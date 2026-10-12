@@ -12,14 +12,14 @@ import type {
   AssetDocumentKind
 } from "../lease/AssetLease.ts";
 import type { EditorRuntime } from "../runtime/EditorRuntime.ts";
-import type {
-  EditorIdentityOptions,
-  EditorSession
-} from "../session/EditorSession.ts";
+import type { EditorSession } from "../session/EditorSession.ts";
+import type { EditorIdentityOptions } from "../session/SessionConnection.ts";
+import type { EditorToolbarSources } from "../session/EditorToolbarSources.ts";
 
 export interface EditorContext {
   launch: EditorLaunch;
   session: EditorSession;
+  toolbar: EditorToolbarSources;
   shell: ShellChannel | null;
   logger: HostLogger;
   commands: CommandConsole;

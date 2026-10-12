@@ -178,6 +178,30 @@ describe("QueryLaunchSource", () => {
     assert.equal((await new QueryLaunchSource("world").read())?.target.value, "def");
     assert.equal(await new QueryLaunchSource("asset").read(), undefined);
   });
+
+  test("reads the viewed tag next to the target", async() => {
+    window.history.replaceState(null, "", "/?target=abc&tag=v1");
+    assert.equal((await new QueryLaunchSource().read())?.tag, "v1");
+
+    window.history.replaceState(null, "", "/?target=abc&tag=");
+    assert.equal((await new QueryLaunchSource().read())?.tag, null);
+  });
+
+  test("the URL of a launch keeps the other page parameters, such as offline", () => {
+    const href = "http://editor.test/map/?offline&target=old&tag=v1";
+    const launch = new EditorLaunch(new AssetId("new"));
+
+    assert.deepEqual(
+      [
+        launch.toUrl(href),
+        launch.viewing("v2").toUrl(href)
+      ].map(String),
+      [
+        "http://editor.test/map/?offline=&target=new",
+        "http://editor.test/map/?offline=&target=new&tag=v2"
+      ]
+    );
+  });
 });
 
 describe("HostMessageLaunchSource", () => {

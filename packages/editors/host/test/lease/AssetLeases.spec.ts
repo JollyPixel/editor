@@ -15,6 +15,7 @@ import {
 // Import Internal Dependencies
 import { AssetLeases } from "#src/lease/AssetLeases.ts";
 import { AssetDocumentConflictError } from "#src/lease/errors/AssetDocumentConflictError.ts";
+import { UnsettledChangesError } from "#src/lease/errors/UnsettledChangesError.ts";
 import {
   FakeClient,
   fakeDocumentKind,
@@ -93,6 +94,21 @@ describe("AssetLeases", () => {
     assert.equal(lease.document, kind.documents[0]);
     assert.equal(lease.record.id, "tex");
     assert.equal(client.fakeRoom("pixelart:tex").joins, 1);
+  });
+
+  test("a tag is leased through its own room beside the current version", () => {
+    const { client, leases } = setup();
+    const kind = fakeDocumentKind("pixelart");
+
+    const tagged = leases.open(kind, "tex", "v1");
+    const current = leases.open(kind, "tex");
+    tagged.release();
+
+    assert.notEqual(tagged.document, current.document);
+    assert.deepEqual([...client.rooms.keys()], ["pixelart@v1:tex", "pixelart:tex"]);
+    assert.equal(client.fakeRoom("pixelart@v1:tex").leaves, 1);
+    assert.equal(leases.has("tex", "v1"), false);
+    assert.equal(leases.holders("tex"), 1);
   });
 
   test("leases of one asset share the document until the last release", () => {
@@ -241,5 +257,34 @@ describe("AssetLeases", () => {
 
     assert.equal(leases.unsaved, false);
     assert.deepEqual(reports, [true, false]);
+  });
+
+  test("settles once the server acknowledges every pending change", async() => {
+    const { leases } = setup();
+    const tex = leases.open(fakeDocumentKind("pixelart"), "tex");
+    tex.document.changes.edit();
+    let settled = false;
+
+    const settling = leases.settled().then(() => {
+      settled = true;
+    });
+    await Promise.resolve();
+    assert.equal(settled, false);
+    tex.document.changes.acknowledge();
+    await settling;
+
+    assert.equal(settled, true);
+  });
+
+  test("stops waiting for pending changes once its signal aborts", async() => {
+    const { leases } = setup();
+    const tex = leases.open(fakeDocumentKind("pixelart"), "tex");
+    tex.document.changes.edit();
+    const waiting = new AbortController();
+
+    const settling = leases.settled(waiting.signal);
+    waiting.abort();
+
+    await assert.rejects(settling, UnsettledChangesError);
   });
 });

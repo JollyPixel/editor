@@ -16,6 +16,7 @@ import { AssetRoom } from "@jolly-pixel/asset";
 // Import Internal Dependencies
 import {
   ASSET_UPDATED,
+  AssetTags,
   CatalogProjection,
   registerAssetRooms,
   type AssetKindHandler
@@ -51,6 +52,7 @@ interface RoomHarness extends AsyncDisposable {
   readonly sync: SyncHarness;
   readonly server: Server;
   readonly catalog: CatalogProjection;
+  readonly tags: AssetTags;
   readonly assetId: string;
   readonly clients: Map<string, RecordingClient>;
   readonly refusals: string[];
@@ -112,16 +114,27 @@ async function roomHarness(
     roomGraceMs: graceMs
   });
   const { logger, records } = recordingLogger();
+  async function flush(
+    assetId: string
+  ): Promise<void> {
+    await sync.scheduler.flush(assetId);
+    await sync.projector.flush(assetId);
+  }
+  const tags = new AssetTags({
+    eventStore: sync.eventStore,
+    projector: sync.projector,
+    writer: sync.writer,
+    flush,
+    objects: sync.objects
+  });
   registerAssetRooms({
     server,
     events: sync.eventStore.writer,
     kinds: sync.kinds,
     catalog,
     states: sync.states,
-    flush: async(assetId) => {
-      await sync.scheduler.flush(assetId);
-      await sync.projector.flush(assetId);
-    },
+    flush,
+    tags,
     logger
   });
 
@@ -132,6 +145,7 @@ async function roomHarness(
     sync,
     server,
     catalog,
+    tags,
     clients,
     assetId: created.assetId,
     get refusals() {
@@ -261,6 +275,59 @@ describe("registerAssetRooms — admission", () => {
 
     assert.deepEqual(harness.refusals, ["unknown asset"]);
     assert.strictEqual(harness.sync.states.has(harness.assetId), false);
+  });
+});
+
+describe("registerAssetRooms — tag rooms", () => {
+  test("a tag room serves the tagged version and refuses its commands", async() => {
+    await using harness = await roomHarness();
+    (await harness.tags.create({
+      assetId: harness.assetId,
+      name: "v1",
+      actor: kActor
+    })).unwrap();
+    await harness.join("A");
+    await harness.send("A", { action: "increment" });
+    const room = new AssetRoom("counter", harness.assetId, "v1").toString();
+    const eventCount = harness.sync.eventStore.reader.list(harness.assetId).length;
+
+    const connection = await harness.join("B", room);
+    await connection.receive({
+      room,
+      kind: "message",
+      payload: { action: "increment" }
+    });
+
+    const [sync, snapshot, denied] = harness.clients.get("B")!.received;
+    assert.deepEqual(
+      (sync as { rights: Record<string, string>; }).rights.increment,
+      "read"
+    );
+    assert.deepEqual(snapshot, {
+      room,
+      kind: "message",
+      payload: {
+        type: "snapshot",
+        data: { value: 0 },
+        version: 1
+      }
+    });
+    assert.strictEqual((denied as { kind: string; }).kind, "denied");
+    assert.strictEqual(
+      harness.sync.eventStore.reader.list(harness.assetId).length,
+      eventCount
+    );
+  });
+
+  test("an unknown tag is refused", async() => {
+    await using harness = await roomHarness();
+
+    await harness.join(
+      "A",
+      new AssetRoom("counter", harness.assetId, "ghost").toString()
+    );
+
+    assert.deepEqual(harness.refusals, ["unknown tag"]);
   });
 });
 

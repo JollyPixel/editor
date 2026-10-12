@@ -10,7 +10,7 @@ import {
 } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
-import type { EditorSessionClient } from "../../session/EditorSession.ts";
+import type { EditorSessionClient } from "../../session/SessionConnection.ts";
 import {
   isCatalogOpenMessage,
   isCatalogPortMessage,

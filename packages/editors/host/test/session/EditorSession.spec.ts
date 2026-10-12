@@ -4,7 +4,7 @@ import {
   test
 } from "node:test";
 import assert from "node:assert/strict";
-import { setImmediate, setTimeout } from "node:timers/promises";
+import { setTimeout } from "node:timers/promises";
 
 // Import Third-party Dependencies
 import {
@@ -14,42 +14,24 @@ import {
   type AssetReferenceData
 } from "@jolly-pixel/asset";
 import {
-  CATALOG_APPLIED,
   CATALOG_EXPORT,
+  CATALOG_APPLIED,
   CATALOG_ROOM,
-  CatalogClient,
-  CatalogUnavailableError,
   type CatalogExportCommand
 } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
-import { EditorSession } from "#src/session/EditorSession.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
-import {
-  SHELL_MESSAGE_TYPE,
-  ShellChannel,
-  isShellCommand
-} from "#src/launch/ShellChannel.ts";
 import type { AssetDocumentKind } from "#src/lease/AssetLease.ts";
 import {
-  FakeClient,
+  MAP,
+  fakeConnection
+} from "../helpers/session/connection.ts";
+import {
   changedMessage,
   fakeDocumentKind,
-  record,
-  snapshotMessage,
   type FakeDocumentKind
 } from "../helpers/rooms.ts";
-
-// CONSTANTS
-const kIdentity = {
-  username: "alice",
-  peerId: "peer-alice",
-  color: "#ff0000"
-};
-const kMap = record("map", "voxelmap");
-const kGrass = record("grass", "pixelart");
-const kStone = record("stone", "pixelart");
-const kSound = record("sound", "audio");
 
 function blockset(
   id: string
@@ -60,43 +42,29 @@ function blockset(
   };
 }
 
-interface ConnectOptions {
+interface OpenOptions {
   target?: string;
   accepts?: string;
   kinds?: AssetDocumentKind<unknown>[];
   dependencies?: Record<string, AssetReferenceData[]>;
   resolveDocuments?: FakeDocumentKind;
-  shell?: ShellChannel;
+  launch?: EditorLaunch;
 }
 
-function unload(): boolean {
-  const event = new Event("beforeunload", { cancelable: true });
-  window.dispatchEvent(event);
-
-  return event.defaultPrevented;
-}
-
-async function startConnect(
-  options: ConnectOptions
+async function startOpen(
+  options: OpenOptions
 ) {
-  const client = new FakeClient();
-  const pending = EditorSession.connect({
-    launch: new EditorLaunch(
-      new AssetId(options.target ?? "map"),
-      options.shell ?? null
+  const { client, connection } = await fakeConnection({
+    dependencies: options.dependencies
+  });
+  const pending = connection.openSession({
+    launch: options.launch ?? new EditorLaunch(
+      new AssetId(options.target ?? "map")
     ),
-    identity: kIdentity,
-    client,
     kinds: options.kinds ?? [],
     accepts: options.accepts ?? "voxelmap"
   });
   pending.catch(() => undefined);
-
-  client.fakeRoom(CATALOG_ROOM).receive(snapshotMessage(
-    [kMap, kGrass, kStone, kSound],
-    options.dependencies ?? {}
-  ));
-  await setImmediate();
 
   return {
     client,
@@ -104,10 +72,10 @@ async function startConnect(
   };
 }
 
-async function connect(
-  options: ConnectOptions = {}
+async function open(
+  options: OpenOptions = {}
 ) {
-  const { client, pending } = await startConnect(options);
+  const { client, pending } = await startOpen(options);
   options.resolveDocuments?.resolveAll();
 
   return {
@@ -116,61 +84,7 @@ async function connect(
   };
 }
 
-describe("EditorSession.connect", () => {
-  test("closes a client when the catalog never becomes ready", async() => {
-    const client = new FakeClient();
-    await assert.rejects(
-      EditorSession.connect({
-        launch: new EditorLaunch(new AssetId("map")),
-        identity: kIdentity,
-        client,
-        kinds: [],
-        accepts: "voxelmap",
-        catalogTimeoutMs: 1
-      }),
-      CatalogUnavailableError
-    );
-    assert.strictEqual(client.destroyed, true);
-  });
-
-  test("uses the catalog its opener resolves without opening another", async() => {
-    const client = new FakeClient();
-    const opening = CatalogClient.connect(client);
-    client.fakeRoom(CATALOG_ROOM).receive(snapshotMessage([kMap], {}));
-    const catalog = await opening;
-
-    const session = await EditorSession.connect({
-      launch: new EditorLaunch(new AssetId("map")),
-      identity: kIdentity,
-      client,
-      openCatalog: () => Promise.resolve(catalog),
-      kinds: [],
-      accepts: "voxelmap"
-    });
-
-    assert.strictEqual(session.catalog, catalog);
-    assert.strictEqual(client.fakeRoom(CATALOG_ROOM).joins, 1);
-    session.dispose();
-  });
-
-  test("closes the client when its catalog opener rejects", async() => {
-    const client = new FakeClient();
-    const failure = new Error("no catalog");
-
-    await assert.rejects(
-      EditorSession.connect({
-        launch: new EditorLaunch(new AssetId("map")),
-        identity: kIdentity,
-        client,
-        openCatalog: () => Promise.reject(failure),
-        kinds: [],
-        accepts: "voxelmap"
-      }),
-      failure
-    );
-    assert.strictEqual(client.destroyed, true);
-  });
-
+describe("EditorSession open", () => {
   test("releases acquired models when a later factory throws", async() => {
     const kind = fakeDocumentKind("pixelart");
     const failure = new Error("factory failed");
@@ -180,7 +94,7 @@ describe("EditorSession.connect", () => {
         throw failure;
       }
     };
-    const { client, pending } = await startConnect({
+    const { client, pending } = await startOpen({
       kinds: [kind, audio],
       dependencies: {
         map: [blockset("grass"), { id: "sound", kind: "audio" }]
@@ -191,32 +105,31 @@ describe("EditorSession.connect", () => {
     assert.equal(kind.documents[0].disposed, true);
     assert.equal(client.fakeRoom("pixelart:grass").leaves, 1);
     assert.equal(client.fakeRoom("voxelmap:map").leaves, 1);
-    assert.equal(client.destroyed, true);
   });
 
   test("leases the target room-only without joining it", async() => {
-    const { client, session } = await connect();
+    const { client, session } = await open();
 
     assert.equal(session.target.record.id, "map");
     assert.equal(client.fakeRoom("voxelmap:map").joins, 0);
-    assert.equal(session.identity, kIdentity);
+    assert.equal(session.identity.username, "alice");
     session.dispose();
   });
 
   test("rejects a missing target and a target of another kind", async() => {
     await assert.rejects(
-      connect({ target: "nope" }),
+      open({ target: "nope" }),
       AssetNotFoundError
     );
     await assert.rejects(
-      connect({ target: "grass", accepts: "voxelmap" }),
+      open({ target: "grass", accepts: "voxelmap" }),
       AssetKindMismatchError
     );
   });
 
   test("leases every modelled dependency and resolves once all are ready", async() => {
     const kind = fakeDocumentKind("pixelart");
-    const { client, session } = await connect({
+    const { client, session } = await open({
       kinds: [kind],
       dependencies: {
         map: [blockset("grass"), blockset("stone"), { id: "sound", kind: "audio" }]
@@ -231,16 +144,9 @@ describe("EditorSession.connect", () => {
     session.dispose();
   });
 
-  test("destroys the client when the target cannot be resolved", async() => {
-    const { client, pending } = await startConnect({ target: "nope" });
-
-    await assert.rejects(pending, AssetNotFoundError);
-    assert.equal(client.destroyed, true);
-  });
-
-  test("disposes everything when a dependency fails to get ready", async() => {
+  test("leaves every room when a dependency fails to get ready", async() => {
     const kind = fakeDocumentKind("pixelart");
-    const { client, pending } = await startConnect({
+    const { client, pending } = await startOpen({
       kinds: [kind],
       dependencies: { map: [blockset("grass")] }
     });
@@ -249,12 +155,11 @@ describe("EditorSession.connect", () => {
     await assert.rejects(pending, /sync failed/);
     assert.equal(kind.documents[0].disposed, true);
     assert.equal(client.fakeRoom("voxelmap:map").leaves, 1);
-    assert.equal(client.destroyed, true);
   });
 
   test("follows the transitive closure of the target", async() => {
     const kind = fakeDocumentKind("pixelart");
-    const { session } = await connect({
+    const { session } = await open({
       kinds: [kind],
       dependencies: {
         map: [blockset("grass")],
@@ -273,11 +178,11 @@ describe("EditorSession.connect", () => {
 describe("EditorSession live closure", () => {
   test("exposes stable dependency views without release ownership", async() => {
     const kind = fakeDocumentKind("pixelart");
-    const { client, session } = await connect({ kinds: [kind] });
+    const { client, session } = await open({ kinds: [kind] });
     const added: unknown[] = [];
     session.on("dependency-added", (dependency) => added.push(dependency));
     client.fakeRoom(CATALOG_ROOM).receive(
-      changedMessage("map", kMap, [blockset("grass")])
+      changedMessage("map", MAP, [blockset("grass")])
     );
     const dependency = session.dependency("grass");
     assert.ok(dependency);
@@ -290,7 +195,7 @@ describe("EditorSession live closure", () => {
     await dependency.ready;
 
     client.fakeRoom(CATALOG_ROOM).receive(
-      changedMessage("map", kMap, [blockset("grass")])
+      changedMessage("map", MAP, [blockset("grass")])
     );
     assert.equal(session.dependency("grass"), dependency);
     session.dispose();
@@ -299,7 +204,7 @@ describe("EditorSession live closure", () => {
   for (const event of ["dependency-added", "dependency-removed"] as const) {
     test(`stops notifications when disposed during ${event}`, async() => {
       const kind = fakeDocumentKind("pixelart");
-      const { client, session } = await connect({
+      const { client, session } = await open({
         kinds: [kind],
         dependencies: {
           map: event === "dependency-removed" ? [blockset("grass")] : []
@@ -313,14 +218,12 @@ describe("EditorSession live closure", () => {
       });
       const next = event === "dependency-added" ?
         [blockset("grass"), blockset("stone")] : [blockset("stone")];
-      client.fakeRoom(CATALOG_ROOM).receive(changedMessage("map", kMap, next));
+      client.fakeRoom(CATALOG_ROOM).receive(changedMessage("map", MAP, next));
 
       assert.equal(notifications, 1);
       assert.deepEqual([...session.dependencies()], []);
       assert.equal(kind.documents.every((document) => document.disposed), true);
       assert.equal(client.fakeRoom("pixelart:stone").leaves, 1);
-      assert.equal(client.destroyed, true);
-      assert.throws(() => session.assets.open(kind, "stone"), /disposed/);
       session.dispose();
     });
   }
@@ -333,7 +236,7 @@ describe("EditorSession live closure", () => {
         throw new Error("factory failed");
       }
     };
-    const { client, session } = await connect({
+    const { client, session } = await open({
       kinds: [kind, audio],
       dependencies: { map: [blockset("grass")] },
       resolveDocuments: kind
@@ -344,7 +247,7 @@ describe("EditorSession live closure", () => {
     session.on("dependency-removed", () => notifications.push("removed"));
 
     assert.throws(() => {
-      client.fakeRoom(CATALOG_ROOM).receive(changedMessage("map", kMap, [
+      client.fakeRoom(CATALOG_ROOM).receive(changedMessage("map", MAP, [
         blockset("stone"),
         { id: "sound", kind: "audio" }
       ]));
@@ -359,7 +262,7 @@ describe("EditorSession live closure", () => {
 
   test("leases added edges and releases removed ones", async() => {
     const kind = fakeDocumentKind("pixelart");
-    const { client, session } = await connect({
+    const { client, session } = await open({
       kinds: [kind],
       dependencies: { map: [blockset("grass")] },
       resolveDocuments: kind
@@ -370,7 +273,7 @@ describe("EditorSession live closure", () => {
     session.on("dependency-removed", (reference) => removed.push(reference));
 
     client.fakeRoom(CATALOG_ROOM).receive(
-      changedMessage("map", kMap, [blockset("stone")])
+      changedMessage("map", MAP, [blockset("stone")])
     );
 
     assert.deepEqual(added, ["stone"]);
@@ -382,14 +285,14 @@ describe("EditorSession live closure", () => {
 
   test("a panel lease keeps a removed dependency alive", async() => {
     const kind = fakeDocumentKind("pixelart");
-    const { client, session } = await connect({
+    const { client, session } = await open({
       kinds: [kind],
       dependencies: { map: [blockset("grass")] },
       resolveDocuments: kind
     });
     const panel = session.assets.open(kind, "grass");
 
-    client.fakeRoom(CATALOG_ROOM).receive(changedMessage("map", kMap, []));
+    client.fakeRoom(CATALOG_ROOM).receive(changedMessage("map", MAP, []));
 
     assert.equal(session.dependency("grass"), undefined);
     assert.equal(panel.document.disposed, false);
@@ -400,7 +303,7 @@ describe("EditorSession live closure", () => {
 
   test("drops a dependency whose record is deleted", async() => {
     const kind = fakeDocumentKind("pixelart");
-    const { client, session } = await connect({
+    const { client, session } = await open({
       kinds: [kind],
       dependencies: { map: [blockset("grass")] },
       resolveDocuments: kind
@@ -414,9 +317,9 @@ describe("EditorSession live closure", () => {
     session.dispose();
   });
 
-  test("dispose releases everything and destroys the client", async() => {
+  test("dispose releases every lease and stops following the catalog", async() => {
     const kind = fakeDocumentKind("pixelart");
-    const { client, session } = await connect({
+    const { client, session } = await open({
       kinds: [kind],
       dependencies: { map: [blockset("grass")] },
       resolveDocuments: kind
@@ -424,19 +327,32 @@ describe("EditorSession live closure", () => {
 
     session.dispose();
     client.fakeRoom(CATALOG_ROOM).receive(
-      changedMessage("map", kMap, [blockset("stone")])
+      changedMessage("map", MAP, [blockset("stone")])
     );
 
     assert.equal(kind.documents.length, 1);
     assert.equal(kind.documents[0].disposed, true);
     assert.equal(client.fakeRoom("voxelmap:map").leaves, 1);
-    assert.equal(client.destroyed, true);
+  });
+});
+
+describe("EditorSession tag view", () => {
+  test("a launch naming a tag leases the target through the tag room", async() => {
+    const kind = fakeDocumentKind("voxelmap");
+    const { client, session } = await open({
+      kinds: [kind],
+      resolveDocuments: kind,
+      launch: new EditorLaunch(new AssetId("map")).viewing("v1")
+    });
+
+    assert.equal(kind.documents[0].room, client.fakeRoom("voxelmap@v1:map"));
+    session.dispose();
   });
 });
 
 describe("EditorSession target document", () => {
   test("keeps the target room-only when no kind is registered", async() => {
-    const { client, session } = await connect();
+    const { client, session } = await open();
 
     await session.targetReady;
 
@@ -447,7 +363,7 @@ describe("EditorSession target document", () => {
 
   test("leases the target as a document and joins its room once", async() => {
     const kind = fakeDocumentKind("voxelmap");
-    const { client, session } = await connect({
+    const { client, session } = await open({
       kinds: [kind],
       resolveDocuments: kind
     });
@@ -460,73 +376,21 @@ describe("EditorSession target document", () => {
     session.dispose();
   });
 
-  test("reports the unsaved state of its documents to the shell", async() => {
-    const posted: unknown[] = [];
-    const shell = new ShellChannel({
-      port: { postMessage: (message) => posted.push(message) },
-      origin: "http://studio.test"
-    });
-    const kind = fakeDocumentKind("voxelmap");
-    const { session } = await connect({
-      kinds: [kind],
-      resolveDocuments: kind,
-      shell
-    });
-    const [map] = kind.documents;
-
-    map.changes.edit();
-    map.changes.edit();
-    map.changes.acknowledge();
-    map.changes.edit();
-    session.dispose();
-
-    assert.deepEqual(
-      posted.filter((message) => isShellCommand(message)),
-      [true, false, true, false].map((unsaved) => {
-        return {
-          type: SHELL_MESSAGE_TYPE,
-          command: "unsaved",
-          unsaved
-        };
-      })
-    );
-  });
-
-  test("asks before unloading while unsaved when no shell framed it", async() => {
-    const kind = fakeDocumentKind("voxelmap");
-    const { session } = await connect({
-      kinds: [kind],
-      resolveDocuments: kind
-    });
-    const [map] = kind.documents;
-
-    assert.equal(unload(), false);
-    map.changes.edit();
-    assert.equal(unload(), true);
-    map.changes.acknowledge();
-    assert.equal(unload(), false);
-
-    map.changes.edit();
-    session.dispose();
-    assert.equal(unload(), false);
-  });
-
-  test("rejects and disposes when the target never becomes ready", async() => {
+  test("rejects and leaves the target room when the target never becomes ready", async() => {
     const kind = fakeDocumentKind("voxelmap");
     const failure = new Error("target failed");
-    const { client, pending } = await startConnect({ kinds: [kind] });
+    const { client, pending } = await startOpen({ kinds: [kind] });
 
     kind.rejectAll(failure);
 
     await assert.rejects(pending, failure);
     assert.equal(kind.documents[0].disposed, true);
     assert.equal(client.fakeRoom("voxelmap:map").leaves, 1);
-    assert.equal(client.destroyed, true);
   });
 
   test("targetLease shares the document the session already holds", async() => {
     const kind = fakeDocumentKind("voxelmap");
-    const { client, session } = await connect({
+    const { client, session } = await open({
       kinds: [kind],
       resolveDocuments: kind
     });
@@ -549,7 +413,7 @@ describe("EditorSession target document", () => {
 
 describe("EditorSession archives", () => {
   test("downloads the target under its current catalog path", async() => {
-    const { client, session } = await connect();
+    const { client, session } = await open();
     const saved: string[] = [];
     const archives = session.archives({
       fallbackName: "map",
@@ -570,7 +434,7 @@ describe("EditorSession archives", () => {
     });
     const catalog = client.fakeRoom(CATALOG_ROOM);
     catalog.receive(changedMessage("map", {
-      ...kMap,
+      ...MAP,
       source: "maps/overworld.voxelmap.json"
     }));
 

@@ -12,6 +12,12 @@ export interface RoomResolution {
    * A join inside that window cancels it.
    */
   graceMs?: number;
+  /**
+   * Caps every message right at "read"; joining and presence keep their
+   * rights. The extension must declare an inbound message protocol.
+   * @default false
+   */
+  readOnly?: boolean;
 }
 
 /**

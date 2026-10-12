@@ -44,7 +44,11 @@ function syncMembersOf(
 describe("ServerRoom — sync snapshot presence", () => {
   test("a role with \"void\" on $presence gets the members without their presence", async() => {
     const extension = createExtension(actionProtocols);
-    const room = new ServerRoom(extension.id, extension, new RightsTable(kPresenceVoidForViewer));
+    const room = new ServerRoom(
+      extension.id,
+      extension,
+      new RightsTable(kPresenceVoidForViewer).scope(extension.name)
+    );
     const a = createClient("A");
     const b = createClient("B");
     const c = createClient("C");

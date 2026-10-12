@@ -3,7 +3,7 @@ import type { PeerIdentity } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { LaunchSource } from "../launch/index.ts";
-import type { EditorSessionClient } from "../session/EditorSession.ts";
+import type { EditorSessionClient } from "../session/SessionConnection.ts";
 import type { CatalogOpener } from "../session/openCatalog.ts";
 
 export interface StandaloneConnection {

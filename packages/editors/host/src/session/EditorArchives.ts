@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { AssetId } from "@jolly-pixel/asset";
 import { showConfirm } from "@jolly-pixel/ui";
 import type {
   ImportConflictPolicy,
@@ -6,13 +7,13 @@ import type {
 } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
-import { LAUNCH_QUERY_PARAM } from "../launch/sources/QueryLaunchSource.ts";
+import { EditorLaunch } from "../launch/EditorLaunch.ts";
 import { LastOpenedLaunchSource } from "../launch/sources/LastOpenedLaunchSource.ts";
 import type { SessionArchive } from "./SessionArchive.ts";
 import type { SessionWorkspace } from "../workspace/SessionWorkspace.ts";
 import { ArchiveRootError } from "./errors/ArchiveRootError.ts";
 import { ArchiveImportDisabledError } from "./errors/ArchiveImportDisabledError.ts";
-import { askImportConflictPolicy } from "./askImportConflictPolicy.ts";
+import { askImportConflictPolicy } from "./dialogs/askImportConflictPolicy.ts";
 
 // CONSTANTS
 const kArchiveExtension = ".zip";
@@ -164,9 +165,11 @@ export class EditorArchives {
     LastOpenedLaunchSource.remember(this.#accepts, root.id);
 
     const { location } = this.#browser;
-    const url = new URL(location.href);
-    url.searchParams.set(LAUNCH_QUERY_PARAM, root.id);
-    location.assign(url.toString());
+    location.assign(
+      new EditorLaunch(
+        new AssetId(root.id)
+      ).toUrl(location.href).toString()
+    );
   }
 
   async pickAndImport(): Promise<void> {

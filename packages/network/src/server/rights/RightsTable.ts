@@ -7,6 +7,10 @@ import type { Right } from "../../protocol/types.ts";
 
 export type RightsMap = Record<string, Record<string, Right>>;
 
+export interface RightsScopeOptions {
+  readOnly?: boolean;
+}
+
 interface Permission {
   pattern: RightsPattern;
   right: Right;
@@ -84,11 +88,13 @@ export class RightsTable {
   }
 
   scope(
-    namespace: string
+    namespace: string,
+    options: RightsScopeOptions = {}
   ): RightsGate {
     return new RightsGate(
       this,
-      namespace
+      namespace,
+      options.readOnly ?? false
     );
   }
 }

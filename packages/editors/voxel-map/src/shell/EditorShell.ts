@@ -1,6 +1,10 @@
 // Import Third-party Dependencies
-import type { EditorRuntime } from "@jolly-pixel/editor.host";
+import type {
+  EditorRuntime,
+  EditorToolbarSources
+} from "@jolly-pixel/editor.host";
 import { CANVAS_HOVER_CHANGE_EVENT } from "@jolly-pixel/editor.pixel-art";
+import "@jolly-pixel/editor.host/ui";
 
 // Import Internal Dependencies
 import type { EditorState } from "../state/index.ts";
@@ -12,6 +16,7 @@ import "./paneIcons.ts";
 export interface EditorShellOptions {
   state: EditorState;
   runtime: EditorRuntime;
+  toolbar: EditorToolbarSources;
 }
 
 export class EditorShell {
@@ -22,7 +27,12 @@ export class EditorShell {
   constructor(
     options: EditorShellOptions
   ) {
-    const { state, runtime } = options;
+    const { state, runtime, toolbar } = options;
+
+    const editorToolbar = document.querySelector("jolly-editor-toolbar");
+    if (editorToolbar) {
+      editorToolbar.sources = toolbar;
+    }
 
     const activityLog = document.querySelector("jolly-log");
     if (activityLog) {

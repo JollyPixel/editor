@@ -59,7 +59,14 @@ Disposes rooms and workers. Await it; close transport resources too.
 ## Dynamic rooms
 
 `setRoomResolver(resolver)` handles unknown names on join. Return
-`{ extension, onEvict?, graceMs? }` or `null`; promises are supported.
+`{ extension, onEvict?, graceMs?, readOnly? }` or `null`; promises are
+supported.
+
+`readOnly: true` caps every message right in that room at `read`, whatever
+the rights table says: members still join and update presence, their sync
+reports `read` for each message event, and their messages are denied. The
+extension must declare an inbound message protocol, or the join is refused
+with `UngatedExtensionError`.
 
 Empty resolved rooms expire after `roomGraceMs` (default `30_000` ms).
 Eviction awaits `onEvict`, then `dispose()`.

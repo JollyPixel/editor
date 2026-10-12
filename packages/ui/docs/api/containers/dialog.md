@@ -21,6 +21,8 @@
 
 `showModal()` opens the native dialog. `close(returnValue?)` closes it. The
 default slot supplies body content; the `actions` slot supplies footer actions.
+Body content stacks in a column with `--jolly-space-2` between children, and
+slotted `p`, `ul` and `ol` lose their block margins.
 
 Escape and backdrop activation emit `jolly-cancel` when `dismissible` is true.
 Closing emits `jolly-close` with `{ returnValue }`.

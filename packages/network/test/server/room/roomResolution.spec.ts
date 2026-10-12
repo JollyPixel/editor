@@ -15,9 +15,11 @@ import {
   harness,
   join
 } from "../../helpers/server/dynamicRooms.ts";
+import { actionProtocols } from "../../helpers/protocol/protocols.ts";
 import {
   Server,
-  type RoomResolution
+  type RoomResolution,
+  type ServerEnvelope
 } from "#src/index.ts";
 
 describe("Server — dynamic room resolution", () => {
@@ -123,6 +125,83 @@ describe("Server — dynamic room resolution", () => {
       extensions.get("pixelart:asset-1")?.messages,
       [{ stroke: 1 }]
     );
+    await server.close();
+  });
+});
+
+describe("dynamic rooms — read-only resolution", () => {
+  test("members join with \"read\" message rights and their messages are denied", async() => {
+    const envelopes: ServerEnvelope[] = [];
+    const extension = new AssetExtension(
+      "pixelart:asset-1",
+      "pixelart",
+      actionProtocols
+    );
+    const server = new Server();
+    server.setRoomResolver((): RoomResolution => {
+      return {
+        extension,
+        readOnly: true
+      };
+    });
+
+    const connectionA = server.connect(
+      {
+        id: "A",
+        send: (data) => envelopes.push(serverEnvelopeOf(data))
+      },
+      identityOf("A")
+    );
+    await connectionA.receive({
+      room: "pixelart:asset-1",
+      kind: "join"
+    });
+    await connectionA.receive({
+      room: "pixelart:asset-1",
+      kind: "message",
+      payload: { action: "voxel-set" }
+    });
+
+    const [sync, denied] = envelopes;
+    assert.ok(sync.kind === "sync");
+    assert.deepEqual(sync.rights, {
+      $presence: "write",
+      "voxel-set": "read",
+      "object-added": "read"
+    });
+    assert.deepEqual(denied, {
+      room: "pixelart:asset-1",
+      kind: "denied",
+      event: "voxel-set",
+      reason: "role \"default\" cannot write \"voxel-set\""
+    });
+    assert.deepEqual(extension.messages, []);
+    await server.close();
+  });
+
+  test("an extension without an inbound protocol is not resolved read-only", async() => {
+    const kinds: string[] = [];
+    const server = new Server();
+    server.setRoomResolver((name): RoomResolution => {
+      return {
+        extension: new AssetExtension(name, "pixelart"),
+        readOnly: true
+      };
+    });
+
+    const connectionA = server.connect(
+      {
+        id: "A",
+        send: (data) => kinds.push(serverEnvelopeOf(data).kind)
+      },
+      identityOf("A")
+    );
+    await connectionA.receive({
+      room: "pixelart:asset-1",
+      kind: "join"
+    });
+
+    assert.deepEqual(kinds, []);
     await server.close();
   });
 });

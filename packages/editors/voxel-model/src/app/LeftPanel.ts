@@ -58,6 +58,11 @@ export interface LeftPanelTexture {
   room: PixelArtRoom;
 }
 
+interface CanvasSources {
+  readonly texture: LeftPanelTexture;
+  readonly workspace: LeftPanelWorkspace;
+}
+
 export class LeftPanel extends LitElement {
   @state()
   declare mode: TexturePane;
@@ -83,6 +88,7 @@ export class LeftPanel extends LitElement {
   #releaseModelAccess: (() => void) | null = null;
   #peerRegionSelections: PeerRegionSelections | null = null;
   #initializing = false;
+  #initialized: CanvasSources | null = null;
   #releaseKeyBindings: (() => void) | null = null;
 
   static override styles = css`
@@ -124,17 +130,53 @@ export class LeftPanel extends LitElement {
   }
 
   async #initializeCanvas(): Promise<void> {
+    if (this.#initializing || !this.hasUpdated) {
+      return;
+    }
+
+    this.#initializing = true;
+    try {
+      for (
+        let next = this.#canvasToInitialize();
+        next !== null;
+        next = this.#canvasToInitialize()
+      ) {
+        await this.#bindCanvas(next);
+      }
+    }
+    finally {
+      this.#initializing = false;
+    }
+  }
+
+  #canvasToInitialize(): CanvasSources | null {
     const texture = this.#texture;
     const workspace = this.workspace;
     if (
       texture === null ||
       workspace === null ||
-      !this.hasUpdated ||
-      this.#initializing
+      (
+        this.#initialized?.texture === texture &&
+        this.#initialized.workspace === workspace
+      )
     ) {
-      return;
+      return null;
     }
-    this.#initializing = true;
+
+    return {
+      texture,
+      workspace
+    };
+  }
+
+  async #bindCanvas(
+    sources: CanvasSources
+  ): Promise<void> {
+    const { texture, workspace } = sources;
+    this.#collaboration?.destroy();
+    this.#collaboration = null;
+    this.#access?.dispose();
+    this.#access = null;
 
     const canvas = await this.panelElement.initialize({
       document: texture.document,
@@ -143,6 +185,7 @@ export class LeftPanel extends LitElement {
       brush: { size: 8 },
       history: new SharedPixelHistory(workspace.history, "build")
     });
+    this.#initialized = sources;
     canvas.uv.showAll = true;
     canvas.uv.showRegionLabels = true;
     canvas.uv.labelScope = "selected";

@@ -76,7 +76,7 @@ class MyEditor {
   // ...
 
   dispose(): void {
-    this.session.dispose();
+    this.#panels.dispose();
   }
 }
 
@@ -89,23 +89,31 @@ await mountStandalone(MyEditor, {
 
 ### Boot
 
-- [`mountStandalone`](./docs/mountStandalone.md): the editor definition, launch
-  sources, the shell channel and the debug handle; `bootStandalone` adds the
-  offline fallback.
-- [`QueryParams`](./docs/QueryParams.md): typed query-string parameters.
+- [`mountStandalone`](./docs/editor/mountStandalone.md): the editor definition and
+  context, switching, page lifecycle, console and boot tracing.
+- [`bootStandalone`](./docs/editor/bootStandalone.md): the offline fallback and the
+  in-page workspace.
+- [`EditorLaunch`](./docs/launch/EditorLaunch.md): launch sources and the target, tag
+  and shell of a page.
+- [`ShellChannel`](./docs/launch/ShellChannel.md): the protocol between a shell and
+  its editor frames.
+- [`QueryParams`](./docs/params/QueryParams.md): typed query-string parameters.
 
 ### Session
 
-- [`EditorSession`](./docs/EditorSession.md): the target room, live
+- [`EditorSession`](./docs/session/EditorSession.md): the target room, live
   dependencies and their events.
-- [`AssetLeases`](./docs/AssetLeases.md): shared rooms and synced documents per
+- [`AssetLeases`](./docs/lease/AssetLeases.md): shared rooms and synced documents per
   asset.
+- [`Archives`](./docs/session/Archives.md): `.zip` export, import and reset.
+- [`EditorToolbar`](./docs/session/EditorToolbar.md): the bar above the viewport, its
+  target picker and the tags of the target.
 
 ### Scene
 
-- [`EditorRuntime`](./docs/EditorRuntime.md): runtime boot with the editor
+- [`EditorRuntime`](./docs/runtime/EditorRuntime.md): runtime boot with the editor
   keyboard rules.
-- [`PeerFrustums`](./docs/PeerFrustums.md): peer camera frustums as an actor
+- [`PeerFrustums`](./docs/runtime/PeerFrustums.md): peer camera frustums as an actor
   component.
 
 ## ✨ Contributors guide

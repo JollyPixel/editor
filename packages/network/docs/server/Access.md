@@ -66,6 +66,9 @@ Opaque inbound protocols cannot be registered with configured rights.
 
 `RightsTable`
 resolves keys with `check`; `scope` returns a namespace-bound `RightsGate`.
+`scope(namespace, { readOnly: true })` caps every message right at `read`.
+`gate.gated` is `true` when the table is configured or the scope is read-only;
+a room then checks each message against the gate.
 
 ### Client access
 

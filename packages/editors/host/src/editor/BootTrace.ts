@@ -4,7 +4,7 @@ import type { HostLogger } from "../debug/readDebugLogger.ts";
 // CONSTANTS
 export const EDITOR_STATE_ATTRIBUTE = "data-editor-state";
 
-export type EditorState = "booting" | "ready" | "failed";
+export type EditorState = "booting" | "switching" | "ready" | "failed";
 
 export class BootTrace {
   readonly logger: HostLogger;

@@ -11,172 +11,25 @@ import { setImmediate } from "node:timers/promises";
 import { BINARY_KIND } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
-import {
-  mountStandalone,
-  type MountStandaloneOptions
-} from "#src/editor/mountStandalone.ts";
-import { EDITOR_STATE_ATTRIBUTE } from "#src/editor/BootTrace.ts";
+import { mountStandalone } from "#src/editor/mountStandalone.ts";
 import { DEBUG_HANDLE } from "#src/editor/StandaloneEditor.ts";
-import type { StandaloneConnection } from "#src/workspace/SessionWorkspace.ts";
-import type {
-  EditorContext,
-  EditorHandle
-} from "#src/editor/EditorDefinition.ts";
 import type { HostLogger } from "#src/debug/readDebugLogger.ts";
-import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
 import { LaunchNotFoundError } from "#src/launch/errors/LaunchNotFoundError.ts";
-import { ShellChannel } from "#src/launch/ShellChannel.ts";
-import { IDENTITY_STORAGE_KEY } from "#src/session/EditorSession.ts";
-import { OfflineWorkspace } from "#src/workspace/offline/OfflineWorkspace.ts";
 import { EditorRuntime } from "#src/runtime/EditorRuntime.ts";
 import { editorHandle } from "../helpers/editorHandle.ts";
 import { captureLogs } from "../helpers/logs.ts";
-
-// CONSTANTS
-const kAssetId = "debug-target";
-const kOtherAssetId = "other-target";
-
-function editorState(): string | null {
-  return document.documentElement.getAttribute(EDITOR_STATE_ATTRIBUTE);
-}
-
-function openWorkspace(): Promise<OfflineWorkspace> {
-  return OfflineWorkspace.open({
-    handlers: [],
-    seed: {
-      "notes/readme.bin": {
-        id: kAssetId,
-        kind: BINARY_KIND,
-        content: () => new Uint8Array([1])
-      }
-    }
-  });
-}
-
-function offlineOptions(
-  workspace: OfflineWorkspace
-): MountStandaloneOptions {
-  return {
-    sources: [
-      {
-        read: () => Promise.resolve(EditorLaunch.fromTarget(kAssetId))
-      }
-    ],
-    connect: () => workspace.connect()
-  };
-}
-
-function trackedConnection(
-  workspace: OfflineWorkspace,
-  onDestroy: () => void
-): StandaloneConnection {
-  const connection = workspace.connect();
-  const { client } = connection;
-
-  return {
-    ...connection,
-    client: {
-      room: (name) => client.room(name),
-      destroy: () => {
-        onDestroy();
-        client.destroy();
-      }
-    }
-  };
-}
-
-function definition(
-  mount: (context: EditorContext) => Promise<EditorHandle>
-) {
-  return {
-    accepts: BINARY_KIND,
-    identity: { title: "never prompted" },
-    kinds: [],
-    mount
-  };
-}
+import {
+  ASSET_ID,
+  definition,
+  editorState,
+  offlineOptions,
+  openWorkspace,
+  resetStandalonePage,
+  trackedConnection
+} from "../helpers/standalone.ts";
 
 describe("mountStandalone", () => {
-  afterEach(() => {
-    document.documentElement.removeAttribute(EDITOR_STATE_ATTRIBUTE);
-    Reflect.deleteProperty(globalThis, DEBUG_HANDLE);
-    Reflect.deleteProperty(globalThis, "hostTestHandle");
-    sessionStorage.clear();
-    window.history.replaceState(null, "", "/");
-    for (const element of document.querySelectorAll("jolly-console")) {
-      element.remove();
-    }
-  });
-
-  test("hands the editor the console mounted on the page", async() => {
-    const workspace = await openWorkspace();
-
-    const received: EditorContext["commands"][] = [];
-    const handle = await mountStandalone(definition((context) => {
-      received.push(context.commands);
-
-      return Promise.resolve(editorHandle(context.session));
-    }), offlineOptions(workspace));
-
-    const elements = document.querySelectorAll("jolly-console");
-    assert.equal(elements.length, 1);
-    assert.equal(received.length, 1);
-    assert.equal(elements[0].console, received[0]);
-    assert.notEqual(
-      received[0].registry.resolveVariable("theme"),
-      undefined
-    );
-    assert.notEqual(
-      received[0].registry.resolveVariable("density"),
-      undefined
-    );
-
-    handle.dispose();
-    await workspace.close();
-  });
-
-  test("leaves the console to the shell that framed the page", async() => {
-    const workspace = await openWorkspace();
-    const shell = new ShellChannel({
-      port: { postMessage: () => undefined },
-      origin: "http://studio.test"
-    });
-
-    const received: EditorContext["commands"][] = [];
-    const handle = await mountStandalone(definition((context) => {
-      received.push(context.commands);
-
-      return Promise.resolve(editorHandle(context.session));
-    }), {
-      ...offlineOptions(workspace),
-      sources: [
-        {
-          read: () => Promise.resolve(EditorLaunch.fromTarget(kAssetId, shell))
-        }
-      ]
-    });
-
-    assert.equal(document.querySelector("jolly-console"), null);
-    assert.equal(received.length, 1);
-    assert.equal(received[0].registry.resolveVariable("theme"), undefined);
-
-    handle.dispose();
-    await workspace.close();
-  });
-
-  test("removes the console when the boot fails", async() => {
-    const workspace = await openWorkspace();
-
-    await assert.rejects(
-      mountStandalone(definition(
-        () => Promise.reject(new Error("mount failed"))
-      ), offlineOptions(workspace)),
-      /mount failed/
-    );
-    assert.equal(document.querySelector("jolly-console"), null);
-
-    await workspace.close();
-  });
+  afterEach(resetStandalonePage);
 
   test("rejects before any session when no launch source names a target", async() => {
     let mounted = false;
@@ -220,15 +73,15 @@ describe("mountStandalone", () => {
     assert.equal(Reflect.get(globalThis, DEBUG_HANDLE), undefined);
 
     ready.resolve();
-    const handle = await pending;
+    const editor = await pending;
     try {
       assert.equal(editorState(), "ready");
-      assert.equal(Reflect.get(globalThis, DEBUG_HANDLE), handle);
-      assert.equal(Reflect.get(globalThis, "hostTestHandle"), handle);
+      assert.equal(Reflect.get(globalThis, DEBUG_HANDLE), editor.handle);
+      assert.equal(Reflect.get(globalThis, "hostTestHandle"), editor.handle);
       assert.equal(shell, null);
     }
     finally {
-      handle.dispose();
+      editor.dispose();
       await workspace.close();
     }
   });
@@ -236,7 +89,7 @@ describe("mountStandalone", () => {
   test("publishes no handle outside dev", async() => {
     const workspace = await openWorkspace();
 
-    const handle = await mountStandalone(definition(
+    const editor = await mountStandalone(definition(
       (context) => Promise.resolve(editorHandle(context.session))
     ), {
       ...offlineOptions(workspace),
@@ -247,7 +100,34 @@ describe("mountStandalone", () => {
     assert.equal(Reflect.get(globalThis, DEBUG_HANDLE), undefined);
     assert.equal(Reflect.get(globalThis, "hostTestHandle"), undefined);
 
-    handle.dispose();
+    editor.dispose();
+    await workspace.close();
+  });
+
+  test("a page kept in the back/forward cache leaves its rooms and reloads when restored", async(t) => {
+    const workspace = await openWorkspace();
+    const reload = t.mock.method(location, "reload", () => undefined);
+    let disposed = 0;
+    let destroyed = false;
+    await mountStandalone(definition((context) => Promise.resolve({
+      ...editorHandle(context.session),
+      dispose: () => {
+        disposed++;
+      }
+    })), {
+      ...offlineOptions(workspace),
+      connect: () => trackedConnection(workspace, () => {
+        destroyed = true;
+      })
+    });
+
+    window.dispatchEvent(Object.assign(new Event("pagehide"), { persisted: true }));
+    window.dispatchEvent(Object.assign(new Event("pageshow"), { persisted: true }));
+    await setImmediate();
+
+    assert.equal(disposed, 1);
+    assert.equal(destroyed, true);
+    assert.ok(reload.mock.callCount() >= 1);
     await workspace.close();
   });
 
@@ -304,7 +184,7 @@ describe("mountStandalone", () => {
     ]);
 
     let editorLogger: HostLogger | undefined;
-    const handle = await mountStandalone(definition((context) => {
+    const editor = await mountStandalone(definition((context) => {
       editorLogger = context.logger;
 
       return Promise.resolve(editorHandle(context.session));
@@ -335,11 +215,11 @@ describe("mountStandalone", () => {
       "[DEBUG] [host.session] target started"
     )], {
       kind: BINARY_KIND,
-      id: kAssetId
+      id: ASSET_ID
     });
     assert.equal(editorLogger?.namespace, "editor");
 
-    handle.dispose();
+    editor.dispose();
     await workspace.close();
   });
 
@@ -361,95 +241,6 @@ describe("mountStandalone", () => {
     ]);
     assert.equal(metas.at(-2)?.error, error);
 
-    await workspace.close();
-  });
-
-  test("stores the username query param as the identity in dev", async() => {
-    const workspace = await openWorkspace();
-    window.history.replaceState(null, "", "/?username=Ada");
-
-    const handle = await mountStandalone(definition(
-      (context) => Promise.resolve(editorHandle(context.session))
-    ), {
-      ...offlineOptions(workspace),
-      dev: true
-    });
-
-    assert.equal(sessionStorage.getItem(IDENTITY_STORAGE_KEY), "Ada");
-
-    handle.dispose();
-    await workspace.close();
-  });
-
-  test("opens the session of the target query param while the launch is read", async() => {
-    const workspace = await openWorkspace();
-    window.history.replaceState(null, "", `/?target=${kAssetId}`);
-    const launch = Promise.withResolvers<EditorLaunch | undefined>();
-    let connections = 0;
-
-    const mounting = mountStandalone(definition(
-      (context) => Promise.resolve(editorHandle(context.session))
-    ), {
-      sources: [{ read: () => launch.promise }],
-      connect: () => {
-        connections++;
-
-        return workspace.connect();
-      }
-    });
-    await setImmediate();
-    assert.equal(connections, 1);
-
-    launch.resolve(EditorLaunch.fromTarget(kAssetId));
-    const handle = await mounting;
-    assert.equal(connections, 1);
-    assert.equal(handle.session.target.record.id, kAssetId);
-
-    handle.dispose();
-    await workspace.close();
-  });
-
-  test("drops the early session when the launch names another target", async() => {
-    const workspace = await OfflineWorkspace.open({
-      handlers: [],
-      seed: {
-        "notes/readme.bin": {
-          id: kAssetId,
-          kind: BINARY_KIND,
-          content: () => new Uint8Array([1])
-        },
-        "notes/other.bin": {
-          id: kOtherAssetId,
-          kind: BINARY_KIND,
-          content: () => new Uint8Array([2])
-        }
-      }
-    });
-    window.history.replaceState(null, "", `/?target=${kAssetId}`);
-    const destroyed: boolean[] = [];
-
-    const handle = await mountStandalone(definition(
-      (context) => Promise.resolve(editorHandle(context.session))
-    ), {
-      sources: [
-        {
-          read: () => Promise.resolve(EditorLaunch.fromTarget(kOtherAssetId))
-        }
-      ],
-      connect: () => {
-        const index = destroyed.push(false) - 1;
-
-        return trackedConnection(workspace, () => {
-          destroyed[index] = true;
-        });
-      }
-    });
-    await setImmediate();
-
-    assert.equal(handle.session.target.record.id, kOtherAssetId);
-    assert.deepEqual(destroyed, [true, false]);
-
-    handle.dispose();
     await workspace.close();
   });
 
@@ -483,20 +274,6 @@ describe("mountStandalone", () => {
     assert.equal(destroyed, true);
     assert.equal(editorState(), "failed");
 
-    await workspace.close();
-  });
-
-  test("ignores the username query param outside dev", async() => {
-    const workspace = await openWorkspace();
-    window.history.replaceState(null, "", "/?username=Ada");
-
-    const handle = await mountStandalone(definition(
-      (context) => Promise.resolve(editorHandle(context.session))
-    ), offlineOptions(workspace));
-
-    assert.equal(sessionStorage.getItem(IDENTITY_STORAGE_KEY), null);
-
-    handle.dispose();
     await workspace.close();
   });
 });

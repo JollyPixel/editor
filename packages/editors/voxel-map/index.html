@@ -38,11 +38,14 @@
           </jolly-pane>
         </jolly-pane-group>
       </jolly-dock>
-      <div id="game-container">
-        <canvas tabindex="-1"></canvas>
-        <jolly-log></jolly-log>
-        <div class="viewport-toolbars">
-          <voxel-edit-toolbar></voxel-edit-toolbar>
+      <div class="viewport-column">
+        <jolly-editor-toolbar></jolly-editor-toolbar>
+        <div id="game-container">
+          <canvas tabindex="-1"></canvas>
+          <jolly-log></jolly-log>
+          <div class="viewport-toolbars">
+            <voxel-edit-toolbar></voxel-edit-toolbar>
+          </div>
         </div>
       </div>
       <jolly-dock

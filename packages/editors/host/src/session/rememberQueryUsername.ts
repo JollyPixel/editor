@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { IDENTITY_STORAGE_KEY } from "./EditorSession.ts";
+import { IDENTITY_STORAGE_KEY } from "./SessionConnection.ts";
 import { HOST_PARAMS } from "../params/HostParams.ts";
 
 export function rememberQueryUsername(

@@ -40,6 +40,12 @@ export class TagName {
     return new TagName(`${kRestorePointPrefix}${eventVersion}`);
   }
 
+  static isRestorePoint(
+    name: string
+  ): boolean {
+    return name.startsWith(kRestorePointPrefix);
+  }
+
   private constructor(
     value: string
   ) {

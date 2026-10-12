@@ -259,10 +259,10 @@ export class RoomRegistry {
     extension: AnyExtension,
     resolution: RoomResolution | null
   ): RoomEntry {
-    if (
-      this.#rights.configured &&
-      extension.protocols.inbound === null
-    ) {
+    const rights = this.#rights.scope(extension.name, {
+      readOnly: resolution?.readOnly
+    });
+    if (rights.gated && extension.protocols.inbound === null) {
       throw new UngatedExtensionError(
         `extension "${extension.name}" declares no inbound message protocol, so a rights table cannot gate it`
       );
@@ -273,7 +273,7 @@ export class RoomRegistry {
       room: new ServerRoom(
         name,
         extension,
-        this.#rights,
+        rights,
         {
           logger: this.#logger,
           limits: this.#limits

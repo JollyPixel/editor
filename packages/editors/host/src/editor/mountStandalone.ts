@@ -9,6 +9,7 @@ import {
   type HostLogger
 } from "../debug/readDebugLogger.ts";
 import type { LaunchSource } from "../launch/index.ts";
+import type { LaunchNavigator } from "../launch/LaunchNavigator.ts";
 import type { StandaloneConnection } from "../workspace/SessionWorkspace.ts";
 
 export interface MountStandaloneOptions {
@@ -35,12 +36,19 @@ export interface MountStandaloneOptions {
   logger?: HostLogger;
 }
 
+export interface StandaloneMount<
+  THandle extends EditorHandle
+> extends LaunchNavigator {
+  readonly handle: THandle;
+  dispose(): void;
+}
+
 export async function mountStandalone<
   THandle extends EditorHandle
 >(
   definition: EditorDefinition<THandle>,
   options: MountStandaloneOptions = {}
-): Promise<THandle> {
+): Promise<StandaloneMount<THandle>> {
   const {
     logger = readDebugLogger(),
     ...mountOptions

@@ -1,7 +1,8 @@
 # AssetRoom
 
 `AssetRoom` is the immutable network room name of one asset, shared by browser
-and server packages. Its string form is `${kind}:${assetId}`.
+and server packages. Its string form is `${kind}:${assetId}`, or
+`${kind}@${tag}:${assetId}` for the room of a tagged version.
 
 ## API
 
@@ -9,8 +10,9 @@ and server packages. Its string form is `${kind}:${assetId}`.
 class AssetRoom {
   readonly kind: string;
   readonly assetId: AssetId;
+  readonly tag: string | null;
 
-  constructor(kind: string, assetId: string | AssetId);
+  constructor(kind: string, assetId: string | AssetId, tag?: string | null);
 
   equals(other: AssetRoom): boolean;
   toJSON(): string;
@@ -20,15 +22,17 @@ class AssetRoom {
 }
 ```
 
-The constructor throws a `TypeError` when `kind` is blank or contains a colon.
-`assetId` is wrapped with `AssetId.from()`, which rejects a blank identifier.
+The constructor throws a `TypeError` when `kind` is blank or contains a colon
+or `@`, and when `tag` is blank or contains a colon. `assetId` is wrapped with
+`AssetId.from()`, which rejects a blank identifier. `tag` defaults to `null`.
 
-`parse()` splits at the first colon, so later colons stay in the asset ID. It
-returns `null` when the separator is missing or when the constructor would
-reject either half.
+`parse()` splits at the first colon, so later colons stay in the asset ID. An
+`@` before that colon starts the tag. It returns `null` when the separator is
+missing or when the constructor would reject a part.
 
-`equals()` compares kind and asset ID. `toJSON()` and `toString()` both return
-the room name.
+`equals()` compares kind, asset ID and tag, so a tagged room never equals the
+room of the current version. `toJSON()` and `toString()` both return the room
+name.
 
 ```ts
 const room = new AssetRoom("model", "hero-model");
@@ -37,4 +41,7 @@ room.toString();
 
 AssetRoom.parse("model:hero:1")?.assetId.value;
 // "hero:1"
+
+new AssetRoom("model", "hero-model", "v1").toString();
+// "model@v1:hero-model"
 ```

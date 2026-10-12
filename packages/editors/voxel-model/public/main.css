@@ -43,6 +43,9 @@ jolly-dock {
   flex-shrink: 0;
   grid-row: 1;
   min-height: 0;
+
+  --jolly-dock-handle-size: 8px;
+  --jolly-dock-resize-bg: transparent;
 }
 
 jolly-dock[side="left"] {
@@ -62,12 +65,20 @@ jolly-dock[hidden] {
   display: none;
 }
 
-#three-renderer {
+.viewport-column {
+  display: flex;
+  flex-direction: column;
   grid-row: 1;
   grid-column: 2;
+  min-width: 200px;
+  min-height: 0;
+}
+
+#three-renderer {
+  flex: 1;
   position: relative;
   overflow: hidden;
-  min-width: 200px;
+  min-height: 0;
   background: black;
 }
 
