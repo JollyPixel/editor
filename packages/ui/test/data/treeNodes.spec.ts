@@ -194,23 +194,10 @@ describe("Data.TreeSnapshot", () => {
   test("places each node among its siblings, collapsed or not", () => {
     const snapshot = new TreeSnapshot(TREE);
 
-    assert.deepEqual(snapshot.placement("a"), { position: 1, size: 2 });
-    assert.deepEqual(snapshot.placement("b"), { position: 2, size: 2 });
-    assert.deepEqual(snapshot.placement("a2"), { position: 2, size: 2 });
-    assert.deepEqual(snapshot.placement("a2a"), { position: 1, size: 1 });
+    assert.deepEqual(snapshot.placement("a"), { position: 1, size: 2, levelHasBranches: true });
+    assert.deepEqual(snapshot.placement("b"), { position: 2, size: 2, levelHasBranches: true });
+    assert.deepEqual(snapshot.placement("a2"), { position: 2, size: 2, levelHasBranches: true });
+    assert.deepEqual(snapshot.placement("a2a"), { position: 1, size: 1, levelHasBranches: false });
     assert.equal(snapshot.placement("missing"), undefined);
-  });
-
-  test("reports branches even when they are collapsed", () => {
-    assert.equal(new TreeSnapshot(TREE).hasBranches, true);
-  });
-
-  test("reports no branches for a flat list or empty children", () => {
-    const flat: TreeNode[] = [
-      { id: "x", label: "X" },
-      { id: "y", label: "Y", children: [] }
-    ];
-
-    assert.equal(new TreeSnapshot(flat).hasBranches, false);
   });
 });

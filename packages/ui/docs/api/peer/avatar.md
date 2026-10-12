@@ -2,7 +2,8 @@
 
 `jolly-avatar` draws a peer's avatar: an uploaded image when there is one,
 otherwise a default glyph picked from the peer id. It is hidden from assistive
-technology, as it sits next to the peer's name.
+technology, as it sits next to the peer's name, unless it shows a
+[presence](#presence).
 
 ```ts
 import "@jolly-pixel/ui";
@@ -35,11 +36,21 @@ same peer.
 URL of an uploaded image, drawn in place of the glyph and cropped to a rounded
 square. When it fails to load, the glyph comes back until `image` changes.
 
+### `presence`
+
+`"online"`, `"offline"`, or empty (the default) for no status. A status draws
+a dot in the bottom corner, green while online and gray while offline, and
+fades the avatar while offline. The avatar then reads as an image labeled
+"Online" or "Offline", with the same tooltip.
+
 ## Styling
 
 The avatar is 16px square. `--jolly-avatar-size` changes that, and
 `--jolly-avatar-radius` the corner radius of the image (25% by default). The
-image is exposed as the `image` part and the glyph as the `glyph` part.
+image is exposed as the `image` part, the glyph as the `glyph` part and the
+status dot as the `presence` part. The dot has a 1px ring in
+`--jolly-avatar-presence-ring` (defaults to `--jolly-surface`); set it to the
+background behind the avatar.
 
 ## Default avatars
 

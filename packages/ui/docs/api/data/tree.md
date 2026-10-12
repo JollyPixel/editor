@@ -27,6 +27,8 @@ tree.expanded = ["scene"];
 | `renamable` | `boolean` | `false` |
 | `activateOnDoubleClick` | `boolean` | `false` |
 | `indentGuides` | `boolean` | `false` |
+| `indentGuidesScope` | `TreeIndentGuidesScope` | `"all"` |
+| `toggleStyle` | `TreeToggleStyle` | `"chevron"` |
 | `swatchPosition` | `TreeSwatchPosition` | `"end"` |
 | `acceptDrop` | `TreeDropAccept \| null` | `null` |
 | `virtual` | `boolean` | `false` |
@@ -182,12 +184,14 @@ reaches the same editor through the row. A row has at most one swatch.
 
 `TreeNode.avatar` draws a [`jolly-avatar`](../peer/avatar.md) in place of
 `icon`, for rows that stand for a person, such as a list of accounts. It takes
-the avatar's `peerId`, and optionally `color` and `image`.
+the avatar's `peerId`, and optionally `color`, `image` and `presence`. With
+`presence`, the avatar shows an online or offline dot and announces it.
 
 ```ts
 node.avatar = {
   peerId: account.id,
-  image: account.avatar
+  image: account.avatar,
+  presence: account.online ? "online" : "offline"
 };
 ```
 
@@ -301,24 +305,44 @@ the rows container.
 
 ## Showing parent/child indent guides
 
-`indentGuides` draws one vertical line per ancestor level, centered under that
-ancestor's expand toggle, purely from CSS. Each row only paints guides across its
-own indent width, so the lines never reach into the toggle or label. Override
+`indentGuides` connects each row to its parent. A line drops from under the
+parent's expand toggle, a short stub reaches every child, and the line stops at
+the last child. Lines are one device pixel thick at any display scale. Override
 `--jolly-tree-guide-color` to change their color and `--jolly-tree-indent` to
-change the spacing between them (defaults to 16px).
+change the spacing between levels (defaults to 16px).
+
+Set `indentGuidesScope` to `"selected"` to draw only the lines leading from
+the selected rows up to the root, instead of every line.
 
 ## Row layout
 
 A row with children starts with its expand toggle, outside the hover and
 selection highlight. `TreeNode.collapsible: false` drops the toggle and keeps
 the children shown, for rows that belong with their parent; ArrowRight and
-ArrowLeft then move to the first child and to the parent. A row without children reserves the same width inside the
-highlight, so icons stay aligned across a level and the highlight reaches the
-row's start. When no node has children, that space is dropped.
+ArrowLeft then move to the first child and to the parent. A row without children
+reserves the same width when one of its siblings has a toggle, so icons and
+labels stay aligned across a level. The space sits inside the highlight, so the
+highlight reaches the row's start, except with `indentGuides`, where it stays
+outside like a toggle and the guide runs through it.
+Siblings without toggles drop that space.
+
+`toggleStyle` picks the expand toggle: a rotating chevron (`"chevron"`) or a
+square holding a plus or minus sign (`"box"`).
 
 The highlight has an inner inline padding on both sides, set by
 `--jolly-tree-row-padding-inline` (defaults to `--jolly-space-1`). The row adds
 no padding of its own on its end side.
+
+The highlight is exposed as the `content` part, plus `leaf` for a node
+without `children`, `branch` for one with `children`, and `selected` while the
+row is selected. Rows without children can be drawn as cards:
+
+```css
+jolly-tree::part(leaf) {
+  border: 1px solid var(--jolly-border);
+  background: var(--jolly-surface-raised);
+}
+```
 
 Node icons are 12px square; `--jolly-tree-icon-size` changes that, for
 example to 16px for [illustrated glyphs](../icon/registry.md#illustrated-glyphs).

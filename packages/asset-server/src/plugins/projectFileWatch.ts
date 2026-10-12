@@ -14,7 +14,7 @@ export function createProjectFileWatchPlugin(
 
   return {
     name: "asset-server-project-file-watch",
-    apply: "serve",
+    apply: (_config, env) => env.command === "serve" && !file.inMemory,
     configureServer(server) {
       server.watcher.add(filePath);
       server.watcher.on("change", async(changed) => {

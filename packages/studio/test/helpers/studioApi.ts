@@ -141,7 +141,7 @@ export function requestStatus(
   return promise;
 }
 
-function browser(
+export function browser(
   url: URL
 ): Browser {
   const cookies = new Map<string, string>();

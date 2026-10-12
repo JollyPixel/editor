@@ -21,7 +21,7 @@ import type { StudioProject } from "../server/project/StudioProject.ts";
 // CONSTANTS
 const kManifestPathname = `/${PROJECT_MANIFEST_FILE}`;
 
-export function projectManifestPlugin(
+export function projectManifest(
   project: StudioProject
 ): Plugin {
   const source = JSON.stringify(new ProjectManifest({
@@ -32,7 +32,9 @@ export function projectManifestPlugin(
   return {
     name: "studio-project-manifest",
     configureServer(server) {
-      server.middlewares.use(manifestMiddleware(source));
+      server.middlewares.use(
+        manifestMiddleware(source)
+      );
       logPackages(project, server.config.logger);
     },
     generateBundle() {
@@ -66,9 +68,14 @@ function manifestMiddleware(
       return;
     }
 
-    response.setHeader("Content-Type", "application/json; charset=utf-8");
+    response.setHeader(
+      "Content-Type",
+      "application/json; charset=utf-8"
+    );
     response.setHeader("Cache-Control", "no-cache");
-    response.end(request.method === "HEAD" ? undefined : source);
+    response.end(
+      request.method === "HEAD" ? undefined : source
+    );
   };
 }
 

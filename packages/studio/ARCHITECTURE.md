@@ -52,16 +52,19 @@ flowchart TB
   ([ADR-0017](./docs/adr/0017-project-packages-are-trusted-code.md)).
 - Editing the project file restarts the dev server.
 - `server/` knows nothing of Vite; `vite/` only adapts it.
+- `StudioBackend` opens the online back-end: the accounts, the asset
+  workspace and its catalog view, `StudioApi` and `SharePage`. `vite/backend`
+  mounts its middleware and attaches its WebSocket to the dev server. It
+  closes the API, then the workspace, then the accounts.
 - `StudioAccess` reads the `access` section into a rights table with a
   built-in `admin` and the `AccountRoles`. `server/accounts` opens the
   project's `Accounts` on `.jollypixel/accounts.db`: the network server
   authenticates with it and registers its `accounts` room.
 - `server/api/StudioApi` is a Fastify app that owns every `/api/` path;
-  `vite/apiPlugin` hands those requests to it. Each API surface is a Fastify
+  `StudioBackend` hands those requests to it. Each API surface is a Fastify
   plugin holding only its route table, such as `accountsRoutes`. A controller
   class such as `AccountsController` owns the handlers and maps domain errors
   to statuses.
-  The accounts are disposed last, once every plugin has closed.
 - The session cookie is named after the project root: cookies ignore ports.
 - `StudioProject.privateFiles` lists the globs Vite must not serve: every
   `.jollypixel/` folder and the project's asset files. Assets reach the
@@ -102,6 +105,9 @@ sequenceDiagram
 
 - The manifest loads while the sign-in dialog is open. A valid session cookie
   skips the dialog (`me`).
+- `StudioSignedIn` holds the signed-in account and what derives from it: the
+  peer identity, the shell's client, the roster, the share links and the
+  session renewal. A new avatar changes the identity the next launch carries.
 - Editor frames connect with the same cookie; `jolly-launch` carries the
   identity only.
 - A refused socket (`unauthorized`), the shell's or a frame's, goes through
@@ -151,8 +157,9 @@ sequenceDiagram
 - `EditorFrames` ignores messages from any other window.
 - Frames open their catalog on the launch port, served by the shell's
   `CatalogShare` ([ADR-0018](./docs/adr/0018-frames-read-the-catalog-through-the-shell.md)).
-- The shell never answers a `jolly-shell` command. `jolly-session-renewed`
-  goes to every frame, not only those that posted `session-refused`.
+- `StudioSession` handles every `jolly-shell` command and never answers one.
+  `jolly-session-renewed` goes to every frame, not only those that posted
+  `session-refused`.
 - Online, every frame joins as the shell's peer (`username`, `peerId`), so one
   user has one presence color across tabs. Offline frames stay guests.
 - One console for the whole studio: Ctrl+K in a frame posts `toggle-console`
@@ -168,10 +175,13 @@ sequenceDiagram
 | `studio:tabs` | `localStorage` | open tab ids in order, active id |
 | `studio:home-layout` | `localStorage` | asset dock size |
 | `studio:asset-kind` | `localStorage` | kind filter |
+| `studio:asset-expanded` | `localStorage` | expanded folder node ids |
 | `jolly_session_<hash>` | HttpOnly cookie | session token, unreadable from scripts |
 
-Restoring tabs skips missing assets and kinds without an editor, stops at the
-cap, and loads only the active frame.
+`StudioPreferences` reads and writes the `studio:` keys through one
+`StorageAdapter`, and parses each one once; an unreadable value reads as
+empty. Restoring tabs skips missing assets and kinds without an editor, stops
+at the cap, and loads only the active frame.
 
 ## Home
 
@@ -218,6 +228,10 @@ flowchart TB
 - Folders start collapsed; the expanded ones are kept in `localStorage`
   (`studio:asset-expanded`), like the kind filter.
 - The tree is `virtual` and scrolls inside the pane, under the toolbar.
+- `AssetTreeView` holds the tree state without the DOM: expanded folders,
+  selection, kind filter, a renamed row's new name until the catalog confirms
+  it, and the asset or folder just created, whose rename starts once the tree
+  shows it. `<asset-browser>` renders it and owns the menus and dialogs.
 - `AssetSelection` decides which actions apply, and re-checks before running.
 - Errors go to the `jolly-log`.
 
@@ -261,6 +275,7 @@ flowchart TB
 
 | Path | Role |
 |---|---|
+| `server/StudioBackend.ts` | the online back-end, opened and closed as one |
 | `server/project/` | project file, `access` section, private files |
 | `server/editors/` | editor packages and pages, dist watcher |
 | `server/accounts.ts` | project accounts |
@@ -273,5 +288,6 @@ flowchart TB
 | `src/accounts/` | `StudioSignedIn`, `SessionRenewal`, `UsersTreeModel`, `/users` console |
 | `src/shares/` | share routes, lifetimes, `ShareLinksClient`, `StudioShareLinks` |
 | `src/editors/` | `EditorRegistry`, `ProjectManifest` |
+| `src/preferences/` | `StudioPreferences` |
 | `src/tabs/` | `EditorTabs`, `EditorFrames`, `SavedTabs` |
-| `src/shell/` | `<jolly-studio>`, `StudioSession`, Home, asset browser, sign-in dialog, Users pane |
+| `src/shell/` | `<jolly-studio>`, `StudioSession`, Home, asset browser (`AssetTreeView`), sign-in dialog, Users pane |

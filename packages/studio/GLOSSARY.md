@@ -41,7 +41,7 @@ and lists the open editors.
 ### Asset browser
 
 The `<asset-browser>` element in the asset dock on Home: the kind filter, the
-asset actions and the tree of catalog records.
+asset actions, the tree of catalog records and the details of the selection.
 
 ### Folder
 

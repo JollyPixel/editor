@@ -151,6 +151,27 @@ describe("createAssetWorkspace", () => {
     assert.strictEqual(workspace.backend.catalog.size, 1);
   });
 
+  test("keeps an in-memory workspace out of its root", async() => {
+    await using temporary = await tempWorkspace();
+    const root = path.join(temporary.root, "assets");
+
+    await using workspace = await createAssetWorkspace({
+      root,
+      inMemory: true,
+      handlers: [liveCounterHandler()],
+      seed: {
+        "counter.counter": () => bytes("0")
+      },
+      backend: { watch: false }
+    });
+
+    assert.strictEqual(workspace.backend.catalog.size, 1);
+    await assert.rejects(
+      fs.access(root),
+      { code: "ENOENT" }
+    );
+  });
+
   test("uses the source it is given", async() => {
     using eventStore = EventStore.persistence.memory();
     const source = new MemoryAssetSource();

@@ -105,3 +105,14 @@ test("the shell console reaches the commands of the active editor only", async({
   await commands.submit("/help brush");
   await expect(lastEntry).toContainText("Nothing is registered as \"brush\"");
 });
+
+test("the Search tool on home opens the shell console", async({ studio, page, commands }) => {
+  await registerAccount(page.request);
+  await studio.open();
+
+  await studio.home.root
+    .getByRole("button", { name: "Search", exact: true })
+    .click();
+
+  await expect(commands.prompt).toBeFocused();
+});

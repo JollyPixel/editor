@@ -16,7 +16,7 @@ import {
 } from "vite";
 
 // Import Internal Dependencies
-import { editorPagesPlugin } from "../../vite/editorPagesPlugin.ts";
+import { editorPages } from "../../vite/editorPages.ts";
 import {
   BUNDLE,
   createDist,
@@ -29,7 +29,7 @@ import {
   removeTempDir
 } from "../helpers/tempDir.ts";
 
-describe("editorPagesPlugin", () => {
+describe("editorPages", () => {
   let dist: string;
   let root: string;
 
@@ -60,7 +60,7 @@ describe("editorPagesPlugin", () => {
       server: {
         middlewareMode: true
       },
-      plugins: [editorPagesPlugin(voxelMapPages(dist))]
+      plugins: [editorPages(voxelMapPages(dist))]
     });
     await using server = await listen(vite.middlewares);
 
@@ -84,7 +84,7 @@ describe("editorPagesPlugin", () => {
       build: {
         outDir
       },
-      plugins: [editorPagesPlugin(voxelMapPages(dist))]
+      plugins: [editorPages(voxelMapPages(dist))]
     });
 
     assert.strictEqual(

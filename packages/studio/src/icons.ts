@@ -71,6 +71,23 @@ registerIcon("share", `
   />
 `);
 
+registerIcon("users", `
+  <path
+    d="M9 4.5a3.5 3.5 0 1 1 0 7a3.5 3.5 0 0 1 0-7ZM3 20a6 6 0 0 1 12 0Z"
+    fill="currentColor"
+    opacity="0.35"
+  />
+  <path
+    class="tone-ink"
+    d="M9 4.5a3.5 3.5 0 1 1 0 7a3.5 3.5 0 0 1 0-7ZM3 20a6 6 0 0 1 12 0ZM15.5 4.6a3.5 3.5 0 0 1 0 6.8M17.5 14.3A6 6 0 0 1 21 20"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+`);
+
 registerIcon("crown", `
   <path
     d="M3 7l5 5 4-7 4 7 5-5-2 12H5L3 7Z"
@@ -150,3 +167,20 @@ registerIcon("all-kinds", `
     <path d="M39 5 V17 H51 Z" fill="#d6f1ff" />
   </g>
 `, { viewBox: "0 0 64 64" });
+
+registerIcon("settings", `
+  <path
+    d="M9.81 4.93L10.01 2.2L13.99 2.2L14.19 4.93L15.45 5.45L17.53 3.67L20.33 6.47L18.55 8.55L19.07 9.81L21.8 10.01L21.8 13.99L19.07 14.19L18.55 15.45L20.33 17.53L17.53 20.33L15.45 18.55L14.19 19.07L13.99 21.8L10.01 21.8L9.81 19.07L8.55 18.55L6.47 20.33L3.67 17.53L5.45 15.45L4.93 14.19L2.2 13.99L2.2 10.01L4.93 9.81L5.45 8.55L3.67 6.47L6.47 3.67L8.55 5.45ZM15 12a3 3 0 1 0 -6 0a3 3 0 1 0 6 0Z"
+    fill="currentColor"
+    fill-rule="evenodd"
+    opacity="0.35"
+  />
+  <path
+    class="tone-ink"
+    d="M9.81 4.93L10.01 2.2L13.99 2.2L14.19 4.93L15.45 5.45L17.53 3.67L20.33 6.47L18.55 8.55L19.07 9.81L21.8 10.01L21.8 13.99L19.07 14.19L18.55 15.45L20.33 17.53L17.53 20.33L15.45 18.55L14.19 19.07L13.99 21.8L10.01 21.8L9.81 19.07L8.55 18.55L6.47 20.33L3.67 17.53L5.45 15.45L4.93 14.19L2.2 13.99L2.2 10.01L4.93 9.81L5.45 8.55L3.67 6.47L6.47 3.67L8.55 5.45ZM15 12a3 3 0 1 0 -6 0a3 3 0 1 0 6 0Z"
+    stroke="currentColor"
+    stroke-width="1.75"
+    stroke-linejoin="round"
+    fill="none"
+  />
+`);

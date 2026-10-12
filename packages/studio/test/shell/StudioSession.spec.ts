@@ -7,11 +7,19 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { SHELL_MESSAGE_TYPE } from "@jolly-pixel/editor.host";
+import {
+  SESSION_RENEWED_MESSAGE_TYPE,
+  SHELL_MESSAGE_TYPE
+} from "@jolly-pixel/editor.host";
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { HOME_TAB_ID } from "../../src/tabs/EditorTabs.ts";
+import {
+  frame,
+  FRAME_ORIGIN,
+  recordPosts
+} from "../helpers/editorFrames.ts";
 import {
   CAVE_RECORD,
   disposeSession,
@@ -137,8 +145,10 @@ describe("StudioSession", () => {
       new MemoryStorageAdapter(),
       undefined,
       {
-        onToggleConsole: () => {
-          toggles++;
+        console: {
+          toggle: () => {
+            toggles++;
+          }
         }
       }
     );
@@ -153,26 +163,41 @@ describe("StudioSession", () => {
     assert.equal(studio.tabs.active, "map-1");
   });
 
-  test("asks to renew the session on an editor's session-refused command", async() => {
-    let refusals = 0;
+  test("renews the session on an editor's session-refused command, then tells the frames", async() => {
+    let renewals = 0;
+    const renewed = new Set<() => void>();
     const studio = session(
       new FakeCatalog([MAP_RECORD]),
       new MemoryStorageAdapter(),
       undefined,
       {
-        onSessionRefused: () => {
-          refusals++;
+        renewal: {
+          async renew() {
+            renewals++;
+            for (const listener of renewed) {
+              listener();
+            }
+          },
+          onRenewed(listener) {
+            renewed.add(listener);
+
+            return () => renewed.delete(listener);
+          }
         }
       }
     );
     await studio.openAsset("map-1");
+    const posted = recordPosts(frame());
 
     postFromFrame({
       type: SHELL_MESSAGE_TYPE,
       command: "session-refused"
     });
 
-    assert.equal(refusals, 1);
+    assert.equal(renewals, 1);
+    assert.deepEqual(posted, [
+      [{ type: SESSION_RENEWED_MESSAGE_TYPE }, FRAME_ORIGIN]
+    ]);
   });
 
   test("dispose stops following the catalog", () => {

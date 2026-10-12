@@ -22,6 +22,9 @@ export const treeStyles = css`
   }
 
   .row {
+    --toggle-size: 12px;
+    --guide-inset: 5px;
+
     position: relative;
     display: flex;
     align-items: center;
@@ -41,14 +44,17 @@ export const treeStyles = css`
 
   .row:focus-visible {
     outline: none;
+  }
+
+  .row:focus-visible .content {
     box-shadow: inset 0 0 0 1px var(--jolly-focus-ring, ${kFallback.focusRing});
   }
 
   .toggle,
   .toggle-spacer {
     flex: 0 0 auto;
-    width: 12px;
-    height: 12px;
+    width: var(--toggle-size);
+    height: var(--toggle-size);
   }
 
   .toggle {
@@ -77,6 +83,44 @@ export const treeStyles = css`
 
   .row[aria-expanded="true"] .toggle jolly-icon {
     transform: rotate(90deg);
+  }
+
+  .box-glyph {
+    display: none;
+    width: 11px;
+    height: 11px;
+    overflow: visible;
+  }
+
+  .box-glyph rect {
+    fill: none;
+    stroke: var(--jolly-tree-guide-color, var(--jolly-border, ${kFallback.borderStrong}));
+  }
+
+  .box-glyph line {
+    stroke: currentcolor;
+  }
+
+  .box-glyph *,
+  .stroke line {
+    stroke-width: var(--jolly-tree-hairline, 1px);
+    shape-rendering: crispedges;
+  }
+
+  .row[aria-expanded="true"] .box-glyph .plus {
+    display: none;
+  }
+
+  :host([toggle-style="box"]) .toggle {
+    justify-items: start;
+  }
+
+  :host([toggle-style="box"]) .box-glyph {
+    display: block;
+  }
+
+  :host([toggle-style="box"]) .toggle jolly-icon {
+    display: none;
   }
 
   .content {
@@ -327,20 +371,54 @@ export const treeStyles = css`
     outline-offset: -1px;
   }
 
-  :host([indent-guides]) .row::before {
-    content: "";
+  .guides {
     position: absolute;
     inset-block: 0;
     inset-inline-start: 0;
-    width: var(--jolly-tree-row-indent, 0);
-    background-image: repeating-linear-gradient(
-      to right,
-      var(--jolly-tree-guide-color, var(--jolly-border, ${kFallback.borderStrong})) 0,
-      var(--jolly-tree-guide-color, var(--jolly-border, ${kFallback.borderStrong})) 1px,
-      transparent 1px,
-      transparent var(--jolly-tree-indent, 16px)
-    );
-    background-position: 5px 0;
+    display: flex;
     pointer-events: none;
+  }
+
+  .rail {
+    position: relative;
+    flex: 0 0 var(--jolly-tree-indent, 16px);
+  }
+
+  .stroke {
+    position: absolute;
+    overflow: visible;
+  }
+
+  .stroke line {
+    stroke: var(--jolly-tree-guide-color, var(--jolly-border, ${kFallback.borderStrong}));
+  }
+
+  .vertical {
+    top: 0;
+    inset-inline-start: var(--guide-inset);
+    width: 1px;
+    height: 100%;
+  }
+
+  .rail[data-rail="elbow"] .vertical {
+    height: 50%;
+  }
+
+  .rail[data-rail="start"] .vertical {
+    top: calc(50% + var(--guide-inset));
+    height: calc(50% - var(--guide-inset));
+  }
+
+  .horizontal {
+    top: 50%;
+    inset-inline-start: var(--guide-inset);
+    width: calc(100% - var(--guide-inset));
+    height: 1px;
+  }
+
+  .row[data-spacer="outside"] .horizontal {
+    width: calc(
+      100% - var(--guide-inset) + var(--toggle-size) + var(--jolly-space-1, 4px)
+    );
   }
 `;

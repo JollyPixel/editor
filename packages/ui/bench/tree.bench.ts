@@ -87,7 +87,8 @@ function rowStateOf(
       moveCursor: false,
       renaming: false,
       renameError: null,
-      hasBranches: true,
+      spacer: "inside",
+      rails: [],
       swatchPosition: "end",
       reorderable: true
     };

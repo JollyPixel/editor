@@ -34,17 +34,30 @@ import {
   type TreeInteraction
 } from "./interaction.ts";
 import { treeStyles } from "./Tree.styles.ts";
+import {
+  TreeRowLayout,
+  type TreeRail
+} from "./TreeRowLayout.ts";
+import {
+  BOX_GLYPH,
+  renderBadges,
+  renderGuides,
+  renderIcon,
+  renderWarning
+} from "./rowTemplates.ts";
 import { TreeDragController } from "./TreeDragController.ts";
 import { TreeFocusController } from "./TreeFocusController.ts";
+import { TreeHairlineController } from "./TreeHairlineController.ts";
 import { TreeRenameController } from "./TreeRenameController.ts";
 import { TreeSelectionController } from "./TreeSelectionController.ts";
 import {
   emitDataEvent,
-  type TreeBadge,
   type TreeDropAccept,
+  type TreeIndentGuidesScope,
   type TreeNode,
   type TreeRenameValidator,
-  type TreeSwatchPosition
+  type TreeSwatchPosition,
+  type TreeToggleStyle
 } from "./contract.ts";
 
 // Registers the chevron, eye, lock and drag glyphs.
@@ -55,6 +68,7 @@ import { revealOverflowTitle } from "../../interaction/overflowTitle.ts";
 
 // CONSTANTS
 const kFlowLayout = flow();
+const kNoRails: readonly TreeRail[] = Object.freeze([]);
 
 @customElement("jolly-tree")
 export class Tree<TData = unknown> extends LitElement {
@@ -114,6 +128,18 @@ export class Tree<TData = unknown> extends LitElement {
 
   @property({
     reflect: true,
+    attribute: "indent-guides-scope"
+  })
+  declare indentGuidesScope: TreeIndentGuidesScope;
+
+  @property({
+    reflect: true,
+    attribute: "toggle-style"
+  })
+  declare toggleStyle: TreeToggleStyle;
+
+  @property({
+    reflect: true,
     attribute: "swatch-position"
   })
   declare swatchPosition: TreeSwatchPosition;
@@ -131,6 +157,7 @@ export class Tree<TData = unknown> extends LitElement {
   private declare _interaction: TreeInteraction;
 
   #snapshot: TreeSnapshot<TData>;
+  #layout: TreeRowLayout<TData>;
   #expandedIds: ReadonlySet<string>;
   #selectedIds: ReadonlySet<string>;
   #drag: TreeDragController<TData>;
@@ -148,7 +175,8 @@ export class Tree<TData = unknown> extends LitElement {
     moveCursor: false,
     renaming: false,
     renameError: null,
-    hasBranches: false,
+    spacer: "none",
+    rails: kNoRails,
     swatchPosition: "end",
     reorderable: false
   };
@@ -169,14 +197,18 @@ export class Tree<TData = unknown> extends LitElement {
     this.renamable = false;
     this.activateOnDoubleClick = false;
     this.indentGuides = false;
+    this.indentGuidesScope = "all";
+    this.toggleStyle = "chevron";
     this.swatchPosition = "end";
     this.acceptDrop = null;
     this.virtual = false;
     this.validateRename = null;
     this._interaction = idleTreeInteraction();
+    new TreeHairlineController(this);
     this.#expandedIds = new Set();
     this.#selectedIds = new Set();
     this.#snapshot = new TreeSnapshot(this.nodes);
+    this.#layout = new TreeRowLayout(this.#snapshot, this.#expandedIds);
     this.#drag = new TreeDragController(this, {
       nodes: () => this.nodes,
       snapshot: () => this.#snapshot,
@@ -237,6 +269,14 @@ export class Tree<TData = unknown> extends LitElement {
         this.nodes,
         this.#expandedIds
       );
+      this.#layout = new TreeRowLayout(this.#snapshot, this.#expandedIds);
+    }
+    if (
+      changed.has("nodes") ||
+      changed.has("expanded") ||
+      changed.has("selected")
+    ) {
+      this.#layout.follow(this.#selectedIds);
     }
   }
 
@@ -290,7 +330,9 @@ export class Tree<TData = unknown> extends LitElement {
     this.#activeRowId = activeId;
 
     const state = this.#rowState;
-    state.hasBranches = this.#snapshot.hasBranches;
+    const layout = this.#layout;
+    const guides = this.indentGuides;
+    const scope = this.indentGuidesScope;
     state.swatchPosition = this.swatchPosition;
     state.reorderable = this.reorderable;
 
@@ -303,6 +345,8 @@ export class Tree<TData = unknown> extends LitElement {
       );
       state.position = placement?.position ?? 1;
       state.setSize = placement?.size ?? 1;
+      state.spacer = layout.spacer(id, guides);
+      state.rails = guides ? layout.rails(id, scope) : kNoRails;
       state.expanded = this.#expandedIds.has(id);
       state.selected = this.#selectedIds.has(id);
       state.active = id === activeId;
@@ -343,12 +387,14 @@ export class Tree<TData = unknown> extends LitElement {
         data-move-cursor=${view.moveCursor ? "true" : nothing}
         data-hidden=${view.visible === false ? "true" : nothing}
         data-warning=${view.warning === undefined ? nothing : "true"}
+        data-spacer=${view.spacer === "outside" ? "outside" : nothing}
         style=${styleMap(rowStyle)}
         @click=${(event: MouseEvent) => this.#selection.onRowClick(event, id)}
         @dblclick=${(event: MouseEvent) => this.#onRowDoubleClick(event, id)}
         @contextmenu=${(event: MouseEvent) => this.#onRowContextMenu(event, id)}
         @pointerdown=${(event: PointerEvent) => this.#drag.onRowPointerDown(event, id)}
       >
+        ${renderGuides(view.rails)}
         ${view.branch ? html`
           <button
             class="toggle"
@@ -356,27 +402,22 @@ export class Tree<TData = unknown> extends LitElement {
             tabindex="-1"
             aria-label=${view.expanded ? "Collapse" : "Expand"}
             @click=${(event: Event) => this.#onToggleExpand(event, id)}
-          ><jolly-icon name="chevron" aria-hidden="true"></jolly-icon></button>
+          ><jolly-icon name="chevron" aria-hidden="true"></jolly-icon>${BOX_GLYPH}</button>
         ` : nothing}
-        <span class="content">
-          ${!view.branch && view.hasBranches ? html`
+        ${view.spacer === "outside" ? html`
+          <span class="toggle-spacer"></span>
+        ` : nothing}
+        <span class="content" part=${view.contentPart}>
+          ${view.spacer === "inside" ? html`
             <span class="toggle-spacer"></span>
           ` : nothing}
-          ${this.#renderIcon(view)}
+          ${renderIcon(view)}
           ${view.swatchPosition === "start" ? this.#renderSwatch(view) : nothing}
           ${this.#renderLabel(view)}
           ${view.detail ? html`<span class="detail">${view.detail}</span>` : nothing}
           ${view.swatchPosition === "end" ? this.#renderSwatch(view) : nothing}
-          ${view.warning === undefined ? nothing : html`
-            <jolly-icon
-              class="warning"
-              name="warning"
-              role="img"
-              aria-label=${view.warning}
-              title=${view.warning}
-            ></jolly-icon>
-          `}
-          ${this.#renderBadges(view)}
+          ${renderWarning(view)}
+          ${renderBadges(view)}
           ${view.visible === undefined ? nothing : html`
             <button
               class="visible-toggle"
@@ -450,70 +491,6 @@ export class Tree<TData = unknown> extends LitElement {
     return this.renderRoot.querySelector<HTMLElement>(
       `.row[data-id="${CSS.escape(id)}"]`
     );
-  }
-
-  #renderBadges(
-    view: TreeRowView
-  ): TemplateResult | typeof nothing {
-    const badges = view.badges;
-    if (badges.length === 0) {
-      return nothing;
-    }
-
-    return html`
-      <span class="badges">${badges.map((badge) => this.#renderBadge(badge))}</span>
-    `;
-  }
-
-  #renderBadge(
-    badge: TreeBadge
-  ): TemplateResult {
-    const label = badge.title ?? "Badge";
-    const title = badge.title ?? nothing;
-    if (badge.icon === undefined) {
-      return html`
-        <span
-          class="badge"
-          role="img"
-          aria-label=${label}
-          title=${title}
-          style="background: ${badge.color}"
-        ></span>
-      `;
-    }
-
-    return html`
-      <jolly-icon
-        class="badge-icon"
-        name=${badge.icon}
-        role="img"
-        aria-label=${label}
-        title=${title}
-        style="color: ${badge.color}"
-      ></jolly-icon>
-    `;
-  }
-
-  #renderIcon(
-    view: TreeRowView
-  ): TemplateResult | typeof nothing {
-    if (view.avatar !== undefined) {
-      return html`
-        <jolly-avatar
-          class="node-avatar"
-          peer-id=${view.avatar.peerId}
-          color=${view.avatar.color ?? ""}
-          image=${view.avatar.image ?? ""}
-        ></jolly-avatar>
-      `;
-    }
-    if (view.icon === undefined) {
-      return nothing;
-    }
-
-    return html`
-      <jolly-icon class="node-icon" name=${view.icon} aria-hidden="true"></jolly-icon>
-    `;
   }
 
   #renderSwatch(

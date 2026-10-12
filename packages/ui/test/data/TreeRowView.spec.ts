@@ -48,7 +48,8 @@ const kState: TreeRowState = {
   moveCursor: false,
   renaming: false,
   renameError: null,
-  hasBranches: true,
+  spacer: "inside",
+  rails: ["tee"],
   swatchPosition: "end",
   reorderable: true
 };
@@ -112,6 +113,7 @@ describe("Data.TreeRowView", () => {
       { avatar: { peerId: "lin", color: "#f00" } },
       { avatar: { peerId: "ada", color: "#00f" } },
       { avatar: { ...kAvatar, image: "/ada.webp" } },
+      { avatar: { ...kAvatar, presence: "online" } },
       { detail: undefined },
       { visible: false },
       { locked: true },
@@ -122,7 +124,8 @@ describe("Data.TreeRowView", () => {
       { badges: [{ color: "#0f0" }] },
       { badges: [{ color: "#00f", title: "Peer" }] },
       { badges: [{ color: "#0f0", title: "Peer", icon: "lock" }] },
-      { children: [{ id: "arm", label: "Arm" }] }
+      { children: [{ id: "arm", label: "Arm" }] },
+      { children: [] }
     ];
 
     for (const change of changes) {
@@ -142,7 +145,8 @@ describe("Data.TreeRowView", () => {
       { dragSource: true },
       { moveCursor: true },
       { renaming: true },
-      { hasBranches: false },
+      { spacer: "outside" },
+      { rails: ["elbow"] },
       { swatchPosition: "start" },
       { reorderable: false }
     ];

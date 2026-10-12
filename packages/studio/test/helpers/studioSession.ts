@@ -7,6 +7,7 @@ import {
 
 // Import Internal Dependencies
 import { EditorRegistry } from "../../src/editors/EditorRegistry.ts";
+import { StudioPreferences } from "../../src/preferences/StudioPreferences.ts";
 import {
   StudioSession,
   type StudioCatalog,
@@ -119,7 +120,7 @@ export function session(
       launchOrigin: "http://localhost",
       share: idleShare()
     },
-    storage,
+    preferences: new StudioPreferences(storage),
     ...extra
   });
 

@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   LitElement,
+  css,
   html,
   type TemplateResult
 } from "lit";
@@ -9,23 +10,26 @@ import {
   query,
   state
 } from "lit/decorators.js";
+import type { Account } from "@jolly-pixel/accounts";
 import {
   FrameConsoles,
   type CatalogShare,
-  type EditorConsole,
-  type LaunchIdentity
+  type EditorConsole
 } from "@jolly-pixel/editor.host";
 import {
   LogQueue,
-  type LogEntry,
-  type PeerIdentity
+  type LogEntry
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { AssetBrowserOptions } from "./assets/AssetBrowser.ts";
-import type { StudioSignedIn } from "../accounts/StudioSignedIn.ts";
+import {
+  SIGNED_IN_CHANGE,
+  type StudioSignedIn
+} from "../accounts/StudioSignedIn.ts";
 import { StudioSession } from "./StudioSession.ts";
 import type { EditorRegistry } from "../editors/EditorRegistry.ts";
+import { StudioPreferences } from "../preferences/StudioPreferences.ts";
 import type {
   EditorTab,
   EditorTabsOptions
@@ -35,7 +39,6 @@ import "./account/AccountBadge.ts";
 
 export interface StudioOptions {
   share: CatalogShare;
-  identity: PeerIdentity | null;
   confirmEvict?: EditorTabsOptions["confirmEvict"];
   editors: EditorRegistry;
   console?: EditorConsole;
@@ -44,6 +47,139 @@ export interface StudioOptions {
 
 @customElement("jolly-studio")
 export class Studio extends LitElement {
+  static override styles = css`
+    :host {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      min-height: 0;
+      background: var(--studio-window);
+      color: var(--jolly-text);
+      font-family: var(--jolly-font-family);
+      font-size: var(--jolly-font-size);
+
+      --studio-gutter: var(--jolly-space-2);
+      --studio-gutter-tight: var(--jolly-space-1);
+      --studio-radius: var(--jolly-radius-md);
+      --studio-window: light-dark(
+        var(--jolly-surface-sunken),
+        color-mix(in oklab, var(--jolly-surface-sunken), black 12%)
+      );
+      --studio-board: var(--jolly-surface);
+      --studio-card: color-mix(
+        in oklab,
+        var(--jolly-surface),
+        var(--jolly-surface-raised)
+      );
+      --studio-card-head-height: 36px;
+      --studio-light: light-dark(
+        rgb(255 255 255 / 70%),
+        rgb(255 255 255 / 5%)
+      );
+      --studio-shade: light-dark(rgb(0 0 0 / 7%), rgb(0 0 0 / 30%));
+      --studio-bevel:
+        inset 0 1px 0 var(--studio-light),
+        inset 0 -1px 0 var(--studio-shade);
+    }
+
+    #studio-header {
+      display: flex;
+      flex: 0 0 auto;
+      align-items: flex-end;
+      gap: var(--studio-gutter);
+      padding: var(--studio-gutter) var(--studio-gutter) 0;
+    }
+
+    #editor-tabs {
+      flex: 1 1 auto;
+      min-width: 0;
+
+      --jolly-control-height: 34px;
+      --jolly-tab-icon-size: 20px;
+      --jolly-tab-close-size: 20px;
+      --jolly-tab-close-icon-size: 12px;
+    }
+
+    #editor-tabs::part(list) {
+      gap: 2px;
+    }
+
+    #editor-tabs::part(tab) {
+      border-radius: var(--studio-radius) var(--studio-radius) 0 0;
+      background: color-mix(in oklab, var(--studio-board) 50%, transparent);
+      color: var(--jolly-text-muted);
+    }
+
+    #editor-tabs::part(tab):hover {
+      background: color-mix(in oklab, var(--studio-board) 80%, transparent);
+      color: var(--jolly-text);
+    }
+
+    #editor-tabs::part(tab-selected),
+    #editor-tabs::part(tab-selected):hover {
+      background: var(--studio-board);
+      color: var(--jolly-text);
+      box-shadow: inset 0 1px 0 var(--studio-light);
+    }
+
+    #editor-tabs::part(tab-selected)::after {
+      background: transparent;
+    }
+
+    #editor-tabs::part(close) {
+      margin-inline: 4px;
+    }
+
+    #studio-actions {
+      flex: 0 0 auto;
+      margin-block-end: 2px;
+    }
+
+    #workbench {
+      position: relative;
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      min-height: 0;
+      margin: 0 var(--studio-gutter) var(--studio-gutter);
+      padding: var(--studio-gutter);
+      overflow: hidden;
+      border-radius: 0 var(--studio-radius) var(--studio-radius);
+      background: var(--studio-board);
+      box-shadow: inset 0 -1px 0 var(--studio-shade);
+    }
+
+    #workbench:has(studio-home[hidden]) {
+      margin: 0 var(--studio-gutter-tight) var(--studio-gutter-tight);
+      padding: var(--studio-gutter-tight);
+      border-radius: var(--studio-radius);
+    }
+
+    #editor-frames {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+    }
+
+    #editor-frames iframe {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      border-radius: var(--jolly-radius-sm);
+    }
+
+    #editor-frames iframe[hidden] {
+      display: none;
+    }
+
+    jolly-log {
+      position: absolute;
+      inset-block-end: calc(var(--studio-gutter) * 3);
+      inset-inline-start: calc(var(--studio-gutter) * 3);
+    }
+  `;
+
   @state()
   declare _assets: AssetBrowserOptions | null;
 
@@ -56,6 +192,9 @@ export class Studio extends LitElement {
   @state()
   declare _signedIn: StudioSignedIn | null;
 
+  @state()
+  declare _account: Account | null;
+
   @query("jolly-tabs")
   declare _strip: HTMLElementTagNameMap["jolly-tabs"] | null;
 
@@ -66,9 +205,9 @@ export class Studio extends LitElement {
   declare _home: HTMLElement | null;
 
   #session: StudioSession | null = null;
+  #preferences = new StudioPreferences();
   #queue = new LogQueue();
   #unsubscribe: (() => void) | null = null;
-  #stopRenewal: (() => void) | null = null;
 
   constructor() {
     super();
@@ -76,6 +215,7 @@ export class Studio extends LitElement {
     this._openTabs = [];
     this._log = [];
     this._signedIn = null;
+    this._account = null;
   }
 
   async attach(
@@ -92,9 +232,11 @@ export class Studio extends LitElement {
 
     this.#session?.dispose();
     const { catalog } = options.share;
+    const signedIn = options.signedIn ?? null;
     const session = new StudioSession({
       catalog,
       editors: options.editors,
+      preferences: this.#preferences,
       tabs: {
         strip: this._strip,
         home: this._home,
@@ -103,29 +245,22 @@ export class Studio extends LitElement {
       frames: {
         container: this._frames,
         share: options.share,
-        identity: () => this.#launchIdentity(options.identity),
+        identity: () => signedIn?.identity ?? null,
         consoles: options.console === undefined ?
           undefined :
           new FrameConsoles({ commands: options.console.commands })
       },
       onTabsChange: this.#syncOpenTabs,
-      onToggleConsole: () => {
-        options.console?.element.toggle();
-      },
-      onSessionRefused: () => {
-        void options.signedIn?.renewal.renew();
-      }
+      console: options.console?.element,
+      renewal: signedIn?.renewal
     });
     this.#session = session;
-    this.#stopRenewal?.();
-    this.#stopRenewal = options.signedIn?.renewal.onRenewed(
-      () => session.notifySessionRenewed()
-    ) ?? null;
-    this._signedIn = options.signedIn ?? null;
+    this.#follow(signedIn);
     this._assets = {
       catalog,
       kinds: session.kinds,
-      shares: options.signedIn?.shares ?? null
+      shares: signedIn?.shares ?? null,
+      preferences: this.#preferences
     };
     await session.restoreTabs();
     this.#syncOpenTabs();
@@ -157,14 +292,9 @@ export class Studio extends LitElement {
     super.disconnectedCallback();
     this.#unsubscribe?.();
     this.#unsubscribe = null;
-    this.#stopRenewal?.();
-    this.#stopRenewal = null;
+    this.#follow(null);
     this.#session?.dispose();
     this.#session = null;
-  }
-
-  protected override createRenderRoot(): HTMLElement {
-    return this;
   }
 
   override render(): TemplateResult {
@@ -173,8 +303,8 @@ export class Studio extends LitElement {
         <jolly-tabs id="editor-tabs" reorderable></jolly-tabs>
         <jolly-toolbar id="studio-actions" label="Studio actions">
           <studio-account
-            .account=${this._signedIn?.account ?? null}
-            .avatar=${this._signedIn?.account.avatar ?? ""}
+            .account=${this._account}
+            .avatar=${this._account?.avatar ?? ""}
             @sign-out=${this.#signOut}
             @avatar-change=${this.#replaceAvatar}
           ></studio-account>
@@ -189,7 +319,10 @@ export class Studio extends LitElement {
             .assets=${this._assets}
             .openTabs=${this._openTabs}
             @asset-open=${this.#onAssetOpen}
+            @console-toggle=${this.#toggleConsole}
             .signedIn=${this._signedIn}
+            .account=${this._account}
+            .preferences=${this.#preferences}
             @asset-error=${this.#logError}
             @users-error=${this.#logError}
           ></studio-home>
@@ -199,6 +332,19 @@ export class Studio extends LitElement {
     `;
   }
 
+  #follow(
+    signedIn: StudioSignedIn | null
+  ): void {
+    this._signedIn?.removeEventListener(SIGNED_IN_CHANGE, this.#syncAccount);
+    this._signedIn = signedIn;
+    signedIn?.addEventListener(SIGNED_IN_CHANGE, this.#syncAccount);
+    this.#syncAccount();
+  }
+
+  readonly #syncAccount = (): void => {
+    this._account = this._signedIn?.account ?? null;
+  };
+
   readonly #signOut = (): void => {
     void this._signedIn?.signOut();
   };
@@ -206,17 +352,8 @@ export class Studio extends LitElement {
   readonly #replaceAvatar = async(
     event: HTMLElementEventMap["avatar-change"]
   ): Promise<void> => {
-    const signedIn = this._signedIn;
-    if (signedIn === null) {
-      return;
-    }
-
     try {
-      const account = await signedIn.replaceAvatar(event.detail.image);
-      this._signedIn = {
-        ...signedIn,
-        account
-      };
+      await this._signedIn?.replaceAvatar(event.detail.image);
     }
     catch (error) {
       this.#queue.push(
@@ -225,21 +362,12 @@ export class Studio extends LitElement {
     }
   };
 
-  #launchIdentity(
-    identity: PeerIdentity | null
-  ): LaunchIdentity | null {
-    const avatar = this._signedIn?.account.avatar;
-
-    return identity === null || avatar === undefined ?
-      identity :
-      {
-        ...identity,
-        avatar
-      };
-  }
-
   readonly #syncOpenTabs = (): void => {
     this._openTabs = this.#session?.tabs.list() ?? [];
+  };
+
+  readonly #toggleConsole = (): void => {
+    this.#session?.toggleConsole();
   };
 
   readonly #onAssetOpen = (

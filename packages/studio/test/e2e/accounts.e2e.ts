@@ -48,5 +48,7 @@ test("lists the signed-in user online under its role", async({ studio, account }
   await studio.goto();
 
   await expect(studio.roster.row(/Member/)).toBeVisible();
-  await expect(studio.roster.row(new RegExp(account))).toContainText("you");
+  await expect(
+    studio.roster.row(new RegExp(account)).getByRole("img", { name: "Online" })
+  ).toBeVisible();
 });

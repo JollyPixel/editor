@@ -64,6 +64,12 @@ export class AssetKindSet implements AssetKindPresenter {
     return this.#byKind.get(kind);
   }
 
+  labelFor(
+    kind: string
+  ): string {
+    return this.#byKind.get(kind)?.label ?? kind;
+  }
+
   iconFor(
     kind: string
   ): IconName {
@@ -72,10 +78,16 @@ export class AssetKindSet implements AssetKindPresenter {
     )?.icon ?? kFallbackIcon;
   }
 
+  canEdit(
+    kind: string
+  ): boolean {
+    return this.#editable.has(kind);
+  }
+
   detailFor(
     kind: string
   ): string | undefined {
-    return this.#editable.has(kind)
+    return this.canEdit(kind)
       ? undefined
       : kNoEditorDetail;
   }

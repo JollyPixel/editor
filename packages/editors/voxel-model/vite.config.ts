@@ -14,13 +14,10 @@ import {
   ProjectKinds,
   type ProjectFileData
 } from "@jolly-pixel/asset-server/node";
-import { MemoryAssetSource } from "@jolly-pixel/asset-source";
-import * as EventStore from "@jolly-pixel/event-store";
 import { VOXEL_MODEL_KIND } from "@jolly-pixel/asset.voxel-model";
 import {
-  CookieRoles,
   PORTS,
-  prebundleWorkspace
+  RunMode
 } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
@@ -30,7 +27,6 @@ import {
 } from "./src/boot/modelProject.ts";
 
 // CONSTANTS
-const kE2EMode = "e2e";
 const kTextureAssetId = "model-texture";
 const kAssetsRoot = path.join(import.meta.dirname, "assets");
 const kProjectFile: ProjectFileData = {
@@ -43,56 +39,38 @@ const kProjectFile: ProjectFileData = {
     }
   }
 };
-const kRights = {
-  member: {
-    "*": "write"
-  },
-  spectator: {
-    "*.$join": "write",
-    "*.$presence": "write",
-    "*": "read"
-  }
-} as const;
 
-const kRoles = new CookieRoles();
-
-export default defineConfig(async({ command, mode }): Promise<UserConfig> => {
-  const e2e = mode === kE2EMode;
-  const staticHosting = mode === "static";
-  const inMemory = command === "build" || e2e;
-  const projectFile = await ProjectFile.open(kAssetsRoot, kProjectFile, {
-    inMemory
-  });
+export default defineConfig(async(env): Promise<UserConfig> => {
+  const mode = new RunMode(
+    env,
+    { port: PORTS.voxelModel }
+  );
+  const projectFile = await ProjectFile.open(
+    kAssetsRoot,
+    kProjectFile,
+    mode
+  );
   const kinds = await ProjectKinds.load(projectFile);
 
   return {
     base: "./",
-    server: e2e ?
-      {
-        port: PORTS.voxelModel,
-        strictPort: true
-      } :
-      undefined,
+    server: mode.server,
     plugins: [
-      prebundleWorkspace(),
+      mode.plugins(),
       createProjectKindsPlugin(kinds),
-      e2e ? kRoles.plugin() : null,
-      inMemory ? null : createProjectFileWatchPlugin(projectFile),
-      ...staticHosting ? [] : [createAssetWorkspacePlugin({
+      createProjectFileWatchPlugin(projectFile),
+      createAssetWorkspacePlugin({
         root: kAssetsRoot,
-        ...(e2e ?
-          {
-            source: new MemoryAssetSource(),
-            eventStore: EventStore.persistence.memory()
-          } :
-          {}),
+        inMemory: mode.inMemory,
+        ...mode.access,
         ...createModelProject(kTextureAssetId),
         handlers: kinds.handlers(),
-        launch: ({ catalog }) => catalog.byKind(VOXEL_MODEL_KIND).next().value?.id.value,
-        auth: e2e ? kRoles : undefined,
-        rights: kRights,
-        defaultRole: "member"
-      })]
+        launch({ catalog }) {
+          return catalog.byKind(
+            VOXEL_MODEL_KIND
+          ).next().value?.id.value;
+        }
+      })
     ]
   };
 });

@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   LitElement,
+  css,
   html,
   nothing,
   type TemplateResult
@@ -35,6 +36,29 @@ export interface UsersErrorDetail {
 
 @customElement("studio-users")
 export class UsersPane extends LitElement {
+  static override styles = css`
+    :host {
+      display: block;
+      padding: var(--jolly-space-2);
+    }
+
+    jolly-tree {
+      --jolly-row-height: 26px;
+      --jolly-tree-avatar-size: 18px;
+      --jolly-avatar-presence-ring: var(--jolly-surface-raised);
+    }
+
+    jolly-tree::part(leaf) {
+      margin-block: 1px;
+      border: 1px solid var(--jolly-border);
+      background: var(--jolly-surface-raised);
+    }
+
+    jolly-tree::part(leaf):hover {
+      background: var(--jolly-control-bg-hover);
+    }
+  `;
+
   @property({ attribute: false })
   declare self: Account | null;
 
@@ -67,16 +91,13 @@ export class UsersPane extends LitElement {
     this.#roster.attach(roster);
   }
 
-  protected override createRenderRoot(): HTMLElement {
-    return this;
-  }
-
   override render(): TemplateResult {
     const model = this.#model();
 
     return html`
       <jolly-tree
         indent-guides
+        toggle-style="box"
         .nodes=${model.nodes}
         .expanded=${this.#expanded(model)}
         @jolly-toggle-expand=${this.#onToggleExpand}
@@ -240,6 +261,7 @@ export class UsersPane extends LitElement {
     change.catch((error: unknown) => {
       const event = new CustomEvent<UsersErrorDetail>("users-error", {
         bubbles: true,
+        composed: true,
         detail: {
           message: error instanceof Error ? error.message : String(error)
         }

@@ -2,7 +2,10 @@
 import path from "node:path";
 
 // Import Third-party Dependencies
-import type { AssetSource } from "@jolly-pixel/asset-source";
+import {
+  MemoryAssetSource,
+  type AssetSource
+} from "@jolly-pixel/asset-source";
 import { FilesystemAssetSource } from "@jolly-pixel/asset-source/node";
 import * as EventStore from "@jolly-pixel/event-store";
 import {
@@ -46,11 +49,19 @@ export interface AssetWorkspaceOptions {
    */
   seed?: AssetSeedMap;
   /**
-   * @default FilesystemAssetSource on `root`
+   * Swaps the default source and event log for in-memory ones, so the
+   * workspace never reads or writes `root`.
+   * @default false
+   */
+  inMemory?: boolean;
+  /**
+   * @default FilesystemAssetSource on `root`, or MemoryAssetSource when
+   * `inMemory`
    */
   source?: AssetSource;
   /**
-   * @default sqlite log inside the workspace state directory
+   * @default sqlite log inside the workspace state directory, or an
+   * in-memory log when `inMemory`
    */
   eventStore?: EventStore.TypedEventStore<AssetEventDataMap>;
   /**
@@ -107,6 +118,7 @@ export async function createAssetWorkspace(
     root,
     handlers = [],
     seed,
+    inMemory = false,
     extensions = [],
     rights,
     defaultRole,
@@ -118,16 +130,19 @@ export async function createAssetWorkspace(
     backend: tuning = {}
   } = options;
 
-  const source = options.source ?? new FilesystemAssetSource(root);
+  const source = options.source ?? (
+    inMemory ? new MemoryAssetSource() : new FilesystemAssetSource(root)
+  );
   if (seed) {
     await seedAssetSource(source, seed, { handlers });
   }
 
   const ownsEventStore = options.eventStore === undefined;
-  const eventStore = options.eventStore ??
+  const eventStore = options.eventStore ?? (inMemory ?
+    EventStore.persistence.memory<AssetEventDataMap>() :
     await EventStore.persistence.sqlite<AssetEventDataMap>(
       path.join(root, EVENTS_DB_PATH)
-    );
+    ));
 
   if (compactOnOpen) {
     const report = eventStore.compact({

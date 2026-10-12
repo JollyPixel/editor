@@ -61,12 +61,12 @@ test("an editor takes the full width and home lists it among open editors", asyn
 
   await studio.assets.open(MAP);
   await expect(studio.assets.root).toBeHidden();
-  const [frame, workbench] = await Promise.all([
+  const [frame, frames] = await Promise.all([
     boxOf(studio.frames.all),
-    boxOf(page.locator("#workbench"))
+    boxOf(page.locator("#editor-frames"))
   ]);
-  expect(frame.x).toBe(workbench.x);
-  expect(frame.width).toBe(workbench.width);
+  expect(frame.x).toBe(frames.x);
+  expect(frame.width).toBe(frames.width);
 
   await tabs.home.click();
   await expect(studio.assets.root).toBeVisible();

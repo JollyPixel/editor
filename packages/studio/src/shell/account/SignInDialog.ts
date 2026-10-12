@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   LitElement,
+  css,
   html,
   nothing,
   type TemplateResult
@@ -41,6 +42,64 @@ export type SignInMode = "login" | "register";
 
 @customElement("studio-sign-in")
 export class SignInDialog extends LitElement {
+  static override styles = css`
+    .sign-in-form {
+      display: flex;
+      flex-direction: column;
+      gap: var(--jolly-space-3);
+      min-width: 280px;
+    }
+
+    .sign-in-form label {
+      display: flex;
+      flex-direction: column;
+      gap: var(--jolly-space-1);
+    }
+
+    .sign-in-form input {
+      padding: var(--jolly-space-2);
+      border: 1px solid var(--jolly-border);
+      border-radius: var(--jolly-radius-sm);
+      background: var(--jolly-control-bg);
+      color: var(--jolly-text);
+      font: inherit;
+    }
+
+    .sign-in-form input:focus-visible {
+      outline: 2px solid var(--jolly-focus-ring);
+      outline-offset: 1px;
+    }
+
+    .sign-in-error {
+      margin: 0;
+      color: var(--jolly-danger);
+    }
+
+    .sign-in-notice {
+      margin: 0;
+      color: var(--jolly-text-muted);
+    }
+
+    .sign-in-link {
+      align-self: flex-start;
+      padding: 0;
+      border: none;
+      background: none;
+      color: var(--jolly-accent-text);
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .sign-in-link:hover {
+      text-decoration: underline;
+    }
+
+    .sign-in-link:focus-visible {
+      outline: 2px solid var(--jolly-focus-ring);
+      outline-offset: 1px;
+    }
+  `;
+
   @state()
   declare _mode: SignInMode;
 
@@ -99,10 +158,6 @@ export class SignInDialog extends LitElement {
     this._username.focus();
 
     return promise;
-  }
-
-  protected override createRenderRoot(): HTMLElement {
-    return this;
   }
 
   override render(): TemplateResult {
