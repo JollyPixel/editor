@@ -79,26 +79,37 @@ describe("StudioAccess.read", () => {
     }
   });
 
-  test("lets a role share only with write on studio.$share", () => {
-    const access = StudioAccess.read({
-      access: {
-        roles: {
-          ...DEFAULT_ACCESS.roles,
-          reviewer: {
-            "studio.$share": "write",
-            "*": "read"
+  for (const { right, allows } of [
+    {
+      right: "studio.$share",
+      allows: (access: StudioAccess, role: string) => access.canShare(role)
+    },
+    {
+      right: "studio.$export",
+      allows: (access: StudioAccess, role: string) => access.canExport(role)
+    }
+  ]) {
+    test(`grants ${right} only to roles with write on it`, () => {
+      const access = StudioAccess.read({
+        access: {
+          roles: {
+            ...DEFAULT_ACCESS.roles,
+            reviewer: {
+              [right]: "write",
+              "*": "read"
+            }
           }
         }
-      }
-    }, kSource);
+      }, kSource);
 
-    assert.deepEqual(
-      ["admin", "member", "reviewer", "spectator", "guest"].filter(
-        (role) => access.canShare(role)
-      ),
-      ["admin", "member", "reviewer"]
-    );
-  });
+      assert.deepEqual(
+        ["admin", "member", "reviewer", "spectator", "guest"].filter(
+          (role) => allows(access, role)
+        ),
+        ["admin", "member", "reviewer"]
+      );
+    });
+  }
 
   test("keeps guests out of the catalog and accounts rooms, read-only elsewhere", () => {
     const access = StudioAccess.read({ version: 1 }, kSource);

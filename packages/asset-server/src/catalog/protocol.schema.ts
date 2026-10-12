@@ -150,13 +150,17 @@ export const catalogCommandProtocol = new MessageProtocol(
           path: kString,
           kind: kString,
           onConflict: { enum: PATH_CONFLICT_POLICIES },
-          content: assetInlineContentSchema
+          content: assetInlineContentSchema,
+          from: kString
         },
         required: [
           "type",
           "requestId",
           "path"
-        ]
+        ],
+        dependentRequired: {
+          from: ["content"]
+        }
       },
       {
         type: "object",

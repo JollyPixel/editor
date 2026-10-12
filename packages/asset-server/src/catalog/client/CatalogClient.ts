@@ -88,6 +88,11 @@ export interface CatalogConnectOptions {
 export interface CatalogCreateOptions {
   kind?: string;
   onConflict?: PathConflictPolicy;
+  /**
+   * Extension of the content's format, such as `".png"`. The kind's handler
+   * converts it before the asset is written.
+   */
+  from?: string;
 }
 
 export interface CatalogRemoveOptions {
@@ -229,7 +234,8 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
       path,
       kind: options.kind,
       onConflict: options.onConflict,
-      content: content === null ? undefined : encodeContent(content)
+      content: content === null ? undefined : encodeContent(content),
+      from: options.from
     });
 
     return reply.assetId;

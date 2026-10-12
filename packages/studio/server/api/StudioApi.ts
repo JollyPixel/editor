@@ -21,8 +21,11 @@ import {
 // Import Internal Dependencies
 import { accountsRoutes } from "./accounts/accountsRoutes.ts";
 import { ApiError } from "./errors/ApiError.ts";
+import { projectRoutes } from "./project/projectRoutes.ts";
 import { sharesRoutes } from "./shares/sharesRoutes.ts";
+import { PROJECT_URL_PATH } from "../../src/project/routes.ts";
 import { SHARES_URL_PATH } from "../../src/shares/routes.ts";
+import type { ProjectArchive } from "../project/ProjectArchive.ts";
 import type { StudioShares } from "../shares/StudioShares.ts";
 
 // CONSTANTS
@@ -40,6 +43,7 @@ export type ApiMiddleware = (
 export interface StudioApiOptions {
   accounts: Accounts;
   shares: StudioShares;
+  archive: ProjectArchive;
   requestsPerMinute?: number;
 }
 
@@ -109,6 +113,11 @@ export class StudioApi implements AsyncDisposable {
       prefix: SHARES_URL_PATH,
       accounts: options.accounts,
       shares: options.shares
+    });
+    await app.register(projectRoutes, {
+      prefix: PROJECT_URL_PATH,
+      accounts: options.accounts,
+      archive: options.archive
     });
     await app.ready();
 

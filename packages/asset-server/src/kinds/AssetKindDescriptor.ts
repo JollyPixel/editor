@@ -20,3 +20,11 @@ export interface AssetKindDescriptor {
   extension: string;
   icon?: AssetKindIcon;
 }
+
+export interface LoadedAssetKind extends AssetKindDescriptor {
+  /**
+   * Extensions the kind's handler converts from, the keys of its
+   * `conversions`.
+   */
+  convertsFrom: readonly string[];
+}

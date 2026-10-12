@@ -21,6 +21,7 @@ export const MODEL_TAB: EditorTab = {
   label: "model.voxelmodel.json",
   url: "/editors/voxel-model/?target=model-1"
 };
+export const PAGE_ID = "settings";
 export const OTHER_TAB: EditorTab = {
   id: "map-2",
   label: "cave.voxelmap.json",
@@ -33,6 +34,7 @@ interface Harness {
   strip: HTMLElement & { value: string; };
   frames: HTMLElement;
   home: HTMLElement;
+  page: HTMLElement;
   itemValues(): string[];
   frameOf(id: string): HTMLIFrameElement;
   visibleFrames(): string[];
@@ -48,7 +50,8 @@ export function harness(
   });
   const frames = document.createElement("div");
   const home = document.createElement("section");
-  document.body.append(strip, frames, home);
+  const page = document.createElement("section");
+  document.body.append(strip, frames, home, page);
   const editorFrames = new EditorFrames({
     container: frames,
     share: idleShare()
@@ -57,6 +60,14 @@ export function harness(
     strip,
     frames: editorFrames,
     home,
+    pages: [
+      {
+        id: PAGE_ID,
+        label: "Settings",
+        icon: "settings",
+        element: page
+      }
+    ],
     ...options
   });
   function frameList(): HTMLIFrameElement[] {
@@ -69,6 +80,7 @@ export function harness(
     strip,
     frames,
     home,
+    page,
     itemValues: () => [...strip.children].map(
       (item) => String(Reflect.get(item, "value"))
     ),

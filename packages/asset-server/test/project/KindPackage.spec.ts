@@ -10,6 +10,7 @@ import { KindPackage } from "#src/node.ts";
 import {
   kindDescriptor,
   kindPackage,
+  loadedKind,
   packageLoader
 } from "../helpers/kindPackages.ts";
 
@@ -35,8 +36,34 @@ describe("KindPackage", () => {
     );
     assert.deepEqual(
       loaded.descriptors,
-      [kindDescriptor("alpha"), kindDescriptor("beta")]
+      [loadedKind("alpha"), loadedKind("beta")]
     );
+  });
+
+  test("describes the extensions each handler converts from", async() => {
+    const kinds = kindPackage(["alpha", "beta"]);
+    const loaded = await KindPackage.load("kind-a", {}, packageLoader({
+      "kind-a": {
+        ASSET_KINDS: {
+          ...kinds,
+          handlers: () => kinds.handlers().map((handler) => (
+            handler.kind === "alpha" ?
+              {
+                ...handler,
+                conversions: {
+                  ".png": async(content: Uint8Array) => content
+                }
+              } :
+              handler
+          ))
+        }
+      }
+    }));
+
+    assert.deepEqual(loaded.descriptors, [
+      loadedKind("alpha", [".png"]),
+      loadedKind("beta")
+    ]);
   });
 
   test("names a package that cannot be loaded", async() => {

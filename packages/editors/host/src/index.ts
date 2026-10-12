@@ -22,6 +22,7 @@ export * from "./session/errors/ArchiveImportDisabledError.ts";
 export * from "./session/openCatalog.ts";
 export * from "./session/SessionArchive.ts";
 export * from "./session/EditorArchives.ts";
+export * from "./session/askImportConflictPolicy.ts";
 export * from "./session/errors/ArchiveRootError.ts";
 export * from "./session/rememberQueryUsername.ts";
 export type {

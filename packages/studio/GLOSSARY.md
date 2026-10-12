@@ -95,14 +95,15 @@ Each one runs `editor.host` with its own client, session and runtime.
 ### Tab
 
 One open editor page in the shell, keyed by the asset id it opened. The
-first tab, Home, is fixed and opens no editor. A tab shows the asset name
+first tab, Home, is fixed and opens no editor; Settings is closable and
+opens no editor either. A tab shows the asset name
 without its kind extension and the full path on hover. A tab loads its frame
 when first focused, and the open tabs are saved under `studio:tabs`.
 
 ### Tab cap
 
 The most editor tabs open at once, four. Opening another asks to close the
-least recently active tab; Home does not count.
+least recently active tab; Home and Settings do not count.
 
 ### Launch handshake
 

@@ -44,7 +44,14 @@ const kKinds = new AssetKindSet({
     {
       kind: "voxelmodel",
       label: "Voxel model",
-      extension: ".voxelmodel.json"
+      extension: ".voxelmodel.json",
+      convertsFrom: [".vox"]
+    },
+    {
+      kind: "pixelart",
+      label: "Pixel art",
+      extension: ".pixelart",
+      convertsFrom: [".png"]
     }
   ],
   editable: ["voxelmap", "voxelmodel"]
@@ -140,6 +147,44 @@ describe("AssetTreeView", () => {
     assert.ok(view.expanded.has(world));
     assert.deepEqual(view.selected, [world]);
     assert.ok(preferences.expandedFolders.has(world));
+  });
+
+  test("asks once per convertible format and adds the dropped files in the folder", async() => {
+    const catalog = new FakeTreeCatalog([kMap], ["maps"]);
+    const { view, errors } = treeView(catalog);
+    const asked: string[] = [];
+
+    await view.importFiles(AssetPath.parse("maps"), [
+      new File(["png"], "hero.png"),
+      new File(["png"], "tiles.png"),
+      new File(["vox"], "tree.vox"),
+      new File(["txt"], "notes.txt"),
+      new File(["zip"], "photos.zip")
+    ], {
+      conversion: async(group) => {
+        asked.push(group.format);
+
+        return group.format === ".png" ?
+          { convertTo: kKinds.entryOf("pixelart") ?? null } :
+          null;
+      },
+      conflicts: async() => null
+    });
+    catalog.change();
+
+    assert.deepEqual(asked, [".png", ".vox"]);
+    assert.deepEqual(
+      [...catalog.records()].map((record) => record.source).sort(),
+      [
+        "maps/hero.pixelart",
+        "maps/notes.txt",
+        "maps/overworld.voxelmap.json",
+        "maps/photos.zip",
+        "maps/tiles.pixelart"
+      ]
+    );
+    assert.ok(view.expanded.has(folderNodeId(AssetPath.parse("maps"))));
+    assert.deepEqual(errors, []);
   });
 
   test("selects a new asset and asks to rename it once the catalog lists it", async() => {

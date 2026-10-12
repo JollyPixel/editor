@@ -22,6 +22,7 @@ import {
   StudioSignedIn,
   type StudioAccountsClient
 } from "../../src/accounts/StudioSignedIn.ts";
+import { ProjectArchiveClient } from "../../src/project/ProjectArchiveClient.ts";
 import { ShareLinksClient } from "../../src/shares/ShareLinksClient.ts";
 
 // CONSTANTS
@@ -91,6 +92,9 @@ function signedInAs(
       signIn: async() => kAlice,
       shareLinks: new ShareLinksClient({
         url: "http://localhost/api/shares/"
+      }),
+      projectArchive: new ProjectArchiveClient({
+        url: "http://localhost/api/project/"
       }),
       connect: (profile) => new Client({
         profile,

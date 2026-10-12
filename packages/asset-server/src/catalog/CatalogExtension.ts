@@ -308,9 +308,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     command: CatalogCreateCommand,
     actor: EventStore.Actor
   ): Promise<Result<CatalogApplied, Error>> {
-    const data = command.content === undefined ?
-      Ok(undefined) :
-      this.#decode(command.content);
+    const data = await this.#createdContent(command);
     if (!data.ok) {
       return data;
     }
@@ -329,6 +327,24 @@ export class CatalogExtension extends Extension<CatalogCommand> {
         assetId: event.assetId
       };
     });
+  }
+
+  async #createdContent(
+    command: CatalogCreateCommand
+  ): Promise<Result<Uint8Array | undefined, Error>> {
+    const { content, from } = command;
+    if (content === undefined) {
+      return Ok(undefined);
+    }
+
+    const decoded = this.#decode(content);
+    if (!decoded.ok || from === undefined) {
+      return decoded;
+    }
+
+    const kind = command.kind ?? this.#backend.kinds.resolve(command.path).kind;
+
+    return this.#backend.kinds.convert(kind, from, decoded.val);
   }
 
   async #export(

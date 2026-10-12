@@ -26,7 +26,8 @@ editing operation. The asset kind defines how the event changes live state.
 
 The behavior registered for one asset kind. It creates, loads, and clears live
 state, applies the kind's domain events, and serializes that state as asset
-content.
+content. Its conversions turn other formats, such as PNG, into that content
+when an asset is created.
 
 ### Live State
 

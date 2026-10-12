@@ -7,10 +7,10 @@ Open work, in the order it should land. Decisions already taken are in the
 
 ## 1. Preferences and settings pane
 
-A per-user store the shell owns, reached from the header toolbar. The open
-tabs, the dock layout and the kind filter move there from `localStorage`. It
-becomes the home of the account: the avatar upload moves there from the
-`AccountBadge` menu.
+A per-user store the shell owns, shown in the Settings tab that the Home
+tools open (empty for now). The open tabs, the dock layout and the kind
+filter move there from `localStorage`. It becomes the home of the account:
+the avatar upload moves there from the `AccountBadge` menu.
 
 ## 2. Unsaved changes on tabs
 

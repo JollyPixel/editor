@@ -177,7 +177,7 @@ describe("CatalogClient", () => {
     const created = client.create(
       "textures/c.pixelart",
       new Uint8Array([1, 2]),
-      { kind: "pixelart", onConflict: "suffix" }
+      { kind: "pixelart", onConflict: "suffix", from: ".png" }
     );
     await flush();
     const [command] = room.sent;
@@ -199,7 +199,8 @@ describe("CatalogClient", () => {
         type: "inline",
         encoding: "base64",
         data: btoa(String.fromCharCode(1, 2))
-      }
+      },
+      from: ".png"
     });
   });
 
@@ -300,7 +301,8 @@ describe("CatalogClient", () => {
       path: "maps/new.voxelmap.json",
       kind: "voxelmap",
       onConflict: undefined,
-      content: undefined
+      content: undefined,
+      from: undefined
     });
   });
 

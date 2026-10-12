@@ -24,7 +24,8 @@ const kMapKind = {
   icon: {
     svg: "<path d=\"M3 6h18\" />",
     tone: "lime"
-  }
+  },
+  convertsFrom: []
 };
 const kMapEditor = {
   name: "voxel-map",
@@ -97,7 +98,8 @@ describe("EditorRegistry", () => {
       icon: {
         svg: "<rect width=\"64\" height=\"64\" fill=\"#ffc93c\" />",
         viewBox: "0 0 64 64"
-      }
+      },
+      convertsFrom: []
     });
     const icon = registry.kindSet().iconFor("blockset");
 
@@ -109,9 +111,10 @@ describe("EditorRegistry", () => {
     const registry = new EditorRegistry()
       .registerKind(kMapKind)
       .registerKind({
-        kind: "texture",
-        label: "Texture",
-        extension: ".png"
+        kind: "pixelart",
+        label: "Pixel art",
+        extension: ".pixelart",
+        convertsFrom: [".png"]
       });
 
     assert.deepEqual(registry.kindSet().entries, [
@@ -119,13 +122,15 @@ describe("EditorRegistry", () => {
         kind: "voxelmap",
         label: "Voxel map",
         extension: ".voxelmap.json",
-        icon: "kind:voxelmap"
+        icon: "kind:voxelmap",
+        convertsFrom: []
       },
       {
-        kind: "texture",
-        label: "Texture",
-        extension: ".png",
-        icon: undefined
+        kind: "pixelart",
+        label: "Pixel art",
+        extension: ".pixelart",
+        icon: undefined,
+        convertsFrom: [".png"]
       }
     ]);
   });
@@ -162,7 +167,8 @@ describe("EditorRegistry", () => {
         icon: {
           svg: "",
           tone: "mauve"
-        }
+        },
+        convertsFrom: []
       }),
       /unknown icon tone "mauve"/
     );

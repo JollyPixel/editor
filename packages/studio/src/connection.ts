@@ -14,6 +14,8 @@ import { Client } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import { StudioSignedIn } from "./accounts/StudioSignedIn.ts";
+import { ProjectArchiveClient } from "./project/ProjectArchiveClient.ts";
+import { PROJECT_URL_PATH } from "./project/routes.ts";
 import { ShareLinksClient } from "./shares/ShareLinksClient.ts";
 import { SHARES_URL_PATH } from "./shares/routes.ts";
 import "./shell/account/SignInDialog.ts";
@@ -47,6 +49,9 @@ async function connectOnline(): Promise<StudioConnection> {
     signIn: () => signIn(accounts),
     shareLinks: new ShareLinksClient({
       url: new URL(`.${SHARES_URL_PATH}`, document.baseURI)
+    }),
+    projectArchive: new ProjectArchiveClient({
+      url: new URL(`.${PROJECT_URL_PATH}`, document.baseURI)
     }),
     connect: (profile) => new Client({ profile }),
     reload: () => location.reload()

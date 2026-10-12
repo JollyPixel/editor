@@ -7,7 +7,16 @@ import type {
 
 // Import Internal Dependencies
 import type { AssetDeletion } from "../../catalog/AssetDeletion.ts";
-import type { AssetKindSet } from "../../catalog/AssetKindSet.ts";
+import {
+  AssetDrop,
+  MAX_DROPPED_FILE_MB,
+  type ConversionChoice,
+  type ConvertibleFiles
+} from "../../catalog/AssetDrop.ts";
+import type {
+  AssetKindEntry,
+  AssetKindSet
+} from "../../catalog/AssetKindSet.ts";
 import { AssetPath } from "../../catalog/AssetPath.ts";
 import { AssetSelection } from "../../catalog/AssetSelection.ts";
 import { CatalogLayout } from "../../catalog/CatalogLayout.ts";
@@ -20,10 +29,12 @@ import {
   type AssetRelocation,
   type AssetTreeNode
 } from "../../catalog/AssetTreeModel.ts";
+import type { DroppedFile } from "../../files/DroppedFile.ts";
 import type { StudioPreferences } from "../../preferences/StudioPreferences.ts";
 import {
   AssetCommands,
   type AssetCommandCatalog,
+  type ConflictQuestion,
   type RelocationVerb
 } from "./AssetCommands.ts";
 
@@ -61,6 +72,13 @@ export type AssetTreePreferences = Pick<
 
 export interface AssetDeleteChoice {
   companions: boolean;
+}
+
+export interface AssetDropQuestions {
+  conversion(
+    files: ConvertibleFiles
+  ): Promise<ConversionChoice | null>;
+  conflicts: ConflictQuestion;
 }
 
 export interface AssetTreeViewOptions {
@@ -271,6 +289,32 @@ export class AssetTreeView {
     return this.#commands.export(asset);
   }
 
+  async importFiles(
+    folder: AssetPath,
+    files: Iterable<File>,
+    questions: AssetDropQuestions
+  ): Promise<void> {
+    const drop = new AssetDrop(files, this.#kinds);
+    for (const file of drop.oversized) {
+      this.#onError(
+        `Could not add "${file.name}": it is larger than ${MAX_DROPPED_FILE_MB} MB`
+      );
+    }
+    for (const archive of drop.archives) {
+      if (!await this.#commands.importArchive(archive, questions.conflicts)) {
+        await this.#commands.add(folder, archive);
+      }
+    }
+    for (const group of drop.convertible) {
+      const choice = await questions.conversion(group);
+      if (choice !== null) {
+        await this.#addAll(folder, group.files, choice.convertTo);
+      }
+    }
+    await this.#addAll(folder, drop.files);
+    this.#expandFolder(folder);
+  }
+
   dispose(): void {
     this.#catalog.off("change", this.#onCatalogChange);
     this.#catalog.off("dependencies", this.#onDependenciesChange);
@@ -290,6 +334,16 @@ export class AssetTreeView {
     if (!folder.isRoot) {
       this.toggle(folderNodeId(folder), true);
     }
+  }
+
+  async #addAll(
+    folder: AssetPath,
+    files: readonly DroppedFile[],
+    convertTo: AssetKindEntry | null = null
+  ): Promise<void> {
+    await Promise.all(
+      files.map((file) => this.#commands.add(folder, file, convertTo))
+    );
   }
 
   async #relocate(

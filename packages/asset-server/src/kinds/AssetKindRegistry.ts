@@ -13,6 +13,7 @@ import {
   BINARY_KIND
 } from "./handlers/binary.ts";
 import { UnknownAssetKindError } from "./errors/UnknownAssetKindError.ts";
+import { UnsupportedAssetConversionError } from "./errors/UnsupportedAssetConversionError.ts";
 import { asError } from "../utils/asError.ts";
 
 interface RegisteredKind {
@@ -60,9 +61,10 @@ export class AssetKindRegistry {
         `Asset kind "${handler.kind}" declares no extensions.`
       );
     }
-    const invalid = extensions.find(
-      (extension) => !extension.startsWith(".") || extension.length < 2
-    );
+    const invalid = [
+      ...extensions,
+      ...Object.keys(handler.conversions ?? {})
+    ].find((extension) => !isExtension(extension));
     if (invalid !== undefined) {
       throw new TypeError(
         `Asset kind "${handler.kind}" declares an invalid extension "${invalid}".`
@@ -127,6 +129,35 @@ export class AssetKindRegistry {
     }
   }
 
+  async convert(
+    kind: string,
+    from: string,
+    content: Uint8Array
+  ): Promise<Result<Uint8Array, Error>> {
+    if (!this.has(kind)) {
+      const error = new UnknownAssetKindError(kind);
+
+      return Err(error);
+    }
+
+    const conversions = this.get(kind).conversions ?? {};
+    const conversion = Object.hasOwn(conversions, from) ?
+      conversions[from] :
+      undefined;
+    if (conversion === undefined) {
+      const error = new UnsupportedAssetConversionError(kind, from);
+
+      return Err(error);
+    }
+
+    try {
+      return Ok(await conversion(content));
+    }
+    catch (error) {
+      return Err(asError(error));
+    }
+  }
+
   resolve(
     path: string
   ): AssetKindHandler {
@@ -154,4 +185,10 @@ export class AssetKindRegistry {
 
     return table;
   }
+}
+
+function isExtension(
+  extension: string
+): boolean {
+  return extension.startsWith(".") && extension.length >= 2;
 }

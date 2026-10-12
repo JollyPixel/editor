@@ -52,7 +52,12 @@ const kManifest = {
       kinds: ["voxelmap"]
     }
   ],
-  kinds: [BLOCKSET_ASSET, VOXEL_MAP_ASSET]
+  kinds: [BLOCKSET_ASSET, VOXEL_MAP_ASSET].map((descriptor) => {
+    return {
+      ...descriptor,
+      convertsFrom: []
+    };
+  })
 };
 
 function voxelMapProject(

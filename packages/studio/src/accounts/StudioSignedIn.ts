@@ -14,6 +14,7 @@ import {
 import { toPeerProfileMetadata } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
+import type { ProjectArchiveClient } from "../project/ProjectArchiveClient.ts";
 import type { ShareLinksClient } from "../shares/ShareLinksClient.ts";
 import { StudioShareLinks } from "../shares/StudioShareLinks.ts";
 import { SessionRenewal } from "./SessionRenewal.ts";
@@ -33,6 +34,7 @@ export interface StudioSignInOptions {
    */
   signIn: () => Promise<Account>;
   shareLinks: ShareLinksClient;
+  projectArchive: ProjectArchiveClient;
   /**
    * Opens the shell's connection, joined with the account's peer profile.
    */
@@ -53,6 +55,7 @@ export class StudioSignedIn extends EventTarget {
   readonly roster: AccountsRoster;
   readonly shares: StudioShareLinks;
   readonly renewal: SessionRenewal;
+  readonly projectArchive: ProjectArchiveClient;
 
   #account: Account;
   #accounts: StudioAccountsClient;
@@ -69,6 +72,7 @@ export class StudioSignedIn extends EventTarget {
     this.client = options.connect(toPeerProfileMetadata(this.identity));
     this.roster = AccountsRoster.join(this.client);
     this.shares = new StudioShareLinks(options.shareLinks, this.roster);
+    this.projectArchive = options.projectArchive;
     this.renewal = new SessionRenewal({
       accountId: account.id,
       currentAccount: () => this.#accounts.me(),

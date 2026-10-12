@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import * as z from "zod";
-import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
+import type { LoadedAssetKind } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
 import type { EditorDescriptor } from "./EditorDescriptor.ts";
@@ -20,18 +20,19 @@ const kProjectManifestSchema = z.object({
       svg: z.string(),
       tone: z.string().optional(),
       viewBox: z.string().optional()
-    }).optional()
+    }).optional(),
+    convertsFrom: z.array(z.string())
   }))
 });
 
 export interface ProjectManifestData {
   editors: readonly EditorDescriptor[];
-  kinds: readonly AssetKindDescriptor[];
+  kinds: readonly LoadedAssetKind[];
 }
 
 export class ProjectManifest implements ProjectManifestData {
   readonly editors: readonly EditorDescriptor[];
-  readonly kinds: readonly AssetKindDescriptor[];
+  readonly kinds: readonly LoadedAssetKind[];
 
   static async fetch(
     base: string | URL

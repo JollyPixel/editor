@@ -1,7 +1,8 @@
 // Import Internal Dependencies
 import type {
   AssetKindDescriptor,
-  AssetKindPackage
+  AssetKindPackage,
+  LoadedAssetKind
 } from "#src/index.ts";
 import type { PackageLoader } from "#src/node.ts";
 import { counterHandler } from "./kinds.ts";
@@ -13,6 +14,16 @@ export function kindDescriptor(
     kind,
     label: kind,
     extension: `.${kind}`
+  };
+}
+
+export function loadedKind(
+  kind: string,
+  convertsFrom: readonly string[] = []
+): LoadedAssetKind {
+  return {
+    ...kindDescriptor(kind),
+    convertsFrom
   };
 }
 
