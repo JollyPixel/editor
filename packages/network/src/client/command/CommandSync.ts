@@ -54,6 +54,21 @@ export interface CommandSyncOptions<
   receipts?: ChangeReceipts<SentChange>;
 }
 
+export type PendingChangesEvent = "settled" | "unsettled";
+
+export interface PendingChanges {
+  readonly pending: number;
+
+  on(
+    event: PendingChangesEvent,
+    listener: () => void
+  ): unknown;
+  off(
+    event: PendingChangesEvent,
+    listener: () => void
+  ): unknown;
+}
+
 export type CommandSyncEventMap<
   TCommand,
   TSnapshot,
@@ -65,6 +80,7 @@ export type CommandSyncEventMap<
   command: (command: TCommand) => void;
   notice: (notice: TNotice) => void;
   settled: () => void;
+  unsettled: () => void;
   overflow: () => void;
   discarded: () => void;
   acknowledged: (command: TCommand, version: number | undefined) => void;
@@ -165,6 +181,7 @@ export class CommandSync<
       this.#ledger.clear();
       this.#refusedOnSnapshot = [];
       this.emit("discarded");
+      this.emit("settled");
       this.#receipts?.discard();
     }
 
@@ -233,12 +250,16 @@ export class CommandSync<
       sent: false,
       applied: true
     };
+    const settled = this.#ledger.size === 0;
     if (this.room.clientId !== null && this.#resumingFrom === null) {
       this.#ledger.add(entry);
       this.#transmit(entry);
     }
     else if (!this.#ledger.overflowed && this.#ledger.hold(entry, body)) {
       this.emit("overflow");
+    }
+    if (settled && this.#ledger.size > 0) {
+      this.emit("unsettled");
     }
 
     return entry.command;

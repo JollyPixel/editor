@@ -78,9 +78,11 @@ interface TabItemProperties {
   fixed?: boolean;
 }
 
+type TabItem = HTMLElementTagNameMap[typeof kTabTag];
+
 interface OpenTab {
   tab: EditorTab;
-  item: HTMLElement;
+  item: TabItem;
 }
 
 interface PageEntry {
@@ -150,6 +152,10 @@ export class EditorTabs {
 
   get size(): number {
     return this.#open.size;
+  }
+
+  get unsaved(): boolean {
+    return [...this.#open.values()].some((entry) => entry.item.modified);
   }
 
   ids(): string[] {
@@ -272,9 +278,24 @@ export class EditorTabs {
     }
 
     this.#frames.remove(id);
+    this.markUnsaved(id, false);
     if (this.#active === id) {
       this.#show(id);
     }
+
+    return true;
+  }
+
+  markUnsaved(
+    id: string,
+    unsaved: boolean
+  ): boolean {
+    const entry = this.#open.get(id);
+    if (entry === undefined) {
+      return false;
+    }
+
+    entry.item.modified = unsaved;
 
     return true;
   }
@@ -340,7 +361,7 @@ export class EditorTabs {
   #createItem(
     id: string,
     properties: TabItemProperties
-  ): HTMLElement {
+  ): TabItem {
     const item = document.createElement(kTabTag);
     Object.assign(item, {
       value: id,

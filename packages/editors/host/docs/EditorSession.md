@@ -107,6 +107,11 @@ username prompt remembers the entered username per tab. `assets` is the session'
 [`AssetLeases`](./AssetLeases.md), where panels open their own leases.
 `catalog` comes from `@jolly-pixel/asset-server/client`.
 
+The session passes each flip of the
+[unsaved state](./AssetLeases.md#unsaved-changes) to
+`launch.shell.reportUnsaved`. Without a shell, it cancels `beforeunload` while
+there are unsaved changes, so the browser asks before leaving.
+
 ## Identity
 
 The username prompt stores the entered name in `sessionStorage` under

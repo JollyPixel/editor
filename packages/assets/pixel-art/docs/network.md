@@ -5,7 +5,7 @@ The browser entry point is `@jolly-pixel/asset.pixel-art/client`. Server protoco
 ## Document synchronization
 
 - `pixelArtRoom(client, assetId)` returns the typed room. The caller joins and leaves it.
-- `new SyncedPixelDocument(room, options?)` creates a `PixelDocument` and a private `PixelSyncClient`. `document` starts at 1 by 1 until the first snapshot. `ready` resolves after that snapshot and `loaded` reports it; `dispose()` removes listeners while the caller retains room and socket ownership.
+- `new SyncedPixelDocument(room, options?)` creates a `PixelDocument` and a private `PixelSyncClient`. `document` starts at 1 by 1 until the first snapshot. `ready` resolves after that snapshot and `loaded` reports it; `pendingChanges` is the sync client's network `PendingChanges`, the edits the server has not acknowledged; `dispose()` removes listeners while the caller retains room and socket ownership.
 - `blankPixelDocument(options?)` creates that 1 by 1 `PixelDocument`, for a synced document that owns more than pixels.
 - `pixelArtDocumentKind(options?)` adapts synced documents to an `@jolly-pixel/editor.host` asset lease.
 - `createPixelArtAsset(catalog, path, document)` encodes a `PixelArtDocumentData`, creates a `pixelart` asset, suffixes a conflicting path, and returns the asset ID.

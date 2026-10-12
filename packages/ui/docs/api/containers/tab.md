@@ -20,6 +20,7 @@
 | `icon` | `IconName` | `""` |
 | `iconOnly` (`icon-only`) | `boolean` | `false` |
 | `fixed` | `boolean` | `false` |
+| `modified` | `boolean` | `false` |
 
 `jolly-tabs` controls `active`, the panel ID, and its ARIA relationship. The
 default slot contains panel content.
@@ -35,3 +36,8 @@ reorderable strip. See [Reordering](./tabs.md#reordering).
 `badge` renders a short chip after the label, such as a count. `action` names
 an icon rendered as a secondary button in the tab, and `actionLabel` is its
 accessible name and tooltip. See [Tab actions](./tabs.md#tab-actions).
+
+`modified` marks a tab with unsaved changes. A closable tab shows a dot in
+place of its close glyph until the pointer is over the tab; any other tab shows
+the dot after its label. The tab button announces "Unsaved changes" as its
+accessible description.

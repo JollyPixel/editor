@@ -10,6 +10,7 @@ import type {
 } from "@jolly-pixel/asset";
 import { Emitter } from "@openally/emitt";
 import type {
+  PendingChanges,
   Peer,
   PeerMetadata,
   Right,
@@ -145,8 +146,28 @@ export function changedMessage(
   };
 }
 
+export class FakePendingChanges extends Emitter<{
+  settled: () => void;
+  unsettled: () => void;
+}> implements PendingChanges {
+  pending = 0;
+
+  edit(): void {
+    this.pending++;
+    if (this.pending === 1) {
+      this.emit("unsettled");
+    }
+  }
+
+  acknowledge(): void {
+    this.pending = 0;
+    this.emit("settled");
+  }
+}
+
 export interface FakeDocument {
   readonly room: Room;
+  readonly changes: FakePendingChanges;
   disposed: boolean;
 }
 
@@ -178,6 +199,7 @@ export function fakeDocumentKind(
     createDocument(room): SyncedDocument<FakeDocument> {
       const document: FakeDocument = {
         room,
+        changes: new FakePendingChanges(),
         disposed: false
       };
       documents.push(document);
@@ -187,6 +209,7 @@ export function fakeDocumentKind(
       return {
         document,
         ready: resolvers.promise,
+        pendingChanges: document.changes,
         dispose: () => {
           document.disposed = true;
         }

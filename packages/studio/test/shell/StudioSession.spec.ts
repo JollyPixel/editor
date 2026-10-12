@@ -40,6 +40,13 @@ function postFromFrame(
   }));
 }
 
+function unload(): boolean {
+  const event = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(event);
+
+  return event.defaultPrevented;
+}
+
 afterEach(disposeSession);
 
 describe("StudioSession", () => {
@@ -198,6 +205,37 @@ describe("StudioSession", () => {
     assert.deepEqual(posted, [
       [{ type: SESSION_RENEWED_MESSAGE_TYPE }, FRAME_ORIGIN]
     ]);
+  });
+
+  test("marks the tab of an editor's unsaved command and asks before unloading until it closes", async() => {
+    const studio = session(new FakeCatalog([MAP_RECORD]));
+    await studio.openAsset("map-1");
+    const item = [...document.querySelectorAll("jolly-tab")].find(
+      (tab) => tab.value === "map-1"
+    );
+    postFromFrame({
+      type: SHELL_MESSAGE_TYPE,
+      command: "unsaved",
+      unsaved: true
+    });
+    assert.equal(item?.modified, true);
+    assert.equal(unload(), true);
+
+    postFromFrame({
+      type: SHELL_MESSAGE_TYPE,
+      command: "unsaved",
+      unsaved: false
+    });
+    assert.equal(item?.modified, false);
+    assert.equal(unload(), false);
+
+    postFromFrame({
+      type: SHELL_MESSAGE_TYPE,
+      command: "unsaved",
+      unsaved: true
+    });
+    studio.tabs.close("map-1");
+    assert.equal(unload(), false);
   });
 
   test("dispose stops following the catalog", () => {

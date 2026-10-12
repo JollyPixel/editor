@@ -54,6 +54,11 @@ const kShellCommandSchema = z.discriminatedUnion("command", [
   z.object({
     type: z.literal(SHELL_MESSAGE_TYPE),
     command: z.literal("session-refused")
+  }),
+  z.object({
+    type: z.literal(SHELL_MESSAGE_TYPE),
+    command: z.literal("unsaved"),
+    unsaved: z.boolean()
   })
 ]);
 const kAppearanceMessageSchema = z.object({
@@ -119,10 +124,17 @@ export interface ShellSessionRefusedCommand {
   command: "session-refused";
 }
 
+export interface ShellUnsavedCommand {
+  type: typeof SHELL_MESSAGE_TYPE;
+  command: "unsaved";
+  unsaved: boolean;
+}
+
 export type ShellCommand =
   | ShellOpenAssetCommand
   | ShellToggleConsoleCommand
-  | ShellSessionRefusedCommand;
+  | ShellSessionRefusedCommand
+  | ShellUnsavedCommand;
 
 export interface AppearanceMessage {
   type: typeof APPEARANCE_MESSAGE_TYPE;
@@ -209,6 +221,16 @@ export class ShellChannel {
     this.#post({
       type: SHELL_MESSAGE_TYPE,
       command: "toggle-console"
+    });
+  }
+
+  reportUnsaved(
+    unsaved: boolean
+  ): void {
+    this.#post({
+      type: SHELL_MESSAGE_TYPE,
+      command: "unsaved",
+      unsaved
     });
   }
 

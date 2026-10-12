@@ -96,7 +96,7 @@ test.describe("gallery shell", () => {
 
     const closable = page.locator("gallery-root .options [data-option=closable] input");
     const close = page.locator("gallery-root jolly-tabs [part~=close]");
-    await expect(page.locator("gallery-root .options jolly-checkbox")).toHaveCount(7);
+    await expect(page.locator("gallery-root .options jolly-checkbox")).toHaveCount(8);
     await expect(close).toHaveCount(0);
 
     await closable.click();

@@ -12,7 +12,10 @@ import { toPeerProfileMetadata } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import type { HostLogger } from "../debug/readDebugLogger.ts";
-import type { EditorLaunch } from "../launch/index.ts";
+import type {
+  EditorLaunch,
+  ShellChannel
+} from "../launch/index.ts";
 import {
   AssetLeases,
   type RoomSource
@@ -193,6 +196,7 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
   #accepts: string;
   #kinds = new Map<string, AssetDocumentKind<unknown>>();
   #dependencies = new Map<string, SessionDependency>();
+  #listening = new AbortController();
   #disposed = false;
 
   readonly #onCatalogChange = (): void => {
@@ -245,6 +249,7 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     }
 
     this.catalog.on("change", this.#onCatalogChange);
+    this.#guardUnsaved(options.launch.shell);
   }
 
   targetLease<TDocument, TCommand, TMessage>(
@@ -288,10 +293,27 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     this.#disposed = true;
 
     this.catalog.off("change", this.#onCatalogChange);
+    this.#listening.abort();
     this.#dependencies.clear();
     this.assets.dispose();
     this.catalog.dispose();
     this.#client.destroy();
+  }
+
+  #guardUnsaved(
+    shell: ShellChannel | null
+  ): void {
+    if (shell !== null) {
+      this.assets.on("unsaved", (unsaved) => shell.reportUnsaved(unsaved));
+
+      return;
+    }
+
+    window.addEventListener("beforeunload", (event) => {
+      if (this.assets.unsaved) {
+        event.preventDefault();
+      }
+    }, { signal: this.#listening.signal });
   }
 
   #syncDependencies(): void {

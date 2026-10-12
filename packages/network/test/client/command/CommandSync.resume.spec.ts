@@ -241,8 +241,10 @@ describe("CommandSync resume", () => {
     const { harness, sync, reconnect } = setup();
     let overflows = 0;
     let discards = 0;
+    let settled = 0;
     sync.on("overflow", () => overflows++);
     sync.on("discarded", () => discards++);
+    sync.on("settled", () => settled++);
 
     harness.room.suspend();
     for (let value = 0; value < 600; value++) {
@@ -258,6 +260,7 @@ describe("CommandSync resume", () => {
     assert.strictEqual(sync.pending, 0);
     assert.strictEqual(sync.overflowed, false);
     assert.strictEqual(discards, 1);
+    assert.strictEqual(settled, 1);
     assert.deepEqual(sentCommands(harness), []);
   });
 });

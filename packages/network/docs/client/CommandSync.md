@@ -53,11 +53,15 @@ and handles rollback/replay through the document's change images.
 
 `new SyncedCommandDocument(room, { document, keys })` groups document and sync.
 Its `ready` promise resolves after the first snapshot; `dispose()` detaches sync.
+`pendingChanges` exposes the sync as `PendingChanges`: `pending`, plus `on` and
+`off` for the `settled` and `unsettled` events.
 
 ## Outcomes
 
 Own echoes acknowledge edits; peer commands pass through reconciliation.
 `acknowledged`, `refused`, and `settled` report outcomes.
+`unsettled` fires when `pending` leaves zero, and `settled` when it returns to
+zero, including after a discard.
 
 ### Resume
 

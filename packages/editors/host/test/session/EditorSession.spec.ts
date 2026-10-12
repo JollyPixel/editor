@@ -25,6 +25,11 @@ import {
 // Import Internal Dependencies
 import { EditorSession } from "#src/session/EditorSession.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
+import {
+  SHELL_MESSAGE_TYPE,
+  ShellChannel,
+  isShellCommand
+} from "#src/launch/ShellChannel.ts";
 import type { AssetDocumentKind } from "#src/lease/AssetLease.ts";
 import {
   FakeClient,
@@ -61,6 +66,14 @@ interface ConnectOptions {
   kinds?: AssetDocumentKind<unknown>[];
   dependencies?: Record<string, AssetReferenceData[]>;
   resolveDocuments?: FakeDocumentKind;
+  shell?: ShellChannel;
+}
+
+function unload(): boolean {
+  const event = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(event);
+
+  return event.defaultPrevented;
 }
 
 async function startConnect(
@@ -68,7 +81,10 @@ async function startConnect(
 ) {
   const client = new FakeClient();
   const pending = EditorSession.connect({
-    launch: new EditorLaunch(new AssetId(options.target ?? "map")),
+    launch: new EditorLaunch(
+      new AssetId(options.target ?? "map"),
+      options.shell ?? null
+    ),
     identity: kIdentity,
     client,
     kinds: options.kinds ?? [],
@@ -442,6 +458,57 @@ describe("EditorSession target document", () => {
     assert.equal(client.fakeRoom("voxelmap:map").joins, 1);
     assert.equal(kind.documents[0].room, client.fakeRoom("voxelmap:map"));
     session.dispose();
+  });
+
+  test("reports the unsaved state of its documents to the shell", async() => {
+    const posted: unknown[] = [];
+    const shell = new ShellChannel({
+      port: { postMessage: (message) => posted.push(message) },
+      origin: "http://studio.test"
+    });
+    const kind = fakeDocumentKind("voxelmap");
+    const { session } = await connect({
+      kinds: [kind],
+      resolveDocuments: kind,
+      shell
+    });
+    const [map] = kind.documents;
+
+    map.changes.edit();
+    map.changes.edit();
+    map.changes.acknowledge();
+    map.changes.edit();
+    session.dispose();
+
+    assert.deepEqual(
+      posted.filter((message) => isShellCommand(message)),
+      [true, false, true, false].map((unsaved) => {
+        return {
+          type: SHELL_MESSAGE_TYPE,
+          command: "unsaved",
+          unsaved
+        };
+      })
+    );
+  });
+
+  test("asks before unloading while unsaved when no shell framed it", async() => {
+    const kind = fakeDocumentKind("voxelmap");
+    const { session } = await connect({
+      kinds: [kind],
+      resolveDocuments: kind
+    });
+    const [map] = kind.documents;
+
+    assert.equal(unload(), false);
+    map.changes.edit();
+    assert.equal(unload(), true);
+    map.changes.acknowledge();
+    assert.equal(unload(), false);
+
+    map.changes.edit();
+    session.dispose();
+    assert.equal(unload(), false);
   });
 
   test("rejects and disposes when the target never becomes ready", async() => {

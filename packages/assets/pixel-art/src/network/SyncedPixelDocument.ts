@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import type { PendingChanges } from "@jolly-pixel/network/client";
 import {
   PixelDocument,
   type Vec2
@@ -33,6 +34,10 @@ export class SyncedPixelDocument {
 
   get loaded(): boolean {
     return this.#sync.ready;
+  }
+
+  get pendingChanges(): PendingChanges {
+    return this.#sync;
   }
 
   constructor(

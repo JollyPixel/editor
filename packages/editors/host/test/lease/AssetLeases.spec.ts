@@ -224,4 +224,22 @@ describe("AssetLeases", () => {
     assert.equal(client.fakeRoom("pixelart:tex").leaves, 1);
     assert.equal(client.fakeRoom("voxelmap:map").leaves, 1);
   });
+
+  test("reports unsaved while any open document has pending changes", () => {
+    const { leases } = setup([record("tex", "pixelart"), record("grass", "pixelart")]);
+    const kind = fakeDocumentKind("pixelart");
+    const reports: boolean[] = [];
+    leases.on("unsaved", (unsaved) => reports.push(unsaved));
+    const tex = leases.open(kind, "tex");
+    const grass = leases.open(kind, "grass");
+
+    tex.document.changes.edit();
+    grass.document.changes.edit();
+    tex.document.changes.acknowledge();
+    assert.equal(leases.unsaved, true);
+    grass.release();
+
+    assert.equal(leases.unsaved, false);
+    assert.deepEqual(reports, [true, false]);
+  });
 });

@@ -34,6 +34,7 @@ import "../../icon/Icon.ts";
 
 // CONSTANTS
 let kTabsId = 0;
+const kModifiedDescription = "Unsaved changes";
 
 export type TabsOrientation = "horizontal" | "vertical";
 
@@ -122,11 +123,15 @@ export class Tabs extends LitElement {
     const text = tab.iconOnly ?
       nothing :
       html`<span class="text">${tab.label}</span>`;
+    const modified = tab.modified ?
+      html`<span class="modified" part="modified" aria-hidden="true"></span>` :
+      nothing;
 
     return html`
       <div
         class="item"
         part=${selected ? "tab tab-selected" : "tab"}
+        ?data-modified=${tab.modified}
         ?data-closable=${tab.closable}
         ?data-action=${tab.action !== ""}
         ?data-disabled=${tab.disabled}
@@ -142,6 +147,7 @@ export class Tabs extends LitElement {
           aria-controls=${this.#panelId(index)}
           aria-selected=${String(selected)}
           aria-label=${tab.iconOnly ? tab.label : nothing}
+          aria-description=${tab.modified ? kModifiedDescription : nothing}
           tabindex=${selected ? "0" : "-1"}
           ?disabled=${tab.disabled}
           title=${tab.tooltip || (tab.iconOnly ? tab.label : nothing)}
@@ -153,7 +159,7 @@ export class Tabs extends LitElement {
         >${icon}${text}${tab.badge === "" ?
           nothing :
           html`<span class="badge" part="badge">${tab.badge}</span>`
-        }</button>
+        }${tab.closable ? nothing : modified}</button>
         ${tab.action === "" ? nothing : html`
           <button
             class="action"
@@ -176,7 +182,7 @@ export class Tabs extends LitElement {
             ?disabled=${tab.disabled}
             data-index=${index}
             @click=${this.#onCloseClick}
-          ><jolly-icon name="close" aria-hidden="true"></jolly-icon></button>
+          >${modified}<jolly-icon name="close" aria-hidden="true"></jolly-icon></button>
         ` : nothing}
       </div>
     `;

@@ -71,6 +71,7 @@ export class StudioSession {
   #renewal: StudioSessionRenewal | undefined;
   #stopRenewal: (() => void) | undefined;
   #restoring = false;
+  #listening = new AbortController();
 
   constructor(
     options: StudioSessionOptions
@@ -95,6 +96,9 @@ export class StudioSession {
     this.#stopRenewal = this.#renewal?.onRenewed(
       () => this.#frames.notifySessionRenewed()
     );
+    window.addEventListener("beforeunload", this.#onBeforeUnload, {
+      signal: this.#listening.signal
+    });
   }
 
   toggleConsole(): void {
@@ -168,6 +172,7 @@ export class StudioSession {
   }
 
   dispose(): void {
+    this.#listening.abort();
     this.#catalog.off("change", this.#syncTabs);
     this.#stopRenewal?.();
     this.tabs.dispose();
@@ -186,7 +191,8 @@ export class StudioSession {
   }
 
   readonly #onShellCommand = (
-    command: ShellCommand
+    command: ShellCommand,
+    from: string
   ): void => {
     switch (command.command) {
       case "open-asset":
@@ -198,12 +204,23 @@ export class StudioSession {
       case "session-refused":
         void this.#renewal?.renew();
         break;
+      case "unsaved":
+        this.tabs.markUnsaved(from, command.unsaved);
+        break;
       default: {
         const unhandled: never = command;
         throw new Error(
           `Unhandled shell command: ${JSON.stringify(unhandled)}`
         );
       }
+    }
+  };
+
+  readonly #onBeforeUnload = (
+    event: BeforeUnloadEvent
+  ): void => {
+    if (this.tabs.unsaved) {
+      event.preventDefault();
     }
   };
 
