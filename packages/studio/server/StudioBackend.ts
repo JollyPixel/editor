@@ -28,6 +28,7 @@ import {
   type StudioAccountsOptions
 } from "./accounts.ts";
 import { StudioApi } from "./api/StudioApi.ts";
+import { ProjectArchive } from "./project/ProjectArchive.ts";
 import type { StudioProject } from "./project/StudioProject.ts";
 import { SharePage } from "./shares/SharePage.ts";
 import { StudioShares } from "./shares/StudioShares.ts";
@@ -109,6 +110,11 @@ export class StudioBackend implements AsyncDisposable {
     const api = await StudioApi.open({
       accounts,
       shares,
+      archive: new ProjectArchive({
+        access: project.access,
+        backend: workspace.backend,
+        name: path.basename(project.file.root)
+      }),
       requestsPerMinute: options.requestsPerMinute
     });
 

@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
+import type { LoadedAssetKind } from "@jolly-pixel/asset-server";
 import {
   isIconTone,
   registerIcon,
@@ -49,7 +49,7 @@ export class EditorRegistry {
   }
 
   registerKind(
-    descriptor: AssetKindDescriptor
+    descriptor: LoadedAssetKind
   ): this {
     const { kind, icon } = descriptor;
     const tone = icon?.tone;
@@ -73,7 +73,8 @@ export class EditorRegistry {
       kind,
       label: descriptor.label,
       extension: descriptor.extension,
-      icon: icon === undefined ? undefined : name
+      icon: icon === undefined ? undefined : name,
+      convertsFrom: descriptor.convertsFrom
     });
 
     return this;

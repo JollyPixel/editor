@@ -1,4 +1,4 @@
-export class ShareRequestError extends Error {
+export class ApiRequestError extends Error {
   readonly status: number;
 
   constructor(
@@ -6,7 +6,7 @@ export class ShareRequestError extends Error {
     message: string
   ) {
     super(message);
-    this.name = "ShareRequestError";
+    this.name = "ApiRequestError";
     this.status = status;
   }
 }

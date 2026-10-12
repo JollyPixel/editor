@@ -5,9 +5,6 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import type { CatalogBatchReport } from "@jolly-pixel/asset-server/client";
-
 // Import Internal Dependencies
 import type { AssetKindEntry } from "../../../src/catalog/AssetKindSet.ts";
 import { AssetPath } from "../../../src/catalog/AssetPath.ts";
@@ -17,10 +14,7 @@ import {
   folderNodeId,
   type AssetRelocation
 } from "../../../src/catalog/AssetTreeModel.ts";
-import {
-  AssetCommands,
-  type AssetCommandCatalog
-} from "../../../src/shell/assets/AssetCommands.ts";
+import { commandsFailingAt } from "../../helpers/assetCommands.ts";
 import { companionModelOf } from "../../helpers/assetTree.ts";
 
 // CONSTANTS
@@ -30,92 +24,6 @@ const kMapKind: AssetKindEntry = {
   label: "Voxel map",
   extension: ".voxelmap.json"
 };
-
-interface CommandsProbe {
-  commands: AssetCommands;
-  errors: string[];
-  calls: string[];
-  lists: string[];
-  created: Parameters<AssetCommandCatalog["create"]>[];
-}
-
-function commandsFailingAt(
-  failAt: number
-): CommandsProbe {
-  const calls: string[] = [];
-  async function call(
-    name: string,
-    target: string
-  ): Promise<void> {
-    calls.push(`${name} ${target}`);
-    if (calls.length - 1 === failAt) {
-      throw new Error("disk full");
-    }
-  }
-  const lists: string[] = [];
-  async function callEach(
-    name: string,
-    targets: string[]
-  ): Promise<CatalogBatchReport> {
-    if (targets.length === 0) {
-      return { applied: 0 };
-    }
-    lists.push(`${name} ${targets.length}`);
-    let applied = 0;
-    for (const target of targets) {
-      try {
-        await call(name, target);
-      }
-      catch (error) {
-        return {
-          applied,
-          failure: (error as Error).message
-        };
-      }
-      applied++;
-    }
-
-    return { applied };
-  }
-  const created: Parameters<AssetCommandCatalog["create"]>[] = [];
-  const catalog: AssetCommandCatalog = {
-    create: async(...args) => {
-      created.push(args);
-      await call("create", args[0]);
-
-      return "created";
-    },
-    renameMany: (renames) => callEach(
-      "rename",
-      Array.from(renames, (rename) => rename.assetId)
-    ),
-    removeMany: (assetIds) => callEach("remove", [...assetIds]),
-    createFolder: async(path) => {
-      await call("createFolder", path);
-
-      return path;
-    },
-    moveFolder: async(from, to) => {
-      await call("moveFolder", `${from} ${to}`);
-
-      return to;
-    },
-    removeFolder: (path) => call("removeFolder", path),
-    exportArchive: async() => new Uint8Array()
-  };
-  const errors: string[] = [];
-
-  return {
-    commands: new AssetCommands({
-      catalog,
-      onError: (message) => errors.push(message)
-    }),
-    errors,
-    calls,
-    lists,
-    created
-  };
-}
 
 function relocationOf(
   from: string,

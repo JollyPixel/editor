@@ -10,9 +10,11 @@ import {
 import {
   customElement,
   property,
-  query
+  query,
+  state
 } from "lit/decorators.js";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
+import { askImportConflictPolicy } from "@jolly-pixel/editor.host";
 import type {
   JollyChangeDetail,
   JollyOption,
@@ -21,6 +23,7 @@ import type {
 
 // Import Internal Dependencies
 import { AssetKindSet } from "../../catalog/AssetKindSet.ts";
+import type { AssetPath } from "../../catalog/AssetPath.ts";
 import { summarizeSelection } from "../../catalog/AssetSummary.ts";
 import {
   AssetSelection,
@@ -32,10 +35,15 @@ import { AssetTreeModel } from "../../catalog/AssetTreeModel.ts";
 import type { StudioPreferences } from "../../preferences/StudioPreferences.ts";
 import type { StudioShareLinks } from "../../shares/StudioShareLinks.ts";
 import { cardStyles } from "../cardStyles.ts";
+import { StudioErrorEvent } from "../StudioErrorEvent.ts";
 import type { AssetDeleteDialog } from "./AssetDeleteDialog.ts";
 import type { AssetShareDialog } from "./AssetShareDialog.ts";
+import { askConversion } from "./askConversion.ts";
 import { assetOpenEvent } from "./assetOpen.ts";
-import { AssetTreeView } from "./AssetTreeView.ts";
+import {
+  AssetTreeView,
+  type AssetDropQuestions
+} from "./AssetTreeView.ts";
 import {
   assetMenu,
   newAssetMenu
@@ -46,6 +54,11 @@ import "./AssetShareDialog.ts";
 
 // CONSTANTS
 const kNoKindOptions: readonly JollyOption<string>[] = [];
+const kFilesType = "Files";
+const kDropQuestions: AssetDropQuestions = {
+  conversion: askConversion,
+  conflicts: askImportConflictPolicy
+};
 
 export interface AssetBrowserOptions {
   catalog: CatalogClient;
@@ -57,10 +70,6 @@ export interface AssetBrowserOptions {
 interface AssetSharing {
   links: StudioShareLinks;
   catalog: CatalogClient;
-}
-
-export interface AssetErrorDetail {
-  message: string;
 }
 
 @customElement("asset-browser")
@@ -88,7 +97,29 @@ export class AssetBrowser extends LitElement {
       }
 
       .browser {
+        position: relative;
         flex: 1 1 0;
+      }
+
+      .browser.dropping {
+        box-shadow:
+          var(--studio-bevel),
+          inset 0 0 0 2px var(--jolly-accent-fill);
+      }
+
+      .drop-hint {
+        position: absolute;
+        inset-inline: var(--jolly-space-2);
+        bottom: var(--jolly-space-2);
+        padding: var(--jolly-space-1) var(--jolly-space-2);
+        overflow: hidden;
+        border-radius: var(--jolly-radius-sm);
+        background: var(--jolly-accent-fill);
+        color: var(--jolly-text-on-fill);
+        text-align: center;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        pointer-events: none;
       }
 
       .browser .card-head {
@@ -160,6 +191,9 @@ export class AssetBrowser extends LitElement {
   @query(".new-asset")
   declare _newAssetButton: HTMLElement;
 
+  @state()
+  declare _dropFolder: AssetPath | null;
+
   #view: AssetTreeView | null = null;
   #bound: AssetBrowserOptions | null = null;
   #menuTarget: AssetSelection | null = null;
@@ -167,6 +201,7 @@ export class AssetBrowser extends LitElement {
   constructor() {
     super();
     this.options = null;
+    this._dropFolder = null;
   }
 
   override connectedCallback(): void {
@@ -192,8 +227,15 @@ export class AssetBrowser extends LitElement {
     const view = this.#view;
     const selection = this.#selection();
 
+    const dropFolder = this._dropFolder;
+
     return html`
-      <div class="card browser">
+      <div
+        class="card browser ${dropFolder === null ? "" : "dropping"}"
+        @dragover=${this.#onDragOver}
+        @dragleave=${this.#onDragLeave}
+        @drop=${this.#onDrop}
+      >
         <div class="card-head">
           <jolly-button-group
             class="kinds"
@@ -279,6 +321,11 @@ export class AssetBrowser extends LitElement {
           @jolly-context-request=${this.#onContextRequest}
           @keydown=${this.#onKeyDown}
         ></jolly-tree>
+        ${dropFolder === null ? nothing : html`
+          <div class="drop-hint">Drop to add to ${dropFolder.isRoot ?
+            "the project root" :
+            `"${dropFolder}"`}</div>
+        `}
       </div>
       <asset-details
         class="card"
@@ -400,11 +447,7 @@ export class AssetBrowser extends LitElement {
   #error(
     message: string
   ): void {
-    this.dispatchEvent(new CustomEvent<AssetErrorDetail>("asset-error", {
-      bubbles: true,
-      composed: true,
-      detail: { message }
-    }));
+    this.dispatchEvent(new StudioErrorEvent(message));
   }
 
   readonly #onKindChange = (
@@ -428,6 +471,62 @@ export class AssetBrowser extends LitElement {
   readonly #acceptDrop = (
     detail: JollyReparentDetail
   ): boolean => this.#view?.acceptsDrop(detail) ?? false;
+
+  #dropFolderAt(
+    event: DragEvent
+  ): AssetPath {
+    const row = event.composedPath().find(
+      (target) => target instanceof HTMLElement &&
+        target.getAttribute("role") === "treeitem"
+    );
+    const nodeId = row instanceof HTMLElement ? row.dataset.id : undefined;
+
+    return this.#selection(nodeId === undefined ? [] : [nodeId]).folder;
+  }
+
+  readonly #onDragOver = (
+    event: DragEvent
+  ): void => {
+    const transfer = event.dataTransfer;
+    if (this.#view === null || !transfer?.types.includes(kFilesType)) {
+      return;
+    }
+
+    event.preventDefault();
+    transfer.dropEffect = "copy";
+    const folder = this.#dropFolderAt(event);
+    if (this._dropFolder === null || !this._dropFolder.equals(folder)) {
+      this._dropFolder = folder;
+    }
+  };
+
+  readonly #onDragLeave = (
+    event: DragEvent
+  ): void => {
+    const card = event.currentTarget;
+    const next = event.relatedTarget;
+    if (
+      !(card instanceof Node) ||
+      !(next instanceof Node) ||
+      !card.contains(next)
+    ) {
+      this._dropFolder = null;
+    }
+  };
+
+  readonly #onDrop = (
+    event: DragEvent
+  ): void => {
+    const view = this.#view;
+    const files = [...event.dataTransfer?.files ?? []];
+    this._dropFolder = null;
+    if (view === null || files.length === 0) {
+      return;
+    }
+
+    event.preventDefault();
+    void view.importFiles(this.#dropFolderAt(event), files, kDropQuestions);
+  };
 
   readonly #onSelect = (
     event: HTMLElementEventMap["jolly-select"]
@@ -528,9 +627,5 @@ export class AssetBrowser extends LitElement {
 declare global {
   interface HTMLElementTagNameMap {
     "asset-browser": AssetBrowser;
-  }
-
-  interface HTMLElementEventMap {
-    "asset-error": CustomEvent<AssetErrorDetail>;
   }
 }

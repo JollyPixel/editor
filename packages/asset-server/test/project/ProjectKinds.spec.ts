@@ -18,8 +18,8 @@ import {
   ProjectKinds
 } from "#src/node.ts";
 import {
-  kindDescriptor,
   kindPackage,
+  loadedKind,
   packageLoader
 } from "../helpers/kindPackages.ts";
 import { writeKindPackage } from "../helpers/packages.ts";
@@ -63,7 +63,7 @@ describe("ProjectKinds", () => {
     );
     assert.deepEqual(
       kinds.descriptors(),
-      ["beta", "gamma", "alpha"].map(kindDescriptor)
+      ["beta", "gamma", "alpha"].map((kind) => loadedKind(kind))
     );
   });
 

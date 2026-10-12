@@ -2,7 +2,7 @@
 import { pathToFileURL } from "node:url";
 
 // Import Internal Dependencies
-import type { AssetKindDescriptor } from "../kinds/AssetKindDescriptor.ts";
+import type { LoadedAssetKind } from "../kinds/AssetKindDescriptor.ts";
 import type { AssetKindHandler } from "../kinds/AssetKindHandler.ts";
 import { BINARY_KIND } from "../kinds/handlers/binary.ts";
 import {
@@ -38,7 +38,9 @@ export class ProjectKinds {
     const {
       resolver = new PackageResolver(file.root),
       load = (packageName) => import(
-        pathToFileURL(resolver.resolve(packageName)).href
+        pathToFileURL(
+          resolver.resolve(packageName)
+        ).href
       )
     } = options;
     const packages = await Promise.all(
@@ -80,12 +82,16 @@ export class ProjectKinds {
 
   handlers(): AssetKindHandler[] {
     return [
-      ...this.packages.flatMap((kindPackage) => kindPackage.handlers),
+      ...this.packages.flatMap(
+        (kindPackage) => kindPackage.handlers
+      ),
       ...builtInAssetKinds()
     ];
   }
 
-  descriptors(): AssetKindDescriptor[] {
-    return this.packages.flatMap((kindPackage) => kindPackage.descriptors);
+  descriptors(): LoadedAssetKind[] {
+    return this.packages.flatMap(
+      (kindPackage) => kindPackage.descriptors
+    );
   }
 }

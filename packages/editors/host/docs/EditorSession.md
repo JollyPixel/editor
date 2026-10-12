@@ -194,6 +194,11 @@ option, an `EditorArchiveBrowser`; it defaults to the DOM and `window.location`.
 A browser opens the file picker only during a user action, such as a click or
 a console command submitted with Enter.
 
+The default browser asks with `askImportConflictPolicy(plan)`, exported for
+hosts importing archives themselves. It resolves with `"keep"`, `"replace"`,
+`"copy"`, or `null` when the dialog is dismissed. It offers only `"copy"`
+when an existing ID has another kind.
+
 ### ArchiveActions
 
 `<jolly-archive-actions>` renders the export, import and reset buttons of an

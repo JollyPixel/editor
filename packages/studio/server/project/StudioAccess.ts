@@ -26,6 +26,7 @@ const kGuestRights = {
 } as const;
 const kBuiltInRoles = [ADMIN_ROLE, GUEST_ROLE];
 export const SHARE_RIGHT = "studio.$share";
+export const EXPORT_RIGHT = "studio.$export";
 const kRolesSchema = z.record(
   z.string().min(1),
   z.record(z.string().min(1), z.enum(kRights))
@@ -132,5 +133,11 @@ export class StudioAccess {
     role: string
   ): boolean {
     return this.#table.check(role, SHARE_RIGHT) === "write";
+  }
+
+  canExport(
+    role: string
+  ): boolean {
+    return this.#table.check(role, EXPORT_RIGHT) === "write";
   }
 }

@@ -187,6 +187,15 @@ describe("AssetKindRegistry — registration guards", () => {
         () => registry.register(handler("bad", { [extension]: "image/png" })),
         { name: "TypeError", message: /invalid extension/ }
       );
+      assert.throws(
+        () => registry.register({
+          ...handler("bad", { ".bad": "text/plain" }),
+          conversions: {
+            [extension]: async(content) => content
+          }
+        }),
+        { name: "TypeError", message: /invalid extension/ }
+      );
     }
   });
 });

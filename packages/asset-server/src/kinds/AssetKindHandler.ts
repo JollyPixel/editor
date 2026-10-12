@@ -48,6 +48,10 @@ export interface AssetCommands<
   ): AssetLiveProtocol<TCommand>;
 }
 
+export type AssetConversion = (
+  content: Uint8Array
+) => Promise<Uint8Array>;
+
 export interface AssetKindCompanion<TState = unknown> {
   readonly kind: string;
 
@@ -70,6 +74,11 @@ export interface AssetKindHandler<
   readonly snapshot?: SnapshotPolicy;
   readonly commands?: AssetCommands<TState, TCommand>;
   readonly companions?: readonly AssetKindCompanion<TState>[];
+  /**
+   * Turns another format, keyed by its extension, into this kind's content
+   * when a catalog create names that extension in `from`.
+   */
+  readonly conversions?: Readonly<Record<string, AssetConversion>>;
 
   create(
     assetId: string

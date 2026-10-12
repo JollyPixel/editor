@@ -100,7 +100,8 @@ export function session(
       .registerKind({
         kind: "voxelmap",
         label: "Voxel map",
-        extension: ".voxelmap.json"
+        extension: ".voxelmap.json",
+        convertsFrom: []
       })
       .registerEditor({
         name: "voxel-map",

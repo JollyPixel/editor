@@ -1,14 +1,16 @@
 // Import Third-party Dependencies
 import type { AccountsFailureCode } from "@jolly-pixel/accounts";
 
+export type ApiFailureCode = AccountsFailureCode | "export-refused";
+
 export class ApiError extends Error {
   readonly status: number;
-  readonly code: AccountsFailureCode;
+  readonly code: ApiFailureCode;
   readonly headers: Readonly<Record<string, string>>;
 
   constructor(
     status: number,
-    code: AccountsFailureCode,
+    code: ApiFailureCode,
     message: string,
     headers: Record<string, string> = {}
   ) {

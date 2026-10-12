@@ -13,12 +13,14 @@ import {
   AccountRoles,
   type AccountsOpenOptions
 } from "@jolly-pixel/accounts/node";
+import { createAssetWorkspace } from "@jolly-pixel/asset-server/node";
 
 // Import Internal Dependencies
 import {
   StudioApi,
   type StudioApiOptions
 } from "../../server/api/StudioApi.ts";
+import { ProjectArchive } from "../../server/project/ProjectArchive.ts";
 import { StudioAccess } from "../../server/project/StudioAccess.ts";
 import { StudioShares } from "../../server/shares/StudioShares.ts";
 import { sharedCatalog } from "./shares.ts";
@@ -60,7 +62,9 @@ export interface StudioApiAccountsOptions extends Omit<
   closures?: Record<string, string[]>;
 }
 
-export type StudioApiListenOptions = Omit<StudioApiOptions, "accounts" | "shares">;
+export type StudioApiListenOptions = Omit<
+  StudioApiOptions, "accounts" | "shares" | "archive"
+>;
 
 export async function listenStudioApi(
   options: StudioApiAccountsOptions = {},
@@ -81,15 +85,25 @@ export async function listenStudioApi(
       defaultRole
     })
   });
+  const access = StudioAccess.read({ version: 1 }, "project.json");
   const shares = new StudioShares({
     accounts,
-    access: StudioAccess.read({ version: 1 }, "project.json"),
+    access,
     catalog: Promise.resolve(sharedCatalog(closures))
+  });
+  const workspace = await createAssetWorkspace({
+    root: "project",
+    inMemory: true
   });
   const api = await StudioApi.open({
     ...apiOptions,
     accounts,
-    shares
+    shares,
+    archive: new ProjectArchive({
+      access,
+      backend: workspace.backend,
+      name: "project"
+    })
   });
   const server = http.createServer((request, response) => {
     api.middleware(request, response, () => {
@@ -117,6 +131,7 @@ export async function listenStudioApi(
         server.close(resolve);
       });
       await api[Symbol.asyncDispose]();
+      await workspace.close();
       accounts[Symbol.dispose]();
     }
   };

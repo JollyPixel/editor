@@ -75,6 +75,10 @@ flowchart TB
   `/view/<token>` with the editor page plus a `<base>` and the launch.
   Guests read the `asset-catalog-view` room, registered once the workspace
   is ready.
+- Project export: `ProjectArchive` checks `studio.$export` and answers
+  `GET /api/project/archive` with every asset in one asset archive, named
+  after the project root. It goes over HTTP, so the catalog content limit
+  does not apply. `GET /api/project/` answers `canExport` for the caller.
 
 | Mode | Project file | Back-end | Editor pages |
 |---|---|---|---|
@@ -202,6 +206,11 @@ flowchart TB
 
 - Home is a fixed tab. Opening an editor hides it, so the tree keeps its state
   ([ADR-0014](./docs/adr/0014-the-asset-browser-lives-on-home.md)).
+- Settings is a shell page like Home, but closable: no frame, outside the cap
+  and the saved tabs.
+- The Home tools, online only: Settings opens the Settings tab, Search the
+  console, Export downloads the project archive. Export stays disabled when
+  the role has no write on `studio.$export`.
 - `project-overview` counts assets per kind (`AssetTally`) and lists open
   editors.
 - `studio-users`, in the right dock when online, draws the `accounts` room
@@ -223,8 +232,18 @@ flowchart TB
 | New folder | toolbar, menu | created in the project, then rename starts |
 | Export | toolbar, menu | `<stem>.zip` with dependencies, not on folders |
 | Share | toolbar, menu | online only; lists, creates and revokes view-only links |
+| Add files | drop files from the OS | into the folder under the cursor, or the root |
 
 - Context menu: right-click, Shift+F10 or the menu key.
+- Dropped files (`AssetDrop`), 10 MB each at most, the WebSocket limit:
+  - `.zip`: imported as an asset archive at its own paths, asking first when
+    some of its assets exist. A `.zip` the catalog refuses to plan is added
+    as a file; any other failure is reported.
+  - A format a kind converts from (`convertsFrom` in the manifest): one
+    question per format, convert or keep. Converting creates
+    `<stem><kind extension>` and the back-end handler converts the bytes.
+  - Anything else: added under its own name; the back-end picks the kind by
+    extension, `binary` otherwise.
 - Folders start collapsed; the expanded ones are kept in `localStorage`
   (`studio:asset-expanded`), like the kind filter.
 - The tree is `virtual` and scrolls inside the pane, under the toolbar.
@@ -286,7 +305,10 @@ flowchart TB
 | `src/seed.ts` | seed for both back-ends |
 | `src/catalog/` | pure tree logic (`AssetTreeModel`, `AssetPath`, …) |
 | `src/accounts/` | `StudioSignedIn`, `SessionRenewal`, `UsersTreeModel`, `/users` console |
+| `src/api/` | `ApiEndpoint`: fetch and failure shape shared by the HTTP clients |
 | `src/shares/` | share routes, lifetimes, `ShareLinksClient`, `StudioShareLinks` |
+| `src/project/` | project routes, `ProjectArchiveClient`, `AttachmentDisposition` |
+| `src/files/` | `DroppedFile`, `FileDownload` |
 | `src/editors/` | `EditorRegistry`, `ProjectManifest` |
 | `src/preferences/` | `StudioPreferences` |
 | `src/tabs/` | `EditorTabs`, `EditorFrames`, `SavedTabs` |

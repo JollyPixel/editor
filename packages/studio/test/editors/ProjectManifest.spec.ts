@@ -26,12 +26,14 @@ const kKinds = [
     icon: {
       svg: "<path/>",
       tone: "green"
-    }
+    },
+    convertsFrom: []
   },
   {
     kind: "blockset",
     label: "Blockset",
-    extension: ".blockset.json"
+    extension: ".blockset.json",
+    convertsFrom: [".png"]
   }
 ];
 

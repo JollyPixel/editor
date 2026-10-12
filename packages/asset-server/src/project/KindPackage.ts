@@ -6,7 +6,10 @@ import {
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import type { AssetKindDescriptor } from "../kinds/AssetKindDescriptor.ts";
+import type {
+  AssetKindDescriptor,
+  LoadedAssetKind
+} from "../kinds/AssetKindDescriptor.ts";
 import type { AssetKindHandler } from "../kinds/AssetKindHandler.ts";
 import type { AssetKindPackage } from "../kinds/AssetKindPackage.ts";
 
@@ -38,12 +41,14 @@ const kDescriptorsParser = new SchemaParser(defineSchema({
   }
 }));
 
-export type PackageLoader = (packageName: string) => Promise<unknown>;
+export type PackageLoader = (
+  packageName: string
+) => Promise<unknown>;
 
 export class KindPackage {
   readonly name: string;
   readonly options: Readonly<Record<string, unknown>>;
-  readonly descriptors: readonly AssetKindDescriptor[];
+  readonly descriptors: readonly LoadedAssetKind[];
   readonly handlers: readonly AssetKindHandler[];
 
   static async load(
@@ -68,14 +73,18 @@ export class KindPackage {
       throw new TypeError(`"${name}" does not export "${KINDS_EXPORT}".`);
     }
 
-    const descriptors = kDescriptorsParser.parse(kinds.descriptors);
+    const descriptors = kDescriptorsParser.parse(
+      kinds.descriptors
+    );
     if (descriptors.err) {
       throw new TypeError(
         `"${name}" exports invalid "${KINDS_EXPORT}" descriptors.`
       );
     }
 
-    const parsedOptions = new SchemaParser(kinds.optionsSchema).parse(options);
+    const parsedOptions = new SchemaParser(
+      kinds.optionsSchema
+    ).parse(options);
     if (parsedOptions.err) {
       throw new TypeError(
         `"${name}" received invalid options: ${describeErrors(parsedOptions.val)}`
@@ -98,19 +107,24 @@ export class KindPackage {
       handlers: readonly AssetKindHandler[];
     }
   ) {
-    const handled = new Set(data.handlers.map((handler) => handler.kind));
-    const unhandled = data.descriptors.find(
-      (descriptor) => !handled.has(descriptor.kind)
+    const handlers = new Map(
+      data.handlers.map((handler) => [handler.kind, handler])
     );
-    if (unhandled !== undefined) {
-      throw new TypeError(
-        `"${data.name}" describes the asset kind "${unhandled.kind}" without handling it.`
-      );
-    }
+    this.descriptors = data.descriptors.map((descriptor) => {
+      const handler = handlers.get(descriptor.kind);
+      if (handler === undefined) {
+        throw new TypeError(
+          `"${data.name}" describes the asset kind "${descriptor.kind}" without handling it.`
+        );
+      }
 
+      return {
+        ...descriptor,
+        convertsFrom: Object.keys(handler.conversions ?? {})
+      };
+    });
     this.name = data.name;
     this.options = structuredClone(data.options);
-    this.descriptors = [...data.descriptors];
     this.handlers = [...data.handlers];
   }
 }

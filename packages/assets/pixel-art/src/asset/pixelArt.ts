@@ -16,6 +16,7 @@ import { PIXEL_ART_ICON } from "./icons.ts";
 export const PIXEL_ART_KIND = "pixelart";
 export const PIXEL_ART_COMMAND = "pixelart.command";
 export const PIXEL_ART_EXTENSION = ".pixelart";
+const kMaxTextureSize = 2048;
 
 export const PIXEL_ART_ASSET: AssetKindDescriptor = {
   kind: PIXEL_ART_KIND,
@@ -23,11 +24,6 @@ export const PIXEL_ART_ASSET: AssetKindDescriptor = {
   extension: PIXEL_ART_EXTENSION,
   icon: PIXEL_ART_ICON
 };
-
-export interface EncodedPixelArt {
-  size: Vec2;
-  content: Uint8Array;
-}
 
 export function createPixelArtDocument(
   size: Vec2
@@ -45,16 +41,14 @@ export function createPixelArtDocument(
 
 export async function pixelArtDocumentFromPng(
   png: Uint8Array
-): Promise<EncodedPixelArt> {
-  const buffer = await createPixelBufferFromPng(png);
+): Promise<Uint8Array> {
   const state = new PixelDocumentState({
-    buffer
+    buffer: await createPixelBufferFromPng(png, {
+      maxSize: kMaxTextureSize
+    })
   });
 
-  return {
-    size: buffer.size(),
-    content: encodePixelArtDocument(
-      serializePixelDocument(state)
-    )
-  };
+  return encodePixelArtDocument(
+    serializePixelDocument(state)
+  );
 }

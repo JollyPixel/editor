@@ -13,17 +13,20 @@ import {
   harness,
   MAP_TAB,
   MODEL_TAB,
-  OTHER_TAB
+  OTHER_TAB,
+  PAGE_ID
 } from "../helpers/editorTabs.ts";
 
 afterEach(disposeHarness);
 
 describe("EditorTabs cap", () => {
-  test("home does not count toward the cap", async() => {
-    const { tabs } = harness({ cap: 1 });
+  test("home and shell pages do not count toward the cap", async() => {
+    const { tabs, itemValues } = harness({ cap: 1 });
+    tabs.openPage(PAGE_ID);
 
     assert.equal(await tabs.open(MAP_TAB), true);
     assert.deepEqual(tabs.ids(), ["map-1"]);
+    assert.deepEqual(itemValues(), [HOME_TAB_ID, PAGE_ID, "map-1"]);
   });
 
   test("evicts the least recently activated tab at the cap", async() => {

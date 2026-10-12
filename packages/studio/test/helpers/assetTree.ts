@@ -3,10 +3,14 @@ import type {
   AssetRecordData,
   AssetReferenceData
 } from "@jolly-pixel/asset";
-import type {
-  CatalogBatchReport,
-  CatalogCreateOptions,
-  CatalogRename
+import {
+  CATALOG_PLAN,
+  CatalogRejectedError,
+  type CatalogBatchReport,
+  type CatalogCreateOptions,
+  type CatalogRename,
+  type ImportPlan,
+  type ImportReport
 } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
@@ -258,5 +262,13 @@ export class FakeTreeCatalog implements AssetTreeCatalog {
 
   async exportArchive(): Promise<Uint8Array> {
     return new Uint8Array();
+  }
+
+  async planImport(): Promise<ImportPlan> {
+    throw new CatalogRejectedError("not an asset archive", CATALOG_PLAN);
+  }
+
+  async importArchive(): Promise<ImportReport> {
+    throw new Error("not an asset archive");
   }
 }

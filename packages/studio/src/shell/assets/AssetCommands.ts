@@ -1,8 +1,12 @@
 // Import Third-party Dependencies
 import {
   ARCHIVE_MIME_TYPE,
+  CATALOG_PLAN,
+  CatalogRejectedError,
   type CatalogBatchReport,
-  type CatalogClient
+  type CatalogClient,
+  type ImportConflictPolicy,
+  type ImportPlan
 } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
@@ -12,6 +16,8 @@ import {
 } from "../../catalog/AssetKindSet.ts";
 import type { AssetPath } from "../../catalog/AssetPath.ts";
 import type { AssetDeletion } from "../../catalog/AssetDeletion.ts";
+import type { DroppedFile } from "../../files/DroppedFile.ts";
+import { FileDownload } from "../../files/FileDownload.ts";
 import type {
   AssetLeafData,
   AssetNodeData,
@@ -33,7 +39,13 @@ export type AssetCommandCatalog = Pick<
   | "moveFolder"
   | "removeFolder"
   | "exportArchive"
+  | "planImport"
+  | "importArchive"
 >;
+
+export type ConflictQuestion = (
+  plan: ImportPlan
+) => Promise<ImportConflictPolicy | null>;
 
 export interface AssetCommandsOptions {
   catalog: AssetCommandCatalog;
@@ -71,6 +83,64 @@ export class AssetCommands {
 
       return null;
     }
+  }
+
+  async add(
+    folder: AssetPath,
+    file: DroppedFile,
+    convertTo: AssetKindEntry | null = null
+  ): Promise<string | null> {
+    const name = convertTo === null ?
+      file.name :
+      `${file.stem}${convertTo.extension}`;
+    try {
+      return await this.#catalog.create(
+        folder.child(name).toString(),
+        await file.bytes(),
+        {
+          kind: convertTo?.kind,
+          from: convertTo === null ? undefined : file.format,
+          onConflict: "suffix"
+        }
+      );
+    }
+    catch (error) {
+      this.#onError(`Could not add "${file.name}": ${reasonOf(error)}`);
+
+      return null;
+    }
+  }
+
+  async importArchive(
+    file: DroppedFile,
+    askConflicts: ConflictQuestion
+  ): Promise<boolean> {
+    try {
+      const content = await file.bytes();
+      const plan = await this.#catalog.planImport(content);
+      const onConflict = plan.live.length === 0 ?
+        "keep" :
+        await askConflicts(plan);
+      if (onConflict === null) {
+        return true;
+      }
+
+      const report = await this.#catalog.importArchive(content, { onConflict });
+      for (const failure of report.failed) {
+        this.#onError(`Could not import "${failure.path}": ${failure.reason}`);
+      }
+    }
+    catch (error) {
+      if (
+        error instanceof CatalogRejectedError &&
+        error.command === CATALOG_PLAN
+      ) {
+        return false;
+      }
+      this.#onError(`Could not import "${file.name}": ${reasonOf(error)}`);
+    }
+
+    return true;
   }
 
   async createFolder(
@@ -153,10 +223,10 @@ export class AssetCommands {
   ): Promise<void> {
     try {
       const bytes = await this.#catalog.exportArchive(asset.id);
-      download(
+      new FileDownload(
         new Blob([Uint8Array.from(bytes)], { type: ARCHIVE_MIME_TYPE }),
         `${asset.path.stem || asset.id}${kArchiveExtension}`
-      );
+      ).save();
     }
     catch (error) {
       this.#onError(`Could not export "${asset.path.name}": ${reasonOf(error)}`);
@@ -276,16 +346,4 @@ function reasonOf(
   error: unknown
 ): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-function download(
-  blob: Blob,
-  fileName: string
-): void {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = fileName;
-  anchor.click();
-  URL.revokeObjectURL(url);
 }

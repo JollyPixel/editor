@@ -30,11 +30,14 @@ import {
 import { StudioSession } from "./StudioSession.ts";
 import type { EditorRegistry } from "../editors/EditorRegistry.ts";
 import { StudioPreferences } from "../preferences/StudioPreferences.ts";
+import { SETTINGS_TAB_ID } from "./settings/StudioSettings.ts";
+import type { StudioErrorEvent } from "./StudioErrorEvent.ts";
 import type {
   EditorTab,
   EditorTabsOptions
 } from "../tabs/EditorTabs.ts";
 import "./home/StudioHome.ts";
+import "./settings/StudioSettings.ts";
 import "./account/AccountBadge.ts";
 
 export interface StudioOptions {
@@ -149,7 +152,7 @@ export class Studio extends LitElement {
       box-shadow: inset 0 -1px 0 var(--studio-shade);
     }
 
-    #workbench:has(studio-home[hidden]) {
+    #workbench:has(#editor-frames > iframe:not([hidden])) {
       margin: 0 var(--studio-gutter-tight) var(--studio-gutter-tight);
       padding: var(--studio-gutter-tight);
       border-radius: var(--studio-radius);
@@ -204,6 +207,9 @@ export class Studio extends LitElement {
   @query("#studio-home")
   declare _home: HTMLElement | null;
 
+  @query("#studio-settings")
+  declare _settings: HTMLElement | null;
+
   #session: StudioSession | null = null;
   #preferences = new StudioPreferences();
   #queue = new LogQueue();
@@ -225,7 +231,8 @@ export class Studio extends LitElement {
     if (
       this._strip === null ||
       this._frames === null ||
-      this._home === null
+      this._home === null ||
+      this._settings === null
     ) {
       throw new Error("The studio must be connected before it is attached.");
     }
@@ -240,6 +247,14 @@ export class Studio extends LitElement {
       tabs: {
         strip: this._strip,
         home: this._home,
+        pages: [
+          {
+            id: SETTINGS_TAB_ID,
+            label: "Settings",
+            icon: "settings",
+            element: this._settings
+          }
+        ],
         confirmEvict: options.confirmEvict
       },
       frames: {
@@ -320,12 +335,18 @@ export class Studio extends LitElement {
             .openTabs=${this._openTabs}
             @asset-open=${this.#onAssetOpen}
             @console-toggle=${this.#toggleConsole}
+            @settings-open=${this.#openSettings}
             .signedIn=${this._signedIn}
             .account=${this._account}
             .preferences=${this.#preferences}
-            @asset-error=${this.#logError}
-            @users-error=${this.#logError}
+            @studio-error=${this.#logError}
           ></studio-home>
+          <studio-settings
+            id="studio-settings"
+            role="region"
+            aria-label="Settings"
+            hidden
+          ></studio-settings>
         </div>
         <jolly-log .entries=${this._log}></jolly-log>
       </section>
@@ -370,6 +391,10 @@ export class Studio extends LitElement {
     this.#session?.toggleConsole();
   };
 
+  readonly #openSettings = (): void => {
+    this.#session?.tabs.openPage(SETTINGS_TAB_ID);
+  };
+
   readonly #onAssetOpen = (
     event: HTMLElementEventMap["asset-open"]
   ): void => {
@@ -377,7 +402,7 @@ export class Studio extends LitElement {
   };
 
   readonly #logError = (
-    event: HTMLElementEventMap["asset-error" | "users-error"]
+    event: StudioErrorEvent
   ): void => {
     this.#queue.push(event.detail.message);
   };

@@ -28,7 +28,8 @@ import {
   PIXEL_ART_ASSET,
   PIXEL_ART_COMMAND,
   PIXEL_ART_EXTENSION,
-  PIXEL_ART_KIND
+  PIXEL_ART_KIND,
+  pixelArtDocumentFromPng
 } from "./pixelArt.ts";
 import { applyPixelCommand } from "../network/PixelCommandApplier.ts";
 import { encodePixelSnapshot } from "../network/PixelSnapshotCodec.ts";
@@ -112,6 +113,9 @@ export function pixelArtAssetKind(
     kind: PIXEL_ART_KIND,
     extensions: {
       [PIXEL_ART_EXTENSION]: "application/json; charset=utf-8"
+    },
+    conversions: {
+      ".png": pixelArtDocumentFromPng
     },
     snapshot,
 

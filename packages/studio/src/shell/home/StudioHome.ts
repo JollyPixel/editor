@@ -4,17 +4,20 @@ import {
   css,
   html,
   nothing,
+  type PropertyValues,
   type TemplateResult
 } from "lit";
 import {
   customElement,
-  property
+  property,
+  state
 } from "lit/decorators.js";
 import type { Account } from "@jolly-pixel/accounts";
 
 // Import Internal Dependencies
 import type { StudioSignedIn } from "../../accounts/StudioSignedIn.ts";
 import { StudioPreferences } from "../../preferences/StudioPreferences.ts";
+import { StudioErrorEvent } from "../StudioErrorEvent.ts";
 import type { AssetBrowserOptions } from "../assets/AssetBrowser.ts";
 import type { EditorTab } from "../../tabs/EditorTabs.ts";
 import "../assets/AssetBrowser.ts";
@@ -135,6 +138,12 @@ export class StudioHome extends LitElement {
   @property({ attribute: false })
   declare preferences: StudioPreferences;
 
+  @state()
+  declare _exporting: boolean;
+
+  @state()
+  declare _canExport: boolean;
+
   constructor() {
     super();
     this.assets = null;
@@ -142,6 +151,16 @@ export class StudioHome extends LitElement {
     this.signedIn = null;
     this.account = null;
     this.preferences = new StudioPreferences();
+    this._exporting = false;
+    this._canExport = false;
+  }
+
+  override willUpdate(
+    changed: PropertyValues<this>
+  ): void {
+    if (changed.has("signedIn") || changed.has("account")) {
+      void this.#loadExportRight();
+    }
   }
 
   override render(): TemplateResult {
@@ -198,7 +217,7 @@ export class StudioHome extends LitElement {
             icon-only
             label="Settings"
             title="Settings"
-            disabled
+            @click=${this.#openSettings}
           ></jolly-button>
           <jolly-button
             icon="search"
@@ -212,7 +231,8 @@ export class StudioHome extends LitElement {
             icon-only
             label="Export project"
             title="Export project"
-            disabled
+            ?disabled=${this._exporting || !this._canExport}
+            @click=${this.#export}
           ></jolly-button>
         </jolly-toolbar>
         ${this.assets === null ? users : html`
@@ -235,6 +255,53 @@ export class StudioHome extends LitElement {
     `;
   }
 
+  async #loadExportRight(): Promise<void> {
+    const signedIn = this.signedIn;
+    this._canExport = false;
+    if (signedIn === null) {
+      return;
+    }
+
+    try {
+      const canExport = await signedIn.projectArchive.canExport();
+      if (this.signedIn === signedIn) {
+        this._canExport = canExport;
+      }
+    }
+    catch (error) {
+      this.dispatchEvent(
+        StudioErrorEvent.from(error, "Could not check the export right")
+      );
+    }
+  }
+
+  readonly #openSettings = (): void => {
+    this.dispatchEvent(new Event("settings-open", {
+      bubbles: true,
+      composed: true
+    }));
+  };
+
+  readonly #export = async(): Promise<void> => {
+    if (this.signedIn === null || this._exporting) {
+      return;
+    }
+
+    this._exporting = true;
+    try {
+      const download = await this.signedIn.projectArchive.download();
+      download.save();
+    }
+    catch (error) {
+      this.dispatchEvent(
+        StudioErrorEvent.from(error, "Could not export the project")
+      );
+    }
+    finally {
+      this._exporting = false;
+    }
+  };
+
   readonly #search = (): void => {
     this.dispatchEvent(new Event("console-toggle", {
       bubbles: true,
@@ -250,5 +317,6 @@ declare global {
 
   interface HTMLElementEventMap {
     "console-toggle": Event;
+    "settings-open": Event;
   }
 }

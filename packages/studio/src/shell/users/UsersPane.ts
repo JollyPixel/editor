@@ -29,10 +29,7 @@ import {
   parseRoleAction,
   type UsersMenuTarget
 } from "../../accounts/UsersTreeModel.ts";
-
-export interface UsersErrorDetail {
-  message: string;
-}
+import { StudioErrorEvent } from "../StudioErrorEvent.ts";
 
 @customElement("studio-users")
 export class UsersPane extends LitElement {
@@ -259,14 +256,7 @@ export class UsersPane extends LitElement {
     change: Promise<void>
   ): void {
     change.catch((error: unknown) => {
-      const event = new CustomEvent<UsersErrorDetail>("users-error", {
-        bubbles: true,
-        composed: true,
-        detail: {
-          message: error instanceof Error ? error.message : String(error)
-        }
-      });
-      this.dispatchEvent(event);
+      this.dispatchEvent(StudioErrorEvent.from(error));
     });
   }
 }
@@ -274,9 +264,5 @@ export class UsersPane extends LitElement {
 declare global {
   interface HTMLElementTagNameMap {
     "studio-users": UsersPane;
-  }
-
-  interface HTMLElementEventMap {
-    "users-error": CustomEvent<UsersErrorDetail>;
   }
 }

@@ -23,6 +23,13 @@ export interface EditorTab extends EditorTabTitle {
   icon?: IconName;
 }
 
+export interface ShellPage {
+  id: string;
+  label: string;
+  icon: IconName;
+  element: HTMLElement;
+}
+
 export interface TabStrip extends HTMLElement {
   value: string;
 }
@@ -35,6 +42,12 @@ export interface EditorTabsOptions {
    * closed and does not count toward `cap`.
    */
   home: HTMLElement;
+  /**
+   * Shell content opened on demand behind a closable tab that does not count
+   * toward `cap`.
+   * @default []
+   */
+  pages?: readonly ShellPage[];
   /**
    * @default DEFAULT_TAB_CAP
    */
@@ -56,8 +69,22 @@ export interface EditorTabOpenOptions {
   focus?: boolean;
 }
 
+interface TabItemProperties {
+  label: string;
+  icon: IconName | "";
+  tooltip?: string;
+  closable?: boolean;
+  iconOnly?: boolean;
+  fixed?: boolean;
+}
+
 interface OpenTab {
   tab: EditorTab;
+  item: HTMLElement;
+}
+
+interface PageEntry {
+  element: HTMLElement;
   item: HTMLElement;
 }
 
@@ -66,12 +93,11 @@ export class EditorTabs {
 
   #strip: TabStrip;
   #frames: EditorFrames;
-  #home: HTMLElement;
-  #homeItem: HTMLElement;
   #confirmEvict: (tab: EditorTab) => boolean | Promise<boolean>;
   #onChange: (() => void) | undefined;
   #open = new Map<string, OpenTab>();
-  #active: string | null = null;
+  #pages = new Map<string, PageEntry>();
+  #active = HOME_TAB_ID;
   #listening = new AbortController();
 
   constructor(
@@ -80,20 +106,31 @@ export class EditorTabs {
     this.cap = options.cap ?? DEFAULT_TAB_CAP;
     this.#strip = options.strip;
     this.#frames = options.frames;
-    this.#home = options.home;
     this.#confirmEvict = options.confirmEvict ?? (() => true);
     this.#onChange = options.onChange;
 
-    this.#homeItem = document.createElement(kTabTag);
-    Object.assign(this.#homeItem, {
-      value: HOME_TAB_ID,
-      label: kHomeLabel,
-      icon: kHomeIcon,
-      iconOnly: true,
-      fixed: true
-    });
-    this.#strip.prepend(this.#homeItem);
-    this.#show(null);
+    const home: PageEntry = {
+      element: options.home,
+      item: this.#createItem(HOME_TAB_ID, {
+        label: kHomeLabel,
+        icon: kHomeIcon,
+        iconOnly: true,
+        fixed: true
+      })
+    };
+    this.#pages.set(HOME_TAB_ID, home);
+    for (const page of options.pages ?? []) {
+      this.#pages.set(page.id, {
+        element: page.element,
+        item: this.#createItem(page.id, {
+          label: page.label,
+          icon: page.icon,
+          closable: true
+        })
+      });
+    }
+    this.#strip.prepend(home.item);
+    this.#show(HOME_TAB_ID);
 
     const { signal } = this.#listening;
     this.#strip.addEventListener("jolly-tab-change", (event) => {
@@ -108,7 +145,7 @@ export class EditorTabs {
   }
 
   get active(): string {
-    return this.#active ?? HOME_TAB_ID;
+    return this.#active;
   }
 
   get size(): number {
@@ -150,9 +187,7 @@ export class EditorTabs {
       this.close(victim.tab.id);
     }
     if (!this.#open.has(tab.id)) {
-      const item = document.createElement(kTabTag);
-      Object.assign(item, {
-        value: tab.id,
+      const item = this.#createItem(tab.id, {
         label: tab.label,
         tooltip: tab.tooltip ?? "",
         icon: tab.icon ?? "",
@@ -172,24 +207,34 @@ export class EditorTabs {
     return true;
   }
 
-  focus(
+  openPage(
     id: string
   ): boolean {
-    if (id === HOME_TAB_ID) {
-      this.#show(null);
-      this.#onChange?.();
-
-      return true;
-    }
-
-    const entry = this.#open.get(id);
-    if (entry === undefined) {
+    const page = this.#pages.get(id);
+    if (page === undefined) {
       return false;
     }
 
-    this.#open.delete(id);
-    this.#open.set(id, entry);
-    this.#show(entry);
+    if (page.item.parentNode !== this.#strip) {
+      this.#strip.append(page.item);
+    }
+
+    return this.focus(id);
+  }
+
+  focus(
+    id: string
+  ): boolean {
+    if (this.#itemOf(id) === null) {
+      return false;
+    }
+
+    const entry = this.#open.get(id);
+    if (entry !== undefined) {
+      this.#open.delete(id);
+      this.#open.set(id, entry);
+    }
+    this.#show(id);
     this.#onChange?.();
 
     return true;
@@ -198,14 +243,15 @@ export class EditorTabs {
   close(
     id: string
   ): boolean {
-    const entry = this.#open.get(id);
-    if (entry === undefined) {
+    const item = this.#itemOf(id);
+    if (item === null || id === HOME_TAB_ID) {
       return false;
     }
 
-    this.#open.delete(id);
-    entry.item.remove();
-    this.#frames.remove(id);
+    item.remove();
+    if (this.#open.delete(id)) {
+      this.#frames.remove(id);
+    }
     if (this.#active === id) {
       this.focus(
         [...this.#open.keys()].at(-1) ?? HOME_TAB_ID
@@ -221,14 +267,13 @@ export class EditorTabs {
   reload(
     id: string
   ): boolean {
-    const entry = this.#open.get(id);
-    if (entry === undefined) {
+    if (!this.#open.has(id)) {
       return false;
     }
 
     this.#frames.remove(id);
     if (this.#active === id) {
-      this.#show(entry);
+      this.#show(id);
     }
 
     return true;
@@ -238,18 +283,18 @@ export class EditorTabs {
     id: string,
     index: number
   ): boolean {
-    const entry = this.#open.get(id);
-    if (entry === undefined) {
+    const item = this.#itemOf(id);
+    if (item === null || id === HOME_TAB_ID) {
       return false;
     }
 
     const others = [...this.#strip.children].filter(
-      (item) => item !== entry.item
+      (other) => other !== item
     );
     const reference = others[
       Math.max(index, kFirstEditorIndex)
     ] ?? null;
-    this.#strip.insertBefore(entry.item, reference);
+    this.#strip.insertBefore(item, reference);
     this.#onChange?.();
 
     return true;
@@ -286,16 +331,41 @@ export class EditorTabs {
       this.#frames.remove(id);
     }
     this.#open.clear();
-    this.#active = null;
-    this.#homeItem.remove();
+    for (const page of this.#pages.values()) {
+      page.item.remove();
+    }
+    this.#active = HOME_TAB_ID;
+  }
+
+  #createItem(
+    id: string,
+    properties: TabItemProperties
+  ): HTMLElement {
+    const item = document.createElement(kTabTag);
+    Object.assign(item, {
+      value: id,
+      ...properties
+    });
+
+    return item;
+  }
+
+  #itemOf(
+    id: string
+  ): HTMLElement | null {
+    const item = this.#open.get(id)?.item ?? this.#pages.get(id)?.item;
+
+    return item?.parentNode === this.#strip ? item : null;
   }
 
   #show(
-    entry: OpenTab | null
+    id: string
   ): void {
-    this.#active = entry?.tab.id ?? null;
-    this.#strip.value = this.active;
-    this.#home.hidden = entry !== null;
-    this.#frames.show(entry?.tab ?? null);
+    this.#active = id;
+    this.#strip.value = id;
+    for (const [pageId, page] of this.#pages) {
+      page.element.hidden = pageId !== id;
+    }
+    this.#frames.show(this.#open.get(id)?.tab ?? null);
   }
 }

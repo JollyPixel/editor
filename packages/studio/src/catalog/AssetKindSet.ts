@@ -17,6 +17,7 @@ export interface AssetKindEntry {
   readonly label: string;
   readonly extension: string;
   readonly icon?: IconName;
+  readonly convertsFrom?: readonly string[];
 }
 
 export interface AssetKindSetInit {
@@ -62,6 +63,14 @@ export class AssetKindSet implements AssetKindPresenter {
     kind: string
   ): AssetKindEntry | undefined {
     return this.#byKind.get(kind);
+  }
+
+  convertingFrom(
+    format: string
+  ): AssetKindEntry[] {
+    return this.entries.filter(
+      (entry) => entry.convertsFrom?.includes(format) === true
+    );
   }
 
   labelFor(
