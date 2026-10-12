@@ -39,7 +39,7 @@ const kHaloStrength = 0.35;
 const kGlowSharpness = 6;
 const kGlowStrength = 0.06;
 
-export class NightSkyBackground {
+export class NightSky {
   readonly node: THREE.Node;
 
   constructor(

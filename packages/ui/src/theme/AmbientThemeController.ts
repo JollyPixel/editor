@@ -7,43 +7,50 @@ import type {
 // Import Internal Dependencies
 import {
   adoptAmbientTheme,
+  resolveAmbientTheme,
   type ResolvedThemeMode
 } from "./ambientTheme.ts";
+import { ThemeChangeObserver } from "./ThemeChangeObserver.ts";
+
+export interface AmbientThemeControllerOptions {
+  /**
+   * Receives the resolved ambient theme when it changes, instead of the
+   * host's `theme` attribute.
+   */
+  onChange?: (
+    mode: ResolvedThemeMode
+  ) => void;
+}
+
+type Adoption = (
+  adopted: ResolvedThemeMode | null
+) => ResolvedThemeMode | null;
 
 export class AmbientThemeController implements ReactiveController {
   #host: ReactiveControllerHost & HTMLElement;
+  #adoption: Adoption;
   #adopted: ResolvedThemeMode | null = null;
-  #observer: MutationObserver | null = null;
-  #frame: number | null = null;
+  #observer = new ThemeChangeObserver(() => this.#adopt());
 
   constructor(
-    host: ReactiveControllerHost & HTMLElement
+    host: ReactiveControllerHost & HTMLElement,
+    options: AmbientThemeControllerOptions = {}
   ) {
     this.#host = host;
+    const { onChange } = options;
+    this.#adoption = onChange === undefined
+      ? (adopted) => adoptAmbientTheme(host, adopted)
+      : (adopted) => notifyAmbientTheme(host, adopted, onChange);
     host.addController(this);
   }
 
   follow(): void {
     this.#adopt();
-    if (this.#observer !== null) {
-      return;
-    }
-
-    this.#observer = new MutationObserver(this.#onMutations);
-    this.#observer.observe(this.#host.ownerDocument, {
-      attributes: true,
-      attributeFilter: ["theme"],
-      subtree: true
-    });
+    this.#observer.observe(this.#host.ownerDocument, this.#host);
   }
 
   stop(): void {
-    this.#observer?.disconnect();
-    this.#observer = null;
-    if (this.#frame !== null) {
-      this.#host.ownerDocument.defaultView?.cancelAnimationFrame(this.#frame);
-      this.#frame = null;
-    }
+    this.#observer.disconnect();
   }
 
   hostDisconnected(): void {
@@ -51,24 +58,19 @@ export class AmbientThemeController implements ReactiveController {
   }
 
   #adopt(): void {
-    this.#adopted = adoptAmbientTheme(this.#host, this.#adopted);
+    this.#adopted = this.#adoption(this.#adopted);
+  }
+}
+
+function notifyAmbientTheme(
+  host: Element,
+  notified: ResolvedThemeMode | null,
+  onChange: (mode: ResolvedThemeMode) => void
+): ResolvedThemeMode {
+  const mode = resolveAmbientTheme(host);
+  if (mode !== notified) {
+    onChange(mode);
   }
 
-  readonly #onMutations = (
-    records: Array<MutationRecord>
-  ): void => {
-    const view = this.#host.ownerDocument.defaultView;
-    if (
-      view === null ||
-      this.#frame !== null ||
-      records.every((record) => record.target === this.#host)
-    ) {
-      return;
-    }
-
-    this.#frame = view.requestAnimationFrame(() => {
-      this.#frame = null;
-      this.#adopt();
-    });
-  };
+  return mode;
 }

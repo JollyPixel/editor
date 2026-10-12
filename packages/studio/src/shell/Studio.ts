@@ -164,12 +164,20 @@ export class Studio extends LitElement {
       min-height: 0;
     }
 
+    #editor-frames:has(> iframe:not([hidden]))::after {
+      position: absolute;
+      inset: 0;
+      border-radius: var(--studio-radius);
+      box-shadow: 0 0 0 calc(var(--studio-radius) / 2) var(--studio-board);
+      content: "";
+      pointer-events: none;
+    }
+
     #editor-frames iframe {
       display: block;
       width: 100%;
       height: 100%;
       border: 0;
-      border-radius: var(--jolly-radius-sm);
     }
 
     #editor-frames iframe[hidden] {

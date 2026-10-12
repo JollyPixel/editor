@@ -6,7 +6,10 @@ import {
 } from "@jolly-pixel/three";
 import type { MaterialGroup } from "@jolly-pixel/voxel.renderer";
 import { VoxelRenderer } from "@jolly-pixel/voxel.renderer/engine";
-import type { PeerIdentity } from "@jolly-pixel/ui";
+import {
+  DocumentTheme,
+  type PeerIdentity
+} from "@jolly-pixel/ui";
 import { PeerRoster } from "@jolly-pixel/ui/network";
 import { RoomGrants } from "@jolly-pixel/network/client";
 import {
@@ -163,12 +166,14 @@ export class EditorScene extends Systems.Scene {
         requestFrame: () => this.#environment?.invalidateShadows()
       });
 
+    const pageTheme = new DocumentTheme();
     const environment = new SceneEnvironment({
       renderer: world.renderer.getSource(),
       scene,
       lighting,
       chunks: view.lighting,
-      casters: view
+      casters: view,
+      theme: pageTheme.mode
     });
     const { materialGroups } = session.map.voxels;
     function applyGlow(
@@ -373,6 +378,10 @@ export class EditorScene extends Systems.Scene {
       }),
       state.view.subscribe("change", (settings) => {
         applyView(settings);
+        world.invalidate();
+      }),
+      pageTheme.follow((theme) => {
+        environment.theme = theme;
         world.invalidate();
       }),
       mapDocument.subscribe("materialGroupsChanged", () => {

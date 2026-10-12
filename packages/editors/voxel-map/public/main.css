@@ -3,7 +3,7 @@
   margin: 0;
   padding: 0;
   scrollbar-width: thin;
-  scrollbar-color: #2a3a4a #0a0f12;
+  scrollbar-color: var(--jolly-groove) transparent;
 }
 
 html,
@@ -57,25 +57,6 @@ jolly-pane[key="paint"]::part(content) {
 html.template-dragging,
 html.template-dragging * {
   cursor: grabbing !important;
-}
-
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: #0a0f12;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #2a3a4a;
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #3a5060;
 }
 
 #game-container::before {

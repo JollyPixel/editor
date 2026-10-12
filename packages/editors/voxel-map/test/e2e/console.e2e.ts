@@ -8,8 +8,10 @@ test("a brush.size write from the console reaches the toolbar", async({ map, com
   await expect(map.toolbar.sizeButton(5)).toBeVisible();
 });
 
-test("the host theme variable restyles the page and the open console", async({ page, commands }) => {
+test("the theme variable restyles the page, console and texture panel", async({ map, page, commands }) => {
   const commandHost = page.locator("jolly-console");
+  await map.panes.open("Paint");
+  await expect(map.texture.panel).toHaveCSS("color-scheme", "dark");
   await commands.open();
   await expect(commandHost).toHaveAttribute("theme", "dark");
 
@@ -17,6 +19,7 @@ test("the host theme variable restyles the page and the open console", async({ p
 
   await expect(page.locator("jolly-scope").first()).toHaveAttribute("theme", "light");
   await expect(commandHost).toHaveAttribute("theme", "light");
+  await expect(map.texture.panel).toHaveCSS("color-scheme", "light");
 });
 
 test("the texture panel's pixel-art shortcuts are in the console", async({ commands }) => {

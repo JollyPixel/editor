@@ -2,9 +2,11 @@
 import * as THREE from "three/webgpu";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import type { BlockLightFalloff } from "@jolly-pixel/voxel.renderer";
+import type { ResolvedThemeMode } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { ShadowTexelSnap } from "./ShadowTexelSnap.ts";
+import { StudioSky } from "./background/StudioSky.ts";
 import type { SceneLighting } from "./SceneLighting.ts";
 import type {
   LightingMode,
@@ -12,7 +14,6 @@ import type {
 } from "../../state/ViewSettings.ts";
 
 // CONSTANTS
-const kBackground = "#262627";
 const kAmbientOcclusion = 0.75;
 const kEnvironmentBlur = 0.04;
 const kShadowRadius = 48;
@@ -37,6 +38,7 @@ export interface SceneEnvironmentOptions {
   lighting: SceneLighting;
   chunks: ChunkRendering;
   casters: ShadowCasters;
+  theme: ResolvedThemeMode;
 }
 
 export class SceneEnvironment {
@@ -54,8 +56,9 @@ export class SceneEnvironment {
   #forward = new THREE.Vector3();
   #sunDirection = new THREE.Vector3();
   #shadowSnap = new ShadowTexelSnap(kShadowRadius * 2, kShadowMapSize);
-  #background = new THREE.Color(kBackground);
+  #theme: ResolvedThemeMode;
   #skies = new Map<LightingMode, THREE.Node>();
+  #studioSkies = new Map<ResolvedThemeMode, THREE.Node>();
 
   constructor(
     options: SceneEnvironmentOptions
@@ -65,6 +68,7 @@ export class SceneEnvironment {
     this.#lighting = options.lighting;
     this.#chunks = options.chunks;
     this.#casters = options.casters;
+    this.#theme = options.theme;
 
     const { shadow } = this.#lighting.directional;
     shadow.autoUpdate = false;
@@ -112,6 +116,17 @@ export class SceneEnvironment {
     this.invalidateShadows();
   }
 
+  get theme(): ResolvedThemeMode {
+    return this.#theme;
+  }
+
+  set theme(
+    theme: ResolvedThemeMode
+  ) {
+    this.#theme = theme;
+    this.#applyBackground();
+  }
+
   invalidateShadows(): void {
     this.#shadowsDirty = true;
   }
@@ -156,12 +171,20 @@ export class SceneEnvironment {
   }
 
   #applyBackground(): void {
+    this.#scene.background = null;
+    this.#scene.backgroundNode = this.#backgroundNode();
+  }
+
+  #backgroundNode(): THREE.Node {
     const { mode, rig: { sky } } = this.#lighting;
     if (sky === null) {
-      this.#scene.background = this.#background;
-      this.#scene.backgroundNode = null;
+      let studio = this.#studioSkies.get(this.#theme);
+      if (studio === undefined) {
+        studio = new StudioSky(this.#theme).node;
+        this.#studioSkies.set(this.#theme, studio);
+      }
 
-      return;
+      return studio;
     }
 
     let node = this.#skies.get(mode);
@@ -169,8 +192,8 @@ export class SceneEnvironment {
       node = new sky(this.#lighting.sunDirection).node;
       this.#skies.set(mode, node);
     }
-    this.#scene.background = null;
-    this.#scene.backgroundNode = node;
+
+    return node;
   }
 
   #environmentMap(): THREE.Texture {

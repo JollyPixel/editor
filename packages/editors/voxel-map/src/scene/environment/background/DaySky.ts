@@ -21,7 +21,7 @@ const kHaze = "#bfcadb";
 const kGlowSharpness = 12;
 const kGlowStrength = 0.55;
 
-export class SkyBackground {
+export class DaySky {
   readonly node: THREE.Node;
 
   constructor(

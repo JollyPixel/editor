@@ -16,15 +16,26 @@ The root entry point exports these theme styles and helpers:
 - `ambientThemeMode(element)` resolves the theme an element that declares
   tokens of its own should adopt: the surrounding scope, then the page's own
   scope host, then `null` when the page picked no side.
+- `resolveAmbientTheme(element)` returns `ambientThemeMode(element)`, or the
+  system color scheme when the page picked no side.
 - `adoptAmbientTheme(element, adopted)` sets the element's `theme` attribute
   to its ambient theme and returns that mode, or removes it and returns `null`
   when the page picked no side. Pass the returned value back on the next call:
   a `theme` the author set is left alone.
 - `AmbientThemeController` is the Lit controller form: `follow()` adopts the
   ambient theme, then adopts it again whenever a `theme` attribute changes in
-  the document, until `stop()` or disconnection.
+  the document, until `stop()` or disconnection. Pass
+  `new AmbientThemeController(host, { onChange })` to receive
+  `resolveAmbientTheme(host)` instead, on `follow()` and then each time it
+  changes, including when the system color scheme changes. The host's `theme`
+  attribute is then left alone, for an element whose `theme` is its own
+  configuration.
 - `documentThemeMode(doc?)` resolves the page scope host's theme, for
   detached UI such as a floating window appended to the body.
+- `new DocumentTheme(doc?)` serves code outside a Lit element, such as a 3D
+  scene. Its `mode` is `documentThemeMode(doc)`, or the system color scheme
+  when the page picked no side. `follow(onChange)` calls `onChange` each time
+  that mode changes and returns a function that stops following.
 
 `ThemeMode` is `"light" | "dark" | "auto"`. `Density` is
 `"compact" | "default" | "comfortable"`. `THEME_MODES` and `DENSITIES` list

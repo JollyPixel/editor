@@ -15,7 +15,8 @@ import type {
   Mode
 } from "@jolly-pixel/pixel-draw.renderer";
 import {
-  ambientThemeMode,
+  AmbientThemeController,
+  resolveAmbientTheme,
   resolveThemeColor,
   themeStyles,
   type ResolvedThemeMode,
@@ -240,9 +241,11 @@ export class PixelDrawPanel extends LitElement {
     this,
     () => this.canvasManager?.shortcuts ?? null
   );
+  readonly #ambientTheme = new AmbientThemeController(this, {
+    onChange: (mode) => this.#adoptAmbientTheme(mode)
+  });
 
   #baseOptions: PixelArtCanvasOptions | null = null;
-  #prefersDarkQuery: MediaQueryList | null = null;
   #canvasHostObserver: ResizeObserver | null = null;
 
   constructor() {
@@ -291,12 +294,7 @@ export class PixelDrawPanel extends LitElement {
   }
 
   get resolvedTheme(): ResolvedThemeMode {
-    if (this.theme !== "auto") {
-      return this.theme;
-    }
-
-    return ambientThemeMode(this) ??
-      (this.#prefersDarkQuery?.matches ? "dark" : "light");
+    return this.theme === "auto" ? resolveAmbientTheme(this) : this.theme;
   }
 
   get activeTextureId(): string | null {
@@ -312,17 +310,13 @@ export class PixelDrawPanel extends LitElement {
   override connectedCallback() {
     super.connectedCallback();
     this.addEventListener("colorpicked", this.#onColorPicked);
-    this.#prefersDarkQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    this.#prefersDarkQuery.addEventListener("change", this.#onPrefersColorSchemeChange);
-    this.#syncAmbientTheme();
+    this.#ambientTheme.follow();
     this.#observeCanvasHost();
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
     this.removeEventListener("colorpicked", this.#onColorPicked);
-    this.#prefersDarkQuery?.removeEventListener("change", this.#onPrefersColorSchemeChange);
-    this.#prefersDarkQuery = null;
     this.#canvasHostObserver?.disconnect();
     this.#canvasHostObserver = null;
     queueMicrotask(() => {
@@ -528,12 +522,6 @@ export class PixelDrawPanel extends LitElement {
     this.#colors.onColorPicked(event.detail);
   };
 
-  readonly #onPrefersColorSchemeChange = (): void => {
-    if (this.theme === "auto") {
-      this.#onThemeChange();
-    }
-  };
-
   #onThemeChange(): void {
     this.#syncCanvasBackground();
     this.dispatchEvent(new CustomEvent<ResolvedThemeMode>("theme-change", {
@@ -568,13 +556,12 @@ export class PixelDrawPanel extends LitElement {
     }
   }
 
-  #syncAmbientTheme(): void {
-    const ambient = ambientThemeMode(this);
-    if (ambient === null) {
-      delete this.dataset.ambientTheme;
-    }
-    else {
-      this.dataset.ambientTheme = ambient;
+  #adoptAmbientTheme(
+    mode: ResolvedThemeMode
+  ): void {
+    this.dataset.ambientTheme = mode;
+    if (this.hasUpdated && this.theme === "auto") {
+      this.#onThemeChange();
     }
   }
 
