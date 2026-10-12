@@ -69,6 +69,37 @@ describe("PointerDragSession", () => {
     assert.deepEqual(finishes, [["commit", false]]);
   });
 
+  test("suppressClick swallows the release click of a started drag only", () => {
+    const element = document.createElement("button");
+    document.body.append(element);
+    const clicks: number[] = [];
+    element.addEventListener("click", (event) => clicks.push(event.detail));
+
+    for (const [pointerId, upX] of [[5, 20], [6, 1]]) {
+      startPointerDragSession({
+        element,
+        event: pointer("pointerdown", pointerId),
+        threshold: 4,
+        suppressClick: true,
+        onMove: () => undefined,
+        onFinish: () => undefined
+      });
+      element.dispatchEvent(pointer("pointermove", pointerId, upX, 0));
+      element.dispatchEvent(pointer("pointerup", pointerId, upX, 0));
+      element.dispatchEvent(new PointerEvent("click", {
+        bubbles: true,
+        detail: 1
+      }));
+    }
+    element.dispatchEvent(new PointerEvent("click", {
+      bubbles: true,
+      detail: 2
+    }));
+    element.remove();
+
+    assert.deepEqual(clicks, [1, 2]);
+  });
+
   test("cancels once when capture is lost", () => {
     const element = document.createElement("div");
     const finishes: PointerDragResult[] = [];

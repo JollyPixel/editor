@@ -67,6 +67,9 @@ export interface DragOverlay {
     rect: Rect
   ): void;
   hideInsertion(): void;
+  toggle(
+    visible: boolean
+  ): void;
   moveGhost(
     x: number,
     y: number
@@ -235,6 +238,12 @@ export function createDragOverlay(
       }
       insertionRect = null;
       insertion.style.display = "none";
+    },
+
+    toggle(
+      visible: boolean
+    ): void {
+      root.style.display = visible ? "" : "none";
     },
 
     moveGhost(

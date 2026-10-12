@@ -53,9 +53,12 @@ it, and `minSize` and `maxSize` apply to each column. The primary column
 stays against the edge. `double` is ignored on top and bottom docks.
 
 `slots(column?)`, `dropZone(column?)`, `previewZone(column?)`,
-`dropCandidates(column?)`, `dropStacks(pane, column?)` and
+`dropCandidates(column?)`, `dropStacks(pane, column?, lifted?)` and
 `insertionLine(index, column?)` take `"primary"` (the default) or
 `"secondary"`; `slots()` without a column returns both, primary first.
+Given the `SlidingReorder` of a lifted tab, `dropStacks` previews drops on
+that tab's own strip live, and the strip keeps the tab until the pointer
+strays 16px above or below it.
 `acceptsSecondary(pane)` tells whether a dragged pane can open or join the
 second column: the dock must be `double`, expanded, and hold another slot.
 Until the column is open, its drop zone is a 48px band just past the inner

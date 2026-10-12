@@ -5,6 +5,10 @@ export interface PointerDragSessionOptions {
   event: PointerEvent;
   threshold?: number;
   documentClass?: string;
+  /**
+   * Swallows the click the browser fires on release once the gesture started.
+   */
+  suppressClick?: boolean;
   onStart?(): void;
   onMove(
     clientX: number,
@@ -33,6 +37,7 @@ export function startPointerDragSession(
     event,
     threshold = 0,
     documentClass,
+    suppressClick = false,
     onStart,
     onMove,
     onFinish
@@ -80,6 +85,9 @@ export function startPointerDragSession(
 
     settled = true;
     teardown();
+    if (started && suppressClick) {
+      swallowNextClick();
+    }
     onFinish(result, started, event);
   }
 
@@ -157,4 +165,26 @@ export function startPointerDragSession(
       settle("cancel");
     }
   };
+}
+
+function swallowNextClick(): void {
+  function onClick(
+    clickEvent: MouseEvent
+  ): void {
+    if (clickEvent.detail === 0) {
+      return;
+    }
+
+    clickEvent.preventDefault();
+    clickEvent.stopImmediatePropagation();
+    disarm();
+  }
+
+  function disarm(): void {
+    document.removeEventListener("click", onClick, true);
+    document.removeEventListener("pointerdown", disarm, true);
+  }
+
+  document.addEventListener("click", onClick, true);
+  document.addEventListener("pointerdown", disarm, true);
 }

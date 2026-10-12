@@ -36,6 +36,7 @@ import {
 import type { Rect } from "../../geometry/Rect.ts";
 import type { IconTone } from "../../icon/registry.ts";
 import type { DropCandidate } from "../../interaction/drag/dropIndex.ts";
+import type { SlidingReorder } from "../../interaction/drag/SlidingReorder.ts";
 import { defaultStorageAdapter } from "../../storage/defaultStorage.ts";
 import { NamespacedStore } from "../../storage/NamespacedStore.ts";
 import type { StorageAdapter } from "../../storage/StorageAdapter.ts";
@@ -47,6 +48,7 @@ import { hiddenStyles } from "../../theme/styles/hiddenStyles.ts";
 
 // CONSTANTS
 const kZoneBand = 48;
+const kDetachDistance = 16;
 const kHandleSize = "var(--jolly-dock-handle-size, 4px)";
 
 export type DockSide = "bottom" | "left" | "right" | "top";
@@ -405,7 +407,8 @@ export class Dock extends LitElement {
 
   dropStacks(
     dragged: PaneElement,
-    column: DockColumn = "primary"
+    column: DockColumn = "primary",
+    lifted: SlidingReorder | null = null
   ): DragStack[] {
     const stacks: DragStack[] = [];
     const slots = this.slots(column);
@@ -413,13 +416,26 @@ export class Dock extends LitElement {
       const element = slots[slot];
       if (isPaneGroup(element)) {
         const source = element.panes().indexOf(dragged);
-        stacks.push({
-          slot,
-          rect: element.tabsRect(),
-          candidates: element.tabCandidates(),
-          source: source === -1 ? null : source,
-          line: (index) => element.tabLine(index)
-        });
+        const rect = element.tabsRect();
+        stacks.push(source === -1 || lifted === null ?
+          {
+            slot,
+            rect,
+            candidates: element.tabCandidates(),
+            source: source === -1 ? null : source,
+            line: (index) => element.tabLine(index)
+          } :
+          {
+            slot,
+            rect: {
+              ...rect,
+              y: rect.y - kDetachDistance,
+              height: rect.height + (2 * kDetachDistance)
+            },
+            candidates: lifted.candidates,
+            source,
+            live: lifted
+          });
         continue;
       }
       if (element === dragged) {

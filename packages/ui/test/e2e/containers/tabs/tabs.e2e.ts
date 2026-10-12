@@ -1,5 +1,9 @@
 // Import Third-party Dependencies
-import { boxOf } from "@jolly-pixel/e2e";
+import {
+  boxOf,
+  centerOf,
+  hold
+} from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
@@ -174,5 +178,64 @@ test.describe("Tabs (modified)", () => {
     await water.hover();
     await expect(dot).toBeHidden();
     await expect(glyph).toBeVisible();
+  });
+});
+
+test.describe("Tabs (reorder)", () => {
+  test("a dragged tab slides its neighbours aside and lands where dropped", async({ page }) => {
+    await openTabs(page, { reorderable: true });
+
+    const tabs = page.locator("jolly-tabs [role=tab]");
+    const stone = tabs.nth(1);
+    const before = await boxOf(stone);
+    const water = await boxOf(tabs.nth(2));
+    const from = await centerOf(tabs.first());
+    await hold(page, from, {
+      x: water.x + (water.width * 0.75),
+      y: from.y
+    });
+
+    await expect.poll(async() => (await boxOf(stone)).x).toBeLessThan(before.x);
+    await expect(page.locator(".jolly-drag-overlay")).toHaveCount(0);
+
+    await page.mouse.up();
+    await expect(tabs).toHaveText(["stone", "water", "grass", "lava"]);
+    await expect(page.locator("jolly-tabs .item[data-lifted]")).toHaveCount(0);
+  });
+
+  test("a tab dropped back in its slot is not selected", async({ page }) => {
+    await openTabs(page, { reorderable: true });
+
+    const tabs = page.locator("jolly-tabs [role=tab]");
+    const from = await centerOf(tabs.nth(1));
+    await hold(page, from, {
+      x: from.x + 10,
+      y: from.y
+    });
+    await page.mouse.up();
+
+    await expect(tabs).toHaveText(["grass", "stone", "water", "lava"]);
+    await expect(page.locator("jolly-tabs .item[data-lifted]")).toHaveCount(0);
+    await expect(tabs.first()).toHaveAttribute("aria-selected", "true");
+  });
+
+  test("Escape slides every tab back home", async({ page }) => {
+    await openTabs(page, { reorderable: true });
+
+    const tabs = page.locator("jolly-tabs [role=tab]");
+    const stone = tabs.nth(1);
+    const before = await boxOf(stone);
+    const water = await boxOf(tabs.nth(2));
+    const from = await centerOf(tabs.first());
+    await hold(page, from, {
+      x: water.x + (water.width * 0.75),
+      y: from.y
+    });
+    await expect.poll(async() => (await boxOf(stone)).x).toBeLessThan(before.x);
+
+    await page.keyboard.press("Escape");
+    await page.mouse.up();
+    await expect(tabs).toHaveText(["grass", "stone", "water", "lava"]);
+    await expect.poll(async() => (await boxOf(stone)).x).toBeCloseTo(before.x, 0);
   });
 });

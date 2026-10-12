@@ -169,12 +169,29 @@ capture, pointer filtering, movement threshold, Escape and lost-capture
 cancellation, and exactly-once teardown. It returns a
 `PointerDragSessionHandle`, and reports an explicit `"commit"` or `"cancel"`
 result. Domain-specific drag code supplies preview and settlement callbacks.
+With `suppressClick`, a gesture that started dragging swallows the click
+the browser fires on release, so dropping a button does not also press it.
+Keyboard clicks still go through.
 
 `startDragSession(options)` starts a pointer drag and returns a
-`DragSessionHandle`. A session reports previews, a commit or cancellation, and
-the selected `DragZone`. The public types include `DragResult`,
+`DragSessionHandle`. It always suppresses the release click. A session reports
+previews, a commit or cancellation, and the selected `DragZone`. The public types include `DragResult`,
 `DragSessionOptions`, and `GhostSource`. `horizontalInsertionLine()` and
 `verticalInsertionLine()` compute insertion-line rectangles.
+
+A `DragStack` takes either a `line` or a `live` `LiveReorder`. A live stack
+previews the drop by moving its own children instead of painting the overlay:
+the session calls `preview(index, clientX, clientY)` on every move over it,
+`rest()` when the pointer leaves, and hides the overlay meanwhile.
+
+`SlidingReorder` is the `LiveReorder` behind tab strips. It takes the children,
+the dragged index, the axis and the pointer position at the start of the
+gesture. The dragged child follows the pointer and the others slide aside to
+open its slot. Its `candidates` resolve the insertion from the dragged child's
+centre rather than the pointer. `settle(apply?)` records where every child
+stands, calls `apply` to move them, waits one frame, then animates each child
+from there into its new place. It resolves `false` when a newer
+`SlidingReorder` took over the children before the animation ended.
 
 `resolveDropIndex(options)` computes an insertion index from ordered
 `DropCandidate` values. `ResolveDropIndexOptions` describes that input.

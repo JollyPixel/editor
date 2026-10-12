@@ -113,8 +113,15 @@ export const paneGroupStyles = css`
     background: rgb(255 255 255 / 30%);
   }
 
-  .tab[data-dragging] {
+  .tab[data-dragging]:not([data-lifted]) {
     opacity: 0.4;
+  }
+
+  .tabs > .tab[data-lifted] {
+    z-index: 1;
+    background-color: var(--jolly-pane-header-bg, ${kFallback.paneHeaderBg});
+    background-image: linear-gradient(rgb(255 255 255 / 18%) 0 0);
+    opacity: 1;
   }
 
   .tab:focus-visible {

@@ -11,6 +11,7 @@ import {
   query,
   state
 } from "lit/decorators.js";
+import { repeat } from "lit/directives/repeat.js";
 
 // Import Internal Dependencies
 import { emitContainerEvent } from "../events.ts";
@@ -34,6 +35,7 @@ import { revealOverflowTitle } from "../../interaction/overflowTitle.ts";
 import type { Rect } from "../../geometry/Rect.ts";
 import { horizontalInsertionLine } from "../../interaction/drag/DragSession.ts";
 import type { DropCandidate } from "../../interaction/drag/dropIndex.ts";
+import { SlidingReorder } from "../../interaction/drag/SlidingReorder.ts";
 import { hiddenStyles } from "../../theme/styles/hiddenStyles.ts";
 
 @customElement("jolly-pane-group")
@@ -101,7 +103,7 @@ export class PaneGroup extends LitElement {
         style=${areaTone === null ? nothing : `--jolly-pane-header-bg: var(--jolly-tone-${areaTone}-fill)`}
         @keydown=${this.#onKeyDown}
       >
-        ${this._panes.map((pane, index) => {
+        ${repeat(this._panes, (pane) => pane, (pane, index) => {
           const selected = pane.layoutKey === this.active;
           const heading = pane.heading || pane.layoutKey;
           const iconOnly = this._compact && pane.icon !== "";
@@ -212,6 +214,23 @@ export class PaneGroup extends LitElement {
     pane: string
   ): void {
     this._dragging = pane;
+  }
+
+  liftTab(
+    pane: PaneElement,
+    pointer: number
+  ): SlidingReorder | null {
+    const from = this._panes.indexOf(pane);
+    if (from === -1) {
+      return null;
+    }
+
+    return new SlidingReorder({
+      items: this.#tabButtons(),
+      from,
+      axis: "x",
+      pointer
+    });
   }
 
   releaseMoveHandle(): void {

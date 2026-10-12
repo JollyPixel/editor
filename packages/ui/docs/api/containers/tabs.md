@@ -49,6 +49,12 @@ position the tab asks to occupy. The element moves nothing: move the
 `jolly-tab` in the listener. A `fixed` tab cannot be dragged and keeps its
 index, since no other tab can be dropped across it.
 
+While a tab is dragged it follows the pointer along the strip, however far the
+pointer strays across it, and the tabs it passes slide aside to open its slot.
+On release it glides into the slot the listener gives it, so move the
+`jolly-tab` before the listener returns. A listener that moves nothing, or
+Escape, slides every tab back to its place.
+
 ```js
 tabs.addEventListener("jolly-tab-reorder", (event) => {
   const tabList = [...tabs.querySelectorAll("jolly-tab")];
@@ -118,6 +124,7 @@ height of the text on the icon.
 | `list` | The tablist, the scrollable part of the strip |
 | `tab` | Every tab item, the label button plus its action and close buttons |
 | `tab-selected` | The selected tab item, in addition to `tab` |
+| `tab-dragging` | The tab item being dragged, in addition to `tab` |
 | `badge` | The badge chip of a tab |
 | `action` | Every action button |
 | `action-selected` | The action button of the selected tab, in addition to `action` |
