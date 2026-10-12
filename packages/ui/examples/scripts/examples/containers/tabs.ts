@@ -17,7 +17,8 @@ type TabsOptionKey =
   | "action"
   | "addButton"
   | "preselected"
-  | "modified";
+  | "modified"
+  | "reorderable";
 
 interface SampleTab {
   value: string;
@@ -77,6 +78,7 @@ function buildTabs(
   const tabs = document.createElement("jolly-tabs");
   tabs.variant = options.skew ? "skew" : "default";
   tabs.orientation = options.vertical ? "vertical" : "horizontal";
+  tabs.reorderable = options.reorderable;
   if (options.preselected) {
     tabs.value = kPreselectedTab;
   }
@@ -105,6 +107,14 @@ function buildTabs(
       (tab) => tab.value === event.detail.value
     );
     closed?.remove();
+  });
+  tabs.addEventListener("jolly-tab-reorder", (event) => {
+    const all = [...tabs.querySelectorAll("jolly-tab")];
+    const moved = all.find((tab) => tab.value === event.detail.value);
+    if (moved !== undefined) {
+      const rest = all.filter((tab) => tab !== moved);
+      tabs.insertBefore(moved, rest[event.detail.index] ?? null);
+    }
   });
   tabs.addEventListener("jolly-tab-action", (event) => {
     tabs.dataset.action = event.detail.value;
@@ -146,6 +156,10 @@ export const TABS_EXAMPLE: GalleryExample<TabsOptionKey> = {
     {
       key: "modified",
       label: "Modified"
+    },
+    {
+      key: "reorderable",
+      label: "Reorderable"
     }
   ],
   render(host, options) {

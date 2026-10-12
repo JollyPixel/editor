@@ -18,6 +18,7 @@ import {
   type DragSessionHandle,
   type DragZone
 } from "../../interaction/drag/DragSession.ts";
+import type { SlidingReorder } from "../../interaction/drag/SlidingReorder.ts";
 
 export interface ExtractGrab {
   x: number;
@@ -80,6 +81,7 @@ export class DockLayoutDragController {
     const startX = frame?.x ?? 0;
     const startY = frame?.y ?? 0;
     const targets = new Map<string, DockTarget>();
+    let reorder: SlidingReorder | null = null;
     let frameSize: ViewportRect | null = null;
     function sizeOf(
       target: Floating
@@ -108,6 +110,7 @@ export class DockLayoutDragController {
       },
       zones: () => {
         targets.clear();
+        reorder = group?.liftTab(pane, originX) ?? null;
 
         return this.#options.docks().flatMap((dock) => {
           const columns: DockColumn[] = dock.acceptsSecondary(pane) ?
@@ -128,7 +131,7 @@ export class DockLayoutDragController {
               axis: dock.axis,
               source: dock === home ? dock.slots(column).indexOf(pane) : null,
               line: (index: number) => dock.insertionLine(index, column),
-              stacks: dock.dropStacks(pane, column),
+              stacks: dock.dropStacks(pane, column, reorder),
               preview: dock.previewZone(column)
             };
           });
@@ -171,31 +174,40 @@ export class DockLayoutDragController {
         const target = result.zone === null ?
           undefined :
           targets.get(result.zone.id);
+        const drop = () => {
+          if (target !== undefined && result.stack !== null) {
+            this.#options.stack(
+              pane,
+              target,
+              result.stack.slot,
+              result.stack.index
+            );
+          }
+          else if (target !== undefined) {
+            this.#options.dock(pane, target, result.index);
+          }
+          else if (frame === null) {
+            this.#options.extract(pane, {
+              x: result.x,
+              y: result.y,
+              offsetX: grabX,
+              offsetY: grabY
+            });
+          }
+          else {
+            this.#options.place(pane, frame);
+          }
+        };
 
-        if (target !== undefined && result.stack !== null) {
-          this.#options.stack(
-            pane,
-            target,
-            result.stack.slot,
-            result.stack.index
-          );
-        }
-        else if (target !== undefined) {
-          this.#options.dock(pane, target, result.index);
-        }
-        else if (frame === null) {
-          this.#options.extract(pane, {
-            x: result.x,
-            y: result.y,
-            offsetX: grabX,
-            offsetY: grabY
-          });
+        if (reorder === null) {
+          drop();
         }
         else {
-          this.#options.place(pane, frame);
+          void reorder.settle(drop);
         }
       },
       onCancel: () => {
+        void reorder?.settle();
         frame?.moveTo(startX, startY);
       },
       onEnd: () => {

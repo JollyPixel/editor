@@ -129,6 +129,7 @@ export * from "./math/components.ts";
 export * from "./field/PopoverController.ts";
 export * from "./interaction/drag/DragSession.ts";
 export * from "./interaction/drag/dropIndex.ts";
+export * from "./interaction/drag/SlidingReorder.ts";
 export * from "./interaction/drag/dragGhost.ts";
 export * from "./interaction/input/InputLayers.ts";
 export {

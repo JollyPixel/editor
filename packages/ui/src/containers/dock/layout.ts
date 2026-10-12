@@ -467,7 +467,7 @@ export function stackPane(
     0,
     pane
   );
-  group.active = pane;
+  group.active = sameGroup ? target.active : pane;
   settleDocks(next);
 
   return next;

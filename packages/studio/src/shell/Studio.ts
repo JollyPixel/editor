@@ -129,6 +129,15 @@ export class Studio extends LitElement {
       background: transparent;
     }
 
+    #editor-tabs::part(tab-dragging),
+    #editor-tabs::part(tab-dragging):hover {
+      background: var(--studio-board);
+      color: var(--jolly-text);
+      box-shadow:
+        inset 0 1px 0 var(--studio-light),
+        var(--jolly-shadow-floating);
+    }
+
     #editor-tabs::part(close) {
       margin-inline: 4px;
     }

@@ -153,8 +153,11 @@ export const tabsStyles = css`
     flex: 0 0 auto;
   }
 
-  .item[data-dragging] {
-    opacity: 0.5;
+  .list > .item[data-lifted] {
+    z-index: 1;
+    background-color: var(--jolly-surface-raised, #fff);
+    color: var(--jolly-text, ${kFallback.text});
+    box-shadow: var(--jolly-shadow-floating, 0 4px 16px rgb(0 0 0 / 30%));
   }
 
   .badge {

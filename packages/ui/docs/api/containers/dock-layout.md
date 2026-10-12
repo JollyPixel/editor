@@ -38,7 +38,8 @@ Saved changes emit `jolly-layout-change` with a copy of the snapshot as
 `{ snapshot }`.
 
 A dragged pane dropped on a pane header or a group tab strip joins that group
-as the active tab; dropped anywhere else in a dock it takes its own slot. The
+as the active tab; dropped anywhere else in a dock it takes its own slot. A tab
+moved within its own group leaves the active tab as it was. The
 layout wraps panes that share a slot in a `jolly-pane-group`.
 
 In a `double` dock, a pane dropped on the band just past the inner edge opens

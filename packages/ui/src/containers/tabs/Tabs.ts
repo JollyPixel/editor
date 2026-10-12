@@ -11,6 +11,7 @@ import {
   query,
   state
 } from "lit/decorators.js";
+import { repeat } from "lit/directives/repeat.js";
 
 // Import Internal Dependencies
 import { emitContainerEvent } from "../events.ts";
@@ -22,19 +23,23 @@ import {
 } from "./tabReorder.ts";
 import { nextEnabledIndex } from "../../controls/roving.ts";
 import { isButtonElement } from "../../dom.ts";
-import type { Rect } from "../../geometry/Rect.ts";
+import { resolveDropIndex } from "../../interaction/drag/dropIndex.ts";
 import {
-  horizontalInsertionLine,
-  startDragSession,
-  verticalInsertionLine,
-  type DragSessionHandle
-} from "../../interaction/drag/DragSession.ts";
+  GRABBING_CLASS,
+  ensureGrabbingStyles
+} from "../../interaction/drag/grabbing.ts";
+import { SlidingReorder } from "../../interaction/drag/SlidingReorder.ts";
+import {
+  startPointerDragSession,
+  type PointerDragSessionHandle
+} from "../../interaction/pointer/PointerDragSession.ts";
 import { RovingFocus } from "../../interaction/focus/RovingFocus.ts";
 import "../../icon/Icon.ts";
 
 // CONSTANTS
 let kTabsId = 0;
 const kModifiedDescription = "Unsaved changes";
+const kDragThreshold = 4;
 
 export type TabsOrientation = "horizontal" | "vertical";
 
@@ -67,11 +72,8 @@ export class Tabs extends LitElement {
   @query("slot:not([name])")
   declare _slot: HTMLSlotElement;
 
-  @query(".list")
-  declare _list: HTMLElement | null;
-
   #generatedId: string;
-  #session: DragSessionHandle | null = null;
+  #session: PointerDragSessionHandle | null = null;
   #roving = new RovingFocus(this, ".label");
 
   constructor() {
@@ -102,7 +104,11 @@ export class Tabs extends LitElement {
           aria-orientation=${this.orientation}
           @keydown=${this.#onKeyDown}
         >
-          ${this._tabs.map((tab, index) => this.#renderItem(tab, index))}
+          ${repeat(
+            this._tabs,
+            (tab) => tab,
+            (tab, index) => this.#renderItem(tab, index)
+          )}
         </div>
         <slot name="list-end"></slot>
       </div>
@@ -130,14 +136,13 @@ export class Tabs extends LitElement {
     return html`
       <div
         class="item"
-        part=${selected ? "tab tab-selected" : "tab"}
+        part=${tabParts(selected, tab === this._dragging)}
         ?data-modified=${tab.modified}
         ?data-closable=${tab.closable}
         ?data-action=${tab.action !== ""}
         ?data-disabled=${tab.disabled}
         ?data-selected=${selected}
         ?data-fixed=${tab.fixed}
-        ?data-dragging=${tab === this._dragging}
       >
         <button
           id=${this.#buttonId(index)}
@@ -219,6 +224,7 @@ export class Tabs extends LitElement {
       return;
     }
 
+    this.#session?.cancel();
     this._tabs = tabs;
   }
 
@@ -270,62 +276,72 @@ export class Tabs extends LitElement {
     const items = [
       ...this.renderRoot.querySelectorAll<HTMLElement>(".item")
     ];
-    const list = this._list;
     if (
       tab === undefined ||
       tab.disabled ||
       segment === null ||
-      segment.end - segment.start < 2 ||
-      list === null
+      segment.end - segment.start < 2
     ) {
       return;
     }
 
     const axis = this.orientation === "horizontal" ? "x" : "y";
-    const rects = items.slice(segment.start, segment.end)
-      .map((item) => item.getBoundingClientRect());
-    const candidates = rects.map((rect) => (axis === "x" ?
-      { start: rect.x, size: rect.width } :
-      { start: rect.y, size: rect.height }));
-    const bounds = unionOf(rects);
-    const insertionLine = axis === "x" ?
-      horizontalInsertionLine :
-      verticalInsertionLine;
+    let reorder: SlidingReorder | null = null;
+    let current: number | null = null;
 
-    this.#session = startDragSession({
-      source: items[from],
+    ensureGrabbingStyles();
+    this.#session = startPointerDragSession({
+      element: event.currentTarget,
       event,
-      handle: event.currentTarget,
-      ghostLabel: tab.label,
-      zones: () => [{
-        id: this.#generatedId,
-        rect: rectOf(list),
-        candidates,
-        axis,
-        source: from - segment.start,
-        line: (index) => insertionLine(bounds, candidates, index)
-      }],
+      threshold: kDragThreshold,
+      documentClass: GRABBING_CLASS,
+      suppressClick: true,
       onStart: () => {
+        reorder = new SlidingReorder({
+          items: items.slice(segment.start, segment.end),
+          from: from - segment.start,
+          axis,
+          pointer: axis === "x" ? event.clientX : event.clientY
+        });
         this._dragging = tab;
       },
-      onCommit: (result) => {
-        const index = result.zone === null ?
-          null :
-          tabDropTarget(segment, from, result.index);
-        if (index !== null) {
-          emitContainerEvent(
-            this,
-            "jolly-tab-reorder",
-            {
-              value: tab.value,
-              index
-            }
-          );
+      onMove: (clientX, clientY) => {
+        if (reorder === null) {
+          return;
         }
+
+        current = resolveDropIndex({
+          position: axis === "x" ? clientX : clientY,
+          candidates: reorder.candidates,
+          current
+        });
+        reorder.preview(current, clientX, clientY);
       },
-      onEnd: () => {
+      onFinish: (settlement) => {
         this.#session = null;
-        this._dragging = null;
+        if (reorder === null) {
+          return;
+        }
+
+        const index = settlement === "commit" && current !== null ?
+          tabDropTarget(segment, from, current) :
+          null;
+        void reorder.settle(() => {
+          if (index !== null) {
+            emitContainerEvent(
+              this,
+              "jolly-tab-reorder",
+              {
+                value: tab.value,
+                index
+              }
+            );
+          }
+        }).then((owned) => {
+          if (owned) {
+            this._dragging = null;
+          }
+        });
       }
     });
   };
@@ -485,33 +501,19 @@ export class Tabs extends LitElement {
   }
 }
 
-function rectOf(
-  element: Element
-): Rect {
-  const rect = element.getBoundingClientRect();
+function tabParts(
+  selected: boolean,
+  dragging: boolean
+): string {
+  const parts = ["tab"];
+  if (selected) {
+    parts.push("tab-selected");
+  }
+  if (dragging) {
+    parts.push("tab-dragging");
+  }
 
-  return {
-    x: rect.x,
-    y: rect.y,
-    width: rect.width,
-    height: rect.height
-  };
-}
-
-function unionOf(
-  rects: readonly DOMRect[]
-): Rect {
-  const left = Math.min(...rects.map((rect) => rect.left));
-  const top = Math.min(...rects.map((rect) => rect.top));
-  const right = Math.max(...rects.map((rect) => rect.right));
-  const bottom = Math.max(...rects.map((rect) => rect.bottom));
-
-  return {
-    x: left,
-    y: top,
-    width: right - left,
-    height: bottom - top
-  };
+  return parts.join(" ");
 }
 
 declare global {

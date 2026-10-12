@@ -206,6 +206,33 @@ test.describe("DockLayout groups", () => {
     await expect.poll(() => widthOf(right.root)).toBe(240 + DOCK_HANDLE_SIZE);
   });
 
+  test("a tab dragged along its strip slides its neighbours aside until it leaves", async({ page }) => {
+    const group = new PaneGroup(page);
+    const blocks = group.tab("Blocks");
+    const overlay = page.locator(".jolly-drag-overlay");
+    const before = await boxOf(blocks);
+    const paint = await boxOf(group.tab("Paint"));
+    const from = await centerOf(group.tab("General"));
+    const along = {
+      x: paint.x + (paint.width * 0.75),
+      y: from.y
+    };
+    await hold(page, from, along);
+
+    await expect.poll(async() => (await boxOf(blocks)).x).toBeLessThan(before.x);
+    await expect(overlay).toBeHidden();
+
+    await page.mouse.move(along.x, along.y + 120, { steps: 6 });
+    await expect(overlay).toBeVisible();
+    await expect.poll(async() => (await boxOf(blocks)).x).toBeCloseTo(before.x, 0);
+
+    await page.mouse.move(along.x, along.y, { steps: 6 });
+    await page.mouse.up();
+    await expect(new Dock(page, "left").slots())
+      .resolves.toEqual([["blocks", "paint", "general"], ["layers"]]);
+    await expect(group.selectedTab).toHaveText("Blocks");
+  });
+
   test("a tab dropped into another dock takes its own slot", async({ page }) => {
     await dragTo(page, new PaneGroup(page).tab("Paint"), await rightEdgeOf(page));
 

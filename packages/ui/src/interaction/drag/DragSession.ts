@@ -8,7 +8,10 @@ import {
   resolveDropIndex,
   type DropCandidate
 } from "./dropIndex.ts";
-import { ensureDocumentStyles } from "../ensureDocumentStyles.ts";
+import {
+  GRABBING_CLASS,
+  ensureGrabbingStyles
+} from "./grabbing.ts";
 import { kFallback } from "../../theme/styles/fallbacks.ts";
 import { resolveThemeToken } from "../../theme/resolveThemeToken.ts";
 import {
@@ -18,7 +21,6 @@ import {
 // CONSTANTS
 const kThreshold = 4;
 const kDeadBand = 6;
-const kDraggingClass = "jolly-pane-dragging";
 const kInsertionThickness = 2;
 const kEnterDepth = 48;
 const kChipOffset = 12;
@@ -67,14 +69,37 @@ export interface DragZone {
   preview?: Rect;
 }
 
-export interface DragStack {
+interface DragStackBounds {
   slot: number;
   rect: Rect;
   candidates: DropCandidate[];
   source?: number | null;
+}
+
+interface DragStackLine {
   line(
     index: number
   ): Rect;
+  live?: never;
+}
+
+interface DragStackLive {
+  line?: never;
+  /**
+   * Moves the existing children to preview the drop, in place of the overlay.
+   */
+  live: LiveReorder;
+}
+
+export type DragStack = DragStackBounds & (DragStackLine | DragStackLive);
+
+export interface LiveReorder {
+  preview(
+    index: number,
+    clientX: number,
+    clientY: number
+  ): void;
+  rest(): void;
 }
 
 export interface DragStackResult {
@@ -183,6 +208,7 @@ export function startDragSession(
   let ghostX = -kChipOffset;
   let ghostY = -kChipOffset;
   let painted: PaintedInsertion | null = null;
+  let following: LiveReorder | null = null;
   let result: DragResult = {
     zone: null,
     index: 0,
@@ -219,7 +245,7 @@ export function startDragSession(
       view?.addEventListener("scroll", remeasure, kPassiveCapture);
       view?.addEventListener("resize", remeasure);
     }
-    ensureSessionStyles();
+    ensureGrabbingStyles();
     onStart?.();
   }
 
@@ -229,10 +255,11 @@ export function startDragSession(
 
   function paintInsertion(
     zone: DragZone,
-    target: DragZone | DragStack,
+    target: DragZone | DragStackBounds & DragStackLine,
     slot: number,
     index: number
   ): void {
+    follow(null);
     if (
       painted !== null &&
       painted.zone === zone &&
@@ -255,6 +282,20 @@ export function startDragSession(
     }
   }
 
+  function follow(
+    live: LiveReorder | null
+  ): void {
+    if (live === following) {
+      return;
+    }
+
+    following?.rest();
+    following = live;
+    painted = null;
+    overlay?.hideInsertion();
+    overlay?.toggle(live === null);
+  }
+
   function update(
     clientX: number,
     clientY: number
@@ -275,6 +316,7 @@ export function startDragSession(
       current = null;
       painted = null;
       overlay?.hideInsertion();
+      follow(null);
     }
     else if (stack === null) {
       const sameZone = result.zone !== null && result.zone.id === zone.id;
@@ -300,7 +342,13 @@ export function startDragSession(
         slot: stack.slot,
         index
       };
-      paintInsertion(zone, stack, stack.slot, index);
+      if (stack.live === undefined) {
+        paintInsertion(zone, stack, stack.slot, index);
+      }
+      else {
+        follow(stack.live);
+        stack.live.preview(index, clientX, clientY);
+      }
     }
 
     overlay?.moveGhost(
@@ -329,7 +377,8 @@ export function startDragSession(
     element: handle,
     event,
     threshold,
-    documentClass: kDraggingClass,
+    documentClass: GRABBING_CLASS,
+    suppressClick: true,
     onStart: begin,
     onMove: update,
     onFinish: (settlement, started) => {
@@ -456,14 +505,4 @@ function movesNothing(
   return source !== undefined &&
     source !== null &&
     (index === source || index === source + 1);
-}
-
-function ensureSessionStyles(): void {
-  ensureDocumentStyles("jolly-drag-session-styles", `
-    html.${kDraggingClass},
-    html.${kDraggingClass} * {
-      cursor: grabbing !important;
-      user-select: none !important;
-    }
-  `);
 }

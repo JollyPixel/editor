@@ -192,14 +192,13 @@ describe("Containers.stackPane", () => {
     assert.equal(stackPane(collapsed, "layers", "left", 0, 0).docks.left.collapsed, false);
   });
 
-  test("reorders inside a group using an index that counts the pane", () => {
+  test("reorders inside a group using an index that counts the pane, keeping its active pane", () => {
     const stacked = stackPane(base, "general", "left", 0, 3);
 
-    assert.deepEqual(stacked.docks.left.groups[0].panes, [
-      "blocks",
-      "paint",
-      "general"
-    ]);
+    assert.deepEqual(stacked.docks.left.groups[0], {
+      panes: ["blocks", "paint", "general"],
+      active: "blocks"
+    });
   });
 
   test("docks a floating pane into a group", () => {
