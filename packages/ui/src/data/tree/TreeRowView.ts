@@ -11,6 +11,10 @@ import {
   isExpandable,
   type FlatTreeRow
 } from "./model.ts";
+import type {
+  TreeRail,
+  TreeRowSpacer
+} from "./TreeRowLayout.ts";
 
 // CONSTANTS
 const kNoBadges: readonly TreeBadge[] = Object.freeze([]);
@@ -28,7 +32,8 @@ export interface TreeRowState {
   moveCursor: boolean;
   renaming: boolean;
   renameError: string | null;
-  hasBranches: boolean;
+  spacer: TreeRowSpacer;
+  rails: readonly TreeRail[];
   swatchPosition: TreeSwatchPosition;
   reorderable: boolean;
 }
@@ -45,6 +50,7 @@ export class TreeRowView {
   readonly swatch: Readonly<TreeSwatch> | undefined;
   readonly badges: readonly Readonly<TreeBadge>[];
   readonly branch: boolean;
+  readonly leaf: boolean;
   readonly depth: number;
   readonly indent: string;
   readonly position: number;
@@ -58,7 +64,8 @@ export class TreeRowView {
   readonly moveCursor: boolean;
   readonly renaming: boolean;
   readonly renameError: string | null;
-  readonly hasBranches: boolean;
+  readonly spacer: TreeRowSpacer;
+  readonly rails: readonly TreeRail[];
   readonly swatchPosition: TreeSwatchPosition;
   readonly reorderable: boolean;
 
@@ -68,6 +75,12 @@ export class TreeRowView {
     kIndents[depth] ??= `calc(${depth} * var(--jolly-tree-indent, 16px))`;
 
     return kIndents[depth];
+  }
+
+  get contentPart(): string {
+    const kind = this.leaf ? "content leaf" : "content branch";
+
+    return this.selected ? `${kind} selected` : kind;
   }
 
   constructor(
@@ -92,6 +105,7 @@ export class TreeRowView {
       kNoBadges :
       Object.freeze(node.badges.map((badge) => Object.freeze({ ...badge })));
     this.branch = isExpandable(node);
+    this.leaf = node.children === undefined;
     this.depth = depth;
     this.indent = TreeRowView.indentOf(depth);
     this.position = state.position;
@@ -105,7 +119,8 @@ export class TreeRowView {
     this.moveCursor = state.moveCursor;
     this.renaming = state.renaming;
     this.renameError = state.renameError;
-    this.hasBranches = state.hasBranches;
+    this.spacer = state.spacer;
+    this.rails = state.rails;
     this.swatchPosition = state.swatchPosition;
     this.reorderable = state.reorderable;
     Object.freeze(this);
@@ -126,6 +141,7 @@ export class TreeRowView {
       this.visible === node.visible &&
       this.locked === node.locked &&
       this.branch === isExpandable(node) &&
+      this.leaf === (node.children === undefined) &&
       this.depth === row.depth &&
       this.position === state.position &&
       this.setSize === state.setSize &&
@@ -138,7 +154,8 @@ export class TreeRowView {
       this.moveCursor === state.moveCursor &&
       this.renaming === state.renaming &&
       this.renameError === state.renameError &&
-      this.hasBranches === state.hasBranches &&
+      this.spacer === state.spacer &&
+      sameRails(this.rails, state.rails) &&
       this.swatchPosition === state.swatchPosition &&
       this.reorderable === state.reorderable &&
       sameSwatch(this.swatch, node.swatch) &&
@@ -156,7 +173,19 @@ function sameAvatar(
 
   return left.peerId === right.peerId &&
     left.color === right.color &&
-    left.image === right.image;
+    left.image === right.image &&
+    left.presence === right.presence;
+}
+
+function sameRails(
+  left: readonly TreeRail[],
+  right: readonly TreeRail[]
+): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((rail, level) => rail === right[level]);
 }
 
 function sameSwatch(

@@ -41,7 +41,7 @@ export class AssetTally {
         (kind) => {
           return {
             kind,
-            label: kinds.entryOf(kind)?.label ?? kind,
+            label: kinds.labelFor(kind),
             icon: kinds.iconFor(kind),
             count: counts.get(kind) ?? 0
           };

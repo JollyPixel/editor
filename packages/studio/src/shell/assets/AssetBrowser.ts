@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   LitElement,
+  css,
   html,
   nothing,
   type PropertyValues,
@@ -20,6 +21,7 @@ import type {
 
 // Import Internal Dependencies
 import { AssetKindSet } from "../../catalog/AssetKindSet.ts";
+import { summarizeSelection } from "../../catalog/AssetSummary.ts";
 import {
   AssetSelection,
   isAssetAction,
@@ -29,22 +31,21 @@ import {
 import { AssetTreeModel } from "../../catalog/AssetTreeModel.ts";
 import type { StudioPreferences } from "../../preferences/StudioPreferences.ts";
 import type { StudioShareLinks } from "../../shares/StudioShareLinks.ts";
+import { cardStyles } from "../cardStyles.ts";
 import type { AssetDeleteDialog } from "./AssetDeleteDialog.ts";
 import type { AssetShareDialog } from "./AssetShareDialog.ts";
+import { assetOpenEvent } from "./assetOpen.ts";
 import { AssetTreeView } from "./AssetTreeView.ts";
 import {
   assetMenu,
   newAssetMenu
 } from "./assetMenu.ts";
 import "./AssetDeleteDialog.ts";
+import "./AssetDetails.ts";
 import "./AssetShareDialog.ts";
 
 // CONSTANTS
-const kAllKinds: JollyOption<string> = {
-  value: "",
-  label: "All kinds",
-  icon: "all-kinds"
-};
+const kNoKindOptions: readonly JollyOption<string>[] = [];
 
 export interface AssetBrowserOptions {
   catalog: CatalogClient;
@@ -58,16 +59,89 @@ interface AssetSharing {
   catalog: CatalogClient;
 }
 
-export interface AssetOpenDetail {
-  assetId: string;
-}
-
 export interface AssetErrorDetail {
   message: string;
 }
 
 @customElement("asset-browser")
 export class AssetBrowser extends LitElement {
+  static override styles = [
+    cardStyles,
+    css`
+      :host {
+        display: flex;
+        flex-direction: column;
+        gap: var(--studio-gutter);
+        height: 100%;
+        box-sizing: border-box;
+
+        --kind-selected-bg: color-mix(
+          in oklab,
+          var(--jolly-accent-fill) 40%,
+          transparent
+        );
+        --kind-selected-bg-hover: color-mix(
+          in oklab,
+          var(--jolly-accent-fill) 50%,
+          transparent
+        );
+      }
+
+      .browser {
+        flex: 1 1 0;
+      }
+
+      .browser .card-head {
+        padding-inline: var(--jolly-space-2);
+      }
+
+      .kinds {
+        flex: 1;
+
+        --jolly-field-inset-start: 0;
+        --jolly-field-inset-end: 0;
+        --jolly-control-height: 24px;
+        --jolly-icon-size: 30px;
+        --jolly-accent-fill: var(--kind-selected-bg);
+        --jolly-accent-fill-hover: var(--kind-selected-bg-hover);
+        --jolly-accent-fill-focus: var(--kind-selected-bg-hover);
+        --jolly-text-on-fill: var(--jolly-accent-text);
+      }
+
+      jolly-toolbar {
+        padding: 0 var(--jolly-space-2) var(--jolly-space-1);
+        border-block-end: 1px solid
+          color-mix(in oklab, var(--jolly-border) 70%, transparent);
+
+        --jolly-control-bg: transparent;
+        --jolly-invalid-bg: transparent;
+        --jolly-icon-button-size: 26px;
+        --jolly-control-height: 26px;
+      }
+
+      jolly-toolbar .rename {
+        margin-inline-start: auto;
+      }
+
+      jolly-tree {
+        flex: 1 1 0;
+        min-height: 0;
+        padding: var(--jolly-space-1) var(--jolly-space-1) 0;
+
+        --jolly-tree-icon-size: 16px;
+      }
+
+      asset-details {
+        flex: 0 0 168px;
+      }
+
+      asset-delete-dialog,
+      asset-share-dialog {
+        position: absolute;
+      }
+    `
+  ];
+
   @property({ attribute: false })
   declare options: AssetBrowserOptions | null;
 
@@ -89,7 +163,6 @@ export class AssetBrowser extends LitElement {
   #view: AssetTreeView | null = null;
   #bound: AssetBrowserOptions | null = null;
   #menuTarget: AssetSelection | null = null;
-  #kindOptions: JollyOption<string>[] = [kAllKinds];
 
   constructor() {
     super();
@@ -106,16 +179,11 @@ export class AssetBrowser extends LitElement {
     this.#bind();
   }
 
-  protected override createRenderRoot(): HTMLElement {
-    return this;
-  }
-
   protected override willUpdate(
     changed: PropertyValues<this>
   ): void {
     if (changed.has("options")) {
       this.#bind();
-      this.#kindOptions = [kAllKinds, ...this.#kinds.toOptions()];
     }
     this.#view?.refresh();
   }
@@ -125,87 +193,97 @@ export class AssetBrowser extends LitElement {
     const selection = this.#selection();
 
     return html`
-      <jolly-button-group
-        class="kinds"
-        icon-only
-        aria-label="Asset kind"
-        .options=${this.#kindOptions}
-        .value=${view?.kind ?? ""}
-        @jolly-change=${this.#onKindChange}
-      ></jolly-button-group>
-      <jolly-toolbar label="Asset actions">
-        <jolly-button
-          class="new-asset"
-          icon="plus"
-          icon-only
-          label="New asset"
-          title="New asset"
-          ?disabled=${this.#kinds.entries.length === 0}
-          @click=${this.#openNewAssetMenu}
-        ></jolly-button>
-        <jolly-button
-          icon="new-folder"
-          icon-only
-          label="New folder"
-          title="New folder"
-          @click=${this.#newFolder}
-        ></jolly-button>
-        <jolly-button
-          icon="pencil"
-          icon-only
-          label="Rename"
-          title="Rename (F2)"
-          ?disabled=${!selection.allows("rename")}
-          @click=${this.#beginRename}
-        ></jolly-button>
-        <jolly-button
-          icon="trash"
-          icon-only
-          variant="danger"
-          label="Delete"
-          title="Delete (Del)"
-          ?disabled=${!selection.allows("delete")}
-          @click=${this.#deleteSelected}
-        ></jolly-button>
-        <jolly-button
-          icon="export"
-          icon-only
-          label="Export"
-          title="Export as a ZIP archive"
-          ?disabled=${!selection.allows("export")}
-          @click=${this.#exportSelected}
-        ></jolly-button>
-        ${this.#sharing === null ? nothing : html`
-          <jolly-button
-            icon="share"
+      <div class="card browser">
+        <div class="card-head">
+          <jolly-button-group
+            class="kinds"
             icon-only
-            label="Share"
-            title="Share a view-only link"
-            ?disabled=${!selection.allows("share")}
-            @click=${this.#shareSelected}
+            layout="grid"
+            aria-label="Asset kind"
+            .columns=${view?.kindOptions.length ?? 0}
+            .options=${view?.kindOptions ?? kNoKindOptions}
+            .value=${view?.kind ?? ""}
+            @jolly-change=${this.#onKindChange}
+          ></jolly-button-group>
+        </div>
+        <jolly-toolbar label="Asset actions">
+          <jolly-button
+            class="new-asset"
+            icon="plus"
+            icon-only
+            label="New asset"
+            title="New asset"
+            ?disabled=${this.#kinds.entries.length === 0}
+            @click=${this.#openNewAssetMenu}
           ></jolly-button>
-        `}
-      </jolly-toolbar>
-      <jolly-tree
-        virtual
-        multiple
-        renamable
-        reorderable
-        row-drag
-        activate-on-double-click
-        indent-guides
-        .nodes=${view?.nodes ?? AssetTreeModel.EMPTY.nodes}
-        .expanded=${[...view?.expanded ?? []]}
-        .selected=${view?.selected ?? []}
-        .acceptDrop=${this.#acceptDrop}
-        @jolly-select=${this.#onSelect}
-        @jolly-toggle-expand=${this.#onToggleExpand}
-        @jolly-activate=${this.#onActivate}
-        @jolly-rename=${this.#onRename}
-        @jolly-reparent=${this.#onReparent}
-        @jolly-context-request=${this.#onContextRequest}
-        @keydown=${this.#onKeyDown}
-      ></jolly-tree>
+          <jolly-button
+            icon="new-folder"
+            icon-only
+            label="New folder"
+            title="New folder"
+            @click=${this.#newFolder}
+          ></jolly-button>
+          <jolly-button
+            class="rename"
+            icon="pencil"
+            icon-only
+            label="Rename"
+            title="Rename (F2)"
+            ?disabled=${!selection.allows("rename")}
+            @click=${this.#beginRename}
+          ></jolly-button>
+          <jolly-button
+            icon="trash"
+            icon-only
+            variant="danger"
+            label="Delete"
+            title="Delete (Del)"
+            ?disabled=${!selection.allows("delete")}
+            @click=${this.#deleteSelected}
+          ></jolly-button>
+          <jolly-button
+            icon="export"
+            icon-only
+            label="Export"
+            title="Export as a ZIP archive"
+            ?disabled=${!selection.allows("export")}
+            @click=${this.#exportSelected}
+          ></jolly-button>
+          ${this.#sharing === null ? nothing : html`
+            <jolly-button
+              icon="share"
+              icon-only
+              label="Share"
+              title="Share a view-only link"
+              ?disabled=${!selection.allows("share")}
+              @click=${this.#shareSelected}
+            ></jolly-button>
+          `}
+        </jolly-toolbar>
+        <jolly-tree
+          virtual
+          multiple
+          renamable
+          reorderable
+          row-drag
+          activate-on-double-click
+          .nodes=${view?.nodes ?? AssetTreeModel.EMPTY.nodes}
+          .expanded=${[...view?.expanded ?? []]}
+          .selected=${view?.selected ?? []}
+          .acceptDrop=${this.#acceptDrop}
+          @jolly-select=${this.#onSelect}
+          @jolly-toggle-expand=${this.#onToggleExpand}
+          @jolly-activate=${this.#onActivate}
+          @jolly-rename=${this.#onRename}
+          @jolly-reparent=${this.#onReparent}
+          @jolly-context-request=${this.#onContextRequest}
+          @keydown=${this.#onKeyDown}
+        ></jolly-tree>
+      </div>
+      <asset-details
+        class="card"
+        .summary=${summarizeSelection(selection, this.#kinds)}
+      ></asset-details>
       <jolly-context-menu
         label="Asset actions"
         @jolly-context-action=${this.#onContextAction}
@@ -308,10 +386,7 @@ export class AssetBrowser extends LitElement {
   #open(
     assetId: string
   ): void {
-    this.dispatchEvent(new CustomEvent<AssetOpenDetail>("asset-open", {
-      bubbles: true,
-      detail: { assetId }
-    }));
+    this.dispatchEvent(assetOpenEvent(assetId));
   }
 
   async #beginRenameOf(
@@ -327,6 +402,7 @@ export class AssetBrowser extends LitElement {
   ): void {
     this.dispatchEvent(new CustomEvent<AssetErrorDetail>("asset-error", {
       bubbles: true,
+      composed: true,
       detail: { message }
     }));
   }
@@ -455,7 +531,6 @@ declare global {
   }
 
   interface HTMLElementEventMap {
-    "asset-open": CustomEvent<AssetOpenDetail>;
     "asset-error": CustomEvent<AssetErrorDetail>;
   }
 }

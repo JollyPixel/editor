@@ -33,6 +33,7 @@ export class AssetShareDialog {
 }
 
 export class ShareLinksPane {
+  readonly tab: Locator;
   readonly links: Locator;
   readonly revokeDialog: Locator;
   readonly confirmRevokeButton: Locator;
@@ -40,6 +41,7 @@ export class ShareLinksPane {
   constructor(
     page: Page
   ) {
+    this.tab = page.getByRole("tab", { name: "Share links" });
     this.links = page.locator("studio-share-links share-link-list")
       .getByRole("listitem");
     this.revokeDialog = page.getByRole("alertdialog", { name: "Revoke link?" });
@@ -49,6 +51,10 @@ export class ShareLinksPane {
         name: "Revoke",
         exact: true
       });
+  }
+
+  async open(): Promise<void> {
+    await this.tab.click();
   }
 
   async revoke(): Promise<void> {

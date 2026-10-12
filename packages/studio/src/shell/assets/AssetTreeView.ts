@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import type { AssetRecordData } from "@jolly-pixel/asset";
-import type { JollyReparentDetail } from "@jolly-pixel/ui";
+import type {
+  JollyOption,
+  JollyReparentDetail
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { AssetDeletion } from "../../catalog/AssetDeletion.ts";
@@ -26,6 +29,11 @@ import {
 
 // CONSTANTS
 const kNewFolderName = "New folder";
+const kAllKinds: JollyOption<string> = {
+  value: "",
+  label: "All kinds",
+  icon: "all-kinds"
+};
 
 export type AssetTreeCatalogEvent = "change" | "dependencies";
 
@@ -79,6 +87,7 @@ export class AssetTreeView {
   #nodes: AssetTreeNode[] = AssetTreeModel.EMPTY.nodes;
   #layout = CatalogLayout.EMPTY;
   #kind: string;
+  #kindOptions: readonly JollyOption<string>[] = [kAllKinds];
   #expanded: ReadonlySet<string>;
   #selected: readonly string[] = [];
   #pendingLabels: ReadonlyMap<string, string> = new Map();
@@ -116,6 +125,10 @@ export class AssetTreeView {
 
   get kind(): string {
     return this.#kind;
+  }
+
+  get kindOptions(): readonly JollyOption<string>[] {
+    return this.#kindOptions;
   }
 
   get expanded(): ReadonlySet<string> {
@@ -343,6 +356,15 @@ export class AssetTreeView {
     const folderNames = [...this.#catalog.folders()];
     this.#layout = new CatalogLayout(records, folderNames);
     this.#stale = false;
+
+    const shownKinds = new Set(records.map((record) => record.kind));
+    shownKinds.add(this.#kind);
+    this.#kindOptions = [
+      kAllKinds,
+      ...this.#kinds.toOptions().filter(
+        (option) => shownKinds.has(option.value)
+      )
+    ];
 
     const model = new AssetTreeModel(records, {
       presenter: this.#kinds,

@@ -22,6 +22,10 @@ export interface TreeBadge {
  */
 export type TreeSwatchPosition = "start" | "end";
 
+export type TreeToggleStyle = "chevron" | "box";
+
+export type TreeIndentGuidesScope = "all" | "selected";
+
 export interface TreeSwatch {
   title: string;
   /**

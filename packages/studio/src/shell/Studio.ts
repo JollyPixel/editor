@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   LitElement,
+  css,
   html,
   type TemplateResult
 } from "lit";
@@ -46,6 +47,139 @@ export interface StudioOptions {
 
 @customElement("jolly-studio")
 export class Studio extends LitElement {
+  static override styles = css`
+    :host {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      min-height: 0;
+      background: var(--studio-window);
+      color: var(--jolly-text);
+      font-family: var(--jolly-font-family);
+      font-size: var(--jolly-font-size);
+
+      --studio-gutter: var(--jolly-space-2);
+      --studio-gutter-tight: var(--jolly-space-1);
+      --studio-radius: var(--jolly-radius-md);
+      --studio-window: light-dark(
+        var(--jolly-surface-sunken),
+        color-mix(in oklab, var(--jolly-surface-sunken), black 12%)
+      );
+      --studio-board: var(--jolly-surface);
+      --studio-card: color-mix(
+        in oklab,
+        var(--jolly-surface),
+        var(--jolly-surface-raised)
+      );
+      --studio-card-head-height: 36px;
+      --studio-light: light-dark(
+        rgb(255 255 255 / 70%),
+        rgb(255 255 255 / 5%)
+      );
+      --studio-shade: light-dark(rgb(0 0 0 / 7%), rgb(0 0 0 / 30%));
+      --studio-bevel:
+        inset 0 1px 0 var(--studio-light),
+        inset 0 -1px 0 var(--studio-shade);
+    }
+
+    #studio-header {
+      display: flex;
+      flex: 0 0 auto;
+      align-items: flex-end;
+      gap: var(--studio-gutter);
+      padding: var(--studio-gutter) var(--studio-gutter) 0;
+    }
+
+    #editor-tabs {
+      flex: 1 1 auto;
+      min-width: 0;
+
+      --jolly-control-height: 34px;
+      --jolly-tab-icon-size: 20px;
+      --jolly-tab-close-size: 20px;
+      --jolly-tab-close-icon-size: 12px;
+    }
+
+    #editor-tabs::part(list) {
+      gap: 2px;
+    }
+
+    #editor-tabs::part(tab) {
+      border-radius: var(--studio-radius) var(--studio-radius) 0 0;
+      background: color-mix(in oklab, var(--studio-board) 50%, transparent);
+      color: var(--jolly-text-muted);
+    }
+
+    #editor-tabs::part(tab):hover {
+      background: color-mix(in oklab, var(--studio-board) 80%, transparent);
+      color: var(--jolly-text);
+    }
+
+    #editor-tabs::part(tab-selected),
+    #editor-tabs::part(tab-selected):hover {
+      background: var(--studio-board);
+      color: var(--jolly-text);
+      box-shadow: inset 0 1px 0 var(--studio-light);
+    }
+
+    #editor-tabs::part(tab-selected)::after {
+      background: transparent;
+    }
+
+    #editor-tabs::part(close) {
+      margin-inline: 4px;
+    }
+
+    #studio-actions {
+      flex: 0 0 auto;
+      margin-block-end: 2px;
+    }
+
+    #workbench {
+      position: relative;
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      min-height: 0;
+      margin: 0 var(--studio-gutter) var(--studio-gutter);
+      padding: var(--studio-gutter);
+      overflow: hidden;
+      border-radius: 0 var(--studio-radius) var(--studio-radius);
+      background: var(--studio-board);
+      box-shadow: inset 0 -1px 0 var(--studio-shade);
+    }
+
+    #workbench:has(studio-home[hidden]) {
+      margin: 0 var(--studio-gutter-tight) var(--studio-gutter-tight);
+      padding: var(--studio-gutter-tight);
+      border-radius: var(--studio-radius);
+    }
+
+    #editor-frames {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+    }
+
+    #editor-frames iframe {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      border-radius: var(--jolly-radius-sm);
+    }
+
+    #editor-frames iframe[hidden] {
+      display: none;
+    }
+
+    jolly-log {
+      position: absolute;
+      inset-block-end: calc(var(--studio-gutter) * 3);
+      inset-inline-start: calc(var(--studio-gutter) * 3);
+    }
+  `;
+
   @state()
   declare _assets: AssetBrowserOptions | null;
 
@@ -163,10 +297,6 @@ export class Studio extends LitElement {
     this.#session = null;
   }
 
-  protected override createRenderRoot(): HTMLElement {
-    return this;
-  }
-
   override render(): TemplateResult {
     return html`
       <header id="studio-header">
@@ -189,6 +319,7 @@ export class Studio extends LitElement {
             .assets=${this._assets}
             .openTabs=${this._openTabs}
             @asset-open=${this.#onAssetOpen}
+            @console-toggle=${this.#toggleConsole}
             .signedIn=${this._signedIn}
             .account=${this._account}
             .preferences=${this.#preferences}
@@ -233,6 +364,10 @@ export class Studio extends LitElement {
 
   readonly #syncOpenTabs = (): void => {
     this._openTabs = this.#session?.tabs.list() ?? [];
+  };
+
+  readonly #toggleConsole = (): void => {
+    this.#session?.toggleConsole();
   };
 
   readonly #onAssetOpen = (

@@ -119,30 +119,20 @@ describe("UsersTreeModel", () => {
     assert.equal(deny.id, "deny");
   });
 
-  test("colours a user by its account and fades it while offline", () => {
-    const model = modelWith();
-    const [admin, , spectator] = model.nodes;
-    const alice = admin.children?.[0];
-    const bob = spectator.children?.[0];
-
-    assert.equal(alice?.swatch?.title, "Online");
-    assert.equal(alice?.detail, "you");
-    assert.equal(bob?.swatch?.title, "Offline");
-    assert.match(bob?.swatch?.color ?? "", /^color-mix\(in srgb, .+ 30%, transparent\)$/);
-  });
-
-  test("draws each user's avatar, with the uploaded image when there is one", () => {
+  test("draws each user's avatar with its presence and uploaded image", () => {
     const model = modelWith();
     const [admin, , spectator] = model.nodes;
 
     assert.deepEqual(admin.children?.[0].avatar, {
       peerId: "a",
-      image: undefined
+      image: undefined,
+      presence: "online"
     });
-    assert.equal(
-      spectator.children?.[0].avatar?.image,
-      "/api/accounts/b/avatar?v=0123456789abcdef"
-    );
+    assert.deepEqual(spectator.children?.[0].avatar, {
+      peerId: "b",
+      image: "/api/accounts/b/avatar?v=0123456789abcdef",
+      presence: "offline"
+    });
   });
 
   test("resolves a user or request row back to its menu target", () => {

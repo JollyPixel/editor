@@ -29,15 +29,25 @@ const kMap: AssetRecordData = {
   kind: "voxelmap",
   source: "maps/overworld.voxelmap.json"
 };
+const kModel: AssetRecordData = {
+  id: "model-1",
+  kind: "voxelmodel",
+  source: "maps/hero.voxelmodel.json"
+};
 const kKinds = new AssetKindSet({
   kinds: [
     {
       kind: "voxelmap",
       label: "Voxel map",
       extension: ".voxelmap.json"
+    },
+    {
+      kind: "voxelmodel",
+      label: "Voxel model",
+      extension: ".voxelmodel.json"
     }
   ],
-  editable: ["voxelmap"]
+  editable: ["voxelmap", "voxelmodel"]
 });
 
 interface TreeViewProbe {
@@ -70,7 +80,34 @@ function treeView(
   };
 }
 
+function kindFilters(
+  view: AssetTreeView
+): string[] {
+  return view.kindOptions.map((option) => option.value);
+}
+
 describe("AssetTreeView", () => {
+  test("offers a kind filter only while the kind has assets or is the active filter", () => {
+    const catalog = new FakeTreeCatalog([kMap], ["maps"]);
+    const { view } = treeView(catalog);
+    assert.deepEqual(kindFilters(view), ["", "voxelmap"]);
+
+    catalog.byId.set(kModel.id, kModel);
+    catalog.change();
+    view.refresh();
+    assert.deepEqual(kindFilters(view), ["", "voxelmap", "voxelmodel"]);
+
+    view.filter("voxelmodel");
+    catalog.byId.delete(kModel.id);
+    catalog.change();
+    view.refresh();
+    assert.deepEqual(kindFilters(view), ["", "voxelmap", "voxelmodel"]);
+
+    view.filter("");
+    view.refresh();
+    assert.deepEqual(kindFilters(view), ["", "voxelmap"]);
+  });
+
   test("shows a new name while renaming and the old one again when the rename fails", async() => {
     const catalog = new FakeTreeCatalog([kMap], ["maps"]);
     catalog.failure = "disk full";

@@ -97,6 +97,10 @@ export class StudioSession {
     );
   }
 
+  toggleConsole(): void {
+    this.#console?.toggle();
+  }
+
   async openAsset(
     assetId: string,
     options: EditorTabOpenOptions = {}
@@ -189,7 +193,7 @@ export class StudioSession {
         void this.openAsset(command.target);
         break;
       case "toggle-console":
-        this.#console?.toggle();
+        this.toggleConsole();
         break;
       case "session-refused":
         void this.#renewal?.renew();

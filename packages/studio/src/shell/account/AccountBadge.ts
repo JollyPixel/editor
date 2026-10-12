@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   LitElement,
+  css,
   html,
   nothing,
   type TemplateResult
@@ -11,22 +12,9 @@ import {
   query
 } from "lit/decorators.js";
 import type { Account } from "@jolly-pixel/accounts";
-import type { ContextMenuEntry } from "@jolly-pixel/ui";
 
-// CONSTANTS
-const kMenu: readonly ContextMenuEntry[] = [
-  {
-    id: "change-avatar",
-    label: "Change avatar…"
-  },
-  "separator",
-  {
-    id: "sign-out",
-    label: "Sign out",
-    icon: "sign-out",
-    intent: "danger"
-  }
-];
+// Import Internal Dependencies
+import { accountMenu } from "./accountMenu.ts";
 
 export interface AvatarChangeDetail {
   image: File;
@@ -34,6 +22,37 @@ export interface AvatarChangeDetail {
 
 @customElement("studio-account")
 export class AccountBadge extends LitElement {
+  static override styles = css`
+    :host {
+      display: flex;
+      align-items: center;
+    }
+
+    jolly-button {
+      --jolly-control-height: 30px;
+      --jolly-control-bg: transparent;
+      --jolly-control-bg-hover: color-mix(
+        in oklab,
+        var(--studio-board) 80%,
+        transparent
+      );
+      --jolly-control-bg-active: var(--studio-board);
+      --jolly-avatar-size: 22px;
+      --jolly-avatar-presence-ring: var(--studio-window);
+    }
+
+    jolly-avatar {
+      margin-inline-end: var(--jolly-space-1);
+    }
+
+    .chevron {
+      color: var(--jolly-text-muted);
+      transform: rotate(90deg);
+
+      --jolly-icon-size: 12px;
+    }
+  `;
+
   @property({ attribute: false })
   declare account: Account | null;
 
@@ -52,10 +71,6 @@ export class AccountBadge extends LitElement {
     this.avatar = "";
   }
 
-  protected override createRenderRoot(): HTMLElement {
-    return this;
-  }
-
   override render(): TemplateResult | typeof nothing {
     if (this.account === null) {
       return nothing;
@@ -70,12 +85,14 @@ export class AccountBadge extends LitElement {
         <jolly-avatar
           peer-id=${this.account.id}
           image=${this.avatar}
+          presence="online"
         ></jolly-avatar>
         <span class="account-name">${this.account.username}</span>
+        <jolly-icon class="chevron" name="chevron"></jolly-icon>
       </jolly-button>
       <jolly-context-menu
         label="Account"
-        .items=${kMenu}
+        .items=${accountMenu(this.account)}
         @jolly-context-action=${this.#onAction}
       ></jolly-context-menu>
       <input
@@ -95,8 +112,8 @@ export class AccountBadge extends LitElement {
       return;
     }
 
-    const { left, bottom } = button.getBoundingClientRect();
-    this._menu.openAt(left, bottom);
+    const { right, bottom } = button.getBoundingClientRect();
+    this._menu.openAt(right, bottom);
   };
 
   readonly #onAction = (

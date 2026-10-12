@@ -9,14 +9,12 @@ import type {
   TreeBadge,
   TreeNode
 } from "@jolly-pixel/ui";
-import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // CONSTANTS
 const kRolePrefix = "role:";
 const kRequestsNodeId = "requests";
 const kRequestPrefix = "request:";
 const kUserPrefix = "user:";
-const kOfflineOpacity = "30%";
 const kOwnerBadge: TreeBadge = {
   color: "#e3a21a",
   title: "Owner",
@@ -216,7 +214,6 @@ export class UsersTreeModel {
   #userNode(
     entry: RosterEntry
   ): UsersTreeNode {
-    const color = peerProfileColor(entry.id, { peerId: entry.id });
     const data: UsersMenuTarget = {
       type: "user",
       entry
@@ -227,16 +224,10 @@ export class UsersTreeModel {
     return {
       id,
       label: entry.username,
-      ...(this.#isViewer(entry) ? { detail: "you" } : {}),
       avatar: {
         peerId: entry.id,
-        image: entry.avatar
-      },
-      swatch: {
-        title: entry.online ? "Online" : "Offline",
-        color: entry.online ?
-          color :
-          `color-mix(in srgb, ${color} ${kOfflineOpacity}, transparent)`
+        image: entry.avatar,
+        presence: entry.online ? "online" : "offline"
       },
       ...(entry.owner ? { badges: [kOwnerBadge] } : {}),
       data
@@ -258,7 +249,7 @@ export function parseRoleAction(
     null;
 }
 
-function roleLabel(
+export function roleLabel(
   role: string
 ): string {
   return role.charAt(0).toUpperCase() + role.slice(1);

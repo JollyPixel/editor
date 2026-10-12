@@ -60,16 +60,15 @@ export interface DepthDropTarget {
 export interface TreePlacement {
   position: number;
   size: number;
+  levelHasBranches: boolean;
 }
 
-interface IndexedNode<TData> {
+interface IndexedNode<TData> extends TreePlacement {
   node: TreeNode<TData>;
   parent: IndexedNode<TData> | null;
   parentId: string | null;
   depth: number;
   order: number;
-  position: number;
-  size: number;
 }
 
 /**
@@ -80,14 +79,12 @@ export class TreeSnapshot<
 > {
   readonly #nodes = new Map<string, IndexedNode<TData>>();
   readonly #visibleRows: FlatTreeRow<TData>[] = [];
-  readonly hasBranches: boolean;
 
   constructor(
     nodes: readonly TreeNode<TData>[],
     expanded: ReadonlySet<string> = new Set()
   ) {
     let order = 0;
-    let hasBranches = false;
 
     const visit = (
       list: readonly TreeNode<TData>[],
@@ -96,6 +93,7 @@ export class TreeSnapshot<
       visible: boolean
     ): void => {
       const parentId = parent === null ? null : parent.node.id;
+      const levelHasBranches = list.some(isExpandable);
       let position = 0;
       for (const node of list) {
         position += 1;
@@ -106,7 +104,8 @@ export class TreeSnapshot<
           depth,
           order,
           position,
-          size: list.length
+          size: list.length,
+          levelHasBranches
         };
         this.#nodes.set(node.id, indexed);
 
@@ -118,7 +117,6 @@ export class TreeSnapshot<
           });
         }
         order += 1;
-        hasBranches ||= isExpandable(node);
 
         if (node.children !== undefined) {
           visit(
@@ -132,7 +130,6 @@ export class TreeSnapshot<
     };
 
     visit(nodes, null, 0, true);
-    this.hasBranches = hasBranches;
   }
 
   get visibleRows(): readonly FlatTreeRow<TData>[] {
@@ -181,7 +178,8 @@ export class TreeSnapshot<
       undefined :
       {
         position: indexed.position,
-        size: indexed.size
+        size: indexed.size,
+        levelHasBranches: indexed.levelHasBranches
       };
   }
 

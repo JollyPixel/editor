@@ -7,7 +7,6 @@ import {
   expect,
   type Locator
 } from "../fixtures.ts";
-import { styleOf } from "../support/styles.ts";
 import {
   TREE_SELECTOR,
   rowOf
@@ -18,6 +17,13 @@ function swatchOrder(
 ): Promise<string[]> {
   return row.evaluate((element) => [...element.querySelectorAll(".swatch, .label")]
     .map((part) => part.className));
+}
+
+function railsOf(
+  row: Locator
+): Promise<(string | null)[]> {
+  return row.locator(".rail")
+    .evaluateAll((rails) => rails.map((rail) => rail.getAttribute("data-rail")));
 }
 
 test.describe("Tree", () => {
@@ -33,7 +39,7 @@ test.describe("Tree", () => {
     await expect(label).not.toHaveAttribute("title");
 
     await tree.evaluate((element) => {
-      (element as HTMLElement).style.width = "165px";
+      (element as HTMLElement).style.width = "153px";
     });
     await page.mouse.move(0, 0);
     await label.hover();
@@ -99,7 +105,7 @@ test.describe("Tree", () => {
     await expect(swatch).toBeVisible();
   });
 
-  test("renders ordered badges and one indent unit per ancestor", async({ page }) => {
+  test("renders ordered badges after the detail", async({ page }) => {
     const badges = rowOf(page, "camera").locator(".badge");
 
     await expect(badges).toHaveCount(2);
@@ -119,12 +125,39 @@ test.describe("Tree", () => {
       boxOf(badges.nth(0))
     ]);
     expect(detail.x).toBeLessThan(badge.x);
+  });
 
-    expect(await styleOf(rowOf(page, "scene"), "width", "::before")).toBe("0px");
-    expect(await styleOf(rowOf(page, "camera"), "width", "::before")).toBe("16px");
+  test("connects each row to its parent and ends the line at the last child", async({ page }) => {
+    expect(await railsOf(rowOf(page, "scene"))).toEqual(["start"]);
+    expect(await railsOf(rowOf(page, "camera"))).toEqual(["tee"]);
+    expect(await railsOf(rowOf(page, "barrel"))).toEqual(["blank", "elbow"]);
+
+    const [guides, content] = await Promise.all([
+      boxOf(rowOf(page, "barrel").locator(".guides")),
+      boxOf(rowOf(page, "barrel").locator(".content"))
+    ]);
+    expect(guides.width).toBe(32);
+    expect(content.x).toBe(guides.x + guides.width);
+  });
+
+  test("announces a row avatar's presence", async({ page }) => {
+    await page.locator(TREE_SELECTOR).evaluate((tree: HTMLElementTagNameMap["jolly-tree"]) => {
+      tree.nodes = [
+        {
+          id: "ada",
+          label: "Ada",
+          avatar: { peerId: "ada", presence: "offline" }
+        }
+      ];
+    });
+
+    await expect(rowOf(page, "ada").getByRole("img", { name: "Offline" })).toBeVisible();
   });
 
   test("highlights a leaf from the row start and aligns its icon with branches", async({ page }) => {
+    await page.locator(TREE_SELECTOR).evaluate((tree: HTMLElementTagNameMap["jolly-tree"]) => {
+      tree.indentGuides = false;
+    });
     const [lighting, lightingContent, lightingIcon, sceneIcon] = await Promise.all([
       boxOf(rowOf(page, "lighting")),
       boxOf(rowOf(page, "lighting").locator(".content")),
@@ -135,11 +168,28 @@ test.describe("Tree", () => {
     expect(lightingContent.x).toBe(lighting.x);
     expect(lightingContent.x + lightingContent.width).toBe(lighting.x + lighting.width);
     expect(lightingIcon.x).toBe(sceneIcon.x);
+    await expect(rowOf(page, "camera").locator(".toggle-spacer")).toHaveCount(1);
+    await expect(rowOf(page, "crate").locator(".toggle-spacer")).toHaveCount(0);
 
     await page.locator(TREE_SELECTOR).evaluate((tree: HTMLElementTagNameMap["jolly-tree"]) => {
       tree.nodes = [{ id: "flat", label: "Flat" }];
     });
     await expect(page.locator(`${TREE_SELECTOR} .toggle-spacer`)).toHaveCount(0);
+  });
+
+  test("keeps a leaf's toggle space outside the highlight under guides", async({ page }) => {
+    const [camera, props, cameraLabel, propsLabel, lighting, scene] = await Promise.all([
+      boxOf(rowOf(page, "camera").locator(".content")),
+      boxOf(rowOf(page, "props").locator(".content")),
+      boxOf(rowOf(page, "camera").locator(".label")),
+      boxOf(rowOf(page, "props").locator(".label")),
+      boxOf(rowOf(page, "lighting").locator(".content")),
+      boxOf(rowOf(page, "scene").locator(".content"))
+    ]);
+
+    expect(camera.x).toBe(props.x);
+    expect(cameraLabel.x).toBe(propsLabel.x);
+    expect(lighting.x).toBe(scene.x);
   });
 
   test("selects with modifiers and keeps one roving focus row", async({ page }) => {

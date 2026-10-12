@@ -1,6 +1,5 @@
 ---
 "@jolly-pixel/network": minor
-"@jolly-pixel/editor.host": minor
 ---
 
 `Client.reconnect()` reopens a client the server refused as `unauthorized`; joined rooms rejoin with their resume payload.

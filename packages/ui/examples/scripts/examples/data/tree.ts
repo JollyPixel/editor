@@ -17,7 +17,11 @@ type TreeOptionKey =
   | "multiple"
   | "requireSelection"
   | "renamable"
-  | "indentGuides";
+  | "indentGuides"
+  | "guidesFollowSelection"
+  | "boxToggles"
+  | "cardRows"
+  | "people";
 
 // CONSTANTS
 const kOptions: GalleryOption<TreeOptionKey>[] = [
@@ -50,8 +54,51 @@ const kOptions: GalleryOption<TreeOptionKey>[] = [
     key: "indentGuides",
     label: "Indent guides",
     initial: true
+  },
+  {
+    key: "guidesFollowSelection",
+    label: "Guides follow selection",
+    initial: false
+  },
+  {
+    key: "boxToggles",
+    label: "Box toggles",
+    initial: false
+  },
+  {
+    key: "cardRows",
+    label: "Card rows",
+    initial: false
+  },
+  {
+    key: "people",
+    label: "People",
+    initial: false
   }
 ];
+const kTreeProperties = [
+  "reorderable",
+  "rowDrag",
+  "multiple",
+  "requireSelection",
+  "renamable",
+  "indentGuides"
+] as const;
+const kCardRowsStyle = `
+  jolly-tree.card-rows::part(leaf) {
+    margin-block: 1px;
+    border: 1px solid var(--jolly-border);
+    background: var(--jolly-surface-raised);
+  }
+
+  jolly-tree.card-rows::part(leaf):hover {
+    background: var(--jolly-control-bg-hover);
+  }
+
+  jolly-tree.card-rows::part(leaf selected) {
+    background: var(--jolly-control-bg-focus);
+  }
+`;
 
 function sampleNodes(): TreeNode[] {
   return [
@@ -124,6 +171,32 @@ function sampleNodes(): TreeNode[] {
   ];
 }
 
+function peopleNode(): TreeNode {
+  return {
+    id: "crew",
+    label: "Crew",
+    detail: "2/3",
+    children: [
+      {
+        id: "ada",
+        label: "Ada",
+        avatar: { peerId: "ada", presence: "online" },
+        badges: [{ color: "#e0567a", title: "Editing" }]
+      },
+      {
+        id: "lin",
+        label: "Lin",
+        avatar: { peerId: "lin", presence: "online" }
+      },
+      {
+        id: "sam",
+        label: "Sam",
+        avatar: { peerId: "sam", presence: "offline" }
+      }
+    ]
+  };
+}
+
 function setNodeField(
   nodes: TreeNode[],
   id: string,
@@ -151,13 +224,15 @@ function buildTree(
   options: GalleryOptionValues<TreeOptionKey>
 ): Tree {
   const tree = document.createElement("jolly-tree");
-  tree.className = "tree-demo";
-  for (const { key } of kOptions) {
+  tree.className = options.cardRows ? "tree-demo card-rows" : "tree-demo";
+  for (const key of kTreeProperties) {
     tree[key] = options[key];
   }
-  tree.nodes = sampleNodes();
+  tree.indentGuidesScope = options.guidesFollowSelection ? "selected" : "all";
+  tree.toggleStyle = options.boxToggles ? "box" : "chevron";
+  tree.nodes = options.people ? [...sampleNodes(), peopleNode()] : sampleNodes();
   tree.selected = [];
-  tree.expanded = ["scene", "props"];
+  tree.expanded = ["scene", "props", "crew"];
 
   tree.addEventListener("jolly-select", (event) => {
     tree.selected = event.detail.selected;
@@ -263,6 +338,8 @@ export const TREE_EXAMPLE: GalleryExample<TreeOptionKey> = {
   options: kOptions,
   render(host, options) {
     const tree = buildTree(options);
-    host.append(tree, rowMenu(tree));
+    const style = document.createElement("style");
+    style.textContent = kCardRowsStyle;
+    host.append(style, tree, rowMenu(tree));
   }
 };

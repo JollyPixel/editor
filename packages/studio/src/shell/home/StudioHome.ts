@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   LitElement,
+  css,
   html,
   nothing,
   type TemplateResult
@@ -26,6 +27,99 @@ export const HOME_LAYOUT_STORAGE_KEY = "studio:home-layout";
 
 @customElement("studio-home")
 export class StudioHome extends LitElement {
+  static override styles = css`
+    :host {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+
+    :host([hidden]) {
+      display: none;
+    }
+
+    jolly-dock {
+      background: transparent;
+
+      --jolly-dock-handle-size: var(--studio-gutter);
+      --jolly-dock-resize-bg: transparent;
+      --jolly-dock-resize-bg-hover: transparent;
+    }
+
+    jolly-dock::part(resize-handle)::after {
+      display: none;
+    }
+
+    #asset-dock jolly-pane {
+      background: transparent;
+    }
+
+    #asset-dock jolly-pane::part(header) {
+      display: none;
+    }
+
+    jolly-pane::part(content) {
+      padding: 0;
+    }
+
+    #studio-tools {
+      flex: 0 0 auto;
+      margin-block-end: var(--studio-gutter);
+
+      --jolly-control-height: var(--studio-card-head-height);
+      --jolly-icon-size: 18px;
+    }
+
+    #studio-tools jolly-button {
+      flex: 1 1 0;
+      border-radius: var(--studio-radius);
+      background: var(--studio-card);
+      box-shadow: var(--studio-bevel);
+
+      --jolly-icon-button-size: 100%;
+      --jolly-control-bg: transparent;
+      --jolly-control-bg-hover: color-mix(
+        in oklab,
+        var(--jolly-ink) 8%,
+        transparent
+      );
+    }
+
+    #users-dock > :is(jolly-pane, jolly-pane-group) {
+      overflow: hidden;
+      border-radius: var(--studio-radius);
+      background: var(--studio-card);
+      box-shadow: var(--studio-bevel);
+    }
+
+    #users-dock jolly-pane {
+      background: transparent;
+    }
+
+    #users-dock jolly-pane::part(header),
+    #users-dock jolly-pane-group::part(tabs) {
+      min-height: var(--studio-card-head-height);
+      padding-inline: var(--jolly-space-1);
+      background: transparent;
+      color: var(--jolly-text-muted);
+    }
+
+    #users-dock jolly-pane-group::part(tab) {
+      letter-spacing: normal;
+    }
+
+    #users-dock jolly-pane-group::part(tab):hover {
+      background: var(--jolly-control-bg-hover);
+      color: var(--jolly-text);
+    }
+
+    #users-dock jolly-pane-group::part(tab-selected),
+    #users-dock jolly-pane-group::part(tab-selected):hover {
+      background: transparent;
+      color: var(--jolly-accent-text);
+    }
+  `;
+
   @property({ attribute: false })
   declare assets: AssetBrowserOptions | null;
 
@@ -50,10 +144,6 @@ export class StudioHome extends LitElement {
     this.preferences = new StudioPreferences();
   }
 
-  protected override createRenderRoot(): HTMLElement {
-    return this;
-  }
-
   override render(): TemplateResult {
     return html`
       <jolly-dock-layout
@@ -76,38 +166,89 @@ export class StudioHome extends LitElement {
           .options=${this.assets}
           .openTabs=${this.openTabs}
         ></project-overview>
-        ${this.signedIn === null ? nothing : html`
-          <jolly-dock
-            id="users-dock"
-            key="right"
-            side="right"
-            size="240"
-            min-size="180"
-            max-size="400"
-          >
-            <jolly-pane key="users" heading="Users" locked>
-              <studio-users
-                .roster=${this.signedIn.roster}
-                .self=${this.account}
-              ></studio-users>
-            </jolly-pane>
-            ${this.assets === null ? nothing : html`
-              <jolly-pane key="share-links" heading="Share links">
-                <studio-share-links
-                  .links=${this.signedIn.shares}
-                  .catalog=${this.assets.catalog}
-                ></studio-share-links>
-              </jolly-pane>
-            `}
-          </jolly-dock>
-        `}
+        ${this.signedIn === null ? nothing : this.#usersDock(this.signedIn)}
       </jolly-dock-layout>
     `;
   }
+
+  #usersDock(
+    signedIn: StudioSignedIn
+  ): TemplateResult {
+    const users = html`
+      <jolly-pane key="users" heading="Users" icon="users" locked>
+        <studio-users
+          .roster=${signedIn.roster}
+          .self=${this.account}
+        ></studio-users>
+      </jolly-pane>
+    `;
+
+    return html`
+      <jolly-dock
+        id="users-dock"
+        key="right"
+        side="right"
+        size="240"
+        min-size="180"
+        max-size="400"
+      >
+        <jolly-toolbar id="studio-tools" label="Studio tools">
+          <jolly-button
+            icon="settings"
+            icon-only
+            label="Settings"
+            title="Settings"
+            disabled
+          ></jolly-button>
+          <jolly-button
+            icon="search"
+            icon-only
+            label="Search"
+            title="Search (opens the console)"
+            @click=${this.#search}
+          ></jolly-button>
+          <jolly-button
+            icon="export"
+            icon-only
+            label="Export project"
+            title="Export project"
+            disabled
+          ></jolly-button>
+        </jolly-toolbar>
+        ${this.assets === null ? users : html`
+          <jolly-pane-group active="users">
+            ${users}
+            <jolly-pane
+              key="share-links"
+              heading="Share links"
+              icon="share"
+              locked
+            >
+              <studio-share-links
+                .links=${signedIn.shares}
+                .catalog=${this.assets.catalog}
+              ></studio-share-links>
+            </jolly-pane>
+          </jolly-pane-group>
+        `}
+      </jolly-dock>
+    `;
+  }
+
+  readonly #search = (): void => {
+    this.dispatchEvent(new Event("console-toggle", {
+      bubbles: true,
+      composed: true
+    }));
+  };
 }
 
 declare global {
   interface HTMLElementTagNameMap {
     "studio-home": StudioHome;
+  }
+
+  interface HTMLElementEventMap {
+    "console-toggle": Event;
   }
 }
