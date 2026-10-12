@@ -13,6 +13,7 @@ export const blockLibraryViewportStyles = css`
     box-sizing: border-box;
     overflow: hidden auto;
     scrollbar-gutter: stable;
+    scrollbar-color: var(--jolly-groove) transparent;
     min-height: 100px;
     max-height: 240px;
     padding: var(--block-grid-inset);

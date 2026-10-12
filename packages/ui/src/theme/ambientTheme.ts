@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import { resolveThemeToken } from "./resolveThemeToken.ts";
+import { systemThemeMode } from "./systemTheme.ts";
 import type { ThemeMode } from "./types.ts";
 
 export type ResolvedThemeMode = Exclude<ThemeMode, "auto">;
@@ -36,6 +37,13 @@ export function ambientThemeMode(
   }
 
   return themeModeOf(getComputedStyle(parent));
+}
+
+export function resolveAmbientTheme(
+  element: Element
+): ResolvedThemeMode {
+  return ambientThemeMode(element) ??
+    systemThemeMode(element.ownerDocument.defaultView);
 }
 
 export function adoptAmbientTheme(

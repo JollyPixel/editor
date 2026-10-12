@@ -36,7 +36,8 @@ function createEnvironment() {
     scene,
     lighting,
     chunks,
-    casters
+    casters,
+    theme: "dark"
   });
 
   return {
@@ -139,13 +140,39 @@ describe("SceneEnvironment", () => {
     assert.equal(scene.backgroundNode, night);
   });
 
-  test("swaps the sky for a plain colour in studio mode", () => {
-    const { scene, apply } = createEnvironment();
+  test("draws flat and studio over a studio sky that follows the theme", () => {
+    const { scene, apply, environment } = createEnvironment();
 
-    apply("daylight");
     apply("studio");
+    const dark = scene.backgroundNode;
+    apply("flat");
 
-    assert.equal(scene.backgroundNode, null);
-    assert.ok(scene.background instanceof THREE.Color);
+    assert.ok(dark);
+    assert.equal(scene.background, null);
+    assert.equal(scene.backgroundNode, dark);
+
+    environment.theme = "light";
+    const light = scene.backgroundNode;
+
+    assert.ok(light);
+    assert.notEqual(light, dark);
+
+    environment.theme = "dark";
+
+    assert.equal(scene.backgroundNode, dark);
+  });
+
+  test("keeps the daylight and night skies whatever the theme", () => {
+    const { scene, apply, environment } = createEnvironment();
+
+    for (const mode of ["daylight", "night"] as const) {
+      apply(mode);
+      const sky = scene.backgroundNode;
+      environment.theme = "light";
+
+      assert.equal(scene.backgroundNode, sky);
+
+      environment.theme = "dark";
+    }
   });
 });

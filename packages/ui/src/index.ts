@@ -17,6 +17,7 @@ export type {
 export * from "./theme/resolveThemeToken.ts";
 export * from "./theme/ambientTheme.ts";
 export * from "./theme/AmbientThemeController.ts";
+export * from "./theme/DocumentTheme.ts";
 
 export * from "./geometry/Rect.ts";
 export type { AnchorRect } from "./geometry/anchoredPosition.ts";

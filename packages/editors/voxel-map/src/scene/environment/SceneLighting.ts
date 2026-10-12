@@ -5,8 +5,8 @@ import type { BlockLightFalloff } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type { LightingMode } from "../../state/ViewSettings.ts";
-import { SkyBackground } from "./SkyBackground.ts";
-import { NightSkyBackground } from "./NightSkyBackground.ts";
+import { DaySky } from "./background/DaySky.ts";
+import { NightSky } from "./background/NightSky.ts";
 
 // CONSTANTS
 const kSunDistance = 24;
@@ -74,7 +74,7 @@ const kRigs: Record<LightingMode, LightingRig> = {
     sunDirection: new THREE.Vector3(-0.62, 0.55, 0.56).normalize(),
     toneMapping: THREE.ACESFilmicToneMapping,
     exposure: 1.05,
-    sky: SkyBackground,
+    sky: DaySky,
     environmentIntensity: kEnvironmentIntensity,
     blockLightFalloff: "wide",
     shadowFill: 0
@@ -89,7 +89,7 @@ const kRigs: Record<LightingMode, LightingRig> = {
     sunDirection: new THREE.Vector3(0.38, 0.78, -0.5).normalize(),
     toneMapping: THREE.ACESFilmicToneMapping,
     exposure: 0.9,
-    sky: NightSkyBackground,
+    sky: NightSky,
     environmentIntensity: 0.08,
     blockLightFalloff: "focused",
     shadowFill: 1

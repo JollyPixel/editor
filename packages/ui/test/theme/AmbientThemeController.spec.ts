@@ -7,6 +7,11 @@ import type { ReactiveControllerHost } from "lit";
 
 // Import Internal Dependencies
 import { AmbientThemeController } from "../../src/theme/AmbientThemeController.ts";
+import {
+  clearTheme,
+  nextFrame,
+  pickTheme
+} from "../helpers/theme/scope.ts";
 
 function controllerHost(): ReactiveControllerHost & HTMLElement {
   const element = document.createElement("div");
@@ -14,21 +19,6 @@ function controllerHost(): ReactiveControllerHost & HTMLElement {
   return Object.assign(element, {
     addController: () => undefined
   }) as unknown as ReactiveControllerHost & HTMLElement;
-}
-
-async function nextFrame(): Promise<void> {
-  await Promise.resolve();
-  await new Promise<void>((resolve) => {
-    window.requestAnimationFrame(() => resolve());
-  });
-}
-
-function pickTheme(
-  scope: HTMLElement,
-  theme: "light" | "dark"
-): void {
-  scope.style.colorScheme = theme;
-  scope.setAttribute("theme", theme);
 }
 
 test("AmbientThemeController follows the page theme until stopped", async() => {
@@ -50,6 +40,33 @@ test("AmbientThemeController follows the page theme until stopped", async() => {
   await nextFrame();
   assert.equal(host.getAttribute("theme"), "light");
 
+  scope.remove();
+  host.remove();
+});
+
+test("AmbientThemeController hands each new theme to onChange, leaving the attribute", async() => {
+  const scope = document.createElement("jolly-scope");
+  pickTheme(scope, "dark");
+  const host = controllerHost();
+  host.setAttribute("theme", "auto");
+  document.body.append(scope, host);
+  const received: Array<string> = [];
+  const controller = new AmbientThemeController(host, {
+    onChange: (mode) => received.push(mode)
+  });
+
+  controller.follow();
+  pickTheme(scope, "dark");
+  await nextFrame();
+  clearTheme(scope);
+  await nextFrame();
+  pickTheme(scope, "light");
+  await nextFrame();
+
+  assert.deepEqual(received, ["dark", "light"]);
+  assert.equal(host.getAttribute("theme"), "auto");
+
+  controller.stop();
   scope.remove();
   host.remove();
 });
