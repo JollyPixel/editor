@@ -4,6 +4,7 @@ import { describe, test } from "node:test";
 
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
+import type { ResolvedThemeMode } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -173,6 +174,27 @@ describe("SceneEnvironment", () => {
       assert.equal(scene.backgroundNode, sky);
 
       environment.theme = "dark";
+    }
+  });
+
+  test("backs the viewport with the sky tone, the theme for studio skies", () => {
+    const { apply, environment } = createEnvironment();
+    const cases: Array<[LightingMode, ResolvedThemeMode, ResolvedThemeMode]> = [
+      ["studio", "dark", "dark"],
+      ["studio", "light", "light"],
+      ["flat", "dark", "dark"],
+      ["flat", "light", "light"],
+      ["daylight", "dark", "light"],
+      ["daylight", "light", "light"],
+      ["night", "dark", "dark"],
+      ["night", "light", "dark"]
+    ];
+
+    for (const [mode, theme, backdrop] of cases) {
+      apply(mode);
+      environment.theme = theme;
+
+      assert.equal(environment.backdrop, backdrop, `${mode} under ${theme}`);
     }
   });
 });

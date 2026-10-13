@@ -8,7 +8,10 @@ import {
 } from "../fixtures.ts";
 import { openExample } from "../support/gallery.ts";
 import { runUntilGone } from "../support/clock.ts";
-import { styleOf } from "../support/styles.ts";
+import {
+  styleOf,
+  partStyleOf
+} from "../support/styles.ts";
 
 test.describe("Log", () => {
   test.beforeEach(async({ page }) => {
@@ -35,6 +38,31 @@ test.describe("Log", () => {
     const name = page.locator("jolly-log .content b");
     await expect(name).toHaveText("Ada");
     expect(await styleOf(name, "color")).not.toBe("rgb(0, 0, 0)");
+  });
+
+  test("pairs its halo with the ink of the color scheme", async({ page }) => {
+    await page.locator("[data-action=log-status]").click();
+
+    const log = page.locator("jolly-log");
+    async function lookUnder(
+      scheme: "light" | "dark"
+    ) {
+      await log.evaluate((element, value) => {
+        element.style.colorScheme = value;
+      }, scheme);
+
+      return {
+        ink: await styleOf(log, "color"),
+        halo: await partStyleOf(log, ".content", "text-shadow")
+      };
+    }
+
+    const light = await lookUnder("light");
+    const dark = await lookUnder("dark");
+
+    expect(light.ink).not.toBe(dark.ink);
+    expect(light.halo).toContain("rgba(255, 255, 255, 0.7)");
+    expect(dark.halo).toContain("rgba(0, 0, 0, 0.65)");
   });
 
   test("announces politely and reflects empty until cleared", async({ page }) => {

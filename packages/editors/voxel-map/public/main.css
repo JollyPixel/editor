@@ -80,12 +80,22 @@ html.template-dragging * {
   height: 220px;
   background: radial-gradient(
     ellipse 100% 100% at top left,
-    rgb(0 0 0 / 85%),
-    rgb(0 0 0 / 60%) 45%,
+    color-mix(in srgb, var(--jolly-surface) 85%, transparent),
+    color-mix(in srgb, var(--jolly-surface) 60%, transparent) 45%,
     transparent
   );
   transition: opacity 200ms ease;
   pointer-events: none;
+}
+
+#game-container[data-backdrop="light"]::before,
+#game-container[data-backdrop="light"] jolly-log {
+  color-scheme: light;
+}
+
+#game-container[data-backdrop="dark"]::before,
+#game-container[data-backdrop="dark"] jolly-log {
+  color-scheme: dark;
 }
 
 #game-container:has(jolly-log[empty])::before {

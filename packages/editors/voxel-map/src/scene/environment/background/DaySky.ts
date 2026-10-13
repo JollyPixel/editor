@@ -12,6 +12,7 @@ import {
   smoothstep,
   vec3
 } from "three/tsl";
+import type { ResolvedThemeMode } from "@jolly-pixel/ui";
 
 // CONSTANTS
 const kHorizon = "#f4dcc0";
@@ -22,6 +23,8 @@ const kGlowSharpness = 12;
 const kGlowStrength = 0.55;
 
 export class DaySky {
+  static readonly backdrop: ResolvedThemeMode = "light";
+
   readonly node: THREE.Node;
 
   constructor(
