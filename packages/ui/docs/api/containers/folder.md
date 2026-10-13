@@ -68,7 +68,17 @@ one leaves `open` alone. A folder that should reveal itself when its own action
 runs opens itself from the handler. A drag ghost clones the folder without its
 light DOM, so actions do not ride along with a reorder.
 
-Slotted `jolly-button` actions use inverted header colors. The `danger` variant
-reads `--jolly-folder-action-danger-fg`, `--jolly-folder-action-danger-bg`,
+The header is 7px taller than `--jolly-control-height`. Slotted `jolly-button`
+actions are chips 3px shorter than the control height and 4px wider than tall,
+with the icon tone fully on at rest. The header exposes that chip height to its
+slotted content as `--jolly-folder-action-size`, so a custom element that
+renders its own action button can match it.
+
+Chips fill with the accent mixed into `--jolly-surface-raised`, and a toned pane
+swaps in its area fill. Override `--jolly-folder-action-fg`,
+`--jolly-folder-action-bg`, `--jolly-folder-action-bg-hover`,
+`--jolly-folder-action-bg-focus`, and `--jolly-folder-action-bg-active` to
+restyle them. The `danger` variant is a red tint with a red glyph and reads
+`--jolly-folder-action-danger-fg`, `--jolly-folder-action-danger-bg`,
 `--jolly-folder-action-danger-bg-hover`, and
 `--jolly-folder-action-danger-bg-focus`.

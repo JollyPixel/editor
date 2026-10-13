@@ -24,19 +24,19 @@ export const kFallback = {
   /**
    * --jolly-folder-action-fg
    */
-  folderActionFg: unsafeCSS("#f4f6f8"),
+  folderActionFg: unsafeCSS("#1b2027"),
   /**
    * --jolly-folder-action-bg
    */
-  folderActionBg: unsafeCSS("#1b2027"),
+  folderActionBg: unsafeCSS("rgb(47 111 216 / 0.22)"),
   /**
    * --jolly-folder-action-danger-fg
    */
-  folderActionDangerFg: unsafeCSS("#ffffff"),
+  folderActionDangerFg: unsafeCSS("#c0362c"),
   /**
    * --jolly-folder-action-danger-bg
    */
-  folderActionDangerBg: unsafeCSS("#c0362c"),
+  folderActionDangerBg: unsafeCSS("rgb(192 54 44 / 0.16)"),
   /**
    * --jolly-pane-header-bg
    */
