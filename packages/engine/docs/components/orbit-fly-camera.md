@@ -61,8 +61,12 @@ interface OrbitFlyCameraOptions extends CameraOptions {
   moveSpeed?: number;
   minMoveSpeed?: number;
   maxMoveSpeed?: number;
+  accelerationTime?: number;
+  brakingTime?: number;
   responsiveness?: number;
   mouseSensitivity?: number;
+  touchpadLookSensitivity?: number;
+  keyLookSpeed?: number;
   maxPitch?: number;
   scrollSpeed?: number;
   speedAdjustStep?: number;
@@ -84,8 +88,12 @@ interface OrbitFlyCameraOptions extends CameraOptions {
 | `yaw` / `pitch` | `0` / `-0.2` | Starting orientation, in radians |
 | `moveSpeed` | `18` | Cruise speed in units per second |
 | `minMoveSpeed` / `maxMoveSpeed` | `2` / `240` | Bounds for the scroll-adjusted `moveSpeed` |
-| `responsiveness` | `18` | Frame-rate-independent acceleration and braking rate, in 1/s |
+| `accelerationTime` | `0.15` | Seconds to ease into a new cruise velocity. Acceleration starts at zero and builds up; `0` starts at full speed |
+| `brakingTime` | `0.1` | Seconds to glide to a stop once the movement keys are released; `0` stops at once |
+| `responsiveness` | `18` | Frame-rate-independent damping rate of the "lock" pivot and distance and the "elastic" trail distance, in 1/s |
 | `mouseSensitivity` | `0.003` | Mouse-look sensitivity |
+| `touchpadLookSensitivity` | `0.36` | Radians turned per wheel notch of a two-finger touchpad swipe; a negative value inverts it |
+| `keyLookSpeed` | `π / 2` | Radians per second turned while I/J/K/L is held |
 | `maxPitch` | `π / 2 - 0.01` | Maximum look-up/down pitch, in radians |
 | `scrollSpeed` | `2.5` | Pivot distance ("lock", while orbiting) or trail distance ("elastic") changed per wheel notch, in world units |
 | `speedAdjustStep` | `0.15` | Fraction `moveSpeed` grows per wheel notch in "none" mode, and in "lock" mode while not orbiting |
@@ -97,9 +105,17 @@ interface OrbitFlyCameraOptions extends CameraOptions {
 | `far` | `2000` | Far clipping plane |
 
 Movement is WASD (forward/right) + Space/Shift (up/down); look-around is
-middle-mouse-drag or Alt+left-drag. The wheel adjusts `moveSpeed`, or the
-pivot/trail distance when a focus mode claims it. Ctrl is reserved for other
-scroll-driven interactions (e.g. brush size), so Ctrl+wheel is ignored.
+middle-mouse-drag, Alt+left-drag, or I/J/K/L (look up/left/down/right). The
+wheel adjusts `moveSpeed`, or the pivot/trail distance when a focus mode
+claims it. Ctrl is reserved for other scroll-driven interactions (e.g. brush
+size), so Ctrl+wheel is ignored.
+
+On a touchpad, a two-finger swipe looks around (orbits while a pivot is
+locked) and a pinch does what the wheel does. With natural scrolling, moving
+the fingers right looks right. The camera reads
+[`Mouse.scrollSource`](../../../controls/docs/mouse.md#wheel-source) to tell
+swipes from wheel notches; set `input.mouse.scrollDevice` when that guess is
+wrong for a device.
 
 ## Runtime properties
 

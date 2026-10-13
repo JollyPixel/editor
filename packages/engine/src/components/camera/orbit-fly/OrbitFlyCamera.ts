@@ -12,13 +12,12 @@ import type { Actor } from "../../../actor/Actor.ts";
 import { CameraComponent, type CameraOptions } from "../Camera.ts";
 import { OrbitFocus } from "./OrbitFocus.ts";
 import { ElasticFocus } from "./ElasticFocus.ts";
+import { SmoothedVelocity } from "./SmoothedVelocity.ts";
 import {
   type CameraFocus,
+  type CameraFocusInput,
   NoCameraFocus
 } from "./CameraFocus.ts";
-
-// CONSTANTS
-const kRestingVelocitySq = 1e-6;
 
 export type OrbitFlyCameraFocusMode = "none" | "lock" | "elastic";
 
@@ -46,10 +45,32 @@ export interface OrbitFlyCameraOptions extends CameraOptions {
   minMoveSpeed?: number;
   maxMoveSpeed?: number;
   /**
-   * Frame-rate-independent acceleration and braking rate, in 1/s.
+   * Seconds to ease into a new cruise velocity; 0 starts at full speed.
+   * @default 0.15
+   */
+  accelerationTime?: number;
+  /**
+   * Seconds to glide to a stop once movement keys are released; 0 stops
+   * at once.
+   * @default 0.1
+   */
+  brakingTime?: number;
+  /**
+   * Frame-rate-independent damping rate of the pivot and trail distance,
+   * in 1/s.
    */
   responsiveness?: number;
   mouseSensitivity?: number;
+  /**
+   * Radians turned per wheel notch of a two-finger touchpad swipe.
+   * @default 0.36
+   */
+  touchpadLookSensitivity?: number;
+  /**
+   * Radians per second turned while I/J/K/L is held.
+   * @default Math.PI / 2
+   */
+  keyLookSpeed?: number;
   maxPitch?: number;
   /**
    * Pivot or trail distance changed per wheel notch, in world units.
@@ -104,7 +125,7 @@ export class OrbitFlyCamera extends CameraComponent {
   enabled = true;
 
   #descendBlocked = false;
-  #vel = new THREE.Vector3();
+  #velocity: SmoothedVelocity;
   #yaw: number;
   #pitch: number;
   #moveSpeed: number;
@@ -112,6 +133,8 @@ export class OrbitFlyCamera extends CameraComponent {
   #maxMoveSpeed: number;
   #responsiveness: number;
   #mouseSensitivity: number;
+  #touchpadLookSensitivity: number;
+  #keyLookSpeed: number;
   #maxPitch: number;
   #scrollSpeed: number;
   #speedAdjustStep: number;
@@ -142,7 +165,9 @@ export class OrbitFlyCamera extends CameraComponent {
     moveForward: Axis.buttons(
       InputCombination.MoveUp,
       InputCombination.MoveDown
-    )
+    ),
+    lookRight: Axis.buttons("KeyL", "KeyJ"),
+    lookUp: Axis.buttons("KeyI", "KeyK")
   });
 
   constructor(
@@ -159,8 +184,12 @@ export class OrbitFlyCamera extends CameraComponent {
       moveSpeed = 18,
       minMoveSpeed = 2,
       maxMoveSpeed = 240,
+      accelerationTime = 0.15,
+      brakingTime = 0.1,
       responsiveness = 18,
       mouseSensitivity = 0.003,
+      touchpadLookSensitivity = 0.36,
+      keyLookSpeed = Math.PI / 2,
       maxPitch = Math.PI / 2 - 0.01,
       scrollSpeed = 2.5,
       speedAdjustStep = 0.15,
@@ -179,8 +208,14 @@ export class OrbitFlyCamera extends CameraComponent {
     this.#minMoveSpeed = minMoveSpeed;
     this.#maxMoveSpeed = maxMoveSpeed;
     this.#moveSpeed = this.#clampMoveSpeed(moveSpeed);
+    this.#velocity = new SmoothedVelocity({
+      accelerationTime,
+      brakingTime
+    });
     this.#responsiveness = responsiveness;
     this.#mouseSensitivity = mouseSensitivity;
+    this.#touchpadLookSensitivity = touchpadLookSensitivity;
+    this.#keyLookSpeed = keyLookSpeed;
     this.#maxPitch = maxPitch;
     this.#scrollSpeed = scrollSpeed;
     this.#speedAdjustStep = speedAdjustStep;
@@ -230,6 +265,38 @@ export class OrbitFlyCamera extends CameraComponent {
     );
   }
 
+  #look(
+    input: CameraFocusInput,
+    swipe: Readonly<THREE.Vector2Like> | null,
+    deltaTime: number
+  ): void {
+    const keyTurn = this.#keyLookSpeed * deltaTime;
+    let yawDelta = -this.#axes.value("lookRight") * keyTurn;
+    let pitchDelta = this.#axes.value("lookUp") * keyTurn;
+
+    const isDragging = input.mouse.isDown("middle") ||
+      (InputCombination.Alt.evaluate(input) && input.mouse.isDown("left"));
+    if (isDragging && input.mouse.isMoving()) {
+      const delta = input.mouse.viewportDelta(false);
+      yawDelta -= delta.x * this.#mouseSensitivity;
+      pitchDelta += delta.y * this.#mouseSensitivity;
+    }
+    if (swipe !== null) {
+      yawDelta += swipe.x * this.#touchpadLookSensitivity;
+      pitchDelta -= swipe.y * this.#touchpadLookSensitivity;
+    }
+    if (yawDelta === 0 && pitchDelta === 0) {
+      return;
+    }
+
+    this.#yaw += yawDelta;
+    this.#pitch = this.#clampPitch(this.#pitch + pitchDelta);
+
+    if (!this.#focus.isLocked) {
+      this.#applyOrientation();
+    }
+  }
+
   #clampPitch(
     pitch: number
   ): number {
@@ -260,7 +327,7 @@ export class OrbitFlyCamera extends CameraComponent {
   }
 
   get moving(): boolean {
-    return this.#vel.lengthSq() > 0 || !this.#focus.settled;
+    return !this.#velocity.resting || !this.#focus.settled;
   }
 
   teleport(
@@ -272,7 +339,7 @@ export class OrbitFlyCamera extends CameraComponent {
     );
     this.#yaw = this.#euler.y;
     this.#pitch = this.#clampPitch(this.#euler.x);
-    this.#vel.set(0, 0, 0);
+    this.#velocity.stop();
 
     this.#applyOrientation();
     this.actor.transform.setLocalPosition(pose.position);
@@ -304,7 +371,7 @@ export class OrbitFlyCamera extends CameraComponent {
 
     this.#yaw = orientation.yaw;
     this.#pitch = this.#clampPitch(orientation.pitch);
-    this.#vel.set(0, 0, 0);
+    this.#velocity.stop();
     this.#updateFocusPose(0);
     this.actor.world.invalidate();
   }
@@ -334,7 +401,7 @@ export class OrbitFlyCamera extends CameraComponent {
 
     if (!this.enabled) {
       this.#descendBlocked = isDescending;
-      this.#vel.set(0, 0, 0);
+      this.#velocity.stop();
 
       return;
     }
@@ -342,28 +409,21 @@ export class OrbitFlyCamera extends CameraComponent {
       this.#descendBlocked = false;
     }
 
+    // Ctrl is reserved for other scroll-driven interactions (e.g. brush size).
+    const isCtrl = InputCombination.Control.evaluate(input);
+    const scroll = input.mouse.scrollTo(this.#scroll);
+    const isSwiping = !isCtrl && input.mouse.scrollSource === "touchpad";
+    const wheel = isCtrl || isSwiping ? 0 : scroll.y;
+
+    this.#axes.update(input);
+    this.#look(input, isSwiping ? scroll : null, deltaTime);
+
     const { transform } = this.actor;
-    const isLooking = input.mouse.isDown("middle") ||
-      (InputCombination.Alt.evaluate(input) && input.mouse.isDown("left"));
-
-    if (isLooking && input.mouse.isMoving()) {
-      const delta = input.mouse.viewportDelta(false);
-      this.#yaw -= delta.x * this.#mouseSensitivity;
-      this.#pitch = this.#clampPitch(
-        this.#pitch + (delta.y * this.#mouseSensitivity)
-      );
-
-      if (!this.#focus.isLocked) {
-        this.#applyOrientation();
-      }
-    }
-
     transform.getForward(this.#forward);
     this.#forward.y = 0;
     this.#forward.normalize();
     this.#right.crossVectors(this.#forward, this.#up).normalize();
 
-    this.#axes.update(input);
     this.#move.set(0, 0, 0);
     if (this.#focus.isLocked) {
       this.#focus.nudge(input, this.#forward, this.#right);
@@ -384,29 +444,18 @@ export class OrbitFlyCamera extends CameraComponent {
       }
     }
 
-    // Ctrl is reserved for other scroll-driven interactions (e.g. brush size).
-    const isCtrl = InputCombination.Control.evaluate(input);
-    const scroll = input.mouse.scrollTo(this.#scroll);
     if (
-      !isCtrl &&
-      scroll.y !== 0 &&
-      !this.#focus.handleScroll(scroll.y, this.#scrollSpeed)
+      wheel !== 0 &&
+      !this.#focus.handleScroll(wheel, this.#scrollSpeed)
     ) {
       this.moveSpeed = this.#moveSpeed *
-        Math.pow(1 + this.#speedAdjustStep, scroll.y);
+        Math.pow(1 + this.#speedAdjustStep, wheel);
     }
 
-    this.#vel.lerp(
-      this.#move,
-      1 - Math.exp(-this.#responsiveness * deltaTime)
-    );
-
-    if (this.#vel.lengthSq() < kRestingVelocitySq) {
-      this.#vel.set(0, 0, 0);
-    }
-    else {
+    this.#velocity.approach(this.#move, deltaTime);
+    if (!this.#velocity.resting) {
       this.#focus.move(
-        this.#offset.copy(this.#vel).multiplyScalar(deltaTime),
+        this.#offset.copy(this.#velocity.value).multiplyScalar(deltaTime),
         transform
       );
     }
