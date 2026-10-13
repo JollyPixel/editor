@@ -15,21 +15,20 @@ import {
 import { colorFromKey } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
-import { defaultAvatarIcon } from "./avatarIcons.ts";
-import "../icon/Icon.ts";
+import { pickDefaultAvatar } from "./defaultAvatars.ts";
 
 export interface PeerAvatar {
   /**
-   * Picks the default glyph and its color.
+   * Picks the default portrait and its color.
    */
   peerId: string;
   /**
-   * CSS color of the default glyph. Defaults to the peer color.
+   * CSS color of the default portrait. Defaults to the peer color.
    */
   color?: string;
   /**
-   * Image URL drawn in place of the glyph. The glyph comes back when the
-   * image fails to load.
+   * Image URL drawn in place of the portrait. The portrait comes back when
+   * the image fails to load.
    */
   image?: string;
   /**
@@ -59,20 +58,35 @@ export class Avatar extends LitElement {
       height: var(--jolly-avatar-size, 16px);
     }
 
-    jolly-icon {
-      --jolly-icon-size: 100%;
-    }
-
-    img {
+    .frame {
       display: block;
       width: 100%;
       height: 100%;
-      border-radius: var(--jolly-avatar-radius, 25%);
+      overflow: hidden;
+      border-radius: var(--jolly-avatar-radius, 50%);
+    }
+
+    img,
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    img {
       object-fit: cover;
     }
 
-    :host([presence="offline"]) img,
-    :host([presence="offline"]) jolly-icon {
+    .backdrop,
+    .eyes {
+      fill: color-mix(in oklab, var(--jolly-avatar-color) 45%, black);
+    }
+
+    .face {
+      fill: var(--jolly-avatar-color);
+    }
+
+    :host([presence="offline"]) .frame {
       opacity: 0.5;
       filter: grayscale(1);
     }
@@ -131,7 +145,7 @@ export class Avatar extends LitElement {
 
   override render(): TemplateResult {
     return html`
-      ${this.#renderFace()}
+      <span class="frame" part="frame">${this.#renderFace()}</span>
       ${this.presence === "" ? nothing : html`
         <span class="presence" part="presence"></span>
       `}
@@ -151,12 +165,18 @@ export class Avatar extends LitElement {
       `;
     }
 
+    const avatar = pickDefaultAvatar(this.peerId);
+
     return html`
-      <jolly-icon
-        part="glyph"
-        name=${defaultAvatarIcon(this.peerId)}
-        style=${`color: ${this.color || colorFromKey(this.peerId)}`}
-      ></jolly-icon>
+      <svg
+        part="portrait"
+        viewBox="0 0 24 24"
+        style=${`--jolly-avatar-color: ${this.color || colorFromKey(this.peerId)}`}
+      >
+        <rect class="backdrop" width="24" height="24" />
+        <path class="face" d=${avatar.face} />
+        <path class="eyes" d=${avatar.eyes} />
+      </svg>
     `;
   }
 

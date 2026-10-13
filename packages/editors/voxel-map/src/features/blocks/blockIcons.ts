@@ -18,7 +18,7 @@ registerIcon("blocks", svg`
     stroke-width="2.2"
     stroke-linejoin="round"
   />
-`, { tone: "amber" });
+`, { tone: "sky" });
 
 registerIcon("block-edit", svg`
   <path
@@ -35,7 +35,7 @@ registerIcon("block-edit", svg`
     d="M18.3 2.7a2 2 0 0 1 2.9 2.9l-8.7 8.7-3.6.8.8-3.6Z"
     fill="currentColor"
   />
-`, { tone: "amber" });
+`, { tone: "sky" });
 
 registerIcon("block-duplicate", svg`
   <rect
@@ -59,7 +59,7 @@ registerIcon("block-duplicate", svg`
     stroke-linecap="round"
     stroke-linejoin="round"
   />
-`, { tone: "amber" });
+`, { tone: "sky" });
 
 registerIcon("order-registry", svg`
   <path
@@ -69,7 +69,7 @@ registerIcon("order-registry", svg`
     stroke="currentColor"
     stroke-width="2.2"
   />
-`, { tone: "amber" });
+`, { tone: "sky" });
 
 registerIcon("order-usage", svg`
   <path
@@ -86,4 +86,4 @@ registerIcon("order-usage", svg`
     stroke-width="2.2"
     stroke-linejoin="round"
   />
-`, { tone: "amber" });
+`, { tone: "sky" });

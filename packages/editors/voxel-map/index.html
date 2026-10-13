@@ -15,15 +15,13 @@
         key="left"
         side="left"
         double
+        share-tone
         collapsible
         size="380"
         min-size="200"
         max-size="600"
       >
-        <jolly-pane-group active="general">
-          <jolly-pane key="general" float-width="380" float-height="520" heading="General" icon="map">
-            <general-panel></general-panel>
-          </jolly-pane>
+        <jolly-pane-group active="blocks">
           <jolly-pane key="blocks" float-width="380" float-height="520" heading="Blocks" icon="blocks">
             <blocks-panel></blocks-panel>
           </jolly-pane>
@@ -43,6 +41,7 @@
         <div id="game-container">
           <canvas tabindex="-1"></canvas>
           <jolly-log></jolly-log>
+          <jolly-presence-stack selectable max="6" hidden></jolly-presence-stack>
           <div class="viewport-toolbars">
             <voxel-edit-toolbar></voxel-edit-toolbar>
           </div>

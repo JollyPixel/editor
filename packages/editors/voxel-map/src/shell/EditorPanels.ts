@@ -6,7 +6,6 @@ import type { VoxelMapWorkspace } from "../workspace/VoxelMapWorkspace.ts";
 import type { TextureEditor } from "../features/texture/TextureEditor.ts";
 import "../features/texture/TextureEditor.ts";
 import { BlocksPanel } from "./panels/BlocksPanel.ts";
-import { GeneralPanel } from "./panels/GeneralPanel.ts";
 import { LayersPanel } from "./panels/LayersPanel.ts";
 import { MaterialsPanel } from "./panels/MaterialsPanel.ts";
 import { PaintPanel } from "./panels/PaintPanel.ts";
@@ -14,7 +13,6 @@ import { TextureHost } from "./TextureHost.ts";
 
 export interface EditorPanelElements {
   layout: DockLayout;
-  general: GeneralPanel;
   blocks: BlocksPanel;
   paint: PaintPanel;
   layers: LayersPanel;
@@ -30,14 +28,12 @@ export class EditorPanels {
     root: ParentNode
   ): EditorPanels | null {
     const layout = root.querySelector("jolly-dock-layout");
-    const general = root.querySelector("general-panel");
     const blocks = root.querySelector("blocks-panel");
     const paint = root.querySelector("paint-panel");
     const layers = root.querySelector("layers-panel");
     const materials = root.querySelector("materials-panel");
     if (
       layout === null ||
-      !(general instanceof GeneralPanel) ||
       !(blocks instanceof BlocksPanel) ||
       !(paint instanceof PaintPanel) ||
       !(layers instanceof LayersPanel) ||
@@ -48,7 +44,6 @@ export class EditorPanels {
 
     return new EditorPanels({
       layout,
-      general,
       blocks,
       paint,
       layers,
@@ -71,13 +66,11 @@ export class EditorPanels {
   ): void {
     const {
       layout,
-      general,
       blocks,
       layers,
       materials
     } = this.#elements;
 
-    general.workspace = workspace;
     blocks.workspace = workspace;
     layers.workspace = workspace;
     materials.workspace = workspace;

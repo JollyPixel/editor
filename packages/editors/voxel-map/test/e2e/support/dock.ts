@@ -8,7 +8,7 @@ import {
   dragTo
 } from "@jolly-pixel/e2e";
 
-export type PaneName = "General" | "Blocks" | "Materials" | "Paint" | "Layers";
+export type PaneName = "Blocks" | "Materials" | "Paint" | "Layers";
 export type DockKey = "left" | "right";
 
 export class PaneDock {

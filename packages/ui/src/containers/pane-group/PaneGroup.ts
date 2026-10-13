@@ -37,6 +37,7 @@ import { horizontalInsertionLine } from "../../interaction/drag/DragSession.ts";
 import type { DropCandidate } from "../../interaction/drag/dropIndex.ts";
 import { SlidingReorder } from "../../interaction/drag/SlidingReorder.ts";
 import { hiddenStyles } from "../../theme/styles/hiddenStyles.ts";
+import type { IconTone } from "../../icon/registry.ts";
 
 @customElement("jolly-pane-group")
 export class PaneGroup extends LitElement {
@@ -97,10 +98,10 @@ export class PaneGroup extends LitElement {
 
     return html`
       <div
-        class="tabs"
+        class=${areaTone === null ? "tabs" : "tabs toned"}
         part="tabs"
         role="tablist"
-        style=${areaTone === null ? nothing : `--jolly-pane-header-bg: var(--jolly-tone-${areaTone}-fill)`}
+        style=${areaTone === null ? nothing : toneStyle(areaTone)}
         @keydown=${this.#onKeyDown}
       >
         ${repeat(this._panes, (pane) => pane, (pane, index) => {
@@ -441,6 +442,15 @@ function columnGapOf(
   element: Element
 ): number {
   return Number.parseFloat(getComputedStyle(element).columnGap) || 0;
+}
+
+function toneStyle(
+  tone: IconTone
+): string {
+  return [
+    `--jolly-pane-header-bg: var(--jolly-tone-${tone}-fill)`,
+    `--jolly-pane-tone-on-fill: var(--jolly-tone-${tone}-on-fill)`
+  ].join("; ");
 }
 
 export function isPaneGroup(

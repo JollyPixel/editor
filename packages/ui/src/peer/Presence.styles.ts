@@ -47,7 +47,7 @@ export const presenceStyles = css`
     );
   }
 
-  .avatar {
+  jolly-avatar {
     margin-inline-end: var(--jolly-space-2, 8px);
   }
 

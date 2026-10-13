@@ -3,24 +3,6 @@
 import { svg } from "lit";
 import { registerIcon } from "@jolly-pixel/ui";
 
-registerIcon("map", svg`
-  <path
-    class="tone-ink"
-    d="M9 4l6 2.5v13.5L9 17.5Z"
-    fill="currentColor"
-    fill-opacity="0.4"
-  />
-  <path
-    class="tone-ink"
-    d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20ZM9 4v13.5M15 6.5V20"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2.2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
-`, { tone: "sky" });
-
 registerIcon("pencil", svg`
   <mask id="pencil-ferrule-cut">
     <rect width="24" height="24" fill="#fff" />
@@ -56,4 +38,4 @@ registerIcon("material", svg`
     stroke-width="2"
     stroke-linecap="round"
   />
-`, { tone: "violet" });
+`, { tone: "lime" });

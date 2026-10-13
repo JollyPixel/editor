@@ -103,6 +103,13 @@ export const paneGroupStyles = css`
     content: "";
   }
 
+  .tabs.toned .tab[aria-selected="true"]::after {
+    background: light-dark(
+      color-mix(in oklab, var(--jolly-pane-header-bg) 70%, black),
+      var(--jolly-pane-tone-on-fill)
+    );
+  }
+
   .tab:disabled {
     background: transparent;
     opacity: 0.35;

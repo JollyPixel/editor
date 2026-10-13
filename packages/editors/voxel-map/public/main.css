@@ -98,6 +98,13 @@ html.template-dragging * {
   inset-inline-start: 16px;
 }
 
+#game-container jolly-presence-stack {
+  position: absolute;
+  inset-block-end: 16px;
+  inset-inline-start: 16px;
+  z-index: 5;
+}
+
 #game-container .viewport-toolbars {
   position: absolute;
   inset-block-end: 16px;

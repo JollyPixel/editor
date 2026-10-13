@@ -9,6 +9,7 @@ import "@jolly-pixel/editor.host/ui";
 // Import Internal Dependencies
 import type { EditorState } from "../state/index.ts";
 import type { VoxelMapWorkspace } from "../workspace/VoxelMapWorkspace.ts";
+import { CollaboratorStack } from "./CollaboratorStack.ts";
 import { EditorPanels } from "./EditorPanels.ts";
 import "./toolbar/EditToolbar.ts";
 import "./paneIcons.ts";
@@ -22,6 +23,7 @@ export interface EditorShellOptions {
 export class EditorShell {
   #panels: EditorPanels | null;
   #toolbar: HTMLElementTagNameMap["voxel-edit-toolbar"] | null;
+  #collaborators: CollaboratorStack | null = null;
   #disposables: Array<() => void> = [];
 
   constructor(
@@ -46,6 +48,13 @@ export class EditorShell {
 
     this.#toolbar = document.querySelector("voxel-edit-toolbar");
 
+    const presenceStack = document.querySelector("jolly-presence-stack");
+    if (presenceStack) {
+      const collaborators = new CollaboratorStack(presenceStack);
+      this.#collaborators = collaborators;
+      this.#disposables.push(() => collaborators.dispose());
+    }
+
     const panels = EditorPanels.mount(document);
     this.#panels = panels;
     if (panels !== null) {
@@ -64,6 +73,7 @@ export class EditorShell {
     workspace: VoxelMapWorkspace
   ): void {
     this.#panels?.attach(workspace);
+    this.#collaborators?.attach(workspace);
     if (this.#toolbar !== null) {
       this.#toolbar.workspace = workspace;
     }

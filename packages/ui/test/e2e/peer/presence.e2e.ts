@@ -15,8 +15,8 @@ test.describe("Presence", () => {
     await expect(presence.locator("[part=peer]")).toHaveText(["Ada", "Sam (you)"]);
     await expect(presence.locator("[part=overflow]")).toHaveText("+1 more");
     await expect(presence.locator("[part=avatar]")).toHaveCount(2);
-    await expect(presence.locator("[part=avatar]").first().locator("jolly-icon"))
-      .toHaveAttribute("name", /^avatar-/);
+    await expect(presence.locator("[part=avatar]").first().locator("[part=portrait]"))
+      .toBeVisible();
 
     const buttons = presence.locator("[part=peer-button]");
     await expect(buttons).toHaveText(["Ada"]);
@@ -32,5 +32,32 @@ test.describe("Presence", () => {
       "color",
       await styleOf(peers.first(), "color")
     );
+  });
+});
+
+test.describe("Presence stack", () => {
+  test("overlaps the capped peers, names them on hover, and selects only remote peers", async({ page }) => {
+    await openExample(page, "peer/presence-stack");
+
+    const stack = page.locator("jolly-presence-stack");
+    const peers = stack.locator("[part=peer]");
+    await expect(peers).toHaveCount(4);
+    await expect(stack.getByRole("img", { name: "Sam (you)" })).toBeVisible();
+    await expect(stack.locator("[part=overflow]")).toHaveText(/\+1/);
+
+    const first = await peers.nth(0).boundingBox();
+    const second = await peers.nth(1).boundingBox();
+    expect(second!.x).toBeLessThan(first!.x + first!.width);
+
+    const lin = stack.getByRole("button", { name: "Select Lin" });
+    const tooltip = peers.nth(2).locator("[part=tooltip]");
+    await expect(tooltip).toBeHidden();
+    await lin.hover();
+    await expect(tooltip).toBeVisible();
+    await expect(tooltip).toHaveText(/Lin\s+via link/);
+
+    await expect(stack.getByRole("button")).toHaveCount(3);
+    await lin.click();
+    await expect(page.locator("output")).toHaveText("Selected: lin");
   });
 });
