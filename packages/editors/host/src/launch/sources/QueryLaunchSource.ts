@@ -1,9 +1,9 @@
 // Import Internal Dependencies
-import { EditorLaunch } from "../EditorLaunch.ts";
+import {
+  EditorLaunch,
+  LAUNCH_QUERY_PARAM
+} from "../EditorLaunch.ts";
 import type { LaunchSource } from "./LaunchSource.ts";
-
-// CONSTANTS
-export const LAUNCH_QUERY_PARAM = "target";
 
 export class QueryLaunchSource implements LaunchSource {
   readonly param: string;
@@ -15,14 +15,15 @@ export class QueryLaunchSource implements LaunchSource {
   }
 
   read(): Promise<EditorLaunch | undefined> {
-    return Promise.resolve(this.peek());
+    return Promise.resolve(
+      this.peek()
+    );
   }
 
   peek(): EditorLaunch | undefined {
-    const target = new URLSearchParams(
-      location.search
-    ).get(this.param);
-
-    return EditorLaunch.fromTarget(target);
+    return EditorLaunch.fromUrl(
+      new URL(location.href),
+      this.param
+    );
   }
 }

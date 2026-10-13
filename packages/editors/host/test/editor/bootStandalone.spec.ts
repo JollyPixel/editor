@@ -23,7 +23,7 @@ import type {
 } from "#src/editor/EditorDefinition.ts";
 import { HOST_PARAMS } from "#src/params/HostParams.ts";
 import { EditorRuntime } from "#src/runtime/EditorRuntime.ts";
-import { EDITOR_STATE_ATTRIBUTE } from "#src/editor/BootTrace.ts";
+import { EDITOR_STATE_ATTRIBUTE } from "#src/state/EditorState.ts";
 import { LaunchNotFoundError } from "#src/launch/errors/LaunchNotFoundError.ts";
 import { LAUNCH_MESSAGE_TYPE } from "#src/launch/ShellChannel.ts";
 import type { LaunchSource } from "#src/launch/sources/LaunchSource.ts";
@@ -160,11 +160,11 @@ describe("bootStandalone", () => {
     window.history.replaceState(null, "", "/?offline");
     const mounted: Array<string> = [];
 
-    const handle = await bootStandalone(definition(mounted), {
+    const editor = await bootStandalone(definition(mounted), {
       sources: missingLaunch(),
       offline: project
     });
-    handle.dispose();
+    editor.dispose();
 
     assert.deepEqual(mounted, [kAssetId]);
     assert.equal(document.body.querySelector("[data-action]"), null);
@@ -174,12 +174,12 @@ describe("bootStandalone", () => {
     const reads = { count: 0 };
     const mounted: Array<string> = [];
 
-    const handle = await bootStandalone(definition(mounted), {
+    const editor = await bootStandalone(definition(mounted), {
       sources: missingLaunch(reads),
       offline: project,
       forceOffline: true
     });
-    handle.dispose();
+    editor.dispose();
 
     assert.equal(reads.count, 0);
     assert.deepEqual(mounted, [kAssetId]);
@@ -189,7 +189,7 @@ describe("bootStandalone", () => {
     context.after(frameInShell());
     const shells: Array<EditorContext["shell"]> = [];
 
-    const handle = await bootStandalone({
+    const editor = await bootStandalone({
       ...definition(),
       mount: (editorContext) => {
         shells.push(editorContext.shell);
@@ -200,7 +200,7 @@ describe("bootStandalone", () => {
       offline: project,
       forceOffline: true
     });
-    handle.dispose();
+    editor.dispose();
 
     assert.equal(shells[0]?.origin, location.origin);
     assert.equal(document.body.querySelector("jolly-console"), null);
@@ -214,8 +214,8 @@ describe("bootStandalone", () => {
       offline: project
     });
     await answerOffer("offline");
-    const handle = await pending;
-    handle.dispose();
+    const editor = await pending;
+    editor.dispose();
 
     assert.deepEqual(mounted, [kAssetId]);
   });
@@ -257,8 +257,8 @@ describe("bootStandalone", () => {
       offline: project
     });
     await answerOffer("offline");
-    const handle = await pending;
-    handle.dispose();
+    const editor = await pending;
+    editor.dispose();
 
     assert.equal(runtimes.created.length, 1);
     assert.deepEqual(received, runtimes.created);

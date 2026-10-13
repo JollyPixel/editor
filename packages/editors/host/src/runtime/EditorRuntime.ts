@@ -73,6 +73,13 @@ export class EditorRuntime {
     scene: Systems.Scene,
     options: EditorRuntimeLoadOptions = {}
   ): Promise<void> {
+    if (this.runtime.running) {
+      await this.runtime.world.sceneManager.loadScene(scene).done;
+      await this.runtime.nextFrame();
+
+      return;
+    }
+
     await this.runtime.load({
       scene,
       skipLoadingScreen: true,

@@ -101,6 +101,7 @@ test("opens the requested model with its default block", async({ page }) => {
 
 - [Editor fixture](./docs/editor-fixture.md): `editorFixture`, the `peer` page and the catalog helpers.
 - [Editor navigation](./docs/editor-navigation.md): `openEditor`, `waitForEditor` and frame waits.
+- [Editor toolbar](./docs/editor-toolbar.md): `EditorToolbar`, the target picker and tags above the viewport.
 
 ## 🧱 Boundaries
 

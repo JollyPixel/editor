@@ -127,7 +127,8 @@ export class VoxelModelEditor {
     const shell = new EditorShell({
       runtime: editorRuntime,
       texture,
-      keyBindingSettings
+      keyBindingSettings,
+      toolbar: context.toolbar
     });
     await editorRuntime.load(scene, {
       maxFps: Infinity
@@ -194,7 +195,5 @@ export class VoxelModelEditor {
     this.#shell.dispose();
     this.#texture.release();
     this.#target.release();
-    this.session.dispose();
-    this.runtime.dispose();
   }
 }

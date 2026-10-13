@@ -5,7 +5,7 @@ import {
 } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
-import type { EditorSessionClient } from "./EditorSession.ts";
+import type { EditorSessionClient } from "./SessionConnection.ts";
 
 // CONSTANTS
 export const CATALOG_TIMEOUT_MS = 5_000;

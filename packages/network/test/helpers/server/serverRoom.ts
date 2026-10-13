@@ -17,5 +17,5 @@ export function createRoom(
   extension: Extension,
   rights?: RightsTable
 ): ServerRoom {
-  return new ServerRoom(extension.id, extension, rights);
+  return new ServerRoom(extension.id, extension, rights?.scope(extension.name));
 }

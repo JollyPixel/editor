@@ -1,9 +1,19 @@
 // Import Internal Dependencies
 import type { RightsTable } from "./RightsTable.ts";
+import {
+  JOIN_EVENT,
+  PRESENCE_EVENT
+} from "../../protocol/constants.ts";
 import type {
   Right,
   RoomRights
 } from "../../protocol/types.ts";
+
+// CONSTANTS
+const kMembershipEvents = new Set([
+  JOIN_EVENT,
+  PRESENCE_EVENT
+]);
 
 /**
  * Read-only view of a `RightsTable` bound to one extension namespace.
@@ -11,27 +21,39 @@ import type {
 export class RightsGate {
   #table: RightsTable;
   #namespace: string;
+  #readOnly: boolean;
 
   constructor(
     table: RightsTable,
-    namespace: string
+    namespace: string,
+    readOnly = false
   ) {
     this.#table = table;
     this.#namespace = namespace;
+    this.#readOnly = readOnly;
   }
 
-  get configured(): boolean {
-    return this.#table.configured;
+  get gated(): boolean {
+    return this.#readOnly || this.#table.configured;
   }
 
   check(
     role: string,
     event: string
   ): Right {
-    return this.#table.check(
+    const right = this.#table.check(
       role,
       `${this.#namespace}.${event}`
     );
+    if (
+      this.#readOnly &&
+      right === "write" &&
+      !kMembershipEvents.has(event)
+    ) {
+      return "read";
+    }
+
+    return right;
   }
 
   canWrite(

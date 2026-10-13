@@ -2,60 +2,30 @@
 import { Emitter } from "@openally/emitt";
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
-import { Systems } from "@jolly-pixel/engine";
-import * as network from "@jolly-pixel/network/client";
-import {
-  promptPeerIdentity,
-  type PeerIdentity
-} from "@jolly-pixel/ui";
-import { toPeerProfileMetadata } from "@jolly-pixel/ui/network";
+import type { PeerIdentity } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { HostLogger } from "../debug/readDebugLogger.ts";
-import type {
-  EditorLaunch,
-  ShellChannel
-} from "../launch/index.ts";
-import {
-  AssetLeases,
-  type RoomSource
-} from "../lease/AssetLeases.ts";
+import type { EditorLaunch } from "../launch/index.ts";
+import type { AssetLeases } from "../lease/AssetLeases.ts";
 import type {
   AssetDependency,
   AssetLease,
   AssetDocumentKind,
   AssetRoomLease
 } from "../lease/AssetLease.ts";
-import {
-  CatalogSessionArchive,
-  type SessionArchive
-} from "./SessionArchive.ts";
+import type { SessionArchive } from "./SessionArchive.ts";
 import {
   EditorArchives,
   type EditorArchivesOptions
 } from "./EditorArchives.ts";
+import type { SessionConnection } from "./SessionConnection.ts";
 import type { SessionWorkspace } from "../workspace/SessionWorkspace.ts";
-import {
-  CATALOG_TIMEOUT_MS,
-  openCatalog,
-  type CatalogOpener
-} from "./openCatalog.ts";
-
-// CONSTANTS
-export const IDENTITY_STORAGE_KEY = "jolly-pixel:username";
 
 export type EditorSessionEvents = {
   "dependency-added": (dependency: AssetDependency) => void;
   "dependency-removed": (reference: AssetReferenceData) => void;
 };
-
-export interface EditorSessionClient extends RoomSource {
-  destroy(): void;
-}
-
-export interface EditorIdentityOptions {
-  title: string;
-}
 
 export interface EditorSessionTarget {
   launch: EditorLaunch;
@@ -67,27 +37,8 @@ export interface EditorSessionTarget {
   logger?: HostLogger;
 }
 
-export interface EditorSessionOptions extends EditorSessionTarget {
-  identity: EditorIdentityOptions;
-  /**
-   * @default joins the catalog room on the session client
-   */
-  openCatalog?: CatalogOpener;
-}
-
-export interface EditorSessionConnectOptions extends EditorSessionTarget {
-  identity: PeerIdentity;
-  client: EditorSessionClient;
-  /**
-   * @default joins the catalog room on `client`
-   */
-  openCatalog?: CatalogOpener;
-  workspace?: SessionWorkspace;
-  catalogTimeoutMs?: number;
-}
-
-export interface EditorSessionParts extends EditorSessionConnectOptions {
-  catalog: CatalogClient;
+export interface EditorSessionParts extends Omit<EditorSessionTarget, "logger"> {
+  connection: SessionConnection;
 }
 
 export type EditorSessionArchivesOptions = Pick<
@@ -101,102 +52,18 @@ interface SessionDependency {
 }
 
 export class EditorSession extends Emitter<EditorSessionEvents> {
-  static async open(
-    options: EditorSessionOptions
-  ): Promise<EditorSession> {
-    const {
-      logger = new Systems.Logger()
-    } = options;
-    const identity = options.launch.shell?.identity ?? await logger.step(
-      "identity",
-      () => promptPeerIdentity({
-        title: options.identity.title,
-        storageKey: IDENTITY_STORAGE_KEY
-      })
-    );
-    const client = new network.Client({
-      profile: toPeerProfileMetadata(identity)
-    });
-    options.launch.shell?.renewWhenRefused(client);
-
-    return EditorSession.connect({
-      ...options,
-      logger,
-      identity,
-      client,
-      catalogTimeoutMs: CATALOG_TIMEOUT_MS
-    });
-  }
-
-  static async connect(
-    options: EditorSessionConnectOptions
-  ): Promise<EditorSession> {
-    const {
-      client,
-      logger = new Systems.Logger()
-    } = options;
-    const catalog = await logger.step(
-      "catalog",
-      () => openCatalog(
-        client,
-        options.catalogTimeoutMs,
-        options.openCatalog
-      )
-    );
-
-    let session: EditorSession;
-    try {
-      session = new EditorSession({
-        ...options,
-        catalog
-      });
-    }
-    catch (error) {
-      catalog.dispose();
-      client.destroy();
-
-      throw error;
-    }
-
-    try {
-      await Promise.all([
-        logger.step(
-          "target",
-          () => session.targetReady,
-          toTraceMeta(session.target.record)
-        ),
-        ...Array.from(
-          session.dependencies(),
-          (dependency) => logger.step(
-            "dependency",
-            () => dependency.ready,
-            toTraceMeta(dependency.record)
-          )
-        )
-      ]);
-    }
-    catch (error) {
-      session.dispose();
-
-      throw error;
-    }
-
-    return session;
-  }
-
   readonly identity: PeerIdentity;
   readonly catalog: CatalogClient;
   readonly workspace: SessionWorkspace | null;
   readonly archive: SessionArchive;
   readonly assets: AssetLeases;
+  readonly tag: string | null;
   readonly target: AssetRoomLease;
   readonly targetReady: Promise<void>;
 
-  #client: EditorSessionClient;
-  #accepts: string;
-  #kinds = new Map<string, AssetDocumentKind<unknown>>();
+  readonly #accepts: string;
+  readonly #kinds = new Map<string, AssetDocumentKind<unknown>>();
   #dependencies = new Map<string, SessionDependency>();
-  #listening = new AbortController();
   #disposed = false;
 
   readonly #onCatalogChange = (): void => {
@@ -208,48 +75,45 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
   ) {
     super();
 
-    this.identity = options.identity;
-    this.catalog = options.catalog;
-    this.workspace = options.workspace ?? null;
-    this.archive = new CatalogSessionArchive({
-      catalog: this.catalog,
-      canImport: this.workspace?.persistent ?? true
-    });
-    this.#client = options.client;
+    const { launch, connection } = options;
+    this.identity = connection.identity;
+    this.catalog = connection.catalog;
+    this.workspace = connection.workspace;
+    this.archive = connection.archive;
+    this.assets = connection.assets;
+    this.tag = launch.tag;
     this.#accepts = options.accepts;
     for (const kind of options.kinds) {
       this.#kinds.set(kind.kind, kind);
     }
 
-    this.assets = new AssetLeases({
-      rooms: this.#client,
-      records: this.catalog
-    });
+    const assetId = launch.target.value;
+    let target: AssetRoomLease | null = null;
     try {
-      const assetId = options.launch.target.value;
       const kind = this.#kinds.get(options.accepts);
       if (kind === undefined) {
-        this.target = this.assets.openRoom(
+        target = this.assets.openRoom(
           options.accepts,
-          assetId
+          assetId,
+          this.tag
         );
         this.targetReady = Promise.resolve();
       }
       else {
-        const lease = this.assets.open(kind, assetId);
-        this.target = lease;
+        const lease = this.assets.open(kind, assetId, this.tag);
+        target = lease;
         this.targetReady = lease.ready;
       }
+      this.target = target;
       this.#syncDependencies();
     }
     catch (error) {
-      this.assets.dispose();
+      target?.release();
 
       throw error;
     }
 
     this.catalog.on("change", this.#onCatalogChange);
-    this.#guardUnsaved(options.launch.shell);
   }
 
   targetLease<TDocument, TCommand, TMessage>(
@@ -257,7 +121,8 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
   ): AssetLease<TDocument, TCommand, TMessage> {
     return this.assets.open(
       kind,
-      this.target.record.id
+      this.target.record.id,
+      this.tag
     );
   }
 
@@ -293,27 +158,11 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     this.#disposed = true;
 
     this.catalog.off("change", this.#onCatalogChange);
-    this.#listening.abort();
-    this.#dependencies.clear();
-    this.assets.dispose();
-    this.catalog.dispose();
-    this.#client.destroy();
-  }
-
-  #guardUnsaved(
-    shell: ShellChannel | null
-  ): void {
-    if (shell !== null) {
-      this.assets.on("unsaved", (unsaved) => shell.reportUnsaved(unsaved));
-
-      return;
+    for (const { lease } of this.#dependencies.values()) {
+      lease.release();
     }
-
-    window.addEventListener("beforeunload", (event) => {
-      if (this.assets.unsaved) {
-        event.preventDefault();
-      }
-    }, { signal: this.#listening.signal });
+    this.#dependencies.clear();
+    this.target.release();
   }
 
   #syncDependencies(): void {
@@ -390,13 +239,4 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
       }
     }
   }
-}
-
-function toTraceMeta(
-  reference: AssetReferenceData
-): Record<string, unknown> {
-  return {
-    kind: reference.kind,
-    id: reference.id
-  };
 }

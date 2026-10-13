@@ -42,8 +42,10 @@ describe("@jolly-pixel/editor.host/ui bundle", () => {
       .sort();
 
     assert.deepStrictEqual(
-      modules.filter((name) => /^(ArchiveActions|archiveIcons)\.js$/.test(name)),
-      ["ArchiveActions.js", "archiveIcons.js"]
+      modules.filter(
+        (name) => /^(ArchiveActions|archiveIcons|EditorToolbar|toolbarIcons)\.js$/.test(name)
+      ),
+      ["ArchiveActions.js", "EditorToolbar.js", "archiveIcons.js", "toolbarIcons.js"]
     );
   });
 });

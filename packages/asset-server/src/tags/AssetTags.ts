@@ -64,6 +64,11 @@ export interface RestoreTagInput {
   actor: EventStore.Actor;
 }
 
+export interface TaggedVersion {
+  readonly eventVersion: number;
+  readonly data: Uint8Array;
+}
+
 export interface AssetTagsOptions {
   eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
   projector: Pick<AssetProjector, "desired">;
@@ -167,15 +172,28 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     return tags;
   }
 
+  read(
+    assetId: string,
+    name: string
+  ): Result<TaggedVersion, UnknownTagError | UnrestorableTagError> {
+    const tagged = this.#taggedEvent(assetId, name);
+    if (!tagged.ok) {
+      return tagged;
+    }
+
+    return Ok({
+      eventVersion: tagged.val.eventVersion,
+      data: decodeContent(tagged.val.eventData.content)
+    });
+  }
+
   async restore(
     input: RestoreTagInput
   ): Promise<Result<RestoreReport, Error>> {
     const { assetId, name } = input;
-    const tag = this.#eventStore.tags.get(assetId, name);
-    if (tag === undefined) {
-      const error = new UnknownTagError(assetId, name);
-
-      return Err(error);
+    const found = this.#taggedEvent(assetId, name);
+    if (!found.ok) {
+      return found;
     }
 
     const checkpoint = await this.#settledCheckpoint(assetId);
@@ -183,15 +201,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
       return checkpoint;
     }
 
-    const tagged = parseWriteEvent(
-      this.#eventStore.reader.get(assetId, tag.eventVersion)
-    );
-    if (tagged === null) {
-      const error = new UnrestorableTagError(assetId, name);
-
-      return Err(error);
-    }
-
+    const tagged = found.val;
     const { event: current, head } = checkpoint.val;
     if (tagged.eventData.hash === current.eventData.hash) {
       return Ok({
@@ -214,7 +224,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
       expectedVersion: head,
       restoredFrom: {
         name,
-        eventVersion: tag.eventVersion
+        eventVersion: tagged.eventVersion
       }
     });
     if (restorePoint.val !== null) {
@@ -250,6 +260,29 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     this.emit("changed", assetId);
 
     return Ok(undefined);
+  }
+
+  #taggedEvent(
+    assetId: string,
+    name: string
+  ): Result<AssetWriteEvent, UnknownTagError | UnrestorableTagError> {
+    const tag = this.#eventStore.tags.get(assetId, name);
+    if (tag === undefined) {
+      const error = new UnknownTagError(assetId, name);
+
+      return Err(error);
+    }
+
+    const event = parseWriteEvent(
+      this.#eventStore.reader.get(assetId, tag.eventVersion)
+    );
+    if (event === null) {
+      const error = new UnrestorableTagError(assetId, name);
+
+      return Err(error);
+    }
+
+    return Ok(event);
   }
 
   async #settledCheckpoint(

@@ -1,9 +1,13 @@
 // Import Third-party Dependencies
-import type { EditorRuntime } from "@jolly-pixel/editor.host";
+import type {
+  EditorRuntime,
+  EditorToolbarSources
+} from "@jolly-pixel/editor.host";
 import {
   CANVAS_HOVER_CHANGE_EVENT,
   type KeyBindingSettings
 } from "@jolly-pixel/editor.pixel-art";
+import "@jolly-pixel/editor.host/ui";
 import type {
   DockLayout,
   PaneElement,
@@ -52,6 +56,7 @@ export interface EditorShellOptions {
   runtime: EditorRuntime;
   texture: LeftPanelTexture;
   keyBindingSettings: KeyBindingSettings;
+  toolbar: EditorToolbarSources;
 }
 
 export class EditorShell {
@@ -70,8 +75,14 @@ export class EditorShell {
     const {
       runtime,
       texture,
-      keyBindingSettings
+      keyBindingSettings,
+      toolbar
     } = options;
+
+    const editorToolbar = document.querySelector("jolly-editor-toolbar");
+    if (editorToolbar) {
+      editorToolbar.sources = toolbar;
+    }
 
     const layout = document.querySelector(kLayoutSelector);
     const leftPanel = document.querySelector<LeftPanel>(kLeftPanelSelector);

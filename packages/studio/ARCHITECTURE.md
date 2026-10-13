@@ -154,7 +154,7 @@ sequenceDiagram
 | `jolly-ready` | frame → shell | nothing |
 | `jolly-launch` | shell → frame | target asset, theme, density, the shell's peer identity, a port to the shell catalog and a port for the frame's console |
 | `jolly-catalog-open` | frame → shell, on the launch port | a port for one catalog |
-| `jolly-shell` | frame → shell | `open-asset`, `toggle-console`, `session-refused` or `unsaved` |
+| `jolly-shell` | frame → shell | `open-asset`, `toggle-console`, `session-refused`, `unsaved` or `editor-state` |
 | `jolly-appearance` | shell → frame | new theme or density |
 | `jolly-session-renewed` | shell → frame | nothing; refused clients reconnect |
 
@@ -169,6 +169,10 @@ sequenceDiagram
 - A frame posts `unsaved` when its documents gain or lose changes the server
   has not acknowledged. The shell marks its tab and cancels `beforeunload`
   while any tab is marked; closing a marked tab does not ask.
+- A tab spins from the moment its frame is created until the frame posts
+  `editor-state` `ready`, spins again while it posts `switching`, and shows a
+  warning on `failed`. A tab opened in the background stays still until its
+  frame loads.
 - One console for the whole studio: Ctrl+K in a frame posts `toggle-console`
   ([ADR-0015](./docs/adr/0015-the-studio-console-takes-precedence.md)).
 - The frame serves its console namespaces on the console port, and

@@ -47,6 +47,7 @@ export interface VoxelMapEditorParts {
   target: AssetLease<SyncedVoxelMap>;
   consoleFeatures: RegistrationHandle;
   metricsPanel: Promise<MetricsPanel>;
+  removeInspectorMetrics: () => void;
 }
 
 export class VoxelMapEditor {
@@ -104,7 +105,8 @@ export class VoxelMapEditor {
     });
     const shell = new EditorShell({
       state,
-      runtime: editorRuntime
+      runtime: editorRuntime,
+      toolbar: context.toolbar
     });
     await editorRuntime.load(scene, {
       maxFps: Infinity
@@ -115,7 +117,9 @@ export class VoxelMapEditor {
       () => scene.ready
     );
     shell.adoptWorkspace(workspace);
-    runtime.metrics.addSource(workspace.view.inspector);
+    const removeInspectorMetrics = runtime.metrics.addSource(
+      workspace.view.inspector
+    );
 
     const metricsPanel = logger.step(
       "metrics",
@@ -155,13 +159,16 @@ export class VoxelMapEditor {
           runtime
         }
       ),
-      metricsPanel
+      metricsPanel,
+      removeInspectorMetrics
     });
   }
 
   #shell: EditorShell;
   #target: AssetLease<SyncedVoxelMap>;
   #consoleFeatures: RegistrationHandle;
+  #metricsPanel: MetricsPanel | null = null;
+  #removeInspectorMetrics: () => void;
   #disposed = false;
 
   readonly ready: Promise<void>;
@@ -180,6 +187,7 @@ export class VoxelMapEditor {
     this.#shell = parts.shell;
     this.#target = parts.target;
     this.#consoleFeatures = parts.consoleFeatures;
+    this.#removeInspectorMetrics = parts.removeInspectorMetrics;
     this.ready = Promise.all([
       parts.target.ready,
       parts.scene.ready
@@ -189,15 +197,18 @@ export class VoxelMapEditor {
       if (this.#disposed) {
         panel.dispose();
       }
+      else {
+        this.#metricsPanel = panel;
+      }
     }, () => undefined);
   }
 
   dispose(): void {
     this.#disposed = true;
+    this.#metricsPanel?.dispose();
+    this.#removeInspectorMetrics();
     this.#consoleFeatures.unregister();
     this.#shell.dispose();
     this.#target.release();
-    this.session.dispose();
-    this.runtime.dispose();
   }
 }

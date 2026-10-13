@@ -3,7 +3,10 @@ import type {
   EditorDefinition,
   EditorHandle
 } from "./EditorDefinition.ts";
-import type { MountStandaloneOptions } from "./mountStandalone.ts";
+import type {
+  MountStandaloneOptions,
+  StandaloneMount
+} from "./mountStandalone.ts";
 import { withOfflineFallback } from "./offerOffline.ts";
 import { StandaloneEditor } from "./StandaloneEditor.ts";
 import { readDebugLogger } from "../debug/readDebugLogger.ts";
@@ -29,7 +32,7 @@ export async function bootStandalone<
 >(
   definition: EditorDefinition<THandle>,
   options: BootStandaloneOptions
-): Promise<THandle> {
+): Promise<StandaloneMount<THandle>> {
   const {
     offline,
     forceOffline = false,
@@ -39,7 +42,7 @@ export async function bootStandalone<
   const params = HOST_PARAMS.read();
   const editor = new StandaloneEditor(definition, logger);
 
-  async function mountOffline(): Promise<THandle> {
+  async function mountOffline(): Promise<StandaloneMount<THandle>> {
     const { openSharedTabWorkspace } = await import(
       "../workspace/shared-tab/openSharedTabWorkspace.ts"
     );

@@ -54,6 +54,16 @@ test("reopens the tabs after a reload and loads only the active one", async({ st
   await expect(studio.frames.all).toHaveCount(2);
 });
 
+test("an editor tab stops loading once its editor is ready", async({ studio }) => {
+  const { tabs } = studio;
+  await studio.openOffline();
+  await studio.assets.open(MAP);
+
+  await studio.frames.expectReady(studio.frames.only());
+  await expect(tabs.tab(MAP_TAB)).not.toHaveAttribute("aria-busy");
+  await expect(tabs.tab(MAP_TAB)).not.toHaveAttribute("aria-description");
+});
+
 test("an editor takes the full width and home lists it among open editors", async({ studio, page }) => {
   const { home, tabs } = studio;
   await studio.openOffline();

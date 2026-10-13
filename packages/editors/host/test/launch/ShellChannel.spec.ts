@@ -48,6 +48,7 @@ describe("ShellChannel message guards", () => {
       { type: SHELL_MESSAGE_TYPE, command: "close", target: "a" },
       { type: SHELL_MESSAGE_TYPE, command: "open-asset", target: 1 },
       { type: SHELL_MESSAGE_TYPE, command: "open-asset" },
+      { type: SHELL_MESSAGE_TYPE, command: "editor-state", state: "loading" },
       { type: READY_MESSAGE_TYPE, command: "toggle-console" }
     ]) {
       assert.equal(isShellCommand(data), false);

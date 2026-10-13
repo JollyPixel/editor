@@ -160,24 +160,56 @@ test.describe("Tabs (closable)", () => {
   });
 });
 
-test.describe("Tabs (modified)", () => {
-  test("a modified tab shows a dot in place of its close glyph until hovered", async({ page }) => {
-    await openTabs(page, { closable: true, modified: true });
+test.describe("Tabs (markers)", () => {
+  const markers = [
+    {
+      part: "modified",
+      index: 2,
+      description: "Unsaved changes"
+    },
+    {
+      part: "busy",
+      index: 0,
+      description: "Loading"
+    },
+    {
+      part: "failed",
+      index: 1,
+      description: "Failed to load"
+    }
+  ];
+
+  for (const { part, index, description } of markers) {
+    test(`a ${part} tab shows its marker in place of its close glyph until hovered`, async({ page }) => {
+      await openTabs(page, {
+        closable: true,
+        modified: true,
+        status: true
+      });
+
+      const tabs = page.locator("jolly-tabs [role=tab]");
+      const item = page.locator("jolly-tabs [part~=tab]").nth(index);
+      const marker = item.locator(`[part~=${part}]`);
+      const glyph = item.locator("[part~=close] jolly-icon[name=close]");
+
+      await expect(page.locator(`jolly-tabs [part~=${part}]`)).toHaveCount(1);
+      await expect(tabs.nth(index)).toHaveAttribute("aria-description", description);
+      await page.mouse.move(0, 0);
+      await expect(marker).toBeVisible();
+      await expect(glyph).toBeHidden();
+
+      await item.hover();
+      await expect(marker).toBeHidden();
+      await expect(glyph).toBeVisible();
+    });
+  }
+
+  test("a busy tab is announced as busy", async({ page }) => {
+    await openTabs(page, { status: true });
 
     const tabs = page.locator("jolly-tabs [role=tab]");
-    const water = page.locator("jolly-tabs [part~=tab]").nth(2);
-    const dot = water.locator("[part~=modified]");
-    const glyph = water.locator("[part~=close] jolly-icon");
-
-    await expect(page.locator("jolly-tabs [part~=modified]")).toHaveCount(1);
-    await expect(tabs.nth(2)).toHaveAttribute("aria-description", "Unsaved changes");
-    await page.mouse.move(0, 0);
-    await expect(dot).toBeVisible();
-    await expect(glyph).toBeHidden();
-
-    await water.hover();
-    await expect(dot).toBeHidden();
-    await expect(glyph).toBeVisible();
+    await expect(tabs.first()).toHaveAttribute("aria-busy", "true");
+    await expect(tabs.nth(1)).not.toHaveAttribute("aria-busy");
   });
 });
 

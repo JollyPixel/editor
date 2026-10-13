@@ -42,6 +42,10 @@ describe("TagName", () => {
   }
 
   test("a restore point is named after the event version it keeps", () => {
-    assert.strictEqual(TagName.restorePoint(12).value, "restore/12");
+    const name = TagName.restorePoint(12).value;
+
+    assert.strictEqual(name, "restore/12");
+    assert.ok(TagName.isRestorePoint(name));
+    assert.ok(!TagName.isRestorePoint("v1"));
   });
 });

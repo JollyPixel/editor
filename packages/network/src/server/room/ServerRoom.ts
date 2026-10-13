@@ -106,12 +106,12 @@ export class ServerRoom {
   constructor(
     id: string,
     extension: AnyExtension,
-    rights: RightsTable = new RightsTable(),
+    rights: RightsGate = new RightsTable().scope(extension.name),
     options: ServerRoomOptions = {}
   ) {
     this.id = id;
     this.#extension = extension;
-    this.#rights = rights.scope(extension.name);
+    this.#rights = rights;
     this.#members = new RoomMembers(this.#rights);
     this.#logger = (options.logger ?? createLogger()).child().withContext({
       room: this.id
@@ -555,7 +555,7 @@ export class ServerRoom {
     }
 
     const { event, message } = parsed.val;
-    if (this.#rights.configured && !this.#authorize({
+    if (this.#rights.gated && !this.#authorize({
       clientId,
       role,
       event,

@@ -56,6 +56,34 @@ describe("AssetRoom", () => {
 
       assert.ok(AssetRoom.parse(room.toString())?.equals(room));
     });
+
+    test("reads a tag between the kind and the asset id", () => {
+      const room = AssetRoom.parse("pixelart@restore/3:a@1");
+
+      assert.strictEqual(room?.kind, "pixelart");
+      assert.strictEqual(room?.tag, "restore/3");
+      assert.strictEqual(room?.assetId.value, "a@1");
+      assert.strictEqual(AssetRoom.parse("pixelart:a1")?.tag, null);
+    });
+
+    test("returns null for an empty tag", () => {
+      assert.strictEqual(AssetRoom.parse("pixelart@:a1"), null);
+    });
+  });
+
+  describe("tag", () => {
+    test("a tagged room is a different room of the same asset", () => {
+      const tagged = new AssetRoom("pixelart", "a1", "v1");
+
+      assert.strictEqual(tagged.toString(), "pixelart@v1:a1");
+      assert.ok(!tagged.equals(new AssetRoom("pixelart", "a1")));
+      assert.ok(AssetRoom.parse(tagged.toString())?.equals(tagged));
+    });
+
+    test("rejects a kind with \"@\" and a tag with a colon", () => {
+      assert.throws(() => new AssetRoom("pixel@art", "a1"), TypeError);
+      assert.throws(() => new AssetRoom("pixelart", "a1", "v:1"), TypeError);
+    });
   });
 
   describe("equals", () => {

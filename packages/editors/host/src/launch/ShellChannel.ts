@@ -10,6 +10,10 @@ import * as z from "zod";
 
 // Import Internal Dependencies
 import type { Appearance } from "../appearance/PageAppearance.ts";
+import {
+  EDITOR_STATES,
+  type EditorState
+} from "../state/EditorState.ts";
 import type { ShellCatalog } from "./catalog/ShellCatalog.ts";
 
 // CONSTANTS
@@ -59,6 +63,11 @@ const kShellCommandSchema = z.discriminatedUnion("command", [
     type: z.literal(SHELL_MESSAGE_TYPE),
     command: z.literal("unsaved"),
     unsaved: z.boolean()
+  }),
+  z.object({
+    type: z.literal(SHELL_MESSAGE_TYPE),
+    command: z.literal("editor-state"),
+    state: z.enum(EDITOR_STATES)
   })
 ]);
 const kAppearanceMessageSchema = z.object({
@@ -130,11 +139,18 @@ export interface ShellUnsavedCommand {
   unsaved: boolean;
 }
 
+export interface ShellEditorStateCommand {
+  type: typeof SHELL_MESSAGE_TYPE;
+  command: "editor-state";
+  state: EditorState;
+}
+
 export type ShellCommand =
   | ShellOpenAssetCommand
   | ShellToggleConsoleCommand
   | ShellSessionRefusedCommand
-  | ShellUnsavedCommand;
+  | ShellUnsavedCommand
+  | ShellEditorStateCommand;
 
 export interface AppearanceMessage {
   type: typeof APPEARANCE_MESSAGE_TYPE;
@@ -231,6 +247,16 @@ export class ShellChannel {
       type: SHELL_MESSAGE_TYPE,
       command: "unsaved",
       unsaved
+    });
+  }
+
+  reportState(
+    state: EditorState
+  ): void {
+    this.#post({
+      type: SHELL_MESSAGE_TYPE,
+      command: "editor-state",
+      state
     });
   }
 

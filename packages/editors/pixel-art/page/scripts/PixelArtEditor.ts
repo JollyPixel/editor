@@ -198,7 +198,6 @@ export class PixelArtEditor {
     this.preview?.dispose();
     this.#scope.dispose();
     this.tabs.dispose();
-    this.session.dispose();
   }
 
   readonly #saveColorDocked = (event: CustomEvent<boolean>): void => {

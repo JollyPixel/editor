@@ -26,8 +26,11 @@ const kStripProperties = [
   "icon",
   "iconOnly",
   "fixed",
-  "modified"
+  "modified",
+  "status"
 ] as const;
+
+export type TabStatus = "idle" | "busy" | "failed";
 
 @customElement("jolly-tab")
 export class Tab extends LitElement {
@@ -86,6 +89,9 @@ export class Tab extends LitElement {
   @property({ type: Boolean, reflect: true })
   declare modified: boolean;
 
+  @property({ type: String, reflect: true })
+  declare status: TabStatus;
+
   constructor() {
     super();
 
@@ -102,6 +108,7 @@ export class Tab extends LitElement {
     this.iconOnly = false;
     this.fixed = false;
     this.modified = false;
+    this.status = "idle";
   }
 
   override connectedCallback(): void {

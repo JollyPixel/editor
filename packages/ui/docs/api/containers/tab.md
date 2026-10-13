@@ -21,6 +21,7 @@
 | `iconOnly` (`icon-only`) | `boolean` | `false` |
 | `fixed` | `boolean` | `false` |
 | `modified` | `boolean` | `false` |
+| `status` | `TabStatus` | `"idle"` |
 
 `jolly-tabs` controls `active`, the panel ID, and its ARIA relationship. The
 default slot contains panel content.
@@ -41,3 +42,9 @@ accessible name and tooltip. See [Tab actions](./tabs.md#tab-actions).
 place of its close glyph until the pointer is over the tab; any other tab shows
 the dot after its label. The tab button announces "Unsaved changes" as its
 accessible description.
+
+`status` is `"idle"`, `"busy"` or `"failed"`. A busy tab shows a spinner and a
+failed one a warning icon, in the same place as the `modified` dot and in its
+stead. The tab button gets `aria-busy` while busy and announces "Loading" or
+"Failed to load" before "Unsaved changes". Size both with
+`--jolly-tab-status-size` (`10px`), or style the `busy` and `failed` parts.

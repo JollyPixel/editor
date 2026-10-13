@@ -354,6 +354,7 @@ export async function createAssetBackend(
         catalog,
         states,
         flush,
+        tags,
         graceMs: attachOptions.graceMs,
         logger
       });

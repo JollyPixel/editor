@@ -2,6 +2,9 @@
 import { AssetId } from "./AssetId.ts";
 import { assertAssetKind } from "./assertAssetKind.ts";
 
+// CONSTANTS
+const kTagSeparator = "@";
+
 export class AssetRoom {
   static parse(
     roomName: string
@@ -11,10 +14,14 @@ export class AssetRoom {
       return null;
     }
 
+    const head = roomName.slice(0, separator);
+    const tagAt = head.indexOf(kTagSeparator);
+
     try {
       return new AssetRoom(
-        roomName.slice(0, separator),
-        roomName.slice(separator + 1)
+        tagAt === -1 ? head : head.slice(0, tagAt),
+        roomName.slice(separator + 1),
+        tagAt === -1 ? null : head.slice(tagAt + 1)
       );
     }
     catch {
@@ -24,15 +31,24 @@ export class AssetRoom {
 
   readonly kind: string;
   readonly assetId: AssetId;
+  readonly tag: string | null;
 
   constructor(
     kind: string,
-    assetId: string | AssetId
+    assetId: string | AssetId,
+    tag: string | null = null
   ) {
     assertAssetKind(kind);
+    if (kind.includes(kTagSeparator)) {
+      throw new TypeError("Asset room kind must not contain \"@\".");
+    }
+    if (tag !== null && (tag.trim().length === 0 || tag.includes(":"))) {
+      throw new TypeError("Asset room tag must be non-empty without a colon.");
+    }
 
     this.kind = kind;
     this.assetId = AssetId.from(assetId);
+    this.tag = tag;
   }
 
   equals(
@@ -43,7 +59,7 @@ export class AssetRoom {
       other.assetId
     );
 
-    return hasEqualKind && hasEqualAssetId;
+    return hasEqualKind && hasEqualAssetId && this.tag === other.tag;
   }
 
   toJSON(): string {
@@ -51,6 +67,10 @@ export class AssetRoom {
   }
 
   toString(): string {
-    return `${this.kind}:${this.assetId.value}`;
+    const head = this.tag === null ?
+      this.kind :
+      `${this.kind}${kTagSeparator}${this.tag}`;
+
+    return `${head}:${this.assetId.value}`;
   }
 }

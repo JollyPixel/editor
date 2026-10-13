@@ -158,8 +158,15 @@ export const dialogStyles = css`
   }
 
   .body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--jolly-space-2, 8px);
     padding: var(--jolly-space-4, 16px);
     background: var(--jolly-surface-raised, ${kFallback.controlBg});
+  }
+
+  ::slotted(:is(p, ul, ol)) {
+    margin-block: 0;
   }
 
   footer {

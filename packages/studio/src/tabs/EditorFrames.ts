@@ -80,14 +80,17 @@ export class EditorFrames {
 
   show(
     tab: EditorTab | null
-  ): void {
-    if (tab !== null && !this.#frames.has(tab.id)) {
+  ): boolean {
+    const created = tab !== null && !this.#frames.has(tab.id);
+    if (created) {
       this.#frames.set(tab.id, this.#createFrame(tab));
     }
     for (const [id, frame] of this.#frames) {
       frame.hidden = id !== tab?.id;
     }
     this.#consoles?.focus(tab?.id ?? null);
+
+    return created;
   }
 
   retitle(

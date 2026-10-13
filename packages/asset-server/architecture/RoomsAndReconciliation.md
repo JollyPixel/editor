@@ -11,6 +11,12 @@ and changes filtered by the closure recomputed on each catalog change. An
 asset linked later shows up as created, one unlinked as deleted. Every
 command is rejected. `CatalogClient.connect(client, { room })` joins it.
 
+A room named with a tag (`counter@v1:<assetId>`, see `AssetRoom`) holds the
+content of that tagged event in a state of its own. It is resolved read-only,
+so members receive `read` rights and every command is denied. It appends
+nothing, reads no catch-up from the event store, and keeps its snapshot when
+the asset changes afterwards. An unknown tag refuses the join.
+
 ## Room lifetime
 
 ```mermaid

@@ -79,7 +79,8 @@ The tag a restore puts on the content it is about to replace, named
 
 The collaboration space for one open, editable asset. Accepted editing
 commands become domain events. The room uses the asset's live state, which is
-released after the room is evicted.
+released after the room is evicted. A tag room shows the content of one tag
+instead and accepts no command.
 
 ## Naming boundaries
 

@@ -24,3 +24,5 @@ export type {
   AssetTag,
   RestoreReport
 } from "../../tags/AssetTags.schema.ts";
+export * from "../../tags/TagName.ts";
+export * from "../../tags/errors/InvalidTagNameError.ts";

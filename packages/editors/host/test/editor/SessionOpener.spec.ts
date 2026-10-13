@@ -22,7 +22,7 @@ import {
   ShellChannel,
   type LaunchIdentity
 } from "#src/launch/ShellChannel.ts";
-import { IDENTITY_STORAGE_KEY } from "#src/session/EditorSession.ts";
+import { IDENTITY_STORAGE_KEY } from "#src/session/SessionConnection.ts";
 import {
   FakeClient,
   record,
@@ -41,6 +41,7 @@ const kDefinition: EditorDefinition<EditorHandle> = {
   kinds: [],
   mount: () => Promise.reject(new Error("not mounted"))
 };
+const kQueried = new EditorLaunch(new AssetId("map"));
 
 afterEach(() => {
   window.history.replaceState(null, "", "/");
@@ -78,7 +79,8 @@ async function shellLaunch(
 }
 
 function opener(
-  client: FakeClient
+  client: FakeClient,
+  queried?: EditorLaunch
 ): SessionOpener {
   return new SessionOpener({
     definition: kDefinition,
@@ -88,21 +90,22 @@ function opener(
         client
       };
     },
+    queried,
     logger: readDebugLogger()
   });
 }
 
 describe("SessionOpener", () => {
   test("an early session takes its catalog from the shell launch", async() => {
-    window.history.replaceState(null, "", "/?target=map");
     using shell = await shellLaunch();
     const client = new FakeClient();
 
-    const session = await opener(client).open(shell.launch);
+    const sessions = opener(client, kQueried);
+    const session = await sessions.open(shell.launch);
 
     assert.strictEqual(session.target.record.id, "map");
     assert.strictEqual(client.rooms.has(CATALOG_ROOM), false);
-    session.dispose();
+    sessions.dispose();
   });
 
   test("an online session joins as the launch identity, not the stored name", async() => {
@@ -113,11 +116,12 @@ describe("SessionOpener", () => {
       peerId: "peer-alice"
     });
 
-    const session = await new SessionOpener({
+    const sessions = new SessionOpener({
       definition: kDefinition,
       logger: readDebugLogger()
-    }).open(shell.launch);
-    session.dispose();
+    });
+    const session = await sessions.open(shell.launch);
+    sessions.dispose();
 
     assert.equal(session.identity.username, "alice");
     assert.equal(session.identity.peerId, "peer-alice");
@@ -126,7 +130,8 @@ describe("SessionOpener", () => {
   test("a launch without a shell catalog opens one on the client", async() => {
     const client = new FakeClient();
 
-    const opening = opener(client).open(new EditorLaunch(new AssetId("map")));
+    const sessions = opener(client);
+    const opening = sessions.open(new EditorLaunch(new AssetId("map")));
     await setImmediate();
     client.fakeRoom(CATALOG_ROOM).receive(
       snapshotMessage([record("map", "voxelmap")])
@@ -134,14 +139,13 @@ describe("SessionOpener", () => {
     const session = await opening;
 
     assert.strictEqual(session.target.record.id, "map");
-    session.dispose();
+    sessions.dispose();
   });
 
   test("disposing before the launch releases the early session client", async() => {
-    window.history.replaceState(null, "", "/?target=map");
     const client = new FakeClient();
 
-    opener(client).dispose();
+    opener(client, kQueried).dispose();
     await setImmediate();
 
     assert.strictEqual(client.destroyed, true);

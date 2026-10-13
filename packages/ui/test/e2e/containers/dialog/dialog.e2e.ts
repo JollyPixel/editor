@@ -78,13 +78,16 @@ test.describe("Dialog", () => {
   test("prompt and confirm helpers settle, trim and remove themselves", async({ page }) => {
     const result = page.locator("main > div");
     const helper = page.locator("body > jolly-dialog");
+    const input = helper.locator("input");
 
     await page.locator("[data-action=prompt-helper]").click();
     await expect(helper).toHaveAttribute("theme", "dark");
     await expect(helper.locator("jolly-text")).toHaveCount(1);
     await expect(helper.locator("jolly-button")).toHaveCount(2);
-    await helper.locator("input").fill("  Layer  ");
-    await helper.locator("input").press("Enter");
+    await input.fill("  Layer  ");
+    await input.blur();
+    await expect(input).toHaveValue("  Layer  ");
+    await input.press("Enter");
     await expect(result).toHaveAttribute("data-result", "Layer");
     await expect(helper).toHaveCount(0);
 

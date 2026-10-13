@@ -71,7 +71,10 @@ export function showPrompt({
   field.label = label;
   field.value = value;
   field.addEventListener("jolly-input", captureValue);
-  field.addEventListener("jolly-change", captureValue);
+  field.addEventListener("jolly-change", (event) => {
+    captureValue(event);
+    field.value = value;
+  });
   dialog.append(field);
 
   const confirm = actionButton(

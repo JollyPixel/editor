@@ -40,11 +40,10 @@ class QueryString {
 }
 ```
 
-| Reader | Absent | Present |
-|---|---|---|
-| `flag(name)` | `false` | `true`, whatever the value |
-| `number(name, fallback?)` | `fallback` | the number, or `fallback` when it does not parse |
-| `string(name)` | `undefined` | the raw value |
+- `flag(name)`: `true` when present, whatever the value.
+- `number(name, fallback?)`: the number, or `fallback` when absent or not a
+  number.
+- `string(name)`: the raw value, `undefined` when absent.
 
 ## Host parameters
 
@@ -68,16 +67,19 @@ HOST_PARAMS.read("?max-fps=10&samples=0&username=Ada&offline");
 // }
 ```
 
-| Parameter | Field | Accepted values | Used by |
-|---|---|---|---|
-| `max-fps` | `maxFps` | a positive number | [`EditorRuntime.load`](./EditorRuntime.md#loading-a-scene) |
-| `samples` | `samples` | a non-negative integer | [`EditorRuntime.samples`](./EditorRuntime.md#properties) |
-| `username` | `username` | a non-blank string, trimmed | [`rememberQueryUsername`](./EditorSession.md#identity), in dev only |
-| `offline` | `offline` | present, whatever the value | [`bootStandalone`](./mountStandalone.md#offline-fallback) |
-| `workspace` | `workspace` | a non-blank string, trimmed | [`bootStandalone`](./mountStandalone.md#offline-fallback) |
-| `render` | `render` | `continuous` or `on-demand`, trimmed | [`EditorRuntime.create`](./EditorRuntime.md#creation) |
+- `max-fps`: a positive number, the cap of
+  [`EditorRuntime.load`](../runtime/EditorRuntime.md#loading-a-scene).
+- `samples`: a non-negative integer, read by
+  [`EditorRuntime.samples`](../runtime/EditorRuntime.md#properties).
+- `username`: stored by [`rememberQueryUsername`](../session/EditorSession.md#identity)
+  in dev.
+- `offline` and `workspace`: open the
+  [offline workspace](../editor/bootStandalone.md#fallback).
+- `render`: `continuous` or `on-demand`, see
+  [`EditorRuntime.create`](../runtime/EditorRuntime.md#creation).
 
-Any other value reads as `undefined`, and an absent `offline` as `false`.
+Strings are trimmed and must not be blank. Any other value reads as
+`undefined`, and an absent `offline` as `false`.
 
 `offlineWorkspaceQuery(workspace)` writes the `offline` and `workspace`
 parameters, for a shell that opens editor pages on its own offline workspace:

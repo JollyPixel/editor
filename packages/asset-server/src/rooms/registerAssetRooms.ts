@@ -7,12 +7,23 @@ import type * as EventStore from "@jolly-pixel/event-store";
 import { AssetRoom } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { AssetRoomExtension } from "./AssetRoomExtension.ts";
+import {
+  AssetRoomExtension,
+  type AssetRoomExtensionOptions
+} from "./AssetRoomExtension.ts";
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
-import type { AssetRoomBinding } from "../kinds/AssetKindHandler.ts";
+import type {
+  AssetCommands,
+  AssetKindHandler
+} from "../kinds/AssetKindHandler.ts";
+import type { AssetCommandHeader } from "../kinds/AssetLiveProtocol.ts";
 import type { CatalogProjection } from "../catalog/CatalogProjection.ts";
 import type { CatalogChange } from "../catalog/client/protocol.ts";
 import type { AssetStateStore } from "../state/AssetStateStore.ts";
+import type {
+  AssetTags,
+  TaggedVersion
+} from "../tags/AssetTags.ts";
 import {
   silentLogger,
   type Logger
@@ -26,8 +37,18 @@ export interface AssetRoomsOptions {
   catalog: CatalogProjection;
   states: AssetStateStore;
   flush: (assetId: string) => Promise<void>;
+  tags: Pick<AssetTags, "read">;
   graceMs?: number;
   logger?: Logger;
+}
+
+type LiveCommands = AssetCommands & Required<Pick<AssetCommands, "live">>;
+
+interface ResolvedRoom {
+  readonly roomId: string;
+  readonly assetId: string;
+  readonly handler: AssetKindHandler;
+  readonly commands: LiveCommands;
 }
 
 export function registerAssetRooms(
@@ -41,6 +62,7 @@ export function registerAssetRooms(
     catalog,
     states,
     flush,
+    tags,
     graceMs,
     logger = silentLogger()
   } = options;
@@ -61,6 +83,72 @@ export function registerAssetRooms(
   }
   states.on("replaced", onStateReplaced);
 
+  function roomExtension(
+    room: ResolvedRoom,
+    state: unknown,
+    version: () => number | undefined,
+    extensionOptions?: AssetRoomExtensionOptions<AssetCommandHeader>
+  ): AssetRoomExtension {
+    const binding = {
+      assetId: room.assetId,
+      kind: room.handler.kind,
+      roomId: room.roomId,
+      state,
+      version
+    };
+
+    return new AssetRoomExtension(
+      binding,
+      room.commands,
+      room.commands.live(binding),
+      events,
+      extensionOptions
+    );
+  }
+
+  function openTagRoom(
+    room: ResolvedRoom,
+    tagged: TaggedVersion
+  ): RoomResolution {
+    const state = room.handler.create(room.assetId);
+    room.handler.load(state, tagged.data);
+
+    return {
+      extension: roomExtension(room, state, () => tagged.eventVersion),
+      graceMs,
+      readOnly: true
+    };
+  }
+
+  async function openLiveRoom(
+    room: ResolvedRoom
+  ): Promise<RoomResolution> {
+    const { assetId } = room;
+    const entry = await states.acquire(assetId, room.handler.kind);
+    const extension = roomExtension(
+      room,
+      entry.state,
+      () => states.versionOf(assetId),
+      {
+        reader,
+        restore: states.takeCommandsSinceCheckpoint(assetId)
+      }
+    );
+    liveRooms.set(assetId, extension);
+
+    return {
+      extension,
+      graceMs,
+      onEvict: async() => {
+        if (liveRooms.get(assetId) === extension) {
+          liveRooms.delete(assetId);
+        }
+        await flush(assetId);
+        states.release(assetId);
+      }
+    };
+  }
+
   server.setRoomResolver(async(roomName): Promise<RoomResolution | null> => {
     function refuse(
       reason: string
@@ -80,52 +168,37 @@ export function registerAssetRooms(
       return null;
     }
 
-    const { kind, assetId: id } = room;
+    const { kind, tag } = room;
     if (!kinds.has(kind)) {
       return refuse("unknown kind");
     }
 
-    const { commands } = kinds.get(kind);
-    if (commands?.live === undefined) {
+    const handler = kinds.get(kind);
+    const { commands } = handler;
+    if (!hasLiveProtocol(commands)) {
       return refuse("kind has no live protocol");
     }
 
-    const assetId = id.value;
-    if (catalog.record(id.value)?.kind !== kind) {
+    const assetId = room.assetId.value;
+    if (catalog.record(assetId)?.kind !== kind) {
       return refuse("unknown asset");
     }
 
-    const entry = await states.acquire(assetId, kind);
-    const binding: AssetRoomBinding = {
-      assetId,
-      kind,
+    const resolved: ResolvedRoom = {
       roomId: roomName,
-      state: entry.state,
-      version: () => states.versionOf(assetId)
+      assetId,
+      handler,
+      commands
     };
-    const extension = new AssetRoomExtension(
-      binding,
-      commands,
-      commands.live(binding),
-      events,
-      {
-        reader,
-        restore: states.takeCommandsSinceCheckpoint(assetId)
-      }
-    );
-    liveRooms.set(assetId, extension);
+    if (tag === null) {
+      return openLiveRoom(resolved);
+    }
 
-    return {
-      extension,
-      graceMs,
-      onEvict: async() => {
-        if (liveRooms.get(assetId) === extension) {
-          liveRooms.delete(assetId);
-        }
-        await flush(assetId);
-        states.release(assetId);
-      }
-    };
+    const tagged = tags.read(assetId, tag);
+
+    return tagged.ok ?
+      openTagRoom(resolved, tagged.val) :
+      refuse("unknown tag");
   });
 
   return () => {
@@ -134,4 +207,10 @@ export function registerAssetRooms(
     liveRooms.clear();
     server.setRoomResolver(null);
   };
+}
+
+function hasLiveProtocol(
+  commands: AssetCommands | undefined
+): commands is LiveCommands {
+  return commands?.live !== undefined;
 }

@@ -6,23 +6,28 @@ export type { LaunchSource } from "./launch/sources/LaunchSource.ts";
 export * from "./launch/sources/HostMessageLaunchSource.ts";
 export * from "./launch/sources/LastOpenedLaunchSource.ts";
 export * from "./launch/sources/QueryLaunchSource.ts";
+export type { LaunchNavigator } from "./launch/LaunchNavigator.ts";
 export * from "./launch/errors/LaunchNotFoundError.ts";
 export * from "./lease/AssetLease.ts";
 export { AssetLeases } from "./lease/AssetLeases.ts";
 export {
   EditorSession,
-  IDENTITY_STORAGE_KEY,
-  type EditorSessionClient,
   type EditorSessionArchivesOptions,
   type EditorSessionEvents,
-  type EditorIdentityOptions
+  type EditorSessionTarget
 } from "./session/EditorSession.ts";
+export * from "./session/SessionConnection.ts";
 export * from "./lease/errors/AssetDocumentConflictError.ts";
+export * from "./lease/errors/UnsettledChangesError.ts";
 export * from "./session/errors/ArchiveImportDisabledError.ts";
 export * from "./session/openCatalog.ts";
 export * from "./session/SessionArchive.ts";
 export * from "./session/EditorArchives.ts";
-export * from "./session/askImportConflictPolicy.ts";
+export * from "./session/EditorTargets.ts";
+export * from "./session/EditorTags.ts";
+export * from "./session/EditorToolbarSources.ts";
+export type { NewTag } from "./session/dialogs/askNewTag.ts";
+export * from "./session/dialogs/askImportConflictPolicy.ts";
 export * from "./session/errors/ArchiveRootError.ts";
 export * from "./session/rememberQueryUsername.ts";
 export type {
@@ -40,7 +45,7 @@ export * from "./editor/mountStandalone.ts";
 export {
   EDITOR_STATE_ATTRIBUTE,
   type EditorState
-} from "./editor/BootTrace.ts";
+} from "./state/EditorState.ts";
 export { DEBUG_HANDLE } from "./editor/StandaloneEditor.ts";
 export * from "./editor/bootStandalone.ts";
 export * from "./editor/offerOffline.ts";

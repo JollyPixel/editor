@@ -31,11 +31,14 @@
           </jolly-pane>
         </jolly-pane-group>
       </jolly-dock>
-      <section id="three-renderer">
-        <canvas tabindex="-1"></canvas>
-        <jolly-model-editor-animating-frame></jolly-model-editor-animating-frame>
-        <jolly-model-editor-history></jolly-model-editor-history>
-      </section>
+      <div class="viewport-column">
+        <jolly-editor-toolbar></jolly-editor-toolbar>
+        <section id="three-renderer">
+          <canvas tabindex="-1"></canvas>
+          <jolly-model-editor-animating-frame></jolly-model-editor-animating-frame>
+          <jolly-model-editor-history></jolly-model-editor-history>
+        </section>
+      </div>
       <jolly-dock
         key="right"
         side="right"

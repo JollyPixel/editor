@@ -1,383 +1,239 @@
 # Architecture
 
-`@jolly-pixel/editor.host` is the part every editor shares: it finds the asset
-to open, connects to the asset server, keeps the asset's dependencies loaded
-and hands the result to the editor. The words used here are defined in the
-[glossary](./GLOSSARY.md).
+`@jolly-pixel/editor.host` is the code every editor page shares. It finds the
+asset to open, opens a session on it and mounts the editor. Terms are defined
+in the [glossary](./GLOSSARY.md).
 
-## System map
+## Map
 
 ```mermaid
 flowchart TB
-  subgraph Page
-    direction TB
-    Frame["parent frame message"]
-    Query["?target= query"]
-    Injected["injected JSON element"]
-    OfflineSources["offline query, last opened,<br/>first matching record"]
-  end
-
-  subgraph Host["editor.host"]
-    direction TB
-    Mount["mountStandalone"]
-    Launch["EditorLaunch<br/>target id"]
-    Session["EditorSession"]
-    Leases["AssetLeases<br/>one room per asset"]
-    Archive["SessionArchive"]
-    Workspace["optional SessionWorkspace"]
-  end
-
-  subgraph Editor["Editor class"]
-    direction TB
-    Definition["static accepts, identity, kinds"]
-    MountFn["static mount(context)"]
-    Handle["instance<br/>dispose()"]
-    Runtime["optional EditorRuntime"]
-  end
-
-  subgraph Server["Asset server"]
-    direction TB
-    Catalog["catalog room"]
-    Rooms["asset rooms"]
-  end
-
-  Frame --> Launch
-  Query --> Launch
-  Injected --> Launch
-  OfflineSources --> Launch
-  Mount --> Launch
-  Definition --> Mount
-  Launch --> Session
-  Session --> Leases
-  Session --> Archive
-  Session --> Workspace
-  Session <-->|"records, dependency edges"| Catalog
-  Leases <-->|"join, leave"| Rooms
-  Session -->|"context"| MountFn
-  MountFn -.-> Runtime
-  MountFn --> Handle
+    Page["mountStandalone(Editor)"] --> Launch["EditorLaunch"]
+    Launch --> Session["EditorSession"]
+    Session --> Leases["AssetLeases"]
+    Session -->|"mount(context)"| Editor["Editor class"]
+    Editor -.-> Runtime["EditorRuntime"]
 ```
 
-The host owns launch resolution and session setup. An editor with a 3D view
-declares a static `createRuntime(logger)`; the host calls it when the boot
-starts and passes the `EditorRuntime` to `mount`. After `mount` succeeds, the
-editor owns the returned session and runtime, and also its scene, panels, and
-target document.
+- `launch/`: where the target comes from, and the `ShellChannel` to a parent frame.
+- `session/`: the connection, the session, toolbar sources and archives.
+- `lease/`: one shared room, and at most one document, per asset.
+- `editor/`: `mountStandalone`, `bootStandalone`, `EditorMount`, `Placement`.
+- `state/`: the page state (`data-editor-state`) and its loading bar.
+- `runtime/`: the 3D runtime wrapper and `PeerFrustums`.
+- `workspace/`: offline and shared-tab connections, behind the `./offline` entry.
+
+## Who owns what
+
+```mermaid
+flowchart TB
+    Host["host"] --> Session["session + connection"]
+    Host --> Runtime["runtime"]
+    Editor["editor handle"] --> Scene["scene, panels"]
+    Editor --> Target["target document"]
+```
+
+- The host keeps the session, the connection and the runtime for the page's lifetime.
+- The editor releases only what `mount` built, in `dispose()`.
+- `Editor.createRuntime(logger)` is optional; editors without a 3D view skip it.
 
 ## Boot
 
 ```mermaid
-sequenceDiagram
-  autonumber
-  participant E as Editor class
-  participant M as mountStandalone
-  participant L as Launch sources
-  participant S as EditorSession
-  participant C as Catalog
-  participant A as AssetLeases
-
-  E->>M: mountStandalone(Editor)
-  par runtime
-    M->>E: createRuntime(logger), when declared
-  and launch
-    M->>L: read() in order
-    L-->>M: EditorLaunch { target }
-  end
-  Note over M,S: the session below starts with the launch read<br/>when the URL has ?target=, and is kept if the launch names it
-  alt default connection
-    M->>S: open({ launch, accepts, identity, kinds })
-    S->>S: prompt username, create WebSocket client
-  else supplied connect option
-    M->>S: connect({ launch, accepts, kinds, identity, client, workspace? })
-  end
-  S->>C: connect, await ready
-  S->>A: openRoom(accepts, target)
-  A-->>S: target lease, room not joined
-  loop each dependency with a known kind
-    S->>A: open(kind, assetId)
-    A-->>S: lease { document, ready }
-  end
-  S->>S: await every ready
-  S-->>M: session
-  M->>E: mount({ launch, session, runtime? })
-  E-->>M: handle
+flowchart TB
+    Start["mountStandalone"] --> Runtime["createRuntime"]
+    Start --> Launch["read launch"]
+    Launch --> Session["open session"]
+    Session --> Mount["Editor.mount(context)"]
+    Runtime --> Mount
+    Mount --> Ready["await handle.ready"]
 ```
 
-Nothing in the session or the runtime needs the shell's answer, so all three
-run at once: the studio puts the target in the frame URL and posts the same
-target in `jolly-launch`. A session opened for a `?target=` the launch does
-not confirm is disposed, and a new one opens for the launch target. Only the
-catalog waits for the launch, since a shell may send a port to its own catalog
-with it (see [Shell catalog](./docs/mountStandalone.md#shell-catalog)).
-
-`mount` starts with every dependency document already synced. The target is the
-exception: the session only reserves its room. The `connect` option supplies an
-identity and client instead of the default username prompt and network client.
-It may also supply a `SessionWorkspace`. `mountStandalone` then awaits `handle.ready`,
-exposes the handle as `window.jollyEditor` in dev, and marks the page
-`data-editor-state="ready"`. For a workspace-backed session it also remembers
-the successfully opened target for the next launch.
+- The runtime is created while the launch is read; `mount` awaits it.
+- With a `connect` option and a `?target=` in the URL, the session opens before
+  the launch answers. It is kept only if the launch names the same view.
+- Every dependency document is synced before `mount`. The target room is only reserved.
+- Once ready, the page gets `data-editor-state="ready"` and, in dev, `window.jollyEditor`.
 
 ## Finding the target
 
 ```mermaid
 flowchart TB
-  Start["EditorLaunch.read(sources)"] --> Framed{"inside a frame?"}
-  Framed -->|"no"| Query
-  Framed -->|"yes"| Ready["post { type: 'jolly-ready' }<br/>to window.parent, once per allowed origin"]
-  Ready --> Wait["wait 1000 ms for<br/>{ type: 'jolly-launch', target }<br/>from window.parent on an allowed origin"]
-  Wait -->|"received"| Found["EditorLaunch<br/>with a ShellChannel"]
-  Wait -->|"timeout"| Query{"?target= present?"}
-  Query -->|"yes"| Found
-  Query -->|"no"| Element{"injected JSON element<br/>present and valid?"}
-  Element -->|"yes"| Found
-  Element -->|"no"| Missing["throw LaunchNotFoundError"]
+    Read["EditorLaunch.read"] --> Frame{"inside a frame?"}
+    Frame -->|"yes"| Parent["jolly-launch from the parent"]
+    Frame -->|"no"| Sources["sources in order"]
+    Parent -->|"timeout"| Sources
+    Sources -->|"none answers"| Missing["LaunchNotFoundError"]
 ```
 
-The first source that answers wins. A page outside a frame skips the wait, so
-a plain tab boots without the timeout. Allowed origins default to the page's
-own origin, the studio's case. The injected element is written by the
-asset workspace Vite plugin's `launch` option. Only a launch answered by the
-parent carries a `ShellChannel`, reachable as `context.shell`, through which
-the editor posts `jolly-shell` commands such as `open-asset` back to the
-parent. Such a page leaves the console to the shell: it mounts no
-`jolly-console`, forwards Ctrl+K as `toggle-console`, applies the theme
-and density the shell sends in `jolly-launch` and `jolly-appearance`, and
-serves its console namespaces on the launch's console port so the shell's
-console shows them. When the server refuses the session's socket, the page
-posts `session-refused` and reconnects once the shell posts
-`jolly-session-renewed`. It posts `unsaved` when its leased documents gain
-their first change the server has not acknowledged, and again when the last
-one is.
+- The first source that answers wins. Outside a frame there is no wait.
+- The parent has 1000 ms, from an allowed origin (the page's own by default).
+- Default sources: `?target=`, then the injected JSON element.
+- `mountStandalone({ sources })` replaces the defaults; the parent is always asked first.
 
-The parent's `jolly-launch` is always read first. `mountStandalone({ sources })`
-replaces the rest of the list. Offline, `bootStandalone` passes the
-workspace's own list: `?target=`, the last opened ID if the catalog still has
-it with the accepted kind, then the first catalog record of that kind. If no source
-returns a target, `EditorLaunch.read` throws before a client is created.
+## Inside a shell
+
+```mermaid
+flowchart TB
+    Shell["parent shell"] -->|"jolly-launch, jolly-appearance"| Page["editor page"]
+    Page -->|"jolly-shell commands"| Shell
+    Page -->|"console namespaces"| Port["console port"]
+```
+
+- Only a launch answered by the parent carries a `ShellChannel` (`context.shell`).
+- The page mounts no console of its own and forwards Ctrl+K as `toggle-console`.
+- It posts `unsaved` when its documents gain or lose unacknowledged changes.
+- It posts `editor-state` on every page state change (`PageState`).
+- It posts `session-refused` and reconnects after `jolly-session-renewed`.
+- Messages and ports: [ShellChannel](./docs/launch/ShellChannel.md).
+
+## Placement
+
+```mermaid
+flowchart TB
+    Launch["EditorLaunch"] --> Placement["Placement"]
+    Placement --> Console["console: own or forwarded"]
+    Placement --> History["history: push or replace"]
+    Placement --> Guard["unsaved: beforeunload or shell"]
+    Placement --> Toolbar["toolbar sources"]
+```
+
+- Placement reads the launch, never the session: an early session cannot tell
+  a shell or share-link launch from a plain page.
+- `targets` exist only outside a shell, `tags` only on a server connection, and neither for a share link.
+- A workspace-backed session remembers its target for the next offline launch.
 
 ## Target and dependencies
 
 ```mermaid
 flowchart TB
-  Session["EditorSession"]
-
-  subgraph TargetSide["Target"]
-    direction TB
-    TargetKind{"kind registered<br/>for accepts?"}
-    TargetLeased["session.target<br/>record + room + document + ready"]
-    TargetRoom["session.target<br/>record + room"]
-    TargetJoin["session joins the room"]
-    EditorJoin["editor joins the room itself"]
-    TargetKind -->|"yes"| TargetLeased --> TargetJoin
-    TargetKind -->|"no"| TargetRoom --> EditorJoin
-  end
-
-  subgraph DependencySide["Dependencies: owned by the session"]
-    direction TB
-    Closure["catalog closure of the target"]
-    Filter{"kind listed in<br/>Editor.kinds?"}
-    DepLease["lease<br/>record + room + document + ready"]
-    Skipped["not leased"]
-    Closure --> Filter
-    Filter -->|"yes"| DepLease
-    Filter -->|"no"| Skipped
-  end
-
-  Session --> TargetKind
-  Session --> Closure
+    Session["EditorSession"] --> Target["target"]
+    Session --> Closure["catalog closure"]
+    Target -->|"kind registered"| Doc["session document"]
+    Target -->|"no kind"| Room["room only"]
+    Closure -->|"kind in Editor.kinds"| Lease["dependency lease"]
 ```
 
-The session builds the target document when the editor registered a document
-kind for `accepts`, and leaves the target room-only otherwise, for editors that
-sync it themselves. It builds dependency documents from the same
-`AssetDocumentKind` objects in `kinds`, and joins their rooms itself. `AssetLeases` checks the catalog record
-exists and has the requested kind before opening a room. A dependency is used
-only when its reference kind matches its current record kind and the editor
-registered a document kind for it.
-
-The session exposes `target`, `catalog`, `assets`, `identity`, `archive`, and
-`workspace` (`null` for the default server connection). Editors can read the
-current dependencies with `dependencies()` or `dependency(assetId)`. These are
-frozen views without `release()`: the session owns those leases. A panel that
-needs a longer lifetime opens its own lease through `session.assets`.
+- A room-only target is joined and synced by the editor itself.
+- A dependency is leased only when its reference kind matches its record kind.
+- `dependencies()` and `dependency(id)` return frozen views without `release()`.
+- A panel that needs a longer lifetime opens its own lease through `session.assets`.
 
 ## Following the catalog
 
 ```mermaid
-sequenceDiagram
-  participant C as Catalog
-  participant S as EditorSession
-  participant A as AssetLeases
-  participant E as Editor
-
-  Note over C: a peer adds a dependency edge
-  C->>S: "dependencies"
-  S->>A: open(kind, assetId)
-  S-->>E: "dependency-added" (lease)
-  E->>E: await lease.ready
-
-  Note over C: the edge is removed, or the record deleted
-  C->>S: "dependencies" or "change"
-  S->>A: lease.release()
-  S-->>E: "dependency-removed" ({ id, kind })
+flowchart TB
+    Change["catalog change"] --> Diff["diff wanted leases"]
+    Diff --> Open["open new leases"]
+    Open --> Release["release removed ones"]
+    Release --> Events["dependency-removed, dependency-added"]
 ```
 
-Only the boot waits for the readiness promises in its initial dependency
-snapshot. A lease announced by `dependency-added` may still be syncing. After
-awaiting it, check that `session.dependency(id)` is still that view; an edge
-could have been removed or replaced meanwhile. On each catalog change the
-session acquires newly wanted leases, releases removed ones, updates its map,
-then emits removal and addition events. If an acquisition throws, it releases
-the leases opened in that pass and keeps the previous dependency set.
+- Only the boot waits for dependency documents. A lease from `dependency-added` may still be syncing.
+- After awaiting it, check `session.dependency(id)` still returns that view.
+- If an open throws, the pass is rolled back and the previous set stays.
 
 ## Lease lifecycle
 
 ```mermaid
 stateDiagram-v2
-  direction TB
-  [*] --> Open: first open() or openRoom()
-  Open --> Open: another holder opens, holders + 1
-  Open --> Open: release(), holders - 1
-  Open --> Closed: last release()
-  Open --> Closed: AssetLeases.dispose()
-  Closed --> [*]
-
-  note right of Open
-    one room and at most one document,
-    shared by every holder
-  end note
-  note right of Closed
-    document disposed, room left
-  end note
+    direction TB
+    [*] --> Open: first open() or openRoom()
+    Open --> Open: holders + 1 or - 1
+    Open --> Closed: last release() or dispose()
+    Closed --> [*]
 ```
 
-A panel that opens its own lease on a dependency keeps the document alive after
-the session drops the edge. The entry remembers how it was first opened:
+- Every holder shares one room and at most one document.
+- `open(kind)` joins on first open; `openRoom` does not join.
+- Opening with another document kind, or with a kind after `openRoom`, throws `AssetDocumentConflictError`.
+- Kinds compare by identity: reuse the objects from `Editor.kinds`.
+- `release()` is idempotent per holder. `AssetLeases.dispose()` closes everything.
 
-| First opened with | Then `openRoom` | Then `open(sameKind)` | Then `open(otherKind)` |
-|---|---|---|---|
-| `open(kind)` | shares | shares | `AssetDocumentConflictError` |
-| `openRoom` | shares | `AssetDocumentConflictError` | `AssetDocumentConflictError` |
-
-The document kind comparison is by object identity. Reuse the same kind object in
-the editor's `kinds` and in later `assets.open` calls. A room-only lease does
-not join the room; a document lease creates its document and joins on first
-open.
-`release()` is idempotent for each holder, and `AssetLeases.dispose()` closes
-all entries, including leases still held by panels.
-
-## Archives and workspace capability
+## Switching target or tag
 
 ```mermaid
 flowchart TB
-  Editor -->|"export, plan, import"| Archive["session.archive"]
-  Archive --> Catalog["CatalogClient archive commands"]
-  Catalog <--> Server["asset server catalog room"]
-  Workspace["session.workspace"] -->|"persistent?"| Archive
+    Navigate["navigate(target, tag)"] --> Settle["settle pending changes"]
+    Settle --> Next["open next session"]
+    Next --> Remount["dispose handle, mount"]
+    Remount --> Drop["dispose old session"]
 ```
 
-`session.archive` sends archive operations through the catalog connection for
-both online and offline sessions. `export(assetId?)` returns a ZIP `Blob` for
-one asset and its referenced assets, or for the whole catalog when no ID is
-given. `plan(file)` reports import conflicts without writing. `import(file, {
-onConflict })` performs the import and returns a report. A memory-backed
-workspace sets `archive.canImport` to `false`; `import` then throws
-`ArchiveImportDisabledError`. Default server sessions and persistent offline
-workspaces allow import. See the [archive API](./docs/EditorSession.md#archives).
+- The page, runtime, client and catalog stay. Leases both sessions use are shared.
+- The old session is disposed last, so the old scene keeps its documents until replaced.
+- The boot is the first switch, through the same `EditorMount`.
+- One switch at a time; only the latest waiting request runs and writes the URL.
+- A tag view puts only the target on its read-only tag room.
+- A failed remount reloads the page on the requested launch.
 
-`session.workspace` is the optional capability supplied by a custom
-connection. It reports `persistent` and offers `reset()`. For
-`OfflineWorkspace`, reset closes the workspace and deletes its IndexedDB
-database when one exists.
-
-## Failure and teardown
+## Archives and workspace
 
 ```mermaid
 flowchart TB
-  Read["read launch"] -->|"no source answers"| E1["LaunchNotFoundError<br/>nothing to release"]
-  Read --> Connect["connect catalog, lease target"]
-  Connect -->|"catalog or target fails"| E2["catalog disposed<br/>client destroyed"]
-  Connect --> Ready["await dependency documents"]
-  Ready -->|"a document rejects ready"| E3["session disposed"]
-  Ready --> MountStep["Editor.mount(context)"]
-  MountStep -->|"throws"| E3
-  MountStep --> Running["editor running"]
-  Running -->|"handle.dispose()"| Dispose["editor calls session.dispose()"]
-  Dispose --> Released["every lease closed<br/>catalog disposed<br/>client destroyed"]
+    Editor["editor"] --> Archive["session.archive"]
+    Archive --> Catalog["catalog commands"]
+    Workspace["session.workspace"] -->|"persistent?"| Archive
 ```
 
-After a successful `mount` the session belongs to the editor: the host never
-disposes it again. The editor handle's `dispose()` must dispose the session.
-Session disposal removes catalog listeners, closes all leases, disposes the
-catalog client, and destroys the network client. For an offline connection,
-destroying that client also starts workspace closure.
-
-## Runtime keyboard
-
-```mermaid
-flowchart TB
-  Key["key event"] --> Guard{"dialog or popover open?<br/>inputLayers guard"}
-  Guard -->|"yes"| Ui["the open layer keeps the key"]
-  Guard -->|"no"| Hover{"pointer over a<br/>2D canvas panel?"}
-  Hover -->|"yes"| Panel["keyboard suspended<br/>panel shortcuts only"]
-  Hover -->|"no"| Scene["runtime keyboard<br/>scene shortcuts"]
-```
-
-`EditorRuntime.create` wraps `Runtime.create` and installs the input-layer
-guard. `load` starts a scene without a loading screen and can set `maxFps`.
-The hover branch exists only after the editor calls `suspendKeyboardOnHover`.
-Overlapping hover bindings keep the runtime keyboard suspended until the last
-one releases it. `PeerFrustums` is a separate actor component for peer camera
-poses, labels, and frustum display; editors add it to their scenes as needed.
+- `export`, `plan` and `import` go through the catalog, online or offline.
+- A memory workspace cannot import: `archive.canImport` is `false`.
+- `session.workspace` is `null` on the default server connection.
+- API: [archives](./docs/session/Archives.md).
 
 ## Offline
 
 ```mermaid
 flowchart TB
-  Editor["bootStandalone<br/>?offline or no server"] -->|"dynamic import"| Offline["OfflineWorkspace.open"]
-
-  subgraph Page["Same page"]
-    direction TB
-    Offline --> Source["MemoryAssetSource or<br/>IndexedDbAssetSource"]
-    Offline --> Events["memory event store"]
-    Source --> Backend["asset back-end"]
-    Events --> Backend
-    Backend --> Server["network Server<br/>catalog room, asset rooms"]
-    Server <-->|"LoopbackTransport"| Client["network Client"]
-  end
-
-  Client -->|"connect()"| Mount["mountStandalone<br/>EditorSession.connect"]
-  Mount --> MountFn["Editor.mount(context)"]
+    Boot["bootStandalone"] -->|"?offline or no server"| Open["open workspace"]
+    Open --> Owner["owner tab: OfflineWorkspace"]
+    Open --> Remote["other tab: RemoteWorkspace"]
+    Owner --> Connect["connect()"]
+    Remote --> Connect
+    Connect --> Mount["same mount path"]
 ```
 
-`OfflineWorkspace.open` starts an asset back-end and network server in the
-page. It uses a loopback client and a guest identity, so the same catalog,
-session, leases, and editor mounting path work without the remote server.
-The offline code is reached through the separate `./offline` entry point so
-an online entry point can load it only when needed. `bootStandalone` imports
-it the same way, and asks the editor for its handlers and seed only in the
-tab that owns the workspace.
+- The workspace runs the asset back-end in the page, so session and leases work unchanged.
+- `./offline` is a separate entry, loaded only when needed.
+- With IndexedDB, one tab holds the lock; other tabs reach it over a BroadcastChannel.
+- Only the owner tab loads the back-end and the editor's handlers and seed.
+- Without Web Locks the shared opener falls back to memory storage.
+- Storage, seeds and reset: [bootStandalone](./docs/editor/bootStandalone.md#offline-workspace).
 
-Storage defaults to memory. With `storage: "indexeddb"`, the asset source
-persists documents and IDs under `jolly-workspace:<name>` (`default` if no
-name is supplied). The event store remains in memory. On reopening, the
-back-end reconciles from stored files; the workspace clears its projection
-checkpoint before doing so. Seeds are applied only when the source is empty.
-Persistent storage uses delayed snapshots and flushes on page visibility
-changes and page hide. Closing flushes and stops the back-end and server.
+## Failure and teardown
 
-An IndexedDB workspace holds a Web Lock for its database name when the browser
-supports the Locks API. Direct `OfflineWorkspace.open` falls back to memory
-when another tab owns the database. `openSharedTabWorkspace` instead connects
-the second tab to the owner over BroadcastChannel with the network package's
-`ChannelTransport`, forwarding the existing network room protocol. Only owner
-discovery and connect messages use the shared `jolly-workspace-channel:<name>`;
-each socket then talks on its own `jolly-workspace-channel:<name>:<socket>`, so
-a tab never receives the traffic of another tab's sockets. It checks
-the lock before importing the back-end, so a second tab loads neither the
-back-end code nor the editor's project. The owner
-alone writes IndexedDB. If Web Locks are unavailable, the shared opener uses
-memory storage. A memory workspace can export and plan an archive, but cannot
-import one. Disposing a session destroys its client; the owner stays open while
-other tabs use it.
+```mermaid
+flowchart TB
+    Launch["no launch"] --> Nothing["nothing to release"]
+    Connect["catalog or target fails"] --> Client["connection disposed"]
+    Mount["sync or mount fails"] --> All["session and connection disposed"]
+    Leave["pagehide, persisted"] --> Everything["handle, session, connection, runtime"]
+```
+
+- Session disposal releases its leases.
+- Connection disposal closes remaining leases, the catalog and the network client.
+- A page restored from the back-forward cache reloads.
+
+## Runtime keyboard
+
+```mermaid
+flowchart TB
+    Key["key event"] --> Layer{"dialog or popover?"}
+    Layer -->|"yes"| Ui["layer keeps it"]
+    Layer -->|"no"| Hover{"over a 2D panel?"}
+    Hover -->|"yes"| Panel["panel shortcuts"]
+    Hover -->|"no"| Scene["scene shortcuts"]
+```
+
+- `EditorRuntime.create` installs the input-layer guard.
+- The hover branch exists only after `suspendKeyboardOnHover`; overlapping bindings release last-out.
+- `PeerFrustums` is an actor component editors add for peer cameras.
+
+API: [mountStandalone](./docs/editor/mountStandalone.md),
+[bootStandalone](./docs/editor/bootStandalone.md),
+[EditorLaunch](./docs/launch/EditorLaunch.md),
+[EditorSession](./docs/session/EditorSession.md),
+[EditorToolbar](./docs/session/EditorToolbar.md),
+[AssetLeases](./docs/lease/AssetLeases.md),
+[EditorRuntime](./docs/runtime/EditorRuntime.md),
+[QueryParams](./docs/params/QueryParams.md).

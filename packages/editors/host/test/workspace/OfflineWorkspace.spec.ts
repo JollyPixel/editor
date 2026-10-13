@@ -106,7 +106,7 @@ describe("OfflineWorkspace", () => {
     const workspace = await openWorkspace();
     const contexts: EditorContext[] = [];
 
-    const handle = await mountStandalone({
+    const editor = await mountStandalone({
       accepts: BINARY_KIND,
       identity: { title: "never prompted" },
       kinds: [],
@@ -122,7 +122,7 @@ describe("OfflineWorkspace", () => {
     assert.equal(session.target.record.source, "notes/readme.bin");
     assert.equal(session.identity.username, "Guest");
 
-    handle.dispose();
+    editor.dispose();
     await workspace.close();
   });
 
@@ -130,7 +130,7 @@ describe("OfflineWorkspace", () => {
     const workspace = await openWorkspace();
     const contexts: EditorContext[] = [];
 
-    const handle = await mountStandalone({
+    const editor = await mountStandalone({
       accepts: BINARY_KIND,
       identity: { title: "never prompted" },
       kinds: [],
@@ -153,7 +153,7 @@ describe("OfflineWorkspace", () => {
       "notes/second.bin"
     );
 
-    handle.dispose();
+    editor.dispose();
     await workspace.close();
   });
 

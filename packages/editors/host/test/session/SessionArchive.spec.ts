@@ -12,7 +12,6 @@ import {
   type ImportReport
 } from "@jolly-pixel/asset-server/client";
 import { BINARY_KIND } from "@jolly-pixel/asset-server";
-import { AssetId } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import {
@@ -20,8 +19,7 @@ import {
   type ArchiveCatalog
 } from "#src/session/SessionArchive.ts";
 import { ArchiveImportDisabledError } from "#src/session/errors/ArchiveImportDisabledError.ts";
-import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
-import { EditorSession } from "#src/session/EditorSession.ts";
+import { SessionConnection } from "#src/session/SessionConnection.ts";
 import { OfflineWorkspace } from "#src/workspace/offline/OfflineWorkspace.ts";
 
 // CONSTANTS
@@ -108,8 +106,8 @@ describe("CatalogSessionArchive", () => {
   });
 });
 
-describe("EditorSession archive port", () => {
-  test("a memory-backed offline session exports but cannot import", async() => {
+describe("SessionConnection archive port", () => {
+  test("a memory-backed offline connection exports but cannot import", async() => {
     const workspace = await OfflineWorkspace.open({
       handlers: [],
       seed: {
@@ -120,23 +118,18 @@ describe("EditorSession archive port", () => {
         }
       }
     });
-    const session = await EditorSession.connect({
-      ...workspace.connect(),
-      launch: new EditorLaunch(new AssetId("readme")),
-      accepts: BINARY_KIND,
-      kinds: []
-    });
+    const connection = await SessionConnection.connect(workspace.connect());
 
-    assert.strictEqual(session.workspace, workspace);
-    assert.strictEqual(session.archive.canImport, false);
+    assert.strictEqual(connection.workspace, workspace);
+    assert.strictEqual(connection.archive.canImport, false);
 
-    const blob = await session.archive.export("readme");
-    const plan = await session.archive.plan(blob);
+    const blob = await connection.archive.export("readme");
+    const plan = await connection.archive.plan(blob);
     assert.deepEqual(plan.live, [
       { id: "readme", kind: BINARY_KIND, path: "notes/readme.bin" }
     ]);
 
-    session.dispose();
+    connection.dispose();
     await workspace.close();
   });
 });

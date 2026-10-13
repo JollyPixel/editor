@@ -10,6 +10,6 @@ export function editorHandle(
     ready,
     session,
     runtime: null,
-    dispose: () => session.dispose()
+    dispose: () => undefined
   };
 }

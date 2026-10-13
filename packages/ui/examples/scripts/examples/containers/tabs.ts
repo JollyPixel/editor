@@ -2,7 +2,10 @@
 import "../../../../src/containers/tabs/Tab.ts";
 import "../../../../src/containers/tabs/Tabs.ts";
 import "../../../../src/controls/Button.ts";
-import type { Tab } from "../../../../src/containers/tabs/Tab.ts";
+import type {
+  Tab,
+  TabStatus
+} from "../../../../src/containers/tabs/Tab.ts";
 import type { Tabs } from "../../../../src/containers/tabs/Tabs.ts";
 import type {
   GalleryExample,
@@ -18,6 +21,7 @@ type TabsOptionKey =
   | "addButton"
   | "preselected"
   | "modified"
+  | "status"
   | "reorderable";
 
 interface SampleTab {
@@ -29,6 +33,8 @@ interface SampleTab {
 // CONSTANTS
 const kPreselectedTab = "stone";
 const kModifiedTab = "water";
+const kBusyTab = "grass";
+const kFailedTab = "stone";
 const kSampleTabs: SampleTab[] = [
   { value: "grass", badge: "12" },
   { value: "stone", badge: "3" },
@@ -47,6 +53,16 @@ function buildTab(
   tab.textContent = `${sample.value} panel`;
 
   return tab;
+}
+
+function statusOf(
+  value: string
+): TabStatus {
+  if (value === kBusyTab) {
+    return "busy";
+  }
+
+  return value === kFailedTab ? "failed" : "idle";
 }
 
 function buildAddButton(
@@ -91,6 +107,9 @@ function buildTabs(
     tab.action = options.action ? "search" : "";
     tab.actionLabel = "Inspect";
     tab.modified = options.modified && tab.value === kModifiedTab;
+    if (options.status) {
+      tab.status = statusOf(tab.value);
+    }
 
     return tab;
   }
@@ -156,6 +175,10 @@ export const TABS_EXAMPLE: GalleryExample<TabsOptionKey> = {
     {
       key: "modified",
       label: "Modified"
+    },
+    {
+      key: "status",
+      label: "Loading status"
     },
     {
       key: "reorderable",

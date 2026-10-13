@@ -25,10 +25,10 @@ describe("RightsGate", () => {
     assert.strictEqual(gate.check("viewer", "voxel-set"), "void");
   });
 
-  test("mirrors the underlying table's configured flag", () => {
-    assert.strictEqual(new RightsTable().scope("any").configured, false);
+  test("gates exactly when the underlying table is configured", () => {
+    assert.strictEqual(new RightsTable().scope("any").gated, false);
     assert.strictEqual(
-      new RightsTable({ viewer: { "any.thing": "read" } }).scope("any").configured,
+      new RightsTable({ viewer: { "any.thing": "read" } }).scope("any").gated,
       true
     );
   });
