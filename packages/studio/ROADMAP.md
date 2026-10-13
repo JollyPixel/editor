@@ -26,6 +26,11 @@ the avatar upload moves there from the `AccountBadge` menu.
 
 ## Long-term goals
 
+### Online hosting
+
+A hosted studio server and browser-hosted sessions over WebRTC. See
+[HOSTING.md](./HOSTING.md).
+
 ### Runtime tab
 
 Another page in another iframe that plays the project. No editor contract
