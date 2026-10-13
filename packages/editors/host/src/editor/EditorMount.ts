@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { BootTrace } from "./BootTrace.ts";
+import type { BootTrace } from "./BootTrace.ts";
 import type { EditorHandle } from "./EditorDefinition.ts";
 import type { HostLogger } from "../debug/readDebugLogger.ts";
 import type { EditorLaunch } from "../launch/EditorLaunch.ts";
@@ -54,6 +54,7 @@ export class EditorMount<
   readonly #options: EditorMountOptions<THandle>;
   readonly #following = new AbortController();
   #mounted: MountedEditor<THandle> | null = null;
+  #boot: BootTrace | null = null;
   #latestRequest = 0;
   #switching: Promise<void> = Promise.resolve();
   #disposed = false;
@@ -76,6 +77,7 @@ export class EditorMount<
     launch: EditorLaunch,
     boot: BootTrace
   ): Promise<void> {
+    this.#boot = boot;
     const started = this.#show(launch, boot, "none");
     this.#switching = started.catch(() => undefined);
     this.#options.history.follow((followed) => {
@@ -114,11 +116,16 @@ export class EditorMount<
     const request = ++this.#latestRequest;
     const switching = this.#switching.then(() => {
       const current = this.#mounted;
-      if (request !== this.#latestRequest || current === null) {
+      const boot = this.#boot;
+      if (
+        request !== this.#latestRequest ||
+        current === null ||
+        boot === null
+      ) {
         return undefined;
       }
 
-      const trace = new BootTrace(
+      const trace = boot.retrace(
         this.#options.logger.child({ namespace: "host.switch" })
       );
 

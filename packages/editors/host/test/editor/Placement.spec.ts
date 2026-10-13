@@ -1,5 +1,6 @@
 // Import Node.js Dependencies
 import {
+  afterEach,
   describe,
   test
 } from "node:test";
@@ -16,6 +17,7 @@ import {
   ShellChannel,
   isShellCommand
 } from "#src/launch/ShellChannel.ts";
+import { PageState } from "#src/state/PageState.ts";
 import type { SessionWorkspace } from "#src/workspace/SessionWorkspace.ts";
 import { fakeDocumentKind, record } from "../helpers/rooms.ts";
 import {
@@ -23,6 +25,7 @@ import {
   FakeSessionCatalog
 } from "../helpers/session/catalog.ts";
 import { fakeConnection } from "../helpers/session/connection.ts";
+import { resetStandalonePage } from "../helpers/standalone.ts";
 
 // CONSTANTS
 const kShell = new ShellChannel({
@@ -147,5 +150,39 @@ describe("Placement unsaved guard", () => {
     leaving.abort();
     assert.equal(unload(), false);
     connection.dispose();
+  });
+});
+
+describe("Placement state report", () => {
+  afterEach(resetStandalonePage);
+
+  test("reports the current editor state then every change to the shell until left", () => {
+    const posted: unknown[] = [];
+    const shell = new ShellChannel({
+      port: { postMessage: (message) => posted.push(message) },
+      origin: "http://studio.test"
+    });
+    const page = new PageState();
+    const leaving = new AbortController();
+    page.show("booting");
+
+    new Placement(new EditorLaunch(new AssetId("map"), shell))
+      .reportState(page, leaving.signal);
+    page.show("ready");
+    page.show("switching");
+    page.show("failed");
+    leaving.abort();
+    page.show("ready");
+
+    assert.deepEqual(
+      posted.filter((message) => isShellCommand(message)),
+      (["booting", "ready", "switching", "failed"] as const).map((state) => {
+        return {
+          type: SHELL_MESSAGE_TYPE,
+          command: "editor-state",
+          state
+        };
+      })
+    );
   });
 });

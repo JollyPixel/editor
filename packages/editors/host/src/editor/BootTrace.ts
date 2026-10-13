@@ -1,20 +1,26 @@
 // Import Internal Dependencies
 import type { HostLogger } from "../debug/readDebugLogger.ts";
-
-// CONSTANTS
-export const EDITOR_STATE_ATTRIBUTE = "data-editor-state";
-
-export type EditorState = "booting" | "switching" | "ready" | "failed";
+import type { EditorState } from "../state/EditorState.ts";
+import type { PageState } from "../state/PageState.ts";
 
 export class BootTrace {
   readonly logger: HostLogger;
 
+  #page: PageState;
   #step: string | null = null;
 
   constructor(
-    logger: HostLogger
+    logger: HostLogger,
+    page: PageState
   ) {
     this.logger = logger;
+    this.#page = page;
+  }
+
+  retrace(
+    logger: HostLogger
+  ): BootTrace {
+    return new BootTrace(logger, this.#page);
   }
 
   async step<T>(
@@ -31,7 +37,7 @@ export class BootTrace {
   state(
     state: EditorState
   ): void {
-    document.documentElement.setAttribute(EDITOR_STATE_ATTRIBUTE, state);
+    this.#page.show(state);
     this.logger.debug(`state ${state}`);
   }
 

@@ -238,6 +238,25 @@ describe("StudioSession", () => {
     assert.equal(unload(), false);
   });
 
+  test("follows the editor state a frame reports on its tab", async() => {
+    const studio = session(new FakeCatalog([MAP_RECORD]));
+    await studio.openAsset("map-1");
+    const item = [...document.querySelectorAll("jolly-tab")].find(
+      (tab) => tab.value === "map-1"
+    );
+    const statuses = (["ready", "switching", "failed"] as const).map((state) => {
+      postFromFrame({
+        type: SHELL_MESSAGE_TYPE,
+        command: "editor-state",
+        state
+      });
+
+      return item?.status;
+    });
+
+    assert.deepEqual(statuses, ["idle", "busy", "failed"]);
+  });
+
   test("dispose stops following the catalog", () => {
     const catalog = new FakeCatalog([MAP_RECORD]);
     const studio = session(catalog);

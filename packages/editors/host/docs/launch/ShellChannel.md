@@ -14,6 +14,7 @@ none, and an editor hides what only a shell can do.
 { type: "jolly-shell", command: "toggle-console" }
 { type: "jolly-shell", command: "session-refused" }
 { type: "jolly-shell", command: "unsaved", unsaved: boolean }
+{ type: "jolly-shell", command: "editor-state", state: EditorState }
 
 // shell → frame
 {
@@ -46,6 +47,7 @@ class ShellChannel {
   openAsset(id: AssetId | string): void;
   toggleConsole(): void;
   reportUnsaved(unsaved: boolean): void;
+  reportState(state: EditorState): void;
   renewWhenRefused(client: RenewableClient): void;
   onAppearance(listener: (appearance: Appearance) => void, signal: AbortSignal): void;
 }
@@ -64,6 +66,13 @@ and a presence color.
 
 `mountStandalone` calls it each time the
 [unsaved state](../lease/AssetLeases.md#unsaved-changes) of the session flips.
+
+### reportState(state)
+
+`mountStandalone` calls it with the current
+[page state](../editor/mountStandalone.md#page-lifecycle) once the launch is
+read, then on every change. The studio shows a spinner on the tab while the
+state is `booting` or `switching`, and a warning once it is `failed`.
 
 ### renewWhenRefused(client)
 

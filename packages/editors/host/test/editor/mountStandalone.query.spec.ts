@@ -74,7 +74,7 @@ describe("mountStandalone page query", () => {
     await workspace.close();
   });
 
-  test("an early session reports unsaved changes to the shell that launched the page", async() => {
+  test("an early session reports its boot and unsaved changes to its shell", async() => {
     const workspace = await openWorkspace();
     window.history.replaceState(null, "", `/?target=${ASSET_ID}`);
     const posted: unknown[] = [];
@@ -96,6 +96,16 @@ describe("mountStandalone page query", () => {
     editor.handle.session.assets.emit("unsaved", true);
 
     assert.deepEqual(posted.filter(isShellCommand), [
+      {
+        type: SHELL_MESSAGE_TYPE,
+        command: "editor-state",
+        state: "booting"
+      },
+      {
+        type: SHELL_MESSAGE_TYPE,
+        command: "editor-state",
+        state: "ready"
+      },
       {
         type: SHELL_MESSAGE_TYPE,
         command: "unsaved",

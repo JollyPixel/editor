@@ -210,7 +210,7 @@ Editor state that `mount` creates, such as the brush, starts over.
 `mountStandalone` sets `data-editor-state` (`EDITOR_STATE_ATTRIBUTE`) on
 `document.documentElement`, in every build:
 
-- `booting` until the launch is read.
+- `booting` until the first editor is ready.
 - `ready` once `handle.ready` resolves.
 - `switching` while a switch runs.
 - `failed` when a boot step throws, or a switch fails after the old editor is
@@ -221,6 +221,12 @@ await page.waitForFunction(
   () => document.documentElement.dataset.editorState === "ready"
 );
 ```
+
+While `booting` or `switching` lasts more than 200 ms, a thin progress bar
+runs along the top of the page. During `switching` the page also ignores
+pointer input and shows a `progress` cursor, so the old editor cannot be
+edited while it is being replaced. Inside a shell, every state is also
+[reported to the shell](../launch/ShellChannel.md#reportstatestate).
 
 While [`session.assets`](../lease/AssetLeases.md#unsaved-changes) has unsaved
 changes, the page reports them to the shell, or cancels `beforeunload`

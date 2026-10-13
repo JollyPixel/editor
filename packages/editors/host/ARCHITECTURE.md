@@ -19,6 +19,7 @@ flowchart TB
 - `session/`: the connection, the session, toolbar sources and archives.
 - `lease/`: one shared room, and at most one document, per asset.
 - `editor/`: `mountStandalone`, `bootStandalone`, `EditorMount`, `Placement`.
+- `state/`: the page state (`data-editor-state`) and its loading bar.
 - `runtime/`: the 3D runtime wrapper and `PeerFrustums`.
 - `workspace/`: offline and shared-tab connections, behind the `./offline` entry.
 
@@ -82,6 +83,7 @@ flowchart TB
 - Only a launch answered by the parent carries a `ShellChannel` (`context.shell`).
 - The page mounts no console of its own and forwards Ctrl+K as `toggle-console`.
 - It posts `unsaved` when its documents gain or lose unacknowledged changes.
+- It posts `editor-state` on every page state change (`PageState`).
 - It posts `session-refused` and reconnects after `jolly-session-renewed`.
 - Messages and ports: [ShellChannel](./docs/launch/ShellChannel.md).
 

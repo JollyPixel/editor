@@ -25,6 +25,7 @@ import {
 } from "../launch/index.ts";
 import type { EditorRuntime } from "../runtime/EditorRuntime.ts";
 import { rememberQueryUsername } from "../session/rememberQueryUsername.ts";
+import { PageState } from "../state/PageState.ts";
 
 // CONSTANTS
 export const DEBUG_HANDLE = "jollyEditor";
@@ -45,6 +46,7 @@ export class StandaloneEditor<
   readonly #logger: HostLogger;
   readonly #mountDefinition: (context: EditorContext) => Promise<THandle>;
   readonly #leaving = new AbortController();
+  readonly #page = new PageState();
   #runtime: Promise<EditorRuntime> | null = null;
   #sessions: SessionOpener | null = null;
   #console: PageConsole | null = null;
@@ -88,7 +90,8 @@ export class StandaloneEditor<
   ): Promise<StandaloneMount<THandle>> {
     const logger = this.#logger;
     const boot = new BootTrace(
-      logger.child({ namespace: "host.boot" })
+      logger.child({ namespace: "host.boot" }),
+      this.#page
     );
 
     boot.state("booting");
@@ -113,6 +116,7 @@ export class StandaloneEditor<
         () => this.#readLaunch(options, boot, queried)
       );
       const placement = new Placement(launch);
+      placement.reportState(this.#page, this.#leaving.signal);
       const pageConsole = placement.openConsole();
       editorConsole = pageConsole;
       editorMount = new EditorMount({
@@ -166,6 +170,7 @@ export class StandaloneEditor<
     this.#sessions = null;
     this.#console?.dispose();
     this.#console = null;
+    this.#page.dispose();
 
     const runtime = this.#runtime;
     this.#runtime = null;

@@ -2,7 +2,7 @@
 import { BINARY_KIND } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
-import { EDITOR_STATE_ATTRIBUTE } from "#src/editor/BootTrace.ts";
+import { EDITOR_STATE_ATTRIBUTE } from "#src/state/EditorState.ts";
 import type {
   EditorContext,
   EditorHandle
@@ -88,7 +88,9 @@ export function resetStandalonePage(): void {
   Reflect.deleteProperty(globalThis, "hostTestHandle");
   sessionStorage.clear();
   window.history.replaceState(null, "", "/");
-  for (const element of document.querySelectorAll("jolly-console")) {
+  for (const element of document.querySelectorAll(
+    "jolly-console, jolly-editor-loading-bar"
+  )) {
     element.remove();
   }
 }

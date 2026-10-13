@@ -244,12 +244,27 @@ export const tabsStyles = css`
     background: currentcolor;
   }
 
-  .item[data-modified]:not(:hover) .close {
+  .busy {
+    --jolly-spinner-size: var(--jolly-tab-status-size, 10px);
+    --jolly-spinner-thickness: 1.5px;
+
+    flex: 0 0 auto;
+  }
+
+  .close .failed,
+  .failed {
+    width: var(--jolly-tab-status-size, 10px);
+    height: var(--jolly-tab-status-size, 10px);
+    flex: 0 0 auto;
+    color: var(--jolly-ink-danger, ${kFallback.inkDanger});
+  }
+
+  .item[data-marked]:not(:hover) .close {
     opacity: 1;
   }
 
-  .item:not(:hover) .close .modified + jolly-icon,
-  .item:hover .close .modified {
+  .item:not(:hover) .close .marker + jolly-icon,
+  .item:hover .close .marker {
     display: none;
   }
 

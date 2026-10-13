@@ -15,7 +15,10 @@ import { repeat } from "lit/directives/repeat.js";
 
 // Import Internal Dependencies
 import { emitContainerEvent } from "../events.ts";
-import type { Tab } from "./Tab.ts";
+import type {
+  Tab,
+  TabStatus
+} from "./Tab.ts";
 import { tabsStyles } from "./Tabs.styles.ts";
 import {
   tabDropTarget,
@@ -34,12 +37,32 @@ import {
   type PointerDragSessionHandle
 } from "../../interaction/pointer/PointerDragSession.ts";
 import { RovingFocus } from "../../interaction/focus/RovingFocus.ts";
+import "../../feedback/Spinner.ts";
 import "../../icon/Icon.ts";
 
 // CONSTANTS
 let kTabsId = 0;
 const kModifiedDescription = "Unsaved changes";
+const kModifiedMarker = html`<span class="marker modified" part="modified" aria-hidden="true"></span>`;
+const kStatusIndicators: Record<TabStatus, TabStatusIndicator | null> = {
+  idle: null,
+  busy: {
+    marker: html`<jolly-spinner class="marker busy" part="busy" aria-hidden="true"></jolly-spinner>`,
+    description: "Loading"
+  },
+  failed: {
+    marker: html`
+      <jolly-icon class="marker failed" part="failed" name="warning" aria-hidden="true"></jolly-icon>
+    `,
+    description: "Failed to load"
+  }
+};
 const kDragThreshold = 4;
+
+interface TabStatusIndicator {
+  marker: TemplateResult;
+  description: string;
+}
 
 export type TabsOrientation = "horizontal" | "vertical";
 
@@ -129,15 +152,13 @@ export class Tabs extends LitElement {
     const text = tab.iconOnly ?
       nothing :
       html`<span class="text">${tab.label}</span>`;
-    const modified = tab.modified ?
-      html`<span class="modified" part="modified" aria-hidden="true"></span>` :
-      nothing;
+    const marker = tabMarker(tab);
 
     return html`
       <div
         class="item"
         part=${tabParts(selected, tab === this._dragging)}
-        ?data-modified=${tab.modified}
+        ?data-marked=${marker !== nothing}
         ?data-closable=${tab.closable}
         ?data-action=${tab.action !== ""}
         ?data-disabled=${tab.disabled}
@@ -152,7 +173,8 @@ export class Tabs extends LitElement {
           aria-controls=${this.#panelId(index)}
           aria-selected=${String(selected)}
           aria-label=${tab.iconOnly ? tab.label : nothing}
-          aria-description=${tab.modified ? kModifiedDescription : nothing}
+          aria-description=${tabDescription(tab)}
+          aria-busy=${tab.status === "busy" ? "true" : nothing}
           tabindex=${selected ? "0" : "-1"}
           ?disabled=${tab.disabled}
           title=${tab.tooltip || (tab.iconOnly ? tab.label : nothing)}
@@ -164,7 +186,7 @@ export class Tabs extends LitElement {
         >${icon}${text}${tab.badge === "" ?
           nothing :
           html`<span class="badge" part="badge">${tab.badge}</span>`
-        }${tab.closable ? nothing : modified}</button>
+        }${tab.closable ? nothing : marker}</button>
         ${tab.action === "" ? nothing : html`
           <button
             class="action"
@@ -187,7 +209,7 @@ export class Tabs extends LitElement {
             ?disabled=${tab.disabled}
             data-index=${index}
             @click=${this.#onCloseClick}
-          >${modified}<jolly-icon name="close" aria-hidden="true"></jolly-icon></button>
+          >${marker}<jolly-icon name="close" aria-hidden="true"></jolly-icon></button>
         ` : nothing}
       </div>
     `;
@@ -514,6 +536,24 @@ function tabParts(
   }
 
   return parts.join(" ");
+}
+
+function tabMarker(
+  tab: Tab
+): TemplateResult | typeof nothing {
+  return kStatusIndicators[tab.status]?.marker ??
+    (tab.modified ? kModifiedMarker : nothing);
+}
+
+function tabDescription(
+  tab: Tab
+): string | typeof nothing {
+  const descriptions = [
+    kStatusIndicators[tab.status]?.description,
+    tab.modified ? kModifiedDescription : undefined
+  ].filter((description) => description !== undefined);
+
+  return descriptions.length === 0 ? nothing : descriptions.join(", ");
 }
 
 declare global {

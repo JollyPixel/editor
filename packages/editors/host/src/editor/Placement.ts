@@ -23,6 +23,7 @@ import {
   type EditorTargetsCatalog
 } from "../session/EditorTargets.ts";
 import { EditorToolbarSources } from "../session/EditorToolbarSources.ts";
+import type { PageState } from "../state/PageState.ts";
 import type { SessionWorkspace } from "../workspace/SessionWorkspace.ts";
 
 export type UnsavedLeases = Pick<AssetLeases, "unsaved" | "subscribe">;
@@ -53,6 +54,16 @@ export class Placement {
 
   history(): LaunchHistory {
     return new PageHistory(this.shell === null ? "push" : "replace");
+  }
+
+  reportState(
+    page: Pick<PageState, "follow">,
+    signal: AbortSignal
+  ): void {
+    const { shell } = this;
+    if (shell !== null) {
+      page.follow((state) => shell.reportState(state), signal);
+    }
   }
 
   guardUnsaved(

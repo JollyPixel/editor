@@ -21,6 +21,7 @@ import { readDebugLogger } from "#src/debug/readDebugLogger.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
 import type { LaunchHistory } from "#src/launch/LaunchHistory.ts";
 import { EditorToolbarSources } from "#src/session/EditorToolbarSources.ts";
+import { PageState } from "#src/state/PageState.ts";
 import { editorHandle } from "../helpers/editorHandle.ts";
 import { fakeConnection } from "../helpers/session/connection.ts";
 import {
@@ -106,7 +107,7 @@ async function startMount(
   });
   await mount.start(
     new EditorLaunch(new AssetId(kFirst)),
-    new BootTrace(readDebugLogger())
+    new BootTrace(readDebugLogger(), new PageState())
   );
   events.length = 0;
 

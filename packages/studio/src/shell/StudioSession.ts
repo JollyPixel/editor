@@ -207,6 +207,9 @@ export class StudioSession {
       case "unsaved":
         this.tabs.markUnsaved(from, command.unsaved);
         break;
+      case "editor-state":
+        this.tabs.markState(from, command.state);
+        break;
       default: {
         const unhandled: never = command;
         throw new Error(

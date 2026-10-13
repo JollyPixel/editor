@@ -1,5 +1,9 @@
 // Import Third-party Dependencies
-import type { IconName } from "@jolly-pixel/ui";
+import type { EditorState } from "@jolly-pixel/editor.host";
+import type {
+  IconName,
+  TabStatus
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { EditorFrames } from "./EditorFrames.ts";
@@ -11,6 +15,12 @@ const kTabTag = "jolly-tab";
 const kHomeLabel = "Home";
 const kFirstEditorIndex = 1;
 const kHomeIcon: IconName = "home";
+const kTabStatus: Record<EditorState, TabStatus> = {
+  booting: "busy",
+  switching: "busy",
+  ready: "idle",
+  failed: "failed"
+};
 
 export interface EditorTabTitle {
   label: string;
@@ -273,12 +283,14 @@ export class EditorTabs {
   reload(
     id: string
   ): boolean {
-    if (!this.#open.has(id)) {
+    const entry = this.#open.get(id);
+    if (entry === undefined) {
       return false;
     }
 
     this.#frames.remove(id);
     this.markUnsaved(id, false);
+    entry.item.status = "idle";
     if (this.#active === id) {
       this.#show(id);
     }
@@ -296,6 +308,20 @@ export class EditorTabs {
     }
 
     entry.item.modified = unsaved;
+
+    return true;
+  }
+
+  markState(
+    id: string,
+    state: EditorState
+  ): boolean {
+    const entry = this.#open.get(id);
+    if (entry === undefined) {
+      return false;
+    }
+
+    entry.item.status = kTabStatus[state];
 
     return true;
   }
@@ -387,6 +413,8 @@ export class EditorTabs {
     for (const [pageId, page] of this.#pages) {
       page.element.hidden = pageId !== id;
     }
-    this.#frames.show(this.#open.get(id)?.tab ?? null);
+    if (this.#frames.show(this.#open.get(id)?.tab ?? null)) {
+      this.markState(id, "booting");
+    }
   }
 }

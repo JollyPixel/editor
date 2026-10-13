@@ -45,7 +45,7 @@ export * from "./editor/mountStandalone.ts";
 export {
   EDITOR_STATE_ATTRIBUTE,
   type EditorState
-} from "./editor/BootTrace.ts";
+} from "./state/EditorState.ts";
 export { DEBUG_HANDLE } from "./editor/StandaloneEditor.ts";
 export * from "./editor/bootStandalone.ts";
 export * from "./editor/offerOffline.ts";

@@ -23,7 +23,7 @@ import type {
 } from "#src/editor/EditorDefinition.ts";
 import { HOST_PARAMS } from "#src/params/HostParams.ts";
 import { EditorRuntime } from "#src/runtime/EditorRuntime.ts";
-import { EDITOR_STATE_ATTRIBUTE } from "#src/editor/BootTrace.ts";
+import { EDITOR_STATE_ATTRIBUTE } from "#src/state/EditorState.ts";
 import { LaunchNotFoundError } from "#src/launch/errors/LaunchNotFoundError.ts";
 import { LAUNCH_MESSAGE_TYPE } from "#src/launch/ShellChannel.ts";
 import type { LaunchSource } from "#src/launch/sources/LaunchSource.ts";
