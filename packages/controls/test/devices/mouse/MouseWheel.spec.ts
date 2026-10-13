@@ -8,10 +8,14 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { Mouse } from "../../../src/index.ts";
+import type {
+  Mouse,
+  ScrollSource
+} from "../../../src/index.ts";
 import {
   createConnectedMouseFixture,
-  MouseCanvasAdapter
+  MouseCanvasAdapter,
+  type WheelEventData
 } from "./Mouse.fixture.ts";
 
 describe("Controls.Mouse wheel", () => {
@@ -149,5 +153,95 @@ describe("Controls.Mouse wheel", () => {
     mouse.update();
 
     assert.strictEqual(mouse.scrollUp, true);
+  });
+});
+
+describe("Controls.Mouse wheel source", () => {
+  let mouse: Mouse;
+  let canvas: MouseCanvasAdapter;
+
+  beforeEach(() => {
+    ({
+      mouse,
+      canvas
+    } = createConnectedMouseFixture());
+  });
+
+  afterEach(() => {
+    mouse.disconnect();
+  });
+
+  function sourceOf(
+    eventData: WheelEventData
+  ): ScrollSource | null {
+    canvas.dispatchWheelEvent(eventData);
+    mouse.update();
+
+    return mouse.scrollSource;
+  }
+
+  const cases: Array<[string, WheelEventData, ScrollSource]> = [
+    ["a whole notch", { wheelDeltaY: 120 }, "wheel"],
+    ["a line-mode event", { wheelDeltaY: 36, deltaMode: 1 }, "wheel"],
+    ["a partial notch", { wheelDeltaY: 36 }, "touchpad"],
+    ["a horizontal swipe", { wheelDeltaX: -120, deltaX: 100 }, "touchpad"],
+    [
+      "Shift turning the wheel horizontal",
+      { wheelDeltaX: -120, deltaX: 100, shiftKey: true },
+      "wheel"
+    ],
+    ["a pinch", { wheelDeltaY: 12, ctrlKey: true }, "zoom"],
+    ["Ctrl+wheel", { wheelDeltaY: 120, ctrlKey: true }, "zoom"]
+  ];
+  for (const [name, eventData, expected] of cases) {
+    test(`reads ${name} as ${expected}`, () => {
+      assert.strictEqual(sourceOf(eventData), expected);
+    });
+  }
+
+  test("keeps a touchpad gesture through a whole-notch event", () => {
+    sourceOf({ wheelDeltaY: 36, timeStamp: 0 });
+
+    assert.strictEqual(
+      sourceOf({ wheelDeltaY: 120, timeStamp: 16 }),
+      "touchpad"
+    );
+  });
+
+  test("starts a new gesture after a pause", () => {
+    sourceOf({ wheelDeltaY: 36, timeStamp: 0 });
+
+    assert.strictEqual(
+      sourceOf({ wheelDeltaY: 120, timeStamp: 1000 }),
+      "wheel"
+    );
+  });
+
+  test("clears the source once the scroll is consumed", () => {
+    sourceOf({ wheelDeltaY: 36 });
+    mouse.update();
+
+    assert.strictEqual(mouse.scrollSource, null);
+  });
+
+  test("keeps the source for a frame spanning several fixed steps", () => {
+    canvas.dispatchWheelEvent({ wheelDeltaY: 36 });
+    mouse.update();
+    mouse.update();
+    mouse.publish("frame");
+
+    assert.strictEqual(mouse.scrollSource, "touchpad");
+  });
+
+  test("scrollDevice overrides detection but still reports zooms", () => {
+    mouse.scrollDevice = "touchpad";
+    assert.strictEqual(sourceOf({ wheelDeltaY: 120 }), "touchpad");
+
+    mouse.scrollDevice = "wheel";
+    assert.strictEqual(sourceOf({ wheelDeltaY: 36 }), "wheel");
+    assert.strictEqual(
+      sourceOf({ wheelDeltaY: 12, ctrlKey: true }),
+      "zoom"
+    );
   });
 });

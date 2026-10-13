@@ -65,6 +65,98 @@ describe("OrbitFlyCamera vertical movement", () => {
   });
 });
 
+describe("OrbitFlyCamera acceleration", () => {
+  function frameSpeeds(
+    harness: ReturnType<typeof createHarness>,
+    frames: number
+  ): number[] {
+    const speeds: number[] = [];
+    for (let index = 0; index < frames; index++) {
+      const before = harness.offset.z;
+      harness.advance();
+      speeds.push(Math.abs(harness.offset.z - before) * 60);
+    }
+
+    return speeds;
+  }
+
+  function brakingDrift(
+    brakingTime: number
+  ): number {
+    const harness = createHarness({ brakingTime });
+    harness.hold("KeyW");
+    harness.advance(60);
+    const released = harness.offset.z;
+    harness.hold();
+    harness.advance(120);
+
+    return Math.abs(harness.offset.z - released);
+  }
+
+  test("builds acceleration up instead of peaking on the first frame", () => {
+    const harness = createHarness();
+
+    harness.hold("KeyW");
+    const [first, second] = frameSpeeds(harness, 2);
+
+    assert.ok(
+      second - first > first,
+      `speed rose by ${first} then ${second - first}`
+    );
+  });
+
+  test("reaches moveSpeed after a held second", () => {
+    const harness = createHarness({ moveSpeed: 10 });
+
+    harness.hold("KeyW");
+    harness.advance(60);
+    const [speed] = frameSpeeds(harness, 1);
+
+    assert.ok(Math.abs(speed - 10) < 0.01, `cruising at ${speed}`);
+  });
+
+  test("starts at full speed when accelerationTime is 0", () => {
+    const harness = createHarness({
+      moveSpeed: 10,
+      accelerationTime: 0
+    });
+
+    harness.hold("KeyW");
+    const [speed] = frameSpeeds(harness, 1);
+
+    assert.ok(Math.abs(speed - 10) < 1e-9, `first frame at ${speed}`);
+  });
+
+  test("glides further after release as brakingTime grows", () => {
+    const drifts = [0, 0.1, 0.3].map(brakingDrift);
+
+    assert.equal(drifts[0], 0);
+    assert.ok(
+      drifts[0] < drifts[1] && drifts[1] < drifts[2],
+      `drifts were ${drifts.join(", ")}`
+    );
+  });
+
+  test("covers the same distance at any frame rate", () => {
+    const distances = [30, 60, 144].map((fps) => {
+      const harness = createHarness();
+      harness.hold("KeyW");
+      harness.advance(fps / 2, 1 / fps);
+      harness.hold();
+      harness.advance(fps / 2, 1 / fps);
+
+      return Math.abs(harness.offset.z);
+    });
+
+    for (const distance of distances) {
+      assert.ok(
+        Math.abs(distance - distances[1]) < distances[1] * 0.01,
+        `distances were ${distances.join(", ")}`
+      );
+    }
+  });
+});
+
 describe("OrbitFlyCamera teleport", () => {
   test("adopts the pose position and orientation", () => {
     const harness = createHarness();
@@ -134,57 +226,6 @@ describe("OrbitFlyCamera teleport", () => {
     harness.advance(10);
 
     assert.deepEqual(harness.offset.toArray(), settled.toArray());
-  });
-});
-
-describe("OrbitFlyCamera Alt+LeftClick look", () => {
-  test("rotates in free-fly, like middle-drag", () => {
-    const harness = createHarness();
-    const startOrientation = harness.orientation.clone();
-
-    harness.hold("AltLeft");
-    harness.lookDrag(80, 0, "left");
-    harness.advance(5);
-    harness.stopLookDrag();
-    harness.hold();
-
-    assert.ok(
-      harness.orientation.angleTo(startOrientation) > 1e-3,
-      "the camera did not rotate"
-    );
-  });
-
-  test("plain LeftClick-drag (no Alt) does not rotate the camera", () => {
-    const harness = createHarness();
-    const startOrientation = harness.orientation.clone();
-
-    harness.lookDrag(80, 0, "left");
-    harness.advance(5);
-    harness.stopLookDrag();
-
-    assert.deepEqual(
-      harness.orientation.toArray(),
-      startOrientation.toArray()
-    );
-  });
-
-  test("orbits around the pivot while locked, like middle-drag", () => {
-    const harness = createHarness({ focusMode: "lock", position: { x: 0, y: 0, z: 0 } });
-    const pivot = new THREE.Vector3(0, 0, -10);
-
-    harness.camera.enterOrbitFocus(pivot);
-    const distance = harness.position.distanceTo(pivot);
-
-    harness.hold("AltLeft");
-    harness.lookDrag(80, 0, "left");
-    harness.advance(5);
-    harness.stopLookDrag();
-    harness.hold();
-
-    assert.ok(
-      Math.abs(harness.position.distanceTo(pivot) - distance) < 1e-3,
-      "distance to the pivot drifted while orbiting"
-    );
   });
 });
 

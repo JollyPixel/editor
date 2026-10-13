@@ -19,7 +19,17 @@ import {
 } from "../Touchpad.class.ts";
 import { MouseMask } from "./MouseMask.ts";
 import { MotionBuffer } from "./MotionBuffer.ts";
+import {
+  WheelGesture,
+  type ScrollDevice,
+  type ScrollSource
+} from "./WheelGesture.ts";
 import { isApplePlatform } from "../../platform.ts";
+
+export type {
+  ScrollDevice,
+  ScrollSource
+} from "./WheelGesture.ts";
 
 // CONSTANTS
 /**
@@ -143,7 +153,9 @@ export class Mouse extends Emitter<
     x: 0,
     y: 0
   };
-  #scrollSample = new MotionBuffer();
+  #scrollDeltaSource: ScrollSource | null = null;
+  #scrollSample = new MotionBuffer<ScrollSource>();
+  #wheelGesture = new WheelGesture();
 
   #canvasEvent: MouseEvent | null = null;
   #hovering = false;
@@ -274,7 +286,9 @@ export class Mouse extends Emitter<
   reset() {
     this.#scrollDelta.x = 0;
     this.#scrollDelta.y = 0;
+    this.#scrollDeltaSource = null;
     this.#scrollSample.reset();
+    this.#wheelGesture.reset();
     this.#canvasEvent = null;
     this.#setHovering(false);
     this.#downMask = 0;
@@ -312,6 +326,20 @@ export class Mouse extends Emitter<
     out.y = this.#scrollSample.value.y;
 
     return out;
+  }
+
+  get scrollSource(): ScrollSource | null {
+    return this.#scrollSample.value.source;
+  }
+
+  get scrollDevice(): ScrollDevice {
+    return this.#wheelGesture.device;
+  }
+
+  set scrollDevice(
+    device: ScrollDevice
+  ) {
+    this.#wheelGesture.device = device;
   }
 
   isScrolling(): boolean {
@@ -463,9 +491,14 @@ export class Mouse extends Emitter<
       (Number(this.#scrollDelta.y > 0) << MouseEventButton.scrollUp) |
       (Number(this.#scrollDelta.y < 0) << MouseEventButton.scrollDown);
     this.#scroll.sample(scrollBits);
-    this.#scrollSample.push(this.#scrollDelta.x, this.#scrollDelta.y);
+    this.#scrollSample.push(
+      this.#scrollDelta.x,
+      this.#scrollDelta.y,
+      this.#scrollDeltaSource
+    );
     this.#scrollDelta.x = 0;
     this.#scrollDelta.y = 0;
+    this.#scrollDeltaSource = null;
 
     if (this.#wantsPointerLock && this.#wasPointerLocked) {
       this.#delta.push(this.newDelta.x, this.newDelta.y);
@@ -713,6 +746,7 @@ export class Mouse extends Emitter<
 
   #onMouseWheel = (event: WheelEvent) => {
     event.preventDefault();
+    this.#scrollDeltaSource = this.#wheelGesture.classify(event);
     const [deltaX, deltaY] = Mouse.wheelDelta(event);
 
     this.#scrollDelta.x += deltaX;

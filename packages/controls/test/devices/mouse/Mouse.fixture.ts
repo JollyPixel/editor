@@ -29,6 +29,11 @@ export interface WheelEventData {
   wheelDeltaX?: number;
   wheelDeltaY?: number;
   detail?: number;
+  deltaX?: number;
+  deltaMode?: number;
+  ctrlKey?: boolean;
+  shiftKey?: boolean;
+  timeStamp?: number;
 }
 
 export class MouseCanvasAdapter extends CanvasAdapter {
@@ -89,8 +94,23 @@ export class MouseCanvasAdapter extends CanvasAdapter {
   ) {
     const listeners = this.listeners.get("wheel") ?? new Set();
     const event = new kEmulatedBrowserWindow.WheelEvent("wheel", {
+      deltaX: eventData.deltaX ?? 0,
+      deltaMode: eventData.deltaMode ?? 0,
       bubbles: true,
       cancelable: true
+    });
+
+    Object.defineProperty(event, "ctrlKey", {
+      value: eventData.ctrlKey ?? false,
+      writable: false
+    });
+    Object.defineProperty(event, "shiftKey", {
+      value: eventData.shiftKey ?? false,
+      writable: false
+    });
+    Object.defineProperty(event, "timeStamp", {
+      value: eventData.timeStamp ?? 0,
+      writable: false
     });
 
     Object.defineProperty(event, "wheelDelta", {

@@ -216,6 +216,37 @@ current `MouseEvents` declaration types the `wheel` listener argument as
 `MouseEvent`, although browsers deliver a `WheelEvent`; callers passing that
 argument to `wheelDelta()` need to narrow or cast it.
 
+## Wheel source
+
+```ts
+type ScrollSource = "wheel" | "touchpad" | "zoom";
+type ScrollDevice = "auto" | "wheel" | "touchpad";
+
+interface Mouse {
+  readonly scrollSource: ScrollSource | null;
+  scrollDevice: ScrollDevice;
+}
+```
+
+Touchpad swipes and pinches still land in `scroll`. `scrollSource` tells which
+one produced it, and is `null` when nothing scrolled. A two-finger swipe is
+`"touchpad"` and a pinch is `"zoom"`.
+
+Browsers report a pinch as a wheel event with `ctrlKey` set, the same as
+Ctrl+wheel, so both read as `"zoom"`. To tell them apart, check whether the
+keyboard holds Control. Safari sends pinches as gesture events and never
+produces `"zoom"` for them.
+
+With `scrollDevice` set to `"auto"` (the default), a gesture starts as
+`"wheel"` and switches to `"touchpad"` on the first event carrying a partial
+notch, or a horizontal delta without Shift. It stays `"touchpad"` until wheel
+events pause for 200 ms. Line- and page-mode events always read as `"wheel"`.
+
+The detection is a heuristic. Smooth or free-spinning wheels, and accelerated
+wheels on macOS, can read as `"touchpad"`. Setting `scrollDevice` to `"wheel"`
+or `"touchpad"` skips detection; Ctrl-flagged events still read as `"zoom"`.
+`reset()` keeps the setting.
+
 ## Pointer lock and visibility
 
 ```ts

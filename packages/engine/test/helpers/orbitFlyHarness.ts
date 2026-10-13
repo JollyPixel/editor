@@ -31,10 +31,11 @@ export interface CameraHarness {
   keepAlives: Array<() => boolean>;
   invalidations: () => number;
   hold(...codes: string[]): void;
-  advance(frames?: number): void;
+  advance(frames?: number, deltaTime?: number): void;
   lookDrag(deltaX: number, deltaY: number, button?: "middle" | "left"): void;
   stopLookDrag(): void;
   scroll(amount: number): void;
+  swipe(x: number, y: number): void;
   pressOnce(...codes: string[]): void;
 }
 
@@ -54,7 +55,9 @@ export function createHarness(
   let leftDown = false;
   let mouseMoving = false;
   let mouseDelta = { x: 0, y: 0 };
+  let scrollX = 0;
   let scrollY = 0;
+  let scrollSource: "wheel" | "touchpad" = "wheel";
   let justPressed = new Set<string>();
 
   const actorValue = {
@@ -116,10 +119,13 @@ export function createHarness(
             return { x: mouseDelta.x, y: mouseDelta.y };
           },
           scrollTo: <T extends { x: number; y: number; }>(out: T) => {
-            out.x = 0;
+            out.x = scrollX;
             out.y = scrollY;
 
             return out;
+          },
+          get scrollSource() {
+            return scrollX === 0 && scrollY === 0 ? null : scrollSource;
           }
         }
       },
@@ -147,7 +153,8 @@ export function createHarness(
         held.add(code);
       }
     },
-    advance(frames = 1): void {
+    advance(frames = 1, deltaTime = kFrame): void {
+      actorValue.world.time.unscaledDelta = deltaTime;
       for (let index = 0; index < frames; index++) {
         camera.update();
         justPressed.clear();
@@ -170,7 +177,14 @@ export function createHarness(
       mouseDelta = { x: 0, y: 0 };
     },
     scroll(amount: number): void {
+      scrollX = 0;
       scrollY = amount;
+      scrollSource = "wheel";
+    },
+    swipe(x: number, y: number): void {
+      scrollX = x;
+      scrollY = y;
+      scrollSource = "touchpad";
     },
     pressOnce(...codes: string[]): void {
       justPressed = new Set(codes);
