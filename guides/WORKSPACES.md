@@ -20,6 +20,8 @@ frontend applications use different manifests and scripts.
   when present. Extend the package config first, followed by `tsconfig/test.json`
   for tests, `tsconfig/examples.json` for examples, or `tsconfig/check.json` for
   other directories. Include each config in the package's `typecheck` script.
+  The root `pnpm run typecheck` finds configs through that `extends` chain, so
+  a config that does not reach `tsconfig/check.json` is never checked there.
 - Declare every direct dependency in `package.json`. Use the `workspace:`
   protocol for internal packages and follow a comparable workspace when
   choosing the range. Add peer dependencies to `devDependencies` when local

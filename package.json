@@ -16,7 +16,7 @@
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
-    "typecheck": "pnpm -r --if-present run typecheck && tsc --noEmit -p docs/tsconfig.json && tsc --noEmit -p scripts/tsconfig.json"
+    "typecheck": "node scripts/typecheck.ts"
   },
   "packageManager": "pnpm@12.4.2",
   "engines": {
@@ -40,6 +40,7 @@
     "@openally/config.oxlint": "1.0.0",
     "@openally/config.stylelint": "1.0.2",
     "@openally/config.typescript": "1.3.0",
+    "@openally/mutex": "4.0.0",
     "@playwright/test": "1.63.0",
     "@types/node": "26.6.4",
     "@types/three": "^0.186.0",
@@ -52,6 +53,7 @@
     "stylelint": "17.16.0",
     "tstyche": "7.2.5",
     "typescript": "^6.0.3",
+    "typescript7": "npm:typescript@7.0.2",
     "vite": "^8.1.3",
     "vite-plugin-checker": "0.14.5",
     "vite-plugin-glsl": "1.6.1",
