@@ -7,49 +7,25 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { CommandConsole } from "@jolly-pixel/console";
+import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
+import { runtimeConsole } from "#src/console/namespaces/runtime.ts";
+import { RuntimeWidgets } from "#src/runtime/RuntimeWidgets.ts";
 import {
-  runtimeConsole,
-  type RuntimeConsoleContext
-} from "#src/console/namespaces/runtime.ts";
-
-interface Widget {
-  hidden: boolean;
-}
-
-interface FakeRuntime {
-  statsHud: Widget | null;
-  viewHelper: Widget | null;
-  metrics: {
-    panel: Widget | null;
-  };
-}
-
-function createRuntime(
-  overrides: Partial<FakeRuntime> = {}
-): FakeRuntime {
-  return {
-    statsHud: {
-      hidden: false
-    },
-    viewHelper: {
-      hidden: false
-    },
-    metrics: {
-      panel: {
-        hidden: true
-      }
-    },
-    ...overrides
-  };
-}
+  createWidgetHost,
+  type FakeWidgetHost
+} from "../../helpers/runtime/widgetHost.ts";
 
 function registerRuntime(
-  runtime: RuntimeConsoleContext["runtime"]
+  runtime: FakeWidgetHost
 ): CommandConsole {
   const commands = new CommandConsole();
-  runtimeConsole(commands, { runtime });
+  runtimeConsole(commands, {
+    runtime: {
+      widgets: new RuntimeWidgets(runtime, new MemoryStorageAdapter())
+    }
+  });
 
   return commands;
 }
@@ -64,7 +40,7 @@ function lastLine(
 
 describe("runtime console", () => {
   test("stats and viewHelper hide their corner widgets", async() => {
-    const runtime = createRuntime();
+    const runtime = createWidgetHost();
     const commands = registerRuntime(runtime);
 
     await commands.submit("runtime.stats off");
@@ -75,7 +51,7 @@ describe("runtime console", () => {
   });
 
   test("stats and viewHelper are absent without their widget", async() => {
-    const commands = registerRuntime(createRuntime({
+    const commands = registerRuntime(createWidgetHost({
       statsHud: null,
       viewHelper: null
     }));
@@ -88,7 +64,7 @@ describe("runtime console", () => {
   });
 
   test("metrics shows and hides the mounted performance pane", async() => {
-    const runtime = createRuntime();
+    const runtime = createWidgetHost();
     const commands = registerRuntime(runtime);
 
     await commands.submit("runtime.metrics on");
@@ -100,7 +76,7 @@ describe("runtime console", () => {
   });
 
   test("metrics reports an error until a performance pane is mounted", async() => {
-    const runtime = createRuntime({
+    const runtime = createWidgetHost({
       metrics: {
         panel: null
       }

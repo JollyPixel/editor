@@ -18,7 +18,7 @@ import {
   BRUSH_MAX_SIZE,
   BRUSH_MIN_SIZE,
   type BrushStore
-} from "../BrushStore.ts";
+} from "../../../state/index.ts";
 import type { VoxelMapWorkspace } from "../../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../../workspace/WorkspaceElement.ts";
 import { brushControlsStyles } from "./BrushControls.styles.ts";
@@ -66,13 +66,13 @@ export class BrushControls extends WorkspaceElement {
   }
 
   get #brush(): BrushStore {
-    return this.attached.brush;
+    return this.attached.state.brush;
   }
 
   protected override watchWorkspace(
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
-    const { brush } = workspace;
+    const { brush } = workspace.state;
     const refresh = (availability: PaintAvailability): void => {
       this._availability = availability;
       this.disabled = availability.blocked;
@@ -94,7 +94,7 @@ export class BrushControls extends WorkspaceElement {
       return nothing;
     }
 
-    const { brush } = workspace;
+    const { brush } = workspace.state;
     const { keyboardLayout } = workspace.state;
     function shortcut(
       chords: readonly KeyChordString[]

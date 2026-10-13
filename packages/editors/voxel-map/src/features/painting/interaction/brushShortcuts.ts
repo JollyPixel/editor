@@ -6,8 +6,10 @@ import type {
 } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
-import type { SelectionStore } from "../../../state/index.ts";
-import type { BrushStore } from "../BrushStore.ts";
+import type {
+  BrushStore,
+  SelectionStore
+} from "../../../state/index.ts";
 
 export const BRUSH_SHORTCUTS = {
   mode: ["r"],

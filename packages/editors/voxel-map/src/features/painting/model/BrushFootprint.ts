@@ -5,7 +5,7 @@ import type { VoxelCoord } from "@jolly-pixel/voxel.renderer";
 import {
   BRUSH_PATTERNS,
   type BrushPattern
-} from "../BrushStore.ts";
+} from "../../../state/index.ts";
 import {
   CellFace,
   type CellFaceId,

@@ -11,7 +11,7 @@ import {
 // Import Internal Dependencies
 import { AimedHalf } from "./AimedHalf.ts";
 import { BrushFootprint } from "./BrushFootprint.ts";
-import type { BrushPattern } from "../BrushStore.ts";
+import type { BrushPattern } from "../../../state/index.ts";
 
 export type StrokeMode = "place" | "replace" | "remove";
 

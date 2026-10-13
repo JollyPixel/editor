@@ -16,7 +16,7 @@ import {
 const kKey = "voxel-map:view";
 
 describe("ViewStore", () => {
-  test("starts from the defaults with every effect off but block light and glow", () => {
+  test("starts from the defaults with every effect off but block light, glow and grid", () => {
     const store = new ViewStore();
 
     assert.deepEqual(store.settings, ViewSettings.DEFAULT);
@@ -26,7 +26,10 @@ describe("ViewStore", () => {
       ambientOcclusion: false,
       shadows: false,
       blockLight: true,
-      glow: true
+      glow: true,
+      grid: true,
+      inspector: "off",
+      chunkBounds: false
     });
   });
 
@@ -49,6 +52,8 @@ describe("ViewStore", () => {
     storage.set(kKey, JSON.stringify({
       lighting: "sunset",
       shadows: "yes",
+      inspector: "xray",
+      grid: 0,
       ambientOcclusion: true
     }));
 

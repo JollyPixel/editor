@@ -14,7 +14,7 @@ import {
 // Import Internal Dependencies
 import type { VoxelMapWorkspace } from "../../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../../workspace/WorkspaceElement.ts";
-import type { RotationMode } from "../BrushStore.ts";
+import type { RotationMode } from "../../../state/index.ts";
 
 // CONSTANTS
 const kRotationOptions: JollyOption<RotationMode>[] = [
@@ -49,16 +49,16 @@ export class BrushOrientation extends WorkspaceElement {
   `;
 
   #rotation = new FieldBinding<RotationMode>(this, {
-    read: () => this.attached.brush.rotationMode,
+    read: () => this.attached.state.brush.rotationMode,
     write: (value) => {
-      this.attached.brush.rotationMode = value;
+      this.attached.state.brush.rotationMode = value;
     }
   });
 
   #flipY = new FieldBinding<boolean>(this, {
-    read: () => this.attached.brush.flipY,
+    read: () => this.attached.state.brush.flipY,
     write: (value) => {
-      this.attached.brush.flipY = value;
+      this.attached.state.brush.flipY = value;
     }
   });
 
@@ -66,7 +66,7 @@ export class BrushOrientation extends WorkspaceElement {
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
     return [
-      workspace.brush.subscribe("change", () => this.requestUpdate())
+      workspace.state.brush.subscribe("change", () => this.requestUpdate())
     ];
   }
 

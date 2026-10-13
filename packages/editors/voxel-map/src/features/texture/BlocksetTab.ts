@@ -13,7 +13,10 @@ import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import type { MapDocument } from "../../document/MapDocument.ts";
-import type { BlockSelection } from "../../state/index.ts";
+import type {
+  BlockSelection,
+  UvSyncStore
+} from "../../state/index.ts";
 import type {
   BlockWriter,
   BlocksetBinding
@@ -27,6 +30,7 @@ export interface BlocksetTabOptions {
   binding: BlocksetBinding;
   blocks: BlockWriter;
   block: BlockSelection;
+  uvSync: UvSyncStore;
   mapDocument: MapDocument;
 }
 
@@ -61,7 +65,8 @@ export class BlocksetTab {
       runLocalRestore: (fn) => canvas.document.runLocalRestore(fn),
       block: options.block,
       mapDocument: options.mapDocument,
-      blocks: options.blocks
+      blocks: options.blocks,
+      uvSync: options.uvSync
     });
     this.#access = new RoomAccess(
       binding.opened.room,

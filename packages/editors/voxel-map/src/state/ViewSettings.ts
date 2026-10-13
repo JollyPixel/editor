@@ -1,7 +1,20 @@
+// Import Third-party Dependencies
+import type { VoxelInspectorMode } from "@jolly-pixel/voxel.renderer";
+
+// Import Internal Dependencies
+import { StoredFields } from "./StoredFields.ts";
+
 // CONSTANTS
 const kLightingModes = ["flat", "studio", "daylight", "night"] as const;
 
+export const INSPECTOR_MODES = Object.freeze([
+  "off",
+  "overlay",
+  "wireframe"
+] as const satisfies readonly VoxelInspectorMode[]);
+
 export type LightingMode = typeof kLightingModes[number];
+export type InspectorMode = typeof INSPECTOR_MODES[number];
 
 export interface ViewSettingsJSON {
   lighting: LightingMode;
@@ -10,6 +23,9 @@ export interface ViewSettingsJSON {
   shadows: boolean;
   blockLight: boolean;
   glow: boolean;
+  grid: boolean;
+  inspector: InspectorMode;
+  chunkBounds: boolean;
 }
 
 export class ViewSettings implements ViewSettingsJSON {
@@ -19,7 +35,10 @@ export class ViewSettings implements ViewSettingsJSON {
     ambientOcclusion: false,
     shadows: false,
     blockLight: true,
-    glow: true
+    glow: true,
+    grid: true,
+    inspector: "off",
+    chunkBounds: false
   });
 
   static parse(
@@ -45,6 +64,9 @@ export class ViewSettings implements ViewSettingsJSON {
   readonly shadows: boolean;
   readonly blockLight: boolean;
   readonly glow: boolean;
+  readonly grid: boolean;
+  readonly inspector: InspectorMode;
+  readonly chunkBounds: boolean;
 
   constructor(
     settings: ViewSettingsJSON
@@ -55,6 +77,9 @@ export class ViewSettings implements ViewSettingsJSON {
     this.shadows = settings.shadows;
     this.blockLight = settings.blockLight;
     this.glow = settings.glow;
+    this.grid = settings.grid;
+    this.inspector = settings.inspector;
+    this.chunkBounds = settings.chunkBounds;
 
     Object.freeze(this);
   }
@@ -73,7 +98,10 @@ export class ViewSettings implements ViewSettingsJSON {
       this.ambientOcclusion === other.ambientOcclusion &&
       this.shadows === other.shadows &&
       this.blockLight === other.blockLight &&
-      this.glow === other.glow;
+      this.glow === other.glow &&
+      this.grid === other.grid &&
+      this.inspector === other.inspector &&
+      this.chunkBounds === other.chunkBounds;
   }
 
   toJSON(): ViewSettingsJSON {
@@ -83,37 +111,31 @@ export class ViewSettings implements ViewSettingsJSON {
       ambientOcclusion: this.ambientOcclusion,
       shadows: this.shadows,
       blockLight: this.blockLight,
-      glow: this.glow
+      glow: this.glow,
+      grid: this.grid,
+      inspector: this.inspector,
+      chunkBounds: this.chunkBounds
     };
   }
 
   #merged(
     value: unknown
   ): ViewSettings {
-    const fields: Map<string, unknown> = typeof value === "object" &&
-      value !== null ?
-      new Map(Object.entries(value)) :
-      new Map();
-    const lighting = fields.get("lighting");
+    const fields = new StoredFields(value);
 
     return new ViewSettings({
-      lighting: kLightingModes.find((mode) => mode === lighting) ??
-        this.lighting,
-      reflections: booleanOr(fields.get("reflections"), this.reflections),
-      ambientOcclusion: booleanOr(
-        fields.get("ambientOcclusion"),
+      lighting: fields.oneOf("lighting", kLightingModes, this.lighting),
+      inspector: fields.oneOf("inspector", INSPECTOR_MODES, this.inspector),
+      grid: fields.boolean("grid", this.grid),
+      chunkBounds: fields.boolean("chunkBounds", this.chunkBounds),
+      reflections: fields.boolean("reflections", this.reflections),
+      ambientOcclusion: fields.boolean(
+        "ambientOcclusion",
         this.ambientOcclusion
       ),
-      shadows: booleanOr(fields.get("shadows"), this.shadows),
-      blockLight: booleanOr(fields.get("blockLight"), this.blockLight),
-      glow: booleanOr(fields.get("glow"), this.glow)
+      shadows: fields.boolean("shadows", this.shadows),
+      blockLight: fields.boolean("blockLight", this.blockLight),
+      glow: fields.boolean("glow", this.glow)
     });
   }
-}
-
-function booleanOr(
-  value: unknown,
-  fallback: boolean
-): boolean {
-  return typeof value === "boolean" ? value : fallback;
 }

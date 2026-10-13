@@ -2,7 +2,7 @@
 import type {
   BrushMode,
   BrushPattern
-} from "../BrushStore.ts";
+} from "../../../state/index.ts";
 import type { ChoiceOption } from "./toolChoice.ts";
 
 // CONSTANTS

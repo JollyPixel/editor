@@ -10,12 +10,16 @@ import { UVMap } from "@jolly-pixel/pixel-draw.renderer";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import { BlockSelection } from "../../../../src/state/index.ts";
+import {
+  BlockSelection,
+  UvSyncStore
+} from "../../../../src/state/index.ts";
 import type { MapDocumentEvents } from "../../../../src/document/MapDocument.ts";
 
 export interface FakeBridgeOptions {
   block: BlockSelection;
   mapDocument: Emitter<MapDocumentEvents>;
+  uvSync: UvSyncStore;
 }
 
 export interface BlockTexturePlacement {
@@ -47,7 +51,8 @@ export function makeFakeVoxelEngine(): {
   const dirtyReasons: string[] = [];
   const bridgeOptions: FakeBridgeOptions = {
     block: new BlockSelection(),
-    mapDocument: new Emitter<MapDocumentEvents>()
+    mapDocument: new Emitter<MapDocumentEvents>(),
+    uvSync: new UvSyncStore()
   };
   const registry = new BlockRegistry();
   const document = {

@@ -9,47 +9,38 @@ import {
 import { CommandConsole } from "@jolly-pixel/console";
 
 // Import Internal Dependencies
-import {
-  viewConsole,
-  type ViewConsoleContext
-} from "../../src/scene/viewConsole.ts";
+import { viewConsole } from "../../src/scene/viewConsole.ts";
+import { ViewStore } from "../../src/state/ViewStore.ts";
 
 function registerView() {
   const commands = new CommandConsole();
-  const grid = {
-    enabled: true
-  };
-  const inspector: ViewConsoleContext["inspector"] = {
-    mode: "off",
-    chunkBounds: false
-  };
-  viewConsole(commands, { grid, inspector });
+  const view = new ViewStore();
+  viewConsole(commands, { state: { view } });
 
   return {
     commands,
-    grid,
-    inspector
+    view
   };
 }
 
 describe("view console", () => {
   test("grid shows and hides the ground grid", async() => {
-    const { commands, grid } = registerView();
+    const { commands, view } = registerView();
 
     await commands.submit("view.grid off");
-    assert.equal(grid.enabled, false);
+    assert.equal(view.settings.grid, false);
 
     await commands.submit("view.grid on");
-    assert.equal(grid.enabled, true);
+    assert.equal(view.settings.grid, true);
   });
 
-  test("inspector and chunkBounds write the voxel inspector", async() => {
-    const { commands, inspector } = registerView();
+  test("inspector and chunkBounds write the view settings", async() => {
+    const { commands, view } = registerView();
 
     await commands.submit("view.inspector wireframe");
     await commands.submit("view.chunkBounds on");
 
-    assert.equal(inspector.mode, "wireframe");
-    assert.equal(inspector.chunkBounds, true);
+    assert.equal(view.settings.inspector, "wireframe");
+    assert.equal(view.settings.chunkBounds, true);
   });
 });

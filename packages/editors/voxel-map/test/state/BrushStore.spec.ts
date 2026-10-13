@@ -5,12 +5,15 @@ import {
   test
 } from "node:test";
 
+// Import Third-party Dependencies
+import { MemoryStorageAdapter } from "@jolly-pixel/ui";
+
 // Import Internal Dependencies
 import {
   BRUSH_MAX_SIZE,
   BRUSH_MIN_SIZE,
   BrushStore
-} from "../../../src/features/painting/BrushStore.ts";
+} from "../../src/state/BrushStore.ts";
 
 describe("BrushStore.size", () => {
   test("reaches sixteen", () => {
@@ -77,5 +80,37 @@ describe("BrushStore.suspended", () => {
     brush.suspended = false;
 
     assert.deepStrictEqual(changes, [true, false]);
+  });
+});
+
+describe("BrushStore storage", () => {
+  test("falls back field by field on invalid stored options", () => {
+    const storage = new MemoryStorageAdapter();
+    storage.set("voxel-map:brush", JSON.stringify({
+      size: 99,
+      rotationMode: 5,
+      mode: "replace",
+      pattern: "star",
+      ghost: "yes",
+      skyRadius: -4
+    }));
+    const brush = new BrushStore(storage);
+
+    assert.strictEqual(brush.size, BRUSH_MAX_SIZE);
+    assert.strictEqual(brush.rotationMode, "auto");
+    assert.strictEqual(brush.mode, "replace");
+    assert.strictEqual(brush.pattern, "square");
+    assert.strictEqual(brush.ghost, false);
+    assert.strictEqual(brush.skyRadius, 0);
+  });
+
+  test("starts from the defaults when the stored value is not JSON", () => {
+    const storage = new MemoryStorageAdapter();
+    storage.set("voxel-map:brush", "{not json");
+
+    const brush = new BrushStore(storage);
+
+    assert.strictEqual(brush.size, BRUSH_MIN_SIZE);
+    assert.strictEqual(brush.skyRadius, 24);
   });
 });

@@ -13,20 +13,16 @@ import { brushConsole } from "../../../src/features/painting/brushConsole.ts";
 import {
   BRUSH_MAX_SIZE,
   BrushStore
-} from "../../../src/features/painting/BrushStore.ts";
+} from "../../../src/state/BrushStore.ts";
 
 function registerBrush() {
   const commands = new CommandConsole();
   const brush = new BrushStore();
-  const localBrush = {
-    skyRadius: 24
-  };
-  const handle = brushConsole(commands, { brush, localBrush });
+  const handle = brushConsole(commands, { state: { brush } });
 
   return {
     commands,
     brush,
-    localBrush,
     handle
   };
 }
@@ -86,12 +82,12 @@ describe("brush console", () => {
     assert.equal(lastLine(commands), "info: 270");
   });
 
-  test("skyRadius writes the local brush", async() => {
-    const { commands, localBrush } = registerBrush();
+  test("skyRadius writes the store", async() => {
+    const { commands, brush } = registerBrush();
 
     await commands.submit("brush.skyRadius 8");
 
-    assert.equal(localBrush.skyRadius, 8);
+    assert.equal(brush.skyRadius, 8);
     assert.equal(lastLine(commands), "info: 8");
   });
 

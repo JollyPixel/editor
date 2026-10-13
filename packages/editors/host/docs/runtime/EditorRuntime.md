@@ -22,6 +22,7 @@ static create(
   options?: RuntimeOptions & {
     params?: HostParams;
     framed?: boolean;
+    storage?: StorageAdapter;
   }
 ): Promise<EditorRuntime>;
 ```
@@ -47,6 +48,10 @@ real frame rate. `framed` defaults to `window.parent !== window`. The `render`
 editor: `render=continuous` rules out a missed wake-up in the studio, and
 `render=on-demand` brings idling back to a standalone page.
 
+`storage` keeps the [widget visibility](#runtime-widgets) between page loads.
+It defaults to a `LocalStorageAdapter`; `create` restores the stored
+visibility of the performance HUD and the view helper once the runtime exists.
+
 An editor booted by [`mountStandalone`](../editor/mountStandalone.md#editor-definition)
 creates it in its static `createRuntime(logger)`, which the host calls before
 the session opens.
@@ -56,12 +61,44 @@ the session opens.
 ```ts
 readonly runtime: Runtime;
 readonly params: HostParams;
+readonly widgets: RuntimeWidgets;
 get samples(): number | undefined;
 dispose(): void;
 ```
 
 `samples` is the `samples` query parameter, for an editor that sets up its own
 multisampled render targets. `dispose()` disposes `runtime`.
+
+## Runtime widgets
+
+`widgets` shows or hides the corner performance HUD (`"stats"`), the axis
+gizmo (`"viewHelper"`) and the metrics panel (`"metrics"`), and saves every
+change under `jolly-pixel:runtime-widgets`.
+
+```ts
+mounted(widget: RuntimeWidget): boolean;
+visible(widget: RuntimeWidget): boolean;
+show(widget: RuntimeWidget, visible: boolean): void;
+startsHidden(widget: RuntimeWidget, fallback: boolean): boolean;
+restore(): void;
+```
+
+`mounted` is `false` while the runtime has no such widget, for example before
+`runtime.mountMetricsPanel` resolves. `show` throws on a widget that is not
+mounted.
+
+`startsHidden` is the saved visibility of a widget, or `fallback` when it was
+never toggled. Pass it as the `hidden` option of the metrics panel so the pane
+opens the way it was left:
+
+```ts
+await editorRuntime.runtime.mountMetricsPanel({
+  hidden: editorRuntime.widgets.startsHidden("metrics", true)
+});
+```
+
+`restore` applies the saved visibility to the mounted widgets and leaves the
+others alone.
 
 ## Loading a scene
 
@@ -101,12 +138,13 @@ releases it. The suspension uses `Keyboard.suspend()`, so it never changes
 ## Console
 
 `runtimeConsole` is a [console feature](../../../../console/docs/features.md)
-that registers the `runtime` namespace over a `Runtime`:
+that registers the `runtime` namespace over the
+[runtime widgets](#runtime-widgets), so every write is kept after a reload:
 
 - `runtime.stats` shows or hides the corner performance HUD. It is registered
-  only when `runtime.statsHud` is not `null`.
+  only when the HUD is mounted.
 - `runtime.viewHelper` shows or hides the axis gizmo. It is registered only
-  when `runtime.viewHelper` is not `null`.
+  when the gizmo is mounted.
 - `runtime.metrics` shows or hides the panel from `mountMetricsPanel()`.
   Writing it before a panel is mounted prints an error.
 
@@ -115,6 +153,6 @@ import { registerConsoleFeatures } from "@jolly-pixel/console";
 import { runtimeConsole } from "@jolly-pixel/editor.host";
 
 registerConsoleFeatures(commands, [runtimeConsole], {
-  runtime: editorRuntime.runtime
+  runtime: editorRuntime
 });
 ```
