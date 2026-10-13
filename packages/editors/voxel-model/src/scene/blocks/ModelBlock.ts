@@ -1,11 +1,17 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
 import {
+  BlockShape,
   MaterialSurface,
+  type BlockShapeJSON,
   type BlockTransformJSON,
-  type MaterialSurfaceJSON
+  type MaterialSurfaceJSON,
+  type MirrorAxes
 } from "@jolly-pixel/asset.voxel-model/client";
-import { clampUvRegion } from "@jolly-pixel/editor.pixel-art/mesh-texturing";
+import {
+  clampUvRegion,
+  type FaceRanges
+} from "@jolly-pixel/editor.pixel-art/mesh-texturing";
 
 // Import Internal Dependencies
 import { BlockNode } from "./BlockNode.ts";
@@ -13,6 +19,10 @@ import { PivotMarker } from "./PivotMarker.ts";
 import { RenderOrder } from "../renderOrder.ts";
 import { plainVector3 } from "./plainVector3.ts";
 import { paintBlockSurface } from "./paintBlockSurface.ts";
+import {
+  BlockShapeMesh,
+  type BlockShapeChanges
+} from "./BlockShapeMesh.ts";
 
 // CONSTANTS
 const kTransformRoundDecimals = 2;
@@ -29,6 +39,8 @@ export interface ModelBlockOptions {
   size?: THREE.Vector3;
   scale?: THREE.Vector3;
   rotation?: THREE.Euler;
+  shape?: BlockShapeJSON;
+  flip?: MirrorAxes;
   texture?: THREE.Texture | null;
 }
 
@@ -38,7 +50,7 @@ export class ModelBlock {
   readonly node = new BlockNode();
   readonly mesh: BlockMesh;
 
-  #size: THREE.Vector3;
+  #shapeMesh: BlockShapeMesh;
   #surface: MaterialSurfaceJSON | null = null;
   #lit = true;
   #pivotOffset = new THREE.Vector3();
@@ -55,6 +67,8 @@ export class ModelBlock {
       scale = new THREE.Vector3(1, 1, 1),
       rotation,
       name,
+      shape = BlockShape.box,
+      flip,
       texture = null,
       uuid
     } = options;
@@ -69,9 +83,9 @@ export class ModelBlock {
     }
     this.node.name = name ?? "";
 
-    this.#size = size.clone();
+    this.#shapeMesh = new BlockShapeMesh({ shape, flip, size });
     this.mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(size.x, size.y, size.z),
+      this.#shapeMesh.geometry,
       new THREE.MeshStandardNodeMaterial({
         alphaTest: 0.01,
         side: THREE.DoubleSide,
@@ -269,14 +283,43 @@ export class ModelBlock {
   }
 
   get size(): THREE.Vector3 {
-    return this.#size.clone();
+    return this.#shapeMesh.size;
+  }
+
+  get shape(): BlockShapeJSON {
+    return this.#shapeMesh.shape;
+  }
+
+  get faces(): Readonly<FaceRanges> {
+    return this.#shapeMesh.faces;
+  }
+
+  rebuild(
+    changes: BlockShapeChanges
+  ): boolean {
+    if (!this.#shapeMesh.rebuild(changes)) {
+      return false;
+    }
+
+    const { geometry } = this.#shapeMesh;
+    this.mesh.geometry = geometry;
+    clampUvRegion(this.mesh);
+    if (this.#selectionTextureGhost !== null) {
+      this.#selectionTextureGhost.geometry = geometry;
+    }
+
+    return true;
+  }
+
+  restoreBaseUv(): void {
+    this.#shapeMesh.restoreBaseUv();
   }
 
   get transform(): BlockTransformJSON {
     return {
       position: plainVector3(this.node.position),
       pivotOffset: plainVector3(this.#pivotOffset),
-      size: plainVector3(this.#size),
+      size: plainVector3(this.#shapeMesh.size),
       scale: plainVector3(this.node.scale),
       rotation: plainVector3(this.node.rotation)
     };
@@ -337,31 +380,13 @@ export class ModelBlock {
   resize(
     size: THREE.Vector3
   ): void {
-    if (sameRounded(this.#size, size, kTransformRoundDecimals)) {
-      return;
+    if (!sameRounded(this.#shapeMesh.size, size, kTransformRoundDecimals)) {
+      this.#shapeMesh.resize(size);
     }
-
-    const next = new THREE.BoxGeometry(size.x, size.y, size.z);
-    const target = this.mesh.geometry.getAttribute("position");
-    const source = next.getAttribute("position");
-    for (let index = 0; index < target.count; index++) {
-      target.setXYZ(
-        index,
-        source.getX(index),
-        source.getY(index),
-        source.getZ(index)
-      );
-    }
-    target.needsUpdate = true;
-    next.dispose();
-
-    this.mesh.geometry.computeBoundingBox();
-    this.mesh.geometry.computeBoundingSphere();
-    this.#size.copy(size);
   }
 
   dispose(): void {
-    this.mesh.geometry.dispose();
+    this.#shapeMesh.dispose();
     this.mesh.material.dispose();
     this.#disposeTextureGhost(this.#selectionTextureGhost);
     this.#pivotMarker.dispose();

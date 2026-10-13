@@ -22,7 +22,6 @@ import type {
   ModelBlocks
 } from "../../scene/blocks/index.ts";
 import { SELECTION_HIGHLIGHT_COLOR } from "../../scene/blocks/ModelBlock.ts";
-import { BoxUvLayout } from "./BoxUvLayout.ts";
 import {
   blockRegionId,
   blockUuidFromRegion
@@ -78,21 +77,23 @@ export class BlockTextures {
         });
         break;
       case "node-renamed":
-      case "node-uv-changed": {
+      case "node-uv-changed":
+      case "node-shape-changed": {
         const block = this.#document.tree.block(command.id);
         if (block) {
           this.#project(block);
         }
         break;
       }
-      case "node-transformed":
-        if (command.flipAxes) {
-          this.#bindByUuid(command.id);
-        }
-        break;
       default:
         break;
     }
+  };
+
+  #onGeometryReplaced = (
+    uuid: string
+  ): void => {
+    this.#bindByUuid(uuid);
   };
 
   #rebuild = (): void => {
@@ -206,7 +207,8 @@ export class BlockTextures {
       uv.subscribe("selection-changed", this.#onRegionSelected),
       this.#document.subscribe("change", this.#onChange),
       this.#document.subscribe("reset", this.#rebuild),
-      this.#selection.subscribe("select", this.#onBlockSelected)
+      this.#selection.subscribe("select", this.#onBlockSelected),
+      this.#blocks.subscribe("geometryReplaced", this.#onGeometryReplaced)
     ];
 
     this.#rebuild();
@@ -277,16 +279,12 @@ export class BlockTextures {
 
     this.#unbind(block.uuid);
 
-    const layout = new BoxUvLayout(
-      this.#document.tree.block(block.uuid)?.flipAxes
-    );
-    layout.applyDefaults(block.mesh.geometry);
-
+    block.restoreBaseUv();
     const binding = new UVGeometryBinding({
       geometry: block.mesh.geometry,
       region,
       textureSize: this.#pixels.size(),
-      faceRanges: layout.faceRanges
+      faceRanges: block.faces
     });
     binding.follow(this.#pixels.uv);
     this.#bindings.set(block.uuid, binding);

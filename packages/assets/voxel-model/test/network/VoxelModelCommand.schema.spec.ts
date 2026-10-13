@@ -60,6 +60,12 @@ const kCommands: readonly VoxelModelCommand[] = [
     uv: UV
   },
   {
+    action: "node-shape-changed",
+    id: "node-1",
+    shape: { type: "plane" },
+    uv: UV
+  },
+  {
     action: "node-material-changed",
     id: "node-1",
     materialId: "material-1"
@@ -303,6 +309,55 @@ describe("voxelModelCommandProtocol", () => {
       accepts({ ...command, uv: { state: "unfolded" } }),
       false
     );
+  });
+
+  test("rejects a shape change to an unknown shape or without its UV layout", () => {
+    const command = {
+      ...kHeader,
+      action: "node-shape-changed",
+      id: "node-1",
+      shape: { type: "plane" },
+      uv: UV
+    };
+
+    assert.strictEqual(accepts(command), true);
+    assert.strictEqual(accepts({ ...command, shape: { type: "blob" } }), false);
+    assert.strictEqual(accepts({ ...command, shape: { type: "plane", sides: 4 } }), false);
+    assert.strictEqual(accepts({ ...command, uv: undefined }), false);
+  });
+
+  test("takes round shapes with a whole number of 3 to 32 sides, and sides on round shapes only", () => {
+    const command = {
+      ...kHeader,
+      action: "node-shape-changed",
+      id: "node-1",
+      uv: UV
+    };
+
+    assert.strictEqual(accepts({ ...command, shape: { type: "cone", sides: 4 } }), true);
+    assert.strictEqual(accepts({ ...command, shape: { type: "cylinder", sides: 32 } }), true);
+    assert.strictEqual(accepts({ ...command, shape: { type: "cylinder", sides: 2 } }), false);
+    assert.strictEqual(accepts({ ...command, shape: { type: "cylinder", sides: 33 } }), false);
+    assert.strictEqual(accepts({ ...command, shape: { type: "cone", sides: 4.5 } }), false);
+    assert.strictEqual(accepts({ ...command, shape: { type: "cone" } }), false);
+    assert.strictEqual(accepts({ ...command, shape: { type: "box", sides: 4 } }), false);
+  });
+
+  test("takes a torus with its ring sides and a thickness from 0.05 to 0.95", () => {
+    const command = {
+      ...kHeader,
+      action: "node-shape-changed",
+      id: "node-1",
+      uv: UV
+    };
+    const torus = { type: "torus", sides: 8, ringSides: 6, thickness: 0.35 };
+
+    assert.strictEqual(accepts({ ...command, shape: torus }), true);
+    assert.strictEqual(accepts({ ...command, shape: { ...torus, ringSides: 2 } }), false);
+    assert.strictEqual(accepts({ ...command, shape: { ...torus, thickness: 0.96 } }), false);
+    assert.strictEqual(accepts({ ...command, shape: { ...torus, thickness: 0.04 } }), false);
+    assert.strictEqual(accepts({ ...command, shape: { type: "torus", sides: 8 } }), false);
+    assert.strictEqual(accepts({ ...command, shape: { type: "cylinder", sides: 8, thickness: 0.5 } }), false);
   });
 
   test("treats flipAxes on node-transformed as optional", () => {

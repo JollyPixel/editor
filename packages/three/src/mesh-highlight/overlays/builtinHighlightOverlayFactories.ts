@@ -5,7 +5,12 @@ import * as THREE from "three";
 import { HighlightOutline } from "./HighlightOutline.ts";
 import { HighlightBoundingBox } from "./HighlightBoundingBox.ts";
 import { HighlightBoxSilhouette } from "./HighlightBoxSilhouette.ts";
-import type { HighlightOverlayFactory } from "./HighlightOverlayFactory.ts";
+import { HighlightMeshSilhouette } from "./HighlightMeshSilhouette.ts";
+import type { HighlightSilhouetteOptions } from "./HighlightSilhouette.ts";
+import type {
+  HighlightOverlayCreateOptions,
+  HighlightOverlayFactory
+} from "./HighlightOverlayFactory.ts";
 import { HighlightOverlayRegistry } from "./HighlightOverlayRegistry.ts";
 
 export const outlineOverlayFactory: HighlightOverlayFactory = {
@@ -21,10 +26,11 @@ export const outlineOverlayFactory: HighlightOverlayFactory = {
   })
 };
 
-export const boxSilhouetteOverlayFactory: HighlightOverlayFactory = {
-  id: "boxSilhouette",
-  supports: (target) => target instanceof THREE.Mesh && target.geometry instanceof THREE.BoxGeometry,
-  create: (target, options) => new HighlightBoxSilhouette({
+function silhouetteOptions(
+  target: THREE.Object3D,
+  options: HighlightOverlayCreateOptions
+): HighlightSilhouetteOptions {
+  return {
     target: target as THREE.Mesh,
     color: options.color,
     opacity: options.opacity,
@@ -36,7 +42,19 @@ export const boxSilhouetteOverlayFactory: HighlightOverlayFactory = {
       options.renderOrder :
       options.renderOrder - 1,
     xrayDepthWrite: options.xrayDepthWrite
-  })
+  };
+}
+
+export const boxSilhouetteOverlayFactory: HighlightOverlayFactory = {
+  id: "boxSilhouette",
+  supports: (target) => target instanceof THREE.Mesh && target.geometry instanceof THREE.BoxGeometry,
+  create: (target, options) => new HighlightBoxSilhouette(silhouetteOptions(target, options))
+};
+
+export const silhouetteOverlayFactory: HighlightOverlayFactory = {
+  id: "silhouette",
+  supports: (target) => target instanceof THREE.Mesh,
+  create: (target, options) => new HighlightMeshSilhouette(silhouetteOptions(target, options))
 };
 
 export const boundingBoxOverlayFactory: HighlightOverlayFactory = {
@@ -63,6 +81,7 @@ export function createDefaultHighlightOverlayRegistry(): HighlightOverlayRegistr
   registry.register(outlineOverlayFactory);
   registry.register(boundingBoxOverlayFactory);
   registry.register(boxSilhouetteOverlayFactory);
+  registry.register(silhouetteOverlayFactory);
 
   return registry;
 }

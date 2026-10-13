@@ -20,7 +20,7 @@ import type {
 } from "../../state/index.ts";
 
 // CONSTANTS
-const kBoxSilhouetteTechnique = "boxSilhouette";
+const kSilhouetteTechnique = "silhouette";
 const kOutlineThickness = 0.05;
 const kSelectionOpacity = 0.5;
 const kHoverOpacity = 0.2;
@@ -48,7 +48,7 @@ export class HighlightBridge {
   #onBlockAdded = (
     block: ModelBlock
   ): void => {
-    this.#meshHighlight.register(block.uuid, block.mesh, { technique: kBoxSilhouetteTechnique });
+    this.#meshHighlight.register(block.uuid, block.mesh, { technique: kSilhouetteTechnique });
   };
 
   #onBlockRemoved = (

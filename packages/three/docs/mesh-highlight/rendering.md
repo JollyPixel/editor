@@ -54,6 +54,44 @@ Options are `target`, `color` (`"#ffffff"`), `opacity` (`1`), `xray`
 or geometry changes. `color`, `opacity`, `fillOpacity`, and `xray` are writable
 properties. Call `dispose()` when finished.
 
+### Silhouettes
+
+`HighlightBoxSilhouette` and `HighlightMeshSilhouette` draw thick bars around
+the outline of a mesh as seen from the camera: a thin dark inner bar against
+the surface, then the colored bar. `HighlightBoxSilhouette` fits a
+`BoxGeometry`, with square joints at its corners. `HighlightMeshSilhouette`
+fits any mesh: it draws the box bars while its target holds a `BoxGeometry`,
+and otherwise outlines the edges between a face turned to the camera and one
+turned away, and every border edge of an open mesh such as a plane.
+
+```ts
+const silhouette = new HighlightMeshSilhouette({
+  target: cylinder,
+  color: "#ff00ff",
+  linewidth: 0.05,
+  xray: true,
+  occludedOpacity: 0.2
+});
+
+silhouette.update(camera.getWorldPosition(new THREE.Vector3()));
+silhouette.dispose();
+```
+
+Options are `target`, `color` (`"#ffffff"`), `opacity` (`1`), `linewidth`
+(`0.05`, in the target's local units), `innerThickness` (`0.02`, `0` drops the
+inner bar), `innerColor` (`"#000000"`), `xray` (`false`), `occludedOpacity`
+(`opacity`), `xrayDepthWrite` (`false`), `peer` (`false`) and `renderOrder`.
+Under xray, the part hidden behind other geometry draws at `occludedOpacity`.
+Call `update(cameraWorldPosition)` every frame: it rebuilds the bars only when
+the outline changes. `HighlightMeshSilhouette` also follows a replaced or
+edited target geometry, switching between box bars and contour as needed. `color`, `opacity`, `linewidth`, `xray` and
+`occludedOpacity` are writable properties; a new `linewidth` applies at the
+next rebuild. Both extend the abstract `HighlightSilhouette`, which other
+code can use for type checks but cannot construct.
+
+`MeshHighlight` uses them for the `"boxSilhouette"` and `"silhouette"`
+techniques. `"boxSilhouette"` only accepts a `BoxGeometry` mesh.
+
 ### MergedHighlightOverlay
 
 Use `MergedHighlightOverlay` for a bulk selection that is outside
@@ -209,7 +247,7 @@ the overlay.
 | Renderer strategies | `MeshHighlightRenderer`, `MeshHighlightRendererFactory`, `MeshHighlightRendererContext` |
 | Overlay contract | `HighlightOverlay`, `HighlightOverlayFactory`, `HighlightOverlayCreateOptions` |
 | Overlay registry | `HighlightOverlayRegistryOptions`, `CreateHighlightOverlayOptions` |
-| Built-in overlays | `HighlightOutlineOptions`, `HighlightBoundingBoxOptions`, `MergedHighlightOverlayOptions` |
+| Built-in overlays | `HighlightOutlineOptions`, `HighlightBoundingBoxOptions`, `HighlightSilhouetteOptions`, `HighlightBoxSilhouetteOptions`, `HighlightMeshSilhouetteOptions`, `MergedHighlightOverlayOptions` |
 | Postprocess | `HighlightEntry`, `HighlightPassOptions`, `HighlightPassJfaOptions` |
 | Peer adapter | `HighlightTarget`, `PeerHighlightPassOptions` |
 

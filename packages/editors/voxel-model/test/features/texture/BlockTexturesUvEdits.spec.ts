@@ -149,19 +149,17 @@ describe("BlockTextures UV edits", () => {
     assert.deepEqual(uvOf(block, 1), before);
   });
 
-  test("swaps the axis-perpendicular faces and mirrors U on the rest, for an X mirror", () => {
+  test("keeps each face on its own region and reflects the block, for an X mirror", () => {
     const { document, uv, block, regionId } = bound();
     uv.setState(regionId, "free");
     uv.move(regionId, { x: 0, y: 0, width: 16, height: 16 }, "right");
     uv.move(regionId, { x: 100, y: 0, width: 16, height: 16 }, "left");
-    uv.move(regionId, { x: 0, y: 100, width: 16, height: 16 }, "front");
 
     document.transform(block.uuid, block.transform, { x: true, y: false, z: false });
 
-    assert.equal(uvOf(block, 0)[0], 100 / TEXTURE_SIZE.x);
-    assert.equal(uvOf(block, 1)[0], 116 / TEXTURE_SIZE.x);
-    assert.equal(uvOf(block, 16)[0], 16 / TEXTURE_SIZE.x);
-    assert.equal(uvOf(block, 17)[0], 0);
+    assert.equal(uvOf(block, 0)[0], 0);
+    assert.equal(uvOf(block, 4)[0], 100 / TEXTURE_SIZE.x);
+    assert.ok(block.mesh.geometry.getAttribute("position").getX(0) < 0);
   });
 
   test("honors flipAxes already recorded on first mapping", () => {
@@ -185,7 +183,8 @@ describe("BlockTextures UV edits", () => {
 
     const mirrored = blocks.get("mirrored");
     assert.ok(mirrored);
-    assert.equal(uvOf(mirrored, 0)[0], 100 / TEXTURE_SIZE.x);
-    assert.equal(uvOf(mirrored, 16)[0], 16 / TEXTURE_SIZE.x);
+    assert.equal(uvOf(mirrored, 0)[0], 0);
+    assert.equal(uvOf(mirrored, 4)[0], 100 / TEXTURE_SIZE.x);
+    assert.ok(mirrored.mesh.geometry.getAttribute("position").getX(0) < 0);
   });
 });

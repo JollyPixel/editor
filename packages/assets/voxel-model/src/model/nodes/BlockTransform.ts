@@ -4,10 +4,16 @@ import type { AnimationSample } from "@jolly-pixel/asset.voxel-animation/client"
 // Import Internal Dependencies
 import type {
   BlockTransformJSON,
+  MirrorAxes,
   Vector3JSON
 } from "../../network/types.ts";
 
 // CONSTANTS
+export const NO_FLIP: Readonly<MirrorAxes> = Object.freeze({
+  x: false,
+  y: false,
+  z: false
+});
 const kDegreesToRadians = Math.PI / 180;
 const kTransformKeys = [
   "position",

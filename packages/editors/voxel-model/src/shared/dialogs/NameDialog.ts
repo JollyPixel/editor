@@ -1,10 +1,14 @@
 // Import Third-party Dependencies
 import {
   html,
+  nothing,
   type TemplateResult
 } from "lit";
 import { state } from "lit/decorators.js";
-import type { JollyChangeDetail } from "@jolly-pixel/ui";
+import type {
+  JollyChangeDetail,
+  JollyOption
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -16,13 +20,27 @@ import {
   type NameFieldOptions
 } from "./NameDraft.ts";
 
+export interface NameDialogChoice {
+  label: string;
+  options: readonly JollyOption<string>[];
+  value: string;
+}
+
 export interface NameDialogContext extends NameFieldOptions {
   heading: string;
   fieldLabel: string;
+  /**
+   * A pick shown under the name, such as a block's shape.
+   */
+  choice?: NameDialogChoice;
 }
 
 export interface NameDialogResult {
   name: string;
+  /**
+   * The value picked, when the dialog was opened with a `choice`.
+   */
+  choice?: string;
 }
 
 export class NameDialog extends EditorDialog<
@@ -35,6 +53,9 @@ export class NameDialog extends EditorDialog<
   @state()
   declare private draft: NameDraft;
 
+  @state()
+  declare private choice: string | null;
+
   constructor() {
     super();
     this.context = {
@@ -43,6 +64,7 @@ export class NameDialog extends EditorDialog<
       defaultName: ""
     };
     this.draft = NameDraft.from(this.context);
+    this.choice = null;
   }
 
   protected get frame(): EditorDialogFrame {
@@ -59,6 +81,7 @@ export class NameDialog extends EditorDialog<
   ): void {
     this.context = context;
     this.draft = NameDraft.from(context);
+    this.choice = context.choice?.value ?? null;
   }
 
   protected override canConfirm(): boolean {
@@ -69,7 +92,8 @@ export class NameDialog extends EditorDialog<
 
   protected result(): NameDialogResult {
     return {
-      name: this.draft.name
+      name: this.draft.name,
+      ...this.choice === null ? {} : { choice: this.choice }
     };
   }
 
@@ -86,7 +110,24 @@ export class NameDialog extends EditorDialog<
         @jolly-input=${this.#onName}
         @jolly-change=${this.#onName}
       ></jolly-text>
+      ${this.context.choice === undefined ?
+        nothing :
+        html`
+          <jolly-button-group
+            icon-only
+            aria-label=${this.context.choice.label}
+            .options=${this.context.choice.options}
+            .value=${this.choice}
+            @jolly-change=${this.#onChoice}
+          ></jolly-button-group>
+        `}
     `;
+  }
+
+  #onChoice(
+    event: CustomEvent<JollyChangeDetail<string>>
+  ): void {
+    this.choice = event.detail.value;
   }
 
   #onName(

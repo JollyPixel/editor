@@ -83,6 +83,7 @@ const kModelCommands: ModelCommandSpecs = {
   },
   "node-transformed": { before: nodeBefore },
   "node-uv-changed": { before: nodeBefore },
+  "node-shape-changed": { before: nodeBefore },
   "node-material-changed": { before: nodeBefore },
   "material-added": {
     before: nothingBefore,

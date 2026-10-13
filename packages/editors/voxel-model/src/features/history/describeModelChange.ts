@@ -21,6 +21,8 @@ export function describeModelChange(
       return `Transform ${node}`;
     case "node-uv-changed":
       return `Edit UVs of ${node}`;
+    case "node-shape-changed":
+      return `Set shape of ${node}`;
     case "node-material-changed":
       return `Set material of ${node}`;
     case "material-added":

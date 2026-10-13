@@ -1,14 +1,15 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 import { Emitter } from "@openally/emitt";
-import type {
-  BlockNodeJSON,
-  BlockTransformJSON,
-  MaterialSurfaceJSON,
-  MirrorAxes,
-  ModelChange,
-  ModelDocument,
-  NodeTransformJSON
+import {
+  BlockShape,
+  type BlockNodeJSON,
+  type BlockTransformJSON,
+  type MaterialSurfaceJSON,
+  type MirrorAxes,
+  type ModelChange,
+  type ModelDocument,
+  type NodeTransformJSON
 } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
@@ -19,6 +20,7 @@ import type {
 } from "../../state/index.ts";
 import { BlockNode } from "./BlockNode.ts";
 import { ModelBlock } from "./ModelBlock.ts";
+import type { BlockShapeChanges } from "./BlockShapeMesh.ts";
 import { plainVector3 } from "./plainVector3.ts";
 import {
   mirrorRotation,
@@ -31,6 +33,7 @@ export type ModelBlocksEvents = {
   blockRemoved: (uuid: string) => void;
   blockVisibilityChanged: (uuids: readonly string[], visible: boolean) => void;
   transformApplied: (uuid: string) => void;
+  geometryReplaced: (uuid: string) => void;
 };
 
 export interface ModelBlocksOptions {
@@ -95,7 +98,14 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
         break;
 
       case "node-transformed":
+        if (command.flipAxes) {
+          this.#rebuild(command.id, { flip: command.flipAxes });
+        }
         this.applyTransform(command.id, command.transform);
+        break;
+
+      case "node-shape-changed":
+        this.#rebuild(command.id, { shape: command.shape });
         break;
 
       case "node-material-changed": {
@@ -304,6 +314,8 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
     const block = new ModelBlock({
       uuid: node.id,
       name: node.name,
+      shape: BlockShape.of(node),
+      ...node.flipAxes === undefined ? {} : { flip: node.flipAxes },
       texture: this.#texture
     });
     block.transform = node.transform;
@@ -314,6 +326,15 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
     this.emit("blockAdded", block);
 
     return block;
+  }
+
+  #rebuild(
+    uuid: string,
+    changes: BlockShapeChanges
+  ): void {
+    if (this.#blocks.get(uuid)?.rebuild(changes)) {
+      this.emit("geometryReplaced", uuid);
+    }
   }
 
   #paint(

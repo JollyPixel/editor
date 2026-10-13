@@ -32,8 +32,9 @@ import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import "./BuildTab.ts";
+import "../features/texture/TextureSizeField.ts";
 import type { TexturePane } from "./texturePanes.ts";
-import type { TransformWorkspace } from "../features/transform/TransformPanelController.ts";
+import type { BuildWorkspace } from "./BuildTab.ts";
 import { PeerRegionSelections } from "../features/texture/index.ts";
 import type { PresenceStore } from "../state/index.ts";
 import type { EditorHistory } from "../features/history/index.ts";
@@ -47,7 +48,7 @@ const kDefaultZoom = {
   sensitivity: 0.6
 };
 
-export interface LeftPanelWorkspace extends TransformWorkspace {
+export interface LeftPanelWorkspace extends BuildWorkspace {
   access: ModelAccessSignals;
   presence: PresenceStore;
   history: EditorHistory;
@@ -95,6 +96,7 @@ export class LeftPanel extends LitElement {
     :host {
       display: flex;
       flex-direction: column;
+      gap: var(--jolly-row-gap, 4px);
       height: 100%;
       box-sizing: border-box;
       font: inherit;
@@ -266,9 +268,13 @@ export class LeftPanel extends LitElement {
     return html`
       <jolly-model-editor-build
         ?hidden=${this.mode !== "build"}
-        .canvas=${this._canvas}
         .workspace=${this.workspace}
       ></jolly-model-editor-build>
+      <jolly-model-editor-texture-size
+        ?hidden=${this.mode !== "build"}
+        .canvas=${this._canvas}
+        .model=${this.workspace?.document ?? null}
+      ></jolly-model-editor-texture-size>
       <pixel-draw-panel
         uv-resize
         uv-overflow="64"

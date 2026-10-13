@@ -103,7 +103,6 @@ Slot names are labels. The consumer decides how `"front"`, `"top"` and any furth
 | `slots` | `readonly UVSlot[]` | Every slot the region carries geometry for, active or not. |
 | `activeSlots` | `readonly UVSlot[]` | Active slots in consumer-defined order. |
 | `movementScope` | `"region" \| "slot"` | Whether dragging moves the region or one slot. |
-| `resizable` | `boolean` | Whether every face is a plain rectangle, which `resized()` requires. |
 | `stackedFace` | `UVSlot \| null` | Slot `rect` was taken from, when stacked. |
 | `bounds` | `SelectionRect` | The shared rectangle when stacked, otherwise the union of the active faces. |
 
@@ -193,11 +192,11 @@ interface UVResizeOptions {
 
 Gives the region or one of its faces a new rectangle, independent of the mesh size:
 
-- **stacked**: `rect` becomes the shared rectangle and every face is reset to it, so a later `unfold()` lays out faces of that size. `slot` is ignored.
+- **stacked**: `rect` becomes the shared rectangle and every face is reset to it, so a later `unfold()` lays out faces of that size. A triangle or compound face keeps its corner or parts, scaled to `rect`. `slot` is ignored.
 - **unfolded**: only `slot` changes size, and the faces of the net behave like solid boxes. A growing edge pushes the faces it would overlap, and they push the faces they reach in turn. A shrinking edge pulls back the faces that touched it, and the faces touching those, each stopping where it would hit a face that stays. Faces out of contact never move, faces never overlap, and face order never changes. Faces that already overlapped, as in a net saved by an older version, are pushed apart right or down, whichever is shorter. With `options.aligned`, every face whose same edge lies on the same line and touches `slot` along it, directly or through another such face, moves that edge by the same amount, so a row keeps its bottom aligned and a column its right side.
 - **free**: only `slot` changes.
 
-Rotation is kept. Returns `this` when the region is not `resizable`, `slot` is missing or inactive outside the stacked state, or nothing changes. Throws a `RangeError` when `rect` is smaller than 1px on either axis. Nothing here knows about the canvas.
+Rotation is kept, and so is the shape of a triangle or compound face: its rectangle changes and its parts scale with it. Returns `this` when `slot` is missing or inactive outside the stacked state, or nothing changes. Throws a `RangeError` when `rect` is smaller than 1px on either axis. Nothing here knows about the canvas.
 
 ### `withGeometry(slot, geometry)`
 
@@ -236,7 +235,7 @@ interface UVResizeTarget {
 }
 ```
 
-The rectangles a resize drag can grab, with the edges and corners each offers: the shared rectangle with every handle when stacked, every net face with only its east and south edges when unfolded, and `selectedSlot` with every handle when free. Empty when the region is not `resizable`.
+The rectangles a resize drag can grab, with the edges and corners each offers: the shared rectangle with every handle when stacked, every net face with only its east and south edges when unfolded, and `selectedSlot` with every handle when free. A triangle or compound face offers the handles of its bounding rectangle.
 
 ### `translated(delta)`
 

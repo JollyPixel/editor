@@ -8,6 +8,7 @@ import {
 // Import Internal Dependencies
 import {
   MenuSession,
+  disableEntries,
   type MenuEntry
 } from "#src/shared/menu/MenuSession.ts";
 
@@ -68,5 +69,27 @@ describe("MenuSession.forRow", () => {
     await session.run("delete", kPoint);
 
     assert.deepEqual(ran, ["rename"]);
+  });
+});
+
+describe("disableEntries", () => {
+  test("disables a submenu once every item in it is disabled", () => {
+    const entries: readonly MenuEntry<"rename" | "delete">[] = [
+      {
+        id: "edit",
+        label: "Edit",
+        items: [
+          { id: "rename", label: "Rename" },
+          { id: "delete", label: "Delete" }
+        ]
+      }
+    ];
+
+    const [partly] = disableEntries(entries, (action) => action === "delete");
+    const [fully] = disableEntries(entries, () => true);
+
+    assert.ok(partly !== "separator" && fully !== "separator");
+    assert.equal(partly.disabled, undefined);
+    assert.equal(fully.disabled, true);
   });
 });

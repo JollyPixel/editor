@@ -85,6 +85,8 @@ export class TransformPanel extends LitElement {
 
   override render(): TemplateResult {
     return html`
+      <jolly-separator label="Transform"></jolly-separator>
+
       <jolly-button-group
         icon-only
         aria-label="Transform mode"

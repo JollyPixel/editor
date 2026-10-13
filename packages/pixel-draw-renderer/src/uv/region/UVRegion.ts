@@ -103,10 +103,6 @@ export class UVRegion {
     return this.#layout.state;
   }
 
-  get resizable(): boolean {
-    return this.#layout.resizable;
-  }
-
   get stackedFace(): UVSlot | null {
     return this.#layout.stackedFace;
   }
@@ -140,10 +136,6 @@ export class UVRegion {
   resizeTargets(
     selectedSlot: UVSlot | null
   ): UVResizeTarget[] {
-    if (!this.resizable) {
-      return [];
-    }
-
     return this.#layout.resizeTargets(selectedSlot).map((target) => {
       return {
         id: this.id,
@@ -207,9 +199,6 @@ export class UVRegion {
   ): UVRegion {
     if (rect.width < 1 || rect.height < 1) {
       throw new RangeError("UV resize needs a size of at least 1px");
-    }
-    if (!this.resizable) {
-      return this;
     }
 
     return this.#with(this.#layout.resized(rect, slot, options));

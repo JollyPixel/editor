@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import {
   copyRect,
+  geometryAt,
   isRectGeometry,
   quarterTurn,
   rectOf,
@@ -174,9 +175,16 @@ export class StackedLayout extends UVLayout {
     }
 
     const geometry = StackedLayout.#rotated(rect, this.#rotation);
+    const faces = this.faces.withSlots(new Map(
+      this.faces.slots.map((slot) => {
+        const current = this.faces.get(slot);
+
+        return [slot, isRectGeometry(current) ? geometry : geometryAt(current, rect)];
+      })
+    ));
 
     return new StackedLayout(
-      UVSlotMap.shared(geometry, this.faces.slots),
+      faces,
       this.activeSlots,
       geometry,
       this.#slot

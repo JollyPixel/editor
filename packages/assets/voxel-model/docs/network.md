@@ -20,6 +20,7 @@ The sync client is a `DocumentSyncClient` from `@jolly-pixel/network/client`, ke
 | `node-moved` | A node ID, the new parent ID, the block transforms the move rewrites, and an optional sibling `beforeId`. |
 | `node-transformed` | A block ID, a transform, and optional flip axes. |
 | `node-uv-changed` | A block ID and its whole UV layout. |
+| `node-shape-changed` | A block ID, its shape and its whole UV layout. |
 | `node-material-changed` | A block ID and a material ID, or `null`. |
 | `material-added`, `material-folder-added` | A full entry with an unused ID, and an optional sibling `beforeId`. |
 | `material-moved` | An entry ID, a new parent folder or `null`, and an optional sibling `beforeId`. |

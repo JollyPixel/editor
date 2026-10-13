@@ -181,6 +181,54 @@ describe("ModelHierarchy block names", () => {
   });
 });
 
+describe("ModelHierarchy.reshape", () => {
+  const kPlane = { type: "plane" } as const;
+  const kTextureSize = { x: 256, y: 256 };
+
+  test("swaps the shape and its UV net in one command, keeping the net where it was", () => {
+    const { document, hierarchy, commands } = createHierarchyFixture();
+    hierarchy.createBlock("Head", null);
+    const body = hierarchy.createBlock("Body", null)!;
+    const origin = { x: new BlockUvLayouts([BlockUvLayouts.net()]).extent.x, y: 0 };
+    commands.length = 0;
+
+    assert.equal(hierarchy.reshape(body, kPlane), true);
+    assert.equal(hierarchy.reshape(body, kPlane), false);
+
+    assert.deepEqual(document.tree.block(body)?.shape, kPlane);
+    assert.deepEqual(document.tree.block(body)?.uv, BlockUvLayouts.net(origin, kPlane));
+    assert.deepEqual(commands.map(({ action }) => action), ["node-shape-changed"]);
+  });
+
+  test("moves the net to free texture space when the new shape would overlap another block", () => {
+    const { document, hierarchy } = createHierarchyFixture();
+    const floor = hierarchy.createBlock("Floor", null, kPlane)!;
+    const wall = hierarchy.createBlock("Wall", null, kPlane)!;
+    const others = new BlockUvLayouts([document.tree.block(wall)!.uv]);
+
+    assert.equal(hierarchy.reshape(floor, { type: "box" }), true);
+
+    assert.equal("shape" in document.tree.block(floor)!, false);
+    assert.deepEqual(
+      document.tree.block(floor)?.uv,
+      others.nextNet(kTextureSize, { type: "box" })
+    );
+  });
+
+  test("needs transform rights rather than hierarchy rights", () => {
+    const { access, hierarchy, commands } = createHierarchyFixture();
+    const head = hierarchy.createBlock("Head", null)!;
+    commands.length = 0;
+
+    access.grant("hierarchy");
+    assert.equal(hierarchy.reshape(head, kPlane), false);
+    assert.deepEqual(commands, []);
+
+    access.grant("transforms");
+    assert.equal(hierarchy.reshape(head, kPlane), true);
+  });
+});
+
 describe("ModelHierarchy access", () => {
   test("sends no node command without hierarchy rights, and mirrors only with transform rights", () => {
     const { access, addBlock, commands, hierarchy } = createHierarchyFixture();

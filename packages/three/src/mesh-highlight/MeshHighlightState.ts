@@ -15,6 +15,7 @@ export type SelectableObject = THREE.Object3D;
 export type HighlightTechnique =
   | "outline"
   | "boxSilhouette"
+  | "silhouette"
   | "highlight"
   | "highlightJfa"
   | (string & {});

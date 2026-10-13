@@ -8,16 +8,11 @@ import {
   type ModelTreeEntry
 } from "../errors/InvalidModelTreeError.ts";
 import { MaterialSurface } from "../materials/MaterialSurface.ts";
+import { BlockShape } from "../nodes/BlockShape.ts";
+import { NO_FLIP } from "../nodes/BlockTransform.ts";
 import type { EntryTreeReader } from "./modelCommands.ts";
 import type { ModelTreeReader } from "../ModelTree.ts";
 import type { OrderedTreeEntry } from "../OrderedTree.ts";
-
-// CONSTANTS
-const kNoFlip = {
-  x: false,
-  y: false,
-  z: false
-};
 
 export function inverseOf(
   tree: ModelTreeReader,
@@ -62,7 +57,7 @@ export function inverseOf(
         transform: block.transform,
         ...command.flipAxes === undefined ?
           {} :
-          { flipAxes: block.flipAxes ?? kNoFlip }
+          { flipAxes: { ...block.flipAxes ?? NO_FLIP } }
       }];
     }
 
@@ -70,6 +65,17 @@ export function inverseOf(
       const block = existing(tree.block(command.id), "node", command.id);
 
       return [{ action: "node-uv-changed", id: block.id, uv: block.uv }];
+    }
+
+    case "node-shape-changed": {
+      const block = existing(tree.block(command.id), "node", command.id);
+
+      return [{
+        action: "node-shape-changed",
+        id: block.id,
+        shape: BlockShape.of(block),
+        uv: block.uv
+      }];
     }
 
     case "node-material-changed":

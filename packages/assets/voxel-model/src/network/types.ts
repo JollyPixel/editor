@@ -8,6 +8,7 @@ import type {
   animationBindingSchema,
   animationSetLinkSchema,
   blockNodeSchema,
+  blockShapeSchema,
   blockTransformSchema,
   folderNodeSchema,
   materialFolderSchema,
@@ -24,6 +25,8 @@ import type {
 export type Vector3JSON = network.Infer<typeof vector3Schema>;
 export type MirrorAxes = network.Infer<typeof mirrorAxesSchema>;
 export type BlockTransformJSON = network.Infer<typeof blockTransformSchema>;
+export type BlockShapeJSON = network.Infer<typeof blockShapeSchema>;
+export type BlockShapeType = BlockShapeJSON["type"];
 export type NodeTransformJSON = network.Infer<typeof nodeTransformSchema>;
 export type MaterialSurfaceJSON = network.Infer<typeof materialSurfaceSchema>;
 export type MaterialSurfacePatchJSON = network.Infer<typeof materialSurfacePatchSchema>;

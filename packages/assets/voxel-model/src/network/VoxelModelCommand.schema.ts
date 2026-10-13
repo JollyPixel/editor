@@ -9,10 +9,27 @@ import { uvLayoutSchema } from "@jolly-pixel/asset.pixel-art/server";
 
 // Import Internal Dependencies
 import { MaterialSurface } from "../model/materials/MaterialSurface.ts";
+import { BLOCK_SHAPE_PARAMETERS } from "../model/nodes/BlockShape.ts";
 
 // CONSTANTS
 const kNullableIdSchema = defineSchema({
   type: ["string", "null"]
+});
+const { sides, ringSides, thickness } = BLOCK_SHAPE_PARAMETERS;
+const kSidesSchema = defineSchema({
+  type: "integer",
+  minimum: sides.min,
+  maximum: sides.max
+});
+const kRingSidesSchema = defineSchema({
+  type: "integer",
+  minimum: ringSides.min,
+  maximum: ringSides.max
+});
+const kThicknessSchema = defineSchema({
+  type: "number",
+  minimum: thickness.min,
+  maximum: thickness.max
 });
 
 export const vector3Schema = defineSchema({
@@ -50,6 +67,39 @@ export const blockTransformSchema = defineSchema({
     "size",
     "scale",
     "rotation"
+  ]
+});
+
+export const blockShapeSchema = defineSchema({
+  oneOf: [
+    {
+      type: "object",
+      properties: {
+        type: { enum: ["box", "plane"] }
+      },
+      required: ["type"],
+      additionalProperties: false
+    },
+    {
+      type: "object",
+      properties: {
+        type: { enum: ["cylinder", "cone"] },
+        sides: kSidesSchema
+      },
+      required: ["type", "sides"],
+      additionalProperties: false
+    },
+    {
+      type: "object",
+      properties: {
+        type: { const: "torus" },
+        sides: kSidesSchema,
+        ringSides: kRingSidesSchema,
+        thickness: kThicknessSchema
+      },
+      required: ["type", "sides", "ringSides", "thickness"],
+      additionalProperties: false
+    }
   ]
 });
 
@@ -113,6 +163,7 @@ export const blockNodeSchema = defineSchema({
     name: { type: "string" },
     transform: blockTransformSchema,
     flipAxes: mirrorAxesSchema,
+    shape: blockShapeSchema,
     uv: uvLayoutSchema,
     materialId: { type: "string" }
   },
@@ -196,6 +247,11 @@ export const voxelModelCommandSchema = defineSchema({
     }),
     commandVariant("node-uv-changed", {
       id: { type: "string" },
+      uv: uvLayoutSchema
+    }),
+    commandVariant("node-shape-changed", {
+      id: { type: "string" },
+      shape: blockShapeSchema,
       uv: uvLayoutSchema
     }),
     commandVariant("node-material-changed", {

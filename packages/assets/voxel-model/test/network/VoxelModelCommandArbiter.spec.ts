@@ -88,7 +88,7 @@ describe("voxelModelConflictKeys", () => {
     [networkCommand(blockAdded("n")), []],
     [
       networkCommand({ action: "node-removed", id: "n" }),
-      ["name:n", "parent:n", "transform:n", "uv:n", "material:n"]
+      ["name:n", "parent:n", "transform:n", "uv:n", "shape:n", "material:n"]
     ],
     [
       networkCommand({
@@ -97,6 +97,15 @@ describe("voxelModelConflictKeys", () => {
         uv: UV
       }),
       ["uv:node-1"]
+    ],
+    [
+      networkCommand({
+        action: "node-shape-changed",
+        id: "node-1",
+        shape: { type: "plane" },
+        uv: UV
+      }),
+      ["shape:node-1", "uv:node-1"]
     ],
     [
       networkCommand({

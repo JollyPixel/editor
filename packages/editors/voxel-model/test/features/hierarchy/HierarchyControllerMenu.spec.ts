@@ -109,16 +109,21 @@ describe("HierarchyController.menuFor run", () => {
 
   test("adds a child under the row it was opened on", async() => {
     const harness = createHierarchyHarness({
-      name: { name: "Arm" }
+      name: { name: "Arm", choice: "pyramid" }
     });
     const folderId = harness.hierarchy.createFolder("Limbs", null)!;
 
     await chooseFromMenu(harness, folderId, "add-block");
     await chooseFromMenu(harness, folderId, "add-folder");
 
-    assert.deepEqual(shapeOf(harness.hierarchy.nodes()), [
+    const [limbs] = harness.hierarchy.nodes();
+    assert.deepEqual(shapeOf([limbs]), [
       ["Limbs", ["Arm", "Arm"]]
     ]);
+    assert.deepEqual(
+      limbs.children.map((child) => [child.kind, child.shape]),
+      [["block", { type: "cone", sides: 4 }], ["folder", null]]
+    );
   });
 
   test("duplicates and deletes the row it was opened on, not the selection", async() => {
@@ -156,7 +161,7 @@ describe("HierarchyController.menuFor run", () => {
 
   test("adds at the root from the tree's menu, whatever is selected", async() => {
     const harness = createHierarchyHarness({
-      name: { name: "Arm" }
+      name: { name: "Arm", choice: "box" }
     });
     selectBlock(harness, "Body");
 

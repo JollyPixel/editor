@@ -11,7 +11,7 @@ import type {
 type KeyedCommand = VoxelModelCommand | VoxelModelNetworkCommand;
 
 export type ModelValueRef =
-  | { kind: "name" | "parent" | "transform" | "uv" | "material" | "flip"; id: string; }
+  | { kind: "name" | "parent" | "transform" | "uv" | "shape" | "material" | "flip"; id: string; }
   | { kind: "material-name" | "material-parent"; id: string; }
   | { kind: "material-surface"; id: string; field: string; }
   | { kind: "animation-own"; id: string; }
@@ -51,6 +51,7 @@ export function modelConflictRefs(
       return [{ kind: "material-parent", id: command.id }];
     case "node-renamed":
     case "node-uv-changed":
+    case "node-shape-changed":
     case "node-material-changed":
     case "material-renamed":
     case "material-changed":
@@ -79,6 +80,8 @@ export function modelWriteRefs(
         [{ kind: "transform", id: command.id }, { kind: "flip", id: command.id }];
     case "node-uv-changed":
       return [{ kind: "uv", id: command.id }];
+    case "node-shape-changed":
+      return [{ kind: "shape", id: command.id }, { kind: "uv", id: command.id }];
     case "node-material-changed":
       return [{ kind: "material", id: command.id }];
     case "material-renamed":
@@ -120,7 +123,7 @@ export function voxelModelWriteKeys(
 function nodeValueRefs(
   id: string
 ): ModelValueRef[] {
-  return (["name", "parent", "transform", "uv", "material"] as const).map((kind) => {
+  return (["name", "parent", "transform", "uv", "shape", "material"] as const).map((kind) => {
     return { kind, id };
   });
 }

@@ -95,6 +95,13 @@ describe("VoxelModelState", () => {
     const state = new VoxelModelState();
     state.load(createVoxelModelDocument({ texture: kTexture }));
     state.applyCommand(blockAdded("a"));
+    state.applyCommand(blockAdded("floor"));
+    state.applyCommand({
+      action: "node-shape-changed",
+      id: "floor",
+      shape: { type: "plane" },
+      uv: BlockUvLayouts.net(undefined, { type: "plane" })
+    });
 
     const reloaded = new VoxelModelState();
     reloaded.load(decodeVoxelModelDocument(encodeVoxelModelDocument(state.toJSON())));

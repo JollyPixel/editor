@@ -17,6 +17,10 @@ export interface AddNodeOptions {
    * Adds inside this row through its menu instead of the header button.
    */
   under?: string;
+  /**
+   * The block shape picked in the New Block dialog; the dialog's own pick when omitted.
+   */
+  shape?: string;
 }
 
 export function hierarchyAction(
@@ -42,6 +46,9 @@ export async function addNode(
     await menu.getByRole("menuitem", { name: new RegExp(`^Add (Child )?${kind}$`) }).click();
   }
   const form = dialog(page, `New ${kind}`);
+  if (options.shape !== undefined) {
+    await form.getByRole("radio", { name: options.shape, exact: true }).click();
+  }
   await textField(form, `${kind} name`).fill(name);
   await form.getByRole("button", { name: "OK" }).click();
   await expect(form).toBeHidden();

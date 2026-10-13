@@ -15,6 +15,7 @@ import {
 } from "#src/model/ModelDocument.ts";
 import { modelHistoryKeys } from "#src/model/history/modelHistoryKeys.ts";
 import { BlockTransform } from "#src/model/nodes/BlockTransform.ts";
+import { BlockUvLayouts } from "#src/model/nodes/BlockUvLayouts.ts";
 import { MaterialSurface } from "#src/model/materials/MaterialSurface.ts";
 import { inverseOf } from "#src/model/history/modelInverse.ts";
 import { InvalidModelTreeError } from "#src/model/errors/InvalidModelTreeError.ts";
@@ -131,6 +132,10 @@ describe("model history round trips", () => {
         state: "stacked",
         rect: { x: 32, y: 0, width: 8, height: 8 }
       });
+    },
+    "reshape blocks with their UV layouts": ({ document, ids }) => {
+      document.setShape(ids.leg, { type: "plane" }, BlockUvLayouts.net({ x: 48, y: 0 }, { type: "plane" }));
+      document.setShape(ids.leg, { type: "box" }, BlockUvLayouts.net({ x: 64, y: 0 }));
     },
     "assign and clear a material": ({ document, ids }) => {
       document.assignMaterial(ids.leg, ids.glass);
