@@ -43,7 +43,6 @@ import { MapLayers } from "../features/layers/MapLayers.ts";
 import { ObjectLayerRenderer } from "../features/layers/objects/ObjectLayerRenderer.ts";
 import { trackBlockPresence } from "../features/blocks/collaboration/blockPresence.ts";
 import { trackLayerPresence } from "../features/layers/collaboration/layerPresence.ts";
-import { BrushStore } from "../features/painting/BrushStore.ts";
 import { LocalBrush } from "../features/painting/LocalBrush.ts";
 import { PeerBrushes } from "../features/painting/collaboration/PeerBrushes.ts";
 import { bindBrushShortcuts } from "../features/painting/interaction/brushShortcuts.ts";
@@ -187,12 +186,19 @@ export class EditorScene extends Systems.Scene {
         viewport.dataset.backdrop = environment.backdrop;
       }
     }
+    const grid = new Grid(kGrid);
+    world
+      .createActor("grid")
+      .addChildren(grid);
     function applyView(
       settings: ViewSettings
     ): void {
       environment.apply(settings);
       applyGlow(settings.glow);
       applyBackdrop();
+      grid.enabled = settings.grid;
+      view.inspector.mode = settings.inspector;
+      view.inspector.chunkBounds = settings.chunkBounds;
     }
     applyView(state.view.settings);
     this.#environment = environment;
@@ -254,10 +260,6 @@ export class EditorScene extends Systems.Scene {
       blocksets
     });
 
-    const grid = new Grid(kGrid);
-    world
-      .createActor("grid")
-      .addChildren(grid);
     const roster = new PeerRoster({
       room: session.room,
       publish: (peers) => {
@@ -295,7 +297,7 @@ export class EditorScene extends Systems.Scene {
         room: session.room,
         camera: camera.camera
       });
-    const brush = new BrushStore();
+    const { brush } = state;
     const localBrush = world
       .createActor("brush")
       .addComponentAndGet(LocalBrush, {
@@ -453,7 +455,6 @@ export class EditorScene extends Systems.Scene {
     this.#workspace.resolve({
       state,
       access,
-      brush,
       mapDocument,
       usage,
       blockSources,
@@ -463,7 +464,6 @@ export class EditorScene extends Systems.Scene {
       layerVisibility,
       layers,
       view,
-      grid,
       localBrush,
       blocksets,
       materials,

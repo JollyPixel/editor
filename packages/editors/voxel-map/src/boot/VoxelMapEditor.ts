@@ -28,9 +28,7 @@ import { EditorScene } from "./EditorScene.ts";
 import type { VoxelMapWorkspace } from "../workspace/VoxelMapWorkspace.ts";
 import { EditorShell } from "../shell/EditorShell.ts";
 import { BLOCKSET_DOCUMENT_KIND } from "../features/blocksets/BlocksetBinding.ts";
-import { brushConsole } from "../features/painting/brushConsole.ts";
-import { textureConsole } from "../features/texture/textureConsole.ts";
-import { viewConsole } from "../scene/viewConsole.ts";
+import { mapConsole } from "./mapConsole.ts";
 
 // CONSTANTS
 const kCanvas = "#game-container > canvas";
@@ -129,7 +127,7 @@ export class VoxelMapEditor {
         key: kPerformancePaneKey,
         title: "Performance",
         storageKey: kPerformanceStorageKey,
-        hidden: true
+        hidden: editorRuntime.widgets.startsHidden("metrics", true)
       })
     );
 
@@ -143,20 +141,14 @@ export class VoxelMapEditor {
       consoleFeatures: registerConsoleFeatures(
         commands,
         [
-          brushConsole,
-          textureConsole,
-          viewConsole,
+          mapConsole,
           runtimeConsole,
           archiveConsole
         ],
         {
-          brush: workspace.brush,
-          localBrush: workspace.localBrush,
           state: workspace.state,
-          grid: workspace.grid,
           archives: workspace.archives,
-          inspector: workspace.view.inspector,
-          runtime
+          runtime: editorRuntime
         }
       ),
       metricsPanel,

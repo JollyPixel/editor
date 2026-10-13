@@ -17,7 +17,10 @@ import type { MapDocumentSignals } from "../../../document/MapDocument.ts";
 import { BlockUv } from "../uv/BlockUv.ts";
 import { BlockUvSelectionSync } from "./BlockUvSelectionSync.ts";
 import { SlotRegionIds } from "./SlotRegionIds.ts";
-import type { BlockSelection } from "../../../state/index.ts";
+import type {
+  BlockSelection,
+  UvSyncStore
+} from "../../../state/index.ts";
 import type { BlockWriter } from "../../blocksets/BlocksetBinding.ts";
 
 export interface BlockUvBridgeOptions {
@@ -25,12 +28,14 @@ export interface BlockUvBridgeOptions {
   block: BlockSelection;
   mapDocument: MapDocumentSignals;
   blocks?: Pick<BlockWriter, "defineBlock">;
+  uvSync: Pick<UvSyncStore, "mode">;
 }
 
 export class BlockUvBridge {
   readonly #uv: UVMap;
   readonly #view: VoxelView;
   readonly #blocks: Pick<BlockWriter, "defineBlock">;
+  readonly #uvSync: Pick<UvSyncStore, "mode">;
   readonly #selection: BlockUvSelectionSync;
   readonly #runLocalRestore: <T>(fn: () => T) => T;
   #regions: SlotRegionIds | null = null;
@@ -49,6 +54,7 @@ export class BlockUvBridge {
     this.#uv = uv;
     this.#view = view;
     this.#blocks = options.blocks ?? view.document;
+    this.#uvSync = options.uvSync;
     this.#selection = new BlockUvSelectionSync(
       uv,
       options.block,
@@ -213,7 +219,11 @@ export class BlockUvBridge {
   };
 
   readonly #onRegionDragging: UVMapListener<"region-dragging"> = ({ region }) => {
-    if (this.#rebuilding || !this.#resolveBlock(region.id)) {
+    if (
+      this.#uvSync.mode !== "live" ||
+      this.#rebuilding ||
+      !this.#resolveBlock(region.id)
+    ) {
       return;
     }
 

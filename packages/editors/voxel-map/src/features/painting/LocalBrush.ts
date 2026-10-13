@@ -15,10 +15,10 @@ import type { OpenStep } from "@jolly-pixel/history";
 // Import Internal Dependencies
 import type {
   BlockSelection,
+  BrushStore,
   PointerCapture,
   SelectionStore
 } from "../../state/index.ts";
-import type { BrushStore } from "./BrushStore.ts";
 import {
   BrushFootprint,
   type BrushShape
@@ -56,7 +56,6 @@ import {
 
 // CONSTANTS
 const kDefaultMaxDistance = 32;
-const kDefaultSkyRadius = 24;
 const kStaleAimFrames = 2;
 const kDragThreshold = 4;
 const kStrokeLabels: Readonly<Record<StrokeMode, string>> = {
@@ -76,7 +75,6 @@ export interface LocalBrushOptions {
   history: MapSteps;
   groundPlaneSize?: number;
   maxDistance?: number;
-  skyRadius?: number;
   color?: THREE.ColorRepresentation;
   onCursorChange: (cursor: BrushFootprint | null) => void;
   onPaintBlocked: () => void;
@@ -121,7 +119,6 @@ export class LocalBrush extends ActorComponent {
       pointer,
       groundPlaneSize = 4096,
       maxDistance = kDefaultMaxDistance,
-      skyRadius = kDefaultSkyRadius,
       color
     } = options;
 
@@ -138,7 +135,7 @@ export class LocalBrush extends ActorComponent {
       solid: view.root,
       groundPlaneSize,
       maxDistance,
-      skyRadius
+      skyRadius: brush.skyRadius
     });
     this.#preview = new BrushPreview({
       actor,
@@ -161,28 +158,15 @@ export class LocalBrush extends ActorComponent {
     this.#unsubscribers = [
       () => view.document.off("command", markAimStale),
       actor.world.keepAlive(() => this.#staleAimFrames > 0),
-      brush.subscribe("change", markDirty),
+      brush.subscribe("change", ({ skyRadius }) => {
+        this.#aimer.skyRadius = skyRadius;
+        markDirty();
+      }),
       block.subscribe("change", markDirty),
       selection.subscribe("change", () => {
         this.#blockedPaintReported = false;
       })
     ];
-  }
-
-  get skyRadius(): number {
-    return this.#aimer.skyRadius;
-  }
-
-  set skyRadius(
-    value: number
-  ) {
-    if (value === this.#aimer.skyRadius) {
-      return;
-    }
-
-    this.#aimer.skyRadius = value;
-    this.#preview.markDirty();
-    this.actor.world.invalidate();
   }
 
   override destroy(): void {

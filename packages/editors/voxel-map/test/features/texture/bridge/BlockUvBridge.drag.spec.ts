@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { BlockUvBridge } from "../../../../src/features/texture/bridge/BlockUvBridge.ts";
+import type { UvSyncMode } from "../../../../src/state/index.ts";
 import {
   makeBlock,
   makeFakeVoxelEngine,
@@ -37,11 +38,14 @@ function runFrame(): void {
   }
 }
 
-function setup() {
+function setup(
+  mode: UvSyncMode = "commit"
+) {
   const engine = makeFakeVoxelEngine();
   engine.view.document.blocks.register(
     makeBlock(1, { col: 0, row: 0, blocksetId: "atlas" })
   );
+  engine.bridgeOptions.uvSync.mode = mode;
   const uv = makeUv();
   const bridge = new BlockUvBridge(uv, engine.view, engine.bridgeOptions);
   bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
@@ -49,11 +53,11 @@ function setup() {
   return { ...engine, uv, bridge };
 }
 
-describe("BlockUvBridge / region-dragging", () => {
+describe("BlockUvBridge / region-dragging in live mode", () => {
   beforeEach(() => kFrames.clear());
 
   it("writes the latest dragged rect once per frame", () => {
-    const { view, dirtyReasons, uv, bridge } = setup();
+    const { view, dirtyReasons, uv, bridge } = setup("live");
     try {
       uv.previewMove("block-1", { x: 16, y: 0, width: 16, height: 16 });
       uv.previewMove("block-1", { x: 32, y: 0, width: 16, height: 16 });
@@ -83,6 +87,7 @@ describe("BlockUvBridge / region-dragging", () => {
       makeBlock(2, { col: 1, row: 0, blocksetId: "atlas" })
     );
     const uv = makeUv();
+    engine.bridgeOptions.uvSync.mode = "live";
     const bridge = new BlockUvBridge(uv, engine.view, engine.bridgeOptions);
     bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
     engine.dirtyReasons.length = 0;
@@ -107,7 +112,7 @@ describe("BlockUvBridge / region-dragging", () => {
   });
 
   it("skips the frame when the drag is back on the block's rect", () => {
-    const { dirtyReasons, uv, bridge } = setup();
+    const { dirtyReasons, uv, bridge } = setup("live");
     try {
       uv.previewMove("block-1", { x: 16, y: 0, width: 16, height: 16 });
       uv.previewMove("block-1", { x: 0, y: 0, width: 16, height: 16 });
@@ -121,7 +126,7 @@ describe("BlockUvBridge / region-dragging", () => {
   });
 
   it("lets the drop win over a pending frame", () => {
-    const { view, dirtyReasons, uv, bridge } = setup();
+    const { view, dirtyReasons, uv, bridge } = setup("live");
     try {
       uv.previewMove("block-1", { x: 16, y: 0, width: 16, height: 16 });
       uv.move("block-1", { x: 32, y: 0, width: 16, height: 16 });
@@ -136,7 +141,7 @@ describe("BlockUvBridge / region-dragging", () => {
   });
 
   it("writes the pending rect as soon as the drag ends", () => {
-    const { view, uv, bridge } = setup();
+    const { view, uv, bridge } = setup("live");
     try {
       uv.previewMove("block-1", { x: 16, y: 0, width: 16, height: 16 });
       uv.emit("region-drag-ended", { id: "block-1", committed: false });
@@ -150,11 +155,75 @@ describe("BlockUvBridge / region-dragging", () => {
   });
 
   it("drops the pending frame on dispose", () => {
-    const { dirtyReasons, uv, bridge } = setup();
+    const { dirtyReasons, uv, bridge } = setup("live");
     uv.previewMove("block-1", { x: 16, y: 0, width: 16, height: 16 });
     bridge.dispose();
     runFrame();
 
     assert.deepEqual(dirtyReasons, []);
+  });
+});
+
+describe("BlockUvBridge / region-dragging in commit mode", () => {
+  beforeEach(() => kFrames.clear());
+
+  it("writes nothing while the region is dragged", () => {
+    const { view, dirtyReasons, uv, bridge } = setup();
+    try {
+      uv.previewMove("block-1", { x: 16, y: 0, width: 16, height: 16 });
+      uv.previewMove("block-1", { x: 32, y: 0, width: 16, height: 16 });
+      runFrame();
+
+      assert.deepEqual(dirtyReasons, []);
+      assert.equal(kFrames.size, 0);
+      assert.equal(view.document.blocks.get(1)?.defaultTexture?.col, 0);
+    }
+    finally {
+      bridge.dispose();
+    }
+  });
+
+  it("writes the dropped rect once", () => {
+    const { view, dirtyReasons, uv, bridge } = setup();
+    try {
+      uv.previewMove("block-1", { x: 16, y: 0, width: 16, height: 16 });
+      uv.move("block-1", { x: 32, y: 0, width: 16, height: 16 });
+      uv.endPreview("block-1", true);
+
+      assert.deepEqual(dirtyReasons, ["block-defined"]);
+      assert.equal(view.document.blocks.get(1)?.defaultTexture?.col, 2);
+    }
+    finally {
+      bridge.dispose();
+    }
+  });
+
+  it("writes nothing for a cancelled drag", () => {
+    const { view, dirtyReasons, uv, bridge } = setup();
+    try {
+      uv.previewMove("block-1", { x: 16, y: 0, width: 16, height: 16 });
+      uv.previewMove("block-1", { x: 0, y: 0, width: 16, height: 16 });
+      uv.endPreview("block-1", false);
+
+      assert.deepEqual(dirtyReasons, []);
+      assert.equal(view.document.blocks.get(1)?.defaultTexture?.col, 0);
+    }
+    finally {
+      bridge.dispose();
+    }
+  });
+
+  it("follows a switch to live mode on the next drag", () => {
+    const { view, uv, bridgeOptions, bridge } = setup();
+    try {
+      bridgeOptions.uvSync.mode = "live";
+      uv.previewMove("block-1", { x: 16, y: 0, width: 16, height: 16 });
+      runFrame();
+
+      assert.equal(view.document.blocks.get(1)?.defaultTexture?.col, 1);
+    }
+    finally {
+      bridge.dispose();
+    }
   });
 });

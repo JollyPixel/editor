@@ -17,7 +17,8 @@ export class Brush {
 
   state() {
     return this.#page.evaluate(() => {
-      const { brush, state } = window.voxelMapEditor!.workspace;
+      const { state } = window.voxelMapEditor!.workspace;
+      const { brush } = state;
 
       return {
         blockId: state.block.id,
@@ -44,7 +45,8 @@ export class Brush {
     patch: BrushPatch
   ): Promise<void> {
     await this.#page.evaluate((values) => {
-      const { brush, state } = window.voxelMapEditor!.workspace;
+      const { state } = window.voxelMapEditor!.workspace;
+      const { brush } = state;
       if (values.blockId !== undefined) {
         state.block.id = values.blockId;
       }

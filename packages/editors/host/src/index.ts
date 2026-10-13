@@ -40,6 +40,7 @@ export {
   type EditorRuntimeLoadOptions
 } from "./runtime/EditorRuntime.ts";
 export * from "./runtime/PeerFrustums.ts";
+export * from "./runtime/RuntimeWidgets.ts";
 export * from "./editor/EditorDefinition.ts";
 export * from "./editor/mountStandalone.ts";
 export {

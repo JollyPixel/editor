@@ -196,6 +196,7 @@ export class TextureEditor extends WorkspaceElement {
         binding,
         blocks: blocksets,
         block: workspace.state.block,
+        uvSync: workspace.state.uvSync,
         mapDocument: workspace.mapDocument
       }));
     }

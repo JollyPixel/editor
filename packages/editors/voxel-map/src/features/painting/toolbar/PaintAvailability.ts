@@ -25,8 +25,8 @@ export class PaintAvailability {
     workspace: VoxelMapWorkspace,
     listener: (availability: PaintAvailability) => void
   ): Iterable<() => void> {
-    const { brush, mapDocument, access } = workspace;
-    const { selection } = workspace.state;
+    const { mapDocument, access } = workspace;
+    const { brush, selection } = workspace.state;
     function refresh(): void {
       listener(PaintAvailability.evaluate(selection, brush.suspended, access.current));
     }

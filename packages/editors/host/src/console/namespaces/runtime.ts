@@ -3,63 +3,45 @@ import type {
   CommandConsole,
   RegistrationHandle
 } from "@jolly-pixel/console";
-import type {
-  MetricsPanel,
-  PerformanceStatsHud,
-  ViewHelperSettings
-} from "@jolly-pixel/runtime";
+
+// Import Internal Dependencies
+import type { RuntimeWidgets } from "../../runtime/RuntimeWidgets.ts";
 
 export interface RuntimeConsoleContext {
   runtime: {
-    readonly statsHud: Pick<PerformanceStatsHud, "hidden"> | null;
-    readonly viewHelper: Pick<ViewHelperSettings, "hidden"> | null;
-    readonly metrics: {
-      readonly panel: Pick<MetricsPanel, "hidden"> | null;
-    };
+    readonly widgets: Pick<RuntimeWidgets, "mounted" | "visible" | "show">;
   };
 }
 
 export function runtimeConsole(
   commands: CommandConsole,
-  { runtime }: RuntimeConsoleContext
+  { runtime: { widgets } }: RuntimeConsoleContext
 ): RegistrationHandle {
   const namespace = commands.registerNamespace("runtime", {
     description: "Performance readouts and viewport gizmos"
   });
 
-  const { statsHud, viewHelper, metrics } = runtime;
-  if (statsHud !== null) {
+  if (widgets.mounted("stats")) {
     namespace.registerVariable("stats", {
       type: "boolean",
       description: "Frame time graph in the viewport corner",
-      get: () => !statsHud.hidden,
-      set: (visible) => {
-        statsHud.hidden = !visible;
-      }
+      get: () => widgets.visible("stats"),
+      set: (visible) => widgets.show("stats", visible)
     });
   }
-  if (viewHelper !== null) {
+  if (widgets.mounted("viewHelper")) {
     namespace.registerVariable("viewHelper", {
       type: "boolean",
       description: "Axis gizmo in the viewport corner",
-      get: () => !viewHelper.hidden,
-      set: (visible) => {
-        viewHelper.hidden = !visible;
-      }
+      get: () => widgets.visible("viewHelper"),
+      set: (visible) => widgets.show("viewHelper", visible)
     });
   }
   namespace.registerVariable("metrics", {
     type: "boolean",
     description: "Performance pane with the metric readouts",
-    get: () => metrics.panel?.hidden === false,
-    set: (visible) => {
-      const { panel } = metrics;
-      if (panel === null) {
-        throw new Error("No performance pane is mounted.");
-      }
-
-      panel.hidden = !visible;
-    }
+    get: () => widgets.visible("metrics"),
+    set: (visible) => widgets.show("metrics", visible)
   });
 
   return namespace;

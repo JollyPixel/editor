@@ -12,20 +12,19 @@ import {
   BRUSH_PATTERNS,
   ROTATION_MODES,
   type RotationMode
-} from "./BrushStore.ts";
-import type { LocalBrush } from "./LocalBrush.ts";
+} from "../../state/index.ts";
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 
 // CONSTANTS
 const kRotationValues = ROTATION_MODES.map(rotationValue);
 
-export interface BrushConsoleContext extends Pick<VoxelMapWorkspace, "brush"> {
-  localBrush: Pick<LocalBrush, "skyRadius">;
+export interface BrushConsoleContext {
+  state: Pick<VoxelMapWorkspace["state"], "brush">;
 }
 
 export function brushConsole(
   commands: CommandConsole,
-  { brush, localBrush }: BrushConsoleContext
+  { state: { brush } }: BrushConsoleContext
 ): RegistrationHandle {
   const namespace = commands.registerNamespace("brush", {
     description: "Voxel brush"
@@ -95,9 +94,9 @@ export function brushConsole(
     type: "number",
     description: "Distance in voxels at which the brush aims into empty " +
       "sky, 0 to turn it off",
-    get: () => localBrush.skyRadius,
+    get: () => brush.skyRadius,
     set: (skyRadius) => {
-      localBrush.skyRadius = skyRadius;
+      brush.skyRadius = skyRadius;
     }
   });
 

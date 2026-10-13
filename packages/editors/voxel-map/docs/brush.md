@@ -14,7 +14,9 @@ scope. The code lives in `src/features/painting/`.
 - `skyRadius`: 24 by default, 0 turns sky aiming off. Console only.
 
 All of them are under the `brush.` console namespace. The keys work only while
-a voxel layer is selected.
+a voxel layer is selected. Every change is saved in the browser under
+`voxel-map:brush` and comes back after a reload; a stored value that is out of
+range or unknown falls back to its default.
 
 ## Input
 
