@@ -20,7 +20,7 @@ presence.max = 5;
 `PresencePeer` extends [`CollaboratorPresence`](./presence-source.md), adding
 `self`, `peerId`, `avatar` and `badge`. Each row starts with a
 [`jolly-avatar`](./avatar.md): `peerId` (defaulting to `clientId`) picks its
-glyph, `color` tints it, and `avatar`, an image URL, replaces it. `badge`, a
+portrait, `color` tints it, and `avatar`, an image URL, replaces it. `badge`, a
 short label such as "via link", follows the name. The element ignores `editing`: it renders a session snapshot, not a
 field. Build the list with [`toPresencePeers`](./presence-source.md#mapping), which
 flags the local peer and orders it first.

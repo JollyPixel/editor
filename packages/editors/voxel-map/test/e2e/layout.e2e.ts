@@ -211,10 +211,10 @@ test("the performance readout merges into the pane group it is dropped on", asyn
   await toggleReadout(commands, true);
   await expect(readout).toBeVisible();
 
-  await map.panes.movePane(readout, "General");
+  await map.panes.movePane(readout, "Blocks");
 
   await expect.poll(() => leftGroups(map)).toEqual([
-    ["general", kPerformancePane, "blocks", "materials", "paint", "layers"]
+    ["blocks", kPerformancePane, "materials", "paint", "layers"]
   ]);
 });
 
@@ -223,7 +223,7 @@ test("runtime.metrics still toggles the readout once docked", async({ map, comma
   await toggleReadout(commands, true);
   await expect(readout).toBeVisible();
 
-  await map.panes.movePane(readout, "General");
+  await map.panes.movePane(readout, "Blocks");
   await expect(
     map.panes.dock("left").locator(`jolly-pane[key='${kPerformancePane}']`)
   ).toBeVisible();

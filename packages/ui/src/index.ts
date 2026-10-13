@@ -51,6 +51,7 @@ export * from "./peer/identity.ts";
 export * from "./peer/promptPeerIdentity.ts";
 
 export * from "./peer/Presence.ts";
+export * from "./peer/PresenceStack.ts";
 export * from "./peer/Avatar.ts";
 export * from "./peer/PresenceSource.ts";
 export * from "./peer/toPresencePeers.ts";

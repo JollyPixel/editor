@@ -127,6 +127,10 @@ export class SceneEnvironment {
     this.#applyBackground();
   }
 
+  get backdrop(): ResolvedThemeMode {
+    return this.#lighting.rig.sky?.backdrop ?? this.#theme;
+  }
+
   invalidateShadows(): void {
     this.#shadowsDirty = true;
   }

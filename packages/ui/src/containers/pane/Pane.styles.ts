@@ -64,6 +64,26 @@ export const paneStyles = css`
         var(--jolly-area-fill) 24%,
         transparent
       );
+      --jolly-folder-action-bg: color-mix(
+        in oklab,
+        var(--jolly-area-fill) 30%,
+        var(--jolly-surface-raised)
+      );
+      --jolly-folder-action-bg-hover: color-mix(
+        in oklab,
+        var(--jolly-area-fill) 44%,
+        var(--jolly-surface-raised)
+      );
+      --jolly-folder-action-bg-focus: color-mix(
+        in oklab,
+        var(--jolly-area-fill) 54%,
+        var(--jolly-surface-raised)
+      );
+      --jolly-folder-action-bg-active: color-mix(
+        in oklab,
+        var(--jolly-area-fill) 60%,
+        var(--jolly-surface-raised)
+      );
       --jolly-separator-label: var(--jolly-area-tone);
       --jolly-separator-rule: color-mix(
         in oklab,

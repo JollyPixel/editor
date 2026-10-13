@@ -36,33 +36,43 @@ const inkTokens = css`
     transparent
   );
 
-  /* Inverted to stay legible over the header. */
-  --jolly-folder-action-fg: var(--jolly-surface);
+  /* Opaque tone tint over the raised surface, so glyphs keep their contrast. */
+  --jolly-folder-action-fg: var(--jolly-text);
   --jolly-folder-action-bg: color-mix(
     in oklab,
-    var(--jolly-ink) 84%,
-    var(--jolly-surface)
+    var(--jolly-accent-fill) 30%,
+    var(--jolly-surface-raised)
   );
   --jolly-folder-action-bg-hover: color-mix(
     in oklab,
-    var(--jolly-ink) 92%,
-    var(--jolly-surface)
+    var(--jolly-accent-fill) 44%,
+    var(--jolly-surface-raised)
   );
-  --jolly-folder-action-bg-focus: var(--jolly-ink);
-  --jolly-folder-action-bg-active: var(--jolly-ink);
-
-  /* Red ground in both themes, so the glyph stays white. */
-  --jolly-folder-action-danger-fg: var(--jolly-neutral-0);
-  --jolly-folder-action-danger-bg: var(--jolly-ink-danger);
+  --jolly-folder-action-bg-focus: color-mix(
+    in oklab,
+    var(--jolly-accent-fill) 54%,
+    var(--jolly-surface-raised)
+  );
+  --jolly-folder-action-bg-active: color-mix(
+    in oklab,
+    var(--jolly-accent-fill) 60%,
+    var(--jolly-surface-raised)
+  );
+  --jolly-folder-action-danger-fg: var(--jolly-ink-danger);
+  --jolly-folder-action-danger-bg: color-mix(
+    in oklab,
+    var(--jolly-ink-danger) 24%,
+    var(--jolly-surface-raised)
+  );
   --jolly-folder-action-danger-bg-hover: color-mix(
     in oklab,
-    var(--jolly-ink-danger) 86%,
-    var(--jolly-ink)
+    var(--jolly-ink-danger) 36%,
+    var(--jolly-surface-raised)
   );
   --jolly-folder-action-danger-bg-focus: color-mix(
     in oklab,
-    var(--jolly-ink-danger) 72%,
-    var(--jolly-ink)
+    var(--jolly-ink-danger) 44%,
+    var(--jolly-surface-raised)
   );
 
   /* Tab hover stays below the control stop; selection uses the accent tint. */

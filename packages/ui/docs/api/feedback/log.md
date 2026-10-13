@@ -65,8 +65,8 @@ animating out included:
   height: 220px;
   background: radial-gradient(
     ellipse 100% 100% at top left,
-    rgb(0 0 0 / 0.85),
-    rgb(0 0 0 / 0.6) 45%,
+    light-dark(rgb(255 255 255 / 0.85), rgb(0 0 0 / 0.85)),
+    light-dark(rgb(255 255 255 / 0.6), rgb(0 0 0 / 0.6)) 45%,
     transparent
   );
   transition: opacity 200ms ease;
@@ -83,6 +83,23 @@ right and bottom edges and shows no seam over a light scene. A diagonal
 `linear-gradient` does not reach zero at the top-right and bottom-left
 corners.
 
+The text color and its shadow both follow `color-scheme`: dark text with a
+light shadow under `light`, the reverse under `dark`. Over a 3D viewport, what
+sits behind the feed is the scene, not the page, so set `color-scheme` on the
+log and the scrim from the scene's backdrop rather than from the UI theme:
+
+```css
+.viewport[data-backdrop="light"]::before,
+.viewport[data-backdrop="light"] jolly-log {
+  color-scheme: light;
+}
+
+.viewport[data-backdrop="dark"]::before,
+.viewport[data-backdrop="dark"] jolly-log {
+  color-scheme: dark;
+}
+```
+
 `empty` is derived, so writing to it only holds until the next render.
 
 | Custom property | Default |
@@ -93,7 +110,7 @@ corners.
 | `--jolly-log-exit-duration` | `var(--jolly-duration-base)` |
 | `--jolly-log-easing` | `var(--jolly-easing)` |
 | `--jolly-log-color` | `var(--jolly-text)` |
-| `--jolly-log-shadow` | a 1px drop shadow |
+| `--jolly-log-shadow` | a 1px drop shadow, light or dark per `color-scheme` |
 | `--jolly-log-rise` | `4px` |
 
 A removed entry stays in the DOM until its exit transition ends, so the

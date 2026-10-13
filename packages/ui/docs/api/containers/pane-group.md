@@ -49,3 +49,9 @@ pane is not in the group. `panes()` returns the slotted panes and `activePane()`
 the shown one. The component exposes `tabs`, `tab`, `tab-selected`, `tab-icon`,
 `tab-label`, and `panels` CSS parts. Tabs size to their label; stretch them
 across the strip with `jolly-pane-group::part(tab) { flex: 1 1 0; }`.
+
+When the shown pane has a [tone](./pane.md), the tab strip takes its fill and
+the selected tab is underlined in a shade of that tone: the light
+`--jolly-tone-<name>-on-fill` in a dark theme, and the fill darkened toward
+black in a light theme, so the line stays distinct from the pane body below.
+Without a tone, the underline uses the text color.

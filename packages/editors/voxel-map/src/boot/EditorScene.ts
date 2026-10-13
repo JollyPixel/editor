@@ -181,11 +181,18 @@ export class EditorScene extends Systems.Scene {
     ): void {
       camera.glow = enabled && anyGlows(materialGroups);
     }
+    const viewport = world.renderer.getSource().domElement.parentElement;
+    function applyBackdrop(): void {
+      if (viewport !== null) {
+        viewport.dataset.backdrop = environment.backdrop;
+      }
+    }
     function applyView(
       settings: ViewSettings
     ): void {
       environment.apply(settings);
       applyGlow(settings.glow);
+      applyBackdrop();
     }
     applyView(state.view.settings);
     this.#environment = environment;
@@ -382,6 +389,7 @@ export class EditorScene extends Systems.Scene {
       }),
       pageTheme.follow((theme) => {
         environment.theme = theme;
+        applyBackdrop();
         world.invalidate();
       }),
       mapDocument.subscribe("materialGroupsChanged", () => {

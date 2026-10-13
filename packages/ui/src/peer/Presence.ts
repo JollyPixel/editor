@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import {
-  LitElement,
   html,
   type TemplateResult
 } from "lit";
@@ -10,87 +9,32 @@ import {
 
 // Import Internal Dependencies
 import { presenceStyles } from "./Presence.styles.ts";
-import { emitPeerEvent } from "./events.ts";
+import { PeerListElement } from "./PeerListElement.ts";
 import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
 import type { PresencePeer } from "./types.ts";
-import "./Avatar.ts";
 
 /**
  * A read-only view of a collaboration snapshot.
  */
 @customElement("jolly-presence")
-export class PresenceElement extends LitElement {
-  static override properties = {
-    peers: {
-      attribute: false
-    },
-    max: {
-      type: Number
-    },
-    selectable: {
-      type: Boolean,
-      reflect: true
-    }
-  };
-
+export class PresenceElement extends PeerListElement {
   static override styles = [
     presenceStyles,
     hiddenStyles
   ];
 
-  declare selectable: boolean;
-
-  #peers: PresencePeer[] = [];
-  #max = Infinity;
-
-  constructor() {
-    super();
-
-    this.selectable = false;
-  }
-
-  get peers(): ReadonlyArray<PresencePeer> {
-    return this.#peers;
-  }
-
-  set peers(
-    value: Iterable<PresencePeer>
-  ) {
-    const previous = this.#peers;
-    this.#peers = [...value];
-    this.requestUpdate("peers", previous);
-  }
-
-  get max(): number {
-    return this.#max;
-  }
-
-  set max(
-    value: number
-  ) {
-    const next = normalizeMax(value);
-    if (next === this.#max) {
-      return;
-    }
-
-    const previous = this.#max;
-    this.#max = next;
-    this.requestUpdate("max", previous);
-  }
-
   override render(): TemplateResult {
-    const visiblePeers = this.#visiblePeers();
-    const overflow = this.#peers.length - visiblePeers.length;
+    const { visible, hidden } = this.partition();
 
     return html`
       <div class="summary" part="summary" aria-live="polite">
-        ${formatConnectionCount(this.#peers.length)}
+        ${this.connectionLabel}
       </div>
       <ul class="list" part="list">
-        ${visiblePeers.map((peer) => this.#renderPeer(peer))}
-        ${overflow > 0
+        ${visible.map((peer) => this.#renderPeer(peer))}
+        ${hidden.length > 0
           ? html`
-            <li class="overflow" part="overflow">+${overflow} more</li>
+            <li class="overflow" part="overflow">+${hidden.length} more</li>
           `
           : ""}
       </ul>
@@ -101,13 +45,7 @@ export class PresenceElement extends LitElement {
     peer: PresencePeer
   ): TemplateResult {
     const body = html`
-      <jolly-avatar
-        class="avatar"
-        part="avatar"
-        peer-id=${peer.peerId ?? peer.clientId}
-        color=${peer.color}
-        image=${peer.avatar ?? ""}
-      ></jolly-avatar>
+      ${this.renderAvatar(peer)}
       <span class=${peer.self ? "self" : ""}>
         ${peer.displayName}${peer.self ? " (you)" : ""}
       </span>
@@ -116,7 +54,7 @@ export class PresenceElement extends LitElement {
       `}
     `;
 
-    if (!this.selectable || peer.self) {
+    if (!this.isSelectable(peer)) {
       return html`
         <li class="peer" part="peer">${body}</li>
       `;
@@ -129,54 +67,11 @@ export class PresenceElement extends LitElement {
           part="peer-button"
           type="button"
           aria-label=${`Select ${peer.displayName}`}
-          @click=${() => this.#select(peer)}
+          @click=${() => this.select(peer)}
         >${body}</button>
       </li>
     `;
   }
-
-  #select(
-    peer: PresencePeer
-  ): void {
-    emitPeerEvent(this, "jolly-peer-select", {
-      clientId: peer.clientId
-    });
-  }
-
-  #visiblePeers(): PresencePeer[] {
-    if (this.#max === Infinity || this.#peers.length <= this.#max) {
-      return this.#peers;
-    }
-    if (this.#max === 0) {
-      return [];
-    }
-
-    const visible = this.#peers.slice(0, this.#max);
-    const selfIndex = this.#peers.findIndex((peer) => peer.self);
-    if (selfIndex >= this.#max) {
-      visible[visible.length - 1] = this.#peers[selfIndex];
-    }
-
-    return visible;
-  }
-}
-
-function normalizeMax(
-  value: number
-): number {
-  if (!Number.isFinite(value)) {
-    return Infinity;
-  }
-
-  return Math.max(0, Math.floor(value));
-}
-
-function formatConnectionCount(
-  count: number
-): string {
-  return count === 1 ?
-    "1 person connected" :
-    `${count} people connected`;
 }
 
 declare global {

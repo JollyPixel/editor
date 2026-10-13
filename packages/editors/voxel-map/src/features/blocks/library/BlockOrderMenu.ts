@@ -19,9 +19,9 @@ export class BlockOrderMenu extends LitElement {
     }
 
     .trigger {
-      --jolly-icon-button-size: calc(var(--jolly-control-height, 20px) + 12px);
-      --jolly-icon-tone-rest: 0%;
-      --jolly-icon-tone-engaged: 0%;
+      --jolly-icon-button-size: calc(var(--jolly-folder-action-size, 20px) + 14px);
+      --jolly-control-height: var(--jolly-folder-action-size, 20px);
+      --jolly-icon-tone-rest: 100%;
       --jolly-text: var(--jolly-folder-action-fg, var(--jolly-text));
       --jolly-control-bg: var(--jolly-folder-action-bg, var(--jolly-control-bg));
       --jolly-control-bg-hover: var(--jolly-folder-action-bg-hover);

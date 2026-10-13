@@ -2,6 +2,7 @@
 import * as THREE from "three";
 import type { Node } from "three/webgpu";
 import type { BlockLightFalloff } from "@jolly-pixel/voxel.renderer";
+import type { ResolvedThemeMode } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { LightingMode } from "../../state/ViewSettings.ts";
@@ -15,7 +16,10 @@ const kDaySky = "#bcd6f2";
 const kDayGround = "#8a7454";
 const kEnvironmentIntensity = 0.6;
 
-type Sky = new (sunDirection: THREE.Vector3) => { readonly node: Node; };
+interface Sky {
+  readonly backdrop: ResolvedThemeMode;
+  new (sunDirection: THREE.Vector3): { readonly node: Node; };
+}
 
 export interface LightingRig {
   ambient: number;

@@ -10,6 +10,10 @@ import {
 import { openExample } from "../../support/gallery.ts";
 import { FloatingWindow } from "../../support/floating.ts";
 import {
+  resolvedColorOf,
+  styleOf
+} from "../../support/styles.ts";
+import {
   Pane,
   PaneGroup
 } from "../../support/pane.ts";
@@ -34,6 +38,28 @@ test.describe("DockLayout tones", () => {
     expect(await areaOf(page, "paint")).toBe("var(--jolly-tone-pink)");
     await expect(new Pane(page, "assets").root)
       .not.toHaveAttribute("toned");
+  });
+
+  test("shades the selected tab underline from its tone: light on dark, deep on light", async({ page }) => {
+    const group = new PaneGroup(page);
+    function underline(): Promise<string> {
+      return styleOf(group.selectedTab, "background-color", "::after");
+    }
+    function shade(
+      color: string
+    ): Promise<string> {
+      return resolvedColorOf(group.root, color);
+    }
+
+    await openExample(page, kExample, { theme: "dark" });
+    await group.tab("Blocks").click();
+    expect(await underline())
+      .toBe(await shade("var(--jolly-tone-amber-on-fill)"));
+
+    await openExample(page, kExample, { theme: "light" });
+    await group.tab("Blocks").click();
+    expect(await underline())
+      .toBe(await shade("color-mix(in oklab, var(--jolly-tone-amber-fill) 70%, black)"));
   });
 
   test("share-tone paints both columns with the leading tone", async({ page }) => {
