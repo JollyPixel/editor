@@ -13,6 +13,7 @@ export * from "./templates/VoxelTemplate.ts";
 export {
   VoxelTemplates,
   type VoxelTemplateCaptureOptions,
-  type VoxelTemplatePlaceOptions
+  type VoxelTemplatePlaceOptions,
+  type VoxelTemplateSnapshotOptions
 } from "./templates/VoxelTemplates.ts";
 export * from "./templates/types.ts";

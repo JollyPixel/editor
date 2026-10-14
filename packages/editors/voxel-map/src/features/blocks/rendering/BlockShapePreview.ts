@@ -5,28 +5,30 @@ import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type { BlockRenderSources } from "./BlockRenderSources.ts";
-import { BlockPreviewRenderer } from "./BlockPreviewRenderer.ts";
+import { BlockPreviewSubject } from "./BlockPreviewSubject.ts";
+import { SquareTurntable } from "../../preview/SquareTurntable.ts";
+import { previewWellStyles } from "../../../shared/styles/previewWell.styles.ts";
 
 @customElement("block-shape-preview")
 export class BlockShapePreview extends LitElement {
-  static override styles = css`
-    :host {
-      display: block;
-      aspect-ratio: 1;
-      contain: size;
-    }
+  static override styles = [
+    previewWellStyles,
+    css`
+      :host {
+        display: block;
+        aspect-ratio: 1;
+        contain: size;
+      }
 
-    .well {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: var(--jolly-well-bg, #0e1316);
-      border-radius: var(--jolly-radius-sm, 3px);
-    }
-  `;
+      .well {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+      }
+    `
+  ];
 
   @property({ attribute: false })
   declare sources: BlockRenderSources;
@@ -37,7 +39,7 @@ export class BlockShapePreview extends LitElement {
   @query(".well")
   declare private _well: HTMLDivElement;
 
-  #renderer: BlockPreviewRenderer | null = null;
+  #renderer: SquareTurntable<BlockPreviewSubject> | null = null;
 
   constructor() {
     super();
@@ -68,7 +70,7 @@ export class BlockShapePreview extends LitElement {
       this.#build();
     }
     else if (changed.has("block")) {
-      this.#renderer.block = this.block;
+      this.#renderer.subject.block = this.block;
     }
   }
 
@@ -79,8 +81,9 @@ export class BlockShapePreview extends LitElement {
       return;
     }
 
-    this.#renderer = new BlockPreviewRenderer(this._well, this.sources);
-    this.#renderer.block = this.block;
+    const subject = new BlockPreviewSubject(this.sources);
+    subject.block = this.block;
+    this.#renderer = new SquareTurntable(this._well, subject);
     this.#renderer.onContextLost = () => this.#build();
   }
 }

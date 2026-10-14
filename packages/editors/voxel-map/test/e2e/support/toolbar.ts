@@ -16,6 +16,7 @@ export class EditToolbar {
   readonly selectButton: Locator;
   readonly connectedSelectButton: Locator;
   readonly pasteButton: Locator;
+  readonly saveTemplateButton: Locator;
   readonly cancelButton: Locator;
 
   constructor(
@@ -36,6 +37,7 @@ export class EditToolbar {
       includeHidden: true
     }).first();
     this.cancelButton = this.button(/^Cancel/);
+    this.saveTemplateButton = this.button("Save as template");
   }
 
   button(

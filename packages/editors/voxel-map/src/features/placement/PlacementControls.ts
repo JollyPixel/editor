@@ -26,6 +26,7 @@ import {
 } from "./placementTransforms.ts";
 import "./placementIcons.ts";
 import "../marquee/marqueeIcons.ts";
+import "../templates/templateIcons.ts";
 
 @customElement("voxel-placement-controls")
 export class PlacementControls extends WorkspaceElement {
@@ -63,7 +64,8 @@ export class PlacementControls extends WorkspaceElement {
       workspace.state.keyboardLayout.subscribe(
         "change",
         () => this.requestUpdate()
-      )
+      ),
+      workspace.access.subscribe("change", () => this.requestUpdate())
     ];
   }
 
@@ -112,6 +114,15 @@ export class PlacementControls extends WorkspaceElement {
           ?disabled=${!this._canPaste}
           @click=${this.#onPaste}
         ></jolly-tool-button>
+        ${current.savable ? html`
+          <jolly-tool-button
+            data-tool="save-template"
+            icon="template-save"
+            label="Save as template"
+            ?disabled=${!this.attached.templates.editable}
+            @click=${this.#onSaveTemplate}
+          ></jolly-tool-button>
+        ` : nothing}
       </div>
       <span class="separator" aria-hidden="true"></span>
       <div class="group" role="group" aria-label="Finish">
@@ -175,6 +186,17 @@ export class PlacementControls extends WorkspaceElement {
   #onPaste(): void {
     const workspace = this.attached;
     workspace.placement.paste(workspace.focusPoint());
+  }
+
+  async #onSaveTemplate(): Promise<void> {
+    const workspace = this.attached;
+    const current = workspace.placement.current;
+    if (current !== null) {
+      await workspace.templates.saveSnapshot(
+        current.snapshot(),
+        current.templateName
+      );
+    }
   }
 
   #onDelete(): void {

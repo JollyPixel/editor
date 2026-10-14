@@ -4,9 +4,9 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
+  VoxelTemplate,
   VoxelWorld,
-  type VoxelCoord,
-  type VoxelTemplate
+  type VoxelCoord
 } from "../../../src/document/world/index.ts";
 import { worldHistory } from "../../helpers/history.ts";
 import { VoxelTransform } from "../../../src/document/geometry/index.ts";
@@ -111,6 +111,37 @@ describe("VoxelWorld.templates.createFromLayer", () => {
       world.templates.toArray().map(({ id }) => id).sort(),
       ["template_0", "template_1", "template_2"]
     );
+  });
+});
+
+describe("VoxelWorld.templates.createFromSnapshot", () => {
+  it("stores the snapshot voxels and pivot under a fresh id and the given name", () => {
+    const world = makeWorld();
+    const snapshot = VoxelTemplate.fromLayer(world.getLayer("Source")!, {
+      id: "selection",
+      name: "Selection"
+    }).transformed(VoxelTransform.fromPacked(kQuarterTurn));
+
+    const template = world.templates.createFromSnapshot(snapshot, { name: "Turned" });
+
+    assert.equal(template?.id, "template_0");
+    assert.equal(template?.name, "Turned");
+    assert.deepEqual(template?.pivot, snapshot.pivot);
+    assert.deepEqual(voxelsOf(template), voxelsOf(snapshot));
+  });
+
+  it("creates nothing for an empty snapshot", () => {
+    const world = makeWorld();
+    const commands = recordCommands(world);
+    const empty = new VoxelTemplate({
+      id: "empty",
+      name: "Empty",
+      positions: [],
+      voxels: []
+    });
+
+    assert.equal(world.templates.createFromSnapshot(empty, { name: "A" }), undefined);
+    assert.deepEqual(commands, []);
   });
 });
 

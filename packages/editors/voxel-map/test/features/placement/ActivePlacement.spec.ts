@@ -10,7 +10,9 @@ import { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import { ActivePlacement } from "../../../src/features/placement/ActivePlacement.ts";
+import { CellRegion } from "../../../src/features/placement/CellRegion.ts";
 import { Placement } from "../../../src/features/placement/Placement.ts";
+import { RegionSource } from "../../../src/features/placement/RegionSource.ts";
 import {
   LayerSource,
   TemplateSource
@@ -48,6 +50,7 @@ describe("ActivePlacement", () => {
     const active = new ActivePlacement(templatePlacement, template, "Ground");
 
     assert.strictEqual(active.icon, "template");
+    assert.strictEqual(active.savable, false);
     assert.strictEqual(active.caption, "House → Ground");
     assert.strictEqual(active.committable, true);
     assert.strictEqual(
@@ -80,6 +83,34 @@ describe("ActivePlacement", () => {
 
     assert.strictEqual(active.icon, "voxel-layer");
     assert.strictEqual(active.caption, "Draft");
+  });
+  test("a turned selection saves as a turned snapshot named after its layer", () => {
+    const world = new VoxelWorld();
+    world.addLayer("Draft");
+    world.setVoxelBulk("Draft", [
+      {
+        position: { x: 0, y: 0, z: 0 },
+        blockId: 1
+      },
+      {
+        position: { x: 1, y: 0, z: 0 },
+        blockId: 1
+      }
+    ]);
+    const source = RegionSource.capture(
+      world,
+      "Draft",
+      CellRegion.spanning({ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 })
+    )!;
+    const placement = Placement.at(source, source.pivot).turnedBy({
+      rotation: 1
+    });
+
+    const active = new ActivePlacement(placement, source.snapshot, "Draft");
+
+    assert.strictEqual(active.savable, true);
+    assert.strictEqual(active.templateName, "Draft selection");
+    assert.deepEqual(active.snapshot().size, { x: 1, y: 1, z: 2 });
   });
 
   test("equals compares the placement, the resolved template and the target", () => {

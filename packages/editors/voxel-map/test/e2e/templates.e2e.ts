@@ -228,3 +228,46 @@ test("a saved template reaches a peer and survives a reload", async({ map, peerM
   await expect.poll(() => templateNames(map)).toEqual(["Ground"]);
   await expect(map.templates.row).toHaveText(/Ground/);
 });
+
+test("the Layers tab previews the selected template while templates exist", async({ map }) => {
+  const { templates } = map;
+  await seedCell(map);
+  await expect(templates.previewWell).toHaveCount(0);
+
+  await templates.saveLayer();
+  await expect(templates.previewCanvas).toBeVisible();
+  await expect(templates.previewHint).toHaveCount(0);
+
+  await templates.saveLayer();
+  await templates.remove(templates.row.last());
+  await expect(templates.previewHint).toBeVisible();
+  await expect(templates.previewCanvas).toHaveCount(0);
+
+  await templates.remove(templates.row);
+  await expect(templates.previewWell).toHaveCount(0);
+});
+
+test("a selection is saved as a named template and stays lifted", async({ map }) => {
+  const { placement, templates, toolbar, world } = map;
+  const row: Cell[] = [0, 1, 2].map((x) => {
+    return { x, y: 0, z: 0 };
+  });
+  await world.seed(row.map((cell) => {
+    return { ...cell, blockId: 1 };
+  }));
+  await map.viewport.pinCamera();
+
+  await toolbar.selectButton.click();
+  await toolbar.connectedSelectButton.click();
+  await map.viewport.click(row[0]);
+  await expect.poll(async() => (await placement.current())?.cells.length)
+    .toBe(row.length);
+
+  await toolbar.saveTemplateButton.click();
+  await templates.name("Wall");
+
+  await expect.poll(() => templateNames(map)).toEqual(["Wall"]);
+  await expect(templates.row).toHaveAttribute("aria-selected", "true");
+  await expect(templates.previewCanvas).toBeVisible();
+  expect((await placement.current())?.kind).toBe("region");
+});

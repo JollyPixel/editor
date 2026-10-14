@@ -15,8 +15,7 @@ import {
 
 describe("BlockPreviewMeshes", () => {
   it("keeps the mesh of an unchanged block and replaces a redefined one", () => {
-    const scene = new THREE.Scene();
-    const meshes = new BlockPreviewMeshes(scene, texturedSources());
+    const meshes = new BlockPreviewMeshes(texturedSources());
     const kept = blockOf({ id: 1 });
     const redefined = blockOf({ id: 2 });
     meshes.sync([kept, redefined]);
@@ -26,12 +25,11 @@ describe("BlockPreviewMeshes", () => {
 
     assert.equal(meshes.entries[0].mesh, keptMesh);
     assert.notEqual(meshes.entries[1].mesh, redefinedMesh);
-    assert.equal(scene.children.includes(redefinedMesh), false);
   });
 
   it("rebuilds every mesh once the atlases change", () => {
     const sources = texturedSources();
-    const meshes = new BlockPreviewMeshes(new THREE.Scene(), sources);
+    const meshes = new BlockPreviewMeshes(sources);
     meshes.sync([blockOf({ id: 1 })]);
     const [before] = meshes.entries;
 

@@ -9,6 +9,7 @@ import {
 
 // Import Internal Dependencies
 import { TileOpacityProbe } from "./tileOpacity.ts";
+import { BlockRenderChanges } from "./BlockRenderChanges.ts";
 
 export interface BlockRenderSourcesOptions {
   shapes: BlockShapeRegistry;
@@ -49,5 +50,9 @@ export class BlockRenderSources {
       atlases: this.atlases,
       emptyTile: (ref, alphaCutoff) => this.tileOpacity.isEmpty(ref, alphaCutoff)
     });
+  }
+
+  watchChanges(): BlockRenderChanges {
+    return new BlockRenderChanges(this);
   }
 }

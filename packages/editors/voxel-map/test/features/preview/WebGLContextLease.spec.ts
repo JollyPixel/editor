@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import {
   WebGLContextLease,
   type LeasedWebGLRenderer
-} from "../../../../src/features/blocks/rendering/WebGLContextLease.ts";
+} from "../../../src/features/preview/WebGLContextLease.ts";
 
 // CONSTANTS
 const kContextLostEvent = "webglcontextlost";

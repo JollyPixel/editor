@@ -1,6 +1,12 @@
 // Import Third-party Dependencies
-import type { VoxelWorld } from "@jolly-pixel/voxel.renderer";
-import { showConfirm } from "@jolly-pixel/ui";
+import type {
+  VoxelTemplate,
+  VoxelWorld
+} from "@jolly-pixel/voxel.renderer";
+import {
+  showConfirm,
+  showPrompt
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { MapDocumentSignals } from "../../document/MapDocument.ts";
@@ -15,6 +21,7 @@ export interface MapTemplatesOptions {
   access: MapAccessSource;
   store?: TemplateStore;
   confirm?: typeof showConfirm;
+  prompt?: typeof showPrompt;
 }
 
 export class MapTemplates {
@@ -23,6 +30,7 @@ export class MapTemplates {
   readonly #world: TemplateWorld;
   readonly #access: MapAccessSource;
   readonly #confirm: typeof showConfirm;
+  readonly #prompt: typeof showPrompt;
   readonly #unsubscribe: () => void;
 
   constructor(
@@ -32,6 +40,7 @@ export class MapTemplates {
     this.#access = options.access;
     this.store = options.store ?? new TemplateStore();
     this.#confirm = options.confirm ?? showConfirm;
+    this.#prompt = options.prompt ?? showPrompt;
     this.#unsubscribe = options.mapDocument.subscribe(
       "templatesChanged",
       this.#reconcile
@@ -53,15 +62,37 @@ export class MapTemplates {
       return null;
     }
 
-    const template = this.#world.templates.createFromLayer(layerName, {
-      name: layerName
-    });
-    if (template === undefined) {
+    return this.#select(
+      this.#world.templates.createFromLayer(layerName, {
+        name: layerName
+      })
+    );
+  }
+
+  async saveSnapshot(
+    snapshot: VoxelTemplate,
+    suggestedName: string
+  ): Promise<string | null> {
+    if (!this.editable) {
       return null;
     }
-    this.store.selected = template.id;
 
-    return template.id;
+    const name = await this.#prompt({
+      title: "Save as template",
+      icon: "template-save",
+      label: "Name",
+      defaultValue: suggestedName,
+      confirmLabel: "Save"
+    });
+    if (name === null || name === "" || !this.editable) {
+      return null;
+    }
+
+    return this.#select(
+      this.#world.templates.createFromSnapshot(snapshot, {
+        name
+      })
+    );
   }
 
   rename(
@@ -92,6 +123,17 @@ export class MapTemplates {
     });
 
     return confirmed && this.#world.templates.remove(templateId);
+  }
+
+  #select(
+    template: VoxelTemplate | undefined
+  ): string | null {
+    if (template === undefined) {
+      return null;
+    }
+    this.store.selected = template.id;
+
+    return template.id;
   }
 
   readonly #reconcile = (): void => {

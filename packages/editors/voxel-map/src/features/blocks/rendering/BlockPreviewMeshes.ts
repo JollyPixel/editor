@@ -8,6 +8,7 @@ import type {
 
 // Import Internal Dependencies
 import type { BlockRenderSources } from "./BlockRenderSources.ts";
+import type { BlockRenderChanges } from "./BlockRenderChanges.ts";
 import { buildBlockPreviewMesh } from "./blockPreviewMesh.ts";
 
 // CONSTANTS
@@ -20,23 +21,18 @@ export interface BlockPreviewEntry {
 }
 
 export class BlockPreviewMeshes {
-  readonly #scene: THREE.Scene;
   readonly #sources: BlockRenderSources;
   readonly #pieces: BlockPieces;
+  readonly #changes: BlockRenderChanges;
   #entries: BlockPreviewEntry[] = [];
-  #atlasVersion: number;
-  #groupsVersion: number;
   #checkedAt = 0;
 
   constructor(
-    scene: THREE.Scene,
     sources: BlockRenderSources
   ) {
-    this.#scene = scene;
     this.#sources = sources;
     this.#pieces = sources.createPieces();
-    this.#atlasVersion = sources.atlases.version;
-    this.#groupsVersion = sources.materialGroups?.version ?? -1;
+    this.#changes = sources.watchChanges();
   }
 
   get entries(): readonly BlockPreviewEntry[] {
@@ -70,14 +66,11 @@ export class BlockPreviewMeshes {
   refresh(
     time: number
   ): void {
-    const atlasVersion = this.#sources.atlases.version;
-    const groupsVersion = this.#sources.materialGroups?.version ?? -1;
-    if (atlasVersion !== this.#atlasVersion) {
-      this.#atlasVersion = atlasVersion;
+    const change = this.#changes.poll();
+    if (change === "atlases") {
       this.#rebuild(() => true);
     }
-    else if (groupsVersion !== this.#groupsVersion) {
-      this.#groupsVersion = groupsVersion;
+    else if (change === "materialGroups") {
       this.#rebuild((entry) => entry.block.materialGroup !== undefined);
     }
     else if (time - this.#checkedAt >= kOpacityCheckIntervalMs) {
@@ -117,8 +110,6 @@ export class BlockPreviewMeshes {
       this.#pieces,
       this.#sources.materialGroups
     );
-    mesh.visible = false;
-    this.#scene.add(mesh);
 
     return {
       block,
@@ -136,7 +127,6 @@ export class BlockPreviewMeshes {
   #remove(
     entry: BlockPreviewEntry
   ): void {
-    this.#scene.remove(entry.mesh);
     disposeObject3D(entry.mesh);
   }
 }
