@@ -7,19 +7,33 @@ import {
 
 // Import Internal Dependencies
 import {
+  BRUSH_NO_BLOCK_REASON,
   BRUSH_NO_LAYER_REASON,
   BRUSH_SUSPENDED_REASON,
   BRUSH_VIEW_ONLY_REASON,
-  PaintAvailability
+  PaintAvailability,
+  type PaintConditions
 } from "../../../../src/features/painting/toolbar/PaintAvailability.ts";
 import { MAP_CAPABILITIES } from "../../../../src/access/MapAccess.ts";
 
-describe("PaintAvailability", () => {
-  test("lets the brush paint on a voxel layer", () => {
-    const availability = PaintAvailability.evaluate({
+function evaluate(
+  conditions: Partial<PaintConditions>
+): PaintAvailability {
+  return PaintAvailability.evaluate({
+    selection: {
       voxelLayer: "Ground",
       lastVoxelLayer: "Ground"
-    }, false, MAP_CAPABILITIES.full);
+    },
+    hasBlock: true,
+    suspended: false,
+    access: MAP_CAPABILITIES.full,
+    ...conditions
+  });
+}
+
+describe("PaintAvailability", () => {
+  test("lets the brush paint on a voxel layer", () => {
+    const availability = evaluate({});
 
     assert.strictEqual(availability.blocked, false);
     assert.strictEqual(availability.reason, null);
@@ -27,10 +41,12 @@ describe("PaintAvailability", () => {
   });
 
   test("offers to resume the last voxel layer from an object layer", () => {
-    const availability = PaintAvailability.evaluate({
-      voxelLayer: null,
-      lastVoxelLayer: "Roof"
-    }, false, MAP_CAPABILITIES.full);
+    const availability = evaluate({
+      selection: {
+        voxelLayer: null,
+        lastVoxelLayer: "Roof"
+      }
+    });
 
     assert.strictEqual(availability.reason, BRUSH_NO_LAYER_REASON);
     assert.deepEqual(availability.notice, {
@@ -40,10 +56,12 @@ describe("PaintAvailability", () => {
   });
 
   test("reports a map without any voxel layer", () => {
-    const availability = PaintAvailability.evaluate({
-      voxelLayer: null,
-      lastVoxelLayer: null
-    }, false, MAP_CAPABILITIES.full);
+    const availability = evaluate({
+      selection: {
+        voxelLayer: null,
+        lastVoxelLayer: null
+      }
+    });
 
     assert.strictEqual(availability.reason, BRUSH_NO_LAYER_REASON);
     assert.deepEqual(availability.notice, {
@@ -52,21 +70,49 @@ describe("PaintAvailability", () => {
     });
   });
 
-  test("blocks the brush silently while suspended, even in an object context", () => {
-    const availability = PaintAvailability.evaluate({
-      voxelLayer: null,
-      lastVoxelLayer: "Roof"
-    }, true, MAP_CAPABILITIES.full);
+  test("reports a map without any block to paint with", () => {
+    const availability = evaluate({
+      hasBlock: false
+    });
+
+    assert.strictEqual(availability.reason, BRUSH_NO_BLOCK_REASON);
+    assert.deepEqual(availability.notice, {
+      message: "No block to paint with",
+      resumeLayer: null
+    });
+  });
+
+  test("reports the missing block before the missing voxel layer", () => {
+    const availability = evaluate({
+      selection: {
+        voxelLayer: null,
+        lastVoxelLayer: "Roof"
+      },
+      hasBlock: false
+    });
+
+    assert.strictEqual(availability.reason, BRUSH_NO_BLOCK_REASON);
+  });
+
+  test("blocks the brush silently while suspended, even without layer or block", () => {
+    const availability = evaluate({
+      selection: {
+        voxelLayer: null,
+        lastVoxelLayer: "Roof"
+      },
+      hasBlock: false,
+      suspended: true
+    });
 
     assert.strictEqual(availability.reason, BRUSH_SUSPENDED_REASON);
     assert.strictEqual(availability.notice, null);
   });
 
   test("tells a role that cannot change voxels that the map is view only", () => {
-    const availability = PaintAvailability.evaluate({
-      voxelLayer: "Ground",
-      lastVoxelLayer: "Ground"
-    }, true, MAP_CAPABILITIES.none);
+    const availability = evaluate({
+      suspended: true,
+      access: MAP_CAPABILITIES.none
+    });
 
     assert.strictEqual(availability.reason, BRUSH_VIEW_ONLY_REASON);
     assert.deepEqual(availability.notice, {
@@ -82,14 +128,13 @@ describe("PaintAvailability", () => {
     };
 
     assert.ok(
-      PaintAvailability.evaluate(selection, false, MAP_CAPABILITIES.full).equals(
-        PaintAvailability.evaluate(selection, false, MAP_CAPABILITIES.full)
-      )
+      evaluate({ selection }).equals(evaluate({ selection }))
     );
     assert.ok(
-      !PaintAvailability.evaluate(selection, false, MAP_CAPABILITIES.full).equals(
-        PaintAvailability.evaluate(selection, true, MAP_CAPABILITIES.full)
-      )
+      !evaluate({ selection }).equals(evaluate({
+        selection,
+        suspended: true
+      }))
     );
   });
 });

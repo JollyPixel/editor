@@ -199,6 +199,24 @@ test("nothing is painted and a warning is logged without a voxel layer", async({
   expect((await map.brush.state()).size).toBe(1);
 });
 
+test("nothing is painted and a warning is logged without any block", async({ map, page }) => {
+  const { toolbar, world } = map;
+  await page.evaluate(() => {
+    const { workspace } = window.voxelMapEditor!;
+    for (const block of [...workspace.mapDocument.blocks.getAll()]) {
+      workspace.blocksets.removeBlock(block.id);
+    }
+  });
+  await expect(toolbar.brushTools).toHaveAttribute("aria-disabled", "true");
+  await expect(toolbar.status).toContainText("No block to paint with");
+
+  await map.viewport.click({ x: 0, y: 0, z: 0 });
+  await nextFrames(page);
+
+  await expect(map.log).toContainText("No block to paint with");
+  expect(await world.voxelCount()).toBe(0);
+});
+
 test("a drag paints every cell it crosses, and undo and redo replay it whole", async({ map, page }) => {
   const { toolbar, world } = map;
   const { undoButton, redoButton } = toolbar;

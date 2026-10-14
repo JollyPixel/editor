@@ -74,6 +74,7 @@ export class MaterialsPanel extends WorkspaceElement {
         this.#renderMaterials(workspace) :
         html`<p class="hint">Add a block to the map to edit materials.</p>`}
       <jolly-folder
+        flush
         key="map-config"
         label="View"
         storage-key="voxel-map:folder:map-config"

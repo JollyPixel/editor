@@ -23,8 +23,8 @@ toolbar.sources = context.toolbar;
 
 The bar is as tall as a pane group's tab strip and does not overlap the
 viewport, so put it in a column above the element holding the canvas. When
-`sources` is `null`, or holds neither `targets` nor `tags`, it sets the
-`empty` attribute and hides itself.
+`sources` is `null`, or holds no `tags` and fewer than two `targets`, it sets
+the `empty` attribute and hides itself.
 
 The bar never draws outside its own width. Below 560px it hides the Asset and
 Version captions and shows Save version as an icon button. Below 360px it
@@ -36,7 +36,8 @@ hides the Read-only text and keeps only the lock.
 
 Its `targets` shows the Asset select, listing the paths of the target and its
 siblings without their extension, such as `maps/overworld` for
-`maps/overworld.voxelmap.json`. Picking one opens it.
+`maps/overworld.voxelmap.json`. Picking one opens it. The select is hidden
+when the target is the only asset of its kind.
 
 Its `tags` shows the Version select, and the bar loads the tags as soon as
 `sources` is set. The select

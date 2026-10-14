@@ -232,19 +232,29 @@ export class MaterialLibrary extends WorkspaceElement {
       return selectedId;
     }
 
-    return workspace.materials.findForBlock(workspace.state.block.id)?.id ?? null;
+    return this.#blockMaterial(workspace)?.id ?? null;
   }
 
   #block(
     workspace: VoxelMapWorkspace
   ): ResolvedBlockDefinition | undefined {
-    return workspace.mapDocument.blocks.get(workspace.state.block.id);
+    return workspace.state.block.resolve(workspace.mapDocument.blocks);
+  }
+
+  #blockMaterial(
+    workspace: VoxelMapWorkspace
+  ): MapMaterial | undefined {
+    const block = this.#block(workspace);
+
+    return block === undefined ?
+      undefined :
+      workspace.materials.findForBlock(block.id);
   }
 
   #followBlock(
     workspace: VoxelMapWorkspace
   ): void {
-    const material = workspace.materials.findForBlock(workspace.state.block.id);
+    const material = this.#blockMaterial(workspace);
     if (material !== undefined) {
       this._selectedId = material.id;
     }
@@ -291,7 +301,10 @@ export class MaterialLibrary extends WorkspaceElement {
     const selectedShelf = selectedId === null ?
       undefined :
       shelves.findShelf(selectedId);
-    const blockOwner = workspace.blocksets.findOwner(workspace.state.block.id);
+    const block = this.#block(workspace);
+    const blockOwner = block === undefined ?
+      undefined :
+      workspace.blocksets.findOwner(block.id);
     const writable = shelves.editableShelves;
     const preferred = [selectedShelf?.slot, blockOwner?.slot].find(
       (slot) => writable.some((shelf) => shelf.slot === slot)

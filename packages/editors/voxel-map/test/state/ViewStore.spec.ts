@@ -68,11 +68,11 @@ describe("ViewStore", () => {
 
   test("ignores an invalid lighting mode in an update", () => {
     const store = new ViewStore();
-    store.update({ lighting: "daylight" });
+    store.update({ lighting: "day" });
 
     store.update(JSON.parse("{\"lighting\":\"dusk\"}"));
 
-    assert.equal(store.settings.lighting, "daylight");
+    assert.equal(store.settings.lighting, "day");
   });
 
   test("restores the night lighting mode from storage", () => {

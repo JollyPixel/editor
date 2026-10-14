@@ -87,11 +87,11 @@ describe("SceneLighting", () => {
     assert.equal(output.toneMapping, THREE.NeutralToneMapping);
   });
 
-  test("daylight swaps the ambient fill for a sky and a warm sun", () => {
+  test("day swaps the ambient fill for a sky and a warm sun", () => {
     const output = createOutput();
     const lighting = new SceneLighting(output);
 
-    lighting.mode = "daylight";
+    lighting.mode = "day";
 
     assert.equal(lighting.ambient.intensity, 0);
     assert.ok(lighting.hemisphere.intensity > 0);
@@ -106,16 +106,16 @@ describe("SceneLighting", () => {
   test("night dims the sky fill and casts a cool moonlight", () => {
     const output = createOutput();
     const lighting = new SceneLighting(output);
-    lighting.mode = "daylight";
-    const daylightFill = lighting.hemisphere.intensity;
-    const daylightSun = lighting.directional.intensity;
+    lighting.mode = "day";
+    const dayFill = lighting.hemisphere.intensity;
+    const daySun = lighting.directional.intensity;
 
     lighting.mode = "night";
 
     const { r, b } = lighting.directional.color;
     assert.equal(lighting.ambient.intensity, 0);
-    assert.ok(lighting.hemisphere.intensity < daylightFill);
-    assert.ok(lighting.directional.intensity < daylightSun);
+    assert.ok(lighting.hemisphere.intensity < dayFill);
+    assert.ok(lighting.directional.intensity < daySun);
     assert.ok(b > r);
     assert.equal(output.toneMapping, THREE.ACESFilmicToneMapping);
     assert.ok(
@@ -126,7 +126,7 @@ describe("SceneLighting", () => {
 
   test("focuses block light at night and lets it wash out shadows", () => {
     const lighting = new SceneLighting();
-    lighting.mode = "daylight";
+    lighting.mode = "day";
 
     assert.equal(lighting.rig.blockLightFalloff, "wide");
     assert.equal(lighting.rig.shadowFill, 0);
@@ -137,16 +137,16 @@ describe("SceneLighting", () => {
     assert.ok(lighting.rig.shadowFill > 0);
   });
 
-  test("restores the daylight sky colours after night", () => {
+  test("restores the day sky colours after night", () => {
     const lighting = new SceneLighting();
-    lighting.mode = "daylight";
+    lighting.mode = "day";
     const sky = lighting.hemisphere.color.getHex();
     const ground = lighting.hemisphere.groundColor.getHex();
 
     lighting.mode = "night";
     assert.notEqual(lighting.hemisphere.color.getHex(), sky);
 
-    lighting.mode = "daylight";
+    lighting.mode = "day";
     assert.equal(lighting.hemisphere.color.getHex(), sky);
     assert.equal(lighting.hemisphere.groundColor.getHex(), ground);
   });

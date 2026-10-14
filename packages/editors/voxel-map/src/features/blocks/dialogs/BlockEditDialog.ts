@@ -295,10 +295,6 @@ export class BlockEditDialog extends WorkspaceElement {
     }
 
     this.#close();
-    const [next] = workspace.mapDocument.blocks.getAll();
-    if (next !== undefined) {
-      workspace.state.block.id = next.id;
-    }
   }
 
   #onClose(): void {

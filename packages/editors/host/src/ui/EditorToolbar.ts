@@ -29,6 +29,11 @@ const kDateFormat = new Intl.DateTimeFormat(undefined, {
   timeStyle: "short"
 });
 
+interface AssetSelect {
+  options: JollyOption<string>[];
+  current: string;
+}
+
 interface ChangeSource {
   on(
     type: "change",
@@ -56,7 +61,7 @@ export class EditorToolbar extends LitElement {
       background: var(--jolly-surface, #20242b);
       box-shadow: var(
         --jolly-editor-toolbar-shadow,
-        0 5px 6px -4px light-dark(rgb(0 0 0 / 20%), rgb(0 0 0 / 55%))
+        0 1px 2px -1px light-dark(rgb(0 0 0 / 8%), rgb(0 0 0 / 25%))
       );
       color: var(--jolly-text, #e6e8eb);
       font-family: var(--jolly-font-family, ui-monospace, monospace);
@@ -192,6 +197,8 @@ export class EditorToolbar extends LitElement {
   declare protected busy: boolean;
   declare protected error: string | null;
 
+  #assetSelect: AssetSelect | null = null;
+
   #sources = new SubscriptionController<EditorToolbarSources | null>(
     this,
     (sources) => {
@@ -224,15 +231,18 @@ export class EditorToolbar extends LitElement {
 
   protected override willUpdate(): void {
     const { targets = null, tags = null } = this.sources ?? {};
-    this.toggleAttribute("empty", targets === null && tags === null);
+    this.#assetSelect = targets === null ? null : assetSelect(targets);
+    this.toggleAttribute("empty", this.#assetSelect === null && tags === null);
   }
 
   override render(): TemplateResult {
-    const { targets = null, tags = null } = this.sources ?? {};
+    const { tags = null } = this.sources ?? {};
 
     return html`
       <div class="bar">
-        ${targets === null ? nothing : this.#renderTargets(targets)}
+        ${this.#assetSelect === null ?
+          nothing :
+          this.#renderTargets(this.#assetSelect)}
         ${tags === null ? nothing : this.#renderVersions(tags)}
         ${this.error === null ?
           nothing :
@@ -242,24 +252,15 @@ export class EditorToolbar extends LitElement {
   }
 
   #renderTargets(
-    targets: EditorTargets
+    select: AssetSelect
   ): TemplateResult {
-    const options = Array.from(targets, (record) => {
-      const source = new AssetSource(record.source);
-
-      return {
-        value: record.id,
-        label: `${source.directory}${source.name}`
-      };
-    });
-
     return html`
       <div class="group asset">
         <span class="caption" id="asset-caption">Asset</span>
         <jolly-select
           aria-labelledby="asset-caption"
-          .options=${options}
-          .value=${targets.current}
+          .options=${select.options}
+          .value=${select.current}
           ?disabled=${this.busy}
           @jolly-change=${this.#onTargetChange}
         ></jolly-select>
@@ -408,6 +409,26 @@ export class EditorToolbar extends LitElement {
       () => source.off("change", repaint)
     ];
   }
+}
+
+function assetSelect(
+  targets: EditorTargets
+): AssetSelect | null {
+  const options = Array.from(targets, (record) => {
+    const source = new AssetSource(record.source);
+
+    return {
+      value: record.id,
+      label: `${source.directory}${source.name}`
+    };
+  });
+
+  return options.length < 2 ?
+    null :
+    {
+      options,
+      current: targets.current
+    };
 }
 
 function versionOptions(

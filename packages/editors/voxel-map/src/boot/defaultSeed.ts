@@ -49,12 +49,12 @@ export function createDefaultSeed(
 ): DefaultSeed {
   return {
     seed: {
-      "maps/overworld.blockset.json": {
+      "overworld.blockset.json": {
         id: blocksetAssetId,
         kind: BLOCKSET_KIND,
         content: () => encodeBlocksetDocument(createDefaultBlockset())
       },
-      "maps/overworld.voxelmap.json": {
+      "overworld.voxelmap.json": {
         id: crypto.randomUUID(),
         kind: VOXEL_MAP_KIND,
         content: () => createVoxelMapDocument({

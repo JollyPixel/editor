@@ -3,6 +3,10 @@ import {
   dialog,
   recordSockets
 } from "@jolly-pixel/e2e";
+import {
+  BLOCKSET_KIND,
+  VOXEL_MAP_KIND
+} from "@jolly-pixel/asset.voxel-map";
 
 // Import Internal Dependencies
 import {
@@ -10,6 +14,15 @@ import {
   expect
 } from "./fixtures.ts";
 import { VoxelMapPage } from "./support/voxelMap.ts";
+import { createDefaultSeed } from "../../src/boot/defaultSeed.ts";
+
+function seededSource(
+  kind: string
+): string | undefined {
+  return Object.entries(createDefaultSeed().seed).find(
+    ([, entry]) => typeof entry === "object" && entry.kind === kind
+  )?.[0];
+}
 
 test("boots the seeded map from an in-page workspace, without a socket", async({ map, page }) => {
   const sockets = recordSockets(page);
@@ -32,12 +45,12 @@ test("boots the seeded map from an in-page workspace, without a socket", async({
   });
 
   expect(state).toEqual({
-    target: "maps/overworld.voxelmap.json",
+    target: seededSource(VOXEL_MAP_KIND),
     persistent: true,
     username: "Guest",
     layers: ["Ground"],
     blocks: 0,
-    blocksets: ["maps/overworld.blockset.json"]
+    blocksets: [seededSource(BLOCKSET_KIND)]
   });
   expect(sockets).toEqual([]);
 });

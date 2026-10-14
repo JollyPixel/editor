@@ -98,7 +98,7 @@ test("the material fields follow the block picked in the library", async({ map }
   await expect(materials.removeButton).toBeVisible();
 });
 
-test("the Materials tab shows a hint and the View settings while the map has no blocks", async({ map }) => {
+test("the Materials tab keeps working View settings while the map has no blocks", async({ map }) => {
   const { materials } = map;
   await map.panes.open("Materials");
   await expect(materials.materialLibrary).toBeVisible();
@@ -113,4 +113,12 @@ test("the Materials tab shows a hint and the View settings while the map has no 
   await expect(materials.materialLibrary).toHaveCount(0);
   await expect(materials.noBlocksHint).toBeVisible();
   await expect(materials.viewSettings).toBeVisible();
+
+  await materials.lighting("Day").click();
+
+  await expect(materials.lighting("Day")).toHaveAttribute("aria-checked", "true");
+  await expect(materials.lighting("Studio")).toHaveAttribute("aria-checked", "false");
+  expect(await map.page.evaluate(
+    () => window.voxelMapEditor!.workspace.state.view.settings.lighting
+  )).toBe("day");
 });
