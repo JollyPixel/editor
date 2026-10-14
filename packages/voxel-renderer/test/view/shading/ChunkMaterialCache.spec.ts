@@ -71,16 +71,20 @@ describe("ChunkMaterialCache — resolve", () => {
     );
   });
 
-  it("renders opaque geometry front-side only, without blending", () => {
+  it("renders and casts opaque geometry front-side only, without blending", () => {
     const material = makeCache().resolve(createGeometryKey("atlas"));
 
     assert.equal(material.transparent, false);
     assert.equal(material.depthWrite, !material.transparent);
     assert.equal(material.side, THREE.FrontSide);
+    assert.equal(material.shadowSide, THREE.FrontSide);
   });
 
-  it("shows both sides of cutout geometry even when opaque", () => {
-    assert.equal(makeCache().resolve(createGeometryKey("atlas", kBlend)).side, THREE.DoubleSide);
+  it("shows and casts both sides of cutout geometry even when opaque", () => {
+    const material = makeCache().resolve(createGeometryKey("atlas", kBlend));
+
+    assert.equal(material.side, THREE.DoubleSide);
+    assert.equal(material.shadowSide, THREE.DoubleSide);
   });
 
   it("blends cutout geometry without writing depth", () => {

@@ -45,12 +45,14 @@ function createEnvironment() {
     scene,
     environment,
     casters,
+    chunks,
+    sun: lighting.directional,
     shadow: lighting.directional.shadow,
     apply: (lighting: LightingMode, glow = true) => environment.apply(
       new ViewSettings({ ...ViewSettings.DEFAULT.toJSON(), lighting, glow })
     ),
-    applyShadows: () => environment.apply(
-      new ViewSettings({ ...ViewSettings.DEFAULT.toJSON(), shadows: true })
+    applyShadows: (shadows = true) => environment.apply(
+      new ViewSettings({ ...ViewSettings.DEFAULT.toJSON(), shadows })
     )
   };
 }
@@ -116,6 +118,32 @@ describe("SceneEnvironment shadows", () => {
     shadow.needsUpdate = false;
 
     environment.invalidateShadows();
+    environment.follow(camera);
+
+    assert.equal(shadow.needsUpdate, true);
+  });
+
+  test("keeps the sun casting when shadows turn off, only chunks stop", () => {
+    const { sun, chunks, applyShadows } = createEnvironment();
+    applyShadows(true);
+
+    applyShadows(false);
+
+    assert.equal(sun.castShadow, true);
+    assert.equal(chunks.castShadow, false);
+    assert.equal(chunks.receiveShadow, false);
+  });
+
+  test("redraws the shadow map when shadows turn back on", () => {
+    const { shadow, applyShadows, environment } = createEnvironment();
+    const camera = createCamera();
+    applyShadows(true);
+    environment.follow(camera);
+    shadow.needsUpdate = false;
+
+    applyShadows(false);
+    environment.follow(camera);
+    applyShadows(true);
     environment.follow(camera);
 
     assert.equal(shadow.needsUpdate, true);
