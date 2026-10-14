@@ -82,3 +82,13 @@ restyle them. The `danger` variant is a red tint with a red glyph and reads
 `--jolly-folder-action-danger-fg`, `--jolly-folder-action-danger-bg`,
 `--jolly-folder-action-danger-bg-hover`, and
 `--jolly-folder-action-danger-bg-focus`.
+
+## Searching
+
+A folder inside a [searchable pane](./pane.md#searching-content) filters its
+own content. When its `label` matches the query, the folder and everything in
+it stay visible. Otherwise it filters its content by the same rules as the
+pane, and the pane hides the folder itself when nothing in it matches.
+A closed folder with a match inside opens while the search lasts, without
+changing or storing `open`. Until the search clears, a folder opened that way
+shows its label without the chevron and cannot be collapsed.

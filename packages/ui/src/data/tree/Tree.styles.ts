@@ -164,6 +164,16 @@ export const treeStyles = css`
     ${truncate}
   }
 
+  .label mark {
+    border-radius: 1px;
+    background: color-mix(
+      in oklab,
+      var(--jolly-accent-fill, ${kFallback.focusRing}) 45%,
+      transparent
+    );
+    color: inherit;
+  }
+
   .detail {
     flex: 0 0 auto;
     color: var(--jolly-text-muted, ${kFallback.text});

@@ -81,5 +81,10 @@ export const CONTROLS_EXAMPLES: readonly GalleryEntry[] = [
     id: "controls/tool-button",
     title: "Tool button",
     load: async() => (await import("./toolButton.ts")).TOOL_BUTTON_EXAMPLE
+  },
+  {
+    id: "controls/search",
+    title: "Search",
+    load: async() => (await import("./search.ts")).SEARCH_EXAMPLE
   }
 ];

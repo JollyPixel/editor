@@ -22,6 +22,15 @@ import { NamespacedStore } from "../../storage/NamespacedStore.ts";
 import type { StorageAdapter } from "../../storage/StorageAdapter.ts";
 import { hiddenStyles } from "../../theme/styles/hiddenStyles.ts";
 import { revealOverflowTitle } from "../../interaction/overflowTitle.ts";
+import { SearchQuery } from "../../search/SearchQuery.ts";
+import {
+  searchElements,
+  type Searchable
+} from "../../search/Searchable.ts";
+import { searchMissStyles } from "../../search/searchMissStyles.ts";
+
+// CONSTANTS
+const kSearchOpenAttribute = "data-search-open";
 
 type ReorderCommand =
   | "cancel"
@@ -31,10 +40,11 @@ type ReorderCommand =
   | "up";
 
 @customElement("jolly-folder")
-export class Folder extends LitElement {
+export class Folder extends LitElement implements Searchable {
   static override styles = [
     folderStyles,
-    hiddenStyles
+    hiddenStyles,
+    searchMissStyles
   ];
 
   @property({ type: String })
@@ -123,7 +133,9 @@ export class Folder extends LitElement {
   override render(): TemplateResult {
     return html`
       <div class="header" part="header">
-        ${this.collapsible ? this.#renderToggle() : this.#renderTitle()}
+        ${this.collapsible && !this.#searchOpen
+          ? this.#renderToggle()
+          : this.#renderTitle()}
         <slot name="actions"></slot>
         <button
           class="grip"
@@ -164,6 +176,26 @@ export class Folder extends LitElement {
       class="label"
       @pointerenter=${revealOverflowTitle}
     >${this.label}</span></div>`;
+  }
+
+  applySearch(
+    query: SearchQuery
+  ): number {
+    const content = [...this.children].filter((child) => child.slot === "");
+    const labelMatches = !query.isEmpty && query.matches(this.label);
+    const contentQuery = labelMatches ? SearchQuery.EMPTY : query;
+    const { matches } = searchElements(content, contentQuery);
+    this.toggleAttribute(
+      kSearchOpenAttribute,
+      !contentQuery.isEmpty && matches > 0
+    );
+    this.requestUpdate();
+
+    return labelMatches ? 1 : matches;
+  }
+
+  get #searchOpen(): boolean {
+    return this.hasAttribute(kSearchOpenAttribute);
   }
 
   headerRect(): DOMRect {

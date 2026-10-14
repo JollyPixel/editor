@@ -48,6 +48,18 @@ export function deepActiveElement(
   return active instanceof HTMLElement ? active : null;
 }
 
+export function stopPropagation(
+  event: Event
+): void {
+  event.stopPropagation();
+}
+
+export function preventDefault(
+  event: Event
+): void {
+  event.preventDefault();
+}
+
 /**
  * Narrows a custom event to its detail.
  */

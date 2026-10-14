@@ -25,6 +25,8 @@ import {
   type FieldLabelPosition
 } from "../field/LabelStackController.ts";
 import type { FieldAlign } from "../field/JollyField.ts";
+import type { SearchQuery } from "../search/SearchQuery.ts";
+import type { Searchable } from "../search/Searchable.ts";
 
 // Registers the icon used by descriptions.
 import "../icon/Icon.ts";
@@ -33,7 +35,7 @@ import "../icon/Icon.ts";
  * Field-aligned layout for custom content.
  */
 @customElement("jolly-property-row")
-export class PropertyRow extends LitElement {
+export class PropertyRow extends LitElement implements Searchable {
   static override styles = [
     propertyRowStyles,
     descriptionHintStyles,
@@ -81,6 +83,12 @@ export class PropertyRow extends LitElement {
     this.stackBelow = DEFAULT_STACK_BELOW;
     this.descriptionDisplay = "block";
     new LabelStackController(this);
+  }
+
+  applySearch(
+    query: SearchQuery
+  ): number {
+    return query.matches(this.label) ? 1 : 0;
   }
 
   override render(): TemplateResult {

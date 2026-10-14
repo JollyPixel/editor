@@ -90,7 +90,8 @@ function rowStateOf(
       spacer: "inside",
       rails: [],
       swatchPosition: "end",
-      reorderable: true
+      reorderable: true,
+      match: null
     };
   };
 }

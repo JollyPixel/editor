@@ -24,6 +24,7 @@
 | `disabled` | `disabled` | `boolean` | `false` |
 | `grouped` | `grouped` | `boolean` | Derived from its parent |
 | `inactive` | `inactive` | `boolean` | Set by its group |
+| `searchable` | `searchable` | `boolean` | `false` |
 | `floatWidth` | `float-width` | `number \| undefined` | `undefined` |
 | `floatHeight` | `float-height` | `number \| undefined` | `undefined` |
 | `movable` | `movable` | `boolean` | Derived from its container |
@@ -55,3 +56,31 @@ resolved tone or `null`. `areaTone` returns the tone the pane paints, which is
 While its grip is grabbed, Up and Down move the pane within its dock, Left and
 Right send it to the adjacent dock, and Shift with Up or Down joins it to the
 group above or below. Space commits and Escape cancels.
+
+## Searching content
+
+A `searchable` pane shows a compact [`jolly-search`](../controls/search.md) at
+the end of its header, also in a grouped pane. Opened, the search box takes the
+place of the title. Ctrl+F (⌘F on macOS) opens it while focus is anywhere in
+the pane, and `openSearch()` opens it from code.
+
+Each query goes to the elements in the default slot:
+
+- An element with an `applySearch` method, the [`Searchable`](../search.md#searchable)
+  hook, filters itself. [`jolly-tree`](../data/tree.md#filtering-rows) hides
+  rows and [`jolly-folder`](./folder.md#searching) hides fields.
+  Every field and `jolly-property-row` match on their `label`.
+- Any other element, such as a button or a separator, is left as it is.
+
+An element with no match gets the `data-search-miss` attribute and is hidden
+until the query changes. When every element that took part misses, the pane
+shows "No matches" in a `no-matches` part. Each query is announced through the
+pane's live region as a match count.
+
+The pane emits `jolly-search` with `{ query }`, the trimmed text, whenever the
+query changes, including to `""` when it is cleared. Listen for it to filter
+content the pane cannot reach. `searchQuery` holds the current trimmed query.
+Content slotted in during a search is filtered as it arrives. Turning
+`searchable` off clears the search.
+
+The header search is exposed as the `search` CSS part.

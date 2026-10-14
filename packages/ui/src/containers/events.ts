@@ -33,6 +33,10 @@ export interface JollyHeadingChangeDetail {
   heading: string;
 }
 
+export interface JollySearchDetail {
+  query: string;
+}
+
 export interface JollyContextActionDetail {
   id: string;
 }
@@ -73,6 +77,7 @@ export interface ContainerEventMap {
   "jolly-reorder": JollyReorderDetail;
   "jolly-resize": JollyResizeDetail;
   "jolly-resize-end": JollyResizeDetail;
+  "jolly-search": JollySearchDetail;
   "jolly-tab-action": JollyTabChangeDetail;
   "jolly-tab-change": JollyTabChangeDetail;
   "jolly-tab-close": JollyTabChangeDetail;
@@ -108,6 +113,7 @@ declare global {
     "jolly-reorder": CustomEvent<JollyReorderDetail>;
     "jolly-resize": CustomEvent<JollyResizeDetail>;
     "jolly-resize-end": CustomEvent<JollyResizeDetail>;
+    "jolly-search": CustomEvent<JollySearchDetail>;
     "jolly-tab-action": CustomEvent<JollyTabChangeDetail>;
     "jolly-tab-change": CustomEvent<JollyTabChangeDetail>;
     "jolly-tab-close": CustomEvent<JollyTabChangeDetail>;

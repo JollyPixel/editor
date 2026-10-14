@@ -33,6 +33,7 @@ tree.expanded = ["scene"];
 | `acceptDrop` | `TreeDropAccept \| null` | `null` |
 | `virtual` | `boolean` | `false` |
 | `validateRename` | `TreeRenameValidator \| null` | `null` |
+| `filter` | `string` | `""` |
 
 The component does not mutate these arrays after user input. Consumers write
 event details back to the relevant property. `selected` and `expanded` compare
@@ -279,6 +280,25 @@ multi-selection keeps it, and focuses the row so the menu returns focus there.
 A menu action can call `beginRename(id)` directly. While a row is being
 renamed or moved, a right-click does nothing, and the text field keeps the
 browser menu.
+
+## Filtering rows
+
+`filter` (attribute `filter`) shows only the rows whose label contains the
+text, with case and diacritics ignored as in
+[`SearchQuery`](../search.md#searchquery), and the ancestors leading to them.
+Those ancestors stay open and lose their toggle for as long as the filter is
+set, without changing `expanded`, so clearing the filter brings back the rows
+the user had open. A matching row keeps its whole subtree. Rows in it with no
+match below them expand and collapse as usual.
+
+The matched part of each label is wrapped in a `<mark>` exposed as the `match`
+CSS part. Reordering, row drag and the keyboard move are off while a filter is
+set. `aria-posinset` and `aria-setsize` count the rows still shown.
+
+`applySearch(query)` sets `filter` from a `SearchQuery` and returns the number
+of matching rows right away, before the next render. It makes the tree
+[`Searchable`](../search.md#searchable), which is how a
+[searchable pane](../containers/pane.md#searching-content) drives it.
 
 ## Virtualizing long trees
 
