@@ -64,8 +64,10 @@ and any other error is rethrown without asking. The runtime is created once
 and reused by every attempt, since the canvas keeps its first context.
 
 Offline, the editor mounts on the workspace named by the `workspace` query
-parameter (`"default"` without it). The parent's `jolly-launch` is still read
-first, so a page framed by the studio keeps its shell channel.
+parameter. Without it, the workspace is named after `definition.accepts`, so
+editors of different kinds served from one origin each seed their own. The
+parent's `jolly-launch` is still read first, so a page framed by the studio
+keeps its shell channel.
 
 A page that connects without `mountStandalone` uses the same dialog:
 

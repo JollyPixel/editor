@@ -48,7 +48,7 @@ export async function bootStandalone<
     );
     const workspace = await openSharedTabWorkspace({
       project: offline,
-      name: params.workspace
+      name: params.workspace ?? definition.accepts
     });
 
     return editor.mount({
