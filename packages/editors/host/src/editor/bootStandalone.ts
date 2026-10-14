@@ -12,11 +12,13 @@ import { StandaloneEditor } from "./StandaloneEditor.ts";
 import { readDebugLogger } from "../debug/readDebugLogger.ts";
 import { InjectedLaunchSource } from "../launch/index.ts";
 import { HOST_PARAMS } from "../params/HostParams.ts";
+import { PeerInvite } from "../workspace/peer/PeerInvite.ts";
 import { shareLinkConnection } from "../workspace/shareLinkConnection.ts";
 import type {
   OfflineProject,
   OfflineProjectLoader
 } from "../workspace/offline/OfflineWorkspace.ts";
+import type { StandaloneWorkspace } from "../workspace/SessionWorkspace.ts";
 
 export type { OfflineProject };
 
@@ -42,14 +44,10 @@ export async function bootStandalone<
   const params = HOST_PARAMS.read();
   const editor = new StandaloneEditor(definition, logger);
 
-  async function mountOffline(): Promise<StandaloneMount<THandle>> {
-    const { openSharedTabWorkspace } = await import(
-      "../workspace/shared-tab/openSharedTabWorkspace.ts"
-    );
-    const workspace = await openSharedTabWorkspace({
-      project: offline,
-      name: params.workspace ?? definition.accepts
-    });
+  async function mountWorkspace(
+    opening: Promise<StandaloneWorkspace>
+  ): Promise<StandaloneMount<THandle>> {
+    const workspace = await opening;
 
     return editor.mount({
       ...mountOptions,
@@ -58,7 +56,25 @@ export async function bootStandalone<
     });
   }
 
+  function mountOffline(): Promise<StandaloneMount<THandle>> {
+    return mountWorkspace(
+      import("../workspace/shared-tab/openSharedTabWorkspace.ts")
+        .then(({ openSharedTabWorkspace }) => openSharedTabWorkspace({
+          project: offline,
+          name: params.workspace ?? definition.accepts
+        }))
+    );
+  }
+
   try {
+    const invite = PeerInvite.fromHash(globalThis.location?.hash ?? "");
+    if (invite !== undefined) {
+      return await mountWorkspace(
+        import("../workspace/peer/openPeerWorkspace.ts")
+          .then(({ openPeerWorkspace }) => openPeerWorkspace(invite))
+      );
+    }
+
     const injected = new InjectedLaunchSource();
     const credential = (await injected.read())?.credential ?? null;
     if (credential !== null) {

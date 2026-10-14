@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 import {
   Server,
   Client,
+  readCredential,
   type ClientSocketEvent
 } from "#src/index.ts";
 import {
@@ -70,6 +71,47 @@ describe("ChannelTransport + ChannelTransportHost", () => {
     });
 
     await waitFor(() => unauthorized);
+  });
+
+  test("a transport credential reaches the server's authentication provider", async() => {
+    const received: (string | null)[] = [];
+    const server = new Server({
+      auth: {
+        authenticate: (attempt) => {
+          received.push(readCredential(attempt));
+
+          return {
+            subject: attempt.clientId,
+            role: attempt.defaultRole
+          };
+        }
+      }
+    });
+    const loopback = new LoopbackTransport({ server });
+    const channel = new MessageChannel();
+    const host = new ChannelTransportHost({
+      port: channel.port1,
+      open: (request) => loopback.connect(request)
+    });
+    const clients = [
+      new ChannelTransport({ port: channel.port2, host: host.id, credential: "invite" }),
+      new ChannelTransport({ port: channel.port2, host: host.id })
+    ].map((transport) => new Client({
+      socket: () => transport.connect()
+    }));
+    for (const client of clients) {
+      client.room("test-ns").join();
+    }
+
+    await waitFor(() => received.length === 2);
+
+    assert.deepEqual(received.toSorted(), ["invite", null]);
+    for (const client of clients) {
+      client.destroy();
+    }
+    host.close();
+    channel.port1.close();
+    channel.port2.close();
   });
 
   test("close() ends open sockets with its event and disconnects them", async() => {

@@ -1,5 +1,6 @@
 export * from "./channel/ChannelTransport.ts";
 export * from "./channel/ChannelTransportHost.ts";
+export * from "./channel/DataChannelPort.ts";
 export {
   CHANNEL_TRANSPORT_TAG,
   isChannelTransportMessage,

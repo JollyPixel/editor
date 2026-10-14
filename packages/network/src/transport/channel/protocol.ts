@@ -30,7 +30,8 @@ const kChannelTransportMessageSchema = z.discriminatedUnion("type", [
   z.object({
     ...kAddressShape,
     type: z.literal("connect"),
-    dedicated: z.boolean()
+    dedicated: z.boolean(),
+    credential: z.optional(z.string())
   }),
   z.object({
     ...kAddressShape,

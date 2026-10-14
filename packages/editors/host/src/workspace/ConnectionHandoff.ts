@@ -2,7 +2,7 @@
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
-import type { StandaloneConnection } from "../SessionWorkspace.ts";
+import type { StandaloneConnection } from "./SessionWorkspace.ts";
 
 export class ParkedConnection {
   readonly #connection: StandaloneConnection;

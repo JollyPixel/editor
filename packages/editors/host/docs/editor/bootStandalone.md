@@ -93,6 +93,32 @@ guest and serves a read-only catalog of the target and its dependencies. When
 the server refuses the socket because the link was revoked or expired, a
 dialog offers to reload.
 
+## Peer invites
+
+A page whose URL fragment holds `#peer=<host>.<token>` opens as a guest of the
+tab that issued it, before any share link or offline check. The guest reaches
+that tab over an `RTCDataChannel`, uses its catalog and rooms like a follower
+tab does, and opens no socket. The token travels on the data channel only, so
+it never reaches a server.
+
+The two tabs find each other through a BroadcastChannel, which limits invites
+to one browser profile for now. No STUN or TURN server is configured. A dialog
+offers to reload when the host does not answer within 20 seconds, revokes the
+invite, or closes its tab.
+
+### peerConsole
+
+A [console feature](../../../../console/docs/features.md) for the owner tab of a
+persistent workspace. `/peer.invite` prints a link to the current page with a
+new invite, and `/peer.stop` revokes every invite and disconnects the guests.
+Without `peers` it registers nothing.
+
+```ts
+registerConsoleFeatures(commands, [peerConsole], {
+  peers: session.workspace?.peers
+});
+```
+
 ## Offline workspace
 
 `@jolly-pixel/editor.host/offline` runs the asset back-end inside the page.
@@ -136,6 +162,12 @@ import.
 ### persistent
 
 Whether the assets outlive the page.
+
+### peers
+
+Set on the owner tab only. `invite()` returns a new `PeerInvite`, whose
+`toUrl(page)` writes it into the fragment of `page`. `guests` counts the
+connected guests and `stop()` revokes every invite and disconnects the guests.
 
 ### connect()
 

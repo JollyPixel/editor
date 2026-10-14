@@ -6,7 +6,8 @@ import type {
 import type {
   ClientSocket,
   ClientSocketEvent,
-  ClientSocketEventType
+  ClientSocketEventType,
+  SocketConnectOptions
 } from "./ClientSocket.ts";
 import {
   UNAUTHORIZED_CLOSE_CODE,
@@ -27,6 +28,7 @@ class LoopbackSocket implements ClientSocket {
   readonly id = crypto.randomUUID();
 
   readonly #server: Server;
+  readonly #credential: string | undefined;
   readonly #listeners = new Map<
     ClientSocketEventType,
     SocketListener[]
@@ -35,9 +37,11 @@ class LoopbackSocket implements ClientSocket {
   #closed = false;
 
   constructor(
-    server: Server
+    server: Server,
+    credential: string | undefined
   ) {
     this.#server = server;
+    this.#credential = credential;
 
     void this.#open();
   }
@@ -74,7 +78,8 @@ class LoopbackSocket implements ClientSocket {
     const identity = await this.#server.authenticate({
       clientId: this.id,
       url: kLoopbackUrl,
-      headers: {}
+      headers: {},
+      credential: this.#credential
     });
     if (this.#closed) {
       return;
@@ -153,7 +158,9 @@ export class LoopbackTransport {
     this.#server = options.server;
   }
 
-  connect(): ClientSocket {
-    return new LoopbackSocket(this.#server);
+  connect(
+    options: SocketConnectOptions = {}
+  ): ClientSocket {
+    return new LoopbackSocket(this.#server, options.credential);
   }
 }

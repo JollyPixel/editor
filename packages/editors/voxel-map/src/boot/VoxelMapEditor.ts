@@ -10,6 +10,7 @@ import type {
 import {
   EditorRuntime,
   archiveConsole,
+  peerConsole,
   runtimeConsole,
   type AssetLease,
   type EditorSession,
@@ -143,12 +144,14 @@ export class VoxelMapEditor {
         [
           mapConsole,
           runtimeConsole,
-          archiveConsole
+          archiveConsole,
+          peerConsole
         ],
         {
           state: workspace.state,
           archives: workspace.archives,
-          runtime: editorRuntime
+          runtime: editorRuntime,
+          peers: session.workspace?.peers
         }
       ),
       metricsPanel,

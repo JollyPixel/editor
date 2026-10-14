@@ -34,8 +34,9 @@ A supplied `server` owns access policy; otherwise the plugin constructs one.
 
 ## LoopbackTransport
 
-`LoopbackTransport({ server }).connect()` opens a same-process client socket.
-JSON messages arrive asynchronously; normal authentication applies.
+`LoopbackTransport({ server }).connect({ credential? })` opens a same-process
+client socket. JSON messages arrive asynchronously; normal authentication
+applies, with `credential` set on the authentication attempt.
 
 ## Channels
 
@@ -44,3 +45,18 @@ over BroadcastChannel, MessagePort, or Worker. Share `host.id` before connecting
 
 Optional `socketPort` isolates socket traffic. Close host and transport separately;
 shared ports remain caller-owned.
+
+A `credential` given to `ChannelTransport` travels with each connection. The
+host passes it to `open({ credential })`, typed `SocketConnectOptions` like the
+argument of `LoopbackTransport.connect`, so `open: (options) =>
+loopback.connect(options)` hands it to the server.
+
+### DataChannelPort
+
+`new DataChannelPort(channel, options?)` turns an ordered, reliable
+`RTCDataChannel` into a port for either side. It sends JSON split into frames of
+at most `frameLength` UTF-16 code units (default 8,192), queues frames while
+`bufferedAmount` is above `highWaterMark` bytes (default 1 MiB), and delivers
+messages once `start()` is called. A malformed frame or a message longer than
+`maxMessageLength` code units (default 16 MiB) closes the channel. `closed`
+reports whether either side closed it.
