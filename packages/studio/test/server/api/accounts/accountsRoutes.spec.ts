@@ -25,15 +25,32 @@ const kSecret = "open sesame";
 
 function postJson(
   url: URL,
-  body: string
+  body: string,
+  headers: Record<string, string> = {}
 ): Promise<Response> {
   return fetch(url, {
     method: "POST",
     headers: {
+      ...headers,
       "content-type": "application/json"
     },
     body
   });
+}
+
+function registerOverHttps(
+  url: URL
+): Promise<Response> {
+  return postJson(
+    new URL("register", url),
+    JSON.stringify({
+      username: "Alice",
+      password: kDigest
+    }),
+    {
+      "x-forwarded-proto": "https"
+    }
+  );
 }
 
 describe("accountsRoutes", () => {
@@ -55,6 +72,26 @@ describe("accountsRoutes", () => {
       response.headers.get("set-cookie") ?? "",
       new RegExp(`^${DEFAULT_SESSION_COOKIE}=[\\w-]{43}; Max-Age=\\d+; Path=/; HttpOnly; SameSite=Strict$`)
     );
+  });
+
+  test("marks the session cookie Secure when a trusted proxy forwards https", async() => {
+    await using server = await listenStudioApi({}, {
+      trustProxy: true
+    });
+
+    const response = await registerOverHttps(server.accountsUrl);
+
+    assert.equal(response.status, 201);
+    assert.match(response.headers.get("set-cookie") ?? "", /; Secure(;|$)/);
+  });
+
+  test("ignores X-Forwarded-Proto from a peer it does not trust", async() => {
+    await using server = await listenStudioApi();
+
+    const response = await registerOverHttps(server.accountsUrl);
+
+    assert.equal(response.status, 201);
+    assert.doesNotMatch(response.headers.get("set-cookie") ?? "", /Secure/);
   });
 
   test("registers, resolves and closes a session", async() => {

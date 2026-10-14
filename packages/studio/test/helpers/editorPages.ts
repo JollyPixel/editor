@@ -7,11 +7,23 @@ import type { AddressInfo } from "node:net";
 
 // Import Third-party Dependencies
 import type { Connect } from "vite";
+import {
+  KindPackage,
+  PackageResolver,
+  ProjectFile,
+  ProjectKinds
+} from "@jolly-pixel/asset-server/node";
+import { ASSET_KINDS } from "@jolly-pixel/asset.voxel-map";
 
 // Import Internal Dependencies
 import { EditorPackage } from "../../server/editors/EditorPackage.ts";
 import { EditorPackages } from "../../server/editors/EditorPackages.ts";
 import { EditorPages } from "../../server/editors/EditorPages.ts";
+import { StudioAccess } from "../../server/project/StudioAccess.ts";
+import {
+  STUDIO_ROOT,
+  StudioProject
+} from "../../server/project/StudioProject.ts";
 import { createTempDir } from "./tempDir.ts";
 
 // CONSTANTS
@@ -61,6 +73,31 @@ export function voxelMapPages(
 ): EditorPages {
   return new EditorPages(
     new EditorPackages([voxelMapEditor(dist)])
+  );
+}
+
+export function voxelMapProject(
+  root: string,
+  dist: string
+): StudioProject {
+  return new StudioProject(
+    new ProjectFile(root, {
+      version: 1
+    }, {
+      inMemory: true
+    }),
+    new EditorPackages([voxelMapEditor(dist)]),
+    new ProjectKinds([
+      new KindPackage({
+        name: "@jolly-pixel/asset.voxel-map",
+        options: {},
+        descriptors: ASSET_KINDS.descriptors,
+        handlers: ASSET_KINDS.handlers()
+      })
+    ], new PackageResolver(root, {
+      fallbacks: [STUDIO_ROOT]
+    })),
+    StudioAccess.read({}, "project.json")
   );
 }
 

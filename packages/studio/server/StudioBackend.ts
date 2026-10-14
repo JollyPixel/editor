@@ -27,7 +27,10 @@ import {
   openStudioAccounts,
   type StudioAccountsOptions
 } from "./accounts.ts";
-import { StudioApi } from "./api/StudioApi.ts";
+import {
+  StudioApi,
+  type TrustProxy
+} from "./api/StudioApi.ts";
 import { ProjectArchive } from "./project/ProjectArchive.ts";
 import type { StudioProject } from "./project/StudioProject.ts";
 import { SharePage } from "./shares/SharePage.ts";
@@ -61,6 +64,12 @@ export interface StudioBackendOptions {
    * @default 300
    */
   requestsPerMinute?: number;
+  /**
+   * Proxies whose `X-Forwarded-For` and `X-Forwarded-Proto` the API believes:
+   * `true` for any, or addresses and CIDR ranges.
+   * @default false
+   */
+  trustProxy?: TrustProxy;
 }
 
 export interface StudioBackendAttachOptions {
@@ -115,7 +124,8 @@ export class StudioBackend implements AsyncDisposable {
         backend: workspace.backend,
         name: path.basename(project.file.root)
       }),
-      requestsPerMinute: options.requestsPerMinute
+      requestsPerMinute: options.requestsPerMinute,
+      trustProxy: options.trustProxy
     });
 
     return new StudioBackend(
@@ -134,6 +144,7 @@ export class StudioBackend implements AsyncDisposable {
   #accounts: Accounts;
   #workspace: AssetWorkspace;
   #api: StudioApi;
+  #transports = new DisposableStack();
 
   private constructor(
     accounts: Accounts,
@@ -155,15 +166,16 @@ export class StudioBackend implements AsyncDisposable {
     httpServer: HttpServer | Http2SecureServer,
     options: StudioBackendAttachOptions = {}
   ): void {
-    new WebsocketTransport({
+    this.#transports.use(new WebsocketTransport({
       path: DEFAULT_WEBSOCKET_PATH,
       httpServer,
       server: this.#workspace.server,
       allowedHosts: options.allowedHosts
-    });
+    }));
   }
 
   async [Symbol.asyncDispose](): Promise<void> {
+    this.#transports.dispose();
     await this.#api[Symbol.asyncDispose]();
     await this.#workspace.close();
     this.#accounts[Symbol.dispose]();

@@ -26,10 +26,10 @@ the avatar upload moves there from the `AccountBadge` menu.
 
 ## Long-term goals
 
-### Online hosting
+### Browser-hosted sessions
 
-A hosted studio server and browser-hosted sessions over WebRTC. See
-[HOSTING.md](./HOSTING.md).
+Editor sessions served from a browser tab, with guests joining over WebRTC.
+See [HOSTING.md](./HOSTING.md).
 
 ### Runtime tab
 

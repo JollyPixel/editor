@@ -110,8 +110,9 @@ export interface WebsocketTransportOptions {
   heartbeatMs?: number;
 }
 
-export class WebsocketTransport {
+export class WebsocketTransport implements Disposable {
   #server: Server;
+  #httpServer: HttpServer | Http2SecureServer;
   #logger: Logger;
   #path: string;
   #wss: WebSocketServer;
@@ -135,6 +136,7 @@ export class WebsocketTransport {
       heartbeatMs = kDefaultHeartbeatMs
     } = options;
     this.#server = server;
+    this.#httpServer = httpServer;
     this.#logger = server.logger;
     this.#path = path;
     this.#policy = new HandshakePolicy({
@@ -165,7 +167,7 @@ export class WebsocketTransport {
     );
     httpServer.once(
       "close",
-      () => this.#onHttpServerClose(httpServer)
+      this.#onHttpServerClose
     );
 
     if (heartbeatMs > 0) {
@@ -248,12 +250,18 @@ export class WebsocketTransport {
       });
   };
 
-  #onHttpServerClose(
-    httpServer: HttpServer | Http2SecureServer
-  ): void {
-    httpServer.off(
+  #onHttpServerClose = (): void => {
+    this[Symbol.dispose]();
+  };
+
+  [Symbol.dispose](): void {
+    this.#httpServer.off(
       "upgrade",
       this.#onUpgrade
+    );
+    this.#httpServer.off(
+      "close",
+      this.#onHttpServerClose
     );
     if (this.#heartbeat !== null) {
       clearInterval(this.#heartbeat);

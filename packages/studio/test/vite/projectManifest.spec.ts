@@ -15,29 +15,16 @@ import {
   createServer
 } from "vite";
 import {
-  KindPackage,
-  PackageResolver,
-  ProjectFile,
-  ProjectKinds
-} from "@jolly-pixel/asset-server/node";
-import {
-  ASSET_KINDS,
   BLOCKSET_ASSET,
   VOXEL_MAP_ASSET
 } from "@jolly-pixel/asset.voxel-map";
 
 // Import Internal Dependencies
 import { PROJECT_MANIFEST_FILE } from "../../src/editors/ProjectManifest.ts";
-import { EditorPackages } from "../../server/editors/EditorPackages.ts";
-import {
-  STUDIO_ROOT,
-  StudioProject
-} from "../../server/project/StudioProject.ts";
-import { StudioAccess } from "../../server/project/StudioAccess.ts";
 import { projectManifest } from "../../vite/projectManifest.ts";
 import {
   listen,
-  voxelMapEditor
+  voxelMapProject
 } from "../helpers/editorPages.ts";
 import {
   createTempDir,
@@ -59,28 +46,6 @@ const kManifest = {
     };
   })
 };
-
-function voxelMapProject(
-  root: string
-): StudioProject {
-  return new StudioProject(
-    new ProjectFile(root, {
-      version: 1
-    }),
-    new EditorPackages([voxelMapEditor("/pkg/dist")]),
-    new ProjectKinds([
-      new KindPackage({
-        name: "@jolly-pixel/asset.voxel-map",
-        options: {},
-        descriptors: ASSET_KINDS.descriptors,
-        handlers: ASSET_KINDS.handlers()
-      })
-    ], new PackageResolver(root, {
-      fallbacks: [STUDIO_ROOT]
-    })),
-    StudioAccess.read({}, "project.json")
-  );
-}
 
 describe("projectManifest", () => {
   let root: string;
@@ -110,7 +75,7 @@ describe("projectManifest", () => {
       server: {
         middlewareMode: true
       },
-      plugins: [projectManifest(voxelMapProject(root))]
+      plugins: [projectManifest(voxelMapProject(root, "/pkg/dist"))]
     });
     await using server = await listen(vite.middlewares);
 
@@ -137,7 +102,7 @@ describe("projectManifest", () => {
       build: {
         outDir
       },
-      plugins: [projectManifest(voxelMapProject(root))]
+      plugins: [projectManifest(voxelMapProject(root, "/pkg/dist"))]
     });
 
     assert.deepEqual(

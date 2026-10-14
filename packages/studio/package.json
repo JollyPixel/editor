@@ -4,11 +4,19 @@
   "version": "0.1.0",
   "type": "module",
   "private": true,
+  "files": [
+    "dist",
+    "public",
+    "server",
+    "src"
+  ],
   "scripts": {
     "build": "pnpm --filter @jolly-pixel/editor.pixel-art build:page",
     "build:static": "pnpm --filter @jolly-pixel/editor.pixel-art build:page:static && pnpm --filter @jolly-pixel/editor.voxel-map build:static && pnpm --filter @jolly-pixel/editor.voxel-model build:static && vite build --mode static",
+    "build:hosted": "pnpm --filter @jolly-pixel/editor.pixel-art build:page && pnpm --filter @jolly-pixel/editor.voxel-map build && pnpm --filter @jolly-pixel/editor.voxel-model build && vite build",
     "dev:e2e": "vite --mode e2e",
     "dev": "vite",
+    "start": "node --env-file-if-exists=.env server/start.ts",
     "dev:editors": "pnpm --parallel --filter @jolly-pixel/ui --filter @jolly-pixel/editor.host --filter @jolly-pixel/editor.pixel-art --filter @jolly-pixel/editor.voxel-map --filter @jolly-pixel/editor.voxel-model run build:watch",
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
@@ -26,31 +34,31 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "@jolly-pixel/asset-source": "workspace:*",
     "@jolly-pixel/e2e": "workspace:*",
-    "@jolly-pixel/editor.pixel-art": "workspace:*",
-    "@jolly-pixel/editor.voxel-map": "workspace:*",
-    "@jolly-pixel/editor.voxel-model": "workspace:*",
     "@jolly-pixel/event-store": "workspace:*",
-    "@openally/servo": "1.1.0",
-    "cookie": "2.0.1",
-    "zod": "4.6.5"
+    "cookie": "2.0.1"
   },
   "dependencies": {
     "@fastify/rate-limit": "11.0.0",
     "@jolly-pixel/accounts": "workspace:*",
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-server": "workspace:*",
+    "@jolly-pixel/asset-source": "workspace:*",
     "@jolly-pixel/asset.pixel-art": "workspace:*",
     "@jolly-pixel/asset.voxel-animation": "workspace:*",
     "@jolly-pixel/asset.voxel-map": "workspace:*",
     "@jolly-pixel/asset.voxel-model": "workspace:*",
     "@jolly-pixel/editor.host": "workspace:*",
+    "@jolly-pixel/editor.pixel-art": "workspace:*",
+    "@jolly-pixel/editor.voxel-map": "workspace:*",
+    "@jolly-pixel/editor.voxel-model": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/pixel-draw.renderer": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",
     "@jolly-pixel/voxel.renderer": "workspace:*",
+    "@openally/servo": "1.1.0",
     "fastify": "5.12.5",
-    "lit": "3.3.3"
+    "lit": "3.3.3",
+    "zod": "4.6.5"
   }
 }

@@ -65,6 +65,23 @@ describe("accountsRoutes throttle", () => {
     assert.equal((await postLogin(url, "Bob", "10.0.0.2")).status, 429);
   });
 
+  test("keys the address throttle on X-Forwarded-For from a trusted proxy", async() => {
+    await using server = await listenStudioApi({
+      throttle: {
+        attempts: 1
+      }
+    }, {
+      trustProxy: ["127.0.0.1"]
+    });
+    const { client } = server.browser();
+    await client.register("Alice", "correct horse");
+    await server.browser().client.register("Bob", "correct horse");
+    const url = new URL("login", server.accountsUrl);
+
+    assert.equal((await postLogin(url, "Alice", "10.0.0.1")).status, 401);
+    assert.equal((await postLogin(url, "Bob", "10.0.0.2")).status, 401);
+  });
+
   test("caps requests per address before authenticating them", async() => {
     await using server = await listenStudioApi({}, {
       requestsPerMinute: 2
