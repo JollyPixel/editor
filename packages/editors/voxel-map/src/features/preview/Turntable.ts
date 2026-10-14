@@ -2,32 +2,29 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type { BlockRenderSources } from "./BlockRenderSources.ts";
 import {
-  createBlockPreviewStage,
+  createPreviewStage,
   lightWithEnvironment,
   needsEnvironment,
   PREVIEW_ROTATION_STEP,
   PREVIEW_TILT
-} from "./blockPreviewMesh.ts";
-import { BlockPreviewMeshes } from "./BlockPreviewMeshes.ts";
+} from "./stage.ts";
 import { WebGLContextLease } from "./WebGLContextLease.ts";
 
 // CONSTANTS
 const kMinPixelRatio = 2;
 const kMaxPixelRatio = 3;
 
-export interface BlockTurntableOptions {
+export interface TurntableOptions {
   preserveDrawingBuffer?: boolean;
 }
 
-export class BlockTurntable {
+export class Turntable {
   readonly canvas: HTMLCanvasElement;
   onContextLost: (() => void) | null = null;
 
   protected readonly container: HTMLElement;
   protected readonly renderer: THREE.WebGLRenderer;
-  protected readonly meshes: BlockPreviewMeshes;
   readonly #scene: THREE.Scene;
   readonly #camera: THREE.PerspectiveCamera;
   readonly #contextLease: WebGLContextLease;
@@ -40,8 +37,7 @@ export class BlockTurntable {
 
   constructor(
     container: HTMLElement,
-    sources: BlockRenderSources,
-    options: BlockTurntableOptions = {}
+    options: TurntableOptions = {}
   ) {
     this.container = container;
     this.renderer = new THREE.WebGLRenderer({
@@ -60,10 +56,9 @@ export class BlockTurntable {
     this.canvas.style.display = "block";
     container.appendChild(this.canvas);
 
-    const stage = createBlockPreviewStage();
+    const stage = createPreviewStage();
     this.#scene = stage.scene;
     this.#camera = stage.camera;
-    this.meshes = new BlockPreviewMeshes(this.#scene, sources);
 
     this.#resizeObserver = new ResizeObserver(() => this.resized());
     this.#resizeObserver.observe(container);
@@ -75,12 +70,17 @@ export class BlockTurntable {
     cancelAnimationFrame(this.#raf);
     this.#resizeObserver.disconnect();
     this.#visibilityObserver.disconnect();
-    this.meshes.dispose();
     this.#contextLease.release();
     this.canvas.remove();
   }
 
   protected resized(): void {
+    return void 0;
+  }
+
+  protected refresh(
+    _time: number
+  ): void {
     return void 0;
   }
 
@@ -96,10 +96,10 @@ export class BlockTurntable {
       lightWithEnvironment(this.#scene, this.renderer);
       this.#lit = true;
     }
-    mesh.visible = true;
     mesh.rotation.set(PREVIEW_TILT, rotation, 0);
+    this.#scene.add(mesh);
     this.renderer.render(this.#scene, this.#camera);
-    mesh.visible = false;
+    this.#scene.remove(mesh);
   }
 
   readonly #onVisibility = (
@@ -117,7 +117,7 @@ export class BlockTurntable {
 
   readonly #loop = (time: number): void => {
     this.#raf = requestAnimationFrame(this.#loop);
-    this.meshes.refresh(time);
+    this.refresh(time);
     this.#rotation += PREVIEW_ROTATION_STEP;
     this.draw();
   };

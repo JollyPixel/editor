@@ -4,23 +4,25 @@ import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type { BlockRenderSources } from "../rendering/BlockRenderSources.ts";
+import { BlockPreviewMeshes } from "../rendering/BlockPreviewMeshes.ts";
 import { BlockGrid } from "./BlockGrid.ts";
 import { CellRepaints } from "./CellRepaints.ts";
 import { TurntableAngles } from "./TurntableAngles.ts";
-import { BlockTurntable } from "../rendering/BlockTurntable.ts";
+import { Turntable } from "../../preview/Turntable.ts";
 import {
   PREVIEW_ROTATION_STEP,
   PREVIEW_STILL_ROTATION
-} from "../rendering/blockPreviewMesh.ts";
+} from "../../preview/stage.ts";
 
 // CONSTANTS
 const kSettleFrames = 6;
 
-export class BlockLibraryRenderer extends BlockTurntable {
+export class BlockLibraryRenderer extends Turntable {
   onLayoutChange: (() => void) | null = null;
   selectedId: number | null = null;
   hoveredId: number | null = null;
 
+  readonly #meshes: BlockPreviewMeshes;
   #repaints = new CellRepaints<THREE.Mesh>();
   #angles = new TurntableAngles(PREVIEW_STILL_ROTATION, PREVIEW_ROTATION_STEP);
   #clearPending = true;
@@ -38,10 +40,11 @@ export class BlockLibraryRenderer extends BlockTurntable {
     container: HTMLElement,
     sources: BlockRenderSources
   ) {
-    super(container, sources, {
+    super(container, {
       preserveDrawingBuffer: true
     });
     this.renderer.autoClear = false;
+    this.#meshes = new BlockPreviewMeshes(sources);
   }
 
   get grid(): BlockGrid {
@@ -51,7 +54,7 @@ export class BlockLibraryRenderer extends BlockTurntable {
   setBlocks(
     blocks: ResolvedBlockDefinition[]
   ): void {
-    this.meshes.sync(blocks);
+    this.#meshes.sync(blocks);
     this.#angles.keep(blocks.map((block) => block.id));
     this.#relayout();
   }
@@ -64,7 +67,18 @@ export class BlockLibraryRenderer extends BlockTurntable {
 
     return index === null ?
       null :
-      this.meshes.entries[index]?.block.id ?? null;
+      this.#meshes.entries[index]?.block.id ?? null;
+  }
+
+  override dispose(): void {
+    this.#meshes.dispose();
+    super.dispose();
+  }
+
+  protected override refresh(
+    time: number
+  ): void {
+    this.#meshes.refresh(time);
   }
 
   protected override resized(): void {
@@ -90,7 +104,7 @@ export class BlockLibraryRenderer extends BlockTurntable {
     const drawnCellSize = this.#drawnCellSize;
     const scrollTop = this.container.scrollTop;
     const containerHeight = this.container.clientHeight;
-    const { entries } = this.meshes;
+    const { entries } = this.#meshes;
     const paints = this.#repaints.due(
       entries,
       {
@@ -143,7 +157,7 @@ export class BlockLibraryRenderer extends BlockTurntable {
 
   #syncCanvasSize(): void {
     const { cols, cellSize } = this.#grid;
-    const rows = this.#grid.rows(this.meshes.entries.length);
+    const rows = this.#grid.rows(this.#meshes.entries.length);
     const width = cols * cellSize;
     const height = rows * cellSize;
     if (width !== this.#canvasWidth || height !== this.#canvasHeight) {

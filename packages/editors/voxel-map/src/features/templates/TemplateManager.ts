@@ -144,7 +144,7 @@ export class TemplateManager extends WorkspaceElement {
   ) {
     if (this._nodes.length === 0) {
       return html`<p class="hint">
-        Select a voxel layer and save it to create a template.
+        Save a voxel layer or a selection to create a template.
       </p>`;
     }
 

@@ -58,6 +58,18 @@ export class ActivePlacement {
     return this.kind === "region";
   }
 
+  get savable(): boolean {
+    return this.kind !== "template";
+  }
+
+  get templateName(): string {
+    const { source } = this.placement;
+
+    return source.kind === "region" ?
+      `${source.layerName} selection` :
+      this.name;
+  }
+
   get icon(): string {
     return kIcons[this.kind];
   }
@@ -79,6 +91,10 @@ export class ActivePlacement {
     return this.target === null ?
       "Commit (add a voxel layer first)" :
       `Commit into ${this.target} (${shortcut})`;
+  }
+
+  snapshot(): VoxelTemplate {
+    return this.template.transformed(this.placement.transform);
   }
 
   positionFor(

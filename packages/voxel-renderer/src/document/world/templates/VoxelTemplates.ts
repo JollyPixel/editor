@@ -50,6 +50,10 @@ export interface VoxelTemplateCaptureOptions {
   properties?: Record<string, any>;
 }
 
+export interface VoxelTemplateSnapshotOptions {
+  name: string;
+}
+
 export interface VoxelTemplatePlaceOptions {
   layerName: string;
   /**
@@ -116,17 +120,22 @@ export class VoxelTemplates implements Iterable<VoxelTemplate> {
       return undefined;
     }
 
-    const template = VoxelTemplate.fromLayer(layer, {
-      ...options,
-      id: options.id ?? this.#nextId()
+    return this.#add(
+      VoxelTemplate.fromLayer(layer, {
+        ...options,
+        id: options.id ?? this.#nextId()
+      })
+    );
+  }
+
+  createFromSnapshot(
+    snapshot: VoxelTemplate,
+    options: VoxelTemplateSnapshotOptions
+  ): VoxelTemplate | undefined {
+    return this.#add(snapshot, {
+      id: this.#nextId(),
+      name: options.name
     });
-    if (template.voxelCount === 0) {
-      return undefined;
-    }
-
-    this.define(serializeVoxelTemplate(template, this.#chunkSize));
-
-    return this.#templates.get(template.id);
   }
 
   define(
@@ -262,6 +271,23 @@ export class VoxelTemplates implements Iterable<VoxelTemplate> {
 
   clear(): void {
     this.#templates.clear();
+  }
+
+  #add(
+    template: VoxelTemplate,
+    identity: Pick<VoxelTemplateJSON, "id" | "name"> = template
+  ): VoxelTemplate | undefined {
+    if (template.voxelCount === 0) {
+      return undefined;
+    }
+
+    this.define({
+      ...serializeVoxelTemplate(template, this.#chunkSize),
+      id: identity.id,
+      name: identity.name
+    });
+
+    return this.#templates.get(identity.id);
   }
 
   #nextId(): string {

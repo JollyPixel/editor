@@ -40,6 +40,13 @@ Returns `undefined` when the layer does not exist or no voxel is captured. An
 | `pivot` | `VoxelCoord` | bottom center | World cell that lands on the placement position. |
 | `properties` | `Record<string, any>` | `{}` | Free-form data. |
 
+#### `createFromSnapshot(snapshot: VoxelTemplate, options: VoxelTemplateSnapshotOptions): VoxelTemplate | undefined`
+
+Saves a template built outside the world, such as a turned copy of a
+selection, under `options.name` and an unused `template_<n>` id. Voxels, pivot
+and properties come from `snapshot`. Returns `undefined` when `snapshot` holds
+no voxel.
+
 #### `define(template: VoxelTemplateJSON): boolean`
 
 Adds a template from its JSON form, such as one saved by

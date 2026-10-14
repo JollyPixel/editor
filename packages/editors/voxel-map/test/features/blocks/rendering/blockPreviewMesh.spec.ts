@@ -11,11 +11,11 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
+import { buildBlockPreviewMesh } from "../../../../src/features/blocks/rendering/blockPreviewMesh.ts";
 import {
-  buildBlockPreviewMesh,
   needsEnvironment,
   PREVIEW_FIT_RADIUS
-} from "../../../../src/features/blocks/rendering/blockPreviewMesh.ts";
+} from "../../../../src/features/preview/stage.ts";
 import {
   blockOf,
   sourcesOf

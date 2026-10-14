@@ -10,7 +10,7 @@ import type {
 import type { BlockRenderSources } from "../blocks/rendering/BlockRenderSources.ts";
 import type { CellRegion } from "./CellRegion.ts";
 import type { Placement } from "./Placement.ts";
-import { TemplateGhost } from "./TemplateGhost.ts";
+import { TemplateGhost } from "../templates/rendering/TemplateGhost.ts";
 
 // CONSTANTS
 const kMarqueeShade = "#1a1a1a";

@@ -10,15 +10,30 @@ import { customElement } from "lit/decorators.js";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
 import "../../features/layers/LayerManager.ts";
 import "../../features/templates/TemplateManager.ts";
+import "../../features/templates/TemplatePreview.ts";
 
 @customElement("layers-panel")
 export class LayersPanel extends WorkspaceElement {
   static override styles = css`
     :host {
-      display: block;
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      min-height: 0;
+      container-type: size;
 
       --jolly-folder-indent: 0;
       --jolly-field-inset-end: 0;
+    }
+
+    .managers {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+    template-preview {
+      flex: 0 0 auto;
     }
   `;
 
@@ -29,8 +44,11 @@ export class LayersPanel extends WorkspaceElement {
     }
 
     return html`
-      <layer-manager .workspace=${workspace}></layer-manager>
-      <template-manager .workspace=${workspace}></template-manager>
+      <div class="managers">
+        <layer-manager .workspace=${workspace}></layer-manager>
+        <template-manager .workspace=${workspace}></template-manager>
+      </div>
+      <template-preview .workspace=${workspace}></template-preview>
     `;
   }
 }

@@ -5,7 +5,9 @@ import type {
 } from "@playwright/test";
 import {
   centerOf,
-  pressAt
+  dialog,
+  pressAt,
+  textField
 } from "@jolly-pixel/e2e";
 import { nextFrames } from "@jolly-pixel/e2e/editor";
 
@@ -21,6 +23,11 @@ export class TemplateList {
   readonly renameBox: Locator;
   readonly saveButton: Locator;
   readonly placeButton: Locator;
+  readonly deleteButton: Locator;
+  readonly preview: Locator;
+  readonly previewWell: Locator;
+  readonly previewCanvas: Locator;
+  readonly previewHint: Locator;
   readonly #page: Page;
   readonly #viewport: Viewport;
 
@@ -35,6 +42,11 @@ export class TemplateList {
     this.renameBox = this.root.getByRole("textbox", { name: "Rename" });
     this.saveButton = this.root.getByRole("button", { name: "Save layer as template" });
     this.placeButton = this.root.getByRole("button", { name: "Place template" });
+    this.deleteButton = this.root.getByRole("button", { name: "Delete template" });
+    this.preview = page.locator("template-preview");
+    this.previewWell = this.preview.locator(".well");
+    this.previewCanvas = this.previewWell.locator("canvas");
+    this.previewHint = this.preview.getByText("Select a template to preview it.");
   }
 
   async saveLayer(): Promise<void> {
@@ -43,6 +55,24 @@ export class TemplateList {
 
   async place(): Promise<void> {
     await this.placeButton.click();
+  }
+
+  async remove(
+    row: Locator
+  ): Promise<void> {
+    await row.locator(".label").click();
+    await this.deleteButton.click();
+    await dialog(this.#page, "Delete template")
+      .getByRole("button", { name: "Delete" })
+      .click();
+  }
+
+  async name(
+    name: string
+  ): Promise<void> {
+    const prompt = dialog(this.#page, "Save as template");
+    await textField(prompt, "Name").fill(name);
+    await prompt.getByRole("button", { name: "Save" }).click();
   }
 
   async rename(

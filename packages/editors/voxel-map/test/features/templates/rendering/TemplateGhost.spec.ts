@@ -16,8 +16,8 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { TemplateGhost } from "../../../src/features/placement/TemplateGhost.ts";
-import { sourcesOf } from "../../helpers/blockSources.ts";
+import { TemplateGhost } from "../../../../src/features/templates/rendering/TemplateGhost.ts";
+import { sourcesOf } from "../../../helpers/blockSources.ts";
 
 // CONSTANTS
 const kSlabBottom = 1;
