@@ -113,6 +113,10 @@ export class DockLayoutDragController {
         reorder = group?.liftTab(pane, originX) ?? null;
 
         return this.#options.docks().flatMap((dock) => {
+          if (dock.drop === "none") {
+            return [];
+          }
+
           const columns: DockColumn[] = dock.acceptsSecondary(pane) ?
             ["secondary", "primary"] :
             ["primary"];

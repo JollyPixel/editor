@@ -42,6 +42,13 @@ as the active tab; dropped anywhere else in a dock it takes its own slot. A tab
 moved within its own group leaves the active tab as it was. The
 layout wraps panes that share a slot in a `jolly-pane-group`.
 
+A dock's [`drop`](./dock.md) narrows this. In a `"tabs"` dock, a pane
+dropped off a header or tab strip joins the group of the nearest slot, and one
+released over its own slot stays where it was. The keyboard adds a pane sent
+there as the last tab of the column's last group, and Up and Down never take a
+tab out of its group. Drags and the keyboard never send a pane into a
+`"none"` dock.
+
 In a `double` dock, a pane dropped on the band just past the inner edge opens
 the second column. The column closes when its last pane leaves. When the
 primary column loses its last pane, the second column's panes move into it.

@@ -21,6 +21,7 @@
 | `double` | `double` | `boolean` | `false` |
 | `split` | `split` | `boolean` | Derived from the `secondary` slot |
 | `shareTone` | `share-tone` | `boolean` | `false` |
+| `drop` | `drop` | `"any" \| "tabs" \| "none"` | `"any"` |
 | `minSize` | `min-size` | `number` | `120` |
 | `maxSize` | `max-size` | `number` | `Infinity` |
 | `storageKey` | `storage-key` | `string` | `""` |
@@ -33,6 +34,15 @@ grows back to `size`. Leave `align` and `overlay` unset on a dock meant to
 start empty, so what lands there fills it. Resizing emits `jolly-resize`
 and then `jolly-resize-end` with `{ width, height, collapsed }`. Double-click
 or Enter toggles a collapsible dock.
+
+`drop` decides what a pane dragged inside a
+[`jolly-dock-layout`](./dock-layout.md) can do in the dock. `"any"` lets it
+join a group or take its own slot. With `"tabs"`, a pane released anywhere
+over a slot joins that slot's group, so panes never stack above one another;
+it takes its own slot only in a column holding no other pane. With `"none"`,
+the dock takes no pane: one released over it floats, and the keyboard never
+sends one there. Panes already inside can still leave, so give them
+[`locked`](./pane.md) to keep them in place.
 
 The resize handle of a dock that is not an overlay sits on its inner edge,
 inside the dock, and adds its thickness to `size`: panes never slide under

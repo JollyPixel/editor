@@ -279,6 +279,29 @@ test.describe("DockLayout groups", () => {
     await expect(group.selectedTab).toHaveText("Layers");
   });
 
+  test("a tabs dock merges a pane dropped on a pane body into that group", async({ page }) => {
+    const left = new Dock(page, "left");
+    await left.root.evaluate((element) => element.setAttribute("drop", "tabs"));
+    const body = await boxOf(new Pane(page, "blocks").root);
+    await dragTo(page, new Pane(page, "layers").header, {
+      x: body.x + body.width - 8,
+      y: body.y + (body.height / 2)
+    });
+
+    await expect(left.slots())
+      .resolves.toEqual([["general", "blocks", "paint", "layers"]]);
+    await expect(new PaneGroup(page).selectedTab).toHaveText("Layers");
+  });
+
+  test("a none dock refuses a dropped pane, which floats instead", async({ page }) => {
+    const right = new Dock(page, "right");
+    await right.root.evaluate((element) => element.setAttribute("drop", "none"));
+    await dragTo(page, new PaneGroup(page).tab("Paint"), await rightEdgeOf(page));
+
+    await expect(right.slots()).resolves.toEqual([]);
+    await expect(new FloatingWindow(page, "paint").root).toBeVisible();
+  });
+
   test("a tab dropped on a pane header creates a group", async({ page }) => {
     const group = new PaneGroup(page);
     const header = await boxOf(new Pane(page, "layers").header);

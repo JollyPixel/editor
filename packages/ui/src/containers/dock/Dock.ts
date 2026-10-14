@@ -15,6 +15,7 @@ import {
 import { dockStyles } from "./Dock.styles.ts";
 import type { DockColumn } from "./layout.ts";
 import { sharedAreaTone } from "./sharedTone.ts";
+import { slotCells } from "./slotCells.ts";
 import { emitContainerEvent } from "../events.ts";
 import {
   isPane,
@@ -53,6 +54,7 @@ const kHandleSize = "var(--jolly-dock-handle-size, 4px)";
 
 export type DockSide = "bottom" | "left" | "right" | "top";
 export type DockAlign = "end" | "start";
+export type DockDrop = "any" | "none" | "tabs";
 export type DockSlot = PaneElement | PaneGroup;
 
 @customElement("jolly-dock")
@@ -94,6 +96,9 @@ export class Dock extends LitElement {
 
   @property({ type: Boolean, reflect: true, attribute: "share-tone" })
   declare shareTone: boolean;
+
+  @property({ type: String, reflect: true })
+  declare drop: DockDrop;
 
   @property({ type: Number, attribute: "min-size" })
   declare minSize: number;
@@ -179,6 +184,7 @@ export class Dock extends LitElement {
     this.double = false;
     this.split = false;
     this.shareTone = false;
+    this.drop = "any";
     this.minSize = 120;
     this.maxSize = Number.POSITIVE_INFINITY;
     this.storageKey = "";
@@ -462,8 +468,22 @@ export class Dock extends LitElement {
         line: (index) => horizontalInsertionLine(header, candidates, index)
       });
     }
+    if (this.drop !== "tabs") {
+      return stacks;
+    }
 
-    return stacks;
+    const cells = slotCells(
+      this.#viewport(),
+      this.dropCandidates(column),
+      this.axis
+    );
+
+    return stacks.map((stack) => {
+      return {
+        ...stack,
+        rect: cells[stack.slot]
+      };
+    });
   }
 
   dropCandidates(
@@ -543,24 +563,33 @@ export class Dock extends LitElement {
     this.split = this.splittable && this.slots("secondary").length > 0;
   }
 
+  #viewport(): Rect {
+    const view = this.ownerDocument.defaultView;
+
+    return {
+      x: 0,
+      y: 0,
+      width: view?.innerWidth ?? 0,
+      height: view?.innerHeight ?? 0
+    };
+  }
+
   #viewportBand(
     vertical: boolean
   ): Rect {
-    const view = this.ownerDocument.defaultView;
-    const viewWidth = view?.innerWidth ?? 0;
-    const viewHeight = view?.innerHeight ?? 0;
+    const { width, height } = this.#viewport();
 
     return vertical ?
       {
-        x: this.side === "left" ? 0 : viewWidth - kZoneBand,
+        x: this.side === "left" ? 0 : width - kZoneBand,
         y: 0,
         width: kZoneBand,
-        height: viewHeight
+        height
       } :
       {
         x: 0,
-        y: this.side === "top" ? 0 : viewHeight - kZoneBand,
-        width: viewWidth,
+        y: this.side === "top" ? 0 : height - kZoneBand,
+        width,
         height: kZoneBand
       };
   }
