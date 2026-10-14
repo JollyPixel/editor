@@ -21,7 +21,7 @@ flowchart TB
 - `editor/`: `mountStandalone`, `bootStandalone`, `EditorMount`, `Placement`.
 - `state/`: the page state (`data-editor-state`) and its loading bar.
 - `runtime/`: the 3D runtime wrapper and `PeerFrustums`.
-- `workspace/`: offline and shared-tab connections, behind the `./offline` entry.
+- `workspace/`: offline, shared-tab and peer connections, behind the `./offline` entry.
 
 ## Who owns what
 
@@ -186,8 +186,10 @@ flowchart TB
 ```mermaid
 flowchart TB
     Boot["bootStandalone"] -->|"?offline or no server"| Open["open workspace"]
-    Open --> Owner["owner tab: OfflineWorkspace"]
-    Open --> Remote["other tab: RemoteWorkspace"]
+    Boot -->|"#peer= invite"| Peer["PeerLink to the owner tab"]
+    Open --> Owner["owner tab: OwnerWorkspace"]
+    Open --> Remote["other tab: GuestWorkspace"]
+    Peer --> Remote
     Owner --> Connect["connect()"]
     Remote --> Connect
     Connect --> Mount["same mount path"]
@@ -198,7 +200,10 @@ flowchart TB
 - With IndexedDB, one tab holds the lock; other tabs reach it over a BroadcastChannel.
 - Only the owner tab loads the back-end and the editor's handlers and seed.
 - Without Web Locks the shared opener falls back to memory storage.
-- Storage, seeds and reset: [bootStandalone](./docs/editor/bootStandalone.md#offline-workspace).
+- A `GuestWorkspace` only needs a `ChannelTransport`: follower tabs build it on a BroadcastChannel, peer guests on a `DataChannelPort`.
+- The owner's `PeerHost` answers offers through `PeerSignaling` and relays each guest to the in-page server.
+- `PeerInvites` is that server's authentication provider: no credential means a same-browser tab, any other credential must be an issued token.
+- Storage, seeds and reset: [bootStandalone](./docs/editor/bootStandalone.md#offline-workspace); invites: [peer invites](./docs/editor/bootStandalone.md#peer-invites).
 
 ## Failure and teardown
 

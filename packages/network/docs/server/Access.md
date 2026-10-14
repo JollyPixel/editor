@@ -24,6 +24,10 @@ optionally through a promise. Identity lasts for one connection.
 
 Client profile cannot assign identity or role; server profile fields override it.
 
+`readCredential(request)` returns `request.credential` when a loopback or
+channel transport set one, otherwise the credential offered in the WebSocket
+handshake, or `null`.
+
 ### BypassAuthentication
 
 The default `BypassAuthentication` assigns `defaultRole`.

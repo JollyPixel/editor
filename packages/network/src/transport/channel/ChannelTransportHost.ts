@@ -2,7 +2,8 @@
 import type {
   ClientSocket,
   ClientSocketEvent,
-  ClientSocketEventType
+  ClientSocketEventType,
+  SocketConnectOptions
 } from "../ClientSocket.ts";
 import {
   CHANNEL_TRANSPORT_TAG,
@@ -32,9 +33,11 @@ export interface ChannelTransportHostOptions {
   port: ChannelPort;
   /**
    * Opens the connection each remote client is relayed to, usually
-   * `LoopbackTransport.connect`.
+   * `LoopbackTransport.connect`, with the credential the client sent.
    */
-  open: () => ClientSocket;
+  open: (
+    options: SocketConnectOptions
+  ) => ClientSocket;
   /**
    * Id clients pass as `host` to reach this host.
    * Messages addressed to other ids are ignored.
@@ -64,7 +67,7 @@ export class ChannelTransportHost {
   readonly id: string;
 
   readonly #port: ChannelPort;
-  readonly #open: () => ClientSocket;
+  readonly #open: (options: SocketConnectOptions) => ClientSocket;
   readonly #socketPort: ChannelSocketPortFactory | undefined;
   readonly #relays = new Map<string, Relay>();
   #closed = false;
@@ -79,7 +82,7 @@ export class ChannelTransportHost {
     }
 
     if (message.type === "connect") {
-      this.#connect(message.socket, message.dedicated);
+      this.#connect(message);
 
       return;
     }
@@ -138,9 +141,13 @@ export class ChannelTransportHost {
   }
 
   #connect(
-    id: string,
-    dedicated: boolean
+    message: Extract<ChannelTransportMessage, { type: "connect"; }>
   ): void {
+    const {
+      socket: id,
+      dedicated,
+      credential
+    } = message;
     const port = dedicated ? this.#socketPort?.(id) ?? null : null;
     if (dedicated && port === null) {
       this.#postEvent(this.#port, id, "close", {
@@ -153,7 +160,7 @@ export class ChannelTransportHost {
 
     const relay: Relay = {
       id,
-      socket: this.#open(),
+      socket: this.#open({ credential }),
       port: port ?? this.#port,
       listener: port === null ? null : this.#listenTo(id, port)
     };

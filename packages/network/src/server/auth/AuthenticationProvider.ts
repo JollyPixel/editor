@@ -15,6 +15,11 @@ export interface AuthenticationAttempt {
   url: string;
   headers: Record<string, string | string[] | undefined>;
   remoteAddress?: string;
+  /**
+   * Credential handed over by a transport without handshake headers, such as
+   * `LoopbackTransport`. `readCredential` prefers it over the headers.
+   */
+  credential?: string;
 }
 
 export interface AuthenticationRequest extends AuthenticationAttempt {

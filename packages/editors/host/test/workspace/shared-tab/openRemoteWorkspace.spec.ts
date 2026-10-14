@@ -43,7 +43,7 @@ async function openTabs() {
   };
 }
 
-describe("RemoteWorkspace", () => {
+describe("openRemoteWorkspace", () => {
   it("hands the launch catalog to its first connection", async() => {
     await using tabs = await openTabs();
     const [source] = tabs.follower.launchSources(BINARY_KIND);

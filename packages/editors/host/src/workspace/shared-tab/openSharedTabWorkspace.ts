@@ -6,7 +6,7 @@ import {
   workspaceDatabaseName
 } from "../offline/workspaceLock.ts";
 import type { StandaloneWorkspace } from "../SessionWorkspace.ts";
-import { RemoteWorkspace } from "./RemoteWorkspace.ts";
+import { openRemoteWorkspace } from "./openRemoteWorkspace.ts";
 
 export interface SharedTabWorkspaceOptions {
   project: OfflineProjectLoader;
@@ -38,29 +38,20 @@ export async function openSharedTabWorkspace(
   const databaseName = workspaceDatabaseName(name);
   const release = await acquireWorkspaceLock(databaseName);
   if (release === null) {
-    return RemoteWorkspace.open(name, databaseName);
+    return openRemoteWorkspace(name, databaseName);
   }
 
-  const [{ OfflineWorkspace }, { OwnerWorkspace }] = await Promise.all([
-    import("../offline/OfflineWorkspace.ts"),
-    import("./OwnerWorkspace.ts")
-  ]).catch((error: unknown) => {
-    release();
+  const { OwnerWorkspace } = await import("./OwnerWorkspace.ts")
+    .catch((error: unknown) => {
+      release();
 
-    throw error;
-  });
-  const workspace = await OfflineWorkspace.openOwner({
+      throw error;
+    });
+
+  return OwnerWorkspace.open({
     project,
+    name,
     databaseName,
     release
   });
-
-  try {
-    return new OwnerWorkspace(workspace, name);
-  }
-  catch (error) {
-    await workspace.close();
-
-    throw error;
-  }
 }

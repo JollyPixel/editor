@@ -12,8 +12,8 @@ import {
 import {
   ConnectionHandoff,
   ParkedConnection
-} from "#src/workspace/shared-tab/ConnectionHandoff.ts";
-import { FakeClient } from "../../helpers/rooms.ts";
+} from "#src/workspace/ConnectionHandoff.ts";
+import { FakeClient } from "../helpers/rooms.ts";
 
 function parked() {
   const client = new FakeClient();

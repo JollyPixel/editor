@@ -31,6 +31,11 @@ export interface ChannelTransportOptions {
    * closes the socket.
    */
   socketPort?: ChannelSocketPortFactory;
+  /**
+   * Opaque credential sent with each connection and handed to the host's
+   * `open()`.
+   */
+  credential?: string;
 }
 
 interface SocketRecord {
@@ -46,6 +51,7 @@ export class ChannelTransport {
   readonly #port: ChannelPort;
   readonly #host: string;
   readonly #socketPort: ChannelSocketPortFactory | undefined;
+  readonly #credential: string | undefined;
   readonly #sockets = new Map<string, SocketRecord>();
   #closed = false;
 
@@ -67,6 +73,7 @@ export class ChannelTransport {
     this.#port = options.port;
     this.#host = options.host;
     this.#socketPort = options.socketPort;
+    this.#credential = options.credential;
     this.#listen(this.#port);
   }
 
@@ -95,7 +102,8 @@ export class ChannelTransport {
       host: this.#host,
       socket: id,
       type: "connect",
-      dedicated: port !== null
+      dedicated: port !== null,
+      credential: this.#credential
     } satisfies ChannelTransportMessage);
 
     return socket;

@@ -6,6 +6,13 @@ export interface ClientSocketEvent {
   readonly reason?: string;
 }
 
+export interface SocketConnectOptions {
+  /**
+   * Opaque credential handed to the server's authentication provider.
+   */
+  credential?: string;
+}
+
 /**
  * The part of a `WebSocket` the client relies on.
  */

@@ -48,6 +48,10 @@ function decodeBase64Url(
 export function readCredential(
   request: AuthenticationRequest
 ): string | null {
+  if (request.credential !== undefined) {
+    return request.credential;
+  }
+
   const offered = offeredProtocols(request)
     .find((value) => value.startsWith(WEBSOCKET_AUTH_PROTOCOL_PREFIX));
   if (offered === undefined) {

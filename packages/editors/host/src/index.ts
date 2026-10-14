@@ -31,6 +31,7 @@ export * from "./session/dialogs/askImportConflictPolicy.ts";
 export * from "./session/errors/ArchiveRootError.ts";
 export * from "./session/rememberQueryUsername.ts";
 export type {
+  PeerSharing,
   SessionWorkspace,
   StandaloneConnection
 } from "./workspace/SessionWorkspace.ts";
@@ -54,6 +55,7 @@ export * from "./appearance/PageAppearance.ts";
 export * from "./console/mountConsole.ts";
 export * from "./console/FrameConsoles.ts";
 export * from "./console/namespaces/archive.ts";
+export * from "./console/namespaces/peer.ts";
 export * from "./console/namespaces/runtime.ts";
 export * from "./debug/readDebugLogger.ts";
 export * from "./params/QueryParams.ts";

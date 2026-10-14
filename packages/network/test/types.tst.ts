@@ -47,6 +47,7 @@ import type {
   WorkerToMainMessage
 } from "#src/server/extension/worker/protocol.ts";
 import type { ChannelTransportMessage } from "#src/transport/channel/protocol.ts";
+import type { DataChannelLike } from "#src/transport/channel/DataChannelPort.ts";
 
 declare const room: Room;
 
@@ -123,6 +124,12 @@ describe("ChannelTransportMessage", () => {
   test("relays events assignable to a client socket event", () => {
     expect<Extract<ChannelTransportMessage, { type: "event"; }>["data"]>()
       .type.toBeAssignableTo<ClientSocketEvent>();
+  });
+});
+
+describe("DataChannelLike", () => {
+  test("is satisfied by a browser RTCDataChannel", () => {
+    expect<RTCDataChannel>().type.toBeAssignableTo<DataChannelLike>();
   });
 });
 

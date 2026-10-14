@@ -5,6 +5,7 @@ import type { PeerIdentity } from "@jolly-pixel/ui";
 import type { LaunchSource } from "../launch/index.ts";
 import type { EditorSessionClient } from "../session/SessionConnection.ts";
 import type { CatalogOpener } from "../session/openCatalog.ts";
+import type { PeerInvite } from "./peer/PeerInvite.ts";
 
 export interface StandaloneConnection {
   identity: PeerIdentity;
@@ -13,9 +14,17 @@ export interface StandaloneConnection {
   workspace?: SessionWorkspace;
 }
 
+export interface PeerSharing {
+  readonly guests: number;
+
+  invite(): PeerInvite;
+  stop(): void;
+}
+
 export interface SessionWorkspace {
   readonly persistent: boolean;
   readonly canReset?: boolean;
+  readonly peers?: PeerSharing;
 
   reset(): Promise<void>;
 }

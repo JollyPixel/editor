@@ -16,7 +16,9 @@ import * as EventStore from "@jolly-pixel/event-store";
 import {
   LoopbackTransport,
   Server,
-  type ClientSocket
+  type AuthenticationProvider,
+  type ClientSocket,
+  type SocketConnectOptions
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
@@ -73,6 +75,7 @@ export interface OfflineOwnerOptions {
   project: OfflineProjectLoader;
   databaseName: string;
   release: () => void;
+  auth: AuthenticationProvider;
 }
 
 export interface OfflineWorkspaceParts {
@@ -105,19 +108,26 @@ export class OfflineWorkspace implements StandaloneWorkspace {
   static async openOwner(
     options: OfflineOwnerOptions
   ): Promise<OfflineWorkspace> {
-    const { project, databaseName, release } = options;
+    const {
+      project,
+      databaseName,
+      release,
+      auth
+    } = options;
 
     return OfflineWorkspace.#start(
       project,
       databaseName,
-      await openPersistentSource(databaseName, release)
+      await openPersistentSource(databaseName, release),
+      auth
     );
   }
 
   static async #start(
     project: OfflineProjectLoader,
     databaseName: string,
-    opened: OfflineSource
+    opened: OfflineSource,
+    auth?: AuthenticationProvider
   ): Promise<OfflineWorkspace> {
     const { source, storage, release } = opened;
 
@@ -150,7 +160,8 @@ export class OfflineWorkspace implements StandaloneWorkspace {
         watch: false
       });
       server = new Server({
-        logger: silentLogger()
+        logger: silentLogger(),
+        auth
       });
 
       return new OfflineWorkspace({
@@ -242,8 +253,10 @@ export class OfflineWorkspace implements StandaloneWorkspace {
     return this.storage === "indexeddb";
   }
 
-  bridgeSocket(): ClientSocket {
-    return this.#transport.connect();
+  bridgeSocket(
+    options: SocketConnectOptions = {}
+  ): ClientSocket {
+    return this.#transport.connect(options);
   }
 
   launchSources(
