@@ -51,7 +51,8 @@ const kState: TreeRowState = {
   spacer: "inside",
   rails: ["tee"],
   swatchPosition: "end",
-  reorderable: true
+  reorderable: true,
+  match: null
 };
 
 function rowOf(
@@ -148,7 +149,8 @@ describe("Data.TreeRowView", () => {
       { spacer: "outside" },
       { rails: ["elbow"] },
       { swatchPosition: "start" },
-      { reorderable: false }
+      { reorderable: false },
+      { match: { start: 0, end: 1 } }
     ];
 
     for (const change of changes) {

@@ -43,6 +43,8 @@ import {
   renderBadges,
   renderGuides,
   renderIcon,
+  renderLabelText,
+  renderSwatch,
   renderWarning
 } from "./rowTemplates.ts";
 import { TreeDragController } from "./TreeDragController.ts";
@@ -63,15 +65,22 @@ import {
 // Registers the chevron, eye, lock and drag glyphs.
 import "../../icon/Icon.ts";
 import "../../peer/Avatar.ts";
-import { originatesInButton } from "../../dom.ts";
+import {
+  originatesInButton,
+  stopPropagation
+} from "../../dom.ts";
 import { revealOverflowTitle } from "../../interaction/overflowTitle.ts";
+import { SearchQuery } from "../../search/SearchQuery.ts";
+import type { Searchable } from "../../search/Searchable.ts";
+import { TreeFilter } from "./TreeFilter.ts";
 
 // CONSTANTS
 const kFlowLayout = flow();
 const kNoRails: readonly TreeRail[] = Object.freeze([]);
 
 @customElement("jolly-tree")
-export class Tree<TData = unknown> extends LitElement {
+export class Tree<TData = unknown> extends LitElement
+  implements Searchable {
   static override styles = treeStyles;
 
   @property({ attribute: false })
@@ -153,6 +162,9 @@ export class Tree<TData = unknown> extends LitElement {
   @property({ attribute: false })
   declare validateRename: TreeRenameValidator | null;
 
+  @property({ type: String })
+  declare filter: string;
+
   @state()
   private declare _interaction: TreeInteraction;
 
@@ -178,8 +190,10 @@ export class Tree<TData = unknown> extends LitElement {
     spacer: "none",
     rails: kNoRails,
     swatchPosition: "end",
-    reorderable: false
+    reorderable: false,
+    match: null
   };
+  #filtered = new TreeFilter<TData>([], SearchQuery.EMPTY);
   #activeRowId: string | null = null;
   #focus: TreeFocusController;
   #rename: TreeRenameController;
@@ -203,6 +217,7 @@ export class Tree<TData = unknown> extends LitElement {
     this.acceptDrop = null;
     this.virtual = false;
     this.validateRename = null;
+    this.filter = "";
     this._interaction = idleTreeInteraction();
     new TreeHairlineController(this);
     this.#expandedIds = new Set();
@@ -214,8 +229,8 @@ export class Tree<TData = unknown> extends LitElement {
       snapshot: () => this.#snapshot,
       visibleRows: () => this.#visibleRows(),
       selected: () => this.selected,
-      reorderable: () => this.reorderable,
-      rowDrag: () => this.rowDrag,
+      reorderable: () => this.#reorderable,
+      rowDrag: () => this.rowDrag && this.#filtered.query.isEmpty,
       acceptDrop: () => this.acceptDrop,
       interaction: () => this._interaction,
       setInteraction: (next) => {
@@ -264,20 +279,43 @@ export class Tree<TData = unknown> extends LitElement {
     if (changed.has("selected")) {
       this.#selectedIds = new Set(this.selected);
     }
-    if (changed.has("nodes") || changed.has("expanded")) {
-      this.#snapshot = new TreeSnapshot(
-        this.nodes,
-        this.#expandedIds
-      );
-      this.#layout = new TreeRowLayout(this.#snapshot, this.#expandedIds);
-    }
+    const query = changed.has("filter") ?
+      new SearchQuery(this.filter) :
+      this.#filtered.query;
     if (
       changed.has("nodes") ||
       changed.has("expanded") ||
-      changed.has("selected")
+      !query.equals(this.#filtered.query)
     ) {
+      this.#rebuild(query);
+    }
+    else if (changed.has("selected")) {
       this.#layout.follow(this.#selectedIds);
     }
+  }
+
+  applySearch(
+    query: SearchQuery
+  ): number {
+    this.filter = query.text;
+    if (!query.equals(this.#filtered.query)) {
+      this.#rebuild(query);
+    }
+
+    return this.#filtered.matches.size;
+  }
+
+  get #reorderable(): boolean {
+    return this.reorderable && this.#filtered.query.isEmpty;
+  }
+
+  #rebuild(
+    query: SearchQuery
+  ): void {
+    this.#filtered = new TreeFilter(this.nodes, query);
+    this.#snapshot = new TreeSnapshot(this.#filtered.nodes, this.#expandedIds);
+    this.#layout = new TreeRowLayout(this.#snapshot, this.#expandedIds);
+    this.#layout.follow(this.#selectedIds);
   }
 
   override render(): TemplateResult {
@@ -333,8 +371,9 @@ export class Tree<TData = unknown> extends LitElement {
     const layout = this.#layout;
     const guides = this.indentGuides;
     const scope = this.indentGuidesScope;
+    const { matches } = this.#filtered;
     state.swatchPosition = this.swatchPosition;
-    state.reorderable = this.reorderable;
+    state.reorderable = this.#reorderable;
 
     return this.#rowViewList.update(rows, (row) => {
       const { id } = row.node;
@@ -348,6 +387,7 @@ export class Tree<TData = unknown> extends LitElement {
       state.spacer = layout.spacer(id, guides);
       state.rails = guides ? layout.rails(id, scope) : kNoRails;
       state.expanded = this.#expandedIds.has(id);
+      state.match = matches.get(id) ?? null;
       state.selected = this.#selectedIds.has(id);
       state.active = id === activeId;
       state.drop = drop;
@@ -412,10 +452,10 @@ export class Tree<TData = unknown> extends LitElement {
             <span class="toggle-spacer"></span>
           ` : nothing}
           ${renderIcon(view)}
-          ${view.swatchPosition === "start" ? this.#renderSwatch(view) : nothing}
+          ${view.swatchPosition === "start" ? renderSwatch(view, this.#onActivateSwatch) : nothing}
           ${this.#renderLabel(view)}
           ${view.detail ? html`<span class="detail">${view.detail}</span>` : nothing}
-          ${view.swatchPosition === "end" ? this.#renderSwatch(view) : nothing}
+          ${view.swatchPosition === "end" ? renderSwatch(view, this.#onActivateSwatch) : nothing}
           ${renderWarning(view)}
           ${renderBadges(view)}
           ${view.visible === undefined ? nothing : html`
@@ -493,42 +533,13 @@ export class Tree<TData = unknown> extends LitElement {
     );
   }
 
-  #renderSwatch(
-    view: TreeRowView
-  ): TemplateResult | typeof nothing {
-    const swatch = view.swatch;
-    if (swatch === undefined) {
-      return nothing;
-    }
-
-    const empty = swatch.color === undefined;
-    const face = [
-      empty ? "" : `--jolly-tree-swatch-color: ${swatch.color}`,
-      swatch.ring === undefined ? "" : `--jolly-tree-swatch-ring: ${swatch.ring}`
-    ].filter(Boolean).join("; ");
-
-    return html`
-      <button
-        class="swatch"
-        part="swatch"
-        type="button"
-        tabindex="-1"
-        aria-label=${swatch.title}
-        title=${swatch.title}
-        data-empty=${empty ? "true" : nothing}
-        style=${face}
-        @click=${(event: Event) => this.#onActivateSwatch(event, view.id)}
-      ></button>
-    `;
-  }
-
-  #onActivateSwatch(
+  readonly #onActivateSwatch = (
     event: Event,
     id: string
-  ): void {
+  ): void => {
     event.stopPropagation();
     emitDataEvent(this, "jolly-activate-swatch", { id });
-  }
+  };
 
   #renderLabel(
     view: TreeRowView
@@ -537,7 +548,7 @@ export class Tree<TData = unknown> extends LitElement {
       return html`<span
         class="label"
         @pointerenter=${revealOverflowTitle}
-      >${view.label}</span>`;
+      >${renderLabelText(view)}</span>`;
     }
 
     const message = view.renameError;
@@ -707,8 +718,8 @@ export class Tree<TData = unknown> extends LitElement {
       activeId,
       interaction: this._interaction,
       selected: this.selected,
-      expanded: new Set(this.expanded),
-      reorderable: this.reorderable,
+      expanded: this.#expandedIds,
+      reorderable: this.#reorderable,
       renamableIds: this.#isRenamable(activeId) ? new Set([activeId]) : new Set()
     });
     if (action === null) {
@@ -741,12 +752,6 @@ export class Tree<TData = unknown> extends LitElement {
         break;
     }
   };
-}
-
-function stopPropagation(
-  event: Event
-): void {
-  event.stopPropagation();
 }
 
 declare global {

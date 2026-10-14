@@ -119,3 +119,11 @@ A field with a `path` under a pane carrying a [`PresenceSource`](../peer/presenc
 has `lockedBy` and `peers` written for it: it claims on focus, releases on blur
 and on disconnection, and never locks against itself. Without a source both stay
 consumer owned, like every other property here.
+
+## Searching
+
+`applySearch(query)` returns `1` when `label` contains the
+[`SearchQuery`](../search.md#searchquery) and `0` otherwise. Every field is
+therefore [`Searchable`](../search.md#searchable): a
+[searchable pane](../containers/pane.md#searching-content) hides the fields
+whose label misses.

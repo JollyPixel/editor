@@ -21,3 +21,7 @@ The default slot supplies the row content. The component has no value or field
 events. `labelPosition`, `stackBelow` and `descriptionDisplay` behave as on a
 field, `stacked` attribute included, so a custom row stacks and describes itself
 like the fields around it. See the [shared field API](../field/shared-field-api.md).
+
+`applySearch(query)` matches on `label` like a field does, so a
+[searchable pane](../containers/pane.md#searching-content) hides a row whose
+label misses.

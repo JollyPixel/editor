@@ -211,7 +211,8 @@ export const folderStyles = css`
     padding-inline-start: 0;
   }
 
-  :host([open]) .content {
+  :host([open]) .content,
+  :host([data-search-open]) .content {
     display: flex;
     flex: 1 1 auto;
     min-height: 0;

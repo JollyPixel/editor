@@ -97,6 +97,7 @@ export * from "./controls/PropertyRow.ts";
 export {
   Range
 } from "./controls/Range.ts";
+export * from "./controls/Search.ts";
 export * from "./controls/Select.ts";
 export * from "./controls/Separator.ts";
 export * from "./controls/Slider.ts";
@@ -201,6 +202,7 @@ export type {
   JollyMoveDetail,
   JollyReorderDetail,
   JollyResizeDetail,
+  JollySearchDetail,
   JollyTabChangeDetail,
   JollyTabReorderDetail,
   JollyToggleDetail,
@@ -233,6 +235,8 @@ export {
   type TreePlacement
 } from "./data/tree/model.ts";
 export * from "./data/tree/contract.ts";
+export * from "./search/SearchQuery.ts";
+export type { Searchable } from "./search/Searchable.ts";
 
 export * from "./monitors/Monitor.ts";
 export * from "./monitors/Graph.ts";

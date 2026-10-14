@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import type { IconName } from "../../icon/registry.ts";
 import type { PeerAvatar } from "../../peer/Avatar.ts";
+import type { SearchMatch } from "../../search/SearchQuery.ts";
 import type {
   TreeBadge,
   TreeDropWhere,
@@ -36,6 +37,7 @@ export interface TreeRowState {
   rails: readonly TreeRail[];
   swatchPosition: TreeSwatchPosition;
   reorderable: boolean;
+  match: Readonly<SearchMatch> | null;
 }
 
 export class TreeRowView {
@@ -68,6 +70,7 @@ export class TreeRowView {
   readonly rails: readonly TreeRail[];
   readonly swatchPosition: TreeSwatchPosition;
   readonly reorderable: boolean;
+  readonly match: Readonly<SearchMatch> | null;
 
   static indentOf(
     depth: number
@@ -123,6 +126,7 @@ export class TreeRowView {
     this.rails = state.rails;
     this.swatchPosition = state.swatchPosition;
     this.reorderable = state.reorderable;
+    this.match = state.match;
     Object.freeze(this);
   }
 
@@ -158,6 +162,7 @@ export class TreeRowView {
       sameRails(this.rails, state.rails) &&
       this.swatchPosition === state.swatchPosition &&
       this.reorderable === state.reorderable &&
+      sameMatch(this.match, state.match) &&
       sameSwatch(this.swatch, node.swatch) &&
       sameBadges(this.badges, node.badges ?? kNoBadges);
   }
@@ -175,6 +180,17 @@ function sameAvatar(
     left.color === right.color &&
     left.image === right.image &&
     left.presence === right.presence;
+}
+
+function sameMatch(
+  left: Readonly<SearchMatch> | null,
+  right: Readonly<SearchMatch> | null
+): boolean {
+  if (left === null || right === null) {
+    return left === right;
+  }
+
+  return left.start === right.start && left.end === right.end;
 }
 
 function sameRails(

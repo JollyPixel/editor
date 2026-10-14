@@ -202,6 +202,34 @@ export const paneStyles = css`
     opacity: 1;
   }
 
+  .search {
+    position: relative;
+    z-index: 1;
+    margin-inline-start: auto;
+
+    --jolly-search-bg: rgb(0 0 0 / 22%);
+    --jolly-search-bg-hover: rgb(0 0 0 / 28%);
+    --jolly-search-bg-focus: rgb(0 0 0 / 34%);
+    --jolly-search-trigger-bg-hover: rgb(255 255 255 / 15%);
+    --jolly-text: var(--jolly-text-on-fill, white);
+    --jolly-text-muted: rgb(255 255 255 / 60%);
+  }
+
+  .search[expanded] {
+    flex: 1 1 auto;
+  }
+
+  .header:has(.search[expanded]) .title {
+    display: none;
+  }
+
+  .no-matches {
+    margin: 0;
+    padding: var(--jolly-space-2, 8px);
+    color: var(--jolly-text-muted, ${kFallback.text});
+    text-align: center;
+  }
+
   .chevron {
     transition: transform var(--jolly-duration-base, 160ms)
       var(--jolly-easing, ease);

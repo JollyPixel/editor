@@ -15,6 +15,7 @@ below documents the properties and behavior owned by one component.
 - [`jolly-number`](./number.md), exported as `NumberField`
 - [`jolly-property-row`](./property-row.md), exported as `PropertyRow`
 - [`jolly-range`](./range.md), exported as `Range`
+- [`jolly-search`](./search.md), exported as `Search`
 - [`jolly-select`](./select.md), exported as `Select`
 - [`jolly-separator`](./separator.md), exported as `Separator`
 - [`jolly-slider`](./slider.md), exported as `Slider`

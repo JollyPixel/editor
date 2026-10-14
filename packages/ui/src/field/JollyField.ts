@@ -36,6 +36,8 @@ import {
   type FieldValue
 } from "./mixed.ts";
 import type { CollaboratorPresence } from "../peer/types.ts";
+import type { SearchQuery } from "../search/SearchQuery.ts";
+import type { Searchable } from "../search/Searchable.ts";
 import { LockController } from "../peer/LockController.ts";
 import { resolveThemeToken } from "../theme/resolveThemeToken.ts";
 import { revealOverflowTitle } from "../interaction/overflowTitle.ts";
@@ -57,7 +59,8 @@ export type { DraftResult } from "./DraftController.ts";
 /**
  * Shared field chrome. Subclasses render only the value area.
  */
-export abstract class JollyField<TValue> extends LitElement {
+export abstract class JollyField<TValue> extends LitElement
+  implements Searchable {
   static override styles = [
     fieldStyles,
     descriptionHintStyles,
@@ -142,6 +145,12 @@ export abstract class JollyField<TValue> extends LitElement {
     this.stackBelow = DEFAULT_STACK_BELOW;
     this.descriptionDisplay = "block";
     new LabelStackController(this);
+  }
+
+  applySearch(
+    query: SearchQuery
+  ): number {
+    return query.matches(this.label) ? 1 : 0;
   }
 
   protected abstract renderValue(): TemplateResult;

@@ -15,11 +15,16 @@ import {
 // Import Internal Dependencies
 import { emitContainerEvent } from "../events.ts";
 import { FolderListController } from "./FolderListController.ts";
+import { PaneSearchController } from "./PaneSearchController.ts";
 import { paneStyles } from "./Pane.styles.ts";
 import {
-  isSlotElement
+  isSlotElement,
+  stopPropagation
 } from "../../dom.ts";
 import "../../icon/Icon.ts";
+import "../../controls/Search.ts";
+import type { Search } from "../../controls/Search.ts";
+import { searchMissStyles } from "../../search/searchMissStyles.ts";
 import type {
   IconName,
   IconTone
@@ -77,7 +82,8 @@ export interface PaneDragDetail {
 export class PaneElement extends LitElement {
   static override styles = [
     paneStyles,
-    hiddenStyles
+    hiddenStyles,
+    searchMissStyles
   ];
 
   @property({ type: String })
@@ -118,6 +124,9 @@ export class PaneElement extends LitElement {
 
   @property({ type: Boolean, reflect: true })
   declare inactive: boolean;
+
+  @property({ type: Boolean, reflect: true })
+  declare searchable: boolean;
 
   @property({
     type: Number,
@@ -164,6 +173,9 @@ export class PaneElement extends LitElement {
   @query(".content")
   declare _content: HTMLElement;
 
+  @query("jolly-search")
+  declare _search: Search | null;
+
   #managed = false;
   #state = new NamespacedStore({
     isManaged: () => this.#managed,
@@ -205,6 +217,17 @@ export class PaneElement extends LitElement {
     }
   });
 
+  #search = new PaneSearchController(this, {
+    enabled: () => this.searchable,
+    field: () => this._search,
+    content: () => this._contentSlot?.assignedElements({ flatten: true }) ?? [],
+    announce: (message) => this.announce(message)
+  });
+
+  get searchQuery(): string {
+    return this.#search.query.text;
+  }
+
   get layoutKey(): string {
     return this.key === "" ?
       deriveKey("jolly-pane", this.heading) :
@@ -235,6 +258,7 @@ export class PaneElement extends LitElement {
     this.disabled = false;
     this.grouped = false;
     this.inactive = false;
+    this.searchable = false;
     this.storageKey = "";
     this.storage = defaultStorageAdapter();
     this.presence = null;
@@ -315,9 +339,10 @@ export class PaneElement extends LitElement {
     const showHeader = chrome ?
       this.heading !== "" ||
       this._hasActions ||
+      this.searchable ||
       this.collapsible ||
       this.movable :
-      this._hasActions;
+      this._hasActions || this.searchable;
 
     return html`
       ${showHeader
@@ -359,6 +384,18 @@ export class PaneElement extends LitElement {
             <span class="actions" part="actions">
               <slot name="actions" @slotchange=${this.#onActionsChange}></slot>
             </span>
+            ${this.searchable
+              ? html`
+                <jolly-search
+                  class="search"
+                  part="search"
+                  compact
+                  label=${`Search ${this.heading || "pane"}`}
+                  @jolly-input=${this.#search.onInput}
+                  @jolly-change=${stopPropagation}
+                ></jolly-search>
+              `
+              : nothing}
             ${chrome && this.movable
               ? html`
                 <button
@@ -382,11 +419,14 @@ export class PaneElement extends LitElement {
         `}
       <div class="content" part="content" ?inert=${this.disabled}>
         <slot
-          @slotchange=${this.#folders.onContentChange}
+          @slotchange=${this.#onContentChange}
           @jolly-folder-reorder=${this.#folders.onReorderCommand}
           @jolly-folder-drag=${this.#folders.onFolderDrag}
           @jolly-toggle=${this.#folders.onFolderToggle}
         ></slot>
+        ${this.#search.noMatches
+          ? html`<p class="no-matches" part="no-matches">No matches</p>`
+          : nothing}
       </div>
       <span class="live-region" aria-live="polite">${this._announcement}</span>
     `;
@@ -397,6 +437,15 @@ export class PaneElement extends LitElement {
   ): void {
     this._announcement = message;
   }
+
+  openSearch(): Promise<void> {
+    return this.#search.open();
+  }
+
+  #onContentChange = () => {
+    this.#folders.onContentChange();
+    this.#search.onContentChange();
+  };
 
   folderStates(): Record<string, { open: boolean; }> {
     return this.#folders.states();

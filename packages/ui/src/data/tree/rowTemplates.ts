@@ -126,3 +126,46 @@ function renderBadge(
     ></jolly-icon>
   `;
 }
+
+export function renderLabelText(
+  view: TreeRowView
+): TemplateResult | string {
+  const { label, match } = view;
+  if (match === null) {
+    return label;
+  }
+
+  return html`${label.slice(0, match.start)}<mark
+    part="match"
+  >${label.slice(match.start, match.end)}</mark>${label.slice(match.end)}`;
+}
+
+export function renderSwatch(
+  view: TreeRowView,
+  activate: (event: Event, id: string) => void
+): TemplateResult | typeof nothing {
+  const swatch = view.swatch;
+  if (swatch === undefined) {
+    return nothing;
+  }
+
+  const empty = swatch.color === undefined;
+  const face = [
+    empty ? "" : `--jolly-tree-swatch-color: ${swatch.color}`,
+    swatch.ring === undefined ? "" : `--jolly-tree-swatch-ring: ${swatch.ring}`
+  ].filter(Boolean).join("; ");
+
+  return html`
+    <button
+      class="swatch"
+      part="swatch"
+      type="button"
+      tabindex="-1"
+      aria-label=${swatch.title}
+      title=${swatch.title}
+      data-empty=${empty ? "true" : nothing}
+      style=${face}
+      @click=${(event: Event) => activate(event, view.id)}
+    ></button>
+  `;
+}
