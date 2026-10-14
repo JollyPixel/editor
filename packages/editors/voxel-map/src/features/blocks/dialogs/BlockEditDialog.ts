@@ -88,6 +88,11 @@ export class BlockEditDialog extends WorkspaceElement {
     this._open = true;
     await this.updateComplete;
     await this._dialog.showModal();
+    this.requestUpdate();
+  }
+
+  protected override shouldUpdate(): boolean {
+    return this._dialog?.closing !== true;
   }
 
   get #block(): ResolvedBlockDefinition | undefined {
@@ -113,7 +118,7 @@ export class BlockEditDialog extends WorkspaceElement {
         heading-editable
         icon="blocks"
         @jolly-heading-change=${this.#onNameChange}
-        @jolly-close=${this.#onClose}
+        @jolly-exited=${this.#onExited}
       >
         <div class="layout">
           <div class="fields">
@@ -297,7 +302,7 @@ export class BlockEditDialog extends WorkspaceElement {
     this.#close();
   }
 
-  #onClose(): void {
+  #onExited(): void {
     this._open = false;
   }
 

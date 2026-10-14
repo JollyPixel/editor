@@ -55,6 +55,7 @@ export interface ContainerEventMap {
   "jolly-cancel": undefined;
   "jolly-close": { returnValue: string; };
   "jolly-context-action": JollyContextActionDetail;
+  "jolly-exited": undefined;
   "jolly-folder-drag": { folder: Folder; event: PointerEvent; };
   "jolly-folder-reorder": {
     folder: Folder;
@@ -92,6 +93,7 @@ declare global {
     "jolly-cancel": CustomEvent<undefined>;
     "jolly-close": CustomEvent<{ returnValue: string; }>;
     "jolly-context-action": CustomEvent<JollyContextActionDetail>;
+    "jolly-exited": CustomEvent<undefined>;
     "jolly-folder-drag": CustomEvent<ContainerEventMap["jolly-folder-drag"]>;
     "jolly-folder-reorder": CustomEvent<ContainerEventMap["jolly-folder-reorder"]>;
     "jolly-heading-change": CustomEvent<JollyHeadingChangeDetail>;

@@ -5,6 +5,12 @@ import {
 } from "../../fixtures.ts";
 import { openExample } from "../../support/gallery.ts";
 
+type DialogHost = HTMLElement & {
+  readonly closing: boolean;
+  showModal(): Promise<void>;
+  close(): void;
+};
+
 test.describe("Dialog", () => {
   test.use({
     example: "containers/dialog",
@@ -175,6 +181,49 @@ test.describe("Dialog", () => {
       }
     });
     await expect(confirm).toHaveCount(0);
+  });
+
+  test("closing lasts until jolly-exited of the last exit transition", async({ page }) => {
+    const host = page.locator("#delete-dialog");
+    const dialog = host.locator("dialog");
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await host.evaluate((element: HTMLElement) => {
+      element.style.setProperty("--jolly-duration-exit", "60s");
+      element.dataset.exits = "0";
+      element.addEventListener("jolly-exited", () => {
+        element.dataset.exits = String(Number(element.dataset.exits) + 1);
+      });
+    });
+    function finishTransitions() {
+      return dialog.evaluate((element) => {
+        for (const animation of element.getAnimations({ subtree: true })) {
+          animation.finish();
+        }
+      });
+    }
+    function closing() {
+      return host.evaluate((element: DialogHost) => element.closing);
+    }
+
+    await page.getByRole("button", { name: "Open dialog" }).click();
+    await expect(dialog).toHaveAttribute("open");
+    await page.keyboard.press("Escape");
+    await expect.poll(closing).toBe(true);
+    await host.evaluate((element: DialogHost) => element.showModal());
+    await expect(dialog).toHaveAttribute("open");
+    expect(await closing()).toBe(false);
+    await finishTransitions();
+
+    const closingOnClose = await host.evaluate((element: DialogHost) => {
+      element.close();
+
+      return element.closing;
+    });
+    expect(closingOnClose).toBe(true);
+    await expect(host).toHaveAttribute("data-exits", "0");
+    await finishTransitions();
+    await expect(host).toHaveAttribute("data-exits", "1");
+    await expect.poll(closing).toBe(false);
   });
 });
 

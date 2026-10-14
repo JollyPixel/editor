@@ -228,24 +228,6 @@ function actionButton(
   return button;
 }
 
-function removeAfterExit(
-  dialog: Dialog
-): void {
-  if (dialog.open) {
-    dialog.addEventListener(
-      "jolly-close",
-      () => removeAfterExit(dialog),
-      { once: true }
-    );
-
-    return;
-  }
-
-  const exits = dialog._dialog?.getAnimations?.({ subtree: true }) ?? [];
-  void Promise.allSettled(exits.map((animation) => animation.finished))
-    .then(() => dialog.remove());
-}
-
 function settleHelper<TResult>(
   dialog: Dialog,
   resolveValue: (returnValue: string) => TResult,
@@ -265,7 +247,6 @@ function settleHelper<TResult>(
     }
 
     settled = true;
-    removeAfterExit(dialog);
     resolve(resolveValue(returnValue));
   }
 
@@ -274,6 +255,9 @@ function settleHelper<TResult>(
     if (detail !== null) {
       settle(detail.returnValue);
     }
+  });
+  dialog.addEventListener("jolly-exited", () => dialog.remove(), {
+    once: true
   });
   void dialog.showModal().then(() => focusOnOpen?.focus());
 

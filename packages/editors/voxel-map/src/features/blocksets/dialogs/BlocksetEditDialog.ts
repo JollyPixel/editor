@@ -106,6 +106,11 @@ export class BlocksetEditDialog extends WorkspaceElement {
     this._blocksetId = blocksetId;
     await this.updateComplete;
     await this._dialog.showModal();
+    this.requestUpdate();
+  }
+
+  protected override shouldUpdate(): boolean {
+    return this._dialog?.closing !== true;
   }
 
   get #entry(): BlocksetEntry | undefined {
@@ -126,7 +131,7 @@ export class BlocksetEditDialog extends WorkspaceElement {
       <jolly-dialog
         heading=${entry === undefined ? "Blockset" : `Blockset "${entry.label}"`}
         icon="blockset"
-        @jolly-close=${this.#onClose}
+        @jolly-exited=${this.#onExited}
       >
         ${entry === undefined ? nothing : this.#renderContent(workspace, entry)}
 
@@ -290,7 +295,7 @@ export class BlocksetEditDialog extends WorkspaceElement {
     this._dialog.close();
   }
 
-  #onClose(): void {
+  #onExited(): void {
     this._blocksetId = null;
     this._pendingTileSize = null;
   }

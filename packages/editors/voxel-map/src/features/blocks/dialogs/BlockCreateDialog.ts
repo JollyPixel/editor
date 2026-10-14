@@ -83,7 +83,7 @@ export class BlockCreateDialog extends WorkspaceElement {
         heading-editable
         icon="blocks"
         @jolly-heading-change=${this.#onNameChange}
-        @jolly-close=${this.#onClose}
+        @jolly-exited=${this.#onExited}
       >
         <div class="layout">
           <div class="fields">
@@ -147,7 +147,7 @@ export class BlockCreateDialog extends WorkspaceElement {
     this._draft = this._draft.with({ size: event.detail.value });
   };
 
-  #onClose(): void {
+  #onExited(): void {
     this._open = false;
   }
 

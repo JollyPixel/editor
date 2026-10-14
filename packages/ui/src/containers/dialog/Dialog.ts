@@ -90,6 +90,8 @@ export class Dialog extends LitElement {
   });
   #theme = new AmbientThemeController(this);
   #releaseInputLayer: (() => void) | null = null;
+  #exits = 0;
+  #closing = false;
 
   constructor() {
     super();
@@ -112,6 +114,10 @@ export class Dialog extends LitElement {
 
   get open(): boolean {
     return this._dialog?.open ?? false;
+  }
+
+  get closing(): boolean {
+    return this.#closing;
   }
 
   protected override willUpdate(
@@ -228,6 +234,7 @@ export class Dialog extends LitElement {
     this.#theme.follow();
     await this.updateComplete;
     if (!this._dialog.open) {
+      this.#closing = false;
       this._dialog.showModal();
       if (this.headingEditable) {
         this._dialog.focus();
@@ -301,6 +308,7 @@ export class Dialog extends LitElement {
     returnValue = ""
   ): void {
     if (this._dialog?.open) {
+      this.#closing = true;
       this._dialog.close(returnValue);
     }
   }
@@ -452,13 +460,28 @@ export class Dialog extends LitElement {
   };
 
   #onClose = () => {
+    this.#closing = true;
     this.#theme.stop();
     this.#settleInlineConfirm(false);
     this.#releaseLayer();
     emitContainerEvent(this, "jolly-close", {
       returnValue: this._dialog.returnValue
     });
+    void this.#emitExited();
   };
+
+  async #emitExited(): Promise<void> {
+    const exit = ++this.#exits;
+    const animations = this._dialog.getAnimations?.({ subtree: true }) ?? [];
+    await Promise.allSettled(
+      animations.map((animation) => animation.finished)
+    );
+
+    if (exit === this.#exits && this.#closing) {
+      this.#closing = false;
+      emitContainerEvent(this, "jolly-exited", undefined);
+    }
+  }
 }
 
 function consumesEnter(
