@@ -70,6 +70,8 @@ function valueOf(
       return tree.block(ref.id)?.flipAxes;
     case "uv":
       return tree.block(ref.id)?.uv;
+    case "shape":
+      return tree.block(ref.id)?.shape;
     case "material":
       return tree.materialIdOf(ref.id);
     case "material-name":

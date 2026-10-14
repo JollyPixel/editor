@@ -67,9 +67,17 @@ export {
   type HighlightBoundingBoxOptions
 } from "./overlays/HighlightBoundingBox.ts";
 export {
+  HighlightSilhouette,
+  type HighlightSilhouetteOptions
+} from "./overlays/HighlightSilhouette.ts";
+export {
   HighlightBoxSilhouette,
   type HighlightBoxSilhouetteOptions
 } from "./overlays/HighlightBoxSilhouette.ts";
+export {
+  HighlightMeshSilhouette,
+  type HighlightMeshSilhouetteOptions
+} from "./overlays/HighlightMeshSilhouette.ts";
 export {
   MergedHighlightOverlay,
   type MergedHighlightOverlayOptions

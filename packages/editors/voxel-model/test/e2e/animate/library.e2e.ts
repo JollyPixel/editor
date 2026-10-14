@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import type { Locator } from "@playwright/test";
 import {
   checkboxField,
   dialog,
@@ -19,6 +18,7 @@ import {
   hierarchyAction,
   renameRow
 } from "../support/hierarchy.ts";
+import { numberField } from "../support/fields.ts";
 import {
   addClip,
   animatePanel,
@@ -31,13 +31,6 @@ import {
   timeline,
   tool
 } from "../support/animate.ts";
-
-function numberField(
-  scope: Locator,
-  label: string
-): Locator {
-  return scope.locator("jolly-number").filter({ hasText: label }).getByRole("textbox");
-}
 
 test("the Animate tab opens on an empty state", async({ page }) => {
   await openAnimateTab(page);

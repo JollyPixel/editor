@@ -46,6 +46,7 @@ import {
   type RootAction
 } from "./hierarchyMenu.ts";
 import type {
+  NameDialogChoice,
   NameDialogContext,
   NameDialogResult
 } from "../../shared/dialogs/NameDialog.ts";
@@ -64,6 +65,11 @@ import {
   disableEntries
 } from "../../shared/menu/MenuSession.ts";
 import type { ModelAccessSignals } from "../../access/ModelAccess.ts";
+import {
+  BLOCK_SHAPE_OPTIONS,
+  blockShapeById,
+  type BlockShapeEntryId
+} from "../../shared/blockShapes.ts";
 
 export interface HierarchyWorkspace {
   access: ModelAccessSignals;
@@ -98,6 +104,7 @@ export class HierarchyController {
   #nodes: TreeNode[] = [];
   #selected: string[] = [];
   #expanded = new ExpandedRows();
+  #lastShape: BlockShapeEntryId = "box";
 
   readonly #rowActions: Record<HierarchyAction, (id: string) => Promise<void> | void> = {
     rename: (id) => this.#view.beginRename(id),
@@ -307,10 +314,18 @@ export class HierarchyController {
   async #addBlock(
     parentId: string | null
   ): Promise<void> {
-    const name = await this.#promptNewName("block", parentId);
-    const uuid = name === null ?
-      null :
-      this.#workspace?.hierarchy.createBlock(name, parentId) ?? null;
+    const result = await this.#promptNew("block", parentId, {
+      label: "Shape",
+      options: BLOCK_SHAPE_OPTIONS,
+      value: this.#lastShape
+    });
+    if (result === null) {
+      return;
+    }
+
+    const { id, shape } = blockShapeById(result.choice);
+    this.#lastShape = id;
+    const uuid = this.#workspace?.hierarchy.createBlock(result.name, parentId, shape) ?? null;
     if (uuid !== null) {
       this.#selectNodes([uuid]);
     }
@@ -319,24 +334,25 @@ export class HierarchyController {
   async #addFolder(
     parentId: string | null
   ): Promise<void> {
-    const name = await this.#promptNewName("folder", parentId);
-    if (name !== null) {
-      this.#workspace?.hierarchy.createFolder(name, parentId);
+    const result = await this.#promptNew("folder", parentId);
+    if (result !== null) {
+      this.#workspace?.hierarchy.createFolder(result.name, parentId);
     }
   }
 
-  async #promptNewName(
+  #promptNew(
     kind: HierarchyNodeKind,
-    parentId: string | null
-  ): Promise<string | null> {
+    parentId: string | null,
+    choice?: NameDialogChoice
+  ): Promise<NameDialogResult | null> {
     const label = kindLabel(kind);
-    const result = await this.#view.promptName({
+
+    return this.#view.promptName({
       heading: `New ${label}`,
       fieldLabel: `${label} name`,
-      ...this.#naming(kind, label, parentId)
+      ...this.#naming(kind, label, parentId),
+      ...choice === undefined ? {} : { choice }
     });
-
-    return result?.name ?? null;
   }
 
   #naming(

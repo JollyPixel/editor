@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import { HighlightBoxSilhouette } from "@jolly-pixel/three";
+import { HighlightSilhouette } from "@jolly-pixel/three";
 
 // Import Internal Dependencies
 import { HighlightBridge } from "#src/features/selection/HighlightBridge.ts";
@@ -26,9 +26,9 @@ function pivotMarkerOf(
 
 function overlayOf(
   block: ModelBlock
-): HighlightBoxSilhouette | undefined {
+): HighlightSilhouette | undefined {
   return block.mesh.children.find(
-    (child): child is HighlightBoxSilhouette => child instanceof HighlightBoxSilhouette
+    (child): child is HighlightSilhouette => child instanceof HighlightSilhouette
   );
 }
 
@@ -109,7 +109,7 @@ describe("HighlightBridge peer selection", () => {
 
     presence.blockSelections = new Map();
 
-    assert.equal(overlayOf(block), undefined);
+    assert.equal(overlayOf(block)?.uuid, undefined);
   });
 
   test("moves the outline when the peer selects a different block", () => {
@@ -120,7 +120,7 @@ describe("HighlightBridge peer selection", () => {
 
     presence.blockSelections = peerMarks(second.uuid);
 
-    assert.equal(overlayOf(first), undefined);
+    assert.equal(overlayOf(first)?.uuid, undefined);
     assert.ok(overlayOf(second));
   });
 });
@@ -142,7 +142,7 @@ describe("HighlightBridge peer hover", () => {
 
     presence.blockHovers = new Map();
 
-    assert.equal(overlayOf(block), undefined);
+    assert.equal(overlayOf(block)?.uuid, undefined);
   });
 });
 

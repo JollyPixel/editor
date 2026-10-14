@@ -119,7 +119,7 @@ describe("resizeTargets", () => {
     );
   });
 
-  test("offers nothing on a region with a triangular face", () => {
+  test("offers every handle on a free triangular face", () => {
     const ramp = new UVRegion({
       id: "r1",
       color: "#f00",
@@ -134,6 +134,6 @@ describe("resizeTargets", () => {
       }
     });
 
-    assert.deepEqual(ramp.resizeTargets("front"), []);
+    assert.deepEqual(ramp.resizeTargets("left"), [target(kRect, kEveryHandle, "left")]);
   });
 });

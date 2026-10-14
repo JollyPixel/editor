@@ -184,6 +184,25 @@ describe("ModelDocument", () => {
     );
   });
 
+  test("reshapes a block with its UV layout in one command, storing no shape for a box", () => {
+    const document = new ModelDocument();
+    const blockId = document.addBlock({ name: "Floor", shape: { type: "plane" } })!;
+    const folderId = document.addFolder({ name: "Limbs" })!;
+    const planeUv = BlockUvLayouts.net(undefined, { type: "plane" });
+    const changes = recordChanges(document);
+
+    assert.deepEqual(document.tree.block(blockId)?.shape, { type: "plane" });
+    assert.deepEqual(document.tree.block(blockId)?.uv, planeUv);
+
+    assert.equal(document.setShape(blockId, { type: "box" }, kUv), true);
+    assert.equal(document.setShape(folderId, { type: "plane" }, planeUv), false);
+
+    const block = document.tree.block(blockId)!;
+    assert.equal("shape" in block, false);
+    assert.deepEqual(block.uv, kUv);
+    assert.deepEqual(changes.map((change) => change.command.action), ["node-shape-changed"]);
+  });
+
   test("adds a material with the default surface and blocks pointing to it", () => {
     const document = new ModelDocument();
 

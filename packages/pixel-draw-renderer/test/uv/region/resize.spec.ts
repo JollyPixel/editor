@@ -89,7 +89,7 @@ describe("UVRegion.resized", () => {
     assert.deepEqual(resized.geometryFor("front"), region.geometryFor("front"));
   });
 
-  test("ignores regions with a non-rectangular face", () => {
+  test("resizes a free triangle slot, keeping its corner", () => {
     const region = new UVRegion({
       id: "r1",
       color: "#f00",
@@ -103,18 +103,50 @@ describe("UVRegion.resized", () => {
         }
       }
     });
+    const rect = {
+      ...cell(1, 0),
+      width: 8
+    };
 
-    assert.equal(region.resizable, false);
-    assert.equal(
-      region.resized(
-        {
-          ...cell(0, 0),
-          width: 8
-        },
-        "front"
-      ),
-      region
-    );
+    assert.deepEqual(region.resized(rect, "left").geometryFor("left"), {
+      shape: "triangle",
+      rect,
+      corner: "top-left"
+    });
+  });
+
+  test("keeps the parts of a stacked compound face, scaled to the new stack rect", () => {
+    const parts = [
+      {
+        shape: "triangle" as const,
+        rect: { x: 0, y: 0, width: 0.5, height: 1 },
+        corner: "bottom-right" as const
+      },
+      {
+        shape: "triangle" as const,
+        rect: { x: 0.5, y: 0, width: 0.5, height: 1 },
+        corner: "bottom-left" as const
+      }
+    ];
+    const region = new UVRegion({
+      id: "r1",
+      color: "#f00",
+      state: "stacked",
+      rect: cell(0, 0),
+      faces: {
+        side: { shape: "compound", rect: cell(0, 0), parts },
+        bottom: cell(0, 0)
+      }
+    });
+    const rect = { x: 2, y: 3, width: 6, height: 10 };
+
+    const resized = region.resized(rect);
+
+    assert.deepEqual(resized.unfold().slotsOf().map(({ slot, geometry }) => [slot, "shape" in geometry]), [
+      ["side", true],
+      ["bottom", false]
+    ]);
+    assert.deepEqual(resized.toLayout().faces?.side, { shape: "compound", rect, parts });
   });
 
   test("ignores an inactive slot", () => {

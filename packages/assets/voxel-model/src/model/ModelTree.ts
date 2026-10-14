@@ -199,6 +199,7 @@ export class ModelTree {
       case "node-moved":
       case "node-transformed":
       case "node-uv-changed":
+      case "node-shape-changed":
         return this.#nodes.accepts(command);
       case "material-added":
       case "material-folder-added":
@@ -226,6 +227,7 @@ export class ModelTree {
       case "node-moved":
       case "node-transformed":
       case "node-uv-changed":
+      case "node-shape-changed":
       case "node-material-changed":
         this.#nodes.apply(command);
         break;

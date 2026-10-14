@@ -149,6 +149,76 @@ describe("ModelBlock pivot placement", () => {
   });
 });
 
+describe("ModelBlock shape", () => {
+  function verticesOf(
+    geometry: THREE.BufferGeometry,
+    name: string
+  ): number[][] {
+    const attribute = geometry.getAttribute(name);
+
+    return Array.from(
+      { length: attribute.count },
+      (_, index) => [attribute.getX(index), attribute.getY(index), attribute.getZ(index)]
+    );
+  }
+
+  test("a plane is one upward quad filling the size in X and Z", () => {
+    const block = new ModelBlock({
+      shape: { type: "plane" },
+      size: new THREE.Vector3(2, 3, 4)
+    });
+    const { geometry } = block.mesh;
+
+    assert.deepEqual(
+      verticesOf(geometry, "position").map(([x, y, z]) => [Math.abs(x), y, Math.abs(z)]),
+      Array.from({ length: 4 }, () => [1, 0, 2])
+    );
+    assert.deepEqual(verticesOf(geometry, "normal"), Array.from({ length: 4 }, () => [0, 1, 0]));
+    assert.equal(geometry.getIndex()?.count, 6);
+  });
+
+  test("a reflected round block stays reflected through a resize", () => {
+    const shape = { type: "cone", sides: 5 } as const;
+    const block = new ModelBlock({ shape, size: new THREE.Vector3(1, 1, 1) });
+
+    block.rebuild({ flip: { x: true, y: false, z: false } });
+    block.resize(new THREE.Vector3(2, 1, 1));
+
+    const plain = new ModelBlock({ shape, size: new THREE.Vector3(2, 1, 1) });
+    assert.deepEqual(
+      verticesOf(block.mesh.geometry, "position"),
+      verticesOf(plain.mesh.geometry, "position").map(([x, y, z]) => [0 - x, y, z])
+    );
+  });
+
+  test("restores the base UVs a texture binding overwrote", () => {
+    const block = new ModelBlock({ shape: { type: "cylinder", sides: 4 } });
+    const uv = block.mesh.geometry.getAttribute("uv");
+    const base = Array.from(uv.array);
+    uv.setXY(0, 0.25, 0.75);
+
+    block.restoreBaseUv();
+
+    assert.deepEqual(Array.from(uv.array), base);
+  });
+
+  test("reshaping swaps the geometry only for a new shape, and later resizes keep it", () => {
+    const block = new ModelBlock({ size: new THREE.Vector3(1, 1, 1) });
+    const box = block.mesh.geometry;
+
+    assert.equal(block.rebuild({ shape: { type: "box" } }), false);
+    assert.equal(block.mesh.geometry, box);
+
+    assert.equal(block.rebuild({ shape: { type: "plane" } }), true);
+    block.resize(new THREE.Vector3(2, 1, 1));
+
+    assert.notEqual(block.mesh.geometry, box);
+    assert.deepEqual(block.shape, { type: "plane" });
+    assert.equal(block.mesh.geometry.getAttribute("position").count, 4);
+    assert.equal(block.mesh.geometry.boundingBox?.max.x, 1);
+  });
+});
+
 describe("ModelBlock resize", () => {
   test("keeps the geometry and its vertices when the size is unchanged", () => {
     const block = new ModelBlock({ size: new THREE.Vector3(1, 1, 1) });

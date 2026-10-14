@@ -1,9 +1,11 @@
 // Import Third-party Dependencies
 import type { Vec2 } from "@jolly-pixel/pixel-draw.renderer";
 import {
+  BlockShape,
   BlockTransform,
   BlockUvLayouts,
   type AddFolderOptions,
+  type BlockShapeJSON,
   type BlockTransformJSON,
   type MirrorAxes,
   type ModelDocument,
@@ -114,7 +116,8 @@ export class ModelHierarchy {
 
   createBlock(
     name: string,
-    parentId: string | null
+    parentId: string | null,
+    shape: BlockShapeJSON = BlockShape.box
   ): string | null {
     if (!this.editable) {
       return null;
@@ -125,8 +128,34 @@ export class ModelHierarchy {
       name,
       parentId,
       transform: BlockTransform.create(),
-      uv: layouts.nextNet(this.#textureSize())
+      shape,
+      uv: layouts.nextNet(this.#textureSize(), shape)
     });
+  }
+
+  reshape(
+    id: string,
+    shape: BlockShapeJSON
+  ): boolean {
+    const { tree } = this.#document;
+    const block = tree.block(id);
+    if (
+      !this.#access.current.has("transforms") ||
+      block === undefined ||
+      BlockShape.same(BlockShape.of(block), shape)
+    ) {
+      return false;
+    }
+
+    const others = new BlockUvLayouts(
+      [...tree.blocks()].filter((each) => each.id !== id).map((each) => each.uv)
+    );
+
+    return this.#document.setShape(
+      id,
+      shape,
+      others.reshaped(block.uv, BlockShape.of(block), shape, this.#textureSize())
+    );
   }
 
   createFolder(
@@ -284,6 +313,7 @@ export class ModelHierarchy {
         ...copy,
         name: this.#document.tree.blockNamesUnder(copy.parentId ?? null).free(copy.name),
         transform: node.transform,
+        shape: BlockShape.of(node),
         uv: node.uv,
         materialId: node.materialId
       });

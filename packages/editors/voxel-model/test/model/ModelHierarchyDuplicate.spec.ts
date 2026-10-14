@@ -44,10 +44,10 @@ describe("ModelHierarchy.duplicate", () => {
     assert.deepEqual(document.tree.block(duplicateId)?.uv, layoutAt(7));
   });
 
-  test("points the copy of a block to the same material", () => {
-    const { document, addBlock, hierarchy } = createHierarchyFixture();
+  test("gives the copy of a block the same material and shape", () => {
+    const { document, blocks, addBlock, hierarchy } = createHierarchyFixture();
     const metalId = document.addMaterial({ name: "Metal" })!;
-    const source = addBlock({ materialId: metalId });
+    const source = addBlock({ materialId: metalId, shape: { type: "plane" } });
 
     const duplicateId = hierarchy.duplicate(source.uuid, {
       name: "Copy",
@@ -57,6 +57,8 @@ describe("ModelHierarchy.duplicate", () => {
 
     assert.equal(document.tree.block(duplicateId!)?.materialId, metalId);
     assert.equal(document.tree.materials.size, 1);
+    assert.deepEqual(document.tree.block(duplicateId!)?.shape, { type: "plane" });
+    assert.deepEqual(blocks.get(duplicateId!)?.shape, { type: "plane" });
   });
 
   test("copies a folder subtree, renaming the blocks that keep their block parent", () => {

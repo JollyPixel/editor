@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import type { TreeNode } from "@jolly-pixel/ui";
+import type {
+  IconName,
+  TreeNode
+} from "@jolly-pixel/ui";
 import {
   peerBadges,
   type PeerMarkMap
@@ -11,6 +14,7 @@ import {
   type HierarchyNode
 } from "../../model/index.ts";
 import { materialSwatch } from "../material/materialSwatch.ts";
+import { blockShapeEntryOf } from "../../shared/blockShapes.ts";
 
 export function toTreeNodes(
   nodes: readonly HierarchyNode[],
@@ -25,11 +29,9 @@ export function toTreeNodes(
       id: node.id,
       label: node.name,
       renamable: true,
+      icon: iconOf(node),
       ...node.kind === "folder" ?
-        {
-          icon: "folder",
-          ...folderVisibility(node, isVisible)
-        } :
+        folderVisibility(node, isVisible) :
         {
           swatch: materialSwatch(node.material),
           visible: isVisible(node.id)
@@ -39,6 +41,14 @@ export function toTreeNodes(
       ...children.length > 0 ? { children } : {}
     };
   });
+}
+
+function iconOf(
+  node: HierarchyNode
+): IconName {
+  return node.shape === null ?
+    "folder" :
+    blockShapeEntryOf(node.shape).icon;
 }
 
 function folderVisibility(

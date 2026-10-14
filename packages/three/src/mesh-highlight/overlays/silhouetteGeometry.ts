@@ -14,15 +14,6 @@ export interface VisibleFaces {
   negZ: boolean;
 }
 
-export const DEFAULT_VISIBLE_FACES: VisibleFaces = {
-  posX: true,
-  negX: false,
-  posY: true,
-  negY: false,
-  posZ: true,
-  negZ: false
-};
-
 const kAxisIndex: Record<Axis, 0 | 1 | 2> = { x: 0, y: 1, z: 2 };
 
 interface EdgeBarEntry {
@@ -129,18 +120,6 @@ export function computeVisibleFaces(
     posZ: localCameraPosition.z > halfExtents.z,
     negZ: localCameraPosition.z < -halfExtents.z
   };
-}
-
-export function sameFaces(
-  left: VisibleFaces,
-  right: VisibleFaces
-): boolean {
-  return left.posX === right.posX &&
-    left.negX === right.negX &&
-    left.posY === right.posY &&
-    left.negY === right.negY &&
-    left.posZ === right.posZ &&
-    left.negZ === right.negZ;
 }
 
 /*
@@ -251,13 +230,16 @@ export interface SilhouetteGeometry {
   outerColorStart: number;
 }
 
-export interface SilhouetteGeometryOptions {
-  halfExtents: THREE.Vector3;
-  faces: VisibleFaces;
+export interface SilhouetteRings {
   innerThickness: number;
   linewidth: number;
   innerColor: THREE.Color;
   color: THREE.Color;
+}
+
+export interface SilhouetteGeometryOptions extends SilhouetteRings {
+  halfExtents: THREE.Vector3;
+  faces: VisibleFaces;
 }
 
 /*
@@ -273,15 +255,12 @@ export interface SilhouetteGeometryOptions {
  * (opacity has always been shared), so a vertex color carries that split
  * instead of a second mesh.
  */
-export function buildSilhouetteGeometry(
-  options: SilhouetteGeometryOptions
+export function mergeRings(
+  innerParts: THREE.BufferGeometry[],
+  outerParts: THREE.BufferGeometry[],
+  rings: SilhouetteRings
 ): SilhouetteGeometry {
-  const { halfExtents, faces, innerThickness, linewidth, innerColor, color } = options;
-
-  const innerParts = innerThickness > 0 ?
-    buildRingParts(halfExtents, faces, innerThickness, 0) :
-    [];
-  const outerParts = buildRingParts(halfExtents, faces, linewidth, innerThickness);
+  const { innerColor, color } = rings;
   const outerColorStart = innerParts.reduce(
     (count, part) => count + part.getAttribute("position").count,
     0
@@ -304,6 +283,19 @@ export function buildSilhouetteGeometry(
   geometry.computeBoundingSphere();
 
   return { geometry, outerColorStart };
+}
+
+export function buildSilhouetteGeometry(
+  options: SilhouetteGeometryOptions
+): SilhouetteGeometry {
+  const { halfExtents, faces, innerThickness, linewidth } = options;
+
+  const innerParts = innerThickness > 0 ?
+    buildRingParts(halfExtents, faces, innerThickness, 0) :
+    [];
+  const outerParts = buildRingParts(halfExtents, faces, linewidth, innerThickness);
+
+  return mergeRings(innerParts, outerParts, options);
 }
 
 function emptySilhouetteGeometry(): THREE.BufferGeometry {

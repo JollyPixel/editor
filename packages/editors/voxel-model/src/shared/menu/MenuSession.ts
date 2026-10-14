@@ -120,9 +120,15 @@ export function disableEntries<TAction extends string>(
       return entry;
     }
     if (entry.items !== undefined) {
+      const items = disableEntries(entry.items, disabled);
+      const allDisabled = items.every(
+        (item) => item === "separator" || item.disabled === true
+      );
+
       return {
         ...entry,
-        items: disableEntries(entry.items, disabled)
+        items,
+        ...allDisabled ? { disabled: true } : {}
       };
     }
 

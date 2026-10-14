@@ -10,6 +10,7 @@ import {
 import { ModelTree, type ModelTreeReader } from "./ModelTree.ts";
 import { BlockTransform } from "./nodes/BlockTransform.ts";
 import { BlockUvLayouts } from "./nodes/BlockUvLayouts.ts";
+import { BlockShape } from "./nodes/BlockShape.ts";
 import { MaterialSurface } from "./materials/MaterialSurface.ts";
 import { randomId } from "./randomId.ts";
 import { inverseOf } from "./history/modelInverse.ts";
@@ -21,6 +22,7 @@ import {
   type ModelImages
 } from "./history/modelImages.ts";
 import type {
+  BlockShapeJSON,
   BlockTransformJSON,
   MaterialSurfaceJSON,
   MaterialSurfacePatchJSON,
@@ -47,6 +49,7 @@ export interface AddFolderOptions {
 
 export interface AddBlockOptions extends AddFolderOptions {
   transform?: BlockTransformJSON;
+  shape?: BlockShapeJSON;
   uv?: UVLayoutData;
   materialId?: string;
 }
@@ -101,13 +104,14 @@ export class ModelDocument extends CommandDocument<
       name,
       parentId = null,
       transform = BlockTransform.create(),
-      uv = BlockUvLayouts.net(),
+      shape = BlockShape.box,
+      uv = BlockUvLayouts.net(BlockUvLayouts.ORIGIN, shape),
       materialId,
       beforeId
     } = options;
     const added = this.commit({
       action: "node-added",
-      node: {
+      node: BlockShape.applyTo({
         kind: "block",
         id,
         parentId,
@@ -115,7 +119,7 @@ export class ModelDocument extends CommandDocument<
         transform,
         uv,
         ...(materialId === undefined ? {} : { materialId })
-      },
+      }, shape),
       ...(beforeId === undefined ? {} : { beforeId })
     });
 
@@ -204,6 +208,19 @@ export class ModelDocument extends CommandDocument<
     return this.commit({
       action: "node-uv-changed",
       id,
+      uv
+    });
+  }
+
+  setShape(
+    id: string,
+    shape: BlockShapeJSON,
+    uv: UVLayoutData
+  ): boolean {
+    return this.commit({
+      action: "node-shape-changed",
+      id,
+      shape,
       uv
     });
   }

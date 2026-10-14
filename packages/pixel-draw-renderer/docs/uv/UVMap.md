@@ -252,7 +252,7 @@ resize(id: string, rect: SelectionRect, slot?: UVSlot | null, options?: UVResize
 
 Gives a stacked region, or one active `slot` of an unfolded or free region, the size and position of `rect`, following [`UVRegion.resized()`](./UVRegion.md#resizedrect-slot-options). Sizes below 1px are raised to 1px. Moved edges stop at the canvas border, extended by [`overflow`](#overflow); for an unfolded net, that includes the faces sliding with an edge. A net already past that border is not pulled back, but it cannot grow further out.
 
-The new region is committed like a state change: it emits `"region-state-changed"` with the previous region, so it records one history step and syncs as `uv-region-state-changed`. Returns `false` for an unknown id, a region with a triangle or compound face, or an unchanged result.
+The new region is committed like a state change: it emits `"region-state-changed"` with the previous region, so it records one history step and syncs as `uv-region-state-changed`. Returns `false` for an unknown id or an unchanged result.
 
 ### `previewResize(id, rect, slot?, options?)`
 

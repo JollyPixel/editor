@@ -1,5 +1,4 @@
 // Import Internal Dependencies
-import { isRectGeometry } from "../../geometry/geometry.ts";
 import type { UVSlotMap } from "../UVSlotMap.ts";
 import type { UVLayoutResizeTarget } from "./UVResizeTarget.ts";
 import type {
@@ -56,12 +55,6 @@ export abstract class UVLayout {
 
     this.faces = faces;
     this.activeSlots = Object.freeze(known);
-  }
-
-  get resizable(): boolean {
-    return this.faces.slots.every(
-      (slot) => isRectGeometry(this.faces.get(slot))
-    );
   }
 
   get stackedFace(): UVSlot | null {

@@ -23,7 +23,7 @@ function node(
   kind: HierarchyNode["kind"],
   children: HierarchyNode[] = []
 ): HierarchyNode {
-  return { id, name: id, kind, material: null, children };
+  return { id, name: id, kind, shape: kind === "block" ? { type: "box" } : null, material: null, children };
 }
 
 function peer(
@@ -37,7 +37,7 @@ function peer(
 }
 
 describe("toTreeNodes", () => {
-  test("gives folders the folder icon and blocks their material swatch", () => {
+  test("gives folders the folder icon, blocks their shape icon and material swatch", () => {
     const glass = {
       kind: "material" as const,
       id: "glass",
@@ -47,7 +47,7 @@ describe("toTreeNodes", () => {
     };
     const nodes = toTreeNodes([node("limbs", "folder", [
       node("arm", "block"),
-      { ...node("leg", "block"), material: glass }
+      { ...node("leg", "block"), shape: { type: "cone", sides: 4 }, material: glass }
     ])], new Map(), (id) => id !== "leg");
 
     assert.deepEqual(nodes, [{
@@ -57,8 +57,22 @@ describe("toTreeNodes", () => {
       icon: "folder",
       visible: true,
       children: [
-        { id: "arm", label: "arm", renamable: true, swatch: materialSwatch(null), visible: true },
-        { id: "leg", label: "leg", renamable: true, swatch: materialSwatch(glass), visible: false }
+        {
+          id: "arm",
+          label: "arm",
+          renamable: true,
+          icon: "block",
+          swatch: materialSwatch(null),
+          visible: true
+        },
+        {
+          id: "leg",
+          label: "leg",
+          renamable: true,
+          icon: "shape-pyramid",
+          swatch: materialSwatch(glass),
+          visible: false
+        }
       ]
     }]);
   });

@@ -11,11 +11,12 @@ import {
   createHierarchyHarness,
   selectBlock
 } from "./hierarchyHarness.ts";
+import { BLOCK_SHAPE_OPTIONS } from "#src/shared/blockShapes.ts";
 
 describe("HierarchyController.addBlock", () => {
-  test("adds under the selected block, then selects the new block", async() => {
+  test("adds the shape picked in the dialog under the selected block, then selects it", async() => {
     const harness = createHierarchyHarness({
-      name: { name: "Arm" }
+      name: { name: "Arm", choice: "plane" }
     });
     selectBlock(harness, "Body");
 
@@ -25,11 +26,28 @@ describe("HierarchyController.addBlock", () => {
     assert.deepEqual(context, {
       heading: "New Block",
       fieldLabel: "Block name",
-      defaultName: "Block"
+      defaultName: "Block",
+      choice: {
+        label: "Shape",
+        options: BLOCK_SHAPE_OPTIONS,
+        value: "box"
+      }
     });
     const [body] = harness.hierarchy.nodes();
     assert.deepEqual(shapeOf(harness.hierarchy.nodes()), [["Body", ["Arm"]]]);
+    assert.deepEqual(body.children[0].shape, { type: "plane" });
     assert.deepEqual(harness.controller.selected, [body.children[0].id]);
+  });
+
+  test("offers the last shape picked the next time", async() => {
+    const harness = createHierarchyHarness({
+      name: { name: "Ring", choice: "torus" }
+    });
+
+    await harness.controller.addBlock();
+    await harness.controller.addBlock();
+
+    assert.deepEqual(harness.calls.name.map(({ choice }) => choice?.value), ["box", "torus"]);
   });
 
   test("prefills a free name and refuses one a sibling block already has", async() => {
@@ -46,7 +64,7 @@ describe("HierarchyController.addBlock", () => {
 
   test("adds at the root without a selection", async() => {
     const harness = createHierarchyHarness({
-      name: { name: "Arm" }
+      name: { name: "Arm", choice: "box" }
     });
     harness.addBlock({ name: "Body" });
 

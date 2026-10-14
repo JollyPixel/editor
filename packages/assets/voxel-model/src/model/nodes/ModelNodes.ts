@@ -10,6 +10,7 @@ import type {
   VoxelModelCommand
 } from "../../network/types.ts";
 import { OrderedTree } from "../OrderedTree.ts";
+import { BlockShape } from "./BlockShape.ts";
 
 export type NodeCommand = Extract<
   VoxelModelCommand,
@@ -138,6 +139,7 @@ export class ModelNodes extends OrderedTree<ModelNodeJSON> {
           command.transforms.every(({ id }) => this.isBlock(id));
       case "node-transformed":
       case "node-uv-changed":
+      case "node-shape-changed":
       case "node-material-changed":
         return this.isBlock(command.id);
     }
@@ -180,6 +182,15 @@ export class ModelNodes extends OrderedTree<ModelNodeJSON> {
 
       case "node-uv-changed":
         this.#patchBlock(command.id, { uv: structuredClone(command.uv) });
+        break;
+
+      case "node-shape-changed":
+        this.update(command.id, (node) => (node.kind === "block" ?
+          {
+            ...BlockShape.applyTo(node, command.shape),
+            uv: structuredClone(command.uv)
+          } :
+          node));
         break;
 
       case "node-material-changed":

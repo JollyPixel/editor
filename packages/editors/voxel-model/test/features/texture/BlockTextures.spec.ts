@@ -96,6 +96,17 @@ describe("BlockTextures model layouts", () => {
     assert.deepEqual(uvOf(block, 1), [48 / TEXTURE_SIZE.x, 1]);
   });
 
+  test("rebinds a reshaped block's new mesh to the layout that came with the shape", () => {
+    const { addBlock, document, uv } = createTextureHarness();
+    const block = addBlock({ uv: stackedAt(0) });
+    const plane = { type: "plane" } as const;
+
+    document.setShape(block.uuid, plane, BlockUvLayouts.net({ x: 32, y: 0 }, plane));
+
+    assert.deepEqual(uv.get(regionIdOf(block))?.slots, ["top"]);
+    assert.deepEqual(uvOf(block, 1), [48 / TEXTURE_SIZE.x, 1]);
+  });
+
   test("shows the default net of a block added without a layout", () => {
     const { addBlock, uv, changes } = createTextureHarness();
     const block = addBlock({ name: "Head" });

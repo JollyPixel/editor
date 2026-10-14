@@ -27,6 +27,7 @@ export const MODEL_CAPABILITIES = new CapabilityTable<
   "node-moved": "hierarchy",
   "node-renamed": "hierarchy",
   "node-transformed": "transforms",
+  "node-shape-changed": "transforms",
   "node-uv-changed": "uv",
   "material-added": "materials",
   "material-changed": "materials",

@@ -1,6 +1,7 @@
 export * from "./animation/ModelAnimationLinks.ts";
 export * from "./animation/TrackBinding.ts";
 export * from "./nodes/BlockTransform.ts";
+export * from "./nodes/BlockShape.ts";
 export * from "./nodes/BlockUvLayouts.ts";
 export * from "./errors/InvalidModelTreeError.ts";
 export * from "./history/modelHistoryKeys.ts";

@@ -2,12 +2,12 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type { HighlightBoxSilhouette } from "#src/index.ts";
+import type { HighlightSilhouette } from "#src/index.ts";
 
 export type SilhouettePass = THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
 
 export function backPassOf(
-  overlay: HighlightBoxSilhouette
+  overlay: HighlightSilhouette
 ): SilhouettePass | undefined {
   return overlay.children.find(
     (child): child is SilhouettePass => (
