@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import {
   applyLayoutChange,
   floatPane,
+  joinLastGroup,
   movePane,
   reconcileLayout,
   stackPane
@@ -218,5 +219,35 @@ describe("Containers.stackPane", () => {
     assert.equal(stackPane(base, "layers", "left", 1, 0), base);
     assert.equal(stackPane(base, "layers", "left", 9, 0), base);
     assert.equal(stackPane(base, "layers", "missing", 0, 0), base);
+  });
+});
+
+describe("Containers.joinLastGroup", () => {
+  const base = reconcileLayout(null, GROUPED_LAYOUT);
+
+  test("adds the pane as the last tab of the column's last group", () => {
+    const occupied = movePane(base, "paint", "right", 0);
+
+    assert.deepEqual(
+      joinLastGroup(occupied, "layers", "right").docks.right.groups,
+      [
+        {
+          panes: ["paint", "layers"],
+          active: "layers"
+        }
+      ]
+    );
+  });
+
+  test("gives the pane its own slot in an empty column", () => {
+    assert.deepEqual(
+      joinLastGroup(base, "layers", "right").docks.right.groups,
+      [
+        {
+          panes: ["layers"],
+          active: "layers"
+        }
+      ]
+    );
   });
 });

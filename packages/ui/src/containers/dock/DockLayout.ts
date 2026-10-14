@@ -11,7 +11,10 @@ import {
 } from "lit/decorators.js";
 
 // Import Internal Dependencies
-import type { Dock } from "./Dock.ts";
+import type {
+  Dock,
+  DockDrop
+} from "./Dock.ts";
 import {
   DockLayoutDragController,
   type ExtractGrab
@@ -27,6 +30,7 @@ import {
   cloneLayout,
   emptyLayout,
   floatPane,
+  joinLastGroup,
   movePane,
   panePlacement,
   paneVisible,
@@ -314,6 +318,10 @@ export class DockLayout extends LitElement {
     }
 
     if (placement.group.length > 1) {
+      if (this.#dropOf(placement.dock) === "tabs") {
+        return;
+      }
+
       this.#transition(movePane(
         this.#snapshot,
         pane.layoutKey,
@@ -410,12 +418,14 @@ export class DockLayout extends LitElement {
     }
 
     const stop = stops[next];
-    this.#transition(movePane(
-      this.#snapshot,
-      pane.layoutKey,
-      stop,
-      columnGroups(this.#snapshot.docks[stop.dock], stop.column)?.length ?? 0
-    ));
+    this.#transition(this.#dropOf(stop.dock) === "tabs" ?
+      joinLastGroup(this.#snapshot, pane.layoutKey, stop) :
+      movePane(
+        this.#snapshot,
+        pane.layoutKey,
+        stop,
+        columnGroups(this.#snapshot.docks[stop.dock], stop.column)?.length ?? 0
+      ));
   }
 
   #stops(
@@ -426,7 +436,7 @@ export class DockLayout extends LitElement {
     return this.docks().flatMap((dock) => {
       const key = dock.layoutKey;
       const state = this.#snapshot.docks[key];
-      if (state === undefined) {
+      if (state === undefined || dock.drop === "none") {
         return [];
       }
 
@@ -454,6 +464,14 @@ export class DockLayout extends LitElement {
         [secondary, primary] :
         [primary, secondary];
     });
+  }
+
+  #dropOf(
+    dock: string
+  ): DockDrop {
+    return this.docks().find(
+      (candidate) => candidate.layoutKey === dock
+    )?.drop ?? "any";
   }
 
   #extract(

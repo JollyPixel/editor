@@ -473,6 +473,29 @@ export function stackPane(
   return next;
 }
 
+export function joinLastGroup(
+  snapshot: LayoutSnapshot,
+  pane: string,
+  to: DockAddress | string
+): LayoutSnapshot {
+  const { dock, column } = dockAddress(to);
+  const state = snapshot.docks[dock];
+  const groups = state === undefined ?
+    [] :
+    columnGroups(state, column) ?? [];
+  const last = groups.at(-1);
+
+  return last === undefined ?
+    movePane(snapshot, pane, to, 0) :
+    stackPane(
+      snapshot,
+      pane,
+      to,
+      groups.length - 1,
+      last.panes.length
+    );
+}
+
 export function floatPane(
   snapshot: LayoutSnapshot,
   pane: string,
