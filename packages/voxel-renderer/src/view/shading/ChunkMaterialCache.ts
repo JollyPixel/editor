@@ -194,9 +194,11 @@ export class ChunkMaterialCache {
     const alphaToCoverage = this.alphaToCoverage &&
       surface.alphaMode === "mask";
 
+    const side = surface.side === "double" ? THREE.DoubleSide : THREE.FrontSide;
     const options = {
       map: texture,
-      side: surface.side === "double" ? THREE.DoubleSide : THREE.FrontSide,
+      side,
+      shadowSide: side,
       alphaTest: 0,
       transparent,
       depthWrite: !transparent,

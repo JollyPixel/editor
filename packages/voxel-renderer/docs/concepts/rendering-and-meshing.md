@@ -28,6 +28,12 @@ Opaque and masked surfaces write depth. Blended surfaces do not, and
 overlapping ones need a
 [`VoxelTransparencyPassNode`](../api/core/VoxelTransparencyPassNode.md).
 
+Chunk meshes cast shadows from the faces they show. Hidden faces between
+blocks are never meshed, so drawing only the back faces into the shadow map
+would let filtered shadows leak light along the foot of every wall. Lit faces
+then shadow themselves unless the light has a `shadow.normalBias` of about one
+to two shadow-map texels, measured in world units.
+
 ## Material customizers
 
 Chunk geometry does not carry ordinary vertex attributes: the vertex shader

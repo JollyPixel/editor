@@ -18,6 +18,7 @@ const kAmbientOcclusion = 0.75;
 const kEnvironmentBlur = 0.04;
 const kShadowRadius = 48;
 const kShadowMapSize = 2048;
+const kShadowNormalBiasTexels = 1.5;
 
 export interface ChunkRendering {
   ambientOcclusion: number;
@@ -73,8 +74,8 @@ export class SceneEnvironment {
     const { shadow } = this.#lighting.directional;
     shadow.autoUpdate = false;
     shadow.mapSize.set(kShadowMapSize, kShadowMapSize);
-    shadow.bias = -0.0002;
-    shadow.normalBias = 0.02;
+    shadow.bias = 0;
+    shadow.normalBias = this.#shadowSnap.texelSize * kShadowNormalBiasTexels;
     shadow.camera.left = -kShadowRadius;
     shadow.camera.right = kShadowRadius;
     shadow.camera.top = kShadowRadius;
