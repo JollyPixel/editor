@@ -105,11 +105,11 @@ export class SceneEnvironment {
     this.#shadows = settings.shadows;
     if (settings.shadows) {
       this.#renderer.shadowMap.enabled = true;
+      this.#lighting.directional.castShadow = true;
     }
     else {
       this.#lighting.aim();
     }
-    this.#lighting.directional.castShadow = settings.shadows;
     this.#chunks.castShadow = settings.shadows;
     this.#chunks.receiveShadow = settings.shadows;
     this.#anchor.set(NaN, NaN, NaN);
