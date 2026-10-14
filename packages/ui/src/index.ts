@@ -102,6 +102,7 @@ export * from "./controls/Separator.ts";
 export * from "./controls/Slider.ts";
 export * from "./controls/SpinSlider.ts";
 export * from "./controls/Text.ts";
+export * from "./controls/Toggle.ts";
 export * from "./controls/ToolButton.ts";
 export * from "./controls/types.ts";
 

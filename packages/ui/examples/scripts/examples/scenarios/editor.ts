@@ -14,6 +14,7 @@ import "../../../../src/controls/Range.ts";
 import "../../../../src/controls/Select.ts";
 import "../../../../src/controls/Separator.ts";
 import "../../../../src/controls/Slider.ts";
+import "../../../../src/controls/Toggle.ts";
 import "../../../../src/math/Quaternion.ts";
 import "../../../../src/math/Vector3.ts";
 import { Mixed, type FieldValue } from "../../../../src/field/mixed.ts";
@@ -426,7 +427,21 @@ function buildPhysics(): HTMLElementTagNameMap["jolly-folder"] {
   disabled.value = false;
   disabled.disabled = true;
 
-  folder.append(disabled);
+  const toggles = document.createElement("div");
+  toggles.style.display = "flex";
+  const states = [
+    ["Static", false],
+    ["Sleeps", true]
+  ] as const;
+  for (const [label, value] of states) {
+    const toggle = bind(document.createElement("jolly-toggle"));
+    toggle.label = label;
+    toggle.value = value;
+    toggle.style.flex = "1 1 0";
+    toggles.append(toggle);
+  }
+
+  folder.append(disabled, toggles);
 
   return folder;
 }

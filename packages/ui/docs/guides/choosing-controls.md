@@ -10,6 +10,7 @@ Use field controls for editable values:
 | Number with a fixed range, in a narrow column | [`jolly-spin-slider`](../api/controls/spin-slider.md) |
 | Numeric interval | [`jolly-range`](../api/controls/range.md) |
 | Boolean | [`jolly-checkbox`](../api/controls/checkbox.md) |
+| Boolean, label drawn inside the control | [`jolly-toggle`](../api/controls/toggle.md) |
 | One choice | [`jolly-select`](../api/controls/select.md) |
 | One visual choice | [`jolly-button-group`](../api/controls/button-group.md) |
 | Bitmask with a few named bits | [`jolly-flags`](../api/controls/flags.md) |

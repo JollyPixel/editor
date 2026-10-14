@@ -18,6 +18,11 @@ export const CONTROLS_EXAMPLES: readonly GalleryEntry[] = [
     load: async() => (await import("./checkbox.ts")).CHECKBOX_EXAMPLE
   },
   {
+    id: "controls/toggle",
+    title: "Toggle",
+    load: async() => (await import("./toggle.ts")).TOGGLE_EXAMPLE
+  },
+  {
     id: "controls/slider",
     title: "Slider",
     load: async() => (await import("./slider.ts")).SLIDER_EXAMPLE
