@@ -39,7 +39,7 @@
     "cookie": "2.0.1"
   },
   "dependencies": {
-    "@fastify/rate-limit": "11.0.0",
+    "@fastify/rate-limit": "11.2.1",
     "@jolly-pixel/accounts": "workspace:*",
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-server": "workspace:*",

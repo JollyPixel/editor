@@ -62,7 +62,7 @@
     "ata-validator": "1.27.1",
     "hyperid": "4.0.0",
     "loglayer": "9.4.0",
-    "pino": "10.3.1",
+    "pino": "10.4.0",
     "secure-json-parse": "4.1.0",
     "ts-pattern": "5.9.0",
     "ws": "8.22.0",
