@@ -281,6 +281,7 @@ function buildElement<TValue>(
     }
     case "jolly-checkbox":
     case "jolly-text":
+    case "jolly-toggle":
       return document.createElement(tag);
     default:
       return tag;

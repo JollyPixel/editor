@@ -11,7 +11,14 @@ interface BindingOptions<TValue> {
   max?: number;
   step?: number;
   options?: Record<string, TValue>;
-  view?: "buttons" | "flags" | "layers" | "point2d" | "quaternion" | "spin";
+  view?:
+    | "buttons"
+    | "flags"
+    | "layers"
+    | "point2d"
+    | "quaternion"
+    | "spin"
+    | "toggle";
   layout?: "segmented" | "grid";
   columns?: number;
   count?: number;
@@ -48,6 +55,7 @@ The initial property value and the options determine the element:
 | `options` with `view: "buttons"` | `jolly-button-group` |
 | `options` with `view: "flags"` and a number | `jolly-flags` |
 | `options` is present | `jolly-select` |
+| Boolean with `view: "toggle"` | `jolly-toggle` |
 | Boolean | `jolly-checkbox` |
 | Number with `view: "layers"` | `jolly-layer-grid` |
 | Number with both `min` and `max`, and `view: "spin"` | `jolly-spin-slider` |

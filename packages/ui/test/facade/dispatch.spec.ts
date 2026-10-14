@@ -11,10 +11,10 @@ import {
 } from "../../src/facade/dispatch.ts";
 
 describe("facade.dispatchTag", () => {
-  test("dispatches a boolean to jolly-checkbox", () => {
-    assert.equal(
-      dispatchTag(true),
-      "jolly-checkbox"
+  test("dispatches a boolean to jolly-checkbox, or jolly-toggle by view", () => {
+    assert.deepEqual(
+      [dispatchTag(true), dispatchTag(true, { view: "toggle" })],
+      ["jolly-checkbox", "jolly-toggle"]
     );
   });
 

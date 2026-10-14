@@ -44,6 +44,7 @@ export type DispatchTag =
   | "jolly-slider"
   | "jolly-spin-slider"
   | "jolly-text"
+  | "jolly-toggle"
   | "jolly-vector2"
   | "jolly-vector3"
   | "jolly-vector4";
@@ -54,7 +55,8 @@ export type DispatchView =
   | "layers"
   | "point2d"
   | "quaternion"
-  | "spin";
+  | "spin"
+  | "toggle";
 
 export interface DispatchOptions<TValue> {
   min?: number;
@@ -124,7 +126,9 @@ export function dispatchTag<TValue>(
     return "jolly-select";
   }
   if (typeof value === "boolean") {
-    return "jolly-checkbox";
+    return options.view === "toggle"
+      ? "jolly-toggle"
+      : "jolly-checkbox";
   }
   if (typeof value === "number") {
     if (options.view === "layers") {

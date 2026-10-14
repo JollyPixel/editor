@@ -20,6 +20,7 @@ below documents the properties and behavior owned by one component.
 - [`jolly-slider`](./slider.md), exported as `Slider`
 - [`jolly-spin-slider`](./spin-slider.md), exported as `SpinSlider`
 - [`jolly-text`](./text.md), exported as `Text`
+- [`jolly-toggle`](./toggle.md), exported as `Toggle`
 - [`jolly-tool-button`](./tool-button.md), exported as `ToolButton`
 
 See [Choosing controls](../../guides/choosing-controls.md) for a value-to-control

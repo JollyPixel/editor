@@ -150,6 +150,10 @@ export abstract class JollyField<TValue> extends LitElement {
     return false;
   }
 
+  protected get hasLabelColumn(): boolean {
+    return this.label !== "";
+  }
+
   protected valuesEqual(
     a: TValue,
     b: TValue
@@ -307,7 +311,7 @@ export abstract class JollyField<TValue> extends LitElement {
     );
     this.toggleAttribute(
       "unlabeled",
-      this.label === ""
+      !this.hasLabelColumn
     );
     this.toggleAttribute(
       "invalid",
@@ -363,7 +367,11 @@ export abstract class JollyField<TValue> extends LitElement {
   }
 
   #renderLabel(): TemplateResult | typeof nothing {
-    return this.label === "" ? nothing : html`<span
+    if (!this.hasLabelColumn) {
+      return nothing;
+    }
+
+    return html`<span
       class="label"
       @pointerenter=${revealOverflowTitle}
     >${this.label}</span>`;

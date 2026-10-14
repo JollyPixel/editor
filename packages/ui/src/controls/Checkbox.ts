@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import {
   html,
-  nothing,
   type TemplateResult
 } from "lit";
 import {
@@ -10,17 +9,16 @@ import {
 } from "lit/decorators.js";
 
 // Import Internal Dependencies
-import { JollyField } from "../field/JollyField.ts";
+import { BooleanField } from "../field/BooleanField.ts";
 import { checkboxStyles } from "./Checkbox.styles.ts";
-import { isInputElement } from "../dom.ts";
 
 /**
  * Wraps a native checkbox and its indeterminate state.
  */
 @customElement("jolly-checkbox")
-export class Checkbox extends JollyField<boolean> {
+export class Checkbox extends BooleanField {
   static override styles = [
-    ...JollyField.styles,
+    ...BooleanField.styles,
     checkboxStyles
   ];
 
@@ -33,7 +31,6 @@ export class Checkbox extends JollyField<boolean> {
   constructor() {
     super();
 
-    this.value = false;
     this.clickableBackground = false;
   }
 
@@ -42,42 +39,8 @@ export class Checkbox extends JollyField<boolean> {
    */
   protected renderValue(): TemplateResult {
     return html`
-      <label class="checkbox">
-        <input
-          type="checkbox"
-          .checked=${this.concreteValue ?? false}
-          .indeterminate=${this.mixed}
-          ?disabled=${this.disabled}
-          aria-readonly=${this.readonlyAria}
-          aria-disabled=${this.lockedAria}
-          aria-description=${this.lockDescription}
-          aria-invalid=${this.displayError === null ? nothing : "true"}
-          @click=${this.#onClick}
-        >
-      </label>
+      <label class="checkbox">${this.renderInput()}</label>
     `;
-  }
-
-  /**
-   * Cancel clicks on readonly controls without removing them from tab order.
-   */
-  #onClick(
-    event: MouseEvent
-  ): void {
-    if (
-      !this.editable ||
-      !isInputElement(event.currentTarget)
-    ) {
-      event.preventDefault();
-
-      return;
-    }
-
-    /*
-     * Native activation has already updated `checked` before this handler runs.
-     */
-    const next = this.mixed ? true : event.currentTarget.checked;
-    this.emitChange(next);
   }
 }
 
