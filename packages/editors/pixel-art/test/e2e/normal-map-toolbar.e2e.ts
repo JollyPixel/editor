@@ -2,7 +2,7 @@
 import { test, expect } from "./fixtures.ts";
 import type { PixelDrawPanel } from "../../src/index.ts";
 
-test("bottom toolbar stays reachable as the panel narrows", async({ panel }) => {
+test("top and bottom toolbars stay reachable as the panel narrows", async({ panel }) => {
   const { normalMap, visibility } = panel;
   await normalMap.enable();
   await panel.changeUvAccess("view");
@@ -16,7 +16,7 @@ test("bottom toolbar stays reachable as the panel narrows", async({ panel }) => 
       const root = element.shadowRoot!;
       const stage = root.querySelector(".stage")!.getBoundingClientRect();
       const buttons = root.querySelectorAll(
-        "[part=history-file-toolbar] button:not([role=menuitem])"
+        ":is([part=history-file-toolbar], [part=top-row]) button:not([role=menuitem])"
       );
 
       return Array.from(buttons).every((button) => {
@@ -34,7 +34,7 @@ test("bottom toolbar stays reachable as the panel narrows", async({ panel }) => 
       .toBeVisible();
     const menuBox = await visibility.menu.boundingBox();
     const triggerBox = await visibility.trigger.boundingBox();
-    expect(menuBox!.y + menuBox!.height).toBeLessThanOrEqual(triggerBox!.y);
+    expect(menuBox!.y).toBeGreaterThanOrEqual(triggerBox!.y + triggerBox!.height);
     await visibility.menu.getByRole("checkbox", { name: "Show region labels" })
       .press("Escape");
   }

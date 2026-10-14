@@ -124,65 +124,63 @@ export class SelectToolbarController implements ReactiveController {
     const editDisabled = selectionDisabled || readOnly;
 
     return html`
-      <div class="select-toolbar-row">
-        <div class="overlay-toolbar top" part="select-toolbar">
-          ${renderRailButton({
-            part: "select-copy-button",
-            label: "Copy selection",
-            tooltip: "Copy",
-            icon: "copy",
-            disabled: selectionDisabled || this.#clipboardPending,
-            onClick: () => void this.copy()
-          })}
-          ${renderRailButton({
-            part: "select-paste-button",
-            label: "Paste image",
-            tooltip: "Paste",
-            icon: "paste",
-            disabled: this.#clipboardPending || readOnly,
-            onClick: () => void this.paste()
-          })}
-          ${RAIL_DIVIDER}
-          ${renderRailButton({
-            part: "select-rotate-button",
-            label: "Rotate clockwise",
-            tooltip: "Rotate 90° clockwise",
-            icon: "rotateClockwise",
-            text: "90°",
-            disabled: editDisabled,
-            onClick: () => select?.rotate()
-          })}
-          ${renderRailButton({
-            part: "select-flip-horizontal-button",
-            label: "Flip horizontal",
-            icon: "flipHorizontal",
-            disabled: editDisabled,
-            onClick: () => select?.flipHorizontal()
-          })}
-          ${renderRailButton({
-            part: "select-flip-vertical-button",
-            label: "Flip vertical",
-            icon: "flipVertical",
-            disabled: editDisabled,
-            onClick: () => select?.flipVertical()
-          })}
-          ${RAIL_DIVIDER}
-          ${renderRailButton({
-            part: "select-delete-button",
-            label: "Delete selection",
-            tooltip: "Delete",
-            icon: "trash",
-            disabled: editDisabled,
-            onClick: () => select?.delete()
-          })}
-        </div>
-        <div
-          class="clipboard-status"
-          part="clipboard-status"
-          aria-live="polite"
-          aria-atomic="true"
-        >${this.#status.value}</div>
+      <div class="overlay-toolbar" part="select-toolbar">
+        ${renderRailButton({
+          part: "select-copy-button",
+          label: "Copy selection",
+          tooltip: "Copy",
+          icon: "copy",
+          disabled: selectionDisabled || this.#clipboardPending,
+          onClick: () => void this.copy()
+        })}
+        ${renderRailButton({
+          part: "select-paste-button",
+          label: "Paste image",
+          tooltip: "Paste",
+          icon: "paste",
+          disabled: this.#clipboardPending || readOnly,
+          onClick: () => void this.paste()
+        })}
+        ${RAIL_DIVIDER}
+        ${renderRailButton({
+          part: "select-rotate-button",
+          label: "Rotate clockwise",
+          tooltip: "Rotate 90° clockwise",
+          icon: "rotateClockwise",
+          text: "90°",
+          disabled: editDisabled,
+          onClick: () => select?.rotate()
+        })}
+        ${renderRailButton({
+          part: "select-flip-horizontal-button",
+          label: "Flip horizontal",
+          icon: "flipHorizontal",
+          disabled: editDisabled,
+          onClick: () => select?.flipHorizontal()
+        })}
+        ${renderRailButton({
+          part: "select-flip-vertical-button",
+          label: "Flip vertical",
+          icon: "flipVertical",
+          disabled: editDisabled,
+          onClick: () => select?.flipVertical()
+        })}
+        ${RAIL_DIVIDER}
+        ${renderRailButton({
+          part: "select-delete-button",
+          label: "Delete selection",
+          tooltip: "Delete",
+          icon: "trash",
+          disabled: editDisabled,
+          onClick: () => select?.delete()
+        })}
       </div>
+      <div
+        class="clipboard-status"
+        part="clipboard-status"
+        aria-live="polite"
+        aria-atomic="true"
+      >${this.#status.value}</div>
     `;
   }
 }

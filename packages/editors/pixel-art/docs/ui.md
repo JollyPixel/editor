@@ -50,16 +50,15 @@ payloads.
 Region overlays still follow `UVMap.isVisible()` in every mode. Use `view` when
 the host owns UV selection and `none` when the texture has no UV layout.
 
-Region visibility uses one eye-and-chevron button in the UV toolbar (`edit`)
-or bottom toolbar (`view`). Click it or hover for 200ms to open independent
-Show all regions, Show region labels and Show UV size checkboxes. Show UV
-size draws the selected region or slot size in texture pixels, like the
-selection size. The popover stays open while changing any option. Leaving
-both the button and popover for 200ms closes it unless keyboard focus is
-inside. Mouse clicks on checkboxes still allow hover closing; Escape or
-clicking outside also closes it.
-It opens below the UV toolbar and above the bottom toolbar, adjusting at
-viewport edges.
+Region visibility uses one eye-and-chevron button at the top of the canvas,
+after the active tool's toolbar, in every tool mode when access is `edit` or
+`view`. Click it or hover for 200ms to open independent Show all regions, Show
+region labels and Show UV size checkboxes. Show UV size draws the selected
+region or slot size in texture pixels, like the selection size. The popover
+stays open while changing any option. Leaving both the button and popover for
+200ms closes it unless keyboard focus is inside. Mouse clicks on checkboxes
+still allow hover closing; Escape or clicking outside also closes it.
+It opens below the button, adjusting at viewport edges.
 The button's accessible description summarizes the settings. It has no tooltip
 because hovering opens the popover.
 
@@ -73,8 +72,10 @@ local storage under `pixel-art:preferences`. They survive refresh and apply
 when switching textures. Missing or invalid values use Paint with both
 visibility settings off. The reusable panel leaves persistence to its host.
 
-CSS parts: `uv-visibility-button`, `uv-visibility-menu`, `uv-show-all-checkbox`
-and `uv-show-region-labels-checkbox`. The checkboxes replace the previous
+CSS parts: `top-row`, `uv-visibility-toolbar`, `uv-visibility-button`,
+`uv-visibility-menu`, `uv-show-all-checkbox`,
+`uv-show-region-labels-checkbox` and `uv-show-size-labels-checkbox`. The first
+two checkboxes replace the previous
 `uv-show-all-button` and `uv-show-region-labels-button` parts.
 
 ## Layout composition

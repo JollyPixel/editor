@@ -2,13 +2,23 @@
 import { test, expect } from "./fixtures.ts";
 import type { PixelDrawPanel } from "../../src/index.ts";
 
-test("view moves region visibility to the bottom toolbar and opens on hover", async({ panel, page }) => {
+test("region visibility stays in the top row for every tool", async({ panel }) => {
+  const trigger = panel.topRow.getByRole("button", { name: "Region visibility" });
+  for (const mode of ["paint", "erase", "move", "fill", "select", "uv"] as const) {
+    await panel.modes.select(mode);
+    await expect(trigger).toBeVisible();
+  }
+  await expect(panel.bottomToolbar.getByRole("button", { name: "Region visibility" }))
+    .toHaveCount(0);
+});
+
+test("view keeps region visibility in the top row and opens it on hover", async({ panel, page }) => {
   await panel.changeUvAccess("view");
 
   await expect(panel.modes.button("uv")).toHaveCount(0);
   await expect(panel.uv.root).toHaveCount(0);
 
-  const trigger = panel.bottomToolbar.getByRole("button", { name: "Region visibility" });
+  const trigger = panel.topRow.getByRole("button", { name: "Region visibility" });
   const { menu } = panel.visibility;
   await trigger.hover();
   await expect(menu).toBeVisible();
@@ -21,7 +31,7 @@ test("view moves region visibility to the bottom toolbar and opens on hover", as
   }
   const buttonBox = await trigger.boundingBox();
   const menuBox = await menu.boundingBox();
-  expect(menuBox!.y + menuBox!.height).toBeLessThanOrEqual(buttonBox!.y);
+  expect(menuBox!.y).toBeGreaterThanOrEqual(buttonBox!.y + buttonBox!.height);
   await page.keyboard.press("Escape");
   await expect(menu).not.toBeVisible();
   await panel.changeUvAccess("none");
@@ -56,18 +66,6 @@ test("none removes every UV control and turns the fill clip off", async({ panel 
     await expect(panel.root.getByRole("button", { name, exact: true })).toHaveCount(0);
   }
   await expect(panel.modes.clipBadge).toHaveCount(0);
-});
-
-test("an open visibility popover closes when access moves its trigger", async({ panel }) => {
-  const { trigger, menu } = panel.visibility;
-  await panel.modes.select("uv");
-  await trigger.click();
-  await expect(menu).toBeVisible();
-  await panel.changeUvAccess("view");
-  await expect(menu).not.toBeVisible();
-  await expect(trigger).toHaveAttribute("aria-expanded", "false");
-  await trigger.click();
-  await expect(menu).toBeVisible();
 });
 
 test("hover delays cancel across the trigger, gap and visibility popover", async({ panel, page }) => {

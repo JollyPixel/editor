@@ -54,13 +54,6 @@ export type UvToolbarHost = ReactiveControllerHost & {
 
 type UVMap = PixelArtCanvas["uv"];
 
-interface UVViewToggle {
-  key: "showAll" | "showRegionLabels" | "showSizeLabels";
-  part: string;
-  icon: IconName;
-  label: string;
-}
-
 function renderBadgedIcon(
   badge: IconName
 ) {
@@ -76,7 +69,6 @@ export class UvToolbarController {
   readonly #host: UvToolbarHost;
   readonly #canvas: () => PixelArtCanvas | null;
   readonly #statePopup: PopoverController;
-  readonly #visibilityPopup: PopoverController;
   #uvNextId = 0;
 
   constructor(
@@ -89,22 +81,6 @@ export class UvToolbarController {
       anchor: () => this.#stateElement("[part=\"uv-state-button\"]"),
       popover: () => this.#stateElement("[part=\"uv-state-menu\"]"),
       side: "below",
-      align: "start",
-      openOnHover: {
-        delay: 200
-      },
-      closeOnHoverLeave: {
-        delay: 200
-      }
-    });
-    this.#visibilityPopup = new PopoverController(host, {
-      anchor: () => this.#stateElement("[part=\"uv-visibility-button\"]"),
-      popover: () => this.#stateElement("[part=\"uv-visibility-menu\"]"),
-      side: () => {
-        const trigger = this.#stateElement("[part=\"uv-visibility-button\"]");
-
-        return trigger?.closest(".bottom") ? "above" : "below";
-      },
       align: "start",
       openOnHover: {
         delay: 200
@@ -287,85 +263,6 @@ export class UvToolbarController {
     `;
   }
 
-  renderVisibilityToggles() {
-    const uv = this.#canvas()?.uv;
-    const showAllIcon = uv?.showAll ? "eyeOpen" : "eyeOff";
-
-    return html`
-      <button
-        class="rail-btn uv-state-trigger"
-        part="uv-visibility-button"
-        popovertarget="uv-visibility-menu"
-        aria-haspopup="dialog"
-        aria-expanded=${this.#visibilityPopup.open}
-        aria-label="Region visibility"
-        aria-description="${uv?.showAll ? "All regions" : "Selected region"};
-          labels ${uv?.showRegionLabels ? "on" : "off"};
-          size ${uv?.showSizeLabels ? "on" : "off"}"
-        ?disabled=${!uv}
-        @pointerenter=${this.#visibilityPopup.onPointerEnter}
-        @pointerleave=${this.#visibilityPopup.onPointerLeave}
-      >
-        ${renderIcon(showAllIcon)}
-        ${renderIcon("chevronDown")}
-      </button>
-      <div
-        class="uv-state-menu uv-visibility-menu"
-        part="uv-visibility-menu"
-        id="uv-visibility-menu"
-        role="dialog"
-        aria-label="Region visibility"
-        popover
-        @pointerenter=${this.#visibilityPopup.onPointerEnter}
-        @pointerleave=${this.#visibilityPopup.onPointerLeave}
-        @beforetoggle=${this.#visibilityPopup.onBeforeToggle}
-        @toggle=${this.#visibilityPopup.onToggle}
-      >
-        ${this.#renderViewToggle(uv, {
-          key: "showAll",
-          part: "uv-show-all-checkbox",
-          icon: showAllIcon,
-          label: "Show all regions"
-        })}
-        ${this.#renderViewToggle(uv, {
-          key: "showRegionLabels",
-          part: "uv-show-region-labels-checkbox",
-          icon: "label",
-          label: "Show region labels"
-        })}
-        ${this.#renderViewToggle(uv, {
-          key: "showSizeLabels",
-          part: "uv-show-size-labels-checkbox",
-          icon: "ruler",
-          label: "Show UV size"
-        })}
-      </div>
-    `;
-  }
-
-  #renderViewToggle(
-    uv: UVMap | undefined,
-    toggle: UVViewToggle
-  ) {
-    return html`
-      <label class="uv-state-option">
-        <input
-          type="checkbox"
-          part=${toggle.part}
-          .checked=${uv?.[toggle.key] ?? false}
-          @change=${() => {
-            if (uv) {
-              uv[toggle.key] = !uv[toggle.key];
-              this.#host.requestUpdate();
-            }
-          }}
-        >
-        ${renderIcon(toggle.icon)}
-        <span>${toggle.label}</span>
-      </label>
-    `;
-  }
-
   render(
     active: boolean,
     allowCreateDelete: boolean,
@@ -377,12 +274,11 @@ export class UvToolbarController {
     }
 
     return html`
-      <div class="overlay-toolbar top" part="uv-toolbar">
+      <div class="overlay-toolbar" part="uv-toolbar">
         ${allowCreateDelete ? this.#renderCreateDelete(uv) : nothing}
         ${this.#renderStateDropdown(uv)}
         ${this.#renderRotateButtons(uv)}
         ${extra}
-        ${this.renderVisibilityToggles()}
       </div>
     `;
   }

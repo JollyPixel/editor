@@ -30,6 +30,7 @@ import { panelStyles } from "./PixelDrawPanel.styles.ts";
 import { railButtonStyles } from "../shared/railButton.styles.ts";
 import { iconStyles } from "../shared/icon.styles.ts";
 import { UvToolbarController } from "../uv/UvToolbarController.ts";
+import { RegionVisibilityController } from "../uv/RegionVisibilityController.ts";
 import { SelectToolbarController } from "../tools/SelectToolbarController.ts";
 import { TextureDropController } from "../textures/import/TextureDropController.ts";
 import { renderHistoryFileToolbar } from "./historyFileToolbar.ts";
@@ -224,6 +225,10 @@ export class PixelDrawPanel extends LitElement {
   });
   readonly #activeCanvas = (): PixelArtCanvas | null => this.canvasManager;
   readonly #uvToolbar = new UvToolbarController(this, this.#activeCanvas);
+  readonly #regionVisibility = new RegionVisibilityController(
+    this,
+    this.#activeCanvas
+  );
   readonly #selectToolbar = new SelectToolbarController(this, this.#activeCanvas);
   readonly #textureDrop = new TextureDropController(this, {
     canvas: this.#activeCanvas,
@@ -646,15 +651,18 @@ export class PixelDrawPanel extends LitElement {
             aria-live="polite"
             aria-atomic="true"
           >${this.#status.value}</div>
-          ${canvas && isBrushMode(mode) ?
-            renderBrushSizeOverlay(canvas, () => this.requestUpdate()) :
-            nothing}
-          ${this.#selectToolbar.render(mode === "select")}
-          ${this.#uvToolbar.render(
-            mode === "uv" && policy.uvMode,
-            this.allowUvCreateDelete && access.has("uvStructure"),
-            normalMaps?.renderOverrideButton() ?? nothing
-          )}
+          <div class="top-row" part="top-row">
+            ${canvas && isBrushMode(mode) ?
+              renderBrushSizeOverlay(canvas, () => this.requestUpdate()) :
+              nothing}
+            ${this.#selectToolbar.render(mode === "select")}
+            ${this.#uvToolbar.render(
+              mode === "uv" && policy.uvMode,
+              this.allowUvCreateDelete && access.has("uvStructure"),
+              normalMaps?.renderOverrideButton() ?? nothing
+            )}
+            ${this.#regionVisibility.render(policy.regionVisibility)}
+          </div>
           ${renderHistoryFileToolbar({
             canvas: this.#activeCanvas,
             importer: this.#importer,
@@ -664,10 +672,7 @@ export class PixelDrawPanel extends LitElement {
               normalMaps?.renderExportButton(exportAlbedo) ?? nothing
             ),
             trailing: [
-              normalMaps?.renderViewSwitch() ?? nothing,
-              policy.visibilityInBottomBar ?
-                this.#uvToolbar.renderVisibilityToggles() :
-                nothing
+              normalMaps?.renderViewSwitch() ?? nothing
             ]
           })}
         </div>
