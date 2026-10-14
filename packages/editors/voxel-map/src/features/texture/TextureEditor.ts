@@ -302,9 +302,7 @@ export class TextureEditor extends WorkspaceElement {
       return;
     }
 
-    const block = workspace.mapDocument.blocks.get(
-      workspace.state.block.id
-    );
+    const block = workspace.state.block.resolve(workspace.mapDocument.blocks);
     if (block === undefined) {
       return;
     }

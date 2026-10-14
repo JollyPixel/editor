@@ -18,6 +18,7 @@
 | `dismissible` | | `boolean` | `true` |
 | `headingEditable` | `heading-editable` | `boolean` | `false` |
 | `open` | | `boolean` | Read-only |
+| `closing` | | `boolean` | Read-only |
 
 `showModal()` opens the native dialog. `close(returnValue?)` closes it. The
 default slot supplies body content; the `actions` slot supplies footer actions.
@@ -25,7 +26,15 @@ Body content stacks in a column with `--jolly-space-2` between children, and
 slotted `p`, `ul` and `ol` lose their block margins.
 
 Escape and backdrop activation emit `jolly-cancel` when `dismissible` is true.
-Closing emits `jolly-close` with `{ returnValue }`.
+Closing emits `jolly-close` with `{ returnValue }` as the exit transition
+starts, then `jolly-exited` once it ends. A dialog reopened before the
+transition ends emits no `jolly-exited`. Keep the body mounted until
+`jolly-exited`, so the content does not change while it fades out.
+
+`closing` turns true as soon as `close()` is called, before `jolly-close`,
+and false on `jolly-exited` or the next `showModal()`. An owner whose action
+removes what the body shows can return `false` from `shouldUpdate` while
+`closing` is true, which keeps the last frame on screen during the fade.
 
 The header is a filled banner like a `jolly-pane` header: it sits on
 `--jolly-dialog-header-bg` with `--jolly-text-on-fill` text and the same
@@ -108,7 +117,7 @@ Escape does unless `dismissible` is `false`. See
 ## Motion
 
 The dialog and its backdrop fade and scale in on open and out on close. Dialog
-helpers stay in the DOM until the exit transition ends. The same motion applies
+helpers stay in the DOM until `jolly-exited`. The same motion applies
 to `jolly-context-menu` and to field popovers such as the `jolly-color` picker
 and control details. A popover scales from the edge nearest its anchor.
 

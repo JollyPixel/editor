@@ -80,10 +80,10 @@ export class BlocksPanel extends WorkspaceElement {
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
     const refreshEditable = (): void => {
-      const { id } = workspace.state.block;
+      const block = workspace.state.block.resolve(workspace.mapDocument.blocks);
 
-      this._canEditBlock = workspace.mapDocument.blocks.has(id) &&
-        workspace.blocksets.canEditBlock(id);
+      this._canEditBlock = block !== undefined &&
+        workspace.blocksets.canEditBlock(block.id);
     };
     refreshEditable();
 
@@ -125,11 +125,12 @@ export class BlocksPanel extends WorkspaceElement {
 
   readonly #duplicateBlock = (): void => {
     const workspace = this.workspace;
-    if (workspace === null) {
+    const block = workspace?.state.block.resolve(workspace.mapDocument.blocks);
+    if (workspace === null || block === undefined) {
       return;
     }
 
-    const id = workspace.blocksets.duplicateBlock(workspace.state.block.id);
+    const id = workspace.blocksets.duplicateBlock(block.id);
     if (id !== null) {
       this.#openFolder();
       workspace.state.block.id = id;

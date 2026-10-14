@@ -64,6 +64,8 @@ const kStrokeLabels: Readonly<Record<StrokeMode, string>> = {
   remove: "Erase"
 };
 
+export type MissingPaintSource = "layer" | "block";
+
 export interface LocalBrushOptions {
   view: VoxelView;
   sources: BlockRenderSources;
@@ -77,7 +79,7 @@ export interface LocalBrushOptions {
   maxDistance?: number;
   color?: THREE.ColorRepresentation;
   onCursorChange: (cursor: BrushFootprint | null) => void;
-  onPaintBlocked: () => void;
+  onPaintBlocked: (missing: MissingPaintSource) => void;
 }
 
 export class LocalBrush extends ActorComponent {
@@ -90,7 +92,7 @@ export class LocalBrush extends ActorComponent {
   #pointerCapture: PointerCapture;
   #history: MapSteps;
   #step: OpenStep | null = null;
-  #onPaintBlocked: () => void;
+  #onPaintBlocked: (missing: MissingPaintSource) => void;
   #aimer: BrushAimResolver;
   #preview: BrushPreview;
   #pointer = new THREE.Vector2();
@@ -154,6 +156,9 @@ export class LocalBrush extends ActorComponent {
     const markAimStale = () => {
       this.#staleAimFrames = kStaleAimFrames;
     };
+    const rearmBlockedPaint = () => {
+      this.#blockedPaintReported = false;
+    };
     view.document.on("command", markAimStale);
     this.#unsubscribers = [
       () => view.document.off("command", markAimStale),
@@ -162,10 +167,11 @@ export class LocalBrush extends ActorComponent {
         this.#aimer.skyRadius = skyRadius;
         markDirty();
       }),
-      block.subscribe("change", markDirty),
-      selection.subscribe("change", () => {
-        this.#blockedPaintReported = false;
-      })
+      block.subscribe("change", () => {
+        rearmBlockedPaint();
+        markDirty();
+      }),
+      selection.subscribe("change", rearmBlockedPaint)
     ];
   }
 
@@ -218,14 +224,15 @@ export class LocalBrush extends ActorComponent {
       return;
     }
 
-    if (this.#selection.voxelLayer === null) {
+    const missing = this.#missingSource();
+    if (missing !== null) {
       this.#endStroke();
       this.#preview.hide();
       if (
         input.mouse.wasJustPressed("left") ||
         input.mouse.wasJustPressed("right")
       ) {
-        this.#reportBlockedPaint();
+        this.#reportBlockedPaint(missing);
       }
 
       return;
@@ -235,13 +242,23 @@ export class LocalBrush extends ActorComponent {
     this.#updatePreview();
   }
 
-  #reportBlockedPaint(): void {
+  #missingSource(): MissingPaintSource | null {
+    if (this.#block.resolve(this.view.document.blocks) === undefined) {
+      return "block";
+    }
+
+    return this.#selection.voxelLayer === null ? "layer" : null;
+  }
+
+  #reportBlockedPaint(
+    missing: MissingPaintSource
+  ): void {
     if (this.#blockedPaintReported) {
       return;
     }
 
     this.#blockedPaintReported = true;
-    this.#onPaintBlocked();
+    this.#onPaintBlocked(missing);
   }
 
   #updateStroke(): void {
@@ -307,7 +324,7 @@ export class LocalBrush extends ActorComponent {
         position: aim.remove
       })
     );
-    if (blockId !== null) {
+    if (blockId !== null && this.view.document.blocks.has(blockId)) {
       this.#block.id = blockId;
     }
   }
@@ -326,6 +343,10 @@ export class LocalBrush extends ActorComponent {
     }
 
     const paint = mode === "remove" ? undefined : this.#paint();
+    if (paint === null) {
+      return;
+    }
+
     const stroke = new BrushStroke({
       mode,
       layerName,
@@ -345,16 +366,20 @@ export class LocalBrush extends ActorComponent {
     this.#apply(stroke, stroke.advance(stroke.origin));
   }
 
-  #paint(): VoxelPaint {
-    return {
-      blockId: this.#block.id,
-      ...resolveBrushOrientation(
-        this.#camera,
-        this.#brush.rotationMode,
-        this.#brush.flipY,
-        this.view.document.blocks.get(this.#block.id)?.shapeId
-      )
-    };
+  #paint(): VoxelPaint | null {
+    const block = this.#block.resolve(this.view.document.blocks);
+
+    return block === undefined ?
+      null :
+      {
+        blockId: block.id,
+        ...resolveBrushOrientation(
+          this.#camera,
+          this.#brush.rotationMode,
+          this.#brush.flipY,
+          block.shapeId
+        )
+      };
   }
 
   #endStroke(): void {
@@ -391,7 +416,10 @@ export class LocalBrush extends ActorComponent {
     const aim = this.#aimer.resolve(
       input.mouse.viewportPositionTo(this.#pointer)
     );
-    this.#frameAim = aim !== null && this.#mergesAt(aim.remove) ?
+    const paint = this.#paint();
+    this.#frameAim = aim !== null &&
+      paint !== null &&
+      this.#mergesAt(aim.remove, paint) ?
       {
         ...aim,
         place: aim.remove
@@ -450,14 +478,16 @@ export class LocalBrush extends ActorComponent {
       createPartGhost(aim.remove, half.aimed);
   }
 
-  #replacementGhost(): GhostTarget | null {
+  #replacementGhost(
+    paint: VoxelPaint
+  ): GhostTarget | null {
     if (this.#stroke !== null || this.#brush.mode !== "replace") {
       return null;
     }
 
     const aim = this.#resolveAim();
     const replacement = this.#aimedHalf(aim)?.replacementFor(
-      this.#paint(),
+      paint,
       this.view.complements
     );
 
@@ -467,13 +497,14 @@ export class LocalBrush extends ActorComponent {
   }
 
   #mergesAt(
-    position: VoxelCoord
+    position: VoxelCoord,
+    paint: VoxelPaint
   ): boolean {
     const layerName = this.#selection.voxelLayer;
 
     return layerName !== null &&
       this.#brush.mode !== "replace" &&
-      canMergePaint(this.view, layerName, position, this.#paint());
+      canMergePaint(this.view, layerName, position, paint);
   }
 
   #strokeTarget(
@@ -545,11 +576,12 @@ export class LocalBrush extends ActorComponent {
 
   #ghostTarget(): GhostTarget | null {
     const layerName = this.#selection.voxelLayer;
-    if (layerName === null || !this.#brush.ghost) {
+    const paint = this.#paint();
+    if (layerName === null || paint === null || !this.#brush.ghost) {
       return null;
     }
 
-    const replacement = this.#replacementGhost();
+    const replacement = this.#replacementGhost(paint);
     if (replacement !== null) {
       return replacement;
     }
@@ -565,9 +597,9 @@ export class LocalBrush extends ActorComponent {
         paint: stroke.paint,
         center: this.#previewCenter()
       },
-      paint: this.#paint(),
+      paint,
       occupied: (position) => layer?.getVoxelAt(position) !== undefined &&
-        !this.#mergesAt(position)
+        !this.#mergesAt(position, paint)
     });
   }
 

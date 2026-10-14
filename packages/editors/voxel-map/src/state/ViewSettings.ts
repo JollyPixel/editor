@@ -5,7 +5,7 @@ import type { VoxelInspectorMode } from "@jolly-pixel/voxel.renderer";
 import { StoredFields } from "./StoredFields.ts";
 
 // CONSTANTS
-const kLightingModes = ["flat", "studio", "daylight", "night"] as const;
+const kLightingModes = ["flat", "studio", "day", "night"] as const;
 
 export const INSPECTOR_MODES = Object.freeze([
   "off",

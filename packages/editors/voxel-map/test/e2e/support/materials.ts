@@ -45,6 +45,12 @@ export class MaterialsPane {
     this.noBlocksHint = this.root.getByText("Add a block to the map to edit materials.");
   }
 
+  lighting(
+    name: string
+  ): Locator {
+    return this.viewSettings.getByRole("radio", { name });
+  }
+
   async create(
     name: string
   ): Promise<void> {

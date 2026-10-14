@@ -24,7 +24,7 @@ import type {
 const kLightingOptions: JollyOption<LightingMode>[] = [
   { label: "Flat", value: "flat" },
   { label: "Studio", value: "studio" },
-  { label: "Daylight", value: "daylight" },
+  { label: "Day", value: "day" },
   { label: "Night", value: "night" }
 ];
 
@@ -35,6 +35,14 @@ export class MapConfigPanel extends LitElement {
       display: flex;
       flex-direction: column;
       gap: var(--jolly-row-gap, 4px);
+    }
+
+    .toggles {
+      --jolly-label-max-width: 70%;
+
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      row-gap: var(--jolly-row-gap, 4px);
     }
   `;
 
@@ -50,52 +58,55 @@ export class MapConfigPanel extends LitElement {
 
   override render() {
     return html`
-      <jolly-select
+      <jolly-button-group
         label="Lighting"
+        label-position="top"
         .options=${kLightingOptions}
         .value=${this.#lighting.value}
         @jolly-change=${this.#lighting.commit}
-      ></jolly-select>
-      <jolly-checkbox
-        align="end"
-        label="Reflections"
-        description="Shows the metal and roughness of material groups"
-        description-display="tooltip"
-        .value=${this.#reflections.value}
-        @jolly-change=${this.#reflections.commit}
-      ></jolly-checkbox>
-      <jolly-checkbox
-        align="end"
-        label="Occlusion"
-        description="Darkens corners; rebuilds every chunk"
-        description-display="tooltip"
-        .value=${this.#ambientOcclusion.value}
-        @jolly-change=${this.#ambientOcclusion.commit}
-      ></jolly-checkbox>
-      <jolly-checkbox
-        align="end"
-        label="Shadows"
-        description="Sun shadows around the camera"
-        description-display="tooltip"
-        .value=${this.#shadows.value}
-        @jolly-change=${this.#shadows.commit}
-      ></jolly-checkbox>
-      <jolly-checkbox
-        align="end"
-        label="Block light"
-        description="Glowing materials light the blocks around them"
-        description-display="tooltip"
-        .value=${this.#blockLight.value}
-        @jolly-change=${this.#blockLight.commit}
-      ></jolly-checkbox>
-      <jolly-checkbox
-        align="end"
-        label="Glow"
-        description="Glowing materials bloom on screen"
-        description-display="tooltip"
-        .value=${this.#glow.value}
-        @jolly-change=${this.#glow.commit}
-      ></jolly-checkbox>
+      ></jolly-button-group>
+      <div class="toggles">
+        <jolly-checkbox
+          align="end"
+          label="Shadows"
+          description="Sun shadows around the camera"
+          description-display="tooltip"
+          .value=${this.#shadows.value}
+          @jolly-change=${this.#shadows.commit}
+        ></jolly-checkbox>
+        <jolly-checkbox
+          align="end"
+          label="Occlusion"
+          description="Darkens corners; rebuilds every chunk"
+          description-display="tooltip"
+          .value=${this.#ambientOcclusion.value}
+          @jolly-change=${this.#ambientOcclusion.commit}
+        ></jolly-checkbox>
+        <jolly-checkbox
+          align="end"
+          label="Block light"
+          description="Glowing materials light the blocks around them"
+          description-display="tooltip"
+          .value=${this.#blockLight.value}
+          @jolly-change=${this.#blockLight.commit}
+        ></jolly-checkbox>
+        <jolly-checkbox
+          align="end"
+          label="Glow"
+          description="Glowing materials bloom on screen"
+          description-display="tooltip"
+          .value=${this.#glow.value}
+          @jolly-change=${this.#glow.commit}
+        ></jolly-checkbox>
+        <jolly-checkbox
+          align="end"
+          label="Reflections"
+          description="Shows the metal and roughness of material groups"
+          description-display="tooltip"
+          .value=${this.#reflections.value}
+          @jolly-change=${this.#reflections.commit}
+        ></jolly-checkbox>
+      </div>
     `;
   }
 

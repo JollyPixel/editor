@@ -43,7 +43,10 @@ import { MapLayers } from "../features/layers/MapLayers.ts";
 import { ObjectLayerRenderer } from "../features/layers/objects/ObjectLayerRenderer.ts";
 import { trackBlockPresence } from "../features/blocks/collaboration/blockPresence.ts";
 import { trackLayerPresence } from "../features/layers/collaboration/layerPresence.ts";
-import { LocalBrush } from "../features/painting/LocalBrush.ts";
+import {
+  LocalBrush,
+  type MissingPaintSource
+} from "../features/painting/LocalBrush.ts";
 import { PeerBrushes } from "../features/painting/collaboration/PeerBrushes.ts";
 import { bindBrushShortcuts } from "../features/painting/interaction/brushShortcuts.ts";
 import { MarqueeTool } from "../features/marquee/MarqueeTool.ts";
@@ -73,6 +76,10 @@ const kDefaultLayerName = "Ground";
 const kMaxAccessListeners = 32;
 const kMapRefusedMessage = "You can only view this map, so the change was not saved";
 const kBlocksetRefusedMessage = "You can only view this blockset, so the change was not saved";
+const kPaintBlockedMessages: Readonly<Record<MissingPaintSource, string>> = {
+  layer: "No voxel layer to paint on: add one in the Layers panel",
+  block: "No block to paint with: create one in the Block Library"
+};
 const kGrid: GridOptions = {
   extent: 400,
   infiniteGrid: true,
@@ -311,8 +318,8 @@ export class EditorScene extends Systems.Scene {
         history: mapHistory,
         color: session.identity.color,
         onCursorChange: (cursor) => peerBrushes.publishLocalCursor(cursor),
-        onPaintBlocked: () => {
-          state.log.push("No voxel layer to paint on: add one in the Layers panel");
+        onPaintBlocked: (missing) => {
+          state.log.push(kPaintBlockedMessages[missing]);
         }
       });
     world.createActor("pivot-click")
@@ -369,7 +376,11 @@ export class EditorScene extends Systems.Scene {
         onChange: publishPlacement
       });
     suspendBrush();
+    state.block.reconcile(mapDocument.blocks);
     this.#disposables.push(
+      mapDocument.subscribe("blockRegistryChanged", () => {
+        state.block.reconcile(mapDocument.blocks);
+      }),
       placement.subscribe("change", suspendBrush),
       state.tool.subscribe("change", suspendBrush),
       access.subscribe("change", suspendBrush),

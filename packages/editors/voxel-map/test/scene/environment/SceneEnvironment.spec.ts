@@ -133,11 +133,11 @@ describe("SceneEnvironment", () => {
     assert.ok(night);
     assert.equal(scene.backgroundNode, night);
 
-    apply("daylight");
-    const daylight = scene.backgroundNode;
+    apply("day");
+    const day = scene.backgroundNode;
     apply("night");
 
-    assert.notEqual(daylight, night);
+    assert.notEqual(day, night);
     assert.equal(scene.backgroundNode, night);
   });
 
@@ -163,10 +163,10 @@ describe("SceneEnvironment", () => {
     assert.equal(scene.backgroundNode, dark);
   });
 
-  test("keeps the daylight and night skies whatever the theme", () => {
+  test("keeps the day and night skies whatever the theme", () => {
     const { scene, apply, environment } = createEnvironment();
 
-    for (const mode of ["daylight", "night"] as const) {
+    for (const mode of ["day", "night"] as const) {
       apply(mode);
       const sky = scene.backgroundNode;
       environment.theme = "light";
@@ -184,8 +184,8 @@ describe("SceneEnvironment", () => {
       ["studio", "light", "light"],
       ["flat", "dark", "dark"],
       ["flat", "light", "light"],
-      ["daylight", "dark", "light"],
-      ["daylight", "light", "light"],
+      ["day", "dark", "light"],
+      ["day", "light", "light"],
       ["night", "dark", "dark"],
       ["night", "light", "dark"]
     ];

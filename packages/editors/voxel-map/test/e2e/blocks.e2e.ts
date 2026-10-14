@@ -7,7 +7,7 @@ import type { VoxelMapPage } from "./support/voxelMap.ts";
 
 function brushBlock(
   map: VoxelMapPage
-): Promise<number> {
+): Promise<number | null> {
   return map.page.evaluate(
     () => window.voxelMapEditor!.workspace.state.block.id
   );

@@ -68,7 +68,7 @@ const kRigs: Record<LightingMode, LightingRig> = {
     blockLightFalloff: "wide",
     shadowFill: 0
   },
-  daylight: {
+  day: {
     ambient: 0,
     hemisphere: 1.15,
     skyColor: kDaySky,

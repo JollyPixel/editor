@@ -64,6 +64,28 @@ describe("EditorToolbar", () => {
     assert.ok(element.hasAttribute("empty"));
   });
 
+  test("hides the Asset select when the target is the only asset of its kind", async() => {
+    function targets(): EditorTargets {
+      return new EditorTargets({
+        catalog: {
+          records: () => [record("forest", "voxelmap"), record("hero", "voxelmodel")].values(),
+          subscribe: () => () => undefined
+        },
+        accepts: "voxelmap",
+        current: "forest",
+        navigator: new FakeNavigator()
+      });
+    }
+
+    const alone = await mount(targets(), null);
+    const tagged = await mount(targets(), fakeTags().tags);
+
+    assert.ok(alone.hasAttribute("empty"));
+    assert.ok(!tagged.hasAttribute("empty"));
+    assert.equal(query(tagged, ".asset"), null);
+    assert.ok(query(tagged, ".version"));
+  });
+
   test("lists assets by path without extension and opens the picked one", async() => {
     const navigator = new FakeNavigator();
     const cave = {

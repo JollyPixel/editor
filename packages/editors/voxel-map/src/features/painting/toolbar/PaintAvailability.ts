@@ -4,6 +4,7 @@ import type { VoxelMapWorkspace } from "../../../workspace/VoxelMapWorkspace.ts"
 import type { MapAccess } from "../../../access/MapAccess.ts";
 
 // CONSTANTS
+export const BRUSH_NO_BLOCK_REASON = "Create a block in the Block Library to paint";
 export const BRUSH_NO_LAYER_REASON = "Select a voxel layer to paint";
 export const BRUSH_SUSPENDED_REASON = "Commit or cancel the placement to paint";
 export const BRUSH_VIEW_ONLY_REASON = "You can only view this map";
@@ -12,6 +13,13 @@ export type PaintingSelection = Pick<
   SelectionStore,
   "voxelLayer" | "lastVoxelLayer"
 >;
+
+export interface PaintConditions {
+  selection: PaintingSelection;
+  hasBlock: boolean;
+  suspended: boolean;
+  access: MapAccess;
+}
 
 export interface PaintingNotice {
   readonly message: string;
@@ -26,9 +34,14 @@ export class PaintAvailability {
     listener: (availability: PaintAvailability) => void
   ): Iterable<() => void> {
     const { mapDocument, access } = workspace;
-    const { brush, selection } = workspace.state;
+    const { brush, block, selection } = workspace.state;
     function refresh(): void {
-      listener(PaintAvailability.evaluate(selection, brush.suspended, access.current));
+      listener(PaintAvailability.evaluate({
+        selection,
+        hasBlock: block.resolve(mapDocument.blocks) !== undefined,
+        suspended: brush.suspended,
+        access: access.current
+      }));
     }
 
     refresh();
@@ -36,16 +49,16 @@ export class PaintAvailability {
     return [
       access.subscribe("change", refresh),
       brush.subscribe("suspendedChange", refresh),
+      block.subscribe("change", refresh),
       selection.subscribe("change", refresh),
       mapDocument.subscribe("layerUpdated", refresh)
     ];
   }
 
   static evaluate(
-    selection: PaintingSelection,
-    suspended: boolean,
-    access: MapAccess
+    conditions: PaintConditions
   ): PaintAvailability {
+    const { selection, hasBlock, suspended, access } = conditions;
     if (!access.has("voxels")) {
       return new PaintAvailability(BRUSH_VIEW_ONLY_REASON, {
         message: "View only",
@@ -54,6 +67,12 @@ export class PaintAvailability {
     }
     if (suspended) {
       return new PaintAvailability(BRUSH_SUSPENDED_REASON, null);
+    }
+    if (!hasBlock) {
+      return new PaintAvailability(BRUSH_NO_BLOCK_REASON, {
+        message: "No block to paint with",
+        resumeLayer: null
+      });
     }
     if (selection.voxelLayer !== null) {
       return PaintAvailability.Ready;
