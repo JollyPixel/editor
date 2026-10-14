@@ -27,7 +27,7 @@ export class UvAccessPolicy {
 
   readonly access: UvAccess;
   readonly uvMode: boolean;
-  readonly visibilityInBottomBar: boolean;
+  readonly regionVisibility: boolean;
   readonly fillClip: boolean;
 
   constructor(
@@ -35,7 +35,7 @@ export class UvAccessPolicy {
   ) {
     this.access = access;
     this.uvMode = access === "edit";
-    this.visibilityInBottomBar = access === "view";
+    this.regionVisibility = access !== "none";
     this.fillClip = access !== "none";
 
     Object.freeze(this);

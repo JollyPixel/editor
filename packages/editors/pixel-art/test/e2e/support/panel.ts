@@ -33,6 +33,7 @@ export class PixelArtPanel {
   readonly uv: UvToolbar;
   readonly textures: TextureTabs;
   readonly importDialog: ImportDialog;
+  readonly topRow: Locator;
   readonly bottomToolbar: Locator;
   readonly undoButton: Locator;
   readonly redoButton: Locator;
@@ -56,6 +57,7 @@ export class PixelArtPanel {
     this.uv = new UvToolbar(this.root);
     this.textures = new TextureTabs(this.root);
     this.importDialog = new ImportDialog(page);
+    this.topRow = this.root.locator("[part=top-row]");
     this.bottomToolbar = this.root.locator("[part=history-file-toolbar]");
     this.undoButton = this.#button("Undo");
     this.redoButton = this.#button("Redo");

@@ -173,11 +173,28 @@ export const panelStyles = css`
     scrollbar-width: thin;
   }
 
-  .tool-option-overlay {
+  .top-row {
     position: absolute;
     top: 8px;
     left: 50%;
     z-index: 2;
+    box-sizing: border-box;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    justify-content: center;
+    gap: 8px;
+    width: max-content;
+    max-width: calc(100% - 16px);
+    pointer-events: none;
+    transform: translateX(-50%);
+  }
+
+  :where(.top-row) > * {
+    pointer-events: auto;
+  }
+
+  .tool-option-overlay {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -187,7 +204,6 @@ export const panelStyles = css`
     color: var(--color-text);
     font-size: 11px;
     user-select: none;
-    transform: translateX(-50%);
   }
 
   .brush-preview {
@@ -271,9 +287,6 @@ export const panelStyles = css`
   }
 
   .overlay-toolbar {
-    position: absolute;
-    left: 50%;
-    z-index: 2;
     display: flex;
     align-items: center;
     padding: 4px;
@@ -282,15 +295,14 @@ export const panelStyles = css`
     color: var(--color-text);
     font-size: 11px;
     user-select: none;
-    transform: translateX(-50%);
-  }
-
-  .overlay-toolbar.top {
-    top: 8px;
   }
 
   .overlay-toolbar.bottom {
+    position: absolute;
     bottom: 8px;
+    left: 50%;
+    z-index: 2;
+    transform: translateX(-50%);
     box-sizing: border-box;
     width: max-content;
     max-width: calc(100% - 16px);
@@ -402,7 +414,7 @@ export const panelStyles = css`
     height: 9px;
   }
 
-  .overlay-toolbar.top .tooltip {
+  .top-row .tooltip {
     left: 50%;
     top: calc(100% + 8px);
     bottom: auto;
@@ -574,20 +586,8 @@ export const panelStyles = css`
     background: var(--color-divider);
   }
 
-  .select-toolbar-row {
-    position: absolute;
-    top: 8px;
-    left: 50%;
-    z-index: 2;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transform: translateX(-50%);
-  }
-
-  .select-toolbar-row .overlay-toolbar {
-    position: static;
-    transform: none;
+  .clipboard-status {
+    align-self: center;
   }
 
   .clipboard-status,

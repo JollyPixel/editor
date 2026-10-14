@@ -67,23 +67,23 @@ describe("UvAccessPolicy flags", () => {
   ) {
     return {
       uvMode: policy.uvMode,
-      visibilityInBottomBar: policy.visibilityInBottomBar,
+      regionVisibility: policy.regionVisibility,
       fillClip: policy.fillClip
     };
   }
 
-  test("exposes UV mode and the fill clip when editable", () => {
+  test("exposes UV mode, region visibility and the fill clip when editable", () => {
     assert.deepEqual(flags(UvAccessPolicy.forAccess("edit")), {
       uvMode: true,
-      visibilityInBottomBar: false,
+      regionVisibility: true,
       fillClip: true
     });
   });
 
-  test("moves the visibility toggles to the bottom bar when view-only", () => {
+  test("keeps the visibility toggles without UV mode when view-only", () => {
     assert.deepEqual(flags(UvAccessPolicy.forAccess("view")), {
       uvMode: false,
-      visibilityInBottomBar: true,
+      regionVisibility: true,
       fillClip: true
     });
   });
@@ -91,7 +91,7 @@ describe("UvAccessPolicy flags", () => {
   test("hides every UV control when disabled", () => {
     assert.deepEqual(flags(UvAccessPolicy.forAccess("none")), {
       uvMode: false,
-      visibilityInBottomBar: false,
+      regionVisibility: false,
       fillClip: false
     });
   });
