@@ -40,11 +40,14 @@ export type ApiMiddleware = (
   next: () => void
 ) => void;
 
+export type TrustProxy = boolean | string | string[];
+
 export interface StudioApiOptions {
   accounts: Accounts;
   shares: StudioShares;
   archive: ProjectArchive;
   requestsPerMinute?: number;
+  trustProxy?: TrustProxy;
 }
 
 export class StudioApi implements AsyncDisposable {
@@ -53,6 +56,7 @@ export class StudioApi implements AsyncDisposable {
   ): Promise<StudioApi> {
     const app = Fastify({
       bodyLimit: kMaxBodyBytes,
+      trustProxy: options.trustProxy ?? false,
       logger: {
         level: "error"
       }

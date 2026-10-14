@@ -157,6 +157,25 @@ describe("WebsocketTransport + Client (integration)", () => {
       client.destroy();
     }
   });
+
+  test("terminates its open sockets once disposed", async() => {
+    const transport = new WebsocketTransport({
+      httpServer,
+      server: new Server(),
+      path: "/ws-dispose"
+    });
+    const socket = new WebSocket(
+      `ws://127.0.0.1:${port}/ws-dispose`,
+      WEBSOCKET_PROTOCOL
+    );
+    await once(socket, "open");
+    const closed = Promise.withResolvers<CloseEvent>();
+    socket.addEventListener("close", closed.resolve);
+
+    transport[Symbol.dispose]();
+
+    assert.strictEqual((await closed.promise).code, 1006);
+  });
 });
 
 async function negotiatedExtensions(

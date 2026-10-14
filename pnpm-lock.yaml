@@ -955,6 +955,9 @@ importers:
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../asset-server
+      '@jolly-pixel/asset-source':
+        specifier: workspace:*
+        version: link:../asset-source
       '@jolly-pixel/asset.pixel-art':
         specifier: workspace:*
         version: link:../assets/pixel-art
@@ -970,6 +973,15 @@ importers:
       '@jolly-pixel/editor.host':
         specifier: workspace:*
         version: link:../editors/host
+      '@jolly-pixel/editor.pixel-art':
+        specifier: workspace:*
+        version: link:../editors/pixel-art
+      '@jolly-pixel/editor.voxel-map':
+        specifier: workspace:*
+        version: link:../editors/voxel-map
+      '@jolly-pixel/editor.voxel-model':
+        specifier: workspace:*
+        version: link:../editors/voxel-model
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../network
@@ -982,40 +994,28 @@ importers:
       '@jolly-pixel/voxel.renderer':
         specifier: workspace:*
         version: link:../voxel-renderer
+      '@openally/servo':
+        specifier: 1.1.0
+        version: 1.1.0
       fastify:
         specifier: 5.12.5
         version: 5.12.5
       lit:
         specifier: 3.3.3
         version: 3.3.3
-    devDependencies:
-      '@jolly-pixel/asset-source':
-        specifier: workspace:*
-        version: link:../asset-source
-      '@jolly-pixel/e2e':
-        specifier: workspace:*
-        version: link:../e2e
-      '@jolly-pixel/editor.pixel-art':
-        specifier: workspace:*
-        version: link:../editors/pixel-art
-      '@jolly-pixel/editor.voxel-map':
-        specifier: workspace:*
-        version: link:../editors/voxel-map
-      '@jolly-pixel/editor.voxel-model':
-        specifier: workspace:*
-        version: link:../editors/voxel-model
-      '@jolly-pixel/event-store':
-        specifier: workspace:*
-        version: link:../event-store
-      '@openally/servo':
-        specifier: 1.1.0
-        version: 1.1.0
-      cookie:
-        specifier: 2.0.1
-        version: 2.0.1
       zod:
         specifier: 4.6.5
         version: 4.6.5
+    devDependencies:
+      '@jolly-pixel/e2e':
+        specifier: workspace:*
+        version: link:../e2e
+      '@jolly-pixel/event-store':
+        specifier: workspace:*
+        version: link:../event-store
+      cookie:
+        specifier: 2.0.1
+        version: 2.0.1
 
   packages/three:
     dependencies:

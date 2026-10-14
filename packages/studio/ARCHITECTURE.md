@@ -55,7 +55,12 @@ flowchart TB
 - `StudioBackend` opens the online back-end: the accounts, the asset
   workspace and its catalog view, `StudioApi` and `SharePage`. `vite/backend`
   mounts its middleware and attaches its WebSocket to the dev server. It
-  closes the API, then the workspace, then the accounts.
+  closes its WebSocket transports, the API, the workspace, then the accounts.
+- `StudioServer` is the hosted entry, started by `server/start.ts`. One
+  `node:http` server chains the back-end, `EditorPages`, `ManifestRoute` and
+  the built shell, so editor pages and the manifest come from the project as
+  in dev. `serveBuild` serves the shell and editor pages, with hashed assets
+  cached as immutable.
 - `StudioAccess` reads the `access` section into a rights table with a
   built-in `admin` and the `AccountRoles`. `server/accounts` opens the
   project's `Accounts` on `.jollypixel/accounts.db`: the network server
@@ -302,8 +307,9 @@ flowchart TB
 | Path | Role |
 |---|---|
 | `server/StudioBackend.ts` | the online back-end, opened and closed as one |
+| `server/StudioServer.ts`, `server/start.ts` | hosted entry and its environment |
 | `server/project/` | project file, `access` section, private files |
-| `server/editors/` | editor packages and pages, dist watcher |
+| `server/editors/` | editor packages and pages, manifest route, dist watcher |
 | `server/accounts.ts` | project accounts |
 | `server/shares/` | share rules, guest admission, `/view/` page |
 | `vite.config.ts`, `vite/` | Vite plugins |

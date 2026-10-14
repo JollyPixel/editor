@@ -9,15 +9,15 @@ import type {
 // Import Third-party Dependencies
 import {
   compose,
-  servo
+  type ServoHandler
 } from "@openally/servo";
-import type { Connect } from "vite";
 
 // Import Internal Dependencies
 import {
   EDITOR_PAGES_DIR,
   EDITOR_PAGES_PREFIX
 } from "../../src/editors/EditorDescriptor.ts";
+import { serveBuild } from "../serveBuild.ts";
 import type { EditorPackage } from "./EditorPackage.ts";
 import type { EditorPackages } from "./EditorPackages.ts";
 import {
@@ -25,24 +25,19 @@ import {
   type EditorPagesServer
 } from "./EditorPagesWatcher.ts";
 
-// CONSTANTS
-const kHashedAsset = /^assets\/.+-[\w-]{8}\.\w+$/;
-const kImmutableCacheControl = "public, max-age=31536000, immutable";
-
 export class EditorPages {
   readonly editors: readonly EditorPackage[];
-  readonly middleware: Connect.NextHandleFunction;
+  readonly middleware: ServoHandler;
 
   constructor(
     editors: EditorPackages
   ) {
     this.editors = [...editors];
     this.middleware = compose(
-      ...this.editors.map((editor) => servo(editor.dist, {
-        prefix: `${EDITOR_PAGES_PREFIX}${editor.name}`,
-        dev: true,
-        setHeaders: cacheHashedAssets
-      })),
+      ...this.editors.map((editor) => serveBuild(
+        editor.dist,
+        `${EDITOR_PAGES_PREFIX}${editor.name}`
+      )),
       unknownEditorPage
     );
   }
@@ -65,18 +60,6 @@ export class EditorPages {
         path.join(outDir, EDITOR_PAGES_DIR, editor.name),
         { recursive: true }
       ))
-    );
-  }
-}
-
-function cacheHashedAssets(
-  response: ServerResponse,
-  filePath: string
-): void {
-  if (kHashedAsset.test(filePath)) {
-    response.setHeader(
-      "Cache-Control",
-      kImmutableCacheControl
     );
   }
 }

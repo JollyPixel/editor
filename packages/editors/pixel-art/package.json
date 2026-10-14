@@ -50,7 +50,8 @@
   },
   "keywords": [],
   "files": [
-    "dist"
+    "dist",
+    "dist-page"
   ],
   "directories": {
     "doc": "docs",

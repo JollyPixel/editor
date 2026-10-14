@@ -1,41 +1,8 @@
-# Online hosting
+# Browser-hosted sessions
 
-Two ways to run the editors online beyond the static build: a hosted studio
-server, and sessions hosted by a browser tab. Neither is scheduled. Written on
-2026-10-13 from the code at `27d7ace2`.
-
-## Hosted studio server
-
-Accounts, share links, project export and the rights table already work, but
-only inside `vite dev`. `vite/backend.ts` mounts `StudioBackend` from a plugin
-with `apply: "serve"`, and voxel-map's `createAssetWorkspacePlugin` works the
-same way.
-
-`StudioBackend` does not depend on Vite. It exposes `middleware` and
-`attach(httpServer, { allowedHosts })`, so a production entry stays short:
-
-- a `node:http` server that serves the built `dist/` and passes other requests
-  to `backend.middleware`;
-- `backend.attach(httpServer, ...)` for the WebSocket upgrade;
-- the same environment as dev, `JOLLY_MASTER_PASSWORD` included.
-
-A quicker first step is to also hook `configurePreviewServer` and run
-`vite preview` behind a reverse proxy. That is enough for a small team, but
-`vite preview` is not a hardened server.
-
-Constraints:
-
-- Rooms live in process memory, events go to `node:sqlite` and clients keep
-  WebSockets open. It needs one long-running Node 24 process with a persistent
-  disk. Serverless platforms do not fit.
-- The TLS proxy in front must forward WebSocket upgrades on `/ws-sync`.
-- One process serves one project. Hosting many projects needs a router in
-  front, which is out of scope.
-- Back up through `GET /api/project/archive` or by copying the disk.
-
-The same process can run the signaling relay for browser-hosted sessions.
-
-## Browser-hosted sessions
+Plan for running an editor session from a browser tab, written on 2026-10-13
+from the code at `27d7ace2`. The hosted studio server is built; see
+[docs/hosting.md](./docs/hosting.md).
 
 The host opens an editor the way it opens one offline: its tab runs
 `OfflineWorkspace` over IndexedDB. Guests open an invite link to the static
@@ -68,7 +35,7 @@ rooms rely on one server to order commands, echo them and send correcting
 snapshots. With the host tab as that server, every guarantee holds. A mesh
 between guests would break them.
 
-### Work
+## Work
 
 - **Data-channel port.** A `ChannelPort` over an ordered, reliable
   `RTCDataChannel` in `@jolly-pixel/network`. Browsers cap the size of one
@@ -101,7 +68,7 @@ between guests would break them.
   tabs against the `SnapshotScheduler` delays. Moving the host role to a guest
   stays out of the first version.
 
-### Order
+## Order
 
 1. Spike on voxel-map with the port, the peer workspaces and signaling through
    the hosted server. It is done when two browsers on different machines edit
@@ -111,8 +78,8 @@ between guests would break them.
 
 ## Open questions
 
-- Signaling through our own relay room, which needs the hosted server, or
-  through Trystero?
+- Signaling through a relay room on the hosted server, which someone then has
+  to run, or through Trystero?
 - Pay for TURN, or accept that some company networks cannot join?
 - Should guests keep a copy of the project when the host leaves? Archives can
   do it, but it changes who owns the project.
