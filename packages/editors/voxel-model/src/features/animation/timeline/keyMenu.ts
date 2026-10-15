@@ -1,14 +1,14 @@
 // Import Third-party Dependencies
 import type { AnimationInterpolation } from "@jolly-pixel/asset.voxel-animation/client";
-
-// Import Internal Dependencies
-import type { KeyEditor } from "../keys/KeyEditor.ts";
-import { INTERPOLATION_OPTIONS } from "../keys/interpolation.ts";
 import {
   MenuSession,
   disableEntries,
   type MenuEntry
-} from "../../../shared/menu/MenuSession.ts";
+} from "@jolly-pixel/ui";
+
+// Import Internal Dependencies
+import type { KeyEditor } from "../keys/KeyEditor.ts";
+import { INTERPOLATION_OPTIONS } from "../keys/interpolation.ts";
 import { DELETE_ITEM } from "../../../shared/menu/menuItems.ts";
 
 type KeyAction =

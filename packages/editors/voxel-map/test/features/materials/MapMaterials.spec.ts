@@ -138,6 +138,18 @@ describe("MapMaterials", () => {
     );
   });
 
+  it("creates a material in the block's blockset and applies it", () => {
+    const { document, materials } = setup([
+      block(kGrass, "terrain/Material"),
+      block(kStone)
+    ]);
+
+    assert.equal(materials.createForBlock(kStone), "rock/Material");
+    assert.equal(document.blocks.get(kStone)?.materialGroup, "rock/Material");
+    assert.equal(document.materialGroups.has("rock/Material"), true);
+    assert.equal(materials.createForBlock(composeBlockId(9, 1)), null);
+  });
+
   it("keeps a stored swatch through a rename and recolours it", () => {
     const { document, materials } = setup([block(kGrass)]);
     const groupId = materials.create(kTerrain)!;
@@ -159,8 +171,8 @@ describe("MapMaterials", () => {
     );
     const [gold] = materials.availableTo(kGrass);
 
-    assert.equal(materials.assign(kGrass, gold), true);
-    assert.equal(materials.assign(kGrass, gold), false);
+    assert.equal(materials.assign(kGrass, gold.id), true);
+    assert.equal(materials.assign(kGrass, gold.id), false);
     assert.equal(document.blocks.get(kGrass)?.materialGroup, "terrain/gold");
 
     assert.equal(materials.assign(kGrass, null), true);

@@ -5,6 +5,7 @@ import {
   query,
   state
 } from "lit/decorators.js";
+import { keyed } from "lit/directives/keyed.js";
 import {
   BlockTextures,
   cullsCoveredFaces,
@@ -31,6 +32,8 @@ import {
   shapeOptions,
   blocksetOptions
 } from "./blockDialog.ts";
+import type { PropertiesChangeDetail } from "../../../shared/properties/CustomPropertiesEditor.ts";
+import "../../../shared/properties/CustomPropertiesEditor.ts";
 import "../blockIcons.ts";
 
 // CONSTANTS
@@ -136,6 +139,12 @@ export class BlockEditDialog extends WorkspaceElement {
               @jolly-change=${this.#onShapeChange}
             ></jolly-select>
             ${this.#renderTransparency(block)}
+            ${keyed(block.id, html`
+              <custom-properties-editor
+                .properties=${block.properties}
+                @properties-change=${this.#onPropertiesChange}
+              ></custom-properties-editor>
+            `)}
             ${this.#renderUsage(workspace, block)}
           </div>
           ${renderShapeColumn({
@@ -258,6 +267,12 @@ export class BlockEditDialog extends WorkspaceElement {
     this.#applyEdit({ cullCoveredFaces: event.detail.value });
   }
 
+  #onPropertiesChange(
+    event: CustomEvent<PropertiesChangeDetail>
+  ): void {
+    this.#applyEdit({ properties: event.detail.properties });
+  }
+
   readonly #onSizeChange = (
     event: CustomEvent<JollyChangeDetail<number>>
   ): void => {
@@ -291,7 +306,7 @@ export class BlockEditDialog extends WorkspaceElement {
     const usage = workspace.usage.inspectUsage(block.id);
     const confirmed = usage.unused ||
       await this._dialog.confirmInline({
-        message: `Delete "${block.name}"? ${usage.removalMessage}`,
+        message: usage.deletePrompt(block.name),
         confirmLabel: "Delete",
         danger: true
       });

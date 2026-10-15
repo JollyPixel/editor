@@ -31,7 +31,8 @@ export const basics = new Tour({
       target: ["blocks-panel", "jolly-folder[key=block-library]"],
       side: "right",
       title: "Block library",
-      body: "Pick the block you want to place here. " +
+      body: "Pick the block you want to place here, " +
+        "or right-click it for quick actions. " +
         "Rotation and Flip Y set how it is oriented.",
       enter: showPane("blocks")
     },

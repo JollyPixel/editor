@@ -7,7 +7,11 @@ import {
   type JollyReparentDetail,
   type JollySelectDetail,
   type JollyToggleExpandDetail,
-  type TreeNode
+  type TreeNode,
+  MenuSession,
+  disableEntries,
+  type MenuEntry,
+  type MenuPoint
 } from "@jolly-pixel/ui";
 import {
   FrameRate,
@@ -27,12 +31,6 @@ import {
   keySelectedBlock,
   type KeySelectedOptions
 } from "./keys/animationShortcuts.ts";
-import {
-  MenuSession,
-  disableEntries,
-  type MenuEntry,
-  type MenuPoint
-} from "../../shared/menu/MenuSession.ts";
 import { ExpandedRows } from "../../shared/ExpandedRows.ts";
 import type { ModelAccessSignals } from "../../access/ModelAccess.ts";
 import {

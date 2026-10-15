@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { MenuSession, type MenuPoint } from "@jolly-pixel/ui";
+
 // Import Internal Dependencies
 import type {
   AnimationLibrary,
@@ -17,10 +20,6 @@ import type {
   DeleteContext,
   DeleteResult
 } from "../../../shared/dialogs/DeleteDialog.ts";
-import {
-  MenuSession,
-  type MenuPoint
-} from "../../../shared/menu/MenuSession.ts";
 import { duplicateNameOf } from "../../../model/index.ts";
 
 // CONSTANTS

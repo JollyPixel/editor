@@ -5,16 +5,12 @@ import {
   test
 } from "node:test";
 
-// Import Third-party Dependencies
-import type {
-  ContextMenuEntry,
-  JollyContextActionDetail,
-  JollyContextRequestDetail
-} from "@jolly-pixel/ui";
-
 // Import Internal Dependencies
-import { ContextMenuController } from "#src/shared/menu/ContextMenuController.ts";
-import { MenuSession } from "#src/shared/menu/MenuSession.ts";
+import type { ContextMenuEntry } from "../../../src/containers/context-menu/ContextMenu.ts";
+import { ContextMenuController } from "../../../src/containers/context-menu/ContextMenuController.ts";
+import { MenuSession } from "../../../src/containers/context-menu/MenuSession.ts";
+import type { JollyContextActionDetail } from "../../../src/containers/events.ts";
+import type { JollyContextRequestDetail } from "../../../src/data/tree/contract.ts";
 
 interface FakeMenu {
   items: readonly ContextMenuEntry[];

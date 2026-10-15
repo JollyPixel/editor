@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import { AnimationDocument } from "@jolly-pixel/asset.voxel-animation/client";
 import { ModelDocument } from "@jolly-pixel/asset.voxel-model/client";
+import { MenuSession } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -21,7 +22,6 @@ import { AnimationHistories } from "#src/features/animation/undo/AnimationHistor
 import { ClipRemovalFocus } from "#src/features/animation/library/ClipRemovalFocus.ts";
 import { createEditorHistory } from "#src/features/history/index.ts";
 import type { NameDialogContext } from "#src/shared/dialogs/NameDialog.ts";
-import { MenuSession } from "#src/shared/menu/MenuSession.ts";
 import { createHost } from "./fixtures.ts";
 import { modelAccess } from "../../fixtures/modelAccess.ts";
 

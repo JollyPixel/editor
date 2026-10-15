@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import type { ReactiveControllerHost } from "lit";
-import { SubscriptionController } from "@jolly-pixel/ui";
+import { SubscriptionController, MenuSession } from "@jolly-pixel/ui";
 import {
   FrameRate,
   type AnimationClipJSON
@@ -30,7 +30,6 @@ import type {
   BlockSelectionStore,
   PresenceStore
 } from "../../../state/index.ts";
-import { MenuSession } from "../../../shared/menu/MenuSession.ts";
 
 export interface TimelineWorkspace {
   document: ModelDocument;

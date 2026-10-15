@@ -1,8 +1,7 @@
+// Import Third-party Dependencies
+import type { MenuEntry, MenuItem } from "@jolly-pixel/ui";
+
 // Import Internal Dependencies
-import type {
-  MenuEntry,
-  MenuItem
-} from "../../shared/menu/MenuSession.ts";
 import {
   DELETE_ITEM,
   DUPLICATE_ITEM,

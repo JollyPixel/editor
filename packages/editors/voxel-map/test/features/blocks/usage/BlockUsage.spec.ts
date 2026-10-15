@@ -37,6 +37,27 @@ describe("BlockUsage", () => {
     );
   });
 
+  it("names the block when asking to delete it or clear its voxels", () => {
+    const placed = new BlockUsage({
+      blockId: 1,
+      voxels: 3,
+      layers: [
+        { layerName: "Ground", voxels: 2 },
+        { layerName: "Top", voxels: 1 }
+      ]
+    });
+
+    assert.equal(
+      kUnused.deletePrompt("Stone"),
+      "Delete \"Stone\"? No voxel uses this block."
+    );
+    assert.equal(
+      placed.clearPrompt("Stone"),
+      "Remove 3 voxels of \"Stone\" from 2 layers? " +
+      "The block stays in the library."
+    );
+  });
+
   it("treats a removal that loses nothing as unused", () => {
     assert.equal(kUnused.unused, true);
     assert.equal(

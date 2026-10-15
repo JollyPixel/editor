@@ -19,6 +19,7 @@ export const blockLibraryViewportStyles = css`
     padding: var(--block-grid-inset);
     border-radius: var(--jolly-radius-sm, 3px);
     cursor: pointer;
+    user-select: none;
   }
 
   :host([layout="fill"]) {
@@ -90,13 +91,33 @@ export const blockLibraryViewportStyles = css`
     z-index: 3;
   }
 
-  .insertion {
+  .landing {
     position: absolute;
-    width: 2px;
-    margin-inline-start: -1px;
-    border-radius: 1px;
-    background: var(--jolly-accent, #4c9aff);
-    box-shadow: 0 0 0 1px var(--jolly-surface, #0e1316);
+    box-sizing: border-box;
+    border: 2px dashed var(--jolly-accent-fill, #4c9aff);
+    border-radius: var(--jolly-radius-sm, 4px);
+    background: color-mix(in srgb, var(--jolly-accent-fill, #4c9aff) 10%, transparent);
+  }
+
+  .ghost {
+    position: fixed;
+    inset: 0 auto auto 0;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--jolly-accent-fill, #4c9aff);
+    border-radius: var(--jolly-radius-sm, 4px);
+    background: color-mix(in srgb, var(--jolly-surface, #0e1316) 85%, transparent);
+    box-shadow: var(--jolly-shadow-floating, 0 4px 16px rgb(0 0 0 / 30%));
+    overflow: visible;
+    pointer-events: none;
+    scale: 1.1;
+  }
+
+  .ghost > canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
   }
 
   .layer.actions {
@@ -130,10 +151,6 @@ export const blockLibraryViewportStyles = css`
 
   .scroller.dragging {
     cursor: grabbing;
-  }
-
-  .scroller.dragging > canvas {
-    opacity: 0.75;
   }
 
   .highlight {

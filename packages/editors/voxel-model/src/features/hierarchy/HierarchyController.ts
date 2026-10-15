@@ -10,7 +10,9 @@ import {
   type JollySelectDetail,
   type JollyToggleExpandDetail,
   type JollyToggleVisibleDetail,
-  type TreeNode
+  type TreeNode,
+  MenuSession,
+  disableEntries
 } from "@jolly-pixel/ui";
 import type {
   ModelChange,
@@ -60,10 +62,6 @@ import type {
 } from "../../shared/dialogs/DeleteDialog.ts";
 import { ExpandedRows } from "../../shared/ExpandedRows.ts";
 import type { NameFieldOptions } from "../../shared/dialogs/NameDraft.ts";
-import {
-  MenuSession,
-  disableEntries
-} from "../../shared/menu/MenuSession.ts";
 import type { ModelAccessSignals } from "../../access/ModelAccess.ts";
 import {
   BLOCK_SHAPE_OPTIONS,

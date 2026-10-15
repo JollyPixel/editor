@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { dialog } from "@jolly-pixel/e2e";
+
 // Import Internal Dependencies
 import {
   test,
@@ -19,6 +22,15 @@ function blockNames(
   return map.page.evaluate(() => [
     ...window.voxelMapEditor!.workspace.view.document.blocks.getAll()
   ].map((block) => block.name));
+}
+
+function blockProperties(
+  map: VoxelMapPage,
+  name: string
+): Promise<Record<string, unknown> | undefined> {
+  return map.page.evaluate((blockName) => [
+    ...window.voxelMapEditor!.workspace.view.document.blocks.getAll()
+  ].find((block) => block.name === blockName)?.properties, name);
 }
 
 function blockSurface(
@@ -166,6 +178,36 @@ test("a transparent block edits its alpha mode and its sides", async({ map }) =>
     .toEqual({ alphaMode: "blend", side: "double" });
 });
 
+test("a block keeps its typed custom properties", async({ map }) => {
+  const { library } = map.blocks;
+  const [first] = await blockNames(map);
+  await library.edit(first);
+  const editor = map.blockDialog(first);
+  const { properties } = editor;
+
+  const keys = properties.getByRole("textbox", { name: "key" });
+  await expect(keys).toHaveCount(1);
+
+  await properties.locator("jolly-select").getByRole("combobox")
+    .selectOption({ label: "Number" });
+  const value = properties.locator("jolly-number input");
+  await value.fill("3");
+  await value.press("Tab");
+  await keys.fill("hardness");
+  await keys.press("Tab");
+
+  await expect(keys).toHaveCount(2);
+  await expect.poll(() => blockProperties(map, first))
+    .toEqual({ hardness: 3 });
+
+  await editor.closeButton.click();
+  await library.edit(first);
+
+  await expect(keys).toHaveCount(2);
+  await expect(keys.first()).toHaveValue("hardness");
+  await expect(value).toHaveValue("3");
+});
+
 test("a lone blockset leaves the blockset field disabled", async({ map }) => {
   const [first] = await blockNames(map);
 
@@ -207,4 +249,37 @@ test("deleting a placed block asks first and removes its voxels", async({ map, p
   await editor.deleteButton.click();
 
   await expect.poll(() => blockNames(map)).not.toContain(first);
+});
+
+test("the block context menu duplicates a block and deletes the copy", async({ map }) => {
+  const { library } = map.blocks;
+  const [, second] = await blockNames(map);
+  const copy = `${second} copy`;
+
+  await library.choose(second, "Duplicate");
+  await expect(library.option(copy)).toHaveAttribute("aria-selected", "true");
+
+  await library.choose(copy, "Delete");
+  await expect.poll(() => blockNames(map)).not.toContain(copy);
+});
+
+test("the block context menu removes the voxels of a block after asking", async({ map, page }) => {
+  await map.world.seed([
+    { x: 0, y: 0, z: 0, blockId: 1 },
+    { x: 1, y: 0, z: 0, blockId: 2 }
+  ]);
+  const { library } = map.blocks;
+  const [first] = await blockNames(map);
+
+  await library.choose(first, "Remove voxels…");
+  await expect(library.option(first)).toHaveAttribute("aria-selected", "true");
+  const confirm = dialog(page, "Remove voxels");
+  await expect(confirm).toContainText(`Remove 1 voxel of "${first}" from 1 layer?`);
+  await confirm.getByRole("button", { name: "Remove" }).click();
+
+  await expect.poll(() => map.world.blocks([
+    { x: 0, y: 0, z: 0 },
+    { x: 1, y: 0, z: 0 }
+  ])).toEqual([null, 2]);
+  expect(await blockNames(map)).toContain(first);
 });

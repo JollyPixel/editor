@@ -6,7 +6,11 @@ import {
   nothing,
   type TemplateResult
 } from "lit";
-import type { ContextMenu } from "@jolly-pixel/ui";
+import {
+  type ContextMenu,
+  ContextMenuController,
+  MenuSession
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -17,8 +21,6 @@ import {
   TRACK_STATE_LABELS,
   type TrackBindingRow
 } from "./trackBindingRows.ts";
-import { ContextMenuController } from "../../../shared/menu/ContextMenuController.ts";
-import { MenuSession } from "../../../shared/menu/MenuSession.ts";
 import { menuPointBelow } from "../../../shared/menu/menuPointBelow.ts";
 
 export class TrackBindings extends LitElement {

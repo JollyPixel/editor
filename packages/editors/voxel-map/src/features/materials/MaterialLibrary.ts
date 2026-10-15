@@ -197,7 +197,7 @@ export class MaterialLibrary extends WorkspaceElement {
         icon="material"
         variant="accent"
         title="Apply ${material.name} to ${block.name}"
-        @click=${() => workspace.materials.assign(block.id, material)}
+        @click=${() => workspace.materials.assign(block.id, material.id)}
       >Apply to selected block</jolly-button>
     `;
   }

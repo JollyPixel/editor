@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import { LitElement, html, css, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { keyed } from "lit/directives/keyed.js";
 import {
   isVoxelObjectLayerCommand,
   type VoxelWorld,
@@ -18,13 +19,8 @@ import {
 } from "./objectSources.ts";
 import { PositionSource } from "../../../shared/PositionSource.ts";
 import { MapObject } from "./MapObject.ts";
-import {
-  parsePropertyRows,
-  createPropertyRows,
-  type PropertyRow,
-  type PropertyRowsChangeDetail
-} from "../properties/propertyDraft.ts";
-import "../properties/CustomPropertiesEditor.ts";
+import type { PropertiesChangeDetail } from "../../../shared/properties/CustomPropertiesEditor.ts";
+import "../../../shared/properties/CustomPropertiesEditor.ts";
 
 @customElement("object-panel")
 export class ObjectPanel extends LitElement {
@@ -52,9 +48,6 @@ export class ObjectPanel extends LitElement {
   @state()
   private declare _object: VoxelObjectJSON | null;
 
-  @state()
-  private declare _props: PropertyRow[];
-
   #subscriptions: Array<() => void> = [];
 
   #port: ObjectPort = {
@@ -75,7 +68,6 @@ export class ObjectPanel extends LitElement {
     this.objectId = null;
     this.writable = true;
     this._object = null;
-    this._props = [];
   }
 
   readonly #onLayerUpdated = (evt: VoxelLayerCommand) => {
@@ -126,13 +118,11 @@ export class ObjectPanel extends LitElement {
       changed.has("objectId") ||
       changed.has("world")
     ) {
-      this.#syncFromStore({ resetProperties: true });
+      this.#syncFromStore();
     }
   }
 
-  #syncFromStore(
-    options: { resetProperties?: boolean; } = {}
-  ): void {
+  #syncFromStore(): void {
     if (!this.layerName || !this.objectId) {
       this._object = null;
 
@@ -144,10 +134,6 @@ export class ObjectPanel extends LitElement {
       this.objectId
     ) ?? null;
     this._object = object === null ? null : { ...object };
-
-    if (object !== null && options.resetProperties === true) {
-      this._props = createPropertyRows(object.properties);
-    }
   }
 
   override render() {
@@ -190,28 +176,20 @@ export class ObjectPanel extends LitElement {
         @jolly-change=${this.#size.commit}
       ></jolly-vector2>
 
-      ${this.#renderProperties()}
+      ${keyed(object.id, html`
+        <custom-properties-editor
+          .properties=${object.properties ?? {}}
+          .disabled=${!this.writable}
+          @properties-change=${this.#onPropertiesChange}
+        ></custom-properties-editor>
+      `)}
     `;
   }
 
-  #renderProperties() {
-    return html`<custom-properties-editor
-      .rows=${this._props}
-      .disabled=${!this.writable}
-      storage-key="voxel-map:folder:object-properties"
-      @property-rows-change=${this.#onPropertyRowsChange}
-    ></custom-properties-editor>`;
-  }
-
-  #onPropertyRowsChange(
-    event: CustomEvent<PropertyRowsChangeDetail>
+  #onPropertiesChange(
+    event: CustomEvent<PropertiesChangeDetail>
   ): void {
-    this._props = event.detail.rows;
-    this.#flushProperties();
-  }
-
-  #flushProperties(): void {
-    this.#patch({ properties: parsePropertyRows(this._props) });
+    this.#patch({ properties: event.detail.properties });
   }
 
   #patch(

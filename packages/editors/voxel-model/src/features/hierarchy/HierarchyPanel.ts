@@ -7,9 +7,10 @@ import {
   type TemplateResult
 } from "lit";
 import { query } from "lit/decorators.js";
-import type {
-  ContextMenu,
-  Tree
+import {
+  type ContextMenu,
+  type Tree,
+  ContextMenuController
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -25,7 +26,6 @@ import {
 import type { NameDialog } from "../../shared/dialogs/NameDialog.ts";
 import type { HierarchyDuplicateDialog } from "./dialogs/HierarchyDuplicateDialog.ts";
 import type { DeleteDialog } from "../../shared/dialogs/DeleteDialog.ts";
-import { ContextMenuController } from "../../shared/menu/ContextMenuController.ts";
 
 // CONSTANTS
 export const SHOW_MATERIAL_EVENT = "show-material";

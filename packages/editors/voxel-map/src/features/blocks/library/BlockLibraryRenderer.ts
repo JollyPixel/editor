@@ -6,7 +6,10 @@ import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 import type { BlockRenderSources } from "../rendering/BlockRenderSources.ts";
 import { BlockPreviewMeshes } from "../rendering/BlockPreviewMeshes.ts";
 import { BlockGrid } from "./BlockGrid.ts";
-import { CellRepaints } from "./CellRepaints.ts";
+import {
+  CellRepaints,
+  type CellLook
+} from "./CellRepaints.ts";
 import { TurntableAngles } from "./TurntableAngles.ts";
 import { Turntable } from "../../preview/Turntable.ts";
 import {
@@ -16,6 +19,11 @@ import {
 
 // CONSTANTS
 const kSettleFrames = 6;
+
+interface LiftedBlock {
+  blockId: number;
+  target: CanvasRenderingContext2D;
+}
 
 export class BlockLibraryRenderer extends Turntable {
   onLayoutChange: (() => void) | null = null;
@@ -35,6 +43,7 @@ export class BlockLibraryRenderer extends Turntable {
   #pendingCellSize = 0;
   #stableFrames = 0;
   #layoutDirty = true;
+  #lifted: LiftedBlock | null = null;
 
   constructor(
     container: HTMLElement,
@@ -52,7 +61,7 @@ export class BlockLibraryRenderer extends Turntable {
   }
 
   setBlocks(
-    blocks: ResolvedBlockDefinition[]
+    blocks: readonly ResolvedBlockDefinition[]
   ): void {
     this.#meshes.sync(blocks);
     this.#angles.keep(blocks.map((block) => block.id));
@@ -68,6 +77,26 @@ export class BlockLibraryRenderer extends Turntable {
     return index === null ?
       null :
       this.#meshes.entries[index]?.block.id ?? null;
+  }
+
+  lift(
+    blockId: number,
+    target: HTMLCanvasElement
+  ): void {
+    const context = target.getContext("2d");
+    if (context === null) {
+      return;
+    }
+
+    this.#lifted = {
+      blockId,
+      target: context
+    };
+    this.hoveredId = null;
+  }
+
+  drop(): void {
+    this.#lifted = null;
   }
 
   override dispose(): void {
@@ -101,7 +130,6 @@ export class BlockLibraryRenderer extends Turntable {
     }
 
     const { cols, cellSize } = this.#grid;
-    const drawnCellSize = this.#drawnCellSize;
     const scrollTop = this.container.scrollTop;
     const containerHeight = this.container.clientHeight;
     const { entries } = this.#meshes;
@@ -111,18 +139,11 @@ export class BlockLibraryRenderer extends Turntable {
         first: Math.floor(scrollTop / cellSize) * cols,
         last: (Math.ceil((scrollTop + containerHeight) / cellSize) * cols) - 1
       },
-      this.#spins
+      this.#lookFor
     );
 
     for (const { index, mode } of paints) {
-      const col = index % cols;
-      const row = Math.floor(index / cols);
-      const x = col * drawnCellSize;
-      const y = (this.#drawnRows - 1 - row) * drawnCellSize;
-      this.renderer.setViewport(x, y, drawnCellSize, drawnCellSize);
-      this.renderer.setScissor(x, y, drawnCellSize, drawnCellSize);
-      this.renderer.setScissorTest(true);
-      this.renderer.clear();
+      this.#clearCell(index);
       if (mode !== "erase") {
         const { block, mesh } = entries[index];
         this.renderMesh(
@@ -134,12 +155,73 @@ export class BlockLibraryRenderer extends Turntable {
       }
     }
 
+    this.#drawLifted();
     this.renderer.setScissorTest(false);
   }
 
-  readonly #spins = (
+  readonly #lookFor = (
     blockId: number
-  ): boolean => blockId === this.selectedId || blockId === this.hoveredId;
+  ): CellLook => {
+    if (blockId === this.#lifted?.blockId) {
+      return "hidden";
+    }
+
+    return blockId === this.selectedId || blockId === this.hoveredId ?
+      "spinning" :
+      "still";
+  };
+
+  #drawLifted(): void {
+    const lifted = this.#lifted;
+    if (lifted === null) {
+      return;
+    }
+
+    const { entries } = this.#meshes;
+    const index = entries.findIndex((entry) => entry.block.id === lifted.blockId);
+    if (index === -1) {
+      return;
+    }
+
+    const { block, mesh } = entries[index];
+    const { cols } = this.#grid;
+    const size = this.#drawnCellSize * this.renderer.getPixelRatio();
+    const pixels = Math.round(size);
+    this.#clearCell(index);
+    this.renderMesh(mesh, this.#angles.advance(block.id));
+
+    const { canvas } = lifted.target;
+    if (canvas.width !== pixels || canvas.height !== pixels) {
+      canvas.width = pixels;
+      canvas.height = pixels;
+    }
+    lifted.target.clearRect(0, 0, pixels, pixels);
+    lifted.target.drawImage(
+      this.canvas,
+      (index % cols) * size,
+      Math.floor(index / cols) * size,
+      size,
+      size,
+      0,
+      0,
+      pixels,
+      pixels
+    );
+    this.renderer.clear();
+  }
+
+  #clearCell(
+    index: number
+  ): void {
+    const { cols } = this.#grid;
+    const size = this.#drawnCellSize;
+    const x = (index % cols) * size;
+    const y = (this.#drawnRows - 1 - Math.floor(index / cols)) * size;
+    this.renderer.setViewport(x, y, size, size);
+    this.renderer.setScissor(x, y, size, size);
+    this.renderer.setScissorTest(true);
+    this.renderer.clear();
+  }
 
   #relayout(): void {
     this.#layoutDirty = false;
