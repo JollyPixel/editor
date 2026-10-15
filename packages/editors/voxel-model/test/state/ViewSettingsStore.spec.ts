@@ -9,6 +9,7 @@ import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 import {
   DEFAULT_VIEW_SETTINGS,
   ViewSettingsStore,
+  backgroundOf,
   type ViewSettings
 } from "#src/state/index.ts";
 
@@ -25,15 +26,15 @@ describe("ViewSettingsStore", () => {
     const emitted: ViewSettings[] = [];
     store.on("change", (settings) => emitted.push(settings));
 
-    store.update({ shading: "flat", keyLight: "top" });
+    store.update({ lighting: "night", keyLight: "top" });
 
     assert.equal(emitted.length, 1);
-    assert.equal(emitted[0].shading, "flat");
+    assert.equal(emitted[0].lighting, "night");
     assert.deepEqual(
       new ViewSettingsStore({ storage }).settings,
       {
         ...DEFAULT_VIEW_SETTINGS,
-        shading: "flat",
+        lighting: "night",
         keyLight: "top"
       }
     );
@@ -54,10 +55,10 @@ describe("ViewSettingsStore", () => {
     let emitted = 0;
     store.on("change", () => emitted++);
 
-    store.update({ exposure: 2 });
-    store.update({ exposure: 2 });
-    store.update({ exposure: 9, shading: "lit" });
-    store.update({ exposure: 3 });
+    store.update({ keyLight: "top" });
+    store.update({ keyLight: "top" });
+    store.update({ keyLight: "top", lighting: "studio" });
+    store.update({ keyLight: "front-left" });
 
     assert.equal(writes.length, 2);
     assert.equal(emitted, 2);
@@ -65,37 +66,49 @@ describe("ViewSettingsStore", () => {
 
   test("follows the settings from now until unsubscribed", () => {
     const store = new ViewSettingsStore();
-    const shadings: string[] = [];
+    const lightings: string[] = [];
 
-    const unfollow = store.follow((settings) => shadings.push(settings.shading));
-    store.update({ shading: "flat" });
+    const unfollow = store.follow((settings) => lightings.push(settings.lighting));
+    store.update({ lighting: "flat" });
     unfollow();
-    store.update({ shading: "lit" });
+    store.update({ lighting: "night" });
 
-    assert.deepEqual(shadings, ["lit", "flat"]);
+    assert.deepEqual(lightings, ["studio", "flat"]);
   });
 
-  test("clamps numbers and drops unknown or malformed stored values", () => {
+  test("drops unknown or malformed stored values", () => {
     const storage = new MemoryStorageAdapter();
     storage.set("voxel-model:view", JSON.stringify({
-      shading: "wireframe",
-      environment: "yes",
-      environmentIntensity: 9,
-      exposure: -1,
+      lighting: "dusk",
+      background: "red",
+      keyLight: "behind",
+      reflections: "yes",
       glow: "on",
-      glowStrength: 7
+      shadows: "on",
+      exposure: 2
     }));
 
     const store = new ViewSettingsStore({ storage });
 
-    assert.equal(store.settings.shading, "lit");
-    assert.equal(store.settings.environment, true);
-    assert.equal(store.settings.environmentIntensity, 2);
-    assert.equal(store.settings.exposure, 0.25);
-    assert.equal(store.settings.glow, true);
-    assert.equal(store.settings.glowStrength, 3);
+    assert.deepEqual(store.settings, DEFAULT_VIEW_SETTINGS);
 
     storage.set("voxel-model:view", "{not json");
     assert.deepEqual(new ViewSettingsStore({ storage }).settings, DEFAULT_VIEW_SETTINGS);
+  });
+
+  test("shows the lighting's background until a custom colour is picked, then until it is reset", () => {
+    const store = new ViewSettingsStore();
+    const night = backgroundOf({ lighting: "night", background: null });
+    store.update({ lighting: "night" });
+    assert.equal(backgroundOf(store.settings), night);
+
+    store.update({ background: "#AA3300" });
+    assert.equal(backgroundOf(store.settings), "#aa3300");
+    store.update({ lighting: "day" });
+    assert.equal(backgroundOf(store.settings), "#aa3300");
+
+    store.update({ background: null });
+    assert.notEqual(backgroundOf(store.settings), "#aa3300");
+    assert.notEqual(backgroundOf(store.settings), night);
   });
 });

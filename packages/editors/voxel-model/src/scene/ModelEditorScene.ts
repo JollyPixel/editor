@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import * as THREE from "three";
 import { Systems, OrbitFlyCamera } from "@jolly-pixel/engine";
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 import { registerPixelHistory } from "@jolly-pixel/asset.pixel-art/client";
@@ -19,6 +18,7 @@ import {
   MaterialFocusStore,
   MaterialPreviews,
   TabStore,
+  isLit,
   type AnimationFocusStore,
   type PresenceStore,
   type ViewSettingsStore
@@ -130,8 +130,6 @@ export class ModelEditorScene extends Systems.Scene {
     } = this.#options;
 
     const scene = this.world.sceneManager.getSource();
-    scene.background = new THREE.Color("#262627");
-
     scene.add(createModelGrid());
 
     const camera = this.world
@@ -190,19 +188,13 @@ export class ModelEditorScene extends Systems.Scene {
 
     const lighting = new ViewLighting({
       scene,
-      view
+      view,
+      environment: createRoomEnvironment(this.world.renderer.getSource()),
+      casters: () => blocks.visibleMeshes()
     });
-    const unfollowShading = view.follow((settings) => {
-      blocks.lit = settings.shading === "lit";
+    const unfollowLit = view.follow((settings) => {
+      blocks.lit = isLit(settings);
     });
-    lighting
-      .useEnvironment(createRoomEnvironment(this.world.renderer.getSource()))
-      .then(
-        () => this.world.invalidate(),
-        (error: unknown) => {
-          console.warn("[voxel-model] No environment map for the viewport.", error);
-        }
-      );
 
     const textures = new BlockTextures({
       pixels,
@@ -267,10 +259,13 @@ export class ModelEditorScene extends Systems.Scene {
       presence
     });
     viewport.addPreDrawStep(highlight.update);
+    viewport.addPreDrawStep(lighting.shadow.update);
     const glow = new ViewGlow({
       target: viewport,
-      view
+      view,
+      glows: () => blocks.glows
     });
+    viewport.addPreDrawStep(glow.update);
     const waker = new SceneWaker({
       document,
       previews,
@@ -299,7 +294,7 @@ export class ModelEditorScene extends Systems.Scene {
       () => collaboration.dispose(),
       () => textures.dispose(),
       () => lighting.dispose(),
-      unfollowShading,
+      unfollowLit,
       () => blocks.dispose(),
       bindHistoryShortcuts({
         keyboard: this.world.input.keyboard,

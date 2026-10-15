@@ -8,7 +8,9 @@ import { MaterialSurface } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import { ModelBlock } from "#src/scene/blocks/ModelBlock.ts";
+import { FlatShading } from "#src/scene/blocks/FlatShading.ts";
 import { NEUTRAL_HIGHLIGHT_COLOR } from "#src/scene/blocks/PivotMarker.ts";
+import { createBlock } from "./blockHelpers.ts";
 
 type TexturedMesh = THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardNodeMaterial>;
 
@@ -30,7 +32,7 @@ function textureGhostOf(
 
 describe("ModelBlock selection ghost", () => {
   test("adds a dimmed front-face duplicate drawn only where occluded", () => {
-    const block = new ModelBlock();
+    const block = createBlock();
 
     block.showSelectionGhost();
 
@@ -44,7 +46,7 @@ describe("ModelBlock selection ghost", () => {
   });
 
   test("keeps a single ghost when shown twice", () => {
-    const block = new ModelBlock();
+    const block = createBlock();
 
     block.showSelectionGhost();
     const first = textureGhostOf(block);
@@ -54,7 +56,7 @@ describe("ModelBlock selection ghost", () => {
   });
 
   test("is removed on hide", () => {
-    const block = new ModelBlock();
+    const block = createBlock();
     block.showSelectionGhost();
     const ghost = textureGhostOf(block);
 
@@ -65,7 +67,7 @@ describe("ModelBlock selection ghost", () => {
   });
 
   test("follows texture changes while shown", () => {
-    const block = new ModelBlock();
+    const block = createBlock();
     block.showSelectionGhost();
     const texture = new THREE.Texture();
 
@@ -75,7 +77,7 @@ describe("ModelBlock selection ghost", () => {
   });
 
   test("takes the block material while shown", () => {
-    const block = new ModelBlock();
+    const block = createBlock();
     block.showSelectionGhost();
 
     block.surface = MaterialSurface.create({
@@ -90,7 +92,7 @@ describe("ModelBlock selection ghost", () => {
   });
 
   test("repaints material values in place, without rebuilding any shader", () => {
-    const block = new ModelBlock();
+    const block = createBlock();
     block.showSelectionGhost();
     const ghostMaterial = textureGhostOf(block)?.material;
     const versions = [block.mesh.material.version, ghostMaterial?.version];
@@ -109,7 +111,7 @@ describe("ModelBlock selection ghost", () => {
   });
 
   test("emphasize does not create a ghost", () => {
-    const block = new ModelBlock();
+    const block = createBlock();
 
     block.emphasize(0x00ff00);
 
@@ -119,7 +121,7 @@ describe("ModelBlock selection ghost", () => {
 
 describe("ModelBlock material", () => {
   test("renders a material and falls back to the default look without one", () => {
-    const block = new ModelBlock();
+    const block = createBlock();
     const surface = MaterialSurface.create({
       color: "#ff0000",
       opacity: 0.4,
@@ -152,22 +154,36 @@ describe("ModelBlock material", () => {
 });
 
 describe("ModelBlock shading", () => {
-  test("is lit by default and passes flat shading to its selection ghost", () => {
-    const block = new ModelBlock();
+  test("switches to flat without rebuilding its materials", () => {
+    const shading = new FlatShading();
+    const block = new ModelBlock({ flatShading: shading });
     block.showSelectionGhost();
+    const ghost = textureGhostOf(block);
+    const versions = [block.mesh.material.version, ghost?.material.version];
 
-    assert.equal(block.lit, true);
+    shading.flat = true;
 
-    block.lit = false;
+    assert.deepEqual(
+      [block.mesh.material.version, ghost?.material.version],
+      versions
+    );
+  });
 
-    assert.equal(block.mesh.material.lights, false);
-    assert.equal(textureGhostOf(block)?.material.lights, false);
+  test("glows only with an emissive colour and intensity", () => {
+    const block = createBlock();
+    assert.equal(block.glows, false);
+
+    block.surface = MaterialSurface.create({ emissive: "#ff8800", emissiveIntensity: 2 });
+    assert.equal(block.glows, true);
+
+    block.surface = MaterialSurface.create({ emissive: "#ff8800", emissiveIntensity: 0 });
+    assert.equal(block.glows, false);
   });
 });
 
 describe("ModelBlock emphasis", () => {
   test("shows and tints the pivot marker on emphasize, hides it again on clear", () => {
-    const block = new ModelBlock();
+    const block = createBlock();
     assert.equal(pivotMarkerOf(block)?.visible, false);
 
     block.emphasize(0x00ff00);
@@ -179,7 +195,7 @@ describe("ModelBlock emphasis", () => {
   });
 
   test("keeps the local pivot marker visible after a peer's emphasis clears", () => {
-    const block = new ModelBlock();
+    const block = createBlock();
 
     block.pivotMarkerVisible = true;
     block.emphasize(0x00ff00, "bob");
@@ -191,7 +207,7 @@ describe("ModelBlock emphasis", () => {
   });
 
   test("falls back to the remaining peer's color when one of two peers clears", () => {
-    const block = new ModelBlock();
+    const block = createBlock();
 
     block.emphasize(0xff0000, "bob");
     block.emphasize(0x0000ff, "cleo");

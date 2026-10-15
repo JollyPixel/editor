@@ -39,6 +39,17 @@ jolly-pane[key="paint"]::part(content) {
   overflow: hidden;
 }
 
+jolly-pane[key="material"]::part(content) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+jolly-model-editor-material-library {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 jolly-dock {
   flex-shrink: 0;
   grid-row: 1;

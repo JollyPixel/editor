@@ -16,6 +16,7 @@ import type {
 } from "../state/index.ts";
 
 // CONSTANTS
+const kBloomStrength = 1;
 const kBloomRadius = 0.4;
 
 /**
@@ -28,10 +29,12 @@ export interface GlowTarget {
 export interface ViewGlowOptions {
   target: GlowTarget;
   view: ViewSettingsStore;
+  glows: () => boolean;
 }
 
 export class ViewGlow {
   #target: GlowTarget;
+  #glows: () => boolean;
   #unfollow: () => void;
   #strength = uniform(1);
 
@@ -54,16 +57,21 @@ export class ViewGlow {
   #apply = (
     settings: ViewSettings
   ): void => {
-    this.#strength.value = settings.glowStrength;
-    this.#target.postProcessing = settings.glow ? this.#postProcessing : null;
+    this.#strength.value = settings.glow ? kBloomStrength : 0;
   };
 
   constructor(
     options: ViewGlowOptions
   ) {
     this.#target = options.target;
+    this.#glows = options.glows;
     this.#unfollow = options.view.follow(this.#apply);
+    this.update();
   }
+
+  readonly update = (): void => {
+    this.#target.postProcessing = this.#glows() ? this.#postProcessing : null;
+  };
 
   dispose(): void {
     this.#unfollow();

@@ -13,48 +13,38 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import "./viewIcons.ts";
 import {
-  ENVIRONMENT_INTENSITY_RANGE,
-  EXPOSURE_RANGE,
-  GLOW_STRENGTH_RANGE,
+  backgroundOf,
+  isLit,
   type KeyLightPreset,
-  type ShadingMode,
   type ViewSettings,
   type ViewSettingsStore
 } from "../../state/index.ts";
+import { LIGHTING_OPTIONS } from "./lightingOptions.ts";
 
 // CONSTANTS
-const kShadingOptions: JollyOption<ShadingMode>[] = [
-  {
-    value: "lit",
-    label: "Lit",
-    icon: "view-lit"
-  },
-  {
-    value: "flat",
-    label: "Flat",
-    icon: "view-flat"
-  }
-];
+const kLightingHelp = "Flat shows plain colours, Studio a bright room, Day warm sunlight " +
+  "under a blue sky, Night a dark scene where glow stands out. " +
+  "Only you see these settings; the model doesn't change.";
+const kBackgroundHelp = "The viewport colour behind the model. " +
+  "It follows the lighting until you pick your own.";
 const kKeyLightOptions: JollyOption<KeyLightPreset>[] = [
   {
     value: "front-left",
-    label: "Front left"
+    label: "Front left",
+    icon: "key-light-front-left"
   },
   {
     value: "front-right",
-    label: "Front right"
+    label: "Front right",
+    icon: "key-light-front-right"
   },
   {
     value: "top",
-    label: "Top"
+    label: "Top",
+    icon: "key-light-top"
   }
 ];
-
-type NumberSetting = {
-  [TKey in keyof ViewSettings]: ViewSettings[TKey] extends number ? TKey : never;
-}[keyof ViewSettings];
 
 export interface ViewWorkspace {
   view: ViewSettingsStore;
@@ -63,7 +53,9 @@ export interface ViewWorkspace {
 export class ViewPanel extends LitElement {
   static override styles = css`
     :host {
-      display: contents;
+      display: block;
+      flex: 0 0 auto;
+      border-top: 1px solid var(--jolly-border, rgb(128 128 128 / 30%));
     }
 
     jolly-folder::part(header) {
@@ -75,6 +67,23 @@ export class ViewPanel extends LitElement {
       flex-direction: column;
       gap: var(--jolly-row-gap, 4px);
       padding: var(--jolly-space-1, 4px);
+    }
+
+    .background {
+      display: flex;
+      align-items: center;
+      gap: var(--jolly-space-1, 4px);
+    }
+
+    .background jolly-color {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
+    .toggles {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--jolly-row-gap, 4px) var(--jolly-space-2, 8px);
     }
   `;
 
@@ -94,100 +103,81 @@ export class ViewPanel extends LitElement {
       return nothing;
     }
 
-    const lit = settings.shading === "lit";
+    const lit = isLit(settings);
 
     return html`
       <jolly-folder key="view" label="View" .open=${false}>
-        <jolly-button
-          slot="actions"
-          icon=${lit ? "view-lit" : "view-flat"}
-          icon-only
-          label=${lit ? "Shading: Lit" : "Shading: Flat"}
-          title=${lit ? "Lit: switch to Flat" : "Flat: switch to Lit"}
-          @click=${this.#toggleShading}
-        ></jolly-button>
         <div class="fields">
           <jolly-button-group
-            label="Shading"
-            .options=${kShadingOptions}
-            .value=${settings.shading}
-            @jolly-change=${this.#bind("shading")}
+            label="Lighting"
+            description=${kLightingHelp}
+            description-display="tooltip"
+            icon-only
+            .options=${LIGHTING_OPTIONS}
+            .value=${settings.lighting}
+            @jolly-change=${this.#bind("lighting")}
           ></jolly-button-group>
-          <jolly-select
+          <jolly-button-group
             label="Key light"
+            description="Direction of the main light"
+            description-display="tooltip"
+            icon-only
             .options=${kKeyLightOptions}
             .value=${settings.keyLight}
             ?disabled=${!lit}
             @jolly-change=${this.#bind("keyLight")}
-          ></jolly-select>
-          ${this.#renderSlider(
-            settings,
-            "Exposure",
-            "exposure",
-            EXPOSURE_RANGE,
-            !lit
-          )}
-          <jolly-checkbox
-            label="Environment"
-            .value=${settings.environment}
-            ?disabled=${!lit}
-            @jolly-change=${this.#bind("environment")}
-          ></jolly-checkbox>
-          ${this.#renderSlider(
-            settings,
-            "Reflections",
-            "environmentIntensity",
-            ENVIRONMENT_INTENSITY_RANGE,
-            !lit || !settings.environment
-          )}
-          <jolly-checkbox
-            label="Glow"
-            .value=${settings.glow}
-            @jolly-change=${this.#bind("glow")}
-          ></jolly-checkbox>
-          ${this.#renderSlider(
-            settings,
-            "Glow strength",
-            "glowStrength",
-            GLOW_STRENGTH_RANGE,
-            !settings.glow
-          )}
+          ></jolly-button-group>
+          <div class="background">
+            <jolly-color
+              label="Background"
+              description=${kBackgroundHelp}
+              description-display="tooltip"
+              .value=${backgroundOf(settings)}
+              @jolly-input=${this.#bind("background")}
+              @jolly-change=${this.#bind("background")}
+            ></jolly-color>
+            ${settings.background === null ? nothing : html`
+              <jolly-button
+                icon="revert"
+                icon-only
+                label="Use the lighting's background"
+                title="Use the lighting's background"
+                @click=${this.#resetBackground}
+              ></jolly-button>
+            `}
+          </div>
+          <div class="toggles">
+            <jolly-toggle
+              label="Reflections"
+              description="Metal and glossy materials reflect a studio room"
+              description-display="tooltip"
+              .value=${settings.reflections}
+              ?disabled=${!lit}
+              @jolly-change=${this.#bind("reflections")}
+            ></jolly-toggle>
+            <jolly-toggle
+              label="Shadows"
+              description="The key light casts shadows across the model"
+              description-display="tooltip"
+              .value=${settings.shadows}
+              ?disabled=${!lit}
+              @jolly-change=${this.#bind("shadows")}
+            ></jolly-toggle>
+            <jolly-toggle
+              label="Glow"
+              description="Glowing materials bloom on screen"
+              description-display="tooltip"
+              .value=${settings.glow}
+              @jolly-change=${this.#bind("glow")}
+            ></jolly-toggle>
+          </div>
         </div>
       </jolly-folder>
     `;
   }
 
-  #renderSlider(
-    settings: ViewSettings,
-    label: string,
-    key: NumberSetting,
-    bounds: { min: number; max: number; },
-    disabled: boolean
-  ): TemplateResult {
-    const onValue = this.#bind(key);
-
-    return html`
-      <jolly-slider
-        label=${label}
-        min=${bounds.min}
-        max=${bounds.max}
-        step="0.05"
-        .value=${settings[key]}
-        ?disabled=${disabled}
-        @jolly-input=${onValue}
-        @jolly-change=${onValue}
-      ></jolly-slider>
-    `;
-  }
-
-  readonly #toggleShading = (
-    event: Event
-  ): void => {
-    event.stopPropagation();
-    const view = this.#workspace.current?.view;
-    view?.update({
-      shading: view.settings.shading === "lit" ? "flat" : "lit"
-    });
+  readonly #resetBackground = (): void => {
+    this.#workspace.current?.view.update({ background: null });
   };
 
   #bind<TKey extends keyof ViewSettings>(

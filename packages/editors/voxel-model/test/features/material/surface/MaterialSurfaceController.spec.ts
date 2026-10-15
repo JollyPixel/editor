@@ -117,7 +117,7 @@ describe("MaterialSurfaceController", () => {
     const harness = createMaterialHarness();
     assert.equal(harness.surface.lit, true);
 
-    harness.view.update({ shading: "flat" });
+    harness.view.update({ lighting: "flat" });
 
     assert.equal(harness.surface.lit, false);
   });

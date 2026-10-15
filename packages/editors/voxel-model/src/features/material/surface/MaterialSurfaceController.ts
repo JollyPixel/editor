@@ -12,11 +12,12 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type {
-  MaterialFocusStore,
-  MaterialPreviews,
-  PresenceStore,
-  ViewSettingsStore
+import {
+  isLit,
+  type MaterialFocusStore,
+  type MaterialPreviews,
+  type PresenceStore,
+  type ViewSettingsStore
 } from "../../../state/index.ts";
 import type { ModelAccessSignals } from "../../../access/ModelAccess.ts";
 
@@ -84,7 +85,9 @@ export class MaterialSurfaceController {
   }
 
   get lit(): boolean {
-    return this.#workspace?.view.settings.shading !== "flat";
+    const view = this.#workspace?.view;
+
+    return view === undefined || isLit(view.settings);
   }
 
   attach(

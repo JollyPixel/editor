@@ -5,7 +5,6 @@ export const materialLibraryStyles = css`
   :host {
     display: flex;
     flex-direction: column;
-    height: 100%;
     min-height: 0;
     box-sizing: border-box;
     container-type: inline-size;

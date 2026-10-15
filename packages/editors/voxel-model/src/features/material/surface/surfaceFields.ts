@@ -109,7 +109,7 @@ export const SURFACE_GROUPS: readonly SurfaceGroup[] = [
   }
 ];
 
-export const UNLIT_NOTE = "Roughness and metalness show with View > Shading: Lit.";
+export const UNLIT_NOTE = "Roughness and metalness show with View > Lighting: Studio or Night.";
 
 export function sliderMax(
   field: Extract<SurfaceField, { control: "slider"; }>

@@ -29,6 +29,7 @@ import {
   materialUses,
   selectedBlock
 } from "../support/scene.ts";
+import { pickLighting } from "../support/view.ts";
 
 test("a block's swatch opens the Material tab, where a new material goes to it", async({ page }) => {
   await openMaterial(page, "Block");
@@ -149,7 +150,7 @@ test("the fields sit in Color, Surface and Glow, which say when they cannot show
 
   const note = group("Surface").getByText("Roughness and metalness show with");
   await expect(note).toBeHidden();
-  await page.getByRole("button", { name: "Shading: Lit" }).click();
+  await pickLighting(page, "Flat");
   await expect(note).toBeVisible();
 });
 
