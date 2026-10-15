@@ -109,9 +109,6 @@ export const SURFACE_GROUPS: readonly SurfaceGroup[] = [
   }
 ];
 
-export const MATERIAL_HELP = "Editing a material changes every block that uses it; " +
-  "the header counts them.";
-
 export const UNLIT_NOTE = "Roughness and metalness show with View > Shading: Lit.";
 
 export function sliderMax(
