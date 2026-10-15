@@ -75,10 +75,6 @@ export const materialLibraryStyles = css`
     padding: var(--jolly-space-1, 4px);
   }
 
-  .help-toggle {
-    margin-left: auto;
-  }
-
   jolly-tree {
     flex: 1 1 auto;
     overflow: auto;
@@ -119,14 +115,9 @@ export const materialLibraryStyles = css`
     font-size: 0.9em;
   }
 
-  .empty,
-  .help {
+  .empty {
     margin: 0;
     padding: var(--jolly-space-2, 8px);
     color: var(--jolly-text-muted, inherit);
-  }
-
-  .help {
-    padding-bottom: 0;
   }
 `;

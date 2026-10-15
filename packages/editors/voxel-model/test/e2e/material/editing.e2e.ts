@@ -164,20 +164,14 @@ test("the new material menu shows each preset's swatch", async({ page }) => {
   }
 });
 
-test("the material help toggles its descriptions and is remembered", async({ page }) => {
+test("hovering a material field's information button shows its description", async({ page }) => {
   const library = await openMaterial(page, "Block");
   await newMaterial(page, "Material");
-  const roughnessHelp = library.getByText("How blurred reflections are");
+  const roughnessHelp = library.getByRole("tooltip").filter({ hasText: "How blurred reflections are" });
   await expect(roughnessHelp).toBeHidden();
 
-  await library.getByRole("button", { name: "Help" }).click();
+  await library.getByRole("button", { name: "More information about Roughness" }).hover();
   await expect(roughnessHelp).toBeVisible();
-  await expect(library.getByText("Editing a material changes every block")).toBeVisible();
-
-  await page.reload();
-  await waitForEditor(page);
-  await openMaterial(page, "Block");
-  await expect(materialTab(page).getByText("How blurred reflections are")).toBeVisible();
 });
 
 test("the Build tab keeps its texture canvas after a visit to the Material tab", async({ page }) => {

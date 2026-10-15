@@ -5,12 +5,8 @@ import {
   nothing,
   type TemplateResult
 } from "lit";
+import { query } from "lit/decorators.js";
 import {
-  query,
-  state
-} from "lit/decorators.js";
-import {
-  LocalStorageAdapter,
   type ContextMenu,
   type JollyChangeDetail,
   type PresencePeer,
@@ -48,7 +44,6 @@ import {
   type MaterialPreset
 } from "./library/materialPresets.ts";
 import {
-  MATERIAL_HELP,
   SURFACE_GROUPS,
   UNLIT_NOTE,
   sliderMax,
@@ -57,13 +52,7 @@ import {
 } from "./surface/surfaceFields.ts";
 import { surfaceGlows } from "./materialSwatch.ts";
 
-// CONSTANTS
-const kHelpKey = "voxel-model:material-help";
-
 export class MaterialLibrary extends LitElement {
-  @state()
-  declare private help: boolean;
-
   @query("jolly-tree")
   declare private tree: Tree;
 
@@ -85,14 +74,8 @@ export class MaterialLibrary extends LitElement {
     (id) => this.#controller.menuFor(id)
   );
   #surface = new MaterialSurfaceController(this);
-  #preferences = new LocalStorageAdapter();
 
   static override styles = materialLibraryStyles;
-
-  constructor() {
-    super();
-    this.help = this.#preferences.get(kHelpKey) === "on";
-  }
 
   attach(
     workspace: MaterialWorkspace & MaterialSurfaceWorkspace
@@ -181,15 +164,6 @@ export class MaterialLibrary extends LitElement {
           ?disabled=${!actOnEdited}
           @click=${this.#tool(state.editedId, "delete")}
         ></jolly-button>
-        <jolly-button
-          class="help-toggle"
-          icon="info"
-          icon-only
-          label="Help"
-          title=${this.help ? "Hide help" : "Show help"}
-          aria-pressed=${this.help ? "true" : "false"}
-          @click=${this.#toggleHelp}
-        ></jolly-button>
       </div>
     `;
   }
@@ -209,7 +183,6 @@ export class MaterialLibrary extends LitElement {
   ): TemplateResult {
     return html`
       ${this.#renderEditors()}
-      ${this.help ? html`<p class="help">${MATERIAL_HELP}</p>` : nothing}
       <div class="fields">
         <jolly-text
           label="Name"
@@ -295,7 +268,6 @@ export class MaterialLibrary extends LitElement {
     edited: ModelMaterialJSON
   ): TemplateResult {
     const { surface } = edited;
-    const description = this.help ? field.help : "";
     const path = fieldPath(edited.id, field.key);
     const readOnly = !this.#surface.editable;
 
@@ -303,7 +275,8 @@ export class MaterialLibrary extends LitElement {
       html`
         <jolly-color
           label=${field.label}
-          description=${description}
+          description=${field.help}
+          description-display="tooltip"
           path=${path}
           ?readonly=${readOnly}
           .value=${surface[field.key]}
@@ -314,7 +287,8 @@ export class MaterialLibrary extends LitElement {
       html`
         <jolly-slider
           label=${field.label}
-          description=${description}
+          description=${field.help}
+          description-display="tooltip"
           path=${path}
           min="0"
           max=${sliderMax(field)}
@@ -325,11 +299,6 @@ export class MaterialLibrary extends LitElement {
           @jolly-change=${this.#listen(field.key, this.#surface.commit)}
         ></jolly-slider>
       `;
-  }
-
-  #toggleHelp(): void {
-    this.help = !this.help;
-    this.#preferences.set(kHelpKey, this.help ? "on" : "off");
   }
 
   #openPresetMenu(
