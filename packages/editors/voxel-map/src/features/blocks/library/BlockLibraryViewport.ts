@@ -18,7 +18,8 @@ import type {
 } from "./BlockGrid.ts";
 import {
   BlockReorderController,
-  type BlockMoveDetail
+  type BlockMoveDetail,
+  type ClientPoint
 } from "./BlockReorderController.ts";
 import {
   PeerMarks,
@@ -89,11 +90,20 @@ export class BlockLibraryViewport extends LitElement {
   @state()
   private declare _grid: BlockGrid | null;
 
+  @state()
+  private declare _laidOut: readonly ResolvedBlockDefinition[];
+
   @query(".scroller")
   declare private _scroller: HTMLDivElement;
 
   @query(".grip")
   declare private _grip: HTMLDivElement | null;
+
+  @query(".ghost")
+  declare private _ghost: HTMLDivElement | null;
+
+  @query(".ghost > canvas")
+  declare private _ghostCanvas: HTMLCanvasElement | null;
 
   #renderer: BlockLibraryRenderer | null = null;
   #shown = false;
@@ -101,9 +111,10 @@ export class BlockLibraryViewport extends LitElement {
   #resizeHandle: ResizeHandle | null = null;
   #reorder = new BlockReorderController(this, {
     scroller: () => this._scroller,
+    blocks: () => this.blocks,
     blockAt: (clientX, clientY) => this.#blockIdAt(clientX, clientY),
-    insertIndexAt: (clientX, clientY) => this.#insertIndexAt(clientX, clientY),
-    blockIds: () => this.blocks.map((block) => block.id),
+    cellOrigin: (index) => this.#cellOrigin(index),
+    landingIndexAt: (clientX, clientY) => this.#landingIndexAt(clientX, clientY),
     onMove: (detail) => {
       this.dispatchEvent(new CustomEvent<BlockMoveDetail>(kBlockMoveEvent, {
         detail,
@@ -126,6 +137,7 @@ export class BlockLibraryViewport extends LitElement {
     this.storage = new LocalStorageAdapter();
     this.sized = false;
     this._grid = null;
+    this._laidOut = [];
   }
 
   override connectedCallback() {
@@ -146,13 +158,23 @@ export class BlockLibraryViewport extends LitElement {
     this.#disconnectResizeHandle();
   }
 
+  override willUpdate(): void {
+    this._laidOut = this.#reorder.arranged;
+  }
+
   override updated(
     changed: Map<string, unknown>
   ): void {
     if (changed.has("layout") || this.#resizeHandle?.handleElt !== this._grip) {
       this.#connectResizeHandle();
     }
+    this.#syncRenderer(changed);
+    this.#syncGhost();
+  }
 
+  #syncRenderer(
+    changed: Map<string, unknown>
+  ): void {
     if (!this.#shown) {
       return;
     }
@@ -162,8 +184,8 @@ export class BlockLibraryViewport extends LitElement {
     if (changed.has("sources") || this.#renderer === null) {
       this.#build();
     }
-    else if (changed.has("blocks")) {
-      this.#renderer?.setBlocks(this.blocks);
+    else if (changed.has("_laidOut")) {
+      this.#renderer?.setBlocks(this._laidOut);
     }
     else {
       return;
@@ -177,7 +199,7 @@ export class BlockLibraryViewport extends LitElement {
   ): void {
     const grid = this._grid;
     const scroller = this._scroller;
-    const index = this.blocks.findIndex((block) => block.id === id);
+    const index = this._laidOut.findIndex((block) => block.id === id);
     if (grid === null || index < 0 || !scroller) {
       return;
     }
@@ -217,7 +239,7 @@ export class BlockLibraryViewport extends LitElement {
         ${cells.map((cell) => this.#renderMarker(cell))}
       </div>
       <div class="layer drop">
-        ${this.#renderInsertion()}
+        ${this.#renderLanding()}
       </div>
       <div class="layer actions">
         ${this.#renderAddCell()}
@@ -225,7 +247,8 @@ export class BlockLibraryViewport extends LitElement {
     </div>
     ${this.layout === "compact" ?
       html`<div class="grip" aria-label="Block library height"></div>` :
-      nothing}`;
+      nothing}
+    ${this.#renderGhost()}`;
   }
 
   readonly #onVisibility = (
@@ -335,7 +358,7 @@ export class BlockLibraryViewport extends LitElement {
       return nothing;
     }
 
-    return this.blocks.map((block, index) => {
+    return this._laidOut.map((block, index) => {
       if (!this.unused.has(block.id)) {
         return nothing;
       }
@@ -354,7 +377,7 @@ export class BlockLibraryViewport extends LitElement {
       return nothing;
     }
 
-    return this.blocks.map((block, index) => {
+    return this._laidOut.map((block, index) => {
       const swatch = this.swatches.get(block.id);
       if (swatch === undefined) {
         return nothing;
@@ -371,23 +394,55 @@ export class BlockLibraryViewport extends LitElement {
     });
   }
 
-  #renderInsertion() {
+  #renderLanding() {
     const grid = this._grid;
-    const insertAt = this.#reorder.insertAt;
-    if (grid === null || insertAt === null) {
+    const drag = this.#reorder.drag;
+    if (grid === null || drag === null) {
       return nothing;
     }
 
-    const marker = grid.insertMarker(insertAt);
+    return html`<div
+      class="landing"
+      style=${grid.cellAt(drag.landing, kCellInset).style}
+    ></div>`;
+  }
+
+  #renderGhost() {
+    const grid = this._grid;
+    const drag = this.#reorder.drag;
+    if (grid === null || drag === null) {
+      return nothing;
+    }
+
+    const x = drag.pointer.clientX - drag.grab.clientX;
+    const y = drag.pointer.clientY - drag.grab.clientY;
 
     return html`<div
-      class="insertion"
+      class="ghost"
+      popover="manual"
+      aria-hidden="true"
       style=${[
-        `left:${marker.x}px`,
-        `top:${marker.y}px`,
-        `height:${marker.height}px`
+        `width:${grid.cellSize}px`,
+        `height:${grid.cellSize}px`,
+        `translate:${x}px ${y}px`
       ].join(";")}
-    ></div>`;
+    ><canvas></canvas></div>`;
+  }
+
+  #syncGhost(): void {
+    const ghost = this._ghost;
+    const canvas = this._ghostCanvas;
+    const drag = this.#reorder.drag;
+    if (ghost === null || canvas === null || drag === null) {
+      this.#renderer?.drop();
+
+      return;
+    }
+
+    if (!ghost.matches(":popover-open")) {
+      ghost.showPopover();
+    }
+    this.#renderer?.lift(drag.blockId, canvas);
   }
 
   #renderOptions() {
@@ -396,7 +451,7 @@ export class BlockLibraryViewport extends LitElement {
       return nothing;
     }
 
-    return this.blocks.map((block, index) => html`<div
+    return this._laidOut.map((block, index) => html`<div
       class="option"
       role="option"
       aria-label=${block.name}
@@ -443,7 +498,7 @@ export class BlockLibraryViewport extends LitElement {
     }
 
     const cells: MarkedCell[] = [];
-    this.blocks.forEach((block, index) => {
+    this._laidOut.forEach((block, index) => {
       const view = this.marks.createView(block.id);
       if (view === null) {
         return;
@@ -462,7 +517,7 @@ export class BlockLibraryViewport extends LitElement {
     this.#renderer?.dispose();
     this.#renderer = new BlockLibraryRenderer(this._scroller, this.sources);
     this.#renderer.selectedId = this.selectedId;
-    this.#renderer.setBlocks(this.blocks);
+    this.#renderer.setBlocks(this._laidOut);
     this.#renderer.onLayoutChange = () => this.#syncGrid();
     this.#renderer.onContextLost = () => {
       this.#build();
@@ -501,7 +556,25 @@ export class BlockLibraryViewport extends LitElement {
     }
   }
 
-  #insertIndexAt(
+  #cellOrigin(
+    index: number
+  ): ClientPoint | null {
+    const grid = this._grid;
+    const canvas = this.#renderer?.canvas;
+    if (grid === null || canvas === undefined) {
+      return null;
+    }
+
+    const bounds = canvas.getBoundingClientRect();
+    const cell = grid.cellAt(index);
+
+    return {
+      clientX: bounds.left + cell.x,
+      clientY: bounds.top + cell.y
+    };
+  }
+
+  #landingIndexAt(
     clientX: number,
     clientY: number
   ): number | null {
@@ -513,7 +586,7 @@ export class BlockLibraryViewport extends LitElement {
 
     const bounds = canvas.getBoundingClientRect();
 
-    return grid.insertIndex(
+    return grid.landingIndex(
       clientX - bounds.left,
       clientY - bounds.top,
       this.blocks.length

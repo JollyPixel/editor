@@ -6,12 +6,6 @@ export interface BlockScrollWindow {
   height: number;
 }
 
-export interface BlockInsertMarker {
-  x: number;
-  y: number;
-  height: number;
-}
-
 export class BlockCell {
   readonly x: number;
   readonly y: number;
@@ -65,21 +59,6 @@ export class BlockGrid {
     return new BlockGrid(cols, Math.max(1, Math.floor(width / cols)));
   }
 
-  static moveTarget(
-    fromIndex: number,
-    insertAt: number,
-    count: number
-  ): number {
-    if (fromIndex < 0 || count <= 0) {
-      return -1;
-    }
-
-    const target = fromIndex < insertAt ? insertAt - 1 : insertAt;
-    const clamped = Math.min(Math.max(target, 0), count - 1);
-
-    return clamped === fromIndex ? -1 : clamped;
-  }
-
   readonly cols: number;
   readonly cellSize: number;
 
@@ -124,33 +103,16 @@ export class BlockGrid {
     return (row * this.cols) + col;
   }
 
-  insertIndex(
+  landingIndex(
     px: number,
     py: number,
     count: number
   ): number {
     const { cols, cellSize } = this;
-    if (count <= 0) {
-      return 0;
-    }
+    const col = Math.min(Math.max(Math.floor(px / cellSize), 0), cols - 1);
+    const row = Math.max(Math.floor(py / cellSize), 0);
 
-    const lastRow = Math.floor(count / cols);
-    const row = Math.min(Math.max(Math.floor(py / cellSize), 0), lastRow);
-    const slot = Math.min(Math.max(Math.round(px / cellSize), 0), cols);
-
-    return Math.min((row * cols) + slot, count);
-  }
-
-  insertMarker(
-    insertAt: number
-  ): BlockInsertMarker {
-    const { cols, cellSize } = this;
-
-    return {
-      x: (insertAt % cols) * cellSize,
-      y: Math.floor(insertAt / cols) * cellSize,
-      height: cellSize
-    };
+    return Math.min((row * cols) + col, Math.max(count - 1, 0));
   }
 
   equals(

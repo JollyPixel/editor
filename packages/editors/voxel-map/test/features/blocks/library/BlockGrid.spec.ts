@@ -150,36 +150,30 @@ describe("BlockCell", () => {
   });
 });
 
-describe("BlockGrid.insertIndex", () => {
+describe("BlockGrid.landingIndex", () => {
   const grid = new BlockGrid(4, 50);
 
-  it("inserts before the cell the pointer sits on the left of", () => {
-    assert.equal(grid.insertIndex(60, 10, 8), 1);
+  it("lands on the cell under the pointer", () => {
+    assert.equal(grid.landingIndex(60, 10, 8), 1);
+    assert.equal(grid.landingIndex(10, 60, 8), 4);
   });
 
-  it("inserts after the cell the pointer sits on the right of", () => {
-    assert.equal(grid.insertIndex(90, 10, 8), 2);
+  it("clamps a pointer beside the columns to the nearest one", () => {
+    assert.equal(grid.landingIndex(-20, 60, 8), 4);
+    assert.equal(grid.landingIndex(500, 10, 8), 3);
   });
 
-  it("accounts for the row the pointer is on", () => {
-    assert.equal(grid.insertIndex(10, 60, 8), 4);
+  it("clamps a pointer above the grid to the first row", () => {
+    assert.equal(grid.landingIndex(60, -30, 8), 1);
   });
 
-  it("clamps to the last populated row", () => {
-    assert.equal(grid.insertIndex(10, 900, 6), 4);
-  });
-
-  it("never exceeds the block count", () => {
-    assert.equal(grid.insertIndex(500, 10, 3), 3);
+  it("lands a pointer past the last block on the last block", () => {
+    assert.equal(grid.landingIndex(10, 900, 6), 5);
+    assert.equal(grid.landingIndex(120, 60, 6), 5);
   });
 
   it("returns 0 for an empty grid", () => {
-    assert.equal(grid.insertIndex(120, 80, 0), 0);
-  });
-
-  it("appends when the pointer is over the add cell of a new row", () => {
-    assert.equal(grid.insertIndex(10, 60, 4), 4);
-    assert.equal(grid.insertIndex(40, 60, 4), 4);
+    assert.equal(grid.landingIndex(120, 80, 0), 0);
   });
 });
 
@@ -200,48 +194,5 @@ describe("BlockGrid.rows", () => {
 
   it("treats a non-positive column count as one column", () => {
     assert.equal(new BlockGrid(0, 1).rows(2), 3);
-  });
-});
-
-describe("BlockGrid.moveTarget", () => {
-  it("shifts a forward move down by the vacated slot", () => {
-    assert.equal(BlockGrid.moveTarget(0, 3, 5), 2);
-  });
-
-  it("keeps a backward move on the insertion slot", () => {
-    assert.equal(BlockGrid.moveTarget(4, 1, 5), 1);
-  });
-
-  it("rejects a move that changes nothing", () => {
-    assert.equal(BlockGrid.moveTarget(2, 2, 5), -1);
-    assert.equal(BlockGrid.moveTarget(2, 3, 5), -1);
-  });
-
-  it("rejects an unknown source", () => {
-    assert.equal(BlockGrid.moveTarget(-1, 2, 5), -1);
-  });
-
-  it("clamps an insertion past the end", () => {
-    assert.equal(BlockGrid.moveTarget(0, 99, 5), 4);
-  });
-});
-
-describe("BlockGrid.insertMarker", () => {
-  const grid = new BlockGrid(4, 50);
-
-  it("sits on the leading edge of the slot", () => {
-    assert.deepEqual(grid.insertMarker(1), {
-      x: 50,
-      y: 0,
-      height: 50
-    });
-  });
-
-  it("wraps an end-of-row slot onto the next row", () => {
-    assert.deepEqual(grid.insertMarker(4), {
-      x: 0,
-      y: 50,
-      height: 50
-    });
   });
 });

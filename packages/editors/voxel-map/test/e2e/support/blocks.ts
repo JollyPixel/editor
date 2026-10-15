@@ -16,6 +16,8 @@ export class BlockLibrary {
   readonly canvas: Locator;
   readonly heightGrip: Locator;
   readonly menu: Locator;
+  readonly ghost: Locator;
+  readonly landing: Locator;
   readonly #root: Locator;
 
   constructor(
@@ -33,6 +35,44 @@ export class BlockLibrary {
       name: "Block library height"
     });
     this.menu = scope.getByRole("menu", { name: "Block actions" });
+    this.ghost = scope.locator("block-library-viewport .ghost");
+    this.landing = scope.locator("block-library-viewport .landing");
+  }
+
+  names(): Promise<string[]> {
+    return this.options.evaluateAll(
+      (options) => options.map((option) => option.getAttribute("aria-label") ?? "")
+    );
+  }
+
+  ghostPainted(): Promise<boolean> {
+    return this.ghost.locator("canvas").evaluate((canvas: HTMLCanvasElement) => {
+      const { data } = canvas
+        .getContext("2d")!
+        .getImageData(0, 0, canvas.width, canvas.height);
+
+      return data.some((value, index) => index % 4 === 3 && value > 0);
+    });
+  }
+
+  async lift(
+    name: string
+  ): Promise<void> {
+    const mouse = this.#root.page().mouse;
+    const { x, y } = await center(this.option(name));
+    await mouse.move(x, y);
+    await mouse.down();
+  }
+
+  async carryOver(
+    name: string
+  ): Promise<void> {
+    const { x, y } = await center(this.option(name));
+    await this.#root.page().mouse.move(x, y, { steps: 2 });
+  }
+
+  async drop(): Promise<void> {
+    await this.#root.page().mouse.up();
   }
 
   option(
@@ -78,6 +118,20 @@ export class BlockLibrary {
       menu = menu.getByRole("menu", { name: label });
     }
   }
+}
+
+async function center(
+  locator: Locator
+): Promise<{ x: number; y: number; }> {
+  const box = await locator.boundingBox();
+  if (box === null) {
+    throw new Error("The block option is not laid out");
+  }
+
+  return {
+    x: box.x + (box.width / 2),
+    y: box.y + (box.height / 2)
+  };
 }
 
 export class BlocksPane {

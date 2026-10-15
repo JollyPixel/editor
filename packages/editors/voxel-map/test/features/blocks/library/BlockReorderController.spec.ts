@@ -21,7 +21,9 @@ import {
 const kCellWidth = 10;
 const kBlockIds = [11, 12, 13];
 
-function setup() {
+function setup(
+  blockIds: readonly number[] = kBlockIds
+) {
   const scroller = document.createElement("div");
   document.body.append(scroller);
   const controllers: ReactiveController[] = [];
@@ -37,11 +39,24 @@ function setup() {
     updateComplete: Promise.resolve(true)
   };
   const moves: BlockMoveDetail[] = [];
+  const blocks = blockIds.map((id) => {
+    return { id };
+  });
+  const layout = { top: 0 };
   const reorder = new BlockReorderController(host, {
     scroller: () => scroller,
-    blockAt: (clientX) => kBlockIds[Math.floor(clientX / kCellWidth)] ?? null,
-    insertIndexAt: (clientX) => Math.round(clientX / kCellWidth),
-    blockIds: () => kBlockIds,
+    blocks: () => blocks,
+    blockAt: (clientX) => blockIds[Math.floor(clientX / kCellWidth)] ?? null,
+    cellOrigin: (index) => {
+      return {
+        clientX: index * kCellWidth,
+        clientY: layout.top
+      };
+    },
+    landingIndexAt: (clientX) => Math.min(
+      Math.floor(clientX / kCellWidth),
+      blockIds.length - 1
+    ),
     onMove: (detail) => moves.push(detail)
   });
 
@@ -49,6 +64,8 @@ function setup() {
     scroller,
     controllers,
     reorder,
+    blocks,
+    layout,
     moves,
     updates: () => updates
   };
@@ -75,7 +92,7 @@ describe("BlockReorderController", () => {
     assert.deepEqual(controllers, [reorder]);
   });
 
-  test("moves the pressed block to the insertion point past the threshold", () => {
+  test("moves the pressed block to its landing cell past the threshold", () => {
     const { scroller, reorder, moves, updates } = setup();
 
     reorder.begin(pointer("pointerdown", 2));
@@ -84,14 +101,64 @@ describe("BlockReorderController", () => {
 
     scroller.dispatchEvent(pointer("pointermove", 28));
     assert.equal(reorder.dragging, true);
-    assert.equal(reorder.insertAt, 3);
+    assert.equal(reorder.drag?.blockId, 11);
+    assert.equal(reorder.drag?.landing, 2);
     assert.ok(updates() > 0);
 
     scroller.dispatchEvent(pointer("pointerup", 28));
     assert.equal(reorder.dragging, false);
-    assert.equal(reorder.insertAt, null);
+    assert.equal(reorder.drag, null);
     assert.deepEqual(moves, [{ id: 11, toIndex: 2 }]);
     assert.equal(reorder.consumeClick(), true);
+    assert.equal(reorder.consumeClick(), false);
+  });
+
+  test("arranges the lifted block at its landing cell while dragging", () => {
+    const { scroller, reorder, blocks } = setup();
+
+    assert.equal(reorder.arranged, blocks);
+
+    reorder.begin(pointer("pointerdown", 2));
+    scroller.dispatchEvent(pointer("pointermove", 28));
+    const arranged = reorder.arranged;
+    assert.deepEqual(arranged.map((block) => block.id), [12, 13, 11]);
+
+    scroller.dispatchEvent(pointer("pointermove", 29));
+    assert.equal(reorder.arranged, arranged);
+
+    scroller.dispatchEvent(pointer("pointermove", 15));
+    assert.deepEqual(reorder.arranged.map((block) => block.id), [12, 11, 13]);
+
+    scroller.dispatchEvent(new KeyboardEvent("keydown", {
+      key: "Escape",
+      bubbles: true
+    }));
+    assert.equal(reorder.arranged, blocks);
+  });
+
+  test("keeps the grab offset measured at the press while the list scrolls", () => {
+    const { scroller, reorder, layout } = setup();
+
+    reorder.begin(pointer("pointerdown", 13, { clientY: 4 }));
+    layout.top = -10;
+    scroller.dispatchEvent(pointer("pointermove", 28, { clientY: 4 }));
+
+    assert.deepEqual(reorder.drag?.grab, {
+      clientX: 3,
+      clientY: 4
+    });
+  });
+
+  test("leaves a single block to the click", () => {
+    const { scroller, reorder, moves } = setup([11]);
+
+    reorder.begin(pointer("pointerdown", 2));
+    scroller.dispatchEvent(pointer("pointermove", 28));
+    scroller.dispatchEvent(pointer("pointerup", 28));
+
+    assert.equal(scroller.hasPointerCapture(1), false);
+    assert.equal(reorder.dragging, false);
+    assert.deepEqual(moves, []);
     assert.equal(reorder.consumeClick(), false);
   });
 

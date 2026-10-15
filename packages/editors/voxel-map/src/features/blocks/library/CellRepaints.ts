@@ -10,9 +10,11 @@ export interface CellRange {
   last: number;
 }
 
+export type CellLook = "still" | "spinning" | "hidden";
+
 export interface CellPaint {
   index: number;
-  mode: "still" | "spinning" | "erase";
+  mode: Exclude<CellLook, "hidden"> | "erase";
 }
 
 export class CellRepaints<TMesh> {
@@ -25,7 +27,7 @@ export class CellRepaints<TMesh> {
   * due(
     cells: readonly RepaintedCell<TMesh>[],
     range: CellRange,
-    spinning: (blockId: number) => boolean
+    lookFor: (blockId: number) => CellLook
   ): IterableIterator<CellPaint> {
     for (let index = cells.length; index < this.#painted.length; index++) {
       if (this.#painted[index] !== undefined) {
@@ -40,14 +42,22 @@ export class CellRepaints<TMesh> {
     const last = Math.min(range.last, cells.length - 1);
     for (let index = Math.max(range.first, 0); index <= last; index++) {
       const { block, mesh } = cells[index];
-      if (spinning(block.id)) {
+      const look = lookFor(block.id);
+      if (look === "spinning") {
         this.#painted[index] = null;
         yield {
           index,
           mode: "spinning"
         };
       }
-      else if (this.#painted[index] !== mesh) {
+      else if (look === "hidden" && this.#painted[index] !== undefined) {
+        this.#painted[index] = undefined;
+        yield {
+          index,
+          mode: "erase"
+        };
+      }
+      else if (look === "still" && this.#painted[index] !== mesh) {
         this.#painted[index] = mesh;
         yield {
           index,

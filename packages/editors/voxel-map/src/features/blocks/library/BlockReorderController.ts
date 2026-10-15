@@ -9,9 +9,6 @@ import {
   type PointerDragSessionHandle
 } from "@jolly-pixel/ui";
 
-// Import Internal Dependencies
-import { BlockGrid } from "./BlockGrid.ts";
-
 // CONSTANTS
 const kDragThreshold = 4;
 const kAutoScrollMargin = 24;
@@ -22,30 +19,52 @@ export interface BlockMoveDetail {
   toIndex: number;
 }
 
-export interface BlockReorderOptions {
+export interface ReorderableBlock {
+  readonly id: number;
+}
+
+export interface ClientPoint {
+  clientX: number;
+  clientY: number;
+}
+
+export interface BlockReorderOptions<TBlock extends ReorderableBlock> {
   scroller(): HTMLElement;
+  blocks(): readonly TBlock[];
   blockAt(clientX: number, clientY: number): number | null;
-  insertIndexAt(clientX: number, clientY: number): number | null;
-  blockIds(): readonly number[];
+  cellOrigin(index: number): ClientPoint | null;
+  landingIndexAt(clientX: number, clientY: number): number | null;
   onMove(detail: BlockMoveDetail): void;
 }
 
-interface PendingMove {
-  blockId: number;
-  fromIndex: number;
+export interface BlockDrag {
+  readonly blockId: number;
+  readonly fromIndex: number;
+  readonly grab: ClientPoint;
+  readonly pointer: ClientPoint;
+  readonly landing: number;
 }
 
-export class BlockReorderController implements ReactiveController {
+interface Arrangement<TBlock> {
+  readonly source: readonly TBlock[];
+  readonly fromIndex: number;
+  readonly landing: number;
+  readonly blocks: readonly TBlock[];
+}
+
+export class BlockReorderController<
+  TBlock extends ReorderableBlock
+> implements ReactiveController {
   readonly #host: ReactiveControllerHost;
-  readonly #options: BlockReorderOptions;
+  readonly #options: BlockReorderOptions<TBlock>;
   #session: PointerDragSessionHandle | null = null;
-  #dragging = false;
-  #insertAt: number | null = null;
+  #drag: BlockDrag | null = null;
+  #arrangement: Arrangement<TBlock> | null = null;
   #suppressClick = false;
 
   constructor(
     host: ReactiveControllerHost,
-    options: BlockReorderOptions
+    options: BlockReorderOptions<TBlock>
   ) {
     this.#host = host;
     this.#options = options;
@@ -53,11 +72,40 @@ export class BlockReorderController implements ReactiveController {
   }
 
   get dragging(): boolean {
-    return this.#dragging;
+    return this.#drag !== null;
   }
 
-  get insertAt(): number | null {
-    return this.#insertAt;
+  get drag(): BlockDrag | null {
+    return this.#drag;
+  }
+
+  get arranged(): readonly TBlock[] {
+    const source = this.#options.blocks();
+    const drag = this.#drag;
+    if (drag === null || drag.landing === drag.fromIndex) {
+      return source;
+    }
+
+    const cached = this.#arrangement;
+    if (
+      cached?.source === source &&
+      cached.fromIndex === drag.fromIndex &&
+      cached.landing === drag.landing
+    ) {
+      return cached.blocks;
+    }
+
+    const blocks = source.slice();
+    const [lifted] = blocks.splice(drag.fromIndex, 1);
+    blocks.splice(drag.landing, 0, lifted);
+    this.#arrangement = {
+      source,
+      fromIndex: drag.fromIndex,
+      landing: drag.landing,
+      blocks
+    };
+
+    return blocks;
   }
 
   begin(
@@ -67,31 +115,47 @@ export class BlockReorderController implements ReactiveController {
       return;
     }
 
+    const blocks = this.#options.blocks();
     const blockId = this.#options.blockAt(event.clientX, event.clientY);
-    if (blockId === null) {
+    if (blockId === null || blocks.length < 2) {
       return;
     }
 
-    const move: PendingMove = {
+    const fromIndex = blocks.findIndex((block) => block.id === blockId);
+    const cell = fromIndex === -1 ? null : this.#options.cellOrigin(fromIndex);
+    if (cell === null) {
+      return;
+    }
+
+    const lifted = {
       blockId,
-      fromIndex: this.#options.blockIds().indexOf(blockId)
+      fromIndex,
+      grab: {
+        clientX: event.clientX - cell.clientX,
+        clientY: event.clientY - cell.clientY
+      }
     };
     const scroller = this.#options.scroller();
     this.#session = startPointerDragSession({
       element: scroller,
       event,
       threshold: kDragThreshold,
-      onStart: () => {
-        this.#dragging = true;
-        this.#host.requestUpdate();
-      },
       onMove: (clientX, clientY, moveEvent) => {
         moveEvent.preventDefault();
         autoScroll(scroller, clientY);
-        this.#insertAt = this.#options.insertIndexAt(clientX, clientY);
+        this.#drag = {
+          ...lifted,
+          pointer: {
+            clientX,
+            clientY
+          },
+          landing: this.#options.landingIndexAt(clientX, clientY) ??
+            this.#drag?.landing ??
+            fromIndex
+        };
         this.#host.requestUpdate();
       },
-      onFinish: (result, started) => this.#finish(move, result, started)
+      onFinish: (result, started) => this.#finish(result, started)
     });
   }
 
@@ -107,32 +171,28 @@ export class BlockReorderController implements ReactiveController {
   }
 
   #finish(
-    move: PendingMove,
     result: PointerDragResult,
     started: boolean
   ): void {
-    const insertAt = this.#insertAt;
+    const drag = this.#drag;
     this.#session = null;
-    this.#dragging = false;
-    this.#insertAt = null;
+    this.#drag = null;
+    this.#arrangement = null;
     this.#suppressClick = started && result === "commit";
     this.#host.requestUpdate();
 
-    if (!this.#suppressClick || insertAt === null) {
+    if (
+      !this.#suppressClick ||
+      drag === null ||
+      drag.landing === drag.fromIndex
+    ) {
       return;
     }
 
-    const toIndex = BlockGrid.moveTarget(
-      move.fromIndex,
-      insertAt,
-      this.#options.blockIds().length
-    );
-    if (toIndex !== -1) {
-      this.#options.onMove({
-        id: move.blockId,
-        toIndex
-      });
-    }
+    this.#options.onMove({
+      id: drag.blockId,
+      toIndex: drag.landing
+    });
   }
 }
 
