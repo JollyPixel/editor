@@ -14,7 +14,10 @@ import {
   type ContextMenu,
   type JollyChangeDetail,
   type PresencePeer,
-  type Tree
+  type Tree,
+  ContextMenuController,
+  MenuSession,
+  type MenuPoint
 } from "@jolly-pixel/ui";
 import type {
   MaterialSurfaceJSON,
@@ -28,11 +31,6 @@ import { presetIcon } from "./library/materialIcons.ts";
 import "../../shared/actionIcons.ts";
 import "../../shared/dialogs/DeleteDialog.ts";
 import type { DeleteDialog } from "../../shared/dialogs/DeleteDialog.ts";
-import { ContextMenuController } from "../../shared/menu/ContextMenuController.ts";
-import {
-  MenuSession,
-  type MenuPoint
-} from "../../shared/menu/MenuSession.ts";
 import { menuPointBelow } from "../../shared/menu/menuPointBelow.ts";
 import type { MaterialAction } from "./library/materialMenu.ts";
 import {

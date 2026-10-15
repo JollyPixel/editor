@@ -41,6 +41,12 @@ opens a new blank row. Clearing a saved row's key removes it, and giving a row a
 key already in use replaces that property. Layer values of any other type stay
 hidden and are kept on save.
 
+Right-clicking a block in the Block Library selects it and opens a menu to edit,
+duplicate, set or remove its material, copy its ID, remove its voxels from the
+map, or delete it. Removing voxels always asks first; deleting asks only when
+voxels still use the block. Right-clicking an empty spot offers a new block.
+The library in the Materials pane only offers the material and ID actions.
+
 ## 🧪 Tests and checks
 
 ```bash

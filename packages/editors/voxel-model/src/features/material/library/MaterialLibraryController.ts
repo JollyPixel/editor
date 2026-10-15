@@ -10,7 +10,10 @@ import {
   type JollySelectDetail,
   type JollyToggleExpandDetail,
   type TreeDropAccept,
-  type TreeNode
+  type TreeNode,
+  MenuSession,
+  disableEntries,
+  type MenuPoint
 } from "@jolly-pixel/ui";
 import {
   decodeMaterialTransfer,
@@ -30,11 +33,6 @@ import type {
 } from "../../../state/index.ts";
 import type { ScopeRecorder } from "../../history/index.ts";
 import { ExpandedRows } from "../../../shared/ExpandedRows.ts";
-import {
-  MenuSession,
-  disableEntries,
-  type MenuPoint
-} from "../../../shared/menu/MenuSession.ts";
 import type { ModelAccessSignals } from "../../../access/ModelAccess.ts";
 import type {
   DeleteContext,

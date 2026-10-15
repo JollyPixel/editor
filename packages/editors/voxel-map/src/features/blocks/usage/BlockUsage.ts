@@ -51,4 +51,18 @@ export class BlockUsage {
     return `Used by ${this.summary}. ` +
       "Those voxels stay in the map but are no longer drawn.";
   }
+
+  deletePrompt(
+    blockName: string
+  ): string {
+    return `Delete "${blockName}"? ${this.removalMessage}`;
+  }
+
+  clearPrompt(
+    blockName: string
+  ): string {
+    return `Remove ${formatCount(this.voxels, "voxel")} of "${blockName}" ` +
+      `from ${formatCount(this.layers.length, "layer")}? ` +
+      "The block stays in the library.";
+  }
 }

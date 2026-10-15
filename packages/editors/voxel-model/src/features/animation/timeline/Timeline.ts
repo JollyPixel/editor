@@ -7,7 +7,11 @@ import {
   type TemplateResult
 } from "lit";
 import { FrameRate } from "@jolly-pixel/asset.voxel-animation/client";
-import type { ContextMenu } from "@jolly-pixel/ui";
+import {
+  type ContextMenu,
+  ContextMenuController,
+  MenuSession
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import "./timelineIcons.ts";
@@ -23,8 +27,6 @@ import type {
 } from "./timelineRows.ts";
 import { keyId } from "./timelineKeys.ts";
 import { TRACK_STATE_LABELS } from "../tracks/trackBindingRows.ts";
-import { ContextMenuController } from "../../../shared/menu/ContextMenuController.ts";
-import { MenuSession } from "../../../shared/menu/MenuSession.ts";
 import { menuPointBelow } from "../../../shared/menu/menuPointBelow.ts";
 
 // CONSTANTS

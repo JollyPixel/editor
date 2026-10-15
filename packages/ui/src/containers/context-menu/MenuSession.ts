@@ -1,8 +1,8 @@
-// Import Third-party Dependencies
+// Import Internal Dependencies
 import type {
   ContextMenuEntry,
   ContextMenuItem
-} from "@jolly-pixel/ui";
+} from "./ContextMenu.ts";
 
 export interface MenuItem<TAction extends string> extends ContextMenuItem {
   id: TAction;

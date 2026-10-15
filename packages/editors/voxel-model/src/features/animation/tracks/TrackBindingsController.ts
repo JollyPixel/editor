@@ -1,6 +1,10 @@
 // Import Third-party Dependencies
 import type { ReactiveControllerHost } from "lit";
-import { SubscriptionController } from "@jolly-pixel/ui";
+import {
+  SubscriptionController,
+  type MenuPoint,
+  type MenuSession
+} from "@jolly-pixel/ui";
 import type { ModelDocument } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
@@ -14,10 +18,6 @@ import {
 } from "./trackBindingRows.ts";
 import { rebindMenu } from "./trackRebind.ts";
 import type { AnimationFocusStore } from "../../../state/index.ts";
-import type {
-  MenuPoint,
-  MenuSession
-} from "../../../shared/menu/MenuSession.ts";
 import type { ModelAccessSignals } from "../../../access/ModelAccess.ts";
 
 export interface TrackBindingsWorkspace {

@@ -15,6 +15,7 @@ export class BlockLibrary {
   readonly addButton: Locator;
   readonly canvas: Locator;
   readonly heightGrip: Locator;
+  readonly menu: Locator;
   readonly #root: Locator;
 
   constructor(
@@ -31,6 +32,7 @@ export class BlockLibrary {
     this.heightGrip = scope.getByRole("separator", {
       name: "Block library height"
     });
+    this.menu = scope.getByRole("menu", { name: "Block actions" });
   }
 
   option(
@@ -60,6 +62,21 @@ export class BlockLibrary {
     name: string
   ): Promise<void> {
     await this.option(name).dblclick();
+  }
+
+  async choose(
+    name: string,
+    ...labels: string[]
+  ): Promise<void> {
+    await this.option(name).click({ button: "right" });
+    let menu = this.menu;
+    for (const label of labels) {
+      await menu.getByRole("menuitem", {
+        name: label,
+        exact: true
+      }).click();
+      menu = menu.getByRole("menu", { name: label });
+    }
   }
 }
 

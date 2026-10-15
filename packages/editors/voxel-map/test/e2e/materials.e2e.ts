@@ -122,3 +122,22 @@ test("the Materials tab keeps working View settings while the map has no blocks"
     () => window.voxelMapEditor!.workspace.state.view.settings.lighting
   )).toBe("day");
 });
+
+test("the block context menu makes a material, shares it and removes it", async({ map }) => {
+  await map.panes.open("Blocks");
+  const { library } = map.blocks;
+  const [first, second] = await blocksOf(map);
+
+  await library.choose(first.name, "Material", "New material");
+  await expect.poll(() => materialOf(map, first.id)).toBeDefined();
+  const groupId = (await materialOf(map, first.id))!;
+  await expect(library.swatch(first.id)).toBeVisible();
+
+  const name = groupId.slice(DEFAULT_BLOCKSET_ID.length + 1);
+  await library.choose(second.name, "Material", name);
+  await expect.poll(() => materialOf(map, second.id)).toBe(groupId);
+
+  await library.choose(first.name, "Remove material");
+  await expect.poll(() => materialOf(map, first.id)).toBeUndefined();
+  expect(await materialOf(map, second.id)).toBe(groupId);
+});

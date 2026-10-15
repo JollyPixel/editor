@@ -3,9 +3,7 @@ import {
   blockPathOf,
   type ModelDocument
 } from "@jolly-pixel/asset.voxel-model/client";
-
-// Import Internal Dependencies
-import { MenuSession } from "../../../shared/menu/MenuSession.ts";
+import { MenuSession } from "@jolly-pixel/ui";
 
 export function rebindMenu(
   document: Pick<ModelDocument, "tree" | "remapAnimationTrack">,

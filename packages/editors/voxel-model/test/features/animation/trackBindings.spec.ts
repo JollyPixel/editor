@@ -2,9 +2,11 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { MenuSession } from "@jolly-pixel/ui";
+
 // Import Internal Dependencies
 import { TrackBindingsController } from "#src/features/animation/tracks/TrackBindingsController.ts";
-import { MenuSession } from "#src/shared/menu/MenuSession.ts";
 import {
   createAnimatedModel,
   createHost

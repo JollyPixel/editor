@@ -1,5 +1,5 @@
-// Import Internal Dependencies
-import type { MenuItem } from "./MenuSession.ts";
+// Import Third-party Dependencies
+import type { MenuItem } from "@jolly-pixel/ui";
 
 export const RENAME_ITEM: MenuItem<"rename"> = {
   id: "rename",

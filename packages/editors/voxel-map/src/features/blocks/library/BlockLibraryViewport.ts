@@ -32,10 +32,17 @@ const kBlockSelectEvent = "block-select";
 const kBlockEditEvent = "block-edit";
 const kBlockMoveEvent = "block-move";
 const kBlockCreateEvent = "block-create";
+const kBlockContextEvent = "block-context";
 const kCellInset = 3;
 const kMinHeight = 60;
 const kMaxHeight = 1200;
 const kHeightStorageKey = "voxel-map:block-library:height";
+
+export interface BlockContextDetail {
+  id: number | null;
+  x: number;
+  y: number;
+}
 
 interface MarkedCell {
   cell: BlockCell;
@@ -193,6 +200,7 @@ export class BlockLibraryViewport extends LitElement {
       aria-label="Blocks"
       @click=${this.#onClick}
       @dblclick=${this.#onDoubleClick}
+      @contextmenu=${this.#onContextMenu}
       @pointerdown=${this.#onPointerDown}
       @pointermove=${this.#onPointerMove}
       @pointerleave=${this.#onPointerLeave}
@@ -553,6 +561,26 @@ export class BlockLibraryViewport extends LitElement {
       kBlockEditEvent,
       event
     );
+  }
+
+  #onContextMenu(
+    event: MouseEvent
+  ): void {
+    const handled = this.#reorder.dragging || !this.dispatchEvent(
+      new CustomEvent<BlockContextDetail>(kBlockContextEvent, {
+        detail: {
+          id: this.#blockIdAt(event.clientX, event.clientY),
+          x: event.clientX,
+          y: event.clientY
+        },
+        bubbles: false,
+        composed: false,
+        cancelable: true
+      })
+    );
+    if (handled) {
+      event.preventDefault();
+    }
   }
 
   #emitForPointer(

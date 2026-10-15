@@ -118,15 +118,15 @@ export class MapMaterials {
 
   assign(
     blockId: number,
-    material: MapMaterial | null
+    groupId: string | null
   ): boolean {
     const block = this.#document.blocks.get(blockId);
-    const groupId = material?.id;
-    if (block === undefined || block.materialGroup === groupId) {
+    const next = groupId ?? undefined;
+    if (block === undefined || block.materialGroup === next) {
       return false;
     }
 
-    return this.#blocksets.defineBlock(withMaterialGroup(block, groupId));
+    return this.#blocksets.defineBlock(withMaterialGroup(block, next));
   }
 
   create(
@@ -141,6 +141,20 @@ export class MapMaterials {
     );
 
     return defined ? groupId : null;
+  }
+
+  createForBlock(
+    blockId: number
+  ): string | null {
+    const block = this.#document.blocks.get(blockId);
+    const slot = this.#blocksets.findOwner(blockId)?.slot;
+    if (block === undefined || slot === undefined) {
+      return null;
+    }
+
+    const groupId = this.create(slot);
+
+    return groupId !== null && this.assign(blockId, groupId) ? groupId : null;
   }
 
   refinish(

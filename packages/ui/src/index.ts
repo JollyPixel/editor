@@ -155,6 +155,8 @@ export {
 } from "./interaction/pointer/PointerDragSession.ts";
 
 export * from "./containers/context-menu/ContextMenu.ts";
+export * from "./containers/context-menu/ContextMenuController.ts";
+export * from "./containers/context-menu/MenuSession.ts";
 export * from "./containers/dialog/Dialog.ts";
 export * from "./containers/dialog/dialogHeader.ts";
 export * from "./containers/dialog/dialogHelpers.ts";

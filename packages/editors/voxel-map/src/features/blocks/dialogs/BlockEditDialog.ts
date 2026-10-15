@@ -306,7 +306,7 @@ export class BlockEditDialog extends WorkspaceElement {
     const usage = workspace.usage.inspectUsage(block.id);
     const confirmed = usage.unused ||
       await this._dialog.confirmInline({
-        message: `Delete "${block.name}"? ${usage.removalMessage}`,
+        message: usage.deletePrompt(block.name),
         confirmLabel: "Delete",
         danger: true
       });

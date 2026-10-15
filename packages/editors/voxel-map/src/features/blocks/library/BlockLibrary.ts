@@ -12,8 +12,11 @@ import {
 } from "lit/decorators.js";
 import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 import {
+  ContextMenuController,
+  MenuSession,
   formatCount,
-  showConfirm
+  showConfirm,
+  type ContextMenu
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -23,9 +26,17 @@ import type { BlockCreateDialog } from "../dialogs/BlockCreateDialog.ts";
 import type { BlockEditDialog } from "../dialogs/BlockEditDialog.ts";
 import { BlockUsage } from "../usage/BlockUsage.ts";
 import { BlockLibraryOrder } from "./BlockLibraryOrder.ts";
+import {
+  BlockMenu,
+  LIBRARY_MENU,
+  type BlockCommand
+} from "./BlockMenu.ts";
 import { PeerMarks } from "./PeerMarks.ts";
 import type { MaterialSwatch } from "../../materials/MaterialSwatch.ts";
-import type { BlockLibraryViewport } from "./BlockLibraryViewport.ts";
+import type {
+  BlockContextDetail,
+  BlockLibraryViewport
+} from "./BlockLibraryViewport.ts";
 import type { BlockMoveDetail } from "./BlockReorderController.ts";
 import "./BlockLibraryViewport.ts";
 import "../dialogs/BlockCreateDialog.ts";
@@ -107,6 +118,14 @@ export class BlockLibrary extends WorkspaceElement {
   @query("block-library-viewport")
   declare private _viewport: BlockLibraryViewport | null;
 
+  @query("jolly-context-menu")
+  declare private _contextMenu: ContextMenu;
+
+  #menu = new ContextMenuController(
+    () => this._contextMenu,
+    () => MenuSession.EMPTY
+  );
+
   constructor() {
     super();
 
@@ -167,8 +186,7 @@ export class BlockLibrary extends WorkspaceElement {
       return nothing;
     }
 
-    const editable = this.editable &&
-      workspace.blocksets.entriesGranting("blocks").length > 0;
+    const creatable = this.#creatable(workspace);
     const cleanable = this.editable && workspace.access.current.has("voxels");
 
     return html`
@@ -180,18 +198,23 @@ export class BlockLibrary extends WorkspaceElement {
         .selectedId=${this._selectedId}
         .unused=${this._unused}
         .swatches=${this._swatches}
-        .editable=${editable}
-        .reorderable=${editable && this.order.reorderable}
+        .editable=${creatable}
+        .reorderable=${creatable && this.order.reorderable}
         .layout=${this.layout}
         @block-select=${this.#onBlockSelect}
         @block-edit=${this.#onBlockEdit}
         @block-move=${this.#onBlockMove}
         @block-create=${this.#onBlockCreate}
+        @block-context=${this.#onBlockContext}
       ></block-library-viewport>
+      <jolly-context-menu
+        label="Block actions"
+        @jolly-context-action=${this.#menu.onContextAction}
+      ></jolly-context-menu>
 
       <slot></slot>
 
-      ${editable ? html`
+      ${creatable ? html`
         <block-create-dialog .workspace=${workspace}></block-create-dialog>
         <block-edit-dialog .workspace=${workspace}></block-edit-dialog>
       ` : nothing}
@@ -262,8 +285,151 @@ export class BlockLibrary extends WorkspaceElement {
     void this._createDialog?.open();
   }
 
-  async editBlock(): Promise<void> {
-    const id = this._selectedId;
+  #creatable(
+    workspace: VoxelMapWorkspace
+  ): boolean {
+    return this.editable &&
+      workspace.blocksets.entriesGranting("blocks").length > 0;
+  }
+
+  #onBlockContext(
+    event: CustomEvent<BlockContextDetail>
+  ): void {
+    const workspace = this.workspace;
+    if (workspace === null) {
+      return;
+    }
+
+    const { id, x, y } = event.detail;
+    const session = id === null ?
+      this.#libraryMenu(workspace) :
+      this.#blockMenu(workspace, id);
+    if (session === null) {
+      return;
+    }
+
+    event.preventDefault();
+    if (id !== null) {
+      workspace.state.block.id = id;
+    }
+    this.#menu.open(session, { x, y });
+  }
+
+  #libraryMenu(
+    workspace: VoxelMapWorkspace
+  ): MenuSession | null {
+    return this.#creatable(workspace) ?
+      MenuSession.from(LIBRARY_MENU, () => this._createDialog.open()) :
+      null;
+  }
+
+  #blockMenu(
+    workspace: VoxelMapWorkspace,
+    blockId: number
+  ): MenuSession {
+    const { mapDocument, blocksets, materials, usage, access } = workspace;
+    const menu = new BlockMenu({
+      blockId,
+      materials: materials.availableTo(blockId),
+      editable: blocksets.canEditBlock(blockId),
+      clearable: access.current.has("voxels") &&
+        !usage.inspectUsage(blockId).unused
+    });
+
+    return menu.session(this.editable ? "blocks" : "materials", {
+      exists: () => mapDocument.blocks.has(blockId),
+      run: (command) => this.#runCommand(workspace, command, blockId),
+      assign: (material) => materials.assign(blockId, material.id)
+    });
+  }
+
+  async #runCommand(
+    workspace: VoxelMapWorkspace,
+    command: BlockCommand,
+    blockId: number
+  ): Promise<void> {
+    switch (command) {
+      case "edit":
+        await this.editBlock(blockId);
+        break;
+      case "duplicate":
+        this.#duplicate(workspace, blockId);
+        break;
+      case "new-material":
+        workspace.materials.createForBlock(blockId);
+        break;
+      case "remove-material":
+        workspace.materials.assign(blockId, null);
+        break;
+      case "copy-id":
+        await navigator.clipboard.writeText(String(blockId));
+        break;
+      case "remove-voxels":
+        await this.#confirmRemoveVoxels(workspace, blockId);
+        break;
+      case "delete":
+        await this.#confirmDelete(workspace, blockId);
+        break;
+    }
+  }
+
+  #duplicate(
+    workspace: VoxelMapWorkspace,
+    blockId: number
+  ): void {
+    const copyId = workspace.blocksets.duplicateBlock(blockId);
+    if (copyId !== null) {
+      workspace.state.block.id = copyId;
+    }
+  }
+
+  async #confirmRemoveVoxels(
+    workspace: VoxelMapWorkspace,
+    blockId: number
+  ): Promise<void> {
+    const block = workspace.mapDocument.blocks.get(blockId);
+    const usage = workspace.usage.inspectUsage(blockId);
+    if (block === undefined || usage.unused) {
+      return;
+    }
+
+    const confirmed = await showConfirm({
+      title: "Remove voxels",
+      message: usage.clearPrompt(block.name),
+      confirmLabel: "Remove",
+      icon: "eraser",
+      danger: true
+    });
+    if (confirmed) {
+      workspace.mapDocument.world.removeBlocks([blockId]);
+    }
+  }
+
+  async #confirmDelete(
+    workspace: VoxelMapWorkspace,
+    blockId: number
+  ): Promise<void> {
+    const block = workspace.mapDocument.blocks.get(blockId);
+    if (block === undefined) {
+      return;
+    }
+
+    const usage = workspace.usage.inspectUsage(blockId);
+    const confirmed = usage.unused || await showConfirm({
+      title: "Delete block",
+      message: usage.deletePrompt(block.name),
+      confirmLabel: "Delete",
+      icon: "trash",
+      danger: true
+    });
+    if (confirmed) {
+      workspace.blocksets.removeBlock(blockId);
+    }
+  }
+
+  async editBlock(
+    id = this._selectedId
+  ): Promise<void> {
     if (id === null || this.workspace?.blocksets.canEditBlock(id) !== true) {
       return;
     }

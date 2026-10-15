@@ -1,11 +1,7 @@
-// Import Third-party Dependencies
-import type {
-  ContextMenu,
-  JollyContextActionDetail,
-  JollyContextRequestDetail
-} from "@jolly-pixel/ui";
-
 // Import Internal Dependencies
+import type { ContextMenu } from "./ContextMenu.ts";
+import type { JollyContextActionDetail } from "../events.ts";
+import type { JollyContextRequestDetail } from "../../data/tree/contract.ts";
 import type {
   MenuPoint,
   MenuSession

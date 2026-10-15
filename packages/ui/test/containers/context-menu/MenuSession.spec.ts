@@ -10,7 +10,7 @@ import {
   MenuSession,
   disableEntries,
   type MenuEntry
-} from "#src/shared/menu/MenuSession.ts";
+} from "../../../src/containers/context-menu/MenuSession.ts";
 
 // CONSTANTS
 const kItems: readonly MenuEntry<"rename" | "delete" | "share">[] = [

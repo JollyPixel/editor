@@ -10,13 +10,15 @@ import {
   query,
   queryAll
 } from "lit/decorators.js";
-import type {
-  ContextMenu,
-  JollyChangeDetail,
-  JollyContextRequestDetail,
-  JollyOption,
-  JollyReparentDetail,
-  Tree
+import {
+  type ContextMenu,
+  type JollyChangeDetail,
+  type JollyContextRequestDetail,
+  type JollyOption,
+  type JollyReparentDetail,
+  type Tree,
+  ContextMenuController,
+  MenuSession
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -26,8 +28,6 @@ import "../../shared/dialogs/DeleteDialog.ts";
 import "../../shared/dialogs/NameDialog.ts";
 import type { DeleteDialog } from "../../shared/dialogs/DeleteDialog.ts";
 import type { NameDialog } from "../../shared/dialogs/NameDialog.ts";
-import { ContextMenuController } from "../../shared/menu/ContextMenuController.ts";
-import { MenuSession } from "../../shared/menu/MenuSession.ts";
 import { menuPointBelow } from "../../shared/menu/menuPointBelow.ts";
 import "../transform/TransformPanel.ts";
 import "./tracks/TrackBindings.ts";

@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import type { ReactiveControllerHost } from "lit";
 import { MaterialSurface } from "@jolly-pixel/asset.voxel-model/client";
+import type { MenuPoint } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -24,7 +25,6 @@ import type {
   DeleteContext,
   DeleteResult
 } from "#src/shared/dialogs/DeleteDialog.ts";
-import type { MenuPoint } from "#src/shared/menu/MenuSession.ts";
 import { createEditorHistory } from "#src/features/history/index.ts";
 import { createModelFixture } from "../../fixtures/model.ts";
 import { modelAccess } from "../../fixtures/modelAccess.ts";
