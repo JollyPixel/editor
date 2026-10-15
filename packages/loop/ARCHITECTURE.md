@@ -32,6 +32,7 @@ None of these are required by the core.
 | --- | --- |
 | [Interpolated](./docs/interpolated.md) | push a sample after each `fixedUpdate`, read `at(alpha)` in `update` |
 | [FrameBudget](./docs/framebudget.md) | a deadline for optional work inside a frame, timed by a `Clock` |
+| [FrameRateGovernor](./docs/framerategovernor.md) | reads each `FrameSchedule` from `frame`, sets `scheduler.maxFps` |
 | [suspendWhenHidden](./docs/suspendwhenhidden.md) | stops and restarts a `GameLoop` as its element leaves and enters view |
 | [Clock](./docs/clock.md) | time for `FrameBudget` and `ManualFrameSource` |
 
@@ -41,7 +42,7 @@ None of these are required by the core.
 flowchart TB
     subgraph Scheduler["FrameScheduler.advance(now)"]
         direction LR
-        Delta["clamp delta<br/>× timeScale"] --> Accumulate["accumulate"] --> Cap["cap at step budget<br/>maxStepsPerFrame × max(timeScale, 1)"]
+        Delta["clamp or snap delta<br/>× timeScale"] --> Accumulate["accumulate"] --> Cap["cap at step budget<br/>maxStepsPerFrame × max(timeScale, 1)"]
     end
     subgraph Loop["GameLoop"]
         direction LR

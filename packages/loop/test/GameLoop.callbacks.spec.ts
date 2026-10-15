@@ -23,7 +23,7 @@ describe("Loop.GameLoop callbacks", () => {
   test("fixedUpdate receives the fixed delta and an incrementing stepIndex", () => {
     const { recorder, callbacks } = record();
     loop.start(callbacks);
-    source.step(80);
+    source.step(70);
 
     assert.deepStrictEqual(recorder.fixedUpdate, [
       [kFixedDelta60, 0],
@@ -34,15 +34,15 @@ describe("Loop.GameLoop callbacks", () => {
     assert.strictEqual(recorder.update.length, 2);
     assert.deepStrictEqual(
       recorder.update[1],
-      [80, recorder.frames[1].alpha]
+      [70, recorder.frames[1].alpha]
     );
   });
 
   test("stepIndex restarts at zero on every frame", () => {
     const { recorder, callbacks } = record();
     loop.start(callbacks);
-    source.step(40);
-    source.step(40);
+    source.step(30);
+    source.step(30);
 
     const indexes = recorder.fixedUpdate.map(([, stepIndex]) => stepIndex);
     assert.deepStrictEqual(indexes, [0, 1, 0, 1]);

@@ -147,10 +147,10 @@ describe("Loop.RequestAnimationFrameSource", () => {
       ) => steps.push(stepIndex)
     });
     animationFrame.flush(16);
-    animationFrame.flush(60);
+    animationFrame.flush(50);
 
     assert.deepStrictEqual(steps, [0, 1, 2]);
-    assert.strictEqual(loop.scheduler.elapsed, 60);
+    assert.strictEqual(loop.scheduler.elapsed, 50);
 
     loop.stop();
     assert.strictEqual(animationFrame.pending.size, 0);

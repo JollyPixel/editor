@@ -95,7 +95,8 @@ The game time one step covers: one second divided by the step rate, so
 ### Leftover time
 
 Game time a frame brought in that is too short to pay for another step. It
-carries over to the next frame, so no time is lost between frames. After a
+carries over to the next frame, so no time is lost between frames. It starts
+at half a step, as far as possible from both step boundaries, and after a
 frame it is always less than one step length.
 
 *In code:* `FrameScheduler.accumulator`.
@@ -107,7 +108,7 @@ With 60 steps per second:
 | Frame rate | Time per frame | Steps per frame |
 | --- | --- | --- |
 | 144 Hz | 6.9 ms | mostly 0, sometimes 1 |
-| 60 Hz | 16.7 ms | usually 1 |
+| 60 Hz | 16.7 ms | 1 |
 | 30 Hz | 33.3 ms | 2 |
 | a 120 ms hitch | 120 ms | 7 owed, see [panic](#panic) |
 
@@ -151,6 +152,31 @@ game by up to one step.
 *In code:* [`Interpolated`](./docs/interpolated.md): `push()` after each step,
 `at(alpha)` when rendering.
 
+## Pacing
+
+### Refresh period
+
+The time between two refreshes of the display, measured from recent frame
+deltas: 16.7 ms at 60 Hz, 8.3 ms at 120 Hz. A frame that misses a refresh
+lasts two periods.
+
+*In code:* `FrameScheduler.refreshPeriod`.
+
+### Snapping
+
+Replacing a jittery frame delta with the whole number of refresh periods it
+stands for. When the period divides into steps evenly, game time follows the
+frame count instead of the clock, and each frame runs the same number of steps.
+
+*In code:* `snapTolerance`. See [frame pacing](./docs/framescheduler.md#frame-pacing).
+
+### Half rate
+
+Rendering on every other refresh while frames keep missing, so each render
+advances by the same number of steps.
+
+*In code:* [`FrameRateGovernor`](./docs/framerategovernor.md).
+
 ## Overload
 
 ### Hitch
@@ -176,7 +202,7 @@ freezes.
 ### Panic
 
 A frame owing more steps than one frame may run. The loop runs the allowed
-steps and drops the rest of the game time, so the game falls a little behind
+steps and drops the game time beyond half a step, so the game falls a little behind
 real time instead of spiraling. Repeated panics mean the machine cannot keep
 up with the step rate.
 

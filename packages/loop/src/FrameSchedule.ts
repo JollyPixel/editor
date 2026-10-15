@@ -40,6 +40,10 @@ export interface FrameSchedule {
    */
   clamped: boolean;
   /**
+   * Whether `unscaledDelta` was snapped to whole refresh periods.
+   */
+  snapped: boolean;
+  /**
    * Whether the step limit discarded accumulated time.
    */
   panicked: boolean;
