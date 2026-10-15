@@ -1,8 +1,9 @@
 # Docking and persistence
 
-`jolly-dock-layout` owns pane placement when it contains docks and floating
-windows. Users can reorder panes, move them between docks, or extract a pane
-into a floating window.
+A `jolly-dock-layout` lets users reorder panes, move them between docks and
+float them, and stores the arrangement.
+
+## 1. Declare the layout
 
 ```html
 <div class="editor-stage">
@@ -18,32 +19,30 @@ into a floating window.
 </div>
 ```
 
-The layout element has `display: contents`; application CSS places its
-children. Pointer moves commit on release. Keyboard users grab a pane with
-Space, move it with arrow keys, commit with Space, and cancel with Escape.
+- The layout has `display: contents`: your CSS places its children.
+- `key` is the identity a dock or pane is stored under. Without one, it is
+  derived from the pane `heading` or the dock `side`, so renaming a pane
+  drops its saved place.
+- Users move panes with the pointer, or with the
+  [keyboard](../api/containers/dock-layout.md#keyboard-moves).
 
-Wrap panes in a `jolly-pane-group` to show them as tabs. Users drag a tab onto
-another pane header or tab strip to group it, or anywhere else to give it its
-own slot. An empty `jolly-dock` is a placeholder: it takes no space until a pane
-is dropped into it, and gives the space back when its last pane leaves.
+## 2. Group panes as tabs
 
 ```html
-<jolly-dock-layout storage-key="voxel-editor">
-  <jolly-dock key="left" side="left">
-    <jolly-pane-group>
-      <jolly-pane key="general" heading="General"></jolly-pane>
-      <jolly-pane key="blocks" heading="Blocks"></jolly-pane>
-    </jolly-pane-group>
-  </jolly-dock>
-  <main>Viewport</main>
-  <jolly-dock key="right" side="right"></jolly-dock>
-</jolly-dock-layout>
+<jolly-dock key="left" side="left">
+  <jolly-pane-group>
+    <jolly-pane key="general" heading="General"></jolly-pane>
+    <jolly-pane key="blocks" heading="Blocks"></jolly-pane>
+  </jolly-pane-group>
+</jolly-dock>
+<jolly-dock key="right" side="right"></jolly-dock>
 ```
 
-Set `double` on a left or right dock to let users open a second column on
-wide screens. Dragging a pane just past the dock's inner edge opens it; the
-dock doubles its width, and resizing splits the new width between the two
-columns. Author `slot="secondary"` on a child to start with the column open.
+- Dropping a pane on a header or tab strip groups it. Anywhere else in a dock,
+  it takes its own slot. See [drop rules](../api/containers/dock-layout.md#drop-rules).
+- An empty dock takes no space until a pane lands in it.
+
+## 3. Offer a second column
 
 ```html
 <jolly-dock key="left" side="left" size="320" double>
@@ -52,14 +51,19 @@ columns. Author `slot="secondary"` on a child to start with the column open.
 </jolly-dock>
 ```
 
-Listen to `jolly-pane-visibility` to pause work in a pane nobody can see.
+Dropping a pane just past the inner edge of a `double` dock opens the column.
+`slot="secondary"` starts with it open.
 
-Set `locked` on panes whose authored placement must remain fixed. Call
-`resetLayout()` to restore the authored layout or `snapshot()` to read the
-current `LayoutSnapshot`.
+## 4. React to the layout
 
-Pane, Folder, Dock, Floating, DockLayout, ThemePreferences, and Stats accept a
-`StorageAdapter` where they persist state. A `LocalStorageAdapter` shared by
-the page is the default.
-Inside a dock layout, the layout owns dock and floating geometry. Folder state
-remains attached to its pane.
+- `jolly-pane-visibility`: pause work in a pane nobody can see.
+- `locked` on a pane: keep its authored place.
+- `resetLayout()`: restore the authored arrangement.
+- `snapshot()`: read the current [`LayoutSnapshot`](../api/containers/layout.md).
+
+## Storage
+
+- Panes, folders, docks, floating windows, the dock layout, theme preferences
+  and stats persist through a [`StorageAdapter`](../api/storage/README.md).
+- Inside a dock layout, the layout stores dock and window geometry. Folder
+  state stays with its pane.

@@ -1,6 +1,6 @@
 # `jolly-flags`
 
-`jolly-flags` edits an unsigned 32-bit bitmask and implements the
+`jolly-flags` edits an unsigned 32-bit bitmask. It implements the
 [shared field API](../field/shared-field-api.md).
 
 ```ts
@@ -13,9 +13,14 @@ field.options = [
 field.value = 5;
 ```
 
-| Property | Type | Default |
-|---|---|---|
-| `options` | `JollyOption<number>[]` | `[]` |
+## Properties
 
-Each option value must contain one bit. Each option has its own tab stop.
-Toggling an option emits `jolly-change` with the complete mask.
+```ts
+interface Flags {
+  options: JollyOption<number>[]; // property only, one bit per value
+}
+```
+
+- Each option has its own tab stop.
+- Toggling an option emits `jolly-change` with the complete mask.
+- For many unnamed bits, use [`jolly-layer-grid`](./layer-grid.md).

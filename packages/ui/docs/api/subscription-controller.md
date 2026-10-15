@@ -18,19 +18,22 @@ type SourceSubscriber<TSource> = (
 ) => Iterable<() => void>;
 ```
 
-| Member | Behavior |
-|---|---|
-| `current` | The attached source, or `null` before the first `attach()`. |
-| `attached` | The attached source. Throws if nothing is attached yet. |
-| `attach(source)` | Stores `source`, releases the previous subscriptions, subscribes if the host is connected, then calls `host.requestUpdate()`. |
+```ts
+interface SubscriptionController<TSource> {
+  readonly current: TSource | null; // null before the first attach()
+  readonly attached: TSource; // throws before the first attach()
+  attach(source: TSource): void;
+}
+```
 
-`subscribe` runs on every connect and every `attach()` while connected. It
-returns the unsubscribe functions for what it opened; the controller calls
-each of them once on release. It defaults to subscribing to nothing, which
-leaves a plain holder that repaints the host on `attach()`.
-
-`attach()` does not compare sources: attaching the same source again
-resubscribes. The source stays attached across a disconnect.
+- `attach()` stores the source, releases the previous subscriptions,
+  subscribes when the host is connected, then calls `host.requestUpdate()`.
+  It does not compare sources: attaching the same one resubscribes.
+- `subscribe` runs on every connect and every `attach()` while connected. Each
+  returned function is called once on release.
+- Without `subscribe`, the controller is a plain holder that repaints the
+  host on `attach()`.
+- The source stays attached across a disconnect.
 
 ```ts
 @customElement("peer-count")

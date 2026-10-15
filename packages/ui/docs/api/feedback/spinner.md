@@ -1,29 +1,35 @@
 # `jolly-spinner`
 
-`jolly-spinner` renders an indeterminate busy indicator for an operation with
-no known duration. Use [`jolly-progress`](./progress.md) when a ratio is
-available.
+`jolly-spinner` is a busy indicator for an operation of unknown duration. Use
+[`jolly-progress`](./progress.md) when a ratio is known.
 
 ```html
 <jolly-spinner label="Adding texture"></jolly-spinner>
 ```
 
-| Property | Attribute | Type | Default |
-|---|---|---|---|
-| `label` | `label` | `string` | `""` |
+## Properties
 
-A non-empty `label` exposes the element as a `status` role carrying that
-accessible name. An empty `label` hides it from assistive technology, which is
-the right default when the spinner sits inside an already labelled control.
+```ts
+interface Spinner {
+  label: string;
+}
+```
 
-The component exposes a `spinner` CSS part and reads these custom properties:
+- A `label` makes the element a `status` with that name. Without one, it is
+  hidden from assistive technology, as inside an already labelled control.
+- Under `prefers-reduced-motion: reduce`, the rotation becomes an opacity
+  pulse.
 
-| Property | Default | Role |
-|---|---|---|
-| `--jolly-spinner-size` | `1em` | Outer diameter; inherits the font size by default |
-| `--jolly-spinner-thickness` | `2px` | Ring width |
-| `--jolly-spinner-color` | `currentColor` | Leading arc color |
-| `--jolly-spinner-track` | 24% of the color | Remaining ring color |
-| `--jolly-spinner-duration` | `700ms` | One full rotation |
+## Styling
 
-Under `prefers-reduced-motion: reduce` the rotation becomes an opacity pulse.
+```css
+jolly-spinner {
+  --jolly-spinner-size: 1em; /* outer diameter */
+  --jolly-spinner-thickness: 2px;
+  --jolly-spinner-color: currentColor; /* leading arc */
+  --jolly-spinner-duration: 700ms; /* one rotation */
+}
+```
+
+`--jolly-spinner-track` colours the rest of the ring, default 24% of the
+colour. The ring is the `spinner` part.

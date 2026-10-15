@@ -1,8 +1,8 @@
 # `jolly-log`
 
-`jolly-log` renders a capped feed of short status messages that rise from a
-bottom edge and fade once their grace period ends. It holds no state: a
-[`LogQueue`](#logqueue) owns the entries and hands the element an array.
+`jolly-log` renders a capped feed of short status messages that rise from the
+bottom and fade after a grace period. It holds no state: a
+[`LogQueue`](#logqueue) owns the entries.
 
 ```ts
 import {
@@ -22,18 +22,26 @@ queue.push("Camera switched to free fly");
 queue.push(html`<b style="color: ${peerColor(3)}">Ada</b> has joined`);
 ```
 
-| Property | Attribute | Type | Default |
-|---|---|---|---|
-| `entries` | none | `readonly LogEntry[]` | `[]` |
-| `live` | `live` | `"polite" \| "off"` | `"polite"` |
-| `empty` | `empty` | `boolean` | `true` |
+## Properties
 
-Entries are newest first. The host is `role="log"` with
-`aria-relevant="additions"`, so expiring entries are never re-announced; set
-`live="off"` for a feed that carries nothing a screen reader needs.
+```ts
+interface LogElement {
+  entries: readonly LogEntry[]; // property only, newest first
+  live: "polite" | "off"; // default "polite"
+  readonly empty: boolean; // reflected, nothing rendered, exit included
+}
+```
 
-The element positions nothing. Place it in a container of your own, absolutely
-or otherwise, and it fills that container from the bottom up:
+- The host is `role="log"` with `aria-relevant="additions"`. Set
+  `live="off"` for a feed screen readers do not need.
+- A removed entry stays until its exit transition ends, so one row more than
+  the cap can briefly show.
+- Under `prefers-reduced-motion`, rows leave without transitions.
+
+## Placement
+
+The element positions nothing and paints no background. It fills its
+container from the bottom up, and is `pointer-events: none`.
 
 ```css
 .viewport {
@@ -47,13 +55,8 @@ or otherwise, and it fills that container from the bottom up:
 }
 ```
 
-The host is `pointer-events: none`, so a feed over a canvas does not swallow
-clicks.
-
-The element paints no background. A scrim for legibility over a busy viewport
-belongs to the container, which can size it independently of the feed and fade
-it out through `empty`, reflected while nothing is rendered, the entry still
-animating out included:
+A legibility scrim belongs to the container, faded out through `empty`. Size
+the gradient ellipse to the box so it reaches zero at every edge:
 
 ```css
 .viewport::before {
@@ -78,15 +81,8 @@ animating out included:
 }
 ```
 
-The ellipse is sized to the box, so the scrim is fully transparent at its
-right and bottom edges and shows no seam over a light scene. A diagonal
-`linear-gradient` does not reach zero at the top-right and bottom-left
-corners.
-
-The text color and its shadow both follow `color-scheme`: dark text with a
-light shadow under `light`, the reverse under `dark`. Over a 3D viewport, what
-sits behind the feed is the scene, not the page, so set `color-scheme` on the
-log and the scrim from the scene's backdrop rather than from the UI theme:
+Text and shadow follow `color-scheme`. Over a 3D viewport, set it from the
+scene's backdrop rather than the UI theme:
 
 ```css
 .viewport[data-backdrop="light"]::before,
@@ -100,55 +96,56 @@ log and the scrim from the scene's backdrop rather than from the UI theme:
 }
 ```
 
-`empty` is derived, so writing to it only holds until the next render.
+## Styling
 
-| Custom property | Default |
-|---|---|
-| `--jolly-log-gap` | `var(--jolly-space-1)` |
-| `--jolly-log-max-width` | `320px` |
-| `--jolly-log-enter-duration` | `var(--jolly-duration-base)` |
-| `--jolly-log-exit-duration` | `var(--jolly-duration-base)` |
-| `--jolly-log-easing` | `var(--jolly-easing)` |
-| `--jolly-log-color` | `var(--jolly-text)` |
-| `--jolly-log-shadow` | a 1px drop shadow, light or dark per `color-scheme` |
-| `--jolly-log-rise` | `4px` |
+```css
+jolly-log {
+  --jolly-log-gap: var(--jolly-space-1);
+  --jolly-log-max-width: 320px;
+  --jolly-log-enter-duration: var(--jolly-duration-base);
+  --jolly-log-exit-duration: var(--jolly-duration-base);
+  --jolly-log-easing: var(--jolly-easing);
+  --jolly-log-color: var(--jolly-text);
+  --jolly-log-rise: 4px;
+}
+```
 
-A removed entry stays in the DOM until its exit transition ends, so the
-rendered row count can briefly exceed the queue's cap by one. That extra row is
-the eviction you are watching. Under `prefers-reduced-motion` both transitions
-are dropped and rows leave on a timeout instead.
+`--jolly-log-shadow` defaults to a 1px drop shadow, light or dark per
+`color-scheme`.
 
 ## `LogQueue`
 
 ```ts
-new LogQueue({
-  max: 5,
-  gracePeriod: 10_000
-});
+new LogQueue(options?: LogQueueOptions)
+
+interface LogQueueOptions {
+  max?: number; // default 5
+  gracePeriod?: number; // ms, default 10_000
+}
+
+interface LogEntry {
+  id: string;
+  content: string | TemplateResult;
+  createdAt: number;
+}
 ```
 
-| Option | Type | Default |
-|---|---|---|
-| `max` | `number` | `5` |
-| `gracePeriod` | `number` | `10_000` |
+### Members
 
-| Member | Behavior |
-|---|---|
-| `entries` | Current entries, newest first |
-| `push(content)` | Appends and returns the generated id |
-| `dismiss(id)` | Removes one entry ahead of its expiry |
-| `clear()` | Removes every entry |
-| `subscribe(listener)` | Returns its own unsubscribe function |
-| `dispose()` | Cancels pending timers and drops listeners |
+- `entries`: current entries, newest first.
+- `push(content)`: appends and returns the new id.
+- `dismiss(id)`: removes one entry early.
+- `clear()`: removes every entry.
+- `subscribe(listener)`: returns its unsubscribe. It does not replay, so read
+  `entries` once at mount.
+- `dispose()`: cancels timers and drops listeners.
 
-Each entry expires `gracePeriod` milliseconds after its own push, unless a
-later push evicts it first. `subscribe` does not replay the current entries, so
-read `queue.entries` once at mount if the queue may already hold some.
+### Behaviour
 
-`content` is a `string` or a Lit `TemplateResult`. Lit escapes interpolated
-values, which is what makes a peer-supplied username safe to render; building
-a template with `unsafeHTML` gives that up. The queue never inspects content,
-so it stays DOM-free and its tests run under `node --test`.
-
-Expiry runs on `setTimeout` and `createdAt` reads `Date.now()`, so a test
-drives both with `t.mock.timers.enable({ apis: ["setTimeout", "Date"] })`.
+- Each entry expires `gracePeriod` after its push, unless a later push evicts
+  it first.
+- Lit escapes interpolated values, so a peer username is safe to render.
+  `unsafeHTML` gives that up.
+- The queue never reads its content, so it is DOM-free.
+- Expiry uses `setTimeout` and `Date.now()`. Tests drive both with
+  `t.mock.timers.enable({ apis: ["setTimeout", "Date"] })`.

@@ -1,32 +1,22 @@
 # Button and separator facades
 
-## Buttons
+## `addButton(options?): FacadeButton`
 
-`addButton(options?)` creates `jolly-button`.
+Creates a `jolly-button`.
 
 ```ts
 interface ButtonOptions {
-  title?: string;
+  title?: string; // the button text
 }
 
-const reset = pane.addButton({ title: "Reset" });
-reset.on("click", (event: MouseEvent) => {
+pane.addButton({ title: "Reset" }).on("click", (event: MouseEvent) => {
   state.value = defaults.value;
   pane.refresh();
 });
 ```
 
-`title` defaults to `""` and becomes the button text. `on("click", handler)`
-registers a DOM click listener and returns the same builder for chaining.
+`on("click", handler)` adds a click listener and returns the builder.
 
-The button builder exposes `element`, `hidden`, `disabled`, and `dispose()`.
+## `addSeparator(): FacadeSeparator`
 
-## Separators
-
-```ts
-const separator = pane.addSeparator();
-```
-
-`addSeparator()` creates `jolly-separator`. Its builder exposes `element`,
-`hidden`, `disabled`, and `dispose()`. It has no events or bound value.
-
+Creates a `jolly-separator`. It has no value and no events.

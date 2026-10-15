@@ -7,17 +7,19 @@
 <jolly-separator label="Rendering"></jolly-separator>
 ```
 
-| Property | Type | Default |
-|---|---|---|
-| `label` | `string` | `""` |
+## Properties
 
-A label adds a visible caption and accessible name. An empty label produces a
-plain separator.
+```ts
+interface Separator {
+  label: string; // visible caption and accessible name
+}
+```
 
 ## Trailing actions
 
-Elements assigned to the `actions` slot sit after the rule, on the same row,
-without changing the separator's height.
+`actions` elements sit after the rule, on the same row, without changing its
+height. They are siblings of the `separator` role, so assistive technology
+reaches them.
 
 ```html
 <jolly-separator label="Layer">
@@ -29,6 +31,3 @@ without changing the separator's height.
   ></jolly-button>
 </jolly-separator>
 ```
-
-Actions are siblings of the `separator` role, so assistive technology reaches
-them. Slotted buttons keep their regular control colors.

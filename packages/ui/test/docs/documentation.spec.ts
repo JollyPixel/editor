@@ -20,6 +20,14 @@ const kCustomElementPattern = /@customElement\("(jolly-[^"]+)"\)/g;
 const kMarkdownLinkPattern = /\[[^\]]+\]\(([^)]+)\)/g;
 const kPropertyPattern = /@property\([\s\S]*?\)\s+declare\s+(\w+)/g;
 
+function namesProperty(
+  page: string,
+  property: string
+): boolean {
+  return page.includes(`\`${property}\``) ||
+    new RegExp(`^\\s+(?:readonly\\s+)?${property}\\??:`, "m").test(page);
+}
+
 function filesWithin(
   directory: string,
   extension: string
@@ -93,7 +101,7 @@ test("component pages name their declared reactive properties", () => {
       .map((match) => match[1]);
     for (const property of properties) {
       assert.equal(
-        page?.includes(`\`${property}\``),
+        namesProperty(page!, property),
         true,
         `${tags[0]} API page must name ${property}`
       );

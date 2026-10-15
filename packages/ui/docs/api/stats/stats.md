@@ -1,7 +1,7 @@
 # `jolly-stats`
 
-`jolly-stats` displays one metric and its oldest-first history from a
-[`StatsRecorder`](./stats-recorder.md).
+`jolly-stats` shows one metric of a [`StatsRecorder`](./stats-recorder.md) and
+its history graph.
 
 ```ts
 import "@jolly-pixel/ui";
@@ -14,36 +14,34 @@ stats.storageKey = "renderer:stats";
 document.body.append(stats);
 ```
 
-| Property | Attribute | Type | Default |
-|---|---|---|---|
-| `recorder` | none | `StatsRecorder \| null` | `null` |
-| `storageKey` | `storage-key` | `string` | `"jolly-stats"` |
-| `storage` | none | `StorageAdapter` | `LocalStorageAdapter` |
+## Properties
 
-The selected metric is saved under `${storageKey}:metric`; an empty
-`storageKey` disables that. Replacing
-`recorder`, `storage`, or `storageKey` restores a valid saved metric or
-selects the recorder's first definition.
+```ts
+interface StatsElement {
+  recorder: StatsRecorder | null; // property only
+  storageKey: string; // attribute storage-key, default "jolly-stats"
+  storage: StorageAdapter; // property only, default LocalStorageAdapter
+}
+```
 
-Click, Enter, Space, ArrowRight, or ArrowDown selects the next metric.
-Right-click, ArrowLeft, or ArrowUp selects the previous metric. Selection wraps
-at both ends.
+- The selected metric is saved under `${storageKey}:metric`. An empty
+  `storageKey` turns that off.
+- Changing `recorder`, `storage` or `storageKey` restores a valid saved metric,
+  or selects the first one.
+- The element subscribes while connected.
 
-The cycle covers every registered metric but the ones whose definition sets
-`tile: false`, which belong to a full readout rather than this tile.
+## Selecting a metric
 
-The element subscribes when connected and whenever `recorder` changes. It
-unsubscribes when disconnected. Its accessible name contains the selected
-metric label and formatted value.
+- Click, Enter, Space, ArrowRight or ArrowDown: next metric.
+- Right-click, ArrowLeft or ArrowUp: previous metric.
+- Selection wraps. Metrics with `tile: false` are skipped.
+- The accessible name holds the metric label and formatted value.
 
-## Graph behavior
+## Graph
 
-The canvas draws the selected metric's history. `min` and `max` from its
-[`MetricDefinition`](./metric-definition.md) fix graph bounds; omitted bounds
-follow the recorded history. The canvas tracks its rendered size through
-`ResizeObserver` when that API is available.
-
-Colors come from the definition's `palette`, with defaults derived from
-`better`. Built-in metrics use the same field; their colors can be overridden
-through `--jolly-stats-fps`, `--jolly-stats-ms`, `--jolly-stats-worst`,
-`--jolly-stats-mb`, and the matching `-bed` properties.
+- `min` and `max` of the [definition](./metric-definition.md) fix the bounds.
+  An omitted bound follows the history.
+- Colours come from the definition's `palette`, defaulting from `better`.
+- Built-in colours: `--jolly-stats-fps`, `--jolly-stats-ms`,
+  `--jolly-stats-worst`, `--jolly-stats-mb`, and the matching `-bed`
+  properties.

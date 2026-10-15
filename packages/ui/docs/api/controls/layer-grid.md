@@ -1,9 +1,8 @@
 # `jolly-layer-grid`
 
 `jolly-layer-grid` shows up to 32 numbered cells in blocks of two rows, like
-the layer and mask fields of the Godot inspector. It edits either a bitmask
-or a single index, and implements the
-[shared field API](../field/shared-field-api.md).
+the layer fields of the Godot inspector. It edits a bitmask or one index, and
+implements the [shared field API](../field/shared-field-api.md).
 
 ```ts
 const field = document.createElement("jolly-layer-grid");
@@ -15,92 +14,55 @@ field.names = {
 field.value = 0b101;
 ```
 
-Use [`jolly-flags`](./flags.md) instead for a few bits that each need a
-visible name.
+For a few bits that each need a visible name, use [`jolly-flags`](./flags.md).
 
 ## Properties
 
-### `mode`
+```ts
+interface LayerGrid {
+  mode: "mask" | "index"; // default "mask"
+  count: number; // 1 to LayerGrid.MaxCount (32), default 20
+  columns: number; // cells per row of one block, default 5
+  start: number; // number shown on the first cell, default 1
+  names: Readonly<Record<number, string>>; // by cell index
+  value: number | typeof Mixed; // default 0
+}
+```
 
-`"mask" | "index"`, reflected. Defaults to `"mask"`.
+- `"mask"`: `value` is a 32-bit mask, cell `i` is bit `2 ** i`. Bits past
+  `count` are kept.
+- `"index"`: `value` is the selected cell, from `0`. A value out of range
+  selects none.
+- `count` is truncated and clamped.
+- Each block holds `columns * 2` cells, row by row: by default 1 to 5 above
+  6 to 10. Zero or less uses `5`. Blocks wrap when the field is narrow.
+- `start` changes labels only. Set `0` to show the index.
+- A named cell's tooltip and accessible name read `"3: Terrain"`. The cell
+  still shows its number.
+- `Mixed`: every cell is `aria-checked="mixed"` in `"mask"` mode, and the first
+  edit keeps only the pressed bit. No cell is selected in `"index"` mode.
 
-In `"mask"` mode `value` is an unsigned 32-bit mask and cell `i` shows bit
-`2 ** i`. Bits past `count` are kept as they are when a cell is toggled.
+## Pointer
 
-In `"index"` mode `value` is the index of the selected cell, counted from
-`0`. A value outside `0..count - 1` selects no cell.
+- `"mask"`: pressing toggles a cell. Dragging paints every crossed cell with
+  the state of the first one.
+- `"index"`: pressing selects a cell. Dragging moves the selection.
+- Each painted cell emits `jolly-input`. Release emits one `jolly-change`.
+- Escape during a drag restores the value from before the press, as
+  `jolly-input`. A drag started on `Mixed` has nothing to restore.
+- A disabled, read-only or locked field ignores presses.
 
-### `count`
+## Keyboard
 
-`number`. Number of cells, from `1` to `32` (`LayerGrid.MaxCount`). Defaults
-to `20`. Fractions are truncated and values outside the range are clamped.
-
-### `columns`
-
-`number`. Cells per row of one block. Each block holds `columns * 2` cells,
-filled row by row, so the default `5` puts cells 1 to 5 above 6 to 10, and 11
-to 15 above 16 to 20. Zero or less uses the default; other values are clamped
-to `1..count`. Blocks sit side by side and wrap onto a new line when the field
-is too narrow for them.
-
-### `start`
-
-`number`. Number shown on the first cell. Defaults to `1`, so index `0` reads
-"1" as in Godot. Set it to `0` to show the index itself. It changes labels
-only, never `value`.
-
-### `names`
-
-`Readonly<Record<number, string>>`, keyed by cell index. Defaults to `{}`. A
-named cell gets the tooltip and accessible name `"3: Terrain"`; the cell still
-shows its number.
-
-### `value`
-
-`number | typeof Mixed`. Defaults to `0`. In `"mask"` mode a mixed value
-marks every cell `aria-checked="mixed"`, and the first edit resolves to the
-pressed bit alone. In `"index"` mode a mixed value selects no cell.
-
-## Interaction
-
-In `"mask"` mode, pressing a cell toggles it. Moving the pointer with the
-button held paints every cell it crosses with the state the first cell took,
-so a drag can switch a run of layers on or off. In `"index"` mode, pressing a
-cell selects it and dragging moves the selection.
-
-Each painted cell emits `jolly-input` with the new value, and release emits
-one `jolly-change`. Escape during a drag emits `jolly-input` with the value
-from before the press and no `jolly-change`; a drag that started on a mixed
-value has nothing to restore, so Escape emits nothing. A disabled, read-only or
-locked field ignores presses.
-
-The grid is one tab stop. Arrow keys move focus within a block's two rows and
-across blocks along the same row, Home and End jump to the first and last
-cell, and Space toggles or selects the focused cell. In `"index"` mode arrow
-keys also select, and each move emits `jolly-change`. A disabled grid has no
-tab stop.
-
-The grid has the `group` role with `checkbox` cells in `"mask"` mode, and
-the `radiogroup` role with `radio` cells in `"index"` mode.
+- One tab stop, none when disabled.
+- Arrow keys move within a block's two rows and across blocks. Home and End
+  jump to the first and last cell.
+- Space toggles or selects. In `"index"` mode, arrow keys also select and emit
+  `jolly-change`.
+- Roles: `group` of `checkbox` cells in `"mask"` mode, `radiogroup` of `radio`
+  cells in `"index"` mode.
 
 ## Facade
 
-A number binding with `view: "layers"` builds this element, whether or not it
-also has `min` and `max`. `count`, `columns`, `mode`, `start` and `names` are
-forwarded.
-
-```ts
-pane.addBinding(camera, "cullMask", {
-  label: "Cull mask",
-  view: "layers",
-  count: 20
-});
-
-pane.addBinding(model, "lod", {
-  label: "LOD",
-  view: "layers",
-  mode: "index",
-  count: 8,
-  columns: 4
-});
-```
+`view: "layers"` on a number binding builds this element. See
+[per-element options](../facade/binding.md#per-element-options).

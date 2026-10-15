@@ -1,30 +1,7 @@
 # Monitor facade
 
 `addMonitor(object, key, options?)` creates a read-only row for a number,
-string, or vector property.
-
-```ts
-type MonitorValue = number | string | Vec2Like | Vec3Like | Vec4Like;
-
-interface MonitorOptions<TValue = MonitorValue> {
-  label?: string;
-  format?: (value: TValue) => string;
-  view?: "graph";
-  min?: number;
-  max?: number;
-  rows?: number;
-  precision?: number;
-}
-```
-
-The default element is `jolly-monitor`. `view: "graph"` creates
-`jolly-graph`; `min`, `max`, and `rows` are applied only to that graph, which
-plots numbers.
-
-`format` receives the property value itself, whatever its shape, and its
-result is displayed as given. Without it a vector value is joined into
-`x, y, z`, each axis rounded to `precision` decimals with trailing zeros
-dropped.
+string or vector property.
 
 ```ts
 const stats = {
@@ -32,8 +9,8 @@ const stats = {
   frameMs: 0
 };
 
-const status = pane.addMonitor(stats, "status");
-const frame = pane.addMonitor(stats, "frameMs", {
+pane.addMonitor(stats, "status");
+pane.addMonitor(stats, "frameMs", {
   label: "Frame",
   view: "graph",
   min: 0,
@@ -43,28 +20,37 @@ const frame = pane.addMonitor(stats, "frameMs", {
 });
 ```
 
-A vector monitor reads the live object, so a `THREE.Vector3` can be handed
-over directly:
+## Options
 
 ```ts
-const min = pane.addMonitor(area, "position", {
-  label: "Min corner",
-  precision: 1
-});
+type MonitorValue = number | string | Vec2Like | Vec3Like | Vec4Like;
+
+interface MonitorOptions<TValue = MonitorValue> {
+  label?: string;
+  format?: (value: TValue) => string; // receives the raw value
+  view?: "graph"; // jolly-graph instead of jolly-monitor
+  min?: number; // graph only
+  max?: number; // graph only
+  rows?: number; // graph only
+  precision?: number; // decimals per vector axis, default 2
+}
 ```
 
-| Option | Default | Behavior |
-|---|---|---|
-| `precision` | `2` | Decimals kept per axis when a vector value is formatted. Ignored when `format` is set. |
+- Without `format`, a vector is joined into `x, y, z`, trailing zeros
+  dropped.
+- A vector monitor reads the live object, so a `THREE.Vector3` can be passed
+  as is.
 
-The builder reads the property during construction. Later assignments require
-`monitor.refresh()` or `pane.refresh()`. Assigning a new value to a graph
-during refresh appends one graph sample.
+## Refreshing
 
-## Add several monitors
+- The value is read once, at construction. Call `monitor.refresh()` or
+  `pane.refresh()` after an assignment.
+- Facade monitors have no timer: refresh on your own cadence.
+- Each refresh of a graph appends one sample.
 
-`addMonitors(object, fields)` adds each configured property and returns
-`void`.
+## `addMonitors(object, fields): void`
+
+Adds one monitor per configured key.
 
 ```ts
 pane.addMonitors(stats, {
@@ -76,9 +62,11 @@ pane.addMonitors(stats, {
 });
 ```
 
-`MonitorFields<TObject>` accepts only keys whose values are assignable to
-`MonitorValue`, and types each entry's `format` against that key's own value.
-An entry set to `undefined` is skipped.
+- `MonitorFields<TObject>` accepts only keys holding a `MonitorValue`, and
+  types each `format` against that key's value.
+- An entry set to `undefined` is skipped.
 
-The returned single-monitor builder exposes `element`, `hidden`, `disabled`,
-`refresh()`, and `dispose()`.
+## Builder
+
+`FacadeMonitor` adds `refresh()` to the
+[builder surface](./README.md#builder-surface).

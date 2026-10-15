@@ -12,47 +12,66 @@ behind a tab strip.
 </jolly-dock>
 ```
 
-| Property | Attribute | Type | Default |
-|---|---|---|---|
-| `active` | `active` | `string` | First pane |
+## Properties
 
-`active` is the `layoutKey` of the shown pane. The default slot accepts
-`jolly-pane` children. Each tab is labelled with the pane `heading`, or its
-`layoutKey` when the heading is empty, and starts with the pane `icon` when it
-has one.
+```ts
+interface PaneGroup {
+  // layoutKey of the shown pane, default the first enabled pane.
+  active: string;
+}
+```
 
-When the strip is too narrow for every label, the tabs that have an icon show
-only the icon. They get `data-icon-only`, the heading becomes their `title`,
-and the label stays as their accessible name. Tabs without an icon keep their
-label, cut off with an [overflow title](../interaction/README.md#overflow-titles).
-The labels come back once the strip is wide enough for all of them again. The
-group measures on resize and whenever its panes change. Grouped panes get `grouped`, which hides their title, fold and grip,
-and the hidden ones get `inactive`. A grouped pane shows its header only when it
-has `actions`, and its content stays visible while `collapsed`.
+## Events
 
-Selecting a tab with a click, Left, Right, Home or End emits
-`jolly-tab-change` with `{ value }`. Inside a dock layout it also reports a
-`GroupChange`. The tab of a `disabled` pane is skipped by both, and an `active`
-naming one falls back to the first enabled pane.
+```ts
+interface PaneGroupEvents {
+  "jolly-tab-change": { value: string; }; // a tab was selected
+}
+```
 
-Inside a `jolly-dock-layout`, the layout creates and removes groups while it
-projects the snapshot. A group left with one pane is replaced by that pane.
-Dragging a tab moves that pane only, and Space on a focused tab starts a
-keyboard move, the same as a pane grip. Along its own strip the dragged tab
-follows the pointer and the other tabs slide aside; once the pointer leaves the
-strip they slide back and the dock layout shows its drop zones.
+Inside a dock layout, selecting a tab also reports a
+[`GroupChange`](./layout.md#layoutchange).
 
-`occupiedSize(axis)` and `dragStack(slot, pane, lifted)` serve drop
-resolution: the second returns the drop target of the tab strip.
-`liftTab(pane, pointer)` returns the `SlidingReorder`
-that slides the strip while that pane's tab is dragged, or `null` when the
-pane is not in the group. `panes()` returns the slotted panes and `activePane()`
-the shown one. The component exposes `tabs`, `tab`, `tab-selected`, `tab-icon`,
-`tab-label`, and `panels` CSS parts. Tabs size to their label; stretch them
-across the strip with `jolly-pane-group::part(tab) { flex: 1 1 0; }`.
+## Methods
 
-When the shown pane has a [tone](./pane.md), the tab strip takes its fill and
-the selected tab is underlined in a shade of that tone: the light
-`--jolly-tone-<name>-on-fill` in a dark theme, and the fill darkened toward
-black in a light theme, so the line stays distinct from the pane body below.
-Without a tone, the underline uses the text color.
+### `panes(): PaneElement[]`
+
+The slotted panes.
+
+### `activePane(): PaneElement | null`
+
+The shown pane.
+
+## Tabs
+
+- Each tab shows the pane `icon` and `heading`, or its `layoutKey` when the
+  heading is empty.
+- Click, Left, Right, Home or End selects a tab.
+- The tab of a `disabled` pane is skipped. An `active` naming one falls back to
+  the first enabled pane.
+- When the strip is too narrow, tabs with an icon show only the icon and get
+  `data-icon-only`. Tabs without an icon truncate, with an
+  [overflow title](../interaction/README.md#overflow-titles).
+- Tabs size to their label. Stretch them with
+  `jolly-pane-group::part(tab) { flex: 1 1 0; }`.
+- When the shown pane has a [tone](../theme/tokens.md#toned-areas), the strip
+  takes its fill and the selected tab is underlined in a shade of it.
+
+## Grouped panes
+
+- Grouped panes get `grouped`, which hides their title, fold and grip.
+- Hidden panes get `inactive`.
+- A grouped pane shows its header only when it has `actions`.
+- Its content stays visible while `collapsed`.
+
+## In a dock layout
+
+- The layout creates and removes groups while it projects the snapshot.
+- A group left with one pane is replaced by that pane.
+- Dragging a tab moves that pane only. Along its own strip the other tabs slide
+  aside. Off the strip, the dock layout shows its drop zones.
+- Space on a focused tab starts a [keyboard move](./dock-layout.md#keyboard-moves).
+
+## Parts
+
+`tabs`, `tab`, `tab-selected`, `tab-icon`, `tab-label`, `panels`.

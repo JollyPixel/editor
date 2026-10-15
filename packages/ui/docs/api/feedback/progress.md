@@ -6,15 +6,18 @@
 <jolly-progress value="37" max="100" label="Loading assets"></jolly-progress>
 ```
 
-| Property | Attribute | Type | Default |
-|---|---|---|---|
-| `value` | `value` | `number \| null` | `null` |
-| `max` | `max` | `number` | `1` |
-| `label` | `label` | `string` | `""` |
-| `valueText` | `value-text` | `string` | `""` |
-| `animated` | `animated` | `boolean` | `false` |
-| `completed` | `completed` | `boolean` | `false` |
+## Properties
 
-`null` produces an indeterminate bar. Rendering clamps determinate values to
-the normalized range without changing the supplied properties. The component
-exposes `track` and `indicator` CSS parts.
+```ts
+interface Progress {
+  value: number | null; // null: indeterminate
+  max: number; // default 1
+  label: string;
+  valueText: string; // attribute value-text
+  animated: boolean;
+  completed: boolean;
+}
+```
+
+- Rendering clamps a determinate value without changing the properties.
+- Parts: `track`, `indicator`.

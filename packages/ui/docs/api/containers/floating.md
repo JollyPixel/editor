@@ -8,33 +8,62 @@
 </jolly-floating>
 ```
 
-| Property | Attribute | Type | Default |
-|---|---|---|---|
-| `x` | `x` | `number` | `8` |
-| `y` | `y` | `number` | `8` |
-| `width` | `width` | `number` | `320` |
-| `height` | `height` | `number` | `360` |
-| `minWidth` | `min-width` | `number` | `160` |
-| `minHeight` | `min-height` | `number` | `80` |
-| `dragging` | `dragging` | `boolean` | `false` |
-| `hidden` | `hidden` | `boolean` | `false` |
-| `storageKey` | `storage-key` | `string` | `""` |
-| `storage` | none | `StorageAdapter` | `LocalStorageAdapter` |
+## Properties
 
-`moveTo(x, y)` moves and clamps the window. `raise()` brings it above sibling
-floating windows. `clampToView()` keeps it reachable. `pane()` returns its
-slotted pane or `null`.
+```ts
+interface Floating {
+  x: number; // default 8
+  y: number; // default 8
+  width: number; // default 320
+  height: number; // default 360
+  minWidth: number; // attribute min-width, default 160
+  minHeight: number; // attribute min-height, default 80
+  hidden: boolean;
+  storageKey: string; // attribute storage-key
+  storage: StorageAdapter; // property only, default LocalStorageAdapter
 
-Movement emits `jolly-move` and `jolly-move-end` with `{ x, y }`. Resize events
-carry `{ width, height, collapsed }`. The component exposes
-`resize-handle-right`, `resize-handle-bottom`, and `resize-handle-corner` CSS
-parts. A dock layout sets `dragging` while it moves the window.
+  dragging: boolean; // set by a dock layout while it moves the window
+}
+```
+
+## Events
+
+```ts
+interface FloatingEvents {
+  "jolly-move": { x: number; y: number; };
+  "jolly-move-end": { x: number; y: number; };
+  "jolly-resize": JollyResizeDetail;
+  "jolly-resize-end": JollyResizeDetail;
+}
+```
+
+## Methods
+
+### `moveTo(x: number, y: number): void`
+
+Moves the window and keeps it in the viewport.
+
+### `raise(): void`
+
+Brings it above sibling floating windows.
+
+### `clampToView(): void`
+
+Moves it back into the viewport.
+
+### `pane(): PaneElement | null`
+
+The slotted pane.
+
+## Parts
+
+`resize-handle-right`, `resize-handle-bottom`, `resize-handle-corner`.
 
 ## Persistence
 
-An unmanaged window saves `x`, `y`, `width` and `height` when a move or
-resize commits, and `hidden` whenever its owner changes it, then restores all
-five before its first render. Its namespace is `storageKey` when set, otherwise
-the page path plus the key of the pane it holds. A window inside a
-`jolly-dock-layout` writes nothing itself: the layout owns its state and is
-told to save instead.
+- Outside a dock layout, the window saves `x`, `y`, `width` and `height` when
+  a move or resize commits, and `hidden` when it changes. It restores them
+  before its first render.
+- The namespace is `storageKey`, otherwise the page path plus the key of its
+  pane.
+- Inside a `jolly-dock-layout`, the layout stores the window instead.

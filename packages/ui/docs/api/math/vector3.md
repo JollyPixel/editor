@@ -1,20 +1,23 @@
 # `jolly-vector3`
 
-`jolly-vector3` edits `x`, `y`, and `z` numeric axes through one field row.
+`jolly-vector3` edits `x`, `y` and `z` in one field row. A `THREE.Vector3`
+can be assigned directly.
 
 ```ts
 const field = document.querySelector("jolly-vector3");
 field.value = mesh.position;
 ```
 
-| Property | Type | Default |
-|---|---|---|
-| `step` | `number` | `0.1` |
-| `min` | `number` | `-Infinity` |
-| `max` | `number` | `Infinity` |
-| `axisLabels` | `Partial<Record<"x" \| "y" \| "z", string>>` | `{}` |
-| `axisStyle` | `"corner" \| "chip" \| "letter"` | `"corner"`, see [axis markers](./README.md#axis-markers) |
+## Properties
 
-The component implements the [shared field API](../field/shared-field-api.md).
-Structural values such as `THREE.Vector3` can be assigned directly. Axis edits
-emit the complete vector.
+```ts
+interface Vector3 {
+  step: number; // default 0.1
+  min: number; // default -Infinity
+  max: number; // default Infinity
+  axisLabels: Partial<Record<"x" | "y" | "z", string>>;
+  axisStyle: AxisStyle;
+}
+```
+
+See [axis markers](./README.md#axis-markers).

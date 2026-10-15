@@ -1,6 +1,7 @@
 # `jolly-control`
 
-`jolly-control` renders one input hint inside `jolly-controls`.
+`jolly-control` renders one input hint inside
+[`jolly-controls`](./controls.md). The host has `role="listitem"`.
 
 ```html
 <jolly-control
@@ -9,11 +10,13 @@
 ><kbd>Shift</kbd><kbd>W</kbd></jolly-control>
 ```
 
-| Property | Type | Default |
-|---|---|---|
-| `description` | `string` | `""` |
-| `details` | `string` | `""` |
+## Properties
 
-The default slot accepts one or more `kbd` elements. A non-empty `details`
-value adds an information button and native popover. The host has
-`role="listitem"`.
+```ts
+interface Control {
+  description: string;
+  details: string; // adds an information button and popover
+}
+```
+
+The default slot takes one or more `kbd` elements.

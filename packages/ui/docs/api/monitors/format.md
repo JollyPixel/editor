@@ -1,15 +1,33 @@
 # Monitor formatting functions
 
-The root package exports these formatters:
+Formatters for `jolly-monitor`, `jolly-graph` and facade monitor options,
+exported from the root entry point.
 
-| Function | Output |
-|---|---|
-| `formatInteger(value)` | Rounded integer, no grouping |
-| `formatCount(value, singular?, plural?)` | Rounded count with `en-US` grouping; with `singular`, followed by the unit (`"1 voxel"`, `"12,345 voxels"`), `plural` defaulting to `singular` plus `s` |
-| `formatDecimal(value, decimals?)` | Fixed-point number, one decimal by default |
-| `formatMilliseconds(value)` | Millisecond text |
-| `formatPercent(value)` | Percentage text |
-| `formatBytes(value)` | Byte size in binary steps (`B`, `KiB`, `MiB`, ...) |
-| `formatVector(value, precision?)` | Comma-joined axes, two decimals by default |
+### `formatInteger(value: number): string`
 
-Pass a formatter to `jolly-monitor`, `jolly-graph`, or facade monitor options.
+Rounded, no grouping.
+
+### `formatCount(value: number, singular?: string, plural?: string): string`
+
+Rounded with `en-US` grouping. With `singular`, followed by the unit:
+`"1 voxel"`, `"12,345 voxels"`. `plural` defaults to `singular` plus `s`.
+
+### `formatDecimal(value: number, decimals?: number): string`
+
+Fixed-point, one decimal by default.
+
+### `formatMilliseconds(value: number): string`
+
+One decimal and ` ms`.
+
+### `formatPercent(value: number): string`
+
+One decimal and ` %`.
+
+### `formatBytes(value: number): string`
+
+Binary steps: `B`, `KiB`, `MiB`, and so on.
+
+### `formatVector(value: Vec2Like | Vec3Like | Vec4Like, precision?: number): string`
+
+Comma-joined axes, two decimals by default.

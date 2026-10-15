@@ -1,12 +1,26 @@
 # Math value types
 
-The math components use structural values and do not depend on Three.js.
+The math fields take structural values and do not depend on Three.js: a
+`THREE.Vector3` is a `Vec3Like`, a `THREE.Quaternion` a `QuatLike`.
 
-- `Vec3Like` has numeric `x`, `y`, and `z` properties.
-- `QuatLike` has numeric `x`, `y`, `z`, and `w` properties.
-- `TransformLike` groups position, quaternion rotation, and scale values.
-- `VectorValue<TAxis>` permits a concrete numeric record or per-axis field
-  values.
+```ts
+interface Vec2Like { readonly x: number; readonly y: number; }
+interface Vec3Like { readonly x: number; readonly y: number; readonly z: number; }
+interface Vec4Like { readonly x: number; readonly y: number; readonly z: number; readonly w: number; }
+interface QuatLike { readonly x: number; readonly y: number; readonly z: number; readonly w: number; }
 
-Objects with matching properties can be assigned directly. A `THREE.Vector3`
-matches `Vec3Like`; a `THREE.Quaternion` matches `QuatLike`.
+interface TransformLike {
+  readonly position: Vec3Like;
+  readonly rotation: QuatLike;
+  readonly scale: Vec3Like;
+}
+
+// A concrete record, a record of per-axis field values, or Mixed.
+type VectorValue<TAxis extends string> =
+  | Record<TAxis, number>
+  | Record<TAxis, FieldValue<number>>
+  | typeof Mixed;
+
+type Vector2Pair = "xy" | "xz" | "yz";
+type AxisStyle = "corner" | "chip" | "letter";
+```

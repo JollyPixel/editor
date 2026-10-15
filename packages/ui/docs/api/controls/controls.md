@@ -1,6 +1,7 @@
 # `jolly-controls`
 
-`jolly-controls` positions a card of `jolly-control` entries over a scene.
+`jolly-controls` positions a card of [`jolly-control`](./control.md) entries
+over a scene.
 
 ```html
 <div class="scene">
@@ -10,13 +11,16 @@
 </div>
 ```
 
-| Property | Attribute | Type | Default |
-|---|---|---|---|
-| `position` | `position` | `ControlsPosition` | `"bottom-left"` |
-| `maxEntriesPerRow` | `max-entries-per-row` | `number` | `3` |
-| `heading` | `heading` | `string` | `""` |
+## Properties
 
-`position` accepts the nine combinations from `top-left` through
-`bottom-right`, including `middle`. The component is absolutely positioned;
-its containing scene should establish a positioning context. The default slot
-contains `jolly-control` entries.
+```ts
+interface Controls {
+  position: ControlsPosition; // default "bottom-left"
+  maxEntriesPerRow: number; // attribute max-entries-per-row, default 3
+  heading: string;
+}
+```
+
+- `position` takes the nine combinations from `top-left` to `bottom-right`,
+  `middle` included.
+- The element is absolutely positioned: the scene needs a positioning context.

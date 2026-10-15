@@ -1,16 +1,25 @@
 # `jolly-density-control`
 
-`jolly-density-control` renders a select preconfigured with the three density
-values.
+`jolly-density-control` renders a select of the three densities. It does not
+apply the density to a scope.
 
 ```html
 <jolly-density-control label="Density"></jolly-density-control>
 ```
 
-| Property | Type | Default |
-|---|---|---|
-| `value` | `"compact" \| "default" \| "comfortable"` | `"default"` |
-| `label` | `string` | `"Density"` |
+## Properties
 
-Selection updates `value` and emits `jolly-change` with `{ value }`. The
-component does not apply the density to a scope.
+```ts
+interface DensityControl {
+  value: "compact" | "default" | "comfortable"; // property only, default "default"
+  label: string; // default "Density"
+}
+```
+
+## Events
+
+```ts
+interface DensityControlEvents {
+  "jolly-change": { value: Density; }; // value is updated first
+}
+```

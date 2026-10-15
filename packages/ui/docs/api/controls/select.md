@@ -12,10 +12,14 @@ field.options = [
 field.value = "nearest";
 ```
 
-| Property | Type | Default |
-|---|---|---|
-| `options` | `JollyOption<T>[]` | `[]` |
+## Properties
 
-Options are matched by position, so their values may be strings, numbers, or
-objects. Options can include an `IconName`. A user selection emits
-`jolly-change`.
+```ts
+interface Select<T> {
+  options: JollyOption<T>[]; // property only
+}
+```
+
+- Options are matched by position, so values may be strings, numbers or
+  objects. An option can carry an `icon`.
+- A user selection emits `jolly-change`.

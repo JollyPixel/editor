@@ -30,5 +30,5 @@ if (isMixed(field.value)) {
 }
 ```
 
-Fields also accept validation, default, lock, and peer state. The full property
-table is in the [shared field API](../api/field/shared-field-api.md).
+Fields also take an error, a default, a lock and peer state. Every property is
+listed in the [shared field API](../api/field/shared-field-api.md).

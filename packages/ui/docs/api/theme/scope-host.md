@@ -1,6 +1,6 @@
 # `jolly-scope`
 
-`jolly-scope` applies `themeStyles` to slotted content.
+`jolly-scope` applies `themeStyles` to its slotted content.
 
 ```html
 <jolly-scope theme="dark" density="compact">
@@ -8,6 +8,8 @@
 </jolly-scope>
 ```
 
-The component has no declared JavaScript properties. `theme` and `density`
-attributes are consumed by `themeStyles`. The default slot contains themed
-content. Application CSS chooses the host display and layout behavior.
+- `theme`: `light` or `dark`. Absent, it follows the system colour scheme.
+- `density`: `compact`, `default` or `comfortable`.
+- Both are plain attributes read by `themeStyles`; the element declares no
+  JavaScript property.
+- Application CSS chooses the host display and layout.

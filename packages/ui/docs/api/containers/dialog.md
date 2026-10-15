@@ -9,135 +9,105 @@
 </jolly-dialog>
 ```
 
-| Property | Attribute | Type | Default |
-|---|---|---|---|
-| `heading` | | `string` | `""` |
-| `icon` | | `IconName` | `""` |
-| `tone` | | `IconTone | ""` | `""` |
-| `intent` | | `DialogIntent | ""` | `""` |
-| `dismissible` | | `boolean` | `true` |
-| `headingEditable` | `heading-editable` | `boolean` | `false` |
-| `open` | | `boolean` | Read-only |
-| `closing` | | `boolean` | Read-only |
+## Properties
 
-`showModal()` opens the native dialog. `close(returnValue?)` closes it. The
-default slot supplies body content; the `actions` slot supplies footer actions.
-Body content stacks in a column with `--jolly-space-2` between children, and
-slotted `p`, `ul` and `ol` lose their block margins.
+```ts
+interface Dialog {
+  heading: string;
+  icon: IconName;
+  tone: IconTone | "";
+  intent: DialogIntent | "";
+  dismissible: boolean; // default true
+  headingEditable: boolean; // attribute heading-editable
 
-Escape and backdrop activation emit `jolly-cancel` when `dismissible` is true.
-Closing emits `jolly-close` with `{ returnValue }` as the exit transition
-starts, then `jolly-exited` once it ends. A dialog reopened before the
-transition ends emits no `jolly-exited`. Keep the body mounted until
-`jolly-exited`, so the content does not change while it fades out.
+  readonly open: boolean;
+  readonly closing: boolean; // from close() until jolly-exited
+}
 
-`closing` turns true as soon as `close()` is called, before `jolly-close`,
-and false on `jolly-exited` or the next `showModal()`. An owner whose action
-removes what the body shows can return `false` from `shouldUpdate` while
-`closing` is true, which keeps the last frame on screen during the fade.
+type DialogIntent = "info" | "success" | "warning" | "danger";
+```
 
-The header is a filled banner like a `jolly-pane` header: it sits on
-`--jolly-dialog-header-bg` with `--jolly-text-on-fill` text and the same
-checker wash. The footer sits on `--jolly-dialog-chrome-bg`, a faint ink tint
-over the body plane. Both take the same padding on every side,
-`--jolly-dialog-chrome-padding`, which follows `--jolly-row-height`, so the
-chrome shrinks and grows with the density.
+## Events
 
-| Token | Default |
-|---|---|
-| `--jolly-dialog-header-bg` | `--jolly-accent-fill` |
-| `--jolly-dialog-chrome-bg` | `--jolly-ink` at 4% over `--jolly-surface-raised` |
-| `--jolly-dialog-chrome-padding` | `calc(var(--jolly-row-height) * 0.4)` |
-| `--jolly-dialog-backdrop` | `--jolly-dialog-header-bg` at 28% over `--jolly-scrim` |
-| `--jolly-dialog-backdrop-filter` | `blur(2px)` |
+```ts
+interface DialogEvents {
+  "jolly-cancel": undefined; // Escape or backdrop, when dismissible
+  "jolly-close": { returnValue: string; }; // exit transition starts
+  "jolly-exited": undefined; // exit transition ends
+  "jolly-heading-change": { heading: string; };
+}
+```
 
-The backdrop is mixed from the header fill, so the fade behind the dialog takes
-the accent, the tone or the intent of the dialog in front of it. A dialog that
-previews its edits on the page behind it can set
-`--jolly-dialog-backdrop-filter: none` and a lighter backdrop.
+- A dialog reopened before the exit transition ends emits no `jolly-exited`.
+- Keep the body mounted until `jolly-exited`, so it does not change while it
+  fades out. An owner can also return `false` from `shouldUpdate` while
+  `closing` is true.
 
-The header, its icon and its title are exposed as the `header`, `icon` and
-`title` parts.
+## Methods
+
+### `showModal(): Promise<void>`
+
+Opens the native dialog.
+
+### `close(returnValue?: string): void`
+
+Closes it.
+
+### `confirmInline(options: InlineConfirmOptions): Promise<boolean>`
+
+Asks for a confirmation inside the open dialog instead of stacking a second
+one. See [Inline confirmation](#inline-confirmation).
+
+## Slots and parts
+
+- Slots: default (body), `actions` (footer).
+- Parts: `header`, `icon`, `title`, `confirmation`.
+- Body children stack in a column with `--jolly-space-2` between them.
+  Slotted `p`, `ul` and `ol` lose their block margins.
 
 ## Icon, tone and intent
 
-`icon` draws a registered glyph before the heading.
+- `icon` draws a registered glyph before the heading.
+- `tone` makes the dialog a [toned area](../theme/tokens.md#toned-areas).
+  Without one, it takes the tone of `icon`.
+- `intent` colours the header only, leaves the content on the accent, and wins
+  over `tone`.
+- `DIALOG_INTENTS` lists the intents. `isDialogIntent(value)` narrows a string.
+- Under forced colours the header uses system colours and the icon carries the
+  intent.
 
-`tone` makes the dialog a toned area, as it does for a
-[`jolly-pane`](./pane.md): the header, the focus ring and the accent-filled
-controls inside take the hue. Without a `tone`, the dialog follows the tone its
-`icon` was registered with.
+Each intent paints the header with `--jolly-intent-<intent>-fill` and has a
+default icon, which an explicit `icon` replaces:
 
-```html
-<jolly-dialog heading="New layer" icon="layers" tone="teal"></jolly-dialog>
-```
-
-`intent` states what the dialog means rather than where it belongs. It colours
-the header only, leaves the content on the regular accent, and wins over
-`tone`. Each intent has a default icon, which an explicit `icon` replaces.
-
-| Intent | Header token | Default icon | Role |
-|---|---|---|---|
-| `info` | `--jolly-intent-info-fill` | `info` | `dialog` |
-| `success` | `--jolly-intent-success-fill` | `check` | `dialog` |
-| `warning` | `--jolly-intent-warning-fill` | `warning` | `alertdialog` |
-| `danger` | `--jolly-intent-danger-fill` | `warning` | `alertdialog` |
+- `info`: icon `info`, role `dialog`.
+- `success`: icon `check`, role `dialog`.
+- `warning`: icon `warning`, role `alertdialog`.
+- `danger`: icon `warning`, role `alertdialog`.
 
 ```html
 <jolly-dialog heading="Delete layer?" intent="danger"></jolly-dialog>
 ```
 
-`DIALOG_INTENTS` lists the four values and `isDialogIntent()` narrows a string
-to `DialogIntent`. Under forced colours the header falls back to system
-colours and the icon alone carries the intent.
-
 ## Editable heading
 
-`headingEditable` renders the heading as a text input inside the same header
-banner. A trimmed value that differs from `heading` commits on blur and on
-Enter, emitting `jolly-heading-change` with `{ heading }`; an empty or
-unchanged draft emits nothing. Escape reverts the input to `heading` and
-leaves the dialog open. The dialog does not write `heading` itself: the owner
-applies the new name and feeds it back.
+With `heading-editable`, the heading is a text input in the header.
 
-```html
-<jolly-dialog heading="Lantern" heading-editable></jolly-dialog>
-```
-
-The input is named `Title` for assistive technology. It sizes itself to its
-content, up to the width of the header. Such a dialog opens with the focus on
-itself rather than on the title, so showing one never arms a rename.
-
-While open, the dialog holds a layer on `inputLayers`, so a viewport keyboard
-guarded by it ignores the keys pressed inside the dialog. The layer can be
-dismissed through `inputLayers.dismissAll()`, which cancels the dialog the way
-Escape does unless `dismissible` is `false`. See
-[Interaction helpers](../interaction/README.md#input-layers).
-
-## Motion
-
-The dialog and its backdrop fade and scale in on open and out on close. Dialog
-helpers stay in the DOM until `jolly-exited`. The same motion applies
-to `jolly-context-menu` and to field popovers such as the `jolly-color` picker
-and control details. A popover scales from the edge nearest its anchor.
-
-| Token | Default |
-|---|---|
-| `--jolly-duration-enter` | `250ms` |
-| `--jolly-duration-exit` | `150ms` |
-| `--jolly-easing-overlay` | `cubic-bezier(0.22, 1, 0.36, 1)` |
-| `--jolly-overlay-scale` | `0.96` |
-
-Under `prefers-reduced-motion: reduce` the transitions are disabled.
+- Enter or blur commits a trimmed value that differs from `heading`, as
+  `jolly-heading-change`. An empty or unchanged draft emits nothing.
+- Escape reverts the input and leaves the dialog open.
+- The dialog does not write `heading`: the owner applies the new name.
+- The dialog opens with focus on itself, not on the input.
 
 ## Inline confirmation
 
-`confirmInline(options)` asks for a confirmation inside the open dialog instead
-of stacking a second one. It resolves to `true` on confirm and `false` on
-cancel, on Escape, on a backdrop click, or when the dialog closes. Called on a
-closed dialog it resolves to `false`.
-
 ```ts
+interface InlineConfirmOptions {
+  message: string;
+  confirmLabel?: string; // default "OK"
+  cancelLabel?: string; // default "Cancel"
+  danger?: boolean;
+}
+
 const confirmed = await dialog.confirmInline({
   message: "3 blocks use this blockset and will lose their texture.",
   confirmLabel: "Remove",
@@ -145,37 +115,62 @@ const confirmed = await dialog.confirmInline({
 });
 ```
 
-| Option | Type | Default |
-|---|---|---|
-| `message` | `string` | |
-| `confirmLabel` | `string` | `"OK"` |
-| `cancelLabel` | `string` | `"Cancel"` |
-| `danger` | `boolean` | `false` |
-
-While confirming, the body is inert, the `actions` slot is hidden and the
-footer shows the message with its two buttons. The confirm button takes the
-focus and is the default action; the focus returns to where it was once the
-confirmation settles. `danger` gives the confirm button the `danger` variant
-and tints the footer. The footer row is exposed as the `confirmation` part,
-and the message carries `role="alert"`.
-
-Escape and a backdrop click answer the confirmation with `false` and leave the
-dialog open; a second Escape closes the dialog as usual.
-
-Use [`showConfirm()`](./dialog-helpers.md) when no dialog is open.
+- Resolves `true` on confirm, `false` on cancel, Escape, backdrop click or
+  close. On a closed dialog it resolves `false`.
+- The footer shows the message and its two buttons. The body is inert and the
+  `actions` slot hidden.
+- The confirm button takes focus and is the default action. Focus returns when
+  the confirmation settles.
+- `danger` uses the `danger` button variant and tints the footer.
+- Escape answers `false` and keeps the dialog open. A second Escape closes it.
+- With no dialog open, use [`showConfirm()`](./dialog-helpers.md).
 
 ## Default action
 
-Enter activates the dialog's default action: the `actions` element carrying
-`data-default`, otherwise the last one whose `variant` is `accent` or `danger`.
-A disabled candidate, or a dialog with neither, leaves Enter alone.
+Enter activates the `actions` element with `data-default`, otherwise the last
+one with `variant` `accent` or `danger`.
 
 ```html
 <jolly-button slot="actions">Cancel</jolly-button>
 <jolly-button slot="actions" variant="accent" data-default>Create</jolly-button>
 ```
 
-Enter is left to the focused control when it commits the key itself: a button,
-a link, a textarea, or contenteditable content. Fields such as `jolly-text`
-commit their draft on Enter before the dialog acts, so the default action sees
-the typed value.
+- A disabled candidate, or none, leaves Enter alone.
+- Buttons, links, textareas and contenteditable content keep Enter.
+- Fields such as `jolly-text` commit their draft first, so the action sees the
+  typed value.
+
+## Keyboard scope
+
+An open dialog holds an [input layer](../interaction/README.md#input-layers).
+`inputLayers.dismissAll()` cancels it like Escape, unless `dismissible` is
+`false`.
+
+## Styling
+
+- `--jolly-dialog-header-bg`: header fill, default `--jolly-accent-fill`.
+- `--jolly-dialog-chrome-bg`: footer fill, default `--jolly-ink` at 4% over
+  `--jolly-surface-raised`.
+- `--jolly-dialog-chrome-padding`: header and footer padding, default
+  `calc(var(--jolly-row-height) * 0.4)`.
+- `--jolly-dialog-backdrop`: default `--jolly-dialog-header-bg` at 28% over
+  `--jolly-scrim`, so it follows the accent, tone or intent.
+- `--jolly-dialog-backdrop-filter`: default `blur(2px)`.
+- A dialog that previews edits on the page behind it can set
+  `--jolly-dialog-backdrop-filter: none`.
+
+## Motion
+
+```css
+:root {
+  --jolly-duration-enter: 250ms;
+  --jolly-duration-exit: 150ms;
+  --jolly-easing-overlay: cubic-bezier(0.22, 1, 0.36, 1);
+  --jolly-overlay-scale: 0.96;
+}
+```
+
+- The dialog and its backdrop fade and scale in and out.
+- `jolly-context-menu` and field popovers use the same motion, scaled from
+  the edge nearest their anchor.
+- `prefers-reduced-motion: reduce` disables the transitions.

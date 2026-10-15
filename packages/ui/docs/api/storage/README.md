@@ -1,6 +1,6 @@
 # Storage API
 
-Stateful components accept this interface:
+Stateful components persist through a `StorageAdapter`:
 
 ```ts
 interface StorageAdapter {
@@ -9,26 +9,32 @@ interface StorageAdapter {
 }
 ```
 
-`LocalStorageAdapter` wraps a `StorageLike` object and permanently falls back
-to memory after a storage access failure. Its `persistent` getter reports
-whether writes still reach the wrapped storage.
+- Keys are `<storage-key>:<name>`.
+- Components that default their `storage` share one `LocalStorageAdapter` for
+  the page.
+- An empty `storageKey` on `jolly-stats` or `jolly-theme-preferences` turns
+  persistence off.
 
-`LocalStorageAdapterOptions` accepts an optional `resolve()` function that
-returns a `StorageLike` value.
+## `LocalStorageAdapter`
 
 ```ts
+new LocalStorageAdapter(options?: LocalStorageAdapterOptions)
+
+interface LocalStorageAdapterOptions {
+  resolve?: () => StorageLike | undefined; // default: globalThis.localStorage
+}
+
 const storage = new LocalStorageAdapter({
   resolve: () => sessionStorage
 });
 ```
 
-`MemoryStorageAdapter` stores string values in memory for the lifetime of the
-instance. It is useful for tests and non-persistent component state.
+- After a storage access failure, it falls back to memory for good. The
+  shared adapter's fallback outlives any one element, so an element recreated
+  with the same key still reads what the last one wrote.
+- `persistent` tells whether writes still reach the wrapped storage.
 
-Components that default their `storage` property share one
-`LocalStorageAdapter` for the page. When `localStorage` fails, its memory
-fallback outlives any single element, so an element recreated with the same
-key still reads what the previous one wrote.
+## `MemoryStorageAdapter`
 
-Keys are `<storage-key>:<name>`. An empty `storageKey` on `jolly-stats` or
-`jolly-theme-preferences` disables persistence.
+Keeps values in memory for the lifetime of the instance, for tests and
+throwaway state.

@@ -8,86 +8,107 @@
 </jolly-dock>
 ```
 
-| Property | Attribute | Type | Default |
-|---|---|---|---|
-| `side` | `side` | `"left" \| "right" \| "top" \| "bottom"` | `"left"` |
-| `align` | `align` | `"start" \| "end" \| null` | `null` |
-| `overlay` | `overlay` | `boolean` | `false` |
-| `key` | `key` | `string` | `""` |
-| `size` | `size` | `number` | `240` |
-| `collapsible` | `collapsible` | `boolean` | `false` |
-| `collapsed` | `collapsed` | `boolean` | `false` |
-| `empty` | `empty` | `boolean` | Derived from slotted panes |
-| `double` | `double` | `boolean` | `false` |
-| `split` | `split` | `boolean` | Derived from the `secondary` slot |
-| `shareTone` | `share-tone` | `boolean` | `false` |
-| `drop` | `drop` | `"any" \| "tabs" \| "none"` | `"any"` |
-| `minSize` | `min-size` | `number` | `120` |
-| `maxSize` | `max-size` | `number` | `Infinity` |
-| `storageKey` | `storage-key` | `string` | `""` |
-| `storage` | none | `StorageAdapter` | `LocalStorageAdapter` |
+## Properties
 
-The default slot accepts `jolly-pane` and `jolly-pane-group` children. A dock
-without either is `empty` from its first render: a dock that is not an overlay
-then takes no space and paints nothing, but still accepts a dragged pane and
-grows back to `size`. Leave `align` and `overlay` unset on a dock meant to
-start empty, so what lands there fills it. Resizing emits `jolly-resize`
-and then `jolly-resize-end` with `{ width, height, collapsed }`. Double-click
-or Enter toggles a collapsible dock.
+```ts
+interface Dock {
+  side: "left" | "right" | "top" | "bottom"; // default "left"
+  align: "start" | "end" | null; // default null
+  overlay: boolean;
+  key: string;
+  size: number; // default 240
+  collapsible: boolean;
+  collapsed: boolean;
+  double: boolean;
+  shareTone: boolean; // attribute share-tone
+  drop: "any" | "tabs" | "none"; // default "any"
+  minSize: number; // attribute min-size, default 120
+  maxSize: number; // attribute max-size, default Infinity
+  storageKey: string; // attribute storage-key
+  storage: StorageAdapter; // property only, default LocalStorageAdapter
 
-`drop` decides what a pane dragged inside a
-[`jolly-dock-layout`](./dock-layout.md) can do in the dock. `"any"` lets it
-join a group or take its own slot. With `"tabs"`, a pane released anywhere
-over a slot joins that slot's group, so panes never stack above one another;
-it takes its own slot only in a column holding no other pane. With `"none"`,
-the dock takes no pane: one released over it floats, and the keyboard never
-sends one there. Panes already inside can still leave, so give them
-[`locked`](./pane.md) to keep them in place.
+  readonly empty: boolean; // no slotted pane or group
+  readonly split: boolean; // the secondary slot holds a pane
+  readonly sharedTone: IconTone | null;
+}
+```
 
-The resize handle of a dock that is not an overlay sits on its inner edge,
-inside the dock, and adds its thickness to `size`: panes never slide under
-it, and neither does whatever sits next to the dock. A collapsed dock
-shrinks to that handle, which stays visible. `--jolly-dock-handle-size` sets
-the thickness (`4px`). An overlay dock keeps its handle just past its inner
-edge.
+- `drop` limits what a dragged pane can do in this dock. See
+  [drop rules](./dock-layout.md#drop-rules).
+- `storageKey` and `storage` persist size and collapse, see
+  [Storage](../storage/README.md).
 
-Public geometry methods support
-`jolly-dock-layout`; `slots()` returns the slotted panes and groups, and
-`panes()` every pane, grouped ones included.
+## Events
 
-A `double` left or right dock that is not an overlay can open a second
-column. Children with `slot="secondary"` fill it, and `split` is set while
-it holds any. A split dock is twice `size` wide and its two columns share
-that width equally: the resize handle stays on the inner edge and moves with
-it, and `minSize` and `maxSize` apply to each column. The primary column
-stays against the edge. `double` is ignored on top and bottom docks.
+```ts
+interface DockEvents {
+  "jolly-resize": JollyResizeDetail; // while the handle moves
+  "jolly-resize-end": JollyResizeDetail; // on release
+}
 
-`slots(column?)` takes `"primary"` or `"secondary"`; without a column it
-returns both, primary first.
+interface JollyResizeDetail {
+  width: number;
+  height: number;
+  collapsed: boolean;
+}
+```
 
-`dragZones(pane, lifted?)` returns the drop zones a dragged pane can use,
-one per column, each tagged with its `column`. A dock with `drop="none"`
-returns none. The second column is offered when the dock is `double`,
-expanded, and holds another slot; until it opens, its zone is a 48px band
-just past the inner edge. Given the `SlidingReorder` of a lifted tab, the
-zones preview drops on that tab's own strip live, and the strip keeps the
-tab until the pointer strays 16px above or below it.
+## Methods
 
-By default each pane of a dock is its own
-[toned area](./pane.md), so the two columns of a split dock can show two hues.
-With `share-tone`, every pane in the dock, untoned ones included, takes one
-tone: that of the first toned pane on screen, reading the primary column before
-the secondary one and a group through its active tab. The read-only
-`sharedTone` getter returns that tone, or `null` when `share-tone` is off or no
-pane on screen is toned. A pane that leaves the dock returns to its own tone.
+### `slots(column?: DockColumn): DockSlot[]`
 
-An overlay dock is `pointer-events: none !important`, so the area around its
-panes reaches whatever it covers even when page CSS sets `pointer-events` on
-`jolly-dock`. Its panes and resize handle still take pointer events, except
-the handle of an empty overlay dock. `jolly-pane`, `jolly-floating`,
-`jolly-controls` and a non-overlay `jolly-dock` declare `pointer-events: auto`,
-so a page can put them inside a `pointer-events: none` layer without
-re-enabling each one:
+Slotted panes and groups of one column. Without a column, both columns,
+primary first.
+
+### `panes(): PaneElement[]`
+
+Every pane of the dock, grouped ones included.
+
+## Slots
+
+- default: `jolly-pane` and `jolly-pane-group` children.
+- `secondary`: the second column of a `double` dock.
+
+## Empty docks
+
+- A dock with no pane is `empty` from its first render.
+- An empty dock that is not an overlay takes no space and paints nothing.
+- It still accepts a dragged pane, then grows back to `size`.
+- Leave `align` and `overlay` unset on a dock meant to start empty.
+
+## Resize handle
+
+- Double-click or Enter toggles a `collapsible` dock.
+- On a dock that is not an overlay, the handle sits inside the inner edge and
+  adds its thickness to `size`. A collapsed dock shrinks to the handle.
+- On an overlay dock, the handle sits just past the inner edge.
+- `--jolly-dock-handle-size` sets the thickness (`4px`).
+
+## Second column
+
+- Only a left or right `double` dock that is not an overlay opens a second
+  column. `double` is ignored on top and bottom docks.
+- A split dock is twice `size` wide, split equally between its columns.
+- `minSize` and `maxSize` apply to each column.
+- The primary column stays against the edge.
+- How panes open and close the column: see
+  [`jolly-dock-layout`](./dock-layout.md#second-column).
+
+## Shared tone
+
+- By default each pane is its own [toned area](../theme/tokens.md#toned-areas).
+- With `share-tone`, every pane of the dock takes the tone of the first toned
+  pane on screen: primary column first, a group through its active tab.
+- `sharedTone` is that tone, or `null` when `share-tone` is off or no pane on
+  screen is toned.
+
+## Overlay pointer events
+
+- An overlay dock is `pointer-events: none !important`, so the area around its
+  panes reaches what it covers. Its panes and handle still take pointer events.
+- `jolly-pane`, `jolly-floating`, `jolly-controls` and a non-overlay
+  `jolly-dock` declare `pointer-events: auto`, so they work inside a
+  `pointer-events: none` layer:
 
 ```css
 jolly-scope {

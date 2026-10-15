@@ -1,50 +1,44 @@
 # `Pane` facade
 
-`Pane` is the facade entry point.
+`Pane` creates a `jolly-pane` and is the entry point of the facade. It is a
+[container](./README.md#containers): it has every `add*()` method.
 
 ```ts
 new Pane(options?: PaneOptions)
 
-interface PaneOptions {
-  title?: string;
-  key?: string;
+interface PaneOptions extends FieldLayoutOptions {
+  title?: string; // the jolly-pane heading
+  key?: string; // persistence and group identity, required to join a group
   icon?: IconName;
   tone?: IconTone;
-  container?: HTMLElement;
-  grow?: boolean;
-  floating?: boolean;
+  container?: HTMLElement; // mount here instead of floating
+  grow?: boolean; // fill and scroll the container, default true
+  floating?: boolean; // float inside container, see below
   collapsible?: boolean;
-  locked?: boolean;
-  storageKey?: string;
-  labelWidth?: string;
+  locked?: boolean; // keep the authored place in a dock layout
+  storageKey?: string; // persistence namespace
+  labelWidth?: string; // --jolly-label-width
   hidden?: boolean;
   floatWidth?: number;
   floatHeight?: number;
 }
+
+interface FieldLayoutOptions {
+  labelPosition?: "inline" | "top" | "auto";
+  stackBelow?: number;
+}
 ```
 
-| Option | Default | Behavior |
-|---|---|---|
-| `title` | `""` | Sets the `jolly-pane` heading. |
-| `key` | `""` | Identity the pane persists and reorders under. A `jolly-pane-group` addresses its tabs by this, so a pane joining one needs it. |
-| `icon` | none | Glyph shown in the pane header and on its group tab. |
-| `tone` | `""` | Colours that glyph and the pane area. |
-| `container` | none | Appends the pane to this element. Without it, the pane floats under `document.body`. |
-| `grow` | `true` in container mode | Makes a mounted pane fill the container and scroll its content. Ignored for a floating pane. |
-| `floating` | `false` | Wraps the pane in a `jolly-floating` inside `container` rather than appending it there. |
-| `collapsible` | `false` | Enables folding the pane to its header. |
-| `locked` | `false` | Keeps the pane at its authored position inside a `jolly-dock-layout`. |
-| `storageKey` | derived | Namespace the pane and its floating window persist under. Derived from the page path and the title when unset, so renaming the pane drops what it remembered. |
-| `labelWidth` | `16ch` floating, none mounted | Width of the label column, as `--jolly-label-width`. |
-| `labelPosition` | none | Default `labelPosition` of every binding and note in the pane, folders included. |
-| `stackBelow` | none | Default `stackBelow` of the same rows. |
-| `hidden` | `false` | Starts the pane hidden. A floating pane persists its visibility, so a stored value wins over this default. |
-| `floatWidth` | none | Sets `floatWidth` on the `jolly-pane`. |
-| `floatHeight` | none | Sets `floatHeight` on the `jolly-pane`. |
+- `storageKey` defaults to the page path plus the title, so renaming the pane
+  drops what it remembered.
+- `hidden` on a floating pane is persisted, and a stored value wins.
+- `pane.presence` sets the [`PresenceSource`](../peer/presence-source.md) of
+  the `jolly-pane`.
+- `dispose()` removes the pane, its window and the scope it created.
 
 ## Floating and mounted panes
 
-Without `container`, the constructor creates this structure:
+Without `container`, the pane floats under `document.body`:
 
 ```text
 document.body
@@ -53,35 +47,30 @@ document.body
         └── jolly-pane
 ```
 
-The scope supplies theme tokens and sets `--jolly-label-width` to `16ch`, or
-to `labelWidth` when given. `pane.element` is the `jolly-floating` wrapper in
-this mode.
+- `pane.element` is the `jolly-floating`.
+- The scope sets `--jolly-label-width` to `labelWidth`, default `16ch`.
 
-With `container`, the constructor appends only `jolly-pane` and
-`pane.element` is that pane. The container must already be inside a theme
-scope. See [Theming and density](../../guides/theming-and-density.md).
+With `container`, only the `jolly-pane` is appended:
 
-A mounted pane inherits its container scope, where `--jolly-label-width`
-defaults to `auto` and every row sizes its own label. Pass `labelWidth` to set
-the variable on the pane itself and line the value columns up.
+- `pane.element` is the `jolly-pane`.
+- The container must already be under a
+  [theme scope](../../guides/theming-and-density.md).
+- `--jolly-label-width` defaults to `auto` there. Pass `labelWidth` to align
+  the value columns.
 
 ```ts
-const container = document.querySelector("#inspector");
-if (!(container instanceof HTMLElement)) {
-  throw new Error("Missing #inspector");
-}
-
 const pane = new Pane({
   title: "Inspector",
-  container,
+  container: document.querySelector("#inspector"),
   grow: false
 });
 ```
 
 ## Field layout
 
-`labelPosition` and `stackBelow` set the layout of every row the pane builds,
-so one option makes a whole pane responsive:
+`labelPosition` and `stackBelow` become the default of every binding and note
+in the pane, folders included. Options given to `addBinding()` or `addNote()`
+win. See [label position](../field/shared-field-api.md#label-position).
 
 ```ts
 const pane = new Pane({
@@ -91,17 +80,10 @@ const pane = new Pane({
 });
 ```
 
-Folders pass the defaults on to their own rows, and an option given to
-`addBinding()` or `addNote()` wins over them. Elements appended with
-`addElement()` are left alone. The type of these two options is exported as
-`FieldLayoutOptions`; see the [shared field API](../field/shared-field-api.md#label-column).
-
 ## Floating inside a dock layout
 
-A pane floating under `document.body` is outside every `jolly-dock-layout`,
-so no layout knows it and it cannot be dropped into one of their groups. Pass
-the layout as the `container` with `floating`, and the pane floats as one the
-layout owns.
+A pane floating under `document.body` belongs to no layout and cannot be
+docked. Pass the layout as `container` with `floating`:
 
 ```ts
 const pane = new Pane({
@@ -112,75 +94,24 @@ const pane = new Pane({
 });
 ```
 
-The layout adopts it on the next sync, stores its geometry in the layout
-snapshot, and the window drags into any dock or pane group like an authored
-pane. `key` is what the snapshot and the groups address it by.
+- The layout adopts the window on its next sync and stores its geometry.
+- The window docks into any dock or group, addressed by `key`.
+- Docking removes the window, so `pane.element` can be detached. `hidden` and
+  `dispose()` act on the current window, or on the `jolly-pane` while docked.
 
-Docking removes the window and floating again creates a new one, so
-`pane.element` can be detached. `hidden` and `dispose()` follow the pane
-instead: they act on its current window, or on the `jolly-pane` while docked.
+## `FacadeHost`
 
-## Contributing to a pane the facade did not create
-
-`Pane` always creates a `jolly-pane`. To add builders inside one that already
-exists, such as a pane authored in HTML, wrap it with `FacadeHost`.
+Adds builders inside an element the facade did not create, such as a pane
+authored in HTML.
 
 ```ts
-import { FacadeHost } from "@jolly-pixel/ui";
+new FacadeHost(element: HTMLElement)
+FacadeHost.query(selector: string, root?: ParentNode): FacadeHost
 
 const host = FacadeHost.query("jolly-pane[key=general]");
 const folder = host.addFolder({ title: "Performance" });
 ```
 
-```ts
-new FacadeHost(element: HTMLElement)
-FacadeHost.query(selector: string, root?: ParentNode): FacadeHost
-```
-
-A host creates no element of its own, so several hosts can contribute to one
-pane. Its `dispose()` disposes what it added and leaves the element itself in
-place, unlike every other builder. `query()` throws when the selector matches
-no element.
-
-## Methods
-
-| Method | Return | Behavior |
-|---|---|---|
-| `addFolder(options?)` | Folder builder | Appends a `jolly-folder`. |
-| `addBinding(object, key, options?)` | Binding builder | Appends a dispatched field bound to `object[key]`. |
-| `addMonitor(object, key, options?)` | Monitor builder | Appends one read-only value. |
-| `addMonitors(object, fields)` | `void` | Adds each configured number or string property. |
-| `addButton(options?)` | Button builder | Appends a `jolly-button`. |
-| `addSeparator()` | Separator builder | Appends a `jolly-separator`. |
-| `addNote(options?)` | Note builder | Appends a `jolly-property-row` carrying text. |
-| `addThemePreferences(options?)` | Element builder | Appends a `jolly-theme-preferences`. |
-| `addElement(element)` | Element builder | Appends and tracks an element the caller built. |
-| `addPresence(options?)` | `Presence` | Appends a `jolly-presence`. |
-| `refresh()` | `void` | Re-reads bindings and monitors created through this pane. |
-| `disposeAll()` | `void` | Disposes direct child builders and clears the child list. |
-| `dispose()` | `void` | Removes `element` and the pane's current host. |
-
-`hidden` and `disabled` read and write the corresponding state on
-`pane.element`, except that `hidden` targets the current host of a pane owned
-by a dock layout. `dispose()` also removes the `jolly-scope` a floating pane
-created.
-
-## Presence
-
-```ts
-pane.presence: PresenceSource | null
-```
-
-Writes the pane's own `presence` property, which every field below it resolves
-through. A binding's `path` then matches against the peer locks that source
-reports, so fields become read-only while a peer holds them.
-
-```ts
-import { RoomPresenceSource } from "@jolly-pixel/ui/network";
-
-pane.presence = new RoomPresenceSource(room);
-pane.addBinding(map, "width", { path: "map.width" });
-```
-
-Without a source no field below the pane ever locks. See [Presence and locking](../peer/presence-source.md).
-
+- Several hosts can contribute to one element.
+- `dispose()` disposes what the host added and leaves the element.
+- `query()` throws when the selector matches nothing.

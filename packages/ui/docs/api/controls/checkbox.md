@@ -1,16 +1,20 @@
 # `jolly-checkbox`
 
-`jolly-checkbox` edits a boolean value and implements the
+`jolly-checkbox` edits a boolean value. It implements the
 [shared field API](../field/shared-field-api.md).
 
 ```html
 <jolly-checkbox label="Visible" clickable-background></jolly-checkbox>
 ```
 
-| Property | Attribute | Type | Default |
-|---|---|---|---|
-| `clickableBackground` | `clickable-background` | `boolean` | `false` |
+## Properties
 
-The native checkbox supplies keyboard behavior. `Mixed` renders as an
-indeterminate checkbox; activating it commits `true`. User activation emits
-`jolly-change`.
+```ts
+interface Checkbox {
+  clickableBackground: boolean; // attribute clickable-background
+}
+```
+
+- The native checkbox supplies keyboard behaviour.
+- `Mixed` shows as indeterminate. Activating it commits `true`.
+- Activation emits `jolly-change`.

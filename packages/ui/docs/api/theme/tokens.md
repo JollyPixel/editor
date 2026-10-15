@@ -1,66 +1,128 @@
 # Theme exports and tokens
 
-The root entry point exports these theme styles and helpers:
+## Styles
 
-- `themeStyles` applies theme tokens, density tokens, scales, font setup, and
-  host selectors.
-- `themeTokens`, `densityTokens`, and `scaleTokens` expose their individual Lit
-  CSS results.
-- `ensureFontFace()` registers the bundled Roboto Mono face.
-- `fontFaceCss` contains its CSS declaration.
-- `resolveThemeToken(element, name)` reads a resolved custom property.
-- `resolveThemeColor(element, name, fallback)` resolves a color for canvas use.
-- `resolveCssColor(element, value, fallback)` resolves a CSS color value, such
-  as `light-dark()` or `var()`, for canvas use.
-- `peerColor(index)` returns a collaborator color.
-- `ambientThemeMode(element)` resolves the theme an element that declares
-  tokens of its own should adopt: the surrounding scope, then the page's own
-  scope host, then `null` when the page picked no side.
-- `resolveAmbientTheme(element)` returns `ambientThemeMode(element)`, or the
-  system color scheme when the page picked no side.
-- `adoptAmbientTheme(element, adopted)` sets the element's `theme` attribute
-  to its ambient theme and returns that mode, or removes it and returns `null`
-  when the page picked no side. Pass the returned value back on the next call:
-  a `theme` the author set is left alone.
-- `AmbientThemeController` is the Lit controller form: `follow()` adopts the
-  ambient theme, then adopts it again whenever a `theme` attribute changes in
-  the document, until `stop()` or disconnection. Pass
-  `new AmbientThemeController(host, { onChange })` to receive
-  `resolveAmbientTheme(host)` instead, on `follow()` and then each time it
-  changes, including when the system color scheme changes. The host's `theme`
-  attribute is then left alone, for an element whose `theme` is its own
-  configuration.
-- `documentThemeMode(doc?)` resolves the page scope host's theme, for
-  detached UI such as a floating window appended to the body.
-- `new DocumentTheme(doc?)` serves code outside a Lit element, such as a 3D
-  scene. Its `mode` is `documentThemeMode(doc)`, or the system color scheme
-  when the page picked no side. `follow(onChange)` calls `onChange` each time
-  that mode changes and returns a function that stops following.
+- `themeStyles`: theme, density and scale tokens, the font and the host
+  selectors, in one Lit `CSSResult`.
+- `themeTokens`, `densityTokens`, `scaleTokens`: the parts on their own.
+- `ensureFontFace()` registers the bundled Roboto Mono face. `fontFaceCss` is
+  its CSS.
 
-`ThemeMode` is `"light" | "dark" | "auto"`. `Density` is
-`"compact" | "default" | "comfortable"`. `THEME_MODES` and `DENSITIES` list
-their values in that order, as frozen arrays.
+## Types
 
-Components consume semantic properties such as `--jolly-surface`,
-`--jolly-text`, `--jolly-control-bg`, `--jolly-accent-fill`,
-`--jolly-danger`, and `--jolly-divider`. Layout properties include
-`--jolly-label-width`, `--jolly-label-max-width`, `--jolly-field-inset-start`,
-`--jolly-field-inset-end`,
-`--jolly-folder-indent`, `--jolly-gutter-width`, and `--jolly-dock-size`.
+```ts
+type ThemeMode = "light" | "dark" | "auto";
+type Density = "compact" | "default" | "comfortable";
+type ResolvedThemeMode = "light" | "dark";
 
-Axis colours are `--jolly-axis-<axis>` for `x`, `y`, `z` and `w`, a fill under
-white text, and `--jolly-axis-<axis>-text` for the axis letter as ink on a
-surface.
+const THEME_MODES: readonly ThemeMode[]; // frozen, in this order
+const DENSITIES: readonly Density[];
+```
 
-Seven tones add hue: `coral`, `amber`, `lime`, `teal`, `sky`, `violet` and
-`pink`. Each has `--jolly-tone-<name>` for ink on a surface,
-`--jolly-tone-<name>-on-fill` for ink over an accent fill, and
-`--jolly-tone-<name>-fill` for a solid ground under white text. Inside a toned
-[`jolly-pane`](../containers/pane.md), `--jolly-area-tone` and
-`--jolly-area-fill` hold the pane's hue, and `--jolly-accent-fill`,
-`--jolly-accent-text` and `--jolly-focus-ring` resolve to it.
+## Reading tokens
 
-Layers that dim the page read `--jolly-dialog-backdrop`: `--jolly-scrim`, a
-dark wash tuned per scheme, mixed with 28% of `--jolly-dialog-header-bg`.
-[`jolly-dialog`](../containers/dialog.md) declares it again on itself, so its
-backdrop follows its intent or tone.
+### `resolveThemeToken(host: HTMLElement, name: string, fallback?: string): string`
+
+The resolved value of a custom property.
+
+### `resolveThemeColor(host: HTMLElement, name: string, fallback?: string): string`
+
+A token resolved to a colour, for canvas use.
+
+### `resolveCssColor(host: HTMLElement, value: string, fallback?: string): string`
+
+Resolves a CSS colour value, such as `light-dark()` or `var()`, for canvas
+use.
+
+### `peerColor(index: number): string`
+
+A collaborator colour.
+
+## Following the page theme
+
+An element that declares tokens of its own stops inheriting the scope around
+it, and one appended to `document.body` never inherited one. These helpers
+resolve the page theme for it. `jolly-dialog` and the facade's floating `Pane`
+already use them.
+
+### `ambientThemeMode(element: Element): ResolvedThemeMode | null`
+
+The surrounding scope's theme, then the page's scope host, then `null` when
+the page picked no side.
+
+### `resolveAmbientTheme(element: Element): ResolvedThemeMode`
+
+`ambientThemeMode()`, or the system colour scheme.
+
+### `adoptAmbientTheme(element: Element, adopted: ResolvedThemeMode | null): ResolvedThemeMode | null`
+
+Sets the element's `theme` attribute to its ambient theme, or removes it, and
+returns the mode. Pass the result back on the next call, so a `theme` the
+author set is left alone.
+
+### `documentThemeMode(doc?: Document): ResolvedThemeMode | null`
+
+The page scope host's theme, for detached UI such as a floating window.
+
+### `AmbientThemeController`
+
+```ts
+new AmbientThemeController(host, options?: AmbientThemeControllerOptions)
+
+interface AmbientThemeControllerOptions {
+  onChange?: (mode: ResolvedThemeMode) => void;
+}
+```
+
+- `follow()` adopts the ambient theme, again on every `theme` change in the
+  document, until `stop()` or disconnection.
+- With `onChange`, it reports `resolveAmbientTheme(host)` instead and leaves
+  the host's `theme` alone, system scheme changes included.
+
+### `DocumentTheme`
+
+```ts
+new DocumentTheme(doc?: Document)
+```
+
+For code outside a Lit element, such as a 3D scene.
+
+- `mode`: `documentThemeMode(doc)`, or the system colour scheme.
+- `follow(onChange)`: calls `onChange` on each change, returns a stop
+  function.
+
+## Semantic tokens
+
+- Surfaces and ink: `--jolly-surface`, `--jolly-text`, `--jolly-control-bg`,
+  `--jolly-accent-fill`, `--jolly-danger`, `--jolly-divider`.
+- Layout: `--jolly-label-width`, `--jolly-label-max-width`,
+  `--jolly-field-inset-start`, `--jolly-field-inset-end`,
+  `--jolly-folder-indent`, `--jolly-gutter-width`, `--jolly-dock-size`.
+- Axes: `--jolly-axis-<axis>` for `x`, `y`, `z`, `w` is a fill under white
+  text. `--jolly-axis-<axis>-text` is the letter as ink on a surface.
+- Backdrop: `--jolly-dialog-backdrop` mixes 28% of `--jolly-dialog-header-bg`
+  into `--jolly-scrim`. A dialog redeclares it so it follows its intent or
+  tone.
+
+## Tones
+
+Seven hues: `coral`, `amber`, `lime`, `teal`, `sky`, `violet`, `pink`. Each
+has:
+
+- `--jolly-tone-<name>`: ink on a surface.
+- `--jolly-tone-<name>-on-fill`: ink over an accent fill.
+- `--jolly-tone-<name>-fill`: a solid ground under white text.
+
+A glyph's default tone is set at
+[registration](../icon/registry.md#tones).
+
+## Toned areas
+
+A `jolly-pane` or `jolly-dialog` with a `tone`, or with an `icon` registered
+with one, is a toned area. Inside it:
+
+- `--jolly-area-tone` and `--jolly-area-fill` hold its hue.
+- `--jolly-accent-fill`, `--jolly-accent-text` and `--jolly-focus-ring`
+  resolve to that hue, so headers, folder headers, separators and
+  accent-filled controls take it.
+- An explicit `tone` wins over the icon's.

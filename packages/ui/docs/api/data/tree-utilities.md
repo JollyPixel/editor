@@ -1,50 +1,108 @@
 # Tree data and functions
 
-`TreeNode<TData>` has a required `id` and `label`, plus optional `children`,
-`collapsible`, `icon`, `visible`, `locked`, and `data` properties. The
-presence of `children` marks a branch, including an empty array.
-`hasChildren(node)` reflects that branch status; `isExpandable(node)` is
-`true` only when `children` holds at least one entry and `collapsible` is not
-`false`, which `jolly-tree` uses to decide whether a row gets an expand
-toggle. A branch with `collapsible: false` always shows its children,
-whatever `expanded` holds.
+Pure helpers over [`TreeNode`](./tree.md#treenode) arrays, exported from the
+root entry point.
 
-`FlatTreeRow` is the flattened row shape. `TreeDropWhere` is `"above"`,
-`"inside"`, or `"below"`.
+## Types
 
-`TreeSnapshot` builds node, parent, depth, ancestor, stable order, and visible
-row indexes in one traversal. Create one snapshot when several operations need
-to inspect the same tree structure. `placement(id)` returns a
-`TreePlacement` `{ position, size, levelHasBranches }`: the node's 1-based
-position among its siblings, their count, and whether any of those siblings
-(the node included) can expand, collapsed or not. It returns `undefined` for an
-unknown ID.
+```ts
+interface FlatTreeRow<TData = unknown> {
+  node: TreeNode<TData>;
+  depth: number;
+  parentId: string | null;
+}
 
-The root entry point exports these pure helpers:
+type TreeDropWhere = "above" | "inside" | "below";
 
-- `flattenVisible(nodes, expanded)` returns visible rows with depth data.
-- `findNode(nodes, id)` returns a node by ID.
-- `findParentId(nodes, id)` returns the parent ID, `null` for a root node, or
-  `undefined` for an unknown ID.
-- `isSelfOrDescendant(nodes, sourceId, targetId)` checks ancestry.
-- `resolveSelection(options)` computes the next selected IDs. With
-  `options.requireSelection`, Ctrl+click keeps the last selected row.
-- `resolveRowDropZone(rect, clientY)` resolves `above`, `inside`, or `below`.
-  The former `(offsetY, height)` call shape remains supported for compatibility.
-- `canDrop(options)` checks structural reparenting constraints, then the
-  optional `options.accept` domain veto.
-- `resolveReparent(options)` returns a reparented tree.
-- `resolveReparentMoves(options)` returns the same drop as `ReparentMove`
-  steps `{ id, parentId, beforeId? }` for a store that moves one node at a
-  time. Applied in order, each step lands its node before `beforeId`, a sibling
-  already in place, or last without one. A refused drop gives no steps.
+interface ReparentMove {
+  id: string;
+  parentId: string | null;
+  beforeId?: string;
+}
 
-`ResolveReparentOptions.accept` is a `TreeDropAccept`, the same predicate
-shape `jolly-tree` takes as its `acceptDrop` property.
+interface ResolveReparentOptions<TData> {
+  nodes: TreeNode<TData>[];
+  movedIds: string[];
+  targetId: string;
+  where: TreeDropWhere;
+  accept?: TreeDropAccept | null; // same shape as jolly-tree acceptDrop
+}
+```
 
-`resolveDropIndex` and its types are documented with the
-[interaction helpers](../interaction/README.md).
+## `TreeSnapshot`
 
-Tree events use `DataEventMap`, `JollyActivateDetail`, `JollyReparentDetail`,
-`JollySelectDetail`, `JollyToggleExpandDetail`, `JollyToggleLockDetail`, and
+```ts
+new TreeSnapshot<TData>(
+  nodes: readonly TreeNode<TData>[],
+  expanded?: ReadonlySet<string>
+)
+```
+
+Indexes nodes, parents, depths and visible rows in one traversal. Build one
+when several operations inspect the same tree.
+
+### `placement(id: string): TreePlacement | undefined`
+
+```ts
+interface TreePlacement {
+  position: number; // 1-based, among its siblings
+  size: number; // sibling count
+  levelHasBranches: boolean; // a sibling, or the node, can expand
+}
+```
+
+`undefined` for an unknown id.
+
+## Functions
+
+### `hasChildren(node): boolean`
+
+`true` when `children` is present, even empty.
+
+### `isExpandable(node): boolean`
+
+`true` when `children` has an entry and `collapsible` is not `false`. Such a
+row gets an expand toggle.
+
+### `flattenVisible(nodes, expanded: ReadonlySet<string>): FlatTreeRow[]`
+
+The visible rows, with depth.
+
+### `findNode(nodes, id): TreeNode | null`
+
+### `findParentId(nodes, id): string | null | undefined`
+
+`null` for a root node, `undefined` for an unknown id.
+
+### `isSelfOrDescendant(nodes, ancestorId, id): boolean`
+
+### `resolveSelection(options): ResolvedSelection`
+
+The next selection after a click. With `requireSelection`, Ctrl+click keeps
+the last selected row.
+
+### `resolveRowDropZone(rect, clientY): TreeDropWhere`
+
+`above`, `inside` or `below` a row. The older `(offsetY, height)` form still
+works.
+
+### `canDrop(options: ResolveReparentOptions): boolean`
+
+Checks the structural rule, then `accept`.
+
+### `resolveReparent(options: ResolveReparentOptions): TreeNode[]`
+
+The reparented tree.
+
+### `resolveReparentMoves(options: ResolveReparentOptions): ReparentMove[]`
+
+The same drop as steps, for a store that moves one node at a time. Applied in
+order, each step puts its node before `beforeId`, or last without one. A
+refused drop gives no steps.
+
+## Event detail types
+
+`DataEventMap`, `JollyActivateDetail`, `JollyActivateSwatchDetail`,
+`JollyContextRequestDetail`, `JollyRenameDetail`, `JollyReparentDetail`,
+`JollySelectDetail`, `JollyToggleExpandDetail`, `JollyToggleLockDetail` and
 `JollyToggleVisibleDetail`.

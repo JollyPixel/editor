@@ -1,27 +1,7 @@
 # `DockFacade`
 
-`DockFacade` wraps a `jolly-dock` whose layout is authored in HTML.
-
-```ts
-static DockFacade.from(
-  element: HTMLElementTagNameMap["jolly-dock"]
-): DockFacade
-```
-
-`from()` finds the nearest `jolly-dock-layout`. It throws an `Error` when the
-dock is outside a layout or the layout has not upgraded to `DockLayout`.
-
-```ts
-static DockFacade.query(
-  selector: string,
-  root?: ParentNode
-): DockFacade
-```
-
-`query()` resolves the selector against `root`, which defaults to `document`,
-and throws an `Error` naming the selector when it matches nothing or matches
-an element that is not an upgraded `jolly-dock`. It is `from()` plus the
-lookup every caller was writing by hand.
+`DockFacade` wraps a `jolly-dock` authored in HTML. It does not create, move
+or dispose the dock.
 
 ```ts
 const dock = DockFacade.query("#tools");
@@ -34,16 +14,26 @@ const inspector = new Pane({
 dock.sync();
 ```
 
-Call `sync()` after code adds panes to the dock. It asks the owning
-`jolly-dock-layout` to reconcile children added after its initial render.
+## Static methods
 
-The facade exposes:
+### `DockFacade.from(element: HTMLElementTagNameMap["jolly-dock"]): DockFacade`
 
-| Member | Behavior |
-|---|---|
-| `element` | The wrapped `jolly-dock`. |
-| `hidden` | Reads or writes `element.hidden`. |
-| `sync()` | Reconciles the owning layout. |
+Throws an `Error` when the dock is outside a `jolly-dock-layout`, or the
+layout has not upgraded.
 
-`DockFacade` does not create, move, or dispose the authored dock.
+### `DockFacade.query(selector: string, root?: ParentNode): DockFacade`
 
+`from()` plus the lookup, in `root` (default `document`). Throws an `Error`
+naming the selector when it matches no upgraded `jolly-dock`.
+
+## Members
+
+```ts
+interface DockFacade {
+  readonly element: HTMLElementTagNameMap["jolly-dock"];
+  hidden: boolean;
+  sync(): void;
+}
+```
+
+Call `sync()` after adding panes, so the layout reconciles them.

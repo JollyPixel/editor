@@ -1,16 +1,18 @@
 # `jolly-monitor`
 
-`jolly-monitor` renders a read-only label and value row.
+`jolly-monitor` renders a read-only label and value row. It does not poll:
+the application assigns each new value.
 
 ```html
 <jolly-monitor label="Draw calls"></jolly-monitor>
 ```
 
-| Property | Type | Default |
-|---|---|---|
-| `label` | `string` | `""` |
-| `value` | `number \| string` | `""` |
-| `format` | `(value: number) => string \| undefined` | `undefined` |
+## Properties
 
-`format` applies only when `value` is a number. The application supplies each
-new value; the component does not poll.
+```ts
+interface MonitorElement {
+  label: string;
+  value: number | string;
+  format: ((value: number) => string) | undefined; // numbers only
+}
+```

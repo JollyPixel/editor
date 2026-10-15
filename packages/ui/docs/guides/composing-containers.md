@@ -1,8 +1,9 @@
 # Composing containers
 
-`jolly-pane` is the content surface used by docks and floating windows.
-`jolly-folder` groups rows within a pane. Tabs switch between larger content
-regions.
+## Pane and folders
+
+A [`jolly-pane`](../api/containers/pane.md) is the content surface. A
+[`jolly-folder`](../api/containers/folder.md) groups rows inside it.
 
 ```html
 <jolly-pane heading="Inspector" reorderable>
@@ -13,7 +14,13 @@ regions.
 </jolly-pane>
 ```
 
-A dock places panes along one side of an application region:
+## Placing panes
+
+- [`jolly-dock`](../api/containers/dock.md): panes along one edge.
+- [`jolly-floating`](../api/containers/floating.md): one pane in viewport
+  coordinates.
+- [`jolly-dock-layout`](../api/containers/dock-layout.md): moves panes between
+  docks and windows. See [Docking and persistence](./docking-and-persistence.md).
 
 ```html
 <jolly-dock side="right" align="start">
@@ -21,11 +28,20 @@ A dock places panes along one side of an application region:
 </jolly-dock>
 ```
 
-`jolly-floating` gives one pane viewport coordinates and resize handles.
-`jolly-dock-layout` coordinates moves between docks and floating windows. See
-[Docking and persistence](./docking-and-persistence.md) for that ownership
-model.
+## Switching content
 
-`jolly-toolbar` supplies toolbar semantics. `jolly-rail` is a compact strip
-for persistent controls. `jolly-dialog` wraps the native modal dialog API and
-provides an `actions` slot.
+- [`jolly-pane-group`](../api/containers/pane-group.md): several panes in one
+  place, behind a tab strip.
+- [`jolly-tabs`](../api/containers/tabs.md): tabbed regions inside any
+  content.
+
+## Bars and overlays
+
+- [`jolly-toolbar`](../api/containers/toolbar.md): toolbar semantics.
+- [`jolly-rail`](../api/containers/rail.md): a compact strip of persistent
+  controls.
+- [`jolly-dialog`](../api/containers/dialog.md): a native modal with an
+  `actions` slot, and [dialog helpers](../api/containers/dialog-helpers.md) for
+  prompts and confirmations.
+- [`jolly-context-menu`](../api/containers/context-menu.md): actions opened at
+  a point.

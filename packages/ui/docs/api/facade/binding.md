@@ -4,219 +4,148 @@
 returns its builder.
 
 ```ts
-interface BindingOptions<TValue> {
-  label?: string;
-  align?: "start" | "end";
+pane.addBinding(settings, "opacity", { min: 0, max: 1, step: 0.01 })
+  .on("change", ({ value, last }) => {
+    preview.opacity = value;
+    if (last) {
+      saveSettings(settings);
+    }
+  });
+```
+
+## Options
+
+```ts
+interface BindingOptions<TValue> extends FieldLayoutOptions {
+  label?: string; // default: the property key
+  align?: "start" | "end"; // default "end" for a checkbox, else "start"
+  path?: string; // lock path, see Presence below
   min?: number;
   max?: number;
   step?: number;
-  options?: Record<string, TValue>;
-  view?:
-    | "buttons"
-    | "flags"
-    | "layers"
-    | "point2d"
-    | "quaternion"
-    | "spin"
-    | "toggle";
+  options?: Record<string, TValue>; // label -> value, in declaration order
+  view?: DispatchView;
+  alpha?: boolean;
+  axisLabels?: Record<string, string>;
+  axes?: "xy" | "xz" | "yz";
+  axisStyle?: AxisStyle;
   layout?: "segmented" | "grid";
   columns?: number;
   count?: number;
   mode?: "mask" | "index";
   start?: number;
   names?: Record<number, string>;
-  alpha?: boolean;
-  axisLabels?: Record<string, string>;
-  axes?: "xy" | "xz" | "yz";
-  path?: string;
-  labelPosition?: "inline" | "top" | "auto";
-  stackBelow?: number;
 }
+
+type DispatchView =
+  | "buttons"
+  | "flags"
+  | "layers"
+  | "point2d"
+  | "quaternion"
+  | "spin"
+  | "toggle";
 ```
 
-`label` defaults to the property key. `align` defaults to `"end"` for a
-checkbox and `"start"` for every other field. `labelPosition` and `stackBelow`
-default to the pane's [field layout](./pane.md#field-layout), then to the
-field's own defaults.
-
-`path` is the lock path forwarded to the field's `path` property. It is the
-consumer's own identifier for the bound value, opaque to the package, and it
-is what a [`PresenceSource`](../peer/presence-source.md) matches a peer's lock
-against. Leave it unset for a field no peer can hold. See
-[the shared field API](../field/shared-field-api.md) and
-[`Pane` presence](./pane.md#presence).
+- `labelPosition` and `stackBelow` default to the pane's
+  [field layout](./pane.md#field-layout).
+- `path` is forwarded to the field's `path`. A
+  [`PresenceSource`](../peer/presence-source.md) on the pane matches peer
+  locks against it. Leave it unset for a field no peer can hold.
 
 ## Control selection
 
-The initial property value and the options determine the element:
+The first matching rule picks the element:
 
-| Value or option | Element |
-|---|---|
-| `options` with `view: "buttons"` | `jolly-button-group` |
-| `options` with `view: "flags"` and a number | `jolly-flags` |
-| `options` is present | `jolly-select` |
-| Boolean with `view: "toggle"` | `jolly-toggle` |
-| Boolean | `jolly-checkbox` |
-| Number with `view: "layers"` | `jolly-layer-grid` |
-| Number with both `min` and `max`, and `view: "spin"` | `jolly-spin-slider` |
-| Number with both `min` and `max` | `jolly-slider` |
-| Other number | `jolly-number` |
-| Six-digit or eight-digit hex string | `jolly-color` |
-| Other string | `jolly-text` |
-| Object with numeric `from` and `to` | `jolly-range` |
-| Object with numeric `x` and `y` | `jolly-vector2` |
-| Object also carrying `z` | `jolly-vector3` |
-| Object also carrying `w` | `jolly-vector4` |
-| Object with two of `x`, `y` and `z` | `jolly-vector2` on that plane |
+1. `options` with `view: "buttons"`: `jolly-button-group`.
+2. `options` with `view: "flags"` on a number: `jolly-flags`.
+3. `options`: `jolly-select`.
+4. Boolean with `view: "toggle"`: `jolly-toggle`.
+5. Boolean: `jolly-checkbox`.
+6. Number with `view: "layers"`: `jolly-layer-grid`.
+7. Number with `min`, `max` and `view: "spin"`: `jolly-spin-slider`.
+8. Number with `min` and `max`: `jolly-slider`.
+9. Other number: `jolly-number`.
+10. Six- or eight-digit hex string: `jolly-color`.
+11. Other string: `jolly-text`.
+12. Object with numeric `from` and `to`: `jolly-range`.
+13. Object with `x`, `y`, `z` and `w`: `jolly-vector4`, or `jolly-quaternion`
+    with `view: "quaternion"`.
+14. Object with `x`, `y` and `z`: `jolly-vector3`.
+15. Object with `x` and `y`: `jolly-vector2`, or `jolly-point2d` with
+    `view: "point2d"`.
+16. Object with `x` and `z`, or `y` and `z`: `jolly-vector2` on that plane.
 
-`options` takes precedence over value type and numeric bounds. Its record keys
-become option labels and its record values become bound values. Declaration
-order is retained.
-
-`view` picks a different control for the same options. `"buttons"` makes a
-`jolly-button-group`, for a handful of options worth showing at once:
+- A `view` the value does not match is ignored. `view: "flags"` on a value
+  that is not a number falls back to `jolly-select`, and drops option values
+  that are not numbers.
+- `null`, `undefined` and other values throw a `TypeError`.
+- `jolly-transform` is not dispatched. Compose it from three bindings, or use
+  the element.
 
 ```ts
 folder.addBinding(settings, "mode", {
-  label: "Mode",
   view: "buttons",
-  options: {
-    Pos: "translate",
-    Angle: "rotate",
-    Scale: "scale"
-  }
+  options: { Pos: "translate", Angle: "rotate", Scale: "scale" }
 });
-```
 
-`"flags"` makes a `jolly-flags` when the bound value is a number, editing it
-as a bitmask. Each option value carries one bit, and a committed edit writes
-the complete mask:
-
-```ts
 folder.addBinding(layer, "mask", {
-  label: "Layers",
   view: "flags",
-  options: {
-    Default: 1,
-    Player: 2,
-    Terrain: 4
-  }
+  options: { Default: 1, Player: 2, Terrain: 4 }
 });
+
+folder.addBinding(camera, "cullMask", { view: "layers", count: 20 });
 ```
-
-Option entries that are not numbers are dropped, and `view: "flags"` on a
-value that is not a number falls back to `jolly-select`.
-
-`view: "spin"` swaps `jolly-slider` for the narrower `jolly-spin-slider`, which
-draws the range as a bar under the value. A number without both bounds
-ignores it and stays a `jolly-number`.
-
-`view: "layers"` makes a `jolly-layer-grid` for a number, with or without
-bounds, as a layer mask or, with `mode: "index"`, one index:
-
-```ts
-folder.addBinding(camera, "cullMask", {
-  label: "Cull mask",
-  view: "layers",
-  count: 20
-});
-```
-
-Vector shapes are tested widest first, so `{ x, y, z }` is a three-axis value
-rather than the two-axis one it also satisfies. `"point2d"` turns a two-axis
-value into a drag pad, and `"quaternion"` reads a four-axis value as a rotation
-and edits it in degrees. A `view` the value does not match is ignored.
-
-A two-axis value is bound on the plane it carries, so `{ x, z }` gets a field
-labelled X and Z writing back those same keys. `axes` overrides that plane.
-
-A numeric `step` without both bounds creates `jolly-number`. Unsupported
-values, including `null` and `undefined`, cause `addBinding()` to throw a
-`TypeError`.
-
-`jolly-transform` is not dispatched. It is not a `JollyField`, so it carries
-no `label`, `disabled`, `align` or `path`, and its three sub-fields lock
-independently. Compose one from three bindings instead, or use the element
-directly.
 
 ## Per-element options
 
-| Option | Applies to | Behavior |
-|---|---|---|
-| `min`, `max`, `step` | numbers, ranges, vectors, `jolly-point2d` | Bounds and increment, shared by every axis of a vector. |
-| `step` | `jolly-quaternion` | Degrees per scrub step or arrow key press. |
-| `alpha` | `jolly-color` | Adds an alpha channel and switches output to `#rrggbbaa`. Defaults to on when the bound value is already eight digits. |
-| `axisLabels` | vectors, `jolly-quaternion` | Per-axis accessible names, e.g. `{ x: "pitch" }`. |
-| `axisStyle` | vectors, `jolly-quaternion` | `"corner"`, `"chip"` or `"letter"`, see [axis markers](../math/README.md#axis-markers). Defaults to the element class's `Defaults.axisStyle`. |
-| `axes` | `jolly-vector2` | Which plane the field edits. Defaults to the pair the bound value carries. |
-| `layout` | `jolly-button-group` | `"segmented"` in a row, or `"grid"`. Defaults to the element's `"segmented"`. |
-| `columns` | `jolly-button-group` | Columns of a `"grid"` layout. Zero lets the grid size itself. |
-| `columns` | `jolly-layer-grid` | Cells per row of one two-row block. Zero or less keeps the element default `5`, unlike the button group. |
-| `count`, `mode`, `start`, `names` | `jolly-layer-grid` | Forwarded to the element's [properties](../controls/layer-grid.md#properties). |
+- `min`, `max`, `step`: numbers, ranges, vectors and `jolly-point2d`, shared by
+  every axis.
+- `step` on `jolly-quaternion`: degrees per scrub step or arrow key.
+- `alpha`: `jolly-color` writes `#rrggbbaa`. On by default for an
+  eight-digit value.
+- `axisLabels`: per-axis accessible names, such as `{ x: "pitch" }`.
+- `axisStyle`: `"corner"`, `"chip"` or `"letter"`, see
+  [axis markers](../math/README.md#axis-markers).
+- `axes`: the plane of `jolly-vector2`. Defaults to the pair the value
+  carries, so `{ x, z }` edits and writes back `x` and `z`.
+- `layout`, `columns`: `jolly-button-group` layout. Zero `columns` sizes the
+  grid itself.
+- `columns` on `jolly-layer-grid`: cells per row of one block. Zero or less
+  keeps the default `5`.
+- `count`, `mode`, `start`, `names`: forwarded to
+  [`jolly-layer-grid`](../controls/layer-grid.md#properties).
 
-## Write-back and change handlers
+## Write-back
 
-The builder listens to `jolly-input` and `jolly-change`. It assigns the event
-value to `object[key]` before running registered handlers.
-
-A math value is the exception. Its axes are copied onto the object already at
-`object[key]`, which keeps that object's identity and its methods, so a
-`THREE.Vector3` survives an edit intact. Axes the bound object does not carry
-are left out. `refresh()` assigns the field a fresh record rather than the
-bound object, because a field compares its value component-wise and would
-otherwise see no change at all.
+- The builder listens to `jolly-input` and `jolly-change`, assigns the value
+  to `object[key]`, then runs the handlers.
+- A math value is copied axis by axis onto the object already at
+  `object[key]`, so a `THREE.Vector3` keeps its identity. Axes the object does
+  not carry are skipped.
 
 ```ts
-const area = {
-  position: new THREE.Vector3(0, 0, 0)
-};
-
 pane
   .addBinding(area, "position", { step: 1, label: "Min corner" })
   .on("change", ({ value }) => {
-    // Still the same THREE.Vector3, now carrying the edited axes.
+    // Still the same THREE.Vector3.
     mesh.position.copy(value);
   });
 ```
 
-```ts
-const settings = {
-  opacity: 0.5
-};
-
-const binding = pane.addBinding(settings, "opacity", {
-  min: 0,
-  max: 1,
-  step: 0.01
-});
-
-binding.on("change", ({ value, last }) => {
-  preview.opacity = value;
-  if (last) {
-    saveSettings(settings);
-  }
-});
-```
-
-The callback receives:
+## Builder
 
 ```ts
+interface FacadeBinding<TObject, TKey> extends FacadeItem {
+  on(name: "change", handler: BindingChangeHandler<TObject[TKey]>): this;
+  refresh(): void; // re-reads object[key]
+}
+
 interface BindingChangeEvent<TValue> {
   value: TValue;
-  last: boolean;
+  last: boolean; // false for jolly-input, true for jolly-change
 }
 ```
 
-`last` is `false` for `jolly-input` and `true` for `jolly-change`.
-`on()` returns the same builder for chaining. Each call adds another handler.
-
-## Builder surface
-
-| Member | Behavior |
-|---|---|
-| `element` | The dispatched field element. |
-| `hidden` | Reads or writes `element.hidden`. |
-| `disabled` | Reads or writes the field's disabled state. |
-| `refresh()` | Re-reads `object[key]` after an external assignment. |
-| `dispose()` | Removes the field element. |
-
+- Each `on()` call adds a handler.
+- Use `last` to save or record history once per committed edit.

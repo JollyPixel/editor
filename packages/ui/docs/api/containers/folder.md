@@ -8,47 +8,59 @@
 </jolly-folder>
 ```
 
-| Property | Attribute | Type | Default |
-|---|---|---|---|
-| `label` | `label` | `string` | `""` |
-| `key` | `key` | `string` | `""` |
-| `open` | `open` | `boolean` | `true` |
-| `collapsible` | `collapsible` | `boolean` | `true` |
-| `reorderable` | `reorderable` | `boolean` | `false` |
-| `dragging` | `dragging` | `boolean` | `false` |
-| `flush` | `flush` | `boolean` | `false` |
-| `storageKey` | `storage-key` | `string` | `""` |
-| `storage` | none | `StorageAdapter` | `LocalStorageAdapter` |
+## Properties
 
-Header activation emits `jolly-toggle` with `{ open }`. A reorderable folder
-shows a grip when its owning pane permits folder reordering. The component
-exposes `header` and `content` CSS parts. Its owning pane sets `dragging` during
-a pointer reorder preview.
+```ts
+interface Folder {
+  label: string;
+  key: string;
+  open: boolean; // default true
+  collapsible: boolean; // default true
+  reorderable: boolean; // shows a grip when its pane allows reordering
+  flush: boolean; // no content indent
+  storageKey: string; // attribute storage-key
+  storage: StorageAdapter; // property only, default LocalStorageAdapter
+
+  dragging: boolean; // set by its pane during a reorder preview
+}
+```
+
+## Events
+
+```ts
+interface FolderEvents {
+  "jolly-toggle": { open: boolean; };
+}
+```
+
+## Slots and parts
+
+- Slots: default (content), `actions` (header).
+- Parts: `header`, `content`.
 
 ## Non-collapsible folders
 
-Set `collapsible` to `false` as a JavaScript property. The folder stays open,
-ignores stored `open` state, and renders its title without a collapse button or
-chevron.
+`collapsible` defaults to `true` and reflects, so an absent attribute or
+`?collapsible=${false}` does not turn it off. Set the property instead:
 
 ```ts
 html`<jolly-folder .collapsible=${false} label="Block Library"></jolly-folder>`
 ```
 
-Because `collapsible` defaults to `true` and reflects, an absent attribute or
-`?collapsible=${false}` does not disable it. Outside Lit, assign
-`folder.collapsible = false`. Open content grows with a stretched host.
+- The folder stays open and ignores stored `open` state.
+- The title has no collapse button or chevron.
+- Open content grows with a stretched host.
 
 ## Indentation
 
-`--jolly-folder-indent` sets the content's inline-start padding and defaults to
-`--jolly-space-1`; nesting compounds it. Set `flush` on one folder, or set the
-custom property to `0` on an ancestor, to flatten its content.
+- `--jolly-folder-indent` sets the content's inline-start padding, default
+  `--jolly-space-1`. Nesting adds up.
+- `flush`, or the property set to `0` on an ancestor, flattens the content.
 
 ## Header actions
 
-Elements assigned to the `actions` slot sit in the header, between the label and
-the grip, and stay visible while the folder is shut.
+`actions` elements sit between the label and the grip, and stay visible while
+the folder is shut.
 
 ```html
 <jolly-folder label="Block Library">
@@ -63,32 +75,23 @@ the grip, and stay visible while the folder is shut.
 </jolly-folder>
 ```
 
-An action is a sibling of the collapse toggle, not a child of it, so activating
-one leaves `open` alone. A folder that should reveal itself when its own action
-runs opens itself from the handler. A drag ghost clones the folder without its
-light DOM, so actions do not ride along with a reorder.
-
-The header is 7px taller than `--jolly-control-height`. Slotted `jolly-button`
-actions are chips 3px shorter than the control height and 4px wider than tall,
-with the icon tone fully on at rest. The header exposes that chip height to its
-slotted content as `--jolly-folder-action-size`, so a custom element that
-renders its own action button can match it.
-
-Chips fill with the accent mixed into `--jolly-surface-raised`, and a toned pane
-swaps in its area fill. Override `--jolly-folder-action-fg`,
-`--jolly-folder-action-bg`, `--jolly-folder-action-bg-hover`,
-`--jolly-folder-action-bg-focus`, and `--jolly-folder-action-bg-active` to
-restyle them. The `danger` variant is a red tint with a red glyph and reads
-`--jolly-folder-action-danger-fg`, `--jolly-folder-action-danger-bg`,
-`--jolly-folder-action-danger-bg-hover`, and
-`--jolly-folder-action-danger-bg-focus`.
+- Activating an action leaves `open` alone. Open the folder from the handler
+  when the action should reveal it.
+- Actions do not appear in the reorder drag ghost.
+- Slotted `jolly-button` actions are small chips. A custom action matches their
+  height with `--jolly-folder-action-size`.
+- Chips fill with the accent mixed into `--jolly-surface-raised`, or the area
+  fill of a toned pane.
+- Restyle them with `--jolly-folder-action-fg`, `-bg`, `-bg-hover`,
+  `-bg-focus` and `-bg-active`. The `danger` variant reads
+  `--jolly-folder-action-danger-fg`, `-bg`, `-bg-hover` and `-bg-focus`.
 
 ## Searching
 
-A folder inside a [searchable pane](./pane.md#searching-content) filters its
-own content. When its `label` matches the query, the folder and everything in
-it stay visible. Otherwise it filters its content by the same rules as the
-pane, and the pane hides the folder itself when nothing in it matches.
-A closed folder with a match inside opens while the search lasts, without
-changing or storing `open`. Until the search clears, a folder opened that way
-shows its label without the chevron and cannot be collapsed.
+In a [searchable pane](./pane.md#searching-content):
+
+- A folder whose `label` matches stays visible with all its content.
+- Otherwise it filters its content like the pane does, and the pane hides it
+  when nothing inside matches.
+- A closed folder with a match opens while the search lasts, without storing
+  `open`, and cannot be collapsed until the search clears.
