@@ -3,6 +3,7 @@ import {
   registerConsoleFeatures,
   type RegistrationHandle
 } from "@jolly-pixel/console";
+import type { Lantern } from "@jolly-pixel/lantern";
 import type {
   MetricsPanel,
   Runtime
@@ -30,9 +31,12 @@ import type { VoxelMapWorkspace } from "../workspace/VoxelMapWorkspace.ts";
 import { EditorShell } from "../shell/EditorShell.ts";
 import { BLOCKSET_DOCUMENT_KIND } from "../features/blocksets/BlocksetBinding.ts";
 import { mapConsole } from "./mapConsole.ts";
+import { basics } from "../tours/basics.ts";
+import { textures } from "../tours/textures.ts";
 
 // CONSTANTS
 const kCanvas = "#game-container > canvas";
+const kTours = [basics, textures];
 const kPerformanceStorageKey = "voxel-map:performance-hud";
 const kPerformancePaneKey = "performance";
 const kMapKind = voxelMapDocumentKind();
@@ -47,6 +51,7 @@ export interface VoxelMapEditorParts {
   consoleFeatures: RegistrationHandle;
   metricsPanel: Promise<MetricsPanel>;
   removeInspectorMetrics: () => void;
+  lantern: Lantern;
 }
 
 export class VoxelMapEditor {
@@ -155,7 +160,8 @@ export class VoxelMapEditor {
         }
       ),
       metricsPanel,
-      removeInspectorMetrics
+      removeInspectorMetrics,
+      lantern: context.lantern
     });
   }
 
@@ -164,6 +170,7 @@ export class VoxelMapEditor {
   #consoleFeatures: RegistrationHandle;
   #metricsPanel: MetricsPanel | null = null;
   #removeInspectorMetrics: () => void;
+  #releaseTours: Array<() => void>;
   #disposed = false;
 
   readonly ready: Promise<void>;
@@ -183,10 +190,17 @@ export class VoxelMapEditor {
     this.#target = parts.target;
     this.#consoleFeatures = parts.consoleFeatures;
     this.#removeInspectorMetrics = parts.removeInspectorMetrics;
+    this.#releaseTours = kTours.map((tour) => parts.lantern.register(tour));
     this.ready = Promise.all([
       parts.target.ready,
       parts.scene.ready
     ]).then(() => undefined);
+
+    this.ready.then(() => {
+      if (!this.#disposed) {
+        parts.lantern.offer(basics);
+      }
+    }, () => undefined);
 
     parts.metricsPanel.then((panel) => {
       if (this.#disposed) {
@@ -203,6 +217,9 @@ export class VoxelMapEditor {
     this.#metricsPanel?.dispose();
     this.#removeInspectorMetrics();
     this.#consoleFeatures.unregister();
+    for (const release of this.#releaseTours) {
+      release();
+    }
     this.#shell.dispose();
     this.#target.release();
   }

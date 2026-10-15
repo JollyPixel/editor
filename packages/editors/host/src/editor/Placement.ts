@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import type { Lantern } from "@jolly-pixel/lantern";
+
 // Import Internal Dependencies
 import { forwardConsole } from "../console/forwardConsole.ts";
 import {
@@ -91,13 +94,14 @@ export class Placement {
   toolbar(
     launch: EditorLaunch,
     session: PlacedSession,
-    navigator: LaunchNavigator
+    navigator: LaunchNavigator,
+    lantern: Lantern
   ): EditorToolbarSources {
     const { catalog, assets } = session;
     const { id, kind } = session.target.record;
 
-    return new EditorToolbarSources(
-      this.shared || this.shell !== null ?
+    return new EditorToolbarSources({
+      targets: this.shared || this.shell !== null ?
         null :
         new EditorTargets({
           catalog,
@@ -105,7 +109,7 @@ export class Placement {
           current: id,
           navigator
         }),
-      this.shared || session.workspace !== null ?
+      tags: this.shared || session.workspace !== null ?
         null :
         new EditorTags({
           catalog,
@@ -113,8 +117,9 @@ export class Placement {
           viewing: launch.tag,
           unsaved: () => assets.unsaved,
           navigator
-        })
-    );
+        }),
+      lantern
+    });
   }
 
   rememberOpened(

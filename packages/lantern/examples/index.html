@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>jolly-pixel/lantern example</title>
+  <link rel="stylesheet" href="./main.css">
+</head>
+
+<body>
+  <jolly-scope theme="dark">
+    <demo-toolbar></demo-toolbar>
+    <main>
+      <aside id="pane">
+        <h2>Blocks</h2>
+        <p>Stone, grass, sand.</p>
+      </aside>
+      <section id="viewport" aria-label="Viewport">
+        <p>Clicks: <output id="clicks">0</output></p>
+      </section>
+    </main>
+    <jolly-pane-group id="dock" active="inspector">
+      <jolly-pane key="inspector" heading="Inspector">
+        <p>Position, rotation, scale.</p>
+      </jolly-pane>
+      <jolly-pane key="layers" heading="Layers">
+        <p>Ground, props, sky.</p>
+      </jolly-pane>
+    </jolly-pane-group>
+    <jolly-button id="start">Start the tour</jolly-button>
+    <jolly-button id="edge">Help</jolly-button>
+    <jolly-lantern></jolly-lantern>
+  </jolly-scope>
+  <script type="module" src="./main.ts"></script>
+</body>
+
+</html>

@@ -1,0 +1,69 @@
+/* Page level only. Colours come from the tokens jolly-scope declares. */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+jolly-scope {
+  --demo-dock-width: 220px;
+
+  display: grid;
+  min-height: 100vh;
+  grid-template-columns: 1fr var(--demo-dock-width);
+  grid-template-rows: auto 1fr;
+  background: var(--jolly-surface);
+  color: var(--jolly-text);
+  font-family: var(--jolly-font-family);
+  font-size: calc(var(--jolly-font-size) + 1px);
+}
+
+main {
+  display: flex;
+  gap: var(--jolly-space-4);
+  padding: var(--jolly-space-4);
+}
+
+#pane {
+  width: 200px;
+  padding: var(--jolly-space-3);
+  background: var(--jolly-surface-raised);
+}
+
+#viewport {
+  display: grid;
+  flex: 1;
+  place-content: center;
+  gap: var(--jolly-space-3);
+  background: var(--jolly-surface-sunken);
+  text-align: center;
+}
+
+#dock {
+  grid-column: 2;
+  grid-row: 1 / -1;
+  border-radius: 0;
+}
+
+#dock p {
+  margin: var(--jolly-space-3);
+}
+
+#start {
+  position: fixed;
+  bottom: 8px;
+  left: 8px;
+}
+
+#edge {
+  position: fixed;
+  right: calc(var(--demo-dock-width) + 8px);
+  bottom: 8px;
+}
+
+#pane[data-highlighted] {
+  background: var(--jolly-folder-header-bg);
+}

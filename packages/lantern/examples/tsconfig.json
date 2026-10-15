@@ -1,0 +1,16 @@
+{
+  "extends": [
+    "../tsconfig.json",
+    "../../../tsconfig/examples.json"
+  ],
+  "compilerOptions": {
+    "paths": {
+      "@jolly-pixel/lantern": [
+        "../src/index.ts"
+      ],
+      "@jolly-pixel/lantern/element": [
+        "../src/element/index.ts"
+      ]
+    }
+  }
+}

@@ -8,11 +8,21 @@ import assert from "node:assert/strict";
 import { setTimeout } from "node:timers/promises";
 
 // Import Third-party Dependencies
-import type { Select } from "@jolly-pixel/ui";
+import {
+  Lantern,
+  TargetPath,
+  Tour
+} from "@jolly-pixel/lantern";
+import {
+  MemoryStorageAdapter,
+  type ContextMenu,
+  type Select
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { EditorToolbar } from "#src/ui/index.ts";
 import "#src/ui/index.ts";
+import { REPLAY_TOUR_STEP } from "#src/lantern/replayTourStep.ts";
 import { EditorTargets } from "#src/session/EditorTargets.ts";
 import type { EditorTags } from "#src/session/EditorTags.ts";
 import { EditorToolbarSources } from "#src/session/EditorToolbarSources.ts";
@@ -26,10 +36,15 @@ import {
 
 async function mount(
   targets: EditorTargets | null,
-  tags: EditorTags | null
+  tags: EditorTags | null,
+  lantern = new Lantern({ storage: new MemoryStorageAdapter() })
 ): Promise<EditorToolbar> {
   const element = document.createElement("jolly-editor-toolbar");
-  element.sources = new EditorToolbarSources(targets, tags);
+  element.sources = new EditorToolbarSources({
+    targets,
+    tags,
+    lantern
+  });
   document.body.append(element);
   await setTimeout();
   await element.updateComplete;
@@ -42,6 +57,23 @@ function query<TElement extends Element = HTMLElement>(
   selector: string
 ): TElement | null {
   return element.shadowRoot!.querySelector<TElement>(selector);
+}
+
+function tour(
+  id: string
+): Tour {
+  return new Tour({
+    id,
+    version: 1,
+    title: `Tour ${id}`,
+    steps: [
+      {
+        id: "welcome",
+        title: "Welcome",
+        body: ""
+      }
+    ]
+  });
 }
 
 function pick(
@@ -62,6 +94,54 @@ describe("EditorToolbar", () => {
     const element = await mount(null, null);
 
     assert.ok(element.hasAttribute("empty"));
+  });
+
+  test("shows the bar for tours alone, and starts the only tour from the replay target", async() => {
+    const lantern = new Lantern({ storage: new MemoryStorageAdapter() });
+    const basics = tour("basics");
+    const release = lantern.register(basics);
+    const element = await mount(null, null, lantern);
+
+    const button = new TargetPath(REPLAY_TOUR_STEP.target).resolve(document);
+    assert.ok(button instanceof HTMLElement);
+    button.click();
+
+    assert.ok(!element.hasAttribute("empty"));
+    assert.equal(lantern.session?.tour, basics);
+
+    lantern.session?.skip();
+    release();
+    await element.updateComplete;
+    assert.ok(element.hasAttribute("empty"));
+    assert.equal(query(element, "[data-tour=tours]"), null);
+  });
+
+  test("lists several tours in a menu with a check on the ones taken", async() => {
+    const lantern = new Lantern({ storage: new MemoryStorageAdapter() });
+    const basics = tour("basics");
+    lantern.register(basics);
+    lantern.register(tour("brushes"));
+    lantern.seen.record(basics);
+    const element = await mount(null, null, lantern);
+    const menu = query<ContextMenu>(element, "jolly-context-menu")!;
+
+    query(element, "[data-tour=tours]")!.click();
+    menu.dispatchEvent(new CustomEvent("jolly-context-action", {
+      detail: { id: "brushes" }
+    }));
+
+    assert.deepEqual(menu.items, [
+      {
+        id: "basics",
+        label: "Tour basics",
+        icon: "check"
+      },
+      {
+        id: "brushes",
+        label: "Tour brushes"
+      }
+    ]);
+    assert.equal(lantern.session?.tour.id, "brushes");
   });
 
   test("hides the Asset select when the target is the only asset of its kind", async() => {

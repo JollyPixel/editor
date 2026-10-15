@@ -21,7 +21,7 @@ export const dialogStyles = css`
     --jolly-dialog-backdrop: color-mix(
       in oklab,
       var(--jolly-dialog-header-bg, ${kFallback.paneHeaderBg}) 28%,
-      light-dark(rgb(30 38 52 / 46%), rgb(5 10 18 / 62%))
+      var(--jolly-scrim, ${kFallback.scrim})
     );
 
     font-family: var(--jolly-font-family, ui-monospace, monospace);

@@ -7,7 +7,8 @@ const kNoCommentsWorkspaces = [
   "accounts",
   "assets/voxel-animation",
   "e2e",
-  "image"
+  "image",
+  "lantern"
 ];
 const kNoOfNamesWorkspaces = [
   "accounts",
@@ -15,6 +16,7 @@ const kNoOfNamesWorkspaces = [
   "bench",
   "editors/pixel-art",
   "event-store",
+  "lantern",
   "resize-handle",
   "voxel-tiled"
 ];
@@ -30,6 +32,7 @@ const kNoGetSetPrefixWorkspaces = [
   "editors/host",
   "event-store",
   "history",
+  "lantern",
   "resize-handle",
   "studio"
 ];

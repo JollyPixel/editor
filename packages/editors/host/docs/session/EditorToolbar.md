@@ -23,8 +23,8 @@ toolbar.sources = context.toolbar;
 
 The bar is as tall as a pane group's tab strip and does not overlap the
 viewport, so put it in a column above the element holding the canvas. When
-`sources` is `null`, or holds no `tags` and fewer than two `targets`, it sets
-the `empty` attribute and hides itself.
+`sources` is `null`, or holds no `tags`, fewer than two `targets` and no
+registered tour, it sets the `empty` attribute and hides itself.
 
 The bar never draws outside its own width. Below 560px it hides the Asset and
 Version captions and shows Save version as an icon button. Below 360px it
@@ -52,14 +52,27 @@ icon buttons instead: Restore this version (accent) and Delete this version
 (danger). The bar is disabled while an action or a switch runs, and a failed
 one shows its error in the bar until the next action.
 
+Its `lantern` shows a Tours button, a question mark at the end of the bar,
+while at least one tour is registered. With one tour, a click starts it. With
+several, it opens a menu listing them by title, with a check on the ones the
+user already finished or skipped. A tour can end on
+[`REPLAY_TOUR_STEP`](../editor/mountStandalone.md#tours), which points at it.
+
 ## EditorToolbarSources
 
 ```ts
+interface EditorToolbarSourcesOptions {
+  targets: EditorTargets | null;
+  tags: EditorTags | null;
+  lantern: Lantern;
+}
+
 class EditorToolbarSources {
   readonly targets: EditorTargets | null;
   readonly tags: EditorTags | null;
+  readonly lantern: Lantern;
 
-  constructor(targets: EditorTargets | null, tags: EditorTags | null);
+  constructor(options: EditorToolbarSourcesOptions);
   dispose(): void;
 }
 ```
@@ -70,7 +83,10 @@ the target itself, and for a share link. `tags` is `null` for a share link and
 for an offline workspace, whose in-memory event store loses tags on reload.
 `tags.viewing` is the tag of the launch.
 
-Both sources listen to the session catalog until `dispose()`. The catalog
+`lantern` is the page's [`Lantern`](../../../../lantern/docs/Lantern.md). It
+outlives the editor, so `dispose()` leaves it alone.
+
+Both catalog sources listen to the session catalog until `dispose()`. The catalog
 outlives a switch, so `mountStandalone` disposes the sources of the editor it
 replaces.
 

@@ -18,6 +18,10 @@ import { SessionOpener } from "./SessionOpener.ts";
 import type { PageConsole } from "../console/mountConsole.ts";
 import type { HostLogger } from "../debug/readDebugLogger.ts";
 import {
+  mountLantern,
+  type PageLantern
+} from "../lantern/mountLantern.ts";
+import {
   EditorLaunch,
   HostMessageLaunchSource,
   InjectedLaunchSource,
@@ -50,6 +54,7 @@ export class StandaloneEditor<
   #runtime: Promise<EditorRuntime> | null = null;
   #sessions: SessionOpener | null = null;
   #console: PageConsole | null = null;
+  #lantern: PageLantern | null = null;
   #mount: EditorMount<THandle> | null = null;
   #debugHandles: readonly string[] = [];
 
@@ -109,6 +114,7 @@ export class StandaloneEditor<
       logger: logger.child({ namespace: "host.session" })
     });
     let editorConsole: PageConsole | null = null;
+    let editorLantern: PageLantern | null = null;
     let editorMount: EditorMount<THandle> | null = null;
     try {
       const launch = await boot.step(
@@ -119,14 +125,26 @@ export class StandaloneEditor<
       placement.reportState(this.#page, this.#leaving.signal);
       const pageConsole = placement.openConsole();
       editorConsole = pageConsole;
+      const pageLantern = mountLantern({
+        commands: pageConsole.commands,
+        logger: logger.child({ namespace: "host.lantern" })
+      });
+      editorLantern = pageLantern;
+      const { lantern } = pageLantern;
       editorMount = new EditorMount({
         sessions,
-        toolbar: (...args) => placement.toolbar(...args),
+        toolbar: (target, session, navigator) => placement.toolbar(
+          target,
+          session,
+          navigator,
+          lantern
+        ),
         mount: (parts) => this.#mountDefinition({
           ...parts,
           shell: parts.launch.shell,
           logger: logger.child({ namespace: "editor" }),
-          commands: pageConsole.commands
+          commands: pageConsole.commands,
+          lantern
         }),
         history: placement.history(),
         logger,
@@ -139,6 +157,7 @@ export class StandaloneEditor<
       );
       this.#sessions = sessions;
       this.#console = pageConsole;
+      this.#lantern = editorLantern;
       this.#mount = editorMount;
       this.#followPage();
 
@@ -147,6 +166,7 @@ export class StandaloneEditor<
     catch (error) {
       editorMount?.dispose();
       sessions.dispose();
+      editorLantern?.dispose();
       editorConsole?.dispose();
       boot.fail(error);
       boot.state("failed");
@@ -168,6 +188,8 @@ export class StandaloneEditor<
     this.#mount = null;
     this.#sessions?.dispose();
     this.#sessions = null;
+    this.#lantern?.dispose();
+    this.#lantern = null;
     this.#console?.dispose();
     this.#console = null;
     this.#page.dispose();

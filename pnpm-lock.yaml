@@ -544,6 +544,9 @@ importers:
       '@jolly-pixel/event-store':
         specifier: workspace:*
         version: link:../../event-store
+      '@jolly-pixel/lantern':
+        specifier: workspace:*
+        version: link:../../lantern
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
@@ -666,6 +669,9 @@ importers:
       '@jolly-pixel/history':
         specifier: workspace:*
         version: link:../../history
+      '@jolly-pixel/lantern':
+        specifier: workspace:*
+        version: link:../../lantern
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
@@ -820,6 +826,25 @@ importers:
       '@jolly-pixel/bench':
         specifier: workspace:*
         version: link:../bench
+
+  packages/lantern:
+    dependencies:
+      '@openally/emitt':
+        specifier: 1.1.0
+        version: 1.1.0
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
+    devDependencies:
+      '@jolly-pixel/e2e':
+        specifier: workspace:*
+        version: link:../e2e
+      '@jolly-pixel/ui':
+        specifier: workspace:*
+        version: link:../ui
+      lit:
+        specifier: 3.3.3
+        version: 3.3.3
 
   packages/loop:
     dependencies:

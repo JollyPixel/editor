@@ -53,6 +53,7 @@ We provide agnostic renderers and engines (often used by our editors below):
 - [@jolly-pixel/arbor](./packages/arbor) - Stylable tree view widget with drag'n'drop support
 - [@jolly-pixel/resize-handle](./packages/resize-handle) - Resize handles / splitters
 - [@jolly-pixel/console](./packages/console) - Command palette and developer console for JollyPixel's editors
+- [@jolly-pixel/lantern](./packages/lantern) - Guided tours for JollyPixel's editors
 
 ### Utilities
 

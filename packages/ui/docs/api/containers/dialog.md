@@ -48,7 +48,7 @@ chrome shrinks and grows with the density.
 | `--jolly-dialog-header-bg` | `--jolly-accent-fill` |
 | `--jolly-dialog-chrome-bg` | `--jolly-ink` at 4% over `--jolly-surface-raised` |
 | `--jolly-dialog-chrome-padding` | `calc(var(--jolly-row-height) * 0.4)` |
-| `--jolly-dialog-backdrop` | `--jolly-dialog-header-bg` at 28% over a themed scrim |
+| `--jolly-dialog-backdrop` | `--jolly-dialog-header-bg` at 28% over `--jolly-scrim` |
 | `--jolly-dialog-backdrop-filter` | `blur(2px)` |
 
 The backdrop is mixed from the header fill, so the fade behind the dialog takes

@@ -174,6 +174,12 @@ const semanticTokens = css`
   --jolly-shadow-overlay: 0 2px 8px light-dark(rgb(0 0 0 / 16%), rgb(0 0 0 / 44%));
   --jolly-shadow-floating: 0 4px 16px light-dark(rgb(0 0 0 / 18%), rgb(0 0 0 / 50%));
   --jolly-shadow-modal: 0 12px 40px light-dark(rgb(0 0 0 / 24%), rgb(0 0 0 / 60%));
+  --jolly-scrim: light-dark(rgb(30 38 52 / 46%), rgb(5 10 18 / 62%));
+  --jolly-dialog-backdrop: color-mix(
+    in oklab,
+    var(--jolly-dialog-header-bg) 28%,
+    var(--jolly-scrim)
+  );
   --jolly-axis-x-text: light-dark(var(--jolly-axis-x-700), var(--jolly-axis-x-300));
   --jolly-axis-y-text: light-dark(var(--jolly-axis-y-700), var(--jolly-axis-y-300));
   --jolly-axis-z-text: light-dark(var(--jolly-axis-z-700), var(--jolly-axis-z-300));
@@ -256,6 +262,7 @@ export const themeTokens = css`
       --jolly-tab-badge-fg: ButtonText;
       --jolly-pane-header-bg: ButtonFace;
       --jolly-dialog-header-bg: ButtonFace;
+      --jolly-dialog-backdrop: rgb(0 0 0 / 55%);
       --jolly-dock-resize-bg: ButtonFace;
       --jolly-dock-resize-bg-hover: Highlight;
       --jolly-separator-label: CanvasText;

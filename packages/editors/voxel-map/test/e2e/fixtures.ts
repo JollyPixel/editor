@@ -30,6 +30,13 @@ import { VoxelMapPage } from "./support/voxelMap.ts";
 
 // CONSTANTS
 const kBlockCount = 32;
+export const EDITOR_OPTIONS = {
+  maxFps: 10,
+  query: {
+    samples: "0",
+    render: "on-demand"
+  }
+};
 
 export { expect } from "@playwright/test";
 
@@ -58,13 +65,7 @@ function createOpaqueBlockset(): BlocksetAssetDocument {
 }
 
 export const test = editorFixture<E2EWorld>({
-  editor: {
-    maxFps: 10,
-    query: {
-      samples: "0",
-      render: "on-demand"
-    }
-  },
+  editor: EDITOR_OPTIONS,
   async create(catalog) {
     const folder = e2eFolder();
     const blocksetId = await catalog.create(

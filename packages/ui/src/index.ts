@@ -20,7 +20,15 @@ export * from "./theme/AmbientThemeController.ts";
 export * from "./theme/DocumentTheme.ts";
 
 export * from "./geometry/Rect.ts";
-export type { AnchorRect } from "./geometry/anchoredPosition.ts";
+export {
+  anchoredPosition,
+  type AnchorRect,
+  type AnchoredPositionOptions
+} from "./geometry/anchoredPosition.ts";
+export type {
+  ViewportPosition,
+  ViewportSize
+} from "./geometry/clampToViewport.ts";
 
 export * from "./storage/StorageAdapter.ts";
 export * from "./storage/LocalStorageAdapter.ts";
