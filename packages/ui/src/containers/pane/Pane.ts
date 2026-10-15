@@ -242,6 +242,12 @@ export class PaneElement extends LitElement {
     return this.closest("jolly-dock")?.sharedTone ?? this.ownTone;
   }
 
+  get chromeElement(): HTMLElement {
+    return this.grouped && this.parentElement !== null ?
+      this.parentElement :
+      this;
+  }
+
   constructor() {
     super();
 

@@ -12,6 +12,8 @@ import {
   AssetId,
   AssetNotFoundError
 } from "@jolly-pixel/asset";
+import { Lantern } from "@jolly-pixel/lantern";
+import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { BootTrace } from "#src/editor/BootTrace.ts";
@@ -32,6 +34,7 @@ import {
 // CONSTANTS
 const kFirst = "map";
 const kSecond = "grass";
+const kLantern = new Lantern({ storage: new MemoryStorageAdapter() });
 
 class MemoryHistory implements LaunchHistory {
   readonly recorded: string[] = [];
@@ -84,7 +87,11 @@ async function startMount(
       })
     },
     toolbar: (launch) => {
-      const sources = new EditorToolbarSources(null, null);
+      const sources = new EditorToolbarSources({
+        targets: null,
+        tags: null,
+        lantern: kLantern
+      });
 
       return Object.assign(sources, {
         dispose: () => events.push(`toolbar ${launch.target.value} disposed`)

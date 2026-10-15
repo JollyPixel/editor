@@ -169,6 +169,7 @@ export class BlocksPanel extends WorkspaceElement {
           slot="actions"
           icon="block-edit"
           icon-only
+          data-tour="edit-block"
           label="Edit block"
           title="Edit block"
           ?disabled=${!this._canEditBlock}

@@ -89,6 +89,7 @@ interface EditorContext {
   shell: ShellChannel | null;
   logger: HostLogger;
   commands: CommandConsole;
+  lantern: Lantern;
 }
 
 interface RuntimeEditorContext extends EditorContext {
@@ -103,6 +104,7 @@ interface RuntimeEditorContext extends EditorContext {
   frame launched the page.
 - `logger` is the `editor` namespace of the [boot trace](#boot-tracing).
 - `commands` is the page's [console](#console).
+- `lantern` holds the page's [guided tours](#tours).
 
 ## Editor handle
 
@@ -258,6 +260,44 @@ The console registers two root variables, `theme` (`light`, `dark`, `auto`)
 and `density` (`compact`, `default`, `comfortable`). They write every
 `jolly-scope` of the page and persist under `jolly-pixel:theme` and
 `jolly-pixel:density`, except under a shell, whose appearance wins.
+
+## Tours
+
+`mountStandalone` creates one [`Lantern`](../../../../lantern/docs/Lantern.md)
+per page, appends a `jolly-lantern` element to the first `jolly-scope` and
+passes the lantern as `context.lantern`. An editor registers its tours in
+`mount` and releases them in `dispose()`:
+
+```ts
+const release = context.lantern.register(basics);
+
+// in dispose()
+release();
+```
+
+To start a tour for people who have never seen it, call
+`context.lantern.offer(basics)` once the editor is ready. The host turns offers
+off when `navigator.webdriver` is set, so e2e runs never see a tour they did
+not start.
+
+The page registers a `tour` console namespace: `/tour.list`, `/tour.start <id>`
+and `/tour.reset [id]`. Warnings about missing targets go to the
+`host.lantern` logger.
+
+`REPLAY_TOUR_STEP` is a step for the end of a tour. It points at the toolbar's
+Tours button and tells the user they can replay the tour from there. The host
+owns its target, so an editor tour lists it as is:
+
+```ts
+import { REPLAY_TOUR_STEP } from "@jolly-pixel/editor.host";
+
+const basics = new Tour({
+  id: "voxel-map.basics",
+  version: 1,
+  title: "Voxel map basics",
+  steps: [welcome, blocks, REPLAY_TOUR_STEP]
+});
+```
 
 A page that boots without `mountStandalone`, such as the studio shell, mounts
 the same console itself:

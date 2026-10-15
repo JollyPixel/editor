@@ -10,11 +10,14 @@ import {
 import {
   SubscriptionController,
   detailOf,
+  type ContextMenu,
+  type ContextMenuItem,
   type JollyChangeDetail,
   type JollyOption
 } from "@jolly-pixel/ui";
 import { AssetSource } from "@jolly-pixel/asset";
 import type { AssetTag } from "@jolly-pixel/asset-server/client";
+import type { Lantern } from "@jolly-pixel/lantern";
 
 // Import Internal Dependencies
 import type { EditorTags } from "../session/EditorTags.ts";
@@ -88,6 +91,10 @@ export class EditorToolbar extends LitElement {
       --jolly-field-inset-end: 0px;
     }
 
+    .bar:has(> .tours) {
+      padding-inline-start: var(--jolly-space-1, 4px);
+    }
+
     .group {
       display: flex;
       align-items: center;
@@ -148,6 +155,12 @@ export class EditorToolbar extends LitElement {
       white-space: nowrap;
     }
 
+    .tours {
+      --jolly-icon-button-size: var(--jolly-row-height, 20px);
+
+      flex: none;
+    }
+
     .error {
       overflow: hidden;
       min-width: 0;
@@ -198,6 +211,7 @@ export class EditorToolbar extends LitElement {
   declare protected error: string | null;
 
   #assetSelect: AssetSelect | null = null;
+  #tours: Lantern | null = null;
 
   #sources = new SubscriptionController<EditorToolbarSources | null>(
     this,
@@ -208,7 +222,8 @@ export class EditorToolbar extends LitElement {
 
       return [
         ...this.#repaintOn(sources?.targets ?? null),
-        ...this.#repaintOn(sources?.tags ?? null)
+        ...this.#repaintOn(sources?.tags ?? null),
+        ...this.#repaintOn(sources?.lantern ?? null)
       ];
     }
   );
@@ -230,9 +245,13 @@ export class EditorToolbar extends LitElement {
   }
 
   protected override willUpdate(): void {
-    const { targets = null, tags = null } = this.sources ?? {};
+    const { targets = null, tags = null, lantern = null } = this.sources ?? {};
     this.#assetSelect = targets === null ? null : assetSelect(targets);
-    this.toggleAttribute("empty", this.#assetSelect === null && tags === null);
+    this.#tours = lantern !== null && lantern.size > 0 ? lantern : null;
+    this.toggleAttribute(
+      "empty",
+      this.#assetSelect === null && tags === null && this.#tours === null
+    );
   }
 
   override render(): TemplateResult {
@@ -240,6 +259,7 @@ export class EditorToolbar extends LitElement {
 
     return html`
       <div class="bar">
+        ${this.#tours === null ? nothing : this.#renderTours(this.#tours)}
         ${this.#assetSelect === null ?
           nothing :
           this.#renderTargets(this.#assetSelect)}
@@ -249,6 +269,66 @@ export class EditorToolbar extends LitElement {
           html`<span class="error" role="alert" title=${this.error}>${this.error}</span>`}
       </div>
     `;
+  }
+
+  #renderTours(
+    lantern: Lantern
+  ): TemplateResult {
+    return html`
+      <jolly-button
+        id="tours"
+        class="tours"
+        data-tour="tours"
+        icon="help"
+        icon-only
+        label="Tours"
+        title="Tours"
+        @click=${(event: Event) => this.#onTours(lantern, event)}
+      ></jolly-button>
+      <jolly-context-menu
+        label="Tours"
+        @jolly-context-action=${(event: Event) => this.#onTourPicked(lantern, event)}
+      ></jolly-context-menu>
+    `;
+  }
+
+  #onTours(
+    lantern: Lantern,
+    event: Event
+  ): void {
+    const tours = [...lantern];
+    if (tours.length === 1) {
+      lantern.start(tours[0]);
+
+      return;
+    }
+
+    const menu = this.shadowRoot?.querySelector<ContextMenu>("jolly-context-menu");
+    const button = event.currentTarget;
+    if (!menu || !(button instanceof HTMLElement)) {
+      return;
+    }
+
+    menu.items = tours.map((tour): ContextMenuItem => {
+      const item: ContextMenuItem = {
+        id: tour.id,
+        label: tour.title
+      };
+
+      return lantern.seen.has(tour) ? { ...item, icon: "check" } : item;
+    });
+    const { left, bottom } = button.getBoundingClientRect();
+    menu.openAt(left, bottom);
+  }
+
+  #onTourPicked(
+    lantern: Lantern,
+    event: Event
+  ): void {
+    const detail = detailOf<{ id: string; }>(event);
+    if (detail !== null) {
+      lantern.start(lantern.tour(detail.id));
+    }
   }
 
   #renderTargets(

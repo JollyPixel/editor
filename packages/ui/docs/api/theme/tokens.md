@@ -59,3 +59,8 @@ Seven tones add hue: `coral`, `amber`, `lime`, `teal`, `sky`, `violet` and
 [`jolly-pane`](../containers/pane.md), `--jolly-area-tone` and
 `--jolly-area-fill` hold the pane's hue, and `--jolly-accent-fill`,
 `--jolly-accent-text` and `--jolly-focus-ring` resolve to it.
+
+Layers that dim the page read `--jolly-dialog-backdrop`: `--jolly-scrim`, a
+dark wash tuned per scheme, mixed with 28% of `--jolly-dialog-header-bg`.
+[`jolly-dialog`](../containers/dialog.md) declares it again on itself, so its
+backdrop follows its intent or tone.

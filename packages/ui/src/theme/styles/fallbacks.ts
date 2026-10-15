@@ -64,5 +64,9 @@ export const kFallback = {
   /**
    * --jolly-accent-600
    */
-  focusRing: unsafeCSS("#2f6fd8")
+  focusRing: unsafeCSS("#2f6fd8"),
+  /**
+   * --jolly-scrim
+   */
+  scrim: unsafeCSS("light-dark(rgb(30 38 52 / 46%), rgb(5 10 18 / 62%))")
 } as const;

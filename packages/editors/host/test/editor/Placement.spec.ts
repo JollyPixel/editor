@@ -8,6 +8,8 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { AssetId } from "@jolly-pixel/asset";
+import { Lantern } from "@jolly-pixel/lantern";
+import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { Placement } from "#src/editor/Placement.ts";
@@ -46,7 +48,7 @@ function toolbar(
     workspace,
     assets: { unsaved: false },
     target: { record: record("map", "voxelmap") }
-  }, new FakeNavigator());
+  }, new FakeNavigator(), new Lantern({ storage: new MemoryStorageAdapter() }));
 }
 
 function unload(): boolean {

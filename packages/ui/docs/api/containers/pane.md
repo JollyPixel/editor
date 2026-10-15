@@ -53,6 +53,11 @@ take that hue instead of the accent. The read-only `ownTone` getter returns the
 resolved tone or `null`. `areaTone` returns the tone the pane paints, which is
 `ownTone` unless its dock sets [`share-tone`](./dock.md).
 
+The read-only `chromeElement` getter returns the element that draws the pane
+with its heading: the parent `jolly-pane-group` when the pane is `grouped`,
+because the group's tab carries the heading, otherwise the pane itself.
+Measure it to outline the whole pane, as a guided tour does.
+
 While its grip is grabbed, Up and Down move the pane within its dock, Left and
 Right send it to the adjacent dock, and Shift with Up or Down joins it to the
 group above or below. Space commits and Escape cancels.
