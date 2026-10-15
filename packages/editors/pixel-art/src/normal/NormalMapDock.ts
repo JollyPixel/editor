@@ -273,7 +273,7 @@ export class NormalMapDock extends LitElement {
           ></jolly-checkbox>
         `)}
         ${this.#renderSetting(target, "strength", html`
-          <jolly-slider
+          <jolly-spin-slider
             ?readonly=${this.locked}
             label-position="auto"
             label="Strength"
@@ -284,7 +284,7 @@ export class NormalMapDock extends LitElement {
             .default=${defaults?.strength}
             @jolly-input=${this.#strength.input}
             @jolly-change=${this.#strength.commit}
-          ></jolly-slider>
+          ></jolly-spin-slider>
         `)}
         ${this.#renderSetting(target, "border", html`
           <jolly-select
@@ -300,7 +300,7 @@ export class NormalMapDock extends LitElement {
         `)}
         ${bevelUsed ? this.#renderSetting(target, "bevel", html`
           <div class="group">
-            <jolly-slider
+            <jolly-spin-slider
               ?readonly=${this.locked}
               label-position="auto"
               label="Bevel width"
@@ -311,7 +311,7 @@ export class NormalMapDock extends LitElement {
               .default=${defaults?.bevel.width}
               @jolly-input=${this.#bevelWidth.input}
               @jolly-change=${this.#bevelWidth.commit}
-            ></jolly-slider>
+            ></jolly-spin-slider>
             <jolly-select
               ?readonly=${this.locked}
               align="end"
@@ -325,7 +325,7 @@ export class NormalMapDock extends LitElement {
           </div>
         `) : nothing}
         ${this.#renderSetting(target, "edgeIntensity", html`
-          <jolly-slider
+          <jolly-spin-slider
             ?readonly=${this.locked}
             label-position="auto"
             label="Edge intensity"
@@ -336,7 +336,7 @@ export class NormalMapDock extends LitElement {
             .default=${defaults?.edgeIntensity}
             @jolly-input=${this.#edgeIntensity.input}
             @jolly-change=${this.#edgeIntensity.commit}
-          ></jolly-slider>
+          ></jolly-spin-slider>
         `)}
         ${this.#renderSetting(target, "levels", html`
           <jolly-select
