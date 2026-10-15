@@ -30,6 +30,7 @@ static async mount(context: EditorContext): Promise<MyEditor> {
 readonly identity: PeerIdentity;
 readonly catalog: CatalogClient;
 readonly assets: AssetLeases;
+readonly connectionStatus: ConnectionStatus | null;
 readonly tag: string | null;
 readonly target: AssetRoomLease;
 readonly targetReady: Promise<void>;
@@ -37,8 +38,9 @@ readonly archive: SessionArchive;
 readonly workspace: SessionWorkspace | null;
 ```
 
-`identity`, `catalog`, `assets`, `archive` and `workspace` belong to the
-[connection](#connection) and are shared by every session opened on it.
+`identity`, `catalog`, `assets`, `connectionStatus`, `archive` and `workspace`
+belong to the [connection](#connection) and are shared by every session opened
+on it.
 
 ### target
 
@@ -61,6 +63,21 @@ The tag of the launch, `null` for the current version.
 
 The connection's [`AssetLeases`](../lease/AssetLeases.md), where panels open their
 own leases.
+
+### connectionStatus
+
+```ts
+class ConnectionStatus extends Emitter<{ change: () => void; }> {
+  readonly online: boolean;
+  readonly unsaved: boolean;
+}
+```
+
+Whether the server is reachable, `null` when the session is not on a server.
+`online` starts as the client's `ready`, turns `false` when the client loses
+its socket and `true` once it reconnects. `unsaved` mirrors `assets.unsaved`.
+`change` fires when `online` flips, and when `unsaved` flips while offline.
+The [toolbar](./EditorToolbar.md#properties) shows it.
 
 ### archive and workspace
 
@@ -157,6 +174,7 @@ class SessionConnection {
   readonly identity: PeerIdentity;
   readonly catalog: CatalogClient;
   readonly assets: AssetLeases;
+  readonly connectionStatus: ConnectionStatus | null;
   readonly archive: SessionArchive;
   readonly workspace: SessionWorkspace | null;
 
@@ -176,10 +194,15 @@ Joins as `shell.identity`, or prompts for a username. Creates a network
 client and waits `CATALOG_TIMEOUT_MS` (5 s) for the catalog snapshot, then
 throws `CatalogUnavailableError` and destroys the client.
 
-### connect({ identity, client, workspace?, catalogTimeoutMs?, openCatalog?, logger? })
+It passes the client as `server`, so only this connection has a
+`connectionStatus` and keeps [offline changes](../lease/AssetLeases.md#offline-changes).
+
+### connect({ identity, client, workspace?, catalogTimeoutMs?, openCatalog?, server?, logger? })
 
 Uses a supplied client. Without `catalogTimeoutMs`, the caller owns
-connection liveness.
+connection liveness. `server` (`null` by default) is the client itself when it
+connects straight to the server: it feeds `connectionStatus`, and the
+connection claims the offline changes of closed pages once the catalog is up.
 
 `openCatalog` lets both open the catalog somewhere other than the client's
 catalog room, such as a [shell's catalog port](../launch/ShellChannel.md#catalog-port).

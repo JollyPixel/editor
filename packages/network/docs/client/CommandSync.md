@@ -26,17 +26,42 @@ Construct before joining. `whenReady()` resolves after the first snapshot.
 readonly ready: boolean;
 readonly pending: number;
 readonly version: number;
-readonly overflowed: boolean;
 ```
 
 `ready` reports first-snapshot readiness; `version` is the applied server position.
-`pending` counts outstanding edits; `overflowed` reports offline buffer overflow.
+`pending` counts outstanding edits.
 
 ## Methods
 
 ### `send(body, timestamp?, basis?): TCommand`
 
 Stamps an already-applied edit. `basis` is the version replayed by undo/redo.
+
+### `keepIn(outbox): void`
+
+Mirrors the unacknowledged commands into `outbox`, so they outlive the page.
+Call it before joining the room and before any `send()`; otherwise it throws.
+
+```ts
+interface ChangeOutbox {
+  restore(): readonly NetworkCommandHeader[];
+  keep(command: NetworkCommandHeader): void;
+  drop(command: NetworkCommandHeader): void;
+}
+```
+
+- `restore()` returns, oldest first, the commands a previous sync of the same
+  room left. They become pending ahead of any new command.
+- `keep()` receives a command when it is queued and again each time its header
+  is stamped for sending. Store a copy and key it by the object: later calls
+  pass the same object.
+- `drop()` receives a command once the server answered it or it was discarded.
+- `destroy()` leaves the outbox untouched.
+
+When a restored command was already sent, the sync joins with that command's
+client id as resume data. The server's acknowledgements for that id skip the
+commands it applied before the page closed; the rest replay over the first
+snapshot and are sent again.
 
 ### `destroy(): void`
 
@@ -53,8 +78,8 @@ and handles rollback/replay through the document's change images.
 
 `new SyncedCommandDocument(room, { document, keys })` groups document and sync.
 Its `ready` promise resolves after the first snapshot; `dispose()` detaches sync.
-`pendingChanges` exposes the sync as `PendingChanges`: `pending`, plus `on` and
-`off` for the `settled` and `unsettled` events.
+`pendingChanges` exposes the sync as `PendingChanges`: `pending`, `keepIn()`,
+plus `on` and `off` for the `settled` and `unsettled` events.
 
 ## Outcomes
 
@@ -66,7 +91,11 @@ zero, including after a discard.
 ### Resume
 
 Reconnects request catch-up or a snapshot using the previous id and version.
-Offline buffering is bounded; `overflow` and `discarded` report lost pending work.
+Commands sent while disconnected are held without a bound and sent once the
+catch-up or snapshot arrives.
+
+A pending command whose replay throws is discarded: the sync emits `refused`
+for it and asks for a fresh snapshot.
 
 ## Reconciliation and conflicts
 

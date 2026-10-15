@@ -37,5 +37,6 @@ policy. Validate resume data, then return catch-up or a snapshot.
 
 ## Cleanup
 
-Call `sync.destroy()` and `room.leave()`. Handle `overflow` and `discarded` when
-reporting lost offline edits. See [CommandSync](../client/CommandSync.md).
+Call `sync.destroy()` and `room.leave()`. To keep offline edits across page
+loads, pass a `ChangeOutbox` to `sync.keepIn()` before joining. See
+[CommandSync](../client/CommandSync.md).

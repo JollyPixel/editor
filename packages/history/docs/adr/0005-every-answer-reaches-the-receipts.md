@@ -28,3 +28,10 @@ asks for a snapshot and reports the command refused: the server refused it befor
   every sync client of a history source does it the same way.
 - A discard forgets the changes it dropped: a later receipt for one changes nothing, and the
   commands a catch-up dropped are no longer refused by the next snapshot.
+
+## Amendment (2026-10-15)
+
+`CommandSync` no longer bounds offline commands: it holds them all and can keep them in an outbox
+across page loads. Nothing drops a pending edit any more, so `ChangeReceipts.discard()`, the
+`discarded` event and the `dropped` refusal are removed. A pending command whose replay throws is
+answered with `refuse` like any other refused command.

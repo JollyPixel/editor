@@ -47,8 +47,6 @@ function describeHistoryChange(
       return "its voxels moved or changed since";
     case "server":
       return "the server refused it";
-    case "dropped":
-      return "it was lost while offline";
     case "closed":
     case "gone":
       return "it is gone";

@@ -14,6 +14,7 @@ import type {
   AssetDocumentKind,
   AssetRoomLease
 } from "../lease/AssetLease.ts";
+import type { ConnectionStatus } from "./ConnectionStatus.ts";
 import type { SessionArchive } from "./SessionArchive.ts";
 import {
   EditorArchives,
@@ -57,6 +58,7 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
   readonly workspace: SessionWorkspace | null;
   readonly archive: SessionArchive;
   readonly assets: AssetLeases;
+  readonly connectionStatus: ConnectionStatus | null;
   readonly tag: string | null;
   readonly target: AssetRoomLease;
   readonly targetReady: Promise<void>;
@@ -81,6 +83,7 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     this.workspace = connection.workspace;
     this.archive = connection.archive;
     this.assets = connection.assets;
+    this.connectionStatus = connection.connectionStatus;
     this.tag = launch.tag;
     this.#accepts = options.accepts;
     for (const kind of options.kinds) {

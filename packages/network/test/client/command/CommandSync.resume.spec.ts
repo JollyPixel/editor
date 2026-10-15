@@ -150,25 +150,6 @@ describe("CommandSync resume", () => {
     assert.deepEqual(applied, [2]);
   });
 
-  test("a discard forgets the commands a catch-up dropped, so the next snapshot refuses none", () => {
-    const { harness, sync, reconnect } = setup();
-    const refused: number[] = [];
-    sync.on("refused", (refusedCommand) => refused.push(refusedCommand.value));
-
-    sync.send({ action: "set", value: 1 });
-    sync.send({ action: "set", value: 2 });
-    reconnect();
-    harness.serverMessage({ type: "catch-up", data: [], version: 0, acks: { A: 1 } });
-    harness.room.suspend();
-    for (let value = 0; value < 600; value++) {
-      sync.send({ action: "set", value });
-    }
-    reconnect("C");
-    harness.serverMessage({ type: "snapshot", data: { value: 0 }, version: 0 });
-
-    assert.deepEqual(refused, []);
-  });
-
   test("a catch-up acknowledges own echoes at its version", () => {
     const { harness, sync, reconnect } = setup();
     const acknowledged: string[] = [];
@@ -237,30 +218,19 @@ describe("CommandSync resume", () => {
     assert.strictEqual(sync.pending, 0);
   });
 
-  test("stops holding past the bound, then drops the ledger and rejoins without resume", () => {
+  test("holds every command of a long disconnection and resends them all on resume", () => {
     const { harness, sync, reconnect } = setup();
-    let overflows = 0;
-    let discards = 0;
-    let settled = 0;
-    sync.on("overflow", () => overflows++);
-    sync.on("discarded", () => discards++);
-    sync.on("settled", () => settled++);
 
     harness.room.suspend();
     for (let value = 0; value < 600; value++) {
       sync.send({ action: "set", value });
     }
-    assert.strictEqual(overflows, 1);
-    assert.strictEqual(sync.overflowed, true);
-    assert.strictEqual(sync.pending, 501);
-
     reconnect();
+    harness.serverMessage({ type: "catch-up", data: [], version: 0 });
 
-    assert.deepEqual(joins(harness.sent).at(-1), undefined);
-    assert.strictEqual(sync.pending, 0);
-    assert.strictEqual(sync.overflowed, false);
-    assert.strictEqual(discards, 1);
-    assert.strictEqual(settled, 1);
-    assert.deepEqual(sentCommands(harness), []);
+    assert.deepEqual(joins(harness.sent).at(-1), { clientId: "A", version: 0 });
+    assert.strictEqual(sync.pending, 600);
+    assert.strictEqual(sentCommands(harness).length, 600);
+    assert.strictEqual(sentCommands(harness).at(-1), "B:600:599");
   });
 });

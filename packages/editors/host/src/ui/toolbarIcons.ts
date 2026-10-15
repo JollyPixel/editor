@@ -27,3 +27,19 @@ registerIcon("help", svg`
     d="M12 3c-3.3 0-5.8 2.1-5.8 5.2h3.2c0-1.4 1.1-2.3 2.6-2.3s2.6.8 2.6 2.1c0 1-.6 1.6-1.8 2.3-1.6 1-2.4 2-2.4 4v.7h3.1v-.5c0-1 .4-1.5 1.7-2.3 1.7-1.1 2.6-2.3 2.6-4.3C17.8 4.9 15.3 3 12 3ZM10.4 17.3h3.3V21h-3.3Z"
   />
 `, { tone: "sky" });
+
+registerIcon("offline", svg`
+  <path
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linejoin="round"
+    d="M7 18.5h10.5a3.5 3.5 0 0 0 .4-7A5.5 5.5 0 0 0 7.4 9.6 4.5 4.5 0 0 0 7 18.5Z"
+  />
+  <path
+    stroke="currentColor"
+    stroke-width="2.2"
+    stroke-linecap="round"
+    d="M4 4l16 16"
+  />
+`);

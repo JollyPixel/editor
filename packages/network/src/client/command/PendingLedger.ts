@@ -1,9 +1,6 @@
 // Import Internal Dependencies
+import type { ChangeOutbox } from "./CommandSync.ts";
 import type { NetworkCommandHeader } from "../../sync/types.ts";
-
-// CONSTANTS
-const kMaxHeldCommands = 500;
-const kMaxHeldBytes = 2 * 1024 * 1024;
 
 export interface LedgerEntry<TCommand extends NetworkCommandHeader> {
   readonly command: TCommand;
@@ -13,46 +10,50 @@ export interface LedgerEntry<TCommand extends NetworkCommandHeader> {
 
 export class PendingLedger<TCommand extends NetworkCommandHeader> {
   #entries: LedgerEntry<TCommand>[] = [];
-  #heldBytes = 0;
-  #overflowed = false;
+  #outbox: ChangeOutbox | null = null;
 
   get size(): number {
     return this.#entries.length;
-  }
-
-  get overflowed(): boolean {
-    return this.#overflowed;
   }
 
   get entries(): readonly LedgerEntry<TCommand>[] {
     return this.#entries;
   }
 
+  keepIn(
+    outbox: ChangeOutbox
+  ): void {
+    this.#outbox = outbox;
+    this.#entries = outbox.restore().map((command) => {
+      return {
+        command: command as TCommand,
+        sent: command.seq > 0,
+        applied: false
+      };
+    });
+  }
+
   add(
     entry: LedgerEntry<TCommand>
   ): void {
     this.#entries.push(entry);
+    this.#outbox?.keep(entry.command);
   }
 
-  hold(
+  markSent(
     entry: LedgerEntry<TCommand>,
-    body: unknown
-  ): boolean {
-    this.#entries.push(entry);
-    this.#heldBytes += JSON.stringify(body).length;
-    if (
-      this.#entries.length > kMaxHeldCommands ||
-      this.#heldBytes > kMaxHeldBytes
-    ) {
-      this.#overflowed = true;
-    }
-
-    return this.#overflowed;
+    clientId: string | null,
+    seq: number
+  ): void {
+    Object.assign(entry.command, {
+      clientId,
+      seq
+    });
+    entry.sent = true;
+    this.#outbox?.keep(entry.command);
   }
 
   takeUnsent(): LedgerEntry<TCommand>[] {
-    this.#heldBytes = 0;
-
     return this.#entries.filter((entry) => !entry.sent);
   }
 
@@ -76,8 +77,18 @@ export class PendingLedger<TCommand extends NetworkCommandHeader> {
     }
     const acknowledged = this.#entries.slice(0, remaining);
     this.#entries = this.#entries.slice(remaining);
+    for (const { command } of acknowledged) {
+      this.#outbox?.drop(command);
+    }
 
     return acknowledged;
+  }
+
+  discard(
+    entry: LedgerEntry<TCommand>
+  ): void {
+    this.#entries = this.#entries.filter((kept) => kept !== entry);
+    this.#outbox?.drop(entry.command);
   }
 
   appliedCommands(): TCommand[] {
@@ -88,7 +99,6 @@ export class PendingLedger<TCommand extends NetworkCommandHeader> {
 
   clear(): void {
     this.#entries = [];
-    this.#heldBytes = 0;
-    this.#overflowed = false;
+    this.#outbox = null;
   }
 }

@@ -9,7 +9,6 @@ export type ChangeReceiptsEvents<TChange> = {
   refused: (
     change: TChange
   ) => void;
-  discarded: () => void;
 };
 
 export class ChangeReceipts<
@@ -50,9 +49,5 @@ export class ChangeReceipts<
       "refused",
       change
     );
-  }
-
-  discard(): void {
-    this.emit("discarded");
   }
 }

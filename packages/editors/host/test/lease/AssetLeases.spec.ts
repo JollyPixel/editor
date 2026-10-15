@@ -111,6 +111,36 @@ describe("AssetLeases", () => {
     assert.equal(leases.holders("tex"), 1);
   });
 
+  test("keeps the pending changes of a current version in its room outbox before joining", () => {
+    const client = new FakeClient();
+    const opened: string[] = [];
+    const leases = new AssetLeases({
+      rooms: client,
+      records: {
+        record: (assetId) => record(assetId, "pixelart")
+      },
+      outboxes: {
+        open: (room) => {
+          opened.push(`${room}:${client.fakeRoom(room).joins}`);
+
+          return {
+            restore: () => [],
+            keep: () => undefined,
+            drop: () => undefined
+          };
+        }
+      }
+    });
+    const kind = fakeDocumentKind("pixelart");
+
+    leases.open(kind, "tex");
+    leases.open(kind, "tex", "v1");
+
+    assert.deepEqual(opened, ["pixelart:tex:0"]);
+    assert.notEqual(kind.documents[0].changes.outbox, null);
+    assert.equal(kind.documents[1].changes.outbox, null);
+  });
+
   test("leases of one asset share the document until the last release", () => {
     const { client, leases } = setup();
     const kind = fakeDocumentKind("pixelart");

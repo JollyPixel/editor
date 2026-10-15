@@ -118,8 +118,7 @@ type HistoryRefusal =
   | { reason: "server"; }
   | { reason: "closed"; documentId: string; }
   | { reason: "changed"; }
-  | { reason: "gone"; }
-  | { reason: "dropped"; };
+  | { reason: "gone"; };
 ```
 
 Flags, labels and counts leave refused steps out. `refused` lists the refused steps of both stacks, newest first. Each reason is described in [refusals](./guides/collaborative-undo.md#refusals).

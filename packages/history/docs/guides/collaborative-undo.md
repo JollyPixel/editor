@@ -46,12 +46,11 @@ A refused step stays refused. Undo and redo skip it, emit `skipped`, and `state(
 
 - `peer`: a peer change touched the guard.
 - `server`: the server refused the step's edit.
-- `dropped`: the sync client threw the edit away unsent, past its offline bound.
 - `closed`: found on undo or redo, one of the step's documents is no longer registered.
 - `changed`: found on undo, redo or a `"load"` reset, a guarded value no longer matches its capture.
 - `gone`: the documents refused every command of the undo or redo.
 
-When the server refuses or drops an undo or redo, the replayed step goes away and the original step comes back to its stack, refused.
+When the server refuses an undo or redo, the replayed step goes away and the original step comes back to its stack, refused.
 
 Three things never refuse a step: a peer change arriving while the step still waits for its receipts (the server ordered the peer change first), this client's own changes, and a `"rewind"`.
 
@@ -61,7 +60,6 @@ A part is pending while its changes wait for the server's answers. The sync clie
 
 - `confirm(change, version)` settles the change. The part's `basis` becomes the highest version confirmed so far.
 - `refuse(change)` refuses the step as `server`.
-- `discard()` refuses every step still pending on that document as `dropped`.
 
 An undo is sent with the part's `basis`, and the server refuses it when a peer wrote the same values after that version. A part with no confirmed version replays with `basis` `0`, which the server accepts only while this client is still the last writer.
 

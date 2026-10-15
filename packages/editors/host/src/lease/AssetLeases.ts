@@ -7,7 +7,10 @@ import {
   AssetRoom,
   type AssetRecordData
 } from "@jolly-pixel/asset";
-import type { Room } from "@jolly-pixel/network/client";
+import type {
+  ChangeOutbox,
+  Room
+} from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import {
@@ -33,9 +36,20 @@ export interface AssetRecords {
   ): AssetRecordData | undefined;
 }
 
+export interface OutboxSource {
+  open(
+    room: string
+  ): ChangeOutbox;
+}
+
 export interface AssetLeasesOptions {
   rooms: RoomSource;
   records: AssetRecords;
+  /**
+   * Keeps the pending changes of every document across page loads.
+   * @default null
+   */
+  outboxes?: OutboxSource | null;
 }
 
 export type AssetLeasesEvents = {
@@ -75,6 +89,7 @@ function hasDocumentKind<TDocument>(
 export class AssetLeases extends Emitter<AssetLeasesEvents> {
   readonly #rooms: RoomSource;
   readonly #records: AssetRecords;
+  readonly #outboxes: OutboxSource | null;
   readonly #entries = new Map<string, LeaseEntry<unknown>>();
   #unsaved = false;
   #disposed = false;
@@ -96,6 +111,7 @@ export class AssetLeases extends Emitter<AssetLeasesEvents> {
 
     this.#rooms = options.rooms;
     this.#records = options.records;
+    this.#outboxes = options.outboxes ?? null;
   }
 
   get unsaved(): boolean {
@@ -218,14 +234,16 @@ export class AssetLeases extends Emitter<AssetLeasesEvents> {
     tag: string | null,
     kind: AssetDocumentKind<unknown> | undefined
   ): LeaseEntry<unknown> {
-    const room = this.#rooms.room(
-      new AssetRoom(record.kind, record.id, tag).toString()
-    );
+    const roomName = new AssetRoom(record.kind, record.id, tag).toString();
+    const room = this.#rooms.room(roomName);
 
     let synced: SyncedDocument<unknown> | undefined;
     try {
       synced = kind?.createDocument(room);
       if (synced !== undefined) {
+        if (this.#outboxes !== null && tag === null) {
+          synced.pendingChanges.keepIn(this.#outboxes.open(roomName));
+        }
         room.join();
       }
     }

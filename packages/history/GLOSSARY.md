@@ -61,7 +61,6 @@ stays listed with its reason.
 | --- | --- |
 | `peer` | A peer wrote a value the step guards. |
 | `server` | The server refused the step's edit, or its undo or redo. |
-| `dropped` | The sync client threw the edit away unsent, past its offline bound. |
 | `closed` | One of the step's documents is no longer registered. |
 | `changed` | A guarded value changed through a write no change reported, such as a load or a moved voxel layer. |
 | `gone` | The documents refused every command of the undo. |

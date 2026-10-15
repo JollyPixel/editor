@@ -23,6 +23,7 @@ export interface CommandIntegratorOptions<
   resolver: ConflictResolver<TCommand>;
   apply: (command: TCommand) => void;
   resync: () => void;
+  unreplayable: (entry: LedgerEntry<TCommand>) => void;
 }
 
 export class CommandIntegrator<TCommand extends NetworkCommandHeader> {
@@ -31,6 +32,7 @@ export class CommandIntegrator<TCommand extends NetworkCommandHeader> {
   #resolver: ConflictResolver<TCommand>;
   #apply: (command: TCommand) => void;
   #resync: () => void;
+  #unreplayable: (entry: LedgerEntry<TCommand>) => void;
 
   constructor(
     options: CommandIntegratorOptions<TCommand>
@@ -40,6 +42,7 @@ export class CommandIntegrator<TCommand extends NetworkCommandHeader> {
     this.#resolver = options.resolver;
     this.#apply = options.apply;
     this.#resync = options.resync;
+    this.#unreplayable = options.unreplayable;
   }
 
   integrate(
@@ -72,15 +75,26 @@ export class CommandIntegrator<TCommand extends NetworkCommandHeader> {
   }
 
   replayPending(): void {
-    const reconciler = this.#reconciler;
     for (const entry of [...this.#ledger.entries]) {
-      if (reconciler === null) {
-        this.#apply(entry.command);
+      try {
+        entry.applied = this.#replay(entry.command);
       }
-      else {
-        entry.applied = reconciler.replay(entry.command);
+      catch {
+        this.#unreplayable(entry);
       }
     }
+  }
+
+  #replay(
+    command: TCommand
+  ): boolean {
+    if (this.#reconciler === null) {
+      this.#apply(command);
+
+      return true;
+    }
+
+    return this.#reconciler.replay(command);
   }
 
   #integrateKeyed(

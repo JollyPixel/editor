@@ -19,11 +19,7 @@ export type HistoryRefusal =
   /**
    * The documents refused every command of the step.
    */
-  | { reason: "gone"; }
-  /**
-   * The sync client dropped the step's edit unsent, past its offline bound.
-   */
-  | { reason: "dropped"; };
+  | { reason: "gone"; };
 
 export interface HistoryStepInfo {
   readonly label: string | null;

@@ -47,6 +47,7 @@ function toolbar(
     catalog: new FakeSessionCatalog(),
     workspace,
     assets: { unsaved: false },
+    connectionStatus: null,
     target: { record: record("map", "voxelmap") }
   }, new FakeNavigator(), new Lantern({ storage: new MemoryStorageAdapter() }));
 }
