@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
 import { LitElement, html, css, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { keyed } from "lit/directives/keyed.js";
 import * as THREE from "three";
 import {
-  isVoxelLayerGeometryCommand,
   type VoxelLayer,
   type VoxelLayerCommand,
   type VoxelWorld
@@ -14,14 +14,10 @@ import { FieldBinding } from "@jolly-pixel/ui";
 import type { MapDocument } from "../../../document/MapDocument.ts";
 import type { SelectionStore } from "../../../state/index.ts";
 import type { MapPlacement } from "../../placement/MapPlacement.ts";
-import {
-  parsePropertyRows,
-  createPropertyRows,
-  type PropertyRow,
-  type PropertyRowsChangeDetail
-} from "../properties/propertyDraft.ts";
+import { PropertyRows } from "../../../shared/properties/PropertyRows.ts";
+import type { PropertiesChangeDetail } from "../../../shared/properties/CustomPropertiesEditor.ts";
 import { PositionSource } from "../../../shared/PositionSource.ts";
-import "../properties/CustomPropertiesEditor.ts";
+import "../../../shared/properties/CustomPropertiesEditor.ts";
 import "../layerIcons.ts";
 import "../../placement/placementIcons.ts";
 
@@ -63,8 +59,6 @@ export class VoxelLayerPanel extends LitElement {
   @state()
   private declare _empty: boolean;
 
-  @state()
-  private declare _props: PropertyRow[];
   #subscriptions: Array<() => void> = [];
 
   #position = new FieldBinding(this, new PositionSource({
@@ -83,12 +77,10 @@ export class VoxelLayerPanel extends LitElement {
     this._layer = null;
     this._contentOrigin = new THREE.Vector3();
     this._empty = true;
-    this._props = [];
   }
 
   #onLayerUpdated = (event: VoxelLayerCommand) => {
     if (
-      isVoxelLayerGeometryCommand(event) &&
       "layerId" in event &&
       this.world.getLayerById(event.layerId)?.name === this.layerName
     ) {
@@ -124,7 +116,6 @@ export class VoxelLayerPanel extends LitElement {
       changed.has("world")
     ) {
       this.#syncFromLayer();
-      this._props = createPropertyRows(this._layer?.properties);
     }
   }
 
@@ -156,12 +147,13 @@ export class VoxelLayerPanel extends LitElement {
 
       ${this.#renderPosition()}
 
-      <custom-properties-editor
-        .rows=${this._props}
-        .disabled=${!this.writable}
-        storage-key="voxel-map:folder:layer-properties"
-        @property-rows-change=${this.#onPropertyRowsChange}
-      ></custom-properties-editor>
+      ${keyed(this.layerName, html`
+        <custom-properties-editor
+          .properties=${this._layer.properties}
+          .disabled=${!this.writable}
+          @properties-change=${this.#onPropertiesChange}
+        ></custom-properties-editor>
+      `)}
     `;
   }
 
@@ -228,21 +220,23 @@ export class VoxelLayerPanel extends LitElement {
     world.rebaseLayer(layerName, this._contentOrigin);
   }
 
-  #onPropertyRowsChange(
-    event: CustomEvent<PropertyRowsChangeDetail>
+  #onPropertiesChange(
+    event: CustomEvent<PropertiesChangeDetail>
   ): void {
-    this._props = event.detail.rows;
-    this.#flushProperties();
-  }
-
-  #flushProperties(): void {
-    const { world, layerName } = this;
-    if (!world || !layerName) {
+    const {
+      world,
+      layerName,
+      _layer: layer
+    } = this;
+    if (!world || !layerName || !layer) {
       return;
     }
 
     world.updateLayer(layerName, {
-      properties: parsePropertyRows(this._props)
+      properties: {
+        ...PropertyRows.uneditable(layer.properties),
+        ...event.detail.properties
+      }
     });
   }
 }

@@ -87,6 +87,7 @@ export class BlockDialog {
   readonly alpha: Locator;
   readonly sides: Locator;
   readonly uvSizes: Locator;
+  readonly properties: Locator;
   readonly disabledBlockset: Locator;
   readonly createButton: Locator;
   readonly closeButton: Locator;
@@ -103,6 +104,7 @@ export class BlockDialog {
     this.alpha = buttonGroup(this.root, "Alpha");
     this.sides = buttonGroup(this.root, "Sides");
     this.uvSizes = buttonGroup(this.root, "UV size");
+    this.properties = this.root.locator("custom-properties-editor");
     this.disabledBlockset = this.root.locator("jolly-select[disabled]");
     this.createButton = this.root.getByRole("button", { name: "Create" });
     this.closeButton = this.root.getByRole("button", { name: "Close" });

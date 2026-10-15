@@ -21,6 +21,15 @@ function blockNames(
   ].map((block) => block.name));
 }
 
+function blockProperties(
+  map: VoxelMapPage,
+  name: string
+): Promise<Record<string, unknown> | undefined> {
+  return map.page.evaluate((blockName) => [
+    ...window.voxelMapEditor!.workspace.view.document.blocks.getAll()
+  ].find((block) => block.name === blockName)?.properties, name);
+}
+
 function blockSurface(
   map: VoxelMapPage,
   blockId: number
@@ -164,6 +173,36 @@ test("a transparent block edits its alpha mode and its sides", async({ map }) =>
   await editor.sides.getByRole("radio", { name: "Both" }).click();
   await expect.poll(() => blockSurface(map, 1))
     .toEqual({ alphaMode: "blend", side: "double" });
+});
+
+test("a block keeps its typed custom properties", async({ map }) => {
+  const { library } = map.blocks;
+  const [first] = await blockNames(map);
+  await library.edit(first);
+  const editor = map.blockDialog(first);
+  const { properties } = editor;
+
+  const keys = properties.getByRole("textbox", { name: "key" });
+  await expect(keys).toHaveCount(1);
+
+  await properties.locator("jolly-select").getByRole("combobox")
+    .selectOption({ label: "Number" });
+  const value = properties.locator("jolly-number input");
+  await value.fill("3");
+  await value.press("Tab");
+  await keys.fill("hardness");
+  await keys.press("Tab");
+
+  await expect(keys).toHaveCount(2);
+  await expect.poll(() => blockProperties(map, first))
+    .toEqual({ hardness: 3 });
+
+  await editor.closeButton.click();
+  await library.edit(first);
+
+  await expect(keys).toHaveCount(2);
+  await expect(keys.first()).toHaveValue("hardness");
+  await expect(value).toHaveValue("3");
 });
 
 test("a lone blockset leaves the blockset field disabled", async({ map }) => {

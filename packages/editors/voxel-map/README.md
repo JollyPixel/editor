@@ -33,6 +33,14 @@ and peaks receive a half turn to account for their default shape geometry;
 slab notches receive the same turn to align with their stair complement.
 Explicit rotations keep the renderer's original shape orientation.
 
+Blocks, layers and objects edit their [custom properties][block-properties] as
+text, number or boolean rows. Changing a row's type converts its value: text
+that is not a number becomes `0`, and only `true` (any case) becomes a true
+boolean. The list always ends with a blank row; giving it a key saves it and
+opens a new blank row. Clearing a saved row's key removes it, and giving a row a
+key already in use replaces that property. Layer values of any other type stay
+hidden and are kept on save.
+
 ## 🧪 Tests and checks
 
 ```bash
@@ -57,5 +65,6 @@ MIT
 
 [contributing]: ../../../CONTRIBUTING.md
 [voxel-renderer]: ../../voxel-renderer/README.md
+[block-properties]: ../../voxel-renderer/docs/api/blocks/BlockDefinition.md#custom-properties
 [editor-host]: ../host/README.md
 [e2e]: ../../e2e/README.md#-starting-a-new-suite

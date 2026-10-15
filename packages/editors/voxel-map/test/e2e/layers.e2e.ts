@@ -18,6 +18,17 @@ interface LayerSummary {
   visible: boolean;
 }
 
+function layerProperties(
+  map: VoxelMapPage,
+  name: string
+): Promise<Record<string, unknown>> {
+  return map.page.evaluate(
+    (layerName) => window.voxelMapEditor!.workspace.view.document.world
+      .getLayer(layerName)!.properties,
+    name
+  );
+}
+
 function voxelLayers(
   map: VoxelMapPage
 ): Promise<LayerSummary[]> {
@@ -106,18 +117,61 @@ test("clicking the empty tree area keeps the layer selected", async({ map }) => 
   await expect(row).toHaveAttribute("aria-selected", "true");
 });
 
-test("the custom properties folder only toggles once it holds a property", async({ map }) => {
+test("the blank custom property row grows the list and a cleared key shrinks it", async({ map }) => {
   const { properties } = map.layers;
-  const toggle = properties.getByRole("button", { name: "Custom Properties" });
+  const keys = properties.getByRole("textbox", { name: "key" });
+  const removeButtons = properties.getByRole("button", { name: "Remove property" });
 
   await map.layers.row("Ground").click();
-  await expect(toggle).toHaveCount(0);
+  await expect(keys).toHaveCount(1);
+  await expect(removeButtons).toHaveCount(0);
 
-  await properties.getByRole("button", { name: "Add property" }).click();
-  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  for (const key of ["biome", "weather"]) {
+    await keys.last().fill(key);
+    await keys.last().press("Tab");
+  }
 
-  await properties.getByRole("button", { name: "Remove property" }).click();
-  await expect(toggle).toHaveCount(0);
+  await expect(keys).toHaveCount(3);
+  await expect(removeButtons).toHaveCount(2);
+  await expect.poll(() => layerProperties(map, "Ground"))
+    .toEqual({ biome: "", weather: "" });
+
+  await removeButtons.first().click();
+  await expect.poll(() => layerProperties(map, "Ground")).toEqual({ weather: "" });
+
+  await keys.first().fill("");
+  await keys.first().press("Tab");
+
+  await expect(keys).toHaveCount(1);
+  await expect.poll(() => layerProperties(map, "Ground")).toEqual({});
+});
+
+test("custom properties follow a layer change made elsewhere", async({ map }) => {
+  const keys = map.layers.properties.getByRole("textbox", { name: "key" });
+
+  await map.layers.row("Ground").click();
+  await keys.last().fill("biome");
+  await keys.last().press("Tab");
+  await expect.poll(() => layerProperties(map, "Ground")).toEqual({ biome: "" });
+
+  await map.page.evaluate(() => window.voxelMapEditor!.workspace.view.document.world
+    .updateLayer("Ground", {
+      properties: {
+        biome: "",
+        weather: "rain",
+        spawn: { x: 1 }
+      }
+    }));
+  await expect(keys).toHaveCount(3);
+
+  await keys.first().fill("terrain");
+  await keys.first().press("Tab");
+
+  await expect.poll(() => layerProperties(map, "Ground")).toEqual({
+    spawn: { x: 1 },
+    terrain: "",
+    weather: "rain"
+  });
 });
 
 test("the layer header rebases the layer and locks while transforming", async({ map }) => {
