@@ -62,7 +62,7 @@ describe("SceneWaker", () => {
     presence.peers = [];
     presence.blockSelections = new Map();
     presence.blockHovers = new Map();
-    view.update({ shading: view.settings.shading === "lit" ? "flat" : "lit" });
+    view.update({ lighting: view.settings.lighting === "flat" ? "studio" : "flat" });
 
     assert.equal(frames.requested, 4);
   });

@@ -19,7 +19,11 @@ import type {
   MaterialPreviews
 } from "../../state/index.ts";
 import { BlockNode } from "./BlockNode.ts";
-import { ModelBlock } from "./ModelBlock.ts";
+import {
+  ModelBlock,
+  type BlockMesh
+} from "./ModelBlock.ts";
+import { FlatShading } from "./FlatShading.ts";
 import type { BlockShapeChanges } from "./BlockShapeMesh.ts";
 import { plainVector3 } from "./plainVector3.ts";
 import {
@@ -50,7 +54,7 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
   #byMesh = new Map<THREE.Object3D, ModelBlock>();
   #selection: BlockSelectionStore;
   #texture: THREE.Texture | null = null;
-  #lit = true;
+  #flatShading = new FlatShading();
   #previews: MaterialPreviews;
   #subscriptions: Array<() => void>;
 
@@ -174,20 +178,35 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
   }
 
   get lit(): boolean {
-    return this.#lit;
+    return !this.#flatShading.flat;
   }
 
   set lit(
     lit: boolean
   ) {
-    this.#lit = lit;
+    this.#flatShading.flat = !lit;
+  }
+
+  get glows(): boolean {
     for (const block of this.#blocks.values()) {
-      block.lit = lit;
+      if (block.visible && block.glows) {
+        return true;
+      }
     }
+
+    return false;
   }
 
   values(): IterableIterator<ModelBlock> {
     return this.#blocks.values();
+  }
+
+  * visibleMeshes(): IterableIterator<BlockMesh> {
+    for (const { mesh } of this.#blocks.values()) {
+      if (mesh.visible) {
+        yield mesh;
+      }
+    }
   }
 
   get(
@@ -316,11 +335,11 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
       name: node.name,
       shape: BlockShape.of(node),
       ...node.flipAxes === undefined ? {} : { flip: node.flipAxes },
-      texture: this.#texture
+      texture: this.#texture,
+      flatShading: this.#flatShading
     });
     block.transform = node.transform;
     block.surface = this.#surfaceOf(node.materialId);
-    block.lit = this.#lit;
     this.#blocks.set(block.uuid, block);
     this.#byMesh.set(block.mesh, block);
     this.emit("blockAdded", block);

@@ -10,6 +10,25 @@ import {
   type VoxelModelCommand
 } from "@jolly-pixel/asset.voxel-model/client";
 
+// Import Internal Dependencies
+import {
+  ModelBlock,
+  type ModelBlockOptions
+} from "#src/scene/blocks/ModelBlock.ts";
+import { FlatShading } from "#src/scene/blocks/FlatShading.ts";
+
+// CONSTANTS
+const kFlatShading = new FlatShading();
+
+export function createBlock(
+  options: Omit<ModelBlockOptions, "flatShading"> = {}
+): ModelBlock {
+  return new ModelBlock({
+    ...options,
+    flatShading: kFlatShading
+  });
+}
+
 export function transformAt(
   position: { x: number; y: number; z: number; }
 ): BlockTransformJSON {

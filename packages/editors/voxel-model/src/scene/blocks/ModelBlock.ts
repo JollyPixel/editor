@@ -19,6 +19,7 @@ import { PivotMarker } from "./PivotMarker.ts";
 import { RenderOrder } from "../renderOrder.ts";
 import { plainVector3 } from "./plainVector3.ts";
 import { paintBlockSurface } from "./paintBlockSurface.ts";
+import type { FlatShading } from "./FlatShading.ts";
 import {
   BlockShapeMesh,
   type BlockShapeChanges
@@ -42,9 +43,10 @@ export interface ModelBlockOptions {
   shape?: BlockShapeJSON;
   flip?: MirrorAxes;
   texture?: THREE.Texture | null;
+  flatShading: FlatShading;
 }
 
-type BlockMesh = THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardNodeMaterial>;
+export type BlockMesh = THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardNodeMaterial>;
 
 export class ModelBlock {
   readonly node = new BlockNode();
@@ -52,13 +54,13 @@ export class ModelBlock {
 
   #shapeMesh: BlockShapeMesh;
   #surface: MaterialSurfaceJSON | null = null;
-  #lit = true;
+  #flat: FlatShading;
   #pivotOffset = new THREE.Vector3();
   #pivotMarker = new PivotMarker();
   #selectionTextureGhost: BlockMesh | null = null;
 
   constructor(
-    options: ModelBlockOptions = {}
+    options: ModelBlockOptions
   ) {
     const {
       position = new THREE.Vector3(0, 0, 0),
@@ -70,8 +72,10 @@ export class ModelBlock {
       shape = BlockShape.box,
       flip,
       texture = null,
-      uuid
+      uuid,
+      flatShading
     } = options;
+    this.#flat = flatShading;
 
     this.node.position.copy(position);
     this.node.scale.copy(scale);
@@ -93,6 +97,9 @@ export class ModelBlock {
       })
     );
     this.mesh.name = name || `mesh_${this.node.uuid}`;
+    this.mesh.castShadow = true;
+    this.mesh.receiveShadow = true;
+    this.#flat.shade(this.mesh.material);
     clampUvRegion(this.mesh);
     this.#paint();
     this.moveBoxAroundPivot(pivotOffset);
@@ -155,15 +162,10 @@ export class ModelBlock {
     }
   }
 
-  get lit(): boolean {
-    return this.#lit;
-  }
+  get glows(): boolean {
+    const { emissive, emissiveIntensity } = this.mesh.material;
 
-  set lit(
-    lit: boolean
-  ) {
-    this.#lit = lit;
-    this.#paint();
+    return emissiveIntensity > 0 && emissive.getHex() !== 0;
   }
 
   get surface(): MaterialSurfaceJSON | null {
@@ -408,6 +410,7 @@ export class ModelBlock {
         depthWrite: false
       })
     );
+    this.#flat.shade(ghost.material);
     this.#paintGhost(ghost);
     clampUvRegion(ghost);
     ghost.name = "selection-texture-ghost";
@@ -430,7 +433,7 @@ export class ModelBlock {
       target.depthWrite = !transparent;
       target.needsUpdate = true;
     }
-    paintBlockSurface(target, surface, this.#lit);
+    paintBlockSurface(target, surface);
 
     const ghost = this.#selectionTextureGhost;
     if (ghost !== null) {
@@ -442,7 +445,7 @@ export class ModelBlock {
     ghost: BlockMesh
   ): void {
     const surface = this.#shownSurface();
-    paintBlockSurface(ghost.material, surface, this.#lit);
+    paintBlockSurface(ghost.material, surface);
     ghost.material.opacity = surface.opacity * kOccludedGhostOpacityScale;
   }
 

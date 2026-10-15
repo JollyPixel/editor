@@ -7,23 +7,26 @@ import {
 
 // CONSTANTS
 const kStorageKey = "voxel-model:view";
-export const SHADING_MODES = ["lit", "flat"] as const;
+export const LIGHTING_MODES = ["flat", "studio", "day", "night"] as const;
 export const KEY_LIGHT_PRESETS = ["front-left", "front-right", "top"] as const;
-export const ENVIRONMENT_INTENSITY_RANGE = { min: 0, max: 2 } as const;
-export const EXPOSURE_RANGE = { min: 0.25, max: 3 } as const;
-export const GLOW_STRENGTH_RANGE = { min: 0, max: 3 } as const;
+const kHexColor = /^#[\da-f]{6}$/i;
+const kLightingBackgrounds: Readonly<Record<LightingMode, string>> = {
+  flat: "#262627",
+  studio: "#262627",
+  day: "#6f97c2",
+  night: "#0c0e14"
+};
 
-export type ShadingMode = typeof SHADING_MODES[number];
+export type LightingMode = typeof LIGHTING_MODES[number];
 export type KeyLightPreset = typeof KEY_LIGHT_PRESETS[number];
 
 export interface ViewSettings {
-  shading: ShadingMode;
-  environment: boolean;
-  environmentIntensity: number;
+  lighting: LightingMode;
+  background: string | null;
   keyLight: KeyLightPreset;
-  exposure: number;
+  reflections: boolean;
+  shadows: boolean;
   glow: boolean;
-  glowStrength: number;
 }
 
 type ViewSettingRule<T> = (value: unknown) => T;
@@ -33,16 +36,27 @@ type ViewSettingRules = {
 };
 
 const kRules: ViewSettingRules = {
-  shading: choice(SHADING_MODES, "lit"),
-  environment: toggle(true),
-  environmentIntensity: range(ENVIRONMENT_INTENSITY_RANGE, 0.5),
+  lighting: choice(LIGHTING_MODES, "studio"),
+  background: hexColorOrNull,
   keyLight: choice(KEY_LIGHT_PRESETS, "front-right"),
-  exposure: range(EXPOSURE_RANGE, 1),
-  glow: toggle(true),
-  glowStrength: range(GLOW_STRENGTH_RANGE, 1)
+  reflections: toggle(true),
+  shadows: toggle(false),
+  glow: toggle(true)
 };
 
 export const DEFAULT_VIEW_SETTINGS: Readonly<ViewSettings> = Object.freeze(normalize({}));
+
+export function isLit(
+  settings: Pick<ViewSettings, "lighting">
+): boolean {
+  return settings.lighting !== "flat";
+}
+
+export function backgroundOf(
+  settings: Pick<ViewSettings, "lighting" | "background">
+): string {
+  return settings.background ?? kLightingBackgrounds[settings.lighting];
+}
 
 export type ViewSettingsEvents = {
   change: (settings: ViewSettings) => void;
@@ -120,13 +134,12 @@ function normalize(
   }
 
   return {
-    shading: read("shading"),
-    environment: read("environment"),
-    environmentIntensity: read("environmentIntensity"),
+    lighting: read("lighting"),
+    background: read("background"),
     keyLight: read("keyLight"),
-    exposure: read("exposure"),
-    glow: read("glow"),
-    glowStrength: read("glowStrength")
+    reflections: read("reflections"),
+    shadows: read("shadows"),
+    glow: read("glow")
   };
 }
 
@@ -136,18 +149,15 @@ function toggle(
   return (value) => (typeof value === "boolean" ? value : fallback);
 }
 
+function hexColorOrNull(
+  value: unknown
+): string | null {
+  return typeof value === "string" && kHexColor.test(value) ? value.toLowerCase() : null;
+}
+
 function choice<T extends string>(
   values: readonly T[],
   fallback: T
 ): ViewSettingRule<T> {
   return (value) => values.find((candidate) => candidate === value) ?? fallback;
-}
-
-function range(
-  bounds: { min: number; max: number; },
-  fallback: number
-): ViewSettingRule<number> {
-  return (value) => (typeof value === "number" && Number.isFinite(value) ?
-    Math.min(Math.max(value, bounds.min), bounds.max) :
-    fallback);
 }

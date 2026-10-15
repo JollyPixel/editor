@@ -7,6 +7,8 @@ import "./app/LeftPanel.ts";
 import "./app/RightPanel.ts";
 import "./features/material/MaterialLibrary.ts";
 import "./features/history/HistoryBar.ts";
+import "./features/view/ViewPanel.ts";
+import "./features/view/LightingMenu.ts";
 import "./features/animation/AnimatePanel.ts";
 import "./features/animation/timeline/Timeline.ts";
 import "./features/animation/timeline/TimelineTransport.ts";

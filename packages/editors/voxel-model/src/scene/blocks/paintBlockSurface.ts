@@ -4,8 +4,7 @@ import type { MaterialSurfaceJSON } from "@jolly-pixel/asset.voxel-model/client"
 
 export function paintBlockSurface(
   target: THREE.MeshStandardNodeMaterial,
-  surface: MaterialSurfaceJSON,
-  lit: boolean
+  surface: MaterialSurfaceJSON
 ): void {
   target.color.set(surface.color);
   target.opacity = surface.opacity;
@@ -13,8 +12,4 @@ export function paintBlockSurface(
   target.metalness = surface.metalness;
   target.emissive.set(surface.emissive);
   target.emissiveIntensity = surface.emissiveIntensity;
-  if (target.lights !== lit) {
-    target.lights = lit;
-    target.needsUpdate = true;
-  }
 }

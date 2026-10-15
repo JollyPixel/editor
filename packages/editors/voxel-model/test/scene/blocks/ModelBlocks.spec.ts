@@ -233,17 +233,17 @@ describe("ModelBlocks textures", () => {
 });
 
 describe("ModelBlocks shading", () => {
-  test("shades existing and future blocks with the current mode", () => {
+  test("gives existing and future blocks of the same surface one shader cache key", () => {
     const fixture = createModelFixture();
     const existing = fixture.addBlock();
 
     fixture.blocks.lit = false;
     const future = fixture.addBlock();
 
-    assert.equal(existing.lit, false);
-    assert.equal(future.lit, false);
-
-    fixture.blocks.lit = true;
-    assert.equal(existing.lit, true);
+    assert.equal(fixture.blocks.lit, false);
+    assert.equal(
+      existing.mesh.material.customProgramCacheKey(),
+      future.mesh.material.customProgramCacheKey()
+    );
   });
 });

@@ -40,7 +40,9 @@ const kTimelineDockSelector = "jolly-dock[key=\"timeline\"]";
 const kAttachedTags = [
   kRightPanelSelector,
   "jolly-model-editor-material-library",
+  "jolly-model-editor-view",
   "jolly-model-editor-history",
+  "jolly-model-editor-lighting-menu",
   kAnimatePanelSelector,
   "jolly-model-editor-timeline",
   "jolly-model-editor-animating-frame",

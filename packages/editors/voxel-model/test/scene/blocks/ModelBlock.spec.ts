@@ -6,7 +6,8 @@ import assert from "node:assert/strict";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { ModelBlock } from "#src/scene/blocks/ModelBlock.ts";
+import type { ModelBlock } from "#src/scene/blocks/ModelBlock.ts";
+import { createBlock } from "./blockHelpers.ts";
 
 // CONSTANTS
 const kEpsilon = 1e-6;
@@ -22,7 +23,7 @@ function assertEulerClose(
 
 describe("ModelBlock rotation space", () => {
   test("world rotation matches local rotation without a rotated ancestor", () => {
-    const block = new ModelBlock();
+    const block = createBlock();
     const rotation = new THREE.Euler(
       THREE.MathUtils.degToRad(15),
       THREE.MathUtils.degToRad(30),
@@ -35,8 +36,8 @@ describe("ModelBlock rotation space", () => {
   });
 
   test("world rotation composes the parent's rotation on top of the local one", () => {
-    const parent = new ModelBlock();
-    const child = new ModelBlock();
+    const parent = createBlock();
+    const child = createBlock();
     parent.node.add(child.node);
 
     const parentRotation = new THREE.Euler(0, THREE.MathUtils.degToRad(90), 0);
@@ -52,8 +53,8 @@ describe("ModelBlock rotation space", () => {
   });
 
   test("worldRotation round-trips through a rotated parent", () => {
-    const parent = new ModelBlock();
-    const child = new ModelBlock();
+    const parent = createBlock();
+    const child = createBlock();
     parent.node.add(child.node);
     parent.rotation = new THREE.Euler(0, THREE.MathUtils.degToRad(60), 0);
 
@@ -77,7 +78,7 @@ describe("ModelBlock rotation space", () => {
 
 describe("ModelBlock accessors", () => {
   test("returns copies, so mutating a read value leaves the block unchanged", () => {
-    const block = new ModelBlock({ position: new THREE.Vector3(1, 2, 3) });
+    const block = createBlock({ position: new THREE.Vector3(1, 2, 3) });
 
     block.position.x = 99;
 
@@ -85,7 +86,7 @@ describe("ModelBlock accessors", () => {
   });
 
   test("moveBoxAroundPivot shifts the mesh and keeps the pivot in place", () => {
-    const block = new ModelBlock();
+    const block = createBlock();
 
     block.moveBoxAroundPivot(new THREE.Vector3(0.5, 0, 0));
 
@@ -95,14 +96,14 @@ describe("ModelBlock accessors", () => {
   });
 
   test("transform round-trips every component", () => {
-    const source = new ModelBlock({
+    const source = createBlock({
       position: new THREE.Vector3(1, 2, 3),
       pivotOffset: new THREE.Vector3(0.5, 0, 0),
       size: new THREE.Vector3(2, 1, 1),
       scale: new THREE.Vector3(1, 3, 1),
       rotation: new THREE.Euler(0.1, 0.2, 0.3)
     });
-    const target = new ModelBlock();
+    const target = createBlock();
 
     target.transform = source.transform;
 
@@ -112,7 +113,7 @@ describe("ModelBlock accessors", () => {
 
 describe("ModelBlock pivot placement", () => {
   function rotatedBlock(): ModelBlock {
-    const block = new ModelBlock({
+    const block = createBlock({
       position: new THREE.Vector3(2, 0, 0),
       pivotOffset: new THREE.Vector3(0.5, 0, 0),
       rotation: new THREE.Euler(0, Math.PI / 4, Math.PI / 6)
@@ -163,7 +164,7 @@ describe("ModelBlock shape", () => {
   }
 
   test("a plane is one upward quad filling the size in X and Z", () => {
-    const block = new ModelBlock({
+    const block = createBlock({
       shape: { type: "plane" },
       size: new THREE.Vector3(2, 3, 4)
     });
@@ -179,12 +180,12 @@ describe("ModelBlock shape", () => {
 
   test("a reflected round block stays reflected through a resize", () => {
     const shape = { type: "cone", sides: 5 } as const;
-    const block = new ModelBlock({ shape, size: new THREE.Vector3(1, 1, 1) });
+    const block = createBlock({ shape, size: new THREE.Vector3(1, 1, 1) });
 
     block.rebuild({ flip: { x: true, y: false, z: false } });
     block.resize(new THREE.Vector3(2, 1, 1));
 
-    const plain = new ModelBlock({ shape, size: new THREE.Vector3(2, 1, 1) });
+    const plain = createBlock({ shape, size: new THREE.Vector3(2, 1, 1) });
     assert.deepEqual(
       verticesOf(block.mesh.geometry, "position"),
       verticesOf(plain.mesh.geometry, "position").map(([x, y, z]) => [0 - x, y, z])
@@ -192,7 +193,7 @@ describe("ModelBlock shape", () => {
   });
 
   test("restores the base UVs a texture binding overwrote", () => {
-    const block = new ModelBlock({ shape: { type: "cylinder", sides: 4 } });
+    const block = createBlock({ shape: { type: "cylinder", sides: 4 } });
     const uv = block.mesh.geometry.getAttribute("uv");
     const base = Array.from(uv.array);
     uv.setXY(0, 0.25, 0.75);
@@ -203,7 +204,7 @@ describe("ModelBlock shape", () => {
   });
 
   test("reshaping swaps the geometry only for a new shape, and later resizes keep it", () => {
-    const block = new ModelBlock({ size: new THREE.Vector3(1, 1, 1) });
+    const block = createBlock({ size: new THREE.Vector3(1, 1, 1) });
     const box = block.mesh.geometry;
 
     assert.equal(block.rebuild({ shape: { type: "box" } }), false);
@@ -221,7 +222,7 @@ describe("ModelBlock shape", () => {
 
 describe("ModelBlock resize", () => {
   test("keeps the geometry and its vertices when the size is unchanged", () => {
-    const block = new ModelBlock({ size: new THREE.Vector3(1, 1, 1) });
+    const block = createBlock({ size: new THREE.Vector3(1, 1, 1) });
     const geometry = block.mesh.geometry;
     const before = [...geometry.getAttribute("position").array];
 
@@ -232,7 +233,7 @@ describe("ModelBlock resize", () => {
   });
 
   test("reshapes the same geometry in place when the size changes", () => {
-    const block = new ModelBlock({ size: new THREE.Vector3(1, 1, 1) });
+    const block = createBlock({ size: new THREE.Vector3(1, 1, 1) });
     const geometry = block.mesh.geometry;
 
     block.resize(new THREE.Vector3(2, 1, 1));
@@ -243,7 +244,7 @@ describe("ModelBlock resize", () => {
   });
 
   test("preserves a custom UV mapping when the size changes", () => {
-    const block = new ModelBlock({ size: new THREE.Vector3(1, 1, 1) });
+    const block = createBlock({ size: new THREE.Vector3(1, 1, 1) });
     block.mesh.geometry.getAttribute("uv").setXY(0, 0.25, 0.25);
 
     block.resize(new THREE.Vector3(2, 1, 1));

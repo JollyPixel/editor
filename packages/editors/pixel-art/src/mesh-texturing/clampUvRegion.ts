@@ -53,7 +53,7 @@ const kClampedMapColor = Fn(({ material }) => {
   const sampled = texture(map, texel.div(size)).level(float(0));
 
   return vec4(reference("color", "color", material), float(1)).mul(sampled);
-});
+})();
 
 /**
  * Keeps MSAA edge samples inside the region written by `UVGeometryBinding`.
@@ -62,7 +62,7 @@ export function clampUvRegion(
   mesh: UvRegionClampedMesh
 ): void {
   ensureUvRegionAttributes(mesh.geometry);
-  mesh.material.colorNode = kClampedMapColor();
+  mesh.material.colorNode = kClampedMapColor;
   mesh.material.needsUpdate = true;
 }
 

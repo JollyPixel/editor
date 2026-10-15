@@ -74,4 +74,17 @@ describe("clampUvRegion", () => {
     assert.ok(colorNode);
     assert.strictEqual(material.colorNode, colorNode);
   });
+
+  test("gives every material the same shader cache key so meshes share one build", () => {
+    const materials = [
+      new THREE.MeshBasicNodeMaterial(),
+      new THREE.MeshBasicNodeMaterial()
+    ];
+    for (const material of materials) {
+      clampUvRegion(new THREE.Mesh(makeGeometry(4), material));
+    }
+
+    const [first, second] = materials;
+    assert.strictEqual(first.customProgramCacheKey(), second.customProgramCacheKey());
+  });
 });
