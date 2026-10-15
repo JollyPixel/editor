@@ -1,5 +1,6 @@
 export * from "./Clock.ts";
 export * from "./FrameBudget.ts";
+export * from "./FrameRateGovernor.ts";
 export * from "./FrameSchedule.ts";
 export * from "./FrameScheduler.ts";
 export * from "./FrameSource.ts";

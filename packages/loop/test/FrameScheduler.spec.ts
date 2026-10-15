@@ -27,9 +27,11 @@ describe("Loop.FrameScheduler", () => {
       assert.strictEqual(scheduler.maxFrameDelta, 250);
       assert.strictEqual(scheduler.maxStepsPerFrame, 5);
       assert.strictEqual(scheduler.timeScale, 1);
+      assert.strictEqual(scheduler.snapTolerance, 0);
+      assert.strictEqual(scheduler.refreshPeriod, null);
     });
 
-    test("the first frame reports no elapsed time and renders", () => {
+    test("the first frame reports no elapsed time, renders, and starts half a step in", () => {
       const scheduler = new FrameScheduler();
       const schedule = scheduler.advance(1_000_000);
 
@@ -41,12 +43,15 @@ describe("Loop.FrameScheduler", () => {
         unscaledRenderDelta: 0,
         fixedDelta: kFixedDelta60,
         steps: 0,
-        alpha: 0,
+        alpha: 0.5,
         render: true,
         clamped: false,
+        snapped: false,
         panicked: false,
         droppedMs: 0
       });
+      assert.strictEqual(scheduler.elapsed, 0);
+      assert.strictEqual(scheduler.phaseShift, kFixedDelta60 / 2);
     });
 
     test("a backwards timestamp yields a zero delta, never negative time", () => {
@@ -78,6 +83,8 @@ describe("Loop.FrameScheduler", () => {
       assert.throws(() => new FrameScheduler({ maxStepsPerFrame: 0 }), RangeError);
       assert.throws(() => new FrameScheduler({ maxStepsPerFrame: 1.5 }), RangeError);
       assert.throws(() => new FrameScheduler({ timeScale: -0.5 }), RangeError);
+      assert.throws(() => new FrameScheduler({ snapTolerance: -1 }), RangeError);
+      assert.throws(() => new FrameScheduler({ snapTolerance: Infinity }), RangeError);
       assert.doesNotThrow(() => new FrameScheduler({ maxFps: Infinity }));
       assert.doesNotThrow(() => new FrameScheduler({ timeScale: 0 }));
     });
@@ -100,8 +107,8 @@ describe("Loop.FrameScheduler", () => {
 
       assert.strictEqual(schedules[0].clamped, true);
       assert.strictEqual(schedules[0].frameDelta, 250);
-      assert.strictEqual(schedules[0].steps, 12);
-      assert.strictEqual(schedules[0].alpha, 0.5);
+      assert.strictEqual(schedules[0].steps, 13);
+      assert.strictEqual(schedules[0].alpha, 0);
       assert.strictEqual(schedules[0].panicked, false);
       assert.strictEqual(schedules[0].rawDelta, 10_000);
       assert.strictEqual(schedules[0].unscaledDelta, 250);
@@ -124,15 +131,15 @@ describe("Loop.FrameScheduler", () => {
       );
     });
 
-    test("caps the step loop and discards the remaining accumulator", () => {
+    test("caps the step loop and discards the accumulator beyond half a step", () => {
       const { schedules, scheduler } = replay([200]);
       const [schedule] = schedules;
 
       assert.strictEqual(schedule.steps, 5);
       assert.strictEqual(schedule.panicked, true);
       assert.ok(closeTo(schedule.droppedMs, 200 - (5 * kFixedDelta60)));
-      assert.strictEqual(schedule.alpha, 0);
-      assert.strictEqual(scheduler.accumulator, 0);
+      assert.ok(closeTo(schedule.alpha, 0.5));
+      assert.ok(closeTo(scheduler.accumulator, kFixedDelta60 / 2));
       assert.ok(closeTo(scheduler.droppedTime, schedule.droppedMs));
     });
 
@@ -293,9 +300,9 @@ describe("Loop.FrameScheduler", () => {
 
       assert.strictEqual(schedule.steps, 4);
       assert.strictEqual(schedule.panicked, false);
-      assert.ok(closeTo(scheduler.accumulator, 20 - kFixedDelta60));
+      assert.ok(closeTo(scheduler.accumulator, 20 - (kFixedDelta60 / 2)));
       assert.ok(closeTo(
-        scheduler.elapsed,
+        scheduler.elapsed + scheduler.phaseShift,
         scheduler.time + scheduler.accumulator + scheduler.droppedTime
       ));
     });
@@ -327,7 +334,7 @@ describe("Loop.FrameScheduler", () => {
     test("tabSwitch: the return frame clamps and panics, then recovers", () => {
       const { schedules } = replayTape(scenarios.tabSwitch);
 
-      assert.deepStrictEqual(stepsOf(schedules), [1, 1, 0, 2, 5, 1, 1, 1, 1]);
+      assert.deepStrictEqual(stepsOf(schedules), [1, 1, 1, 1, 5, 1, 1, 1, 1]);
       assert.deepStrictEqual(
         schedules.map(({ clamped }) => clamped),
         [false, false, false, false, true, false, false, false, false]
@@ -353,10 +360,10 @@ describe("Loop.FrameScheduler", () => {
     test("singleSlowFrame: catches up within budget", () => {
       const { schedules, scheduler } = replayTape(scenarios.singleSlowFrame);
 
-      assert.deepStrictEqual(stepsOf(schedules), [1, 1, 0, 2, 4, 1, 1, 1, 1]);
+      assert.deepStrictEqual(stepsOf(schedules), [1, 1, 1, 1, 5, 1, 1, 1, 1]);
       assert.ok(schedules.every(({ panicked }) => panicked === false));
       assert.ok(schedules.every(({ clamped }) => clamped === false));
-      assert.ok(closeTo(schedules[4].alpha, 0.8));
+      assert.ok(closeTo(schedules[4].alpha, 0.3));
       assert.strictEqual(scheduler.droppedTime, 0);
     });
 
@@ -368,7 +375,7 @@ describe("Loop.FrameScheduler", () => {
       assert.ok(schedules.every(({ render }) => render));
       assert.strictEqual(
         schedules.reduce((total, { steps }) => total + steps, 0),
-        6
+        7
       );
     });
 
@@ -387,7 +394,7 @@ describe("Loop.FrameScheduler", () => {
 
       assert.ok(schedules.every(({ frameDelta }) => frameDelta === 0));
       assert.ok(schedules.every(({ steps }) => steps === 0));
-      assert.ok(schedules.every(({ alpha }) => alpha === 0));
+      assert.ok(schedules.every(({ alpha }) => alpha === 0.5));
       assert.ok(schedules.every(({ render }) => render));
       assert.strictEqual(scheduler.time, 0);
     });

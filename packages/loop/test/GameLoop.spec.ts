@@ -76,10 +76,10 @@ describe("Loop.GameLoop", () => {
       assert.strictEqual(loop.paused, true);
       assert.strictEqual(loop.scheduler.time, simulated);
       assert.ok(
-        recorder.frames.slice(1).every(({ render }) => render)
+        recorder.frames.slice(2).every(({ render }) => render)
       );
       assert.ok(
-        recorder.frames.slice(1).every(({ steps }) => steps === 0)
+        recorder.frames.slice(2).every(({ steps }) => steps === 0)
       );
 
       loop.resume();

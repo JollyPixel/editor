@@ -108,6 +108,7 @@ Optional helpers. Use them only when you need them.
 
 - [Interpolated](./docs/interpolated.md): smooth rendering between two fixed steps.
 - [FrameBudget](./docs/framebudget.md): a time limit for optional work inside a frame.
+- [FrameRateGovernor](./docs/framerategovernor.md): render at half rate while frames keep missing their refresh.
 - [suspendWhenHidden](./docs/suspendwhenhidden.md): stop a loop while its canvas is off screen.
 - [Clock](./docs/clock.md): `PerformanceClock` and `ManualClock`, for `FrameBudget` and tests.
 
@@ -124,13 +125,14 @@ The scheduler limits lag in two stages.
 | `maxFrameDelta` | `250` | The raw delta is clamped to this before accumulating. |
 | `maxStepsPerFrame` | `5` | Upper bound on fixed steps per frame, multiplied by `timeScale` above `1`. |
 | `timeScale` | `1` | Multiplier applied to the frame delta. `0` pauses. |
+| `snapTolerance` | `0` | Snaps deltas near whole refresh periods. See [frame pacing](./docs/framescheduler.md#frame-pacing). |
 
 A tab switch, a breakpoint or a laptop waking up produces one enormous delta.
 `maxFrameDelta` absorbs it and the frame reports `clamped: true`.
 
 An overloaded frame wants more steps than its budget allows. The budget is
 `ceil(maxStepsPerFrame × max(timeScale, 1))`, so fast-forward does not count
-as overload. The scheduler runs that many steps and **discards** the rest, reporting `panicked: true`
+as overload. The scheduler runs that many steps and **discards** the rest beyond half a step, reporting `panicked: true`
 with `droppedMs`. Simulation time falls behind wall-clock time, the game slows
 down, and the loop cannot spiral, because unrun work is never carried forward.
 

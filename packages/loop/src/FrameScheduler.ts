@@ -1,5 +1,9 @@
 // Import Internal Dependencies
 import type { FrameSchedule } from "./FrameSchedule.ts";
+import {
+  RefreshPeriod,
+  wholeRatio
+} from "./RefreshPeriod.ts";
 
 export interface FrameSchedulerOptions {
   /**
@@ -22,6 +26,11 @@ export interface FrameSchedulerOptions {
    * Frame-delta multiplier. Defaults to 1.
    */
   timeScale?: number;
+  /**
+   * Largest gap in ms between a frame delta and a whole number of refresh
+   * periods that still snaps the delta. Defaults to 0, which disables it.
+   */
+  snapTolerance?: number;
 }
 
 interface NumberRule {
@@ -37,15 +46,18 @@ const kDefaults: Required<FrameSchedulerOptions> = {
   maxFps: Infinity,
   maxFrameDelta: 250,
   maxStepsPerFrame: 5,
-  timeScale: 1
+  timeScale: 1,
+  snapTolerance: 0
 };
+const kExactRatioError = 1e-9;
 
 const kRules: Record<keyof FrameSchedulerOptions, NumberRule> = {
   fixedFps: { min: 0, exclusive: true },
   maxFps: { min: 0, exclusive: true, allowInfinite: true },
   maxFrameDelta: { min: 0, exclusive: true },
   maxStepsPerFrame: { min: 1, integer: true },
-  timeScale: { min: 0 }
+  timeScale: { min: 0 },
+  snapTolerance: { min: 0 }
 };
 
 /**
@@ -61,6 +73,9 @@ export class FrameScheduler {
   #maxFrameDelta = kDefaults.maxFrameDelta;
   #maxStepsPerFrame = kDefaults.maxStepsPerFrame;
   #timeScale = kDefaults.timeScale;
+  #stepBudget = kDefaults.maxStepsPerFrame;
+  #snapTolerance = kDefaults.snapTolerance;
+  #refreshPeriod = new RefreshPeriod();
 
   #lastNow: number | null = null;
   #accumulator = 0;
@@ -70,8 +85,10 @@ export class FrameScheduler {
   #time = 0;
   #elapsed = 0;
   #droppedTime = 0;
+  #phaseShift = 0;
   #frameCount = 0;
   #queuedSteps = 0;
+  #seeded = false;
 
   constructor(
     options: FrameSchedulerOptions = {}
@@ -82,6 +99,7 @@ export class FrameScheduler {
     this.maxStepsPerFrame = options.maxStepsPerFrame ??
       kDefaults.maxStepsPerFrame;
     this.timeScale = options.timeScale ?? kDefaults.timeScale;
+    this.snapTolerance = options.snapTolerance ?? kDefaults.snapTolerance;
   }
 
   get fixedFps(): number {
@@ -141,6 +159,7 @@ export class FrameScheduler {
       "maxStepsPerFrame",
       value
     );
+    this.#updateStepBudget();
   }
 
   get timeScale(): number {
@@ -154,6 +173,24 @@ export class FrameScheduler {
       "timeScale",
       value
     );
+    this.#updateStepBudget();
+  }
+
+  get snapTolerance(): number {
+    return this.#snapTolerance;
+  }
+
+  set snapTolerance(
+    value: number
+  ) {
+    this.#snapTolerance = assertNumber(
+      "snapTolerance",
+      value
+    );
+  }
+
+  get refreshPeriod(): number | null {
+    return this.#refreshPeriod.measured;
   }
 
   get accumulator(): number {
@@ -172,6 +209,10 @@ export class FrameScheduler {
     return this.#droppedTime;
   }
 
+  get phaseShift(): number {
+    return this.#phaseShift;
+  }
+
   get frameCount(): number {
     return this.#frameCount;
   }
@@ -185,8 +226,11 @@ export class FrameScheduler {
     this.#time = 0;
     this.#elapsed = 0;
     this.#droppedTime = 0;
+    this.#phaseShift = 0;
     this.#frameCount = 0;
     this.#queuedSteps = 0;
+    this.#seeded = false;
+    this.#refreshPeriod.clear();
   }
 
   skipGap(): void {
@@ -214,8 +258,36 @@ export class FrameScheduler {
     this.#lastNow = now;
     this.#frameCount++;
 
+    if (!this.#seeded) {
+      this.#seeded = true;
+      this.#accumulator += this.#fixedDelta / 2;
+      this.#phaseShift += this.#fixedDelta / 2;
+    }
+
     const clamped = rawDelta > this.#maxFrameDelta;
-    const wallDelta = clamped ? this.#maxFrameDelta : rawDelta;
+    let wallDelta = this.#maxFrameDelta;
+    let snapped = false;
+    let lockedPeriod: number | null = null;
+    if (!clamped) {
+      this.#refreshPeriod.observe(rawDelta);
+      wallDelta = rawDelta;
+
+      const measured = this.#snapTolerance === 0 ?
+        null :
+        this.#refreshPeriod.measured;
+      if (measured !== null) {
+        const periods = wholePeriods(
+          rawDelta,
+          measured,
+          this.#snapTolerance
+        );
+        if (periods > 0) {
+          snapped = true;
+          lockedPeriod = this.#refreshPeriod.lockTo(this.#fixedDelta);
+          wallDelta = periods * (lockedPeriod ?? measured);
+        }
+      }
+    }
     const scaledDelta = wallDelta * this.#timeScale;
     const queuedSteps = this.#queuedSteps;
     const queuedDelta = queuedSteps * this.#fixedDelta;
@@ -227,9 +299,7 @@ export class FrameScheduler {
     const wantedSteps = Math.floor(
       this.#accumulator / this.#fixedDelta
     );
-    const stepBudget = Math.ceil(
-      this.#maxStepsPerFrame * Math.max(this.#timeScale, 1)
-    );
+    const stepBudget = this.#stepBudget;
     const steps = Math.min(wantedSteps, stepBudget);
     const panicked = wantedSteps > stepBudget;
 
@@ -238,9 +308,12 @@ export class FrameScheduler {
 
     let droppedMs = 0;
     if (panicked) {
-      droppedMs = this.#accumulator;
-      this.#accumulator = 0;
+      droppedMs = this.#accumulator - (this.#fixedDelta / 2);
+      this.#accumulator -= droppedMs;
       this.#droppedTime += droppedMs;
+    }
+    if (lockedPeriod !== null) {
+      this.#alignPhase(lockedPeriod);
     }
 
     const render = this.#shouldRender(
@@ -269,9 +342,39 @@ export class FrameScheduler {
       alpha: this.#accumulator / this.#fixedDelta,
       render,
       clamped,
+      snapped,
       panicked,
       droppedMs
     };
+  }
+
+  #updateStepBudget(): void {
+    this.#stepBudget = Math.ceil(
+      this.#maxStepsPerFrame * Math.max(this.#timeScale, 1)
+    );
+  }
+
+  #alignPhase(
+    lockedPeriod: number
+  ): void {
+    const scaledPeriod = lockedPeriod * this.#timeScale;
+    if (scaledPeriod === 0) {
+      return;
+    }
+
+    const unit = Math.min(scaledPeriod, this.#fixedDelta);
+    const fits = wholeRatio(
+      Math.max(scaledPeriod, this.#fixedDelta),
+      unit,
+      kExactRatioError
+    ) > 0;
+    if (!fits) {
+      return;
+    }
+
+    const aligned = (Math.floor(this.#accumulator / unit) * unit) + (unit / 2);
+    this.#phaseShift += aligned - this.#accumulator;
+    this.#accumulator = aligned;
   }
 
   #shouldRender(
@@ -298,6 +401,18 @@ export class FrameScheduler {
 
     return true;
   }
+}
+
+function wholePeriods(
+  delta: number,
+  period: number,
+  tolerance: number
+): number {
+  const periods = Math.round(delta / period);
+
+  return periods >= 1 && Math.abs(delta - (periods * period)) <= tolerance ?
+    periods :
+    0;
 }
 
 function assertNumber(

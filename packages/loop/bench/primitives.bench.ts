@@ -8,6 +8,8 @@ import {
 // Import Internal Dependencies
 import {
   FrameBudget,
+  FrameRateGovernor,
+  FrameScheduler,
   GameLoop,
   Interpolated,
   ManualClock,
@@ -33,6 +35,15 @@ const suite = defineSuite("loop / primitives", (bench) => {
   const clock = new ManualClock();
   const budget = new FrameBudget(clock).start(4);
 
+  const scheduler = new FrameScheduler();
+  const governor = new FrameRateGovernor(scheduler);
+  let now = 0;
+  let schedule = scheduler.advance(now);
+  for (let frame = 0; frame < 32; frame++) {
+    now += 1000 / 60;
+    schedule = scheduler.advance(now);
+  }
+
   bench
     .add("GameLoop frame — one step, dispatched", batched(() => {
       source.step(1000 / 60);
@@ -45,6 +56,9 @@ const suite = defineSuite("loop / primitives", (bench) => {
     }))
     .add("FrameBudget#expired", batched(() => {
       kSink.value += budget.expired ? 1 : 0;
+    }))
+    .add("FrameRateGovernor#observe() — full rate, no miss", batched(() => {
+      governor.observe(schedule);
     }));
 
   return () => {

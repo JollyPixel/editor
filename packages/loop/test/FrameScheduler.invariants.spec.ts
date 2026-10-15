@@ -25,7 +25,9 @@ const kOptionGrid: FrameSchedulerOptions[] = [
   { maxFrameDelta: 33, maxStepsPerFrame: 2 },
   { timeScale: 0.25 },
   { timeScale: 4, fixedFps: 90 },
-  { timeScale: 0 }
+  { timeScale: 0 },
+  { snapTolerance: 2 },
+  { snapTolerance: 2, timeScale: 0.5, maxFps: 60 }
 ];
 
 function describeOptions(
@@ -105,7 +107,8 @@ describe("Loop.FrameScheduler invariants", () => {
 
           const accounted = scheduler.time +
             scheduler.accumulator +
-            scheduler.droppedTime;
+            scheduler.droppedTime -
+            scheduler.phaseShift;
           assert.ok(
             Math.abs(scheduler.elapsed - accounted) <= kEpsilon,
             `${where}: ${scheduler.elapsed}ms of wall time, ${accounted}ms ` +

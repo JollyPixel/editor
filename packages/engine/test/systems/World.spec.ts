@@ -140,8 +140,8 @@ describe("Systems.World", () => {
       world.start();
       tick();
 
-      // 80ms is four steps of 16.66ms, plus change.
-      tick(80);
+      // 70ms plus the initial half step is four steps of 16.66ms, plus change.
+      tick(70);
 
       const indexes = sceneManager.fixedUpdate.mock.calls
         .map(({ arguments: args }) => args[1]);
@@ -155,12 +155,12 @@ describe("Systems.World", () => {
       world.start();
       tick();
 
-      tick(80);
+      tick(70);
 
       const [deltaTime, alpha] = sceneManager.update.mock.calls.at(-1)!.arguments;
-      assert.strictEqual(deltaTime, 0.08);
-      // 80ms leaves 13.33ms in the accumulator, four fifths of a step.
-      assert.ok(Math.abs(alpha - 0.8) < 1e-9, `alpha was ${alpha}`);
+      assert.strictEqual(deltaTime, 0.07);
+      // 70ms plus the initial half step leaves 11.66ms, 0.7 of a step.
+      assert.ok(Math.abs(alpha - 0.7) < 1e-9, `alpha was ${alpha}`);
     });
 
     test("should keep stepping but stop drawing on a capped frame", () => {
@@ -418,10 +418,10 @@ describe("Systems.World", () => {
       world.start();
       tick();
       /*
-       * Half speed: 100ms of wall clock is 50ms of simulation, one step of
-       * 33.3ms with the remainder left in the accumulator.
+       * Half speed: 80ms of wall clock is 40ms of simulation, plus the
+       * initial half step, one step of 33.3ms with the remainder left over.
        */
-      tick(100);
+      tick(80);
 
       assert.strictEqual(sceneManager.fixedUpdate.mock.callCount(), 1);
     });

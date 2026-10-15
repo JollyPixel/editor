@@ -63,3 +63,20 @@ export function generateTape(
     );
   });
 }
+
+export function jitteredDeltas(
+  rng: Xorshift32,
+  period: number,
+  jitter: number,
+  frames: number
+): number[] {
+  const deltas: number[] = [];
+  let previous = 0;
+  for (let frame = 1; frame <= frames; frame++) {
+    const timestamp = (frame * period) + rng.between(-jitter, jitter);
+    deltas.push(timestamp - previous);
+    previous = timestamp;
+  }
+
+  return deltas;
+}
