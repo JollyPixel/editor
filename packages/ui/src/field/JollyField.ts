@@ -196,39 +196,6 @@ export abstract class JollyField<TValue> extends LitElement
     return this.#draft;
   }
 
-  protected get draft(): string | null {
-    return this.#draft.draft;
-  }
-
-  protected setDraft(
-    text: string | null
-  ): void {
-    this.#draft.setDraft(text);
-  }
-
-  protected setParseError(
-    message: string | null
-  ): void {
-    this.#draft.setError(message);
-  }
-
-  protected clearDraft(): void {
-    this.#draft.clear();
-  }
-
-  protected onDraftInput(
-    event: Event
-  ): void {
-    this.#draft.onInput(event);
-  }
-
-  protected onDraftKeyDown(
-    event: KeyboardEvent,
-    commit: () => void
-  ): void {
-    this.#draft.onKeyDown(event, commit);
-  }
-
   protected commitDraft(
     parse: (text: string) => DraftResult<TValue> | null
   ): void {
@@ -252,7 +219,7 @@ export abstract class JollyField<TValue> extends LitElement
   protected emitChange(
     value: TValue
   ): void {
-    this.clearDraft();
+    this.#draft.clear();
     emitFieldEvent(
       this,
       "jolly-change",

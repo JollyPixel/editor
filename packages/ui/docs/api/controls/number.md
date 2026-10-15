@@ -7,18 +7,28 @@
 <jolly-number label="Opacity" min="0" max="1" step="0.01"></jolly-number>
 ```
 
-| Property | Type | Default |
-|---|---|---|
-| `step` | `number` | `1` |
-| `min` | `number` | `-Infinity` |
-| `max` | `number` | `Infinity` |
-| `value` | `number \| typeof Mixed` | `0` |
+## Properties
 
-Typed input accepts decimal and scientific literals, parentheses, unary signs,
-and the `+`, `-`, `*`, and `/` operators. `,` is read as a decimal separator,
-so `1,5` is `1.5`. Anything else, such as a name or a member access, is a parse
-error shown on the field without committing. Arrow keys commit one step. Shift
-multiplies the step by ten; Alt divides it by ten.
+```ts
+interface NumberField {
+  step: number; // default 1
+  min: number; // default -Infinity
+  max: number; // default Infinity
+  value: number | typeof Mixed; // default 0
+}
+```
 
-Pointer scrubbing emits `jolly-input` during movement and `jolly-change` on
-release. Enter or blur commits typed input. Escape discards the draft.
+## Typed input
+
+- Accepts decimal and scientific literals, parentheses, unary signs, and `+`,
+  `-`, `*`, `/`.
+- `,` is a decimal separator: `1,5` is `1.5`.
+- Anything else is a parse error shown on the field, and nothing commits.
+- Enter or blur commits. Escape discards the draft.
+
+## Steps and scrubbing
+
+- Arrow keys commit one step. Shift multiplies it by ten, Alt divides it by
+  ten.
+- Pointer scrubbing emits `jolly-input` while moving and `jolly-change` on
+  release.

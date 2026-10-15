@@ -1,7 +1,7 @@
 # Layout data and functions
 
-The container layout exports serialize persisted dock and floating-window
-state.
+The snapshot a [`jolly-dock-layout`](./dock-layout.md) persists, and the
+functions that read it.
 
 ```ts
 import {
@@ -12,38 +12,136 @@ import {
 } from "@jolly-pixel/ui";
 ```
 
-`emptyLayout()` creates an empty `LayoutSnapshot`. `parseLayout()` returns a
-supported snapshot or `null` for absent, malformed, or unsupported data.
-`reconcileLayout()` combines a stored snapshot with the currently declared
-docks and panes. `serializeLayout()` produces the persisted JSON string.
+## `LayoutSnapshot`
 
-A dock state holds `groups`, each `{ panes, active }`. A lone pane is a group
-of one. A `double` dock also holds `secondary`, the groups of its second
-column, which is empty while the column is closed. Stored `secondary` groups
-return to `groups` when the dock is no longer declared `double`, and a
-dock whose `groups` are empty takes its `secondary` groups instead. Stored groups win over declared ones; a pane the store never saw joins
-the group of a declared sibling when one is present in the same dock.
+```ts
+interface LayoutSnapshot {
+  v: number;
+  docks: Record<string, DockState>;
+  floating: Record<string, FloatingState>;
+  geometry: Record<string, FloatingState>;
+  panes: Record<string, PaneState>;
+  folders: Record<string, Record<string, { open: boolean; }>>;
+}
 
-`dockPanes(state)` flattens a dock state, primary column first.
-`panePlacement(snapshot, pane)` returns
-`{ dock, column, index, count, group, active }`, where `index` and `count`
-count the groups of that column, or `null` for a pane that is not docked.
-`column` is `"primary"` or `"secondary"`.
+interface DockState {
+  size?: number;
+  collapsed?: boolean;
+  groups: PaneGroupState[];
+  // Groups of the second column, empty while it is closed.
+  secondary?: PaneGroupState[];
+}
 
-`movePane(snapshot, pane, to, index)` and
-`stackPane(snapshot, pane, to, slot, index)` take a dock key, which targets
-the primary column, or a `DockAddress` `{ dock, column }`. A move to the
-second column of a dock that is not `double` returns the snapshot unchanged.
-`dockAddress(to)` normalizes either form, and
-`columnGroups(state, column)` returns the groups of one column, or
-`undefined` for a second column the dock does not have. `paneVisible(snapshot,
-pane)` follows the rule described in [`jolly-dock-layout`](./dock-layout.md).
+interface PaneGroupState {
+  panes: string[];
+  active: string;
+}
 
-The same module exports `DeclaredDock`, `DeclaredGroup`, `DeclaredLayout`,
-`DockAddress`, `DockColumn`, `DockState`, `FloatingState`, `LayoutSnapshot`, `PaneGroupState`,
-`PanePlacement`, and `PaneState`.
+interface FloatingState {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+}
 
-`LayoutChange` is the detail of `jolly-layout-dirty`:
+interface PaneState {
+  collapsed?: boolean;
+}
+```
+
+- A lone pane is a group of one.
+- Keys are dock and pane `key` values.
+
+## Functions
+
+### `emptyLayout(): LayoutSnapshot`
+
+A snapshot with no dock, window or pane.
+
+### `parseLayout(raw: string | null): LayoutSnapshot | null`
+
+`null` for absent, malformed or unsupported data.
+
+### `serializeLayout(snapshot: LayoutSnapshot): string`
+
+The JSON string the layout stores.
+
+### `reconcileLayout(stored: LayoutSnapshot | null, declared: DeclaredLayout): LayoutSnapshot`
+
+Combines a stored snapshot with the docks and panes currently declared.
+
+- Stored groups win over declared ones.
+- A pane the store never saw joins the group of a declared sibling in the same
+  dock, when there is one.
+- Stored `secondary` groups return to `groups` when the dock is no longer
+  `double`.
+- A dock with empty `groups` takes its `secondary` groups.
+
+```ts
+interface DeclaredLayout {
+  docks: DeclaredDock[];
+  floating: { key: string; geometry: FloatingState; }[];
+  locked: string[];
+}
+
+interface DeclaredDock {
+  key: string;
+  size?: number;
+  groups: DeclaredGroup[];
+  double?: boolean;
+  secondary?: DeclaredGroup[];
+}
+
+interface DeclaredGroup {
+  panes: string[];
+  active?: string;
+}
+```
+
+### `dockPanes(state: DockState): string[]`
+
+Every pane of a dock, primary column first.
+
+### `panePlacement(snapshot: LayoutSnapshot, pane: string): PanePlacement | null`
+
+`null` for a pane that is not docked.
+
+```ts
+interface PanePlacement {
+  dock: string;
+  column: "primary" | "secondary";
+  // Position among the groups of that column.
+  index: number;
+  count: number;
+  group: string[];
+  active: boolean;
+}
+```
+
+### `paneVisible(snapshot: LayoutSnapshot, pane: string): boolean`
+
+The visibility rule of [`jolly-pane-visibility`](./dock-layout.md#events).
+
+### `dockAddress(to: DockAddress | string): DockAddress`
+
+Normalizes a dock key, which means its primary column, into a `DockAddress`.
+
+```ts
+interface DockAddress {
+  dock: string;
+  column: "primary" | "secondary";
+}
+```
+
+### `columnGroups(state: DockState, column: DockColumn): PaneGroupState[] | undefined`
+
+The groups of one column, `undefined` for a second column the dock does not
+have.
+
+## `LayoutChange`
+
+The detail of `jolly-layout-dirty`, which docks, floating windows and panes
+emit when they change on their own.
 
 ```ts
 type LayoutChange =
@@ -54,11 +152,16 @@ type LayoutChange =
   | { type: "folder"; pane: string; folder: string; open: boolean; };
 ```
 
-Each member is also exported on its own as `DockChange`, `FloatingChange`,
-`GroupChange`, `PaneChange`, and `FolderChange`. A `GroupChange` activates
-the named pane inside its group. A change naming a dock or floating pane
-the snapshot does not hold is ignored.
+- Each member is exported on its own: `DockChange`, `FloatingChange`,
+  `GroupChange`, `PaneChange`, `FolderChange`.
+- A `GroupChange` activates the named pane in its group.
+- A change naming a dock or floating pane the snapshot does not hold is
+  ignored.
 
-Container event types are `ContainerEventMap`, `JollyMoveDetail`,
-`JollyReorderDetail`, `JollyResizeDetail`, `JollyTabChangeDetail`,
-`JollyToggleDetail`, and `PaneVisibilityDetail`.
+## Event detail types
+
+`ContainerEventMap`, `JollyContextActionDetail`, `JollyHeadingChangeDetail`,
+`JollyMoveDetail`, `JollyReorderDetail`, `JollySearchDetail`,
+`JollyResizeDetail`, `JollyTabChangeDetail`, `JollyTabReorderDetail`,
+`JollyToggleDetail` and `PaneVisibilityDetail` are exported from the root
+entry point.

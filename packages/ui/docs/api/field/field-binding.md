@@ -1,8 +1,8 @@
 # `FieldBinding`
 
-`FieldBinding` is the template-side counterpart of the facade's
-[`addBinding`](../facade/binding.md). It wires one field element to one value
-without a mirrored `@state` property.
+`FieldBinding` wires one field in a Lit template to one value, without a
+mirrored `@state` property. It is the template counterpart of the facade's
+[`addBinding`](../facade/binding.md).
 
 ```ts
 import { FieldBinding } from "@jolly-pixel/ui";
@@ -18,16 +18,19 @@ interface FieldSource<TValue> {
 }
 ```
 
-| Member | Behavior |
-|---|---|
-| `value` | Calls `read()`. Not cached. |
-| `input` | Handler for `jolly-input`. Writes with `last` as `false`. |
-| `commit` | Handler for `jolly-change`. Writes with `last` as `true`. |
+## Members
 
-`input` and `commit` are bound, so a template passes them directly. Both
-ignore an event whose detail carries no `value`, so binding one to an event
-with a different detail shape, such as `jolly-heading-change`, writes nothing
-rather than writing `undefined`.
+```ts
+interface FieldBinding<TValue> {
+  readonly value: TValue; // calls read(), not cached
+  input: (event: Event) => void; // jolly-input, last false
+  commit: (event: Event) => void; // jolly-change, last true
+}
+```
+
+- `input` and `commit` are bound, so a template passes them directly.
+- Both ignore an event whose detail has no `value`, such as
+  `jolly-heading-change`.
 
 ```ts
 @customElement("lighting-panel")
@@ -72,10 +75,11 @@ export class LightingPanel extends LitElement {
 
 ## Reading through
 
-The binding stores nothing. Every render calls `read()`, and a handler calls
-`write()` then `host.requestUpdate()`, so the following render shows what the
-source actually holds. A source that clamps or rejects an edit needs no
-rollback:
+- The binding stores nothing. Each render calls `read()`. A handler calls
+  `write()`, then `host.requestUpdate()`.
+- A source that clamps or rejects an edit needs no rollback: the next render
+  shows what it holds.
+- `read()` runs during render, so the source must exist by then.
 
 ```ts
 #count = new FieldBinding<number>(this, {
@@ -86,18 +90,13 @@ rollback:
 });
 ```
 
-Typing `-5` writes `0` and the field renders `0`. This is the element contract
-from [Controlled elements](../../adr/0002-controlled-elements.md), which a
-mirrored `@state` copy would break.
-
-`read()` runs during render, so the source must be reachable by then. A panel
-whose store arrives as a property should not render until it has one.
+Typing `-5` writes `0`, and the field renders `0`.
 
 ## Binding a vector
 
-A math field compares its value component-wise, so the same object compares
-equal to itself and the field never repaints. `read()` must therefore return a
-fresh snapshot rather than the bound object:
+A math field compares its value component-wise, so `read()` must return a
+fresh snapshot, not the bound object. `write` decides what the store
+receives; nothing is copied onto the bound object.
 
 ```ts
 #position = new FieldBinding<Vec3Like>(this, {
@@ -116,19 +115,12 @@ fresh snapshot rather than the bound object:
 });
 ```
 
-This is the same rule `Binding.refresh()` follows in the facade, for the same
-reason: see
-[ADR-0027](../../adr/0027-facade-math-writes-are-component-wise.md) and
-[ADR-0021](../../adr/0021-structural-math-types.md). Unlike the facade,
-`FieldBinding` does not copy the committed axes onto the bound object; `write`
-decides what the store receives.
-
 ## Continuous and committed edits
 
-Bind `commit` alone when only a committed edit matters, which is the common
-case for a checkbox or a select. Bind `input` as well for a slider or a
-scrubbed number, so dragging updates the application live. `write()` receives
-`last` to tell the two apart, matching the facade's `BindingChangeEvent`:
+- Bind `commit` alone when only the committed edit matters, as for a checkbox
+  or a select.
+- Bind `input` too for a slider or a scrubbed number.
+- `last` tells the two apart:
 
 ```ts
 write: (value, last) => {
@@ -139,17 +131,9 @@ write: (value, last) => {
 }
 ```
 
-## Choosing between the two bindings
+## Compared with `addBinding`
 
-| | `FieldBinding` | `addBinding` |
-|---|---|---|
-| Authoring | Lit template | Imperative builder |
-| Element | Written by the template | Dispatched from the value |
-| Value access | `read`/`write` accessors | An object and a property key |
-| State | None | The builder owns the element |
-
-`FieldBinding` does not dispatch a control: the template already names one, so
-`min`, `max`, `options` and the rest are attributes on that element. See
-[Binding facade](../facade/binding.md) for the dispatch table, and
-[ADR-0040](../../adr/0040-declarative-bindings-read-through.md) for why this
-one keeps no mirror.
+- `FieldBinding` authors in a Lit template, with `read`/`write` accessors, and
+  keeps no state. The template names the element and its attributes.
+- `addBinding` builds imperatively from an object and a key, picks the element
+  from the value, and owns it.

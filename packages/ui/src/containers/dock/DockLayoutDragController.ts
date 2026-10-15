@@ -15,8 +15,7 @@ import { isPaneGroup } from "../pane-group/PaneGroup.ts";
 import { headerGhost } from "../../interaction/drag/dragGhost.ts";
 import {
   startDragSession,
-  type DragSessionHandle,
-  type DragZone
+  type DragSessionHandle
 } from "../../interaction/drag/DragSession.ts";
 import type { SlidingReorder } from "../../interaction/drag/SlidingReorder.ts";
 
@@ -68,7 +67,6 @@ export class DockLayoutDragController {
     detail: PaneDragDetail
   ): void {
     const { pane } = detail;
-    const home = pane.closest("jolly-dock");
     const group = pane.parentElement !== null && isPaneGroup(pane.parentElement) ?
       pane.parentElement :
       null;
@@ -113,32 +111,15 @@ export class DockLayoutDragController {
         reorder = group?.liftTab(pane, originX) ?? null;
 
         return this.#options.docks().flatMap((dock) => {
-          if (dock.drop === "none") {
-            return [];
+          const zones = dock.dragZones(pane, reorder);
+          for (const zone of zones) {
+            targets.set(zone.id, {
+              dock,
+              column: zone.column
+            });
           }
 
-          const columns: DockColumn[] = dock.acceptsSecondary(pane) ?
-            ["secondary", "primary"] :
-            ["primary"];
-
-          return columns.map((column): DragZone => {
-            const id = `${dock.layoutKey}:${column}`;
-            targets.set(id, {
-              dock,
-              column
-            });
-
-            return {
-              id,
-              rect: dock.dropZone(column),
-              candidates: dock.dropCandidates(column),
-              axis: dock.axis,
-              source: dock === home ? dock.slots(column).indexOf(pane) : null,
-              line: (index: number) => dock.insertionLine(index, column),
-              stacks: dock.dropStacks(pane, column, reorder),
-              preview: dock.previewZone(column)
-            };
-          });
+          return zones;
         });
       },
       probe: frame === null ?

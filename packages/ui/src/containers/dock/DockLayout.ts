@@ -11,10 +11,7 @@ import {
 } from "lit/decorators.js";
 
 // Import Internal Dependencies
-import type {
-  Dock,
-  DockDrop
-} from "./Dock.ts";
+import type { Dock } from "./Dock.ts";
 import {
   DockLayoutDragController,
   type ExtractGrab
@@ -30,24 +27,22 @@ import {
   cloneLayout,
   emptyLayout,
   floatPane,
-  joinLastGroup,
   movePane,
   panePlacement,
   paneVisible,
   reconcileLayout,
   stackPane,
   type DeclaredLayout,
-  type DockAddress,
   type LayoutChange,
   type LayoutSnapshot,
   type PanePlacement
 } from "./layout.ts";
-import { columnGroups } from "./dockColumns.ts";
 import {
   parseLayout,
   serializeLayout
 } from "./layoutParser.ts";
 import { LayoutProjection } from "./LayoutProjection.ts";
+import { PaneStepper } from "./PaneStepper.ts";
 import { extractSize } from "./extractSize.ts";
 import type {
   PaneDragDetail,
@@ -294,86 +289,15 @@ export class DockLayout extends LitElement {
       return;
     }
 
-    if (command === "up" || command === "down") {
-      this.#nudge(pane, command === "up" ? -1 : 1);
-    }
-    else if (command === "join-previous" || command === "join-next") {
-      this.#join(pane, command === "join-previous" ? -1 : 1);
-    }
-    else {
-      this.#shift(pane, command === "previous" ? -1 : 1);
+    const stepper = new PaneStepper(this.docks());
+    const next = stepper.step(this.#snapshot, pane.layoutKey, command);
+    if (next !== this.#snapshot) {
+      this.#transition(next);
     }
 
     this.#refocus(pane, true);
-    pane.announce(this.#positionOf(pane, label));
+    pane.announce(stepper.describe(this.#snapshot, pane.layoutKey, label));
   };
-
-  #nudge(
-    pane: PaneElement,
-    offset: number
-  ): void {
-    const placement = panePlacement(this.#snapshot, pane.layoutKey);
-    if (placement === null) {
-      return;
-    }
-
-    if (placement.group.length > 1) {
-      if (this.#dropOf(placement.dock) === "tabs") {
-        return;
-      }
-
-      this.#transition(movePane(
-        this.#snapshot,
-        pane.layoutKey,
-        placement,
-        offset > 0 ? placement.index + 1 : placement.index
-      ));
-
-      return;
-    }
-
-    const to = Math.min(
-      Math.max(placement.index + offset, 0),
-      placement.count - 1
-    );
-    if (placement.index === to) {
-      return;
-    }
-
-    this.#transition(movePane(
-      this.#snapshot,
-      pane.layoutKey,
-      placement,
-      offset > 0 ? to + 1 : to
-    ));
-  }
-
-  #join(
-    pane: PaneElement,
-    offset: number
-  ): void {
-    const placement = panePlacement(this.#snapshot, pane.layoutKey);
-    if (placement === null) {
-      return;
-    }
-
-    const slot = placement.index + offset;
-    const target = columnGroups(
-      this.#snapshot.docks[placement.dock],
-      placement.column
-    )?.[slot];
-    if (target === undefined) {
-      return;
-    }
-
-    this.#transition(stackPane(
-      this.#snapshot,
-      pane.layoutKey,
-      placement,
-      slot,
-      target.panes.length
-    ));
-  }
 
   #refocus(
     pane: PaneElement,
@@ -393,85 +317,6 @@ export class DockLayout extends LitElement {
       pane.releaseMoveHandle();
       void group.focusMoveHandle(pane.layoutKey, grabbed);
     }
-  }
-
-  #shift(
-    pane: PaneElement,
-    offset: number
-  ): void {
-    const stops = this.#stops(pane);
-    if (stops.length === 0) {
-      return;
-    }
-
-    const placement = panePlacement(this.#snapshot, pane.layoutKey);
-    const index = placement === null ?
-      -1 :
-      stops.findIndex((stop) => stop.dock === placement.dock &&
-        stop.column === placement.column);
-    const next = Math.min(
-      Math.max(index === -1 ? offset * stops.length : index + offset, 0),
-      stops.length - 1
-    );
-    if (index === next) {
-      return;
-    }
-
-    const stop = stops[next];
-    this.#transition(this.#dropOf(stop.dock) === "tabs" ?
-      joinLastGroup(this.#snapshot, pane.layoutKey, stop) :
-      movePane(
-        this.#snapshot,
-        pane.layoutKey,
-        stop,
-        columnGroups(this.#snapshot.docks[stop.dock], stop.column)?.length ?? 0
-      ));
-  }
-
-  #stops(
-    pane: PaneElement
-  ): DockAddress[] {
-    const placement = panePlacement(this.#snapshot, pane.layoutKey);
-
-    return this.docks().flatMap((dock) => {
-      const key = dock.layoutKey;
-      const state = this.#snapshot.docks[key];
-      if (state === undefined || dock.drop === "none") {
-        return [];
-      }
-
-      const primary: DockAddress = {
-        dock: key,
-        column: "primary"
-      };
-      const secondary: DockAddress = {
-        dock: key,
-        column: "secondary"
-      };
-      const alone = placement?.dock === key &&
-        placement.column === "primary" &&
-        state.groups.length === 1 &&
-        placement.group.length === 1;
-      if (
-        state.secondary === undefined ||
-        state.groups.length === 0 ||
-        (state.secondary.length === 0 && alone)
-      ) {
-        return [primary];
-      }
-
-      return dock.side === "right" ?
-        [secondary, primary] :
-        [primary, secondary];
-    });
-  }
-
-  #dropOf(
-    dock: string
-  ): DockDrop {
-    return this.docks().find(
-      (candidate) => candidate.layoutKey === dock
-    )?.drop ?? "any";
   }
 
   #extract(
@@ -539,29 +384,6 @@ export class DockLayout extends LitElement {
         }
       }
     ));
-  }
-
-  #positionOf(
-    pane: PaneElement,
-    label: string
-  ): string {
-    const placement = panePlacement(this.#snapshot, pane.layoutKey);
-    const dock = placement === null ?
-      undefined :
-      this.docks().find((candidate) => candidate.layoutKey === placement.dock);
-    if (placement === null || dock === undefined) {
-      return `${label}, floating`;
-    }
-
-    const column = placement.column === "secondary" ? ", second column" : "";
-    const position = `${label}, ${dock.side} dock${column}, position ` +
-      `${placement.index + 1} of ${placement.count}`;
-    if (placement.group.length === 1) {
-      return position;
-    }
-
-    return `${position}, tab ` +
-      `${placement.group.indexOf(pane.layoutKey) + 1} of ${placement.group.length}`;
   }
 
   #commit(

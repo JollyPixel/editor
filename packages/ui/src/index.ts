@@ -222,25 +222,20 @@ export type {
 export * from "./data/tree/Tree.ts";
 export {
   canDrop,
-  resolveDepthDropTarget,
-  resolveDropDepth,
   resolveReparent,
   resolveReparentMoves,
   resolveRowDropZone,
   resolveSelection,
   TreeSnapshot,
-  ancestorChain,
   findNode,
   findParentId,
   flattenVisible,
   hasChildren,
   isExpandable,
   isSelfOrDescendant,
-  type DepthDropTarget,
   type FlatTreeRow,
   type ReparentMove,
   type ResolvedSelection,
-  type ResolveDepthDropOptions,
   type ResolveReparentOptions,
   type TreePlacement
 } from "./data/tree/model.ts";

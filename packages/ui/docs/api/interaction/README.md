@@ -3,11 +3,7 @@
 ## Popovers
 
 `PopoverController` positions a native popover against an anchor, repositions
-it while open, restores focus, and can handle Escape cancellation.
-`PopoverControllerOptions` configures the anchor, popover, placement, and
-lifecycle callbacks. The anchor is an element or an `AnchorRect` in viewport
-pixels; a rectangle of zero size anchors at a point. Focus returns on close
-only to an element anchor.
+it while open and restores focus on close.
 
 ```ts
 const popup = new PopoverController(this, {
@@ -19,44 +15,47 @@ popup.show();
 popup.hide();
 ```
 
-`show()` opens the popover and places it in the same task, so its first frame
-is already against the anchor. A popover opened another way, such as with
-`popovertarget`, is placed on its `toggle` event, which can come a frame late.
-Each placement sets `--jolly-overlay-origin` on the popover to the point
-nearest the anchor's center, which the overlay motion scales from, then calls
-`onReposition`. That includes the placements on scroll and resize, so content
-anchored inside the popover can follow it.
+### Options
 
-Omitting either hover option disables it; an empty object enables its default
-delay. Hover opening is opt-in: set `openOnHover: { delay: 200 }` and bind
-`onPointerEnter` and `onPointerLeave` to the trigger's `pointerenter` and
-`pointerleave` events. `openOnHover.delay` is in milliseconds and defaults to 200;
-zero or a negative value opens immediately. Touch pointers and disabled
-triggers do not open on hover. Point anchors do not support hover opening.
+```ts
+interface PopoverControllerOptions {
+  // An element, or a viewport rectangle. A zero-size rectangle is a point.
+  anchor: () => HTMLElement | AnchorRect | null;
+  popover: () => HTMLElement | null;
+  gap?: number; // default 4
+  side?: PopoverSide | (() => PopoverSide); // callback runs on each placement
+  align?: "center" | "start"; // default "start"
+  openOnHover?: { delay?: number; }; // ms, default 200
+  closeOnHoverLeave?: { delay?: number; }; // ms, default 200
+  claimsInput?: boolean; // default true, holds an input layer while open
+  onOpen?: () => void;
+  onClose?: () => void;
+  onReposition?: () => void; // after each placement, scroll and resize too
+  onCancel?: (event: KeyboardEvent) => void; // Escape, before closing
+}
 
-Leaving the trigger cancels a pending open. By default, leaving an open
-popover does not close it. The first click on the trigger of a hover-opened
-popover keeps it open instead of toggling it closed, and hover closing stops
-until it closes; later clicks toggle as usual. Hover does not move focus; click and keyboard activation remain the trigger's responsibility.
-Bind `onBeforeToggle` and `onToggle` on the popover as usual. Explicit
-show/hide, native toggles and host disconnection cancel pending hover work.
-Pending opens also check that the same anchor and popover are still connected.
-After a host update replaces an open popover or its element anchor, the
-controller closes it and releases its input layer.
-`claimsInput: false` skips that input layer, for a hint that only describes
-and should leave shortcuts working while it shows.
+type PopoverSide = "above" | "below" | "left" | "right";
+```
 
-`closeOnHoverLeave: { delay: 200 }` enables closing when the pointer leaves
-the trigger and popover. Bind both pointer handlers to both elements. Its
-`delay` is in milliseconds, defaults to 200, and zero or negative values close
-immediately. Entering either element cancels a pending close, including while
-crossing the gap. Touch pointers do not schedule closing, and keyboard focus
-inside the popover keeps it open. Clicking a checkbox or another control with the
-pointer allows hover closing even if the control receives focus. Explicit
-show/hide, native toggles and host disconnection cancel close timers too.
+### Members
 
-`side` accepts either a side string or a callback returning one, evaluated
-on each placement. Use a callback for a trigger that moves between toolbars.
+- `show()`, `hide()`, `reposition()`, `open`.
+- `onPointerEnter`, `onPointerLeave`: bound hover handlers.
+- `onBeforeToggle`, `onToggle`: bound handlers for the popover's toggle
+  events.
+
+### Placement
+
+- `show()` places the popover in the same task, so its first frame is already
+  against the anchor. A popover opened by `popovertarget` is placed on
+  `toggle`, which can be a frame late.
+- Each placement sets `--jolly-overlay-origin` to the point nearest the
+  anchor's centre, which the overlay motion scales from.
+- Focus returns on close only to an element anchor.
+- When a host update replaces an open popover or its element anchor, the
+  controller closes it.
+
+### Hover
 
 ```ts
 const popup = new PopoverController(this, {
@@ -77,17 +76,25 @@ html`<button popovertarget="options"
   @toggle=${popup.onToggle}>...</div>`;
 ```
 
+- `openOnHover`: bind both handlers to the trigger. A delay of zero or less
+  opens at once. Leaving the trigger cancels a pending open.
+- `closeOnHoverLeave`: bind both handlers to the trigger and the popover.
+  Entering either one cancels a pending close.
+- Touch pointers, disabled triggers and point anchors do not open on hover.
+- Hover does not move focus. Keyboard focus inside the popover keeps it open.
+- The first click on the trigger of a hover-opened popover pins it open
+  instead of closing it.
+- `show()`, `hide()`, native toggles and disconnection cancel pending hover
+  timers.
+
 ## Overflow titles
 
-A label cut off with an ellipsis shows its full text as a native tooltip while
-the pointer is over it. A label that fits gets no tooltip. Tree rows, field and
-`jolly-property-row` labels, `jolly-folder` headers, context menu items and
-pane group tabs all do this.
+A label cut off with an ellipsis shows its full text as a native tooltip on
+hover. Tree rows, field and `jolly-property-row` labels, folder headers,
+context menu items and pane group tabs do this.
 
-The `overflow-title` attribute turns it off. It works on any element, and the
-nearest ancestor that has it wins, across shadow boundaries. Only `"off"`
-disables. Any other value turns it back on below an `"off"`. With no attribute
-anywhere, it is on.
+- `overflow-title="off"` turns it off for an element and its descendants,
+  across shadow boundaries. Any other value turns it back on below an `"off"`.
 
 ```html
 <jolly-scope overflow-title="off">
@@ -96,23 +103,24 @@ anywhere, it is on.
 </jolly-scope>
 ```
 
-The check runs when the pointer enters the label, so it reflects the label's
-size at that moment. `revealOverflowTitle` is that `pointerenter` handler, for
-truncating labels a consumer renders itself:
+### `revealOverflowTitle(event: Event): void`
+
+The `pointerenter` handler, for truncating labels a consumer renders itself.
 
 ```ts
 html`<span class="label" @pointerenter=${revealOverflowTitle}>${name}</span>`;
 ```
 
-`syncOverflowTitle(element)` applies the same rule directly: it sets the
-element's `title` to its text while `scrollWidth` exceeds `clientWidth` and
-the attribute allows it, and removes the `title` otherwise.
+### `syncOverflowTitle(element: HTMLElement): void`
+
+Sets `title` to the element's text while `scrollWidth` exceeds `clientWidth`
+and the attribute allows it, and removes it otherwise.
 
 ## Input layers
 
-`inputLayers` records which keyboard events belong to the UI. While any layer
-is open, every `keydown` and `keypress` is claimed in a `window` capture
-listener, before any other listener runs. `keyup` is never claimed.
+`inputLayers` records which keyboard events belong to the UI. While a layer is
+open, every `keydown` and `keypress` is claimed in a `window` capture
+listener. `keyup` is never claimed.
 
 ```ts
 interface InputLayerOptions {
@@ -132,26 +140,24 @@ class InputLayers {
 const inputLayers: InputLayers;
 ```
 
-`push()` opens a layer and returns an idempotent release. `blocks(event)` is
-`true` for an event claimed while a layer was open, even when a listener
-closed the last layer during that event's dispatch, as Escape does.
-`onEngage` listeners run when the first layer opens.
+- `push()` opens a layer and returns an idempotent release.
+- `blocks(event)` is `true` for a claimed event, even when a listener closed
+  the last layer during its dispatch, as Escape does.
+- `onEngage` listeners run when the first layer opens.
+- `dismissAll()` calls `dismiss` on every layer, newest first, and returns
+  `true` only when all closed. A layer without `dismiss` refuses and stays
+  open. On `false`, do not open over it.
 
-`dismiss` closes the layer's owner and returns whether it did. `dismissAll()`
-calls it on every open layer, newest first, and returns `true` only when every
-layer closed. A layer pushed without `dismiss` refuses. A refusing layer stays
-open and the others still close. A caller that gets `false` should not open
-over it; see [ADR-0020](../../adr/0020-input-scope-follows-focus.md).
+Holders:
 
-`jolly-dialog` holds a layer while it is open, and so does every popover
-driven by `PopoverController`, from `beforetoggle` to close. Hover flyouts
-such as `jolly-tool-button` do not. A dialog dismisses like a cancel: a
-pending inline confirmation settles as `false`, `jolly-cancel` fires, and the
-dialog closes. With `dismissible` set to `false` it refuses. A popover
-dismisses by hiding.
+- `jolly-dialog`, while open. Dismissing it cancels it, unless `dismissible`
+  is `false`.
+- Every `PopoverController` popover, unless `claimsInput` is `false`.
+  Dismissing hides it.
+- Hover flyouts such as `jolly-tool-button` hold none.
 
-The shape matches the `KeyboardGuard` of `@jolly-pixel/controls`, which `ui`
-does not depend on. An editor wires the two together once:
+The shape matches the `KeyboardGuard` of `@jolly-pixel/controls`. Wire them
+once, and the keyboard ignores keys pressed while a dialog or popover is open:
 
 ```ts
 import { inputLayers } from "@jolly-pixel/ui";
@@ -159,41 +165,37 @@ import { inputLayers } from "@jolly-pixel/ui";
 const dispose = input.keyboard.addGuard(inputLayers);
 ```
 
-The keyboard then ignores keys pressed while a dialog or popover is open, and
-releases keys held when one opens.
-
 ## Drag sessions
 
-`startPointerDragSession(options)` owns the shared gesture lifecycle: immediate
-capture, pointer filtering, movement threshold, Escape and lost-capture
-cancellation, and exactly-once teardown. It returns a
-`PointerDragSessionHandle`, and reports an explicit `"commit"` or `"cancel"`
-result. Domain-specific drag code supplies preview and settlement callbacks.
-With `suppressClick`, a gesture that started dragging swallows the click
-the browser fires on release, so dropping a button does not also press it.
-Keyboard clicks still go through.
+### `startPointerDragSession(options): PointerDragSessionHandle`
 
-`startDragSession(options)` starts a pointer drag and returns a
-`DragSessionHandle`. It always suppresses the release click. A session reports
-previews, a commit or cancellation, and the selected `DragZone`. The public types include `DragResult`,
-`DragSessionOptions`, and `GhostSource`. `horizontalInsertionLine()` and
-`verticalInsertionLine()` compute insertion-line rectangles.
+Owns one pointer gesture: immediate capture, movement threshold, Escape and
+lost-capture cancellation, and exactly-once teardown.
 
-A `DragStack` takes either a `line` or a `live` `LiveReorder`. A live stack
-previews the drop by moving its own children instead of painting the overlay:
-the session calls `preview(index, clientX, clientY)` on every move over it,
-`rest()` when the pointer leaves, and hides the overlay meanwhile.
+```ts
+interface PointerDragSessionOptions {
+  element: HTMLElement;
+  event: PointerEvent;
+  threshold?: number; // pixels before the drag starts, default 0
+  documentClass?: string; // set on the document while dragging
+  suppressClick?: boolean; // swallow the release click once started
+  onStart?(): void;
+  onMove(clientX: number, clientY: number, event: PointerEvent): void;
+  onFinish(
+    result: "commit" | "cancel",
+    started: boolean,
+    event: PointerEvent | null
+  ): void;
+}
 
-`SlidingReorder` is the `LiveReorder` behind tab strips. It takes the children,
-the dragged index, the axis and the pointer position at the start of the
-gesture. The dragged child follows the pointer and the others slide aside to
-open its slot. Its `candidates` resolve the insertion from the dragged child's
-centre rather than the pointer. `settle(apply?)` records where every child
-stands, calls `apply` to move them, waits one frame, then animates each child
-from there into its new place. It resolves `false` when a newer
-`SlidingReorder` took over the children before the animation ended.
+interface PointerDragSessionHandle {
+  cancel(): void;
+}
+```
 
-`resolveDropIndex(options)` computes an insertion index from ordered
-`DropCandidate` values. `ResolveDropIndexOptions` describes that input.
-`copyTheme`, `headerGhost`, and `themeTokenNames` support drag visuals that
-preserve inherited theme values.
+`suppressClick` keeps a dropped button from also being pressed. Keyboard
+clicks still go through.
+
+The other drag exports (`startDragSession`, `SlidingReorder`,
+`resolveDropIndex`, the insertion-line and ghost helpers) drive the package's
+own docks, tabs and trees.

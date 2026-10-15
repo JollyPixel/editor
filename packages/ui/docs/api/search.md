@@ -60,11 +60,13 @@ interface Searchable {
 }
 ```
 
-`applySearch` filters what the element shows and returns how many matches it
-holds. It receives `SearchQuery.EMPTY` when the search is cleared, and must
-then show everything again. `jolly-tree`, `jolly-folder`,
-`jolly-property-row` and every field implement it. An element that wraps a tree
-in its own shadow root can implement it by forwarding the call:
+- `applySearch` filters what the element shows and returns its match count.
+- It receives `SearchQuery.EMPTY` when the search clears, and must then show
+  everything again.
+- `jolly-tree`, `jolly-folder`, `jolly-property-row` and every field
+  implement it.
+
+An element wrapping a tree in its own shadow root forwards the call:
 
 ```ts
 class HierarchyPanel extends LitElement implements Searchable {

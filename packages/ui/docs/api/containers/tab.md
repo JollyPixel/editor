@@ -1,50 +1,44 @@
 # `jolly-tab`
 
-`jolly-tab` is one panel owned by `jolly-tabs`.
+`jolly-tab` is one panel owned by [`jolly-tabs`](./tabs.md). The default slot
+holds the panel content.
 
 ```html
 <jolly-tab value="build" label="Build">Build settings</jolly-tab>
 ```
 
-| Property | Type | Default |
-|---|---|---|
-| `label` | `string` | `""` |
-| `value` | `string` | `""` |
-| `disabled` | `boolean` | `false` |
-| `active` | `boolean` | `false` |
-| `closable` | `boolean` | `false` |
-| `tooltip` | `string` | `""` |
-| `badge` | `string` | `""` |
-| `action` | `IconName` | `""` |
-| `actionLabel` (`action-label`) | `string` | `""` |
-| `icon` | `IconName` | `""` |
-| `iconOnly` (`icon-only`) | `boolean` | `false` |
-| `fixed` | `boolean` | `false` |
-| `modified` | `boolean` | `false` |
-| `status` | `TabStatus` | `"idle"` |
+## Properties
 
-`jolly-tabs` controls `active`, the panel ID, and its ARIA relationship. The
-default slot contains panel content.
+```ts
+interface Tab {
+  label: string;
+  value: string;
+  disabled: boolean;
+  closable: boolean; // adds a close button
+  tooltip: string; // title of the tab button
+  badge: string; // short chip after the label, such as a count
+  action: IconName; // secondary button in the tab
+  actionLabel: string; // attribute action-label
+  icon: IconName;
+  iconOnly: boolean; // attribute icon-only
+  fixed: boolean; // keeps its place in a reorderable strip
+  modified: boolean; // unsaved changes
+  status: "idle" | "busy" | "failed"; // default "idle"
 
-`tooltip` sets the `title` of the tab button when not empty. `closable` adds a close button next to the tab button. See
-[`jolly-tabs`](./tabs.md) for the event it raises.
+  active: boolean; // set by jolly-tabs
+}
+```
 
-`icon` renders a glyph before the label, sized by `--jolly-tab-icon-size`
-(`16px`). `iconOnly` hides the label text and keeps it as the accessible name
-and, without a `tooltip`, as the title. `fixed` keeps the tab in place in a
-reorderable strip. See [Reordering](./tabs.md#reordering).
+- `iconOnly` hides the label, which stays the accessible name and, without a
+  `tooltip`, the title.
+- `actionLabel` is the action's accessible name and tooltip.
+- Events are raised by the parent, see [`jolly-tabs`](./tabs.md#events).
 
-`badge` renders a short chip after the label, such as a count. `action` names
-an icon rendered as a secondary button in the tab, and `actionLabel` is its
-accessible name and tooltip. See [Tab actions](./tabs.md#tab-actions).
+## Status marks
 
-`modified` marks a tab with unsaved changes. A closable tab shows a dot in
-place of its close glyph until the pointer is over the tab; any other tab shows
-the dot after its label. The tab button announces "Unsaved changes" as its
-accessible description.
-
-`status` is `"idle"`, `"busy"` or `"failed"`. A busy tab shows a spinner and a
-failed one a warning icon, in the same place as the `modified` dot and in its
-stead. The tab button gets `aria-busy` while busy and announces "Loading" or
-"Failed to load" before "Unsaved changes". Size both with
-`--jolly-tab-status-size` (`10px`), or style the `busy` and `failed` parts.
+- `modified`: a closable tab shows a dot in place of its close glyph until
+  hovered; other tabs show the dot after the label. Announced as "Unsaved
+  changes".
+- `status="busy"`: a spinner, and `aria-busy`. Announced as "Loading".
+- `status="failed"`: a warning icon. Announced as "Failed to load".
+- The status mark replaces the `modified` dot.

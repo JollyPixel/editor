@@ -1,6 +1,7 @@
 # `jolly-transform`
 
-`jolly-transform` composes position, rotation, and scale fields.
+`jolly-transform` composes position, rotation and scale rows. It is not a
+field: it has no `label`, `disabled`, `align` or `path` of its own.
 
 ```ts
 const transform = document.querySelector("jolly-transform");
@@ -11,30 +12,27 @@ transform.value = {
 };
 ```
 
-| Property | Attribute | Type | Default |
-|---|---|---|---|
-| `value` | none | `TransformValue` | Identity transform |
-| `default` | none | `TransformDefault \| undefined` | `undefined` |
-| `state` | none | `TransformFieldState` | `{}` |
-| `positionLabel` | `position-label` | `string` | `"Position"` |
-| `rotationLabel` | `rotation-label` | `string` | `"Rotation"` |
-| `scaleLabel` | `scale-label` | `string` | `"Scale"` |
-| `labelPosition` | `label-position` | `"inline" \| "top" \| "auto"` | `"inline"` |
-| `stackBelow` | `stack-below` | `number` | `200` |
-| `axisStyle` | `axis-style` | `AxisStyle \| undefined` | `undefined` |
+## Properties
 
-With `labelPosition="auto"` the transform measures its own width against
-`stackBelow` and stacks its three rows together, rather than letting each row
-decide alone. It reflects `stacked` while they are.
+```ts
+interface Transform {
+  value: TransformLike; // property only, default identity
+  default: TransformDefault | undefined; // property only
+  state: TransformFieldState; // property only, per-row state
+  positionLabel: string; // attribute position-label, default "Position"
+  rotationLabel: string; // attribute rotation-label, default "Rotation"
+  scaleLabel: string; // attribute scale-label, default "Scale"
+  labelPosition: "inline" | "top" | "auto"; // attribute label-position
+  stackBelow: number; // attribute stack-below, default 200
+  axisStyle: AxisStyle | undefined; // attribute axis-style
+}
+```
 
-`axisStyle` is passed to all three rows. Left `undefined`, each row keeps its
-own class default, `Vector3.Defaults.axisStyle` or
-`Quaternion.Defaults.axisStyle`. See [axis markers](./README.md#axis-markers).
-
-`state` applies `lockedBy`, `peers`, `disabled`, `readonly`, and `error` to
-each sub-field independently. Sub-field edits emit `jolly-input` or
-`jolly-change` with the complete merged transform value.
-
-The `TransformValue`, `TransformDefault`, and `TransformFieldState` interfaces
-are declared by the implementation module but are not exported from the
-package root. Consumers can use the structural shapes shown above.
+- `state` sets `lockedBy`, `peers`, `disabled`, `readonly` and `error` on each
+  row independently, so the three rows lock separately.
+- A row edit emits `jolly-input` or `jolly-change` with the whole transform.
+- With `labelPosition="auto"`, the three rows stack together, measured on the
+  transform's own width. It reflects `stacked` while they do.
+- `axisStyle` applies to all three rows. Unset, each row keeps its class
+  default. See [axis markers](./README.md#axis-markers).
+- `TransformDefault` and `TransformFieldState` are not exported from the root.

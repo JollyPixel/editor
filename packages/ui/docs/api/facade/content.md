@@ -1,18 +1,15 @@
 # Note, element and theme preference facades
 
-## Notes
+## `addNote(options?): FacadeNote`
 
-`addNote(options?)` creates a `jolly-property-row`: field-aligned text that
-explains the rows around it without binding a value.
+Creates a `jolly-property-row`: field-aligned text with no bound value.
 
 ```ts
-interface NoteOptions {
+interface NoteOptions extends FieldLayoutOptions {
   label?: string;
   description?: string;
   descriptionDisplay?: "block" | "tooltip";
   align?: "start" | "end";
-  labelPosition?: "inline" | "top" | "auto";
-  stackBelow?: number;
 }
 
 const note = folder.addNote({
@@ -22,54 +19,39 @@ const note = folder.addNote({
 note.description = "Updated copy.";
 ```
 
-`label` and `description` both default to `""` and stay mutable on the
-builder. `align`, `descriptionDisplay`, `labelPosition` and `stackBelow` are
-left to the element's own defaults when unset, so a note lines up with the
-fields around it; `labelPosition` and `stackBelow` fall back to the pane's
-[field layout](./pane.md#field-layout) first. Markup richer than
-two strings belongs in the element itself, reached through `note.element` or
-added with `addElement()`.
+- `label` and `description` stay writable on the builder.
+- Unset options keep the element defaults, after the pane's
+  [field layout](./pane.md#field-layout).
+- For richer markup, use `note.element` or `addElement()`.
 
-The builder exposes `element`, `label`, `description`, `hidden`, `disabled`,
-and `dispose()`.
+## `addThemePreferences(options?): FacadeThemePreferences`
 
-## Theme preferences
-
-`addThemePreferences(options?)` creates a `jolly-theme-preferences` row pair.
+Creates a [`jolly-theme-preferences`](../theme/theme-preferences.md).
 
 ```ts
 interface ThemePreferencesOptions {
-  layout?: "inline" | "stack";
+  layout?: "inline" | "stack"; // default "stack" here
   storageKey?: string;
-  target?: HTMLElement;
+  target?: HTMLElement; // default: the nearest jolly-scope
 }
 
 chrome.addThemePreferences({ storageKey: "three-examples" });
 ```
 
-`layout` defaults to `"stack"` here, not to the element's own `"inline"`: a
-pane gives the controls a label column to line up with, and `inline` stretches
-them across it. `storageKey` and `target` are forwarded untouched, and an
-unset `target` resolves to the nearest `jolly-scope` as usual. See
-[`jolly-theme-preferences`](../theme/theme-preferences.md).
+`layout` defaults to `"stack"`, unlike the element, so the controls line up
+with the pane's label column.
 
-The call returns a `FacadeElement`, so the element stays reachable for the
-properties this facade does not cover.
+## `addElement(element): FacadeElement<TElement>`
 
-## Any other element
-
-`addElement(element)` appends an element the caller built and tracks it like a
-builder, so it takes part in `disposeAll()` and gains `hidden`, `disabled`
-and `dispose()`.
+Appends an element the caller built and tracks it like a builder, so
+`disposeAll()` reaches it.
 
 ```ts
-const canvas = document.createElement("canvas");
-const preview = folder.addElement(canvas);
+const preview = folder.addElement(document.createElement("canvas"));
 
 preview.hidden = !settings.showPreview;
 ```
 
-`addElement()` keeps the element's own type, so `preview.element` is a
-`HTMLCanvasElement`. Use it instead of `folder.element.append()`, which is
-untracked and, on a floating `Pane`, appends beside the pane rather than
-inside it.
+- `preview.element` keeps its type, here `HTMLCanvasElement`.
+- Prefer it to `element.append()`: on a floating `Pane`, `element` is the
+  window, so an appended child lands beside the pane.

@@ -1,60 +1,60 @@
 # Peer identity
 
-## `promptPeerIdentity(options)`
+```ts
+interface PeerIdentity {
+  username: string;
+  peerId: string;
+  color: string; // derived from peerId
+  avatar?: string; // same-origin path of an uploaded image
+}
+```
+
+## `promptPeerIdentity(options): Promise<PeerIdentity>`
 
 ```ts
-import { promptPeerIdentity } from "@jolly-pixel/ui";
+interface PromptPeerIdentityOptions {
+  title: string;
+  storageKey: string;
+  storage?: StorageAdapter; // default: sessionStorage
+}
 
 const identity = await promptPeerIdentity({
   title: "Join voxel map",
   storageKey: "voxel-map:username"
 });
-// { username, peerId, color }
 ```
 
-Asks for a username once per tab and reuses it from `sessionStorage` under
-`storageKey`; pass `storage` to use another `StorageAdapter`. An empty answer
-falls back to `GUEST_USERNAME` (`"Guest"`). `peerId` is a fresh UUID and
-`color` is derived from it.
+- Asks for a username once per tab and reuses it.
+- An empty answer gives `GUEST_USERNAME` (`"Guest"`).
+- `peerId` is a fresh UUID.
 
-## `peerIdentity(username, peerId?, avatar?)`
+## `peerIdentity(username, peerId?, avatar?): PeerIdentity`
 
 ```ts
-import { peerIdentity } from "@jolly-pixel/ui";
-
 const guest = peerIdentity("Guest");
 const joined = peerIdentity("alice", launch.peerId);
-```
-
-Builds a `PeerIdentity` whose `color` is derived from `peerId`, so the same
-peer id always gets the same color. `peerId` defaults to a fresh UUID.
-
-`avatar` is the same-origin path of an uploaded image, which the host passes
-when it knows one. The identity leaves `avatar` out without it.
-
-```ts
 const identity = peerIdentity(account.username, account.id, account.avatar);
 ```
 
+- The same `peerId` always gets the same `color`.
+- `peerId` defaults to a fresh UUID.
+- Without `avatar`, the identity has none.
+
 ## Profile helpers
 
-Available under the `./network` subpath.
+From the `./network` subpath.
 
-### `toPeerProfileMetadata(identity)`
+### `toPeerProfileMetadata(identity): PeerProfileMetadata`
 
-The `{ username, peerId }` profile to pass to `new Client({ profile })`, typed
-as `@jolly-pixel/network`'s `PeerProfileMetadata`. It leaves `avatar` out: a
-client cannot claim an image, only the server can set one.
+The `{ username, peerId }` profile for `new Client({ profile })`. It leaves
+`avatar` out: only the server can set one.
 
-### `peerProfileColor(clientId, profile)`
+### `peerProfileColor(clientId, profile): string`
 
-The color of the published `peerId`, falling back to `clientId`, so every peer
-computes the same color for the same identity.
+The colour of the published `peerId`, or of `clientId` without one.
 
-### `toPresencePeer(peer)`
+### `toPresencePeer(member: RoomMember): PresencePeer`
 
-The `PresencePeer` of a room peer, read with `@jolly-pixel/network`'s
-`parsePeerProfile`: named by `username`, colored with `peerProfileColor`, and
-carrying the profile's `peerId` and `avatar`. A `via` string, such as
-`"link"` for a guest connected through a share link, becomes the badge
-"via link".
+A room peer as a `PresencePeer`: named by `username`, coloured by
+`peerProfileColor`, with the profile's `peerId` and `avatar`. A `via` string,
+such as `"link"`, becomes the badge "via link".

@@ -1,7 +1,6 @@
 # Dialog helpers
 
-`showPrompt`, `showConfirm`, `showChoice`, and `resolveStoredPrompt` create
-string-based dialogs under `document.body`.
+Promise-based dialogs created under `document.body`.
 
 ```ts
 import {
@@ -30,34 +29,74 @@ const choice = await showChoice({
 });
 ```
 
-`showPrompt()` resolves a trimmed string or `null`. `showConfirm()` resolves a
-boolean. `showChoice()` shows a Cancel button (`cancelLabel`) followed by
-`actions` in order, appends the optional `content` nodes under the message, and
-resolves the picked action `value`, or `null` on cancel. `focus` names the
-action focused on open. Do not use `"cancel"` as an action value.
-`resolveStoredPrompt()` returns a non-empty stored value or opens a
-prompt and stores its result. It accepts a `StorageAdapter` and uses
-`LocalStorageAdapter` by default.
+- Every helper resolves once the dialog has closed and focus has returned to
+  the element that opened it.
+- Enter confirms and Escape cancels, through the
+  [default action](./dialog.md#default-action).
 
-Every helper takes the header options of
-[`jolly-dialog`](./dialog.md#icon-tone-and-intent): `title`, `icon`, `tone` and
-`intent`. `showConfirm()` with `danger: true` defaults to `intent: "danger"`.
+## Options
 
 ```ts
-const resize = await showConfirm({
-  title: "Resize blockset?",
-  message: "Tiles outside the new grid are dropped.",
-  intent: "warning"
-});
+// Header of the dialog, see jolly-dialog.
+interface DialogHeaderOptions {
+  title?: string;
+  icon?: IconName;
+  tone?: IconTone;
+  intent?: DialogIntent;
+}
+
+interface PromptOptions extends DialogHeaderOptions {
+  label: string;
+  defaultValue?: string;
+  confirmLabel?: string; // default "OK"
+  cancelLabel?: string; // default "Cancel"
+}
+
+interface ConfirmOptions extends DialogHeaderOptions {
+  message: string;
+  confirmLabel?: string; // default "OK"
+  cancelLabel?: string; // default "Cancel"
+  danger?: boolean; // also defaults intent to "danger"
+}
+
+interface ChoiceOptions<TValue extends string = string>
+  extends DialogHeaderOptions {
+  message: string;
+  content?: readonly Node[]; // appended under the message
+  actions: readonly ChoiceAction<TValue>[];
+  cancelLabel?: string; // default "Cancel"
+  focus?: TValue; // action focused on open
+}
+
+interface ChoiceAction<TValue extends string = string> {
+  value: TValue;
+  label: string;
+  variant?: ButtonVariant;
+}
+
+interface StoredPromptOptions extends PromptOptions {
+  storage?: StorageAdapter; // default LocalStorageAdapter
+  storageKey: string;
+  fallbackValue: string;
+}
 ```
 
-The matching option types are `DialogHeaderOptions`, `PromptOptions`, `ConfirmOptions`,
-`ChoiceOptions`, `ChoiceAction`, and `StoredPromptOptions`.
+## Functions
 
-Both helpers confirm on Enter and cancel on Escape, through the
-[`jolly-dialog` default action](./dialog.md#default-action). `showConfirm()`
-opens with its confirm action focused; `showPrompt()` opens with the text field
-focused.
+### `showPrompt(options: PromptOptions): Promise<string | null>`
 
-Every helper resolves once the native dialog has closed, after the browser has
-returned focus to the element that opened it.
+The trimmed text, or `null` on cancel. Opens with the field focused.
+
+### `showConfirm(options: ConfirmOptions): Promise<boolean>`
+
+Opens with the confirm button focused.
+
+### `showChoice<TValue>(options: ChoiceOptions<TValue>): Promise<TValue | null>`
+
+Shows Cancel, then `actions` in order. Resolves the picked `value`, or `null`
+on cancel. Do not use `"cancel"` as a value.
+
+### `resolveStoredPrompt(options: StoredPromptOptions): Promise<string>`
+
+Returns the stored value when it is not empty. Otherwise prompts, stores the
+answer, or `fallbackValue` when the answer is empty, and returns it.

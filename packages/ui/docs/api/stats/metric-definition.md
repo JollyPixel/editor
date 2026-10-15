@@ -1,47 +1,36 @@
 # Metric definitions
 
-`MetricDefinition` describes one `StatsRecorder` value and how
-`jolly-stats` displays it.
+`MetricDefinition` describes one `StatsRecorder` value and how `jolly-stats`
+displays it. Everything below is exported from `@jolly-pixel/ui/stats`.
 
 ```ts
 interface MetricDefinition {
-  id: string;
-  label: string;
-  format?: (value: number) => string;
-  unit?: "count" | "integer" | "decimal" | "ms" | "percent" | "bytes";
-  group?: string;
-  min?: number;
+  id: string; // unique, non-empty
+  label: string; // shown beside the value
+  format?: (value: number) => string; // wins over unit
+  unit?: MetricUnit;
+  group?: string; // folder in a full readout, ignored by jolly-stats
+  min?: number; // fixed graph bound, else follows history
   max?: number;
-  better?: "higher" | "lower";
-  aggregate?: "last" | "average" | "max";
+  better?: "higher" | "lower"; // default ink: success, warning, else accent
+  aggregate?: "last" | "average" | "max"; // recorder, default "last"
   palette?: MetricPalette;
-  tile?: boolean;
-  sample?: () => number;
+  tile?: boolean; // false: left out of the jolly-stats cycle, default true
+  sample?: () => number; // recorder, read just before each flush
 }
 
 interface MetricPalette {
-  ink?: string;
-  bed?: string;
+  ink?: string; // readout and bars
+  bed?: string; // background
 }
 ```
 
-| Property | Consumer | Behavior |
-|---|---|---|
-| `id` | Recorder and display | Unique, non-empty lookup key. |
-| `label` | Display | Text shown beside the current value. |
-| `format` | Display | Formats the numeric readout. Takes precedence over `unit`. |
-| `unit` | Display | Names a formatter instead of carrying one. |
-| `group` | Display | Folder a full readout files the metric under. Ignored by `jolly-stats`. |
-| `min`, `max` | Display | Fixed graph bounds. An omitted bound follows recorded history. |
-| `better` | Display | Default ink: the success color for `"higher"`, the warning color for `"lower"`, the accent otherwise. |
-| `palette` | Display | Graph and readout colors. Each omitted color falls back to the default. |
-| `tile` | Display | `false` keeps the metric out of the `jolly-stats` cycle, leaving it to a full readout. Defaults to `true`. |
-| `aggregate` | Recorder | Reduces values pending in one refresh window. Defaults to `"last"`. |
-| `sample` | Recorder | Reads one value immediately before a refresh window is aggregated. |
-
-`ink` colors the readout and the bars, `bed` the background. Each is a CSS
-color and may use `var()`, `light-dark()`, or `color-mix()`, resolved on the
-`jolly-stats` element. An invalid color uses the default.
+- `aggregate` reduces the values pushed in one window: the last one, their
+  mean, or the largest.
+- Palette colours may use `var()`, `light-dark()` or `color-mix()`, resolved
+  on the `jolly-stats` element. An invalid colour uses the default.
+- The recorder stores a shallow copy. Display fields never clamp or reject
+  recorded values.
 
 ```ts
 recorder.addMetric({
@@ -54,37 +43,28 @@ recorder.addMetric({
 });
 ```
 
-The recorder stores a shallow copy of the definition. Display properties do not
-clamp, transform, or reject recorded values.
+## Units
 
-## Units instead of formatters
-
-A definition either carries a `format` or names the `unit` it measures. The
-unit exists so a package describing metrics does not have to depend on this one
-for a formatter; a display resolves it.
+A `unit` lets a package describe a metric without importing a formatter.
 
 ```ts
-resolveMetricFormat(
-  definition: MetricDefinition
-): (value: number) => string
+type MetricUnit = "count" | "integer" | "decimal" | "ms" | "percent" | "bytes";
 ```
 
-`format` wins when a definition carries one, the unit's formatter comes next,
-and a definition naming neither is formatted as a whole number.
+How `1234.5` reads:
 
-| Unit | Formatter | `1234.5` reads |
-|---|---|---|
-| `count` | `formatCount` | `1,235` |
-| `integer` | `formatInteger` | `1235` |
-| `decimal` | `formatDecimal` | `1234.5` |
-| `ms` | `formatMilliseconds` | `1234.5 ms` |
-| `percent` | `formatPercent` | `1234.5 %` |
-| `bytes` | `formatBytes` | `1.2 KiB` |
+- `count` (`formatCount`): `1,235`.
+- `integer` (`formatInteger`): `1235`.
+- `decimal` (`formatDecimal`): `1234.5`.
+- `ms` (`formatMilliseconds`): `1234.5 ms`.
+- `percent` (`formatPercent`): `1234.5 %`.
+- `bytes` (`formatBytes`): `1.2 KiB`.
 
-## Describing metrics from another package
+### `resolveMetricFormat(definition): (value: number) => string`
 
-`MetricSource` is the contract a subsystem answers to hand its metrics to a
-recorder.
+`format`, then the unit's formatter, then a whole number.
+
+## `MetricSource`
 
 ```ts
 interface MetricSource {
@@ -92,40 +72,28 @@ interface MetricSource {
 }
 ```
 
-It is structural: a source satisfies it by shape and never imports this
-package. `@jolly-pixel/voxel.renderer` declares its own `VoxelMetric` for that
-reason, and pins the compatibility with a type test rather than a dependency.
+Structural: a subsystem satisfies it by shape, without importing this package.
+`@jolly-pixel/voxel.renderer` declares its own `VoxelMetric` and pins the
+compatibility with a type test.
 
-## Fixed and observed graph ranges
+## Graph ranges
+
+### `resolveMetricRange(definition, history: readonly number[]): MetricRange`
 
 ```ts
-resolveMetricRange(
-  definition: MetricDefinition,
-  history: readonly number[]
-): MetricRange
-
 interface MetricRange {
   min: number;
   max: number;
 }
-```
 
-Each defined bound is returned unchanged. An omitted bound uses the lowest or
-highest history value. Empty history resolves an omitted bound to `0`.
-
-```ts
-resolveMetricRange(
-  {
-    id: "frameMs",
-    label: "MS",
-    min: 0
-  },
-  [12, 20, 16]
-);
+resolveMetricRange({ id: "frameMs", label: "MS", min: 0 }, [12, 20, 16]);
 // { min: 0, max: 20 }
 ```
 
-`MetricDefinition`, `MetricAggregation`, `MetricDirection`, `MetricPalette`,
-`MetricRange`, `MetricSource`, `MetricUnit`, `resolveMetricFormat()`, and
-`resolveMetricRange()` are exported from `@jolly-pixel/ui/stats`.
+A defined bound is kept. An omitted one takes the lowest or highest history
+value, or `0` for an empty history.
 
+## Exported types
+
+`MetricDefinition`, `MetricAggregation`, `MetricDirection`, `MetricPalette`,
+`MetricRange`, `MetricSource`, `MetricUnit`.

@@ -10,13 +10,13 @@ import type { TreeNode } from "../src/data/tree/contract.ts";
 import {
   TreeSnapshot,
   flattenVisible,
-  resolveEdgeDropRows,
   type FlatTreeRow
 } from "../src/data/tree/model.ts";
 import {
   TreeRowViewList,
   type TreeRowState
 } from "../src/data/tree/TreeRowView.ts";
+import { TreeDrop } from "../src/data/tree/TreeDrop.ts";
 
 // CONSTANTS
 const kSizes = [1_000, 10_000];
@@ -38,16 +38,16 @@ const suite = defineSuite("tree", (bench) => {
       .add(`TreeSnapshot ${size} collapsed`, () => new TreeSnapshot(nodes))
       .add(`flattenVisible ${size}`, () => flattenVisible(nodes, expanded).length)
       .add(
-        `resolveEdgeDropRows ${size}, 1 moved`,
-        () => resolveEdgeDropRows(rows, [middleIds[0]], snapshot).lastRow
+        `TreeDrop ${size} last row, 1 moved`,
+        () => hoverEdge(snapshot, [middleIds[0]], "below")
       )
       .add(
-        `resolveEdgeDropRows ${size}, 50 middle`,
-        () => resolveEdgeDropRows(rows, middleIds, snapshot).lastRow
+        `TreeDrop ${size} last row, 50 middle`,
+        () => hoverEdge(snapshot, middleIds, "below")
       )
       .add(
-        `resolveEdgeDropRows ${size}, 50 leading`,
-        () => resolveEdgeDropRows(rows, leadingIds, snapshot).firstRow
+        `TreeDrop ${size} first row, 50 leading`,
+        () => hoverEdge(snapshot, leadingIds, "above")
       );
 
     const list = new TreeRowViewList();
@@ -69,6 +69,34 @@ const suite = defineSuite("tree", (bench) => {
 });
 
 export default suite;
+
+function hoverEdge(
+  snapshot: TreeSnapshot,
+  movedIds: string[],
+  where: "above" | "below"
+): string | undefined {
+  const rows = snapshot.visibleRows;
+  const row = where === "above" ? rows[0] : rows[rows.length - 1];
+  const drop = new TreeDrop({
+    snapshot,
+    movedIds
+  });
+
+  return drop.resolve({
+    clientX: 0,
+    clientY: where === "above" ? 1 : 19,
+    row: {
+      id: row.node.id,
+      top: 0,
+      height: 20
+    },
+    container: {
+      top: 0,
+      left: 0
+    },
+    indentUnit: 16
+  })?.targetId;
+}
 
 function rowStateOf(
   selectedId: string,

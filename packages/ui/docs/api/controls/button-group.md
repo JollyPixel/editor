@@ -12,25 +12,27 @@ field.options = [
 field.value = "move";
 ```
 
-| Property | Attribute | Type | Default |
-|---|---|---|---|
-| `options` | | `JollyOption<T>[]` | `[]` |
-| `layout` | `layout` | `"segmented" \| "grid"` | `"segmented"` |
-| `columns` | `columns` | `number` | `0` |
-| `iconOnly` | `icon-only` | `boolean` | `false` |
+## Properties
 
-`columns = 0` lets the grid choose its column count. The group has one tab
-stop. Arrow keys move between enabled options. A selection emits
-`jolly-change`.
+```ts
+interface ButtonGroup<T> {
+  options: JollyOption<T>[]; // property only
+  layout: "segmented" | "grid"; // default "segmented"
+  columns: number; // 0 lets the grid choose
+  iconOnly: boolean; // attribute icon-only
+}
+```
 
-An option with an `icon` renders that [registered icon](../icon/registry.md)
-before its label. Each segment shows its label as a tooltip. `iconOnly` hides
-the labels visually; they still name the segments for assistive technology.
+## Behaviour
+
+- One tab stop. Arrow keys move between enabled options.
+- A selection emits `jolly-change`.
+- An option `icon` renders a [registered icon](../icon/registry.md) before the
+  label. Each segment shows its label as a tooltip.
+- `iconOnly` hides the labels visually. They still name the segments.
+- The radio group is named by `label`, or by the element's `aria-label` when
+  the label is empty.
 
 ```html
 <jolly-button-group icon-only aria-label="Tool"></jolly-button-group>
 ```
-
-The radio group is named by `label`. A group with no visible label falls back
-to an `aria-label` on the element, so dropping the label column to save width
-keeps the group named.

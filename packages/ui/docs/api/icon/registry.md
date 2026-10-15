@@ -93,11 +93,11 @@ registerIcon("cube", svg`
 - `tone-ink` shifts a `currentColor` stroke or fill towards the tone, for glyphs
   with no closed shape.
 
-`ICON_TONES` lists the tones: `coral`, `amber`, `lime`, `teal`, `sky`, `violet`
-and `pink`. Each resolves to `--jolly-tone-<name>`, or
-`--jolly-tone-<name>-on-fill` over an accent fill;
-`--jolly-tone-<name>-fill` is the solid ground a toned area paints. A glyph registered without a
-tone keeps following `currentColor`.
+- `ICON_TONES` lists the seven tones. Their tokens are in
+  [Theme exports and tokens](../theme/tokens.md#tones).
+- A glyph registered without a tone follows `currentColor`.
+- A pane or dialog whose icon has a tone becomes a
+  [toned area](../theme/tokens.md#toned-areas).
 
 ```ts
 iconTone(name: IconName): IconTone | null
@@ -157,10 +157,16 @@ its accessible label.
 
 ## Types
 
-`BuiltinIconName` is the union of the eleven package names. `IconName`
-preserves completion for those names while accepting application-defined
-strings.
-`IconGlyph` is `string | SVGTemplateResult`. `IconTone` is the union of
-`ICON_TONES`, and `RegisterIconOptions` is
-`{ tone?: IconTone; viewBox?: string }`.
+```ts
+type BuiltinIconName =
+  | "chevron" | "close" | "plus" | "revert" | "drag" | "lock"
+  | "eye" | "search" | "check" | "info" | "warning";
+type IconName = BuiltinIconName | (string & {}); // completion for built-ins
+type IconGlyph = string | SVGTemplateResult;
+type IconTone = typeof ICON_TONES[number];
 
+interface RegisterIconOptions {
+  tone?: IconTone;
+  viewBox?: string; // default "0 0 24 24"
+}
+```

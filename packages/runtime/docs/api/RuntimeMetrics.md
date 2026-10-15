@@ -19,10 +19,10 @@ const release = runtime.metrics.addSource(engine.inspector);
 
 | Method | Description |
 |---|---|
-| `addSource(source)` | Registers every metric of a [`MetricSource`](../../../ui/docs/api/stats/metric-definition.md#describing-metrics-from-another-package) and returns a release function. Call it when the source dies before the runtime; a leftover metric keeps sampling it. |
+| `addSource(source)` | Registers every metric of a [`MetricSource`](../../../ui/docs/api/stats/metric-definition.md#metricsource) and returns a release function. Call it when the source dies before the runtime; a leftover metric keeps sampling it. |
 | `addMetric(definition)` | Registers one [`MetricDefinition`](../../../ui/docs/api/stats/metric-definition.md) and returns a release function. |
 | `removeMetric(id)` | Removes a metric. Returns `false` when the id is unknown. |
-| `track(id, value)` | Pushes a value to a metric, as [`StatsRecorder.track()`](../../../ui/docs/api/stats/stats-recorder.md#push-a-custom-metric). |
+| `track(id, value)` | Pushes a value to a metric, as [`StatsRecorder.track()`](../../../ui/docs/api/stats/stats-recorder.md#custom-metrics). |
 | `mountPanel(options?)` | Mounts the readout panel and disposes the previous one. `runtime.mountMetricsPanel()` adds the world keyboard. |
 | `dispose()` | Called by `runtime.dispose()`. |
 
@@ -43,7 +43,7 @@ const { drawCalls, triangles } = runtime.metrics.renderer.frame;
 It returns a new `RendererFrameStats` on every read. `drawCalls` and
 `triangles` come from the last drawn frame; `geometries` and `textures` are
 live. To refresh a display at the recorder's pace, read it from
-[`runtime.stats.subscribe()`](../../../ui/docs/api/stats/stats-recorder.md#subscribe-to-refreshes).
+[`runtime.stats.subscribe()`](../../../ui/docs/api/stats/stats-recorder.md#reading).
 
 ## MetricsPanel
 

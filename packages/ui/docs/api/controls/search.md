@@ -1,70 +1,41 @@
 # `jolly-search`
 
-`jolly-search` is a one-line search box: a magnifier glyph, a text input, and
-a clear button that shows once the box holds text. It works on its own, and
-[`jolly-pane`](../containers/pane.md#searching-content) renders one in its
-header when the pane is `searchable`.
+`jolly-search` is a one-line search box: a magnifier, a text input and a clear
+button once it holds text. A [searchable pane](../containers/pane.md#searching-content)
+renders one in its header.
 
 ```html
 <jolly-search placeholder="Search assets"></jolly-search>
 <jolly-search compact></jolly-search>
 ```
 
-It is not a field: it has no label column, revert button or lock. It owns its
-`value`, unlike the field elements, which wait for the owner to write a value
-back. A query is view state that never reaches the document or other peers,
-so there is nothing for an owner to arbitrate.
+It is not a field: no label column, revert button or lock. It owns its
+`value`, since a query never reaches the document or other peers.
 
 ## Properties
 
-### `value`
+```ts
+interface Search {
+  value: string; // set from outside: replaces the text, emits nothing
+  placeholder: string; // default "Search"
+  label: string; // default "Search", accessible name and trigger tooltip
+  compact: boolean; // only a magnifier button until opened
+  expanded: boolean; // compact only: the box is shown
+  disabled: boolean;
+}
+```
 
-`string`. Defaults to `""`. Typing replaces it. Setting it from outside
-replaces the text in the box and emits nothing.
-
-### `placeholder`
-
-`string`. Defaults to `"Search"`.
-
-### `label`
-
-`string`. Defaults to `"Search"`. The accessible name of the input and of the
-compact trigger, which also shows it as a tooltip.
-
-### `compact`
-
-`boolean`, reflected. Defaults to `false`. A compact search renders only a
-magnifier button until it is opened.
-
-### `expanded`
-
-`boolean`, reflected. Defaults to `false`. Only a compact search reads it:
-`true` swaps the button for the box. Clicking the button and `open()` set it.
-It goes back to `false` when the input loses focus while empty, or on Escape
-in an empty box.
-
-### `disabled`
-
-`boolean`, reflected. Defaults to `false`.
-
-## Methods
-
-### `open()`
-
-Expands a compact search, then focuses the input and selects its text.
-Returns a promise that settles once the input has focus.
-
-### `clear()`
-
-Empties `value` and emits `jolly-input` and `jolly-change` with `""`. Does
-nothing when `value` is already empty.
+A compact search collapses again when the input loses focus while empty, or
+on Escape in an empty box.
 
 ## Events
 
-`jolly-input` fires on every keystroke with `{ value }`; filter on it.
-`jolly-change` fires with `{ value }` on Enter and when the clear button or
-Escape empties the box. Both bubble and cross shadow roots, and
-[`onFieldChange`](../dom.md) subscribes to either.
+```ts
+interface SearchEvents {
+  "jolly-input": { value: string; }; // every keystroke, filter on it
+  "jolly-change": { value: string; }; // Enter, clear button, Escape
+}
+```
 
 ```ts
 const search = document.querySelector("jolly-search");
@@ -73,17 +44,27 @@ onFieldChange<string>(search, (query) => {
 }, "jolly-input");
 ```
 
+## Methods
+
+### `open(): Promise<void>`
+
+Expands a compact search, focuses the input and selects its text.
+
+### `clear(): void`
+
+Empties `value` and emits both events with `""`. Does nothing when already
+empty.
+
 ## Keyboard
 
-Escape empties a box that holds text. In an empty compact box it collapses
-the search and moves focus back to the magnifier button. Either way the
-Escape stops there, so an enclosing dialog stays open.
+- Escape empties a box with text.
+- In an empty compact box, Escape collapses it and focuses the magnifier.
+- Escape stops there, so an enclosing dialog stays open.
 
 ## Styling
 
-The box fills the width of the host, and a collapsed compact search is only
-as wide as its button. The component exposes `box` and `trigger` CSS parts.
-
-`--jolly-search-bg`, `--jolly-search-bg-hover` and `--jolly-search-bg-focus`
-fill the box and default to the control fills. `--jolly-search-trigger-bg-hover`
-fills the hovered magnifier and clear buttons.
+- The box fills the host. A collapsed compact search is as wide as its button.
+- Parts: `box`, `trigger`.
+- `--jolly-search-bg`, `--jolly-search-bg-hover`, `--jolly-search-bg-focus`:
+  box fills, default the control fills.
+- `--jolly-search-trigger-bg-hover`: hovered magnifier and clear buttons.

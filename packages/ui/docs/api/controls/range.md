@@ -1,22 +1,26 @@
 # `jolly-range`
 
-`jolly-range` edits an `Interval` with `from` and `to` values. It implements
-the [shared field API](../field/shared-field-api.md).
+`jolly-range` edits an `Interval` with `from` and `to` endpoints. It
+implements the [shared field API](../field/shared-field-api.md).
 
 ```ts
 const field = document.querySelector("jolly-range");
 field.value = { from: 10, to: 30 };
 ```
 
-| Property | Type | Default |
-|---|---|---|
-| `step` | `number` | `1` |
-| `min` | `number` | `0` |
-| `max` | `number` | `100` |
-| `value` | `Interval \| typeof Mixed` | `{ from: 0, to: 100 }` |
+## Properties
 
-Endpoints cannot cross. A committed value is quantized to `step`, clamped to
-the component bounds, then clamped against the other endpoint. Enter, blur,
-and arrow-key stepping emit `jolly-change`. Escape discards the focused
-endpoint's draft. A parse error on either endpoint is shown as the field
-error.
+```ts
+interface Range {
+  step: number; // default 1
+  min: number; // default 0
+  max: number; // default 100
+  value: Interval | typeof Mixed; // default { from: 0, to: 100 }
+}
+```
+
+- Endpoints cannot cross. A commit is quantized to `step`, clamped to the
+  bounds, then clamped against the other endpoint.
+- Enter, blur and arrow-key steps emit `jolly-change`.
+- Escape discards the focused endpoint's draft.
+- A parse error on either endpoint shows as the field error.

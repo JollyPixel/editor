@@ -1,6 +1,7 @@
 # `jolly-property-row`
 
-`jolly-property-row` aligns custom slotted content with field rows.
+`jolly-property-row` aligns custom slotted content with field rows. It has no
+value and no field events.
 
 ```html
 <jolly-property-row label="Export" description="Writes to the project folder">
@@ -8,20 +9,19 @@
 </jolly-property-row>
 ```
 
-| Property | Attribute | Type | Default |
-|---|---|---|---|
-| `label` | `label` | `string` | `""` |
-| `description` | `description` | `string` | `""` |
-| `align` | `align` | `"start" \| "end"` | `"start"` |
-| `labelPosition` | `label-position` | `"inline" \| "top" \| "auto"` | `"inline"` |
-| `stackBelow` | `stack-below` | `number` | `200` |
-| `descriptionDisplay` | `description-display` | `"block" \| "tooltip"` | `"block"` |
+## Properties
 
-The default slot supplies the row content. The component has no value or field
-events. `labelPosition`, `stackBelow` and `descriptionDisplay` behave as on a
-field, `stacked` attribute included, so a custom row stacks and describes itself
-like the fields around it. See the [shared field API](../field/shared-field-api.md).
+```ts
+interface PropertyRow {
+  label: string;
+  description: string;
+  align: "start" | "end"; // default "start"
+  labelPosition: "inline" | "top" | "auto"; // attribute label-position
+  stackBelow: number; // attribute stack-below, default 200
+  descriptionDisplay: "block" | "tooltip"; // attribute description-display
+}
+```
 
-`applySearch(query)` matches on `label` like a field does, so a
-[searchable pane](../containers/pane.md#searching-content) hides a row whose
-label misses.
+- Layout and description options work as on a
+  [field](../field/shared-field-api.md#label-position), `stacked` included.
+- `applySearch(query)` matches on `label`, like a field.

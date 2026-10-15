@@ -1,9 +1,9 @@
 # `jolly-spin-slider`
 
-`jolly-spin-slider` edits a bounded number in a single text field, with a thin
-bar along its bottom edge showing where the value sits in the range. It takes
-less width than [`jolly-slider`](./slider.md), which puts the readout beside the
-track. It implements the [shared field API](../field/shared-field-api.md).
+`jolly-spin-slider` edits a bounded number in one text field, with a thin bar
+along its bottom edge showing where the value sits. It is narrower than
+[`jolly-slider`](./slider.md). It implements the
+[shared field API](../field/shared-field-api.md).
 
 ```html
 <jolly-spin-slider label="Intensity" min="0" max="2" step="0.01"></jolly-spin-slider>
@@ -11,57 +11,34 @@ track. It implements the [shared field API](../field/shared-field-api.md).
 
 ## Properties
 
-### `step`
+```ts
+interface SpinSlider {
+  step: number; // drag, arrow and typed increment, default 1
+  min: number; // default 0
+  max: number; // default 100
+  value: number | typeof Mixed; // default 0, Mixed cannot be dragged
+}
+```
 
-`number`. Increment for dragging, arrow keys and typed values. Defaults to
-`1`.
+## Pointer
 
-### `min`
+- Press and move more than 3px to drag from the current value. The bar's full
+  width covers the whole range. Shift multiplies the step by ten, Alt divides
+  it by ten.
+- Press on the bar to jump there, then keep dragging.
+- Release without moving to type: the input takes focus with its text
+  selected.
+- Dragging emits `jolly-input`, release one `jolly-change`.
+- Escape during a drag restores the value from before the press.
+- A disabled, read-only or locked field cannot be dragged.
 
-`number`. Lower bound, at the bar's left end. Defaults to `0`.
+## Typing
 
-### `max`
-
-`number`. Upper bound, at the bar's right end. Defaults to `100`.
-
-### `value`
-
-`number | typeof Mixed`. Defaults to `0`. A mixed value shows the `Mixed`
-placeholder and cannot be dragged.
-
-## Interaction
-
-Press anywhere on the field and move more than 3px to drag. The value moves
-from where it was, and dragging across the bar's full width covers the whole
-range. Shift multiplies the step by ten and Alt divides it by ten.
-
-Press on the bar to jump to that point, then keep dragging from there.
-
-Release without moving to start typing: the input takes focus with its text
-selected. Typed input follows the same rules as
-[`jolly-number`](./number.md): expressions are accepted, Enter or blur
-commits, Escape discards the draft, and the arrow keys commit one step. While
-the input has focus, a press on the text places the caret instead of
-dragging; the bar still jumps.
-
-Dragging and jumping emit `jolly-input` while the pointer moves and one
-`jolly-change` on release. Escape during a drag restores the value from before
-the press and emits no `jolly-change`. A disabled, read-only or locked field
-cannot be dragged.
-
-The input has the `spinbutton` role, takes `label` as its accessible name, and
-exposes `aria-valuemin`, `aria-valuemax` and `aria-valuenow`.
+- Same rules as [`jolly-number`](./number.md).
+- While focused, a press on the text places the caret. The bar still jumps.
+- The input is a `spinbutton` named by `label`.
 
 ## Facade
 
-A binding with `min`, `max` and `view: "spin"` builds this element. Without
-both bounds the binding stays a `jolly-number`.
-
-```ts
-pane.addBinding(light, "intensity", {
-  min: 0,
-  max: 2,
-  step: 0.01,
-  view: "spin"
-});
-```
+`view: "spin"` on a binding with `min` and `max` builds this element. See
+[control selection](../facade/binding.md#control-selection).

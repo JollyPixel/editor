@@ -1,7 +1,7 @@
 # `jolly-tool-button`
 
 `jolly-tool-button` is a square icon button for rails and floating toolbars.
-It can hold a flyout with related options.
+It can hold a flyout of related options.
 
 ```html
 <jolly-tool-button icon="plus" label="Add" flyout-side="above">
@@ -9,43 +9,46 @@ It can hold a flyout with related options.
 </jolly-tool-button>
 ```
 
-| Property | Type | Default |
-|---|---|---|
-| `icon` | `IconName \| undefined` | `undefined` |
-| `label` | `string` | `""` |
-| `tone` | `IconTone | ""` | `""` |
-| `active` | `boolean` | `false` |
-| `disabled` | `boolean` | `false` |
-| `flyoutSide` (`flyout-side`) | `"above" \| "below" \| "left" \| "right"` | `"right"` |
-| `open` | `boolean` | `false` |
+## Properties
 
-The default slot renders after the icon; leave `icon` unset to show only
-slotted content, for example a number. `label` is the
-accessible name and the tooltip; the tooltip opens on `flyout-side`.
+```ts
+interface ToolButton {
+  icon: IconName | undefined; // unset: only slotted content, such as a number
+  label: string; // accessible name and tooltip
+  tone: IconTone | ""; // default: the tone of icon
+  active: boolean; // accent fill, aria-pressed without a flyout
+  disabled: boolean;
+  flyoutSide: "above" | "below" | "left" | "right"; // attribute flyout-side, default "right"
+  open: boolean;
+}
+```
 
-Content in the `flyout` slot turns the button into a flyout trigger and adds a
-notch that points towards `flyout-side`. The flyout:
+- A toned button tints its hover and `active` fill with the tone.
+- The tooltip opens on `flyout-side`.
 
-- opens on mouse hover, and on click for touch, pen and keyboard;
-- stays open while a press that started inside it is held, so a slider can be
-  dragged past its edge;
-- closes on pointer leave, focus leaving the button, Escape, or a click on an
-  enabled `button`, `jolly-button` or `jolly-tool-button` inside it.
+## Methods
 
-`active` shows the accent fill and sets `aria-pressed` on buttons without a
-flyout. A toned button tints its hover and `active` fill with the tone instead;
-the tone comes from `tone`, or from the [registered tone](../icon/registry.md#tones)
-of `icon` when `tone` is empty. `show()` and `hide()` open and close the flyout programmatically;
-`show()` does nothing without flyout content or while disabled.
+### `show(): void`
 
-| Part | Element |
-|---|---|
-| `button` | the square button |
-| `notch` | the arrow pointing towards the flyout |
-| `tooltip` | the label tooltip |
-| `flyout` | the flyout panel |
+Opens the flyout. Does nothing without flyout content or while disabled.
 
-| Custom property | Default |
-|---|---|
-| `--jolly-tool-button-size` | `36px` |
-| `--jolly-tool-button-gap` | `6px` |
+### `hide(): void`
+
+Closes it.
+
+## Flyout
+
+Content in the `flyout` slot makes the button a trigger, with a notch pointing
+to `flyout-side`.
+
+- Opens on mouse hover, and on click for touch, pen and keyboard.
+- Stays open while a press that started inside it is held, so a slider can be
+  dragged past its edge.
+- Closes on pointer leave, focus leaving, Escape, or a click on an enabled
+  `button`, `jolly-button` or `jolly-tool-button` inside it.
+- Holds no [input layer](../interaction/README.md#input-layers).
+
+## Styling
+
+- Parts: `button`, `notch`, `tooltip`, `flyout`.
+- `--jolly-tool-button-size` (`36px`), `--jolly-tool-button-gap` (`6px`).

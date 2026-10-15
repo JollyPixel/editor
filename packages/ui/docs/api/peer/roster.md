@@ -1,12 +1,18 @@
 # Room roster and peer marks
 
-Two adapters over a `@jolly-pixel/network` room, exported from
-`@jolly-pixel/ui/network`. Both push plain snapshots through a `publish`
-callback, so the editor decides where the state lives.
+Adapters over a `@jolly-pixel/network` room, from `@jolly-pixel/ui/network`.
+They push plain snapshots through a `publish` callback, so the editor decides
+where the state lives.
 
 ## `PeerRoster`
 
 ```ts
+interface PeerRosterOptions {
+  room: Room;
+  publish: (peers: readonly PresencePeer[]) => void;
+  log?: LogQueue;
+}
+
 const roster = new PeerRoster({
   room,
   publish: (peers) => {
@@ -16,20 +22,32 @@ const roster = new PeerRoster({
 });
 ```
 
-`peers` is a `PresencePeer[]` with the local peer first (`self: true`) and
-remote peers sorted by `clientId`. Every peer is keyed by its connection and
-described by [`toPresencePeer`](./identity.md#topresencepeerpeer). The local
-peer is keyed by `room.clientId` (`""` until the join is admitted) and read
-from `room.profile`, the claimed profile until the server admits one.
-
-The roster republishes on `sync`, `peer-joined`, `peer-left` and
-`peer-profile`. With a `log`, it pushes one "has joined" or "has left" entry per remote peer; members already
-present at `sync` are not announced. `dispose()` unsubscribes and publishes an
-empty list.
+- `peers` lists the local peer first (`self: true`), then remote peers by
+  `clientId`, each built by
+  [`toPresencePeer`](./identity.md#profile-helpers).
+- The local peer is keyed by `room.clientId` (`""` until admitted) and read
+  from `room.profile`.
+- Republishes on `sync`, `peer-joined`, `peer-left` and `peer-profile`.
+- With `log`, pushes a "has joined" or "has left" entry per remote peer.
+  Peers already present at `sync` are not announced.
+- `dispose()` unsubscribes and publishes an empty list.
 
 ## `PeerMarkTracker`
 
+Publishes one local key under `presenceKey` and folds every remote peer's key
+into a `PeerMarkMap`.
+
 ```ts
+interface PeerMarkTrackerOptions<TKey> {
+  room: Room;
+  presenceKey: string;
+  localKey: () => TKey | null;
+  readKey: (value: unknown) => TKey | null; // null: the peer marks nothing
+  publish: (marks: PeerMarkMap<TKey>) => void;
+}
+
+type PeerMarkMap<TKey> = ReadonlyMap<TKey, readonly PresencePeer[]>;
+
 const tracker = new PeerMarkTracker<string>({
   room,
   presenceKey: "block",
@@ -41,16 +59,21 @@ const tracker = new PeerMarkTracker<string>({
 });
 ```
 
-Publishes one local key under `presenceKey` and folds every remote peer's key
-into a `PeerMarkMap<TKey>`, a `ReadonlyMap<TKey, readonly PresencePeer[]>`
-whose buckets are sorted by `clientId`. `readKey` returning `null` means the
-peer marks nothing.
+- Buckets are sorted by `clientId`. The local peer never appears.
+- Call `publishLocal()` after the local key changes. An unchanged key is not
+  sent again.
+- `dispose()` unsubscribes and publishes an empty map.
 
-Call `publishLocal()` after the local key changes; an unchanged key is not
-sent again. The local peer never appears in the marks, since `room.peers`
-excludes it. `dispose()` unsubscribes and publishes an empty map.
+## `markedPeers(room, values): MarkedPeer[]`
 
-## `markedPeers` and `peerMarks`
+Pairs each presence value with its sender, sorted by `clientId`. Skips `null`
+values and senders not in `room.peers`.
+
+## `peerMarks(marked): PeerMarkMap`
+
+Folds `[peer, key]` pairs into a map, keeping their order. `PeerMarkTracker`
+publishes `peerMarks(markedPeers(room, values))`. Use them directly when a
+presence value carries more than a key:
 
 ```ts
 const cursors = markedPeers(room, channel.values);
@@ -59,14 +82,10 @@ const marks = peerMarks(
 );
 ```
 
-`markedPeers(room, values)` pairs each presence value with its sender's
-`PresencePeer`, sorted by `clientId`, and skips `null` values and senders that
-are not in `room.peers`. `peerMarks(marked)` folds such pairs into a
-`PeerMarkMap<TKey>`, keeping their order in each bucket. `PeerMarkTracker`
-publishes `peerMarks(markedPeers(room, values))`; use them directly when a
-presence value carries more than a key.
+## `peerBadges(key, marks): TreeBadge[]`
 
-## `peerBadges`
+The peers marking `key`, as [`jolly-tree` badges](../data/tree.md#row-content):
+at most three, in bucket order, coloured and titled per peer.
 
 ```ts
 const node = {
@@ -74,7 +93,3 @@ const node = {
   badges: peerBadges(layerNode.id, marks)
 };
 ```
-
-Turns the peers marking `key` in a `PeerMarkMap<TKey>` into `jolly-tree`
-badges (`color` and `title` from each peer's color and display name), at most
-three, in bucket order. An unmarked key returns an empty array.

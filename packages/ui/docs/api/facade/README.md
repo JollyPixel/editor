@@ -1,7 +1,7 @@
 # Facade API
 
-The facade is exported from `@jolly-pixel/ui`. It creates the same custom
-elements available to Lit templates and plain HTML.
+The facade builds the package's custom elements from JavaScript and binds
+them to object properties.
 
 ```ts
 import {
@@ -10,53 +10,73 @@ import {
 } from "@jolly-pixel/ui";
 ```
 
-- [`Pane`](./pane.md) is the facade entry point.
-- [`DockFacade`](./dock.md) wraps an authored `jolly-dock`.
-- [`FacadeHost`](./pane.md#contributing-to-a-pane-the-facade-did-not-create)
-  adds builders inside an element the caller already owns.
-- [Folder builders](./folder.md) group facade children.
-- [Bindings](./binding.md) edit object properties.
-- [Monitors](./monitor.md) display object properties.
-- [Buttons and separators](./actions.md) add actions and visual divisions.
-- [Notes, elements and theme preferences](./content.md) add content the facade
-  does not bind.
-- [Presence](./presence.md) displays peer snapshots.
+- [`Pane`](./pane.md): the entry point, and `FacadeHost` for an existing
+  element.
+- [`DockFacade`](./dock.md): wraps an authored `jolly-dock`.
+- [Folders](./folder.md): group builders.
+- [Bindings](./binding.md): edit object properties.
+- [Monitors](./monitor.md): display object properties.
+- [Buttons and separators](./actions.md).
+- [Notes, elements and theme preferences](./content.md).
+- [Presence](./presence.md): peer snapshots.
 
-## Shared builder surface
+A walkthrough is in [Using the facade](../../guides/using-the-facade.md).
 
-Every builder returned by the facade implements `Disposable`:
+## Builder surface
+
+Every builder shares this surface, from the `FacadeItem` base:
 
 ```ts
-interface Disposable {
+interface FacadeItem extends Disposable {
+  readonly element: HTMLElement;
+  hidden: boolean;
+  disabled: boolean;
   dispose(): void;
 }
 ```
 
-Builders also expose their underlying `element` and mutable `hidden` and
-`disabled` properties, shared through one `FacadeItem` base. `disabled` writes
-the native property on buttons and bound fields, and toggles the `disabled`
-attribute on every other builder. `Pane` and folder builders add `refresh()`
-and `disposeAll()` because they own child builders.
+- `disabled` writes the native property on buttons and bound fields, and the
+  `disabled` attribute on other builders.
+- Disposing a builder detaches it from the container that created it.
 
-Disposing a builder detaches it from the container that created it, so a
-container never keeps a builder it no longer owns.
+## Containers
 
-## Naming the builders
+`Pane`, `FacadeFolder` and `FacadeHost` hold child builders. They share
+`FacadeContainer`:
 
-Every builder type is exported, under a `Facade` prefix where the element of
-the same name already holds the plain one:
+```ts
+interface FacadeContainer extends FacadeItem {
+  addFolder(options?: FolderOptions): FacadeFolder;
+  addBinding(object, key, options?: BindingOptions): FacadeBinding;
+  addMonitor(object, key, options?: MonitorOptions): FacadeMonitor;
+  addMonitors(object, fields: MonitorFields): void;
+  addButton(options?: ButtonOptions): FacadeButton;
+  addSeparator(): FacadeSeparator;
+  addNote(options?: NoteOptions): FacadeNote;
+  addThemePreferences(options?): FacadeThemePreferences;
+  addElement<TElement>(element: TElement): FacadeElement<TElement>;
+  addPresence(options?: PresenceOptions): Presence;
+  refresh(): void;
+  disposeAll(): void;
+}
+```
 
-| Returned by | Type |
-|---|---|
-| `addFolder()` | `FacadeFolder` |
-| `addBinding()` | `FacadeBinding<TObject, TKey>` |
-| `addMonitor()` | `FacadeMonitor<TObject, TKey>` |
-| `addButton()` | `FacadeButton` |
-| `addSeparator()` | `FacadeSeparator` |
-| `addNote()` | `FacadeNote` |
-| `addThemePreferences()` | `FacadeThemePreferences` |
-| `addElement()` | `FacadeElement<TElement>` |
-| `addPresence()` | `Presence` |
+- Facade bindings do not observe assignments. `refresh()` re-reads the
+  bindings and monitors the container created, nested folders included.
+- `disposeAll()` disposes the direct child builders and clears the list.
+- Elements appended to `element` by hand are not tracked: `disposeAll()`
+  leaves them. Use `addElement()` instead.
+
+## Exported types
+
+- Builders: `FacadeFolder`, `FacadeBinding`, `FacadeMonitor`, `FacadeButton`,
+  `FacadeSeparator`, `FacadeNote`, `FacadeThemePreferences`, `FacadeElement`,
+  `Presence`. The `Facade` prefix avoids clashing with element classes.
+- Bases, as types: `FacadeItem`, `FacadeContainer`, `Disposable`.
+- Options: `PaneOptions`, `FolderOptions`, `BindingOptions`, `DispatchView`,
+  `BindingChangeEvent`, `BindingChangeHandler`, `MonitorKey`, `MonitorValue`,
+  `MonitorOptions`, `MonitorFields`, `ButtonOptions`, `NoteOptions`,
+  `ThemePreferencesOptions`, `PresenceOptions`, `FieldLayoutOptions`.
 
 ```ts
 import type { FacadeFolder } from "@jolly-pixel/ui";
@@ -67,15 +87,3 @@ function bindLighting(
   folder.addBinding(lighting, "intensity", { min: 0, max: 4 });
 }
 ```
-
-`FacadeItem` and `FacadeContainer` are exported as types only. `FacadeItem` is
-the shell every builder shares, and `FacadeContainer` is the surface `Pane` and
-`FacadeFolder` have in common, for code that takes either.
-
-The root entry point also exports the option and callback types `PaneOptions`,
-`FolderOptions`, `BindingOptions`, `BindingChangeEvent`,
-`BindingChangeHandler`, `MonitorKey`, `MonitorOptions`, `MonitorFields`,
-`ButtonOptions`, and `PresenceOptions`.
-
-For an assembled workflow, read [Using the facade](../../guides/using-the-facade.md).
-

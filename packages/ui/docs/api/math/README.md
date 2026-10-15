@@ -8,63 +8,57 @@
 - [`jolly-vector4`](./vector4.md), exported as `Vector4`
 - [Math value types](./types.md)
 
-Vector and quaternion components implement the
-[shared field API](../field/shared-field-api.md). Every axis input follows the
-[`jolly-number`](../controls/number.md) entry rules, and an axis parse error is
-shown as the field error.
+Shared by the vector and quaternion fields:
 
-Every one of them except `jolly-transform` is reachable from the facade:
-`addBinding` picks one from the bound value's own axes. See
-[Binding facade](../facade/binding.md).
+- They implement the [shared field API](../field/shared-field-api.md).
+- Each axis input follows the [`jolly-number`](../controls/number.md) entry
+  rules. An axis parse error shows as the field error.
+- Each axis can hold `Mixed` on its own. An edit emits the complete value.
+- All but `jolly-transform` are picked by the facade's
+  [`addBinding`](../facade/binding.md#control-selection).
 
 ## Axis markers
 
-`axisStyle` (attribute `axis-style`, type `AxisStyle`) sets how
-`jolly-vector2`, `jolly-vector3`, `jolly-vector4` and `jolly-quaternion` mark
-each axis:
+`axisStyle` (attribute `axis-style`) sets how `jolly-vector2`,
+`jolly-vector3`, `jolly-vector4` and `jolly-quaternion` mark each axis:
 
 - `"corner"`, the default: a small triangle in the axis colour on the input's
   top corner.
-- `"chip"`: the axis letter in white on a square of the axis colour, at the
-  input's leading edge.
-- `"letter"`: the axis letter alone, in the axis colour, at the input's leading
-  edge.
+- `"chip"`: the axis letter in white on a square of the axis colour.
+- `"letter"`: the axis letter alone, in the axis colour.
 
-With `"chip"` and `"letter"`, the letter replaces the scrub groove: dragging it
-scrubs the axis. The letter is as wide as the control is tall, so each input
-gives up that width. Override `--jolly-axis-letter-width` on the element to
-change it.
+With `"chip"` and `"letter"`, dragging the letter scrubs the axis. The letter
+is as wide as the control is tall; `--jolly-axis-letter-width` changes that.
 
 New elements read their style from their class `Defaults`, so an editor can
-switch every field at once before creating any:
+switch every field before creating any. `Vector2`, `Vector3` and `Vector4`
+share one `Defaults`; `Quaternion` has its own.
 
 ```ts
 Vector3.Defaults.axisStyle = "letter";
 Quaternion.Defaults.axisStyle = "letter";
 ```
 
-`Vector2`, `Vector3` and `Vector4` share one `Defaults` object; `Quaternion`
-has its own.
-
 ## Value helpers
 
-The root entry point exports the structural guards these components dispatch
-on, and the functions the facade uses to move axes between a field and a bound
-object:
+### `isVec2Like`, `isVec3Like`, `isVec4Like`, `isQuatLike`, `isTransformLike`
 
-- `isVec2Like(value)`, `isVec3Like(value)`, `isVec4Like(value)`,
-  `isQuatLike(value)`, `isTransformLike(value)`. Each asks only for the axes it
-  names, so a four-axis value satisfies the narrower guards too.
-- `vec2PairOf(value)` names the plane of a value carrying exactly two of `x`,
-  `y` and `z` (`"xy"`, `"xz"` or `"yz"`), and returns null for anything else.
-  It is exact where the guards above are not: a three-axis value belongs to
-  `jolly-vector3`, not to a pair.
-- `snapshotComponents(value)` returns a plain record of a value's own numeric
-  axes, one level deep for a transform. Non-numeric axes, `Mixed` among them,
-  are skipped.
-- `copyComponents(target, source)` writes `source`'s numeric axes onto `target`
-  in place, keeping `target`'s identity. Axes `target` does not already carry
-  are left out.
-- `formatVector(value, precision?)` joins the axes a value carries into
-  `x, y, z`, rounded to `precision` decimals (default `2`) with trailing zeros
-  dropped.
+Structural guards. Each checks only the axes it names, so a four-axis value
+passes the narrower guards too.
+
+### `vec2PairOf(value: unknown): Vector2Pair | null`
+
+The plane of a value with exactly two of `x`, `y` and `z`, else `null`. A
+three-axis value has none.
+
+### `snapshotComponents(value: unknown): unknown`
+
+A plain record of the value's numeric axes, one level deep for a transform.
+`Mixed` and other non-numbers are skipped.
+
+### `copyComponents(target: unknown, source: unknown): void`
+
+Writes `source`'s numeric axes onto `target` in place, keeping its identity.
+Axes `target` does not carry are skipped.
+
+[`formatVector`](../monitors/format.md) joins a value's axes for display.

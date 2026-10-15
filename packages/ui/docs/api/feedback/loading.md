@@ -12,19 +12,40 @@ loading.setProgress(37, 120);
 await loading.complete();
 ```
 
-| Property | Type | Default |
-|---|---|---|
-| `started` | `boolean` | `false` |
-| `completed` | `boolean` | `false` |
+## Properties
 
-| Method | Behavior |
-|---|---|
-| `start()` | Shows the screen on the next animation frame |
-| `setAsset(name)` | Sets the displayed asset text |
-| `setProgress(value, max)` | Updates and clamps the current progress |
-| `getProgressPercentage()` | Returns progress as a percentage |
-| `complete(callback?)` | Fills, fades, removes, then calls the callback |
-| `error(error)` | Replaces progress with an error view |
-| `dismiss()` | Fades and removes the current view |
+```ts
+interface Loading {
+  readonly started: boolean;
+  readonly completed: boolean;
+}
+```
 
-The error view uses the cause stack when `error.cause` is an `Error`.
+## Methods
+
+### `start(): Promise<void>`
+
+Shows the screen on the next animation frame.
+
+### `setAsset(name: string): void`
+
+Sets the asset text.
+
+### `setProgress(value: number, max: number): void`
+
+Updates the progress, clamped.
+
+### `getProgressPercentage(): number`
+
+### `complete(callback?: () => void): Promise<void>`
+
+Fills the bar, fades out, removes the element, then calls `callback`.
+
+### `error(error: Error): void`
+
+Replaces the progress with an error view. Shows the stack of `error.cause`
+when it is an `Error`.
+
+### `dismiss(): Promise<void>`
+
+Fades out and removes the current view.

@@ -1,6 +1,7 @@
 # `jolly-rail`
 
-`jolly-rail` is a compact strip for persistent controls.
+`jolly-rail` is a compact strip for persistent controls. It provides layout
+only, with no toolbar role.
 
 ```html
 <jolly-rail>
@@ -8,9 +9,10 @@
 </jolly-rail>
 ```
 
-| Property | Type | Default |
-|---|---|---|
-| `orientation` | `"horizontal" \| "vertical"` | `"vertical"` |
+## Properties
 
-The default slot contains controls. The rail provides layout only and adds no
-toolbar role.
+```ts
+interface Rail {
+  orientation: "horizontal" | "vertical"; // default "vertical"
+}
+```

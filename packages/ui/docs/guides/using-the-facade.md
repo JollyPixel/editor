@@ -1,7 +1,9 @@
 # Using the facade
 
-The facade creates JollyPixel elements from JavaScript and binds controls to
-object properties. Import `Pane` from the root package:
+Build a settings panel from JavaScript, bound to a plain object. Every call
+below is detailed in the [facade API](../api/facade/README.md).
+
+## 1. Create a pane
 
 ```ts
 import { Pane } from "@jolly-pixel/ui";
@@ -9,64 +11,31 @@ import { Pane } from "@jolly-pixel/ui";
 const settings = {
   enabled: true,
   opacity: 0.75,
-  mode: "overlay"
+  mode: "overlay",
+  position: new THREE.Vector3(0, 0, 0)
 };
 
 const pane = new Pane({ title: "Renderer" });
 ```
 
-With no `container`, `Pane` appends a themed `jolly-floating` containing a
-`jolly-pane` to `document.body`. Call `pane.dispose()` when the owning view is
-destroyed.
+With no `container`, the pane floats under `document.body`. Call
+`pane.dispose()` when the view goes away.
 
-## Add bindings
-
-`addBinding()` reads the current property value, selects a control, and writes
-edits back to the property.
+## 2. Bind properties
 
 ```ts
 pane.addBinding(settings, "enabled");
-pane.addBinding(settings, "opacity", {
-  label: "Opacity",
-  min: 0,
-  max: 1,
-  step: 0.01
-});
+pane.addBinding(settings, "opacity", { min: 0, max: 1, step: 0.01 });
 pane.addBinding(settings, "mode", {
-  options: {
-    Off: "off",
-    Overlay: "overlay",
-    Wireframe: "wireframe"
-  }
+  options: { Off: "off", Overlay: "overlay", Wireframe: "wireframe" }
 });
+pane.addBinding(settings, "position", { step: 1 });
 ```
 
-The first binding creates `jolly-checkbox`. Bounds make the numeric binding a
-`jolly-slider` (or a narrower `jolly-spin-slider` with `view: "spin"`), and
-`options` makes the string binding a `jolly-select`. See
-[Binding facade](../api/facade/binding.md) for the full dispatch table.
+The value picks the control: a checkbox, a slider, a select and a vector row.
+See [control selection](../api/facade/binding.md#control-selection).
 
-## Bind a vector
-
-A value carrying numeric axes dispatches to the matching math component, so a
-position is one row rather than three sliders:
-
-```ts
-const area = {
-  position: new THREE.Vector3(0, 0, 0),
-  size: { x: 4, y: 1, z: 4 }
-};
-
-pane.addBinding(area, "position", { step: 1, label: "Min corner" });
-pane.addBinding(area, "size", { min: 1, max: 24, step: 1 });
-```
-
-The axes are copied onto the bound object rather than replacing it, so
-`area.position` is still the same `THREE.Vector3` after an edit. Pass
-`view: "quaternion"` to read a four-axis value as a rotation, or
-`view: "point2d"` to turn a two-axis value into a drag pad.
-
-A binding handler runs after the object has been updated:
+## 3. React to edits
 
 ```ts
 pane
@@ -79,26 +48,15 @@ pane
   });
 ```
 
-`last` is `false` for `jolly-input` and `true` for the committed
-`jolly-change`. Use it when continuous input should update the application,
-but persistence or history should run once per committed edit.
+The object is already updated when the handler runs. `last` is `true` once per
+committed edit.
 
-## Group controls and add actions
-
-Folders expose the same methods as the pane, so they can contain bindings,
-monitors, actions, presence views, and nested folders.
+## 4. Group and add actions
 
 ```ts
-const display = pane.addFolder({
-  title: "Display",
-  expanded: true
-});
+const display = pane.addFolder({ title: "Display" });
 
-display.addBinding(settings, "opacity", {
-  min: 0,
-  max: 1,
-  step: 0.01
-});
+display.addBinding(settings, "opacity", { min: 0, max: 1, step: 0.01 });
 display.addSeparator();
 display
   .addButton({ title: "Reset opacity" })
@@ -108,121 +66,41 @@ display
   });
 ```
 
-Bindings do not observe object assignments. `refresh()` re-reads the values of
-bindings and monitors created by that folder. `pane.refresh()` cascades into
-every folder created through the pane.
+Bindings do not observe assignments: call `refresh()` after changing the
+object yourself.
 
-## Display monitored values
-
-`addMonitor()` creates a text monitor. Set `view: "graph"` for a numeric
-history graph. `addMonitors()` adds several properties with one typed
-configuration object. A vector property is joined into `x, y, z`.
+## 5. Show live values
 
 ```ts
-const stats = {
-  calls: 0,
-  frameMs: 0
-};
+const stats = { calls: 0, frameMs: 0 };
+const perf = pane.addFolder({ title: "Performance" });
 
-const performanceFolder = pane.addFolder({ title: "Performance" });
-performanceFolder.addMonitors(stats, {
+perf.addMonitors(stats, {
   calls: { label: "Draw calls" },
-  frameMs: {
-    label: "Frame",
-    format: (value) => `${value.toFixed(1)} ms`
-  }
+  frameMs: { label: "Frame", format: (value) => `${value.toFixed(1)} ms` }
 });
 
-function updatePerformance(): void {
+function onFrame(): void {
   stats.calls = renderer.info.render.drawCalls;
   stats.frameMs = renderer.frameTime;
-  performanceFolder.refresh();
+  perf.refresh();
 }
 ```
 
-Facade monitors have no timer. The application updates the backing object and
-calls `refresh()` on its own cadence.
-
-## Mount a pane in a dock
-
-Pass a container to place the pane in existing markup. The container must
-already be under a `jolly-scope` or another theme host.
+## 6. Mount in a dock
 
 ```ts
-import {
-  DockFacade,
-  Pane
-} from "@jolly-pixel/ui";
+import { DockFacade, Pane } from "@jolly-pixel/ui";
 
 const dock = DockFacade.query("#tools");
-const pane = new Pane({
+const inspector = new Pane({
   title: "Inspector",
   container: dock.element,
-  grow: true,
   collapsible: true
 });
 
 dock.sync();
 ```
 
-`DockFacade.query()` throws when the selector matches no upgraded
-`jolly-dock`; `DockFacade.from()` takes the element when you already hold it.
-Either way the dock must sit inside a `jolly-dock-layout`. Call `sync()` after
-adding panes so the layout reconciles the new children.
-
-## Add content the facade does not bind
-
-Not every row carries a value. `addNote()` adds field-aligned explanatory
-text, `addThemePreferences()` adds the theme and density controls, and
-`addElement()` adopts an element you built yourself:
-
-```ts
-const peers = pane.addFolder({ title: "Peer rendering" });
-peers.addNote({
-  description: "Your own selection wins silhouette overlaps."
-});
-
-const chrome = pane.addFolder({ title: "Appearance" });
-chrome.addThemePreferences({ storageKey: "my-editor" });
-
-const preview = document.createElement("canvas");
-peers.addElement(preview).hidden = !settings.preview;
-```
-
-Prefer `addElement()` over `builder.element.append()`. The appended element is
-then tracked like every other builder, and on a floating `Pane` it lands
-inside the pane rather than beside it, because `pane.element` is the
-`jolly-floating` wrapper in that mode.
-
-## Manage builder state
-
-Every returned builder has `element`, `hidden`, `disabled`, and `dispose()`.
-Pane and folder builders also provide:
-
-- `refresh()` re-reads direct bindings and monitors, including those inside
-  folders created by the builder.
-- `disposeAll()` disposes the direct builders it created and clears its
-  internal child list.
-
-Disposing a builder on its own detaches it from the container that created it,
-so the container stops holding it and `disposeAll()` will not reach it twice.
-
-Elements appended directly to a builder's `element` are outside that child
-list. `disposeAll()` leaves them in place.
-
-Every builder type is exported, under a `Facade` prefix where an element
-already owns the plain name: `FacadeFolder`, `FacadeBinding`, `FacadeMonitor`,
-`FacadeButton`, `FacadeSeparator`, `FacadeNote` and `FacadeElement`.
-
-```ts
-import type { FacadeFolder } from "@jolly-pixel/ui";
-
-function bindLighting(
-  folder: FacadeFolder
-): void {
-  folder.addBinding(lighting, "intensity", { min: 0, max: 4 });
-}
-```
-
-See the [facade API](../api/facade/README.md) for constructor options and each
-returned builder surface.
+The dock must sit in a `jolly-dock-layout` under a theme scope. See
+[Docking and persistence](./docking-and-persistence.md).

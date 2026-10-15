@@ -1,22 +1,27 @@
 # `jolly-button`
 
-`jolly-button` renders a slotted action button.
-The root entry point exports `Button` and `ButtonVariant`.
+`jolly-button` renders a slotted action button. Activation emits the native
+`click` event.
 
 ```html
 <jolly-button icon="revert" variant="accent">Reset</jolly-button>
 <jolly-button icon="close" label="Close" icon-only></jolly-button>
 ```
 
-| Property | Attribute | Type | Default |
-|---|---|---|---|
-| `icon` | `icon` | `IconName \| undefined` | `undefined` |
-| `variant` | `variant` | `"default" \| "accent" \| "danger"` | `"default"` |
-| `disabled` | `disabled` | `boolean` | `false` |
-| `label` | `label` | `string` | `""` |
-| `iconOnly` | `icon-only` | `boolean` | `false` |
+## Properties
 
-The default slot supplies visible button content. Set `label` when an icon-only
-button has no visible text; `label` names the button for assistive technology
-and shows nothing on hover, so add the global `title` attribute when an icon
-alone also needs a tooltip. Activation emits the native `click` event.
+```ts
+interface Button {
+  icon: IconName | undefined;
+  variant: ButtonVariant; // default "default"
+  disabled: boolean;
+  label: string; // accessible name
+  iconOnly: boolean; // attribute icon-only
+}
+
+type ButtonVariant = "default" | "accent" | "danger";
+```
+
+- The default slot holds the visible content.
+- `label` names an icon-only button but shows no tooltip. Add the global
+  `title` attribute for one.
