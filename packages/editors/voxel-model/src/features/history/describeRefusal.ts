@@ -15,8 +15,6 @@ export function describeRefusal(
       return "it is gone";
     case "changed":
       return "it was changed since";
-    case "dropped":
-      return "it was lost while offline";
     case "peer": {
       const peer = peers.find(({ clientId }) => clientId === refusal.clientId);
 

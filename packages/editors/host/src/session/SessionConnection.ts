@@ -16,6 +16,11 @@ import {
   AssetLeases,
   type RoomSource
 } from "../lease/AssetLeases.ts";
+import { PendingOutboxes } from "../lease/PendingOutboxes.ts";
+import {
+  ConnectionStatus,
+  type ServerConnection
+} from "./ConnectionStatus.ts";
 import type { SessionWorkspace } from "../workspace/SessionWorkspace.ts";
 import {
   EditorSession,
@@ -70,6 +75,12 @@ export interface SessionConnectionConnectOptions extends SessionConnectionBase {
   openCatalog?: CatalogOpener;
   workspace?: SessionWorkspace;
   catalogTimeoutMs?: number;
+  /**
+   * The client again, when it connects straight to the server: the toolbar
+   * shows when it drops, and pending changes are kept across page loads.
+   * @default null
+   */
+  server?: ServerConnection | null;
 }
 
 export interface SessionConnectionOptions {
@@ -77,6 +88,14 @@ export interface SessionConnectionOptions {
   catalog: CatalogClient;
   client: EditorSessionClient;
   workspace?: SessionWorkspace;
+  /**
+   * @default null
+   */
+  server?: ServerConnection | null;
+  /**
+   * @default null
+   */
+  outboxes?: PendingOutboxes | null;
 }
 
 export class SessionConnection {
@@ -104,7 +123,8 @@ export class SessionConnection {
       client,
       logger,
       openCatalog: options.openCatalog,
-      catalogTimeoutMs: CATALOG_TIMEOUT_MS
+      catalogTimeoutMs: CATALOG_TIMEOUT_MS,
+      server: client
     });
   }
 
@@ -113,6 +133,7 @@ export class SessionConnection {
   ): Promise<SessionConnection> {
     const {
       client,
+      server = null,
       logger = new Systems.Logger()
     } = options;
     const catalog = await logger.step(
@@ -128,7 +149,9 @@ export class SessionConnection {
       identity: options.identity,
       catalog,
       client,
-      workspace: options.workspace
+      workspace: options.workspace,
+      server,
+      outboxes: server === null ? null : await PendingOutboxes.open()
     });
   }
 
@@ -137,8 +160,10 @@ export class SessionConnection {
   readonly workspace: SessionWorkspace | null;
   readonly archive: SessionArchive;
   readonly assets: AssetLeases;
+  readonly connectionStatus: ConnectionStatus | null;
 
   readonly #client: EditorSessionClient;
+  readonly #outboxes: PendingOutboxes | null;
   #disposed = false;
 
   constructor(
@@ -152,10 +177,19 @@ export class SessionConnection {
       canImport: this.workspace?.persistent ?? true
     });
     this.#client = options.client;
+    this.#outboxes = options.outboxes ?? null;
     this.assets = new AssetLeases({
       rooms: this.#client,
-      records: this.catalog
+      records: this.catalog,
+      outboxes: this.#outboxes
     });
+    const { server = null } = options;
+    this.connectionStatus = server === null ?
+      null :
+      new ConnectionStatus({
+        client: server,
+        changes: this.assets
+      });
   }
 
   async openSession(
@@ -200,9 +234,11 @@ export class SessionConnection {
     }
     this.#disposed = true;
 
+    this.connectionStatus?.dispose();
     this.assets.dispose();
     this.catalog.dispose();
     this.#client.destroy();
+    void this.#outboxes?.close();
   }
 }
 

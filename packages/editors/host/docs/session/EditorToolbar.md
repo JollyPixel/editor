@@ -23,12 +23,13 @@ toolbar.sources = context.toolbar;
 
 The bar is as tall as a pane group's tab strip and does not overlap the
 viewport, so put it in a column above the element holding the canvas. When
-`sources` is `null`, or holds no `tags`, fewer than two `targets` and no
-registered tour, it sets the `empty` attribute and hides itself.
+`sources` is `null`, or holds no `tags`, fewer than two `targets`, no
+registered tour and no offline `connection`, it sets the `empty` attribute and
+hides itself.
 
 The bar never draws outside its own width. Below 560px it hides the Asset and
 Version captions and shows Save version as an icon button. Below 360px it
-hides the Read-only text and keeps only the lock.
+hides the Read-only and Offline texts and keeps only their icons.
 
 ## Properties
 
@@ -52,6 +53,11 @@ icon buttons instead: Restore this version (accent) and Delete this version
 (danger). The bar is disabled while an action or a switch runs, and a failed
 one shows its error in the bar until the next action.
 
+Its `connection` shows a crossed cloud with the text Offline, in the warning
+color at the end of the bar, while `online` is `false`. Its tooltip says the
+changes wait in the browser when there are any, and that the page is
+reconnecting otherwise.
+
 Its `lantern` shows a Tours button, a question mark at the end of the bar,
 while at least one tour is registered. With one tour, a click starts it. With
 several, it opens a menu listing them by title, with a check on the ones the
@@ -64,12 +70,14 @@ user already finished or skipped. A tour can end on
 interface EditorToolbarSourcesOptions {
   targets: EditorTargets | null;
   tags: EditorTags | null;
+  connectionStatus?: ConnectionStatus | null;
   lantern: Lantern;
 }
 
 class EditorToolbarSources {
   readonly targets: EditorTargets | null;
   readonly tags: EditorTags | null;
+  readonly connectionStatus: ConnectionStatus | null;
   readonly lantern: Lantern;
 
   constructor(options: EditorToolbarSourcesOptions);
@@ -81,7 +89,9 @@ class EditorToolbarSources {
 `mount` as `context.toolbar`. `targets` is `null` inside a shell, which picks
 the target itself, and for a share link. `tags` is `null` for a share link and
 for an offline workspace, whose in-memory event store loses tags on reload.
-`tags.viewing` is the tag of the launch.
+`tags.viewing` is the tag of the launch. `connectionStatus` is the session's
+[`connectionStatus`](./EditorSession.md#connectionstatus), `null` by default
+and off a server.
 
 `lantern` is the page's [`Lantern`](../../../../lantern/docs/Lantern.md). It
 outlives the editor, so `dispose()` leaves it alone.

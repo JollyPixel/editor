@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import { setTimeout } from "node:timers/promises";
 
 // Import Third-party Dependencies
+import { Emitter } from "@openally/emitt";
 import {
   Lantern,
   TargetPath,
@@ -26,7 +27,13 @@ import { REPLAY_TOUR_STEP } from "#src/lantern/replayTourStep.ts";
 import { EditorTargets } from "#src/session/EditorTargets.ts";
 import type { EditorTags } from "#src/session/EditorTags.ts";
 import { EditorToolbarSources } from "#src/session/EditorToolbarSources.ts";
-import { record } from "../helpers/rooms.ts";
+import { ConnectionStatus } from "#src/session/ConnectionStatus.ts";
+import { AssetLeases } from "#src/lease/AssetLeases.ts";
+import {
+  FakeClient,
+  fakeDocumentKind,
+  record
+} from "../helpers/rooms.ts";
 import {
   TAGGED_ASSET_ID,
   assetTag,
@@ -93,6 +100,45 @@ describe("EditorToolbar", () => {
   test("hides itself when the session offers neither targets nor tags", async() => {
     const element = await mount(null, null);
 
+    assert.ok(element.hasAttribute("empty"));
+  });
+
+  test("shows Offline while the server is unreachable, and says when changes wait", async() => {
+    const client = Object.assign(
+      new Emitter<{ ready: () => void; disconnected: () => void; }>(),
+      { ready: true }
+    );
+    const assets = new AssetLeases({
+      rooms: new FakeClient(),
+      records: {
+        record: (assetId) => record(assetId, "pixelart")
+      }
+    });
+    const kind = fakeDocumentKind("pixelart");
+    const element = document.createElement("jolly-editor-toolbar");
+    element.sources = new EditorToolbarSources({
+      targets: null,
+      tags: null,
+      connectionStatus: new ConnectionStatus({ client, changes: assets }),
+      lantern: new Lantern({ storage: new MemoryStorageAdapter() })
+    });
+    document.body.append(element);
+    await element.updateComplete;
+    assert.ok(element.hasAttribute("empty"));
+
+    client.emit("disconnected");
+    await element.updateComplete;
+    assert.ok(!element.hasAttribute("empty"));
+    assert.equal(query(element, ".offline")?.title, "Reconnecting to the server");
+
+    assets.open(kind, "tex");
+    kind.documents[0].changes.edit();
+    await element.updateComplete;
+    assert.match(query(element, ".offline")?.title ?? "", /kept in this browser/);
+
+    client.emit("ready");
+    await element.updateComplete;
+    assert.equal(query(element, ".offline"), null);
     assert.ok(element.hasAttribute("empty"));
   });
 

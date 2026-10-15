@@ -110,10 +110,27 @@ settled(signal?: AbortSignal): Promise<void>;
 
 `unsaved` is `true` while an open document has changes its server has not
 acknowledged. The `unsaved` event fires each time it flips. Releasing the last
-lease of such a document makes it `false` again: its changes go with it.
+lease of such a document makes it `false` again. Its changes are lost, except
+the [offline changes](#offline-changes) of a server session.
 `settled()` resolves once `unsaved` is `false`, at once when it already is.
 When `signal` aborts first, it rejects with `UnsettledChangesError`, whose
 `cause` is the signal's reason.
+
+## Offline changes
+
+On a server session, each current-version document keeps its unacknowledged
+changes in IndexedDB until the server answers them, through
+[`pendingChanges.keepIn()`](../../../../network/docs/client/CommandSync.md#keepin-outbox-void).
+A page that closes or reloads with changes still pending leaves them there.
+The next page claims them when its session opens; when it opens the same
+asset, it replays them over its first snapshot and sends them. Releasing and
+reopening an asset in the same page picks up its changes the same way.
+
+- A page never takes the changes of another page that is still open.
+- Tag views, offline, shared-tab and peer workspaces keep nothing.
+- A change the server applied but whose answer was lost with the page is
+  skipped, as long as the server still remembers the closed page's client.
+  After a server restart it is sent again.
 
 ## Errors
 

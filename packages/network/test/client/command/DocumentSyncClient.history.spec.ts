@@ -182,21 +182,4 @@ describe("CommandHistory over DocumentSyncClient", () => {
       [0, 0]
     );
   });
-
-  test("edits dropped past the offline bound refuse their step", () => {
-    const { harness, document, history } = setup();
-    harness.room.suspend();
-    history.record("main", "Fill", () => {
-      for (let index = 0; index <= 500; index++) {
-        document.set(`cell:${index}`, index);
-      }
-    });
-
-    harness.room.rejoin();
-    harness.admit("other");
-
-    assert.deepEqual(history.state("main").refused, [
-      { label: "Fill", refused: { reason: "dropped" } }
-    ]);
-  });
 });

@@ -10,7 +10,7 @@ flowchart TB
     History -->|"change · refused · skipped"| Editor
     Document["HistorySource<br/>CommandDocument or custom"] -->|"change · reset"| History
     History -->|"applyStep(command, basis)"| Document
-    Sync["Sync client"] -->|"confirm · refuse · discard"| Receipts["ChangeReceipts"]
+    Sync["Sync client"] -->|"confirm · refuse"| Receipts["ChangeReceipts"]
     Receipts --> History
 ```
 
@@ -81,7 +81,6 @@ Every check passes or the whole step is skipped. Redo is the same with the stack
 | --- | --- |
 | `confirmed(change, version)` | the change stops waiting; `basis` becomes the newest version |
 | `refused(change)` | refused as `server` |
-| `discarded()` | every step still pending on that document is refused as `dropped` |
 
 See the [API docs](./README.md#-api) and the [glossary](./GLOSSARY.md) for
 details.

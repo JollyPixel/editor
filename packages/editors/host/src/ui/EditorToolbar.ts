@@ -20,6 +20,7 @@ import type { AssetTag } from "@jolly-pixel/asset-server/client";
 import type { Lantern } from "@jolly-pixel/lantern";
 
 // Import Internal Dependencies
+import type { ConnectionStatus } from "../session/ConnectionStatus.ts";
 import type { EditorTags } from "../session/EditorTags.ts";
 import type { EditorTargets } from "../session/EditorTargets.ts";
 import type { EditorToolbarSources } from "../session/EditorToolbarSources.ts";
@@ -155,6 +156,19 @@ export class EditorToolbar extends LitElement {
       white-space: nowrap;
     }
 
+    .offline {
+      --jolly-icon-size: 12px;
+
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      gap: var(--jolly-space-1, 4px);
+      margin-inline-start: auto;
+      color: var(--jolly-warning, #e0a43a);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
     .tours {
       --jolly-icon-button-size: var(--jolly-row-height, 20px);
 
@@ -196,7 +210,8 @@ export class EditorToolbar extends LitElement {
         margin-inline-end: 0;
       }
 
-      .read-only .label {
+      .read-only .label,
+      .offline .label {
         display: none;
       }
 
@@ -212,6 +227,7 @@ export class EditorToolbar extends LitElement {
 
   #assetSelect: AssetSelect | null = null;
   #tours: Lantern | null = null;
+  #offline: ConnectionStatus | null = null;
 
   #sources = new SubscriptionController<EditorToolbarSources | null>(
     this,
@@ -223,6 +239,7 @@ export class EditorToolbar extends LitElement {
       return [
         ...this.#repaintOn(sources?.targets ?? null),
         ...this.#repaintOn(sources?.tags ?? null),
+        ...this.#repaintOn(sources?.connectionStatus ?? null),
         ...this.#repaintOn(sources?.lantern ?? null)
       ];
     }
@@ -245,12 +262,23 @@ export class EditorToolbar extends LitElement {
   }
 
   protected override willUpdate(): void {
-    const { targets = null, tags = null, lantern = null } = this.sources ?? {};
+    const {
+      targets = null,
+      tags = null,
+      connectionStatus = null,
+      lantern = null
+    } = this.sources ?? {};
     this.#assetSelect = targets === null ? null : assetSelect(targets);
     this.#tours = lantern !== null && lantern.size > 0 ? lantern : null;
+    this.#offline = connectionStatus?.online === false ?
+      connectionStatus :
+      null;
     this.toggleAttribute(
       "empty",
-      this.#assetSelect === null && tags === null && this.#tours === null
+      this.#assetSelect === null &&
+      tags === null &&
+      this.#tours === null &&
+      this.#offline === null
     );
   }
 
@@ -264,6 +292,7 @@ export class EditorToolbar extends LitElement {
           nothing :
           this.#renderTargets(this.#assetSelect)}
         ${tags === null ? nothing : this.#renderVersions(tags)}
+        ${this.#offline === null ? nothing : this.#renderOffline(this.#offline)}
         ${this.error === null ?
           nothing :
           html`<span class="error" role="alert" title=${this.error}>${this.error}</span>`}
@@ -412,6 +441,22 @@ export class EditorToolbar extends LitElement {
             ></jolly-button>
           `}
       </div>
+    `;
+  }
+
+  #renderOffline(
+    connection: ConnectionStatus
+  ): TemplateResult {
+    const title = connection.unsaved ?
+      "Your changes are kept in this browser and sent once the server is back" :
+      "Reconnecting to the server";
+
+    return html`
+      <span
+        class="offline"
+        role="status"
+        title=${title}
+      ><jolly-icon name="offline"></jolly-icon><span class="label">Offline</span></span>
     `;
   }
 

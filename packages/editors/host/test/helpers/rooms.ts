@@ -10,6 +10,7 @@ import type {
 } from "@jolly-pixel/asset";
 import { Emitter } from "@openally/emitt";
 import type {
+  ChangeOutbox,
   PendingChanges,
   Peer,
   PeerMetadata,
@@ -151,6 +152,13 @@ export class FakePendingChanges extends Emitter<{
   unsettled: () => void;
 }> implements PendingChanges {
   pending = 0;
+  outbox: ChangeOutbox | null = null;
+
+  keepIn(
+    outbox: ChangeOutbox
+  ): void {
+    this.outbox = outbox;
+  }
 
   edit(): void {
     this.pending++;

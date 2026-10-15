@@ -149,6 +149,7 @@ stateDiagram-v2
 - Opening with another document kind, or with a kind after `openRoom`, throws `AssetDocumentConflictError`.
 - Kinds compare by identity: reuse the objects from `Editor.kinds`.
 - `release()` is idempotent per holder. `AssetLeases.dispose()` closes everything.
+- On a server connection, `PendingOutboxes` claims the records of closed pages (no live Web Lock) at open, then gives each current-version document an in-memory, write-through outbox before it joins. Records are keyed by command object, not position.
 
 ## Switching target or tag
 

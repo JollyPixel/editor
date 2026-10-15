@@ -9,7 +9,6 @@ const detach = document.receipts.attach();
 
 document.receipts.confirm(change, 12);
 document.receipts.refuse(change);
-document.receipts.discard();
 
 detach();
 ```
@@ -34,10 +33,6 @@ Emits `confirmed`. `version` is `number | undefined`.
 
 Emits `refused`.
 
-### discard(): void
-
-Emits `discarded`: every change still waiting is lost.
-
 ## Events
 
 ### confirmed
@@ -50,10 +45,4 @@ Emits `discarded`: every change still waiting is lost.
 
 ```ts
 (change: TChange) => void
-```
-
-### discarded
-
-```ts
-() => void
 ```

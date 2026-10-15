@@ -17,6 +17,7 @@ import type { ShellChannel } from "../launch/ShellChannel.ts";
 import { LastOpenedLaunchSource } from "../launch/sources/LastOpenedLaunchSource.ts";
 import type { AssetRoomLease } from "../lease/AssetLease.ts";
 import type { AssetLeases } from "../lease/AssetLeases.ts";
+import type { ConnectionStatus } from "../session/ConnectionStatus.ts";
 import {
   EditorTags,
   type EditorTagsCatalog
@@ -35,6 +36,7 @@ export interface PlacedSession {
   readonly catalog: EditorTargetsCatalog & EditorTagsCatalog;
   readonly workspace: SessionWorkspace | null;
   readonly assets: Pick<AssetLeases, "unsaved">;
+  readonly connectionStatus: ConnectionStatus | null;
   readonly target: Pick<AssetRoomLease, "record">;
 }
 
@@ -118,6 +120,7 @@ export class Placement {
           unsaved: () => assets.unsaved,
           navigator
         }),
+      connectionStatus: session.connectionStatus,
       lantern
     });
   }

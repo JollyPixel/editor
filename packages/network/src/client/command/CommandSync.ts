@@ -56,9 +56,22 @@ export interface CommandSyncOptions<
 
 export type PendingChangesEvent = "settled" | "unsettled";
 
+export interface ChangeOutbox {
+  restore(): readonly NetworkCommandHeader[];
+  keep(
+    command: NetworkCommandHeader
+  ): void;
+  drop(
+    command: NetworkCommandHeader
+  ): void;
+}
+
 export interface PendingChanges {
   readonly pending: number;
 
+  keepIn(
+    outbox: ChangeOutbox
+  ): void;
   on(
     event: PendingChangesEvent,
     listener: () => void
@@ -81,8 +94,6 @@ export type CommandSyncEventMap<
   notice: (notice: TNotice) => void;
   settled: () => void;
   unsettled: () => void;
-  overflow: () => void;
-  discarded: () => void;
   acknowledged: (command: TCommand, version: number | undefined) => void;
   /**
    * Its local effect is already rolled back.
@@ -172,20 +183,11 @@ export class CommandSync<
     const previous = this.#clientId;
     this.#clientId = this.room.clientId;
     if (previous !== null && previous !== this.#clientId) {
-      if (!this.#ledger.overflowed) {
-        this.#resumingFrom = previous;
-
-        return;
-      }
-
-      this.#ledger.clear();
-      this.#refusedOnSnapshot = [];
-      this.emit("discarded");
-      this.emit("settled");
-      this.#receipts?.discard();
+      this.#resumingFrom ??= previous;
     }
-
-    this.#transmitHeld();
+    if (this.#resumingFrom === null) {
+      this.#transmitHeld();
+    }
   };
 
   constructor(
@@ -201,7 +203,8 @@ export class CommandSync<
       reconciler: options.reconciler ?? null,
       resolver: options.resolver ?? new LastWriteWinsResolver(),
       apply: (command) => this.emit("command", command),
-      resync: () => this.#resync()
+      resync: () => this.#resync(),
+      unreplayable: (entry) => this.#discard(entry)
     });
     this.#applySnapshot = options.applySnapshot ?? null;
     this.#receipts = options.receipts ?? null;
@@ -226,12 +229,23 @@ export class CommandSync<
     return this.#version;
   }
 
-  get overflowed(): boolean {
-    return this.#ledger.overflowed;
-  }
-
   whenReady(): Promise<void> {
     return this.#whenReady.promise;
+  }
+
+  keepIn(
+    outbox: ChangeOutbox
+  ): void {
+    if (this.#clientId !== null || this.#ledger.size > 0) {
+      throw new Error("Keep pending changes in an outbox before joining.");
+    }
+
+    this.#ledger.keepIn(outbox);
+    const sent = this.#ledger.entries.find((entry) => entry.sent);
+    this.#resumingFrom = sent?.command.clientId ?? null;
+    if (this.#ledger.size > 0) {
+      this.emit("unsettled");
+    }
   }
 
   send(
@@ -251,14 +265,11 @@ export class CommandSync<
       applied: true
     };
     const settled = this.#ledger.size === 0;
+    this.#ledger.add(entry);
     if (this.room.clientId !== null && this.#resumingFrom === null) {
-      this.#ledger.add(entry);
       this.#transmit(entry);
     }
-    else if (!this.#ledger.overflowed && this.#ledger.hold(entry, body)) {
-      this.emit("overflow");
-    }
-    if (settled && this.#ledger.size > 0) {
+    if (settled) {
       this.emit("unsettled");
     }
 
@@ -287,14 +298,15 @@ export class CommandSync<
   }
 
   #resume(): NetworkResume | undefined {
-    if (this.#clientId === null || this.#ledger.overflowed) {
+    const clientId = this.#resumingFrom ?? this.#clientId;
+    if (clientId === null) {
       return undefined;
     }
 
-    return this.#resyncing ?
-      { clientId: this.#clientId } :
+    return this.#resyncing || this.#clientId === null ?
+      { clientId } :
       {
-        clientId: this.#clientId,
+        clientId,
         version: this.#version
       };
   }
@@ -308,11 +320,7 @@ export class CommandSync<
   #transmit(
     entry: LedgerEntry<TCommand>
   ): void {
-    Object.assign(entry.command, {
-      clientId: this.room.clientId,
-      seq: ++this.#seq
-    });
-    entry.sent = true;
+    this.#ledger.markSent(entry, this.room.clientId, ++this.#seq);
     this.room.send({ ...entry.command });
   }
 
@@ -320,6 +328,17 @@ export class CommandSync<
     this.#resumingFrom = null;
     this.#ledger.markUnsent();
     this.#transmitHeld();
+  }
+
+  #discard(
+    entry: LedgerEntry<TCommand>
+  ): void {
+    this.#ledger.discard(entry);
+    this.#noteSettled([entry]);
+    this.#refuse(entry.command);
+    if (!this.#resyncing) {
+      this.#resync();
+    }
   }
 
   #noteVersion(

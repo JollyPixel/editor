@@ -111,11 +111,9 @@ export class CommandHistory<
       this.#onConfirmed(change, version);
     };
     const onRefused = (change: AnyChange): void => this.#onRefused(change);
-    const onDiscarded = (): void => this.#onDiscarded(id);
     const { receipts } = registered.document;
     receipts.on("confirmed", onConfirmed);
     receipts.on("refused", onRefused);
-    receipts.on("discarded", onDiscarded);
     const releases = [
       registered.document.subscribe(
         "change",
@@ -127,8 +125,7 @@ export class CommandHistory<
         }
       }),
       () => receipts.off("confirmed", onConfirmed),
-      () => receipts.off("refused", onRefused),
-      () => receipts.off("discarded", onDiscarded)
+      () => receipts.off("refused", onRefused)
     ];
     this.#documents.set(id, {
       registration: registered,
@@ -513,20 +510,6 @@ export class CommandHistory<
     const owner = this.#takeOwner(change);
     if (owner?.basis.refuse(change) === true) {
       this.#reject(owner.step, { reason: "server" });
-    }
-  }
-
-  #onDiscarded(
-    documentId: string
-  ): void {
-    const dropped = [...this.#scopes].filter(
-      (step) => step.parts.get(documentId)?.basis.pending === true
-    );
-    for (const step of dropped) {
-      for (const link of step.lineage()) {
-        link.parts.get(documentId)?.basis.drop();
-      }
-      this.#reject(step, { reason: "dropped" });
     }
   }
 
