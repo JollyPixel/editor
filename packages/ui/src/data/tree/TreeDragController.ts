@@ -6,18 +6,14 @@ import type {
 
 // Import Internal Dependencies
 import {
-  canDrop,
-  resolveDepthDropTarget,
   resolveDropIndicatorRow,
-  resolveEdgeDropRows,
-  resolveEdgeDropTarget,
   resolveRowDropStyle,
-  resolveRowDropZone,
   type DropIndicatorRow,
   type FlatTreeRow,
   type RowDropStyle,
   type TreeSnapshot
 } from "./model.ts";
+import { TreeDrop } from "./TreeDrop.ts";
 import {
   idleTreeInteraction,
   samePointerDropPreview,
@@ -26,8 +22,7 @@ import {
 } from "./interaction.ts";
 import {
   emitDataEvent,
-  type TreeDropAccept,
-  type TreeNode
+  type TreeDropAccept
 } from "./contract.ts";
 import {
   startPointerDragSession,
@@ -41,7 +36,6 @@ const kDefaultIndent = 16;
 const kDraggingClass = "jolly-tree-dragging";
 
 export interface TreeDragOptions<TData> {
-  nodes(): TreeNode<TData>[];
   snapshot(): TreeSnapshot<TData>;
   visibleRows(): readonly FlatTreeRow<TData>[];
   selected(): string[];
@@ -170,13 +164,7 @@ export class TreeDragController<TData> implements ReactiveController {
     }
 
     const { movedIds, cursorId, where } = moveState;
-    if (canDrop({
-      nodes: this.#options.nodes(),
-      movedIds,
-      targetId: cursorId,
-      where,
-      accept: this.#options.acceptDrop()
-    }, this.#options.snapshot())) {
+    if (this.#drop(movedIds).allows(cursorId, where)) {
       emitDataEvent(this.#host, "jolly-reparent", { movedIds, targetId: cursorId, where });
     }
   }
@@ -222,50 +210,47 @@ export class TreeDragController<TData> implements ReactiveController {
     });
   }
 
+  #drop(
+    movedIds: string[]
+  ): TreeDrop<TData> {
+    return new TreeDrop({
+      snapshot: this.#options.snapshot(),
+      rows: this.#options.visibleRows(),
+      movedIds,
+      accept: this.#options.acceptDrop()
+    });
+  }
+
   #previewDrop(
     clientX: number,
     clientY: number,
     movedIds: string[]
   ): void {
-    const rows = this.#options.visibleRows();
     const target = this.#options.elementAtPoint(clientX, clientY);
-    const rowElement = target instanceof Element ? target.closest<HTMLElement>(".row") : null;
-    if (rowElement === null) {
-      this.#setPointerPreview(this.#resolveEdgeDrop(rows, clientY, movedIds));
-
-      return;
-    }
-
-    const targetId = rowElement.dataset.id;
-    if (targetId === undefined) {
+    const rowElement = target instanceof Element ?
+      target.closest<HTMLElement>(".row") :
+      null;
+    const rowId = rowElement?.dataset.id;
+    if (rowElement !== null && rowId === undefined) {
       this.#setPointerPreview(null);
 
       return;
     }
 
-    const rect = rowElement.getBoundingClientRect();
-    const where = resolveRowDropZone(rect, clientY);
-    if (where !== "inside") {
-      const { firstRow, lastRow } = resolveEdgeDropRows(rows, movedIds, this.#options.snapshot());
-      const edgeRow = where === "below" ? lastRow : firstRow;
-      if (edgeRow !== undefined && targetId === edgeRow.node.id) {
-        this.#setPointerPreview(
-          this.#resolveDepthDrop(edgeRow, clientX, movedIds, where)
-        );
-
-        return;
-      }
-    }
-
-    this.#setPointerPreview(canDrop({
-      nodes: this.#options.nodes(),
-      movedIds,
-      targetId,
-      where,
-      accept: this.#options.acceptDrop()
-    }, this.#options.snapshot()) ?
-      { targetId, where, anchorId: targetId } :
-      null);
+    const rect = rowElement?.getBoundingClientRect();
+    this.#setPointerPreview(this.#drop(movedIds).resolve({
+      clientX,
+      clientY,
+      row: rect === undefined || rowId === undefined ?
+        null :
+        {
+          id: rowId,
+          top: rect.top,
+          height: rect.height
+        },
+      container: this.#options.rowsRect(),
+      indentUnit: this.#options.indentUnit() || kDefaultIndent
+    }));
   }
 
   #setPointerPreview(
@@ -283,47 +268,5 @@ export class TreeDragController<TData> implements ReactiveController {
       ...interaction,
       preview
     });
-  }
-
-  #resolveEdgeDrop(
-    rows: readonly FlatTreeRow<TData>[],
-    clientY: number,
-    movedIds: string[]
-  ): TreePointerDropPreview | null {
-    const containerTop = this.#options.rowsRect()?.top;
-    const isAboveEverything = containerTop !== undefined && clientY < containerTop;
-
-    return resolveEdgeDropTarget({
-      nodes: this.#options.nodes(),
-      movedIds,
-      rows,
-      where: isAboveEverything ? "above" : "below",
-      accept: this.#options.acceptDrop()
-    }, this.#options.snapshot());
-  }
-
-  #resolveDepthDrop(
-    row: FlatTreeRow<TData>,
-    clientX: number,
-    movedIds: string[],
-    where: "above" | "below"
-  ): TreePointerDropPreview | null {
-    const containerLeft = this.#options.rowsRect()?.left;
-    if (containerLeft === undefined) {
-      return null;
-    }
-
-    const target = resolveDepthDropTarget({
-      nodes: this.#options.nodes(),
-      movedIds,
-      rowId: row.node.id,
-      clientX,
-      containerLeft,
-      indentUnit: this.#options.indentUnit() || kDefaultIndent,
-      where,
-      accept: this.#options.acceptDrop()
-    }, this.#options.snapshot());
-
-    return target === null ? null : { ...target, anchorId: row.node.id };
   }
 }

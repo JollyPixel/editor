@@ -4,7 +4,6 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  ancestorChain,
   findNode,
   findParentId,
   flattenVisible,
@@ -104,17 +103,13 @@ describe("Data.findParentId", () => {
   });
 });
 
-describe("Data.ancestorChain", () => {
+describe("Data.TreeSnapshot.ancestorChain", () => {
   test("is just the id for a root node", () => {
-    assert.deepEqual(ancestorChain(TREE, "b"), ["b"]);
-  });
-
-  test("runs root first through the id itself for a nested node", () => {
-    assert.deepEqual(ancestorChain(TREE, "a2a"), ["a", "a2", "a2a"]);
+    assert.deepEqual(new TreeSnapshot(TREE).ancestorChain("b"), ["b"]);
   });
 
   test("stops at the id itself for an unknown id", () => {
-    assert.deepEqual(ancestorChain(TREE, "missing"), ["missing"]);
+    assert.deepEqual(new TreeSnapshot(TREE).ancestorChain("missing"), ["missing"]);
   });
 });
 

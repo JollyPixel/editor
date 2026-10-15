@@ -42,8 +42,9 @@ keyboard move, the same as a pane grip. Along its own strip the dragged tab
 follows the pointer and the other tabs slide aside; once the pointer leaves the
 strip they slide back and the dock layout shows its drop zones.
 
-`occupiedSize(axis)`, `tabsRect()`, `tabCandidates()` and `tabLine(index)`
-serve drop resolution. `liftTab(pane, pointer)` returns the `SlidingReorder`
+`occupiedSize(axis)` and `dragStack(slot, pane, lifted)` serve drop
+resolution: the second returns the drop target of the tab strip.
+`liftTab(pane, pointer)` returns the `SlidingReorder`
 that slides the strip while that pane's tab is dragged, or `null` when the
 pane is not in the group. `panes()` returns the slotted panes and `activePane()`
 the shown one. The component exposes `tabs`, `tab`, `tab-selected`, `tab-icon`,

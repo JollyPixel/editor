@@ -225,7 +225,6 @@ export class Tree<TData = unknown> extends LitElement
     this.#snapshot = new TreeSnapshot(this.nodes);
     this.#layout = new TreeRowLayout(this.#snapshot, this.#expandedIds);
     this.#drag = new TreeDragController(this, {
-      nodes: () => this.nodes,
       snapshot: () => this.#snapshot,
       visibleRows: () => this.#visibleRows(),
       selected: () => this.selected,

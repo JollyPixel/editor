@@ -16,8 +16,9 @@
 | `variant` | `"default" \| "skew"` | `"default"` |
 | `reorderable` | `boolean` | `false` |
 
-An absent, disabled, or unknown value selects the first enabled tab, once
-the tabs are slotted; a value set before that is kept as requested. A tab
+An absent, disabled, or unknown value selects the first enabled tab, or the
+first tab when every tab is disabled, once the tabs are slotted; a value set
+before that is kept as requested. A tab
 appended in the same turn as the value selecting it is picked up before the
 next render, so it stays selected. User
 selection emits `jolly-tab-change` with `{ value }`. Home, End, and the arrow

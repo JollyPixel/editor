@@ -20,11 +20,7 @@ import type {
   TabStatus
 } from "./Tab.ts";
 import { tabsStyles } from "./Tabs.styles.ts";
-import {
-  tabDropTarget,
-  tabSegment
-} from "./tabReorder.ts";
-import { nextEnabledIndex } from "../../controls/roving.ts";
+import { TabStrip } from "./TabStrip.ts";
 import { isButtonElement } from "../../dom.ts";
 import { resolveDropIndex } from "../../interaction/drag/dropIndex.ts";
 import {
@@ -220,7 +216,7 @@ export class Tabs extends LitElement {
   ): void {
     this.#refreshTabs();
     if (changed.has("value") || changed.has("_tabs")) {
-      this.value = this.#resolveValue();
+      this.value = this.#strip().active(this.value);
     }
   }
 
@@ -250,19 +246,14 @@ export class Tabs extends LitElement {
     this._tabs = tabs;
   }
 
-  #resolveValue(): string {
-    if (this._tabs.length === 0) {
-      return this.value;
-    }
-
-    const requested = this._tabs.find(
-      (tab) => tab.value === this.value && !tab.disabled
-    );
-    const selected = requested ?? this._tabs.find(
-      (tab) => !tab.disabled
-    );
-
-    return selected?.value ?? "";
+  #strip(): TabStrip {
+    return new TabStrip(this._tabs.map((tab) => {
+      return {
+        key: tab.value,
+        disabled: tab.disabled,
+        fixed: tab.fixed
+      };
+    }));
   }
 
   #synchroniseTabs(): void {
@@ -291,10 +282,8 @@ export class Tabs extends LitElement {
 
     const from = Number(event.currentTarget.dataset.index);
     const tab = this._tabs[from];
-    const segment = tabSegment(
-      this._tabs.map((candidate) => candidate.fixed),
-      from
-    );
+    const strip = this.#strip();
+    const segment = strip.segment(from);
     const items = [
       ...this.renderRoot.querySelectorAll<HTMLElement>(".item")
     ];
@@ -346,7 +335,7 @@ export class Tabs extends LitElement {
         }
 
         const index = settlement === "commit" && current !== null ?
-          tabDropTarget(segment, from, current) :
+          strip.dropTarget(from, current) :
           null;
         void reorder.settle(() => {
           if (index !== null) {
@@ -460,28 +449,11 @@ export class Tabs extends LitElement {
     const current = this._tabs.findIndex(
       (tab) => tab.value === this.value
     );
-    const enabled = this._tabs.map((tab) => !tab.disabled);
-    let next = -1;
-    if (event.key === "Home") {
-      next = enabled.indexOf(true);
-    }
-    else if (event.key === "End") {
-      next = enabled.lastIndexOf(true);
-    }
-    else {
-      const backward = this.orientation === "horizontal" ?
-        "ArrowLeft" :
-        "ArrowUp";
-      const forward = this.orientation === "horizontal" ?
-        "ArrowRight" :
-        "ArrowDown";
-      if (event.key === backward) {
-        next = nextEnabledIndex(enabled, current, -1);
-      }
-      else if (event.key === forward) {
-        next = nextEnabledIndex(enabled, current, 1);
-      }
-    }
+    const next = this.#strip().navigate(
+      event.key,
+      current,
+      this.orientation
+    );
     if (next === -1) {
       return;
     }

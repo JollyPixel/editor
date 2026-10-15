@@ -62,17 +62,16 @@ that width equally: the resize handle stays on the inner edge and moves with
 it, and `minSize` and `maxSize` apply to each column. The primary column
 stays against the edge. `double` is ignored on top and bottom docks.
 
-`slots(column?)`, `dropZone(column?)`, `previewZone(column?)`,
-`dropCandidates(column?)`, `dropStacks(pane, column?, lifted?)` and
-`insertionLine(index, column?)` take `"primary"` (the default) or
-`"secondary"`; `slots()` without a column returns both, primary first.
-Given the `SlidingReorder` of a lifted tab, `dropStacks` previews drops on
-that tab's own strip live, and the strip keeps the tab until the pointer
-strays 16px above or below it.
-`acceptsSecondary(pane)` tells whether a dragged pane can open or join the
-second column: the dock must be `double`, expanded, and hold another slot.
-Until the column is open, its drop zone is a 48px band just past the inner
-edge.
+`slots(column?)` takes `"primary"` or `"secondary"`; without a column it
+returns both, primary first.
+
+`dragZones(pane, lifted?)` returns the drop zones a dragged pane can use,
+one per column, each tagged with its `column`. A dock with `drop="none"`
+returns none. The second column is offered when the dock is `double`,
+expanded, and holds another slot; until it opens, its zone is a 48px band
+just past the inner edge. Given the `SlidingReorder` of a lifted tab, the
+zones preview drops on that tab's own strip live, and the strip keeps the
+tab until the pointer strays 16px above or below it.
 
 By default each pane of a dock is its own
 [toned area](./pane.md), so the two columns of a split dock can show two hues.

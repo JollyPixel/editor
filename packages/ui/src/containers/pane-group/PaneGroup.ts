@@ -22,10 +22,7 @@ import {
   type PaneMoveCommand
 } from "../pane/Pane.ts";
 import { paneGroupStyles } from "./PaneGroup.styles.ts";
-import {
-  resolveActiveTab,
-  tabNavigationTarget
-} from "./tabSelection.ts";
+import { TabStrip } from "../tabs/TabStrip.ts";
 import {
   naturalTabsWidth,
   tabLabelsFit,
@@ -33,11 +30,17 @@ import {
 } from "./tabCompaction.ts";
 import { revealOverflowTitle } from "../../interaction/overflowTitle.ts";
 import type { Rect } from "../../geometry/Rect.ts";
-import { horizontalInsertionLine } from "../../interaction/drag/DragSession.ts";
+import {
+  horizontalInsertionLine,
+  type DragStack
+} from "../../interaction/drag/DragSession.ts";
 import type { DropCandidate } from "../../interaction/drag/dropIndex.ts";
 import { SlidingReorder } from "../../interaction/drag/SlidingReorder.ts";
 import { hiddenStyles } from "../../theme/styles/hiddenStyles.ts";
 import type { IconTone } from "../../icon/registry.ts";
+
+// CONSTANTS
+const kDetachDistance = 16;
 
 @customElement("jolly-pane-group")
 export class PaneGroup extends LitElement {
@@ -141,7 +144,7 @@ export class PaneGroup extends LitElement {
   }
 
   protected override willUpdate(): void {
-    this.active = this.#resolveActive();
+    this.active = this.#strip(this.panes()).active(this.active);
   }
 
   protected override updated(
@@ -179,36 +182,38 @@ export class PaneGroup extends LitElement {
     return axis === "y" ? rect.height : rect.width;
   }
 
-  tabsRect(): Rect {
-    const rect = (this._tabs ?? this).getBoundingClientRect();
+  dragStack(
+    slot: number,
+    dragged: PaneElement,
+    lifted: SlidingReorder | null
+  ): DragStack {
+    const source = this.panes().indexOf(dragged);
+    const rect = this.#tabsRect();
+    if (source === -1 || lifted === null) {
+      return {
+        slot,
+        rect,
+        candidates: this.#tabCandidates(),
+        source: source === -1 ? null : source,
+        line: (index) => horizontalInsertionLine(
+          this.#tabsRect(),
+          this.#tabCandidates(),
+          index
+        )
+      };
+    }
 
     return {
-      x: rect.x,
-      y: rect.y,
-      width: rect.width,
-      height: rect.height
+      slot,
+      rect: {
+        ...rect,
+        y: rect.y - kDetachDistance,
+        height: rect.height + (2 * kDetachDistance)
+      },
+      candidates: lifted.candidates,
+      source,
+      live: lifted
     };
-  }
-
-  tabCandidates(): DropCandidate[] {
-    return this.#tabButtons().map((button) => {
-      const rect = button.getBoundingClientRect();
-
-      return {
-        start: rect.x,
-        size: rect.width
-      };
-    });
-  }
-
-  tabLine(
-    index: number
-  ): Rect {
-    return horizontalInsertionLine(
-      this.tabsRect(),
-      this.tabCandidates(),
-      index
-    );
   }
 
   markDragging(
@@ -296,14 +301,43 @@ export class PaneGroup extends LitElement {
     this._compact = !tabLabelsFit(naturalWidth, tabs.clientWidth);
   }
 
+  #tabsRect(): Rect {
+    const rect = (this._tabs ?? this).getBoundingClientRect();
+
+    return {
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height
+    };
+  }
+
+  #tabCandidates(): DropCandidate[] {
+    return this.#tabButtons().map((button) => {
+      const rect = button.getBoundingClientRect();
+
+      return {
+        start: rect.x,
+        size: rect.width
+      };
+    });
+  }
+
   #tabButtons(): HTMLButtonElement[] {
     return [
       ...this.renderRoot.querySelectorAll<HTMLButtonElement>(".tab")
     ];
   }
 
-  #resolveActive(): string {
-    return resolveActiveTab(this.panes(), this.active);
+  #strip(
+    panes: readonly PaneElement[]
+  ): TabStrip {
+    return new TabStrip(panes.map((pane) => {
+      return {
+        key: pane.layoutKey,
+        disabled: pane.disabled
+      };
+    }));
   }
 
   #onSlotChange = () => {
@@ -377,7 +411,7 @@ export class PaneGroup extends LitElement {
       return;
     }
 
-    const next = tabNavigationTarget(this._panes, event.key, current);
+    const next = this.#strip(this._panes).navigate(event.key, current);
     if (next === -1) {
       return;
     }

@@ -4,6 +4,7 @@ import type {
   TreeDropWhere,
   TreeNode
 } from "./contract.ts";
+import { TreeDrop } from "./TreeDrop.ts";
 
 export interface FlatTreeRow<TData = unknown> {
   node: TreeNode<TData>;
@@ -39,22 +40,6 @@ export interface ReparentMove {
   id: string;
   parentId: string | null;
   beforeId?: string;
-}
-
-export interface ResolveDepthDropOptions<TData> {
-  nodes: TreeNode<TData>[];
-  movedIds: string[];
-  rowId: string;
-  clientX: number;
-  containerLeft: number;
-  indentUnit: number;
-  where: "above" | "below";
-  accept?: TreeDropAccept | null;
-}
-
-export interface DepthDropTarget {
-  targetId: string;
-  where: TreeDropWhere;
 }
 
 export interface TreePlacement {
@@ -268,15 +253,6 @@ export function findParentId<TData>(
   ).parentId(id);
 }
 
-export function ancestorChain<TData>(
-  nodes: readonly TreeNode<TData>[],
-  id: string
-): string[] {
-  return new TreeSnapshot(
-    nodes
-  ).ancestorChain(id);
-}
-
 export function isSelfOrDescendant<TData>(
   nodes: readonly TreeNode<TData>[],
   ancestorId: string,
@@ -392,191 +368,29 @@ export function resolveRowDropZone(
   rectOrOffset: Pick<DOMRect, "top" | "height"> | number,
   clientYOrHeight: number
 ): TreeDropWhere {
-  const offsetY = typeof rectOrOffset === "number" ?
-    rectOrOffset :
-    clientYOrHeight - rectOrOffset.top;
-  const height = typeof rectOrOffset === "number" ?
-    clientYOrHeight :
-    rectOrOffset.height;
-  if (offsetY < height / 4) {
-    return "above";
-  }
-  if (offsetY > height * 3 / 4) {
-    return "below";
+  if (typeof rectOrOffset === "number") {
+    return TreeDrop.zone(
+      {
+        top: 0,
+        height: clientYOrHeight
+      },
+      rectOrOffset
+    );
   }
 
-  return "inside";
-}
-
-export function resolveDropDepth(
-  clientX: number,
-  containerLeft: number,
-  indentUnit: number,
-  chainLength: number
-): number {
-  const depth = Math.floor(
-    (clientX - containerLeft) / indentUnit
-  );
-
-  return Math.min(Math.max(depth, 0), chainLength - 1);
-}
-
-export function resolveEdgeDropRows<TData>(
-  rows: readonly FlatTreeRow<TData>[],
-  movedIds: readonly string[],
-  snapshot: TreeSnapshot<TData>
-): {
-  firstRow: FlatTreeRow<TData> | undefined;
-  lastRow: FlatTreeRow<TData> | undefined;
-} {
-  const moved = new Set(
-    movedIds.filter((id) => snapshot.node(id) !== null)
-  );
-
-  let first = 0;
-  while (first < rows.length && isMovedRow(rows[first], moved, snapshot)) {
-    first += 1;
-  }
-  if (first === rows.length) {
-    return {
-      firstRow: undefined,
-      lastRow: undefined
-    };
-  }
-
-  let last = rows.length - 1;
-  while (last > first && isMovedRow(rows[last], moved, snapshot)) {
-    last -= 1;
-  }
-
-  return {
-    firstRow: rows[first],
-    lastRow: rows[last]
-  };
-}
-
-function isMovedRow<TData>(
-  row: FlatTreeRow<TData>,
-  moved: ReadonlySet<string>,
-  snapshot: TreeSnapshot<TData>
-): boolean {
-  let id: string | null | undefined = row.node.id;
-  while (moved.size > 0 && typeof id === "string" && !moved.has(id)) {
-    id = snapshot.parentId(id);
-  }
-
-  return moved.size > 0 && typeof id === "string";
-}
-
-interface ResolveRootDropOptions<TData> {
-  nodes: TreeNode<TData>[];
-  movedIds: string[];
-  rowId: string;
-  where: "above" | "below";
-  accept?: TreeDropAccept | null;
-}
-
-function resolveRootDropTarget<TData>(
-  options: ResolveRootDropOptions<TData>,
-  snapshot = new TreeSnapshot(options.nodes)
-): DepthDropTarget | null {
-  const {
-    movedIds,
-    rowId,
-    where,
-    accept = null
-  } = options;
-  const targetId = snapshot.ancestorChain(rowId)[0];
-
-  return canDrop({
-    nodes: options.nodes,
-    movedIds,
-    targetId,
-    where,
-    accept
-  }, snapshot) ? {
-      targetId,
-      where
-    } :
-    null;
-}
-
-export interface ResolveEdgeDropOptions<TData> {
-  nodes: TreeNode<TData>[];
-  movedIds: string[];
-  rows: readonly FlatTreeRow<TData>[];
-  where: "above" | "below";
-  accept?: TreeDropAccept | null;
-}
-
-export function resolveEdgeDropTarget<TData>(
-  options: ResolveEdgeDropOptions<TData>,
-  snapshot = new TreeSnapshot(options.nodes)
-): DropIndicatorTarget | null {
-  const {
-    nodes,
-    movedIds,
-    rows,
-    where,
-    accept = null
-  } = options;
-  const edgeRow = where === "above" ? rows[0] : rows[rows.length - 1];
-  if (edgeRow === undefined) {
-    return null;
-  }
-
-  const direct = resolveRootDropTarget({ nodes, movedIds, rowId: edgeRow.node.id, where, accept }, snapshot);
-  if (direct !== null) {
-    return { ...direct, anchorId: edgeRow.node.id };
-  }
-
-  const { firstRow, lastRow } = resolveEdgeDropRows(rows, movedIds, snapshot);
-  const fallbackRow = where === "above" ? firstRow : lastRow;
-  if (fallbackRow === undefined) {
-    return null;
-  }
-
-  const fallback = resolveRootDropTarget({
-    nodes,
-    movedIds,
-    rowId: fallbackRow.node.id,
-    where,
-    accept
-  }, snapshot);
-  if (fallback === null) {
-    return null;
-  }
-
-  const anchorId = movedIds.includes(edgeRow.node.id) ? edgeRow.node.id : fallbackRow.node.id;
-
-  return { ...fallback, anchorId };
+  return TreeDrop.zone(rectOrOffset, clientYOrHeight);
 }
 
 export function canDrop<TData>(
-  options: ResolveReparentOptions<TData>,
-  snapshot = new TreeSnapshot(options.nodes)
+  options: ResolveReparentOptions<TData>
 ): boolean {
-  const {
-    movedIds,
-    targetId,
-    where,
-    accept = null
-  } = options;
-  if (movedIds.includes(targetId)) {
-    return false;
-  }
-
-  if (movedIds.some(
-    (movedId) => snapshot.isSelfOrDescendant(movedId, targetId)
-  )) {
-    return false;
-  }
-
-  return accept === null || accept({
-    movedIds,
-    targetId,
-    where
+  const drop = new TreeDrop({
+    snapshot: new TreeSnapshot(options.nodes),
+    movedIds: options.movedIds,
+    accept: options.accept
   });
+
+  return drop.allows(options.targetId, options.where);
 }
 
 export interface DropIndicatorRow {
@@ -620,41 +434,6 @@ export function resolveRowDropStyle(
     drop: dropIndicator.where,
     dropIndent: `calc(${dropIndicator.depth} * var(--jolly-tree-indent, 16px))`
   };
-}
-
-export function resolveDepthDropTarget<TData>(
-  options: ResolveDepthDropOptions<TData>,
-  snapshot = new TreeSnapshot(options.nodes)
-): DepthDropTarget | null {
-  const {
-    movedIds,
-    rowId,
-    clientX,
-    containerLeft,
-    indentUnit,
-    where,
-    accept = null
-  } = options;
-  const chain = snapshot.ancestorChain(rowId);
-  const depth = resolveDropDepth(
-    clientX,
-    containerLeft,
-    indentUnit,
-    chain.length
-  );
-  const targetId = chain[depth];
-
-  return canDrop({
-    nodes: options.nodes,
-    movedIds,
-    targetId,
-    where,
-    accept
-  }, snapshot) ? {
-      targetId,
-      where
-    } :
-    null;
 }
 
 export function resolveReparent<TData>(

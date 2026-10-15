@@ -32,7 +32,8 @@ import {
 import {
   horizontalInsertionLine,
   verticalInsertionLine,
-  type DragStack
+  type DragStack,
+  type DragZone
 } from "../../interaction/drag/DragSession.ts";
 import type { Rect } from "../../geometry/Rect.ts";
 import type { IconTone } from "../../icon/registry.ts";
@@ -49,13 +50,16 @@ import { hiddenStyles } from "../../theme/styles/hiddenStyles.ts";
 
 // CONSTANTS
 const kZoneBand = 48;
-const kDetachDistance = 16;
 const kHandleSize = "var(--jolly-dock-handle-size, 4px)";
 
 export type DockSide = "bottom" | "left" | "right" | "top";
 export type DockAlign = "end" | "start";
 export type DockDrop = "any" | "none" | "tabs";
 export type DockSlot = PaneElement | PaneGroup;
+
+export interface DockDragZone extends DragZone {
+  column: DockColumn;
+}
 
 @customElement("jolly-dock")
 export class Dock extends LitElement {
@@ -315,7 +319,36 @@ export class Dock extends LitElement {
     }
   }
 
-  acceptsSecondary(
+  dragZones(
+    dragged: PaneElement,
+    lifted: SlidingReorder | null = null
+  ): DockDragZone[] {
+    if (this.drop === "none") {
+      return [];
+    }
+
+    const columns: DockColumn[] = this.#acceptsSecondary(dragged) ?
+      ["secondary", "primary"] :
+      ["primary"];
+
+    return columns.map((column) => {
+      const source = this.slots(column).indexOf(dragged);
+
+      return {
+        id: `${this.layoutKey}:${column}`,
+        column,
+        rect: this.#dropZone(column),
+        candidates: this.#dropCandidates(column),
+        axis: this.axis,
+        source: source === -1 ? null : source,
+        line: (index: number) => this.#insertionLine(index, column),
+        stacks: this.#dropStacks(dragged, column, lifted),
+        preview: this.#previewZone(column)
+      };
+    });
+  }
+
+  #acceptsSecondary(
     dragged: PaneElement
   ): boolean {
     if (!this.splittable || this.collapsed) {
@@ -326,8 +359,8 @@ export class Dock extends LitElement {
       this.slots("primary").some((slot) => slot !== dragged);
   }
 
-  dropZone(
-    column: DockColumn = "primary"
+  #dropZone(
+    column: DockColumn
   ): Rect {
     if (column === "secondary") {
       return this.#secondaryZone();
@@ -368,8 +401,8 @@ export class Dock extends LitElement {
       };
   }
 
-  previewZone(
-    column: DockColumn = "primary"
+  #previewZone(
+    column: DockColumn
   ): Rect | undefined {
     const size = Math.min(Math.max(this.size, this.minSize), this.maxSize);
     if (column === "secondary") {
@@ -393,7 +426,7 @@ export class Dock extends LitElement {
       return undefined;
     }
 
-    const zone = this.dropZone();
+    const zone = this.#dropZone("primary");
     if (vertical) {
       return {
         x: this.side === "left" ? zone.x : zone.x + zone.width - size,
@@ -411,37 +444,17 @@ export class Dock extends LitElement {
     };
   }
 
-  dropStacks(
+  #dropStacks(
     dragged: PaneElement,
-    column: DockColumn = "primary",
-    lifted: SlidingReorder | null = null
+    column: DockColumn,
+    lifted: SlidingReorder | null
   ): DragStack[] {
     const stacks: DragStack[] = [];
     const slots = this.slots(column);
     for (let slot = 0; slot < slots.length; slot++) {
       const element = slots[slot];
       if (isPaneGroup(element)) {
-        const source = element.panes().indexOf(dragged);
-        const rect = element.tabsRect();
-        stacks.push(source === -1 || lifted === null ?
-          {
-            slot,
-            rect,
-            candidates: element.tabCandidates(),
-            source: source === -1 ? null : source,
-            line: (index) => element.tabLine(index)
-          } :
-          {
-            slot,
-            rect: {
-              ...rect,
-              y: rect.y - kDetachDistance,
-              height: rect.height + (2 * kDetachDistance)
-            },
-            candidates: lifted.candidates,
-            source,
-            live: lifted
-          });
+        stacks.push(element.dragStack(slot, dragged, lifted));
         continue;
       }
       if (element === dragged) {
@@ -474,7 +487,7 @@ export class Dock extends LitElement {
 
     const cells = slotCells(
       this.#viewport(),
-      this.dropCandidates(column),
+      this.#dropCandidates(column),
       this.axis
     );
 
@@ -486,8 +499,8 @@ export class Dock extends LitElement {
     });
   }
 
-  dropCandidates(
-    column: DockColumn = "primary"
+  #dropCandidates(
+    column: DockColumn
   ): DropCandidate[] {
     return this.slots(column).map((slot) => {
       const rect = slot.getBoundingClientRect();
@@ -505,12 +518,12 @@ export class Dock extends LitElement {
     });
   }
 
-  insertionLine(
+  #insertionLine(
     index: number,
-    column: DockColumn = "primary"
+    column: DockColumn
   ): Rect {
     const bounds = this.#insertionBounds(column);
-    const candidates = this.dropCandidates(column);
+    const candidates = this.#dropCandidates(column);
 
     return this.axis === "y" ?
       verticalInsertionLine(bounds, candidates, index) :
@@ -525,7 +538,7 @@ export class Dock extends LitElement {
       this.getBoundingClientRect();
     const thickness = this.axis === "y" ? rect.width : rect.height;
     if (thickness === 0) {
-      return this.previewZone(column) ?? this.dropZone(column);
+      return this.#previewZone(column) ?? this.#dropZone(column);
     }
 
     return {

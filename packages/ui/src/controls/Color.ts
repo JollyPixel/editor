@@ -136,7 +136,7 @@ export class Color extends JollyField<string> {
         class="hex"
         spellcheck="false"
         aria-label="Hex value"
-        .value=${this.draft ?? swatch ?? ""}
+        .value=${this.draftController.draft ?? swatch ?? ""}
         placeholder=${this.mixed ? MIXED_PLACEHOLDER : this.#placeholder}
         ?disabled=${this.disabled}
         ?readonly=${this.inputReadonly}
@@ -145,7 +145,7 @@ export class Color extends JollyField<string> {
         aria-disabled=${this.lockedAria}
         aria-description=${this.lockDescription}
         aria-invalid=${this.displayError === null ? nothing : "true"}
-        @input=${this.onDraftInput}
+        @input=${this.#onInput}
         @focus=${this.#pointerFocus.onFocus}
         @keydown=${this.#onKeyDown}
         @blur=${this.#onBlur}
@@ -233,12 +233,18 @@ export class Color extends JollyField<string> {
     return detail.value;
   }
 
+  #onInput(
+    event: Event
+  ): void {
+    this.draftController.onInput(event);
+  }
+
   #onKeyDown(
     event: KeyboardEvent
   ): void {
     this.#pointerFocus.onKeyDown();
 
-    this.onDraftKeyDown(
+    this.draftController.onKeyDown(
       event,
       () => this.#commit()
     );

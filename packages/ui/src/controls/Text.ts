@@ -36,7 +36,7 @@ export class Text extends JollyField<string> {
     return html`
       <input
         type="text"
-        .value=${this.draft ?? this.#displayed}
+        .value=${this.draftController.draft ?? this.#displayed}
         placeholder=${this.mixed ? MIXED_PLACEHOLDER : this.placeholder}
         ?disabled=${this.disabled}
         ?readonly=${this.inputReadonly}
@@ -69,7 +69,7 @@ export class Text extends JollyField<string> {
 
     const { value } = event.target;
 
-    this.setDraft(value);
+    this.draftController.setDraft(value);
     this.emitInput(value);
   }
 
@@ -84,7 +84,7 @@ export class Text extends JollyField<string> {
     else if (event.key === "Escape") {
       // Prevent outer dialogs from closing a canceled edit.
       event.stopPropagation();
-      this.clearDraft();
+      this.draftController.clear();
     }
   }
 
@@ -94,7 +94,7 @@ export class Text extends JollyField<string> {
   }
 
   #commit(): void {
-    const draft = this.draft;
+    const { draft } = this.draftController;
     if (draft === null) {
       return;
     }
@@ -103,7 +103,7 @@ export class Text extends JollyField<string> {
       draft === this.#displayed &&
       !this.mixed
     ) {
-      this.clearDraft();
+      this.draftController.clear();
 
       return;
     }
