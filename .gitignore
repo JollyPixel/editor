@@ -144,6 +144,7 @@ temp.mjs
 test-results/
 playwright-report/
 blob-report/
+perf-results/
 
 # Dev-server asset workspace seeded by the voxel-map editor
 packages/editors/voxel-map/assets/

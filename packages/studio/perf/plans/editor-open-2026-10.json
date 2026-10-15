@@ -1,0 +1,54 @@
+{
+  "editors": "voxel-map,voxel-model",
+  "modes": "online",
+  "phases": "cold,reload",
+  "variants": [
+    {
+      "label": "control"
+    },
+    {
+      "label": "prewarm",
+      "prewarm": true
+    },
+    {
+      "label": "lazy-audio",
+      "storage": {
+        "bench:lazy-audio": "1"
+      }
+    },
+    {
+      "label": "defer-library",
+      "storage": {
+        "bench:defer-library": "1"
+      }
+    },
+    {
+      "label": "lazy-metrics",
+      "storage": {
+        "bench:lazy-metrics": "1"
+      }
+    },
+    {
+      "label": "compile-async",
+      "storage": {
+        "bench:compile-async": "1"
+      }
+    },
+    {
+      "label": "glow-off",
+      "storage": {
+        "voxel-model:view": "{\"glow\":false}"
+      }
+    },
+    {
+      "label": "combined",
+      "prewarm": true,
+      "storage": {
+        "bench:lazy-audio": "1",
+        "bench:defer-library": "1",
+        "bench:lazy-metrics": "1",
+        "voxel-model:view": "{\"glow\":false}"
+      }
+    }
+  ]
+}

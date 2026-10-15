@@ -21,8 +21,11 @@
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "test:e2e": "playwright test",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p server/tsconfig.json && tsc --noEmit -p vite/tsconfig.json",
-    "lint": "oxlint src server test vite vite.config.ts && pnpm run lint:css",
+    "perf:open": "node perf/openEditors.ts",
+    "perf:ab": "node perf/abRun.ts",
+    "perf:summary": "node perf/summarize.ts",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p server/tsconfig.json && tsc --noEmit -p vite/tsconfig.json && tsc --noEmit -p perf/tsconfig.json",
+    "lint": "oxlint src server test vite perf vite.config.ts && pnpm run lint:css",
     "lint:css": "stylelint \"public/**/*.css\" --cache"
   },
   "repository": {
