@@ -9,10 +9,10 @@ One measurement is one double-click on an asset row, timed until the editor fram
 - `ready`: the frame's `<html data-editor-state>` turns `ready`, the state the tab spinner waits for.
 - `settled`: the end of the last long animation frame (over 50 ms) in the 4 s after `ready`. An editor can report `ready` and keep the main thread busy for another second; `settled` is when it stops.
 - `busy before ready` and `busy after ready`: the summed duration of long animation frames on either side of `ready`. Same-origin frames share the shell's main thread, so the shell's observer sees the frames' work too.
-- Boot steps: every `logger.step()` of `host.boot`, `host.session`, `editor.runtime` and the editor, from the `[DEBUG] [ns] <step> started|done` console lines that `jolly-pixel:debug=*` turns on. Steps run concurrently, so their durations overlap; read the `start` and `end` columns, not the sum.
+- Boot steps: every `logger.step()` of `host.boot`, `host.session`, `editor.runtime` and the editor, read from the `<namespace>:<step>` User Timing measures the step records in the frame. No debug flag is needed. Steps run concurrently, so their durations overlap; read the `start` and `end` columns, not the sum.
 - Transfer: the frame's Resource Timing entries (requests, transfer and decoded bytes) and the WebSocket bytes received after the click.
 
-The page probe ([`perf/pageProbe.ts`](../../perf/pageProbe.ts)) is an init script, so it runs in the shell and in every editor frame before their own code.
+The page probe ([`perf/harness/pageProbe.ts`](../../perf/harness/pageProbe.ts)) is an init script, so it runs in the shell and in every editor frame before their own code. An open whose shell recorded no `dblclick`, or whose frame never reported `ready`, fails and is left out of the results instead of counting as 0 ms.
 
 ## Phases
 
@@ -50,7 +50,7 @@ $ pnpm run perf:summary perf-results/baseline.json --steps --phase reload
 `perf:open` options:
 
 - `--editors voxel-map,voxel-model,pixel-art` and `--modes online,offline`: what to open. Online registers a new account per context; offline opens `/?offline`.
-- `--phases first,reopen,reload,cold`: `first` always runs.
+- `--phases reopen,reload,cold`: the phases measured after `first`, which always runs.
 - `--runs 6`: repetitions. Each run shuffles modes and editors and launches a new browser per editor.
 - `--label`: tags every measurement, for summaries that mix files.
 - `--storage '{"key":"value"}'`: `localStorage` entries written before any page script runs.
@@ -66,15 +66,15 @@ The browser window must stay visible: a hidden or minimized window stops `reques
 Laptop speed drifts with power and thermal state, so never compare two runs taken at different times. Compare variants inside one interleaved run:
 
 ```bash
-$ pnpm run perf:ab --plan perf/plans/editor-open-2026-10.json --rounds 5 --out perf-results/ab
-$ pnpm run perf:summary perf-results/ab --control control
+$ pnpm run perf:ab --plan perf/plans/editor-open-2026-10.json --rounds 5 --out perf-results/ab.json
+$ pnpm run perf:summary perf-results/ab.json --control control
 ```
 
-[`perf/abRun.ts`](../../perf/abRun.ts) runs one round of every variant, then the next round in reverse order, so a slow period hits every variant alike. `--control` prints each median with its difference to the control. With five rounds, treat differences under about 50 ms on `ready` as noise, and read the p90 column too: a stall that hits only some opens moves the p90 and not the median.
+[`perf/abRun.ts`](../../perf/abRun.ts) runs one round of every variant, then the next round in reverse order, so a slow period hits every variant alike. Every measurement of the run goes to the one `--out` file, written after each open. `--control` prints each median with its difference to the control. With five rounds, treat differences under about 50 ms on `ready` as noise, and read the p90 column too: a stall that hits only some opens moves the p90 and not the median.
 
 Drift between runs can be large: in October 2026 the same warm open went from about 870 to 350 ms over one evening. Run `perf/probes/firstUse.ts` before and after a session; if its numbers moved, report each A/B with the state it ran in and do not compare absolute times across runs.
 
-A variant in a plan file has a `label` and any of:
+A plan file lists the `editors`, `modes` and follow-up `phases` as arrays, plus its `variants`. It is validated before the first browser starts. A variant has a `label` and any of:
 
 - `storage`: `localStorage` entries. This covers editor settings that persist there (`voxel-model:view` for glow and environment) and the `bench:*` flags of an experiment patch.
 - `prewarm`: shell-side WebGPU warm-up.
@@ -131,7 +131,7 @@ $ node perf/traceOpen.ts --editor voxel-model --warm
 $ node perf/analyzeTrace.ts perf-results/traces/voxel-model-warm.json
 ```
 
-`--warm` opens the editor once and reloads the shell before tracing. The analysis prints self time per event on the renderer and GPU main threads, the pipeline and shader compiles (`APICreateRenderPipeline`, `CompileShaderDXC`, `Program::MainLinkLoadEvent::wait`), the synchronous waits of the page on the GPU process (`CommandBufferProxyImpl::WaitForGetOffset`), and the main-thread tasks over 15 ms after the click. Open the same file in the DevTools Performance panel for the full picture.
+`--warm` opens the editor once and reloads the shell before tracing. `--mode` (`offline` by default), `--base`, `--storage` and `--settle` mean the same as for `perf:open`, and the browser launches with the same flags. Boot steps show as User Timing measures in the trace. The analysis prints self time per event on the renderer and GPU main threads, the pipeline and shader compiles (`APICreateRenderPipeline`, `CompileShaderDXC`, `Program::MainLinkLoadEvent::wait`), the synchronous waits of the page on the GPU process (`CommandBufferProxyImpl::WaitForGetOffset`), and the main-thread tasks over 15 ms after the click. Open the same file in the DevTools Performance panel for the full picture.
 
 ### Probes
 

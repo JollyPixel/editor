@@ -1,20 +1,15 @@
 // Import Third-party Dependencies
-import {
-  chromium,
-  type Frame,
-  type Page
+import type {
+  Frame,
+  Page
 } from "@playwright/test";
 
 // Import Internal Dependencies
-import {
-  EXPANDED_STORAGE_KEY,
-  SEED_FOLDERS,
-  STUDIO_URL
-} from "../editors.ts";
+import { BenchBrowser } from "../harness/BenchBrowser.ts";
+import { STUDIO_URL } from "../harness/BenchEditors.ts";
 
 // CONSTANTS
 const kBlankUrl = new URL("main.css", STUDIO_URL).href;
-const kSeedRowIndex = 5;
 
 interface FirstUseCosts {
   adapter: number;
@@ -24,12 +19,12 @@ interface FirstUseCosts {
   canvas2d: number;
 }
 
-const browser = await chromium.launch({ headless: false });
-const context = await browser.newContext();
-await context.addInitScript(([key, folders]: string[]) => {
-  localStorage.setItem(key, folders);
-}, [EXPANDED_STORAGE_KEY, JSON.stringify(SEED_FOLDERS)]);
-const page = await context.newPage();
+const bench = await BenchBrowser.launch();
+const studio = await bench.newStudioPage({
+  base: STUDIO_URL,
+  mode: "offline"
+});
+const { page } = studio;
 let iframes = 0;
 
 await page.goto(kBlankUrl);
@@ -37,15 +32,14 @@ console.log("fresh browser, first page ", await measure(page));
 console.log("same page again           ", await measure(page));
 console.log("new iframe in that page   ", await measure(await addIframe(page)));
 
-await page.goto(`${STUDIO_URL}?offline`);
-await page.getByRole("treeitem").nth(kSeedRowIndex).waitFor();
+await studio.open();
 console.log("studio shell, new document", await measure(await addIframe(page)));
 console.log("studio shell, next iframe ", await measure(await addIframe(page)));
 
-const tab = await browser.newPage();
+const tab = await bench.browser.newPage();
 await tab.goto(kBlankUrl);
 console.log("new tab                   ", await measure(tab));
-await browser.close();
+await bench.close();
 
 async function addIframe(
   target: Page

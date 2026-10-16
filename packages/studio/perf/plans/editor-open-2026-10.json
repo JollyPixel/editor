@@ -1,7 +1,7 @@
 {
-  "editors": "voxel-map,voxel-model",
-  "modes": "online",
-  "phases": "cold,reload",
+  "editors": ["voxel-map", "voxel-model"],
+  "modes": ["online"],
+  "phases": ["cold", "reload"],
   "variants": [
     {
       "label": "control"

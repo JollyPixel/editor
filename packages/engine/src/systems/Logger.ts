@@ -267,9 +267,14 @@ export class Logger {
 
     try {
       const result = await run();
+      const endedAt = performance.now();
+      performance.measure(`${this.#label}:${name}`, {
+        start: startedAt,
+        end: endedAt
+      });
       this.debug(`${name} done`, {
         ...meta,
-        ms: Math.round(performance.now() - startedAt)
+        ms: Math.round(endedAt - startedAt)
       });
 
       return result;
@@ -284,6 +289,10 @@ export class Logger {
     }
   }
 
+  get #label(): string {
+    return this.namespace || "root";
+  }
+
   #emit(
     level: EmittedLogLevel,
     msg: string,
@@ -296,8 +305,7 @@ export class Logger {
       return;
     }
 
-    const ns = this.namespace || "root";
-    const formatted = `[${level.toUpperCase()}] [${ns}] ${msg}`;
+    const formatted = `[${level.toUpperCase()}] [${this.#label}] ${msg}`;
     const args = meta === undefined ? [formatted] : [formatted, meta];
 
     this.#root.adapter[kAdapterMethod[level]](...args);

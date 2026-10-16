@@ -80,6 +80,11 @@ before awaiting, `<name> done` with `ms` once `run` resolves, and
 `started` line as the last one, which names the operation a hang is waiting
 on.
 
+A step that resolves also records a `performance.measure()` named
+`<namespace>:<name>` (`root:<name>` on the root logger), whatever the level
+and namespaces. The measures show in the DevTools Performance panel and can
+be read with `performance.getEntriesByType("measure")`.
+
 ```ts
 const workspace = await logger.step("scene", () => scene.ready);
 // [DEBUG] [editor] scene started

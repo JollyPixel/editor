@@ -2,6 +2,9 @@
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
+// Import Internal Dependencies
+import { Tally } from "./analysis/Tally.ts";
+
 // CONSTANTS
 const kThreads = /CrRendererMain|CrGpuMain/;
 const kGpuWork = new RegExp([
@@ -84,13 +87,15 @@ function printThreadSelfTime(): void {
   for (const span of spans) {
     const key = threadKey(span);
     if (kThreads.test(threadNames.get(key) ?? "")) {
-      byThread.set(key, [...byThread.get(key) ?? [], span]);
+      const list = byThread.get(key) ?? [];
+      list.push(span);
+      byThread.set(key, list);
     }
   }
 
   for (const [key, list] of byThread) {
     list.sort((a, b) => a.ts - b.ts || b.dur - a.dur);
-    const selfTimes = new Map<string, number>();
+    const selfTimes = new Tally();
     const stack: Span[] = [];
     let busy = 0;
     for (const span of list) {
@@ -102,39 +107,28 @@ function printThreadSelfTime(): void {
         busy += span.dur;
       }
       else {
-        add(selfTimes, parent.name, -Math.min(span.dur, parent.ts + parent.dur - span.ts));
+        selfTimes.add(parent.name, -Math.min(span.dur, parent.ts + parent.dur - span.ts));
       }
-      add(selfTimes, span.name, span.dur);
+      selfTimes.add(span.name, span.dur);
       stack.push(span);
     }
     console.log(`\n## ${threadNames.get(key)} (${key}): busy ${ms(busy)}`);
-    for (const [name, us] of [...selfTimes].sort((a, b) => b[1] - a[1]).slice(0, Number(args.top))) {
+    for (const { key: name, total: us } of selfTimes.top(Number(args.top))) {
       console.log(`${ms(us).padStart(10)}  ${name}`);
     }
   }
 }
 
 function printGpuWork(): void {
-  const work = new Map<string, {
-    count: number;
-    us: number;
-  }>();
+  const work = new Tally();
   for (const span of spans) {
-    if (!kGpuWork.test(span.name)) {
-      continue;
+    if (kGpuWork.test(span.name)) {
+      work.add(`${threadNames.get(threadKey(span)) ?? "?"} | ${span.name}`, span.dur);
     }
-    const key = `${threadNames.get(threadKey(span)) ?? "?"} | ${span.name}`;
-    const entry = work.get(key) ?? {
-      count: 0,
-      us: 0
-    };
-    entry.count++;
-    entry.us += span.dur;
-    work.set(key, entry);
   }
 
   console.log("\n## GPU work and waits");
-  for (const [key, { count, us }] of [...work].sort((a, b) => b[1].us - a[1].us)) {
+  for (const { key, total: us, count } of work.top(Infinity)) {
     console.log(`${ms(us).padStart(10)} ${String(count).padStart(5)}x  ${key}`);
   }
 }
@@ -161,17 +155,15 @@ function printMainTimeline(): void {
     if (task.dur < kLongTaskUs) {
       continue;
     }
-    const children = new Map<string, number>();
+    const children = new Tally();
     for (const span of main) {
       const inside = span !== task && span.ts >= task.ts && span.ts + span.dur <= taskEnd;
       if (inside && kTaskChildren.test(span.name)) {
-        add(children, span.name, span.dur);
+        children.add(span.name, span.dur);
       }
     }
-    const summary = [...children]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 4)
-      .map(([name, us]) => `${name} ${ms(us)}`)
+    const summary = children.top(4)
+      .map(({ key: name, total: us }) => `${name} ${ms(us)}`)
       .join(", ");
     console.log(`@${ms(task.ts - click.ts).padStart(9)} ${ms(task.dur).padStart(9)}  ${summary}`);
   }
@@ -181,14 +173,6 @@ function threadKey(
   event: TraceEvent
 ): string {
   return `${event.pid}:${event.tid}`;
-}
-
-function add(
-  map: Map<string, number>,
-  key: string,
-  value: number
-): void {
-  map.set(key, (map.get(key) ?? 0) + value);
 }
 
 function ms(
