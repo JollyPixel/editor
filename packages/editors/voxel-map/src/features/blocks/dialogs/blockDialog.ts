@@ -17,6 +17,7 @@ import type {
 
 // Import Internal Dependencies
 import type { BlockRenderSources } from "../rendering/BlockRenderSources.ts";
+import type { PreviewStage } from "../../preview/PreviewStage.ts";
 import type { BlocksetEntry } from "../../blocksets/BlocksetEntry.ts";
 import { tileSizeSegments } from "../../blocksets/tileSizes.ts";
 import "../rendering/BlockShapePreview.ts";
@@ -59,6 +60,7 @@ export const blockDialogStyles = css`
 
 export interface BlockShapeColumn {
   open: boolean;
+  stage: PreviewStage;
   sources: BlockRenderSources;
   block: ResolvedBlockDefinition | null;
   size: number | undefined;
@@ -104,6 +106,7 @@ export function renderShapeColumn(
     <div class="shape">
       ${column.open ? html`
         <block-shape-preview
+          .stage=${column.stage}
           .sources=${column.sources}
           .block=${column.block}
         ></block-shape-preview>

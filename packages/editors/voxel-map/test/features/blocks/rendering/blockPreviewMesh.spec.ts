@@ -15,7 +15,7 @@ import { buildBlockPreviewMesh } from "../../../../src/features/blocks/rendering
 import {
   needsEnvironment,
   PREVIEW_FIT_RADIUS
-} from "../../../../src/features/preview/stage.ts";
+} from "../../../../src/features/preview/PreviewStage.ts";
 import {
   blockOf,
   sourcesOf

@@ -1,14 +1,14 @@
 // Import Third-party Dependencies
 import {
-  fromUint8Array,
-  toUint8Array
-} from "js-base64";
-import {
   decodePng,
   encodePng
 } from "@jolly-pixel/image";
 
 // Import Internal Dependencies
+import {
+  decodeBase64,
+  encodeBase64
+} from "../utils/base64.ts";
 import {
   InvalidPixelArtDocumentError
 } from "./errors/InvalidPixelArtDocumentError.ts";
@@ -22,7 +22,7 @@ export interface PngPixels {
 export function encodePixelBytes(
   pixels: Uint8Array | Uint8ClampedArray
 ): string {
-  return fromUint8Array(
+  return encodeBase64(
     new Uint8Array(
       pixels.buffer,
       pixels.byteOffset,
@@ -34,8 +34,12 @@ export function encodePixelBytes(
 export function decodePixelBytes(
   pixels: string
 ): Uint8ClampedArray {
+  const bytes = decodeBase64(pixels);
+
   return new Uint8ClampedArray(
-    toUint8Array(pixels)
+    bytes.buffer,
+    bytes.byteOffset,
+    bytes.byteLength
   );
 }
 
@@ -43,15 +47,18 @@ export async function encodePngPixels(
   pixels: Uint8ClampedArray,
   size: Vec2
 ): Promise<PngPixels> {
-  const png = await encodePng({
-    width: size.x,
-    height: size.y,
-    data: pixels.subarray(0, size.x * size.y * 4)
-  });
+  const png = await encodePng(
+    {
+      width: size.x,
+      height: size.y,
+      data: pixels.subarray(0, size.x * size.y * 4)
+    },
+    { filter: "none" }
+  );
 
   return {
     format: "png",
-    data: fromUint8Array(png)
+    data: encodeBase64(png)
   };
 }
 
@@ -60,7 +67,7 @@ export async function decodePngPixels(
   size: Vec2
 ): Promise<Uint8ClampedArray> {
   const image = await decodePng(
-    toUint8Array(pixels.data)
+    decodeBase64(pixels.data)
   );
   if (
     image.width !== size.x ||

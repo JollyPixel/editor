@@ -29,7 +29,20 @@ const kColumns: Column[] = [
   { title: "longest frame after", cell: (group) => group.median((item) => item.framesAfterReady.longest) },
   { title: "transfer KB", cell: (group) => group.median((item) => item.transferKB) },
   { title: "requests", cell: (group) => group.median((item) => item.requests) },
-  { title: "socket KB", cell: (group) => group.median((item) => item.socketKB) }
+  { title: "socket KB", cell: (group) => group.median((item) => item.socketKB) },
+  { title: "script ms", cell: (group) => group.median((item) => item.cdp.scriptMs) }
+];
+const kMemoryColumns: Column[] = [
+  { title: "allocated MB", cell: (group) => group.median((item) => item.memory?.allocatedMB) },
+  {
+    title: "GC ms",
+    cell: (group) => group.median((item) => {
+      const { memory } = item;
+
+      return memory === undefined ? undefined : memory.minorGc.ms + memory.majorGc.ms;
+    })
+  },
+  { title: "major GCs", cell: (group) => group.median((item) => item.memory?.majorGc.count) }
 ];
 
 const { values: args, positionals } = parseArgs({
@@ -41,12 +54,16 @@ const { values: args, positionals } = parseArgs({
   }
 });
 
-const groups = MeasurementGroup.groupAll(positionals.flatMap(ResultsFile.read))
+const measurements = positionals.flatMap(ResultsFile.read);
+const groups = MeasurementGroup.groupAll(measurements)
   .sort(compareGroups);
+const columns = measurements.some((item) => item.memory !== undefined) ?
+  [...kColumns, ...kMemoryColumns] :
+  kColumns;
 
 printTable(
-  kColumns.map(({ title }) => title),
-  groups.map((group) => kColumns.map(({ cell }) => cell(group, controlOf(group))))
+  columns.map(({ title }) => title),
+  groups.map((group) => columns.map(({ cell }) => cell(group, controlOf(group))))
 );
 
 if (args.steps) {

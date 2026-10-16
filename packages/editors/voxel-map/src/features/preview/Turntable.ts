@@ -1,64 +1,28 @@
-// Import Third-party Dependencies
-import * as THREE from "three";
-
 // Import Internal Dependencies
-import {
-  createPreviewStage,
-  lightWithEnvironment,
-  needsEnvironment,
-  PREVIEW_ROTATION_STEP,
-  PREVIEW_TILT
-} from "./stage.ts";
-import { WebGLContextLease } from "./WebGLContextLease.ts";
-
-// CONSTANTS
-const kMinPixelRatio = 2;
-const kMaxPixelRatio = 3;
-
-export interface TurntableOptions {
-  preserveDrawingBuffer?: boolean;
-}
+import type { PreviewStage } from "./PreviewStage.ts";
 
 export class Turntable {
   readonly canvas: HTMLCanvasElement;
-  onContextLost: (() => void) | null = null;
 
   protected readonly container: HTMLElement;
-  protected readonly renderer: THREE.WebGLRenderer;
-  readonly #scene: THREE.Scene;
-  readonly #camera: THREE.PerspectiveCamera;
-  readonly #contextLease: WebGLContextLease;
+  protected readonly stage: PreviewStage;
+  protected readonly context: CanvasRenderingContext2D | null;
   readonly #resizeObserver: ResizeObserver;
   readonly #visibilityObserver: IntersectionObserver;
   #raf = -1;
   #visible = false;
-  #lit = false;
-  #rotation = 0;
 
   constructor(
     container: HTMLElement,
-    options: TurntableOptions = {}
+    stage: PreviewStage
   ) {
     this.container = container;
-    this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true,
-      preserveDrawingBuffer: options.preserveDrawingBuffer ?? false
-    });
-    this.renderer.setPixelRatio(
-      Math.min(Math.max(window.devicePixelRatio, kMinPixelRatio), kMaxPixelRatio)
-    );
-    this.renderer.setClearColor(0x000000, 0);
-    this.#contextLease = new WebGLContextLease(this.renderer);
-    this.#contextLease.onLost = () => this.onContextLost?.();
+    this.stage = stage;
 
-    this.canvas = this.renderer.domElement;
+    this.canvas = document.createElement("canvas");
     this.canvas.style.display = "block";
+    this.context = this.canvas.getContext("2d");
     container.appendChild(this.canvas);
-
-    const stage = createPreviewStage();
-    this.#scene = stage.scene;
-    this.#camera = stage.camera;
 
     this.#resizeObserver = new ResizeObserver(() => this.resized());
     this.#resizeObserver.observe(container);
@@ -70,7 +34,6 @@ export class Turntable {
     cancelAnimationFrame(this.#raf);
     this.#resizeObserver.disconnect();
     this.#visibilityObserver.disconnect();
-    this.#contextLease.release();
     this.canvas.remove();
   }
 
@@ -86,20 +49,6 @@ export class Turntable {
 
   protected draw(): void {
     return void 0;
-  }
-
-  protected renderMesh(
-    mesh: THREE.Mesh,
-    rotation = this.#rotation
-  ): void {
-    if (!this.#lit && needsEnvironment(mesh)) {
-      lightWithEnvironment(this.#scene, this.renderer);
-      this.#lit = true;
-    }
-    mesh.rotation.set(PREVIEW_TILT, rotation, 0);
-    this.#scene.add(mesh);
-    this.renderer.render(this.#scene, this.#camera);
-    this.#scene.remove(mesh);
   }
 
   readonly #onVisibility = (
@@ -118,7 +67,6 @@ export class Turntable {
   readonly #loop = (time: number): void => {
     this.#raf = requestAnimationFrame(this.#loop);
     this.refresh(time);
-    this.#rotation += PREVIEW_ROTATION_STEP;
     this.draw();
   };
 }

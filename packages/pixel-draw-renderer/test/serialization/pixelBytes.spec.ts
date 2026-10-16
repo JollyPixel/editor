@@ -29,6 +29,16 @@ describe("pixel bytes", () => {
     assert.deepStrictEqual([...decoded], [...pixels]);
   });
 
+  test("writes and reads the standard padded base64 alphabet", () => {
+    const pixels = new Uint8ClampedArray([
+      10, 20, 30, 255,
+      0, 0, 0, 0
+    ]);
+
+    assert.strictEqual(encodePixelBytes(pixels), "ChQe/wAAAAA=");
+    assert.deepStrictEqual([...decodePixelBytes("ChQe/wAAAAA=")], [...pixels]);
+  });
+
   test("encodes only the view, not its backing buffer", () => {
     const backing = new Uint8Array([
       1, 2, 3, 4,

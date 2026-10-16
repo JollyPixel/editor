@@ -8,7 +8,9 @@ import {
   decodePng,
   encodePng,
   InvalidPngError,
-  type DecodedImage
+  type DecodedImage,
+  type EncodePngOptions,
+  type PngFilter
 } from "@jolly-pixel/image";
 ```
 
@@ -51,11 +53,26 @@ the runtime's `DecompressionStream` implementation.
 ## `encodePng()`
 
 ```ts
-function encodePng(image: DecodedImage): Promise<Uint8Array>
+function encodePng(
+  image: DecodedImage,
+  options?: EncodePngOptions
+): Promise<Uint8Array>
+
+type PngFilter = "adaptive" | "none" | "sub" | "up" | "average" | "paeth";
+
+interface EncodePngOptions {
+  filter?: PngFilter;
+}
 ```
 
 `encodePng()` writes an 8-bit, non-interlaced, truecolor-with-alpha PNG. It
 does not mutate `image.data`.
+
+`filter` picks the scanline filter. The default, `"adaptive"`, tries the five
+PNG filters on every row and keeps the one with the smallest sum of absolute
+differences. Every other value uses that single filter on every row. Pixel art
+with large flat areas and few colors often compresses smaller and faster with
+`"none"`.
 
 Width and height must be positive 32-bit integers. A mismatched data length or
 invalid dimension rejects with `InvalidPngError`.

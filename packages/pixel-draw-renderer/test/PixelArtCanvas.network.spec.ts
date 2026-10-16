@@ -5,9 +5,7 @@ import {
   beforeEach
 } from "node:test";
 import assert from "node:assert/strict";
-
-// Import Third-party Dependencies
-import { toUint8Array } from "js-base64";
+import { Buffer } from "node:buffer";
 
 // Import Internal Dependencies
 import { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
@@ -171,7 +169,7 @@ describe("PixelArtCanvas — onBufferUpdated", () => {
         { x: 4, y: 4 }
       );
       assert.strictEqual(
-        toUint8Array(events[0].metadata.pixels).length,
+        Buffer.from(events[0].metadata.pixels, "base64").length,
         4 * 4 * 4
       );
       manager.destroy();

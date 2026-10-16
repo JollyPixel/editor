@@ -4,9 +4,7 @@ import {
   test
 } from "node:test";
 import assert from "node:assert/strict";
-
-// Import Third-party Dependencies
-import { fromUint8Array } from "js-base64";
+import { Buffer } from "node:buffer";
 
 // Import Internal Dependencies
 import type { PixelCommand } from "#src/sync/PixelCommand.ts";
@@ -169,7 +167,7 @@ describe("PixelDocument", () => {
         action: "texture-replaced",
         metadata: {
           size: { x: 2, y: 2 },
-          pixels: fromUint8Array(pixels)
+          pixels: Buffer.from(pixels).toString("base64")
         }
       });
 

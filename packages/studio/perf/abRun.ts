@@ -14,7 +14,8 @@ const { values: args } = parseArgs({
   options: {
     plan: { type: "string" },
     rounds: { type: "string", default: "5" },
-    out: { type: "string", default: "perf-results/ab.json" }
+    out: { type: "string", default: "perf-results/ab.json" },
+    memory: { type: "string" }
   }
 });
 
@@ -23,8 +24,11 @@ if (args.plan === undefined) {
 }
 
 const plan = OpenPlan.read(args.plan);
-const editors = (await BenchEditors.read()).select(plan.editors);
+const editors = (
+  await BenchEditors.read()
+).select(plan.editors);
 const results = new ResultsFile(args.out, args);
+
 for (const { round, variant } of plan.schedule(Number(args.rounds))) {
   console.log(`round ${round} ${variant.label}`);
   const run = new OpenRun({
@@ -39,8 +43,10 @@ for (const { round, variant } of plan.schedule(Number(args.rounds))) {
     cpuThrottle: 1,
     settleMs: DEFAULT_SETTLE_MS,
     profileDir: null,
+    memoryDir: args.memory ?? null,
     base: variant.base
   });
+
   for await (const measurement of run.measure()) {
     results.add(measurement);
   }

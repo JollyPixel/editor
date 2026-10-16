@@ -2,7 +2,7 @@
 import { LitElement, html, css, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
-import * as THREE from "three";
+import { Vector3 } from "three";
 import {
   type VoxelLayer,
   type VoxelLayerCommand,
@@ -54,7 +54,7 @@ export class VoxelLayerPanel extends LitElement {
   private declare _layer: VoxelLayer | null;
 
   @state()
-  private declare _contentOrigin: THREE.Vector3;
+  private declare _contentOrigin: Vector3;
 
   @state()
   private declare _empty: boolean;
@@ -75,7 +75,7 @@ export class VoxelLayerPanel extends LitElement {
     this.layerName = null;
     this.writable = true;
     this._layer = null;
-    this._contentOrigin = new THREE.Vector3();
+    this._contentOrigin = new Vector3();
     this._empty = true;
   }
 
@@ -127,7 +127,7 @@ export class VoxelLayerPanel extends LitElement {
     if (layer) {
       const bounds = layer.worldBounds();
       this._empty = bounds === null;
-      this._contentOrigin = new THREE.Vector3()
+      this._contentOrigin = new Vector3()
         .copy(bounds?.min ?? layer.position)
         .round();
     }

@@ -48,7 +48,9 @@ export class OpenPlan {
   static read(
     file: string
   ): OpenPlan {
-    const plan = kPlanSchema.safeParse(JSON.parse(readFileSync(file, "utf8")));
+    const plan = kPlanSchema.safeParse(
+      JSON.parse(readFileSync(file, "utf8"))
+    );
     if (!plan.success) {
       throw new TypeError(`"${file}" is not a valid plan:\n${z.prettifyError(plan.error)}`);
     }
@@ -69,12 +71,11 @@ export class OpenPlan {
     rounds: number
   ): IterableIterator<ScheduledVariant> {
     for (let round = 0; round < rounds; round++) {
-      const variants = round % 2 === 0 ? this.variants : this.variants.toReversed();
+      const variants = round % 2 === 0
+        ? this.variants
+        : this.variants.toReversed();
       for (const variant of variants) {
-        yield {
-          round,
-          variant
-        };
+        yield { round, variant };
       }
     }
   }

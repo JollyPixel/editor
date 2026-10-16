@@ -26,7 +26,9 @@ export class ResultsFile {
         .flatMap((file) => ResultsFile.read(path.join(target, file)));
     }
 
-    return JSON.parse(readFileSync(target, "utf8")).measurements;
+    return JSON.parse(
+      readFileSync(target, "utf8")
+    ).measurements;
   }
 
   constructor(
@@ -35,7 +37,10 @@ export class ResultsFile {
   ) {
     this.file = path.resolve(file);
     this.#setup = setup;
-    mkdirSync(path.dirname(this.file), { recursive: true });
+    mkdirSync(
+      path.dirname(this.file),
+      { recursive: true }
+    );
   }
 
   add(

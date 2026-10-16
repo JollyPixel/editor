@@ -1,11 +1,9 @@
-// Import Third-party Dependencies
-import {
-  fromUint8Array,
-  toUint8Array
-} from "js-base64";
-
 // Import Internal Dependencies
 import type { AssetInlineContent } from "./AssetEvents.schema.ts";
+import {
+  decodeBase64,
+  encodeBase64
+} from "../utils/base64.ts";
 
 export function encodeContent(
   data: Uint8Array
@@ -13,12 +11,12 @@ export function encodeContent(
   return {
     type: "inline",
     encoding: "base64",
-    data: fromUint8Array(data)
+    data: encodeBase64(data)
   };
 }
 
 export function decodeContent(
   content: AssetInlineContent
 ): Uint8Array {
-  return toUint8Array(content.data);
+  return decodeBase64(content.data);
 }

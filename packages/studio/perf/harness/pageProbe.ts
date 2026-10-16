@@ -137,3 +137,45 @@ export function readProbe(): ProbeSnapshot {
     })
   };
 }
+
+export interface FramePacing {
+  frames: number;
+  worstMs: number;
+  elapsedMs: number;
+}
+
+export function startFramePacing(): void {
+  const pacing = {
+    frames: 0,
+    worstMs: 0,
+    started: performance.now(),
+    last: performance.now(),
+    running: true
+  };
+  Reflect.set(window, "__perfPacing", pacing);
+  function tick(now: number): void {
+    pacing.frames++;
+    pacing.worstMs = Math.max(pacing.worstMs, now - pacing.last);
+    pacing.last = now;
+    if (pacing.running) {
+      requestAnimationFrame(tick);
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+export function stopFramePacing(): FramePacing {
+  const pacing = Reflect.get(window, "__perfPacing") as {
+    frames: number;
+    worstMs: number;
+    started: number;
+    running: boolean;
+  };
+  pacing.running = false;
+
+  return {
+    frames: pacing.frames,
+    worstMs: Math.round(pacing.worstMs),
+    elapsedMs: Math.round(performance.now() - pacing.started)
+  };
+}

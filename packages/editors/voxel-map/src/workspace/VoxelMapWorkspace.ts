@@ -11,6 +11,7 @@ import type { MapDocument } from "../document/MapDocument.ts";
 import type { EditorState } from "../state/index.ts";
 import type { BlockUsageStore } from "../features/blocks/usage/BlockUsageStore.ts";
 import type { BlockRenderSources } from "../features/blocks/rendering/BlockRenderSources.ts";
+import type { PreviewStage } from "../features/preview/PreviewStage.ts";
 import type { LayerVisibilityStore } from "../features/layers/LayerVisibilityStore.ts";
 import type { MapLayers } from "../features/layers/MapLayers.ts";
 import type { LocalBrush } from "../features/painting/LocalBrush.ts";
@@ -27,6 +28,7 @@ export interface VoxelMapWorkspace {
   mapDocument: MapDocument;
   usage: BlockUsageStore;
   blockSources: BlockRenderSources;
+  previewStage: PreviewStage;
   templates: MapTemplates;
   placement: MapPlacement;
   history: MapHistory;

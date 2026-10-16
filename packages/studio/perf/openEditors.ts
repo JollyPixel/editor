@@ -32,6 +32,7 @@ const { values: args } = parseArgs({
     cpu: { type: "string", default: "1" },
     settle: { type: "string", default: String(DEFAULT_SETTLE_MS) },
     profile: { type: "string" },
+    memory: { type: "string" },
     base: { type: "string", default: STUDIO_URL }
   }
 });
@@ -49,6 +50,7 @@ const run = new OpenRun({
   cpuThrottle: Number(args.cpu),
   settleMs: Number(args.settle),
   profileDir: args.profile ?? null,
+  memoryDir: args.memory ?? null,
   base: args.base
 });
 const results = new ResultsFile(args.out, args);

@@ -9,7 +9,7 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { fitGeometry } from "../../preview/stage.ts";
+import { fitGeometry } from "../../preview/PreviewStage.ts";
 import { createSurfaceMaterial } from "./surfaceMaterial.ts";
 
 // CONSTANTS

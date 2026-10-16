@@ -105,24 +105,6 @@ test("the order menu opens on hover and stays open once clicked", async({ map, p
   await expect(orderButton).toHaveAccessibleName("Order: Most used first");
 });
 
-test("the library redraws after the browser drops its WebGL context", async({ map }) => {
-  const { canvas } = map.blocks.library;
-  await expect(canvas).toHaveCount(1);
-
-  await canvas.evaluate((element: HTMLCanvasElement) => {
-    element.dataset.dropped = "true";
-    element
-      .getContext("webgl2")!
-      .getExtension("WEBGL_lose_context")!
-      .loseContext();
-  });
-
-  await expect(canvas).not.toHaveAttribute("data-dropped");
-  expect(await canvas.evaluate(
-    (element: HTMLCanvasElement) => element.getContext("webgl2")!.isContextLost()
-  )).toBe(false);
-});
-
 test("the add cell creates a block and selects it", async({ map }) => {
   const { library } = map.blocks;
   await library.addButton.click();

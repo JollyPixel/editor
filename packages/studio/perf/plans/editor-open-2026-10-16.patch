@@ -1,0 +1,31 @@
+diff --git a/packages/editors/voxel-model/src/features/transform/gizmo/TransformGizmo.ts b/packages/editors/voxel-model/src/features/transform/gizmo/TransformGizmo.ts
+index 6483e137..b52b72fb 100644
+--- a/packages/editors/voxel-model/src/features/transform/gizmo/TransformGizmo.ts
++++ b/packages/editors/voxel-model/src/features/transform/gizmo/TransformGizmo.ts
+@@ -174,8 +174,9 @@ export class TransformGizmo extends Emitter<TransformGizmoEvents> {
+     this.#tool = options.tool;
+ 
+     const controls = createControls(options);
+-    const pivotControls = createControls(options, { handle: { kind: "sphere" } });
+-    const resizeControls = createControls(options, { scaleHandle: { kind: "slab" } });
++    const oneGizmo = localStorage.getItem("bench:one-gizmo") === "1";
++    const pivotControls = oneGizmo ? controls : createControls(options, { handle: { kind: "sphere" } });
++    const resizeControls = oneGizmo ? controls : createControls(options, { scaleHandle: { kind: "slab" } });
+ 
+     this.#tools = {
+       pos: nodeTool(controls, "translate", (space) => (space === "local" ? "parent" : "world")),
+diff --git a/packages/editors/voxel-model/src/scene/ModelEditorScene.ts b/packages/editors/voxel-model/src/scene/ModelEditorScene.ts
+index 6c307241..39c7e054 100644
+--- a/packages/editors/voxel-model/src/scene/ModelEditorScene.ts
++++ b/packages/editors/voxel-model/src/scene/ModelEditorScene.ts
+@@ -189,7 +189,9 @@ export class ModelEditorScene extends Systems.Scene {
+     const lighting = new ViewLighting({
+       scene,
+       view,
+-      environment: createRoomEnvironment(this.world.renderer),
++      environment: localStorage.getItem("bench:no-environment") === "1" ?
++        null :
++        createRoomEnvironment(this.world.renderer),
+       casters: () => blocks.visibleMeshes()
+     });
+     const unfollowLit = view.follow((settings) => {

@@ -65,7 +65,11 @@ export class BenchBrowser {
       baseURL: options.base,
       viewport: kViewport
     });
-    await context.addInitScript(seedStorage, options.storage ?? {});
+    await context.addInitScript(
+      seedStorage,
+      options.storage ?? {}
+    );
+
     if (options.prewarm) {
       await context.addInitScript(prewarmAdapter);
     }
@@ -76,7 +80,10 @@ export class BenchBrowser {
       await registerAccount(context.request);
     }
 
-    return new StudioPage(await context.newPage(), options.mode);
+    return new StudioPage(
+      await context.newPage(),
+      options.mode
+    );
   }
 
   close(): Promise<void> {

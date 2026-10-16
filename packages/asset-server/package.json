@@ -59,7 +59,6 @@
     "@openally/servo": "1.1.0",
     "ata-validator": "1.27.1",
     "fflate": "0.8.3",
-    "js-base64": "3.9.4",
     "loglayer": "9.4.0",
     "picomatch": "4.0.7",
     "ts-pattern": "5.9.0"

@@ -9,7 +9,7 @@ import {
 
 // Import Internal Dependencies
 import { createSurfaceMaterial } from "../../blocks/rendering/surfaceMaterial.ts";
-import { fitGeometry } from "../../preview/stage.ts";
+import { fitGeometry } from "../../preview/PreviewStage.ts";
 import {
   buildTemplateBatches,
   type TemplateBatchSources

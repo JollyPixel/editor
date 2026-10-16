@@ -6,6 +6,7 @@ import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 import type { BlockRenderSources } from "../rendering/BlockRenderSources.ts";
 import { BlockPreviewMeshes } from "../rendering/BlockPreviewMeshes.ts";
 import { BlockGrid } from "./BlockGrid.ts";
+import { CellCaptures } from "./CellCaptures.ts";
 import {
   CellRepaints,
   type CellLook
@@ -14,8 +15,9 @@ import { TurntableAngles } from "./TurntableAngles.ts";
 import { Turntable } from "../../preview/Turntable.ts";
 import {
   PREVIEW_ROTATION_STEP,
-  PREVIEW_STILL_ROTATION
-} from "../../preview/stage.ts";
+  PREVIEW_STILL_ROTATION,
+  type PreviewStage
+} from "../../preview/PreviewStage.ts";
 
 // CONSTANTS
 const kSettleFrames = 6;
@@ -29,17 +31,23 @@ export class BlockLibraryRenderer extends Turntable {
   onLayoutChange: (() => void) | null = null;
   selectedId: number | null = null;
   hoveredId: number | null = null;
+  libraryHovered = false;
 
   readonly #meshes: BlockPreviewMeshes;
+  readonly #cell: THREE.RenderTarget;
+  readonly #stopWatchingCompiles: () => void;
   #repaints = new CellRepaints<THREE.Mesh>();
+  #captures = new CellCaptures();
+  #capturing = new Set<number>();
+  #capturingGhost = false;
   #angles = new TurntableAngles(PREVIEW_STILL_ROTATION, PREVIEW_ROTATION_STEP);
-  #clearPending = true;
   #grid = new BlockGrid(1, 1);
   #canvasWidth = 0;
   #canvasHeight = 0;
   #drawnCols = 0;
   #drawnRows = 0;
   #drawnCellSize = 0;
+  #cellPixels = 0;
   #pendingCellSize = 0;
   #stableFrames = 0;
   #layoutDirty = true;
@@ -47,13 +55,15 @@ export class BlockLibraryRenderer extends Turntable {
 
   constructor(
     container: HTMLElement,
+    stage: PreviewStage,
     sources: BlockRenderSources
   ) {
-    super(container, {
-      preserveDrawingBuffer: true
-    });
-    this.renderer.autoClear = false;
+    super(container, stage);
     this.#meshes = new BlockPreviewMeshes(sources);
+    this.#cell = stage.createTarget();
+    this.#stopWatchingCompiles = stage.watchCompiles(
+      () => this.#repaints.invalidate()
+    );
   }
 
   get grid(): BlockGrid {
@@ -88,10 +98,15 @@ export class BlockLibraryRenderer extends Turntable {
       return;
     }
 
-    this.#lifted = {
-      blockId,
-      target: context
-    };
+    if (this.#lifted?.target === context) {
+      this.#lifted.blockId = blockId;
+    }
+    else {
+      this.#lifted = {
+        blockId,
+        target: context
+      };
+    }
     this.hoveredId = null;
   }
 
@@ -100,7 +115,10 @@ export class BlockLibraryRenderer extends Turntable {
   }
 
   override dispose(): void {
+    this.#stopWatchingCompiles();
+    this.drop();
     this.#meshes.dispose();
+    this.#cell.dispose();
     super.dispose();
   }
 
@@ -123,12 +141,6 @@ export class BlockLibraryRenderer extends Turntable {
       return;
     }
 
-    if (this.#clearPending) {
-      this.#clearPending = false;
-      this.renderer.setScissorTest(false);
-      this.renderer.clear();
-    }
-
     const { cols, cellSize } = this.#grid;
     const scrollTop = this.container.scrollTop;
     const containerHeight = this.container.clientHeight;
@@ -143,20 +155,26 @@ export class BlockLibraryRenderer extends Turntable {
     );
 
     for (const { index, mode } of paints) {
-      this.#clearCell(index);
-      if (mode !== "erase") {
-        const { block, mesh } = entries[index];
-        this.renderMesh(
-          mesh,
-          mode === "spinning" ?
-            this.#angles.advance(block.id) :
-            this.#angles.angleForBlock(block.id)
-        );
+      if (mode === "erase") {
+        this.#captures.erase(index);
+        this.#clearCell(index);
+        continue;
       }
+      if (mode === "spinning" && this.#capturing.has(index)) {
+        continue;
+      }
+
+      const { block, mesh } = entries[index];
+      this.#paintCell(
+        index,
+        mesh,
+        mode === "spinning" ?
+          this.#angles.advance(block.id) :
+          this.#angles.angleForBlock(block.id)
+      );
     }
 
     this.#drawLifted();
-    this.renderer.setScissorTest(false);
   }
 
   readonly #lookFor = (
@@ -166,61 +184,82 @@ export class BlockLibraryRenderer extends Turntable {
       return "hidden";
     }
 
-    return blockId === this.selectedId || blockId === this.hoveredId ?
-      "spinning" :
-      "still";
+    const spinning = blockId === this.hoveredId ||
+      (this.libraryHovered && blockId === this.selectedId);
+
+    return spinning ? "spinning" : "still";
   };
+
+  #paintCell(
+    index: number,
+    mesh: THREE.Mesh,
+    rotation: number
+  ): void {
+    const ticket = this.#captures.issue();
+    this.#capturing.add(index);
+    this.stage.capture(this.#cell, mesh, rotation)
+      .then((image) => {
+        if (this.#captures.land(index, ticket)) {
+          const { x, y } = this.#cellOrigin(index);
+          this.context?.putImageData(image, x, y);
+        }
+      })
+      .finally(() => this.#capturing.delete(index));
+  }
 
   #drawLifted(): void {
     const lifted = this.#lifted;
-    if (lifted === null) {
+    if (lifted === null || this.#capturingGhost) {
       return;
     }
 
-    const { entries } = this.#meshes;
-    const index = entries.findIndex((entry) => entry.block.id === lifted.blockId);
-    if (index === -1) {
-      return;
-    }
-
-    const { block, mesh } = entries[index];
-    const { cols } = this.#grid;
-    const size = this.#drawnCellSize * this.renderer.getPixelRatio();
-    const pixels = Math.round(size);
-    this.#clearCell(index);
-    this.renderMesh(mesh, this.#angles.advance(block.id));
-
-    const { canvas } = lifted.target;
-    if (canvas.width !== pixels || canvas.height !== pixels) {
-      canvas.width = pixels;
-      canvas.height = pixels;
-    }
-    lifted.target.clearRect(0, 0, pixels, pixels);
-    lifted.target.drawImage(
-      this.canvas,
-      (index % cols) * size,
-      Math.floor(index / cols) * size,
-      size,
-      size,
-      0,
-      0,
-      pixels,
-      pixels
+    const entry = this.#meshes.entries.find(
+      (candidate) => candidate.block.id === lifted.blockId
     );
-    this.renderer.clear();
+    if (entry === undefined) {
+      return;
+    }
+
+    const pixels = this.#cellPixels;
+    this.#capturingGhost = true;
+    this.stage.capture(
+      this.#cell,
+      entry.mesh,
+      this.#angles.advance(entry.block.id)
+    )
+      .then((image) => {
+        if (lifted !== this.#lifted || image.width !== pixels) {
+          return;
+        }
+
+        const { canvas } = lifted.target;
+        if (canvas.width !== pixels || canvas.height !== pixels) {
+          canvas.width = pixels;
+          canvas.height = pixels;
+        }
+        lifted.target.putImageData(image, 0, 0);
+      })
+      .finally(() => {
+        this.#capturingGhost = false;
+      });
+  }
+
+  #cellOrigin(
+    index: number
+  ): { x: number; y: number; } {
+    const pixels = this.#cellPixels;
+
+    return {
+      x: (index % this.#drawnCols) * pixels,
+      y: Math.floor(index / this.#drawnCols) * pixels
+    };
   }
 
   #clearCell(
     index: number
   ): void {
-    const { cols } = this.#grid;
-    const size = this.#drawnCellSize;
-    const x = (index % cols) * size;
-    const y = (this.#drawnRows - 1 - Math.floor(index / cols)) * size;
-    this.renderer.setViewport(x, y, size, size);
-    this.renderer.setScissor(x, y, size, size);
-    this.renderer.setScissorTest(true);
-    this.renderer.clear();
+    const { x, y } = this.#cellOrigin(index);
+    this.context?.clearRect(x, y, this.#cellPixels, this.#cellPixels);
   }
 
   #relayout(): void {
@@ -273,9 +312,12 @@ export class BlockLibraryRenderer extends Turntable {
     this.#drawnCols = cols;
     this.#drawnRows = rows;
     this.#drawnCellSize = cellSize;
+    this.#cellPixels = cellSize * this.stage.pixelRatio;
     this.#stableFrames = 0;
-    this.renderer.setSize(width, height, false);
+    this.canvas.width = cols * this.#cellPixels;
+    this.canvas.height = rows * this.#cellPixels;
+    this.#cell.setSize(this.#cellPixels, this.#cellPixels);
+    this.#captures.reset();
     this.#repaints.invalidate();
-    this.#clearPending = true;
   }
 }

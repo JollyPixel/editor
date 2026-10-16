@@ -303,9 +303,6 @@ importers:
       fflate:
         specifier: 0.8.3
         version: 0.8.3
-      js-base64:
-        specifier: 3.9.4
-        version: 3.9.4
       loglayer:
         specifier: 9.4.0
         version: 9.4.0
@@ -922,9 +919,6 @@ importers:
       '@openally/emitt':
         specifier: 1.1.0
         version: 1.1.0
-      js-base64:
-        specifier: 3.9.4
-        version: 3.9.4
     devDependencies:
       '@jolly-pixel/asset-source':
         specifier: workspace:*
@@ -3785,9 +3779,6 @@ packages:
 
   jju@1.4.0:
     resolution: {integrity: sha512-8wb9Yw966OSxApiCt0K3yNJL8pnNeIv+OEq2YMidz4FKP6nonSRoOXc80iXY4JaN2FC11B9qsNmDsm+ZOfMROA==}
-
-  js-base64@3.9.4:
-    resolution: {integrity: sha512-PtOMXpEGuP0RRiRXsjzHzl44dMHxSu2CPvAhinupR1tBa88me+1DPqsobl7eupn5UukjLkln1ZnAOAOXOrYG0Q==}
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
@@ -7296,8 +7287,6 @@ snapshots:
       istanbul-lib-report: 3.0.1
 
   jju@1.4.0: {}
-
-  js-base64@3.9.4: {}
 
   js-tokens@4.0.0: {}
 

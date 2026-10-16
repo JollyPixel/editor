@@ -1,6 +1,6 @@
 # Benchmarking editor opens
 
-How to measure what it costs to open an editor from the studio, and how to A/B a change against it. The tools live in `packages/studio/perf/`, starting with [`openEditors.ts`](../../perf/openEditors.ts); the October 2026 results are in [the editor-open report](./editor-open-2026-10.md).
+How to measure what it costs to open an editor from the studio, what an open editor costs while it sits there, and how to A/B a change against either. The tools live in `packages/studio/perf/`, starting with [`openEditors.ts`](../../perf/openEditors.ts); the latest results are in [the 16 October 2026 report](./editor-performance-2026-10-16.md).
 
 ## What is measured
 
@@ -57,6 +57,7 @@ $ pnpm run perf:summary perf-results/baseline.json --steps --phase reload
 - `--prewarm`: the shell requests a WebGPU adapter as soon as it loads.
 - `--cpu 4`: CDP CPU throttling.
 - `--profile <dir>`: records a V8 CPU profile of each open.
+- `--memory <dir>`: samples every allocation of each open, collected objects included, into a `.heapprofile`, and records a light trace for garbage collection on the renderer main thread. Each measurement gets `memory.allocatedMB`, `memory.minorGc` and `memory.majorGc` (count and ms; major includes incremental marking steps), and `perf:summary` adds their columns. The recording slows the open, so compare memory runs with memory runs only. `perf:ab` takes the same option.
 - `--headless`: avoid it. Headless Chromium renders with SwiftShader, which makes WebGPU and WebGL costs meaningless.
 
 The browser window must stay visible: a hidden or minimized window stops `requestAnimationFrame`, and the editors never reach their first frame.
@@ -66,7 +67,7 @@ The browser window must stay visible: a hidden or minimized window stops `reques
 Laptop speed drifts with power and thermal state, so never compare two runs taken at different times. Compare variants inside one interleaved run:
 
 ```bash
-$ pnpm run perf:ab --plan perf/plans/editor-open-2026-10.json --rounds 5 --out perf-results/ab.json
+$ pnpm run perf:ab --plan perf/plans/editor-open-2026-10-16.json --rounds 5 --out perf-results/ab.json
 $ pnpm run perf:summary perf-results/ab.json --control control
 ```
 
@@ -88,14 +89,16 @@ Build the change once behind a `localStorage` flag, so control and variant run t
 $ git worktree add D:/Sources/JollyPixel/jpb HEAD
 $ cd D:/Sources/JollyPixel/jpb
 $ pnpm install --frozen-lockfile --prefer-offline
-$ git apply packages/studio/perf/plans/editor-open-2026-10.patch
+$ git apply packages/studio/perf/plans/editor-open-2026-10-16.patch
 $ pnpm run build
 $ pnpm --filter @jolly-pixel/studio dev:e2e
 ```
 
 Then run `perf:ab` from the main checkout as above: the plan's variants turn the flags on, and the control runs the same build without them. Stop the main checkout's `dev:e2e` first, since both use port 3004. On Windows keep the worktree path short, as deep scratch paths exceed `MAX_PATH` during the build.
 
-[`editor-open-2026-10.patch`](../../perf/plans/editor-open-2026-10.patch) holds the October experiments: `bench:lazy-audio`, `bench:defer-library` (`1` defers the Block Library renderer, `off` never builds it), `bench:lazy-metrics` and `bench:compile-async`. The patch is measurement scaffolding, not a fix to merge.
+When only editor pages change, the patch can also go on the main checkout: apply it, rebuild the editors, measure, then `git apply -R` it. The flags default to off, so the control is the unchanged code.
+
+[`editor-open-2026-10-16.patch`](../../perf/plans/editor-open-2026-10-16.patch) holds the 16 October experiments: `bench:no-environment` and `bench:one-gizmo` in voxel-model. The patch is measurement scaffolding, not a fix to merge.
 
 Do not build or run tests while a measurement runs.
 
@@ -118,9 +121,29 @@ $ pnpm run perf:open --runs 1 --modes online --phases reload --profile perf-resu
 $ node perf/analyzeProfile.ts perf-results/profiles/<file>.cpuprofile --top 30
 $ node perf/analyzeProfile.ts <file> --stacks "getContext|setSize" --depth 12
 $ node perf/analyzeProfile.ts <file> --from 100 --until 700
+$ node perf/analyzeProfile.ts <file> --inclusive "createControls|createRoomEnvironment"
 ```
 
-It prints self time by package, file and function. `--stacks` prints the callers of matching functions; `--from`/`--until` keep the samples of one window, in milliseconds from the start of the profile (just before the click). A native call that waits on the GPU process, such as `getContext`, `setSize` or a WebGL `getParameter`, shows as self time of the JavaScript function that made it.
+It prints self time by package, file and function. `--stacks` prints the callers of matching functions; `--inclusive` prints the total time spent under each matching function, its callees included; `--from`/`--until` keep the samples of one window, in milliseconds from the start of the profile (just before the click). A native call that waits on the GPU process, such as `getContext`, `setSize` or a WebGL `getParameter`, shows as self time of the JavaScript function that made it.
+
+The same script reads the `.heapprofile` files of `--memory`, `steadyState.ts` and `profileServer.ts --heap`, and then prints allocated bytes instead of time. `--from`/`--until` do not apply to them.
+
+### An open editor
+
+```bash
+$ node perf/steadyState.ts --mode online --rounds 3 --seconds 5
+$ node perf/steadyState.ts --editors voxel-model --storage '{"bench:no-environment":"1"}'
+```
+
+Opens each editor in a new browser, waits as long as `perf:open` settles, then measures three scenarios of `--seconds` each: `away` (pointer off the canvas), `hover` (pointer resting on the largest canvas of the frame) and `orbit` (middle-button drag in circles). Each scenario records main-thread and script time from the CDP `Performance` metrics, allocations with collected objects, garbage collection, and `requestAnimationFrame` pacing in the frame. It prints a table of medians and writes `--out` (default `perf-results/steady.json`) and one `.heapprofile` per scenario into `--profiles`. `--scenarios`, `--editors`, `--mode`, `--storage` and `--base` select what runs.
+
+### The server
+
+```bash
+$ node perf/profileServer.ts --seconds 240 --heap
+```
+
+Starts the hosted `StudioServer` in-process on port 3004 with in-memory back-end and accounts, like `dev:e2e`, and CPU-profiles it for `--seconds` through the Node inspector; `--heap` also samples its allocations. Build the studio shell first (`pnpm exec vite build`), stop `dev:e2e`, and run `perf:open --modes online` against it in a second terminal. The profile lands in `--out` (default `perf-results/server.cpuprofile`); node frames resolve to their workspace package without source maps.
 
 ### Chrome traces
 
@@ -131,7 +154,7 @@ $ node perf/traceOpen.ts --editor voxel-model --warm
 $ node perf/analyzeTrace.ts perf-results/traces/voxel-model-warm.json
 ```
 
-`--warm` opens the editor once and reloads the shell before tracing. `--mode` (`offline` by default), `--base`, `--storage` and `--settle` mean the same as for `perf:open`, and the browser launches with the same flags. Boot steps show as User Timing measures in the trace. The analysis prints self time per event on the renderer and GPU main threads, the pipeline and shader compiles (`APICreateRenderPipeline`, `CompileShaderDXC`, `Program::MainLinkLoadEvent::wait`), the synchronous waits of the page on the GPU process (`CommandBufferProxyImpl::WaitForGetOffset`), and the main-thread tasks over 15 ms after the click. Open the same file in the DevTools Performance panel for the full picture.
+`--warm` opens the editor once and reloads the shell before tracing. `--mode` (`offline` by default), `--base`, `--storage` and `--settle` mean the same as for `perf:open`, and the browser launches with the same flags. Boot steps show as User Timing measures in the trace. The analysis prints self time per event on the renderer and GPU main threads, the pipeline and shader compiles (`APICreateRenderPipeline`, `CompileShaderDXC`, `Program::MainLinkLoadEvent::wait`), the synchronous waits of the page on the GPU process (`CommandBufferProxyImpl::WaitForGetOffset`), the main-thread tasks over 15 ms after the click, and the garbage collection pauses on the renderer main thread. Open the same file in the DevTools Performance panel for the full picture.
 
 ### Probes
 
@@ -153,8 +176,8 @@ $ node perf/bundleComposition.ts
 
 Needs the source-map build. Prints, per editor, the eager chunks (the entry plus its `modulepreload` links) raw, gzip and brotli, and their bytes by package, then the lazy chunks. Bytes the minifier emits without a mapping show as `(unmapped)`.
 
-## Environment of the October 2026 run
+## Environment of the 16 October 2026 run
 
 - Windows 11 Pro 26200, Intel Core Ultra 9 285HX laptop with 32 GB, integrated Intel Graphics (Xe-LPG) only.
 - Playwright 1.64 with Chromium 156.0.8078.4, headed. WebGL runs through ANGLE on Direct3D 11, WebGPU through Dawn on Direct3D 12.
-- Node.js 24.18, studio `dev:e2e`, editors built from `837a08fc`.
+- Node.js 24.18, studio `dev:e2e`, editors built from `86ad0bda`.

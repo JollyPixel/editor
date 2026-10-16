@@ -95,7 +95,7 @@ export class SceneEnvironment {
     this.#applyBackground();
 
     this.#scene.environment = settings.reflections ?
-      this.#environmentMap() :
+      this.environmentMap :
       null;
     this.#scene.environmentIntensity = rig.environmentIntensity;
 
@@ -133,6 +133,33 @@ export class SceneEnvironment {
 
   get backdrop(): ResolvedThemeMode {
     return this.#lighting.rig.sky?.backdrop ?? this.#theme;
+  }
+
+  get environmentMap(): THREE.Texture {
+    if (this.#environment === null) {
+      const room = new RoomEnvironment();
+      const generator = new THREE.PMREMGenerator(this.#renderer.getSource());
+      const environment = generator.fromScene(room, kEnvironmentBlur);
+      this.#environment = environment;
+      this.#renderer.compiled()
+        .then(() => {
+          if (this.#environment === environment) {
+            generator.fromScene(
+              room,
+              kEnvironmentBlur,
+              kEnvironmentNear,
+              kEnvironmentFar,
+              { renderTarget: environment }
+            );
+          }
+        })
+        .finally(() => {
+          generator.dispose();
+          room.dispose();
+        });
+    }
+
+    return this.#environment.texture;
   }
 
   invalidateShadows(): void {
@@ -202,32 +229,5 @@ export class SceneEnvironment {
     }
 
     return node;
-  }
-
-  #environmentMap(): THREE.Texture {
-    if (this.#environment === null) {
-      const room = new RoomEnvironment();
-      const generator = new THREE.PMREMGenerator(this.#renderer.getSource());
-      const environment = generator.fromScene(room, kEnvironmentBlur);
-      this.#environment = environment;
-      this.#renderer.compiled()
-        .then(() => {
-          if (this.#environment === environment) {
-            generator.fromScene(
-              room,
-              kEnvironmentBlur,
-              kEnvironmentNear,
-              kEnvironmentFar,
-              { renderTarget: environment }
-            );
-          }
-        })
-        .finally(() => {
-          generator.dispose();
-          room.dispose();
-        });
-    }
-
-    return this.#environment.texture;
   }
 }

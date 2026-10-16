@@ -7,6 +7,7 @@ import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 import type { BlockRenderSources } from "./BlockRenderSources.ts";
 import { BlockPreviewSubject } from "./BlockPreviewSubject.ts";
 import { SquareTurntable } from "../../preview/SquareTurntable.ts";
+import type { PreviewStage } from "../../preview/PreviewStage.ts";
 import { previewWellStyles } from "../../../shared/styles/previewWell.styles.ts";
 
 @customElement("block-shape-preview")
@@ -29,6 +30,9 @@ export class BlockShapePreview extends LitElement {
       }
     `
   ];
+
+  @property({ attribute: false })
+  declare stage: PreviewStage;
 
   @property({ attribute: false })
   declare sources: BlockRenderSources;
@@ -66,7 +70,11 @@ export class BlockShapePreview extends LitElement {
   override updated(
     changed: Map<string, unknown>
   ): void {
-    if (changed.has("sources") || this.#renderer === null) {
+    if (
+      changed.has("stage") ||
+      changed.has("sources") ||
+      this.#renderer === null
+    ) {
       this.#build();
     }
     else if (changed.has("block")) {
@@ -83,8 +91,7 @@ export class BlockShapePreview extends LitElement {
 
     const subject = new BlockPreviewSubject(this.sources);
     subject.block = this.block;
-    this.#renderer = new SquareTurntable(this._well, subject);
-    this.#renderer.onContextLost = () => this.#build();
+    this.#renderer = new SquareTurntable(this._well, this.stage, subject);
   }
 }
 
