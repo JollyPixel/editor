@@ -10,8 +10,10 @@ import {
 
 // Import Third-party Dependencies
 import * as THREE from "three";
+import type * as THREE_WEBGPU from "three/webgpu";
 import { KeyBindings } from "@jolly-pixel/controls";
 import { LogQueue } from "@jolly-pixel/ui";
+import { VoxelTransparencyPassNode } from "@jolly-pixel/voxel.renderer";
 import type {
   CameraPose,
   Systems
@@ -35,7 +37,9 @@ function createLayer(
   };
 }
 
-function setup() {
+function setup(
+  samples?: number
+) {
   const keyboard = new KeyBindings();
   const pointer = new PointerCapture();
   const log = new LogQueue();
@@ -67,7 +71,8 @@ function setup() {
   const camera = new EditorCamera({
     world,
     pointer,
-    log
+    log,
+    samples
   });
 
   function pressEscape(): boolean {
@@ -110,6 +115,21 @@ function createBlock(
   root.updateMatrixWorld(true);
 
   return root;
+}
+
+function passSamples(
+  samples?: number
+): number | undefined {
+  const { camera, controls } = setup(samples);
+  camera.glow = false;
+  const node = controls.postProcessing?.({
+    renderer: {} as THREE_WEBGPU.WebGPURenderer,
+    scene: new THREE.Scene(),
+    camera: camera.camera
+  });
+  assert.ok(node instanceof VoxelTransparencyPassNode);
+
+  return node.options.samples;
 }
 
 describe("EditorCamera", () => {
@@ -207,6 +227,11 @@ describe("EditorCamera", () => {
 
     assert.equal(pressEscape(), false);
     assert.equal(controls.enabled, true);
+  });
+
+  test("multisamples the scene pass 4x by default, since the canvas has no MSAA", () => {
+    assert.equal(passSamples(), 4);
+    assert.equal(passSamples(0), 0);
   });
 
   test("keeps the camera pipeline while the glow setting is unchanged", () => {

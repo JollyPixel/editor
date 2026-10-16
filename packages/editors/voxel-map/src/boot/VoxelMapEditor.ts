@@ -71,6 +71,11 @@ export class VoxelMapEditor {
       includePerformanceStats: {
         position: "top-right"
       },
+      renderer: {
+        webgpu: {
+          antialias: false
+        }
+      },
       focusCanvas: false,
       focusHint: true,
       viewHelper: true,

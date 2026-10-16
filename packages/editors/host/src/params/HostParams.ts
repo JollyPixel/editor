@@ -11,6 +11,7 @@ export type RenderMode = typeof kRenderModes[number];
 export interface HostParams {
   maxFps: number | undefined;
   samples: number | undefined;
+  gpuTime: boolean;
   username: string | undefined;
   offline: boolean;
   workspace: string | undefined;
@@ -29,6 +30,7 @@ export const HOST_PARAMS = new QueryParams<HostParams>((query) => {
     samples: samples !== undefined && Number.isInteger(samples) && samples >= 0 ?
       samples :
       undefined,
+    gpuTime: query.flag("gpu-time"),
     username: username === "" ? undefined : username,
     offline: query.flag(kOfflineParam),
     workspace: workspace === "" ? undefined : workspace,

@@ -34,6 +34,7 @@ class FakeRenderer {
 
   getSource() {
     return {
+      backend: {},
       info: this.info
     };
   }

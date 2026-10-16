@@ -15,11 +15,12 @@ describe("HOST_PARAMS", () => {
   test("reads every host parameter", () => {
     assert.deepEqual(
       HOST_PARAMS.read(
-        "?max-fps=10&samples=0&username=Ada&offline&workspace=%20demo%20"
+        "?max-fps=10&samples=0&gpu-time&username=Ada&offline&workspace=%20demo%20"
       ),
       {
         maxFps: 10,
         samples: 0,
+        gpuTime: true,
         username: "Ada",
         offline: true,
         workspace: "demo",
@@ -32,6 +33,7 @@ describe("HOST_PARAMS", () => {
     assert.deepEqual(HOST_PARAMS.read(""), {
       maxFps: undefined,
       samples: undefined,
+      gpuTime: false,
       username: undefined,
       offline: false,
       workspace: undefined,
@@ -45,6 +47,7 @@ describe("HOST_PARAMS", () => {
       {
         maxFps: undefined,
         samples: undefined,
+        gpuTime: false,
         username: undefined,
         offline: false,
         workspace: undefined,

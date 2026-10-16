@@ -1,7 +1,8 @@
 // Import Node.js Dependencies
 import {
   describe,
-  test
+  test,
+  type TestContext
 } from "node:test";
 import assert from "node:assert/strict";
 
@@ -31,25 +32,33 @@ function recordingRuntime(
   return runtime as Runtime;
 }
 
+function recordCreates(
+  t: TestContext
+): Array<RuntimeOptions | undefined> {
+  const created: Array<RuntimeOptions | undefined> = [];
+  const runtime = {
+    world: {
+      input: {
+        keyboard: {
+          addGuard: () => undefined
+        }
+      }
+    }
+  } as unknown as Runtime;
+  t.mock.method(Runtime, "create", (_canvas: unknown, options?: RuntimeOptions) => {
+    created.push(options);
+
+    return Promise.resolve(runtime);
+  });
+
+  return created;
+}
+
 describe("EditorRuntime", () => {
   const scene = {} as Systems.Scene;
 
   test("renders on demand only in a frame or when the render param asks for it", async(t) => {
-    const created: Array<RuntimeOptions | undefined> = [];
-    const runtime = {
-      world: {
-        input: {
-          keyboard: {
-            addGuard: () => undefined
-          }
-        }
-      }
-    } as unknown as Runtime;
-    t.mock.method(Runtime, "create", (_canvas: unknown, options?: RuntimeOptions) => {
-      created.push(options);
-
-      return Promise.resolve(runtime);
-    });
+    const created = recordCreates(t);
 
     await EditorRuntime.create("canvas", {
       params: HOST_PARAMS.read(""),
@@ -76,6 +85,39 @@ describe("EditorRuntime", () => {
     assert.deepEqual(
       created.map((options) => options?.renderOnDemand),
       [true, false, false, false, true]
+    );
+  });
+
+  test("the gpu-time param turns on timestamps and keeps the editor renderer options", async(t) => {
+    const created = recordCreates(t);
+    const renderer = {
+      webgpu: {
+        antialias: false
+      }
+    };
+
+    await EditorRuntime.create("canvas", {
+      params: HOST_PARAMS.read("?gpu-time"),
+      framed: true,
+      renderer
+    });
+    await EditorRuntime.create("canvas", {
+      params: HOST_PARAMS.read(""),
+      framed: true,
+      renderer
+    });
+
+    assert.deepEqual(
+      created.map((options) => options?.renderer?.webgpu),
+      [
+        {
+          antialias: false,
+          trackTimestamp: true
+        },
+        {
+          antialias: false
+        }
+      ]
     );
   });
 
