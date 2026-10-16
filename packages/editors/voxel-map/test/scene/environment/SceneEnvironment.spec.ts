@@ -40,6 +40,7 @@ function createEnvironment() {
     renderer,
     scene,
     lighting,
+    roomEnvironment: null,
     chunks,
     casters,
     theme: "dark"

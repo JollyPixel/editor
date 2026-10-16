@@ -2,8 +2,14 @@
 import type * as THREE from "three";
 
 // Import Internal Dependencies
-import { HANDLE_HIGHLIGHT_COLOR } from "../common/axes.ts";
+import {
+  type Axis,
+  AXIS_COLOR,
+  HANDLE_HIGHLIGHT_COLOR
+} from "../common/axes.ts";
+import type { GizmoHandleStyle } from "./handles/GizmoHandle.ts";
 import type {
+  TransformAxisHandleOptions,
   TransformCenterAppearanceOptions,
   TransformDirection,
   TransformDirectionPolicy,
@@ -30,6 +36,13 @@ const kDefaultPickerRadius = 0.16;
 const kDefaultPickerLengthScale = 1;
 const kDefaultPickerRingTube = 0.08;
 const kDefaultRenderOrder = 20;
+const kDefaultDirections: TransformDirectionPolicy = "positive";
+const kDefaultTranslateHandle: TransformAxisHandleOptions = {
+  kind: "arrow"
+};
+const kDefaultScaleHandle: TransformAxisHandleOptions = {
+  kind: "cube"
+};
 const kDefaultOutline: ResolvedOutline = {
   color: "#080b11",
   opacity: 1,
@@ -79,23 +92,27 @@ export interface ResolvedCenter {
   interactive: boolean;
 }
 
+export interface ResolvedAxis {
+  excluded: boolean;
+  color: THREE.ColorRepresentation;
+  directions: TransformDirectionPolicy;
+  shapes: Record<"translate" | "scale", TransformAxisHandleOptions>;
+}
+
 export interface ResolvedAppearance {
   size: number;
   gap: number;
   pickerRadius: number;
   pickerLengthScale: number;
   pickerRingTube: number;
-  hoverColor: THREE.ColorRepresentation;
-  activeColor: THREE.ColorRepresentation;
-  outline: false | ResolvedOutline;
+  style: GizmoHandleStyle;
+  axes: Record<Axis, ResolvedAxis>;
   center: false | ResolvedCenter;
   planes: false | ResolvedPlanes;
   rings: ResolvedRings;
   viewRing: false | ResolvedViewRing;
   hideAligned: boolean;
   flipTowardCamera: boolean;
-  depthTest: boolean;
-  renderOrder: number;
 }
 
 export function resolveAppearance(
@@ -120,9 +137,21 @@ export function resolveAppearance(
       options.picker?.ringTube ?? kDefaultPickerRingTube,
       "gizmo picker.ringTube"
     ),
-    hoverColor: options.hoverColor ?? HANDLE_HIGHLIGHT_COLOR,
-    activeColor: options.activeColor ?? HANDLE_HIGHLIGHT_COLOR,
-    outline,
+    style: {
+      hoverColor: options.hoverColor ?? HANDLE_HIGHLIGHT_COLOR,
+      activeColor: options.activeColor ?? HANDLE_HIGHLIGHT_COLOR,
+      outline,
+      depthTest: options.depthTest ?? false,
+      renderOrder: finite(
+        options.renderOrder ?? kDefaultRenderOrder,
+        "gizmo renderOrder"
+      )
+    },
+    axes: {
+      x: resolveAxis("x", options),
+      y: resolveAxis("y", options),
+      z: resolveAxis("z", options)
+    },
     center,
     planes: resolvePlanes(
       options.planes,
@@ -131,12 +160,7 @@ export function resolveAppearance(
     rings: resolveRings(options.rings),
     viewRing: resolveViewRing(options.viewRing),
     hideAligned: options.hideAligned ?? false,
-    flipTowardCamera: options.flipTowardCamera ?? false,
-    depthTest: options.depthTest ?? false,
-    renderOrder: finite(
-      options.renderOrder ?? kDefaultRenderOrder,
-      "gizmo renderOrder"
-    )
+    flipTowardCamera: options.flipTowardCamera ?? false
   };
 }
 
@@ -163,6 +187,31 @@ export function resolveDirections(
   }
 
   return [1, -1];
+}
+
+function resolveAxis(
+  axis: Axis,
+  options: TransformGizmoAppearanceOptions
+): ResolvedAxis {
+  const overrides = options.axes?.[axis];
+  const excluded = overrides === false;
+  const axisOptions = excluded ? undefined : overrides;
+
+  return {
+    excluded,
+    color: axisOptions?.color ?? AXIS_COLOR[axis],
+    directions: axisOptions?.directions ??
+      options.directions ??
+      kDefaultDirections,
+    shapes: {
+      translate: axisOptions?.handle ??
+        options.handle ??
+        kDefaultTranslateHandle,
+      scale: axisOptions?.scaleHandle ??
+        options.scaleHandle ??
+        kDefaultScaleHandle
+    }
+  };
 }
 
 function resolveOutline(

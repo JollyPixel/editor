@@ -23,12 +23,12 @@ export const PREVIEW_STILL_ROTATION = Math.PI / 4;
 
 export interface PreviewStageOptions {
   renderer: Systems.Renderer<THREE.WebGPURenderer>;
-  environmentMap: () => THREE.Texture;
+  environmentMap: () => THREE.Texture | null;
 }
 
 export class PreviewStage {
   readonly #renderer: Systems.Renderer<THREE.WebGPURenderer>;
-  readonly #environmentMap: () => THREE.Texture;
+  readonly #environmentMap: () => THREE.Texture | null;
   readonly #scene = new THREE.Scene();
   readonly #camera = new THREE.PerspectiveCamera(kCameraFov, 1, 0.1, 20);
   readonly #clearColor = new THREE.Color();
