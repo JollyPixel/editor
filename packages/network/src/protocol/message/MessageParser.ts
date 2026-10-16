@@ -54,7 +54,7 @@ export class MessageParser<
   #unionKeyword: "oneOf" | "anyOf";
   #byTag = new Map<string, readonly CompiledVariant<TMessage>[]>();
   #untagged: readonly CompiledVariant<TMessage>[];
-  #union: Validator<TMessage>;
+  #union: Validator<TMessage> | null;
 
   constructor(
     protocol: MessageProtocol
@@ -81,10 +81,12 @@ export class MessageParser<
         this.#byTag.set(tag, [...variants, ...this.#untagged]);
       }
     }
-    this.#union = new Validator<TMessage>(
-      protocol.schema,
-      VALIDATOR_OPTIONS
-    );
+    this.#union = compiled.length === 0 ?
+      null :
+      new Validator<TMessage>(
+        protocol.schema,
+        VALIDATOR_OPTIONS
+      );
   }
 
   parse(
@@ -106,9 +108,15 @@ export class MessageParser<
       };
     }
 
-    return parsed === undefined ?
-      Err(this.#union.validate(payload).errors) :
-      Ok(parsed);
+    if (parsed !== undefined) {
+      return Ok(parsed);
+    }
+
+    return Err(
+      this.#union === null ?
+        [this.#noVariantError()] :
+        this.#union.validate(payload).errors
+    );
   }
 
   #candidatesFor(
@@ -127,6 +135,18 @@ export class MessageParser<
     return typeof tag === "string" ?
       this.#byTag.get(tag) ?? this.#untagged :
       this.#untagged;
+  }
+
+  #noVariantError(): ValidationError {
+    return {
+      keyword: this.#unionKeyword,
+      instancePath: "",
+      schemaPath: `#/${this.#unionKeyword}`,
+      params: {
+        variants: 0
+      },
+      message: "accepts no message"
+    };
   }
 
   #ambiguityError(
