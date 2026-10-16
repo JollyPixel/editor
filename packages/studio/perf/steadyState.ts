@@ -1,63 +1,65 @@
 // Import Node.js Dependencies
-import {
-  mkdirSync,
-  writeFileSync
-} from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 
+// Import Third-party Dependencies
+import * as z from "zod";
+
 // Import Internal Dependencies
+import { MarkdownTable } from "./analysis/MarkdownTable.ts";
+import {
+  MeasurementGroup,
+  type MeasurementPick
+} from "./analysis/MeasurementGroup.ts";
 import type { GcPauses } from "./analysis/Trace.ts";
+import { alternatingRounds } from "./harness/alternatingRounds.ts";
 import { BenchBrowser } from "./harness/BenchBrowser.ts";
 import {
   BenchEditors,
-  STUDIO_URL,
   type BenchEditor
 } from "./harness/BenchEditors.ts";
 import {
   EditorViewport,
-  VIEWPORT_SCENARIOS,
-  type ViewportScenario
+  VIEWPORT_SCENARIOS
 } from "./harness/EditorViewport.ts";
 import {
-  MODES_SCHEMA,
-  STORAGE_SCHEMA
-} from "./harness/OpenPlan.ts";
-import { DEFAULT_SETTLE_MS } from "./harness/OpenRun.ts";
+  DEFAULT_SETTLE_MS,
+  MODE_FLAG,
+  STORAGE_FLAG,
+  splitList
+} from "./harness/flags.ts";
 import {
-  readProbe,
+  FRAME_PACING_THRESHOLDS,
   startFramePacing,
   stopFramePacing
-} from "./harness/pageProbe.ts";
-import type { StudioMode } from "./harness/StudioPage.ts";
+} from "./harness/framePacing.ts";
+import { readProbe } from "./harness/openProbe.ts";
+import { ResultsFile } from "./harness/ResultsFile.ts";
+import { STUDIO_URL } from "./harness/StudioPage.ts";
 import { StudioSession } from "./harness/StudioSession.ts";
-
-interface SteadyMeasurement {
-  round: number;
-  editor: string;
-  mode: StudioMode;
-  scenario: ViewportScenario;
-  elapsedMs: number;
-  allocatedMBPerSecond: number;
-  allocatedKBPerFrame: number;
-  heapGrowthMB: number;
-  taskMsPerSecond: number;
-  scriptMsPerSecond: number;
-  minorGc: GcPauses;
-  majorGc: GcPauses;
-  frames: number;
-  worstFrameMs: number;
-  longFrames: number;
-  longFramesMs: number;
-  renders: number;
-  wakes: number;
-  idleMs: number;
-  heapProfileFile: string;
-}
+import {
+  SteadySample,
+  type SteadyMeasurement
+} from "./harness/SteadySample.ts";
 
 // CONSTANTS
 const kBetweenScenariosMs = 500;
-const kSchema = MODES_SCHEMA.element;
+const kSummaryColumns: [string, MeasurementPick<SteadyMeasurement>][] = [
+  ["main thread ms/s", (item) => item.taskMsPerSecond],
+  ["script ms/s", (item) => item.scriptMsPerSecond],
+  ["MB/s", (item) => item.allocatedMBPerSecond],
+  ["KB/frame", (item) => item.allocatedKBPerFrame],
+  ["minor GC/s", (item) => perSecond(item, item.minorGc.count)],
+  ["GC ms/s", (item) => perSecond(item, item.minorGc.ms + item.majorGc.ms)],
+  ["major GCs", (item) => item.majorGc.count],
+  ["frames/s", (item) => perSecond(item, item.frames)],
+  ["renders/s", (item) => perSecond(item, item.renders)],
+  ["wakes", (item) => item.wakes],
+  ["idle %", (item) => (item.idleMs * 100) / item.elapsedMs],
+  ["worst frame ms", (item) => item.worstFrameMs],
+  ["long frames ms", (item) => item.longFramesMs],
+  ["heap growth MB", (item) => item.heapGrowthMB]
+];
 
 const { values: args } = parseArgs({
   options: {
@@ -73,38 +75,29 @@ const { values: args } = parseArgs({
   }
 });
 
-const editors = (await BenchEditors.read()).select(list(args.editors));
-const mode = kSchema.parse(args.mode);
-const scenarios = list(args.scenarios).map((name) => {
-  if (!VIEWPORT_SCENARIOS.includes(name as ViewportScenario)) {
-    throw new Error(`Unknown scenario "${name}"`);
-  }
-
-  return name as ViewportScenario;
-});
+const editors = (await BenchEditors.read()).select(splitList(args.editors));
+const mode = MODE_FLAG.parse(args.mode);
+const scenarios = z.array(z.enum(VIEWPORT_SCENARIOS)).parse(splitList(args.scenarios));
 const durationMs = Number(args.seconds) * 1000;
-const storage = STORAGE_SCHEMA.parse(JSON.parse(args.storage));
-const measurements: SteadyMeasurement[] = [];
-mkdirSync(args.profiles, { recursive: true });
+const storage = STORAGE_FLAG.parse(args.storage);
+const results = new ResultsFile(args.out, "steady", args);
 
-for (let round = 0; round < Number(args.rounds); round++) {
-  const order = round % 2 === 0 ? editors : editors.toReversed();
-  for (const editor of order) {
-    try {
-      measurements.push(...await measureEditor(editor, round));
+for (const { round, item: editor } of alternatingRounds(editors, Number(args.rounds))) {
+  try {
+    for await (const measurement of measureEditor(editor, round)) {
+      results.add(measurement);
     }
-    catch (error) {
-      console.error(`${round} ${editor.name} failed`, error);
-    }
-    writeResults();
+  }
+  catch (error) {
+    console.error(`${round} ${editor.name} failed`, error);
   }
 }
-printSummary();
+printSummary(results);
 
-async function measureEditor(
+async function* measureEditor(
   editor: BenchEditor,
   round: number
-): Promise<SteadyMeasurement[]> {
+): AsyncGenerator<SteadyMeasurement> {
   const bench = await BenchBrowser.launch();
   try {
     const session = await StudioSession.start(bench, {
@@ -120,58 +113,38 @@ async function measureEditor(
     await studio.page.waitForTimeout(DEFAULT_SETTLE_MS);
     const viewport = await EditorViewport.locate(studio.page, frame);
 
-    const results: SteadyMeasurement[] = [];
     for (const scenario of scenarios) {
       await viewport.prepare(scenario);
       await studio.page.waitForTimeout(kBetweenScenariosMs);
 
-      const metricsBefore = await session.metrics();
-      await session.startMemory();
-      const started = await frame.evaluate(now);
-      await frame.evaluate(startFramePacing);
-      await viewport.play(scenario, durationMs);
-      const pacing = await frame.evaluate(stopFramePacing);
-      const ended = await frame.evaluate(now);
-      const recording = await session.stopMemory();
-      const metricsAfter = await session.metrics();
-
-      const longFrames = [
-        ...(await frame.evaluate(readProbe)).frames,
-        ...(await studio.page.evaluate(readProbe)).frames
-      ].filter(({ t }) => t >= started && t <= ended);
-      const heapProfileFile = path.join(
+      const heapProfile = path.join(
         args.profiles,
         `${editor.name}-${mode}-${scenario}-${round}.heapprofile`
       );
-      writeFileSync(heapProfileFile, JSON.stringify(recording.heapProfile));
+      const { result: pacing, recording } = await session.record(
+        { heapProfile },
+        async() => {
+          await frame.evaluate(startFramePacing, FRAME_PACING_THRESHOLDS);
+          await viewport.play(scenario, durationMs);
 
-      const seconds = pacing.elapsedMs / 1000;
-      const metrics = {
-        before: metricsBefore,
-        after: metricsAfter
-      };
-      const measurement: SteadyMeasurement = {
+          return frame.evaluate(stopFramePacing);
+        }
+      );
+
+      const sample = new SteadySample({
+        recording,
+        pacing,
+        probes: [
+          await frame.evaluate(readProbe),
+          await studio.page.evaluate(readProbe)
+        ]
+      });
+      const measurement = sample.toMeasurement({
         round,
         editor: editor.name,
         mode,
-        scenario,
-        elapsedMs: pacing.elapsedMs,
-        allocatedMBPerSecond: round1(recording.allocatedBytes / 1e6 / seconds),
-        allocatedKBPerFrame: round1(recording.allocatedBytes / 1024 / Math.max(1, pacing.frames)),
-        heapGrowthMB: round1(metricDelta(metrics, "JSHeapUsedSize") / 1e6),
-        taskMsPerSecond: Math.round(metricDelta(metrics, "TaskDuration") * 1000 / seconds),
-        scriptMsPerSecond: Math.round(metricDelta(metrics, "ScriptDuration") * 1000 / seconds),
-        minorGc: recording.gc.minor,
-        majorGc: recording.gc.major,
-        frames: pacing.frames,
-        worstFrameMs: pacing.worstMs,
-        longFrames: longFrames.length,
-        longFramesMs: Math.round(longFrames.reduce((total, { duration }) => total + duration, 0)),
-        renders: pacing.renders,
-        wakes: pacing.wakes,
-        idleMs: pacing.idleMs,
-        heapProfileFile
-      };
+        scenario
+      });
       console.log(
         `${round} ${editor.name.padEnd(11)} ${scenario.padEnd(5)}`,
         `${measurement.allocatedMBPerSecond} MB/s ${measurement.allocatedKBPerFrame} KB/frame`,
@@ -180,93 +153,47 @@ async function measureEditor(
         `renders ${measurement.renders} wakes ${measurement.wakes} idle ${measurement.idleMs}ms`,
         `main ${measurement.taskMsPerSecond}ms/s`
       );
-      results.push(measurement);
+
+      yield measurement;
     }
     await session.close();
-
-    return results;
   }
   finally {
     await bench.close();
   }
 }
 
+function printSummary(
+  measurements: Iterable<SteadyMeasurement>
+): void {
+  const table = new MarkdownTable(
+    ["editor", "scenario", "n", ...kSummaryColumns.map(([title]) => title)],
+    { fractionDigits: 1 }
+  );
+  const groups = MeasurementGroup.groupBy(
+    measurements,
+    (item) => [item.editor, item.scenario]
+  );
+  for (const group of groups) {
+    table.add([
+      group.sample.editor,
+      group.sample.scenario,
+      group.items.length,
+      ...kSummaryColumns.map(([, pick]) => group.median(pick))
+    ]);
+  }
+  console.log(`\n${table}`);
+}
+
+function perSecond(
+  item: SteadyMeasurement,
+  count: number
+): number {
+  return count / (item.elapsedMs / 1000);
+}
+
 function pauses(
   gc: GcPauses
 ): string {
   return `${gc.count}x${gc.ms}ms`;
-}
-
-function now(): number {
-  return performance.timeOrigin + performance.now();
-}
-
-function writeResults(): void {
-  mkdirSync(path.dirname(path.resolve(args.out)), { recursive: true });
-  writeFileSync(args.out, JSON.stringify({
-    setup: args,
-    measurements
-  }, null, 2));
-}
-
-function printSummary(): void {
-  const columns: [string, (item: SteadyMeasurement) => number][] = [
-    ["main thread ms/s", (item) => item.taskMsPerSecond],
-    ["script ms/s", (item) => item.scriptMsPerSecond],
-    ["MB/s", (item) => item.allocatedMBPerSecond],
-    ["KB/frame", (item) => item.allocatedKBPerFrame],
-    ["minor GC/s", (item) => round1(item.minorGc.count / (item.elapsedMs / 1000))],
-    ["GC ms/s", (item) => round1((item.minorGc.ms + item.majorGc.ms) / (item.elapsedMs / 1000))],
-    ["major GCs", (item) => item.majorGc.count],
-    ["frames/s", (item) => round1(item.frames / (item.elapsedMs / 1000))],
-    ["renders/s", (item) => round1(item.renders / (item.elapsedMs / 1000))],
-    ["wakes", (item) => item.wakes],
-    ["idle %", (item) => Math.round((item.idleMs * 100) / item.elapsedMs)],
-    ["worst frame ms", (item) => item.worstFrameMs],
-    ["long frames ms", (item) => item.longFramesMs],
-    ["heap growth MB", (item) => item.heapGrowthMB]
-  ];
-  console.log();
-  console.log(`| editor | scenario | n | ${columns.map(([title]) => title).join(" | ")} |`);
-  console.log(`|${" --- |".repeat(columns.length + 3)}`);
-  for (const editor of editors) {
-    for (const scenario of scenarios) {
-      const items = measurements.filter(
-        (item) => item.editor === editor.name && item.scenario === scenario
-      );
-      if (items.length === 0) {
-        continue;
-      }
-      const cells = columns.map(([, pick]) => median(items.map(pick)));
-      console.log(`| ${editor.name} | ${scenario} | ${items.length} | ${cells.join(" | ")} |`);
-    }
-  }
-}
-
-function median(
-  values: number[]
-): number {
-  const sorted = values.toSorted((left, right) => left - right);
-  const middle = sorted.length >> 1;
-
-  return round1(sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2);
-}
-
-function round1(
-  value: number
-): number {
-  return Math.round(value * 10) / 10;
-}
-
-function list(
-  value: string
-): string[] {
-  return value.split(",").filter((item) => item !== "");
-}
-
-function metricDelta(
-  metrics: Record<"before" | "after", Map<string, number>>,
-  name: string
-): number {
-  return (metrics.after.get(name) ?? 0) - (metrics.before.get(name) ?? 0);
 }

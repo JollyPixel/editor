@@ -6,7 +6,7 @@ import type {
 
 // Import Internal Dependencies
 import { BenchBrowser } from "../harness/BenchBrowser.ts";
-import { STUDIO_URL } from "../harness/BenchEditors.ts";
+import { STUDIO_URL } from "../harness/StudioPage.ts";
 
 // CONSTANTS
 const kBlankUrl = new URL("main.css", STUDIO_URL).href;

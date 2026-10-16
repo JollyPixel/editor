@@ -86,16 +86,13 @@ export class Trace {
     return this.#threadNames.get(Trace.threadKey(event)) ?? "?";
   }
 
-  garbageCollections(
-    from = -Infinity,
-    until = Infinity
-  ): GcSummary {
+  garbageCollections(): GcSummary {
     const summary: GcSummary = {
       minor: { count: 0, ms: 0 },
       major: { count: 0, ms: 0 }
     };
     const pauses = this.spans
-      .filter((span) => this.#isMainThreadGc(span) && span.ts >= from && span.ts <= until)
+      .filter((span) => this.#isMainThreadGc(span))
       .sort((left, right) => left.ts - right.ts || right.dur - left.dur);
 
     const ends = new Map<string, number>();

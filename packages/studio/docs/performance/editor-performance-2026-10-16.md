@@ -139,7 +139,7 @@ Offline, the studio shell runs the asset server in the page, on the same main th
 
 ## Experiments
 
-`bench:*` flags in [`editor-open-2026-10-16.patch`](../../perf/plans/editor-open-2026-10-16.patch), plan [`editor-open-2026-10-16.json`](../../perf/plans/editor-open-2026-10-16.json), five interleaved rounds, online:
+`bench:*` flags in [`editor-open-2026-10-16.patch`](./editor-open-2026-10-16.patch), plan [`editor-open-2026-10-16.json`](./editor-open-2026-10-16.json), five interleaved rounds, online:
 
 - `no-environment`: voxel-model skips the room environment, the upper bound of baking it.
 - `one-gizmo`: voxel-model builds one `TransformControls` and reuses it for the pivot and resize tools, close to building handles per mode on demand.

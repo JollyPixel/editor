@@ -2,64 +2,56 @@
 import { parseArgs } from "node:util";
 
 // Import Internal Dependencies
+import { BenchEditors } from "./harness/BenchEditors.ts";
+import { splitList } from "./harness/flags.ts";
 import {
-  BenchEditors,
-  STUDIO_URL
-} from "./harness/BenchEditors.ts";
-import {
-  MODES_SCHEMA,
-  PHASES_SCHEMA,
-  STORAGE_SCHEMA
+  FOLLOW_UP_PHASE,
+  OpenPlan
 } from "./harness/OpenPlan.ts";
 import {
-  DEFAULT_SETTLE_MS,
-  FOLLOW_UP_PHASES,
+  OPEN_RUN_OPTIONS,
   OpenRun
 } from "./harness/OpenRun.ts";
 import { ResultsFile } from "./harness/ResultsFile.ts";
+import { STUDIO_URL } from "./harness/StudioPage.ts";
 
 const { values: args } = parseArgs({
   options: {
     runs: { type: "string", default: "5" },
     modes: { type: "string", default: "online,offline" },
     editors: { type: "string", default: "voxel-map,voxel-model,pixel-art" },
-    phases: { type: "string", default: FOLLOW_UP_PHASES.join(",") },
+    phases: { type: "string", default: FOLLOW_UP_PHASE.options.join(",") },
     out: { type: "string", default: "perf-results/open.json" },
     label: { type: "string", default: "baseline" },
     storage: { type: "string", default: "{}" },
     prewarm: { type: "boolean", default: false },
-    headless: { type: "boolean", default: false },
-    cpu: { type: "string", default: "1" },
-    settle: { type: "string", default: String(DEFAULT_SETTLE_MS) },
-    profile: { type: "string" },
-    memory: { type: "string" },
-    base: { type: "string", default: STUDIO_URL }
+    base: { type: "string", default: STUDIO_URL },
+    ...OPEN_RUN_OPTIONS
   }
 });
 
-const editors = await BenchEditors.read();
-const run = new OpenRun({
-  label: args.label,
-  runs: Number(args.runs),
-  editors: editors.select(list(args.editors)),
-  modes: MODES_SCHEMA.parse(list(args.modes)),
-  phases: new Set(PHASES_SCHEMA.parse(list(args.phases))),
-  storage: STORAGE_SCHEMA.parse(JSON.parse(args.storage)),
-  prewarm: args.prewarm,
-  headless: args.headless,
-  cpuThrottle: Number(args.cpu),
-  settleMs: Number(args.settle),
-  profileDir: args.profile ?? null,
-  memoryDir: args.memory ?? null,
-  base: args.base
-});
-const results = new ResultsFile(args.out, args);
-for await (const measurement of run.measure()) {
+const plan = OpenPlan.parse(
+  {
+    editors: splitList(args.editors),
+    modes: splitList(args.modes),
+    phases: splitList(args.phases),
+    variants: [
+      {
+        label: args.label,
+        storage: JSON.parse(args.storage),
+        prewarm: args.prewarm,
+        base: args.base
+      }
+    ]
+  },
+  "The command line"
+);
+const run = new OpenRun(
+  plan,
+  await BenchEditors.read(),
+  OpenRun.settingsFrom(args)
+);
+const results = new ResultsFile(args.out, "open", args);
+for await (const measurement of run.measure(Number(args.runs))) {
   results.add(measurement);
-}
-
-function list(
-  value: string
-): string[] {
-  return value.split(",").filter((item) => item !== "");
 }

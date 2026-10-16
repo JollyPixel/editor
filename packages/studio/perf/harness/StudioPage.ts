@@ -1,4 +1,8 @@
 // Import Third-party Dependencies
+import {
+  PORTS,
+  baseUrl
+} from "@jolly-pixel/e2e";
 import type {
   Frame,
   Page
@@ -10,6 +14,7 @@ import { StudioShell } from "../../test/e2e/support/studio.ts";
 import type { BenchEditor } from "./BenchEditors.ts";
 
 // CONSTANTS
+export const STUDIO_URL = `${baseUrl(PORTS.studio)}/`;
 export const STUDIO_MODES = ["online", "offline"] as const;
 const kTabsStorageKey = "studio:tabs";
 const kShellTimeoutMs = 30_000;

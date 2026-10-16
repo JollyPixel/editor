@@ -1,9 +1,3 @@
-// Import Third-party Dependencies
-import {
-  PORTS,
-  baseUrl
-} from "@jolly-pixel/e2e";
-
 // Import Internal Dependencies
 import {
   STUDIO_ROOT,
@@ -20,7 +14,6 @@ import {
 } from "../../test/e2e/support/tabs.ts";
 
 // CONSTANTS
-export const STUDIO_URL = `${baseUrl(PORTS.studio)}/`;
 const kOpenTargets = new Map([
   ["voxel-map", { row: MAP, tab: MAP_TAB }],
   ["voxel-model", { row: MODEL, tab: "model" }],

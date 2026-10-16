@@ -5,20 +5,16 @@ import { readFileSync } from "node:fs";
 import * as z from "zod";
 
 // Import Internal Dependencies
-import { STUDIO_URL } from "./BenchEditors.ts";
-import {
-  FOLLOW_UP_PHASES,
-  type FollowUpPhase
-} from "./OpenRun.ts";
+import { STORAGE_SCHEMA } from "./flags.ts";
+import { PHASES } from "./OpenSample.ts";
 import {
   STUDIO_MODES,
+  STUDIO_URL,
   type StudioMode
 } from "./StudioPage.ts";
 
 // CONSTANTS
-export const STORAGE_SCHEMA = z.record(z.string(), z.string());
-export const MODES_SCHEMA = z.array(z.enum(STUDIO_MODES)).min(1);
-export const PHASES_SCHEMA = z.array(z.enum(FOLLOW_UP_PHASES));
+export const FOLLOW_UP_PHASE = z.enum(PHASES).exclude(["first"]);
 const kVariantSchema = z.object({
   label: z.string().min(1),
   storage: STORAGE_SCHEMA.default({}),
@@ -27,17 +23,13 @@ const kVariantSchema = z.object({
 });
 const kPlanSchema = z.object({
   editors: z.array(z.string().min(1)).min(1),
-  modes: MODES_SCHEMA,
-  phases: PHASES_SCHEMA.default([]),
+  modes: z.array(z.enum(STUDIO_MODES)).min(1),
+  phases: z.array(FOLLOW_UP_PHASE).default([]),
   variants: z.array(kVariantSchema).min(1)
 });
 
+export type FollowUpPhase = z.infer<typeof FOLLOW_UP_PHASE>;
 export type OpenVariant = z.infer<typeof kVariantSchema>;
-
-export interface ScheduledVariant {
-  round: number;
-  variant: OpenVariant;
-}
 
 export class OpenPlan {
   readonly editors: readonly string[];
@@ -48,11 +40,19 @@ export class OpenPlan {
   static read(
     file: string
   ): OpenPlan {
-    const plan = kPlanSchema.safeParse(
-      JSON.parse(readFileSync(file, "utf8"))
+    return OpenPlan.parse(
+      JSON.parse(readFileSync(file, "utf8")),
+      `"${file}"`
     );
+  }
+
+  static parse(
+    input: unknown,
+    source: string
+  ): OpenPlan {
+    const plan = kPlanSchema.safeParse(input);
     if (!plan.success) {
-      throw new TypeError(`"${file}" is not a valid plan:\n${z.prettifyError(plan.error)}`);
+      throw new TypeError(`${source} is not a valid plan:\n${z.prettifyError(plan.error)}`);
     }
 
     return new OpenPlan(plan.data);
@@ -65,18 +65,5 @@ export class OpenPlan {
     this.modes = [...data.modes];
     this.phases = new Set(data.phases);
     this.variants = [...data.variants];
-  }
-
-  * schedule(
-    rounds: number
-  ): IterableIterator<ScheduledVariant> {
-    for (let round = 0; round < rounds; round++) {
-      const variants = round % 2 === 0
-        ? this.variants
-        : this.variants.toReversed();
-      for (const variant of variants) {
-        yield { round, variant };
-      }
-    }
   }
 }

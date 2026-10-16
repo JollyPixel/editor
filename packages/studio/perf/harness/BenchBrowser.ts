@@ -6,11 +6,7 @@ import {
 
 // Import Internal Dependencies
 import { registerAccount } from "../../test/e2e/support/account.ts";
-import {
-  installProbe,
-  prewarmAdapter,
-  seedStorage
-} from "./pageProbe.ts";
+import { installProbe } from "./openProbe.ts";
 import {
   StudioPage,
   type StudioMode
@@ -88,5 +84,27 @@ export class BenchBrowser {
 
   close(): Promise<void> {
     return this.browser.close();
+  }
+}
+
+function seedStorage(
+  entries: Record<string, string>
+): void {
+  try {
+    for (const [key, value] of Object.entries(entries)) {
+      localStorage.setItem(key, value);
+    }
+  }
+  catch {
+    console.warn("[perf] localStorage unavailable");
+  }
+}
+
+function prewarmAdapter(): void {
+  const gpu = Reflect.get(navigator, "gpu") as {
+    requestAdapter(): Promise<unknown>;
+  } | undefined;
+  if (window === window.top && gpu !== undefined) {
+    void gpu.requestAdapter();
   }
 }

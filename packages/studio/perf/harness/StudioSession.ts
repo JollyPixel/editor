@@ -1,3 +1,10 @@
+// Import Node.js Dependencies
+import {
+  mkdirSync,
+  writeFileSync
+} from "node:fs";
+import path from "node:path";
+
 // Import Third-party Dependencies
 import type {
   Browser,
@@ -15,21 +22,43 @@ import type {
   BenchBrowser,
   StudioPageOptions
 } from "./BenchBrowser.ts";
+import { MetricsDelta } from "./MetricsDelta.ts";
 import { SocketTraffic } from "./SocketTraffic.ts";
 import type { StudioPage } from "./StudioPage.ts";
 
 // CONSTANTS
-const kSamplingIntervalUs = 200;
-const kAllocationSamplingBytes = 16 * 1024;
+export const CPU_SAMPLING_INTERVAL_US = 200;
+export const HEAP_SAMPLING = {
+  samplingInterval: 16 * 1024,
+  includeObjectsCollectedByMajorGC: true,
+  includeObjectsCollectedByMinorGC: true
+} as const;
 
 export interface StudioSessionOptions extends StudioPageOptions {
   cpuThrottle: number;
 }
 
+export interface RecordingFiles {
+  cpuProfile?: string;
+  heapProfile?: string;
+}
+
 export interface MemoryRecording {
-  heapProfile: unknown;
+  heapProfileFile: string;
   allocatedBytes: number;
   gc: GcSummary;
+}
+
+export interface SessionRecording {
+  metrics: MetricsDelta;
+  socketBytes: number;
+  cpuProfileFile?: string;
+  memory?: MemoryRecording;
+}
+
+export interface Recorded<T> {
+  result: T;
+  recording: SessionRecording;
 }
 
 export class StudioSession {
@@ -67,54 +96,97 @@ export class StudioSession {
     this.#browser = browser;
   }
 
-  async metrics(): Promise<Map<string, number>> {
-    const { metrics } = await this.#cdp.send("Performance.getMetrics");
+  async record<T>(
+    files: RecordingFiles,
+    action: () => Promise<T>
+  ): Promise<Recorded<T>> {
+    const metricsBefore = await this.#metrics();
+    const socketsBefore = this.traffic.received;
+    if (files.cpuProfile !== undefined) {
+      await this.#startProfile();
+    }
+    if (files.heapProfile !== undefined) {
+      await this.#startMemory();
+    }
 
-    return new Map(metrics.map(({ name, value }) => [name, value]));
-  }
+    const result = await action();
 
-  async startProfile(): Promise<void> {
-    await this.#cdp.send("Profiler.enable");
-    await this.#cdp.send("Profiler.setSamplingInterval", {
-      interval: kSamplingIntervalUs
-    });
-    await this.#cdp.send("Profiler.start");
-  }
-
-  async stopProfile(): Promise<unknown> {
-    const { profile } = await this.#cdp.send("Profiler.stop");
-    await this.#cdp.send("Profiler.disable");
-
-    return profile;
-  }
-
-  async startMemory(): Promise<void> {
-    await this.#browser.startTracing(undefined, {
-      categories: GC_CATEGORIES
-    });
-    await this.#cdp.send("HeapProfiler.enable");
-    await this.#cdp.send("HeapProfiler.startSampling", {
-      samplingInterval: kAllocationSamplingBytes,
-      includeObjectsCollectedByMajorGC: true,
-      includeObjectsCollectedByMinorGC: true
-    });
-  }
-
-  async stopMemory(): Promise<MemoryRecording> {
-    const { profile } = await this.#cdp.send("HeapProfiler.stopSampling");
-    await this.#cdp.send("HeapProfiler.disable");
-    const trace = Trace.parse(
-      (await this.#browser.stopTracing()).toString("utf8")
-    );
+    const cpuProfileFile = files.cpuProfile === undefined ?
+      undefined :
+      await this.#stopProfile(files.cpuProfile);
+    const memory = files.heapProfile === undefined ?
+      undefined :
+      await this.#stopMemory(files.heapProfile);
 
     return {
-      heapProfile: profile,
-      allocatedBytes: ProfileTree.fromHeapProfile(profile).weights.total,
-      gc: trace.garbageCollections()
+      result,
+      recording: {
+        metrics: new MetricsDelta(metricsBefore, await this.#metrics()),
+        socketBytes: this.traffic.received - socketsBefore,
+        cpuProfileFile,
+        memory
+      }
     };
   }
 
   close(): Promise<void> {
     return this.studio.page.context().close();
   }
+
+  async #metrics(): Promise<Map<string, number>> {
+    const { metrics } = await this.#cdp.send("Performance.getMetrics");
+
+    return new Map(metrics.map(({ name, value }) => [name, value]));
+  }
+
+  async #startProfile(): Promise<void> {
+    await this.#cdp.send("Profiler.enable");
+    await this.#cdp.send("Profiler.setSamplingInterval", {
+      interval: CPU_SAMPLING_INTERVAL_US
+    });
+    await this.#cdp.send("Profiler.start");
+  }
+
+  async #stopProfile(
+    file: string
+  ): Promise<string> {
+    const { profile } = await this.#cdp.send("Profiler.stop");
+    await this.#cdp.send("Profiler.disable");
+    writeJson(file, profile);
+
+    return file;
+  }
+
+  async #startMemory(): Promise<void> {
+    await this.#browser.startTracing(undefined, {
+      categories: GC_CATEGORIES
+    });
+    await this.#cdp.send("HeapProfiler.enable");
+    await this.#cdp.send("HeapProfiler.startSampling", HEAP_SAMPLING);
+  }
+
+  async #stopMemory(
+    file: string
+  ): Promise<MemoryRecording> {
+    const { profile } = await this.#cdp.send("HeapProfiler.stopSampling");
+    await this.#cdp.send("HeapProfiler.disable");
+    const trace = Trace.parse(
+      (await this.#browser.stopTracing()).toString("utf8")
+    );
+    writeJson(file, profile);
+
+    return {
+      heapProfileFile: file,
+      allocatedBytes: ProfileTree.totalAllocated(profile),
+      gc: trace.garbageCollections()
+    };
+  }
+}
+
+function writeJson(
+  file: string,
+  value: unknown
+): void {
+  mkdirSync(path.dirname(file), { recursive: true });
+  writeFileSync(file, JSON.stringify(value));
 }

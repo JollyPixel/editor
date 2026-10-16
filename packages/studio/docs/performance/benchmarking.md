@@ -12,7 +12,7 @@ One measurement is one double-click on an asset row, timed until the editor fram
 - Boot steps: every `logger.step()` of `host.boot`, `host.session`, `editor.runtime` and the editor, read from the `<namespace>:<step>` User Timing measures the step records in the frame. No debug flag is needed. Steps run concurrently, so their durations overlap; read the `start` and `end` columns, not the sum.
 - Transfer: the frame's Resource Timing entries (requests, transfer and decoded bytes) and the WebSocket bytes received after the click.
 
-The page probe ([`perf/harness/pageProbe.ts`](../../perf/harness/pageProbe.ts)) is an init script, so it runs in the shell and in every editor frame before their own code. An open whose shell recorded no `dblclick`, or whose frame never reported `ready`, fails and is left out of the results instead of counting as 0 ms.
+The page probe ([`perf/harness/openProbe.ts`](../../perf/harness/openProbe.ts)) is an init script, so it runs in the shell and in every editor frame before their own code. An open whose shell recorded no `dblclick`, or whose frame never reported `ready`, fails and is left out of the results instead of counting as 0 ms.
 
 ## Phases
 
@@ -51,27 +51,29 @@ $ pnpm run perf:summary perf-results/baseline.json --steps --phase reload
 
 - `--editors voxel-map,voxel-model,pixel-art` and `--modes online,offline`: what to open. Online registers a new account per context; offline opens `/?offline`.
 - `--phases reopen,reload,cold`: the phases measured after `first`, which always runs.
-- `--runs 6`: repetitions. Each run shuffles modes and editors and launches a new browser per editor.
+- `--runs 6`: repetitions. Each run shuffles modes and editors and launches a new browser per editor. A measurement's `run` is its repetition, and profile files end with it.
 - `--label`: tags every measurement, for summaries that mix files.
 - `--storage '{"key":"value"}'`: `localStorage` entries written before any page script runs.
 - `--prewarm`: the shell requests a WebGPU adapter as soon as it loads.
 - `--cpu 4`: CDP CPU throttling.
 - `--profile <dir>`: records a V8 CPU profile of each open.
-- `--memory <dir>`: samples every allocation of each open, collected objects included, into a `.heapprofile`, and records a light trace for garbage collection on the renderer main thread. Each measurement gets `memory.allocatedMB`, `memory.minorGc` and `memory.majorGc` (count and ms; major includes incremental marking steps), and `perf:summary` adds their columns. The recording slows the open, so compare memory runs with memory runs only. `perf:ab` takes the same option.
+- `--memory <dir>`: samples every allocation of each open, collected objects included, into a `.heapprofile`, and records a light trace for garbage collection on the renderer main thread. Each measurement gets `memory.allocatedMB`, `memory.minorGc` and `memory.majorGc` (count and ms; major includes incremental marking steps), and `perf:summary` adds their columns. The recording slows the open, so compare memory runs with memory runs only.
 - `--headless`: avoid it. Headless Chromium renders with SwiftShader, which makes WebGPU and WebGL costs meaningless.
 
 The browser window must stay visible: a hidden or minimized window stops `requestAnimationFrame`, and the editors never reach their first frame.
+
+Results files carry a `kind`: `open` for `perf:open` and `perf:ab`, `steady` for `steadyState.ts`. `perf:summary` reads `open` files only. Given a folder, it skips the files of another kind; given a file of another kind, or a file written before `kind` existed, it stops with an error. Add `"kind": "open"` to an older `perf:open` file to summarize it again.
 
 ## A/B protocol
 
 Laptop speed drifts with power and thermal state, so never compare two runs taken at different times. Compare variants inside one interleaved run:
 
 ```bash
-$ pnpm run perf:ab --plan perf/plans/editor-open-2026-10-16.json --rounds 5 --out perf-results/ab.json
+$ pnpm run perf:ab --plan docs/performance/editor-open-2026-10-16.json --rounds 5 --out perf-results/ab.json
 $ pnpm run perf:summary perf-results/ab.json --control control
 ```
 
-[`perf/abRun.ts`](../../perf/abRun.ts) runs one round of every variant, then the next round in reverse order, so a slow period hits every variant alike. Every measurement of the run goes to the one `--out` file, written after each open. `--control` prints each median with its difference to the control. With five rounds, treat differences under about 50 ms on `ready` as noise, and read the p90 column too: a stall that hits only some opens moves the p90 and not the median.
+[`perf/abRun.ts`](../../perf/abRun.ts) runs one round of every variant, then the next round in reverse order, so a slow period hits every variant alike. A measurement's `run` is its round, and profile files end with it. Every measurement of the run goes to the one `--out` file, written after each open. `--headless`, `--cpu`, `--settle`, `--profile` and `--memory` mean the same as for `perf:open`. `--control` prints each median with its difference to the control. With five rounds, treat differences under about 50 ms on `ready` as noise, and read the p90 column too: a stall that hits only some opens moves the p90 and not the median.
 
 Drift between runs can be large: in October 2026 the same warm open went from about 870 to 350 ms over one evening. Run `perf/probes/firstUse.ts` before and after a session; if its numbers moved, report each A/B with the state it ran in and do not compare absolute times across runs.
 
@@ -89,7 +91,7 @@ Build the change once behind a `localStorage` flag, so control and variant run t
 $ git worktree add D:/Sources/JollyPixel/jpb HEAD
 $ cd D:/Sources/JollyPixel/jpb
 $ pnpm install --frozen-lockfile --prefer-offline
-$ git apply packages/studio/perf/plans/editor-open-2026-10-16.patch
+$ git apply packages/studio/docs/performance/editor-open-2026-10-16.patch
 $ pnpm run build
 $ pnpm --filter @jolly-pixel/studio dev:e2e
 ```
@@ -98,7 +100,7 @@ Then run `perf:ab` from the main checkout as above: the plan's variants turn the
 
 When only editor pages change, the patch can also go on the main checkout: apply it, rebuild the editors, measure, then `git apply -R` it. The flags default to off, so the control is the unchanged code.
 
-[`editor-open-2026-10-16.patch`](../../perf/plans/editor-open-2026-10-16.patch) holds the 16 October experiments: `bench:no-environment` and `bench:one-gizmo` in voxel-model. The patch is measurement scaffolding, not a fix to merge.
+[`editor-open-2026-10-16.patch`](./editor-open-2026-10-16.patch) holds the 16 October experiments: `bench:no-environment` and `bench:one-gizmo` in voxel-model. The patch is measurement scaffolding, not a fix to merge. It applies to `86ad0bda`, the commit of that report, and stopped applying at `51891fd1`; check out the commit in the worktree first, or write a new patch for the current code.
 
 Do not build or run tests while a measurement runs.
 
@@ -135,7 +137,7 @@ $ node perf/steadyState.ts --mode online --rounds 3 --seconds 5
 $ node perf/steadyState.ts --editors voxel-model --storage '{"bench:no-environment":"1"}'
 ```
 
-Opens each editor in a new browser, waits as long as `perf:open` settles, then measures four scenarios of `--seconds` each: `away` (pointer off the canvas), `hover` (pointer resting on the largest canvas of the frame), `orbit` (middle-button drag in circles) and `panels` (pointer nudged every 400 ms over a corner of the frame that has no canvas). Each scenario records main-thread and script time from the CDP `Performance` metrics, allocations with collected objects, garbage collection, and `requestAnimationFrame` pacing in the frame. It also counts the frame's WebGPU renders (`getCurrentTexture` calls): `wakes` is the number of renders that came more than 100 ms after the previous one, and `idle %` is the share of the scenario spent in those gaps. It prints a table of medians and writes `--out` (default `perf-results/steady.json`) and one `.heapprofile` per scenario into `--profiles`. `--scenarios`, `--editors`, `--mode`, `--storage` and `--base` select what runs.
+Opens each editor in a new browser, waits as long as `perf:open` settles, then measures four scenarios of `--seconds` each: `away` (pointer off the canvas), `hover` (pointer resting at the center of the largest canvas of the frame), `orbit` (middle-button drag in circles) and `panels` (pointer nudged every 400 ms over a corner of the frame that has no canvas). Each scenario records main-thread and script time from the CDP `Performance` metrics, allocations with collected objects, garbage collection, and `requestAnimationFrame` pacing in the frame. It also counts the frame's WebGPU renders (`getCurrentTexture` calls): `wakes` is the number of renders that came more than 100 ms after the previous one, and `idle %` is the share of the scenario spent in those gaps. Without WebGPU in the browser there is nothing to count, so the scenario fails instead of reporting zero renders. It prints a table of medians and writes `--out` (default `perf-results/steady.json`) and one `.heapprofile` per scenario into `--profiles`. `--scenarios`, `--editors`, `--mode`, `--storage` and `--base` select what runs.
 
 ### The server
 
@@ -143,7 +145,7 @@ Opens each editor in a new browser, waits as long as `perf:open` settles, then m
 $ node perf/profileServer.ts --seconds 240 --heap
 ```
 
-Starts the hosted `StudioServer` in-process on port 3004 with in-memory back-end and accounts, like `dev:e2e`, and CPU-profiles it for `--seconds` through the Node inspector; `--heap` also samples its allocations. Build the studio shell first (`pnpm exec vite build`), stop `dev:e2e`, and run `perf:open --modes online` against it in a second terminal. The profile lands in `--out` (default `perf-results/server.cpuprofile`); node frames resolve to their workspace package without source maps.
+Starts the hosted `StudioServer` in-process on port 3004 with the in-memory back-end and accounts of `dev:e2e` (`vite/e2eBackend.ts`), and CPU-profiles it for `--seconds` through the Node inspector; `--heap` also samples its allocations. Build the studio shell first (`pnpm exec vite build`), stop `dev:e2e`, and run `perf:open --modes online` against it in a second terminal. The profile lands in `--out` (default `perf-results/server.cpuprofile`); node frames resolve to their workspace package without source maps.
 
 ### Chrome traces
 
