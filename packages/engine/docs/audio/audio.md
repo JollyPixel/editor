@@ -31,6 +31,10 @@ Master volume controller. Wraps a Three.js `AudioListener` and emits
 world listener goes through the listener gain, so the master volume
 applies to it without any extra wiring.
 
+The listener, and the browser `AudioContext` behind it, is created the
+first time `listener`, `threeAudioListener` or `volume` is used, so a world
+that never plays sound opens no audio context.
+
 ```ts
 type GlobalAudioEvents = {
   volumechange: [volume: number];

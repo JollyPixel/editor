@@ -82,6 +82,16 @@ they import to `optimizeDeps.include`, with `force: true`. It skips
 loads the module. It never reads `node_modules` nor the packages it lists:
 anything those import is bundled with them.
 
+## `precompress(): Plugin`
+
+A Vite plugin that runs only on `vite build`. Once the bundle is written, it
+writes a brotli (`.br`, maximum quality) and a gzip (`.gz`, level 9) copy
+next to every `.css`, `.html`, `.js`, `.json`, `.mjs`, `.svg` and `.wasm`
+file of the bundle that weighs 1 KB or more. Files copied from `publicDir`
+are not part of the bundle and stay uncompressed. The studio serves these
+copies to clients that accept them; see the studio's
+[Hosting](../../studio/docs/hosting.md).
+
 ## `RunMode`
 
 Reads Vite's `command` and `mode` once, so a `vite.config.ts` asks one object

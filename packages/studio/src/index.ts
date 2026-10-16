@@ -33,7 +33,14 @@ function required<TName extends keyof HTMLElementTagNameMap>(
   return element;
 }
 
+function prewarmWebGPU(): void {
+  if ("gpu" in navigator) {
+    void navigator.gpu.requestAdapter().catch(() => null);
+  }
+}
+
 async function boot(): Promise<void> {
+  prewarmWebGPU();
   const editorConsole = mountConsole();
   const [connection, manifest] = await Promise.all([
     connectStudio(),

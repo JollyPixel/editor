@@ -15,10 +15,11 @@ import {
   MenuSession,
   type MenuPoint
 } from "@jolly-pixel/ui";
-import type {
-  MaterialSurfaceJSON,
-  MaterialSurfacePatchJSON,
-  ModelMaterialJSON
+import {
+  MaterialSurface,
+  type MaterialSurfaceJSON,
+  type MaterialSurfacePatchJSON,
+  type ModelMaterialJSON
 } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
@@ -50,7 +51,6 @@ import {
   type SurfaceField,
   type SurfaceGroup
 } from "./surface/surfaceFields.ts";
-import { surfaceGlows } from "./materialSwatch.ts";
 
 export class MaterialLibrary extends LitElement {
   @query("jolly-tree")
@@ -204,7 +204,7 @@ export class MaterialLibrary extends LitElement {
     group: SurfaceGroup,
     edited: ModelMaterialJSON
   ): TemplateResult {
-    const off = group.id === "glow" && !surfaceGlows(edited.surface);
+    const off = group.id === "glow" && !MaterialSurface.glows(edited.surface);
     const unlit = group.id === "surface" && !this.#surface.lit;
 
     return html`

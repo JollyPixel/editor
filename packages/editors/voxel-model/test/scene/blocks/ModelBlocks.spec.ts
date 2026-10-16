@@ -196,6 +196,29 @@ describe("ModelBlocks surface previews", () => {
   });
 });
 
+describe("ModelBlocks glow", () => {
+  test("glows while a shown block has a glowing surface, previews included", () => {
+    const { document, previews, blocks, addBlock } = createModelFixture();
+    const lamp = document.addMaterial({ name: "Lamp" })!;
+    const block = addBlock({ materialId: lamp });
+    assert.equal(blocks.glows, false);
+
+    previews.set(lamp, "bob", { emissive: "#ffcc66" });
+    assert.equal(blocks.glows, true);
+
+    previews.end(lamp, "bob");
+    assert.equal(blocks.glows, false);
+
+    document.changeMaterial(lamp, { emissive: "#ffcc66" });
+    addBlock({ materialId: lamp });
+    document.remove(block.uuid);
+    assert.equal(blocks.glows, true);
+
+    document.changeMaterial(lamp, { emissiveIntensity: 0 });
+    assert.equal(blocks.glows, false);
+  });
+});
+
 describe("ModelBlocks selection", () => {
   test("removing the selected and hovered block clears both marks", () => {
     const fixture = createModelFixture();

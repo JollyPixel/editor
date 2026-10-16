@@ -9,6 +9,7 @@ import {
 } from "@jolly-pixel/asset-server/node";
 import {
   PORTS,
+  precompress,
   RunMode
 } from "@jolly-pixel/e2e";
 
@@ -54,6 +55,7 @@ export default defineConfig((env) => {
     },
     plugins: [
       mode.plugins(),
+      precompress(),
       mode.serve && !mode.e2e && checker({ typescript: true }),
       createProjectKindsPlugin(kinds),
       createAssetWorkspacePlugin({

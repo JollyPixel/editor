@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
+import { brotliCompressSync } from "node:zlib";
 
 // Import Internal Dependencies
 import { EditorPackage } from "../../../server/editors/EditorPackage.ts";
@@ -85,6 +86,27 @@ describe("EditorPages", () => {
       response.headers.get("cache-control"),
       "public, max-age=31536000, immutable"
     );
+  });
+
+  test("sends the brotli build of a bundle to a client that accepts it", async() => {
+    await fs.writeFile(
+      path.join(dist, `${HASHED_BUNDLE}.br`),
+      brotliCompressSync(BUNDLE)
+    );
+
+    const response = await server.fetch(`/editors/voxel-map/${HASHED_BUNDLE}`, {
+      headers: {
+        "accept-encoding": "br"
+      }
+    });
+
+    assert.strictEqual(response.status, 200);
+    assert.strictEqual(response.headers.get("content-encoding"), "br");
+    assert.strictEqual(
+      response.headers.get("cache-control"),
+      "public, max-age=31536000, immutable"
+    );
+    assert.strictEqual(await response.text(), BUNDLE);
   });
 
   test("revalidates every file without a content hash", async() => {
