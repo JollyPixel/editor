@@ -2,9 +2,13 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { Buffer } from "node:buffer";
+import { inflateSync } from "node:zlib";
 
 // Import Internal Dependencies
-import { encodePng } from "#src/png/encodePng.ts";
+import {
+  encodePng,
+  type PngFilter
+} from "#src/png/encodePng.ts";
 import { decodePng } from "#src/png/decodePng.ts";
 import type { DecodedImage } from "#src/types.ts";
 import {
@@ -165,6 +169,36 @@ describe("encodePng", () => {
         );
       }
     });
+  });
+
+  describe("filter option", () => {
+    const filters: [PngFilter, number][] = [
+      ["none", 0],
+      ["sub", 1],
+      ["up", 2],
+      ["average", 3],
+      ["paeth", 4]
+    ];
+
+    for (const [filter, type] of filters) {
+      it(`starts every scanline with filter type ${type} for "${filter}"`, async() => {
+        const source = noisyImage(8);
+        const bytes = await encodePng(source, { filter });
+        const idat = parseChunks(bytes).find((chunk) => chunk.type === "IDAT");
+        assert.ok(idat);
+
+        const scanlines = inflateSync(idat.data);
+        const stride = (source.width * 4) + 1;
+        const types = Array.from(
+          { length: source.height },
+          (_, row) => scanlines[row * stride]
+        );
+        assert.deepEqual(types, Array.from({ length: source.height }, () => type));
+
+        const decoded = await decodePng(bytes);
+        assert.deepEqual([...decoded.data], [...source.data]);
+      });
+    }
   });
 
   describe("rejects", () => {

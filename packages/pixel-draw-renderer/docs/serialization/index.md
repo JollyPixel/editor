@@ -85,7 +85,9 @@ interface PngPixels {
 
 `encodePngPixels` and `decodePngPixels` are the compact alternative for a
 snapshot sent over the network: a 1024x512 tileset is about 2.7 MB as base64
-RGBA8 and about 165 KB as a base64 PNG. Both are asynchronous. `encodePngPixels` reads
+RGBA8 and about 95 KB as a base64 PNG. `encodePngPixels` skips PNG row
+filtering, which suits pixel art: it is faster and smaller than adaptive
+filtering. Both are asynchronous. `encodePngPixels` reads
 the first `size.x * size.y * 4` bytes before its first `await`, so the buffer
 can change while it compresses. `decodePngPixels` throws
 `InvalidPixelArtDocumentError` when the image is not `size`. Persisted

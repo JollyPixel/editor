@@ -50,7 +50,6 @@
   "dependencies": {
     "@jolly-pixel/color": "workspace:*",
     "@jolly-pixel/image": "workspace:*",
-    "@openally/emitt": "1.1.0",
-    "js-base64": "3.9.4"
+    "@openally/emitt": "1.1.0"
   }
 }

@@ -553,13 +553,20 @@ export class BlockLibraryViewport extends LitElement {
   #onPointerMove(
     event: PointerEvent
   ): void {
-    if (this.#renderer !== null && !this.#reorder.dragging) {
-      this.#renderer.hoveredId = this.#blockIdAt(event.clientX, event.clientY);
+    const renderer = this.#renderer;
+    if (renderer === null) {
+      return;
+    }
+
+    renderer.libraryHovered = true;
+    if (!this.#reorder.dragging) {
+      renderer.hoveredId = this.#blockIdAt(event.clientX, event.clientY);
     }
   }
 
   #onPointerLeave(): void {
     if (this.#renderer !== null) {
+      this.#renderer.libraryHovered = false;
       this.#renderer.hoveredId = null;
     }
   }

@@ -17,12 +17,6 @@
       "storage": {
         "bench:one-gizmo": "1"
       }
-    },
-    {
-      "label": "fast-pixels",
-      "storage": {
-        "bench:fast-pixels": "1"
-      }
     }
   ]
 }

@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import type * as THREE from "three";
+
 // CONSTANTS
 const kChannels = 4;
 const kOpaque = 255;
@@ -5,9 +8,14 @@ const kLinear = Float32Array.from(
   { length: 256 },
   (_, value) => decodeSRGB(value / kOpaque)
 );
+const kEncodeSteps = 4095;
+const kEncode = Uint8Array.from(
+  { length: kEncodeSteps + 1 },
+  (_, step) => Math.round(encodeSRGB(step / kEncodeSteps) * kOpaque)
+);
 
 export interface PreviewReadback {
-  data: ArrayLike<number>;
+  data: THREE.TypedArray;
   width: number;
   height: number;
   bottomUp: boolean;
@@ -26,10 +34,10 @@ export class PreviewPixels {
     const pixels = new Uint8ClampedArray(rowLength * height);
     for (let row = 0; row < height; row++) {
       const source = (bottomUp ? height - 1 - row : row) * stride;
-      const target = row * rowLength;
-      for (let offset = 0; offset < rowLength; offset++) {
-        pixels[target + offset] = data[source + offset];
-      }
+      pixels.set(
+        data.subarray(source, source + rowLength),
+        row * rowLength
+      );
     }
     straightenAlpha(pixels);
 
@@ -64,11 +72,11 @@ function straightenAlpha(
       continue;
     }
 
-    const scale = kOpaque / coverage;
+    const scale = kEncodeSteps * kOpaque / coverage;
     for (let channel = alpha - 3; channel < alpha; channel++) {
-      pixels[channel] = Math.round(
-        encodeSRGB(Math.min(kLinear[pixels[channel]] * scale, 1)) * kOpaque
-      );
+      pixels[channel] = kEncode[
+        Math.min(kEncodeSteps, Math.round(kLinear[pixels[channel]] * scale))
+      ];
     }
   }
 }

@@ -3,14 +3,13 @@ import {
   imageDataToPixels,
   pixelsToImageData
 } from "@jolly-pixel/color";
-import {
-  fromUint8Array,
-  isValid,
-  toUint8Array
-} from "js-base64";
 
 // Import Internal Dependencies
 import { filledArray } from "../utils/array.ts";
+import {
+  decodeBase64,
+  encodeBase64
+} from "../utils/base64.ts";
 import type {
   DecodedRasterImage,
   SelectionClipboardMetadataV1,
@@ -21,6 +20,9 @@ import type {
   RGBA8,
   SelectionRect
 } from "../types.ts";
+
+// CONSTANTS
+const kBase64 = /^[A-Za-z0-9+/]*={0,2}$/;
 
 export interface SelectionMetadata {
   mask: boolean[];
@@ -50,7 +52,7 @@ function encodeMask(
 
   return {
     encoding: "bitset",
-    data: fromUint8Array(bytes)
+    data: encodeBase64(bytes)
   };
 }
 
@@ -60,23 +62,23 @@ function encodePixels(
   const bytes = new Uint8ClampedArray(pixels.length * 4);
   pixelsToImageData(pixels, bytes);
 
-  return fromUint8Array(new Uint8Array(bytes.buffer));
+  return encodeBase64(new Uint8Array(bytes.buffer));
 }
 
-function decodeBase64(
+function decodeBytes(
   value: unknown,
   expectedLength: number
 ): Uint8Array | null {
   if (
     typeof value !== "string" ||
-    !isValid(value)
+    !kBase64.test(value)
   ) {
     return null;
   }
 
   let bytes: Uint8Array;
   try {
-    bytes = toUint8Array(value);
+    bytes = decodeBase64(value);
   }
   catch {
     return null;
@@ -124,7 +126,7 @@ function decodeMask(
     return null;
   }
 
-  const bytes = decodeBase64(
+  const bytes = decodeBytes(
     mask.data,
     Math.ceil(length / 8)
   );
@@ -148,7 +150,7 @@ function decodePixels(
     return null;
   }
 
-  const bytes = decodeBase64(
+  const bytes = decodeBytes(
     value,
     length * 4
   );

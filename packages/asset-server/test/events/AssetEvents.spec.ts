@@ -185,6 +185,20 @@ describe("inline content", () => {
       data.subarray(2, 7)
     );
   });
+
+  test("stores the standard padded base64 alphabet", () => {
+    const data = Uint8Array.from([250, 251, 252, 253]);
+
+    assert.strictEqual(encodeContent(data).data, "+vv8/Q==");
+    assert.deepEqual(
+      decodeContent({
+        type: "inline",
+        encoding: "base64",
+        data: "+vv8/Q=="
+      }),
+      data
+    );
+  });
 });
 
 describe("writeData", () => {

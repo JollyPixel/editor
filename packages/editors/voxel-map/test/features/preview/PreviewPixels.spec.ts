@@ -8,10 +8,10 @@ import { PreviewPixels } from "../../../src/features/preview/PreviewPixels.ts";
 describe("PreviewPixels", () => {
   it("drops the row padding of a padded readback", () => {
     const pixels = PreviewPixels.fromReadback({
-      data: [
+      data: Uint8Array.from([
         10, 20, 30, 255, 0, 0, 0, 0,
         40, 50, 60, 255
-      ],
+      ]),
       width: 1,
       height: 2,
       bottomUp: false
@@ -22,10 +22,10 @@ describe("PreviewPixels", () => {
 
   it("puts the top row first for a bottom-up readback", () => {
     const pixels = PreviewPixels.fromReadback({
-      data: [
+      data: Uint8Array.from([
         10, 20, 30, 255,
         40, 50, 60, 255
-      ],
+      ]),
       width: 1,
       height: 2,
       bottomUp: true
@@ -36,11 +36,11 @@ describe("PreviewPixels", () => {
 
   it("straightens a premultiplied edge pixel in linear light", () => {
     const pixels = PreviewPixels.fromReadback({
-      data: [
+      data: Uint8Array.from([
         93, 93, 93, 128,
         10, 20, 30, 255,
         0, 0, 0, 0
-      ],
+      ]),
       width: 3,
       height: 1,
       bottomUp: false

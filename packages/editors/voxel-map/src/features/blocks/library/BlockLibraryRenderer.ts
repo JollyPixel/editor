@@ -31,6 +31,7 @@ export class BlockLibraryRenderer extends Turntable {
   onLayoutChange: (() => void) | null = null;
   selectedId: number | null = null;
   hoveredId: number | null = null;
+  libraryHovered = false;
 
   readonly #meshes: BlockPreviewMeshes;
   readonly #cell: THREE.RenderTarget;
@@ -183,9 +184,10 @@ export class BlockLibraryRenderer extends Turntable {
       return "hidden";
     }
 
-    return blockId === this.selectedId || blockId === this.hoveredId ?
-      "spinning" :
-      "still";
+    const spinning = blockId === this.hoveredId ||
+      (this.libraryHovered && blockId === this.selectedId);
+
+    return spinning ? "spinning" : "still";
   };
 
   #paintCell(

@@ -4,9 +4,7 @@ import {
   test
 } from "node:test";
 import assert from "node:assert/strict";
-
-// Import Third-party Dependencies
-import { toUint8Array } from "js-base64";
+import { Buffer } from "node:buffer";
 
 // Import Internal Dependencies
 import { LocalHistory } from "./helpers/history/LocalHistory.ts";
@@ -99,7 +97,7 @@ describe("PixelArtCanvas.clearTexture", () => {
     assert.ok(event.action === "texture-replaced");
     assert.deepStrictEqual(event.metadata.size, { x: 8, y: 8 });
     const pixels = new Uint8ClampedArray(
-      toUint8Array(event.metadata.pixels)
+      Buffer.from(event.metadata.pixels, "base64")
     );
     assert.deepStrictEqual(readPixel(pixels, { x: 1, y: 1 }, 8), kWhite);
     assert.deepStrictEqual(

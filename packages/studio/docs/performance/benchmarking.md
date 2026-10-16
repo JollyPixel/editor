@@ -98,7 +98,7 @@ Then run `perf:ab` from the main checkout as above: the plan's variants turn the
 
 When only editor pages change, the patch can also go on the main checkout: apply it, rebuild the editors, measure, then `git apply -R` it. The flags default to off, so the control is the unchanged code.
 
-[`editor-open-2026-10-16.patch`](../../perf/plans/editor-open-2026-10-16.patch) holds the 16 October experiments: `bench:no-environment` and `bench:one-gizmo` in voxel-model, `bench:fast-pixels` and `bench:still-selection` in voxel-map. The patch is measurement scaffolding, not a fix to merge.
+[`editor-open-2026-10-16.patch`](../../perf/plans/editor-open-2026-10-16.patch) holds the 16 October experiments: `bench:no-environment` and `bench:one-gizmo` in voxel-model. The patch is measurement scaffolding, not a fix to merge.
 
 Do not build or run tests while a measurement runs.
 
@@ -132,7 +132,7 @@ The same script reads the `.heapprofile` files of `--memory`, `steadyState.ts` a
 
 ```bash
 $ node perf/steadyState.ts --mode online --rounds 3 --seconds 5
-$ node perf/steadyState.ts --editors voxel-map --storage '{"bench:still-selection":"1"}'
+$ node perf/steadyState.ts --editors voxel-model --storage '{"bench:no-environment":"1"}'
 ```
 
 Opens each editor in a new browser, waits as long as `perf:open` settles, then measures three scenarios of `--seconds` each: `away` (pointer off the canvas), `hover` (pointer resting on the largest canvas of the frame) and `orbit` (middle-button drag in circles). Each scenario records main-thread and script time from the CDP `Performance` metrics, allocations with collected objects, garbage collection, and `requestAnimationFrame` pacing in the frame. It prints a table of medians and writes `--out` (default `perf-results/steady.json`) and one `.heapprofile` per scenario into `--profiles`. `--scenarios`, `--editors`, `--mode`, `--storage` and `--base` select what runs.

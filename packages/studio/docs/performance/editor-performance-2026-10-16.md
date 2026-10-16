@@ -2,6 +2,12 @@
 
 Where the editors spend their time and memory, measured at `86ad0bda` after the October fixes: async pipeline compiles (`02b3191a`) and the Block Library on the viewport's WebGPU renderer (`86ad0bda`). It covers opening an editor from the studio, an editor sitting open, and the server behind them. The method and the tools are described in [Benchmarking editor opens](./benchmarking.md).
 
+Four small fixes landed the same day, and the findings they close are no longer listed here:
+- The Block Library spins the selected cell only while the pointer is over the library.
+- Base64 goes through `Uint8Array.fromBase64`, `Buffer` or `atob` instead of `js-base64`.
+- `PreviewPixels` copies readback rows with `TypedArray.set` and encodes sRGB through a table.
+- Network snapshots are encoded as PNG without row filters, 70 KB instead of 124 KB for the seed blockset.
+
 The machine ran in its fast state for the whole session: a fresh browser's first `requestAdapter` took 352 ms in `probes/firstUse.ts`, against 586 to 1232 ms in the earlier October runs. Absolute times are comparable within this report only.
 
 ## Summary
@@ -11,8 +17,8 @@ The machine ran in its fast state for the whole session: a fresh browser's first
 - Generating voxel-model's room environment (PMREM) on every open costs 150 ms of `ready`, measured by skipping it. Baking it, item 2 of the previous report, is the largest open-time gain left.
 - The largest single step is now the GPU: `host.boot:compile`, the wait for the first frame that starts no pipeline compile, takes 300 to 375 ms. Chrome compiles 31 shaders for voxel-model and 21 for voxel-map on worker threads during it.
 - voxel-model allocates 73 to 84 MB per open. A third of it comes from its transform gizmo: the editor builds three `TransformControls`, each with every handle of every mode. In time it costs only about 25 ms of `editor:scene`.
-- Sitting open, voxel-map uses 118 ms of main thread per second with the pointer off the canvas, because the Block Library spins and reads back the selected block every frame. Hovering a still canvas costs voxel-model 133 ms/s against 22 ms/s idle, since the runtime renders every frame while the pointer is over it.
-- The server is idle 99% of the time. `js-base64` accounts for about 65% of its allocations: on Node 24 it decodes through `atob(...).split("")`, 65 times slower than `Buffer`.
+- Sitting open, a still pointer over the canvas costs voxel-model 133 ms/s of main thread against 22 ms/s idle, since the runtime renders every frame while the pointer is over it.
+- The server is idle 99% of the time.
 
 ## Opening an editor
 
@@ -73,7 +79,7 @@ The first animation frame runs the scene's `awake` and the first render. Inclusi
 
 The gizmo is three `TransformControls` ([`TransformGizmo.ts`](../../../editors/voxel-model/src/features/transform/gizmo/TransformGizmo.ts)): the move, rotate and scale tool, the pivot tool and the resize tool. Each builds every handle for every mode, so the pivot and resize controls, which only translate or scale, also build three torus rings and their outlines. The outline geometry goes through `mergeVertices` and an angle-weighted miter-normal pass per vertex ([`outline.ts`](../../../three/src/transform-controls/handles/outline.ts)). None of it is visible until a block is selected.
 
-voxel-map's first frame is lighter. Its main-thread work around the open is the Block Library: `PreviewStage.capture` 60 to 80 ms, `PreviewPixels.fromReadback` 21 to 31 ms (an element-by-element row copy, then `Math.pow` on every partly transparent pixel), the atlas alpha scan behind `syncAlphaModes` 14 to 18 ms. voxel-map keeps reflections off by default, so it builds no room environment at open.
+voxel-map's first frame is lighter. Its main-thread work around the open is the Block Library: `PreviewStage.capture` 60 to 80 ms and the atlas alpha scan behind `syncAlphaModes` 14 to 18 ms. voxel-map keeps reflections off by default, so it builds no room environment at open.
 
 ### The GPU compile wait
 
@@ -105,13 +111,13 @@ GC costs little during an open, about a tenth of the busy time before `ready`. W
 
 ## An editor sitting open
 
-[`steadyState.ts`](../../perf/steadyState.ts) opens an editor, waits 4 s, then measures 5 s with the pointer off the canvas (`away`), resting on the viewport (`hover`) and dragging it with the middle button (`orbit`). Three online runs, medians:
+[`steadyState.ts`](../../perf/steadyState.ts) opens an editor, waits 4 s, then measures 5 s with the pointer off the canvas (`away`), resting on the viewport (`hover`) and dragging it with the middle button (`orbit`). Three online runs, medians; the voxel-map rows were measured again after the Block Library fix:
 
 | Editor | Scenario | Main thread | Script | Allocated | Per frame | GC |
 |---|---|---|---|---|---|---|
-| voxel-map | away | 118 ms/s | 36 ms/s | 0.7 MB/s | 12 KB | 8 ms/s |
-| voxel-map | hover | 217 ms/s | 125 ms/s | 4.7 MB/s | 76 KB | 10 ms/s |
-| voxel-map | orbit | 233 ms/s | 119 ms/s | 4.0 MB/s | 64 KB | 7 ms/s |
+| voxel-map | away | 23 ms/s | 6 ms/s | 0.2 MB/s | 3 KB | 5 ms/s |
+| voxel-map | hover | 151 ms/s | 110 ms/s | 4.5 MB/s | 72 KB | 6 ms/s |
+| voxel-map | orbit | 154 ms/s | 97 ms/s | 3.6 MB/s | 59 KB | 5 ms/s |
 | voxel-model | away | 22 ms/s | 3 ms/s | 0 MB/s | 0 KB | 4 ms/s |
 | voxel-model | hover | 133 ms/s | 96 ms/s | 2.8 MB/s | 45 KB | 5 ms/s |
 | voxel-model | orbit | 164 ms/s | 109 ms/s | 3.6 MB/s | 59 KB | 5 ms/s |
@@ -121,7 +127,6 @@ GC costs little during an open, about a tenth of the busy time before `ready`. W
 
 Every editor holds 60 frames per second with no long animation frame. GC stays under 1% of the time. The cost is in work that does not need doing:
 
-- **The selected block spins forever.** The Block Library marks the selected and the hovered block `spinning` ([`BlockLibraryRenderer.ts`](../../../editors/voxel-map/src/features/blocks/library/BlockLibraryRenderer.ts)), so with a block selected its turntable renders the cell into a render target, reads it back and `putImageData`s it on every frame, wherever the pointer is. That is 90% of voxel-map's idle allocations and most of its 118 ms/s. Its `BlockPreviewMeshes.refresh` also rescans tile opacity for every block every 250 ms.
 - **Hovering renders every frame.** With `renderOnDemand`, the runtime keeps the loop alive while `input.mouse.hovering` ([`Runtime.ts`](../../../runtime/src/Runtime.ts), #855). A still pointer over voxel-model costs 111 ms/s more than no pointer and draws the same image 60 times a second, including the `ViewHelper` pass, 39% of voxel-model's hover allocations.
 - The rest of the per-frame allocations are three.js computing render-object cache keys (`getCacheKey`, `cyrb53`, `updateForRender`): about 45 to 80 KB a frame, which our code does not control.
 
@@ -129,13 +134,11 @@ Every editor holds 60 frames per second with no long animation frame. GC stays u
 
 [`profileServer.ts`](../../perf/profileServer.ts) ran the hosted `StudioServer` in-process with the Node inspector for 240 s while `perf:open` made 36 online opens:
 
-- 99.1% idle. Apart from Node internals (700 ms), no package but `js-base64` reaches 100 ms: `@openally/servo` 98 ms, `@jolly-pixel/network` 98 ms, `@jolly-pixel/image` 82 ms, Fastify 30 ms.
-- `js-base64` is the hottest package (340 ms with its regex) and allocates about 190 of the 292 MB sampled. The asset server decodes inline content with it while replaying a room ([`inlineContent.ts`](../../../asset-server/src/events/inlineContent.ts)), and the pixel-art serialization decodes and encodes the blockset pixels with it ([`pixelBytes.ts`](../../../pixel-draw-renderer/src/serialization/pixelBytes.ts)). Node 24 has no `Uint8Array.fromBase64`, so `js-base64` falls back to `atob(...).split("").map(...)`. On a 170 KB payload: decode 4.24 ms against 0.065 ms with `Buffer.from(text, "base64")`, encode 0.93 ms against 0.068 ms.
-- PNG encoding of the blockset snapshot (`adaptiveFilter`, which tries every filter on every row) took 54 ms over the session; it runs again each time the snapshot version changes.
+- 99.1% idle. Apart from Node internals (700 ms) and `js-base64` (340 ms, since removed), no package reaches 100 ms: `@openally/servo` 98 ms, `@jolly-pixel/network` 98 ms, `@jolly-pixel/image` 82 ms, Fastify 30 ms.
 
 ## Offline mode
 
-Offline, the studio shell runs the asset server in the page, on the same main thread as the editor frames. voxel-map pays for it in `host.boot:session` (159 to 186 ms against 52 online). The shell's own work in a warm offline voxel-map open includes the PNG `adaptiveFilter` of the blockset snapshot (25 ms) and `js-base64`'s whole-string regex `[^A-Za-z0-9\+\/]` (20 ms), which runs even where Chrome decodes natively.
+Offline, the studio shell runs the asset server in the page, on the same main thread as the editor frames. voxel-map pays for it in `host.boot:session` (159 to 186 ms against 52 online).
 
 ## Experiments
 
@@ -143,27 +146,18 @@ Offline, the studio shell runs the asset server in the page, on the same main th
 
 - `no-environment`: voxel-model skips the room environment, the upper bound of baking it.
 - `one-gizmo`: voxel-model builds one `TransformControls` and reuses it for the pivot and resize tools, close to building handles per mode on demand.
-- `fast-pixels`: `PreviewPixels` copies rows with `TypedArray.set` and encodes sRGB through a 4096-entry table.
-- `still-selection`: the Block Library spins only the hovered block, measured on an open editor rather than an open.
 
 voxel-model, medians of `ready` (equal to `settled` everywhere) and their difference to `control`:
 
-| Phase | control | no-environment | one-gizmo | fast-pixels |
-|---|---|---|---|---|
-| first | 814 | 667 (−147) | 767 (−47) | 785 (−29) |
-| cold | 872 | 722 (−150) | 834 (−38) | 875 (+3) |
-| reload | 886 | 739 (−147) | 868 (−18) | 864 (−22) |
+| Phase | control | no-environment | one-gizmo |
+|---|---|---|---|
+| first | 814 | 667 (−147) | 767 (−47) |
+| cold | 872 | 722 (−150) | 834 (−38) |
+| reload | 886 | 739 (−147) | 868 (−18) |
 
-The flags that do not touch voxel-map moved its medians by −95 to +47 ms, so that is the noise of this run. Only `no-environment` is above it, by the same 150 ms in every phase: `editor:scene` 176 → 98 ms and `host.boot:mount` 207 → 122 ms. The gizmo saves about 25 ms of `editor:scene`, less than its profile suggested: its gain is the 25 MB, not the time. `fast-pixels` is noise on `ready`; the readback runs in the library's async captures, beside the critical path.
+The flags that do not touch voxel-map moved its medians by −95 to +47 ms, so that is the noise of this run. Only `no-environment` is above it, by the same 150 ms in every phase: `editor:scene` 176 → 98 ms and `host.boot:mount` 207 → 122 ms. The gizmo saves about 25 ms of `editor:scene`, less than its profile suggested: its gain is the 25 MB, not the time.
 
 voxel-map's control `reload` hit the 3 s GPU stall again (p90 3017 ms) in one of its five runs.
-
-`still-selection` keeps the selected Block Library cell still and spins only the hovered one. [`steadyState.ts`](../../perf/steadyState.ts) on voxel-map, control and flag alternated three times:
-
-| Scenario | Main thread, control | Main thread, `still-selection` | Allocated, control | Allocated, `still-selection` |
-|---|---|---|---|---|
-| away | 120 to 154 ms/s | 24 to 27 ms/s | 0.8 to 1.5 MB/s | 0.1 to 0.2 MB/s |
-| hover | 214 to 253 ms/s | 162 to 188 ms/s | 4.6 to 4.8 MB/s | 4.4 to 4.8 MB/s |
 
 ## Recommendations
 
@@ -171,25 +165,22 @@ In order of gain per effort, on this machine.
 
 | # | Change | Where | Gain | Effort |
 |---|---|---|---|---|
-| 1 | Stop spinning the selected Block Library cell, or spin it only while the library is hovered, and stop its `requestAnimationFrame` loop when no cell is due | voxel-map `BlockLibraryRenderer`, `Turntable` | −95 to −127 ms/s of main thread and a render plus readback per frame while the map editor sits open | small |
-| 2 | Decode and encode base64 natively: `Uint8Array.fromBase64` / `toBase64` where they exist, `Buffer` on Node, and drop `js-base64` | asset-server `inlineContent.ts`, pixel-draw-renderer `pixelBytes.ts`, `selectionMetadata.ts` | 65x faster decode and 14x faster encode on Node, about 65% of the server's allocations; 20 ms of regex in the offline shell | small |
-| 3 | Bake the room environment once instead of generating it on every open (item 2 of the previous report) | voxel-model `roomEnvironment.ts`, voxel-map `SceneEnvironment` when reflections or standard-material previews need it | −147 to −150 ms `ready` on voxel-model in every phase, five pipelines fewer | medium |
-| 4 | Build gizmo handles per mode on first use, or share one `TransformControls` across the voxel-model tools | `@jolly-pixel/three` `TransformGizmo`, voxel-model `TransformGizmo` | about −25 MB per voxel-model open, −25 ms of `editor:scene` | medium |
-| 5 | Stop the render loop under a still pointer: keep it alive on pointer moves and for what hover drives, not on `hovering` alone | runtime `Runtime.ts` keep-alive, with the features #855 kept alive in mind | −111 ms/s and −2.8 MB/s for voxel-model under a resting pointer, the same order for voxel-map | medium, needs care |
-| 6 | Copy readback rows with `TypedArray.set` and encode sRGB through a table | voxel-map `PreviewPixels` | 21 to 31 ms of main thread per open, off the critical path | small |
-| 7 | Encode transient room snapshots with one fixed PNG filter instead of `adaptiveFilter` | `@jolly-pixel/image` option used by `encodePixelSnapshot` | part of 54 ms per blockset snapshot on the server and 25 ms in the offline shell | small |
+| 1 | Bake the room environment once instead of generating it on every open (item 2 of the previous report) | voxel-model `roomEnvironment.ts`, voxel-map `SceneEnvironment` when reflections or standard-material previews need it | −147 to −150 ms `ready` on voxel-model in every phase, five pipelines fewer | medium |
+| 2 | Build gizmo handles per mode on first use, or share one `TransformControls` across the voxel-model tools | `@jolly-pixel/three` `TransformGizmo`, voxel-model `TransformGizmo` | about −25 MB per voxel-model open, −25 ms of `editor:scene` | medium |
+| 3 | Stop the render loop under a still pointer: keep it alive on pointer moves and for what hover drives, not on `hovering` alone | runtime `Runtime.ts` keep-alive, with the features #855 kept alive in mind | −111 ms/s and −2.8 MB/s for voxel-model under a resting pointer, the same order for voxel-map | medium, needs care |
 
 Not worth doing now:
 
 - The `launch` wait: it ends with the renderer, off the critical path.
 - The hidden metrics pane, again: it overlaps the compile wait.
 - Per-frame three.js cache-key allocations: under 1% of the time in GC.
+- The Block Library's `requestAnimationFrame` loop and its tile opacity rescan (`BlockPreviewMeshes.refresh`, every block every 250 ms): idle voxel-map is at 23 ms/s with both, against 22 for voxel-model.
 - Shared chunks across editors, as before: only the first open of a second editor kind on a cold cache gains.
 
 ## Limits
 
 - One machine: Intel Core Ultra 9 285HX laptop, integrated Xe-LPG GPU, Chromium on Direct3D 12. A discrete GPU or another shader compiler changes the compile wait first.
 - The seed project is small: an empty map with one layer and the 1024x512 blockset, the default model and its 64x64 texture. Real maps add meshing, larger snapshots and longer room replays.
-- The server profile covers warm rooms after the first open; its base64 cost grows with the history a cold room replays.
+- The server profile covers warm rooms after the first open, not the replay of a cold room.
 - `--memory` records a light trace and samples allocations. Its runs differed from the baseline by up to 180 ms on warm opens, in both directions; compare memory runs only with memory runs.
 - The `bench:*` flags are measurement patches, not the shape the fixes should take.
