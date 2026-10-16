@@ -9,6 +9,7 @@ The machine ran in its fast state: a fresh browser's first `requestAdapter` took
 - voxel-model warm opens are about 100 ms faster since the morning: `reload` 504 → 402 ms, `reopen` 576 → 460 ms. Cold opens gained 19 to 83 ms. voxel-map and pixel-art did not move.
 - A warm voxel open spends about 60 ms loading its scripts, 120 to 170 ms in boot steps, and 220 ms waiting on the GPU to compile the first frame's pipelines. That wait is the largest single step of every open.
 - A cold open adds about 110 ms before the editor runs its first line: download, background parse and lazy compile of 2.8 to 3.0 MB of eager JavaScript. On an emulated fast 4G link the download alone puts `DOMContentLoaded` at 1.2 s, and a cold open takes 2.1 s (voxel-model) to 3.4 s (voxel-map).
+- About 1.25 s of voxel-map's fast 4G open is the emulation, not the link: Chrome's throttling delivers the 100 KB blockset snapshot frame ten times slower than its configured throughput. WebSocket compression, enabled on 17 October, removes it from the harness numbers, see [Over a real link](#over-a-real-link).
 - A returning user (`restart`, browser relaunched on the same profile) gets part of the shader compiles from Chrome's disk cache, 135 to 177 ms instead of 215 to 246 ms. The V8 code cache barely helps: the first boot step starts 10 to 25 ms earlier than cold.
 - The voxel editors load 52 KB of brotli for three.js model and KTX2 loaders that no editor uses at boot. Loading them on demand saves 37 to 155 ms on voxel-map cold opens.
 - Tested and rejected: V8 compile hints on the eager chunks, and prefetching editor files from the shell on localhost.
@@ -136,7 +137,31 @@ Four rounds on localhost, three on fast 4G. voxel-map gains 37 to 155 ms. voxel-
 
 ### Over a real link
 
-On fast 4G (9 Mbit/s, 165 ms latency), a cold voxel-map open reaches `DOMContentLoaded` at 1264 ms and voxel-model at 1290 ms: the eager download dominates. After that, voxel-map waits on its blockset room: `host.session:dependency` runs from 1290 to 2929 ms for 101 KB of WebSocket data, against about 40 ms on localhost. At 1 MB/s the bytes alone take about 100 ms, so the room open probably makes several round trips one after the other; I did not trace it.
+On fast 4G (9 Mbit/s, 165 ms latency), a cold voxel-map open reaches `DOMContentLoaded` at 1264 ms and voxel-model at 1290 ms: the eager download dominates. After that, voxel-map waits on its blockset room: `host.session:dependency` runs from 1290 to 2929 ms for 101 KB of WebSocket data, against about 40 ms on localhost.
+
+A trace of the WebSocket frames at `c9726dc5` (CDP `Network.webSocketFrame*` timestamps, cold voxel-map) shows a single exchange. The editor sends the blockset and voxel-map joins together, the blockset `sync` comes back 48 ms later, and the `snapshot` follows as one 100,611-byte frame. 95.5 KB of it is the block atlas, a 1024x512 PNG of 71.6 KB sent as base64. On localhost the server sends that frame 13 ms after the join.
+
+The time goes to the throttling itself. Join to snapshot, one open each:
+
+| Throttling | Join → snapshot |
+|---|---|
+| none | 13 ms |
+| 165 ms latency, no throughput limit | 323 ms |
+| 1 MB/s, no latency | 1070 ms |
+| 4 MB/s, no latency | 820 ms |
+
+At 1 MB/s the frame should take 100 ms, and four times the throughput saves only a quarter of the time. Chrome's emulation charges this frame about ten times what the configured link would; I did not look into why. Over a real fast 4G link, the frame costs its transfer time, about 100 ms, plus the round trips of TCP slow start on a socket that has carried little data so far.
+
+The studio server did not negotiate permessage-deflate. With it on (`StudioBackend.attach`, 1 KB threshold), the snapshot travels as 69.7 KB, and the emulation no longer inflates it. Three cold voxel-map opens on fast 4G each, medians:
+
+| | Without compression | With compression |
+|---|---|---|
+| join → snapshot | 1460 ms | 207 ms |
+| `host.session:dependency` | 1630 ms | 379 ms |
+
+Only the 31% fewer bytes carry over to a real link, about 30 ms of transfer on fast 4G. The rest of the 1.25 s is the artifact going away, so fast 4G numbers measured before this change overstate voxel-map by about that much.
+
+The PNG is already near its floor: the `none` filter the codec uses gives 71.6 KB, the `adaptive` filter 126.6 KB, and deflate at level 9 over the raw pixels 68.4 KB.
 
 ### Prefetching from the shell
 
@@ -165,8 +190,9 @@ In order of gain per effort, on this machine.
 
 | # | Change | Where | Gain | Effort |
 |---|---|---|---|---|
-| 1 | Trace the blockset room open on a slow link and cut its sequential round trips | `@jolly-pixel/editor.host` session, asset-server dependency rooms | up to 1.5 s of a voxel-map cold open on fast 4G | medium |
-| 2 | Build the shared packages once and serve them from one path to every editor | editor builds, studio `EditorPages` | the second editor kind's cold open skips about 450 KB brotli, about 0.4 s on fast 4G (estimated) | high |
+| 1 | Build the shared packages once and serve them from one path to every editor | editor builds, studio `EditorPages` | the second editor kind's cold open skips about 450 KB brotli, about 0.4 s on fast 4G (estimated) | high |
+
+The first version of this table put the blockset room first, on the belief that it made several round trips. It makes one; the trace and the compression change are in [Over a real link](#over-a-real-link).
 
 The compile wait (215 to 246 ms) is the largest step left, and only fewer distinct pipelines shorten it on a first visit. Ending the tab spinner before it would shorten the perceived open by the same amount, at the cost of showing the viewport before every object draws.
 
@@ -174,10 +200,13 @@ Not worth doing now:
 
 - Compile hints on the eager chunks: measured, no gain on `ready`.
 - Lazy console UI in editor frames, the unused envelope validator, minifying Lit templates: 5 to 15 KB brotli each.
+- Sending the block atlas as a binary frame instead of base64: the same saving as compression, for a protocol change.
+- Mounting the voxel-map editor before the atlas arrives: it would hide the atlas transfer on slow links, but changes what the host promises an editor at mount.
 
 ## Limits
 
 - One machine: Intel Core Ultra 9 285HX laptop, integrated Xe-LPG GPU, Chromium 156 on Direct3D 12, studio on localhost. Fast 4G is CDP emulation: it adds latency per request in the renderer and does not model packet loss.
+- CDP throttling delivers a large uncompressed WebSocket frame about ten times slower than its configured throughput. The fast 4G rows above predate compression and carry about 1.25 s of it on voxel-map.
 - `restart` runs with Playwright attached, which may keep Chrome from consuming its code cache; the uninstrumented check covers voxel-map only, five launches.
 - The seed project is small, as in the morning report.
 - The variants on port 3014 changed between runs, so compare rows within one plan only.
