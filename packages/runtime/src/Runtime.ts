@@ -10,7 +10,8 @@ import { StatsRecorder } from "@jolly-pixel/ui/stats";
 import {
   AnimationLoopFrameSource,
   GameLoop,
-  type FrameSchedulerOptions
+  type FrameSchedulerOptions,
+  type GameLoopOptions
 } from "@jolly-pixel/loop";
 
 // Import Internal Dependencies
@@ -49,7 +50,13 @@ import {
   type ViewHelperOptions
 } from "./ui/viewHelper/ViewHelperSettings.ts";
 
+// CONSTANTS
+const kRenderOnDemandIdleDelay = 2000;
+
 export type RuntimeCanvasTarget = HTMLCanvasElement | string;
+
+export type RuntimeLoopOptions = FrameSchedulerOptions &
+  Pick<GameLoopOptions, "idleDelay">;
 
 export interface RuntimeOptions<
   TContext = Systems.WorldDefaultContext
@@ -69,7 +76,7 @@ export interface RuntimeOptions<
   context?: TContext;
   audio?: GlobalAudio;
   assets?: RuntimeAssetOptions;
-  loop?: FrameSchedulerOptions;
+  loop?: RuntimeLoopOptions;
   /**
    * Forwarded to `Systems.ThreeRenderer.create()`.
    */
@@ -150,13 +157,14 @@ export class Runtime<
       source: new AnimationLoopFrameSource(
         renderer.getSource()
       ),
+      idleDelay: kRenderOnDemandIdleDelay,
       ...options.loop,
       keepAlive: this.renderOnDemand ?
-        () => this.world.animating ||
-          this.world.input.wasActive ||
-          this.world.input.mouse.hovering :
+        () => this.world.animating || this.world.input.wasActive :
         undefined
     });
+    this.loop.on("start", () => this.stats.skipGap());
+    this.loop.on("wake", () => this.stats.skipGap());
     this.world.on("invalidate", () => this.loop.invalidate());
     renderer.on("compiled", () => this.world.invalidate());
     renderer.on("deviceLost", (info) => {

@@ -10,6 +10,7 @@ import type { Plugin } from "vite";
 // CONSTANTS
 const kMinBytes = 1024;
 const kCompressible = new Set([
+  ".bin",
   ".css",
   ".html",
   ".js",

@@ -54,6 +54,7 @@ set leaves them out.
 interface HostParams {
   maxFps: number | undefined;
   samples: number | undefined;
+  gpuTime: boolean;
   username: string | undefined;
   offline: boolean;
   workspace: string | undefined;
@@ -62,7 +63,7 @@ interface HostParams {
 
 HOST_PARAMS.read("?max-fps=10&samples=0&username=Ada&offline");
 // {
-//   maxFps: 10, samples: 0, username: "Ada", offline: true,
+//   maxFps: 10, samples: 0, gpuTime: false, username: "Ada", offline: true,
 //   workspace: undefined, render: undefined
 // }
 ```
@@ -71,6 +72,8 @@ HOST_PARAMS.read("?max-fps=10&samples=0&username=Ada&offline");
   [`EditorRuntime.load`](../runtime/EditorRuntime.md#loading-a-scene).
 - `samples`: a non-negative integer, read by
   [`EditorRuntime.samples`](../runtime/EditorRuntime.md#properties).
+- `gpu-time`: a flag that turns on GPU timestamps, see
+  [`EditorRuntime.create`](../runtime/EditorRuntime.md#creation).
 - `username`: stored by [`rememberQueryUsername`](../session/EditorSession.md#identity)
   in dev.
 - `offline` and `workspace`: open the
@@ -79,7 +82,7 @@ HOST_PARAMS.read("?max-fps=10&samples=0&username=Ada&offline");
   [`EditorRuntime.create`](../runtime/EditorRuntime.md#creation).
 
 Strings are trimmed and must not be blank. Any other value reads as
-`undefined`, and an absent `offline` as `false`.
+`undefined`, and an absent `offline` or `gpu-time` as `false`.
 
 `offlineWorkspaceQuery(workspace)` writes the `offline` and `workspace`
 parameters, for a shell that opens editor pages on its own offline workspace:

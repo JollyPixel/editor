@@ -1,6 +1,7 @@
 // Import Node.js Dependencies
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { setImmediate } from "node:timers/promises";
 
 // Import Third-party Dependencies
 import type * as THREE from "three/webgpu";
@@ -9,6 +10,8 @@ import type * as THREE from "three/webgpu";
 import { RendererMetrics } from "../../src/metrics/RendererMetrics.ts";
 
 interface FakeRenderer {
+  backend: { trackTimestamp?: boolean; };
+  resolveTimestampsAsync: (type: string) => Promise<number | undefined>;
   info: {
     render: { drawCalls: number; triangles: number; };
     memory: {
@@ -23,6 +26,8 @@ interface FakeRenderer {
 
 function makeRenderer(): FakeRenderer {
   return {
+    backend: {},
+    resolveTimestampsAsync: () => Promise.resolve(undefined),
     info: {
       render: {
         drawCalls: 12,
@@ -101,6 +106,41 @@ describe("RendererMetrics", () => {
 
     renderer.info.memory.attributesSize = 0;
     assert.equal(sampleOf(metrics, "geometryMemory"), 1024);
+  });
+
+  it("adds no GPU time unless the backend kept timestamp tracking", () => {
+    const untracked = makeRenderer();
+    const unsupported = makeRenderer();
+    unsupported.backend.trackTimestamp = false;
+
+    for (const renderer of [untracked, unsupported]) {
+      const ids = metricsOf(renderer).metrics.map((metric) => metric.id);
+      assert.equal(ids.includes("gpuTime"), false);
+    }
+  });
+
+  it("samples the GPU time resolved after each drawn frame", async() => {
+    const renderer = makeRenderer();
+    renderer.backend.trackTimestamp = true;
+    const durations = [2.5, undefined];
+    const resolved: string[] = [];
+    renderer.resolveTimestampsAsync = (type) => {
+      resolved.push(type);
+
+      return Promise.resolve(durations.shift());
+    };
+    const metrics = metricsOf(renderer);
+
+    assert.equal(sampleOf(metrics, "gpuTime"), 0);
+
+    metrics.captureFrame();
+    await setImmediate();
+    assert.equal(sampleOf(metrics, "gpuTime"), 2.5);
+
+    metrics.captureFrame();
+    await setImmediate();
+    assert.equal(sampleOf(metrics, "gpuTime"), 2.5);
+    assert.deepEqual(resolved, ["render", "render"]);
   });
 
   it("files every metric under one group, outside the tile", () => {

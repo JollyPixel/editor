@@ -18,13 +18,14 @@
     "#src/*": "./src/*"
   },
   "scripts": {
-    "prepublishOnly": "tsc -b",
-    "build": "tsc -b",
+    "prepublishOnly": "pnpm run build",
+    "build": "tsc -b && node scripts/copyAssets.ts",
+    "bake:environment": "node scripts/bakeRoomEnvironment.ts",
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.test.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "dev": "vite",
-    "lint": "oxlint src test examples",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p examples/tsconfig.json"
+    "lint": "oxlint src test examples scripts",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p examples/tsconfig.json && tsc --noEmit -p scripts/tsconfig.json"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",

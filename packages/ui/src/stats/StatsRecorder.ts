@@ -54,7 +54,8 @@ export class StatsRecorder {
   readonly #listeners = new Set<StatsListener>();
 
   #beginTime: number | null = null;
-  #windowStart: number;
+  #windowStart: number | null;
+  #lastEnd = 0;
   #frames = 0;
   #revision = 0;
 
@@ -109,20 +110,26 @@ export class StatsRecorder {
       now - this.#beginTime
     );
     this.#beginTime = null;
-    this.#frames++;
     this.#push("ms", duration);
     this.#push("worstMs", duration);
+    if (this.#windowStart === null) {
+      this.#windowStart = now;
 
-    const elapsed = now - this.#windowStart;
-    if (elapsed < this.#refreshInterval) {
       return;
     }
 
-    this.#push(
-      "fps",
-      (this.#frames * 1000) / elapsed
-    );
-    this.#flush(now);
+    this.#frames++;
+    this.#lastEnd = now;
+    if (now - this.#windowStart >= this.#refreshInterval) {
+      this.#closeWindow(now);
+    }
+  }
+
+  skipGap(): void {
+    if (this.#frames > 0) {
+      this.#closeWindow(this.#lastEnd);
+    }
+    this.#windowStart = null;
   }
 
   track(
@@ -227,6 +234,19 @@ export class StatsRecorder {
     this.#listeners.add(listener);
 
     return () => this.#listeners.delete(listener);
+  }
+
+  #closeWindow(
+    end: number
+  ): void {
+    const elapsed = end - (this.#windowStart ?? end);
+    if (elapsed > 0) {
+      this.#push(
+        "fps",
+        (this.#frames * 1000) / elapsed
+      );
+    }
+    this.#flush(end);
   }
 
   #flush(

@@ -30,6 +30,7 @@ import {
   pixelArtConsole
 } from "@jolly-pixel/editor.pixel-art";
 import { LocalStorageAdapter } from "@jolly-pixel/ui";
+import { BakedRoomEnvironment } from "@jolly-pixel/three";
 
 // Import Internal Dependencies
 import {
@@ -76,6 +77,8 @@ export class VoxelModelEditor {
   static createRuntime(
     logger: HostLogger
   ): Promise<EditorRuntime> {
+    void BakedRoomEnvironment.load();
+
     return EditorRuntime.create(kCanvas, {
       focusCanvas: false,
       viewHelper: true,
@@ -109,6 +112,12 @@ export class VoxelModelEditor {
     );
     const target = session.targetLease(kModelKind);
     await texture.ready;
+    const roomEnvironment = await BakedRoomEnvironment.load()
+      .catch((error: unknown) => {
+        console.warn("[voxel-model] No environment map for the viewport.", error);
+
+        return null;
+      });
 
     const scene = new ModelEditorScene({
       room: target.room,
@@ -123,7 +132,8 @@ export class VoxelModelEditor {
         fallbackName: "model",
         resetWarning: "Every model and texture stored in this browser is " +
           "deleted. Export what you want to keep first."
-      })
+      }),
+      roomEnvironment
     });
     const keyBindingSettings = new KeyBindingSettings({
       storage: new LocalStorageAdapter(),

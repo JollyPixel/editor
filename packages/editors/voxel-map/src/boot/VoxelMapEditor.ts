@@ -23,6 +23,7 @@ import {
   voxelMapDocumentKind,
   type SyncedVoxelMap
 } from "@jolly-pixel/asset.voxel-map/client";
+import { BakedRoomEnvironment } from "@jolly-pixel/three";
 
 // Import Internal Dependencies
 import { EditorState } from "../state/index.ts";
@@ -64,9 +65,16 @@ export class VoxelMapEditor {
   static createRuntime(
     logger: HostLogger
   ): Promise<EditorRuntime> {
+    void BakedRoomEnvironment.load();
+
     return EditorRuntime.create(kCanvas, {
       includePerformanceStats: {
         position: "top-right"
+      },
+      renderer: {
+        webgpu: {
+          antialias: false
+        }
       },
       focusCanvas: false,
       focusHint: true,
@@ -89,6 +97,12 @@ export class VoxelMapEditor {
     } = context;
     const state = new EditorState();
     const target = session.targetLease(kMapKind);
+    const roomEnvironment = await BakedRoomEnvironment.load()
+      .catch((error: unknown) => {
+        console.warn("[voxel-map] No environment map for reflections.", error);
+
+        return null;
+      });
 
     const { runtime } = editorRuntime;
     const scene = new EditorScene({
@@ -105,7 +119,8 @@ export class VoxelMapEditor {
             "deleted. Export what you want to keep first."
         })
       },
-      samples: editorRuntime.samples
+      samples: editorRuntime.samples,
+      roomEnvironment
     });
     const shell = new EditorShell({
       state,

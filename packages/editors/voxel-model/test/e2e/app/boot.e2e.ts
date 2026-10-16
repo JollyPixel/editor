@@ -24,7 +24,7 @@ test("opens the requested model with its default block and texture regions", asy
   });
 });
 
-test("the runtime idles once the pointer is off the canvas", async({ page }) => {
+test("the runtime idles once input stops", async({ page }) => {
   await page.mouse.move(0, 0);
 
   await expect.poll(() => runtimeIdle(page)).toBe(true);

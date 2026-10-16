@@ -334,7 +334,8 @@ limits: THREE.Box3 | null;
 ```
 
 Add `helper` to the rendered scene. It shows on `attach()` and hides on
-`detach()`. Changing `mode` or `axes` ends an active gesture. Vectors and
+`detach()`. The handles of a mode are built the first time that mode shows on a
+target. Changing `mode` or `axes` ends an active gesture. Vectors and
 quaternions read back from `orientation`, `pivot` and `snap` are copies.
 
 `object` is the camera, as on every `THREE.Controls`. The attached object is

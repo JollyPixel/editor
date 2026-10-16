@@ -1,4 +1,5 @@
 export class FakeAnimationRenderer {
+  readonly backend = {};
   readonly info = {
     render: {
       drawCalls: 0,

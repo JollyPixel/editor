@@ -9,9 +9,10 @@ import {
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type {
-  TransformEndEvent,
-  TransformMode
+import {
+  TransformControls,
+  type TransformEndEvent,
+  type TransformMode
 } from "#src/index.ts";
 import { watchDisposal } from "../fixtures/disposal.ts";
 import { pointerAt } from "../fixtures/pointer.ts";
@@ -59,6 +60,38 @@ describe("appearance", () => {
     ]);
 
     harness.controls.dispose();
+  });
+
+  test("builds the handles of a mode the first time it shows on a target", () => {
+    const controls = new TransformControls(new THREE.PerspectiveCamera());
+    function built(): string[] {
+      const names: string[] = [];
+      controls.helper.traverse((object) => {
+        if (object.name.startsWith("transform-handle-")) {
+          names.push(object.name);
+        }
+      });
+
+      return names;
+    }
+
+    controls.mode = "rotate";
+    assert.deepEqual(built(), []);
+
+    controls.mode = "scale";
+    controls.attach(new THREE.Object3D());
+    assert.ok(built().every((name) => !name.includes("-rotate-")));
+    const scaleOnly = built().length;
+
+    controls.mode = "translate";
+    controls.mode = "scale";
+    const translateAndScale = built().length;
+    assert.ok(translateAndScale > scaleOnly);
+
+    controls.mode = "translate";
+    assert.equal(built().length, translateAndScale);
+
+    controls.dispose();
   });
 
   test("starts the axis handles at the gap, joined at the origin by default", () => {
@@ -559,6 +592,8 @@ describe("rendering", () => {
         outline: { opacity: 1 }
       }
     });
+    harness.controls.mode = "rotate";
+    harness.controls.mode = "scale";
 
     const names = new Set<string>();
     const opaque: string[] = [];

@@ -2,6 +2,7 @@
 import { Systems } from "@jolly-pixel/engine";
 import {
   Grid,
+  type BakedRoomEnvironment,
   type GridOptions
 } from "@jolly-pixel/three";
 import type { MaterialGroup } from "@jolly-pixel/voxel.renderer";
@@ -115,6 +116,7 @@ export interface EditorSceneOptions {
   state: EditorState;
   session: EditorSceneSession;
   samples?: number;
+  roomEnvironment: BakedRoomEnvironment | null;
 }
 
 export class EditorScene extends Systems.Scene {
@@ -143,7 +145,8 @@ export class EditorScene extends Systems.Scene {
     const {
       state,
       session,
-      samples
+      samples,
+      roomEnvironment
     } = this.#options;
     const world = this.world;
     const scene = world.sceneManager.getSource();
@@ -178,6 +181,7 @@ export class EditorScene extends Systems.Scene {
       renderer: world.renderer,
       scene,
       lighting,
+      roomEnvironment,
       chunks: view.lighting,
       casters: view,
       theme: pageTheme.mode

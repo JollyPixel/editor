@@ -48,6 +48,11 @@ real frame rate. `framed` defaults to `window.parent !== window`. The `render`
 editor: `render=continuous` rules out a missed wake-up in the studio, and
 `render=on-demand` brings idling back to a standalone page.
 
+The `gpu-time` query parameter adds `trackTimestamp: true` to the
+`renderer.webgpu` options, so the metrics panel shows the
+[GPU time](../../../../runtime/docs/api/RuntimeMetrics.md#renderer-counters)
+of each frame.
+
 `storage` keeps the [widget visibility](#runtime-widgets) between page loads.
 It defaults to a `LocalStorageAdapter`; `create` restores the stored
 visibility of the performance HUD and the view helper once the runtime exists.

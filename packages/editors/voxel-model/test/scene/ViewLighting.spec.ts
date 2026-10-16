@@ -12,7 +12,7 @@ import { ViewSettingsStore } from "#src/state/index.ts";
 function createHarness() {
   const scene = new THREE.Scene();
   const view = new ViewSettingsStore();
-  const environment = new THREE.Texture();
+  const environment = new THREE.RenderTarget();
   const lighting = new ViewLighting({
     scene,
     view,
@@ -29,18 +29,23 @@ function createHarness() {
 }
 
 describe("ViewLighting", () => {
-  test("adds its lights, background and environment to the scene and removes them on dispose", () => {
+  test("adds its lights, background and environment to the scene and releases them on dispose", () => {
     const { scene, environment, lighting } = createHarness();
+    let released = false;
+    environment.addEventListener("dispose", () => {
+      released = true;
+    });
 
     assert.ok(scene.children.includes(lighting.key));
     assert.ok(scene.background === lighting.background);
-    assert.ok(scene.environment === environment);
+    assert.ok(scene.environment === environment.texture);
 
     lighting.dispose();
 
     assert.equal(scene.children.includes(lighting.key), false);
     assert.ok(scene.background === null);
     assert.ok(scene.environment === null);
+    assert.ok(released);
   });
 
   test("darkens the background and dims the key light at night", () => {
@@ -98,7 +103,7 @@ describe("ViewLighting", () => {
 
     view.update({ reflections: false });
 
-    assert.ok(scene.environment === environment);
+    assert.ok(scene.environment === environment.texture);
     assert.equal(scene.environmentIntensity, 0);
   });
 });

@@ -9,6 +9,7 @@ import type {
   VoxelModelRoom
 } from "@jolly-pixel/asset.voxel-model/client";
 import { RoomGrants } from "@jolly-pixel/network/client";
+import type { BakedRoomEnvironment } from "@jolly-pixel/three";
 
 // Import Internal Dependencies
 import { ModelHierarchy } from "../model/index.ts";
@@ -27,7 +28,6 @@ import { ModelBlocks } from "./blocks/index.ts";
 import { ViewLighting } from "./ViewLighting.ts";
 import { ViewGlow } from "./ViewGlow.ts";
 import { ViewportRenderer } from "./ViewportRenderer.ts";
-import { createRoomEnvironment } from "./roomEnvironment.ts";
 import {
   BlockPicker,
   HighlightBridge
@@ -73,6 +73,7 @@ export interface ModelEditorSceneOptions {
   animationSets: AnimationSetSource;
   archives: EditorArchives;
   view: ViewSettingsStore;
+  roomEnvironment: BakedRoomEnvironment | null;
 }
 
 export interface ModelWorkspace {
@@ -189,7 +190,8 @@ export class ModelEditorScene extends Systems.Scene {
     const lighting = new ViewLighting({
       scene,
       view,
-      environment: createRoomEnvironment(this.world.renderer),
+      environment: this.#options.roomEnvironment
+        ?.createRenderTarget(this.world.renderer.getSource()) ?? null,
       casters: () => blocks.visibleMeshes()
     });
     const unfollowLit = view.follow((settings) => {

@@ -41,6 +41,7 @@ Takes every [`FrameScheduler` option](./framescheduler.md#options), plus:
 | `source` | `new RequestAnimationFrameSource()` | Where frames come from. |
 | `keepAlive` | `() => true` | Return `false` to let the loop sleep. See [Rendering on demand](#rendering-on-demand). |
 | `trailingRenders` | `2` | Extra frames to render before sleeping. Integer `>= 0`, else `RangeError`. |
+| `idleDelay` | `0` | Milliseconds to keep rendering after the last activity before sleeping. Finite and `>= 0`, else `RangeError`. |
 
 ## Callbacks
 
@@ -143,7 +144,9 @@ canvas.addEventListener(
 
 - `start()`, `invalidate()`, and any frame where `keepAlive()` returns `true`
   queue `1 + trailingRenders` rendered frames.
-- Once they are drawn, the loop sleeps.
+- Once they are drawn and `idleDelay` milliseconds have passed since the last
+  of those calls or frames, the loop sleeps. A delay keeps the loop from
+  sleeping and waking between two inputs.
 - Frames skipped by `maxFps` don't count, so a cap never eats a requested frame.
 - On wake, the idle time is skipped: the first frame has a zero delta.
 

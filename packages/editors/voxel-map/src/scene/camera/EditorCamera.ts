@@ -20,6 +20,7 @@ import { CameraPostProcessing } from "./CameraPostProcessing.ts";
 // CONSTANTS
 const kPivotMaxDistance = 32;
 const kPivotFallbackDistance = 24;
+const kDefaultSamples = 4;
 
 export interface EditorCameraOptions {
   world: Systems.World;
@@ -42,12 +43,15 @@ export class EditorCamera {
   constructor(
     options: EditorCameraOptions
   ) {
-    const { world, pointer, log, samples } = options;
+    const {
+      world,
+      pointer,
+      log,
+      samples = kDefaultSamples
+    } = options;
     this.#world = world;
     this.#log = log;
-    this.#postProcessing = new CameraPostProcessing(
-      samples === undefined ? {} : { samples }
-    );
+    this.#postProcessing = new CameraPostProcessing({ samples });
 
     const controls = world
       .createActor("camera")

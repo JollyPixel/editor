@@ -40,6 +40,7 @@ scene.add(grid); // self-updating: no manual .update() call needed
 
 ### Utilities
 
+- [BakedRoomEnvironment](docs/BakedRoomEnvironment.md): Prefiltered `RoomEnvironment` reflection map, loaded instead of generated at runtime.
 - [Utilities](docs/utilities.md): Coordinate conversions between world, client and normalized device space (`projectToClient`, `clientToNdc`), and `createCanvas2D` for canvas-backed textures.
 
 ### Network

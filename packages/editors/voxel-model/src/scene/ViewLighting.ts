@@ -68,7 +68,7 @@ const kPresets: Record<LightingMode, LightingPreset> = {
 export interface ViewLightingOptions {
   scene: THREE.Scene;
   view: ViewSettingsStore;
-  environment: THREE.Texture | null;
+  environment: THREE.RenderTarget | null;
   casters: () => Iterable<ShadowCaster>;
 }
 
@@ -80,7 +80,7 @@ export class ViewLighting {
   readonly shadow: KeyLightShadow;
 
   #scene: THREE.Scene;
-  #environment: THREE.Texture | null;
+  #environment: THREE.RenderTarget | null;
   #unfollow: () => void;
 
   #apply = (
@@ -115,7 +115,7 @@ export class ViewLighting {
     });
 
     this.#scene.background = this.background;
-    this.#scene.environment = this.#environment;
+    this.#scene.environment = this.#environment?.texture ?? null;
     this.#scene.add(this.hemisphere, this.key, this.fill);
     this.#unfollow = options.view.follow(this.#apply);
   }

@@ -33,6 +33,7 @@ function createRuntime(
     {
       renderOnDemand: true,
       audio: {},
+      loop: { idleDelay: 0 },
       ...options
     }
   ]);
@@ -117,20 +118,20 @@ describe("Runtime renderOnDemand", () => {
     dispose();
   });
 
-  test("stays awake while the pointer hovers the canvas", () => {
-    const { runtime, renderer, tick, dispose } = createRuntime();
+  test("goes idle two seconds after the pointer rests on the canvas", () => {
+    const { runtime, renderer, tick, dispose } = createRuntime({
+      loop: {}
+    });
     runtime.start();
-    tick(10);
 
     runtime.canvas.dispatchEvent(new MouseEvent("mouseenter"));
     runtime.canvas.dispatchEvent(
       new PointerEvent("pointermove", { bubbles: true })
     );
-    tick(50);
+    tick(124);
     assert.equal(runtime.idle, false);
     assert.equal(renderer.source.looping, true);
 
-    runtime.canvas.dispatchEvent(new MouseEvent("mouseleave"));
     tick(10);
     assert.equal(runtime.idle, true);
     dispose();

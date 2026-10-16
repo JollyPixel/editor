@@ -40,12 +40,15 @@ export class RendererMetrics implements MetricSource {
   #captured = false;
   #capturedDrawCalls = 0;
   #capturedTriangles = 0;
+  #tracksGpuTime: boolean;
+  #gpuTime = 0;
 
   constructor(
     renderer: THREE.WebGPURenderer,
     options: RendererMetricsOptions = {}
   ) {
     this.#renderer = renderer;
+    this.#tracksGpuTime = tracksTimestamps(renderer);
 
     const traits: MetricTraits = {
       unit: "count",
@@ -53,7 +56,19 @@ export class RendererMetrics implements MetricSource {
       group: options.group ?? kDefaultGroup,
       tile: options.tile ?? false
     };
+    const gpuTime: MetricDefinition[] = this.#tracksGpuTime ?
+      [
+        {
+          ...traits,
+          id: "gpuTime",
+          label: "GPU time",
+          unit: "ms",
+          sample: () => this.#gpuTime
+        }
+      ] :
+      [];
     this.metrics = [
+      ...gpuTime,
       {
         ...traits,
         id: "calls",
@@ -128,5 +143,23 @@ export class RendererMetrics implements MetricSource {
     this.#captured = true;
     this.#capturedDrawCalls = render.drawCalls;
     this.#capturedTriangles = render.triangles;
+    if (this.#tracksGpuTime) {
+      void this.#resolveGpuTime();
+    }
   }
+
+  async #resolveGpuTime(): Promise<void> {
+    const duration = await this.#renderer.resolveTimestampsAsync("render");
+    if (duration !== undefined) {
+      this.#gpuTime = duration;
+    }
+  }
+}
+
+function tracksTimestamps(
+  renderer: THREE.WebGPURenderer
+): boolean {
+  const { backend } = renderer;
+
+  return "trackTimestamp" in backend && backend.trackTimestamp === true;
 }

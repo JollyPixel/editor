@@ -4,8 +4,7 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import {
   type Axis,
-  AXES,
-  AXIS_COLOR
+  AXES
 } from "../common/axes.ts";
 import { eyeDirection } from "../common/eyeDirection.ts";
 import { screenScaleFactor } from "../common/screenScaleFactor.ts";
@@ -20,7 +19,6 @@ import { CenterHandle } from "./handles/CenterHandle.ts";
 import { createAxisHandleGeometry } from "./handles/geometry.ts";
 import type {
   GizmoHandle,
-  GizmoHandleStyle,
   GizmoView
 } from "./handles/GizmoHandle.ts";
 import {
@@ -33,23 +31,12 @@ import { SilhouetteRing } from "./handles/SilhouetteRing.ts";
 import { ViewRingHandle } from "./handles/ViewRingHandle.ts";
 import type { TransformFrame } from "./TransformFrame.ts";
 import type {
-  TransformAxisAppearanceOptions,
-  TransformAxisHandleOptions,
-  TransformDirectionPolicy,
   TransformGizmoAppearanceOptions,
   TransformHandle,
   TransformMode
 } from "./types.ts";
 
 // CONSTANTS
-const kDefaultDirections: TransformDirectionPolicy = "positive";
-const kDefaultTranslateHandle: TransformAxisHandleOptions = {
-  kind: "arrow"
-};
-const kDefaultScaleHandle: TransformAxisHandleOptions = {
-  kind: "cube"
-};
-
 const kJunctionRadius = 0.08;
 
 const kDesiredMatrix = new THREE.Matrix4();
@@ -73,6 +60,7 @@ export class TransformGizmo extends THREE.Object3D {
     z: true
   };
   #appearance: ResolvedAppearance;
+  #builtModes = new Set<TransformMode>();
   #handles: GizmoHandle[] = [];
   #handleByPicker = new Map<THREE.Object3D, GizmoHandle>();
   #silhouette: SilhouetteRing | null = null;
@@ -103,9 +91,6 @@ export class TransformGizmo extends THREE.Object3D {
     this.name = "transform-gizmo";
     this.matrixAutoUpdate = false;
     this.visible = false;
-
-    this.#createHandles(options);
-    this.#applyVisibility();
   }
 
   get target(): THREE.Object3D | null {
@@ -126,6 +111,7 @@ export class TransformGizmo extends THREE.Object3D {
     this.#mode = mode;
     this.hover(null);
     this.activate(null);
+    this.#createModeHandles();
     this.#applyVisibility();
   }
 
@@ -160,6 +146,10 @@ export class TransformGizmo extends THREE.Object3D {
     if (target === null) {
       this.hover(null);
       this.activate(null);
+    }
+    else {
+      this.#createModeHandles();
+      this.#applyVisibility();
     }
   }
 
@@ -343,36 +333,57 @@ export class TransformGizmo extends THREE.Object3D {
     return handle.handleId.kind !== "center" || this.#mode !== "rotate";
   }
 
-  #createHandles(
-    options: TransformGizmoAppearanceOptions
-  ): void {
+  #createModeHandles(): void {
+    const mode = this.#mode;
+    if (
+      this.#target === null ||
+      this.#disposed ||
+      this.#builtModes.has(mode)
+    ) {
+      return;
+    }
+
+    if (mode === "rotate") {
+      this.#createRotateHandles();
+    }
+    else {
+      this.#createAxisHandles(mode);
+      this.#createPlaneHandles(mode);
+    }
+    if (this.#builtModes.size === 0) {
+      this.#createCenterHandle();
+    }
+    this.#builtModes.add(mode);
+  }
+
+  #createCenterHandle(): void {
+    const { center, style } = this.#appearance;
+    if (center !== false) {
+      this.#register(new CenterHandle({
+        center,
+        style
+      }));
+    }
+  }
+
+  #createRotateHandles(): void {
     const appearance = this.#appearance;
-    const style: GizmoHandleStyle = {
-      hoverColor: appearance.hoverColor,
-      activeColor: appearance.activeColor,
-      outline: appearance.outline,
-      depthTest: appearance.depthTest,
-      renderOrder: appearance.renderOrder
-    };
+    const { style } = appearance;
     if (appearance.rings.frontOnly) {
       this.#silhouette = new SilhouetteRing({
         rings: appearance.rings,
-        depthTest: appearance.depthTest,
-        renderOrder: appearance.renderOrder
+        depthTest: style.depthTest,
+        renderOrder: style.renderOrder
       });
       this.add(this.#silhouette);
     }
 
     for (const axis of AXES) {
-      const axisAppearance = options.axes?.[axis];
-      if (axisAppearance === false) {
+      const { excluded, color } = appearance.axes[axis];
+      if (excluded) {
         continue;
       }
 
-      const overrides = axisAppearance ?? {};
-      const color = overrides.color ?? AXIS_COLOR[axis];
-      this.#createAxisHandles("translate", axis, overrides, options, style);
-      this.#createAxisHandles("scale", axis, overrides, options, style);
       this.#register(new RingHandle({
         axis,
         rings: appearance.rings,
@@ -381,7 +392,6 @@ export class TransformGizmo extends THREE.Object3D {
         style
       }));
     }
-    this.#createPlaneHandles(options, style);
 
     if (appearance.viewRing !== false) {
       this.#register(new ViewRingHandle({
@@ -391,83 +401,63 @@ export class TransformGizmo extends THREE.Object3D {
         style
       }));
     }
-    if (appearance.center !== false) {
-      this.#register(new CenterHandle({
-        center: appearance.center,
-        style
-      }));
-    }
   }
 
   #createPlaneHandles(
-    options: TransformGizmoAppearanceOptions,
-    style: GizmoHandleStyle
+    mode: "translate" | "scale"
   ): void {
-    const { planes } = this.#appearance;
+    const { planes, axes, style } = this.#appearance;
     if (planes === false) {
       return;
     }
 
-    function axisColor(
-      axis: Axis
-    ): THREE.ColorRepresentation {
-      const overrides = options.axes?.[axis];
-
-      return overrides === false || overrides === undefined
-        ? AXIS_COLOR[axis]
-        : overrides.color ?? AXIS_COLOR[axis];
-    }
-
     for (const normal of AXES) {
-      const excluded = PLANE_AXES[normal].some(
-        (axis) => options.axes?.[axis] === false
-      );
-      if (excluded) {
+      const spanned = PLANE_AXES[normal];
+      if (spanned.some((axis) => axes[axis].excluded)) {
         continue;
       }
 
-      const color = planes.color === "blend"
-        ? blendColors(PLANE_AXES[normal].map(axisColor))
-        : axisColor(normal);
-      for (const mode of ["translate", "scale"] as const) {
-        this.#register(new PlaneHandle({
-          mode,
-          normal,
-          planes,
-          color,
-          style
-        }));
-      }
+      this.#register(new PlaneHandle({
+        mode,
+        normal,
+        planes,
+        color: planes.color === "blend"
+          ? blendColors(spanned.map((axis) => axes[axis].color))
+          : axes[normal].color,
+        style
+      }));
     }
   }
 
   #createAxisHandles(
-    mode: "translate" | "scale",
-    axis: Axis,
-    overrides: TransformAxisAppearanceOptions,
-    options: TransformGizmoAppearanceOptions,
-    style: GizmoHandleStyle
+    mode: "translate" | "scale"
   ): void {
-    const policy = overrides.directions ??
-      options.directions ??
-      kDefaultDirections;
-    const shape = mode === "translate"
-      ? overrides.handle ?? options.handle ?? kDefaultTranslateHandle
-      : overrides.scaleHandle ?? options.scaleHandle ?? kDefaultScaleHandle;
+    const appearance = this.#appearance;
+    for (const axis of AXES) {
+      const {
+        excluded,
+        color,
+        directions,
+        shapes
+      } = appearance.axes[axis];
+      if (excluded) {
+        continue;
+      }
 
-    for (const direction of resolveDirections(policy)) {
-      this.#register(new AxisHandle({
-        mode,
-        axis,
-        direction,
-        flippable: policy !== "both",
-        gap: this.#appearance.gap,
-        shape: createAxisHandleGeometry(shape),
-        color: overrides.color ?? AXIS_COLOR[axis],
-        pickerRadius: this.#appearance.pickerRadius,
-        pickerLengthScale: this.#appearance.pickerLengthScale,
-        style
-      }));
+      for (const direction of resolveDirections(directions)) {
+        this.#register(new AxisHandle({
+          mode,
+          axis,
+          direction,
+          flippable: directions !== "both",
+          gap: appearance.gap,
+          shape: createAxisHandleGeometry(shapes[mode]),
+          color,
+          pickerRadius: appearance.pickerRadius,
+          pickerLengthScale: appearance.pickerLengthScale,
+          style: appearance.style
+        }));
+      }
     }
   }
 

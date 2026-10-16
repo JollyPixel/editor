@@ -47,6 +47,7 @@ export class EditorRuntime {
       renderOnDemand = true,
       framed = window.parent !== window,
       storage,
+      renderer = {},
       ...runtimeOptions
     } = options;
     const render = params.render ?? (framed ? "on-demand" : "continuous");
@@ -55,6 +56,7 @@ export class EditorRuntime {
       {
         suspendWhenHidden: true,
         ...runtimeOptions,
+        renderer: params.gpuTime ? trackTimestamps(renderer) : renderer,
         renderOnDemand: renderOnDemand && render === "on-demand"
       }
     );
@@ -118,4 +120,16 @@ export class EditorRuntime {
       event
     );
   }
+}
+
+function trackTimestamps(
+  options: Systems.ThreeRendererOptions
+): Systems.ThreeRendererOptions {
+  return {
+    ...options,
+    webgpu: {
+      ...options.webgpu,
+      trackTimestamp: true
+    }
+  };
 }
