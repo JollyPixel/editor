@@ -9,7 +9,7 @@ import type { SessionRecording } from "./StudioSession.ts";
 import type { GcPauses } from "../analysis/Trace.ts";
 
 // CONSTANTS
-export const PHASES = ["first", "reopen", "reload", "cold"] as const;
+export const PHASES = ["first", "reopen", "reload", "cold", "restart"] as const;
 
 export type Phase = typeof PHASES[number];
 

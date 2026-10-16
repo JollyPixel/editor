@@ -6,10 +6,7 @@ import {
 import path from "node:path";
 
 // Import Third-party Dependencies
-import type {
-  Browser,
-  CDPSession
-} from "@playwright/test";
+import type { CDPSession } from "@playwright/test";
 
 // Import Internal Dependencies
 import { ProfileTree } from "../analysis/ProfileTree.ts";
@@ -25,6 +22,7 @@ import type {
 import { MetricsDelta } from "./MetricsDelta.ts";
 import { SocketTraffic } from "./SocketTraffic.ts";
 import type { StudioPage } from "./StudioPage.ts";
+import type { NetworkConditions } from "./flags.ts";
 
 // CONSTANTS
 export const CPU_SAMPLING_INTERVAL_US = 200;
@@ -36,6 +34,7 @@ export const HEAP_SAMPLING = {
 
 export interface StudioSessionOptions extends StudioPageOptions {
   cpuThrottle: number;
+  network?: NetworkConditions;
 }
 
 export interface RecordingFiles {
@@ -65,7 +64,7 @@ export class StudioSession {
   readonly studio: StudioPage;
   readonly traffic: SocketTraffic;
   readonly #cdp: CDPSession;
-  readonly #browser: Browser;
+  readonly #bench: BenchBrowser;
 
   static async start(
     bench: BenchBrowser,
@@ -79,8 +78,15 @@ export class StudioSession {
         rate: options.cpuThrottle
       });
     }
-    const session = new StudioSession(studio, cdp, bench.browser);
+    const session = new StudioSession(studio, cdp, bench);
     await studio.open();
+    if (options.network !== undefined) {
+      await cdp.send("Network.enable");
+      await cdp.send("Network.emulateNetworkConditions", {
+        offline: false,
+        ...options.network
+      });
+    }
 
     return session;
   }
@@ -88,12 +94,12 @@ export class StudioSession {
   constructor(
     studio: StudioPage,
     cdp: CDPSession,
-    browser: Browser
+    bench: BenchBrowser
   ) {
     this.studio = studio;
     this.traffic = new SocketTraffic(studio.page);
     this.#cdp = cdp;
-    this.#browser = browser;
+    this.#bench = bench;
   }
 
   async record<T>(
@@ -158,7 +164,7 @@ export class StudioSession {
   }
 
   async #startMemory(): Promise<void> {
-    await this.#browser.startTracing(undefined, {
+    await this.#bench.browser.startTracing(undefined, {
       categories: GC_CATEGORIES
     });
     await this.#cdp.send("HeapProfiler.enable");
@@ -171,7 +177,7 @@ export class StudioSession {
     const { profile } = await this.#cdp.send("HeapProfiler.stopSampling");
     await this.#cdp.send("HeapProfiler.disable");
     const trace = Trace.parse(
-      (await this.#browser.stopTracing()).toString("utf8")
+      (await this.#bench.browser.stopTracing()).toString("utf8")
     );
     writeJson(file, profile);
 

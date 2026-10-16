@@ -1,7 +1,8 @@
 // Import Third-party Dependencies
 import {
   chromium,
-  type Browser
+  type Browser,
+  type BrowserContext
 } from "@playwright/test";
 
 // Import Internal Dependencies
@@ -9,6 +10,7 @@ import { registerAccount } from "../../test/e2e/support/account.ts";
 import { installProbe } from "./openProbe.ts";
 import {
   StudioPage,
+  TABS_STORAGE_KEY,
   type StudioMode
 } from "./StudioPage.ts";
 
@@ -17,9 +19,19 @@ const kViewport = {
   width: 1600,
   height: 900
 };
+const kArgs = [
+  "--disable-renderer-backgrounding",
+  "--disable-background-timer-throttling",
+  "--disable-backgrounding-occluded-windows"
+];
 
 export interface BenchBrowserOptions {
   headless?: boolean;
+}
+
+export interface PersistentProfileOptions extends BenchBrowserOptions {
+  userDataDir: string;
+  base: string;
 }
 
 export interface StudioPageOptions {
@@ -31,33 +43,54 @@ export interface StudioPageOptions {
 }
 
 export class BenchBrowser {
-  readonly browser: Browser;
+  readonly #browser: Browser | null;
+  readonly #profile: BrowserContext | null;
 
   static async launch(
     options: BenchBrowserOptions = {}
   ): Promise<BenchBrowser> {
     const browser = await chromium.launch({
       headless: options.headless ?? false,
-      args: [
-        "--disable-renderer-backgrounding",
-        "--disable-background-timer-throttling",
-        "--disable-backgrounding-occluded-windows"
-      ]
+      args: kArgs
     });
 
-    return new BenchBrowser(browser);
+    return new BenchBrowser(browser, null);
+  }
+
+  static async launchPersistent(
+    options: PersistentProfileOptions
+  ): Promise<BenchBrowser> {
+    const profile = await chromium.launchPersistentContext(options.userDataDir, {
+      headless: options.headless ?? false,
+      args: kArgs,
+      baseURL: options.base,
+      viewport: kViewport
+    });
+    await profile.addInitScript(forgetSavedTabs, TABS_STORAGE_KEY);
+
+    return new BenchBrowser(null, profile);
   }
 
   constructor(
-    browser: Browser
+    browser: Browser | null,
+    profile: BrowserContext | null
   ) {
-    this.browser = browser;
+    this.#browser = browser;
+    this.#profile = profile;
+  }
+
+  get browser(): Browser {
+    if (this.#browser === null) {
+      throw new Error("A persistent profile exposes no Browser handle");
+    }
+
+    return this.#browser;
   }
 
   async newStudioPage(
     options: StudioPageOptions
   ): Promise<StudioPage> {
-    const context = await this.browser.newContext({
+    const context = this.#profile ?? await this.browser.newContext({
       baseURL: options.base,
       viewport: kViewport
     });
@@ -77,13 +110,14 @@ export class BenchBrowser {
     }
 
     return new StudioPage(
-      await context.newPage(),
+      context.pages().at(0) ?? await context.newPage(),
       options.mode
     );
   }
 
-  close(): Promise<void> {
-    return this.browser.close();
+  async close(): Promise<void> {
+    await this.#browser?.close();
+    await this.#profile?.close();
   }
 }
 
@@ -94,6 +128,17 @@ function seedStorage(
     for (const [key, value] of Object.entries(entries)) {
       localStorage.setItem(key, value);
     }
+  }
+  catch {
+    console.warn("[perf] localStorage unavailable");
+  }
+}
+
+function forgetSavedTabs(
+  key: string
+): void {
+  try {
+    localStorage.removeItem(key);
   }
   catch {
     console.warn("[perf] localStorage unavailable");

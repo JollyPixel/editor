@@ -16,7 +16,7 @@ import type { BenchEditor } from "./BenchEditors.ts";
 // CONSTANTS
 export const STUDIO_URL = `${baseUrl(PORTS.studio)}/`;
 export const STUDIO_MODES = ["online", "offline"] as const;
-const kTabsStorageKey = "studio:tabs";
+export const TABS_STORAGE_KEY = "studio:tabs";
 const kShellTimeoutMs = 30_000;
 const kIdleBeforeOpenMs = 500;
 
@@ -46,7 +46,7 @@ export class StudioPage {
   async reopenWithoutTabs(): Promise<void> {
     await this.page.evaluate(
       (key) => localStorage.removeItem(key),
-      kTabsStorageKey
+      TABS_STORAGE_KEY
     );
     await this.open();
   }

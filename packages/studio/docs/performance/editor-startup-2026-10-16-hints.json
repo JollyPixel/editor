@@ -1,0 +1,14 @@
+{
+  "editors": ["voxel-map", "voxel-model", "pixel-art"],
+  "modes": ["online"],
+  "phases": ["reopen", "reload", "cold", "restart"],
+  "variants": [
+    {
+      "label": "defer"
+    },
+    {
+      "label": "defer+hints",
+      "base": "http://localhost:3014/"
+    }
+  ]
+}

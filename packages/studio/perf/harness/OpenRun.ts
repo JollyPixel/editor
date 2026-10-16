@@ -1,4 +1,5 @@
 // Import Node.js Dependencies
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 // Import Internal Dependencies
@@ -8,7 +9,11 @@ import type {
   BenchEditor,
   BenchEditors
 } from "./BenchEditors.ts";
-import { DEFAULT_SETTLE_MS } from "./flags.ts";
+import {
+  DEFAULT_SETTLE_MS,
+  NETWORK_FLAG,
+  type NetworkConditions
+} from "./flags.ts";
 import type {
   OpenPlan,
   OpenVariant
@@ -27,6 +32,7 @@ import { StudioSession } from "./StudioSession.ts";
 export const OPEN_RUN_OPTIONS = {
   headless: { type: "boolean", default: false },
   cpu: { type: "string", default: "1" },
+  network: { type: "string" },
   settle: { type: "string", default: String(DEFAULT_SETTLE_MS) },
   profile: { type: "string" },
   memory: { type: "string" }
@@ -35,6 +41,7 @@ export const OPEN_RUN_OPTIONS = {
 export interface OpenRunFlags {
   headless: boolean;
   cpu: string;
+  network?: string;
   settle: string;
   profile?: string;
   memory?: string;
@@ -43,6 +50,7 @@ export interface OpenRunFlags {
 export interface OpenRunSettings {
   headless: boolean;
   cpuThrottle: number;
+  network?: NetworkConditions;
   settleMs: number;
   profileDir: string | null;
   memoryDir: string | null;
@@ -66,6 +74,9 @@ export class OpenRun {
     return {
       headless: flags.headless,
       cpuThrottle: Number(flags.cpu),
+      network: flags.network === undefined ?
+        undefined :
+        NETWORK_FLAG.parse(flags.network),
       settleMs: Number(flags.settle),
       profileDir: flags.profile ?? null,
       memoryDir: flags.memory ?? null
@@ -135,6 +146,46 @@ export class OpenRun {
       yield await this.#measureOpen(cold, cell, "cold");
       await cold.close();
     }
+    if (phases.has("restart")) {
+      yield await this.#measureRestart(cell);
+    }
+  }
+
+  async #measureRestart(
+    cell: OpenCell
+  ): Promise<OpenMeasurement> {
+    const { variant, mode, editor } = cell;
+    const profile = {
+      userDataDir: path.join(
+        tmpdir(),
+        "jolly-pixel-perf",
+        `${variant.label}-${mode}-${editor.name}`
+      ),
+      base: variant.base,
+      headless: this.#settings.headless
+    };
+
+    const primer = await BenchBrowser.launchPersistent(profile);
+    try {
+      const { studio } = await this.#startSession(primer, cell);
+      await studio.waitUntilOpenable(editor);
+      await studio.openEditor(editor);
+      await studio.page.waitForTimeout(this.#settings.settleMs);
+      await studio.closeEditor(editor);
+    }
+    finally {
+      await primer.close();
+    }
+
+    const restarted = await BenchBrowser.launchPersistent(profile);
+    try {
+      const session = await this.#startSession(restarted, cell);
+
+      return await this.#measureOpen(session, cell, "restart");
+    }
+    finally {
+      await restarted.close();
+    }
   }
 
   #startSession(
@@ -147,7 +198,8 @@ export class OpenRun {
       storage: variant.storage,
       prewarm: variant.prewarm,
       probe: true,
-      cpuThrottle: this.#settings.cpuThrottle
+      cpuThrottle: this.#settings.cpuThrottle,
+      network: this.#settings.network
     });
   }
 

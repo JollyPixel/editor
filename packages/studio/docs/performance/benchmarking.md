@@ -1,6 +1,6 @@
 # Benchmarking editor opens
 
-How to measure what it costs to open an editor from the studio, what an open editor costs while it sits there, and how to A/B a change against either. The tools live in `packages/studio/perf/`, starting with [`openEditors.ts`](../../perf/openEditors.ts); the latest results are in [the 16 October 2026 report](./editor-performance-2026-10-16.md).
+How to measure what it costs to open an editor from the studio, what an open editor costs while it sits there, and how to A/B a change against either. The tools live in `packages/studio/perf/`, starting with [`openEditors.ts`](../../perf/openEditors.ts); the latest results are in [Editor start-up, 16 October 2026](./editor-startup-2026-10-16.md), and the cost of an open editor in [the earlier report of the same day](./editor-performance-2026-10-16.md).
 
 ## What is measured
 
@@ -24,6 +24,9 @@ Each phase changes which caches are warm:
 | `cold` | warm (a `first` ran before) | empty, new context | new shell |
 | `reload` | warm | warm | shell reloaded, editor never opened in it |
 | `reopen` | warm | warm | same shell, tab closed and opened again |
+| `restart` | fresh launch | warm, on disk | new shell in a restarted browser |
+
+`restart` is a returning user: a persistent profile opens the editor once, the browser closes, and the open after the relaunch is measured. It is the only phase that keeps the disk caches (HTTP, V8 code cache, GPU shader cache) across a browser launch; the other phases run in Playwright contexts, which keep their caches in memory. The profiles live in `<tmp>/jolly-pixel-perf/<label>-<mode>-<editor>` and are reused by later runs, which open the editor again before the measured restart anyway. `--memory` does not support `restart`.
 
 `first` includes one-off browser costs: the first WebGPU adapter in a fresh browser takes over a second, the first `AudioContext` a few hundred milliseconds. Users who already run Chrome pay them less often; read `cold` and `reload` for the cost of the studio itself.
 
@@ -50,12 +53,13 @@ $ pnpm run perf:summary perf-results/baseline.json --steps --phase reload
 `perf:open` options:
 
 - `--editors voxel-map,voxel-model,pixel-art` and `--modes online,offline`: what to open. Online registers a new account per context; offline opens `/?offline`.
-- `--phases reopen,reload,cold`: the phases measured after `first`, which always runs.
+- `--phases reopen,reload,cold,restart`: the phases measured after `first`, which always runs.
 - `--runs 6`: repetitions. Each run shuffles modes and editors and launches a new browser per editor. A measurement's `run` is its repetition, and profile files end with it.
 - `--label`: tags every measurement, for summaries that mix files.
 - `--storage '{"key":"value"}'`: `localStorage` entries written before any page script runs.
 - `--prewarm`: the shell requests a WebGPU adapter as soon as it loads.
 - `--cpu 4`: CDP CPU throttling.
+- `--network fast-4g`: CDP network throttling with the DevTools presets, `fast-4g` (9 Mbit/s, 165 ms) or `slow-4g` (1.6 Mbit/s, 563 ms), both at 90% of the nominal throughput. It starts after the shell's first load, so the unbundled `dev:e2e` shell does not dominate the run; a `reload` reloads the shell throttled. On localhost, transfer size barely shows in `ready`; use it to measure what bytes cost.
 - `--profile <dir>`: records a V8 CPU profile of each open.
 - `--memory <dir>`: samples every allocation of each open, collected objects included, into a `.heapprofile`, and records a light trace for garbage collection on the renderer main thread. Each measurement gets `memory.allocatedMB`, `memory.minorGc` and `memory.majorGc` (count and ms; major includes incremental marking steps), and `perf:summary` adds their columns. The recording slows the open, so compare memory runs with memory runs only.
 - `--headless`: avoid it. Headless Chromium renders with SwiftShader, which makes WebGPU and WebGL costs meaningless.
@@ -73,7 +77,7 @@ $ pnpm run perf:ab --plan docs/performance/editor-open-2026-10-16.json --rounds 
 $ pnpm run perf:summary perf-results/ab.json --control control
 ```
 
-[`perf/abRun.ts`](../../perf/abRun.ts) runs one round of every variant, then the next round in reverse order, so a slow period hits every variant alike. A measurement's `run` is its round, and profile files end with it. Every measurement of the run goes to the one `--out` file, written after each open. `--headless`, `--cpu`, `--settle`, `--profile` and `--memory` mean the same as for `perf:open`. `--control` prints each median with its difference to the control. With five rounds, treat differences under about 50 ms on `ready` as noise, and read the p90 column too: a stall that hits only some opens moves the p90 and not the median.
+[`perf/abRun.ts`](../../perf/abRun.ts) runs one round of every variant, then the next round in reverse order, so a slow period hits every variant alike. A measurement's `run` is its round, and profile files end with it. Every measurement of the run goes to the one `--out` file, written after each open. `--headless`, `--cpu`, `--network`, `--settle`, `--profile` and `--memory` mean the same as for `perf:open`. `--control` prints each median with its difference to the control. With five rounds, treat differences under about 50 ms on `ready` as noise, and read the p90 column too: a stall that hits only some opens moves the p90 and not the median.
 
 Drift between runs can be large: in October 2026 the same warm open went from about 870 to 350 ms over one evening. Run `perf/probes/firstUse.ts` before and after a session; if its numbers moved, report each A/B with the state it ran in and do not compare absolute times across runs.
 
@@ -100,7 +104,7 @@ Then run `perf:ab` from the main checkout as above: the plan's variants turn the
 
 When only editor pages change, the patch can also go on the main checkout: apply it, rebuild the editors, measure, then `git apply -R` it. The flags default to off, so the control is the unchanged code.
 
-[`editor-open-2026-10-16.patch`](./editor-open-2026-10-16.patch) holds the 16 October experiments: `bench:no-environment` and `bench:one-gizmo` in voxel-model. The patch is measurement scaffolding, not a fix to merge. It applies to `86ad0bda`, the commit of that report, and stopped applying at `51891fd1`; check out the commit in the worktree first, or write a new patch for the current code.
+[`editor-open-2026-10-16.patch`](./editor-open-2026-10-16.patch) holds the 16 October experiments: `bench:no-environment` and `bench:one-gizmo` in voxel-model. The patch is measurement scaffolding, not a fix to merge. It applies to `86ad0bda`, the commit of that report, and stopped applying at `51891fd1`; check out the commit in the worktree first, or write a new patch for the current code. [`editor-startup-2026-10-16.patch`](./editor-startup-2026-10-16.patch) holds the start-up experiments; it applies to `0b0438a8`.
 
 Do not build or run tests while a measurement runs.
 
@@ -182,4 +186,4 @@ Needs the source-map build. Prints, per editor, the eager chunks (the entry plus
 
 - Windows 11 Pro 26200, Intel Core Ultra 9 285HX laptop with 32 GB, integrated Intel Graphics (Xe-LPG) only.
 - Playwright 1.64 with Chromium 156.0.8078.4, headed. WebGL runs through ANGLE on Direct3D 11, WebGPU through Dawn on Direct3D 12.
-- Node.js 24.18, studio `dev:e2e`, editors built from `86ad0bda`.
+- Node.js 24.18, studio `dev:e2e`, editors built from `86ad0bda` for the first report and from `0b0438a8` for the start-up report.

@@ -1,0 +1,14 @@
+{
+  "editors": ["voxel-map", "voxel-model", "pixel-art"],
+  "modes": ["online", "offline"],
+  "phases": ["reopen", "reload", "cold"],
+  "variants": [
+    {
+      "label": "df7d1089",
+      "base": "http://localhost:3014/"
+    },
+    {
+      "label": "0b0438a8"
+    }
+  ]
+}
