@@ -1,0 +1,20 @@
+{
+  "editors": ["voxel-map", "voxel-model", "pixel-art"],
+  "modes": ["online"],
+  "phases": ["cold", "restart"],
+  "variants": [
+    {
+      "label": "df7d1089",
+      "base": "http://localhost:3014/"
+    },
+    {
+      "label": "0b0438a8+defer"
+    },
+    {
+      "label": "prefetch",
+      "storage": {
+        "bench:prefetch-editors": "1"
+      }
+    }
+  ]
+}

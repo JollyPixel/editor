@@ -4,7 +4,7 @@ import {
   type KeyBindingDefaults,
   type KeyBindingOverrides
 } from "@jolly-pixel/controls";
-import * as z from "zod";
+import * as z from "zod/mini";
 
 // CONSTANTS
 const kDefaults = Object.freeze({

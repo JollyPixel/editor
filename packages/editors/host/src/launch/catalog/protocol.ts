@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import * as z from "zod";
+import * as z from "zod/mini";
 
 // CONSTANTS
 export const CATALOG_OPEN_MESSAGE_TYPE = "jolly-catalog-open";

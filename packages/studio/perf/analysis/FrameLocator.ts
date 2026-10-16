@@ -3,7 +3,10 @@ import path from "node:path";
 
 // Import Internal Dependencies
 import { SourceMapFile } from "./SourceMapFile.ts";
-import type { BenchEditors } from "../harness/BenchEditors.ts";
+
+export interface ServedEditors {
+  servingUrl(url: string): { dist: string; } | null;
+}
 
 export interface CallFrame {
   functionName: string;
@@ -19,11 +22,11 @@ export interface FrameLocation {
 }
 
 export class FrameLocator {
-  readonly #editors: BenchEditors;
+  readonly #editors: ServedEditors;
   readonly #maps = new Map<string, SourceMapFile | null>();
 
   constructor(
-    editors: BenchEditors
+    editors: ServedEditors
   ) {
     this.#editors = editors;
   }

@@ -5,11 +5,7 @@ import {
   type AssetRecord
 } from "@jolly-pixel/asset";
 import * as THREE from "three/webgpu";
-import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
-import { MTLLoader } from "three/addons/loaders/MTLLoader.js";
-import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+import type { MTLLoader } from "three/addons/loaders/MTLLoader.js";
 
 // Import Internal Dependencies
 import { parse } from "../utils/path.ts";
@@ -62,6 +58,10 @@ export class ModelAssetLoader implements AssetLoader<Model> {
   async #loadObject(
     source: ReturnType<typeof parse>
   ): Promise<Model> {
+    const [{ OBJLoader }, { MTLLoader }] = await Promise.all([
+      import("three/addons/loaders/OBJLoader.js"),
+      import("three/addons/loaders/MTLLoader.js")
+    ]);
     const objLoader = new OBJLoader(this.#manager)
       .setPath(source.dir);
     const mtlLoader = new MTLLoader(this.#manager)
@@ -81,6 +81,7 @@ export class ModelAssetLoader implements AssetLoader<Model> {
   async #loadFbx(
     source: ReturnType<typeof parse>
   ): Promise<Model> {
+    const { FBXLoader } = await import("three/addons/loaders/FBXLoader.js");
     const object = await new FBXLoader(this.#manager)
       .setPath(source.dir)
       .loadAsync(source.base);
@@ -113,6 +114,10 @@ export class ModelAssetLoader implements AssetLoader<Model> {
   async #loadGltf(
     source: ReturnType<typeof parse>
   ): Promise<Model> {
+    const [{ GLTFLoader }, { MeshoptDecoder }] = await Promise.all([
+      import("three/addons/loaders/GLTFLoader.js"),
+      import("three/addons/libs/meshopt_decoder.module.js")
+    ]);
     const object = await new GLTFLoader(this.#manager)
       .setMeshoptDecoder(MeshoptDecoder)
       .setPath(source.dir)

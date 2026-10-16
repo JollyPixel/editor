@@ -1,14 +1,15 @@
 // Import Internal Dependencies
-import type {
-  ProbeFrame,
-  ProbeSnapshot
-} from "./pageProbe.ts";
+import {
+  longFramesWithin,
+  type ProbeFrame,
+  type ProbeSnapshot
+} from "./openProbe.ts";
 import type { StudioMode } from "./StudioPage.ts";
-import type { MemoryRecording } from "./StudioSession.ts";
+import type { SessionRecording } from "./StudioSession.ts";
 import type { GcPauses } from "../analysis/Trace.ts";
 
 // CONSTANTS
-export const PHASES = ["first", "reopen", "reload", "cold"] as const;
+export const PHASES = ["first", "reopen", "reload", "cold", "restart"] as const;
 
 export type Phase = typeof PHASES[number];
 
@@ -64,17 +65,14 @@ export interface OpenMeasurement {
 
 export type OpenContext = Pick<
   OpenMeasurement,
-  "label" | "run" | "mode" | "editor" | "phase" | "profileFile"
+  "label" | "run" | "mode" | "editor" | "phase"
 >;
 
 export interface OpenSampleData {
   shell: ProbeSnapshot;
   frame: ProbeSnapshot;
-  metricsBefore: Map<string, number>;
-  metricsAfter: Map<string, number>;
-  socketBytes: number;
+  recording: SessionRecording;
   settleMs: number;
-  memory?: MemoryRecording & { heapProfileFile: string; };
 }
 
 export class OpenSample {
@@ -102,8 +100,13 @@ export class OpenSample {
   toMeasurement(
     context: OpenContext
   ): OpenMeasurement {
-    const { frame, socketBytes, memory } = this.#data;
-    const frames = this.#framesInWindow();
+    const { frame, recording } = this.#data;
+    const { metrics, memory } = recording;
+    const frames = longFramesWithin(
+      [frame, this.#data.shell],
+      this.click,
+      this.ready + this.#data.settleMs
+    );
     const settled = Math.max(
       this.ready,
       ...frames.map(({ t, duration }) => t + duration)
@@ -125,17 +128,18 @@ export class OpenSample {
         };
       }),
       cdp: {
-        scriptMs: Math.round(this.#metricDelta("ScriptDuration") * 1000),
-        taskMs: Math.round(this.#metricDelta("TaskDuration") * 1000),
-        layoutMs: Math.round(this.#metricDelta("LayoutDuration") * 1000),
-        styleMs: Math.round(this.#metricDelta("RecalcStyleDuration") * 1000),
-        heapDeltaMB: Math.round(this.#metricDelta("JSHeapUsedSize") / 1e5) / 10,
-        nodesDelta: this.#metricDelta("Nodes")
+        scriptMs: Math.round(metrics.change("ScriptDuration") * 1000),
+        taskMs: Math.round(metrics.change("TaskDuration") * 1000),
+        layoutMs: Math.round(metrics.change("LayoutDuration") * 1000),
+        styleMs: Math.round(metrics.change("RecalcStyleDuration") * 1000),
+        heapDeltaMB: Math.round(metrics.change("JSHeapUsedSize") / 1e5) / 10,
+        nodesDelta: metrics.change("Nodes")
       },
       requests: frame.requests,
       transferKB: Math.round(frame.transferBytes / 1024),
       decodedKB: Math.round(frame.decodedBytes / 1024),
-      socketKB: Math.round(socketBytes / 1024),
+      socketKB: Math.round(recording.socketBytes / 1024),
+      profileFile: recording.cpuProfileFile,
       memory: memory === undefined ? undefined : {
         allocatedMB: Math.round(memory.allocatedBytes / 1e5) / 10,
         minorGc: memory.gc.minor,
@@ -143,13 +147,6 @@ export class OpenSample {
         heapProfileFile: memory.heapProfileFile
       }
     };
-  }
-
-  #framesInWindow(): ProbeFrame[] {
-    const end = this.ready + this.#data.settleMs;
-
-    return [...this.#data.frame.frames, ...this.#data.shell.frames]
-      .filter(({ t }) => t >= this.click && t <= end);
   }
 
   #steps(): Record<string, OpenStep> {
@@ -174,13 +171,6 @@ export class OpenSample {
       blocking: Math.round(frames.reduce((total, { blocking }) => total + blocking, 0)),
       longest: Math.round(Math.max(0, ...frames.map(({ duration }) => duration)))
     };
-  }
-
-  #metricDelta(
-    name: string
-  ): number {
-    return (this.#data.metricsAfter.get(name) ?? 0) -
-      (this.#data.metricsBefore.get(name) ?? 0);
   }
 
   #sinceClick(

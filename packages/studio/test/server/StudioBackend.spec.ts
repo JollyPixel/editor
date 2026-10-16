@@ -1,4 +1,6 @@
 // Import Node.js Dependencies
+import { randomBytes } from "node:crypto";
+import http from "node:http";
 import {
   describe,
   test
@@ -11,6 +13,7 @@ import {
   CATALOG_VIEW_ROOM,
   CatalogClient
 } from "@jolly-pixel/asset-server/client";
+import { WEBSOCKET_PROTOCOL } from "@jolly-pixel/network";
 import { Client } from "@jolly-pixel/network/client";
 import { Window } from "happy-dom";
 
@@ -59,4 +62,40 @@ describe("StudioBackend", () => {
       await guestPage.happyDOM.close();
     }
   });
+
+  test("compresses its sockets with permessage-deflate", async() => {
+    await using backend = await serveBackend();
+
+    assert.match(
+      await negotiatedExtensions(backend.socketUrl),
+      /^permessage-deflate/
+    );
+  });
 });
+
+async function negotiatedExtensions(
+  socketUrl: string
+): Promise<string> {
+  const upgraded = Promise.withResolvers<string>();
+  const request = http.request(socketUrl.replace(/^ws:/, "http:"), {
+    headers: {
+      Connection: "Upgrade",
+      Upgrade: "websocket",
+      "Sec-WebSocket-Version": "13",
+      "Sec-WebSocket-Key": randomBytes(16).toString("base64"),
+      "Sec-WebSocket-Protocol": WEBSOCKET_PROTOCOL,
+      "Sec-WebSocket-Extensions": "permessage-deflate"
+    }
+  });
+  request.once("upgrade", (response, socket) => {
+    socket.destroy();
+    upgraded.resolve(response.headers["sec-websocket-extensions"] ?? "");
+  });
+  request.once("response", (response) => {
+    upgraded.reject(new Error(`Upgrade refused: ${response.statusCode}`));
+  });
+  request.once("error", upgraded.reject);
+  request.end();
+
+  return upgraded.promise;
+}

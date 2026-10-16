@@ -14,9 +14,11 @@ import {
   StudioProject
 } from "../server/project/StudioProject.ts";
 import { StudioServer } from "../server/StudioServer.ts";
-
-// CONSTANTS
-const kSamplingIntervalUs = 200;
+import { E2E_BACKEND_OPTIONS } from "../vite/e2eBackend.ts";
+import {
+  CPU_SAMPLING_INTERVAL_US,
+  HEAP_SAMPLING
+} from "./harness/StudioSession.ts";
 
 const { values: args } = parseArgs({
   options: {
@@ -35,14 +37,7 @@ const server = await StudioServer.open({
   shell: path.join(STUDIO_ROOT, "dist"),
   backend: {
     inMemory: true,
-    requestsPerMinute: 100_000,
-    accounts: {
-      inMemory: true,
-      defaultRole: "member",
-      throttle: {
-        registrations: 1_000
-      }
-    }
+    ...E2E_BACKEND_OPTIONS
   }
 });
 const url = await server.listen(PORTS.studio, "localhost");
@@ -51,16 +46,12 @@ const inspector = new Session();
 inspector.connect();
 await inspector.post("Profiler.enable");
 await inspector.post("Profiler.setSamplingInterval", {
-  interval: kSamplingIntervalUs
+  interval: CPU_SAMPLING_INTERVAL_US
 });
 await inspector.post("Profiler.start");
 if (args.heap) {
   await inspector.post("HeapProfiler.enable");
-  await inspector.post("HeapProfiler.startSampling", {
-    samplingInterval: 16 * 1024,
-    includeObjectsCollectedByMajorGC: true,
-    includeObjectsCollectedByMinorGC: true
-  });
+  await inspector.post("HeapProfiler.startSampling", HEAP_SAMPLING);
 }
 console.info(`Profiling ${url} for ${args.seconds} s`);
 

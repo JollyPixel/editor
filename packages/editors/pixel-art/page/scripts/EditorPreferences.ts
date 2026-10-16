@@ -4,24 +4,25 @@ import type {
   PixelArtCanvas
 } from "@jolly-pixel/pixel-draw.renderer";
 import type { StorageAdapter } from "@jolly-pixel/ui";
-import * as z from "zod";
+import * as z from "zod/mini";
 
 // CONSTANTS
 const kStorageKey = "pixel-art:preferences";
 const kPreferences = z.object({
-  mode: z
-    .enum([
+  mode: z.catch(
+    z.enum([
       "paint",
       "erase",
       "move",
       "fill",
       "select",
       "uv"
-    ])
-    .catch("paint"),
-  showAll: z.boolean().catch(false),
-  showRegionLabels: z.boolean().catch(false),
-  showSizeLabels: z.boolean().catch(false)
+    ]),
+    "paint"
+  ),
+  showAll: z.catch(z.boolean(), false),
+  showRegionLabels: z.catch(z.boolean(), false),
+  showSizeLabels: z.catch(z.boolean(), false)
 });
 const kVisibilityEvents = [
   "visibility-changed",

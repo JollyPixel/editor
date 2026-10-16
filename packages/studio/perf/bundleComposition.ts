@@ -11,6 +11,7 @@ import {
   BenchEditors,
   type BenchEditor
 } from "./harness/BenchEditors.ts";
+import { splitList } from "./harness/flags.ts";
 
 const { values: args } = parseArgs({
   options: {
@@ -20,7 +21,7 @@ const { values: args } = parseArgs({
 });
 
 const editors = await BenchEditors.read();
-for (const editor of editors.select(args.editors.split(","))) {
+for (const editor of editors.select(splitList(args.editors))) {
   report(editor);
 }
 

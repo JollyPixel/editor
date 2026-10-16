@@ -6,22 +6,12 @@ import {
 import type { RunMode } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
-import type { StudioAccountsOptions } from "../server/accounts.ts";
 import type { StudioProject } from "../server/project/StudioProject.ts";
 import {
   StudioBackend,
   type StudioBackendOptions
 } from "../server/StudioBackend.ts";
-
-// CONSTANTS
-const kE2ERequestsPerMinute = 100_000;
-const kE2EAccounts: StudioAccountsOptions = {
-  inMemory: true,
-  defaultRole: "member",
-  throttle: {
-    registrations: 1_000
-  }
-};
+import { E2E_BACKEND_OPTIONS } from "./e2eBackend.ts";
 
 export function backend(
   project: StudioProject,
@@ -62,8 +52,7 @@ function backendOptions(
   if (mode.e2e) {
     return {
       inMemory: mode.inMemory,
-      accounts: kE2EAccounts,
-      requestsPerMinute: kE2ERequestsPerMinute
+      ...E2E_BACKEND_OPTIONS
     };
   }
 

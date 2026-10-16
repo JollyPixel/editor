@@ -5,7 +5,7 @@ import { parseArgs } from "node:util";
 import { BenchEditors } from "./harness/BenchEditors.ts";
 import { OpenPlan } from "./harness/OpenPlan.ts";
 import {
-  DEFAULT_SETTLE_MS,
+  OPEN_RUN_OPTIONS,
   OpenRun
 } from "./harness/OpenRun.ts";
 import { ResultsFile } from "./harness/ResultsFile.ts";
@@ -15,7 +15,7 @@ const { values: args } = parseArgs({
     plan: { type: "string" },
     rounds: { type: "string", default: "5" },
     out: { type: "string", default: "perf-results/ab.json" },
-    memory: { type: "string" }
+    ...OPEN_RUN_OPTIONS
   }
 });
 
@@ -23,31 +23,12 @@ if (args.plan === undefined) {
   throw new Error("Missing --plan <file.json>");
 }
 
-const plan = OpenPlan.read(args.plan);
-const editors = (
-  await BenchEditors.read()
-).select(plan.editors);
-const results = new ResultsFile(args.out, args);
-
-for (const { round, variant } of plan.schedule(Number(args.rounds))) {
-  console.log(`round ${round} ${variant.label}`);
-  const run = new OpenRun({
-    label: variant.label,
-    runs: 1,
-    editors,
-    modes: plan.modes,
-    phases: plan.phases,
-    storage: variant.storage,
-    prewarm: variant.prewarm,
-    headless: false,
-    cpuThrottle: 1,
-    settleMs: DEFAULT_SETTLE_MS,
-    profileDir: null,
-    memoryDir: args.memory ?? null,
-    base: variant.base
-  });
-
-  for await (const measurement of run.measure()) {
-    results.add(measurement);
-  }
+const run = new OpenRun(
+  OpenPlan.read(args.plan),
+  await BenchEditors.read(),
+  OpenRun.settingsFrom(args)
+);
+const results = new ResultsFile(args.out, "open", args);
+for await (const measurement of run.measure(Number(args.rounds))) {
+  results.add(measurement);
 }

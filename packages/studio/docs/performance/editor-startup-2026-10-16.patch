@@ -1,0 +1,178 @@
+diff --git a/packages/editors/voxel-map/src/boot/VoxelMapEditor.ts b/packages/editors/voxel-map/src/boot/VoxelMapEditor.ts
+index 5c43d47c..7dcf011b 100644
+--- a/packages/editors/voxel-map/src/boot/VoxelMapEditor.ts
++++ b/packages/editors/voxel-map/src/boot/VoxelMapEditor.ts
+@@ -65,7 +65,7 @@ export class VoxelMapEditor {
+   static createRuntime(
+     logger: HostLogger
+   ): Promise<EditorRuntime> {
+-    void BakedRoomEnvironment.load();
++    queueMicrotask(() => void BakedRoomEnvironment.load());
+ 
+     return EditorRuntime.create(kCanvas, {
+       includePerformanceStats: {
+diff --git a/packages/editors/voxel-model/src/boot/VoxelModelEditor.ts b/packages/editors/voxel-model/src/boot/VoxelModelEditor.ts
+index 637fa62d..1766ad72 100644
+--- a/packages/editors/voxel-model/src/boot/VoxelModelEditor.ts
++++ b/packages/editors/voxel-model/src/boot/VoxelModelEditor.ts
+@@ -77,7 +77,7 @@ export class VoxelModelEditor {
+   static createRuntime(
+     logger: HostLogger
+   ): Promise<EditorRuntime> {
+-    void BakedRoomEnvironment.load();
++    queueMicrotask(() => void BakedRoomEnvironment.load());
+ 
+     return EditorRuntime.create(kCanvas, {
+       focusCanvas: false,
+diff --git a/packages/studio/src/index.ts b/packages/studio/src/index.ts
+index 13d9408f..f72e3927 100644
+--- a/packages/studio/src/index.ts
++++ b/packages/studio/src/index.ts
+@@ -66,6 +66,10 @@ async function boot(): Promise<void> {
+     );
+   }
+ 
++  if (localStorage.getItem("bench:prefetch-editors") === "1") {
++    void prefetchEditors(manifest);
++  }
++
+   if (import.meta.env.DEV) {
+     window.studio = studio;
+   }
+@@ -75,6 +79,22 @@ async function boot(): Promise<void> {
+   );
+ }
+ 
++async function prefetchEditors(
++  manifest: ProjectManifest
++): Promise<void> {
++  await Promise.all(manifest.editors.map(async({ name }) => {
++    const page = new URL(`editors/${name}/`, document.baseURI);
++    const html = await (await fetch(page)).text();
++    const files = html.matchAll(/(?:src|href)="\.\/([^"]+\.(?:js|css))"/g);
++    await Promise.all(
++      Array.from(files, async([, file]) => {
++        const response = await fetch(new URL(file, page), { priority: "low" });
++        await response.arrayBuffer();
++      })
++    );
++  }));
++}
++
+ function createEditorRegistry(
+   manifest: ProjectManifest,
+   query: Readonly<Record<string, string>>
+diff --git a/packages/engine/src/assets/model.ts b/packages/engine/src/assets/model.ts
+index bc36f505..432f10a0 100644
+--- a/packages/engine/src/assets/model.ts
++++ b/packages/engine/src/assets/model.ts
+@@ -5,11 +5,7 @@ import {
+   type AssetRecord
+ } from "@jolly-pixel/asset";
+ import * as THREE from "three/webgpu";
+-import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
+-import { MTLLoader } from "three/addons/loaders/MTLLoader.js";
+-import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
+-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+-import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
++import type { MTLLoader } from "three/addons/loaders/MTLLoader.js";
+ 
+ // Import Internal Dependencies
+ import { parse } from "../utils/path.ts";
+@@ -62,6 +58,10 @@ export class ModelAssetLoader implements AssetLoader<Model> {
+   async #loadObject(
+     source: ReturnType<typeof parse>
+   ): Promise<Model> {
++    const [{ OBJLoader }, { MTLLoader }] = await Promise.all([
++      import("three/addons/loaders/OBJLoader.js"),
++      import("three/addons/loaders/MTLLoader.js")
++    ]);
+     const objLoader = new OBJLoader(this.#manager)
+       .setPath(source.dir);
+     const mtlLoader = new MTLLoader(this.#manager)
+@@ -81,6 +81,7 @@ export class ModelAssetLoader implements AssetLoader<Model> {
+   async #loadFbx(
+     source: ReturnType<typeof parse>
+   ): Promise<Model> {
++    const { FBXLoader } = await import("three/addons/loaders/FBXLoader.js");
+     const object = await new FBXLoader(this.#manager)
+       .setPath(source.dir)
+       .loadAsync(source.base);
+@@ -113,6 +114,10 @@ export class ModelAssetLoader implements AssetLoader<Model> {
+   async #loadGltf(
+     source: ReturnType<typeof parse>
+   ): Promise<Model> {
++    const [{ GLTFLoader }, { MeshoptDecoder }] = await Promise.all([
++      import("three/addons/loaders/GLTFLoader.js"),
++      import("three/addons/libs/meshopt_decoder.module.js")
++    ]);
+     const object = await new GLTFLoader(this.#manager)
+       .setMeshoptDecoder(MeshoptDecoder)
+       .setPath(source.dir)
+diff --git a/packages/runtime/src/Runtime.ts b/packages/runtime/src/Runtime.ts
+index 5b1b3d17..14cdd3aa 100644
+--- a/packages/runtime/src/Runtime.ts
++++ b/packages/runtime/src/Runtime.ts
+@@ -1,6 +1,6 @@
+ // Import Third-party Dependencies
+ import * as THREE from "three/webgpu";
+-import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
++import type { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
+ import type { AssetCatalog } from "@jolly-pixel/asset";
+ import {
+   Systems,
+@@ -105,7 +105,7 @@ export class Runtime<
+   #adaptivePixelRatio: boolean;
+   #logger: Systems.Logger;
+   #session: RuntimeSession | null = null;
+-  #ktx2: KTX2Loader | null;
++  #ktx2: LazyKtx2Loader | null;
+   #statsHud: PerformanceStatsHud | null = null;
+ 
+   private constructor(
+@@ -135,9 +135,7 @@ export class Runtime<
+     const ktx2 = options.assets?.ktx2;
+     this.#ktx2 = ktx2 === undefined ?
+       null :
+-      new KTX2Loader(this.manager)
+-        .setTranscoderPath(ktx2.transcoderPath)
+-        .detectSupport(renderer.getSource());
++      new LazyKtx2Loader(this.manager, ktx2.transcoderPath, renderer.getSource());
+ 
+     this.world = new Systems.World<THREE.WebGPURenderer, TContext>(renderer, {
+       enableOnExit: true,
+@@ -319,3 +317,34 @@ export class Runtime<
+     this.#ktx2 = null;
+   }
+ }
++
++class LazyKtx2Loader {
++  #loader: Promise<KTX2Loader> | null = null;
++  #create: () => Promise<KTX2Loader>;
++
++  constructor(
++    manager: THREE.LoadingManager,
++    transcoderPath: string,
++    renderer: THREE.WebGPURenderer
++  ) {
++    this.#create = async() => {
++      const { KTX2Loader } = await import("three/addons/loaders/KTX2Loader.js");
++
++      return new KTX2Loader(manager)
++        .setTranscoderPath(transcoderPath)
++        .detectSupport(renderer);
++    };
++  }
++
++  async loadAsync(
++    url: string
++  ): Promise<THREE.CompressedTexture> {
++    this.#loader ??= this.#create();
++
++    return (await this.#loader).loadAsync(url);
++  }
++
++  dispose(): void {
++    void this.#loader?.then((loader) => loader.dispose());
++  }
++}

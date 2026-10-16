@@ -4,14 +4,6 @@ import type {
   Page
 } from "@playwright/test";
 
-// CONSTANTS
-export const VIEWPORT_SCENARIOS = ["away", "hover", "orbit", "panels"] as const;
-const kPointerStepMs = 16;
-const kNudgeEveryMs = 400;
-const kPanelInset = 12;
-const kOrbitRadius = 120;
-const kOrbitPeriodMs = 2_000;
-
 export type ViewportScenario = typeof VIEWPORT_SCENARIOS[number];
 
 interface Point {
@@ -24,32 +16,45 @@ interface Box extends Point {
   height: number;
 }
 
+type Anchor = "pageCorner" | "canvasCenter" | "panel";
+type Motion = "still" | "orbit" | "nudge";
+
+interface ScenarioPlan {
+  anchor: Anchor;
+  motion: Motion;
+}
+
+// CONSTANTS
+export const VIEWPORT_SCENARIOS = ["away", "hover", "orbit", "panels"] as const;
+const kScenarios: Record<ViewportScenario, ScenarioPlan> = {
+  away: { anchor: "pageCorner", motion: "still" },
+  hover: { anchor: "canvasCenter", motion: "still" },
+  orbit: { anchor: "canvasCenter", motion: "orbit" },
+  panels: { anchor: "panel", motion: "nudge" }
+};
+const kPageCorner: Point = { x: 5, y: 1 };
+const kApproachPx = 4;
+const kPointerStepMs = 16;
+const kNudgeEveryMs = 400;
+const kPanelInset = 12;
+const kOrbitRadius = 120;
+const kOrbitPeriodMs = 2_000;
+
 export class EditorViewport {
   readonly #page: Page;
-  readonly center: Point;
-  readonly panel: Point;
+  readonly #anchors: Record<Anchor, Point>;
 
   static async locate(
     page: Page,
     frame: Frame
   ): Promise<EditorViewport> {
-    let largest: Point & { area: number; } | null = null;
-    const canvases: Box[] = [];
-    for (const canvas of await frame.locator("canvas").all()) {
-      const box = await canvas.boundingBox();
-      if (box !== null) {
-        canvases.push(box);
-      }
-      const area = box === null ? 0 : box.width * box.height;
-      if (box !== null && area > (largest?.area ?? 0)) {
-        largest = {
-          x: box.x + (box.width / 2),
-          y: box.y + (box.height / 2),
-          area
-        };
-      }
-    }
-    if (largest === null) {
+    const canvases = (
+      await Promise.all(
+        (await frame.locator("canvas").all()).map((canvas) => canvas.boundingBox())
+      )
+    ).filter((box) => box !== null);
+    const [largest] = canvases.toSorted((left, right) => area(right) - area(left));
+    if (largest === undefined || area(largest) === 0) {
       throw new Error("The editor frame has no visible canvas");
     }
 
@@ -58,58 +63,55 @@ export class EditorViewport {
       throw new Error("The editor frame is not visible");
     }
 
-    return new EditorViewport(
-      page,
-      largest,
-      panelPoint(frameBox, canvases)
-    );
+    return new EditorViewport(page, {
+      pageCorner: kPageCorner,
+      canvasCenter: {
+        x: largest.x + (largest.width / 2),
+        y: largest.y + (largest.height / 2)
+      },
+      panel: panelPoint(frameBox, canvases)
+    });
   }
 
   constructor(
     page: Page,
-    center: Point,
-    panel: Point
+    anchors: Record<Anchor, Point>
   ) {
     this.#page = page;
-    this.center = center;
-    this.panel = panel;
+    this.#anchors = anchors;
   }
 
   async prepare(
     scenario: ViewportScenario
   ): Promise<void> {
     const { mouse } = this.#page;
-    if (scenario === "away") {
-      await mouse.move(1, 1);
-
-      return;
-    }
-    if (scenario === "panels") {
-      await mouse.move(this.panel.x, this.panel.y);
-
-      return;
-    }
-
-    await mouse.move(this.center.x - 4, this.center.y);
-    await mouse.move(this.center.x, this.center.y, { steps: 2 });
+    const { x, y } = this.#anchors[kScenarios[scenario].anchor];
+    await mouse.move(x - kApproachPx, y);
+    await mouse.move(x, y, { steps: 2 });
   }
 
   async play(
     scenario: ViewportScenario,
     durationMs: number
   ): Promise<void> {
-    if (scenario === "panels") {
-      await this.#nudgePanels(durationMs);
-
-      return;
+    switch (kScenarios[scenario].motion) {
+      case "still":
+        await this.#page.waitForTimeout(durationMs);
+        break;
+      case "orbit":
+        await this.#orbit(durationMs);
+        break;
+      case "nudge":
+        await this.#nudge(durationMs);
+        break;
     }
-    if (scenario !== "orbit") {
-      await this.#page.waitForTimeout(durationMs);
+  }
 
-      return;
-    }
-
+  async #orbit(
+    durationMs: number
+  ): Promise<void> {
     const { mouse } = this.#page;
+    const center = this.#anchors.canvasCenter;
     await mouse.down({ button: "middle" });
     const started = performance.now();
     for (
@@ -119,28 +121,35 @@ export class EditorViewport {
     ) {
       const angle = 2 * Math.PI * elapsed / kOrbitPeriodMs;
       await mouse.move(
-        this.center.x + (kOrbitRadius * Math.cos(angle)),
-        this.center.y + (kOrbitRadius * Math.sin(angle) / 2)
+        center.x + (kOrbitRadius * Math.cos(angle)),
+        center.y + (kOrbitRadius * Math.sin(angle) / 2)
       );
       await this.#page.waitForTimeout(kPointerStepMs);
     }
     await mouse.up({ button: "middle" });
   }
 
-  async #nudgePanels(
+  async #nudge(
     durationMs: number
   ): Promise<void> {
     const { mouse } = this.#page;
+    const { panel } = this.#anchors;
     const started = performance.now();
     for (
       let nudge = 0;
       performance.now() - started < durationMs;
       nudge++
     ) {
-      await mouse.move(this.panel.x + (nudge % 2 === 0 ? 3 : 0), this.panel.y);
+      await mouse.move(panel.x + (nudge % 2 === 0 ? 3 : 0), panel.y);
       await this.#page.waitForTimeout(kNudgeEveryMs);
     }
   }
+}
+
+function area(
+  box: Box
+): number {
+  return box.width * box.height;
 }
 
 function panelPoint(

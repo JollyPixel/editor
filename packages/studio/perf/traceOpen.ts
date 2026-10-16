@@ -5,15 +5,13 @@ import { parseArgs } from "node:util";
 
 // Import Internal Dependencies
 import { BenchBrowser } from "./harness/BenchBrowser.ts";
+import { BenchEditors } from "./harness/BenchEditors.ts";
 import {
-  BenchEditors,
-  STUDIO_URL
-} from "./harness/BenchEditors.ts";
-import {
-  MODES_SCHEMA,
-  STORAGE_SCHEMA
-} from "./harness/OpenPlan.ts";
-import { DEFAULT_SETTLE_MS } from "./harness/OpenRun.ts";
+  DEFAULT_SETTLE_MS,
+  MODE_FLAG,
+  STORAGE_FLAG
+} from "./harness/flags.ts";
+import { STUDIO_URL } from "./harness/StudioPage.ts";
 
 // CONSTANTS
 const kCategories = [
@@ -48,13 +46,12 @@ const { values: args } = parseArgs({
 });
 
 const [editor] = (await BenchEditors.read()).select([args.editor]);
-const [mode] = MODES_SCHEMA.parse([args.mode]);
 const settleMs = Number(args.settle);
 const bench = await BenchBrowser.launch();
 const studio = await bench.newStudioPage({
   base: args.base,
-  mode,
-  storage: STORAGE_SCHEMA.parse(JSON.parse(args.storage))
+  mode: MODE_FLAG.parse(args.mode),
+  storage: STORAGE_FLAG.parse(args.storage)
 });
 await studio.open();
 if (args.warm) {

@@ -12,6 +12,7 @@ import { SavedTabs } from "../tabs/SavedTabs.ts";
 export const TABS_STORAGE_KEY = "studio:tabs";
 export const ASSET_KIND_STORAGE_KEY = "studio:asset-kind";
 export const EXPANDED_FOLDERS_STORAGE_KEY = "studio:asset-expanded";
+export const PREFETCH_EDITORS_STORAGE_KEY = "studio:prefetch-editors";
 const kNodeIdsSchema = z.array(z.string());
 
 export class StudioPreferences {
@@ -21,6 +22,10 @@ export class StudioPreferences {
     storage: StorageAdapter = new LocalStorageAdapter()
   ) {
     this.storage = storage;
+  }
+
+  get prefetchEditors(): boolean {
+    return this.storage.get(PREFETCH_EDITORS_STORAGE_KEY) !== "off";
   }
 
   get tabs(): SavedTabs {

@@ -1,71 +1,48 @@
-// Import Internal Dependencies
-import type {
-  OpenMeasurement,
-  Phase
-} from "../harness/OpenSample.ts";
-import type { StudioMode } from "../harness/StudioPage.ts";
+export type MeasurementPick<T> = (measurement: T) => number | undefined;
 
-export type MeasurementPick = (measurement: OpenMeasurement) => number | undefined;
+export class MeasurementGroup<T> {
+  readonly sample: T;
+  readonly items: T[];
 
-export class MeasurementGroup {
-  readonly editor: string;
-  readonly mode: StudioMode;
-  readonly phase: Phase;
-  readonly label: string;
-  readonly items: OpenMeasurement[] = [];
-
-  static groupAll(
-    measurements: Iterable<OpenMeasurement>
-  ): MeasurementGroup[] {
-    const groups = new Map<string, MeasurementGroup>();
+  static groupBy<T>(
+    measurements: Iterable<T>,
+    keyFor: (measurement: T) => readonly string[]
+  ): MeasurementGroup<T>[] {
+    const groups = new Map<string, MeasurementGroup<T>>();
     for (const measurement of measurements) {
-      const key = [
-        measurement.editor,
-        measurement.mode,
-        measurement.phase,
-        measurement.label
-      ].join("\0");
-      let group = groups.get(key);
+      const key = keyFor(measurement).join("\0");
+      const group = groups.get(key);
       if (group === undefined) {
-        group = new MeasurementGroup(measurement);
-        groups.set(key, group);
+        groups.set(key, new MeasurementGroup(measurement));
       }
-      group.items.push(measurement);
+      else {
+        group.items.push(measurement);
+      }
     }
 
     return [...groups.values()];
   }
 
   constructor(
-    sample: Pick<OpenMeasurement, "editor" | "mode" | "phase" | "label">
+    sample: T
   ) {
-    this.editor = sample.editor;
-    this.mode = sample.mode;
-    this.phase = sample.phase;
-    this.label = sample.label;
-  }
-
-  sharesCellWith(
-    other: MeasurementGroup
-  ): boolean {
-    return this.editor === other.editor &&
-      this.mode === other.mode &&
-      this.phase === other.phase;
+    this.sample = sample;
+    this.items = [sample];
   }
 
   median(
-    pick: MeasurementPick
+    pick: MeasurementPick<T>
   ): number {
     const sorted = this.#sorted(pick);
     const middle = sorted.length >> 1;
 
-    return Math.round(
-      sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2
-    );
+    return sorted.length % 2 ?
+      sorted[middle] :
+      (sorted[middle - 1] + sorted[middle]) / 2;
   }
 
   percentile(
-    pick: MeasurementPick,
+    pick: MeasurementPick<T>,
     rank: number
   ): number {
     const sorted = this.#sorted(pick);
@@ -74,7 +51,7 @@ export class MeasurementGroup {
   }
 
   #sorted(
-    pick: MeasurementPick
+    pick: MeasurementPick<T>
   ): number[] {
     return this.items
       .map(pick)

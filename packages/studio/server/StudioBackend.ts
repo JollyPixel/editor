@@ -46,6 +46,9 @@ const kBlocksetFile = path.join(
   "blockset.png"
 );
 const kRoomGraceMs = 5 * 60_000;
+const kSocketCompression = {
+  threshold: 1024
+};
 
 export type StudioBackendMiddleware = (
   request: IncomingMessage,
@@ -170,6 +173,7 @@ export class StudioBackend implements AsyncDisposable {
       path: DEFAULT_WEBSOCKET_PATH,
       httpServer,
       server: this.#workspace.server,
+      compression: kSocketCompression,
       allowedHosts: options.allowedHosts
     }));
   }

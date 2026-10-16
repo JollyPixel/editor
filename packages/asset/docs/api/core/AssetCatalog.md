@@ -91,4 +91,4 @@ interface AssetManifestData {
 `AssetCatalog.parse()` reads `version` first and throws
 `UnsupportedAssetManifestError` for any version other than `1`. It then parses
 every [`AssetRecord`](../domain/AssetRecord.md) before constructing the
-catalog. A malformed manifest throws a `ZodError`.
+catalog. A malformed manifest throws a `$ZodError`.

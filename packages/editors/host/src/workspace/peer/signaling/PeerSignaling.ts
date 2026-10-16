@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import * as z from "zod";
+import * as z from "zod/mini";
 
 // CONSTANTS
 const kPeerSignalSchema = z.discriminatedUnion("type", [
@@ -14,9 +14,9 @@ const kPeerSignalSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("candidate"),
     candidate: z.string(),
-    sdpMid: z.string().nullable(),
-    sdpMLineIndex: z.number().nullable(),
-    usernameFragment: z.string().nullable().optional()
+    sdpMid: z.nullable(z.string()),
+    sdpMLineIndex: z.nullable(z.number()),
+    usernameFragment: z.optional(z.nullable(z.string()))
   })
 ]);
 

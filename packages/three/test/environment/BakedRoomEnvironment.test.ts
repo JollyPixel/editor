@@ -33,7 +33,7 @@ describe("BakedRoomEnvironment", () => {
     );
   });
 
-  test("shares one atlas request between every load", async(t) => {
+  test("requests the atlas once, after the calling job ends", async(t) => {
     const bytes = await fs.readFile(kAtlasPath);
     const request = t.mock.method(
       globalThis,
@@ -41,7 +41,10 @@ describe("BakedRoomEnvironment", () => {
       async() => new Response(bytes)
     );
 
-    const first = await BakedRoomEnvironment.load();
+    const loading = BakedRoomEnvironment.load();
+    assert.equal(request.mock.callCount(), 0);
+
+    const first = await loading;
     const second = await BakedRoomEnvironment.load();
 
     assert.equal(request.mock.callCount(), 1);

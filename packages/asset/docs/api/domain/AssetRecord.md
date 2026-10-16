@@ -47,5 +47,5 @@ interface AssetRecordData {
 ```
 
 `toJSON()` returns a new data object and omits `revision` when it is undefined.
-`parse()` throws a `ZodError` for a malformed shape, then applies the
+`parse()` throws a `$ZodError` for a malformed shape, then applies the
 constructor rules above.

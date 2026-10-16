@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import { AssetId } from "@jolly-pixel/asset";
-import * as z from "zod";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import type { HostLogger } from "../debug/readDebugLogger.ts";
@@ -11,12 +11,12 @@ import type { LaunchSource } from "./sources/LaunchSource.ts";
 // CONSTANTS
 export const LAUNCH_QUERY_PARAM = "target";
 export const LAUNCH_TAG_PARAM = "tag";
-const kTargetSchema = z.string().refine(
-  (target) => target.trim() !== ""
+const kTargetSchema = z.string().check(
+  z.refine((target) => target.trim() !== "")
 );
 const kLaunchSchema = z.object({
   target: kTargetSchema,
-  credential: z.string().min(1).optional()
+  credential: z.optional(z.string().check(z.minLength(1)))
 });
 
 export class EditorLaunch {
