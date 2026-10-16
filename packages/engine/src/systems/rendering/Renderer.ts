@@ -47,6 +47,7 @@ export type RendererEvents<T = THREE.WebGPURenderer> = {
   draw: (
     params: { source: T; }
   ) => void;
+  compiled: () => void;
 };
 
 export interface Renderer<
@@ -88,6 +89,7 @@ export interface Renderer<
   draw(
     scene: THREE.Scene
   ): void;
+  compiled(): Promise<void>;
   clear(): void;
   dispose(): void;
 }

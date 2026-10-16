@@ -78,6 +78,7 @@ fails to initialize.
 | `dispose()` | Stops, then removes the HUD, readout panel, and overlay layer and disposes the world. Do not reuse the runtime. |
 | `nextFrame()` | Requests a frame and resolves once a frame has rendered and emitted `afterUpdate`. Never resolves while stopped. |
 | `frames(count)` | Awaits `nextFrame()` `count` times. |
+| `compiledFrame()` | Awaits `nextFrame()`, then, while the renderer has [pipelines compiling](../../../engine/docs/systems/renderer.md#pipeline-compiles), waits for them and awaits another frame. Resolves once a frame has drawn every object. Never resolves while stopped. |
 | `mountMetricsPanel(options?)` | `metrics.mountPanel()` with the world keyboard as `keyboard`. |
 
 ## Loading and startup
@@ -109,6 +110,8 @@ frames on:
 - keyboard, pointer, wheel, and drag-and-drop events in the page;
 - window `resize`, `focus`, and `blur`;
 - a resize of the canvas container or a device pixel ratio change;
+- the renderer's `compiled` event, so objects skipped while their pipelines
+  compiled get drawn;
 - a `gamepadconnected` event, or a held button or stick on a connected
   gamepad, sampled once per animation frame while idle without rendering;
 - every frame while the pointer hovers the canvas;

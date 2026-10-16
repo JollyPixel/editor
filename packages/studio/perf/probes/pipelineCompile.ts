@@ -1,11 +1,9 @@
 // Import Node.js Dependencies
 import { parseArgs } from "node:util";
 
-// Import Third-party Dependencies
-import { chromium } from "@playwright/test";
-
 // Import Internal Dependencies
-import { STUDIO_URL } from "../editors.ts";
+import { BenchBrowser } from "../harness/BenchBrowser.ts";
+import { STUDIO_URL } from "../harness/BenchEditors.ts";
 
 // CONSTANTS
 const kBlankUrl = new URL("main.css", STUDIO_URL).href;
@@ -19,8 +17,8 @@ const { values: args } = parseArgs({
   }
 });
 
-const browser = await chromium.launch({ headless: false });
-const page = await browser.newPage();
+const bench = await BenchBrowser.launch();
+const page = await bench.browser.newPage();
 await page.goto(kBlankUrl);
 await compile("async", 1_000);
 
@@ -30,7 +28,7 @@ for (let round = 0; round < Number(args.rounds); round++) {
     console.log(mode.padEnd(5), await compile(mode, round * 10 + modes.indexOf(mode)));
   }
 }
-await browser.close();
+await bench.close();
 
 function compile(
   mode: CompileMode,

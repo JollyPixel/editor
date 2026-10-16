@@ -1,13 +1,36 @@
 // Import Node.js Dependencies
-import { readFileSync, readdirSync, statSync } from "node:fs";
-import path from "node:path";
 import { parseArgs } from "node:util";
 
 // Import Internal Dependencies
-import type { OpenMeasurement } from "./openEditors.ts";
+import {
+  MeasurementGroup,
+  type MeasurementPick
+} from "./analysis/MeasurementGroup.ts";
+import { ResultsFile } from "./harness/ResultsFile.ts";
+
+interface Column {
+  title: string;
+  cell(group: MeasurementGroup, control: MeasurementGroup | undefined): string | number;
+}
 
 // CONSTANTS
 const kPhaseOrder = ["first", "cold", "reload", "reopen"];
+const kColumns: Column[] = [
+  { title: "editor", cell: (group) => group.editor },
+  { title: "mode", cell: (group) => group.mode },
+  { title: "phase", cell: (group) => group.phase },
+  { title: "variant", cell: (group) => group.label },
+  { title: "n", cell: (group) => group.items.length },
+  { title: "ready", cell: (group, control) => versus(group, control, (item) => item.clickToReady) },
+  { title: "ready p90", cell: (group) => group.percentile((item) => item.clickToReady, 0.9) },
+  { title: "settled", cell: (group, control) => versus(group, control, (item) => item.clickToSettled) },
+  { title: "busy before ready", cell: (group) => group.median((item) => item.framesBeforeReady.total) },
+  { title: "busy after ready", cell: (group) => group.median((item) => item.framesAfterReady.total) },
+  { title: "longest frame after", cell: (group) => group.median((item) => item.framesAfterReady.longest) },
+  { title: "transfer KB", cell: (group) => group.median((item) => item.transferKB) },
+  { title: "requests", cell: (group) => group.median((item) => item.requests) },
+  { title: "socket KB", cell: (group) => group.median((item) => item.socketKB) }
+];
 
 const { values: args, positionals } = parseArgs({
   allowPositionals: true,
@@ -18,128 +41,81 @@ const { values: args, positionals } = parseArgs({
   }
 });
 
-const measurements = positionals.flatMap(readMeasurements);
-const groups = groupBy(measurements, (item) => [item.editor, item.mode, item.phase, item.label].join("|"));
-const keys = [...groups.keys()].sort(compareKeys);
+const groups = MeasurementGroup.groupAll(positionals.flatMap(ResultsFile.read))
+  .sort(compareGroups);
 
-console.log([
-  "| editor | mode | phase | variant | n | ready | ready p90 | settled",
-  "| busy before ready | busy after ready | longest frame after | transfer KB | requests | socket KB |"
-].join(" "));
-console.log("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
-for (const key of keys) {
-  const list = groups.get(key)!;
-  const [editor, mode, phase, label] = key.split("|");
-  const control = args.control === undefined || args.control === label ?
-    undefined :
-    groups.get([editor, mode, phase, args.control].join("|"));
-  console.log(
-    `| ${editor} | ${mode} | ${phase} | ${label} | ${list.length}`,
-    `| ${versus(list, control, (item) => item.clickToReady)}`,
-    `| ${percentile(list.map((item) => item.clickToReady), 0.9)}`,
-    `| ${versus(list, control, (item) => item.clickToSettled)}`,
-    `| ${median(list.map((item) => item.framesBeforeReady.total))}`,
-    `| ${median(list.map((item) => item.framesAfterReady.total))}`,
-    `| ${median(list.map((item) => item.framesAfterReady.longest))}`,
-    `| ${median(list.map((item) => item.transferKB))} | ${median(list.map((item) => item.requests))}`,
-    `| ${median(list.map((item) => item.socketKB))} |`
+printTable(
+  kColumns.map(({ title }) => title),
+  groups.map((group) => kColumns.map(({ cell }) => cell(group, controlOf(group))))
+);
+
+if (args.steps) {
+  const rows: (string | number)[][] = [];
+  for (const group of groups) {
+    if (args.phase !== undefined && args.phase !== group.phase) {
+      continue;
+    }
+    const names = new Set(group.items.flatMap((item) => Object.keys(item.steps)));
+    const steps = Array.from(names, (name) => {
+      return {
+        name,
+        start: group.median((item) => item.steps[name]?.start),
+        end: group.median((item) => item.steps[name]?.end)
+      };
+    }).sort((left, right) => left.end - right.end);
+    for (const { name, start, end } of steps) {
+      rows.push([group.editor, group.mode, group.phase, group.label, name, start, end]);
+    }
+  }
+  console.log();
+  printTable(["editor", "mode", "phase", "variant", "step", "start", "end"], rows);
+}
+
+function controlOf(
+  group: MeasurementGroup
+): MeasurementGroup | undefined {
+  if (args.control === undefined || group.label === args.control) {
+    return undefined;
+  }
+
+  return groups.find(
+    (candidate) => candidate.label === args.control && candidate.sharesCellWith(group)
   );
 }
 
-if (args.steps) {
-  console.log("\n| editor | mode | phase | variant | step | start | end |");
-  console.log("|---|---|---|---|---|---|---|");
-  for (const key of keys) {
-    const [editor, mode, phase, label] = key.split("|");
-    if (args.phase !== undefined && args.phase !== phase) {
-      continue;
-    }
-    const list = groups.get(key)!;
-    const names = new Set(list.flatMap((item) => Object.keys(item.steps)));
-    const rows = [...names].map((name) => {
-      const values = list.flatMap((item) => (item.steps[name] ? [item.steps[name]] : []));
-
-      return {
-        name,
-        start: median(values.map((value) => value.start)),
-        end: median(values.map((value) => value.end))
-      };
-    }).sort((a, b) => a.end - b.end);
-    for (const row of rows) {
-      console.log(`| ${editor} | ${mode} | ${phase} | ${label} | ${row.name} | ${row.start} | ${row.end} |`);
-    }
-  }
-}
-
 function versus(
-  list: OpenMeasurement[],
-  control: OpenMeasurement[] | undefined,
-  pick: (item: OpenMeasurement) => number
+  group: MeasurementGroup,
+  control: MeasurementGroup | undefined,
+  pick: MeasurementPick
 ): string {
-  const value = median(list.map(pick));
+  const value = group.median(pick);
   if (control === undefined) {
     return String(value);
   }
-  const difference = value - median(control.map(pick));
+  const difference = value - control.median(pick);
 
   return `${value} (${difference >= 0 ? "+" : ""}${difference})`;
 }
 
-function readMeasurements(
-  target: string
-): OpenMeasurement[] {
-  if (statSync(target).isDirectory()) {
-    return readdirSync(target)
-      .filter((file) => file.endsWith(".json"))
-      .flatMap((file) => readMeasurements(path.join(target, file)));
-  }
-
-  return JSON.parse(readFileSync(target, "utf8")).measurements;
-}
-
-function groupBy<T>(
-  items: T[],
-  keyOf: (item: T) => string
-): Map<string, T[]> {
-  const groups = new Map<string, T[]>();
-  for (const item of items) {
-    const key = keyOf(item);
-    groups.set(key, [...groups.get(key) ?? [], item]);
-  }
-
-  return groups;
-}
-
-function compareKeys(
-  left: string,
-  right: string
+function compareGroups(
+  left: MeasurementGroup,
+  right: MeasurementGroup
 ): number {
-  const [leftEditor, leftMode, leftPhase, leftLabel] = left.split("|");
-  const [rightEditor, rightMode, rightPhase, rightLabel] = right.split("|");
-  const leftOrder = leftLabel === args.control ? 0 : 1;
-  const rightOrder = rightLabel === args.control ? 0 : 1;
+  const leftOrder = left.label === args.control ? 0 : 1;
+  const rightOrder = right.label === args.control ? 0 : 1;
 
-  return leftEditor.localeCompare(rightEditor) ||
-    leftMode.localeCompare(rightMode) ||
-    kPhaseOrder.indexOf(leftPhase) - kPhaseOrder.indexOf(rightPhase) ||
+  return left.editor.localeCompare(right.editor) ||
+    left.mode.localeCompare(right.mode) ||
+    kPhaseOrder.indexOf(left.phase) - kPhaseOrder.indexOf(right.phase) ||
     leftOrder - rightOrder ||
-    leftLabel.localeCompare(rightLabel);
+    left.label.localeCompare(right.label);
 }
 
-function median(
-  values: number[]
-): number {
-  const sorted = [...values].sort((a, b) => a - b);
-  const middle = sorted.length >> 1;
-
-  return Math.round(sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2);
-}
-
-function percentile(
-  values: number[],
-  rank: number
-): number {
-  const sorted = [...values].sort((a, b) => a - b);
-
-  return sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * rank) - 1)];
+function printTable(
+  header: string[],
+  rows: (string | number)[][]
+): void {
+  for (const cells of [header, header.map(() => "---"), ...rows]) {
+    console.log(`| ${cells.join(" | ")} |`);
+  }
 }

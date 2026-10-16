@@ -71,6 +71,20 @@ describe("Systems.Logger", () => {
     assert.strictEqual(typeof meta.ms, "number");
   });
 
+  test("should record a settled step as a performance measure while logging is off", async() => {
+    const adapter = createAdapter();
+    const logger = new Logger({ adapter }).child({ namespace: "editor" });
+
+    await logger.step("scene", () => Promise.resolve());
+    void logger.step("pending", () => new Promise<void>(() => void 0));
+
+    const measures = performance.getEntriesByType("measure")
+      .filter(({ name }) => name.startsWith("editor:"));
+    assert.deepEqual(measures.map(({ name }) => name), ["editor:scene"]);
+    assert.strictEqual(adapter.log.mock.callCount(), 0);
+    performance.clearMeasures("editor:scene");
+  });
+
   test("should log a failed step and rethrow its error", async() => {
     const adapter = createAdapter();
     const logger = new Logger({ level: "debug", namespaces: ["*"], adapter });

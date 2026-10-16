@@ -213,7 +213,10 @@ Editor state that `mount` creates, such as the brush, starts over.
 `document.documentElement`, in every build:
 
 - `booting` until the first editor is ready.
-- `ready` once `handle.ready` resolves.
+- `ready` once `handle.ready` resolves. For an editor with a runtime on a
+  visible page, it also waits for
+  [`runtime.compiledFrame()`](../../../../runtime/docs/api/Runtime.md#methods),
+  so the first frame shown has every pipeline compiled.
 - `switching` while a switch runs.
 - `failed` when a boot step throws, or a switch fails after the old editor is
   disposed.
@@ -327,8 +330,8 @@ unless the page enables namespaces, as comma-separated globs:
 
 Namespaces:
 
-- `host.boot`: state changes and the `launch`, `session`, `mount` and `ready`
-  steps with their duration.
+- `host.boot`: state changes and the `launch`, `session`, `mount`, `ready`
+  and `compile` steps with their duration.
 - `host.launch`: the [parent handshake](../launch/EditorLaunch.md#hostmessagelaunchsource).
 - `host.session`: the [session steps](../session/EditorSession.md#boot-steps).
 - `host.switch`: the steps of a switch.

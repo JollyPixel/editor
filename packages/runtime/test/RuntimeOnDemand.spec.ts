@@ -105,6 +105,18 @@ describe("Runtime renderOnDemand", () => {
     dispose();
   });
 
+  test("wakes when the renderer finishes compiling pipelines", () => {
+    const { runtime, renderer, tick, dispose } = createRuntime();
+    runtime.start();
+    tick(10);
+
+    renderer.emit("compiled");
+
+    assert.equal(runtime.idle, false);
+    assert.equal(renderer.source.looping, true);
+    dispose();
+  });
+
   test("stays awake while the pointer hovers the canvas", () => {
     const { runtime, renderer, tick, dispose } = createRuntime();
     runtime.start();

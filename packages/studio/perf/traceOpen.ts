@@ -3,21 +3,17 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 
-// Import Third-party Dependencies
-import {
-  chromium,
-  type Page
-} from "@playwright/test";
-
 // Import Internal Dependencies
+import { BenchBrowser } from "./harness/BenchBrowser.ts";
 import {
-  EXPANDED_STORAGE_KEY,
-  SEED_FOLDERS,
-  STUDIO_URL,
-  editorFrameSelector,
-  parseEditors,
-  type BenchEditor
-} from "./editors.ts";
+  BenchEditors,
+  STUDIO_URL
+} from "./harness/BenchEditors.ts";
+import {
+  MODES_SCHEMA,
+  STORAGE_SCHEMA
+} from "./harness/OpenPlan.ts";
+import { DEFAULT_SETTLE_MS } from "./harness/OpenRun.ts";
 
 // CONSTANTS
 const kCategories = [
@@ -38,74 +34,43 @@ const kCategories = [
   "webgpu",
   "disabled-by-default-webgpu"
 ];
-const kSeedRowIndex = 5;
-const kReadyTimeoutMs = 60_000;
 
 const { values: args } = parseArgs({
   options: {
     editor: { type: "string", default: "voxel-map" },
+    mode: { type: "string", default: "offline" },
     warm: { type: "boolean", default: false },
-    settle: { type: "string", default: "4000" },
+    settle: { type: "string", default: String(DEFAULT_SETTLE_MS) },
     storage: { type: "string", default: "{}" },
+    base: { type: "string", default: STUDIO_URL },
     out: { type: "string", default: "perf-results/traces" }
   }
 });
 
-const [editor] = parseEditors(args.editor);
-const browser = await chromium.launch({ headless: false });
-const context = await browser.newContext({
-  viewport: {
-    width: 1600,
-    height: 900
-  }
+const [editor] = (await BenchEditors.read()).select([args.editor]);
+const [mode] = MODES_SCHEMA.parse([args.mode]);
+const settleMs = Number(args.settle);
+const bench = await BenchBrowser.launch();
+const studio = await bench.newStudioPage({
+  base: args.base,
+  mode,
+  storage: STORAGE_SCHEMA.parse(JSON.parse(args.storage))
 });
-await context.addInitScript((storage: Record<string, string>) => {
-  for (const [key, value] of Object.entries(storage)) {
-    localStorage.setItem(key, value);
-  }
-}, {
-  [EXPANDED_STORAGE_KEY]: JSON.stringify(SEED_FOLDERS),
-  ...JSON.parse(args.storage)
-});
-const page = await context.newPage();
-await openShell(page);
+await studio.open();
 if (args.warm) {
-  await openEditor(page, editor);
-  await page.waitForTimeout(Number(args.settle));
-  await page.evaluate(() => localStorage.removeItem("studio:tabs"));
-  await openShell(page);
+  await studio.openEditor(editor);
+  await studio.page.waitForTimeout(settleMs);
+  await studio.reopenWithoutTabs();
 }
+await studio.waitUntilOpenable(editor);
 
-await browser.startTracing(undefined, { categories: kCategories });
-await openEditor(page, editor);
-await page.waitForTimeout(Number(args.settle));
-const trace = await browser.stopTracing();
-await browser.close();
+await bench.browser.startTracing(undefined, { categories: kCategories });
+await studio.openEditor(editor);
+await studio.page.waitForTimeout(settleMs);
+const trace = await bench.browser.stopTracing();
+await bench.close();
 
 mkdirSync(args.out, { recursive: true });
 const file = path.join(args.out, `${editor.name}-${args.warm ? "warm" : "cold"}.json`);
 writeFileSync(file, trace);
 console.log(file);
-
-async function openShell(
-  target: Page
-): Promise<void> {
-  await target.goto(`${STUDIO_URL}?offline`);
-  await target.getByRole("treeitem").nth(kSeedRowIndex).waitFor();
-  await target.waitForTimeout(800);
-}
-
-async function openEditor(
-  target: Page,
-  bench: BenchEditor
-): Promise<void> {
-  await target.getByRole("treeitem").filter({
-    has: target.getByText(bench.row, { exact: true })
-  }).dblclick();
-  await target.locator(editorFrameSelector(bench)).contentFrame()
-    .locator("html[data-editor-state=ready]")
-    .waitFor({
-      state: "attached",
-      timeout: kReadyTimeoutMs
-    });
-}

@@ -5,14 +5,12 @@ import { brotliCompressSync, gzipSync } from "node:zlib";
 import { parseArgs } from "node:util";
 
 // Import Internal Dependencies
+import { SourceMapFile } from "./analysis/SourceMapFile.ts";
+import { Tally } from "./analysis/Tally.ts";
 import {
-  parseEditors,
+  BenchEditors,
   type BenchEditor
-} from "./editors.ts";
-import {
-  SourceMap,
-  packageOf
-} from "./sourceMap.ts";
+} from "./harness/BenchEditors.ts";
 
 const { values: args } = parseArgs({
   options: {
@@ -21,7 +19,8 @@ const { values: args } = parseArgs({
   }
 });
 
-for (const editor of parseEditors(args.editors)) {
+const editors = await BenchEditors.read();
+for (const editor of editors.select(args.editors.split(","))) {
   report(editor);
 }
 
@@ -29,8 +28,8 @@ function report(
   editor: BenchEditor
 ): void {
   const preloaded = eagerChunks(editor);
-  const eager = new Map<string, number>();
-  const lazy = new Map<string, number>();
+  const eager = new Tally();
+  const lazy = new Tally();
   let raw = 0;
   let gzip = 0;
   let brotli = 0;
@@ -41,9 +40,7 @@ function report(
     }
     const file = path.join(editor.dist, "assets", name);
     const isEager = preloaded.has(`assets/${name}`);
-    for (const [pkg, bytes] of bytesByPackage(file)) {
-      add(isEager ? eager : lazy, pkg, bytes);
-    }
+    countPackages(file, isEager ? eager : lazy);
     if (isEager) {
       const code = readFileSync(file);
       raw += code.length;
@@ -70,40 +67,25 @@ function eagerChunks(
   );
 }
 
-function bytesByPackage(
-  file: string
-): Map<string, number> {
+function countPackages(
+  file: string,
+  tally: Tally
+): void {
   const code = readFileSync(file, "utf8");
-  const bytes = new Map<string, number>();
-  const map = SourceMap.load(file);
+  const size = Buffer.byteLength(code);
+  const map = SourceMapFile.load(file);
   if (map === null) {
-    bytes.set("(no source map)", code.length);
+    tally.add("(no source map)", size);
 
-    return bytes;
+    return;
   }
 
-  const lines = code.split("\n");
   let mapped = 0;
-  map.lines.forEach((segments, index) => {
-    const lineLength = lines[index]?.length ?? 0;
-    segments.forEach((segment, position) => {
-      const end = segments[position + 1]?.column ?? lineLength;
-      const size = Math.max(0, end - segment.column);
-      add(bytes, segment.source === null ? "(generated)" : packageOf(segment.source), size);
-      mapped += size;
-    });
-  });
-  add(bytes, "(unmapped)", Math.max(0, code.length - mapped));
-
-  return bytes;
-}
-
-function add(
-  map: Map<string, number>,
-  key: string,
-  value: number
-): void {
-  map.set(key, (map.get(key) ?? 0) + value);
+  for (const span of map.generatedSpans(code)) {
+    tally.add(span.package ?? "(generated)", span.bytes);
+    mapped += span.bytes;
+  }
+  tally.add("(unmapped)", Math.max(0, size - mapped));
 }
 
 function kb(
@@ -114,10 +96,10 @@ function kb(
 
 function print(
   title: string,
-  map: Map<string, number>
+  tally: Tally
 ): void {
   console.log(`${title}:`);
-  for (const [pkg, bytes] of [...map].sort((a, b) => b[1] - a[1]).slice(0, Number(args.top))) {
-    console.log(`  ${kb(bytes).padStart(9)}  ${pkg}`);
+  for (const { key, total } of tally.top(Number(args.top))) {
+    console.log(`  ${kb(total).padStart(9)}  ${key}`);
   }
 }

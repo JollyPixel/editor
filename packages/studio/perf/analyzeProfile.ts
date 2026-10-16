@@ -4,11 +4,9 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 
 // Import Internal Dependencies
-import { editorOfUrl } from "./editors.ts";
-import {
-  SourceMap,
-  packageOf
-} from "./sourceMap.ts";
+import { SourceMapFile } from "./analysis/SourceMapFile.ts";
+import { Tally } from "./analysis/Tally.ts";
+import { BenchEditors } from "./harness/BenchEditors.ts";
 
 interface CallFrame {
   functionName: string;
@@ -53,6 +51,7 @@ if (file === undefined) {
   );
 }
 
+const editors = await BenchEditors.read();
 const profile: CpuProfile = JSON.parse(readFileSync(file, "utf8"));
 const nodes = new Map(profile.nodes.map((node) => [node.id, node]));
 const parents = new Map<number, number>();
@@ -61,48 +60,45 @@ for (const node of profile.nodes) {
     parents.set(child, node.id);
   }
 }
-const maps = new Map<string, SourceMap | null>();
+const maps = new Map<string, SourceMapFile | null>();
 const selfTime = sampleSelfTime();
-const total = [...selfTime.values()].reduce((sum, value) => sum + value, 0);
 
-const byPackage = new Map<string, number>();
-const byFile = new Map<string, number>();
-const byFunction = new Map<string, number>();
-for (const [id, us] of selfTime) {
+const byPackage = new Tally();
+const byFile = new Tally();
+const byFunction = new Tally();
+for (const { key: id, total: us } of selfTime) {
   const location = locate(nodes.get(id)!.callFrame);
-  add(byPackage, location.pkg, us);
-  add(byFile, location.file, us);
-  add(byFunction, location.label, us);
+  byPackage.add(location.pkg, us);
+  byFile.add(location.file, us);
+  byFunction.add(location.label, us);
 }
 
-console.log(`# ${path.basename(file)}: ${format(total)} sampled`);
+console.log(`# ${path.basename(file)}: ${format(selfTime.total)} sampled`);
 print("Self time by package", byPackage);
 print("Self time by file", byFile);
 print("Self time by function", byFunction);
 
 if (args.stacks !== undefined) {
   const pattern = new RegExp(args.stacks);
-  const stacks = new Map<string, number>();
-  for (const [id, us] of selfTime) {
-    if (!pattern.test(locate(nodes.get(id)!.callFrame).label)) {
-      continue;
+  const stacks = new Tally();
+  for (const { key: id, total: us } of selfTime) {
+    if (pattern.test(locate(nodes.get(id)!.callFrame).label)) {
+      stacks.add(callerChain(id).join("\n    <- "), us);
     }
-    add(stacks, callerChain(id).join("\n    <- "), us);
   }
   print(`Stacks for /${args.stacks}/`, stacks);
 }
 
-function sampleSelfTime(): Map<number, number> {
+function sampleSelfTime(): Tally<number> {
   const from = args.from === undefined ? -Infinity : Number(args.from) * 1000;
   const until = args.until === undefined ? Infinity : Number(args.until) * 1000;
-  const times = new Map<number, number>();
+  const times = new Tally<number>();
   let elapsed = 0;
   for (let index = 0; index < profile.samples.length; index++) {
     elapsed += profile.timeDeltas[index];
-    if (elapsed < from || elapsed > until) {
-      continue;
+    if (elapsed >= from && elapsed <= until) {
+      times.add(profile.samples[index], profile.timeDeltas[index + 1] ?? 0);
     }
-    add(times, profile.samples[index], profile.timeDeltas[index + 1] ?? 0);
   }
 
   return times;
@@ -129,11 +125,12 @@ function locate(
 ): Location {
   if (callFrame.url === "") {
     const name = callFrame.functionName || "(native)";
+    const group = name.startsWith("(") ? name : "(native)";
 
     return {
       label: name,
-      file: name.startsWith("(") ? name : "(native)",
-      pkg: name.startsWith("(") ? name : "(native)"
+      file: group,
+      pkg: group
     };
   }
 
@@ -141,48 +138,40 @@ function locate(
   const position = map?.originalPosition(callFrame.lineNumber, callFrame.columnNumber) ?? null;
   if (position === null) {
     const url = callFrame.url.replace(/^https?:\/\/[^/]+/, "");
-    const pkg = editorOfUrl(callFrame.url) === null ? "(studio shell)" : "(editor, unmapped)";
 
     return {
       label: `${callFrame.functionName || "(anonymous)"} ${url}:${callFrame.lineNumber + 1}`,
       file: url,
-      pkg
+      pkg: editors.servingUrl(callFrame.url) === null ? "(studio shell)" : "(editor, unmapped)"
     };
   }
 
   const short = position.source
     .replace(/^.*node_modules\//, "")
-    .replace(/^.*packages\//, "")
-    .replace(/^(\.\.\/)+/, "");
+    .replace(/^.*packages\//, "");
 
   return {
     label: `${position.name ?? callFrame.functionName} ${short}:${position.line}`,
     file: short,
-    pkg: packageOf(position.source)
+    pkg: position.package
   };
 }
 
 function sourceMapOf(
   url: string
-): SourceMap | null {
+): SourceMapFile | null {
   if (!maps.has(url)) {
-    const editor = editorOfUrl(url);
+    const editor = editors.servingUrl(url);
     const asset = /\/editors\/[\w-]+\/(assets\/[^?]+)/.exec(url)?.[1];
-    const map = editor === null || asset === undefined ?
-      null :
-      SourceMap.load(path.join(editor.dist, asset));
-    maps.set(url, map);
+    maps.set(
+      url,
+      editor === null || asset === undefined ?
+        null :
+        SourceMapFile.load(path.join(editor.dist, asset))
+    );
   }
 
   return maps.get(url) ?? null;
-}
-
-function add<T>(
-  map: Map<T, number>,
-  key: T,
-  value: number
-): void {
-  map.set(key, (map.get(key) ?? 0) + value);
 }
 
 function format(
@@ -193,10 +182,10 @@ function format(
 
 function print(
   title: string,
-  map: Map<string, number>
+  tally: Tally
 ): void {
   console.log(`\n## ${title}`);
-  for (const [key, us] of [...map].sort((a, b) => b[1] - a[1]).slice(0, Number(args.top))) {
-    console.log(`${format(us)} ${(100 * us / total).toFixed(1).padStart(5)}%  ${key}`);
+  for (const { key, total: us } of tally.top(Number(args.top))) {
+    console.log(`${format(us)} ${(100 * us / selfTime.total).toFixed(1).padStart(5)}%  ${key}`);
   }
 }

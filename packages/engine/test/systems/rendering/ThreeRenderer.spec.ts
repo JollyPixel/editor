@@ -107,4 +107,66 @@ describe("Systems.Rendering.ThreeRenderer", () => {
 
     assert.deepStrictEqual(calls, ["three", "engine"]);
   });
+
+  describe("pipeline compiles", () => {
+    function compilingRenderer() {
+      const compiles: PromiseWithResolvers<void>[] = [];
+      const backend = {
+        createRenderPipeline(
+          _renderObject: unknown,
+          promises: Promise<void>[] | null
+        ) {
+          if (promises !== null) {
+            const compile = Promise.withResolvers<void>();
+            compiles.push(compile);
+            promises.push(compile.promise);
+          }
+        }
+      };
+      const renderer = new ThreeRenderer({
+        ...createRendererSpy(),
+        backend
+      } as any);
+      let emitted = 0;
+      renderer.on("compiled", () => emitted++);
+
+      return {
+        renderer,
+        compiles,
+        emitted: () => emitted,
+        createPipeline: () => backend.createRenderPipeline({}, null)
+      };
+    }
+
+    test("should compile asynchronously a pipeline three.js would create synchronously", () => {
+      const { renderer, compiles, createPipeline } = compilingRenderer();
+
+      createPipeline();
+
+      assert.strictEqual(compiles.length, 1);
+      assert.strictEqual(renderer.pendingCompiles, 1);
+    });
+
+    test("should settle once every pending pipeline has compiled", async() => {
+      const { renderer, compiles, emitted, createPipeline } = compilingRenderer();
+      createPipeline();
+      createPipeline();
+      let settled = false;
+      void renderer.compiled().then(() => {
+        settled = true;
+      });
+
+      compiles[0].resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+      assert.strictEqual(settled, false);
+      assert.strictEqual(emitted(), 0);
+
+      compiles[1].reject(new Error("invalid shader"));
+      await renderer.compiled();
+      assert.strictEqual(settled, true);
+      assert.strictEqual(emitted(), 1);
+      assert.strictEqual(renderer.pendingCompiles, 0);
+    });
+  });
 });

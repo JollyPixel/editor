@@ -4,6 +4,7 @@ import { describe, test } from "node:test";
 
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
+import type { Systems } from "@jolly-pixel/engine";
 import type { ResolvedThemeMode } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -27,9 +28,12 @@ function createEnvironment() {
     castShadow: false,
     receiveShadow: false
   };
-  const renderer = {
+  const source = {
     shadowMap: { enabled: false }
-  } as unknown as THREE.WebGPURenderer;
+  };
+  const renderer = {
+    getSource: () => source
+  } as unknown as Systems.Renderer<THREE.WebGPURenderer>;
   const casters = { meshVersion: 0 };
   const lighting = new SceneLighting();
   const environment = new SceneEnvironment({

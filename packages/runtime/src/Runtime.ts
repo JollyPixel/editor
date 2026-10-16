@@ -158,6 +158,7 @@ export class Runtime<
         undefined
     });
     this.world.on("invalidate", () => this.loop.invalidate());
+    renderer.on("compiled", () => this.world.invalidate());
     renderer.on("deviceLost", (info) => {
       this.#logger.error(
         "GPU device lost, reload the page to render again",
@@ -243,6 +244,14 @@ export class Runtime<
     count: number
   ): Promise<void> {
     for (let index = 0; index < count; index++) {
+      await this.nextFrame();
+    }
+  }
+
+  async compiledFrame(): Promise<void> {
+    await this.nextFrame();
+    while (this.renderer.pendingCompiles > 0) {
+      await this.renderer.compiled();
       await this.nextFrame();
     }
   }

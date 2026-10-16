@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import type { Systems } from "@jolly-pixel/engine";
 import type { BlockLightFalloff } from "@jolly-pixel/voxel.renderer";
 import type { ResolvedThemeMode } from "@jolly-pixel/ui";
 
@@ -16,6 +17,8 @@ import type {
 // CONSTANTS
 const kAmbientOcclusion = 0.75;
 const kEnvironmentBlur = 0.04;
+const kEnvironmentNear = 0.1;
+const kEnvironmentFar = 100;
 const kShadowRadius = 48;
 const kShadowMapSize = 2048;
 const kShadowNormalBiasTexels = 1.5;
@@ -34,7 +37,7 @@ export interface ShadowCasters {
 }
 
 export interface SceneEnvironmentOptions {
-  renderer: THREE.WebGPURenderer;
+  renderer: Systems.Renderer<THREE.WebGPURenderer>;
   scene: THREE.Scene;
   lighting: SceneLighting;
   chunks: ChunkRendering;
@@ -43,7 +46,7 @@ export interface SceneEnvironmentOptions {
 }
 
 export class SceneEnvironment {
-  #renderer: THREE.WebGPURenderer;
+  #renderer: Systems.Renderer<THREE.WebGPURenderer>;
   #scene: THREE.Scene;
   #lighting: SceneLighting;
   #chunks: ChunkRendering;
@@ -105,7 +108,7 @@ export class SceneEnvironment {
 
     this.#shadows = settings.shadows;
     if (settings.shadows) {
-      this.#renderer.shadowMap.enabled = true;
+      this.#renderer.getSource().shadowMap.enabled = true;
       this.#lighting.directional.castShadow = true;
     }
     else {
@@ -204,10 +207,25 @@ export class SceneEnvironment {
   #environmentMap(): THREE.Texture {
     if (this.#environment === null) {
       const room = new RoomEnvironment();
-      const generator = new THREE.PMREMGenerator(this.#renderer);
-      this.#environment = generator.fromScene(room, kEnvironmentBlur);
-      generator.dispose();
-      room.dispose();
+      const generator = new THREE.PMREMGenerator(this.#renderer.getSource());
+      const environment = generator.fromScene(room, kEnvironmentBlur);
+      this.#environment = environment;
+      this.#renderer.compiled()
+        .then(() => {
+          if (this.#environment === environment) {
+            generator.fromScene(
+              room,
+              kEnvironmentBlur,
+              kEnvironmentNear,
+              kEnvironmentFar,
+              { renderTarget: environment }
+            );
+          }
+        })
+        .finally(() => {
+          generator.dispose();
+          room.dispose();
+        });
     }
 
     return this.#environment.texture;
