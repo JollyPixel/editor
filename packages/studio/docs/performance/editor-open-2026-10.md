@@ -9,10 +9,10 @@ The machine ran about twice as fast during the last two runs as during the first
 - pixel-art opens in 180 to 350 ms. Nothing to fix.
 - Before the fixes, voxel-map and voxel-model took 0.8 to 1 s to `ready` on a warm browser and 1.3 to 1.8 s on a cold one in the slow state, about half that in the fast state. Both kept the main thread busy for another 0.3 to 1.2 s after `ready`.
 - Five changes landed in `e5178c28`; see [Fixed](#fixed). The largest one, requesting a WebGPU adapter from the shell, cuts 435 to 565 ms from the first voxel editor open of a new studio tab.
+- A sixth change compiles every render pipeline asynchronously. The editors are fully drawn 228 to 424 ms sooner and no long frame follows `ready`.
 - What is left happens in the GPU process:
-  1. three.js creates WebGPU pipelines synchronously, so every shader compiles one after the other on the GPU process main thread: 27 pipelines and 1.2 s of DXC compiles for voxel-model, 9 pipelines and 0.4 s for voxel-map at `837a08fc`.
-  2. voxel-map's Block Library opens a second, WebGL, context and resizes its canvas while the GPU process is busy, which blocks the main thread after `ready`.
-  3. Each open regenerates the room environment (PMREM), five pipelines and their renders.
+  1. voxel-map's Block Library opens a second, WebGL, context and resizes its canvas while the GPU process is busy, which blocks the main thread after `ready`.
+  2. Each open regenerates the room environment (PMREM), five pipelines and their renders.
 
 ## Baseline
 
@@ -48,14 +48,17 @@ Gains are the A/B medians of the measurement flags, taken before each change lan
 | The bloom pass is built only while a material glows | voxel-model `ViewGlow`, `MaterialSurface.glows` | measured as `glow-off`: −175 to −381 ms `settled`, −145 to −307 ms on the worst frame after `ready`; `ready` unchanged |
 | Builds write `.br` and `.gz` copies, `serveBuild` sends them | `@jolly-pixel/e2e` `precompress`, Vite configs, `serveBuild` | voxel-map eager set 3456 KB → 776 KB; invisible on localhost, about 0.44 s on a 50 Mbit/s link |
 | The voxel-animation client no longer bundles the schema compiler | `asset.voxel-animation` asset kind | voxel-model eager set 3101 KB → 2796 KB, without `ata-validator` |
+| Every render pipeline compiles asynchronously, and `ready` waits for the first frame that starts no compile | engine `ThreeRenderer`, runtime `compiledFrame()`, host `compile` step | −228 to −424 ms `settled`, busy after `ready` from 483–702 ms to 0; see [below](#shader-compiles-ran-one-after-the-other-on-the-gpu-process-main-thread) |
 
 The adapter cost is per page, not per frame. Editor frames are same-origin iframes and share the shell's renderer process, so only the first `requestAdapter` of a studio document waited: 527 ms in the slow state and 234 ms in the fast one, then 17 ms for the next iframes. Before the fix it sat inside the first editor's `renderer` step, which ran from 115 to 552 ms of a warm voxel-map open while the session was done at 215 ms.
 
 ## Open findings
 
-### Synchronous pipeline creation serializes shader compiles on the GPU process
+### Shader compiles ran one after the other on the GPU process main thread
 
-three.js r186 calls `device.createRenderPipeline()` (synchronous) for every pipeline a render needs. Chrome then compiles each shader with DXC, one at a time, on the GPU process main thread. Counted from a warm-browser trace at `837a08fc` ([`analyzeTrace.ts`](../../perf/analyzeTrace.ts)):
+Fixed: see [Async pipeline compiles](#async-pipeline-compiles) below.
+
+three.js r186 takes `device.createRenderPipelineAsync()` only for pipelines that `compileAsync()` reaches, and `device.createRenderPipeline()` for every other one a render needs. Chrome compiles the shaders of the latter with DXC, one at a time, on the GPU process main thread. Counted from a warm-browser trace at `837a08fc` ([`analyzeTrace.ts`](../../perf/analyzeTrace.ts)):
 
 | Editor | Pipelines | DXC compiles | `APICreateRenderPipeline` | DXC time |
 |---|---|---|---|---|
@@ -72,7 +75,33 @@ While the GPU process compiles, the page cannot present frames. That is the 1 s 
 
 [`probes/pipelineCompile.ts`](../../perf/probes/pipelineCompile.ts) creates 24 pipelines with heavy fragment shaders both ways, six interleaved rounds: synchronous creation takes 4400 to 4520 ms until the GPU is done, `createRenderPipelineAsync` 340 to 390 ms. The 12x gap means Chrome compiles async pipelines in parallel, off the GPU main thread.
 
-`compile-async` calls `renderer.compileAsync(scene, camera)` before the first render of each scene and skips that render until it resolves (patch in [`editor-open-2026-10.patch`](../../perf/plans/editor-open-2026-10.patch)). `ready` does not move and `settled` gets 70 to 520 ms worse. It only covers scene materials: PMREM, bloom and the output pass still compile synchronously, and the delayed first frame pushes them later. Async compilation has to cover every pipeline to pay off.
+`compile-async` calls `renderer.compileAsync(scene, camera)` before the first render of each scene and skips that render until it resolves (patch in [`editor-open-2026-10.patch`](../../perf/plans/editor-open-2026-10.patch)). `ready` does not move and `settled` gets 70 to 520 ms worse. It only covers scene materials: PMREM, bloom and the output pass still compile synchronously, and the delayed first frame pushes them later. `compileAsync` also waits for each pipeline before it creates the next, so even the pipelines it covers do not compile in parallel.
+
+#### Async pipeline compiles
+
+The three.js backend already creates a pipeline with `createRenderPipelineAsync` whenever it is handed a list to push the compile promise into, and a render already skips any object whose pipeline is not ready. `ThreeRenderer` now always hands that list over, so every pipeline takes the async path, the PMREM, bloom and output ones included, without changing three.js. Skipped objects are drawn by the frame the runtime requests once the compiles settle. The two renders that run only once, the PMREM environment and the on-demand shadow maps, are rendered again after `compiled()`.
+
+Warm voxel-model trace on 2026-10-16:
+
+| | Sync creates | Async creates | DXC on the GPU main thread | DXC on worker threads |
+|---|---|---|---|---|
+| Before | 18 | 0 | 885 ms | 0 ms |
+| After | 1 | 17 | 77 ms | 929 ms |
+
+The one synchronous pipeline left (20 ms) is created outside three.js' render path.
+
+`ready` now waits for the first frame that starts no compile, so the first frame on screen is complete. A/B, five interleaved rounds on 2026-10-16, online, `control` running the same build with the old synchronous path:
+
+| Editor | Phase | Ready | Settled | Busy after ready |
+|---|---|---|---|---|
+| voxel-map | first | 1260 → 1600 | 1876 → 1600 | 583 → 0 |
+| voxel-map | cold | 991 → 1216 | 1545 → 1216 | 554 → 0 |
+| voxel-map | reload | 713 → 969 | 1197 → 969 | 483 → 0 |
+| voxel-model | first | 1210 → 1519 | 1902 → 1519 | 681 → 0 |
+| voxel-model | cold | 1112 → 1413 | 1837 → 1413 | 683 → 0 |
+| voxel-model | reload | 780 → 1069 | 1492 → 1069 | 702 → 0 |
+
+`ready` reads 225 to 340 ms later because it now includes the compiles. Before, the frame shown at `ready` could not present until the GPU process had compiled every pipeline, so `settled` is the comparable moment: the editor is drawn and responsive 228 to 424 ms sooner.
 
 ### The Block Library runs a second, WebGL, context
 
@@ -125,8 +154,7 @@ In order of gain per effort. Gains are the A/B medians above, on this machine, a
 | # | Change | Where | Gain | Effort |
 |---|---|---|---|---|
 | 1 | Drop the Block Library's WebGL context: render thumbnails with the viewport's WebGPU renderer into a render target, or cache them as bitmaps | voxel-map `features/blocks/library`, `features/preview` | −135 to −215 ms of main thread after `ready`, a shorter worst frame, one GPU context and 300 KB of three.js | medium |
-| 2 | Create every pipeline asynchronously: warm up PMREM, bloom and the output pass with `compileAsync`, or render the first frames only once `createRenderPipelineAsync` resolves | engine render path, possibly upstream three.js | up to 1.2 s of GPU-process time for voxel-model, 0.4 s for voxel-map (probe: 12x faster for 24 pipelines) | large |
-| 3 | Bake the room environment (PMREM) once instead of generating it on every open | voxel-model `roomEnvironment.ts`, voxel-map `SceneEnvironment` | 5 pipelines and their renders; not measured on its own | medium |
+| 2 | Bake the room environment (PMREM) once instead of generating it on every open | voxel-model `roomEnvironment.ts`, voxel-map `SceneEnvironment` | 5 pipelines and their renders; not measured on its own | medium |
 
 Not worth doing now:
 

@@ -60,6 +60,10 @@ export class KeyLightShadow {
     this.#stale = true;
   }
 
+  invalidate(): void {
+    this.#stale = true;
+  }
+
   aim(
     from: THREE.Vector3Tuple
   ): void {

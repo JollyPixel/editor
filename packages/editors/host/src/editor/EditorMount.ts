@@ -236,6 +236,10 @@ export class EditorMount<
 
     try {
       await trace.step("ready", () => handle.ready);
+      const { runtime } = handle;
+      if (runtime !== null && document.visibilityState === "visible") {
+        await trace.step("compile", () => runtime.compiledFrame());
+      }
     }
     catch (error) {
       toolbar.dispose();

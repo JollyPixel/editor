@@ -120,4 +120,15 @@ describe("KeyLightShadow", () => {
 
     assert.equal(redraws(light, shadow), false);
   });
+
+  test("redraws the unchanged shadow map once invalidated", () => {
+    const { light, shadow } = createShadow([boxAt(0, 1, 0)]);
+    shadow.enabled = true;
+    assert.equal(redraws(light, shadow), true);
+    assert.equal(redraws(light, shadow), false);
+
+    shadow.invalidate();
+    assert.equal(redraws(light, shadow), true);
+    assert.equal(redraws(light, shadow), false);
+  });
 });

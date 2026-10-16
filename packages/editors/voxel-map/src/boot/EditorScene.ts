@@ -174,7 +174,7 @@ export class EditorScene extends Systems.Scene {
 
     const pageTheme = new DocumentTheme();
     const environment = new SceneEnvironment({
-      renderer: world.renderer.getSource(),
+      renderer: world.renderer,
       scene,
       lighting,
       chunks: view.lighting,
@@ -209,6 +209,10 @@ export class EditorScene extends Systems.Scene {
     }
     applyView(state.view.settings);
     this.#environment = environment;
+    function invalidateShadows(): void {
+      environment.invalidateShadows();
+    }
+    world.renderer.on("compiled", invalidateShadows);
 
     const blockSources = BlockRenderSources.fromView(view);
     const access = new RoomGrants(session.room, MAP_CAPABILITIES)
@@ -441,6 +445,7 @@ export class EditorScene extends Systems.Scene {
       state.keyboardLayout.watch(window),
       () => camera.dispose(),
       () => environment.dispose(),
+      () => world.renderer.off("compiled", invalidateShadows),
       releaseBlockPresence,
       releaseLayerPresence,
       () => roster.dispose(),

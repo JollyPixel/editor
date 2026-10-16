@@ -12,6 +12,7 @@ import {
   type RenderStrategy,
   DirectRenderStrategy
 } from "./RenderStrategy.ts";
+import { PipelineCompiles } from "./PipelineCompiles.ts";
 
 // CONSTANTS
 const kDefaultMaxPixelRatio = 2;
@@ -134,6 +135,7 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents> implements Rende
   #height = 0;
   #appliedWidth = 0;
   #appliedHeight = 0;
+  #compiles: PipelineCompiles | null = null;
 
   constructor(
     webGPURenderer: THREE.WebGPURenderer
@@ -141,6 +143,14 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents> implements Rende
     super();
     this.webGPURenderer = webGPURenderer;
     this.renderStrategy = new DirectRenderStrategy(webGPURenderer);
+
+    const { backend } = webGPURenderer;
+    if (PipelineCompiles.isBackend(backend)) {
+      this.#compiles = new PipelineCompiles(
+        backend,
+        () => this.emit("compiled")
+      );
+    }
 
     const onDeviceLost = webGPURenderer.onDeviceLost;
     webGPURenderer.onDeviceLost = (info) => {
@@ -171,6 +181,14 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents> implements Rende
 
   getSource() {
     return this.webGPURenderer;
+  }
+
+  get pendingCompiles(): number {
+    return this.#compiles?.pending ?? 0;
+  }
+
+  compiled(): Promise<void> {
+    return this.#compiles?.settled() ?? Promise.resolve();
   }
 
   addRenderComponent(

@@ -3,7 +3,8 @@
 The `Renderer` interface defines the rendering pipeline used
 by [World](world.md). It abstracts over the
 underlying graphics API so the rest of the engine only depends on
-a small set of operations: resize, draw, clear, and dispose.
+a small set of operations: resize, draw, clear, dispose, and waiting
+for pending GPU pipeline compiles.
 
 The engine ships with one concrete implementation —
 `ThreeRenderer` — built on top of Three.js's `WebGPURenderer`.
@@ -259,6 +260,44 @@ instead.
 
 `clear()` clears the frame buffer without rendering.
 
+## Pipeline compiles
+
+`ThreeRenderer` compiles every render pipeline asynchronously, including the
+ones three.js creates inside a render: scene materials, post-processing
+passes, the output pass and `PMREMGenerator`. The browser compiles them in
+parallel, off the GPU process main thread, so frames keep presenting while
+shaders compile.
+
+An object whose pipeline is still compiling is skipped by the frame and drawn
+by a later one. When the last pending compile settles, the renderer emits
+`"compiled"`; under `@jolly-pixel/runtime` this requests a frame.
+
+```ts
+interface ThreeRenderer {
+  /** Pipelines still compiling. */
+  readonly pendingCompiles: number;
+  /** Resolves once no pipeline is compiling, at once when none is. */
+  compiled(): Promise<void>;
+}
+```
+
+A render that runs once, into a target or a shadow map that is not redrawn
+every frame, comes out incomplete while its pipelines compile. Render it, wait
+for `compiled()`, then render it again:
+
+```ts
+const generator = new THREE.PMREMGenerator(renderer.getSource());
+const target = generator.fromScene(room, 0.04);
+scene.environment = target.texture;
+
+await renderer.compiled();
+generator.fromScene(room, 0.04, 0.1, 100, { renderTarget: target });
+generator.dispose();
+```
+
+A failed compile settles like a successful one: three.js logs it and never
+draws the object.
+
 `renderComponents` lists the registered cameras in registration order.
 It is read-only; register and remove cameras with `addRenderComponent()` and
 `removeRenderComponent()`.
@@ -286,6 +325,7 @@ correctly. The renderer must not be used after disposal.
 | ----- | ------- | ------------- |
 | `resize` | `{ width, height }` | After the canvas size changes |
 | `draw` | `{ source: THREE.WebGPURenderer }` | After each render frame |
+| `compiled` | none | When the last pending [pipeline compile](#pipeline-compiles) settles |
 | `deviceLost` | `{ api, message, reason }` | When the GPU device or WebGL context is lost |
 
 After `deviceLost`, three.js has already logged the loss and stops rendering.

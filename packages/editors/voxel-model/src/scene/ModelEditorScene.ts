@@ -189,7 +189,7 @@ export class ModelEditorScene extends Systems.Scene {
     const lighting = new ViewLighting({
       scene,
       view,
-      environment: createRoomEnvironment(this.world.renderer.getSource()),
+      environment: createRoomEnvironment(this.world.renderer),
       casters: () => blocks.visibleMeshes()
     });
     const unfollowLit = view.follow((settings) => {
@@ -260,6 +260,10 @@ export class ModelEditorScene extends Systems.Scene {
     });
     viewport.addPreDrawStep(highlight.update);
     viewport.addPreDrawStep(lighting.shadow.update);
+    function invalidateShadow(): void {
+      lighting.shadow.invalidate();
+    }
+    this.world.renderer.on("compiled", invalidateShadow);
     const glow = new ViewGlow({
       target: viewport,
       view,
@@ -294,6 +298,7 @@ export class ModelEditorScene extends Systems.Scene {
       () => collaboration.dispose(),
       () => textures.dispose(),
       () => lighting.dispose(),
+      () => this.world.renderer.off("compiled", invalidateShadow),
       unfollowLit,
       () => blocks.dispose(),
       bindHistoryShortcuts({

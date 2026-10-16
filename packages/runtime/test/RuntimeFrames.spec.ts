@@ -30,12 +30,32 @@ class SteppedWorld {
   }
 }
 
+class CompilingRenderer {
+  pendingCompiles = 0;
+
+  #settled = Promise.withResolvers<void>();
+
+  start(): void {
+    this.pendingCompiles = 1;
+  }
+
+  finish(): void {
+    this.pendingCompiles = 0;
+    this.#settled.resolve();
+  }
+
+  compiled(): Promise<void> {
+    return this.#settled.promise;
+  }
+}
+
 function steppedRuntime(
-  world: SteppedWorld
+  world: SteppedWorld,
+  renderer = new CompilingRenderer()
 ): Runtime {
   return Object.assign(
     Object.create(Runtime.prototype),
-    { world }
+    { world, renderer }
   ) as Runtime;
 }
 
@@ -89,5 +109,22 @@ describe("Runtime frame stepping", () => {
     const world = new SteppedWorld();
 
     await steppedRuntime(world).frames(0);
+  });
+
+  test("compiledFrame waits for the pipelines a frame started, then draws once more", async() => {
+    const world = new SteppedWorld();
+    const renderer = new CompilingRenderer();
+    const frame = track(steppedRuntime(world, renderer).compiledFrame());
+
+    renderer.start();
+    await world.step();
+    assert.equal(frame.settled, false);
+
+    renderer.finish();
+    await setImmediate();
+    assert.equal(frame.settled, false);
+
+    await world.step();
+    assert.equal(frame.settled, true);
   });
 });
