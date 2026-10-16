@@ -8,6 +8,8 @@ import type { BenchEditor } from "./BenchEditors.ts";
 import {
   OpenSample,
   type OpenMeasurement,
+  type OpenMemory,
+  type OpenSampleData,
   type Phase
 } from "./OpenSample.ts";
 import { readProbe } from "./pageProbe.ts";
@@ -32,6 +34,7 @@ export interface OpenRunOptions {
   cpuThrottle: number;
   settleMs: number;
   profileDir: string | null;
+  memoryDir: string | null;
   base: string;
 }
 
@@ -42,8 +45,10 @@ export class OpenRun {
     options: OpenRunOptions
   ) {
     this.options = options;
-    if (options.profileDir !== null) {
-      mkdirSync(options.profileDir, { recursive: true });
+    for (const dir of [options.profileDir, options.memoryDir]) {
+      if (dir !== null) {
+        mkdirSync(dir, { recursive: true });
+      }
     }
   }
 
@@ -118,9 +123,10 @@ export class OpenRun {
     phase: Phase,
     run: number
   ): Promise<OpenMeasurement> {
-    const { label, settleMs, profileDir } = this.options;
+    const { label, settleMs, profileDir, memoryDir } = this.options;
     const { studio, traffic } = session;
     const { mode } = studio;
+    const fileStem = `${label}-${mode}-${editor.name}-${phase}-${run}`;
     await studio.waitUntilOpenable(editor);
 
     const metricsBefore = await session.metrics();
@@ -128,16 +134,26 @@ export class OpenRun {
     if (profileDir !== null) {
       await session.startProfile();
     }
+    if (memoryDir !== null) {
+      await session.startMemory();
+    }
     const frame = await studio.openEditor(editor);
     await studio.page.waitForTimeout(settleMs);
 
     let profileFile: string | undefined;
     if (profileDir !== null) {
-      profileFile = path.join(
-        profileDir,
-        `${label}-${mode}-${editor.name}-${phase}-${run}.cpuprofile`
-      );
+      profileFile = path.join(profileDir, `${fileStem}.cpuprofile`);
       writeFileSync(profileFile, JSON.stringify(await session.stopProfile()));
+    }
+    let memory: OpenSampleData["memory"];
+    if (memoryDir !== null) {
+      const recording = await session.stopMemory();
+      const heapProfileFile = path.join(memoryDir, `${fileStem}.heapprofile`);
+      writeFileSync(heapProfileFile, JSON.stringify(recording.heapProfile));
+      memory = {
+        ...recording,
+        heapProfileFile
+      };
     }
 
     const metricsAfter = await session.metrics();
@@ -147,7 +163,8 @@ export class OpenRun {
       metricsBefore,
       metricsAfter,
       socketBytes: traffic.received - socketsBefore,
-      settleMs
+      settleMs,
+      memory
     });
     const measurement = sample.toMeasurement({
       label,
@@ -161,7 +178,8 @@ export class OpenRun {
       `${run} ${mode.padEnd(7)} ${editor.name.padEnd(11)} ${phase.padEnd(6)}`,
       `ready ${measurement.clickToReady} settled ${measurement.clickToSettled}`,
       `busy ${measurement.framesBeforeReady.total}/${measurement.framesAfterReady.total}`,
-      `xfer ${measurement.transferKB}KB ws ${measurement.socketKB}KB`
+      `xfer ${measurement.transferKB}KB ws ${measurement.socketKB}KB`,
+      memorySummary(measurement.memory)
     );
 
     return measurement;
@@ -178,4 +196,15 @@ export class OpenRun {
 
     return copy;
   }
+}
+
+function memorySummary(
+  memory: OpenMemory | undefined
+): string {
+  if (memory === undefined) {
+    return "";
+  }
+  const { allocatedMB, minorGc, majorGc } = memory;
+
+  return `alloc ${allocatedMB}MB gc ${minorGc.ms}/${majorGc.ms}ms`;
 }

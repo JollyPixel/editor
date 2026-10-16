@@ -1,7 +1,16 @@
 // Import Third-party Dependencies
-import type { CDPSession } from "@playwright/test";
+import type {
+  Browser,
+  CDPSession
+} from "@playwright/test";
 
 // Import Internal Dependencies
+import { ProfileTree } from "../analysis/ProfileTree.ts";
+import {
+  GC_CATEGORIES,
+  Trace,
+  type GcSummary
+} from "../analysis/Trace.ts";
 import type {
   BenchBrowser,
   StudioPageOptions
@@ -11,15 +20,23 @@ import type { StudioPage } from "./StudioPage.ts";
 
 // CONSTANTS
 const kSamplingIntervalUs = 200;
+const kAllocationSamplingBytes = 16 * 1024;
 
 export interface StudioSessionOptions extends StudioPageOptions {
   cpuThrottle: number;
+}
+
+export interface MemoryRecording {
+  heapProfile: unknown;
+  allocatedBytes: number;
+  gc: GcSummary;
 }
 
 export class StudioSession {
   readonly studio: StudioPage;
   readonly traffic: SocketTraffic;
   readonly #cdp: CDPSession;
+  readonly #browser: Browser;
 
   static async start(
     bench: BenchBrowser,
@@ -33,7 +50,7 @@ export class StudioSession {
         rate: options.cpuThrottle
       });
     }
-    const session = new StudioSession(studio, cdp);
+    const session = new StudioSession(studio, cdp, bench.browser);
     await studio.open();
 
     return session;
@@ -41,11 +58,13 @@ export class StudioSession {
 
   constructor(
     studio: StudioPage,
-    cdp: CDPSession
+    cdp: CDPSession,
+    browser: Browser
   ) {
     this.studio = studio;
     this.traffic = new SocketTraffic(studio.page);
     this.#cdp = cdp;
+    this.#browser = browser;
   }
 
   async metrics(): Promise<Map<string, number>> {
@@ -67,6 +86,32 @@ export class StudioSession {
     await this.#cdp.send("Profiler.disable");
 
     return profile;
+  }
+
+  async startMemory(): Promise<void> {
+    await this.#browser.startTracing(undefined, {
+      categories: GC_CATEGORIES
+    });
+    await this.#cdp.send("HeapProfiler.enable");
+    await this.#cdp.send("HeapProfiler.startSampling", {
+      samplingInterval: kAllocationSamplingBytes,
+      includeObjectsCollectedByMajorGC: true,
+      includeObjectsCollectedByMinorGC: true
+    });
+  }
+
+  async stopMemory(): Promise<MemoryRecording> {
+    const { profile } = await this.#cdp.send("HeapProfiler.stopSampling");
+    await this.#cdp.send("HeapProfiler.disable");
+    const trace = Trace.parse(
+      (await this.#browser.stopTracing()).toString("utf8")
+    );
+
+    return {
+      heapProfile: profile,
+      allocatedBytes: ProfileTree.fromHeapProfile(profile).weights.total,
+      gc: trace.garbageCollections()
+    };
   }
 
   close(): Promise<void> {

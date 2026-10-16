@@ -4,6 +4,8 @@ import type {
   ProbeSnapshot
 } from "./pageProbe.ts";
 import type { StudioMode } from "./StudioPage.ts";
+import type { MemoryRecording } from "./StudioSession.ts";
+import type { GcPauses } from "../analysis/Trace.ts";
 
 // CONSTANTS
 export const PHASES = ["first", "reopen", "reload", "cold"] as const;
@@ -21,6 +23,13 @@ export interface OpenStep {
   start: number;
   end: number;
   ms: number;
+}
+
+export interface OpenMemory {
+  allocatedMB: number;
+  minorGc: GcPauses;
+  majorGc: GcPauses;
+  heapProfileFile: string;
 }
 
 export interface OpenMeasurement {
@@ -50,6 +59,7 @@ export interface OpenMeasurement {
   decodedKB: number;
   socketKB: number;
   profileFile?: string;
+  memory?: OpenMemory;
 }
 
 export type OpenContext = Pick<
@@ -64,6 +74,7 @@ export interface OpenSampleData {
   metricsAfter: Map<string, number>;
   socketBytes: number;
   settleMs: number;
+  memory?: MemoryRecording & { heapProfileFile: string; };
 }
 
 export class OpenSample {
@@ -91,7 +102,7 @@ export class OpenSample {
   toMeasurement(
     context: OpenContext
   ): OpenMeasurement {
-    const { frame, socketBytes } = this.#data;
+    const { frame, socketBytes, memory } = this.#data;
     const frames = this.#framesInWindow();
     const settled = Math.max(
       this.ready,
@@ -124,7 +135,13 @@ export class OpenSample {
       requests: frame.requests,
       transferKB: Math.round(frame.transferBytes / 1024),
       decodedKB: Math.round(frame.decodedBytes / 1024),
-      socketKB: Math.round(socketBytes / 1024)
+      socketKB: Math.round(socketBytes / 1024),
+      memory: memory === undefined ? undefined : {
+        allocatedMB: Math.round(memory.allocatedBytes / 1e5) / 10,
+        minorGc: memory.gc.minor,
+        majorGc: memory.gc.major,
+        heapProfileFile: memory.heapProfileFile
+      }
     };
   }
 

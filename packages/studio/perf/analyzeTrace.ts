@@ -1,9 +1,13 @@
 // Import Node.js Dependencies
-import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
 // Import Internal Dependencies
 import { Tally } from "./analysis/Tally.ts";
+import {
+  Trace,
+  type GcPauses,
+  type Span
+} from "./analysis/Trace.ts";
 
 // CONSTANTS
 const kThreads = /CrRendererMain|CrGpuMain/;
@@ -34,27 +38,6 @@ const kTaskChildren = new RegExp([
 ].join("|"));
 const kLongTaskUs = 15_000;
 
-interface TraceEvent {
-  name: string;
-  ph: string;
-  ts: number;
-  dur?: number;
-  pid: number;
-  tid: number;
-  args?: {
-    name?: string;
-    data?: {
-      type?: string;
-      functionName?: string;
-      url?: string;
-    };
-  };
-}
-
-interface Span extends TraceEvent {
-  dur: number;
-}
-
 const { values: args, positionals } = parseArgs({
   allowPositionals: true,
   options: {
@@ -68,25 +51,19 @@ if (file === undefined) {
   throw new Error("Usage: analyzeTrace.ts <trace.json> [--top n] [--window ms]");
 }
 
-const raw = JSON.parse(readFileSync(file, "utf8"));
-const events: TraceEvent[] = Array.isArray(raw) ? raw : raw.traceEvents;
-const threadNames = new Map<string, string>();
-for (const event of events) {
-  if (event.ph === "M" && event.name === "thread_name") {
-    threadNames.set(threadKey(event), event.args?.name ?? "?");
-  }
-}
-const spans = events.filter((event): event is Span => event.ph === "X" && event.dur !== undefined);
+const trace = Trace.read(file);
+const { events, spans } = trace;
 
 printThreadSelfTime();
 printGpuWork();
 printMainTimeline();
+printGarbageCollections();
 
 function printThreadSelfTime(): void {
   const byThread = new Map<string, Span[]>();
   for (const span of spans) {
-    const key = threadKey(span);
-    if (kThreads.test(threadNames.get(key) ?? "")) {
+    const key = Trace.threadKey(span);
+    if (kThreads.test(trace.threadName(span))) {
       const list = byThread.get(key) ?? [];
       list.push(span);
       byThread.set(key, list);
@@ -112,7 +89,7 @@ function printThreadSelfTime(): void {
       selfTimes.add(span.name, span.dur);
       stack.push(span);
     }
-    console.log(`\n## ${threadNames.get(key)} (${key}): busy ${ms(busy)}`);
+    console.log(`\n## ${trace.threadName(list[0])} (${key}): busy ${ms(busy)}`);
     for (const { key: name, total: us } of selfTimes.top(Number(args.top))) {
       console.log(`${ms(us).padStart(10)}  ${name}`);
     }
@@ -123,7 +100,7 @@ function printGpuWork(): void {
   const work = new Tally();
   for (const span of spans) {
     if (kGpuWork.test(span.name)) {
-      work.add(`${threadNames.get(threadKey(span)) ?? "?"} | ${span.name}`, span.dur);
+      work.add(`${trace.threadName(span)} | ${span.name}`, span.dur);
     }
   }
 
@@ -142,7 +119,9 @@ function printMainTimeline(): void {
   }
   const end = click.ts + Number(args.window) * 1000;
   const main = spans
-    .filter((span) => threadKey(span) === threadKey(click) && span.ts >= click.ts && span.ts < end)
+    .filter((span) => Trace.threadKey(span) === Trace.threadKey(click) &&
+      span.ts >= click.ts &&
+      span.ts < end)
     .sort((a, b) => a.ts - b.ts);
 
   console.log("\n## Main-thread tasks after the click (> 15 ms)");
@@ -169,10 +148,18 @@ function printMainTimeline(): void {
   }
 }
 
-function threadKey(
-  event: TraceEvent
-): string {
-  return `${event.pid}:${event.tid}`;
+function printGarbageCollections(): void {
+  const { minor, major } = trace.garbageCollections();
+  console.log("\n## Garbage collection on the renderer main thread");
+  printPauses(minor, "minor (scavenge)");
+  printPauses(major, "major (mark-compact and incremental steps)");
+}
+
+function printPauses(
+  pauses: GcPauses,
+  title: string
+): void {
+  console.log(`${ms(pauses.ms * 1000).padStart(10)} ${String(pauses.count).padStart(5)}x  ${title}`);
 }
 
 function ms(

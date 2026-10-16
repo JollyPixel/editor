@@ -14,7 +14,8 @@ const { values: args } = parseArgs({
   options: {
     plan: { type: "string" },
     rounds: { type: "string", default: "5" },
-    out: { type: "string", default: "perf-results/ab.json" }
+    out: { type: "string", default: "perf-results/ab.json" },
+    memory: { type: "string" }
   }
 });
 
@@ -42,6 +43,7 @@ for (const { round, variant } of plan.schedule(Number(args.rounds))) {
     cpuThrottle: 1,
     settleMs: DEFAULT_SETTLE_MS,
     profileDir: null,
+    memoryDir: args.memory ?? null,
     base: variant.base
   });
 

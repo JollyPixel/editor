@@ -1,0 +1,28 @@
+{
+  "editors": ["voxel-map", "voxel-model"],
+  "modes": ["online"],
+  "phases": ["cold", "reload"],
+  "variants": [
+    {
+      "label": "control"
+    },
+    {
+      "label": "no-environment",
+      "storage": {
+        "bench:no-environment": "1"
+      }
+    },
+    {
+      "label": "one-gizmo",
+      "storage": {
+        "bench:one-gizmo": "1"
+      }
+    },
+    {
+      "label": "fast-pixels",
+      "storage": {
+        "bench:fast-pixels": "1"
+      }
+    }
+  ]
+}
