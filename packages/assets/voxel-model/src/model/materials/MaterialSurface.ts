@@ -37,6 +37,7 @@ const kSurfaceProperties = {
     minimum: 0
   }
 } as const satisfies Record<(typeof kSurfaceKeys)[number], SurfaceFieldSchema>;
+const kNoEmissive = "#000000";
 const kDefaultSurface: MaterialSurfaceJSON = {
   color: "#ffffff",
   opacity: 1,
@@ -80,6 +81,12 @@ export class MaterialSurface {
 
     return keys.length > 0 &&
       keys.every((key) => satisfiesField(key, Reflect.get(value, key)));
+  }
+
+  static glows(
+    surface: MaterialSurfaceJSON
+  ): boolean {
+    return surface.emissive !== kNoEmissive && surface.emissiveIntensity > 0;
   }
 
   readonly #surface: MaterialSurfaceJSON;

@@ -5,5 +5,6 @@ export * from "./pointer.ts";
 export * from "./ports.ts";
 export * from "./roles.ts";
 export * from "./sockets.ts";
+export * from "./vite/precompress.ts";
 export * from "./vite/prebundleWorkspace.ts";
 export * from "./vite/RunMode.ts";

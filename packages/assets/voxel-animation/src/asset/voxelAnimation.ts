@@ -1,17 +1,11 @@
 // Import Third-party Dependencies
 import {
   defineSchema,
-  describeErrors,
-  SchemaParser,
   type Infer
 } from "@jolly-pixel/network";
-import {
-  InvalidAssetDocumentError,
-  type AssetKindDescriptor
-} from "@jolly-pixel/asset-server";
+import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
-import { mapTrackKeys } from "../model/values/trackKeys.ts";
 import {
   animationClipSchema,
   animationKeySchema,
@@ -20,18 +14,16 @@ import {
 } from "../network/AnimationCommand.schema.ts";
 import type {
   AnimationClipJSON,
-  AnimationInterpolation,
-  AnimationSetSnapshot,
-  AnimationTrackJSON
+  AnimationSetSnapshot
 } from "../network/types.ts";
 import { VOXEL_ANIMATION_ICON } from "./icons.ts";
+import { compactTrack } from "./storedTrack.ts";
 
 // CONSTANTS
 export const VOXEL_ANIMATION_KIND = "voxelanimation";
 export const VOXEL_ANIMATION_COMMAND = "voxelanimation.command";
 export const VOXEL_ANIMATION_EXTENSION = ".voxelanim.json";
 export const VOXEL_ANIMATION_DOCUMENT_VERSION = 1;
-const kDefaultInterpolation: AnimationInterpolation = "linear";
 
 export const VOXEL_ANIMATION_ASSET: AssetKindDescriptor = {
   kind: VOXEL_ANIMATION_KIND,
@@ -78,7 +70,6 @@ export const voxelAnimationDocumentSchema = defineSchema({
 });
 
 type StoredAnimationDocument = Infer<typeof voxelAnimationDocumentSchema>;
-type StoredAnimationTrack = StoredAnimationDocument["clips"][number]["tracks"][number];
 
 export type VoxelAnimationDocument = AnimationSetSnapshot & {
   version: typeof VOXEL_ANIMATION_DOCUMENT_VERSION;
@@ -88,8 +79,6 @@ export interface VoxelAnimationDocumentOptions {
   rig?: string;
   clips?: AnimationClipJSON[];
 }
-
-const kDocumentParser = new SchemaParser(voxelAnimationDocumentSchema);
 
 export function createVoxelAnimationDocument(
   options: VoxelAnimationDocumentOptions = {}
@@ -120,56 +109,4 @@ export function encodeVoxelAnimationDocument(
   };
 
   return new TextEncoder().encode(JSON.stringify(stored));
-}
-
-export function decodeVoxelAnimationDocument(
-  content: Uint8Array
-): VoxelAnimationDocument {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(new TextDecoder().decode(content));
-  }
-  catch (error) {
-    throw new InvalidAssetDocumentError(
-      VOXEL_ANIMATION_KIND,
-      "content is not JSON",
-      { cause: error }
-    );
-  }
-
-  const result = kDocumentParser.parse(parsed);
-  if (result.err) {
-    throw new InvalidAssetDocumentError(
-      VOXEL_ANIMATION_KIND,
-      describeErrors(result.val)
-    );
-  }
-
-  return {
-    ...result.val,
-    clips: result.val.clips.map((clip) => {
-      return {
-        ...clip,
-        tracks: clip.tracks.map(expandTrack)
-      };
-    })
-  };
-}
-
-function compactTrack(
-  track: AnimationTrackJSON
-): StoredAnimationTrack {
-  return mapTrackKeys(track, ({ interpolation, ...key }) => (
-    interpolation === kDefaultInterpolation ?
-      key :
-      { ...key, interpolation }
-  ));
-}
-
-function expandTrack(
-  stored: StoredAnimationTrack
-): AnimationTrackJSON {
-  return mapTrackKeys(stored, ({ interpolation = kDefaultInterpolation, ...key }) => {
-    return { ...key, interpolation };
-  });
 }

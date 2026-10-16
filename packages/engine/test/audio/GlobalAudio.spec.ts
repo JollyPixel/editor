@@ -1,6 +1,14 @@
 // Import Node.js Dependencies
-import { describe, test, beforeEach, mock } from "node:test";
+import {
+  describe,
+  test,
+  beforeEach,
+  mock
+} from "node:test";
 import assert from "node:assert/strict";
+
+// Import Third-party Dependencies
+import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import { GlobalAudio } from "../../src/audio/GlobalAudio.ts";
@@ -101,5 +109,32 @@ describe("Audio.GlobalAudio", () => {
     globalAudio.volume = -1.5;
 
     assert.deepStrictEqual(observedVolumes, [1, 0]);
+  });
+});
+
+describe("Audio.GlobalAudio without a provided listener", () => {
+  let createGain: ReturnType<typeof mock.fn>;
+
+  beforeEach(() => {
+    createGain = mock.fn(() => {
+      return {
+        connect: () => undefined
+      };
+    });
+    THREE.AudioContext.setContext({
+      createGain,
+      destination: {}
+    });
+  });
+
+  test("should not create an audio graph before the listener is used", () => {
+    const globalAudio = new GlobalAudio();
+
+    assert.strictEqual(createGain.mock.calls.length, 0);
+
+    const listener = globalAudio.listener;
+
+    assert.strictEqual(createGain.mock.calls.length, 1);
+    assert.strictEqual(globalAudio.threeAudioListener, listener);
   });
 });

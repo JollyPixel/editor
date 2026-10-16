@@ -90,7 +90,7 @@ test("opens the requested model with its default block", async({ page }) => {
 `@jolly-pixel/e2e`, for every suite:
 
 - [Config](./docs/config.md): `defineE2EConfig`, `PORTS`, `baseUrl`, the
-  `prebundleWorkspace` Vite plugin and `RunMode`.
+  `prebundleWorkspace` and `precompress` Vite plugins and `RunMode`.
 - [Pointer](./docs/pointer.md): bounding boxes, drags and multi-step presses.
 - [Locators](./docs/locators.md): dialogs, fields and tree rows of `@jolly-pixel/ui`.
 - [Sockets](./docs/sockets.md): `recordSockets`.

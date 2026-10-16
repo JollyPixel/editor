@@ -18,6 +18,10 @@ export function serveBuild(
   return servo(directory, {
     prefix,
     dev: true,
+    precompressed: {
+      brotli: true,
+      gzip: true
+    },
     setHeaders: cacheHashedAssets
   });
 }

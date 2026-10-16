@@ -1,12 +1,10 @@
 // Import Third-party Dependencies
-import type {
-  MaterialSurfaceJSON,
-  ModelMaterialJSON
+import {
+  MaterialSurface,
+  type MaterialSurfaceJSON,
+  type ModelMaterialJSON
 } from "@jolly-pixel/asset.voxel-model/client";
 import type { TreeSwatch } from "@jolly-pixel/ui";
-
-// CONSTANTS
-const kNoEmissive = "#000000";
 
 export function materialSwatch(
   material: Pick<ModelMaterialJSON, "name" | "surface"> | null
@@ -26,14 +24,8 @@ export function surfaceSwatch(
 ): { color: string; ring?: string; } {
   return {
     color: withAlpha(surface.color, surface.opacity),
-    ...(surfaceGlows(surface) ? { ring: surface.emissive } : {})
+    ...(MaterialSurface.glows(surface) ? { ring: surface.emissive } : {})
   };
-}
-
-export function surfaceGlows(
-  surface: MaterialSurfaceJSON
-): boolean {
-  return surface.emissive !== kNoEmissive && surface.emissiveIntensity > 0;
 }
 
 function withAlpha(

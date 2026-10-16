@@ -7,14 +7,20 @@ export type GlobalAudioEvents = {
 };
 
 export class GlobalAudio extends Emitter<GlobalAudioEvents> {
-  listener: THREE.AudioListener;
+  #listener: THREE.AudioListener | null;
 
   constructor(
-    listener: THREE.AudioListener = new THREE.AudioListener()
+    listener: THREE.AudioListener | null = null
   ) {
     super();
 
-    this.listener = listener;
+    this.#listener = listener;
+  }
+
+  get listener(): THREE.AudioListener {
+    this.#listener ??= new THREE.AudioListener();
+
+    return this.#listener;
   }
 
   get threeAudioListener(): THREE.AudioListener {

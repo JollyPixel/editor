@@ -24,12 +24,25 @@ export class ManifestRoute {
       kinds: project.kinds.descriptors()
     }));
     const bytes = new TextEncoder().encode(this.source);
-    this.middleware = servo(
+    const serve = servo(
       bytesSource(
         async(file) => (file === PROJECT_MANIFEST_FILE ? bytes : null),
         { etag: "content" }
       ),
       { dev: true }
     );
+    this.middleware = (request, response, next) => {
+      const pathname = URL.parse(
+        request.url ?? "/",
+        "http://localhost"
+      )?.pathname;
+
+      if (pathname === `/${PROJECT_MANIFEST_FILE}`) {
+        serve(request, response, next);
+      }
+      else {
+        next?.();
+      }
+    };
   }
 }

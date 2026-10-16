@@ -64,6 +64,7 @@ An entry lands before the sibling `beforeId`, or last without one. The methods r
 | `MaterialSurface.create(overrides?)` | The default surface, with `overrides` applied. |
 | `MaterialSurface.isValid(value)` | Whether a value is a valid surface. It needs no schema compiler, so browser code can check input with it. |
 | `MaterialSurface.isPatch(value)` | Whether a value is a valid, non-empty surface patch. |
+| `MaterialSurface.glows(surface)` | Whether the surface emits light: an `emissive` color other than black at an `emissiveIntensity` above 0. |
 | `MaterialSurface.KEYS` | The surface field names. |
 | `MaterialSurface.PROPERTIES` | The JSON schema of each field; the network schemas are built from them. |
 | `new MaterialSurface(surface)` | Holds a surface. Throws a `RangeError` for an invalid one. |

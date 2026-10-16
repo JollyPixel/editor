@@ -10,6 +10,7 @@ import { SchemaParser } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import { MaterialSurface } from "#src/model/materials/MaterialSurface.ts";
+import type { MaterialSurfaceJSON } from "#src/network/types.ts";
 import {
   materialSurfacePatchSchema,
   materialSurfaceSchema
@@ -63,6 +64,18 @@ describe("MaterialSurface", () => {
         JSON.stringify(value)
       );
     }
+  });
+
+  test("glows only with a non-black emissive color at a positive intensity", () => {
+    function glowsWith(
+      overrides: Partial<MaterialSurfaceJSON>
+    ): boolean {
+      return MaterialSurface.glows(MaterialSurface.create(overrides));
+    }
+
+    assert.equal(glowsWith({ emissive: "#ffcc66" }), true);
+    assert.equal(glowsWith({ emissive: "#ffcc66", emissiveIntensity: 0 }), false);
+    assert.equal(glowsWith({}), false);
   });
 
   test("rejects an invalid surface", () => {

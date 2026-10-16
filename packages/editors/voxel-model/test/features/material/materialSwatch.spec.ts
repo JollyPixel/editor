@@ -6,10 +6,7 @@ import assert from "node:assert/strict";
 import { MaterialSurface } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
-import {
-  materialSwatch,
-  surfaceGlows
-} from "#src/features/material/materialSwatch.ts";
+import { materialSwatch } from "#src/features/material/materialSwatch.ts";
 
 describe("materialSwatch", () => {
   test("is empty and invites a material when the block has none", () => {
@@ -41,13 +38,5 @@ describe("materialSwatch", () => {
 
     assert.equal(ringOf(0.6), "#ff0000");
     assert.equal(ringOf(0), undefined);
-  });
-});
-
-describe("surfaceGlows", () => {
-  test("is off at zero intensity or with a black glow color", () => {
-    assert.equal(surfaceGlows(MaterialSurface.create({ emissive: "#ffcc66" })), true);
-    assert.equal(surfaceGlows(MaterialSurface.create({ emissive: "#ffcc66", emissiveIntensity: 0 })), false);
-    assert.equal(surfaceGlows(MaterialSurface.create()), false);
   });
 });

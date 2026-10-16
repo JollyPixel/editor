@@ -17,6 +17,7 @@ import {
 import { VOXEL_MODEL_KIND } from "@jolly-pixel/asset.voxel-model";
 import {
   PORTS,
+  precompress,
   RunMode
 } from "@jolly-pixel/e2e";
 
@@ -57,6 +58,7 @@ export default defineConfig(async(env): Promise<UserConfig> => {
     server: mode.server,
     plugins: [
       mode.plugins(),
+      precompress(),
       createProjectKindsPlugin(kinds),
       createProjectFileWatchPlugin(projectFile),
       createAssetWorkspacePlugin({

@@ -18,6 +18,7 @@ import {
 } from "@jolly-pixel/asset-server/node";
 import {
   PORTS,
+  precompress,
   prebundleWorkspace,
   RunMode
 } from "@jolly-pixel/e2e";
@@ -66,6 +67,7 @@ export default defineConfig(async(env): Promise<UserConfig> => {
     },
     plugins: [
       prebundleWorkspace(),
+      precompress(),
       createProjectKindsPlugin(project.kinds),
       projectManifest(project),
       createProjectFileWatchPlugin(project.file),
