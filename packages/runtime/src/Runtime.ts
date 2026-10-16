@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
 import type { AssetCatalog } from "@jolly-pixel/asset";
 import {
   Systems,
@@ -23,6 +22,9 @@ import {
   createRuntimeAssetCoordinator
 } from "./assets/createRuntimeAssetCoordinator.ts";
 import type { RuntimeAssetOptions } from "./assets/RuntimeAssetOptions.ts";
+import {
+  LazyCompressedTextureLoader
+} from "./assets/LazyCompressedTextureLoader.ts";
 import {
   resolveRuntimeAssetCatalog
 } from "./assets/resolveRuntimeAssetCatalog.ts";
@@ -105,7 +107,7 @@ export class Runtime<
   #adaptivePixelRatio: boolean;
   #logger: Systems.Logger;
   #session: RuntimeSession | null = null;
-  #ktx2: KTX2Loader | null;
+  #ktx2: LazyCompressedTextureLoader | null;
   #statsHud: PerformanceStatsHud | null = null;
 
   private constructor(
@@ -135,9 +137,11 @@ export class Runtime<
     const ktx2 = options.assets?.ktx2;
     this.#ktx2 = ktx2 === undefined ?
       null :
-      new KTX2Loader(this.manager)
-        .setTranscoderPath(ktx2.transcoderPath)
-        .detectSupport(renderer.getSource());
+      LazyCompressedTextureLoader.ktx2(
+        this.manager,
+        ktx2,
+        renderer.getSource()
+      );
 
     this.world = new Systems.World<THREE.WebGPURenderer, TContext>(renderer, {
       enableOnExit: true,

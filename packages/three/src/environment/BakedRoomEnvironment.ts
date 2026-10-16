@@ -13,7 +13,8 @@ export class BakedRoomEnvironment {
 
   static load(): Promise<BakedRoomEnvironment> {
     if (BakedRoomEnvironment.#loading === null) {
-      BakedRoomEnvironment.#loading = BakedRoomEnvironment.#request();
+      BakedRoomEnvironment.#loading = Promise.resolve()
+        .then(() => BakedRoomEnvironment.#request());
       BakedRoomEnvironment.#loading.catch(() => undefined);
     }
 

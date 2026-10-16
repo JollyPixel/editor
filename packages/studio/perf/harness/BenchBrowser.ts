@@ -10,6 +10,7 @@ import { registerAccount } from "../../test/e2e/support/account.ts";
 import { installProbe } from "./openProbe.ts";
 import {
   StudioPage,
+  PREFETCH_EDITORS_STORAGE_KEY,
   TABS_STORAGE_KEY,
   type StudioMode
 } from "./StudioPage.ts";
@@ -96,7 +97,10 @@ export class BenchBrowser {
     });
     await context.addInitScript(
       seedStorage,
-      options.storage ?? {}
+      {
+        [PREFETCH_EDITORS_STORAGE_KEY]: "off",
+        ...options.storage
+      }
     );
 
     if (options.prewarm) {

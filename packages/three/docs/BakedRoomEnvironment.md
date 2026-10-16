@@ -17,7 +17,7 @@ The map is the output of `PMREMGenerator.fromScene(new RoomEnvironment(), 0.04)`
 
 ### `static load(): Promise<BakedRoomEnvironment>`
 
-Requests the bundled atlas once and returns the same promise to every later call, including a rejection when the response is not ok. Calling it without awaiting starts the download early and reports no unhandled rejection.
+Requests the bundled atlas once and returns the same promise to every later call, including a rejection when the response is not ok. Calling it without awaiting starts the download early and reports no unhandled rejection. The request starts one microtask after the first call, so calling it while a module evaluates does not run `fetch` inside that evaluation.
 
 ### `constructor(texels: Uint16Array)`
 

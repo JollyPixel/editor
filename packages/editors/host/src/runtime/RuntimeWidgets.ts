@@ -5,7 +5,7 @@ import type {
   ViewHelperSettings
 } from "@jolly-pixel/runtime";
 import type { StorageAdapter } from "@jolly-pixel/ui";
-import * as z from "zod";
+import * as z from "zod/mini";
 
 // CONSTANTS
 const kStorageKey = "jolly-pixel:runtime-widgets";
@@ -14,12 +14,12 @@ const kWidgets = [
   "viewHelper",
   "metrics"
 ] as const;
-const kStoredFlag = z.boolean().optional().catch(undefined);
-const kStoredVisibilitySchema = z.object({
+const kStoredFlag = z.catch(z.optional(z.boolean()), undefined);
+const kStoredVisibilitySchema = z.catch(z.object({
   stats: kStoredFlag,
   viewHelper: kStoredFlag,
   metrics: kStoredFlag
-}).catch({});
+}), {});
 const kMissingMessages: Readonly<Record<RuntimeWidget, string>> = {
   stats: "No performance HUD is mounted.",
   viewHelper: "No view helper is mounted.",

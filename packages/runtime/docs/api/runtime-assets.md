@@ -58,9 +58,10 @@ for a complete setup.
 
 ## KTX2 textures
 
-Set `ktx2` to load `.ktx2` sources through `TEXTURE_ASSET`. The runtime builds
-one `KTX2Loader` on `runtime.manager`, calls `detectSupport()` on its
-renderer, and disposes it in `runtime.dispose()`. Without `ktx2`, loading a
+Set `ktx2` to load `.ktx2` sources through `TEXTURE_ASSET`. On the first
+`.ktx2` load, the runtime imports `KTX2Loader`, builds one on
+`runtime.manager` and calls `detectSupport()` on its renderer. Later loads
+share it, and `runtime.dispose()` disposes it. Without `ktx2`, loading a
 `.ktx2` texture rejects.
 
 `transcoderPath` is the URL of a directory serving `basis_transcoder.js` and

@@ -165,12 +165,8 @@ In order of gain per effort, on this machine.
 
 | # | Change | Where | Gain | Effort |
 |---|---|---|---|---|
-| 1 | Import the model loaders, the meshopt decoder and `KTX2Loader` on first use | `@jolly-pixel/engine` `assets/model.ts`, `@jolly-pixel/runtime` `Runtime.ts` | −52 KB brotli per voxel editor, −37 to −155 ms on voxel-map cold opens | low |
-| 2 | Start `BakedRoomEnvironment.load()` after module evaluation | voxel-map and voxel-model `createRuntime` | none for users; keeps 50 to 60 ms of inspector cost out of every cold measurement | trivial |
-| 3 | Trace the blockset room open on a slow link and cut its sequential round trips | `@jolly-pixel/editor.host` session, asset-server dependency rooms | up to 1.5 s of a voxel-map cold open on fast 4G | medium |
-| 4 | Build the shared packages once and serve them from one path to every editor | editor builds, studio `EditorPages` | the second editor kind's cold open skips about 450 KB brotli, about 0.4 s on fast 4G (estimated) | high |
-| 5 | Prefetch the editors' eager files from the idle shell | studio `src/index.ts` | none on localhost; up to the eager download (1.2 s on fast 4G) when the user idles long enough, not measured | low |
-| 6 | Move client code paths to `zod/mini` | host, network, asset packages | about −20 KB brotli per editor | medium |
+| 1 | Trace the blockset room open on a slow link and cut its sequential round trips | `@jolly-pixel/editor.host` session, asset-server dependency rooms | up to 1.5 s of a voxel-map cold open on fast 4G | medium |
+| 2 | Build the shared packages once and serve them from one path to every editor | editor builds, studio `EditorPages` | the second editor kind's cold open skips about 450 KB brotli, about 0.4 s on fast 4G (estimated) | high |
 
 The compile wait (215 to 246 ms) is the largest step left, and only fewer distinct pipelines shorten it on a first visit. Ending the tab spinner before it would shorten the perceived open by the same amount, at the cost of showing the viewport before every object draws.
 

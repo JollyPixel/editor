@@ -16,7 +16,8 @@ All of them extend `Error` and set `name` to the class name.
 `AssetKindMismatchError` carries the `id`, `expectedKind`, and `actualKind`.
 `UnsupportedAssetManifestError` carries the `version`.
 
-A malformed shape passed to a `parse()` method throws a `ZodError`. Blank
+A malformed shape passed to a `parse()` method throws a `$ZodError`, the
+base error class of `zod/mini` (`z.core.$ZodError`). Blank
 values, and asset kinds containing a colon, throw `TypeError`.
 
 ## Loader and store configuration

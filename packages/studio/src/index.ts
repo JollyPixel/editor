@@ -12,13 +12,20 @@ import {
 } from "./editors/EditorDescriptor.ts";
 import { ProjectManifest } from "./editors/ProjectManifest.ts";
 import { EditorRegistry } from "./editors/EditorRegistry.ts";
+import { EditorPrefetch } from "./editors/EditorPrefetch.ts";
 import "./icons.ts";
+import { StudioPreferences } from "./preferences/StudioPreferences.ts";
 import type { Studio } from "./shell/Studio.ts";
 import "./shell/Studio.ts";
 
 declare global {
   interface Window {
     studio?: Studio;
+  }
+  interface Navigator {
+    readonly connection?: {
+      readonly saveData?: boolean;
+    };
   }
 }
 
@@ -66,6 +73,15 @@ async function boot(): Promise<void> {
     );
   }
 
+  if (
+    new StudioPreferences().prefetchEditors &&
+      navigator.connection?.saveData !== true
+  ) {
+    whenIdle(
+      () => void new EditorPrefetch(manifest.editors, document.baseURI).run()
+    );
+  }
+
   if (import.meta.env.DEV) {
     window.studio = studio;
   }
@@ -73,6 +89,17 @@ async function boot(): Promise<void> {
     EDITOR_PAGE_REBUILT_EVENT,
     (page: EditorPageRebuilt) => studio.reloadEditor(page.name)
   );
+}
+
+function whenIdle(
+  task: () => void
+): void {
+  if ("requestIdleCallback" in window) {
+    requestIdleCallback(task);
+  }
+  else {
+    setTimeout(task);
+  }
 }
 
 function createEditorRegistry(

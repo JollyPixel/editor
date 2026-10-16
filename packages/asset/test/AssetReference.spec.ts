@@ -40,7 +40,7 @@ describe("AssetReference", () => {
     );
   });
 
-  test("rejects malformed persisted references with a ZodError", () => {
+  test("rejects malformed persisted references with a $ZodError", () => {
     const cases: unknown[] = [
       null,
       [],
@@ -51,7 +51,7 @@ describe("AssetReference", () => {
     for (const input of cases) {
       assert.throws(
         () => AssetReference.parse(input, kModelAsset),
-        { name: "ZodError" }
+        { name: "$ZodError" }
       );
     }
   });

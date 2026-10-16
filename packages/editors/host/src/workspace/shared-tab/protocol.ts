@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import * as z from "zod";
+import * as z from "zod/mini";
 
 // CONSTANTS
 export const DISCOVERY_TIMEOUT_MS = 5_000;

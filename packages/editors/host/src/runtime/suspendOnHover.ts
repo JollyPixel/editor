@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import * as z from "zod";
+import * as z from "zod/mini";
 
 // CONSTANTS
 const kHoverChangeDetailSchema = z.object({

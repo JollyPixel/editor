@@ -79,7 +79,10 @@ an implicit load inside the ECS lifecycle.
 
 `createDefaultAssetLoaders(manager, options?)` returns an `AssetLoaderRegistry`
 holding these loaders, all sharing the given Three.js `LoadingManager`. The
-runtime starts from it and registers custom loaders on top.
+runtime starts from it and registers custom loaders on top. The model loader
+imports the three.js loader for a format (and the meshopt decoder for glTF) on
+the first source of that format, so bundles that never load a model do not
+download them.
 
 ```ts
 const loaders = createDefaultAssetLoaders(new THREE.LoadingManager());

@@ -56,7 +56,7 @@ describe("AssetCatalog", () => {
     assert.equal(record.revision, "sha256:abc");
   });
 
-  test("rejects malformed manifests with a ZodError", () => {
+  test("rejects malformed manifests with a $ZodError", () => {
     const cases: unknown[] = [
       null,
       [],
@@ -72,7 +72,7 @@ describe("AssetCatalog", () => {
     for (const input of cases) {
       assert.throws(
         () => AssetCatalog.parse(input),
-        { name: "ZodError" }
+        { name: "$ZodError" }
       );
     }
   });

@@ -6,7 +6,7 @@ import {
   peerIdentity,
   type PeerIdentity
 } from "@jolly-pixel/ui";
-import * as z from "zod";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import type { Appearance } from "../appearance/PageAppearance.ts";
@@ -27,13 +27,13 @@ const kAppearanceSchema = z.object({
   density: z.enum(DENSITIES)
 });
 const kLaunchPortsSchema = z.object({
-  catalog: z.instanceof(MessagePort).optional(),
-  console: z.instanceof(MessagePort).optional()
+  catalog: z.optional(z.instanceof(MessagePort)),
+  console: z.optional(z.instanceof(MessagePort))
 });
 const kLaunchIdentitySchema = z.object({
-  username: z.string().trim().min(1),
-  peerId: z.string().min(1),
-  avatar: z.string().optional().catch(undefined)
+  username: z.string().check(z.trim(), z.minLength(1)),
+  peerId: z.string().check(z.minLength(1)),
+  avatar: z.catch(z.optional(z.string()), undefined)
 });
 const kReadyMessageSchema = z.object({
   type: z.literal(READY_MESSAGE_TYPE)
@@ -41,9 +41,9 @@ const kReadyMessageSchema = z.object({
 const kLaunchMessageSchema = z.object({
   type: z.literal(LAUNCH_MESSAGE_TYPE),
   target: z.string(),
-  appearance: kAppearanceSchema.optional().catch(undefined),
-  identity: kLaunchIdentitySchema.nullable().catch(null),
-  ports: kLaunchPortsSchema.catch({})
+  appearance: z.catch(z.optional(kAppearanceSchema), undefined),
+  identity: z.catch(z.nullable(kLaunchIdentitySchema), null),
+  ports: z.catch(kLaunchPortsSchema, {})
 });
 const kShellCommandSchema = z.discriminatedUnion("command", [
   z.object({

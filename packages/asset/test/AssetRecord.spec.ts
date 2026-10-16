@@ -72,7 +72,7 @@ describe("AssetRecord", () => {
     assert.equal(record.revision, undefined);
   });
 
-  test("rejects malformed persisted records with a ZodError", () => {
+  test("rejects malformed persisted records with a $ZodError", () => {
     const cases: unknown[] = [
       null,
       [],
@@ -88,7 +88,7 @@ describe("AssetRecord", () => {
     for (const input of cases) {
       assert.throws(
         () => AssetRecord.parse(input),
-        { name: "ZodError" }
+        { name: "$ZodError" }
       );
     }
   });

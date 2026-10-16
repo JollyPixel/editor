@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import * as z from "zod";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import { AssetId } from "./AssetId.ts";
@@ -10,7 +10,7 @@ const kAssetRecordSchema = z.object({
   id: z.string(),
   kind: z.string(),
   source: z.string(),
-  revision: z.string().optional()
+  revision: z.optional(z.string())
 });
 
 export interface AssetRecordData {

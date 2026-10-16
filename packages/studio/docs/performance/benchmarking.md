@@ -56,7 +56,7 @@ $ pnpm run perf:summary perf-results/baseline.json --steps --phase reload
 - `--phases reopen,reload,cold,restart`: the phases measured after `first`, which always runs.
 - `--runs 6`: repetitions. Each run shuffles modes and editors and launches a new browser per editor. A measurement's `run` is its repetition, and profile files end with it.
 - `--label`: tags every measurement, for summaries that mix files.
-- `--storage '{"key":"value"}'`: `localStorage` entries written before any page script runs.
+- `--storage '{"key":"value"}'`: `localStorage` entries written before any page script runs. The harness writes `"studio:prefetch-editors": "off"` first, so the shell does not download the editors' files ahead of the open; set it to `"on"` to measure the prefetch.
 - `--prewarm`: the shell requests a WebGPU adapter as soon as it loads.
 - `--cpu 4`: CDP CPU throttling.
 - `--network fast-4g`: CDP network throttling with the DevTools presets, `fast-4g` (9 Mbit/s, 165 ms) or `slow-4g` (1.6 Mbit/s, 563 ms), both at 90% of the nominal throughput. It starts after the shell's first load, so the unbundled `dev:e2e` shell does not dominate the run; a `reload` reloads the shell throttled. On localhost, transfer size barely shows in `ready`; use it to measure what bytes cost.
