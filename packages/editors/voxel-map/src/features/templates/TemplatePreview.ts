@@ -117,16 +117,15 @@ export class TemplatePreview extends WorkspaceElement {
     well: HTMLDivElement
   ): SquareTurntable<TemplatePreviewSubject> {
     const workspace = this.attached;
-    const renderer = new SquareTurntable(well, new TemplatePreviewSubject({
-      sources: workspace.blockSources,
-      blockRegistry: workspace.view.document.blocks
-    }));
-    renderer.onContextLost = () => {
-      this.#disposeRenderer();
-      this.requestUpdate();
-    };
 
-    return renderer;
+    return new SquareTurntable(
+      well,
+      workspace.previewStage,
+      new TemplatePreviewSubject({
+        sources: workspace.blockSources,
+        blockRegistry: workspace.view.document.blocks
+      })
+    );
   }
 
   #disposeRenderer(): void {

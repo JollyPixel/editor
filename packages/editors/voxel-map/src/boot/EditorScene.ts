@@ -37,6 +37,7 @@ import type {
 import type { VoxelMapWorkspace } from "../workspace/VoxelMapWorkspace.ts";
 import { BlockUsageStore } from "../features/blocks/usage/BlockUsageStore.ts";
 import { BlockRenderSources } from "../features/blocks/rendering/BlockRenderSources.ts";
+import { PreviewStage } from "../features/preview/PreviewStage.ts";
 import { LayerVisibilityStore } from "../features/layers/LayerVisibilityStore.ts";
 import { LocalLayerVisibility } from "../features/layers/LocalLayerVisibility.ts";
 import { MapLayers } from "../features/layers/MapLayers.ts";
@@ -215,6 +216,10 @@ export class EditorScene extends Systems.Scene {
     world.renderer.on("compiled", invalidateShadows);
 
     const blockSources = BlockRenderSources.fromView(view);
+    const previewStage = new PreviewStage({
+      renderer: world.renderer,
+      environmentMap: () => environment.environmentMap
+    });
     const access = new RoomGrants(session.room, MAP_CAPABILITIES)
       .setMaxListeners(kMaxAccessListeners);
     const mapDocument = new MapDocument({
@@ -474,6 +479,7 @@ export class EditorScene extends Systems.Scene {
       mapDocument,
       usage,
       blockSources,
+      previewStage,
       templates,
       placement,
       history,

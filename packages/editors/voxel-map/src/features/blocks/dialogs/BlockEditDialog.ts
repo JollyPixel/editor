@@ -149,6 +149,7 @@ export class BlockEditDialog extends WorkspaceElement {
           </div>
           ${renderShapeColumn({
             open: this._open,
+            stage: workspace.previewStage,
             sources: workspace.blockSources,
             block,
             size: BlockTextures.fromBlock(block).size ?? blocksets.tileSizeFor(blocksetId),

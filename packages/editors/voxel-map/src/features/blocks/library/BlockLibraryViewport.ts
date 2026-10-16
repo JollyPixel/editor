@@ -12,6 +12,7 @@ import {
 import { blockLibraryViewportStyles } from "./BlockLibraryViewport.styles.ts";
 import { BlockLibraryRenderer } from "./BlockLibraryRenderer.ts";
 import type { BlockRenderSources } from "../rendering/BlockRenderSources.ts";
+import type { PreviewStage } from "../../preview/PreviewStage.ts";
 import type {
   BlockGrid,
   BlockCell
@@ -53,6 +54,9 @@ interface MarkedCell {
 @customElement("block-library-viewport")
 export class BlockLibraryViewport extends LitElement {
   static override styles = blockLibraryViewportStyles;
+
+  @property({ attribute: false })
+  declare stage: PreviewStage;
 
   @property({ attribute: false })
   declare sources: BlockRenderSources;
@@ -181,7 +185,11 @@ export class BlockLibraryViewport extends LitElement {
     if (this.#renderer !== null) {
       this.#renderer.selectedId = this.selectedId;
     }
-    if (changed.has("sources") || this.#renderer === null) {
+    if (
+      changed.has("stage") ||
+      changed.has("sources") ||
+      this.#renderer === null
+    ) {
       this.#build();
     }
     else if (changed.has("_laidOut")) {
@@ -515,14 +523,14 @@ export class BlockLibraryViewport extends LitElement {
 
   #build(): void {
     this.#renderer?.dispose();
-    this.#renderer = new BlockLibraryRenderer(this._scroller, this.sources);
+    this.#renderer = new BlockLibraryRenderer(
+      this._scroller,
+      this.stage,
+      this.sources
+    );
     this.#renderer.selectedId = this.selectedId;
     this.#renderer.setBlocks(this._laidOut);
     this.#renderer.onLayoutChange = () => this.#syncGrid();
-    this.#renderer.onContextLost = () => {
-      this.#build();
-      this.#syncGrid();
-    };
   }
 
   #syncGrid(): void {

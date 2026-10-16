@@ -54,8 +54,11 @@ export class OpenRun {
           const bench = await BenchBrowser.launch({
             headless: this.options.headless
           });
+
           try {
-            yield* this.#measureEditor(bench, mode, editor, run);
+            yield* this.#measureEditor(
+              bench, mode, editor, run
+            );
           }
           catch (error) {
             console.error(`${run} ${mode} ${editor.name} failed`, error);
@@ -77,6 +80,7 @@ export class OpenRun {
     const { phases } = this.options;
     const session = await this.#startSession(bench, mode);
     yield await this.#measureOpen(session, editor, "first", run);
+
     if (phases.has("reopen")) {
       await session.studio.closeEditor(editor);
       yield await this.#measureOpen(session, editor, "reopen", run);

@@ -103,6 +103,7 @@ export class BlockCreateDialog extends WorkspaceElement {
           </div>
           ${renderShapeColumn({
             open: this._open,
+            stage: workspace.previewStage,
             sources: workspace.blockSources,
             block: this.#previewBlock,
             size: draft.size ?? blocksets.tileSizeFor(draft.blocksetId),

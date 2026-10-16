@@ -192,6 +192,7 @@ export class BlockLibrary extends WorkspaceElement {
     return html`
       ${cleanable ? this.#renderOrphans(workspace) : nothing}
       <block-library-viewport
+        .stage=${workspace.previewStage}
         .sources=${workspace.blockSources}
         .blocks=${this._shownBlocks}
         .marks=${this._marks}

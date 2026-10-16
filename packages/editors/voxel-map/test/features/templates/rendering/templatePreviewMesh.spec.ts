@@ -12,7 +12,7 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { PREVIEW_FIT_RADIUS } from "../../../../src/features/preview/stage.ts";
+import { PREVIEW_FIT_RADIUS } from "../../../../src/features/preview/PreviewStage.ts";
 import {
   buildTemplatePreviewMesh
 } from "../../../../src/features/templates/rendering/templatePreviewMesh.ts";

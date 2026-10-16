@@ -23,8 +23,11 @@ if (args.plan === undefined) {
 }
 
 const plan = OpenPlan.read(args.plan);
-const editors = (await BenchEditors.read()).select(plan.editors);
+const editors = (
+  await BenchEditors.read()
+).select(plan.editors);
 const results = new ResultsFile(args.out, args);
+
 for (const { round, variant } of plan.schedule(Number(args.rounds))) {
   console.log(`round ${round} ${variant.label}`);
   const run = new OpenRun({
@@ -41,6 +44,7 @@ for (const { round, variant } of plan.schedule(Number(args.rounds))) {
     profileDir: null,
     base: variant.base
   });
+
   for await (const measurement of run.measure()) {
     results.add(measurement);
   }
