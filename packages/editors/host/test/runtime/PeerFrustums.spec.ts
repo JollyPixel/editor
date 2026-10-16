@@ -16,14 +16,11 @@ import { FakeRoom } from "../helpers/rooms.ts";
 interface FrustumsHarness {
   room: FakeRoom;
   frustums: PeerFrustums;
-  keepAlives: Set<() => boolean>;
   invalidations(): number;
-  animating(): boolean;
 }
 
 function createFrustums(): FrustumsHarness {
   const room = new FakeRoom("voxel-map:test");
-  const keepAlives = new Set<() => boolean>();
   let invalidations = 0;
 
   const actor = {
@@ -32,13 +29,6 @@ function createFrustums(): FrustumsHarness {
     world: {
       invalidate: () => {
         invalidations++;
-      },
-      keepAlive: (predicate: () => boolean) => {
-        keepAlives.add(predicate);
-
-        return () => {
-          keepAlives.delete(predicate);
-        };
       },
       sceneManager: {
         scheduleStart: () => void 0,
@@ -56,9 +46,7 @@ function createFrustums(): FrustumsHarness {
   return {
     room,
     frustums,
-    keepAlives,
-    invalidations: () => invalidations,
-    animating: () => [...keepAlives].some((predicate) => predicate())
+    invalidations: () => invalidations
   };
 }
 
@@ -76,17 +64,6 @@ function joinPeer(
 }
 
 describe("PeerFrustums", () => {
-  test("keeps the world rendering while other peers share the room", () => {
-    const { room, animating } = createFrustums();
-    assert.equal(animating(), false);
-
-    joinPeer(room, "peer-a");
-    assert.equal(animating(), true);
-
-    room.peers.delete("peer-a");
-    assert.equal(animating(), false);
-  });
-
   test("wakes the world when a peer joins", () => {
     const { room, invalidations } = createFrustums();
     const before = invalidations();
@@ -96,14 +73,13 @@ describe("PeerFrustums", () => {
     assert.equal(invalidations(), before + 1);
   });
 
-  test("releases its keep-alive and listeners once destroyed", () => {
-    const { room, frustums, keepAlives, invalidations } = createFrustums();
+  test("releases its listeners once destroyed", () => {
+    const { room, frustums, invalidations } = createFrustums();
     frustums.destroy();
     const before = invalidations();
 
     joinPeer(room, "peer-a");
 
-    assert.equal(keepAlives.size, 0);
     assert.equal(invalidations(), before);
   });
 });

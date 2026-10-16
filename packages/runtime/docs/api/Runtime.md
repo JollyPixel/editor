@@ -31,7 +31,7 @@ fails to initialize.
 | `assets` | empty catalog | Catalog and extra loaders. See [asset options](./runtime-assets.md). |
 | `audio` | engine default | Global audio service of the world. |
 | `renderer` | engine defaults | Forwarded to [`ThreeRenderer.create()`](../../../engine/docs/systems/renderer.md). An explicit `output.pixelRatio` or `output.maxPixelRatio` survives `load()`. |
-| `loop` | scheduler defaults | [`FrameSchedulerOptions`](../../../loop/docs/framescheduler.md) of `runtime.loop`. |
+| `loop` | scheduler defaults | [`FrameSchedulerOptions`](../../../loop/docs/framescheduler.md) of `runtime.loop`, plus its [`idleDelay`](../../../loop/docs/gameloop.md#options), `2000` by default. |
 | `logger` | every namespace disabled | Receives the [startup steps](#startup-tracing) and a lost GPU device. |
 | `overlay.container` | tracks the canvas | Element or selector hosting [`runtime.overlay`](./OverlayLayer.md). |
 | `includePerformanceStats` | `false` | `true` or an object mounts the corner HUD. |
@@ -102,10 +102,11 @@ displays. The runtime stays stopped.
 
 ## Rendering on demand
 
-With `renderOnDemand: true`, the loop sleeps once no frame is owed. The
+With `renderOnDemand: true`, the loop sleeps once no frame is owed and two
+seconds (`loop.idleDelay`) have passed since the last frame request. The
 [`GameLoop`](../../../loop/docs/gameloop.md#rendering-on-demand) page explains
-the trailing frames and wake-up delta. While started, the runtime requests
-frames on:
+the trailing frames, idle delay, and wake-up delta. While started, the runtime
+requests frames on:
 
 - keyboard, pointer, wheel, and drag-and-drop events in the page;
 - window `resize`, `focus`, and `blur`;
@@ -114,14 +115,15 @@ frames on:
   compiled get drawn;
 - a `gamepadconnected` event, or a held button or stick on a connected
   gamepad, sampled once per animation frame while idle without rendering;
-- every frame while the pointer hovers the canvas;
 - every frame after which a key, button, or touch is still held, or a
   [`world.keepAlive()`](../../../engine/docs/systems/world.md#rendering-on-demand)
   predicate returns `true`.
 
 Any other change to what is drawn must call
 [`world.invalidate()`](../../../engine/docs/systems/world.md#rendering-on-demand).
-The HUD shows an `IDLE` badge while `idle` is `true`.
+The HUD shows an `IDLE` badge while `idle` is `true`. The runtime calls
+`stats.skipGap()` whenever the loop starts or wakes, so the idle time never
+shows up as an FPS drop.
 
 ## Startup tracing
 

@@ -49,6 +49,9 @@ interface SteadyMeasurement {
   worstFrameMs: number;
   longFrames: number;
   longFramesMs: number;
+  renders: number;
+  wakes: number;
+  idleMs: number;
   heapProfileFile: string;
 }
 
@@ -164,6 +167,9 @@ async function measureEditor(
         worstFrameMs: pacing.worstMs,
         longFrames: longFrames.length,
         longFramesMs: Math.round(longFrames.reduce((total, { duration }) => total + duration, 0)),
+        renders: pacing.renders,
+        wakes: pacing.wakes,
+        idleMs: pacing.idleMs,
         heapProfileFile
       };
       console.log(
@@ -171,6 +177,7 @@ async function measureEditor(
         `${measurement.allocatedMBPerSecond} MB/s ${measurement.allocatedKBPerFrame} KB/frame`,
         `gc ${pauses(measurement.minorGc)}/${pauses(measurement.majorGc)}`,
         `frames ${measurement.frames} worst ${measurement.worstFrameMs}ms`,
+        `renders ${measurement.renders} wakes ${measurement.wakes} idle ${measurement.idleMs}ms`,
         `main ${measurement.taskMsPerSecond}ms/s`
       );
       results.push(measurement);
@@ -212,6 +219,9 @@ function printSummary(): void {
     ["GC ms/s", (item) => round1((item.minorGc.ms + item.majorGc.ms) / (item.elapsedMs / 1000))],
     ["major GCs", (item) => item.majorGc.count],
     ["frames/s", (item) => round1(item.frames / (item.elapsedMs / 1000))],
+    ["renders/s", (item) => round1(item.renders / (item.elapsedMs / 1000))],
+    ["wakes", (item) => item.wakes],
+    ["idle %", (item) => Math.round((item.idleMs * 100) / item.elapsedMs)],
     ["worst frame ms", (item) => item.worstFrameMs],
     ["long frames ms", (item) => item.longFramesMs],
     ["heap growth MB", (item) => item.heapGrowthMB]

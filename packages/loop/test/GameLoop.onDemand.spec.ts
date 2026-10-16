@@ -70,6 +70,17 @@ describe("Loop.GameLoop on demand", () => {
     );
   });
 
+  test("rejects a negative or non-finite idleDelay", () => {
+    assert.throws(
+      () => new GameLoop({ idleDelay: -1 }),
+      RangeError
+    );
+    assert.throws(
+      () => new GameLoop({ idleDelay: Number.POSITIVE_INFINITY }),
+      RangeError
+    );
+  });
+
   test("never sleeps without a keepAlive option", () => {
     const source = new ManualFrameSource();
     const loop = new GameLoop({ source });
@@ -90,6 +101,34 @@ describe("Loop.GameLoop on demand", () => {
     assert.equal(loop.running, true);
     assert.equal(source.running, false);
     assert.deepEqual(events, ["sleep"]);
+  });
+
+  test("keeps rendering for idleDelay after the last activity", () => {
+    const { source, loop, frames, events, start } = setup({
+      trailingRenders: 0,
+      idleDelay: 100
+    });
+    start();
+
+    stepWhileRunning(source, 20);
+
+    assert.equal(frames.at(-1), 112);
+    assert.equal(loop.sleeping, true);
+    assert.deepEqual(events, ["sleep"]);
+  });
+
+  test("an invalidation during idleDelay restarts it", () => {
+    const { source, loop, frames, start } = setup({
+      trailingRenders: 0,
+      idleDelay: 100
+    });
+    start();
+    stepWhileRunning(source, 4);
+
+    loop.invalidate();
+    stepWhileRunning(source, 20);
+
+    assert.equal(frames.at(-1), 192);
   });
 
   test("invalidate() wakes a sleeping loop without the idle gap", () => {

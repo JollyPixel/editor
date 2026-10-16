@@ -142,17 +142,45 @@ export interface FramePacing {
   frames: number;
   worstMs: number;
   elapsedMs: number;
+  renders: number;
+  wakes: number;
+  idleMs: number;
 }
 
+interface PacingState {
+  frames: number;
+  worstMs: number;
+  started: number;
+  last: number;
+  running: boolean;
+  renders: number;
+  wakes: number;
+  idleMs: number;
+  lastRender: number;
+  restore(): void;
+}
+
+interface CanvasContextClass {
+  prototype: object;
+}
+
+type TextureAcquire = (this: unknown) => unknown;
+
 export function startFramePacing(): void {
-  const pacing = {
+  const pacing: PacingState = {
     frames: 0,
     worstMs: 0,
     started: performance.now(),
     last: performance.now(),
-    running: true
+    running: true,
+    renders: 0,
+    wakes: 0,
+    idleMs: 0,
+    lastRender: performance.now(),
+    restore: () => undefined
   };
   Reflect.set(window, "__perfPacing", pacing);
+
   function tick(now: number): void {
     pacing.frames++;
     pacing.worstMs = Math.max(pacing.worstMs, now - pacing.last);
@@ -162,20 +190,53 @@ export function startFramePacing(): void {
     }
   }
   requestAnimationFrame(tick);
+
+  const context = Reflect.get(window, "GPUCanvasContext") as
+    CanvasContextClass | undefined;
+  if (context === undefined) {
+    return;
+  }
+
+  const { prototype } = context;
+  const original = Reflect.get(
+    prototype,
+    "getCurrentTexture"
+  ) as TextureAcquire;
+  function countRender(this: unknown): unknown {
+    const now = performance.now();
+    const gap = now - pacing.lastRender;
+    if (gap > 4) {
+      pacing.renders++;
+      pacing.lastRender = now;
+    }
+    if (gap > 100) {
+      pacing.wakes++;
+      pacing.idleMs += gap;
+    }
+
+    return original.call(this);
+  }
+  Reflect.set(prototype, "getCurrentTexture", countRender);
+  pacing.restore = () => {
+    Reflect.set(prototype, "getCurrentTexture", original);
+  };
 }
 
 export function stopFramePacing(): FramePacing {
-  const pacing = Reflect.get(window, "__perfPacing") as {
-    frames: number;
-    worstMs: number;
-    started: number;
-    running: boolean;
-  };
+  const pacing = Reflect.get(window, "__perfPacing") as PacingState;
   pacing.running = false;
+  pacing.restore();
+  const now = performance.now();
+  const trailingGap = now - pacing.lastRender;
 
   return {
     frames: pacing.frames,
     worstMs: Math.round(pacing.worstMs),
-    elapsedMs: Math.round(performance.now() - pacing.started)
+    elapsedMs: Math.round(now - pacing.started),
+    renders: pacing.renders,
+    wakes: pacing.wakes,
+    idleMs: Math.round(
+      pacing.idleMs + (trailingGap > 100 ? trailingGap : 0)
+    )
   };
 }

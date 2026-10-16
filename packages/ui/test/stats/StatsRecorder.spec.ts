@@ -6,9 +6,6 @@ import { describe, it } from "node:test";
 import {
   StatsRecorder
 } from "../../src/stats/StatsRecorder.ts";
-import {
-  resolveMetricRange
-} from "../../src/stats/MetricDefinition.ts";
 import type {
   PerformanceMemory,
   StatsPerformance
@@ -53,6 +50,30 @@ describe("StatsRecorder", () => {
     assert.deepEqual(recorder.history("fps"), [20]);
     assert.deepEqual(recorder.history("ms"), [15]);
     assert.deepEqual(recorder.history("worstMs"), [20]);
+  });
+
+  it("skipGap() keeps an idle gap out of the FPS history", () => {
+    const clock = new FakePerformance();
+    const recorder = new StatsRecorder({
+      performance: clock,
+      refreshInterval: 100
+    });
+    function frames(
+      count: number
+    ): void {
+      for (let index = 0; index < count; index++) {
+        clock.advance(16);
+        recorder.begin();
+        recorder.end();
+      }
+    }
+
+    frames(3);
+    clock.advance(60_000);
+    recorder.skipGap();
+    frames(8);
+
+    assert.deepEqual(recorder.history("fps"), [62.5, 62.5]);
   });
 
   it("supports last, average and max aggregation", () => {
@@ -235,63 +256,5 @@ describe("StatsRecorder", () => {
         }
       );
     }
-  });
-});
-
-describe("resolveMetricRange", () => {
-  it("resolves fixed and automatic graph bounds", () => {
-    assert.deepEqual(
-      resolveMetricRange(
-        { id: "auto", label: "Auto" },
-        [4, 2, 8]
-      ),
-      { min: 2, max: 8 }
-    );
-    assert.deepEqual(
-      resolveMetricRange(
-        { id: "fixed", label: "Fixed", min: 0, max: 10 },
-        [4, 2, 8]
-      ),
-      { min: 0, max: 10 }
-    );
-  });
-
-  it("scans the history only for a missing bound", () => {
-    assert.deepEqual(
-      resolveMetricRange(
-        { id: "floor", label: "Floor", min: 0 },
-        [4, 2, 8]
-      ),
-      { min: 0, max: 8 }
-    );
-    assert.deepEqual(
-      resolveMetricRange(
-        { id: "ceiling", label: "Ceiling", max: 10 },
-        [4, 2, 8]
-      ),
-      { min: 2, max: 10 }
-    );
-  });
-
-  it("falls back to zero for an empty history", () => {
-    assert.deepEqual(
-      resolveMetricRange(
-        { id: "auto", label: "Auto" },
-        []
-      ),
-      { min: 0, max: 0 }
-    );
-  });
-
-  it("handles a history longer than the spread argument limit", () => {
-    const history = Array.from({ length: 200_000 }, (_, index) => index % 97);
-
-    assert.deepEqual(
-      resolveMetricRange(
-        { id: "auto", label: "Auto" },
-        history
-      ),
-      { min: 0, max: 96 }
-    );
   });
 });

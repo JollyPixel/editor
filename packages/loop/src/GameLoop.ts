@@ -59,6 +59,7 @@ export interface GameLoopOptions extends FrameSchedulerOptions {
   source?: FrameSource;
   keepAlive?: () => boolean;
   trailingRenders?: number;
+  idleDelay?: number;
 }
 
 /**
@@ -75,7 +76,9 @@ export class GameLoop extends Emitter<GameLoopEvents> {
   #timeScale: number;
   #keepAlive: () => boolean;
   #trailingRenders: number;
+  #idleDelay: number;
   #owedRenders = 0;
+  #activeAt: number | null = null;
   #sleeping = false;
 
   constructor(
@@ -86,6 +89,7 @@ export class GameLoop extends Emitter<GameLoopEvents> {
       source,
       keepAlive = () => true,
       trailingRenders = kDefaultTrailingRenders,
+      idleDelay = 0,
       ...schedulerOptions
     } = options;
 
@@ -97,12 +101,21 @@ export class GameLoop extends Emitter<GameLoopEvents> {
         `trailingRenders must be an integer >= 0, got ${trailingRenders}`
       );
     }
+    if (
+      !Number.isFinite(idleDelay) ||
+      idleDelay < 0
+    ) {
+      throw new RangeError(
+        `idleDelay must be a finite number >= 0, got ${idleDelay}`
+      );
+    }
 
     this.scheduler = new FrameScheduler(schedulerOptions);
     this.#source = source ?? new RequestAnimationFrameSource();
     this.#timeScale = this.scheduler.timeScale;
     this.#keepAlive = keepAlive;
     this.#trailingRenders = trailingRenders;
+    this.#idleDelay = idleDelay;
   }
 
   get running(): boolean {
@@ -234,9 +247,12 @@ export class GameLoop extends Emitter<GameLoopEvents> {
 
   #oweRenders(): void {
     this.#owedRenders = this.#trailingRenders + 1;
+    this.#activeAt = null;
   }
 
-  #sleepWhenIdle(): void {
+  #sleepWhenIdle(
+    now: number
+  ): void {
     if (!this.#running || this.#sleeping) {
       return;
     }
@@ -247,7 +263,10 @@ export class GameLoop extends Emitter<GameLoopEvents> {
       return;
     }
 
-    if (this.#owedRenders > 0) {
+    if (
+      this.#owedRenders > 0 ||
+      now - (this.#activeAt ?? now) < this.#idleDelay
+    ) {
       return;
     }
 
@@ -259,6 +278,7 @@ export class GameLoop extends Emitter<GameLoopEvents> {
   readonly #onFrame = (
     now: number
   ): void => {
+    this.#activeAt ??= now;
     const schedule = this.scheduler.advance(now);
     if (schedule.render) {
       this.#owedRenders--;
@@ -298,6 +318,6 @@ export class GameLoop extends Emitter<GameLoopEvents> {
       );
     }
 
-    this.#sleepWhenIdle();
+    this.#sleepWhenIdle(now);
   };
 }

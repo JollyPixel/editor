@@ -51,7 +51,14 @@ Records the elapsed duration and counts the frame. Without a matching
 
 Once `refreshInterval` has elapsed, `end()` also flushes: it aggregates pending
 values, samples pull metrics, appends to each history and notifies
-subscribers. There is no timer and no separate flush method.
+subscribers. There is no timer.
+
+### `skipGap(): void`
+
+Call it when frames stop for a while, such as a loop going to sleep, and before
+they resume. It flushes the frames counted since the last flush, measured up
+to the last `end()`. The next window then starts at the next `end()`, so the
+pause never shows up as a low FPS sample.
 
 ## Built-in metrics
 
