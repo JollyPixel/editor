@@ -66,7 +66,7 @@ export class ViewPanel extends LitElement {
       display: flex;
       flex-direction: column;
       gap: var(--jolly-row-gap, 4px);
-      padding: var(--jolly-space-1, 4px);
+      padding-block: var(--jolly-space-1, 4px);
     }
 
     .background {
@@ -84,6 +84,7 @@ export class ViewPanel extends LitElement {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: var(--jolly-row-gap, 4px) var(--jolly-space-2, 8px);
+      padding-inline-start: var(--jolly-field-inset-start, var(--jolly-space-1, 4px));
     }
   `;
 
@@ -106,7 +107,7 @@ export class ViewPanel extends LitElement {
     const lit = isLit(settings);
 
     return html`
-      <jolly-folder key="view" label="View" .open=${false}>
+      <jolly-folder key="view" label="View" flush .open=${false}>
         <div class="fields">
           <jolly-button-group
             label="Lighting"

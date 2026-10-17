@@ -6,31 +6,9 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import type {
-  ReactiveController,
-  ReactiveControllerHost
-} from "lit";
-
 // Import Internal Dependencies
 import { TextureBusy } from "../../../src/textures/import/TextureBusy.ts";
-
-class TestHost implements ReactiveControllerHost {
-  readonly updateComplete = Promise.resolve(true);
-  updateCount = 0;
-
-  addController(_controller: ReactiveController): void {
-    void _controller;
-  }
-
-  removeController(_controller: ReactiveController): void {
-    void _controller;
-  }
-
-  requestUpdate(): void {
-    this.updateCount++;
-  }
-}
+import { TestHost } from "../../fixtures/host.ts";
 
 function graceDelay(
   t: TestContext

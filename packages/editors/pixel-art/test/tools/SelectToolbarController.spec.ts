@@ -6,32 +6,12 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import {
-  render,
-  type ReactiveController,
-  type ReactiveControllerHost
-} from "lit";
+import { render } from "lit";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import { SelectToolbarController } from "../../src/tools/SelectToolbarController.ts";
-
-class TestHost implements ReactiveControllerHost {
-  readonly updateComplete = Promise.resolve(true);
-  updateCount = 0;
-
-  addController(_controller: ReactiveController): void {
-    void _controller;
-  }
-
-  removeController(_controller: ReactiveController): void {
-    void _controller;
-  }
-
-  requestUpdate(): void {
-    this.updateCount++;
-  }
-}
+import { TestHost } from "../fixtures/host.ts";
 
 type ClipboardOperationResult = Awaited<ReturnType<PixelArtCanvas["copySelection"]>>;
 

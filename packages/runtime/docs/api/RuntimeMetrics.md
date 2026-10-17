@@ -88,3 +88,4 @@ Metrics registered later join it on their own.
 | `hidden` | `false` | Starts hidden. |
 | `collapsible` | `true` | Lets the created pane fold to its header. |
 | `filter` | none | Keeps only the metrics it accepts, later ones included. `(metric) => metric.tile === false` drops what the HUD already cycles. |
+| `signal` | none | `AbortSignal` that unmounts the panel and clears `panel`. Aborted before `mountPanel()` resolves, the mount is dropped and the current panel stays. |

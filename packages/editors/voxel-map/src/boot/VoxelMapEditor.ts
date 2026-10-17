@@ -4,10 +4,7 @@ import {
   type RegistrationHandle
 } from "@jolly-pixel/console";
 import type { Lantern } from "@jolly-pixel/lantern";
-import type {
-  MetricsPanel,
-  Runtime
-} from "@jolly-pixel/runtime";
+import type { Runtime } from "@jolly-pixel/runtime";
 import {
   EditorRuntime,
   archiveConsole,
@@ -39,7 +36,6 @@ import { textures } from "../tours/textures.ts";
 const kCanvas = "#game-container > canvas";
 const kTours = [basics, textures];
 const kPerformanceStorageKey = "voxel-map:performance-hud";
-const kPerformancePaneKey = "performance";
 const kMapKind = voxelMapDocumentKind();
 
 export interface VoxelMapEditorParts {
@@ -50,7 +46,7 @@ export interface VoxelMapEditorParts {
   session: EditorSession;
   target: AssetLease<SyncedVoxelMap>;
   consoleFeatures: RegistrationHandle;
-  metricsPanel: Promise<MetricsPanel>;
+  disposePerformancePane: () => void;
   removeInspectorMetrics: () => void;
   lantern: Lantern;
 }
@@ -140,17 +136,11 @@ export class VoxelMapEditor {
       workspace.view.inspector
     );
 
-    const metricsPanel = logger.step(
-      "metrics",
-      () => runtime.mountMetricsPanel({
-        target: shell.layout ?? undefined,
-        floating: true,
-        key: kPerformancePaneKey,
-        title: "Performance",
-        storageKey: kPerformanceStorageKey,
-        hidden: editorRuntime.widgets.startsHidden("metrics", true)
-      })
-    );
+    const disposePerformancePane = editorRuntime.mountPerformancePane({
+      target: shell.layout ?? undefined,
+      storageKey: kPerformanceStorageKey,
+      logger
+    });
 
     return new VoxelMapEditor({
       runtime,
@@ -174,7 +164,7 @@ export class VoxelMapEditor {
           peers: session.workspace?.peers
         }
       ),
-      metricsPanel,
+      disposePerformancePane,
       removeInspectorMetrics,
       lantern: context.lantern
     });
@@ -183,7 +173,7 @@ export class VoxelMapEditor {
   #shell: EditorShell;
   #target: AssetLease<SyncedVoxelMap>;
   #consoleFeatures: RegistrationHandle;
-  #metricsPanel: MetricsPanel | null = null;
+  #disposePerformancePane: () => void;
   #removeInspectorMetrics: () => void;
   #releaseTours: Array<() => void>;
   #disposed = false;
@@ -205,6 +195,7 @@ export class VoxelMapEditor {
     this.#target = parts.target;
     this.#consoleFeatures = parts.consoleFeatures;
     this.#removeInspectorMetrics = parts.removeInspectorMetrics;
+    this.#disposePerformancePane = parts.disposePerformancePane;
     this.#releaseTours = kTours.map((tour) => parts.lantern.register(tour));
     this.ready = Promise.all([
       parts.target.ready,
@@ -216,20 +207,11 @@ export class VoxelMapEditor {
         parts.lantern.offer(basics);
       }
     }, () => undefined);
-
-    parts.metricsPanel.then((panel) => {
-      if (this.#disposed) {
-        panel.dispose();
-      }
-      else {
-        this.#metricsPanel = panel;
-      }
-    }, () => undefined);
   }
 
   dispose(): void {
     this.#disposed = true;
-    this.#metricsPanel?.dispose();
+    this.#disposePerformancePane();
     this.#removeInspectorMetrics();
     this.#consoleFeatures.unregister();
     for (const release of this.#releaseTours) {

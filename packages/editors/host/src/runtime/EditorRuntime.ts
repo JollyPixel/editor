@@ -19,6 +19,9 @@ import {
   type HostParams
 } from "../params/HostParams.ts";
 
+// CONSTANTS
+const kPerformancePaneKey = "performance";
+
 export interface EditorRuntimeCreateOptions extends RuntimeOptions {
   params?: HostParams;
   /**
@@ -35,6 +38,15 @@ export interface EditorRuntimeCreateOptions extends RuntimeOptions {
 
 export interface EditorRuntimeLoadOptions {
   maxFps?: number;
+}
+
+export interface PerformancePaneOptions {
+  /**
+   * The `jolly-dock-layout` the pane floats in and can dock into.
+   */
+  target?: HTMLElement;
+  storageKey: string;
+  logger: Systems.Logger;
 }
 
 export class EditorRuntime {
@@ -104,6 +116,28 @@ export class EditorRuntime {
       skipLoadingScreen: true,
       maxFps: this.params.maxFps ?? options.maxFps
     });
+  }
+
+  mountPerformancePane(
+    options: PerformancePaneOptions
+  ): () => void {
+    const { target, storageKey, logger } = options;
+    const unmount = new AbortController();
+
+    logger.step(
+      "metrics",
+      () => this.runtime.mountMetricsPanel({
+        target,
+        floating: true,
+        key: kPerformancePaneKey,
+        title: "Performance",
+        storageKey,
+        hidden: this.widgets.startsHidden("metrics", true),
+        signal: unmount.signal
+      })
+    ).catch(() => undefined);
+
+    return () => unmount.abort();
   }
 
   dispose(): void {

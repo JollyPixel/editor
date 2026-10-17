@@ -10,13 +10,17 @@ import assert from "node:assert/strict";
 import type { Systems } from "@jolly-pixel/engine";
 import {
   Runtime,
+  type MetricsPanel,
+  type MetricsPanelOptions,
   type RuntimeLoadOptions,
   type RuntimeOptions
 } from "@jolly-pixel/runtime";
+import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { EditorRuntime } from "#src/runtime/EditorRuntime.ts";
 import { HOST_PARAMS } from "#src/params/HostParams.ts";
+import { captureLogs } from "../helpers/logs.ts";
 
 function recordingRuntime(
   loads: Array<RuntimeLoadOptions>
@@ -145,5 +149,43 @@ describe("EditorRuntime", () => {
 
     assert.equal(loads[0].maxFps, Infinity);
     assert.equal(editorRuntime.samples, undefined);
+  });
+
+  test("mounts a hidden floating performance pane until disposed", () => {
+    const mounts: MetricsPanelOptions[] = [];
+    const runtime: Pick<Runtime, "mountMetricsPanel"> = {
+      mountMetricsPanel: (options = {}) => {
+        mounts.push(options);
+
+        return Promise.withResolvers<MetricsPanel>().promise;
+      }
+    };
+    const target = document.createElement("div");
+
+    const editorRuntime = new EditorRuntime(
+      runtime as Runtime,
+      HOST_PARAMS.read(""),
+      new MemoryStorageAdapter()
+    );
+
+    const dispose = editorRuntime.mountPerformancePane({
+      target,
+      storageKey: "test:performance",
+      logger: captureLogs().logger
+    });
+    const [{ signal, ...options }] = mounts;
+
+    assert.deepEqual(options, {
+      target,
+      floating: true,
+      key: "performance",
+      title: "Performance",
+      storageKey: "test:performance",
+      hidden: true
+    });
+    assert.equal(signal?.aborted, false);
+
+    dispose();
+    assert.equal(signal?.aborted, true);
   });
 });

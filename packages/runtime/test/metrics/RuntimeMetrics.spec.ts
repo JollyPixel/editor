@@ -128,6 +128,38 @@ describe("RuntimeMetrics", () => {
     );
   });
 
+  it("unmounts the panel when its signal aborts", async() => {
+    const { metrics } = createMetrics();
+    const host = document.createElement("div");
+    const controller = new AbortController();
+
+    await metrics.mountPanel({
+      target: host,
+      signal: controller.signal
+    });
+    controller.abort();
+
+    assert.equal(metrics.panel, null);
+    assert.equal(host.childElementCount, 0);
+  });
+
+  it("skips a mount aborted before it resolves and keeps the current panel", async() => {
+    const { metrics } = createMetrics();
+    const host = document.createElement("div");
+    const current = await metrics.mountPanel({ target: host });
+    const controller = new AbortController();
+
+    const mounting = metrics.mountPanel({
+      target: host,
+      signal: controller.signal
+    });
+    controller.abort();
+    await mounting;
+
+    assert.strictEqual(metrics.panel, current);
+    assert.equal(host.childElementCount, 1);
+  });
+
   it("keeps one panel, replacing it on every mount", async() => {
     const { metrics } = createMetrics();
     const host = document.createElement("div");

@@ -73,6 +73,8 @@ export class ShapeField extends LitElement {
     jolly-select {
       flex: 1 1 0;
       min-width: 0;
+
+      --jolly-field-inset-end: 0;
     }
   `;
 

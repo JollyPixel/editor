@@ -4,7 +4,7 @@ import { bootStandalone } from "@jolly-pixel/editor.host";
 // Import Internal Dependencies
 import "./app/paneIcons.ts";
 import "./app/LeftPanel.ts";
-import "./app/RightPanel.ts";
+import "./features/hierarchy/HierarchyPanel.ts";
 import "./features/material/MaterialLibrary.ts";
 import "./features/history/HistoryBar.ts";
 import "./features/view/ViewPanel.ts";

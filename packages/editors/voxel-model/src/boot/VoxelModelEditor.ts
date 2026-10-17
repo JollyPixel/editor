@@ -20,6 +20,7 @@ import { voxelAnimationDocumentKind } from "@jolly-pixel/asset.voxel-animation/c
 import {
   EditorRuntime,
   archiveConsole,
+  runtimeConsole,
   type AssetLease,
   type EditorSession,
   type HostLogger,
@@ -49,6 +50,7 @@ const kCanvas = "#three-renderer canvas";
 const kModelKind = voxelModelDocumentKind();
 const kTextureKind = pixelArtDocumentKind();
 const kAnimationKind = voxelAnimationDocumentKind();
+const kPerformanceStorageKey = "voxel-model:performance-hud";
 
 export type ModelTextureLease = AssetLease<
   PixelDocument,
@@ -65,6 +67,7 @@ export interface VoxelModelEditorParts {
   texture: ModelTextureLease;
   target: AssetLease<ModelDocument>;
   consoleFeatures: RegistrationHandle;
+  disposePerformancePane: () => void;
 }
 
 export class VoxelModelEditor {
@@ -80,6 +83,9 @@ export class VoxelModelEditor {
     void BakedRoomEnvironment.load();
 
     return EditorRuntime.create(kCanvas, {
+      includePerformanceStats: {
+        position: "top-right"
+      },
       focusCanvas: false,
       viewHelper: true,
       renderer: {
@@ -155,6 +161,12 @@ export class VoxelModelEditor {
     );
     shell.adoptWorkspace(workspace);
 
+    const disposePerformancePane = editorRuntime.mountPerformancePane({
+      target: shell.layout,
+      storageKey: kPerformanceStorageKey,
+      logger: context.logger
+    });
+
     return new VoxelModelEditor({
       runtime: editorRuntime.runtime,
       scene,
@@ -167,13 +179,16 @@ export class VoxelModelEditor {
         commands,
         [
           pixelArtConsole,
+          runtimeConsole,
           archiveConsole
         ],
         {
           keyBindingSettings,
-          archives: workspace.archives
+          archives: workspace.archives,
+          runtime: editorRuntime
         }
-      )
+      ),
+      disposePerformancePane
     });
   }
 
@@ -181,6 +196,7 @@ export class VoxelModelEditor {
   #texture: ModelTextureLease;
   #target: AssetLease<ModelDocument>;
   #consoleFeatures: RegistrationHandle;
+  #disposePerformancePane: () => void;
 
   readonly ready: Promise<void>;
   readonly runtime: Runtime;
@@ -199,6 +215,7 @@ export class VoxelModelEditor {
     this.#texture = parts.texture;
     this.#target = parts.target;
     this.#consoleFeatures = parts.consoleFeatures;
+    this.#disposePerformancePane = parts.disposePerformancePane;
     this.ready = Promise.all([
       parts.target.ready,
       parts.scene.ready
@@ -206,6 +223,7 @@ export class VoxelModelEditor {
   }
 
   dispose(): void {
+    this.#disposePerformancePane();
     this.#consoleFeatures.unregister();
     this.#shell.dispose();
     this.#texture.release();

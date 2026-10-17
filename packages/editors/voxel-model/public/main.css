@@ -39,10 +39,21 @@ jolly-pane[key="paint"]::part(content) {
   overflow: hidden;
 }
 
+jolly-pane[key="model"]::part(content),
 jolly-pane[key="material"]::part(content) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+jolly-model-editor-hierarchy {
+  --jolly-folder-gap: var(--jolly-space-1, 4px);
+}
+
+/* The heading still names the pane in the dock menus and its aria labels; only the header text is hidden. */
+jolly-pane[key="timeline"]::part(title),
+jolly-pane[key="timeline"]::part(icon) {
+  display: none;
 }
 
 jolly-model-editor-material-library {
@@ -91,6 +102,13 @@ jolly-dock[hidden] {
   overflow: hidden;
   min-height: 0;
   background: black;
+}
+
+#three-renderer jolly-presence-stack {
+  position: absolute;
+  inset-block-end: 16px;
+  inset-inline-start: 16px;
+  z-index: 5;
 }
 
 #three-renderer canvas {

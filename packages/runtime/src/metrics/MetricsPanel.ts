@@ -63,6 +63,10 @@ export interface MetricsPanelOptions {
    * registered after mounting.
    */
   filter?: (definition: MetricDefinition) => boolean;
+  /**
+   * Unmounts the panel once aborted, even before the mount resolves.
+   */
+  signal?: AbortSignal;
 }
 
 interface PanelItem {

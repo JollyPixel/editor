@@ -49,10 +49,32 @@ export class RuntimeMetrics {
   ): Promise<MetricsPanel> {
     const { MetricsPanel } = await import("./MetricsPanel.ts");
 
-    this.#panel?.dispose();
-    this.#panel = new MetricsPanel(this.#recorder, options);
+    const panel = new MetricsPanel(this.#recorder, options);
+    const { signal } = options;
+    if (signal?.aborted) {
+      panel.dispose();
 
-    return this.#panel;
+      return panel;
+    }
+
+    this.#panel?.dispose();
+    this.#panel = panel;
+    signal?.addEventListener(
+      "abort",
+      () => this.#unmount(panel),
+      { once: true }
+    );
+
+    return panel;
+  }
+
+  #unmount(
+    panel: MetricsPanel
+  ): void {
+    panel.dispose();
+    if (this.#panel === panel) {
+      this.#panel = null;
+    }
   }
 
   addMetric(
