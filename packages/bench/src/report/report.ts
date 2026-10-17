@@ -27,6 +27,10 @@ export interface BenchmarkRow {
   "p99 (ms)"?: number;
   "rme %"?: number;
   samples?: number;
+  /**
+   * Heap bytes allocated per operation, set by `--allocations`.
+   */
+  "B/op"?: number;
 }
 
 export interface BenchmarkReport {

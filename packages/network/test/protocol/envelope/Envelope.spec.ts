@@ -149,6 +149,38 @@ describe("Envelope.parseServer", () => {
   });
 });
 
+describe("Envelope.parseTrustedServer", () => {
+  test("checks only the room and kind of a server envelope", () => {
+    const result = Envelope.parseTrustedServer(JSON.stringify({
+      room: "pixel-draw",
+      kind: "sync",
+      self: "A"
+    }));
+
+    assert.equal(result.ok, true);
+    assert.equal(errorOf(Envelope.parseServer({
+      room: "pixel-draw",
+      kind: "sync",
+      self: "A"
+    })).reason, "malformed");
+  });
+
+  test("rejects invalid JSON, a missing room and an unknown kind", () => {
+    assert.equal(errorOf(Envelope.parseTrustedServer("{")).reason, "invalid-json");
+    for (const value of [
+      null,
+      { kind: "message" },
+      { room: "pixel-draw", kind: "join" }
+    ]) {
+      assert.equal(
+        errorOf(Envelope.parseTrustedServer(value)).reason,
+        "malformed",
+        `expected ${JSON.stringify(value)} to be rejected`
+      );
+    }
+  });
+});
+
 describe("Envelope.stringify", () => {
   test("fails with a descriptive error for a value JSON.stringify can't serialize", () => {
     const circular: Record<string, unknown> = { hello: "world" };

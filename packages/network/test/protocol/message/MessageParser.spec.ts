@@ -126,6 +126,45 @@ describe("MessageParser", () => {
     assert.strictEqual(parser.parse({ action: "other" }).unwrap().event, "anything");
   });
 
+  test("tells variants sharing a tag apart by a nested constant", () => {
+    const parser = new MessageParser(new MessageProtocol({
+      oneOf: ["paint", "erase"].map((action) => {
+        return {
+          title: action,
+          type: "object",
+          properties: {
+            type: { const: "command" },
+            data: {
+              type: "object",
+              properties: {
+                action: { const: action },
+                x: { type: "number" }
+              },
+              required: ["action", "x"]
+            }
+          },
+          required: ["type", "data"]
+        };
+      })
+    }, { discriminator: "type" }));
+
+    assert.strictEqual(
+      parser.parse({ type: "command", data: { action: "erase", x: 1 } }).unwrap().event,
+      "erase"
+    );
+    assert.strictEqual(
+      parser.parse({ type: "command", data: { action: "paint", x: 2 } }).unwrap().event,
+      "paint"
+    );
+    for (const data of [{ action: "erase", x: "one" }, { action: "fill", x: 1 }, { x: 1 }]) {
+      assert.strictEqual(
+        parser.parse({ type: "command", data }).ok,
+        false,
+        `expected ${JSON.stringify(data)} to be rejected`
+      );
+    }
+  });
+
   test("accepts nothing when the protocol declares no message", () => {
     const parser = new MessageParser(MessageProtocol.EMPTY);
 

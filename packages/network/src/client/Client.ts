@@ -49,6 +49,13 @@ export interface ClientOptions {
    */
   socket?: () => ClientSocket;
   reconnect?: boolean | ClientReconnectOptions;
+  /**
+   * Skips JSON prototype-key scrubbing and envelope schema validation on
+   * server messages, checking only their room and kind. Enable it only for
+   * a server you operate; a room's `parser` still validates its messages.
+   * @default false
+   */
+  trustServer?: boolean;
 }
 
 export type ClientEventMap = {
@@ -69,6 +76,7 @@ export class Client extends Emitter<ClientEventMap> {
   #attempt = 0;
   #suspended = false;
   #timer: ReturnType<typeof setTimeout> | null = null;
+  #parse: typeof Envelope.parseServer;
 
   constructor(
     options: ClientOptions = {}
@@ -78,6 +86,9 @@ export class Client extends Emitter<ClientEventMap> {
     this.#logger = options.logger ?? createLogger();
     this.#connect = options.socket ?? connectWebSocket;
     this.#delays = reconnectDelays(options.reconnect ?? true);
+    this.#parse = options.trustServer === true ?
+      Envelope.parseTrustedServer :
+      Envelope.parseServer;
     this.#openSocket();
   }
 
@@ -290,7 +301,7 @@ export class Client extends Emitter<ClientEventMap> {
   #receive(
     raw: unknown
   ): void {
-    const parsed = Envelope.parseServer(raw);
+    const parsed = this.#parse(raw);
     if (!parsed.ok) {
       this.#logger
         .withMetadata({ raw, error: describeEnvelopeParseError(parsed.val) })

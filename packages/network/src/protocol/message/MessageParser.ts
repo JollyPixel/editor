@@ -8,8 +8,10 @@ import {
 
 // Import Internal Dependencies
 import type { MessageProtocol } from "./MessageProtocol.ts";
+import { VariantGroup } from "./VariantGroup.ts";
 import {
   VALIDATOR_OPTIONS,
+  type JSONSchema,
   type ValidationError
 } from "../schema.ts";
 
@@ -32,6 +34,7 @@ interface CompiledVariant<
 > {
   readonly event: string;
   readonly tag: string | null;
+  readonly schema: JSONSchema;
   readonly validator: Validator<TMessage>;
 }
 
@@ -52,9 +55,9 @@ export class MessageParser<
 
   #discriminator: string;
   #unionKeyword: "oneOf" | "anyOf";
-  #byTag = new Map<string, readonly CompiledVariant<TMessage>[]>();
+  #byTag = new Map<string, VariantGroup<CompiledVariant<TMessage>>>();
   #untagged: readonly CompiledVariant<TMessage>[];
-  #union: Validator<TMessage>;
+  #union: Validator<TMessage> | null;
 
   constructor(
     protocol: MessageProtocol
@@ -69,6 +72,7 @@ export class MessageParser<
       return {
         event,
         tag,
+        schema,
         validator: new Validator<TMessage>(
           schema,
           VALIDATOR_OPTIONS
@@ -78,13 +82,19 @@ export class MessageParser<
     this.#untagged = compiled.filter((variant) => variant.tag === null);
     for (const [tag, variants] of Map.groupBy(compiled, (variant) => variant.tag)) {
       if (tag !== null) {
-        this.#byTag.set(tag, [...variants, ...this.#untagged]);
+        this.#byTag.set(tag, new VariantGroup(
+          variants,
+          this.#untagged,
+          this.#discriminator
+        ));
       }
     }
-    this.#union = new Validator<TMessage>(
-      protocol.schema,
-      VALIDATOR_OPTIONS
-    );
+    this.#union = compiled.length === 0 ?
+      null :
+      new Validator<TMessage>(
+        protocol.schema,
+        VALIDATOR_OPTIONS
+      );
   }
 
   parse(
@@ -106,9 +116,15 @@ export class MessageParser<
       };
     }
 
-    return parsed === undefined ?
-      Err(this.#union.validate(payload).errors) :
-      Ok(parsed);
+    if (parsed !== undefined) {
+      return Ok(parsed);
+    }
+
+    return Err(
+      this.#union === null ?
+        [this.#noVariantError()] :
+        this.#union.validate(payload).errors
+    );
   }
 
   #candidatesFor(
@@ -124,9 +140,21 @@ export class MessageParser<
 
     const tag: unknown = Reflect.get(payload, this.#discriminator);
 
-    return typeof tag === "string" ?
-      this.#byTag.get(tag) ?? this.#untagged :
-      this.#untagged;
+    const group = typeof tag === "string" ? this.#byTag.get(tag) : undefined;
+
+    return group?.candidatesFor(payload) ?? this.#untagged;
+  }
+
+  #noVariantError(): ValidationError {
+    return {
+      keyword: this.#unionKeyword,
+      instancePath: "",
+      schemaPath: `#/${this.#unionKeyword}`,
+      params: {
+        variants: 0
+      },
+      message: "accepts no message"
+    };
   }
 
   #ambiguityError(

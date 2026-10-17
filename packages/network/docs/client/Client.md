@@ -22,10 +22,16 @@ interface ClientOptions {
   logger?: Logger;
   socket?: () => ClientSocket;
   reconnect?: boolean | ClientReconnectOptions;
+  trustServer?: boolean;
 }
 ```
 
 `new Client(options?)` enables reconnect by default.
+
+- `trustServer`, off by default, parses server messages with plain
+  `JSON.parse` and checks only their `room` and `kind`. Prototype keys such as
+  `__proto__` are kept, and the envelope schema is skipped. Enable it only for
+  a server you operate. A room's `parser` still validates its payloads.
 
 ### ready
 

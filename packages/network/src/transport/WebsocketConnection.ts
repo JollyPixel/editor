@@ -33,6 +33,7 @@ export interface WebsocketConnectionOptions {
   logger: Logger;
   maxBufferedBytes: number;
   onMessage: (json: string) => Promise<void>;
+  holdWrites: () => void;
 }
 
 export class WebsocketConnection implements ClientHandle {
@@ -42,6 +43,7 @@ export class WebsocketConnection implements ClientHandle {
   #logger: Logger;
   #maxBufferedBytes: number;
   #onMessage: (json: string) => Promise<void>;
+  #holdWrites: () => void;
   #pending = 0;
   #awaitingPong = false;
 
@@ -53,6 +55,7 @@ export class WebsocketConnection implements ClientHandle {
     this.#logger = options.logger;
     this.#maxBufferedBytes = options.maxBufferedBytes;
     this.#onMessage = options.onMessage;
+    this.#holdWrites = options.holdWrites;
   }
 
   send(
@@ -79,6 +82,7 @@ export class WebsocketConnection implements ClientHandle {
       return;
     }
 
+    this.#holdWrites();
     this.#socket.send(json);
   }
 
@@ -90,16 +94,18 @@ export class WebsocketConnection implements ClientHandle {
       this.#socket.pause();
     }
 
-    void this.#onMessage(json).finally(() => {
-      this.#pending--;
-      if (
-        this.#pending <= kResumeAtPendingMessages &&
-        this.#socket.isPaused
-      ) {
-        this.#socket.resume();
-      }
-    });
+    void this.#onMessage(json).then(this.#settle, this.#settle);
   }
+
+  #settle = (): void => {
+    this.#pending--;
+    if (
+      this.#pending <= kResumeAtPendingMessages &&
+      this.#socket.isPaused
+    ) {
+      this.#socket.resume();
+    }
+  };
 
   probe(): void {
     if (this.#awaitingPong) {

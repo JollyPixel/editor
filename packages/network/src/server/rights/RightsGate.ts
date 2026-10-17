@@ -22,6 +22,7 @@ export class RightsGate {
   #table: RightsTable;
   #namespace: string;
   #readOnly: boolean;
+  #resolved = new Map<string, Map<string, Right>>();
 
   constructor(
     table: RightsTable,
@@ -38,6 +39,25 @@ export class RightsGate {
   }
 
   check(
+    role: string,
+    event: string
+  ): Right {
+    let byEvent = this.#resolved.get(role);
+    if (byEvent === undefined) {
+      byEvent = new Map();
+      this.#resolved.set(role, byEvent);
+    }
+
+    let right = byEvent.get(event);
+    if (right === undefined) {
+      right = this.#lookup(role, event);
+      byEvent.set(event, right);
+    }
+
+    return right;
+  }
+
+  #lookup(
     role: string,
     event: string
   ): Right {

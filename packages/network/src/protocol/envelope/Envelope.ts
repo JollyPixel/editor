@@ -2,7 +2,6 @@
 import {
   Ok,
   Err,
-  wrap,
   type Result
 } from "@openally/result";
 import secureJson from "secure-json-parse";
@@ -19,11 +18,22 @@ import {
   type Infer,
   type ValidationError
 } from "../schema.ts";
+import { errorMessage } from "../../errorMessage.ts";
 
 // CONSTANTS
 const kJsonParseOptions: secureJson.ParseOptions = {
   protoAction: "remove",
   constructorAction: "remove"
+};
+const kServerEnvelopeKinds: Record<ServerEnvelope["kind"], true> = {
+  message: true,
+  sync: true,
+  "peer-joined": true,
+  "peer-left": true,
+  "peer-presence": true,
+  "peer-profile": true,
+  denied: true,
+  error: true
 };
 
 export type ClientEnvelope = Infer<typeof clientEnvelopeSchema>;
@@ -45,32 +55,29 @@ interface CompiledValidator {
   ): { readonly errors: readonly ValidationError[]; };
 }
 
-function parseJson(
-  raw: unknown
-): Result<unknown, EnvelopeParseError> {
-  if (typeof raw !== "string") {
-    return Ok(raw);
-  }
-
-  return wrap<unknown, Error>(() => secureJson.parse(raw, kJsonParseOptions))
-    .mapErr((error): EnvelopeParseError => {
-      return {
-        reason: "invalid-json",
-        message: error.message
-      };
-    });
-}
+type EnvelopeGuard<TEnvelope extends Envelope> = (
+  value: unknown
+) => value is TEnvelope;
 
 function envelopeParser<TEnvelope extends Envelope>(
-  validator: CompiledValidator
+  validator: CompiledValidator,
+  parseJson: (text: string) => unknown,
+  isEnvelope: EnvelopeGuard<TEnvelope>
 ): (raw: unknown) => Result<TEnvelope, EnvelopeParseError> {
-  function isEnvelope(
-    value: unknown
-  ): value is TEnvelope {
-    return validator.isValid(value) === true;
-  }
+  return (raw) => {
+    let value = raw;
+    if (typeof raw === "string") {
+      try {
+        value = parseJson(raw);
+      }
+      catch (error) {
+        return Err<EnvelopeParseError>({
+          reason: "invalid-json",
+          message: errorMessage(error)
+        });
+      }
+    }
 
-  return (raw) => parseJson(raw).andThen((value) => {
     if (isEnvelope(value)) {
       return Ok(value);
     }
@@ -79,7 +86,34 @@ function envelopeParser<TEnvelope extends Envelope>(
       reason: "malformed",
       errors: validator.validate(value).errors
     });
-  });
+  };
+}
+
+function validEnvelope<TEnvelope extends Envelope>(
+  validator: CompiledValidator
+): EnvelopeGuard<TEnvelope> {
+  return (value): value is TEnvelope => validator.isValid(value) === true;
+}
+
+function parseSecureJson(
+  text: string
+): unknown {
+  return secureJson.parse(text, kJsonParseOptions);
+}
+
+function isServerEnvelopeShape(
+  value: unknown
+): value is ServerEnvelope {
+  return typeof value === "object" &&
+    value !== null &&
+    typeof Reflect.get(value, "room") === "string" &&
+    Object.hasOwn(kServerEnvelopeKinds, String(Reflect.get(value, "kind")));
+}
+
+export function unknownEnvelopeKind(
+  envelope: never
+): never {
+  throw new Error(`unknown envelope kind in ${JSON.stringify(envelope)}`);
 }
 
 export function describeEnvelopeParseError(
@@ -91,13 +125,30 @@ export function describeEnvelopeParseError(
 }
 
 export const Envelope = {
-  parseClient: envelopeParser<ClientEnvelope>(clientValidator),
-  parseServer: envelopeParser<ServerEnvelope>(serverValidator),
+  parseClient: envelopeParser(
+    clientValidator,
+    parseSecureJson,
+    validEnvelope<ClientEnvelope>(clientValidator)
+  ),
+  parseServer: envelopeParser(
+    serverValidator,
+    parseSecureJson,
+    validEnvelope<ServerEnvelope>(serverValidator)
+  ),
+  parseTrustedServer: envelopeParser(
+    serverValidator,
+    JSON.parse,
+    isServerEnvelopeShape
+  ),
 
   stringify(
     envelope: Envelope
   ): Result<string, string> {
-    return wrap<string, Error>(() => JSON.stringify(envelope))
-      .mapErr((error) => error.message);
+    try {
+      return Ok(JSON.stringify(envelope));
+    }
+    catch (error) {
+      return Err(errorMessage(error));
+    }
   }
 };

@@ -5,6 +5,7 @@ import { PRESENCE_EVENT } from "../../protocol/constants.ts";
 import type { ClientHandle } from "../../transport/ClientHandle.ts";
 import type { PeerIdentity } from "../auth/AuthenticationProvider.ts";
 import type { RightsGate } from "../rights/RightsGate.ts";
+import type { RoomContext } from "../extension/Extension.ts";
 import type { PeerPresence } from "./PeerPresence.ts";
 
 export interface PeerRecord {
@@ -12,6 +13,7 @@ export interface PeerRecord {
   identity: PeerIdentity;
   profile: PeerMetadata;
   presence: PeerPresence;
+  readonly context: RoomContext;
 }
 
 export interface RoomMemberSnapshot {
@@ -126,8 +128,8 @@ export class RoomMembers {
       null :
       new SerializedEnvelope(unreadable);
 
-    for (const [clientId, record] of this.#members) {
-      if (clientId === excludeClientId) {
+    for (const record of this.#members.values()) {
+      if (record.handle.id === excludeClientId) {
         continue;
       }
 

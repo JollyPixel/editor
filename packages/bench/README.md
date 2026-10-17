@@ -100,6 +100,7 @@ pnpm --filter @jolly-pixel/loop bench              # every suite, in path order
 pnpm --filter @jolly-pixel/loop bench scheduler    # matching file paths
 pnpm --filter @jolly-pixel/loop bench --task steady # matching task names
 pnpm --filter @jolly-pixel/loop bench --json       # JSON per suite
+pnpm --filter @jolly-pixel/loop bench --allocations # add a B/op column
 pnpm --filter @jolly-pixel/loop bench --list       # print what would run
 pnpm exec jolly-bench --help
 ```
@@ -115,6 +116,7 @@ the equivalent commands can call `pnpm exec jolly-bench` directly.
 | `--warmup-iterations <n>` | `BENCH_WARMUP_ITERATIONS` | `3` |
 | `--batch <n>` | `BENCH_BATCH` | `100` |
 | `--json` | `BENCH_FORMAT=json` | table output |
+| `--allocations` | `BENCH_ALLOCATIONS=1` | off |
 | `--task <substring>` | `BENCH_TASK` | every task |
 | `--pattern <glob>` | n/a | `bench/**/*.bench.ts` |
 | `--ignore <substring>` | n/a | nothing |
@@ -179,11 +181,19 @@ is useful for tests, but its timings do not represent browser work. A headless
 suite can still count calls such as `getBoundingClientRect()` when the count is
 the behavior under test.
 
-Do not derive bytes per operation from `process.memoryUsage().heapUsed`. The
-value changes at garbage-collection boundaries, and V8 may remove allocations
-from a tight monomorphic loop. Use a heap profile to investigate allocation
-behavior and tests to guard allocation-sensitive contracts such as object
-identity.
+Do not derive bytes per operation from `process.memoryUsage().heapUsed` alone.
+The value drops at every garbage collection. `--allocations` runs each task
+again after sampling, for at least `--iterations` calls and up to 1,000 or the
+`--time` budget, under a `v8.GCProfiler`. It adds the heap each collection
+freed to the heap growth, so a scavenge in the middle no longer hides what was
+allocated. The `B/op` column divides that by the operations per iteration.
+
+The figure is what optimized code allocates: V8 may remove an allocation that
+does not escape a tight loop, and a real caller may not get that benefit.
+Tasks with `beforeEach` or `afterEach` hooks report no `B/op`, because the
+hooks would be counted with the task. Use a heap profile to find where the
+bytes come from, and tests to guard allocation-sensitive contracts such as
+object identity.
 
 ## ✨ Contributors guide
 

@@ -29,6 +29,7 @@ Options:
   --warmup-time <ms>       warmup budget per task
   --warmup-iterations <n>  minimum warmup samples per task
   --batch <n>              calls per iteration for batched tasks
+  --allocations            add a B/op column, measured after sampling
   --pattern <glob>         override the discovery glob
   --ignore <substring>     skip matching files, repeatable
   --cwd <dir>              directory to discover from
@@ -48,6 +49,7 @@ const { values, positionals } = parseArgs({
     "warmup-time": { type: "string" },
     "warmup-iterations": { type: "string" },
     batch: { type: "string" },
+    allocations: { type: "boolean" },
     pattern: { type: "string" },
     ignore: { type: "string", multiple: true, default: [] },
     cwd: { type: "string" },
@@ -85,7 +87,8 @@ try {
       "warmup-iterations",
       values["warmup-iterations"]
     ),
-    batch: optionalNumber("batch", values.batch)
+    batch: optionalNumber("batch", values.batch),
+    allocations: values.allocations
   });
 
   if (files.length === 0) {

@@ -66,6 +66,26 @@ room.send({ hello: "world" });
 Guides: [Getting started](./docs/guides/getting-started.md),
 [Command synchronization](./docs/guides/command-sync.md).
 
+## 📈 Benchmarks
+
+```bash
+$ pnpm --filter @jolly-pixel/network bench
+$ pnpm --filter @jolly-pixel/network bench room --allocations
+$ pnpm --filter @jolly-pixel/network bench:load --scenario command --clients 150
+```
+
+`bench` runs the micro suites in `bench/*.bench.ts` on the shared
+`@jolly-pixel/bench` harness: envelope parsing, message protocol matching,
+room fan-out with and without a rights table, `Server#receive`, and the client
+receive path. `--allocations` adds a `B/op` column.
+
+`bench:load` starts a server in a child process and drives it over real
+WebSockets from worker threads. The `presence`, `command` and `churn`
+scenarios report delivered messages per second, latency percentiles, and the
+server's CPU, event loop utilization, heap and GC pauses. `--help` lists the
+knobs. Treat a run as saturated when the server's event loop utilization nears
+1 or the driver warns about its own; the latencies then include queueing.
+
 ## ✨ Contributors guide
 
 Read the [contributing guide][contributing] before submitting a change.

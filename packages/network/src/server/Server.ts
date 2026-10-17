@@ -4,7 +4,7 @@ import {
   Envelope,
   type ClientEnvelope
 } from "../protocol/envelope/Envelope.ts";
-import { errorMessage } from "./errors.ts";
+import { errorMessage } from "../errorMessage.ts";
 import {
   createLogger,
   type Logger
@@ -35,12 +35,6 @@ import {
   REAUTHENTICATE_CLOSE_CODE,
   REAUTHENTICATE_CLOSE_REASON
 } from "../transport/constants.ts";
-
-interface EnvelopeFields {
-  clientId: string;
-  room?: string;
-  kind?: string;
-}
 
 export interface ServerConnection {
   readonly id: string;
@@ -212,7 +206,7 @@ export class Server {
           return this.#receive(clientId, raw);
         }
 
-        this.#logEnvelope({ clientId }, {
+        this.#logEnvelope(clientId, null, {
           outcome: "dropped",
           reason: "closed connection"
         });
@@ -244,7 +238,7 @@ export class Server {
   ): Promise<void> {
     const parsed = Envelope.parseClient(raw);
     if (!parsed.ok) {
-      this.#logEnvelope({ clientId }, {
+      this.#logEnvelope(clientId, null, {
         outcome: "dropped",
         reason: `malformed envelope: ${describeEnvelopeParseError(parsed.val)}`
       });
@@ -265,23 +259,23 @@ export class Server {
     clientId: string,
     envelope: ClientEnvelope
   ): Promise<void> {
-    const outcome = await this.#dispatcher.dispatch(clientId, envelope)
-      .catch((error): DispatchOutcome => {
-        return {
-          outcome: "dropped",
-          reason: errorMessage(error)
-        };
-      });
+    let outcome: DispatchOutcome;
+    try {
+      outcome = await this.#dispatcher.dispatch(clientId, envelope);
+    }
+    catch (error) {
+      outcome = {
+        outcome: "dropped",
+        reason: errorMessage(error)
+      };
+    }
 
-    this.#logEnvelope({
-      clientId,
-      room: envelope.room,
-      kind: envelope.kind
-    }, outcome);
+    this.#logEnvelope(clientId, envelope, outcome);
   }
 
   #logEnvelope(
-    fields: EnvelopeFields,
+    clientId: string,
+    envelope: ClientEnvelope | null,
     outcome: DispatchOutcome
   ): void {
     const dropped = outcome.outcome === "dropped";
@@ -290,7 +284,11 @@ export class Server {
     }
 
     const wideEvent = this.logger.withMetadata({
-      ...fields,
+      clientId,
+      ...(envelope === null ? {} : {
+        room: envelope.room,
+        kind: envelope.kind
+      }),
       ...outcome
     });
     if (dropped) {

@@ -8,7 +8,7 @@ export class PeerPresence {
   static readonly EMPTY = new PeerPresence();
 
   #values: PeerMetadata = {};
-  #entryLengths = new Map<string, number>();
+  #entries = 0;
   #entriesLength = 0;
 
   get values(): PeerMetadata {
@@ -16,7 +16,7 @@ export class PeerPresence {
   }
 
   get length(): number {
-    const separators = Math.max(this.#entryLengths.size - 1, 0);
+    const separators = Math.max(this.#entries - 1, 0);
 
     return kBracesLength + this.#entriesLength + separators;
   }
@@ -29,22 +29,36 @@ export class PeerPresence {
       ...this.#values,
       ...patch
     };
-    next.#entryLengths = new Map(this.#entryLengths);
+    next.#entries = this.#entries;
     next.#entriesLength = this.#entriesLength;
 
-    for (const [key, value] of Object.entries(patch)) {
-      next.#entriesLength -= next.#entryLengths.get(key) ?? 0;
-      next.#entryLengths.delete(key);
-      if (value === undefined) {
+    for (const key in patch) {
+      if (!Object.hasOwn(patch, key)) {
         continue;
       }
 
-      const entryLength = JSON.stringify(key).length + 1 +
-        JSON.stringify(value).length;
-      next.#entriesLength += entryLength;
-      next.#entryLengths.set(key, entryLength);
+      const previous = Object.hasOwn(this.#values, key) ?
+        this.#values[key] :
+        undefined;
+      if (previous !== undefined) {
+        next.#entries--;
+        next.#entriesLength -= entryLength(key, previous);
+      }
+
+      const value = patch[key];
+      if (value !== undefined) {
+        next.#entries++;
+        next.#entriesLength += entryLength(key, value);
+      }
     }
 
     return next;
   }
+}
+
+function entryLength(
+  key: string,
+  value: unknown
+): number {
+  return JSON.stringify(key).length + 1 + JSON.stringify(value).length;
 }

@@ -3,6 +3,9 @@ import type { ClientHandle } from "../transport/ClientHandle.ts";
 import type { PeerIdentity } from "./auth/AuthenticationProvider.ts";
 import type { PeerMetadata } from "../protocol/types.ts";
 
+// CONSTANTS
+const kSettled = Promise.resolve();
+
 export interface ClientSession {
   handle: ClientHandle;
   identity: PeerIdentity;
@@ -81,6 +84,9 @@ export class ClientSessions {
     clientId: string
   ): void {
     this.#sessions.delete(clientId);
+    if (this.#queues.get(clientId)?.size === 0) {
+      this.#queues.delete(clientId);
+    }
   }
 
   clear(): void {
@@ -99,23 +105,22 @@ export class ClientSessions {
       this.#queues.set(clientId, lanes);
     }
 
-    const previous = lanes.get(lane) ?? Promise.resolve();
-    const next = previous.then(task, task);
+    const next = (lanes.get(lane) ?? kSettled).then(task);
 
-    const tail: Promise<void> = next
-      .catch(() => void 0)
-      .then(() => {
-        if (lanes.get(lane) !== tail) {
-          return;
-        }
-        lanes.delete(lane);
-        if (
-          lanes.size === 0 &&
-          this.#queues.get(clientId) === lanes
-        ) {
-          this.#queues.delete(clientId);
-        }
-      });
+    const settle = (): void => {
+      if (lanes.get(lane) !== tail) {
+        return;
+      }
+      lanes.delete(lane);
+      if (
+        lanes.size === 0 &&
+        !this.#sessions.has(clientId) &&
+        this.#queues.get(clientId) === lanes
+      ) {
+        this.#queues.delete(clientId);
+      }
+    };
+    const tail: Promise<void> = next.then(settle, settle);
     lanes.set(lane, tail);
 
     return next;
