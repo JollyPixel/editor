@@ -60,6 +60,11 @@ export class BlockLibrary extends WorkspaceElement {
       min-height: 0;
     }
 
+    block-create-dialog,
+    block-edit-dialog {
+      position: absolute;
+    }
+
     .problems {
       display: flex;
       flex: 0 0 auto;

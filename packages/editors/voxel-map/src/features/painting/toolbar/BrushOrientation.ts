@@ -29,9 +29,25 @@ const kRotationOptions: JollyOption<RotationMode>[] = [
 export class BrushOrientation extends WorkspaceElement {
   static override styles = css`
     :host {
+      --brush-orientation-height: max(
+        16px,
+        calc(var(--jolly-control-height, 20px) - 4px)
+      );
+
       display: flex;
       align-items: center;
-      gap: var(--jolly-space-1, 4px);
+      gap: 1px;
+      border-radius: var(--jolly-radius-sm, 2px);
+      overflow: hidden;
+    }
+
+    jolly-button-group,
+    jolly-toggle {
+      --jolly-row-height: var(--brush-orientation-height);
+      --jolly-control-height: var(--brush-orientation-height);
+      --jolly-field-inset-start: 0;
+      --jolly-field-inset-end: 0;
+      --jolly-radius-sm: 0;
     }
 
     jolly-button-group {
@@ -39,12 +55,8 @@ export class BrushOrientation extends WorkspaceElement {
       min-width: 0;
     }
 
-    jolly-checkbox {
-      --jolly-label-width: auto;
-      --jolly-label-max-width: none;
-
+    jolly-toggle {
       flex: 0 0 auto;
-      margin-inline-start: auto;
     }
   `;
 
@@ -82,12 +94,11 @@ export class BrushOrientation extends WorkspaceElement {
         .value=${this.#rotation.value}
         @jolly-change=${this.#rotation.commit}
       ></jolly-button-group>
-      <jolly-checkbox
-        align="end"
+      <jolly-toggle
         label="Flip Y"
         .value=${this.#flipY.value}
         @jolly-change=${this.#flipY.commit}
-      ></jolly-checkbox>
+      ></jolly-toggle>
     `;
   }
 }

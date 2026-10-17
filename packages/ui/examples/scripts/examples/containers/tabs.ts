@@ -6,7 +6,10 @@ import type {
   Tab,
   TabStatus
 } from "../../../../src/containers/tabs/Tab.ts";
-import type { Tabs } from "../../../../src/containers/tabs/Tabs.ts";
+import type {
+  Tabs,
+  TabsVariant
+} from "../../../../src/containers/tabs/Tabs.ts";
 import type {
   GalleryExample,
   GalleryOptionValues
@@ -14,6 +17,7 @@ import type {
 
 type TabsOptionKey =
   | "skew"
+  | "line"
   | "vertical"
   | "closable"
   | "badges"
@@ -88,11 +92,21 @@ function buildAddButton(
   return add;
 }
 
+function tabsVariant(
+  options: GalleryOptionValues<TabsOptionKey>
+): TabsVariant {
+  if (options.line) {
+    return "line";
+  }
+
+  return options.skew ? "skew" : "default";
+}
+
 function buildTabs(
   options: GalleryOptionValues<TabsOptionKey>
 ): Tabs {
   const tabs = document.createElement("jolly-tabs");
-  tabs.variant = options.skew ? "skew" : "default";
+  tabs.variant = tabsVariant(options);
   tabs.orientation = options.vertical ? "vertical" : "horizontal";
   tabs.reorderable = options.reorderable;
   if (options.preselected) {
@@ -138,6 +152,9 @@ function buildTabs(
   tabs.addEventListener("jolly-tab-action", (event) => {
     tabs.dataset.action = event.detail.value;
   });
+  tabs.addEventListener("jolly-tab-edit", (event) => {
+    tabs.dataset.edit = event.detail.value;
+  });
 
   return tabs;
 }
@@ -147,6 +164,10 @@ export const TABS_EXAMPLE: GalleryExample<TabsOptionKey> = {
     {
       key: "skew",
       label: "Skew variant"
+    },
+    {
+      key: "line",
+      label: "Line variant"
     },
     {
       key: "vertical",

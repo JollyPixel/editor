@@ -19,8 +19,7 @@ import {
   resolveAmbientTheme,
   resolveThemeColor,
   themeStyles,
-  type ResolvedThemeMode,
-  type TabsVariant
+  type ResolvedThemeMode
 } from "@jolly-pixel/ui";
 import { StandalonePixelHistory } from "@jolly-pixel/asset.pixel-art/client";
 
@@ -67,7 +66,8 @@ import {
   type TextureChangeDetail,
   type TextureCloseRequestDetail,
   type TextureEditRequestDetail,
-  type TextureTabsMode
+  type TextureTabsMode,
+  type TextureTabsVariant
 } from "../textures/TextureTabStrip.ts";
 import "../textures/dialogs/ClearTextureDialog.ts";
 import "../textures/dialogs/ImportTextureDialog.ts";
@@ -102,7 +102,6 @@ export interface PixelDrawTexture {
   readonly id: string;
   readonly name: string;
   readonly tooltip: string;
-  readonly badge: string;
   readonly disabled: boolean;
   readonly canvas: PixelArtCanvas;
 }
@@ -203,7 +202,10 @@ export class PixelDrawPanel extends LitElement {
   declare textureAddLabel: string;
 
   @property({ type: String, attribute: "texture-tabs-variant" })
-  declare textureTabsVariant: TabsVariant;
+  declare textureTabsVariant: TextureTabsVariant;
+
+  @property({ type: Boolean, attribute: "texture-tabs-line" })
+  declare textureTabsLine: boolean;
 
   readonly #status = new TransientStatus(this);
   readonly #textures = new TextureSet(this, {
@@ -269,6 +271,7 @@ export class PixelDrawPanel extends LitElement {
     this.texturesEditable = false;
     this.textureAddLabel = "Add texture";
     this.textureTabsVariant = "default";
+    this.textureTabsLine = false;
   }
 
   get keyBindings(): PixelArtKeyBindings {
@@ -291,7 +294,6 @@ export class PixelDrawPanel extends LitElement {
         id: entry.id,
         name: entry.name,
         tooltip: entry.tooltip,
-        badge: entry.badge,
         disabled: entry.disabled,
         canvas: entry.canvas
       };
@@ -594,6 +596,7 @@ export class PixelDrawPanel extends LitElement {
 
     return html`
       <div class="rail" part="rail">
+        ${this.#tabs.renderLineToggle()}
         <mode-rail
           .mode=${mode}
           .options=${canvas ? readToolOptions(canvas) : DEFAULT_TOOL_OPTIONS}
@@ -701,6 +704,7 @@ declare global {
     "texture-close-request": CustomEvent<TextureCloseRequestDetail>;
     "texture-create-request": CustomEvent<undefined>;
     "texture-edit-request": CustomEvent<TextureEditRequestDetail>;
+    "texture-tabs-line-change": CustomEvent<boolean>;
     "theme-change": CustomEvent<ResolvedThemeMode>;
   }
 }

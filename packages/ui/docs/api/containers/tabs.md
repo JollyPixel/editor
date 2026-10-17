@@ -16,7 +16,7 @@ tab set.
 interface Tabs {
   value: string;
   orientation: "horizontal" | "vertical"; // default "horizontal"
-  variant: "default" | "skew"; // default "default"
+  variant: "default" | "skew" | "line"; // default "default"
   reorderable: boolean;
 }
 ```
@@ -32,15 +32,23 @@ interface TabsEvents {
   "jolly-tab-change": { value: string; }; // user selection
   "jolly-tab-close": { value: string; };
   "jolly-tab-action": { value: string; };
+  "jolly-tab-edit": { value: string; };
   "jolly-tab-reorder": { value: string; index: number; };
 }
 ```
 
 The element never removes or moves a tab itself: the listener does.
 
+- `jolly-tab-edit` asks the host to rename or edit a tab. It fires on a double
+  click, after the first click selected the tab, and on F2 for the focused
+  tab. A disabled tab fires it too without being selected.
+- A double click leaves the tab unfocused, so focus restored to it later, such
+  as by a closing dialog, draws no focus ring. F2 keeps the focus.
+
 ## Keyboard
 
-Home, End and the arrow keys of the orientation move between enabled tabs.
+Home, End and the arrow keys of the orientation move between enabled tabs. F2
+emits `jolly-tab-edit` for the focused tab.
 
 ## Closable tabs
 
@@ -114,6 +122,27 @@ jolly-tabs {
 }
 ```
 
+## Line variant
+
+`variant="line"` shrinks each tab to an unlabelled segment of a thin bar, for
+a horizontal strip that must take almost no height.
+
+- Segments share the strip width, up to a maximum width each.
+- The label, and the `tooltip` under it, show in a tip below the segment on
+  hover or keyboard focus. The label stays the accessible name.
+- Badges, actions, close buttons and status marks are hidden.
+
+```css
+jolly-tabs {
+  --jolly-tab-line-size: 3px; /* bar thickness */
+  --jolly-tab-line-hit: 8px; /* segment height, the pointer target */
+  --jolly-tab-line-gap: 2px;
+  --jolly-tab-line-max-width: 120px;
+  --jolly-tab-line-fill: rgb(128 128 128 / 15%);
+  --jolly-tab-line-fill-hover: #7b828c;
+}
+```
+
 ## Parts
 
 - `strip`: the tab list plus the `list-end` slot.
@@ -123,6 +152,7 @@ jolly-tabs {
 - `action`, `action-selected`: the action button.
 - `close`, `close-selected`: the close button.
 - `modified`, `busy`, `failed`: the status marks.
+- `tip`: the hover label of the line variant.
 
 Tabs size to their label. Stretch them with:
 

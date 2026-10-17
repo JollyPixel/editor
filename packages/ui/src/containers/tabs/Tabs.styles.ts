@@ -126,7 +126,8 @@ export const tabsStyles = css`
     outline: none;
   }
 
-  button:disabled {
+  button:disabled,
+  button[aria-disabled="true"] {
     cursor: default;
   }
 
@@ -325,6 +326,75 @@ export const tabsStyles = css`
     --jolly-control-bg: transparent;
     --jolly-control-bg-hover: transparent;
     --jolly-control-bg-active: transparent;
+  }
+
+  :host([variant="line"]) .list {
+    flex: 1 1 auto;
+    gap: var(--jolly-tab-line-gap, 2px);
+  }
+
+  :host([variant="line"]) .item {
+    min-width: 12px;
+    max-width: var(--jolly-tab-line-max-width, 120px);
+    height: var(--jolly-tab-line-hit, 8px);
+    min-height: 0;
+    flex: 1 1 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  :host([variant="line"]) .item::after {
+    bottom: calc(50% - var(--jolly-tab-line-size, 3px) / 2);
+    height: var(--jolly-tab-line-size, 3px);
+    border-radius: var(--jolly-tab-line-size, 3px);
+    background: var(--jolly-tab-line-fill, ${kFallback.controlBg});
+    pointer-events: none;
+  }
+
+  :host([variant="line"]) .item:hover::after {
+    background: var(--jolly-tab-line-fill-hover, ${kFallback.borderStrong});
+  }
+
+  :host([variant="line"]) .item[data-selected]::after {
+    background: var(--jolly-accent-fill);
+  }
+
+  :host([variant="line"]) .label {
+    padding: 0;
+  }
+
+  :host([variant="line"]) :is(.badge, .marker, .action, .close) {
+    display: none;
+  }
+
+  .tip {
+    position: absolute;
+    z-index: 10;
+    top: calc(100% + 2px);
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 3px 8px;
+    border-radius: var(--jolly-radius-sm, 2px);
+    background: var(--jolly-surface-raised);
+    box-shadow: var(--jolly-shadow-overlay);
+    color: var(--jolly-text, ${kFallback.text});
+    text-align: start;
+    white-space: pre;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
+  }
+
+  .tip-detail {
+    color: var(--jolly-text-muted, ${kFallback.text});
+  }
+
+  .item:hover .tip,
+  .item:has(.label:focus-visible) .tip {
+    opacity: 1;
+    visibility: visible;
   }
 
   .panels {

@@ -81,6 +81,7 @@ export interface ContainerEventMap {
   "jolly-tab-action": JollyTabChangeDetail;
   "jolly-tab-change": JollyTabChangeDetail;
   "jolly-tab-close": JollyTabChangeDetail;
+  "jolly-tab-edit": JollyTabChangeDetail;
   "jolly-tab-reorder": JollyTabReorderDetail;
   "jolly-toggle": JollyToggleDetail;
 }
@@ -117,6 +118,7 @@ declare global {
     "jolly-tab-action": CustomEvent<JollyTabChangeDetail>;
     "jolly-tab-change": CustomEvent<JollyTabChangeDetail>;
     "jolly-tab-close": CustomEvent<JollyTabChangeDetail>;
+    "jolly-tab-edit": CustomEvent<JollyTabChangeDetail>;
     "jolly-tab-reorder": CustomEvent<JollyTabReorderDetail>;
     "jolly-toggle": CustomEvent<JollyToggleDetail>;
   }

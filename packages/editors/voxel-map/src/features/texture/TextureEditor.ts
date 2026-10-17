@@ -27,7 +27,6 @@ import type { AddBlocksetDialog } from "../blocksets/dialogs/AddBlocksetDialog.t
 import type { BlocksetEditDialog } from "../blocksets/dialogs/BlocksetEditDialog.ts";
 import { BlocksetTab } from "./BlocksetTab.ts";
 import {
-  blockCountsByBlockset,
   blocksetTabLabels,
   type BlocksetTabLabels
 } from "./blocksetTabLabels.ts";
@@ -116,6 +115,7 @@ export class TextureEditor extends WorkspaceElement {
       blocksets.subscribe("activeChange", this.#reconcile),
       workspace.state.block.subscribe("change", this.#onBlockChange),
       workspace.access.subscribe("change", this.#requestSync),
+      workspace.state.textureTabs.subscribe("change", this.#requestSync),
       mapDocument.subscribe("blockRegistryChanged", this.#onBlockRegistryChanged)
     ];
   }
@@ -162,10 +162,9 @@ export class TextureEditor extends WorkspaceElement {
 
     const { view, blocksets } = workspace;
     const { entries } = blocksets;
-    const counts = blockCountsByBlockset(workspace.mapDocument.blocks.getAll());
     for (const entry of entries) {
       const blocksetId = entry.id;
-      const labels = blocksetTabLabels(entry, counts.get(blocksetId) ?? 0);
+      const labels = blocksetTabLabels(entry);
       const binding = blocksets.open(blocksetId);
       const tab = this.#tabs.get(blocksetId);
       const placeholder = tab === undefined && binding === undefined &&
@@ -291,7 +290,6 @@ export class TextureEditor extends WorkspaceElement {
     }
 
     this.#followSelectedBlock(false);
-    this.requestUpdate();
   };
 
   #followSelectedBlock(
@@ -377,6 +375,7 @@ export class TextureEditor extends WorkspaceElement {
     }
 
     const addable = workspace.access.current.has("blocksets");
+    const { textureTabs } = workspace.state;
 
     return html`
       ${workspace.blocksets.entries.length === 0 ?
@@ -390,6 +389,10 @@ export class TextureEditor extends WorkspaceElement {
             .uvAccess=${this.uvAccess}
             .texturesAddable=${addable}
             .texturesClosable=${false}
+            .textureTabsLine=${textureTabs.value === "line"}
+            @texture-tabs-line-change=${(event: CustomEvent<boolean>) => {
+              textureTabs.value = event.detail ? "line" : "tabs";
+            }}
           ></pixel-draw-panel>
         `}
       <add-blockset-dialog></add-blockset-dialog>

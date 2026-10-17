@@ -42,8 +42,8 @@ export class TextureEditor {
     label: string
   ): Promise<Locator> {
     await this.panel
-      .getByRole("button", { name: `Edit ${label}` })
-      .click();
+      .getByRole("tab", { name: label, exact: true })
+      .dblclick();
 
     return dialog(this.#page, `Blockset "${label}"`);
   }

@@ -62,7 +62,7 @@ interface TabStatusIndicator {
 
 export type TabsOrientation = "horizontal" | "vertical";
 
-export type TabsVariant = "default" | "skew";
+export type TabsVariant = "default" | "skew" | "line";
 
 @customElement("jolly-tabs")
 export class Tabs extends LitElement {
@@ -142,10 +142,12 @@ export class Tabs extends LitElement {
     index: number
   ): TemplateResult {
     const selected = tab.value === this.value;
+    const line = this.variant === "line";
+    const compact = tab.iconOnly || line;
     const icon = tab.icon === "" ?
       nothing :
       html`<jolly-icon class="icon" name=${tab.icon} aria-hidden="true"></jolly-icon>`;
-    const text = tab.iconOnly ?
+    const text = compact ?
       nothing :
       html`<span class="text">${tab.label}</span>`;
     const marker = tabMarker(tab);
@@ -168,14 +170,15 @@ export class Tabs extends LitElement {
           role="tab"
           aria-controls=${this.#panelId(index)}
           aria-selected=${String(selected)}
-          aria-label=${tab.iconOnly ? tab.label : nothing}
+          aria-label=${compact ? tab.label : nothing}
           aria-description=${tabDescription(tab)}
           aria-busy=${tab.status === "busy" ? "true" : nothing}
+          aria-disabled=${tab.disabled ? "true" : nothing}
           tabindex=${selected ? "0" : "-1"}
-          ?disabled=${tab.disabled}
-          title=${tab.tooltip || (tab.iconOnly ? tab.label : nothing)}
+          title=${tabTitle(tab, line)}
           data-index=${index}
           @click=${this.#onSelect}
+          @dblclick=${this.#onDoubleClick}
           @mousedown=${this.#onMouseDown}
           @auxclick=${this.#onAuxClick}
           @pointerdown=${this.#onPointerDown}
@@ -183,6 +186,7 @@ export class Tabs extends LitElement {
           nothing :
           html`<span class="badge" part="badge">${tab.badge}</span>`
         }${tab.closable ? nothing : marker}</button>
+        ${line ? lineTip(tab) : nothing}
         ${tab.action === "" ? nothing : html`
           <button
             class="action"
@@ -360,14 +364,7 @@ export class Tabs extends LitElement {
   #onSelect = (
     event: MouseEvent
   ) => {
-    if (!isButtonElement(event.currentTarget)) {
-      return;
-    }
-
-    const index = Number(
-      event.currentTarget.dataset.index
-    );
-    this.#selectIndex(index, true);
+    this.#selectIndex(tabIndex(event.currentTarget), true);
   };
 
   #onMouseDown = (
@@ -406,11 +403,7 @@ export class Tabs extends LitElement {
     event: MouseEvent
   ) => {
     event.stopPropagation();
-    if (!isButtonElement(event.currentTarget)) {
-      return;
-    }
-
-    const tab = this._tabs[Number(event.currentTarget.dataset.index)];
+    const tab = this._tabs[tabIndex(event.currentTarget)];
     if (tab !== undefined && tab.action !== "") {
       emitContainerEvent(
         this,
@@ -420,14 +413,32 @@ export class Tabs extends LitElement {
     }
   };
 
+  #onDoubleClick = (
+    event: MouseEvent
+  ) => {
+    if (isButtonElement(event.currentTarget)) {
+      event.currentTarget.blur();
+    }
+    this.#requestEdit(event.currentTarget);
+  };
+
+  #requestEdit(
+    target: EventTarget | null
+  ): void {
+    const tab = this._tabs[tabIndex(target)];
+    if (tab !== undefined) {
+      emitContainerEvent(
+        this,
+        "jolly-tab-edit",
+        { value: tab.value }
+      );
+    }
+  }
+
   #closableIndex(
     event: MouseEvent
   ): number {
-    if (!isButtonElement(event.currentTarget)) {
-      return -1;
-    }
-
-    const index = Number(event.currentTarget.dataset.index);
+    const index = tabIndex(event.currentTarget);
     const tab = this._tabs[index];
 
     return tab !== undefined && tab.closable && !tab.disabled ? index : -1;
@@ -446,6 +457,13 @@ export class Tabs extends LitElement {
   #onKeyDown = (
     event: KeyboardEvent
   ) => {
+    if (event.key === "F2") {
+      event.preventDefault();
+      this.#requestEdit(event.target);
+
+      return;
+    }
+
     const current = this._tabs.findIndex(
       (tab) => tab.value === this.value
     );
@@ -508,6 +526,37 @@ function tabParts(
   }
 
   return parts.join(" ");
+}
+
+function tabIndex(
+  target: EventTarget | null
+): number {
+  return isButtonElement(target) ? Number(target.dataset.index) : -1;
+}
+
+function tabTitle(
+  tab: Tab,
+  line: boolean
+): string | typeof nothing {
+  if (line) {
+    return nothing;
+  }
+
+  return tab.tooltip || (tab.iconOnly ? tab.label : nothing);
+}
+
+function lineTip(
+  tab: Tab
+): TemplateResult {
+  const detail = tab.tooltip === "" ?
+    nothing :
+    html`<span class="tip-detail">${tab.tooltip}</span>`;
+
+  return html`
+    <span class="tip" part="tip" aria-hidden="true">
+      <span class="tip-label">${tab.label}</span>${detail}
+    </span>
+  `;
 }
 
 function tabMarker(

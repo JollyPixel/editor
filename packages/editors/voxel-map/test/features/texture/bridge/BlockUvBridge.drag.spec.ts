@@ -45,7 +45,7 @@ function setup(
   engine.view.document.blocks.register(
     makeBlock(1, { col: 0, row: 0, blocksetId: "atlas" })
   );
-  engine.bridgeOptions.uvSync.mode = mode;
+  engine.bridgeOptions.uvSync.value = mode;
   const uv = makeUv();
   const bridge = new BlockUvBridge(uv, engine.view, engine.bridgeOptions);
   bridge.activateBlockset(blocksetSlot("atlas"), 16);
@@ -87,7 +87,7 @@ describe("BlockUvBridge / region-dragging in live mode", () => {
       makeBlock(2, { col: 1, row: 0, blocksetId: "atlas" })
     );
     const uv = makeUv();
-    engine.bridgeOptions.uvSync.mode = "live";
+    engine.bridgeOptions.uvSync.value = "live";
     const bridge = new BlockUvBridge(uv, engine.view, engine.bridgeOptions);
     bridge.activateBlockset(blocksetSlot("atlas"), 16);
     engine.dirtyReasons.length = 0;
@@ -216,7 +216,7 @@ describe("BlockUvBridge / region-dragging in commit mode", () => {
   it("follows a switch to live mode on the next drag", () => {
     const { view, uv, bridgeOptions, bridge } = setup();
     try {
-      bridgeOptions.uvSync.mode = "live";
+      bridgeOptions.uvSync.value = "live";
       uv.previewMove("block-1", { x: 16, y: 0, width: 16, height: 16 });
       runFrame();
 

@@ -28,14 +28,14 @@ export interface BlockUvBridgeOptions {
   block: BlockSelection;
   mapDocument: MapDocumentSignals;
   blocks?: Pick<BlockWriter, "defineBlock">;
-  uvSync: Pick<UvSyncStore, "mode">;
+  uvSync: Pick<UvSyncStore, "value">;
 }
 
 export class BlockUvBridge {
   readonly #uv: UVMap;
   readonly #view: VoxelView;
   readonly #blocks: Pick<BlockWriter, "defineBlock">;
-  readonly #uvSync: Pick<UvSyncStore, "mode">;
+  readonly #uvSync: Pick<UvSyncStore, "value">;
   readonly #selection: BlockUvSelectionSync;
   readonly #runLocalRestore: <T>(fn: () => T) => T;
   #regions: SlotRegionIds | null = null;
@@ -220,7 +220,7 @@ export class BlockUvBridge {
 
   readonly #onRegionDragging: UVMapListener<"region-dragging"> = ({ region }) => {
     if (
-      this.#uvSync.mode !== "live" ||
+      this.#uvSync.value !== "live" ||
       this.#rebuilding ||
       !this.#resolveBlock(region.id)
     ) {

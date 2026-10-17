@@ -141,7 +141,6 @@ export class TextureSet {
       id,
       name,
       tooltip = "",
-      badge = "",
       disabled = false,
       access = PIXEL_ART_CAPABILITIES.full,
       ...canvasOptions
@@ -178,7 +177,6 @@ export class TextureSet {
       id,
       name,
       tooltip,
-      badge,
       disabled,
       access,
       host,
