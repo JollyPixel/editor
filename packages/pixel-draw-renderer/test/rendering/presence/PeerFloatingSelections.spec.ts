@@ -12,7 +12,7 @@ import {
 } from "#src/rendering/presence/PeerFloatingSelections.ts";
 import {
   canvasPixels,
-  mockContextOf,
+  contextOf,
   readPixel
 } from "../../fixtures/canvas.ts";
 import { makeCanvas } from "../../helpers/dom.ts";
@@ -46,7 +46,7 @@ describe("PeerFloatingSelections — set + draw", () => {
     ghosts.set("peer-A", state);
 
     const dest = makeCanvas(10);
-    ghosts.draw(mockContextOf(dest).asRenderingContext());
+    ghosts.draw(contextOf(dest));
 
     assert.deepStrictEqual(
       readPixel(canvasPixels(dest), { x: 5, y: 5 }, 10),
@@ -82,7 +82,7 @@ describe("PeerFloatingSelections — set + draw", () => {
 
     const dest = makeCanvas(10);
     ghosts.draw(
-      mockContextOf(dest).asRenderingContext()
+      contextOf(dest)
     );
 
     assert.deepStrictEqual(
@@ -114,10 +114,10 @@ describe("PeerFloatingSelections — set + draw", () => {
     ghosts.set("peer-A", state);
 
     const dest = makeCanvas(10);
-    const destCtx = mockContextOf(dest);
+    const destCtx = contextOf(dest);
     destCtx.fillStyle = "#00ff00";
     destCtx.fillRect(0, 0, 10, 10);
-    ghosts.draw(destCtx.asRenderingContext());
+    ghosts.draw(destCtx);
 
     assert.deepStrictEqual(
       readPixel(canvasPixels(dest), { x: 0, y: 0 }, 10),
@@ -177,7 +177,7 @@ describe("PeerFloatingSelections — set + draw", () => {
     );
 
     const dest = makeCanvas(10);
-    ghosts.draw(mockContextOf(dest).asRenderingContext());
+    ghosts.draw(contextOf(dest));
 
     assert.deepStrictEqual(
       readPixel(canvasPixels(dest), { x: 6, y: 6 }, 10),
@@ -236,7 +236,7 @@ describe("PeerFloatingSelections — set + draw", () => {
 
     const dest = makeCanvas(10);
     ghosts.draw(
-      mockContextOf(dest).asRenderingContext()
+      contextOf(dest)
     );
 
     assert.deepStrictEqual(
@@ -260,7 +260,7 @@ describe("PeerFloatingSelections — set + draw", () => {
     ghosts.set("peer-A", { ...state, mask: [false, true] });
 
     const dest = makeCanvas(10);
-    ghosts.draw(mockContextOf(dest).asRenderingContext());
+    ghosts.draw(contextOf(dest));
 
     assert.deepStrictEqual(readPixel(canvasPixels(dest), { x: 5, y: 5 }, 10), [0, 0, 0, 0]);
     assert.deepStrictEqual(readPixel(canvasPixels(dest), { x: 6, y: 5 }, 10), [0, 0, 255, 255]);

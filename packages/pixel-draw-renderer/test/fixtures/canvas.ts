@@ -1,370 +1,101 @@
 // Import Third-party Dependencies
+import type { Window } from "happy-dom";
 import {
-  parseColor,
-  toRGBA8
-} from "@jolly-pixel/color";
+  Canvas,
+  Image
+} from "skia-canvas";
 
-function parseCSSColor(
-  color: string
-): [number, number, number, number] {
-  const parsed = parseColor(color);
-  if (parsed === null) {
-    return [0, 0, 0, 255];
-  }
+// CONSTANTS
+const kDefaultCanvasSize = {
+  width: 300,
+  height: 150
+};
 
-  const {
-    r,
-    g,
-    b,
-    a
-  } = toRGBA8(parsed);
+type DrawImage = (
+  image: unknown,
+  ...coords: number[]
+) => void;
 
-  return [r, g, b, a];
-}
-
-function isCanvasSource(
-  source: unknown
-): source is HTMLCanvasElement {
-  return typeof (
-    source as { getContext?: unknown; }
-  ).getContext === "function";
-}
-
-class MockImageData {
-  data: Uint8ClampedArray;
-  width: number;
-  height: number;
-
-  constructor(
-    width: number,
-    height: number
-  ) {
-    this.width = width;
-    this.height = height;
-    this.data = new Uint8ClampedArray(
-      width * height * 4
-    );
-  }
-}
-
-export class MockCanvas2DContext {
-  fillStyle = "#000000";
-  globalCompositeOperation: GlobalCompositeOperation = "source-over";
-  imageSmoothingEnabled = false;
-  putImageDataCallCount = 0;
-  drawImageCallCount = 0;
-  readonly canvas: HTMLCanvasElement;
-
-  #pixels: Uint8ClampedArray;
-  #width: number;
-  #height: number;
-  #compositeStack: GlobalCompositeOperation[] = [];
-
-  constructor(
-    canvas: HTMLCanvasElement
-  ) {
-    this.canvas = canvas;
-    this.#width = canvas.width;
-    this.#height = canvas.height;
-    this.#pixels = new Uint8ClampedArray(
-      this.#width * this.#height * 4
-    );
-  }
-
-  get pixels(): Uint8ClampedArray {
-    this.#syncSize();
-
-    return this.#pixels;
-  }
-
-  asRenderingContext(): CanvasRenderingContext2D {
-    return this as unknown as CanvasRenderingContext2D;
-  }
-
-  #syncSize(): void {
-    if (
-      this.canvas.width === this.#width &&
-      this.canvas.height === this.#height
-    ) {
-      return;
-    }
-    this.#width = this.canvas.width;
-    this.#height = this.canvas.height;
-    this.#pixels = new Uint8ClampedArray(
-      this.#width * this.#height * 4
-    );
-  }
-
-  setTransform = (..._args: unknown[]): void => undefined;
-  beginPath = (): void => undefined;
-  save(): void {
-    this.#compositeStack.push(this.globalCompositeOperation);
-  }
-  restore(): void {
-    const compositeOperation = this.#compositeStack.pop();
-    if (compositeOperation !== undefined) {
-      this.globalCompositeOperation = compositeOperation;
-    }
-  }
-  clip = (): void => undefined;
-  rect = (..._args: unknown[]): void => undefined;
-
-  drawImage(
-    image: unknown,
-    ...args: number[]
-  ): void {
-    this.drawImageCallCount++;
-    if (!isCanvasSource(image)) {
-      return;
-    }
-
-    const srcPixels = mockContextOf(image).pixels;
-    const srcWidth = image.width;
-
-    let sx = 0;
-    let sy = 0;
-    let sw = image.width;
-    let sh = image.height;
-    let dx: number;
-    let dy: number;
-    let dw: number;
-    let dh: number;
-
-    if (args.length === 2) {
-      [dx, dy] = args;
-      dw = sw;
-      dh = sh;
-    }
-    else if (args.length === 4) {
-      [dx, dy, dw, dh] = args;
-    }
-    else if (args.length === 8) {
-      [sx, sy, sw, sh, dx, dy, dw, dh] = args;
-    }
-    else {
-      return;
-    }
-
-    this.#syncSize();
-    const destPixels = this.#pixels;
-    const destWidth = this.#width;
-    const destHeight = this.#height;
-
-    for (let py = 0; py < dh; py++) {
-      const destY = Math.floor(dy) + py;
-      if (destY < 0 || destY >= destHeight) {
-        continue;
-      }
-      const srcY = sy + Math.floor((py / dh) * sh);
-
-      for (let px = 0; px < dw; px++) {
-        const destX = Math.floor(dx) + px;
-        if (destX < 0 || destX >= destWidth) {
-          continue;
-        }
-        const srcX = sx + Math.floor((px / dw) * sw);
-
-        const srcIdx = (srcY * srcWidth + srcX) * 4;
-        const destIdx = (destY * destWidth + destX) * 4;
-        this.#compositePixel(destPixels, destIdx, srcPixels, srcIdx);
-      }
-    }
-  }
-
-  #compositePixel(
-    destPixels: Uint8ClampedArray,
-    destIdx: number,
-    srcPixels: Uint8ClampedArray,
-    srcIdx: number
-  ): void {
-    const srcAlpha = srcPixels[srcIdx + 3] / 255;
-    const destAlpha = destPixels[destIdx + 3] / 255;
-
-    if (this.globalCompositeOperation === "destination-out") {
-      const outAlpha = destAlpha * (1 - srcAlpha);
-      destPixels[destIdx + 3] = Math.round(outAlpha * 255);
-      if (outAlpha === 0) {
-        destPixels[destIdx] = 0;
-        destPixels[destIdx + 1] = 0;
-        destPixels[destIdx + 2] = 0;
-      }
-
-      return;
-    }
-
-    const outAlpha = srcAlpha + destAlpha * (1 - srcAlpha);
-    if (outAlpha === 0) {
-      destPixels[destIdx] = 0;
-      destPixels[destIdx + 1] = 0;
-      destPixels[destIdx + 2] = 0;
-      destPixels[destIdx + 3] = 0;
-
-      return;
-    }
-
-    for (let channel = 0; channel < 3; channel++) {
-      const src = srcPixels[srcIdx + channel];
-      const dest = destPixels[destIdx + channel];
-      destPixels[destIdx + channel] = Math.round(
-        (
-          src * srcAlpha +
-          dest * destAlpha * (1 - srcAlpha)
-        ) / outAlpha
-      );
-    }
-    destPixels[destIdx + 3] = Math.round(outAlpha * 255);
-  }
-
-  clearRect(
-    x: number,
-    y: number,
-    width: number,
-    height: number
-  ): void {
-    this.#syncSize();
-    const minX = Math.max(0, x);
-    const minY = Math.max(0, y);
-    const maxX = Math.min(x + width, this.#width);
-    const maxY = Math.min(y + height, this.#height);
-
-    for (let py = minY; py < maxY; py++) {
-      for (let px = minX; px < maxX; px++) {
-        const index = (py * this.#width + px) * 4;
-        this.#pixels.fill(0, index, index + 4);
-      }
-    }
-  }
-
-  fillRect(
-    x: number,
-    y: number,
-    width: number,
-    height: number
-  ): void {
-    this.#syncSize();
-    const [r, g, b, a] = parseCSSColor(this.fillStyle);
-    const pixels = this.#pixels;
-    const cw = this.#width;
-    const ch = this.#height;
-
-    for (let py = Math.max(0, y); py < Math.min(y + height, ch); py++) {
-      for (let px = Math.max(0, x); px < Math.min(x + width, cw); px++) {
-        const idx = (py * cw + px) * 4;
-
-        pixels[idx] = r;
-        pixels[idx + 1] = g;
-        pixels[idx + 2] = b;
-        pixels[idx + 3] = a;
-      }
-    }
-  }
-
-  createImageData(
-    width: number,
-    height: number
-  ): MockImageData {
-    return new MockImageData(width, height);
-  }
-
-  getImageData(
-    x: number,
-    y: number,
-    width: number,
-    height: number
-  ): MockImageData {
-    this.#syncSize();
-    const result = new MockImageData(width, height);
-    const pixels = this.#pixels;
-    const cw = this.#width;
-
-    for (let py = 0; py < height; py++) {
-      for (let px = 0; px < width; px++) {
-        const srcIdx = ((y + py) * cw + (x + px)) * 4;
-        const dstIdx = (py * width + px) * 4;
-
-        result.data[dstIdx] = pixels[srcIdx] ?? 0;
-        result.data[dstIdx + 1] = pixels[srcIdx + 1] ?? 0;
-        result.data[dstIdx + 2] = pixels[srcIdx + 2] ?? 0;
-        result.data[dstIdx + 3] = pixels[srcIdx + 3] ?? 0;
-      }
-    }
-
-    return result;
-  }
-
-  putImageData(
-    imageData: MockImageData,
-    x: number,
-    y: number
-  ): void {
-    this.putImageDataCallCount++;
-    this.#syncSize();
-    const pixels = this.#pixels;
-    const cw = this.#width;
-    const ch = this.#height;
-
-    for (let py = 0; py < imageData.height; py++) {
-      for (let px = 0; px < imageData.width; px++) {
-        const dstX = x + px;
-        const dstY = y + py;
-
-        if (
-          dstX < 0 || dstX >= cw ||
-          dstY < 0 || dstY >= ch
-        ) {
-          continue;
-        }
-
-        const srcIdx = (py * imageData.width + px) * 4;
-        const dstIdx = (dstY * cw + dstX) * 4;
-        pixels[dstIdx] = imageData.data[srcIdx];
-        pixels[dstIdx + 1] = imageData.data[srcIdx + 1];
-        pixels[dstIdx + 2] = imageData.data[srcIdx + 2];
-        pixels[dstIdx + 3] = imageData.data[srcIdx + 3];
-      }
-    }
-  }
-}
-
-export function installCanvasMock(
-  doc: Document
+export function installSkiaCanvas(
+  window: Window
 ): void {
-  const createElement = doc.createElement.bind(doc);
-  Object.assign(doc, {
-    createElement(
-      tagName: string,
-      options?: ElementCreationOptions
-    ) {
-      const element = createElement(
-        tagName,
-        options
-      );
-      if (tagName.toLowerCase() === "canvas") {
-        const context = new MockCanvas2DContext(
-          element as HTMLCanvasElement
-        );
-        Object.assign(element, {
-          getContext: (type: string) => (
-            type === "2d" ? context : null
-          )
-        });
-      }
+  const surfaces = new WeakMap<object, Canvas>();
 
-      return element;
+  function surfaceOf(
+    element: object
+  ): Canvas {
+    let surface = surfaces.get(element);
+    if (surface === undefined) {
+      surface = new Canvas(
+        kDefaultCanvasSize.width,
+        kDefaultCanvasSize.height,
+        { gpu: false }
+      );
+      drawElementsThroughSurfaces(surface.getContext("2d"));
+      surfaces.set(element, surface);
+    }
+
+    return surface;
+  }
+
+  function drawElementsThroughSurfaces(
+    context: object
+  ): void {
+    const drawImage = (context as { drawImage: DrawImage; }).drawImage.bind(
+      context
+    );
+
+    Object.assign(context, {
+      drawImage(
+        image: unknown,
+        ...coords: number[]
+      ): void {
+        if (image instanceof window.HTMLImageElement) {
+          return;
+        }
+
+        drawImage(
+          image instanceof window.HTMLCanvasElement ? surfaceOf(image) : image,
+          ...coords
+        );
+      }
+    });
+  }
+
+  Object.defineProperties(window.HTMLCanvasElement.prototype, {
+    width: {
+      configurable: true,
+      get(this: object) {
+        return surfaceOf(this).width;
+      },
+      set(this: object, value: number) {
+        surfaceOf(this).width = value;
+      }
+    },
+    height: {
+      configurable: true,
+      get(this: object) {
+        return surfaceOf(this).height;
+      },
+      set(this: object, value: number) {
+        surfaceOf(this).height = value;
+      }
+    },
+    getContext: {
+      configurable: true,
+      value(this: object, type: string) {
+        return type === "2d" ? surfaceOf(this).getContext("2d") : null;
+      }
     }
   });
 }
 
-export function mockContextOf(
+export function contextOf(
   canvas: HTMLCanvasElement
-): MockCanvas2DContext {
-  const context = canvas.getContext(
-    "2d"
-  ) as unknown as MockCanvas2DContext | null;
+): CanvasRenderingContext2D {
+  const context = canvas.getContext("2d");
   if (context === null) {
-    throw new Error(
-      "canvas was not created through installCanvasMock"
-    );
+    throw new Error("canvas has no 2D context");
   }
 
   return context;
@@ -373,7 +104,22 @@ export function mockContextOf(
 export function canvasPixels(
   canvas: HTMLCanvasElement
 ): Uint8ClampedArray {
-  return mockContextOf(canvas).pixels;
+  return contextOf(canvas).getImageData(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  ).data;
+}
+
+export function decodedImage(
+  canvas: HTMLCanvasElement
+): HTMLImageElement {
+  const surface = contextOf(canvas).canvas as unknown as Canvas;
+
+  return new Image(
+    surface.toBufferSync("png")
+  ) as unknown as HTMLImageElement;
 }
 
 export function readPixel(

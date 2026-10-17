@@ -942,6 +942,9 @@ importers:
       '@jolly-pixel/history':
         specifier: workspace:*
         version: link:../history
+      skia-canvas:
+        specifier: 4.0.0
+        version: 4.0.0(debug@4.4.3(supports-color@10.2.2))(supports-color@10.2.2)
 
   packages/resize-handle: {}
 
@@ -2556,6 +2559,50 @@ packages:
     resolution: {integrity: sha512-tlqY9xq5ukxTUZBmoOp+m61cqwQD5pHJtFY3Mn8CA8ps6yghLH/Hw8UPdqg4OLmFW3IFlcXnQNmo/dh8HzXYIQ==}
     engines: {node: '>=18'}
 
+  '@skia-canvas/darwin-arm64@4.0.0':
+    resolution: {integrity: sha512-0THbyAdihsVc+C8dB44BWDUxYPs8g6XY19Az77Q6F3ExUpod+QpJAkKdZ8fHB8PGtj74WzsjFt+5Ns/R+RD83A==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@skia-canvas/darwin-x64@4.0.0':
+    resolution: {integrity: sha512-cZRlVDjUVlSegG63kyTY0dMG95RUTw0ZwgkUMnMoLzrp73F2T6KcX3QFAmp2CRW/405i04Mo0PLTK5Y24gLMUA==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@skia-canvas/linux-arm64-glibc@4.0.0':
+    resolution: {integrity: sha512-/wJRyiIZjFSPtHf/Zwo7chEM5o2P12mS3+N2h8uckNstSlT3P/CWlOi8HjO9OBSypbLhwz4gJfWW7eS+lY6lyw==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@skia-canvas/linux-arm64-musl@4.0.0':
+    resolution: {integrity: sha512-rbFMxYZ1wgZjF2l+Tx5ve+oTc3ZLHyDyAQRP6dKfbxIUHGUi8zgdpV754jM+VvkuqW9ljzc2sOYe3izrpfYByQ==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@skia-canvas/linux-x64-glibc@4.0.0':
+    resolution: {integrity: sha512-rpgx6WX6OrNFuBNz1tjOnxbNG6il5wfe72HhpA6fOo1ZBWPgzmHEmeAXvSMvhbnsJEdcfBV9akThufzitQ4sgA==}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@skia-canvas/linux-x64-musl@4.0.0':
+    resolution: {integrity: sha512-xOh7dt9Z5pAMVc6KNkJEu906usaa5HAUEQ8CwEQHWtiZQNvQx6Ma71+I0c4mEWFEJaA1mwK5xUoGSzONY+wsmw==}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@skia-canvas/win32-arm64@4.0.0':
+    resolution: {integrity: sha512-5+yXHAQLp0jacna/zhLKMfesDfKcZBXoKxcu82adLYI6vu5hj5P+iUI2416rfRdeUzX/E9n+mIfKTylEHgIdMA==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@skia-canvas/win32-x64@4.0.0':
+    resolution: {integrity: sha512-qLmlrca+VRR+JZAmN0TYCmztVabi3YWKAbxXD9HLHcUP5HKOk2wh+y/9nMqJsJLQyQqItBeNjnLHLfsDS65RnQ==}
+    cpu: [x64]
+    os: [win32]
+
   '@stylistic/eslint-plugin@5.10.0':
     resolution: {integrity: sha512-nPK52ZHvot8Ju/0A4ucSX1dcPV2/1clx0kLcH5wDmrE4naKso7TUC/voUyU1O9OTKTrR6MYip6LP0ogEMQ9jPQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
@@ -2999,6 +3046,10 @@ packages:
     resolution: {integrity: sha512-xRQbDb9BnwDafYNn6Vwl839DYVjqXYb1XVGtWAZ1kcDc6iwAL4hg3B1dZlRiuENFeO2H53gFG3in621AdERVAg==}
     engines: {node: '>=0.4.0'}
     hasBin: true
+
+  agent-base@9.0.0:
+    resolution: {integrity: sha512-TQf59BsZnytt8GdJKLPfUZ54g/iaUL2OWDSFCCvMOhsHduDQxO8xC4PNeyIkVcA5KwL2phPSv0douC0fgWzmnA==}
+    engines: {node: '>= 20'}
 
   ajv-formats@3.0.1:
     resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
@@ -3595,6 +3646,15 @@ packages:
   focus-trap@7.8.0:
     resolution: {integrity: sha512-/yNdlIkpWbM0ptxno3ONTuf+2g318kh2ez3KSeZN5dZ8YC6AAmgeWz+GasYYiBJPFaYcSAPeu4GfhUaChzIJXA==}
 
+  follow-redirects@1.16.1:
+    resolution: {integrity: sha512-FNvFGzoMLWmE6Yj9spb/zjd7yiNCHiAW9/Tg9CXrQ8wuu32HtlJOwWO11OJafl5FfY3DxTdQ0vj42zU1kvv5jg==}
+    engines: {node: '>=4.0'}
+    peerDependencies:
+      debug: '*'
+    peerDependenciesMeta:
+      debug:
+        optional: true
+
   foreground-child@3.3.1:
     resolution: {integrity: sha512-gIXjKqtFuWEgzFRJA9WCQeSJLZDjgJUOMCMzxtvFq/37KojM1BFGufqsCy0r4qSQmYLsZYMeyRqzIWOMup03sw==}
     engines: {node: '>=14'}
@@ -3692,6 +3752,10 @@ packages:
 
   html-void-elements@3.0.0:
     resolution: {integrity: sha512-bEqo66MRXsUGxWHV5IP0PUiAWwoEjba4VCzg0LjFJBpchPaTfyfCKTG6bc5F8ucKec3q5y6qOdGyYTSBEvhCrg==}
+
+  https-proxy-agent@9.1.0:
+    resolution: {integrity: sha512-ag87y7cJJ9/3+GxFr8Oy4O5faDsGRGnBGsJj/YjOSsSx/5eadKLYTMPlzuR6obgoCDDm0abAAZitXXQkMOPSpA==}
+    engines: {node: '>= 20'}
 
   human-id@4.2.1:
     resolution: {integrity: sha512-zPGsiS+dWoTZtZ4AtpA9Y+BdSFSNWvnouNlWNoUFyAM6xHOHmdCvqO3k8AIbdamCOv4gUFUVNPf6rJFfc4UiJw==}
@@ -4250,6 +4314,15 @@ packages:
   property-information@7.2.0:
     resolution: {integrity: sha512-IAtzIB6sUiWaJYrX9smp3V46pBGbBeLFRGdh25kg1334VcBlD8HzhPeNIWQH9zhGmo2itIe25EHt9dQP7G5hmg==}
 
+  proxy-agent-negotiate@1.1.0:
+    resolution: {integrity: sha512-N8IBcM3UgCVzz2L2Lqv8DVntDnnC8/hiV4nEDUPkqq72TPUgYWjQc+bdZlBPZK9LzPAvOY//gAt0S0DApoOXWQ==}
+    engines: {node: '>= 20'}
+    peerDependencies:
+      kerberos: ^2.0.0
+    peerDependenciesMeta:
+      kerberos:
+        optional: true
+
   punycode@2.3.1:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
@@ -4397,6 +4470,10 @@ packages:
 
   sisteransi@1.0.5:
     resolution: {integrity: sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==}
+
+  skia-canvas@4.0.0:
+    resolution: {integrity: sha512-Y4K2xKy1nxj6fhT/ZTHQ+KJnSqV/oOXqbgjML8ie2Jj8eJ3satsiz9y/L8OWYclpNhEAvBSOIurdZ9hDs6fsGA==}
+    engines: {node: '>=18'}
 
   slash@5.1.0:
     resolution: {integrity: sha512-ZA6oR3T/pEyuqwMgAKT0/hAv8oAXckzbkmR0UkUosQ+Mc4RxGoJkRmwHgHufaenlyAgE1Mxgpdcrf75y6XcnDg==}
@@ -5992,6 +6069,30 @@ snapshots:
 
   '@sindresorhus/merge-streams@4.0.0': {}
 
+  '@skia-canvas/darwin-arm64@4.0.0':
+    optional: true
+
+  '@skia-canvas/darwin-x64@4.0.0':
+    optional: true
+
+  '@skia-canvas/linux-arm64-glibc@4.0.0':
+    optional: true
+
+  '@skia-canvas/linux-arm64-musl@4.0.0':
+    optional: true
+
+  '@skia-canvas/linux-x64-glibc@4.0.0':
+    optional: true
+
+  '@skia-canvas/linux-x64-musl@4.0.0':
+    optional: true
+
+  '@skia-canvas/win32-arm64@4.0.0':
+    optional: true
+
+  '@skia-canvas/win32-x64@4.0.0':
+    optional: true
+
   '@stylistic/eslint-plugin@5.10.0(eslint@10.8.1(supports-color@10.2.2))':
     dependencies:
       '@eslint-community/eslint-utils': 4.9.1(eslint@10.8.1(supports-color@10.2.2))
@@ -6427,6 +6528,8 @@ snapshots:
       acorn: 8.17.0
 
   acorn@8.17.0: {}
+
+  agent-base@9.0.0: {}
 
   ajv-formats@3.0.1(ajv@8.20.0):
     optionalDependencies:
@@ -7120,6 +7223,10 @@ snapshots:
     dependencies:
       tabbable: 6.5.0
 
+  follow-redirects@1.16.1(debug@4.4.3(supports-color@10.2.2)):
+    optionalDependencies:
+      debug: 4.4.3(supports-color@10.2.2)
+
   foreground-child@3.3.1:
     dependencies:
       cross-spawn: 7.0.6
@@ -7228,6 +7335,15 @@ snapshots:
   html-tags@5.1.0: {}
 
   html-void-elements@3.0.0: {}
+
+  https-proxy-agent@9.1.0(supports-color@10.2.2):
+    dependencies:
+      agent-base: 9.0.0
+      debug: 4.4.3(supports-color@10.2.2)
+      proxy-agent-negotiate: 1.1.0
+    transitivePeerDependencies:
+      - kerberos
+      - supports-color
 
   human-id@4.2.1: {}
 
@@ -7748,6 +7864,8 @@ snapshots:
 
   property-information@7.2.0: {}
 
+  proxy-agent-negotiate@1.1.0: {}
+
   punycode@2.3.1: {}
 
   pure-rand@8.4.2: {}
@@ -7935,6 +8053,25 @@ snapshots:
   signal-exit@4.1.0: {}
 
   sisteransi@1.0.5: {}
+
+  skia-canvas@4.0.0(debug@4.4.3(supports-color@10.2.2))(supports-color@10.2.2):
+    dependencies:
+      detect-libc: 2.1.2
+      follow-redirects: 1.16.1(debug@4.4.3(supports-color@10.2.2))
+      https-proxy-agent: 9.1.0(supports-color@10.2.2)
+    optionalDependencies:
+      '@skia-canvas/darwin-arm64': 4.0.0
+      '@skia-canvas/darwin-x64': 4.0.0
+      '@skia-canvas/linux-arm64-glibc': 4.0.0
+      '@skia-canvas/linux-arm64-musl': 4.0.0
+      '@skia-canvas/linux-x64-glibc': 4.0.0
+      '@skia-canvas/linux-x64-musl': 4.0.0
+      '@skia-canvas/win32-arm64': 4.0.0
+      '@skia-canvas/win32-x64': 4.0.0
+    transitivePeerDependencies:
+      - debug
+      - kerberos
+      - supports-color
 
   slash@5.1.0: {}
 

@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  mockContextOf,
+  contextOf,
   readPixel
 } from "./fixtures/canvas.ts";
 import { mouseEvent } from "./helpers/events.ts";
@@ -72,7 +72,7 @@ describe("PixelArtCanvas — select mode external paste", () => {
     const source = document.createElement("canvas");
     source.width = 1;
     source.height = 1;
-    mockContextOf(source).fillStyle = "rgba(12, 34, 56, 1)";
+    contextOf(source).fillStyle = "rgba(12, 34, 56, 1)";
     source.getContext("2d")!.fillRect(0, 0, 1, 1);
     const manager = createSelectCanvas({
       clipboard: makeRasterClipboard()
@@ -100,7 +100,7 @@ describe("PixelArtCanvas — select mode external paste", () => {
     const source = document.createElement("canvas");
     source.width = 10;
     source.height = 1;
-    const context = mockContextOf(source);
+    const context = contextOf(source);
     context.fillStyle = "rgba(255, 0, 0, 1)";
     context.fillRect(0, 0, 10, 1);
     context.fillStyle = "rgba(0, 0, 255, 1)";
@@ -136,7 +136,7 @@ describe("PixelArtCanvas — select mode external paste", () => {
     const source = document.createElement("canvas");
     source.width = 1;
     source.height = 1;
-    mockContextOf(source).fillStyle = "rgba(12, 34, 56, 1)";
+    contextOf(source).fillStyle = "rgba(12, 34, 56, 1)";
     source.getContext("2d")!.fillRect(0, 0, 1, 1);
     const manager = createSelectCanvas({
       clipboard: makeRasterClipboard()
@@ -155,7 +155,7 @@ describe("PixelArtCanvas — select mode external paste", () => {
     const source = document.createElement("canvas");
     source.width = 1;
     source.height = 1;
-    mockContextOf(source).fillStyle = "rgba(12, 34, 56, 1)";
+    contextOf(source).fillStyle = "rgba(12, 34, 56, 1)";
     source.getContext("2d")!.fillRect(0, 0, 1, 1);
     const manager = createSelectCanvas({
       clipboard: makeRasterClipboard()
@@ -179,7 +179,7 @@ describe("PixelArtCanvas — select mode external paste", () => {
     const source = document.createElement("canvas");
     source.width = 1;
     source.height = 1;
-    mockContextOf(source).fillStyle = "rgba(12, 34, 56, 1)";
+    contextOf(source).fillStyle = "rgba(12, 34, 56, 1)";
     source.getContext("2d")!.fillRect(0, 0, 1, 1);
     const manager = createSelectCanvas({
       clipboard: makeRasterClipboard()
@@ -200,7 +200,7 @@ describe("PixelArtCanvas — select mode external paste", () => {
     const source = document.createElement("canvas");
     source.width = 1;
     source.height = 1;
-    mockContextOf(source).fillStyle = "rgba(12, 34, 56, 1)";
+    contextOf(source).fillStyle = "rgba(12, 34, 56, 1)";
     source.getContext("2d")!.fillRect(0, 0, 1, 1);
     const manager = createSelectCanvas({
       clipboard: makeRasterClipboard()
@@ -229,7 +229,7 @@ describe("PixelArtCanvas — select mode external paste", () => {
     const source = document.createElement("canvas");
     source.width = 1;
     source.height = 1;
-    mockContextOf(source).fillStyle = "rgba(12, 34, 56, 1)";
+    contextOf(source).fillStyle = "rgba(12, 34, 56, 1)";
     source.getContext("2d")!.fillRect(0, 0, 1, 1);
     const manager = createSelectCanvas({
       clipboard: makeRasterClipboard()

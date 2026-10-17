@@ -12,7 +12,7 @@ import {
 } from "#src/rendering/presence/PeerFloatingSelections.ts";
 import {
   canvasPixels,
-  mockContextOf,
+  contextOf,
   readPixel
 } from "../../fixtures/canvas.ts";
 import { makeCanvas } from "../../helpers/dom.ts";
@@ -49,7 +49,7 @@ describe("PeerFloatingSelections — remove", () => {
 
     const dest = makeCanvas(10);
     ghosts.draw(
-      mockContextOf(dest).asRenderingContext()
+      contextOf(dest)
     );
     assert.deepStrictEqual(
       readPixel(canvasPixels(dest), { x: 5, y: 5 }, 10),

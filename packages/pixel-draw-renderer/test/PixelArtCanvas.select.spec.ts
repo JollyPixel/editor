@@ -6,10 +6,8 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import {
-  canvasPixels,
-  readPixel
-} from "./fixtures/canvas.ts";
+import { readPixel } from "./fixtures/canvas.ts";
+import { shownPixel } from "./helpers/canvas.ts";
 import { mouseEvent } from "./helpers/events.ts";
 import { createSelectCanvas } from "./helpers/select-canvas/manager.ts";
 
@@ -74,9 +72,8 @@ describe("PixelArtCanvas — select mode", () => {
     canvas.dispatchEvent(mouseEvent("mousedown", 95, 95));
     canvas.dispatchEvent(mouseEvent("mousemove", 103, 103));
 
-    const midDragPixels = canvasPixels(canvas);
     assert.deepStrictEqual(
-      readPixel(midDragPixels, { x: 2, y: 2 }, canvas.width),
+      shownPixel(manager, { x: 2, y: 2 }),
       [255, 255, 255, 255],
       "source previewed as vacated (dominant surrounding color) while a real move is in progress"
     );
@@ -102,11 +99,7 @@ describe("PixelArtCanvas — select mode", () => {
     await manager.copySelection();
     await manager.pasteClipboard();
 
-    const afterPaste = readPixel(
-      canvasPixels(canvas),
-      { x: 2, y: 2 },
-      canvas.width
-    );
+    const afterPaste = shownPixel(manager, { x: 2, y: 2 });
 
     canvas.dispatchEvent(
       mouseEvent("mousedown", 92, 92)
@@ -115,11 +108,7 @@ describe("PixelArtCanvas — select mode", () => {
       mouseEvent("mousemove", 100, 100)
     );
 
-    const midDrag = readPixel(
-      canvasPixels(canvas),
-      { x: 2, y: 2 },
-      canvas.width
-    );
+    const midDrag = shownPixel(manager, { x: 2, y: 2 });
     assert.deepStrictEqual(
       midDrag,
       afterPaste,

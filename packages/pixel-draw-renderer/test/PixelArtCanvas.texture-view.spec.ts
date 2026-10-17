@@ -7,11 +7,11 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import type { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
+import { readPixel } from "./fixtures/canvas.ts";
 import {
-  canvasPixels,
-  readPixel
-} from "./fixtures/canvas.ts";
-import { createPixelArtCanvas } from "./helpers/canvas.ts";
+  createPixelArtCanvas,
+  shownPixel
+} from "./helpers/canvas.ts";
 import { mouseEvent } from "./helpers/events.ts";
 import { FakeFrames } from "./helpers/frames.ts";
 import {
@@ -20,7 +20,6 @@ import {
 } from "./helpers/select.ts";
 
 // CONSTANTS
-const kContainerSize = 200;
 const kFlatNormal = [128, 128, 255, 255];
 
 function createCanvas(): PixelArtCanvas {
@@ -32,18 +31,6 @@ function createCanvas(): PixelArtCanvas {
   });
 
   return manager;
-}
-
-function shownPixel(
-  manager: PixelArtCanvas,
-  x: number,
-  y: number
-): number[] {
-  return readPixel(
-    canvasPixels(manager.canvas()),
-    { x, y },
-    kContainerSize
-  );
 }
 
 function texturePixel(
@@ -59,7 +46,7 @@ describe("PixelArtCanvas texture view", () => {
     const manager = createCanvas();
 
     assert.equal(manager.textureView, "albedo");
-    assert.deepEqual(shownPixel(manager, 0, 0), [128, 128, 128, 255]);
+    assert.deepEqual(shownPixel(manager, { x: 0, y: 0 }), [128, 128, 128, 255]);
   });
 
   test("the normal view draws the normal map in place of the texture", () => {
@@ -69,11 +56,11 @@ describe("PixelArtCanvas texture view", () => {
     manager.textureView = "normal";
 
     assert.equal(manager.textureView, "normal");
-    assert.deepEqual(shownPixel(manager, 0, 0), kFlatNormal);
+    assert.deepEqual(shownPixel(manager, { x: 0, y: 0 }), kFlatNormal);
 
     manager.textureView = "albedo";
 
-    assert.deepEqual(shownPixel(manager, 0, 0), [128, 128, 128, 255]);
+    assert.deepEqual(shownPixel(manager, { x: 0, y: 0 }), [128, 128, 128, 255]);
   });
 
   test("the normal view follows pixel changes on the next frame", (t) => {
@@ -84,10 +71,10 @@ describe("PixelArtCanvas texture view", () => {
 
     manager.brush.primary.set("#ffffff");
     manager.commitPixels([{ x: 3, y: 3 }]);
-    assert.deepEqual(shownPixel(manager, 2, 3), kFlatNormal);
+    assert.deepEqual(shownPixel(manager, { x: 2, y: 3 }), kFlatNormal);
     frames.run();
 
-    assert.notDeepEqual(shownPixel(manager, 2, 3), kFlatNormal);
+    assert.notDeepEqual(shownPixel(manager, { x: 2, y: 3 }), kFlatNormal);
   });
 
   test("retains the normal map only while the normal view is shown", () => {
@@ -113,7 +100,7 @@ describe("PixelArtCanvas texture view", () => {
 
     manager.textureView = "normal";
 
-    assert.deepEqual(shownPixel(manager, 0, 0), kFlatNormal);
+    assert.deepEqual(shownPixel(manager, { x: 0, y: 0 }), kFlatNormal);
     release();
   });
 
