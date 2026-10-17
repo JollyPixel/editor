@@ -4,7 +4,7 @@ import {
   type RoomJoiner,
   type RoomLimits
 } from "./ServerRoom.ts";
-import { errorMessage } from "../errors.ts";
+import { errorMessage } from "../../errorMessage.ts";
 import { UngatedExtensionError } from "../errors/UngatedExtensionError.ts";
 import type { Logger } from "../logger.ts";
 import type { RightsTable } from "../rights/RightsTable.ts";

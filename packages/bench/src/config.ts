@@ -39,6 +39,10 @@ export interface BenchmarkConfig {
    * Task-name substring; `null` runs every task.
    */
   task: string | null;
+  /**
+   * Adds a `B/op` column, measured in a separate pass after sampling.
+   */
+  allocations: boolean;
 }
 
 // Delay environment validation until config() is read.
@@ -68,7 +72,8 @@ export function configure(
     warmupIterations: pick(overrides.warmupIterations, active.warmupIterations),
     batch: pick(overrides.batch, active.batch),
     format: pick(overrides.format, active.format),
-    task: pick(overrides.task, active.task)
+    task: pick(overrides.task, active.task),
+    allocations: pick(overrides.allocations, active.allocations)
   };
 
   return current;
@@ -98,8 +103,29 @@ function fromEnvironment(): BenchmarkConfig {
     ),
     batch: envNumber("BENCH_BATCH", kDefaultBatch),
     format: envFormat("BENCH_FORMAT", "table"),
-    task: process.env.BENCH_TASK || null
+    task: process.env.BENCH_TASK || null,
+    allocations: envBoolean("BENCH_ALLOCATIONS", false)
   };
+}
+
+function envBoolean(
+  name: string,
+  fallback: boolean
+): boolean {
+  const raw = process.env[name];
+  if (raw === undefined || raw === "") {
+    return fallback;
+  }
+  if (raw === "1" || raw === "true") {
+    return true;
+  }
+  if (raw === "0" || raw === "false") {
+    return false;
+  }
+
+  throw new BenchmarkError(
+    `${name} expects 1, 0, true or false, got "${raw}"`
+  );
 }
 
 function envNumber(

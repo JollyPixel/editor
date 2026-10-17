@@ -25,6 +25,7 @@ import {
 } from "./constants.ts";
 import { HandshakePolicy } from "./HandshakePolicy.ts";
 import { WebsocketConnection } from "./WebsocketConnection.ts";
+import { WriteBatch } from "./WriteBatch.ts";
 
 // CONSTANTS
 const kDefaultCompressionLevel = 3;
@@ -120,6 +121,7 @@ export class WebsocketTransport implements Disposable {
   #maxBufferedBytes: number;
   #heartbeat: ReturnType<typeof setInterval> | null = null;
   #connections = new Set<WebsocketConnection>();
+  #writes = new WriteBatch();
 
   constructor(
     options: WebsocketTransportOptions
@@ -243,6 +245,7 @@ export class WebsocketTransport implements Disposable {
 
           this.#onWebsocketClientConnect(
             ws,
+            socket,
             clientId,
             identity
           );
@@ -267,6 +270,7 @@ export class WebsocketTransport implements Disposable {
       clearInterval(this.#heartbeat);
       this.#heartbeat = null;
     }
+    this.#writes.flush();
     for (const client of this.#wss.clients) {
       client.terminate();
     }
@@ -281,6 +285,7 @@ export class WebsocketTransport implements Disposable {
 
   #onWebsocketClientConnect(
     socket: WebSocket,
+    stream: Duplex,
     clientId: string,
     identity: PeerIdentity
   ): void {
@@ -289,7 +294,8 @@ export class WebsocketTransport implements Disposable {
       socket,
       logger: this.#logger,
       maxBufferedBytes: this.#maxBufferedBytes,
-      onMessage: (json) => serverConnection.receive(json)
+      onMessage: (json) => serverConnection.receive(json),
+      holdWrites: () => this.#writes.hold(stream)
     });
     this.#connections.add(handle);
     const serverConnection = this.#server.connect(

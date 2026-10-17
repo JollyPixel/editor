@@ -1,3 +1,4 @@
+export { RecordingBench } from "./allocations.ts";
 export {
   config,
   configure,

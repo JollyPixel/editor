@@ -1,15 +1,12 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
-import {
-  match,
-  P
-} from "ts-pattern";
 
 // Import Internal Dependencies
 import { DEFAULT_ROLE } from "../protocol/constants.ts";
-import type {
-  ClientEnvelope,
-  ServerEnvelope
+import {
+  unknownEnvelopeKind,
+  type ClientEnvelope,
+  type ServerEnvelope
 } from "../protocol/envelope/Envelope.ts";
 import type { RoomMessageParser } from "../protocol/message/MessageParser.ts";
 import type {
@@ -232,18 +229,35 @@ export class ClientRoom<
   receive(
     envelope: ServerEnvelope
   ): void {
-    match(envelope)
-      .with({ kind: "message" }, (envelope) => this.#receiveMessage(envelope.payload))
-      .with({ kind: "sync" }, (envelope) => this.#admit(envelope))
-      .with({ kind: "peer-joined" }, (envelope) => this.#addPeer(envelope))
-      .with({ kind: "peer-left" }, (envelope) => this.#removePeer(envelope.clientId))
-      .with({ kind: "peer-presence" }, (envelope) => this.#patchMember(envelope, "presence"))
-      .with({ kind: "peer-profile" }, (envelope) => this.#patchMember(envelope, "profile"))
-      .with({ kind: P.union("denied", "error") }, (envelope) => this.emit(envelope.kind, {
-        event: envelope.event,
-        reason: envelope.reason
-      }))
-      .exhaustive();
+    switch (envelope.kind) {
+      case "message":
+        this.#receiveMessage(envelope.payload);
+        break;
+      case "sync":
+        this.#admit(envelope);
+        break;
+      case "peer-joined":
+        this.#addPeer(envelope);
+        break;
+      case "peer-left":
+        this.#removePeer(envelope.clientId);
+        break;
+      case "peer-presence":
+        this.#patchMember(envelope, "presence");
+        break;
+      case "peer-profile":
+        this.#patchMember(envelope, "profile");
+        break;
+      case "denied":
+      case "error":
+        this.emit(envelope.kind, {
+          event: envelope.event,
+          reason: envelope.reason
+        });
+        break;
+      default:
+        unknownEnvelopeKind(envelope);
+    }
   }
 
   #sendJoin(): void {

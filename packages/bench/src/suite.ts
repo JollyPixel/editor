@@ -1,10 +1,14 @@
 // Import Third-party Dependencies
-import {
+import type {
   Bench,
-  type Task
+  Task
 } from "tinybench";
 
 // Import Internal Dependencies
+import {
+  RecordingBench,
+  type AllocationBudget
+} from "./allocations.ts";
 import { config } from "./config.ts";
 import { BenchmarkError } from "./errors/index.ts";
 import {
@@ -40,10 +44,10 @@ export type SuiteSetup = (bench: Bench) =>
 
 export function createBench(
   name: string
-): Bench {
+): RecordingBench {
   const { time, iterations, warmupTime, warmupIterations } = config();
 
-  return new Bench({
+  return new RecordingBench({
     name,
     time,
     iterations,
@@ -93,7 +97,7 @@ export function defineSuite(
 
 async function runBench(
   name: string,
-  bench: Bench,
+  bench: RecordingBench,
   opsPerIteration: OpsPerIteration
 ): Promise<BenchmarkReport | null> {
   const { task: filter } = config();
@@ -113,10 +117,39 @@ async function runBench(
     config().batch :
     opsPerIteration;
 
+  const results = bench.tasks.map((task) => toRow(task, divisor));
+  if (config().allocations) {
+    await addAllocations(bench, results, divisor);
+  }
+
   return report({
     suite: name,
-    results: bench.tasks.map((task) => toRow(task, divisor))
+    results
   });
+}
+
+async function addAllocations(
+  bench: RecordingBench,
+  results: BenchmarkRow[],
+  opsPerIteration: number
+): Promise<void> {
+  const { iterations, time } = config();
+  const budget: AllocationBudget = {
+    minCalls: iterations,
+    timeMs: time
+  };
+
+  for (const [index, task] of bench.tasks.entries()) {
+    const row = results[index];
+    if (row.error !== undefined || row.state !== undefined) {
+      continue;
+    }
+
+    const bytes = await bench.bytesPerCall(task, budget);
+    if (bytes !== null) {
+      row["B/op"] = Math.round(bytes / opsPerIteration);
+    }
+  }
 }
 
 /**

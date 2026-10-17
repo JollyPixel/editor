@@ -82,6 +82,53 @@ describe("defineSuite", () => {
     assert.equal(typeof report.results[0]["ns/op"], "number");
   });
 
+  it("should report no B/op unless allocations are enabled", async() => {
+    const suite = defineSuite("unit / no allocations", (bench) => {
+      bench.add("task", () => void 0);
+    });
+
+    const report = await suite.run();
+
+    assert.ok(report !== null);
+    assert.equal(report.results[0]["B/op"], undefined);
+  });
+
+  it("should measure the heap bytes each operation allocates", async() => {
+    configure({
+      allocations: true,
+      batch: 10
+    });
+    const sink: unknown[][] = [];
+    const suite = defineSuite("unit / allocations", (bench) => {
+      bench
+        .add("allocating", batched(() => {
+          sink[0] = Array.from({ length: 1_000 }, () => 0);
+        }))
+        .add("idle", batched(() => void 0));
+    }, { opsPerIteration: "batch" });
+
+    const report = await suite.run();
+
+    assert.ok(report !== null);
+    const [allocating, idle] = report.results;
+    assert.ok(allocating["B/op"] !== undefined && allocating["B/op"] >= 8_000);
+    assert.ok(idle["B/op"] !== undefined && idle["B/op"] < 64);
+  });
+
+  it("should skip B/op for tasks whose per-iteration hooks allocate", async() => {
+    configure({ allocations: true });
+    const suite = defineSuite("unit / hooked allocations", (bench) => {
+      bench.add("task", () => void 0, {
+        beforeEach: () => void 0
+      });
+    });
+
+    const report = await suite.run();
+
+    assert.ok(report !== null);
+    assert.equal(report.results[0]["B/op"], undefined);
+  });
+
   it("should call the setup on every run", async() => {
     let setups = 0;
     const suite = defineSuite("unit / setup", (bench) => {

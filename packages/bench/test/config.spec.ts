@@ -23,7 +23,8 @@ const kEnvKeys = [
   "BENCH_WARMUP_ITERATIONS",
   "BENCH_BATCH",
   "BENCH_FORMAT",
-  "BENCH_TASK"
+  "BENCH_TASK",
+  "BENCH_ALLOCATIONS"
 ];
 
 describe("config", () => {
@@ -46,7 +47,8 @@ describe("config", () => {
       warmupIterations: 3,
       batch: 100,
       format: "table",
-      task: null
+      task: null,
+      allocations: false
     });
   });
 
@@ -58,6 +60,7 @@ describe("config", () => {
     process.env.BENCH_BATCH = "25";
     process.env.BENCH_FORMAT = "json";
     process.env.BENCH_TASK = "isDown";
+    process.env.BENCH_ALLOCATIONS = "1";
     resetConfig();
 
     assert.deepEqual(config(), {
@@ -67,7 +70,8 @@ describe("config", () => {
       warmupIterations: 9,
       batch: 25,
       format: "json",
-      task: "isDown"
+      task: "isDown",
+      allocations: true
     });
   });
 
@@ -97,6 +101,17 @@ describe("config", () => {
     assert.throws(resetConfig, (error: Error) => {
       assert.ok(error instanceof BenchmarkError);
       assert.match(error.message, /BENCH_FORMAT expects one of table, json/);
+
+      return true;
+    });
+  });
+
+  it("should reject an allocations switch it cannot read", () => {
+    process.env.BENCH_ALLOCATIONS = "yes";
+
+    assert.throws(resetConfig, (error: Error) => {
+      assert.ok(error instanceof BenchmarkError);
+      assert.match(error.message, /BENCH_ALLOCATIONS expects 1, 0, true or false/);
 
       return true;
     });

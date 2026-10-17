@@ -22,6 +22,10 @@ Default URL uses the page host and `/ws-sync`; supply it explicitly in Node.
 from `/node` takes `{ httpServer, server, path, ...options }`.
 Options control hosts, origins, payload limits, heartbeat, and compression.
 
+Messages sent to one socket during an event loop turn leave in a single write
+once the turn ends, so a broadcast costs one write per recipient rather than
+one per message.
+
 `[Symbol.dispose]()` terminates its sockets and stops handling upgrades. The
 HTTP server's `close` event does the same, but Node.js only emits it once every
 connection has ended, upgraded sockets included. Dispose the network server

@@ -55,7 +55,8 @@ function connectionOver(
     socket,
     logger: captureLogger().logger,
     maxBufferedBytes: 1024,
-    onMessage
+    onMessage,
+    holdWrites: () => void 0
   });
 }
 

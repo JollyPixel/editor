@@ -162,6 +162,26 @@ describe("Room — room parser", () => {
     assert.deepEqual(malformed, [{ action: "unheard-of" }]);
   });
 
+  test("keeps prototype keys in payloads only when the client trusts the server", () => {
+    const raw = JSON.stringify({
+      room: "pixel-draw",
+      kind: "message",
+      payload: JSON.parse("{\"__proto__\":{\"polluted\":true}}")
+    });
+    const delivered = [false, true].map((trustServer) => {
+      const { client, socket } = createOpenClient({ trustServer });
+      const room = client.room("pixel-draw");
+      room.join();
+      const messages: object[] = [];
+      room.on("message", (payload) => messages.push(Object(payload)));
+      socket.deliver(raw);
+
+      return Object.hasOwn(messages[0], "__proto__");
+    });
+
+    assert.deepEqual(delivered, [false, true]);
+  });
+
   test("passes payloads straight through when no parser is supplied", () => {
     const { client, socket } = createOpenClient();
     const room = client.room("pixel-draw");

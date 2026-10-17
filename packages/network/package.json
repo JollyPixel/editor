@@ -31,7 +31,9 @@
     "test-types": "tstyche --tsconfig ./test/tsconfig.json",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",
     "lint": "oxlint src test",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p scripts/tsconfig.json"
+    "bench": "jolly-bench",
+    "bench:load": "node bench/load/index.ts",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p scripts/tsconfig.json && tsc --noEmit -p bench/tsconfig.json"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
@@ -77,6 +79,7 @@
     }
   },
   "devDependencies": {
+    "@jolly-pixel/bench": "workspace:*",
     "@types/ws": "8.18.2",
     "fast-check": "4.10.2"
   }

@@ -23,7 +23,7 @@ import {
   PRESENCE_EVENT
 } from "../../protocol/constants.ts";
 import { describeErrors } from "../../protocol/schema.ts";
-import { errorMessage } from "../errors.ts";
+import { errorMessage } from "../../errorMessage.ts";
 import type { PeerIdentity } from "../auth/AuthenticationProvider.ts";
 import type {
   PeerMetadata,
@@ -35,12 +35,9 @@ import type { ClientHandle } from "../../transport/ClientHandle.ts";
 const kDefaultPeerMetadataLength = 1_048_576;
 const kDefaultResyncIntervalMs = 1_000;
 
-interface AuthorizeOptions {
-  clientId: string;
+interface AuthorizeRequest {
   role: string;
   event: string;
-  target: ClientHandle;
-  reason: string;
   label: string;
 }
 
@@ -138,30 +135,21 @@ export class ServerRoom {
     };
   }
 
-  #contextFor(
-    identity: PeerIdentity
-  ): RoomContext {
-    return {
-      room: this.#roomBroadcast,
-      identity
-    };
-  }
-
   #authorize(
-    options: AuthorizeOptions
+    target: ClientHandle,
+    request: AuthorizeRequest
   ): boolean {
-    const {
-      role,
-      target,
-      ...refusal
-    } = options;
-    if (this.#rights.canWrite(role, refusal.event)) {
+    const { role, event } = request;
+    if (this.#rights.canWrite(role, event)) {
       return true;
     }
 
     this.#refuse(target, {
-      ...refusal,
-      kind: "denied"
+      clientId: target.id,
+      kind: "denied",
+      event,
+      reason: refusalReason(role, event),
+      label: request.label
     });
 
     return false;
@@ -240,12 +228,9 @@ export class ServerRoom {
     } = joiner;
     const clientId = client.id;
     const { role } = identity;
-    if (!this.#authorize({
-      clientId,
+    if (!this.#authorize(client, {
       role,
       event: JOIN_EVENT,
-      target: client,
-      reason: `role "${role}" is not permitted to join this room`,
       label: "join"
     })) {
       return false;
@@ -260,7 +245,6 @@ export class ServerRoom {
     }
 
     const initialPresence = this.#initialPresence(
-      clientId,
       client,
       role,
       presence
@@ -274,11 +258,16 @@ export class ServerRoom {
       return false;
     }
 
+    const context: RoomContext = {
+      room: this.#roomBroadcast,
+      identity
+    };
     this.#members.add(clientId, {
       handle: client,
       identity,
       profile,
-      presence: initialPresence
+      presence: initialPresence,
+      context
     });
     this.#sendSyncSnapshot(clientId, client, role);
     this.#announceJoin(
@@ -300,7 +289,7 @@ export class ServerRoom {
         presence: { ...initialPresence.values },
         ...(resume === undefined ? {} : { resume })
       },
-      this.#contextFor(identity)
+      context
     );
     this.#logger
       .withMetadata({
@@ -314,7 +303,6 @@ export class ServerRoom {
   }
 
   #initialPresence(
-    clientId: string,
     client: ClientHandle,
     role: string,
     presence: PeerMetadata
@@ -323,12 +311,9 @@ export class ServerRoom {
       return PeerPresence.EMPTY;
     }
 
-    const authorized = this.#authorize({
-      clientId,
+    const authorized = this.#authorize(client, {
       role,
       event: PRESENCE_EVENT,
-      target: client,
-      reason: `role "${role}" cannot update presence`,
       label: "join presence"
     });
 
@@ -396,7 +381,7 @@ export class ServerRoom {
 
     await this.#extension.onClientDisconnect?.(
       clientId,
-      this.#contextFor(record.identity)
+      record.context
     );
     this.#logger
       .withMetadata({ clientId })
@@ -463,12 +448,9 @@ export class ServerRoom {
     patch: PeerMetadata
   ): void {
     const { role } = record.identity;
-    if (!this.#authorize({
-      clientId,
+    if (!this.#authorize(record.handle, {
       role,
       event: PRESENCE_EVENT,
-      target: record.handle,
-      reason: `role "${role}" cannot update presence`,
       label: "presence update"
     })) {
       return;
@@ -506,39 +488,34 @@ export class ServerRoom {
     }
   }
 
-  async message(
+  message(
     clientId: string,
     payload: unknown
-  ): Promise<boolean> {
+  ): boolean | Promise<boolean> {
     const record = this.#members.get(clientId);
     if (record === undefined) {
       return false;
     }
 
-    await this.#receiveMessage(
+    return this.#receiveMessage(
       clientId,
       record,
       payload
-    );
-
-    return true;
+    )?.then(isMember) ?? true;
   }
 
-  async #receiveMessage(
+  #receiveMessage(
     clientId: string,
     record: PeerRecord,
     payload: unknown
-  ): Promise<void> {
-    const { identity } = record;
-    const { role } = identity;
+  ): void | Promise<void> {
+    const { role } = record.identity;
     if (this.#inbound === null) {
-      await this.#deliverMessage(
+      return this.#deliverMessage(
         clientId,
-        identity,
+        record,
         payload
       );
-
-      return;
     }
 
     const parsed = this.#inbound.parse(payload);
@@ -555,20 +532,20 @@ export class ServerRoom {
     }
 
     const { event, message } = parsed.val;
-    if (this.#rights.gated && !this.#authorize({
-      clientId,
-      role,
-      event,
-      target: record.handle,
-      reason: `role "${role}" cannot write "${event}"`,
-      label: "message"
-    })) {
+    if (
+      this.#rights.gated &&
+      !this.#authorize(record.handle, {
+        role,
+        event,
+        label: "message"
+      })
+    ) {
       return;
     }
 
-    await this.#deliverMessage(
+    return this.#deliverMessage(
       clientId,
-      identity,
+      record,
       message
     );
   }
@@ -599,7 +576,7 @@ export class ServerRoom {
     try {
       await this.#extension.onResync?.(
         clientId,
-        this.#contextFor(record.identity)
+        record.context
       );
     }
     catch (error) {
@@ -613,11 +590,11 @@ export class ServerRoom {
     }
   }
 
-  async #deliverMessage(
+  #deliverMessage(
     clientId: string,
-    identity: PeerIdentity,
+    record: PeerRecord,
     message: unknown
-  ): Promise<void> {
+  ): void | Promise<void> {
     if (typeof this.#extension.onMessage !== "function") {
       this.#logger
         .withMetadata({
@@ -630,10 +607,10 @@ export class ServerRoom {
       return;
     }
 
-    await this.#extension.onMessage(
+    return this.#extension.onMessage(
       clientId,
       message,
-      this.#contextFor(identity)
+      record.context
     );
   }
 
@@ -675,4 +652,22 @@ export class ServerRoom {
       this.#members.sendTo(to, envelope, event);
     }
   }
+}
+
+function refusalReason(
+  role: string,
+  event: string
+): string {
+  if (event === JOIN_EVENT) {
+    return `role "${role}" is not permitted to join this room`;
+  }
+  if (event === PRESENCE_EVENT) {
+    return `role "${role}" cannot update presence`;
+  }
+
+  return `role "${role}" cannot write "${event}"`;
+}
+
+function isMember(): boolean {
+  return true;
 }

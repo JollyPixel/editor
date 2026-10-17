@@ -28,7 +28,8 @@ export class RightsPattern {
     }
 
     let position = head.length;
-    for (const literal of literals.slice(1, -1)) {
+    for (let next = 1; next < literals.length - 1; next++) {
+      const literal = literals[next];
       const index = key.indexOf(literal, position);
       if (index === -1) {
         return false;

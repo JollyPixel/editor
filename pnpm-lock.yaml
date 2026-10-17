@@ -901,6 +901,9 @@ importers:
         specifier: 4.6.5
         version: 4.6.5
     devDependencies:
+      '@jolly-pixel/bench':
+        specifier: workspace:*
+        version: link:../bench
       '@types/ws':
         specifier: 8.18.2
         version: 8.18.2
