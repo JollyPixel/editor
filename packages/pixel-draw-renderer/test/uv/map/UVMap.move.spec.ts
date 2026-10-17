@@ -25,7 +25,7 @@ describe("UVMap — move", () => {
 
     assert.ok(result);
     assert.deepStrictEqual(
-      map.get(region.id)!.rectFor("front"),
+      map.get(region.id)!.slotRect("front"),
       { x: 10, y: 10, width: 4, height: 4 }
     );
     assert.strictEqual(events.length, 1);
@@ -44,7 +44,7 @@ describe("UVMap — move", () => {
     );
 
     assert.deepStrictEqual(
-      map.get(region.id)!.rectFor("front"),
+      map.get(region.id)!.slotRect("front"),
       { x: 12, y: 12, width: 4, height: 4 }
     );
   });
@@ -61,7 +61,7 @@ describe("UVMap — move", () => {
   test("moves a single face of an free region, leaving the others put", () => {
     const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     const events: EventPayload<"region-moved">[] = [];
     map.on("region-moved", (e) => events.push(e));
 
@@ -73,15 +73,15 @@ describe("UVMap — move", () => {
 
     assert.ok(result);
     const moved = map.get(region.id)!;
-    assert.deepStrictEqual(moved.rectFor("left"), { x: 10, y: 10, width: 4, height: 4 });
-    assert.deepStrictEqual(moved.rectFor("right"), { x: 0, y: 0, width: 4, height: 4 });
+    assert.deepStrictEqual(moved.slotRect("left"), { x: 10, y: 10, width: 4, height: 4 });
+    assert.deepStrictEqual(moved.slotRect("right"), { x: 0, y: 0, width: 4, height: 4 });
     assert.strictEqual(events[0].face, "left");
   });
 
   test("refuses to move an free region when no face is given", () => {
     const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     const events: EventPayload<"region-moved">[] = [];
     map.on("region-moved", (e) => events.push(e));
 
@@ -95,14 +95,14 @@ describe("UVMap — move", () => {
   test("rejects a slot the free region does not own", () => {
     const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
 
     assert.strictEqual(map.move(
       region.id,
       { x: 2, y: 2, width: 4, height: 4 },
       "missing"
     ), false);
-    assert.deepStrictEqual(map.get(region.id)?.rectFor("front"), {
+    assert.deepStrictEqual(map.get(region.id)?.slotRect("front"), {
       x: 0,
       y: 0,
       width: 4,
@@ -116,7 +116,7 @@ describe("UVMap — move", () => {
 
     assert.ok(map.move(region.id, { x: 8, y: 8, width: 4, height: 4 }, "top"));
     assert.deepStrictEqual(
-      map.get(region.id)!.rectFor("back"),
+      map.get(region.id)!.slotRect("back"),
       { x: 8, y: 8, width: 4, height: 4 }
     );
   });
@@ -142,8 +142,8 @@ describe("UVMap — previewMove", () => {
       { x: 12, y: 12, width: 4, height: 4 }
     );
     assert.deepStrictEqual(
-      map.get(region.id)!.rectFor("front"),
-      region.rectFor("front"),
+      map.get(region.id)!.slotRect("front"),
+      region.slotRect("front"),
       "stored rect must be unchanged"
     );
   });
@@ -151,7 +151,7 @@ describe("UVMap — previewMove", () => {
   test("carries the face for an free region", () => {
     const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     const events: EventPayload<"region-dragging">[] = [];
     map.on("region-dragging", (e) => events.push(e));
 
@@ -175,7 +175,7 @@ describe("UVMap — previewMove", () => {
 
     map.previewMove(region.id, { x: 5, y: 6, width: 4, height: 4 }, "left");
 
-    assert.deepStrictEqual(events[0].region.geometryFor("left"), {
+    assert.deepStrictEqual(events[0].region.slotGeometry("left"), {
       shape: "triangle",
       corner: "top-right",
       rect: { x: 5, y: 6, width: 4, height: 4 }
@@ -202,7 +202,7 @@ describe("UVMap — previewMove", () => {
     );
 
     assert.strictEqual(moveEvents.length, 1);
-    assert.deepStrictEqual(moveEvents[0].previousRect, region.rectFor("front"));
+    assert.deepStrictEqual(moveEvents[0].previousRect, region.slotRect("front"));
   });
 
   test("is a no-op for an unknown id", () => {

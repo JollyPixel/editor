@@ -64,9 +64,6 @@ export interface ServerOptions {
   validateOutbound?: boolean;
 }
 
-/**
- * Dispatches transport envelopes to rooms in per-client order.
- */
 export class Server {
   readonly logger: Logger;
 
@@ -112,10 +109,10 @@ export class Server {
     this.#rooms.register(extension);
   }
 
-  setRoomResolver(
+  useRoomResolver(
     resolver: RoomResolver | null
   ): void {
-    this.#rooms.setResolver(resolver);
+    this.#rooms.useResolver(resolver);
   }
 
   settled(

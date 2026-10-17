@@ -101,7 +101,7 @@ export class AnimationKeyer implements TransformTarget {
     }
 
     const { key, set, link, clip } = focused;
-    const path = new TrackBinding(clip.tracks.map((track) => track.path), link, tree).pathOf(blockId);
+    const path = new TrackBinding(clip.tracks.map((track) => track.path), link, tree).trackPath(blockId);
     const { tick } = session.playback;
     const shown = { ...kRestSample, ...new ClipSampler(clip).sample(tick).get(path) };
     const delta = new BlockTransform(rest).deltaTo(pose);
@@ -118,7 +118,7 @@ export class AnimationKeyer implements TransformTarget {
             value,
             interpolation: current?.interpolation ?? "linear"
           };
-          keyed = set.document.setKey(clip.id, path, channel, key) || keyed;
+          keyed = set.document.writeKey(clip.id, path, channel, key) || keyed;
         }
       }
 

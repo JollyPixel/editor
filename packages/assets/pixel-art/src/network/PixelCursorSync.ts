@@ -44,8 +44,8 @@ function profileLabel(
 export class PixelCursorSync {
   #canvas: PixelArtCanvas;
   #channel: PresenceChannel<Vec2 | null>;
-  #labelOf: PeerStyle;
-  #colorOf: PeerStyle;
+  #displayLabel: PeerStyle;
+  #peerColor: PeerStyle;
   #previousHandler: ((pos: Vec2 | null) => void) | undefined;
 
   #handleCursorMove = (
@@ -70,8 +70,8 @@ export class PixelCursorSync {
     options: PixelCursorSyncOptions
   ) {
     this.#canvas = options.canvas;
-    this.#labelOf = peerStyle(options.room, options.label ?? profileLabel);
-    this.#colorOf = peerStyle(options.room, options.color);
+    this.#displayLabel = peerStyle(options.room, options.label ?? profileLabel);
+    this.#peerColor = peerStyle(options.room, options.color);
     this.#channel = new PresenceChannel(options.room, {
       key: "cursor",
       decode: decodeCursor,
@@ -97,8 +97,8 @@ export class PixelCursorSync {
   ): void {
     this.#canvas.peerPresence.cursors.set(clientId, {
       pos,
-      color: this.#colorOf(clientId),
-      label: this.#labelOf(clientId)
+      color: this.#peerColor(clientId),
+      label: this.#displayLabel(clientId)
     });
   }
 }

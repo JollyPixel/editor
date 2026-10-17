@@ -53,7 +53,7 @@ export class ObjectOverlayRenderer implements MeshHighlightRenderer {
 
     try {
       for (const indicator of indicators) {
-        const technique = this.#techniqueFor(indicator);
+        const technique = this.#overlayTechnique(indicator);
         const dashed = indicator.role === "hover" &&
           indicator.source === "peer";
         const current = this.#overlays.get(indicator.objectId);
@@ -76,7 +76,7 @@ export class ObjectOverlayRenderer implements MeshHighlightRenderer {
           fillOpacity: appearance.bounds.fillOpacity,
           xray: appearance.xray,
           dashed,
-          occludedOpacity: occludedOpacityFor(indicator, appearance),
+          occludedOpacity: scaleOccludedOpacity(indicator, appearance),
           peer: indicator.source === "peer",
           renderOrder: appearance.renderOrder ?? undefined,
           xrayDepthWrite: appearance.xrayDepthWrite
@@ -109,7 +109,7 @@ export class ObjectOverlayRenderer implements MeshHighlightRenderer {
       overlay.opacity = indicator.opacity;
       overlay.xray = appearance.xray;
       if (overlay.occludedOpacity !== undefined) {
-        overlay.occludedOpacity = occludedOpacityFor(indicator, appearance);
+        overlay.occludedOpacity = scaleOccludedOpacity(indicator, appearance);
       }
       if (overlay.fillOpacity !== undefined) {
         overlay.fillOpacity = appearance.bounds.fillOpacity;
@@ -136,7 +136,7 @@ export class ObjectOverlayRenderer implements MeshHighlightRenderer {
     this.#overlays.clear();
   }
 
-  #techniqueFor(
+  #overlayTechnique(
     indicator: ResolvedHighlightIndicator
   ): string {
     if (this.#boundsOnly) {
@@ -150,7 +150,7 @@ export class ObjectOverlayRenderer implements MeshHighlightRenderer {
   }
 }
 
-function occludedOpacityFor(
+function scaleOccludedOpacity(
   indicator: ResolvedHighlightIndicator,
   appearance: MeshHighlightAppearance
 ): number {

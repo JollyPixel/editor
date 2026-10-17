@@ -15,10 +15,6 @@ export function randomColor(
   };
 }
 
-/**
- * Generates `count` in-bounds positions for `size`.
- * Duplicates are intentional to mimic brush revisits.
- */
 export function randomPositions(
   count: number,
   size: Vec2,

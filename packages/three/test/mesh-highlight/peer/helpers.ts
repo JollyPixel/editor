@@ -49,7 +49,7 @@ export function createStubColorAllocator(): StubColorAllocator {
 
   return {
     released,
-    colorOf: (peerId) => `stub:${peerId}`,
+    peerColor: (peerId) => `stub:${peerId}`,
     release: (peerId) => {
       released.push(peerId);
     }

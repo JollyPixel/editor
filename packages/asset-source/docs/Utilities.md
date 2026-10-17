@@ -67,7 +67,7 @@ class FolderSet implements Iterable<string> {
   readonly size: number;
   has(folder: string): boolean;
   add(folder: string): this;
-  addParentsOf(assetPath: string): this;
+  addParents(assetPath: string): this;
   subtree(root: string): string[];
   prune(root: string, files: Iterable<string>): string[];
   equals(other: FolderSet): boolean;
@@ -78,7 +78,7 @@ isWithinFolder(path: string, folder: string): boolean
 ```
 
 A `FolderSet` holds normalized folder paths and always holds the parents of
-each folder it holds. `add` adds a folder with its parents, and `addParentsOf`
+each folder it holds. `add` adds a folder with its parents, and `addParents`
 adds the folders above a path: `"maps/world/a.json"` adds `"maps"` and
 `"maps/world"`. The set is mutable.
 

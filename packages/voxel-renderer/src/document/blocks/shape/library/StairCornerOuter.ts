@@ -79,9 +79,6 @@ const kStairCornerOuterFaces: readonly FaceDefinition[] = [
   })
 ];
 
-/**
- * Convex stair corner whose bottom is its only fully occluding face.
- */
 export class StairCornerOuter extends BlockShapeBase {
   readonly id: BlockShapeID;
   readonly collisionHint: BlockCollisionHint = "trimesh";

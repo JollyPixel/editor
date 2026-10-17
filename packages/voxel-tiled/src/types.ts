@@ -1,6 +1,3 @@
-/**
- * Base fields shared by every Tiled custom property variant.
- */
 export interface TiledPropertyBase {
   name: string;
   /**
@@ -387,7 +384,4 @@ export interface TiledObjectTemplate {
 
 export type TiledGID = number;
 
-/**
- * A tile layer data cell is a GID or 0 (empty).
- */
 export type TiledCell = TiledGID;

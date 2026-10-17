@@ -14,7 +14,6 @@ import {
 } from "#src/index.ts";
 
 function noop(): void {
-  // no-op
 }
 
 function command(
@@ -96,7 +95,7 @@ describe("argument rules", () => {
     const commands = new CommandConsole();
 
     assert.throws(() => commands.registerCommand("cmd", command([
-      // @ts-expect-error an enum argument requires enumValues
+      // @ts-expect-error
       { name: "mode", type: "enum" }
     ])), MissingEnumValuesError);
     assert.throws(() => commands.registerCommand("cmd", command([
@@ -129,7 +128,7 @@ describe("argument rules", () => {
     const commands = new CommandConsole();
 
     assert.throws(() => commands.registerCommand("cmd", command([
-      // @ts-expect-error only a string argument can be rest
+      // @ts-expect-error
       { name: "count", type: "number", rest: true }
     ])), InvalidRestArgumentError);
   });

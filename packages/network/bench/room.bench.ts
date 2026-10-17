@@ -12,7 +12,7 @@ import {
   EchoExtension,
   SinkHandle,
   cursorPatch,
-  identityOf,
+  createIdentity,
   silentLogger,
   strokeCommand
 } from "./_fixtures.ts";
@@ -67,7 +67,7 @@ async function joinedRoom(
     const clientId = `peer-${index}`;
     await room.join({
       handle: new SinkHandle(clientId),
-      identity: identityOf(clientId, index % 4 === 3 ? "viewer" : "editor")
+      identity: createIdentity(clientId, index % 4 === 3 ? "viewer" : "editor")
     });
   }
 

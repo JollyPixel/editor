@@ -65,10 +65,10 @@ export class AssetCompanions {
 
     const owners = new Map<string, string>();
     for (const asset of candidates) {
-      const owner = soleReferrerOf(referrers, asset.id);
+      const owner = soleReferrer(referrers, asset.id);
       if (
         owner !== undefined &&
-        soleReferrerOf(referrers, owner) === undefined
+        soleReferrer(referrers, owner) === undefined
       ) {
         owners.set(asset.id, owner);
       }
@@ -77,13 +77,13 @@ export class AssetCompanions {
     return new AssetCompanions(owners);
   }
 
-  ownerOf(
+  findOwner(
     assetId: string
   ): string | undefined {
     return this.#owners.get(assetId);
   }
 
-  companionsOf(
+  listCompanions(
     ownerId: string
   ): readonly string[] {
     return [
@@ -92,7 +92,7 @@ export class AssetCompanions {
   }
 }
 
-function soleReferrerOf(
+function soleReferrer(
   referrers: ReadonlyMap<string, readonly string[]>,
   assetId: string
 ): string | undefined {

@@ -7,7 +7,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import {
-  frustumsOf,
+  findFrustums,
   joinPeer,
   pose,
   setup
@@ -124,10 +124,10 @@ describe("lifecycle", () => {
     sync.attach(new THREE.Object3D());
 
     sync.destroy();
-    assert.equal(frustumsOf(parent).length, 0);
+    assert.equal(findFrustums(parent).length, 0);
     assert.deepEqual(room.subscribedEvents(), []);
 
     joinPeer(room, "bob", { frustum: pose(2) });
-    assert.equal(frustumsOf(parent).length, 0);
+    assert.equal(findFrustums(parent).length, 0);
   });
 });

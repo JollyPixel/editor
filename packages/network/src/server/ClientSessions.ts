@@ -12,9 +12,6 @@ export interface ClientSession {
   revoked: boolean;
 }
 
-/**
- * Tracks client identities and serializes dispatch per client and lane.
- */
 export class ClientSessions {
   #sessions = new Map<string, ClientSession>();
   #queues = new Map<string, Map<string, Promise<void>>>();

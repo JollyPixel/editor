@@ -87,10 +87,6 @@ export interface AssetBackendOptions {
   logger?: Logger;
 }
 
-/**
- * The options a host may forward to `createAssetBackend` without owning its
- * source, event store, kinds or logger.
- */
 export type AssetBackendTuning = Omit<
   AssetBackendOptions,
   "source" | "eventStore" | "handlers" | "logger"
@@ -119,9 +115,6 @@ export interface AssetBackend extends AsyncDisposable {
   close(): Promise<void>;
 }
 
-/**
- * Assembles the asset backend and starts projections in dependency order.
- */
 export async function createAssetBackend(
   options: AssetBackendOptions
 ): Promise<AssetBackend> {

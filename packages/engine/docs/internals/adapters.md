@@ -27,7 +27,7 @@ Used by `World` (`globalsAdapter` option) to publish the world instance.
 
 ```ts
 interface GlobalsAdapter {
-  setGame(instance: World<any, any>): void;
+  exposeGame(instance: World<any, any>): void;
 }
 ```
 

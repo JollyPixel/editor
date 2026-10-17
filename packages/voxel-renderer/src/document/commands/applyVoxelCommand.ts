@@ -29,11 +29,6 @@ export interface VoxelCommandTarget extends VoxelWorldCommandTarget {
   readonly blendGroups: BlendGroupList;
 }
 
-/**
- * Applies a layer or blockset link command and returns it as applied,
- * normalized the way peers should replay it, or null when it changed
- * nothing.
- */
 export function applyVoxelWorldCommand(
   target: VoxelWorldCommandTarget,
   command: VoxelWorldCommand,
@@ -53,10 +48,6 @@ export function applyVoxelWorldCommand(
   );
 }
 
-/**
- * Applies the command and returns it as applied, normalized the way peers
- * should replay it, or null when it changed nothing.
- */
 export function applyVoxelCommand(
   target: VoxelCommandTarget,
   command: VoxelCommand,

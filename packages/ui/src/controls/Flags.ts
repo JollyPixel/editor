@@ -25,9 +25,6 @@ export interface FlagsDefaults {
   value: number;
 }
 
-/**
- * Edits a bitmask as independent checkboxes.
- */
 @customElement("jolly-flags")
 export class Flags extends JollyField<number> {
   static readonly Defaults: FlagsDefaults = {
@@ -89,23 +86,18 @@ export class Flags extends JollyField<number> {
     }
 
     if (!this.editable) {
-      // Preserve tab order for locked fields.
       event.preventDefault();
 
       return;
     }
 
     const mask = this.concreteValue;
-    // A mixed value resolves to the clicked bit.
     if (mask === undefined) {
       this.emitChange(option.value);
 
       return;
     }
 
-    /*
-     * Native activation has already updated `checked` before this handler runs.
-     */
     this.emitChange(
       setFlag(
         mask,

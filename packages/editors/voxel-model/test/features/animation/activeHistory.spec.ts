@@ -27,7 +27,7 @@ describe("ActiveHistory", () => {
     animationFocus.focusClip("walk", "run");
     assert.equal(active.state.undoLabel, "Key run");
     assert.equal(active.undo(), true);
-    assert.equal(model.keyOf("run"), undefined);
+    assert.equal(model.toKey("run"), undefined);
 
     animationFocus.focusSet("walk");
     assert.equal(active.targetName, "Walk");
@@ -50,7 +50,7 @@ describe("ActiveHistory", () => {
     model.access.grant();
 
     assert.deepEqual([active.readOnly, active.undo(), changes], [true, false, 1]);
-    assert.notEqual(model.keyOf("run"), undefined);
+    assert.notEqual(model.toKey("run"), undefined);
 
     model.access.grant("animations");
     assert.deepEqual([active.readOnly, active.undo()], [false, true]);

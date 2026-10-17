@@ -13,7 +13,7 @@ import {
 // Import Internal Dependencies
 import type { FieldValue } from "../field/mixed.ts";
 import { emitFieldEvent } from "../field/events.ts";
-import { detailOf } from "../dom.ts";
+import { readDetail } from "../dom.ts";
 import type { CollaboratorPresence } from "../peer/types.ts";
 import type {
   AxisStyle,
@@ -44,9 +44,6 @@ export interface TransformDefault {
   scale?: Record<TransformAxis3, number>;
 }
 
-/**
- * State applied independently to one transform sub-field.
- */
 export interface TransformSubFieldState {
   lockedBy?: CollaboratorPresence | null;
   peers?: CollaboratorPresence[];
@@ -65,10 +62,6 @@ export interface TransformFieldState {
 const kEmptySubState: TransformSubFieldState = {};
 const kNoPeers: CollaboratorPresence[] = [];
 
-/**
- * Composes independently labeled and lockable position, rotation and scale
- * fields. Each sub-field owns its Mixed and revert state.
- */
 @customElement("jolly-transform")
 export class Transform extends LitElement {
   static override styles = [
@@ -238,7 +231,7 @@ export class Transform extends LitElement {
     event: Event,
     live: boolean
   ): void {
-    const detail = detailOf<{ value: unknown; }>(event);
+    const detail = readDetail<{ value: unknown; }>(event);
     if (detail === null) {
       return;
     }

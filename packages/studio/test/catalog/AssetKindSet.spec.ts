@@ -37,8 +37,8 @@ describe("AssetKindSet", () => {
   });
 
   test("finds the entry of a listed kind", () => {
-    assert.deepEqual(kKinds.entryOf("voxelmap"), kMap);
-    assert.equal(kKinds.entryOf("binary"), undefined);
+    assert.deepEqual(kKinds.findEntry("voxelmap"), kMap);
+    assert.equal(kKinds.findEntry("binary"), undefined);
   });
 
   test("names a new asset after the kind label", () => {
@@ -47,34 +47,34 @@ describe("AssetKindSet", () => {
   });
 
   test("falls back to the file icon", () => {
-    assert.equal(kKinds.iconFor("voxelmap"), "kind:voxelmap");
-    assert.equal(kKinds.iconFor("texture"), "file");
-    assert.equal(kKinds.iconFor("binary"), "file");
+    assert.equal(kKinds.kindIcon("voxelmap"), "kind:voxelmap");
+    assert.equal(kKinds.kindIcon("texture"), "file");
+    assert.equal(kKinds.kindIcon("binary"), "file");
   });
 
   test("details every kind no editor opens, listed or not", () => {
-    assert.equal(kKinds.detailFor("voxelmap"), undefined);
-    assert.equal(kKinds.detailFor("texture"), "no editor");
-    assert.equal(kKinds.detailFor("binary"), "no editor");
+    assert.equal(kKinds.kindDetail("voxelmap"), undefined);
+    assert.equal(kKinds.kindDetail("texture"), "no editor");
+    assert.equal(kKinds.kindDetail("binary"), "no editor");
   });
 
   test("displays a name without the extension of its kind", () => {
     assert.equal(
-      kKinds.displayNameFor("voxelmap", "cave.voxelmap.json"),
+      kKinds.trimExtension("voxelmap", "cave.voxelmap.json"),
       "cave"
     );
     assert.equal(
-      kKinds.displayNameFor("voxelmap", "v1.2 cave.voxelmap.json"),
+      kKinds.trimExtension("voxelmap", "v1.2 cave.voxelmap.json"),
       "v1.2 cave"
     );
-    assert.equal(kKinds.displayNameFor("texture", "grass.png"), "grass");
+    assert.equal(kKinds.trimExtension("texture", "grass.png"), "grass");
   });
 
   test("displays the whole name when the kind extension does not apply", () => {
-    assert.equal(kKinds.displayNameFor("binary", "data.bin"), "data.bin");
-    assert.equal(kKinds.displayNameFor("voxelmap", "cave.json"), "cave.json");
+    assert.equal(kKinds.trimExtension("binary", "data.bin"), "data.bin");
+    assert.equal(kKinds.trimExtension("voxelmap", "cave.json"), "cave.json");
     assert.equal(
-      kKinds.displayNameFor("voxelmap", ".voxelmap.json"),
+      kKinds.trimExtension("voxelmap", ".voxelmap.json"),
       ".voxelmap.json"
     );
   });
@@ -106,7 +106,7 @@ describe("AssetKindSet", () => {
     editable.push("voxelmap");
 
     assert.equal(set.has("voxelmap"), false);
-    assert.equal(set.detailFor("voxelmap"), "no editor");
+    assert.equal(set.kindDetail("voxelmap"), "no editor");
     assert.equal(Object.isFrozen(set.entries), true);
     assert.equal(Object.isFrozen(set.entries[0]), true);
   });

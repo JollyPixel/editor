@@ -15,7 +15,7 @@ function quadCount(
   return triangles.length / 18;
 }
 
-function segmentsOf(
+function listSegments(
   edges: number[]
 ): string[] {
   const segments: string[] = [];
@@ -26,7 +26,7 @@ function segmentsOf(
   return segments.sort();
 }
 
-function normalsOf(
+function computeNormals(
   triangles: number[]
 ): string[] {
   const normals = new Set<string>();
@@ -62,7 +62,7 @@ describe("VoxelShell.fromCells", () => {
     const faces: string[] = [];
 
     for (let index = 0; index < triangles.length; index += 18) {
-      faces.push(normalsOf(triangles.slice(index, index + 18))[0]);
+      faces.push(computeNormals(triangles.slice(index, index + 18))[0]);
     }
 
     assert.deepStrictEqual(faces.sort(), [
@@ -74,7 +74,7 @@ describe("VoxelShell.fromCells", () => {
       "1,0,0"
     ]);
     for (let index = 0; index < triangles.length; index += 18) {
-      const [nx, ny, nz] = normalsOf(triangles.slice(index, index + 18))[0]
+      const [nx, ny, nz] = computeNormals(triangles.slice(index, index + 18))[0]
         .split(",")
         .map(Number);
       const face = triangles.slice(index, index + 18);
@@ -96,7 +96,7 @@ describe("VoxelShell.fromCells", () => {
       pattern: "square"
     }).cells());
 
-    assert.deepStrictEqual(segmentsOf(shell.edges), segmentsOf([
+    assert.deepStrictEqual(listSegments(shell.edges), listSegments([
       -1, 0, -1, 2, 0, -1,
       -1, 0, 2, 2, 0, 2,
       -1, 1, -1, 2, 1, -1,
@@ -183,15 +183,15 @@ describe("VoxelShell.edgesFacing", () => {
     const edges = cube.edgesFacing([5, 5, 5]);
 
     assert.strictEqual(edges.length / 6, 9);
-    assert.ok(!segmentsOf(edges).includes("0,0,0,1,0,0"));
-    assert.ok(!segmentsOf(edges).includes("0,0,0,0,1,0"));
-    assert.ok(!segmentsOf(edges).includes("0,0,0,0,0,1"));
+    assert.ok(!listSegments(edges).includes("0,0,0,1,0,0"));
+    assert.ok(!listSegments(edges).includes("0,0,0,0,1,0"));
+    assert.ok(!listSegments(edges).includes("0,0,0,0,0,1"));
   });
 
   test("keeps the four edges of the only face seen head-on", () => {
     const edges = cube.edgesFacing([0.5, 5, 0.5]);
 
-    assert.deepStrictEqual(segmentsOf(edges), [
+    assert.deepStrictEqual(listSegments(edges), [
       "0,1,0,0,1,1",
       "0,1,0,1,1,0",
       "0,1,1,1,1,1",
@@ -212,10 +212,10 @@ describe("VoxelShell.edgesFacing", () => {
     const convex = "1,1,0,1,1,1";
     const pinched = "1,1,1,1,1,2";
 
-    assert.ok(segmentsOf(shell.edges).includes(convex));
-    assert.ok(segmentsOf(shell.edges).includes(pinched));
+    assert.ok(listSegments(shell.edges).includes(convex));
+    assert.ok(listSegments(shell.edges).includes(pinched));
 
-    const facing = segmentsOf(shell.edgesFacing([-5, -5, 0.5]));
+    const facing = listSegments(shell.edgesFacing([-5, -5, 0.5]));
     assert.ok(!facing.includes(convex));
     assert.ok(facing.includes(pinched));
   });

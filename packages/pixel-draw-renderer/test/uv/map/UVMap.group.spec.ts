@@ -199,8 +199,8 @@ describe("UVMap — previewMoveGroup", () => {
     ]);
 
     assert.deepStrictEqual(rest, []);
-    assert.deepStrictEqual(preview.rectFor("front"), { x: 10, y: 0, width: 4, height: 4 });
-    assert.deepStrictEqual(preview.rectFor("back"), { x: 0, y: 10, width: 4, height: 4 });
+    assert.deepStrictEqual(preview.slotRect("front"), { x: 10, y: 0, width: 4, height: 4 });
+    assert.deepStrictEqual(preview.slotRect("back"), { x: 0, y: 10, width: 4, height: 4 });
     assert.deepStrictEqual(
       events.map(({ region, face }) => [region, face]),
       [[preview, null]]

@@ -7,16 +7,11 @@ export function isFullQuad(
     return false;
   }
 
-  // FACE packs direction as `axis * 2 + (negative ? 1 : 0)`.
   const axis = cull >> 1;
   const plane = (cull & 1) === 0 ? 1 : 0;
   const uAxis = axis === 0 ? 1 : 0;
   const vAxis = axis === 2 ? 1 : 2;
 
-  /*
-   * Bit `(v << 1) | u` per visited corner; all four must show up exactly once
-   * in both position and tile space.
-   */
   let cornerMask = 0;
   let uvMask = 0;
 

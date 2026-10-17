@@ -164,7 +164,7 @@ export class PeerFrustumSync {
     }
   }
 
-  poseOf(
+  peerPose(
     clientId: string
   ): PeerFrustumPose | undefined {
     const pose = this.#channel.values.get(clientId);
@@ -185,7 +185,7 @@ export class PeerFrustumSync {
     }
 
     for (const [clientId, frustum] of this.#peers) {
-      frustum.color = color(clientId, this.#profileOf(clientId));
+      frustum.color = color(clientId, this.#peerProfile(clientId));
     }
   }
 
@@ -277,7 +277,7 @@ export class PeerFrustumSync {
       (this.#fadeWithin - this.#hideWithin);
   }
 
-  #profileOf(
+  #peerProfile(
     clientId: string
   ): PeerMetadata {
     return this.#room.peers.get(clientId)?.profile ?? {};
@@ -286,7 +286,7 @@ export class PeerFrustumSync {
   #createPeer(
     clientId: string
   ): PeerFrustum {
-    const profile = this.#profileOf(clientId);
+    const profile = this.#peerProfile(clientId);
     const frustum = new PeerFrustum({
       ...this.#frustumOptions,
       ...this.#color && {

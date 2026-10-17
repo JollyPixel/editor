@@ -21,13 +21,7 @@ export interface TransformTarget {
   readonly modes: readonly TransformMode[];
   readonly writable: boolean;
   begin?(block: ModelBlock): void;
-  /**
-   * A gizmo drag let go of `block`.
-   */
   end(block: ModelBlock): void;
-  /**
-   * A typed value changed `block`.
-   */
   commit(block: ModelBlock): void;
 }
 

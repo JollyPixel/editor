@@ -486,7 +486,7 @@ export class LocalBrush extends ActorComponent {
     }
 
     const aim = this.#resolveAim();
-    const replacement = this.#aimedHalf(aim)?.replacementFor(
+    const replacement = this.#aimedHalf(aim)?.findReplacement(
       paint,
       this.view.complements
     );

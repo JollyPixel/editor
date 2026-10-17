@@ -31,13 +31,7 @@ export interface TransformLivePayload {
 }
 
 export interface LiveView {
-  /**
-   * Names the pose the viewport shows, `null` for the rest pose.
-   */
   key(): string | null;
-  /**
-   * Where `uuid` stands in that pose without any live edit.
-   */
   shownTransform(uuid: string): BlockTransformJSON | undefined;
   subscribe(listener: () => void): () => void;
 }

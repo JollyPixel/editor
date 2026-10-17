@@ -19,7 +19,7 @@ import {
   createAccounts,
   databaseWith,
   databaseWithRetiredRole,
-  sessionFor
+  openSession
 } from "./helpers/accounts.ts";
 import { solidPng } from "./helpers/avatar/images.ts";
 
@@ -86,7 +86,7 @@ describe("Accounts.authenticate — share links", () => {
     using database = databaseWith("Alice");
     const [alice] = database.accounts;
     using accounts = createAccounts(database);
-    const cookie = `jolly_session=${sessionFor(database, alice.id)}`;
+    const cookie = `jolly_session=${openSession(database, alice.id)}`;
 
     assert.equal(accounts.authenticate(upgrade(cookie, "unknown")), null);
   });
@@ -99,7 +99,7 @@ describe("Accounts.authenticate", () => {
     using accounts = createAccounts(database);
 
     assert.deepEqual(
-      accounts.authenticate(upgrade(`jolly_session=${sessionFor(database, alice.id)}`)),
+      accounts.authenticate(upgrade(`jolly_session=${openSession(database, alice.id)}`)),
       {
         subject: alice.id,
         role: "admin",
@@ -117,7 +117,7 @@ describe("Accounts.authenticate", () => {
     using database = databaseWith("Alice");
     const [alice] = database.accounts;
     using accounts = createAccounts(database);
-    const token = sessionFor(database, alice.id);
+    const token = openSession(database, alice.id);
     const { avatar } = await accounts.replaceAvatar(alice.id, await solidPng(8, 8));
 
     assert.equal(
@@ -132,7 +132,7 @@ describe("Accounts.authenticate", () => {
     using accounts = createAccounts(database);
 
     assert.equal(
-      accounts.authenticate(upgrade(`jolly_session=${sessionFor(database, bob.id)}`))?.role,
+      accounts.authenticate(upgrade(`jolly_session=${openSession(database, bob.id)}`))?.role,
       "spectator"
     );
   });
@@ -150,7 +150,7 @@ describe("Accounts.watchRevocations", () => {
       address: ADDRESS,
       secure: false,
       headers: {
-        cookie: `jolly_session=${sessionFor(database, alice.id)}`
+        cookie: `jolly_session=${openSession(database, alice.id)}`
       }
     });
     stop();

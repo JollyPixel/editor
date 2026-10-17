@@ -34,7 +34,7 @@ describe("RuntimeLoadingScreen", () => {
       canvas,
       container
     );
-    screen.setProgress(2, 5);
+    screen.updateProgress(2, 5);
     screen.error(new Error("load failed"));
 
     assert.strictEqual(container.childElementCount, 1);
@@ -106,12 +106,12 @@ describe("RuntimeLoadingScreen", () => {
     const loading = container.querySelector("jolly-loading");
     assert.ok(loading instanceof Loading);
 
-    screen.setProgress(0, 0);
+    screen.updateProgress(0, 0);
     const completion = screen.complete();
 
     assert.strictEqual(loading.progress, 1);
     assert.strictEqual(loading.maxProgress, 1);
-    assert.strictEqual(loading.getProgressPercentage(), 100);
+    assert.strictEqual(loading.progressPercentage, 100);
     assert.strictEqual(canvas.style.opacity, "0");
 
     await completion;

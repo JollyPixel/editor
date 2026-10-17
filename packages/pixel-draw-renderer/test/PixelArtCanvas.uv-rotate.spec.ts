@@ -44,13 +44,13 @@ describe("PixelArtCanvas — uv rotation", () => {
 
     manager.shortcuts.rotate("cw");
     assert.deepStrictEqual(
-      manager.uv.get(region.id)!.geometryFor("front"),
+      manager.uv.get(region.id)!.slotGeometry("front"),
       { x: 0, y: 0, width: 2, height: 4, rotation: 1 }
     );
 
     manager.shortcuts.rotate("ccw");
     assert.deepStrictEqual(
-      manager.uv.get(region.id)!.geometryFor("front"),
+      manager.uv.get(region.id)!.slotGeometry("front"),
       { x: 0, y: 0, width: 4, height: 2 }
     );
     manager.destroy();
@@ -59,14 +59,14 @@ describe("PixelArtCanvas — uv rotation", () => {
   test("rotate turns only the selected slot of a free region", () => {
     const manager = makeManager();
     const region = selectedRegion(manager);
-    manager.uv.setState(region.id, "free");
+    manager.uv.applyState(region.id, "free");
     manager.uv.select(region.id, "top");
 
     manager.shortcuts.rotate("cw");
 
     const stored = manager.uv.get(region.id)!;
-    assert.strictEqual(stored.geometryFor("top").rotation, 1);
-    assert.strictEqual(stored.geometryFor("front").rotation, undefined);
+    assert.strictEqual(stored.slotGeometry("top").rotation, 1);
+    assert.strictEqual(stored.slotGeometry("front").rotation, undefined);
     manager.destroy();
   });
 
@@ -81,7 +81,7 @@ describe("PixelArtCanvas — uv rotation", () => {
     canvas.dispatchEvent(mouseEvent("mouseup", 88, 88));
 
     assert.deepStrictEqual(
-      manager.uv.get(region.id)!.geometryFor("front"),
+      manager.uv.get(region.id)!.slotGeometry("front"),
       { x: 1, y: 1, width: 4, height: 2 }
     );
     manager.destroy();
@@ -96,7 +96,7 @@ describe("PixelArtCanvas — uv rotation", () => {
     assert.deepStrictEqual(manager.uv.get(region.id)!.toJSON(), region.toJSON());
 
     manager.redo();
-    assert.strictEqual(manager.uv.get(region.id)!.geometryFor("front").rotation, 1);
+    assert.strictEqual(manager.uv.get(region.id)!.slotGeometry("front").rotation, 1);
     manager.destroy();
   });
 
@@ -134,7 +134,7 @@ describe("PixelArtCanvas — uv rotation", () => {
       onCommand: (event) => events.push(event)
     });
     const region = selectedRegion(manager);
-    manager.uv.setState(region.id, "free");
+    manager.uv.applyState(region.id, "free");
     events.length = 0;
 
     manager.uv.rotate(region.id, "cw", "top");
@@ -182,7 +182,7 @@ describe("PixelArtCanvas — uv rotation", () => {
     });
 
     assert.deepStrictEqual(
-      manager.uv.get(region.id)!.geometryFor("top"),
+      manager.uv.get(region.id)!.slotGeometry("top"),
       { x: 3, y: 0, width: 2, height: 4, rotation: 1 }
     );
     assert.strictEqual(events.length, 0);

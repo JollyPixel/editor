@@ -106,7 +106,7 @@ export class PixelCommandArbiter {
       case "global-fill":
         return this.#pixelTracker.admit(
           command,
-          state.buffer.positionsOf(command.metadata.fromColor).map(pixelKey)
+          state.buffer.findPositions(command.metadata.fromColor).map(pixelKey)
         );
       case "palette-color-changed":
         return this.#paletteTracker.admit(

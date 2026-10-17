@@ -24,7 +24,7 @@ describe("UVMap — selectedSlot", () => {
   test("defaults to front when an free region is selected without a face", () => {
     const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
 
     map.select(region.id);
 
@@ -34,7 +34,7 @@ describe("UVMap — selectedSlot", () => {
   test("keeps the requested face for an free region", () => {
     const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
 
     map.select(region.id, "bottom");
 
@@ -70,12 +70,12 @@ describe("UVMap — selectedSlot", () => {
   test("is cleared and emits selection-changed when the selected region stacks", () => {
     const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.select(region.id, "bottom");
     const events: EventPayload<"selection-changed">[] = [];
     map.on("selection-changed", (e) => events.push(e));
 
-    map.setState(region.id, "stacked");
+    map.applyState(region.id, "stacked");
 
     assert.strictEqual(map.selectedSlot, null);
     assert.deepStrictEqual(events, [
@@ -86,7 +86,7 @@ describe("UVMap — selectedSlot", () => {
   test("emits selection-changed when the face alone changes", () => {
     const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.select(region.id, "front");
     const events: EventPayload<"selection-changed">[] = [];
     map.on("selection-changed", (e) => events.push(e));

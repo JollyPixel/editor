@@ -16,9 +16,6 @@ import { bootstrapRuntime } from "./utils/bootstrapRuntime.ts";
 // CONSTANTS
 const kHelvetikerRegularFont = new AssetReference("helvetiker_regular", AssetTypes.font);
 
-/**
- * Declares and constructs the renderers example scene.
- */
 class RenderersScene extends Systems.Scene {
   audioBackground!: AudioBackground;
 

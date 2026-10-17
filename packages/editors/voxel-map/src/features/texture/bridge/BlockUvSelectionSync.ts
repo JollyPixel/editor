@@ -8,9 +8,6 @@ import type {
 import type { BlockSelection } from "../../../state/index.ts";
 import type { SlotRegionIds } from "./SlotRegionIds.ts";
 
-/**
- * Keeps block-library and UV-map selection aligned.
- */
 export class BlockUvSelectionSync {
   #uv: UVMap;
   #block: BlockSelection;

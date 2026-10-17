@@ -21,31 +21,31 @@ import {
 import { formatVector } from "../src/monitors/format.ts";
 import {
   BATCH,
-  batchOf,
+  createBatch,
   type Rng
 } from "./_fixtures.ts";
 
 const suite = defineSuite("math", (bench) => {
-  const vectors = batchOf(vector3);
+  const vectors = createBatch(vector3);
   const copies = vectors.map((vector) => {
     return {
       ...vector
     };
   });
-  const quaternions = batchOf(quaternion);
+  const quaternions = createBatch(quaternion);
   const quaternionCopies = quaternions.map((value) => {
     return {
       ...value
     };
   });
-  const transforms = batchOf((rng) => {
+  const transforms = createBatch((rng) => {
     return {
       position: vector3(rng),
       rotation: quaternion(rng),
       scale: vector3(rng)
     };
   });
-  const targets = batchOf((rng) => {
+  const targets = createBatch((rng) => {
     return {
       position: vector3(rng),
       rotation: quaternion(rng),
@@ -54,20 +54,20 @@ const suite = defineSuite("math", (bench) => {
   });
 
   bench
-    .add("vectorValueHasChanged equal", () => countOf(
+    .add("vectorValueHasChanged equal", () => countMatches(
       vectors,
       (vector, index) => vectorValueHasChanged(vector, copies[index])
     ))
-    .add("quatHasChanged equal", () => countOf(
+    .add("quatHasChanged equal", () => countMatches(
       quaternions,
       (value, index) => quatHasChanged(value, quaternionCopies[index])
     ))
-    .add("isTransformLike", () => countOf(transforms, isTransformLike))
-    .add("snapshotComponents transform", () => countOf(
+    .add("isTransformLike", () => countMatches(transforms, isTransformLike))
+    .add("snapshotComponents transform", () => countMatches(
       transforms,
       (transform) => snapshotComponents(transform) !== null
     ))
-    .add("copyComponents transform", () => countOf(
+    .add("copyComponents transform", () => countMatches(
       transforms,
       (transform, index) => {
         copyComponents(targets[index], transform);
@@ -75,11 +75,11 @@ const suite = defineSuite("math", (bench) => {
         return true;
       }
     ))
-    .add("quaternionToEuler round trip", () => countOf(
+    .add("quaternionToEuler round trip", () => countMatches(
       quaternions,
       (value) => eulerRoundTrips(quaternionToEuler(value), value)
     ))
-    .add("formatVector", () => countOf(
+    .add("formatVector", () => countMatches(
       vectors,
       (vector) => formatVector(vector).length > 0
     ));
@@ -118,7 +118,7 @@ function quaternion(
   };
 }
 
-function countOf<T>(
+function countMatches<T>(
   items: T[],
   predicate: (item: T, index: number) => boolean
 ): number {

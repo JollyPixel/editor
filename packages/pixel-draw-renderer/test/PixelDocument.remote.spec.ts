@@ -194,7 +194,7 @@ describe("PixelDocument", () => {
         author.uv.get(region.id)!.toJSON()
       );
       assert.deepEqual(
-        peer.uv.get(region.id)!.rectFor("front"),
+        peer.uv.get(region.id)!.slotRect("front"),
         { x: -6, y: 5, width: 2, height: 2 }
       );
     });

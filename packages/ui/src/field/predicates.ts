@@ -18,9 +18,6 @@ export interface PeerChips {
   overflow: number;
 }
 
-/**
- * Whether a value differs from its default.
- */
 export function isModified<TValue>(
   value: FieldValue<TValue>,
   fallback: TValue | undefined,
@@ -37,9 +34,6 @@ export function isModified<TValue>(
   return !equals(value, fallback);
 }
 
-/**
- * Resolves a remote holder while excluding the local peer.
- */
 export function resolveHolder(
   peers: readonly CollaboratorPresence[],
   lockedBy: CollaboratorPresence | null,
@@ -59,9 +53,6 @@ export function resolveHolder(
   ) ?? null;
 }
 
-/**
- * Splits visible peer chips from their overflow count.
- */
 export function splitPeerChips(
   peers: readonly CollaboratorPresence[],
   limit: number,

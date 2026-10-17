@@ -125,7 +125,7 @@ export class CatalogFolders extends Emitter<
       await this.#source.folders()
     );
     for (const record of this.#catalog.catalog) {
-      folders.addParentsOf(record.source);
+      folders.addParents(record.source);
     }
 
     if (!folders.equals(this.#folders)) {
@@ -142,7 +142,7 @@ export class CatalogFolders extends Emitter<
     }
 
     const { size } = this.#folders;
-    this.#folders.addParentsOf(
+    this.#folders.addParents(
       change.record.source
     );
     if (this.#folders.size !== size) {

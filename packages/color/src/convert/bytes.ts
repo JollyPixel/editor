@@ -8,9 +8,6 @@ import type {
   RGBA8
 } from "../types.ts";
 
-/**
- * Rounds and clamps unit channels to bytes.
- */
 export function toRGBA8(
   color: RGBA
 ): RGBA8 {
@@ -22,9 +19,6 @@ export function toRGBA8(
   };
 }
 
-/**
- * Divides byte channels by 255 without validation.
- */
 export function fromRGBA8(
   color: RGBA8
 ): RGBA {

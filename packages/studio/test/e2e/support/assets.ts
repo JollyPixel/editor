@@ -6,8 +6,8 @@ import {
   type Page
 } from "@playwright/test";
 import {
-  boxOf,
-  centerOf,
+  measureBox,
+  measureCenter,
   dragTo,
   treeRow
 } from "@jolly-pixel/e2e";
@@ -149,7 +149,7 @@ export class AssetBrowser {
     source: string,
     target: string
   ): Promise<void> {
-    await dragTo(this.#page, this.row(source), await centerOf(this.row(target)));
+    await dragTo(this.#page, this.row(source), await measureCenter(this.row(target)));
   }
 
   async rename(
@@ -180,7 +180,7 @@ export class AssetBrowser {
   }
 
   async openMenuBelowRows(): Promise<void> {
-    const tree = await boxOf(this.tree);
+    const tree = await measureBox(this.tree);
     await this.#page.mouse.click(
       tree.x + (tree.width / 2),
       tree.y + tree.height - kBelowRowsOffset,

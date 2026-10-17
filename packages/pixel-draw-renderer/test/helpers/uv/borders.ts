@@ -5,7 +5,7 @@ export interface UVBorderView {
   hasAttribute(name: string): boolean;
 }
 
-function boxOf(
+function measureBox(
   path: SVGPathElement
 ): { x: number; y: number; width: number; height: number; } {
   const values = (path.getAttribute("d") ?? "").match(/-?\d+(\.\d+)?/g)?.map(Number) ?? [];
@@ -22,7 +22,7 @@ function boxOf(
   };
 }
 
-function viewOf(
+function readView(
   element: SVGPathElement
 ): UVBorderView {
   return {
@@ -30,7 +30,7 @@ function viewOf(
     style: element.style,
     getAttribute(name) {
       if (name === "x" || name === "y" || name === "width" || name === "height") {
-        return String(boxOf(element)[name]);
+        return String(measureBox(element)[name]);
       }
 
       return element.getAttribute(name);
@@ -54,11 +54,11 @@ export function uvEntryGroups(
 export function uvBorderRects(
   svg: SVGElement
 ): UVBorderView[] {
-  return uvEntryGroups(svg).map((group) => viewOf(group.querySelectorAll("path")[1]));
+  return uvEntryGroups(svg).map((group) => readView(group.querySelectorAll("path")[1]));
 }
 
 export function uvCasingRects(
   svg: SVGElement
 ): UVBorderView[] {
-  return uvEntryGroups(svg).map((group) => viewOf(group.querySelectorAll("path")[0]));
+  return uvEntryGroups(svg).map((group) => readView(group.querySelectorAll("path")[0]));
 }

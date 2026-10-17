@@ -10,14 +10,14 @@ const kFrame = new THREE.Matrix4();
 export class BlockNode extends THREE.Group {
   #effectiveScale = new THREE.Vector3(1, 1, 1);
 
-  static anchorScaleOf(
+  static inheritedScale(
     parent: THREE.Object3D | null
   ): Readonly<THREE.Vector3Like> {
     return parent instanceof BlockNode ? parent.effectiveScale : kUnitScale;
   }
 
   override updateMatrix(): void {
-    const anchor = BlockNode.anchorScaleOf(this.parent);
+    const anchor = BlockNode.inheritedScale(this.parent);
     this.#effectiveScale.copy(anchor).multiply(this.scale);
 
     kAnchorInverse.makeScale(inverseOrOne(anchor.x), inverseOrOne(anchor.y), inverseOrOne(anchor.z));

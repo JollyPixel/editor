@@ -151,7 +151,7 @@ const table = new CapabilityTable({
 });
 ```
 
-Groups room events into capabilities. `grantsFor(source)` grants a capability
+Groups room events into capabilities. `resolveGrants(source)` grants a capability
 only when `source.can()` returns `"write"` for every event mapped to it.
 `full` and `none` grant every capability and none. `governs(event)` tells
 whether the table maps an event.

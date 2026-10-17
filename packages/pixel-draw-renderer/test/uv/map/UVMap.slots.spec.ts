@@ -34,7 +34,7 @@ describe("UVMap — inactive slots", () => {
     const map = makeFreeWithInactiveSlot();
 
     assert.strictEqual(map.move("r1", { x: 20, y: 20, width: 4, height: 4 }, "back"), false);
-    assert.deepStrictEqual(map.get("r1")?.rectFor("back"), { x: 8, y: 0, width: 4, height: 4 });
+    assert.deepStrictEqual(map.get("r1")?.slotRect("back"), { x: 8, y: 0, width: 4, height: 4 });
   });
 
   test("refuses to rotate an inactive slot", () => {

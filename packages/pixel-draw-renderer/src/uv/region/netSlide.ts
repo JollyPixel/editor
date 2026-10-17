@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import {
   geometryAt,
-  rectOf,
+  boundingRect,
   sameRect
 } from "../geometry/geometry.ts";
 import type { UVSlotMap } from "./UVSlotMap.ts";
@@ -156,7 +156,7 @@ export function alignedResizes(
 
     const frame = kFrames[edge];
     const rects = new Map(
-      slots.map((other) => [other, frame.forward(rectOf(faces.get(other)))])
+      slots.map((other) => [other, frame.forward(boundingRect(faces.get(other)))])
     );
     const line = frame.forward(from).x + frame.forward(from).width;
     const members = [frame.forward(from)];
@@ -198,7 +198,7 @@ export function slidNeighbors(
   to: SelectionRect
 ): Map<UVSlot, UVGeometry> {
   const rects = new Map(
-    slots.map((other) => [other, rectOf(faces.get(other))])
+    slots.map((other) => [other, boundingRect(faces.get(other))])
   );
   const east = {
     ...from,
@@ -244,7 +244,7 @@ export function slidNeighbors(
   const slid = new Map<UVSlot, UVGeometry>();
   for (const other of slots) {
     const rect = rects.get(other)!;
-    if (other !== slot && !sameRect(rect, rectOf(faces.get(other)))) {
+    if (other !== slot && !sameRect(rect, boundingRect(faces.get(other)))) {
       slid.set(other, geometryAt(faces.get(other), rect));
     }
   }

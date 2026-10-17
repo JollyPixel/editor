@@ -141,7 +141,7 @@ export class EditorFrames {
     return frame;
   }
 
-  #frameOf(
+  #findFrame(
     source: MessageEventSource | null
   ): [string, HTMLIFrameElement] | undefined {
     if (source === null) {
@@ -207,7 +207,7 @@ export class EditorFrames {
   readonly #onMessage = (
     event: MessageEvent
   ): void => {
-    const sender = this.#frameOf(event.source);
+    const sender = this.#findFrame(event.source);
     if (sender === undefined) {
       return;
     }

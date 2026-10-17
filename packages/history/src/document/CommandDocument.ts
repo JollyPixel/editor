@@ -18,10 +18,10 @@ export interface CommandState<TCommand, TSnapshot, TImage> {
   load(
     snapshot: TSnapshot
   ): void;
-  imageOf(
+  captureImage(
     command: TCommand
   ): TImage;
-  inverseOf(
+  invert(
     command: TCommand
   ): TCommand[];
   restored(
@@ -119,7 +119,7 @@ export class CommandDocument<
       (image) => CommandChange.local(
         command,
         image,
-        this.#state.inverseOf(command),
+        this.#state.invert(command),
         basis
       )
     );
@@ -133,7 +133,7 @@ export class CommandDocument<
       return null;
     }
 
-    const change = changeOf(this.#state.imageOf(command));
+    const change = changeOf(this.#state.captureImage(command));
     this.#state.apply(command);
     this.emit("change", change);
 

@@ -27,7 +27,7 @@ describe("materialSwatch", () => {
   });
 
   test("rings a glowing material in its emissive colour", () => {
-    function ringOf(
+    function swatchRing(
       emissiveIntensity: number
     ) {
       return materialSwatch({
@@ -36,7 +36,7 @@ describe("materialSwatch", () => {
       }).ring;
     }
 
-    assert.equal(ringOf(0.6), "#ff0000");
-    assert.equal(ringOf(0), undefined);
+    assert.equal(swatchRing(0.6), "#ff0000");
+    assert.equal(swatchRing(0), undefined);
   });
 });

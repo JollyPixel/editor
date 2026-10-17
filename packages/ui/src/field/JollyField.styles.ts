@@ -5,9 +5,6 @@ import { css } from "lit";
 import { kFallback } from "../theme/styles/fallbacks.ts";
 import { fillTransition, truncate } from "../theme/styles/mixins.ts";
 
-/**
- * Shared field layout and state styles.
- */
 export const fieldStyles = css`
   :host {
     --jolly-field-active-color: light-dark(

@@ -18,9 +18,9 @@ export type ModelEntryTree = typeof MODEL_ENTRY_TREES[number];
 export type EntryTreeReader<T extends OrderedTreeEntry> = Pick<
   OrderedTree<T>,
   | "get"
-  | "childrenOf"
-  | "nextSiblingOf"
-  | "subtreeOf"
+  | "listChildren"
+  | "findNextSibling"
+  | "subtreeFrom"
 >;
 
 export interface EntryRef {
@@ -59,7 +59,7 @@ const kModelCommands: ModelCommandSpecs = {
   },
   "node-removed": {
     before: (tree, { id }) => {
-      return { nodes: tree.subtreeOf(id) };
+      return { nodes: tree.subtreeFrom(id) };
     },
     removes: ({ id }) => {
       return { which: "nodes", id };
@@ -124,11 +124,11 @@ const kModelCommands: ModelCommandSpecs = {
         const folder = tree.materials.get(id);
 
         return {
-          materials: folder === undefined ? [] : [folder, ...tree.materials.childrenOf(id)]
+          materials: folder === undefined ? [] : [folder, ...tree.materials.listChildren(id)]
         };
       }
 
-      const materials = tree.materials.subtreeOf(id);
+      const materials = tree.materials.subtreeFrom(id);
       const removed = new Set(materials.map((entry) => entry.id));
 
       return {
@@ -155,7 +155,7 @@ const kModelCommands: ModelCommandSpecs = {
   "animation-binding-cleared": { before: linkBefore }
 };
 
-export function entryImagesOf(
+export function captureEntryImages(
   tree: ModelTreeReader,
   command: VoxelModelCommand
 ): ModelImages {
@@ -163,30 +163,30 @@ export function entryImagesOf(
     nodes: [],
     materials: [],
     animationSets: [],
-    ...specOf(command).before(tree, command)
+    ...commandSpec(command).before(tree, command)
   };
 }
 
-export function entrySlotOf(
+export function findEntrySlot(
   command: VoxelModelCommand
 ): EntrySlot | undefined {
-  return specOf(command).slot?.(command);
+  return commandSpec(command).slot?.(command);
 }
 
-export function removedEntryOf(
+export function removedEntry(
   command: VoxelModelCommand
 ): EntryRef | undefined {
-  return specOf(command).removes?.(command);
+  return commandSpec(command).removes?.(command);
 }
 
-export function entriesOf(
+export function selectEntryTree(
   tree: ModelTreeReader,
   which: ModelEntryTree
 ): EntryTreeReader<OrderedTreeEntry> {
   return which === "nodes" ? tree : tree.materials;
 }
 
-function specOf(
+function commandSpec(
   command: VoxelModelCommand
 ): ModelCommandSpec<VoxelModelCommand> {
   return kModelCommands[command.action];

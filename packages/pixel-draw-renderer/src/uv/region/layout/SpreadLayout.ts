@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { rectOf } from "../../geometry/geometry.ts";
+import { boundingRect } from "../../geometry/geometry.ts";
 import { RectArea } from "../../../utils/RectArea.ts";
 import type { UVSlotMap } from "../UVSlotMap.ts";
 import {
@@ -21,7 +21,7 @@ export abstract class SpreadLayout extends UVLayout {
 
   get bounds(): SelectionRect {
     const [first, ...rest] = this.activeSlots.map(
-      (slot) => rectOf(this.faces.get(slot))
+      (slot) => boundingRect(this.faces.get(slot))
     );
 
     return rest.reduce(
@@ -30,13 +30,13 @@ export abstract class SpreadLayout extends UVLayout {
     ).bounds;
   }
 
-  geometryFor(
+  slotGeometry(
     slot: UVSlot
   ): UVGeometry {
     return this.faces.get(slot);
   }
 
-  slotsOf(): UVRegionSlot[] {
+  listSlots(): UVRegionSlot[] {
     return this.activeSlots.map((slot) => {
       return {
         slot,

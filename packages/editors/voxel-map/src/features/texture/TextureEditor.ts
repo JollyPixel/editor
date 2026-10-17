@@ -335,7 +335,7 @@ export class TextureEditor extends WorkspaceElement {
     const { blocksets } = workspace;
     const active = blocksets.activeBlocksetId;
     const result = await this._addDialog.open({
-      defaultTileSize: (active === null ? undefined : blocksets.tileSizeFor(active)) ??
+      defaultTileSize: (active === null ? undefined : blocksets.blocksetTileSize(active)) ??
         DEFAULT_TILE_SIZE,
       linkable: blocksets.linkableAssets()
     });

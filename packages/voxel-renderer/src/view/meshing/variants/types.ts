@@ -26,9 +26,6 @@ export interface BlocksetResolver {
   ): AtlasUvSource | undefined;
 }
 
-/**
- * Polygon with transforms, winding, and atlas UVs compiled into its data.
- */
 export interface BlockVariantFace {
   /**
    * World-space neighbour direction to test for occlusion, or -1 to always emit.
@@ -102,9 +99,6 @@ export interface MergedVariantPart {
   faces: readonly BlockVariantFace[];
 }
 
-/**
- * The two shapes of a merged cell.
- */
 export interface MergedVariant {
   parts: readonly MergedVariantPart[];
   /**

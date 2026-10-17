@@ -43,15 +43,12 @@ export interface TreeDragOptions<TData> {
   rowDrag(): boolean;
   acceptDrop(): TreeDropAccept | null;
   interaction(): TreeInteraction;
-  setInteraction(next: TreeInteraction): void;
+  switchInteraction(next: TreeInteraction): void;
   rowsRect(): { top: number; left: number; } | undefined;
   elementAtPoint(clientX: number, clientY: number): Element | null;
   indentUnit(): number;
 }
 
-/**
- * Owns pointer and keyboard row drag-and-drop for jolly-tree.
- */
 export class TreeDragController<TData> implements ReactiveController {
   #host: ReactiveControllerHost & EventTarget;
   #options: TreeDragOptions<TData>;
@@ -107,7 +104,7 @@ export class TreeDragController<TData> implements ReactiveController {
       interaction.cursorId === id;
   }
 
-  dropStyleFor(
+  rowDropStyle(
     nodeId: string,
     rowIndent: string
   ): RowDropStyle {
@@ -158,7 +155,7 @@ export class TreeDragController<TData> implements ReactiveController {
 
   commitKeyboardMove(): void {
     const moveState = this.#options.interaction();
-    this.#options.setInteraction(idleTreeInteraction());
+    this.#options.switchInteraction(idleTreeInteraction());
     if (moveState.kind !== "keyboard-move") {
       return;
     }
@@ -181,7 +178,7 @@ export class TreeDragController<TData> implements ReactiveController {
       threshold: options.threshold,
       documentClass: kDraggingClass,
       onStart: () => {
-        this.#options.setInteraction({
+        this.#options.switchInteraction({
           kind: "pointer-move",
           movedIds,
           preview: null
@@ -196,7 +193,7 @@ export class TreeDragController<TData> implements ReactiveController {
           interaction.preview :
           null;
         this.#session = null;
-        this.#options.setInteraction(idleTreeInteraction(
+        this.#options.switchInteraction(idleTreeInteraction(
           started && result === "commit"
         ));
         if (result === "commit" && preview !== null) {
@@ -232,13 +229,13 @@ export class TreeDragController<TData> implements ReactiveController {
       null;
     const rowId = rowElement?.dataset.id;
     if (rowElement !== null && rowId === undefined) {
-      this.#setPointerPreview(null);
+      this.#showPointerPreview(null);
 
       return;
     }
 
     const rect = rowElement?.getBoundingClientRect();
-    this.#setPointerPreview(this.#drop(movedIds).resolve({
+    this.#showPointerPreview(this.#drop(movedIds).resolve({
       clientX,
       clientY,
       row: rect === undefined || rowId === undefined ?
@@ -253,7 +250,7 @@ export class TreeDragController<TData> implements ReactiveController {
     }));
   }
 
-  #setPointerPreview(
+  #showPointerPreview(
     preview: TreePointerDropPreview | null
   ): void {
     const interaction = this.#options.interaction();
@@ -264,7 +261,7 @@ export class TreeDragController<TData> implements ReactiveController {
       return;
     }
 
-    this.#options.setInteraction({
+    this.#options.switchInteraction({
       ...interaction,
       preview
     });

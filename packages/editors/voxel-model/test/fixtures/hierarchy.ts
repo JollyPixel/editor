@@ -11,7 +11,7 @@ import {
 } from "#src/model/index.ts";
 import { createEditorHistory } from "#src/features/history/index.ts";
 import {
-  buildEditsOf,
+  recordBuildEdits,
   createModelFixture,
   type ModelFixture
 } from "./model.ts";
@@ -30,13 +30,13 @@ export interface HierarchyFixture extends ModelFixture {
   commands: VoxelModelCommand[];
 }
 
-export function createHierarchyFor(
+export function createHierarchy(
   fixture: ModelFixture,
   access: TestModelAccess
 ): ModelHierarchy {
   return new ModelHierarchy({
     document: fixture.document,
-    edits: buildEditsOf(createEditorHistory({ document: fixture.document })),
+    edits: recordBuildEdits(createEditorHistory({ document: fixture.document })),
     textureSize: () => kTextureSize,
     poses: fixture.blocks,
     access
@@ -52,16 +52,16 @@ export function createHierarchyFixture(): HierarchyFixture {
   return {
     ...fixture,
     access,
-    hierarchy: createHierarchyFor(fixture, access),
+    hierarchy: createHierarchy(fixture, access),
     commands
   };
 }
 
-export function shapeOf(
+export function readShape(
   nodes: readonly HierarchyNode[]
 ): unknown[] {
   return nodes.map((node) => (
-    node.children.length > 0 ? [node.name, shapeOf(node.children)] : node.name
+    node.children.length > 0 ? [node.name, readShape(node.children)] : node.name
   ));
 }
 

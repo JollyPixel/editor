@@ -29,9 +29,6 @@ export type ThreeRendererEvents = RendererEvents & {
   ) => void;
 };
 
-/**
- * Mutable `WebGPURenderer` state, applied after the GPU context exists.
- */
 export interface ThreeRendererOutputOptions {
   /**
    * Device pixel ratio.

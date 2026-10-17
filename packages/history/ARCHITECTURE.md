@@ -27,7 +27,7 @@ local edit, and reports the server's answers through the document's receipts.
 ```mermaid
 flowchart TB
     Change["change from a document"] --> Origin{"origin"}
-    Origin -->|"local"| Join["join the open step,<br/>or file its own in scopeOf(change)"]
+    Origin -->|"local"| Join["join the open step,<br/>or file its own in resolveScope(change)"]
     Origin -->|"local · replay"| Recapture["recapture the guards it touches"]
     Origin -->|"remote"| Refuse["refuse the settled steps it touches"]
 ```

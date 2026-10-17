@@ -222,7 +222,7 @@ describe("VoxelMeshBuilder - partial boundary faces", () => {
     ];
     const kNeighbours = [[2, 1, 1], [0, 1, 1], [1, 2, 1], [1, 0, 1], [1, 1, 2], [1, 1, 0]] as const;
 
-    function statsOf(
+    function measureStats(
       transform: VoxelTransformOptions,
       neighbour: readonly [number, number, number]
     ) {
@@ -238,8 +238,8 @@ describe("VoxelMeshBuilder - partial boundary faces", () => {
     for (const [flipped, rotated] of kEquivalents) {
       for (const neighbour of kNeighbours) {
         assert.deepEqual(
-          statsOf(flipped, neighbour),
-          statsOf(rotated, neighbour),
+          measureStats(flipped, neighbour),
+          measureStats(rotated, neighbour),
           `${JSON.stringify(flipped)} next to ${neighbour}`
         );
       }

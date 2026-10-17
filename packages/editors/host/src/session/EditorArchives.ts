@@ -61,9 +61,6 @@ export interface EditorArchiveTarget {
   readonly source: string;
 }
 
-/**
- * The browser side of the archive flows: downloads, dialogs and navigation.
- */
 export interface EditorArchiveBrowser {
   readonly location: Pick<Location, "href" | "assign" | "reload">;
   pickArchive(): Promise<Blob | null>;

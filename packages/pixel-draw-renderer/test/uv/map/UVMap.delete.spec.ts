@@ -40,7 +40,7 @@ describe("UVMap — delete", () => {
   test("clears selection and emits selection-changed when the selected region is deleted", () => {
     const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.select(region.id, "top");
     const events: EventPayload<"selection-changed">[] = [];
     map.on("selection-changed", (e) => events.push(e));
@@ -67,7 +67,7 @@ describe("UVMap — clear", () => {
 
     const region = map.create({ width: 4, height: 4 });
     assert.deepStrictEqual(
-      region.rectFor("front"),
+      region.slotRect("front"),
       { x: 0, y: 0, width: 4, height: 4 },
       "rect must be { x: 0, y: 0, width: 4, height: 4 }"
     );
@@ -101,7 +101,7 @@ describe("UVMap — clear", () => {
 
     assert.deepStrictEqual([...map.regions].map((region) => region.id), [kept.id]);
     assert.notDeepStrictEqual(
-      map.create({ width: 4, height: 4 }).rectFor("front"),
+      map.create({ width: 4, height: 4 }).slotRect("front"),
       { x: 0, y: 0, width: 4, height: 4 }
     );
   });

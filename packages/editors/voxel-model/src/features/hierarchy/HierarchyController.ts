@@ -23,7 +23,7 @@ import type {
 // Import Internal Dependencies
 import {
   blockIdsUnder,
-  duplicateNameOf,
+  duplicateName,
   findHierarchyNode,
   kindLabel,
   type HierarchyNode,
@@ -121,7 +121,7 @@ export class HierarchyController {
   #onChange = (
     change: ModelChange
   ): void => {
-    const parentId = landingParentOf(change.command);
+    const parentId = destinationParent(change.command);
     if (parentId !== null) {
       this.#expanded.expand(parentId);
     }
@@ -283,7 +283,7 @@ export class HierarchyController {
     }
   };
 
-  menuFor(
+  openMenu(
     id: string | null
   ): MenuSession {
     const readOnly = !this.writable;
@@ -381,7 +381,7 @@ export class HierarchyController {
     const parentId = this.#workspace?.document.tree.get(id)?.parentId ?? null;
     const result = await this.#view.promptDuplicate({
       hasChildren,
-      ...this.#naming(source.kind, duplicateNameOf(source.name), parentId)
+      ...this.#naming(source.kind, duplicateName(source.name), parentId)
     });
     const workspace = this.#workspace;
     if (result === null || workspace === null) {
@@ -490,7 +490,7 @@ export class HierarchyController {
   };
 }
 
-function landingParentOf(
+function destinationParent(
   command: VoxelModelCommand
 ): string | null {
   switch (command.action) {

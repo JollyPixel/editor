@@ -47,7 +47,7 @@ export class InstancedHighlightMask {
 
   sync(): void {
     for (const [mesh, idColor] of this.#entries) {
-      const resources = this.#resourcesFor(mesh);
+      const resources = this.#ensureResources(mesh);
       resources.colorAttribute.array.fill(0);
       resources.maskedFlagAttribute.array.fill(0);
       resources.priorityFlagAttribute.array.fill(0);
@@ -67,17 +67,17 @@ export class InstancedHighlightMask {
     }
   }
 
-  materialsFor(
+  maskMaterials(
     mesh: THREE.InstancedMesh
   ): Pick<InstancedMaskResources, "material" | "priorityMaterial"> | undefined {
     if (!this.#entries.has(mesh)) {
       return undefined;
     }
 
-    return this.#resourcesFor(mesh);
+    return this.#ensureResources(mesh);
   }
 
-  #resourcesFor(
+  #ensureResources(
     mesh: THREE.InstancedMesh
   ): InstancedMaskResources {
     const cached = this.#resources.get(mesh);

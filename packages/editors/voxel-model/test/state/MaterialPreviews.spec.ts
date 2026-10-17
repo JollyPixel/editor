@@ -26,10 +26,10 @@ describe("MaterialPreviews", () => {
     previews.set("glass", "bob", { roughness: 0.3, color: "#ff0000" });
 
     assert.deepEqual(
-      previews.surfaceOf("glass", kStored),
+      previews.previewSurface("glass", kStored),
       { ...kStored, roughness: 0.1, metalness: 0.9, color: "#ff0000" }
     );
-    assert.deepEqual(previews.surfaceOf("metal", kStored), kStored);
+    assert.deepEqual(previews.previewSurface("metal", kStored), kStored);
   });
 
   test("tells which material and owner each change is for, and only real changes", () => {
@@ -44,6 +44,6 @@ describe("MaterialPreviews", () => {
 
     assert.deepEqual(changes, [["glass", "bob"], ["glass", "bob"]]);
     assert.equal(previews.layer("glass", "bob"), undefined);
-    assert.deepEqual(previews.surfaceOf("glass", kStored), kStored);
+    assert.deepEqual(previews.previewSurface("glass", kStored), kStored);
   });
 });

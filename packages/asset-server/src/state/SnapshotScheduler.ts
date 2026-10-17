@@ -41,11 +41,6 @@ export interface SnapshotSchedulerOptions {
   logger?: Logger;
 }
 
-/**
- * Schedules snapshots by quiet period and maximum delay per asset.
- *
- * Snapshots append events; the projector performs the physical write.
- */
 export class SnapshotScheduler {
   #eventStore: EventStore.EventStore;
   #states: AssetStateStore;
@@ -208,7 +203,7 @@ export class SnapshotScheduler {
     }
 
     const entry = this.#states.get(assetId);
-    const version = this.#states.versionOf(assetId);
+    const version = this.#states.openVersion(assetId);
     const desired = this.#projector.desired(assetId);
     if (
       entry === undefined ||
@@ -239,7 +234,7 @@ export class SnapshotScheduler {
         assetId,
         reason: updated.val.message
       });
-      if (this.#states.versionOf(assetId) !== version) {
+      if (this.#states.openVersion(assetId) !== version) {
         log.debug("asset snapshot superseded");
 
         return "superseded";

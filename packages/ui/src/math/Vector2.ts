@@ -6,7 +6,7 @@ import {
 
 // Import Internal Dependencies
 import { VectorField } from "./VectorField.ts";
-import { axisKeysOf } from "./axes.ts";
+import { resolveAxisKeys } from "./axes.ts";
 import type {
   Vector2Axis,
   Vector2Pair,
@@ -28,7 +28,7 @@ export class Vector2 extends VectorField<
   }
 
   protected override getAxisKeys(): readonly Vector2Axis[] {
-    return axisKeysOf(this.axes);
+    return resolveAxisKeys(this.axes);
   }
 }
 

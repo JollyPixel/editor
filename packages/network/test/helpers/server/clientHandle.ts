@@ -25,7 +25,7 @@ export function createClient(
   };
 }
 
-export function serverEnvelopeOf(
+export function toServerEnvelope(
   data: unknown
 ): ServerEnvelope {
   const result = Envelope.parseServer(data);

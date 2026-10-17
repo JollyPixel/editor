@@ -71,7 +71,7 @@ export class PeerMarks<TKey> {
     this.#marks = marks;
   }
 
-  peersFor(
+  markingPeers(
     key: TKey
   ): readonly PresencePeer[] {
     return this.#marks.get(key) ?? [];
@@ -80,7 +80,7 @@ export class PeerMarks<TKey> {
   createView(
     key: TKey
   ): PeerMarkView | null {
-    const marks = this.peersFor(key);
+    const marks = this.markingPeers(key);
 
     return marks.length === 0 ? null : new PeerMarkView(marks);
   }

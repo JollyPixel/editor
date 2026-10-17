@@ -61,9 +61,6 @@ export interface AssetKindCompanion<TState = unknown> {
   ): void;
 }
 
-/**
- * Folds an asset event stream and serializes its projected state.
- */
 export interface AssetKindHandler<
   TState = unknown,
   TCommand extends AssetCommandHeader = AssetCommandHeader

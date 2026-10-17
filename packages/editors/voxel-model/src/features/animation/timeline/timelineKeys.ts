@@ -107,7 +107,7 @@ export function removeKeys(
   }
 }
 
-export function interpolationOf(
+export function sharedInterpolation(
   clip: AnimationClipJSON,
   refs: readonly KeyRef[]
 ): AnimationInterpolation | "mixed" | null {
@@ -119,7 +119,7 @@ export function interpolationOf(
   return interpolations.size === 1 ? [...interpolations][0] : "mixed";
 }
 
-export function setInterpolation(
+export function applyInterpolation(
   document: AnimationDocument,
   clip: AnimationClipJSON,
   refs: readonly KeyRef[],
@@ -161,7 +161,7 @@ function setKeys(
 ): KeyRef[] {
   const placed = new Map<string, KeyRef>();
   for (const { path, channel, key } of keys) {
-    if (document.setKey(clipId, path, channel, key)) {
+    if (document.writeKey(clipId, path, channel, key)) {
       const ref = { path, tick: key.tick };
       placed.set(keyId(ref), ref);
     }

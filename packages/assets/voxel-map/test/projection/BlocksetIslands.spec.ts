@@ -69,7 +69,7 @@ function setup() {
   };
 }
 
-function islandMapOf(
+function toIslandMap(
   islands: BlocksetIslands
 ): IslandMap {
   return IslandMap.fromFaces(kSize, islands.faces());
@@ -99,7 +99,7 @@ function normalAt(
 
 describe("BlocksetIslands", () => {
   it("builds one island per block tile, keyed by region id", () => {
-    const islands = islandMapOf(setup().islands);
+    const islands = toIslandMap(setup().islands);
 
     assert.deepEqual([...islands.islandAt(0, 0)!.regionIds], ["block-1"]);
     assert.deepEqual([...islands.islandAt(8, 0)!.regionIds], ["block-2"]);
@@ -110,7 +110,7 @@ describe("BlocksetIslands", () => {
     const normals = NormalMapGenerator.generate({
       size: kSize,
       pixels: halfWhitePixels(),
-      islands: islandMapOf(setup().islands),
+      islands: toIslandMap(setup().islands),
       config: NormalMapConfig.create()
     });
 

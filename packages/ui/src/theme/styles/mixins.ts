@@ -4,18 +4,12 @@ import { css } from "lit";
 // Import Internal Dependencies
 import { kFallback } from "./fallbacks.ts";
 
-/**
- * Single-line ellipsis; the element still needs a constrained inline size.
- */
 export const truncate = css`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 `;
 
-/**
- * Offset is set per site: handles inset the ring, controls outset it.
- */
 export const focusRing = css`
   outline: 2px solid var(--jolly-focus-ring, ${kFallback.focusRing});
 `;
@@ -46,10 +40,6 @@ export const headerTexture = css`
   mask-image: linear-gradient(to right, black, transparent);
 `;
 
-/**
- * Fades and scales a native dialog or popover carrying the
- * `overlay-motion` class, and its backdrop, in and out.
- */
 export const overlayMotion = css`
   .overlay-motion,
   .overlay-motion::backdrop {
@@ -95,9 +85,6 @@ export const overlayMotion = css`
   }
 `;
 
-/**
- * Hidden visually but kept in the accessibility tree.
- */
 export const visuallyHidden = css`
   position: absolute;
   width: 1px;

@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { boxOf } from "@jolly-pixel/e2e";
+import { measureBox } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
@@ -12,9 +12,9 @@ import {
   fieldChanges,
   recordFieldChanges
 } from "../support/events.ts";
-import { styleOf } from "../support/styles.ts";
+import { readStyle } from "../support/styles.ts";
 
-function gradientOf(
+function readGradient(
   field: Locator
 ): Promise<Record<string, string>> {
   return field.locator(".checkbox").evaluate((element) => {
@@ -68,15 +68,15 @@ test.describe("checkbox", () => {
     const field = row(page, "jolly-checkbox", "default");
     const target = field.locator(".checkbox");
     const [targetBox, inputBox] = await Promise.all([
-      boxOf(target),
-      boxOf(field.locator("input"))
+      measureBox(target),
+      measureBox(field.locator("input"))
     ]);
     expect(targetBox.width).toBeGreaterThan(inputBox.width);
 
-    const resting = await styleOf(target, "background-image", "::before");
+    const resting = await readStyle(target, "background-image", "::before");
     await target.hover();
     await expect.poll(
-      () => styleOf(target, "background-image", "::before")
+      () => readStyle(target, "background-image", "::before")
     ).not.toBe(resting);
 
     await target.click({
@@ -107,10 +107,10 @@ test.describe("checkbox", () => {
     const input = field.locator("input");
 
     await expect(field).toHaveAttribute("clickable-background", "");
-    const start = await gradientOf(field);
+    const start = await readGradient(field);
     const [startValue, startInput] = await Promise.all([
-      boxOf(value),
-      boxOf(input)
+      measureBox(value),
+      measureBox(input)
     ]);
     expect(start).toMatchObject({
       top: "2px",
@@ -123,16 +123,16 @@ test.describe("checkbox", () => {
     expect(startInput.x - startValue.x).toBe(4);
 
     await field.evaluate((element) => element.setAttribute("align", "end"));
-    await expect.poll(() => gradientOf(field)).toMatchObject({
+    await expect.poll(() => readGradient(field)).toMatchObject({
       topLeft: "0px",
       bottomLeft: "0px",
       topRight: "2px",
       bottomRight: "2px"
     });
-    const end = await gradientOf(field);
+    const end = await readGradient(field);
     const [endValue, endInput] = await Promise.all([
-      boxOf(value),
-      boxOf(input)
+      measureBox(value),
+      measureBox(input)
     ]);
     expect(end.image).not.toBe(start.image);
     expect(endValue.width).toBe(startValue.width);
@@ -157,8 +157,8 @@ test.describe("checkbox", () => {
       .not.toHaveCSS("position", "relative");
 
     const [value, input] = await Promise.all([
-      boxOf(field.locator(".value")),
-      boxOf(field.locator("input"))
+      measureBox(field.locator(".value")),
+      measureBox(field.locator("input"))
     ]);
     expect(input.x).toBe(value.x);
   });
@@ -187,11 +187,11 @@ test("an end-aligned editor checkbox spans its value column apart from the label
   }).first();
   const label = propertyRow.locator(".label").first();
   const [rowBox, labelBox, valueBox, gradientBox, inputBox] = await Promise.all([
-    boxOf(propertyRow.locator(".row").first()),
-    boxOf(label),
-    boxOf(propertyRow.locator(".value").first()),
-    boxOf(propertyRow.locator("jolly-checkbox .checkbox")),
-    boxOf(propertyRow.locator('input[type="checkbox"]'))
+    measureBox(propertyRow.locator(".row").first()),
+    measureBox(label),
+    measureBox(propertyRow.locator(".value").first()),
+    measureBox(propertyRow.locator("jolly-checkbox .checkbox")),
+    measureBox(propertyRow.locator('input[type="checkbox"]'))
   ]);
   const inputRight = inputBox.x + inputBox.width;
 

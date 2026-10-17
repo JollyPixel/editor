@@ -20,12 +20,12 @@ export interface TrackResolution {
   remap: AnimationBindingJSON | null;
 }
 
-export function blockPathOf(
+export function buildBlockPath(
   tree: ModelTreeReader,
   id: string
 ): string {
   const names: string[] = [];
-  for (let current: string | null = id; current !== null; current = tree.transformParentOf(current)) {
+  for (let current: string | null = id; current !== null; current = tree.findTransformParent(current)) {
     names.unshift(tree.get(current)?.name ?? "");
   }
 
@@ -47,11 +47,11 @@ export class TrackBinding {
 
     const byPath = blockPaths(tree);
     for (const path of paths) {
-      const remap = this.#link.bindingOf(path) ?? null;
+      const remap = this.#link.findBinding(path) ?? null;
       const target = remap === null ? path : remap.target;
       const ids = target === null ? [] : byPath.get(new TrackPath(target).key) ?? [];
       this.#tracks.set(path, {
-        state: target === null ? "ignored" : stateOf(ids),
+        state: target === null ? "ignored" : toTrackState(ids),
         blockId: ids.length === 1 && target !== null ? ids[0] : null,
         remap
       });
@@ -79,7 +79,7 @@ export class TrackBinding {
     return bound;
   }
 
-  pathOf(
+  trackPath(
     blockId: string
   ): string {
     for (const [path, resolution] of this.#tracks) {
@@ -88,7 +88,7 @@ export class TrackBinding {
       }
     }
 
-    const own = blockPathOf(this.#tree, blockId);
+    const own = buildBlockPath(this.#tree, blockId);
 
     return this.#link.pathTargeting(own) ?? own;
   }
@@ -99,14 +99,14 @@ function blockPaths(
 ): Map<string, string[]> {
   const paths = new Map<string, string[]>();
   for (const block of tree.blocks()) {
-    const { key } = new TrackPath(blockPathOf(tree, block.id));
+    const { key } = new TrackPath(buildBlockPath(tree, block.id));
     paths.set(key, [...paths.get(key) ?? [], block.id]);
   }
 
   return paths;
 }
 
-function stateOf(
+function toTrackState(
   ids: readonly string[]
 ): TrackState {
   if (ids.length === 0) {

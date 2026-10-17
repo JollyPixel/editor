@@ -24,13 +24,6 @@ export interface GraphDefaults {
   samples: number;
 }
 
-/**
- * Sparkline over a ring buffer. The application pushes `value`; there is no
- * internal timer. `min`/`max` fix the vertical range; either left `undefined`
- * auto-scales to the buffer's own observed extreme, since a fixed ceiling
- * like a theoretical max framerate is rarely known up front and flattens the
- * line whenever the real values sit far below it.
- */
 @customElement("jolly-graph")
 export class GraphElement extends LitElement {
   static readonly Defaults: GraphDefaults = {
@@ -61,9 +54,6 @@ export class GraphElement extends LitElement {
   @property({ type: Number })
   declare samples: number;
 
-  /**
-   * Formats the current-value overlay drawn over the graph.
-   */
   @property({ attribute: false })
   declare format: ((value: number) => string) | undefined;
 

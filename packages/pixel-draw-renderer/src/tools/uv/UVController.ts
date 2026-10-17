@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { rectOf } from "../../uv/geometry/geometry.ts";
+import { boundingRect } from "../../uv/geometry/geometry.ts";
 import {
   UV_RESIZE_CURSORS,
   resizeHandleAt,
@@ -167,7 +167,7 @@ export class UVController implements UVTool {
     const dragged: UVMove = {
       id: region.id,
       slot: grouped ? null : face,
-      rect: grouped ? region.bounds : rectOf(geometry)
+      rect: grouped ? region.bounds : boundingRect(geometry)
     };
     this.#gesture = UVGesture.move(
       this.#uvMap,
@@ -223,7 +223,7 @@ export class UVController implements UVTool {
   #showPreview(
     gesture: UVGesture
   ): void {
-    this.#overlay.setLivePreview(gesture.preview(this.#lineHeld));
+    this.#overlay.showLivePreview(gesture.preview(this.#lineHeld));
   }
 
   #finish(
@@ -239,7 +239,7 @@ export class UVController implements UVTool {
     if (!commit) {
       gesture.restore();
     }
-    this.#overlay.setLivePreview(null);
+    this.#overlay.showLivePreview(null);
     this.#uvMap.endPreview(gesture.id, committed);
   }
 

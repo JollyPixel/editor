@@ -25,7 +25,7 @@ export function decimalPlaces(
   return dot === -1 ? 0 : text.length - dot - 1;
 }
 
-export function precisionOf(
+export function measurePrecision(
   ...values: number[]
 ): number {
   let places = 0;

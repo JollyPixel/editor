@@ -108,7 +108,7 @@ export class FillEngine implements FillTool {
     }
 
     const mask = this.#clipMask(seed);
-    const positions = this.#canvasBuffer.positionsOf(
+    const positions = this.#canvasBuffer.findPositions(
       fromColor,
       mask
     );

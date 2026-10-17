@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
-  boxOf,
-  centerOf,
+  measureBox,
+  measureCenter,
   hold
 } from "@jolly-pixel/e2e";
 
@@ -17,8 +17,8 @@ import {
   reloadGallery
 } from "../../support/gallery.ts";
 import {
-  partStyleOf,
-  styleOf
+  readPartStyle,
+  readStyle
 } from "../../support/styles.ts";
 
 // CONSTANTS
@@ -40,7 +40,7 @@ function channelSpread(
   }, color);
 }
 
-function chevronAngleOf(
+function readChevronAngle(
   chevron: Locator
 ): Promise<number> {
   return chevron.evaluate(async(element) => {
@@ -83,9 +83,9 @@ test.describe("Folder", () => {
     const folder = page.locator("jolly-folder");
     const action = folder.locator("jolly-button[data-action=plus]");
     const [header, label, actionBox] = await Promise.all([
-      boxOf(folder.locator(".header")),
-      boxOf(folder.locator(".toggle .label")),
-      boxOf(action)
+      measureBox(folder.locator(".header")),
+      measureBox(folder.locator(".toggle .label")),
+      measureBox(action)
     ]);
     expect(actionBox.x).toBeGreaterThan(label.x + label.width);
     expect(actionBox.x + actionBox.width).toBeLessThanOrEqual(header.x + header.width);
@@ -109,7 +109,7 @@ test.describe("Folder", () => {
 
     await openExample(page, "containers/folder");
     await expect(folder.locator(".chevron")).toHaveCount(1);
-    const toggleLabel = await boxOf(folder.locator(".toggle .label"));
+    const toggleLabel = await measureBox(folder.locator(".toggle .label"));
 
     await openExample(page, "containers/folder", {
       options: { collapsible: false }
@@ -118,7 +118,7 @@ test.describe("Folder", () => {
     await expect(folder.locator(".chevron")).toHaveCount(0);
     await expect(folder.locator(".title .label")).toHaveText("Transform");
     await expect(folder.locator("jolly-button[data-action=plus]")).toBeVisible();
-    expect((await boxOf(folder.locator(".title .label"))).x).toBe(toggleLabel.x);
+    expect((await measureBox(folder.locator(".title .label"))).x).toBe(toggleLabel.x);
 
     await folder.locator(".header").click();
     await expect(folder).toHaveAttribute("open");
@@ -133,7 +133,7 @@ test.describe("Folder", () => {
       options: { nested: true, flush: true }
     });
     await expect(outer.locator(".content").first()).toHaveCSS("padding-left", "0px");
-    expect((await boxOf(row)).x).toBe((await boxOf(outer)).x);
+    expect((await measureBox(row)).x).toBe((await measureBox(outer)).x);
 
     await openExample(page, "containers/folder", {
       options: { nested: true }
@@ -142,7 +142,7 @@ test.describe("Folder", () => {
     await outer.evaluate(
       (element: HTMLElement) => element.style.setProperty("--jolly-folder-indent", "0px")
     );
-    expect((await boxOf(row)).x).toBe((await boxOf(outer)).x);
+    expect((await measureBox(row)).x).toBe((await measureBox(outer)).x);
   });
 
   test("holds a nested field short of the header bar it sits under", async({ page }) => {
@@ -150,15 +150,15 @@ test.describe("Folder", () => {
 
     const folder = page.locator("jolly-folder").first();
     const value = folder.locator("jolly-slider input[type=text]");
-    const header = await boxOf(folder.locator(".header"));
+    const header = await measureBox(folder.locator(".header"));
     const headerRight = header.x + header.width;
-    const inset = await boxOf(value);
+    const inset = await measureBox(value);
     expect(headerRight - (inset.x + inset.width)).toBe(4);
 
     await folder.evaluate(
       (element: HTMLElement) => element.style.setProperty("--jolly-field-inset-end", "0px")
     );
-    const flush = await boxOf(value);
+    const flush = await measureBox(value);
     expect(flush.x + flush.width).toBeCloseTo(headerRight, 0);
   });
 
@@ -167,9 +167,9 @@ test.describe("Folder", () => {
 
     const inspector = page.locator("jolly-dock[side=right]");
     const fills = await Promise.all([
-      styleOf(inspector.locator("jolly-pane > .header"), "background-color"),
-      styleOf(inspector.locator("jolly-folder > .header").first(), "background-color"),
-      styleOf(inspector.locator("jolly-vector3 input").first(), "background-color")
+      readStyle(inspector.locator("jolly-pane > .header"), "background-color"),
+      readStyle(inspector.locator("jolly-folder > .header").first(), "background-color"),
+      readStyle(inspector.locator("jolly-vector3 input").first(), "background-color")
     ]);
 
     expect(new Set(fills).size).toBe(3);
@@ -179,19 +179,19 @@ test.describe("Folder", () => {
     await openExample(page, "scenarios/dock-layout");
 
     const pane = page.locator("jolly-pane[key='inspector']");
-    const paneOpen = await chevronAngleOf(pane.locator(".chevron"));
+    const paneOpen = await readChevronAngle(pane.locator(".chevron"));
     await pane.locator(".fold").click();
     await expect(pane).toHaveAttribute("collapsed");
-    const paneShut = await chevronAngleOf(pane.locator(".chevron"));
+    const paneShut = await readChevronAngle(pane.locator(".chevron"));
 
     await openExample(page, "scenarios/reorder-persist");
 
     const folder = page.locator("jolly-pane > jolly-folder").first();
     await expect(folder).toHaveAttribute("open");
-    const folderOpen = await chevronAngleOf(folder.locator(".chevron"));
+    const folderOpen = await readChevronAngle(folder.locator(".chevron"));
     await folder.locator(".toggle").click();
     await expect(folder).not.toHaveAttribute("open");
-    const folderShut = await chevronAngleOf(folder.locator(".chevron"));
+    const folderShut = await readChevronAngle(folder.locator(".chevron"));
 
     expect(paneOpen).not.toBe(paneShut);
     expect(folderOpen).toBe(paneOpen);
@@ -212,23 +212,23 @@ test.describe("Folder reorder", () => {
     await expect(folders.nth(0)).toHaveCSS("margin-block-end", "2px");
     await expect(folders.nth(1)).toHaveCSS("margin-block-end", "2px");
     await expect(folders.nth(2)).toHaveCSS("margin-block-end", "2px");
-    expect(await styleOf(header, "background-image", "::after"))
+    expect(await readStyle(header, "background-image", "::after"))
       .toContain("conic-gradient");
-    await expect.poll(() => styleOf(header, "opacity", "::after")).toBe("0.08");
+    await expect.poll(() => readStyle(header, "opacity", "::after")).toBe("0.08");
 
     await header.hover();
-    await expect.poll(() => styleOf(header, "opacity", "::after")).toBe("0.14");
+    await expect.poll(() => readStyle(header, "opacity", "::after")).toBe("0.14");
   });
 
   test("a pointer drag carries a header replica, draws a neutral line, commits once", async({ page }) => {
     const folders = page.locator("jolly-pane > jolly-folder");
     const source = folders.first();
     const [sourceBox, sourceHeader, target] = await Promise.all([
-      boxOf(source),
-      boxOf(source.locator(".header")),
-      boxOf(folders.nth(2))
+      measureBox(source),
+      measureBox(source.locator(".header")),
+      measureBox(folders.nth(2))
     ]);
-    const grip = await centerOf(source.locator(".grip"));
+    const grip = await measureCenter(source.locator(".grip"));
 
     await hold(page, grip, {
       x: grip.x,
@@ -247,21 +247,21 @@ test.describe("Folder reorder", () => {
     await expect.poll(
       () => ghost.evaluate((element) => element.children.length)
     ).toBe(0);
-    const carried = await boxOf(ghost);
+    const carried = await measureBox(ghost);
     expect(carried.width).toBeCloseTo(sourceBox.width, 0);
     expect(carried.height).toBeCloseTo(sourceHeader.height, 0);
-    expect(await styleOf(ghost.locator(".header"), "background-color"))
-      .toBe(await styleOf(folders.nth(1).locator(".header"), "background-color"));
+    expect(await readStyle(ghost.locator(".header"), "background-color"))
+      .toBe(await readStyle(folders.nth(1).locator(".header"), "background-color"));
 
     const line = page.locator(".jolly-drag-insertion");
-    const lineFill = await styleOf(line, "background-color");
-    const headerFill = await partStyleOf(
+    const lineFill = await readStyle(line, "background-color");
+    const headerFill = await readPartStyle(
       page.locator("jolly-pane").first(),
       ".header",
       "background-color"
     );
     expect(lineFill).not.toBe(headerFill);
-    expect(await styleOf(line, "box-shadow")).not.toBe("none");
+    expect(await readStyle(line, "box-shadow")).not.toBe("none");
     expect(await channelSpread(page, lineFill))
       .toBeLessThan(await channelSpread(page, headerFill) / 2);
     await expect.poll(() => visualOrder(folders)).toEqual(kDefaultOrder);

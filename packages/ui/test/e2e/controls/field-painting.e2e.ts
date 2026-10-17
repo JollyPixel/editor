@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { boxOf } from "@jolly-pixel/e2e";
+import { measureBox } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
@@ -11,7 +11,7 @@ import {
   fieldControl as control
 } from "../support/field.ts";
 import { fieldRow as row, openExample } from "../support/gallery.ts";
-import { styleOf } from "../support/styles.ts";
+import { readStyle } from "../support/styles.ts";
 
 test.describe("controls: field painting", () => {
   test("step sizes share one stable label column", async({ page }) => {
@@ -35,15 +35,15 @@ test.describe("controls: field painting", () => {
 
     const range = row(page, "jolly-range", "default");
     const separator = range.locator(".separator");
-    const muted = await styleOf(range.locator(".label"), "color");
+    const muted = await readStyle(range.locator(".label"), "color");
 
     await expect(separator).toHaveAttribute("aria-hidden", "true");
     await expect(separator).toHaveText("");
     await expect(separator).toHaveCSS("color", muted);
     await expect(separator).toHaveCSS("border-inline-start-style", "solid");
     await expect(separator).toHaveCSS("border-inline-end-style", "solid");
-    expect(await styleOf(separator, "height", "::after")).toBe("1px");
-    expect(await styleOf(separator, "background-color", "::after"))
+    expect(await readStyle(separator, "height", "::after")).toBe("1px");
+    expect(await readStyle(separator, "background-color", "::after"))
       .toBe(muted);
   });
 
@@ -51,21 +51,21 @@ test.describe("controls: field painting", () => {
     await openExample(page, "controls/slider");
 
     const lane = row(page, "jolly-slider", "colored").locator(".lane");
-    const restingHeight = await styleOf(lane, "height", "::before");
-    const restingFill = await styleOf(lane, "--jolly-slider-thumb-fill");
-    const hoverFill = await styleOf(lane, "--jolly-accent-fill-hover");
+    const restingHeight = await readStyle(lane, "height", "::before");
+    const restingFill = await readStyle(lane, "--jolly-slider-thumb-fill");
+    const hoverFill = await readStyle(lane, "--jolly-accent-fill-hover");
 
     await lane.hover();
-    await expect.poll(() => styleOf(lane, "--jolly-slider-thumb-fill"))
+    await expect.poll(() => readStyle(lane, "--jolly-slider-thumb-fill"))
       .not.toBe(restingFill);
-    expect(await styleOf(lane, "--jolly-slider-thumb-fill")).toBe(hoverFill);
+    expect(await readStyle(lane, "--jolly-slider-thumb-fill")).toBe(hoverFill);
 
     await lane.evaluate((element) => Promise.all(
       element.getAnimations({ subtree: true }).map(
         (animation) => animation.finished
       )
     ));
-    expect(await styleOf(lane, "height", "::before")).toBe(restingHeight);
+    expect(await readStyle(lane, "height", "::before")).toBe(restingHeight);
   });
 
   test("slider value edges stay aligned across field chrome", async({ page }) => {
@@ -79,7 +79,7 @@ test.describe("controls: field painting", () => {
       "mixed+modified"
     ];
     const boxes = await Promise.all(states.map(
-      (state) => boxOf(row(page, "jolly-slider", state).locator(".value"))
+      (state) => measureBox(row(page, "jolly-slider", state).locator(".value"))
     ));
     const starts = boxes.map((box) => box.x);
     const ends = boxes.map((box) => box.x + box.width);
@@ -95,16 +95,16 @@ test.describe("controls: field painting", () => {
     const input = control(field);
     const revert = field.locator(".revert");
     const [inputBox, revertBox] = await Promise.all([
-      boxOf(input),
-      boxOf(revert)
+      measureBox(input),
+      measureBox(revert)
     ]);
 
     expect(revertBox.height).toBe(inputBox.height);
     expect(revertBox.x + revertBox.width).toBe(inputBox.x);
 
-    const fill = await styleOf(input, "background-color");
+    const fill = await readStyle(input, "background-color");
     await revert.hover();
-    await expect.poll(() => styleOf(revert, "background-color")).toBe(fill);
+    await expect.poll(() => readStyle(revert, "background-color")).toBe(fill);
   });
 });
 
@@ -113,13 +113,13 @@ test.describe("controls: theming", () => {
     await openExample(page, "controls/number");
 
     const input = control(page.locator("jolly-number").first());
-    const light = await styleOf(input, "background-color");
+    const light = await readStyle(input, "background-color");
     expect(light).not.toBe("");
 
     await page.locator("gallery-root").evaluate(
       (root) => root.setAttribute("theme", "dark")
     );
-    await expect.poll(() => styleOf(input, "background-color"))
+    await expect.poll(() => readStyle(input, "background-color"))
       .not.toBe(light);
   });
 
@@ -127,11 +127,11 @@ test.describe("controls: theming", () => {
     await openExample(page, "controls/text");
 
     const input = control(page.locator("jolly-text").first());
-    const rest = await styleOf(input, "background-color");
+    const rest = await readStyle(input, "background-color");
     expect(rest).not.toBe(TRANSPARENT);
 
     await input.focus();
-    await expect.poll(() => styleOf(input, "background-color"))
+    await expect.poll(() => readStyle(input, "background-color"))
       .not.toBe(rest);
   });
 });

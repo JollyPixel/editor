@@ -79,7 +79,7 @@ is not a conflict.
 readonly actions: readonly TAction[];
 get overrides(): Partial<Record<TAction, KeyChordString[]>>;
 
-chordsOf(action: TAction): readonly KeyChord[];
+chordsBoundTo(action: TAction): readonly KeyChord[];
 format(action: TAction, options?: KeyChordFormatOptions): string[];
 bind(
   target: KeyBindingTarget,
@@ -103,7 +103,7 @@ type KeyBindingHandlers<TAction extends string> = Readonly<
 from its defaults. It returns a new object on each read. A map built from the
 same defaults and these overrides has the same chords, so store this value.
 
-`chordsOf()` returns the resolved chords of an action, after overrides.
+`chordsBoundTo()` returns the resolved chords of an action, after overrides.
 
 `format()` labels each chord of an action for a tooltip or a settings screen,
 with the same options as [`KeyChord.format()`](./key-chords.md#labels).

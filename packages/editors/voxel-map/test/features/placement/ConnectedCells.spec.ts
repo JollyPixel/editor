@@ -16,7 +16,7 @@ import {
 // Import Internal Dependencies
 import { ConnectedCells } from "../../../src/features/placement/ConnectedCells.ts";
 
-function layerOf(
+function createLayer(
   cells: VoxelCoord[]
 ): VoxelLayer {
   const world = new VoxelWorld();
@@ -46,7 +46,7 @@ describe("ConnectedCells", () => {
       { x: 2, y: 0, z: 1 },
       { x: 2, y: 0, z: 2 }
     ];
-    const layer = layerOf([
+    const layer = createLayer([
       ...shape,
       { x: 0, y: 0, z: 2 },
       { x: 0, y: 1, z: 1 },
@@ -64,13 +64,13 @@ describe("ConnectedCells", () => {
   });
 
   test("finds nothing from an empty cell", () => {
-    const layer = layerOf([{ x: 0, y: 0, z: 0 }]);
+    const layer = createLayer([{ x: 0, y: 0, z: 0 }]);
 
     assert.equal(ConnectedCells.flood(layer, { x: 1, y: 0, z: 0 }), null);
   });
 
   test("keeps the second shape of a merged cell in its template", () => {
-    const layer = layerOf([{ x: 0, y: 0, z: 0 }]);
+    const layer = createLayer([{ x: 0, y: 0, z: 0 }]);
     const packed = packVoxel(2, 0);
     const partner = packVoxel(3, 1);
     layer.setPackedVoxelAt({ x: 1, y: 0, z: 0 }, packed, partner);

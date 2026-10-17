@@ -166,7 +166,7 @@ describe("UVController — carrying nested regions", () => {
     controller.handleEnd();
 
     const free = map.get("free")!;
-    assert.deepStrictEqual(free.rectFor("front"), { ...kOuter, x: 8, y: 6 });
-    assert.deepStrictEqual(free.rectFor("top"), { ...kInner, x: 10, y: 8 });
+    assert.deepStrictEqual(free.slotRect("front"), { ...kOuter, x: 8, y: 6 });
+    assert.deepStrictEqual(free.slotRect("top"), { ...kInner, x: 10, y: 8 });
   });
 });

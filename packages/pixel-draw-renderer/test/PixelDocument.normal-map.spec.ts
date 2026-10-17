@@ -96,7 +96,7 @@ describe("PixelDocument normal map", () => {
     const doc = createNormalMapDocument(events);
 
     doc.patchNormalMapDefaults({ strength: 5 });
-    doc.setNormalMapZone({ regionId: "a", settings: "off" });
+    doc.assignNormalMapZone({ regionId: "a", settings: "off" });
     doc.deleteNormalMapZone("a");
     doc.disableNormalMap();
 
@@ -129,7 +129,7 @@ describe("PixelDocument normal map", () => {
       const doc = createNormalMapDocument();
       doc.enableNormalMap();
       addRegion(doc, "a");
-      doc.setNormalMapZone({ regionId: "a", settings: "off" });
+      doc.assignNormalMapZone({ regionId: "a", settings: "off" });
 
       doc.applyRemoteCommand({
         action: "uv-region-deleted",

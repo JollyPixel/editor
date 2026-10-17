@@ -28,9 +28,6 @@ export interface SliderDefaults {
   orientation: SliderOrientation;
 }
 
-/**
- * Native range control paired with an editable readout.
- */
 @customElement("jolly-slider")
 export class Slider extends JollyField<number> {
   static readonly Defaults: SliderDefaults = {

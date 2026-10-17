@@ -20,7 +20,7 @@ export interface PressOptions {
   settle?: (page: Page) => Promise<void>;
 }
 
-export async function boxOf(
+export async function measureBox(
   locator: Locator
 ): Promise<Box> {
   const box = await locator.boundingBox();
@@ -31,10 +31,10 @@ export async function boxOf(
   return box;
 }
 
-export async function centerOf(
+export async function measureCenter(
   locator: Locator
 ): Promise<Point> {
-  const box = await boxOf(locator);
+  const box = await measureBox(locator);
 
   return {
     x: box.x + (box.width / 2),
@@ -42,7 +42,7 @@ export async function centerOf(
   };
 }
 
-export function widthOf(
+export function measureWidth(
   locator: Locator
 ): Promise<number> {
   return locator.evaluate(
@@ -50,7 +50,7 @@ export function widthOf(
   );
 }
 
-export function heightOf(
+export function measureHeight(
   locator: Locator
 ): Promise<number> {
   return locator.evaluate(
@@ -74,7 +74,7 @@ export async function dragTo(
   handle: Locator,
   target: Point
 ): Promise<void> {
-  await hold(page, await centerOf(handle), target, 16);
+  await hold(page, await measureCenter(handle), target, 16);
   await page.mouse.up();
 }
 
@@ -83,7 +83,7 @@ export async function scrubBy(
   handle: Locator,
   distance: number
 ): Promise<void> {
-  const from = await centerOf(handle);
+  const from = await measureCenter(handle);
   await hold(page, from, {
     x: from.x + distance,
     y: from.y

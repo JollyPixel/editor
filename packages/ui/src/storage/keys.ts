@@ -50,7 +50,7 @@ export function resolveOrder(
 
     seen.add(key);
     result.splice(
-      anchorIndexFor(result, present, index) + 1,
+      findAnchorIndex(result, present, index) + 1,
       0,
       key
     );
@@ -59,7 +59,7 @@ export function resolveOrder(
   return result;
 }
 
-function anchorIndexFor(
+function findAnchorIndex(
   result: readonly string[],
   present: readonly string[],
   index: number

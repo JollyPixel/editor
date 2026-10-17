@@ -26,9 +26,6 @@ export interface RenderStrategy {
     width: number,
     height: number
   ): void;
-  /**
-   * Releases GPU resources owned by the strategy.
-   */
   dispose(): void;
 }
 
@@ -57,7 +54,6 @@ export class DirectRenderStrategy implements RenderStrategy {
     const hasViewports = sorted.some((rc) => rc.viewport !== null);
 
     if (!hasViewports) {
-      // Fast path: clear once, render all cameras full-canvas
       this.#renderer.setViewport(0, 0, canvasWidth, canvasHeight);
       this.#renderer.clear();
     }
@@ -102,7 +98,6 @@ export class DirectRenderStrategy implements RenderStrategy {
   }
 
   dispose(): void {
-    // The WebGPURenderer is owned by ThreeRenderer, not by the strategy.
     this.#pipelines.dispose();
   }
 }

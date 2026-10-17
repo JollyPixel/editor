@@ -58,11 +58,6 @@ interface LoggerPrivateOptions {
   root: LoggerState;
 }
 
-/**
- * Holds the shared mutable state of a logger tree.
- * All child loggers created via `.child()` reference the same LoggerState,
- * so runtime changes to level or namespaces propagate immediately.
- */
 class LoggerState {
   level: LogLevel;
   namespaces: string[];
@@ -135,23 +130,12 @@ export class Logger {
     return this.#root.level;
   }
 
-  /**
-   * Changes the minimum log level for the entire logger tree.
-   * Affects all child loggers immediately since they share the same state.
-   */
   setLevel(
     level: LogLevel
   ): void {
     this.#root.level = level;
   }
 
-  /**
-   * Adds one or more namespace patterns to the enabled set.
-   * Invalidates the matcher cache so new patterns take effect immediately.
-   *
-   * @example
-   * logger.enableNamespace("systems.*", "actor");
-   */
   enableNamespace(
     ...patterns: string[]
   ): void {
@@ -159,9 +143,6 @@ export class Logger {
     this.#root.invalidateMatchers();
   }
 
-  /**
-   * Removes one or more namespace patterns from the enabled set.
-   */
   disableNamespace(
     ...patterns: string[]
   ): void {
@@ -175,32 +156,16 @@ export class Logger {
     this.#root.invalidateMatchers();
   }
 
-  /**
-   * Returns true if the given level would be emitted given the current minimum level.
-   */
   isLevelEnabled(
     level: LogLevel
   ): boolean {
     return kLogLevelValue[level] >= kLogLevelValue[this.#root.level];
   }
 
-  /**
-   * Returns true if this logger's own namespace is currently enabled.
-   */
   isNamespaceEnabled(): boolean {
     return this.#root.isNamespaceEnabled(this.namespace);
   }
 
-  /**
-   * Creates a child logger whose namespace is appended to this logger's namespace.
-   * The child shares the same level, namespace list, and adapter as the root.
-   *
-   * @example
-   * const root = new Logger({ level: "debug", namespaces: ["systems.*"] });
-   * const child = root.child({ namespace: "systems.sceneManager" });
-   * child.debug("setScene", { scene: "Game" });
-   * // → [DEBUG] [systems.sceneManager] setScene
-   */
   child(
     options: LoggerChildOptions
   ): Logger {
@@ -312,16 +277,6 @@ export class Logger {
   }
 }
 
-/**
- * Converts a dot-notation namespace pattern into a slash-separated glob
- * compatible with picomatch.
- *
- * @example
- * "systems.*"       → "systems/**"
- * "systems.asset.*" → "systems/asset/**"
- * "*"               → "**"
- * "systems"         → "systems"
- */
 function normalizePattern(
   pattern: string
 ): string {

@@ -115,7 +115,7 @@ export class MockCanvas2DContext {
     }
 
     this.#syncSize();
-    const source = mockContextOf(image).pixels;
+    const source = mockContext(image).pixels;
 
     for (let py = 0; py < image.height; py++) {
       for (let px = 0; px < image.width; px++) {
@@ -172,7 +172,7 @@ export function installCanvasMock(
   });
 }
 
-export function mockContextOf(
+export function mockContext(
   canvas: HTMLCanvasElement
 ): MockCanvas2DContext {
   const context = canvas.getContext(
@@ -188,5 +188,5 @@ export function mockContextOf(
 export function canvasPixels(
   canvas: HTMLCanvasElement
 ): Uint8ClampedArray {
-  return mockContextOf(canvas).pixels;
+  return mockContext(canvas).pixels;
 }

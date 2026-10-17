@@ -63,7 +63,6 @@ describe("Controls.Gamepad polling", () => {
         gamepad.update();
       }
 
-      // Roughly 120 / IdlePollFrames, versus 120 before the back-off.
       assert.ok(polls <= 8, `expected at most 8 polls, got ${polls}`);
     });
 

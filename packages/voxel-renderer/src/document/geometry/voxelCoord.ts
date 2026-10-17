@@ -1,10 +1,7 @@
 // Import Internal Dependencies
 import type { VoxelCoord } from "../world/types.ts";
 
-/*
- * CONSTANTS
- * Pulls the point just inside the cell owning the surface it sits on.
- */
+// CONSTANTS
 const kSurfaceEpsilon = 1e-4;
 
 export function floorVoxelPosition(

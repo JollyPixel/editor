@@ -10,11 +10,11 @@ import { nextFrames } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
 import {
-  clientPointOf,
+  toClientPoint,
   type ScreenPoint,
   type ViewSnapshot
 } from "./projection.ts";
-import { editorOf } from "./scene.ts";
+import { resolveEditor } from "./scene.ts";
 
 type Axis = "X" | "Y" | "Z";
 
@@ -22,7 +22,7 @@ async function blockPoint(
   page: Page,
   name: string
 ): Promise<ScreenPoint> {
-  const editor = await editorOf(page);
+  const editor = await resolveEditor(page);
 
   const { view, point } = await editor.evaluate(({ workspace, runtime }, blockName) => {
     const { blocks, gizmo } = workspace;
@@ -58,14 +58,14 @@ async function blockPoint(
     };
   }, name);
 
-  return clientPointOf(view, point);
+  return toClientPoint(view, point);
 }
 
 export async function gizmoHandlePoints(
   page: Page,
   axis: Axis
 ): Promise<[ScreenPoint, ScreenPoint]> {
-  const editor = await editorOf(page);
+  const editor = await resolveEditor(page);
   await page.waitForFunction(({ workspace }) => {
     const { gizmo } = workspace;
 
@@ -141,8 +141,8 @@ export async function gizmoHandlePoints(
   }, axis);
 
   return [
-    clientPointOf(view, points[0]),
-    clientPointOf(view, points[1])
+    toClientPoint(view, points[0]),
+    toClientPoint(view, points[1])
   ];
 }
 

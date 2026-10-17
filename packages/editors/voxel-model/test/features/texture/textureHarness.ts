@@ -84,7 +84,7 @@ export function createTextureHarness() {
   };
 }
 
-export function uvOf(
+export function readUv(
   block: ModelBlock,
   index: number
 ): [number, number] {
@@ -93,7 +93,7 @@ export function uvOf(
   return [attribute.getX(index), attribute.getY(index)];
 }
 
-export function regionIdOf(
+export function readRegionId(
   block: ModelBlock
 ): string {
   return `block-${block.uuid}`;

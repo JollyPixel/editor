@@ -10,7 +10,7 @@ import type {
 import {
   jsonPayload,
   metadata,
-  objectOf
+  arbitraryRecord
 } from "./json.ts";
 
 // CONSTANTS
@@ -58,7 +58,7 @@ export const serverEnvelope: fc.Arbitrary<ServerEnvelope> = fc.oneof(
     room: kRoom,
     kind: fc.constant("sync"),
     self: kText,
-    rights: objectOf(kRight),
+    rights: arbitraryRecord(kRight),
     members: fc.array(kPeer, { maxLength: 3 })
   }),
   fc.record({

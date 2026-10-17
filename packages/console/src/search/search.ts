@@ -61,7 +61,7 @@ function rank(
   entry: RegisteredEntry,
   ranked: TopRanked<RankedTarget>
 ): void {
-  const target = SearchTarget.of(entry);
+  const target = SearchTarget.fromEntry(entry);
   const byName = matchText(needle, target.address);
   if (byName !== null) {
     ranked.add({

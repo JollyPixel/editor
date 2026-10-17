@@ -4,10 +4,6 @@ export interface NormalizedProgress {
   readonly ratio: number | null;
 }
 
-/**
- * Normalizes progress for rendering without changing the caller's raw values.
- * A missing value is indeterminate. Invalid numeric values render from zero.
- */
 export function normalizeProgress(
   value: number | null,
   max: number

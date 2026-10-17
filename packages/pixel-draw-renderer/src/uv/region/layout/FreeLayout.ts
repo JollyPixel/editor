@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import {
   geometryAt,
-  rectOf,
+  boundingRect,
   sameRect
 } from "../../geometry/geometry.ts";
 import type { UVSlotMap } from "../UVSlotMap.ts";
@@ -33,10 +33,10 @@ export class FreeLayout extends SpreadLayout {
     return new FreeLayout(layout.spreadFaces(), layout.activeSlots);
   }
 
-  rectFor(
+  slotRect(
     slot: UVSlot | null
   ): SelectionRect {
-    return slot === null ? this.bounds : rectOf(this.faces.get(slot));
+    return slot === null ? this.bounds : boundingRect(this.faces.get(slot));
   }
 
   movedTo(
@@ -48,7 +48,7 @@ export class FreeLayout extends SpreadLayout {
     }
 
     const geometry = this.faces.get(slot);
-    const rect = rectOf(geometry);
+    const rect = boundingRect(geometry);
     if (rect.x === position.x && rect.y === position.y) {
       return this;
     }
@@ -64,7 +64,7 @@ export class FreeLayout extends SpreadLayout {
     rect: SelectionRect,
     slot: UVSlot | null
   ): FreeLayout {
-    if (!this.isTarget(slot) || sameRect(rectOf(this.faces.get(slot)), rect)) {
+    if (!this.isTarget(slot) || sameRect(boundingRect(this.faces.get(slot)), rect)) {
       return this;
     }
 
@@ -99,7 +99,7 @@ export class FreeLayout extends SpreadLayout {
     return [
       {
         slot: selectedSlot,
-        rect: this.rectFor(selectedSlot),
+        rect: this.slotRect(selectedSlot),
         handles: UV_EVERY_RESIZE_HANDLE
       }
     ];

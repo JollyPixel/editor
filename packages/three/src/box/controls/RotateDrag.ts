@@ -8,7 +8,7 @@ import {
 } from "../../common/axes.ts";
 import { RotateGesture } from "../../transform-controls/gestures/RotateGesture.ts";
 import {
-  quarterTurnsFor,
+  snapQuarterTurns,
   unwrapAngle
 } from "./quarterTurns.ts";
 
@@ -110,7 +110,7 @@ export class RotateDrag {
 
     this.#angle = this.#angular ? unwrapAngle(this.#angle, angle) : angle;
 
-    const turns = quarterTurnsFor(this.#angle, this.#turns);
+    const turns = snapQuarterTurns(this.#angle, this.#turns);
     const steps: AxisSign[] = [];
     while (this.#turns !== turns) {
       const step: AxisSign = turns > this.#turns ? 1 : -1;

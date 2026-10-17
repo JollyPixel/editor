@@ -13,12 +13,12 @@ import type { AnimationSession } from "../session/AnimationSession.ts";
 import type { ScopeRecorder } from "../../history/index.ts";
 import {
   copyKeys,
-  interpolationOf,
+  sharedInterpolation,
   keyId,
   moveKeys,
   pasteKeys,
   removeKeys,
-  setInterpolation,
+  applyInterpolation,
   type CopiedKey
 } from "../timeline/timelineKeys.ts";
 import type {
@@ -67,7 +67,7 @@ export class KeyEditor extends Emitter<KeyEditorEvents> {
   get interpolation(): AnimationInterpolation | "mixed" | null {
     const clip = this.#session.focused?.clip;
 
-    return clip === undefined ? null : interpolationOf(clip, this.selected);
+    return clip === undefined ? null : sharedInterpolation(clip, this.selected);
   }
 
   select(
@@ -140,7 +140,7 @@ export class KeyEditor extends Emitter<KeyEditorEvents> {
     }
   }
 
-  setInterpolation(
+  applyInterpolation(
     interpolation: AnimationInterpolation
   ): void {
     const refs = this.selected;
@@ -152,7 +152,7 @@ export class KeyEditor extends Emitter<KeyEditorEvents> {
       `Set interpolation of ${new TrackPath(refs[0].path).blockName}` :
       `Set interpolation of ${refs.length} keys`;
     this.#edit(label, (document, clip) => {
-      setInterpolation(document, clip, refs, interpolation);
+      applyInterpolation(document, clip, refs, interpolation);
 
       return refs;
     });

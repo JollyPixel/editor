@@ -48,8 +48,8 @@ export function createHistoryModel(
     key: (target: { setId: string; clipId: string; }, label: string) => model.history.record(
       scope(target),
       label,
-      () => model.set.setKey(target.clipId, "Body/Arm", "position", HISTORY_KEY)
+      () => model.set.writeKey(target.clipId, "Body/Arm", "position", HISTORY_KEY)
     ),
-    keyOf: (clipId: string) => model.set.set.keyAt(clipId, "Body/Arm", "position", HISTORY_KEY.tick)?.value.x
+    toKey: (clipId: string) => model.set.set.keyAt(clipId, "Body/Arm", "position", HISTORY_KEY.tick)?.value.x
   };
 }

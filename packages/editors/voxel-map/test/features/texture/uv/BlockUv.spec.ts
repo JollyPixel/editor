@@ -16,7 +16,7 @@ import { BlockUv } from "../../../../src/features/texture/uv/BlockUv.ts";
 // CONSTANTS
 const kShapes = BlockShapeRegistry.createDefault();
 
-function uvOf(
+function createUv(
   patch: Partial<BlockDefinition>
 ): BlockUv {
   const block = resolveBlockDefinition({
@@ -44,18 +44,18 @@ describe("BlockUv", () => {
   });
 
   it("knows the blocksets its shape samples", () => {
-    const uv = uvOf({
+    const uv = createUv({
       defaultTexture: { blocksetId: "stone", col: 0, row: 0 }
     });
 
     assert.equal(uv.textured, true);
     assert.equal(uv.layout.usesBlockset("stone"), true);
     assert.equal(uv.layout.usesBlockset("wood"), false);
-    assert.equal(uvOf({}).textured, false);
+    assert.equal(createUv({}).textured, false);
   });
 
   it("stacks a box block and moves it back through its region", () => {
-    const uv = uvOf({
+    const uv = createUv({
       defaultTexture: { blocksetId: "stone", col: 1, row: 0 }
     });
     const region = uv.region();

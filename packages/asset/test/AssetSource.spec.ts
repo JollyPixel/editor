@@ -5,7 +5,7 @@ import { describe, test } from "node:test";
 // Import Internal Dependencies
 import { AssetSource } from "../src/index.ts";
 
-function partsOf(
+function readParts(
   source: AssetSource
 ) {
   return {
@@ -18,7 +18,7 @@ function partsOf(
 describe("AssetSource", () => {
   describe("constructor", () => {
     test("splits at the last slash and the first dot of the file name", () => {
-      assert.deepEqual(partsOf(new AssetSource("maps/world.voxelmap.json")), {
+      assert.deepEqual(readParts(new AssetSource("maps/world.voxelmap.json")), {
         directory: "maps/",
         name: "world",
         extension: ".voxelmap.json"
@@ -26,7 +26,7 @@ describe("AssetSource", () => {
     });
 
     test("keeps a leading dot in the name", () => {
-      assert.deepEqual(partsOf(new AssetSource(".hidden")), {
+      assert.deepEqual(readParts(new AssetSource(".hidden")), {
         directory: "",
         name: ".hidden",
         extension: ""
@@ -34,7 +34,7 @@ describe("AssetSource", () => {
     });
 
     test("ignores dots in the directory", () => {
-      assert.deepEqual(partsOf(new AssetSource("v1.2/readme")), {
+      assert.deepEqual(readParts(new AssetSource("v1.2/readme")), {
         directory: "v1.2/",
         name: "readme",
         extension: ""

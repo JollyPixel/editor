@@ -75,7 +75,7 @@ export class RoomMembers {
     this.#members.clear();
   }
 
-  snapshotFor(
+  visibleSnapshot(
     role: string
   ): RoomMemberSnapshot[] {
     const withPresence = this.#canRead(role, PRESENCE_EVENT);

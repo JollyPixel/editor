@@ -9,7 +9,7 @@ import type { ContextMenuEntry } from "@jolly-pixel/ui";
 import {
   createMaterialHarness as createHarness,
   dropMaterials as drop,
-  materialNamesOf as namesOf,
+  listMaterialNames as namesOf,
   type MaterialHarness
 } from "../materialHarness.ts";
 import { usageRowId } from "#src/features/material/library/usageRows.ts";
@@ -25,10 +25,10 @@ async function choose(
   id: string | null,
   action: string
 ): Promise<void> {
-  await harness.controller.menuFor(id).run(action, kMenuPoint);
+  await harness.controller.openMenu(id).run(action, kMenuPoint);
 }
 
-function labelsOf(
+function listLabels(
   entries: readonly ContextMenuEntry[]
 ): string[] {
   return entries.map((entry) => (entry === "separator" ? "-" : entry.label));
@@ -184,16 +184,16 @@ describe("MaterialLibraryController order", () => {
   });
 });
 
-describe("MaterialLibraryController.menuFor", () => {
+describe("MaterialLibraryController.openMenu", () => {
   test("lists the actions of the tree and of a material", () => {
     const harness = createHarness();
 
-    assert.deepEqual(labelsOf(harness.controller.menuFor(null).items), [
+    assert.deepEqual(listLabels(harness.controller.openMenu(null).items), [
       "New Material…",
       "-",
       "Paste"
     ]);
-    assert.deepEqual(labelsOf(harness.controller.menuFor(harness.glass).items), [
+    assert.deepEqual(listLabels(harness.controller.openMenu(harness.glass).items), [
       "Rename",
       "Duplicate",
       "Copy",
@@ -207,8 +207,8 @@ describe("MaterialLibraryController.menuFor", () => {
     const block = harness.addBlock({ name: "Arm", materialId: harness.glass });
     harness.selection.select(block.uuid);
 
-    assert.deepEqual(harness.controller.menuFor(harness.controller.state.selectedId).items, []);
-    assert.equal(labelsOf(harness.controller.menuFor(harness.glass).items)[0], "Rename");
+    assert.deepEqual(harness.controller.openMenu(harness.controller.state.selectedId).items, []);
+    assert.equal(listLabels(harness.controller.openMenu(harness.glass).items)[0], "Rename");
   });
 
   test("adds the preset offered where the menu was opened", async() => {
@@ -232,7 +232,7 @@ describe("MaterialLibraryController.menuFor", () => {
 
   test("runs nothing for a row removed since its menu opened, or an action it did not list", async() => {
     const harness = createHarness();
-    const menu = harness.controller.menuFor(harness.glass);
+    const menu = harness.controller.openMenu(harness.glass);
 
     await choose(harness, null, "delete");
     harness.document.removeMaterial(harness.glass);

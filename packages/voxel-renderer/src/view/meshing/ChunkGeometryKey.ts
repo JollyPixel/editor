@@ -5,10 +5,6 @@ import type { BlockSurface } from "../../document/blocks/BlockSurface.ts";
 const kSurfaceSeparator = ":surface=";
 const kBlendedSuffix = ":blended";
 
-/**
- * A chunk draw group identified by its atlas, surface policy, material
- * group, and whether its faces carry blend neighbours.
- */
 export class ChunkGeometryKey {
   readonly blocksetId: string;
   readonly surface: BlockSurface;

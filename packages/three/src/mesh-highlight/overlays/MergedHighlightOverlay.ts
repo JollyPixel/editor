@@ -23,10 +23,6 @@ export interface MergedHighlightOverlayOptions {
   xray?: boolean;
 }
 
-/**
- * Merges target edges into one world-space draw call.
- * Rebuild it after target sets or transforms change.
- */
 export class MergedHighlightOverlay {
   readonly object: THREE.LineSegments<THREE.BufferGeometry, THREE.LineBasicMaterial>;
 

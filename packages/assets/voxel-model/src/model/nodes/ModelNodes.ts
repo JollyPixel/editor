@@ -47,7 +47,7 @@ export class ModelNodes extends OrderedTree<ModelNodeJSON> {
     return this.peek(id)?.kind === "block";
   }
 
-  materialIdOf(
+  blockMaterialId(
     id: string
   ): string | undefined {
     const node = this.peek(id);
@@ -63,7 +63,7 @@ export class ModelNodes extends OrderedTree<ModelNodeJSON> {
       .map(({ id }) => id);
   }
 
-  enclosingBlockOf(
+  findEnclosingBlock(
     id: string | null
   ): string | null {
     let current = id;
@@ -81,23 +81,23 @@ export class ModelNodes extends OrderedTree<ModelNodeJSON> {
     return null;
   }
 
-  transformParentOf(
+  findTransformParent(
     id: string
   ): string | null {
-    return this.enclosingBlockOf(this.peek(id)?.parentId ?? null);
+    return this.findEnclosingBlock(this.peek(id)?.parentId ?? null);
   }
 
   blockNamesUnder(
     parentId: string | null,
     exceptId?: string
   ): NameSet {
-    const blockParent = this.enclosingBlockOf(parentId);
+    const blockParent = this.findEnclosingBlock(parentId);
     const names: string[] = [];
     for (const node of this.scan()) {
       if (
         node.kind === "block" &&
         node.id !== exceptId &&
-        this.transformParentOf(node.id) === blockParent
+        this.findTransformParent(node.id) === blockParent
       ) {
         names.push(node.name);
       }
@@ -110,9 +110,9 @@ export class ModelNodes extends OrderedTree<ModelNodeJSON> {
     const byParent = new Map<string | null, Map<string, string[]>>();
     for (const node of this.scan()) {
       if (node.kind === "block") {
-        const parent = this.transformParentOf(node.id);
+        const parent = this.findTransformParent(node.id);
         const byName = byParent.get(parent) ?? new Map<string, string[]>();
-        const key = NameSet.keyOf(node.name);
+        const key = NameSet.toKey(node.name);
         byName.set(key, [...byName.get(key) ?? [], node.id]);
         byParent.set(parent, byName);
       }

@@ -339,7 +339,7 @@ export class ModelEditorScene extends Systems.Scene {
       previews,
       view,
       teleportToPeer: (clientId) => {
-        const pose = collaboration.frustums.poseOf(clientId);
+        const pose = collaboration.frustums.peerPose(clientId);
         if (pose !== undefined) {
           camera.teleport(pose);
         }

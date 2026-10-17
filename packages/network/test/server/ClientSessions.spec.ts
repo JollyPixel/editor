@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { identityOf } from "../helpers/server/identity.ts";
+import { createIdentity } from "../helpers/server/identity.ts";
 import { ClientSessions } from "#src/server/ClientSessions.ts";
 
 function handle(
@@ -20,8 +20,8 @@ describe("ClientSessions", () => {
     const sessions = new ClientSessions();
     const gate = Promise.withResolvers<void>();
 
-    sessions.open(handle("A"), identityOf(handle("A")));
-    sessions.open(handle("B"), identityOf(handle("B")));
+    sessions.open(handle("A"), createIdentity(handle("A")));
+    sessions.open(handle("B"), createIdentity(handle("B")));
     sessions.enqueue("A", () => gate.promise, "room-1");
     sessions.clear();
 

@@ -8,9 +8,6 @@ export type DraftResult<TValue> =
   | { ok: true; value: TValue; }
   | { ok: false; error: string; };
 
-/**
- * Manages the common input, keyboard, blur, and parse lifecycle of a draft.
- */
 export class DraftController<TValue> {
   #host: ReactiveControllerHost;
   #draft: string | null = null;
@@ -30,7 +27,7 @@ export class DraftController<TValue> {
     return this.#error;
   }
 
-  setDraft(
+  updateDraft(
     text: string | null
   ): void {
     if (this.#draft === text) {
@@ -41,7 +38,7 @@ export class DraftController<TValue> {
     this.#host.requestUpdate();
   }
 
-  setError(
+  showError(
     message: string | null
   ): void {
     if (this.#error === message) {
@@ -53,8 +50,8 @@ export class DraftController<TValue> {
   }
 
   clear(): void {
-    this.setDraft(null);
-    this.setError(null);
+    this.updateDraft(null);
+    this.showError(null);
   }
 
   onInput(
@@ -64,8 +61,8 @@ export class DraftController<TValue> {
       return;
     }
 
-    this.setDraft(event.target.value);
-    this.setError(null);
+    this.updateDraft(event.target.value);
+    this.showError(null);
   }
 
   onKeyDown(
@@ -76,7 +73,6 @@ export class DraftController<TValue> {
       commit();
     }
     else if (event.key === "Escape") {
-      // Keep parent popovers open while discarding a draft.
       event.stopPropagation();
       this.clear();
     }
@@ -99,7 +95,7 @@ export class DraftController<TValue> {
       return;
     }
     if (!result.ok) {
-      this.setError(result.error);
+      this.showError(result.error);
 
       return;
     }

@@ -151,9 +151,6 @@ export interface BoxControlsOptions {
   handleSize?: number;
 }
 
-/**
- * Pointer controls for moving, resizing, turning and mirroring one `BoxVolume`.
- */
 export class BoxControls<
   TBox extends BoxVolume = BoxVolume
 > extends THREE.Controls<BoxControlsEventMap, THREE.Camera> {
@@ -265,9 +262,6 @@ export class BoxControls<
     this.#handles.flipAxes = flipAxes;
   }
 
-  /**
-   * Attaches a box and optionally claims `options.from` as a drag.
-   */
   attach(
     box: TBox,
     options: BoxAttachOptions = {}
@@ -673,7 +667,7 @@ export class BoxControls<
       box.position[axis] = moveAxis({
         target: constraints.snapOn(axis, _point[axis], free),
         size: _size[axis],
-        bounds: constraints.rangeFor(axis)
+        bounds: constraints.axisRange(axis)
       });
     }
 
@@ -702,8 +696,8 @@ export class BoxControls<
         _point[axis] - session.faceOffset,
         free
       ),
-      minSize: constraints.minSizeFor(axis),
-      bounds: constraints.rangeFor(axis)
+      minSize: constraints.axisMinSize(axis),
+      bounds: constraints.axisRange(axis)
     });
 
     box.position[axis] = extent.min;
@@ -815,9 +809,6 @@ export class BoxControls<
     return true;
   }
 
-  /**
-   * Snapshots the live `snap`, `minSize` and `bounds` fields.
-   */
   #constraints(): AxisConstraints {
     const { snap, minSize, bounds } = this;
 

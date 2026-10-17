@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { UVRegionLayer } from "#src/rendering/overlays/UVRegions.ts";
-import { rectOf } from "#src/uv/geometry/geometry.ts";
+import { boundingRect } from "#src/uv/geometry/geometry.ts";
 import {
   makeSvg,
   makeViewport
@@ -104,7 +104,7 @@ describe("UVRegionLayer — size labels", () => {
   test("labels only the selected slot of a free region", () => {
     const { svg, map } = makeSetup();
     const region = map.create({ width: 4, height: 4, id: "r1" });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.resize(region.id, { x: 0, y: 0, width: 7, height: 2 }, "top");
     map.select(region.id, "top");
     map.showSizeLabels = true;
@@ -121,28 +121,28 @@ describe("UVRegionLayer — size labels", () => {
     map.select(region.id);
     map.showSizeLabels = true;
 
-    layer.setLivePreview(
+    layer.showLivePreview(
       livePreview(map.previewResize(region.id, { ...region.bounds, width: 9 }))
     );
     assert.deepStrictEqual(sizeTexts(svg), ["9×4"]);
 
-    layer.setLivePreview(null);
+    layer.showLivePreview(null);
     assert.deepStrictEqual(sizeTexts(svg), ["4×4"]);
   });
 
   test("labels every net face inside its bottom-right corner", () => {
     const { svg, map } = makeSetup();
     const region = map.create({ width: 8, height: 8, id: "r1" });
-    map.setState(region.id, "unfolded");
+    map.applyState(region.id, "unfolded");
     map.select(region.id);
     map.showSizeLabels = true;
 
-    const faces = map.get(region.id)!.slotsOf();
+    const faces = map.get(region.id)!.listSlots();
     const labels = sizeLabels(svg);
     assert.strictEqual(labels.length, faces.length);
     assert.deepStrictEqual(
       labels.map((label) => label.getAttribute("y")).sort(),
-      faces.map(({ geometry }) => String(screenBottom(rectOf(geometry)) - kInset)).sort()
+      faces.map(({ geometry }) => String(screenBottom(boundingRect(geometry)) - kInset)).sort()
     );
     assert.ok(labels.every((label) => label.getAttribute("visibility") === "visible"));
   });
@@ -177,19 +177,19 @@ describe("UVRegionLayer — size labels", () => {
   test("keeps a resized net face size outside while it is too small to fit inside", () => {
     const { svg, map, layer } = makeSetup();
     const region = map.create({ width: 3, height: 3, id: "r1" });
-    map.setState(region.id, "unfolded");
+    map.applyState(region.id, "unfolded");
     map.select(region.id);
     map.showSizeLabels = true;
 
-    const front = rectOf(map.get(region.id)!.geometryFor("front"));
+    const front = boundingRect(map.get(region.id)!.slotGeometry("front"));
     const preview = map.previewResize(
       region.id,
       { ...front, width: front.width + 1 },
       "front"
     )!;
-    layer.setLivePreview({ regions: [preview], slot: "front" });
+    layer.showLivePreview({ regions: [preview], slot: "front" });
 
-    const resized = rectOf(preview.geometryFor("front"));
+    const resized = boundingRect(preview.slotGeometry("front"));
     const visible = sizeLabels(svg).filter(
       (label) => label.getAttribute("visibility") === "visible"
     );
@@ -206,19 +206,19 @@ describe("UVRegionLayer — size labels", () => {
   test("keeps a resized net face size inside when outside would cover a face", () => {
     const { svg, map, layer } = makeSetup();
     const region = map.create({ width: 8, height: 8, id: "r1" });
-    map.setState(region.id, "unfolded");
+    map.applyState(region.id, "unfolded");
     map.select(region.id);
     map.showSizeLabels = true;
 
-    const front = rectOf(map.get(region.id)!.geometryFor("front"));
+    const front = boundingRect(map.get(region.id)!.slotGeometry("front"));
     const preview = map.previewResize(
       region.id,
       { ...front, width: front.width + 1 },
       "front"
     )!;
-    layer.setLivePreview({ regions: [preview], slot: "front" });
+    layer.showLivePreview({ regions: [preview], slot: "front" });
 
-    const resized = rectOf(preview.geometryFor("front"));
+    const resized = boundingRect(preview.slotGeometry("front"));
     const label = sizeLabels(svg).find(
       (el) => el.textContent === `${resized.width}×${resized.height}`
     )!;

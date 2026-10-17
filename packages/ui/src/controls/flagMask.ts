@@ -1,6 +1,3 @@
-/**
- * Pure unsigned 32-bit mask helpers.
- */
 export function normalizeMask(
   mask: number
 ): number {

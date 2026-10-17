@@ -157,7 +157,7 @@ export class BlocksetEditDialog extends WorkspaceElement {
     entry: BlocksetEntry
   ) {
     const { definition } = entry;
-    const tileSize = workspace.blocksets.tileSizeFor(definition.id);
+    const tileSize = workspace.blocksets.blocksetTileSize(definition.id);
     const resizable = workspace.blocksets.access(definition.id).has("tileSize");
     const usage = workspace.usage.inspectBlocksetUsage(definition.id);
     const renamable = entry.assetId !== null;
@@ -233,7 +233,7 @@ export class BlocksetEditDialog extends WorkspaceElement {
   ): void {
     const workspace = this.workspace;
     const { definition } = entry;
-    const from = workspace?.blocksets.tileSizeFor(definition.id);
+    const from = workspace?.blocksets.blocksetTileSize(definition.id);
     if (workspace === null || from === undefined) {
       return;
     }

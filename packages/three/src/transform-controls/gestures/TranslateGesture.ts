@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { AXES } from "../../common/axes.ts";
 import {
   type SnapStep,
-  snapStepFor,
+  resolveSnapStep,
   snapValue
 } from "../../common/snap.ts";
 import { PLANE_AXES } from "../handles/handleId.ts";
@@ -107,7 +107,7 @@ export class TranslateGesture {
       .applyQuaternion(this.#inverse)
       .multiply(this.#mask);
     for (const axis of AXES) {
-      target[axis] = snapValue(target[axis], snapStepFor(snap, axis));
+      target[axis] = snapValue(target[axis], resolveSnapStep(snap, axis));
     }
     target.applyQuaternion(this.#quaternion);
 

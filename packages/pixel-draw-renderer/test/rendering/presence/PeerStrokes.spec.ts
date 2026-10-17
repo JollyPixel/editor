@@ -11,7 +11,7 @@ import {
 } from "#src/rendering/presence/PeerStrokes.ts";
 import {
   canvasPixels,
-  contextOf,
+  context2d,
   readPixel
 } from "../../fixtures/canvas.ts";
 import { makeCanvas } from "../../helpers/dom.ts";
@@ -43,7 +43,7 @@ describe("PeerStrokes", () => {
       ghosts.set("peer-B", [kBlue]);
 
       const dest = makeCanvas(10);
-      ghosts.draw(contextOf(dest));
+      ghosts.draw(context2d(dest));
 
       assert.deepStrictEqual(
         readPixel(canvasPixels(dest), { x: 2, y: 3 }, dest.width),
@@ -65,7 +65,7 @@ describe("PeerStrokes", () => {
       ghosts.set("peer-A", [kBlue]);
 
       const dest = makeCanvas(10);
-      ghosts.draw(contextOf(dest));
+      ghosts.draw(context2d(dest));
 
       assert.deepStrictEqual(
         readPixel(canvasPixels(dest), { x: 2, y: 3 }, dest.width),
@@ -86,7 +86,7 @@ describe("PeerStrokes", () => {
       ghosts.remove("peer-A");
 
       const dest = makeCanvas(10);
-      ghosts.draw(contextOf(dest));
+      ghosts.draw(context2d(dest));
 
       assert.deepStrictEqual(
         readPixel(canvasPixels(dest), { x: 2, y: 3 }, dest.width),
@@ -124,7 +124,7 @@ describe("PeerStrokes", () => {
       ghosts.removeOverlapping([{ x: 2, y: 3 }]);
 
       const dest = makeCanvas(10);
-      ghosts.draw(contextOf(dest));
+      ghosts.draw(context2d(dest));
       assert.deepStrictEqual(
         readPixel(canvasPixels(dest), { x: 2, y: 3 }, dest.width),
         [0, 0, 0, 0],

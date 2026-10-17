@@ -10,7 +10,7 @@ import {
   EchoExtension,
   SinkHandle,
   cursorPatch,
-  identityOf,
+  createIdentity,
   silentLogger,
   strokeCommand
 } from "./_fixtures.ts";
@@ -32,7 +32,7 @@ const suite = defineSuite("network / Server#receive", async(bench) => {
     const clientId = `peer-${index}`;
     const connection = server.connect(
       new SinkHandle(clientId),
-      identityOf(clientId)
+      createIdentity(clientId)
     );
     await connection.receive(JSON.stringify({
       room: ROOM_NAME,

@@ -18,7 +18,7 @@ test.describe("Runtime pixel ratio", () => {
       }
     });
 
-    expect(await pixelRatioOf(page)).toBe(1);
+    expect(await readPixelRatio(page)).toBe(1);
   });
 
   test("load keeps an explicit renderer pixel ratio", async({ page }) => {
@@ -35,11 +35,11 @@ test.describe("Runtime pixel ratio", () => {
       }
     });
 
-    expect(await pixelRatioOf(page)).toBe(2);
+    expect(await readPixelRatio(page)).toBe(2);
   });
 });
 
-function pixelRatioOf(
+function readPixelRatio(
   page: Page
 ): Promise<number> {
   return page.evaluate(

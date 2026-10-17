@@ -23,14 +23,14 @@ export type UVRegionFilter = (id: string) => boolean;
 export interface UVOwnershipOptions {
   uv: UVMap;
   isRecording: () => boolean;
-  removeNormalMapZoneOf: (regionId: string) => IndexedNormalMapZone | null;
+  removeNormalMapZone: (regionId: string) => IndexedNormalMapZone | null;
   record: (edit: LocalEdit) => void;
 }
 
 export class UVOwnership {
   #disowned = new Set<UVRegionFilter>();
   #isRecording: () => boolean;
-  #removeNormalMapZoneOf: (regionId: string) => IndexedNormalMapZone | null;
+  #removeNormalMapZone: (regionId: string) => IndexedNormalMapZone | null;
   #record: (edit: LocalEdit) => void;
 
   constructor(
@@ -38,7 +38,7 @@ export class UVOwnership {
   ) {
     const { uv } = options;
     this.#isRecording = options.isRecording;
-    this.#removeNormalMapZoneOf = options.removeNormalMapZoneOf;
+    this.#removeNormalMapZone = options.removeNormalMapZone;
     this.#record = options.record;
 
     uv.on("region-created", ({ region }) => this.#created(region));
@@ -112,7 +112,7 @@ export class UVOwnership {
       return;
     }
 
-    const zone = this.#removeNormalMapZoneOf(region.id);
+    const zone = this.#removeNormalMapZone(region.id);
     const inverse: DocumentCommand[] = [uvRegionCreated(region.toJSON())];
     if (zone) {
       inverse.push({
@@ -137,7 +137,7 @@ export class UVOwnership {
     }
 
     this.#record({
-      command: uvRegionMoved(region.id, face, region.rectFor(face ?? "front")),
+      command: uvRegionMoved(region.id, face, region.slotRect(face ?? "front")),
       inverse: [uvRegionMoved(region.id, face, previousRect)]
     });
   }

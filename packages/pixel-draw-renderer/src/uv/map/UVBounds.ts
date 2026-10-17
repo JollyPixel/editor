@@ -65,7 +65,7 @@ export class UVBounds {
     slot: UVSlot | null = null
   ): UVRegion {
     if (slot !== null) {
-      return region.movedTo(this.fit(region.rectFor(slot)), slot);
+      return region.movedTo(this.fit(region.slotRect(slot)), slot);
     }
 
     const bounds = region.bounds;
@@ -83,7 +83,7 @@ export class UVBounds {
     slot: UVSlot | null
   ): UVRegion {
     const clamped = this.fit({
-      ...region.rectFor(slot),
+      ...region.slotRect(slot),
       x: position.x,
       y: position.y
     });

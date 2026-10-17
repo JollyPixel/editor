@@ -36,11 +36,6 @@ const outputHandle = new ResizeHandle(output, {
   minSize: 100,
   maxSize: 320
 });
-/*
- * horizontal:"left"/vertical:"top" anchors the object's top-left corner, so
- * the supplied handle (placed bottom-right in the markup) grows both axes
- * together as it's dragged away from that anchor.
- */
 const objectCorner = new CornerResizeHandle(object, {
   horizontal: "left",
   vertical: "top",
@@ -90,10 +85,6 @@ for (const handle of handles) {
   );
 }
 
-/*
- * Only the edge handles are collapsible; the corner handle has no
- * double-click behavior.
- */
 sidebarHandle.handleElt.addEventListener("dblclick", updateStatus);
 outputHandle.handleElt.addEventListener("dblclick", updateStatus);
 

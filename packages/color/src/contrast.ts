@@ -16,9 +16,6 @@ const kLuminanceWeights = {
 };
 const kContrastOffset = 0.05;
 
-/**
- * Computes WCAG relative luminance and ignores alpha.
- */
 export function relativeLuminance(
   color: RGBA
 ): number {
@@ -27,9 +24,6 @@ export function relativeLuminance(
     (kLuminanceWeights.b * srgbToLinear(color.b));
 }
 
-/**
- * Computes the WCAG contrast ratio from 1 to 21 and ignores alpha.
- */
 export function contrastRatio(
   a: RGBA,
   b: RGBA
@@ -42,9 +36,6 @@ export function contrastRatio(
     second / first;
 }
 
-/**
- * Uses the editor-tuned BT.601 threshold and ignores alpha.
- */
 export function contrastingColor(
   input: ColorInput
 ): string {

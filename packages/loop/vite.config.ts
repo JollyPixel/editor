@@ -14,7 +14,6 @@ function examplePage(
   return fileURLToPath(new URL(`./examples/${name}`, import.meta.url));
 }
 
-// https://vitejs.dev/config/
 export default defineConfig({
   root: kExamplesRoot,
   server: {

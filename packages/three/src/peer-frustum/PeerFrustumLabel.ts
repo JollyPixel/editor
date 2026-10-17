@@ -27,10 +27,6 @@ export interface PeerFrustumLabelOptions {
   showNameBox?: boolean;
 }
 
-/**
- * Billboard nameplate rendered with a canvas texture.
- * Positioned above the owning frustum's local origin.
- */
 export class PeerFrustumLabel extends CanvasSprite {
   #displayName: string;
   #color: THREE.ColorRepresentation;
@@ -128,7 +124,6 @@ export class PeerFrustumLabel extends CanvasSprite {
       context.fillStyle = "#ffffff";
     }
     else {
-      // Use a dark shadow when no background is drawn.
       context.shadowColor = "rgba(0, 0, 0, 0.9)";
       context.shadowBlur = 6;
       context.shadowOffsetX = 0;

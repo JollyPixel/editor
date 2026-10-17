@@ -21,7 +21,7 @@ describe("UVRegionLayer — face labels", () => {
       height: RECT_SIZE_THAT_FITS_A_LABEL,
       id: "r1"
     });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.select("r1", "left");
 
     assert.deepStrictEqual(
@@ -38,7 +38,7 @@ describe("UVRegionLayer — face labels", () => {
       height: RECT_SIZE_THAT_FITS_A_LABEL,
       id: "r1"
     });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.select("r1", "front");
 
     const peeled = ["front", "back", "left"] as const;
@@ -77,14 +77,14 @@ describe("UVRegionLayer — face labels", () => {
       height: RECT_SIZE_THAT_FITS_A_LABEL,
       id: "r1"
     });
-    map.setState(a.id, "free");
+    map.applyState(a.id, "free");
     map.select("r1", "top");
     const b = map.create({
       width: RECT_SIZE_THAT_FITS_A_LABEL,
       height: RECT_SIZE_THAT_FITS_A_LABEL,
       id: "r2"
     });
-    map.setState(b.id, "free");
+    map.applyState(b.id, "free");
     map.showAll = true;
     map.showRegionLabels = true;
 
@@ -102,7 +102,7 @@ describe("UVRegionLayer — face labels", () => {
       height: RECT_SIZE_THAT_FITS_A_LABEL,
       id: "r1"
     });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.select("r1", "front");
 
     DEFAULT_UV_SLOTS.forEach((face, index) => {
@@ -142,7 +142,7 @@ describe("UVRegionLayer — face labels", () => {
       height: RECT_SIZE_THAT_FITS_A_LABEL,
       id: "r1"
     });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
 
     map.showAll = true;
 
@@ -156,7 +156,7 @@ describe("UVRegionLayer — face labels", () => {
       height: 4,
       id: "r1"
     });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.select("r1", "front");
 
     assert.deepStrictEqual(uvLabelTexts(svg), []);
@@ -169,11 +169,11 @@ describe("UVRegionLayer — face labels", () => {
       height: RECT_SIZE_THAT_FITS_A_LABEL,
       id: "r1"
     });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.select("r1", "front");
     assert.strictEqual(uvLabelTexts(svg).length, 1);
 
-    map.setState("r1", "stacked");
+    map.applyState("r1", "stacked");
 
     assert.deepStrictEqual(uvLabelTexts(svg), []);
   });

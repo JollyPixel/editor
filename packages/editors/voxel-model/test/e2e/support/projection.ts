@@ -18,7 +18,7 @@ export interface ViewSnapshot {
   };
 }
 
-export function clientPointOf(
+export function toClientPoint(
   view: ViewSnapshot,
   point: THREE.Vector3Like
 ): ScreenPoint {

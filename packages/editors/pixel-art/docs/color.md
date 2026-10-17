@@ -8,7 +8,7 @@ focus use inset highlights that stay within each swatch.
 
 ## Custom layouts
 
-`ColorSwatch` exposes `color`, `opacity`, `disabled`, `setColor(hex, opacity)`
+`ColorSwatch` exposes `color`, `opacity`, `disabled`, `applyColor(hex, opacity)`
 and `close()`. It emits `color-picker-open` with a `ColorPickerRequest` and
 `color-picker-close` with its button anchor. Wire these events to one shared
 `ColorPickerPopover.open(request)` and `close(anchor)`. Committed and preview

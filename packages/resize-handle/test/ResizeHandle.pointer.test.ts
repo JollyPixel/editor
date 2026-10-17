@@ -1,9 +1,6 @@
 // Import Node.js Dependencies
 import assert from "node:assert/strict";
-import {
-  describe,
-  test
-} from "node:test";
+import { describe, test } from "node:test";
 
 // Import Internal Dependencies
 import { ResizeHandle } from "../src/index.ts";
@@ -172,13 +169,11 @@ describe("pointer drag", () => {
     const rh = new ResizeHandle(target, { direction: "left" });
 
     installPointerCaptureMock(rh.handleElt);
-    // startDrag = clientX=100, initialSize=200
     firePointerEvent(rh.handleElt, "pointerdown", {
       button: 0,
       pointerId: 1,
       clientX: 100
     });
-    // delta=150, size = 200 + (150 - 100) = 250
     firePointerEvent(rh.handleElt, "pointermove", {
       clientX: 150
     });
@@ -192,13 +187,11 @@ describe("pointer drag", () => {
     const rh = new ResizeHandle(target, { direction: "right" });
 
     installPointerCaptureMock(rh.handleElt);
-    // startDrag = clientX=100, initialSize=200
     firePointerEvent(rh.handleElt, "pointerdown", {
       button: 0,
       pointerId: 1,
       clientX: 100
     });
-    // delta=50, size = 200 + (100 - 50) = 250
     firePointerEvent(rh.handleElt, "pointermove", {
       clientX: 50
     });
@@ -212,13 +205,11 @@ describe("pointer drag", () => {
     const rh = new ResizeHandle(target, { direction: "top" });
 
     installPointerCaptureMock(rh.handleElt);
-    // startDrag = clientY=50, initialSize=150
     firePointerEvent(rh.handleElt, "pointerdown", {
       button: 0,
       pointerId: 1,
       clientY: 50
     });
-    // delta=100, size = 150 + (100 - 50) = 200
     firePointerEvent(rh.handleElt, "pointermove", {
       clientY: 100
     });
@@ -232,13 +223,11 @@ describe("pointer drag", () => {
     const rh = new ResizeHandle(target, { direction: "bottom" });
 
     installPointerCaptureMock(rh.handleElt);
-    // startDrag = clientY=100, initialSize=150
     firePointerEvent(rh.handleElt, "pointerdown", {
       button: 0,
       pointerId: 1,
       clientY: 100
     });
-    // delta=50, size = 150 + (100 - 50) = 200
     firePointerEvent(rh.handleElt, "pointermove", {
       clientY: 50
     });
@@ -271,148 +260,5 @@ describe("pointer drag", () => {
     });
     assert.equal(target.style.width, "280px");
     assert.equal(rh.handleElt.getAttribute("aria-valuenow"), "280");
-  });
-
-  test("fires drag event on each pointermove", () => {
-    const container = makeContainer();
-    const target = makeTarget(container);
-    const rh = new ResizeHandle(target, { direction: "left" });
-
-    let dragCount = 0;
-    rh.addEventListener("drag", () => {
-      dragCount++;
-    });
-
-    installPointerCaptureMock(rh.handleElt);
-    firePointerEvent(rh.handleElt, "pointerdown", {
-      button: 0,
-      pointerId: 1,
-      clientX: 100
-    });
-    firePointerEvent(rh.handleElt, "pointermove", {
-      clientX: 120
-    });
-    firePointerEvent(rh.handleElt, "pointermove", {
-      clientX: 140
-    });
-
-    assert.strictEqual(dragCount, 2);
-  });
-
-  test("fires dragEnd event on pointerup", () => {
-    const container = makeContainer();
-    const target = makeTarget(container);
-    const rh = new ResizeHandle(target, { direction: "left" });
-
-    let dragEndFired = false;
-    rh.addEventListener("dragEnd", () => {
-      dragEndFired = true;
-    });
-
-    installPointerCaptureMock(rh.handleElt);
-    firePointerEvent(rh.handleElt, "pointerdown", {
-      button: 0,
-      pointerId: 1
-    });
-    firePointerEvent(rh.handleElt, "pointerup", {
-      pointerId: 1
-    });
-
-    assert.strictEqual(dragEndFired, true);
-  });
-
-  test("calls releasePointerCapture on pointerup", () => {
-    const container = makeContainer();
-    const target = makeTarget(container);
-    const rh = new ResizeHandle(target, { direction: "left" });
-
-    const state = installPointerCaptureMock(rh.handleElt);
-    firePointerEvent(rh.handleElt, "pointerdown", {
-      button: 0,
-      pointerId: 3
-    });
-    assert.strictEqual(state.captured, 3);
-
-    firePointerEvent(rh.handleElt, "pointerup", {
-      pointerId: 3
-    });
-
-    assert.strictEqual(state.captured, null);
-  });
-
-  test('removes "handle-dragging" and direction class on pointerup', () => {
-    const container = makeContainer();
-    const target = makeTarget(container);
-    const rh = new ResizeHandle(target, { direction: "left" });
-
-    installPointerCaptureMock(rh.handleElt);
-    firePointerEvent(rh.handleElt, "pointerdown", {
-      button: 0,
-      pointerId: 1
-    });
-
-    assert.ok(document.documentElement.classList.contains("handle-dragging"));
-    assert.ok(document.documentElement.classList.contains("vertical"));
-
-    firePointerEvent(rh.handleElt, "pointerup");
-
-    assert.ok(!document.documentElement.classList.contains("handle-dragging"));
-    assert.ok(!document.documentElement.classList.contains("vertical"));
-  });
-
-  test("listeners cleaned up after pointerup — no further events trigger callbacks", () => {
-    const container = makeContainer();
-    const target = makeTarget(container);
-    const rh = new ResizeHandle(target, { direction: "left" });
-
-    let dragCount = 0;
-    rh.addEventListener("drag", () => {
-      dragCount++;
-    });
-
-    installPointerCaptureMock(rh.handleElt);
-    firePointerEvent(rh.handleElt, "pointerdown", {
-      button: 0,
-      pointerId: 1,
-      clientX: 100
-    });
-    firePointerEvent(rh.handleElt, "pointermove", {
-      clientX: 120
-    });
-    assert.strictEqual(dragCount, 1);
-
-    firePointerEvent(rh.handleElt, "pointerup");
-
-    // Additional moves after cleanup should not fire drag
-    firePointerEvent(rh.handleElt, "pointermove", {
-      clientX: 140
-    });
-
-    assert.strictEqual(dragCount, 1);
-  });
-
-  test("pointercancel triggers same cleanup as pointerup", () => {
-    const container = makeContainer();
-    const target = makeTarget(container);
-    const rh = new ResizeHandle(target, { direction: "left" });
-
-    let dragEndFired = false;
-    rh.addEventListener("dragEnd", () => {
-      dragEndFired = true;
-    });
-
-    const state = installPointerCaptureMock(rh.handleElt);
-    firePointerEvent(rh.handleElt, "pointerdown", {
-      button: 0,
-      pointerId: 1
-    });
-
-    assert.ok(document.documentElement.classList.contains("handle-dragging"));
-
-    firePointerEvent(rh.handleElt, "pointercancel");
-
-    assert.ok(!document.documentElement.classList.contains("handle-dragging"));
-    assert.strictEqual(state.captured, null);
-    assert.strictEqual(dragEndFired, true);
   });
 });

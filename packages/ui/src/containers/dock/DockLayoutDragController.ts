@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import type { Dock } from "./Dock.ts";
 import type { DockColumn } from "./layout.ts";
-import { floatingOf } from "./LayoutProjection.ts";
+import { readFloating } from "./LayoutProjection.ts";
 import type { Floating } from "../floating/Floating.ts";
 import {
   clampToViewport,
@@ -70,7 +70,7 @@ export class DockLayoutDragController {
     const group = pane.parentElement !== null && isPaneGroup(pane.parentElement) ?
       pane.parentElement :
       null;
-    const frame = floatingOf(pane);
+    const frame = readFloating(pane);
     const originX = detail.event.clientX;
     const originY = detail.event.clientY;
     const rect = pane.getBoundingClientRect();
@@ -81,7 +81,7 @@ export class DockLayoutDragController {
     const targets = new Map<string, DockTarget>();
     let reorder: SlidingReorder | null = null;
     let frameSize: ViewportRect | null = null;
-    function sizeOf(
+    function measureFrame(
       target: Floating
     ): ViewportRect {
       frameSize ??= target.getBoundingClientRect();
@@ -125,7 +125,7 @@ export class DockLayoutDragController {
       probe: frame === null ?
         undefined :
         (clientX: number, clientY: number) => {
-          const box = sizeOf(frame);
+          const box = measureFrame(frame);
 
           return {
             x: startX + clientX - originX,
@@ -151,7 +151,7 @@ export class DockLayoutDragController {
             frame,
             startX + result.x - originX,
             startY + result.y - originY,
-            sizeOf(frame)
+            measureFrame(frame)
           );
         }
       },

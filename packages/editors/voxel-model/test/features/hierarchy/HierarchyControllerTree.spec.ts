@@ -9,8 +9,8 @@ import {
 } from "#src/state/index.ts";
 import { createModelFixture } from "../../fixtures/model.ts";
 import {
-  createHierarchyFor,
-  shapeOf
+  createHierarchy,
+  readShape
 } from "../../fixtures/hierarchy.ts";
 import {
   createHierarchyHarness,
@@ -157,10 +157,10 @@ describe("HierarchyController.handleReparent", () => {
     const c = harness.addBlock({ name: "C" });
 
     reparent(harness, [c.uuid], a.uuid, "above");
-    assert.deepEqual(shapeOf(harness.hierarchy.nodes()), ["C", "A", "B"]);
+    assert.deepEqual(readShape(harness.hierarchy.nodes()), ["C", "A", "B"]);
 
     reparent(harness, [c.uuid, a.uuid], b.uuid, "below");
-    assert.deepEqual(shapeOf(harness.hierarchy.nodes()), ["B", "C", "A"]);
+    assert.deepEqual(readShape(harness.hierarchy.nodes()), ["B", "C", "A"]);
   });
 
   test("keeps the drop position when a row changes parent", () => {
@@ -173,7 +173,7 @@ describe("HierarchyController.handleReparent", () => {
     reparent(harness, [arm.uuid], head.uuid, "below");
 
     assert.deepEqual(
-      shapeOf(harness.hierarchy.nodes()),
+      readShape(harness.hierarchy.nodes()),
       [["Body", ["Head", "Arm", "Tail"]]]
     );
   });
@@ -195,7 +195,7 @@ describe("HierarchyController.attach", () => {
       document,
       blocks,
       selection,
-      hierarchy: createHierarchyFor(fixture, harness.access),
+      hierarchy: createHierarchy(fixture, harness.access),
       presence: new PresenceStore(),
       tab: new TabStore()
     });

@@ -96,11 +96,9 @@ export class MockCanvas2DContext {
   }
 
   setTransform(..._args: unknown[]): void {
-    // No-op for testing
   }
 
   beginPath(): void {
-    // No-op for testing
   }
 
   save(): void {
@@ -115,11 +113,9 @@ export class MockCanvas2DContext {
   }
 
   clip(): void {
-    // No-op for testing
   }
 
   rect(..._args: unknown[]): void {
-    // No-op for testing
   }
 
   drawImage(
@@ -131,7 +127,7 @@ export class MockCanvas2DContext {
       return;
     }
 
-    const srcPixels = mockContextOf(image).pixels;
+    const srcPixels = mockContext(image).pixels;
     const srcWidth = image.width;
 
     let sx = 0;
@@ -368,7 +364,7 @@ export function installCanvasMock(
   });
 }
 
-export function mockContextOf(
+export function mockContext(
   canvas: HTMLCanvasElement
 ): MockCanvas2DContext {
   const context = canvas.getContext(

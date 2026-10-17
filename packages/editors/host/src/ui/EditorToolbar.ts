@@ -9,7 +9,7 @@ import {
 } from "lit";
 import {
   SubscriptionController,
-  detailOf,
+  readDetail,
   type ContextMenu,
   type ContextMenuItem,
   type JollyChangeDetail,
@@ -354,7 +354,7 @@ export class EditorToolbar extends LitElement {
     lantern: Lantern,
     event: Event
   ): void {
-    const detail = detailOf<{ id: string; }>(event);
+    const detail = readDetail<{ id: string; }>(event);
     if (detail !== null) {
       lantern.start(lantern.tour(detail.id));
     }
@@ -470,7 +470,7 @@ export class EditorToolbar extends LitElement {
   readonly #onTargetChange = (
     event: Event
   ): void => {
-    const detail = detailOf<JollyChangeDetail<string>>(event);
+    const detail = readDetail<JollyChangeDetail<string>>(event);
     const targets = this.sources?.targets;
     if (detail !== null && targets) {
       void this.#run(() => targets.open(detail.value));
@@ -480,7 +480,7 @@ export class EditorToolbar extends LitElement {
   readonly #onVersionChange = (
     event: Event
   ): void => {
-    const detail = detailOf<JollyChangeDetail<string>>(event);
+    const detail = readDetail<JollyChangeDetail<string>>(event);
     const tags = this.sources?.tags;
     if (detail !== null && tags) {
       void this.#run(() => tags.view(

@@ -25,9 +25,6 @@ const kExamplesByGroup: Record<GalleryGroup, readonly GalleryEntry[]> = {
   math: MATH_EXAMPLES
 };
 
-/**
- * The navigation and E2E sweep derive from this list, in group declaration order.
- */
 export const manifest: readonly GalleryEntry[] = Object
   .values(kExamplesByGroup)
   .flat();

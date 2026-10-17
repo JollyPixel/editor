@@ -9,7 +9,7 @@ import {
 import {
   GRID_KIND,
   GRID_PAINTED,
-  bytesOf,
+  createBytes,
   gridHandler,
   paintCommand
 } from "./_fixtures.ts";
@@ -31,15 +31,15 @@ const kActor: EventStore.Actor = {
 const suite = defineSuite("asset-server / event primitives", async(bench) => {
   const handler = gridHandler({ contentBytes: 4_096 });
   const state = handler.create("grid-0");
-  const painted = eventOf(GRID_PAINTED, paintCommand(1));
+  const painted = createEvent(GRID_PAINTED, paintCommand(1));
 
   bench.add("fold domain command", () => {
     foldAssetEvent(handler, state, painted);
   });
 
   for (const size of kSizes) {
-    const data = bytesOf(size, size);
-    const updated = eventOf(
+    const data = createBytes(size, size);
+    const updated = createEvent(
       ASSET_UPDATED,
       await writeData("grids/grid-0.grid", GRID_KIND, data)
     );
@@ -60,7 +60,7 @@ const suite = defineSuite("asset-server / event primitives", async(bench) => {
 
 export default suite;
 
-function eventOf(
+function createEvent(
   eventType: string,
   eventData: unknown
 ): EventStore.Event {

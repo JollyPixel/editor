@@ -7,7 +7,7 @@ import {
 // Import Internal Dependencies
 import {
   benchProtocols,
-  snapshotOf,
+  createSnapshot,
   strokeCommand
 } from "./_fixtures.ts";
 import { MessageParser } from "../src/protocol/message/MessageParser.ts";
@@ -21,8 +21,8 @@ const suite = defineSuite("network / MessageParser", (bench) => {
 
   for (const variants of kVariantCounts) {
     const { inbound, outbound } = benchProtocols(variants);
-    const inboundParser = MessageParser.of(inbound);
-    const outboundParser = MessageParser.of(outbound);
+    const inboundParser = MessageParser.fromProtocol(inbound);
+    const outboundParser = MessageParser.fromProtocol(outbound);
     const command = strokeCommand(variants - 1);
     const broadcast = {
       type: "command",
@@ -40,10 +40,10 @@ const suite = defineSuite("network / MessageParser", (bench) => {
   }
 
   const { outbound } = benchProtocols(10);
-  const outboundParser = MessageParser.of(outbound);
+  const outboundParser = MessageParser.fromProtocol(outbound);
   const snapshot = {
     type: "snapshot",
-    data: snapshotOf(kSnapshotBytes),
+    data: createSnapshot(kSnapshotBytes),
     version: 1
   };
   bench.add("outbound 256 KB snapshot [10 variants]", () => {

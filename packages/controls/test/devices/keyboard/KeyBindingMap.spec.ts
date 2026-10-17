@@ -50,8 +50,8 @@ describe("Controls.KeyBindingMap", () => {
       redo: "Mod+Shift+y"
     });
 
-    assert.deepEqual(map.chordsOf("redo").map(String), ["Mod+Shift+y"]);
-    assert.deepEqual(map.chordsOf("undo").map(String), ["Mod+z"]);
+    assert.deepEqual(map.chordsBoundTo("redo").map(String), ["Mod+Shift+y"]);
+    assert.deepEqual(map.chordsBoundTo("undo").map(String), ["Mod+z"]);
   });
 
   test("an empty override leaves the action unbound", () => {
@@ -59,7 +59,7 @@ describe("Controls.KeyBindingMap", () => {
       remove: []
     });
 
-    assert.deepEqual(map.chordsOf("remove"), []);
+    assert.deepEqual(map.chordsBoundTo("remove"), []);
   });
 
   test("rejects an override that is not a key chord", () => {
@@ -98,8 +98,8 @@ describe("Controls.KeyBindingMap", () => {
 
     for (const action of map.actions) {
       assert.deepEqual(
-        rebuilt.chordsOf(action).map(String),
-        map.chordsOf(action).map(String)
+        rebuilt.chordsBoundTo(action).map(String),
+        map.chordsBoundTo(action).map(String)
       );
     }
   });

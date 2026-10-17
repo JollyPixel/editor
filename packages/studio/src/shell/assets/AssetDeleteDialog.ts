@@ -91,18 +91,18 @@ export class AssetDeleteDialog extends LitElement {
 
     return html`
       <jolly-dialog
-        heading=${headingOf(deletion)}
+        heading=${formatHeading(deletion)}
         icon="trash"
         intent="danger"
         @jolly-close=${this.#onClose}
       >
-        <p>${messageOf(deletion, dependents)}</p>
+        <p>${formatMessage(deletion, dependents)}</p>
         ${dependents.length > 0 ? html`
           <ul>${dependents.map((dependent) => html`<li>${dependent}</li>`)}</ul>
         ` : nothing}
         ${companions.length > 0 ? html`
           <jolly-checkbox
-            label=${companionLabelOf(companions)}
+            label=${formatCompanionLabel(companions)}
             clickable-background
             .value=${this._companions}
             @jolly-change=${this.#onCompanionsChange}
@@ -155,7 +155,7 @@ export class AssetDeleteDialog extends LitElement {
   }
 }
 
-function headingOf(
+function formatHeading(
   deletion: AssetDeletion | null
 ): string {
   const [target] = deletion?.targets ?? [];
@@ -171,7 +171,7 @@ function headingOf(
     `Delete "${target.path.name}"?`;
 }
 
-function messageOf(
+function formatMessage(
   deletion: AssetDeletion | null,
   dependents: readonly string[]
 ): string {
@@ -193,7 +193,7 @@ function messageOf(
     `${scope} These assets still reference them:`;
 }
 
-function companionLabelOf(
+function formatCompanionLabel(
   companions: readonly string[]
 ): string {
   return companions.length === 1 ?

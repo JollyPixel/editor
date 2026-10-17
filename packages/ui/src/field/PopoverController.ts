@@ -81,9 +81,6 @@ export interface PopoverControllerOptions {
   onCancel?: (event: KeyboardEvent) => void;
 }
 
-/**
- * Positions a native popover beside an anchor and restores focus on close.
- */
 export class PopoverController implements ReactiveController {
   #host: ReactiveControllerHost;
   #options: PopoverControllerOptions;

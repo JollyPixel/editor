@@ -31,10 +31,6 @@ export interface EditorRegistryOptions {
   prefix?: string;
 }
 
-/**
- * Resolves the editor page of an asset kind. Registering a kind twice, or a
- * kind in two editors, throws.
- */
 export class EditorRegistry {
   #kinds = new Map<string, AssetKindEntry>();
   #editors = new Map<string, EditorDescriptor>();
@@ -110,7 +106,7 @@ export class EditorRegistry {
     });
   }
 
-  editorFor(
+  findEditor(
     kind: string
   ): EditorDescriptor | undefined {
     return this.#editors.get(kind);

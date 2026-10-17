@@ -9,7 +9,7 @@ import { toRGBA } from "../src/png/pixels.ts";
 import {
   COLOR_TYPES,
   colorModel,
-  samplesOf
+  createSamples
 } from "./_fixtures.ts";
 
 // CONSTANTS
@@ -23,7 +23,7 @@ const suite = defineSuite("png / pixels", (bench) => {
 
   for (const { name, type } of COLOR_TYPES) {
     const color = colorModel(type);
-    const samples = new Uint8Array(samplesOf(kSize, type).buffer);
+    const samples = new Uint8Array(createSamples(kSize, type).buffer);
 
     bench.add(`toRGBA / ${name}`, () => {
       toRGBA(samples, color, palette);

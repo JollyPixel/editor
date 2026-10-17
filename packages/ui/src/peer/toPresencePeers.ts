@@ -5,9 +5,6 @@ import type {
   PresencePeer
 } from "./types.ts";
 
-/**
- * Converts a snapshot to display peers with the local peer first.
- */
 export function toPresencePeers(
   peers: Iterable<CollaboratorPresence>,
   selfId: string

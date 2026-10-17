@@ -14,12 +14,6 @@ const kVec2Axes: readonly string[] = ["x", "y"];
 const kVec3Axes: readonly string[] = ["x", "y", "z"];
 const kVec4Axes: readonly string[] = ["x", "y", "z", "w"];
 
-/*
- * Each guard asks only for the axes it names, so a four-axis value satisfies
- * the two- and three-axis guards too. Callers that need one answer test from
- * the widest shape down.
- */
-
 export function isVec2Like(
   value: unknown
 ): value is Vec2Like {
@@ -44,11 +38,7 @@ export function isQuatLike(
   return hasAxes(value, kVec4Axes);
 }
 
-/*
- * Exact, unlike the guards above: a three-axis value belongs to
- * `jolly-vector3`, not to a pair.
- */
-export function vec2PairOf(
+export function parseVec2Pair(
   value: unknown
 ): Vector2Pair | null {
   if (typeof value !== "object" || value === null) {

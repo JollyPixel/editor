@@ -80,7 +80,7 @@ Both are frozen.
 ## Methods
 
 ```ts
-zoneOf(regionId: string): Readonly<NormalMapZone> | undefined;
+findZone(regionId: string): Readonly<NormalMapZone> | undefined;
 indexOf(regionId: string): number;
 pickDefaults(keys: Iterable<keyof NormalMapSettings>): Partial<NormalMapSettings>;
 withDefaults(patch: Partial<NormalMapSettings>): NormalMapConfig;

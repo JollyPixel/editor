@@ -38,10 +38,6 @@ export interface HighlightPassJfaOptions {
   isolatedFillOpacity?: number;
 }
 
-/**
- * Draws pixel-accurate Jump Flood outlines with `THREE.WebGPURenderer`.
- * Owns the scene pipeline and uses `HighlightEntry` semantics.
- */
 export class HighlightPassJfa {
   readonly pipeline: THREE.RenderPipeline;
 
@@ -332,9 +328,6 @@ export class HighlightPassJfa {
     this.#isolatedFillOpacityUniform.value = isolatedFillOpacity;
   }
 
-  /**
-   * Replaces all outlined entries.
-   */
   get entries(): HighlightEntry[] {
     return [...this.#entries];
   }
@@ -380,9 +373,6 @@ export class HighlightPassJfa {
     this.#instancedMask.sync();
   }
 
-  /**
-   * Renders the scene and outlines through the owned pipeline.
-   */
   render(): void {
     this.#renderJumpFlood();
     this.pipeline.render();
@@ -471,16 +461,16 @@ export class HighlightPassJfa {
 
     scene.background = null;
 
-    this.#setSize(size.width, size.height);
+    this.#resize(size.width, size.height);
 
     renderer.autoClear = true;
     renderer.setClearColor(0x000000, 0);
 
     renderer.setRenderObjectFunction(
-      // eslint-disable-next-line max-params -- external callback contract, matches HighlightPass's own override
+      // eslint-disable-next-line max-params
       (object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext) => {
         if (object instanceof THREE.InstancedMesh) {
-          const instanced = this.#instancedMask.materialsFor(object);
+          const instanced = this.#instancedMask.maskMaterials(object);
           if (instanced) {
             renderer.renderObject(
               object,
@@ -525,10 +515,10 @@ export class HighlightPassJfa {
     if (hasPriority) {
       renderer.autoClear = false;
       renderer.setRenderObjectFunction(
-        // eslint-disable-next-line max-params -- external callback contract, matches HighlightPass's own override
+        // eslint-disable-next-line max-params
         (object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext) => {
           if (object instanceof THREE.InstancedMesh) {
-            const instanced = this.#instancedMask.materialsFor(object);
+            const instanced = this.#instancedMask.maskMaterials(object);
             if (instanced) {
               renderer.renderObject(
                 object,
@@ -576,7 +566,7 @@ export class HighlightPassJfa {
     if (hasIsolated) {
       renderer.autoClear = true;
       renderer.setRenderObjectFunction(
-        // eslint-disable-next-line max-params -- external callback contract, matches HighlightPass's own override
+        // eslint-disable-next-line max-params
         (object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext) => {
           if (!(object instanceof THREE.Mesh)) {
             return;
@@ -720,7 +710,7 @@ export class HighlightPassJfa {
     renderer.setClearColor(previousClearColor, previousClearAlpha);
   }
 
-  #setSize(
+  #resize(
     width: number,
     height: number
   ): void {

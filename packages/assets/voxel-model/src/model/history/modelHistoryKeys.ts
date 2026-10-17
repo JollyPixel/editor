@@ -8,9 +8,9 @@ import {
 // Import Internal Dependencies
 import {
   MODEL_ENTRY_TREES,
-  entriesOf,
-  entrySlotOf,
-  removedEntryOf,
+  selectEntryTree,
+  findEntrySlot,
+  removedEntry,
   type EntryRef
 } from "./modelCommands.ts";
 import type { ModelChange } from "../ModelDocument.ts";
@@ -36,16 +36,16 @@ export function modelHistoryKeys(
   return {
     written: (change) => [
       ...voxelModelConflictKeys(change.command),
-      ...containerKeysOf(tree, change)
+      ...collectContainerKeys(tree, change)
     ],
     guard: (commands) => new KeyedGuard(commands.flatMap((command) => [
-      ...modelConflictRefs(command).map((ref) => guardOf(tree, ref)),
+      ...modelConflictRefs(command).map((ref) => createValueGuard(tree, ref)),
       ...removedSubtreeGuards(tree, command)
     ]))
   };
 }
 
-function guardOf(
+function createValueGuard(
   tree: ModelTreeReader,
   ref: ModelValueRef
 ): KeyedGuardEntry {
@@ -73,7 +73,7 @@ function valueOf(
     case "shape":
       return tree.block(ref.id)?.shape;
     case "material":
-      return tree.materialIdOf(ref.id);
+      return tree.blockMaterialId(ref.id);
     case "material-name":
       return tree.materials.get(ref.id)?.name;
     case "material-parent":
@@ -91,7 +91,7 @@ function removedSubtreeGuards(
   tree: ModelTreeReader,
   command: VoxelModelCommand
 ): KeyedGuardEntry[] {
-  const removed = removedEntryOf(command);
+  const removed = removedEntry(command);
   if (removed === undefined) {
     return [];
   }
@@ -99,28 +99,28 @@ function removedSubtreeGuards(
   return [{
     key: subtreeKey(removed),
     read: () => {
-      const entries = entriesOf(tree, removed.which);
+      const entries = selectEntryTree(tree, removed.which);
 
-      return entries.get(removed.id) === undefined ? undefined : entries.subtreeOf(removed.id);
+      return entries.get(removed.id) === undefined ? undefined : entries.subtreeFrom(removed.id);
     }
   }];
 }
 
-function containerKeysOf(
+function collectContainerKeys(
   tree: ModelTreeReader,
   change: ModelChange
 ): string[] {
   const { command, image: { before } } = change;
-  const slot = entrySlotOf(command);
+  const slot = findEntrySlot(command);
   const keys = MODEL_ENTRY_TREES.flatMap((which) => {
-    const entries = entriesOf(tree, which);
+    const entries = selectEntryTree(tree, which);
     const parents = [
       ...before[which].map(({ parentId }) => parentId),
       ...slot?.which === which ? [slot.parentId] : []
     ];
 
     return parents
-      .flatMap((parentId) => chainOf(parentId, (id) => entries.get(id)?.parentId ?? null))
+      .flatMap((parentId) => ancestorChain(parentId, (id) => entries.get(id)?.parentId ?? null))
       .map((id) => subtreeKey({ which, id }));
   });
 
@@ -133,7 +133,7 @@ function subtreeKey(
   return `${kSubtreeKeyPrefixes[entry.which]}:${entry.id}`;
 }
 
-function chainOf(
+function ancestorChain(
   id: string | null,
   parentOf: (id: string) => string | null
 ): string[] {

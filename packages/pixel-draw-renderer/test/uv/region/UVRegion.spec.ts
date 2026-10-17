@@ -57,7 +57,7 @@ describe("UVRegion", () => {
       assert.strictEqual(region.state, "free");
       for (const face of DEFAULT_UV_SLOTS) {
         assert.deepStrictEqual(
-          region.rectFor(face),
+          region.slotRect(face),
           faces[face],
           `${face} must keep its own rect`
         );
@@ -70,7 +70,7 @@ describe("UVRegion", () => {
       rect.x = 99;
 
       assert.strictEqual(
-        region.rectFor("front").x,
+        region.slotRect("front").x,
         REGION_RECT.x,
         "later caller mutation must not reach the region"
       );
@@ -105,18 +105,18 @@ describe("UVRegion", () => {
     });
   });
 
-  describe("rectFor / facesOf", () => {
+  describe("slotRect", () => {
     test("a stacked region returns its single rect for every face", () => {
       const region = makeStacked();
 
       for (const face of DEFAULT_UV_SLOTS) {
-        assert.deepStrictEqual(region.rectFor(face), REGION_RECT, `${face} must share the rect`);
+        assert.deepStrictEqual(region.slotRect(face), REGION_RECT, `${face} must share the rect`);
       }
     });
 
-    test("slotsOf yields one null-slotted entry when stacked", () => {
+    test("listSlots yields one null-slotted entry when stacked", () => {
       assert.deepStrictEqual(
-        makeStacked().slotsOf(),
+        makeStacked().listSlots(),
         [{ slot: null, geometry: REGION_RECT }]
       );
     });
@@ -137,15 +137,15 @@ describe("UVRegion", () => {
         }
       });
 
-      assert.deepStrictEqual(region.rectFor("left"), REGION_RECT);
-      assert.deepStrictEqual(region.slotsOf(), [{
+      assert.deepStrictEqual(region.slotRect("left"), REGION_RECT);
+      assert.deepStrictEqual(region.listSlots(), [{
         slot: "left",
         geometry: { shape: "triangle", corner: "top-right", rect: REGION_RECT }
       }]);
     });
 
-    test("slotsOf yields six entries in default slot order when free", () => {
-      const faces = makeFree().slotsOf();
+    test("listSlots yields six entries in default slot order when free", () => {
+      const faces = makeFree().listSlots();
 
       assert.deepStrictEqual(
         faces.map((entry) => entry.slot),
@@ -172,39 +172,39 @@ describe("UVRegion", () => {
       });
 
       assert.deepStrictEqual(
-        region.slotsOf().map(({ slot }) => slot),
+        region.listSlots().map(({ slot }) => slot),
         ["top", "left"]
       );
     });
 
-    test("geometryFor returns a copy", () => {
+    test("slotGeometry returns a copy", () => {
       const region = makeStacked();
-      const geometry = region.geometryFor("front");
+      const geometry = region.slotGeometry("front");
       if ("shape" in geometry) {
         assert.fail("expected rectangle geometry");
       }
       geometry.x = 99;
 
-      assert.strictEqual(region.rectFor("front").x, REGION_RECT.x);
+      assert.strictEqual(region.slotRect("front").x, REGION_RECT.x);
     });
 
-    test("rectFor returns a copy", () => {
+    test("slotRect returns a copy", () => {
       const region = makeStacked();
-      const rect = region.rectFor("front");
+      const rect = region.slotRect("front");
       rect.x = 99;
 
-      assert.strictEqual(region.rectFor("front").x, REGION_RECT.x);
+      assert.strictEqual(region.slotRect("front").x, REGION_RECT.x);
     });
 
-    test("slotsOf returns geometry copies", () => {
+    test("listSlots returns geometry copies", () => {
       const region = makeFree();
-      const [{ geometry }] = region.slotsOf();
+      const [{ geometry }] = region.listSlots();
       if ("shape" in geometry) {
         assert.fail("expected rectangle geometry");
       }
       geometry.x = 99;
 
-      assert.strictEqual(region.rectFor("front").x, REGION_RECT.x);
+      assert.strictEqual(region.slotRect("front").x, REGION_RECT.x);
     });
   });
 
@@ -214,7 +214,7 @@ describe("UVRegion", () => {
 
       assert.strictEqual(region.state, "free");
       for (const face of DEFAULT_UV_SLOTS) {
-        assert.deepStrictEqual(region.rectFor(face), REGION_RECT, `${face} must start where the region was`);
+        assert.deepStrictEqual(region.slotRect(face), REGION_RECT, `${face} must start where the region was`);
       }
     });
 

@@ -58,7 +58,7 @@ describe("Placement", () => {
 
     assert.deepEqual(bounds.size, { x: 1, y: 1, z: 3 });
     assert.deepEqual(
-      placement.positionFor(kTemplate, bounds.min),
+      placement.positionFromMinCorner(kTemplate, bounds.min),
       placement.position
     );
   });

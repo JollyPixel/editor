@@ -114,7 +114,7 @@ export function createMaterialHarness(
 
 export type MaterialHarness = ReturnType<typeof createMaterialHarness>;
 
-export function materialNamesOf(
+export function listMaterialNames(
   harness: MaterialHarness
 ): string[] {
   return [...harness.document.tree.materials.values()].map(({ name }) => name);

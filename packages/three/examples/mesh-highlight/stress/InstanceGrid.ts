@@ -27,7 +27,7 @@ export class InstanceGrid {
   ): void {
     const matrix = new THREE.Matrix4();
     for (let i = 0; i < count; i++) {
-      matrix.setPosition(this.positionOf(i, count));
+      matrix.setPosition(this.gridPosition(i, count));
       this.mesh.setMatrixAt(i, matrix);
     }
 
@@ -37,7 +37,7 @@ export class InstanceGrid {
     this.#count = count;
   }
 
-  positionOf(
+  gridPosition(
     index: number,
     count = this.#count
   ): THREE.Vector3 {
@@ -88,7 +88,7 @@ export class InstanceGrid {
       }
       distances.push({
         id: i,
-        distanceSquared: this.positionOf(i).distanceToSquared(origin)
+        distanceSquared: this.gridPosition(i).distanceToSquared(origin)
       });
     }
     distances.sort((a, b) => a.distanceSquared - b.distanceSquared);

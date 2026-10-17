@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  snapStepFor,
+  resolveSnapStep,
   snapValue
 } from "#src/common/snap.ts";
 
@@ -30,20 +30,20 @@ describe("snapValue", () => {
   });
 });
 
-describe("snapStepFor", () => {
+describe("resolveSnapStep", () => {
   test("reads no step while snapping is disabled", () => {
-    assert.equal(snapStepFor(null, "x"), 0);
+    assert.equal(resolveSnapStep(null, "x"), 0);
   });
 
   test("applies a uniform step to every axis", () => {
-    assert.equal(snapStepFor(2, "x"), 2);
-    assert.equal(snapStepFor(2, "y"), 2);
+    assert.equal(resolveSnapStep(2, "x"), 2);
+    assert.equal(resolveSnapStep(2, "y"), 2);
   });
 
   test("reads the per-axis step of a vector", () => {
     const snap = { x: 1, y: 0.5, z: 4 };
 
-    assert.equal(snapStepFor(snap, "y"), 0.5);
-    assert.equal(snapStepFor(snap, "z"), 4);
+    assert.equal(resolveSnapStep(snap, "y"), 0.5);
+    assert.equal(resolveSnapStep(snap, "z"), 4);
   });
 });

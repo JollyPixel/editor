@@ -3,7 +3,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import {
-  backgroundOf,
+  resolveBackground,
   isLit,
   type KeyLightPreset,
   type LightingMode,
@@ -91,7 +91,7 @@ export class ViewLighting {
     this.shadow.aim([x, y, z]);
     this.fill.position.set(-x, y * 0.5, -z);
 
-    this.background.set(backgroundOf(settings));
+    this.background.set(resolveBackground(settings));
     this.hemisphere.color.set(preset.sky);
     this.hemisphere.groundColor.set(preset.ground);
     this.hemisphere.intensity = preset.hemisphere;

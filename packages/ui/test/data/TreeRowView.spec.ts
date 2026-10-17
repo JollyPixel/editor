@@ -43,7 +43,7 @@ const kState: TreeRowState = {
   selected: false,
   active: false,
   drop: null,
-  dropIndent: TreeRowView.indentOf(1),
+  dropIndent: TreeRowView.indentStyle(1),
   dragSource: false,
   moveCursor: false,
   renaming: false,
@@ -55,7 +55,7 @@ const kState: TreeRowState = {
   match: null
 };
 
-function rowOf(
+function createRow(
   node: Partial<TreeNode> = {},
   depth = 1
 ): FlatTreeRow<unknown> {
@@ -78,10 +78,10 @@ function stateWith(
   };
 }
 
-function viewOf(
+function createView(
   node: Partial<TreeNode> = {}
 ): TreeRowView {
-  return new TreeRowView(rowOf(node), kState);
+  return new TreeRowView(createRow(node), kState);
 }
 
 function matches(
@@ -90,12 +90,12 @@ function matches(
   state: Partial<TreeRowState> = {},
   depth = 1
 ): boolean {
-  return view.matches(rowOf(node, depth), stateWith(state));
+  return view.matches(createRow(node, depth), stateWith(state));
 }
 
 describe("Data.TreeRowView", () => {
   test("rebuilt nodes with the same rendered fields match the view", () => {
-    assert.ok(matches(viewOf(), {
+    assert.ok(matches(createView(), {
       avatar: { ...kAvatar },
       swatch: { ...kSwatch },
       badges: kBadges.map((badge) => {
@@ -130,7 +130,7 @@ describe("Data.TreeRowView", () => {
     ];
 
     for (const change of changes) {
-      assert.ok(!matches(viewOf(), change), JSON.stringify(change));
+      assert.ok(!matches(createView(), change), JSON.stringify(change));
     }
   });
 
@@ -142,7 +142,7 @@ describe("Data.TreeRowView", () => {
       { selected: true },
       { active: true },
       { drop: "inside" },
-      { dropIndent: TreeRowView.indentOf(2) },
+      { dropIndent: TreeRowView.indentStyle(2) },
       { dragSource: true },
       { moveCursor: true },
       { renaming: true },
@@ -154,12 +154,12 @@ describe("Data.TreeRowView", () => {
     ];
 
     for (const change of changes) {
-      assert.ok(!matches(viewOf(), {}, change), JSON.stringify(change));
+      assert.ok(!matches(createView(), {}, change), JSON.stringify(change));
     }
   });
 
   test("a deeper row no longer matches", () => {
-    assert.ok(!matches(viewOf(), {}, {}, 2));
+    assert.ok(!matches(createView(), {}, {}, 2));
   });
 
   test("a swatch or badge mutated in place no longer matches", () => {
@@ -171,18 +171,18 @@ describe("Data.TreeRowView", () => {
       badges: [badge]
     };
 
-    const beforeSwatch = viewOf(node);
+    const beforeSwatch = createView(node);
     swatch.color = "#00f";
     assert.ok(!matches(beforeSwatch, node));
 
-    const beforeBadge = viewOf(node);
+    const beforeBadge = createView(node);
     badge.color = "#00f";
     assert.ok(!matches(beforeBadge, node));
   });
 });
 
 describe("Data.TreeRowViewList", () => {
-  function rowsOf(
+  function createRows(
     ...ids: string[]
   ) {
     return ids.map((id) => {
@@ -197,7 +197,7 @@ describe("Data.TreeRowViewList", () => {
     });
   }
 
-  function stateOf(
+  function rowStateSelecting(
     selectedId: string | null
   ): (row: { node: TreeNode; }) => TreeRowState {
     return (row) => {
@@ -210,15 +210,15 @@ describe("Data.TreeRowViewList", () => {
 
   test("returns the same list while no row changes", () => {
     const list = new TreeRowViewList();
-    const first = list.update(rowsOf("a", "b"), stateOf(null));
+    const first = list.update(createRows("a", "b"), rowStateSelecting(null));
 
-    assert.equal(list.update(rowsOf("a", "b"), stateOf(null)), first);
+    assert.equal(list.update(createRows("a", "b"), rowStateSelecting(null)), first);
   });
 
   test("keeps the views of unchanged rows when another row changes", () => {
     const list = new TreeRowViewList();
-    const [a, b] = list.update(rowsOf("a", "b"), stateOf(null));
-    const next = list.update(rowsOf("a", "b"), stateOf("b"));
+    const [a, b] = list.update(createRows("a", "b"), rowStateSelecting(null));
+    const next = list.update(createRows("a", "b"), rowStateSelecting("b"));
 
     assert.equal(next[0], a);
     assert.notEqual(next[1], b);
@@ -227,8 +227,8 @@ describe("Data.TreeRowViewList", () => {
 
   test("follows rows that are added, removed or reordered", () => {
     const list = new TreeRowViewList();
-    const [a, b] = list.update(rowsOf("a", "b"), stateOf(null));
-    const next = list.update(rowsOf("c", "b", "a"), stateOf(null));
+    const [a, b] = list.update(createRows("a", "b"), rowStateSelecting(null));
+    const next = list.update(createRows("c", "b", "a"), rowStateSelecting(null));
 
     assert.deepEqual(next.map((view) => view.id), ["c", "b", "a"]);
     assert.equal(next[1], b);
@@ -239,11 +239,11 @@ describe("Data.TreeRowViewList", () => {
 
   test("keeps the remaining views stable once a row is removed", () => {
     const list = new TreeRowViewList();
-    const [a, , c] = list.update(rowsOf("a", "b", "c"), stateOf(null));
-    const next = list.update(rowsOf("a", "c"), stateOf(null));
+    const [a, , c] = list.update(createRows("a", "b", "c"), rowStateSelecting(null));
+    const next = list.update(createRows("a", "c"), rowStateSelecting(null));
 
     assert.deepEqual(next, [a, c]);
-    assert.equal(list.update(rowsOf("a", "c"), stateOf(null)), next);
+    assert.equal(list.update(createRows("a", "c"), rowStateSelecting(null)), next);
     assert.equal(list.indexOf("b"), -1);
   });
 });

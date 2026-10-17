@@ -12,7 +12,7 @@ import { createAnimatedModel } from "./fixtures.ts";
 describe("timelineRows", () => {
   test("lists keyed blocks and the selected one in hierarchy order, with each key's interpolation", () => {
     const model = createAnimatedModel();
-    model.set.setKey(model.clipId, "Body/Arm", "scale", {
+    model.set.writeKey(model.clipId, "Body/Arm", "scale", {
       tick: 0,
       value: { x: 1, y: 1, z: 1 },
       interpolation: "step"
@@ -40,7 +40,7 @@ describe("timelineRows", () => {
   test("lists the clip's unbound tracks with their state and keys until they are rebound", () => {
     const model = createAnimatedModel();
     const { document } = model;
-    model.set.setKey(model.clipId, "Body/Leg", "position", {
+    model.set.writeKey(model.clipId, "Body/Leg", "position", {
       tick: 12000,
       value: { x: 0, y: 1, z: 0 },
       interpolation: "step"

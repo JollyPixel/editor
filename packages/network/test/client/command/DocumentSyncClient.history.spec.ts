@@ -54,10 +54,10 @@ class KeyValueDocument extends CommandDocument<SetCommand, Snapshot, SetImage> {
           values.set(key, value);
         }
       },
-      imageOf: ({ key }) => {
+      captureImage: ({ key }) => {
         return { key, value: values.get(key) ?? 0 };
       },
-      inverseOf: ({ key }) => [{ action: "set", key, value: values.get(key) ?? 0 }],
+      invert: ({ key }) => [{ action: "set", key, value: values.get(key) ?? 0 }],
       restored: (images) => {
         const snapshot = Object.fromEntries(values);
         for (const { key, value } of images.toReversed()) {
@@ -100,7 +100,7 @@ function setup(
         return { key, read: () => document.values.get(key) };
       }))
     },
-    scopeOf: () => "main",
+    resolveScope: () => "main",
     label: ({ command }) => `Set ${command.key}`
   });
   harness.serverMessage({ type: "snapshot", data: { a: 0, b: 0 }, version: 0 });

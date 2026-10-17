@@ -84,9 +84,6 @@ function fillPixels(
   }
 }
 
-/**
- * Stores raw RGBA8 pixel data without DOM APIs.
- */
 export class PixelBuffer implements DefaultPixelBuffer {
   #width: number;
   #height: number;
@@ -351,7 +348,7 @@ export class PixelBuffer implements DefaultPixelBuffer {
     return colors;
   }
 
-  positionsOf(
+  findPositions(
     color: RGBA8,
     mask?: Uint8Array
   ): Vec2[] {

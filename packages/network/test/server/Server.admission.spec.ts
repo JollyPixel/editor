@@ -52,7 +52,7 @@ describe("Server — room admission", () => {
   test("a refused room is never resolved", async() => {
     await using server = new Server({ admits: scopedTo() });
     const resolved: string[] = [];
-    server.setRoomResolver((room) => {
+    server.useRoomResolver((room) => {
       resolved.push(room);
 
       return null;

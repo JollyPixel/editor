@@ -68,7 +68,7 @@ describe("AnimationPoser", () => {
     });
     model.tab.activate("animate");
 
-    model.set.setKey(model.clipId, "Body/Arm", "position", {
+    model.set.writeKey(model.clipId, "Body/Arm", "position", {
       tick: 0,
       value: { x: 10, y: 0, z: 0 },
       interpolation: "step"

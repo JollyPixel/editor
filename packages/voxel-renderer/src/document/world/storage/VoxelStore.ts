@@ -3,30 +3,15 @@ import { VOXEL_ABSENT, type PackedVoxel } from "./packedVoxel.ts";
 
 // CONSTANTS
 const kInitialCapacity = 16;
-/**
- * Grow once three quarters of the slots are taken; linear probing degrades past that.
- */
 const kLoadFactorNum = 3;
 const kLoadFactorDen = 4;
-/**
- * Int32Array fill value marking a free slot. Linear indices are never negative.
- */
 const kFreeKey = -1;
-/**
- * Knuth's multiplicative constant, 2^32 / φ rounded to an odd integer.
- */
 const kGoldenRatio = 0x9E3779B1;
 
-/**
- * Sparse open-addressed voxel store backed by typed arrays.
- */
 export class VoxelStore {
   #keys: Int32Array;
   #values: Uint32Array;
   #mask: number;
-  /**
-   * High-bit extraction shift; `32 - log2(capacity)`.
-   */
   #shift: number;
   #size = 0;
   #growAt: number;
@@ -94,9 +79,6 @@ export class VoxelStore {
     this.#shared = true;
   }
 
-  /**
-   * Number of slots scanned during iteration.
-   */
   get capacity(): number {
     return this.#keys.length;
   }
@@ -189,7 +171,6 @@ export class VoxelStore {
       hole = (hole + 1) & mask;
     }
 
-    // Move following keys back to keep clusters contiguous.
     const values = this.#values;
     let scan = hole;
     for (;;) {

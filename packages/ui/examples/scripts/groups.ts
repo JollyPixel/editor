@@ -30,7 +30,7 @@ export function isGalleryGroup(
   return Object.hasOwn(kGroupLabels, value);
 }
 
-export function groupLabelOf(
+export function resolveGroupLabel(
   id: string
 ): string {
   const [group] = id.split("/");

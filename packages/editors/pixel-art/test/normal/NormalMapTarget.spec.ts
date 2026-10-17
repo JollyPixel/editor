@@ -48,7 +48,7 @@ class FakeDocument implements NormalMapTargetDocument {
     this.commits++;
   }
 
-  setNormalMapZone(
+  assignNormalMapZone(
     zone: NormalMapZone
   ): void {
     this.normalMap = this.normalMap?.withZone(zone) ?? null;
@@ -152,10 +152,10 @@ describe("NormalMapTarget", () => {
 
     target.write({ strength: 2 }, false);
     assert.equal(selectedTarget(doc).overrides("strength"), true);
-    assert.deepEqual(doc.normalMap?.zoneOf("tile")?.settings, { invert: true });
+    assert.deepEqual(doc.normalMap?.findZone("tile")?.settings, { invert: true });
 
     target.write({ strength: 2 }, true);
-    assert.deepEqual(doc.normalMap?.zoneOf("tile")?.settings, {
+    assert.deepEqual(doc.normalMap?.findZone("tile")?.settings, {
       invert: true,
       strength: 2
     });
@@ -168,10 +168,10 @@ describe("NormalMapTarget", () => {
     });
 
     selectedTarget(doc).switchOff(true);
-    assert.equal(doc.normalMap?.zoneOf("tile")?.settings, "off");
+    assert.equal(doc.normalMap?.findZone("tile")?.settings, "off");
 
     selectedTarget(doc).switchOff(false);
-    assert.deepEqual(doc.normalMap?.zoneOf("tile")?.settings, {});
+    assert.deepEqual(doc.normalMap?.findZone("tile")?.settings, {});
   });
 
   test("reset drops one override of the zone", () => {
@@ -182,7 +182,7 @@ describe("NormalMapTarget", () => {
 
     selectedTarget(doc).reset("strength");
 
-    assert.deepEqual(doc.normalMap?.zoneOf("tile")?.settings, { invert: true });
+    assert.deepEqual(doc.normalMap?.findZone("tile")?.settings, { invert: true });
   });
 
   test("switchOff and reset leave the texture defaults alone", () => {

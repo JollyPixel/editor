@@ -16,9 +16,6 @@ import { bootstrapRuntime } from "./utils/bootstrapRuntime.ts";
 const kTinyWitchModel = new AssetReference("tinywitch", AssetTypes.model);
 const kStandardModel = new AssetReference("standard", AssetTypes.model);
 
-/**
- * Declares and constructs the 3D-models example scene.
- */
 class ModelsScene extends Systems.Scene {
   constructor() {
     super("models", {

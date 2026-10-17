@@ -54,8 +54,8 @@ export function summarizeSelection(
     return {
       subject: "asset",
       title: asset.path.name,
-      icon: kinds.iconFor(asset.kind),
-      kindLabel: kinds.labelFor(asset.kind),
+      icon: kinds.kindIcon(asset.kind),
+      kindLabel: kinds.kindLabel(asset.kind),
       location: parentLocation(asset.path),
       editableAssetId: kinds.canEdit(asset.kind) ? asset.id : null
     };

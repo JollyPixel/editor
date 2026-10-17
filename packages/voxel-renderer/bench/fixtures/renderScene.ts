@@ -133,7 +133,7 @@ function buildView(
   return view;
 }
 
-function pipelineOf(
+function createPipeline(
   renderer: THREE.WebGPURenderer,
   scene: THREE.Scene,
   camera: THREE.Camera,
@@ -182,7 +182,7 @@ export async function renderBench(
   camera.lookAt(size / 2, 0, size / 2);
   camera.updateMatrixWorld();
 
-  const pipeline = pipelineOf(renderer, scene, camera, options.glow);
+  const pipeline = createPipeline(renderer, scene, camera, options.glow);
   pipeline.outputColorTransform = false;
   try {
     await renderFrames(renderer, kWarmupFrames, () => pipeline.render());

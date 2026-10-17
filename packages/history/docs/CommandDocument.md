@@ -25,8 +25,8 @@ class Stats extends CommandDocument<SetCommand, Record<string, number>, SetImage
           values.set(key, value);
         }
       },
-      imageOf: ({ key }) => ({ key, value: values.get(key) }),
-      inverseOf: ({ key }) => [{ key, value: values.get(key) ?? 0 }],
+      captureImage: ({ key }) => ({ key, value: values.get(key) }),
+      invert: ({ key }) => [{ key, value: values.get(key) ?? 0 }],
       restored: (images) => {
         const snapshot = Object.fromEntries(values);
         for (const { key, value } of images.toReversed()) {
@@ -82,11 +82,11 @@ Applies the command.
 
 Replaces the state.
 
-### imageOf(command): TImage
+### captureImage(command): TImage
 
 What the command is about to replace. Read before `apply`.
 
-### inverseOf(command): TCommand[]
+### invert(command): TCommand[]
 
 The commands undoing it. Read before `apply`, for local changes only.
 

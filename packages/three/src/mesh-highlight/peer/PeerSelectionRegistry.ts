@@ -98,13 +98,13 @@ export class PeerSelectionRegistry extends EventTarget {
     this.#colorAllocator.release(peerId);
   }
 
-  selectionOf(
+  selectedObject(
     peerId: string
   ): string | null {
     return this.#peerToObject.get(peerId) ?? null;
   }
 
-  selectorsOf(
+  listSelectors(
     objectId: string
   ): readonly string[] {
     return (this.#objectToPeers.get(objectId) ?? []).slice();
@@ -114,16 +114,16 @@ export class PeerSelectionRegistry extends EventTarget {
     return Array.from(this.#objectToPeers.keys());
   }
 
-  primarySelectorOf(
+  primarySelector(
     objectId: string
   ): string | null {
     return this.#objectToPeers.get(objectId)?.[0] ?? null;
   }
 
-  colorOf(
+  peerColor(
     peerId: string
   ): string {
-    return this.#colorAllocator.colorOf(peerId);
+    return this.#colorAllocator.peerColor(peerId);
   }
 
   dispose(): void {

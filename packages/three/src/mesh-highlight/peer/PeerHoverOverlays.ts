@@ -218,11 +218,11 @@ export class PeerHoverOverlays {
   ): void {
     const existing = this.#overlays.get(objectId);
     const hasSelector = objectId === this.#selection.selected ||
-      this.#selectionRegistry.selectorsOf(objectId).length > 0;
+      this.#selectionRegistry.listSelectors(objectId).length > 0;
     const isLocalHovered = objectId === this.#selection.hovered;
     const suppressed = hasSelector || isLocalHovered;
     const culled = !suppressed && this.#visibility !== null && !this.#visibility.isVisible(objectId);
-    const primaryPeerId = (suppressed || culled) ? null : this.#hoverRegistry.primaryHovererOf(objectId);
+    const primaryPeerId = (suppressed || culled) ? null : this.#hoverRegistry.primaryHoverer(objectId);
 
     if (primaryPeerId === null) {
       if (existing) {
@@ -233,7 +233,7 @@ export class PeerHoverOverlays {
       return;
     }
 
-    const color = this.#hoverRegistry.colorOf(primaryPeerId);
+    const color = this.#hoverRegistry.peerColor(primaryPeerId);
     if (existing) {
       existing.color = color;
       existing.xray = this.#selection.appearance.xray;
@@ -241,14 +241,14 @@ export class PeerHoverOverlays {
       return;
     }
 
-    const target = this.#selection.targetFor(objectId);
+    const target = this.#selection.findTarget(objectId);
     if (!target) {
       return;
     }
 
     const { linewidth } = this.#selection.appearance.outline;
 
-    const rawTechnique = this.#selection.techniqueFor(objectId);
+    const rawTechnique = this.#selection.resolveTechnique(objectId);
     const technique = isScenePipelineTechnique(rawTechnique) ? "outline" : rawTechnique;
 
     this.#overlays.set(objectId, this.#selection.overlayRegistry.create(target, {

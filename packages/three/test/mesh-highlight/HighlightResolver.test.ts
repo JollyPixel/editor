@@ -35,7 +35,7 @@ function createHarness(): {
   state.register("sphere", new THREE.Mesh());
 
   const allocator = {
-    colorOf: (peerId: string) => (peerId === "peer-a" ? "#ff0000" : "#0000ff"),
+    peerColor: (peerId: string) => (peerId === "peer-a" ? "#ff0000" : "#0000ff"),
     release: () => void 0
   };
   const selections = new PeerSelectionRegistry({

@@ -12,9 +12,6 @@ export interface ColorPaletteOptions {
 }
 
 export class ColorPalette {
-  /**
-   * Stores a frozen copy so exposed colors cannot mutate the palette.
-   */
   readonly colors: readonly string[];
 
   #index = 0;

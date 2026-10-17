@@ -106,7 +106,7 @@ export class BlockCreateDialog extends WorkspaceElement {
             stage: workspace.previewStage,
             sources: workspace.blockSources,
             block: this.#previewBlock,
-            size: draft.size ?? blocksets.tileSizeFor(draft.blocksetId),
+            size: draft.size ?? blocksets.blocksetTileSize(draft.blocksetId),
             onSizeChange: this.#onSizeChange
           })}
         </div>

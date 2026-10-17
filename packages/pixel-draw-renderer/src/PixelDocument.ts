@@ -12,10 +12,10 @@ import {
   type EditGrouping
 } from "./sync/EditRecorder.ts";
 import {
-  selectEditOf,
-  strokeOf,
-  strokesOf,
-  textureOf,
+  selectEditCommand,
+  strokeCommand,
+  strokeCommands,
+  textureCommand,
   type DocumentCommand,
   type PixelCommand
 } from "./sync/PixelCommand.ts";
@@ -34,7 +34,7 @@ import type { EditSource } from "./sync/EditChange.ts";
 import type { UVMap } from "./uv/map/UVMap.ts";
 import {
   coveredPixels,
-  rectOf
+  boundingRect
 } from "./uv/geometry/geometry.ts";
 import type { UVGeometry } from "./uv/geometry/types.ts";
 import { RectArea } from "./utils/RectArea.ts";
@@ -131,7 +131,7 @@ export class PixelDocument extends Emitter<
     this.#ownership = new UVOwnership({
       uv: this.uv,
       isRecording: () => this.#recorder.recording,
-      removeNormalMapZoneOf: (regionId) => this.#state.removeNormalMapZoneOf(regionId),
+      removeNormalMapZone: (regionId) => this.#state.removeNormalMapZone(regionId),
       record: (edit) => this.#recorder.record(edit)
     });
     this.#recorder = new EditRecorder({
@@ -247,7 +247,7 @@ export class PixelDocument extends Emitter<
     geometry: UVGeometry
   ): boolean {
     const size = this.buffer.size();
-    const area = RectArea.from(rectOf(geometry));
+    const area = RectArea.from(boundingRect(geometry));
     if (area.isEmpty) {
       return false;
     }
@@ -275,9 +275,9 @@ export class PixelDocument extends Emitter<
     }
 
     const inverse = this.#undoable(() => (beforeColor ?
-      [strokeOf(pixels, beforeColor)] :
-      strokesOf(pixels, this.buffer.samplePixels(pixels))));
-    const stroke = strokeOf(pixels, color);
+      [strokeCommand(pixels, beforeColor)] :
+      strokeCommands(pixels, this.buffer.samplePixels(pixels))));
+    const stroke = strokeCommand(pixels, color);
     this.#state.apply(stroke);
     this.#commitDrawing({ command: stroke, inverse });
   }
@@ -286,12 +286,12 @@ export class PixelDocument extends Emitter<
     fill: GlobalFill
   ): void {
     const { positions, fromColor, toColor } = fill;
-    const stroke = strokeOf(positions, toColor);
+    const stroke = strokeCommand(positions, toColor);
 
     this.#state.apply(stroke);
     this.#commitDrawing({
       command: stroke,
-      inverse: [strokeOf(positions, fromColor)],
+      inverse: [strokeCommand(positions, fromColor)],
       sent: { action: "global-fill", metadata: { fromColor, toColor } }
     });
   }
@@ -302,8 +302,8 @@ export class PixelDocument extends Emitter<
     beforeColors: RGBA8[]
   ): void {
     this.#commitDrawing({
-      command: strokeOf(pixels, color),
-      inverse: this.#undoable(() => strokesOf(pixels, beforeColors))
+      command: strokeCommand(pixels, color),
+      inverse: this.#undoable(() => strokeCommands(pixels, beforeColors))
     });
   }
 
@@ -311,12 +311,12 @@ export class PixelDocument extends Emitter<
     edit: SelectionEdit
   ): void {
     const { positions } = edit;
-    const redo = selectEditOf(positions, edit.afterColors);
+    const redo = selectEditCommand(positions, edit.afterColors);
 
     this.#state.apply(redo);
     this.#commitDrawing({
       command: redo,
-      inverse: [selectEditOf(positions, edit.beforeColors)]
+      inverse: [selectEditCommand(positions, edit.beforeColors)]
     });
   }
 
@@ -377,10 +377,10 @@ export class PixelDocument extends Emitter<
     this.#commitNormalMap(NormalMapChange.patchDefaults(this.normalMap, patch));
   }
 
-  setNormalMapZone(
+  assignNormalMapZone(
     zone: NormalMapZone
   ): void {
-    this.#commitNormalMap(NormalMapChange.setZone(this.normalMap, zone));
+    this.#commitNormalMap(NormalMapChange.assignZone(this.normalMap, zone));
   }
 
   deleteNormalMapZone(
@@ -456,7 +456,7 @@ export class PixelDocument extends Emitter<
 
   #textureSnapshot(): DocumentCommand[] {
     return this.#undoable(() => [
-      textureOf(this.buffer.size(), this.buffer.pixels())
+      textureCommand(this.buffer.size(), this.buffer.pixels())
     ]);
   }
 
@@ -467,7 +467,7 @@ export class PixelDocument extends Emitter<
     replace();
 
     this.#recorder.record({
-      command: textureOf(this.buffer.size(), this.buffer.pixels({ copy: false })),
+      command: textureCommand(this.buffer.size(), this.buffer.pixels({ copy: false })),
       inverse
     });
   }

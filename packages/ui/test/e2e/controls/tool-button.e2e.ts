@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
 import {
-  boxOf,
-  centerOf,
+  measureBox,
+  measureCenter,
   hold,
-  widthOf
+  measureWidth
 } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
@@ -25,12 +25,12 @@ test.describe("Tool button", () => {
     const mode = page.getByTestId("mode");
     const icon = mode.locator(".button jolly-icon").first();
     await expect(icon).toBeVisible();
-    await expect.poll(() => widthOf(icon)).toBeGreaterThan(0);
+    await expect.poll(() => measureWidth(icon)).toBeGreaterThan(0);
 
     const notch = mode.locator(".notch").first();
     const [notchBox, buttonBox] = await Promise.all([
-      boxOf(notch),
-      boxOf(mode.locator(".button").first())
+      measureBox(notch),
+      measureBox(mode.locator(".button").first())
     ]);
     expect(notchBox.y - buttonBox.y).toBeLessThan(buttonBox.height / 2);
     expect(Math.abs(
@@ -91,10 +91,10 @@ test.describe("Tool button", () => {
     await size.locator(".button").first().hover();
     const lane = size.locator("jolly-slider .lane");
     await expect(lane).toBeVisible();
-    const box = await boxOf(lane);
+    const box = await measureBox(lane);
     expect(box.height).toBeGreaterThan(box.width);
 
-    await hold(page, await centerOf(lane), {
+    await hold(page, await measureCenter(lane), {
       x: box.x + 200,
       y: box.y - 20
     }, 5);

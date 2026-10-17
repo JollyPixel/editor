@@ -21,10 +21,10 @@ import type {
   Vec2
 } from "../types.ts";
 import {
-  selectEditOf,
-  strokeOf,
-  strokesOf,
-  textureOf,
+  selectEditCommand,
+  strokeCommand,
+  strokeCommands,
+  textureCommand,
   uvRegionCreated,
   uvRegionDeleted,
   uvRegionMoved,
@@ -108,7 +108,7 @@ export class PixelDocumentState<
         break;
       case "global-fill":
         this.#paint(
-          this.buffer.positionsOf(command.metadata.fromColor),
+          this.buffer.findPositions(command.metadata.fromColor),
           command.metadata.toColor
         );
         break;
@@ -126,7 +126,7 @@ export class PixelDocumentState<
         break;
       case "uv-region-deleted":
         this.uv.delete(command.metadata.id);
-        this.removeNormalMapZoneOf(command.metadata.id);
+        this.removeNormalMapZone(command.metadata.id);
         break;
       case "uv-region-moved": {
         const { id, rect, face } = command.metadata;
@@ -163,13 +163,13 @@ export class PixelDocumentState<
       case "normal-map-defaults-patched":
       case "normal-map-zone-set":
       case "normal-map-zone-deleted":
-        return NormalMapChange.of(this.#normalMap, command) !== null;
+        return NormalMapChange.fromCommand(this.#normalMap, command) !== null;
       default:
         return true;
     }
   }
 
-  inverseOf(
+  invert(
     command: DocumentCommand
   ): DocumentCommand[] {
     switch (command.action) {
@@ -182,23 +182,23 @@ export class PixelDocumentState<
         }];
       }
       case "stroke":
-        return strokesOf(
+        return strokeCommands(
           command.metadata.positions,
           this.buffer.samplePixels(command.metadata.positions)
         );
       case "global-fill": {
         const { fromColor } = command.metadata;
 
-        return [strokeOf(this.buffer.positionsOf(fromColor), fromColor)];
+        return [strokeCommand(this.buffer.findPositions(fromColor), fromColor)];
       }
       case "select-edit":
-        return [selectEditOf(
+        return [selectEditCommand(
           command.metadata.positions,
           this.buffer.samplePixels(command.metadata.positions)
         )];
       case "resized":
       case "texture-replaced":
-        return [textureOf(this.buffer.size(), this.buffer.pixels().slice())];
+        return [textureCommand(this.buffer.size(), this.buffer.pixels().slice())];
       case "uv-region-created": {
         const existing = this.uv.get(command.metadata.region.id);
 
@@ -230,10 +230,10 @@ export class PixelDocumentState<
     }
   }
 
-  removeNormalMapZoneOf(
+  removeNormalMapZone(
     regionId: string
   ): IndexedNormalMapZone | null {
-    const removed = NormalMapChange.zoneOf(this.#normalMap, regionId);
+    const removed = NormalMapChange.indexedZone(this.#normalMap, regionId);
     this.#applyNormalMap({
       action: "normal-map-zone-deleted",
       metadata: { regionId }
@@ -248,7 +248,7 @@ export class PixelDocumentState<
     switch (command.action) {
       case "uv-region-deleted": {
         const region = this.uv.get(command.metadata.id);
-        const zone = NormalMapChange.zoneOf(this.#normalMap, command.metadata.id);
+        const zone = NormalMapChange.indexedZone(this.#normalMap, command.metadata.id);
         if (region === undefined) {
           return [];
         }
@@ -261,7 +261,7 @@ export class PixelDocumentState<
         const { id, face } = command.metadata;
         const region = this.uv.get(id);
 
-        return region ? [uvRegionMoved(id, face, region.rectFor(face ?? "front"))] : [];
+        return region ? [uvRegionMoved(id, face, region.slotRect(face ?? "front"))] : [];
       }
       case "uv-region-state-changed": {
         const region = this.uv.get(command.metadata.region.id);
@@ -277,7 +277,7 @@ export class PixelDocumentState<
       case "normal-map-defaults-patched":
       case "normal-map-zone-set":
       case "normal-map-zone-deleted": {
-        const change = NormalMapChange.of(this.#normalMap, command);
+        const change = NormalMapChange.fromCommand(this.#normalMap, command);
 
         return change === null ? [] : [change.undo];
       }

@@ -51,10 +51,10 @@ export class KeyInspectorController {
     this.#refresh();
   }
 
-  setInterpolation(
+  applyInterpolation(
     interpolation: AnimationInterpolation
   ): void {
-    this.#connection.current?.keyEditor.setInterpolation(interpolation);
+    this.#connection.current?.keyEditor.applyInterpolation(interpolation);
   }
 
   readonly #refresh = (): void => {

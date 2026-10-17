@@ -21,7 +21,7 @@ export function installSkiaCanvas(
 ): void {
   const surfaces = new WeakMap<object, Canvas>();
 
-  function surfaceOf(
+  function skiaSurface(
     element: object
   ): Canvas {
     let surface = surfaces.get(element);
@@ -55,7 +55,7 @@ export function installSkiaCanvas(
         }
 
         drawImage(
-          image instanceof window.HTMLCanvasElement ? surfaceOf(image) : image,
+          image instanceof window.HTMLCanvasElement ? skiaSurface(image) : image,
           ...coords
         );
       }
@@ -66,31 +66,31 @@ export function installSkiaCanvas(
     width: {
       configurable: true,
       get(this: object) {
-        return surfaceOf(this).width;
+        return skiaSurface(this).width;
       },
       set(this: object, value: number) {
-        surfaceOf(this).width = value;
+        skiaSurface(this).width = value;
       }
     },
     height: {
       configurable: true,
       get(this: object) {
-        return surfaceOf(this).height;
+        return skiaSurface(this).height;
       },
       set(this: object, value: number) {
-        surfaceOf(this).height = value;
+        skiaSurface(this).height = value;
       }
     },
     getContext: {
       configurable: true,
       value(this: object, type: string) {
-        return type === "2d" ? surfaceOf(this).getContext("2d") : null;
+        return type === "2d" ? skiaSurface(this).getContext("2d") : null;
       }
     }
   });
 }
 
-export function contextOf(
+export function context2d(
   canvas: HTMLCanvasElement
 ): CanvasRenderingContext2D {
   const context = canvas.getContext("2d");
@@ -104,7 +104,7 @@ export function contextOf(
 export function canvasPixels(
   canvas: HTMLCanvasElement
 ): Uint8ClampedArray {
-  return contextOf(canvas).getImageData(
+  return context2d(canvas).getImageData(
     0,
     0,
     canvas.width,
@@ -115,7 +115,7 @@ export function canvasPixels(
 export function decodedImage(
   canvas: HTMLCanvasElement
 ): HTMLImageElement {
-  const surface = contextOf(canvas).canvas as unknown as Canvas;
+  const surface = context2d(canvas).canvas as unknown as Canvas;
 
   return new Image(
     surface.toBufferSync("png")

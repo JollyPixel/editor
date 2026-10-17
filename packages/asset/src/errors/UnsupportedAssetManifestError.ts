@@ -1,6 +1,3 @@
-/**
- * Reports a persisted asset manifest version unsupported by this package.
- */
 export class UnsupportedAssetManifestError extends Error {
   readonly version: number;
 

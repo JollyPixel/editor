@@ -13,10 +13,6 @@ import type { RGBA8, Vec2 } from "../src/types.ts";
 // CONSTANTS
 const kGroupCount = 4096;
 
-/**
- * Benchmarks `groupPositionsByColor`, which builds the inverse of every stroke.
- * Grouping cost scales with distinct color count.
- */
 const suite = defineSuite("Undo grouping (buffer/colorGroups)", (bench) => {
   const rng = mulberry32();
   const fewColors = buildGroupInput(kGroupCount, 4, rng);

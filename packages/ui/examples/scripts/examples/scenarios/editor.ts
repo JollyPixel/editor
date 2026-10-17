@@ -19,7 +19,7 @@ import "../../../../src/math/Quaternion.ts";
 import "../../../../src/math/Vector3.ts";
 import { Mixed, type FieldValue } from "../../../../src/field/mixed.ts";
 import { peerColor } from "../../../../src/theme/peerColor.ts";
-import { detailOf } from "../../../../src/dom.ts";
+import { readDetail } from "../../../../src/dom.ts";
 import { showConfirm } from "../../../../src/containers/dialog/dialogHelpers.ts";
 import type { CollaboratorPresence } from "../../../../src/peer/types.ts";
 import type { GalleryExample } from "../../types.ts";
@@ -112,7 +112,7 @@ function bind<
   function writeBack(
     event: Event
   ): void {
-    const detail = detailOf<{ value: TValue; }>(event);
+    const detail = readDetail<{ value: TValue; }>(event);
     if (detail !== null) {
       element.value = detail.value;
     }
@@ -124,9 +124,6 @@ function bind<
   return element;
 }
 
-/**
- * Creates a pane whose fields share one label column.
- */
 function labelledPane(
   key: string,
   title: string
@@ -310,7 +307,6 @@ function buildTransform(): HTMLElementTagNameMap["jolly-folder"] {
   readonlyField.align = "end";
   readonlyField.description = "Derived from the mesh, not editable.";
 
-  // 45 degrees about Y.
   const rotation = bind(document.createElement("jolly-quaternion"));
   rotation.label = "Rotation";
   rotation.value = {
@@ -448,7 +444,6 @@ function buildPhysics(): HTMLElementTagNameMap["jolly-folder"] {
 
 function buildPalette(): HTMLElementTagNameMap["jolly-floating"] {
   const floating = document.createElement("jolly-floating");
-  // Start over the viewport and preserve this size across docking.
   floating.x = 560;
   floating.y = 96;
   floating.width = 260;

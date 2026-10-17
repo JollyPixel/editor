@@ -139,8 +139,8 @@ export class NormalMapController {
       return;
     }
 
-    if (doc.normalMap.zoneOf(regionId) === undefined) {
-      doc.setNormalMapZone({
+    if (doc.normalMap.findZone(regionId) === undefined) {
+      doc.assignNormalMapZone({
         regionId,
         settings: {}
       });

@@ -10,9 +10,11 @@ import { fileURLToPath } from "node:url";
 // Import Third-party Dependencies
 import { Mutex } from "@openally/mutex";
 
+// Import Internal Dependencies
+import { ROOT_DIR } from "../workspace/root.ts";
+
 // CONSTANTS
-const kRootDir = path.join(import.meta.dirname, "..", "..");
-const kCheckConfig = path.join(kRootDir, "tsconfig", "check.json");
+const kCheckConfig = path.join(ROOT_DIR, "tsconfig", "check.json");
 const kSkippedDirectories = new Set(["node_modules", "dist", "coverage", "public"]);
 const kTsc = path.join(
   path.dirname(fileURLToPath(import.meta.resolve("typescript7/package.json"))),
@@ -37,14 +39,14 @@ function extendsCheckConfig(
 
 function checkConfigs(): string[] {
   return fs.globSync("**/tsconfig.json", {
-    cwd: kRootDir,
+    cwd: ROOT_DIR,
     exclude: (entry) => {
       const name = path.basename(entry);
 
       return kSkippedDirectories.has(name) || name.startsWith(".");
     }
   })
-    .map((config) => path.join(kRootDir, config))
+    .map((config) => path.join(ROOT_DIR, config))
     .filter(extendsCheckConfig);
 }
 
@@ -67,7 +69,7 @@ async function typecheck(
     return true;
   }
 
-  console.error(`\n${path.relative(kRootDir, configPath)}\n${output}`);
+  console.error(`\n${path.relative(ROOT_DIR, configPath)}\n${output}`);
 
   return false;
 }

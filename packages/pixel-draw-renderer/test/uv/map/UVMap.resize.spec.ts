@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { rectOf } from "#src/uv/geometry/geometry.ts";
+import { boundingRect } from "#src/uv/geometry/geometry.ts";
 import {
   makeUvMap,
   type EventPayload
@@ -42,9 +42,9 @@ describe("UVMap — resize", () => {
   test("stops an unfolded face once a sliding neighbor reaches the border", () => {
     const map = makeUvMap({ x: 32, y: 32 });
     const region = map.create({ width: 4, height: 4 });
-    map.setState(region.id, "unfolded");
+    map.applyState(region.id, "unfolded");
     const net = map.get(region.id)!;
-    const front = rectOf(net.geometryFor("front"));
+    const front = boundingRect(net.slotGeometry("front"));
 
     map.resize(
       region.id,
@@ -55,7 +55,7 @@ describe("UVMap — resize", () => {
     const resized = map.get(region.id)!;
     assert.equal(resized.bounds.x + resized.bounds.width, 32);
     assert.equal(
-      rectOf(resized.geometryFor("front")).x,
+      boundingRect(resized.slotGeometry("front")).x,
       front.x
     );
   });
@@ -81,9 +81,9 @@ describe("UVMap — resize", () => {
   test("names the previewed face only for a free region", () => {
     const map = makeUvMap({ x: 32, y: 32 });
     const net = map.create({ width: 4, height: 4 });
-    map.setState(net.id, "unfolded");
+    map.applyState(net.id, "unfolded");
     const free = map.create({ width: 4, height: 4 });
-    map.setState(free.id, "free");
+    map.applyState(free.id, "free");
     const faces: (string | null)[] = [];
     map.on("region-dragging", (event) => faces.push(event.face));
 

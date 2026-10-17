@@ -17,9 +17,6 @@ import type { RGBA8 } from "../src/types.ts";
 const kSide = 256;
 const kWhite: RGBA8 = { r: 255, g: 255, b: 255, a: 255 };
 
-/**
- * Covers geometry and selection helpers used during interactive editing.
- */
 const suite = defineSuite("Tools (tools/*)", (bench) => {
   const brush1 = new Brush({ size: 1 });
   const brush8 = new Brush({ size: 8 });

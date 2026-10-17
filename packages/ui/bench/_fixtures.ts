@@ -6,7 +6,7 @@ export const BATCH = 256;
 
 export type Rng = () => number;
 
-export function batchOf<T>(
+export function createBatch<T>(
   create: (rng: Rng) => T
 ): T[] {
   const rng = mulberry32();

@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import "../../../../src/math/Vector3.ts";
 import type { GalleryExample } from "../../types.ts";
-import { detailOf } from "../../../../src/dom.ts";
+import { readDetail } from "../../../../src/dom.ts";
 import { Mixed } from "../../../../src/field/mixed.ts";
 import type { JollyChangeDetail } from "../../../../src/field/events.ts";
 import type { Vector3 } from "../../../../src/math/Vector3.ts";
@@ -69,12 +69,11 @@ export const MIXED_PER_AXIS_EXAMPLE: GalleryExample = {
     }
 
     field.addEventListener("jolly-change", (event) => {
-      const detail = detailOf<JollyChangeDetail<VectorValue<Axis3>>>(event);
+      const detail = readDetail<JollyChangeDetail<VectorValue<Axis3>>>(event);
       if (detail === null || detail.value === Mixed) {
         return;
       }
 
-      // Preserve each object's value for untouched Mixed axes.
       for (const object of selection) {
         for (const axis of kAxes) {
           const axisValue = detail.value[axis];

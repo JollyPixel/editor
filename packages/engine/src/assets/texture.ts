@@ -35,10 +35,6 @@ export interface TextureAssetLoaderOptions {
   ktx2?: CompressedTextureLoader;
 }
 
-/**
- * Loads textures through the runtime's Three.js loading manager.
- * The default filter preserves pixel-art edges.
- */
 export class TextureAssetLoader implements AssetLoader<THREE.Texture> {
   #manager: THREE.LoadingManager;
   #filter: THREE.MagnificationTextureFilter;

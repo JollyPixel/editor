@@ -29,25 +29,25 @@ class FakePreview implements RegionPreview {
     this.followed.push(uv);
   }
 
-  setTextureSize(
+  resizeTexture(
     size: Vec2
   ): void {
     this.textureSizes.push(size);
   }
 
-  setTargetPosition(
+  moveTo(
     position: THREE.Vector3
   ): void {
     this.targetPositions.push(position.clone());
   }
 
-  setSelected(
+  markSelected(
     selected: boolean
   ): void {
     this.selected = selected;
   }
 
-  setRotation(
+  rotateTo(
     rotation: THREE.Euler
   ): void {
     this.rotation.copy(rotation);

@@ -38,9 +38,6 @@ export interface FloatingSelectionOptions {
   blankSource?: boolean;
 }
 
-/**
- * Fired for floating-selection view changes not represented by the buffer.
- */
 export type FloatingSelectionEvent = {
   changed: () => void;
 };

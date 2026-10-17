@@ -11,7 +11,7 @@ import {
   NO_MIRROR,
   at,
   createHierarchyFixture,
-  shapeOf
+  readShape
 } from "../fixtures/hierarchy.ts";
 
 function layoutAt(
@@ -73,7 +73,7 @@ describe("ModelHierarchy.duplicate", () => {
       mirrorAxes: NO_MIRROR
     });
 
-    assert.deepEqual(shapeOf(hierarchy.nodes()), [
+    assert.deepEqual(readShape(hierarchy.nodes()), [
       ["Limbs", [["Arm", ["Hand"]]]],
       ["Limbs Copy", [["Arm 2", ["Hand"]]]]
     ]);
@@ -105,7 +105,7 @@ describe("ModelHierarchy.duplicate", () => {
       mirrorAxes: NO_MIRROR
     });
 
-    assert.deepEqual(shapeOf(hierarchy.nodes()), [
+    assert.deepEqual(readShape(hierarchy.nodes()), [
       ["Body", ["Head"]],
       "Body Copy"
     ]);
@@ -130,7 +130,7 @@ describe("ModelHierarchy.duplicate", () => {
       mirrorAxes: NO_MIRROR
     });
 
-    assert.deepEqual(shapeOf(hierarchy.nodes()), [
+    assert.deepEqual(readShape(hierarchy.nodes()), [
       ["Limbs", ["Arm", "Arm Copy", "Leg"]],
       "Torso",
       "Torso Copy",

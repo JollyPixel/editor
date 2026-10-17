@@ -19,10 +19,6 @@ export function quatEquals(
     Object.is(a.w, b.w);
 }
 
-/**
- * Component-wise equality for `VectorValue`, including per-axis `Mixed`.
- * Whole-value `Mixed` only equals itself.
- */
 export function vectorValueEquals(
   a: VectorValue<string>,
   b: VectorValue<string>

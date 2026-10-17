@@ -32,9 +32,6 @@ export interface TileRescale {
   to: number;
 }
 
-/**
- * Expands a tuple reference and fills in a missing blockset ID.
- */
 export function resolveTileRef(
   ref: TileRef,
   defaultBlocksetId?: string

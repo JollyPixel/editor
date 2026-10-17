@@ -12,7 +12,7 @@ export interface AnimationImage {
   readonly clips: ReadonlyMap<string, AnimationClipJSON | undefined>;
 }
 
-export function imageOf(
+export function captureImage(
   set: AnimationSetReader,
   command: AnimationCommand
 ): AnimationImage {

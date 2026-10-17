@@ -20,7 +20,7 @@ import type {
   DeleteContext,
   DeleteResult
 } from "../../../shared/dialogs/DeleteDialog.ts";
-import { duplicateNameOf } from "../../../model/index.ts";
+import { duplicateName } from "../../../model/index.ts";
 
 // CONSTANTS
 const kFirstClipName = "Clip 1";
@@ -47,9 +47,6 @@ export interface AnimateActionsOptions {
   workspace: AnimateActionsWorkspace;
   view: AnimateActionsView;
   expand(setId: string): void;
-  /**
-   * Why the last action failed, or `null` once one succeeds.
-   */
   report(error: string | null): void;
 }
 
@@ -225,11 +222,11 @@ export class AnimateActions {
       return;
     }
 
-    const beforeId = document.set.nextClipOf(row.clipId);
+    const beforeId = document.set.nextClipAfter(row.clipId);
     this.#focusClip(await this.#attempt(
       `Could not duplicate "${clip.name}"`,
       () => this.#animations.copyClip(row, row.target, {
-        name: this.#animations.freeClipName(row.target, duplicateNameOf(clip.name)),
+        name: this.#animations.freeClipName(row.target, duplicateName(clip.name)),
         ...beforeId === undefined ? {} : { beforeId }
       })
     ));

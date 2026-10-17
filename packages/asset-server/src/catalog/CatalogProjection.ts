@@ -112,7 +112,7 @@ export class CatalogProjection extends Emitter<
     }
 
     const reachable = new Set([assetId]);
-    for (const { id } of this.#dependencies.closureOf(assetId)) {
+    for (const { id } of this.#dependencies.transitiveDependencies(assetId)) {
       if (this.record(id) !== undefined) {
         reachable.add(id);
       }
@@ -121,11 +121,11 @@ export class CatalogProjection extends Emitter<
     return reachable;
   }
 
-  dependentsOf(
+  listDependents(
     assetId: string
   ): AssetRecord[] {
     return this.#dependencies
-      .dependentsOf(assetId)
+      .listDependents(assetId)
       .flatMap((dependentId) => this.record(dependentId) ?? []);
   }
 
@@ -181,7 +181,7 @@ export class CatalogProjection extends Emitter<
       assetId,
       record: record.toJSON(),
       ...(this.#dependencies.has(assetId) ?
-        { dependencies: this.#dependencies.dependenciesOf(assetId) } :
+        { dependencies: this.#dependencies.listDependencies(assetId) } :
         {})
     };
   }

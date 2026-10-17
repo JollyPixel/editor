@@ -28,13 +28,13 @@ import {
 function accepts(
   message: unknown
 ): boolean {
-  return MessageParser.of(catalogMessageProtocol).parse(message).ok;
+  return MessageParser.fromProtocol(catalogMessageProtocol).parse(message).ok;
 }
 
 function parses(
   command: unknown
 ): boolean {
-  return MessageParser.of(catalogCommandProtocol).parse(command).ok;
+  return MessageParser.fromProtocol(catalogCommandProtocol).parse(command).ok;
 }
 
 describe("catalogCommandProtocol", () => {

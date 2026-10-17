@@ -12,7 +12,7 @@ history.register({
       return { key, read: () => values.get(key) };
     }))
   },
-  scopeOf: () => "build"
+  resolveScope: () => "build"
 });
 ```
 
@@ -21,7 +21,7 @@ interface HistoryRegistration<TScope, TCommand, TImage, TWritten = Iterable<stri
   id: string;
   document: HistorySource<TCommand, TImage>;
   keys: HistoryKeys<TCommand, TImage, TWritten, TCapture>;
-  scopeOf(change: CommandChange<TCommand, TImage>): TScope | null;
+  resolveScope(change: CommandChange<TCommand, TImage>): TScope | null;
   label?(change: CommandChange<TCommand, TImage>): string | null;
   compact?(commands: readonly TCommand[]): TCommand[];
 }
@@ -39,7 +39,7 @@ The [`HistorySource`](#historysource) to record.
 
 The document's [`HistoryKeys`](#historykeys).
 
-### scopeOf(change)
+### resolveScope(change)
 
 The scope of a local change made outside a step, or `null` for no step.
 

@@ -15,11 +15,10 @@ import {
   emitFieldEvent,
   type JollyChangeDetail
 } from "../../field/events.ts";
-import { detailOf } from "../../dom.ts";
+import { readDetail } from "../../dom.ts";
 import type { JollyOption } from "../../controls/types.ts";
 import type { ThemeMode } from "../types.ts";
 
-// Registers jolly-button-group.
 import "../../controls/ButtonGroup.ts";
 
 // CONSTANTS
@@ -78,7 +77,7 @@ export class ThemeControl extends LitElement {
   #onChange(
     event: Event
   ): void {
-    const detail = detailOf<JollyChangeDetail<ThemeMode>>(event);
+    const detail = readDetail<JollyChangeDetail<ThemeMode>>(event);
     if (detail === null) {
       return;
     }

@@ -7,7 +7,7 @@ import {
   copyGeometry,
   geometryAt,
   quarterTurn,
-  rectOf,
+  boundingRect,
   rotateGeometry,
   rotateRect
 } from "../geometry/geometry.ts";
@@ -84,7 +84,7 @@ export class UVSlotMap {
     origin: Vec2
   ): UVSlotMap {
     return this.#mapped((geometry) => geometryAt(geometry, {
-      ...rectOf(geometry),
+      ...boundingRect(geometry),
       x: origin.x,
       y: origin.y
     }));
@@ -95,7 +95,7 @@ export class UVSlotMap {
     dy: number
   ): UVSlotMap {
     return this.#mapped((geometry) => {
-      const rect = rectOf(geometry);
+      const rect = boundingRect(geometry);
 
       return geometryAt(geometry, {
         ...rect,
@@ -123,7 +123,7 @@ export class UVSlotMap {
       let height = frame.height;
       let width = frame.width;
       for (let turn = 0; turn < quarterTurn(turns); turn++) {
-        const rect = rectOf(geometry);
+        const rect = boundingRect(geometry);
         geometry = geometryAt(rotateGeometry(geometry, 1), {
           ...rotateRect(rect, 1),
           x: frame.x + height - (rect.y - frame.y + rect.height),

@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
-  boxOf,
-  centerOf,
+  measureBox,
+  measureCenter,
   hold
 } from "@jolly-pixel/e2e";
 
@@ -13,7 +13,7 @@ import {
 } from "../fixtures.ts";
 import {
   TREE_SELECTOR,
-  rowOf
+  findRow
 } from "../support/tree.ts";
 
 function rootIds(
@@ -30,11 +30,11 @@ async function holdBelowLastRow(
   target: string
 ): Promise<void> {
   const [rows, below] = await Promise.all([
-    boxOf(page.locator(`${TREE_SELECTOR} .rows`)),
-    boxOf(rowOf(page, target))
+    measureBox(page.locator(`${TREE_SELECTOR} .rows`)),
+    measureBox(findRow(page, target))
   ]);
 
-  await hold(page, await centerOf(rowOf(page, source).locator(".grip")), {
+  await hold(page, await measureCenter(findRow(page, source).locator(".grip")), {
     x: rows.x + 1,
     y: below.y + below.height + 8
   }, 1);
@@ -53,7 +53,7 @@ test.describe("Tree", () => {
   });
 
   test("reparents with the keyboard move state", async({ page }) => {
-    const lighting = rowOf(page, "lighting");
+    const lighting = findRow(page, "lighting");
     await lighting.click();
     await lighting.press(" ");
     await lighting.press("ArrowRight");
@@ -63,16 +63,16 @@ test.describe("Tree", () => {
   });
 
   test("grip dragging commits an inside drop", async({ page }) => {
-    await expect(rowOf(page, "camera").locator("[part=grip]")).toBeVisible();
+    await expect(findRow(page, "camera").locator("[part=grip]")).toBeVisible();
     await hold(
       page,
-      await centerOf(rowOf(page, "camera").locator(".grip")),
-      await centerOf(rowOf(page, "lighting")),
+      await measureCenter(findRow(page, "camera").locator(".grip")),
+      await measureCenter(findRow(page, "lighting")),
       1
     );
     await page.mouse.up();
 
-    await expect(rowOf(page, "camera")).toHaveCount(0);
+    await expect(findRow(page, "camera")).toHaveCount(0);
   });
 
   test("edge dragging uses indentation to promote a nested row", async({ page }) => {
@@ -85,19 +85,19 @@ test.describe("Tree", () => {
   test("the drop line stays on the hovered row, never on a descendant", async({ page }) => {
     await test.step("below the last root row", async() => {
       await holdBelowLastRow(page, "lighting", "lighting");
-      await expect(rowOf(page, "lighting")).toHaveAttribute("data-drop", "below");
-      await expect(rowOf(page, "barrel")).not.toHaveAttribute("data-drop", /.+/);
+      await expect(findRow(page, "lighting")).toHaveAttribute("data-drop", "below");
+      await expect(findRow(page, "barrel")).not.toHaveAttribute("data-drop", /.+/);
       await cancelDrag(page);
     });
 
     await test.step("on a branch's own row", async() => {
-      const scene = await boxOf(rowOf(page, "scene"));
-      await hold(page, await centerOf(rowOf(page, "lighting").locator(".grip")), {
+      const scene = await measureBox(findRow(page, "scene"));
+      await hold(page, await measureCenter(findRow(page, "lighting").locator(".grip")), {
         x: scene.x + (scene.width / 2),
         y: scene.y + scene.height - 2
       }, 1);
-      await expect(rowOf(page, "scene")).toHaveAttribute("data-drop", "below");
-      await expect(rowOf(page, "barrel")).not.toHaveAttribute("data-drop", /.+/);
+      await expect(findRow(page, "scene")).toHaveAttribute("data-drop", "below");
+      await expect(findRow(page, "barrel")).not.toHaveAttribute("data-drop", /.+/);
       await cancelDrag(page);
     });
 
@@ -108,15 +108,15 @@ test.describe("Tree", () => {
         }
       );
       await holdBelowLastRow(page, "barrel", "barrel");
-      await expect(rowOf(page, "barrel")).toHaveAttribute("data-drop", "below");
-      await expect(rowOf(page, "crate")).not.toHaveAttribute("data-drop", /.+/);
+      await expect(findRow(page, "barrel")).toHaveAttribute("data-drop", "below");
+      await expect(findRow(page, "crate")).not.toHaveAttribute("data-drop", /.+/);
       await cancelDrag(page);
     });
   });
 
   test("whole-row cancellation and disconnection clean up the gesture", async({ page }) => {
-    const camera = rowOf(page, "camera");
-    const box = await boxOf(camera);
+    const camera = findRow(page, "camera");
+    const box = await measureBox(camera);
     const from = {
       x: box.x + 40,
       y: box.y + (box.height / 2)

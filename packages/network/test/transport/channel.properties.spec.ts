@@ -40,7 +40,7 @@ describe("ChannelTransport + ChannelTransportHost properties", () => {
           await harness.drain();
 
           for (const client of harness.clients) {
-            const server = harness.serverOf(client);
+            const server = harness.relayedServer(client);
             const closeIndex = client.events.indexOf("close");
             assert.ok(closeIndex === -1 || closeIndex === client.events.length - 1);
 
@@ -81,7 +81,7 @@ describe("ChannelTransport + ChannelTransportHost properties", () => {
           assert.deepStrictEqual(harness.listeningPorts(), []);
           for (const client of harness.clients) {
             assert.ok(client.closed);
-            assert.strictEqual(harness.serverOf(client)?.closed ?? true, true);
+            assert.strictEqual(harness.relayedServer(client)?.closed ?? true, true);
           }
         }
       ),

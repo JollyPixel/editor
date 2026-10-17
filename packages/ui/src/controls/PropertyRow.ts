@@ -28,12 +28,8 @@ import type { FieldAlign } from "../field/JollyField.ts";
 import type { SearchQuery } from "../search/SearchQuery.ts";
 import type { Searchable } from "../search/Searchable.ts";
 
-// Registers the icon used by descriptions.
 import "../icon/Icon.ts";
 
-/**
- * Field-aligned layout for custom content.
- */
 @customElement("jolly-property-row")
 export class PropertyRow extends LitElement implements Searchable {
   static override styles = [

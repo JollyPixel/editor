@@ -69,7 +69,7 @@ describe("AssetTreeModel empty folders", () => {
     const model = new AssetTreeModel(kRecords, {
       folders: [AssetPath.parse("drafts")]
     });
-    const relocation = model.renameOf(folderNodeId(AssetPath.parse("drafts")), "levels");
+    const relocation = model.planRename(folderNodeId(AssetPath.parse("drafts")), "levels");
 
     assert.equal(relocation?.type, "folder");
     assert.equal(relocation?.to.toString(), "levels");
@@ -77,7 +77,7 @@ describe("AssetTreeModel empty folders", () => {
   });
 
   test("tags an asset relocation with its node type", () => {
-    const relocation = kModel.renameOf(assetNodeId("readme"), "notes");
+    const relocation = kModel.planRename(assetNodeId("readme"), "notes");
 
     assert.equal(relocation?.type, "asset");
   });
@@ -106,7 +106,7 @@ describe("AssetTreeModel empty folders", () => {
 
 describe("AssetTreeModel moves of several rows", () => {
   test("moves each selected asset into the target folder", () => {
-    const moves = kModel.movesOf({
+    const moves = kModel.planMoves({
       movedIds: [assetNodeId("readme"), assetNodeId("tex-1")],
       targetId: kMaps,
       where: "inside"
@@ -120,7 +120,7 @@ describe("AssetTreeModel moves of several rows", () => {
 
   test("refuses the whole move when two assets land on one path", () => {
     assert.throws(
-      () => kModel.movesOf({
+      () => kModel.planMoves({
         movedIds: [assetNodeId("tex-1"), assetNodeId("tex-2")],
         targetId: kMaps,
         where: "inside"
@@ -132,7 +132,7 @@ describe("AssetTreeModel moves of several rows", () => {
 
   test("refuses a move onto an asset that stays", () => {
     assert.throws(
-      () => kModel.movesOf({
+      () => kModel.planMoves({
         movedIds: [assetNodeId("tex-2")],
         targetId: kTextures,
         where: "inside"
@@ -142,7 +142,7 @@ describe("AssetTreeModel moves of several rows", () => {
   });
 
   test("merges a renamed folder into another when no path collides", () => {
-    assert.deepEqual(kModel.renameOf(kMaps, "textures")?.renames, [
+    assert.deepEqual(kModel.planRename(kMaps, "textures")?.renames, [
       {
         assetId: "map-1",
         to: "textures/overworld.voxelmap.json"

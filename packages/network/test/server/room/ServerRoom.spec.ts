@@ -6,10 +6,10 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { identityOf } from "../../helpers/server/identity.ts";
+import { createIdentity } from "../../helpers/server/identity.ts";
 import {
   createClient,
-  serverEnvelopeOf,
+  toServerEnvelope,
   withoutSync
 } from "../../helpers/server/clientHandle.ts";
 import {
@@ -24,12 +24,12 @@ describe("ServerRoom", () => {
     const b = createClient("B");
     const room = createRoom(extension);
 
-    await room.join({ handle: a.client, identity: identityOf("A") });
+    await room.join({ handle: a.client, identity: createIdentity("A") });
     assert.deepEqual(withoutSync(a.sent), []);
 
     await room.join({
       handle: b.client,
-      identity: identityOf("B"),
+      identity: createIdentity("B"),
       profile: { username: "bob" }
     });
     assert.deepEqual(withoutSync(a.sent), [{
@@ -51,7 +51,7 @@ describe("ServerRoom", () => {
 
     await room.join({
       handle: a.client,
-      identity: identityOf("A"),
+      identity: createIdentity("A"),
       profile: { username: "alice" }
     });
     assert.deepEqual(a.sent, [{
@@ -69,7 +69,7 @@ describe("ServerRoom", () => {
       ]
     }]);
 
-    await room.join({ handle: b.client, identity: identityOf("B") });
+    await room.join({ handle: b.client, identity: createIdentity("B") });
     assert.deepEqual(b.sent, [{
       room: "pixel-draw",
       kind: "sync",
@@ -97,7 +97,7 @@ describe("ServerRoom", () => {
     const a = createClient("A");
     const room = createRoom(extension);
 
-    await room.join({ handle: a.client, identity: identityOf("A") });
+    await room.join({ handle: a.client, identity: createIdentity("A") });
     extension.clients[0].send({ type: "snapshot" });
 
     assert.deepEqual(withoutSync(a.sent), [{
@@ -112,8 +112,8 @@ describe("ServerRoom", () => {
     const a = createClient("A");
     const b = createClient("B");
     const room = createRoom(extension);
-    await room.join({ handle: a.client, identity: identityOf("A") });
-    await room.join({ handle: b.client, identity: identityOf("B") });
+    await room.join({ handle: a.client, identity: createIdentity("A") });
+    await room.join({ handle: b.client, identity: createIdentity("B") });
     a.sent.length = 0;
     b.sent.length = 0;
 
@@ -129,8 +129,8 @@ describe("ServerRoom", () => {
     const a = createClient("A");
     const b = createClient("B");
     const room = createRoom(extension);
-    await room.join({ handle: a.client, identity: identityOf("A") });
-    await room.join({ handle: b.client, identity: identityOf("B") });
+    await room.join({ handle: a.client, identity: createIdentity("A") });
+    await room.join({ handle: b.client, identity: createIdentity("B") });
     a.sent.length = 0;
     b.sent.length = 0;
 
@@ -149,7 +149,7 @@ describe("ServerRoom", () => {
     const extension = createExtension();
     const a = createClient("A");
     const room = createRoom(extension);
-    await room.join({ handle: a.client, identity: identityOf("A") });
+    await room.join({ handle: a.client, identity: createIdentity("A") });
 
     await room.message("A", { hello: "world" });
 
@@ -161,8 +161,8 @@ describe("ServerRoom", () => {
     const a = createClient("A");
     const b = createClient("B");
     const room = createRoom(extension);
-    await room.join({ handle: a.client, identity: identityOf("A") });
-    await room.join({ handle: b.client, identity: identityOf("B") });
+    await room.join({ handle: a.client, identity: createIdentity("A") });
+    await room.join({ handle: b.client, identity: createIdentity("B") });
     a.sent.length = 0;
     b.sent.length = 0;
 
@@ -186,9 +186,9 @@ describe("ServerRoom", () => {
       };
     }
     const room = createRoom(extension);
-    await room.join({ handle: a.client, identity: identityOf("A") });
-    await room.join({ handle: serializingClient("B"), identity: identityOf("B") });
-    await room.join({ handle: serializingClient("C"), identity: identityOf("C") });
+    await room.join({ handle: a.client, identity: createIdentity("A") });
+    await room.join({ handle: serializingClient("B"), identity: createIdentity("B") });
+    await room.join({ handle: serializingClient("C"), identity: createIdentity("C") });
     a.sent.length = 0;
     serialized.length = 0;
 
@@ -214,10 +214,10 @@ describe("ServerRoom", () => {
 
     await room.join({
       handle: createClient("A").client,
-      identity: identityOf("A"),
+      identity: createIdentity("A"),
       resume: { version: 2 }
     });
-    await room.join({ handle: createClient("B").client, identity: identityOf("B") });
+    await room.join({ handle: createClient("B").client, identity: createIdentity("B") });
 
     assert.deepEqual(extension.peers.map((peer) => peer.resume), [{ version: 2 }, undefined]);
     assert.strictEqual("resume" in extension.peers[1], false);
@@ -227,13 +227,13 @@ describe("ServerRoom", () => {
     const extension = createExtension();
     const a = createClient("A");
     const room = createRoom(extension);
-    await room.join({ handle: a.client, identity: identityOf("A") });
+    await room.join({ handle: a.client, identity: createIdentity("A") });
 
     await room.resync("A");
     await room.resync("nobody");
 
     assert.deepEqual(extension.resynced, ["A"]);
-    assert.strictEqual(extension.lastContext.identity.subject, identityOf("A").subject);
+    assert.strictEqual(extension.lastContext.identity.subject, createIdentity("A").subject);
   });
 
   test("a message from a non-member never reaches the extension", async() => {
@@ -251,13 +251,13 @@ describe("ServerRoom", () => {
     const b = createClient("B");
     const c = createClient("C");
     const room = createRoom(extension);
-    await room.join({ handle: a.client, identity: identityOf("A") });
+    await room.join({ handle: a.client, identity: createIdentity("A") });
     await room.join({
       handle: b.client,
-      identity: identityOf("B"),
+      identity: createIdentity("B"),
       presence: { cursor: { x: 2, y: 3 } }
     });
-    await room.join({ handle: c.client, identity: identityOf("C") });
+    await room.join({ handle: c.client, identity: createIdentity("C") });
 
     assert.deepEqual(withoutSync(a.sent)[0], {
       room: "pixel-draw",
@@ -267,7 +267,7 @@ describe("ServerRoom", () => {
       profile: {},
       presence: { cursor: { x: 2, y: 3 } }
     });
-    const sync = serverEnvelopeOf(c.sent[0]);
+    const sync = toServerEnvelope(c.sent[0]);
     assert.ok(sync.kind === "sync");
     assert.deepEqual(
       sync.members.find((member) => member.clientId === "B")?.presence,

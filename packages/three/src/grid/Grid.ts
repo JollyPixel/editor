@@ -26,7 +26,6 @@ import {
 // CONSTANTS
 const kInfiniteGridQuadSize = 2;
 
-// Numeric properties backed by a `GridUniforms` entry.
 const kNumberUniformKeys = [
   "cellSize",
   "sectionSize",
@@ -40,7 +39,6 @@ const kNumberUniformKeys = [
   "offset"
 ] as const;
 
-// Boolean properties stored as 0 or 1 in a `GridUniforms` entry.
 const kBooleanUniformKeys = [
   "hideCellOnSection",
   "showSection",
@@ -149,11 +147,6 @@ export interface GridAxesOptions {
   zColor?: THREE.ColorRepresentation;
 }
 
-/**
- * Every `@default` here (and on `GridCellOptions`, `GridSectionOptions`,
- * `GridFadeOptions`, `GridAxesOptions`) is `Grid.Defaults`' out-of-the-box
- * value; mutate `Grid.Defaults` to change it process-wide.
- */
 export interface GridOptions {
   /**
    * Grid plane.
@@ -259,9 +252,6 @@ export interface GridExtentDefaults {
   fadeMultiplier: number;
 }
 
-/**
- * Global fallbacks used when a `GridOptions` field is omitted.
- */
 export interface GridDefaults {
   plane: GridPlaneValue;
   cell: GridCellDefaults;
@@ -277,9 +267,6 @@ export interface GridDefaults {
   extent: GridExtentDefaults;
 }
 
-/**
- * Live properties backed by shader uniforms.
- */
 export interface Grid {
   cellSize: number;
   sectionSize: number;
@@ -296,9 +283,6 @@ export interface Grid {
   showAxes: boolean;
 }
 
-/**
- * TSL grid mesh for `THREE.WebGPURenderer`.
- */
 export class Grid extends THREE.Mesh<THREE.PlaneGeometry> {
   static readonly Defaults: GridDefaults = {
     plane: new GridPlaneValue("xz"),
@@ -382,7 +366,6 @@ export class Grid extends THREE.Mesh<THREE.PlaneGeometry> {
       defaults.extent.minimum
     );
 
-    // Infinite mode uses a clip-space quad; the shader reconstructs the plane.
     const geometry = infiniteGrid ?
       new THREE.PlaneGeometry(kInfiniteGridQuadSize, kInfiniteGridQuadSize) :
       new THREE.PlaneGeometry(extent, extent);

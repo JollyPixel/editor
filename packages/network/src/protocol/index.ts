@@ -6,8 +6,8 @@ export {
   describeErrors,
   isSchema,
   minProperties,
-  notMultipleOf,
-  requiredAnyOf,
+  notMultiple,
+  requireAnyGroup,
   type Infer,
   type Schema,
   type ValidationError

@@ -32,7 +32,7 @@ const kRejected = [
 
 export type Rng = () => number;
 
-export function batchOf<T>(
+export function createBatch<T>(
   create: (rng: Rng) => T
 ): T[] {
   const rng = mulberry32();

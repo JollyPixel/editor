@@ -34,9 +34,6 @@ export interface VectorFieldDefaults {
   axisStyle: AxisStyle;
 }
 
-/**
- * Shared base for `Vector2`, `Vector3` and `Vector4`.
- */
 export abstract class VectorField<
   TAxis extends string,
   TValue extends VectorValue<string> = VectorValue<TAxis>
@@ -133,7 +130,7 @@ export abstract class VectorField<
   protected renderValue(): TemplateResult {
     return html`
       <div class="axes">
-        ${this.getAxisKeys().map((axis) => this.#controllerFor(axis).render())}
+        ${this.getAxisKeys().map((axis) => this.#axisController(axis).render())}
       </div>
     `;
   }
@@ -154,7 +151,7 @@ export abstract class VectorField<
     }
   }
 
-  #controllerFor(
+  #axisController(
     axis: TAxis
   ): AxisController {
     let controller = this.#axes.get(axis);

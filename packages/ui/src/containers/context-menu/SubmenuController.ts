@@ -59,7 +59,7 @@ export class SubmenuController implements ReactiveController {
     item: HTMLButtonElement
   ): void {
     this.cancelHover();
-    const depth = this.#depthOf(item);
+    const depth = this.#measureDepth(item);
     if (depth === -1) {
       return;
     }
@@ -67,7 +67,7 @@ export class SubmenuController implements ReactiveController {
     const current = this.#levels.at(
       depth
     )?.item ?? null;
-    const wanted = branchOf(item) === null ? null : item;
+    const wanted = findBranch(item) === null ? null : item;
     if (wanted === current) {
       return;
     }
@@ -93,8 +93,8 @@ export class SubmenuController implements ReactiveController {
     focus: boolean
   ): void {
     this.cancelHover();
-    const branch = branchOf(item);
-    const depth = this.#depthOf(item);
+    const branch = findBranch(item);
+    const depth = this.#measureDepth(item);
     if (
       branch === null ||
       depth === -1 ||
@@ -189,7 +189,7 @@ export class SubmenuController implements ReactiveController {
     this.#levels.at(depth)?.menu.hidePopover();
   }
 
-  #depthOf(
+  #measureDepth(
     item: HTMLElement
   ): number {
     const menu = item.parentElement?.closest(".menu");
@@ -276,7 +276,7 @@ function layoutRect(
   };
 }
 
-function branchOf(
+function findBranch(
   item: HTMLButtonElement
 ): Branch | null {
   const key = item.dataset.submenu;

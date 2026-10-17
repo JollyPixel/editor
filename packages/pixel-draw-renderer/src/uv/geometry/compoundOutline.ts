@@ -54,7 +54,6 @@ function clockwise(
     area += (current.x * next.y) - (next.x * current.y);
   }
 
-  // A y-down axis flips the sign, so a clockwise ring has a positive area.
   return area >= 0 ? points : [...points].reverse();
 }
 
@@ -179,14 +178,13 @@ function sharpestTurn(
     return outgoing[0] ?? null;
   }
 
-  const incoming = angleOf(edge);
+  const incoming = edgeAngle(edge);
   let best: Edge | null = null;
   let bestTurn = Infinity;
 
   for (const candidate of outgoing) {
-    let turn = (angleOf(candidate) - incoming) % kTwoPi;
+    let turn = (edgeAngle(candidate) - incoming) % kTwoPi;
     if (turn < kEpsilon) {
-      // Straight on only when every other candidate turns away.
       turn += kTwoPi;
     }
 
@@ -199,7 +197,7 @@ function sharpestTurn(
   return best;
 }
 
-function angleOf(
+function edgeAngle(
   edge: Edge
 ): number {
   return Math.atan2(

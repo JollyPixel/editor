@@ -93,7 +93,7 @@ describe("Client — default url", () => {
 
   beforeEach(() => {
     urls.length = 0;
-    // @ts-expect-error - test double, not a full WebSocket implementation
+    // @ts-expect-error
     globalThis.WebSocket = UrlRecordingSocket;
   });
 
@@ -103,7 +103,7 @@ describe("Client — default url", () => {
   });
 
   test("derives a ws:// url from location when none is provided", () => {
-    // @ts-expect-error - partial Location stub, only protocol/host are read
+    // @ts-expect-error
     globalThis.location = { protocol: "http:", host: "localhost:5173" };
 
     new Client({});
@@ -112,7 +112,7 @@ describe("Client — default url", () => {
   });
 
   test("derives a wss:// url from location when the page is https", () => {
-    // @ts-expect-error - partial Location stub, only protocol/host are read
+    // @ts-expect-error
     globalThis.location = { protocol: "https:", host: "example.com" };
 
     new Client({});

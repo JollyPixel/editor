@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import {
-  boxOf,
+  measureBox,
   dialog,
   selectField
 } from "@jolly-pixel/e2e";
@@ -109,7 +109,7 @@ test("a new voxel layer is listed and selected", async({ map }) => {
 test("clicking the empty tree area keeps the layer selected", async({ map }) => {
   const { tree } = map.layers;
   const row = map.layers.row("Ground");
-  const box = await boxOf(tree);
+  const box = await measureBox(tree);
 
   await row.click();
   await tree.click({ position: { x: 8, y: box.height - 8 } });

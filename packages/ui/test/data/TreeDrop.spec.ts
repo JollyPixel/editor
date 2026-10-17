@@ -229,8 +229,8 @@ describe("Data.TreeDrop edge rows", () => {
         const last = available[available.length - 1];
         const middle = available.slice(1, -1).find((id) => id.includes("."));
 
-        assert.equal(probe.hover({ id: last, where: "below" })?.targetId, rootOf(last));
-        assert.equal(probe.hover({ id: first, where: "above" })?.targetId, rootOf(first));
+        assert.equal(probe.hover({ id: last, where: "below" })?.targetId, rootSegment(last));
+        assert.equal(probe.hover({ id: first, where: "above" })?.targetId, rootSegment(first));
         if (middle !== undefined) {
           assert.equal(probe.hover({ id: middle, where: "below" })?.targetId, middle);
         }
@@ -239,7 +239,7 @@ describe("Data.TreeDrop edge rows", () => {
   });
 });
 
-function rootOf(
+function rootSegment(
   id: string
 ): string {
   return id.split(".")[0];

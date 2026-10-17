@@ -19,8 +19,8 @@ import { AssetPathTakenError } from "../../src/catalog/errors/AssetPathTakenErro
 import {
   COMPANION_EDGES,
   COMPANION_RECORDS,
-  companionModelOf,
-  dependenciesOf,
+  createCompanionModel,
+  createDependencies,
   shape
 } from "../helpers/assetTree.ts";
 
@@ -36,7 +36,7 @@ function nestedUnder(
 
 describe("AssetTreeModel companions", () => {
   test("nests an asset under the same-named asset that references it", () => {
-    assert.deepEqual(shape(companionModelOf().nodes), [
+    assert.deepEqual(shape(createCompanionModel().nodes), [
       ["maps", [
         "cave.voxelmap.json",
         ["overworld.voxelmap.json", ["overworld.blockset.json"]]
@@ -49,7 +49,7 @@ describe("AssetTreeModel companions", () => {
   });
 
   test("keeps an owner's companions shown, with no expand toggle", () => {
-    const model = companionModelOf();
+    const model = createCompanionModel();
 
     assert.equal(model.node(assetNodeId("map-overworld"))?.collapsible, false);
     assert.equal(model.node(assetNodeId("map-cave"))?.collapsible, undefined);
@@ -62,7 +62,7 @@ describe("AssetTreeModel companions", () => {
   });
 
   test("nests nothing across folders", () => {
-    const model = companionModelOf([
+    const model = createCompanionModel([
       {
         id: "map-overworld",
         kind: "voxelmap",
@@ -87,7 +87,7 @@ describe("AssetTreeModel companions", () => {
         source: "maps/overworld.voxelmodel.json"
       }
     ];
-    const model = companionModelOf(records, {
+    const model = createCompanionModel(records, {
       ...COMPANION_EDGES,
       "model-overworld": ["blockset-overworld"]
     });
@@ -97,7 +97,7 @@ describe("AssetTreeModel companions", () => {
   });
 
   test("nests nothing for assets referencing each other", () => {
-    const model = companionModelOf(COMPANION_RECORDS, {
+    const model = createCompanionModel(COMPANION_RECORDS, {
       "map-overworld": ["blockset-overworld"],
       "blockset-overworld": ["map-overworld"]
     });
@@ -109,7 +109,7 @@ describe("AssetTreeModel companions", () => {
   test("shows a companion in its folder when the kind filter hides its owner", () => {
     const model = new AssetTreeModel(COMPANION_RECORDS, {
       kind: "blockset",
-      dependencies: dependenciesOf(COMPANION_EDGES)
+      dependencies: createDependencies(COMPANION_EDGES)
     });
 
     assert.deepEqual(shape(model.nodes), [
@@ -121,7 +121,7 @@ describe("AssetTreeModel companions", () => {
   test("keeps a companion of another kind under its shown owner", () => {
     const model = new AssetTreeModel(COMPANION_RECORDS, {
       kind: "voxelmodel",
-      dependencies: dependenciesOf(COMPANION_EDGES)
+      dependencies: createDependencies(COMPANION_EDGES)
     });
 
     assert.deepEqual(shape(model.nodes), [
@@ -132,7 +132,7 @@ describe("AssetTreeModel companions", () => {
 
   test("renames companions with their owner, keeping their extensions", () => {
     assert.deepEqual(
-      companionModelOf().renameOf(assetNodeId("map-overworld"), "island")?.renames,
+      createCompanionModel().planRename(assetNodeId("map-overworld"), "island")?.renames,
       [
         {
           assetId: "map-overworld",
@@ -148,7 +148,7 @@ describe("AssetTreeModel companions", () => {
 
   test("renames a companion alone", () => {
     assert.deepEqual(
-      companionModelOf().renameOf(assetNodeId("texture-hero"), "skin")?.renames,
+      createCompanionModel().planRename(assetNodeId("texture-hero"), "skin")?.renames,
       [
         {
           assetId: "texture-hero",
@@ -159,7 +159,7 @@ describe("AssetTreeModel companions", () => {
   });
 
   test("moves companions with their owner, once when both are moved", () => {
-    const moves = companionModelOf().movesOf({
+    const moves = createCompanionModel().planMoves({
       movedIds: [assetNodeId("texture-hero"), assetNodeId("model-hero")],
       targetId: kMaps,
       where: "inside"
@@ -180,7 +180,7 @@ describe("AssetTreeModel companions", () => {
   });
 
   test("refuses a rename whose companion lands on a taken path", () => {
-    const model = companionModelOf([
+    const model = createCompanionModel([
       ...COMPANION_RECORDS,
       {
         id: "blockset-island",
@@ -190,7 +190,7 @@ describe("AssetTreeModel companions", () => {
     ]);
 
     assert.throws(
-      () => model.renameOf(assetNodeId("map-overworld"), "island"),
+      () => model.planRename(assetNodeId("map-overworld"), "island"),
       (error) => error instanceof AssetPathTakenError &&
         error.path === "maps/island.blockset.json"
     );

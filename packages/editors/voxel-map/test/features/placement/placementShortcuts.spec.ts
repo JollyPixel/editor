@@ -16,11 +16,11 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { mapHistoryOf } from "../../helpers/mapHistory.ts";
+import { createWorldHistory } from "../../helpers/mapHistory.ts";
 import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
 import { bindPlacementShortcuts } from "../../../src/features/placement/placementShortcuts.ts";
 import { SelectionStore } from "../../../src/state/index.ts";
-import { mapDocumentOf } from "../../helpers/mapDocument.ts";
+import { createMapDocument } from "../../helpers/mapDocument.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
 
 function setup() {
@@ -38,9 +38,9 @@ function setup() {
   })!.id;
   const store = new MapPlacement({
     world,
-    history: mapHistoryOf(world),
+    history: createWorldHistory(world),
     selection: new SelectionStore(),
-    mapDocument: mapDocumentOf(world),
+    mapDocument: createMapDocument(world),
     access: mapAccess()
   });
   let commits = 0;

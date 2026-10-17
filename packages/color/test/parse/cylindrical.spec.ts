@@ -7,10 +7,7 @@ import { parseColor } from "../../src/parse/index.ts";
 import { formatHex } from "../../src/format.ts";
 import { rgbToHsl } from "../../src/convert/hsl.ts";
 
-/*
- * CONSTANTS
- * hsl(210 40% 17%) is the same color in every notation below.
- */
+// CONSTANTS
 const kHex = "#1a2b3d";
 const kHslFixtures: [string, string][] = [
   ["hsl(210, 40%, 17%)", kHex],
@@ -40,7 +37,7 @@ const kRejected = [
   "hwb(210 40% red)"
 ];
 
-function hueOf(
+function readHue(
   input: string
 ): number {
   const color = parseColor(input);
@@ -66,15 +63,15 @@ describe("parseColor / hsl", () => {
   test("reads every angle unit as the same hue", () => {
     for (const [input] of kHslFixtures) {
       assert.ok(
-        Math.abs(hueOf(input) - 210) < 1e-9,
-        `${input}: ${hueOf(input)}`
+        Math.abs(readHue(input) - 210) < 1e-9,
+        `${input}: ${readHue(input)}`
       );
     }
   });
 
   test("wraps the hue into 0-360", () => {
-    assert.equal(hueOf("hsl(-150, 40%, 17%)"), 210);
-    assert.equal(hueOf("hsl(570, 40%, 17%)"), 210);
+    assert.equal(readHue("hsl(-150, 40%, 17%)"), 210);
+    assert.equal(readHue("hsl(570, 40%, 17%)"), 210);
   });
 
   test("reads a none hue as 0", () => {

@@ -17,7 +17,7 @@ const kPairs: Readonly<Record<Vector2Pair, readonly Vector2Axis[]>> = {
 };
 const kDefaultPair: Vector2Pair = "xy";
 
-export function axisKeysOf(
+export function resolveAxisKeys(
   pair: Vector2Pair | undefined
 ): readonly Vector2Axis[] {
   return pair === undefined
@@ -33,10 +33,6 @@ export function sameAxisKeys(
     a.every((axis, index) => axis === b[index]);
 }
 
-/*
- * Null when nothing needs moving, either because the value already carries
- * every new axis or because it cannot be read component-wise.
- */
 export function rekeyVectorValue<TValue extends VectorValue<string>>(
   value: FieldValue<TValue>,
   previous: readonly string[] | null,

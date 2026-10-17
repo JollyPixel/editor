@@ -4,9 +4,6 @@ import { assertAssetKind } from "./assertAssetKind.ts";
 // CONSTANTS
 declare const kAssetValueTypeBrand: unique symbol;
 
-/**
- * Binds a persistent asset kind to the value produced by its loader.
- */
 export class AssetType<
   TValue = unknown
 > {

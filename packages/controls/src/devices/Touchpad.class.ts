@@ -11,11 +11,8 @@ import type {
 import { EdgeBuffer } from "./EdgeBuffer.ts";
 
 export const TouchIdentifier = {
-  // usually first finger/index
   primary: 0,
-  // usually second finger/middle
   secondary: 1,
-  // usually third finger/ring
   tertiary: 2
 } as const;
 
@@ -43,16 +40,6 @@ export interface TouchpadOptions {
   canvas: CanvasAdapter;
 }
 
-/**
- * Touchpad input handler supporting multi-touch gestures.
- *
- * Touch identifiers are assigned by the browser sequentially as fingers touch the screen.
- * The first touch is typically identifier 0, second is 1, etc.
- * Identifiers may be reused after a touch ends.
- *
- * @see https://www.w3.org/TR/touch-events/
- * @see https://docs.google.com/document/d/12-HPlSIF7-ISY8TQHtuQ3IqDi-isZVI0Yzv5zwl90VU/edit?tab=t.0
- */
 export class Touchpad extends Emitter<
   TouchEvents
 > implements InputControl {

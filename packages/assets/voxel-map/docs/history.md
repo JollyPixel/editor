@@ -42,7 +42,7 @@ object, block and blockset commands, direct `VoxelLayer` writes, and commands
 applied with `document.apply()`.
 
 `VoxelEdits` follows the document's `"command"` event. Every local world
-command emits one `change` with origin `"local"`, and `edits.changeFor(command)`
+command emits one `change` with origin `"local"`, and `edits.trackedChange(command)`
 returns that change to the listeners subscribed after it. `VoxelSyncClient`
 builds its edits before it subscribes, so it sends each command with its
 `basis` and matches the server's answers to it. A command applied
@@ -75,7 +75,7 @@ class VoxelEdits implements HistorySource<VoxelWorldCommand, null> {
   constructor(document: VoxelEditsDocument);
   readonly world: VoxelWorld;
   readonly receipts: ChangeReceipts<VoxelChange>;
-  changeFor(command: VoxelWorldCommand): VoxelChange | undefined;
+  trackedChange(command: VoxelWorldCommand): VoxelChange | undefined;
   subscribe(event: "change", listener: (change: VoxelChange) => void): () => void;
   subscribe(event: "reset", listener: (cause: DocumentResetCause) => void): () => void;
   applyStep(command: VoxelWorldCommand, basis: number | undefined): VoxelChange | null;

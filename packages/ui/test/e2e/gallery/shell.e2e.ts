@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { boxOf, widthOf } from "@jolly-pixel/e2e";
+import { measureBox, measureWidth } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
@@ -15,8 +15,8 @@ import {
   reloadGallery
 } from "../support/gallery.ts";
 import {
-  resolvedColorOf,
-  styleOf
+  resolveColor,
+  readStyle
 } from "../support/styles.ts";
 
 // CONSTANTS
@@ -43,10 +43,10 @@ async function headerLayout(
   pane: Locator
 ) {
   const [title, actions, theme, density] = await Promise.all([
-    boxOf(pane.locator(".title")),
-    boxOf(pane.locator(".actions")),
-    boxOf(pane.locator("jolly-button-group")),
-    boxOf(pane.locator("jolly-select"))
+    measureBox(pane.locator(".title")),
+    measureBox(pane.locator(".actions")),
+    measureBox(pane.locator("jolly-button-group")),
+    measureBox(pane.locator("jolly-select"))
   ]);
 
   return {
@@ -136,7 +136,7 @@ test.describe("gallery shell", () => {
     await gotoGallery(page);
 
     const pane = page.locator("gallery-root .gallery-pane");
-    const headerColor = await styleOf(pane.locator(":scope > .header"), "color");
+    const headerColor = await readStyle(pane.locator(":scope > .header"), "color");
     await expect(pane.locator("jolly-button-group .segment").first())
       .toHaveCSS("color", headerColor);
     await expect(pane.locator("jolly-select select")).toHaveCSS("color", headerColor);
@@ -148,7 +148,7 @@ test.describe("gallery shell", () => {
     await page.locator("gallery-root jolly-dock").evaluate((element: HTMLElement) => {
       element.style.width = "160px";
     });
-    await expect.poll(() => widthOf(page.locator("gallery-root jolly-dock"))).toBe(160);
+    await expect.poll(() => measureWidth(page.locator("gallery-root jolly-dock"))).toBe(160);
     const narrow = await headerLayout(pane);
     expect(narrow.titleBottom).toBeLessThanOrEqual(narrow.actionsTop);
     expect(narrow.densityTop).toBeGreaterThan(narrow.themeTop);
@@ -163,10 +163,10 @@ test.describe("gallery shell", () => {
     const swatch = page.locator("gallery-root .token-swatch").first();
 
     await gotoGallery(page, { theme: "dark" });
-    const dark = await styleOf(swatch, "background-color");
+    const dark = await readStyle(swatch, "background-color");
     await gotoGallery(page, { theme: "light" });
 
-    expect(await styleOf(swatch, "background-color")).not.toBe(dark);
+    expect(await readStyle(swatch, "background-color")).not.toBe(dark);
   });
 
   test("the density preference survives navigation and reloads", async({ page }) => {
@@ -202,11 +202,11 @@ test.describe("gallery shell", () => {
     await expect(select).toHaveCSS("color-scheme", "dark");
     await expect(select).toHaveCSS(
       "background-color",
-      await styleOf(segment, "background-color")
+      await readStyle(segment, "background-color")
     );
     await expect(select.locator("option").first()).toHaveCSS(
       "background-color",
-      await resolvedColorOf(select, "var(--jolly-surface-raised)")
+      await resolveColor(select, "var(--jolly-surface-raised)")
     );
   });
 });

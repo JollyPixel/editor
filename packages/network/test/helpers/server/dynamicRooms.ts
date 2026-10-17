@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { identityOf } from "./identity.ts";
+import { createIdentity } from "./identity.ts";
 import {
   Server,
   Extension,
@@ -64,7 +64,7 @@ export function harness(
   const server = new Server({
     roomGraceMs: options.graceMs ?? 1_000
   });
-  server.setRoomResolver((name): RoomResolution | null => {
+  server.useRoomResolver((name): RoomResolution | null => {
     const separator = name.indexOf(":");
     if (separator === -1) {
       return null;
@@ -96,7 +96,7 @@ export async function join(
   clientId: string,
   room: string
 ): Promise<ServerConnection> {
-  const connection = server.connect(client(clientId), identityOf(client(clientId)));
+  const connection = server.connect(client(clientId), createIdentity(client(clientId)));
   await connection.receive({ room, kind: "join" });
 
   return connection;

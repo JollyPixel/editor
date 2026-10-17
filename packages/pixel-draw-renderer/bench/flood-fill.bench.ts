@@ -16,9 +16,6 @@ import type {
 const kWhite: RGBA8 = { r: 255, g: 255, b: 255, a: 255 };
 const kBlack: RGBA8 = { r: 0, g: 0, b: 0, a: 255 };
 
-/**
- * Uniform buffer fixture with `maxSize` pinned to the canvas size.
- */
 function uniformBuffer(
   side: number
 ): PixelBuffer {
@@ -71,9 +68,6 @@ function checkerboardBuffer(
   return buffer;
 }
 
-/**
- * `Fill` is read-only, so per-scenario fixtures are reused across iterations.
- */
 const suite = defineSuite("Flood fill (tools/Fill)", (bench) => {
   const buffer128 = uniformBuffer(128);
   const buffer256 = uniformBuffer(256);
@@ -103,14 +97,14 @@ const suite = defineSuite("Flood fill (tools/Fill)", (bench) => {
     .add("connectedRegion / 256x256 (65k px)", () => {
       Fill.connectedRegion(buffer256, { x: 128, y: 128 });
     })
-    .add("positionsOf / 256x256 (all match)", () => {
-      buffer256.positionsOf(kWhite);
+    .add("findPositions / 256x256 (all match)", () => {
+      buffer256.findPositions(kWhite);
     })
-    .add("positionsOf / 512x512 (all match)", () => {
-      buffer512.positionsOf(kWhite);
+    .add("findPositions / 512x512 (all match)", () => {
+      buffer512.findPositions(kWhite);
     })
-    .add("positionsOf / 256x256 (no match)", () => {
-      buffer256.positionsOf(kBlack);
+    .add("findPositions / 256x256 (no match)", () => {
+      buffer256.findPositions(kBlack);
     });
 });
 

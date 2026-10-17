@@ -50,13 +50,13 @@ describe("BlockUvBridge — stairs", () => {
     const bridge = new BlockUvBridge(uv, view, bridgeOptions);
 
     try {
-      bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
-      uv.setState("block-1", "free");
+      bridge.activateBlockset(blocksetSlot("atlas"), 16);
+      uv.applyState("block-1", "free");
 
       const region = uv.get("block-1")!;
 
       assert.deepEqual(
-        region.slotsOf().map(({ slot }) => slot),
+        region.listSlots().map(({ slot }) => slot),
         kStairSlots,
         "eight quads across six faces become eight editable slots"
       );
@@ -71,10 +71,10 @@ describe("BlockUvBridge — stairs", () => {
     const bridge = new BlockUvBridge(uv, view, bridgeOptions);
 
     try {
-      bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
-      uv.setState("block-1", "free");
+      bridge.activateBlockset(blocksetSlot("atlas"), 16);
+      uv.applyState("block-1", "free");
 
-      const geometry = uv.get("block-1")!.geometryFor("right") as UVCompound;
+      const geometry = uv.get("block-1")!.slotGeometry("right") as UVCompound;
 
       assert.equal(geometry.shape, "compound");
       assert.equal(geometry.parts.length, 2);
@@ -94,27 +94,27 @@ describe("BlockUvBridge — stairs", () => {
     const bridge = new BlockUvBridge(uv, view, bridgeOptions);
 
     try {
-      bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
-      uv.setState("block-1", "free");
+      bridge.activateBlockset(blocksetSlot("atlas"), 16);
+      uv.applyState("block-1", "free");
 
       const region = uv.get("block-1")!;
 
       assert.deepEqual(
-        region.rectFor("top"),
+        region.slotRect("top"),
         { x: 0, y: 0, width: 16, height: 8 },
         "a half-depth quad takes half a tile, or its texture is squashed"
       );
       assert.deepEqual(
-        region.rectFor("top.1"),
+        region.slotRect("top.1"),
         { x: 0, y: 8, width: 16, height: 8 },
         "the tread sits below it, so the pair covers the tile without overlap"
       );
       assert.deepEqual(
-        region.rectFor("back"),
+        region.slotRect("back"),
         { x: 0, y: 8, width: 16, height: 8 }
       );
       assert.deepEqual(
-        region.rectFor("back.1"),
+        region.slotRect("back.1"),
         { x: 0, y: 0, width: 16, height: 8 }
       );
     }
@@ -128,8 +128,8 @@ describe("BlockUvBridge — stairs", () => {
     const bridge = new BlockUvBridge(uv, view, bridgeOptions);
 
     try {
-      bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
-      uv.setState("block-1", "free");
+      bridge.activateBlockset(blocksetSlot("atlas"), 16);
+      uv.applyState("block-1", "free");
       uv.move("block-1", { x: 48, y: 40, width: 16, height: 8 }, "top.1");
 
       const updated = view.document.blocks.get(1)!;
@@ -161,14 +161,14 @@ describe("BlockUvBridge — stairs", () => {
     const bridge = new BlockUvBridge(uv, view, bridgeOptions);
 
     try {
-      bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
-      uv.setState("block-1", "stacked", "top.1");
+      bridge.activateBlockset(blocksetSlot("atlas"), 16);
+      uv.applyState("block-1", "stacked", "top.1");
 
       const region = uv.get("block-1")!;
 
       assert.equal(region.stackedFace, "front");
       assert.deepEqual(
-        region.rectFor("top.1"),
+        region.slotRect("top.1"),
         { x: 0, y: 0, width: 16, height: 16 },
         "a 16x8 tread must not become the block's shared rectangle"
       );
@@ -189,20 +189,20 @@ describe("BlockUvBridge — stairs", () => {
     const bridge = new BlockUvBridge(uv, view, bridgeOptions);
 
     try {
-      bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
+      bridge.activateBlockset(blocksetSlot("atlas"), 16);
       uv.move("block-1", { x: 48, y: 40, width: 16, height: 8 }, "top.1");
-      uv.setState("block-1", "stacked");
+      uv.applyState("block-1", "stacked");
       uv.move("block-1", { x: 32, y: 16, width: 16, height: 16 });
-      uv.setState("block-1", "free");
+      uv.applyState("block-1", "free");
 
       const region = uv.get("block-1")!;
 
       assert.deepEqual(
-        region.rectFor("top"),
+        region.slotRect("top"),
         { x: 32, y: 16, width: 16, height: 8 }
       );
       assert.deepEqual(
-        region.rectFor("top.1"),
+        region.slotRect("top.1"),
         { x: 32, y: 24, width: 16, height: 8 },
         "the tread must return to its half of the tile the region now sits on"
       );
@@ -219,16 +219,16 @@ describe("BlockUvBridge — stairs", () => {
     const bridge = new BlockUvBridge(uv, view, bridgeOptions);
 
     try {
-      bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
+      bridge.activateBlockset(blocksetSlot("atlas"), 16);
 
       const region = uv.get("block-1")!;
 
       assert.deepEqual(
-        region.rectFor("top"),
+        region.slotRect("top"),
         { x: 32, y: 16, width: 16, height: 8 }
       );
       assert.deepEqual(
-        region.rectFor("top.1"),
+        region.slotRect("top.1"),
         { x: 32, y: 24, width: 16, height: 8 },
         "the two halves stack back into the tile the face always had"
       );

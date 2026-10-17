@@ -22,7 +22,7 @@ import {
 import type { ArchiveBackend } from "./ArchiveBackend.ts";
 import type { AssetImportError } from "./import/AssetImport.ts";
 import {
-  archiveEntryOf,
+  toArchiveEntry,
   encodeArchiveManifest
 } from "./format/ArchiveManifest.ts";
 import { readableAsset } from "./readableAsset.ts";
@@ -45,7 +45,7 @@ export async function exportAssetArchive(
   }
 
   const starts = root.val === undefined ?
-    Array.from(catalog.catalog, referenceOf) :
+    Array.from(catalog.catalog, toReference) :
     [root.val];
 
   const assets: AssetArchiveEntry[] = [];
@@ -59,7 +59,7 @@ export async function exportAssetArchive(
       continue;
     }
 
-    const entry = archiveEntryOf(record);
+    const entry = toArchiveEntry(record);
     const data = await backend.source.read(entry.path);
     const readable = readableAsset(backend.kinds, {
       ...entry,
@@ -101,7 +101,7 @@ async function flushRoot(
     return Err(error);
   }
 
-  return Ok(referenceOf(record));
+  return Ok(toReference(record));
 }
 
 async function flushClosure(
@@ -117,13 +117,13 @@ async function flushClosure(
       await backend.flush(assetId);
     }
     pending = backend.catalog.dependencies
-      .closureOf(rootId)
+      .transitiveDependencies(rootId)
       .map((reference) => reference.id)
       .filter((assetId) => !flushed.has(assetId));
   }
 }
 
-function referenceOf(
+function toReference(
   record: AssetRecord
 ): AssetReferenceData {
   return {

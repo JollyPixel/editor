@@ -2,17 +2,9 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-/*
- * CONSTANTS
- * Static `import`/`export ... from "..."`, excluding the type-only forms which are erased at compile time.
- */
+// CONSTANTS
 const kStaticSpecifier = /^\s*(?:import|export)\s+(?!type\s)(?:[^"';]*?\sfrom\s+)?["']([^"']+)["']/gm;
 
-/**
- * Walks the eagerly-evaluated module graph, i.e. every module a bare
- * `import "@jolly-pixel/event-store"` forces the runtime to evaluate.
- * Dynamic `import()` and type-only imports are deliberately not followed.
- */
 export function eagerGraph(
   entryPoint: string
 ): Map<string, string[]> {

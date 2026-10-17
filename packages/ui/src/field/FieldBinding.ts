@@ -2,7 +2,7 @@
 import type { ReactiveControllerHost } from "lit";
 
 // Import Internal Dependencies
-import { detailOf } from "../dom.ts";
+import { readDetail } from "../dom.ts";
 import type { JollyChangeDetail } from "./events.ts";
 
 export interface FieldSource<TValue> {
@@ -45,7 +45,7 @@ export class FieldBinding<TValue> {
     event: Event,
     last: boolean
   ): void {
-    const detail = detailOf<unknown>(event);
+    const detail = readDetail<unknown>(event);
     if (!carriesValue<TValue>(detail)) {
       return;
     }

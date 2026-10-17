@@ -15,10 +15,6 @@ export interface ChunkVisibilityOptions {
   unload: ChunkUnloadFn;
 }
 
-/**
- * Hides or unloads built chunks as they leave the view distance, and brings
- * them back when they return.
- */
 export class ChunkVisibility {
   #meshes: ChunkMeshStore;
   #unload: ChunkUnloadFn;

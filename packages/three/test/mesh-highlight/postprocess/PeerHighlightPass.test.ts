@@ -79,7 +79,7 @@ describe("refresh", () => {
       peerHighlight.refresh();
 
       assert.strictEqual(highlight.calls.length, callsBefore + 1);
-      assert.strictEqual(lastEntries(highlight)[0].color, registry.colorOf("peer-a"));
+      assert.strictEqual(lastEntries(highlight)[0].color, registry.peerColor("peer-a"));
     }
   );
 });
@@ -122,7 +122,7 @@ describe("dispose", () => {
 
     peerHighlight.dispose();
 
-    assert.strictEqual(registry.selectionOf("peer-a"), "mesh-1");
+    assert.strictEqual(registry.selectedObject("peer-a"), "mesh-1");
     assert.strictEqual(selection.selected, "mesh-1");
   });
 });

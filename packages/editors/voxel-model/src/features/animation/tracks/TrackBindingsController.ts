@@ -9,7 +9,7 @@ import type { ModelDocument } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import {
-  clipTargetOf,
+  toClipTarget,
   type AnimationLibrary
 } from "../library/AnimationLibrary.ts";
 import {
@@ -126,7 +126,7 @@ export class TrackBindingsController {
     }
 
     return {
-      setName: workspace.animations.targetName(clipTargetOf(set)),
+      setName: workspace.animations.targetName(toClipTarget(set)),
       rows: trackBindingRows(set.document.set, link, workspace.document.tree),
       editable: workspace.animations.editable
     };

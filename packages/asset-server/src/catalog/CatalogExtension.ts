@@ -51,7 +51,7 @@ import { CatalogOutbox } from "./CatalogOutbox.ts";
 import { CatalogContentTooLargeError } from "./errors/CatalogContentTooLargeError.ts";
 import { AssetHasDependentsError } from "./errors/AssetHasDependentsError.ts";
 import {
-  actorOf,
+  toActor,
   type AssetInlineContent
 } from "../events/AssetEvents.ts";
 import {
@@ -176,7 +176,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     command: CatalogCommand,
     context: RoomContext
   ): Promise<void> {
-    const result = await this.#execute(command, actorOf(context.identity))
+    const result = await this.#execute(command, toActor(context.identity))
       .catch((error: unknown) => Err(asError(error)));
 
     this.#outbox.flush();
@@ -471,7 +471,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     }
 
     const dependents = this.#backend.catalog
-      .dependentsOf(assetId)
+      .listDependents(assetId)
       .map((record) => {
         return {
           id: record.id.value,

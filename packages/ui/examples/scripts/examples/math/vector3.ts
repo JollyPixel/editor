@@ -4,7 +4,7 @@ import { renderStateMatrix } from "../../stateMatrix.ts";
 import { Vector3 } from "../../../../src/math/Vector3.ts";
 import {
   AXIS_STYLE_OPTIONS,
-  axisStyleOf,
+  pickAxisStyle,
   type AxisStyleOptionKey
 } from "./axisStyle.ts";
 
@@ -15,7 +15,7 @@ export const VECTOR3_EXAMPLE: GalleryExample<AxisStyleOptionKey> = {
       liveInput: true,
       create() {
         const field = document.createElement("jolly-vector3");
-        field.axisStyle = axisStyleOf(options);
+        field.axisStyle = pickAxisStyle(options);
         field.label = "Position";
         field.description = "Drag an axis's edge handle, or type 10*2";
         field.step = 0.1;

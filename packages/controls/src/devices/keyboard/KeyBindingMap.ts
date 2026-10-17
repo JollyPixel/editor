@@ -45,7 +45,7 @@ export class KeyBindingMap<TAction extends string> {
 
     const owners = new Map<string, TAction>();
     for (const action of this.actions) {
-      const chords = listOf(overrides[action] ?? defaults[action])
+      const chords = toList(overrides[action] ?? defaults[action])
         .map((value) => KeyChord.from(value));
 
       for (const chord of chords) {
@@ -63,8 +63,8 @@ export class KeyBindingMap<TAction extends string> {
   get overrides(): Partial<Record<TAction, KeyChordString[]>> {
     const overrides: Partial<Record<TAction, KeyChordString[]>> = {};
     for (const action of this.actions) {
-      const chords = this.chordsOf(action).map((chord) => chord.toString());
-      if (!sameChords(chords, listOf(this.#defaults[action]))) {
+      const chords = this.chordsBoundTo(action).map((chord) => chord.toString());
+      if (!sameChords(chords, toList(this.#defaults[action]))) {
         overrides[action] = chords;
       }
     }
@@ -72,7 +72,7 @@ export class KeyBindingMap<TAction extends string> {
     return overrides;
   }
 
-  chordsOf(
+  chordsBoundTo(
     action: TAction
   ): readonly KeyChord[] {
     return this.#chords.get(action) ?? [];
@@ -82,7 +82,7 @@ export class KeyBindingMap<TAction extends string> {
     action: TAction,
     options: KeyChordFormatOptions = {}
   ): string[] {
-    return this.chordsOf(action).map((chord) => chord.format(options));
+    return this.chordsBoundTo(action).map((chord) => chord.format(options));
   }
 
   bind(
@@ -91,7 +91,7 @@ export class KeyBindingMap<TAction extends string> {
     options: KeyBindingOptions = {}
   ): () => void {
     const releases = this.actions.map((action) => target.bind(
-      this.chordsOf(action),
+      this.chordsBoundTo(action),
       handlers[action],
       options
     ));
@@ -112,7 +112,7 @@ function sameChords(
     left.every((chord, index) => chord === right[index]);
 }
 
-function listOf(
+function toList(
   value: string | readonly string[]
 ): readonly string[] {
   return typeof value === "string" ? [value] : value;

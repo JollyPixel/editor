@@ -9,7 +9,7 @@ import * as THREE from "three";
 import type { VoxelView } from "../../src/view/VoxelView.ts";
 import type { PulledChunkGeometry } from "../../src/view/meshing/index.ts";
 import {
-  chunkCoordsOf,
+  readChunkCoords,
   chunkMeshes,
   makeView,
   placeCube
@@ -44,7 +44,7 @@ function resolveLightTexture(
   coords: string
 ): THREE.Texture | null {
   const mesh = chunkMeshes(view).find(
-    (candidate) => chunkCoordsOf(candidate) === coords
+    (candidate) => readChunkCoords(candidate) === coords
   );
   assert.ok(mesh, `chunk ${coords} must be meshed`);
 
@@ -69,7 +69,7 @@ describe("VoxelView - block light", () => {
   it("darkens a distant chunk without rebuilding it", () => {
     const view = glowingView();
     const [distant] = chunkMeshes(view).filter(
-      (mesh) => chunkCoordsOf(mesh) === "3,0,0"
+      (mesh) => readChunkCoords(mesh) === "3,0,0"
     );
 
     view.document.world.removeVoxel("Ground", { position: { x: 1, y: 0, z: 1 } });

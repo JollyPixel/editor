@@ -7,9 +7,6 @@ declare global {
   }
 }
 
-/**
- * Tracks global input modality independently of `:focus-visible`.
- */
 export function ensureModalityTracking(): void {
   if (
     typeof document === "undefined" ||
@@ -36,9 +33,6 @@ export function ensureModalityTracking(): void {
   );
 }
 
-/**
- * Whether the latest tracked input was a pointer event.
- */
 export function wasPointerInput(): boolean {
   return typeof window !== "undefined" &&
     window.__jollyLastInputWasPointer === true;

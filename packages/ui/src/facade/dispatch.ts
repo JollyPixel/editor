@@ -11,7 +11,7 @@ import {
   isVec2Like,
   isVec3Like,
   isVec4Like,
-  vec2PairOf
+  parseVec2Pair
 } from "../math/guards.ts";
 import type {
   AxisStyle,
@@ -69,45 +69,14 @@ export interface DispatchOptions<TValue> {
    * `#rrggbbaa`. Defaults to on when the bound value is already eight digits.
    */
   alpha?: boolean;
-  /*
-   * Per-axis accessible names for a vector field, e.g. `{ x: "pitch" }`.
-   */
   axisLabels?: Record<string, string>;
-  /*
-   * Which plane a two-axis field edits. Defaults to the pair the bound value
-   * itself carries.
-   */
   axes?: Vector2Pair;
-  /*
-   * How a vector or quaternion field marks its axes. Defaults to the element
-   * class's `Defaults.axisStyle`.
-   */
   axisStyle?: AxisStyle;
-  /*
-   * How a `view: "buttons"` group arranges its options.
-   */
   layout?: ButtonGroupLayout;
-  /*
-   * Columns of a `layout: "grid"` button group. Zero lets the grid size
-   * itself. Cells per block row of a `view: "layers"` grid, where zero keeps
-   * the element default.
-   */
   columns?: number;
-  /*
-   * Number of cells in a `view: "layers"` grid.
-   */
   count?: number;
-  /*
-   * Whether a `view: "layers"` grid edits a mask or one index.
-   */
   mode?: LayerGridMode;
-  /*
-   * Number shown on the first cell of a `view: "layers"` grid.
-   */
   start?: number;
-  /*
-   * Tooltip names of a `view: "layers"` grid, keyed by cell index.
-   */
   names?: Record<number, string>;
 }
 
@@ -161,7 +130,7 @@ export function dispatchTag<TValue>(
       ? "jolly-point2d"
       : "jolly-vector2";
   }
-  if (vec2PairOf(value) !== null) {
+  if (parseVec2Pair(value) !== null) {
     return "jolly-vector2";
   }
 

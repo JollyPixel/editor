@@ -84,9 +84,9 @@ check and the keyword, and returns the schema:
 - `minProperties(schema, min)`: at least `min` properties.
 - `dependentRequired(schema, { from: ["content"] })`: `from` requires
   `content`.
-- `requiredAnyOf(schema, [["src", "tileSize"], ["asset"]])`: every key of one
+- `requireAnyGroup(schema, [["src", "tileSize"], ["asset"]])`: every key of one
   group at least.
-- `notMultipleOf(schema, divisor)`: a number that `divisor` does not divide.
+- `notMultiple(schema, divisor)`: a number that `divisor` does not divide.
 
 ```ts
 import { minProperties } from "@jolly-pixel/network";
@@ -98,7 +98,7 @@ const faces = minProperties(z.record(z.string(), z.number()), 1);
 
 Root exports `MessageParser` and `SchemaParser`; `/client` omits them.
 Parsing returns `Ok` or `Err`. `SchemaParser.is(value)` checks a value without
-collecting errors. `MessageParser.of` caches per protocol object.
+collecting errors. `MessageParser.fromProtocol` caches per protocol object.
 `identify(payload)` returns the event the payload's tags name without
 validating it, or `null` when no single variant matches them.
 

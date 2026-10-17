@@ -44,7 +44,7 @@ function makeRenderer(): FakeRenderer {
   };
 }
 
-function sampleOf(
+function readSample(
   metrics: RendererMetrics,
   id: string
 ): number {
@@ -54,7 +54,7 @@ function sampleOf(
   return metric.sample();
 }
 
-function metricsOf(
+function createMetrics(
   renderer: FakeRenderer
 ): RendererMetrics {
   return new RendererMetrics(renderer as unknown as THREE.WebGPURenderer);
@@ -63,23 +63,23 @@ function metricsOf(
 describe("RendererMetrics", () => {
   it("reads the live counters until a frame is captured", () => {
     const renderer = makeRenderer();
-    const metrics = metricsOf(renderer);
+    const metrics = createMetrics(renderer);
 
-    assert.equal(sampleOf(metrics, "calls"), 12);
-    assert.equal(sampleOf(metrics, "renderedTriangles"), 300);
+    assert.equal(readSample(metrics, "calls"), 12);
+    assert.equal(readSample(metrics, "renderedTriangles"), 300);
   });
 
   it("holds the captured frame after the renderer resets its counters", () => {
     const renderer = makeRenderer();
-    const metrics = metricsOf(renderer);
+    const metrics = createMetrics(renderer);
 
     metrics.captureFrame();
     renderer.info.render.drawCalls = 0;
     renderer.info.render.triangles = 0;
     renderer.info.memory.textures = 5;
 
-    assert.equal(sampleOf(metrics, "calls"), 12);
-    assert.equal(sampleOf(metrics, "renderedTriangles"), 300);
+    assert.equal(readSample(metrics, "calls"), 12);
+    assert.equal(readSample(metrics, "renderedTriangles"), 300);
     assert.deepEqual(metrics.frame, {
       drawCalls: 12,
       triangles: 300,
@@ -90,22 +90,22 @@ describe("RendererMetrics", () => {
 
   it("reads memory counters live, which the renderer never resets", () => {
     const renderer = makeRenderer();
-    const metrics = metricsOf(renderer);
+    const metrics = createMetrics(renderer);
 
     renderer.info.memory.geometries = 9;
-    assert.equal(sampleOf(metrics, "geometries"), 9);
-    assert.equal(sampleOf(metrics, "textures"), 2);
+    assert.equal(readSample(metrics, "geometries"), 9);
+    assert.equal(readSample(metrics, "textures"), 2);
   });
 
   it("reads GPU memory in bytes, vertex and index buffers together", () => {
     const renderer = makeRenderer();
-    const metrics = metricsOf(renderer);
+    const metrics = createMetrics(renderer);
 
-    assert.equal(sampleOf(metrics, "geometryMemory"), 5120);
-    assert.equal(sampleOf(metrics, "textureMemory"), 2048);
+    assert.equal(readSample(metrics, "geometryMemory"), 5120);
+    assert.equal(readSample(metrics, "textureMemory"), 2048);
 
     renderer.info.memory.attributesSize = 0;
-    assert.equal(sampleOf(metrics, "geometryMemory"), 1024);
+    assert.equal(readSample(metrics, "geometryMemory"), 1024);
   });
 
   it("adds no GPU time unless the backend kept timestamp tracking", () => {
@@ -114,7 +114,7 @@ describe("RendererMetrics", () => {
     unsupported.backend.trackTimestamp = false;
 
     for (const renderer of [untracked, unsupported]) {
-      const ids = metricsOf(renderer).metrics.map((metric) => metric.id);
+      const ids = createMetrics(renderer).metrics.map((metric) => metric.id);
       assert.equal(ids.includes("gpuTime"), false);
     }
   });
@@ -129,22 +129,22 @@ describe("RendererMetrics", () => {
 
       return Promise.resolve(durations.shift());
     };
-    const metrics = metricsOf(renderer);
+    const metrics = createMetrics(renderer);
 
-    assert.equal(sampleOf(metrics, "gpuTime"), 0);
-
-    metrics.captureFrame();
-    await setImmediate();
-    assert.equal(sampleOf(metrics, "gpuTime"), 2.5);
+    assert.equal(readSample(metrics, "gpuTime"), 0);
 
     metrics.captureFrame();
     await setImmediate();
-    assert.equal(sampleOf(metrics, "gpuTime"), 2.5);
+    assert.equal(readSample(metrics, "gpuTime"), 2.5);
+
+    metrics.captureFrame();
+    await setImmediate();
+    assert.equal(readSample(metrics, "gpuTime"), 2.5);
     assert.deepEqual(resolved, ["render", "render"]);
   });
 
   it("files every metric under one group, outside the tile", () => {
-    const metrics = metricsOf(makeRenderer());
+    const metrics = createMetrics(makeRenderer());
 
     for (const metric of metrics.metrics) {
       assert.equal(metric.group, "renderer");

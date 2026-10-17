@@ -19,9 +19,6 @@ import type {
 const kBloomStrength = 1;
 const kBloomRadius = 0.4;
 
-/**
- * The render step whose output the glow replaces.
- */
 export interface GlowTarget {
   postProcessing: Systems.PostProcessing | null;
 }

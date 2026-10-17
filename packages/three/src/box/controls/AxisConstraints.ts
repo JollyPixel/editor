@@ -5,7 +5,7 @@ import * as THREE from "three";
 import type { Axis } from "../../common/axes.ts";
 import {
   type SnapStep,
-  snapStepFor,
+  resolveSnapStep,
   snapValue
 } from "../../common/snap.ts";
 import type { AxisRange } from "../types.ts";
@@ -25,9 +25,6 @@ export interface AxisConstraintsOptions {
   bounds?: THREE.Box3 | null;
 }
 
-/**
- * Resolves the snapping step, the minimum extent and the clamp range that apply to one axis.
- */
 export class AxisConstraints {
   readonly snap: SnapStep;
   readonly minSize: THREE.Vector3Like | null;
@@ -47,11 +44,11 @@ export class AxisConstraints {
     this.bounds = bounds;
   }
 
-  stepFor(
+  axisStep(
     axis: Axis,
     free = false
   ): number {
-    return free ? 0 : snapStepFor(this.snap, axis);
+    return free ? 0 : resolveSnapStep(this.snap, axis);
   }
 
   snapOn(
@@ -61,23 +58,23 @@ export class AxisConstraints {
   ): number {
     return snapValue(
       value,
-      this.stepFor(axis, free)
+      this.axisStep(axis, free)
     );
   }
 
-  minSizeFor(
+  axisMinSize(
     axis: Axis
   ): number {
     if (this.minSize !== null) {
       return this.minSize[axis];
     }
 
-    const step = this.stepFor(axis);
+    const step = this.axisStep(axis);
 
     return step > 0 ? step : 1;
   }
 
-  rangeFor(
+  axisRange(
     axis: Axis
   ): AxisRange | null {
     const { bounds } = this;

@@ -173,7 +173,7 @@ export class MapBlocksets
     return this.#editableBlockOwner(blockId) !== undefined;
   }
 
-  tileSizeFor(
+  blocksetTileSize(
     blocksetId: string
   ): number | undefined {
     return this.#bindings.get(blocksetId)?.opened.blockset.tileSize;
@@ -189,7 +189,7 @@ export class MapBlocksets
     blocksetId: string,
     size: number | undefined
   ): TilePosition | undefined {
-    const tileSize = this.tileSizeFor(blocksetId);
+    const tileSize = this.blocksetTileSize(blocksetId);
     if (tileSize === undefined) {
       return undefined;
     }

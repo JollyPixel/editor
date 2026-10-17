@@ -10,9 +10,6 @@ import {
 } from "./runtime.ts";
 import { tableReporter } from "./table.ts";
 
-/**
- * Batched rows include `ns/op`; `mean (ms)` covers the whole batch.
- */
 export interface BenchmarkRow {
   task: string;
   /**

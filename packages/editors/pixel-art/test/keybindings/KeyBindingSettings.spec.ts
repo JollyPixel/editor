@@ -111,8 +111,8 @@ describe("KeyBindingSettings", () => {
 
     assert.equal(received.length, 2);
     assert.equal(received[1], settings.keyBindings);
-    assert.deepEqual(received[0].chordsOf("undo").map(String), ["Mod+j"]);
-    assert.deepEqual(received[1].chordsOf("undo").map(String), ["Mod+z"]);
+    assert.deepEqual(received[0].chordsBoundTo("undo").map(String), ["Mod+j"]);
+    assert.deepEqual(received[1].chordsBoundTo("undo").map(String), ["Mod+z"]);
   });
 
   test("bind applies the current map and follows changes until released", () => {
@@ -131,6 +131,6 @@ describe("KeyBindingSettings", () => {
     release();
     settings.reset();
     assert.notEqual(target.keyBindings, settings.keyBindings);
-    assert.deepEqual(target.keyBindings.chordsOf("undo").map(String), ["Mod+j"]);
+    assert.deepEqual(target.keyBindings.chordsBoundTo("undo").map(String), ["Mod+j"]);
   });
 });

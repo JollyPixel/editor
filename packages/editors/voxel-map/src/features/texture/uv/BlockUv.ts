@@ -8,7 +8,7 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 import {
   UVRegion,
-  rotationOf,
+  geometryRotation,
   type SelectionRect,
   type UVGeometry,
   type UVQuarterTurn,
@@ -37,7 +37,7 @@ export class BlockUv extends BlockProjection {
     }
     if (a.state === "stacked" && b.state === "stacked") {
       return rectsEqual(a.rect, b.rect) &&
-        rotationOf(a.rect) === rotationOf(b.rect) &&
+        geometryRotation(a.rect) === geometryRotation(b.rect) &&
         geometriesEqual(a.faces, b.faces);
     }
     if (a.state !== "stacked" && b.state !== "stacked") {
@@ -94,13 +94,13 @@ export class BlockUv extends BlockProjection {
               throw new RangeError(`No texture template for UV slot "${face}"`);
             }
 
-            const geometry = region.geometryFor(face);
+            const geometry = region.slotGeometry(face);
 
             return [
               face,
               tileRefFromRect(
                 "shape" in geometry ? geometry.rect : geometry,
-                withTileRotation(template, rotationOf(geometry)),
+                withTileRotation(template, geometryRotation(geometry)),
                 tileSize,
                 shapeUv.bounds[face],
                 shapeUv.spans[face]
@@ -122,10 +122,10 @@ export class BlockUv extends BlockProjection {
       ...block,
       faceTextures: {},
       defaultTexture: tileRefFromRect(
-        region.rectFor(stackedSlot),
+        region.slotRect(stackedSlot),
         withTileRotation(
           template,
-          rotationOf(region.geometryFor(stackedSlot))
+          geometryRotation(region.slotGeometry(stackedSlot))
         ),
         tileSize,
         shapeUv.bounds[stackedSlot]

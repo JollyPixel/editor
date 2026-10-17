@@ -10,9 +10,6 @@ import {
   type AssetEvent
 } from "../events/AssetEvents.ts";
 
-/**
- * Physical state one asset stream asks for. `null` means "absent".
- */
 export interface AssetProjection {
   readonly path: string;
   readonly kind: string;

@@ -52,9 +52,6 @@ export interface AssetLoadBatchTask {
   load(): Promise<void>;
 }
 
-/**
- * Tracks the state and progress of one independent asset loading operation.
- */
 class RunningAssetLoadBatch implements AssetLoadBatch {
   readonly total: number;
   readonly done: Promise<void>;

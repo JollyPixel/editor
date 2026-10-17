@@ -8,7 +8,7 @@ import {
 import {
   ROOM_NAME,
   cursorPatch,
-  snapshotOf,
+  createSnapshot,
   strokeCommand
 } from "./_fixtures.ts";
 import { Envelope } from "../src/protocol/envelope/Envelope.ts";
@@ -41,7 +41,7 @@ const suite = defineSuite("network / Envelope", (bench) => {
     kind: "message",
     payload: {
       type: "snapshot",
-      data: snapshotOf(kSnapshotBytes),
+      data: createSnapshot(kSnapshotBytes),
       version: 1
     }
   });

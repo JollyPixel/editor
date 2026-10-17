@@ -14,7 +14,7 @@ import { evaluate } from "../src/numeric/evaluate.ts";
 import { valueFromDelta } from "../src/numeric/valueFromDelta.ts";
 import {
   BATCH,
-  batchOf,
+  createBatch,
   type Rng
 } from "./_fixtures.ts";
 
@@ -26,37 +26,37 @@ const kBounds = {
 };
 
 const suite = defineSuite("numeric", (bench) => {
-  const plain = batchOf((rng) => (rng() * 200 - 100).toFixed(2));
-  const expressions = batchOf(expression);
-  const integers = batchOf((rng) => Math.round(rng() * 400 - 200));
-  const decimals = batchOf((rng) => Math.round(rng() * 1e4) / 100);
-  const doubles = batchOf((rng) => rng() * 100);
-  const deltas = batchOf((rng) => Math.round(rng() * 400 - 200));
+  const plain = createBatch((rng) => (rng() * 200 - 100).toFixed(2));
+  const expressions = createBatch(expression);
+  const integers = createBatch((rng) => Math.round(rng() * 400 - 200));
+  const decimals = createBatch((rng) => Math.round(rng() * 1e4) / 100);
+  const doubles = createBatch((rng) => rng() * 100);
+  const deltas = createBatch((rng) => Math.round(rng() * 400 - 200));
 
   bench
-    .add("evaluate plain", () => sumOf(plain, (text) => valueOf(evaluate(text))))
-    .add("evaluate expression", () => sumOf(expressions, (text) => valueOf(evaluate(text))))
-    .add("parseNumericEntry", () => sumOf(
+    .add("evaluate plain", () => sumBy(plain, (text) => valueOf(evaluate(text))))
+    .add("evaluate expression", () => sumBy(expressions, (text) => valueOf(evaluate(text))))
+    .add("parseNumericEntry", () => sumBy(
       expressions,
       (text) => valueOf(parseNumericEntry(text, kBounds))
     ))
-    .add("formatNumber integer step 1", () => sumOf(
+    .add("formatNumber integer step 1", () => sumBy(
       integers,
       (value) => formatNumber(value, 1).length
     ))
-    .add("formatNumber 2dp step 0.01", () => sumOf(
+    .add("formatNumber 2dp step 0.01", () => sumBy(
       decimals,
       (value) => formatNumber(value, 0.01).length
     ))
-    .add("formatNumber double step 0.01", () => sumOf(
+    .add("formatNumber double step 0.01", () => sumBy(
       doubles,
       (value) => formatNumber(value, 0.01).length
     ))
-    .add("quantize step 0.1", () => sumOf(
+    .add("quantize step 0.1", () => sumBy(
       doubles,
       (value) => quantize(value, 0.1, -50, 50)
     ))
-    .add("valueFromDelta", () => sumOf(
+    .add("valueFromDelta", () => sumBy(
       deltas,
       (deltaPx) => valueFromDelta({
         start: 1.25,
@@ -64,7 +64,7 @@ const suite = defineSuite("numeric", (bench) => {
         step: 0.05
       })
     ))
-    .add("valueFromDelta known precision", () => sumOf(
+    .add("valueFromDelta known precision", () => sumBy(
       deltas,
       (deltaPx) => valueFromDelta({
         start: 1.25,
@@ -97,7 +97,7 @@ function valueOf(
   return result?.ok ? result.value : 0;
 }
 
-function sumOf<T>(
+function sumBy<T>(
   items: T[],
   read: (item: T) => number
 ): number {

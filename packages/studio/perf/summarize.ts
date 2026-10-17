@@ -75,7 +75,7 @@ const summary = new MarkdownTable(
   { fractionDigits: 0 }
 );
 for (const group of groups) {
-  summary.add(columns.map(({ cell }) => cell(group, controlFor(group))));
+  summary.add(columns.map(({ cell }) => cell(group, findControlGroup(group))));
 }
 console.log(String(summary));
 
@@ -104,7 +104,7 @@ if (args.steps) {
   console.log(`\n${steps}`);
 }
 
-function controlFor(
+function findControlGroup(
   group: OpenGroup
 ): OpenGroup | undefined {
   if (args.control === undefined || group.sample.label === args.control) {

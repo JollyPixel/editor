@@ -7,18 +7,10 @@ import {
 } from "../storage/packedVoxel.ts";
 import type { VoxelCoord } from "../types.ts";
 
-/**
- * Number of values per cell in a `VoxelPatchCells` array.
- */
 export const VOXEL_PATCH_STRIDE = 5;
 
 export const VOXEL_PATCH_PARTNER_STRIDE = 3;
 
-/**
- * Flat list of cell writes, `VOXEL_PATCH_STRIDE` numbers per cell:
- * `x, y, z, blockId, transform`. A `blockId` of `0` (air) removes the voxel.
- * Positions are world-space.
- */
 export type VoxelPatchCells = number[];
 
 export type VoxelPatchPartners = number[];

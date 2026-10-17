@@ -213,7 +213,7 @@ export class AnimatePanelController {
     section: AnimateSection
   ): (detail: JollyReparentDetail) => boolean {
     return ({ movedIds, targetId, where }) => {
-      const nodes = this.#nodesOf(section);
+      const nodes = this.#sectionNodes(section);
       const target = asClipRow(findRow(nodes, targetId));
 
       return target !== null && where !== "inside" && movedIds.every(
@@ -226,7 +226,7 @@ export class AnimatePanelController {
     section: AnimateSection,
     event: CustomEvent<JollyReparentDetail>
   ): void {
-    const nodes = this.#nodesOf(section);
+    const nodes = this.#sectionNodes(section);
     const [move] = resolveReparentMoves({ nodes, ...event.detail });
     const row = asClipRow(findRow(nodes, move?.id));
     if (move !== undefined && row !== null) {
@@ -249,7 +249,7 @@ export class AnimatePanelController {
       return MenuSession.forRow(
         this.#writableEntries(SET_MENU),
         exists,
-        (action) => this.#setAction(actions, action, row.setId)
+        (action) => this.#runSetAction(actions, action, row.setId)
       );
     }
 
@@ -341,7 +341,7 @@ export class AnimatePanelController {
     }
   }
 
-  async #setAction(
+  async #runSetAction(
     actions: AnimateActions,
     action: SetAction,
     setId: string
@@ -367,7 +367,7 @@ export class AnimatePanelController {
       disableEntries(entries, () => true);
   }
 
-  #nodesOf(
+  #sectionNodes(
     section: AnimateSection
   ): TreeNode<RowTarget>[] {
     return section === "own" ? this.#state.ownClips : this.#state.sharedSets;

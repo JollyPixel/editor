@@ -21,14 +21,14 @@ function createMask(
   return mask;
 }
 
-describe("materialsFor", () => {
+describe("maskMaterials", () => {
   test("resolves materials only for a mesh with an added instance", () => {
     const mesh = createInstancedMesh();
     const mask = createMask(mesh, 3);
 
     assert.strictEqual(mask.size, 1);
-    assert.ok(mask.materialsFor(mesh));
-    assert.strictEqual(mask.materialsFor(createInstancedMesh()), undefined);
+    assert.ok(mask.maskMaterials(mesh));
+    assert.strictEqual(mask.maskMaterials(createInstancedMesh()), undefined);
   });
 
   test("resolves nothing once cleared", () => {
@@ -38,7 +38,7 @@ describe("materialsFor", () => {
     mask.clear();
 
     assert.strictEqual(mask.size, 0);
-    assert.strictEqual(mask.materialsFor(mesh), undefined);
+    assert.strictEqual(mask.maskMaterials(mesh), undefined);
   });
 });
 
@@ -46,21 +46,21 @@ describe("sync", () => {
   test("keeps the materials while the instance count is unchanged", () => {
     const mesh = createInstancedMesh();
     const mask = createMask(mesh);
-    const before = mask.materialsFor(mesh)!;
+    const before = mask.maskMaterials(mesh)!;
     const counts = watchDisposal(before.material, before.priorityMaterial);
 
     mask.clear();
     mask.add(mesh, 4, new THREE.Color("#00ff00"), true);
     mask.sync();
 
-    assert.strictEqual(mask.materialsFor(mesh)!.material, before.material);
+    assert.strictEqual(mask.maskMaterials(mesh)!.material, before.material);
     assert.deepStrictEqual(counts, [0, 0]);
   });
 
   test("replaces and releases the materials once the instance count changes", () => {
     const mesh = createInstancedMesh();
     const mask = createMask(mesh);
-    const before = mask.materialsFor(mesh)!;
+    const before = mask.maskMaterials(mesh)!;
     const counts = watchDisposal(before.material, before.priorityMaterial);
 
     mesh.count = 20;
@@ -68,7 +68,7 @@ describe("sync", () => {
     mask.add(mesh, 15, new THREE.Color("#00ff00"), false);
     mask.sync();
 
-    assert.notStrictEqual(mask.materialsFor(mesh)!.material, before.material);
+    assert.notStrictEqual(mask.maskMaterials(mesh)!.material, before.material);
     assert.deepStrictEqual(counts, [1, 1]);
   });
 });
@@ -77,12 +77,12 @@ describe("dispose", () => {
   test("releases every material and forgets every mesh", () => {
     const mesh = createInstancedMesh();
     const mask = createMask(mesh);
-    const { material, priorityMaterial } = mask.materialsFor(mesh)!;
+    const { material, priorityMaterial } = mask.maskMaterials(mesh)!;
     const counts = watchDisposal(material, priorityMaterial);
 
     mask.dispose();
 
     assert.deepStrictEqual(counts, [1, 1]);
-    assert.strictEqual(mask.materialsFor(mesh), undefined);
+    assert.strictEqual(mask.maskMaterials(mesh), undefined);
   });
 });

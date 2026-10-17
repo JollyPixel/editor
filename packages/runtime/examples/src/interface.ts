@@ -8,9 +8,6 @@ import {
 // Import Internal Dependencies
 import { bootstrapRuntime } from "./utils/bootstrapRuntime.ts";
 
-/**
- * Declares and constructs the GUI example scene.
- */
 class InterfaceScene extends Systems.Scene {
   constructor() {
     super("interface");

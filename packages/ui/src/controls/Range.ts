@@ -24,9 +24,6 @@ export interface RangeDefaults {
   to: number;
 }
 
-/**
- * Edits a bounded interval whose endpoints cannot cross.
- */
 @customElement("jolly-range")
 export class Range extends JollyField<Interval> {
   static readonly Defaults: RangeDefaults = {

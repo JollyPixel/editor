@@ -13,12 +13,12 @@ import {
 import { formatHex } from "../src/format.ts";
 import {
   BATCH,
-  batchOf,
+  createBatch,
   unitRgba
 } from "./_fixtures.ts";
 
 const suite = defineSuite("contrast", (bench) => {
-  const colors = batchOf(unitRgba);
+  const colors = createBatch(unitRgba);
   const hexColors = colors.map((color) => formatHex(color));
 
   bench

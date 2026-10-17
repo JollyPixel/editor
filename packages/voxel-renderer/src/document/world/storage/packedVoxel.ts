@@ -12,19 +12,10 @@ import {
 // CONSTANTS
 const kTransformBits = 8;
 
-/**
- * Highest storable block id. The transform takes a byte, leaving 23 bits.
- */
 export const MAX_BLOCK_ID = 0x7FFFFF;
 
-/**
- * Negative sentinel returned when no voxel is present.
- */
 export const VOXEL_ABSENT = -1;
 
-/**
- * Packed voxel with block ID in bits 8-30 and transform in bits 0-7.
- */
 export type PackedVoxel = number;
 
 export function packVoxel(

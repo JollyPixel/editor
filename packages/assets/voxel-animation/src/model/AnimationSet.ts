@@ -21,7 +21,7 @@ export type AnimationSetReader = Pick<
   | "clip"
   | "clips"
   | "trackPaths"
-  | "nextClipOf"
+  | "nextClipAfter"
   | "clipNameTaken"
   | "freeClipName"
   | "track"
@@ -75,7 +75,7 @@ export class AnimationSet {
     return [...paths.values()];
   }
 
-  nextClipOf(
+  nextClipAfter(
     clipId: string
   ): string | undefined {
     const order = [...this.#clips.keys()];
@@ -121,7 +121,7 @@ export class AnimationSet {
         return true;
       case "clip-added":
         return !this.#clips.has(command.clip.id) &&
-          AnimationClip.problemOf(command.clip) === null &&
+          AnimationClip.findProblem(command.clip) === null &&
           this.#isSlot(command.beforeId, command.clip.id);
       case "clip-removed":
         return this.#clips.has(command.id);

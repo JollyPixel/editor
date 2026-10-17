@@ -6,9 +6,6 @@ import type {
 } from "../FrameSource.ts";
 import type { FrameSchedulerOptions } from "../FrameScheduler.ts";
 
-/**
- * Named frame deltas and scheduler options replayed through `run()`.
- */
 export interface FrameTape {
   name: string;
   /**
@@ -22,9 +19,6 @@ export interface FrameTape {
   deltas: number[];
 }
 
-/**
- * Emits frames only through `start()`, `step()`, or `run()`.
- */
 export class ManualFrameSource implements FrameSource {
   readonly clock: ManualClock;
 

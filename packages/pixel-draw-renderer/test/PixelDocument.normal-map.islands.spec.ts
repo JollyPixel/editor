@@ -26,7 +26,7 @@ describe("PixelDocument normal map", () => {
 
       assert.equal(changes, 1);
       assert.notEqual(doc.islands, islands);
-      assert.equal(doc.islands.islandsOf("tile").length, 1);
+      assert.equal(doc.islands.islandsInRegion("tile").length, 1);
     });
 
     test("are rebuilt after a resize", () => {
@@ -43,11 +43,11 @@ describe("PixelDocument normal map", () => {
 
     test("an idle normal map reads the current islands", () => {
       const doc = createNormalMapDocument();
-      assert.equal(doc.normals.islands.islandsOf("tile").length, 0);
+      assert.equal(doc.normals.islands.islandsInRegion("tile").length, 0);
 
       addRegion(doc, "tile");
 
-      assert.equal(doc.normals.islands.islandsOf("tile").length, 1);
+      assert.equal(doc.normals.islands.islandsInRegion("tile").length, 1);
     });
 
     test("follow the supplied faces instead of the UV regions", () => {
@@ -63,8 +63,8 @@ describe("PixelDocument normal map", () => {
       addRegion(doc, "tile");
 
       assert.equal(changes, 1);
-      assert.equal(doc.islands.islandsOf("brick").length, 1);
-      assert.equal(doc.islands.islandsOf("tile").length, 0);
+      assert.equal(doc.islands.islandsInRegion("brick").length, 1);
+      assert.equal(doc.islands.islandsInRegion("tile").length, 0);
 
       faces.push({
         regionId: "glass",
@@ -73,13 +73,13 @@ describe("PixelDocument normal map", () => {
       doc.invalidateIslands();
 
       assert.equal(changes, 2);
-      assert.equal(doc.islands.islandsOf("glass").length, 1);
+      assert.equal(doc.islands.islandsInRegion("glass").length, 1);
 
       release();
 
       assert.equal(changes, 3);
-      assert.equal(doc.islands.islandsOf("brick").length, 0);
-      assert.equal(doc.islands.islandsOf("tile").length, 1);
+      assert.equal(doc.islands.islandsInRegion("brick").length, 0);
+      assert.equal(doc.islands.islandsInRegion("tile").length, 1);
     });
 
     test("a stale release keeps the newer faces", () => {
@@ -92,7 +92,7 @@ describe("PixelDocument normal map", () => {
 
       release();
 
-      assert.equal(doc.islands.islandsOf("brick").length, 1);
+      assert.equal(doc.islands.islandsInRegion("brick").length, 1);
     });
   });
 });

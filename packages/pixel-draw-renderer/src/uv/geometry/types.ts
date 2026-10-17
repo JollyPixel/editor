@@ -1,14 +1,8 @@
 // Import Internal Dependencies
 import type { SelectionRect } from "../../types.ts";
 
-/**
- * Consumer-defined texture slot identifier.
- */
 export type UVSlot = string;
 
-/**
- * Clockwise quarter turns in texture space, where y points down.
- */
 export type UVQuarterTurn = 0 | 1 | 2 | 3;
 
 export type UVRegionState =
@@ -41,9 +35,6 @@ export type UVCompoundPart =
     corner: UVTriangleCorner;
   };
 
-/**
- * Rectangle in normalized local geometry space.
- */
 export interface UVNormalizedRect {
   x: number;
   y: number;

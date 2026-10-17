@@ -151,7 +151,7 @@ describe("ModelBlock pivot placement", () => {
 });
 
 describe("ModelBlock shape", () => {
-  function verticesOf(
+  function readVertices(
     geometry: THREE.BufferGeometry,
     name: string
   ): number[][] {
@@ -171,10 +171,10 @@ describe("ModelBlock shape", () => {
     const { geometry } = block.mesh;
 
     assert.deepEqual(
-      verticesOf(geometry, "position").map(([x, y, z]) => [Math.abs(x), y, Math.abs(z)]),
+      readVertices(geometry, "position").map(([x, y, z]) => [Math.abs(x), y, Math.abs(z)]),
       Array.from({ length: 4 }, () => [1, 0, 2])
     );
-    assert.deepEqual(verticesOf(geometry, "normal"), Array.from({ length: 4 }, () => [0, 1, 0]));
+    assert.deepEqual(readVertices(geometry, "normal"), Array.from({ length: 4 }, () => [0, 1, 0]));
     assert.equal(geometry.getIndex()?.count, 6);
   });
 
@@ -187,8 +187,8 @@ describe("ModelBlock shape", () => {
 
     const plain = createBlock({ shape, size: new THREE.Vector3(2, 1, 1) });
     assert.deepEqual(
-      verticesOf(block.mesh.geometry, "position"),
-      verticesOf(plain.mesh.geometry, "position").map(([x, y, z]) => [0 - x, y, z])
+      readVertices(block.mesh.geometry, "position"),
+      readVertices(plain.mesh.geometry, "position").map(([x, y, z]) => [0 - x, y, z])
     );
   });
 

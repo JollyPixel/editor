@@ -40,9 +40,6 @@ export interface RoomRegistryOptions {
   validateOutbound?: boolean;
 }
 
-/**
- * Owns room resolution and eviction; membership lives in each room.
- */
 export class RoomRegistry {
   #logger: Logger;
   #rights: RightsTable;
@@ -65,7 +62,7 @@ export class RoomRegistry {
     this.#validateOutbound = options.validateOutbound;
   }
 
-  setResolver(
+  useResolver(
     resolver: RoomResolver | null
   ): void {
     this.#resolver = resolver;

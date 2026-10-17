@@ -60,11 +60,6 @@ const kRules: Record<keyof FrameSchedulerOptions, NumberRule> = {
   snapTolerance: { min: 0 }
 };
 
-/**
- * Turns wall-clock timestamps into fixed simulation steps.
- * Clamps long frames and discards time beyond `maxStepsPerFrame`.
- * All time values use milliseconds.
- */
 export class FrameScheduler {
   #fixedFps = kDefaults.fixedFps;
   #fixedDelta = 1000 / kDefaults.fixedFps;

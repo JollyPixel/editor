@@ -70,7 +70,7 @@ export class ColorSwatch extends LitElement {
     }
   }
 
-  setColor(
+  applyColor(
     hex: string,
     opacity = 1
   ): void {

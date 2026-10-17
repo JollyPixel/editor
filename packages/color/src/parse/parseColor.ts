@@ -21,9 +21,6 @@ import type {
 const kHash = 0x23;
 const kCloseParen = 0x29;
 
-/**
- * Returns `null` for partial input so fields can parse every keystroke.
- */
 export function parseColor(
   input: string
 ): RGBA | null {

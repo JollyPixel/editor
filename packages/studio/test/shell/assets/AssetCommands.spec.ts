@@ -15,7 +15,7 @@ import {
   type AssetRelocation
 } from "../../../src/catalog/AssetTreeModel.ts";
 import { commandsFailingAt } from "../../helpers/assetCommands.ts";
-import { companionModelOf } from "../../helpers/assetTree.ts";
+import { createCompanionModel } from "../../helpers/assetTree.ts";
 
 // CONSTANTS
 const kMaps = folderNodeId(AssetPath.parse("maps"));
@@ -25,7 +25,7 @@ const kMapKind: AssetKindEntry = {
   extension: ".voxelmap.json"
 };
 
-function relocationOf(
+function createRelocation(
   from: string,
   to: string,
   count: number
@@ -71,7 +71,7 @@ describe("AssetCommands", () => {
 
   test("says how many renames of a folder went through and returns it", async() => {
     const { commands, errors } = commandsFailingAt(2);
-    const relocation = relocationOf("maps", "worlds", 3);
+    const relocation = createRelocation("maps", "worlds", 3);
 
     assert.equal(await commands.relocate([relocation], "rename"), relocation);
     assert.deepEqual(errors, ['Renamed 2 of 3 assets under "maps": disk full']);
@@ -79,10 +79,10 @@ describe("AssetCommands", () => {
 
   test("counts every asset of a move of several rows", async() => {
     const { commands, errors, calls } = commandsFailingAt(2);
-    const failed = relocationOf("models", "world/models", 2);
+    const failed = createRelocation("models", "world/models", 2);
 
     assert.equal(
-      await commands.relocate([relocationOf("maps", "world/maps", 1), failed], "move"),
+      await commands.relocate([createRelocation("maps", "world/maps", 1), failed], "move"),
       failed
     );
     assert.deepEqual(errors, ["Moved 2 of 3 assets: disk full"]);
@@ -93,8 +93,8 @@ describe("AssetCommands", () => {
     const { commands, lists, calls } = commandsFailingAt(-1);
 
     await commands.relocate([
-      relocationOf("maps", "world/maps", 2),
-      relocationOf("models", "world/models", 1)
+      createRelocation("maps", "world/maps", 2),
+      createRelocation("models", "world/models", 1)
     ], "move");
 
     assert.deepEqual(lists, ["rename 3"]);
@@ -107,7 +107,7 @@ describe("AssetCommands", () => {
   test("deletes the assets of a deletion in one list", async() => {
     const { commands, lists } = commandsFailingAt(-1);
 
-    await commands.remove(companionModelOf().deletionOf([kMaps]), true);
+    await commands.remove(createCompanionModel().planDeletion([kMaps]), true);
 
     assert.deepEqual(lists, ["remove 3"]);
   });
@@ -115,20 +115,20 @@ describe("AssetCommands", () => {
   test("names the project root when a move there fails", async() => {
     const { commands, errors } = commandsFailingAt(0);
 
-    await commands.relocate([relocationOf("maps/old", "old", 1)], "move");
+    await commands.relocate([createRelocation("maps/old", "old", 1)], "move");
 
     assert.deepEqual(errors, ['Could not move "old" to the project root: disk full']);
   });
 
   test("says how many deletions went through, under a folder or not", async() => {
-    const model = companionModelOf();
+    const model = createCompanionModel();
     const owner = commandsFailingAt(1);
     await owner.commands.remove(
-      model.deletionOf([assetNodeId("map-overworld")]),
+      model.planDeletion([assetNodeId("map-overworld")]),
       true
     );
     const folder = commandsFailingAt(1);
-    await folder.commands.remove(model.deletionOf([kMaps]), true);
+    await folder.commands.remove(model.planDeletion([kMaps]), true);
 
     assert.deepEqual(owner.errors, ["Deleted 1 of 2 assets: disk full"]);
     assert.deepEqual(folder.errors, ['Deleted 1 of 3 assets under "maps": disk full']);
@@ -148,7 +148,7 @@ describe("AssetCommands", () => {
     const { commands, calls } = commandsFailingAt(-1);
 
     assert.equal(
-      await commands.relocate([relocationOf("maps", "worlds", 1)], "rename"),
+      await commands.relocate([createRelocation("maps", "worlds", 1)], "rename"),
       null
     );
     assert.deepEqual(calls, [
@@ -161,7 +161,7 @@ describe("AssetCommands", () => {
     const { commands, errors } = commandsFailingAt(1);
 
     assert.equal(
-      await commands.relocate([relocationOf("maps", "worlds", 1)], "rename"),
+      await commands.relocate([createRelocation("maps", "worlds", 1)], "rename"),
       null
     );
     assert.deepEqual(errors, ['Could not finish renaming "maps": disk full']);
@@ -170,7 +170,7 @@ describe("AssetCommands", () => {
   test("leaves the folders alone when an asset moves", async() => {
     const { commands, calls } = commandsFailingAt(-1);
     const relocation: AssetRelocation = {
-      ...relocationOf("maps/a.png", "a.png", 1),
+      ...createRelocation("maps/a.png", "a.png", 1),
       type: "asset"
     };
 
@@ -181,7 +181,7 @@ describe("AssetCommands", () => {
 
   test("deletes the folders of a deletion after their assets", async() => {
     const { commands, calls } = commandsFailingAt(-1);
-    const deletion = companionModelOf().deletionOf([kMaps]);
+    const deletion = createCompanionModel().planDeletion([kMaps]);
 
     await commands.remove(deletion, false);
 
@@ -194,7 +194,7 @@ describe("AssetCommands", () => {
     const model = new AssetTreeModel([], { folders: [drafts] });
     const { commands, errors } = commandsFailingAt(0);
 
-    await commands.remove(model.deletionOf([folderNodeId(drafts)]), false);
+    await commands.remove(model.planDeletion([folderNodeId(drafts)]), false);
 
     assert.deepEqual(errors, ['Could not delete "drafts": disk full']);
   });
@@ -206,7 +206,7 @@ describe("AssetCommands", () => {
     const { commands, calls, errors } = commandsFailingAt(0);
 
     await commands.remove(
-      model.deletionOf([folderNodeId(drafts), folderNodeId(scratch)]),
+      model.planDeletion([folderNodeId(drafts), folderNodeId(scratch)]),
       false
     );
 

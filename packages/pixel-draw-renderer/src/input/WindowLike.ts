@@ -1,6 +1,3 @@
-/**
- * Injectable subset of `Window` used for global input events.
- */
 export interface WindowLike {
   addEventListener(
     type: "mousemove",

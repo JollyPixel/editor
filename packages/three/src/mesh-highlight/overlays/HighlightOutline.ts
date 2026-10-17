@@ -41,9 +41,6 @@ export interface HighlightOutlineOptions {
   dashed?: boolean;
 }
 
-/**
- * Draws a mesh's edges without modifying its material.
- */
 export class HighlightOutline extends THREE.LineSegments<THREE.BufferGeometry, THREE.LineBasicMaterial> {
   constructor(
     options: HighlightOutlineOptions

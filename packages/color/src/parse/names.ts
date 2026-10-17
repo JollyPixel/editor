@@ -1,6 +1,3 @@
-/**
- * Omits `transparent` because the parser handles its alpha separately.
- */
 export const kNamedColors: ReadonlyMap<string, number> = new Map([
   ["aliceblue", 0xf0f8ff],
   ["antiquewhite", 0xfaebd7],

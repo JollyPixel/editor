@@ -17,8 +17,8 @@ import {
   dependentRequired,
   describeErrors,
   minProperties,
-  notMultipleOf,
-  requiredAnyOf
+  notMultiple,
+  requireAnyGroup
 } from "#src/protocol/schema.ts";
 
 // CONSTANTS
@@ -48,7 +48,7 @@ const kSchemas = {
     }),
     { from: ["content"] }
   ),
-  requiredAnyOf: requiredAnyOf(
+  requireAnyGroup: requireAnyGroup(
     z.object({
       src: z.optional(z.string()),
       size: z.optional(z.int()),
@@ -56,7 +56,7 @@ const kSchemas = {
     }),
     [["src", "size"], ["asset"]]
   ),
-  notMultipleOf: notMultipleOf(z.int(), 2)
+  notMultiple: notMultiple(z.int(), 2)
 };
 const kValues: unknown[] = [
   null,

@@ -13,13 +13,13 @@ import {
 } from "../src/palette/deterministic.ts";
 import {
   BATCH,
-  batchOf,
+  createBatch,
   hexPair
 } from "./_fixtures.ts";
 
 const suite = defineSuite("palette", (bench) => {
-  const shortKeys = batchOf((rng) => `peer-${Math.floor(rng() * 1e6)}`);
-  const longKeys = batchOf(
+  const shortKeys = createBatch((rng) => `peer-${Math.floor(rng() * 1e6)}`);
+  const longKeys = createBatch(
     (rng) => Array.from({ length: 16 }, () => hexPair(rng)).join("")
   );
   const palette = new ColorPalette();

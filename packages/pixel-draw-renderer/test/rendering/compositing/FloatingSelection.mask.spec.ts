@@ -11,7 +11,7 @@ import {
 } from "#src/rendering/compositing/FloatingSelection.ts";
 import {
   canvasPixels,
-  contextOf,
+  context2d,
   readPixel
 } from "../../fixtures/canvas.ts";
 import { makeCanvas } from "../../helpers/dom.ts";
@@ -39,7 +39,7 @@ describe("FloatingSelection", () => {
 
       const dest = makeCanvas(10);
       overlay.draw(
-        contextOf(dest)
+        context2d(dest)
       );
 
       assert.deepStrictEqual(
@@ -77,7 +77,7 @@ describe("FloatingSelection", () => {
         });
 
         const dest = makeCanvas(10);
-        const destCtx = contextOf(dest);
+        const destCtx = context2d(dest);
         const underlying = destCtx.createImageData(2, 1);
         underlying.data.set([
           0, 255, 0, 255,

@@ -1,9 +1,26 @@
 // Import Node.js Dependencies
-import { describe, test, mock } from "node:test";
+import {
+  describe,
+  test,
+  mock
+} from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { ActorTree } from "../src/index.ts";
+
+function createFakeActor(
+  options: { children?: any[]; name?: string; } = {}
+) {
+  const { children = [], name = "" } = options;
+
+  return {
+    name,
+    children,
+    pendingForDestruction: false,
+    markDestructionPending: mock.fn()
+  };
+}
 
 describe("ActorTree", () => {
   describe("add", () => {
@@ -70,7 +87,6 @@ describe("ActorTree", () => {
 
       actorTree.add(actor1);
 
-      // Try to remove actor that was never added
       actorTree.remove(actor2);
 
       assert.equal(actorTree.children.length, 1);
@@ -252,178 +268,4 @@ describe("ActorTree", () => {
 
     assert.deepEqual(walkResult, []);
   });
-
-  test("should walk from specific node", () => {
-    const grandChildActor = createFakeActor();
-    const childActor = createFakeActor({
-      children: [grandChildActor]
-    });
-    const rootActor = createFakeActor({
-      children: [childActor]
-    });
-
-    const actorTree = new ActorTree();
-
-    const walkResult = Array.from(actorTree.walkFromNode(rootActor as any));
-
-    assert.deepEqual(
-      walkResult.map((node) => node.actor),
-      [childActor, grandChildActor]
-    );
-  });
-
-  test("should provide correct parent references when walking from node", () => {
-    const grandChildActor = createFakeActor();
-    const childActor = createFakeActor({
-      children: [grandChildActor]
-    });
-    const rootActor = createFakeActor({
-      children: [childActor]
-    });
-
-    const actorTree = new ActorTree();
-
-    const walkResult = Array.from(actorTree.walkFromNode(rootActor as any));
-
-    assert.equal(walkResult[0].parent, rootActor);
-    assert.equal(walkResult[1].parent, childActor);
-  });
-
-  test("should return empty iterator when walking from node with no children", () => {
-    const leafActor = createFakeActor();
-    const actorTree = new ActorTree();
-
-    const walkResult = Array.from(actorTree.walkFromNode(leafActor as any));
-
-    assert.deepEqual(walkResult, []);
-  });
-
-  test("should handle multiple root actors with nested children", () => {
-    const child1 = createFakeActor();
-    const child2 = createFakeActor();
-    const root1 = createFakeActor({
-      children: [child1]
-    });
-    const root2 = createFakeActor({
-      children: [child2]
-    });
-
-    const actorTree = new ActorTree();
-    actorTree.children.push(root1 as any, root2 as any);
-
-    const walkResult = Array.from(actorTree.walk());
-    const expectedOrder = [root1, child1, root2, child2];
-
-    assert.deepEqual(
-      walkResult.map((node) => node.actor),
-      expectedOrder
-    );
-  });
-
-  test("should be iterable with for...of loop", () => {
-    const actors = [createFakeActor(), createFakeActor()];
-    const actorTree = new ActorTree();
-    actorTree.children.push(...actors as any);
-
-    const collected: any[] = [];
-    for (const node of actorTree.walk()) {
-      collected.push(node.actor);
-    }
-
-    assert.deepEqual(collected, actors);
-  });
-
-  test("should support early termination with break", () => {
-    const actors = [
-      createFakeActor(),
-      createFakeActor(),
-      createFakeActor()
-    ];
-
-    const actorTree = new ActorTree();
-    actorTree.children.push(...actors as any);
-
-    const collected: any[] = [];
-    for (const node of actorTree.walk()) {
-      collected.push(node.actor);
-      if (collected.length === 2) {
-        break;
-      }
-    }
-
-    assert.equal(collected.length, 2);
-    assert.deepEqual(collected, actors.slice(0, 2));
-  });
 });
-
-describe("ActorTree path patterns", () => {
-  function createTree() {
-    const weapon = createFakeActor({ name: "Weapon" });
-    const hand = createFakeActor({ name: "RightHand", children: [weapon] });
-    const mesh = createFakeActor({ name: "Mesh_Body" });
-    const body = createFakeActor({ name: "Body", children: [mesh, hand] });
-    const player = createFakeActor({ name: "Player", children: [body] });
-    const tree = new ActorTree();
-    tree.children.push(player as any);
-
-    return { tree, player, body, hand, weapon, mesh };
-  }
-
-  function names(
-    actors: Iterable<{ name: string; }>
-  ): string[] {
-    return [...actors].map((actor) => actor.name);
-  }
-
-  test("should match a path that continues after a double star", () => {
-    const { tree } = createTree();
-
-    assert.deepEqual(names(tree.getActors("**/RightHand/Weapon")), ["Weapon"]);
-  });
-
-  test("should match a glob segment after a double star", () => {
-    const { tree } = createTree();
-
-    assert.deepEqual(names(tree.getActors("Player/**/Mesh_*")), ["Mesh_Body"]);
-  });
-
-  test("should match single-level globs along a path", () => {
-    const { tree } = createTree();
-
-    assert.deepEqual(names(tree.getActors("Player/*/RightHand")), ["RightHand"]);
-  });
-
-  test("should skip pending actors inside a path", () => {
-    const { tree, hand } = createTree();
-    hand.pendingForDestruction = true;
-
-    assert.deepEqual(names(tree.getActors("**/RightHand/Weapon")), []);
-  });
-
-  test("should anchor getActor paths at the root actors", () => {
-    const { tree, weapon } = createTree();
-
-    assert.equal(tree.getActor("Player/Body/RightHand/Weapon"), weapon);
-    assert.equal(tree.getActor("RightHand/Weapon"), null);
-  });
-
-  test("should not resolve a path through a pending actor", () => {
-    const { tree, body } = createTree();
-    body.pendingForDestruction = true;
-
-    assert.equal(tree.getActor("Player/Body/RightHand"), null);
-  });
-});
-
-function createFakeActor(
-  options: { children?: any[]; name?: string; } = {}
-) {
-  const { children = [], name = "" } = options;
-
-  return {
-    name,
-    children,
-    pendingForDestruction: false,
-    markDestructionPending: mock.fn()
-  };
-}

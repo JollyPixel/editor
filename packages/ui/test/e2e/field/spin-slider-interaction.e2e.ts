@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import {
-  boxOf,
+  measureBox,
   scrubBy
 } from "@jolly-pixel/e2e";
 
@@ -26,7 +26,7 @@ test.describe("spin slider", () => {
 
   test("a drag over a quarter of the bar moves a quarter of the range and commits once", async({ page }) => {
     const field = row(page, "jolly-spin-slider", "default");
-    const bar = await boxOf(field.locator(".bar"));
+    const bar = await measureBox(field.locator(".bar"));
 
     await scrubBy(page, field.locator("input"), bar.width / 4);
 
@@ -48,7 +48,7 @@ test.describe("spin slider", () => {
 
   test("pressing the bar jumps to that point", async({ page }) => {
     const bar = row(page, "jolly-spin-slider", "default").locator(".bar");
-    const box = await boxOf(bar);
+    const box = await measureBox(bar);
 
     await bar.click({
       position: {

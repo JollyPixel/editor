@@ -42,17 +42,8 @@ import {
 // CONSTANTS
 const kDiscardThreshold = 0.003;
 
-/**
- * `"lines"` draws continuous grid lines.
- * `"cross"` draws short plus marks at intersections.
- */
 export type GridStyle = "lines" | "cross";
 
-/**
- * `"camera"` fades around the camera's in-plane position.
- * `"origin"` fades around the plane origin.
- * `"target"` fades around the target and falls back to the camera when cleared.
- */
 export type GridFadeFrom = "camera" | "origin" | "target";
 
 export interface GridUniformOptions {
@@ -76,9 +67,6 @@ export interface GridUniformOptions {
   offset: number;
 }
 
-/**
- * Builds uniforms for the live `Grid` properties.
- */
 export function createGridUniforms(
   options: GridUniformOptions
 ) {
@@ -101,17 +89,12 @@ export function createGridUniforms(
     yAxisColor: uniform(new THREE.Color(options.yAxisColor)),
     zAxisColor: uniform(new THREE.Color(options.zAxisColor)),
     offset: uniform(options.offset, "float"),
-    // `Grid` updates this fade anchor every frame in target mode.
     targetPosition: uniform(new THREE.Vector3())
   };
 }
 
 export type GridUniforms = ReturnType<typeof createGridUniforms>;
 
-/**
- * AA grid-line test from Bgolus's "Pristine Grid".
- * `uv` is cell-scaled; `lineWidthPx` is in pixels.
- */
 const pristineGrid = Fn(([uv, lineWidthPx]: [Node<"vec2">, Node<"float">]) => {
   const uvDeriv = vec2(
     length(vec2(dFdx(uv.x), dFdy(uv.x))),
@@ -129,7 +112,6 @@ const pristineGrid = Fn(([uv, lineWidthPx]: [Node<"vec2">, Node<"float">]) => {
   )
     .mul(saturate(targetWidth.div(drawWidth)));
 
-  // Below one derivative pixel, blend toward a flat fill.
   const blendFactor = saturate(uvDeriv.mul(2).sub(1));
   const blended = line.add(
     targetWidth.sub(line).mul(blendFactor)
@@ -138,10 +120,6 @@ const pristineGrid = Fn(([uv, lineWidthPx]: [Node<"vec2">, Node<"float">]) => {
   return max(blended.x, blended.y);
 });
 
-/**
- * Cross variant of `pristineGrid`.
- * `armLength` is the half-arm length in cell units (0-0.5).
- */
 const pristineCross = Fn(([uv, lineWidthPx, armLength]: [Node<"vec2">, Node<"float">, Node<"float">]) => {
   const uvDeriv = vec2(
     length(vec2(dFdx(uv.x), dFdy(uv.x))),
@@ -164,7 +142,6 @@ const pristineCross = Fn(([uv, lineWidthPx, armLength]: [Node<"vec2">, Node<"flo
     targetWidth.sub(line).mul(blendFactor)
   );
 
-  // Window each line to a short arm.
   const armAA = max(uvDeriv.mul(1.5), vec2(0.0001));
   const armEdge = vec2(float(1).sub(armLength.mul(2)));
   const arm = smoothstep(
@@ -179,9 +156,6 @@ const pristineCross = Fn(([uv, lineWidthPx, armLength]: [Node<"vec2">, Node<"flo
   );
 });
 
-/**
- * 1D AA line test for axis highlighting.
- */
 const axisLine = Fn(([coord, widthPx]: [Node<"float">, Node<"float">]) => {
   const halfWidth = max(
     fwidth(coord).mul(widthPx).mul(0.5),
@@ -193,9 +167,6 @@ const axisLine = Fn(([coord, widthPx]: [Node<"float">, Node<"float">]) => {
   );
 });
 
-/**
- * Hard per-cell cutoff for `hideCellOnSection` on cross cells.
- */
 const hardLatticeMask = Fn(([cellIndex, sectionSize]: [Node<"vec2">, Node<"float">]) => {
   const onLattice = or(
     abs(mod(round(cellIndex.x), sectionSize)).lessThan(0.5),
@@ -209,9 +180,6 @@ const hardLatticeMask = Fn(([cellIndex, sectionSize]: [Node<"vec2">, Node<"float
   );
 });
 
-/**
- * Soft per-cell falloff for `hideCellOnSection` on line cells.
- */
 const softLatticeMask = Fn((
   [cellIndex, sectionSize, fadeWidth]: [Node<"vec2">, Node<"float">, Node<"float">]
 ) => {
@@ -297,9 +265,6 @@ function pickPlaneComponents(
   };
 }
 
-/**
- * Reconstructs the world hit point for `infiniteGrid`.
- */
 function buildInfiniteWorldHit(
   plane: GridPlane,
   uniforms: GridUniforms
@@ -341,9 +306,6 @@ export interface BuildGridMaterialOptions {
   infiniteGrid: boolean;
 }
 
-/**
- * Builds the grid material.
- */
 export function buildGridMaterial(
   options: BuildGridMaterialOptions
 ): THREE.MeshBasicNodeMaterial {
@@ -354,7 +316,6 @@ export function buildGridMaterial(
   const material = new THREE.MeshBasicNodeMaterial();
 
   if (infiniteGrid) {
-    // Full-viewport quad in clip space.
     material.vertexNode = vec4(
       positionLocal.xy,
       float(1),
@@ -396,13 +357,11 @@ export function buildGridMaterial(
         )
     ).mul(uniforms.showSection);
 
-    // Fade out the fine grid once it goes sub-pixel.
     const fineDeriv = fwidth(worldUV.div(uniforms.cellSize));
     const fineFade = saturate(
       float(1).sub(max(fineDeriv.x, fineDeriv.y))
     );
 
-    // Test section overlap at cell granularity.
     const cellIndex = worldUV.div(uniforms.cellSize);
     const sectionLatticeMask = cellStyle === "cross" ?
       hardLatticeMask(cellIndex, uniforms.sectionSize) :
@@ -412,7 +371,6 @@ export function buildGridMaterial(
         uniforms.hideCellOnSectionFadeWidth
       );
 
-    // Hide the fine grid where the section grid covers it.
     const hideCellOnSection = uniforms.hideCellOnSection
       .mul(uniforms.showSection);
     const fineSectionMask = mix(

@@ -24,10 +24,6 @@ export interface VoxelMeshStats {
   buildTimeMs: number;
 }
 
-/**
- * The live set of built chunks and the counters aggregated from it. Holds no
- * scene-graph object of its own.
- */
 export class InspectedChunkRegistry {
   #entries = new Map<string, InspectedChunkEntry>();
 

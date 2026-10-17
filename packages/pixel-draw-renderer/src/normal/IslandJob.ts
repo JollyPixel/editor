@@ -44,7 +44,7 @@ export class IslandJob {
     }
 
     const wraps = settings.border === "wrap" && island.isRect;
-    if (wraps && target.touchesEdgeOf(bounds)) {
+    if (wraps && target.touchesEdge(bounds)) {
       target = islandArea;
     }
 

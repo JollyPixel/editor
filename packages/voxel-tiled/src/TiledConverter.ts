@@ -84,10 +84,6 @@ interface ObjectLayerContext {
   counter: { value: number; };
 }
 
-/**
- * A converted map: the world with its blockset links, and the blocks the
- * world's tiles were turned into, one per unique tile.
- */
 export interface TiledConversion {
   world: VoxelWorldJSON;
   blocks: ResolvedBlockDefinition[];
@@ -222,13 +218,13 @@ function buildBlocks(
       continue;
     }
 
-    const props = tileSet.getTileProperties(rawGid);
+    const props = tileSet.tileProperties(rawGid);
     if (!props) {
       continue;
     }
 
     const blocksetId = ctx.blocksetIds.get(tileSet.firstgid) ?? tileSet.name;
-    const localId = tileSet.getTileLocalId(rawGid);
+    const localId = tileSet.localTileId(rawGid);
     const blockId = nextId++;
 
     gidToBlockId.set(rawGid, blockId);

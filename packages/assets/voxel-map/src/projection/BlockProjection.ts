@@ -40,13 +40,13 @@ const kBoxShapeUv: BlockShapeUv = {
 };
 
 export class BlockProjection {
-  static regionIdOf(
+  static formatRegionId(
     localBlockId: number
   ): string {
     return `${kRegionIdPrefix}${localBlockId}`;
   }
 
-  static localBlockIdOf(
+  static parseLocalBlockId(
     regionId: string
   ): number | null {
     if (!regionId.startsWith(kRegionIdPrefix)) {
@@ -76,7 +76,7 @@ export class BlockProjection {
   }
 
   get regionId(): string {
-    return BlockProjection.regionIdOf(decodeLocalBlockId(this.block.id));
+    return BlockProjection.formatRegionId(decodeLocalBlockId(this.block.id));
   }
 
   get textured(): boolean {

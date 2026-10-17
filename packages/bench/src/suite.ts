@@ -17,9 +17,6 @@ import {
   type BenchmarkRow
 } from "./report/index.ts";
 
-/**
- * Operations per sample; `"batch"` uses the configured batch size.
- */
 export type OpsPerIteration = number | "batch";
 
 export interface SuiteOptions {
@@ -34,9 +31,6 @@ export interface BenchmarkSuite {
   run: () => Promise<BenchmarkReport | null>;
 }
 
-/**
- * Called after each run when returned by setup.
- */
 export type SuiteTeardown = () => void | Promise<void>;
 
 export type SuiteSetup = (bench: Bench) =>
@@ -69,9 +63,6 @@ export function batched(
   };
 }
 
-/**
- * Runs setup before every measurement run.
- */
 export function defineSuite(
   name: string,
   setup: SuiteSetup,
@@ -152,9 +143,6 @@ async function addAllocations(
   }
 }
 
-/**
- * Throws when no task produces a report.
- */
 export async function runSuites(
   suites: Iterable<BenchmarkSuite>
 ): Promise<BenchmarkReport[]> {
@@ -199,7 +187,6 @@ function toRow(
     };
   }
 
-  // Keep ns/op before the whole-batch columns.
   const perOp: Partial<BenchmarkRow> = opsPerIteration > 1 ?
     {
       "ns/op": Number(

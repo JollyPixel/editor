@@ -124,8 +124,8 @@ export class ViewSettings implements ViewSettingsJSON {
     const fields = new StoredFields(value);
 
     return new ViewSettings({
-      lighting: fields.oneOf("lighting", kLightingModes, this.lighting),
-      inspector: fields.oneOf("inspector", INSPECTOR_MODES, this.inspector),
+      lighting: fields.choice("lighting", kLightingModes, this.lighting),
+      inspector: fields.choice("inspector", INSPECTOR_MODES, this.inspector),
       grid: fields.boolean("grid", this.grid),
       chunkBounds: fields.boolean("chunkBounds", this.chunkBounds),
       reflections: fields.boolean("reflections", this.reflections),

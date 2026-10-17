@@ -27,7 +27,7 @@ function setupShape(
     defaultTexture: { col: 2, row: 2, blocksetId: "atlas" }
   });
   const bridge = new BlockUvBridge(uv, view, bridgeOptions);
-  bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
+  bridge.activateBlockset(blocksetSlot("atlas"), 16);
 
   return { view, uv, bridge };
 }
@@ -39,7 +39,7 @@ describe("BlockUvBridge / rotation", () => {
     const uv = makeUv();
     const bridge = new BlockUvBridge(uv, view, bridgeOptions);
     try {
-      bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
+      bridge.activateBlockset(blocksetSlot("atlas"), 16);
 
       uv.rotate("block-1", "cw");
 
@@ -74,9 +74,9 @@ describe("BlockUvBridge / rotation", () => {
     const uv = makeUv();
     const bridge = new BlockUvBridge(uv, view, bridgeOptions);
     try {
-      bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
+      bridge.activateBlockset(blocksetSlot("atlas"), 16);
 
-      assert.deepEqual(uv.get("block-1")!.geometryFor("top"), {
+      assert.deepEqual(uv.get("block-1")!.slotGeometry("top"), {
         x: 16,
         y: 32,
         width: 16,
@@ -95,8 +95,8 @@ describe("BlockUvBridge / rotation", () => {
     const uv = makeUv();
     const bridge = new BlockUvBridge(uv, view, bridgeOptions);
     try {
-      bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
-      uv.setState("block-1", "free");
+      bridge.activateBlockset(blocksetSlot("atlas"), 16);
+      uv.applyState("block-1", "free");
 
       uv.rotate("block-1", "cw", "top");
 
@@ -118,15 +118,15 @@ describe("BlockUvBridge / rotation", () => {
     it(`a rotated ${shapeId} "${slot}" slot survives the round trip through its tile`, () => {
       const { view, uv, bridge } = setupShape(shapeId);
       try {
-        uv.setState("block-1", "free");
+        uv.applyState("block-1", "free");
 
         uv.rotate("block-1", "cw", slot);
 
         const block = view.document.blocks.get(1)!;
         assert.equal(block.faceTextures[slot].rotation, 1);
         assert.deepEqual(
-          new BlockUv(block, view.shapes.get(block.shapeId), 16).region().geometryFor(slot),
-          uv.get("block-1")!.geometryFor(slot)
+          new BlockUv(block, view.shapes.get(block.shapeId), 16).region().slotGeometry(slot),
+          uv.get("block-1")!.slotGeometry(slot)
         );
       }
       finally {

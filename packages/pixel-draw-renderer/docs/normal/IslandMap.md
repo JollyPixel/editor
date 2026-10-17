@@ -51,7 +51,7 @@ interface Island {
 
 ```ts
 islandAt(x: number, y: number): Island | null;
-islandsOf(regionId: string): Island[];
+islandsInRegion(regionId: string): Island[];
 islandsWithin(rect: SelectionRect): Island[];
 ```
 

@@ -237,7 +237,7 @@ export class TextureSet {
       throw new Error(`PixelDrawPanel: cannot remove "${id}", the last texture`);
     }
 
-    const next = entry === this.#active ? this.#replacementFor(entry) : null;
+    const next = entry === this.#active ? this.#successor(entry) : null;
     this.#entries.delete(id);
 
     if (next !== null) {
@@ -261,7 +261,7 @@ export class TextureSet {
     this.#entries.clear();
   }
 
-  #replacementFor(
+  #successor(
     entry: TextureEntry
   ): TextureEntry | null {
     const candidates = [...this.#entries.values()]

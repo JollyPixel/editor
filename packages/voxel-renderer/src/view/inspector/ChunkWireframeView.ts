@@ -17,9 +17,6 @@ const kModeCycle: Record<VoxelInspectorMode, VoxelInspectorMode> = {
   wireframe: "off"
 };
 
-/**
- * Selects counters only, a wireframe overlay, or wireframe-only rendering.
- */
 export type VoxelInspectorMode =
   | "off"
   | "overlay"
@@ -44,10 +41,6 @@ export interface ChunkWireframeViewOptions {
   opacity?: number;
 }
 
-/**
- * Draws a wireframe copy of every chunk mesh; `"wireframe"` hides the group
- * holding the textured meshes.
- */
 export class ChunkWireframeView implements ChunkInspectorView {
   #parent: THREE.Object3D;
   #solids: THREE.Object3D;

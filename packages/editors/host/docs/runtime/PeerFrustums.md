@@ -11,7 +11,7 @@ const frustums = world
     camera: orbitCamera.threeCamera as THREE.PerspectiveCamera
   });
 
-orbitCamera.teleport(frustums.poseOf(clientId));
+orbitCamera.teleport(frustums.peerPose(clientId));
 ```
 
 ## Options
@@ -32,7 +32,7 @@ to 5 units.
 ## Methods
 
 ```ts
-poseOf(clientId: string): PeerFrustumPose | undefined;
+peerPose(clientId: string): PeerFrustumPose | undefined;
 ```
 
 Returns the peer's last published pose, or `undefined` when the peer has

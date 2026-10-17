@@ -94,9 +94,6 @@ function commandCount(
     .length;
 }
 
-/**
- * Replays an asset stream into a fresh buffer.
- */
 function replay(
   eventStore: EventStore.EventStore,
   assetId: string
@@ -174,7 +171,6 @@ describe("pixel-art asset kind over a real back-end", () => {
 
       assert.strictEqual(commandCount(eventStore, record.id), 1);
 
-      // Commands do not update the source before a snapshot.
       assert.deepEqual(
         bufferFromFile(
           await fs.readFile(path.join(root, kDocumentPath))
@@ -250,7 +246,6 @@ describe("pixel-art asset kind over a real back-end", () => {
       });
       const afterFirst = commandCount(eventStore, record.id);
 
-      // A replay of an edit older than A's write loses.
       await connectionB.receive({
         room,
         kind: "message",

@@ -209,7 +209,7 @@ describe("MeshHighlight", () => {
 
     assert.strictEqual(presentations[0].disposeCount, 1);
     assert.deepStrictEqual(system.peerSelections.selectedObjectIds(), []);
-    assert.strictEqual(system.state.targetFor("mesh"), undefined);
+    assert.strictEqual(system.state.findTarget("mesh"), undefined);
     assert.throws(() => system.render(), /disposed/);
   });
 });

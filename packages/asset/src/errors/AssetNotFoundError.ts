@@ -1,9 +1,6 @@
 // Import Internal Dependencies
 import type { AssetId } from "../AssetId.ts";
 
-/**
- * Reports a lookup for an asset ID absent from the catalog.
- */
 export class AssetNotFoundError extends Error {
   readonly id: AssetId;
 

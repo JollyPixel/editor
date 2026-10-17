@@ -5,7 +5,7 @@ import type {
   PixelDocumentState
 } from "./PixelDocumentState.ts";
 import {
-  strokeOf,
+  strokeCommand,
   toDocumentCommand,
   toPixelCommand,
   type DocumentCommand,
@@ -94,7 +94,7 @@ export class EditRecorder {
       return null;
     }
 
-    const inverse = this.#state.inverseOf(command);
+    const inverse = this.#state.invert(command);
     this.silently(() => this.#state.apply(command));
     const change = EditChange.local(command, inverse);
     this.#emit(change, command);
@@ -175,7 +175,7 @@ export class EditRecorder {
 
     const { fromColor, toColor } = command.metadata;
 
-    return strokeOf(this.#state.buffer.positionsOf(fromColor), toColor);
+    return strokeCommand(this.#state.buffer.findPositions(fromColor), toColor);
   }
 
   #emit(

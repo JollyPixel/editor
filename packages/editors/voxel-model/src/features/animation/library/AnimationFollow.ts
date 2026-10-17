@@ -2,7 +2,7 @@
 import { TrackPath } from "@jolly-pixel/asset.voxel-animation/client";
 import {
   TrackBinding,
-  blockPathOf,
+  buildBlockPath,
   type ModelDocument
 } from "@jolly-pixel/asset.voxel-model/client";
 
@@ -87,7 +87,7 @@ export class AnimationFollow {
             path,
             remapped: remap !== null,
             blockId,
-            blockPath: blockPathOf(tree, blockId)
+            blockPath: buildBlockPath(tree, blockId)
           }]
       ));
     });
@@ -101,7 +101,7 @@ export class AnimationFollow {
       return;
     }
 
-    const blockPath = new TrackPath(blockPathOf(tree, track.blockId));
+    const blockPath = new TrackPath(buildBlockPath(tree, track.blockId));
     if (blockPath.equals(track.blockPath)) {
       return;
     }

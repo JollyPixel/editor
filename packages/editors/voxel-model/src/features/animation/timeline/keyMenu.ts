@@ -58,7 +58,7 @@ function runKeyAction(
       keys.remove();
       break;
     default:
-      keys.setInterpolation(action);
+      keys.applyInterpolation(action);
       break;
   }
 }

@@ -11,9 +11,6 @@ import type { MeshHighlightState } from "../MeshHighlightState.ts";
 // CONSTANTS
 const kHoverDarkenFactor = 0.35;
 
-/**
- * Minimum highlight target used by this adapter.
- */
 export type HighlightTarget = Pick<HighlightPass, "entries">;
 
 export interface PeerHighlightPassOptions {
@@ -30,10 +27,6 @@ export interface PeerHighlightPassOptions {
   hoverRegistry?: PeerHoverRegistry;
 }
 
-/**
- * Converts local and peer selection state into highlight entries.
- * Local selections take priority; hover entries are isolated.
- */
 export class PeerHighlightPass {
   #registry: PeerSelectionRegistry;
   #selection: MeshHighlightState;
@@ -95,9 +88,6 @@ export class PeerHighlightPass {
     this.refresh();
   }
 
-  /**
-   * Detaches subscriptions without disposing dependencies.
-   */
   dispose(): void {
     this.#registry.removeEventListener(
       "peerSelectionChange",
@@ -135,9 +125,6 @@ export class PeerHighlightPass {
     this.#highlight.entries = [];
   }
 
-  /**
-   * Rebuilds and publishes the complete entry list.
-   */
   refresh(): void {
     const localSelected = this.#selection.selected;
     const localHovered = this.#selection.hovered === localSelected ? null : this.#selection.hovered;
@@ -160,7 +147,7 @@ export class PeerHighlightPass {
     const entries: HighlightEntry[] = [];
 
     for (const objectId of objectIds) {
-      const target = this.#selection.targetFor(objectId);
+      const target = this.#selection.findTarget(objectId);
       if (target === undefined) {
         continue;
       }
@@ -185,31 +172,31 @@ export class PeerHighlightPass {
 
       const visible = this.#visibility === null || this.#visibility.isVisible(objectId);
 
-      const peerId = visible ? this.#registry.primarySelectorOf(objectId) : null;
+      const peerId = visible ? this.#registry.primarySelector(objectId) : null;
       if (peerId !== null) {
         entries.push({
           target,
-          color: this.#registry.colorOf(peerId)
+          color: this.#registry.peerColor(peerId)
         });
         continue;
       }
 
       if (
-        this.#registry.selectorsOf(objectId).length > 0 ||
+        this.#registry.listSelectors(objectId).length > 0 ||
         !visible ||
         this.#hoverRegistry === null
       ) {
         continue;
       }
 
-      const hovererId = this.#hoverRegistry.primaryHovererOf(objectId);
+      const hovererId = this.#hoverRegistry.primaryHoverer(objectId);
       if (hovererId === null) {
         continue;
       }
 
       entries.push({
         target,
-        color: this.#darken(this.#hoverRegistry.colorOf(hovererId)),
+        color: this.#darken(this.#hoverRegistry.peerColor(hovererId)),
         isolated: true
       });
     }

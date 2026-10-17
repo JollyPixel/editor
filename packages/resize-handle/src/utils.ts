@@ -25,9 +25,6 @@ export interface SizeFromDeltaOptions {
   max: number;
 }
 
-/**
- * Applies pointer travel to an initial size and clamps the result.
- */
 export function sizeFromDelta(
   options: SizeFromDeltaOptions
 ): number {

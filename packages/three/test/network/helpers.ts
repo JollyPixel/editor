@@ -51,7 +51,7 @@ export function joinPeer(
   room.emitSync(clientId);
 }
 
-export function frustumsOf(
+export function findFrustums(
   parent: THREE.Object3D
 ): PeerFrustum[] {
   return parent.children.filter(

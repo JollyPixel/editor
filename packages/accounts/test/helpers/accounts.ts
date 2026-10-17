@@ -149,7 +149,7 @@ export function createAccounts(
   });
 }
 
-export function sessionFor(
+export function openSession(
   database: AccountsDatabase,
   accountId: string
 ): string {

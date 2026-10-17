@@ -4,9 +4,6 @@ import type { RGBA8 } from "./types.ts";
 // CONSTANTS
 const kBytesPerPixel = 4;
 
-/**
- * Copies `ImageData` bytes so returned pixels outlive the buffer.
- */
 export function imageDataToPixels(
   data: Uint8ClampedArray
 ): RGBA8[] {
@@ -28,9 +25,6 @@ export function imageDataToPixels(
   return pixels;
 }
 
-/**
- * Writes in place; masked pixels keep RGB but receive zero alpha.
- */
 export function pixelsToImageData(
   pixels: readonly RGBA8[],
   data: Uint8ClampedArray,

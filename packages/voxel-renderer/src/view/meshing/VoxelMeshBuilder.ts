@@ -39,10 +39,6 @@ export interface VoxelMeshBuilderOptions {
   visibility?: MeshableLayerVisibility;
 }
 
-/**
- * Builds visible chunk geometry, split by blockset and cutout mode. Vertex
- * positions are relative to the chunk origin in world space.
- */
 export class VoxelMeshBuilder {
   readonly stats = new MeshBuildStats();
 

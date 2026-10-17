@@ -20,9 +20,6 @@ import {
 // CONSTANTS
 const kSink = { value: 0 };
 
-/**
- * Measures dispatch, interpolation, and budget-check costs.
- */
 const suite = defineSuite("loop / primitives", (bench) => {
   const source = new ManualFrameSource();
   const loop = new GameLoop({ source });

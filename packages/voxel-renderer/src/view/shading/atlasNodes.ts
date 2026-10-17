@@ -15,7 +15,6 @@ type Vec4Node = Node<"vec4">;
 export function atlasSize(
   map: THREE.Texture
 ): Vec2Node {
-  // `@types/three` types textureSize() as an untyped node.
   const size = textureSize(texture(map, vec2(0)), int(0)) as unknown as Node<"ivec2">;
 
   return vec2(size);
@@ -28,9 +27,6 @@ export function regionStart(
   return round(tileRegion.xy.mul(size).sub(0.5));
 }
 
-/**
- * Size in texels of the face rect; `tileRegion` spans texel centres.
- */
 export function regionTexels(
   map: THREE.Texture,
   tileRegion: Vec4Node

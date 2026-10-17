@@ -134,7 +134,7 @@ export function paintCommand(
   };
 }
 
-export function bytesOf(
+export function createBytes(
   length: number,
   seed: number
 ): Uint8Array {
@@ -165,7 +165,7 @@ export function gridRoom(
   return `${GRID_KIND}:${assetId}`;
 }
 
-export function identityOf(
+export function createIdentity(
   subject: string
 ): PeerIdentity {
   return {
@@ -242,7 +242,7 @@ async function seed(
       eventData: await writeData(
         `assets/${Math.floor(index / 100)}/file-${index}.bin`,
         BINARY_KIND,
-        bytesOf(kBinaryBytes, index),
+        createBytes(kBinaryBytes, index),
         sceneDependencies(index)
       ),
       actor: kSeedActor
@@ -256,7 +256,7 @@ async function seed(
       eventData: await writeData(
         `grids/grid-${index}.grid`,
         GRID_KIND,
-        bytesOf(options.contentBytes, index)
+        createBytes(options.contentBytes, index)
       ),
       actor: kSeedActor
     });
@@ -325,7 +325,7 @@ export function connectPeer(
 
   return {
     handle,
-    connection: server.connect(handle, identityOf(clientId))
+    connection: server.connect(handle, createIdentity(clientId))
   };
 }
 

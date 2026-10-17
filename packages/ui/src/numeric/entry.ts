@@ -5,12 +5,12 @@ import {
   type EvalResult
 } from "./evaluate.ts";
 import {
-  multiplierFor,
+  modifierMultiplier,
   type ModifierKeys
 } from "./modifierMultiplier.ts";
 import {
   decimalPlaces,
-  precisionOf,
+  measurePrecision,
   roundToPrecision
 } from "./precision.ts";
 import { valueFromDelta } from "./valueFromDelta.ts";
@@ -31,7 +31,7 @@ export function formatNumber(
     return "";
   }
 
-  return value.toFixed(precisionOf(step, value));
+  return value.toFixed(measurePrecision(step, value));
 }
 
 export function quantize(
@@ -84,7 +84,7 @@ export function stepNumericEntry(
   return valueFromDelta({
     start,
     deltaPx: direction,
-    step: bounds.step * multiplierFor(modifiers),
+    step: bounds.step * modifierMultiplier(modifiers),
     pixelsPerStep: 1,
     min: bounds.min,
     max: bounds.max

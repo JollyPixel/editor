@@ -33,7 +33,7 @@ export class HandshakePolicy {
       new Set(allowedOrigins);
   }
 
-  refusalFor(
+  checkHandshake(
     headers: IncomingHttpHeaders
   ): HandshakeRefusal | null {
     const host = headers.host?.toLowerCase();

@@ -30,9 +30,6 @@ export interface ModelRendererOptions<
   animations?: ModelRendererAnimationOptions<TClipName>;
 }
 
-/**
- * Attaches a prepared model asset to an actor during awake.
- */
 export class ModelRenderer<
   TClipName extends string = string
 > extends ActorComponent<any> {

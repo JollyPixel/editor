@@ -115,7 +115,7 @@ export class NormalMapOverview {
     regions: ReadonlyMap<string, UVRegion>
   ): string[] {
     const names = new Set<string>();
-    for (const island of this.#islands.islandsOf(zone.regionId)) {
+    for (const island of this.#islands.islandsInRegion(zone.regionId)) {
       const winner = this.#config.winningZone(island.regionIds);
       if (winner !== undefined && winner.regionId !== zone.regionId) {
         const region = regions.get(winner.regionId);

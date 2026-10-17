@@ -4,9 +4,6 @@ import { cpus } from "node:os";
 // Import Internal Dependencies
 import { config } from "../config.ts";
 
-/**
- * A type keeps the implicit index signature required by `RuntimeMetadata`.
- */
 export type HostMetadata = {
   node: string;
   v8: string;

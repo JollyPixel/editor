@@ -16,17 +16,17 @@ import {
   readHeader,
   writeHeader
 } from "../src/png/header.ts";
-import { colorModelOf } from "../src/png/pixels.ts";
+import { findColorModel } from "../src/png/pixels.ts";
 import {
   colorModel,
-  pngOf
+  createPng
 } from "./_fixtures.ts";
 
 // CONSTANTS
 const kSize = 256;
 
 const suite = defineSuite("png / chunks and header", (bench) => {
-  const png = pngOf(kSize, 6);
+  const png = createPng(kSize, 6);
   const chunks: PngChunk[] = [...readChunks(png)];
   const header = {
     width: kSize,
@@ -54,8 +54,8 @@ const suite = defineSuite("png / chunks and header", (bench) => {
     .add("writeHeader", batched(() => {
       sink ^= writeHeader(header).length;
     }))
-    .add("colorModelOf", batched(() => {
-      sink ^= colorModelOf(6)?.channels ?? 0;
+    .add("findColorModel", batched(() => {
+      sink ^= findColorModel(6)?.channels ?? 0;
     }));
 
   return () => {

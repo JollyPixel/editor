@@ -31,9 +31,6 @@ export interface HighlightResolverOptions {
   visibility?: PeerSelectionVisibility;
 }
 
-/**
- * Resolves local and peer intent into one visible indicator per object.
- */
 export class HighlightResolver {
   #state: MeshHighlightState;
   #peerSelections: PeerSelectionRegistry | null;
@@ -81,12 +78,12 @@ export class HighlightResolver {
   #resolveObject(
     objectId: string
   ): ResolvedHighlightIndicator | null {
-    const target = this.#state.targetFor(objectId);
+    const target = this.#state.findTarget(objectId);
     if (!target) {
       return null;
     }
 
-    const technique = this.#state.techniqueFor(objectId);
+    const technique = this.#state.resolveTechnique(objectId);
     if (objectId === this.#state.selected) {
       return {
         objectId,
@@ -101,7 +98,7 @@ export class HighlightResolver {
 
     const peersVisible = this.#visibility?.isVisible(objectId) ?? true;
     const selectorId = peersVisible ?
-      this.#peerSelections?.primarySelectorOf(objectId) ?? null :
+      this.#peerSelections?.primarySelector(objectId) ?? null :
       null;
     if (selectorId !== null) {
       return {
@@ -110,7 +107,7 @@ export class HighlightResolver {
         role: "selection",
         source: "peer",
         peerId: selectorId,
-        color: this.#peerSelections!.colorOf(selectorId),
+        color: this.#peerSelections!.peerColor(selectorId),
         opacity: this.#state.appearance.selected.opacity,
         technique
       };
@@ -129,7 +126,7 @@ export class HighlightResolver {
     }
 
     const hovererId = peersVisible ?
-      this.#peerHovers?.primaryHovererOf(objectId) ?? null :
+      this.#peerHovers?.primaryHoverer(objectId) ?? null :
       null;
     if (hovererId === null) {
       return null;
@@ -141,7 +138,7 @@ export class HighlightResolver {
       role: "hover",
       source: "peer",
       peerId: hovererId,
-      color: this.#peerHovers!.colorOf(hovererId),
+      color: this.#peerHovers!.peerColor(hovererId),
       opacity: this.#state.appearance.hovered.opacity,
       technique
     };

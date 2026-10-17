@@ -66,10 +66,6 @@ export function mockBoundingRect(
   element.getBoundingClientRect = () => rect;
 }
 
-/**
- * Installs setPointerCapture / releasePointerCapture stubs on an element.
- * Returns a state object so tests can assert the current capture state.
- */
 export function installPointerCaptureMock(
   element: HTMLElement
 ): { captured: number | null; } {

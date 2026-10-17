@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { centerOf, dragTo } from "@jolly-pixel/e2e";
+import { measureCenter, dragTo } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
@@ -10,8 +10,8 @@ import {
 import { openExample } from "../../support/gallery.ts";
 import { FloatingWindow } from "../../support/floating.ts";
 import {
-  resolvedColorOf,
-  styleOf
+  resolveColor,
+  readStyle
 } from "../../support/styles.ts";
 import {
   Pane,
@@ -21,7 +21,7 @@ import {
 // CONSTANTS
 const kExample = "scenarios/dock-layout-tones";
 
-function areaOf(
+function readPaneArea(
   page: Page,
   pane: string
 ): Promise<string> {
@@ -34,8 +34,8 @@ test.describe("DockLayout tones", () => {
   test("each column keeps its own tone by default", async({ page }) => {
     await openExample(page, kExample);
 
-    expect(await areaOf(page, "general")).toBe("var(--jolly-tone-sky)");
-    expect(await areaOf(page, "paint")).toBe("var(--jolly-tone-pink)");
+    expect(await readPaneArea(page, "general")).toBe("var(--jolly-tone-sky)");
+    expect(await readPaneArea(page, "paint")).toBe("var(--jolly-tone-pink)");
     await expect(new Pane(page, "assets").root)
       .not.toHaveAttribute("toned");
   });
@@ -43,12 +43,12 @@ test.describe("DockLayout tones", () => {
   test("shades the selected tab underline from its tone: light on dark, deep on light", async({ page }) => {
     const group = new PaneGroup(page);
     function underline(): Promise<string> {
-      return styleOf(group.selectedTab, "background-color", "::after");
+      return readStyle(group.selectedTab, "background-color", "::after");
     }
     function shade(
       color: string
     ): Promise<string> {
-      return resolvedColorOf(group.root, color);
+      return resolveColor(group.root, color);
     }
 
     await openExample(page, kExample, { theme: "dark" });
@@ -67,16 +67,16 @@ test.describe("DockLayout tones", () => {
       options: { shareTone: true }
     });
 
-    await expect.poll(() => areaOf(page, "paint"))
+    await expect.poll(() => readPaneArea(page, "paint"))
       .toBe("var(--jolly-tone-sky)");
-    await expect.poll(() => areaOf(page, "assets"))
+    await expect.poll(() => readPaneArea(page, "assets"))
       .toBe("var(--jolly-tone-violet)");
 
     await new PaneGroup(page).tab("Blocks").click();
 
-    await expect.poll(() => areaOf(page, "paint"))
+    await expect.poll(() => readPaneArea(page, "paint"))
       .toBe("var(--jolly-tone-amber)");
-    await expect.poll(() => areaOf(page, "general"))
+    await expect.poll(() => readPaneArea(page, "general"))
       .toBe("var(--jolly-tone-amber)");
   });
 
@@ -84,18 +84,18 @@ test.describe("DockLayout tones", () => {
     await openExample(page, kExample, {
       options: { shareTone: true }
     });
-    await expect.poll(() => areaOf(page, "paint"))
+    await expect.poll(() => readPaneArea(page, "paint"))
       .toBe("var(--jolly-tone-sky)");
 
     await dragTo(
       page,
       new Pane(page, "paint").header.first(),
-      await centerOf(page.locator(".dock-layout-viewport"))
+      await measureCenter(page.locator(".dock-layout-viewport"))
     );
 
     await expect(new FloatingWindow(page, "paint").root)
       .toHaveCount(1);
-    await expect.poll(() => areaOf(page, "paint"))
+    await expect.poll(() => readPaneArea(page, "paint"))
       .toBe("var(--jolly-tone-pink)");
   });
 });

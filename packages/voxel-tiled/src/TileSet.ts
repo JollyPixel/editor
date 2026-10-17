@@ -79,7 +79,7 @@ export class TileSet {
   containsGid(
     gid: number
   ): boolean {
-    return this.containsLocalId(this.getTileLocalId(gid));
+    return this.containsLocalId(this.localTileId(gid));
   }
 
   containsLocalId(
@@ -88,16 +88,16 @@ export class TileSet {
     return index >= 0 && index < this.#metadata.tilecount;
   }
 
-  getTileLocalId(
+  localTileId(
     gid: number
   ): number {
     return (gid & ~TILED_FLIPPED_FLAGS) - this.#metadata.firstgid;
   }
 
-  getTileProperties(
+  tileProperties(
     gid: number
   ): TileProps | null {
-    const localId = this.getTileLocalId(gid);
+    const localId = this.localTileId(gid);
     if (!this.containsLocalId(localId)) {
       return null;
     }

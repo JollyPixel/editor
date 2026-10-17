@@ -10,7 +10,7 @@ import {
 
 // Import Internal Dependencies
 import {
-  blockOf,
+  createBlock,
   texturedSources
 } from "../../../helpers/blockSources.ts";
 
@@ -31,15 +31,15 @@ describe("BlockRenderSources.createPieces", () => {
   const pieces = texturedSources().createPieces();
 
   it("lists every slot of an untextured block as empty", () => {
-    assert.deepEqual(pieces.findEmptySlots(blockOf({})), kCubeSlots);
+    assert.deepEqual(pieces.findEmptySlots(createBlock({})), kCubeSlots);
   });
 
   it("lists nothing for a painted block", () => {
-    assert.deepEqual(pieces.findEmptySlots(blockOf({ defaultTexture: kPainted })), []);
+    assert.deepEqual(pieces.findEmptySlots(createBlock({ defaultTexture: kPainted })), []);
   });
 
   it("probes the atlas pixels for the slots mapped to a blank tile", () => {
-    const block = blockOf({
+    const block = createBlock({
       defaultTexture: kPainted,
       faceTextures: { top: kBlank, bottom: kBlank }
     });
@@ -54,7 +54,7 @@ describe("BlockRenderSources.createPieces", () => {
   it("lists nothing for an unknown shape", () => {
     assert.deepEqual(
       pieces.findEmptySlots(
-        blockOf({ shapeId: "unknown" as BlockDefinition["shapeId"] })
+        createBlock({ shapeId: "unknown" as BlockDefinition["shapeId"] })
       ),
       []
     );

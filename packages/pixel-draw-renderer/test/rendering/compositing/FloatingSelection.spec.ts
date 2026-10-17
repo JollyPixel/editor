@@ -11,7 +11,7 @@ import {
 } from "#src/rendering/compositing/FloatingSelection.ts";
 import {
   canvasPixels,
-  contextOf,
+  context2d,
   readPixel
 } from "../../fixtures/canvas.ts";
 import { makeCanvas } from "../../helpers/dom.ts";
@@ -30,7 +30,7 @@ describe("FloatingSelection", () => {
 
       assert.doesNotThrow(
         () => overlay.draw(
-          contextOf(dest)
+          context2d(dest)
         ),
         "draw should not throw when nothing has been created"
       );
@@ -56,7 +56,7 @@ describe("FloatingSelection", () => {
 
       const dest = makeCanvas(10);
       overlay.draw(
-        contextOf(dest)
+        context2d(dest)
       );
       assert.deepStrictEqual(
         readPixel(canvasPixels(dest), { x: 0, y: 0 }, dest.width),
@@ -81,7 +81,7 @@ describe("FloatingSelection", () => {
 
       const dest = makeCanvas(10);
       overlay.draw(
-        contextOf(dest)
+        context2d(dest)
       );
 
       assert.deepStrictEqual(
@@ -117,7 +117,7 @@ describe("FloatingSelection", () => {
 
       const dest = makeCanvas(10);
       overlay.draw(
-        contextOf(dest)
+        context2d(dest)
       );
 
       assert.deepStrictEqual(
@@ -151,7 +151,7 @@ describe("FloatingSelection", () => {
       });
 
       const dest = makeCanvas(10);
-      overlay.draw(contextOf(dest));
+      overlay.draw(context2d(dest));
 
       assert.deepStrictEqual(
         readPixel(canvasPixels(dest), { x: 0, y: 0 }, dest.width),
@@ -183,7 +183,7 @@ describe("FloatingSelection", () => {
       });
 
       const dest = makeCanvas(10);
-      const destCtx = contextOf(dest);
+      const destCtx = context2d(dest);
       const initial = destCtx.createImageData(2, 1);
       initial.data.set([
         255, 0, 0, 255,

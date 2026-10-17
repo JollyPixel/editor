@@ -11,9 +11,6 @@ import type {
   BlockShapeID
 } from "../BlockShape.ts";
 
-/**
- * Z-axis ramp whose NegY and PosZ faces fully occlude neighbours.
- */
 export class Ramp extends BlockShapeBase {
   readonly id: BlockShapeID;
   readonly collisionHint: BlockCollisionHint = "trimesh";

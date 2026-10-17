@@ -9,7 +9,7 @@ import * as THREE from "three";
 import {
   at,
   createHierarchyFixture,
-  shapeOf
+  readShape
 } from "../fixtures/hierarchy.ts";
 
 describe("ModelHierarchy.move", () => {
@@ -23,12 +23,12 @@ describe("ModelHierarchy.move", () => {
     hierarchy.move(block.uuid, folderId);
 
     assert.equal(document.tree.get(block.uuid)?.parentId, folderId);
-    assert.equal(document.tree.transformParentOf(block.uuid), parent.uuid);
+    assert.equal(document.tree.findTransformParent(block.uuid), parent.uuid);
 
     hierarchy.move(block.uuid, null);
 
     assert.equal(document.tree.get(block.uuid)?.parentId, null);
-    assert.equal(document.tree.transformParentOf(block.uuid), null);
+    assert.equal(document.tree.findTransformParent(block.uuid), null);
     assert.deepEqual(
       commands.map((command) => command.action),
       ["node-moved", "node-moved"]
@@ -63,7 +63,7 @@ describe("ModelHierarchy.move", () => {
     hierarchy.move(outer!, anchor.uuid);
     scene.updateMatrixWorld(true);
 
-    assert.equal(document.tree.transformParentOf(block.uuid), anchor.uuid);
+    assert.equal(document.tree.findTransformParent(block.uuid), anchor.uuid);
     assert.equal(document.tree.get(block.uuid)?.parentId, inner);
     assert.deepStrictEqual(block.worldPosition, new THREE.Vector3(1, 0, 0));
     assert.equal(commands.length, 1);
@@ -94,10 +94,10 @@ describe("ModelHierarchy.move", () => {
     const c = addBlock({ name: "C" });
 
     hierarchy.move(c.uuid, null, b.uuid);
-    assert.deepEqual(shapeOf(hierarchy.nodes()), ["A", "C", "B"]);
+    assert.deepEqual(readShape(hierarchy.nodes()), ["A", "C", "B"]);
 
     hierarchy.move(c.uuid, null);
-    assert.deepEqual(shapeOf(hierarchy.nodes()), ["A", "B", "C"]);
+    assert.deepEqual(readShape(hierarchy.nodes()), ["A", "B", "C"]);
   });
 
   test("refuses to move a node into its own subtree", () => {
@@ -135,7 +135,7 @@ describe("ModelHierarchy.remove", () => {
     scene.updateMatrixWorld(true);
 
     assert.equal(blocks.get(middle.uuid), undefined);
-    assert.equal(document.tree.transformParentOf(leaf.uuid), root.uuid);
+    assert.equal(document.tree.findTransformParent(leaf.uuid), root.uuid);
     assert.deepStrictEqual(leaf.worldPosition, new THREE.Vector3(7, 0, 0));
   });
 
@@ -149,7 +149,7 @@ describe("ModelHierarchy.remove", () => {
 
     hierarchy.remove(group!, { withChildren: false });
 
-    assert.deepEqual(shapeOf(hierarchy.nodes()), ["First", "A", "B", "Last"]);
+    assert.deepEqual(readShape(hierarchy.nodes()), ["First", "A", "B", "Last"]);
   });
 
   test("without children, promotes the blocks a child folder carries", () => {
@@ -160,8 +160,8 @@ describe("ModelHierarchy.remove", () => {
 
     hierarchy.remove(body.uuid, { withChildren: false });
 
-    assert.deepEqual(shapeOf(hierarchy.nodes()), [["Limbs", ["Arm"]]]);
-    assert.equal(document.tree.transformParentOf(arm.uuid), null);
+    assert.deepEqual(readShape(hierarchy.nodes()), [["Limbs", ["Arm"]]]);
+    assert.equal(document.tree.findTransformParent(arm.uuid), null);
     assert.equal(arm.node.parent?.type, "Scene");
   });
 
@@ -172,6 +172,6 @@ describe("ModelHierarchy.remove", () => {
 
     hierarchy.remove(folderId!, { withChildren: false });
 
-    assert.deepEqual(shapeOf(hierarchy.nodes()), ["Arm"]);
+    assert.deepEqual(readShape(hierarchy.nodes()), ["Arm"]);
   });
 });

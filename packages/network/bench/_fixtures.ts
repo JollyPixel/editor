@@ -106,7 +106,7 @@ export function strokeCommand(
   };
 }
 
-export function snapshotOf(
+export function createSnapshot(
   bytes: number
 ): BenchSnapshot {
   const random = mulberry32(bytes);
@@ -129,7 +129,7 @@ export function cursorPatch(
   };
 }
 
-export function identityOf(
+export function createIdentity(
   subject: string,
   role = "editor"
 ): PeerIdentity {
@@ -194,7 +194,7 @@ export class EchoExtension extends Extension<BenchCommand> {
     super();
     this.id = options.roomId ?? ROOM_NAME;
     this.protocols = benchProtocols(options.variants);
-    this.#snapshot = snapshotOf(options.snapshotBytes ?? 64);
+    this.#snapshot = createSnapshot(options.snapshotBytes ?? 64);
   }
 
   override onClientConnect(

@@ -1,6 +1,3 @@
-/**
- * Blends samples; alpha maps zero to `previous` and one to `current`.
- */
 export type Lerp<T> = (
   previous: T,
   current: T,
@@ -15,10 +12,6 @@ export function lerpNumber(
   return previous + ((current - previous) * alpha);
 }
 
-/**
- * Stores fixed-step samples for interpolation.
- * The caller supplies the blending function.
- */
 export class Interpolated<T> {
   #previous: T;
   #current: T;

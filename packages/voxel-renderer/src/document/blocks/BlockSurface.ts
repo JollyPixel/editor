@@ -12,9 +12,6 @@ export interface BlockSurfaceOptions {
   materialGroup?: string;
 }
 
-/**
- * Resolved rendering policy, independent of neighbour-face culling.
- */
 export class BlockSurface {
   readonly alphaMode: BlockAlphaMode;
   readonly side: BlockSide;

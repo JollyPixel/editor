@@ -54,7 +54,7 @@ const kColorModels: readonly ColorModel[] = [
   TRUECOLOR_ALPHA
 ];
 
-export function colorModelOf(
+export function findColorModel(
   type: number
 ): ColorModel | undefined {
   return kColorModels.find((model) => model.type === type);

@@ -26,9 +26,6 @@ export interface PointerDragSessionHandle {
   cancel(): void;
 }
 
-/**
- * Owns one pointer gesture from capture through exactly-once settlement.
- */
 export function startPointerDragSession(
   options: PointerDragSessionOptions
 ): PointerDragSessionHandle {

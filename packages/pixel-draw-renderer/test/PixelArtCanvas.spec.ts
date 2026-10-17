@@ -14,7 +14,7 @@ import { makeContainer } from "./helpers/dom.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
 import {
   canvasPixels,
-  contextOf,
+  context2d,
   readPixel
 } from "./fixtures/canvas.ts";
 
@@ -211,7 +211,7 @@ describe("PixelArtCanvas", () => {
   describe("repaint (no double-paint)", () => {
     test("a committed stroke repaints exactly once", (t) => {
       const { manager, canvas } = createPixelArtCanvas();
-      const drawImage = t.mock.method(contextOf(canvas), "drawImage");
+      const drawImage = t.mock.method(context2d(canvas), "drawImage");
 
       manager.centerTexture();
       const perFrame = drawImage.mock.callCount();

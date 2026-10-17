@@ -18,7 +18,7 @@ describe("UVMap — free / stack", () => {
     const events: EventPayload<"region-state-changed">[] = [];
     map.on("region-state-changed", (e) => events.push(e));
 
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
 
     assert.strictEqual(events.length, 1);
     assert.strictEqual(events[0].region, map.get(region.id));
@@ -28,36 +28,36 @@ describe("UVMap — free / stack", () => {
   test("stack uses the requested face as the shared rectangle", () => {
     const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.move(region.id, { x: 12, y: 12, width: 4, height: 4 }, "top");
 
-    assert.ok(map.setState(region.id, "stacked", "top"));
+    assert.ok(map.applyState(region.id, "stacked", "top"));
 
     const stored = map.get(region.id)!;
     assert.strictEqual(stored.state, "stacked");
-    assert.deepStrictEqual(stored.rectFor("front"), { x: 12, y: 12, width: 4, height: 4 });
+    assert.deepStrictEqual(stored.slotRect("front"), { x: 12, y: 12, width: 4, height: 4 });
   });
 
   test("returns false for an unknown id or a redundant transition", () => {
     const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
 
-    assert.ok(!map.setState("no-such", "free"));
-    assert.ok(!map.setState(region.id, "stacked"), "already stacked");
-    assert.ok(map.setState(region.id, "free"));
-    assert.ok(!map.setState(region.id, "free"), "already free");
-    assert.ok(map.setState(region.id, "unfolded"));
-    assert.ok(!map.setState(region.id, "unfolded"), "already unfolded");
+    assert.ok(!map.applyState("no-such", "free"));
+    assert.ok(!map.applyState(region.id, "stacked"), "already stacked");
+    assert.ok(map.applyState(region.id, "free"));
+    assert.ok(!map.applyState(region.id, "free"), "already free");
+    assert.ok(map.applyState(region.id, "unfolded"));
+    assert.ok(!map.applyState(region.id, "unfolded"), "already unfolded");
   });
 
   test("restoreState puts a whole region back without a create/delete cycle", () => {
     const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.move(region.id, { x: 12, y: 12, width: 4, height: 4 }, "top");
     const before = map.get(region.id)!.toJSON();
 
-    map.setState(region.id, "stacked");
+    map.applyState(region.id, "stacked");
     const created: string[] = [];
     map.on("region-created", (e) => created.push(e.region.id));
 
@@ -66,7 +66,7 @@ describe("UVMap — free / stack", () => {
     const stored = map.get(region.id)!;
     assert.strictEqual(stored.state, "free");
     assert.deepStrictEqual(
-      stored.rectFor("top"),
+      stored.slotRect("top"),
       { x: 12, y: 12, width: 4, height: 4 },
       "the previous face layout must come back"
     );
@@ -105,7 +105,7 @@ describe("UVMap rename", () => {
   test("keeps the layout, color and selection of the region", () => {
     const map = makeUvMap();
     const region = map.create({ name: "Torso", width: 4, height: 4 });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.move(region.id, { x: 24, y: 24, width: 4, height: 4 }, "top");
     map.select(region.id, "top");
     const before = map.get(region.id)!.toJSON();

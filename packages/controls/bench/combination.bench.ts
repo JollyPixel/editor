@@ -9,10 +9,6 @@ import {
 import { createActiveInput } from "./tick-active.bench.ts";
 import { InputCombination } from "../src/index.ts";
 
-/**
- * Every atomic condition funnels into the query path, so a 4-condition combo
- * multiplies whatever `isDown`/`wasJustPressed` cost by four.
- */
 const suite = defineSuite("controls / combinations", (bench) => {
   const { input } = createActiveInput();
 

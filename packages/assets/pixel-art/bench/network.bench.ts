@@ -25,10 +25,6 @@ const kWhite: RGBA8 = { r: 255, g: 255, b: 255, a: 255 };
 const kBlack: RGBA8 = { r: 0, g: 0, b: 0, a: 255 };
 const kResolveBatch = 1000;
 
-/**
- * Benchmarks command application (`stroke`, `global-fill`) and
- * `LastWriteWinsResolver.resolve` under mixed conflicts.
- */
 const suite = defineSuite("Network (network/*)", (bench) => {
   const rng = mulberry32();
   const size: Vec2 = { x: kSide, y: kSide };
@@ -63,7 +59,6 @@ const suite = defineSuite("Network (network/*)", (bench) => {
     .add("applyPixelCommand / global-fill 256x256", () => {
       applyPixelCommand(fillState, fillCommand);
     }, {
-      // Reset white before each run so `global-fill` keeps worst-case coverage.
       beforeEach() {
         fillState.buffer.replacePixels(whitePixels, size);
       }

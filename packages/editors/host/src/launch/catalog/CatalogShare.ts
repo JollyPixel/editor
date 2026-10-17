@@ -84,9 +84,6 @@ export class CatalogShare {
     this.#room.on("message", this.#relay);
   }
 
-  /**
-   * The returned function closes `connector` and every port opened through it.
-   */
   serve(
     connector: MessagePort
   ): () => void {

@@ -15,7 +15,7 @@ import {
 } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
-import { displayNameOf } from "../../../model/index.ts";
+import { nodeDisplayName } from "../../../model/index.ts";
 
 export interface TimelineKey {
   tick: number;
@@ -52,11 +52,11 @@ export function timelineRows(
   for (const track of clip.tracks) {
     const blockId = bound.get(track.path);
     if (blockId !== undefined && !tracks.has(blockId)) {
-      tracks.set(blockId, { path: track.path, keys: keysOf(track) });
+      tracks.set(blockId, { path: track.path, keys: listKeys(track) });
     }
   }
   if (selectedId !== null && tree.block(selectedId) !== undefined && !tracks.has(selectedId)) {
-    tracks.set(selectedId, { path: binding.pathOf(selectedId), keys: [] });
+    tracks.set(selectedId, { path: binding.trackPath(selectedId), keys: [] });
   }
 
   return blocksInOrder(tree).flatMap((block) => {
@@ -64,7 +64,7 @@ export function timelineRows(
 
     return track === undefined ? [] : [{
       blockId: block.id,
-      name: displayNameOf(block),
+      name: nodeDisplayName(block),
       path: track.path,
       keys: track.keys,
       selected: block.id === selectedId
@@ -86,12 +86,12 @@ export function unboundTimelineRows(
       path: track.path,
       name: new TrackPath(track.path).blockName,
       state,
-      keys: keysOf(track)
+      keys: listKeys(track)
     }];
   });
 }
 
-function keysOf(
+function listKeys(
   track: AnimationTrackJSON
 ): TimelineKey[] {
   const ticks = new Map<number, TimelineKey["interpolation"]>();
@@ -115,7 +115,7 @@ function blocksInOrder(
   function visit(
     parentId: string | null
   ): ModelNodeJSON[] {
-    return tree.childrenOf(parentId).flatMap((node) => [
+    return tree.listChildren(parentId).flatMap((node) => [
       ...node.kind === "block" ? [node] : [],
       ...visit(node.id)
     ]);

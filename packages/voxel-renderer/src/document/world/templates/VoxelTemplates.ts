@@ -72,10 +72,6 @@ export interface VoxelTemplatePlaceOptions {
   overwrite?: boolean;
 }
 
-/**
- * Templates saved with a world, keyed by id. Every change is dispatched to
- * the world as a template command; placing one is a voxel patch.
- */
 export class VoxelTemplates implements Iterable<VoxelTemplate> {
   #templates = new Map<string, VoxelTemplate>();
   #chunkSize: number;

@@ -4,7 +4,7 @@ import {
   expect
 } from "../fixtures.ts";
 import { fieldRow as row } from "../support/gallery.ts";
-import { styleOf } from "../support/styles.ts";
+import { readStyle } from "../support/styles.ts";
 
 test.describe("colored fields", () => {
   test.use({
@@ -15,8 +15,8 @@ test.describe("colored fields", () => {
     const shadows: string[] = [];
     for (const state of ["modified", "colored+modified"]) {
       const field = row(page, "jolly-checkbox", state);
-      const paint = await styleOf(field.locator("input"), "accent-color");
-      const shadow = await styleOf(field, "box-shadow");
+      const paint = await readStyle(field.locator("input"), "accent-color");
+      const shadow = await readStyle(field, "box-shadow");
 
       expect(shadow).toContain(paint);
       shadows.push(shadow);
@@ -28,22 +28,22 @@ test.describe("colored fields", () => {
   test("the neutral paint is muted in light and near-white in dark", async({ page }) => {
     const field = row(page, "jolly-checkbox", "default");
     const box = field.locator("input");
-    const lightPaint = await styleOf(box, "accent-color");
+    const lightPaint = await readStyle(box, "accent-color");
 
-    expect(lightPaint).toBe(await styleOf(field.locator(".label"), "color"));
+    expect(lightPaint).toBe(await readStyle(field.locator(".label"), "color"));
 
     await page.locator("gallery-root").evaluate(
       (root) => root.setAttribute("theme", "dark")
     );
-    await expect.poll(() => styleOf(box, "accent-color")).not.toBe(lightPaint);
-    expect(await styleOf(box, "accent-color"))
-      .toBe(await styleOf(field, "color"));
+    await expect.poll(() => readStyle(box, "accent-color")).not.toBe(lightPaint);
+    expect(await readStyle(box, "accent-color"))
+      .toBe(await readStyle(field, "color"));
   });
 
   test("a root accent override reaches only colored fields", async({ page }) => {
     const neutral = row(page, "jolly-checkbox", "default").locator("input");
     const colored = row(page, "jolly-checkbox", "colored").locator("input");
-    const neutralBefore = await styleOf(neutral, "accent-color");
+    const neutralBefore = await readStyle(neutral, "accent-color");
 
     await page.locator("gallery-root").evaluate((root: HTMLElement) => {
       root.style.setProperty("--jolly-accent-fill", "rgb(255, 102, 0)");

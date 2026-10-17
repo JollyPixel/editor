@@ -10,7 +10,7 @@ import {
   type MeshHighlightMode,
   MeshHighlight
 } from "../../../src/index.ts";
-import { hexOf } from "./selectables.ts";
+import { toHex } from "./selectables.ts";
 
 interface ModeScopedElement {
   element: FacadeItem;
@@ -71,8 +71,8 @@ export function bindHighlightAndPeerPanel(
     });
 
   const colorSettings = {
-    color: hexOf(appearance.selected.color),
-    hoverColor: hexOf(appearance.hovered.color),
+    color: toHex(appearance.selected.color),
+    hoverColor: toHex(appearance.hovered.color),
     hoverOpacity: appearance.hovered.opacity
   };
   highlightFolder

@@ -5,7 +5,6 @@ import { positiveNumber } from "./utils/parse.ts";
 // CONSTANTS
 const kDefaultTime = 500;
 const kDefaultWarmupTime = 100;
-// Low iteration floors limit slow tasks while fast tasks use the time budgets.
 const kDefaultIterations = 12;
 const kDefaultWarmupIterations = 3;
 const kDefaultBatch = 100;
@@ -45,15 +44,8 @@ export interface BenchmarkConfig {
   allocations: boolean;
 }
 
-// Delay environment validation until config() is read.
 let current: BenchmarkConfig | null = null;
 
-/**
- * Suite modules may load before CLI flags are applied, so callers read this
- * lazily.
- *
- * @throws {BenchmarkError} When a `BENCH_*` variable is invalid.
- */
 export function config(): Readonly<BenchmarkConfig> {
   current ??= fromEnvironment();
 

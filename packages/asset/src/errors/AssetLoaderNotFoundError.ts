@@ -1,6 +1,3 @@
-/**
- * Reports a load request for an asset kind without a registered loader.
- */
 export class AssetLoaderNotFoundError extends Error {
   readonly kind: string;
 

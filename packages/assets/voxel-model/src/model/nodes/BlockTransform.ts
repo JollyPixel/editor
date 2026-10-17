@@ -27,7 +27,7 @@ export class BlockTransform {
   static create(
     overrides: Partial<BlockTransformJSON> = {}
   ): BlockTransformJSON {
-    return copyOf({
+    return cloneTransform({
       position: { x: 0, y: 0, z: 0 },
       pivotOffset: { x: 0, y: 0, z: 0 },
       size: { x: 1, y: 1, z: 1 },
@@ -74,7 +74,7 @@ export class BlockTransform {
   constructor(
     rest: BlockTransformJSON
   ) {
-    this.#rest = copyOf(rest);
+    this.#rest = cloneTransform(rest);
   }
 
   pose(
@@ -109,11 +109,11 @@ export class BlockTransform {
   }
 
   toJSON(): BlockTransformJSON {
-    return copyOf(this.#rest);
+    return cloneTransform(this.#rest);
   }
 }
 
-function copyOf(
+function cloneTransform(
   transform: BlockTransformJSON
 ): BlockTransformJSON {
   return {

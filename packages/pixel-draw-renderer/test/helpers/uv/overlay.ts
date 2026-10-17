@@ -14,7 +14,7 @@ export class FakeOverlay {
     return false;
   }
 
-  setLivePreview(
+  showLivePreview(
     preview: UVLivePreview | null
   ): void {
     this.previews.push(preview);

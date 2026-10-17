@@ -58,16 +58,16 @@ function createHarness(
   };
 }
 
-function materialOf(
+function readMaterial(
   mesh: THREE.Mesh
 ): THREE.LineBasicMaterial {
   return (mesh.children[0] as THREE.LineSegments).material as THREE.LineBasicMaterial;
 }
 
-function colorOf(
+function readColor(
   mesh: THREE.Mesh
 ): string {
-  return `#${materialOf(mesh).color.getHexString()}`;
+  return `#${readMaterial(mesh).color.getHexString()}`;
 }
 
 describe("peer hover", () => {
@@ -76,22 +76,22 @@ describe("peer hover", () => {
     hoverRegistry.hover("peer-a", "mesh-1");
 
     assert.strictEqual(mesh.children.length, 1);
-    assert.ok(materialOf(mesh) instanceof THREE.LineDashedMaterial);
-    assert.strictEqual(colorOf(mesh), hoverRegistry.colorOf("peer-a"));
+    assert.ok(readMaterial(mesh) instanceof THREE.LineDashedMaterial);
+    assert.strictEqual(readColor(mesh), hoverRegistry.peerColor("peer-a"));
   });
 
   test("defaults to the documented 0.35 hover opacity", () => {
     const { hoverRegistry, mesh } = createHarness();
     hoverRegistry.hover("peer-a", "mesh-1");
 
-    assert.strictEqual(materialOf(mesh).opacity, 0.35);
+    assert.strictEqual(readMaterial(mesh).opacity, 0.35);
   });
 
   test("a custom opacity is applied to the overlay", () => {
     const { hoverRegistry, mesh } = createHarness({ opacity: 0.7 });
     hoverRegistry.hover("peer-a", "mesh-1");
 
-    assert.strictEqual(materialOf(mesh).opacity, 0.7);
+    assert.strictEqual(readMaterial(mesh).opacity, 0.7);
   });
 
   test(
@@ -102,7 +102,7 @@ describe("peer hover", () => {
       hoverRegistry.hover("peer-b", "mesh-1");
 
       assert.strictEqual(mesh.children.length, 1);
-      assert.strictEqual(colorOf(mesh), hoverRegistry.colorOf("peer-a"));
+      assert.strictEqual(readColor(mesh), hoverRegistry.peerColor("peer-a"));
     }
   );
 
@@ -119,7 +119,7 @@ describe("peer hover", () => {
       overlayBefore,
       "must reuse the same overlay instance, not rebuild it"
     );
-    assert.strictEqual(colorOf(mesh), hoverRegistry.colorOf("peer-b"));
+    assert.strictEqual(readColor(mesh), hoverRegistry.peerColor("peer-b"));
   });
 
   test("all peers un-hovering disposes the overlay", () => {
@@ -138,7 +138,7 @@ describe("peer hover", () => {
     new PeerHoverOverlays({ selectionRegistry, hoverRegistry, selection });
 
     assert.strictEqual(mesh.children.length, 1);
-    assert.strictEqual(colorOf(mesh), hoverRegistry.colorOf("peer-a"));
+    assert.strictEqual(readColor(mesh), hoverRegistry.peerColor("peer-a"));
   });
 });
 
@@ -157,7 +157,7 @@ describe("priority rule: any selector suppresses hover", () => {
     selection.select("mesh-1");
 
     assert.strictEqual(mesh.children.length, 1, "only the local selection's own overlay should remain");
-    assert.notStrictEqual(colorOf(mesh), hoverRegistry.colorOf("peer-a"));
+    assert.notStrictEqual(readColor(mesh), hoverRegistry.peerColor("peer-a"));
   });
 
   test("the peer hover overlay reappears once the selector clears", () => {
@@ -177,7 +177,7 @@ describe("priority rule: local hover wins over peer hover", () => {
     selection.hover("mesh-1");
 
     assert.strictEqual(mesh.children.length, 1, "only the local hover's own overlay should remain");
-    assert.notStrictEqual(colorOf(mesh), hoverRegistry.colorOf("peer-a"));
+    assert.notStrictEqual(readColor(mesh), hoverRegistry.peerColor("peer-a"));
   });
 
   test("the peer hover overlay reappears once the local hover moves away", () => {

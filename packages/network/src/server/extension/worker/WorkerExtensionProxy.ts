@@ -39,15 +39,11 @@ export interface WorkerExtensionProxyOptions {
 }
 
 function resolveHostEntryUrl(): URL {
-  // Static URLs stop bundlers from globbing sibling .d.ts and .map files.
   return import.meta.url.endsWith(".ts") ?
     new URL("./WorkerExtensionHost.ts", import.meta.url) :
     new URL("./WorkerExtensionHost.js", import.meta.url);
 }
 
-/**
- * Presents a worker-hosted extension through the normal Extension API.
- */
 export class WorkerExtensionProxy extends Extension {
   readonly id: string;
   readonly name: string;
@@ -165,7 +161,6 @@ export class WorkerExtensionProxy extends Extension {
     });
     transport.onError((error) => this.#handleFailure(error));
     transport.onExit((code) => {
-      // `close()` sets `#dead`, so nonzero termination codes are not crashes.
       if (code !== 0 && !this.#dead) {
         this.#handleFailure(new Error(`worker exited with code ${code}`));
       }

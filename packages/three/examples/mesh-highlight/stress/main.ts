@@ -93,7 +93,7 @@ function refreshHighlightEntries(): void {
       continue;
     }
 
-    const peerId = peerRegistry.primarySelectorOf(objectId);
+    const peerId = peerRegistry.primarySelector(objectId);
     if (peerId === null) {
       continue;
     }
@@ -101,7 +101,7 @@ function refreshHighlightEntries(): void {
     entries.push({
       target: grid.mesh,
       instanceId,
-      color: peerRegistry.colorOf(peerId)
+      color: peerRegistry.peerColor(peerId)
     });
   }
 
@@ -176,7 +176,7 @@ function clusterPeersAroundSelection(
   }
 
   peers.assign(
-    grid.nearestIds(grid.positionOf(anchorId), peerCount, anchorId)
+    grid.nearestIds(grid.gridPosition(anchorId), peerCount, anchorId)
   );
 }
 

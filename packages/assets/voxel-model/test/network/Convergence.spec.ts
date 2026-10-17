@@ -35,7 +35,7 @@ function nodeIds(
   return [...nodes].map((node) => node.id).sort();
 }
 
-function snapshotOf(
+function takeSnapshot(
   document: ModelDocument
 ) {
   return {
@@ -205,12 +205,12 @@ describe("voxel-model convergence", () => {
 
     assert.strictEqual(document.tree.materials.has("glass"), false);
     assert.strictEqual(document.tree.materials.has("iron"), true);
-    assert.strictEqual(document.tree.materialIdOf("M"), undefined);
+    assert.strictEqual(document.tree.blockMaterialId("M"), undefined);
 
     flush();
     deliver();
 
-    assert.deepStrictEqual(snapshotOf(document), server.state.snapshot());
+    assert.deepStrictEqual(takeSnapshot(document), server.state.snapshot());
   });
 
   test("a newer local surface change survives an older peer change of the same field", () => {
@@ -230,7 +230,7 @@ describe("voxel-model convergence", () => {
     const surface = document.tree.materials.material("glass")?.surface;
     assert.strictEqual(surface?.opacity, 0.5);
     assert.strictEqual(surface?.roughness, 0.2);
-    assert.deepStrictEqual(snapshotOf(document), server.state.snapshot());
+    assert.deepStrictEqual(takeSnapshot(document), server.state.snapshot());
   });
 
   test("a pending set link and binding survive a peer edit rebased before them", () => {
@@ -248,6 +248,6 @@ describe("voxel-model convergence", () => {
 
     flush();
     deliver();
-    assert.deepStrictEqual(snapshotOf(document), server.state.snapshot());
+    assert.deepStrictEqual(takeSnapshot(document), server.state.snapshot());
   });
 });

@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
 import {
   makeContainer,
-  overlayOf
+  findOverlay
 } from "./helpers/dom.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
 import {
@@ -37,7 +37,7 @@ describe("PixelArtCanvas — paint mode", () => {
         brush: { size: 5, maxSize: 32 }
       });
       const canvas = manager.canvas();
-      const svg = overlayOf(container);
+      const svg = findOverlay(container);
       const group = svg.querySelector('g[data-overlay="brush-highlight"]');
       assert.ok(group, "highlight group should exist");
 

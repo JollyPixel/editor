@@ -64,7 +64,7 @@ export function pixelHistoryRegistration<TScope extends string>(
     id,
     document: pixelEdits(document),
     keys: pixelHistoryKeys(document),
-    scopeOf: () => scope,
+    resolveScope: () => scope,
     label: ({ command }) => kLabels[command.action]
   };
 }
@@ -108,7 +108,7 @@ class PixelGuard implements HistoryGuard<PixelKeySet, PixelCapture> {
     const entries: KeyedGuardEntry[] = [];
     let texture = false;
     for (const command of commands) {
-      const area = areaOf(command);
+      const area = affectedArea(command);
       if (area === "texture") {
         texture = true;
       }
@@ -182,12 +182,12 @@ function writtenKeys(
   change: CommandChange<DocumentCommand, null>
 ): PixelKeySet {
   return new PixelKeySet(
-    areaOf(change.command),
+    affectedArea(change.command),
     namedEntries(document, change.command).map(({ key }) => key)
   );
 }
 
-function areaOf(
+function affectedArea(
   command: DocumentCommand
 ): PixelArea | null {
   switch (command.action) {
@@ -274,7 +274,7 @@ function slotEntry(
       }
 
       return region.slots.includes(slot)
-        ? region.geometryFor(slot)
+        ? region.slotGeometry(slot)
         : undefined;
     }
   };

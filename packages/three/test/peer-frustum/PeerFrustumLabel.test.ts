@@ -7,7 +7,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { PeerFrustumLabel } from "#src/peer-frustum/PeerFrustumLabel.ts";
-import { contextOf } from "../fixtures/canvas.ts";
+import { spriteContext } from "../fixtures/canvas.ts";
 
 describe("constructor", () => {
   test("is a THREE.Sprite", () => {
@@ -25,7 +25,7 @@ describe("constructor", () => {
       color: "#43aa8b"
     });
 
-    assert.strictEqual(contextOf(label).lastFillText, "Alice");
+    assert.strictEqual(spriteContext(label).lastFillText, "Alice");
   });
 
   test("showNameBox defaults to false: no background box is drawn", () => {
@@ -34,7 +34,7 @@ describe("constructor", () => {
       color: "#43aa8b"
     });
 
-    assert.strictEqual(contextOf(label).roundRectCallCount, 0);
+    assert.strictEqual(spriteContext(label).roundRectCallCount, 0);
   });
 
   test("showNameBox: true draws a background box", () => {
@@ -44,7 +44,7 @@ describe("constructor", () => {
       showNameBox: true
     });
 
-    assert.strictEqual(contextOf(label).roundRectCallCount, 1);
+    assert.strictEqual(spriteContext(label).roundRectCallCount, 1);
   });
 });
 
@@ -57,7 +57,7 @@ describe("displayName", () => {
 
     label.displayName = "Erin";
 
-    assert.strictEqual(contextOf(label).lastFillText, "Erin");
+    assert.strictEqual(spriteContext(label).lastFillText, "Erin");
   });
 });
 
@@ -71,7 +71,7 @@ describe("color", () => {
     label.color = "#00ff00";
 
     assert.strictEqual(
-      contextOf(label).fillStyle,
+      spriteContext(label).fillStyle,
       new THREE.Color("#00ff00").getStyle()
     );
   });
@@ -86,6 +86,6 @@ describe("showNameBox", () => {
 
     label.showNameBox = true;
 
-    assert.strictEqual(contextOf(label).roundRectCallCount, 1);
+    assert.strictEqual(spriteContext(label).roundRectCallCount, 1);
   });
 });

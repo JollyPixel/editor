@@ -20,16 +20,10 @@ export interface PresenceRequestDetail {
 }
 
 export interface PresenceProvider {
-  /**
-   * Pushes the current source to every registered descendant.
-   */
   notify(): void;
   dispose(): void;
 }
 
-/**
- * Requests the nearest source across shadow roots without `@lit/context`.
- */
 export function requestPresenceSource(
   element: HTMLElement
 ): PresenceRequestDetail {

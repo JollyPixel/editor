@@ -30,7 +30,7 @@ import {
   Selectables,
   addSelectionLighting,
   selectionMaterial,
-  hexOf
+  toHex
 } from "../shared/selectables.ts";
 
 // CONSTANTS
@@ -134,7 +134,7 @@ room.join();
 
 const colorPalette = new ColorPalette();
 const colorAllocator = {
-  colorOf: (peerId: string) => colorPalette.forKey(peerId),
+  peerColor: (peerId: string) => colorPalette.forKey(peerId),
   release: () => void 0
 };
 
@@ -219,8 +219,8 @@ function refreshPeersLegend(): void {
   const rows: { name: string; color: string; selected: string; }[] = [
     {
       name: `${username} (you)`,
-      color: hexOf(highlight.appearance.selected.color),
-      selected: selectables.labelOf(highlight.selected)
+      color: toHex(highlight.appearance.selected.color),
+      selected: selectables.displayLabel(highlight.selected)
     }
   ];
 
@@ -228,7 +228,7 @@ function refreshPeersLegend(): void {
     rows.push({
       name: network.parsePeerProfile(peer.profile).username,
       color: colorPalette.forKey(clientId),
-      selected: selectables.labelOf(peerRegistry.selectionOf(clientId))
+      selected: selectables.displayLabel(peerRegistry.selectedObject(clientId))
     });
   }
 
@@ -249,8 +249,8 @@ function refreshPeersLegend(): void {
 }
 
 function refreshStatus(): void {
-  status.hovered = selectables.labelOf(hoveredId);
-  status.selected = selectables.labelOf(highlight.selected);
+  status.hovered = selectables.displayLabel(hoveredId);
+  status.selected = selectables.displayLabel(highlight.selected);
   sessionFolder.refresh();
   refreshPeersLegend();
 }

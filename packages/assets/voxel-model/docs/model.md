@@ -17,7 +17,7 @@ document.addBlock({
   transform: BlockTransform.create({ position: { x: 1, y: 0, z: 0 } })
 });
 
-document.tree.transformParentOf(document.tree.childrenOf(arms)[0].id); // body
+document.tree.findTransformParent(document.tree.listChildren(arms)[0].id); // body
 ```
 
 ## Nodes
@@ -40,8 +40,8 @@ A model tree holds blocks and folders. A folder only sorts nodes. A block has a 
 | `rename(id, name)` | Renames a node. |
 | `move(id, parentId, { transforms?, beforeId? }?)` | Moves a node, with the block transforms the move rewrites. A node cannot move into its own subtree. |
 | `transform(id, transform, flipAxes?)` | Sets a block's transform. A `flipAxes` with no axis set clears the block's flip. |
-| `setUv(id, uv)` | Sets a block's whole UV layout. |
-| `setShape(id, shape, uv)` | Sets a block's shape and its whole UV layout in one command, since a UV layout only fits the faces of one shape. |
+| `updateUv(id, uv)` | Sets a block's whole UV layout. |
+| `updateShape(id, shape, uv)` | Sets a block's shape and its whole UV layout in one command, since a UV layout only fits the faces of one shape. |
 | `assignMaterial(id, materialId)` | Points a block to a material, or to none with `null`. |
 
 The edit methods return `false` when the tree refuses the command, and the `add*` methods `null`. Without an `id`, the `add*` methods give the node a random ID of 12 letters and digits. A node lands before the sibling `beforeId`, or last among its siblings without one. Parents must exist, IDs must be unused, and transforms, UV layouts and materials target blocks.
@@ -54,10 +54,10 @@ The edit methods return `false` when the tree refuses the command, and the `add*
 |---|---|
 | `size`, `has(id)`, `get(id)`, `values()` | The nodes, in tree order. |
 | `block(id)`, `blocks()` | Blocks only. |
-| `childrenOf(parentId)`, `nextSiblingOf(id)`, `subtreeOf(id)` | Sibling order and subtrees. `parentId` is `null` for the root. |
-| `transformParentOf(id)` | The nearest block above a node, folders skipped, or `null`. |
-| `enclosingBlockOf(id)` | The node itself when it is a block, else its transform parent. |
-| `materialIdOf(id)` | A block's `materialId`. |
+| `listChildren(parentId)`, `findNextSibling(id)`, `subtreeFrom(id)` | Sibling order and subtrees. `parentId` is `null` for the root. |
+| `findTransformParent(id)` | The nearest block above a node, folders skipped, or `null`. |
+| `findEnclosingBlock(id)` | The node itself when it is a block, else its transform parent. |
+| `blockMaterialId(id)` | A block's `materialId`. |
 | `blocksUsing(materialId)`, `materialUses()` | The blocks pointing to a material, and the number of blocks per material ID. |
 | `blockNamesUnder(parentId, exceptId?)` | The `NameSet` of the block names a block placed under `parentId` would sit among. |
 | `blockNameClashes()` | The IDs of every block sharing its name with a sibling block. |
@@ -86,7 +86,7 @@ Block names should be unique among the blocks sharing a transform parent, compar
 | `BLOCK_SHAPE_PARAMETERS` | The `min`, `max`, `step` and `default` of each shape parameter: `sides` (3 to 32, step 1, 8), `ringSides` (3 to 32, step 1, 6) and `thickness` (0.05 to 0.95, step 0.05, 0.35). |
 | `BlockShape.box` | The frozen box shape. |
 | `BlockShape.create(type)` | A shape of `type`, with the default sides, ring sides and thickness it needs. |
-| `BlockShape.of(block)` | A copy of a block's shape, a box when it stores none. |
+| `BlockShape.fromBlock(block)` | A copy of a block's shape, a box when it stores none. |
 | `BlockShape.slots(shape)` | The UV slots of a shape: the six box faces, `top` for a plane, for a cylinder or cone `side-0` to `side-<sides - 1>` then `top` (cylinder only) and `bottom`, and for a torus `side-0` to `side-<sides - 1>`, one per segment around the ring, each wrapping the whole tube. |
 | `BlockShape.sideSlots(sides)` | `side-0` to `side-<sides - 1>`. |
 | `BlockShape.isSideSlot(slot)` | Whether `slot` is one of those side slots. |

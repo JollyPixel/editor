@@ -16,7 +16,7 @@ import { blockShapeUv } from "#src/projection/blockShapeUv.ts";
 // CONSTANTS
 const kShapes = BlockShapeRegistry.createDefault();
 
-function shapeOf(
+function findShape(
   id: string
 ): BlockShape {
   const shape = kShapes.get(id);
@@ -27,7 +27,7 @@ function shapeOf(
 
 describe("blockShapeUv", () => {
   it("reads a cube as a plain six-face box", () => {
-    const topology = blockShapeUv(shapeOf("cube"));
+    const topology = blockShapeUv(findShape("cube"));
 
     assert.equal(topology.isBox, true);
     assert.deepEqual(topology.activeFaces, [...DEFAULT_UV_SLOTS]);
@@ -35,7 +35,7 @@ describe("blockShapeUv", () => {
   });
 
   it("drops the face slot a ramp never renders", () => {
-    const topology = blockShapeUv(shapeOf("ramp"));
+    const topology = blockShapeUv(findShape("ramp"));
 
     assert.equal(topology.isBox, false);
     assert.deepEqual(topology.activeFaces, [
@@ -48,7 +48,7 @@ describe("blockShapeUv", () => {
   });
 
   it("derives the right-angle corner of a ramp's triangular sides", () => {
-    const topology = blockShapeUv(shapeOf("ramp"));
+    const topology = blockShapeUv(findShape("ramp"));
 
     assert.deepEqual(topology.triangles, {
       left: "bottom-right",
@@ -57,7 +57,7 @@ describe("blockShapeUv", () => {
   });
 
   it("keeps a stair off the box path", () => {
-    const topology = blockShapeUv(shapeOf("stair"));
+    const topology = blockShapeUv(findShape("stair"));
 
     assert.equal(topology.isBox, false);
     assert.deepEqual(topology.triangles, {});
@@ -77,7 +77,7 @@ describe("blockShapeUv", () => {
   });
 
   it("gives a cube face the whole tile", () => {
-    const topology = blockShapeUv(shapeOf("cube"));
+    const topology = blockShapeUv(findShape("cube"));
 
     for (const face of DEFAULT_UV_SLOTS) {
       assert.deepEqual(
@@ -89,7 +89,7 @@ describe("blockShapeUv", () => {
   });
 
   it("narrows a pole side to the width of the pole", () => {
-    const topology = blockShapeUv(shapeOf("pole"));
+    const topology = blockShapeUv(findShape("pole"));
 
     assert.deepEqual(topology.bounds.top, {
       u0: 0.375,
@@ -107,8 +107,8 @@ describe("blockShapeUv", () => {
   });
 
   it("halves a slab side while keeping its top whole", () => {
-    const bottom = blockShapeUv(shapeOf("slabBottom"));
-    const top = blockShapeUv(shapeOf("slabTop"));
+    const bottom = blockShapeUv(findShape("slabBottom"));
+    const top = blockShapeUv(findShape("slabTop"));
 
     assert.deepEqual(bottom.bounds.front, { u0: 0, v0: 0, u1: 1, v1: 0.5 });
     assert.deepEqual(top.bounds.front, { u0: 0, v0: 0.5, u1: 1, v1: 1 });
@@ -116,7 +116,7 @@ describe("blockShapeUv", () => {
   });
 
   it("unions the quads a slot owns rather than taking the first", () => {
-    const topology = blockShapeUv(shapeOf("stair"));
+    const topology = blockShapeUv(findShape("stair"));
 
     assert.deepEqual(
       topology.bounds.right,
@@ -152,7 +152,7 @@ describe("blockShapeUv", () => {
   });
 
   it("gives each stair slot one range, coplanar quads included", () => {
-    const topology = blockShapeUv(shapeOf("stair"));
+    const topology = blockShapeUv(findShape("stair"));
 
     assert.equal(topology.faceRanges.top?.length, 1);
     assert.equal(topology.faceRanges.top?.[0].count, 4);
@@ -162,7 +162,7 @@ describe("blockShapeUv", () => {
   });
 
   it("covers the geometry with no gap or overlap between faces", () => {
-    const topology = blockShapeUv(shapeOf("stairCornerOuter"));
+    const topology = blockShapeUv(findShape("stairCornerOuter"));
     const ranges = topology.activeFaces
       .flatMap((face) => topology.faceRanges[face] ?? [])
       .toSorted((a, b) => a.start - b.start);

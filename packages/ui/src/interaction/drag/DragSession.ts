@@ -36,9 +36,6 @@ interface PaintedInsertion {
   index: number;
 }
 
-/**
- * A container that can receive the dragged element.
- */
 export interface DragZone {
   /**
    * Caller-owned identifier, returned untouched in the result.
@@ -59,9 +56,6 @@ export interface DragZone {
    * so no line is painted there.
    */
   source?: number | null;
-  /**
-   * Client rect of the insertion line for an index.
-   */
   line(
     index: number
   ): Rect;
@@ -133,13 +127,7 @@ export interface DragSessionOptions {
    * Element that keeps pointer capture; defaults to `source`.
    */
   handle?: HTMLElement;
-  /**
-   * Resolved once, when the drag passes the threshold.
-   */
   zones(): DragZone[];
-  /**
-   * Box the gesture will occupy for a pointer position, asked on every move.
-   */
   probe?(
     clientX: number,
     clientY: number
@@ -155,9 +143,6 @@ export interface DragSessionOptions {
    * element already follows the pointer.
    */
   ghost?: boolean;
-  /**
-   * Builds what the cursor carries, in place of the label chip.
-   */
   ghostElement?(): HTMLElement | null;
   threshold?: number;
   deadBand?: number;
@@ -409,7 +394,7 @@ export function verticalInsertionLine(
 ): Rect {
   const position = index === 0 ?
     (candidates[0]?.start ?? bounds.y) :
-    edgeOf(candidates[index - 1], bounds.y + bounds.height);
+    candidateEdge(candidates[index - 1], bounds.y + bounds.height);
 
   return {
     x: bounds.x,
@@ -426,7 +411,7 @@ export function horizontalInsertionLine(
 ): Rect {
   const position = index === 0 ?
     (candidates[0]?.start ?? bounds.x) :
-    edgeOf(candidates[index - 1], bounds.x + bounds.width);
+    candidateEdge(candidates[index - 1], bounds.x + bounds.width);
 
   return {
     x: position - (kInsertionThickness / 2),
@@ -436,7 +421,7 @@ export function horizontalInsertionLine(
   };
 }
 
-function edgeOf(
+function candidateEdge(
   candidate: DropCandidate | undefined,
   fallback: number
 ): number {

@@ -15,8 +15,8 @@ describe("select", () => {
     const registry = new PeerSelectionRegistry();
     registry.select("peer-a", "box");
 
-    assert.strictEqual(registry.selectionOf("peer-a"), "box");
-    assert.deepStrictEqual(registry.selectorsOf("box"), ["peer-a"]);
+    assert.strictEqual(registry.selectedObject("peer-a"), "box");
+    assert.deepStrictEqual(registry.listSelectors("box"), ["peer-a"]);
   });
 
   test("a second peer selecting the same object is appended after the first", () => {
@@ -24,8 +24,8 @@ describe("select", () => {
     registry.select("peer-a", "box");
     registry.select("peer-b", "box");
 
-    assert.deepStrictEqual(registry.selectorsOf("box"), ["peer-a", "peer-b"]);
-    assert.strictEqual(registry.primarySelectorOf("box"), "peer-a");
+    assert.deepStrictEqual(registry.listSelectors("box"), ["peer-a", "peer-b"]);
+    assert.strictEqual(registry.primarySelector("box"), "peer-a");
   });
 
   test("moving a peer from one object to another removes it from the first", () => {
@@ -33,9 +33,9 @@ describe("select", () => {
     registry.select("peer-a", "box");
     registry.select("peer-a", "cone");
 
-    assert.deepStrictEqual(registry.selectorsOf("box"), []);
-    assert.deepStrictEqual(registry.selectorsOf("cone"), ["peer-a"]);
-    assert.strictEqual(registry.selectionOf("peer-a"), "cone");
+    assert.deepStrictEqual(registry.listSelectors("box"), []);
+    assert.deepStrictEqual(registry.listSelectors("cone"), ["peer-a"]);
+    assert.strictEqual(registry.selectedObject("peer-a"), "cone");
   });
 
   test("deselecting the primary peer promotes the next-oldest remaining peer", () => {
@@ -44,8 +44,8 @@ describe("select", () => {
     registry.select("peer-b", "box");
     registry.select("peer-a", null);
 
-    assert.strictEqual(registry.primarySelectorOf("box"), "peer-b");
-    assert.deepStrictEqual(registry.selectorsOf("box"), ["peer-b"]);
+    assert.strictEqual(registry.primarySelector("box"), "peer-b");
+    assert.deepStrictEqual(registry.listSelectors("box"), ["peer-b"]);
   });
 
   test("is a no-op (and does not dispatch) when re-selecting the same object", () => {
@@ -107,26 +107,26 @@ describe("removePeer", () => {
     registry.select("peer-a", "box");
     registry.removePeer("peer-a");
 
-    assert.strictEqual(registry.selectionOf("peer-a"), null);
-    assert.deepStrictEqual(registry.selectorsOf("box"), []);
+    assert.strictEqual(registry.selectedObject("peer-a"), null);
+    assert.deepStrictEqual(registry.listSelectors("box"), []);
   });
 });
 
-describe("colorOf", () => {
+describe("peerColor", () => {
   test("resolves a peer to the same color on another registry, whatever was asked first", () => {
     const registry = new PeerSelectionRegistry();
-    registry.colorOf("peer-b");
+    registry.peerColor("peer-b");
 
-    assert.strictEqual(registry.colorOf("peer-a"), new PeerHoverRegistry().colorOf("peer-a"));
+    assert.strictEqual(registry.peerColor("peer-a"), new PeerHoverRegistry().peerColor("peer-a"));
   });
 });
 
 describe("colorAllocator", () => {
-  test("delegates colorOf to the injected allocator", () => {
+  test("delegates peerColor to the injected allocator", () => {
     const allocator = createStubColorAllocator();
     const registry = new PeerSelectionRegistry({ colorAllocator: allocator });
 
-    assert.strictEqual(registry.colorOf("peer-a"), "stub:peer-a");
+    assert.strictEqual(registry.peerColor("peer-a"), "stub:peer-a");
   });
 
   test("calls release on removePeer", () => {
@@ -156,8 +156,8 @@ describe("dispose", () => {
     registry.select("peer-a", "box");
     registry.dispose();
 
-    assert.strictEqual(registry.selectionOf("peer-a"), null);
-    assert.deepStrictEqual(registry.selectorsOf("box"), []);
-    assert.strictEqual(registry.primarySelectorOf("box"), null);
+    assert.strictEqual(registry.selectedObject("peer-a"), null);
+    assert.deepStrictEqual(registry.listSelectors("box"), []);
+    assert.strictEqual(registry.primarySelector("box"), null);
   });
 });

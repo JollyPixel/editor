@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
 import type { Locator } from "@playwright/test";
 import {
-  boxOf,
-  centerOf,
+  measureBox,
+  measureCenter,
   dragTo,
   type CommandConsole
 } from "@jolly-pixel/e2e";
@@ -190,18 +190,18 @@ for (const stacked of kStackedBlockLibraries) {
     await map.panes.open(stacked.pane);
     await expect(below).toBeVisible();
 
-    const before = await boxOf(library.listbox);
-    const gap = (await boxOf(below)).y - (before.y + before.height);
-    const grip = await centerOf(library.heightGrip);
+    const before = await measureBox(library.listbox);
+    const gap = (await measureBox(below)).y - (before.y + before.height);
+    const grip = await measureCenter(library.heightGrip);
     await dragTo(page, library.heightGrip, {
       x: grip.x,
       y: grip.y - before.height
     });
 
-    await expect.poll(async() => (await boxOf(library.listbox)).height)
+    await expect.poll(async() => (await measureBox(library.listbox)).height)
       .toBeLessThan(before.height);
-    const after = await boxOf(library.listbox);
-    expect((await boxOf(below)).y - (after.y + after.height))
+    const after = await measureBox(library.listbox);
+    expect((await measureBox(below)).y - (after.y + after.height))
       .toBeCloseTo(gap, 0);
   });
 }

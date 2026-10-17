@@ -4,7 +4,7 @@ export interface RecordedCalls<TArgs extends unknown[]> {
   };
 }
 
-export function callsOf<TArgs extends unknown[]>(
+export function readCalls<TArgs extends unknown[]>(
   fn: RecordedCalls<TArgs>
 ): TArgs[] {
   return fn.mock.calls.map((call) => call.arguments);

@@ -26,9 +26,6 @@ interface Disposable {
   dispose(): void;
 }
 
-/**
- * Release the GPU resources owned by an Object3D subtree.
- */
 export function disposeObject3D(
   root: THREE.Object3D,
   options: DisposeObject3DOptions = {}
@@ -155,10 +152,6 @@ function disposeTexture(
 ): void {
   texture.dispose();
 
-  /*
-   * ImageBitmap keeps CPU-side resources alive until it is closed,
-   * and three.js leaves that call to the application.
-   */
   const { image } = texture;
   if (
     typeof ImageBitmap !== "undefined" &&

@@ -67,15 +67,9 @@ import {
   type VoxelLogger
 } from "../../../VoxelLogger.ts";
 
-/*
- * CONSTANTS
- * A packed transform uses bits 0-4, so a block has at most 32 variants.
- */
+// CONSTANTS
 const kTransformCount = VOXEL_TRANSFORM_MASK + 1;
 const kOcclusionUnknown = -1;
-/**
- * Caps the flat occlusion table at 64k slots; higher IDs use the map.
- */
 const kOcclusionMaxSlots = 1 << 16;
 const kOcclusionFaceMask = 0b111111;
 const kNoBlock = -1;
@@ -117,9 +111,6 @@ interface ResolvedTiles {
   pending: boolean;
 }
 
-/**
- * Memoizes transformed geometry and atlas UVs by block and transform.
- */
 export class BlockVariantCache {
   #blockRegistry: BlockRegistry;
   #shapeRegistry: BlockShapeRegistry;
@@ -148,9 +139,6 @@ export class BlockVariantCache {
     WeakMap<BlockVariant, boolean>
   >();
 
-  /**
-   * Flat occlusion cache indexed by block and transform.
-   */
   #occlusion = new Int32Array(0);
 
   #blockVersion = -1;
@@ -206,9 +194,6 @@ export class BlockVariantCache {
     this.#variantTable.fill(undefined);
   }
 
-  /**
-   * Returns null when the block or shape is unknown.
-   */
   get(
     blockId: number,
     transform: number
@@ -396,10 +381,6 @@ export class BlockVariantCache {
     transform: number
   ): number {
     const key = (blockId * kTransformCount) + (transform & VOXEL_TRANSFORM_MASK);
-    /*
-     * Unsigned so a negative key (never produced by a packed voxel, but cheap
-     * to rule out) misses the table instead of reading `undefined`.
-     */
     if (key >>> 0 < this.#occlusion.length) {
       const cached = this.#occlusion[key];
       if (cached !== kOcclusionUnknown) {
@@ -683,11 +664,6 @@ export class BlockVariantCache {
     const tileUvs = new Float32Array(vertexCount * 2);
 
     for (let i = 0; i < vertexCount; i++) {
-      /*
-       * An odd number of flips mirrors the face, so vertices are stored in
-       * reverse order to keep the winding (and therefore the front side)
-       * correct.
-       */
       const vi = mirrored ? vertexCount - 1 - i : i;
       const vertex = rotateVertex(
         faceDef.vertices[vi],

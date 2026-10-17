@@ -13,9 +13,9 @@ import { BlockUvLayouts } from "./nodes/BlockUvLayouts.ts";
 import { BlockShape } from "./nodes/BlockShape.ts";
 import { MaterialSurface } from "./materials/MaterialSurface.ts";
 import { randomId } from "./randomId.ts";
-import { inverseOf } from "./history/modelInverse.ts";
+import { invert } from "./history/modelInverse.ts";
 import {
-  modelImageOf,
+  captureModelImage,
   restoreModelImages,
   type EntryOrder,
   type ModelImage,
@@ -201,7 +201,7 @@ export class ModelDocument extends CommandDocument<
     });
   }
 
-  setUv(
+  updateUv(
     id: string,
     uv: UVLayoutData
   ): boolean {
@@ -212,7 +212,7 @@ export class ModelDocument extends CommandDocument<
     });
   }
 
-  setShape(
+  updateShape(
     id: string,
     shape: BlockShapeJSON,
     uv: UVLayoutData
@@ -397,8 +397,8 @@ function modelState(
     placeable: (command) => tree.placeable(command),
     apply: (command) => tree.apply(command),
     load: (snapshot) => tree.load(snapshot),
-    imageOf: (command) => modelImageOf(tree, command),
-    inverseOf: (command) => inverseOf(tree, command),
+    captureImage: (command) => captureModelImage(tree, command),
+    invert: (command) => invert(tree, command),
     restored: (images) => restoreModelImages(tree, images)
   };
 }

@@ -22,7 +22,7 @@ const kDropped = {
   reason: "gone"
 };
 
-function sentOf(
+function readSent(
   socket: FakeSocket
 ): unknown[] {
   return socket.sent.map((raw) => JSON.parse(raw));
@@ -89,7 +89,7 @@ describe("Client — reconnect", () => {
     t.mock.timers.tick(500);
     sockets[1].open();
 
-    assert.deepEqual(sentOf(sockets[1]), [
+    assert.deepEqual(readSent(sockets[1]), [
       {
         room: "pixel-draw",
         kind: "join",
@@ -144,7 +144,7 @@ describe("Client — reconnect", () => {
 
     assert.strictEqual(disconnected, 0);
     assert.strictEqual(client.ready, true);
-    assert.deepEqual(sentOf(sockets[1]), [
+    assert.deepEqual(readSent(sockets[1]), [
       { room: "pixel-draw", kind: "join", profile: {}, presence: {} }
     ]);
   });
@@ -209,7 +209,7 @@ describe("Client — reconnect", () => {
     sockets[1].open();
 
     assert.strictEqual(client.ready, true);
-    assert.deepEqual(sentOf(sockets[1]), [
+    assert.deepEqual(readSent(sockets[1]), [
       {
         room: "pixel-draw",
         kind: "join",
@@ -228,7 +228,7 @@ describe("Client — reconnect", () => {
     client.reconnect();
     sockets[1].open();
 
-    assert.deepEqual(sentOf(sockets[1]), [
+    assert.deepEqual(readSent(sockets[1]), [
       { room: "pixel-draw", kind: "join", profile: {}, presence: {} }
     ]);
   });

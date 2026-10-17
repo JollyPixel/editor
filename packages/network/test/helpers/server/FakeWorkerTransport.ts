@@ -8,11 +8,6 @@ import {
   type MainToWorkerMessage
 } from "#src/server/extension/worker/protocol.ts";
 
-/**
- * In-memory WorkerTransport double: no real thread, no real postMessage. Tests
- * drive the "worker" side by calling simulateMessage/simulateError/simulateExit
- * directly, and inspect what the proxy would have sent via `sent`.
- */
 export class FakeWorkerTransport implements WorkerTransport {
   sent: unknown[] = [];
   terminated = false;
@@ -87,10 +82,6 @@ export class FakeWorkerTransport implements WorkerTransport {
   }
 }
 
-/**
- * Every spawn (including restarts) gets its own FakeWorkerTransport, collected
- * in `transports` in spawn order, so tests can assert on restart behavior.
- */
 export function createFakeTransportFactory(): {
   factory: WorkerTransportFactory;
   transports: FakeWorkerTransport[];

@@ -101,7 +101,6 @@ export function resolveBlockProperties(
 export function resolveBlockDefinition(
   def: BlockDefinition
 ): ResolvedBlockDefinition {
-  // Validate policy at the registry boundary, including imported documents.
   new BlockSurface(def);
   if (
     def.blendGroup !== undefined &&

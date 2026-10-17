@@ -11,7 +11,7 @@ import type { Account } from "@jolly-pixel/accounts";
 // Import Internal Dependencies
 import { accountMenu } from "../../../src/shell/account/accountMenu.ts";
 
-function headerOf(
+function readHeader(
   account: Account
 ): unknown {
   return accountMenu(account)[0];
@@ -19,7 +19,7 @@ function headerOf(
 
 describe("accountMenu", () => {
   test("opens on a disabled header naming the owner with a crown", () => {
-    assert.deepEqual(headerOf({
+    assert.deepEqual(readHeader({
       id: "a1",
       username: "ada",
       role: "admin",
@@ -33,7 +33,7 @@ describe("accountMenu", () => {
   });
 
   test("names the role of an account that does not own the project", () => {
-    assert.deepEqual(headerOf({
+    assert.deepEqual(readHeader({
       id: "b2",
       username: "bob",
       role: "member",

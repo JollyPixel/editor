@@ -17,9 +17,6 @@ type SceneLoadChangeHandler<TContext> = (
   load: ManagedSceneLoad<TContext>
 ) => void;
 
-/**
- * Stores the mutable state behind the public scene-load read model.
- */
 export class ManagedSceneLoad<
   TContext = WorldDefaultContext
 > implements SceneLoad<TContext> {

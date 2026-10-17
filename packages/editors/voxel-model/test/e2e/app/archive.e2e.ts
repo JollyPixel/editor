@@ -35,7 +35,7 @@ function offlineIds(
     return {
       modelId,
       textureId: session.catalog.dependencies
-        .dependenciesOf(modelId)
+        .listDependencies(modelId)
         .find((dependency) => dependency.kind === "pixelart")?.id
     };
   });

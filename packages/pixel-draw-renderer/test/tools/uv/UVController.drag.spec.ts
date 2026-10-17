@@ -20,7 +20,7 @@ describe("UVController — drag to move", () => {
     controller.handleEnd();
 
     assert.deepStrictEqual(
-      map.get(region.id)!.rectFor("front"),
+      map.get(region.id)!.slotRect("front"),
       { x: 4, y: 4, width: 8, height: 8 }
     );
   });
@@ -38,8 +38,8 @@ describe("UVController — drag to move", () => {
     controller.handleEnd();
 
     assert.deepStrictEqual(
-      map.get(region.id)!.rectFor("front"),
-      region.rectFor("front")
+      map.get(region.id)!.slotRect("front"),
+      region.slotRect("front")
     );
     assert.deepStrictEqual(moved, []);
     assert.deepStrictEqual(ended, [
@@ -87,8 +87,8 @@ describe("UVController — drag to move", () => {
     controller.handleEnd();
 
     assert.deepStrictEqual(
-      map.get(region.id)!.rectFor("front"),
-      region.rectFor("front")
+      map.get(region.id)!.slotRect("front"),
+      region.slotRect("front")
     );
     assert.strictEqual(overlay.previews.at(-1), null);
   });
@@ -127,8 +127,8 @@ describe("UVController — drag to move", () => {
         { x: 5, y: 5, width: 8, height: 8 }
       ]);
       assert.deepStrictEqual(
-        map.get(region.id)!.rectFor("front"),
-        region.rectFor("front"),
+        map.get(region.id)!.slotRect("front"),
+        region.slotRect("front"),
         "not committed yet"
       );
     });
@@ -146,7 +146,7 @@ describe("UVController — drag to move", () => {
 
       assert.deepStrictEqual(
         events.at(-1)!.region.bounds,
-        region.rectFor("front")
+        region.slotRect("front")
       );
     });
   });

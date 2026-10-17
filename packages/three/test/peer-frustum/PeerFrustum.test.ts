@@ -11,7 +11,7 @@ import {
   PeerFrustumLabel,
   type PeerFrustumDefaults
 } from "#src/index.ts";
-import { contextOf } from "../fixtures/canvas.ts";
+import { spriteContext } from "../fixtures/canvas.ts";
 import { watchDisposal } from "../fixtures/disposal.ts";
 
 function overrideDefaults(
@@ -194,7 +194,7 @@ describe("showNameBox", () => {
 
     const { label } = frustum;
     assert.ok(label instanceof PeerFrustumLabel);
-    assert.strictEqual(contextOf(label).roundRectCallCount, 1);
+    assert.strictEqual(spriteContext(label).roundRectCallCount, 1);
   });
 });
 

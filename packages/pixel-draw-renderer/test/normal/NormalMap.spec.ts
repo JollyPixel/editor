@@ -122,7 +122,7 @@ describe("NormalMap", () => {
     assert.equal(doc.normals.islands.islands.length, 2);
     assert.deepEqual(doc.normals.pixels, expected(doc));
 
-    doc.setNormalMapZone({ regionId: "tile", settings: { invert: true } });
+    doc.assignNormalMapZone({ regionId: "tile", settings: { invert: true } });
     doc.normals.flush();
     assert.deepEqual(doc.normals.pixels, expected(doc));
 
@@ -185,7 +185,7 @@ describe("NormalMap", () => {
       doc.normals.preview(doc.normalMap!.withDefaults({ strength: 8 }));
       doc.normals.flush();
 
-      doc.setNormalMapZone({ regionId: "tile", settings: { invert: true } });
+      doc.assignNormalMapZone({ regionId: "tile", settings: { invert: true } });
       doc.normals.flush();
 
       assert.equal(doc.normals.config, doc.normalMap);

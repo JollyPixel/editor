@@ -16,16 +16,16 @@ import { PREVIEW_FIT_RADIUS } from "../../../../src/features/preview/PreviewStag
 import {
   buildTemplatePreviewMesh
 } from "../../../../src/features/templates/rendering/templatePreviewMesh.ts";
-import { sourcesOf } from "../../../helpers/blockSources.ts";
+import { createSources } from "../../../helpers/blockSources.ts";
 
 // CONSTANTS
 const kPlain = 1;
 const kGold = 2;
 const kUnknown = 9;
 
-function sourcesFor() {
+function createPreviewSources() {
   return {
-    pieces: sourcesOf(new BlocksetAtlases()).createPieces(),
+    pieces: createSources(new BlocksetAtlases()).createPieces(),
     blockRegistry: new BlockRegistry([
       {
         id: kPlain,
@@ -45,7 +45,7 @@ function sourcesFor() {
   };
 }
 
-function templateOf(
+function createTemplate(
   blockIds: number[]
 ): VoxelTemplate {
   return new VoxelTemplate({
@@ -59,8 +59,8 @@ function templateOf(
 describe("buildTemplatePreviewMesh", () => {
   it("draws material group blocks with their finish beside plain blocks", () => {
     const mesh = buildTemplatePreviewMesh(
-      templateOf([kPlain, kGold, kPlain]),
-      sourcesFor()
+      createTemplate([kPlain, kGold, kPlain]),
+      createPreviewSources()
     );
 
     assert.ok(mesh !== null);
@@ -72,8 +72,8 @@ describe("buildTemplatePreviewMesh", () => {
 
   it("fits the whole template inside the preview radius", () => {
     const mesh = buildTemplatePreviewMesh(
-      templateOf([kPlain, kPlain, kPlain]),
-      sourcesFor()
+      createTemplate([kPlain, kPlain, kPlain]),
+      createPreviewSources()
     );
 
     assert.ok(mesh !== null);
@@ -85,7 +85,7 @@ describe("buildTemplatePreviewMesh", () => {
 
   it("draws nothing when no voxel resolves to a block", () => {
     assert.equal(
-      buildTemplatePreviewMesh(templateOf([kUnknown]), sourcesFor()),
+      buildTemplatePreviewMesh(createTemplate([kUnknown]), createPreviewSources()),
       null
     );
   });

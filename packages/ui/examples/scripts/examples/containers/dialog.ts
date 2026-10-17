@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import { DIALOG_INTENTS } from "../../../../src/containers/dialog/dialogHeader.ts";
-import { detailOf } from "../../../../src/dom.ts";
+import { readDetail } from "../../../../src/dom.ts";
 import {
   showChoice,
   showConfirm,
@@ -139,7 +139,7 @@ export const DIALOG_EXAMPLE: GalleryExample = {
     const field = document.createElement("jolly-text");
     field.label = "Name";
     field.addEventListener("jolly-change", (event) => {
-      const detail = detailOf<JollyChangeDetail<string>>(event);
+      const detail = readDetail<JollyChangeDetail<string>>(event);
       if (detail !== null) {
         field.value = detail.value;
       }
@@ -165,7 +165,7 @@ export const DIALOG_EXAMPLE: GalleryExample = {
     editableHeading.headingEditable = true;
     editableHeading.append(text("The heading itself carries the name."));
     editableHeading.addEventListener("jolly-heading-change", (event) => {
-      const detail = detailOf<JollyHeadingChangeDetail>(event);
+      const detail = readDetail<JollyHeadingChangeDetail>(event);
       if (detail !== null) {
         editableHeading.heading = detail.heading;
         root.dataset.result = `heading:${detail.heading}`;

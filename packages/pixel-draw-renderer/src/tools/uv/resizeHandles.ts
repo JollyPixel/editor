@@ -54,7 +54,7 @@ export function resizeHandleAt(
       handles.includes("n"),
       handles.includes("s")
     );
-    const corner = handleOf(y, x);
+    const corner = pickHandle(y, x);
     if (x !== null && y !== null && corner !== null && !handles.includes(corner)) {
       if (x.distance <= y.distance) {
         y = null;
@@ -65,7 +65,7 @@ export function resizeHandleAt(
     }
     const insideX = within(point.x, screen.x, screen.width);
     const insideY = within(point.y, screen.y, screen.height);
-    const handle = handleOf(y, x);
+    const handle = pickHandle(y, x);
     if (
       handle === null ||
       (x === null && !insideX) ||
@@ -106,7 +106,7 @@ function within(
   return value >= start && value <= start + length;
 }
 
-function sideOf<T extends string>(
+function pickSide<T extends string>(
   hit: EdgeHit | null,
   start: T,
   end: T
@@ -118,11 +118,11 @@ function sideOf<T extends string>(
   return hit.end ? end : start;
 }
 
-function handleOf(
+function pickHandle(
   y: EdgeHit | null,
   x: EdgeHit | null
 ): UVResizeHandle | null {
-  return kHandleGrid[sideOf(y, "n", "s")][sideOf(x, "w", "e")];
+  return kHandleGrid[pickSide(y, "n", "s")][pickSide(x, "w", "e")];
 }
 
 function edgeAt(

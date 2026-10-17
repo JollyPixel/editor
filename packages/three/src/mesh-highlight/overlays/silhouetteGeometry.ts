@@ -56,18 +56,6 @@ const kBoxFaceOrder: readonly BoxFace[] = ["posX", "negX", "posY", "negY", "posZ
 const kPosFace: Record<Axis, BoxFace> = { x: "posX", y: "posY", z: "posZ" };
 const kNegFace: Record<Axis, BoxFace> = { x: "negX", y: "negY", z: "negZ" };
 
-/*
- * A box's face, dropped when it sits exactly where another piece of this
- * silhouette touches it. Without this, the bar meeting a corner joint (or
- * two edges meeting a joint) each keep the face at that shared plane, and
- * those two faces are then perfectly coincident: same plane, same
- * rectangle. Opaque rendering hides it (drawing the same color over itself
- * twice looks the same as once), which is why this only ever showed up
- * under the opacity used for hover. Under alpha blending that duplicate
- * face gets composited twice, painting a visibly different square right
- * on the seam. Dropping it here is the geometric union of the two shapes:
- * there was never anything to actually see there in the first place.
- */
 function buildBoxGeometry(
   size: readonly [number, number, number],
   excludeFaces: ReadonlySet<BoxFace>
@@ -122,13 +110,6 @@ export function computeVisibleFaces(
   };
 }
 
-/*
- * Bars stop half a thickness short of each corner on every side, leaving an
- * exact thickness-cubed gap. A box joint of that same size fills it flush,
- * with no overlap and no rounding, unlike the sphere this used to be: a
- * sphere touches a square bar end only at its center, leaving visible gaps
- * at the bar's corners and a curved bulge past its flat sides.
- */
 function buildRingParts(
   halfExtents: THREE.Vector3,
   faces: VisibleFaces,
@@ -159,7 +140,6 @@ function buildRingParts(
     center[kAxisIndex[cross1]] = sCross1 * offsets[cross1];
     center[kAxisIndex[cross2]] = sCross2 * offsets[cross2];
 
-    // A kept edge always reaches a corner joint at both ends: see kept below.
     const bar = buildBoxGeometry(size, new Set([kPosFace[axis], kNegFace[axis]]));
     bar.translate(...center);
     parts.push(bar);
@@ -242,19 +222,6 @@ export interface SilhouetteGeometryOptions extends SilhouetteRings {
   faces: VisibleFaces;
 }
 
-/*
- * The inner and outer rings meet flush, by construction, with no gap and
- * no overlap: see buildRingParts. Rendering them as two separate meshes
- * meant two separate draw calls could write the exact same depth at that
- * shared seam, and once both depth-test for real (needed for the occluded
- * pass), that coincident plane z-fights pixel by pixel, worst at corners
- * where several touching faces converge. Merging both rings into one
- * geometry removes the seam as a rendering concept entirely: every
- * fragment belongs to exactly one triangle from one draw call, so there is
- * nothing left to compete over. The two rings only ever differed in color
- * (opacity has always been shared), so a vertex color carries that split
- * instead of a second mesh.
- */
 export function mergeRings(
   innerParts: THREE.BufferGeometry[],
   outerParts: THREE.BufferGeometry[],
@@ -273,10 +240,6 @@ export function mergeRings(
     tagColor(part, color);
   }
 
-  /*
-   * Order matters: outerColorStart above assumes outer parts trail inner
-   * ones, and writeOuterColor below only repaints that trailing slice.
-   */
   const parts = [...innerParts, ...outerParts];
   const geometry = parts.length > 0 ? mergeGeometries(parts) : emptySilhouetteGeometry();
   geometry.computeBoundingBox();
@@ -318,7 +281,7 @@ export function writeOuterColor(
   attribute.needsUpdate = true;
 }
 
-export function halfExtentsOf(
+export function measureHalfExtents(
   target: THREE.Mesh
 ): THREE.Vector3 {
   target.geometry.computeBoundingBox();

@@ -37,7 +37,7 @@ export class SourceMapFile {
     );
   }
 
-  static packageOf(
+  static parsePackage(
     source: string
   ): string {
     const normalized = source.replaceAll("\\", "/");
@@ -85,7 +85,7 @@ export class SourceMapFile {
       source: position.source,
       line: position.line,
       name: position.name,
-      package: SourceMapFile.packageOf(position.source)
+      package: SourceMapFile.parsePackage(position.source)
     };
   }
 
@@ -100,7 +100,7 @@ export class SourceMapFile {
         yield {
           package: segment.length === 1 ?
             null :
-            SourceMapFile.packageOf(resolvedSources[segment[1]]),
+            SourceMapFile.parsePackage(resolvedSources[segment[1]]),
           bytes: Buffer.byteLength(line.slice(segment[0], segments[position + 1]?.[0]))
         };
       }

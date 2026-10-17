@@ -15,7 +15,7 @@ import {
   type EnvelopeParseError
 } from "#src/protocol/envelope/Envelope.ts";
 
-function errorOf(
+function unwrapError(
   result: Result<unknown, EnvelopeParseError>
 ): EnvelopeParseError {
   assert.ok(!result.ok);
@@ -42,13 +42,13 @@ describe("Envelope.parseClient", () => {
   test("rejects a presence envelope without a patch", () => {
     const result = Envelope.parseClient({ room: "pixel-draw", kind: "presence" });
 
-    assert.equal(errorOf(result).reason, "malformed");
+    assert.equal(unwrapError(result).reason, "malformed");
   });
 
   test("rejects a message envelope without a payload", () => {
     const result = Envelope.parseClient({ room: "pixel-draw", kind: "message" });
 
-    assert.equal(errorOf(result).reason, "malformed");
+    assert.equal(unwrapError(result).reason, "malformed");
   });
 
   test("rejects a profile that is not an object", () => {
@@ -58,14 +58,14 @@ describe("Envelope.parseClient", () => {
       profile: "anonymous"
     });
 
-    assert.equal(errorOf(result).reason, "malformed");
+    assert.equal(unwrapError(result).reason, "malformed");
   });
 
   test("reports invalid JSON apart from a malformed shape", () => {
     const result = Envelope.parseClient("{not json");
 
-    assert.equal(errorOf(result).reason, "invalid-json");
-    assert.match(describeEnvelopeParseError(errorOf(result)), /invalid JSON/);
+    assert.equal(unwrapError(result).reason, "invalid-json");
+    assert.match(describeEnvelopeParseError(unwrapError(result)), /invalid JSON/);
   });
 
   test("rejects a value that is not an envelope shape", () => {
@@ -79,7 +79,7 @@ describe("Envelope.parseClient", () => {
   test("rejects a room name longer than 256 characters", () => {
     assert.equal(Envelope.parseClient({ room: "r".repeat(256), kind: "leave" }).ok, true);
     assert.equal(
-      errorOf(Envelope.parseClient({ room: "r".repeat(257), kind: "leave" })).reason,
+      unwrapError(Envelope.parseClient({ room: "r".repeat(257), kind: "leave" })).reason,
       "malformed"
     );
   });
@@ -87,8 +87,8 @@ describe("Envelope.parseClient", () => {
   test("rejects an unrecognized kind", () => {
     const result = Envelope.parseClient({ room: "pixel-draw", kind: "unknown-kind" });
 
-    assert.equal(errorOf(result).reason, "malformed");
-    assert.notEqual(describeEnvelopeParseError(errorOf(result)), "");
+    assert.equal(unwrapError(result).reason, "malformed");
+    assert.notEqual(describeEnvelopeParseError(unwrapError(result)), "");
   });
 });
 
@@ -101,7 +101,7 @@ describe("Envelope.parseServer", () => {
       rights: {}
     });
 
-    assert.equal(errorOf(result).reason, "malformed");
+    assert.equal(unwrapError(result).reason, "malformed");
   });
 
   test("rejects a sync envelope whose rights are not a known right", () => {
@@ -113,7 +113,7 @@ describe("Envelope.parseServer", () => {
       members: []
     });
 
-    assert.equal(errorOf(result).reason, "malformed");
+    assert.equal(unwrapError(result).reason, "malformed");
   });
 
   test("rejects a sync envelope whose members are not peers", () => {
@@ -132,7 +132,7 @@ describe("Envelope.parseServer", () => {
       ]
     });
 
-    assert.equal(errorOf(result).reason, "malformed");
+    assert.equal(unwrapError(result).reason, "malformed");
   });
 
   test("rejects a peer-joined envelope with a non-string clientId", () => {
@@ -145,7 +145,7 @@ describe("Envelope.parseServer", () => {
       presence: {}
     });
 
-    assert.equal(errorOf(result).reason, "malformed");
+    assert.equal(unwrapError(result).reason, "malformed");
   });
 });
 
@@ -158,7 +158,7 @@ describe("Envelope.parseTrustedServer", () => {
     }));
 
     assert.equal(result.ok, true);
-    assert.equal(errorOf(Envelope.parseServer({
+    assert.equal(unwrapError(Envelope.parseServer({
       room: "pixel-draw",
       kind: "sync",
       self: "A"
@@ -166,14 +166,14 @@ describe("Envelope.parseTrustedServer", () => {
   });
 
   test("rejects invalid JSON, a missing room and an unknown kind", () => {
-    assert.equal(errorOf(Envelope.parseTrustedServer("{")).reason, "invalid-json");
+    assert.equal(unwrapError(Envelope.parseTrustedServer("{")).reason, "invalid-json");
     for (const value of [
       null,
       { kind: "message" },
       { room: "pixel-draw", kind: "join" }
     ]) {
       assert.equal(
-        errorOf(Envelope.parseTrustedServer(value)).reason,
+        unwrapError(Envelope.parseTrustedServer(value)).reason,
         "malformed",
         `expected ${JSON.stringify(value)} to be rejected`
       );

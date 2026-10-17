@@ -3,7 +3,7 @@ const kDigit = /\d/;
 const kSpace = /\s/;
 
 export class NameSet {
-  static keyOf(
+  static toKey(
     name: string
   ): string {
     return name.trim().toLowerCase();
@@ -15,14 +15,14 @@ export class NameSet {
     names: Iterable<string> = []
   ) {
     for (const name of names) {
-      this.#keys.add(NameSet.keyOf(name));
+      this.#keys.add(NameSet.toKey(name));
     }
   }
 
   has(
     name: string
   ): boolean {
-    return this.#keys.has(NameSet.keyOf(name));
+    return this.#keys.has(NameSet.toKey(name));
   }
 
   free(

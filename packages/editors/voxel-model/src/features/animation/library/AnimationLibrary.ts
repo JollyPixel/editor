@@ -20,12 +20,9 @@ const kUnnamed = "Animation set";
 const kOwnClips = "this model";
 const kViewOnly = "You can only view this model";
 
-/**
- * `null` stands for the model's own clips; the own set's id never does.
- */
 export type ClipTarget = string | null;
 
-export function clipTargetOf(
+export function toClipTarget(
   set: Pick<LinkedAnimationSet, "id" | "own">
 ): ClipTarget {
   return set.own ? null : set.id;
@@ -54,19 +51,10 @@ export interface AnimationSetRecord {
 export interface AnimationSetSource {
   open(id: string): AnimationSetLease;
   create(name: string): Promise<AssetReferenceData>;
-  /**
-   * Named after the model.
-   */
   createOwn(): Promise<AssetReferenceData>;
   rename(id: string, name: string): Promise<void>;
   records(): AnimationSetRecord[];
-  /**
-   * How many assets reference the set.
-   */
-  usersOf(id: string): number;
-  /**
-   * Calls `listener` when records or their users change.
-   */
+  countUsers(id: string): number;
   subscribe(listener: () => void): () => void;
 }
 
@@ -152,8 +140,8 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
 
     return {
       id,
-      name: this.#nameOf(id),
-      users: this.#source.usersOf(id),
+      name: this.#recordName(id),
+      users: this.#source.countUsers(id),
       own: this.#document.tree.animationSets.owned?.id === id,
       document: open.lease.document
     };
@@ -207,7 +195,7 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
   targetName(
     target: ClipTarget
   ): string {
-    return target === null ? kOwnClips : this.#nameOf(target);
+    return target === null ? kOwnClips : this.#recordName(target);
   }
 
   focusName(
@@ -224,7 +212,7 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
     }
 
     return clipId === null ?
-      this.targetName(clipTargetOf(set)) :
+      this.targetName(toClipTarget(set)) :
       set.document.set.clip(clipId)?.name ?? null;
   }
 
@@ -387,7 +375,7 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
     }
   }
 
-  #nameOf(
+  #recordName(
     id: string
   ): string {
     return this.#source.records().find((record) => record.id === id)?.name ?? kUnnamed;

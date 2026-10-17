@@ -36,9 +36,6 @@ export interface VoxelChunkBounds {
   readonly maxZ: number;
 }
 
-/**
- * Fixed-size sparse grid storing voxels as packed integers.
- */
 export class VoxelChunk {
   readonly store = new VoxelStore();
 

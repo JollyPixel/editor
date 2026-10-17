@@ -52,7 +52,7 @@ An entry lands before the sibling `beforeId`, or last without one. The methods r
 | Member | Description |
 |---|---|
 | `size`, `has(id)`, `get(id)`, `values()` | Materials and folders. |
-| `childrenOf(parentId)`, `nextSiblingOf(id)`, `subtreeOf(id)` | Sibling order and subtrees. |
+| `listChildren(parentId)`, `findNextSibling(id)`, `subtreeFrom(id)` | Sibling order and subtrees. |
 | `material(id)`, `materials()` | Materials only. |
 
 `tree.blocksUsing(materialId)` and `tree.materialUses()` tell which blocks use a material.

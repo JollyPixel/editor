@@ -30,9 +30,6 @@ export interface ControlsDefaults {
   heading: string;
 }
 
-/**
- * A positioned, declarative HUD card for scene control hints.
- */
 @customElement("jolly-controls")
 export class Controls extends LitElement {
   static readonly Defaults: ControlsDefaults = {

@@ -1,9 +1,6 @@
 // Import Third-party Dependencies
 import { css } from "lit";
 
-/**
- * Icon targets stay 32px; the default row pitch is 24px with the container gap.
- */
 export const densityTokens = css`
   :host {
     --jolly-row-height: 20px;

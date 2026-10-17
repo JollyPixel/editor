@@ -14,14 +14,6 @@ import {
   wheelEvent
 } from "./_fixtures.ts";
 
-/**
- * The DOM-facing path. `mousemove` can fire at 1000 Hz on a high-poll mouse, so
- * per-event work (layout reads, object literals, generators) is paid far more
- * often than per-frame work.
- *
- * Layout cost cannot be reproduced outside a browser, so
- * `boundingClientRectCalls` is reported separately as "rect reads per event".
- */
 const suite = defineSuite("controls / events", (bench) => {
   const { canvas, document } = createInput();
   const move = mouseEvent(canvas);
@@ -64,11 +56,6 @@ const suite = defineSuite("controls / events", (bench) => {
 
 export default suite;
 
-/**
- * Counts forced-layout reads per event rather than timing them: in Node
- * `getBoundingClientRect` is free, in a browser it can flush style and layout
- * for the whole document.
- */
 function reportLayoutReads(): void {
   const rows: { event: string; "rect reads": number; }[] = [];
 

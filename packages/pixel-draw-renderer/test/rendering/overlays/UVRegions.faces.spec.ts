@@ -27,7 +27,7 @@ describe("UVRegionLayer — free regions", () => {
     new UVRegionLayer(svg, makeViewport(), map);
 
     const region = map.create({ width: 4, height: 4, id: "r1" });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.select("r1");
 
     assert.strictEqual(
@@ -48,7 +48,7 @@ describe("UVRegionLayer — free regions", () => {
       height: 4,
       id: "r1"
     });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.select("r1", "front");
 
     assert.strictEqual(
@@ -80,7 +80,7 @@ describe("UVRegionLayer — free regions", () => {
     assert.strictEqual(uvEntryGroups(svg)[0].style.opacity, "");
   });
 
-  test("setLivePreview moves only the dragged face", () => {
+  test("showLivePreview moves only the dragged face", () => {
     const svg = makeSvg();
     const map = makeUvMap({ x: 64, y: 64 });
     const overlay = new UVRegionLayer(svg, makeViewport(), map);
@@ -90,10 +90,10 @@ describe("UVRegionLayer — free regions", () => {
       height: 4,
       id: "r1"
     });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.select("r1");
 
-    overlay.setLivePreview(
+    overlay.showLivePreview(
       livePreview(
         map.previewMove(
           "r1",
@@ -161,7 +161,7 @@ describe("UVRegionLayer — unfolded regions", () => {
     const overlay = new UVRegionLayer(svg, makeViewport(), map);
 
     map.create({ width: 4, height: 4, id: "r1" });
-    map.setState("r1", "unfolded");
+    map.applyState("r1", "unfolded");
     map.select("r1");
 
     return { svg, map, overlay };
@@ -194,7 +194,7 @@ describe("UVRegionLayer — unfolded regions", () => {
   test("a previewed move of the net moves every face together", () => {
     const { svg, map, overlay } = makeUnfolded();
 
-    overlay.setLivePreview(
+    overlay.showLivePreview(
       livePreview(map.previewMove("r1", { x: 2, y: 3, width: 8, height: 12 }))
     );
 
@@ -213,7 +213,7 @@ describe("UVRegionLayer — unfolded regions", () => {
     const region = map.get("r1");
     assert.ok(region);
 
-    overlay.setPeerPreviews(new Map([["peer-A", { region, face: null, color: "#f00" }]]));
+    overlay.showPeerPreviews(new Map([["peer-A", { region, face: null, color: "#f00" }]]));
 
     const borders = uvBorderRects(svg);
     assert.strictEqual(borders.length, 6);

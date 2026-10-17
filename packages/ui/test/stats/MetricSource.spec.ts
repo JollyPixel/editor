@@ -14,7 +14,7 @@ import type {
   MetricSource
 } from "../../src/stats/index.ts";
 
-function sourceOf(
+function createSource(
   ...metrics: MetricDefinition[]
 ): MetricSource {
   return { metrics };
@@ -24,7 +24,7 @@ describe("StatsRecorder - sources", () => {
   it("registers every metric a source describes", () => {
     const recorder = new StatsRecorder();
     recorder.addSource(
-      sourceOf(
+      createSource(
         { id: "chunks", label: "chunks", sample: () => 2 },
         { id: "meshes", label: "meshes", sample: () => 3 }
       )
@@ -38,7 +38,7 @@ describe("StatsRecorder - sources", () => {
   it("releases every metric of a source at once", () => {
     const recorder = new StatsRecorder();
     const release = recorder.addSource(
-      sourceOf(
+      createSource(
         { id: "chunks", label: "chunks" },
         { id: "meshes", label: "meshes" }
       )
@@ -56,7 +56,7 @@ describe("StatsRecorder - sources", () => {
 
     assert.throws(
       () => recorder.addSource(
-        sourceOf(
+        createSource(
           { id: "chunks", label: "chunks" },
           { id: "meshes", label: "meshes" }
         )
@@ -89,7 +89,7 @@ describe("StatsRecorder - sources", () => {
     const recorder = new StatsRecorder();
     const initial = recorder.revision;
     const release = recorder.addSource(
-      sourceOf({ id: "chunks", label: "chunks" })
+      createSource({ id: "chunks", label: "chunks" })
     );
 
     assert.notEqual(recorder.revision, initial);
@@ -116,18 +116,18 @@ describe("resolveMetricFormat", () => {
   });
 
   it("maps a unit to its formatter", () => {
-    function formatOf(
+    function formatSample(
       unit: MetricDefinition["unit"]
     ): string {
       return resolveMetricFormat({ id: "a", label: "a", unit })(1234.5);
     }
 
-    assert.equal(formatOf("count"), "1,235");
-    assert.equal(formatOf("integer"), "1235");
-    assert.equal(formatOf("decimal"), "1234.5");
-    assert.equal(formatOf("ms"), "1234.5 ms");
-    assert.equal(formatOf("percent"), "1234.5 %");
-    assert.equal(formatOf("bytes"), "1.2 KiB");
+    assert.equal(formatSample("count"), "1,235");
+    assert.equal(formatSample("integer"), "1235");
+    assert.equal(formatSample("decimal"), "1234.5");
+    assert.equal(formatSample("ms"), "1234.5 ms");
+    assert.equal(formatSample("percent"), "1234.5 %");
+    assert.equal(formatSample("bytes"), "1.2 KiB");
   });
 
   it("falls back to whole numbers when a definition names neither", () => {

@@ -108,26 +108,26 @@ Slot names are labels. The consumer decides how `"front"`, `"top"` and any furth
 
 ## Methods
 
-### `rectFor(slot?)`
+### `slotRect(slot?)`
 
 ```ts
-rectFor(slot?: UVSlot | null): SelectionRect
+slotRect(slot?: UVSlot | null): SelectionRect
 ```
 
 Returns a copy of the rectangle sampled by `slot`. Only a free region answers per slot; a stacked or unfolded region returns `bounds` whatever slot is asked for, because it moves as one. `null`, the default, returns `bounds`.
 
-### `geometryFor(slot)`
+### `slotGeometry(slot)`
 
 ```ts
-geometryFor(slot: UVSlot): UVGeometry
+slotGeometry(slot: UVSlot): UVGeometry
 ```
 
-Returns a copy of the slot's geometry. A stacked region always returns its shared rectangle. An unfolded region returns the cell the net gave that slot, which is what `rectFor()` will not tell you.
+Returns a copy of the slot's geometry. A stacked region always returns its shared rectangle. An unfolded region returns the cell the net gave that slot, which is what `slotRect()` will not tell you.
 
-### `slotsOf()`
+### `listSlots()`
 
 ```ts
-slotsOf(): { slot: UVSlot | null; geometry: UVGeometry }[]
+listSlots(): { slot: UVSlot | null; geometry: UVGeometry }[]
 ```
 
 Returns copied geometry in the region's own slot order. A stacked region returns one entry with `slot: null`. Unfolded and free regions both return one entry per active slot, so an overlay draws and hit-tests every cell of a net individually even though dragging any of them moves the whole region.
@@ -152,7 +152,7 @@ The packing net places the tallest face first, then fills the lowest free spot l
 
 Unfolding always lays the net out again, whatever state it starts from, so a hand-arranged free layout is discarded. That transition undoes with the whole previous region, so undo brings the arrangement back. The result is idempotent: unfolding a net returns `this`.
 
-Nothing here knows about the canvas. A net larger than the texture keeps going past the edge; [`UVMap.setState()`](./UVMap.md#setstateid-state-face) is what pulls it back inside.
+Nothing here knows about the canvas. A net larger than the texture keeps going past the edge; [`UVMap.applyState()`](./UVMap.md#setstateid-state-face) is what pulls it back inside.
 
 ### `stack(slot?)`
 
@@ -287,10 +287,10 @@ rotateGeometry(geometry: UVGeometry, turns: number): UVGeometry
 
 Turns a geometry clockwise by `turns` quarter turns (negative values turn counter-clockwise), keeping the top-left corner of its rect, and adds `turns` to its `rotation`.
 
-### `rotationOf(geometry)`
+### `geometryRotation(geometry)`
 
 ```ts
-rotationOf(geometry: UVGeometry): UVQuarterTurn
+geometryRotation(geometry: UVGeometry): UVQuarterTurn
 ```
 
 Returns the geometry's `rotation`, or `0`.
@@ -303,18 +303,18 @@ withRotation(geometry: UVGeometry, rotation: number): UVGeometry
 
 Returns a shallow copy of `geometry` with `rotation` set to that many quarter turns, without moving or reshaping it. The key is left out when the turns reduce to `0`. A nested `rect` or `parts` is shared with the input.
 
-### `rectOf(geometry)`
+### `boundingRect(geometry)`
 
 ```ts
-rectOf(geometry: UVGeometry): SelectionRect
+boundingRect(geometry: UVGeometry): SelectionRect
 ```
 
 Returns a copy of the geometry's bounding rect, without its shape or `rotation`.
 
-### `triangleCornerOf(geometry)`
+### `triangleCorner(geometry)`
 
 ```ts
-triangleCornerOf(geometry: UVGeometry): UVTriangleCorner | null
+triangleCorner(geometry: UVGeometry): UVTriangleCorner | null
 ```
 
 Returns the corner of a triangle geometry, before any `rotation` is applied, or `null` for a rect or compound.
@@ -333,4 +333,4 @@ Turns a mesh UV inside the unit square, with `v` pointing up, so that it follows
 rotateCorner(corner: UVTriangleCorner, turns: number): UVTriangleCorner
 ```
 
-Turns a triangle corner clockwise. A mesh consumer recovers the corner a triangle had before rotating with `rotateCorner(corner, -rotationOf(geometry))`, applies that orientation first, then `rotateUv()`.
+Turns a triangle corner clockwise. A mesh consumer recovers the corner a triangle had before rotating with `rotateCorner(corner, -geometryRotation(geometry))`, applies that orientation first, then `rotateUv()`.

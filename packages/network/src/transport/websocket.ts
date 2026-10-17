@@ -147,7 +147,6 @@ export class WebsocketTransport implements Disposable {
     });
     this.#maxBufferedBytes = maxBufferedBytes;
 
-    // Manual upgrade filtering requires `noServer` mode.
     this.#wss = new WebSocketServer({
       noServer: true,
       maxPayload,
@@ -202,7 +201,7 @@ export class WebsocketTransport implements Disposable {
     socket.on("error", destroySocket);
 
     const remoteAddress = req.socket.remoteAddress;
-    const refusal = this.#policy.refusalFor(req.headers);
+    const refusal = this.#policy.checkHandshake(req.headers);
     if (refusal !== null) {
       this.#logger
         .withMetadata({

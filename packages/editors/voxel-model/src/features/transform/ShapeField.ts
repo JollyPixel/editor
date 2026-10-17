@@ -22,7 +22,7 @@ import "../../shared/shapeIcons.ts";
 import {
   BLOCK_SHAPE_OPTIONS,
   blockShapeById,
-  blockShapeEntryOf,
+  matchBlockShapeEntry,
   type BlockShapeEntryId
 } from "../../shared/blockShapes.ts";
 import type { ModelHierarchy } from "../../model/index.ts";
@@ -98,7 +98,7 @@ export class ShapeField extends LitElement {
 
   override render(): TemplateResult {
     const shape = this.#shape();
-    const entry = blockShapeEntryOf(shape);
+    const entry = matchBlockShapeEntry(shape);
 
     return html`
       <jolly-separator label="Geometry"></jolly-separator>
@@ -144,7 +144,7 @@ export class ShapeField extends LitElement {
   #shape(): BlockShapeJSON {
     const block = this.#selectedBlock();
 
-    return block === undefined ? BlockShape.box : BlockShape.of(block);
+    return block === undefined ? BlockShape.box : BlockShape.fromBlock(block);
   }
 
   #reshape(

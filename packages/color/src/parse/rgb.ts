@@ -6,9 +6,6 @@ import {
 } from "./tokens.ts";
 import type { RGBA } from "../types.ts";
 
-/**
- * Accepts both syntaxes and clamps numeric or percentage channels.
- */
 export function parseRgbFunction(
   fn: ColorFunction
 ): RGBA | null {

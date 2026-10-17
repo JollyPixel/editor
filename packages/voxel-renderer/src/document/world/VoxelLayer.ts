@@ -87,11 +87,6 @@ export interface VoxelLayerCloneOptions extends Partial<VoxelLayerOptions> {
   name: string;
 }
 
-/**
- * A named, ordered layer of voxel data.
- * Voxels are organized into chunks for efficient dirty-flagging and mesh rebuilding.
- * Higher `order` values take visual priority over lower when compositing.
- */
 export class VoxelLayer {
   compositing: "replace" | "composite";
   id: string;

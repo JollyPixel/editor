@@ -45,9 +45,6 @@ export interface ProjectionStateData {
   readonly failures: Record<string, ProjectionFailure>;
 }
 
-/**
- * Persists each asset's last successfully projected event id.
- */
 export class ProjectionState {
   #source: AssetSource;
   #checkpoints = new Map<string, number>();

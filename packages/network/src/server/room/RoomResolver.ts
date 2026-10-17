@@ -20,9 +20,6 @@ export interface RoomResolution {
   readOnly?: boolean;
 }
 
-/**
- * Resolves unknown rooms on first join; null rejects the join.
- */
 export type RoomResolver = (
   roomName: string
 ) => Promise<RoomResolution | null> | RoomResolution | null;

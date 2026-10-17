@@ -47,7 +47,7 @@ export function voxelHistoryRegistration<TScope extends string>(
     id,
     document: edits,
     keys: voxelHistoryKeys(edits.world),
-    scopeOf: () => scope,
+    resolveScope: () => scope,
     label: () => kLabel,
     compact: compactVoxelPatches
   };
@@ -72,7 +72,7 @@ class VoxelGuard implements HistoryGuard<VoxelKeySet, Int32Array> {
     commands: readonly VoxelWorldCommand[]
   ) {
     this.#world = world;
-    this.keys = new VoxelKeySet(commands.flatMap(cellsOf));
+    this.keys = new VoxelKeySet(commands.flatMap(affectedCells));
   }
 
   touches(
@@ -113,7 +113,7 @@ function writtenKeys(
     case "voxels-set":
     case "voxels-removed":
     case "voxels-patched":
-      return new VoxelKeySet(cellsOf(command));
+      return new VoxelKeySet(affectedCells(command));
     case "layer-transformed":
       return new VoxelKeySet([], [command.layerId]);
     case "removed":
@@ -129,23 +129,23 @@ function writtenKeys(
   }
 }
 
-function cellsOf(
+function affectedCells(
   command: VoxelWorldCommand
 ): VoxelKeyCell[] {
   switch (command.action) {
     case "voxel-set":
     case "voxel-removed":
-      return [cellOf(command.layerId, command.metadata.position)];
+      return [toKeyCell(command.layerId, command.metadata.position)];
     case "voxels-set":
     case "voxels-removed":
       return command.metadata.entries.map(
-        ({ position }) => cellOf(command.layerId, position)
+        ({ position }) => toKeyCell(command.layerId, position)
       );
     case "voxels-patched": {
       const { cells } = command.metadata;
       const keyCells: VoxelKeyCell[] = [];
       for (let offset = 0; offset < cells.length; offset += VOXEL_PATCH_STRIDE) {
-        keyCells.push(cellOf(command.layerId, {
+        keyCells.push(toKeyCell(command.layerId, {
           x: cells[offset],
           y: cells[offset + 1],
           z: cells[offset + 2]
@@ -159,7 +159,7 @@ function cellsOf(
   }
 }
 
-function cellOf(
+function toKeyCell(
   layerId: string,
   position: VoxelCoord
 ): VoxelKeyCell {

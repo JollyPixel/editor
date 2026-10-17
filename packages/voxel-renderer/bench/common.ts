@@ -25,9 +25,6 @@ export interface PopulatedTerrain {
   voxelCount: number;
 }
 
-/**
- * Creates a `VoxelView` pre-wired for terrain generation benchmarks.
- */
 export function createBenchView(
   chunkSize: number,
   workers?: MeshWorkerOptions
@@ -62,9 +59,6 @@ export function createBenchView(
   return view;
 }
 
-/**
- * Populates terrain and routes water voxels to `WATER_LAYER`.
- */
 export function populateTerrain(
   view: VoxelView,
   options: TerrainOptions
@@ -114,7 +108,6 @@ function mockTexture(): any {
       height: 2 * TILE_SIZE
     },
     dispose() {
-      // Benchmark texture stub: nothing to release.
     }
   };
 }

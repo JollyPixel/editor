@@ -11,7 +11,7 @@ const kDefaultColors = [
 ];
 
 export interface PeerColorAllocator {
-  colorOf(
+  peerColor(
     peerId: string
   ): string;
   release(
@@ -32,7 +32,7 @@ function hash(
 
 export function createDefaultColorAllocator(): PeerColorAllocator {
   return {
-    colorOf: (peerId) => kDefaultColors[hash(peerId) % kDefaultColors.length],
+    peerColor: (peerId) => kDefaultColors[hash(peerId) % kDefaultColors.length],
     release: () => void 0
   };
 }

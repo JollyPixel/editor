@@ -15,11 +15,6 @@ import {
   type BenchInput
 } from "./_fixtures.ts";
 
-/**
- * The player is actually playing: keys held, mouse moving with buttons down,
- * both sticks deflected. Measures the per-frame state-transition loops rather
- * than the idle short-circuit.
- */
 const suite = defineSuite("controls / tick — active", (bench) => {
   const active = createActiveInput();
   const keyboardOnly = createActiveInput();

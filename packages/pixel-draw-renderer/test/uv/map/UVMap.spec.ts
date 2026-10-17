@@ -27,7 +27,7 @@ describe("UVMap — create", () => {
     });
 
     assert.deepStrictEqual(region.activeSlots, ["side"]);
-    const geometry = region.geometryFor("side");
+    const geometry = region.slotGeometry("side");
     assert.ok("shape" in geometry);
     assert.strictEqual(geometry.shape, "triangle");
   });
@@ -45,10 +45,10 @@ describe("UVMap — create", () => {
     });
 
     assert.strictEqual(region.state, "free");
-    assert.deepStrictEqual(region.slotsOf().map(({ slot }) => slot), [
+    assert.deepStrictEqual(region.listSlots().map(({ slot }) => slot), [
       "back", "left", "right", "top", "bottom"
     ]);
-    assert.deepStrictEqual(region.geometryFor("left"), {
+    assert.deepStrictEqual(region.slotGeometry("left"), {
       shape: "triangle", corner: "bottom-right", rect: { x: 0, y: 0, width: 8, height: 8 }
     });
   });
@@ -67,7 +67,7 @@ describe("UVMap — create", () => {
     });
 
     assert.strictEqual(region.state, "stacked");
-    assert.deepStrictEqual(region.slotsOf().map(({ slot }) => slot), [null]);
+    assert.deepStrictEqual(region.listSlots().map(({ slot }) => slot), [null]);
     assert.deepStrictEqual(region.toJSON().activeFaces, ["back", "left", "right", "top", "bottom"]);
     assert.deepStrictEqual(region.toJSON().faces?.left, {
       shape: "triangle", corner: "bottom-right", rect: { x: 0, y: 0, width: 8, height: 8 }
@@ -89,7 +89,7 @@ describe("UVMap — create", () => {
     assert.deepStrictEqual(region.toJSON().faces?.top, {
       x: 0, y: 0, width: 16, height: 23
     });
-    assert.strictEqual(region.free().rectFor("top").height, 23);
+    assert.strictEqual(region.free().slotRect("top").height, 23);
   });
 
   test("clamps a slot template size to the canvas", () => {
@@ -103,7 +103,7 @@ describe("UVMap — create", () => {
       }
     });
 
-    assert.deepStrictEqual(region.rectFor("top"), {
+    assert.deepStrictEqual(region.slotRect("top"), {
       x: 0, y: 0, width: 1, height: 32
     });
   });
@@ -114,7 +114,7 @@ describe("UVMap — create", () => {
 
     assert.strictEqual(region.state, "stacked");
     assert.deepStrictEqual(
-      region.rectFor("front"),
+      region.slotRect("front"),
       { x: 0, y: 0, width: 8, height: 8 }
     );
     assert.strictEqual(typeof region.color, "string");
@@ -126,7 +126,7 @@ describe("UVMap — create", () => {
     const region = map.create({ width: 100, height: 100 });
 
     assert.deepStrictEqual(
-      region.rectFor("front"),
+      region.slotRect("front"),
       { x: 0, y: 0, width: 4, height: 4 }
     );
   });
@@ -136,7 +136,7 @@ describe("UVMap — create", () => {
     const a = map.create({ width: 8, height: 8 });
     const b = map.create({ width: 8, height: 8 });
 
-    assert.notDeepStrictEqual(a.rectFor("front"), b.rectFor("front"));
+    assert.notDeepStrictEqual(a.slotRect("front"), b.slotRect("front"));
   });
 
   test("assigns distinct colors from the palette to successive regions", () => {

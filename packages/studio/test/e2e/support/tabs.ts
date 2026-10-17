@@ -6,7 +6,7 @@ import {
   type Page
 } from "@playwright/test";
 import {
-  boxOf,
+  measureBox,
   dragTo
 } from "@jolly-pixel/e2e";
 
@@ -51,7 +51,7 @@ export class EditorTabs {
   async moveFirst(
     name: string
   ): Promise<void> {
-    const home = await boxOf(this.home);
+    const home = await measureBox(this.home);
     await dragTo(this.#page, this.tab(name), {
       x: home.x + (home.width * 0.75),
       y: home.y + (home.height / 2)
@@ -74,7 +74,7 @@ export class EditorFrames {
     return this.all.contentFrame();
   }
 
-  of(
+  locate(
     editor: string
   ): FrameLocator {
     return this.#page

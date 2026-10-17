@@ -85,8 +85,8 @@ export const PROGRESS_EXAMPLE: GalleryExample = {
         const assetName = kAssetNames[completed % kAssetNames.length];
         aggregate.value = completed;
         aggregate.valueText = `${completed} of ${kAssetTotal} assets`;
-        loading.setAsset(assetName);
-        loading.setProgress(completed, kAssetTotal);
+        loading.showAsset(assetName);
+        loading.updateProgress(completed, kAssetTotal);
         status.textContent = `${completed} / ${kAssetTotal}: ${assetName}`;
 
         if (completed === kAssetTotal) {
@@ -110,7 +110,7 @@ export const PROGRESS_EXAMPLE: GalleryExample = {
     empty.addEventListener("click", () => {
       restore();
       void loading.start();
-      loading.setProgress(0, 0);
+      loading.updateProgress(0, 0);
       status.textContent = "Empty load detected. Completion follows after the preview.";
       emptyTimer = window.setTimeout(() => {
         emptyTimer = undefined;

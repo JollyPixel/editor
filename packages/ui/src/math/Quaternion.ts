@@ -53,10 +53,6 @@ const kIdentity: QuatLike = {
   w: 1
 };
 
-/**
- * Edits a quaternion as XYZ Euler angles in degrees.
- * The Euler draft survives renders until value represents a new rotation.
- */
 @customElement("jolly-quaternion")
 export class Quaternion extends JollyField<QuatLike> {
   static readonly Defaults: QuaternionDefaults = {
@@ -131,12 +127,12 @@ export class Quaternion extends JollyField<QuatLike> {
   protected renderValue(): TemplateResult {
     return html`
       <div class="axes">
-        ${kAxisKeys.map((axis) => this.#controllerFor(axis).render())}
+        ${kAxisKeys.map((axis) => this.#axisController(axis).render())}
       </div>
     `;
   }
 
-  #controllerFor(
+  #axisController(
     axis: QuaternionAxis
   ): AxisController {
     let controller = this.#axes.get(axis);

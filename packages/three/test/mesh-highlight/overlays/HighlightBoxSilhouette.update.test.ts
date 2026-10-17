@@ -9,8 +9,8 @@ import * as THREE from "three";
 import { HighlightBoxSilhouette } from "#src/index.ts";
 import { createBoxMesh } from "../helpers.ts";
 import {
-  backPassOf,
-  lastColorOf
+  findBackPass,
+  readLastColor
 } from "./helpers.ts";
 
 describe("update", () => {
@@ -57,7 +57,7 @@ describe("update", () => {
 
     overlay.update(new THREE.Vector3(100, 0, 0));
 
-    assert.strictEqual(backPassOf(overlay)?.geometry, overlay.geometry);
+    assert.strictEqual(findBackPass(overlay)?.geometry, overlay.geometry);
   });
 
   test("recolors the rebuilt geometry's outer ring after a color change", () => {
@@ -66,7 +66,7 @@ describe("update", () => {
 
     overlay.update(new THREE.Vector3(100, 0, 0));
 
-    assert.strictEqual(`#${lastColorOf(overlay.geometry).getHexString()}`, "#0000ff");
+    assert.strictEqual(`#${readLastColor(overlay.geometry).getHexString()}`, "#0000ff");
   });
 
   test("still accepts a color change after a camera inside the box left nothing to draw", () => {

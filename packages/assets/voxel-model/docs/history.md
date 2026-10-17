@@ -15,7 +15,7 @@ history.register({
   id: "model",
   document,
   keys: modelHistoryKeys(document.tree),
-  scopeOf: () => "build"
+  resolveScope: () => "build"
 });
 
 const step = history.open("build", "Add body");

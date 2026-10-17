@@ -7,7 +7,7 @@ import { setImmediate as flush } from "node:timers/promises";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { identityOf } from "../../helpers/server/identity.ts";
+import { createIdentity } from "../../helpers/server/identity.ts";
 import {
   AssetExtension,
   client,
@@ -43,8 +43,7 @@ describe("Server — room lifetime regressions", () => {
       kind: "leave"
     });
 
-    // dropped as "client has not joined room", and must not disarm the timer
-    const connectionZ = server.connect(client("Z"), identityOf(client("Z")));
+    const connectionZ = server.connect(client("Z"), createIdentity(client("Z")));
     await connectionZ.receive({
       room: "pixelart:asset-1",
       kind: "message",
@@ -68,7 +67,7 @@ describe("Server — room lifetime regressions", () => {
         guest: { "kind.$join": "void" }
       }
     });
-    server.setRoomResolver((name): RoomResolution => {
+    server.useRoomResolver((name): RoomResolution => {
       return {
         extension: new AssetExtension(name, "kind", actionProtocols),
         onEvict: () => {
@@ -77,7 +76,7 @@ describe("Server — room lifetime regressions", () => {
       };
     });
 
-    const connectionA = server.connect(client("A"), identityOf(client("A"), "guest"));
+    const connectionA = server.connect(client("A"), createIdentity(client("A"), "guest"));
     await connectionA.receive({
       room: "kind:asset-1",
       kind: "join"
@@ -94,12 +93,12 @@ describe("Server — room lifetime regressions", () => {
   test("outbound envelopes carry the joined name, not the extension id", async() => {
     const sent: any[] = [];
     const server = new Server();
-    server.setRoomResolver((): RoomResolution => {
+    server.useRoomResolver((): RoomResolution => {
       return { extension: new AssetExtension("ext-id", "kind") };
     });
 
-    const connectionA = server.connect({ id: "A", send: (data) => sent.push(data) }, identityOf("A"));
-    const connectionB = server.connect({ id: "B", send: (data) => sent.push(data) }, identityOf("B"));
+    const connectionA = server.connect({ id: "A", send: (data) => sent.push(data) }, createIdentity("A"));
+    const connectionB = server.connect({ id: "B", send: (data) => sent.push(data) }, createIdentity("B"));
     await connectionA.receive({ room: "kind:asset-1", kind: "join" });
     await connectionB.receive({ room: "kind:asset-1", kind: "join" });
 
@@ -115,15 +114,11 @@ describe("Server — room lifetime regressions", () => {
     const order: string[] = [];
     const eviction = Promise.withResolvers<void>();
     const server = new Server({ roomGraceMs: 1_000 });
-    server.setRoomResolver((name): RoomResolution => {
+    server.useRoomResolver((name): RoomResolution => {
       order.push("resolve");
 
       return {
         extension: new AssetExtension(name, "kind"),
-        /*
-         * one-shot gate: only the first eviction blocks, so close() below
-         * is not left waiting on a promise nothing resolves
-         */
         onEvict: (): Promise<void> => {
           if (order.includes("evict:start")) {
             return Promise.resolve();
@@ -147,13 +142,12 @@ describe("Server — room lifetime regressions", () => {
     await flush();
     assert.deepEqual(order, ["resolve", "evict:start"]);
 
-    const connectionB = server.connect(client("B"), identityOf(client("B")));
+    const connectionB = server.connect(client("B"), createIdentity(client("B")));
     const rejoin = connectionB.receive({
       room: "pixelart:asset-1",
       kind: "join"
     });
     await flush();
-    // the resolver must not have run again while the flush is pending
     assert.deepEqual(order, ["resolve", "evict:start"]);
 
     eviction.resolve();

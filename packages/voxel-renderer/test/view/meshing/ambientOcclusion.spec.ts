@@ -55,7 +55,7 @@ function makeFixture(
   return fixture;
 }
 
-function geometriesOf(
+function collectGeometries(
   fixture: MeshFixture,
   chunk: Vec3Tuple = [0, 0, 0]
 ): THREE.BufferGeometry[] {
@@ -132,7 +132,7 @@ describe("ambient occlusion baking", () => {
     place(fixture, [1, 0, 1]);
     place(fixture, [2, 1, 1]);
 
-    const top = shadedVertices(geometriesOf(fixture), kUp);
+    const top = shadedVertices(collectGeometries(fixture), kUp);
 
     assert.deepEqual(shadesAt(top, [2, 1, 1]), [kOneSide]);
     assert.deepEqual(shadesAt(top, [2, 1, 2]), [kOneSide]);
@@ -147,7 +147,7 @@ describe("ambient occlusion baking", () => {
       place(fixture, [2, 1, 1]);
       place(fixture, [1, 1, 2]);
 
-      const top = shadedVertices(geometriesOf(fixture), kUp);
+      const top = shadedVertices(collectGeometries(fixture), kUp);
 
       assert.deepEqual(shadesAt(top, [2, 1, 2]), [0]);
       assert.deepEqual(shadesAt(top, [2, 1, 1]), [kOneSide]);
@@ -161,7 +161,7 @@ describe("ambient occlusion baking", () => {
     place(fixture, [1, 0, 1]);
     place(fixture, [2, 1, 1], kCutoutId);
 
-    const top = shadedVertices(geometriesOf(fixture), kUp)
+    const top = shadedVertices(collectGeometries(fixture), kUp)
       .filter(({ position }) => position[1] === 1);
 
     assert.deepEqual([...new Set(top.map(({ shade }) => shade))], [kLit]);
@@ -173,7 +173,7 @@ describe("ambient occlusion baking", () => {
     place(fixture, [2, 1, 2]);
     place(fixture, [0, 1, 0]);
 
-    for (const geometry of geometriesOf(fixture)) {
+    for (const geometry of collectGeometries(fixture)) {
       const normals = geometry.getAttribute("normal").array;
       for (let quad = 0; quad < normals.length; quad += 16) {
         const diagonal = normals[quad + 3] + normals[quad + 11];
@@ -182,7 +182,7 @@ describe("ambient occlusion baking", () => {
         assert.ok(diagonal >= opposite);
       }
     }
-    const top = shadedVertices(geometriesOf(fixture), kUp);
+    const top = shadedVertices(collectGeometries(fixture), kUp);
     assert.deepEqual(shadesAt(top, [2, 1, 2]), [kOneSide]);
     assert.deepEqual(shadesAt(top, [1, 1, 1]), [kOneSide]);
   });
@@ -192,7 +192,7 @@ describe("ambient occlusion baking", () => {
     place(fixture, [1, 0, 1], kSlabId);
     place(fixture, [2, 1, 1]);
 
-    const side = shadedVertices(geometriesOf(fixture), kPosX)
+    const side = shadedVertices(collectGeometries(fixture), kPosX)
       .filter(({ position }) => position[0] === 2);
 
     assert.deepEqual(shadesAt(side, [2, 0, 1]), [kLit]);
@@ -204,7 +204,7 @@ describe("ambient occlusion baking", () => {
     place(fixture, [3, 0, 3]);
     place(fixture, [4, 1, 4]);
 
-    const top = shadedVertices(geometriesOf(fixture), kUp);
+    const top = shadedVertices(collectGeometries(fixture), kUp);
 
     assert.deepEqual(shadesAt(top, [4, 1, 4]), [kOneSide]);
     assert.deepEqual(shadesAt(top, [3, 1, 3]), [kLit]);

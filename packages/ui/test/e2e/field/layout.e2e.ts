@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { boxOf } from "@jolly-pixel/e2e";
+import { measureBox } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
@@ -13,8 +13,8 @@ async function insets(
   field: Locator
 ): Promise<{ start: number; end: number; }> {
   const [outer, inner] = await Promise.all([
-    boxOf(field),
-    boxOf(field.locator("input"))
+    measureBox(field),
+    measureBox(field.locator("input"))
   ]);
 
   return {
@@ -57,8 +57,8 @@ test("label-less fields inset their value symmetrically", async({ page }) => {
   await test.step("help text aligns with the value", async() => {
     const field = row("unlabeled+description");
     const [outer, description] = await Promise.all([
-      boxOf(field),
-      boxOf(field.locator(".description"))
+      measureBox(field),
+      measureBox(field.locator(".description"))
     ]);
 
     expect(Math.round(description.x - outer.x))
@@ -79,8 +79,8 @@ test.describe("field layout", () => {
     await expect(plain.locator(".revert")).toHaveCount(0);
 
     const [modifiedValue, plainValue] = await Promise.all([
-      boxOf(modified.locator(".value")),
-      boxOf(plain.locator(".value"))
+      measureBox(modified.locator(".value")),
+      measureBox(plain.locator(".value"))
     ]);
     expect(modifiedValue.x).toBe(plainValue.x);
     expect(modifiedValue.width).toBe(plainValue.width);
@@ -93,8 +93,8 @@ test.describe("field layout", () => {
     const tooltip = field.getByRole("tooltip", { includeHidden: true });
 
     await expect(field.locator(".description")).toHaveCount(0);
-    expect((await boxOf(field)).height)
-      .toBeLessThan((await boxOf(block)).height);
+    expect((await measureBox(field)).height)
+      .toBeLessThan((await measureBox(block)).height);
     await expect(hint).toHaveAccessibleName("More information about Speed");
 
     await test.step("hover shows the description", async() => {
@@ -126,8 +126,8 @@ test.describe("field layout", () => {
 
     async function labelAboveValue(): Promise<boolean> {
       const [label, value] = await Promise.all([
-        boxOf(text.locator(".label")),
-        boxOf(text.locator("input"))
+        measureBox(text.locator(".label")),
+        measureBox(text.locator("input"))
       ]);
 
       return label.y + label.height <= value.y;
@@ -174,10 +174,10 @@ test.describe("field layout", () => {
     const field = column.locator("jolly-number");
     const row = column.locator("jolly-property-row");
     const [fieldLabel, rowLabel, fieldValue, rowValue] = await Promise.all([
-      boxOf(field.locator(".label")),
-      boxOf(row.locator(".label")),
-      boxOf(field.locator(".value")),
-      boxOf(row.locator(".value"))
+      measureBox(field.locator(".label")),
+      measureBox(row.locator(".label")),
+      measureBox(field.locator(".value")),
+      measureBox(row.locator(".value"))
     ]);
 
     expect(rowLabel.x).toBe(fieldLabel.x);

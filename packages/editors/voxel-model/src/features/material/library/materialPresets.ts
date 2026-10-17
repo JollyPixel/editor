@@ -4,9 +4,6 @@ import {
   type MaterialSurfaceJSON
 } from "@jolly-pixel/asset.voxel-model/client";
 
-/**
- * A starting point for a new material; the material keeps no link to it.
- */
 export interface MaterialPreset {
   id: string;
   label: string;

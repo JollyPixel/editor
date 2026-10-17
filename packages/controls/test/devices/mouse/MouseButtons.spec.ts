@@ -237,7 +237,6 @@ describe("Controls.Mouse buttons", () => {
     mouse.update();
     assert.strictEqual(mouse.wasJustReleased("left"), true);
 
-    // The settling tick must run even though nothing is held.
     mouse.update();
     assert.strictEqual(mouse.wasJustReleased("left"), false);
     assert.strictEqual(mouse.wasActive, false);

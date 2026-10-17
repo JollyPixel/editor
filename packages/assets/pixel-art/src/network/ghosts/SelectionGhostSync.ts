@@ -30,7 +30,7 @@ export interface SelectionGhostSyncOptions {
 export class SelectionGhostSync {
   #canvas: PixelArtCanvas;
   #room: PixelArtRoom;
-  #colorOf: PeerStyle;
+  #peerColor: PeerStyle;
   #channel: PresenceChannel<SelectionPresenceData>;
   #pending: SelectionPresenceData | undefined;
   #frame: number | undefined;
@@ -73,7 +73,7 @@ export class SelectionGhostSync {
     selectionOutlines.set(change.clientId, {
       rect: preview ? state.liveRect : state.rect,
       mask: "mask" in state ? state.mask : null,
-      color: this.#colorOf(change.clientId)
+      color: this.#peerColor(change.clientId)
     });
     if (preview) {
       floatingSelections.set(change.clientId, {
@@ -105,7 +105,7 @@ export class SelectionGhostSync {
   ) {
     this.#canvas = options.canvas;
     this.#room = options.room;
-    this.#colorOf = peerStyle(options.room, options.color);
+    this.#peerColor = peerStyle(options.room, options.color);
     this.#channel = new PresenceChannel(options.room, {
       key: "selectionGhost",
       decode: (value) => decodeSelectionPresence(

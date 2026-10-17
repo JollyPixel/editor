@@ -19,7 +19,7 @@ import {
 } from "#src/features/history/index.ts";
 import { ModelHierarchy } from "#src/model/index.ts";
 import {
-  buildEditsOf,
+  recordBuildEdits,
   createModelFixture
 } from "../../fixtures/model.ts";
 import { modelAccess } from "../../fixtures/modelAccess.ts";
@@ -28,7 +28,7 @@ import { modelAccess } from "../../fixtures/modelAccess.ts";
 const kNoMirror = { x: false, y: false, z: false };
 const kScopes: readonly EditorHistoryScope[] = ["build", "material", ANIMATION_LIBRARY];
 
-function changesOf(
+function recordChanges(
   document: ModelDocument,
   edit: () => void
 ): ModelChange[] {
@@ -51,7 +51,7 @@ describe("describeModelChange", () => {
     const iron = document.addMaterial({ name: "Iron" })!;
     const arm = document.addBlock({ name: "Arm" })!;
 
-    const labels = changesOf(document, () => {
+    const labels = recordChanges(document, () => {
       document.addBlock({ name: "Leg" });
       document.rename(arm, "Left Arm");
       document.assignMaterial(arm, iron);
@@ -112,7 +112,7 @@ describe("ModelHierarchy undo steps", () => {
     const history = createEditorHistory({ document: fixture.document });
     const hierarchy = new ModelHierarchy({
       document: fixture.document,
-      edits: buildEditsOf(history),
+      edits: recordBuildEdits(history),
       textureSize: () => {
         return { x: 256, y: 256 };
       },
@@ -151,7 +151,7 @@ describe("ModelHierarchy undo steps", () => {
     assert.equal(history.state("build").undoLabel, "Delete Body");
     assert.equal(history.undo("build"), true);
     assert.equal(document.tree.get(arm.uuid)?.parentId, body.uuid);
-    assert.equal(document.tree.childrenOf(null).length, 1);
+    assert.equal(document.tree.listChildren(null).length, 1);
   });
 
   test("tree edits and transforms share Build, materials keep their own", () => {
@@ -182,7 +182,7 @@ describe("ModelHierarchy undo steps", () => {
     const steps = kScopes.map((scope) => history.state(scope).undoCount);
 
     const uv = BlockUvLayouts.net({ x: 32, y: 0 });
-    document.setUv(body.uuid, uv);
+    document.updateUv(body.uuid, uv);
 
     assert.deepEqual(kScopes.map((scope) => history.state(scope).undoCount), steps);
     assert.equal(history.undo("build"), true);

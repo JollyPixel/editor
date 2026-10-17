@@ -8,15 +8,6 @@ import type {
   WindowAdapter
 } from "../src/adapters/index.ts";
 
-/**
- * Headless adapters mirroring `test/mocks`, minus the `node:test` mock
- * instrumentation (which allocates a call record per invocation and would
- * pollute the very allocation counts these benchmarks measure).
- *
- * `dispatch` replaces the browser event loop: it invokes the listeners the
- * device registered through `connect()`, so the DOM-facing hot paths are
- * measurable without a DOM.
- */
 export class BenchEventTarget {
   #listeners = new Map<string, Set<EventTargetListener>>();
 
@@ -59,10 +50,6 @@ export class BenchCanvasAdapter extends BenchEventTarget implements CanvasAdapte
   clientHeight = 1080;
   style = { cursor: "auto" };
 
-  /**
-   * Layout reads cannot be timed outside a browser, so they are counted
-   * instead: "rect reads per event" is the metric that matters.
-   */
   boundingClientRectCalls = 0;
 
   #rect = {
@@ -83,7 +70,6 @@ export class BenchCanvasAdapter extends BenchEventTarget implements CanvasAdapte
   }
 
   requestFullscreen(): void {
-    // no-op
   }
 
   requestPointerLock(): Promise<void> {
@@ -91,7 +77,6 @@ export class BenchCanvasAdapter extends BenchEventTarget implements CanvasAdapte
   }
 
   focus(): void {
-    // no-op
   }
 }
 
@@ -111,10 +96,6 @@ export class BenchDocumentAdapter extends BenchEventTarget implements DocumentAd
 export class BenchNavigatorAdapter implements NavigatorAdapter {
   gamepads: (globalThis.Gamepad | null)[] = [null, null, null, null];
 
-  /**
-   * Browsers hand back a fresh snapshot array on every call. Reproducing that
-   * here keeps the gamepad benchmark honest about the allocation it triggers.
-   */
   allocateSnapshot = true;
 
   getGamepads(): (globalThis.Gamepad | null)[] {
@@ -149,9 +130,6 @@ export interface BenchInput extends BenchAdapters {
   input: Input;
 }
 
-/**
- * A fully connected `Input`, wired to headless adapters on every seam.
- */
 export function createInput(): BenchInput {
   const adapters = createAdapters();
   const input = new Input(adapters.canvas, {
@@ -180,12 +158,6 @@ export function createGamepadSnapshot(
   } as unknown as globalThis.Gamepad;
 }
 
-/**
- * `offsetX`/`offsetY` are always present on a real `MouseEvent`, so they are
- * present here too: without them the benchmark would measure `Mouse`'s
- * `getBoundingClientRect()` fallback rather than the path a browser takes.
- * Pass `omitOffsets` to exercise that fallback deliberately.
- */
 export function mouseEvent(
   target: unknown,
   overrides: Record<string, unknown> = {}
@@ -263,5 +235,4 @@ export function touchEvent(
 }
 
 function noop(): void {
-  // deliberately empty
 }

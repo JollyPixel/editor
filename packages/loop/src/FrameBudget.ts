@@ -1,9 +1,6 @@
 // Import Internal Dependencies
 import { type Clock, PerformanceClock } from "./Clock.ts";
 
-/**
- * Tracks a millisecond deadline for optional per-frame work.
- */
 export class FrameBudget {
   #clock: Clock;
   #budget = 0;

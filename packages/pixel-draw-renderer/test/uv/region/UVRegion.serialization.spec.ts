@@ -88,8 +88,8 @@ describe("UVRegion", () => {
       assert.strictEqual(restored.state, "free");
       for (const face of DEFAULT_UV_SLOTS) {
         assert.deepStrictEqual(
-          restored.rectFor(face),
-          region.rectFor(face),
+          restored.slotRect(face),
+          region.slotRect(face),
           `${face} must survive serialization`
         );
       }
@@ -102,7 +102,7 @@ describe("UVRegion", () => {
         data.rect.x = 99;
       }
 
-      assert.strictEqual(region.rectFor("front").x, REGION_RECT.x);
+      assert.strictEqual(region.slotRect("front").x, REGION_RECT.x);
     });
   });
 });

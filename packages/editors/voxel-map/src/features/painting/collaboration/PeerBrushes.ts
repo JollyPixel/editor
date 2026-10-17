@@ -97,7 +97,7 @@ export class PeerBrushes extends ActorComponent {
       return;
     }
 
-    const mesh = this.#meshFor(
+    const mesh = this.#ensureMesh(
       clientId,
       peerProfileColor(clientId, peer.profile)
     );
@@ -116,7 +116,7 @@ export class PeerBrushes extends ActorComponent {
     mesh.draw(peerCursor);
   }
 
-  #meshFor(
+  #ensureMesh(
     clientId: string,
     color: string
   ): BrushMesh {

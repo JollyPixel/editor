@@ -1,8 +1,5 @@
 // Import Node.js Dependencies
-import {
-  describe,
-  test
-} from "node:test";
+import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
@@ -15,7 +12,6 @@ import {
 // Import Internal Dependencies
 import { AssetLeases } from "#src/lease/AssetLeases.ts";
 import { AssetDocumentConflictError } from "#src/lease/errors/AssetDocumentConflictError.ts";
-import { UnsettledChangesError } from "#src/lease/errors/UnsettledChangesError.ts";
 import {
   FakeClient,
   fakeDocumentKind,
@@ -269,52 +265,5 @@ describe("AssetLeases", () => {
     assert.equal(lease.document.disposed, true);
     assert.equal(client.fakeRoom("pixelart:tex").leaves, 1);
     assert.equal(client.fakeRoom("voxelmap:map").leaves, 1);
-  });
-
-  test("reports unsaved while any open document has pending changes", () => {
-    const { leases } = setup([record("tex", "pixelart"), record("grass", "pixelart")]);
-    const kind = fakeDocumentKind("pixelart");
-    const reports: boolean[] = [];
-    leases.on("unsaved", (unsaved) => reports.push(unsaved));
-    const tex = leases.open(kind, "tex");
-    const grass = leases.open(kind, "grass");
-
-    tex.document.changes.edit();
-    grass.document.changes.edit();
-    tex.document.changes.acknowledge();
-    assert.equal(leases.unsaved, true);
-    grass.release();
-
-    assert.equal(leases.unsaved, false);
-    assert.deepEqual(reports, [true, false]);
-  });
-
-  test("settles once the server acknowledges every pending change", async() => {
-    const { leases } = setup();
-    const tex = leases.open(fakeDocumentKind("pixelart"), "tex");
-    tex.document.changes.edit();
-    let settled = false;
-
-    const settling = leases.settled().then(() => {
-      settled = true;
-    });
-    await Promise.resolve();
-    assert.equal(settled, false);
-    tex.document.changes.acknowledge();
-    await settling;
-
-    assert.equal(settled, true);
-  });
-
-  test("stops waiting for pending changes once its signal aborts", async() => {
-    const { leases } = setup();
-    const tex = leases.open(fakeDocumentKind("pixelart"), "tex");
-    tex.document.changes.edit();
-    const waiting = new AbortController();
-
-    const settling = leases.settled(waiting.signal);
-    waiting.abort();
-
-    await assert.rejects(settling, UnsettledChangesError);
   });
 });

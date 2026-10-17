@@ -4,7 +4,7 @@ import type {
   Page
 } from "@playwright/test";
 import {
-  centerOf,
+  measureCenter,
   dialog,
   pressAt,
   textField
@@ -87,7 +87,7 @@ export class TemplateList {
     cell: Cell
   ): Promise<void> {
     await pressAt(this.#page, [
-      await centerOf(this.row),
+      await measureCenter(this.row),
       await this.#viewport.cellTop(cell)
     ], { settle: nextFrames });
   }

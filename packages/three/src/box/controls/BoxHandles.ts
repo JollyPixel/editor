@@ -25,9 +25,6 @@ const kPickerSegments = 4;
 const kGapUnits = 0.15;
 const kRenderOrder = 20;
 
-/*
- * Ground-axis slots stay first so instance counts can hide the Y arrows.
- */
 const kGroundSlotCount = 4;
 const kSlots: readonly BoxFace[] = [
   { axis: "x", sign: 1 },

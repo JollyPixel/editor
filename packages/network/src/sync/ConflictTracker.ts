@@ -66,7 +66,7 @@ export class ConflictTracker<
     keys: readonly string[],
     version?: number
   ): void {
-    const header = recordOf(command, version);
+    const header = toRecord(command, version);
     for (const key of keys) {
       this.#lastByKey.set(key, header);
     }
@@ -77,7 +77,7 @@ export class ConflictTracker<
     version?: number
   ): void {
     this.#lastByKey.clear();
-    this.#floor = recordOf(command, version);
+    this.#floor = toRecord(command, version);
   }
 
   #accepts(
@@ -91,7 +91,7 @@ export class ConflictTracker<
   }
 }
 
-function recordOf(
+function toRecord(
   command: NetworkCommandHeader,
   version: number | undefined
 ): ConflictRecord {

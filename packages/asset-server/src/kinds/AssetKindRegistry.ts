@@ -27,9 +27,6 @@ export interface DecodedAsset {
   readonly state: unknown;
 }
 
-/**
- * Resolves handlers in registration order, then falls back to `binary`.
- */
 export class AssetKindRegistry {
   #kinds = new Map<string, RegisteredKind>();
 

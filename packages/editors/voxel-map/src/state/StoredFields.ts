@@ -40,7 +40,7 @@ export class StoredFields {
       fallback;
   }
 
-  oneOf<T>(
+  choice<T>(
     key: string,
     values: readonly T[],
     fallback: T

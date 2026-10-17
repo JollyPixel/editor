@@ -18,7 +18,7 @@ export interface BlockSummary {
   pivotOffset: Vector3Like;
 }
 
-export function editorOf(
+export function resolveEditor(
   page: Page
 ): Promise<JSHandle<VoxelModelEditor>> {
   return page.evaluateHandle(() => {
@@ -34,7 +34,7 @@ export function editorOf(
 export async function runtimeIdle(
   page: Page
 ): Promise<boolean> {
-  const editor = await editorOf(page);
+  const editor = await resolveEditor(page);
 
   return editor.evaluate(({ runtime }) => runtime.idle);
 }
@@ -42,7 +42,7 @@ export async function runtimeIdle(
 export async function outline(
   page: Page
 ): Promise<string[]> {
-  const editor = await editorOf(page);
+  const editor = await resolveEditor(page);
 
   return editor.evaluate(({ workspace }) => {
     const { hierarchy } = workspace;
@@ -68,7 +68,7 @@ export async function outline(
 export async function materialOutline(
   page: Page
 ): Promise<string[]> {
-  const editor = await editorOf(page);
+  const editor = await resolveEditor(page);
 
   return editor.evaluate(({ workspace }) => {
     const { materials } = workspace.document.tree;
@@ -78,7 +78,7 @@ export async function materialOutline(
       parentId: string | null,
       depth: number
     ): void {
-      for (const entry of materials.childrenOf(parentId)) {
+      for (const entry of materials.listChildren(parentId)) {
         const suffix = entry.kind === "folder" ? "/" : "";
         lines.push(`${"  ".repeat(depth)}${entry.name}${suffix}`);
         visit(entry.id, depth + 1);
@@ -93,7 +93,7 @@ export async function materialOutline(
 export async function selectedBlock(
   page: Page
 ): Promise<string | null> {
-  const editor = await editorOf(page);
+  const editor = await resolveEditor(page);
 
   return editor.evaluate(({ workspace }) => {
     const { blocks, selection } = workspace;
@@ -108,7 +108,7 @@ export async function blockSurface(
   name: string,
   source: "scene" | "document" = "scene"
 ): Promise<MaterialSurfaceJSON | null> {
-  const editor = await editorOf(page);
+  const editor = await resolveEditor(page);
 
   return editor.evaluate(({ workspace }, query) => {
     if (query.source === "scene") {
@@ -128,7 +128,7 @@ export async function blockSurface(
 export async function materialUses(
   page: Page
 ): Promise<Array<[string, number]>> {
-  const editor = await editorOf(page);
+  const editor = await resolveEditor(page);
 
   return editor.evaluate(({ workspace }) => {
     const { tree } = workspace.document;
@@ -143,7 +143,7 @@ export async function materialUses(
 export async function gizmoAttached(
   page: Page
 ): Promise<boolean> {
-  const editor = await editorOf(page);
+  const editor = await resolveEditor(page);
 
   return editor.evaluate(({ workspace }) => (workspace.gizmo.activeControls?.target ?? null) !== null);
 }
@@ -152,7 +152,7 @@ export async function blockVisible(
   page: Page,
   name: string
 ): Promise<boolean | null> {
-  const editor = await editorOf(page);
+  const editor = await resolveEditor(page);
 
   return editor.evaluate(({ workspace }, blockName) => [...workspace.blocks.values()]
     .find((block) => block.name === blockName)?.visible ?? null, name);
@@ -162,7 +162,7 @@ export async function blockSummary(
   page: Page,
   name: string
 ): Promise<BlockSummary | null> {
-  const editor = await editorOf(page);
+  const editor = await resolveEditor(page);
 
   return editor.evaluate(({ workspace }, blockName) => {
     const { blocks } = workspace;

@@ -110,7 +110,7 @@ describe("PackageResolver", () => {
       fallbacks: [host]
     });
 
-    assert.deepEqual(resolver.importersOf("./kinds/local"), [
+    assert.deepEqual(resolver.findImporters("./kinds/local"), [
       path.join(project, "package.json")
     ]);
     assert.throws(

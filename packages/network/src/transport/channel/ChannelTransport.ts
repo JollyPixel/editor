@@ -43,10 +43,6 @@ interface SocketRecord {
   readonly port: ChannelPort | null;
 }
 
-/**
- * Opens client connections served by a `ChannelTransportHost` on the other
- * end of a message port, such as another tab, an iframe or a worker.
- */
 export class ChannelTransport {
   readonly #port: ChannelPort;
   readonly #host: string;

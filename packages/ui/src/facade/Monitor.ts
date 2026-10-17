@@ -43,11 +43,6 @@ export type MonitorKey<TObject> = {
   [K in keyof TObject]: TObject[K] extends MonitorValue ? K : never;
 }[keyof TObject];
 
-/**
- * A read-only row bound to one object property: `jolly-monitor` by default,
- * `jolly-graph` when `options.view` is `"graph"`. A vector value is joined
- * into `x, y, z` unless `format` says otherwise.
- */
 export class FacadeMonitor<
   TObject extends object,
   TKey extends MonitorKey<TObject>

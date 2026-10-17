@@ -62,7 +62,7 @@ export class PackageResolver {
       return fs.realpathSync(directory);
     }
 
-    for (const importer of this.importersOf(specifier)) {
+    for (const importer of this.findImporters(specifier)) {
       const manifest = findManifest(specifier, importer);
       if (manifest !== undefined) {
         return fs.realpathSync(path.dirname(manifest));
@@ -80,7 +80,7 @@ export class PackageResolver {
     }
 
     let cause: unknown;
-    for (const importer of this.importersOf(specifier)) {
+    for (const importer of this.findImporters(specifier)) {
       try {
         return createRequire(importer).resolve(specifier);
       }
@@ -95,7 +95,7 @@ export class PackageResolver {
     );
   }
 
-  importersOf(
+  findImporters(
     specifier: string
   ): string[] {
     const directories = PackageResolver.isLocal(specifier) ?

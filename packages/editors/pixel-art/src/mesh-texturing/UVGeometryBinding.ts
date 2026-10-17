@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
 import type * as THREE from "three/webgpu";
 import {
-  rectOf,
-  rotationOf,
+  boundingRect,
+  geometryRotation,
   withRotation,
   type UVSlot,
   type UVGeometry,
@@ -47,7 +47,7 @@ export class UVGeometryBinding {
 
     this.applyFace(
       face,
-      region.geometryFor(face)
+      region.slotGeometry(face)
     );
   };
 
@@ -64,7 +64,7 @@ export class UVGeometryBinding {
       return;
     }
 
-    this.setRegion(region);
+    this.bindRegion(region);
   };
 
   constructor(
@@ -94,14 +94,14 @@ export class UVGeometryBinding {
     return this.#region.id;
   }
 
-  setRegion(
+  bindRegion(
     region: UVRegion
   ): void {
     this.#region = region;
     this.#applyRegion();
   }
 
-  setTextureSize(
+  resizeTexture(
     size: Vec2
   ): void {
     this.#textureSize = size;
@@ -121,7 +121,7 @@ export class UVGeometryBinding {
       this.#geometry,
       this.#baseUv,
       face === null ?
-        withRotation(rectOf(geometry), rotationOf(geometry)) :
+        withRotation(boundingRect(geometry), geometryRotation(geometry)) :
         geometry,
       this.#textureSize,
       ranges
@@ -170,7 +170,7 @@ export class UVGeometryBinding {
   #applySlots(
     region: UVRegion
   ): void {
-    for (const { slot, geometry } of region.slotsOf()) {
+    for (const { slot, geometry } of region.listSlots()) {
       this.applyFace(slot, geometry);
     }
   }

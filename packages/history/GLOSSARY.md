@@ -17,7 +17,7 @@ A named history with its own undo and redo stacks, usually one per editor tab
 or tool. Undo in one scope never walks into another. A scope starts with its
 first step.
 
-*In code:* the `TScope` type parameter. A registration's `scopeOf(change)`
+*In code:* the `TScope` type parameter. A registration's `resolveScope(change)`
 picks the scope of a local change made outside a step, and `removeScope(scope)`
 drops a scope with its steps.
 

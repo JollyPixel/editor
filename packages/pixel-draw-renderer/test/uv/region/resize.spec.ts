@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { UVRegion } from "#src/uv/region/UVRegion.ts";
-import { rectOf } from "#src/uv/geometry/geometry.ts";
+import { boundingRect } from "#src/uv/geometry/geometry.ts";
 import {
   cell,
   unfolded
@@ -39,9 +39,9 @@ describe("UVRegion.resized", () => {
       const resized = stacked().resized(rect);
 
       assert.deepEqual(resized.bounds, rect);
-      for (const { geometry } of resized.unfold().slotsOf()) {
+      for (const { geometry } of resized.unfold().listSlots()) {
         assert.deepEqual(
-          [rectOf(geometry).width, rectOf(geometry).height],
+          [boundingRect(geometry).width, boundingRect(geometry).height],
           [6, 5]
         );
       }
@@ -57,7 +57,7 @@ describe("UVRegion.resized", () => {
           height: 7
         });
 
-      assert.deepEqual(region.geometryFor("front"), {
+      assert.deepEqual(region.slotGeometry("front"), {
         x: 0,
         y: 0,
         width: 2,
@@ -79,14 +79,14 @@ describe("UVRegion.resized", () => {
       "top"
     );
 
-    assert.deepEqual(resized.geometryFor("top"), {
+    assert.deepEqual(resized.slotGeometry("top"), {
       x: 1,
       y: 1,
       width: 3,
       height: 9,
       rotation: 1
     });
-    assert.deepEqual(resized.geometryFor("front"), region.geometryFor("front"));
+    assert.deepEqual(resized.slotGeometry("front"), region.slotGeometry("front"));
   });
 
   test("resizes a free triangle slot, keeping its corner", () => {
@@ -108,7 +108,7 @@ describe("UVRegion.resized", () => {
       width: 8
     };
 
-    assert.deepEqual(region.resized(rect, "left").geometryFor("left"), {
+    assert.deepEqual(region.resized(rect, "left").slotGeometry("left"), {
       shape: "triangle",
       rect,
       corner: "top-left"
@@ -142,7 +142,7 @@ describe("UVRegion.resized", () => {
 
     const resized = region.resized(rect);
 
-    assert.deepEqual(resized.unfold().slotsOf().map(({ slot, geometry }) => [slot, "shape" in geometry]), [
+    assert.deepEqual(resized.unfold().listSlots().map(({ slot, geometry }) => [slot, "shape" in geometry]), [
       ["side", true],
       ["bottom", false]
     ]);

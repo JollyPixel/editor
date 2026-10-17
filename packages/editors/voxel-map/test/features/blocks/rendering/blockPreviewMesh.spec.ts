@@ -17,12 +17,12 @@ import {
   PREVIEW_FIT_RADIUS
 } from "../../../../src/features/preview/PreviewStage.ts";
 import {
-  blockOf,
-  sourcesOf
+  createBlock,
+  createSources
 } from "../../../helpers/blockSources.ts";
 
 // CONSTANTS
-const kSources = sourcesOf(new BlocksetAtlases());
+const kSources = createSources(new BlocksetAtlases());
 const kPieces = kSources.createPieces();
 
 function assertFitted(
@@ -42,14 +42,14 @@ describe("needsEnvironment", () => {
     ]);
 
     assert.equal(needsEnvironment(
-      buildBlockPreviewMesh(blockOf({ materialGroup: "gold" }), kPieces, groups)
+      buildBlockPreviewMesh(createBlock({ materialGroup: "gold" }), kPieces, groups)
     ), true);
     assert.equal(needsEnvironment(
-      buildBlockPreviewMesh(blockOf({}), kPieces, groups)
+      buildBlockPreviewMesh(createBlock({}), kPieces, groups)
     ), false);
     assert.equal(needsEnvironment(
       buildBlockPreviewMesh(
-        blockOf({ shapeId: "unknown" as BlockDefinition["shapeId"] }),
+        createBlock({ shapeId: "unknown" as BlockDefinition["shapeId"] }),
         kPieces
       )
     ), false);
@@ -59,7 +59,7 @@ describe("needsEnvironment", () => {
 describe("buildBlockPreviewMesh", () => {
   it("builds a fitted mesh for every registered shape", () => {
     for (const shapeId of kSources.shapes.ids()) {
-      const mesh = buildBlockPreviewMesh(blockOf({ shapeId }), kPieces);
+      const mesh = buildBlockPreviewMesh(createBlock({ shapeId }), kPieces);
 
       assert.ok(mesh.geometry.getIndex()!.count > 0, shapeId);
       assert.ok(mesh.geometry.getAttribute("uv"), shapeId);
@@ -68,8 +68,8 @@ describe("buildBlockPreviewMesh", () => {
   });
 
   it("builds different geometry for different shapes", () => {
-    const cube = buildBlockPreviewMesh(blockOf({ shapeId: "cube" }), kPieces);
-    const ramp = buildBlockPreviewMesh(blockOf({ shapeId: "ramp" }), kPieces);
+    const cube = buildBlockPreviewMesh(createBlock({ shapeId: "cube" }), kPieces);
+    const ramp = buildBlockPreviewMesh(createBlock({ shapeId: "ramp" }), kPieces);
 
     assert.notDeepEqual(
       cube.geometry.getAttribute("position").array,
@@ -79,7 +79,7 @@ describe("buildBlockPreviewMesh", () => {
 
   it("falls back to a grey box for an unknown shape", () => {
     const mesh = buildBlockPreviewMesh(
-      blockOf({ shapeId: "unknown" as BlockDefinition["shapeId"] }),
+      createBlock({ shapeId: "unknown" as BlockDefinition["shapeId"] }),
       kPieces
     );
     const material = mesh.material as THREE.MeshLambertMaterial;
@@ -94,7 +94,7 @@ describe("buildBlockPreviewMesh", () => {
     ]);
 
     const gold = buildBlockPreviewMesh(
-      blockOf({ materialGroup: "gold" }),
+      createBlock({ materialGroup: "gold" }),
       kPieces,
       groups
     );
@@ -104,7 +104,7 @@ describe("buildBlockPreviewMesh", () => {
     assert.equal(textured.roughness, 0.3);
 
     const plain = buildBlockPreviewMesh(
-      blockOf({ materialGroup: "silver" }),
+      createBlock({ materialGroup: "silver" }),
       kPieces,
       groups
     );
@@ -114,7 +114,7 @@ describe("buildBlockPreviewMesh", () => {
 
   it("covers the whole index buffer with its groups", () => {
     for (const shapeId of kSources.shapes.ids()) {
-      const mesh = buildBlockPreviewMesh(blockOf({ shapeId }), kPieces);
+      const mesh = buildBlockPreviewMesh(createBlock({ shapeId }), kPieces);
       const { groups } = mesh.geometry;
       const last = groups.at(-1)!;
 

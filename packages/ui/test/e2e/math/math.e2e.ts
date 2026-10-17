@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import {
-  boxOf,
+  measureBox,
   scrubBy
 } from "@jolly-pixel/e2e";
 
@@ -16,14 +16,14 @@ import {
   fieldChanges as changes,
   recordFieldChanges as recordChanges
 } from "../support/events.ts";
-import { styleOf } from "../support/styles.ts";
+import { readStyle } from "../support/styles.ts";
 
 function axisTagColor(
   page: Page,
   tag: string,
   axis: string
 ): Promise<string> {
-  return styleOf(
+  return readStyle(
     row(page, tag, "default")
       .locator(`.axis-box[data-axis="${axis}"] .axis-tag`),
     "border-top-color"
@@ -126,7 +126,7 @@ test.describe("axis markers", () => {
       options: { axisLetters: true }
     });
 
-    const chip = await boxOf(
+    const chip = await measureBox(
       row(page, "jolly-vector3", "default")
         .locator('.axis-box[data-axis="y"] .scrub-handle')
     );
@@ -254,8 +254,8 @@ test.describe("transform", () => {
     await expect(position).toHaveAttribute("label-position", "top");
 
     const [label, value] = await Promise.all([
-      boxOf(position.locator(".label").first()),
-      boxOf(position.locator(".value").first())
+      measureBox(position.locator(".label").first()),
+      measureBox(position.locator(".value").first())
     ]);
     expect(value.y).toBeGreaterThanOrEqual(label.y + label.height);
     expect(value.x).toBe(label.x);
@@ -266,7 +266,7 @@ test("point2d commits a clamped point from a pad press", async({ page }) => {
   await openExample(page, "math/point2d");
   await recordChanges(page);
 
-  const box = await boxOf(row(page, "jolly-point2d", "default").locator(".pad"));
+  const box = await measureBox(row(page, "jolly-point2d", "default").locator(".pad"));
   await page.mouse.move(box.x + box.width - 1, box.y + 1);
   await page.mouse.down();
   await page.mouse.up();

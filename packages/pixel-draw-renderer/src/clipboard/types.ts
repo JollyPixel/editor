@@ -13,21 +13,12 @@ export const SUPPORTED_RASTER_TYPES = [
   "image/gif"
 ] as const;
 
-/**
- * A selection placed on the texture: `pixels` and `mask` are row-major over
- * `rect`.
- */
 export interface SelectionSnapshot {
   rect: SelectionRect;
   pixels: RGBA8[];
   mask: boolean[];
 }
 
-/**
- * Clipboard content that has been decoded but not yet placed. Where it lands
- * depends on the cursor, camera, and texture bounds, none of which the
- * clipboard knows about.
- */
 export interface DecodedSelection {
   width: number;
   height: number;
@@ -56,9 +47,6 @@ export interface SelectionClipboardMetadataV1 {
   pixels?: string;
 }
 
-/**
- * Matches the read/write surface of the browser Clipboard API.
- */
 export interface ClipboardAdapter {
   read(): Promise<ClipboardItem[]>;
   write(items: ClipboardItem[]): Promise<void>;

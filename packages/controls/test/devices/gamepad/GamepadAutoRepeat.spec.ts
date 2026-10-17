@@ -42,7 +42,6 @@ describe("Controls.Gamepad auto repeat", () => {
     const originalDateNow = Date.now;
     let mockTime = 1000;
 
-    // Mock Date.now to control time
     Date.now = mock.fn(() => mockTime);
 
     const mockGamepad = mocks.Gamepad();
@@ -50,22 +49,15 @@ describe("Controls.Gamepad auto repeat", () => {
     mockGamepad.axes[1] = 0.0;
     navigatorAdapter.gamepads = [mockGamepad, null, null, null];
 
-    // First update creates auto repeat
     gamepad.update();
 
-    /*
-     * Advance time past the auto repeat delay
-     * 600ms later (delay is 500ms)
-     */
     mockTime = 1600;
 
-    // Second update should trigger auto repeat
     gamepad.update();
 
     const xAxis = gamepad.axes[0][0];
     assert.strictEqual(xAxis.wasPositiveJustAutoRepeated, true);
 
-    // Restore original Date.now
     Date.now = originalDateNow;
   });
 
@@ -75,10 +67,8 @@ describe("Controls.Gamepad auto repeat", () => {
     mockGamepad.axes[1] = 0.0;
     navigatorAdapter.gamepads = [mockGamepad, null, null, null];
 
-    // First update to create auto repeat
     gamepad.update();
 
-    // Release axis
     mockGamepad.axes[0] = 0.0;
     gamepad.update();
 
@@ -97,12 +87,10 @@ describe("Controls.Gamepad auto repeat", () => {
 
     gamepad.update();
 
-    // Check first gamepad
     const button1 = gamepad.buttons[0][0];
     assert.strictEqual(button1.isDown, true);
     assert.strictEqual(button1.value, 1.0);
 
-    // Check second gamepad
     const button2 = gamepad.buttons[1][1];
     assert.strictEqual(button2.isDown, true);
     assert.strictEqual(button2.value, 0.8);
@@ -110,7 +98,6 @@ describe("Controls.Gamepad auto repeat", () => {
 
   test("should handle second stick axes correctly", () => {
     const mockGamepad = mocks.Gamepad();
-    // Second stick (axes 2 and 3)
     mockGamepad.axes[2] = 0.7;
     mockGamepad.axes[3] = -0.5;
     navigatorAdapter.gamepads = [mockGamepad, null, null, null];
@@ -136,7 +123,6 @@ describe("Controls.Gamepad auto repeat", () => {
 
     const autoRepeat = gamepad.autoRepeats[0];
     assert.ok(autoRepeat !== null);
-    // Should prioritize first axis (index 0)
     assert.strictEqual(autoRepeat.axis, 0);
   });
 });

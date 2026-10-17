@@ -20,7 +20,7 @@ export const AXIS_STYLE_OPTIONS: readonly GalleryOption<AxisStyleOptionKey>[] = 
   }
 ];
 
-export function axisStyleOf(
+export function pickAxisStyle(
   options: GalleryOptionValues<AxisStyleOptionKey>
 ): AxisStyle {
   if (options.letterOnly) {

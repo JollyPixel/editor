@@ -9,9 +9,6 @@ import {
 } from "./transformers/numeric.ts";
 
 // CONSTANTS
-/**
- * @see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_code_values
- */
 export const KEY_CODES = Object.freeze([
   "Digit0", "Digit1", "Digit2", "Digit3", "Digit4", "Digit5", "Digit6",
   "Digit7", "Digit8", "Digit9", "Minus", "Equal", "Backspace", "Tab", "Comma",
@@ -43,9 +40,6 @@ export type ExtendedKeyCode =
   | Alphabet
   | Numeric;
 
-/**
- * Every shorthand (`"A"`, `"7"`) pre-resolved to its `KeyCode`.
- */
 const kExtendedKeyToCode: Record<string, KeyCode> = buildLookup();
 
 function buildLookup(): Record<string, KeyCode> {

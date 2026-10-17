@@ -184,7 +184,6 @@ export class OfflineWorkspace implements StandaloneWorkspace {
         eventStore?.close();
       }
       catch {
-        // Preserve the startup error.
       }
       try {
         if (source instanceof IndexedDbAssetSource) {
@@ -192,7 +191,6 @@ export class OfflineWorkspace implements StandaloneWorkspace {
         }
       }
       catch {
-        // Preserve the startup error.
       }
       finally {
         release?.();

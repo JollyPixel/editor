@@ -116,7 +116,7 @@ export class LeftPanel extends LitElement {
     this.keyBindingSettings = null;
   }
 
-  setTexture(
+  showTexture(
     texture: LeftPanelTexture
   ): void {
     this.#texture = texture;

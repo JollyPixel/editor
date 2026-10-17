@@ -56,25 +56,10 @@ export class CommandChange<TCommand, TImage> {
   }
 
   readonly command: TCommand;
-  /**
-   * `replay` is this client's pending command re-applied after a peer's.
-   */
   readonly origin: CommandOrigin;
-  /**
-   * What the command replaced, read before it applied.
-   */
   readonly image: TImage;
-  /**
-   * Empty unless the change is local.
-   */
   readonly inverse: readonly TCommand[];
-  /**
-   * The peer behind a remote change; `null` otherwise.
-   */
   readonly clientId: string | null;
-  /**
-   * For an undo or redo: the room version of the step it replays.
-   */
   readonly basis: number | undefined;
 
   constructor(

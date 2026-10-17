@@ -4,7 +4,7 @@ import type { AnimationChange } from "@jolly-pixel/asset.voxel-animation/client"
 
 // Import Internal Dependencies
 import {
-  clipTargetOf,
+  toClipTarget,
   type AnimationLibrary
 } from "./AnimationLibrary.ts";
 import type {
@@ -78,7 +78,7 @@ export class ClipRemovalFocus extends Emitter<ClipRemovalFocusEvents> {
       return;
     }
 
-    animationFocus.focusSet(clipTargetOf(set));
+    animationFocus.focusSet(toClipTarget(set));
     this.#show(clientId);
   };
 

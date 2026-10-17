@@ -9,10 +9,6 @@ export type VoxelObjectLayerDispatch = (
   command: VoxelObjectLayerCommand
 ) => boolean;
 
-/**
- * Named layers of free-standing objects, keyed by layer name. Every change
- * is dispatched to the world as a layer command.
- */
 export class VoxelObjectLayers implements Iterable<VoxelObjectLayerJSON> {
   #layers = new Map<string, VoxelObjectLayerJSON>();
   #dispatch: VoxelObjectLayerDispatch;

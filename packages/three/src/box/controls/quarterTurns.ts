@@ -11,7 +11,7 @@ export function unwrapAngle(
   return next + (kFullTurn * Math.round((previous - next) / kFullTurn));
 }
 
-export function quarterTurnsFor(
+export function snapQuarterTurns(
   angle: number,
   current: number
 ): number {

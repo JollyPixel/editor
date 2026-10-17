@@ -54,9 +54,6 @@ export type SceneEvents<TContext = WorldDefaultContext> = {
 
 type SceneLoadMode = "replace" | "append";
 
-/**
- * Owns scene loading state and applies changes at frame boundaries.
- */
 export class SceneManager<
   TContext = WorldDefaultContext
 > extends Emitter<SceneEvents<TContext>> {

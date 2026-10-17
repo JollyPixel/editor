@@ -1,6 +1,3 @@
-/**
- * Serializes async work without letting a rejection break the chain.
- */
 export class TaskChain {
   #tail: Promise<unknown> = Promise.resolve();
   #queued = 0;

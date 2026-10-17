@@ -380,7 +380,7 @@ export class CommandSync<
       }
       else {
         this.emit("acknowledged", command, version);
-        this.#receiptOf(command, (change) => this.#receipts?.confirm(change, version));
+        this.#createReceipt(command, (change) => this.#receipts?.confirm(change, version));
       }
     }
     this.#noteSettled(entries);
@@ -392,10 +392,10 @@ export class CommandSync<
     command: TCommand
   ): void {
     this.emit("refused", command);
-    this.#receiptOf(command, (change) => this.#receipts?.refuse(change));
+    this.#createReceipt(command, (change) => this.#receipts?.refuse(change));
   }
 
-  #receiptOf(
+  #createReceipt(
     command: TCommand,
     write: (change: SentChange) => void
   ): void {

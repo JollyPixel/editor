@@ -4,7 +4,7 @@ import { parseColor } from "@jolly-pixel/color";
 // Import Internal Dependencies
 import "../../../../src/controls/ColorPicker.ts";
 import type { GalleryExample } from "../../types.ts";
-import { detailOf } from "../../../../src/dom.ts";
+import { readDetail } from "../../../../src/dom.ts";
 import type { ColorPickerLayout } from "../../../../src/controls/ColorPicker.ts";
 import type { JollyChangeDetail } from "../../../../src/field/events.ts";
 
@@ -102,7 +102,7 @@ function buildPanel(
   function writeBack(
     event: Event
   ): void {
-    const detail = detailOf<JollyChangeDetail<string>>(event);
+    const detail = readDetail<JollyChangeDetail<string>>(event);
     if (detail === null) {
       return;
     }

@@ -52,9 +52,6 @@ export interface AreaBoxOptions extends BoxVolumeOptions {
   displayName?: string;
 }
 
-/**
- * Translucent axis-aligned volume anchored at its min corner.
- */
 export class AreaBox extends BoxVolume {
   static readonly Defaults: AreaBoxDefaults = {
     color: "#4da3ff",

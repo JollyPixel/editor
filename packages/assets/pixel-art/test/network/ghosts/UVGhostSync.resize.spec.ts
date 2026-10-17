@@ -39,7 +39,7 @@ for (const ending of ["cancel", "commit", "disconnect"] as const) {
     first.manager.mode = "uv";
     second.manager.mode = "uv";
     const region = first.manager.uv.create({ width: 4, height: 4 });
-    first.manager.uv.setState(region.id, "free");
+    first.manager.uv.applyState(region.id, "free");
     const before = first.manager.uv.get(region.id)!;
     second.manager.uv.restore(before.toJSON());
     const commandsA = new PixelSyncClient({
@@ -103,7 +103,7 @@ for (const ending of ["cancel", "commit", "disconnect"] as const) {
         first.manager.uv.get(region.id)!.toJSON()
       );
       deliverPresence();
-      assert.equal(second.manager.uv.get(region.id)!.rectFor("front").width, 6);
+      assert.equal(second.manager.uv.get(region.id)!.slotRect("front").width, 6);
       assert.deepEqual(
         handles().map((handle) => handle.getAttribute("x")),
         ["80.5", "104.5", "80.5", "104.5"]

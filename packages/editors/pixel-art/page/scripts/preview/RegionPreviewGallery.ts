@@ -49,7 +49,7 @@ export class RegionPreviewGallery {
     selectedRegionId
   }) => {
     for (const [regionId, preview] of this.#previews) {
-      preview.setSelected(regionId === selectedRegionId);
+      preview.markSelected(regionId === selectedRegionId);
     }
   };
 
@@ -68,7 +68,7 @@ export class RegionPreviewGallery {
       this.#addPreview(region);
     }
     for (const [regionId, preview] of this.#previews) {
-      preview.setSelected(regionId === uv.selectedRegionId);
+      preview.markSelected(regionId === uv.selectedRegionId);
     }
   }
 
@@ -81,7 +81,7 @@ export class RegionPreviewGallery {
   refreshTextureSize(): void {
     const { textureSize } = this.#canvasManager;
     for (const preview of this.#previews.values()) {
-      preview.setTextureSize(textureSize);
+      preview.resizeTexture(textureSize);
     }
   }
 
@@ -114,7 +114,7 @@ export class RegionPreviewGallery {
     );
     const referencePreview = this.#previews.values().next().value;
     if (referencePreview) {
-      preview.setRotation(referencePreview.rotation);
+      preview.rotateTo(referencePreview.rotation);
     }
     preview.follow(this.#canvasManager.uv);
 
@@ -130,7 +130,7 @@ export class RegionPreviewGallery {
     );
 
     previews.forEach((preview, index) => {
-      preview.setTargetPosition(positions[index]);
+      preview.moveTo(positions[index]);
     });
   }
 }

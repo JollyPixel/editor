@@ -10,18 +10,12 @@ import { resolveLock } from "./resolveLock.ts";
 import type { PresenceSource } from "./PresenceSource.ts";
 import type { CollaboratorPresence } from "./types.ts";
 
-/**
- * Field state synchronized while a presence source is attached.
- */
 export interface LockHost extends ReactiveControllerHost, HTMLElement {
   path: string | null;
   lockedBy: CollaboratorPresence | null;
   peers: readonly CollaboratorPresence[];
 }
 
-/**
- * Claims and releases a `JollyField` path as focus changes.
- */
 export class LockController implements ReactiveController {
   #host: LockHost;
   #source: PresenceSource | null = null;

@@ -21,12 +21,6 @@ export interface AnchoredPositionOptions {
   align?: "center" | "start";
 }
 
-/**
- * Places a panel against its anchor, flips to the opposite side when it
- * doesn't fit, and clamps it to the viewport. Oversized panels start at the
- * viewport edge. "above"/"below" run the flip along Y with X aligned to the
- * anchor (or centered); "left"/"right" mirror that along X with Y aligned.
- */
 export function anchoredPosition({
   anchor,
   panel,
@@ -112,10 +106,6 @@ export interface AnchorOriginOptions {
   position: ViewportPosition;
 }
 
-/**
- * Returns the point of a placed panel nearest to its anchor's center, in
- * pixels from the panel's top-left corner. A panel scales from there.
- */
 export function anchorOrigin({
   anchor,
   panel,

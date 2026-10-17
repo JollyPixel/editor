@@ -99,8 +99,8 @@ describe("built-in shape uv convention", () => {
     it(`${shape.id} never mirrors a tile`, () => {
       shape.faces.forEach((definition, index) => {
         assert.ok(
-          windingOf(definition.vertices, definition.normal) ===
-          uvWindingOf(definition.uvs),
+          measureWinding(definition.vertices, definition.normal) ===
+          measureUvWinding(definition.uvs),
           `${shape.id} face ${index} (slot ${definition.face}) ` +
           "reads its texture back to front"
         );
@@ -135,7 +135,7 @@ describe("built-in shape uv convention", () => {
   }
 });
 
-function windingOf(
+function measureWinding(
   vertices: readonly Vec3[],
   normal: Vec3
 ): number {
@@ -152,7 +152,7 @@ function windingOf(
   );
 }
 
-function uvWindingOf(
+function measureUvWinding(
   uvs: readonly Vec2[]
 ): number {
   const [a, b, c] = uvs;

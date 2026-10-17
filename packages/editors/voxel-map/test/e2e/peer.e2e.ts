@@ -25,7 +25,7 @@ const kGuestCell = {
   z: 0
 };
 
-function targetOf(
+function readTarget(
   editor: VoxelMapPage
 ): Promise<string> {
   return editor.page.evaluate(
@@ -46,7 +46,7 @@ test("a guest joins from a peer invite, edits with the host and sees it leave", 
   try {
     await guest.page.goto(invite!.trim());
     await waitForEditor(guest.page);
-    expect(await targetOf(guest)).toBe(await targetOf(map));
+    expect(await readTarget(guest)).toBe(await readTarget(map));
 
     await map.world.seed([{ ...kHostCell, blockId: 1 }]);
     await expect.poll(() => guest.world.blocks([kHostCell])).toEqual([1]);

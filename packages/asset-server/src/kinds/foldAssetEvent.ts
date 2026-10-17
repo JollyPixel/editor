@@ -36,7 +36,7 @@ export function foldAssetEvent<
     return null;
   }
 
-  const command = MessageParser.of<TCommand>(commands.protocol)
+  const command = MessageParser.fromProtocol<TCommand>(commands.protocol)
     .parse(event.eventData);
   if (!command.ok) {
     return null;

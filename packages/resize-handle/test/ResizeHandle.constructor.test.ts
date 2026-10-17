@@ -18,7 +18,7 @@ describe("constructor", () => {
     const target = makeTarget(container);
 
     assert.throws(
-      // @ts-expect-error Testing invalid direction
+      // @ts-expect-error
       () => new ResizeHandle(target, { direction: "invalid" }),
       /Invalid direction/
     );

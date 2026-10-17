@@ -25,7 +25,7 @@ function uvSnapshot(
     const { uv } = element.canvasManager!;
     const region = uv.selectedRegionId ? uv.get(uv.selectedRegionId) : undefined;
     const faces: Record<string, { x: number; y: number; }> = {};
-    for (const entry of region?.slotsOf() ?? []) {
+    for (const entry of region?.listSlots() ?? []) {
       const rect = "rect" in entry.geometry ? entry.geometry.rect : entry.geometry;
       faces[entry.slot ?? "*"] = { x: rect.x, y: rect.y };
     }
@@ -46,7 +46,7 @@ function uvRotations(
     const region = uv.selectedRegionId ? uv.get(uv.selectedRegionId) : undefined;
     const rotations: Record<string, number> = {};
     for (const slot of region?.activeSlots ?? []) {
-      rotations[slot] = region!.geometryFor(slot).rotation ?? 0;
+      rotations[slot] = region!.slotGeometry(slot).rotation ?? 0;
     }
 
     return rotations;

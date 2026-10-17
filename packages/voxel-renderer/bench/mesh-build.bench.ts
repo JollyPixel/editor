@@ -10,12 +10,6 @@ import {
   settle
 } from "./common.ts";
 
-/**
- * Headless replay of the `noise-world` example: generate terrain, then mesh dirty
- * chunks. Measures the same two phases shown in the demo HUD.
- *
- * Usage: node bench/mesh-build.bench.ts [--size 1024] [--chunk 256] [--runs 3] [--workers 0]
- */
 const { values } = parseArgs({
   options: {
     size: { type: "string", default: "1024" },
@@ -42,13 +36,11 @@ for (let run = 0; run < runs; run++) {
   });
   const generateMs = performance.now() - generateStart;
 
-  // Without workers, `flush()` meshes in one pass instead of frame-budgeted ticks.
   const meshStart = performance.now();
   const mainMs = workers > 0 ? await settle(view) : flushed(view);
   const meshMs = performance.now() - meshStart;
 
   const { triangles, vertices } = view.inspector.mesh.stats;
-  // Geometry memory is mostly `arrayBuffers`; `heapUsed` alone under-reports cost.
   const {
     heapUsed, arrayBuffers, rss
   } = process.memoryUsage();

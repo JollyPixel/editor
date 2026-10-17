@@ -68,9 +68,6 @@ export interface WorldDefaultContext {
   [key: string]: unknown;
 }
 
-/**
- * Owns synchronous engine systems and their shared runtime context.
- */
 export class World<
   T = THREE.WebGPURenderer,
   TContext = WorldDefaultContext
@@ -126,7 +123,7 @@ export class World<
     this.assetCoordinator = assetCoordinator;
 
     sceneManager.bindWorld(this);
-    globalsAdapter.setGame(this);
+    globalsAdapter.exposeGame(this);
   }
 
   createActor(

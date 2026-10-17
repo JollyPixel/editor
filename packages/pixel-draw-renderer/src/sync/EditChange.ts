@@ -36,17 +36,8 @@ export class EditChange<TCommand> {
   }
 
   readonly command: TCommand;
-  /**
-   * `replay` is this client's pending command re-applied after a peer's.
-   */
   readonly origin: EditOrigin;
-  /**
-   * Commands that undo a local change; empty otherwise.
-   */
   readonly inverse: readonly TCommand[];
-  /**
-   * The peer behind a remote change; `null` otherwise.
-   */
   readonly clientId: string | null;
 
   private constructor(

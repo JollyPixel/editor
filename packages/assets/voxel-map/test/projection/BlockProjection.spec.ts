@@ -14,7 +14,7 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 import {
   DEFAULT_UV_SLOTS,
-  rectOf,
+  boundingRect,
   type UVGeometry
 } from "@jolly-pixel/pixel-draw.renderer";
 
@@ -25,7 +25,7 @@ import { makeResolvedBlockDef } from "../helpers/blocks.ts";
 // CONSTANTS
 const kShapes = BlockShapeRegistry.createDefault();
 
-function shapeOf(
+function findShape(
   id: string
 ): BlockShape {
   const shape = kShapes.get(id);
@@ -36,17 +36,17 @@ function shapeOf(
 
 describe("BlockProjection", () => {
   it("round-trips a local block id through its region id", () => {
-    assert.equal(BlockProjection.regionIdOf(4), "block-4");
-    assert.equal(BlockProjection.localBlockIdOf("block-4"), 4);
-    assert.equal(BlockProjection.localBlockIdOf("block-x"), null);
-    assert.equal(BlockProjection.localBlockIdOf("other-4"), null);
-    assert.equal(BlockProjection.localBlockIdOf("block-0"), null);
-    assert.equal(BlockProjection.localBlockIdOf("block-65536"), null);
+    assert.equal(BlockProjection.formatRegionId(4), "block-4");
+    assert.equal(BlockProjection.parseLocalBlockId("block-4"), 4);
+    assert.equal(BlockProjection.parseLocalBlockId("block-x"), null);
+    assert.equal(BlockProjection.parseLocalBlockId("other-4"), null);
+    assert.equal(BlockProjection.parseLocalBlockId("block-0"), null);
+    assert.equal(BlockProjection.parseLocalBlockId("block-65536"), null);
   });
 
   it("names the region after the local id of a projected block", () => {
     const block = makeResolvedBlockDef(composeBlockId(2, 7), "cube");
-    const projection = new BlockProjection(block, shapeOf("cube"), 8);
+    const projection = new BlockProjection(block, findShape("cube"), 8);
 
     assert.equal(projection.regionId, "block-7");
   });
@@ -55,7 +55,7 @@ describe("BlockProjection", () => {
     const block = makeResolvedBlockDef(1, "cube", {
       defaultTexture: { col: 1, row: 2 }
     });
-    const faces = new BlockProjection(block, shapeOf("cube"), 8).faces();
+    const faces = new BlockProjection(block, findShape("cube"), 8).faces();
 
     assert.deepEqual(Object.keys(faces), [...DEFAULT_UV_SLOTS]);
     for (const geometry of Object.values(faces)) {
@@ -67,7 +67,7 @@ describe("BlockProjection", () => {
     const block = makeResolvedBlockDef(1, "cube", {
       defaultTexture: { col: 0, row: 0, rotation: 1 }
     });
-    const faces = new BlockProjection(block, shapeOf("cube"), 8).faces();
+    const faces = new BlockProjection(block, findShape("cube"), 8).faces();
 
     assert.deepEqual(faces.top, {
       x: 0,
@@ -80,7 +80,7 @@ describe("BlockProjection", () => {
 
   it("maps a ramp side onto a triangle", () => {
     const block = makeResolvedBlockDef(1, "ramp");
-    const faces = new BlockProjection(block, shapeOf("ramp"), 8).faces();
+    const faces = new BlockProjection(block, findShape("ramp"), 8).faces();
 
     assert.deepEqual(faces.left, {
       shape: "triangle",
@@ -102,7 +102,7 @@ describe("BlockProjection", () => {
 
   it("gives one island face per textured slot", () => {
     const block = makeResolvedBlockDef(3, "ramp");
-    const faces = new BlockProjection(block, shapeOf("ramp"), 8).islandFaces();
+    const faces = new BlockProjection(block, findShape("ramp"), 8).islandFaces();
 
     assert.equal(faces.length, 5);
     assert.ok(faces.every(({ regionId }) => regionId === "block-3"));
@@ -112,10 +112,10 @@ describe("BlockProjection", () => {
     const block = makeResolvedBlockDef(1, "ramp", {
       faceTextures: { top: { col: 0, row: 0 } }
     });
-    const projection = new BlockProjection(block, shapeOf("ramp"), 8);
+    const projection = new BlockProjection(block, findShape("ramp"), 8);
 
-    assert.ok(heightOf(projection.faces().top) > 8);
-    assert.equal(heightOf(projection.stackedFaces().top), 8);
+    assert.ok(measureHeight(projection.faces().top) > 8);
+    assert.equal(measureHeight(projection.stackedFaces().top), 8);
   });
 
   it("spans an island only over the tile area the renderer samples", () => {
@@ -129,20 +129,20 @@ describe("BlockProjection", () => {
   });
 });
 
-function heightOf(
+function measureHeight(
   geometry: UVGeometry
 ): number {
-  return rectOf(geometry).height;
+  return boundingRect(geometry).height;
 }
 
 function topIslandHeight(
   block: ResolvedBlockDefinition
 ): number {
-  const projection = new BlockProjection(block, shapeOf("ramp"), 8);
+  const projection = new BlockProjection(block, findShape("ramp"), 8);
   const faces = projection.islandFaces();
   const top = faces[projection.layout.slots.findIndex(
     ({ slot }) => slot === "top"
   )];
 
-  return heightOf(top.geometry);
+  return measureHeight(top.geometry);
 }

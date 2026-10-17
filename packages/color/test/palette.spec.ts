@@ -87,8 +87,8 @@ describe("goldenAngleColor", () => {
   });
 
   test("keeps adjacent indexes far apart in hue", () => {
-    const first = hueOf(goldenAngleColor(0));
-    const second = hueOf(goldenAngleColor(1));
+    const first = readHue(goldenAngleColor(0));
+    const second = readHue(goldenAngleColor(1));
     const distance = Math.abs(first - second);
 
     assert.ok(Math.min(distance, 360 - distance) > 90);
@@ -102,7 +102,7 @@ describe("goldenAngleColor", () => {
   });
 });
 
-function hueOf(
+function readHue(
   hex: string
 ): number {
   const color = parseColor(hex);

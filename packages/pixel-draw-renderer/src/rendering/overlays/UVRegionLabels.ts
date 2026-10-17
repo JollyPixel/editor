@@ -4,8 +4,8 @@ import { contrastingColor } from "@jolly-pixel/color";
 // Import Internal Dependencies
 import { SVG_NS } from "../constants.ts";
 import {
-  rectOf,
-  triangleCornerOf
+  boundingRect,
+  triangleCorner
 } from "../../uv/geometry/geometry.ts";
 import type { UVOverlayEntry } from "./UVOverlayProjection.ts";
 import type { DefaultViewport } from "../Viewport.ts";
@@ -53,7 +53,7 @@ export class UVRegionLabels {
   render(
     entries: readonly UVOverlayEntry[]
   ): void {
-    const labels = this.#labelsOf(entries);
+    const labels = this.#buildLabels(entries);
     const keys = new Set(labels.map(({ entry }) => entry.key));
     for (const [key, el] of this.#labels) {
       if (!keys.has(key)) {
@@ -74,7 +74,7 @@ export class UVRegionLabels {
     this.#labels.clear();
   }
 
-  #labelsOf(
+  #buildLabels(
     entries: readonly UVOverlayEntry[]
   ): UVLabel[] {
     const showRegionLabels = this.#uvMap.showRegionLabels;
@@ -96,7 +96,7 @@ export class UVRegionLabels {
     const labels: UVLabel[] = [];
     for (const group of groups.values()) {
       const entry = group.find((candidate) => candidate.selected) ?? group[0];
-      const rect = rectOf(entry.geometry);
+      const rect = boundingRect(entry.geometry);
       if (rect.width * zoom >= kMinScreenSize && rect.height * zoom >= kMinScreenSize) {
         labels.push({ entry, stacked: group.length });
       }
@@ -110,8 +110,8 @@ export class UVRegionLabels {
   ): void {
     const { entry } = label;
     const el = this.#labels.get(entry.key) ?? this.#create(entry.key);
-    const screen = this.#viewport.toScreenRect(rectOf(entry.geometry));
-    const anchor = kAnchors[triangleCornerOf(entry.geometry) ?? "none"];
+    const screen = this.#viewport.toScreenRect(boundingRect(entry.geometry));
+    const anchor = kAnchors[triangleCorner(entry.geometry) ?? "none"];
     const x = anchor.right ? screen.x + screen.width - kPadding : screen.x + kPadding;
     const y = anchor.bottom ?
       screen.y + screen.height - kPadding :

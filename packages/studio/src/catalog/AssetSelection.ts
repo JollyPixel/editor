@@ -31,7 +31,7 @@ export function newAssetAction(
   return `${kNewAssetActionPrefix}${kind}`;
 }
 
-export function newAssetKindOf(
+export function parseNewAssetKind(
   id: string
 ): string | null {
   return id.startsWith(kNewAssetActionPrefix) ?

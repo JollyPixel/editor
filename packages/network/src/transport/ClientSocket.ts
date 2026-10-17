@@ -13,9 +13,6 @@ export interface SocketConnectOptions {
   credential?: string;
 }
 
-/**
- * The part of a `WebSocket` the client relies on.
- */
 export interface ClientSocket {
   send(
     data: string

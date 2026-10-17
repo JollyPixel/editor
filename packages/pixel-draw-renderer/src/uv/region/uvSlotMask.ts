@@ -10,7 +10,7 @@ export function uvSlotGeometries(
   const geometries: UVGeometry[] = [];
 
   for (const region of regions) {
-    for (const { geometry } of region.slotsOf()) {
+    for (const { geometry } of region.listSlots()) {
       geometries.push(geometry);
     }
   }

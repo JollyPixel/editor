@@ -22,10 +22,6 @@ import {
 // CONSTANTS
 const kVelocityThreshold = 0.1;
 
-/**
- * Displays determinate or indeterminate progress for a long-running operation.
- * Omit value for the indeterminate state.
- */
 @customElement("jolly-progress")
 export class Progress extends LitElement {
   static override styles = progressStyles;

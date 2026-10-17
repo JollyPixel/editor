@@ -133,7 +133,7 @@ invalidateIslands(): void;
 enableNormalMap(config?: NormalMapConfig): void;
 disableNormalMap(): void;
 patchNormalMapDefaults(patch: Partial<NormalMapSettings>): void;
-setNormalMapZone(zone: NormalMapZone): void;
+assignNormalMapZone(zone: NormalMapZone): void;
 deleteNormalMapZone(regionId: string): void;
 ```
 

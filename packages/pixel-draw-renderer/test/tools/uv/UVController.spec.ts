@@ -98,7 +98,7 @@ describe("UVController — deselectOnEmptyClick: false", () => {
 
     assert.strictEqual(overlay.previews.length, 0);
     assert.deepStrictEqual(
-      map.get(region.id)!.rectFor("front"),
+      map.get(region.id)!.slotRect("front"),
       { x: 0, y: 0, width: 8, height: 8 }
     );
   });

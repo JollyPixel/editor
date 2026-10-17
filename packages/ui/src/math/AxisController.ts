@@ -35,9 +35,6 @@ export interface AxisControllerOptions {
   step(): number;
   min(): number;
   max(): number;
-  /**
-   * `undefined` renders the mixed placeholder and blocks scrubbing.
-   */
   value(): number | undefined;
   editable(): boolean;
   disabled(): boolean;
@@ -49,9 +46,6 @@ export interface AxisControllerOptions {
   ): void;
 }
 
-/**
- * Coordinates one axis's scrub handle, expression input and keyboard steps.
- */
 export class AxisController {
   #options: AxisControllerOptions;
   #draft: DraftController<number>;
@@ -63,7 +57,7 @@ export class AxisController {
     options: AxisControllerOptions
   ) {
     this.#options = options;
-    this.#colorStyle = colorStyleOf(options);
+    this.#colorStyle = buildColorStyle(options);
     this.#draft = new DraftController<number>(host);
     this.#input = new NumericInputController(host, {
       draft: this.#draft,
@@ -128,7 +122,7 @@ export class AxisController {
   }
 }
 
-function colorStyleOf(
+function buildColorStyle(
   options: AxisControllerOptions
 ): string | null {
   const { colorVar, textColorVar } = options;

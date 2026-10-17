@@ -68,7 +68,7 @@ export class Placement {
     const mirrored = this.turnedBy(options);
 
     return mirrored.movedTo(
-      mirrored.positionFor(template, min)
+      mirrored.positionFromMinCorner(template, min)
     );
   }
 
@@ -78,7 +78,7 @@ export class Placement {
     return template.placedBounds(this.position, this.transform);
   }
 
-  positionFor(
+  positionFromMinCorner(
     template: VoxelTemplate,
     min: VoxelCoord
   ): VoxelCoord {

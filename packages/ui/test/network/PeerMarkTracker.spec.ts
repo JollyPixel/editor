@@ -51,7 +51,7 @@ function readStringKey(
   return typeof value === "string" ? value : null;
 }
 
-function clientIdsOf(
+function listClientIds(
   marks: PeerMarkMap<string>
 ): [string, string[]][] {
   return [...marks].map(([key, bucket]) => [
@@ -97,7 +97,7 @@ describe("PeerMarkTracker", () => {
 
     harness.emit("sync");
 
-    assert.deepEqual(clientIdsOf(harness.marks()), [
+    assert.deepEqual(listClientIds(harness.marks()), [
       ["a", ["bob", "cleo"]],
       ["b", ["dan"]]
     ]);
@@ -242,7 +242,7 @@ describe("markedPeers and peerMarks", () => {
 
     const marks = peerMarks([[zoe, "walk"], [ada, "walk"], [ada, "run"]]);
 
-    assert.deepEqual(clientIdsOf(marks), [
+    assert.deepEqual(listClientIds(marks), [
       ["walk", ["zoe", "ada"]],
       ["run", ["ada"]]
     ]);

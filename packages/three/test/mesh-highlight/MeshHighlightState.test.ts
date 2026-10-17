@@ -239,45 +239,45 @@ describe("dispose", () => {
 
     assert.strictEqual(state.selected, null);
     assert.strictEqual(state.hovered, null);
-    assert.strictEqual(state.targetFor("mesh-1"), undefined);
+    assert.strictEqual(state.findTarget("mesh-1"), undefined);
     assert.strictEqual(mesh.children.length, 0);
     assert.strictEqual(group.children.length, 1);
   });
 });
 
-describe("techniqueFor", () => {
+describe("resolveTechnique", () => {
   test("defaults to \"outline\" for a mesh registered without a technique", () => {
     const { state } = createStateWithMeshAndGroup();
 
-    assert.strictEqual(state.techniqueFor("mesh-1"), "outline");
+    assert.strictEqual(state.resolveTechnique("mesh-1"), "outline");
   });
 
   test("returns the per-id override given to register", () => {
     const state = new MeshHighlightState();
     state.register("mesh-1", createBoxMesh(), { technique: "highlight" });
 
-    assert.strictEqual(state.techniqueFor("mesh-1"), "highlight");
+    assert.strictEqual(state.resolveTechnique("mesh-1"), "highlight");
   });
 
   test("falls back to the state's technique default when no per-id override is set", () => {
     const state = new MeshHighlightState({ technique: "highlight" });
     state.register("mesh-1", createBoxMesh());
 
-    assert.strictEqual(state.techniqueFor("mesh-1"), "highlight");
+    assert.strictEqual(state.resolveTechnique("mesh-1"), "highlight");
   });
 });
 
-describe("targetFor", () => {
+describe("findTarget", () => {
   test("returns the object registered for id", () => {
     const { state, mesh } = createStateWithMeshAndGroup();
 
-    assert.strictEqual(state.targetFor("mesh-1"), mesh);
+    assert.strictEqual(state.findTarget("mesh-1"), mesh);
   });
 
   test("returns undefined for an unregistered id", () => {
     const { state } = createStateWithMeshAndGroup();
 
-    assert.strictEqual(state.targetFor("unknown"), undefined);
+    assert.strictEqual(state.findTarget("unknown"), undefined);
   });
 });
 
@@ -291,6 +291,6 @@ describe("register", () => {
 
     assert.strictEqual(mesh.children.length, 0);
     assert.ok(replacement.children[0] instanceof HighlightOutline);
-    assert.strictEqual(state.targetFor("mesh-1"), replacement);
+    assert.strictEqual(state.findTarget("mesh-1"), replacement);
   });
 });

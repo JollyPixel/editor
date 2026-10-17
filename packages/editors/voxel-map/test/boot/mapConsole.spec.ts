@@ -30,7 +30,7 @@ function openConsole(
   return commands;
 }
 
-function* variablesOf(
+function* listVariables(
   commands: CommandConsole
 ): IterableIterator<RegisteredVariable> {
   for (const namespace of commands.registry.namespaces()) {
@@ -76,7 +76,7 @@ describe("mapConsole", () => {
     const written = new Map<string, unknown>();
     const before = openConsole(storage);
     let index = 0;
-    for (const variable of variablesOf(before)) {
+    for (const variable of listVariables(before)) {
       const initial = variable.def.get();
       const value = await change(variable, index++);
       assert.notDeepEqual(value, initial, `${variable.address} did not change`);

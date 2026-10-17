@@ -13,9 +13,9 @@ import {
 import { watchDisposal } from "../../fixtures/disposal.ts";
 import { createBoxMesh } from "../helpers.ts";
 import {
-  backPassOf,
+  findBackPass,
   colorAt,
-  lastColorOf
+  readLastColor
 } from "./helpers.ts";
 
 describe("constructor", () => {
@@ -40,7 +40,7 @@ describe("constructor", () => {
     });
 
     const first = colorAt(overlay.geometry, 0);
-    const last = lastColorOf(overlay.geometry);
+    const last = readLastColor(overlay.geometry);
     assert.strictEqual(`#${first.getHexString()}`, "#00ff00");
     assert.strictEqual(`#${last.getHexString()}`, "#ff0000");
   });
@@ -84,7 +84,7 @@ describe("constructor", () => {
     const overlay = new HighlightBoxSilhouette({ target: createBoxMesh(), xray: true, opacity: 0.8 });
 
     assert.strictEqual(overlay.children.length, 1);
-    const back = backPassOf(overlay);
+    const back = findBackPass(overlay);
     assert.ok(back);
     assert.strictEqual(back.material.depthTest, true);
     assert.strictEqual(back.material.opacity, 0.8);
@@ -95,7 +95,7 @@ describe("constructor", () => {
       target: createBoxMesh(), xray: true, opacity: 0.8, occludedOpacity: 0.2
     });
 
-    assert.strictEqual(backPassOf(overlay)?.material.opacity, 0.2);
+    assert.strictEqual(findBackPass(overlay)?.material.opacity, 0.2);
   });
 
   test("skips the dimmed pass entirely when xray is off", () => {
@@ -136,7 +136,7 @@ describe("color", () => {
     overlay.color = "#0000ff";
 
     const first = colorAt(overlay.geometry, 0);
-    const last = lastColorOf(overlay.geometry);
+    const last = readLastColor(overlay.geometry);
     assert.strictEqual(`#${first.getHexString()}`, "#00ff00");
     assert.strictEqual(`#${last.getHexString()}`, "#0000ff");
   });
@@ -181,7 +181,7 @@ describe("xray", () => {
     const overlay = new HighlightBoxSilhouette({ target: createBoxMesh(), xray: true, xrayDepthWrite: true });
 
     assert.strictEqual(overlay.material.depthWrite, true);
-    assert.strictEqual(backPassOf(overlay)?.material.depthWrite, false);
+    assert.strictEqual(findBackPass(overlay)?.material.depthWrite, false);
 
     overlay.xray = false;
     overlay.xray = true;
@@ -213,7 +213,7 @@ describe("dispose", () => {
 
   test("also disposes the occluded pass's own material", () => {
     const overlay = new HighlightBoxSilhouette({ target: createBoxMesh(), xray: true });
-    const counts = watchDisposal(backPassOf(overlay)?.material);
+    const counts = watchDisposal(findBackPass(overlay)?.material);
 
     overlay.dispose();
 

@@ -14,9 +14,6 @@ const kDefaultColors = [
   "#277da1"
 ];
 const kGoldenAngle = 137.5;
-/**
- * These defaults keep peer markers legible on dark scenes.
- */
 const kDefaultLightness = 0.7;
 const kDefaultSaturation = 0.72;
 
@@ -35,9 +32,6 @@ export function defaultPaletteColors(): string[] {
   return [...kDefaultColors];
 }
 
-/**
- * Returns the stable palette-index hash used by `colorFromKey`.
- */
 export function hashKey(
   key: string
 ): number {
@@ -56,9 +50,6 @@ export function colorFromKey(
   return colors[hashKey(key) % colors.length];
 }
 
-/**
- * Generates unbounded colors with adjacent hues 137.5 degrees apart.
- */
 export function goldenAngleColor(
   index: number,
   options: GoldenAngleOptions = {}

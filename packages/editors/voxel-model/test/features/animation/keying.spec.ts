@@ -93,7 +93,7 @@ describe("AnimationKeyer", () => {
 
   test("keeps the interpolation of a key it replaces", () => {
     const { model, arm, keyer, keys } = createKeying(0);
-    model.set.setKey(model.clipId, "Body/Arm", "position", {
+    model.set.writeKey(model.clipId, "Body/Arm", "position", {
       tick: 0,
       value: { x: 0, y: 0, z: 0 },
       interpolation: "step"
@@ -148,7 +148,7 @@ describe("KeyInspectorController", () => {
     }
     assert.equal(state(), null);
 
-    model.set.setKey(model.clipId, "Body/Arm", "position", {
+    model.set.writeKey(model.clipId, "Body/Arm", "position", {
       tick: 24000,
       value: { x: 2, y: 0, z: 0 },
       interpolation: "smooth"
@@ -158,7 +158,7 @@ describe("KeyInspectorController", () => {
     model.keyEditor.select({ path: "Body/Arm", tick: 24000 }, true);
     assert.deepEqual(state(), { title: "2 keys", interpolation: "mixed", editable: true });
 
-    inspector.setInterpolation("step");
+    inspector.applyInterpolation("step");
     assert.deepEqual([interpolations(), state()?.interpolation], [["step", "step"], "step"]);
     assert.equal(model.history.state(model.clipScope).undoLabel, "Set interpolation of 2 keys");
 

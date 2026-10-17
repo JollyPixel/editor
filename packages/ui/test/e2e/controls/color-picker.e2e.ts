@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
-  boxOf,
-  centerOf,
+  measureBox,
+  measureCenter,
   hold
 } from "@jolly-pixel/e2e";
 
@@ -49,8 +49,8 @@ async function dragAreaToBlack(
   page: Page,
   area: Locator
 ): Promise<void> {
-  const box = await boxOf(area);
-  await hold(page, await centerOf(area), {
+  const box = await measureBox(area);
+  await hold(page, await measureCenter(area), {
     x: box.x,
     y: box.y + box.height
   }, 3);
@@ -253,7 +253,7 @@ test.describe("color picker: wide layout", () => {
     const picker = page.locator('jolly-color-picker[layout="wide"]').first();
     const track = picker.locator(".track.hue");
     await track.scrollIntoViewIfNeeded();
-    const box = await boxOf(track);
+    const box = await measureBox(track);
     expect(box.height).toBeGreaterThan(box.width);
 
     await page.mouse.click(

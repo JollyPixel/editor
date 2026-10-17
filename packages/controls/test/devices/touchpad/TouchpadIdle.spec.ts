@@ -50,7 +50,6 @@ describe("Controls.Touchpad idle gating", () => {
     assert.strictEqual(touchpad.isDown(0), false);
     assert.strictEqual(touchpad.wasEnded(0), true);
 
-    // The settling tick must run even though nothing is down.
     touchpad.update();
     assert.strictEqual(touchpad.wasEnded(0), false);
     assert.strictEqual(touchpad.wasActive, false);

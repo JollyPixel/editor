@@ -4,9 +4,6 @@ import type {
 } from "../types.ts";
 
 export class Line {
-  /**
-   * Uses Bresenham's line algorithm.
-   */
   static rasterize(
     start: Vec2,
     end: Vec2

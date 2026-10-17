@@ -16,13 +16,13 @@ export function kindLabel(
   return kKindLabels[kind];
 }
 
-export function displayNameOf(
+export function nodeDisplayName(
   node: Pick<ModelNodeJSON, "kind" | "name">
 ): string {
   return node.name || kindLabel(node.kind);
 }
 
-export function duplicateNameOf(
+export function duplicateName(
   name: string
 ): string {
   return `${name} Copy`;
@@ -33,7 +33,7 @@ export function blockNameTakenMessage(
   parentId: string | null,
   name: string
 ): string {
-  const parent = blockParentName(tree, tree.enclosingBlockOf(parentId));
+  const parent = blockParentName(tree, tree.findEnclosingBlock(parentId));
 
   return parent === null ?
     `A root block is already named "${name}"` :
@@ -45,7 +45,7 @@ export function blockNameClashMessage(
   id: string,
   name: string
 ): string {
-  const parent = blockParentName(tree, tree.transformParentOf(id));
+  const parent = blockParentName(tree, tree.findTransformParent(id));
 
   return parent === null ?
     `Another root block is named "${name}"` :
@@ -58,5 +58,5 @@ function blockParentName(
 ): string | null {
   const parent = blockParentId === null ? undefined : tree.get(blockParentId);
 
-  return parent === undefined ? null : displayNameOf(parent);
+  return parent === undefined ? null : nodeDisplayName(parent);
 }

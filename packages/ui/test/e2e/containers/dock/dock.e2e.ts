@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
 import {
-  boxOf,
+  measureBox,
   dragTo,
-  widthOf
+  measureWidth
 } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
@@ -12,8 +12,8 @@ import {
 } from "../../fixtures.ts";
 import { openExample } from "../../support/gallery.ts";
 import {
-  resolvedColorOf,
-  styleOf
+  resolveColor,
+  readStyle
 } from "../../support/styles.ts";
 import { Dock } from "../../support/dock.ts";
 import { FloatingWindow } from "../../support/floating.ts";
@@ -26,11 +26,11 @@ test.describe("Dock", () => {
 
   test("keyboard resizing and both collapse inputs share the handle", async({ page }) => {
     const { root: dock, resizeHandle: handle } = new Dock(page);
-    const initial = await widthOf(dock);
+    const initial = await measureWidth(dock);
 
     await handle.focus();
     await handle.press("ArrowLeft");
-    await expect.poll(() => widthOf(dock)).toBe(initial + 8);
+    await expect.poll(() => measureWidth(dock)).toBe(initial + 8);
 
     await handle.dblclick();
     await expect(dock).toHaveAttribute("collapsed");
@@ -46,10 +46,10 @@ test.describe("Dock", () => {
       (element: HTMLElement) => element.style.marginInlineStart
     )).toBe("auto");
     await expect(dock.locator("jolly-pane")).toHaveCSS("border-radius", "0px");
-    expect(await styleOf(handle, "background-image", "::after"))
+    expect(await readStyle(handle, "background-image", "::after"))
       .toContain("radial-gradient");
 
-    const rest = await resolvedColorOf(handle, "var(--jolly-dock-resize-bg)");
+    const rest = await resolveColor(handle, "var(--jolly-dock-resize-bg)");
     await expect(handle).toHaveCSS("background-color", rest);
     await handle.hover();
     await expect(handle).not.toHaveCSS("background-color", rest);
@@ -60,13 +60,13 @@ test.describe("Placement", () => {
   test("docks fill the stage and hold locked panes over a stacked window", async({ page }) => {
     await openExample(page, "scenarios/dock-resize");
 
-    expect(await styleOf(new FloatingWindow(page).root, "z-index"))
+    expect(await readStyle(new FloatingWindow(page).root, "z-index"))
       .not.toBe("auto");
 
-    const stage = await boxOf(page.locator(".placement-stage"));
+    const stage = await measureBox(page.locator(".placement-stage"));
     for (const side of ["left", "right"]) {
       const pane = new Pane(page, side);
-      const dock = await boxOf(new Dock(page, { side }).root);
+      const dock = await measureBox(new Dock(page, { side }).root);
 
       expect(dock.height).toBe(stage.height - 2);
       await expect(pane.root).toHaveAttribute("locked");
@@ -76,7 +76,7 @@ test.describe("Placement", () => {
     await expect(new Pane(page, "floating").root)
       .toHaveAttribute("movable");
 
-    const viewport = await boxOf(page.locator(".placement-viewport"));
+    const viewport = await measureBox(page.locator(".placement-viewport"));
     await dragTo(page, new Pane(page, "left").header, {
       x: viewport.x + (viewport.width / 2),
       y: viewport.y + 200
@@ -90,11 +90,11 @@ test.describe("Placement", () => {
 
     await expect(page.locator(".placement-stage jolly-dock-layout")).toHaveCount(1);
     const header = new Pane(page, "floating").header;
-    const viewport = await boxOf(page.locator(".placement-viewport"));
+    const viewport = await measureBox(page.locator(".placement-viewport"));
 
     for (const side of ["left", "right"]) {
       const dock = new Dock(page, { side });
-      const box = await boxOf(dock.root);
+      const box = await measureBox(dock.root);
       await dragTo(page, header, {
         x: box.x + (box.width / 2),
         y: box.y + box.height - 60
@@ -140,8 +140,8 @@ test.describe("Placement", () => {
     await expect(new Dock(page, { side: "left" }).pane("left").root).toHaveCount(1);
     await expect(new FloatingWindow(page).root).toHaveCount(1);
     await expect.poll(async() => {
-      const right = await widthOf(new Dock(page, { side: "right" }).root);
-      const left = await widthOf(new Dock(page, { side: "left" }).root);
+      const right = await measureWidth(new Dock(page, { side: "right" }).root);
+      const left = await measureWidth(new Dock(page, { side: "left" }).root);
 
       return right - left;
     }).toBe(80);

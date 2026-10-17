@@ -22,7 +22,7 @@ export function animationHistoryKeys(
   return {
     written: ({ command }) => [
       ...animationConflictKeys(command),
-      ...contentKeysOf(command)
+      ...touchedContentKeys(command)
     ],
     guard: (commands) => new KeyedGuard(commands.flatMap((command) => [
       ...animationConflictRefs(command).map((ref): KeyedGuardEntry => {
@@ -48,13 +48,13 @@ function valueOf(
     case "clip":
       return Reflect.get(set.clip(ref.clipId) ?? {}, ref.field);
     case "clip-order":
-      return set.has(ref.clipId) ? set.nextClipOf(ref.clipId) ?? null : undefined;
+      return set.has(ref.clipId) ? set.nextClipAfter(ref.clipId) ?? null : undefined;
     case "key":
       return set.keyAt(ref.clipId, ref.path, ref.channel, ref.tick);
   }
 }
 
-function contentKeysOf(
+function touchedContentKeys(
   command: AnimationCommand
 ): string[] {
   switch (command.action) {

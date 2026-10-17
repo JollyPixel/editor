@@ -76,7 +76,7 @@ export class AssetCreationPlanner {
       this.#kinds.resolve(writable.val) :
       this.#kinds.get(input.kind);
     const companions = input.data === undefined ?
-      this.#companionsOf(handler, requested.extension) :
+      this.#planCompanions(handler, requested.extension) :
       Ok([]);
     if (!companions.ok) {
       return companions;
@@ -161,7 +161,7 @@ export class AssetCreationPlanner {
     };
   }
 
-  #companionsOf(
+  #planCompanions(
     handler: AssetKindHandler,
     extension: string
   ): Result<PlannedCompanion[], Error> {

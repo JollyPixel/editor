@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { ModelDocument } from "#src/model/ModelDocument.ts";
 import {
   TrackBinding,
-  blockPathOf
+  buildBlockPath
 } from "#src/model/animation/TrackBinding.ts";
 import type { AnimationSetLinkJSON } from "#src/network/types.ts";
 
@@ -35,16 +35,16 @@ function link(
   };
 }
 
-describe("blockPathOf", () => {
+describe("buildBlockPath", () => {
   test("joins block names from the root, skipping folders", () => {
     const { tree, ids } = createModel();
 
-    assert.equal(blockPathOf(tree, ids.body), "Body");
-    assert.equal(blockPathOf(tree, ids.hand), "Body/Arm.L/Hand");
+    assert.equal(buildBlockPath(tree, ids.body), "Body");
+    assert.equal(buildBlockPath(tree, ids.hand), "Body/Arm.L/Hand");
   });
 });
 
-function statesOf(
+function readStates(
   binding: TrackBinding
 ): [string, string, string | null][] {
   return [...binding].map(([path, { state, blockId }]) => [path, state, blockId]);
@@ -60,7 +60,7 @@ describe("TrackBinding", () => {
       tree
     );
 
-    assert.deepEqual(statesOf(binding), [
+    assert.deepEqual(readStates(binding), [
       ["body/ARM.L/hand ", "bound", ids.hand],
       ["Body", "bound", ids.body],
       ["Body/Tail", "missing", null],
@@ -82,7 +82,7 @@ describe("TrackBinding", () => {
       tree
     );
 
-    assert.deepEqual(statesOf(binding), [
+    assert.deepEqual(readStates(binding), [
       ["Body/Leg", "bound", ids.hand],
       ["body", "ignored", null],
       ["Body/Tail", "missing", null]
@@ -106,11 +106,11 @@ describe("TrackBinding", () => {
     const { tree, ids } = createModel();
     const remapped = link([{ path: "Rig/Wrist", target: "body/arm.l/hand" }]);
 
-    assert.equal(new TrackBinding([], link(), tree).pathOf(ids.hand), "Body/Arm.L/Hand");
+    assert.equal(new TrackBinding([], link(), tree).trackPath(ids.hand), "Body/Arm.L/Hand");
     assert.equal(
-      new TrackBinding(["Body", "body/arm.l/HAND"], link(), tree).pathOf(ids.hand),
+      new TrackBinding(["Body", "body/arm.l/HAND"], link(), tree).trackPath(ids.hand),
       "body/arm.l/HAND"
     );
-    assert.equal(new TrackBinding([], remapped, tree).pathOf(ids.hand), "Rig/Wrist");
+    assert.equal(new TrackBinding([], remapped, tree).trackPath(ids.hand), "Rig/Wrist");
   });
 });

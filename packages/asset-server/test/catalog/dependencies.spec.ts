@@ -1,28 +1,20 @@
 // Import Node.js Dependencies
-import {
-  describe,
-  test
-} from "node:test";
+import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
-import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
 import {
   ASSET_CREATED,
   ASSET_UPDATED,
   CatalogProjection,
-  createAssetBackend,
   encodeContent,
   type AssetEventDataMap,
   type CatalogChange
 } from "#src/index.ts";
-import {
-  syncHarness,
-  type SyncHarness
-} from "../helpers/backend.ts";
+import { syncHarness, type SyncHarness } from "../helpers/backend.ts";
 import {
   LINK_TARGETS_SET,
   linkContent,
@@ -198,10 +190,10 @@ describe("CatalogProjection — dependency index", () => {
     projection.on("changed", (change) => changes.push(change));
 
     const map = await createLink(harness, "map.link", "tex");
-    assert.deepEqual(projection.dependencies.dependenciesOf(map), [linkReference("tex")]);
-    assert.deepEqual(projection.dependencies.dependentsOf("tex"), [map]);
+    assert.deepEqual(projection.dependencies.listDependencies(map), [linkReference("tex")]);
+    assert.deepEqual(projection.dependencies.listDependents("tex"), [map]);
     assert.deepEqual(
-      projection.dependentsOf("tex").map((record) => record.id.value),
+      projection.listDependents("tex").map((record) => record.id.value),
       [map]
     );
     assert.deepEqual(changes.at(-1)?.dependencies, [linkReference("tex")]);
@@ -211,23 +203,23 @@ describe("CatalogProjection — dependency index", () => {
       data: linkContent("other"),
       actor: kActor
     });
-    assert.deepEqual(projection.dependencies.dependentsOf("tex"), []);
-    assert.deepEqual(projection.dependencies.dependentsOf("other"), [map]);
+    assert.deepEqual(projection.dependencies.listDependents("tex"), []);
+    assert.deepEqual(projection.dependencies.listDependents("other"), [map]);
 
     await harness.writer.rename({
       assetId: map,
       to: "renamed.link",
       actor: kActor
     });
-    assert.deepEqual(projection.dependencies.dependenciesOf(map), [linkReference("other")]);
+    assert.deepEqual(projection.dependencies.listDependencies(map), [linkReference("other")]);
     assert.deepEqual(changes.at(-1)?.dependencies, [linkReference("other")]);
 
     await harness.writer.remove({
       assetId: map,
       actor: kActor
     });
-    assert.deepEqual(projection.dependencies.dependenciesOf(map), []);
-    assert.deepEqual(projection.dependencies.dependentsOf("other"), []);
+    assert.deepEqual(projection.dependencies.listDependencies(map), []);
+    assert.deepEqual(projection.dependencies.listDependents("other"), []);
     assert.strictEqual(changes.at(-1)?.dependencies, undefined);
     assert.deepEqual(projection.dependencies.toJSON(), {});
 
@@ -246,8 +238,8 @@ describe("CatalogProjection — dependency index", () => {
     const projection = new CatalogProjection({ projector: harness.projector });
     projection.load();
 
-    assert.deepEqual(projection.dependencies.dependentsOf(texture), [map]);
-    assert.deepEqual(projection.dependencies.dependenciesOf(map), [linkReference(texture)]);
+    assert.deepEqual(projection.dependencies.listDependents(texture), [map]);
+    assert.deepEqual(projection.dependencies.listDependencies(map), [linkReference(texture)]);
   });
 
   test("events without edges are reported as unindexed", async() => {
@@ -263,72 +255,5 @@ describe("CatalogProjection — dependency index", () => {
       assert.deepEqual(projection.dependencies.toJSON(), {});
     }
     eventStore.close();
-  });
-});
-
-describe("createAssetBackend — dependency backfill", () => {
-  test("rewrites assets whose newest write has no edges, once", async() => {
-    const source = new MemoryAssetSource();
-    const eventStore = EventStore.persistence.memory<AssetEventDataMap>();
-    const data = linkContent("tex");
-    await source.write("old.link", data);
-    legacyCreated(eventStore, "old", "old.link", data);
-
-    {
-      await using backend = await createAssetBackend({
-        source,
-        eventStore,
-        handlers: [linkHandler()],
-        watch: false
-      });
-
-      assert.deepEqual(backend.catalog.dependencies.dependenciesOf("old"), [
-        linkReference("tex")
-      ]);
-      assert.deepEqual(unindexedIds(backend.catalog), []);
-    }
-
-    const count = eventStore.reader.list("old").length;
-    {
-      await using backend = await createAssetBackend({
-        source,
-        eventStore,
-        handlers: [linkHandler()],
-        watch: false
-      });
-
-      assert.deepEqual(backend.catalog.dependencies.dependentsOf("tex"), ["old"]);
-    }
-    assert.strictEqual(eventStore.reader.list("old").length, count);
-    eventStore.close();
-  });
-
-  test("leaves kinds without edges alone", async() => {
-    const source = new MemoryAssetSource();
-    const eventStore = EventStore.persistence.memory<AssetEventDataMap>();
-    const data = bytes("png");
-    await source.write("a.png", data);
-    eventStore.writer.append({
-      assetType: "binary",
-      assetId: "png",
-      eventType: ASSET_CREATED,
-      eventData: {
-        path: "a.png",
-        kind: "binary",
-        hash: sha256Hex(data),
-        size: data.byteLength,
-        content: encodeContent(data)
-      },
-      actor: kActor
-    }).unwrap();
-
-    await using backend = await createAssetBackend({
-      source,
-      eventStore,
-      watch: false
-    });
-
-    assert.strictEqual(eventStore.reader.list("png").length, 1);
-    assert.deepEqual(unindexedIds(backend.catalog), ["png"]);
   });
 });

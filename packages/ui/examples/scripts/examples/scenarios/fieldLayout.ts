@@ -7,7 +7,7 @@ import "../../../../src/controls/Select.ts";
 import "../../../../src/controls/Text.ts";
 import "../../../../src/math/Transform.ts";
 import type { GalleryExample } from "../../types.ts";
-import { detailOf } from "../../../../src/dom.ts";
+import { readDetail } from "../../../../src/dom.ts";
 import type { FieldDescriptionDisplay } from "../../../../src/field/DescriptionHint.ts";
 import type { JollyChangeDetail } from "../../../../src/field/events.ts";
 
@@ -199,7 +199,7 @@ function controlled<TField extends HTMLElement & { value: unknown; }>(
       return;
     }
 
-    const detail = detailOf<JollyChangeDetail<TField["value"]>>(event);
+    const detail = readDetail<JollyChangeDetail<TField["value"]>>(event);
     if (detail !== null) {
       field.value = detail.value;
     }

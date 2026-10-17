@@ -6,9 +6,6 @@ import type { GridFadeFrom } from "./shader.ts";
 
 export class GridFadeValue {
   readonly from: GridFadeFrom;
-  /**
-   * Target for `"target"` mode. Set to `null` to use `trackTarget`'s fallback.
-   */
   target: THREE.Object3D | null;
 
   constructor(
@@ -24,9 +21,6 @@ export class GridFadeValue {
     this.target = target ?? null;
   }
 
-  /**
-   * Copies the target's world position, or the fallback when cleared.
-   */
   trackTarget(
     targetPositionUniform: THREE.Vector3,
     fallbackPosition?: THREE.Vector3Like

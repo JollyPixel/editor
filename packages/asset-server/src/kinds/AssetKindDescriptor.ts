@@ -10,10 +10,6 @@ export interface AssetKindIcon {
   viewBox?: string;
 }
 
-/**
- * Serializable presentation data for an asset kind, read by hosts that list
- * or open assets without loading the kind's handler.
- */
 export interface AssetKindDescriptor {
   kind: string;
   label: string;

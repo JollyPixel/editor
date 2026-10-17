@@ -292,7 +292,7 @@ export class UVMap extends Emitter<
     this.emit("region-moved", {
       region: moved,
       face: target,
-      previousRect: region.rectFor(target)
+      previousRect: region.slotRect(target)
     });
     this.emit("changed");
 
@@ -322,7 +322,7 @@ export class UVMap extends Emitter<
         [null] :
         region.activeSlots;
       for (const slot of slots) {
-        const slotRect = region.rectFor(slot);
+        const slotRect = region.slotRect(slot);
         if (area.contains(slotRect)) {
           targets.push({
             id: region.id,
@@ -411,7 +411,7 @@ export class UVMap extends Emitter<
     this.emit("region-drag-ended", { id, committed });
   }
 
-  setState(
+  applyState(
     id: string,
     state: UVRegionState,
     slot: UVSlot | null = null

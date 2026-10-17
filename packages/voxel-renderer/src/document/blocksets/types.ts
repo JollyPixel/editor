@@ -1,10 +1,6 @@
 // Import Third-party Dependencies
 import type * as THREE from "three";
 
-/**
- * Clockwise quarter turns of the tile image inside its face, in image space
- * where y points down. Applied before the block's own transform.
- */
 export type TileRotation = 0 | 1 | 2 | 3;
 
 export interface ResolvedTileRef {
@@ -27,9 +23,6 @@ export type Coords = [col: number, row: number];
 
 export type TileRef = Coords | ResolvedTileRef;
 
-/**
- * Normalized sub-rectangle of a tile, with `v` pointing up.
- */
 export interface TileBounds {
   u0: number;
   v0: number;

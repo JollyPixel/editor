@@ -37,13 +37,6 @@ export interface IdentitySidecarData {
   readonly assets: readonly IdentityEntry[];
 }
 
-/**
- * Persists path-to-AssetId mappings beside the workspace.
- *
- * The event log is never committed, so this file is the only record of
- * asset ids that survives a clone. An unreadable sidecar loses ids, not
- * event data.
- */
 export class IdentitySidecar {
   #source: AssetSource;
   #byPath = new Map<string, IdentityEntry>();

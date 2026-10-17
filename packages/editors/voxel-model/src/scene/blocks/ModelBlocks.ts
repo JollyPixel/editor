@@ -90,7 +90,7 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
       }
 
       case "node-moved":
-        for (const node of this.#document.tree.subtreeOf(command.id)) {
+        for (const node of this.#document.tree.subtreeFrom(command.id)) {
           const block = this.#blocks.get(node.id);
           if (block) {
             this.#attach(block);
@@ -281,7 +281,7 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
     return {
       ...block.transform,
       position: plainVector3(parent.worldToLocal(block.worldPosition)),
-      scale: plainVector3(block.effectiveScale.divide(BlockNode.anchorScaleOf(parent))),
+      scale: plainVector3(block.effectiveScale.divide(BlockNode.inheritedScale(parent))),
       rotation: plainVector3(rotation)
     };
   }
@@ -333,13 +333,13 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
     const block = new ModelBlock({
       uuid: node.id,
       name: node.name,
-      shape: BlockShape.of(node),
+      shape: BlockShape.fromBlock(node),
       ...node.flipAxes === undefined ? {} : { flip: node.flipAxes },
       texture: this.#texture,
       flatShading: this.#flatShading
     });
     block.transform = node.transform;
-    block.surface = this.#surfaceOf(node.materialId);
+    block.surface = this.#previewSurface(node.materialId);
     this.#blocks.set(block.uuid, block);
     this.#byMesh.set(block.mesh, block);
     this.emit("blockAdded", block);
@@ -359,8 +359,8 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
   #paint(
     block: ModelBlock
   ): void {
-    block.surface = this.#surfaceOf(
-      this.#document.tree.materialIdOf(block.uuid)
+    block.surface = this.#previewSurface(
+      this.#document.tree.blockMaterialId(block.uuid)
     );
   }
 
@@ -381,7 +381,7 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
     }
   }
 
-  #surfaceOf(
+  #previewSurface(
     materialId: string | undefined
   ): MaterialSurfaceJSON | null {
     if (materialId === undefined) {
@@ -392,14 +392,14 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
 
     return stored === undefined ?
       null :
-      this.#previews.surfaceOf(materialId, stored);
+      this.#previews.previewSurface(materialId, stored);
   }
 
   #attach(
     block: ModelBlock
   ): void {
     const parent = this.#parentObject(
-      this.#document.tree.transformParentOf(block.uuid)
+      this.#document.tree.findTransformParent(block.uuid)
     );
     if (block.node.parent !== parent) {
       parent.add(block.node);

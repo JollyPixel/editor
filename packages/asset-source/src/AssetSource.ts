@@ -4,9 +4,6 @@ export interface AssetWatchOptions {
   onReady?: () => void;
 }
 
-/**
- * Physical store using root-relative POSIX paths.
- */
 export interface AssetSource {
   read(
     path: string

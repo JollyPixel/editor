@@ -13,7 +13,7 @@ A step is what one undo takes back: every local change made by one user action, 
 - `record(scope, label, edit)` files the changes made during `edit` as one step.
 - `open(scope, label)` keeps a step open across calls, for a drag over pointer events.
 - A step opened inside another joins the outer one.
-- A local change made outside any step becomes its own step in the scope its registration's `scopeOf(change)` returns. `null` means it makes no step.
+- A local change made outside any step becomes its own step in the scope its registration's `resolveScope(change)` returns. `null` means it makes no step.
 - A change with an empty `inverse` joins no step.
 - Filing a step clears the redo stack of its scope.
 

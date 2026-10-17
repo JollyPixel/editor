@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { AnimationSet } from "#src/model/AnimationSet.ts";
 import { InvalidAnimationSetError } from "#src/model/errors/InvalidAnimationSetError.ts";
 import {
-  imageOf,
+  captureImage,
   restoreImages
 } from "#src/model/history/animationImages.ts";
 import type { AnimationCommand } from "#src/network/types.ts";
@@ -15,7 +15,7 @@ import {
   key
 } from "../helpers/clips.ts";
 
-function setOf(
+function createSet(
   ...commands: AnimationCommand[]
 ): AnimationSet {
   const set = new AnimationSet();
@@ -29,7 +29,7 @@ function setOf(
 
 describe("AnimationSet", () => {
   test("a track path in another case or spacing is the same track", () => {
-    const set = setOf(
+    const set = createSet(
       { action: "clip-added", clip: clip("walk") },
       { action: "key-set", clipId: "walk", path: "Body/Arm", channel: "position", key: key(0, 1) },
       { action: "key-set", clipId: "walk", path: "body/ ARM ", channel: "position", key: key(12, 2) },
@@ -49,7 +49,7 @@ describe("AnimationSet", () => {
   });
 
   test("renames a track with its keys, refusing a path another track holds", () => {
-    const set = setOf(
+    const set = createSet(
       { action: "clip-added", clip: clip("walk") },
       { action: "key-set", clipId: "walk", path: "Body/Arm", channel: "position", key: key(0, 1) },
       { action: "key-set", clipId: "walk", path: "Body/Leg", channel: "position", key: key(0, 2) }
@@ -68,7 +68,7 @@ describe("AnimationSet", () => {
   });
 
   test("compares clip names trimmed and in any case, and finds a free one", () => {
-    const set = setOf(
+    const set = createSet(
       { action: "clip-added", clip: clip("walk", { name: "Walk" }) },
       { action: "clip-added", clip: clip("walk-2", { name: "Walk 2" }) }
     );
@@ -80,7 +80,7 @@ describe("AnimationSet", () => {
   });
 
   test("keeps clips in order and places one before a sibling", () => {
-    const set = setOf(
+    const set = createSet(
       { action: "clip-added", clip: clip("walk") },
       { action: "clip-added", clip: clip("run") },
       { action: "clip-added", clip: clip("idle"), beforeId: "walk" },
@@ -88,8 +88,8 @@ describe("AnimationSet", () => {
     );
 
     assert.deepEqual([...set.clips()].map(({ id }) => id), ["run", "idle", "walk"]);
-    assert.equal(set.nextClipOf("idle"), "walk");
-    assert.equal(set.nextClipOf("walk"), undefined);
+    assert.equal(set.nextClipAfter("idle"), "walk");
+    assert.equal(set.nextClipAfter("walk"), undefined);
   });
 
   test("sets keys in tick order, replacing one at the same tick", () => {
@@ -99,7 +99,7 @@ describe("AnimationSet", () => {
       path: "body/arm",
       channel: "rotation"
     } as const;
-    const set = setOf(
+    const set = createSet(
       { action: "clip-added", clip: clip("walk") },
       { ...rotation, key: key(12000, 90) },
       { ...rotation, key: key(0, 0) },
@@ -113,7 +113,7 @@ describe("AnimationSet", () => {
   });
 
   test("drops an emptied channel, then the emptied track", () => {
-    const set = setOf(
+    const set = createSet(
       { action: "clip-added", clip: clip("walk") },
       { action: "key-set", clipId: "walk", path: "arm", channel: "position", key: key(0, 1) },
       { action: "key-set", clipId: "walk", path: "arm", channel: "scale", key: key(0, 2) },
@@ -126,7 +126,7 @@ describe("AnimationSet", () => {
   });
 
   test("refuses commands on missing clips, keys and tracks, and frame rates off the tick grid", () => {
-    const set = setOf({ action: "clip-added", clip: clip("walk") });
+    const set = createSet({ action: "clip-added", clip: clip("walk") });
 
     assert.equal(set.accepts({ action: "clip-added", clip: clip("walk") }), false);
     assert.equal(set.accepts({ action: "clip-added", clip: clip("run", { fps: 7 }) }), false);
@@ -144,7 +144,7 @@ describe("AnimationSet", () => {
   });
 
   test("changes only the clip fields a patch names", () => {
-    const set = setOf(
+    const set = createSet(
       { action: "clip-added", clip: clip("walk") },
       { action: "clip-changed", id: "walk", patch: { loop: false, fps: 30 } }
     );
@@ -153,7 +153,7 @@ describe("AnimationSet", () => {
   });
 
   test("rejects a snapshot with a repeated clip or keys out of order, keeping the previous set", () => {
-    const set = setOf({ action: "rig-renamed", rig: "Humanoid" });
+    const set = createSet({ action: "rig-renamed", rig: "Humanoid" });
 
     assert.throws(
       () => set.load({ rig: "", clips: [clip("a"), clip("a")] }),
@@ -170,7 +170,7 @@ describe("AnimationSet", () => {
   });
 
   test("restores the images of several commands, newest first", () => {
-    const set = setOf(
+    const set = createSet(
       { action: "clip-added", clip: clip("walk") },
       { action: "clip-added", clip: clip("run") }
     );
@@ -182,7 +182,7 @@ describe("AnimationSet", () => {
       { action: "clip-added", clip: clip("jump"), beforeId: "walk" }
     ];
     const images = commands.map((command) => {
-      const image = imageOf(set, command);
+      const image = captureImage(set, command);
       set.apply(command);
 
       return image;

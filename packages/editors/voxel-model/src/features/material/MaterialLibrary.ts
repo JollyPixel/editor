@@ -71,7 +71,7 @@ export class MaterialLibrary extends LitElement {
   });
   #menu = new ContextMenuController(
     () => this.menu,
-    (id) => this.#controller.menuFor(id)
+    (id) => this.#controller.openMenu(id)
   );
   #surface = new MaterialSurfaceController(this);
 

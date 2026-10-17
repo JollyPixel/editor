@@ -17,7 +17,7 @@ import {
 } from "../helpers/fill/buffer.ts";
 
 describe("PixelBuffer", () => {
-  describe("positionsOf", () => {
+  describe("findPositions", () => {
     test("matches every pixel of the given color, including disconnected regions", () => {
       const buf = new PixelBuffer({
         size: { x: 5, y: 2 },
@@ -43,7 +43,7 @@ describe("PixelBuffer", () => {
         { x: 4, y: 1 }
       ], COLOR_A);
 
-      const positions = buf.positionsOf(COLOR_A);
+      const positions = buf.findPositions(COLOR_A);
 
       assert.deepStrictEqual(
         sortPositions(positions),
@@ -68,7 +68,7 @@ describe("PixelBuffer", () => {
       });
 
       assert.deepStrictEqual(
-        buf.positionsOf(COLOR_B),
+        buf.findPositions(COLOR_B),
         []
       );
     });
@@ -83,7 +83,7 @@ describe("PixelBuffer", () => {
         { x: 0, y: 0 }
       ], { ...COLOR_A, a: 0 });
 
-      const positions = buf.positionsOf({ ...COLOR_A, a: 0 });
+      const positions = buf.findPositions({ ...COLOR_A, a: 0 });
 
       assert.deepStrictEqual(
         positions,
@@ -91,13 +91,13 @@ describe("PixelBuffer", () => {
       );
     });
   });
-  describe("positionsOf with a mask", () => {
+  describe("findPositions with a mask", () => {
     test("skips matching pixels whose mask entry is zero", () => {
       const buf = filledBuffer({ x: 3, y: 2 }, COLOR_B);
       const mask = Uint8Array.from([0, 1, 0, 1, 0, 1]);
 
       assert.deepStrictEqual(
-        buf.positionsOf(COLOR_B, mask),
+        buf.findPositions(COLOR_B, mask),
         [{ x: 1, y: 0 }, { x: 0, y: 1 }, { x: 2, y: 1 }]
       );
     });

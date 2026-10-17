@@ -38,7 +38,7 @@ export class StrokeGhostEncoder {
 
     return {
       from,
-      spans: spansOf(pixels.slice(from))
+      spans: toSpans(pixels.slice(from))
     };
   }
 
@@ -58,7 +58,7 @@ export class StrokeGhostEncoder {
   }
 }
 
-function spansOf(
+function toSpans(
   pixels: readonly PeerStrokePixel[]
 ): StrokeGhostSpan[] {
   const spans: StrokeGhostSpan[] = [];

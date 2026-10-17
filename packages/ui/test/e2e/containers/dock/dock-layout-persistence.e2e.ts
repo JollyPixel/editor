@@ -1,10 +1,10 @@
 // Import Third-party Dependencies
 import {
-  boxOf,
-  centerOf,
+  measureBox,
+  measureCenter,
   dragTo,
-  heightOf,
-  widthOf
+  measureHeight,
+  measureWidth
 } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
@@ -28,9 +28,9 @@ test.describe("DockLayout persistence", () => {
   test("a window remembers its size through docking and reloads until reset", async({ page }) => {
     const left = new Dock(page, "left");
     const frame = new FloatingWindow(page);
-    const origin = await boxOf(frame.root);
+    const origin = await measureBox(frame.root);
     await frame.resizeTo({ width: 170, height: 130 });
-    const resized = await boxOf(frame.root);
+    const resized = await measureBox(frame.root);
     expect(resized.width).toBeLessThan(origin.width);
     expect(resized.height).toBeLessThan(origin.height);
 
@@ -41,49 +41,49 @@ test.describe("DockLayout persistence", () => {
     await reloadGallery(page);
 
     await dragTo(page, new Pane(page, "assets").header, { x: 700, y: 400 });
-    const restored = await boxOf(frame.root);
+    const restored = await measureBox(frame.root);
     expect(restored.width).toBeCloseTo(resized.width, 0);
     expect(restored.height).toBeCloseTo(resized.height, 0);
     expect(700 - restored.x).toBeGreaterThan(0);
     expect(700 - restored.x).toBeLessThan(restored.width);
 
     await page.locator(kReset).click();
-    await expect.poll(() => widthOf(frame.root)).toBe(260);
+    await expect.poll(() => measureWidth(frame.root)).toBe(260);
   });
 
   test("reset restores the authored geometry, not only the placement", async({ page }) => {
     const dock = new Dock(page, "left");
     const frame = new FloatingWindow(page);
-    const width = await widthOf(dock.root);
-    const origin = await boxOf(frame.root);
+    const width = await measureWidth(dock.root);
+    const origin = await measureBox(frame.root);
 
     await dock.resizeHandle.focus();
     await dock.resizeHandle.press("ArrowRight");
-    await expect.poll(() => widthOf(dock.root)).toBeGreaterThan(width);
+    await expect.poll(() => measureWidth(dock.root)).toBeGreaterThan(width);
 
     await dragTo(page, frame.pane("assets").header, {
       x: origin.x + 220,
       y: origin.y + 180
     });
-    await expect.poll(async() => (await boxOf(frame.root)).x)
+    await expect.poll(async() => (await measureBox(frame.root)).x)
       .toBeGreaterThan(origin.x);
 
     await page.locator(kReset).click();
-    await expect.poll(() => widthOf(dock.root)).toBe(width);
-    await expect.poll(async() => (await boxOf(frame.root)).x).toBe(origin.x);
-    await expect.poll(async() => (await boxOf(frame.root)).y).toBe(origin.y);
+    await expect.poll(() => measureWidth(dock.root)).toBe(width);
+    await expect.poll(async() => (await measureBox(frame.root)).x).toBe(origin.x);
+    await expect.poll(async() => (await measureBox(frame.root)).y).toBe(origin.y);
   });
 
   test("folds, folders and a collapsed dock survive a reload", async({ page }) => {
     const inspector = new Pane(page, "inspector");
     const folder = new Pane(page, "hud").root.locator("jolly-folder");
     const dock = new Dock(page, "left");
-    const expanded = await heightOf(inspector.root);
+    const expanded = await measureHeight(inspector.root);
 
     await inspector.fold.click();
     await expect(inspector.root).toHaveAttribute("collapsed");
     await expect(inspector.fold).toHaveAttribute("aria-expanded", "false");
-    await expect.poll(() => heightOf(inspector.root)).toBeLessThan(expanded);
+    await expect.poll(() => measureHeight(inspector.root)).toBeLessThan(expanded);
 
     await folder.locator(".toggle").click();
     await dock.resizeHandle.dblclick();
@@ -98,8 +98,8 @@ test.describe("DockLayout persistence", () => {
 
   test("an emptied solid dock gives its space back and still takes a pane", async({ page }) => {
     const dock = new Dock(page, "left");
-    const viewport = await centerOf(page.locator(".dock-layout-viewport"));
-    expect(await widthOf(dock.root)).toBeGreaterThan(0);
+    const viewport = await measureCenter(page.locator(".dock-layout-viewport"));
+    expect(await measureWidth(dock.root)).toBeGreaterThan(0);
 
     for (const [key, offset] of [["hierarchy", 0], ["inspector", 80]] as const) {
       await dragTo(page, dock.pane(key).header, {
@@ -108,9 +108,9 @@ test.describe("DockLayout persistence", () => {
       });
     }
     await expect(dock.root).toHaveAttribute("empty");
-    await expect.poll(() => widthOf(dock.root)).toBe(0);
+    await expect.poll(() => measureWidth(dock.root)).toBe(0);
 
-    const edge = await boxOf(dock.root);
+    const edge = await measureBox(dock.root);
     await dragTo(page, new FloatingWindow(page).pane("hierarchy").header, {
       x: edge.x + 8,
       y: edge.y + 200
@@ -124,7 +124,7 @@ test.describe("DockLayout persistence", () => {
     await dragTo(
       page,
       new Pane(page, "hierarchy").header,
-      await centerOf(page.locator(".dock-layout-viewport"))
+      await measureCenter(page.locator(".dock-layout-viewport"))
     );
     await expect(left.paneKeys()).resolves.toEqual(["inspector"]);
 

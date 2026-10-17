@@ -16,11 +16,6 @@ import type {
 const kPngType = "image/png";
 const kBytesPerPixel = 4;
 
-/**
- * Interop format for other applications. Masked-out pixels keep their RGB and
- * take alpha 0. The bytes go straight to the encoder rather than through a
- * canvas, so partial alpha survives exactly.
- */
 export async function encodeSelectionPng(
   snapshot: SelectionSnapshot
 ): Promise<Blob> {
@@ -37,11 +32,6 @@ export async function encodeSelectionPng(
   return new Blob([png], { type: kPngType });
 }
 
-/**
- * Adapter for the clipboard surface, which is shaped in RGBA8 objects.
- * The per-pixel allocation happens once, here, rather than anywhere
- * upstream of it.
- */
 export async function decodeRasterBlob(
   blob: Blob
 ): Promise<DecodedRasterImage> {

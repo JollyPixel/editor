@@ -72,12 +72,6 @@ export type BlocksetDocumentListener = (
 
 export type BlocksetDocumentEvents = BlockDocumentEvents<BlocksetDocumentCommand>;
 
-/**
- * The blocks, material groups, blend groups and tile size of one blockset.
- * Tile references name no blockset: they are relative to the blockset's own
- * atlas, and block ids are local to it until a world projects them into a
- * slot.
- */
 export class BlocksetDocument extends BlockDocument<BlocksetDocumentCommand> {
   #tileSize: number;
 

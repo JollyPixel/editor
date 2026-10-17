@@ -114,7 +114,7 @@ export class EditorShell {
     this.#timelineDock = timelineDock;
     this.#attached = kAttachedTags.map(queryWorkspaceElement);
 
-    this.#leftPanel.setTexture(texture);
+    this.#leftPanel.showTexture(texture);
     this.#leftPanel.keyBindingSettings = keyBindingSettings;
     for (const type of kLayoutEvents) {
       layout.addEventListener(type, this.#onLayoutChange);
@@ -173,7 +173,7 @@ export class EditorShell {
 
   #syncTab(): void {
     this.#timelineDock.hidden = !this.#animating;
-    this.#workspace?.tab.activate(tabOf(this.#animateTabs.active));
+    this.#workspace?.tab.activate(parseEditorTab(this.#animateTabs.active));
   }
 
   get #animating(): boolean {
@@ -220,7 +220,7 @@ function queryWorkspaceElement(
   return element;
 }
 
-function tabOf(
+function parseEditorTab(
   pane: string | null
 ): EditorTab {
   return EDITOR_TABS.find((tab) => tab === pane) ?? "build";

@@ -67,10 +67,6 @@ export class MouseCanvasAdapter extends CanvasAdapter {
       writable: false
     });
 
-    /*
-     * Browsers expose offsets relative to the target's box. The fallback
-     * covers environments where these properties are unavailable.
-     */
     Object.defineProperty(event, "offsetX", {
       value: eventData.omitOffsets ?
         undefined :
@@ -138,9 +134,6 @@ export class MouseDocumentAdapter extends DocumentAdapter {
   override exitPointerLock = mock.fn();
   override pointerLockElement: any = null;
 
-  /**
-   * A move or release that happened away from the canvas.
-   */
   dispatchMouseEvent(
     type: "mousemove" | "mouseup",
     eventData: MouseEventData = {}
@@ -156,9 +149,6 @@ export class MouseDocumentAdapter extends DocumentAdapter {
     this.replay(type, event);
   }
 
-  /**
-   * Replays a canvas event the way bubbling delivers it to the document.
-   */
   replay(
     type: string,
     event: unknown

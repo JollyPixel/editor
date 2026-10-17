@@ -131,13 +131,13 @@ export class UvToolbarController {
     });
   }
 
-  #setState(
+  #applyState(
     uv: UVMap,
     regionId: string,
     state: UVRegionState
   ): void {
     this.#statePopup.hide();
-    uv.setState(
+    uv.applyState(
       regionId,
       state,
       state === "stacked" ? uv.selectedSlot : null
@@ -185,7 +185,7 @@ export class UvToolbarController {
               class="uv-state-option"
               part="uv-${state}-button"
               role="menuitem"
-              @click=${() => this.#setState(uv, regionId, state)}
+              @click=${() => this.#applyState(uv, regionId, state)}
             >
               ${renderIcon(kStateIcons[state])}
               <span>${kStateLabels[state]}</span>

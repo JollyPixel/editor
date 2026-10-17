@@ -15,7 +15,7 @@ import {
   createDefaultHighlightOverlayRegistry
 } from "#src/mesh-highlight/overlays/builtinHighlightOverlayFactories.ts";
 import { createBoxMesh } from "../helpers.ts";
-import { backPassOf } from "./helpers.ts";
+import { findBackPass } from "./helpers.ts";
 
 // CONSTANTS
 const kVerticesPerContourEdge = 4 * 6;
@@ -24,7 +24,7 @@ function createPlaneMesh(): THREE.Mesh {
   return new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2));
 }
 
-function vertexCountOf(
+function countVertices(
   overlay: HighlightSilhouette
 ): number {
   return overlay.geometry.getAttribute("position").count;
@@ -37,7 +37,7 @@ describe("HighlightMeshSilhouette", () => {
 
     overlay.update(new THREE.Vector3(100, 100, 100));
 
-    assert.strictEqual(vertexCountOf(overlay), 6 * kVerticesPerContourEdge);
+    assert.strictEqual(countVertices(overlay), 6 * kVerticesPerContourEdge);
   });
 
   test("outlines the border of a plane, outside it, from either side", () => {
@@ -52,7 +52,7 @@ describe("HighlightMeshSilhouette", () => {
       overlay.geometry.computeBoundingBox();
       const bounds = overlay.geometry.boundingBox as THREE.Box3;
 
-      assert.strictEqual(vertexCountOf(overlay), 2 * 4 * kVerticesPerContourEdge);
+      assert.strictEqual(countVertices(overlay), 2 * 4 * kVerticesPerContourEdge);
       assert.ok(bounds.max.x >= 0.5 + 0.07 - 1e-6);
       assert.ok(bounds.min.z <= -0.5 - 0.07 + 1e-6);
     }
@@ -84,16 +84,16 @@ describe("HighlightMeshSilhouette", () => {
     const overlay = new HighlightMeshSilhouette({ target, xray: true });
 
     overlay.update(camera);
-    assert.strictEqual(vertexCountOf(overlay), vertexCountOf(boxBars));
+    assert.strictEqual(countVertices(overlay), countVertices(boxBars));
 
     target.geometry = new THREE.ConeGeometry(0.5, 1, 4);
     overlay.update(camera);
-    assert.strictEqual(vertexCountOf(overlay), vertexCountOf(coneContour));
-    assert.strictEqual(backPassOf(overlay)?.geometry, overlay.geometry);
+    assert.strictEqual(countVertices(overlay), countVertices(coneContour));
+    assert.strictEqual(findBackPass(overlay)?.geometry, overlay.geometry);
 
     target.geometry = new THREE.BoxGeometry(1, 1, 1);
     overlay.update(camera);
-    assert.strictEqual(vertexCountOf(overlay), vertexCountOf(boxBars));
+    assert.strictEqual(countVertices(overlay), countVertices(boxBars));
   });
 });
 

@@ -50,7 +50,7 @@ Built (uncommitted). The offline back-end runs the asset server in the browser (
 - Schemas are written with zod/mini. Node validates them with ata-validator, on the JSON Schema that `z.toJSONSchema` emits; browsers validate them with zod. network's `#schema-runtime` import picks the runtime with the `browser` condition.
 - The browser runtime loads `z.compile` lazily: validators use zod's parser until the compiler arrives. Loaded eagerly, the compiler added 8 KB brotli to every editor page.
 - The in-browser server does not validate its own outbound messages (`validateOutbound: false`): rooms name each message from its tags, for read rights.
-- network's `minProperties`, `dependentRequired`, `requiredAnyOf` and `notMultipleOf` carry rules zod cannot emit: each one adds a zod check and the matching JSON Schema keyword. A network test runs both runtimes on every rule.
+- network's `minProperties`, `dependentRequired`, `requireAnyGroup` and `notMultiple` carry rules zod cannot emit: each one adds a zod check and the matching JSON Schema keyword. A network test runs both runtimes on every rule.
 - Static studio JS, all chunks: 4237 KB minified / 1013 KB brotli before, 3769 / 924 KB after. Eager chunks: shell 197, pixel-art 282, voxel-map 653, voxel-model 598 KB brotli.
 - [`studio.bundle.spec.ts`](./test/vite/studio.bundle.spec.ts) fails if any ata-validator module reaches the studio build.
 

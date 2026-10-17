@@ -20,13 +20,7 @@ export const NOOP_LOGGER: VoxelLogger = {
   child() {
     return NOOP_LOGGER;
   },
-  debug() {
-    // Intentionally empty.
-  },
-  warn() {
-    // Intentionally empty.
-  },
-  error() {
-    // Intentionally empty.
-  }
+  debug: () => undefined,
+  warn: () => undefined,
+  error: () => undefined
 };

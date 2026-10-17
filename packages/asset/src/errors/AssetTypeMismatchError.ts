@@ -1,6 +1,3 @@
-/**
- * Reports reuse of one asset kind through a different AssetType token.
- */
 export class AssetTypeMismatchError extends Error {
   readonly kind: string;
 

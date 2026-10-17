@@ -7,7 +7,7 @@ import type {
 // CONSTANTS
 export const TREE_SELECTOR = "jolly-tree";
 
-export function rowOf(
+export function findRow(
   page: Page,
   id: string
 ): Locator {

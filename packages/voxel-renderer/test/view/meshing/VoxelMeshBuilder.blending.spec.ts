@@ -101,7 +101,7 @@ function blendSummary(
   return summary;
 }
 
-function regionOf(
+function readRegion(
   fixture: MeshFixture,
   blockId: number
 ): number[] {
@@ -193,7 +193,7 @@ describe("VoxelMeshBuilder - tile blending", () => {
         resolved[face] = {};
         for (const [offset, { block, strength }] of Object.entries(neighbours)) {
           resolved[face][offset] = {
-            region: regionOf(fixture, block),
+            region: readRegion(fixture, block),
             strength
           };
         }

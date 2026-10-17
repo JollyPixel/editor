@@ -30,9 +30,6 @@ export function parseHslFunction(
   });
 }
 
-/**
- * Parses the editors' non-standard `hsv()` and `hsva()` syntax.
- */
 export function parseHsvFunction(
   fn: ColorFunction
 ): RGBA | null {
@@ -46,9 +43,6 @@ export function parseHsvFunction(
   });
 }
 
-/**
- * Rejects legacy comma syntax, which CSS does not define for `hwb()`.
- */
 export function parseHwbFunction(
   fn: ColorFunction
 ): RGBA | null {
@@ -66,9 +60,6 @@ export function parseHwbFunction(
   });
 }
 
-/**
- * Accepts CSS angle units and percentage-valued bare channels.
- */
 function parseChannels(
   fn: ColorFunction
 ): CylindricalChannels | null {

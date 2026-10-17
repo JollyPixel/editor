@@ -10,7 +10,7 @@ import {
 // Import Internal Dependencies
 import {
   blockNameClashMessage,
-  displayNameOf
+  nodeDisplayName
 } from "./nodeNames.ts";
 
 export type HierarchyNodeKind = ModelNodeKind;
@@ -47,13 +47,13 @@ export function buildHierarchyNodes(
     parentId: string | null
   ): HierarchyNode[] {
     return (byParent.get(parentId) ?? []).map((node) => {
-      const name = displayNameOf(node);
+      const name = nodeDisplayName(node);
 
       return {
         id: node.id,
         name,
         kind: node.kind,
-        shape: node.kind === "block" ? BlockShape.of(node) : null,
+        shape: node.kind === "block" ? BlockShape.fromBlock(node) : null,
         material: node.kind === "block" && node.materialId !== undefined ?
           tree.materials.material(node.materialId) ?? null :
           null,

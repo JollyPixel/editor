@@ -18,9 +18,6 @@ const kEmptyLock: ResolvedLock = Object.freeze({
   peers: Object.freeze([])
 });
 
-/**
- * Resolves one path, giving the local peer precedence.
- */
 export function resolveLock(
   peers: Iterable<CollaboratorPresence>,
   path: string | null,

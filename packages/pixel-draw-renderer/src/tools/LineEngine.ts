@@ -106,7 +106,7 @@ export class LineEngine {
     this.#linePreview.clear();
     this.#document.paintPixels(
       this.#stamp(pending),
-      this.#brush.colorFor(lineSource)
+      this.#brush.paintColor(lineSource)
     );
     this.#onProgress?.([]);
     this.arm("mousedown", lineSource);
@@ -131,7 +131,7 @@ export class LineEngine {
 
     this.#linePreview.drawLine(pending.start, pending.end);
 
-    const color = this.#brush.colorFor(pending.source);
+    const color = this.#brush.paintColor(pending.source);
     this.#onProgress?.(
       this.#stamp(pending).map((position) => {
         return { ...position, color };

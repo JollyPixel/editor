@@ -11,11 +11,6 @@ import {
   createGamepadSnapshot
 } from "./_fixtures.ts";
 
-/**
- * The 99% case: `World#update()` ticks `Input` every frame while the player is
- * holding nothing. Every millisecond here is paid whether or not the game reads
- * a single input, so this suite is the primary target of the idle-gating work.
- */
 const suite = defineSuite("controls / tick — idle", (bench) => {
   const idle = createInput();
 

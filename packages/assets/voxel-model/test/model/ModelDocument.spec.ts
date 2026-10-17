@@ -174,8 +174,8 @@ describe("ModelDocument", () => {
     const blockId = document.addBlock({ name: "Arm" })!;
     const folderId = document.addFolder({ name: "Limbs" })!;
 
-    assert.equal(document.setUv(blockId, kUv), true);
-    assert.equal(document.setUv(folderId, kUv), false);
+    assert.equal(document.updateUv(blockId, kUv), true);
+    assert.equal(document.updateUv(folderId, kUv), false);
 
     assert.deepEqual(document.tree.block(blockId)?.uv, kUv);
     assert.deepEqual(
@@ -194,8 +194,8 @@ describe("ModelDocument", () => {
     assert.deepEqual(document.tree.block(blockId)?.shape, { type: "plane" });
     assert.deepEqual(document.tree.block(blockId)?.uv, planeUv);
 
-    assert.equal(document.setShape(blockId, { type: "box" }, kUv), true);
-    assert.equal(document.setShape(folderId, { type: "plane" }, planeUv), false);
+    assert.equal(document.updateShape(blockId, { type: "box" }, kUv), true);
+    assert.equal(document.updateShape(folderId, { type: "plane" }, planeUv), false);
 
     const block = document.tree.block(blockId)!;
     assert.equal("shape" in block, false);

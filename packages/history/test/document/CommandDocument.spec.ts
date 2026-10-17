@@ -38,8 +38,8 @@ class ValuesDocument extends CommandDocument<SetCommand, Values, number | undefi
           values.set(key, value);
         }
       },
-      imageOf: ({ key }) => values.get(key),
-      inverseOf: ({ key }) => [{ key, value: values.get(key) ?? 0 }],
+      captureImage: ({ key }) => values.get(key),
+      invert: ({ key }) => [{ key, value: values.get(key) ?? 0 }],
       restored: (images) => {
         return { restored: images.length };
       }

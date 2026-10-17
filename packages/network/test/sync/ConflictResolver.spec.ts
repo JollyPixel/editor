@@ -72,11 +72,6 @@ describe("LastWriteWinsResolver — same client (undo/redo replay ordering)", ()
   test("accepts even when the incoming timestamp is older than the existing one", () => {
     const resolver = new LastWriteWinsResolver();
 
-    /*
-     * Mirrors undo replaying two overlapping edits newest-first: the first
-     * replay (of the more recent edit) lands with the newer timestamp, then
-     * the second replay (of the older edit) arrives with an older one.
-     */
     const existing = header({ clientId: "A", timestamp: 2000 });
     const incoming = header({ clientId: "A", timestamp: 500 });
 

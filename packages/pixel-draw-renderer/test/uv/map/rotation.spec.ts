@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import {
   copyGeometry,
   geometryAt,
-  rectOf,
+  boundingRect,
   rotateCorner,
   rotateGeometry,
   rotateUv
@@ -46,7 +46,7 @@ describe("UV rotation geometry", () => {
     const rotated = rotateGeometry({ x: 0, y: 0, width: 4, height: 2 }, -1);
 
     assert.strictEqual(rotated.rotation, 3);
-    assert.deepStrictEqual(rectOf(rotated), { x: 0, y: 0, width: 2, height: 4 });
+    assert.deepStrictEqual(boundingRect(rotated), { x: 0, y: 0, width: 2, height: 4 });
   });
 
   test("four turns restore every geometry kind and drop the rotation field", () => {
@@ -121,7 +121,7 @@ describe("UV rotation geometry", () => {
     assert.deepStrictEqual(rotateUv(0, 1, -1), rotateUv(0, 1, 3));
   });
 
-  test("copies and moves keep the rotation, rectOf drops it", () => {
+  test("copies and moves keep the rotation, boundingRect drops it", () => {
     const geometry: UVGeometry = { x: 0, y: 0, width: 4, height: 8, rotation: 3 };
 
     assert.deepStrictEqual(copyGeometry(geometry), geometry);
@@ -129,7 +129,7 @@ describe("UV rotation geometry", () => {
       geometryAt(geometry, { x: 5, y: 6, width: 4, height: 8 }),
       { x: 5, y: 6, width: 4, height: 8, rotation: 3 }
     );
-    assert.deepStrictEqual(rectOf(geometry), { x: 0, y: 0, width: 4, height: 8 });
+    assert.deepStrictEqual(boundingRect(geometry), { x: 0, y: 0, width: 4, height: 8 });
   });
 
   test("validation accepts quarter turns only", () => {

@@ -7,9 +7,6 @@ export interface BinaryAssetState {
   bytes: Uint8Array;
 }
 
-/**
- * Fallback handler that treats an asset's bytes as its state.
- */
 export const binaryAssetKind: AssetKindHandler<BinaryAssetState> = {
   kind: BINARY_KIND,
   extensions: {},

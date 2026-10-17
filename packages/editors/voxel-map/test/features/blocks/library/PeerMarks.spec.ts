@@ -108,7 +108,7 @@ describe("PeerMarks.withSelf", () => {
     );
 
     assert.deepEqual(
-      merged.peersFor(3).map((entry) => entry.clientId),
+      merged.markingPeers(3).map((entry) => entry.clientId),
       ["ada", "bob", "cleo"]
     );
   });
@@ -116,14 +116,14 @@ describe("PeerMarks.withSelf", () => {
   it("marks a block nobody else selected", () => {
     const merged = PeerMarks.withSelf(new Map(), 7, roster);
 
-    assert.deepEqual(merged.peersFor(7), [PeerMarks.findSelf(roster)]);
+    assert.deepEqual(merged.markingPeers(7), [PeerMarks.findSelf(roster)]);
   });
 
   it("keeps peer marks when there is no local selection", () => {
     const merged = PeerMarks.withSelf(new Map([[3, [mark("bob")]]]), null, roster);
 
     assert.deepEqual(
-      merged.peersFor(3).map((entry) => entry.clientId),
+      merged.markingPeers(3).map((entry) => entry.clientId),
       ["bob"]
     );
   });

@@ -21,7 +21,6 @@ const kCrossOriginIsolation = {
   "Cross-Origin-Embedder-Policy": "require-corp"
 };
 
-// https://vitejs.dev/config/
 export default defineConfig({
   root: "examples",
   build: {
@@ -63,10 +62,6 @@ export default defineConfig({
     glsl(),
     wasm()
   ],
-  /**
-   * Exclude @dimforge/rapier3d from Vite's pre-bundling, so the browser can
-   * load the WASM binary directly.
-   */
   optimizeDeps: {
     exclude: ["@dimforge/rapier3d"]
   }

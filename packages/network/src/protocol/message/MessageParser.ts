@@ -38,7 +38,7 @@ interface CompiledVariant extends MessageVariant {
 export class MessageParser<
   TMessage = unknown
 > implements RoomMessageParser<TMessage> {
-  static of<TMessage = unknown>(
+  static fromProtocol<TMessage = unknown>(
     protocol: MessageProtocol
   ): MessageParser<TMessage> {
     let parser = kParsers.get(protocol);
@@ -85,7 +85,7 @@ export class MessageParser<
     payload: unknown
   ): Result<ParsedMessage<TMessage>, readonly ValidationError[]> {
     let parsed: ParsedMessage<TMessage> | undefined;
-    for (const { event, parser } of this.#candidatesFor(payload)) {
+    for (const { event, parser } of this.#matchCandidates(payload)) {
       if (!parser.is(payload)) {
         continue;
       }
@@ -116,12 +116,12 @@ export class MessageParser<
   identify(
     payload: unknown
   ): string | null {
-    const candidates = this.#candidatesFor(payload);
+    const candidates = this.#matchCandidates(payload);
 
     return candidates.length === 1 ? candidates[0].event : null;
   }
 
-  #candidatesFor(
+  #matchCandidates(
     payload: unknown
   ): readonly CompiledVariant[] {
     if (
@@ -136,7 +136,7 @@ export class MessageParser<
 
     const group = typeof tag === "string" ? this.#byTag.get(tag) : undefined;
 
-    return group?.candidatesFor(payload) ?? this.#untagged;
+    return group?.matchCandidates(payload) ?? this.#untagged;
   }
 
   #noVariantError(): ValidationError {

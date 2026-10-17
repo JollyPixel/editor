@@ -13,7 +13,7 @@ export class TrackPath {
     this.path = path;
     this.key = path
       .split(TrackPath.SEPARATOR)
-      .map(NameSet.keyOf)
+      .map(NameSet.toKey)
       .join(TrackPath.SEPARATOR);
   }
 

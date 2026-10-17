@@ -55,7 +55,7 @@ function createHarness(
   };
 }
 
-function chipsOf(
+function findChips(
   mesh: THREE.Mesh
 ): PeerSelectionChip[] {
   return (mesh.children[0] as THREE.Group).children as PeerSelectionChip[];
@@ -75,10 +75,10 @@ describe("peer selection", () => {
     registry.select("peer-b", "mesh-1");
 
     assert.strictEqual(mesh.children.length, 1);
-    const chips = chipsOf(mesh);
+    const chips = findChips(mesh);
     assert.strictEqual(chips.length, 2);
-    assert.strictEqual(chips[0].color, registry.colorOf("peer-a"));
-    assert.strictEqual(chips[1].color, registry.colorOf("peer-b"));
+    assert.strictEqual(chips[0].color, registry.peerColor("peer-a"));
+    assert.strictEqual(chips[1].color, registry.peerColor("peer-b"));
   });
 
   test("a third selector rebuilds the group with three chips", () => {
@@ -88,9 +88,9 @@ describe("peer selection", () => {
     registry.select("peer-c", "mesh-1");
 
     assert.strictEqual(mesh.children.length, 1);
-    const chips = chipsOf(mesh);
+    const chips = findChips(mesh);
     assert.strictEqual(chips.length, 3);
-    assert.strictEqual(chips[2].color, registry.colorOf("peer-c"));
+    assert.strictEqual(chips[2].color, registry.peerColor("peer-c"));
   });
 
   test("dropping back to a single selector removes the chip row", () => {
@@ -111,16 +111,16 @@ describe("overflow cap", () => {
     registry.select("peer-c", "mesh-1");
     registry.select("peer-d", "mesh-1");
 
-    const chips = chipsOf(mesh);
+    const chips = findChips(mesh);
     assert.strictEqual(chips.length, 4, "3 capped chips + 1 overflow badge");
-    assert.strictEqual(chips[0].color, registry.colorOf("peer-a"));
-    assert.strictEqual(chips[1].color, registry.colorOf("peer-b"));
-    assert.strictEqual(chips[2].color, registry.colorOf("peer-c"));
+    assert.strictEqual(chips[0].color, registry.peerColor("peer-a"));
+    assert.strictEqual(chips[1].color, registry.peerColor("peer-b"));
+    assert.strictEqual(chips[2].color, registry.peerColor("peer-c"));
     const badge = chips[3];
     assert.strictEqual(badge.label, "+1");
     assert.notStrictEqual(
       badge.color,
-      registry.colorOf("peer-d"),
+      registry.peerColor("peer-d"),
       "the overflow badge is never colored like a real peer"
     );
   });
@@ -131,7 +131,7 @@ describe("overflow cap", () => {
       registry.select(peerId, "mesh-1");
     }
 
-    const chips = chipsOf(mesh);
+    const chips = findChips(mesh);
     assert.strictEqual(chips.length, 4);
     assert.strictEqual(chips[3].label, "+3");
   });
@@ -145,7 +145,7 @@ describe("overflow cap", () => {
         registry.select(peerId, "mesh-1");
       }
       visibility!.update();
-      const badgeBefore = chipsOf(mesh)[3];
+      const badgeBefore = findChips(mesh)[3];
       assert.strictEqual(badgeBefore.label, "+1");
 
       registry.select("peer-e", "mesh-1");
@@ -155,7 +155,7 @@ describe("overflow cap", () => {
       registry.select("peer-f", "mesh-2");
       visibility!.update();
 
-      const chipsAfter = chipsOf(mesh);
+      const chipsAfter = findChips(mesh);
       assert.strictEqual(
         chipsAfter.length,
         4,
@@ -214,7 +214,7 @@ describe("enabled", () => {
 
     assert.strictEqual(chips.enabled, true);
     assert.strictEqual(mesh.children.length, 1);
-    assert.strictEqual(chipsOf(mesh).length, 2);
+    assert.strictEqual(findChips(mesh).length, 2);
   });
 
   test("disabling immediately disposes every active chip row", () => {
@@ -236,7 +236,7 @@ describe("dispose", () => {
     registry.select("peer-a", "mesh-1");
     registry.select("peer-b", "mesh-1");
     const counts = watchDisposal(
-      ...chipsOf(mesh).map((chip) => chip.material.map ?? undefined)
+      ...findChips(mesh).map((chip) => chip.material.map ?? undefined)
     );
 
     chips.dispose();

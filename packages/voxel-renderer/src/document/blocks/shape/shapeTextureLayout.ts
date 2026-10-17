@@ -52,9 +52,6 @@ export interface ResolvedBlockTextureSlot extends ShapeTextureSlotLayout {
   tile: ResolvedTileRef;
 }
 
-/**
- * Resolves shape slots and block texture fallback rules in one place.
- */
 export function resolvedBlockTextureSlots(
   block: ResolvedBlockDefinition,
   shape: BlockShape
@@ -74,9 +71,6 @@ export function resolvedBlockTextureSlots(
   });
 }
 
-/**
- * Describes how a block shape's authored geometry occupies texture slots.
- */
 export function shapeTextureLayout(
   shape: BlockShape
 ): ShapeTextureLayout {

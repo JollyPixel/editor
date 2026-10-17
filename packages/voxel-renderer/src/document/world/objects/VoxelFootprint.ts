@@ -6,10 +6,6 @@ export interface VoxelFootprintJSON {
   height: number;
 }
 
-/**
- * Immutable whole-cell area an object covers on the ground plane.
- * Width spans x and height spans z.
- */
 export class VoxelFootprint {
   static readonly Unit: VoxelFootprint = new VoxelFootprint(1, 1);
 

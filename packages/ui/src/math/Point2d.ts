@@ -20,7 +20,7 @@ import { point2dStyles } from "./Point2d.styles.ts";
 import { ratioFromPointer } from "../color/area.ts";
 import { unitRatio } from "../numeric/bounds.ts";
 import { formatNumber, quantize } from "../numeric/entry.ts";
-import { multiplierFor } from "../numeric/modifierMultiplier.ts";
+import { modifierMultiplier } from "../numeric/modifierMultiplier.ts";
 
 export type Point2dAxis = "x" | "y";
 
@@ -30,10 +30,6 @@ export interface Point2dDefaults {
   max: number;
 }
 
-/**
- * Draggable 2D pad using a bounded Vector2 value.
- * A drag sets both axes, so it has no per-axis Mixed state.
- */
 @customElement("jolly-point2d")
 export class Point2d extends JollyField<VectorValue<Point2dAxis>> {
   static readonly Defaults: Point2dDefaults = {
@@ -199,7 +195,7 @@ export class Point2d extends JollyField<VectorValue<Point2dAxis>> {
       return;
     }
 
-    const step = this.step * multiplierFor(event);
+    const step = this.step * modifierMultiplier(event);
     let { x, y } = point;
 
     switch (event.key) {

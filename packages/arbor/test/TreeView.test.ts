@@ -96,7 +96,6 @@ describe("TreeView", () => {
       assert.notStrictEqual(insertedItem, null);
       if (insertedItem) {
         assert.strictEqual(insertedItem, newItem);
-        // assert.strictEqual(insertedItem.nextElementSibling, firstItem);
       }
     });
 

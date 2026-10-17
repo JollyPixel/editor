@@ -66,7 +66,7 @@ describe("voxel-animation convergence", () => {
   test("a local key and a peer key on other ticks both land", () => {
     const { server, document, deliver, flush } = setup();
 
-    document.setKey("walk", "arm", "rotation", key(0, 10));
+    document.writeKey("walk", "arm", "rotation", key(0, 10));
     server.receive("A", networkCommand({
       action: "key-set",
       clipId: "walk",
@@ -87,7 +87,7 @@ describe("voxel-animation convergence", () => {
   test("a key set in a clip a peer removed meanwhile is dropped everywhere", () => {
     const { server, document, deliver, flush } = setup();
 
-    document.setKey("run", "leg", "position", key(0, 1));
+    document.writeKey("run", "leg", "position", key(0, 1));
     server.receive("A", networkCommand({ action: "clip-removed", id: "run" }, { clientId: "A" }));
     flush();
     deliver();

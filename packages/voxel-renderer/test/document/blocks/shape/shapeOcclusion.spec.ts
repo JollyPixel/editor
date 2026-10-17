@@ -7,7 +7,7 @@ import { computeOcclusionMask } from "../../../../src/document/blocks/shape/inde
 import { defineFace } from "../../../../src/document/blocks/face/index.ts";
 import { FACE } from "../../../../src/document/geometry/faceDirection.ts";
 
-function maskOf(
+function toMask(
   faces: readonly FACE[]
 ): number {
   return faces.reduce<number>((mask, face) => mask | (1 << face), 0);
@@ -27,7 +27,7 @@ describe("computeOcclusionMask", () => {
       })
     ]);
 
-    assert.equal(mask, maskOf([FACE.NegY]));
+    assert.equal(mask, toMask([FACE.NegY]));
   });
 
   it("leaves a half-covered boundary plane clear", () => {
@@ -56,7 +56,7 @@ describe("computeOcclusionMask", () => {
       })
     ]);
 
-    assert.equal(mask, maskOf([FACE.PosX]));
+    assert.equal(mask, toMask([FACE.PosX]));
   });
 
   it("ignores a face that does not sit on its own boundary plane", () => {
@@ -85,6 +85,6 @@ describe("computeOcclusionMask", () => {
       })
     ]);
 
-    assert.equal(mask, maskOf([FACE.NegZ]));
+    assert.equal(mask, toMask([FACE.NegZ]));
   });
 });

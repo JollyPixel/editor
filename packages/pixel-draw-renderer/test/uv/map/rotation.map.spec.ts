@@ -45,7 +45,7 @@ describe("UVMap.rotate", () => {
   test("a free region needs a slot and clamps only that slot", () => {
     const map = makeUvMap();
     const region = map.create({ width: 4, height: 16 });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.move(region.id, { x: 28, y: 0, width: 4, height: 16 }, "top");
     const events: EventPayload<"region-rotated">[] = [];
     map.on("region-rotated", (event) => events.push(event));
@@ -55,10 +55,10 @@ describe("UVMap.rotate", () => {
 
     const stored = map.get(region.id)!;
     assert.deepStrictEqual(
-      stored.geometryFor("top"),
+      stored.slotGeometry("top"),
       { x: 16, y: 0, width: 16, height: 4, rotation: 1 }
     );
-    assert.deepStrictEqual(stored.rectFor("front"), region.rectFor("front"));
+    assert.deepStrictEqual(stored.slotRect("front"), region.slotRect("front"));
     assert.strictEqual(events[0].face, "top");
   });
 
@@ -74,7 +74,7 @@ describe("UVMap.rotate", () => {
 
     assert.ok(map.restoreRotation(region.rotated("cw").toJSON()));
 
-    assert.strictEqual(map.get(region.id)!.geometryFor("front").rotation, 1);
+    assert.strictEqual(map.get(region.id)!.slotGeometry("front").rotation, 1);
     assert.strictEqual(events[0].face, null);
   });
 
@@ -89,11 +89,11 @@ describe("UVMap.rotate", () => {
     map.move(region.id, { x: 4, y: 4, width: 16, height: 8 });
 
     assert.deepStrictEqual(
-      dragged[0].region.geometryFor("front"),
+      dragged[0].region.slotGeometry("front"),
       { x: 2, y: 2, width: 8, height: 16, rotation: 1 }
     );
     assert.deepStrictEqual(
-      map.get(region.id)!.geometryFor("front"),
+      map.get(region.id)!.slotGeometry("front"),
       { x: 4, y: 4, width: 8, height: 16, rotation: 1 }
     );
   });

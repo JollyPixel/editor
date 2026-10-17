@@ -10,7 +10,7 @@ import {
   recordFieldChanges as recordChanges,
   recordFieldInputs
 } from "../support/events.ts";
-import { styleOf } from "../support/styles.ts";
+import { readStyle } from "../support/styles.ts";
 
 test.describe("range", () => {
   test.use({
@@ -126,7 +126,7 @@ test.describe("slider", () => {
 
     const slider = page.locator("jolly-slider").first();
     const lane = slider.locator(".lane");
-    const before = await styleOf(lane, "--jolly-slider-progress");
+    const before = await readStyle(lane, "--jolly-slider-progress");
 
     await slider.locator('input[type="range"]').evaluate(
       (node: HTMLInputElement) => {
@@ -138,7 +138,7 @@ test.describe("slider", () => {
       }
     );
 
-    await expect.poll(() => styleOf(lane, "--jolly-slider-progress"))
+    await expect.poll(() => readStyle(lane, "--jolly-slider-progress"))
       .not.toBe(before);
     await expect.poll(() => changes(page)).toEqual([]);
   });

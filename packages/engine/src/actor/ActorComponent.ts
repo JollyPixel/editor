@@ -20,9 +20,6 @@ export interface ActorComponentOptions<
   typeName: FreeComponentEnum;
 }
 
-/**
- * Provides shared identity, lifecycle registration, and world access to components.
- */
 export class ActorComponent<
   TContext = WorldDefaultContext
 > implements Component {

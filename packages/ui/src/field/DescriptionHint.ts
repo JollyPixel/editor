@@ -16,7 +16,6 @@ import {
   wasPointerInput
 } from "./pointerModality.ts";
 
-// Registers the information icon.
 import "../icon/Icon.ts";
 
 // CONSTANTS

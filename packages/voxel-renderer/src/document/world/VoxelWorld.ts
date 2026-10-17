@@ -92,9 +92,6 @@ export interface VoxelMergeAllLayersOptions {
 
 export type { VoxelLayerRestoreOptions };
 
-/**
- * Layered voxel data ordered from highest to lowest compositing priority.
- */
 export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   readonly chunkSize: number;
   readonly objectLayers = new VoxelObjectLayers(

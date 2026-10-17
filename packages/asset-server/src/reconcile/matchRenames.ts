@@ -43,11 +43,6 @@ export interface RenameMatch {
   readonly deleted: DeletedAsset[];
 }
 
-/**
- * Matches a rename only when one removed and one added path share a hash.
- *
- * Ambiguous hashes remain deletes and creates.
- */
 export function matchRenames(
   projected: Iterable<ProjectedEntry>,
   observed: Iterable<ObservedEntry>

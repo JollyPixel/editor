@@ -259,13 +259,6 @@ export abstract class HighlightSilhouette extends THREE.Mesh<THREE.BufferGeometr
     this.#back?.material.dispose();
   }
 
-  /**
-   * Off xray, occlusion just works: an occluded fragment fails the normal
-   * depth test and never draws, same as any other depth-tested mesh. Xray
-   * keeps that same front pass (so the visible portion looks identical) and
-   * adds a second, depth-inverted pass that only draws the occluded portion,
-   * dimmed. The two never overlap a pixel, so there is nothing to blend twice.
-   */
   #applyXray(): void {
     this.material.depthWrite = !this.#xray || this.#xrayDepthWrite;
 

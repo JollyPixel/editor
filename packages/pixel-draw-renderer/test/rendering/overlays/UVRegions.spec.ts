@@ -203,7 +203,7 @@ describe("UVRegionLayer — visibility follows UVMap state", () => {
   });
 });
 
-describe("UVRegionLayer — setLivePreview", () => {
+describe("UVRegionLayer — showLivePreview", () => {
   test("renders the live preview instead of the stored region", () => {
     const svg = makeSvg();
     const map = makeUvMap({ x: 64, y: 64 });
@@ -219,7 +219,7 @@ describe("UVRegionLayer — setLivePreview", () => {
     });
     map.showAll = true;
 
-    overlay.setLivePreview(
+    overlay.showLivePreview(
       livePreview(map.previewMove(region.id, {
         x: 9, y: 9, width: 2, height: 2
       }))
@@ -229,7 +229,7 @@ describe("UVRegionLayer — setLivePreview", () => {
     assert.strictEqual(rect.getAttribute("x"), "36");
     assert.strictEqual(rect.getAttribute("y"), "36");
 
-    overlay.setLivePreview(null);
+    overlay.showLivePreview(null);
     assert.strictEqual(rect.getAttribute("x"), "0");
   });
 
@@ -246,7 +246,7 @@ describe("UVRegionLayer — setLivePreview", () => {
     map.move("inner", { x: 2, y: 2, width: 2, height: 2 });
     map.showAll = true;
 
-    overlay.setLivePreview({
+    overlay.showLivePreview({
       regions: map.previewMoveGroup([
         { id: "outer", rect: { x: 10, y: 0, width: 8, height: 8 }, slot: null },
         { id: "inner", rect: { x: 12, y: 2, width: 2, height: 2 }, slot: null }

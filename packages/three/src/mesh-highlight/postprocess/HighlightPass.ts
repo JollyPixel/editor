@@ -65,10 +65,6 @@ export interface HighlightPassOptions {
   downSampleRatio?: number;
 }
 
-/**
- * Draws colored post-process outlines with `THREE.WebGPURenderer`.
- * Owns the scene pipeline and ignores scene occlusion.
- */
 export class HighlightPass {
   readonly pipeline: THREE.RenderPipeline;
 
@@ -321,9 +317,6 @@ export class HighlightPass {
     this.#edgeGlowUniform.value = edgeGlow;
   }
 
-  /**
-   * Replaces all outlined entries.
-   */
   get entries(): HighlightEntry[] {
     return [...this.#entries];
   }
@@ -444,16 +437,16 @@ export class HighlightPass {
     scene.background = null;
 
     const size = renderer.getDrawingBufferSize(new THREE.Vector2());
-    this.#setSize(size.width, size.height);
+    this.#resize(size.width, size.height);
 
     renderer.autoClear = true;
     renderer.setClearColor(0x000000, 0);
 
     renderer.setRenderObjectFunction(
-      // eslint-disable-next-line max-params -- external callback contract
+      // eslint-disable-next-line max-params
       (object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext) => {
         if (object instanceof THREE.InstancedMesh) {
-          const instanced = this.#instancedMask.materialsFor(object);
+          const instanced = this.#instancedMask.maskMaterials(object);
           if (instanced) {
             renderer.renderObject(
               object,
@@ -500,10 +493,10 @@ export class HighlightPass {
     if (hasPriority) {
       renderer.autoClear = false;
       renderer.setRenderObjectFunction(
-        // eslint-disable-next-line max-params -- external callback contract
+        // eslint-disable-next-line max-params
         (object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext) => {
           if (object instanceof THREE.InstancedMesh) {
-            const instanced = this.#instancedMask.materialsFor(object);
+            const instanced = this.#instancedMask.maskMaterials(object);
             if (instanced) {
               renderer.renderObject(
                 object,
@@ -560,7 +553,7 @@ export class HighlightPass {
     if (hasIsolated) {
       renderer.autoClear = true;
       renderer.setRenderObjectFunction(
-        // eslint-disable-next-line max-params -- external callback contract
+        // eslint-disable-next-line max-params
         (object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext) => {
           if (!(object instanceof THREE.Mesh)) {
             return;
@@ -715,7 +708,7 @@ export class HighlightPass {
     renderer.setClearColor(previousClearColor, previousClearAlpha);
   }
 
-  #setSize(
+  #resize(
     width: number,
     height: number
   ): void {

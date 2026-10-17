@@ -40,7 +40,6 @@ describe("constructor", () => {
     () => {
       const container = makeContainer();
       const target = makeTarget(container);
-      // Anchoring the left and top edges puts the handle itself bottom-right.
       const crh = new CornerResizeHandle(target, {
         horizontal: "left",
         vertical: "top"
@@ -77,10 +76,6 @@ describe("constructor", () => {
       vertical: "top"
     });
 
-    /*
-     * Pointer-only: the target's own edge ResizeHandle instances already
-     * give a keyboard/screen-reader user full access to each axis.
-     */
     assert.equal(crh.handleElt.getAttribute("aria-hidden"), "true");
     assert.equal(crh.handleElt.hasAttribute("tabindex"), false);
     assert.equal(crh.handleElt.hasAttribute("role"), false);

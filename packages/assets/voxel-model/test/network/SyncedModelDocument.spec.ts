@@ -117,7 +117,7 @@ describe("SyncedModelDocument", () => {
       id: "model",
       document: synced.document,
       keys: modelHistoryKeys(synced.document.tree),
-      scopeOf: () => "model"
+      resolveScope: () => "model"
     });
 
     synced.document.rename("limbs", "Arms");

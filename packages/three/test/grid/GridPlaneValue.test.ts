@@ -88,7 +88,7 @@ describe("GridPlaneValue", () => {
       return geometry;
     }
 
-    function boundingBoxOf(
+    function measureBoundingBox(
       geometry: THREE.PlaneGeometry
     ): THREE.Box3 {
       const box = geometry.boundingBox;
@@ -97,7 +97,7 @@ describe("GridPlaneValue", () => {
       return box;
     }
 
-    function frontNormalOf(
+    function readFrontNormal(
       geometry: THREE.PlaneGeometry
     ): THREE.Vector3 {
       return new THREE.Vector3().fromBufferAttribute(
@@ -118,8 +118,8 @@ describe("GridPlaneValue", () => {
 
     test("\"xz\" flattens the geometry onto y = 0, facing +y", () => {
       const geometry = orientedPlane(new GridPlaneValue("xz"));
-      const box = boundingBoxOf(geometry);
-      const normal = frontNormalOf(geometry);
+      const box = measureBoundingBox(geometry);
+      const normal = readFrontNormal(geometry);
 
       assertNear(box.min.y, 0);
       assertNear(box.max.y, 0);
@@ -130,8 +130,8 @@ describe("GridPlaneValue", () => {
 
     test("\"yz\" flattens the geometry onto x = 0, facing +x", () => {
       const geometry = orientedPlane(new GridPlaneValue("yz"));
-      const box = boundingBoxOf(geometry);
-      const normal = frontNormalOf(geometry);
+      const box = measureBoundingBox(geometry);
+      const normal = readFrontNormal(geometry);
 
       assertNear(box.min.x, 0);
       assertNear(box.max.x, 0);
@@ -142,8 +142,8 @@ describe("GridPlaneValue", () => {
 
     test("\"xy\" leaves the geometry flat on z = 0, facing +z", () => {
       const geometry = orientedPlane(new GridPlaneValue("xy"));
-      const box = boundingBoxOf(geometry);
-      const normal = frontNormalOf(geometry);
+      const box = measureBoundingBox(geometry);
+      const normal = readFrontNormal(geometry);
 
       assert.strictEqual(box.min.z, 0);
       assert.strictEqual(box.max.z, 0);

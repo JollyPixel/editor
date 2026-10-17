@@ -78,7 +78,7 @@ export function blockShapeById(
   return entry;
 }
 
-export function blockShapeEntryOf(
+export function matchBlockShapeEntry(
   shape: BlockShapeJSON
 ): KnownBlockShape {
   const entry = BLOCK_SHAPES.find((each) => BlockShape.same(each.shape, shape)) ??

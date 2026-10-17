@@ -12,15 +12,9 @@ const kMissingAsset = "Deleted asset";
 const kUnknownCreator = "a removed account";
 
 export interface ShareLinkLookups {
-  /**
-   * Catalog path of an asset, `undefined` once it is gone.
-   */
   assetPath(
     assetId: string
   ): string | undefined;
-  /**
-   * Username of an account, `undefined` when the roster does not list it.
-   */
   username(
     accountId: string
   ): string | undefined;

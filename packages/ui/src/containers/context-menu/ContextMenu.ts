@@ -142,7 +142,6 @@ export class ContextMenu extends LitElement {
 
       return;
     }
-    // Linux fires contextmenu on press: the release would light-dismiss it.
     if (this.#pressed) {
       this.#showOnRelease = true;
 

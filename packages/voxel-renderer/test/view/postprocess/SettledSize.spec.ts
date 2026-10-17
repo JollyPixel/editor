@@ -8,7 +8,7 @@ import { SettledSize } from "../../../src/view/postprocess/SettledSize.ts";
 // CONSTANTS
 const kSettleFrames = 6;
 
-function requestFor(
+function requestFrames(
   size: SettledSize,
   frames: number,
   width: number,
@@ -33,7 +33,7 @@ describe("SettledSize", () => {
     size.request(800, 600);
 
     assert.deepEqual(
-      requestFor(size, 3, 800, 600),
+      requestFrames(size, 3, 800, 600),
       [false, false, false]
     );
   });
@@ -52,7 +52,7 @@ describe("SettledSize", () => {
     const size = new SettledSize();
     size.request(800, 600);
 
-    const changes = requestFor(size, kSettleFrames + 1, 640, 600);
+    const changes = requestFrames(size, kSettleFrames + 1, 640, 600);
 
     assert.deepEqual(
       changes,
@@ -64,10 +64,10 @@ describe("SettledSize", () => {
   it("restarts the wait when the request moves again", () => {
     const size = new SettledSize();
     size.request(800, 600);
-    requestFor(size, kSettleFrames, 640, 600);
+    requestFrames(size, kSettleFrames, 640, 600);
 
     assert.deepEqual(
-      requestFor(size, kSettleFrames, 641, 600),
+      requestFrames(size, kSettleFrames, 641, 600),
       Array.from({ length: kSettleFrames }, () => false)
     );
     assert.deepEqual([size.width, size.height], [800, 600]);

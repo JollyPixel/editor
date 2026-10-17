@@ -108,7 +108,6 @@ export class UISprite<
     const { input } = this.actor.world;
     const isOver = this.isPointerOver();
 
-    // --- Pointer Enter / Leave ---
     if (isOver && !this.#isHovered) {
       this.#isHovered = true;
       this.onPointerEnter.emit();
@@ -124,18 +123,15 @@ export class UISprite<
       this.#applyStyle(this.#style);
     }
 
-    // --- Pointer Down ---
     if (isOver && input.mouse.wasJustPressed("left")) {
       this.#isPressed = true;
       this.onPointerDown.emit();
     }
 
-    // --- Right Click ---
     if (isOver && input.mouse.wasJustReleased("right")) {
       this.onRightClick.emit();
     }
 
-    // --- Pointer Up / Click / Double Click ---
     if (this.#isPressed && input.mouse.wasJustReleased("left")) {
       this.#isPressed = false;
       this.onPointerUp.emit();

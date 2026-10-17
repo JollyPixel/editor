@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import { Mixed } from "../../src/field/mixed.ts";
 import { peerColor } from "../../src/theme/peerColor.ts";
-import { detailOf } from "../../src/dom.ts";
+import { readDetail } from "../../src/dom.ts";
 import type { CollaboratorPresence } from "../../src/peer/types.ts";
 import type { JollyChangeDetail } from "../../src/field/events.ts";
 
@@ -21,19 +21,10 @@ export interface FieldLike {
 export interface StateMatrixOptions<
   TField extends HTMLElement & FieldLike
 > {
-  /**
-   * A fresh, fully configured element in its default state. Called once per row.
-   */
   create(): TField;
-  /**
-   * Override when a control needs more than assigning the sentinel.
-   */
   applyMixed?(
     field: TField
   ): void;
-  /**
-   * A value differing from `default`, so the revert gutter appears.
-   */
   modified?(
     field: TField
   ): void;
@@ -60,10 +51,6 @@ const kHolder: CollaboratorPresence = {
   editing: "example.field"
 };
 
-/**
- * Ten rows, fixed, no opt out: the point of a shared matrix is that every control renders the
- * same states, and a per control row list is how they drift apart.
- */
 const kRows = [
   "default",
   "mixed",
@@ -158,7 +145,7 @@ function buildRow<
   function writeBack(
     event: Event
   ): void {
-    const detail = detailOf<JollyChangeDetail<unknown>>(
+    const detail = readDetail<JollyChangeDetail<unknown>>(
       event
     );
     if (detail !== null) {

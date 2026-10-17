@@ -17,10 +17,6 @@ import {
   UNIT_TILE_SPAN
 } from "../../document/blocksets/tileRef.ts";
 
-/**
- * Fills in a missing tile grid, flooring partial tiles out of it. Throws
- * when the definition declares no tile size.
- */
 export function resolveBlocksetDefinition(
   def: BlocksetDefinition,
   size: AtlasSize

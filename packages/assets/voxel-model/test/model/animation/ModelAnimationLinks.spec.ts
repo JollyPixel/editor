@@ -13,7 +13,7 @@ import {
 // CONSTANTS
 const kLink = { id: "walk", kind: "voxelanimation", bindings: [] };
 
-function treeOf(
+function createTree(
   ...commands: VoxelModelCommand[]
 ): ModelTree {
   const tree = new ModelTree();
@@ -27,7 +27,7 @@ function treeOf(
 
 describe("ModelTree animation set links", () => {
   test("links once, remaps tracks, any case of a path being one track, and unlinks", () => {
-    const tree = treeOf(
+    const tree = createTree(
       blockAdded("arm"),
       { action: "animation-set-linked", link: kLink },
       { action: "animation-binding-changed", id: "walk", path: "Arm", target: "Hand" },
@@ -44,7 +44,7 @@ describe("ModelTree animation set links", () => {
   });
 
   test("refuses remap commands on a set that is not linked", () => {
-    const tree = treeOf(
+    const tree = createTree(
       folderAdded("limbs"),
       { action: "animation-set-linked", link: kLink }
     );
@@ -58,18 +58,20 @@ describe("ModelTree animation set links", () => {
   });
 
   test("returns the link a link command is about to replace", () => {
-    const tree = treeOf({ action: "animation-set-linked", link: kLink });
+    const tree = createTree({ action: "animation-set-linked", link: kLink });
     const relink: VoxelModelCommand = {
       action: "animation-set-linked",
       link: { ...kLink, id: "run" }
     };
 
-    assert.deepEqual(tree.imagesOf({ action: "animation-set-unlinked", id: "walk" }).animationSets, [kLink]);
-    assert.deepEqual(tree.imagesOf(relink).animationSets, []);
+    const unlinked = tree.captureImages({ action: "animation-set-unlinked", id: "walk" });
+
+    assert.deepEqual(unlinked.animationSets, [kLink]);
+    assert.deepEqual(tree.captureImages(relink).animationSets, []);
   });
 
   test("owns one set at most, and shares it back", () => {
-    const tree = treeOf({ action: "animation-set-linked", link: { ...kLink, own: true } });
+    const tree = createTree({ action: "animation-set-linked", link: { ...kLink, own: true } });
     const run = { ...kLink, id: "run" };
 
     assert.equal(tree.animationSets.owned?.id, "walk");

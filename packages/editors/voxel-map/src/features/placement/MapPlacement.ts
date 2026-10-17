@@ -228,7 +228,7 @@ export class MapPlacement {
     if (current !== null) {
       this.#assign(
         current.placement.movedTo(
-          current.positionFor(min)
+          current.positionFromMinCorner(min)
         )
       );
     }

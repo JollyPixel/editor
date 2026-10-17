@@ -37,10 +37,6 @@ function makeGeometry(
   return geometry;
 }
 
-/*
- * Signed distance, in texels, of a rect-local point (y down) to the
- * half-plane: negative inside the triangle.
- */
 function edgeDistance(
   [nx, ny, c]: HalfPlane,
   localX: number,

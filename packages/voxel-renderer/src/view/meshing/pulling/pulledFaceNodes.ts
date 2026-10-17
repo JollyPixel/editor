@@ -302,9 +302,6 @@ function shade(
   return quantizeShade(mixed);
 }
 
-/**
- * Mean of the four corner levels, the value `shade` averages to over the face.
- */
 function faceShade(
   ao: Node<"uint">
 ): FloatNode {

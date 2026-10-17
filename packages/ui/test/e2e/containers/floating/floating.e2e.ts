@@ -1,11 +1,11 @@
 // Import Third-party Dependencies
 import {
-  boxOf,
-  centerOf,
+  measureBox,
+  measureCenter,
   dragTo,
-  heightOf,
+  measureHeight,
   hold,
-  widthOf
+  measureWidth
 } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
@@ -24,7 +24,7 @@ test.describe("Floating", () => {
   test("moves within the viewport and resizes from the keyboard", async({ page }) => {
     const frame = new FloatingWindow(page);
     const floating = frame.root;
-    const title = await boxOf(frame.pane().title);
+    const title = await measureBox(frame.pane().title);
 
     await hold(page, {
       x: title.x + 5,
@@ -37,17 +37,17 @@ test.describe("Floating", () => {
     await expect(floating).toHaveAttribute("x", "0");
     await expect(floating).toHaveAttribute("y", "0");
 
-    const width = await widthOf(floating);
+    const width = await measureWidth(floating);
     const handle = frame.resizeHandle("right");
     await handle.focus();
     await handle.press("ArrowRight");
-    await expect.poll(() => widthOf(floating)).toBe(width + 8);
+    await expect.poll(() => measureWidth(floating)).toBe(width + 8);
   });
 
   test("a button in the pane actions is clicked, not dragged", async({ page }) => {
     const frame = new FloatingWindow(page);
     const floating = frame.root;
-    const title = await boxOf(frame.pane().title);
+    const title = await measureBox(frame.pane().title);
     await hold(page, {
       x: title.x + 5,
       y: title.y + 5
@@ -69,9 +69,9 @@ test.describe("Floating", () => {
     const floating = frame.root;
     const corner = frame.resizeHandle("corner");
     const [width, height, from] = await Promise.all([
-      widthOf(floating),
-      heightOf(floating),
-      centerOf(corner)
+      measureWidth(floating),
+      measureHeight(floating),
+      measureCenter(corner)
     ]);
 
     await dragTo(page, corner, {
@@ -79,8 +79,8 @@ test.describe("Floating", () => {
       y: from.y + 30
     });
 
-    await expect.poll(() => widthOf(floating)).toBe(width + 40);
-    await expect.poll(() => heightOf(floating)).toBe(height + 30);
+    await expect.poll(() => measureWidth(floating)).toBe(width + 40);
+    await expect.poll(() => measureHeight(floating)).toBe(height + 30);
   });
 
   test("folding the held pane shrinks the window to its header and locks its height", async({ page }) => {
@@ -88,19 +88,19 @@ test.describe("Floating", () => {
     const floating = frame.root;
     const pane = frame.pane();
     const bottom = frame.resizeHandle("bottom");
-    const height = await heightOf(floating);
+    const height = await measureHeight(floating);
 
     await pane.fold.click();
     await expect(pane.root).toHaveAttribute("collapsed");
-    const header = await heightOf(pane.header);
-    await expect.poll(() => heightOf(floating)).toBeCloseTo(header, 0);
+    const header = await measureHeight(pane.header);
+    await expect.poll(() => measureHeight(floating)).toBeCloseTo(header, 0);
     await expect(bottom).toHaveClass(/disabled/);
     await expect(frame.resizeHandle("corner")).toHaveClass(/disabled/);
     await expect(frame.resizeHandle("right")).not.toHaveClass(/disabled/);
 
     await pane.fold.click();
     await expect(pane.root).not.toHaveAttribute("collapsed");
-    await expect.poll(() => heightOf(floating)).toBeCloseTo(height, 0);
+    await expect.poll(() => measureHeight(floating)).toBeCloseTo(height, 0);
     await expect(bottom).not.toHaveClass(/disabled/);
   });
 

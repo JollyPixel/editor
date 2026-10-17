@@ -11,7 +11,7 @@ import {
 import {
   buildSilhouetteGeometry,
   computeVisibleFaces,
-  halfExtentsOf
+  measureHalfExtents
 } from "./silhouetteGeometry.ts";
 
 export type HighlightBoxSilhouetteOptions = HighlightSilhouetteOptions;
@@ -28,7 +28,7 @@ export class BoxSilhouetteShape implements SilhouetteShape {
   viewFrom(
     localCameraPosition: THREE.Vector3
   ): SilhouetteView {
-    const halfExtents = halfExtentsOf(this.#target);
+    const halfExtents = measureHalfExtents(this.#target);
     const faces = computeVisibleFaces(localCameraPosition, halfExtents);
 
     return {

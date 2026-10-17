@@ -9,7 +9,7 @@ import { reloadGallery } from "../support/gallery.ts";
 // CONSTANTS
 const kDarkFpsBackground = [0, 17, 34, 255];
 
-function cornerPixelOf(
+function readCornerPixel(
   stats: Locator
 ): Promise<number[] | null> {
   return stats.evaluate((element) => {
@@ -59,8 +59,8 @@ test.describe("stats cycle", () => {
 
     const stats = page.locator("jolly-stats");
     await expect(stats).toHaveAttribute("aria-label", /^FPS:/);
-    await expect.poll(() => cornerPixelOf(stats)).not.toBeNull();
-    expect(await cornerPixelOf(stats)).not.toEqual(kDarkFpsBackground);
+    await expect.poll(() => readCornerPixel(stats)).not.toBeNull();
+    expect(await readCornerPixel(stats)).not.toEqual(kDarkFpsBackground);
 
     const scope = page.locator("jolly-scope:has(> jolly-stats)");
     await stats.evaluate((element) => {
@@ -70,7 +70,7 @@ test.describe("stats cycle", () => {
       wrapper.append(element);
     });
     await scope.evaluate((element) => element.setAttribute("theme", "dark"));
-    await expect.poll(() => cornerPixelOf(stats)).toEqual(kDarkFpsBackground);
+    await expect.poll(() => readCornerPixel(stats)).toEqual(kDarkFpsBackground);
     expect(failures).toEqual([]);
   });
 });

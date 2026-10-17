@@ -13,7 +13,7 @@ import {
 // CONSTANTS
 const kShapes = BlockShapeRegistry.createDefault();
 
-function layoutOf(
+function createLayout(
   patch: Partial<BlockDefinition>
 ): BlockTextureLayout {
   const block = resolveBlockDefinition({
@@ -28,7 +28,7 @@ function layoutOf(
 
 describe("BlockTextureLayout", () => {
   it("has no slot without a shape", () => {
-    const layout = layoutOf({
+    const layout = createLayout({
       shapeId: "missing",
       defaultTexture: { blocksetId: "atlas", col: 0, row: 0 }
     });
@@ -39,7 +39,7 @@ describe("BlockTextureLayout", () => {
   });
 
   it("uses the blocksets its slots sample", () => {
-    const layout = layoutOf({
+    const layout = createLayout({
       defaultTexture: { blocksetId: "other", col: 0, row: 0 },
       faceTextures: { top: { blocksetId: "atlas", col: 2, row: 1 } }
     });
@@ -50,7 +50,7 @@ describe("BlockTextureLayout", () => {
   });
 
   it("collects the unique rects its slots draw from a blockset", () => {
-    const layout = layoutOf({
+    const layout = createLayout({
       defaultTexture: { blocksetId: "atlas", col: 0, row: 0 },
       faceTextures: {
         top: { blocksetId: "atlas", col: 1, row: 0 },
@@ -65,7 +65,7 @@ describe("BlockTextureLayout", () => {
   });
 
   it("measures a drawn rect from the reference size", () => {
-    const layout = layoutOf({
+    const layout = createLayout({
       defaultTexture: { blocksetId: "t", col: 1, row: 0, size: 32 }
     });
 
@@ -75,11 +75,11 @@ describe("BlockTextureLayout", () => {
   });
 
   it("reserves whole tiles, stretched by a sloped face, as footprints", () => {
-    const ramp = layoutOf({
+    const ramp = createLayout({
       shapeId: "ramp",
       faceTextures: { top: { blocksetId: "wood", col: 0, row: 1 } }
     });
-    const cube = layoutOf({
+    const cube = createLayout({
       defaultTexture: { blocksetId: "wood", col: 1, row: 0 }
     });
 

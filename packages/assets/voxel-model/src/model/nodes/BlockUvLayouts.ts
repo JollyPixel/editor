@@ -50,7 +50,7 @@ export class BlockUvLayouts {
       state: "stacked",
       rect,
       faces: Object.fromEntries(
-        BlockShape.slots(shape).map((slot) => [slot, cellOf(shape, slot, rect)])
+        BlockShape.slots(shape).map((slot) => [slot, cellGeometry(shape, slot, rect)])
       )
     };
 
@@ -64,7 +64,7 @@ export class BlockUvLayouts {
   constructor(
     layouts: Iterable<UVLayoutData>
   ) {
-    this.#bounds = Array.from(layouts, boundsOf);
+    this.#bounds = Array.from(layouts, measureBounds);
   }
 
   get extent(): Vec2 {
@@ -94,9 +94,9 @@ export class BlockUvLayouts {
     textureSize: Vec2
   ): UVLayoutData {
     if (from.type !== to.type) {
-      const net = BlockUvLayouts.net(boundsOf(layout), to);
+      const net = BlockUvLayouts.net(measureBounds(layout), to);
 
-      return isFree(boundsOf(net), textureSize, this.#bounds) ? net : this.nextNet(textureSize, to);
+      return isFree(measureBounds(net), textureSize, this.#bounds) ? net : this.nextNet(textureSize, to);
     }
 
     return layout.state === "stacked" ?
@@ -117,20 +117,20 @@ export class BlockUvLayouts {
       return this.nextNet(textureSize, shape);
     }
 
-    const cell = rectOf(current[anchor]);
-    const taken = [...this.#bounds, ...kept.map((slot) => rectOf(current[slot]))];
+    const cell = boundingRect(current[anchor]);
+    const taken = [...this.#bounds, ...kept.map((slot) => boundingRect(current[slot]))];
     const faces = Object.fromEntries(kept.map((slot) => [slot, current[slot]]));
     for (const slot of slots.filter((each) => !(each in current))) {
       const origin = freeCell(cell, textureSize, taken) ?? cell;
       const placed = { ...cell, x: origin.x, y: origin.y };
-      faces[slot] = cellOf(shape, slot, placed);
+      faces[slot] = cellGeometry(shape, slot, placed);
       taken.push(placed);
     }
 
     return {
       ...layout,
       faces,
-      ...activeFacesFor(layout, slots)
+      ...filterActiveFaces(layout, slots)
     };
   }
 
@@ -138,7 +138,7 @@ export class BlockUvLayouts {
     textureSize: Vec2,
     shape: BlockShapeJSON
   ): Vec2 {
-    const net = boundsOf(BlockUvLayouts.net(BlockUvLayouts.ORIGIN, shape));
+    const net = measureBounds(BlockUvLayouts.net(BlockUvLayouts.ORIGIN, shape));
 
     return freeCell(net, textureSize, this.#bounds) ?? BlockUvLayouts.ORIGIN;
   }
@@ -154,14 +154,14 @@ function restacked(
   return {
     ...rest,
     faces: Object.fromEntries(
-      slots.map((slot) => [slot, faces[slot] ?? cellOf(shape, slot, layout.rect)])
+      slots.map((slot) => [slot, faces[slot] ?? cellGeometry(shape, slot, layout.rect)])
     ),
-    ...activeFacesFor(layout, slots),
+    ...filterActiveFaces(layout, slots),
     ...stackedFace !== undefined && slots.includes(stackedFace) ? { stackedFace } : {}
   };
 }
 
-function activeFacesFor(
+function filterActiveFaces(
   layout: UVLayoutData,
   slots: readonly UVSlot[]
 ): Pick<UVLayoutData, "activeFaces"> {
@@ -217,7 +217,7 @@ function isFree(
     !taken.some((bounds) => RectArea.from(bounds).intersects(rect));
 }
 
-function cellOf(
+function cellGeometry(
   shape: BlockShapeJSON,
   slot: UVSlot,
   rect: SelectionRect
@@ -233,7 +233,7 @@ function cellOf(
     { x, y, width, height };
 }
 
-function rectOf(
+function boundingRect(
   geometry: UVGeometry
 ): SelectionRect {
   const { x, y, width, height } = "rect" in geometry ? geometry.rect : geometry;
@@ -241,7 +241,7 @@ function rectOf(
   return { x, y, width, height };
 }
 
-function boundsOf(
+function measureBounds(
   layout: UVLayoutData
 ): SelectionRect {
   return UVRegion.fromLayout(layout, kLayoutIdentity).bounds;

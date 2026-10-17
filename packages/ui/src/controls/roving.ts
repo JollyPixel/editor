@@ -1,6 +1,3 @@
-/**
- * Returns the next enabled index or `-1` when none are enabled.
- */
 export function nextEnabledIndex(
   enabled: readonly boolean[],
   from: number,

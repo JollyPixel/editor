@@ -28,10 +28,6 @@ export interface ElasticFocusOptions {
   sceneProvider: () => THREE.Object3D;
 }
 
-/**
- * WASD/look pilot a free-floating pivot; the camera trails behind it at a
- * scroll-adjusted distance, reaching 0 (free-fly) at full zoom-in.
- */
 export class ElasticFocus implements CameraFocus {
   readonly isLocked = false;
 

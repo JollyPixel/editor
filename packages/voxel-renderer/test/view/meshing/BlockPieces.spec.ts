@@ -23,7 +23,7 @@ import {
 import { makeAtlasDef, registerAtlas } from "../../helpers/atlas.ts";
 import { mockTexture } from "../../helpers/mockTexture.ts";
 
-function blockOf(
+function createBlock(
   patch: Partial<BlockDefinition> = {}
 ) {
   return resolveBlockDefinition({
@@ -48,9 +48,9 @@ function setup(
   return { atlases, atlas, pieces };
 }
 
-function uvsOf(
+function readUvs(
   pieces: BlockPieces,
-  block: ReturnType<typeof blockOf>
+  block: ReturnType<typeof createBlock>
 ): number[] {
   return Array.from(pieces.buildGeometry(block)!.getAttribute("uv").array);
 }
@@ -58,7 +58,7 @@ function uvsOf(
 describe("BlockPieces", () => {
   it("keeps the geometry in block space", () => {
     const { pieces } = setup();
-    const geometry = pieces.buildGeometry(blockOf({ shapeId: "ramp" }))!;
+    const geometry = pieces.buildGeometry(createBlock({ shapeId: "ramp" }))!;
     geometry.computeBoundingBox();
 
     assert.deepEqual(geometry.boundingBox!.min.toArray(), [0, 0, 0]);
@@ -67,7 +67,7 @@ describe("BlockPieces", () => {
 
   it("orients the geometry with the given transform", () => {
     const { pieces } = setup();
-    const block = blockOf({ shapeId: "ramp" });
+    const block = createBlock({ shapeId: "ramp" });
     const identity = pieces.buildGeometry(block)!;
     const turned = pieces.buildGeometry(block, new VoxelTransform({ rotation: 1 }))!;
 
@@ -80,7 +80,7 @@ describe("BlockPieces", () => {
 
   it("returns no geometry and no empty slot for an unknown shape", () => {
     const { pieces } = setup();
-    const block = blockOf({ shapeId: "missing" });
+    const block = createBlock({ shapeId: "missing" });
 
     assert.equal(pieces.buildGeometry(block), null);
     assert.equal(pieces.resolvePiece(block), null);
@@ -89,8 +89,8 @@ describe("BlockPieces", () => {
 
   it("turns the tile inside the face like the chunk mesher", () => {
     const { atlas, pieces } = setup();
-    const flat = blockOf({ defaultTexture: { blocksetId: "atlas", col: 1, row: 1 } });
-    const turned = blockOf({
+    const flat = createBlock({ defaultTexture: { blocksetId: "atlas", col: 1, row: 1 } });
+    const turned = createBlock({
       defaultTexture: { blocksetId: "atlas", col: 1, row: 1, rotation: 1 }
     });
     const region = atlas.computeTileUvRegion(1, 1, undefined, undefined, 1);
@@ -100,7 +100,7 @@ describe("BlockPieces", () => {
     );
     const [u, v] = rotateTileUv(uvs[0], uvs[1], 1);
 
-    assert.notDeepEqual(uvsOf(pieces, turned), uvsOf(pieces, flat));
+    assert.notDeepEqual(readUvs(pieces, turned), readUvs(pieces, flat));
     assert.equal(
       geometry.getAttribute("uv").getX(0),
       Math.fround(region.offsetU + (u * region.scaleU))
@@ -113,18 +113,18 @@ describe("BlockPieces", () => {
 
   it("draws a block of an undeclared blockset with the missing texture", () => {
     const { atlases, pieces } = setup();
-    const block = blockOf({ defaultTexture: { blocksetId: "gone", col: 3, row: 3 } });
+    const block = createBlock({ defaultTexture: { blocksetId: "gone", col: 3, row: 3 } });
     const missing = atlases.resolveAtlas("gone")!;
 
     assert.equal(pieces.resolveTexture(block), missing.texture);
-    assert.ok(uvsOf(pieces, block).every((uv) => uv >= 0 && uv <= 1));
+    assert.ok(readUvs(pieces, block).every((uv) => uv >= 0 && uv <= 1));
   });
 
   it("puts the slots of an empty tile in the empty group", () => {
     const { pieces } = setup(
       (ref) => ref === undefined || ref.col === 1
     );
-    const block = blockOf({
+    const block = createBlock({
       defaultTexture: { blocksetId: "atlas", col: 0, row: 0 },
       faceTextures: {
         top: { blocksetId: "atlas", col: 1, row: 0 }
@@ -142,7 +142,7 @@ describe("BlockPieces", () => {
   it("treats a slot without a tile as empty by default", () => {
     const { pieces } = setup();
 
-    assert.deepEqual(pieces.findEmptySlots(blockOf()), [
+    assert.deepEqual(pieces.findEmptySlots(createBlock()), [
       "right",
       "left",
       "top",
@@ -154,7 +154,7 @@ describe("BlockPieces", () => {
 
   it("caches pieces per transform until the atlases change", () => {
     const { atlases, pieces } = setup();
-    const block = blockOf({ defaultTexture: { blocksetId: "atlas", col: 0, row: 0 } });
+    const block = createBlock({ defaultTexture: { blocksetId: "atlas", col: 0, row: 0 } });
 
     const before = pieces.resolvePiece(block);
     assert.equal(pieces.resolvePiece(block, VoxelTransform.Identity), before);

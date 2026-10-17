@@ -42,9 +42,6 @@ export interface DocumentSyncClientOptions<
   TImage
 > {
   document: SyncableDocument<TCommand, TSnapshot, TImage>;
-  /**
-   * The registers an absolute write sets; `null` for any other command.
-   */
   keys(command: TCommand): readonly string[] | null;
   resolver?: ConflictResolver<TCommand>;
 }

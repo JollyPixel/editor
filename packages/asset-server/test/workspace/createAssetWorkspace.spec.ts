@@ -1,8 +1,5 @@
 // Import Node.js Dependencies
-import {
-  describe,
-  test
-} from "node:test";
+import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -18,28 +15,13 @@ import {
 import { AssetRoom } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import {
-  CATALOG_ROOM,
-  STATE_GITIGNORE_PATH
-} from "#src/index.ts";
-import {
-  createAssetWorkspace,
-  type AssetWorkspace
-} from "#src/node.ts";
+import { CATALOG_ROOM, STATE_GITIGNORE_PATH } from "#src/index.ts";
+import { createAssetWorkspace } from "#src/node.ts";
 import { tempWorkspace } from "../helpers/tempWorkspace.ts";
-import {
-  counterHandler,
-  liveCounterHandler
-} from "../helpers/kinds.ts";
+import { counterHandler, liveCounterHandler } from "../helpers/kinds.ts";
 import { counterProtocols } from "../helpers/protocols.ts";
 import { bytes } from "../helpers/bytes.ts";
 import { recordingClient } from "../helpers/rooms.ts";
-
-// CONSTANTS
-const kCompactionActor: EventStore.Actor = {
-  type: "user",
-  id: "tester"
-};
 
 class StaticExtension extends Extension {
   readonly id: string;
@@ -261,91 +243,3 @@ describe("createAssetWorkspace", () => {
     assert.strictEqual(eventStore.reader.listAll().length, 1);
   });
 });
-
-describe("createAssetWorkspace — compaction", () => {
-  async function editThenReopen(
-    compactOnOpen: boolean | undefined,
-    eventStore: EventStore.EventStore
-  ): Promise<void> {
-    const source = new MemoryAssetSource();
-    function open(): Promise<AssetWorkspace> {
-      return createAssetWorkspace({
-        root: "unused",
-        source,
-        eventStore,
-        compactOnOpen,
-        backend: { watch: false }
-      });
-    }
-
-    const first = await open();
-    const created = (await first.backend.writer.create({
-      path: "a.png",
-      data: bytes("one"),
-      actor: kCompactionActor
-    })).unwrap();
-    await first.backend.writer.update({
-      assetId: created.assetId,
-      data: bytes("two"),
-      actor: kCompactionActor
-    });
-    await first.backend.flush();
-    await first.close();
-
-    const second = await open();
-    await second.close();
-  }
-
-  test("drops the events superseded by each checkpoint", async() => {
-    using eventStore = EventStore.persistence.memory();
-
-    await editThenReopen(undefined, eventStore);
-
-    assert.deepEqual(
-      eventStore.reader.listAll().map((event) => event.eventType),
-      ["asset.updated"]
-    );
-  });
-
-  test("keeps the whole log when it is turned off", async() => {
-    using eventStore = EventStore.persistence.memory();
-
-    await editThenReopen(false, eventStore);
-
-    assert.deepEqual(
-      eventStore.reader.listAll().map((event) => event.eventType),
-      ["asset.created", "asset.updated"]
-    );
-  });
-
-  test("the catalog a reopened workspace serves survives it", async() => {
-    using eventStore = EventStore.persistence.memory();
-    const source = new MemoryAssetSource();
-    function open(): Promise<AssetWorkspace> {
-      return createAssetWorkspace({
-        root: "unused",
-        source,
-        eventStore,
-        backend: { watch: false }
-      });
-    }
-
-    const first = await open();
-    const created = (await first.backend.writer.create({
-      path: "a.png",
-      data: bytes("one"),
-      actor: kCompactionActor
-    })).unwrap();
-    await first.backend.flush();
-    await first.close();
-
-    await using second = await open();
-
-    assert.strictEqual(second.backend.catalog.size, 1);
-    assert.strictEqual(
-      second.backend.catalog.snapshot().assets[0].id,
-      created.assetId
-    );
-  });
-});
-

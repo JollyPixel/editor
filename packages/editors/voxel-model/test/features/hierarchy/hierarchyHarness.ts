@@ -27,7 +27,7 @@ import {
   createModelFixture,
   type ModelFixture
 } from "../../fixtures/model.ts";
-import { createHierarchyFor } from "../../fixtures/hierarchy.ts";
+import { createHierarchy } from "../../fixtures/hierarchy.ts";
 import {
   modelAccess,
   type TestModelAccess
@@ -68,7 +68,7 @@ export function createHierarchyHarness(
   const fixture = createModelFixture();
   const { document, blocks, selection } = fixture;
   const access = modelAccess();
-  const hierarchy = createHierarchyFor(fixture, access);
+  const hierarchy = createHierarchy(fixture, access);
   const calls: DialogCalls = {
     name: [],
     duplicate: [],
@@ -146,5 +146,5 @@ export async function chooseFromMenu(
   id: string | null,
   action: string
 ): Promise<void> {
-  await harness.controller.menuFor(id).run(action, MENU_POINT);
+  await harness.controller.openMenu(id).run(action, MENU_POINT);
 }

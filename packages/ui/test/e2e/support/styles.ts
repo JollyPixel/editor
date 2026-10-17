@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import type { Locator } from "@playwright/test";
 
-export function styleOf(
+export function readStyle(
   locator: Locator,
   property: string,
   pseudo: string | null = null
@@ -14,7 +14,7 @@ export function styleOf(
   );
 }
 
-export function partStyleOf(
+export function readPartStyle(
   locator: Locator,
   selector: string,
   property: string
@@ -31,7 +31,7 @@ export function partStyleOf(
   );
 }
 
-export function resolvedColorOf(
+export function resolveColor(
   locator: Locator,
   value: string
 ): Promise<string> {
@@ -49,10 +49,10 @@ export function resolvedColorOf(
   );
 }
 
-export async function shadowBlurOf(
+export async function readShadowBlur(
   locator: Locator
 ): Promise<number> {
-  const shadow = await styleOf(locator, "box-shadow");
+  const shadow = await readStyle(locator, "box-shadow");
   const lengths = shadow.match(/-?\d+(?:\.\d+)?px/g) ?? [];
 
   return lengths.length < 3 ? 0 : Number.parseFloat(lengths[2]);

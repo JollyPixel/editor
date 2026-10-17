@@ -15,7 +15,7 @@ import {
 } from "../src/png/filters.ts";
 import { writeHeader } from "../src/png/header.ts";
 import {
-  colorModelOf,
+  findColorModel,
   type ColorModel
 } from "../src/png/pixels.ts";
 import type { DecodedImage } from "../src/types.ts";
@@ -53,7 +53,7 @@ export type Content = "tiles" | "noise";
 export function colorModel(
   type: number
 ): ColorModel {
-  const model = colorModelOf(type);
+  const model = findColorModel(type);
   if (model === undefined) {
     throw new Error(`Unknown color type ${type}`);
   }
@@ -61,7 +61,7 @@ export function colorModel(
   return model;
 }
 
-export function samplesOf(
+export function createSamples(
   size: number,
   type: number,
   content: Content = "tiles"
@@ -111,11 +111,11 @@ export function rgbaImage(
   return {
     width: size,
     height: size,
-    data: samplesOf(size, 6, content)
+    data: createSamples(size, 6, content)
   };
 }
 
-export function pngOf(
+export function createPng(
   size: number,
   type: number,
   content: Content = "tiles"
@@ -123,7 +123,7 @@ export function pngOf(
   const color = colorModel(type);
   const compressed = deflateSync(
     filterScanlines(
-      samplesOf(size, type, content),
+      createSamples(size, type, content),
       size,
       size,
       color.channels,

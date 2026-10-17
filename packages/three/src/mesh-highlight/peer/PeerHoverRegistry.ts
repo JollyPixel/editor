@@ -98,13 +98,13 @@ export class PeerHoverRegistry extends EventTarget {
     this.#colorAllocator.release(peerId);
   }
 
-  hoverOf(
+  hoveredObject(
     peerId: string
   ): string | null {
     return this.#peerToObject.get(peerId) ?? null;
   }
 
-  hoverersOf(
+  listHoverers(
     objectId: string
   ): readonly string[] {
     return (this.#objectToPeers.get(objectId) ?? []).slice();
@@ -114,16 +114,16 @@ export class PeerHoverRegistry extends EventTarget {
     return Array.from(this.#objectToPeers.keys());
   }
 
-  primaryHovererOf(
+  primaryHoverer(
     objectId: string
   ): string | null {
     return this.#objectToPeers.get(objectId)?.[0] ?? null;
   }
 
-  colorOf(
+  peerColor(
     peerId: string
   ): string {
-    return this.#colorAllocator.colorOf(peerId);
+    return this.#colorAllocator.peerColor(peerId);
   }
 
   dispose(): void {

@@ -18,9 +18,6 @@ export type DropCallback = (
   orderedNodes: HTMLLIElement[]
 ) => boolean;
 
-/**
- * Options for configuring the `TreeView` instance.
- */
 export interface TreeViewOptions {
   /**
    * Callback invoked when a drag is initiated on a node.
@@ -364,7 +361,7 @@ export class TreeView extends EventTarget {
     this.dispatchEvent(new Event("selectionChange"));
   }
 
-  #getDropLocation(
+  #resolveDropLocation(
     event: DragEvent
   ): DropLocation | null {
     if (!(event.target instanceof HTMLElement)) {
@@ -404,7 +401,7 @@ export class TreeView extends EventTarget {
       element = element.parentElement!;
     }
 
-    let where = this.#getInsertionPoint(element, event.pageY);
+    let where = this.#insertionPointAt(element, event.pageY);
     if (where === "below") {
       if (
         element.classList.contains("item") &&
@@ -431,7 +428,7 @@ export class TreeView extends EventTarget {
     };
   }
 
-  #getInsertionPoint(
+  #insertionPointAt(
     element: HTMLElement,
     y: number
   ): "above" | "below" | "inside" {
@@ -459,7 +456,6 @@ export class TreeView extends EventTarget {
       .querySelector(".drop-inside")?.classList.remove("drop-inside");
     this.root
       .querySelector(".drop-below")?.classList.remove("drop-below");
-    // For the rare case where we're dropping a foreign item into an empty tree view
     this.root.classList.remove("drop-inside");
   }
 
@@ -577,7 +573,7 @@ export class TreeView extends EventTarget {
   };
 
   #onDragOver = (event: DragEvent) => {
-    const dropLocation = this.#getDropLocation(event);
+    const dropLocation = this.#resolveDropLocation(event);
     if (dropLocation === null) {
       return false;
     }
@@ -630,7 +626,7 @@ export class TreeView extends EventTarget {
     this.#previousDropLocation = null;
     event.preventDefault();
 
-    const dropLocation = this.#getDropLocation(event);
+    const dropLocation = this.#resolveDropLocation(event);
     if (dropLocation === null) {
       return;
     }

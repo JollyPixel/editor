@@ -8,7 +8,7 @@ const unregister = history.register({
   id: "model",
   document,
   keys: modelHistoryKeys(document.tree),
-  scopeOf: () => "build"
+  resolveScope: () => "build"
 });
 
 history.record("build", "Rename Arm", () => document.rename(id, "Arm"));

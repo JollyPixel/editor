@@ -61,9 +61,6 @@ export interface ChunkNeighbourhoodOptions {
   visibility?: MeshableLayerVisibility;
 }
 
-/**
- * Provides compositing and occlusion queries over visible layers.
- */
 export class ChunkNeighbourhood {
   readonly layers: readonly LayerChunkCache[];
 
@@ -292,12 +289,6 @@ export class ChunkNeighbourhood {
     );
   }
 
-  /**
-   * Fills `out` with the blend neighbour of each `FACE_BLEND_OFFSETS` cell,
-   * or null. A neighbour blends when its group bleeds onto this face's
-   * group, its matching face shares this face's atlas and is not covered.
-   * Returns false, leaving `out` untouched, when the face cannot blend.
-   */
   blendNeighboursAt(
     variant: BlockVariant,
     face: BlockVariantFace,

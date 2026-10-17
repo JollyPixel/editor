@@ -8,15 +8,6 @@ import {
   populateTerrain
 } from "./common.ts";
 
-/**
- * Meshing with and without ambient occlusion on one world, interleaved inside a single process.
- *
- * Separate process runs can drift heavily under thermal throttling. Alternating
- * variants on the same chunks cancels most machine drift; reporting min keeps
- * the least-interrupted sample.
- *
- * Usage: node bench/mesh-compare.bench.ts [--size 512] [--chunk 256] [--rounds 5]
- */
 const { values } = parseArgs({
   options: {
     size: { type: "string", default: "512" },
@@ -58,7 +49,6 @@ const variants = [
   }
 ] satisfies { name: string; builder: VoxelMeshBuilder; times: number[]; }[];
 
-// Warmup pass so both builders start timed rounds in optimized code paths.
 for (const { builder } of variants) {
   meshAll(builder);
 }
@@ -106,7 +96,6 @@ function meshAll(
     triangles += builder.stats.triangles;
     vertices += builder.stats.vertices;
     bytes += builder.stats.bytes;
-    // Builder buffers are reused; dispose per-chunk geometries to avoid accumulation.
     for (const geometry of geometries.values()) {
       geometry.dispose();
     }

@@ -80,7 +80,7 @@ export class UVPickCycle {
         continue;
       }
 
-      for (const { slot: face, geometry } of region.slotsOf()) {
+      for (const { slot: face, geometry } of region.listSlots()) {
         if (pointInGeometry(position, geometry)) {
           hits.push({ region, face, geometry });
         }

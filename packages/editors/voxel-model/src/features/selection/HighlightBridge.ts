@@ -100,7 +100,8 @@ export class HighlightBridge {
     this.#presence = options.presence;
 
     const peerColorAllocator: PeerColorAllocator = {
-      colorOf: (peerId) => this.#presence.peers.find((peer) => peer.clientId === peerId)?.color ?? "#ffffff",
+      peerColor: (peerId) => this.#presence.peers
+        .find((peer) => peer.clientId === peerId)?.color ?? "#ffffff",
       release: () => void 0
     };
 

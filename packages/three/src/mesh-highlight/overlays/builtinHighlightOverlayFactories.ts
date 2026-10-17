@@ -69,10 +69,6 @@ export const boundingBoxOverlayFactory: HighlightOverlayFactory = {
   })
 };
 
-/**
- * A registry pre-populated with every built-in technique. `MeshHighlightState`
- * builds one per instance unless given its own.
- */
 export function createDefaultHighlightOverlayRegistry(): HighlightOverlayRegistry {
   const registry = new HighlightOverlayRegistry({
     defaultId: "outline",

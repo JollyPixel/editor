@@ -143,11 +143,11 @@ export class ServerRoom {
     const { inbound, outbound } = extension.protocols;
     this.#inbound = inbound === null
       ? null
-      : MessageParser.of(inbound);
+      : MessageParser.fromProtocol(inbound);
     this.#outboundEvent = outbound === null
       ? null
       : outboundEvent(
-        MessageParser.of(outbound),
+        MessageParser.fromProtocol(outbound),
         options.validateOutbound ?? true
       );
 
@@ -225,7 +225,7 @@ export class ServerRoom {
       .debug(label);
   }
 
-  rightsFor(
+  roleRights(
     role: string
   ): RoomRights {
     const { inbound, outbound } = this.#extension.protocols;
@@ -380,8 +380,8 @@ export class ServerRoom {
       room: this.id,
       kind: "sync",
       self: clientId,
-      rights: this.rightsFor(role),
-      members: this.#members.snapshotFor(role)
+      rights: this.roleRights(role),
+      members: this.#members.visibleSnapshot(role)
     });
   }
 

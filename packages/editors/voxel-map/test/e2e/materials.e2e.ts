@@ -6,7 +6,7 @@ import {
 import type { VoxelMapPage } from "./support/voxelMap.ts";
 import { DEFAULT_BLOCKSET_ID } from "../../src/boot/defaultSeed.ts";
 
-function finishOf(
+function readFinish(
   map: VoxelMapPage,
   groupId: string
 ): Promise<{ roughness: number; swatch: string | null; } | null> {
@@ -22,7 +22,7 @@ function finishOf(
   }, groupId);
 }
 
-function blocksOf(
+function readBlocks(
   map: VoxelMapPage
 ): Promise<{ id: number; name: string; }[]> {
   return map.page.evaluate(() => [
@@ -32,7 +32,7 @@ function blocksOf(
   }));
 }
 
-function materialOf(
+function readMaterial(
   map: VoxelMapPage,
   blockId: number
 ): Promise<string | undefined> {
@@ -46,21 +46,21 @@ test("a material made in the Materials pane is renamed, applied, recoloured and 
   const { materials } = map;
   const { library } = materials;
   await map.panes.open("Materials");
-  const [first, second] = await blocksOf(map);
+  const [first, second] = await readBlocks(map);
 
   await library.select(first.name);
   await materials.create("Gold");
   const goldId = `${DEFAULT_BLOCKSET_ID}/Gold`;
-  await expect.poll(() => finishOf(map, goldId)).not.toBeNull();
-  expect(await materialOf(map, first.id)).toBeUndefined();
+  await expect.poll(() => readFinish(map, goldId)).not.toBeNull();
+  expect(await readMaterial(map, first.id)).toBeUndefined();
 
   await materials.applyButton.click();
-  await expect.poll(() => materialOf(map, first.id)).toBe(goldId);
+  await expect.poll(() => readMaterial(map, first.id)).toBe(goldId);
 
   await library.select(second.name);
   await expect(materials.selected).toHaveText("Gold");
   await materials.applyButton.click();
-  await expect.poll(() => materialOf(map, second.id)).toBe(goldId);
+  await expect.poll(() => readMaterial(map, second.id)).toBe(goldId);
 
   const firstSquare = library.swatch(first.id);
   await expect(firstSquare).toBeVisible();
@@ -68,11 +68,11 @@ test("a material made in the Materials pane is renamed, applied, recoloured and 
     .toHaveAttribute("style", (await firstSquare.getAttribute("style"))!);
 
   await materials.changeColor("#ff0000");
-  await expect.poll(async() => (await finishOf(map, goldId))?.swatch).toBe("#ff0000");
+  await expect.poll(async() => (await readFinish(map, goldId))?.swatch).toBe("#ff0000");
   await expect(firstSquare).toHaveAttribute("style", /background:#ff0000/);
 
   await materials.changeRoughness(0);
-  await expect.poll(async() => (await finishOf(map, goldId))?.roughness).toBe(0);
+  await expect.poll(async() => (await readFinish(map, goldId))?.roughness).toBe(0);
 
   await map.panes.open("Blocks");
   await expect(map.blocks.library.swatch(first.id)).toBeVisible();
@@ -81,7 +81,7 @@ test("a material made in the Materials pane is renamed, applied, recoloured and 
 test("the material fields follow the block picked in the library", async({ map }) => {
   const { materials } = map;
   await map.panes.open("Materials");
-  const [first, second] = await blocksOf(map);
+  const [first, second] = await readBlocks(map);
   await map.page.evaluate(([firstId, secondId]) => {
     const { blocksets, mapDocument } = window.voxelMapEditor!.workspace;
     for (const [blockId, name] of [[firstId, "Gold"], [secondId, "Silver"]] as const) {
@@ -126,18 +126,18 @@ test("the Materials tab keeps working View settings while the map has no blocks"
 test("the block context menu makes a material, shares it and removes it", async({ map }) => {
   await map.panes.open("Blocks");
   const { library } = map.blocks;
-  const [first, second] = await blocksOf(map);
+  const [first, second] = await readBlocks(map);
 
   await library.choose(first.name, "Material", "New material");
-  await expect.poll(() => materialOf(map, first.id)).toBeDefined();
-  const groupId = (await materialOf(map, first.id))!;
+  await expect.poll(() => readMaterial(map, first.id)).toBeDefined();
+  const groupId = (await readMaterial(map, first.id))!;
   await expect(library.swatch(first.id)).toBeVisible();
 
   const name = groupId.slice(DEFAULT_BLOCKSET_ID.length + 1);
   await library.choose(second.name, "Material", name);
-  await expect.poll(() => materialOf(map, second.id)).toBe(groupId);
+  await expect.poll(() => readMaterial(map, second.id)).toBe(groupId);
 
   await library.choose(first.name, "Remove material");
-  await expect.poll(() => materialOf(map, first.id)).toBeUndefined();
-  expect(await materialOf(map, second.id)).toBe(groupId);
+  await expect.poll(() => readMaterial(map, first.id)).toBeUndefined();
+  expect(await readMaterial(map, second.id)).toBe(groupId);
 });

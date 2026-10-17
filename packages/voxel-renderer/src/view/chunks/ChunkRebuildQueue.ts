@@ -14,10 +14,6 @@ export type ChunkRebuildFn = (
   target: ChunkMeshTarget
 ) => boolean;
 
-/**
- * Mesh targets awaiting a rebuild, drained nearest-to-focus first under a
- * per-tick time budget.
- */
 export class ChunkRebuildQueue {
   #pending: PendingRebuild[] = [];
   #head = 0;
@@ -28,10 +24,6 @@ export class ChunkRebuildQueue {
     return this.#queued.size;
   }
 
-  /**
-   * Returns false when the target key was already queued; the newer target
-   * then replaces the queued one.
-   */
   push(
     target: ChunkMeshTarget
   ): boolean {

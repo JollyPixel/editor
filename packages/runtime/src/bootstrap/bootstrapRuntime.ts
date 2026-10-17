@@ -136,7 +136,7 @@ async function loadInitialAssets<TContext>(
       loadingScreen?.update(progress);
     }
   });
-  loadingScreen?.setProgress(
+  loadingScreen?.updateProgress(
     batch.completed,
     batch.total
   );
@@ -158,12 +158,12 @@ async function loadInitialScene<TContext>(
       return;
     }
 
-    loadingScreen?.setProgress(
+    loadingScreen?.updateProgress(
       sceneLoad.completed,
       sceneLoad.total
     );
     if (sceneLoad.currentAsset !== null) {
-      loadingScreen?.setAsset(sceneLoad.currentAsset);
+      loadingScreen?.showAsset(sceneLoad.currentAsset);
     }
   }
 
