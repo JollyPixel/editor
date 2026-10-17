@@ -116,6 +116,49 @@ describe("CatalogExtension — join", () => {
     );
     extension.dispose();
   });
+
+  test("a later joiner sees assets and folders changed since an earlier join", async() => {
+    await using harness = await syncHarness();
+    const projection = new CatalogProjection({
+      projector: harness.projector
+    });
+    projection.load();
+    projection.start();
+
+    const backend = catalogBackend(harness, projection);
+    const extension = new CatalogExtension({ backend });
+    const room = recordingRoom();
+    extension.onClientConnect(recordingClient("A"), roomPeer("A"), room.context);
+    await harness.writer.create({
+      path: "a.png",
+      data: bytes("one"),
+      actor: kActor
+    });
+    extension.onClientConnect(recordingClient("B"), roomPeer("B"), room.context);
+    await backend.folders.create("textures");
+    extension.onClientConnect(recordingClient("C"), roomPeer("C"), room.context);
+
+    const snapshots = room.direct
+      .filter((entry) => entry.clientId !== "A")
+      .map((entry) => entry.payload);
+    const manifest = projection.snapshot();
+    const dependencies = { [manifest.assets[0].id]: [] };
+    assert.deepEqual(snapshots, [
+      {
+        type: CATALOG_SNAPSHOT,
+        manifest,
+        dependencies,
+        folders: []
+      },
+      {
+        type: CATALOG_SNAPSHOT,
+        manifest,
+        dependencies,
+        folders: ["textures"]
+      }
+    ]);
+    extension.dispose();
+  });
 });
 
 describe("CatalogExtension — broadcast", () => {
@@ -687,6 +730,32 @@ describe("catalog HTTP handler", () => {
     });
 
     assert.strictEqual(second.status, 304);
+  });
+
+  test("serves the new snapshot once the catalog changes", async() => {
+    await using harness = await syncHarness();
+    const projection = new CatalogProjection({
+      projector: harness.projector
+    });
+    projection.load();
+    projection.start();
+
+    await using server = await serveCatalog(projection);
+    const first = await fetch(`${server.origin}${CATALOG_URL_PATH}`);
+    await first.arrayBuffer();
+    await harness.writer.create({
+      path: "a.png",
+      data: bytes("one"),
+      actor: kActor
+    });
+
+    const second = await fetch(`${server.origin}${CATALOG_URL_PATH}`, {
+      headers: { "if-none-match": first.headers.get("etag") ?? "" }
+    });
+
+    assert.strictEqual(second.status, 200);
+    assert.deepEqual(await second.json(), projection.snapshot());
+    assert.strictEqual(projection.size, 1);
   });
 
   test("refuses a non-GET method", async() => {

@@ -35,3 +35,34 @@ export {
   type SuiteTeardown
 } from "./suite.ts";
 export { mulberry32 } from "./utils/random.ts";
+export {
+  LOAD_ARGS,
+  choiceArg,
+  loadUsage,
+  nonNegativeArg,
+  positiveArg,
+  readLoadArgs,
+  type LoadArgs,
+  type LoadArgValues
+} from "./load/loadArgs.ts";
+export { LoadMeter } from "./load/LoadMeter.ts";
+export {
+  printLoadResult,
+  recordLatency,
+  type LoadResult
+} from "./load/loadReport.ts";
+export type { LoadDriverInit } from "./load/protocol.ts";
+export type { PacedEntry } from "./load/RateSchedule.ts";
+export {
+  runLoad,
+  type LoadRun,
+  type LoadRunOptions
+} from "./load/runLoad.ts";
+export {
+  runLoadDriver,
+  type LoadDriverOptions
+} from "./load/runLoadDriver.ts";
+export {
+  loadServerConfig,
+  runLoadServer
+} from "./load/runLoadServer.ts";

@@ -36,6 +36,7 @@ export class CatalogProjection extends Emitter<
   #catalog = new AssetCatalog();
   #dependencies = new DependencyIndex();
   #following = false;
+  #revision = 0;
 
   constructor(
     options: CatalogProjectionOptions
@@ -56,7 +57,12 @@ export class CatalogProjection extends Emitter<
     return this.#catalog.size;
   }
 
+  get revision(): number {
+    return this.#revision;
+  }
+
   load(): void {
+    this.#revision++;
     this.#catalog = new AssetCatalog();
     this.#dependencies.clear();
 
@@ -136,6 +142,7 @@ export class CatalogProjection extends Emitter<
   ): void => {
     const catalogChange = this.#fold(change);
     if (catalogChange !== null) {
+      this.#revision++;
       this.emit(
         "changed",
         catalogChange

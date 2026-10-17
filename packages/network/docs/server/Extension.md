@@ -54,6 +54,9 @@ Releases resources on eviction or shutdown.
 
 `context.identity` is trusted; `peer.resume` requires feature validation.
 `context.room.broadcast` / `sendTo` validate payloads and filter by read rights.
+A frozen payload (`Object.freeze`) is validated and serialized once per room and
+reused when sent again, so freeze a large payload sent to many joiners and
+never mutate what it references.
 
 ## Presence-only rooms
 

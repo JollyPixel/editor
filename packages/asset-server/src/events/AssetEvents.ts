@@ -229,7 +229,8 @@ export async function writeData(
   data: Uint8Array,
   dependencies: readonly AssetReferenceData[] = []
 ): Promise<AssetWriteData> {
-  const snapshot = Uint8Array.from(data);
+  const size = data.byteLength;
+  const content = encodeContent(data);
   const references = dependencies.map((reference) => {
     return {
       id: reference.id,
@@ -240,9 +241,9 @@ export async function writeData(
   return {
     path,
     kind,
-    hash: await contentHash(snapshot),
-    size: snapshot.byteLength,
-    content: encodeContent(snapshot),
+    hash: await contentHash(data),
+    size,
+    content,
     dependencies: references
   };
 }

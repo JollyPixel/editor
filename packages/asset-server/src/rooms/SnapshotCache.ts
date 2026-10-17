@@ -1,20 +1,23 @@
+// Import Third-party Dependencies
+import type { NetworkSyncMessage } from "@jolly-pixel/network";
+
 // Import Internal Dependencies
 import type { AssetLiveProtocol } from "../kinds/AssetLiveProtocol.ts";
 
-export interface RoomSnapshot {
-  readonly data: unknown;
-  readonly version: number | undefined;
-}
+type SnapshotMessage = Readonly<
+  Extract<NetworkSyncMessage<unknown, unknown>, { type: "snapshot"; }>
+>;
 
-interface VersionedSnapshot extends RoomSnapshot {
+interface VersionedMessage {
   readonly version: number;
+  readonly message: SnapshotMessage;
 }
 
 export class SnapshotCache {
   #protocol: Pick<AssetLiveProtocol, "snapshot" | "encodeSnapshot">;
   #version: () => number | undefined;
-  #plain: VersionedSnapshot | null = null;
-  #encoded: VersionedSnapshot | null = null;
+  #plain: VersionedMessage | null = null;
+  #encoded: VersionedMessage | null = null;
 
   constructor(
     protocol: Pick<AssetLiveProtocol, "snapshot" | "encodeSnapshot">,
@@ -40,25 +43,22 @@ export class SnapshotCache {
     );
   }
 
-  current(): RoomSnapshot {
+  current(): SnapshotMessage {
     const version = this.#version();
     if (version === undefined) {
-      return {
-        version,
-        data: this.#protocol.snapshot()
-      };
+      return snapshotMessage(this.#protocol.snapshot());
     }
     if (this.#encoded?.version === version) {
-      return this.#encoded;
+      return this.#encoded.message;
     }
     if (this.#plain?.version !== version) {
       this.#plain = {
         version,
-        data: this.#protocol.snapshot()
+        message: snapshotMessage(this.#protocol.snapshot(), version)
       };
     }
 
-    return this.#plain;
+    return this.#plain.message;
   }
 
   async #store(
@@ -70,7 +70,7 @@ export class SnapshotCache {
       if (this.#version() === version) {
         this.#encoded = {
           version,
-          data
+          message: snapshotMessage(data, version)
         };
       }
     }
@@ -78,4 +78,15 @@ export class SnapshotCache {
       this.#encoded = null;
     }
   }
+}
+
+function snapshotMessage(
+  data: unknown,
+  version?: number
+): SnapshotMessage {
+  return Object.freeze({
+    type: "snapshot",
+    data,
+    ...(version === undefined ? {} : { version })
+  });
 }

@@ -16,6 +16,7 @@ import {
 } from "./RoomMembers.ts";
 import { PeerPresence } from "./PeerPresence.ts";
 import { ResyncThrottle } from "./ResyncThrottle.ts";
+import { SerializedEnvelope } from "./SerializedEnvelope.ts";
 import { MessageParser } from "../../protocol/message/MessageParser.ts";
 import {
   JOIN_EVENT,
@@ -39,6 +40,11 @@ interface AuthorizeRequest {
   role: string;
   event: string;
   label: string;
+}
+
+interface OutboundDelivery {
+  readonly message: SerializedEnvelope;
+  readonly event: string | undefined;
 }
 
 interface Refusal {
@@ -99,6 +105,7 @@ export class ServerRoom {
   #outbound: MessageParser | null;
   #peerMetadataLength: number;
   #resyncs: ResyncThrottle;
+  #frozenDeliveries = new WeakMap<object, OutboundDelivery>();
 
   constructor(
     id: string,
@@ -336,15 +343,15 @@ export class ServerRoom {
       profile
     } as const;
 
-    this.#members.send({
+    this.#members.send(new SerializedEnvelope({
       ...envelope,
       presence
-    }, {
+    }), {
       event: PRESENCE_EVENT,
-      unreadable: {
+      unreadable: new SerializedEnvelope({
         ...envelope,
         presence: {}
-      },
+      }),
       excludeClientId: clientId
     });
   }
@@ -373,11 +380,11 @@ export class ServerRoom {
 
     this.#members.remove(clientId);
     this.#resyncs.forget(clientId);
-    this.#members.send({
+    this.#members.send(new SerializedEnvelope({
       room: this.id,
       kind: "peer-left",
       clientId
-    }, { excludeClientId: clientId });
+    }), { excludeClientId: clientId });
 
     await this.#extension.onClientDisconnect?.(
       clientId,
@@ -416,12 +423,12 @@ export class ServerRoom {
     }
 
     record.profile = profile;
-    this.#members.send({
+    this.#members.send(new SerializedEnvelope({
       room: this.id,
       kind: "peer-profile",
       clientId,
       patch
-    });
+    }));
   }
 
   updatePresence(
@@ -467,12 +474,12 @@ export class ServerRoom {
     }
 
     record.presence = presence;
-    this.#members.send({
+    this.#members.send(new SerializedEnvelope({
       room: this.id,
       kind: "peer-presence",
       clientId,
       patch
-    }, {
+    }), {
       event: PRESENCE_EVENT,
       excludeClientId: clientId
     });
@@ -624,6 +631,29 @@ export class ServerRoom {
     payload: unknown,
     to?: string
   ): void {
+    const delivery = this.#delivery(payload);
+    if (delivery === null) {
+      return;
+    }
+
+    const { message, event } = delivery;
+    if (to === undefined) {
+      this.#members.send(message, { event });
+    }
+    else {
+      this.#members.sendTo(to, message, event);
+    }
+  }
+
+  #delivery(
+    payload: unknown
+  ): OutboundDelivery | null {
+    const frozen = isFrozenObject(payload);
+    const cached = frozen ? this.#frozenDeliveries.get(payload) : undefined;
+    if (cached !== undefined) {
+      return cached;
+    }
+
     let event: string | undefined;
     if (this.#outbound !== null) {
       const parsed = this.#outbound.parse(payload);
@@ -635,22 +665,24 @@ export class ServerRoom {
           })
           .error("outbound payload does not match the extension protocol");
 
-        return;
+        return null;
       }
       event = parsed.val.event;
     }
 
-    const envelope = {
-      room: this.id,
-      kind: "message",
-      payload
-    } as const;
-    if (to === undefined) {
-      this.#members.send(envelope, { event });
+    const delivery = {
+      message: new SerializedEnvelope({
+        room: this.id,
+        kind: "message",
+        payload
+      }),
+      event
+    };
+    if (frozen) {
+      this.#frozenDeliveries.set(payload, delivery);
     }
-    else {
-      this.#members.sendTo(to, envelope, event);
-    }
+
+    return delivery;
   }
 }
 
@@ -670,4 +702,12 @@ function refusalReason(
 
 function isMember(): boolean {
   return true;
+}
+
+function isFrozenObject(
+  payload: unknown
+): payload is object {
+  return typeof payload === "object" &&
+    payload !== null &&
+    Object.isFrozen(payload);
 }

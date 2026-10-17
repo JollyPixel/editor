@@ -215,6 +215,17 @@ function sortedRecord<TValue>(
   map: Map<string, TValue>
 ): Record<string, TValue> {
   return Object.fromEntries(
-    [...map.entries()].sort(([a], [b]) => a.localeCompare(b))
+    [...map.entries()].sort(byKey)
   );
+}
+
+function byKey(
+  [left]: [string, unknown],
+  [right]: [string, unknown]
+): number {
+  if (left === right) {
+    return 0;
+  }
+
+  return left < right ? -1 : 1;
 }

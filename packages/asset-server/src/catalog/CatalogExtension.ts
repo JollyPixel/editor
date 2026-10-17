@@ -110,6 +110,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
   #onChanged: (change: CatalogChange) => void;
   #onFolders: (folders: readonly string[]) => void;
   #onTags: (assetId: string) => void;
+  #snapshot: CatalogMessage | null = null;
 
   constructor(
     options: CatalogExtensionOptions
@@ -124,8 +125,14 @@ export class CatalogExtension extends Extension<CatalogCommand> {
       ...options.archiveLimits
     };
     this.#deleteProtection = options.deleteProtection ?? true;
-    this.#onChanged = (change) => this.#outbox.pushChange(change);
-    this.#onFolders = (folders) => this.#outbox.pushFolders(folders);
+    this.#onChanged = (change) => {
+      this.#snapshot = null;
+      this.#outbox.pushChange(change);
+    };
+    this.#onFolders = (folders) => {
+      this.#snapshot = null;
+      this.#outbox.pushFolders(folders);
+    };
     this.#onTags = (assetId) => this.#outbox.pushTags(
       assetId,
       this.#backend.tags.list(assetId)
@@ -152,13 +159,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     this.#broadcast = context.room;
     this.#members.add(client.id);
 
-    const { catalog, folders } = this.#backend;
-    context.room.sendTo(client.id, {
-      type: CATALOG_SNAPSHOT,
-      manifest: catalog.snapshot(),
-      dependencies: catalog.dependencies.toJSON(),
-      folders: folders.toJSON()
-    } satisfies CatalogMessage);
+    context.room.sendTo(client.id, this.#joinSnapshot());
   }
 
   override onClientDisconnect(
@@ -209,6 +210,18 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     );
     this.#members.clear();
     this.#broadcast = null;
+  }
+
+  #joinSnapshot(): CatalogMessage {
+    const { catalog, folders } = this.#backend;
+    this.#snapshot ??= Object.freeze({
+      type: CATALOG_SNAPSHOT,
+      manifest: catalog.snapshot(),
+      dependencies: catalog.dependencies.toJSON(),
+      folders: folders.toJSON()
+    } satisfies CatalogMessage);
+
+    return this.#snapshot;
   }
 
   async #execute(
