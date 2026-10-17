@@ -1,7 +1,8 @@
 // Import Third-party Dependencies
-import type {
-  EditorRuntime,
-  EditorToolbarSources
+import {
+  bindPresenceStack,
+  type EditorRuntime,
+  type EditorToolbarSources
 } from "@jolly-pixel/editor.host";
 import {
   CANVAS_HOVER_CHANGE_EVENT,
@@ -11,7 +12,8 @@ import "@jolly-pixel/editor.host/ui";
 import type {
   DockLayout,
   PaneElement,
-  PaneGroup
+  PaneGroup,
+  PresenceStack
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -34,11 +36,12 @@ import type { ModelWorkspace } from "../scene/ModelEditorScene.ts";
 const kLayoutSelector = "jolly-dock-layout";
 const kLayoutEvents = ["jolly-layout-change", "jolly-pane-visibility"];
 const kLeftPanelSelector = "jolly-model-editor-left-panel";
-const kRightPanelSelector = "jolly-model-editor-right-panel";
+const kHierarchySelector = "jolly-model-editor-hierarchy";
 const kAnimatePanelSelector = "jolly-model-editor-animate-panel";
 const kTimelineDockSelector = "jolly-dock[key=\"timeline\"]";
+const kPresenceStackSelector = "jolly-presence-stack";
 const kAttachedTags = [
-  kRightPanelSelector,
+  kHierarchySelector,
   "jolly-model-editor-material-library",
   "jolly-model-editor-view",
   "jolly-model-editor-history",
@@ -68,6 +71,7 @@ export class EditorShell {
   #animateTabs: PaneGroup;
   #timelineDock: HTMLElement;
   #attached: WorkspaceElement[];
+  #presenceStack: PresenceStack;
   #workspace: ModelWorkspace | null = null;
   #disposables: Array<() => void> = [];
 
@@ -88,7 +92,7 @@ export class EditorShell {
 
     const layout = document.querySelector(kLayoutSelector);
     const leftPanel = document.querySelector<LeftPanel>(kLeftPanelSelector);
-    const rightPanel = document.querySelector(kRightPanelSelector);
+    const hierarchy = document.querySelector(kHierarchySelector);
     const materialPane = layout?.querySelector<PaneElement>(
       `jolly-pane[key="${kMaterialPane}"]`
     );
@@ -96,11 +100,13 @@ export class EditorShell {
       .querySelector(kAnimatePanelSelector)
       ?.closest<PaneGroup>("jolly-pane-group");
     const timelineDock = document.querySelector<HTMLElement>(kTimelineDockSelector);
+    const presenceStack = document.querySelector(kPresenceStackSelector);
     if (
       layout === null ||
       leftPanel === null ||
-      rightPanel === null ||
+      hierarchy === null ||
       timelineDock === null ||
+      presenceStack === null ||
       !animateTabs ||
       !materialPane
     ) {
@@ -113,6 +119,7 @@ export class EditorShell {
     this.#animateTabs = animateTabs;
     this.#timelineDock = timelineDock;
     this.#attached = kAttachedTags.map(queryWorkspaceElement);
+    this.#presenceStack = presenceStack;
 
     this.#leftPanel.showTexture(texture);
     this.#leftPanel.keyBindingSettings = keyBindingSettings;
@@ -123,14 +130,14 @@ export class EditorShell {
       );
     }
     void layout.updateComplete.then(this.#onLayoutChange);
-    rightPanel.addEventListener(SHOW_MATERIAL_EVENT, this.#showMaterialPane);
-    rightPanel.addEventListener(SHOW_BUILD_EVENT, this.#showBuildPane);
+    hierarchy.addEventListener(SHOW_MATERIAL_EVENT, this.#showMaterialPane);
+    hierarchy.addEventListener(SHOW_BUILD_EVENT, this.#showBuildPane);
     this.#disposables.push(
-      () => rightPanel.removeEventListener(
+      () => hierarchy.removeEventListener(
         SHOW_MATERIAL_EVENT,
         this.#showMaterialPane
       ),
-      () => rightPanel.removeEventListener(
+      () => hierarchy.removeEventListener(
         SHOW_BUILD_EVENT,
         this.#showBuildPane
       ),
@@ -141,6 +148,10 @@ export class EditorShell {
     );
   }
 
+  get layout(): DockLayout {
+    return this.#layout;
+  }
+
   adoptWorkspace(
     workspace: ModelWorkspace
   ): void {
@@ -148,6 +159,11 @@ export class EditorShell {
     for (const element of this.#attached) {
       void element.attach(workspace);
     }
+    this.#disposables.push(bindPresenceStack(
+      this.#presenceStack,
+      workspace.presence,
+      (clientId) => workspace.teleportToPeer(clientId)
+    ));
     this.#leftPanel.workspace = workspace;
     this.#syncGizmo();
     this.#syncTab();

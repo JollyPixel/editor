@@ -38,10 +38,12 @@ export type {
 export {
   EditorRuntime,
   type EditorRuntimeCreateOptions,
-  type EditorRuntimeLoadOptions
+  type EditorRuntimeLoadOptions,
+  type PerformancePaneOptions
 } from "./runtime/EditorRuntime.ts";
 export * from "./runtime/PeerFrustums.ts";
 export * from "./runtime/RuntimeWidgets.ts";
+export * from "./presence/bindPresenceStack.ts";
 export * from "./editor/EditorDefinition.ts";
 export * from "./editor/mountStandalone.ts";
 export {

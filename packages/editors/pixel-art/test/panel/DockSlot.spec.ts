@@ -5,31 +5,9 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import type {
-  ReactiveController,
-  ReactiveControllerHost
-} from "lit";
-
 // Import Internal Dependencies
 import { DockSlot } from "#src/panel/DockSlot.ts";
-
-class TestHost implements ReactiveControllerHost {
-  readonly updateComplete = Promise.resolve(true);
-  updateCount = 0;
-
-  addController(_controller: ReactiveController): void {
-    void _controller;
-  }
-
-  removeController(_controller: ReactiveController): void {
-    void _controller;
-  }
-
-  requestUpdate(): void {
-    this.updateCount++;
-  }
-}
+import { TestHost } from "../fixtures/host.ts";
 
 function createSlot(): { slot: DockSlot; host: TestHost; changes: () => number; } {
   const host = new TestHost();

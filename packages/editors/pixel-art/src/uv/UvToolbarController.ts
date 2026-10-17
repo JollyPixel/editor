@@ -53,6 +53,21 @@ export type UvToolbarHost = ReactiveControllerHost & {
 };
 
 type UVMap = PixelArtCanvas["uv"];
+type UVRegion = NonNullable<ReturnType<UVMap["get"]>>;
+
+interface UVSelection {
+  id: string;
+  region: UVRegion;
+}
+
+function selectedRegion(
+  uv: UVMap
+): UVSelection | null {
+  const id = uv.selectedRegionId;
+  const region = id ? uv.get(id) : undefined;
+
+  return id && region ? { id, region } : null;
+}
 
 function renderBadgedIcon(
   badge: IconName
@@ -145,13 +160,10 @@ export class UvToolbarController {
   }
 
   #renderStateDropdown(
-    uv: UVMap
+    uv: UVMap,
+    { id: regionId, region }: UVSelection
   ) {
-    const regionId = uv.selectedRegionId;
-    const current = regionId ? uv.get(regionId)?.state : undefined;
-    if (!regionId || current === undefined) {
-      return nothing;
-    }
+    const current = region.state;
 
     return html`
       <button
@@ -196,14 +208,9 @@ export class UvToolbarController {
   }
 
   #renderRotateButtons(
-    uv: UVMap
+    uv: UVMap,
+    { id: regionId, region }: UVSelection
   ) {
-    const regionId = uv.selectedRegionId;
-    const region = regionId ? uv.get(regionId) : undefined;
-    if (!regionId || !region) {
-      return nothing;
-    }
-
     const slot = region.movementScope === "slot" ? uv.selectedSlot : null;
     const target = slot === null ? "region" : `slot "${slot}"`;
 
@@ -273,11 +280,18 @@ export class UvToolbarController {
       return nothing;
     }
 
+    const selection = selectedRegion(uv);
+    if (!allowCreateDelete && selection === null && extra === nothing) {
+      return nothing;
+    }
+
     return html`
       <div class="overlay-toolbar" part="uv-toolbar">
         ${allowCreateDelete ? this.#renderCreateDelete(uv) : nothing}
-        ${this.#renderStateDropdown(uv)}
-        ${this.#renderRotateButtons(uv)}
+        ${selection === null ? nothing : html`
+          ${this.#renderStateDropdown(uv, selection)}
+          ${this.#renderRotateButtons(uv, selection)}
+        `}
         ${extra}
       </div>
     `;

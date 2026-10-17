@@ -75,7 +75,6 @@ export class AnimatePanel extends LitElement {
       flex: 1 1 auto;
       min-height: 96px;
       overflow: auto;
-      border-bottom: 1px solid var(--jolly-border, rgb(128 128 128 / 30%));
     }
 
     jolly-tree {
@@ -113,6 +112,18 @@ export class AnimatePanel extends LitElement {
       flex-direction: column;
       gap: var(--jolly-row-gap, 4px);
       padding: var(--jolly-space-2, 8px);
+    }
+
+    .clip {
+      border-top: 1px solid var(--jolly-border, rgb(128 128 128 / 30%));
+    }
+
+    .transform {
+      padding-inline: 0;
+    }
+
+    .transform > jolly-button {
+      margin-inline: var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
     }
 
     .empty {
