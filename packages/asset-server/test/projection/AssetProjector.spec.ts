@@ -282,6 +282,26 @@ describe("AssetProjector — lifecycle events land on the source", () => {
 });
 
 describe("AssetProjector — checkpoints", () => {
+  test("persists checkpoints a second after a single-asset flush", async(t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
+    await using harness = await syncHarness();
+
+    const created = (await harness.writer.create({
+      path: "a.png",
+      data: bytes("hello"),
+      actor: kActor
+    })).unwrap();
+    await harness.projector.flush(created.assetId);
+    t.mock.timers.tick(1_000);
+    await harness.projector.flush(created.assetId);
+
+    const persisted = await ProjectionState.load(harness.source);
+    assert.strictEqual(
+      persisted.checkpoint(created.assetId),
+      created.eventId
+    );
+  });
+
   test("advances only after a successful write", async() => {
     await using harness = await syncHarness();
 

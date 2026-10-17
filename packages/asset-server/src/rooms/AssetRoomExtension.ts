@@ -146,9 +146,11 @@ export class AssetRoomExtension<
     this.#room = context.room;
     this.#members.add(peer.clientId);
 
-    const resume = kResumeParser.parse(peer.resume);
-    if (resume.ok) {
-      await this.#departure(resume.val.clientId);
+    const resume = peer.resume === undefined ?
+      null :
+      kResumeParser.parse(peer.resume).unwrapOr(null);
+    if (resume !== null) {
+      await this.#departure(resume.clientId);
     }
     const encoding = this.#snapshots.refresh();
     if (encoding !== null) {
@@ -164,7 +166,7 @@ export class AssetRoomExtension<
     }
 
     client.send(
-      resume.ok ? this.#resumeMessage(resume.val) : this.#snapshot({})
+      resume === null ? this.#snapshot({}) : this.#resumeMessage(resume)
     );
   }
 
@@ -341,14 +343,14 @@ export class AssetRoomExtension<
   #snapshot(
     acks: AcksField
   ): AssetSyncMessage {
-    const { data, version } = this.#snapshots.current();
+    const message = this.#snapshots.current();
 
-    return {
-      type: "snapshot",
-      data,
-      ...(version === undefined ? {} : { version }),
-      ...acks
-    };
+    return acks.acks === undefined ?
+      message :
+      {
+        ...message,
+        ...acks
+      };
   }
 
   #resync(

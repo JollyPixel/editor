@@ -118,6 +118,42 @@ describe("ServerRoom — outbound protocol", () => {
     assert.deepEqual(a.sent, []);
   });
 
+  test("delivers a frozen payload sent again, gated per recipient", async() => {
+    const extension = createExtension(syncProtocols);
+    const serialized: string[] = [];
+    const blocked = createClient("B");
+    const room = createRoom(extension, new RightsTable({
+      allowed: {
+        "pixel-draw.$join": "write",
+        "pixel-draw.voxel-set": "read"
+      },
+      blocked: {
+        "pixel-draw.$join": "write",
+        "pixel-draw.voxel-set": "void"
+      }
+    }));
+    await room.join({
+      handle: {
+        id: "A",
+        send: (data) => serialized.push(JSON.stringify(data)),
+        sendSerialized: (json) => serialized.push(json)
+      },
+      identity: identityOf("A", "allowed")
+    });
+    await room.join({ handle: blocked.client, identity: identityOf("B", "blocked") });
+    serialized.length = 0;
+    blocked.sent.length = 0;
+
+    const payload = Object.freeze({ type: "command", data: { action: "voxel-set" } });
+    extension.lastContext.room.sendTo("A", payload);
+    extension.lastContext.room.broadcast(payload);
+    extension.lastContext.room.sendTo("B", payload);
+
+    const expected = JSON.stringify({ room: "pixel-draw", kind: "message", payload });
+    assert.deepEqual(serialized, [expected, expected]);
+    assert.deepEqual(blocked.sent, []);
+  });
+
   test("filters a scoped sendTo the same way as a broadcast", async() => {
     const extension = createExtension(syncProtocols);
     const a = createClient("A");

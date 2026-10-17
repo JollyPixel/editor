@@ -23,6 +23,7 @@ import {
 
 // CONSTANTS
 const kSidecarVersion = 1;
+const kPathCollator = new Intl.Collator();
 const kValidatorOptions = { useDefaults: false };
 const kEntrySchema = defineSchema({
   type: "object",
@@ -143,7 +144,7 @@ export class IdentitySidecar {
     return {
       version: kSidecarVersion,
       assets: [...this.#byId.values()].sort(
-        (left, right) => left.path.localeCompare(right.path)
+        (left, right) => kPathCollator.compare(left.path, right.path)
       )
     };
   }

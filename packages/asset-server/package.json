@@ -24,10 +24,12 @@
   "scripts": {
     "prepublishOnly": "tsc -b",
     "build": "tsc -b",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p bench/tsconfig.json",
     "test-only": "node --test \"test/**/*.spec.ts\"",
     "test-types": "tstyche --tsconfig ./test/tsconfig.json",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",
+    "bench": "jolly-bench",
+    "bench:load": "node bench/load/index.ts",
     "lint": "oxlint src test"
   },
   "publishConfig": {
@@ -70,5 +72,8 @@
     "vite": {
       "optional": true
     }
+  },
+  "devDependencies": {
+    "@jolly-pixel/bench": "workspace:*"
   }
 }

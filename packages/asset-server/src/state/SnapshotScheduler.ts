@@ -26,6 +26,7 @@ const kFlushAttempts = 3;
 interface PendingSnapshot {
   handle: ReturnType<typeof setTimeout>;
   firstEventAt: number;
+  dueAt: number;
 }
 
 type SnapshotOutcome = "written" | "skipped" | "superseded";
@@ -100,32 +101,23 @@ export class SnapshotScheduler {
       return;
     }
 
-    const policy = {
-      delay: entry.handler.snapshot?.delay ?? this.#policy.delay,
-      maxDelay: entry.handler.snapshot?.maxDelay ?? this.#policy.maxDelay
-    };
+    const { snapshot } = entry.handler;
+    const delay = snapshot?.delay ?? this.#policy.delay;
+    const maxDelay = snapshot?.maxDelay ?? this.#policy.maxDelay;
+    const now = Date.now();
 
     const pending = this.#pending.get(assetId);
-    const firstEventAt = pending?.firstEventAt ?? Date.now();
     if (pending !== undefined) {
-      clearTimeout(pending.handle);
+      pending.dueAt = Math.min(now + delay, pending.firstEventAt + maxDelay);
+
+      return;
     }
 
-    const elapsed = Date.now() - firstEventAt;
-    const delay = Math.max(
-      0,
-      Math.min(policy.delay, policy.maxDelay - elapsed)
-    );
-
-    const handle = setTimeout(
-      () => void this.snapshot(assetId),
-      delay
-    );
-    handle.unref?.();
-
+    const dueAt = now + Math.min(delay, maxDelay);
     this.#pending.set(assetId, {
-      firstEventAt,
-      handle
+      firstEventAt: now,
+      dueAt,
+      handle: this.#arm(assetId, dueAt - now)
     });
   }
 
@@ -156,6 +148,37 @@ export class SnapshotScheduler {
     assetId: string
   ): Promise<boolean> {
     return await this.#run(assetId) === "written";
+  }
+
+  #arm(
+    assetId: string,
+    delay: number
+  ): ReturnType<typeof setTimeout> {
+    const handle = setTimeout(
+      () => this.#onDue(assetId),
+      Math.max(0, delay)
+    );
+    handle.unref?.();
+
+    return handle;
+  }
+
+  #onDue(
+    assetId: string
+  ): void {
+    const pending = this.#pending.get(assetId);
+    if (pending === undefined) {
+      return;
+    }
+
+    const remaining = pending.dueAt - Date.now();
+    if (remaining > 0) {
+      pending.handle = this.#arm(assetId, remaining);
+
+      return;
+    }
+
+    void this.snapshot(assetId);
   }
 
   #run(

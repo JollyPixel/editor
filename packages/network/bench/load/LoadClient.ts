@@ -3,14 +3,13 @@ import type { RecordableHistogram } from "node:perf_hooks";
 
 // Import Third-party Dependencies
 import { WebSocket } from "ws";
+import {
+  recordLatency,
+  type LoadMeter
+} from "@jolly-pixel/bench";
 
 // Import Internal Dependencies
 import { WEBSOCKET_PROTOCOL } from "../../src/index.ts";
-
-export interface LoadLatencies {
-  own: RecordableHistogram;
-  peer: RecordableHistogram;
-}
 
 interface IncomingEnvelope {
   room: string;
@@ -33,31 +32,27 @@ interface IncomingEnvelope {
 export class LoadClient {
   static connect(
     url: string,
-    latencies: LoadLatencies
+    meter: LoadMeter
   ): Promise<LoadClient> {
     const socket = new WebSocket(url, WEBSOCKET_PROTOCOL);
 
     return new Promise((resolve, reject) => {
-      socket.once("open", () => resolve(new LoadClient(socket, latencies)));
+      socket.once("open", () => resolve(new LoadClient(socket, meter)));
       socket.once("error", reject);
     });
   }
 
-  bytesReceived = 0;
-  messagesReceived = 0;
-  messagesSent = 0;
-
   #socket: WebSocket;
-  #latencies: LoadLatencies;
+  #meter: LoadMeter;
   #self = new Map<string, string>();
   #joining = new Map<string, () => void>();
 
   constructor(
     socket: WebSocket,
-    latencies: LoadLatencies
+    meter: LoadMeter
   ) {
     this.#socket = socket;
-    this.#latencies = latencies;
+    this.#meter = meter;
     socket.on("message", (data: Buffer) => this.#receive(data));
   }
 
@@ -87,7 +82,7 @@ export class LoadClient {
   send(
     envelope: object
   ): void {
-    this.messagesSent++;
+    this.#meter.sent++;
     this.#socket.send(JSON.stringify(envelope));
   }
 
@@ -99,15 +94,15 @@ export class LoadClient {
     data: Buffer
   ): void {
     const now = performance.now() + performance.timeOrigin;
-    this.bytesReceived += data.length;
-    this.messagesReceived++;
+    this.#meter.bytes += data.length;
+    this.#meter.received++;
 
     const envelope: IncomingEnvelope = JSON.parse(data.toString());
     if (envelope.kind === "sync") {
       this.#self.set(envelope.room, envelope.self ?? "");
     }
     else if (envelope.kind === "peer-presence") {
-      this.#record(this.#latencies.peer, now, envelope.patch?.cursor?.t);
+      this.#record(this.#meter.peer, now, envelope.patch?.cursor?.t);
     }
     else if (envelope.kind === "message") {
       this.#receiveMessage(envelope, now);
@@ -131,7 +126,7 @@ export class LoadClient {
 
     const own = payload.data?.clientId === this.#self.get(envelope.room);
     this.#record(
-      own ? this.#latencies.own : this.#latencies.peer,
+      own ? this.#meter.own : this.#meter.peer,
       now,
       payload.data?.sentAt
     );
@@ -143,7 +138,7 @@ export class LoadClient {
     sentAt: number | undefined
   ): void {
     if (typeof sentAt === "number") {
-      histogram.record(Math.max(1, Math.round((now - sentAt) * 1_000)));
+      recordLatency(histogram, sentAt, now);
     }
   }
 }

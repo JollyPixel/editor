@@ -34,7 +34,8 @@ state directory:
 - `assets.json` keeps path to ID mappings across checkouts. Commit it when
   IDs must remain stable without a local event log.
 - `state.json` stores local projection positions and failures. It can be
-  rebuilt from the event store.
+  rebuilt from the event store. A full `flush()` and `close()` write it at
+  once; projecting a single asset writes it up to a second later.
 - `objects/` holds backup copies of tagged content
   and of external edits the projector was about to overwrite, listed in
   `objects/index.json`. The ledger is read on the first backup, not at

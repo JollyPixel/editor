@@ -1,5 +1,4 @@
 // Import Internal Dependencies
-import type { Envelope } from "../../protocol/envelope/Envelope.ts";
 import type { PeerMetadata } from "../../protocol/types.ts";
 import { PRESENCE_EVENT } from "../../protocol/constants.ts";
 import type { ClientHandle } from "../../transport/ClientHandle.ts";
@@ -7,6 +6,7 @@ import type { PeerIdentity } from "../auth/AuthenticationProvider.ts";
 import type { RightsGate } from "../rights/RightsGate.ts";
 import type { RoomContext } from "../extension/Extension.ts";
 import type { PeerPresence } from "./PeerPresence.ts";
+import type { SerializedEnvelope } from "./SerializedEnvelope.ts";
 
 export interface PeerRecord {
   handle: ClientHandle;
@@ -25,32 +25,8 @@ export interface RoomMemberSnapshot {
 
 export interface RoomSendOptions {
   event?: string;
-  unreadable?: Envelope;
+  unreadable?: SerializedEnvelope;
   excludeClientId?: string;
-}
-
-class SerializedEnvelope {
-  #envelope: Envelope;
-  #json: string | undefined;
-
-  constructor(
-    envelope: Envelope
-  ) {
-    this.#envelope = envelope;
-  }
-
-  sendTo(
-    handle: ClientHandle
-  ): void {
-    if (handle.sendSerialized === undefined) {
-      handle.send(this.#envelope);
-
-      return;
-    }
-
-    this.#json ??= JSON.stringify(this.#envelope);
-    handle.sendSerialized(this.#json);
-  }
 }
 
 export class RoomMembers {
@@ -115,7 +91,7 @@ export class RoomMembers {
   }
 
   send(
-    envelope: Envelope,
+    message: SerializedEnvelope,
     options: RoomSendOptions = {}
   ): void {
     const {
@@ -123,28 +99,23 @@ export class RoomMembers {
       unreadable,
       excludeClientId
     } = options;
-    const readable = new SerializedEnvelope(envelope);
-    const fallback = unreadable === undefined ?
-      null :
-      new SerializedEnvelope(unreadable);
-
     for (const record of this.#members.values()) {
       if (record.handle.id === excludeClientId) {
         continue;
       }
 
       if (this.#canRead(record.identity.role, event)) {
-        readable.sendTo(record.handle);
+        message.sendTo(record.handle);
       }
       else {
-        fallback?.sendTo(record.handle);
+        unreadable?.sendTo(record.handle);
       }
     }
   }
 
   sendTo(
     clientId: string,
-    envelope: Envelope,
+    message: SerializedEnvelope,
     event?: string
   ): void {
     const record = this.#members.get(clientId);
@@ -152,7 +123,7 @@ export class RoomMembers {
       record !== undefined &&
       this.#canRead(record.identity.role, event)
     ) {
-      record.handle.send(envelope);
+      message.sendTo(record.handle);
     }
   }
 

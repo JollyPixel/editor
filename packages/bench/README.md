@@ -158,6 +158,24 @@ such as the shared numeric parser.
 | `hasFailure(report)` | True when a task of the report errored |
 | `BenchmarkError` | Raised when a run has nothing to measure, or is misconfigured |
 
+Load harnesses (`bench:load` in network and asset-server) start a server in a
+child process and drive it from worker threads. A harness keeps three files:
+the entry parses its flags and calls `runLoad`, the server module calls
+`runLoadServer`, and the driver module connects its clients and calls
+`runLoadDriver`. These exports do the rest:
+
+| Export | Purpose |
+| --- | --- |
+| `runLoad(options)` | Forks the server and the drivers, runs warmup then the measured window, and resolves the merged `LoadRun` |
+| `runLoadServer(httpServer, close)` | Listens on a free port, answers the server CPU, event loop, heap and GC samples, and calls `close` on disconnect |
+| `loadServerConfig()` | The server config `runLoad` passed to the child process |
+| `runLoadDriver(init, options)` | Paces each entry at `init.rate` actions per second and answers the run, pause, reset and report commands |
+| `LoadMeter` | Latency histograms and sent, received and byte counters shared by a driver's clients |
+| `recordLatency(histogram, start, end)` | Records a duration in microseconds |
+| `printLoadResult(parameters, run, json)` | Prints the parameters and measured columns as a table or one JSON line, and warns about a saturated driver |
+| `LOAD_ARGS`, `readLoadArgs(values, usage)`, `loadUsage(summary, options)` | The shared `--clients`, `--rate`, `--duration`, `--warmup`, `--workers`, `--compression`, `--profile` and `--json` flags |
+| `positiveArg`, `nonNegativeArg`, `choiceArg` | Validate a harness's own flags and name the flag on error |
+
 Built on [tinybench][tinybench], which is the only dependency. The CLI adds
 none.
 

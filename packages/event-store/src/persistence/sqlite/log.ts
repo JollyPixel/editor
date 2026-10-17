@@ -79,9 +79,13 @@ export class SqliteEventLog implements EventLog {
            event_version, actor, created_at)
          SELECT ?, ?, ?, ?, head.version + 1, ?, ?
          FROM (
-           SELECT COALESCE(MAX(event_version), 0) AS version
-           FROM events
-           WHERE asset_id = ?
+           SELECT COALESCE((
+             SELECT event_version
+             FROM events
+             WHERE asset_id = ?
+             ORDER BY event_version DESC
+             LIMIT 1
+           ), 0) AS version
          ) head
          WHERE ? IS NULL OR head.version = ?
          RETURNING event_id, event_version`,

@@ -25,6 +25,9 @@ import { TaskChain } from "../utils/TaskChain.ts";
 import { asError } from "../utils/asError.ts";
 import { contentHash } from "../utils/contentHash.ts";
 
+// CONSTANTS
+const kStateSaveDelayMs = 1_000;
+
 export interface AssetProjectionChange {
   readonly assetId: string;
   readonly eventType: AssetEventType;
@@ -64,6 +67,7 @@ export class AssetProjector extends Emitter<
   #dirty = new Set<string>();
   #writing = new Set<string>();
   #stateDirty = false;
+  #stateSave: ReturnType<typeof setTimeout> | null = null;
   #queue = new TaskChain();
   #unsubscribe: (() => void) | null = null;
 
@@ -197,7 +201,16 @@ export class AssetProjector extends Emitter<
   flush(
     assetId?: string
   ): Promise<void> {
-    return this.#queue.run(() => this.#converge(assetId));
+    return this.#queue.run(async() => {
+      if (assetId === undefined) {
+        await this.#converge(this.#dirty);
+        await this.#saveState();
+      }
+      else {
+        await this.#converge([assetId]);
+        this.#scheduleStateSave();
+      }
+    });
   }
 
   #absorb(
@@ -261,28 +274,46 @@ export class AssetProjector extends Emitter<
   }
 
   async #converge(
-    assetId?: string
+    assetIds: Iterable<string>
   ): Promise<void> {
-    const targets = assetId === undefined ?
-      [...this.#dirty] :
-      [assetId].filter((id) => this.#dirty.has(id));
+    for (const assetId of [...assetIds]) {
+      if (this.#dirty.has(assetId)) {
+        await this.#convergeAsset(assetId);
+      }
+    }
+  }
 
-    for (const target of targets) {
-      await this.#convergeAsset(target);
+  #scheduleStateSave(): void {
+    if (this.#stateSave !== null || !this.#stateDirty) {
+      return;
     }
 
-    if (this.#stateDirty) {
-      this.#stateDirty = false;
-      try {
-        await this.#state.save();
-      }
-      catch (error) {
-        this.#logger
-          .withMetadata({
-            reason: asError(error).message
-          })
-          .warn("projection state not persisted");
-      }
+    this.#stateSave = setTimeout(() => {
+      this.#stateSave = null;
+      void this.#queue.run(() => this.#saveState());
+    }, kStateSaveDelayMs);
+    this.#stateSave.unref?.();
+  }
+
+  async #saveState(): Promise<void> {
+    if (this.#stateSave !== null) {
+      clearTimeout(this.#stateSave);
+      this.#stateSave = null;
+    }
+    if (!this.#stateDirty) {
+      return;
+    }
+
+    this.#stateDirty = false;
+    try {
+      await this.#state.save();
+    }
+    catch (error) {
+      this.#logger
+        .withMetadata({
+          reason: asError(error).message
+        })
+        .warn("projection state not persisted");
     }
   }
 
