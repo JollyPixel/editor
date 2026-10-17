@@ -5,33 +5,26 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import * as z from "zod/mini";
+
 // Import Internal Dependencies
 import { MessageParser } from "#src/protocol/message/MessageParser.ts";
-import { MessageProtocol } from "#src/protocol/message/MessageProtocol.ts";
+import {
+  MessageProtocol,
+  withEvent
+} from "#src/protocol/message/MessageProtocol.ts";
 
 // CONSTANTS
-const kCommandProtocol = new MessageProtocol({
-  oneOf: [
-    {
-      type: "object",
-      properties: {
-        action: { const: "voxel-set" },
-        x: { type: "number" }
-      },
-      required: [
-        "action",
-        "x"
-      ]
-    },
-    {
-      type: "object",
-      properties: {
-        action: { const: "voxel-removed" }
-      },
-      required: ["action"]
-    }
-  ]
-});
+const kCommandProtocol = new MessageProtocol(z.union([
+  z.object({
+    action: z.literal("voxel-set"),
+    x: z.number()
+  }),
+  z.object({
+    action: z.literal("voxel-removed")
+  })
+]));
 
 describe("MessageParser", () => {
   test("of() compiles one parser per protocol", () => {
@@ -83,22 +76,10 @@ describe("MessageParser", () => {
   });
 
   test("rejects a payload matching variants of two different events", () => {
-    const parser = new MessageParser(new MessageProtocol({
-      oneOf: [
-        {
-          title: "paint",
-          type: "object",
-          properties: { x: { type: "number" } },
-          required: ["x"]
-        },
-        {
-          title: "erase",
-          type: "object",
-          properties: { y: { type: "number" } },
-          required: ["y"]
-        }
-      ]
-    }));
+    const parser = new MessageParser(new MessageProtocol(z.union([
+      withEvent(z.object({ x: z.number() }), "paint"),
+      withEvent(z.object({ y: z.number() }), "erase")
+    ])));
 
     const result = parser.parse({ x: 1, y: 2 });
 
@@ -108,45 +89,26 @@ describe("MessageParser", () => {
   });
 
   test("checks variants without a discriminator alongside the tagged ones", () => {
-    const parser = new MessageParser(new MessageProtocol({
-      oneOf: [
-        {
-          type: "object",
-          properties: { action: { const: "voxel-set" } },
-          required: ["action"]
-        },
-        {
-          title: "anything",
-          type: "object"
-        }
-      ]
-    }));
+    const parser = new MessageParser(new MessageProtocol(z.union([
+      z.object({ action: z.literal("voxel-set") }),
+      withEvent(z.object({}), "anything")
+    ])));
 
     assert.ok(!parser.parse({ action: "voxel-set" }).ok);
     assert.strictEqual(parser.parse({ action: "other" }).unwrap().event, "anything");
   });
 
-  test("tells variants sharing a tag apart by a nested constant", () => {
-    const parser = new MessageParser(new MessageProtocol({
-      oneOf: ["paint", "erase"].map((action) => {
-        return {
-          title: action,
-          type: "object",
-          properties: {
-            type: { const: "command" },
-            data: {
-              type: "object",
-              properties: {
-                action: { const: action },
-                x: { type: "number" }
-              },
-              required: ["action", "x"]
-            }
-          },
-          required: ["type", "data"]
-        };
-      })
-    }, { discriminator: "type" }));
+  test("tells variants sharing a tag apart by a nested literal", () => {
+    const parser = new MessageParser(new MessageProtocol(
+      z.union(["paint", "erase"].map((action) => withEvent(z.object({
+        type: z.literal("command"),
+        data: z.object({
+          action: z.literal(action),
+          x: z.number()
+        })
+      }), action))),
+      { discriminator: "type" }
+    ));
 
     assert.strictEqual(
       parser.parse({ type: "command", data: { action: "erase", x: 1 } }).unwrap().event,

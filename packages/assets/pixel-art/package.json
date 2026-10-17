@@ -57,7 +57,8 @@
     "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/history": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
-    "@jolly-pixel/pixel-draw.renderer": "workspace:*"
+    "@jolly-pixel/pixel-draw.renderer": "workspace:*",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@jolly-pixel/asset-source": "workspace:*",

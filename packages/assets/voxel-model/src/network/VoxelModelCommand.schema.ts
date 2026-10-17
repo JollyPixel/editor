@@ -1,314 +1,242 @@
 // Import Third-party Dependencies
 import {
   commandVariant,
-  defineSchema,
   MessageProtocol,
+  minProperties,
   withCommandHeader
 } from "@jolly-pixel/network";
 import { uvLayoutSchema } from "@jolly-pixel/asset.pixel-art/server";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import { MaterialSurface } from "../model/materials/MaterialSurface.ts";
 import { BLOCK_SHAPE_PARAMETERS } from "../model/nodes/BlockShape.ts";
 
 // CONSTANTS
-const kNullableIdSchema = defineSchema({
-  type: ["string", "null"]
-});
+const kNullableIdSchema = z.nullable(z.string());
 const { sides, ringSides, thickness } = BLOCK_SHAPE_PARAMETERS;
-const kSidesSchema = defineSchema({
-  type: "integer",
-  minimum: sides.min,
-  maximum: sides.max
-});
-const kRingSidesSchema = defineSchema({
-  type: "integer",
-  minimum: ringSides.min,
-  maximum: ringSides.max
-});
-const kThicknessSchema = defineSchema({
-  type: "number",
-  minimum: thickness.min,
-  maximum: thickness.max
+const kSidesSchema = z.int().check(z.minimum(sides.min), z.maximum(sides.max));
+const kRingSidesSchema = z.int().check(
+  z.minimum(ringSides.min),
+  z.maximum(ringSides.max)
+);
+const kThicknessSchema = z.number().check(
+  z.minimum(thickness.min),
+  z.maximum(thickness.max)
+);
+const kHexColorSchema = z.string().check(
+  z.regex(new RegExp(MaterialSurface.PROPERTIES.color.pattern))
+);
+const kUnitSchema = z.number().check(
+  z.minimum(MaterialSurface.PROPERTIES.opacity.minimum),
+  z.maximum(MaterialSurface.PROPERTIES.opacity.maximum)
+);
+const kSurfaceShape = {
+  color: kHexColorSchema,
+  opacity: kUnitSchema,
+  roughness: kUnitSchema,
+  metalness: kUnitSchema,
+  emissive: kHexColorSchema,
+  emissiveIntensity: z.number().check(
+    z.minimum(MaterialSurface.PROPERTIES.emissiveIntensity.minimum)
+  )
+} satisfies Record<(typeof MaterialSurface.KEYS)[number], z.ZodMiniType>;
+
+export const vector3Schema = z.object({
+  x: z.number(),
+  y: z.number(),
+  z: z.number()
 });
 
-export const vector3Schema = defineSchema({
-  type: "object",
-  properties: {
-    x: { type: "number" },
-    y: { type: "number" },
-    z: { type: "number" }
-  },
-  required: ["x", "y", "z"]
+export const mirrorAxesSchema = z.object({
+  x: z.boolean(),
+  y: z.boolean(),
+  z: z.boolean()
 });
 
-export const mirrorAxesSchema = defineSchema({
-  type: "object",
-  properties: {
-    x: { type: "boolean" },
-    y: { type: "boolean" },
-    z: { type: "boolean" }
-  },
-  required: ["x", "y", "z"]
+export const blockTransformSchema = z.object({
+  position: vector3Schema,
+  pivotOffset: vector3Schema,
+  size: vector3Schema,
+  scale: vector3Schema,
+  rotation: vector3Schema
 });
 
-export const blockTransformSchema = defineSchema({
-  type: "object",
-  properties: {
-    position: vector3Schema,
-    pivotOffset: vector3Schema,
-    size: vector3Schema,
-    scale: vector3Schema,
-    rotation: vector3Schema
-  },
-  required: [
-    "position",
-    "pivotOffset",
-    "size",
-    "scale",
-    "rotation"
-  ]
+export const blockShapeSchema = z.union([
+  z.strictObject({
+    type: z.enum(["box", "plane"])
+  }),
+  z.strictObject({
+    type: z.enum(["cylinder", "cone"]),
+    sides: kSidesSchema
+  }),
+  z.strictObject({
+    type: z.literal("torus"),
+    sides: kSidesSchema,
+    ringSides: kRingSidesSchema,
+    thickness: kThicknessSchema
+  })
+]);
+
+export const materialSurfaceSchema = z.object(kSurfaceShape);
+
+export const materialSurfacePatchSchema = minProperties(
+  z.partial(z.strictObject(kSurfaceShape)),
+  1
+);
+
+export const modelMaterialSchema = z.object({
+  kind: z.literal("material"),
+  id: z.string(),
+  parentId: kNullableIdSchema,
+  name: z.string(),
+  surface: materialSurfaceSchema
 });
 
-export const blockShapeSchema = defineSchema({
-  oneOf: [
-    {
-      type: "object",
-      properties: {
-        type: { enum: ["box", "plane"] }
-      },
-      required: ["type"],
-      additionalProperties: false
-    },
-    {
-      type: "object",
-      properties: {
-        type: { enum: ["cylinder", "cone"] },
-        sides: kSidesSchema
-      },
-      required: ["type", "sides"],
-      additionalProperties: false
-    },
-    {
-      type: "object",
-      properties: {
-        type: { const: "torus" },
-        sides: kSidesSchema,
-        ringSides: kRingSidesSchema,
-        thickness: kThicknessSchema
-      },
-      required: ["type", "sides", "ringSides", "thickness"],
-      additionalProperties: false
-    }
-  ]
+export const materialFolderSchema = z.object({
+  kind: z.literal("folder"),
+  id: z.string(),
+  parentId: kNullableIdSchema,
+  name: z.string()
 });
 
-export const materialSurfaceSchema = defineSchema({
-  type: "object",
-  properties: MaterialSurface.PROPERTIES,
-  required: MaterialSurface.KEYS
+export const materialEntrySchema = z.discriminatedUnion("kind", [
+  materialFolderSchema,
+  modelMaterialSchema
+]);
+
+export const folderNodeSchema = z.object({
+  kind: z.literal("folder"),
+  id: z.string(),
+  parentId: kNullableIdSchema,
+  name: z.string()
 });
 
-export const materialSurfacePatchSchema = defineSchema({
-  type: "object",
-  properties: MaterialSurface.PROPERTIES,
-  minProperties: 1,
-  additionalProperties: false
+export const blockNodeSchema = z.object({
+  kind: z.literal("block"),
+  id: z.string(),
+  parentId: kNullableIdSchema,
+  name: z.string(),
+  transform: blockTransformSchema,
+  flipAxes: z.optional(mirrorAxesSchema),
+  shape: z.optional(blockShapeSchema),
+  uv: uvLayoutSchema,
+  materialId: z.optional(z.string())
 });
 
-export const modelMaterialSchema = defineSchema({
-  type: "object",
-  properties: {
-    kind: { const: "material" },
-    id: { type: "string" },
+export const modelNodeSchema = z.discriminatedUnion("kind", [
+  folderNodeSchema,
+  blockNodeSchema
+]);
+
+export const nodeTransformSchema = z.object({
+  id: z.string(),
+  transform: blockTransformSchema
+});
+
+const kRemapTargetSchema = z.nullable(z.string().check(z.minLength(1)));
+const kBindingPathSchema = z.string().check(z.minLength(1));
+
+export const animationBindingSchema = z.object({
+  path: kBindingPathSchema,
+  target: kRemapTargetSchema
+});
+
+export const animationSetLinkSchema = z.object({
+  id: z.string(),
+  kind: z.string(),
+  bindings: z.array(animationBindingSchema),
+  own: z.optional(z.boolean())
+});
+
+export const voxelModelSnapshotSchema = z.object({
+  nodes: z.array(modelNodeSchema),
+  materials: z.array(materialEntrySchema),
+  animationSets: z.array(animationSetLinkSchema)
+});
+
+export const voxelModelCommandSchema = z.discriminatedUnion("action", [
+  commandVariant("node-added", {
+    node: modelNodeSchema,
+    beforeId: z.optional(z.string())
+  }),
+  commandVariant("node-removed", {
+    id: z.string()
+  }),
+  commandVariant("node-renamed", {
+    id: z.string(),
+    name: z.string()
+  }),
+  commandVariant("node-moved", {
+    id: z.string(),
     parentId: kNullableIdSchema,
-    name: { type: "string" },
-    surface: materialSurfaceSchema
-  },
-  required: ["kind", "id", "parentId", "name", "surface"]
-});
-
-export const materialFolderSchema = defineSchema({
-  type: "object",
-  properties: {
-    kind: { const: "folder" },
-    id: { type: "string" },
-    parentId: kNullableIdSchema,
-    name: { type: "string" }
-  },
-  required: ["kind", "id", "parentId", "name"]
-});
-
-export const materialEntrySchema = defineSchema({
-  oneOf: [materialFolderSchema, modelMaterialSchema]
-});
-
-export const folderNodeSchema = defineSchema({
-  type: "object",
-  properties: {
-    kind: { const: "folder" },
-    id: { type: "string" },
-    parentId: kNullableIdSchema,
-    name: { type: "string" }
-  },
-  required: ["kind", "id", "parentId", "name"]
-});
-
-export const blockNodeSchema = defineSchema({
-  type: "object",
-  properties: {
-    kind: { const: "block" },
-    id: { type: "string" },
-    parentId: kNullableIdSchema,
-    name: { type: "string" },
+    transforms: z.array(nodeTransformSchema),
+    beforeId: z.optional(z.string())
+  }),
+  commandVariant("node-transformed", {
+    id: z.string(),
     transform: blockTransformSchema,
-    flipAxes: mirrorAxesSchema,
+    flipAxes: z.optional(mirrorAxesSchema)
+  }),
+  commandVariant("node-uv-changed", {
+    id: z.string(),
+    uv: uvLayoutSchema
+  }),
+  commandVariant("node-shape-changed", {
+    id: z.string(),
     shape: blockShapeSchema,
-    uv: uvLayoutSchema,
-    materialId: { type: "string" }
-  },
-  required: ["kind", "id", "parentId", "name", "transform", "uv"]
-});
-
-export const modelNodeSchema = defineSchema({
-  oneOf: [folderNodeSchema, blockNodeSchema]
-});
-
-export const nodeTransformSchema = defineSchema({
-  type: "object",
-  properties: {
-    id: { type: "string" },
-    transform: blockTransformSchema
-  },
-  required: ["id", "transform"]
-});
-
-const kRemapTargetSchema = defineSchema({
-  type: ["string", "null"],
-  minLength: 1
-});
-
-export const animationBindingSchema = defineSchema({
-  type: "object",
-  properties: {
-    path: { type: "string", minLength: 1 },
+    uv: uvLayoutSchema
+  }),
+  commandVariant("node-material-changed", {
+    id: z.string(),
+    materialId: kNullableIdSchema
+  }),
+  commandVariant("material-added", {
+    material: modelMaterialSchema,
+    beforeId: z.optional(z.string())
+  }),
+  commandVariant("material-folder-added", {
+    folder: materialFolderSchema,
+    beforeId: z.optional(z.string())
+  }),
+  commandVariant("material-moved", {
+    id: z.string(),
+    parentId: kNullableIdSchema,
+    beforeId: z.optional(z.string())
+  }),
+  commandVariant("material-removed", {
+    id: z.string(),
+    keepContents: z.optional(z.boolean())
+  }),
+  commandVariant("material-renamed", {
+    id: z.string(),
+    name: z.string()
+  }),
+  commandVariant("material-changed", {
+    id: z.string(),
+    surface: materialSurfacePatchSchema
+  }),
+  commandVariant("animation-set-linked", {
+    link: animationSetLinkSchema
+  }),
+  commandVariant("animation-set-unlinked", {
+    id: z.string()
+  }),
+  commandVariant("animation-set-owned", {
+    id: z.string(),
+    own: z.boolean()
+  }),
+  commandVariant("animation-binding-changed", {
+    id: z.string(),
+    path: kBindingPathSchema,
     target: kRemapTargetSchema
-  },
-  required: ["path", "target"]
-});
+  }),
+  commandVariant("animation-binding-cleared", {
+    id: z.string(),
+    path: kBindingPathSchema
+  })
+]);
 
-export const animationSetLinkSchema = defineSchema({
-  type: "object",
-  properties: {
-    id: { type: "string" },
-    kind: { type: "string" },
-    bindings: { type: "array", items: animationBindingSchema },
-    own: { type: "boolean" }
-  },
-  required: ["id", "kind", "bindings"]
-});
-
-export const voxelModelSnapshotSchema = defineSchema({
-  type: "object",
-  properties: {
-    nodes: { type: "array", items: modelNodeSchema },
-    materials: { type: "array", items: materialEntrySchema },
-    animationSets: { type: "array", items: animationSetLinkSchema }
-  },
-  required: ["nodes", "materials", "animationSets"]
-});
-
-export const voxelModelCommandSchema = defineSchema({
-  oneOf: [
-    commandVariant("node-added", {
-      node: modelNodeSchema
-    }, {
-      beforeId: { type: "string" }
-    }),
-    commandVariant("node-removed", {
-      id: { type: "string" }
-    }),
-    commandVariant("node-renamed", {
-      id: { type: "string" },
-      name: { type: "string" }
-    }),
-    commandVariant("node-moved", {
-      id: { type: "string" },
-      parentId: kNullableIdSchema,
-      transforms: { type: "array", items: nodeTransformSchema }
-    }, {
-      beforeId: { type: "string" }
-    }),
-    commandVariant("node-transformed", {
-      id: { type: "string" },
-      transform: blockTransformSchema
-    }, {
-      flipAxes: mirrorAxesSchema
-    }),
-    commandVariant("node-uv-changed", {
-      id: { type: "string" },
-      uv: uvLayoutSchema
-    }),
-    commandVariant("node-shape-changed", {
-      id: { type: "string" },
-      shape: blockShapeSchema,
-      uv: uvLayoutSchema
-    }),
-    commandVariant("node-material-changed", {
-      id: { type: "string" },
-      materialId: kNullableIdSchema
-    }),
-    commandVariant("material-added", {
-      material: modelMaterialSchema
-    }, {
-      beforeId: { type: "string" }
-    }),
-    commandVariant("material-folder-added", {
-      folder: materialFolderSchema
-    }, {
-      beforeId: { type: "string" }
-    }),
-    commandVariant("material-moved", {
-      id: { type: "string" },
-      parentId: kNullableIdSchema
-    }, {
-      beforeId: { type: "string" }
-    }),
-    commandVariant("material-removed", {
-      id: { type: "string" }
-    }, {
-      keepContents: { type: "boolean" }
-    }),
-    commandVariant("material-renamed", {
-      id: { type: "string" },
-      name: { type: "string" }
-    }),
-    commandVariant("material-changed", {
-      id: { type: "string" },
-      surface: materialSurfacePatchSchema
-    }),
-    commandVariant("animation-set-linked", {
-      link: animationSetLinkSchema
-    }),
-    commandVariant("animation-set-unlinked", {
-      id: { type: "string" }
-    }),
-    commandVariant("animation-set-owned", {
-      id: { type: "string" },
-      own: { type: "boolean" }
-    }),
-    commandVariant("animation-binding-changed", {
-      id: { type: "string" },
-      path: { type: "string", minLength: 1 },
-      target: kRemapTargetSchema
-    }),
-    commandVariant("animation-binding-cleared", {
-      id: { type: "string" },
-      path: { type: "string", minLength: 1 }
-    })
-  ]
-});
-
-export const voxelModelCommandProtocol: MessageProtocol = new MessageProtocol({
-  oneOf: voxelModelCommandSchema.oneOf.map(withCommandHeader)
-});
+export const voxelModelCommandProtocol: MessageProtocol = new MessageProtocol(
+  z.union(voxelModelCommandSchema.def.options.map(withCommandHeader))
+);

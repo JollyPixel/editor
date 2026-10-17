@@ -1,134 +1,104 @@
 // Import Third-party Dependencies
 import {
   commandVariant,
-  defineSchema,
   MessageProtocol,
   withCommandHeader
 } from "@jolly-pixel/network";
+import * as z from "zod/mini";
 
 // CONSTANTS
 export const ANIMATION_CHANNELS = ["position", "rotation", "scale"] as const;
 export const ANIMATION_INTERPOLATIONS = ["step", "linear", "smooth"] as const;
 
-export const vector3Schema = defineSchema({
-  type: "object",
-  properties: {
-    x: { type: "number" },
-    y: { type: "number" },
-    z: { type: "number" }
-  },
-  required: ["x", "y", "z"]
+export const vector3Schema = z.object({
+  x: z.number(),
+  y: z.number(),
+  z: z.number()
 });
 
-export const animationChannelSchema = defineSchema({
-  enum: ANIMATION_CHANNELS
+export const animationChannelSchema = z.enum(ANIMATION_CHANNELS);
+
+const kTick = z.int().check(z.minimum(0));
+const kPositiveInteger = z.int().check(z.minimum(1));
+
+export const animationKeySchema = z.object({
+  tick: kTick,
+  value: vector3Schema,
+  interpolation: z.enum(ANIMATION_INTERPOLATIONS)
 });
 
-export const animationKeySchema = defineSchema({
-  type: "object",
-  properties: {
-    tick: { type: "integer", minimum: 0 },
-    value: vector3Schema,
-    interpolation: { enum: ANIMATION_INTERPOLATIONS }
-  },
-  required: ["tick", "value", "interpolation"]
+const kKeysSchema = z.optional(z.array(animationKeySchema));
+
+export const animationTrackSchema = z.object({
+  path: z.string().check(z.minLength(1)),
+  position: kKeysSchema,
+  rotation: kKeysSchema,
+  scale: kKeysSchema
 });
 
-const kKeysSchema = defineSchema({
-  type: "array",
-  items: animationKeySchema
+export const animationClipSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  length: kPositiveInteger,
+  fps: kPositiveInteger,
+  loop: z.boolean(),
+  tracks: z.array(animationTrackSchema)
 });
 
-export const animationTrackSchema = defineSchema({
-  type: "object",
-  properties: {
-    path: { type: "string", minLength: 1 },
-    position: kKeysSchema,
-    rotation: kKeysSchema,
-    scale: kKeysSchema
-  },
-  required: ["path"]
+export const animationClipPatchSchema = z.strictObject({
+  name: z.optional(z.string()),
+  length: z.optional(kPositiveInteger),
+  fps: z.optional(kPositiveInteger),
+  loop: z.optional(z.boolean())
 });
 
-export const animationClipSchema = defineSchema({
-  type: "object",
-  properties: {
-    id: { type: "string" },
-    name: { type: "string" },
-    length: { type: "integer", minimum: 1 },
-    fps: { type: "integer", minimum: 1 },
-    loop: { type: "boolean" },
-    tracks: { type: "array", items: animationTrackSchema }
-  },
-  required: ["id", "name", "length", "fps", "loop", "tracks"]
+export const animationSetSnapshotSchema = z.object({
+  rig: z.string(),
+  clips: z.array(animationClipSchema)
 });
 
-export const animationClipPatchSchema = defineSchema({
-  type: "object",
-  properties: {
-    name: { type: "string" },
-    length: { type: "integer", minimum: 1 },
-    fps: { type: "integer", minimum: 1 },
-    loop: { type: "boolean" }
-  },
-  additionalProperties: false
-});
+export const animationCommandSchema = z.discriminatedUnion("action", [
+  commandVariant("rig-renamed", {
+    rig: z.string()
+  }),
+  commandVariant("clip-added", {
+    clip: animationClipSchema,
+    beforeId: z.optional(z.string())
+  }),
+  commandVariant("clip-removed", {
+    id: z.string()
+  }),
+  commandVariant("clip-changed", {
+    id: z.string(),
+    patch: animationClipPatchSchema
+  }),
+  commandVariant("clip-moved", {
+    id: z.string(),
+    beforeId: z.optional(z.string())
+  }),
+  commandVariant("key-set", {
+    clipId: z.string(),
+    path: z.string().check(z.minLength(1)),
+    channel: animationChannelSchema,
+    key: animationKeySchema
+  }),
+  commandVariant("key-removed", {
+    clipId: z.string(),
+    path: z.string(),
+    channel: animationChannelSchema,
+    tick: kTick
+  }),
+  commandVariant("track-removed", {
+    clipId: z.string(),
+    path: z.string()
+  }),
+  commandVariant("track-renamed", {
+    clipId: z.string(),
+    path: z.string(),
+    to: z.string().check(z.minLength(1))
+  })
+]);
 
-export const animationSetSnapshotSchema = defineSchema({
-  type: "object",
-  properties: {
-    rig: { type: "string" },
-    clips: { type: "array", items: animationClipSchema }
-  },
-  required: ["rig", "clips"]
-});
-
-export const animationCommandSchema = defineSchema({
-  oneOf: [
-    commandVariant("rig-renamed", {
-      rig: { type: "string" }
-    }),
-    commandVariant("clip-added", {
-      clip: animationClipSchema
-    }, {
-      beforeId: { type: "string" }
-    }),
-    commandVariant("clip-removed", {
-      id: { type: "string" }
-    }),
-    commandVariant("clip-changed", {
-      id: { type: "string" },
-      patch: animationClipPatchSchema
-    }),
-    commandVariant("clip-moved", {
-      id: { type: "string" }
-    }, {
-      beforeId: { type: "string" }
-    }),
-    commandVariant("key-set", {
-      clipId: { type: "string" },
-      path: { type: "string", minLength: 1 },
-      channel: animationChannelSchema,
-      key: animationKeySchema
-    }),
-    commandVariant("key-removed", {
-      clipId: { type: "string" },
-      path: { type: "string" },
-      channel: animationChannelSchema,
-      tick: { type: "integer", minimum: 0 }
-    }),
-    commandVariant("track-removed", {
-      clipId: { type: "string" },
-      path: { type: "string" }
-    }),
-    commandVariant("track-renamed", {
-      clipId: { type: "string" },
-      path: { type: "string" },
-      to: { type: "string", minLength: 1 }
-    })
-  ]
-});
-
-export const animationCommandProtocol: MessageProtocol = new MessageProtocol({
-  oneOf: animationCommandSchema.oneOf.map(withCommandHeader)
-});
+export const animationCommandProtocol: MessageProtocol = new MessageProtocol(
+  z.union(animationCommandSchema.def.options.map(withCommandHeader))
+);

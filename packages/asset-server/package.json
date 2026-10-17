@@ -59,11 +59,11 @@
     "@openally/emitt": "1.1.0",
     "@openally/result": "3.1.0",
     "@openally/servo": "1.1.0",
-    "ata-validator": "1.53.0",
     "fflate": "0.8.3",
     "loglayer": "9.4.0",
     "picomatch": "4.0.7",
-    "ts-pattern": "5.9.0"
+    "ts-pattern": "5.9.0",
+    "zod": "4.6.5"
   },
   "peerDependencies": {
     "vite": "^8.0.0"

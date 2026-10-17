@@ -18,8 +18,6 @@ import {
   type AssetRoomBinding
 } from "@jolly-pixel/asset-server";
 import {
-  MessageParser,
-  MessageProtocol,
   SchemaParser
 } from "@jolly-pixel/network";
 import {
@@ -414,10 +412,7 @@ describe("pixelArtAssetKind", () => {
     const state = handler.create("asset-1");
     state.document.buffer.pixels().set(kRedTuple, 4);
     const protocol = handler.commands!.live!(binding(state));
-    const parser = new MessageParser(new MessageProtocol({
-      title: "snapshot",
-      ...pixelSnapshotSchema
-    }));
+    const parser = new SchemaParser(pixelSnapshotSchema);
 
     const encoded = await protocol.encodeSnapshot!() as PixelWireSnapshot;
     const { pixels, size } = encoded;

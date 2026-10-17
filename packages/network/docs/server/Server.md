@@ -21,11 +21,17 @@ interface ServerOptions {
   admits?: RoomAdmission;
   roomGraceMs?: number;
   limits?: RoomLimits;
+  validateOutbound?: boolean;
 }
 ```
 
 `new Server(options?)` configures logging, [access](./Access.md), grace periods,
 and room limits.
+
+`validateOutbound` defaults to `true`. With `false`, rooms name each outbound
+message from its tags (`MessageParser.identify`) without validating it, and
+drop a message no tag names. A server running in the browser uses it to skip
+checking the messages it produces itself.
 
 ## Methods
 

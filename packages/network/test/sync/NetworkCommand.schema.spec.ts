@@ -5,6 +5,9 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import * as z from "zod/mini";
+
 // Import Internal Dependencies
 import {
   commandVariant,
@@ -13,29 +16,22 @@ import {
 } from "#src/index.ts";
 
 describe("commandVariant", () => {
-  test("requires the action and the required properties only", () => {
-    const variant = commandVariant(
-      "renamed",
-      { name: { type: "string" } },
-      { note: { type: "string" } }
-    );
+  test("requires its action and its non-optional properties", () => {
+    const parser = new SchemaParser(commandVariant("renamed", {
+      name: z.string(),
+      note: z.optional(z.string())
+    }));
 
-    assert.deepStrictEqual(variant, {
-      type: "object",
-      properties: {
-        action: { const: "renamed" },
-        name: { type: "string" },
-        note: { type: "string" }
-      },
-      required: ["action", "name"]
-    });
+    assert.ok(parser.parse({ action: "renamed", name: "a" }).ok);
+    assert.ok(parser.parse({ action: "moved", name: "a" }).err);
+    assert.ok(parser.parse({ action: "renamed" }).err);
   });
 });
 
 describe("withCommandHeader", () => {
   test("adds the header properties and requires them", () => {
     const parser = new SchemaParser(withCommandHeader(
-      commandVariant("renamed", { name: { type: "string" } })
+      commandVariant("renamed", { name: z.string() })
     ));
 
     assert.ok(parser.parse({

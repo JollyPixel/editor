@@ -55,8 +55,10 @@ describe("EditorPackages", () => {
     const root = await createRoot();
     const voxelMap = await createPackage(path.join(root, "voxel-map"), {
       name: "voxel-map",
-      kinds: ["voxelmap"]
+      kinds: ["voxelmap"],
+      page: "index.html"
     });
+    await fs.writeFile(path.join(voxelMap, "index.html"), "");
     const pixelArt = await createPackage(path.join(root, "pixel-art"), {
       name: "pixel-art",
       kinds: ["pixelart"],
@@ -73,14 +75,16 @@ describe("EditorPackages", () => {
         name: "voxel-map",
         kinds: ["voxelmap"],
         dist: path.join(voxelMap, "dist"),
-        prebuilt: false
+        prebuilt: false,
+        page: path.join(voxelMap, "index.html")
       }),
       new EditorPackage({
         package: "./pixel-art",
         name: "pixel-art",
         kinds: ["pixelart"],
         dist: path.join(pixelArt, "dist-page"),
-        prebuilt: false
+        prebuilt: false,
+        page: null
       })
     ]);
     assert.deepEqual(editors.descriptors(), [
@@ -113,30 +117,37 @@ describe("EditorPackages", () => {
     assert.ok(!voxelMap.prebuilt);
   });
 
-  test("requires the built page of a package installed in node_modules", async() => {
+  test("marks a package installed in node_modules as prebuilt, without its page source", async() => {
     const root = await createRoot();
-    const directory = await createPackage(
+    await createPackage(
       path.join(root, "node_modules", "editor"),
       {
         name: "voxel-map",
-        kinds: ["voxelmap"]
+        kinds: ["voxelmap"],
+        page: "index.html"
       }
     );
-    const dist = path.join(directory, "dist");
-    const resolver = new PackageResolver(root);
-
-    assert.throws(
-      () => EditorPackages.read(["editor"], resolver),
-      {
-        name: "TypeError",
-        message: `"editor" has no built page at "${dist}".`
-      }
-    );
-
-    await fs.mkdir(dist);
-    const [editor] = EditorPackages.read(["editor"], resolver);
+    const [editor] = EditorPackages.read(["editor"], new PackageResolver(root));
 
     assert.ok(editor.prebuilt);
+    assert.strictEqual(editor.page, null);
+  });
+
+  test("rejects a workspace package whose page source is missing", async() => {
+    const root = await createRoot();
+    const directory = await createPackage(path.join(root, "voxel-map"), {
+      name: "voxel-map",
+      kinds: ["voxelmap"],
+      page: "index.html"
+    });
+
+    assert.throws(
+      () => EditorPackages.read(["./voxel-map"], new PackageResolver(root)),
+      {
+        name: "TypeError",
+        message: `"./voxel-map" has no page source at "${path.join(directory, "index.html")}".`
+      }
+    );
   });
 
   test("rejects a package without an editor manifest", async() => {
@@ -159,6 +170,7 @@ describe("EditorPackages", () => {
       { name: "voxel-map", kinds: [] },
       { name: "voxel-map", kinds: [""] },
       { name: "voxel-map", kinds: ["voxelmap"], dist: 1 },
+      { name: "voxel-map", kinds: ["voxelmap"], page: "" },
       { kinds: ["voxelmap"] },
       { name: "voxel-map", kinds: "voxelmap" }
     ];

@@ -1,9 +1,10 @@
 // Import Third-party Dependencies
 import {
-  defineSchema,
+  dependentRequired,
   MessageProtocol,
   type MessageProtocols
 } from "@jolly-pixel/network";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import {
@@ -52,30 +53,14 @@ import {
 } from "../tags/AssetTags.schema.ts";
 
 // CONSTANTS
-const kString = { type: "string" } as const;
-const kStrings = {
-  type: "array",
-  items: kString
-} as const;
-const kReferences = {
-  type: "array",
-  items: assetReferenceSchema
-} as const;
-const kTags = {
-  type: "array",
-  items: assetTagSchema
-} as const;
-const kRenameSchema = {
-  type: "object",
-  properties: {
-    assetId: kString,
-    to: kString
-  },
-  required: [
-    "assetId",
-    "to"
-  ]
-} as const;
+const kString = z.string();
+const kStrings = z.array(kString);
+const kReferences = z.array(assetReferenceSchema);
+const kTags = z.array(assetTagSchema);
+const kRenameSchema = z.object({
+  assetId: kString,
+  to: kString
+});
 const kCommandTypes = [
   CATALOG_CREATE,
   CATALOG_RENAME,
@@ -92,522 +77,183 @@ const kCommandTypes = [
   CATALOG_RESTORE
 ] as const;
 
-export const assetRecordSchema = defineSchema({
-  type: "object",
-  properties: {
-    id: kString,
-    kind: kString,
-    source: kString,
-    revision: kString
-  },
-  required: [
-    "id",
-    "kind",
-    "source"
-  ]
+export const assetRecordSchema = z.object({
+  id: kString,
+  kind: kString,
+  source: kString,
+  revision: z.optional(kString)
 });
 
-export const catalogChangeSchema = defineSchema({
-  type: "object",
-  properties: {
-    eventType: {
-      enum: [
-        ASSET_CREATED,
-        ASSET_UPDATED,
-        ASSET_RENAMED,
-        ASSET_DELETED
-      ]
-    },
-    assetId: kString,
-    record: {
-      oneOf: [
-        assetRecordSchema,
-        { type: "null" }
-      ]
-    },
-    dependencies: kReferences
-  },
-  required: [
-    "eventType",
-    "assetId",
-    "record"
-  ]
+export const catalogChangeSchema = z.object({
+  eventType: z.enum([
+    ASSET_CREATED,
+    ASSET_UPDATED,
+    ASSET_RENAMED,
+    ASSET_DELETED
+  ]),
+  assetId: kString,
+  record: z.nullable(assetRecordSchema),
+  dependencies: z.optional(kReferences)
 });
 
-export const dependencyMapSchema = defineSchema({
-  type: "object",
-  additionalProperties: kReferences
-});
+export const dependencyMapSchema = z.record(z.string(), kReferences);
+
+function requestVariant<
+  const TType extends string,
+  const TShape extends z.core.$ZodLooseShape
+>(
+  type: TType,
+  shape: TShape
+) {
+  return z.object({
+    type: z.literal(type),
+    requestId: kString,
+    ...shape
+  });
+}
+
+function appliedVariant<
+  const TCommand extends z.ZodMiniType,
+  const TShape extends z.core.$ZodLooseShape
+>(
+  command: TCommand,
+  shape: TShape
+) {
+  return requestVariant(CATALOG_APPLIED, {
+    command,
+    ...shape
+  });
+}
 
 export const catalogCommandProtocol = new MessageProtocol(
-  {
-    oneOf: [
-      {
-        type: "object",
-        properties: {
-          type: { const: CATALOG_CREATE },
-          requestId: kString,
-          path: kString,
-          kind: kString,
-          onConflict: { enum: PATH_CONFLICT_POLICIES },
-          content: assetInlineContentSchema,
-          from: kString
-        },
-        required: [
-          "type",
-          "requestId",
-          "path"
-        ],
-        dependentRequired: {
-          from: ["content"]
-        }
-      },
-      {
-        type: "object",
-        properties: {
-          type: { const: CATALOG_RENAME },
-          requestId: kString,
-          renames: {
-            type: "array",
-            minItems: 1,
-            items: kRenameSchema
-          }
-        },
-        required: [
-          "type",
-          "requestId",
-          "renames"
-        ]
-      },
-      {
-        type: "object",
-        properties: {
-          type: { const: CATALOG_DELETE },
-          requestId: kString,
-          assetIds: {
-            type: "array",
-            minItems: 1,
-            items: kString
-          },
-          force: { type: "boolean" }
-        },
-        required: [
-          "type",
-          "requestId",
-          "assetIds"
-        ]
-      },
-      {
-        type: "object",
-        properties: {
-          type: { const: CATALOG_CREATE_FOLDER },
-          requestId: kString,
-          path: kString
-        },
-        required: [
-          "type",
-          "requestId",
-          "path"
-        ]
-      },
-      {
-        type: "object",
-        properties: {
-          type: { const: CATALOG_MOVE_FOLDER },
-          requestId: kString,
-          from: kString,
-          to: kString
-        },
-        required: [
-          "type",
-          "requestId",
-          "from",
-          "to"
-        ]
-      },
-      {
-        type: "object",
-        properties: {
-          type: { const: CATALOG_DELETE_FOLDER },
-          requestId: kString,
-          path: kString
-        },
-        required: [
-          "type",
-          "requestId",
-          "path"
-        ]
-      },
-      {
-        type: "object",
-        properties: {
-          type: { const: CATALOG_EXPORT },
-          requestId: kString,
-          root: kString
-        },
-        required: [
-          "type",
-          "requestId"
-        ]
-      },
-      {
-        type: "object",
-        properties: {
-          type: { const: CATALOG_PLAN },
-          requestId: kString,
-          content: assetInlineContentSchema
-        },
-        required: [
-          "type",
-          "requestId",
-          "content"
-        ]
-      },
-      {
-        type: "object",
-        properties: {
-          type: { const: CATALOG_IMPORT },
-          requestId: kString,
-          content: assetInlineContentSchema,
-          onConflict: { enum: IMPORT_CONFLICT_POLICIES }
-        },
-        required: [
-          "type",
-          "requestId",
-          "content",
-          "onConflict"
-        ]
-      },
-      {
-        type: "object",
-        properties: {
-          type: { const: CATALOG_TAGS },
-          requestId: kString,
-          assetId: kString
-        },
-        required: [
-          "type",
-          "requestId",
-          "assetId"
-        ]
-      },
-      {
-        type: "object",
-        properties: {
-          type: { const: CATALOG_TAG },
-          requestId: kString,
-          assetId: kString,
-          name: tagNameSchema,
-          message: tagMessageSchema
-        },
-        required: [
-          "type",
-          "requestId",
-          "assetId",
-          "name"
-        ]
-      },
-      {
-        type: "object",
-        properties: {
-          type: { const: CATALOG_UNTAG },
-          requestId: kString,
-          assetId: kString,
-          name: tagReferenceSchema
-        },
-        required: [
-          "type",
-          "requestId",
-          "assetId",
-          "name"
-        ]
-      },
-      {
-        type: "object",
-        properties: {
-          type: { const: CATALOG_RESTORE },
-          requestId: kString,
-          assetId: kString,
-          name: tagReferenceSchema
-        },
-        required: [
-          "type",
-          "requestId",
-          "assetId",
-          "name"
-        ]
-      }
-    ]
-  },
+  z.union([
+    dependentRequired(
+      requestVariant(CATALOG_CREATE, {
+        path: kString,
+        kind: z.optional(kString),
+        onConflict: z.optional(z.enum(PATH_CONFLICT_POLICIES)),
+        content: z.optional(assetInlineContentSchema),
+        from: z.optional(kString)
+      }),
+      { from: ["content"] }
+    ),
+    requestVariant(CATALOG_RENAME, {
+      renames: z.array(kRenameSchema).check(z.minLength(1))
+    }),
+    requestVariant(CATALOG_DELETE, {
+      assetIds: z.array(kString).check(z.minLength(1)),
+      force: z.optional(z.boolean())
+    }),
+    requestVariant(CATALOG_CREATE_FOLDER, {
+      path: kString
+    }),
+    requestVariant(CATALOG_MOVE_FOLDER, {
+      from: kString,
+      to: kString
+    }),
+    requestVariant(CATALOG_DELETE_FOLDER, {
+      path: kString
+    }),
+    requestVariant(CATALOG_EXPORT, {
+      root: z.optional(kString)
+    }),
+    requestVariant(CATALOG_PLAN, {
+      content: assetInlineContentSchema
+    }),
+    requestVariant(CATALOG_IMPORT, {
+      content: assetInlineContentSchema,
+      onConflict: z.enum(IMPORT_CONFLICT_POLICIES)
+    }),
+    requestVariant(CATALOG_TAGS, {
+      assetId: kString
+    }),
+    requestVariant(CATALOG_TAG, {
+      assetId: kString,
+      name: tagNameSchema,
+      message: z.optional(tagMessageSchema)
+    }),
+    requestVariant(CATALOG_UNTAG, {
+      assetId: kString,
+      name: tagReferenceSchema
+    }),
+    requestVariant(CATALOG_RESTORE, {
+      assetId: kString,
+      name: tagReferenceSchema
+    })
+  ]),
   {
     discriminator: "type"
   }
 );
 
 export const catalogMessageProtocol = new MessageProtocol(
-  {
-    oneOf: [
-      {
-        type: "object",
-        properties: {
-          type: { const: CATALOG_SNAPSHOT },
-          manifest: {
-            type: "object",
-            properties: {
-              version: { const: 1 },
-              assets: {
-                type: "array",
-                items: assetRecordSchema
-              }
-            },
-            required: [
-              "version",
-              "assets"
-            ]
-          },
-          dependencies: dependencyMapSchema,
-          folders: kStrings
-        },
-        required: [
-          "type",
-          "manifest",
-          "folders"
-        ]
-      },
-      {
-        type: "object",
-        properties: {
-          type: { const: CATALOG_CHANGED },
-          changes: {
-            type: "array",
-            minItems: 1,
-            items: catalogChangeSchema
-          }
-        },
-        required: [
-          "type",
-          "changes"
-        ]
-      },
-      {
-        type: "object",
-        properties: {
-          type: { const: CATALOG_FOLDERS },
-          folders: kStrings
-        },
-        required: [
-          "type",
-          "folders"
-        ]
-      },
-      {
-        type: "object",
-        properties: {
-          type: { const: CATALOG_TAGS_CHANGED },
-          assetId: kString,
-          tags: kTags
-        },
-        required: [
-          "type",
-          "assetId",
-          "tags"
-        ]
-      },
-      {
-        type: "object",
-        properties: {
-          type: { const: CATALOG_APPLIED }
-        },
-        required: ["type"],
-        oneOf: [
-          {
-            type: "object",
-            properties: {
-              type: { const: CATALOG_APPLIED },
-              requestId: kString,
-              command: { const: CATALOG_CREATE },
-              assetId: kString
-            },
-            required: [
-              "type",
-              "requestId",
-              "command",
-              "assetId"
-            ]
-          },
-          {
-            type: "object",
-            properties: {
-              type: { const: CATALOG_APPLIED },
-              requestId: kString,
-              command: {
-                enum: [
-                  CATALOG_RENAME,
-                  CATALOG_DELETE
-                ]
-              },
-              applied: {
-                type: "integer",
-                minimum: 0
-              },
-              failure: kString
-            },
-            required: [
-              "type",
-              "requestId",
-              "command",
-              "applied"
-            ]
-          },
-          {
-            type: "object",
-            properties: {
-              type: { const: CATALOG_APPLIED },
-              requestId: kString,
-              command: {
-                enum: [
-                  CATALOG_CREATE_FOLDER,
-                  CATALOG_MOVE_FOLDER,
-                  CATALOG_DELETE_FOLDER
-                ]
-              },
-              path: kString
-            },
-            required: [
-              "type",
-              "requestId",
-              "command",
-              "path"
-            ]
-          },
-          {
-            type: "object",
-            properties: {
-              type: { const: CATALOG_APPLIED },
-              requestId: kString,
-              command: { const: CATALOG_EXPORT },
-              content: assetInlineContentSchema
-            },
-            required: [
-              "type",
-              "requestId",
-              "command",
-              "content"
-            ]
-          },
-          {
-            type: "object",
-            properties: {
-              type: { const: CATALOG_APPLIED },
-              requestId: kString,
-              command: { const: CATALOG_PLAN },
-              plan: importPlanSchema
-            },
-            required: [
-              "type",
-              "requestId",
-              "command",
-              "plan"
-            ]
-          },
-          {
-            type: "object",
-            properties: {
-              type: { const: CATALOG_APPLIED },
-              requestId: kString,
-              command: { const: CATALOG_IMPORT },
-              report: importReportSchema
-            },
-            required: [
-              "type",
-              "requestId",
-              "command",
-              "report"
-            ]
-          },
-          {
-            type: "object",
-            properties: {
-              type: { const: CATALOG_APPLIED },
-              requestId: kString,
-              command: { const: CATALOG_TAGS },
-              assetId: kString,
-              tags: kTags
-            },
-            required: [
-              "type",
-              "requestId",
-              "command",
-              "assetId",
-              "tags"
-            ]
-          },
-          {
-            type: "object",
-            properties: {
-              type: { const: CATALOG_APPLIED },
-              requestId: kString,
-              command: { const: CATALOG_TAG },
-              tag: assetTagSchema
-            },
-            required: [
-              "type",
-              "requestId",
-              "command",
-              "tag"
-            ]
-          },
-          {
-            type: "object",
-            properties: {
-              type: { const: CATALOG_APPLIED },
-              requestId: kString,
-              command: { const: CATALOG_UNTAG },
-              assetId: kString,
-              name: kString
-            },
-            required: [
-              "type",
-              "requestId",
-              "command",
-              "assetId",
-              "name"
-            ]
-          },
-          {
-            type: "object",
-            properties: {
-              type: { const: CATALOG_APPLIED },
-              requestId: kString,
-              command: { const: CATALOG_RESTORE },
-              report: restoreReportSchema
-            },
-            required: [
-              "type",
-              "requestId",
-              "command",
-              "report"
-            ]
-          }
-        ]
-      },
-      {
-        type: "object",
-        properties: {
-          type: { const: CATALOG_REJECTED },
-          requestId: kString,
-          command: { enum: kCommandTypes },
-          reason: kString
-        },
-        required: [
-          "type",
-          "requestId",
-          "command",
-          "reason"
-        ]
-      }
-    ]
-  },
+  z.union([
+    z.object({
+      type: z.literal(CATALOG_SNAPSHOT),
+      manifest: z.object({
+        version: z.literal(1),
+        assets: z.array(assetRecordSchema)
+      }),
+      dependencies: z.optional(dependencyMapSchema),
+      folders: kStrings
+    }),
+    z.object({
+      type: z.literal(CATALOG_CHANGED),
+      changes: z.array(catalogChangeSchema).check(z.minLength(1))
+    }),
+    z.object({
+      type: z.literal(CATALOG_FOLDERS),
+      folders: kStrings
+    }),
+    z.object({
+      type: z.literal(CATALOG_TAGS_CHANGED),
+      assetId: kString,
+      tags: kTags
+    }),
+    z.union([
+      appliedVariant(z.literal(CATALOG_CREATE), {
+        assetId: kString
+      }),
+      appliedVariant(z.enum([CATALOG_RENAME, CATALOG_DELETE]), {
+        applied: z.int().check(z.minimum(0)),
+        failure: z.optional(kString)
+      }),
+      appliedVariant(z.enum([
+        CATALOG_CREATE_FOLDER,
+        CATALOG_MOVE_FOLDER,
+        CATALOG_DELETE_FOLDER
+      ]), {
+        path: kString
+      }),
+      appliedVariant(z.literal(CATALOG_EXPORT), {
+        content: assetInlineContentSchema
+      }),
+      appliedVariant(z.literal(CATALOG_PLAN), {
+        plan: importPlanSchema
+      }),
+      appliedVariant(z.literal(CATALOG_IMPORT), {
+        report: importReportSchema
+      }),
+      appliedVariant(z.literal(CATALOG_TAGS), {
+        assetId: kString,
+        tags: kTags
+      }),
+      appliedVariant(z.literal(CATALOG_TAG), {
+        tag: assetTagSchema
+      }),
+      appliedVariant(z.literal(CATALOG_UNTAG), {
+        assetId: kString,
+        name: kString
+      }),
+      appliedVariant(z.literal(CATALOG_RESTORE), {
+        report: restoreReportSchema
+      })
+    ]),
+    requestVariant(CATALOG_REJECTED, {
+      command: z.enum(kCommandTypes),
+      reason: kString
+    })
+  ]),
   {
     discriminator: "type"
   }

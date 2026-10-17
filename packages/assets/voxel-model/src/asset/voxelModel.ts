@@ -1,10 +1,8 @@
 // Import Third-party Dependencies
 import type { AssetReferenceData } from "@jolly-pixel/asset";
-import {
-  defineSchema,
-  type Infer
-} from "@jolly-pixel/network";
+import type { Infer } from "@jolly-pixel/network";
 import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import { BlockTransform } from "../model/nodes/BlockTransform.ts";
@@ -37,39 +35,19 @@ export const VOXEL_MODEL_ASSET: AssetKindDescriptor = {
   icon: VOXEL_MODEL_ICON
 };
 
-const kStoredBlockNodeSchema = defineSchema({
-  ...blockNodeSchema,
-  properties: {
-    ...blockNodeSchema.properties,
-    transform: {
-      type: "object",
-      properties: blockTransformSchema.properties
-    }
-  }
+const kStoredBlockNodeSchema = z.extend(blockNodeSchema, {
+  transform: z.partial(blockTransformSchema)
 });
 
-export const voxelModelDocumentSchema = defineSchema({
-  type: "object",
-  properties: {
-    version: { const: VOXEL_MODEL_DOCUMENT_VERSION },
-    nodes: {
-      type: "array",
-      items: {
-        oneOf: [folderNodeSchema, kStoredBlockNodeSchema]
-      }
-    },
-    materials: voxelModelSnapshotSchema.properties.materials,
-    animationSets: voxelModelSnapshotSchema.properties.animationSets,
-    texture: {
-      type: "object",
-      properties: {
-        id: { type: "string" },
-        kind: { type: "string" }
-      },
-      required: ["id", "kind"]
-    }
-  },
-  required: ["version", "nodes", "materials", "animationSets", "texture"]
+export const voxelModelDocumentSchema = z.object({
+  version: z.literal(VOXEL_MODEL_DOCUMENT_VERSION),
+  nodes: z.array(z.union([folderNodeSchema, kStoredBlockNodeSchema])),
+  materials: voxelModelSnapshotSchema.shape.materials,
+  animationSets: voxelModelSnapshotSchema.shape.animationSets,
+  texture: z.object({
+    id: z.string(),
+    kind: z.string()
+  })
 });
 
 type StoredVoxelModelDocument = Infer<typeof voxelModelDocumentSchema>;

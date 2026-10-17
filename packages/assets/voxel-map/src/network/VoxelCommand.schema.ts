@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
   MessageProtocol,
-  type JSONSchema
+  requiredAnyOf
 } from "@jolly-pixel/network";
 import {
   MAX_BLOCKSET_SLOT,
@@ -10,289 +10,223 @@ import {
   type VoxelTemplateCommandAction,
   type VoxelBlocksetCommandAction
 } from "@jolly-pixel/voxel.renderer";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import {
+  anyObjectSchema,
   networkCommand,
-  objectSchema,
   tileSizeSchema
 } from "./schema.ts";
 
 // CONSTANTS
-const kVector3Schema: JSONSchema = {
-  type: "object",
-  properties: {
-    x: { type: "number" },
-    y: { type: "number" },
-    z: { type: "number" }
-  },
-  required: [
-    "x",
-    "y",
-    "z"
-  ]
-};
+const kVector3Schema = z.object({
+  x: z.number(),
+  y: z.number(),
+  z: z.number()
+});
 
-const kVoxelTransformProperties = {
-  rotation: { type: "number" },
-  flipX: { type: "boolean" },
-  flipY: { type: "boolean" },
-  flipZ: { type: "boolean" }
-} as const;
+const kVoxelTransformSchema = z.object({
+  rotation: z.number(),
+  flipX: z.boolean(),
+  flipY: z.boolean(),
+  flipZ: z.boolean()
+});
 
-const kVoxelSetProperties = {
+const kVoxelPlacementShape = {
   position: kVector3Schema,
-  blockId: { type: "number" },
-  ...kVoxelTransformProperties,
-  merge: { type: "boolean" }
-} as const;
-
-const kPatchCellsSchema: JSONSchema = {
-  type: "array",
-  items: { type: "integer" }
+  blockId: z.number(),
+  merge: z.optional(z.boolean())
 };
 
-const kVoxelObjectProperties: Record<string, JSONSchema> = {
-  id: { type: "string" },
-  name: { type: "string" },
-  type: { type: "string" },
-  x: { type: "number" },
-  y: { type: "number" },
-  z: { type: "number" },
-  width: { type: "number" },
-  height: { type: "number" },
-  rotation: { type: "number" },
-  visible: { type: "boolean" },
-  color: { type: "string" },
-  locked: { type: "boolean" },
-  properties: {
-    type: "object",
-    additionalProperties: {
-      type: ["string", "number", "boolean"]
-    }
-  }
-};
+const kPatchCellsSchema = z.array(z.int());
 
-const kEmptySchema: JSONSchema = {
-  type: "object"
-};
+const kVoxelObjectSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.string(),
+  x: z.number(),
+  y: z.number(),
+  z: z.number(),
+  width: z.number(),
+  height: z.number(),
+  rotation: z.number(),
+  visible: z.boolean(),
+  color: z.string(),
+  locked: z.boolean(),
+  properties: z.record(
+    z.string(),
+    z.union([z.string(), z.number(), z.boolean()])
+  )
+});
 
-const kIdSchema: JSONSchema = {
-  type: "string",
-  minLength: 1
-};
+const kIdSchema = z.string().check(z.minLength(1));
+const kPositiveInteger = z.int().check(z.minimum(1));
 
-const kRankSchema: JSONSchema = {
-  type: "string",
-  pattern: "^[0-9A-Za-z]*[1-9A-Za-z]$"
-};
+const kRankSchema = z.string().check(
+  z.regex(/^[0-9A-Za-z]*[1-9A-Za-z]$/)
+);
 
-const kLayerMetadataSchemas: Record<VoxelLayerCommandAction, JSONSchema> = {
-  added: objectSchema({
-    name: { type: "string" },
+const kLayerMetadataSchemas: Record<VoxelLayerCommandAction, z.ZodMiniType> = {
+  added: z.object({
+    name: z.string(),
     rank: kRankSchema,
-    options: { type: "object" }
+    options: anyObjectSchema
   }),
-  removed: kEmptySchema,
-  updated: objectSchema({
-    options: { type: "object" }
+  removed: anyObjectSchema,
+  updated: z.object({
+    options: anyObjectSchema
   }),
-  cloned: objectSchema({
+  cloned: z.object({
     cloneId: kIdSchema,
     rank: kRankSchema,
-    options: objectSchema({ name: { type: "string" } })
+    options: z.object({ name: z.string() })
   }),
-  merged: objectSchema({
+  merged: z.object({
     targetLayerId: kIdSchema
   }),
-  "position-updated": {
-    oneOf: [
-      objectSchema({ position: kVector3Schema }),
-      objectSchema({ delta: kVector3Schema })
-    ]
-  },
-  "position-rebased": objectSchema({
-    position: kVector3Schema
-  }),
-  "voxel-set": objectSchema(kVoxelSetProperties, [
-    "position",
-    "blockId",
-    ...Object.keys(kVoxelTransformProperties)
+  "position-updated": z.union([
+    z.object({ position: kVector3Schema }),
+    z.object({ delta: kVector3Schema })
   ]),
-  "voxel-removed": objectSchema({
+  "position-rebased": z.object({
     position: kVector3Schema
   }),
-  "voxels-set": objectSchema({
-    entries: {
-      type: "array",
-      items: objectSchema(kVoxelSetProperties, ["position", "blockId"])
-    }
+  "voxel-set": z.extend(kVoxelTransformSchema, kVoxelPlacementShape),
+  "voxel-removed": z.object({
+    position: kVector3Schema
   }),
-  "voxels-removed": objectSchema({
-    entries: {
-      type: "array",
-      items: objectSchema({ position: kVector3Schema })
-    }
+  "voxels-set": z.object({
+    entries: z.array(
+      z.extend(z.partial(kVoxelTransformSchema), kVoxelPlacementShape)
+    )
   }),
-  "voxels-patched": objectSchema({
+  "voxels-removed": z.object({
+    entries: z.array(z.object({ position: kVector3Schema }))
+  }),
+  "voxels-patched": z.object({
     cells: kPatchCellsSchema,
-    partners: kPatchCellsSchema
-  }, ["cells"]),
-  "layer-transformed": objectSchema(kVoxelTransformProperties),
-  "layer-moved": objectSchema({
+    partners: z.optional(kPatchCellsSchema)
+  }),
+  "layer-transformed": kVoxelTransformSchema,
+  "layer-moved": z.object({
     rank: kRankSchema
   }),
-  "object-layer-added": kEmptySchema,
-  "object-layer-removed": kEmptySchema,
-  "object-layer-updated": objectSchema({
-    patch: objectSchema({ visible: { type: "boolean" } }, [])
+  "object-layer-added": anyObjectSchema,
+  "object-layer-removed": anyObjectSchema,
+  "object-layer-updated": z.object({
+    patch: z.object({ visible: z.optional(z.boolean()) })
   }),
-  "object-added": objectSchema({
-    object: objectSchema(kVoxelObjectProperties, [
-      "id",
-      "name",
-      "x",
-      "y",
-      "z",
-      "visible"
-    ])
+  "object-added": z.object({
+    object: z.partial(kVoxelObjectSchema, {
+      type: true,
+      width: true,
+      height: true,
+      rotation: true,
+      color: true,
+      locked: true,
+      properties: true
+    })
   }),
-  "object-removed": objectSchema({
-    objectId: { type: "string" }
+  "object-removed": z.object({
+    objectId: z.string()
   }),
-  "object-moved": objectSchema({
-    objectId: { type: "string" },
-    fromLayerName: { type: "string" },
-    toLayerName: { type: "string" }
+  "object-moved": z.object({
+    objectId: z.string(),
+    fromLayerName: z.string(),
+    toLayerName: z.string()
   }),
-  "object-updated": objectSchema({
-    objectId: { type: "string" },
-    patch: objectSchema(kVoxelObjectProperties, [])
+  "object-updated": z.object({
+    objectId: z.string(),
+    patch: z.partial(kVoxelObjectSchema)
   })
 };
 
-const kTemplateSchema: JSONSchema = objectSchema(
-  {
-    id: { type: "string", minLength: 1 },
-    name: { type: "string" },
-    pivot: kVector3Schema,
-    properties: { type: "object" },
-    chunkSize: { type: "integer", minimum: 1 },
-    palette: { type: "array" },
-    chunks: { type: "array" }
-  },
-  ["id", "name", "pivot", "chunkSize", "palette", "chunks"]
-);
+const kTemplateSchema = z.object({
+  id: kIdSchema,
+  name: z.string(),
+  pivot: kVector3Schema,
+  properties: z.optional(anyObjectSchema),
+  chunkSize: kPositiveInteger,
+  palette: z.array(z.unknown()),
+  chunks: z.array(z.unknown())
+});
 
 const kTemplateCommandProperties: Record<
   VoxelTemplateCommandAction,
-  Record<string, JSONSchema>
+  z.core.$ZodLooseShape
 > = {
   "template-defined": {
     template: kTemplateSchema
   },
   "template-updated": {
-    templateId: { type: "string" },
-    patch: objectSchema({
-      name: { type: "string" },
+    templateId: z.string(),
+    patch: z.partial(z.object({
+      name: z.string(),
       pivot: kVector3Schema,
-      properties: { type: "object" }
-    }, [])
+      properties: anyObjectSchema
+    }))
   },
   "template-removed": {
-    templateId: { type: "string" }
+    templateId: z.string()
   }
 };
 
-const kSlotSchema: JSONSchema = {
-  type: "integer",
-  minimum: 0,
-  maximum: MAX_BLOCKSET_SLOT
-};
+const kSlotSchema = z.int().check(z.minimum(0), z.maximum(MAX_BLOCKSET_SLOT));
 
-export const blocksetDefinitionSchema: JSONSchema = {
-  ...objectSchema(
-    {
-      id: { type: "string", minLength: 1 },
-      slot: kSlotSchema,
-      src: { type: "string", minLength: 1 },
-      asset: objectSchema({
-        id: { type: "string", minLength: 1 },
-        kind: { type: "string", minLength: 1 }
-      }),
-      tileSize: tileSizeSchema,
-      cols: { type: "integer", minimum: 1 },
-      rows: { type: "integer", minimum: 1 }
-    },
-    ["id"]
-  ),
-  anyOf: [
-    { required: ["src", "tileSize"] },
-    { required: ["asset"] }
-  ]
-};
+export const blocksetDefinitionSchema = requiredAnyOf(
+  z.object({
+    id: kIdSchema,
+    slot: z.optional(kSlotSchema),
+    src: z.optional(kIdSchema),
+    asset: z.optional(z.object({
+      id: kIdSchema,
+      kind: kIdSchema
+    })),
+    tileSize: z.optional(tileSizeSchema),
+    cols: z.optional(kPositiveInteger),
+    rows: z.optional(kPositiveInteger)
+  }),
+  [["src", "tileSize"], ["asset"]]
+);
 
 const kBlocksetCommandProperties: Record<
   VoxelBlocksetCommandAction,
-  Record<string, JSONSchema>
+  z.core.$ZodLooseShape
 > = {
   "blockset-added": {
     blockset: blocksetDefinitionSchema
   },
   "blockset-removed": {
-    blocksetId: { type: "string" }
+    blocksetId: z.string()
   }
 };
 
-export const voxelWorldSchema: JSONSchema = {
-  type: "object",
-  properties: {
-    version: { const: VOXEL_WORLD_VERSION },
-    chunkSize: { type: "integer", minimum: 1 },
-    blocksets: {
-      type: "array",
-      items: blocksetDefinitionSchema
-    },
-    layers: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          palette: { type: "array" },
-          chunks: { type: "array" }
-        },
-        required: ["palette", "chunks"]
-      }
-    },
-    objectLayers: { type: "array" },
-    templates: {
-      type: "array",
-      items: kTemplateSchema
-    }
-  },
-  required: [
-    "version",
-    "chunkSize",
-    "blocksets",
-    "layers"
-  ]
-};
-
-export const voxelCommandProtocol: MessageProtocol = new MessageProtocol({
-  oneOf: [
-    ...Object.entries(kLayerMetadataSchemas).map(
-      ([action, metadata]) => networkCommand(action, action.startsWith("object-") ?
-        { layerName: { type: "string" }, metadata } :
-        { layerId: kIdSchema, metadata })
-    ),
-    ...Object.entries(kTemplateCommandProperties).map(
-      ([action, properties]) => networkCommand(action, properties)
-    ),
-    ...Object.entries(kBlocksetCommandProperties).map(
-      ([action, properties]) => networkCommand(action, properties)
-    ),
-    networkCommand("world-replace", {
-      data: voxelWorldSchema
-    })
-  ]
+export const voxelWorldSchema = z.object({
+  version: z.literal(VOXEL_WORLD_VERSION),
+  chunkSize: kPositiveInteger,
+  blocksets: z.array(blocksetDefinitionSchema),
+  layers: z.array(z.object({
+    palette: z.array(z.unknown()),
+    chunks: z.array(z.unknown())
+  })),
+  objectLayers: z.optional(z.array(z.unknown())),
+  templates: z.optional(z.array(kTemplateSchema))
 });
+
+export const voxelCommandProtocol: MessageProtocol = new MessageProtocol(z.union([
+  ...Object.entries(kLayerMetadataSchemas).map(
+    ([action, metadata]) => networkCommand(action, action.startsWith("object-") ?
+      { layerName: z.string(), metadata } :
+      { layerId: kIdSchema, metadata })
+  ),
+  ...Object.entries(kTemplateCommandProperties).map(
+    ([action, properties]) => networkCommand(action, properties)
+  ),
+  ...Object.entries(kBlocksetCommandProperties).map(
+    ([action, properties]) => networkCommand(action, properties)
+  ),
+  networkCommand("world-replace", {
+    data: voxelWorldSchema
+  })
+]));

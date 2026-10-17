@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import { Validator } from "ata-validator";
 import {
   Ok,
   Err,
@@ -7,41 +6,38 @@ import {
 } from "@openally/result";
 
 // Import Internal Dependencies
-import {
-  VALIDATOR_OPTIONS,
-  type Infer,
-  type JSONSchema,
-  type ValidationError
+import { SchemaValidator } from "#schema-runtime";
+import type {
+  Infer,
+  Schema,
+  ValidationError
 } from "./schema.ts";
 
-/**
- * Checks values against one JSON Schema. The schema compiles on the first
- * `parse()`, so constructing a parser at module load costs nothing.
- */
 export class SchemaParser<
-  const TSchema extends JSONSchema
+  const TSchema extends Schema
 > {
   readonly schema: TSchema;
 
-  #validator: Validator<Infer<TSchema>>;
+  #validator: SchemaValidator;
 
   constructor(
     schema: TSchema
   ) {
     this.schema = schema;
-    this.#validator = new Validator<Infer<TSchema>>(
-      schema,
-      VALIDATOR_OPTIONS
-    );
+    this.#validator = new SchemaValidator(schema);
+  }
+
+  is(
+    value: unknown
+  ): value is Infer<TSchema> {
+    return this.#validator.isValid(value);
   }
 
   parse(
     value: unknown
   ): Result<Infer<TSchema>, readonly ValidationError[]> {
-    const result = this.#validator.validate(value);
-
-    return result.valid
-      ? Ok(result.data)
-      : Err(result.errors);
+    return this.is(value)
+      ? Ok(value)
+      : Err(this.#validator.errors(value));
   }
 }

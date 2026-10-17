@@ -1,5 +1,10 @@
 // Import Third-party Dependencies
-import type { JSONSchema } from "@jolly-pixel/network";
+import {
+  serverMessageProtocol,
+  type MessageProtocol,
+  type Schema
+} from "@jolly-pixel/network";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import {
@@ -7,24 +12,31 @@ import {
   ASSET_ROOM_REJECTED
 } from "../kinds/AssetLiveProtocol.ts";
 
-export const assetRoomDeletedSchema: JSONSchema = {
-  title: ASSET_ROOM_DELETED,
-  type: "object",
-  properties: {
-    type: { const: ASSET_ROOM_DELETED }
-  },
-  required: ["type"]
-};
+// CONSTANTS
+const kAssetRoomDeletedSchema = z.object({
+  type: z.literal(ASSET_ROOM_DELETED)
+});
 
-export const assetRoomRejectedSchema: JSONSchema = {
-  title: ASSET_ROOM_REJECTED,
-  type: "object",
-  properties: {
-    type: { const: ASSET_ROOM_REJECTED },
-    reason: { type: "string" }
-  },
-  required: [
-    "type",
-    "reason"
-  ]
-};
+const kAssetRoomRejectedSchema = z.object({
+  type: z.literal(ASSET_ROOM_REJECTED),
+  reason: z.string()
+});
+
+export const assetRoomResumeSchema = z.object({
+  clientId: z.string(),
+  version: z.optional(z.int().check(z.minimum(0)))
+});
+
+export function assetRoomOutboundProtocol(
+  command: MessageProtocol,
+  snapshot: Schema
+): MessageProtocol {
+  return serverMessageProtocol({
+    command,
+    snapshot,
+    notices: [
+      kAssetRoomDeletedSchema,
+      kAssetRoomRejectedSchema
+    ]
+  });
+}

@@ -2,12 +2,16 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+// CONSTANTS
+const kZodModule = import.meta.resolve("zod/mini");
+
 export function kindModule(
   kind: string
 ): string {
-  return "export const ASSET_KINDS = {\n" +
+  return `import * as z from ${JSON.stringify(kZodModule)};\n` +
+    "export const ASSET_KINDS = {\n" +
     "  descriptors: [],\n" +
-    "  optionsSchema: { type: \"object\" },\n" +
+    "  optionsSchema: z.record(z.string(), z.unknown()),\n" +
     `  handlers: (options) => [{ kind: ${JSON.stringify(kind)}, options }]\n` +
     "};\n";
 }

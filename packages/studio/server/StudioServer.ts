@@ -7,7 +7,7 @@ import path from "node:path";
 import { compose } from "@openally/servo";
 
 // Import Internal Dependencies
-import { EditorPages } from "./editors/EditorPages.ts";
+import { EDITOR_PAGES_DIR } from "../src/editors/EditorDescriptor.ts";
 import { ManifestRoute } from "./editors/ManifestRoute.ts";
 import type { StudioProject } from "./project/StudioProject.ts";
 import { serveBuild } from "./serveBuild.ts";
@@ -19,7 +19,8 @@ import {
 export interface StudioServerOptions {
   project: StudioProject;
   /**
-   * Folder of the built studio shell, holding its `index.html`.
+   * Folder of the built studio shell, holding its `index.html` and the page
+   * of every project editor under `editors/<name>/`.
    */
   shell: string;
   backend?: StudioBackendOptions;
@@ -35,16 +36,16 @@ export class StudioServer implements AsyncDisposable {
   static async open(
     options: StudioServerOptions
   ): Promise<StudioServer> {
-    const index = path.join(options.shell, "index.html");
-    try {
-      await fs.access(index);
-    }
-    catch (error) {
-      throw new Error(
-        `"${index}" is missing: build the studio before serving it.`,
-        { cause: error }
-      );
-    }
+    const pages = [
+      path.join(options.shell, "index.html"),
+      ...Array.from(options.project.editors, (editor) => path.join(
+        options.shell,
+        EDITOR_PAGES_DIR,
+        editor.name,
+        "index.html"
+      ))
+    ];
+    await Promise.all(pages.map(requireBuiltPage));
 
     return new StudioServer(
       options,
@@ -61,7 +62,6 @@ export class StudioServer implements AsyncDisposable {
   ) {
     this.#backend = backend;
     const pages = compose(
-      new EditorPages(options.project.editors).middleware,
       new ManifestRoute(options.project).middleware,
       serveBuild(options.shell)
     );
@@ -105,5 +105,19 @@ export class StudioServer implements AsyncDisposable {
     this.#http.closeAllConnections();
     await this.#backend[Symbol.asyncDispose]();
     await closed;
+  }
+}
+
+async function requireBuiltPage(
+  page: string
+): Promise<void> {
+  try {
+    await fs.access(page);
+  }
+  catch (error) {
+    throw new Error(
+      `"${page}" is missing: build the studio before serving it.`,
+      { cause: error }
+    );
   }
 }

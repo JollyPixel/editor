@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import * as z from "zod/mini";
+
 // Import Internal Dependencies
 import type {
   AssetKindDescriptor,
@@ -33,9 +36,7 @@ export function kindPackage(
 ): AssetKindPackage {
   return {
     descriptors: kinds.map(kindDescriptor),
-    optionsSchema: {
-      type: "object"
-    },
+    optionsSchema: z.record(z.string(), z.unknown()),
     handlers(options = {}) {
       received.push(options);
 

@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import {
-  defineSchema,
   describeErrors,
   SchemaParser,
   type ConflictResolver
@@ -28,6 +27,7 @@ import {
   type VoxelWorldCommandTarget,
   type VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import {
@@ -45,10 +45,7 @@ import {
   blocksetAssetKind,
   type BlocksetAssetKindOptions
 } from "./blocksetAssetKind.ts";
-import {
-  objectSchema,
-  tileSizeSchema
-} from "../network/schema.ts";
+import { tileSizeSchema } from "../network/schema.ts";
 import {
   voxelCommandProtocol,
   voxelWorldSchema
@@ -61,35 +58,20 @@ import type { VoxelMapNetworkCommand } from "../network/types.ts";
 const kDefaultLayerName = "Ground";
 const kCompanionBlocksetId = "default";
 const kWorldParser = new SchemaParser(voxelWorldSchema);
-const kPositiveIntegerSchema = defineSchema({
-  type: "integer",
-  minimum: 1
-});
-const kOptionsSchema = defineSchema({
-  type: "object",
-  properties: {
-    blockset: {
-      type: "object",
-      properties: {
-        tileSize: tileSizeSchema,
-        defaultSize: objectSchema({
-          x: kPositiveIntegerSchema,
-          y: kPositiveIntegerSchema
-        }),
-        snapshot: SNAPSHOT_POLICY_SCHEMA
-      },
-      additionalProperties: false
-    },
-    voxelmap: {
-      type: "object",
-      properties: {
-        chunkSize: kPositiveIntegerSchema,
-        snapshot: SNAPSHOT_POLICY_SCHEMA
-      },
-      additionalProperties: false
-    }
-  },
-  additionalProperties: false
+const kPositiveIntegerSchema = z.int().check(z.minimum(1));
+const kOptionsSchema = z.strictObject({
+  blockset: z.optional(z.strictObject({
+    tileSize: z.optional(tileSizeSchema),
+    defaultSize: z.optional(z.object({
+      x: kPositiveIntegerSchema,
+      y: kPositiveIntegerSchema
+    })),
+    snapshot: z.optional(SNAPSHOT_POLICY_SCHEMA)
+  })),
+  voxelmap: z.optional(z.strictObject({
+    chunkSize: z.optional(kPositiveIntegerSchema),
+    snapshot: z.optional(SNAPSHOT_POLICY_SCHEMA)
+  }))
 });
 const kDefaultSnapshot: SnapshotPolicy = {
   delay: 5_000,

@@ -9,7 +9,7 @@ import {
   isStatePath,
   safeAssetPath
 } from "@jolly-pixel/asset-source";
-import { Validator } from "ata-validator";
+import { SchemaParser } from "@jolly-pixel/network";
 import {
   strFromU8,
   strToU8
@@ -25,10 +25,7 @@ import {
 import { AssetArchiveError } from "../errors/AssetArchiveError.ts";
 
 // CONSTANTS
-const kManifestValidator = new Validator(
-  assetArchiveManifestSchema,
-  { useDefaults: false }
-);
+const kManifestParser = new SchemaParser(assetArchiveManifestSchema);
 
 export function archiveEntryOf(
   record: AssetRecord
@@ -63,8 +60,8 @@ export function parseArchiveManifest(
     return Err(error);
   }
 
-  const result = kManifestValidator.validate(document);
-  if (!result.valid) {
+  const result = kManifestParser.parse(document);
+  if (!result.ok) {
     const error = new AssetArchiveError(
       "manifest-invalid",
       "Archive manifest does not match the expected shape."
@@ -72,16 +69,16 @@ export function parseArchiveManifest(
 
     return Err(error);
   }
-  if (result.data.version !== ASSET_ARCHIVE_VERSION) {
+  if (result.val.version !== ASSET_ARCHIVE_VERSION) {
     const error = new AssetArchiveError(
       "unsupported-version",
-      `Archive version ${result.data.version} is not supported.`
+      `Archive version ${result.val.version} is not supported.`
     );
 
     return Err(error);
   }
 
-  const { root, assets, missing = [] } = result.data;
+  const { root, assets, missing = [] } = result.val;
   const ids = new Set<string>();
   for (const entry of assets) {
     const checked = checkEntry(entry, ids);

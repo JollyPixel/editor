@@ -8,7 +8,8 @@
       "name": "voxel-model",
       "kinds": [
         "voxelmodel"
-      ]
+      ],
+      "page": "index.html"
     }
   },
   "scripts": {
@@ -17,7 +18,6 @@
     "dev:e2e": "vite --mode e2e",
     "build": "vite build",
     "build:watch": "vite build --watch",
-    "build:static": "pnpm run typecheck && vite build --mode static",
     "preview": "vite preview",
     "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",

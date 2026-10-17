@@ -55,24 +55,38 @@ export async function createDist(): Promise<string> {
   return dist;
 }
 
+export interface VoxelMapEditorOptions {
+  name?: string;
+  prebuilt?: boolean;
+  page?: string | null;
+}
+
 export function voxelMapEditor(
   dist: string,
-  name = "voxel-map"
+  options: VoxelMapEditorOptions = {}
 ): EditorPackage {
+  const {
+    name = "voxel-map",
+    prebuilt = false,
+    page = null
+  } = options;
+
   return new EditorPackage({
     package: `@jolly-pixel/editor.${name}`,
     name,
     kinds: ["voxelmap"],
     dist,
-    prebuilt: false
+    prebuilt,
+    page
   });
 }
 
 export function voxelMapPages(
-  dist: string
+  dist: string,
+  page: string | null = null
 ): EditorPages {
   return new EditorPages(
-    new EditorPackages([voxelMapEditor(dist)])
+    new EditorPackages([voxelMapEditor(dist, { page })])
   );
 }
 

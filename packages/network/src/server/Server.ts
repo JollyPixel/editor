@@ -56,6 +56,12 @@ export interface ServerOptions {
    */
   roomGraceMs?: number;
   limits?: RoomLimits;
+  /**
+   * When false, outbound messages are identified by their tags without being
+   * validated, and a message no tag identifies is dropped.
+   * @default true
+   */
+  validateOutbound?: boolean;
 }
 
 /**
@@ -82,7 +88,8 @@ export class Server {
       logger: this.logger,
       rights: this.#rights,
       graceMs: options.roomGraceMs,
-      limits: options.limits
+      limits: options.limits,
+      validateOutbound: options.validateOutbound
     });
     this.#dispatcher = new EnvelopeDispatcher({
       rooms: this.#rooms,

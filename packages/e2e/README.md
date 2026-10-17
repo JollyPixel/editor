@@ -132,7 +132,7 @@ the package without a workspace cycle.
    does.
 6. CI picks the suite up from its `test:e2e` script and runs it when the
    package or one of its workspace dependencies changes
-   (`scripts/ciAffected.ts`). To keep it out of CI, add a `--skip-e2e` entry
+   (`scripts/ci/affected.ts`). To keep it out of CI, add a `--skip-e2e` entry
    in `.github/workflows/node.js.yml`.
 
 ## ✨ Contributors guide

@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import type {
-  JSONSchema,
+  Schema,
   NetworkCommandHeader
 } from "@jolly-pixel/network";
 
@@ -37,7 +37,7 @@ export interface AssetArbitration<
 export interface AssetLiveProtocol<
   TCommand extends AssetCommandHeader = AssetCommandHeader
 > {
-  readonly snapshotSchema: JSONSchema;
+  readonly snapshotSchema: Schema;
 
   snapshot(): unknown;
 

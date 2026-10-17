@@ -21,8 +21,8 @@ import {
 } from "../events/AssetEvents.ts";
 import type { RecordedCommand } from "../state/AssetStateStore.ts";
 import {
-  assetRoomDeletedSchema,
-  assetRoomRejectedSchema
+  assetRoomOutboundProtocol,
+  assetRoomResumeSchema
 } from "./AssetRoomExtension.schema.ts";
 import {
   PeerAcks,
@@ -33,20 +33,10 @@ import { SnapshotCache } from "./SnapshotCache.ts";
 // CONSTANTS
 const kDefaultResumeLimit = 1_000;
 const kDefaultDepartureTimeout = 5_000;
-const kResumeParser = new network.SchemaParser(network.defineSchema({
-  type: "object",
-  properties: {
-    clientId: { type: "string" },
-    version: {
-      type: "integer",
-      minimum: 0
-    }
-  },
-  required: ["clientId"]
-}));
+const kResumeParser = new network.SchemaParser(assetRoomResumeSchema);
 const kRoomProtocols = new WeakMap<
   network.MessageProtocol,
-  Map<network.JSONSchema, network.MessageProtocols>
+  Map<network.Schema, network.MessageProtocols>
 >();
 
 export interface AssetRoomExtensionOptions<TCommand = unknown> {
@@ -98,7 +88,7 @@ export class AssetRoomExtension<
     this.name = binding.kind;
     this.protocols = assetRoomProtocols(
       commands.protocol,
-      protocol.snapshotSchema
+      protocol
     );
     this.#assetId = binding.assetId;
     this.#version = binding.version ?? (() => undefined);
@@ -408,8 +398,9 @@ export class AssetRoomExtension<
 
 function assetRoomProtocols(
   command: network.MessageProtocol,
-  snapshot: network.JSONSchema
+  live: AssetLiveProtocol
 ): network.MessageProtocols {
+  const snapshot = live.snapshotSchema;
   let bySnapshot = kRoomProtocols.get(command);
   if (bySnapshot === undefined) {
     bySnapshot = new Map();
@@ -420,14 +411,7 @@ function assetRoomProtocols(
   if (protocols === undefined) {
     protocols = {
       inbound: command,
-      outbound: network.serverMessageProtocol({
-        command,
-        snapshot,
-        notices: [
-          assetRoomDeletedSchema,
-          assetRoomRejectedSchema
-        ]
-      })
+      outbound: assetRoomOutboundProtocol(command, snapshot)
     };
     bySnapshot.set(snapshot, protocols);
   }

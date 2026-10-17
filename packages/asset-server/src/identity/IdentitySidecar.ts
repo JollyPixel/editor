@@ -1,15 +1,18 @@
 // Import Third-party Dependencies
-import { defineSchema } from "@jolly-pixel/network";
 import {
-  Validator,
+  SchemaParser,
   type Infer
-} from "ata-validator";
+} from "@jolly-pixel/network";
 import {
   writeJsonFile,
   type AssetSource
 } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
+import {
+  identityEntrySchema,
+  identitySidecarSchema
+} from "./IdentitySidecar.schema.ts";
 import {
   silentLogger,
   type Logger
@@ -24,36 +27,10 @@ import {
 // CONSTANTS
 const kSidecarVersion = 1;
 const kPathCollator = new Intl.Collator();
-const kValidatorOptions = { useDefaults: false };
-const kEntrySchema = defineSchema({
-  type: "object",
-  properties: {
-    id: { type: "string" },
-    path: { type: "string" },
-    kind: { type: "string" }
-  },
-  required: [
-    "id",
-    "path",
-    "kind"
-  ]
-});
-const kEntryValidator = new Validator(
-  kEntrySchema,
-  kValidatorOptions
-);
-const kDocumentValidator = new Validator(
-  defineSchema({
-    type: "object",
-    properties: {
-      assets: { type: "array" }
-    },
-    required: ["assets"]
-  }),
-  kValidatorOptions
-);
+const kEntryParser = new SchemaParser(identityEntrySchema);
+const kDocumentParser = new SchemaParser(identitySidecarSchema);
 
-export type IdentityEntry = Readonly<Infer<typeof kEntrySchema>>;
+export type IdentityEntry = Readonly<Infer<typeof identityEntrySchema>>;
 
 export interface IdentitySidecarData {
   readonly version: 1;
@@ -177,8 +154,8 @@ export class IdentitySidecar {
   static parse(
     input: unknown
   ): StateFileParse<IdentityEntry[]> {
-    const document = kDocumentValidator.validate(input);
-    if (!document.valid) {
+    const document = kDocumentParser.parse(input);
+    if (!document.ok) {
       return {
         data: [],
         dropped: 0
@@ -186,8 +163,8 @@ export class IdentitySidecar {
     }
 
     const { entries, dropped } = keepValid(
-      document.data.assets.entries(),
-      kEntryValidator
+      document.val.assets.entries(),
+      kEntryParser
     );
 
     return {

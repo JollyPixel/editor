@@ -48,7 +48,7 @@ instead.
 | Named after a feature | A slice kept out of the root because the root registers custom elements, or because it is loaded lazily | `@jolly-pixel/ui/stats`, `@jolly-pixel/editor.host/offline` |
 
 - Use lowercase names with no file extension and no wildcard. `pnpm run lint`
-  runs `scripts/checkExports.ts`, which rejects other keys and targets with no
+  runs `scripts/exports/check.ts`, which rejects other keys and targets with no
   source file.
 - Add a subpath only when a consumer imports it. Export a new helper from the
   root and rely on tree-shaking instead of adding a subpath for it.

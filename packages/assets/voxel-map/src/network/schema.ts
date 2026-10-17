@@ -1,32 +1,21 @@
 // Import Third-party Dependencies
 import {
   commandVariant,
-  defineSchema,
-  withCommandHeader,
-  type JSONSchema
+  withCommandHeader
 } from "@jolly-pixel/network";
 import { MAX_TILE_SIZE } from "@jolly-pixel/voxel.renderer";
+import * as z from "zod/mini";
 
-export const tileSizeSchema = defineSchema({
-  type: "integer",
-  minimum: 1,
-  maximum: MAX_TILE_SIZE
-});
+export const tileSizeSchema = z.int().check(
+  z.minimum(1),
+  z.maximum(MAX_TILE_SIZE)
+);
 
-export function objectSchema(
-  properties: Record<string, JSONSchema>,
-  required: readonly string[] = Object.keys(properties)
-): JSONSchema {
-  return {
-    type: "object",
-    properties,
-    required: [...required]
-  };
-}
+export const anyObjectSchema = z.record(z.string(), z.unknown());
 
 export function networkCommand(
   action: string,
-  properties: Record<string, JSONSchema>
-): JSONSchema {
+  properties: z.core.$ZodLooseShape
+): z.ZodMiniObject {
   return withCommandHeader(commandVariant(action, properties));
 }

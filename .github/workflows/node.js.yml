@@ -37,7 +37,7 @@ jobs:
           BASE: ${{ github.event_name == 'pull_request' && 'HEAD~1' || '' }}
         # TODO: enable voxel-map and voxel-model once their CI-only timeouts are fixed
         run: |
-          node scripts/ciAffected.ts --base "$BASE" \
+          node scripts/ci/affected.ts --base "$BASE" \
             --skip-e2e @jolly-pixel/editor.voxel-map \
             --skip-e2e @jolly-pixel/editor.voxel-model \
             --skip-e2e @jolly-pixel/studio >> "$GITHUB_OUTPUT"

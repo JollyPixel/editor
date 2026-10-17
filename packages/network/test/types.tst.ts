@@ -26,7 +26,7 @@ import {
 import type { Room } from "#src/client/Room.ts";
 import type {
   Infer,
-  JSONSchema
+  Schema
 } from "#src/protocol/schema.ts";
 import type {
   ClientEnvelope,
@@ -135,28 +135,15 @@ describe("DataChannelLike", () => {
 
 describe("MessageProtocol", () => {
   test("infers its message union from an inline schema", () => {
-    const protocol = new MessageProtocol({
-      oneOf: [
-        {
-          type: "object",
-          properties: {
-            action: { const: "voxel-removed" }
-          },
-          required: ["action"]
-        },
-        {
-          type: "object",
-          properties: {
-            action: { const: "voxel-set" },
-            x: { type: "number" }
-          },
-          required: [
-            "action",
-            "x"
-          ]
-        }
-      ]
-    });
+    const protocol = new MessageProtocol(zm.union([
+      zm.object({
+        action: zm.literal("voxel-removed")
+      }),
+      zm.object({
+        action: zm.literal("voxel-set"),
+        x: zm.number()
+      })
+    ]));
 
     expect<InferMessage<typeof protocol>>().type.toBeAssignableTo<
       { action: "voxel-removed"; } | { action: "voxel-set"; x: number; }
@@ -167,7 +154,7 @@ describe("MessageProtocol", () => {
 
   test("is only built through its constructor", () => {
     expect<MessageProtocol>().type.not.toBeAssignableFrom<{
-      schema: JSONSchema;
+      schema: Schema;
       variants: [];
       events: [];
     }>();

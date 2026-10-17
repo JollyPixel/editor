@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import {
-  defineSchema,
-  type ConflictResolver
-} from "@jolly-pixel/network";
+import type { ConflictResolver } from "@jolly-pixel/network";
 import {
   InvalidAssetDocumentError,
   SNAPSHOT_POLICY_SCHEMA,
@@ -22,6 +19,7 @@ import {
   type PixelArtDocumentData,
   type Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import {
@@ -47,13 +45,9 @@ const kDefaultSize: Vec2 = {
   x: 32,
   y: 32
 };
-const kOptionsSchema = defineSchema({
-  type: "object",
-  properties: {
-    defaultSize: sizeSchema,
-    snapshot: SNAPSHOT_POLICY_SCHEMA
-  },
-  additionalProperties: false
+const kOptionsSchema = z.strictObject({
+  defaultSize: z.optional(sizeSchema),
+  snapshot: z.optional(SNAPSHOT_POLICY_SCHEMA)
 });
 
 export class PixelArtState {

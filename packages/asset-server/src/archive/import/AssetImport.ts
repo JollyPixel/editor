@@ -1,8 +1,6 @@
 // Import Third-party Dependencies
-import {
-  defineSchema,
-  type Infer
-} from "@jolly-pixel/network";
+import type { Infer } from "@jolly-pixel/network";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import { assetArchiveEntrySchema } from "../AssetArchive.ts";
@@ -16,73 +14,30 @@ import type { Immutable } from "../../utils/Immutable.ts";
 // CONSTANTS
 export const IMPORT_CONFLICT_POLICIES = ["replace", "keep", "copy"] as const;
 
-const kEntries = {
-  type: "array",
-  items: assetArchiveEntrySchema
-} as const;
+const kEntries = z.array(assetArchiveEntrySchema);
 
-export const sharedDependentsSchema = defineSchema({
-  type: "object",
-  properties: {
-    ...assetArchiveEntrySchema.properties,
-    dependents: kEntries
-  },
-  required: [
-    ...assetArchiveEntrySchema.required,
-    "dependents"
-  ]
+export const sharedDependentsSchema = z.extend(assetArchiveEntrySchema, {
+  dependents: kEntries
 });
 
-export const importPlanSchema = defineSchema({
-  type: "object",
-  properties: {
-    root: assetReferenceSchema,
-    live: kEntries,
-    fresh: kEntries,
-    sharedDependents: {
-      type: "array",
-      items: sharedDependentsSchema
-    },
-    incompatible: kEntries
-  },
-  required: [
-    "live",
-    "fresh",
-    "sharedDependents",
-    "incompatible"
-  ]
+export const importPlanSchema = z.object({
+  root: z.optional(assetReferenceSchema),
+  live: kEntries,
+  fresh: kEntries,
+  sharedDependents: z.array(sharedDependentsSchema),
+  incompatible: kEntries
 });
 
-export const importFailureSchema = defineSchema({
-  type: "object",
-  properties: {
-    ...assetArchiveEntrySchema.properties,
-    reason: { type: "string" }
-  },
-  required: [
-    ...assetArchiveEntrySchema.required,
-    "reason"
-  ]
+export const importFailureSchema = z.extend(assetArchiveEntrySchema, {
+  reason: z.string()
 });
 
-export const importReportSchema = defineSchema({
-  type: "object",
-  properties: {
-    root: assetReferenceSchema,
-    created: kEntries,
-    replaced: kEntries,
-    kept: kEntries,
-    failed: {
-      type: "array",
-      items: importFailureSchema
-    }
-  },
-  required: [
-    "created",
-    "replaced",
-    "kept",
-    "failed"
-  ]
+export const importReportSchema = z.object({
+  root: z.optional(assetReferenceSchema),
+  created: kEntries,
+  replaced: kEntries,
+  kept: kEntries,
+  failed: z.array(importFailureSchema)
 });
 
 export type ImportConflictPolicy = typeof IMPORT_CONFLICT_POLICIES[number];

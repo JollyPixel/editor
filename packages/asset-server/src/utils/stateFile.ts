@@ -1,5 +1,9 @@
 // Import Third-party Dependencies
-import type { Validator } from "ata-validator";
+import type {
+  Infer,
+  Schema,
+  SchemaParser
+} from "@jolly-pixel/network";
 import {
   readJsonFile,
   type AssetSource
@@ -39,17 +43,17 @@ export async function readStateFile<TData>(
   return data;
 }
 
-export function keepValid<TKey, TValue>(
+export function keepValid<TKey, const TSchema extends Schema>(
   entries: Iterable<[TKey, unknown]>,
-  validator: Validator<TValue>
-): ValidEntries<TKey, TValue> {
-  const kept: [TKey, TValue][] = [];
+  parser: SchemaParser<TSchema>
+): ValidEntries<TKey, Infer<TSchema>> {
+  const kept: [TKey, Infer<TSchema>][] = [];
   let dropped = 0;
 
   for (const [key, value] of entries) {
-    const result = validator.validate(value);
-    if (result.valid) {
-      kept.push([key, result.data]);
+    const result = parser.parse(value);
+    if (result.ok) {
+      kept.push([key, result.val]);
     }
     else {
       dropped += 1;

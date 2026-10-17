@@ -1,19 +1,24 @@
+// Import Third-party Dependencies
+import * as z from "zod/mini";
+
 // Import Internal Dependencies
 import type {
   Infer,
-  JSONSchema
+  Schema
 } from "../schema.ts";
+import { SchemaShape } from "./SchemaShape.ts";
 import {
   InvalidMessageProtocolError
 } from "./errors/InvalidMessageProtocolError.ts";
 
 // CONSTANTS
 const kDefaultDiscriminator = "action";
+const kEvents = z.registry<{ event: string; }>();
 
 export interface MessageVariant {
   readonly event: string;
   readonly tag: string | null;
-  readonly schema: JSONSchema;
+  readonly schema: Schema;
 }
 
 export interface MessageProtocolOptions {
@@ -34,48 +39,69 @@ export type InferMessage<
   TProtocol["schema"]
 >;
 
+export function withEvent<
+  TSchema extends Schema
+>(
+  schema: TSchema,
+  event: string
+): TSchema {
+  kEvents.add(schema, { event });
+
+  return schema;
+}
+
 function eventNameOf(
-  variant: JSONSchema,
+  variant: Schema,
   discriminator: string
 ): string {
-  if (typeof variant.title === "string") {
-    return variant.title;
+  const named = kEvents.get(variant);
+  if (named !== undefined) {
+    return named.event;
   }
 
-  const value = variant.properties?.[discriminator]?.const;
-  if (typeof value !== "string") {
+  const tag = tagOf(variant, discriminator);
+  if (tag !== null) {
+    return tag;
+  }
+
+  const property = SchemaShape.properties(variant)?.[discriminator];
+  if (property !== undefined && SchemaShape.isOptional(property)) {
     throw new InvalidMessageProtocolError(
-      `every variant must set "title" or a const "${discriminator}" property`
+      `a variant must not make "${discriminator}" optional`
     );
   }
 
-  if (variant.required?.includes(discriminator) !== true) {
-    throw new InvalidMessageProtocolError(
-      `variant "${value}" must list "${discriminator}" as required`
-    );
-  }
-
-  return value;
+  throw new InvalidMessageProtocolError(
+    `every variant must use withEvent() or a literal "${discriminator}" property`
+  );
 }
 
 function tagOf(
-  variant: JSONSchema,
+  variant: Schema,
   discriminator: string
 ): string | null {
-  const value = variant.properties?.[discriminator]?.const;
+  const options = SchemaShape.options(variant);
+  if (options !== null) {
+    const tags = new Set(options.map((option) => tagOf(option, discriminator)));
+    const [tag] = tags;
 
-  return typeof value === "string" &&
-    variant.required?.includes(discriminator) === true ?
-    value :
-    null;
+    return tags.size === 1 && tag !== undefined ? tag : null;
+  }
+
+  const property = SchemaShape.properties(variant)?.[discriminator];
+  if (property === undefined || SchemaShape.isOptional(property)) {
+    return null;
+  }
+
+  const value = SchemaShape.constOf(property);
+
+  return typeof value === "string" ? value : null;
 }
 
 export class MessageProtocol<
-  const TSchema extends JSONSchema = JSONSchema
+  const TSchema extends Schema = Schema
 > {
-  static readonly EMPTY: MessageProtocol = new MessageProtocol({
-    oneOf: []
-  });
+  static readonly EMPTY: MessageProtocol = new MessageProtocol(z.union([]));
 
   readonly schema: TSchema;
   readonly discriminator: string;
@@ -90,7 +116,7 @@ export class MessageProtocol<
     const {
       discriminator = kDefaultDiscriminator
     } = options;
-    const variants = schema.oneOf ?? schema.anyOf ?? [schema];
+    const variants = SchemaShape.options(schema) ?? [schema];
 
     this.schema = schema;
     this.discriminator = discriminator;

@@ -81,9 +81,8 @@ pnpm --filter @jolly-pixel/editor.pixel-art build:page
 ```
 
 The dev server listens on `http://localhost:3000` and seeds one texture. The
-page builds to `dist-page/`, leaving the library's `dist/` alone.
-`build:page:static` builds the variant that always starts offline, for the
-studio's static build.
+page builds to `dist-page/`, leaving the library's `dist/` alone. The
+studio's own builds compile `page/index.html` with the shell instead.
 
 ## 📚 API
 

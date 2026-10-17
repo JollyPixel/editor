@@ -13,11 +13,11 @@ import {
   commandVariant,
   withCommandHeader,
   type ClientHandle,
-  type JSONSchema,
   type PeerIdentity,
   type ServerConnection
 } from "@jolly-pixel/network";
 import { mulberry32 } from "@jolly-pixel/bench";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import {
@@ -50,30 +50,16 @@ const kSeedActor: EventStore.Actor = {
   type: "system",
   source: "bench"
 };
-const kGridProtocol = new MessageProtocol({
-  oneOf: [
-    withCommandHeader(commandVariant("paint", {
-      index: {
-        type: "integer",
-        minimum: 0
-      },
-      value: {
-        type: "integer",
-        minimum: 0,
-        maximum: 255
-      }
-    }, {
-      sentAt: { type: "number" }
-    }))
-  ]
+const kGridProtocol = new MessageProtocol(z.union([
+  withCommandHeader(commandVariant("paint", {
+    index: z.int().check(z.minimum(0)),
+    value: z.int().check(z.minimum(0), z.maximum(255)),
+    sentAt: z.optional(z.number())
+  }))
+]));
+const kGridSnapshotSchema = z.object({
+  cells: z.string()
 });
-const kGridSnapshotSchema: JSONSchema = {
-  type: "object",
-  properties: {
-    cells: { type: "string" }
-  },
-  required: ["cells"]
-};
 
 export type StoreKind = "memory" | "sqlite";
 

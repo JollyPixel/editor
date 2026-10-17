@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import {
   MessageParser,
-  MessageProtocol
+  SchemaParser
 } from "@jolly-pixel/network";
 import { NormalMapConfig } from "@jolly-pixel/pixel-draw.renderer";
 
@@ -181,10 +181,7 @@ describe("blocksetCommandProtocol", () => {
 
 describe("blocksetSnapshotSchema", () => {
   test("requires pixels next to the document fields", () => {
-    const parser = new MessageParser(new MessageProtocol({
-      title: "snapshot",
-      ...blocksetSnapshotSchema
-    }));
+    const parser = new SchemaParser(blocksetSnapshotSchema);
     const snapshot = {
       tileSize: 8,
       pixels: { size: { x: 8, y: 8 }, pixels: "" },

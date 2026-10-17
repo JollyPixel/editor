@@ -5,9 +5,13 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import * as z from "zod/mini";
+
 // Import Internal Dependencies
 import { serverMessageProtocol } from "#src/sync/serverMessageProtocol.ts";
 import { MessageParser } from "#src/protocol/message/MessageParser.ts";
+import { withEvent } from "#src/protocol/message/MessageProtocol.ts";
 import {
   CATCH_UP_EVENT,
   SNAPSHOT_EVENT
@@ -18,7 +22,7 @@ describe("serverMessageProtocol", () => {
   test("names a snapshot with the reserved event and a command or correction with its action", () => {
     const protocol = serverMessageProtocol({
       command: actionCommandProtocol,
-      snapshot: { type: "object" }
+      snapshot: z.object({})
     });
 
     assert.deepEqual(protocol.events, [
@@ -31,22 +35,17 @@ describe("serverMessageProtocol", () => {
     ]);
   });
 
-  test("appends notices named by their title or \"type\" constant", () => {
+  test("appends notices named by withEvent() or their \"type\" literal", () => {
     const protocol = serverMessageProtocol({
       command: actionCommandProtocol,
-      snapshot: { type: "object" },
+      snapshot: z.object({}),
       notices: [
-        {
-          title: "$deleted",
-          type: "object",
-          properties: { type: { const: "deleted" } },
-          required: ["type"]
-        },
-        {
-          type: "object",
-          properties: { type: { const: "rejected" } },
-          required: ["type"]
-        }
+        withEvent(z.object({
+          type: z.literal("deleted")
+        }), "$deleted"),
+        z.object({
+          type: z.literal("rejected")
+        })
       ]
     });
 
@@ -56,7 +55,7 @@ describe("serverMessageProtocol", () => {
   test("resolves a server message to the inner command's event", () => {
     const parser = new MessageParser(serverMessageProtocol({
       command: actionCommandProtocol,
-      snapshot: { type: "object" }
+      snapshot: z.object({})
     }));
 
     const snapshot = parser.parse({ type: "snapshot", data: {} });
@@ -81,7 +80,7 @@ describe("serverMessageProtocol", () => {
   test("declares a non-negative room version and acks", () => {
     const parser = new MessageParser(serverMessageProtocol({
       command: actionCommandProtocol,
-      snapshot: { type: "object" }
+      snapshot: z.object({})
     }));
 
     assert.ok(parser.parse({ type: "command", data: { action: "voxel-set" }, version: 4 }).ok);
@@ -99,7 +98,7 @@ describe("serverMessageProtocol", () => {
   test("validates every command of a catch-up", () => {
     const parser = new MessageParser(serverMessageProtocol({
       command: actionCommandProtocol,
-      snapshot: { type: "object" }
+      snapshot: z.object({})
     }));
 
     const caughtUp = parser.parse({

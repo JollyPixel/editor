@@ -1,10 +1,13 @@
 // Import Internal Dependencies
-import type { JSONSchema } from "../schema.ts";
+import type { Schema } from "../schema.ts";
+import {
+  SchemaShape,
+  isConstValue,
+  type ConstValue
+} from "./SchemaShape.ts";
 
 // CONSTANTS
 const kMaxConstDepth = 3;
-
-type ConstValue = string | number | boolean;
 
 interface ConstAt {
   readonly path: readonly string[];
@@ -17,7 +20,7 @@ interface DistinguishingConst {
 }
 
 export interface GroupedVariant {
-  readonly schema: JSONSchema;
+  readonly schema: Schema;
 }
 
 export class VariantGroup<TVariant extends GroupedVariant> {
@@ -77,7 +80,7 @@ export class VariantGroup<TVariant extends GroupedVariant> {
 }
 
 function distinguishingConst(
-  schemas: readonly JSONSchema[],
+  schemas: readonly Schema[],
   discriminator: string
 ): DistinguishingConst | null {
   const consts = schemas.map(
@@ -106,25 +109,28 @@ function distinguishingConst(
 }
 
 function constsWithin(
-  schema: JSONSchema,
+  schema: Schema,
   path: readonly string[],
   discriminator: string
 ): Map<string, ConstAt> {
   const consts = new Map<string, ConstAt>();
-  if (path.length >= kMaxConstDepth || schema.properties === undefined) {
+  const properties = SchemaShape.properties(schema);
+  if (path.length >= kMaxConstDepth || properties === null) {
     return consts;
   }
 
-  for (const [key, property] of Object.entries(schema.properties)) {
+  for (const [key, optional] of Object.entries(properties)) {
     if (path.length === 0 && key === discriminator) {
       continue;
     }
 
     const nested = [...path, key];
-    if (isConstValue(property.const)) {
+    const property = SchemaShape.unwrapOptional(optional);
+    const value = SchemaShape.constOf(property);
+    if (value !== undefined) {
       consts.set(JSON.stringify(nested), {
         path: nested,
-        value: property.const
+        value
       });
     }
     for (const [deeper, at] of constsWithin(property, nested, discriminator)) {
@@ -133,12 +139,4 @@ function constsWithin(
   }
 
   return consts;
-}
-
-function isConstValue(
-  value: unknown
-): value is ConstValue {
-  return typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean";
 }

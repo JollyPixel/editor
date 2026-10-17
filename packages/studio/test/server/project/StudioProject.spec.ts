@@ -25,6 +25,7 @@ import {
 
 // CONSTANTS
 const kBase = path.resolve("/studio");
+const kZodModule = import.meta.resolve("zod/mini");
 const kRoots: string[] = [];
 
 async function createRoot(): Promise<string> {
@@ -132,9 +133,10 @@ describe("StudioProject", () => {
       );
       await fs.writeFile(
         path.join(kind, "index.js"),
+        `import * as z from ${JSON.stringify(kZodModule)};\n` +
         "export const ASSET_KINDS = {\n" +
         "  descriptors: [],\n" +
-        "  optionsSchema: { type: \"object\" },\n" +
+        "  optionsSchema: z.record(z.string(), z.unknown()),\n" +
         "  handlers: () => [{ kind: \"local-kind\" }]\n" +
         "};\n"
       );

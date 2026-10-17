@@ -1,9 +1,5 @@
 // Import Third-party Dependencies
-import {
-  defineSchema,
-  MessageProtocol,
-  type JSONSchema
-} from "@jolly-pixel/network";
+import { MessageProtocol } from "@jolly-pixel/network";
 import {
   pixelCommandSchemas,
   pixelSnapshotSchema
@@ -17,96 +13,79 @@ import {
   type VoxelBlockCommandAction,
   type VoxelMaterialGroupCommandAction
 } from "@jolly-pixel/voxel.renderer";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import {
   networkCommand,
-  objectSchema,
   tileSizeSchema
 } from "../schema.ts";
 
 // CONSTANTS
-const kUnitSchema = defineSchema({
-  type: "number",
-  minimum: 0,
-  maximum: 1
-});
+const kUnitSchema = z.number().check(z.minimum(0), z.maximum(1));
+const kNonEmptyString = z.string().check(z.minLength(1));
+const kHexColorSchema = z.string().check(z.regex(/^#[0-9a-fA-F]{6}$/));
 
 const kBlockCommandProperties: Record<
   VoxelBlockCommandAction,
-  Record<string, JSONSchema>
+  z.core.$ZodLooseShape
 > = {
   "block-defined": {
-    block: objectSchema({
-      id: {
-        type: "integer",
-        minimum: 1,
-        maximum: MAX_LOCAL_BLOCK_ID
-      },
-      name: { type: "string" },
-      shapeId: { type: "string" }
+    block: z.object({
+      id: z.int().check(z.minimum(1), z.maximum(MAX_LOCAL_BLOCK_ID)),
+      name: z.string(),
+      shapeId: z.string()
     })
   },
   "block-removed": {
-    blockId: { type: "integer" }
+    blockId: z.int()
   },
   "block-moved": {
-    blockId: { type: "integer" },
-    toIndex: { type: "integer" }
+    blockId: z.int(),
+    toIndex: z.int()
   }
 };
 
-export const materialGroupSchema = defineSchema({
-  type: "object",
-  properties: {
-    id: { type: "string", minLength: 1 },
-    roughness: kUnitSchema,
-    metalness: kUnitSchema,
-    emissive: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
-    emissiveIntensity: { type: "number", minimum: 0 },
-    normalScale: { type: "number", minimum: 0 },
-    lightLevel: { type: "integer", minimum: 0, maximum: MAX_LIGHT_LEVEL },
-    swatch: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" }
-  },
-  required: ["id"]
+export const materialGroupSchema = z.object({
+  id: kNonEmptyString,
+  roughness: z.optional(kUnitSchema),
+  metalness: z.optional(kUnitSchema),
+  emissive: z.optional(kHexColorSchema),
+  emissiveIntensity: z.optional(z.number().check(z.minimum(0))),
+  normalScale: z.optional(z.number().check(z.minimum(0))),
+  lightLevel: z.optional(z.int().check(z.minimum(0), z.maximum(MAX_LIGHT_LEVEL))),
+  swatch: z.optional(kHexColorSchema)
 });
 
 const kMaterialGroupCommandProperties: Record<
   VoxelMaterialGroupCommandAction,
-  Record<string, JSONSchema>
+  z.core.$ZodLooseShape
 > = {
   "material-group-defined": {
     group: materialGroupSchema
   },
   "material-group-removed": {
-    groupId: { type: "string", minLength: 1 }
+    groupId: kNonEmptyString
   }
 };
 
-export const blendGroupSchema = defineSchema({
-  type: "object",
-  properties: {
-    id: { type: "string", minLength: 1 },
-    width: { type: "integer", minimum: 1, maximum: 64 },
-    pattern: { type: "string", enum: ["noise", "bayer"] },
-    priority: { type: "integer" },
-    exclude: {
-      type: "array",
-      items: { type: "string", minLength: 1 }
-    }
-  },
-  required: ["id"]
+export const blendGroupSchema = z.object({
+  id: kNonEmptyString,
+  width: z.optional(z.int().check(z.minimum(1), z.maximum(64))),
+  pattern: z.optional(z.enum(["noise", "bayer"])),
+  priority: z.optional(z.int()),
+  exclude: z.optional(z.array(kNonEmptyString))
 });
 
 const kBlendGroupCommandProperties: Record<
   VoxelBlendGroupCommandAction,
-  Record<string, JSONSchema>
+  z.core.$ZodLooseShape
 > = {
   "blend-group-defined": {
     group: blendGroupSchema
   },
   "blend-group-removed": {
-    groupId: { type: "string", minLength: 1 }
+    groupId: kNonEmptyString
   }
 };
 
@@ -114,47 +93,30 @@ const kTileSizeAction: BlocksetTileSizeCommand["action"] = "tile-size-updated";
 const kMaterialGroupRenameAction: BlocksetMaterialGroupRenameCommand["action"] =
   "material-group-renamed";
 
-export const blocksetSnapshotSchema: JSONSchema = {
-  type: "object",
-  properties: {
-    tileSize: tileSizeSchema,
-    pixels: pixelSnapshotSchema,
-    blocks: { type: "array" },
-    materialGroups: {
-      type: "array",
-      items: materialGroupSchema
-    },
-    blendGroups: {
-      type: "array",
-      items: blendGroupSchema
-    }
-  },
-  required: [
-    "tileSize",
-    "pixels",
-    "blocks",
-    "materialGroups"
-  ]
-};
-
-export const blocksetCommandProtocol: MessageProtocol = new MessageProtocol({
-  oneOf: [
-    ...pixelCommandSchemas,
-    ...Object.entries(kBlockCommandProperties).map(
-      ([action, properties]) => networkCommand(action, properties)
-    ),
-    ...Object.entries(kMaterialGroupCommandProperties).map(
-      ([action, properties]) => networkCommand(action, properties)
-    ),
-    ...Object.entries(kBlendGroupCommandProperties).map(
-      ([action, properties]) => networkCommand(action, properties)
-    ),
-    networkCommand(kTileSizeAction, {
-      tileSize: tileSizeSchema
-    }),
-    networkCommand(kMaterialGroupRenameAction, {
-      groupId: { type: "string", minLength: 1 },
-      to: { type: "string", minLength: 1 }
-    })
-  ]
+export const blocksetSnapshotSchema = z.object({
+  tileSize: tileSizeSchema,
+  pixels: pixelSnapshotSchema,
+  blocks: z.array(z.unknown()),
+  materialGroups: z.array(materialGroupSchema),
+  blendGroups: z.optional(z.array(blendGroupSchema))
 });
+
+export const blocksetCommandProtocol: MessageProtocol = new MessageProtocol(z.union([
+  ...pixelCommandSchemas,
+  ...Object.entries(kBlockCommandProperties).map(
+    ([action, properties]) => networkCommand(action, properties)
+  ),
+  ...Object.entries(kMaterialGroupCommandProperties).map(
+    ([action, properties]) => networkCommand(action, properties)
+  ),
+  ...Object.entries(kBlendGroupCommandProperties).map(
+    ([action, properties]) => networkCommand(action, properties)
+  ),
+  networkCommand(kTileSizeAction, {
+    tileSize: tileSizeSchema
+  }),
+  networkCommand(kMaterialGroupRenameAction, {
+    groupId: kNonEmptyString,
+    to: kNonEmptyString
+  })
+]));

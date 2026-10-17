@@ -1,72 +1,43 @@
 // Import Third-party Dependencies
-import type { JSONSchema } from "@jolly-pixel/network";
+import { notMultipleOf } from "@jolly-pixel/network";
 import {
   NORMAL_MAP_BEVEL_PROFILES,
   NORMAL_MAP_BORDERS,
   NORMAL_MAP_HEIGHTS
 } from "@jolly-pixel/pixel-draw.renderer";
+import * as z from "zod/mini";
 
 // CONSTANTS
-const kNonNegative: JSONSchema = {
-  type: "number",
-  minimum: 0
-};
+const kNonNegative = z.number().check(z.minimum(0));
 
-const kSettingsProperties: Record<string, JSONSchema> = {
-  height: { enum: [...NORMAL_MAP_HEIGHTS] },
-  invert: { type: "boolean" },
+const kOddLevels = notMultipleOf(z.int().check(z.minimum(3)), 2);
+
+const kSettingsShape = {
+  height: z.enum(NORMAL_MAP_HEIGHTS),
+  invert: z.boolean(),
   strength: kNonNegative,
-  border: { enum: [...NORMAL_MAP_BORDERS] },
-  bevel: {
-    type: "object",
-    properties: {
-      width: { type: "number", exclusiveMinimum: 0 },
-      profile: { enum: [...NORMAL_MAP_BEVEL_PROFILES] }
-    },
-    required: ["width", "profile"]
-  },
+  border: z.enum(NORMAL_MAP_BORDERS),
+  bevel: z.object({
+    width: z.number().check(z.gt(0)),
+    profile: z.enum(NORMAL_MAP_BEVEL_PROFILES)
+  }),
   edgeIntensity: kNonNegative,
-  levels: {
-    anyOf: [
-      { const: 0 },
-      { type: "integer", minimum: 3, not: { multipleOf: 2 } }
-    ]
-  }
+  levels: z.union([z.literal(0), kOddLevels])
 };
 
-export const normalMapSettingsPatchSchema: JSONSchema = {
-  type: "object",
-  properties: kSettingsProperties
-};
+export const normalMapSettingsSchema = z.object(kSettingsShape);
 
-export const normalMapSettingsSchema: JSONSchema = {
-  type: "object",
-  properties: kSettingsProperties,
-  required: Object.keys(kSettingsProperties)
-};
+export const normalMapSettingsPatchSchema = z.partial(normalMapSettingsSchema);
 
-export const normalMapZoneSchema: JSONSchema = {
-  type: "object",
-  properties: {
-    regionId: { type: "string", minLength: 1 },
-    settings: {
-      oneOf: [
-        { const: "off" },
-        normalMapSettingsPatchSchema
-      ]
-    }
-  },
-  required: ["regionId", "settings"]
-};
+export const normalMapZoneSchema = z.object({
+  regionId: z.string().check(z.minLength(1)),
+  settings: z.union([
+    z.literal("off"),
+    normalMapSettingsPatchSchema
+  ])
+});
 
-export const normalMapDataSchema: JSONSchema = {
-  type: "object",
-  properties: {
-    defaults: normalMapSettingsSchema,
-    zones: {
-      type: "array",
-      items: normalMapZoneSchema
-    }
-  },
-  required: ["defaults", "zones"]
-};
+export const normalMapDataSchema = z.object({
+  defaults: normalMapSettingsSchema,
+  zones: z.array(normalMapZoneSchema)
+});

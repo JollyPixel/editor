@@ -37,6 +37,7 @@ export interface RoomRegistryOptions {
    */
   graceMs?: number;
   limits?: RoomLimits;
+  validateOutbound?: boolean;
 }
 
 /**
@@ -48,6 +49,7 @@ export class RoomRegistry {
   #resolver: RoomResolver | null;
   #graceMs: number;
   #limits: RoomLimits | undefined;
+  #validateOutbound: boolean | undefined;
   #entries = new Map<string, RoomEntry>();
   #evictions = new Map<string, Promise<void>>();
   #resolutions = new Map<string, Promise<ServerRoom | null>>();
@@ -60,6 +62,7 @@ export class RoomRegistry {
     this.#resolver = options.resolver ?? null;
     this.#graceMs = options.graceMs ?? kDefaultRoomGraceMs;
     this.#limits = options.limits;
+    this.#validateOutbound = options.validateOutbound;
   }
 
   setResolver(
@@ -276,7 +279,8 @@ export class RoomRegistry {
         rights,
         {
           logger: this.#logger,
-          limits: this.#limits
+          limits: this.#limits,
+          validateOutbound: this.#validateOutbound
         }
       ),
       resolution,

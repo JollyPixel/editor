@@ -1,9 +1,7 @@
 // Import Third-party Dependencies
-import {
-  defineSchema,
-  type Infer
-} from "@jolly-pixel/network";
+import type { Infer } from "@jolly-pixel/network";
 import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import {
@@ -32,41 +30,22 @@ export const VOXEL_ANIMATION_ASSET: AssetKindDescriptor = {
   icon: VOXEL_ANIMATION_ICON
 };
 
-const kStoredKeysSchema = defineSchema({
-  type: "array",
-  items: {
-    ...animationKeySchema,
-    required: ["tick", "value"]
-  }
+const kStoredKeysSchema = z.optional(z.array(z.extend(animationKeySchema, {
+  interpolation: z.optional(animationKeySchema.shape.interpolation)
+})));
+
+const kStoredTrackSchema = z.extend(animationTrackSchema, {
+  position: kStoredKeysSchema,
+  rotation: kStoredKeysSchema,
+  scale: kStoredKeysSchema
 });
 
-const kStoredTrackSchema = defineSchema({
-  ...animationTrackSchema,
-  properties: {
-    ...animationTrackSchema.properties,
-    position: kStoredKeysSchema,
-    rotation: kStoredKeysSchema,
-    scale: kStoredKeysSchema
-  }
-});
-
-export const voxelAnimationDocumentSchema = defineSchema({
-  type: "object",
-  properties: {
-    version: { const: VOXEL_ANIMATION_DOCUMENT_VERSION },
-    rig: animationSetSnapshotSchema.properties.rig,
-    clips: {
-      type: "array",
-      items: {
-        ...animationClipSchema,
-        properties: {
-          ...animationClipSchema.properties,
-          tracks: { type: "array", items: kStoredTrackSchema }
-        }
-      }
-    }
-  },
-  required: ["version", "rig", "clips"]
+export const voxelAnimationDocumentSchema = z.object({
+  version: z.literal(VOXEL_ANIMATION_DOCUMENT_VERSION),
+  rig: animationSetSnapshotSchema.shape.rig,
+  clips: z.array(z.extend(animationClipSchema, {
+    tracks: z.array(kStoredTrackSchema)
+  }))
 });
 
 type StoredAnimationDocument = Infer<typeof voxelAnimationDocumentSchema>;

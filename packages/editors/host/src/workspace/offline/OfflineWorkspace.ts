@@ -161,7 +161,8 @@ export class OfflineWorkspace implements StandaloneWorkspace {
       });
       server = new Server({
         logger: silentLogger(),
-        auth
+        auth,
+        validateOutbound: false
       });
 
       return new OfflineWorkspace({
