@@ -12,7 +12,7 @@ import {
   Server,
   commandVariant,
   withCommandHeader,
-  type ClientHandle,
+  type ClientConnection,
   type PeerIdentity,
   type ServerConnection
 } from "@jolly-pixel/network";
@@ -287,7 +287,7 @@ function removeStoreDirectory(
   fs.rmdirSync(location);
 }
 
-export class SinkHandle implements ClientHandle {
+export class SinkHandle implements ClientConnection {
   readonly id: string;
   bytes = 0;
   messages = 0;
@@ -298,17 +298,15 @@ export class SinkHandle implements ClientHandle {
     this.id = id;
   }
 
-  send(
-    data: unknown
-  ): void {
-    this.sendSerialized(JSON.stringify(data));
-  }
-
   sendSerialized(
     json: string
   ): void {
     this.bytes += json.length;
     this.messages++;
+  }
+
+  close(): void {
+    return;
   }
 }
 

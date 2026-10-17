@@ -8,7 +8,10 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { createIdentity } from "../../helpers/server/identity.ts";
-import { toServerEnvelope } from "../../helpers/server/clientHandle.ts";
+import {
+  createConnection,
+  toServerEnvelope
+} from "../../helpers/server/clientConnection.ts";
 import {
   AssetExtension,
   client,
@@ -87,10 +90,7 @@ describe("Server — dynamic room resolution", () => {
     });
 
     const connectionA = server.connect(
-      {
-        id: "A",
-        send: (data) => kinds.push(toServerEnvelope(data).kind)
-      },
+      createConnection("A", (data) => kinds.push(toServerEnvelope(data).kind)),
       createIdentity("A")
     );
     await connectionA.receive({
@@ -146,10 +146,7 @@ describe("dynamic rooms — read-only resolution", () => {
     });
 
     const connectionA = server.connect(
-      {
-        id: "A",
-        send: (data) => envelopes.push(toServerEnvelope(data))
-      },
+      createConnection("A", (data) => envelopes.push(toServerEnvelope(data))),
       createIdentity("A")
     );
     await connectionA.receive({
@@ -190,10 +187,7 @@ describe("dynamic rooms — read-only resolution", () => {
     });
 
     const connectionA = server.connect(
-      {
-        id: "A",
-        send: (data) => kinds.push(toServerEnvelope(data).kind)
-      },
+      createConnection("A", (data) => kinds.push(toServerEnvelope(data).kind)),
       createIdentity("A")
     );
     await connectionA.receive({

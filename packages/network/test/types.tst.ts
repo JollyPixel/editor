@@ -46,7 +46,7 @@ import type {
   MainToWorkerMessage,
   WorkerToMainMessage
 } from "#src/server/extension/worker/protocol.ts";
-import type { ChannelTransportMessage } from "#src/transport/channel/protocol.ts";
+import type { ChannelMessage } from "#src/transport/channel/ChannelMessage.ts";
 import type { DataChannelLike } from "#src/transport/channel/DataChannelPort.ts";
 
 declare const room: Room;
@@ -115,14 +115,14 @@ describe("CommandReconciler", () => {
   });
 });
 
-describe("ChannelTransportMessage", () => {
+describe("ChannelMessage", () => {
   test("relays every client socket event type", () => {
-    expect<Extract<ChannelTransportMessage, { type: "event"; }>["event"]>()
+    expect<Extract<ChannelMessage, { type: "event"; }>["event"]>()
       .type.toBe<ClientSocketEventType>();
   });
 
   test("relays events assignable to a client socket event", () => {
-    expect<Extract<ChannelTransportMessage, { type: "event"; }>["data"]>()
+    expect<Extract<ChannelMessage, { type: "event"; }>["data"]>()
       .type.toBeAssignableTo<ClientSocketEvent>();
   });
 });

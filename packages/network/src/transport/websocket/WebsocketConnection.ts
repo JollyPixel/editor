@@ -2,8 +2,8 @@
 import { WebSocket } from "ws";
 
 // Import Internal Dependencies
-import type { Logger } from "../server/logger.ts";
-import type { ClientHandle } from "./ClientHandle.ts";
+import type { Logger } from "../../server/logger.ts";
+import type { ClientConnection } from "../../server/connection/ClientConnection.ts";
 
 // CONSTANTS
 const kPauseAtPendingMessages = 64;
@@ -36,7 +36,7 @@ export interface WebsocketConnectionOptions {
   holdWrites: () => void;
 }
 
-export class WebsocketConnection implements ClientHandle {
+export class WebsocketConnection implements ClientConnection {
   readonly id: string;
 
   #socket: WebsocketConnectionSocket;
@@ -56,12 +56,6 @@ export class WebsocketConnection implements ClientHandle {
     this.#maxBufferedBytes = options.maxBufferedBytes;
     this.#onMessage = options.onMessage;
     this.#holdWrites = options.holdWrites;
-  }
-
-  send(
-    data: unknown
-  ): void {
-    this.sendSerialized(JSON.stringify(data));
   }
 
   sendSerialized(

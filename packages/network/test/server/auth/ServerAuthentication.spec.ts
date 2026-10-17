@@ -7,14 +7,14 @@ import { setTimeout as nextTimer } from "node:timers/promises";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { createClient } from "../../helpers/server/clientHandle.ts";
+import { createClient } from "../../helpers/server/clientConnection.ts";
 import { RecordingExtension } from "../../helpers/server/RecordingExtension.ts";
 import {
   PresenceOnlyExtension,
   Server,
   UnknownDefaultRoleError,
   type AuthenticationProvider,
-  type ClientHandle
+  type ClientConnection
 } from "#src/index.ts";
 
 function attempt(
@@ -132,7 +132,7 @@ describe("Server — the authenticated role drives rights", () => {
         {
           clientId: "A",
           role: "editor",
-          profile: Object.create(null),
+          profile: {},
           presence: {}
         }
       ]
@@ -170,10 +170,10 @@ describe("Server — revocations", () => {
   function closableClient(
     id: string,
     closed: string[]
-  ): ClientHandle {
+  ): ClientConnection {
     return {
       id,
-      send: () => void 0,
+      sendSerialized: () => void 0,
       close: (code) => closed.push(`${id}:${code}`)
     };
   }

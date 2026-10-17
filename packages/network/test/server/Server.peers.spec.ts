@@ -10,7 +10,7 @@ import { createIdentity } from "../helpers/server/identity.ts";
 import {
   createClient,
   withoutSync
-} from "../helpers/server/clientHandle.ts";
+} from "../helpers/server/clientConnection.ts";
 import { RecordingExtension } from "../helpers/server/RecordingExtension.ts";
 import { Server } from "#src/index.ts";
 
@@ -148,7 +148,7 @@ describe("Server — peer metadata", () => {
         {
           clientId: "B",
           role: "default",
-          profile: Object.create(null),
+          profile: {},
           presence: {}
         }
       ]
@@ -190,7 +190,7 @@ describe("Server — peer metadata", () => {
         {
           clientId: "C",
           role: "default",
-          profile: Object.create(null),
+          profile: {},
           presence: {}
         }
       ]

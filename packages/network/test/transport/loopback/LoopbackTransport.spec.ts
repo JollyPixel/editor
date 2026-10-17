@@ -12,9 +12,9 @@ import {
   Client,
   type PeerIdentity
 } from "#src/index.ts";
-import { LoopbackTransport } from "#src/transport/loopback.ts";
-import { RecordingExtension } from "../helpers/server/RecordingExtension.ts";
-import { waitFor } from "../helpers/waitFor.ts";
+import { LoopbackTransport } from "#src/transport/loopback/LoopbackTransport.ts";
+import { RecordingExtension } from "../../helpers/server/RecordingExtension.ts";
+import { waitFor } from "../../helpers/waitFor.ts";
 
 function createLoopback(): {
   transport: LoopbackTransport;

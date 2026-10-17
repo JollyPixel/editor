@@ -11,7 +11,7 @@ import { createIdentity } from "../../helpers/server/identity.ts";
 import {
   createClient,
   toServerEnvelope
-} from "../../helpers/server/clientHandle.ts";
+} from "../../helpers/server/clientConnection.ts";
 import { createExtension } from "../../helpers/server/serverRoom.ts";
 import { actionProtocols } from "../../helpers/protocol/protocols.ts";
 import { ServerRoom } from "#src/server/room/ServerRoom.ts";

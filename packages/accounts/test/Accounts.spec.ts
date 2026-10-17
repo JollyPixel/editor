@@ -7,8 +7,6 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
-  WEBSOCKET_AUTH_PROTOCOL_PREFIX,
-  WEBSOCKET_PROTOCOL,
   type AuthenticationRequest,
   type PeerMetadata
 } from "@jolly-pixel/network";
@@ -33,15 +31,10 @@ function upgrade(
     headers: {
       host: "studio.local",
       origin: "http://studio.local",
-      ...(cookie === undefined ? {} : { cookie }),
-      ...(credential === undefined ? {} : {
-        "sec-websocket-protocol": [
-          WEBSOCKET_PROTOCOL,
-          WEBSOCKET_AUTH_PROTOCOL_PREFIX + Buffer.from(credential).toString("base64url")
-        ].join(", ")
-      })
+      ...(cookie === undefined ? {} : { cookie })
     },
-    defaultRole: "spectator"
+    defaultRole: "spectator",
+    credential
   };
 }
 

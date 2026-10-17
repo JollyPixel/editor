@@ -1,5 +1,6 @@
 // Import Internal Dependencies
-import type { ClientHandle } from "#src/index.ts";
+import type { ClientConnection } from "#src/index.ts";
+import { ConnectedClient } from "#src/server/connection/ConnectedClient.ts";
 import {
   describeEnvelopeParseError,
   Envelope,
@@ -7,8 +8,19 @@ import {
 } from "#src/protocol/envelope/Envelope.ts";
 
 export interface RecordingClient {
-  client: ClientHandle;
+  client: ConnectedClient;
   sent: unknown[];
+}
+
+export function createConnection(
+  id: string,
+  receive: (data: unknown) => void = () => void 0
+): ClientConnection {
+  return {
+    id,
+    sendSerialized: (json) => receive(JSON.parse(json)),
+    close: () => void 0
+  };
 }
 
 export function createClient(
@@ -17,10 +29,9 @@ export function createClient(
   const sent: unknown[] = [];
 
   return {
-    client: {
-      id,
-      send: (data) => sent.push(data)
-    },
+    client: new ConnectedClient(
+      createConnection(id, (data) => sent.push(data))
+    ),
     sent
   };
 }

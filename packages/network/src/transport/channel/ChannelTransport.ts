@@ -3,17 +3,17 @@ import type {
   ClientSocket,
   ClientSocketEvent
 } from "../ClientSocket.ts";
+import { GOING_AWAY_CLOSE_CODE } from "../constants.ts";
 import { ChannelSocket } from "./ChannelSocket.ts";
+import type {
+  ChannelPort,
+  ChannelSocketPortFactory
+} from "./ChannelPort.ts";
 import {
   CHANNEL_TRANSPORT_TAG,
-  parseChannelTransportMessage,
-  type ChannelPort,
-  type ChannelSocketPortFactory,
-  type ChannelTransportMessage
-} from "./protocol.ts";
-
-// CONSTANTS
-const kGoingAwayCloseCode = 1001;
+  parseChannelMessage,
+  type ChannelMessage
+} from "./ChannelMessage.ts";
 
 export interface ChannelTransportOptions {
   /**
@@ -52,7 +52,7 @@ export class ChannelTransport {
   #closed = false;
 
   readonly #onMessage = (event: { data: unknown; }): void => {
-    const message = parseChannelTransportMessage(event.data);
+    const message = parseChannelMessage(event.data);
     if (
       message?.type === "event" &&
       message.host === this.#host
@@ -100,14 +100,14 @@ export class ChannelTransport {
       type: "connect",
       dedicated: port !== null,
       credential: this.#credential
-    } satisfies ChannelTransportMessage);
+    } satisfies ChannelMessage);
 
     return socket;
   }
 
   close(
     event: ClientSocketEvent = {
-      code: kGoingAwayCloseCode,
+      code: GOING_AWAY_CLOSE_CODE,
       reason: "Channel transport closed."
     }
   ): void {

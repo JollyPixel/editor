@@ -9,11 +9,11 @@ import assert from "node:assert/strict";
 import fc from "fast-check";
 
 // Import Internal Dependencies
-import { ChannelHarness } from "../helpers/transport/ChannelHarness.ts";
+import { ChannelHarness } from "../../helpers/transport/ChannelHarness.ts";
 import {
   channelAction,
   channelSetup
-} from "../helpers/arbitraries/channelActions.ts";
+} from "../../helpers/arbitraries/channelActions.ts";
 
 // CONSTANTS
 const kRuns = 500;

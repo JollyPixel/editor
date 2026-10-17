@@ -1,15 +1,11 @@
-export interface ClientHandle {
+export interface ClientConnection {
   readonly id: string;
 
-  send(
-    data: unknown
-  ): void;
-
-  sendSerialized?(
+  sendSerialized(
     json: string
   ): void;
 
-  close?(
+  close(
     code: number,
     reason: string
   ): void;

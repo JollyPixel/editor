@@ -4,7 +4,7 @@ import {
   WEBSOCKET_AUTH_PROTOCOL_PREFIX,
   WEBSOCKET_PROTOCOL
 } from "./constants.ts";
-import type { ClientSocket } from "./ClientSocket.ts";
+import type { ClientSocket } from "../ClientSocket.ts";
 
 export interface WebSocketConnectOptions {
   /**

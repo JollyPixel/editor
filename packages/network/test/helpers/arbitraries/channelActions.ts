@@ -2,7 +2,7 @@
 import fc from "fast-check";
 
 // Import Internal Dependencies
-import { CHANNEL_TRANSPORT_TAG } from "#src/transport/channel.ts";
+import { CHANNEL_TRANSPORT_TAG } from "#src/transport/channel/ChannelMessage.ts";
 import {
   HOST_ID,
   SOCKET_EVENTS,

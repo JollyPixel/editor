@@ -7,7 +7,7 @@ import { setImmediate } from "node:timers/promises";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { WriteBatch } from "#src/transport/WriteBatch.ts";
+import { WriteBatch } from "#src/transport/websocket/WriteBatch.ts";
 
 class CountingStream {
   corked = 0;

@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { createIdentity } from "../../helpers/server/identity.ts";
+import { createConnection } from "../../helpers/server/clientConnection.ts";
 import {
   AssetExtension,
   client,
@@ -97,8 +98,8 @@ describe("Server — room lifetime regressions", () => {
       return { extension: new AssetExtension("ext-id", "kind") };
     });
 
-    const connectionA = server.connect({ id: "A", send: (data) => sent.push(data) }, createIdentity("A"));
-    const connectionB = server.connect({ id: "B", send: (data) => sent.push(data) }, createIdentity("B"));
+    const connectionA = server.connect(createConnection("A", (data) => sent.push(data)), createIdentity("A"));
+    const connectionB = server.connect(createConnection("B", (data) => sent.push(data)), createIdentity("B"));
     await connectionA.receive({ room: "kind:asset-1", kind: "join" });
     await connectionB.receive({ room: "kind:asset-1", kind: "join" });
 

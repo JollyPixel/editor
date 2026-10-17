@@ -18,10 +18,10 @@ import {
   Client,
   connectWebSocket
 } from "#src/index.ts";
-import { WebsocketTransport } from "#src/transport/websocket.ts";
-import { WEBSOCKET_PROTOCOL } from "#src/transport/constants.ts";
-import { RecordingExtension } from "../helpers/server/RecordingExtension.ts";
-import { waitFor } from "../helpers/waitFor.ts";
+import { WebsocketTransport } from "#src/transport/websocket/WebsocketTransport.ts";
+import { WEBSOCKET_PROTOCOL } from "#src/transport/websocket/constants.ts";
+import { RecordingExtension } from "../../helpers/server/RecordingExtension.ts";
+import { waitFor } from "../../helpers/waitFor.ts";
 
 describe("WebsocketTransport + Client (integration)", () => {
   let httpServer: HttpServer;

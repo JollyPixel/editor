@@ -37,7 +37,7 @@ import type {
   PeerMetadata,
   RoomRights
 } from "../../protocol/types.ts";
-import type { ClientHandle } from "../../transport/ClientHandle.ts";
+import type { ConnectedClient } from "../connection/ConnectedClient.ts";
 
 // CONSTANTS
 const kDefaultPeerMetadataLength = 1_048_576;
@@ -63,7 +63,7 @@ interface Refusal {
 }
 
 export interface RoomJoiner {
-  handle: ClientHandle;
+  handle: ConnectedClient;
   identity: PeerIdentity;
   profile?: PeerMetadata;
   presence?: PeerMetadata;
@@ -158,7 +158,7 @@ export class ServerRoom {
   }
 
   #authorize(
-    target: ClientHandle,
+    target: ConnectedClient,
     request: AuthorizeRequest
   ): boolean {
     const { role, event } = request;
@@ -178,7 +178,7 @@ export class ServerRoom {
   }
 
   #withinLimit(
-    client: ClientHandle,
+    client: ConnectedClient,
     event: string,
     subject: "profile" | "presence",
     length: number
@@ -199,7 +199,7 @@ export class ServerRoom {
   }
 
   #refuse(
-    target: ClientHandle,
+    target: ConnectedClient,
     refusal: Refusal
   ): void {
     const {
@@ -325,7 +325,7 @@ export class ServerRoom {
   }
 
   #initialPresence(
-    client: ClientHandle,
+    client: ConnectedClient,
     role: string,
     presence: PeerMetadata
   ): PeerPresence {
@@ -373,7 +373,7 @@ export class ServerRoom {
 
   #sendSyncSnapshot(
     clientId: string,
-    client: ClientHandle,
+    client: ConnectedClient,
     role: string
   ): void {
     client.send({

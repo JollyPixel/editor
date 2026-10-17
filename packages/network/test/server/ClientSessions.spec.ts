@@ -8,20 +8,15 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { createIdentity } from "../helpers/server/identity.ts";
 import { ClientSessions } from "#src/server/ClientSessions.ts";
-
-function handle(
-  id: string
-) {
-  return { id, send: () => void 0 };
-}
+import { createConnection } from "../helpers/server/clientConnection.ts";
 
 describe("ClientSessions", () => {
   test("clear drops every session and pending lane", () => {
     const sessions = new ClientSessions();
     const gate = Promise.withResolvers<void>();
 
-    sessions.open(handle("A"), createIdentity(handle("A")));
-    sessions.open(handle("B"), createIdentity(handle("B")));
+    sessions.open(createConnection("A"), createIdentity("A"));
+    sessions.open(createConnection("B"), createIdentity("B"));
     sessions.enqueue("A", () => gate.promise, "room-1");
     sessions.clear();
 

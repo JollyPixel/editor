@@ -13,8 +13,8 @@ import { WebSocket } from "ws";
 import {
   WebsocketConnection,
   type WebsocketConnectionSocket
-} from "#src/transport/WebsocketConnection.ts";
-import { captureLogger } from "../helpers/captureLogger.ts";
+} from "#src/transport/websocket/WebsocketConnection.ts";
+import { captureLogger } from "../../helpers/captureLogger.ts";
 
 class FakeSocket implements WebsocketConnectionSocket {
   readyState: number = WebSocket.OPEN;

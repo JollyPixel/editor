@@ -13,7 +13,7 @@ import * as EventStore from "@jolly-pixel/event-store";
 import { FilesystemAssetSource } from "@jolly-pixel/asset-source/node";
 import {
   Server,
-  type ClientHandle
+  type ClientConnection
 } from "@jolly-pixel/network";
 import { AssetRoom } from "@jolly-pixel/asset";
 import {
@@ -58,13 +58,14 @@ function tempRoot(): Promise<string> {
 
 function client(
   id: string
-): ClientHandle & { received: unknown[]; } {
+): ClientConnection & { received: unknown[]; } {
   const received: unknown[] = [];
 
   return {
     id,
     received,
-    send: (payload) => received.push(payload)
+    sendSerialized: (json) => received.push(JSON.parse(json)),
+    close: () => void 0
   };
 }
 

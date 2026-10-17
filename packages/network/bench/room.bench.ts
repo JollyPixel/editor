@@ -18,6 +18,7 @@ import {
 } from "./_fixtures.ts";
 import { RightsTable } from "../src/index.ts";
 import { ServerRoom } from "../src/server/room/ServerRoom.ts";
+import { ConnectedClient } from "../src/server/connection/ConnectedClient.ts";
 
 // CONSTANTS
 const kMemberCounts = [2, 10, 50];
@@ -66,7 +67,7 @@ async function joinedRoom(
   for (let index = 0; index < members; index++) {
     const clientId = `peer-${index}`;
     await room.join({
-      handle: new SinkHandle(clientId),
+      handle: new ConnectedClient(new SinkHandle(clientId)),
       identity: createIdentity(clientId, index % 4 === 3 ? "viewer" : "editor")
     });
   }

@@ -5,7 +5,6 @@ import type { IncomingHttpHeaders } from "node:http";
 // Import Third-party Dependencies
 import {
   GUEST_USERNAME,
-  readCredential,
   type AuthenticationProvider,
   type AuthenticationRequest,
   type PeerIdentity,
@@ -222,14 +221,8 @@ export class Accounts implements AuthenticationProvider, Disposable {
   authenticate(
     request: AuthenticationRequest
   ): PeerIdentity | null {
-    let credential: string | null;
-    try {
-      credential = readCredential(request);
-    }
-    catch {
-      return null;
-    }
-    if (credential !== null) {
+    const { credential } = request;
+    if (credential !== undefined) {
       const link = this.shareLinks.find(credential);
 
       return link === null ? null : toGuestIdentity(link);

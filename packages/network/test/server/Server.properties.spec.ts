@@ -15,7 +15,7 @@ import { createIdentity } from "../helpers/server/identity.ts";
 import {
   createClient,
   withoutSync
-} from "../helpers/server/clientHandle.ts";
+} from "../helpers/server/clientConnection.ts";
 import { captureLogger } from "../helpers/captureLogger.ts";
 import { RecordingExtension } from "../helpers/server/RecordingExtension.ts";
 import { clientEnvelope } from "../helpers/arbitraries/envelopes.ts";

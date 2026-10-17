@@ -6,5 +6,5 @@ export {
 } from "./server/auth/password.ts";
 export * from "./server/extension/worker/WorkerExtensionDescriptor.ts";
 export * from "./server/extension/worker/WorkerExtensionProxy.ts";
-export * from "./transport/websocket.ts";
+export * from "./transport/websocket/WebsocketTransport.ts";
 export * from "./plugins/vite.ts";
