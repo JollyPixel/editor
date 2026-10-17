@@ -21,7 +21,6 @@ import { PROJECT_MANIFEST_FILE } from "../../src/editors/ProjectManifest.ts";
 import { StudioServer } from "../../server/StudioServer.ts";
 import {
   createDist,
-  INDEX_HTML,
   voxelMapProject
 } from "../helpers/editorPages.ts";
 import {
@@ -31,6 +30,7 @@ import {
 
 // CONSTANTS
 const kShellHtml = "<!DOCTYPE html><title>JollyPixel Studio</title>";
+const kCompiledEditorHtml = "<!DOCTYPE html><title>Compiled Voxel Map</title>";
 const kPublicHost = "studio.example.com";
 
 interface Upgrade {
@@ -81,6 +81,11 @@ describe("StudioServer", () => {
     shell = path.join(root, "shell");
     await fs.mkdir(shell);
     await fs.writeFile(path.join(shell, "index.html"), kShellHtml);
+    await fs.mkdir(path.join(shell, "editors", "voxel-map"), { recursive: true });
+    await fs.writeFile(
+      path.join(shell, "editors", "voxel-map", "index.html"),
+      kCompiledEditorHtml
+    );
     editorDist = await createDist();
   });
 
@@ -103,17 +108,19 @@ describe("StudioServer", () => {
     });
   }
 
-  test("serves the shell, the editor pages, the manifest and the API on one port", async() => {
+  test("serves the shell, its editor pages, the manifest and the API on one port", async() => {
     await using server = await openServer();
     const url = await server.listen(0, "127.0.0.1");
 
     const shellPage = await fetch(url);
     const editorPage = await fetch(new URL("editors/voxel-map/", url));
+    const unknownEditor = await fetch(new URL("editors/unknown/", url));
     const manifest = await fetch(new URL(PROJECT_MANIFEST_FILE, url));
     const api = await fetch(new URL("api/unknown", url));
 
     assert.equal(await shellPage.text(), kShellHtml);
-    assert.equal(await editorPage.text(), INDEX_HTML);
+    assert.equal(await editorPage.text(), kCompiledEditorHtml);
+    assert.equal(unknownEditor.status, 404);
     assert.deepEqual(
       (await manifest.json()).editors,
       [
@@ -157,6 +164,23 @@ describe("StudioServer", () => {
         shell: path.join(root, "missing")
       }),
       /build the studio before serving it/
+    );
+  });
+
+  test("refuses to open a shell built without an editor page", async() => {
+    const staleShell = path.join(root, "stale-shell");
+    await fs.mkdir(staleShell);
+    await fs.writeFile(path.join(staleShell, "index.html"), kShellHtml);
+    const editorPage = path.join(staleShell, "editors", "voxel-map", "index.html");
+
+    await assert.rejects(
+      StudioServer.open({
+        project: voxelMapProject(root, editorDist),
+        shell: staleShell
+      }),
+      {
+        message: `"${editorPage}" is missing: build the studio before serving it.`
+      }
     );
   });
 });

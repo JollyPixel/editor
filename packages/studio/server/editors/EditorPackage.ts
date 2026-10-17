@@ -15,7 +15,8 @@ const kPackageManifestSchema = z.object({
     editor: z.object({
       name: z.string().regex(/^[a-z0-9][a-z0-9-]*$/),
       kinds: z.array(z.string().min(1)).min(1),
-      dist: z.string().default("dist")
+      dist: z.string().default("dist"),
+      page: z.string().min(1).optional()
     })
   })
 });
@@ -27,9 +28,15 @@ export interface EditorPackageData extends EditorDescriptor {
    */
   dist: string;
   /**
-   * The page ships built: it must exist when read and is never watched.
+   * The page ships built and is never watched.
    */
   prebuilt: boolean;
+  /**
+   * Absolute path of the page's source HTML, which the studio build compiles
+   * together with the shell. Null when the manifest names none, or when a
+   * prebuilt package ships only its built page.
+   */
+  page: string | null;
 }
 
 export class EditorPackage implements EditorPackageData {
@@ -38,6 +45,7 @@ export class EditorPackage implements EditorPackageData {
   readonly kinds: readonly string[];
   readonly dist: string;
   readonly prebuilt: boolean;
+  readonly page: string | null;
 
   static read(
     packageName: string,
@@ -58,21 +66,31 @@ export class EditorPackage implements EditorPackageData {
       );
     }
 
-    const { name, kinds, dist } = manifest.data.jollypixel.editor;
-    const editor = new EditorPackage({
+    const {
+      name,
+      kinds,
+      dist,
+      page
+    } = manifest.data.jollypixel.editor;
+    const prebuilt = root.split(/[\\/]/).includes(kInstallFolder);
+    const source = page === undefined ?
+      null :
+      path.resolve(root, page);
+    const shipsPage = source !== null && fs.existsSync(source);
+    if (source !== null && !shipsPage && !prebuilt) {
+      throw new TypeError(
+        `"${packageName}" has no page source at "${source}".`
+      );
+    }
+
+    return new EditorPackage({
       package: packageName,
       name,
       kinds,
       dist: path.resolve(root, dist),
-      prebuilt: root.split(/[\\/]/).includes(kInstallFolder)
+      prebuilt,
+      page: shipsPage ? source : null
     });
-    if (editor.prebuilt && !fs.existsSync(editor.dist)) {
-      throw new TypeError(
-        `"${packageName}" has no built page at "${editor.dist}".`
-      );
-    }
-
-    return editor;
   }
 
   constructor(
@@ -83,6 +101,7 @@ export class EditorPackage implements EditorPackageData {
     this.kinds = [...data.kinds];
     this.dist = data.dist;
     this.prebuilt = data.prebuilt;
+    this.page = data.page;
   }
 
   toDescriptor(): EditorDescriptor {

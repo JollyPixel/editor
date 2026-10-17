@@ -61,7 +61,7 @@ describe("EditorPagesWatcher", () => {
     warnings = [];
     watcher = new EditorPagesWatcher(server, [
       voxelMapEditor(mapDist),
-      voxelMapEditor(modelDist, "voxel-model")
+      voxelMapEditor(modelDist, { name: "voxel-model" })
     ]);
   });
 

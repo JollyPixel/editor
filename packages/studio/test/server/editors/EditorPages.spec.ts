@@ -12,7 +12,6 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { brotliCompressSync } from "node:zlib";
 
 // Import Internal Dependencies
-import { EditorPackage } from "../../../server/editors/EditorPackage.ts";
 import { EditorPackages } from "../../../server/editors/EditorPackages.ts";
 import { EditorPages } from "../../../server/editors/EditorPages.ts";
 import { EDITOR_PAGE_SETTLE_MS } from "../../../server/editors/EditorPagesWatcher.ts";
@@ -170,6 +169,27 @@ describe("EditorPages", () => {
     }
   });
 
+  test("requires the built page of a prebuilt editor", async() => {
+    const parent = await createTempDir("studio-missing-");
+    const missingDist = path.join(parent, "dist");
+    const editors = new EditorPackages([
+      voxelMapEditor(missingDist, { name: "prebuilt", prebuilt: true })
+    ]);
+
+    try {
+      assert.throws(
+        () => new EditorPages(editors),
+        {
+          name: "TypeError",
+          message: `"@jolly-pixel/editor.prebuilt" has no built page at "${missingDist}".`
+        }
+      );
+    }
+    finally {
+      await removeTempDir(parent);
+    }
+  });
+
   test("announces rebuilt pages of the editors that are not prebuilt", async() => {
     const parent = await createTempDir("studio-prebuilt-");
     const prebuiltDist = path.join(parent, "prebuilt", "dist");
@@ -177,14 +197,8 @@ describe("EditorPages", () => {
     await fs.mkdir(prebuiltDist, { recursive: true });
     const sent: string[] = [];
     const watcher = new EditorPages(new EditorPackages([
-      new EditorPackage({
-        package: "@jolly-pixel/editor.prebuilt",
-        name: "prebuilt",
-        kinds: ["voxelmap"],
-        dist: prebuiltDist,
-        prebuilt: true
-      }),
-      voxelMapEditor(builtDist, "built")
+      voxelMapEditor(prebuiltDist, { name: "prebuilt", prebuilt: true }),
+      voxelMapEditor(builtDist, { name: "built" })
     ])).watch({
       config: {
         logger: {

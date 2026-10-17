@@ -57,10 +57,10 @@ flowchart TB
   mounts its middleware and attaches its WebSocket to the dev server. It
   closes its WebSocket transports, the API, the workspace, then the accounts.
 - `StudioServer` is the hosted entry, started by `server/start.ts`. One
-  `node:http` server chains the back-end, `EditorPages`, `ManifestRoute` and
-  the built shell, so editor pages and the manifest come from the project as
-  in dev. `serveBuild` serves the shell and editor pages, with hashed assets
-  cached as immutable.
+  `node:http` server chains the back-end, `ManifestRoute` and the built shell,
+  which holds every editor page under `editors/<name>/`. It refuses to start
+  when a project editor has no page there. `serveBuild` serves the shell and
+  its pages, with hashed assets cached as immutable.
 - `StudioAccess` reads the `access` section into a rights table with a
   built-in `admin` and the `AccountRoles`. `server/accounts` opens the
   project's `Accounts` on `.jollypixel/accounts.db`: the network server
@@ -296,9 +296,19 @@ flowchart TB
   Event --> Reload
 ```
 
-- Each page bundles its own `editor.host` and `@jolly-pixel/ui`: change
-  either, rebuild the page.
+- In dev, each page folder bundles its own `editor.host` and
+  `@jolly-pixel/ui`: change either, rebuild the page.
 - Reload hits the active tab now, the others on next focus.
+- `build:hosted` and `build:static` compile every page whose manifest names a
+  `page` in the shell's Vite build, so ui, lit and three get one URL across
+  pages. `vite/editorPages` adds each page as a virtual
+  `editors/<name>/index.html` input. The page's URLs must be relative: a
+  root-absolute one fails the build.
+- That build turns off rolldown's `mergeCommonChunks`: left on, it moves
+  shared modules into one page's entry chunk and the shell preloads the
+  voxel-map entry. `test/vite/studio.bundle.spec.ts` guards it.
+- Both builds then fill `editors/<name>/` with the `public/` folder of each
+  compiled page and the `dist` of every other editor.
 - `pixel-art` builds its page with `build:page`, which the studio `build`
   runs.
 

@@ -26,8 +26,10 @@ shell's own document waits for the `EditorDefinition` revisit in the
 
 - A tab is a full editor: its own WebSocket client, runtime and WebGL contexts. See
   [ADR-0005](./0005-four-editor-tabs.md).
-- Each page bundles its own `editor.host` and `@jolly-pixel/ui`. The pages stay self-contained so
+- Each page resolves its own `editor.host` and `@jolly-pixel/ui`. The pages stay self-contained so
   an external editor can ship prebuilt, and the shell does not pin the host version an editor runs.
+  Since October 2026 the studio build compiles the pages that ship their source HTML together with
+  the shell, so modules they share get one URL; a prebuilt page is copied as built.
   In dev, `pnpm --filter @jolly-pixel/studio dev:editors` rebuilds both libraries and every page
   on change, and the dev server tells the shell to reload the frames of a rebuilt editor.
 - An editor's own Vite config and back-end stay for standalone development and its e2e suite.

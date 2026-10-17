@@ -12,8 +12,8 @@
   ],
   "scripts": {
     "build": "pnpm --filter @jolly-pixel/editor.pixel-art build:page",
-    "build:static": "pnpm --filter @jolly-pixel/editor.pixel-art build:page:static && pnpm --filter @jolly-pixel/editor.voxel-map build:static && pnpm --filter @jolly-pixel/editor.voxel-model build:static && vite build --mode static",
-    "build:hosted": "pnpm --filter @jolly-pixel/editor.pixel-art build:page && pnpm --filter @jolly-pixel/editor.voxel-map build && pnpm --filter @jolly-pixel/editor.voxel-model build && vite build",
+    "build:static": "vite build --mode static",
+    "build:hosted": "vite build",
     "dev:e2e": "vite --mode e2e",
     "dev": "vite",
     "start": "node --env-file-if-exists=.env server/start.ts",

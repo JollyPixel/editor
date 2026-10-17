@@ -10,7 +10,7 @@ $ pnpm --filter @jolly-pixel/studio build:static
 
 ## Hosted server
 
-One Node.js process serves one project behind a TLS reverse proxy. Build the editor pages and the shell, then start it:
+One Node.js process serves one project behind a TLS reverse proxy. Build the workspace, then the studio, which compiles the shell and the editor pages in one Vite build, and start it:
 
 ```bash
 $ pnpm -r build

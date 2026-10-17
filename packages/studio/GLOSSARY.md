@@ -73,8 +73,9 @@ icon. The shell registers one per kind it can show.
 ### Editor manifest
 
 The `jollypixel.editor` field of an editor package's `package.json`:
-`{ name, kinds, dist? }`. It tells the studio which kinds the editor opens
-and which folder holds its built page.
+`{ name, kinds, dist?, page? }`. It tells the studio which kinds the editor
+opens, which folder holds its built page and, with `page`, which source HTML
+the studio build compiles together with the shell.
 
 ### Project manifest
 

@@ -16,6 +16,7 @@ import {
 } from "vite";
 
 // Import Internal Dependencies
+import type { EditorPages } from "../../server/editors/EditorPages.ts";
 import { editorPages } from "../../vite/editorPages.ts";
 import {
   BUNDLE,
@@ -28,6 +29,22 @@ import {
   createTempDir,
   removeTempDir
 } from "../helpers/tempDir.ts";
+
+// CONSTANTS
+const kEditorCss = "body { margin: 0; }";
+const kScriptUrl = /(?:src|href)="([^"]+\.js)"/g;
+const kBundledStylesheet = /href="\.\.\/\.\.\/assets\/[^"]+\.css"/;
+
+async function scriptsOf(
+  page: string
+): Promise<string[]> {
+  const html = await fs.readFile(page, "utf8");
+
+  return Array.from(
+    html.matchAll(kScriptUrl),
+    ([, url]) => path.resolve(path.dirname(page), url)
+  );
+}
 
 describe("editorPages", () => {
   let dist: string;
@@ -42,7 +59,11 @@ describe("editorPages", () => {
     );
     await fs.writeFile(
       path.join(root, "main.ts"),
-      "document.title = \"studio\";\n"
+      "import { mount } from \"./shared.ts\";\nmount(\"studio\");\n"
+    );
+    await fs.writeFile(
+      path.join(root, "shared.ts"),
+      "export function mount(name: string) {\n  document.title = name;\n}\n"
     );
   });
 
@@ -75,17 +96,96 @@ describe("editorPages", () => {
     }
   });
 
-  test("copies the pages on build", async() => {
-    const outDir = path.join(root, "out");
-    await build({
+  function buildStudio(
+    pages: EditorPages,
+    outDir: string
+  ) {
+    return build({
       root,
+      base: "./",
       configFile: false,
       logLevel: "silent",
       build: {
         outDir
       },
-      plugins: [editorPages(voxelMapPages(dist))]
+      plugins: [editorPages(pages)]
     });
+  }
+
+  test("compiles an editor page with the shell into shared chunks", async() => {
+    const editor = await createTempDir("studio-editor-page-");
+    await fs.mkdir(path.join(editor, "src"));
+    await fs.mkdir(path.join(editor, "public"));
+    await fs.writeFile(
+      path.join(editor, "index.html"),
+      "<link rel=\"stylesheet\" href=\"./main.css\">" +
+      "<link rel=\"stylesheet\" href=\"./src/editor.css\">" +
+      "<script type=\"module\" src=\"./src/index.ts\"></script>"
+    );
+    await fs.writeFile(path.join(editor, "public", "main.css"), kEditorCss);
+    await fs.writeFile(path.join(editor, "src", "editor.css"), kEditorCss);
+    const shared = path
+      .relative(path.join(editor, "src"), path.join(root, "shared.ts"))
+      .replaceAll("\\", "/");
+    await fs.writeFile(
+      path.join(editor, "src", "index.ts"),
+      `import { mount } from "${shared}";\nmount("editor");\n`
+    );
+    const outDir = path.join(root, "compiled");
+
+    try {
+      await buildStudio(
+        voxelMapPages(dist, path.join(editor, "index.html")),
+        outDir
+      );
+      const editorDir = path.join(outDir, "editors", "voxel-map");
+      const shellScripts = await scriptsOf(path.join(outDir, "index.html"));
+      const editorScripts = await scriptsOf(path.join(editorDir, "index.html"));
+      const editorHtml = await fs.readFile(
+        path.join(editorDir, "index.html"),
+        "utf8"
+      );
+
+      assert.ok(editorScripts.length > 0);
+      assert.ok(
+        editorScripts.every((script) => script.startsWith(
+          path.join(outDir, "assets")
+        ))
+      );
+      assert.ok(shellScripts.some((script) => editorScripts.includes(script)));
+      assert.match(editorHtml, kBundledStylesheet);
+      assert.strictEqual(
+        await fs.readFile(path.join(editorDir, "main.css"), "utf8"),
+        kEditorCss
+      );
+    }
+    finally {
+      await removeTempDir(editor);
+    }
+  });
+
+  test("rejects an editor page with a root-absolute URL", async() => {
+    const editor = await createTempDir("studio-editor-page-");
+    const page = path.join(editor, "index.html");
+    await fs.writeFile(
+      page,
+      "<script type=\"module\" src=\"/src/index.ts\"></script>"
+    );
+
+    try {
+      await assert.rejects(
+        buildStudio(voxelMapPages(dist, page), path.join(root, "rejected")),
+        /"\/src\/index\.ts": editor pages use relative URLs/
+      );
+    }
+    finally {
+      await removeTempDir(editor);
+    }
+  });
+
+  test("copies the built pages of the editors it does not compile", async() => {
+    const outDir = path.join(root, "out");
+    await buildStudio(voxelMapPages(dist), outDir);
 
     assert.strictEqual(
       await fs.readFile(
