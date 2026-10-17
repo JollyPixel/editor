@@ -25,7 +25,8 @@ import { WorkspaceElement } from "../../../workspace/WorkspaceElement.ts";
 import type { BlockCreateDialog } from "../dialogs/BlockCreateDialog.ts";
 import type { BlockEditDialog } from "../dialogs/BlockEditDialog.ts";
 import { BlockUsage } from "../usage/BlockUsage.ts";
-import { BlockLibraryOrder } from "./BlockLibraryOrder.ts";
+import { BlockLibraryView } from "./BlockLibraryView.ts";
+import { ShownBlocks } from "./ShownBlocks.ts";
 import {
   BlockMenu,
   LIBRARY_MENU,
@@ -85,10 +86,18 @@ export class BlockLibrary extends WorkspaceElement {
     .problems:hover {
       background: color-mix(in srgb, var(--jolly-danger) 22%, transparent);
     }
+
+    .no-matches {
+      flex: 0 0 auto;
+      margin: 0;
+      padding: var(--jolly-space-1, 4px);
+      color: var(--jolly-text-muted);
+      text-align: center;
+    }
   `;
 
   @property({ attribute: false })
-  declare order: BlockLibraryOrder;
+  declare view: BlockLibraryView;
 
   @property({ type: Boolean })
   declare editable: boolean;
@@ -100,10 +109,7 @@ export class BlockLibrary extends WorkspaceElement {
   private declare _selectedId: number | null;
 
   @state()
-  private declare _blocks: ResolvedBlockDefinition[];
-
-  @state()
-  private declare _shownBlocks: ResolvedBlockDefinition[];
+  private declare _shown: ShownBlocks;
 
   @state()
   private declare _marks: PeerMarks<number>;
@@ -134,12 +140,11 @@ export class BlockLibrary extends WorkspaceElement {
   constructor() {
     super();
 
-    this.order = BlockLibraryOrder.Registry;
+    this.view = BlockLibraryView.Default;
     this.layout = "compact";
     this.editable = true;
     this._selectedId = null;
-    this._blocks = [];
-    this._shownBlocks = [];
+    this._shown = ShownBlocks.Empty;
     this._marks = new PeerMarks();
     this._unused = new Set();
     this._swatches = new Map();
@@ -169,7 +174,14 @@ export class BlockLibrary extends WorkspaceElement {
       workspace.mapDocument.subscribe("materialGroupsChanged", refreshSwatches),
       presence.subscribe("blockSelectionsChange", refreshMarks),
       presence.subscribe("peersChange", refreshMarks),
-      workspace.blocksets.subscribe("change", () => this.requestUpdate()),
+      workspace.blocksets.subscribe("change", () => {
+        this.#refreshShownBlocks(workspace);
+        this.requestUpdate();
+      }),
+      workspace.blocksets.subscribe("activeChange", () => {
+        this.#refreshShownBlocks(workspace);
+        void this.#revealSelection();
+      }),
       workspace.access.subscribe("change", () => this.requestUpdate()),
       workspace.usage.subscribe("change", () => this.#refreshUsage(workspace))
     ];
@@ -179,7 +191,7 @@ export class BlockLibrary extends WorkspaceElement {
     changed: Map<string, unknown>
   ) {
     const workspace = this.workspace;
-    if (changed.has("order") && workspace !== null) {
+    if (changed.has("view") && workspace !== null) {
       this.#refreshShownBlocks(workspace);
       void this.#revealSelection();
     }
@@ -196,16 +208,17 @@ export class BlockLibrary extends WorkspaceElement {
 
     return html`
       ${cleanable ? this.#renderOrphans(workspace) : nothing}
+      ${this.#renderNoMatches()}
       <block-library-viewport
         .stage=${workspace.previewStage}
         .sources=${workspace.blockSources}
-        .blocks=${this._shownBlocks}
+        .blocks=${this._shown.blocks}
         .marks=${this._marks}
         .selectedId=${this._selectedId}
         .unused=${this._unused}
         .swatches=${this._swatches}
         .editable=${creatable}
-        .reorderable=${creatable && this.order.reorderable}
+        .reorderable=${creatable && this.view.order.reorderable}
         .layout=${this.layout}
         @block-select=${this.#onBlockSelect}
         @block-edit=${this.#onBlockEdit}
@@ -225,6 +238,14 @@ export class BlockLibrary extends WorkspaceElement {
         <block-edit-dialog .workspace=${workspace}></block-edit-dialog>
       ` : nothing}
     `;
+  }
+
+  #renderNoMatches() {
+    if (this.view.search.isEmpty || this._shown.blocks.length > 0) {
+      return nothing;
+    }
+
+    return html`<p class="no-matches" role="status">No matching blocks</p>`;
   }
 
   #renderOrphans(
@@ -278,13 +299,16 @@ export class BlockLibrary extends WorkspaceElement {
     event: CustomEvent<{ id: number; }>
   ): void {
     this.attached.state.block.id = event.detail.id;
-    void this.editBlock();
+    void this.#editBlock();
   }
 
   #onBlockMove(
     event: CustomEvent<BlockMoveDetail>
   ): void {
-    this.workspace?.blocksets.moveBlock(event.detail.id, event.detail.toIndex);
+    this.workspace?.blocksets.moveBlock(
+      event.detail.id,
+      this._shown.registryIndex(event.detail)
+    );
   }
 
   #onBlockCreate(): void {
@@ -356,7 +380,7 @@ export class BlockLibrary extends WorkspaceElement {
   ): Promise<void> {
     switch (command) {
       case "edit":
-        await this.editBlock(blockId);
+        await this.#editBlock(blockId);
         break;
       case "duplicate":
         this.#duplicate(workspace, blockId);
@@ -433,7 +457,7 @@ export class BlockLibrary extends WorkspaceElement {
     }
   }
 
-  async editBlock(
+  async #editBlock(
     id = this._selectedId
   ): Promise<void> {
     if (id === null || this.workspace?.blocksets.canEditBlock(id) !== true) {
@@ -475,8 +499,7 @@ export class BlockLibrary extends WorkspaceElement {
   #refreshBlocks(
     workspace: VoxelMapWorkspace
   ): void {
-    this._blocks = [...workspace.mapDocument.blocks.getAll()];
-    this.#refreshShownBlocks(workspace);
+    this.#showBlocks(workspace, [...workspace.mapDocument.blocks.getAll()]);
   }
 
   #refreshUsage(
@@ -502,19 +525,21 @@ export class BlockLibrary extends WorkspaceElement {
   #refreshShownBlocks(
     workspace: VoxelMapWorkspace
   ): void {
-    const next = this.order.apply(
-      this._blocks,
-      workspace.usage.stats.blocks
-    );
-    const shown = this._shownBlocks;
-    if (
-      next.length === shown.length &&
-      next.every((block, index) => block === shown[index])
-    ) {
-      return;
-    }
+    this.#showBlocks(workspace, this._shown.registry);
+  }
 
-    this._shownBlocks = next;
+  #showBlocks(
+    workspace: VoxelMapWorkspace,
+    registry: readonly ResolvedBlockDefinition[]
+  ): void {
+    this._shown = this._shown.update(
+      registry,
+      this.view.apply(
+        registry,
+        workspace.blocksets.active,
+        workspace.usage.stats.blocks
+      )
+    );
   }
 }
 

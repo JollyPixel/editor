@@ -78,8 +78,9 @@ the folder is shut.
 - Activating an action leaves `open` alone. Open the folder from the handler
   when the action should reveal it.
 - Actions do not appear in the reorder drag ghost.
-- Slotted `jolly-button` actions are small chips. A custom action matches their
-  height with `--jolly-folder-action-size`.
+- Slotted `jolly-button` actions are small chips. A slotted
+  [`jolly-search`](../controls/search.md) gets the same size and fill. A custom
+  action matches their height with `--jolly-folder-action-size`.
 - Chips fill with the accent mixed into `--jolly-surface-raised`, or the area
   fill of a toned pane.
 - Restyle them with `--jolly-folder-action-fg`, `-bg`, `-bg-hover`,

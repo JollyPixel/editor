@@ -4,7 +4,10 @@ import {
   type AssetRecordData
 } from "@jolly-pixel/asset";
 import { BLOCKSET_KIND } from "@jolly-pixel/asset.voxel-map/client";
-import type { BlocksetDefinition } from "@jolly-pixel/voxel.renderer";
+import {
+  decodeBlocksetSlot,
+  type BlocksetDefinition
+} from "@jolly-pixel/voxel.renderer";
 
 export class BlocksetEntry {
   static isBlocksetAsset(
@@ -75,6 +78,12 @@ export class BlocksetEntry {
 
   get linked(): boolean {
     return this.assetId !== null;
+  }
+
+  ownsBlockId(
+    blockId: number
+  ): boolean {
+    return decodeBlocksetSlot(blockId) === this.definition.slot;
   }
 
   equals(

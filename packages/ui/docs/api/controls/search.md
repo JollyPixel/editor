@@ -68,3 +68,9 @@ empty.
 - `--jolly-search-bg`, `--jolly-search-bg-hover`, `--jolly-search-bg-focus`:
   box fills, default the control fills.
 - `--jolly-search-trigger-bg-hover`: hovered magnifier and clear buttons.
+- `--jolly-search-trigger-width`, `--jolly-search-trigger-height` (default
+  `16px`), `--jolly-search-trigger-icon-size` (default `12px`),
+  `--jolly-search-trigger-bg` (default none) and
+  `--jolly-search-trigger-opacity` (default `0.75`): the collapsed magnifier.
+- A search in a [folder header](../containers/folder.md#header-actions) is
+  sized and filled like the folder's `jolly-button` actions.

@@ -82,24 +82,37 @@ export const searchStyles = css`
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    width: 16px;
-    height: 16px;
     padding: 0;
     border: 0;
     border-radius: var(--jolly-radius-sm, 2px);
-    background: none;
     color: inherit;
-    opacity: 0.75;
     cursor: pointer;
 
     ${fillTransition}
+  }
+
+  .trigger {
+    width: var(--jolly-search-trigger-width, 16px);
+    height: var(--jolly-search-trigger-height, 16px);
+    background: var(--jolly-search-trigger-bg, none);
+    opacity: var(--jolly-search-trigger-opacity, 0.75);
+  }
+
+  .clear {
+    width: 16px;
+    height: 16px;
+    background: none;
+    opacity: 0.75;
   }
 
   .clear[hidden] {
     display: none;
   }
 
-  .trigger jolly-icon,
+  .trigger jolly-icon {
+    --jolly-icon-size: var(--jolly-search-trigger-icon-size, 12px);
+  }
+
   .clear jolly-icon {
     --jolly-icon-size: 12px;
   }

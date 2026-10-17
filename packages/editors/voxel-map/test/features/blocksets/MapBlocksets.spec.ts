@@ -261,9 +261,12 @@ describe("MapBlocksets", () => {
 
     blocksets.activeBlocksetId = "missing";
     blocksets.activeBlocksetId = "rock";
+    assert.equal(blocksets.active?.id, "rock");
+
     relink([TERRAIN_BLOCKSET]);
 
     assert.deepEqual(changes, ["rock", "terrain"]);
+    assert.equal(blocksets.active?.id, "terrain");
   });
 
   it("links a catalog asset under a fresh blockset id", () => {

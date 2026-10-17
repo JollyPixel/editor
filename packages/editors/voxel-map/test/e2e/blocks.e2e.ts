@@ -85,24 +85,60 @@ test("clicking a block selects it for the brush", async({ map }) => {
   expect(await brushBlock(map)).toBe(2);
 });
 
-test("the order menu opens on hover and stays open once clicked", async({ map, page }) => {
-  const { orderButton, orderMenu } = map.blocks;
-  const mostUsed = orderMenu.getByRole("menuitemradio", { name: "Most used first" });
+test("the settings menu opens on hover and stays open once clicked", async({ map, page }) => {
+  const { settingsButton, settingsMenu } = map.blocks;
+  const mostUsed = settingsMenu.getByRole("menuitemradio", { name: "Most used first" });
 
-  await orderButton.hover();
-  await expect(orderMenu).toBeVisible();
+  await settingsButton.hover();
+  await expect(settingsMenu).toBeVisible();
   await page.mouse.move(0, 0);
-  await expect(orderMenu).toBeHidden();
+  await expect(settingsMenu).toBeHidden();
 
-  await orderButton.hover();
-  await expect(orderMenu).toBeVisible();
-  await orderButton.click();
+  await settingsButton.hover();
+  await expect(settingsMenu).toBeVisible();
+  await settingsButton.click();
   await page.mouse.move(0, 0);
   await expect(mostUsed).toBeVisible();
 
   await mostUsed.click();
-  await expect(orderMenu).toBeHidden();
-  await expect(orderButton).toHaveAccessibleName("Order: Most used first");
+  await expect(settingsMenu).toBeHidden();
+  await settingsButton.click();
+  await expect(mostUsed).toHaveAttribute("aria-checked", "true");
+});
+
+test("the active blockset setting shows only the selected tab's blocks", async({ map }) => {
+  const { blocks, texture } = map;
+  await texture.addBlankBlockset("stone");
+  await expect(blocks.library.options).toHaveCount(32);
+
+  await blocks.chooseSetting("Active blockset");
+  await expect(blocks.library.options).toHaveCount(0);
+
+  await texture.blocksetTab(/^blockset/).click();
+  await expect(blocks.library.options).toHaveCount(32);
+
+  await blocks.chooseSetting("All blocksets");
+  await texture.blocksetTab(/^stone/).click();
+  await expect(blocks.library.options).toHaveCount(32);
+});
+
+test("the search shows only the blocks whose name matches", async({ map }) => {
+  const { blocks } = map;
+  const [, second] = await blockNames(map);
+
+  await blocks.search(second);
+  await expect(blocks.library.option(second)).toBeVisible();
+  const shown = await blocks.library.names();
+  expect(shown.length).toBeLessThan(32);
+  expect(shown.every((name) => name.includes(second))).toBe(true);
+
+  await blocks.search("no such block");
+  await expect(blocks.library.options).toHaveCount(0);
+  await expect(blocks.noMatches).toBeVisible();
+
+  await blocks.searchBox.press("Escape");
+  await expect(blocks.library.options).toHaveCount(32);
+  await expect(blocks.noMatches).toBeHidden();
 });
 
 test("the add cell creates a block and selects it", async({ map }) => {

@@ -87,3 +87,16 @@ registerIcon("order-usage", svg`
     stroke-linejoin="round"
   />
 `, { tone: "sky" });
+
+registerIcon("library-settings", svg`
+  <path
+    class="tone-ink"
+    d="M9.81 4.93 10.01 2.2h3.98l.2 2.73 1.26.52 2.08-1.78 2.8 2.8-1.78 2.08.52 1.26 2.73.2v3.98l-2.73.2-.52 1.26 1.78 2.08-2.8 2.8-2.08-1.78-1.26.52-.2 2.73h-3.98l-.2-2.73-1.26-.52-2.08 1.78-2.8-2.8 1.78-2.08-.52-1.26-2.73-.2v-3.98l2.73-.2.52-1.26-1.78-2.08 2.8-2.8 2.08 1.78ZM15 12a3 3 0 1 0-6 0 3 3 0 1 0 6 0Z"
+    fill="currentColor"
+    fill-opacity="0.4"
+    fill-rule="evenodd"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linejoin="round"
+  />
+`, { tone: "sky" });
