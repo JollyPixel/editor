@@ -51,7 +51,6 @@
     "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/history": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
-    "@openally/emitt": "1.1.0",
     "zod": "4.6.5"
   },
   "devDependencies": {
