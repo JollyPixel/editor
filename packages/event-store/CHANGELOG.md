@@ -1,5 +1,26 @@
 # @jolly-pixel/event-store
 
+## 5.0.0
+
+### Major Changes
+
+- [#962](https://github.com/JollyPixel/editor/pull/962) [`e330bb1`](https://github.com/JollyPixel/editor/commit/e330bb166a520f7dd4ae7cf4c0837bf721c7bb90) Thanks [@fraxken](https://github.com/fraxken)! - `reader.listFromCheckpoint` is replaced by `listFromCheckpoints({ assetId })`, and `writer` exposes only `append`: observe rejected appends with `subscribeRejections`.
+  `createEventStore`, `EventLog`, `SqliteEventLog` and `SQL_SCHEMA` are no longer exported, and `EventLogClosedError` now is.
+
+### Minor Changes
+
+- [#962](https://github.com/JollyPixel/editor/pull/962) [`7bdb4dd`](https://github.com/JollyPixel/editor/commit/7bdb4ddbdb0eed8c2882ece4a3911fe43b9cc436) Thanks [@fraxken](https://github.com/fraxken)! - Add per-asset `tags` that keep their event through compaction (`UnknownEventError`, `EventTagConflictError`) and `reader.get(assetId, eventVersion)`.
+  SQLite databases gain the `tags` table on their next open.
+
+- [#869](https://github.com/JollyPixel/editor/pull/869) [`e646731`](https://github.com/JollyPixel/editor/commit/e646731d6968af9a58604f5b503950e73dfa9681) Thanks [@fraxken](https://github.com/fraxken)! - event-store adds `expectedVersion` appends (`EventVersionConflictError`) and per-asset `compact` (`assetId`); SQLite files open in WAL mode with incremental vacuum.
+  asset-server snapshots no longer reload live state or drop commands appended while serializing, compacts before snapshots (`compactOnSnapshot`), caches room snapshots per version and reconciles only changed paths; `watch` reports readiness through `onReady` and skips initial and temporary entries.
+  network room loggers no longer overwrite the shared logger context, and disabled debug logs skip building metadata.
+
+### Patch Changes
+
+- [#1021](https://github.com/JollyPixel/editor/pull/1021) [`334fb9b`](https://github.com/JollyPixel/editor/commit/334fb9b31baf67b797f0f9564ac4f6be2c689e11) Thanks [@fraxken](https://github.com/fraxken)! - Cache the catalog join snapshot and HTTP body per catalog revision, defer projection state saves of single-asset flushes by up to a second, and drop per-command allocations on asset room edits.
+  A room validates and serializes a frozen outbound payload once and reuses it. The sqlite append no longer scans the asset's whole history to find its next version.
+
 ## 4.0.0
 
 ### Major Changes

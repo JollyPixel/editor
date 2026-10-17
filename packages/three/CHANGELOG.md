@@ -1,5 +1,32 @@
 # @jolly-pixel/three
 
+## 4.2.0
+
+### Minor Changes
+
+- [#990](https://github.com/JollyPixel/editor/pull/990) [`4e6f3f2`](https://github.com/JollyPixel/editor/commit/4e6f3f297144e5bee51734b83ec5fe6a22cc3ea7) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add `HighlightMeshSilhouette` and the `"silhouette"` technique: box bars on a `BoxGeometry`, the camera-facing contour on any other mesh. Both silhouettes share the `HighlightSilhouette` base class.
+  UV regions with triangle or compound faces can now be resized, stacked ones included; `UVRegion.resizable` is removed.
+
+- [#913](https://github.com/JollyPixel/editor/pull/913) [`d9038e8`](https://github.com/JollyPixel/editor/commit/d9038e846d997950d592c319d631abbf5d397baf) Thanks [@fraxken](https://github.com/fraxken)! - `BoxControls` mirror chips now mirror through the box center; `pivot` only drives quarter turns.
+  Vertical moves now use Ctrl (⌘ on macOS) instead of Shift, which fly cameras use to descend.
+  New `snapBypass` option (default `true`) lets hosts stop Alt from suspending snapping.
+
+- [#905](https://github.com/JollyPixel/editor/pull/905) [`26b8b55`](https://github.com/JollyPixel/editor/commit/26b8b551d00aa70ea11b7b7e0097f70c1da43dc3) Thanks [@fraxken](https://github.com/fraxken)! - Add `clientToNdc(canvas, clientX, clientY, target?)`, the inverse of `projectToClient`, for aiming a `Raycaster` from pointer coordinates.
+
+- [#1017](https://github.com/JollyPixel/editor/pull/1017) [`51891fd`](https://github.com/JollyPixel/editor/commit/51891fd155676510b2450f00eb7cd4c78691f522) Thanks [@fraxken](https://github.com/fraxken)! - Add `BakedRoomEnvironment`, a prefiltered `RoomEnvironment` reflection map loaded instead of generated at runtime.
+  `TransformControls` builds the handles of a mode the first time that mode shows on a target.
+
+- [#967](https://github.com/JollyPixel/editor/pull/967) [`75902c5`](https://github.com/JollyPixel/editor/commit/75902c51ba6fb64d72d322e9bc73a80e8dcfbce2) Thanks [@fraxken](https://github.com/fraxken)! - `RoomPresenceSource(room)` and `PeerRoster` key peers by connection and read the local peer from `room.profile`, now the claimed profile until `sync`; both drop `identity`, and claims travel under `fieldLock`.
+  `@jolly-pixel/network` adds `parsePeerProfile`, `PeerProfileMetadata`, `GUEST_USERNAME` and `PresenceChannel.published`; `ui` drops `readUsername`, `readPeerId`, `readAvatar`, `readBadge`, `NullPresenceSource` and `LocalPeerIdentity`, and renames `presencePeerOf` and `toPeerMetadata` to `toPresencePeer` and `toPeerProfileMetadata`.
+  `PeerFrustumSync` labels a peer without a `username` as `"Guest"` by default.
+
+### Patch Changes
+
+- [#1018](https://github.com/JollyPixel/editor/pull/1018) [`c9726dc`](https://github.com/JollyPixel/editor/commit/c9726dc516927b5d119e066e7dfa0a1bca536eaf) Thanks [@fraxken](https://github.com/fraxken)! - The model asset loader and `Runtime` import the three.js model loaders, meshopt decoder and `KTX2Loader` on first use; `BakedRoomEnvironment.load()` starts its request one microtask after the call.
+  `AssetCatalog`, `AssetRecord` and `AssetReference` validate with `zod/mini`, so a malformed shape throws `$ZodError` instead of the classic `ZodError`.
+- Updated dependencies [[`334fb9b`](https://github.com/JollyPixel/editor/commit/334fb9b31baf67b797f0f9564ac4f6be2c689e11), [`e91817e`](https://github.com/JollyPixel/editor/commit/e91817e4dc21e0f659340de5ab426cdec4d45067), [`35f9459`](https://github.com/JollyPixel/editor/commit/35f94598ed00f46dfd07152c752f8604d6ce436f), [`5af5621`](https://github.com/JollyPixel/editor/commit/5af5621e4223fb97ab38b22530a64c0884d52051), [`f174add`](https://github.com/JollyPixel/editor/commit/f174addea4b885bd601976b7fd730a91a0b047c4), [`ef2c7fe`](https://github.com/JollyPixel/editor/commit/ef2c7fe37e1d532b745e6462c26bb9f650ccc875), [`12dca6e`](https://github.com/JollyPixel/editor/commit/12dca6e98be8b71f9ef8517edcc17d8e8520fb72), [`c141b45`](https://github.com/JollyPixel/editor/commit/c141b453ebd7191ee44bd98b74825e8b9570264e), [`02172bd`](https://github.com/JollyPixel/editor/commit/02172bd0a88a1db4612b76a41d78e424517f5ba0), [`9bcc044`](https://github.com/JollyPixel/editor/commit/9bcc044e1feaaed69f3344d17bff5b7e7f3ea797), [`c86b214`](https://github.com/JollyPixel/editor/commit/c86b214c710a64428fa251465f3bcd7984471a36), [`85641f5`](https://github.com/JollyPixel/editor/commit/85641f5459de96c87aea28ae1ec5ef564991a760), [`40e16a4`](https://github.com/JollyPixel/editor/commit/40e16a4ae92fdb94931b59e9ba80af52330b1bc4), [`27cff63`](https://github.com/JollyPixel/editor/commit/27cff63c507ae72b62c0299999590c839f2ac492), [`28dae7b`](https://github.com/JollyPixel/editor/commit/28dae7b8ef17f600128ba02cfe33436afadf1c92), [`5fbedf2`](https://github.com/JollyPixel/editor/commit/5fbedf27124e3deb38992f3b70592b9536d9223c), [`13c7153`](https://github.com/JollyPixel/editor/commit/13c7153fcd2cfded9e0f9be6536e0aae8440ba19), [`a75ee6d`](https://github.com/JollyPixel/editor/commit/a75ee6dc5ef94c274f0f3b69d8eeff73e018e495), [`e646731`](https://github.com/JollyPixel/editor/commit/e646731d6968af9a58604f5b503950e73dfa9681), [`a1c9713`](https://github.com/JollyPixel/editor/commit/a1c9713eafcdf644030bd565c4e119b84e3cfea8), [`f20007a`](https://github.com/JollyPixel/editor/commit/f20007a1717a9b9bbab779489156c36451be38a0), [`6b9daee`](https://github.com/JollyPixel/editor/commit/6b9daee5304c6bf06fd77086633e682d35640afc), [`75902c5`](https://github.com/JollyPixel/editor/commit/75902c51ba6fb64d72d322e9bc73a80e8dcfbce2)]:
+  - @jolly-pixel/network@6.0.0
+
 ## 4.1.0
 
 ### Minor Changes

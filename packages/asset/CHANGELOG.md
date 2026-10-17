@@ -1,5 +1,15 @@
 # @jolly-pixel/asset
 
+## 3.1.0
+
+### Minor Changes
+
+- [#1018](https://github.com/JollyPixel/editor/pull/1018) [`c9726dc`](https://github.com/JollyPixel/editor/commit/c9726dc516927b5d119e066e7dfa0a1bca536eaf) Thanks [@fraxken](https://github.com/fraxken)! - The model asset loader and `Runtime` import the three.js model loaders, meshopt decoder and `KTX2Loader` on first use; `BakedRoomEnvironment.load()` starts its request one microtask after the call.
+  `AssetCatalog`, `AssetRecord` and `AssetReference` validate with `zod/mini`, so a malformed shape throws `$ZodError` instead of the classic `ZodError`.
+
+- [#977](https://github.com/JollyPixel/editor/pull/977) [`6b9daee`](https://github.com/JollyPixel/editor/commit/6b9daee5304c6bf06fd77086633e682d35640afc) Thanks [@fraxken](https://github.com/fraxken)! - Tag rooms: `AssetRoom` takes an optional `tag` (`kind@tag:assetId`), and the asset-server resolves such a room read-only with the tagged content through `AssetTags.read()`.
+  Network `RoomResolution.readOnly` caps every message right of a resolved room at `read`, and `RightsGate.configured` becomes `gated`; `TagName` (with `isRestorePoint`) and `InvalidTagNameError` are exported from `@jolly-pixel/asset-server/client`.
+
 ## 3.0.0
 
 ### Major Changes
