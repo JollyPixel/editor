@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
-import { defineSchema } from "@jolly-pixel/network";
+import type { Infer } from "@jolly-pixel/network";
 import type { AssetReferenceData } from "@jolly-pixel/asset";
-import type { Infer } from "ata-validator";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import { assetReferenceSchema } from "../events/AssetEvents.schema.ts";
@@ -10,38 +10,17 @@ import { assetReferenceSchema } from "../events/AssetEvents.schema.ts";
 export const ASSET_ARCHIVE_VERSION = 1;
 export const ASSET_ARCHIVE_MANIFEST_PATH = "bundle.json";
 
-export const assetArchiveEntrySchema = defineSchema({
-  type: "object",
-  properties: {
-    id: { type: "string" },
-    kind: { type: "string" },
-    path: { type: "string" }
-  },
-  required: [
-    "id",
-    "kind",
-    "path"
-  ]
+export const assetArchiveEntrySchema = z.object({
+  id: z.string(),
+  kind: z.string(),
+  path: z.string()
 });
 
-export const assetArchiveManifestSchema = defineSchema({
-  type: "object",
-  properties: {
-    version: { type: "integer" },
-    root: assetReferenceSchema,
-    assets: {
-      type: "array",
-      items: assetArchiveEntrySchema
-    },
-    missing: {
-      type: "array",
-      items: assetReferenceSchema
-    }
-  },
-  required: [
-    "version",
-    "assets"
-  ]
+export const assetArchiveManifestSchema = z.object({
+  version: z.int(),
+  root: z.optional(assetReferenceSchema),
+  assets: z.array(assetArchiveEntrySchema),
+  missing: z.optional(z.array(assetReferenceSchema))
 });
 
 export type AssetArchiveEntry = Readonly<

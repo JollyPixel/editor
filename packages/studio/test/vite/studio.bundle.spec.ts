@@ -1,5 +1,9 @@
 // Import Node.js Dependencies
-import { describe, test } from "node:test";
+import {
+  before,
+  describe,
+  test
+} from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
 
@@ -12,6 +16,7 @@ import {
 // CONSTANTS
 const kStudioRoot = path.join(import.meta.dirname, "..", "..");
 const kThreeCore = /[\\/]three[\\/]build[\\/]three\.core\.js$/;
+const kAtaValidator = /[\\/]ata-validator[\\/]/;
 
 function threeChunks(
   closure: Iterable<Rolldown.OutputChunk>
@@ -22,7 +27,9 @@ function threeChunks(
 }
 
 describe("@jolly-pixel/studio bundle", () => {
-  test("compiles the editor pages with the shell into shared chunks", async() => {
+  let chunks: Map<string, Rolldown.OutputChunk>;
+
+  before(async() => {
     const result = await build({
       configFile: path.join(kStudioRoot, "vite.config.ts"),
       root: kStudioRoot,
@@ -31,11 +38,14 @@ describe("@jolly-pixel/studio bundle", () => {
         write: false
       }
     }) as Rolldown.RolldownOutput;
-    const chunks = new Map(
+    chunks = new Map(
       result.output.flatMap(
         (file) => (file.type === "chunk" ? [[file.fileName, file]] : [])
       )
     );
+  });
+
+  test("compiles the editor pages with the shell into shared chunks", () => {
     const entries = [...chunks.values()].filter((chunk) => chunk.isEntry);
     const eager = new Map(entries.map((entry) => {
       const closure = new Set([entry]);
@@ -64,6 +74,15 @@ describe("@jolly-pixel/studio bundle", () => {
     assert.deepStrictEqual(
       threeChunks(eager.get("voxel-map")!),
       threeChunks(eager.get("voxel-model")!)
+    );
+  });
+
+  test("ships without ata-validator", () => {
+    assert.deepStrictEqual(
+      [...chunks.values()]
+        .flatMap((chunk) => chunk.moduleIds)
+        .filter((id) => kAtaValidator.test(id)),
+      []
     );
   });
 });

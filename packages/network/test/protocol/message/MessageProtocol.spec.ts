@@ -5,43 +5,34 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import * as z from "zod/mini";
+
 // Import Internal Dependencies
 import {
   MessageProtocol,
-  NO_MESSAGE_PROTOCOLS
+  NO_MESSAGE_PROTOCOLS,
+  withEvent
 } from "#src/protocol/message/MessageProtocol.ts";
 import {
   InvalidMessageProtocolError
 } from "#src/protocol/message/errors/InvalidMessageProtocolError.ts";
 
 // CONSTANTS
-const kSetVariant = {
-  type: "object",
-  properties: {
-    action: { const: "voxel-set" },
-    x: { type: "number" }
-  },
-  required: [
-    "action",
-    "x"
-  ]
-} as const;
-const kRemovedVariant = {
-  type: "object",
-  properties: {
-    action: { const: "voxel-removed" }
-  },
-  required: ["action"]
-} as const;
+const kSetVariant = z.object({
+  action: z.literal("voxel-set"),
+  x: z.number()
+});
+const kRemovedVariant = z.object({
+  action: z.literal("voxel-removed")
+});
 
 describe("MessageProtocol", () => {
-  test("names each oneOf variant after its \"action\" constant by default", () => {
-    const protocol = new MessageProtocol({
-      oneOf: [
-        kSetVariant,
-        kRemovedVariant
-      ]
-    });
+  test("names each union variant after its \"action\" literal by default", () => {
+    const protocol = new MessageProtocol(z.union([
+      kSetVariant,
+      kRemovedVariant
+    ]));
 
     assert.deepEqual(protocol.events, ["voxel-set", "voxel-removed"]);
     assert.deepEqual(
@@ -50,13 +41,11 @@ describe("MessageProtocol", () => {
     );
   });
 
-  test("reads anyOf variants", () => {
-    const protocol = new MessageProtocol({
-      anyOf: [
-        kSetVariant,
-        kRemovedVariant
-      ]
-    });
+  test("reads discriminated union variants", () => {
+    const protocol = new MessageProtocol(z.discriminatedUnion("action", [
+      kSetVariant,
+      kRemovedVariant
+    ]));
 
     assert.deepEqual(protocol.events, ["voxel-set", "voxel-removed"]);
   });
@@ -69,13 +58,9 @@ describe("MessageProtocol", () => {
 
   test("honours an explicit discriminator", () => {
     const protocol = new MessageProtocol(
-      {
-        type: "object",
-        properties: {
-          type: { const: "ping" }
-        },
-        required: ["type"]
-      },
+      z.object({
+        type: z.literal("ping")
+      }),
       {
         discriminator: "type"
       }
@@ -84,17 +69,29 @@ describe("MessageProtocol", () => {
     assert.deepEqual(protocol.events, ["ping"]);
   });
 
-  test("prefers an explicit title over the discriminator constant", () => {
-    const protocol = new MessageProtocol({
-      oneOf: [
-        {
-          ...kRemovedVariant,
-          title: "$removed"
-        }
-      ]
-    });
+  test("prefers a withEvent() name over the discriminator literal", () => {
+    const protocol = new MessageProtocol(z.union([
+      withEvent(z.object({
+        action: z.literal("voxel-removed")
+      }), "$removed")
+    ]));
 
     assert.deepEqual(protocol.events, ["$removed"]);
+  });
+
+  test("tags a nested union with the literal its options share", () => {
+    const protocol = new MessageProtocol(z.union([
+      kRemovedVariant,
+      z.union([
+        z.object({ action: z.literal("applied"), command: z.literal("create") }),
+        z.object({ action: z.literal("applied"), command: z.literal("delete") })
+      ])
+    ]));
+
+    assert.deepEqual(
+      protocol.variants.map(({ event, tag }) => [event, tag]),
+      [["voxel-removed", "voxel-removed"], ["applied", "applied"]]
+    );
   });
 
   test("declares no event when it accepts no message", () => {
@@ -105,21 +102,16 @@ describe("MessageProtocol", () => {
 
   test("rejects a variant that names no event", () => {
     assert.throws(
-      () => new MessageProtocol({ oneOf: [{ type: "object" }] }),
+      () => new MessageProtocol(z.union([z.object({ x: z.number() })])),
       InvalidMessageProtocolError
     );
   });
 
   test("rejects a variant whose discriminator is optional", () => {
     assert.throws(
-      () => new MessageProtocol({
-        oneOf: [
-          {
-            type: "object",
-            properties: { action: { const: "voxel-set" } }
-          }
-        ]
-      }),
+      () => new MessageProtocol(z.union([
+        z.object({ action: z.optional(z.literal("voxel-set")) })
+      ])),
       InvalidMessageProtocolError
     );
   });

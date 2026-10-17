@@ -1,12 +1,11 @@
 // Import Third-party Dependencies
 import {
   commandVariant,
-  defineSchema,
   MessageProtocol,
-  withCommandHeader,
-  type JSONSchema
+  withCommandHeader
 } from "@jolly-pixel/network";
 import { COLOR_PALETTE_SIZE } from "@jolly-pixel/pixel-draw.renderer";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import type { PixelCommandAction } from "./pixelCommandActions.ts";
@@ -23,71 +22,37 @@ import {
 } from "./NormalMap.schema.ts";
 
 // CONSTANTS
-const kVec2Schema = defineSchema({
-  type: "object",
-  properties: {
-    x: { type: "integer" },
-    y: { type: "integer" }
-  },
-  required: [
-    "x",
-    "y"
-  ]
+const kVec2Schema = z.object({
+  x: z.int(),
+  y: z.int()
 });
 
-export const sizeSchema = defineSchema({
-  type: "object",
-  properties: {
-    x: { type: "integer", exclusiveMinimum: 0 },
-    y: { type: "integer", exclusiveMinimum: 0 }
-  },
-  required: [
-    "x",
-    "y"
-  ]
+export const sizeSchema = z.object({
+  x: z.int().check(z.gt(0)),
+  y: z.int().check(z.gt(0))
 });
 
-const kRgba8Schema = defineSchema({
-  type: "object",
-  properties: {
-    r: { type: "number" },
-    g: { type: "number" },
-    b: { type: "number" },
-    a: { type: "number" }
-  },
-  required: [
-    "r",
-    "g",
-    "b",
-    "a"
-  ]
+const kRgba8Schema = z.object({
+  r: z.number(),
+  g: z.number(),
+  b: z.number(),
+  a: z.number()
 });
 
-const kPaletteColorSchema = defineSchema({
-  type: "object",
-  properties: {
-    r: { type: "integer", minimum: 0, maximum: 255 },
-    g: { type: "integer", minimum: 0, maximum: 255 },
-    b: { type: "integer", minimum: 0, maximum: 255 },
-    a: { type: "integer", minimum: 0, maximum: 255 }
-  },
-  required: ["r", "g", "b", "a"],
-  additionalProperties: false
+const kChannel = z.int().check(z.minimum(0), z.maximum(255));
+const kPaletteColorSchema = z.strictObject({
+  r: kChannel,
+  g: kChannel,
+  b: kChannel,
+  a: kChannel
 });
 
-const kFlatIntegers = defineSchema({
-  type: "array",
-  items: { type: "integer" }
-});
-
-const kFlatNumbers = defineSchema({
-  type: "array",
-  items: { type: "number" }
-});
+const kFlatIntegers = z.array(z.int());
+const kFlatNumbers = z.array(z.number());
 
 const kPixelCommandMetadata: Record<
   PixelCommandAction,
-  readonly Record<string, JSONSchema>[]
+  readonly z.core.$ZodLooseShape[]
 > = {
   stroke: [
     {
@@ -96,7 +61,7 @@ const kPixelCommandMetadata: Record<
     },
     {
       color: kRgba8Schema,
-      positions: { type: "array", items: kVec2Schema }
+      positions: z.array(kVec2Schema)
     }
   ],
   resized: [{
@@ -104,7 +69,7 @@ const kPixelCommandMetadata: Record<
   }],
   "texture-replaced": [{
     size: sizeSchema,
-    pixels: { type: "string" }
+    pixels: z.string()
   }],
   "global-fill": [{
     fromColor: kRgba8Schema,
@@ -116,19 +81,19 @@ const kPixelCommandMetadata: Record<
       rgba: kFlatNumbers
     },
     {
-      positions: { type: "array", items: kVec2Schema },
-      colors: { type: "array", items: kRgba8Schema }
+      positions: z.array(kVec2Schema),
+      colors: z.array(kRgba8Schema)
     }
   ],
   "uv-region-created": [{
     region: uvRegionSchema
   }],
   "uv-region-deleted": [{
-    id: { type: "string" }
+    id: z.string()
   }],
   "uv-region-moved": [{
-    id: { type: "string" },
-    face: { type: ["string", "null"], minLength: 1 },
+    id: z.string(),
+    face: z.nullable(z.string().check(z.minLength(1))),
     rect: textureRectSchema
   }],
   "uv-region-state-changed": [{
@@ -136,25 +101,21 @@ const kPixelCommandMetadata: Record<
   }],
   "uv-region-rotated": [
     {
-      id: { type: "string" },
+      id: z.string(),
       face: uvSlotSchema,
       geometry: uvGeometrySchema
     },
     {
-      id: { type: "string" },
-      face: { type: "null" },
+      id: z.string(),
+      face: z.null(),
       region: uvRegionSchema
     }
   ],
   "normal-map-toggled": [{
-    config: { oneOf: [{ type: "null" }, normalMapDataSchema] }
+    config: z.nullable(normalMapDataSchema)
   }],
   "palette-color-changed": [{
-    index: {
-      type: "integer",
-      minimum: 0,
-      maximum: COLOR_PALETTE_SIZE - 1
-    },
+    index: z.int().check(z.minimum(0), z.maximum(COLOR_PALETTE_SIZE - 1)),
     color: kPaletteColorSchema
   }],
   "normal-map-defaults-patched": [{
@@ -162,77 +123,44 @@ const kPixelCommandMetadata: Record<
   }],
   "normal-map-zone-set": [{
     zone: normalMapZoneSchema,
-    index: { type: "integer", minimum: 0 }
+    index: z.int().check(z.minimum(0))
   }],
   "normal-map-zone-deleted": [{
-    regionId: { type: "string", minLength: 1 }
+    regionId: z.string().check(z.minLength(1))
   }]
 };
 
-function metadataSchema(
-  properties: Record<string, JSONSchema>
-): JSONSchema {
-  return {
-    type: "object",
-    properties,
-    required: Object.keys(properties)
-  };
-}
-
 function pixelCommand(
   action: string,
-  variants: readonly Record<string, JSONSchema>[]
-): JSONSchema {
+  variants: readonly z.core.$ZodLooseShape[]
+) {
   return withCommandHeader(commandVariant(action, {
     metadata: variants.length === 1 ?
-      metadataSchema(variants[0]) :
-      { oneOf: variants.map(metadataSchema) }
+      z.object(variants[0]) :
+      z.union(variants.map((variant) => z.object(variant)))
   }));
 }
 
-export const pixelCommandSchemas: readonly JSONSchema[] = Object.entries(
+export const pixelCommandSchemas: readonly z.ZodMiniObject[] = Object.entries(
   kPixelCommandMetadata
 ).map(([action, variants]) => pixelCommand(action, variants));
 
-export const pixelCommandProtocol: MessageProtocol = new MessageProtocol({
-  oneOf: [...pixelCommandSchemas]
-});
+export const pixelCommandProtocol: MessageProtocol = new MessageProtocol(
+  z.union(pixelCommandSchemas)
+);
 
-export const pixelSnapshotSchema: JSONSchema = {
-  type: "object",
-  properties: {
-    size: sizeSchema,
-    pixels: {
-      oneOf: [
-        { type: "string" },
-        {
-          type: "object",
-          properties: {
-            format: { const: "png" },
-            data: { type: "string" }
-          },
-          required: [
-            "format",
-            "data"
-          ],
-          additionalProperties: false
-        }
-      ]
-    },
-    uvRegions: {
-      type: "array",
-      items: uvRegionSchema
-    },
-    palette: {
-      type: "array",
-      minItems: COLOR_PALETTE_SIZE,
-      maxItems: COLOR_PALETTE_SIZE,
-      items: kPaletteColorSchema
-    },
-    normalMap: normalMapDataSchema
-  },
-  required: [
-    "size",
-    "pixels"
-  ]
-};
+export const pixelSnapshotSchema = z.object({
+  size: sizeSchema,
+  pixels: z.union([
+    z.string(),
+    z.strictObject({
+      format: z.literal("png"),
+      data: z.string()
+    })
+  ]),
+  uvRegions: z.optional(z.array(uvRegionSchema)),
+  palette: z.optional(z.array(kPaletteColorSchema).check(
+    z.length(COLOR_PALETTE_SIZE)
+  )),
+  normalMap: z.optional(normalMapDataSchema)
+});

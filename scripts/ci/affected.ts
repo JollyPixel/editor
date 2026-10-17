@@ -8,10 +8,10 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 
 // Import Internal Dependencies
-import { PnpmLockfile } from "./ci/PnpmLockfile.ts";
+import { PnpmLockfile } from "./PnpmLockfile.ts";
 
 // CONSTANTS
-const kRootDir = path.join(import.meta.dirname, "..");
+const kRootDir = path.join(import.meta.dirname, "..", "..");
 const kLockfile = "pnpm-lock.yaml";
 const kSharedPaths = [
   "package.json",
@@ -21,8 +21,7 @@ const kSharedPaths = [
   "tsconfig/",
   ".github/actions/",
   ".github/workflows/node.js.yml",
-  "scripts/ci/",
-  "scripts/ciAffected.ts"
+  "scripts/ci/"
 ];
 
 interface WorkspaceProject {

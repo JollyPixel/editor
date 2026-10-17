@@ -3,6 +3,7 @@ import {
   MessageProtocol,
   type MessageProtocols
 } from "@jolly-pixel/network";
+import * as z from "zod";
 
 // Import Internal Dependencies
 import {
@@ -17,170 +18,72 @@ import {
 } from "./protocol.ts";
 
 // CONSTANTS
-const kString = { type: "string" } as const;
-const kBoolean = { type: "boolean" } as const;
-const kRosterEntrySchema = {
-  type: "object",
-  properties: {
-    id: kString,
-    username: kString,
-    role: kString,
-    owner: kBoolean,
-    avatar: kString,
-    online: kBoolean
-  },
-  required: [
-    "id",
-    "username",
-    "role",
-    "owner",
-    "online"
-  ]
-} as const;
-const kAccessRequestSchema = {
-  type: "object",
-  properties: {
-    id: kString,
-    username: kString
-  },
-  required: [
-    "id",
-    "username"
-  ]
-} as const;
+const kRosterEntrySchema = z.object({
+  id: z.string(),
+  username: z.string(),
+  role: z.string(),
+  owner: z.boolean(),
+  avatar: z.optional(z.string()),
+  online: z.boolean()
+});
+const kAccessRequestSchema = z.object({
+  id: z.string(),
+  username: z.string()
+});
 
 export const accountsCommandProtocol = new MessageProtocol(
-  {
-    oneOf: [
-      {
-        type: "object",
-        properties: {
-          type: { const: ACCOUNTS_ASSIGN_ROLE },
-          requestId: kString,
-          username: kString,
-          role: kString
-        },
-        required: [
-          "type",
-          "requestId",
-          "username",
-          "role"
-        ]
-      },
-      {
-        type: "object",
-        properties: {
-          type: { const: ACCOUNTS_APPROVE },
-          requestId: kString,
-          username: kString,
-          role: kString
-        },
-        required: [
-          "type",
-          "requestId",
-          "username",
-          "role"
-        ]
-      },
-      {
-        type: "object",
-        properties: {
-          type: { const: ACCOUNTS_DENY },
-          requestId: kString,
-          username: kString
-        },
-        required: [
-          "type",
-          "requestId",
-          "username"
-        ]
-      },
-      {
-        type: "object",
-        properties: {
-          type: { const: ACCOUNTS_REMOVE },
-          requestId: kString,
-          username: kString
-        },
-        required: [
-          "type",
-          "requestId",
-          "username"
-        ]
-      },
-      {
-        type: "object",
-        properties: {
-          type: { const: ACCOUNTS_TRANSFER_OWNERSHIP },
-          requestId: kString,
-          username: kString
-        },
-        required: [
-          "type",
-          "requestId",
-          "username"
-        ]
-      }
-    ]
-  },
+  z.union([
+    z.object({
+      type: z.literal(ACCOUNTS_ASSIGN_ROLE),
+      requestId: z.string(),
+      username: z.string(),
+      role: z.string()
+    }),
+    z.object({
+      type: z.literal(ACCOUNTS_APPROVE),
+      requestId: z.string(),
+      username: z.string(),
+      role: z.string()
+    }),
+    z.object({
+      type: z.literal(ACCOUNTS_DENY),
+      requestId: z.string(),
+      username: z.string()
+    }),
+    z.object({
+      type: z.literal(ACCOUNTS_REMOVE),
+      requestId: z.string(),
+      username: z.string()
+    }),
+    z.object({
+      type: z.literal(ACCOUNTS_TRANSFER_OWNERSHIP),
+      requestId: z.string(),
+      username: z.string()
+    })
+  ]),
   {
     discriminator: "type"
   }
 );
 
 export const accountsMessageProtocol = new MessageProtocol(
-  {
-    oneOf: [
-      {
-        type: "object",
-        properties: {
-          type: { const: ACCOUNTS_ROSTER },
-          roles: {
-            type: "array",
-            items: kString
-          },
-          accounts: {
-            type: "array",
-            items: kRosterEntrySchema
-          },
-          requests: {
-            type: "array",
-            items: kAccessRequestSchema
-          }
-        },
-        required: [
-          "type",
-          "roles",
-          "accounts",
-          "requests"
-        ]
-      },
-      {
-        type: "object",
-        properties: {
-          type: { const: ACCOUNTS_APPLIED },
-          requestId: kString
-        },
-        required: [
-          "type",
-          "requestId"
-        ]
-      },
-      {
-        type: "object",
-        properties: {
-          type: { const: ACCOUNTS_REJECTED },
-          requestId: kString,
-          reason: kString
-        },
-        required: [
-          "type",
-          "requestId",
-          "reason"
-        ]
-      }
-    ]
-  },
+  z.union([
+    z.object({
+      type: z.literal(ACCOUNTS_ROSTER),
+      roles: z.array(z.string()),
+      accounts: z.array(kRosterEntrySchema),
+      requests: z.array(kAccessRequestSchema)
+    }),
+    z.object({
+      type: z.literal(ACCOUNTS_APPLIED),
+      requestId: z.string()
+    }),
+    z.object({
+      type: z.literal(ACCOUNTS_REJECTED),
+      requestId: z.string(),
+      reason: z.string()
+    })
+  ]),
   {
     discriminator: "type"
   }

@@ -1,3 +1,10 @@
+// Import Third-party Dependencies
+import {
+  Ok,
+  Err,
+  type Result
+} from "@openally/result";
+
 // Import Internal Dependencies
 import {
   createLogger,
@@ -81,7 +88,12 @@ export interface RoomLimits {
 export interface ServerRoomOptions {
   logger?: Logger;
   limits?: RoomLimits;
+  validateOutbound?: boolean;
 }
+
+type OutboundEvent = (
+  payload: unknown
+) => Result<string, string>;
 
 export class ServerRoom {
   readonly id: string;
@@ -102,7 +114,7 @@ export class ServerRoom {
   #logger: Logger;
   #roomBroadcast: RoomBroadcast;
   #inbound: MessageParser | null;
-  #outbound: MessageParser | null;
+  #outboundEvent: OutboundEvent | null;
   #peerMetadataLength: number;
   #resyncs: ResyncThrottle;
   #frozenDeliveries = new WeakMap<object, OutboundDelivery>();
@@ -132,9 +144,12 @@ export class ServerRoom {
     this.#inbound = inbound === null
       ? null
       : MessageParser.of(inbound);
-    this.#outbound = outbound === null
+    this.#outboundEvent = outbound === null
       ? null
-      : MessageParser.of(outbound);
+      : outboundEvent(
+        MessageParser.of(outbound),
+        options.validateOutbound ?? true
+      );
 
     this.#roomBroadcast = {
       broadcast: (payload) => this.#deliver(payload),
@@ -655,19 +670,19 @@ export class ServerRoom {
     }
 
     let event: string | undefined;
-    if (this.#outbound !== null) {
-      const parsed = this.#outbound.parse(payload);
-      if (!parsed.ok) {
+    if (this.#outboundEvent !== null) {
+      const identified = this.#outboundEvent(payload);
+      if (!identified.ok) {
         this.#logger
           .withMetadata({
             outcome: "dropped",
-            reason: describeErrors(parsed.val)
+            reason: identified.val
           })
           .error("outbound payload does not match the extension protocol");
 
         return null;
       }
-      event = parsed.val.event;
+      event = identified.val;
     }
 
     const delivery = {
@@ -684,6 +699,25 @@ export class ServerRoom {
 
     return delivery;
   }
+}
+
+function outboundEvent(
+  parser: MessageParser,
+  validate: boolean
+): OutboundEvent {
+  if (!validate) {
+    return (payload) => {
+      const event = parser.identify(payload);
+
+      return event === null ? Err("no tag identifies the payload") : Ok(event);
+    };
+  }
+
+  return (payload) => {
+    const parsed = parser.parse(payload);
+
+    return parsed.ok ? Ok(parsed.val.event) : Err(describeErrors(parsed.val));
+  };
 }
 
 function refusalReason(

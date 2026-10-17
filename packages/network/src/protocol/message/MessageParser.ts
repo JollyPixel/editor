@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import { Validator } from "ata-validator";
 import {
   Ok,
   Err,
@@ -7,12 +6,15 @@ import {
 } from "@openally/result";
 
 // Import Internal Dependencies
-import type { MessageProtocol } from "./MessageProtocol.ts";
+import type {
+  MessageProtocol,
+  MessageVariant
+} from "./MessageProtocol.ts";
 import { VariantGroup } from "./VariantGroup.ts";
-import {
-  VALIDATOR_OPTIONS,
-  type JSONSchema,
-  type ValidationError
+import { SchemaParser } from "../SchemaParser.ts";
+import type {
+  Schema,
+  ValidationError
 } from "../schema.ts";
 
 export interface ParsedMessage<TMessage> {
@@ -29,13 +31,8 @@ export interface RoomMessageParser<TMessage> {
 // CONSTANTS
 const kParsers = new WeakMap<MessageProtocol, MessageParser>();
 
-interface CompiledVariant<
-  TMessage
-> {
-  readonly event: string;
-  readonly tag: string | null;
-  readonly schema: JSONSchema;
-  readonly validator: Validator<TMessage>;
+interface CompiledVariant extends MessageVariant {
+  readonly parser: SchemaParser<Schema>;
 }
 
 export class MessageParser<
@@ -54,29 +51,19 @@ export class MessageParser<
   }
 
   #discriminator: string;
-  #unionKeyword: "oneOf" | "anyOf";
-  #byTag = new Map<string, VariantGroup<CompiledVariant<TMessage>>>();
-  #untagged: readonly CompiledVariant<TMessage>[];
-  #union: Validator<TMessage> | null;
+  #byTag = new Map<string, VariantGroup<CompiledVariant>>();
+  #untagged: readonly CompiledVariant[];
+  #union: SchemaParser<Schema> | null;
 
   constructor(
     protocol: MessageProtocol
   ) {
     this.#discriminator = protocol.discriminator;
-    this.#unionKeyword = protocol.schema.oneOf === undefined &&
-      protocol.schema.anyOf !== undefined ?
-      "anyOf" :
-      "oneOf";
 
-    const compiled = protocol.variants.map(({ event, tag, schema }) => {
+    const compiled = protocol.variants.map((variant) => {
       return {
-        event,
-        tag,
-        schema,
-        validator: new Validator<TMessage>(
-          schema,
-          VALIDATOR_OPTIONS
-        )
+        ...variant,
+        parser: new SchemaParser(variant.schema)
       };
     });
     this.#untagged = compiled.filter((variant) => variant.tag === null);
@@ -91,18 +78,15 @@ export class MessageParser<
     }
     this.#union = compiled.length === 0 ?
       null :
-      new Validator<TMessage>(
-        protocol.schema,
-        VALIDATOR_OPTIONS
-      );
+      new SchemaParser(protocol.schema);
   }
 
   parse(
     payload: unknown
   ): Result<ParsedMessage<TMessage>, readonly ValidationError[]> {
     let parsed: ParsedMessage<TMessage> | undefined;
-    for (const { event, validator } of this.#candidatesFor(payload)) {
-      if (!validator.isValidObject(payload)) {
+    for (const { event, parser } of this.#candidatesFor(payload)) {
+      if (!parser.is(payload)) {
         continue;
       }
       if (parsed !== undefined && parsed.event !== event) {
@@ -112,7 +96,7 @@ export class MessageParser<
       }
       parsed ??= {
         event,
-        message: payload
+        message: payload as TMessage
       };
     }
 
@@ -120,16 +104,26 @@ export class MessageParser<
       return Ok(parsed);
     }
 
-    return Err(
-      this.#union === null ?
-        [this.#noVariantError()] :
-        this.#union.validate(payload).errors
-    );
+    if (this.#union === null) {
+      return Err([this.#noVariantError()]);
+    }
+
+    const union = this.#union.parse(payload);
+
+    return Err(union.ok ? [] : union.val);
+  }
+
+  identify(
+    payload: unknown
+  ): string | null {
+    const candidates = this.#candidatesFor(payload);
+
+    return candidates.length === 1 ? candidates[0].event : null;
   }
 
   #candidatesFor(
     payload: unknown
-  ): readonly CompiledVariant<TMessage>[] {
+  ): readonly CompiledVariant[] {
     if (
       typeof payload !== "object" ||
       payload === null ||
@@ -147,12 +141,7 @@ export class MessageParser<
 
   #noVariantError(): ValidationError {
     return {
-      keyword: this.#unionKeyword,
       instancePath: "",
-      schemaPath: `#/${this.#unionKeyword}`,
-      params: {
-        variants: 0
-      },
       message: "accepts no message"
     };
   }
@@ -162,12 +151,7 @@ export class MessageParser<
     other: string
   ): ValidationError {
     return {
-      keyword: this.#unionKeyword,
       instancePath: "",
-      schemaPath: `#/${this.#unionKeyword}`,
-      params: {
-        events: [event, other]
-      },
       message: `matches both "${event}" and "${other}"`
     };
   }

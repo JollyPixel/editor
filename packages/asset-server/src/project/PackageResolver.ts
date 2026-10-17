@@ -8,20 +8,17 @@ import {
 
 // Import Third-party Dependencies
 import {
-  defineSchema,
   describeErrors,
   SchemaParser
 } from "@jolly-pixel/network";
+import * as z from "zod/mini";
 
 // CONSTANTS
 const kLocalSpecifier = /^\.\.?[\\/]/;
 const kManifestFile = "package.json";
-const kManifestParser = new SchemaParser(defineSchema({
-  type: "object",
-  properties: {
-    name: { type: "string" },
-    exports: {}
-  }
+const kManifestParser = new SchemaParser(z.object({
+  name: z.optional(z.string()),
+  exports: z.optional(z.unknown())
 }));
 
 export interface PackageResolverOptions {

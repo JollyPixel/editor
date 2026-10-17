@@ -1,12 +1,20 @@
 // Import Third-party Dependencies
-import { defineSchema } from "@jolly-pixel/network";
-import { Validator } from "ata-validator";
+import {
+  SchemaParser,
+  type Infer,
+  type Schema
+} from "@jolly-pixel/network";
 import {
   writeJsonFile,
   type AssetSource
 } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
+import {
+  projectionCheckpointSchema,
+  projectionFailureSchema,
+  projectionRecordSchema
+} from "./ProjectionState.schema.ts";
 import {
   silentLogger,
   type Logger
@@ -21,31 +29,9 @@ import {
 
 // CONSTANTS
 const kStateVersion = 1;
-const kValidatorOptions = { useDefaults: false };
-const kRecordValidator = new Validator(
-  defineSchema({ type: "object" }),
-  kValidatorOptions
-);
-const kCheckpointValidator = new Validator(
-  defineSchema({ type: "integer" }),
-  kValidatorOptions
-);
-const kFailureValidator = new Validator(
-  defineSchema({
-    type: "object",
-    properties: {
-      eventId: { type: "integer" },
-      attempts: { type: "integer" },
-      reason: { type: "string" }
-    },
-    required: [
-      "eventId",
-      "attempts",
-      "reason"
-    ]
-  }),
-  kValidatorOptions
-);
+const kRecordParser = new SchemaParser(projectionRecordSchema);
+const kCheckpointParser = new SchemaParser(projectionCheckpointSchema);
+const kFailureParser = new SchemaParser(projectionFailureSchema);
 
 export interface ProjectionFailure {
   readonly eventId: number;
@@ -163,7 +149,8 @@ export class ProjectionState {
   static parse(
     input: unknown
   ): StateFileParse<ProjectionStateData | null> {
-    if (!kRecordValidator.isValidObject(input)) {
+    const record = kRecordParser.parse(input);
+    if (!record.ok) {
       return {
         data: null,
         dropped: 0
@@ -171,12 +158,12 @@ export class ProjectionState {
     }
 
     const checkpoints = validRecord(
-      input.checkpoints,
-      kCheckpointValidator
+      record.val.checkpoints,
+      kCheckpointParser
     );
     const failures = validRecord(
-      input.failures,
-      kFailureValidator
+      record.val.failures,
+      kFailureParser
     );
 
     return {
@@ -194,11 +181,12 @@ export class ProjectionState {
   }
 }
 
-function validRecord<TValue>(
+function validRecord<const TSchema extends Schema>(
   input: unknown,
-  validator: Validator<TValue>
-): ValidEntries<string, TValue> {
-  if (!kRecordValidator.isValidObject(input)) {
+  parser: SchemaParser<TSchema>
+): ValidEntries<string, Infer<TSchema>> {
+  const record = kRecordParser.parse(input);
+  if (!record.ok) {
     return {
       entries: [],
       dropped: 0
@@ -206,8 +194,8 @@ function validRecord<TValue>(
   }
 
   return keepValid(
-    Object.entries(input),
-    validator
+    Object.entries(record.val),
+    parser
   );
 }
 

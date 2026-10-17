@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import { Mutex } from "@openally/mutex";
 
 // CONSTANTS
-const kRootDir = path.join(import.meta.dirname, "..");
+const kRootDir = path.join(import.meta.dirname, "..", "..");
 const kCheckConfig = path.join(kRootDir, "tsconfig", "check.json");
 const kSkippedDirectories = new Set(["node_modules", "dist", "coverage", "public"]);
 const kTsc = path.join(

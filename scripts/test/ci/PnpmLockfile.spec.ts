@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 // Import Internal Dependencies
-import { PnpmLockfile } from "../ci/PnpmLockfile.ts";
+import { PnpmLockfile } from "../../ci/PnpmLockfile.ts";
 
 // CONSTANTS
 const kBase = `---

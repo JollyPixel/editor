@@ -1,17 +1,17 @@
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
-import type { PeerIdentity } from "@jolly-pixel/network";
+import {
+  SchemaParser,
+  type Infer,
+  type PeerIdentity,
+  type ValidationError
+} from "@jolly-pixel/network";
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 import {
   Err,
   Ok,
   type Result
 } from "@openally/result";
-import {
-  Validator,
-  type Infer,
-  type ValidationError
-} from "ata-validator";
 
 // Import Internal Dependencies
 import {
@@ -29,19 +29,9 @@ export const ASSET_EVENT_PREFIX = "asset.";
 
 const kSnapshotSource = "snapshot";
 
-const kValidatorOptions = { useDefaults: false };
-const kWriteDataValidator = new Validator(
-  assetWriteDataSchema,
-  kValidatorOptions
-);
-const kRenamedDataValidator = new Validator(
-  assetRenamedDataSchema,
-  kValidatorOptions
-);
-const kDeletedDataValidator = new Validator(
-  assetDeletedDataSchema,
-  kValidatorOptions
-);
+const kWriteDataParser = new SchemaParser(assetWriteDataSchema);
+const kRenamedDataParser = new SchemaParser(assetRenamedDataSchema);
+const kDeletedDataParser = new SchemaParser(assetDeletedDataSchema);
 
 export const ASSET_CREATED = `${ASSET_EVENT_PREFIX}created` as const;
 export const ASSET_UPDATED = `${ASSET_EVENT_PREFIX}updated` as const;
@@ -146,26 +136,26 @@ export function parseAssetEvent(
     case ASSET_UPDATED:
       return parseWriteEvent(event.eventType, event);
     case ASSET_RENAMED: {
-      const result = kRenamedDataValidator.validate(event.eventData);
+      const result = kRenamedDataParser.parse(event.eventData);
 
-      return result.valid ?
+      return result.ok ?
         Ok({
           ...event,
           eventType: ASSET_RENAMED,
-          eventData: result.data
+          eventData: result.val
         }) :
-        Err(malformed(result.errors));
+        Err(malformed(result.val));
     }
     case ASSET_DELETED: {
-      const result = kDeletedDataValidator.validate(event.eventData);
+      const result = kDeletedDataParser.parse(event.eventData);
 
-      return result.valid ?
+      return result.ok ?
         Ok({
           ...event,
           eventType: ASSET_DELETED,
-          eventData: result.data
+          eventData: result.val
         }) :
-        Err(malformed(result.errors));
+        Err(malformed(result.val));
     }
     default:
       return Err({ reason: "foreign" });
@@ -191,12 +181,12 @@ function parseWriteEvent(
   eventType: typeof ASSET_CREATED | typeof ASSET_UPDATED,
   event: EventStore.Event
 ): Result<AssetEvent, AssetEventRejection> {
-  const result = kWriteDataValidator.validate(event.eventData);
-  if (!result.valid) {
-    return Err(malformed(result.errors));
+  const result = kWriteDataParser.parse(event.eventData);
+  if (!result.ok) {
+    return Err(malformed(result.val));
   }
 
-  const { content } = result.data;
+  const { content } = result.val;
   if (content.type !== "inline") {
     return Err({
       reason: "unsupported",
@@ -208,7 +198,7 @@ function parseWriteEvent(
     ...event,
     eventType,
     eventData: {
-      ...result.data,
+      ...result.val,
       content
     }
   });

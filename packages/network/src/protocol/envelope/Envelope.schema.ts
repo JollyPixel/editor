@@ -1,280 +1,125 @@
-// Import Internal Dependencies
-import { defineSchema } from "../schema.ts";
+// Import Third-party Dependencies
+import * as z from "zod/mini";
 
 // CONSTANTS
 const kMaxRoomNameLength = 256;
 
-const kRoomProperties = {
-  room: {
-    type: "string",
-    maxLength: kMaxRoomNameLength
-  }
-} as const;
-const kRoomRequired = [
-  "room",
-  "kind"
-] as const;
-const kOutcomeProperties = {
-  event: {
-    type: "string"
-  },
-  reason: {
-    type: "string"
-  }
-} as const;
+const kRoom = z.string().check(z.maxLength(kMaxRoomNameLength));
+const kOutcome = {
+  event: z.string(),
+  reason: z.string()
+};
 
-export const rightSchema = defineSchema({
-  enum: [
-    "read",
-    "write",
-    "void"
-  ]
+export const rightSchema = z.enum([
+  "read",
+  "write",
+  "void"
+]);
+
+export const peerMetadataSchema = z.record(z.string(), z.unknown());
+
+export const roomRightsSchema = z.record(z.string(), rightSchema);
+
+const kPeerShape = {
+  clientId: z.string(),
+  role: z.string(),
+  profile: peerMetadataSchema,
+  presence: peerMetadataSchema
+};
+
+export const peerSchema = z.object(kPeerShape);
+
+export const joinEnvelopeSchema = z.object({
+  room: kRoom,
+  kind: z.literal("join"),
+  profile: z.optional(peerMetadataSchema),
+  presence: z.optional(peerMetadataSchema),
+  resume: z.optional(z.unknown())
 });
 
-export const peerMetadataSchema = defineSchema({
-  type: "object"
+export const leaveEnvelopeSchema = z.object({
+  room: kRoom,
+  kind: z.literal("leave")
 });
 
-export const roomRightsSchema = defineSchema({
-  type: "object",
-  additionalProperties: rightSchema
+export const resyncEnvelopeSchema = z.object({
+  room: kRoom,
+  kind: z.literal("resync")
 });
 
-export const peerSchema = defineSchema({
-  type: "object",
-  properties: {
-    clientId: {
-      type: "string"
-    },
-    role: {
-      type: "string"
-    },
-    profile: peerMetadataSchema,
-    presence: peerMetadataSchema
-  },
-  required: [
-    "clientId",
-    "role",
-    "profile",
-    "presence"
-  ]
+export const messageEnvelopeSchema = z.object({
+  room: kRoom,
+  kind: z.literal("message"),
+  payload: z.unknown()
 });
 
-export const joinEnvelopeSchema = defineSchema({
-  type: "object",
-  properties: {
-    ...kRoomProperties,
-    kind: {
-      const: "join"
-    },
-    profile: peerMetadataSchema,
-    presence: peerMetadataSchema,
-    resume: {}
-  },
-  required: kRoomRequired
+export const presenceEnvelopeSchema = z.object({
+  room: kRoom,
+  kind: z.literal("presence"),
+  patch: peerMetadataSchema
 });
 
-export const leaveEnvelopeSchema = defineSchema({
-  type: "object",
-  properties: {
-    ...kRoomProperties,
-    kind: {
-      const: "leave"
-    }
-  },
-  required: kRoomRequired
+export const syncEnvelopeSchema = z.object({
+  room: kRoom,
+  kind: z.literal("sync"),
+  self: z.string(),
+  rights: roomRightsSchema,
+  members: z.array(peerSchema)
 });
 
-export const resyncEnvelopeSchema = defineSchema({
-  type: "object",
-  properties: {
-    ...kRoomProperties,
-    kind: {
-      const: "resync"
-    }
-  },
-  required: kRoomRequired
+export const peerJoinedEnvelopeSchema = z.object({
+  room: kRoom,
+  kind: z.literal("peer-joined"),
+  ...kPeerShape
 });
 
-export const messageEnvelopeSchema = defineSchema({
-  type: "object",
-  properties: {
-    ...kRoomProperties,
-    kind: {
-      const: "message"
-    },
-    payload: {}
-  },
-  required: [
-    ...kRoomRequired,
-    "payload"
-  ]
+export const peerLeftEnvelopeSchema = z.object({
+  room: kRoom,
+  kind: z.literal("peer-left"),
+  clientId: z.string()
 });
 
-export const presenceEnvelopeSchema = defineSchema({
-  type: "object",
-  properties: {
-    ...kRoomProperties,
-    kind: {
-      const: "presence"
-    },
-    patch: peerMetadataSchema
-  },
-  required: [
-    ...kRoomRequired,
-    "patch"
-  ]
+export const peerPresenceEnvelopeSchema = z.object({
+  room: kRoom,
+  kind: z.literal("peer-presence"),
+  clientId: z.string(),
+  patch: peerMetadataSchema
 });
 
-export const syncEnvelopeSchema = defineSchema({
-  type: "object",
-  properties: {
-    ...kRoomProperties,
-    kind: {
-      const: "sync"
-    },
-    self: {
-      type: "string"
-    },
-    rights: roomRightsSchema,
-    members: {
-      type: "array",
-      items: peerSchema
-    }
-  },
-  required: [
-    ...kRoomRequired,
-    "self",
-    "rights",
-    "members"
-  ]
+export const peerProfileEnvelopeSchema = z.object({
+  room: kRoom,
+  kind: z.literal("peer-profile"),
+  clientId: z.string(),
+  patch: peerMetadataSchema
 });
 
-export const peerJoinedEnvelopeSchema = defineSchema({
-  type: "object",
-  properties: {
-    ...kRoomProperties,
-    kind: {
-      const: "peer-joined"
-    },
-    ...peerSchema.properties
-  },
-  required: [
-    ...kRoomRequired,
-    ...peerSchema.required
-  ]
+export const deniedEnvelopeSchema = z.object({
+  room: kRoom,
+  kind: z.literal("denied"),
+  ...kOutcome
 });
 
-export const peerLeftEnvelopeSchema = defineSchema({
-  type: "object",
-  properties: {
-    ...kRoomProperties,
-    kind: {
-      const: "peer-left"
-    },
-    clientId: {
-      type: "string"
-    }
-  },
-  required: [
-    ...kRoomRequired,
-    "clientId"
-  ]
+export const errorEnvelopeSchema = z.object({
+  room: kRoom,
+  kind: z.literal("error"),
+  ...kOutcome
 });
 
-export const peerPresenceEnvelopeSchema = defineSchema({
-  type: "object",
-  properties: {
-    ...kRoomProperties,
-    kind: {
-      const: "peer-presence"
-    },
-    clientId: {
-      type: "string"
-    },
-    patch: peerMetadataSchema
-  },
-  required: [
-    ...kRoomRequired,
-    "clientId",
-    "patch"
-  ]
-});
+export const clientEnvelopeSchema = z.discriminatedUnion("kind", [
+  joinEnvelopeSchema,
+  leaveEnvelopeSchema,
+  messageEnvelopeSchema,
+  presenceEnvelopeSchema,
+  resyncEnvelopeSchema
+]);
 
-export const peerProfileEnvelopeSchema = defineSchema({
-  type: "object",
-  properties: {
-    ...kRoomProperties,
-    kind: {
-      const: "peer-profile"
-    },
-    clientId: {
-      type: "string"
-    },
-    patch: peerMetadataSchema
-  },
-  required: [
-    ...kRoomRequired,
-    "clientId",
-    "patch"
-  ]
-});
-
-export const deniedEnvelopeSchema = defineSchema({
-  type: "object",
-  properties: {
-    ...kRoomProperties,
-    kind: {
-      const: "denied"
-    },
-    ...kOutcomeProperties
-  },
-  required: [
-    ...kRoomRequired,
-    "event",
-    "reason"
-  ]
-});
-
-export const errorEnvelopeSchema = defineSchema({
-  type: "object",
-  properties: {
-    ...kRoomProperties,
-    kind: {
-      const: "error"
-    },
-    ...kOutcomeProperties
-  },
-  required: [
-    ...kRoomRequired,
-    "event",
-    "reason"
-  ]
-});
-
-export const clientEnvelopeSchema = defineSchema({
-  $id: "client-envelope",
-  title: "ClientEnvelope",
-  oneOf: [
-    joinEnvelopeSchema,
-    leaveEnvelopeSchema,
-    messageEnvelopeSchema,
-    presenceEnvelopeSchema,
-    resyncEnvelopeSchema
-  ]
-});
-
-export const serverEnvelopeSchema = defineSchema({
-  $id: "server-envelope",
-  title: "ServerEnvelope",
-  oneOf: [
-    messageEnvelopeSchema,
-    syncEnvelopeSchema,
-    peerJoinedEnvelopeSchema,
-    peerLeftEnvelopeSchema,
-    peerPresenceEnvelopeSchema,
-    peerProfileEnvelopeSchema,
-    deniedEnvelopeSchema,
-    errorEnvelopeSchema
-  ]
-});
+export const serverEnvelopeSchema = z.discriminatedUnion("kind", [
+  messageEnvelopeSchema,
+  syncEnvelopeSchema,
+  peerJoinedEnvelopeSchema,
+  peerLeftEnvelopeSchema,
+  peerPresenceEnvelopeSchema,
+  peerProfileEnvelopeSchema,
+  deniedEnvelopeSchema,
+  errorEnvelopeSchema
+]);

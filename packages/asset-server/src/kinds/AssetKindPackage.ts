@@ -1,34 +1,22 @@
 // Import Third-party Dependencies
-import {
-  defineSchema,
-  type JSONSchema
-} from "@jolly-pixel/network";
+import type { Schema } from "@jolly-pixel/network";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import type { AssetKindDescriptor } from "./AssetKindDescriptor.ts";
 import type { AssetKindHandler } from "./AssetKindHandler.ts";
 
 // CONSTANTS
-export const SNAPSHOT_POLICY_SCHEMA = defineSchema({
-  type: "object",
-  properties: {
-    delay: {
-      type: "number",
-      minimum: 0
-    },
-    maxDelay: {
-      type: "number",
-      minimum: 0
-    }
-  },
-  additionalProperties: false
+export const SNAPSHOT_POLICY_SCHEMA = z.strictObject({
+  delay: z.optional(z.number().check(z.minimum(0))),
+  maxDelay: z.optional(z.number().check(z.minimum(0)))
 });
 
 export interface AssetKindPackage<
   TOptions extends object = object
 > {
   readonly descriptors: readonly AssetKindDescriptor[];
-  readonly optionsSchema: JSONSchema;
+  readonly optionsSchema: Schema;
 
   handlers(
     options?: TOptions

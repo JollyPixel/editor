@@ -1,15 +1,18 @@
 // Import Third-party Dependencies
 import {
-  defineSchema,
+  SchemaParser,
   type Infer
 } from "@jolly-pixel/network";
-import { Validator } from "ata-validator";
 import {
   writeJsonFile,
   type AssetSource
 } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
+import {
+  backupEntrySchema,
+  backupLedgerSchema
+} from "./ContentObjects.schema.ts";
 import {
   silentLogger,
   type Logger
@@ -29,72 +32,10 @@ import {
 
 // CONSTANTS
 const kLedgerVersion = 1;
-const kValidatorOptions = { useDefaults: false };
-const kString = { type: "string" } as const;
-const kBackupProperties = {
-  hash: kString,
-  size: {
-    type: "integer",
-    minimum: 0
-  },
-  assetId: kString,
-  path: kString,
-  createdAt: kString
-} as const;
-const kBackupRequired = [
-  "hash",
-  "size",
-  "assetId",
-  "path",
-  "createdAt",
-  "reason"
-] as const;
+const kLedgerParser = new SchemaParser(backupLedgerSchema);
+const kEntryParser = new SchemaParser(backupEntrySchema);
 
-const kBackupEntrySchema = defineSchema({
-  oneOf: [
-    {
-      type: "object",
-      properties: {
-        ...kBackupProperties,
-        reason: { const: "tag" },
-        tag: {
-          type: "object",
-          properties: {
-            name: kString,
-            message: kString
-          },
-          required: ["name"]
-        }
-      },
-      required: [...kBackupRequired, "tag"]
-    },
-    {
-      type: "object",
-      properties: {
-        ...kBackupProperties,
-        reason: { const: "external-edit" }
-      },
-      required: kBackupRequired
-    }
-  ]
-});
-
-const kLedgerValidator = new Validator(
-  defineSchema({
-    type: "object",
-    properties: {
-      entries: { type: "array" }
-    },
-    required: ["entries"]
-  }),
-  kValidatorOptions
-);
-const kEntryValidator = new Validator(
-  kBackupEntrySchema,
-  kValidatorOptions
-);
-
-export type BackupEntry = Infer<typeof kBackupEntrySchema>;
+export type BackupEntry = Infer<typeof backupEntrySchema>;
 export type BackupInput = Without<BackupEntry, "hash" | "size" | "createdAt">;
 
 interface BackupLedgerData {
@@ -151,7 +92,8 @@ export class ContentObjects {
   static parse(
     input: unknown
   ): StateFileParse<BackupEntry[]> {
-    if (!kLedgerValidator.isValidObject(input)) {
+    const ledger = kLedgerParser.parse(input);
+    if (!ledger.ok) {
       return {
         data: [],
         dropped: 0
@@ -159,8 +101,8 @@ export class ContentObjects {
     }
 
     const { entries, dropped } = keepValid(
-      input.entries.entries(),
-      kEntryValidator
+      ledger.val.entries.entries(),
+      kEntryParser
     );
 
     return {

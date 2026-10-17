@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 // CONSTANTS
-const kRootDir = path.join(import.meta.dirname, "..");
+const kRootDir = path.join(import.meta.dirname, "..", "..");
 const kSubpathSegment = /^[a-z][a-z0-9-]*$/;
 
 interface PackageManifest {

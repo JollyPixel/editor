@@ -58,7 +58,8 @@
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/pixel-draw.renderer": "workspace:*",
     "@jolly-pixel/voxel.renderer": "workspace:*",
-    "@openally/emitt": "1.1.0"
+    "@openally/emitt": "1.1.0",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@jolly-pixel/asset": "workspace:*",

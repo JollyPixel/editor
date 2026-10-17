@@ -2,10 +2,14 @@ export * from "./types.ts";
 export * from "./constants.ts";
 export * from "./profile/PeerProfile.ts";
 export {
-  defineSchema,
+  dependentRequired,
   describeErrors,
+  isSchema,
+  minProperties,
+  notMultipleOf,
+  requiredAnyOf,
   type Infer,
-  type JSONSchema,
+  type Schema,
   type ValidationError
 } from "./schema.ts";
 export {

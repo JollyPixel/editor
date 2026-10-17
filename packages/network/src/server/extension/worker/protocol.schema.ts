@@ -1,212 +1,83 @@
+// Import Third-party Dependencies
+import * as z from "zod/mini";
+
 // Import Internal Dependencies
-import { defineSchema } from "../../../protocol/schema.ts";
 import { peerMetadataSchema } from "../../../protocol/envelope/Envelope.schema.ts";
 
-const kIdentifier = { type: "string" } as const;
-const kIdentity = {
-  type: "object",
-  properties: {
-    subject: kIdentifier,
-    role: kIdentifier
-  },
-  required: [
-    "subject",
-    "role"
-  ]
-} as const;
-const kRoomPeer = {
-  type: "object",
-  properties: {
-    clientId: kIdentifier,
-    identity: kIdentity,
-    profile: peerMetadataSchema,
-    presence: peerMetadataSchema,
-    resume: {}
-  },
-  required: [
-    "clientId",
-    "identity",
-    "profile",
-    "presence"
-  ]
-} as const;
+// CONSTANTS
+const kIdentifier = z.string();
+const kIdentity = z.object({
+  subject: kIdentifier,
+  role: kIdentifier
+});
+const kRoomPeer = z.object({
+  clientId: kIdentifier,
+  identity: kIdentity,
+  profile: peerMetadataSchema,
+  presence: peerMetadataSchema,
+  resume: z.optional(z.unknown())
+});
 
-export const hostWorkerDataSchema = defineSchema({
-  type: "object",
-  properties: {
+function dispatchVariant<
+  const TMethod extends string,
+  TArgs extends z.ZodMiniTuple
+>(
+  method: TMethod,
+  args: TArgs
+) {
+  return z.object({
+    type: z.literal("dispatch"),
     id: kIdentifier,
-    modulePath: kIdentifier,
-    exportName: kIdentifier,
-    extensionWorkerData: {}
-  },
-  required: [
-    "id",
-    "modulePath"
-  ]
+    identity: kIdentity,
+    method: z.literal(method),
+    args
+  });
+}
+
+function contextCallVariant<
+  const TMethod extends string,
+  TArgs extends z.ZodMiniTuple
+>(
+  method: TMethod,
+  args: TArgs
+) {
+  return z.object({
+    type: z.literal("context-call"),
+    method: z.literal(method),
+    args
+  });
+}
+
+export const hostWorkerDataSchema = z.object({
+  id: kIdentifier,
+  modulePath: kIdentifier,
+  exportName: z.optional(kIdentifier),
+  extensionWorkerData: z.optional(z.unknown())
 });
 
-export const mainToWorkerSchema = defineSchema({
-  oneOf: [
-    {
-      type: "object",
-      properties: {
-        type: { const: "dispatch" },
-        id: kIdentifier,
-        identity: kIdentity,
-        method: { const: "onClientConnect" },
-        args: {
-          type: "array",
-          prefixItems: [
-            kIdentifier,
-            kRoomPeer
-          ],
-          minItems: 2
-        }
-      },
-      required: [
-        "type",
-        "id",
-        "method",
-        "args",
-        "identity"
-      ]
-    },
-    {
-      type: "object",
-      properties: {
-        type: { const: "dispatch" },
-        id: kIdentifier,
-        identity: kIdentity,
-        method: { const: "onClientDisconnect" },
-        args: {
-          type: "array",
-          prefixItems: [kIdentifier],
-          minItems: 1
-        }
-      },
-      required: [
-        "type",
-        "id",
-        "method",
-        "args",
-        "identity"
-      ]
-    },
-    {
-      type: "object",
-      properties: {
-        type: { const: "dispatch" },
-        id: kIdentifier,
-        identity: kIdentity,
-        method: { const: "onResync" },
-        args: {
-          type: "array",
-          prefixItems: [kIdentifier],
-          minItems: 1
-        }
-      },
-      required: [
-        "type",
-        "id",
-        "method",
-        "args",
-        "identity"
-      ]
-    },
-    {
-      type: "object",
-      properties: {
-        type: { const: "dispatch" },
-        id: kIdentifier,
-        identity: kIdentity,
-        method: { const: "onMessage" },
-        args: {
-          type: "array",
-          prefixItems: [kIdentifier, {}],
-          minItems: 2
-        }
-      },
-      required: [
-        "type",
-        "id",
-        "method",
-        "args",
-        "identity"
-      ]
-    }
-  ]
-});
+export const mainToWorkerSchema = z.union([
+  dispatchVariant("onClientConnect", z.tuple([kIdentifier, kRoomPeer])),
+  dispatchVariant("onClientDisconnect", z.tuple([kIdentifier])),
+  dispatchVariant("onResync", z.tuple([kIdentifier])),
+  dispatchVariant("onMessage", z.tuple([kIdentifier, z.unknown()]))
+]);
 
-export const workerToMainSchema = defineSchema({
-  oneOf: [
-    {
-      type: "object",
-      properties: {
-        type: { const: "ready" },
-        methods: {
-          type: "array",
-          items: {
-            enum: [
-              "onClientConnect",
-              "onClientDisconnect",
-              "onResync",
-              "onMessage"
-            ]
-          }
-        }
-      },
-      required: [
-        "type",
-        "methods"
-      ]
-    },
-    {
-      type: "object",
-      properties: {
-        type: { const: "dispatch-result" },
-        id: kIdentifier,
-        ok: { type: "boolean" },
-        error: kIdentifier
-      },
-      required: [
-        "type",
-        "id",
-        "ok"
-      ]
-    },
-    {
-      type: "object",
-      properties: {
-        type: { const: "context-call" },
-        method: { const: "room.broadcast" },
-        args: {
-          type: "array",
-          prefixItems: [{}],
-          minItems: 1
-        }
-      },
-      required: [
-        "type",
-        "method",
-        "args"
-      ]
-    },
-    {
-      type: "object",
-      properties: {
-        type: { const: "context-call" },
-        method: { const: "client.send" },
-        args: {
-          type: "array",
-          prefixItems: [kIdentifier, {}],
-          minItems: 2
-        }
-      },
-      required: [
-        "type",
-        "method",
-        "args"
-      ]
-    }
-  ]
-});
+export const workerToMainSchema = z.union([
+  z.object({
+    type: z.literal("ready"),
+    methods: z.array(z.enum([
+      "onClientConnect",
+      "onClientDisconnect",
+      "onResync",
+      "onMessage"
+    ]))
+  }),
+  z.object({
+    type: z.literal("dispatch-result"),
+    id: kIdentifier,
+    ok: z.boolean(),
+    error: z.optional(kIdentifier)
+  }),
+  contextCallVariant("room.broadcast", z.tuple([z.unknown()])),
+  contextCallVariant("client.send", z.tuple([kIdentifier, z.unknown()]))
+]);

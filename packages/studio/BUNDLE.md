@@ -6,7 +6,7 @@ What the studio shell and the three editor pages make the browser download befor
 
 - Every page is already minified, three.js included, and [`serveBuild`](./server/serveBuild.ts) serves precompressed brotli with an immutable cache on hashed assets. The weight comes from what the pages contain and from how they are built.
 - three.js is about 220 KB of brotli in each voxel editor, a third of the page. Our copy is close to the cost of `WebGPURenderer` alone, so tree-shaking it harder saves little.
-- The offline back-end chunk ships the whole ata-validator schema compiler: 438 KB minified, 95 KB brotli. The `1.53.0` bump (`e91817e4`) grew it by 30 KB of brotli.
+- The offline back-end chunk ships the whole ata-validator schema compiler: 438 KB minified, 95 KB brotli. The `1.53.0` bump (`e91817e4`) grew it by 30 KB of brotli. Item 1 replaces it with zod in the browser.
 - Smaller items: lazy-loading what the first screen does not show, per-consumer ui registration, picomatch and classic zod in the browser, and `emitDecoratorMetadata`.
 
 ## Where the bytes are
@@ -43,18 +43,18 @@ No dependency is bundled twice in different versions: one each of three `0.186.1
 
 Ranked by expected gain. Estimates are eager brotli unless stated.
 
-### 1. Precompile the offline back-end validators
+### 1. Take ata-validator out of the browser
 
-The offline back-end runs the asset server in the browser (static mode, `?offline`, the shared-tab owner). Its lazy chunk is mostly ata-validator: 758 KB rendered, of which `js-compiler.js` and `js-compiler-errors.js` alone are 321 KB. The network client avoids this already: [`compileSchemas.ts`](../network/scripts/compileSchemas.ts) writes `generated/client.compiled.ts` and `server.compiled.ts`.
+Built (uncommitted). The offline back-end runs the asset server in the browser (static mode, `?offline`, the shared-tab owner, a peer host). Its lazy chunk was mostly ata-validator: 438 KB minified, 94 KB brotli.
 
-Validators that are built at runtime with `new Validator(...)` and can reach the browser:
+- Schemas are written with zod/mini. Node validates them with ata-validator, on the JSON Schema that `z.toJSONSchema` emits; browsers validate them with zod. network's `#schema-runtime` import picks the runtime with the `browser` condition.
+- The browser runtime loads `z.compile` lazily: validators use zod's parser until the compiler arrives. Loaded eagerly, the compiler added 8 KB brotli to every editor page.
+- The in-browser server does not validate its own outbound messages (`validateOutbound: false`): rooms name each message from its tags, for read rights.
+- network's `minProperties`, `dependentRequired`, `requiredAnyOf` and `notMultipleOf` carry rules zod cannot emit: each one adds a zod check and the matching JSON Schema keyword. A network test runs both runtimes on every rule.
+- Static studio JS, all chunks: 4237 KB minified / 1013 KB brotli before, 3769 / 924 KB after. Eager chunks: shell 197, pixel-art 282, voxel-map 653, voxel-model 598 KB brotli.
+- [`studio.bundle.spec.ts`](./test/vite/studio.bundle.spec.ts) fails if any ata-validator module reaches the studio build.
 
-- [`ArchiveManifest.ts`](../asset-server/src/archive/format/ArchiveManifest.ts)
-- [`ContentObjects.ts`](../asset-server/src/objects/ContentObjects.ts)
-- [`ProjectionState.ts`](../asset-server/src/projection/ProjectionState.ts)
-- [`MessageParser.ts`](../network/src/protocol/message/MessageParser.ts) and [`SchemaParser.ts`](../network/src/protocol/SchemaParser.ts)
-
-Precompiling them the same way should remove ata-validator from the browser: about 95 KB brotli and 438 KB of parse from every offline boot. `SchemaParser` takes schemas defined by asset kinds, so it may need a compile step per kind rather than one generated file. Guard the result with a vite bundle spec that fails if `ata-validator/lib/js-compiler` appears in an editor's output.
+Measured and dropped on the way: precompiled ata validators (`generated/*.compiled.ts` beside each schema, 995 KB minified / 67 KB brotli, verdict only, and a build step), and full error detail in them (11.4 MB minified).
 
 ### 2. Lazy-load what the first screen does not show
 

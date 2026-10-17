@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 import {
-  defineSchema,
   describeErrors,
   SchemaParser,
   type ConflictResolver,
@@ -16,6 +15,7 @@ import {
 } from "@jolly-pixel/asset-server";
 
 import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import {
@@ -48,12 +48,8 @@ type StoredModelNode = Infer<typeof voxelModelDocumentSchema>["nodes"][number];
 
 // CONSTANTS
 const kDocumentParser = new SchemaParser(voxelModelDocumentSchema);
-const kOptionsSchema = defineSchema({
-  type: "object",
-  properties: {
-    snapshot: SNAPSHOT_POLICY_SCHEMA
-  },
-  additionalProperties: false
+const kOptionsSchema = z.strictObject({
+  snapshot: z.optional(SNAPSHOT_POLICY_SCHEMA)
 });
 
 export function decodeVoxelModelDocument(

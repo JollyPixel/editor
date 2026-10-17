@@ -7,12 +7,11 @@ import {
 import secureJson from "secure-json-parse";
 
 // Import Internal Dependencies
-import * as clientValidator from "./generated/client.compiled.ts";
-import * as serverValidator from "./generated/server.compiled.ts";
-import type {
+import {
   clientEnvelopeSchema,
   serverEnvelopeSchema
 } from "./Envelope.schema.ts";
+import { SchemaParser } from "../SchemaParser.ts";
 import {
   describeErrors,
   type Infer,
@@ -35,6 +34,8 @@ const kServerEnvelopeKinds: Record<ServerEnvelope["kind"], true> = {
   denied: true,
   error: true
 };
+const kClientParser = new SchemaParser(clientEnvelopeSchema);
+const kServerParser = new SchemaParser(serverEnvelopeSchema);
 
 export type ClientEnvelope = Infer<typeof clientEnvelopeSchema>;
 export type ServerEnvelope = Infer<typeof serverEnvelopeSchema>;
@@ -46,23 +47,13 @@ export type EnvelopeParseError =
   | { reason: "invalid-json"; message: string; }
   | { reason: "malformed"; errors: readonly ValidationError[]; };
 
-interface CompiledValidator {
-  isValid(
-    value: unknown
-  ): boolean;
-  validate(
-    value: unknown
-  ): { readonly errors: readonly ValidationError[]; };
-}
-
-type EnvelopeGuard<TEnvelope extends Envelope> = (
+type EnvelopeCheck<TEnvelope extends Envelope> = (
   value: unknown
-) => value is TEnvelope;
+) => Result<TEnvelope, readonly ValidationError[]>;
 
 function envelopeParser<TEnvelope extends Envelope>(
-  validator: CompiledValidator,
   parseJson: (text: string) => unknown,
-  isEnvelope: EnvelopeGuard<TEnvelope>
+  check: EnvelopeCheck<TEnvelope>
 ): (raw: unknown) => Result<TEnvelope, EnvelopeParseError> {
   return (raw) => {
     let value = raw;
@@ -78,21 +69,15 @@ function envelopeParser<TEnvelope extends Envelope>(
       }
     }
 
-    if (isEnvelope(value)) {
-      return Ok(value);
-    }
+    const checked = check(value);
 
-    return Err<EnvelopeParseError>({
-      reason: "malformed",
-      errors: validator.validate(value).errors
-    });
+    return checked.ok ?
+      Ok(checked.val) :
+      Err<EnvelopeParseError>({
+        reason: "malformed",
+        errors: checked.val
+      });
   };
-}
-
-function validEnvelope<TEnvelope extends Envelope>(
-  validator: CompiledValidator
-): EnvelopeGuard<TEnvelope> {
-  return (value): value is TEnvelope => validator.isValid(value) === true;
 }
 
 function parseSecureJson(
@@ -126,19 +111,18 @@ export function describeEnvelopeParseError(
 
 export const Envelope = {
   parseClient: envelopeParser(
-    clientValidator,
     parseSecureJson,
-    validEnvelope<ClientEnvelope>(clientValidator)
+    (value) => kClientParser.parse(value)
   ),
   parseServer: envelopeParser(
-    serverValidator,
     parseSecureJson,
-    validEnvelope<ServerEnvelope>(serverValidator)
+    (value) => kServerParser.parse(value)
   ),
   parseTrustedServer: envelopeParser(
-    serverValidator,
     JSON.parse,
-    isServerEnvelopeShape
+    (value) => (isServerEnvelopeShape(value) ?
+      Ok(value) :
+      kServerParser.parse(value))
   ),
 
   stringify(

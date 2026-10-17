@@ -1,114 +1,50 @@
 // Import Third-party Dependencies
-import { defineSchema } from "@jolly-pixel/network";
-import type { Infer } from "ata-validator";
+import type { Infer } from "@jolly-pixel/network";
+import * as z from "zod/mini";
 
-export const assetInlineContentSchema = defineSchema({
-  type: "object",
-  properties: {
-    type: { const: "inline" },
-    encoding: { const: "base64" },
-    data: { type: "string" }
-  },
-  required: [
-    "type",
-    "encoding",
-    "data"
-  ]
+export const assetInlineContentSchema = z.object({
+  type: z.literal("inline"),
+  encoding: z.literal("base64"),
+  data: z.string()
 });
 
 export type AssetInlineContent = Infer<typeof assetInlineContentSchema>;
 
-export const assetContentSchema = defineSchema({
-  oneOf: [
-    assetInlineContentSchema,
-    {
-      type: "object",
-      properties: {
-        type: { const: "ref" },
-        hash: { type: "string" },
-        size: { type: "number" }
-      },
-      required: [
-        "type",
-        "hash",
-        "size"
-      ]
-    }
-  ]
+export const assetContentSchema = z.discriminatedUnion("type", [
+  assetInlineContentSchema,
+  z.object({
+    type: z.literal("ref"),
+    hash: z.string(),
+    size: z.number()
+  })
+]);
+
+export const assetReferenceSchema = z.object({
+  id: z.string(),
+  kind: z.string()
 });
 
-export const assetReferenceSchema = defineSchema({
-  type: "object",
-  properties: {
-    id: { type: "string" },
-    kind: { type: "string" }
-  },
-  required: [
-    "id",
-    "kind"
-  ]
+export const assetWriteDataSchema = z.object({
+  path: z.string(),
+  kind: z.string(),
+  hash: z.string(),
+  size: z.number(),
+  content: assetContentSchema,
+  dependencies: z.optional(z.array(assetReferenceSchema)),
+  restoredFrom: z.optional(z.object({
+    name: z.string(),
+    eventVersion: z.int().check(z.minimum(1))
+  }))
 });
 
-export const assetWriteDataSchema = defineSchema({
-  type: "object",
-  properties: {
-    path: { type: "string" },
-    kind: { type: "string" },
-    hash: { type: "string" },
-    size: { type: "number" },
-    content: assetContentSchema,
-    dependencies: {
-      type: "array",
-      items: assetReferenceSchema
-    },
-    restoredFrom: {
-      type: "object",
-      properties: {
-        name: { type: "string" },
-        eventVersion: {
-          type: "integer",
-          minimum: 1
-        }
-      },
-      required: [
-        "name",
-        "eventVersion"
-      ]
-    }
-  },
-  required: [
-    "path",
-    "kind",
-    "hash",
-    "size",
-    "content"
-  ]
+export const assetRenamedDataSchema = z.object({
+  from: z.string(),
+  to: z.string(),
+  kind: z.string(),
+  hash: z.string()
 });
 
-export const assetRenamedDataSchema = defineSchema({
-  type: "object",
-  properties: {
-    from: { type: "string" },
-    to: { type: "string" },
-    kind: { type: "string" },
-    hash: { type: "string" }
-  },
-  required: [
-    "from",
-    "to",
-    "kind",
-    "hash"
-  ]
-});
-
-export const assetDeletedDataSchema = defineSchema({
-  type: "object",
-  properties: {
-    path: { type: "string" },
-    kind: { type: "string" }
-  },
-  required: [
-    "path",
-    "kind"
-  ]
+export const assetDeletedDataSchema = z.object({
+  path: z.string(),
+  kind: z.string()
 });

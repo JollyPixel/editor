@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import {
   MessageParser,
-  MessageProtocol
+  SchemaParser
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
@@ -181,10 +181,7 @@ describe("pixelCommandProtocol: uv regions", () => {
 
 describe("pixelSnapshotSchema", () => {
   test("accepts base64 or PNG pixels", () => {
-    const parser = new MessageParser(new MessageProtocol({
-      title: "snapshot",
-      ...pixelSnapshotSchema
-    }));
+    const parser = new SchemaParser(pixelSnapshotSchema);
     const snapshot = {
       size: { x: 4, y: 4 },
       uvRegions: []
@@ -202,10 +199,7 @@ describe("pixelSnapshotSchema", () => {
   });
 
   test("validates the snapshot's uv regions", () => {
-    const parser = new MessageParser(new MessageProtocol({
-      title: "snapshot",
-      ...pixelSnapshotSchema
-    }));
+    const parser = new SchemaParser(pixelSnapshotSchema);
     const snapshot = {
       size: { x: 4, y: 4 },
       pixels: ""

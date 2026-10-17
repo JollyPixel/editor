@@ -5,19 +5,18 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import * as z from "zod/mini";
+
 // Import Internal Dependencies
 import { SchemaParser } from "#src/protocol/SchemaParser.ts";
 import { describeErrors } from "#src/protocol/schema.ts";
 
 // CONSTANTS
-const kPointParser = new SchemaParser({
-  type: "object",
-  properties: {
-    x: { type: "number" },
-    y: { type: "number" }
-  },
-  required: ["x", "y"]
-});
+const kPointParser = new SchemaParser(z.object({
+  x: z.number(),
+  y: z.number()
+}));
 
 describe("SchemaParser", () => {
   test("returns a value that matches the schema", () => {

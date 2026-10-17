@@ -5,26 +5,22 @@ import { isDeepStrictEqual } from "node:util";
 
 // Import Third-party Dependencies
 import {
-  defineSchema,
   describeErrors,
   SchemaParser,
   type Infer
 } from "@jolly-pixel/network";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import { PROJECT_FILE_PATH } from "../stateDirectory.ts";
 
 // CONSTANTS
-const kProjectFileSchema = defineSchema({
-  type: "object",
-  properties: {
-    version: { const: 1 },
-    kinds: {
-      type: "object",
-      additionalProperties: { type: "object" }
-    }
-  },
-  required: ["version"]
+const kProjectFileSchema = z.object({
+  version: z.literal(1),
+  kinds: z.optional(z.record(
+    z.string(),
+    z.record(z.string(), z.unknown())
+  ))
 });
 const kProjectFileParser = new SchemaParser(kProjectFileSchema);
 

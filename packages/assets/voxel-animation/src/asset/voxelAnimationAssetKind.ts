@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import {
-  defineSchema,
   describeErrors,
   SchemaParser,
   type ConflictResolver
@@ -12,6 +11,7 @@ import {
   type AssetKindPackage,
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import {
@@ -34,12 +34,8 @@ import { AnimationCommandArbiter } from "../network/AnimationCommandArbiter.ts";
 import type { AnimationNetworkCommand } from "../network/types.ts";
 
 // CONSTANTS
-const kOptionsSchema = defineSchema({
-  type: "object",
-  properties: {
-    snapshot: SNAPSHOT_POLICY_SCHEMA
-  },
-  additionalProperties: false
+const kOptionsSchema = z.strictObject({
+  snapshot: z.optional(SNAPSHOT_POLICY_SCHEMA)
 });
 const kDocumentParser = new SchemaParser(voxelAnimationDocumentSchema);
 

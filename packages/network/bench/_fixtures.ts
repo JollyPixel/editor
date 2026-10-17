@@ -3,6 +3,7 @@ import pino from "pino";
 import { LogLayer } from "loglayer";
 import { PinoTransport } from "@loglayer/transport-pino";
 import { mulberry32 } from "@jolly-pixel/bench";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import {
@@ -57,23 +58,16 @@ export function actionName(
 export function commandProtocol(
   variants: number
 ): MessageProtocol {
-  return new MessageProtocol({
-    oneOf: Array.from({ length: variants }, (_, variant) => withCommandHeader(
+  const pixel = z.int().check(z.minimum(0));
+
+  return new MessageProtocol(z.union(
+    Array.from({ length: variants }, (_, variant) => withCommandHeader(
       commandVariant(actionName(variant), {
-        color: {
-          type: "integer",
-          minimum: 0
-        },
-        xy: {
-          type: "array",
-          items: {
-            type: "integer",
-            minimum: 0
-          }
-        }
+        color: pixel,
+        xy: z.array(pixel)
       })
     ))
-  });
+  ));
 }
 
 export interface BenchProtocols extends MessageProtocols {
@@ -90,15 +84,9 @@ export function benchProtocols(
     inbound: command,
     outbound: serverMessageProtocol({
       command,
-      snapshot: {
-        type: "object",
-        properties: {
-          pixels: {
-            type: "string"
-          }
-        },
-        required: ["pixels"]
-      }
+      snapshot: z.object({
+        pixels: z.string()
+      })
     })
   };
 }

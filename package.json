@@ -9,14 +9,14 @@
     "build": "pnpm -r --if-present run build",
     "test": "pnpm -r --if-present run test && pnpm run test:scripts",
     "test:scripts": "node --test \"scripts/test/**/*.spec.ts\"",
-    "lint": "oxlint packages scripts && node scripts/checkExports.ts && pnpm -r --if-present run lint:css",
+    "lint": "oxlint packages scripts && node scripts/exports/check.ts && pnpm -r --if-present run lint:css",
     "ci:publish": "changeset publish",
     "ci:version": "changeset version",
     "clear": "clear-ts-build",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
-    "typecheck": "node scripts/typecheck.ts"
+    "typecheck": "node scripts/typecheck/run.ts"
   },
   "packageManager": "pnpm@12.4.2",
   "engines": {

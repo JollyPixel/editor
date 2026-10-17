@@ -1,99 +1,72 @@
+// Import Third-party Dependencies
+import * as z from "zod/mini";
+
 // Import Internal Dependencies
-import { MessageProtocol } from "../protocol/message/MessageProtocol.ts";
+import {
+  MessageProtocol,
+  withEvent
+} from "../protocol/message/MessageProtocol.ts";
 import {
   CATCH_UP_EVENT,
   SNAPSHOT_EVENT
 } from "../protocol/constants.ts";
-import type { JSONSchema } from "../protocol/schema.ts";
+import type { Schema } from "../protocol/schema.ts";
 
 // CONSTANTS
-const kAcksSchema = {
-  type: "object",
-  additionalProperties: {
-    type: "integer",
-    minimum: 0
-  }
-} as const;
-const kVersionSchema = {
-  type: "integer",
-  minimum: 0
-} as const;
-const kRefusedSchema = {
-  type: "integer",
-  minimum: 0
-} as const;
+const kNonNegativeInt = z.int().check(z.minimum(0));
+const kAcksSchema = z.record(z.string(), kNonNegativeInt);
 
 export interface ServerMessageProtocolOptions {
   command: MessageProtocol;
-  snapshot: JSONSchema;
-  notices?: readonly JSONSchema[];
+  snapshot: Schema;
+  notices?: readonly Schema[];
 }
 
 type SyncMessageType = "snapshot" | "command" | "correction";
 
 const kSyncOptionalProperties: Record<
   SyncMessageType,
-  Record<string, JSONSchema>
+  z.core.$ZodLooseShape
 > = {
   snapshot: {
-    version: kVersionSchema,
-    acks: kAcksSchema,
-    refused: kRefusedSchema
+    version: z.optional(kNonNegativeInt),
+    acks: z.optional(kAcksSchema),
+    refused: z.optional(kNonNegativeInt)
   },
   command: {
-    version: kVersionSchema
+    version: z.optional(kNonNegativeInt)
   },
   correction: {
-    acks: kAcksSchema,
-    refused: kRefusedSchema
+    acks: z.optional(kAcksSchema),
+    refused: z.optional(kNonNegativeInt)
   }
 };
 
 function syncVariant(
-  title: string,
+  event: string,
   type: SyncMessageType,
-  data: JSONSchema
-): JSONSchema {
-  return {
-    title,
-    type: "object",
-    properties: {
-      type: { const: type },
-      data,
-      ...kSyncOptionalProperties[type]
-    },
-    required: [
-      "type",
-      "data"
-    ]
-  };
+  data: Schema
+): Schema {
+  return withEvent(z.object({
+    type: z.literal(type),
+    data,
+    ...kSyncOptionalProperties[type]
+  }), event);
 }
 
 function catchUpVariant(
   command: MessageProtocol
-): JSONSchema {
+): Schema {
   const items = command.variants.length === 0 ?
-    {} :
-    { anyOf: command.variants.map(({ schema }) => schema) };
+    z.unknown() :
+    z.union(command.variants.map(({ schema }) => schema));
 
-  return {
-    title: CATCH_UP_EVENT,
-    type: "object",
-    properties: {
-      type: { const: "catch-up" },
-      data: {
-        type: "array",
-        items
-      },
-      version: kVersionSchema,
-      acks: kAcksSchema
-    },
-    required: [
-      "type",
-      "data",
-      "version"
-    ]
-  };
+  return withEvent(z.object({
+    type: z.literal("catch-up"),
+    data: z.array(items),
+    version: kNonNegativeInt,
+    acks: z.optional(kAcksSchema)
+  }), CATCH_UP_EVENT);
 }
 
 export function serverMessageProtocol(
@@ -106,19 +79,17 @@ export function serverMessageProtocol(
   } = options;
 
   return new MessageProtocol(
-    {
-      oneOf: [
-        syncVariant(SNAPSHOT_EVENT, "snapshot", snapshot),
-        ...command.variants.map(
-          ({ event, schema }) => syncVariant(event, "command", schema)
-        ),
-        ...command.variants.map(
-          ({ event, schema }) => syncVariant(event, "correction", schema)
-        ),
-        catchUpVariant(command),
-        ...notices
-      ]
-    },
+    z.union([
+      syncVariant(SNAPSHOT_EVENT, "snapshot", snapshot),
+      ...command.variants.map(
+        ({ event, schema }) => syncVariant(event, "command", schema)
+      ),
+      ...command.variants.map(
+        ({ event, schema }) => syncVariant(event, "correction", schema)
+      ),
+      catchUpVariant(command),
+      ...notices
+    ]),
     {
       discriminator: "type"
     }

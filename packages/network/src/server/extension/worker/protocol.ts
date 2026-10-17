@@ -1,7 +1,5 @@
-// Import Third-party Dependencies
-import { Validator } from "ata-validator";
-
 // Import Internal Dependencies
+import { SchemaParser } from "../../../protocol/SchemaParser.ts";
 import {
   hostWorkerDataSchema,
   mainToWorkerSchema,
@@ -11,19 +9,9 @@ import type { RoomPeer } from "../Extension.ts";
 import type { PeerIdentity } from "../../auth/AuthenticationProvider.ts";
 
 // CONSTANTS
-const kValidatorOptions = { useDefaults: false };
-const kHostWorkerData = new Validator(
-  hostWorkerDataSchema,
-  kValidatorOptions
-);
-const kMainToWorker = new Validator(
-  mainToWorkerSchema,
-  kValidatorOptions
-);
-const kWorkerToMain = new Validator(
-  workerToMainSchema,
-  kValidatorOptions
-);
+const kHostWorkerData = new SchemaParser(hostWorkerDataSchema);
+const kMainToWorker = new SchemaParser(mainToWorkerSchema);
+const kWorkerToMain = new SchemaParser(workerToMainSchema);
 
 export interface DispatchArgsMap {
   onClientConnect: [clientId: string, peer: RoomPeer];
@@ -95,17 +83,17 @@ export interface HostWorkerData {
 export function isHostWorkerData(
   value: unknown
 ): value is HostWorkerData {
-  return kHostWorkerData.isValidObject(value);
+  return kHostWorkerData.is(value);
 }
 
 export function isMainToWorkerMessage(
   value: unknown
 ): value is MainToWorkerMessage {
-  return kMainToWorker.isValidObject(value);
+  return kMainToWorker.is(value);
 }
 
 export function isWorkerToMainMessage(
   value: unknown
 ): value is WorkerToMainMessage {
-  return kWorkerToMain.isValidObject(value);
+  return kWorkerToMain.is(value);
 }

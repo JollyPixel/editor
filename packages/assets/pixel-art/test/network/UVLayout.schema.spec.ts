@@ -7,9 +7,8 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
-  MessageParser,
-  MessageProtocol,
-  type JSONSchema
+  SchemaParser,
+  type Schema
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
@@ -23,26 +22,10 @@ import {
 const kRect = { x: 0, y: 0, width: 8, height: 8 };
 
 function accepts(
-  schema: JSONSchema,
+  schema: Schema,
   payload: unknown
 ): boolean {
-  const protocol = new MessageProtocol({
-    oneOf: [
-      {
-        type: "object",
-        properties: {
-          action: { const: "check" },
-          value: schema
-        },
-        required: ["action", "value"]
-      }
-    ]
-  });
-
-  return new MessageParser(protocol).parse({
-    action: "check",
-    value: payload
-  }).ok;
+  return new SchemaParser(schema).parse(payload).ok;
 }
 
 describe("network/UVLayout.schema", () => {

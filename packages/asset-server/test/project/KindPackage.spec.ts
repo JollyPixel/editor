@@ -5,6 +5,9 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import * as z from "zod/mini";
+
 // Import Internal Dependencies
 import { KindPackage } from "#src/node.ts";
 import {
@@ -92,6 +95,12 @@ describe("KindPackage", () => {
           ...kindPackage(["alpha"]),
           optionsSchema: undefined
         }
+      },
+      {
+        ASSET_KINDS: {
+          ...kindPackage(["alpha"]),
+          optionsSchema: { type: "object" }
+        }
       }
     ];
 
@@ -148,12 +157,9 @@ describe("KindPackage", () => {
         "kind-a": {
           ASSET_KINDS: {
             ...kindPackage(["alpha"], received),
-            optionsSchema: {
-              type: "object",
-              properties: {
-                size: { type: "number" }
-              }
-            }
+            optionsSchema: z.object({
+              size: z.optional(z.number())
+            })
           }
         }
       })),

@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import {
-  defineSchema,
   describeErrors,
   SchemaParser,
   type ConflictResolver
@@ -41,9 +40,8 @@ import {
   BLOCKSET_KIND,
   type BlocksetAssetDocument
 } from "./blockset.ts";
-import { tileSizeSchema } from "../network/schema.ts";
+import { blocksetDocumentSchema } from "./blocksetDocument.schema.ts";
 import {
-  materialGroupSchema,
   blocksetCommandProtocol,
   blocksetSnapshotSchema
 } from "../network/blockset/BlocksetCommand.schema.ts";
@@ -55,26 +53,7 @@ import type {
 
 // CONSTANTS
 const kDefaultGridSize = 8;
-const kDocumentParser = new SchemaParser(defineSchema({
-  type: "object",
-  properties: {
-    version: { const: BLOCKSET_DOCUMENT_VERSION },
-    tileSize: tileSizeSchema,
-    pixels: { type: "object" },
-    blocks: { type: "array" },
-    materialGroups: {
-      type: "array",
-      items: materialGroupSchema
-    }
-  },
-  required: [
-    "version",
-    "tileSize",
-    "pixels",
-    "blocks",
-    "materialGroups"
-  ]
-}));
+const kDocumentParser = new SchemaParser(blocksetDocumentSchema);
 
 export function parseBlocksetDocument(
   value: unknown

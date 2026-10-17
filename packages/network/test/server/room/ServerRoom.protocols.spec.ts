@@ -15,7 +15,10 @@ import {
   createExtension,
   createRoom
 } from "../../helpers/server/serverRoom.ts";
-import { RightsTable } from "#src/index.ts";
+import {
+  RightsTable,
+  Server
+} from "#src/index.ts";
 import { syncProtocols } from "../../helpers/protocol/protocols.ts";
 
 describe("ServerRoom — inbound protocol", () => {
@@ -172,5 +175,59 @@ describe("ServerRoom — outbound protocol", () => {
     });
 
     assert.deepEqual(a.sent, []);
+  });
+});
+
+describe("Server — outbound identified without validation", () => {
+  async function joinedServer() {
+    const server = new Server({
+      validateOutbound: false,
+      rights: {
+        blocked: {
+          "pixel-draw.$join": "write",
+          "pixel-draw.voxel-set": "void"
+        },
+        allowed: {
+          "pixel-draw.$join": "write",
+          "pixel-draw.voxel-set": "read"
+        }
+      }
+    });
+    const extension = createExtension(syncProtocols);
+    server.register(extension);
+
+    const a = createClient("A");
+    const b = createClient("B");
+    await server.connect(a.client, identityOf("A", "blocked"))
+      .receive({ room: "pixel-draw", kind: "join" });
+    await server.connect(b.client, identityOf("B", "allowed"))
+      .receive({ room: "pixel-draw", kind: "join" });
+    a.sent.length = 0;
+    b.sent.length = 0;
+
+    return { extension, a, b };
+  }
+
+  test("gates a payload the protocol would reject on the event its tags name", async() => {
+    const { extension, a, b } = await joinedServer();
+
+    const payload = { type: "command", data: { action: "voxel-set" }, version: -1 };
+    extension.lastContext.room.broadcast(payload);
+
+    assert.deepEqual(a.sent, []);
+    assert.deepEqual(b.sent, [{
+      room: "pixel-draw",
+      kind: "message",
+      payload
+    }]);
+  });
+
+  test("drops a payload no tag identifies", async() => {
+    const { extension, b } = await joinedServer();
+
+    extension.lastContext.room.broadcast({ type: "command", data: { action: "unheard-of" } });
+    extension.lastContext.room.broadcast({ data: { action: "voxel-set" } });
+
+    assert.deepEqual(b.sent, []);
   });
 });

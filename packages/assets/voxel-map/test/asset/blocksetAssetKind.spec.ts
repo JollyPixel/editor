@@ -15,10 +15,7 @@ import {
   type AssetEventData
 } from "@jolly-pixel/asset-server";
 import { PIXEL_COMMAND_ACTIONS } from "@jolly-pixel/asset.pixel-art/client";
-import {
-  MessageParser,
-  MessageProtocol
-} from "@jolly-pixel/network";
+import { SchemaParser } from "@jolly-pixel/network";
 import {
   decodePngPixels,
   NormalMapConfig
@@ -325,10 +322,7 @@ describe("blocksetAssetKind", () => {
       roomId: `${BLOCKSET_KIND}:asset-1`,
       state
     });
-    const parser = new MessageParser(new MessageProtocol({
-      title: "snapshot",
-      ...blocksetSnapshotSchema
-    }));
+    const parser = new SchemaParser(blocksetSnapshotSchema);
 
     const encoded = await protocol.encodeSnapshot!() as BlocksetSnapshot;
     const { pixels, ...document } = encoded;

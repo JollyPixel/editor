@@ -1,185 +1,106 @@
 // Import Third-party Dependencies
-import {
-  defineSchema,
-  type JSONSchema
-} from "@jolly-pixel/network";
+import { minProperties } from "@jolly-pixel/network";
+import * as z from "zod/mini";
 
-export const uvSlotSchema = defineSchema({
-  type: "string",
-  minLength: 1
+// CONSTANTS
+const kQuarterTurnSchema = z.literal([0, 1, 2, 3]);
+const kTriangleCornerSchema = z.enum([
+  "top-left",
+  "top-right",
+  "bottom-left",
+  "bottom-right"
+]);
+
+export const uvSlotSchema = z.string().check(z.minLength(1));
+
+export const textureRectSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+  width: z.number().check(z.gt(0)),
+  height: z.number().check(z.gt(0))
 });
 
-export const textureRectSchema = defineSchema({
-  type: "object",
-  properties: {
-    x: { type: "number" },
-    y: { type: "number" },
-    width: { type: "number", exclusiveMinimum: 0 },
-    height: { type: "number", exclusiveMinimum: 0 }
-  },
-  required: [
-    "x",
-    "y",
-    "width",
-    "height"
-  ]
+const kUVRectSchema = z.extend(textureRectSchema, {
+  rotation: z.optional(kQuarterTurnSchema)
 });
 
-const kQuarterTurnSchema = defineSchema({
-  enum: [0, 1, 2, 3]
-});
-
-const kUVRectSchema = defineSchema({
-  ...textureRectSchema,
-  properties: {
-    ...textureRectSchema.properties,
-    rotation: kQuarterTurnSchema
-  }
-});
-
-const kNormalizedRectSchema = defineSchema({
-  type: "object",
-  properties: {
-    x: { type: "number", minimum: 0 },
-    y: { type: "number", minimum: 0 },
-    width: { type: "number", exclusiveMinimum: 0, maximum: 1 },
-    height: { type: "number", exclusiveMinimum: 0, maximum: 1 }
-  },
-  required: [
-    "x",
-    "y",
-    "width",
-    "height"
-  ]
-});
-
-const kTriangleCornerSchema = defineSchema({
-  enum: [
-    "top-left",
-    "top-right",
-    "bottom-left",
-    "bottom-right"
-  ]
+const kNormalizedRectSchema = z.object({
+  x: z.number().check(z.minimum(0)),
+  y: z.number().check(z.minimum(0)),
+  width: z.number().check(z.gt(0), z.maximum(1)),
+  height: z.number().check(z.gt(0), z.maximum(1))
 });
 
 function triangleSchema<
-  const TRect extends JSONSchema,
-  const TExtra extends Record<string, JSONSchema>
+  TRect extends z.ZodMiniType,
+  const TExtra extends z.core.$ZodLooseShape
 >(
   rect: TRect,
   extra: TExtra
 ) {
-  return {
-    type: "object",
-    properties: {
-      shape: { const: "triangle" },
-      corner: kTriangleCornerSchema,
-      rect,
-      ...extra
-    },
-    required: [
-      "shape",
-      "corner",
-      "rect"
-    ]
-  } as const;
+  return z.object({
+    shape: z.literal("triangle"),
+    corner: kTriangleCornerSchema,
+    rect,
+    ...extra
+  });
 }
 
-export const uvGeometrySchema = defineSchema({
-  oneOf: [
-    kUVRectSchema,
-    triangleSchema(textureRectSchema, { rotation: kQuarterTurnSchema }),
-    {
-      type: "object",
-      properties: {
-        shape: { const: "compound" },
-        rect: textureRectSchema,
-        rotation: kQuarterTurnSchema,
-        parts: {
-          type: "array",
-          minItems: 1,
-          items: {
-            oneOf: [
-              kNormalizedRectSchema,
-              triangleSchema(kNormalizedRectSchema, {})
-            ]
-          }
-        }
-      },
-      required: [
-        "shape",
-        "rect",
-        "parts"
-      ]
-    }
-  ]
-});
-
-const kUVFacesSchema = defineSchema({
-  type: "object",
-  minProperties: 1,
-  propertyNames: uvSlotSchema,
-  additionalProperties: uvGeometrySchema
-});
-
-const kActiveFacesSchema = defineSchema({
-  type: "array",
-  minItems: 1,
-  items: uvSlotSchema
-});
-
-const kUVLayoutVariants = [
-  {
-    type: "object",
-    properties: {
-      state: { const: "stacked" },
-      rect: kUVRectSchema,
-      faces: kUVFacesSchema,
-      activeFaces: kActiveFacesSchema,
-      stackedFace: uvSlotSchema
-    },
-    required: [
-      "state",
-      "rect"
-    ]
-  },
-  {
-    type: "object",
-    properties: {
-      state: { enum: ["unfolded", "free"] },
-      faces: kUVFacesSchema,
-      activeFaces: kActiveFacesSchema
-    },
-    required: [
-      "state",
-      "faces"
-    ]
-  }
-] as const satisfies readonly JSONSchema[];
-
-/**
- * A UV region without its identity: the geometry another document stores
- * for a region it owns.
- */
-export const uvLayoutSchema = defineSchema({
-  oneOf: kUVLayoutVariants
-});
-
-export const uvRegionSchema: JSONSchema = {
-  oneOf: kUVLayoutVariants.map((variant) => {
-    return {
-      ...variant,
-      properties: {
-        id: { type: "string", minLength: 1 },
-        color: { type: "string" },
-        name: { type: "string" },
-        ...variant.properties
-      },
-      required: [
-        "id",
-        "color",
-        ...variant.required
-      ]
-    };
+export const uvGeometrySchema = z.union([
+  kUVRectSchema,
+  triangleSchema(textureRectSchema, {
+    rotation: z.optional(kQuarterTurnSchema)
+  }),
+  z.object({
+    shape: z.literal("compound"),
+    rect: textureRectSchema,
+    rotation: z.optional(kQuarterTurnSchema),
+    parts: z.array(z.union([
+      kNormalizedRectSchema,
+      triangleSchema(kNormalizedRectSchema, {})
+    ])).check(z.minLength(1))
   })
+]);
+
+const kUVFacesSchema = minProperties(
+  z.record(uvSlotSchema, uvGeometrySchema),
+  1
+);
+
+const kActiveFacesSchema = z.array(uvSlotSchema).check(z.minLength(1));
+
+const kStackedLayoutShape = {
+  state: z.literal("stacked"),
+  rect: kUVRectSchema,
+  faces: z.optional(kUVFacesSchema),
+  activeFaces: z.optional(kActiveFacesSchema),
+  stackedFace: z.optional(uvSlotSchema)
 };
+
+const kUnfoldedLayoutShape = {
+  state: z.enum(["unfolded", "free"]),
+  faces: kUVFacesSchema,
+  activeFaces: z.optional(kActiveFacesSchema)
+};
+
+const kRegionIdentityShape = {
+  id: z.string().check(z.minLength(1)),
+  color: z.string(),
+  name: z.optional(z.string())
+};
+
+export const uvLayoutSchema = z.union([
+  z.object(kStackedLayoutShape),
+  z.object(kUnfoldedLayoutShape)
+]);
+
+export const uvRegionSchema = z.union([
+  z.object({
+    ...kRegionIdentityShape,
+    ...kStackedLayoutShape
+  }),
+  z.object({
+    ...kRegionIdentityShape,
+    ...kUnfoldedLayoutShape
+  })
+]);

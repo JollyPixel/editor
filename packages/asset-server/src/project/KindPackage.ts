@@ -1,9 +1,10 @@
 // Import Third-party Dependencies
 import {
-  defineSchema,
   describeErrors,
+  isSchema,
   SchemaParser
 } from "@jolly-pixel/network";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import type {
@@ -15,31 +16,16 @@ import type { AssetKindPackage } from "../kinds/AssetKindPackage.ts";
 
 // CONSTANTS
 export const KINDS_EXPORT = "ASSET_KINDS";
-const kDescriptorsParser = new SchemaParser(defineSchema({
-  type: "array",
-  items: {
-    type: "object",
-    properties: {
-      kind: { type: "string" },
-      label: { type: "string" },
-      extension: { type: "string" },
-      icon: {
-        type: "object",
-        properties: {
-          svg: { type: "string" },
-          tone: { type: "string" },
-          viewBox: { type: "string" }
-        },
-        required: ["svg"]
-      }
-    },
-    required: [
-      "kind",
-      "label",
-      "extension"
-    ]
-  }
-}));
+const kDescriptorsParser = new SchemaParser(z.array(z.object({
+  kind: z.string(),
+  label: z.string(),
+  extension: z.string(),
+  icon: z.optional(z.object({
+    svg: z.string(),
+    tone: z.optional(z.string()),
+    viewBox: z.optional(z.string())
+  }))
+})));
 
 export type PackageLoader = (
   packageName: string
@@ -138,6 +124,5 @@ function isAssetKindPackage(
     "handlers" in value &&
     typeof value.handlers === "function" &&
     "optionsSchema" in value &&
-    typeof value.optionsSchema === "object" &&
-    value.optionsSchema !== null;
+    isSchema(value.optionsSchema);
 }
