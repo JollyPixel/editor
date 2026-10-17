@@ -8,7 +8,8 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { CanvasBuffer } from "#src/buffer/CanvasBuffer.ts";
 import {
-  mockContextOf,
+  canvasPixels,
+  contextOf,
   readPixel
 } from "../fixtures/canvas.ts";
 import { TEST_MAX_SIZE } from "../helpers/buffer/maxSize.ts";
@@ -36,13 +37,15 @@ describe("CanvasBuffer", () => {
   });
 
   describe("drawPixels / samplePixel", () => {
-    test("syncs the working canvas with a single putImageData call regardless of pixel count", () => {
+    test("syncs the working canvas with a single putImageData call regardless of pixel count", (t) => {
       const buf = new CanvasBuffer({
         size: { x: 8, y: 8 },
         maxSize: TEST_MAX_SIZE
       });
-      const ctx = mockContextOf(buf.canvas());
-      const before = ctx.putImageDataCallCount;
+      const putImageData = t.mock.method(
+        contextOf(buf.canvas()),
+        "putImageData"
+      );
 
       const pixels = [
         { x: 0, y: 0 },
@@ -56,7 +59,7 @@ describe("CanvasBuffer", () => {
         { r: 10, g: 20, b: 30, a: 255 }
       );
 
-      assert.strictEqual(ctx.putImageDataCallCount - before, 1);
+      assert.strictEqual(putImageData.mock.callCount(), 1);
     });
 
     test(
@@ -70,7 +73,7 @@ describe("CanvasBuffer", () => {
           [
             { x: 2, y: 2 }
           ],
-          { r: 1, g: 2, b: 3, a: 4 }
+          { r: 1, g: 2, b: 3, a: 255 }
         );
 
         buf.drawPixels(
@@ -81,10 +84,10 @@ describe("CanvasBuffer", () => {
           { r: 100, g: 100, b: 100, a: 255 }
         );
 
-        const mirror = mockContextOf(buf.canvas()).pixels;
+        const mirror = canvasPixels(buf.canvas());
         assert.deepStrictEqual(
           readPixel(mirror, { x: 2, y: 2 }, 8),
-          [1, 2, 3, 4]
+          [1, 2, 3, 255]
         );
         assert.deepStrictEqual(
           readPixel(mirror, { x: 0, y: 0 }, 8),
@@ -112,7 +115,7 @@ describe("CanvasBuffer", () => {
         { r: 10, g: 20, b: 30, a: 255 }
       );
 
-      const mirror = mockContextOf(buf.canvas()).pixels;
+      const mirror = canvasPixels(buf.canvas());
       assert.deepStrictEqual(
         readPixel(mirror, { x: 1, y: 1 }, 4),
         [10, 20, 30, 255]
@@ -123,13 +126,15 @@ describe("CanvasBuffer", () => {
       );
     });
 
-    test("skips the canvas sync entirely when every position is out of bounds", () => {
+    test("skips the canvas sync entirely when every position is out of bounds", (t) => {
       const buf = new CanvasBuffer({
         size: { x: 4, y: 4 },
         maxSize: TEST_MAX_SIZE
       });
-      const ctx = mockContextOf(buf.canvas());
-      const before = ctx.putImageDataCallCount;
+      const putImageData = t.mock.method(
+        contextOf(buf.canvas()),
+        "putImageData"
+      );
 
       assert.doesNotThrow(() => buf.drawPixels(
         [
@@ -139,7 +144,7 @@ describe("CanvasBuffer", () => {
         { r: 1, g: 1, b: 1, a: 1 }
       ));
 
-      assert.strictEqual(ctx.putImageDataCallCount, before);
+      assert.strictEqual(putImageData.mock.callCount(), 0);
     });
   });
 

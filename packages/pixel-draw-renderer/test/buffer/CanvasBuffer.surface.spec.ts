@@ -9,7 +9,9 @@ import assert from "node:assert/strict";
 import { CanvasBuffer } from "#src/buffer/CanvasBuffer.ts";
 import type { Vec2 } from "#src/types.ts";
 import {
-  mockContextOf,
+  canvasPixels,
+  contextOf,
+  decodedImage,
   readPixel
 } from "../fixtures/canvas.ts";
 import { TEST_MAX_SIZE } from "../helpers/buffer/maxSize.ts";
@@ -41,7 +43,7 @@ describe("CanvasBuffer", () => {
       buf.copyToMaster();
       buf.resize({ x: 16, y: 16 });
 
-      const mirror = mockContextOf(buf.canvas()).pixels;
+      const mirror = canvasPixels(buf.canvas());
       assert.deepStrictEqual(
         readPixel(mirror, { x: 2, y: 2 }, 16),
         [10, 20, 30, 255]
@@ -73,15 +75,37 @@ describe("CanvasBuffer", () => {
       assert.deepStrictEqual(buf.samplePixel(0, 0), [0, 0, 0, 0]);
     });
 
+    test("draws a decoded image into a new working canvas", () => {
+      const buf = new CanvasBuffer({
+        size: { x: 4, y: 4 },
+        maxSize: TEST_MAX_SIZE
+      });
+      const painted = document.createElement("canvas");
+      painted.width = 6;
+      painted.height = 5;
+      const ctx = contextOf(painted);
+      ctx.fillStyle = "#0a141e";
+      ctx.fillRect(3, 2, 1, 1);
+
+      buf.loadTexture(decodedImage(painted));
+
+      assert.deepStrictEqual(buf.size(), { x: 6, y: 5 });
+      assert.deepStrictEqual(
+        readPixel(canvasPixels(buf.canvas()), { x: 3, y: 2 }, 6),
+        [10, 20, 30, 255]
+      );
+      assert.deepStrictEqual(buf.samplePixel(3, 2), [10, 20, 30, 255]);
+    });
+
     for (const source of [
       {
         name: "naturalWidth over width",
-        image: { naturalWidth: 6, naturalHeight: 5, width: 3, height: 2 },
+        natural: { width: 6, height: 5 },
         expected: { x: 6, y: 5 }
       },
       {
         name: "width when naturalWidth is 0",
-        image: { naturalWidth: 0, naturalHeight: 0, width: 3, height: 2 },
+        natural: { width: 0, height: 0 },
         expected: { x: 3, y: 2 }
       }
     ]) {
@@ -90,7 +114,13 @@ describe("CanvasBuffer", () => {
           size: { x: 4, y: 4 },
           maxSize: TEST_MAX_SIZE
         });
-        const image = source.image as unknown as HTMLImageElement;
+        const image = document.createElement("img");
+        image.width = 3;
+        image.height = 2;
+        Object.defineProperties(image, {
+          naturalWidth: { value: source.natural.width },
+          naturalHeight: { value: source.natural.height }
+        });
 
         buf.loadTexture(image);
 
@@ -100,7 +130,6 @@ describe("CanvasBuffer", () => {
           { x: canvas.width, y: canvas.height },
           source.expected
         );
-        assert.strictEqual(mockContextOf(canvas).drawImageCallCount, 1);
       });
     }
 

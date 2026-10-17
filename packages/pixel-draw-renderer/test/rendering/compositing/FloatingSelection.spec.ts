@@ -11,7 +11,7 @@ import {
 } from "#src/rendering/compositing/FloatingSelection.ts";
 import {
   canvasPixels,
-  mockContextOf,
+  contextOf,
   readPixel
 } from "../../fixtures/canvas.ts";
 import { makeCanvas } from "../../helpers/dom.ts";
@@ -30,7 +30,7 @@ describe("FloatingSelection", () => {
 
       assert.doesNotThrow(
         () => overlay.draw(
-          mockContextOf(dest).asRenderingContext()
+          contextOf(dest)
         ),
         "draw should not throw when nothing has been created"
       );
@@ -56,7 +56,7 @@ describe("FloatingSelection", () => {
 
       const dest = makeCanvas(10);
       overlay.draw(
-        mockContextOf(dest).asRenderingContext()
+        contextOf(dest)
       );
       assert.deepStrictEqual(
         readPixel(canvasPixels(dest), { x: 0, y: 0 }, dest.width),
@@ -81,7 +81,7 @@ describe("FloatingSelection", () => {
 
       const dest = makeCanvas(10);
       overlay.draw(
-        mockContextOf(dest).asRenderingContext()
+        contextOf(dest)
       );
 
       assert.deepStrictEqual(
@@ -117,7 +117,7 @@ describe("FloatingSelection", () => {
 
       const dest = makeCanvas(10);
       overlay.draw(
-        mockContextOf(dest).asRenderingContext()
+        contextOf(dest)
       );
 
       assert.deepStrictEqual(
@@ -151,7 +151,7 @@ describe("FloatingSelection", () => {
       });
 
       const dest = makeCanvas(10);
-      overlay.draw(mockContextOf(dest).asRenderingContext());
+      overlay.draw(contextOf(dest));
 
       assert.deepStrictEqual(
         readPixel(canvasPixels(dest), { x: 0, y: 0 }, dest.width),
@@ -183,14 +183,14 @@ describe("FloatingSelection", () => {
       });
 
       const dest = makeCanvas(10);
-      const destCtx = mockContextOf(dest);
+      const destCtx = contextOf(dest);
       const initial = destCtx.createImageData(2, 1);
       initial.data.set([
         255, 0, 0, 255,
         255, 0, 0, 255
       ]);
       destCtx.putImageData(initial, 0, 0);
-      overlay.draw(destCtx.asRenderingContext());
+      overlay.draw(destCtx);
 
       assert.deepStrictEqual(
         readPixel(canvasPixels(dest), { x: 0, y: 0 }, dest.width),

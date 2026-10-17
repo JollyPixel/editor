@@ -45,7 +45,8 @@
   "devDependencies": {
     "@jolly-pixel/asset-source": "workspace:*",
     "@jolly-pixel/bench": "workspace:*",
-    "@jolly-pixel/history": "workspace:*"
+    "@jolly-pixel/history": "workspace:*",
+    "skia-canvas": "4.0.0"
   },
   "dependencies": {
     "@jolly-pixel/color": "workspace:*",

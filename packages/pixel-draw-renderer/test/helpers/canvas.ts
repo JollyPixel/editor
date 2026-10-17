@@ -4,6 +4,11 @@ import {
   type PixelArtCanvasOptions
 } from "#src/PixelArtCanvas.ts";
 import type { PixelCommand } from "#src/sync/PixelCommand.ts";
+import type { Vec2 } from "#src/types.ts";
+import {
+  canvasPixels,
+  readPixel
+} from "../fixtures/canvas.ts";
 import {
   makeContainer,
   overlayOf
@@ -27,6 +32,26 @@ export interface CreatedPixelArtCanvas {
   canvas: HTMLCanvasElement;
   overlay: SVGSVGElement;
   container: HTMLDivElement;
+}
+
+export function shownPixel(
+  manager: PixelArtCanvas,
+  texel: Vec2
+): [number, number, number, number] {
+  const canvas = manager.canvas();
+  const screen = manager.viewport.toScreen({
+    x: texel.x + 0.5,
+    y: texel.y + 0.5
+  });
+
+  return readPixel(
+    canvasPixels(canvas),
+    {
+      x: Math.floor(screen.x),
+      y: Math.floor(screen.y)
+    },
+    canvas.width
+  );
 }
 
 export function createPixelArtCanvas(

@@ -11,7 +11,7 @@ import {
 } from "#src/rendering/compositing/FloatingSelection.ts";
 import {
   canvasPixels,
-  mockContextOf,
+  contextOf,
   readPixel
 } from "../../fixtures/canvas.ts";
 import { makeCanvas } from "../../helpers/dom.ts";
@@ -39,7 +39,7 @@ describe("FloatingSelection", () => {
 
       const dest = makeCanvas(10);
       overlay.draw(
-        mockContextOf(dest).asRenderingContext()
+        contextOf(dest)
       );
 
       assert.deepStrictEqual(
@@ -77,14 +77,14 @@ describe("FloatingSelection", () => {
         });
 
         const dest = makeCanvas(10);
-        const destCtx = mockContextOf(dest);
+        const destCtx = contextOf(dest);
         const underlying = destCtx.createImageData(2, 1);
         underlying.data.set([
           0, 255, 0, 255,
           0, 255, 0, 255
         ]);
         destCtx.putImageData(underlying, 0, 0);
-        overlay.draw(destCtx.asRenderingContext());
+        overlay.draw(destCtx);
 
         assert.deepStrictEqual(
           readPixel(canvasPixels(dest), { x: 0, y: 0 }, dest.width),

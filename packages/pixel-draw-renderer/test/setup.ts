@@ -3,7 +3,7 @@ import { Window } from "happy-dom";
 
 // Import Internal Dependencies
 import {
-  installCanvasMock
+  installSkiaCanvas
 } from "./fixtures/canvas.ts";
 
 // CONSTANTS
@@ -34,4 +34,4 @@ Object.assign(globalThis, {
   }
 });
 
-installCanvasMock(document);
+installSkiaCanvas(kEmulatedBrowserWindow);

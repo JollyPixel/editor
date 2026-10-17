@@ -14,7 +14,7 @@ import { makeContainer } from "./helpers/dom.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
 import {
   canvasPixels,
-  mockContextOf,
+  contextOf,
   readPixel
 } from "./fixtures/canvas.ts";
 
@@ -209,20 +209,19 @@ describe("PixelArtCanvas", () => {
   });
 
   describe("repaint (no double-paint)", () => {
-    test("a committed stroke repaints exactly once", () => {
+    test("a committed stroke repaints exactly once", (t) => {
       const { manager, canvas } = createPixelArtCanvas();
-      const displayCtx = mockContextOf(canvas);
+      const drawImage = t.mock.method(contextOf(canvas), "drawImage");
 
-      displayCtx.drawImageCallCount = 0;
       manager.centerTexture();
-      const perFrame = displayCtx.drawImageCallCount;
+      const perFrame = drawImage.mock.callCount();
       assert.ok(perFrame > 0, "centerTexture should repaint once");
 
-      displayCtx.drawImageCallCount = 0;
+      drawImage.mock.resetCalls();
       manager.commitPixels([{ x: 1, y: 1 }, { x: 2, y: 2 }]);
 
       assert.strictEqual(
-        displayCtx.drawImageCallCount,
+        drawImage.mock.callCount(),
         perFrame,
         "one committed stroke should paint exactly one frame"
       );

@@ -8,7 +8,8 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { CanvasBuffer } from "#src/buffer/CanvasBuffer.ts";
 import {
-  mockContextOf,
+  canvasPixels,
+  contextOf,
   readPixel
 } from "../fixtures/canvas.ts";
 import { TEST_MAX_SIZE } from "../helpers/buffer/maxSize.ts";
@@ -34,7 +35,7 @@ describe("CanvasBuffer", () => {
         Array.from({ length: 16 }, () => true)
       );
 
-      const mirror = mockContextOf(buf.canvas()).pixels;
+      const mirror = canvasPixels(buf.canvas());
       assert.deepStrictEqual(readPixel(mirror, { x: 2, y: 2 }, 4), [9, 9, 9, 255]);
       assert.deepStrictEqual(readPixel(mirror, { x: 3, y: 3 }, 4), [9, 9, 9, 255]);
       assert.deepStrictEqual(readPixel(mirror, { x: 0, y: 3 }, 4), [1, 2, 3, 255]);
@@ -61,13 +62,13 @@ describe("CanvasBuffer", () => {
         Array.from({ length: 9 }, () => true)
       );
 
-      const canvasPixels = mockContextOf(buf.canvas()).pixels;
+      const mirror = canvasPixels(buf.canvas());
       assert.deepStrictEqual(
-        readPixel(canvasPixels, { x: 0, y: 0 }, 2),
+        readPixel(mirror, { x: 0, y: 0 }, 2),
         [4, 0, 0, 255]
       );
       assert.deepStrictEqual(
-        readPixel(canvasPixels, { x: 1, y: 1 }, 2),
+        readPixel(mirror, { x: 1, y: 1 }, 2),
         [8, 0, 0, 255]
       );
     });
@@ -83,7 +84,7 @@ describe("CanvasBuffer", () => {
         [
           { x: 1, y: 0 }
         ],
-        { r: 1, g: 2, b: 3, a: 4 }
+        { r: 1, g: 2, b: 3, a: 255 }
       );
 
       const red = { r: 255, g: 0, b: 0, a: 255 };
@@ -99,14 +100,14 @@ describe("CanvasBuffer", () => {
         [true, false]
       );
 
-      const mirror = mockContextOf(buf.canvas()).pixels;
+      const mirror = canvasPixels(buf.canvas());
       assert.deepStrictEqual(
         buf.samplePixel(0, 0),
         [255, 0, 0, 255]
       );
       assert.deepStrictEqual(
         buf.samplePixel(1, 0),
-        [1, 2, 3, 4],
+        [1, 2, 3, 255],
         "masked-false cell untouched"
       );
       assert.deepStrictEqual(
@@ -115,20 +116,22 @@ describe("CanvasBuffer", () => {
       );
       assert.deepStrictEqual(
         readPixel(mirror, { x: 1, y: 0 }, 4),
-        [1, 2, 3, 4],
+        [1, 2, 3, 255],
         "masked-false cell untouched on the mirror"
       );
     });
   });
 
   describe("region writes outside the buffer", () => {
-    test("drawMaskedRegion skips the canvas sync when the rect is entirely out of bounds", () => {
+    test("drawMaskedRegion skips the canvas sync when the rect is entirely out of bounds", (t) => {
       const buf = new CanvasBuffer({
         size: { x: 4, y: 4 },
         maxSize: TEST_MAX_SIZE
       });
-      const ctx = mockContextOf(buf.canvas());
-      const before = ctx.putImageDataCallCount;
+      const putImageData = t.mock.method(
+        contextOf(buf.canvas()),
+        "putImageData"
+      );
 
       buf.drawMaskedRegion(
         { x: 10, y: 10, width: 2, height: 2 },
@@ -138,7 +141,7 @@ describe("CanvasBuffer", () => {
         Array.from({ length: 4 }, () => true)
       );
 
-      assert.strictEqual(ctx.putImageDataCallCount, before);
+      assert.strictEqual(putImageData.mock.callCount(), 0);
     });
   });
 });
