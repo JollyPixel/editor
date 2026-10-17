@@ -42,6 +42,10 @@ export class BlocksPanel extends WorkspaceElement {
       flex: 1 1 auto;
       min-height: 0;
     }
+
+    brush-orientation {
+      margin: 0 var(--jolly-space-1, 4px) var(--jolly-space-1, 4px);
+    }
   `;
 
   @property({
