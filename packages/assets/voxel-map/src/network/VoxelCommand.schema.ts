@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
   MessageProtocol,
-  requiredAnyOf
+  requireAnyGroup
 } from "@jolly-pixel/network";
 import {
   MAX_BLOCKSET_SLOT,
@@ -174,7 +174,7 @@ const kTemplateCommandProperties: Record<
 
 const kSlotSchema = z.int().check(z.minimum(0), z.maximum(MAX_BLOCKSET_SLOT));
 
-export const blocksetDefinitionSchema = requiredAnyOf(
+export const blocksetDefinitionSchema = requireAnyGroup(
   z.object({
     id: kIdSchema,
     slot: z.optional(kSlotSchema),

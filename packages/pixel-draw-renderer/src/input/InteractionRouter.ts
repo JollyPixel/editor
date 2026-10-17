@@ -76,7 +76,7 @@ export class InteractionRouter implements InputActions {
       return;
     }
 
-    const mode = this.#modeOf(next);
+    const mode = this.#requireMode(next);
     this.#displaced = null;
     this.#activate(mode);
   }
@@ -99,7 +99,7 @@ export class InteractionRouter implements InputActions {
     this.#pixelsReadOnly = readOnly;
     if (this.unavailableModes.has(this.#active.id)) {
       this.#displaced = this.#active;
-      this.#activate(this.#modeOf(kReadOnlyFallbackMode));
+      this.#activate(this.#requireMode(kReadOnlyFallbackMode));
     }
     else if (
       this.#displaced !== null &&
@@ -259,7 +259,7 @@ export class InteractionRouter implements InputActions {
     return this.#active.onFlipVertical();
   }
 
-  #modeOf(
+  #requireMode(
     id: Mode
   ): InteractionMode {
     const mode = this.#modes.get(id);

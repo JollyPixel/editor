@@ -41,7 +41,7 @@ describe("AnimatePanelController clip rows", () => {
     await controller.actions!.newClip(null);
     const own = animations.ownSet()!;
     const [wave] = own.document.set.clips();
-    own.document.setKey(wave.id, "Body", "position", {
+    own.document.writeKey(wave.id, "Body", "position", {
       tick: 0,
       value: { x: 1, y: 0, z: 0 },
       interpolation: "linear"

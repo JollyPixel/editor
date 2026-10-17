@@ -54,7 +54,7 @@ export class VariantGroup<TVariant extends GroupedVariant> {
     }
   }
 
-  candidatesFor(
+  matchCandidates(
     payload: object
   ): readonly TVariant[] {
     if (this.#path === null) {

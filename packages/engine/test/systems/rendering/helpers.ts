@@ -39,7 +39,6 @@ export function createRenderComponent(
       _canvasWidth: number,
       _canvasHeight: number
     ) => {
-      // no-op
     })
   } satisfies RenderComponent & { prepareRender: ReturnType<typeof mock.fn>; };
 }
@@ -55,10 +54,6 @@ export function createPipelineSpy(
   };
 }
 
-/**
- * Records the WebGPURenderer calls DirectRenderStrategy makes. No real GPU
- * context is needed since these are hand-shaped spies, not a real renderer.
- */
 export function createRendererSpy() {
   return {
     setViewport: mock.fn(),

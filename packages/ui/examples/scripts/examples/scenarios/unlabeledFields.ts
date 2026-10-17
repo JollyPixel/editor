@@ -2,7 +2,7 @@
 import "../../../../src/controls/Text.ts";
 import type { GalleryExample } from "../../types.ts";
 import { peerColor } from "../../../../src/theme/peerColor.ts";
-import { detailOf } from "../../../../src/dom.ts";
+import { readDetail } from "../../../../src/dom.ts";
 import type { JollyChangeDetail } from "../../../../src/field/events.ts";
 import type { Text } from "../../../../src/controls/Text.ts";
 
@@ -99,7 +99,7 @@ function createField(
   configure(field);
 
   field.addEventListener("jolly-change", (event) => {
-    const detail = detailOf<JollyChangeDetail<string>>(event);
+    const detail = readDetail<JollyChangeDetail<string>>(event);
     if (detail !== null) {
       field.value = detail.value;
     }

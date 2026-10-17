@@ -51,7 +51,7 @@ export class KeyInspector extends LitElement {
   readonly #onInterpolation = (
     event: CustomEvent<JollyChangeDetail<AnimationInterpolation>>
   ): void => {
-    this.#controller.setInterpolation(event.detail.value);
+    this.#controller.applyInterpolation(event.detail.value);
   };
 
   override render(): TemplateResult | typeof nothing {

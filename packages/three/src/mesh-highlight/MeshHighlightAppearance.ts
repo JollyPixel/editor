@@ -77,9 +77,6 @@ export interface HighlightPassJfaAppearance {
   readonly isolatedFillOpacity: number;
 }
 
-/**
- * Immutable visual configuration shared by every selection renderer.
- */
 export class MeshHighlightAppearance {
   readonly selected: HighlightIndicatorAppearance;
   readonly hovered: HighlightIndicatorAppearance;

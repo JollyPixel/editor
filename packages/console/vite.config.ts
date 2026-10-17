@@ -6,7 +6,6 @@ import { defineConfig } from "vite";
 import checker from "vite-plugin-checker";
 import { PORTS } from "@jolly-pixel/e2e";
 
-// https://vitejs.dev/config/
 export default defineConfig({
   root: "examples",
   resolve: {

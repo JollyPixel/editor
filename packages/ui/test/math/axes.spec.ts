@@ -4,26 +4,26 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  axisKeysOf,
+  resolveAxisKeys,
   rekeyVectorValue,
   sameAxisKeys
 } from "../../src/math/axes.ts";
 import { Mixed } from "../../src/field/mixed.ts";
 
-describe("Math.axes.axisKeysOf", () => {
+describe("Math.axes.resolveAxisKeys", () => {
   test("names the axes of each pair", () => {
-    assert.deepEqual(axisKeysOf("xy"), ["x", "y"]);
-    assert.deepEqual(axisKeysOf("xz"), ["x", "z"]);
-    assert.deepEqual(axisKeysOf("yz"), ["y", "z"]);
+    assert.deepEqual(resolveAxisKeys("xy"), ["x", "y"]);
+    assert.deepEqual(resolveAxisKeys("xz"), ["x", "z"]);
+    assert.deepEqual(resolveAxisKeys("yz"), ["y", "z"]);
   });
 
   test("falls back to xy for an unset pair", () => {
-    assert.deepEqual(axisKeysOf(undefined), ["x", "y"]);
+    assert.deepEqual(resolveAxisKeys(undefined), ["x", "y"]);
   });
 
   test("falls back to xy for an unknown pair", () => {
     assert.deepEqual(
-      axisKeysOf("zw" as "xy"),
+      resolveAxisKeys("zw" as "xy"),
       ["x", "y"]
     );
   });

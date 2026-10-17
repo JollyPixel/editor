@@ -9,9 +9,9 @@ import {
 } from "../../../src/containers/context-menu/contextMenuKeys.ts";
 
 // CONSTANTS
-const kMiddleDisabled = itemsOf([true, false, true]);
+const kMiddleDisabled = createItems([true, false, true]);
 
-function itemsOf(
+function createItems(
   enabled: readonly boolean[],
   submenus: readonly boolean[] = []
 ): ContextMenuKeyItem[] {
@@ -51,7 +51,7 @@ describe("ContextMenu.contextMenuKeyAction", () => {
   });
 
   test("Home and End reach the first and last enabled items", () => {
-    const items = itemsOf([false, true, true, false]);
+    const items = createItems([false, true, true, false]);
 
     assert.deepEqual(
       contextMenuKeyAction("Home", items, 2, false),
@@ -83,7 +83,7 @@ describe("ContextMenu.contextMenuKeyAction", () => {
   });
 
   test("ArrowRight, Enter and Space open an enabled submenu item", () => {
-    const items = itemsOf([true, false, true], [false, true, true]);
+    const items = createItems([true, false, true], [false, true, true]);
 
     for (const key of ["ArrowRight", "Enter", " "]) {
       assert.deepEqual(
@@ -118,7 +118,7 @@ describe("ContextMenu.contextMenuKeyAction", () => {
       { kind: "close" }
     );
     assert.deepEqual(
-      contextMenuKeyAction("ArrowDown", itemsOf([false, false]), -1, false),
+      contextMenuKeyAction("ArrowDown", createItems([false, false]), -1, false),
       { kind: "none" }
     );
   });

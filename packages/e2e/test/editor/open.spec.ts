@@ -11,7 +11,7 @@ import {
   type OpenEditorOptions
 } from "../../src/editor/open.ts";
 
-function queryOf(
+function toQuery(
   options: OpenEditorOptions
 ): Record<string, string> {
   const url = new URL(editorPath(options), "http://localhost");
@@ -25,7 +25,7 @@ describe("editorPath", () => {
   });
 
   it("writes each named option as its host query parameter", () => {
-    assert.deepEqual(queryOf({
+    assert.deepEqual(toQuery({
       target: "asset-1",
       username: "E2E",
       maxFps: 10,
@@ -51,7 +51,7 @@ describe("editorPath", () => {
   });
 
   it("lets the extra query override a named option", () => {
-    assert.deepEqual(queryOf({
+    assert.deepEqual(toQuery({
       username: "E2E",
       query: {
         username: "Guest"

@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { boxOf } from "@jolly-pixel/e2e";
+import { measureBox } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
@@ -9,7 +9,7 @@ import {
 } from "../fixtures.ts";
 import {
   TREE_SELECTOR,
-  rowOf
+  findRow
 } from "../support/tree.ts";
 
 function swatchOrder(
@@ -19,7 +19,7 @@ function swatchOrder(
     .map((part) => part.className));
 }
 
-function railsOf(
+function readRails(
   row: Locator
 ): Promise<(string | null)[]> {
   return row.locator(".rail")
@@ -33,7 +33,7 @@ test.describe("Tree", () => {
 
   test("titles a label only while it is cut off, unless an ancestor opts out", async({ page }) => {
     const tree = page.locator(TREE_SELECTOR);
-    const label = rowOf(page, "crate").locator(".label");
+    const label = findRow(page, "crate").locator(".label");
 
     await label.hover();
     await expect(label).not.toHaveAttribute("title");
@@ -53,7 +53,7 @@ test.describe("Tree", () => {
 
   test("activates a swatch without selecting or renaming its row", async({ page }) => {
     const tree = page.locator(TREE_SELECTOR);
-    const crate = rowOf(page, "crate");
+    const crate = findRow(page, "crate");
     const swatch = crate.getByRole("button", { name: "Material: Glass" });
     await tree.evaluate((element) => {
       element.addEventListener("jolly-activate-swatch", (event) => {
@@ -73,7 +73,7 @@ test.describe("Tree", () => {
 
   test("draws the swatch before the label when its position is start", async({ page }) => {
     const tree = page.locator(TREE_SELECTOR);
-    const crate = rowOf(page, "crate");
+    const crate = findRow(page, "crate");
 
     expect(await swatchOrder(crate)).toEqual(["label", "swatch"]);
 
@@ -84,7 +84,7 @@ test.describe("Tree", () => {
 
   test("lets the page space the swatch through its part", async({ page }) => {
     const tree = page.locator(TREE_SELECTOR);
-    const swatch = rowOf(page, "crate").getByRole("button", { name: "Material: Glass" });
+    const swatch = findRow(page, "crate").getByRole("button", { name: "Material: Glass" });
     await tree.evaluate((element) => {
       element.setAttribute("swatch-position", "start");
       const style = document.createElement("style");
@@ -97,7 +97,7 @@ test.describe("Tree", () => {
   });
 
   test("shows an empty swatch only on a hovered or selected row", async({ page }) => {
-    const barrel = rowOf(page, "barrel");
+    const barrel = findRow(page, "barrel");
     const swatch = barrel.getByRole("button", { name: "Add material" });
     await expect(swatch).toBeHidden();
 
@@ -106,35 +106,35 @@ test.describe("Tree", () => {
   });
 
   test("renders ordered badges after the detail", async({ page }) => {
-    const badges = rowOf(page, "camera").locator(".badge");
+    const badges = findRow(page, "camera").locator(".badge");
 
     await expect(badges).toHaveCount(2);
     await expect(badges.nth(0)).toHaveAttribute("aria-label", "Ada");
     await expect(badges.nth(1)).toHaveAttribute("aria-label", "Lin");
     await expect(badges.nth(0)).toHaveCSS("background-color", "rgb(224, 86, 122)");
-    const iconBadge = rowOf(page, "camera").locator(".badge-icon");
+    const iconBadge = findRow(page, "camera").locator(".badge-icon");
     await expect(iconBadge).toHaveAttribute("name", "lock");
     await expect(iconBadge).toHaveAttribute("aria-label", "Locked by Ada");
     await expect(iconBadge).toHaveCSS("color", "rgb(227, 162, 26)");
-    await expect(rowOf(page, "scene").locator(".badges")).toHaveCount(0);
-    await expect(rowOf(page, "camera").locator(".detail")).toHaveText("2 lights");
-    await expect(rowOf(page, "scene").locator(".detail")).toHaveCount(0);
+    await expect(findRow(page, "scene").locator(".badges")).toHaveCount(0);
+    await expect(findRow(page, "camera").locator(".detail")).toHaveText("2 lights");
+    await expect(findRow(page, "scene").locator(".detail")).toHaveCount(0);
 
     const [detail, badge] = await Promise.all([
-      boxOf(rowOf(page, "camera").locator(".detail")),
-      boxOf(badges.nth(0))
+      measureBox(findRow(page, "camera").locator(".detail")),
+      measureBox(badges.nth(0))
     ]);
     expect(detail.x).toBeLessThan(badge.x);
   });
 
   test("connects each row to its parent and ends the line at the last child", async({ page }) => {
-    expect(await railsOf(rowOf(page, "scene"))).toEqual(["start"]);
-    expect(await railsOf(rowOf(page, "camera"))).toEqual(["tee"]);
-    expect(await railsOf(rowOf(page, "barrel"))).toEqual(["blank", "elbow"]);
+    expect(await readRails(findRow(page, "scene"))).toEqual(["start"]);
+    expect(await readRails(findRow(page, "camera"))).toEqual(["tee"]);
+    expect(await readRails(findRow(page, "barrel"))).toEqual(["blank", "elbow"]);
 
     const [guides, content] = await Promise.all([
-      boxOf(rowOf(page, "barrel").locator(".guides")),
-      boxOf(rowOf(page, "barrel").locator(".content"))
+      measureBox(findRow(page, "barrel").locator(".guides")),
+      measureBox(findRow(page, "barrel").locator(".content"))
     ]);
     expect(guides.width).toBe(32);
     expect(content.x).toBe(guides.x + guides.width);
@@ -151,7 +151,7 @@ test.describe("Tree", () => {
       ];
     });
 
-    await expect(rowOf(page, "ada").getByRole("img", { name: "Offline" })).toBeVisible();
+    await expect(findRow(page, "ada").getByRole("img", { name: "Offline" })).toBeVisible();
   });
 
   test("highlights a leaf from the row start and aligns its icon with branches", async({ page }) => {
@@ -159,17 +159,17 @@ test.describe("Tree", () => {
       tree.indentGuides = false;
     });
     const [lighting, lightingContent, lightingIcon, sceneIcon] = await Promise.all([
-      boxOf(rowOf(page, "lighting")),
-      boxOf(rowOf(page, "lighting").locator(".content")),
-      boxOf(rowOf(page, "lighting").locator(".node-icon")),
-      boxOf(rowOf(page, "scene").locator(".node-icon"))
+      measureBox(findRow(page, "lighting")),
+      measureBox(findRow(page, "lighting").locator(".content")),
+      measureBox(findRow(page, "lighting").locator(".node-icon")),
+      measureBox(findRow(page, "scene").locator(".node-icon"))
     ]);
 
     expect(lightingContent.x).toBe(lighting.x);
     expect(lightingContent.x + lightingContent.width).toBe(lighting.x + lighting.width);
     expect(lightingIcon.x).toBe(sceneIcon.x);
-    await expect(rowOf(page, "camera").locator(".toggle-spacer")).toHaveCount(1);
-    await expect(rowOf(page, "crate").locator(".toggle-spacer")).toHaveCount(0);
+    await expect(findRow(page, "camera").locator(".toggle-spacer")).toHaveCount(1);
+    await expect(findRow(page, "crate").locator(".toggle-spacer")).toHaveCount(0);
 
     await page.locator(TREE_SELECTOR).evaluate((tree: HTMLElementTagNameMap["jolly-tree"]) => {
       tree.nodes = [{ id: "flat", label: "Flat" }];
@@ -179,12 +179,12 @@ test.describe("Tree", () => {
 
   test("keeps a leaf's toggle space outside the highlight under guides", async({ page }) => {
     const [camera, props, cameraLabel, propsLabel, lighting, scene] = await Promise.all([
-      boxOf(rowOf(page, "camera").locator(".content")),
-      boxOf(rowOf(page, "props").locator(".content")),
-      boxOf(rowOf(page, "camera").locator(".label")),
-      boxOf(rowOf(page, "props").locator(".label")),
-      boxOf(rowOf(page, "lighting").locator(".content")),
-      boxOf(rowOf(page, "scene").locator(".content"))
+      measureBox(findRow(page, "camera").locator(".content")),
+      measureBox(findRow(page, "props").locator(".content")),
+      measureBox(findRow(page, "camera").locator(".label")),
+      measureBox(findRow(page, "props").locator(".label")),
+      measureBox(findRow(page, "lighting").locator(".content")),
+      measureBox(findRow(page, "scene").locator(".content"))
     ]);
 
     expect(camera.x).toBe(props.x);
@@ -193,8 +193,8 @@ test.describe("Tree", () => {
   });
 
   test("selects with modifiers and keeps one roving focus row", async({ page }) => {
-    const camera = rowOf(page, "camera");
-    const props = rowOf(page, "props");
+    const camera = findRow(page, "camera");
+    const props = findRow(page, "props");
 
     await camera.click();
     await props.click({ modifiers: ["Control"] });
@@ -207,8 +207,8 @@ test.describe("Tree", () => {
 
   test("keeps a row selected on empty-area and ctrl clicks when a selection is required", async({ page }) => {
     const rows = page.locator(`${TREE_SELECTOR} .rows`);
-    const camera = rowOf(page, "camera");
-    const { height } = await boxOf(rows);
+    const camera = findRow(page, "camera");
+    const { height } = await measureBox(rows);
 
     await camera.click();
     await rows.click({ position: { x: 8, y: height - 8 } });
@@ -225,8 +225,8 @@ test.describe("Tree", () => {
 
   test("navigates expansion and activation from the keyboard", async({ page }) => {
     const tree = page.locator(TREE_SELECTOR);
-    const scene = rowOf(page, "scene");
-    const camera = rowOf(page, "camera");
+    const scene = findRow(page, "scene");
+    const camera = findRow(page, "camera");
 
     await scene.click();
     await scene.press("ArrowRight");
@@ -248,14 +248,14 @@ test.describe("Tree", () => {
   });
 
   test("commits and cancels rename while restoring row focus", async({ page }) => {
-    const camera = rowOf(page, "camera");
+    const camera = findRow(page, "camera");
     await camera.dblclick();
     await camera.locator(".rename").fill("Lens");
     await camera.locator(".rename").press("Enter");
     await expect(camera.locator(".label")).toHaveText("Lens");
     await expect(camera).toBeFocused();
 
-    const crate = rowOf(page, "crate");
+    const crate = findRow(page, "crate");
     await crate.dblclick();
     await crate.locator(".rename").fill("Discarded");
     await crate.locator(".rename").press("Escape");
@@ -269,7 +269,7 @@ test.describe("Tree", () => {
       element.validateRename = ({ name }) => (name === "Crate" ? "Name taken" : null);
     });
 
-    const camera = rowOf(page, "camera");
+    const camera = findRow(page, "camera");
     const field = camera.locator(".rename");
     await camera.dblclick();
     await field.fill("Crate");
@@ -308,17 +308,17 @@ test.describe("Tree", () => {
       element.nodes = flag(element.nodes);
     });
 
-    const crate = rowOf(page, "crate");
+    const crate = findRow(page, "crate");
     await expect(crate).toHaveAttribute("data-warning", "true");
     await expect(crate.locator(".warning")).toHaveAttribute("aria-label", "Duplicate name");
-    await expect(rowOf(page, "camera")).not.toHaveAttribute("data-warning");
+    await expect(findRow(page, "camera")).not.toHaveAttribute("data-warning");
   });
 
   test("keeps renaming while the pointer selects text in the field", async({ page }) => {
-    const camera = rowOf(page, "camera");
+    const camera = findRow(page, "camera");
     await camera.dblclick();
     const field = camera.locator(".rename");
-    const box = await boxOf(field);
+    const box = await measureBox(field);
 
     await field.click();
     await page.mouse.move(box.x + 2, box.y + (box.height / 2));
@@ -335,7 +335,7 @@ test.describe("Tree", () => {
 
   test("activates on double-click and renames on request when opted in", async({ page }) => {
     const tree = page.locator(TREE_SELECTOR);
-    const camera = rowOf(page, "camera");
+    const camera = findRow(page, "camera");
     await tree.evaluate((element: HTMLElementTagNameMap["jolly-tree"]) => {
       element.activateOnDoubleClick = true;
       element.addEventListener("jolly-activate", (event) => {

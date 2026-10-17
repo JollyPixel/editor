@@ -1,7 +1,3 @@
-/**
- * Structurally compatible with `MetricDefinition` of `@jolly-pixel/ui/stats`,
- * declared here so this package depends on no UI library.
- */
 export interface VoxelMetric {
   id: string;
   label: string;

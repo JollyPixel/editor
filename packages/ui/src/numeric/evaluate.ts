@@ -22,9 +22,6 @@ type Token =
   | { type: "operator"; value: string; }
   | { type: "paren"; value: "(" | ")"; };
 
-/**
- * Evaluates arithmetic expressions with decimal and scientific literals.
- */
 export function evaluate(
   input: string
 ): EvalResult {
@@ -36,7 +33,6 @@ export function evaluate(
     };
   }
 
-  // Fast path for plain numeric input.
   if (kPlainNumber.test(text)) {
     return finalize(
       Number(text.replace(",", "."))

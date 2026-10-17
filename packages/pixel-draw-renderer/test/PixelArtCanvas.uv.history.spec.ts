@@ -69,13 +69,13 @@ describe("PixelArtCanvas — uv mode", () => {
 
       manager.undo();
       assert.deepStrictEqual(
-        manager.uv.get(region.id)!.rectFor("front"),
-        region.rectFor("front")
+        manager.uv.get(region.id)!.slotRect("front"),
+        region.slotRect("front")
       );
 
       manager.redo();
       assert.deepStrictEqual(
-        manager.uv.get(region.id)!.rectFor("front"),
+        manager.uv.get(region.id)!.slotRect("front"),
         { x: 3, y: 3, width: 4, height: 4 }
       );
     });
@@ -138,7 +138,7 @@ describe("PixelArtCanvas — uv mode", () => {
     test("undo/redo an free", () => {
       const manager = createUvCanvas();
       const region = manager.uv.create({ width: 4, height: 4 });
-      manager.uv.setState(region.id, "free");
+      manager.uv.applyState(region.id, "free");
 
       manager.undo();
       assert.strictEqual(manager.uv.get(region.id)!.state, "stacked");
@@ -150,9 +150,9 @@ describe("PixelArtCanvas — uv mode", () => {
     test("undoing a stack restores the previous face layout", () => {
       const manager = createUvCanvas();
       const region = manager.uv.create({ width: 4, height: 4 });
-      manager.uv.setState(region.id, "free");
+      manager.uv.applyState(region.id, "free");
       manager.uv.move(region.id, { x: 3, y: 3, width: 4, height: 4 }, "top");
-      manager.uv.setState(region.id, "stacked");
+      manager.uv.applyState(region.id, "stacked");
       assert.strictEqual(manager.uv.get(region.id)!.state, "stacked");
 
       manager.undo();
@@ -160,7 +160,7 @@ describe("PixelArtCanvas — uv mode", () => {
       const restored = manager.uv.get(region.id)!;
       assert.strictEqual(restored.state, "free");
       assert.deepStrictEqual(
-        restored.rectFor("top"),
+        restored.slotRect("top"),
         { x: 3, y: 3, width: 4, height: 4 },
         "stack is lossy, so undo must replay the whole previous region"
       );
@@ -169,8 +169,8 @@ describe("PixelArtCanvas — uv mode", () => {
     test("undoing a stack does not look like a region being recreated", () => {
       const manager = createUvCanvas();
       const region = manager.uv.create({ width: 4, height: 4 });
-      manager.uv.setState(region.id, "free");
-      manager.uv.setState(region.id, "stacked");
+      manager.uv.applyState(region.id, "free");
+      manager.uv.applyState(region.id, "stacked");
 
       const created: string[] = [];
       const deleted: string[] = [];
@@ -231,7 +231,7 @@ describe("PixelArtCanvas — uv mode", () => {
       if (events[0].action === "uv-region-moved") {
         assert.deepStrictEqual(
           events[0].metadata.rect,
-          region.rectFor("front")
+          region.slotRect("front")
         );
       }
     });

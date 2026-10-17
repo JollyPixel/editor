@@ -70,7 +70,7 @@ export class BlockLibraryRenderer extends Turntable {
     return this.#grid;
   }
 
-  setBlocks(
+  showBlocks(
     blocks: readonly ResolvedBlockDefinition[]
   ): void {
     this.#meshes.sync(blocks);
@@ -151,7 +151,7 @@ export class BlockLibraryRenderer extends Turntable {
         first: Math.floor(scrollTop / cellSize) * cols,
         last: (Math.ceil((scrollTop + containerHeight) / cellSize) * cols) - 1
       },
-      this.#lookFor
+      this.#cellLook
     );
 
     for (const { index, mode } of paints) {
@@ -177,7 +177,7 @@ export class BlockLibraryRenderer extends Turntable {
     this.#drawLifted();
   }
 
-  readonly #lookFor = (
+  readonly #cellLook = (
     blockId: number
   ): CellLook => {
     if (blockId === this.#lifted?.blockId) {

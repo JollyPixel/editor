@@ -98,12 +98,6 @@ export interface VoxelDocumentOptions {
   onCommand?: VoxelCommandListener;
 }
 
-/**
- * A world with the blocks, material groups and blend groups its blocksets
- * project into it. Saving and loading cover the world and its blockset links
- * only; blocks and groups are runtime state a host fills from blockset
- * documents.
- */
 export class VoxelDocument extends BlockDocument<VoxelCommand> {
   readonly world: VoxelWorld;
   readonly blocksets: BlocksetList;

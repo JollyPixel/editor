@@ -30,7 +30,7 @@ export class UVResizeHandles {
   ): void {
     const corners = region === null ?
       [] :
-      this.#cornersOf(region, selectedSlot, view);
+      this.#projectCorners(region, selectedSlot, view);
 
     while (this.#squares.length > corners.length) {
       this.#squares.pop()!.remove();
@@ -58,7 +58,7 @@ export class UVResizeHandles {
     this.#squares = [];
   }
 
-  #cornersOf(
+  #projectCorners(
     region: UVRegion,
     selectedSlot: UVSlot | null,
     view: ScreenProjection

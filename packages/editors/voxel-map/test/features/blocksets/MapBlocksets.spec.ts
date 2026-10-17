@@ -22,7 +22,7 @@ describe("MapBlocksets", () => {
     const { view, blocksets } = setupMapBlocksets();
 
     assert.equal(blocksets.open("terrain") !== undefined, true);
-    assert.equal(blocksets.tileSizeFor("terrain"), 16);
+    assert.equal(blocksets.blocksetTileSize("terrain"), 16);
     assert.deepEqual(view.document.blocks.get(composeBlockId(1, 1))?.defaultTexture, {
       col: 0,
       row: 0,
@@ -211,7 +211,7 @@ describe("MapBlocksets", () => {
     const { view, blocksets } = setupMapBlocksets();
 
     assert.equal(blocksets.resizeTiles("terrain", 32), true);
-    assert.equal(blocksets.tileSizeFor("terrain"), 32);
+    assert.equal(blocksets.blocksetTileSize("terrain"), 32);
     assert.equal(view.document.blocks.get(composeBlockId(1, 1))?.defaultTexture?.size, 16);
     assert.equal(blocksets.resizeTiles("missing", 32), false);
   });

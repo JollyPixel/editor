@@ -15,7 +15,7 @@ export interface NormalMapTargetDocument {
   patchNormalMapDefaults(
     patch: Partial<NormalMapSettings>
   ): void;
-  setNormalMapZone(
+  assignNormalMapZone(
     zone: NormalMapZone
   ): void;
 }
@@ -30,7 +30,7 @@ export class NormalMapTarget {
     }
 
     const regionId = doc.uv.selectedRegionId;
-    const zone = regionId === null ? undefined : committed.zoneOf(regionId);
+    const zone = regionId === null ? undefined : committed.findZone(regionId);
 
     return new NormalMapTarget(doc, committed, zone ?? null);
   }
@@ -70,7 +70,7 @@ export class NormalMapTarget {
   ): boolean {
     const zone = this.zone === null ?
       undefined :
-      this.#shown.zoneOf(this.zone.regionId);
+      this.#shown.findZone(this.zone.regionId);
 
     return zone !== undefined &&
       zone.settings !== "off" &&
@@ -95,7 +95,7 @@ export class NormalMapTarget {
       this.#doc.patchNormalMapDefaults(patch);
     }
     else {
-      this.#doc.setNormalMapZone(zone);
+      this.#doc.assignNormalMapZone(zone);
     }
   }
 
@@ -103,7 +103,7 @@ export class NormalMapTarget {
     off: boolean
   ): void {
     if (this.zone !== null) {
-      this.#doc.setNormalMapZone({
+      this.#doc.assignNormalMapZone({
         regionId: this.zone.regionId,
         settings: off ? "off" : {}
       });
@@ -119,7 +119,7 @@ export class NormalMapTarget {
 
     const settings = { ...this.zone.settings };
     delete settings[key];
-    this.#doc.setNormalMapZone({
+    this.#doc.assignNormalMapZone({
       regionId: this.zone.regionId,
       settings
     });

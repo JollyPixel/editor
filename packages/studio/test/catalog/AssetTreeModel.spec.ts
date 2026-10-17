@@ -103,8 +103,8 @@ describe("AssetTreeModel", () => {
   test("resolves icons and details per kind", () => {
     const model = new AssetTreeModel(kRecords, {
       presenter: {
-        iconFor: (kind) => (kind === "voxelmap" ? "map" : undefined),
-        detailFor: (kind) => (kind === "binary" ? "no editor" : undefined)
+        kindIcon: (kind) => (kind === "voxelmap" ? "map" : undefined),
+        kindDetail: (kind) => (kind === "binary" ? "no editor" : undefined)
       }
     });
 
@@ -120,14 +120,14 @@ describe("AssetTreeModel", () => {
 
   test("deletes the asset itself or every asset under a folder", () => {
     assert.deepEqual(
-      kModel.deletionOf([assetNodeId("readme")]).assets.map((asset) => asset.id),
+      kModel.planDeletion([assetNodeId("readme")]).assets.map((asset) => asset.id),
       ["readme"]
     );
     assert.deepEqual(
-      kModel.deletionOf([kTextures]).assets.map((asset) => asset.id),
+      kModel.planDeletion([kTextures]).assets.map((asset) => asset.id),
       ["tex-b", "tex-a", "tex-nested"]
     );
-    assert.equal(kModel.deletionOf(["asset:unknown"]).isEmpty, true);
+    assert.equal(kModel.planDeletion(["asset:unknown"]).isEmpty, true);
   });
 
   test("replaces labels without touching the model", () => {
@@ -172,21 +172,21 @@ describe("AssetTreeModel kind filter", () => {
 
     assert.equal(model.has(assetNodeId("map-in-textures")), false);
     assert.ok(
-      model.deletionOf([kTextures]).assets.some(
+      model.planDeletion([kTextures]).assets.some(
         (asset) => asset.id === "map-in-textures"
       )
     );
     assert.ok(
-      model.renameOf(kTextures, "images")?.renames.some(
+      model.planRename(kTextures, "images")?.renames.some(
         (rename) => rename.to === "images/level.voxelmap.json"
       )
     );
   });
 });
 
-describe("AssetTreeModel.renameOf", () => {
+describe("AssetTreeModel.planRename", () => {
   test("renames an asset in its folder and keeps its extension", () => {
-    assert.deepEqual(plain(kModel.renameOf(assetNodeId("map-2"), "tunnel")), {
+    assert.deepEqual(plain(kModel.planRename(assetNodeId("map-2"), "tunnel")), {
       nodeId: assetNodeId("map-2"),
       from: "maps/cave.voxelmap.json",
       to: "maps/tunnel.voxelmap.json",
@@ -200,7 +200,7 @@ describe("AssetTreeModel.renameOf", () => {
   });
 
   test("renames every asset under a folder, nested ones included", () => {
-    assert.deepEqual(kModel.renameOf(kTextures, "art")?.renames, [
+    assert.deepEqual(kModel.planRename(kTextures, "art")?.renames, [
       {
         assetId: "tex-b",
         to: "art/b.pixelart"
@@ -230,7 +230,7 @@ describe("AssetTreeModel.renameOf", () => {
       }
     ]);
 
-    assert.deepEqual(model.renameOf(folderNodeId(AssetPath.parse("map")), "world")?.renames, [
+    assert.deepEqual(model.planRename(folderNodeId(AssetPath.parse("map")), "world")?.renames, [
       {
         assetId: "inside",
         to: "world/a.bin"
@@ -239,12 +239,12 @@ describe("AssetTreeModel.renameOf", () => {
   });
 
   test("returns null for an unknown node or an unchanged path", () => {
-    assert.equal(kModel.renameOf("asset:unknown", "x"), null);
-    assert.equal(kModel.renameOf(assetNodeId("map-2"), "cave"), null);
+    assert.equal(kModel.planRename("asset:unknown", "x"), null);
+    assert.equal(kModel.planRename(assetNodeId("map-2"), "cave"), null);
   });
 
   test("throws for an invalid name", () => {
-    assert.throws(() => kModel.renameOf(kMaps, "a/b"), InvalidAssetNameError);
+    assert.throws(() => kModel.planRename(kMaps, "a/b"), InvalidAssetNameError);
   });
 });
 
@@ -271,7 +271,7 @@ describe("AssetTreeModel drops", () => {
 
   test("moves an asset and a whole folder, keeping nested paths", () => {
     assert.deepEqual(
-      kModel.movesOf({ movedIds: [assetNodeId("readme")], targetId: kMaps, where: "inside" }).map(plain),
+      kModel.planMoves({ movedIds: [assetNodeId("readme")], targetId: kMaps, where: "inside" }).map(plain),
       [
         {
           nodeId: assetNodeId("readme"),
@@ -282,14 +282,14 @@ describe("AssetTreeModel drops", () => {
       ]
     );
     assert.deepEqual(
-      kModel.movesOf({ movedIds: [kBlocks], targetId: kMaps, where: "above" })
+      kModel.planMoves({ movedIds: [kBlocks], targetId: kMaps, where: "above" })
         .map((relocation) => relocation.renames),
       [[{ assetId: "tex-nested", to: "blocks/stone.pixelart" }]]
     );
   });
 
   test("skips a row whose folder moves with it", () => {
-    const moves = kModel.movesOf({
+    const moves = kModel.planMoves({
       movedIds: [kTextures, assetNodeId("tex-nested")],
       targetId: kMaps,
       where: "inside"

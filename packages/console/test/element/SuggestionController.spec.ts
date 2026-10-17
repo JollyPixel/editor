@@ -141,36 +141,36 @@ describe("SuggestionController", () => {
   });
 
   describe("usage", () => {
-    async function usageOf(
+    async function readUsage(
       text: string
     ) {
       return (await suggest(text)).usage;
     }
 
     test("is empty with nothing highlighted", async() => {
-      assert.equal(await usageOf(""), null);
+      assert.equal(await readUsage(""), null);
     });
 
     test("shows a command signature", async() => {
-      assert.deepEqual(await usageOf("?checkout"), {
+      assert.deepEqual(await readUsage("?checkout"), {
         usage: "/git.checkout <branch>",
         description: "Switch branches"
       });
     });
 
     test("shows a variable type and current value", async() => {
-      assert.deepEqual(await usageOf("?autofetch"), {
+      assert.deepEqual(await readUsage("?autofetch"), {
         usage: "git.autoFetch <boolean> = true",
         description: "Fetch in the background"
       });
     });
 
     test("leaves the value out when the getter throws", async() => {
-      assert.equal((await usageOf("?remote"))?.usage, "git.remote <string>");
+      assert.equal((await readUsage("?remote"))?.usage, "git.remote <string>");
     });
 
     test("counts the members of a namespace", async() => {
-      assert.deepEqual(await usageOf("?git"), {
+      assert.deepEqual(await readUsage("?git"), {
         usage: "git.",
         description: "Version control: 1 command, 2 variables"
       });

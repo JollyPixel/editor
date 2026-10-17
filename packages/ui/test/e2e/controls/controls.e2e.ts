@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { boxOf } from "@jolly-pixel/e2e";
+import { measureBox } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
@@ -29,7 +29,7 @@ test.describe("scene controls", () => {
     await expect(controls.locator("kbd").first()).toHaveText("W");
 
     const boxes = await Promise.all(
-      [0, 1, 2, 3].map((index) => boxOf(entries.nth(index)))
+      [0, 1, 2, 3].map((index) => measureBox(entries.nth(index)))
     );
     expect(boxes[1].y).toBe(boxes[0].y);
     expect(boxes[2].y).toBe(boxes[0].y);
@@ -45,8 +45,8 @@ test.describe("scene controls", () => {
     await expect.poll(() => isOpen(details)).toBe(true);
 
     const [buttonBox, detailsBox] = await Promise.all([
-      boxOf(button),
-      boxOf(details)
+      measureBox(button),
+      measureBox(details)
     ]);
     expect(detailsBox.y + detailsBox.height).toBeLessThanOrEqual(buttonBox.y);
     expect(Math.abs(

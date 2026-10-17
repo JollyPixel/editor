@@ -11,7 +11,7 @@ import {
 } from "lit/decorators.js";
 
 // Import Internal Dependencies
-import { detailOf } from "../../dom.ts";
+import { readDetail } from "../../dom.ts";
 import { defaultStorageAdapter } from "../../storage/defaultStorage.ts";
 import { NamespacedStore } from "../../storage/NamespacedStore.ts";
 import type { StorageAdapter } from "../../storage/StorageAdapter.ts";
@@ -26,7 +26,6 @@ import {
   resolveThemePreference
 } from "../preferences.ts";
 
-// Registers the composed controls.
 import "./DensityControl.ts";
 import "./ThemeControl.ts";
 
@@ -149,7 +148,7 @@ export class ThemePreferences extends LitElement {
   #onThemeChange = (
     event: Event
   ) => {
-    const detail = detailOf<JollyChangeDetail<ThemeMode>>(event);
+    const detail = readDetail<JollyChangeDetail<ThemeMode>>(event);
     if (detail === null) {
       return;
     }
@@ -161,7 +160,7 @@ export class ThemePreferences extends LitElement {
   #onDensityChange = (
     event: Event
   ) => {
-    const detail = detailOf<JollyChangeDetail<Density>>(event);
+    const detail = readDetail<JollyChangeDetail<Density>>(event);
     if (detail === null) {
       return;
     }

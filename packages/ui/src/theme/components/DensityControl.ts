@@ -15,11 +15,10 @@ import {
   emitFieldEvent,
   type JollyChangeDetail
 } from "../../field/events.ts";
-import { detailOf } from "../../dom.ts";
+import { readDetail } from "../../dom.ts";
 import type { JollyOption } from "../../controls/types.ts";
 import type { Density } from "../types.ts";
 
-// Registers jolly-select.
 import "../../controls/Select.ts";
 
 // CONSTANTS
@@ -78,7 +77,7 @@ export class DensityControl extends LitElement {
   #onChange(
     event: Event
   ): void {
-    const detail = detailOf<JollyChangeDetail<Density>>(event);
+    const detail = readDetail<JollyChangeDetail<Density>>(event);
     if (detail === null) {
       return;
     }

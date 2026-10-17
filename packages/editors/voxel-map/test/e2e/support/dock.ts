@@ -4,7 +4,7 @@ import type {
   Page
 } from "@playwright/test";
 import {
-  centerOf,
+  measureCenter,
   dragTo
 } from "@jolly-pixel/e2e";
 
@@ -54,7 +54,7 @@ export class PaneDock {
     await dragTo(
       this.#page,
       this.tab(name),
-      await centerOf(this.dock(dock))
+      await measureCenter(this.dock(dock))
     );
   }
 
@@ -65,7 +65,7 @@ export class PaneDock {
     await dragTo(
       this.#page,
       pane.locator(".header").first(),
-      await centerOf(this.tab(tab))
+      await measureCenter(this.tab(tab))
     );
   }
 }

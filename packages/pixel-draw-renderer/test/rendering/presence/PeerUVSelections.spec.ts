@@ -129,7 +129,7 @@ describe("PeerUVSelections", () => {
   test("does not dim the faces of a free region a peer selected", () => {
     const { svg, map, selections } = setup();
 
-    map.setState("r1", "free");
+    map.applyState("r1", "free");
     map.select("r2");
     selections.set("peer-A", {
       regionId: "r1",

@@ -104,7 +104,7 @@ export class BehaviorInitializer {
 
   #resolveProperties(): void {
     for (const [propertyName, { type }] of this.#metadata.properties) {
-      const finalValue = this.#behavior[propertyName] ?? defaultValueOf(type);
+      const finalValue = this.#behavior[propertyName] ?? cloneDefaultValue(type);
 
       this.#behavior[propertyName] = finalValue;
       this.#behavior.setProperty(propertyName as string, finalValue);
@@ -128,7 +128,7 @@ export class BehaviorInitializer {
   }
 }
 
-function defaultValueOf(
+function cloneDefaultValue(
   type: ScenePropertyType
 ): unknown {
   const value = kDefaultValues[type];

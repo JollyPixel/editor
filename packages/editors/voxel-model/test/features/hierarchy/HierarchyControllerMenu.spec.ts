@@ -8,7 +8,7 @@ import type { ContextMenuEntry } from "@jolly-pixel/ui";
 // Import Internal Dependencies
 import {
   NO_MIRROR,
-  shapeOf
+  readShape
 } from "../../fixtures/hierarchy.ts";
 import {
   MENU_POINT,
@@ -17,13 +17,13 @@ import {
   selectBlock
 } from "./hierarchyHarness.ts";
 
-function labelsOf(
+function listLabels(
   entries: readonly ContextMenuEntry[]
 ): string[] {
   return entries.map((entry) => (entry === "separator" ? "-" : entry.label));
 }
 
-function enabledLabelsOf(
+function listEnabledLabels(
   entries: readonly ContextMenuEntry[]
 ): string[] {
   return entries.flatMap((entry) => (
@@ -40,20 +40,20 @@ describe("HierarchyController without hierarchy rights", () => {
     harness.access.grant("materials");
 
     assert.deepEqual([harness.controller.writable, harness.updates()], [false, before + 1]);
-    assert.deepEqual(enabledLabelsOf(harness.controller.menuFor(block.uuid).items), ["Material…"]);
-    assert.deepEqual(enabledLabelsOf(harness.controller.menuFor(null).items), []);
+    assert.deepEqual(listEnabledLabels(harness.controller.openMenu(block.uuid).items), ["Material…"]);
+    assert.deepEqual(listEnabledLabels(harness.controller.openMenu(null).items), []);
 
     harness.access.grant("hierarchy");
     assert.equal(harness.controller.writable, true);
   });
 });
 
-describe("HierarchyController.menuFor", () => {
+describe("HierarchyController.openMenu", () => {
   test("offers a block its material and one child block", () => {
     const harness = createHierarchyHarness();
     const block = harness.addBlock();
 
-    assert.deepEqual(labelsOf(harness.controller.menuFor(block.uuid).items), [
+    assert.deepEqual(listLabels(harness.controller.openMenu(block.uuid).items), [
       "Add Child Block",
       "Rename",
       "Duplicate",
@@ -68,7 +68,7 @@ describe("HierarchyController.menuFor", () => {
     const harness = createHierarchyHarness();
     const folderId = harness.hierarchy.createFolder("Limbs", null)!;
 
-    assert.deepEqual(labelsOf(harness.controller.menuFor(folderId).items), [
+    assert.deepEqual(listLabels(harness.controller.openMenu(folderId).items), [
       "Add Block",
       "Add Folder",
       "Rename",
@@ -81,20 +81,20 @@ describe("HierarchyController.menuFor", () => {
   test("is empty for a node that is gone", () => {
     const harness = createHierarchyHarness();
 
-    assert.deepEqual(harness.controller.menuFor("missing").items, []);
+    assert.deepEqual(harness.controller.openMenu("missing").items, []);
   });
 
   test("offers the tree itself only the root adds", () => {
     const harness = createHierarchyHarness();
 
-    assert.deepEqual(labelsOf(harness.controller.menuFor(null).items), [
+    assert.deepEqual(listLabels(harness.controller.openMenu(null).items), [
       "Add Block",
       "Add Folder"
     ]);
   });
 });
 
-describe("HierarchyController.menuFor run", () => {
+describe("HierarchyController.openMenu run", () => {
   test("renames through the view and selects the block to show its material", async() => {
     const harness = createHierarchyHarness();
     const block = harness.addBlock();
@@ -117,7 +117,7 @@ describe("HierarchyController.menuFor run", () => {
     await chooseFromMenu(harness, folderId, "add-folder");
 
     const [limbs] = harness.hierarchy.nodes();
-    assert.deepEqual(shapeOf([limbs]), [
+    assert.deepEqual(readShape([limbs]), [
       ["Limbs", ["Arm", "Arm"]]
     ]);
     assert.deepEqual(
@@ -140,10 +140,10 @@ describe("HierarchyController.menuFor run", () => {
     harness.selection.select(leg.uuid);
 
     await chooseFromMenu(harness, arm.uuid, "duplicate");
-    assert.deepEqual(shapeOf(harness.hierarchy.nodes()), ["Arm", "Left Arm", "Leg"]);
+    assert.deepEqual(readShape(harness.hierarchy.nodes()), ["Arm", "Left Arm", "Leg"]);
 
     await chooseFromMenu(harness, arm.uuid, "delete");
-    assert.deepEqual(shapeOf(harness.hierarchy.nodes()), ["Left Arm", "Leg"]);
+    assert.deepEqual(readShape(harness.hierarchy.nodes()), ["Left Arm", "Leg"]);
   });
 
   test("does nothing for a node removed while the menu was open", async() => {
@@ -151,7 +151,7 @@ describe("HierarchyController.menuFor run", () => {
       delete: { deleteChildren: true }
     });
     const arm = harness.addBlock();
-    const menu = harness.controller.menuFor(arm.uuid);
+    const menu = harness.controller.openMenu(arm.uuid);
     harness.document.remove(arm.uuid);
 
     await menu.run("delete", MENU_POINT);
@@ -167,7 +167,7 @@ describe("HierarchyController.menuFor run", () => {
 
     await chooseFromMenu(harness, null, "add-block");
 
-    assert.deepEqual(shapeOf(harness.hierarchy.nodes()), ["Body", "Arm"]);
+    assert.deepEqual(readShape(harness.hierarchy.nodes()), ["Body", "Arm"]);
   });
 
   test("ignores a row action chosen on the tree's menu", async() => {

@@ -17,7 +17,7 @@ const map = new KeyBindingMap({
 
 test("actions are inferred from the defaults", () => {
   expect(map.actions).type.toBe<readonly ("undo" | "redo")[]>();
-  expect(map.chordsOf).type.not.toBeCallableWith("paste");
+  expect(map.chordsBoundTo).type.not.toBeCallableWith("paste");
 });
 
 test("defaults are typed chords while overrides are untrusted strings", () => {

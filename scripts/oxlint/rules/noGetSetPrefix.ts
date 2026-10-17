@@ -13,13 +13,15 @@ const kWebApis = [
   "getGamepads",
   "getImageData",
   "getItem",
+  "getLayoutMap",
   "getPropertyValue",
   "getRootNode",
   "setAnimationLoop",
   "setAttribute",
   "setItem",
   "setPointerCapture",
-  "setProperty"
+  "setProperty",
+  "setTransform"
 ];
 
 export const noGetSetPrefix: Rule = {

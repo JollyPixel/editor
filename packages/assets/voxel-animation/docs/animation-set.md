@@ -12,12 +12,12 @@ import {
 const document = new AnimationDocument();
 const wave = document.addClip({ name: "Wave", loop: true })!;
 const frames = new FrameRate(24);
-document.setKey(wave, "Body/Arm.R", "rotation", {
+document.writeKey(wave, "Body/Arm.R", "rotation", {
   tick: 0,
   value: { x: 0, y: 0, z: 0 },
   interpolation: "smooth"
 });
-document.setKey(wave, "Body/Arm.R", "rotation", {
+document.writeKey(wave, "Body/Arm.R", "rotation", {
   tick: frames.toTick(12),
   value: { x: 0, y: 0, z: 90 },
   interpolation: "smooth"
@@ -33,7 +33,7 @@ A set is `{ rig, clips }`. `rig` labels the hierarchy the set targets, such as `
 
 An `AnimationClipJSON` is `{ id, name, length, fps, loop, tracks }`. `length` is in ticks, `fps` is the frame grid the timeline snaps to, and `loop` tells a game to play the clip on repeat by default. Clip names compare trimmed and in any case.
 
-A track is `{ path, position?, rotation?, scale? }`. `path` names a block by its name path, such as `Body/Arm.L`. Each channel holds keys in strictly rising tick order. A key is `{ tick, value: { x, y, z }, interpolation }`, with `interpolation` one of `"step"`, `"linear"` or `"smooth"`. The set rounds each value to 4 decimals, whether the key comes from `setKey`, `addClip` or a loaded document, so `0.006363961` is stored as `0.0064`. `roundKeyValue(value)` applies the same rounding to an `{ x, y, z }`, so callers can compare a value with a stored key. A track exists while it has a key: removing its last key removes it.
+A track is `{ path, position?, rotation?, scale? }`. `path` names a block by its name path, such as `Body/Arm.L`. Each channel holds keys in strictly rising tick order. A key is `{ tick, value: { x, y, z }, interpolation }`, with `interpolation` one of `"step"`, `"linear"` or `"smooth"`. The set rounds each value to 4 decimals, whether the key comes from `writeKey`, `addClip` or a loaded document, so `0.006363961` is stored as `0.0064`. `roundKeyValue(value)` applies the same rounding to an `{ x, y, z }`, so callers can compare a value with a stored key. A track exists while it has a key: removing its last key removes it.
 
 Values are relative to the block's rest pose. Position is added, rotation is added per axis in degrees, so a key can spin several turns, and scale multiplies.
 
@@ -68,7 +68,7 @@ Track paths compare as a `TrackPath`: segment by segment, trimmed and in any cas
 | Member | Description |
 |---|---|
 | `new NameSet(names)` | Holds the names. |
-| `NameSet.keyOf(name)` | `name` trimmed and in lower case. |
+| `NameSet.toKey(name)` | `name` trimmed and in lower case. |
 | `has(name)` | Whether a name is taken. |
 | `free(name)` | `name` trimmed when free, otherwise the first free `name 2`, `name 3`, replacing a trailing number. |
 
@@ -81,7 +81,7 @@ Track paths compare as a `TrackPath`: segment by segment, trimmed and in any cas
 | `removeClip(id)` | Removes a clip. |
 | `changeClip(id, patch)` | Changes any of `name`, `length`, `fps` and `loop`. |
 | `moveClip(id, beforeId?)` | Moves a clip before `beforeId`, or last. |
-| `setKey(clipId, path, channel, key)` | Sets the key at `key.tick`, replacing one already there and creating the track when new. |
+| `writeKey(clipId, path, channel, key)` | Sets the key at `key.tick`, replacing one already there and creating the track when new. |
 | `removeKey(clipId, path, channel, tick)` | Removes a key. |
 | `removeTrack(clipId, path)` | Removes a track and its keys. |
 | `renameTrack(clipId, path, to)` | Moves a track and its keys to `to`. Refused when another track holds `to` or the path is unchanged; a change of case only is a rename. |
@@ -95,7 +95,7 @@ The edit methods return `false`, and `addClip` `null`, when the set refuses the 
 | Member | Description |
 |---|---|
 | `rig`, `size`, `has(id)` | The rig label and the clips. |
-| `clip(id)`, `clips()`, `nextClipOf(id)` | Clips in their order. |
+| `clip(id)`, `clips()`, `nextClipAfter(id)` | Clips in their order. |
 | `track(clipId, path)`, `keyAt(clipId, path, channel, tick)` | One track or one key. |
 | `trackPaths()` | Every track path of the set once, as a clip first wrote it. |
 | `clipNameTaken(name, exceptId?)`, `freeClipName(name)` | Clip name checks, as a `NameSet` does them. |

@@ -140,7 +140,6 @@ export class OrbitFlyCamera extends CameraComponent {
   #speedAdjustStep: number;
   #focus: CameraFocus;
 
-  // Reused each frame to avoid allocations.
   #forward = new THREE.Vector3();
   #right = new THREE.Vector3();
   #up = new THREE.Vector3(0, 1, 0);
@@ -409,7 +408,6 @@ export class OrbitFlyCamera extends CameraComponent {
       this.#descendBlocked = false;
     }
 
-    // Ctrl is reserved for other scroll-driven interactions (e.g. brush size).
     const isCtrl = InputCombination.Control.evaluate(input);
     const scroll = input.mouse.scrollTo(this.#scroll);
     const isSwiping = !isCtrl && input.mouse.scrollSource === "touchpad";

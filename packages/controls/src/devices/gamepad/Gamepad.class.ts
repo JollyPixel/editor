@@ -16,88 +16,37 @@ import { GamepadVibration } from "./GamepadVibration.class.ts";
 import { EdgeBuffer } from "../EdgeBuffer.ts";
 
 // CONSTANTS
-/**
- * Deflection past which a stick axis counts as "pressed" in a direction.
- */
 const kAxisPressedValue = 0.5;
 const kStickCount = 2;
-/**
- * Edge flags per axis, packed as `axisIndex * kAxisEdgeCount + edge`.
- */
 const kAxisEdgeCount = 6;
 
 export type GamepadIndex = 0 | 1 | 2 | 3;
 
-/**
- * Standard Gamepad button mapping (W3C Gamepad API specification).
- *
- * This mapping corresponds to a typical Xbox/PlayStation controller layout.
- * Actual button availability may vary by controller model.
- *
- * @see https://w3c.github.io/gamepad/#remapping
- * @see https://developer.mozilla.org/en-US/docs/Web/API/Gamepad/buttons
- */
 export const GamepadButton = {
-  /*
-   * Face buttons (right side)
-   * Bottom button (Xbox: A, PlayStation: Cross)
-   */
   A: 0,
-  // Right button (Xbox: B, PlayStation: Circle)
   B: 1,
-  // Left button (Xbox: X, PlayStation: Square)
   X: 2,
-  // Top button (Xbox: Y, PlayStation: Triangle)
   Y: 3,
 
-  /*
-   * Shoulder buttons
-   * L1
-   */
   LeftBumper: 4,
-  // R1
   RightBumper: 5,
-  // L2
   LeftTrigger: 6,
-  // R2
   RightTrigger: 7,
 
-  /*
-   * Center buttons
-   * Back/Share button
-   */
   Select: 8,
-  // Start/Options button
   Start: 9,
 
-  /*
-   * Stick buttons (press down on analog stick)
-   * L3
-   */
   LeftStick: 10,
-  // R3
   RightStick: 11,
 
-  // D-Pad
   DPadUp: 12,
   DPadDown: 13,
   DPadLeft: 14,
   DPadRight: 15,
 
-  /*
-   * Special buttons (may not be present on all controllers)
-   * Xbox and PlayStation button
-   */
   Home: 16
 } as const;
 
-/**
- * Standard Gamepad axis mapping.
- *
- * Axis values range from -1.0 to 1.0.
- * - Negative values: Left/Up
- * - Positive values: Right/Down
- */
 export const GamepadAxis = {
   LeftStickX: 0,
   LeftStickY: 1,
@@ -153,16 +102,10 @@ export interface GamepadOptions {
   windowAdapter?: WindowAdapter;
 }
 
-/**
- * @see https://developer.mozilla.org/en-US/docs/Web/API/Gamepad_API/Using_the_Gamepad_API
- */
 export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
   static MaxGamepads = 4;
   static MaxButtons = 16;
   static MaxAxes = 4;
-  /**
-   * Frames to wait between `getGamepads()` polls while nothing is connected.
-   */
   static IdlePollFrames = 30;
 
   #navigatorAdapter: NavigatorAdapter;
@@ -170,15 +113,9 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
 
   #wasActive = false;
   #idlePollCountdown = 0;
-  /**
-   * One bit per slot that returned a gamepad on the latest poll.
-   */
   #presentGamepads = 0;
   #edges: GamepadEdges[] = [];
 
-  /**
-   * Reused by `#updateAxes` to avoid per-stick allocations.
-   */
   #stickScratch: [GamepadAxisState, GamepadAxisState] = [
     null as unknown as GamepadAxisState,
     null as unknown as GamepadAxisState
@@ -411,10 +348,6 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
   }
 
   sample(): void {
-    /*
-     * `gamepadconnected` may not fire for a controller present at page load.
-     * Poll slowly until one is found, then resume per-frame polling.
-     */
     if (this.#presentGamepads === 0 && this.connectedGamepads <= 0) {
       if (this.#idlePollCountdown > 0) {
         this.#idlePollCountdown--;
@@ -426,7 +359,6 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
     }
 
     const gamepads = this.#navigatorAdapter.getGamepads();
-    // Clear before early returns so device preference cannot remain stale.
     this.#wasActive = false;
     if (gamepads === null) {
       this.#presentGamepads = 0;
@@ -440,7 +372,6 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
       if (gamepad) {
         present |= 1 << gamepadIndex;
         this.#updateButtons(gamepad, gamepadIndex);
-        // Auto-repeat reads and writes the axis flags, so they are read back.
         this.#updateAxes(gamepad, gamepadIndex);
         this.#edges[gamepadIndex].axes.push(
           axisEdgeBits(this.axes[gamepadIndex])
@@ -457,7 +388,6 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
     gamepadIndex: number
   ): void {
     const states = this.buttons[gamepadIndex];
-    // Controllers may expose fewer buttons than `MaxButtons`.
     const count = Math.min(states.length, gamepad.buttons.length);
     let active = 0;
     let pressed = 0;
@@ -499,7 +429,6 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
 
     for (let stick = 0; stick < kStickCount; stick++) {
       const stickIndex = stick * 2;
-      // Some controllers expose only one stick.
       if (
         typeof gamepad.axes[stickIndex] !== "number" ||
         typeof gamepad.axes[stickIndex + 1] !== "number"
@@ -571,7 +500,6 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
     const x = gamepad.axes[stickIndex];
     const y = gamepad.axes[stickIndex + 1];
 
-    // Compare squared magnitudes to avoid `sqrt`.
     const live = Number((x * x) + (y * y) >= this.axisDeadZone * this.axisDeadZone);
 
     axes[0].value = x * live;
@@ -657,7 +585,6 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
 
   #onGamepadConnected = (event: GamepadEvent) => {
     this.connectedGamepads++;
-    // Cancel idle back-off so input is polled on the next frame.
     this.#idlePollCountdown = 0;
     this.emit("connect", event.gamepad);
   };

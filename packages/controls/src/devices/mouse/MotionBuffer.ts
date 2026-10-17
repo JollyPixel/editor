@@ -15,9 +15,6 @@ function emptySample<TSource>(): MotionSample<TSource> {
   };
 }
 
-/**
- * Movement summed for both readers until each takes it into `value`.
- */
 export class MotionBuffer<TSource = never> {
   readonly value = emptySample<TSource>();
 

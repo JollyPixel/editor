@@ -4,7 +4,7 @@ import type {
   SelectionRect,
   Vec2
 } from "../../types.ts";
-import { quarterTurnsOf } from "../geometry/geometry.ts";
+import { directionQuarterTurns } from "../geometry/geometry.ts";
 import { UVSlotMap } from "./UVSlotMap.ts";
 import type {
   UVLayout,
@@ -84,7 +84,7 @@ export class UVRegion {
     this.id = data.id;
     this.name = data.name;
     this.color = data.color;
-    this.#layout = UVRegion.#layoutOf(data);
+    this.#layout = UVRegion.#createLayout(data);
   }
 
   get slots(): readonly UVSlot[] {
@@ -117,20 +117,20 @@ export class UVRegion {
     return this.#layout.isTarget(slot);
   }
 
-  rectFor(
+  slotRect(
     slot: UVSlot | null = null
   ): SelectionRect {
-    return this.#layout.rectFor(slot);
+    return this.#layout.slotRect(slot);
   }
 
-  geometryFor(
+  slotGeometry(
     slot: UVSlot
   ): UVGeometry {
-    return this.#layout.geometryFor(slot);
+    return this.#layout.slotGeometry(slot);
   }
 
-  slotsOf(): UVRegionSlot[] {
-    return this.#layout.slotsOf();
+  listSlots(): UVRegionSlot[] {
+    return this.#layout.listSlots();
   }
 
   resizeTargets(
@@ -215,7 +215,7 @@ export class UVRegion {
     direction: RotationDirection,
     slot: UVSlot | null = null
   ): UVRegion {
-    return this.#with(this.#layout.rotated(quarterTurnsOf(direction), slot));
+    return this.#with(this.#layout.rotated(directionQuarterTurns(direction), slot));
   }
 
   toLayout(): UVLayoutData {
@@ -257,7 +257,7 @@ export class UVRegion {
     return region;
   }
 
-  static #layoutOf(
+  static #createLayout(
     data: UVRegionData
   ): UVLayout {
     if (data.state === "stacked") {

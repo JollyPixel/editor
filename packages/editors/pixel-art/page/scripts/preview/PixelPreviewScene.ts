@@ -99,7 +99,7 @@ export class PixelPreviewScene extends Systems.Scene {
     this.#ready.resolve();
   }
 
-  setCanvas(
+  attachCanvas(
     canvasManager: PixelArtCanvas
   ): void {
     if (canvasManager === this.#canvasManager) {
@@ -113,7 +113,7 @@ export class PixelPreviewScene extends Systems.Scene {
     }
   }
 
-  setAppearance(
+  applyAppearance(
     theme: ResolvedThemeMode
   ): void {
     const appearance = kSceneAppearances[theme];

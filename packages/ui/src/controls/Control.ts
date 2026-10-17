@@ -15,14 +15,10 @@ import {
 import { controlStyles } from "./Control.styles.ts";
 import { PopoverController } from "../field/PopoverController.ts";
 
-// Side-effect import: details use the shared information icon.
 import "../icon/Icon.ts";
 
 let nextDetailsId = 0;
 
-/**
- * A declarative key hint inside `jolly-controls`.
- */
 @customElement("jolly-control")
 export class Control extends LitElement {
   static override styles = controlStyles;

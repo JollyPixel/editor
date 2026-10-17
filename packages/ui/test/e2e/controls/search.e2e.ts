@@ -6,7 +6,7 @@ import {
   test,
   expect
 } from "../fixtures.ts";
-import { rowOf } from "../support/tree.ts";
+import { findRow } from "../support/tree.ts";
 
 function visibleRowIds(
   page: Page
@@ -42,7 +42,7 @@ test.describe("search", () => {
     const pane = page.locator("[data-pane=scene]");
     const before = await visibleRowIds(page);
 
-    await rowOf(page, "camera").click();
+    await findRow(page, "camera").click();
     await page.keyboard.press("Control+f");
     const input = pane.getByRole("searchbox");
     await expect(input).toBeFocused();
@@ -51,9 +51,9 @@ test.describe("search", () => {
     await input.fill("lamp");
     await expect.poll(() => visibleRowIds(page))
       .toEqual(["scene", "props", "lamp", "lights", "lamp-light"]);
-    await expect(rowOf(page, "lamp").locator("mark")).toHaveText("lamp");
-    await expect(rowOf(page, "lamp").locator(".grip")).toHaveCount(0);
-    await expect(rowOf(page, "props").locator(".toggle")).toHaveCount(0);
+    await expect(findRow(page, "lamp").locator("mark")).toHaveText("lamp");
+    await expect(findRow(page, "lamp").locator(".grip")).toHaveCount(0);
+    await expect(findRow(page, "props").locator(".toggle")).toHaveCount(0);
 
     await page.keyboard.press("Escape");
     await expect.poll(() => visibleRowIds(page)).toEqual(before);

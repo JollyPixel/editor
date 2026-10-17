@@ -75,7 +75,7 @@ export class UVRegionLayer {
     this.#uvMap.on("changed", this.#onChanged);
   }
 
-  setLivePreview(
+  showLivePreview(
     preview: UVLivePreview | null
   ): void {
     this.#livePreview = preview;
@@ -100,7 +100,7 @@ export class UVRegionLayer {
     this.#render();
   }
 
-  setPeerPreviews(
+  showPeerPreviews(
     previews: ReadonlyMap<string, UVPeerPreview>
   ): void {
     this.#peerPreviews = previews;
@@ -119,7 +119,7 @@ export class UVRegionLayer {
     return false;
   }
 
-  setPeerSelections(
+  showPeerSelections(
     colorByRegion: ReadonlyMap<string, string>
   ): void {
     this.#peerSelections = colorByRegion;
@@ -212,8 +212,8 @@ export class UVRegionLayer {
     const entries: UVPreviewEntry[] = [];
     for (const [clientId, { region, face, color }] of this.#peerPreviews) {
       const geometries = face === null ?
-        region.slotsOf() :
-        [{ slot: face, geometry: region.geometryFor(face) }];
+        region.listSlots() :
+        [{ slot: face, geometry: region.slotGeometry(face) }];
       for (const { slot, geometry } of geometries) {
         entries.push({
           key: `peer:${clientId}:${uvTargetKey({ regionId: region.id, slot })}`,

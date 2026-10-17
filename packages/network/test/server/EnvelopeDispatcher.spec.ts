@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { identityOf } from "../helpers/server/identity.ts";
+import { createIdentity } from "../helpers/server/identity.ts";
 import { createClient } from "../helpers/server/clientHandle.ts";
 import { EnvelopeDispatcher } from "#src/server/EnvelopeDispatcher.ts";
 import { ClientSessions } from "#src/server/ClientSessions.ts";
@@ -68,7 +68,7 @@ describe("EnvelopeDispatcher — routing", () => {
   test("drops an envelope addressed to an unregistered room", async() => {
     const { dispatcher, sessions } = createHarness();
     const { client } = createClient("A");
-    sessions.open(client, identityOf(client));
+    sessions.open(client, createIdentity(client));
 
     assert.deepEqual(
       await dispatcher.dispatch("A", { room: "unknown", kind: "join" }),
@@ -84,7 +84,7 @@ describe("EnvelopeDispatcher — join", () => {
   test("admits a client into the room", async() => {
     const { dispatcher, sessions, rooms } = createHarness();
     const { client } = createClient("A");
-    sessions.open(client, identityOf(client));
+    sessions.open(client, createIdentity(client));
 
     assert.deepEqual(
       await dispatcher.dispatch("A", { room: "lobby", kind: "join" }),
@@ -96,7 +96,7 @@ describe("EnvelopeDispatcher — join", () => {
   test("ignores a second join for a room already joined", async() => {
     const { dispatcher, sessions } = createHarness();
     const { client } = createClient("A");
-    sessions.open(client, identityOf(client));
+    sessions.open(client, createIdentity(client));
 
     await dispatcher.dispatch("A", { room: "lobby", kind: "join" });
 
@@ -114,7 +114,7 @@ describe("EnvelopeDispatcher — join", () => {
       new RightsTable({ viewer: { "lobby.$join": "void" } })
     );
     const { client } = createClient("A");
-    sessions.open(client, identityOf(client));
+    sessions.open(client, createIdentity(client));
 
     assert.deepEqual(
       await dispatcher.dispatch("A", {
@@ -153,7 +153,7 @@ describe("EnvelopeDispatcher — membership gate", () => {
     test(`drops a "${envelope.kind}" from a client that never joined`, async() => {
       const { dispatcher, sessions } = createHarness();
       const { client } = createClient("A");
-      sessions.open(client, identityOf(client));
+      sessions.open(client, createIdentity(client));
 
       assert.deepEqual(
         await dispatcher.dispatch("A", envelope),
@@ -169,8 +169,8 @@ describe("EnvelopeDispatcher — membership gate", () => {
     const { dispatcher, sessions } = createHarness();
     const a = createClient("A");
     const b = createClient("B");
-    sessions.open(a.client, identityOf(a.client));
-    sessions.open(b.client, identityOf(b.client));
+    sessions.open(a.client, createIdentity(a.client));
+    sessions.open(b.client, createIdentity(b.client));
 
     await dispatcher.dispatch("A", { room: "lobby", kind: "join" });
     await dispatcher.dispatch("B", { room: "lobby", kind: "join" });
@@ -194,7 +194,7 @@ describe("EnvelopeDispatcher — membership gate", () => {
   test("handles a resync once the client has joined", async() => {
     const { dispatcher, sessions } = createHarness();
     const a = createClient("A");
-    sessions.open(a.client, identityOf(a.client));
+    sessions.open(a.client, createIdentity(a.client));
     await dispatcher.dispatch("A", { room: "lobby", kind: "join" });
 
     assert.deepEqual(
@@ -207,8 +207,8 @@ describe("EnvelopeDispatcher — membership gate", () => {
     const { dispatcher, sessions } = createHarness();
     const a = createClient("A");
     const b = createClient("B");
-    sessions.open(a.client, identityOf(a.client));
-    sessions.open(b.client, identityOf(b.client));
+    sessions.open(a.client, createIdentity(a.client));
+    sessions.open(b.client, createIdentity(b.client));
 
     await dispatcher.dispatch("A", { room: "lobby", kind: "join" });
     await dispatcher.dispatch("B", { room: "lobby", kind: "join" });
@@ -235,7 +235,7 @@ describe("EnvelopeDispatcher — leave", () => {
   test("removes the client from the room", async() => {
     const { dispatcher, sessions, rooms } = createHarness();
     const { client } = createClient("A");
-    sessions.open(client, identityOf(client));
+    sessions.open(client, createIdentity(client));
 
     await dispatcher.dispatch("A", { room: "lobby", kind: "join" });
 
@@ -249,7 +249,7 @@ describe("EnvelopeDispatcher — leave", () => {
   test("ignores a leave from a client that never joined", async() => {
     const { dispatcher, sessions } = createHarness();
     const { client } = createClient("A");
-    sessions.open(client, identityOf(client));
+    sessions.open(client, createIdentity(client));
 
     assert.deepEqual(
       await dispatcher.dispatch("A", { room: "lobby", kind: "leave" }),

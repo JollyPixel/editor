@@ -31,9 +31,6 @@ export interface VoxelRendererOptions extends VoxelViewOptions {
   focus?: THREE.Object3D | null;
 }
 
-/**
- * Runs a `VoxelView` through the actor component lifecycle.
- */
 export class VoxelRenderer extends ActorComponent {
   readonly document: VoxelDocument;
   readonly view: VoxelView;

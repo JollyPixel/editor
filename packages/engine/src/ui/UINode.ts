@@ -135,7 +135,6 @@ export class UINode<TContext = WorldDefaultContext> extends ActorComponent<TCont
   ): number {
     const { anchor, bounds, offset, width, pivotX } = params;
 
-    // Shift so the pivot-aligned edge sits at the anchor
     const pivotShift = width * (0.5 - pivotX);
 
     switch (anchor) {
@@ -155,7 +154,6 @@ export class UINode<TContext = WorldDefaultContext> extends ActorComponent<TCont
   ): number {
     const { anchor, bounds, offset, height, pivotY } = params;
 
-    // Shift so the pivot-aligned edge sits at the anchor
     const pivotShift = height * (0.5 - pivotY);
 
     switch (anchor) {

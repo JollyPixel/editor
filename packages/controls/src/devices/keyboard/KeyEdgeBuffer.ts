@@ -24,10 +24,6 @@ export class KeyEdges {
   }
 }
 
-/**
- * Key edges and typed characters observed once and kept for both readers
- * until each takes them.
- */
 export class KeyEdgeBuffer {
   #step = new KeyEdges();
   #frame = new KeyEdges();
@@ -48,9 +44,6 @@ export class KeyEdgeBuffer {
     this.#frame.char += char;
   }
 
-  /**
-   * The returned edges stay valid until the next `take()`.
-   */
   take(
     reader: InputReader
   ): Readonly<KeyEdges> {

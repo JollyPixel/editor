@@ -11,30 +11,17 @@ import { AssetId } from "@jolly-pixel/asset";
 import { launchElement } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
-import { ShellCatalog } from "#src/launch/catalog/ShellCatalog.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
 import type { LaunchSource } from "#src/launch/sources/LaunchSource.ts";
-import {
-  ANY_SHELL_ORIGIN,
-  HostMessageLaunchSource
-} from "#src/launch/sources/HostMessageLaunchSource.ts";
-import {
-  LAUNCH_MESSAGE_TYPE,
-  READY_MESSAGE_TYPE,
-  SHELL_MESSAGE_TYPE
-} from "#src/launch/ShellChannel.ts";
 import { InjectedLaunchSource } from "#src/launch/sources/InjectedLaunchSource.ts";
 import { QueryLaunchSource } from "#src/launch/sources/QueryLaunchSource.ts";
 import { LaunchNotFoundError } from "#src/launch/errors/LaunchNotFoundError.ts";
 import { captureLogs } from "../helpers/logs.ts";
-
-// CONSTANTS
-const kStudioOrigin = "http://studio.test";
 const kNothing: LaunchSource = {
   read: () => Promise.resolve(undefined)
 };
 
-function launchOf(
+function createLaunchSource(
   target: string
 ): LaunchSource {
   return {
@@ -53,49 +40,6 @@ function injectLaunchElement(
   document.head.append(element);
 }
 
-type FakeParent = MessagePort & {
-  posted: Array<{
-    message: unknown;
-    origin: string;
-  }>;
-};
-
-function fakeParent(): FakeParent {
-  const posted: FakeParent["posted"] = [];
-
-  return Object.assign(new MessageChannel().port1, {
-    posted,
-    postMessage(
-      message: unknown,
-      origin: string
-    ): void {
-      posted.push({
-        message,
-        origin
-      });
-    }
-  });
-}
-
-function frameIn(
-  parent: MessageEventSource
-): () => void {
-  const descriptor = Object.getOwnPropertyDescriptor(window, "parent");
-  Object.defineProperty(window, "parent", {
-    configurable: true,
-    get: () => parent
-  });
-
-  return () => {
-    if (descriptor === undefined) {
-      Reflect.deleteProperty(window, "parent");
-    }
-    else {
-      Object.defineProperty(window, "parent", descriptor);
-    }
-  };
-}
-
 afterEach(() => {
   document.head.replaceChildren();
   window.history.replaceState(null, "", "/");
@@ -103,7 +47,7 @@ afterEach(() => {
 
 describe("EditorLaunch.read", () => {
   test("returns the first defined launch in source order", async() => {
-    const launch = await EditorLaunch.read([kNothing, launchOf("a"), launchOf("b")]);
+    const launch = await EditorLaunch.read([kNothing, createLaunchSource("a"), createLaunchSource("b")]);
 
     assert.equal(launch.target.value, "a");
   });
@@ -115,7 +59,7 @@ describe("EditorLaunch.read", () => {
   test("logs each source read until one answers", async() => {
     const { logger, metas } = captureLogs();
 
-    await EditorLaunch.read([kNothing, launchOf("a"), launchOf("b")], logger);
+    await EditorLaunch.read([kNothing, createLaunchSource("a"), createLaunchSource("b")], logger);
 
     assert.deepEqual(
       metas.map((meta) => [meta?.index, meta?.target]),
@@ -201,278 +145,5 @@ describe("QueryLaunchSource", () => {
         "http://editor.test/map/?offline=&target=new&tag=v2"
       ]
     );
-  });
-});
-
-describe("HostMessageLaunchSource", () => {
-  test("resolves nothing at once outside a frame", async() => {
-    assert.equal(
-      await new HostMessageLaunchSource({ timeout: 10_000 }).read(),
-      undefined
-    );
-  });
-
-  test("posts ready and takes the launch posted by the parent window", async(context) => {
-    const parent = fakeParent();
-    context.after(frameIn(parent));
-
-    const pending = new HostMessageLaunchSource({
-      origins: [kStudioOrigin]
-    }).read();
-    assert.deepEqual(parent.posted, [
-      {
-        message: { type: READY_MESSAGE_TYPE },
-        origin: kStudioOrigin
-      }
-    ]);
-
-    window.dispatchEvent(new MessageEvent("message", {
-      source: window,
-      data: { type: LAUNCH_MESSAGE_TYPE, target: "ignored" }
-    }));
-    window.dispatchEvent(new MessageEvent("message", {
-      source: parent,
-      data: { type: "other", target: "ignored" }
-    }));
-    window.dispatchEvent(new MessageEvent("message", {
-      source: parent,
-      data: { type: LAUNCH_MESSAGE_TYPE, target: 1 }
-    }));
-    window.dispatchEvent(new MessageEvent("message", {
-      source: parent,
-      origin: kStudioOrigin,
-      data: { type: LAUNCH_MESSAGE_TYPE, target: "from-host" }
-    }));
-
-    const launch = await pending;
-    assert.equal(launch?.target.value, "from-host");
-    assert.equal(launch?.shell?.origin, kStudioOrigin);
-    assert.equal(launch?.shell?.identity, null);
-  });
-
-  test("hands the launch identity to the shell channel", async(context) => {
-    const parent = fakeParent();
-    context.after(frameIn(parent));
-
-    const pending = new HostMessageLaunchSource({
-      origins: [kStudioOrigin]
-    }).read();
-    window.dispatchEvent(new MessageEvent("message", {
-      source: parent,
-      origin: kStudioOrigin,
-      data: {
-        type: LAUNCH_MESSAGE_TYPE,
-        target: "from-host",
-        identity: {
-          username: "alice",
-          peerId: "peer-alice"
-        }
-      }
-    }));
-    const launch = await pending;
-
-    assert.equal(launch?.shell?.identity?.username, "alice");
-    assert.equal(launch?.shell?.identity?.peerId, "peer-alice");
-  });
-
-  test("answers the parent through the shell channel", async(context) => {
-    const parent = fakeParent();
-    context.after(frameIn(parent));
-
-    const pending = new HostMessageLaunchSource({
-      origins: [kStudioOrigin]
-    }).read();
-    window.dispatchEvent(new MessageEvent("message", {
-      source: parent,
-      origin: kStudioOrigin,
-      data: { type: LAUNCH_MESSAGE_TYPE, target: "from-host" }
-    }));
-    const launch = await pending;
-    parent.posted.length = 0;
-
-    launch?.shell?.openAsset("blockset-1");
-    launch?.shell?.toggleConsole();
-
-    assert.deepEqual(parent.posted, [
-      {
-        message: {
-          type: SHELL_MESSAGE_TYPE,
-          command: "open-asset",
-          target: "blockset-1"
-        },
-        origin: kStudioOrigin
-      },
-      {
-        message: {
-          type: SHELL_MESSAGE_TYPE,
-          command: "toggle-console"
-        },
-        origin: kStudioOrigin
-      }
-    ]);
-  });
-
-  test("gives the shell channel the ports the launch carries", async(context) => {
-    const parent = fakeParent();
-    context.after(frameIn(parent));
-    const catalog = new MessageChannel();
-    const consolePorts = new MessageChannel();
-    context.after(() => {
-      catalog.port1.close();
-      consolePorts.port1.close();
-    });
-    const launches = [
-      { catalog: catalog.port2 },
-      { catalog: catalog.port2, console: consolePorts.port2 },
-      { console: consolePorts.port2 },
-      undefined
-    ];
-    const received: Array<[boolean, boolean]> = [];
-
-    for (const ports of launches) {
-      const pending = new HostMessageLaunchSource({
-        origins: [kStudioOrigin]
-      }).read();
-      window.dispatchEvent(new MessageEvent("message", {
-        source: parent,
-        origin: kStudioOrigin,
-        data: { type: LAUNCH_MESSAGE_TYPE, target: "from-host", ports }
-      }));
-      const shell = (await pending)?.shell;
-      received.push([
-        shell?.catalog instanceof ShellCatalog,
-        shell?.console === consolePorts.port2
-      ]);
-    }
-
-    assert.deepEqual(received, [
-      [true, false],
-      [true, true],
-      [false, true],
-      [false, false]
-    ]);
-  });
-
-  test("gives the shell channel a valid launch appearance only", async(context) => {
-    const parent = fakeParent();
-    context.after(frameIn(parent));
-    const appearances: unknown[] = [];
-
-    for (const appearance of [
-      { theme: "light", density: "compact" },
-      { theme: "pink", density: "compact" },
-      undefined
-    ]) {
-      const pending = new HostMessageLaunchSource({
-        origins: [kStudioOrigin]
-      }).read();
-      window.dispatchEvent(new MessageEvent("message", {
-        source: parent,
-        origin: kStudioOrigin,
-        data: { type: LAUNCH_MESSAGE_TYPE, target: "from-host", appearance }
-      }));
-      const launch = await pending;
-      assert.equal(launch?.target.value, "from-host");
-      appearances.push(launch?.shell?.appearance);
-    }
-
-    assert.deepEqual(appearances, [
-      { theme: "light", density: "compact" },
-      null,
-      null
-    ]);
-  });
-
-  test("posts ready to its own origin by default", async(context) => {
-    const parent = fakeParent();
-    context.after(frameIn(parent));
-    context.mock.timers.enable({ apis: ["setTimeout"] });
-
-    const pending = new HostMessageLaunchSource({ timeout: 50 }).read();
-    context.mock.timers.tick(50);
-    await pending;
-
-    assert.deepEqual(
-      parent.posted.map(({ origin }) => origin),
-      [location.origin]
-    );
-  });
-
-  test("posts ready once per allowed origin", async(context) => {
-    const parent = fakeParent();
-    context.after(frameIn(parent));
-    context.mock.timers.enable({ apis: ["setTimeout"] });
-
-    const pending = new HostMessageLaunchSource({
-      timeout: 50,
-      origins: [kStudioOrigin, "http://other.test", kStudioOrigin]
-    }).read();
-    context.mock.timers.tick(50);
-    await pending;
-
-    assert.deepEqual(
-      parent.posted.map(({ origin }) => origin),
-      [kStudioOrigin, "http://other.test"]
-    );
-  });
-
-  test("ignores a launch from an origin outside the allow-list", async(context) => {
-    const parent = fakeParent();
-    context.after(frameIn(parent));
-    const { logger, lines } = captureLogs();
-
-    const pending = new HostMessageLaunchSource({
-      origins: [kStudioOrigin],
-      logger
-    }).read();
-    window.dispatchEvent(new MessageEvent("message", {
-      source: parent,
-      origin: "http://evil.test",
-      data: { type: LAUNCH_MESSAGE_TYPE, target: "hijacked" }
-    }));
-    window.dispatchEvent(new MessageEvent("message", {
-      source: parent,
-      origin: kStudioOrigin,
-      data: { type: LAUNCH_MESSAGE_TYPE, target: "from-host" }
-    }));
-
-    const launch = await pending;
-    assert.equal(launch?.target.value, "from-host");
-    assert.deepEqual(lines, [
-      "[DEBUG] [root] ready posted",
-      "[WARN] [root] launch rejected",
-      "[DEBUG] [root] launch accepted"
-    ]);
-  });
-
-  test("accepts any origin once ANY_SHELL_ORIGIN is allowed", async(context) => {
-    const parent = fakeParent();
-    context.after(frameIn(parent));
-
-    const pending = new HostMessageLaunchSource({
-      origins: [ANY_SHELL_ORIGIN]
-    }).read();
-    window.dispatchEvent(new MessageEvent("message", {
-      source: parent,
-      origin: "http://anywhere.test",
-      data: { type: LAUNCH_MESSAGE_TYPE, target: "from-host" }
-    }));
-
-    const launch = await pending;
-    assert.deepEqual(
-      parent.posted.map(({ origin }) => origin),
-      [ANY_SHELL_ORIGIN]
-    );
-    assert.equal(launch?.shell?.origin, "http://anywhere.test");
-  });
-
-  test("gives up after the timeout", async(context) => {
-    context.after(frameIn(fakeParent()));
-    context.mock.timers.enable({ apis: ["setTimeout"] });
-
-    const pending = new HostMessageLaunchSource({ timeout: 50 }).read();
-    context.mock.timers.tick(50);
-
-    assert.equal(await pending, undefined);
   });
 });

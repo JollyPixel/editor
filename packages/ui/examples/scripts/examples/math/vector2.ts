@@ -4,7 +4,7 @@ import { renderStateMatrix } from "../../stateMatrix.ts";
 import { Vector2 } from "../../../../src/math/Vector2.ts";
 import {
   AXIS_STYLE_OPTIONS,
-  axisStyleOf,
+  pickAxisStyle,
   type AxisStyleOptionKey
 } from "./axisStyle.ts";
 
@@ -36,15 +36,11 @@ export const VECTOR2_EXAMPLE: GalleryExample<"xz" | AxisStyleOptionKey> = {
     return renderStateMatrix<Vector2>(host, {
       liveInput: true,
       create() {
-        /*
-         * Authored as markup, the path a Lit template takes: the pair arrives
-         * as an attribute after the constructor, before the value.
-         */
         const holder = document.createElement("div");
         holder.innerHTML = plane.markup;
 
         const field = holder.querySelector("jolly-vector2")!;
-        field.axisStyle = axisStyleOf(options);
+        field.axisStyle = pickAxisStyle(options);
         field.value = { ...plane.initial };
         field.default = { ...plane.initial };
 

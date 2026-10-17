@@ -18,9 +18,6 @@ export interface AreaBoxEdgesOptions {
   opacity: number;
 }
 
-/**
- * Twelve fat-line segments tracing the area
- */
 export class AreaBoxEdges extends LineSegments2 {
   declare geometry: BoxEdgesGeometry;
 
@@ -98,14 +95,14 @@ export class AreaBoxEdges extends LineSegments2 {
     );
 
     this.material.opacity = opacity;
-    this.#setTransparent(opacity < 1);
+    this.#applyTransparency(opacity < 1);
     this.material.color.copy(this.#color).lerp(
       kTintTarget,
       this.#tint * kTintRatio
     );
   }
 
-  #setTransparent(
+  #applyTransparency(
     transparent: boolean
   ): void {
     if (this.material.transparent === transparent) {

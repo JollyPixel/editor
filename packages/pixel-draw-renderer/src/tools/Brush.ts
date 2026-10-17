@@ -162,7 +162,7 @@ export class Brush {
     this.colorOutline = highlight.colorOutline ?? "#000";
   }
 
-  colorFor(
+  paintColor(
     source: BrushPaintSource
   ): RGBA8 {
     return this[source].asRGBA();

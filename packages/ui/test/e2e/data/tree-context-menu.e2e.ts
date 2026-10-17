@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { boxOf } from "@jolly-pixel/e2e";
+import { measureBox } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
@@ -8,7 +8,7 @@ import {
 } from "../fixtures.ts";
 import {
   TREE_SELECTOR,
-  rowOf
+  findRow
 } from "../support/tree.ts";
 
 test.describe("Tree context requests", () => {
@@ -17,8 +17,8 @@ test.describe("Tree context requests", () => {
   });
 
   test("a right-click selects the row and opens its menu at the pointer", async({ page }) => {
-    const crate = rowOf(page, "crate");
-    const box = await boxOf(crate);
+    const crate = findRow(page, "crate");
+    const box = await measureBox(crate);
     const pointer = {
       x: box.x + 30,
       y: box.y + 4
@@ -35,8 +35,8 @@ test.describe("Tree context requests", () => {
   });
 
   test("a right-click inside a multi-selection keeps it", async({ page }) => {
-    const crate = rowOf(page, "crate");
-    const barrel = rowOf(page, "barrel");
+    const crate = findRow(page, "crate");
+    const barrel = findRow(page, "barrel");
     await crate.click();
     await barrel.click({ modifiers: ["Control"] });
     await expect(crate).toHaveAttribute("aria-selected", "true");
@@ -48,7 +48,7 @@ test.describe("Tree context requests", () => {
   });
 
   test("Rename from the menu keeps the field focused and commits", async({ page }) => {
-    const camera = rowOf(page, "camera");
+    const camera = findRow(page, "camera");
     await camera.click({ button: "right" });
     await page.getByRole("menuitem", { name: "Rename" }).click();
 
@@ -61,9 +61,9 @@ test.describe("Tree context requests", () => {
   });
 
   test("the browser's keyboard context menu (Shift+F10) opens under the focused row", async({ page }) => {
-    const barrel = rowOf(page, "barrel");
+    const barrel = findRow(page, "barrel");
     await barrel.click();
-    const box = await boxOf(barrel);
+    const box = await measureBox(barrel);
 
     await page.keyboard.press("Shift+F10");
 
@@ -81,9 +81,9 @@ test.describe("Tree context requests", () => {
         }
       });
     });
-    const crate = rowOf(page, "crate");
+    const crate = findRow(page, "crate");
     await crate.click();
-    const rows = await boxOf(page.locator(`${TREE_SELECTOR} .rows`));
+    const rows = await measureBox(page.locator(`${TREE_SELECTOR} .rows`));
 
     await page.mouse.click(rows.x + 20, rows.y + rows.height - 5, { button: "right" });
 
@@ -93,7 +93,7 @@ test.describe("Tree context requests", () => {
   });
 
   test("a right-click in the rename field leaves the row menu closed", async({ page }) => {
-    const camera = rowOf(page, "camera");
+    const camera = findRow(page, "camera");
     await camera.dblclick();
     const field = camera.locator(".rename");
     await expect(field).toBeFocused();

@@ -36,7 +36,7 @@ export class MeshContour {
     const position = geometry.getAttribute("position");
     const index = geometry.getIndex();
     const welded = new Map<string, number>();
-    const vertexOf = (source: number): number => {
+    const weldVertex = (source: number): number => {
       const point = new THREE.Vector3().fromBufferAttribute(position, source);
       const key = [point.x, point.y, point.z]
         .map((value) => Math.round(value * kWeldPrecision))
@@ -53,7 +53,7 @@ export class MeshContour {
     const edgeByKey = new Map<string, ContourEdge>();
     const count = index?.count ?? position.count;
     for (let corner = 0; corner + 2 < count; corner += 3) {
-      const triangle = [0, 1, 2].map((offset) => vertexOf(index?.getX(corner + offset) ?? corner + offset));
+      const triangle = [0, 1, 2].map((offset) => weldVertex(index?.getX(corner + offset) ?? corner + offset));
       const [a, b, c] = triangle.map((vertex) => this.#vertices[vertex]);
       const normal = new THREE.Vector3().subVectors(b, a).cross(new THREE.Vector3().subVectors(c, a));
       if (normal.lengthSq() <= kDegenerateArea) {

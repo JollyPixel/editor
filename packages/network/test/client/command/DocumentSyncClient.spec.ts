@@ -50,8 +50,8 @@ class ValueDocument extends CommandDocument<SetCommand, TestSnapshot, number> {
         loads.push(value);
         state.value = value;
       },
-      imageOf: () => state.value,
-      inverseOf: () => [{ action: "set", value: state.value }],
+      captureImage: () => state.value,
+      invert: () => [{ action: "set", value: state.value }],
       restored: (images) => {
         return { value: images[0] };
       }

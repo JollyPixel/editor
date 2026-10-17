@@ -79,10 +79,10 @@ Colors for the inner and outer strokes of the brush cursor.
 
 ## Methods
 
-### `colorFor(source)`
+### `paintColor(source)`
 
 ```ts
-colorFor(source: BrushPaintSource): RGBA
+paintColor(source: BrushPaintSource): RGBA
 ```
 
 Returns the color a stroke takes for the given source, where `BrushPaintSource` is `"primary" | "secondary" | "erase"`. Every drawing tool resolves its color through it.

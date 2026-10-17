@@ -165,7 +165,7 @@ export class PeerSelectionOverlays {
     const existing = this.#overlays.get(objectId);
     const isLocalSelected = objectId === this.#selection.selected;
     const culled = !isLocalSelected && this.#visibility !== null && !this.#visibility.isVisible(objectId);
-    const primaryPeerId = (isLocalSelected || culled) ? null : this.#registry.primarySelectorOf(objectId);
+    const primaryPeerId = (isLocalSelected || culled) ? null : this.#registry.primarySelector(objectId);
 
     if (primaryPeerId === null) {
       if (existing) {
@@ -176,7 +176,7 @@ export class PeerSelectionOverlays {
       return;
     }
 
-    const color = this.#registry.colorOf(primaryPeerId);
+    const color = this.#registry.peerColor(primaryPeerId);
     if (existing) {
       existing.color = color;
       existing.xray = this.#selection.appearance.xray;
@@ -188,7 +188,7 @@ export class PeerSelectionOverlays {
       return;
     }
 
-    const target = this.#selection.targetFor(objectId);
+    const target = this.#selection.findTarget(objectId);
     if (!target) {
       return;
     }
@@ -196,7 +196,7 @@ export class PeerSelectionOverlays {
     const { linewidth } = this.#selection.appearance.outline;
     const { fillOpacity } = this.#selection.appearance.bounds;
 
-    const rawTechnique = this.#selection.techniqueFor(objectId);
+    const rawTechnique = this.#selection.resolveTechnique(objectId);
     const technique = isScenePipelineTechnique(rawTechnique) ? "outline" : rawTechnique;
 
     const overlay = this.#selection.overlayRegistry.create(target, {

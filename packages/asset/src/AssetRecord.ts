@@ -27,9 +27,6 @@ export interface AssetRecordOptions {
   readonly revision?: string;
 }
 
-/**
- * Describes the current source and revision assigned to a stable asset ID.
- */
 export class AssetRecord {
   readonly id: AssetId;
   readonly kind: string;

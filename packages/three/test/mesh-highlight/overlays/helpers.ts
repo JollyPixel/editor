@@ -6,7 +6,7 @@ import type { HighlightSilhouette } from "#src/index.ts";
 
 export type SilhouettePass = THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
 
-export function backPassOf(
+export function findBackPass(
   overlay: HighlightSilhouette
 ): SilhouettePass | undefined {
   return overlay.children.find(
@@ -25,7 +25,7 @@ export function colorAt(
   return new THREE.Color(attribute.getX(index), attribute.getY(index), attribute.getZ(index));
 }
 
-export function lastColorOf(
+export function readLastColor(
   geometry: THREE.BufferGeometry
 ): THREE.Color {
   return colorAt(geometry, geometry.getAttribute("position").count - 1);

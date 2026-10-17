@@ -43,9 +43,6 @@ export interface GalleryEntry {
    */
   id: GalleryExampleId;
   title: string;
-  /**
-   * Imports the example's own chunk, so a page only loads the example it shows.
-   */
   load(): Promise<GalleryExample>;
 }
 
@@ -53,11 +50,6 @@ export interface GalleryExample<
   TKey extends string = string
 > {
   options?: readonly GalleryOption<TKey>[];
-  /**
-   * Returns a teardown only for state living outside `host`: timers, subscriptions, listeners on
-   * `window` or `document`, and panes mounting themselves on `document.body`. The gallery clears
-   * `host` on its own, so appended elements need no teardown.
-   */
   render(
     host: HTMLElement,
     options: GalleryOptionValues<TKey>

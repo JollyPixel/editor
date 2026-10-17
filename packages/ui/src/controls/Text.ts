@@ -15,9 +15,6 @@ import { MIXED_PLACEHOLDER } from "../field/mixed.ts";
 import { isInputElement } from "../dom.ts";
 import { PointerFocusController } from "../field/PointerFocusController.ts";
 
-/**
- * Text field with streamed input and committed changes.
- */
 @customElement("jolly-text")
 export class Text extends JollyField<string> {
   @property({ type: String })
@@ -53,9 +50,6 @@ export class Text extends JollyField<string> {
     `;
   }
 
-  /**
-   * Mixed text renders as empty input.
-   */
   get #displayed(): string {
     return this.concreteValue ?? "";
   }
@@ -69,7 +63,7 @@ export class Text extends JollyField<string> {
 
     const { value } = event.target;
 
-    this.draftController.setDraft(value);
+    this.draftController.updateDraft(value);
     this.emitInput(value);
   }
 
@@ -82,7 +76,6 @@ export class Text extends JollyField<string> {
       this.#commit();
     }
     else if (event.key === "Escape") {
-      // Prevent outer dialogs from closing a canceled edit.
       event.stopPropagation();
       this.draftController.clear();
     }

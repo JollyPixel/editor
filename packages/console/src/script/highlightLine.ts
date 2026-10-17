@@ -31,7 +31,7 @@ export function highlightLine(
   errors: Iterable<ScriptRange> = []
 ): HighlightPiece[] {
   const { text } = line;
-  const tokens = tokensOf(line, valueType);
+  const tokens = highlightTokens(line, valueType);
   const errorRanges = [...errors];
   const cuts = new Set([0, text.length]);
   for (const range of [...tokens, ...errorRanges]) {
@@ -65,7 +65,7 @@ export function highlightLine(
   return pieces;
 }
 
-function tokensOf(
+function highlightTokens(
   line: ScriptLine,
   valueType: ConsoleValueType | undefined
 ): Token[] {

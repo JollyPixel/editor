@@ -33,27 +33,24 @@ type AssetStoreEntry<TValue> =
   | ReadyAssetStoreEntry<TValue>
   | FailedAssetStoreEntry<TValue>;
 
-/**
- * Owns loaded values and in-flight operations for one runtime scope.
- */
 export class AssetStore {
   #entries = new Map<
     string,
     AssetStoreEntry<unknown>
   >();
 
-  statusOf(
+  loadStatus(
     reference: AssetReference<unknown>
   ): AssetStatus {
-    return this.#entryOf(
+    return this.#findEntry(
       reference
     )?.status ?? "unloaded";
   }
 
-  errorOf(
+  loadError(
     reference: AssetReference<unknown>
   ): unknown | undefined {
-    const entry = this.#entryOf(reference);
+    const entry = this.#findEntry(reference);
 
     return entry?.status === "failed" ?
       entry.error :
@@ -63,7 +60,7 @@ export class AssetStore {
   get<TValue>(
     reference: AssetReference<TValue>
   ): TValue {
-    const entry = this.#entryOf(reference);
+    const entry = this.#findEntry(reference);
     if (entry?.status !== "ready") {
       throw new AssetNotReadyError(
         reference.id,
@@ -78,7 +75,7 @@ export class AssetStore {
     reference: AssetReference<TValue>,
     load: () => Promise<TValue>
   ): Promise<TValue> {
-    const entry = this.#entryOf(reference);
+    const entry = this.#findEntry(reference);
     if (entry?.status === "ready") {
       return entry.value;
     }
@@ -139,7 +136,7 @@ export class AssetStore {
     }
   }
 
-  #entryOf<TValue>(
+  #findEntry<TValue>(
     reference: AssetReference<TValue>
   ): AssetStoreEntry<TValue> | undefined {
     const entry = this.#entries.get(reference.id.value);
@@ -150,7 +147,6 @@ export class AssetStore {
       throw new AssetTypeMismatchError(reference.kind);
     }
 
-    // Token identity recovers TValue after heterogeneous map storage.
     return entry as AssetStoreEntry<TValue>;
   }
 }

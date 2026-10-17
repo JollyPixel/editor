@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { boxOf } from "@jolly-pixel/e2e";
+import { measureBox } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
@@ -11,7 +11,7 @@ import {
   fieldChanges,
   recordFieldChanges
 } from "../support/events.ts";
-import { styleOf } from "../support/styles.ts";
+import { readStyle } from "../support/styles.ts";
 
 test.describe("toggle", () => {
   test.use({
@@ -25,9 +25,9 @@ test.describe("toggle", () => {
   test("the label sits inside the box and names the switch", async({ page }) => {
     const field = row(page, "jolly-toggle", "default");
     const [box, text, knob] = await Promise.all([
-      boxOf(field.locator(".toggle")),
-      boxOf(field.locator(".text")),
-      boxOf(field.locator(".switch"))
+      measureBox(field.locator(".toggle")),
+      measureBox(field.locator(".text")),
+      measureBox(field.locator(".switch"))
     ]);
 
     await expect(field).toHaveAttribute("unlabeled", "");
@@ -59,7 +59,7 @@ test.describe("toggle", () => {
     function knobLeft(
       state: string
     ): Promise<string> {
-      return styleOf(
+      return readStyle(
         row(page, "jolly-toggle", state).locator(".switch"),
         "left",
         "::before"
@@ -77,24 +77,24 @@ test.describe("toggle", () => {
     const valid = row(page, "jolly-toggle", "default").locator(".toggle");
     const invalid = row(page, "jolly-toggle", "error").locator(".toggle");
 
-    const validRest = await styleOf(valid, "background-color");
+    const validRest = await readStyle(valid, "background-color");
     await valid.hover();
-    await expect.poll(() => styleOf(valid, "background-color"))
+    await expect.poll(() => readStyle(valid, "background-color"))
       .not.toBe(validRest);
-    const validHover = await styleOf(valid, "background-color");
+    const validHover = await readStyle(valid, "background-color");
 
-    const invalidRest = await styleOf(invalid, "background-color");
+    const invalidRest = await readStyle(invalid, "background-color");
     await invalid.hover();
-    await expect.poll(() => styleOf(invalid, "background-color"))
+    await expect.poll(() => readStyle(invalid, "background-color"))
       .not.toBe(invalidRest);
-    expect(await styleOf(invalid, "background-color")).not.toBe(validHover);
+    expect(await readStyle(invalid, "background-color")).not.toBe(validHover);
   });
 
   test("the revert gutter sits before the box, not inside it", async({ page }) => {
     const field = row(page, "jolly-toggle", "modified");
     const [revert, box] = await Promise.all([
-      boxOf(field.locator(".revert")),
-      boxOf(field.locator(".toggle"))
+      measureBox(field.locator(".revert")),
+      measureBox(field.locator(".toggle"))
     ]);
 
     await expect(field.locator(".toggle .revert")).toHaveCount(0);
@@ -106,7 +106,7 @@ test.describe("toggle", () => {
     const colored = row(page, "jolly-toggle", "colored+modified")
       .locator(".switch");
 
-    expect(await styleOf(neutral, "background-color"))
-      .not.toBe(await styleOf(colored, "background-color"));
+    expect(await readStyle(neutral, "background-color"))
+      .not.toBe(await readStyle(colored, "background-color"));
   });
 });

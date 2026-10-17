@@ -30,11 +30,6 @@ export interface VoxelTransparencyPassOptions {
   samples?: number;
 }
 
-/**
- * Weighted blended transparency for a complete scene and camera.
- * Two transparent draws avoid requiring indexed MRT blending on WebGL.
- * Colours are approximate; accumulated coverage is order independent.
- */
 export class VoxelTransparencyPassNode extends THREE.PassNode {
   #scene: THREE.Scene;
   #accumulation: THREE.RenderTarget;

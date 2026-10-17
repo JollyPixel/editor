@@ -23,9 +23,6 @@ export interface DiscoverOptions {
   filters?: string[];
 }
 
-/**
- * Lists sorted benchmark paths relative to `cwd`, using forward slashes.
- */
 export function discover(
   options: DiscoverOptions = {}
 ): string[] {
@@ -51,7 +48,6 @@ export async function loadSuite(
   cwd = process.cwd()
 ): Promise<BenchmarkSuite> {
   const href = pathToFileURL(path.resolve(cwd, file)).href;
-  // Keep the dynamic import unknown until isSuite() validates it.
   const { default: suite }: { default: unknown; } = await import(href);
 
   if (!isSuite(suite)) {

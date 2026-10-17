@@ -11,7 +11,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { LogQueue } from "../../src/feedback/LogQueue.ts";
 
-function contentsOf(
+function readContents(
   queue: LogQueue
 ): string[] {
   return queue.entries.map((entry) => String(entry.content));
@@ -31,7 +31,7 @@ describe("LogQueue", () => {
     queue.push("first");
     queue.push("second");
 
-    assert.deepStrictEqual(contentsOf(queue), ["second", "first"]);
+    assert.deepStrictEqual(readContents(queue), ["second", "first"]);
   });
 
   test("stamps entries with the current time", () => {
@@ -53,7 +53,7 @@ describe("LogQueue", () => {
     queue.push("second");
     queue.push("third");
 
-    assert.deepStrictEqual(contentsOf(queue), ["third", "second"]);
+    assert.deepStrictEqual(readContents(queue), ["third", "second"]);
   });
 
   test("expires an entry after its own grace period", () => {
@@ -66,10 +66,10 @@ describe("LogQueue", () => {
     queue.push("second");
 
     mock.timers.tick(600);
-    assert.deepStrictEqual(contentsOf(queue), ["second"]);
+    assert.deepStrictEqual(readContents(queue), ["second"]);
 
     mock.timers.tick(400);
-    assert.deepStrictEqual(contentsOf(queue), []);
+    assert.deepStrictEqual(readContents(queue), []);
   });
 
   test("dismisses a known entry once", () => {
@@ -84,7 +84,7 @@ describe("LogQueue", () => {
     queue.dismiss(id);
     queue.dismiss("log-unknown");
 
-    assert.deepStrictEqual(contentsOf(queue), ["second"]);
+    assert.deepStrictEqual(readContents(queue), ["second"]);
     assert.deepStrictEqual(seen, [1]);
   });
 
@@ -109,7 +109,7 @@ describe("LogQueue", () => {
 
     queue.clear();
 
-    assert.deepStrictEqual(contentsOf(queue), []);
+    assert.deepStrictEqual(readContents(queue), []);
   });
 
   test("clears nothing when already empty", () => {
@@ -139,6 +139,6 @@ describe("LogQueue", () => {
 
     queue.push("first");
 
-    assert.deepStrictEqual(contentsOf(queue), []);
+    assert.deepStrictEqual(readContents(queue), []);
   });
 });

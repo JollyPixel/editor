@@ -63,10 +63,6 @@ export interface ChunkMeshStoreOptions {
   receiveShadow?: boolean;
 }
 
-/**
- * Owns built chunk entries, inspector registrations, and collider registrations.
- * Materials belong to `ChunkMaterialCache` and are not disposed here.
- */
 export class ChunkMeshStore {
   #entries = new Map<string, ChunkMeshEntry>();
   #placements = new Map<VoxelChunk, string>();

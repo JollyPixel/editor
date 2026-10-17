@@ -25,7 +25,6 @@ export class TouchpadCanvasAdapter extends mocks.CanvasAdapter {
       changedTouches: touches,
       target: this,
       preventDefault: () => {
-        // DO NOTHING
       }
     } as unknown as Event;
 

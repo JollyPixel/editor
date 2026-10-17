@@ -38,7 +38,7 @@ export class RoomGrants<
     this.#table = table;
     this.#current = room.clientId === null ?
       table.full :
-      table.grantsFor(room);
+      table.resolveGrants(room);
     room.on("sync", this.#refresh);
     room.on("denied", this.#onDenied);
   }
@@ -53,7 +53,7 @@ export class RoomGrants<
   }
 
   readonly #refresh = (): void => {
-    const next = this.#table.grantsFor(this.#room);
+    const next = this.#table.resolveGrants(this.#room);
     if (!next.equals(this.#current)) {
       this.#current = next;
       this.emit("change", next);

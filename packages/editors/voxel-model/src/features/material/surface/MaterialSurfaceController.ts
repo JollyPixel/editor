@@ -70,7 +70,7 @@ export class MaterialSurfaceController {
 
     return {
       ...material,
-      surface: previews.surfaceOf(material.id, material.surface)
+      surface: previews.previewSurface(material.id, material.surface)
     };
   }
 

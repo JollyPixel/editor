@@ -93,7 +93,7 @@ describe("ContextMenu.placeSubmenu", () => {
 });
 
 describe("ContextMenu.submenuSide", () => {
-  function sideFor(
+  function pickSubmenuSide(
     left: number,
     prefer: "left" | "right",
     viewportWidth = kViewport.width
@@ -113,19 +113,19 @@ describe("ContextMenu.submenuSide", () => {
   }
 
   test("keeps the right side while a full-width submenu fits there", () => {
-    assert.equal(sideFor(320, "right"), "right");
+    assert.equal(pickSubmenuSide(320, "right"), "right");
   });
 
   test("turns left once the right side cannot hold a full-width submenu", () => {
-    assert.equal(sideFor(321, "right"), "left");
+    assert.equal(pickSubmenuSide(321, "right"), "left");
   });
 
   test("keeps cascading left while a full-width submenu fits there", () => {
-    assert.equal(sideFor(320, "left"), "left");
+    assert.equal(pickSubmenuSide(320, "left"), "left");
   });
 
   test("keeps the preferred side when neither side fits", () => {
-    assert.equal(sideFor(200, "right", 600), "right");
-    assert.equal(sideFor(200, "left", 600), "left");
+    assert.equal(pickSubmenuSide(200, "right", 600), "right");
+    assert.equal(pickSubmenuSide(200, "left", 600), "left");
   });
 });

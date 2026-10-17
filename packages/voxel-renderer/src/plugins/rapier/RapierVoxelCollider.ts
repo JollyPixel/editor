@@ -23,10 +23,6 @@ import {
   rotateVertex
 } from "../../document/geometry/rotation.ts";
 
-/**
- * Structural Rapier3D subset that keeps the WASM module consumer-owned.
- */
-
 export interface RapierColliderDesc {
   setTranslation(
     x: number,
@@ -108,11 +104,6 @@ interface ChunkSolids {
   indices: number[];
 }
 
-/**
- * Builds one fixed body per chunk: full cubes greedily merged into cuboids,
- * partial boxes as their own cuboids, and trimesh-hinted blocks as a
- * triangle mesh of their shape faces.
- */
 export class RapierVoxelCollider implements VoxelCollider {
   #rapier: RapierAPI;
   #world: RapierWorld;

@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import {
-  rectOf,
+  boundingRect,
   sameRect
 } from "../uv/geometry/geometry.ts";
 import type { UVGeometry } from "../uv/geometry/types.ts";
@@ -26,7 +26,7 @@ export class IslandDraft {
     this.#isRemainder = geometry === null;
     this.#rect = geometry === null || "shape" in geometry ?
       null :
-      rectOf(geometry);
+      boundingRect(geometry);
   }
 
   addFace(

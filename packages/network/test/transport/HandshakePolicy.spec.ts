@@ -19,15 +19,15 @@ describe("HandshakePolicy — hosts", () => {
       "localhost:5173",
       "studio.localhost"
     ]) {
-      assert.strictEqual(policy.refusalFor({ host }), null, host);
+      assert.strictEqual(policy.checkHandshake({ host }), null, host);
     }
   });
 
   test("refuses a domain name it was not given, and a missing Host header", () => {
     const policy = new HandshakePolicy();
 
-    assert.strictEqual(policy.refusalFor({ host: "attacker.example:5173" }), "host");
-    assert.strictEqual(policy.refusalFor({}), "host");
+    assert.strictEqual(policy.checkHandshake({ host: "attacker.example:5173" }), "host");
+    assert.strictEqual(policy.checkHandshake({}), "host");
   });
 
   test("accepts listed hosts, and the subdomains of a host starting with \".\"", () => {
@@ -35,30 +35,30 @@ describe("HandshakePolicy — hosts", () => {
       allowedHosts: ["studio.example", ".jolly.example"]
     });
 
-    assert.strictEqual(policy.refusalFor({ host: "STUDIO.example" }), null);
-    assert.strictEqual(policy.refusalFor({ host: "jolly.example" }), null);
-    assert.strictEqual(policy.refusalFor({ host: "a.jolly.example:443" }), null);
-    assert.strictEqual(policy.refusalFor({ host: "other.studio.example" }), "host");
-    assert.strictEqual(policy.refusalFor({ host: "notjolly.example" }), "host");
+    assert.strictEqual(policy.checkHandshake({ host: "STUDIO.example" }), null);
+    assert.strictEqual(policy.checkHandshake({ host: "jolly.example" }), null);
+    assert.strictEqual(policy.checkHandshake({ host: "a.jolly.example:443" }), null);
+    assert.strictEqual(policy.checkHandshake({ host: "other.studio.example" }), "host");
+    assert.strictEqual(policy.checkHandshake({ host: "notjolly.example" }), "host");
   });
 
   test("accepts any host when allowedHosts is true", () => {
     const policy = new HandshakePolicy({ allowedHosts: true });
 
-    assert.strictEqual(policy.refusalFor({ host: "attacker.example" }), null);
+    assert.strictEqual(policy.checkHandshake({ host: "attacker.example" }), null);
   });
 });
 
 describe("HandshakePolicy — origins", () => {
   test("accepts an upgrade without an Origin header, as non-browser clients send", () => {
-    assert.strictEqual(new HandshakePolicy().refusalFor({ host: "localhost:5173" }), null);
+    assert.strictEqual(new HandshakePolicy().checkHandshake({ host: "localhost:5173" }), null);
   });
 
   test("accepts the request's own host as origin, whatever the scheme", () => {
     const policy = new HandshakePolicy();
 
     for (const origin of ["http://localhost:5173", "https://localhost:5173"]) {
-      assert.strictEqual(policy.refusalFor({ host: "localhost:5173", origin }), null, origin);
+      assert.strictEqual(policy.checkHandshake({ host: "localhost:5173", origin }), null, origin);
     }
   });
 
@@ -66,7 +66,7 @@ describe("HandshakePolicy — origins", () => {
     const policy = new HandshakePolicy();
 
     for (const origin of ["https://attacker.example", "http://localhost:3000", "null"]) {
-      assert.strictEqual(policy.refusalFor({ host: "localhost:5173", origin }), "origin", origin);
+      assert.strictEqual(policy.checkHandshake({ host: "localhost:5173", origin }), "origin", origin);
     }
   });
 
@@ -77,15 +77,15 @@ describe("HandshakePolicy — origins", () => {
     };
 
     assert.strictEqual(
-      new HandshakePolicy({ allowedOrigins: ["http://localhost:3000"] }).refusalFor(headers),
+      new HandshakePolicy({ allowedOrigins: ["http://localhost:3000"] }).checkHandshake(headers),
       null
     );
-    assert.strictEqual(new HandshakePolicy({ allowedOrigins: true }).refusalFor(headers), null);
+    assert.strictEqual(new HandshakePolicy({ allowedOrigins: true }).checkHandshake(headers), null);
   });
 
   test("checks the host before the origin", () => {
     assert.strictEqual(
-      new HandshakePolicy({ allowedOrigins: true }).refusalFor({
+      new HandshakePolicy({ allowedOrigins: true }).checkHandshake({
         host: "attacker.example",
         origin: "http://attacker.example"
       }),

@@ -213,7 +213,7 @@ export class NormalMap extends Emitter<NormalMapEvent> {
 
     const areas = new Map<number, RectArea>();
     for (const regionId of this.#dirtyRegions) {
-      for (const island of islands.islandsOf(regionId)) {
+      for (const island of islands.islandsInRegion(regionId)) {
         areas.set(island.index, RectArea.from(island.bounds));
       }
     }

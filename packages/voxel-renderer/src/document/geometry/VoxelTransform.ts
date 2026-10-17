@@ -30,9 +30,6 @@ export const VoxelRotation = {
   CW90: 3
 } as const;
 
-/**
- * Quarter turns around Y: 0°, 90° CCW, 180°, 270° CCW.
- */
 export type VoxelRotationStep = 0 | 1 | 2 | 3;
 
 export interface VoxelTransformOptions {
@@ -58,17 +55,9 @@ export interface VoxelTransformOptions {
   flipY?: boolean;
 }
 
-/**
- * Immutable Y-rotation and mirror flags. Only 32 values exist, so instances
- * are interned and `fromPacked()` never allocates on a hot path.
- */
 export class VoxelTransform {
   static readonly Identity: VoxelTransform = VoxelTransform.fromPacked(0);
 
-  /**
-   * Ignores bits outside `VOXEL_TRANSFORM_MASK`, so a whole transform byte
-   * can be passed in.
-   */
   static fromPacked(
     packed: number
   ): VoxelTransform {
@@ -102,9 +91,6 @@ export class VoxelTransform {
   readonly flipZ: boolean;
   readonly flipY: boolean;
 
-  /**
-   * Rotation in bits 0-1, flipX in bit 2, flipZ in bit 3, flipY in bit 4.
-   */
   readonly packed: number;
 
   constructor(
@@ -132,9 +118,6 @@ export class VoxelTransform {
     return this.packed === other.packed;
   }
 
-  /**
-   * The transform that applies this one, then `outer`.
-   */
   followedBy(
     outer: VoxelTransform
   ): VoxelTransform {
@@ -152,10 +135,6 @@ export class VoxelTransform {
     );
   }
 
-  /**
-   * Moves a cell offset, measured from the cell this transform turns around,
-   * the way the transform moves a block inside its cell.
-   */
   transformOffset(
     offset: Vector3Like
   ): Vector3Like {

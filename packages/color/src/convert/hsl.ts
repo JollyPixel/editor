@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import {
-  hueOf,
+  computeHue,
   hueSector,
   sectorChannels
 } from "./hue.ts";
@@ -27,8 +27,8 @@ export function rgbToHsl(
   const lightness = (max + min) / 2;
 
   return {
-    h: hueOf(r, g, b, max, chroma),
-    s: saturationOf(chroma, lightness),
+    h: computeHue(r, g, b, max, chroma),
+    s: saturationFromChroma(chroma, lightness),
     l: lightness,
     a: clampUnit(color.a)
   };
@@ -73,7 +73,7 @@ export function hsvToHsl(
 
   return {
     h: wrapHue(color.h),
-    s: clampUnit(hslSaturationOf(s, v, l)),
+    s: clampUnit(toHslSaturation(s, v, l)),
     l,
     a: clampUnit(color.a)
   };
@@ -94,7 +94,7 @@ export function hslToHsv(
   };
 }
 
-function saturationOf(
+function saturationFromChroma(
   chroma: number,
   lightness: number
 ): number {
@@ -105,7 +105,7 @@ function saturationOf(
   return chroma / (1 - Math.abs((2 * lightness) - 1));
 }
 
-function hslSaturationOf(
+function toHslSaturation(
   s: number,
   v: number,
   l: number

@@ -68,14 +68,12 @@ describe("pointer drag", () => {
     });
 
     installPointerCaptureMock(crh.handleElt);
-    // startDrag = (100, 80), initial size = 200x150
     firePointerEvent(crh.handleElt, "pointerdown", {
       button: 0,
       pointerId: 1,
       clientX: 100,
       clientY: 80
     });
-    // delta = (50, 40) -> width 250, height 190
     firePointerEvent(crh.handleElt, "pointermove", {
       clientX: 150,
       clientY: 120
@@ -100,7 +98,6 @@ describe("pointer drag", () => {
       clientX: 100,
       clientY: 80
     });
-    // moving toward the origin grows a right/bottom-anchored box
     firePointerEvent(crh.handleElt, "pointermove", {
       clientX: 50,
       clientY: 30

@@ -9,7 +9,7 @@ import { ANIMATION_CHANNELS } from "../../network/AnimationCommand.schema.ts";
 import type { AnimationSetReader } from "../AnimationSet.ts";
 import { InvalidAnimationSetError } from "../errors/InvalidAnimationSetError.ts";
 
-export function inverseOf(
+export function invert(
   set: AnimationSetReader,
   command: AnimationCommand
 ): AnimationCommand[] {
@@ -24,7 +24,7 @@ export function inverseOf(
       return [{
         action: "clip-added",
         clip: existingClip(set, command.id),
-        ...withBefore(set.nextClipOf(command.id))
+        ...withBefore(set.nextClipAfter(command.id))
       }];
 
     case "clip-changed":
@@ -38,7 +38,7 @@ export function inverseOf(
       return [{
         action: "clip-moved",
         id: command.id,
-        ...withBefore(set.nextClipOf(command.id))
+        ...withBefore(set.nextClipAfter(command.id))
       }];
 
     case "key-set": {

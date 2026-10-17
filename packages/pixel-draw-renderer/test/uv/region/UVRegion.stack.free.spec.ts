@@ -32,10 +32,10 @@ describe("UVRegion", () => {
 
       const restored = ramp.stack().free();
 
-      assert.deepStrictEqual(restored.slotsOf().map(({ slot }) => slot), [
+      assert.deepStrictEqual(restored.listSlots().map(({ slot }) => slot), [
         "back", "left", "right", "top", "bottom"
       ]);
-      assert.deepStrictEqual(restored.geometryFor("left"), {
+      assert.deepStrictEqual(restored.slotGeometry("left"), {
         shape: "triangle", corner: "top-right", rect: REGION_RECT
       });
     });
@@ -63,11 +63,11 @@ describe("UVRegion", () => {
       const smallLeft = { ...REGION_RECT, width: 1, height: 1 };
       const restored = ramp.stack().free();
 
-      assert.deepStrictEqual(restored.rectFor("left"), smallLeft);
-      assert.deepStrictEqual(restored.geometryFor("left"), {
+      assert.deepStrictEqual(restored.slotRect("left"), smallLeft);
+      assert.deepStrictEqual(restored.slotGeometry("left"), {
         shape: "triangle", corner: "top-right", rect: smallLeft
       });
-      assert.deepStrictEqual(restored.rectFor("back"), REGION_RECT);
+      assert.deepStrictEqual(restored.slotRect("back"), REGION_RECT);
     });
 
     test("resets moved faces onto the shared rectangle", () => {
@@ -92,7 +92,7 @@ describe("UVRegion", () => {
 
       for (const face of DEFAULT_UV_SLOTS) {
         assert.deepStrictEqual(
-          restored.rectFor(face),
+          restored.slotRect(face),
           REGION_RECT,
           `${face} must restart on the region's rect`
         );
@@ -123,7 +123,7 @@ describe("UVRegion", () => {
 
       for (const face of DEFAULT_UV_SLOTS) {
         assert.deepStrictEqual(
-          restored.rectFor(face),
+          restored.slotRect(face),
           moved,
           `${face} must follow the region instead of replaying its old offset`
         );
@@ -147,16 +147,16 @@ describe("UVRegion", () => {
 
       const stacked = region.stack();
       const moved = stacked.movedTo({
-        ...stacked.rectFor("front"),
-        x: stacked.rectFor("front").x + 20,
-        y: stacked.rectFor("front").y + 10
+        ...stacked.slotRect("front"),
+        x: stacked.slotRect("front").x + 20,
+        y: stacked.slotRect("front").y + 10
       });
       const restored = moved.free();
 
-      assert.deepStrictEqual(restored.rectFor("front"), {
+      assert.deepStrictEqual(restored.slotRect("front"), {
         x: 20, y: 10, width: 4, height: 4
       });
-      assert.deepStrictEqual(restored.rectFor("top"), {
+      assert.deepStrictEqual(restored.slotRect("top"), {
         x: 20, y: 10, width: 4, height: 16
       });
     });

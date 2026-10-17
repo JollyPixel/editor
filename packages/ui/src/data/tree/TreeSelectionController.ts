@@ -16,12 +16,9 @@ export interface TreeSelectionOptions<TData> {
   multiple(): boolean;
   requireSelection(): boolean;
   interaction(): TreeInteraction;
-  setInteraction(next: TreeInteraction): void;
+  switchInteraction(next: TreeInteraction): void;
 }
 
-/**
- * Owns click, ctrl/shift, and keyboard row selection for jolly-tree.
- */
 export class TreeSelectionController<TData> {
   #host: EventTarget;
   #options: TreeSelectionOptions<TData>;
@@ -87,7 +84,7 @@ export class TreeSelectionController<TData> {
   #consumeSuppressedClick(): boolean {
     const interaction = this.#options.interaction();
     if (interaction.kind === "idle" && interaction.suppressClick) {
-      this.#options.setInteraction(idleTreeInteraction());
+      this.#options.switchInteraction(idleTreeInteraction());
 
       return true;
     }

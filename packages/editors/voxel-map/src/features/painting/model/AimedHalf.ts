@@ -44,7 +44,7 @@ export class AimedHalf {
     this.kept = { ...kept };
   }
 
-  replacementFor(
+  findReplacement(
     paint: VoxelPaint,
     complements: BlockComplements
   ): VoxelPart | null {

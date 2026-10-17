@@ -26,8 +26,8 @@ Where a block's textured faces sit on its blockset's atlas, in pixels. An unknow
 
 | Member | Description |
 |---|---|
-| `BlockProjection.regionIdOf(localBlockId)` | The UV region id of a block: `block-<localBlockId>`. |
-| `BlockProjection.localBlockIdOf(regionId)` | The local block id a region id names, or `null` when it names no block. |
+| `BlockProjection.formatRegionId(localBlockId)` | The UV region id of a block: `block-<localBlockId>`. |
+| `BlockProjection.parseLocalBlockId(regionId)` | The local block id a region id names, or `null` when it names no block. |
 | `regionId` | The region id of the block, from its id inside its blockset, so a block keeps its region id whatever slot its blockset takes in a world. |
 | `textured` | Whether the shape samples at least one tile. |
 | `isBox` | Whether the shape is a plain cube. |

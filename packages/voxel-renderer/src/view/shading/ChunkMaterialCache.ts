@@ -61,9 +61,6 @@ export interface ChunkMaterialCacheOptions {
   alphaToCoverage?: boolean;
 }
 
-/**
- * Caches shared chunk materials by atlas and surface policy.
- */
 export class ChunkMaterialCache {
   tileAveraging: boolean;
   alphaToCoverage: boolean;

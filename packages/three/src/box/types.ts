@@ -1,14 +1,8 @@
 // Import Internal Dependencies
 import type { Axis } from "../common/axes.ts";
 
-/**
- * `"xz"` excludes vertical interaction; `"xyz"` includes it.
- */
 export type BoxAxisPolicy = "xz" | "xyz";
 
-/**
- * `"none"` hides every resize arrow.
- */
 export type BoxResizePolicy = BoxAxisPolicy | "none";
 
 export type BoxRotatePolicy = "y" | "none";

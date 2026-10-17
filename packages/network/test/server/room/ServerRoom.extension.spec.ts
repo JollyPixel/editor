@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { identityOf } from "../../helpers/server/identity.ts";
+import { createIdentity } from "../../helpers/server/identity.ts";
 import {
   createClient,
   withoutSync
@@ -50,19 +50,19 @@ describe("ServerRoom — RoomContext identity", () => {
   test("scopes each context to the member that triggered it", async() => {
     const extension = createExtension();
     const room = createRoom(extension);
-    await room.join({ handle: createClient("A").client, identity: identityOf("A") });
-    await room.join({ handle: createClient("B").client, identity: identityOf("B") });
+    await room.join({ handle: createClient("A").client, identity: createIdentity("A") });
+    await room.join({ handle: createClient("B").client, identity: createIdentity("B") });
 
     await room.message("B", {});
 
-    assert.deepEqual(extension.lastContext.identity, identityOf("B"));
+    assert.deepEqual(extension.lastContext.identity, createIdentity("B"));
   });
 
   test("ignores a leave from a client that is not a member", async() => {
     const extension = createExtension();
     const a = createClient("A");
     const room = createRoom(extension);
-    await room.join({ handle: a.client, identity: identityOf("A") });
+    await room.join({ handle: a.client, identity: createIdentity("A") });
     a.sent.length = 0;
 
     assert.equal(await room.leave("ghost"), false);
@@ -83,10 +83,10 @@ describe("ServerRoom — extension without lifecycle hooks", () => {
     const a = createClient("A");
     const b = createClient("B");
 
-    assert.equal(await room.join({ handle: a.client, identity: identityOf("A") }), true);
+    assert.equal(await room.join({ handle: a.client, identity: createIdentity("A") }), true);
     assert.equal(await room.join({
       handle: b.client,
-      identity: identityOf("B"),
+      identity: createIdentity("B"),
       profile: { username: "bob" }
     }), true);
 
@@ -105,8 +105,8 @@ describe("ServerRoom — extension without lifecycle hooks", () => {
     const a = createClient("A");
     const b = createClient("B");
 
-    await room.join({ handle: a.client, identity: identityOf("A") });
-    await room.join({ handle: b.client, identity: identityOf("B") });
+    await room.join({ handle: a.client, identity: createIdentity("A") });
+    await room.join({ handle: b.client, identity: createIdentity("B") });
     a.sent.length = 0;
 
     await room.leave("B");
@@ -122,7 +122,7 @@ describe("ServerRoom — extension without lifecycle hooks", () => {
     const room = createRoom(new HooklessExtension());
     const a = createClient("A");
 
-    await room.join({ handle: a.client, identity: identityOf("A") });
+    await room.join({ handle: a.client, identity: createIdentity("A") });
     a.sent.length = 0;
 
     await room.message("A", { any: "payload" });

@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import {
   geometryAt,
-  rectOf,
+  boundingRect,
   sameRect
 } from "../../geometry/geometry.ts";
 import { UVNet } from "../UVNet.ts";
@@ -49,7 +49,7 @@ export class NetLayout extends SpreadLayout {
     return new NetLayout(spread.withSlots(packed), layout.activeSlots);
   }
 
-  rectFor(): SelectionRect {
+  slotRect(): SelectionRect {
     return this.bounds;
   }
 
@@ -73,7 +73,7 @@ export class NetLayout extends SpreadLayout {
       return this;
     }
 
-    const previous = rectOf(this.faces.get(slot));
+    const previous = boundingRect(this.faces.get(slot));
     if (sameRect(previous, rect)) {
       return this;
     }
@@ -86,7 +86,7 @@ export class NetLayout extends SpreadLayout {
         rect
       ).reduce(
         (layout, { slot: face, edge, delta }) => layout.resized(
-          withEdgeMoved(rectOf(layout.faces.get(face)), edge, delta),
+          withEdgeMoved(boundingRect(layout.faces.get(face)), edge, delta),
           face
         ),
         this.resized(rect, slot)
@@ -108,10 +108,10 @@ export class NetLayout extends SpreadLayout {
   }
 
   resizeTargets(): UVLayoutResizeTarget[] {
-    return this.slotsOf().map(({ slot, geometry }) => {
+    return this.listSlots().map(({ slot, geometry }) => {
       return {
         slot,
-        rect: rectOf(geometry),
+        rect: boundingRect(geometry),
         handles: UV_NET_RESIZE_HANDLES
       };
     });

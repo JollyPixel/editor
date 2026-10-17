@@ -13,9 +13,6 @@ import {
 import { monitorStyles } from "./Monitor.styles.ts";
 import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
 
-/**
- * Read-only label and value row. `format` is ignored for a string value.
- */
 @customElement("jolly-monitor")
 export class MonitorElement extends LitElement {
   static override styles = [

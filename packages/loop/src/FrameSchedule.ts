@@ -1,6 +1,3 @@
-/**
- * The scheduling result for one frame. Instances are never reused.
- */
 export interface FrameSchedule {
   /**
    * Non-negative wall-clock delta before clamping and scaling, in ms.

@@ -37,10 +37,10 @@ export interface RegionPreview {
   readonly mesh: THREE.Mesh;
   readonly rotation: THREE.Euler;
   follow(uv: UVMap): void;
-  setTextureSize(size: Vec2): void;
-  setTargetPosition(position: THREE.Vector3): void;
-  setSelected(selected: boolean): void;
-  setRotation(rotation: THREE.Euler): void;
+  resizeTexture(size: Vec2): void;
+  moveTo(position: THREE.Vector3): void;
+  markSelected(selected: boolean): void;
+  rotateTo(rotation: THREE.Euler): void;
   dispose(): void;
 }
 
@@ -109,25 +109,25 @@ export class RegionPreviewBehavior extends ActorComponent implements RegionPrevi
     this.#binding.follow(uv);
   }
 
-  setTextureSize(
+  resizeTexture(
     size: Vec2
   ): void {
-    this.#binding.setTextureSize(size);
+    this.#binding.resizeTexture(size);
   }
 
-  setTargetPosition(
+  moveTo(
     position: THREE.Vector3
   ): void {
     this.#targetPosition.copy(position);
   }
 
-  setSelected(
+  markSelected(
     selected: boolean
   ): void {
     this.#selected = selected;
   }
 
-  setRotation(
+  rotateTo(
     rotation: THREE.Euler
   ): void {
     this.actor.object3D.rotation.copy(rotation);

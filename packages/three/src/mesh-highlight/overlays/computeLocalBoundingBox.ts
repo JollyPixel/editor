@@ -1,9 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 
-/**
- * Computes descendant mesh bounds in `target`'s local space.
- */
 export function computeLocalBoundingBox(
   target: THREE.Object3D
 ): THREE.Box3 {

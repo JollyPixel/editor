@@ -8,9 +8,9 @@ export type DependencyMap = Readonly<
 export type ReadonlyDependencyIndex = Pick<
   DependencyIndex,
   | "has"
-  | "dependenciesOf"
-  | "dependentsOf"
-  | "closureOf"
+  | "listDependencies"
+  | "listDependents"
+  | "transitiveDependencies"
   | "dependenciesFirst"
   | "toJSON"
 >;
@@ -65,7 +65,7 @@ export class DependencyIndex {
     this.#incoming.clear();
   }
 
-  dependenciesOf(
+  listDependencies(
     assetId: string
   ): readonly AssetReferenceData[] {
     return this.#outgoing.get(
@@ -73,7 +73,7 @@ export class DependencyIndex {
     )?.map(copyReference) ?? [];
   }
 
-  dependentsOf(
+  listDependents(
     assetId: string
   ): readonly string[] {
     return [
@@ -81,7 +81,7 @@ export class DependencyIndex {
     ];
   }
 
-  closureOf(
+  transitiveDependencies(
     assetId: string
   ): AssetReferenceData[] {
     const visited = new Set([assetId]);

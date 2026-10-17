@@ -15,9 +15,6 @@ export interface RectRow {
   readonly indexInBounds: number;
 }
 
-/**
- * Immutable row-major view over a rectangle of pixels.
- */
 export class RectArea {
   readonly #rect: SelectionRect;
 
@@ -190,7 +187,7 @@ export class RectArea {
     return RectArea.#intersect(this.#rect, rect) !== null;
   }
 
-  touchesEdgeOf(
+  touchesEdge(
     rect: SelectionRect
   ): boolean {
     return this.#rect.x === rect.x ||

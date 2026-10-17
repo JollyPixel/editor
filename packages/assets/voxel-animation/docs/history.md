@@ -15,7 +15,7 @@ history.register({
   id: "set",
   document,
   keys: animationHistoryKeys(document.set),
-  scopeOf: () => "animate"
+  resolveScope: () => "animate"
 });
 
 const step = history.open("animate", "Add walk");

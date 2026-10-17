@@ -12,9 +12,6 @@ export interface AnimationLoopRenderer {
   ): void;
 }
 
-/**
- * Frame source driven by a renderer's `setAnimationLoop()`.
- */
 export class AnimationLoopFrameSource implements FrameSource {
   #renderer: AnimationLoopRenderer;
 

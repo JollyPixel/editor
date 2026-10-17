@@ -15,10 +15,6 @@ import {
   seed
 } from "../../helpers/backends.ts";
 
-/**
- * Behaviour every backend owes the `EventStore` contract.
- * Anything asserted here is part of the contract, not of one implementation.
- */
 for (const backend of backends) {
   describe(`${backend.name} — append`, () => {
     test("assigns a monotonically increasing version per asset", async() => {

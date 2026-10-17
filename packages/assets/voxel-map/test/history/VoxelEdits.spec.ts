@@ -63,7 +63,7 @@ function recordedChange(
   edits: VoxelEdits,
   command: VoxelCommand
 ): VoxelChange | undefined {
-  return isVoxelWorldCommand(command) ? edits.changeFor(command) : undefined;
+  return isVoxelWorldCommand(command) ? edits.trackedChange(command) : undefined;
 }
 
 function blockAt(

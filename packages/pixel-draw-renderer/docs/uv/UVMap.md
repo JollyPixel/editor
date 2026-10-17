@@ -92,7 +92,7 @@ A region with `activeSlots` or `slotGeometries` starts free. Other regions start
 net: UVNet
 ```
 
-The [net](./UVNet.md) used when a region unfolds through `setState()` or is created unfolded. The default is `UVNet.packed`. Changing it leaves existing nets where they are. It is local configuration and is not synchronized: a state change sends the resulting region, so peers do not need the same net.
+The [net](./UVNet.md) used when a region unfolds through `applyState()` or is created unfolded. The default is `UVNet.packed`. Changing it leaves existing nets where they are. It is local configuration and is not synchronized: a state change sends the resulting region, so peers do not need the same net.
 
 ### `overflow`
 
@@ -270,17 +270,17 @@ endPreview(id: string, committed: boolean): void
 ```
 
 Emits `"region-drag-ended"`, closing the preview lifecycle `previewMove()` and `previewResize()` open. Call it once per drag, whether it committed or not.
-### `setState(id, state, slot?)`
+### `applyState(id, state, slot?)`
 
 ```ts
-setState(id: string, state: UVRegionState, slot?: UVSlot | null): boolean
+applyState(id: string, state: UVRegionState, slot?: UVSlot | null): boolean
 ```
 
 Moves a region to one of the three states, emitting `"region-state-changed"` with the previous region as serialized data. Returns `false` for an unknown id or a transition that changes nothing.
 
 `slot` applies to `"stacked"` only, where it picks between equally large candidate faces. The geometry each state produces is described on [`UVRegion`](./UVRegion.md).
 
-`"unfolded"` is the one transition this map corrects after the fact. `UVRegion.unfold()` lays out the map's [`net`](#net) wherever the region already sits, then `setState()` shifts the whole net back inside the canvas, extended by [`overflow`](#overflow), if it overhangs. A net larger than that area is shifted to its top-left corner and left hanging off the far edge; the transition still succeeds, so peers never disagree about whether it happened.
+`"unfolded"` is the one transition this map corrects after the fact. `UVRegion.unfold()` lays out the map's [`net`](#net) wherever the region already sits, then `applyState()` shifts the whole net back inside the canvas, extended by [`overflow`](#overflow), if it overhangs. A net larger than that area is shifted to its top-left corner and left hanging off the far edge; the transition still succeeds, so peers never disagree about whether it happened.
 
 Unfolding repacks from any state, so a free region's hand-placed faces are lost. Undo restores them, because a state change undoes with the whole previous region.
 

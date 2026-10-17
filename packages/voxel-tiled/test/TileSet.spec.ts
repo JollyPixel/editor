@@ -63,14 +63,14 @@ describe("TileSet", () => {
     it(`maps ${name} to local id ${localId}`, () => {
       const tileset = makeTileset();
 
-      assert.equal(tileset.getTileLocalId(gid), localId);
+      assert.equal(tileset.localTileId(gid), localId);
       assert.equal(tileset.containsLocalId(localId), contained);
       assert.equal(tileset.containsGid(gid), contained);
     });
   }
 });
 
-describe("TileSet.getTileProperties", () => {
+describe("TileSet.tileProperties", () => {
   const kTiles: [number, number, number, number, number][] = [
     [1, 0, 0, 0, 0.5],
     [2, 1, 0, 0.25, 0.5],
@@ -80,7 +80,7 @@ describe("TileSet.getTileProperties", () => {
 
   for (const [gid, col, row, offsetU, offsetV] of kTiles) {
     it(`places gid ${gid} at column ${col}, row ${row} with a Y-flipped uv`, () => {
-      const props = makeTileset().getTileProperties(gid);
+      const props = makeTileset().tileProperties(gid);
       assert.ok(props !== null);
 
       assert.deepEqual([props.coords.x, props.coords.y], [col, row]);
@@ -94,12 +94,12 @@ describe("TileSet.getTileProperties", () => {
   it("returns null for a gid outside the tileset", () => {
     const tileset = makeTileset();
 
-    assert.equal(tileset.getTileProperties(99), null);
-    assert.equal(tileset.getTileProperties(0), null);
+    assert.equal(tileset.tileProperties(99), null);
+    assert.equal(tileset.tileProperties(0), null);
   });
 
   it("decodes the flip bits", () => {
-    const props = makeTileset().getTileProperties(1 | FLIPPED_HORIZONTAL | FLIPPED_ANTI_DIAGONAL);
+    const props = makeTileset().tileProperties(1 | FLIPPED_HORIZONTAL | FLIPPED_ANTI_DIAGONAL);
     assert.ok(props !== null);
 
     assert.deepEqual(

@@ -36,8 +36,8 @@ interface Harness {
   home: HTMLElement;
   page: HTMLElement;
   itemValues(): string[];
-  statusOf(id: string): string;
-  frameOf(id: string): HTMLIFrameElement;
+  tabStatus(id: string): string;
+  findFrame(id: string): HTMLIFrameElement;
   visibleFrames(): string[];
 }
 
@@ -85,13 +85,13 @@ export function harness(
     itemValues: () => [...strip.children].map(
       (item) => String(Reflect.get(item, "value"))
     ),
-    statusOf: (id) => String(Reflect.get(
+    tabStatus: (id) => String(Reflect.get(
       [...strip.children].find(
         (item) => Reflect.get(item, "value") === id
       ) ?? {},
       "status"
     )),
-    frameOf: (id) => {
+    findFrame: (id) => {
       const frame = frameList().find(
         (candidate) => candidate.src.endsWith(`target=${id}`)
       );

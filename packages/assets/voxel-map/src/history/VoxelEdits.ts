@@ -101,7 +101,7 @@ export class VoxelEdits implements HistorySource<VoxelWorldCommand, null> {
     };
   }
 
-  changeFor(
+  trackedChange(
     command: VoxelWorldCommand
   ): VoxelChange | undefined {
     return this.#changes.get(command);

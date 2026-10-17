@@ -15,7 +15,7 @@ import {
   type PixelCursorSyncOptions
 } from "#src/network/PixelCursorSync.ts";
 import { asCanvas } from "../helpers/canvas.ts";
-import { callsOf } from "../helpers/mock.ts";
+import { readCalls } from "../helpers/mock.ts";
 import { MockRoom } from "../helpers/room.ts";
 
 type CursorListener = (pos: Vec2 | null) => void;
@@ -74,8 +74,8 @@ describe("PixelCursorSync — construction", () => {
 
     const { cursors } = setup({}, room);
 
-    assert.strictEqual(callsOf(cursors.set).length, 1);
-    const [clientId, state] = callsOf(cursors.set)[0];
+    assert.strictEqual(readCalls(cursors.set).length, 1);
+    const [clientId, state] = readCalls(cursors.set)[0];
     assert.strictEqual(clientId, "peer-B");
     assert.deepStrictEqual(state.pos, { x: 3, y: 4 });
     assert.strictEqual(state.label, "Bob");
@@ -95,7 +95,7 @@ describe("PixelCursorSync — construction", () => {
     host.onCursorMove?.({ x: 2, y: 3 });
     sync.destroy();
 
-    assert.deepStrictEqual(callsOf(previous), [[{ x: 2, y: 3 }]]);
+    assert.deepStrictEqual(readCalls(previous), [[{ x: 2, y: 3 }]]);
     assert.strictEqual(host.onCursorMove, previous);
   });
 
@@ -107,7 +107,7 @@ describe("PixelCursorSync — construction", () => {
     sync.destroy();
     host.onCursorMove?.({ x: 1, y: 1 });
 
-    assert.deepStrictEqual(callsOf(cursors.remove), [["peer-B"]]);
+    assert.deepStrictEqual(readCalls(cursors.remove), [["peer-B"]]);
     assert.deepStrictEqual(room.presenceUpdates, []);
   });
 });
@@ -134,7 +134,7 @@ describe("PixelCursorSync — remote peers", () => {
 
     room.emit("peer-presence", { clientId: "peer-B", patch: { cursor: { x: 1, y: 2 } } });
 
-    const [[clientId, state]] = callsOf(cursors.set);
+    const [[clientId, state]] = readCalls(cursors.set);
     assert.strictEqual(clientId, "peer-B");
     assert.deepStrictEqual(state.pos, { x: 1, y: 2 });
     assert.strictEqual(state.label, "Bob");
@@ -159,7 +159,7 @@ describe("PixelCursorSync — remote peers", () => {
 
     room.emit("peer-joined", { clientId: "peer-C" });
 
-    assert.strictEqual(callsOf(cursors.set)[0][1].label, "Cara");
+    assert.strictEqual(readCalls(cursors.set)[0][1].label, "Cara");
   });
 
   test("removes a leaving peer's cursor", () => {
@@ -169,7 +169,7 @@ describe("PixelCursorSync — remote peers", () => {
 
     room.emit("peer-left", { clientId: "peer-B" });
 
-    assert.deepStrictEqual(callsOf(cursors.remove), [["peer-B"]]);
+    assert.deepStrictEqual(readCalls(cursors.remove), [["peer-B"]]);
   });
 
   test("names a peer with the label option", () => {
@@ -180,7 +180,7 @@ describe("PixelCursorSync — remote peers", () => {
 
     room.emit("peer-presence", { clientId: "peer-B", patch: { cursor: { x: 0, y: 0 } } });
 
-    assert.strictEqual(callsOf(cursors.set)[0][1].label, "Bobby");
+    assert.strictEqual(readCalls(cursors.set)[0][1].label, "Bobby");
   });
 
   test("uses the color option with the client id and profile", () => {
@@ -190,8 +190,8 @@ describe("PixelCursorSync — remote peers", () => {
 
     room.emit("peer-presence", { clientId: "peer-B", patch: { cursor: { x: 0, y: 0 } } });
 
-    assert.deepStrictEqual(callsOf(color), [["peer-B", { tint: "#123456" }]]);
-    assert.strictEqual(callsOf(cursors.set)[0][1].color, "#123456");
+    assert.deepStrictEqual(readCalls(color), [["peer-B", { tint: "#123456" }]]);
+    assert.strictEqual(readCalls(cursors.set)[0][1].color, "#123456");
   });
 });
 

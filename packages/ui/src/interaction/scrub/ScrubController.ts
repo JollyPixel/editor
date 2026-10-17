@@ -8,8 +8,8 @@ import type {
 import { valueFromDelta } from "../../numeric/valueFromDelta.ts";
 import { ensureDocumentStyles } from "../ensureDocumentStyles.ts";
 import { createDragGuide, type DragGuide } from "./dragGuide.ts";
-import { multiplierFor } from "../../numeric/modifierMultiplier.ts";
-import { precisionOf } from "../../numeric/precision.ts";
+import { modifierMultiplier } from "../../numeric/modifierMultiplier.ts";
+import { measurePrecision } from "../../numeric/precision.ts";
 import { kFallback } from "../../theme/styles/fallbacks.ts";
 import { resolveThemeToken } from "../../theme/resolveThemeToken.ts";
 import {
@@ -21,20 +21,11 @@ import {
 const kDraggingClass = "jolly-scrub-dragging";
 
 export interface ScrubOptions {
-  /**
-   * Resolves the current scrub target.
-   */
   target(): HTMLElement | null;
   step(): number;
-  /**
-   * Value at drag start.
-   */
   start(): number | undefined;
   min?(): number;
   max?(): number;
-  /**
-   * Pointer travel per step, or `undefined` for the default of 4.
-   */
   pixelsPerStep?(): number | undefined;
   /**
    * Travel before a press becomes a drag. @default 0
@@ -44,15 +35,9 @@ export interface ScrubOptions {
    * Draws the dashed guide while dragging. @default true
    */
   guide?: boolean;
-  /**
-   * Value the press jumps to, or `undefined` to scrub from the current value.
-   */
   jump?(
     event: PointerEvent
   ): number | undefined;
-  /**
-   * Called when a press is released before it crosses a non-zero `threshold`.
-   */
   onClick?(): void;
   onInput(
     value: number
@@ -62,9 +47,6 @@ export interface ScrubOptions {
   ): void;
 }
 
-/**
- * Handles pointer scrubbing from the value captured at `pointerdown`.
- */
 export class ScrubController implements ReactiveController {
   #host: ReactiveControllerHost & HTMLElement;
   #options: ScrubOptions;
@@ -119,7 +101,6 @@ export class ScrubController implements ReactiveController {
       return;
     }
 
-    // Mixed values have no scrub starting point.
     const start = this.#options.start();
     if (start === undefined) {
       return;
@@ -153,7 +134,6 @@ export class ScrubController implements ReactiveController {
       this.#options.onInput(jumped);
     }
 
-    // Prevent native text selection while dragging.
     event.preventDefault();
   };
 
@@ -221,19 +201,19 @@ export class ScrubController implements ReactiveController {
       deltaPx: event.clientX - this.#startX,
       step,
       pixelsPerStep: this.#pixelsPerStep,
-      multiplier: multiplierFor(event),
+      multiplier: modifierMultiplier(event),
       min: this.#options.min?.(),
       max: this.#options.max?.(),
-      precision: this.#precisionFor(step)
+      precision: this.#cachedPrecision(step)
     });
   }
 
-  #precisionFor(
+  #cachedPrecision(
     step: number
   ): number {
     if (step !== this.#precisionStep) {
       this.#precisionStep = step;
-      this.#precision = precisionOf(this.#startValue, step);
+      this.#precision = measurePrecision(this.#startValue, step);
     }
 
     return this.#precision;

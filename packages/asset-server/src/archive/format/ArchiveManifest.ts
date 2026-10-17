@@ -27,7 +27,7 @@ import { AssetArchiveError } from "../errors/AssetArchiveError.ts";
 // CONSTANTS
 const kManifestParser = new SchemaParser(assetArchiveManifestSchema);
 
-export function archiveEntryOf(
+export function toArchiveEntry(
   record: AssetRecord
 ): AssetArchiveEntry {
   return {

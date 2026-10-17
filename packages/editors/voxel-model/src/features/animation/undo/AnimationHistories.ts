@@ -67,7 +67,7 @@ export class AnimationHistories {
         id: animationKey(setId),
         document,
         keys: animationHistoryKeys(document.set),
-        scopeOf: (change) => scopeOfAnimationChange(
+        resolveScope: (change) => scopeOfAnimationChange(
           change,
           setId,
           this.#document.tree.animationSets

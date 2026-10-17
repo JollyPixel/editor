@@ -59,7 +59,7 @@ describe("normal map commands", () => {
       applyPixelCommand(state, command("normal-map-zone-set", kZoneOff));
 
       assert.equal(state.normalMap?.defaults.strength, 6);
-      assert.equal(state.normalMap?.zoneOf("a")?.settings, "off");
+      assert.equal(state.normalMap?.findZone("a")?.settings, "off");
 
       applyPixelCommand(state, command("normal-map-zone-deleted", {
         regionId: "a"

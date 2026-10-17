@@ -1,0 +1,193 @@
+// Import Node.js Dependencies
+import {
+  describe,
+  test,
+  beforeEach,
+  mock
+} from "node:test";
+import assert from "node:assert/strict";
+
+// Import Third-party Dependencies
+import * as THREE from "three/webgpu";
+
+// Import Internal Dependencies
+import { Camera3DControls } from "../../../src/components/camera/Camera3DControls.ts";
+import { Transform } from "../../../src/actor/Transform.ts";
+import type { Actor } from "../../../src/actor/Actor.ts";
+
+function createRendererMock() {
+  return {
+    addRenderComponent: mock.fn(),
+    removeRenderComponent: mock.fn(),
+    markRenderOrderDirty: mock.fn()
+  };
+}
+
+function createActorMock() {
+  const parent = new THREE.Scene();
+  const object3D = new THREE.Group();
+  parent.add(object3D);
+
+  return {
+    object3D,
+    transform: new Transform(object3D),
+    components: [],
+    componentsRequiringUpdate: [],
+    world: {
+      time: {
+        delta: 0.1,
+        unscaledDelta: 0.1
+      },
+      renderer: createRendererMock(),
+      audio: { threeAudioListener: new THREE.Object3D() },
+      sceneManager: {
+        scheduleStart: () => void 0,
+        cancelStart: () => void 0
+      },
+      input: {
+        getMouseDelta: mock.fn(() => {
+          return { x: 0, y: 0 };
+        }),
+        keyboard: {
+          isDown: mock.fn((_key: string) => false)
+        },
+        mouse: {
+          isDown: mock.fn(() => false),
+          wasJustReleased: mock.fn(() => false)
+        }
+      }
+    }
+  };
+}
+
+type ActorMock = ReturnType<typeof createActorMock>;
+
+describe("Components.Camera.Camera3DControls", () => {
+  let actor: ActorMock;
+
+  beforeEach(() => {
+    actor = createActorMock();
+  });
+
+  describe("camera options", () => {
+    test("should forward the clipping planes instead of dropping them", () => {
+      const controls = new Camera3DControls(actor as unknown as Actor, {
+        near: 2,
+        far: 4096
+      });
+
+      assert.strictEqual(controls.near, 2);
+      assert.strictEqual(controls.far, 4096);
+      assert.strictEqual(controls.camera.far, 4096);
+    });
+
+    test("should forward the field of view", () => {
+      const controls = new Camera3DControls(actor as unknown as Actor, {
+        fov: 75
+      });
+
+      assert.strictEqual(controls.fov, 75);
+      assert.strictEqual(controls.camera.fov, 75);
+    });
+
+    test("should forward the projection mode", () => {
+      const controls = new Camera3DControls(actor as unknown as Actor, {
+        projectionMode: "orthographic",
+        orthographicScale: 12
+      });
+
+      assert.strictEqual(controls.projectionMode, "orthographic");
+      assert.strictEqual(controls.orthographicScale, 12);
+      assert.ok(controls.threeCamera instanceof THREE.OrthographicCamera);
+    });
+
+    test("should forward depth and viewport", () => {
+      const viewport = { x: 0, y: 0, width: 0.5, height: 1 };
+      const controls = new Camera3DControls(actor as unknown as Actor, {
+        depth: 3,
+        viewport
+      });
+
+      assert.strictEqual(controls.depth, 3);
+      assert.deepStrictEqual(controls.viewport, viewport);
+    });
+
+    test("should attach an audio listener by default", () => {
+      const controls = new Camera3DControls(actor as unknown as Actor);
+
+      assert.strictEqual(controls.threeCamera.children.length, 1);
+    });
+
+    test("should let the caller opt out of the audio listener", () => {
+      const controls = new Camera3DControls(actor as unknown as Actor, {
+        addAudioListener: false
+      });
+
+      assert.strictEqual(controls.threeCamera.children.length, 0);
+    });
+  });
+
+  describe("update()", () => {
+    test("should move the actor, not the three camera", () => {
+      const controls = new Camera3DControls(actor as unknown as Actor, {
+        speed: 10
+      });
+      actor.world.input.keyboard.isDown.mock.mockImplementation(
+        (key: string) => key === "KeyW"
+      );
+
+      controls.update();
+
+      assert.strictEqual(
+        Math.round(actor.transform.getLocalPosition().z * 100) / 100,
+        -1,
+        "forward is -Z: speed 10 for 0.1s"
+      );
+    });
+
+    test("should keep moving while game time is paused", () => {
+      const controls = new Camera3DControls(actor as unknown as Actor, {
+        speed: 10
+      });
+      actor.world.time.delta = 0;
+      actor.world.input.keyboard.isDown.mock.mockImplementation(
+        (key: string) => key === "KeyW"
+      );
+
+      controls.update();
+
+      assert.strictEqual(
+        Math.round(actor.transform.getLocalPosition().z * 100) / 100,
+        -1
+      );
+    });
+
+    test("should move vertically in world space", () => {
+      const controls = new Camera3DControls(actor as unknown as Actor, {
+        speed: 10
+      });
+      actor.world.input.keyboard.isDown.mock.mockImplementation(
+        (key: string) => key === "Space"
+      );
+
+      controls.update();
+
+      assert.strictEqual(
+        Math.round(actor.transform.getGlobalPosition().y * 100) / 100,
+        1
+      );
+    });
+
+    test("should stay put when no key is down", () => {
+      const controls = new Camera3DControls(actor as unknown as Actor);
+
+      controls.update();
+
+      assert.deepStrictEqual(
+        actor.transform.getLocalPosition().toArray(),
+        [0, 0, 0],
+        "normalizing a zero movement vector must not produce NaN"
+      );
+    });
+  });
+});

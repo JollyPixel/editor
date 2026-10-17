@@ -20,9 +20,6 @@ export interface ClampToViewportOptions {
   viewport: ViewportSize;
 }
 
-/**
- * Keeps a fixed-position rectangle reachable inside the viewport.
- */
 export function clampToViewport({
   x,
   y,

@@ -1,13 +1,13 @@
 // Import Internal Dependencies
 import "../../../../src/math/Transform.ts";
 import type { GalleryExample } from "../../types.ts";
-import { detailOf } from "../../../../src/dom.ts";
+import { readDetail } from "../../../../src/dom.ts";
 import { peerColor } from "../../../../src/theme/peerColor.ts";
 import type { JollyChangeDetail } from "../../../../src/field/events.ts";
 import type { Transform } from "../../../../src/math/Transform.ts";
 import {
   AXIS_STYLE_OPTIONS,
-  axisStyleOf,
+  pickAxisStyle,
   type AxisStyleOptionKey
 } from "./axisStyle.ts";
 
@@ -31,7 +31,7 @@ export const TRANSFORM_EXAMPLE: GalleryExample<TransformOptionKey> = {
   ],
   render(host, options) {
     const transform = document.createElement("jolly-transform");
-    transform.axisStyle = axisStyleOf(options);
+    transform.axisStyle = pickAxisStyle(options);
     if (options.stacked) {
       transform.labelPosition = "top";
     }
@@ -53,7 +53,7 @@ export const TRANSFORM_EXAMPLE: GalleryExample<TransformOptionKey> = {
     }
 
     transform.addEventListener("jolly-change", (event) => {
-      const detail = detailOf<JollyChangeDetail<Transform["value"]>>(event);
+      const detail = readDetail<JollyChangeDetail<Transform["value"]>>(event);
       if (detail !== null) {
         transform.value = detail.value;
       }

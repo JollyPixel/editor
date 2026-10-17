@@ -53,17 +53,17 @@ const suite = defineSuite("tree", (bench) => {
     const list = new TreeRowViewList();
     const selectedId = rows[Math.floor(rows.length / 2)].node.id;
     let selected = false;
-    const stateOf = rowStateOf(selectedId, () => selected);
-    list.update(rows, stateOf);
+    const rowStateSelecting = createRowState(selectedId, () => selected);
+    list.update(rows, rowStateSelecting);
     bench
       .add(
         `TreeRowViewList ${size} unchanged`,
-        () => list.update(rows, stateOf).length
+        () => list.update(rows, rowStateSelecting).length
       )
       .add(`TreeRowViewList ${size} one row toggled`, () => {
         selected = !selected;
 
-        return list.update(rows, stateOf).length;
+        return list.update(rows, rowStateSelecting).length;
       });
   }
 });
@@ -98,7 +98,7 @@ function hoverEdge(
   })?.targetId;
 }
 
-function rowStateOf(
+function createRowState(
   selectedId: string,
   selected: () => boolean
 ): (row: FlatTreeRow<unknown>) => TreeRowState {

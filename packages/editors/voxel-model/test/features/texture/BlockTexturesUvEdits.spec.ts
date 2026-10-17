@@ -10,9 +10,9 @@ import { BlockTransform } from "@jolly-pixel/asset.voxel-model/client";
 import {
   TEXTURE_SIZE,
   createTextureHarness,
-  regionIdOf,
+  readRegionId,
   stackedAt,
-  uvOf
+  readUv
 } from "./textureHarness.ts";
 
 function bound() {
@@ -23,7 +23,7 @@ function bound() {
   return {
     ...harness,
     block,
-    regionId: regionIdOf(block)
+    regionId: readRegionId(block)
   };
 }
 
@@ -33,7 +33,7 @@ describe("BlockTextures UV edits", () => {
 
     uv.move(regionId, { x: 64, y: 32, width: 16, height: 16 });
 
-    assert.deepEqual(uvOf(block, 1), [80 / TEXTURE_SIZE.x, 1 - (32 / TEXTURE_SIZE.y)]);
+    assert.deepEqual(readUv(block, 1), [80 / TEXTURE_SIZE.x, 1 - (32 / TEXTURE_SIZE.y)]);
     assert.deepEqual(document.tree.block(block.uuid)?.uv, stackedAt(64, 32));
     assert.deepEqual(
       changes.map((change) => change.command.action),
@@ -59,7 +59,7 @@ describe("BlockTextures UV edits", () => {
 
     uv.move(regionId, { x: 64, y: 32, width: 16, height: 16 });
     uv.rotate(regionId, "cw");
-    uv.setState(regionId, "unfolded");
+    uv.applyState(regionId, "unfolded");
 
     assert.deepEqual(pixelEvents, []);
     assert.deepEqual(pixelChanges, []);
@@ -75,7 +75,7 @@ describe("BlockTextures UV edits", () => {
     });
 
     assert.deepEqual(
-      uv.get(regionId)?.geometryFor("front"),
+      uv.get(regionId)?.slotGeometry("front"),
       { x: 64, y: 32, width: 16, height: 16 }
     );
     assert.deepEqual(
@@ -89,8 +89,8 @@ describe("BlockTextures UV edits", () => {
 
     uv.previewMove(regionId, { x: 64, y: 32, width: 16, height: 16 });
 
-    assert.deepEqual(uvOf(block, 1), [80 / TEXTURE_SIZE.x, 1 - (32 / TEXTURE_SIZE.y)]);
-    assert.deepEqual(uv.get(regionId)?.geometryFor("front"), { x: 0, y: 0, width: 16, height: 16 });
+    assert.deepEqual(readUv(block, 1), [80 / TEXTURE_SIZE.x, 1 - (32 / TEXTURE_SIZE.y)]);
+    assert.deepEqual(uv.get(regionId)?.slotGeometry("front"), { x: 0, y: 0, width: 16, height: 16 });
     assert.deepEqual(changes, []);
   });
 
@@ -99,8 +99,8 @@ describe("BlockTextures UV edits", () => {
 
     uv.rotate(regionId, "cw");
 
-    assert.deepEqual(uvOf(block, 0), [16 / TEXTURE_SIZE.x, 1]);
-    assert.deepEqual(uvOf(block, 1), [16 / TEXTURE_SIZE.x, 1 - (16 / TEXTURE_SIZE.y)]);
+    assert.deepEqual(readUv(block, 0), [16 / TEXTURE_SIZE.x, 1]);
+    assert.deepEqual(readUv(block, 1), [16 / TEXTURE_SIZE.x, 1 - (16 / TEXTURE_SIZE.y)]);
     assert.deepEqual(
       document.tree.block(block.uuid)?.uv,
       {
@@ -116,8 +116,8 @@ describe("BlockTextures UV edits", () => {
 
     textures.previewPeerDrag(moved);
 
-    assert.deepEqual(uvOf(block, 1), [80 / TEXTURE_SIZE.x, 1 - (32 / TEXTURE_SIZE.y)]);
-    assert.deepEqual(uv.get(regionId)?.geometryFor("front"), { x: 0, y: 0, width: 16, height: 16 });
+    assert.deepEqual(readUv(block, 1), [80 / TEXTURE_SIZE.x, 1 - (32 / TEXTURE_SIZE.y)]);
+    assert.deepEqual(uv.get(regionId)?.slotGeometry("front"), { x: 0, y: 0, width: 16, height: 16 });
     assert.equal(frames.requested, 1);
   });
 
@@ -128,13 +128,13 @@ describe("BlockTextures UV edits", () => {
 
     textures.previewPeerDrag(resized);
 
-    assert.deepEqual(uvOf(block, 1), [24 / TEXTURE_SIZE.x, 1]);
+    assert.deepEqual(readUv(block, 1), [24 / TEXTURE_SIZE.x, 1]);
     assert.equal(uv.get(regionId), stored);
   });
 
   test("ignores regions and peer drags that belong to no block", () => {
     const { uv, block, textures, changes } = bound();
-    const before = uvOf(block, 1);
+    const before = readUv(block, 1);
     uv.create({ id: "unrelated-region", width: 16, height: 16 });
 
     uv.move("unrelated-region", { x: 8, y: 8, width: 16, height: 16 });
@@ -146,25 +146,25 @@ describe("BlockTextures UV edits", () => {
     }));
 
     assert.deepEqual(changes, []);
-    assert.deepEqual(uvOf(block, 1), before);
+    assert.deepEqual(readUv(block, 1), before);
   });
 
   test("keeps each face on its own region and reflects the block, for an X mirror", () => {
     const { document, uv, block, regionId } = bound();
-    uv.setState(regionId, "free");
+    uv.applyState(regionId, "free");
     uv.move(regionId, { x: 0, y: 0, width: 16, height: 16 }, "right");
     uv.move(regionId, { x: 100, y: 0, width: 16, height: 16 }, "left");
 
     document.transform(block.uuid, block.transform, { x: true, y: false, z: false });
 
-    assert.equal(uvOf(block, 0)[0], 0);
-    assert.equal(uvOf(block, 4)[0], 100 / TEXTURE_SIZE.x);
+    assert.equal(readUv(block, 0)[0], 0);
+    assert.equal(readUv(block, 4)[0], 100 / TEXTURE_SIZE.x);
     assert.ok(block.mesh.geometry.getAttribute("position").getX(0) < 0);
   });
 
   test("honors flipAxes already recorded on first mapping", () => {
     const { document, blocks, uv, regionId, block } = bound();
-    uv.setState(regionId, "free");
+    uv.applyState(regionId, "free");
     uv.move(regionId, { x: 0, y: 0, width: 16, height: 16 }, "right");
     uv.move(regionId, { x: 100, y: 0, width: 16, height: 16 }, "left");
 
@@ -183,8 +183,8 @@ describe("BlockTextures UV edits", () => {
 
     const mirrored = blocks.get("mirrored");
     assert.ok(mirrored);
-    assert.equal(uvOf(mirrored, 0)[0], 0);
-    assert.equal(uvOf(mirrored, 4)[0], 100 / TEXTURE_SIZE.x);
+    assert.equal(readUv(mirrored, 0)[0], 0);
+    assert.equal(readUv(mirrored, 4)[0], 100 / TEXTURE_SIZE.x);
     assert.ok(mirrored.mesh.geometry.getAttribute("position").getX(0) < 0);
   });
 });

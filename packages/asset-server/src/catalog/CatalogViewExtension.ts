@@ -123,7 +123,7 @@ export class CatalogViewExtension extends Extension<CatalogCommand> {
   ): void => {
     for (const [root, view] of this.#views) {
       const visible = this.#catalog.reachableFrom(root);
-      const changes = this.#changesFor(change, view.visible, visible);
+      const changes = this.#projectChanges(change, view.visible, visible);
       view.visible = visible;
       if (changes.length === 0) {
         continue;
@@ -157,7 +157,7 @@ export class CatalogViewExtension extends Extension<CatalogCommand> {
     return view;
   }
 
-  #changesFor(
+  #projectChanges(
     change: CatalogChange,
     before: ReadonlySet<string>,
     after: ReadonlySet<string>
@@ -198,7 +198,7 @@ export class CatalogViewExtension extends Extension<CatalogCommand> {
       assetId,
       record: record.toJSON(),
       ...(dependencies.has(assetId) ?
-        { dependencies: dependencies.dependenciesOf(assetId) } :
+        { dependencies: dependencies.listDependencies(assetId) } :
         {})
     };
   }
@@ -220,7 +220,7 @@ export class CatalogViewExtension extends Extension<CatalogCommand> {
     const within: Record<string, DependencyMap[string]> = {};
     for (const assetId of visible) {
       if (dependencies.has(assetId)) {
-        within[assetId] = dependencies.dependenciesOf(assetId);
+        within[assetId] = dependencies.listDependencies(assetId);
       }
     }
 

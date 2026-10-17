@@ -10,7 +10,7 @@ import { CanvasBuffer } from "#src/buffer/CanvasBuffer.ts";
 import type { Vec2 } from "#src/types.ts";
 import {
   canvasPixels,
-  contextOf,
+  context2d,
   decodedImage,
   readPixel
 } from "../fixtures/canvas.ts";
@@ -83,7 +83,7 @@ describe("CanvasBuffer", () => {
       const painted = document.createElement("canvas");
       painted.width = 6;
       painted.height = 5;
-      const ctx = contextOf(painted);
+      const ctx = context2d(painted);
       ctx.fillStyle = "#0a141e";
       ctx.fillRect(3, 2, 1, 1);
 

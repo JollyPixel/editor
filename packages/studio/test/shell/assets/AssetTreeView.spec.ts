@@ -20,7 +20,7 @@ import { StudioPreferences } from "../../../src/preferences/StudioPreferences.ts
 import { AssetTreeView } from "../../../src/shell/assets/AssetTreeView.ts";
 import {
   FakeTreeCatalog,
-  labelOf
+  findLabel
 } from "../../helpers/assetTree.ts";
 
 // CONSTANTS
@@ -120,14 +120,14 @@ describe("AssetTreeView", () => {
     catalog.failure = "disk full";
     const { view, errors } = treeView(catalog);
     const nodeId = assetNodeId(kMap.id);
-    const before = labelOf(view.nodes, nodeId);
+    const before = findLabel(view.nodes, nodeId);
 
     const renaming = view.rename(nodeId, "world");
-    const during = labelOf(view.nodes, nodeId);
+    const during = findLabel(view.nodes, nodeId);
     await renaming;
 
     assert.notEqual(during, before);
-    assert.equal(labelOf(view.nodes, nodeId), before);
+    assert.equal(findLabel(view.nodes, nodeId), before);
     assert.equal(errors.length, 1);
   });
 
@@ -165,7 +165,7 @@ describe("AssetTreeView", () => {
         asked.push(group.format);
 
         return group.format === ".png" ?
-          { convertTo: kKinds.entryOf("pixelart") ?? null } :
+          { convertTo: kKinds.findEntry("pixelart") ?? null } :
           null;
       },
       conflicts: async() => null

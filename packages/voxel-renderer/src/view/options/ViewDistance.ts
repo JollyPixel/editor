@@ -1,9 +1,6 @@
 // CONSTANTS
 const kDefaultHysteresis = 1;
 
-/**
- * Cylinder around the focus (`"xz"`, Minecraft-like) or sphere (`"sphere"`).
- */
 export type ViewDistanceShape =
   | "xz"
   | "sphere";
@@ -26,11 +23,6 @@ export interface ViewDistanceOptions {
   hysteresis?: number;
 }
 
-/**
- * Immutable chunk radius around a focus point, with separate enter and leave
- * radii. Distances are measured in world units between the focus and a chunk
- * center.
- */
 export class ViewDistance {
   static readonly Unlimited = new ViewDistance();
 

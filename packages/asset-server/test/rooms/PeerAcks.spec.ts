@@ -14,8 +14,8 @@ describe("PeerAcks", () => {
     acks.record("alice", 2);
     acks.record("bob", undefined);
 
-    assert.deepEqual(acks.of(["alice", "bob"]), { acks: { alice: 2 } });
-    assert.deepEqual(acks.of(["bob"]), {});
+    assert.deepEqual(acks.collectAcks(["alice", "bob"]), { acks: { alice: 2 } });
+    assert.deepEqual(acks.collectAcks(["bob"]), {});
   });
 
   test("a departed client is acknowledged on resume only", () => {

@@ -34,7 +34,6 @@ const kinds = await ProjectKinds.load(
   })
 );
 
-// https://vitejs.dev/config/
 export default defineConfig((env) => {
   const mode = new RunMode(
     env,

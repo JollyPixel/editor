@@ -7,7 +7,7 @@ import {
   GLASS_SURFACE,
   createMaterialHarness as createHarness,
   dropMaterials as drop,
-  materialNamesOf as namesOf,
+  listMaterialNames as namesOf,
   preset,
   type MaterialHarness
 } from "../materialHarness.ts";
@@ -242,7 +242,7 @@ function enabledLabels(
   harness: MaterialHarness,
   id: string | null
 ): string[] {
-  return harness.controller.menuFor(id).items.flatMap((entry) => (
+  return harness.controller.openMenu(id).items.flatMap((entry) => (
     entry === "separator" || entry.disabled === true ? [] : [entry.label]
   ));
 }

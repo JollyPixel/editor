@@ -8,9 +8,6 @@ export interface DragGuide {
   destroy(): void;
 }
 
-/**
- * Creates the document-level guide shown during a scrub drag.
- */
 export function createDragGuide(
   originY: number,
   startX: number,
@@ -69,7 +66,6 @@ export function createDragGuide(
       String(currentX)
     );
 
-    // No arrow until the pointer moves.
     if (currentX === startX) {
       arrow.setAttribute(
         "points",
@@ -88,7 +84,6 @@ export function createDragGuide(
     );
   }
 
-  // Avoid the SVG default `x2` of zero before the first move.
   update(startX);
 
   return {

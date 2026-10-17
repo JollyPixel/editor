@@ -62,7 +62,7 @@ export class StrokeMode extends InteractionMode {
     position: PointerPosition,
     _ctrlKey: boolean
   ): boolean {
-    const source = this.#sourceFor(slot);
+    const source = this.#paintSource(slot);
     this.#line.updateCursor(position.boundedTexture);
     if (this.#line.commitsOn("mousedown")) {
       if (position.boundedTexture) {
@@ -131,7 +131,7 @@ export class StrokeMode extends InteractionMode {
 
     const strokeSource = this.#engine.endStroke();
     if (strokeSource === null) {
-      this.#line.arm("mousedown", this.#sourceFor("primary"));
+      this.#line.arm("mousedown", this.#paintSource("primary"));
     }
     else {
       this.#line.arm("mouseup", strokeSource);
@@ -155,7 +155,7 @@ export class StrokeMode extends InteractionMode {
     this.#line.cancel();
   }
 
-  #sourceFor(
+  #paintSource(
     slot: BrushColorSlot
   ): BrushPaintSource {
     return this.#erase ? "erase" : slot;

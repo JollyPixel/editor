@@ -5,9 +5,9 @@ import { contrastingColor } from "@jolly-pixel/color";
 import { SVG_NS } from "../constants.ts";
 import {
   outlinePoints,
-  rectOf,
-  rotationOf,
-  triangleCornerOf
+  boundingRect,
+  geometryRotation,
+  triangleCorner
 } from "../../uv/geometry/geometry.ts";
 import { compoundOutline } from "../../uv/geometry/compoundOutline.ts";
 import type {
@@ -64,7 +64,7 @@ export class UVRegionBorder {
     geometry: UVGeometry,
     view: ScreenProjection
   ): void {
-    const screen = view.toScreenRect(rectOf(geometry));
+    const screen = view.toScreenRect(boundingRect(geometry));
     this.#stroke.setAttribute("d", geometryPath(geometry, screen));
 
     const inset = Math.min(
@@ -78,7 +78,7 @@ export class UVRegionBorder {
       width: screen.width - (2 * inset),
       height: screen.height - (2 * inset)
     }));
-    this.#placeMarker(rotationOf(geometry), screen);
+    this.#placeMarker(geometryRotation(geometry), screen);
   }
 
   paint(
@@ -198,10 +198,10 @@ function geometryPath(
     return compoundPath(geometry, screen);
   }
 
-  return pathOf(outlinePoints(screen, triangleCornerOf(geometry)));
+  return toPath(outlinePoints(screen, triangleCorner(geometry)));
 }
 
-function pathOf(
+function toPath(
   points: readonly Vec2[]
 ): string {
   return `M${points.map((point) => `${point.x},${point.y}`).join("L")}Z`;
@@ -220,12 +220,12 @@ function compoundPath(
     };
   }
 
-  const loops = outlineOf(geometry.parts) ?? [];
+  const loops = traceOutline(geometry.parts) ?? [];
 
-  return loops.map((loop) => pathOf(loop.map(scaled))).join(" ");
+  return loops.map((loop) => toPath(loop.map(scaled))).join(" ");
 }
 
-function outlineOf(
+function traceOutline(
   parts: readonly UVCompoundPart[]
 ): Vec2[][] | null {
   const key = JSON.stringify(parts);

@@ -44,7 +44,7 @@ export class HistoryPart {
   capture(
     keys: AnyKeys
   ): void {
-    this.#captured = this.#guardOf(
+    this.#captured = this.#cachedGuard(
       keys
     ).capture();
   }
@@ -53,16 +53,16 @@ export class HistoryPart {
     keys: AnyKeys,
     written: unknown
   ): boolean {
-    return this.#guardOf(keys).touches(written);
+    return this.#cachedGuard(keys).touches(written);
   }
 
   changed(
     keys: AnyKeys
   ): boolean {
-    return !this.#guardOf(keys).same(this.#captured);
+    return !this.#cachedGuard(keys).same(this.#captured);
   }
 
-  #guardOf(
+  #cachedGuard(
     keys: AnyKeys
   ): HistoryGuard<unknown, unknown> {
     if (

@@ -59,7 +59,7 @@ export function createModelFixture(): ModelFixture {
   };
 }
 
-export function buildEditsOf(
+export function recordBuildEdits(
   history: Pick<EditorHistory, "record">
 ): BuildRecorder {
   return {

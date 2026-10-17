@@ -56,7 +56,7 @@ describe("UVRegionLayer — staying visible over the artwork", () => {
       height: 4,
       id: "r1"
     });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.select("r1", "front");
 
     assert.deepStrictEqual(
@@ -79,7 +79,7 @@ describe("UVRegionLayer — staying visible over the artwork", () => {
       id: "r1",
       color: "#123456"
     });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.select("r1", "front");
 
     const painted = uvBorderRects(svg);
@@ -132,7 +132,7 @@ describe("UVRegionLayer — staying visible over the artwork", () => {
       id: "r1",
       color: "#123456"
     });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.select("r1", "front");
 
     const label = svg.querySelector("text")!;

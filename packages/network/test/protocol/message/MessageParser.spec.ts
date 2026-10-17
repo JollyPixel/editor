@@ -28,11 +28,11 @@ const kCommandProtocol = new MessageProtocol(z.union([
 
 describe("MessageParser", () => {
   test("of() compiles one parser per protocol", () => {
-    const parser = MessageParser.of(kCommandProtocol);
+    const parser = MessageParser.fromProtocol(kCommandProtocol);
 
-    assert.strictEqual(MessageParser.of(kCommandProtocol), parser);
+    assert.strictEqual(MessageParser.fromProtocol(kCommandProtocol), parser);
     assert.notStrictEqual(
-      MessageParser.of(new MessageProtocol(kCommandProtocol.schema)),
+      MessageParser.fromProtocol(new MessageProtocol(kCommandProtocol.schema)),
       parser
     );
     assert.strictEqual(parser.parse({ action: "voxel-removed" }).ok, true);

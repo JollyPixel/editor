@@ -18,7 +18,7 @@ import type { BlockAlphaMode, BlockSide } from "../../../../src/document/blocks/
 // CONSTANTS
 const kSettleFrames = 6;
 
-function chunkGroupOf(
+function findChunkGroup(
   view: VoxelView
 ): THREE.Object3D {
   const chunks = view.root.getObjectByName("VoxelView:chunks");
@@ -180,7 +180,7 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
     }, { blockId: options.colored ? depthIndex % 2 + 1 : 1, transform: 0 });
   }
   view.flush();
-  const chunks = chunkGroupOf(view);
+  const chunks = findChunkGroup(view);
   const pulled = chunks.children.every((child) => child instanceof PulledChunkMesh);
   if (chunks.children.length === 0 || !pulled) {
     throw new Error("The chunk meshes are not vertex pulled.");

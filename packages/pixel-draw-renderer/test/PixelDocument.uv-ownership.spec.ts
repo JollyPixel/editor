@@ -67,7 +67,7 @@ describe("PixelDocument", () => {
       });
       doc.uv.move(region.id, { x: 2, y: 2, width: 4, height: 4 });
       assert.equal(doc.uv.rotate(region.id, "cw"), true);
-      assert.equal(doc.uv.setState(region.id, "unfolded"), true);
+      assert.equal(doc.uv.applyState(region.id, "unfolded"), true);
       doc.uv.delete(region.id);
 
       assert.equal(doc.uv.get(region.id), undefined);

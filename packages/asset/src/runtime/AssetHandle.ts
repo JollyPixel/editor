@@ -8,9 +8,6 @@ export type AssetStatus =
   | "ready"
   | "failed";
 
-/**
- * Provides synchronous typed access to one entry in an AssetStore.
- */
 export class AssetHandle<
   TValue = unknown
 > {
@@ -27,13 +24,13 @@ export class AssetHandle<
   }
 
   get status(): AssetStatus {
-    return this.#store.statusOf(
+    return this.#store.loadStatus(
       this.reference
     );
   }
 
   get error(): unknown | undefined {
-    return this.#store.errorOf(
+    return this.#store.loadError(
       this.reference
     );
   }

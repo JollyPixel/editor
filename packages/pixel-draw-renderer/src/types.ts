@@ -27,15 +27,8 @@ export interface SelectionRect {
   height: number;
 }
 
-/**
- * Anything accepted as a color input across the package: a CSS color string
- * (hex, rgb(), hsl(), named color, ...) or byte channels.
- */
 export type ByteColorInput = string | RGBA8;
 
-/**
- * Wire and render payload for one uncommitted peer-stroke pixel.
- */
 export interface PeerStrokePixel {
   x: number;
   y: number;

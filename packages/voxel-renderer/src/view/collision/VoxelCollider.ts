@@ -25,9 +25,6 @@ export interface VoxelChunkCollision {
   readonly geometries: ReadonlyMap<ChunkGeometryKey, THREE.BufferGeometry>;
 }
 
-/**
- * Physics adapter keyed by opaque chunk IDs from `VoxelView`.
- */
 export interface VoxelCollider {
   rebuildChunk(
     key: string,

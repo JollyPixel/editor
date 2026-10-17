@@ -33,7 +33,6 @@ export class PeerCursors extends PeerRegistry<
   #svg: SVGElement;
   #viewport: DefaultViewport;
   #defs: SVGDefsElement;
-  // Per-instance ids prevent SVG filter collisions across canvases.
   #shadowFilterId = `peer-cursor-shadow-${crypto.randomUUID()}`;
 
   constructor(
@@ -99,7 +98,6 @@ export class PeerCursors extends PeerRegistry<
     arrow.setAttribute("stroke-width", "1");
     group.appendChild(arrow);
 
-    // A white paint-order stroke keeps labels legible over similar colors.
     const labelText = document.createElementNS(SVG_NS, "text");
     labelText.setAttribute("x", String(kLabelOffsetX));
     labelText.setAttribute("y", String(kLabelOffsetY));

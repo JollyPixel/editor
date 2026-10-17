@@ -113,6 +113,6 @@ export class MemoryAssetSource implements AssetSource {
       key,
       Uint8Array.from(data)
     );
-    this.#folders.addParentsOf(key);
+    this.#folders.addParents(key);
   }
 }

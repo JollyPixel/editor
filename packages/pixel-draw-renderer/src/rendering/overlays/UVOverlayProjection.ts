@@ -64,7 +64,7 @@ export function projectUVOverlay(
       null :
       peerSelections.get(region.id) ?? null;
 
-    for (const { slot, geometry } of region.slotsOf()) {
+    for (const { slot, geometry } of region.listSlots()) {
       const key = uvTargetKey({
         regionId: region.id,
         slot

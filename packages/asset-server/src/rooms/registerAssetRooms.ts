@@ -128,7 +128,7 @@ export function registerAssetRooms(
     const extension = roomExtension(
       room,
       entry.state,
-      () => states.versionOf(assetId),
+      () => states.openVersion(assetId),
       {
         reader,
         restore: states.takeCommandsSinceCheckpoint(assetId)
@@ -149,7 +149,7 @@ export function registerAssetRooms(
     };
   }
 
-  server.setRoomResolver(async(roomName): Promise<RoomResolution | null> => {
+  server.useRoomResolver(async(roomName): Promise<RoomResolution | null> => {
     function refuse(
       reason: string
     ): null {
@@ -205,7 +205,7 @@ export function registerAssetRooms(
     catalog.off("changed", onCatalogChanged);
     states.off("replaced", onStateReplaced);
     liveRooms.clear();
-    server.setRoomResolver(null);
+    server.useRoomResolver(null);
   };
 }
 

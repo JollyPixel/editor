@@ -46,7 +46,7 @@ Quaternion.Defaults.axisStyle = "letter";
 Structural guards. Each checks only the axes it names, so a four-axis value
 passes the narrower guards too.
 
-### `vec2PairOf(value: unknown): Vector2Pair | null`
+### `parseVec2Pair(value: unknown): Vector2Pair | null`
 
 The plane of a value with exactly two of `x`, `y` and `z`, else `null`. A
 three-axis value has none.

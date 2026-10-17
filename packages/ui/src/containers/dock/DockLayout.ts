@@ -57,10 +57,6 @@ import type { StorageAdapter } from "../../storage/StorageAdapter.ts";
 // CONSTANTS
 const kGrabInset = 24;
 
-/**
- * Coordinates a set of docks, the panes inside them, and the floating windows
- * panes are dragged out into.
- */
 @customElement("jolly-dock-layout")
 export class DockLayout extends LitElement {
   static override styles = css`

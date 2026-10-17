@@ -7,9 +7,6 @@ import {
   wasPointerInput
 } from "./pointerModality.ts";
 
-/**
- * Tracks pointer focus so fields can suppress a spurious focus-visible ring.
- */
 export class PointerFocusController {
   #host: ReactiveControllerHost;
   #active = false;

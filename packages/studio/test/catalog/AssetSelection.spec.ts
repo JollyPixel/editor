@@ -17,10 +17,10 @@ import {
   assetNodeId,
   folderNodeId
 } from "../../src/catalog/AssetTreeModel.ts";
-import { companionModelOf } from "../helpers/assetTree.ts";
+import { createCompanionModel } from "../helpers/assetTree.ts";
 
 // CONSTANTS
-const kModel = companionModelOf();
+const kModel = createCompanionModel();
 const kModels = folderNodeId(AssetPath.parse("models"));
 const kHero = assetNodeId("model-hero");
 const kCave = assetNodeId("map-cave");

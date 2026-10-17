@@ -63,7 +63,7 @@ export class StudioPage {
     editor: BenchEditor
   ): Promise<Frame> {
     await this.shell.assets.open(editor.row);
-    const frameLocator = this.shell.frames.of(editor.name);
+    const frameLocator = this.shell.frames.locate(editor.name);
     const element = await frameLocator.owner().elementHandle({
       timeout: kShellTimeoutMs
     });
@@ -80,7 +80,7 @@ export class StudioPage {
     editor: BenchEditor
   ): Promise<void> {
     await this.shell.tabs.close(editor.tab);
-    await this.shell.frames.of(editor.name).owner().waitFor({
+    await this.shell.frames.locate(editor.name).owner().waitFor({
       state: "detached"
     });
     await this.shell.tabs.home.click();

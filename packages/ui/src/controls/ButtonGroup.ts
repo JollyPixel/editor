@@ -107,7 +107,7 @@ export class ButtonGroup<TValue> extends JollyField<TValue> {
         data-index=${index}
         aria-checked=${selected ? "true" : "false"}
         title=${option.label}
-        tabindex=${this.#tabIndexFor(index)}
+        tabindex=${this.#rovingTabIndex(index)}
         ?disabled=${this.disabled || option.disabled === true}
         @click=${() => this.#select(index)}
       >
@@ -130,7 +130,7 @@ export class ButtonGroup<TValue> extends JollyField<TValue> {
     );
   }
 
-  #tabIndexFor(
+  #rovingTabIndex(
     index: number
   ): number {
     const selected = this.#selectedIndex;

@@ -107,11 +107,6 @@ interface TexelBounds {
   end: Vec2Node;
 }
 
-/**
- * Confines each face's samples to its own atlas rect. MSAA can shade a
- * partially covered pixel from a point outside the triangle, whose
- * interpolated UV would otherwise read a neighbouring tile.
- */
 export function enableTileShading(
   material: TileShadedMaterial,
   inputs: TileInputs,
@@ -200,19 +195,12 @@ function applyTileColor(
   const keepsAlpha = (alphaMode === "blend" && !flat) ||
     (alphaMode === "mask" && alphaToCoverage);
 
-  /*
-   * `materialColor` re-samples the atlas at raw UVs; read material.color directly.
-   */
   const tint = shadedTint(material, brightness, aoStrength);
 
   const blockLight = options.blockLight === undefined ?
     null :
     new BlockLightIrradianceNode(options.blockLight);
 
-  /*
-   * The WebGPU build aliases the classic material names onto their node
-   * variants, so `colorNode` exists at runtime but not on the classic type.
-   */
   const color = Fn(() => {
     if (surface?.alphaMode === "mask") {
       diffuse.a.lessThan(surface.alphaCutoff).discard();
@@ -255,11 +243,6 @@ function casterColor(
   })();
 }
 
-/**
- * Box-filters the face rect over `kFootprintScale` pixel footprints. A
- * one-pixel box still aliases tile borders and TRAA jitter; two pixels
- * matches the support of trilinear mipmapping.
- */
 function footprintAverage(
   map: THREE.Texture,
   averages: THREE.Texture,
@@ -362,11 +345,6 @@ function varyingBounds(
   };
 }
 
-/**
- * Fades per-vertex AO to its face average by the share of the face the
- * filter box spans, so corner gradients do not alias into lines once a
- * face covers a few pixels.
- */
 function minifiedBrightness(
   map: THREE.Texture,
   inputs: TileInputs,
@@ -412,10 +390,6 @@ function tableAt(
   return lerp(bottom, top, fy);
 }
 
-/**
- * Four summed-area taps giving the alpha-weighted average of the face rect.
- * Sampled in the vertex stage: the rect is constant across a face.
- */
 function regionAverage(
   map: THREE.Texture,
   averages: THREE.Texture,
@@ -487,9 +461,5 @@ function configureClassicAlpha(
       `#include <map_fragment>\n${alpha}\ndiffuseColor.a = 1.0;`
     );
   };
-  /**
-   * The color node holds references to this material and atlas. Classic
-   * materials converted by WebGPURenderer must keep those bindings separate.
-   */
   material.customProgramCacheKey = () => `${material.uuid}:${JSON.stringify(surface)}:${flat}`;
 }

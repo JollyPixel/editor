@@ -64,10 +64,6 @@ export interface VoxelEditWriteOptions {
   reach: number;
 }
 
-/**
- * Collects voxel writes so dirty chunks are marked once per touched chunk
- * and changed cells are coalesced, last write wins, until the batch flushes.
- */
 export class VoxelEditBatch {
   #size: number;
   #shift: number;

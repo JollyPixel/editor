@@ -61,7 +61,7 @@ function createSource(
     createOwn: () => Promise.reject(new Error("unused")),
     rename: () => Promise.reject(new Error("unused")),
     records: () => [{ id: "walk", kind: "voxelanimation", name: "Walk" }],
-    usersOf: () => 1,
+    countUsers: () => 1,
     subscribe: () => () => undefined
   };
 }
@@ -80,7 +80,7 @@ export function createAnimatedModel(
   const set = new AnimationDocument();
   const clipId = set.addClip({ id: "clip", name: "Wave", length: 24000 })!;
   for (const [tick, x] of [[0, 0], [24000, 2]]) {
-    set.setKey(clipId, "Body/Arm", "position", { tick, value: { x, y: 0, z: 0 }, interpolation: "linear" });
+    set.writeKey(clipId, "Body/Arm", "position", { tick, value: { x, y: 0, z: 0 }, interpolation: "linear" });
   }
   const history = createEditorHistory({ document });
   const source = createSource(set);

@@ -133,7 +133,7 @@ export class NormalMapConfig {
     );
   }
 
-  zoneOf(
+  findZone(
     regionId: string
   ): Readonly<NormalMapZone> | undefined {
     return this.zones.find(

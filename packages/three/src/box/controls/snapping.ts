@@ -19,9 +19,6 @@ export interface MoveAxisOptions {
   bounds?: AxisRange | null;
 }
 
-/**
- * Clamps the min corner; oversized extents pin to `bounds.min`.
- */
 export function moveAxis(
   options: MoveAxisOptions
 ): number {
@@ -47,9 +44,6 @@ export interface ResizeAxisOptions {
   bounds?: AxisRange | null;
 }
 
-/**
- * Resizes one face; `minSize` wins when it conflicts with `bounds`.
- */
 export function resizeAxis(
   options: ResizeAxisOptions
 ): AxisExtent {

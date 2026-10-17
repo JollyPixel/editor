@@ -26,9 +26,6 @@ export interface NumberFieldDefaults {
 export class NumberField extends JollyField<number> {
   static readonly Defaults: NumberFieldDefaults = {
     step: 1,
-    /**
-     * Number fields are unbounded by default.
-     */
     min: Number.NEGATIVE_INFINITY,
     max: Number.POSITIVE_INFINITY,
     value: 0

@@ -99,7 +99,7 @@ export function installCanvasMock(
   });
 }
 
-export function contextOf(
+export function spriteContext(
   sprite: THREE.Sprite
 ): MockCanvasRenderingContext2D {
   const { map } = sprite.material;

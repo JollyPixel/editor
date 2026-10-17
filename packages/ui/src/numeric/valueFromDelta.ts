@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import { clamp } from "./bounds.ts";
 import {
-  precisionOf,
+  measurePrecision,
   roundToPrecision
 } from "./precision.ts";
 
@@ -28,9 +28,6 @@ export interface ValueFromDeltaOptions {
   precision?: number;
 }
 
-/**
- * Returns a scrub value stepped from the drag start.
- */
 export function valueFromDelta(
   options: ValueFromDeltaOptions
 ): number {
@@ -42,7 +39,7 @@ export function valueFromDelta(
     multiplier = 1,
     min = Number.NEGATIVE_INFINITY,
     max = Number.POSITIVE_INFINITY,
-    precision = precisionOf(start, step)
+    precision = measurePrecision(start, step)
   } = options;
 
   const stepCount = Math.round(

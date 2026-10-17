@@ -40,7 +40,7 @@ const kBlue = {
   a: 255
 };
 
-function strokeOf(
+function strokeCommand(
   positions: Vec2[],
   color: RGBA8
 ): DocumentCommand {
@@ -68,7 +68,7 @@ function createDocument(): HistoryDocument {
 describe("pixelHistoryKeys", () => {
   test("a stroke guard holds what its pixels are now and notices a change", () => {
     const doc = createDocument();
-    const guard = pixelHistoryKeys(doc).guard([strokeOf([{ x: 1, y: 1 }], kRed)]);
+    const guard = pixelHistoryKeys(doc).guard([strokeCommand([{ x: 1, y: 1 }], kRed)]);
     const captured = guard.capture();
 
     assert.equal(guard.same(captured), true);
@@ -81,7 +81,7 @@ describe("pixelHistoryKeys", () => {
   test("a resize or replacement touches every pixel guard, and no palette guard", () => {
     const doc = createDocument();
     const keys = pixelHistoryKeys(doc);
-    const stroke = keys.guard([strokeOf([{ x: 1, y: 1 }], kRed)]);
+    const stroke = keys.guard([strokeCommand([{ x: 1, y: 1 }], kRed)]);
     const palette = keys.guard([{
       action: "palette-color-changed",
       metadata: { index: 2, color: kRed }
@@ -105,7 +105,7 @@ describe("pixelHistoryKeys", () => {
     }]);
     const captured = guard.capture();
 
-    assert.equal(guard.touches(keys.written(localChange(strokeOf([{ x: 3, y: 3 }], kBlue)))), true);
+    assert.equal(guard.touches(keys.written(localChange(strokeCommand([{ x: 3, y: 3 }], kBlue)))), true);
     doc.resize({ x: 2, y: 2 });
     assert.equal(guard.same(captured), false);
   });

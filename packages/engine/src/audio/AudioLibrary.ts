@@ -5,9 +5,6 @@ import type {
   AssetReference
 } from "@jolly-pixel/asset";
 
-/**
- * Maps gameplay names to synchronously readable audio asset handles.
- */
 export class AudioLibrary<
   TKeys extends string = string
 > {

@@ -59,7 +59,7 @@ implements PixelArtCanvasHistory {
         written: () => [],
         guard: () => new KeyedGuard([])
       },
-      scopeOf: () => scope
+      resolveScope: () => scope
     });
 
     return {

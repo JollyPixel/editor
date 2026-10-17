@@ -29,7 +29,7 @@ export interface BlockAlphaModesOptions {
   ) => BlocksetPixels | undefined;
 }
 
-function alphaModeFor(
+function resolveAlphaMode(
   current: BlockAlphaMode | undefined,
   transparent: boolean
 ): BlockAlphaMode {
@@ -67,7 +67,7 @@ export class BlockAlphaModes {
       return resolved;
     }
 
-    const alphaMode = alphaModeFor(
+    const alphaMode = resolveAlphaMode(
       resolved.alphaMode,
       transparent
     );

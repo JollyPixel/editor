@@ -432,7 +432,7 @@ export class PixelArtCanvas {
     pixels: Vec2[],
     source: BrushPaintSource = "primary"
   ): void {
-    this.document.paintPixels(pixels, this.brush.colorFor(source));
+    this.document.paintPixels(pixels, this.brush.paintColor(source));
   }
 
   undo(): boolean {

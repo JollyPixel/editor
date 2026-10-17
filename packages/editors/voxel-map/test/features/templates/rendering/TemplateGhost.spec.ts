@@ -17,13 +17,13 @@ import {
 
 // Import Internal Dependencies
 import { TemplateGhost } from "../../../../src/features/templates/rendering/TemplateGhost.ts";
-import { sourcesOf } from "../../../helpers/blockSources.ts";
+import { createSources } from "../../../helpers/blockSources.ts";
 
 // CONSTANTS
 const kSlabBottom = 1;
 const kSlabTop = 2;
 
-function ghostOf(): TemplateGhost {
+function createGhost(): TemplateGhost {
   return new TemplateGhost({
     blockRegistry: new BlockRegistry([
       {
@@ -37,11 +37,11 @@ function ghostOf(): TemplateGhost {
         shapeId: "slabTop"
       }
     ]),
-    sources: sourcesOf(new BlocksetAtlases())
+    sources: createSources(new BlocksetAtlases())
   });
 }
 
-function heightOf(
+function measureHeight(
   ghost: TemplateGhost
 ): number {
   const bounds = new THREE.Box3();
@@ -57,7 +57,7 @@ function heightOf(
 
 describe("TemplateGhost", () => {
   test("draws both shapes of a merged cell", () => {
-    const ghost = ghostOf();
+    const ghost = createGhost();
     ghost.draw(
       new VoxelTemplate({
         id: "pair",
@@ -69,11 +69,11 @@ describe("TemplateGhost", () => {
       VoxelTransform.Identity
     );
 
-    assert.equal(heightOf(ghost), 1);
+    assert.equal(measureHeight(ghost), 1);
   });
 
   test("draws the single shape of an unmerged cell", () => {
-    const ghost = ghostOf();
+    const ghost = createGhost();
     ghost.draw(
       new VoxelTemplate({
         id: "slab",
@@ -84,6 +84,6 @@ describe("TemplateGhost", () => {
       VoxelTransform.Identity
     );
 
-    assert.equal(heightOf(ghost), 0.5);
+    assert.equal(measureHeight(ghost), 0.5);
   });
 });

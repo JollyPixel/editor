@@ -4,10 +4,6 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import { PeerFrustumLabel } from "./PeerFrustumLabel.ts";
 
-/**
- * Every `@default` here is `PeerFrustum.Defaults`' out-of-the-box value;
- * mutate `PeerFrustum.Defaults` to change it process-wide.
- */
 export interface PeerFrustumOptions {
   /**
    * Vertical field of view in degrees.
@@ -51,9 +47,6 @@ export interface PeerFrustumOptions {
   showNameBox?: boolean;
 }
 
-/**
- * Global fallbacks used when a `PeerFrustumOptions` field is omitted.
- */
 export interface PeerFrustumDefaults {
   fov: number;
   aspect: number;
@@ -74,11 +67,6 @@ interface FrustumCorners {
   readonly bottomLeft: THREE.Vector3;
 }
 
-/**
- * Static wireframe camera shape for peer presence.
- * Geometry points along local `-Z`; copy the represented camera's position
- * and quaternion.
- */
 export class PeerFrustum extends THREE.LineSegments<
   THREE.BufferGeometry, THREE.LineBasicMaterial
 > {
@@ -92,10 +80,6 @@ export class PeerFrustum extends THREE.LineSegments<
     showNameBox: false
   };
 
-  /**
-   * Label created by the constructor or first `displayName` assignment.
-   * `null` until a name is provided.
-   */
   label: PeerFrustumLabel | null = null;
 
   #color: THREE.ColorRepresentation;
@@ -224,7 +208,6 @@ export class PeerFrustum extends THREE.LineSegments<
     );
     const halfWidth = halfHeight * aspect;
 
-    // Camera looks down local -Z (Three.js / engine convention).
     return {
       topLeft: new THREE.Vector3(-halfWidth, halfHeight, -distance),
       topRight: new THREE.Vector3(halfWidth, halfHeight, -distance),
@@ -251,21 +234,17 @@ export class PeerFrustum extends THREE.LineSegments<
       depth
     );
 
-    // Each consecutive pair is one segment (THREE.LineSegments, no index needed).
     const points = [
-      // Near-plane rectangle
       nearCorners.topLeft, nearCorners.topRight,
       nearCorners.topRight, nearCorners.bottomRight,
       nearCorners.bottomRight, nearCorners.bottomLeft,
       nearCorners.bottomLeft, nearCorners.topLeft,
 
-      // Far-plane rectangle
       farCorners.topLeft, farCorners.topRight,
       farCorners.topRight, farCorners.bottomRight,
       farCorners.bottomRight, farCorners.bottomLeft,
       farCorners.bottomLeft, farCorners.topLeft,
 
-      // Body connects each near corner to its far counterpart
       nearCorners.topLeft, farCorners.topLeft,
       nearCorners.topRight, farCorners.topRight,
       nearCorners.bottomRight, farCorners.bottomRight,

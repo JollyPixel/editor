@@ -102,7 +102,7 @@ opacity.
 The fade drives `PeerFrustum.opacity`, which spans the wireframe and its label,
 clamps to `0..1`, and turns the line material transparent below `1`.
 
-`poseOf(clientId)` returns a copy of the last pose applied to a peer, or
+`peerPose(clientId)` returns a copy of the last pose applied to a peer, or
 `undefined` for an unknown peer, one whose pose is missing or malformed, and
 one that has left. Use it to move a local camera onto a peer's viewpoint.
 

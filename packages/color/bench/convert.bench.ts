@@ -21,7 +21,7 @@ import {
 } from "../src/convert/index.ts";
 import {
   BATCH,
-  batchOf,
+  createBatch,
   hsla,
   hsva,
   rgba8,
@@ -29,30 +29,30 @@ import {
 } from "./_fixtures.ts";
 
 const suite = defineSuite("convert", (bench) => {
-  const rgbColors = batchOf(unitRgba);
-  const hslColors = batchOf(hsla);
-  const hsvColors = batchOf(hsva);
+  const rgbColors = createBatch(unitRgba);
+  const hslColors = createBatch(hsla);
+  const hsvColors = createBatch(hsva);
   const hwbColors = rgbColors.map(rgbToHwb);
-  const bytes8 = batchOf(rgba8);
+  const bytes8 = createBatch(rgba8);
 
   bench
-    .add("rgbToHsl", () => sumOf(rgbColors, (color) => rgbToHsl(color).h))
-    .add("hslToRgb", () => sumOf(hslColors, (color) => hslToRgb(color).r))
-    .add("rgbToHsv", () => sumOf(rgbColors, (color) => rgbToHsv(color).h))
-    .add("hsvToRgb", () => sumOf(hsvColors, (color) => hsvToRgb(color).r))
-    .add("rgbToHwb", () => sumOf(rgbColors, (color) => rgbToHwb(color).h))
-    .add("hwbToRgb", () => sumOf(hwbColors, (color) => hwbToRgb(color).r))
-    .add("hslToHsv", () => sumOf(hslColors, (color) => hslToHsv(color).v))
-    .add("hsvToHsl", () => sumOf(hsvColors, (color) => hsvToHsl(color).l))
-    .add("toRGBA8", () => sumOf(rgbColors, (color) => toRGBA8(color).r))
-    .add("fromRGBA8", () => sumOf(bytes8, (color) => fromRGBA8(color).r))
-    .add("srgbToLinear", () => sumOf(rgbColors, (color) => srgbToLinear(color.r)))
-    .add("linearToSrgb", () => sumOf(rgbColors, (color) => linearToSrgb(color.r)));
+    .add("rgbToHsl", () => sumBy(rgbColors, (color) => rgbToHsl(color).h))
+    .add("hslToRgb", () => sumBy(hslColors, (color) => hslToRgb(color).r))
+    .add("rgbToHsv", () => sumBy(rgbColors, (color) => rgbToHsv(color).h))
+    .add("hsvToRgb", () => sumBy(hsvColors, (color) => hsvToRgb(color).r))
+    .add("rgbToHwb", () => sumBy(rgbColors, (color) => rgbToHwb(color).h))
+    .add("hwbToRgb", () => sumBy(hwbColors, (color) => hwbToRgb(color).r))
+    .add("hslToHsv", () => sumBy(hslColors, (color) => hslToHsv(color).v))
+    .add("hsvToHsl", () => sumBy(hsvColors, (color) => hsvToHsl(color).l))
+    .add("toRGBA8", () => sumBy(rgbColors, (color) => toRGBA8(color).r))
+    .add("fromRGBA8", () => sumBy(bytes8, (color) => fromRGBA8(color).r))
+    .add("srgbToLinear", () => sumBy(rgbColors, (color) => srgbToLinear(color.r)))
+    .add("linearToSrgb", () => sumBy(rgbColors, (color) => linearToSrgb(color.r)));
 }, { opsPerIteration: BATCH });
 
 export default suite;
 
-function sumOf<T>(
+function sumBy<T>(
   colors: T[],
   read: (color: T) => number
 ): number {

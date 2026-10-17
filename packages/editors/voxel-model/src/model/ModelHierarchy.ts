@@ -142,7 +142,7 @@ export class ModelHierarchy {
     if (
       !this.#access.current.has("transforms") ||
       block === undefined ||
-      BlockShape.same(BlockShape.of(block), shape)
+      BlockShape.same(BlockShape.fromBlock(block), shape)
     ) {
       return false;
     }
@@ -151,10 +151,10 @@ export class ModelHierarchy {
       [...tree.blocks()].filter((each) => each.id !== id).map((each) => each.uv)
     );
 
-    return this.#document.setShape(
+    return this.#document.updateShape(
       id,
       shape,
-      others.reshaped(block.uv, BlockShape.of(block), shape, this.#textureSize())
+      others.reshaped(block.uv, BlockShape.fromBlock(block), shape, this.#textureSize())
     );
   }
 
@@ -190,9 +190,9 @@ export class ModelHierarchy {
       return;
     }
     const { tree } = this.#document;
-    const parentUuid = tree.enclosingBlockOf(parentId);
+    const parentUuid = tree.findEnclosingBlock(parentId);
     const transforms = this.#blocksCarriedBy(id)
-      .filter((uuid) => tree.transformParentOf(uuid) !== parentUuid)
+      .filter((uuid) => tree.findTransformParent(uuid) !== parentUuid)
       .map((uuid) => {
         return {
           id: uuid,
@@ -238,7 +238,7 @@ export class ModelHierarchy {
         {
           name: options.name,
           parentId: source.parentId,
-          beforeId: this.#document.tree.nextSiblingOf(source.id)
+          beforeId: this.#document.tree.findNextSibling(source.id)
         },
         options.includeChildren,
         duplicatedUuids
@@ -273,7 +273,7 @@ export class ModelHierarchy {
 
     this.#edits.record(`Delete ${node.name}`, () => {
       if (!options.withChildren) {
-        for (const child of tree.childrenOf(id)) {
+        for (const child of tree.listChildren(id)) {
           this.move(child.id, node.parentId, id);
         }
       }
@@ -293,7 +293,7 @@ export class ModelHierarchy {
       return [node.id];
     }
 
-    return tree.childrenOf(id).flatMap(
+    return tree.listChildren(id).flatMap(
       (child) => this.#blocksCarriedBy(child.id)
     );
   }
@@ -305,7 +305,7 @@ export class ModelHierarchy {
     duplicatedUuids: string[]
   ): string | null {
     const children = includeChildren ?
-      this.#document.tree.childrenOf(node.id) :
+      this.#document.tree.listChildren(node.id) :
       [];
     const duplicateId = node.kind === "folder" ?
       this.#document.addFolder(copy) :
@@ -313,7 +313,7 @@ export class ModelHierarchy {
         ...copy,
         name: this.#document.tree.blockNamesUnder(copy.parentId ?? null).free(copy.name),
         transform: node.transform,
-        shape: BlockShape.of(node),
+        shape: BlockShape.fromBlock(node),
         uv: node.uv,
         materialId: node.materialId
       });

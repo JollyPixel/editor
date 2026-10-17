@@ -69,10 +69,6 @@ export class BlendGroup {
     Object.freeze(this);
   }
 
-  /**
-   * Edge strength this group bleeds onto a face of `face`: 0 when it does
-   * not, 0.5 when both share the edge, 1 when this group covers it.
-   */
   bleedOnto(
     face: BlendGroup
   ): number {

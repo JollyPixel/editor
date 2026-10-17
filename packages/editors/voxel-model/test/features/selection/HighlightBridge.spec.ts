@@ -16,7 +16,7 @@ function stubRenderer(): THREE.WebGPURenderer {
   return { render: () => void 0 } as unknown as THREE.WebGPURenderer;
 }
 
-function pivotMarkerOf(
+function findPivotMarker(
   block: ModelBlock
 ): THREE.Sprite | undefined {
   return block.node.children.find(
@@ -24,7 +24,7 @@ function pivotMarkerOf(
   );
 }
 
-function overlayOf(
+function findOverlay(
   block: ModelBlock
 ): HighlightSilhouette | undefined {
   return block.mesh.children.find(
@@ -65,7 +65,7 @@ describe("HighlightBridge local selection", () => {
     selection.select(block.uuid);
 
     assert.ok(block.mesh.children.some((child) => child.name === "selection-texture-ghost"));
-    assert.ok(overlayOf(block));
+    assert.ok(findOverlay(block));
   });
 
   test("hides the ghost again once a different block is selected", () => {
@@ -87,7 +87,7 @@ describe("HighlightBridge local hover", () => {
 
     selection.hover(block.uuid);
 
-    assert.ok(overlayOf(block));
+    assert.ok(findOverlay(block));
   });
 });
 
@@ -98,8 +98,8 @@ describe("HighlightBridge peer selection", () => {
 
     presence.blockSelections = peerMarks(block.uuid);
 
-    assert.ok(overlayOf(block));
-    assert.equal(pivotMarkerOf(block)?.visible, false);
+    assert.ok(findOverlay(block));
+    assert.equal(findPivotMarker(block)?.visible, false);
   });
 
   test("clears the outline once the peer's mark drops out", () => {
@@ -109,7 +109,7 @@ describe("HighlightBridge peer selection", () => {
 
     presence.blockSelections = new Map();
 
-    assert.equal(overlayOf(block)?.uuid, undefined);
+    assert.equal(findOverlay(block)?.uuid, undefined);
   });
 
   test("moves the outline when the peer selects a different block", () => {
@@ -120,8 +120,8 @@ describe("HighlightBridge peer selection", () => {
 
     presence.blockSelections = peerMarks(second.uuid);
 
-    assert.equal(overlayOf(first)?.uuid, undefined);
-    assert.ok(overlayOf(second));
+    assert.equal(findOverlay(first)?.uuid, undefined);
+    assert.ok(findOverlay(second));
   });
 });
 
@@ -132,7 +132,7 @@ describe("HighlightBridge peer hover", () => {
 
     presence.blockHovers = peerMarks(block.uuid);
 
-    assert.ok(overlayOf(block));
+    assert.ok(findOverlay(block));
   });
 
   test("clears the outline once the peer stops hovering", () => {
@@ -142,7 +142,7 @@ describe("HighlightBridge peer hover", () => {
 
     presence.blockHovers = new Map();
 
-    assert.equal(overlayOf(block)?.uuid, undefined);
+    assert.equal(findOverlay(block)?.uuid, undefined);
   });
 });
 
@@ -162,7 +162,7 @@ describe("HighlightBridge block lifecycle", () => {
     });
     selection.select(block.uuid);
 
-    assert.ok(overlayOf(block));
+    assert.ok(findOverlay(block));
   });
 
   test("registers blocks added after construction", () => {
@@ -171,7 +171,7 @@ describe("HighlightBridge block lifecycle", () => {
     const block = addBlock();
     selection.select(block.uuid);
 
-    assert.ok(overlayOf(block));
+    assert.ok(findOverlay(block));
   });
 });
 

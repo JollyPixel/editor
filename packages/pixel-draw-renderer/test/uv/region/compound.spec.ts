@@ -7,8 +7,8 @@ import {
   copyGeometry,
   geometryAt,
   pointInGeometry,
-  rectOf,
-  triangleCornerOf
+  boundingRect,
+  triangleCorner
 } from "../../../src/uv/geometry/geometry.ts";
 import { UVRegion } from "../../../src/uv/region/UVRegion.ts";
 import type {
@@ -29,7 +29,7 @@ const kStairSide: UVCompound = {
 describe("compound geometry", () => {
   test("bounds are the compound's own rect", () => {
     assert.deepStrictEqual(
-      rectOf(kStairSide),
+      boundingRect(kStairSide),
       { x: 0, y: 0, width: 16, height: 16 }
     );
   });
@@ -85,14 +85,14 @@ describe("compound geometry", () => {
 });
 
 describe("geometry helpers", () => {
-  test("triangleCornerOf answers only for a triangle", () => {
-    assert.equal(triangleCornerOf(kStairSide), null);
+  test("triangleCorner answers only for a triangle", () => {
+    assert.equal(triangleCorner(kStairSide), null);
     assert.equal(
-      triangleCornerOf({ x: 0, y: 0, width: 1, height: 1 }),
+      triangleCorner({ x: 0, y: 0, width: 1, height: 1 }),
       null
     );
     assert.equal(
-      triangleCornerOf({
+      triangleCorner({
         shape: "triangle",
         corner: "bottom-left",
         rect: { x: 0, y: 0, width: 1, height: 1 }
@@ -109,7 +109,7 @@ describe("UVRegion — a shape's own slots", () => {
     "top.1": { x: 0, y: 0, width: 16, height: 16 }
   };
 
-  test("slotsOf carries the three slots it was given, in order", () => {
+  test("listSlots carries the three slots it was given, in order", () => {
     const region = new UVRegion({
       id: "block-1",
       color: "#fff",
@@ -118,11 +118,11 @@ describe("UVRegion — a shape's own slots", () => {
     });
 
     assert.deepStrictEqual(
-      region.slotsOf().map(({ slot }) => slot),
+      region.listSlots().map(({ slot }) => slot),
       ["right", "top", "top.1"]
     );
     assert.deepStrictEqual(region.slots, ["right", "top", "top.1"]);
-    assert.throws(() => region.geometryFor("bottom"), RangeError);
+    assert.throws(() => region.slotGeometry("bottom"), RangeError);
   });
 
   test("stack skips a compound when picking the face to stack onto", () => {
@@ -150,7 +150,7 @@ describe("UVRegion — a shape's own slots", () => {
     });
 
     assert.deepStrictEqual(
-      region.slotsOf().map(({ slot }) => slot),
+      region.listSlots().map(({ slot }) => slot),
       ["top"]
     );
   });
@@ -165,7 +165,7 @@ describe("UVRegion — a shape's own slots", () => {
     const restored = new UVRegion(region.toJSON());
 
     assert.deepStrictEqual(
-      restored.geometryFor("right"),
+      restored.slotGeometry("right"),
       kStairSide
     );
   });

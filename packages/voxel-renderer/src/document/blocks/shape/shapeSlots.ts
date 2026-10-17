@@ -25,10 +25,6 @@ export const FACE_SLOT_NAMES = [
 
 export type FaceSlotName = typeof FACE_SLOT_NAMES[number];
 
-/**
- * Key of a block's `faceTextures`. Any string is accepted because a shape may
- * pin its polygons to a slot name of its own.
- */
 export type TextureSlotKey =
   | FaceSlotName
   | `${FaceSlotName}.${number}`
@@ -51,9 +47,6 @@ export function faceSlotName(
   return FACE_SLOT_NAMES[face];
 }
 
-/**
- * Reads a numeric `FACE` key as that face's default slot.
- */
 export function normalizeSlotKey(
   key: string
 ): string {
@@ -64,9 +57,6 @@ export function normalizeSlotKey(
     key;
 }
 
-/**
- * Slot a derived slot inherits its tile from, so `top.1` falls back to `top`.
- */
 export function baseSlotName(
   slot: string
 ): string {
@@ -75,10 +65,6 @@ export function baseSlotName(
   return separator === -1 ? slot : slot.slice(0, separator);
 }
 
-/**
- * Slots of `shape`, ordered by face then by distance from the boundary plane.
- * Memoized, so callers may compare identities.
- */
 export function shapeSlots(
   shape: BlockShape
 ): readonly ShapeSlot[] {
@@ -93,11 +79,6 @@ export function shapeSlots(
   return slots;
 }
 
-/**
- * `faceTextures` keys that cannot texture any polygon of `shape`. Built-in face
- * slot names are always known, so one texture map can be shared by a cube and
- * a ramp, which has no `back`.
- */
 export function unknownTextureSlots(
   keys: Iterable<string>,
   shape: BlockShape

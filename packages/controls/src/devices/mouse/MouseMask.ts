@@ -2,9 +2,6 @@
 import type { InputReader } from "../../types.ts";
 import { EdgeBuffer } from "../EdgeBuffer.ts";
 
-/**
- * Bitmask fed by DOM events and samples, published to one reader at a time.
- */
 export class MouseMask {
   #value = 0;
   #pending = 0;

@@ -8,7 +8,7 @@ import { text } from "../shared/containerBuilders.ts";
 const kEdgeRow = "Wing";
 const kRows = ["Torso", "Arm", "Locked leg", kEdgeRow];
 
-function entriesFor(
+function buildMenuEntries(
   row: string
 ): ContextMenuEntry[] {
   const locked = row.startsWith("Locked");
@@ -84,7 +84,7 @@ export const CONTEXT_MENU_EXAMPLE = createSimpleExample(
         event.preventDefault();
         row.focus();
         target = name;
-        menu.items = entriesFor(name);
+        menu.items = buildMenuEntries(name);
         menu.openAt(event.clientX, event.clientY);
       });
 

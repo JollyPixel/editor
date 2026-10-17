@@ -17,12 +17,6 @@ const kLayer = "Ground";
 const kStoneId = 1;
 const kGlowId = 2;
 
-/**
- * Headless block light replay: a stone floor with scattered emitters and
- * pillars, timed through the same update and texture refresh the view runs.
- *
- * Usage: node bench/block-light.bench.ts [--size 256] [--lights 300] [--chunk 16] [--tint #ffffff] [--runs 5]
- */
 const { values } = parseArgs({
   options: {
     size: { type: "string", default: "256" },

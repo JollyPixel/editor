@@ -12,10 +12,6 @@ import { AssetArchiveError } from "./errors/AssetArchiveError.ts";
 import { UnknownAssetKindError } from "../kinds/errors/UnknownAssetKindError.ts";
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
 
-/**
- * Loads the asset into a throwaway state of its kind, so export and import
- * accept exactly the same documents.
- */
 export function readableAsset(
   kinds: AssetKindRegistry,
   asset: AssetArchiveAsset

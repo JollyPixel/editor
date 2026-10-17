@@ -91,10 +91,6 @@ export class PulledFaceBuffer {
     this.#maxZ = -Infinity;
   }
 
-  /**
-   * `neighbours` is read by a blended buffer only; an entry that no longer
-   * fits the palette is dropped.
-   */
   // eslint-disable-next-line max-params
   addFace(
     face: BlockVariantFace,

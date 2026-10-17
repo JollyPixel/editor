@@ -167,7 +167,7 @@ export function toDocumentCommand(
   };
 }
 
-export function strokeOf(
+export function strokeCommand(
   positions: Vec2[],
   color: RGBA8
 ): DocumentCommand {
@@ -177,16 +177,16 @@ export function strokeOf(
   };
 }
 
-export function strokesOf(
+export function strokeCommands(
   positions: Vec2[],
   colors: RGBA8[]
 ): DocumentCommand[] {
   return groupPositionsByColor(positions, colors).map(
-    (group) => strokeOf(group.positions, group.color)
+    (group) => strokeCommand(group.positions, group.color)
   );
 }
 
-export function selectEditOf(
+export function selectEditCommand(
   positions: Vec2[],
   colors: RGBA8[]
 ): DocumentCommand {
@@ -196,7 +196,7 @@ export function selectEditOf(
   };
 }
 
-export function textureOf(
+export function textureCommand(
   size: Vec2,
   pixels: Uint8ClampedArray
 ): DocumentCommand {
@@ -261,7 +261,7 @@ export function uvRegionRotated(
     {
       id: region.id,
       face,
-      geometry: region.geometryFor(face)
+      geometry: region.slotGeometry(face)
     };
 
   return {

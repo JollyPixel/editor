@@ -18,7 +18,7 @@ history.register({
     written: () => [],
     guard: () => new KeyedGuard([])
   },
-  scopeOf: () => "main"
+  resolveScope: () => "main"
 });
 ```
 

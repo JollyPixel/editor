@@ -14,7 +14,7 @@ export class SlotRegionIds {
   resolveBlockId(
     regionId: string
   ): number | null {
-    const localId = BlockProjection.localBlockIdOf(regionId);
+    const localId = BlockProjection.parseLocalBlockId(regionId);
 
     return localId === null ? null : this.slot.composeBlockId(localId);
   }
@@ -23,7 +23,7 @@ export class SlotRegionIds {
     blockId: number
   ): string | null {
     return this.slot.ownsBlockId(blockId) ?
-      BlockProjection.regionIdOf(this.slot.decodeLocalBlockId(blockId)) :
+      BlockProjection.formatRegionId(this.slot.decodeLocalBlockId(blockId)) :
       null;
   }
 }

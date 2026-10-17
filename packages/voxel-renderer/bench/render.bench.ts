@@ -11,12 +11,6 @@ import { chromium } from "@playwright/test";
 // Import Internal Dependencies
 import type { RenderBenchOptions } from "./fixtures/renderScene.ts";
 
-/**
- * Frame time of a lit voxel map in headless Chrome, through the transparency
- * pass and optionally the glow (emissive MRT + bloom) pass.
- *
- * Usage: node bench/render.bench.ts [--size 96] [--lights 120] [--frames 60] [--resolution 512] [--runs 3] [--webgpu] [--gpu]
- */
 const { values } = parseArgs({
   options: {
     size: { type: "string", default: "96" },

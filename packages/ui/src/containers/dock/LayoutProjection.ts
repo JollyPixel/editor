@@ -39,11 +39,11 @@ export class LayoutProjection {
     const floating: DeclaredFloating[] = [];
     const locked: string[] = [];
     for (const pane of this.#host.panes()) {
-      const frame = floatingOf(pane);
+      const frame = readFloating(pane);
       if (frame !== null) {
         floating.push({
           key: pane.layoutKey,
-          geometry: geometryOf(frame)
+          geometry: readGeometry(frame)
         });
       }
       if (pane.locked) {
@@ -94,10 +94,10 @@ export class LayoutProjection {
       }
       dock.collapsed = state.collapsed === true;
       const primary = state.groups
-        .map((group) => this.#slotFor(group, index, released, claimed))
+        .map((group) => this.#claimSlot(group, index, released, claimed))
         .filter((slot) => slot !== null);
       const secondary = (state.secondary ?? [])
-        .map((group) => this.#slotFor(group, index, released, claimed))
+        .map((group) => this.#claimSlot(group, index, released, claimed))
         .filter((slot) => slot !== null);
       for (const slot of primary) {
         slot.removeAttribute("slot");
@@ -142,7 +142,7 @@ export class LayoutProjection {
     );
   }
 
-  #slotFor(
+  #claimSlot(
     state: PaneGroupState,
     index: ReadonlyMap<string, PaneElement>,
     released: Set<Floating>,
@@ -152,7 +152,7 @@ export class LayoutProjection {
       .map((key) => index.get(key))
       .filter((pane) => pane !== undefined);
     for (const pane of panes) {
-      const frame = floatingOf(pane);
+      const frame = readFloating(pane);
       if (frame !== null) {
         released.add(frame);
       }
@@ -210,7 +210,7 @@ export class LayoutProjection {
     pane: PaneElement,
     geometry: FloatingState
   ): void {
-    let frame = floatingOf(pane);
+    let frame = readFloating(pane);
     pane.removeAttribute("slot");
     if (frame === null) {
       frame = document.createElement("jolly-floating");
@@ -227,7 +227,7 @@ export class LayoutProjection {
   }
 }
 
-export function floatingOf(
+export function readFloating(
   pane: PaneElement
 ): Floating | null {
   const parent = pane.parentElement;
@@ -279,7 +279,7 @@ function orderChildren(
   }
 }
 
-function geometryOf(
+function readGeometry(
   frame: Floating
 ): FloatingState {
   return {

@@ -54,9 +54,6 @@ export interface TimelineView extends TimelinePeers {
 }
 
 export interface TimelinePlayhead {
-  /**
-   * `fraction` runs from 0 at the clip's start to 1 at its end; `null` past the end.
-   */
   showPlayhead(fraction: number | null): void;
 }
 

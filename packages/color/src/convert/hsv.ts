@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import {
-  hueOf,
+  computeHue,
   hueSector,
   sectorChannels
 } from "./hue.ts";
@@ -13,9 +13,6 @@ import type {
   RGBA
 } from "../types.ts";
 
-/**
- * Clamps unit sRGB and reports zero hue and saturation for grays.
- */
 export function rgbToHsv(
   color: RGBA
 ): HSVA {
@@ -28,16 +25,13 @@ export function rgbToHsv(
   const chroma = max - min;
 
   return {
-    h: hueOf(r, g, b, max, chroma),
+    h: computeHue(r, g, b, max, chroma),
     s: max === 0 ? 0 : chroma / max,
     v: max,
     a: clampUnit(color.a)
   };
 }
 
-/**
- * Wraps hue and clamps all other HSVA channels.
- */
 export function hsvToRgb(
   color: HSVA
 ): RGBA {

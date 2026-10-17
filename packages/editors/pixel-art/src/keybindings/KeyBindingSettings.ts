@@ -72,7 +72,7 @@ export class KeyBindingSettings extends Emitter<KeyBindingSettingsEvents> {
   chordsBoundTo(
     action: PixelArtAction
   ): KeyChordString[] {
-    return this.#keyBindings.chordsOf(action).map((chord) => chord.toString());
+    return this.#keyBindings.chordsBoundTo(action).map((chord) => chord.toString());
   }
 
   assign(

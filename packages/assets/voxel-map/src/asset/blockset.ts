@@ -36,11 +36,6 @@ export const BLOCKSET_ASSET: AssetKindDescriptor = {
   icon: BLOCKSET_ICON
 };
 
-/**
- * The stored form of a blockset: its pixels, tile size, blocks and material
- * groups. Blocks carry blockset-local ids and tile references naming no
- * blockset.
- */
 export interface BlocksetAssetDocument {
   version: typeof BLOCKSET_DOCUMENT_VERSION;
   tileSize: number;
@@ -112,9 +107,6 @@ export function createBlocksetDocument(
   };
 }
 
-/**
- * Wraps a PNG as a blockset with one cube block per tile.
- */
 export async function blocksetDocumentFromPng(
   png: Uint8Array,
   options: BlocksetFromPngOptions = {}

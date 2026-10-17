@@ -1,9 +1,6 @@
 // Import Internal Dependencies
 import type { AssetId } from "../AssetId.ts";
 
-/**
- * Reports disagreement between a reference kind and its catalog record.
- */
 export class AssetKindMismatchError extends Error {
   readonly id: AssetId;
   readonly expectedKind: string;

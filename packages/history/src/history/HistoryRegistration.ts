@@ -63,7 +63,7 @@ export interface HistoryRegistration<
   id: string;
   document: HistorySource<TCommand, TImage>;
   keys: HistoryKeys<TCommand, TImage, TWritten, TCapture>;
-  scopeOf(
+  resolveScope(
     change: CommandChange<TCommand, TImage>
   ): TScope | null;
   label?(

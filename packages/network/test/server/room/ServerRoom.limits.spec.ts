@@ -7,10 +7,10 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { identityOf } from "../../helpers/server/identity.ts";
+import { createIdentity } from "../../helpers/server/identity.ts";
 import {
   createClient,
-  serverEnvelopeOf
+  toServerEnvelope
 } from "../../helpers/server/clientHandle.ts";
 import { createExtension } from "../../helpers/server/serverRoom.ts";
 import { actionProtocols } from "../../helpers/protocol/protocols.ts";
@@ -28,11 +28,11 @@ const kPresenceVoidForViewer = {
   }
 } as const;
 
-function syncMembersOf(
+function filterSyncMembers(
   sent: unknown[]
 ): unknown[] {
   const sync = sent
-    .map(serverEnvelopeOf)
+    .map(toServerEnvelope)
     .find((envelope) => envelope.kind === "sync");
   if (sync === undefined || sync.kind !== "sync") {
     throw new Error("expected a sync envelope");
@@ -54,18 +54,18 @@ describe("ServerRoom — sync snapshot presence", () => {
     const c = createClient("C");
     await room.join({
       handle: a.client,
-      identity: identityOf("A"),
+      identity: createIdentity("A"),
       presence: { cursor: { x: 1, y: 1 } }
     });
 
-    await room.join({ handle: b.client, identity: identityOf("B", "viewer") });
-    await room.join({ handle: c.client, identity: identityOf("C") });
+    await room.join({ handle: b.client, identity: createIdentity("B", "viewer") });
+    await room.join({ handle: c.client, identity: createIdentity("C") });
 
-    assert.deepEqual(syncMembersOf(b.sent), [
+    assert.deepEqual(filterSyncMembers(b.sent), [
       { clientId: "A", role: "default", profile: {}, presence: {} },
       { clientId: "B", role: "viewer", profile: {}, presence: {} }
     ]);
-    assert.deepEqual(syncMembersOf(c.sent)[0], {
+    assert.deepEqual(filterSyncMembers(c.sent)[0], {
       clientId: "A",
       role: "default",
       profile: {},
@@ -89,7 +89,7 @@ describe("ServerRoom — peer metadata length", () => {
 
     const admitted = await room.join({
       handle: a.client,
-      identity: identityOf("A"),
+      identity: createIdentity("A"),
       profile: { username: "x".repeat(64) }
     });
 
@@ -109,7 +109,7 @@ describe("ServerRoom — peer metadata length", () => {
 
     const admitted = await room.join({
       handle: a.client,
-      identity: identityOf("A"),
+      identity: createIdentity("A"),
       presence: { selection: "x".repeat(64) }
     });
 
@@ -121,8 +121,8 @@ describe("ServerRoom — peer metadata length", () => {
     const room = roomWithLimit();
     const a = createClient("A");
     const b = createClient("B");
-    await room.join({ handle: a.client, identity: identityOf("A") });
-    await room.join({ handle: b.client, identity: identityOf("B") });
+    await room.join({ handle: a.client, identity: createIdentity("A") });
+    await room.join({ handle: b.client, identity: createIdentity("B") });
     a.sent.length = 0;
     b.sent.length = 0;
 
@@ -135,7 +135,7 @@ describe("ServerRoom — peer metadata length", () => {
       event: "$presence",
       reason: "presence exceeds 64 JSON characters"
     }]);
-    assert.deepEqual(b.sent.map(serverEnvelopeOf), [{
+    assert.deepEqual(b.sent.map(toServerEnvelope), [{
       room: "pixel-draw",
       kind: "peer-presence",
       clientId: "A",
@@ -146,7 +146,7 @@ describe("ServerRoom — peer metadata length", () => {
   test("measures a replaced key once, so repeated patches of one key never add up", async() => {
     const room = roomWithLimit();
     const a = createClient("A");
-    await room.join({ handle: a.client, identity: identityOf("A") });
+    await room.join({ handle: a.client, identity: createIdentity("A") });
     a.sent.length = 0;
 
     for (let x = 0; x < 100; x++) {
@@ -166,7 +166,7 @@ describe("ServerRoom — resync throttle", () => {
         limits: { resyncIntervalMs: 1_000 }
       });
       const a = createClient("A");
-      await room.join({ handle: a.client, identity: identityOf("A") });
+      await room.join({ handle: a.client, identity: createIdentity("A") });
 
       await room.resync("A");
       await room.resync("A");
@@ -192,7 +192,7 @@ describe("ServerRoom — resync throttle", () => {
       const extension = createExtension(actionProtocols);
       const room = new ServerRoom(extension.id, extension);
       const a = createClient("A");
-      await room.join({ handle: a.client, identity: identityOf("A") });
+      await room.join({ handle: a.client, identity: createIdentity("A") });
 
       await room.resync("A");
       await room.resync("A");

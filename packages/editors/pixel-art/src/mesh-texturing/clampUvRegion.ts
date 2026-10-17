@@ -37,7 +37,6 @@ const kClampedMapColor = Fn(({ material }) => {
     return materialColor;
   }
 
-  // @types/three declares textureSize() as an untyped Node
   const texels = textureSize(texture(map), int(0)) as unknown as Node<"ivec2">;
   const size = vec2(texels);
   const region = attribute<"vec4">(UV_REGION_ATTRIBUTE, "vec4");
@@ -55,9 +54,6 @@ const kClampedMapColor = Fn(({ material }) => {
   return vec4(reference("color", "color", material), float(1)).mul(sampled);
 })();
 
-/**
- * Keeps MSAA edge samples inside the region written by `UVGeometryBinding`.
- */
 export function clampUvRegion(
   mesh: UvRegionClampedMesh
 ): void {

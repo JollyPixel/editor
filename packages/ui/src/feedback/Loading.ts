@@ -113,13 +113,13 @@ export class Loading extends LitElement {
     this.remove();
   }
 
-  setAsset(
+  showAsset(
     assetName: string
   ): void {
     this.assetName = assetName;
   }
 
-  setProgress(
+  updateProgress(
     value: number,
     max: number
   ): void {
@@ -127,7 +127,7 @@ export class Loading extends LitElement {
     this.maxProgress = max;
   }
 
-  getProgressPercentage(): number {
+  get progressPercentage(): number {
     if (this.maxProgress === 0) {
       return 0;
     }

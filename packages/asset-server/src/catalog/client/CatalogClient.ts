@@ -202,11 +202,11 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
     return this.#folders.values();
   }
 
-  dependentsOf(
+  listDependents(
     assetId: string
   ): AssetRecordData[] {
     return this.#dependencies
-      .dependentsOf(assetId)
+      .listDependents(assetId)
       .flatMap((dependentId) => this.#records.get(dependentId) ?? []);
   }
 
@@ -281,7 +281,7 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
       renames: entries
     });
 
-    return reportOf(rawReport);
+    return toReport(rawReport);
   }
 
   async removeMany(
@@ -299,7 +299,7 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
       force: options.force
     });
 
-    return reportOf(rawReport);
+    return toReport(rawReport);
   }
 
   async createFolder(
@@ -595,7 +595,7 @@ async function readyWithin(
   }
 }
 
-function reportOf(
+function toReport(
   reply: Reply<typeof CATALOG_RENAME | typeof CATALOG_DELETE>
 ): CatalogBatchReport {
   return reply.failure === undefined ?

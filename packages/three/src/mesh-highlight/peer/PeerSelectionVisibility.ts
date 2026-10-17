@@ -21,10 +21,6 @@ export interface PeerSelectionVisibilityOptions {
   hoverRegistry?: PeerHoverRegistry;
 }
 
-/**
- * Tracks frustum and distance visibility for peer indicators.
- * Call `update()` once per render tick.
- */
 export class PeerSelectionVisibility extends EventTarget {
   #registry: PeerSelectionRegistry;
   #selection: MeshHighlightState;
@@ -72,9 +68,6 @@ export class PeerSelectionVisibility extends EventTarget {
     this.#maxDistance = maxDistance;
   }
 
-  /**
-   * Recomputes visibility and dispatches when a result changes.
-   */
   update(): void {
     this.#camera.updateMatrixWorld();
     this.#viewProjectionMatrix.multiplyMatrices(
@@ -99,7 +92,7 @@ export class PeerSelectionVisibility extends EventTarget {
     }
 
     for (const id of currentIds) {
-      const target = this.#selection.targetFor(id);
+      const target = this.#selection.findTarget(id);
       if (!target) {
         continue;
       }
@@ -126,9 +119,6 @@ export class PeerSelectionVisibility extends EventTarget {
     }
   }
 
-  /**
-   * Returns the last result, or `true` before the id is evaluated.
-   */
   isVisible(
     objectId: string
   ): boolean {

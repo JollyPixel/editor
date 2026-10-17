@@ -11,7 +11,7 @@ import {
 
 // Import Internal Dependencies
 import {
-  clipTargetOf,
+  toClipTarget,
   type ClipTarget,
   type LinkedAnimationSet
 } from "./AnimationLibrary.ts";
@@ -53,7 +53,7 @@ export function clipNodes(
   set: LinkedAnimationSet,
   focuses: ClipFocuses
 ): TreeNode<RowTarget>[] {
-  const target = clipTargetOf(set);
+  const target = toClipTarget(set);
 
   return [...set.document.set.clips()].map((clip) => {
     const id = animationKey(set.id, clip.id);

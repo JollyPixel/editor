@@ -1,6 +1,3 @@
-/**
- * Narrows an event target to an input element.
- */
 export function isInputElement(
   target: EventTarget | null
 ): target is HTMLInputElement {
@@ -60,10 +57,7 @@ export function preventDefault(
   event.preventDefault();
 }
 
-/**
- * Narrows a custom event to its detail.
- */
-export function detailOf<TDetail>(
+export function readDetail<TDetail>(
   event: Event
 ): TDetail | null {
   return event instanceof CustomEvent ? event.detail : null;

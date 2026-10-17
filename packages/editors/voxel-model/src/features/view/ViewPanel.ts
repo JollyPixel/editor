@@ -14,7 +14,7 @@ import {
 
 // Import Internal Dependencies
 import {
-  backgroundOf,
+  resolveBackground,
   isLit,
   type KeyLightPreset,
   type ViewSettings,
@@ -132,7 +132,7 @@ export class ViewPanel extends LitElement {
               label="Background"
               description=${kBackgroundHelp}
               description-display="tooltip"
-              .value=${backgroundOf(settings)}
+              .value=${resolveBackground(settings)}
               @jolly-input=${this.#bind("background")}
               @jolly-change=${this.#bind("background")}
             ></jolly-color>

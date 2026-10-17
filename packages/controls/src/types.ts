@@ -15,10 +15,6 @@ export interface Vector3Like {
   z: number;
 }
 
-/**
- * Who consumes input edges: `"step"` before each fixed step, `"frame"` before
- * the rendered update. Each reader sees every edge once.
- */
 export type InputReader = "step" | "frame";
 
 export interface InputUpdateable {

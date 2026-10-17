@@ -12,7 +12,7 @@ import { watchDisposal } from "../fixtures/disposal.ts";
 import { PeerFrustum } from "#src/index.ts";
 import { PeerFrustumSync } from "#src/network/index.ts";
 import {
-  frustumsOf,
+  findFrustums,
   joinPeer,
   pose,
   setup
@@ -26,8 +26,8 @@ describe("remote peers", () => {
 
     new PeerFrustumSync({ room, parent });
 
-    const [frustum] = frustumsOf(parent);
-    assert.equal(frustumsOf(parent).length, 1);
+    const [frustum] = findFrustums(parent);
+    assert.equal(findFrustums(parent).length, 1);
     assert.equal(frustum.visible, true);
     assert.equal(frustum.position.x, 3);
   });
@@ -36,11 +36,11 @@ describe("remote peers", () => {
     const { room, parent, sync } = setup();
     room.emitSync();
     sync.attach(new THREE.Object3D());
-    assert.equal(frustumsOf(parent).length, 0);
+    assert.equal(findFrustums(parent).length, 0);
 
     joinPeer(room, "alice", { frustum: pose(1) });
 
-    assert.equal(frustumsOf(parent).length, 1);
+    assert.equal(findFrustums(parent).length, 1);
   });
 
   test("applies pose patches from \"peer-presence\"", () => {
@@ -55,8 +55,8 @@ describe("remote peers", () => {
       }
     });
 
-    const [frustum] = frustumsOf(parent);
-    assert.equal(frustumsOf(parent).length, 1);
+    const [frustum] = findFrustums(parent);
+    assert.equal(findFrustums(parent).length, 1);
     assert.deepEqual(frustum.position.toArray(), [1, 2, 3]);
     assert.deepEqual(frustum.quaternion.toArray(), [0, 1, 0, 0]);
   });
@@ -67,7 +67,7 @@ describe("remote peers", () => {
 
     room.emitPresence("alice", { cursor: { x: 1 } });
 
-    assert.deepEqual(sync.poseOf("alice"), pose(1));
+    assert.deepEqual(sync.peerPose("alice"), pose(1));
   });
 
   test("hides a tracked peer whose pose becomes invalid", () => {
@@ -77,7 +77,7 @@ describe("remote peers", () => {
 
     room.emitPresence("alice", { frustum: null });
 
-    const [frustum] = frustumsOf(parent);
+    const [frustum] = findFrustums(parent);
     assert.equal(frustum.visible, false);
   });
 
@@ -85,12 +85,12 @@ describe("remote peers", () => {
     const { room, parent, sync } = setup();
     joinPeer(room, "alice", { frustum: pose(1) });
     sync.attach(new THREE.Object3D());
-    const [frustum] = frustumsOf(parent);
+    const [frustum] = findFrustums(parent);
     const disposals = watchDisposal(frustum.geometry, frustum.material);
 
     room.emitLeft("alice");
 
-    assert.equal(frustumsOf(parent).length, 0);
+    assert.equal(findFrustums(parent).length, 0);
     assert.equal(frustum.parent, null);
     assert.deepEqual(disposals, [1, 1]);
   });
@@ -125,7 +125,7 @@ describe("remote peers", () => {
       }
     });
 
-    assert.deepEqual(sync.poseOf("alice"), {
+    assert.deepEqual(sync.peerPose("alice"), {
       position: { x: 4, y: 5, z: 6 },
       quaternion: { x: 0, y: 1, z: 0, w: 0 }
     });
@@ -136,17 +136,17 @@ describe("remote peers", () => {
     joinPeer(room, "alice", { frustum: pose(1) });
     sync.attach(new THREE.Object3D());
 
-    const first = sync.poseOf("alice");
+    const first = sync.peerPose("alice");
     (first!.position as { x: number; }).x = 99;
 
-    assert.equal(sync.poseOf("alice")?.position.x, 1);
+    assert.equal(sync.peerPose("alice")?.position.x, 1);
   });
 
   test("has no pose for an unknown peer", () => {
     const { sync } = setup();
     sync.attach(new THREE.Object3D());
 
-    assert.equal(sync.poseOf("alice"), undefined);
+    assert.equal(sync.peerPose("alice"), undefined);
   });
 
   test("drops the pose when it becomes invalid or the peer leaves", () => {
@@ -159,8 +159,8 @@ describe("remote peers", () => {
     room.emitPresence("alice", { frustum: null });
     room.emitLeft("bob");
 
-    assert.equal(sync.poseOf("alice"), undefined);
-    assert.equal(sync.poseOf("bob"), undefined);
+    assert.equal(sync.peerPose("alice"), undefined);
+    assert.equal(sync.peerPose("bob"), undefined);
   });
 
   test("reads the display name from the peer identity", () => {
@@ -169,7 +169,7 @@ describe("remote peers", () => {
 
     sync.attach(new THREE.Object3D());
 
-    assert.equal(frustumsOf(parent)[0].displayName, "Alice");
+    assert.equal(findFrustums(parent)[0].displayName, "Alice");
   });
 });
 
@@ -181,7 +181,7 @@ describe("presence key", () => {
     sync.attach(new THREE.Object3D());
     sync.update();
 
-    assert.equal(frustumsOf(parent)[0].position.x, 4);
+    assert.equal(findFrustums(parent)[0].position.x, 4);
     assert.deepEqual(Object.keys(room.patches[0]), ["camera"]);
   });
 });
@@ -196,7 +196,7 @@ describe("colors", () => {
     joinPeer(room, "alice", { frustum: pose(1) });
     sync.attach(new THREE.Object3D());
 
-    const [frustum] = frustumsOf(parent);
+    const [frustum] = findFrustums(parent);
     assert.equal(frustum.color, "#111111");
 
     sync.update();
@@ -227,7 +227,7 @@ describe("colors", () => {
     joinPeer(room, "alice", { frustum: pose(1) });
     sync.attach(new THREE.Object3D());
 
-    const [frustum] = frustumsOf(parent);
+    const [frustum] = findFrustums(parent);
     assert.equal(
       frustum.color,
       PeerFrustum.Defaults.color
@@ -243,7 +243,7 @@ describe("colors", () => {
     room.emitSync();
     sync.attach(new THREE.Object3D());
 
-    const frustums = frustumsOf(parent);
+    const frustums = findFrustums(parent);
     assert.deepEqual(
       frustums.map((frustum) => frustum.color),
       ["#abcdef", "#abcdef"]
@@ -264,7 +264,7 @@ describe("colors", () => {
     joinPeer(room, "alice", { frustum: pose(1) });
     sync.attach(new THREE.Object3D());
 
-    const [frustum] = frustumsOf(parent);
+    const [frustum] = findFrustums(parent);
     assert.equal(frustum.color, "#123456");
   });
 });

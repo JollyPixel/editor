@@ -29,7 +29,7 @@ const kRemove = {
   z: 0
 };
 
-function optionsOf(
+function createOptions(
   patch: Partial<GhostTargetOptions> = {}
 ): GhostTargetOptions {
   return {
@@ -52,7 +52,7 @@ function optionsOf(
 
 describe("resolveGhostTarget", () => {
   test("puts the ghost on the place cell with the brush orientation", () => {
-    const target = resolveGhostTarget(optionsOf());
+    const target = resolveGhostTarget(createOptions());
 
     assert.ok(target !== null);
     assert.deepEqual(target.position, kPlace);
@@ -63,7 +63,7 @@ describe("resolveGhostTarget", () => {
   });
 
   test("overlays the aimed block in replace mode", () => {
-    const target = resolveGhostTarget(optionsOf({ mode: "replace" }));
+    const target = resolveGhostTarget(createOptions({ mode: "replace" }));
 
     assert.ok(target !== null);
     assert.deepEqual(target.position, kRemove);
@@ -71,20 +71,20 @@ describe("resolveGhostTarget", () => {
   });
 
   test("shows nothing for a brush larger than one voxel", () => {
-    assert.equal(resolveGhostTarget(optionsOf({ size: 2 })), null);
+    assert.equal(resolveGhostTarget(createOptions({ size: 2 })), null);
   });
 
   test("shows nothing without an aim", () => {
-    assert.equal(resolveGhostTarget(optionsOf({ aim: null })), null);
+    assert.equal(resolveGhostTarget(createOptions({ aim: null })), null);
   });
 
   test("skips an occupied place cell and an empty replace cell", () => {
     assert.equal(
-      resolveGhostTarget(optionsOf({ occupied: () => true })),
+      resolveGhostTarget(createOptions({ occupied: () => true })),
       null
     );
     assert.equal(
-      resolveGhostTarget(optionsOf({
+      resolveGhostTarget(createOptions({
         mode: "replace",
         occupied: () => false
       })),
@@ -93,7 +93,7 @@ describe("resolveGhostTarget", () => {
   });
 
   test("keeps the frozen stroke orientation over the camera one", () => {
-    const target = resolveGhostTarget(optionsOf({
+    const target = resolveGhostTarget(createOptions({
       aim: null,
       stroke: {
         center: kPlace,
@@ -114,10 +114,10 @@ describe("resolveGhostTarget", () => {
   });
 
   test("overlays a cell the stroke already painted", () => {
-    const target = resolveGhostTarget(optionsOf({
+    const target = resolveGhostTarget(createOptions({
       stroke: {
         center: kRemove,
-        paint: optionsOf().paint
+        paint: createOptions().paint
       }
     }));
 
@@ -127,7 +127,7 @@ describe("resolveGhostTarget", () => {
 
   test("shows nothing during a remove stroke", () => {
     assert.equal(
-      resolveGhostTarget(optionsOf({
+      resolveGhostTarget(createOptions({
         stroke: {
           center: kRemove,
           paint: undefined

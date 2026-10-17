@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { CanvasBuffer } from "#src/buffer/CanvasBuffer.ts";
 import {
   canvasPixels,
-  contextOf,
+  context2d,
   readPixel
 } from "../fixtures/canvas.ts";
 import { TEST_MAX_SIZE } from "../helpers/buffer/maxSize.ts";
@@ -129,7 +129,7 @@ describe("CanvasBuffer", () => {
         maxSize: TEST_MAX_SIZE
       });
       const putImageData = t.mock.method(
-        contextOf(buf.canvas()),
+        context2d(buf.canvas()),
         "putImageData"
       );
 

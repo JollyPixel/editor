@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // Import Node.js Dependencies
 import { parseArgs } from "node:util";
 

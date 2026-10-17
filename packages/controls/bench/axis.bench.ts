@@ -17,11 +17,6 @@ import {
 // CONSTANTS
 const kStressAxisCount = 32;
 
-/**
- * `AxisMap#update` runs once per frame and resolves every bound axis, so its
- * cost is the product of axes, sources per axis, and conditions per source.
- * The named tasks isolate each of those multipliers.
- */
 const suite = defineSuite("controls / axis", (bench) => {
   const { input } = createActiveInput();
 
@@ -88,10 +83,6 @@ const suite = defineSuite("controls / axis", (bench) => {
 
 export default suite;
 
-/**
- * The binding set from `docs/axismap.md`: one plain two-key axis, one keyboard
- * axis fed by a composite half, and two axes a gamepad stick also drives.
- */
 function createMovementMap() {
   return new AxisMap({
     moveRight: Axis.buttons("KeyD.down", "KeyA.down")

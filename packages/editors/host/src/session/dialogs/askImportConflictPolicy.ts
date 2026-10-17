@@ -5,10 +5,6 @@ import type {
   ImportPlan
 } from "@jolly-pixel/asset-server/client";
 
-/**
- * Asks how to import an archive whose assets partly exist already. Resolves
- * with `null` when the dialog is dismissed.
- */
 export function askImportConflictPolicy(
   plan: ImportPlan
 ): Promise<ImportConflictPolicy | null> {

@@ -19,11 +19,11 @@ import {
   type AnimationSetReader
 } from "./AnimationSet.ts";
 import {
-  imageOf,
+  captureImage,
   restoreImages,
   type AnimationImage
 } from "./history/animationImages.ts";
-import { inverseOf } from "./history/animationInverse.ts";
+import { invert } from "./history/animationInverse.ts";
 import { TICKS_PER_SECOND } from "./values/FrameRate.ts";
 import { randomId } from "./values/randomId.ts";
 
@@ -127,7 +127,7 @@ export class AnimationDocument extends CommandDocument<
     });
   }
 
-  setKey(
+  writeKey(
     clipId: string,
     path: string,
     channel: AnimationChannel,
@@ -169,8 +169,8 @@ function animationState(
     placeable: (command) => set.placeable(command),
     apply: (command) => set.apply(command),
     load: (snapshot) => set.load(snapshot),
-    imageOf: (command) => imageOf(set, command),
-    inverseOf: (command) => inverseOf(set, command),
+    captureImage: (command) => captureImage(set, command),
+    invert: (command) => invert(set, command),
     restored: (images) => restoreImages(set.toJSON(), images)
   };
 }

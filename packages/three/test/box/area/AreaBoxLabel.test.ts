@@ -7,13 +7,13 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { AreaBoxLabel } from "#src/index.ts";
-import { contextOf } from "../../fixtures/canvas.ts";
+import { spriteContext } from "../../fixtures/canvas.ts";
 import { watchDisposal } from "../../fixtures/disposal.ts";
 
 describe("constructor", () => {
   test("draws the outlined display name", () => {
     const label = new AreaBoxLabel({ displayName: "Spawn" });
-    const context = contextOf(label);
+    const context = spriteContext(label);
 
     assert.equal(context.lastStrokeText, "Spawn");
     assert.equal(context.lastFillText, "Spawn");
@@ -27,7 +27,7 @@ describe("constructor", () => {
 describe("live properties", () => {
   test("redraws after the display name or color changes", () => {
     const label = new AreaBoxLabel({ displayName: "Spawn" });
-    const context = contextOf(label);
+    const context = spriteContext(label);
     const callsBefore = context.fillTextCallCount;
 
     label.displayName = "Patrol";

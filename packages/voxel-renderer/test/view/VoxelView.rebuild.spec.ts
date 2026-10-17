@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import type { VoxelView } from "../../src/view/VoxelView.ts";
 import {
-  chunkCoordsOf,
+  readChunkCoords,
   chunkMeshes,
   fillChunks,
   makeView,
@@ -72,7 +72,7 @@ describe("VoxelView - chunk rebuild orchestration", () => {
     view.init();
 
     assert.deepEqual(
-      chunkMeshes(view).map(chunkCoordsOf),
+      chunkMeshes(view).map(readChunkCoords),
       ["3,0,0", "2,0,0", "1,0,0", "0,0,0"]
     );
     assert.equal(view.pendingRebuilds, 0);

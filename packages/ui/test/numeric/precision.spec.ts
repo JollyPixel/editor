@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   decimalPlaces,
-  precisionOf,
+  measurePrecision,
   roundToPrecision
 } from "../../src/numeric/precision.ts";
 
@@ -32,17 +32,17 @@ describe("Numeric.decimalPlaces", () => {
   });
 });
 
-describe("Numeric.precisionOf", () => {
+describe("Numeric.measurePrecision", () => {
   test("keeps the finest precision among its values", () => {
-    assert.equal(precisionOf(0.1, 0.001, 5), 3);
+    assert.equal(measurePrecision(0.1, 0.001, 5), 3);
   });
 
   test("caps a large precision at twelve decimals", () => {
-    assert.equal(precisionOf(1e-20), 12);
+    assert.equal(measurePrecision(1e-20), 12);
   });
 
   test("is zero without values", () => {
-    assert.equal(precisionOf(), 0);
+    assert.equal(measurePrecision(), 0);
   });
 });
 

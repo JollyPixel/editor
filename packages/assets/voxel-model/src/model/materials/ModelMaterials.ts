@@ -20,9 +20,9 @@ export type ModelMaterialsReader = Pick<
   | "material"
   | "values"
   | "materials"
-  | "childrenOf"
-  | "nextSiblingOf"
-  | "subtreeOf"
+  | "listChildren"
+  | "findNextSibling"
+  | "subtreeFrom"
 >;
 
 export class ModelMaterials extends OrderedTree<MaterialEntryJSON> {

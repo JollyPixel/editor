@@ -45,9 +45,6 @@ export class LocalStorageAdapter implements StorageAdapter {
     }
   }
 
-  /**
-   * Whether writes reach `localStorage`.
-   */
   get persistent() {
     return this.#storage !== null;
   }

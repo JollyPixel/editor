@@ -70,9 +70,6 @@ export interface MaterialLibraryPrompts {
   beginRename(
     id: string
   ): void;
-  /**
-   * `choose` runs only when the person picks a preset.
-   */
   choosePreset(
     choose: (preset: MaterialPreset) => void,
     point: MenuPoint
@@ -80,9 +77,6 @@ export interface MaterialLibraryPrompts {
   writeClipboard(
     text: string
   ): Promise<void>;
-  /**
-   * `null` when the browser refuses to read the clipboard.
-   */
   readClipboard(): Promise<string | null>;
 }
 
@@ -91,9 +85,6 @@ export interface SelectedBlockState {
   materialId: string | null;
 }
 
-/**
- * A new object whenever any of it changes.
- */
 export interface MaterialLibraryState {
   nodes: readonly TreeNode[];
   /**
@@ -242,7 +233,7 @@ export class MaterialLibraryController {
       name: `${source.name} Copy`,
       surface: source.surface,
       parentId: source.parentId,
-      beforeId: document.tree.materials.nextSiblingOf(source.id)
+      beforeId: document.tree.materials.findNextSibling(source.id)
     }));
   }
 
@@ -355,7 +346,7 @@ export class MaterialLibraryController {
       return;
     }
 
-    const beforeId = where === "above" ? targetId : library.nextSiblingOf(targetId);
+    const beforeId = where === "above" ? targetId : library.findNextSibling(targetId);
     if (id !== beforeId) {
       this.#workspace?.document.moveMaterial(
         id,
@@ -375,7 +366,7 @@ export class MaterialLibraryController {
     }
   };
 
-  menuFor(
+  openMenu(
     id: string | null
   ): MenuSession {
     const readOnly = !this.editable;

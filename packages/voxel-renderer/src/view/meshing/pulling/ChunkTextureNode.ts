@@ -11,9 +11,6 @@ import {
 // Import Internal Dependencies
 import { PulledChunkGeometry } from "./PulledChunkGeometry.ts";
 
-/**
- * Binds, per drawn object, a texture its pulled chunk geometry owns.
- */
 export abstract class ChunkTextureNode extends TextureNode {
   constructor(
     value: THREE.Texture,

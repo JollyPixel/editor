@@ -67,14 +67,14 @@ export class BrushStore extends Emitter<BrushStoreEvents> {
 
     return Object.freeze({
       size: clampSize(fields.number("size", kDefaultOptions.size)),
-      rotationMode: fields.oneOf(
+      rotationMode: fields.choice(
         "rotationMode",
         ROTATION_MODES,
         kDefaultOptions.rotationMode
       ),
       flipY: fields.boolean("flipY", kDefaultOptions.flipY),
-      mode: fields.oneOf("mode", BRUSH_MODES, kDefaultOptions.mode),
-      pattern: fields.oneOf("pattern", BRUSH_PATTERNS, kDefaultOptions.pattern),
+      mode: fields.choice("mode", BRUSH_MODES, kDefaultOptions.mode),
+      pattern: fields.choice("pattern", BRUSH_PATTERNS, kDefaultOptions.pattern),
       ghost: fields.boolean("ghost", kDefaultOptions.ghost),
       skyRadius: Math.max(
         0,

@@ -11,7 +11,7 @@ import { PeerGhostStream } from "#src/network/ghosts/PeerGhostStream.ts";
 import type { PixelNetworkCommand } from "#src/network/types.ts";
 import { command } from "../../fixtures/commands.ts";
 import {
-  callsOf,
+  readCalls,
   nextFrame
 } from "../../helpers/mock.ts";
 import { MockRoom } from "../../helpers/room.ts";
@@ -108,7 +108,7 @@ describe("PeerGhostStream — remote peers", () => {
 
     const { layer } = setup(room);
 
-    assert.deepStrictEqual(callsOf(layer.set), [["peer-B", "ghost"]]);
+    assert.deepStrictEqual(readCalls(layer.set), [["peer-B", "ghost"]]);
   });
 
   test("keeps a still ghost until the peer clears it", (t) => {
@@ -131,7 +131,7 @@ describe("PeerGhostStream — remote peers", () => {
     room.emit("peer-presence", { clientId: "peer-D", patch: { testGhost: "ghost" } });
     room.emit("peer-left", { clientId: "peer-D" });
 
-    assert.deepStrictEqual(callsOf(layer.remove), [["peer-B"], ["peer-C"], ["peer-D"]]);
+    assert.deepStrictEqual(readCalls(layer.remove), [["peer-B"], ["peer-C"], ["peer-D"]]);
   });
 
   test("a snapshot clears every ghost", () => {
@@ -148,7 +148,7 @@ describe("PeerGhostStream — remote peers", () => {
 
     room.deliverCommand(resized);
 
-    assert.deepStrictEqual(callsOf(reconcile), [[resized]]);
+    assert.deepStrictEqual(readCalls(reconcile), [[resized]]);
   });
 });
 

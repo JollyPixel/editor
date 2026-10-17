@@ -18,10 +18,6 @@ export interface SaturationValue {
   v: number;
 }
 
-/**
- * Returns top-left-relative pointer ratios clamped to the rectangle.
- * Zero-sized axes return 0.
- */
 export function ratioFromPointer(
   pointer: PointerPosition,
   rect: AreaRect
@@ -40,9 +36,6 @@ export function ratioFromPointer(
   };
 }
 
-/**
- * Maps x to saturation and inverted y to value.
- */
 export function saturationValueFromPointer(
   pointer: PointerPosition,
   rect: AreaRect

@@ -119,7 +119,7 @@ describe("mountStandalone page query", () => {
 
   test("views the tag of the page URL only for the target it names", async() => {
     const mounted: Array<string | null> = [];
-    async function mountFor(
+    async function mountWithQuery(
       search: string
     ): Promise<void> {
       const workspace = await openWorkspace();
@@ -133,8 +133,8 @@ describe("mountStandalone page query", () => {
       await workspace.close();
     }
 
-    await mountFor(`/?target=${ASSET_ID}&tag=v1`);
-    await mountFor(`/?target=${OTHER_ASSET_ID}&tag=v1`);
+    await mountWithQuery(`/?target=${ASSET_ID}&tag=v1`);
+    await mountWithQuery(`/?target=${OTHER_ASSET_ID}&tag=v1`);
 
     assert.deepEqual(mounted, ["v1", null]);
   });

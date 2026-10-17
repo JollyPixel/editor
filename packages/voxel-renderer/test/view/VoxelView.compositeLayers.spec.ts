@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import type { VoxelView } from "../../src/view/VoxelView.ts";
 import {
   chunkMeshes,
-  faceCountOf,
+  countFaces,
   makeView,
   placeCube
 } from "../helpers/view.ts";
@@ -22,11 +22,11 @@ function meshKeys(
     .sort();
 }
 
-function facesOf(
+function countViewFaces(
   view: VoxelView
 ): number {
   return chunkMeshes(view).reduce(
-    (total, mesh) => total + faceCountOf(mesh),
+    (total, mesh) => total + countFaces(mesh),
     0
   );
 }
@@ -53,7 +53,7 @@ describe("VoxelView - composite layers", () => {
     view.flush();
 
     assert.deepEqual(meshKeys(view), ["cell:0,0,0"]);
-    assert.equal(facesOf(view), 10);
+    assert.equal(countViewFaces(view), 10);
   });
 
   it("draws as many faces as one layer holding every voxel", () => {
@@ -65,7 +65,7 @@ describe("VoxelView - composite layers", () => {
     layered.flush();
     single.flush();
 
-    assert.equal(facesOf(layered), facesOf(single));
+    assert.equal(countViewFaces(layered), countViewFaces(single));
   });
 
   it("keeps a layer placed off the chunk grid in its own mesh", () => {
@@ -88,7 +88,7 @@ describe("VoxelView - composite layers", () => {
     view.tick(0);
 
     assert.deepEqual(meshKeys(view), ["cell:0,0,0"]);
-    assert.equal(facesOf(view), 6);
+    assert.equal(countViewFaces(view), 6);
   });
 
   it("removes the cell mesh once no layer draws in it", () => {
@@ -110,7 +110,7 @@ describe("VoxelView - composite layers", () => {
     view.tick(0);
 
     assert.deepEqual(meshKeys(view), ["cell:0,0,0", "cell:1,0,0"]);
-    assert.equal(facesOf(view), 12);
+    assert.equal(countViewFaces(view), 12);
   });
 
   it("rebuilds the cell without a hidden layer", () => {
@@ -121,7 +121,7 @@ describe("VoxelView - composite layers", () => {
     view.tick(0);
 
     assert.deepEqual(meshKeys(view), ["cell:0,0,0"]);
-    assert.equal(facesOf(view), 6);
+    assert.equal(countViewFaces(view), 6);
   });
 
   it("hides a layer in this view only", () => {
@@ -131,7 +131,7 @@ describe("VoxelView - composite layers", () => {
     view.layerVisibility.override("Top", false);
     view.tick(0);
 
-    assert.equal(facesOf(view), 6);
+    assert.equal(countViewFaces(view), 6);
     assert.equal(view.document.world.getLayer("Top")?.visible, true);
     assert.equal(
       view.document.world.getVoxelAt({ x: 1, y: 0, z: 0 })?.blockId,
@@ -146,11 +146,11 @@ describe("VoxelView - composite layers", () => {
 
     view.layerVisibility.override("Top", true);
     view.tick(0);
-    assert.equal(facesOf(view), 10);
+    assert.equal(countViewFaces(view), 10);
 
     view.layerVisibility.reset("Top");
     view.tick(0);
-    assert.equal(facesOf(view), 6);
+    assert.equal(countViewFaces(view), 6);
   });
 
   it("rebuilds the cell without a removed layer", () => {
@@ -161,6 +161,6 @@ describe("VoxelView - composite layers", () => {
     view.tick(0);
 
     assert.deepEqual(meshKeys(view), ["cell:0,0,0"]);
-    assert.equal(facesOf(view), 6);
+    assert.equal(countViewFaces(view), 6);
   });
 });

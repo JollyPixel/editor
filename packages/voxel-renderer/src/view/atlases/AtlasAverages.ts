@@ -15,17 +15,7 @@ interface AtlasPixels {
   height: number;
 }
 
-/**
- * Summed-area table of an atlas: texel `(i, j)` holds the sums over every
- * source texel left of column `i` and below row `j`, with `v` pointing up.
- * RGB is linear and premultiplied by alpha; A is the alpha sum. Four texels
- * give the average colour of any integer texel rect.
- */
 export class AtlasAverages {
-  /**
-   * Table shared by every atlas drawing `source`, or null when its pixels
-   * cannot be read (no 2D canvas, cross-origin image, unloaded image).
-   */
   static fromTexture(
     source: THREE.Texture
   ): AtlasAverages | null {
@@ -45,9 +35,6 @@ export class AtlasAverages {
     return table;
   }
 
-  /**
-   * Table already built for `source`, without building one.
-   */
   static peek(
     source: THREE.Texture
   ): AtlasAverages | undefined {
@@ -61,9 +48,6 @@ export class AtlasAverages {
   #table: Float32Array;
   #stride: number;
 
-  /**
-   * Prefer `AtlasAverages.fromTexture()`, which shares one table per source texture.
-   */
   constructor(
     source: THREE.Texture,
     pixels: AtlasPixels
@@ -88,10 +72,6 @@ export class AtlasAverages {
     source.addEventListener("dispose", this.#onSourceDisposed);
   }
 
-  /**
-   * Rebuilds the table when the source texture was updated since the last
-   * build. Returns whether it did.
-   */
   refresh(): boolean {
     if (this.#source.version === this.#version) {
       return false;
@@ -108,7 +88,6 @@ export class AtlasAverages {
       image.width !== pixels.width + 1 ||
       image.height !== pixels.height + 1
     ) {
-      // A resized GPU texture is only reallocated after a dispose.
       this.texture.dispose();
       this.#stride = pixels.width + 1;
       this.#table = allocateSummedAreaTable(pixels);
@@ -123,10 +102,6 @@ export class AtlasAverages {
     return true;
   }
 
-  /**
-   * Average of the texel rect `[x0, x1) × [y0, y1)`, with `y` counted from
-   * the bottom row. RGB is the alpha-weighted linear colour.
-   */
   average(
     x0: number,
     y0: number,
@@ -212,9 +187,6 @@ export class AtlasAverages {
   }
 }
 
-/**
- * Zeroed table; row 0 and column 0 stay zero across fills.
- */
 function allocateSummedAreaTable(
   pixels: AtlasPixels
 ): Float32Array {
@@ -238,9 +210,6 @@ function channel(
   return linear ? kSrgbToLinear[value] : value / 255;
 }
 
-/**
- * Reads RGBA8 texels in image row order.
- */
 function readPixels(
   source: THREE.Texture
 ): AtlasPixels | null {

@@ -14,9 +14,6 @@ interface AssetLoaderEntry {
   readonly loader: AssetLoader<unknown>;
 }
 
-/**
- * Maps each persistent asset kind to its runtime loader.
- */
 export class AssetLoaderRegistry {
   #loaders = new Map<
     string,
@@ -67,7 +64,6 @@ export class AssetLoaderRegistry {
       throw new AssetTypeMismatchError(type.kind);
     }
 
-    // Token identity recovers TValue after heterogeneous map storage.
     return entry.loader as AssetLoader<TValue>;
   }
 }

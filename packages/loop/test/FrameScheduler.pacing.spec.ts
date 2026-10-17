@@ -12,7 +12,7 @@ const kFixedDelta60 = 1000 / 60;
 const kWarmupFrames = 8;
 const kSnapTolerance = 2;
 
-function stepsOf(
+function listSteps(
   schedules: { steps: number; }[]
 ): number[] {
   return schedules.map(({ steps }) => steps);
@@ -30,7 +30,7 @@ describe("Loop.FrameScheduler pacing", () => {
   function steadySteps(
     schedules: { steps: number; }[]
   ): number[] {
-    return stepsOf(schedules.slice(kWarmupFrames));
+    return listSteps(schedules.slice(kWarmupFrames));
   }
 
   function alternates(
@@ -93,7 +93,7 @@ describe("Loop.FrameScheduler pacing", () => {
 
     assert.strictEqual(schedules[20].unscaledDelta, 2 * kFixedDelta60);
     assert.deepStrictEqual(
-      stepsOf(schedules.slice(kWarmupFrames)),
+      listSteps(schedules.slice(kWarmupFrames)),
       schedules.slice(kWarmupFrames).map((_, index) => (index === 12 ? 2 : 1))
     );
   });

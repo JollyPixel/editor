@@ -41,7 +41,7 @@ const kStuck = fc.option(
   { nil: undefined }
 );
 
-function laneOf(
+function toLane(
   task: { client: string; lane: string; }
 ): string {
   return `${task.client}/${task.lane}`;
@@ -61,10 +61,10 @@ describe("ClientSessions properties", () => {
           });
           const active = new Map<string, number>();
           const order = new Map<string, number[]>();
-          const stuckLane = stuck === undefined ? null : laneOf(stuck);
+          const stuckLane = stuck === undefined ? null : toLane(stuck);
 
           tasks.forEach((task, index) => {
-            const lane = laneOf(task);
+            const lane = toLane(task);
             sessions.enqueue(task.client, async() => {
               records[index].started = true;
               order.set(lane, [...order.get(lane) ?? [], index]);
@@ -102,10 +102,10 @@ describe("ClientSessions properties", () => {
             assert.deepStrictEqual(indices, indices.toSorted((a, b) => a - b), lane);
           }
           tasks.forEach((task, index) => {
-            const lane = laneOf(task);
+            const lane = toLane(task);
             const record = records[index];
             if (lane === stuckLane) {
-              const first = tasks.findIndex((candidate) => laneOf(candidate) === lane);
+              const first = tasks.findIndex((candidate) => toLane(candidate) === lane);
               assert.strictEqual(record.started, index === first);
               assert.strictEqual(record.settled, "pending");
             }
@@ -115,7 +115,7 @@ describe("ClientSessions properties", () => {
             }
           });
 
-          const blocked = tasks.some((task) => laneOf(task) === stuckLane);
+          const blocked = tasks.some((task) => toLane(task) === stuckLane);
           for (const client of kClients) {
             assert.strictEqual(drained.get(client), !(blocked && stuck?.client === client));
           }

@@ -144,11 +144,6 @@ class LoopbackSocket implements ClientSocket {
   }
 }
 
-/**
- * Connects clients to a server living in the same process, without a
- * network socket. Envelopes are serialized and delivered asynchronously,
- * as they are over a WebSocket.
- */
 export class LoopbackTransport {
   #server: Server;
 

@@ -23,7 +23,7 @@ describe("UVController — dragging an unfolded region", () => {
       viewport: makeViewport(1)
     });
     const region = map.create({ width: 4, height: 4 });
-    map.setState(region.id, "unfolded");
+    map.applyState(region.id, "unfolded");
     map.select(region.id);
 
     return { map, overlay, controller, id: region.id };

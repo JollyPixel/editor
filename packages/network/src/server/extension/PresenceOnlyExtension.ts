@@ -17,9 +17,6 @@ export interface PresenceOnlyExtensionOptions {
   protocols?: MessageProtocols;
 }
 
-/**
- * Provides presence-only rooms, optionally relaying opaque payloads.
- */
 export class PresenceOnlyExtension extends Extension {
   readonly id: string;
   readonly name: string;

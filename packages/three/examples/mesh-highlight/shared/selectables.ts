@@ -34,7 +34,7 @@ export class Selectables {
     return object;
   }
 
-  labelOf(
+  displayLabel(
     id: string | null
   ): string {
     return id === null ? kEmptyLabel : this.#labels.get(id) ?? id;
@@ -55,7 +55,7 @@ export function selectionMaterial(
   return new THREE.MeshStandardMaterial({ color });
 }
 
-export function hexOf(
+export function toHex(
   color: THREE.ColorRepresentation
 ): string {
   return `#${new THREE.Color(color).getHexString()}`;

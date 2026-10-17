@@ -20,7 +20,7 @@ import {
 // CONSTANTS
 const kTileSize = 2;
 
-function bufferOf(
+function createBuffer(
   width: number,
   height: number,
   alphaAt: (x: number, y: number) => number
@@ -39,7 +39,7 @@ function bufferOf(
   };
 }
 
-function canvasOf(
+function createCanvas(
   width: number,
   height: number
 ): HTMLCanvasElement {
@@ -62,7 +62,7 @@ function setup(
       }
     ])
   });
-  const texture = new THREE.Texture<AtlasImage>(canvasOf(4, 2));
+  const texture = new THREE.Texture<AtlasImage>(createCanvas(4, 2));
   atlases.registerTexture("atlas", texture);
 
   let reads = 0;
@@ -81,7 +81,7 @@ function setup(
 
 describe("readImagePixels", () => {
   it("returns null for an empty image", () => {
-    assert.equal(readImagePixels(canvasOf(0, 0)), null);
+    assert.equal(readImagePixels(createCanvas(0, 0)), null);
   });
 
   it("returns null for an image without a decoded size", () => {
@@ -90,7 +90,7 @@ describe("readImagePixels", () => {
 });
 
 describe("TileOpacityProbe", () => {
-  const pixels = bufferOf(4, 2, (x) => (x < 2 ? 255 : 0));
+  const pixels = createBuffer(4, 2, (x) => (x < 2 ? 255 : 0));
 
   it("treats a missing tile ref as empty", () => {
     const { probe } = setup(pixels);
@@ -112,7 +112,7 @@ describe("TileOpacityProbe", () => {
   });
 
   it("only sees the pixels at or above the alpha cutoff", () => {
-    const { probe } = setup(bufferOf(4, 2, (x) => (x === 3 ? 128 : 0)));
+    const { probe } = setup(createBuffer(4, 2, (x) => (x === 3 ? 128 : 0)));
     const tile = { blocksetId: "atlas", col: 1, row: 0 };
 
     assert.equal(probe.isEmpty(tile, 0.5), false);
@@ -121,7 +121,7 @@ describe("TileOpacityProbe", () => {
   });
 
   it("clips a tile that runs past the image edge", () => {
-    const { probe } = setup(bufferOf(4, 2, (x) => (x % 3 === 0 ? 255 : 0)));
+    const { probe } = setup(createBuffer(4, 2, (x) => (x % 3 === 0 ? 255 : 0)));
 
     assert.equal(probe.isEmpty({ blocksetId: "atlas", col: 2, row: 0 }, 0), true);
     assert.equal(

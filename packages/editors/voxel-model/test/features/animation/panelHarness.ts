@@ -78,7 +78,7 @@ export function createSetSource(
       return Promise.resolve();
     },
     records: () => [...records],
-    usersOf: (id) => (id === "shared" ? 3 : 1),
+    countUsers: (id) => (id === "shared" ? 3 : 1),
     subscribe(listener) {
       listeners.add(listener);
 

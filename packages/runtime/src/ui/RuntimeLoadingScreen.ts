@@ -5,9 +5,6 @@ import type {
 } from "@jolly-pixel/asset";
 import { Loading } from "@jolly-pixel/ui/feedback";
 
-/**
- * Adapts the loading web component to the runtime bootstrap workflow.
- */
 export class RuntimeLoadingScreen {
   #canvas: HTMLCanvasElement;
   #loading: Loading;
@@ -47,24 +44,24 @@ export class RuntimeLoadingScreen {
   update(
     progress: AssetLoadProgress
   ): void {
-    this.setAsset(progress.record);
-    this.setProgress(
+    this.showAsset(progress.record);
+    this.updateProgress(
       progress.completed,
       progress.total
     );
   }
 
-  setAsset(
+  showAsset(
     asset: AssetRecord
   ): void {
-    this.#loading.setAsset(asset.source);
+    this.#loading.showAsset(asset.source);
   }
 
-  setProgress(
+  updateProgress(
     completed: number,
     total: number
   ): void {
-    this.#loading.setProgress(
+    this.#loading.updateProgress(
       completed,
       total
     );

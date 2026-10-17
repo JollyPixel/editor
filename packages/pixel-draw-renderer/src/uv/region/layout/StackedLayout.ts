@@ -4,10 +4,10 @@ import {
   geometryAt,
   isRectGeometry,
   quarterTurn,
-  rectOf,
+  boundingRect,
   rotateGeometry,
   rotateRect,
-  rotationOf,
+  geometryRotation,
   sameRect
 } from "../../geometry/geometry.ts";
 import { UVSlotMap } from "../UVSlotMap.ts";
@@ -45,7 +45,7 @@ export class StackedLayout extends UVLayout {
   static from(
     data: StackedData
   ): StackedLayout {
-    const rotation = rotationOf(data.rect);
+    const rotation = geometryRotation(data.rect);
     const faces = data.faces ?
       new UVSlotMap(data.faces) :
       UVSlotMap.shared(StackedLayout.#rotated(data.rect, rotation));
@@ -65,19 +65,19 @@ export class StackedLayout extends UVLayout {
     const { faces, activeSlots } = layout;
     const target = StackedLayout.#target(layout, slot);
     const rotation = StackedLayout.#dominantRotation(
-      activeSlots.map((face) => rotationOf(faces.get(face))),
-      rotationOf(faces.get(target))
+      activeSlots.map((face) => geometryRotation(faces.get(face))),
+      geometryRotation(faces.get(target))
     );
     const aligned = faces.withSlots(
       new Map(
         faces.slots.map((face) => {
           const geometry = faces.get(face);
 
-          return [face, rotateGeometry(geometry, rotation - rotationOf(geometry))];
+          return [face, rotateGeometry(geometry, rotation - geometryRotation(geometry))];
         })
       )
     );
-    const rect = rectOf(aligned.get(target));
+    const rect = boundingRect(aligned.get(target));
 
     return new StackedLayout(
       aligned.stackedAt(rect),
@@ -99,7 +99,7 @@ export class StackedLayout extends UVLayout {
     }
 
     this.#rect = copyRect(rect);
-    this.#rotation = rotationOf(rect);
+    this.#rotation = geometryRotation(rect);
     this.#slot = slot;
   }
 
@@ -111,15 +111,15 @@ export class StackedLayout extends UVLayout {
     return copyRect(this.#rect);
   }
 
-  rectFor(): SelectionRect {
+  slotRect(): SelectionRect {
     return this.bounds;
   }
 
-  geometryFor(): UVGeometry {
+  slotGeometry(): UVGeometry {
     return this.#geometry();
   }
 
-  slotsOf(): UVRegionSlot[] {
+  listSlots(): UVRegionSlot[] {
     return [
       {
         slot: null,
@@ -129,7 +129,7 @@ export class StackedLayout extends UVLayout {
   }
 
   spreadFaces(): UVSlotMap {
-    const anchor = rectOf(
+    const anchor = boundingRect(
       this.faces.get(this.#slot ?? this.faces.slots[0])
     );
 
@@ -246,7 +246,7 @@ export class StackedLayout extends UVLayout {
 
         return !isRectGeometry(geometry) ||
           !sameRect(geometry, this.#rect) ||
-          rotationOf(geometry) !== this.#rotation;
+          geometryRotation(geometry) !== this.#rotation;
       });
   }
 
@@ -282,7 +282,7 @@ export class StackedLayout extends UVLayout {
     let bestArea = -1;
 
     for (const slot of layout.activeSlots) {
-      const rect = rectOf(layout.faces.get(slot));
+      const rect = boundingRect(layout.faces.get(slot));
       const area = rect.width * rect.height;
       if (area > bestArea) {
         best = [slot];

@@ -17,9 +17,6 @@ export interface TreeBadge {
   icon?: IconName;
 }
 
-/**
- * Where a row draws its swatch: before the label, or after the detail.
- */
 export type TreeSwatchPosition = "start" | "end";
 
 export type TreeToggleStyle = "chevron" | "box";
@@ -104,9 +101,6 @@ export interface JollyRenameDetail {
   name: string;
 }
 
-/**
- * Why `name` is refused for the row, or `null` to accept it.
- */
 export type TreeRenameValidator = (
   detail: JollyRenameDetail
 ) => string | null;

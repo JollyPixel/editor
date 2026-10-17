@@ -95,10 +95,10 @@ samplePixels(positions: Vec2[]): RGBA[]
 
 Batch `samplePixel`. Out-of-bounds positions return `{ r: 0, g: 0, b: 0, a: 0 }`.
 
-### `positionsOf(color, mask?)`
+### `findPositions(color, mask?)`
 
 ```ts
-positionsOf(color: RGBA, mask?: Uint8Array): Vec2[]
+findPositions(color: RGBA, mask?: Uint8Array): Vec2[]
 ```
 
 Returns every position holding exactly `color`, row by row. With a `mask`, positions whose mask entry is `0` are skipped. A `global-fill` command repaints these positions.

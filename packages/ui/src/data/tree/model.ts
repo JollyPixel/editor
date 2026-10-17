@@ -56,9 +56,6 @@ interface IndexedNode<TData> extends TreePlacement {
   order: number;
 }
 
-/**
- * Immutable structural view of a tree, built in one depth-first traversal.
- */
 export class TreeSnapshot<
   TData = unknown
 > {

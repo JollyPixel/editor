@@ -13,10 +13,6 @@ export interface BootstrapRuntimeOptions<
   loadingDelay?: RuntimeLoadOptions<TContext>["loadingDelay"];
 }
 
-/**
- * Locates the example page's canvas and loads a Runtime with the given scene.
- * Every example script shares this so it only has to declare its own Scene.
- */
 export async function bootstrapRuntime<
   TContext = Systems.WorldDefaultContext
 >(

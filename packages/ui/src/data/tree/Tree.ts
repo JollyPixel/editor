@@ -62,7 +62,6 @@ import {
   type TreeToggleStyle
 } from "./contract.ts";
 
-// Registers the chevron, eye, lock and drag glyphs.
 import "../../icon/Icon.ts";
 import "../../peer/Avatar.ts";
 import {
@@ -232,7 +231,7 @@ export class Tree<TData = unknown> extends LitElement
       rowDrag: () => this.rowDrag && this.#filtered.query.isEmpty,
       acceptDrop: () => this.acceptDrop,
       interaction: () => this._interaction,
-      setInteraction: (next) => {
+      switchInteraction: (next) => {
         this._interaction = next;
       },
       rowsRect: () => this.renderRoot.querySelector(".rows")?.getBoundingClientRect(),
@@ -252,7 +251,7 @@ export class Tree<TData = unknown> extends LitElement
     this.#rename = new TreeRenameController(this, {
       validateRename: () => this.validateRename,
       interaction: () => this._interaction,
-      setInteraction: (next) => {
+      switchInteraction: (next) => {
         this._interaction = next;
       },
       focusRow: (id) => this.#focus.focusRow(id)
@@ -263,7 +262,7 @@ export class Tree<TData = unknown> extends LitElement
       multiple: () => this.multiple,
       requireSelection: () => this.requireSelection,
       interaction: () => this._interaction,
-      setInteraction: (next) => {
+      switchInteraction: (next) => {
         this._interaction = next;
       }
     });
@@ -377,9 +376,9 @@ export class Tree<TData = unknown> extends LitElement
     return this.#rowViewList.update(rows, (row) => {
       const { id } = row.node;
       const placement = this.#snapshot.placement(id);
-      const { drop, dropIndent } = this.#drag.dropStyleFor(
+      const { drop, dropIndent } = this.#drag.rowDropStyle(
         id,
-        TreeRowView.indentOf(row.depth)
+        TreeRowView.indentStyle(row.depth)
       );
       state.position = placement?.position ?? 1;
       state.setSize = placement?.size ?? 1;

@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { identityOf } from "../helpers/server/identity.ts";
+import { createIdentity } from "../helpers/server/identity.ts";
 import { createClient } from "../helpers/server/clientHandle.ts";
 import { RecordingExtension } from "../helpers/server/RecordingExtension.ts";
 import {
@@ -24,7 +24,7 @@ describe("Server — rights: denied join", () => {
       server.register(extension);
 
       const { client, sent } = createClient("A");
-      const connectionA = server.connect(client, identityOf(client, "viewer"));
+      const connectionA = server.connect(client, createIdentity(client, "viewer"));
       await connectionA.receive({
         room: "pixel-draw",
         kind: "join"
@@ -71,8 +71,8 @@ describe("Server — rights: denied join", () => {
 
       const a = createClient("A");
       const b = createClient("B");
-      const connectionA = server.connect(a.client, identityOf(a.client, "viewer"));
-      const connectionB = server.connect(b.client, identityOf(b.client, "viewer"));
+      const connectionA = server.connect(a.client, createIdentity(a.client, "viewer"));
+      const connectionB = server.connect(b.client, createIdentity(b.client, "viewer"));
       await connectionA.receive({ room: "voxel-map:world-1", kind: "join" });
       await connectionB.receive({ room: "voxel-map:world-2", kind: "join" });
       a.sent.length = 0;

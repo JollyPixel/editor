@@ -11,11 +11,6 @@ export interface FixtureWorkerData {
   greeting?: string;
 }
 
-/**
- * Real Extension used by the worker_threads e2e test; it exercises the actual
- * dynamic import + construction + RPC round-trip a worker-mode registration
- * goes through, as opposed to WorkerExtensionProxy.spec.ts's FakeWorkerTransport.
- */
 export default class FixtureExtension extends Extension {
   readonly protocols = OPAQUE_PROTOCOLS;
   readonly id = "fixture";

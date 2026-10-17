@@ -1,11 +1,11 @@
 // Import Third-party Dependencies
 import type * as THREE from "three/webgpu";
 import {
-  rectOf,
+  boundingRect,
   rotateCorner,
   rotateUv,
-  rotationOf,
-  triangleCornerOf,
+  geometryRotation,
+  triangleCorner,
   type UVGeometry,
   type UVTriangleCorner,
   type Vec2
@@ -26,9 +26,9 @@ export function applyUvGeometry(
   textureSize: Vec2,
   ranges: readonly FaceVertexRange[]
 ): void {
-  const rect = rectOf(uvGeometry);
-  const rotation = rotationOf(uvGeometry);
-  const corner = triangleCornerOf(uvGeometry);
+  const rect = boundingRect(uvGeometry);
+  const rotation = geometryRotation(uvGeometry);
+  const corner = triangleCorner(uvGeometry);
   const orientation = corner === null ?
     null :
     rotateCorner(corner, -rotation);

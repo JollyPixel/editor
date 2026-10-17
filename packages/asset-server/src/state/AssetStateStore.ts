@@ -106,7 +106,7 @@ export class AssetStateStore extends Emitter<AssetStateStoreEventMap> {
     return this.#open.get(assetId)?.entry;
   }
 
-  versionOf(
+  openVersion(
     assetId: string
   ): number | undefined {
     return this.#open.get(assetId)?.version;

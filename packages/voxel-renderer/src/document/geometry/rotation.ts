@@ -7,12 +7,7 @@ import {
 } from "./faceDirection.ts";
 import type { VoxelTransform } from "./VoxelTransform.ts";
 
-/*
- * CONSTANTS
- * Indexed by quarter-turn then face; positive rotation is CCW from above.
- * rot=1 (90° CCW):  PosX→NegZ, NegX→PosZ, PosZ→PosX, NegZ→NegX
- * rot=3 (270° CCW): PosX→PosZ, NegX→NegZ, PosZ→NegX, NegZ→PosX
- */
+// CONSTANTS
 const kRotateFaceTable: readonly (readonly FACE[])[] = [
   [0, 1, 2, 3, 4, 5],
   [5, 4, 2, 3, 0, 1],

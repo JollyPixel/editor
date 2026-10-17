@@ -35,7 +35,7 @@ function makePulledView(
   return view;
 }
 
-function positionNodeOf(
+function readPositionNode(
   mesh: THREE.Mesh
 ): unknown {
   return (mesh.material as { positionNode?: unknown; }).positionNode ?? null;
@@ -49,7 +49,7 @@ describe("VoxelView - pulled chunk meshes", () => {
     assert.ok(meshes.length > 0);
     for (const mesh of meshes) {
       assert.ok(mesh instanceof PulledChunkMesh);
-      assert.ok(positionNodeOf(mesh) !== null);
+      assert.ok(readPositionNode(mesh) !== null);
     }
   });
 

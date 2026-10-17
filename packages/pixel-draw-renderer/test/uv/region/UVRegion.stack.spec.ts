@@ -25,9 +25,9 @@ describe("UVRegion", () => {
       for (const stacked of [moved.stack(), moved.stack("top")]) {
         assert.strictEqual(stacked.state, "stacked");
         assert.strictEqual(stacked.stackedFace, "front");
-        assert.deepStrictEqual(stacked.rectFor("front"), REGION_RECT);
+        assert.deepStrictEqual(stacked.slotRect("front"), REGION_RECT);
         assert.deepStrictEqual(
-          stacked.rectFor("top"),
+          stacked.slotRect("top"),
           REGION_RECT,
           "a partial slot must not become the shared rectangle"
         );
@@ -59,7 +59,7 @@ describe("UVRegion", () => {
       const stacked = region.stack("left");
 
       assert.strictEqual(stacked.stackedFace, "top");
-      assert.deepStrictEqual(stacked.rectFor("front"), { ...REGION_RECT, x: 9, y: 9 });
+      assert.deepStrictEqual(stacked.slotRect("front"), { ...REGION_RECT, x: 9, y: 9 });
     });
 
     test("stacks onto the largest face, not the first one", () => {
@@ -80,7 +80,7 @@ describe("UVRegion", () => {
       const stacked = pole.stack();
 
       assert.strictEqual(stacked.stackedFace, "left");
-      assert.deepStrictEqual(stacked.rectFor("front"), {
+      assert.deepStrictEqual(stacked.slotRect("front"), {
         x: 0, y: 6, width: 16, height: 4
       });
     });
@@ -106,7 +106,7 @@ describe("UVRegion", () => {
       assert.strictEqual(stacked.stackedFace, "top");
       for (const face of DEFAULT_UV_SLOTS) {
         assert.deepStrictEqual(
-          stacked.rectFor(face),
+          stacked.slotRect(face),
           topRect,
           `${face} must adopt the requested face rect`
         );

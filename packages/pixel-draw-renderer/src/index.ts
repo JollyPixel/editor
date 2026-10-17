@@ -96,12 +96,12 @@ export {
 } from "./utils/math.ts";
 export * from "./utils/RectArea.ts";
 export {
-  rectOf,
+  boundingRect,
   rotateCorner,
   rotateGeometry,
   rotateUv,
-  rotationOf,
-  triangleCornerOf,
+  geometryRotation,
+  triangleCorner,
   withRotation
 } from "./uv/geometry/geometry.ts";
 export {

@@ -10,7 +10,7 @@ import type {
 } from "../../../src/view/inspector/index.ts";
 import type { VoxelMetric } from "../../../src/view/inspector/VoxelMetric.ts";
 
-function inspectorOf(
+function createInspector(
   stats: Partial<VoxelMeshStats>
 ): VoxelMeshInspector {
   return {
@@ -33,7 +33,7 @@ function inspectorOf(
   };
 }
 
-function sampleOf(
+function readSample(
   metrics: readonly VoxelMetric[],
   id: string
 ): number {
@@ -45,30 +45,30 @@ function sampleOf(
 
 describe("voxelMetrics", () => {
   it("samples the live statistics rather than a copy", () => {
-    const inspector = inspectorOf({ voxels: 2 });
+    const inspector = createInspector({ voxels: 2 });
     const metrics = voxelMetrics(inspector);
 
-    assert.equal(sampleOf(metrics, "voxels"), 2);
+    assert.equal(readSample(metrics, "voxels"), 2);
     inspector.stats.voxels = 9;
-    assert.equal(sampleOf(metrics, "voxels"), 9);
+    assert.equal(readSample(metrics, "voxels"), 9);
   });
 
   it("reports culled faces as a share of every candidate face", () => {
     const metrics = voxelMetrics(
-      inspectorOf({ faces: 3, culledFaces: 1 })
+      createInspector({ faces: 3, culledFaces: 1 })
     );
 
-    assert.equal(sampleOf(metrics, "culledFaces"), 25);
+    assert.equal(readSample(metrics, "culledFaces"), 25);
   });
 
   it("reports a zero share when nothing was built", () => {
-    const metrics = voxelMetrics(inspectorOf({}));
+    const metrics = voxelMetrics(createInspector({}));
 
-    assert.equal(sampleOf(metrics, "culledFaces"), 0);
+    assert.equal(readSample(metrics, "culledFaces"), 0);
   });
 
   it("names every metric once", () => {
-    const metrics = voxelMetrics(inspectorOf({}));
+    const metrics = voxelMetrics(createInspector({}));
     const ids = new Set(metrics.map(({ id }) => id));
 
     assert.equal(ids.size, metrics.length);

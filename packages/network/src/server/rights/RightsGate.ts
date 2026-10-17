@@ -15,9 +15,6 @@ const kMembershipEvents = new Set([
   PRESENCE_EVENT
 ]);
 
-/**
- * Read-only view of a `RightsTable` bound to one extension namespace.
- */
 export class RightsGate {
   #table: RightsTable;
   #namespace: string;

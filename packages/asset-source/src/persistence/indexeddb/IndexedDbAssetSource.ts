@@ -253,7 +253,7 @@ function storeFile(
   transaction.objectStore(kFilesStore).put(data, key);
   storeFolders(
     transaction,
-    new FolderSet().addParentsOf(key)
+    new FolderSet().addParents(key)
   );
 }
 
@@ -274,7 +274,7 @@ function backfillFolders(
   files.onsuccess = () => {
     const folders = new FolderSet();
     for (const file of stringKeys(files.result)) {
-      folders.addParentsOf(file);
+      folders.addParents(file);
     }
     storeFolders(transaction, folders);
   };

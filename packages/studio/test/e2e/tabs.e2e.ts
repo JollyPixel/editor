@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { boxOf } from "@jolly-pixel/e2e";
+import { measureBox } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
@@ -72,8 +72,8 @@ test("an editor takes the full width and home lists it among open editors", asyn
   await studio.assets.open(MAP);
   await expect(studio.assets.root).toBeHidden();
   const [frame, frames] = await Promise.all([
-    boxOf(studio.frames.all),
-    boxOf(page.locator("#editor-frames"))
+    measureBox(studio.frames.all),
+    measureBox(page.locator("#editor-frames"))
   ]);
   expect(frame.x).toBe(frames.x);
   expect(frame.width).toBe(frames.width);

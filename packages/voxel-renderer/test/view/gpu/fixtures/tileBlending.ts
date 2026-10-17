@@ -43,9 +43,6 @@ async function atlasImage(): Promise<HTMLImageElement> {
   return image;
 }
 
-/**
- * Draws two red grass columns beside two blue dirt columns from above.
- */
 export async function renderBlendScene(
   options: BlendProbeOptions
 ): Promise<BlendProbe> {

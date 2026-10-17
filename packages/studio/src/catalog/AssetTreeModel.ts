@@ -41,13 +41,13 @@ export type AssetNodeData = AssetFolderData | AssetLeafData;
 export type AssetTreeNode = TreeNode<AssetNodeData>;
 
 export interface AssetKindPresenter {
-  iconFor(kind: string): IconName | undefined;
-  detailFor(kind: string): string | undefined;
+  kindIcon(kind: string): IconName | undefined;
+  kindDetail(kind: string): string | undefined;
 }
 
 export interface AssetDependencies {
-  dependenciesOf(assetId: string): readonly AssetReferenceData[];
-  dependentsOf(assetId: string): readonly string[];
+  listDependencies(assetId: string): readonly AssetReferenceData[];
+  listDependents(assetId: string): readonly string[];
 }
 
 export interface AssetTreeOptions {
@@ -122,13 +122,13 @@ export class AssetTreeModel {
       AssetCompanions.EMPTY :
       AssetCompanions.pair(
         this.#assets.values(),
-        (assetId) => dependencies.dependenciesOf(assetId)
+        (assetId) => dependencies.listDependencies(assetId)
       );
 
     const leaves = new Map<string, AssetLeaf>();
     for (const asset of this.#assets.values()) {
       this.#folderAt(asset.path.parent);
-      const kinds = [asset.kind, this.#ownerOf(asset.id)?.kind];
+      const kinds = [asset.kind, this.#ownerLeaf(asset.id)?.kind];
       if (!options.kind || kinds.includes(options.kind)) {
         leaves.set(asset.id, {
           asset,
@@ -137,7 +137,7 @@ export class AssetTreeModel {
       }
     }
     for (const { asset, node } of leaves.values()) {
-      const ownerId = this.#companions.ownerOf(asset.id);
+      const ownerId = this.#companions.findOwner(asset.id);
       const owner = ownerId === undefined ?
         undefined :
         leaves.get(ownerId)?.node;
@@ -179,7 +179,7 @@ export class AssetTreeModel {
     return path;
   }
 
-  deletionOf(
+  planDeletion(
     nodeIds: Iterable<string>
   ): AssetDeletion {
     const targets = [...nodeIds].flatMap(
@@ -196,7 +196,7 @@ export class AssetTreeModel {
       if (target.type !== "asset") {
         continue;
       }
-      for (const companion of this.#companionsOf(target.id)) {
+      for (const companion of this.#companionLeaves(target.id)) {
         if (!assets.has(companion.id)) {
           companions.set(companion.id, companion);
         }
@@ -207,15 +207,15 @@ export class AssetTreeModel {
       targets,
       assets: [...assets.values()],
       companions: [...companions.values()],
-      dependents: this.#dependentsOf(assets.values()),
-      dependentsWithCompanions: this.#dependentsOf([
+      dependents: this.#collectDependents(assets.values()),
+      dependentsWithCompanions: this.#collectDependents([
         ...assets.values(),
         ...companions.values()
       ])
     });
   }
 
-  renameOf(
+  planRename(
     nodeId: string,
     name: string
   ): AssetRelocation | null {
@@ -262,7 +262,7 @@ export class AssetTreeModel {
       );
   }
 
-  movesOf(
+  planMoves(
     detail: JollyReparentDetail
   ): AssetRelocation[] {
     const folder = this.dropFolder(detail);
@@ -307,7 +307,7 @@ export class AssetTreeModel {
 
     return moved.filter(([, data]) => {
       if (data.type === "asset") {
-        const owner = this.#companions.ownerOf(data.id);
+        const owner = this.#companions.findOwner(data.id);
         if (owner !== undefined && movedAssets.has(owner)) {
           return false;
         }
@@ -343,7 +343,7 @@ export class AssetTreeModel {
       };
     });
     if (data.type === "asset") {
-      for (const companion of this.#companionsOf(data.id)) {
+      for (const companion of this.#companionLeaves(data.id)) {
         renames.push({
           assetId: companion.id,
           to: to.withName(`${to.stem}${companion.path.extension}`).toString()
@@ -360,10 +360,10 @@ export class AssetTreeModel {
     };
   }
 
-  #ownerOf(
+  #ownerLeaf(
     assetId: string
   ): AssetLeafData | undefined {
-    const ownerId = this.#companions.ownerOf(assetId);
+    const ownerId = this.#companions.findOwner(assetId);
 
     return ownerId === undefined ? undefined : this.#assets.get(ownerId);
   }
@@ -407,21 +407,21 @@ export class AssetTreeModel {
     );
   }
 
-  #companionsOf(
+  #companionLeaves(
     ownerId: string
   ): AssetLeafData[] {
     return this.#companions
-      .companionsOf(ownerId)
+      .listCompanions(ownerId)
       .flatMap((assetId) => this.#assets.get(assetId) ?? []);
   }
 
-  #dependentsOf(
+  #collectDependents(
     assets: Iterable<AssetLeafData>
   ): string[] {
     const deleted = new Set([...assets].map((asset) => asset.id));
     const dependents = new Set<string>();
     for (const assetId of deleted) {
-      for (const dependentId of this.#dependencies?.dependentsOf(assetId) ?? []) {
+      for (const dependentId of this.#dependencies?.listDependents(assetId) ?? []) {
         const dependent = this.#assets.get(dependentId);
         if (dependent !== undefined && !deleted.has(dependentId)) {
           dependents.add(dependent.path.toString());
@@ -477,8 +477,8 @@ function assetNode(
   return {
     id: assetNodeId(data.id),
     label: data.path.name,
-    icon: presenter?.iconFor(data.kind),
-    detail: presenter?.detailFor(data.kind),
+    icon: presenter?.kindIcon(data.kind),
+    detail: presenter?.kindDetail(data.kind),
     renamable: true,
     data
   };

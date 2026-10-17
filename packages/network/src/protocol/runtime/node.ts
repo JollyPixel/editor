@@ -17,7 +17,7 @@ const kValidatorOptions = {
 } as const;
 const kValidators = new WeakMap<Schema, Validator>();
 
-function validatorFor(
+function compileValidator(
   schema: Schema
 ): Validator {
   let validator = kValidators.get(schema);
@@ -53,7 +53,7 @@ export class SchemaValidator {
   }
 
   get #compiled(): Validator {
-    this.#validator ??= validatorFor(this.#schema);
+    this.#validator ??= compileValidator(this.#schema);
 
     return this.#validator;
   }

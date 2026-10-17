@@ -55,7 +55,7 @@ function buildTab(
   return tab;
 }
 
-function statusOf(
+function tabStatus(
   value: string
 ): TabStatus {
   if (value === kBusyTab) {
@@ -108,7 +108,7 @@ function buildTabs(
     tab.actionLabel = "Inspect";
     tab.modified = options.modified && tab.value === kModifiedTab;
     if (options.status) {
-      tab.status = statusOf(tab.value);
+      tab.status = tabStatus(tab.value);
     }
 
     return tab;

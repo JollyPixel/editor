@@ -11,7 +11,7 @@ import {
   shadowPassSwitch
 } from "../../../src/view/shading/ShadowPassSwitchNode.ts";
 
-function builderFor(
+function fakeBuilder(
   material: THREE.Material
 ): THREE.NodeBuilder {
   return { material } as unknown as THREE.NodeBuilder;
@@ -26,7 +26,7 @@ describe("ShadowPassSwitchNode", () => {
     const shadowMaterial = new THREE.ShadowNode(light, light.shadow)
       .getShadowMaterial();
 
-    assert.equal(node.setup(builderFor(shadowMaterial)), caster);
-    assert.equal(node.setup(builderFor(new THREE.MeshLambertMaterial())), main);
+    assert.equal(node.setup(fakeBuilder(shadowMaterial)), caster);
+    assert.equal(node.setup(fakeBuilder(new THREE.MeshLambertMaterial())), main);
   });
 });

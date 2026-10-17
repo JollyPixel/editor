@@ -57,7 +57,7 @@ export class CapabilityTable<
     return Object.hasOwn(this.#capabilities, event);
   }
 
-  grantsFor(
+  resolveGrants(
     source: RightsSource
   ): Grants<TCapability> {
     const withheld = new Set<TCapability>();

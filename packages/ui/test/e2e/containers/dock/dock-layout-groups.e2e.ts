@@ -1,10 +1,10 @@
 // Import Third-party Dependencies
 import {
-  boxOf,
-  centerOf,
+  measureBox,
+  measureCenter,
   dragTo,
   hold,
-  widthOf,
+  measureWidth,
   type Point
 } from "@jolly-pixel/e2e";
 
@@ -25,10 +25,10 @@ import {
   PaneGroup
 } from "../../support/pane.ts";
 
-async function rightEdgeOf(
+async function readRightEdge(
   page: Page
 ): Promise<Point> {
-  const stage = await boxOf(page.locator(".dock-layout-stage"));
+  const stage = await measureBox(page.locator(".dock-layout-stage"));
 
   return {
     x: stage.x + stage.width - 12,
@@ -93,12 +93,12 @@ test.describe("DockLayout groups", () => {
     await expect(layersHeader.locator("jolly-icon.icon")).toHaveAttribute("name", "eye");
 
     const [icon, label] = await Promise.all([
-      boxOf(general.locator("jolly-icon")),
-      boxOf(general.locator(".label"))
+      measureBox(general.locator("jolly-icon")),
+      measureBox(general.locator(".label"))
     ]);
     expect(icon.x).toBeLessThan(label.x);
 
-    const from = await centerOf(layersHeader);
+    const from = await measureCenter(layersHeader);
     await hold(page, from, {
       x: from.x + 40,
       y: from.y - 60
@@ -119,7 +119,7 @@ test.describe("DockLayout groups", () => {
       (root instanceof ShadowRoot ? root : document.head).append(style);
     });
 
-    const strip = await boxOf(group.tabStrip);
+    const strip = await measureBox(group.tabStrip);
     const widths = await group.tabs.evaluateAll(
       (tabs) => tabs.map((tab) => tab.getBoundingClientRect().width)
     );
@@ -133,8 +133,8 @@ test.describe("DockLayout groups", () => {
       element.setAttribute("size", "150");
     });
     const general = group.tab("General");
-    await expect.poll(() => widthOf(general)).toBeLessThan(60);
-    expect(await widthOf(general.locator("jolly-icon"))).toBeCloseTo(14, 0);
+    await expect.poll(() => measureWidth(general)).toBeLessThan(60);
+    expect(await measureWidth(general.locator("jolly-icon"))).toBeCloseTo(14, 0);
     expect(await general.locator(".label").evaluate(
       (label) => label.scrollWidth > label.clientWidth
     )).toBe(true);
@@ -153,26 +153,26 @@ test.describe("DockLayout groups", () => {
     const right = new Dock(page, "right");
     const layers = new Pane(page, "layers");
     await expect(right.root).toHaveAttribute("empty");
-    expect(await widthOf(right.root)).toBe(0);
+    expect(await measureWidth(right.root)).toBe(0);
 
     await hold(
       page,
-      await centerOf(layers.header),
-      await rightEdgeOf(page),
+      await measureCenter(layers.header),
+      await readRightEdge(page),
       16
     );
     const armed = page.locator(".jolly-drag-zone-armed");
     await expect(armed).toHaveCount(1);
-    expect((await boxOf(armed)).width).toBe(240);
+    expect((await measureBox(armed)).width).toBe(240);
     await page.mouse.up();
 
     await expect(right.root).not.toHaveAttribute("empty");
-    await expect.poll(() => widthOf(right.root)).toBe(240 + DOCK_HANDLE_SIZE);
+    await expect.poll(() => measureWidth(right.root)).toBe(240 + DOCK_HANDLE_SIZE);
     await expect(right.slots()).resolves.toEqual([["layers"]]);
 
     await new Dock(page, "left").drop(layers.header, 20);
     await expect(right.root).toHaveAttribute("empty");
-    await expect.poll(() => widthOf(right.root)).toBe(0);
+    await expect.poll(() => measureWidth(right.root)).toBe(0);
   });
 
   test("an empty dock shows no resize handle and cannot be collapsed", async({ page }) => {
@@ -190,12 +190,12 @@ test.describe("DockLayout groups", () => {
     await dragTo(
       page,
       new Pane(page, "layers").header,
-      await rightEdgeOf(page)
+      await readRightEdge(page)
     );
     await right.resizeHandle.dblclick();
     await expect(right.root).toHaveAttribute("collapsed");
 
-    const edge = await boxOf(right.root);
+    const edge = await measureBox(right.root);
     await dragTo(page, new PaneGroup(page).tab("Paint"), {
       x: edge.x - 8,
       y: edge.y + (edge.height / 2)
@@ -203,28 +203,28 @@ test.describe("DockLayout groups", () => {
 
     await expect(right.slots()).resolves.toEqual([["layers"], ["paint"]]);
     await expect(right.root).not.toHaveAttribute("collapsed");
-    await expect.poll(() => widthOf(right.root)).toBe(240 + DOCK_HANDLE_SIZE);
+    await expect.poll(() => measureWidth(right.root)).toBe(240 + DOCK_HANDLE_SIZE);
   });
 
   test("a tab dragged along its strip slides its neighbours aside until it leaves", async({ page }) => {
     const group = new PaneGroup(page);
     const blocks = group.tab("Blocks");
     const overlay = page.locator(".jolly-drag-overlay");
-    const before = await boxOf(blocks);
-    const paint = await boxOf(group.tab("Paint"));
-    const from = await centerOf(group.tab("General"));
+    const before = await measureBox(blocks);
+    const paint = await measureBox(group.tab("Paint"));
+    const from = await measureCenter(group.tab("General"));
     const along = {
       x: paint.x + (paint.width * 0.75),
       y: from.y
     };
     await hold(page, from, along);
 
-    await expect.poll(async() => (await boxOf(blocks)).x).toBeLessThan(before.x);
+    await expect.poll(async() => (await measureBox(blocks)).x).toBeLessThan(before.x);
     await expect(overlay).toBeHidden();
 
     await page.mouse.move(along.x, along.y + 120, { steps: 6 });
     await expect(overlay).toBeVisible();
-    await expect.poll(async() => (await boxOf(blocks)).x).toBeCloseTo(before.x, 0);
+    await expect.poll(async() => (await measureBox(blocks)).x).toBeCloseTo(before.x, 0);
 
     await page.mouse.move(along.x, along.y, { steps: 6 });
     await page.mouse.up();
@@ -234,7 +234,7 @@ test.describe("DockLayout groups", () => {
   });
 
   test("a tab dropped into another dock takes its own slot", async({ page }) => {
-    await dragTo(page, new PaneGroup(page).tab("Paint"), await rightEdgeOf(page));
+    await dragTo(page, new PaneGroup(page).tab("Paint"), await readRightEdge(page));
 
     const paint = new Pane(page, "paint");
     await expect(new Dock(page, "right").slots()).resolves.toEqual([["paint"]]);
@@ -248,11 +248,11 @@ test.describe("DockLayout groups", () => {
 
   test("a hidden tab floats at its declared size, else at its group size", async({ page }) => {
     const group = new PaneGroup(page);
-    const groupBox = await boxOf(group.root);
-    const viewport = await centerOf(page.locator(".dock-layout-viewport"));
+    const groupBox = await measureBox(group.root);
+    const viewport = await measureCenter(page.locator(".dock-layout-viewport"));
 
     await dragTo(page, group.tab("Paint"), viewport);
-    const declared = await boxOf(new FloatingWindow(page, "paint").root);
+    const declared = await measureBox(new FloatingWindow(page, "paint").root);
     expect(declared.width).toBeCloseTo(300, 0);
     expect(declared.height).toBeCloseTo(420, 0);
 
@@ -260,14 +260,14 @@ test.describe("DockLayout groups", () => {
       x: viewport.x - 200,
       y: viewport.y
     });
-    const inherited = await boxOf(new FloatingWindow(page, "general").root);
+    const inherited = await measureBox(new FloatingWindow(page, "general").root);
     expect(inherited.width).toBeCloseTo(groupBox.width, 0);
     expect(inherited.height).toBeCloseTo(groupBox.height, 0);
   });
 
   test("a pane dropped on a tab strip joins the group as the shown tab", async({ page }) => {
     const group = new PaneGroup(page);
-    const strip = await boxOf(group.tabStrip);
+    const strip = await measureBox(group.tabStrip);
     await dragTo(page, new Pane(page, "layers").header, {
       x: strip.x + strip.width - 8,
       y: strip.y + (strip.height / 2)
@@ -282,7 +282,7 @@ test.describe("DockLayout groups", () => {
   test("a tabs dock merges a pane dropped on a pane body into that group", async({ page }) => {
     const left = new Dock(page, "left");
     await left.root.evaluate((element) => element.setAttribute("drop", "tabs"));
-    const body = await boxOf(new Pane(page, "blocks").root);
+    const body = await measureBox(new Pane(page, "blocks").root);
     await dragTo(page, new Pane(page, "layers").header, {
       x: body.x + body.width - 8,
       y: body.y + (body.height / 2)
@@ -296,7 +296,7 @@ test.describe("DockLayout groups", () => {
   test("a none dock refuses a dropped pane, which floats instead", async({ page }) => {
     const right = new Dock(page, "right");
     await right.root.evaluate((element) => element.setAttribute("drop", "none"));
-    await dragTo(page, new PaneGroup(page).tab("Paint"), await rightEdgeOf(page));
+    await dragTo(page, new PaneGroup(page).tab("Paint"), await readRightEdge(page));
 
     await expect(right.slots()).resolves.toEqual([]);
     await expect(new FloatingWindow(page, "paint").root).toBeVisible();
@@ -304,7 +304,7 @@ test.describe("DockLayout groups", () => {
 
   test("a tab dropped on a pane header creates a group", async({ page }) => {
     const group = new PaneGroup(page);
-    const header = await boxOf(new Pane(page, "layers").header);
+    const header = await measureBox(new Pane(page, "layers").header);
     await dragTo(page, group.tab("General"), {
       x: header.x + 12,
       y: header.y + (header.height / 2)
@@ -318,7 +318,7 @@ test.describe("DockLayout groups", () => {
   test("a group left with one pane gives way to that pane", async({ page }) => {
     const left = new Dock(page, "left");
     for (const label of ["General", "Blocks"]) {
-      await dragTo(page, new PaneGroup(page).tab(label), await rightEdgeOf(page));
+      await dragTo(page, new PaneGroup(page).tab(label), await readRightEdge(page));
     }
 
     await expect(new PaneGroup(left.root).root).toHaveCount(0);
@@ -353,7 +353,7 @@ test.describe("DockLayout groups", () => {
     const left = new Dock(page, "left");
     const right = new Dock(page, "right");
     await group.tab("General").click();
-    await dragTo(page, group.tab("Paint"), await rightEdgeOf(page));
+    await dragTo(page, group.tab("Paint"), await readRightEdge(page));
     await reloadGallery(page);
 
     await expect(left.slots())

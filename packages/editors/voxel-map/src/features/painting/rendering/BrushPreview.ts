@@ -69,7 +69,7 @@ export class BrushPreview {
     this.#ghost.hide();
     this.#removal.hide();
     this.#dirty = true;
-    this.#setCursor(null);
+    this.#moveCursor(null);
   }
 
   update(
@@ -88,7 +88,7 @@ export class BrushPreview {
       this.#mesh.clearFootprint();
       this.#ghost.hide();
       this.#removal.hide();
-      this.#setCursor(null);
+      this.#moveCursor(null);
 
       return;
     }
@@ -106,7 +106,7 @@ export class BrushPreview {
       this.#mesh.show();
       this.#mesh.draw(next);
     }
-    this.#setCursor(next);
+    this.#moveCursor(next);
   }
 
   destroy(): void {
@@ -133,7 +133,7 @@ export class BrushPreview {
     return true;
   }
 
-  #setCursor(
+  #moveCursor(
     next: BrushFootprint | null
   ): void {
     if (next === this.#cursor || next?.equals(this.#cursor) === true) {

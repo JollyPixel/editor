@@ -6,9 +6,6 @@ export interface ButtonOptions {
   title?: string;
 }
 
-/**
- * A `jolly-button` with no bound value, matching `folder.addButton`.
- */
 export class FacadeButton extends FacadeItem {
   readonly element: HTMLElement;
 

@@ -12,7 +12,7 @@ import {
 } from "./helpers.ts";
 import { createBox } from "../peer/helpers.ts";
 
-function lightnessOf(
+function readLightness(
   color: THREE.ColorRepresentation
 ): number {
   return new THREE.Color(color).getHSL({ h: 0, s: 0, l: 0 }).l;
@@ -29,7 +29,7 @@ describe("peer hover", () => {
     assert.strictEqual(entries[0].isolated, true);
     assert.ok(!entries[0].priority, "a peer hover entry should not be marked priority");
     assert.ok(
-      lightnessOf(entries[0].color) < lightnessOf(hoverRegistry!.colorOf("peer-a")),
+      readLightness(entries[0].color) < readLightness(hoverRegistry!.peerColor("peer-a")),
       "must be darkened, not the raw peer color"
     );
   });
@@ -41,7 +41,7 @@ describe("peer hover", () => {
 
     const entries = lastEntries(highlight);
     assert.strictEqual(entries.length, 1);
-    assert.strictEqual(entries[0].color, registry.colorOf("peer-b"));
+    assert.strictEqual(entries[0].color, registry.peerColor("peer-b"));
     assert.ok(!entries[0].isolated, "the surviving entry is the peer selection, not a hover");
   });
 

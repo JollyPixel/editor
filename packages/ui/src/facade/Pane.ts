@@ -18,10 +18,6 @@ import type { FieldLayoutOptions } from "./fieldLayout.ts";
 // CONSTANTS
 const kDefaultLabelWidth = "16ch";
 
-/**
- * `labelPosition` and `stackBelow` become the default of every binding and
- * note added to the pane, its folders included.
- */
 export interface PaneOptions extends FieldLayoutOptions {
   title?: string;
   /**

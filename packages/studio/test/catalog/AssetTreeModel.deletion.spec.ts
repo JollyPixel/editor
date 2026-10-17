@@ -16,14 +16,14 @@ import {
 import {
   COMPANION_EDGES,
   COMPANION_RECORDS,
-  companionModelOf,
-  dependenciesOf
+  createCompanionModel,
+  createDependencies
 } from "../helpers/assetTree.ts";
 
 // CONSTANTS
 const kMaps = folderNodeId(AssetPath.parse("maps"));
 
-function idsOf(
+function collectIds(
   assets: readonly AssetLeafData[]
 ): string[] {
   return assets.map((asset) => asset.id);
@@ -31,27 +31,27 @@ function idsOf(
 
 describe("AssetTreeModel deletion", () => {
   test("offers the companions of a deleted owner and who still references them", () => {
-    const deletion = companionModelOf().deletionOf([assetNodeId("map-overworld")]);
+    const deletion = createCompanionModel().planDeletion([assetNodeId("map-overworld")]);
 
-    assert.deepEqual(idsOf(deletion.assets), ["map-overworld"]);
-    assert.deepEqual(idsOf(deletion.companions), ["blockset-overworld"]);
+    assert.deepEqual(collectIds(deletion.assets), ["map-overworld"]);
+    assert.deepEqual(collectIds(deletion.companions), ["blockset-overworld"]);
     assert.deepEqual(deletion.dependents(false), []);
     assert.deepEqual(deletion.dependents(true), ["maps/cave.voxelmap.json"]);
     assert.deepEqual(
-      idsOf(deletion.removals(true)),
+      collectIds(deletion.removals(true)),
       ["map-overworld", "blockset-overworld"]
     );
-    assert.deepEqual(idsOf(deletion.removals(false)), ["map-overworld"]);
+    assert.deepEqual(collectIds(deletion.removals(false)), ["map-overworld"]);
   });
 
   test("offers no companion or dependent the selection already deletes", () => {
-    const deletion = companionModelOf().deletionOf([
+    const deletion = createCompanionModel().planDeletion([
       kMaps,
       assetNodeId("map-overworld")
     ]);
 
     assert.deepEqual(
-      idsOf(deletion.assets),
+      collectIds(deletion.assets),
       ["map-overworld", "blockset-overworld", "map-cave"]
     );
     assert.deepEqual(deletion.companions, []);
@@ -61,10 +61,10 @@ describe("AssetTreeModel deletion", () => {
   test("deletes nothing for an empty folder, but names it", () => {
     const drafts = AssetPath.parse("maps/drafts");
     const model = new AssetTreeModel(COMPANION_RECORDS, {
-      dependencies: dependenciesOf(COMPANION_EDGES),
+      dependencies: createDependencies(COMPANION_EDGES),
       folders: [drafts]
     });
-    const deletion = model.deletionOf([folderNodeId(drafts), "asset:unknown"]);
+    const deletion = model.planDeletion([folderNodeId(drafts), "asset:unknown"]);
 
     assert.equal(deletion.isEmpty, true);
     assert.deepEqual(deletion.folders, [drafts]);

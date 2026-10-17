@@ -296,10 +296,10 @@ export class SignInDialog extends LitElement {
     }
     catch (error) {
       if (isPending(error)) {
-        this._notice = messageFor(error);
+        this._notice = describeError(error);
       }
       else {
-        this._error = messageFor(error);
+        this._error = describeError(error);
       }
       masterPasswordRefused = error instanceof AccountsRequestError &&
         kMasterPasswordCodes.has(error.code);
@@ -350,7 +350,7 @@ function isPending(
     error.code === "account-pending";
 }
 
-function messageFor(
+function describeError(
   error: unknown
 ): string {
   if (error instanceof AccountsRequestError) {

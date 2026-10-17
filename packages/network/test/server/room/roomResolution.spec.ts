@@ -7,8 +7,8 @@ import { setImmediate as flush } from "node:timers/promises";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { identityOf } from "../../helpers/server/identity.ts";
-import { serverEnvelopeOf } from "../../helpers/server/clientHandle.ts";
+import { createIdentity } from "../../helpers/server/identity.ts";
+import { toServerEnvelope } from "../../helpers/server/clientHandle.ts";
 import {
   AssetExtension,
   client,
@@ -68,7 +68,7 @@ describe("Server — dynamic room resolution", () => {
   test("a message to a never-joined dynamic room is dropped", async() => {
     const { server, created } = harness();
 
-    const connectionA = server.connect(client("A"), identityOf(client("A")));
+    const connectionA = server.connect(client("A"), createIdentity(client("A")));
     await connectionA.receive({
       room: "pixelart:asset-1",
       kind: "message",
@@ -82,16 +82,16 @@ describe("Server — dynamic room resolution", () => {
   test("a resolver that throws drops the join and registers nothing", async() => {
     const kinds: string[] = [];
     const server = new Server();
-    server.setRoomResolver(() => {
+    server.useRoomResolver(() => {
       throw new Error("resolver exploded");
     });
 
     const connectionA = server.connect(
       {
         id: "A",
-        send: (data) => kinds.push(serverEnvelopeOf(data).kind)
+        send: (data) => kinds.push(toServerEnvelope(data).kind)
       },
-      identityOf("A")
+      createIdentity("A")
     );
     await connectionA.receive({
       room: "pixelart:asset-1",
@@ -99,7 +99,7 @@ describe("Server — dynamic room resolution", () => {
     });
     assert.strictEqual(kinds.length, 0);
 
-    server.setRoomResolver((name): RoomResolution => {
+    server.useRoomResolver((name): RoomResolution => {
       return { extension: new AssetExtension(name, "pixelart") };
     });
     await connectionA.receive({
@@ -138,7 +138,7 @@ describe("dynamic rooms — read-only resolution", () => {
       actionProtocols
     );
     const server = new Server();
-    server.setRoomResolver((): RoomResolution => {
+    server.useRoomResolver((): RoomResolution => {
       return {
         extension,
         readOnly: true
@@ -148,9 +148,9 @@ describe("dynamic rooms — read-only resolution", () => {
     const connectionA = server.connect(
       {
         id: "A",
-        send: (data) => envelopes.push(serverEnvelopeOf(data))
+        send: (data) => envelopes.push(toServerEnvelope(data))
       },
-      identityOf("A")
+      createIdentity("A")
     );
     await connectionA.receive({
       room: "pixelart:asset-1",
@@ -182,7 +182,7 @@ describe("dynamic rooms — read-only resolution", () => {
   test("an extension without an inbound protocol is not resolved read-only", async() => {
     const kinds: string[] = [];
     const server = new Server();
-    server.setRoomResolver((name): RoomResolution => {
+    server.useRoomResolver((name): RoomResolution => {
       return {
         extension: new AssetExtension(name, "pixelart"),
         readOnly: true
@@ -192,9 +192,9 @@ describe("dynamic rooms — read-only resolution", () => {
     const connectionA = server.connect(
       {
         id: "A",
-        send: (data) => kinds.push(serverEnvelopeOf(data).kind)
+        send: (data) => kinds.push(toServerEnvelope(data).kind)
       },
-      identityOf("A")
+      createIdentity("A")
     );
     await connectionA.receive({
       room: "pixelart:asset-1",
@@ -211,7 +211,7 @@ describe("dynamic rooms — concurrent joins", () => {
     const order: string[] = [];
     const gate = Promise.withResolvers<void>();
     const server = new Server();
-    server.setRoomResolver(async(name): Promise<RoomResolution> => {
+    server.useRoomResolver(async(name): Promise<RoomResolution> => {
       if (name === "pixelart:slow") {
         await gate.promise;
       }
@@ -220,7 +220,7 @@ describe("dynamic rooms — concurrent joins", () => {
       return { extension: new AssetExtension(name, "pixelart") };
     });
 
-    const connectionA = server.connect(client("A"), identityOf(client("A")));
+    const connectionA = server.connect(client("A"), createIdentity(client("A")));
     const slow = connectionA.receive({
       room: "pixelart:slow",
       kind: "join"
@@ -242,7 +242,7 @@ describe("dynamic rooms — concurrent joins", () => {
     const { server, extensions } = harness();
     const room = "pixelart:a1";
 
-    const connectionA = server.connect(client("A"), identityOf(client("A")));
+    const connectionA = server.connect(client("A"), createIdentity(client("A")));
     const join = connectionA.receive({ room, kind: "join" });
     const message = connectionA.receive({
       room,
@@ -263,7 +263,7 @@ describe("dynamic rooms — concurrent joins", () => {
     const order: string[] = [];
     const gate = Promise.withResolvers<void>();
     const server = new Server();
-    server.setRoomResolver(async(name): Promise<RoomResolution> => {
+    server.useRoomResolver(async(name): Promise<RoomResolution> => {
       await gate.promise;
       const extension = new AssetExtension(name, "pixelart");
       function connect() {
@@ -281,7 +281,7 @@ describe("dynamic rooms — concurrent joins", () => {
       };
     });
 
-    const connectionA = server.connect(client("A"), identityOf(client("A")));
+    const connectionA = server.connect(client("A"), createIdentity(client("A")));
     const join = connectionA.receive({
       room: "pixelart:a1",
       kind: "join"

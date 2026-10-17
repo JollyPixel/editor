@@ -1,16 +1,9 @@
-/**
- * Renders one `?` placeholder per value, for an `IN (...)` clause.
- */
-export function placeholdersFor(
+export function sqlPlaceholders(
   values: readonly unknown[]
 ): string {
   return values.map(() => "?").join(", ");
 }
 
-/**
- * Neutralizes the GLOB metacharacters `[`, `]`, `*` and `?` so that a value
- * matches literally.
- */
 export function escapeGlob(
   value: string
 ): string {

@@ -30,10 +30,10 @@ describe("UVRegion", () => {
       const restored = UVRegion.from(data).free();
 
       assert.strictEqual(data.state === "stacked" ? data.stackedFace : null, "left");
-      assert.deepStrictEqual(restored.rectFor("front"), {
+      assert.deepStrictEqual(restored.slotRect("front"), {
         x: 0, y: 6, width: 4, height: 4
       });
-      assert.deepStrictEqual(restored.rectFor("top"), {
+      assert.deepStrictEqual(restored.slotRect("top"), {
         x: 0, y: 6, width: 4, height: 16
       });
     });

@@ -19,9 +19,6 @@ export interface RequestAnimationFrameSourceOptions {
   ) => void;
 }
 
-/**
- * Browser frame source with injectable animation-frame functions.
- */
 export class RequestAnimationFrameSource implements FrameSource {
   #request: (callback: (now: number) => void) => number;
   #cancel: (handle: number) => void;

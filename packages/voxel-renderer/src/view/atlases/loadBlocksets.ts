@@ -25,9 +25,6 @@ export interface LoadBlocksetsOptions {
   loader?: TextureSourceLoader;
 }
 
-/**
- * Fetches atlas textures so they can be registered synchronously
- */
 export function loadBlocksets(
   definitions: Iterable<BlocksetDefinition>,
   options: LoadBlocksetsOptions = {}

@@ -59,10 +59,6 @@ interface Relay {
   readonly listener: PortListener | null;
 }
 
-/**
- * Serves `ChannelTransport` clients: each remote connection is relayed to a
- * local socket opened with `open()`.
- */
 export class ChannelTransportHost {
   readonly id: string;
 

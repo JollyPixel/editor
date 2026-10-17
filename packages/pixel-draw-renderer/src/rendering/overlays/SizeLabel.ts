@@ -114,8 +114,8 @@ export class SizeLabel {
       return null;
     }
 
-    const label = SizeLabel.#labelOf(rect);
-    const width = SizeLabel.#widthOf(label);
+    const label = SizeLabel.#formatLabel(rect);
+    const width = SizeLabel.#measureWidth(label);
     const below = bottom + kGap;
     const y = below > canvasHeight - kMargin ? top - kGap + kFontSize : below;
 
@@ -193,7 +193,7 @@ export class SizeLabel {
     const shift = skippedLines * kFontSize;
 
     return SizeLabel.#placement(
-      SizeLabel.#labelOf(rect),
+      SizeLabel.#formatLabel(rect),
       corner.right ?
         screen.x + screen.width - kInsetEnd :
         screen.x + kInsetStart,
@@ -210,7 +210,7 @@ export class SizeLabel {
     y: number,
     anchor: "start" | "end"
   ): SizeLabelPlacement {
-    const width = SizeLabel.#widthOf(label);
+    const width = SizeLabel.#measureWidth(label);
 
     return {
       label,
@@ -226,13 +226,13 @@ export class SizeLabel {
     };
   }
 
-  static #labelOf(
+  static #formatLabel(
     rect: SelectionRect
   ): string {
     return `${rect.width}×${rect.height}`;
   }
 
-  static #widthOf(
+  static #measureWidth(
     label: string
   ): number {
     return label.length * kCharWidth;

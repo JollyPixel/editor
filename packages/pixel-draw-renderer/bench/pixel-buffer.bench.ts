@@ -25,11 +25,6 @@ const kClippedRegion: SelectionRect = {
   height: 256
 };
 
-/**
- * Covers edit-path primitives: construction (`#fill` over `maxSize²`),
- * `copyToMaster`, pixel and region drawing, transparency scans, `resize`, and
- * snapshot clone cost.
- */
 const suite = defineSuite("PixelBuffer (buffer/PixelBuffer)", (bench) => {
   const rng = mulberry32();
 

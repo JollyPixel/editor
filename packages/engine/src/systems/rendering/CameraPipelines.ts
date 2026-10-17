@@ -23,10 +23,6 @@ interface CameraPipelineEntry {
   pipeline: CameraPipeline;
 }
 
-/**
- * One `THREE.RenderPipeline` per post-processed camera, rebuilt when its
- * post-processing, scene or three.js camera changes.
- */
 export class CameraPipelines {
   #renderer: THREE.WebGPURenderer;
   #createPipeline: CameraPipelineFactory;

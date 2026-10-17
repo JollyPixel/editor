@@ -4,9 +4,6 @@ import type { ResolvedBlockDefinition } from "./BlockDefinition.ts";
 import { composeBlockId } from "./BlockId.ts";
 
 // CONSTANTS
-/**
- * Historical byte-sized cap, unrelated to `MAX_LOCAL_BLOCK_ID`.
- */
 const kDefaultLimit = 255;
 
 export type BlockOverrides = Partial<
@@ -25,10 +22,6 @@ export type BlockOverrides = Partial<
   >
 >;
 
-/**
- * The tile grid blocks are generated from. With an `id`, tile references
- * name that blockset; with a `slot`, block ids are projected into it.
- */
 export type TileGridSource =
   & Pick<ResolvedBlocksetDefinition, "cols" | "rows">
   & Partial<Pick<ResolvedBlocksetDefinition, "id" | "slot">>;
@@ -46,9 +39,6 @@ export interface BlocksFromTileGridOptions {
   ) => BlockOverrides;
 }
 
-/**
- * One cube block per tile, row-major, with ids starting at 1.
- */
 export function* blocksFromTileGrid(
   def: TileGridSource,
   options: BlocksFromTileGridOptions = {}

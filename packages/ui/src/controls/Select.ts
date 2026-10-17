@@ -19,9 +19,6 @@ import type { JollyOption } from "./types.ts";
 // CONSTANTS
 const kMixedValue = "__jolly_mixed__";
 
-/**
- * Wraps a native select with index-based option matching.
- */
 @customElement("jolly-select")
 export class Select<TValue> extends JollyField<TValue> {
   static override styles = [
@@ -67,10 +64,6 @@ export class Select<TValue> extends JollyField<TValue> {
     `;
   }
 
-  /**
-   * Options render after the select's own bindings. Synchronizing here keeps
-   * the native selected option aligned when options and value arrive together.
-   */
   protected override updated(): void {
     const select = this.renderRoot.querySelector("select");
     if (select !== null) {
@@ -98,9 +91,6 @@ export class Select<TValue> extends JollyField<TValue> {
       return;
     }
 
-    /*
-     * Restore readonly selections while keeping the control focusable.
-     */
     if (!this.editable) {
       event.target.value = this.#selectedKey;
 

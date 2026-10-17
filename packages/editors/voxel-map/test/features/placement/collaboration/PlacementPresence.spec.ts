@@ -128,7 +128,7 @@ describe("PlacementPresence", () => {
         blockId: 1
       };
     }));
-    function presenceOf(
+    function createPresence(
       to: number
     ): PlacementPresence {
       const region = CellRegion.spanning({ x: 0, y: 0, z: 0 }, { x: to, y: 0, z: 0 });
@@ -137,7 +137,7 @@ describe("PlacementPresence", () => {
       return overTheWire(PlacementPresence.fromPlacement(Placement.at(source, { x: 0, y: 0, z: 0 })))!;
     }
 
-    assert.ok(presenceOf(1).equals(presenceOf(1)));
-    assert.ok(!presenceOf(1).equals(presenceOf(2)));
+    assert.ok(createPresence(1).equals(createPresence(1)));
+    assert.ok(!createPresence(1).equals(createPresence(2)));
   });
 });

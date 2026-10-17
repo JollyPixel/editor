@@ -19,9 +19,6 @@ export interface AssetCoordinatorOptions {
   loaders: AssetLoaderRegistry;
 }
 
-/**
- * Resolves asset references and creates independent loading operations.
- */
 export class AssetCoordinator {
   readonly catalog: AssetCatalog;
   readonly loaders: AssetLoaderRegistry;
@@ -78,7 +75,7 @@ export class AssetCoordinator {
 
     for (const reference of references) {
       const record = this.catalog.resolve(reference);
-      const ready = this.#store.statusOf(
+      const ready = this.#store.loadStatus(
         reference
       ) === "ready";
 

@@ -48,7 +48,7 @@ function setup(
   engine.bridgeOptions.uvSync.mode = mode;
   const uv = makeUv();
   const bridge = new BlockUvBridge(uv, engine.view, engine.bridgeOptions);
-  bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
+  bridge.activateBlockset(blocksetSlot("atlas"), 16);
 
   return { ...engine, uv, bridge };
 }
@@ -89,7 +89,7 @@ describe("BlockUvBridge / region-dragging in live mode", () => {
     const uv = makeUv();
     engine.bridgeOptions.uvSync.mode = "live";
     const bridge = new BlockUvBridge(uv, engine.view, engine.bridgeOptions);
-    bridge.setActiveBlockset(blocksetSlot("atlas"), 16);
+    bridge.activateBlockset(blocksetSlot("atlas"), 16);
     engine.dirtyReasons.length = 0;
     try {
       uv.previewMoveGroup([

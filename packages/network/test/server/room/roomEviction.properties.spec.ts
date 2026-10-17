@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import fc from "fast-check";
 
 // Import Internal Dependencies
-import { identityOf } from "../../helpers/server/identity.ts";
+import { createIdentity } from "../../helpers/server/identity.ts";
 import {
   type AssetExtension,
   client,
@@ -99,7 +99,7 @@ describe("room eviction properties", () => {
             else if (action.type === "join") {
               let connection = connected.get(action.client);
               if (connection === undefined) {
-                connection = server.connect(client(action.client), identityOf(action.client));
+                connection = server.connect(client(action.client), createIdentity(action.client));
                 connected.set(action.client, connection);
               }
               await connection.receive({ room: kRoom, kind: "join" });

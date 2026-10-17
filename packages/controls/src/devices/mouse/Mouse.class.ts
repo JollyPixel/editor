@@ -32,9 +32,6 @@ export type {
 } from "./WheelGesture.ts";
 
 // CONSTANTS
-/**
- * Every index in `MouseEventButton`, hence every bit the state masks use.
- */
 const kButtonCount = 7;
 const kScrollMask = (1 << 5) | (1 << 6);
 
@@ -45,9 +42,6 @@ export interface MouseButtonState {
   wasJustReleased: boolean;
 }
 
-/**
- * @see https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/button
- */
 export const MouseEventButton = {
   left: 0,
   middle: 1,
@@ -80,23 +74,13 @@ export interface MouseOptions {
 export class Mouse extends Emitter<
   MouseEvents
 > implements InputControl {
-  /**
-   * @see https://github.com/w3c/uievents/issues/181
-   */
   static wheelDelta(
     event: WheelEvent
   ): [number, number] {
     if (isApplePlatform()) {
-      /*
-       * Note that deltaMode MUST be accessed BEFORE delta* in order to get
-       * non-pixel values in Firefox.
-       * See https://github.com/w3c/uievents/issues/181
-       */
-
       switch (event.deltaMode) {
         case event.DOM_DELTA_LINE:
         case event.DOM_DELTA_PAGE:
-          // Discard the delta value, just take the sign
           return [
             Math.sign(event.deltaX),
             Math.sign(-event.deltaY)
@@ -120,9 +104,6 @@ export class Mouse extends Emitter<
   #canvas: CanvasAdapter;
   #documentAdapter: DocumentAdapter;
 
-  /**
-   * Live DOM state and the last published state, stored as bitsets.
-   */
   #downMask = 0;
   #prevMask = 0;
   #pressed = new MouseMask();
@@ -136,9 +117,6 @@ export class Mouse extends Emitter<
   };
   newPosition: { x: number; y: number; } | null = null;
 
-  /**
-   * Reused by `#onMouseMove`; `newPosition` points at this or is null.
-   */
   #newPositionSlot = {
     x: 0,
     y: 0
@@ -290,7 +268,7 @@ export class Mouse extends Emitter<
     this.#scrollSample.reset();
     this.#wheelGesture.reset();
     this.#canvasEvent = null;
-    this.#setHovering(false);
+    this.#updateHovering(false);
     this.#downMask = 0;
     this.#prevMask = 0;
     this.#pressed.reset();
@@ -469,8 +447,8 @@ export class Mouse extends Emitter<
       return;
     }
     if (typeof buttonValue === "boolean") {
-      this.#setButton(MouseEventButton.left, buttonValue);
-      this.#setHovering(buttonValue);
+      this.#updateButton(MouseEventButton.left, buttonValue);
+      this.#updateHovering(buttonValue);
     }
     if (position) {
       this.newPosition = position;
@@ -623,7 +601,7 @@ export class Mouse extends Emitter<
     return index >= 0 && index < kButtonCount ? 1 << index : 0;
   }
 
-  #setButton(
+  #updateButton(
     index: number,
     value: boolean
   ): void {
@@ -661,7 +639,7 @@ export class Mouse extends Emitter<
     return true;
   }
 
-  #setHovering(
+  #updateHovering(
     hovering: boolean
   ): void {
     if (this.#hovering === hovering) {
@@ -673,17 +651,17 @@ export class Mouse extends Emitter<
   }
 
   #onMouseEnter = () => {
-    this.#setHovering(true);
+    this.#updateHovering(true);
   };
 
   #onMouseLeave = () => {
-    this.#setHovering(false);
+    this.#updateHovering(false);
   };
 
   #onMouseMove = (event: MouseEvent) => {
     this.#canvasEvent = event;
     event.preventDefault();
-    this.#setHovering(true);
+    this.#updateHovering(true);
 
     if (this.#wantsPointerLock) {
       if (this.#wasPointerLocked && event.movementX !== null) {
@@ -716,7 +694,7 @@ export class Mouse extends Emitter<
   #onMouseDown = (event: MouseEvent) => {
     event.preventDefault();
     this.#canvas.focus();
-    this.#setButton(event.button, true);
+    this.#updateButton(event.button, true);
 
     if (this.#wantsPointerLock && !this.#wasPointerLocked) {
       this.#canvas.requestPointerLock();
@@ -729,7 +707,7 @@ export class Mouse extends Emitter<
     if (this.isDown(event.button)) {
       event.preventDefault();
     }
-    this.#setButton(event.button, false);
+    this.#updateButton(event.button, false);
 
     if (this.#wantsPointerLock && !this.#wasPointerLocked) {
       this.#canvas.requestPointerLock();
@@ -782,7 +760,7 @@ export class Mouse extends Emitter<
       return;
     }
 
-    this.#setButton(event.button, false);
+    this.#updateButton(event.button, false);
 
     this.emit("up", event);
   };

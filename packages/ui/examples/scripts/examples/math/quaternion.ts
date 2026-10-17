@@ -4,7 +4,7 @@ import { renderStateMatrix } from "../../stateMatrix.ts";
 import { Quaternion } from "../../../../src/math/Quaternion.ts";
 import {
   AXIS_STYLE_OPTIONS,
-  axisStyleOf,
+  pickAxisStyle,
   type AxisStyleOptionKey
 } from "./axisStyle.ts";
 
@@ -15,7 +15,7 @@ export const QUATERNION_EXAMPLE: GalleryExample<AxisStyleOptionKey> = {
       liveInput: true,
       create() {
         const field = document.createElement("jolly-quaternion");
-        field.axisStyle = axisStyleOf(options);
+        field.axisStyle = pickAxisStyle(options);
         field.label = "Rotation";
         field.description = "Edited as Euler angles, in degrees";
         field.value = {
@@ -34,7 +34,6 @@ export const QUATERNION_EXAMPLE: GalleryExample<AxisStyleOptionKey> = {
         return field;
       },
       modified(field) {
-        // 45 degrees about Y.
         field.value = {
           x: 0,
           y: 0.3826834323650898,

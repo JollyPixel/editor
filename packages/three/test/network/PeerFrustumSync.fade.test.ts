@@ -7,7 +7,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import {
-  frustumsOf,
+  findFrustums,
   joinPeer,
   pose,
   setup
@@ -27,7 +27,7 @@ describe("proximity fade", () => {
 
     sync.update();
 
-    const [frustum] = frustumsOf(parent);
+    const [frustum] = findFrustums(parent);
     assert.equal(frustum.opacity, 1);
     assert.equal(frustum.visible, true);
   });
@@ -39,7 +39,7 @@ describe("proximity fade", () => {
 
     sync.update();
 
-    const [frustum] = frustumsOf(parent);
+    const [frustum] = findFrustums(parent);
     assert.equal(frustum.opacity, 0);
     assert.equal(frustum.visible, false);
   });
@@ -51,7 +51,7 @@ describe("proximity fade", () => {
 
     sync.update();
 
-    const [frustum] = frustumsOf(parent);
+    const [frustum] = findFrustums(parent);
     assert.equal(frustum.opacity, 0.5);
     assert.equal(frustum.material.transparent, true);
     assert.equal(frustum.visible, true);
@@ -64,7 +64,7 @@ describe("proximity fade", () => {
 
     sync.update();
 
-    assert.equal(frustumsOf(parent)[0].label?.opacity, 0.5);
+    assert.equal(findFrustums(parent)[0].label?.opacity, 0.5);
   });
 
   test("follows the source as it moves away", () => {
@@ -77,7 +77,7 @@ describe("proximity fade", () => {
     source.position.x = -10;
     sync.update();
 
-    const [frustum] = frustumsOf(parent);
+    const [frustum] = findFrustums(parent);
     assert.equal(frustum.opacity, 1);
     assert.equal(frustum.visible, true);
   });
@@ -89,7 +89,7 @@ describe("proximity fade", () => {
 
     room.emitPresence("alice", { frustum: pose(0.5) });
 
-    const [frustum] = frustumsOf(parent);
+    const [frustum] = findFrustums(parent);
     assert.equal(frustum.visible, false);
   });
 
@@ -101,7 +101,7 @@ describe("proximity fade", () => {
 
     sync.detach();
 
-    const [frustum] = frustumsOf(parent);
+    const [frustum] = findFrustums(parent);
     assert.equal(frustum.opacity, 1);
     assert.equal(frustum.visible, true);
   });
@@ -114,7 +114,7 @@ describe("proximity fade", () => {
 
     sync.detach();
 
-    const [frustum] = frustumsOf(parent);
+    const [frustum] = findFrustums(parent);
     assert.equal(frustum.visible, false);
   });
 
@@ -125,7 +125,7 @@ describe("proximity fade", () => {
 
     sync.update();
 
-    const [frustum] = frustumsOf(parent);
+    const [frustum] = findFrustums(parent);
     assert.equal(frustum.opacity, 1);
     assert.equal(frustum.visible, true);
   });

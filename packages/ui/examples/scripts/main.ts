@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { detailOf } from "../../src/dom.ts";
+import { readDetail } from "../../src/dom.ts";
 import { findExample } from "./manifest.ts";
 import {
   clearOptions,
@@ -52,7 +52,7 @@ async function mount(
     example
   };
   dispose = example.render(root.exampleHost, values);
-  root.setActive(entry.id);
+  root.activate(entry.id);
   root.showOptions(example.options ?? [], values);
   document.title = `${entry.title} | jolly-pixel/ui`;
 }
@@ -112,14 +112,14 @@ async function start() {
   document.body.append(root);
 
   root.addEventListener("gallery-select", (event) => {
-    const detail = detailOf<{ id: string; }>(event);
+    const detail = readDetail<{ id: string; }>(event);
     if (detail !== null) {
       select(detail.id, root);
     }
   });
 
   root.addEventListener("gallery-option", (event) => {
-    const detail = detailOf<{ key: string; value: boolean; }>(event);
+    const detail = readDetail<{ key: string; value: boolean; }>(event);
     if (detail !== null) {
       toggle(detail.key, detail.value, root);
     }

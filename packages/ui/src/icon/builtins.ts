@@ -4,9 +4,6 @@ import { svg } from "lit";
 // Import Internal Dependencies
 import { registerIcon } from "./registry.ts";
 
-/**
- * Registers built-in chrome glyphs on the shared 24px grid.
- */
 registerIcon("chevron", svg`
   <path
     d="M8.5 5.5 16 12l-7.5 6.5"
@@ -39,7 +36,6 @@ registerIcon("plus", svg`
   />
 `, { tone: "lime" });
 
-// Circular reset arrow.
 registerIcon("revert", svg`
   <path
     d="M3 12a9 9 0 1 0 3-6.7L3 8"
@@ -59,7 +55,6 @@ registerIcon("revert", svg`
   />
 `);
 
-// Horizontal drag affordance.
 registerIcon("drag", svg`
   <path
     d="M3 12h18"
@@ -131,7 +126,6 @@ registerIcon("check", svg`
   />
 `);
 
-// Description indicator.
 registerIcon("info", svg`
   <circle cx="12" cy="12" r="9" fill="currentColor" />
   <path
@@ -144,7 +138,6 @@ registerIcon("info", svg`
   <circle cx="12" cy="7.5" r="1.35" fill="var(--jolly-surface, Canvas)" />
 `);
 
-// Error indicator.
 registerIcon("warning", svg`
   <path
     d="M12 4.25 21.5 20.5h-19Z"

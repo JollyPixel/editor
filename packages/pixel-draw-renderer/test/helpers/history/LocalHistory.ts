@@ -38,7 +38,7 @@ export function unguardedRegistration<TCommand>(
       written: () => [],
       guard: () => new KeyedGuard([])
     },
-    scopeOf: () => kScope
+    resolveScope: () => kScope
   };
 }
 

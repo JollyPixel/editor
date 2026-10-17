@@ -4,7 +4,7 @@ import { ruleTester } from "../../helpers/ruleTester.ts";
 
 ruleTester.run("no-of-names", noOfNames, {
   valid: [
-    "class A { parsePolicy() {} replacementFor() {} indexOf() {} valueOf() {} }",
+    "class A { parsePolicy() {} indexOf() {} valueOf() {} waitFor() {} }",
     "const offset = 1; const sizeOf = 2;",
     "items.indexOf(x); Array.of(1); boxOf(x);",
     {
@@ -28,6 +28,10 @@ ruleTester.run("no-of-names", noOfNames, {
     {
       code: "class A { zoneOf = (id: number) => id; }",
       errors: 1
+    },
+    {
+      code: "class A { replacementFor() {} #rightsFor() {} }",
+      errors: 2
     }
   ]
 });

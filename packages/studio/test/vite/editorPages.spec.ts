@@ -35,7 +35,7 @@ const kEditorCss = "body { margin: 0; }";
 const kScriptUrl = /(?:src|href)="([^"]+\.js)"/g;
 const kBundledStylesheet = /href="\.\.\/\.\.\/assets\/[^"]+\.css"/;
 
-async function scriptsOf(
+async function readScripts(
   page: string
 ): Promise<string[]> {
   const html = await fs.readFile(page, "utf8");
@@ -139,8 +139,8 @@ describe("editorPages", () => {
         outDir
       );
       const editorDir = path.join(outDir, "editors", "voxel-map");
-      const shellScripts = await scriptsOf(path.join(outDir, "index.html"));
-      const editorScripts = await scriptsOf(path.join(editorDir, "index.html"));
+      const shellScripts = await readScripts(path.join(outDir, "index.html"));
+      const editorScripts = await readScripts(path.join(editorDir, "index.html"));
       const editorHtml = await fs.readFile(
         path.join(editorDir, "index.html"),
         "utf8"

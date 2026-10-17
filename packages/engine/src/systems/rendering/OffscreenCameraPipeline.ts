@@ -5,10 +5,6 @@ import { texture } from "three/tsl";
 // Import Internal Dependencies
 import type { CameraPipeline } from "./CameraPipelines.ts";
 
-/**
- * Runs a `THREE.RenderPipeline` into its own target, then draws that target
- * through the renderer output so later renders composite over it.
- */
 export class OffscreenCameraPipeline implements CameraPipeline {
   #renderer: THREE.WebGPURenderer;
   #pipeline: THREE.RenderPipeline;

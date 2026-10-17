@@ -23,7 +23,7 @@ import {
 
 type ChunkMaterial = THREE.MeshLambertMaterial | THREE.MeshStandardMaterial;
 
-function materialsOf(
+function readMaterials(
   view: VoxelView
 ): ChunkMaterial[] {
   return chunkMeshes(view).map((mesh) => mesh.material as ChunkMaterial);
@@ -44,7 +44,7 @@ describe("VoxelView - chunk materials", () => {
     const view = meshedGround();
     view.flush();
 
-    const [material] = materialsOf(view);
+    const [material] = readMaterials(view);
     assert.equal(material.transparent, false);
     assert.equal(material.depthWrite, true);
     assert.equal(material.side, THREE.FrontSide);
@@ -109,7 +109,7 @@ describe("VoxelView - material groups", () => {
   it("gives a grouped block its own customizable material on one atlas", () => {
     const view = goldView([undefined, "gold"]);
 
-    const materials = materialsOf(view) as THREE.MeshStandardMaterial[];
+    const materials = readMaterials(view) as THREE.MeshStandardMaterial[];
     assert.equal(materials.length, 2);
     assert.deepEqual(
       materials.map((material) => material.metalness).sort(),
@@ -121,7 +121,7 @@ describe("VoxelView - material groups", () => {
   it("shares one material between ungrouped blocks", () => {
     const view = goldView([undefined, undefined]);
 
-    assert.equal(materialsOf(view).length, 1);
+    assert.equal(readMaterials(view).length, 1);
   });
 });
 
@@ -144,7 +144,7 @@ describe("VoxelView - document material group finishes", () => {
   function goldMaterial(
     view: VoxelView
   ): ChunkMaterial | undefined {
-    return materialsOf(view).find(
+    return readMaterials(view).find(
       (material) => material instanceof THREE.MeshStandardMaterial
     );
   }
@@ -160,7 +160,7 @@ describe("VoxelView - document material group finishes", () => {
     assert.ok(gold instanceof THREE.MeshStandardMaterial);
     assert.equal(gold.metalness, 1);
     assert.equal(gold.roughness, 0.3);
-    assert.equal(materialsOf(view).length, 2);
+    assert.equal(readMaterials(view).length, 2);
   });
 
   it("edits the finish of the drawn material in place", () => {
@@ -235,18 +235,18 @@ describe("VoxelView - tile minification", () => {
   it("replaces chunk materials when switched", () => {
     const view = meshedGround();
     view.flush();
-    const [before] = materialsOf(view);
+    const [before] = readMaterials(view);
 
     view.rendering.tileMinification = "nearest";
     view.flush();
 
     assert.equal(view.rendering.tileMinification, "nearest");
-    assert.notEqual(materialsOf(view)[0], before);
+    assert.notEqual(readMaterials(view)[0], before);
   });
 });
 
 describe("VoxelView - normal textures", () => {
-  function normalNodeOf(
+  function readNormalNode(
     material: THREE.Material
   ): unknown {
     return (material as { normalNode?: unknown; }).normalNode ?? null;
@@ -255,12 +255,12 @@ describe("VoxelView - normal textures", () => {
   it("lights chunks with the normal texture loaded next to the atlas", () => {
     const view = meshedGround();
     view.flush();
-    assert.equal(normalNodeOf(materialsOf(view)[0]), null);
+    assert.equal(readNormalNode(readMaterials(view)[0]), null);
 
     view.loadBlockset(makeAtlasDef(), mockTexture(), { normal: mockTexture() });
     view.flush();
 
-    assert.notEqual(normalNodeOf(materialsOf(view)[0]), null);
+    assert.notEqual(readNormalNode(readMaterials(view)[0]), null);
   });
 
   it("drops the relief when the blockset is reloaded without one", () => {
@@ -273,6 +273,6 @@ describe("VoxelView - normal textures", () => {
     view.flush();
 
     assert.equal(view.atlases.requireLoadedAtlas().normal, null);
-    assert.equal(normalNodeOf(materialsOf(view)[0]), null);
+    assert.equal(readNormalNode(readMaterials(view)[0]), null);
   });
 });

@@ -9,7 +9,7 @@ import {
 } from "#src/index.ts";
 import { withBrush } from "../helpers/script/withBrush.ts";
 
-function changesOf(
+function listChanges(
   draft: ScriptDraft
 ): string[] {
   return draft.changes.map(
@@ -17,7 +17,7 @@ function changesOf(
   );
 }
 
-function diagnosticsOf(
+function listDiagnostics(
   draft: ScriptDraft
 ): string[] {
   return draft.diagnostics.map(
@@ -72,7 +72,7 @@ describe("VariableScript", () => {
       const script = commands.editScript("brush");
 
       assert.ok(script.text.endsWith(`label = ${written}`), label);
-      assert.deepEqual(changesOf(script.parse(script.text)), [], label);
+      assert.deepEqual(listChanges(script.parse(script.text)), [], label);
     }
   });
 
@@ -83,7 +83,7 @@ describe("VariableScript", () => {
     const draft = script.parse(script.text);
 
     assert.equal(draft.ok, true);
-    assert.deepEqual(changesOf(draft), []);
+    assert.deepEqual(listChanges(draft), []);
     assert.equal(draft.valueType(2), "enum");
     assert.equal(draft.valueType(7), "number");
     assert.equal(draft.valueType(1), undefined);
@@ -102,8 +102,8 @@ describe("VariableScript", () => {
       "label = \"  spaced \""
     ].join("\n"));
 
-    assert.deepEqual(diagnosticsOf(draft), []);
-    assert.deepEqual(changesOf(draft), [
+    assert.deepEqual(listDiagnostics(draft), []);
+    assert.deepEqual(listChanges(draft), [
       "1: theme = \"light\"",
       "3: brush.size = 4",
       "5: brush.ghost = false",
@@ -118,7 +118,7 @@ describe("VariableScript", () => {
 
     const draft = script.parse(script.text.replace("mode = build", "mode = replace"));
 
-    assert.deepEqual(changesOf(draft), ["6: brush.mode = \"replace\""]);
+    assert.deepEqual(listChanges(draft), ["6: brush.mode = \"replace\""]);
   });
 
   test("a key that was not written in the script compares against its live value", () => {
@@ -127,7 +127,7 @@ describe("VariableScript", () => {
 
     const draft = script.parse("theme = dark\nbrush.size = 3");
 
-    assert.deepEqual(changesOf(draft), ["2: brush.size = 3"]);
+    assert.deepEqual(listChanges(draft), ["2: brush.size = 3"]);
   });
 
   test("reports each malformed line with its range and keeps no change for it", () => {
@@ -149,8 +149,8 @@ describe("VariableScript", () => {
       "[]"
     ].join("\n"));
 
-    assert.deepEqual(changesOf(draft), []);
-    assert.deepEqual(diagnosticsOf(draft), [
+    assert.deepEqual(listChanges(draft), []);
+    assert.deepEqual(listDiagnostics(draft), [
       "1:1-5 Unknown namespace \"brsh\". Did you mean brush?",
       "3:1-6 Expected \"]\" at the end of the section",
       "4:7-10 Expected a number, got \"big\"",
@@ -172,7 +172,7 @@ describe("VariableScript", () => {
 
     const draft = script.parse("[brush]\nmode = \"build\" x");
 
-    assert.deepEqual(diagnosticsOf(draft), [
+    assert.deepEqual(listDiagnostics(draft), [
       "2:7-16 Unexpected text after the closing quote"
     ]);
   });
@@ -189,13 +189,13 @@ describe("VariableScript", () => {
 
     assert.equal(script.text, "; Labels <string[]>\ntags = \"two words\" b");
     const unedited = script.parse(script.text);
-    assert.deepEqual(changesOf(unedited), []);
+    assert.deepEqual(listChanges(unedited), []);
     assert.equal(unedited.valueType(2), "string");
-    assert.deepEqual(changesOf(script.parse("tags = b \"two words\"")), [
+    assert.deepEqual(listChanges(script.parse("tags = b \"two words\"")), [
       "1: tags = [\"b\",\"two words\"]"
     ]);
-    assert.deepEqual(changesOf(script.parse("tags =")), ["1: tags = []"]);
-    assert.deepEqual(diagnosticsOf(script.parse("tags = a \"b")), [
+    assert.deepEqual(listChanges(script.parse("tags =")), ["1: tags = []"]);
+    assert.deepEqual(listDiagnostics(script.parse("tags = a \"b")), [
       "1:7-11 Expected a closing quote, got \"a \"b\""
     ]);
   });

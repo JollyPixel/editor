@@ -97,10 +97,10 @@ export class ActivePlacement {
     return this.template.transformed(this.placement.transform);
   }
 
-  positionFor(
+  positionFromMinCorner(
     min: VoxelCoord
   ): VoxelCoord {
-    return this.placement.positionFor(
+    return this.placement.positionFromMinCorner(
       this.template,
       min
     );

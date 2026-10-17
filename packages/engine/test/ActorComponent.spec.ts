@@ -15,9 +15,6 @@ import {
 } from "../src/index.ts";
 import { createWorld } from "./mocks.ts";
 
-/**
- * Exposes protected asset access for its focused unit test.
- */
 class AssetConsumer extends ActorComponent {
   constructor(
     actor: Actor

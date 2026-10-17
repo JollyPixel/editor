@@ -131,7 +131,7 @@ How a region lays its slots out on the texture:
 The state decides what a drag or a rotation acts on: the whole region when
 stacked or unfolded, one slot when free.
 
-*In code:* `UVRegion.state` and `UVMap.setState()`.
+*In code:* `UVRegion.state` and `UVMap.applyState()`.
 
 ### UV net
 

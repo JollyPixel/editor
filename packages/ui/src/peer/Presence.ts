@@ -13,9 +13,6 @@ import { PeerListElement } from "./PeerListElement.ts";
 import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
 import type { PresencePeer } from "./types.ts";
 
-/**
- * A read-only view of a collaboration snapshot.
- */
 @customElement("jolly-presence")
 export class PresenceElement extends PeerListElement {
   static override styles = [

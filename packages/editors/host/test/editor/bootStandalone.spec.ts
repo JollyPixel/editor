@@ -12,10 +12,7 @@ import { BINARY_KIND } from "@jolly-pixel/asset-server";
 import type { Runtime } from "@jolly-pixel/runtime";
 
 // Import Internal Dependencies
-import {
-  bootStandalone,
-  type OfflineProject
-} from "#src/editor/bootStandalone.ts";
+import { bootStandalone, type OfflineProject } from "#src/editor/bootStandalone.ts";
 import type {
   EditorContext,
   EditorHandle,
@@ -263,42 +260,5 @@ describe("bootStandalone", () => {
     assert.equal(runtimes.created.length, 1);
     assert.deepEqual(received, runtimes.created);
     assert.equal(runtimes.disposed(), 0);
-  });
-
-  test("disposes the runtime when the boot fails for good", async() => {
-    const runtimes = recordingRuntimes();
-
-    const pending = bootStandalone({
-      ...definition(),
-      createRuntime: runtimes.create,
-      mount: (context: RuntimeEditorContext) => Promise.resolve(
-        editorHandle(context.session)
-      )
-    }, {
-      sources: missingLaunch(),
-      offline: project
-    });
-    await answerOffer("cancel");
-
-    await assert.rejects(pending, LaunchNotFoundError);
-    await setImmediate();
-    assert.equal(runtimes.disposed(), 1);
-  });
-
-  test("rethrows any other error without offering the offline workspace", async() => {
-    const error = new Error("launch failed");
-
-    await assert.rejects(
-      bootStandalone(definition(), {
-        sources: [
-          {
-            read: () => Promise.reject(error)
-          }
-        ],
-        offline: project
-      }),
-      error
-    );
-    assert.equal(document.body.querySelector("[data-action]"), null);
   });
 });

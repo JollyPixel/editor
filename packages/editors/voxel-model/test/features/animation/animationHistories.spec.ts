@@ -59,7 +59,7 @@ describe("scopeOfAnimationChange", () => {
       const model = createHistoryModel({ own });
       const focused = model.animationSession.focused!;
 
-      model.set.setKey(model.clipId, "Body/Arm", "position", HISTORY_KEY);
+      model.set.writeKey(model.clipId, "Body/Arm", "position", HISTORY_KEY);
 
       assert.equal(model.history.state(focused.key).undoLabel, "Key Arm");
     });
@@ -110,8 +110,8 @@ describe("AnimationHistories", () => {
     assert.equal(model.state(model.walkSet).undoCount, 2);
 
     assert.equal(model.undo(model.wave), true);
-    assert.equal(model.keyOf(model.wave.clipId), undefined);
-    assert.equal(model.keyOf("run"), 5);
+    assert.equal(model.toKey(model.wave.clipId), undefined);
+    assert.equal(model.toKey("run"), 5);
     assert.equal(set.set.clip("run")?.fps, 12);
     assert.equal(model.state(model.walkSet).undoCount, 2, "an undo in a clip files nothing in the set");
   });
@@ -126,7 +126,7 @@ describe("AnimationHistories", () => {
     assert.equal(model.state(model.walkSet).undoLabel, "Delete clip Run");
 
     assert.equal(model.undo(model.walkSet), true);
-    assert.equal(model.keyOf("run"), 5);
+    assert.equal(model.toKey("run"), 5);
     assert.equal(model.state(model.run).canUndo, false);
   });
 

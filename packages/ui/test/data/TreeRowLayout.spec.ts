@@ -36,7 +36,7 @@ const kNested: TreeNode[] = [
 ];
 const kNestedIds = ["root", "open", "leaf", "middle", "last", "tail"];
 
-function layoutOf(
+function createLayout(
   nodes: TreeNode[],
   expanded: string[] = []
 ): TreeRowLayout {
@@ -45,7 +45,7 @@ function layoutOf(
   return new TreeRowLayout(new TreeSnapshot(nodes, expandedIds), expandedIds);
 }
 
-function railsOf(
+function readRails(
   layout: TreeRowLayout,
   scope: "all" | "selected"
 ): (readonly TreeRail[])[] {
@@ -54,9 +54,9 @@ function railsOf(
 
 describe("Data.TreeRowLayout", () => {
   test("rails carry one level per ancestor and end the line at the last child", () => {
-    const layout = layoutOf(kNested, ["root", "open"]);
+    const layout = createLayout(kNested, ["root", "open"]);
 
-    assert.deepEqual(railsOf(layout, "all"), [
+    assert.deepEqual(readRails(layout, "all"), [
       ["start"],
       ["tee", "start"],
       ["line", "elbow"],
@@ -67,10 +67,10 @@ describe("Data.TreeRowLayout", () => {
   });
 
   test("selected rails draw only the path from each selected row to its ancestors", () => {
-    const layout = layoutOf(kNested, ["root", "open", "last"]);
+    const layout = createLayout(kNested, ["root", "open", "last"]);
     layout.follow(["leaf"]);
 
-    assert.deepEqual(railsOf(layout, "selected"), [
+    assert.deepEqual(readRails(layout, "selected"), [
       ["start"],
       ["elbow", "start"],
       ["blank", "elbow"],
@@ -80,7 +80,7 @@ describe("Data.TreeRowLayout", () => {
     ]);
 
     layout.follow(["open", "tail"]);
-    assert.deepEqual(railsOf(layout, "selected"), [
+    assert.deepEqual(readRails(layout, "selected"), [
       ["start"],
       ["tee"],
       ["line", "blank"],
@@ -91,12 +91,12 @@ describe("Data.TreeRowLayout", () => {
   });
 
   test("an unknown row has no rails", () => {
-    assert.deepEqual(layoutOf(TREE).rails("missing"), []);
+    assert.deepEqual(createLayout(TREE).rails("missing"), []);
   });
 
   test("a leaf reserves the toggle width only beside a branch sibling", () => {
-    const tree = layoutOf(TREE);
-    const folders = layoutOf(FOLDER_TREE);
+    const tree = createLayout(TREE);
+    const folders = createLayout(FOLDER_TREE);
 
     assert.equal(tree.spacer("a1", false), "inside");
     assert.equal(tree.spacer("b", true), "outside");

@@ -355,7 +355,7 @@ function syncPivot(): void {
     : null;
 }
 
-function pivotOf(
+function computePivot(
   area: AreaBox
 ): THREE.Vector3 {
   return controls.pivot?.clone() ??
@@ -378,7 +378,7 @@ function turnArea(
   area: AreaBox,
   turns: number
 ): void {
-  const pivot = pivotOf(area);
+  const pivot = computePivot(area);
   const { min, max } = area.toBox3();
   const corners = [min, max].map((corner) => corner
     .sub(pivot)
@@ -393,7 +393,7 @@ function mirrorArea(
   area: AreaBox,
   axis: Axis
 ): void {
-  const pivot = pivotOf(area);
+  const pivot = computePivot(area);
   const box = area.toBox3();
   const min = (pivot[axis] * 2) - box.max[axis];
   const max = (pivot[axis] * 2) - box.min[axis];

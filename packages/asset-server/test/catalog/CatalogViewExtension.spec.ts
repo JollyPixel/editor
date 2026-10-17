@@ -154,7 +154,7 @@ describe("CatalogViewExtension", () => {
 
     assert.deepEqual(visible(harness), ["map", "stone"]);
     assert.deepEqual(
-      harness.view.dependencies.dependenciesOf(map).map(({ id }) => id),
+      harness.view.dependencies.listDependencies(map).map(({ id }) => id),
       [stone]
     );
   });

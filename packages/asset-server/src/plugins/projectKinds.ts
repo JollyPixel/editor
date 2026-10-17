@@ -47,7 +47,7 @@ export function createProjectKindsPlugin(
         return null;
       }
 
-      for (const projectImporter of kinds.resolver.importersOf(source)) {
+      for (const projectImporter of kinds.resolver.findImporters(source)) {
         const resolved = await this.resolve(
           source,
           projectImporter,

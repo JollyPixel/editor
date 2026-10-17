@@ -15,13 +15,12 @@ import {
 const kE2EMode = "e2e";
 
 const network = new Server();
-network.setRoomResolver((roomName) => {
+network.useRoomResolver((roomName) => {
   return {
     extension: new PresenceOnlyExtension(roomName)
   };
 });
 
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const e2e = mode === kE2EMode;
 

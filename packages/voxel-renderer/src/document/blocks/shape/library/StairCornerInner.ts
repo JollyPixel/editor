@@ -74,9 +74,6 @@ const kStairCornerInnerFaces: readonly FaceDefinition[] = [
   })
 ];
 
-/**
- * Concave stair corner that occludes NegY, PosZ, and PosX.
- */
 export class StairCornerInner extends BlockShapeBase {
   readonly id: BlockShapeID;
   readonly collisionHint: BlockCollisionHint = "trimesh";

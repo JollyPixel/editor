@@ -47,8 +47,8 @@ export class NumbersDocument extends CommandDocument<SetCommand, Record<string, 
           values.set(key, value);
         }
       },
-      imageOf: ({ key }) => values.get(key),
-      inverseOf: ({ key }) => (key === "cursor" ? [] : [{ key, value: values.get(key) }]),
+      captureImage: ({ key }) => values.get(key),
+      invert: ({ key }) => (key === "cursor" ? [] : [{ key, value: values.get(key) }]),
       restored: () => Object.fromEntries(values)
     });
     this.id = id;
@@ -92,24 +92,24 @@ export class NumbersDocument extends CommandDocument<SetCommand, Record<string, 
   }
 
   registration(
-    scopeOf: () => Scope | null
+    resolveScope: () => Scope | null
   ): HistoryRegistration<Scope, SetCommand, number | undefined> {
     return {
       id: this.id,
       document: this,
       keys: {
-        written: ({ command }) => [command.key, ...containersOf(command.key)],
+        written: ({ command }) => [command.key, ...ancestorKeys(command.key)],
         guard: (commands) => new KeyedGuard(commands.map(({ key }) => {
           return { key, read: () => this.values.get(key) };
         }))
       },
-      scopeOf,
+      resolveScope,
       label: ({ command }) => `Set ${command.key}`
     };
   }
 }
 
-function containersOf(
+function ancestorKeys(
   key: string
 ): string[] {
   const parts = key.split("/");

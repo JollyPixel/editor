@@ -26,7 +26,6 @@ describe("Systems.Rendering.ThreeRenderer", () => {
       }
 
       observe() {
-        // no-op
       }
     } as any;
     t.after(() => {

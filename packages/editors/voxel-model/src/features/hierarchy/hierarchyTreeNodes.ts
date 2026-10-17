@@ -14,7 +14,7 @@ import {
   type HierarchyNode
 } from "../../model/index.ts";
 import { materialSwatch } from "../material/materialSwatch.ts";
-import { blockShapeEntryOf } from "../../shared/blockShapes.ts";
+import { matchBlockShapeEntry } from "../../shared/blockShapes.ts";
 
 export function toTreeNodes(
   nodes: readonly HierarchyNode[],
@@ -29,7 +29,7 @@ export function toTreeNodes(
       id: node.id,
       label: node.name,
       renamable: true,
-      icon: iconOf(node),
+      icon: nodeIcon(node),
       ...node.kind === "folder" ?
         folderVisibility(node, isVisible) :
         {
@@ -43,12 +43,12 @@ export function toTreeNodes(
   });
 }
 
-function iconOf(
+function nodeIcon(
   node: HierarchyNode
 ): IconName {
   return node.shape === null ?
     "folder" :
-    blockShapeEntryOf(node.shape).icon;
+    matchBlockShapeEntry(node.shape).icon;
 }
 
 function folderVisibility(

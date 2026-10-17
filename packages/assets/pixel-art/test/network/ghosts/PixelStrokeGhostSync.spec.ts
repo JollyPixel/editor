@@ -21,7 +21,7 @@ import {
 } from "../../fixtures/commands.ts";
 import { asCanvas } from "../../helpers/canvas.ts";
 import {
-  callsOf,
+  readCalls,
   nextFrame
 } from "../../helpers/mock.ts";
 import { MockRoom } from "../../helpers/room.ts";
@@ -90,7 +90,7 @@ describe("PixelStrokeGhostSync — local strokes", () => {
     host.onStrokeProgress?.([kPixel]);
     sync.destroy();
 
-    assert.deepStrictEqual(callsOf(previous), [[[kPixel]]]);
+    assert.deepStrictEqual(readCalls(previous), [[[kPixel]]]);
     assert.strictEqual(host.onStrokeProgress, previous);
   });
 
@@ -199,7 +199,7 @@ describe("PixelStrokeGhostSync — remote peers", () => {
       patch: { strokeGhost: { from: 40, spans: [{ color: kRed, xy: [3, 0] }] } }
     });
 
-    assert.deepStrictEqual(callsOf(strokes.set), [["peer-B", [redPixel(3)]]]);
+    assert.deepStrictEqual(readCalls(strokes.set), [["peer-B", [redPixel(3)]]]);
   });
 
   test("ignores a malformed strokeGhost payload", () => {
@@ -227,7 +227,7 @@ describe("PixelStrokeGhostSync — remote peers", () => {
     room.emit("peer-left", { clientId: "peer-B" });
     room.deliverSnapshot();
 
-    assert.deepStrictEqual(callsOf(strokes.remove), [["peer-B"]]);
+    assert.deepStrictEqual(readCalls(strokes.remove), [["peer-B"]]);
     assert.strictEqual(strokes.clearAll.mock.callCount(), 1);
   });
 });
@@ -242,7 +242,7 @@ describe("PixelStrokeGhostSync — reconciliation", () => {
       positions
     }, { clientId: "peer-B" }));
 
-    assert.deepStrictEqual(callsOf(strokes.removeOverlapping), [[positions]]);
+    assert.deepStrictEqual(readCalls(strokes.removeOverlapping), [[positions]]);
     assert.strictEqual(strokes.remove.mock.callCount(), 0);
   });
 

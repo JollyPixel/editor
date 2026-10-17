@@ -57,7 +57,7 @@ export function dependentRequired<
   );
 }
 
-export function requiredAnyOf<
+export function requireAnyGroup<
   TSchema extends z.ZodMiniType<object>
 >(
   schema: TSchema,
@@ -76,7 +76,7 @@ export function requiredAnyOf<
   );
 }
 
-export function notMultipleOf<
+export function notMultiple<
   TSchema extends z.ZodMiniType<number>
 >(
   schema: TSchema,

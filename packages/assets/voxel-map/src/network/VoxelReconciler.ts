@@ -77,7 +77,7 @@ export class VoxelReconciler implements CommandReconciler<VoxelMapNetworkCommand
     document: VoxelDocument
   ) {
     this.#document = document;
-    this.#images = imagesOf(document);
+    this.#images = captureLayerImages(document);
     document.world.addRecorder(
       this.#recorder,
       { includeUnrecorded: true }
@@ -113,7 +113,7 @@ export class VoxelReconciler implements CommandReconciler<VoxelMapNetworkCommand
 
   observe(): void {
     this.#recorded = [];
-    this.#images = imagesOf(this.#document);
+    this.#images = captureLayerImages(this.#document);
   }
 
   revert(
@@ -145,7 +145,7 @@ export class VoxelReconciler implements CommandReconciler<VoxelMapNetworkCommand
       structuralInverse(command, (layerId) => {
         const layer = this.#document.world.getLayerById(layerId);
 
-        return layer === undefined ? undefined : imageOf(layer);
+        return layer === undefined ? undefined : captureLayerImage(layer);
       });
     const applied = this.#document.applyCommand(
       command,
@@ -326,7 +326,7 @@ function previousOptions(
   return previous;
 }
 
-function imageOf(
+function captureLayerImage(
   layer: VoxelLayer
 ): LayerImage {
   return {
@@ -339,12 +339,12 @@ function imageOf(
   };
 }
 
-function imagesOf(
+function captureLayerImages(
   document: VoxelDocument
 ): Map<string, LayerImage> {
   return new Map(
     document.world.getLayers().map(
-      (layer) => [layer.id, imageOf(layer)]
+      (layer) => [layer.id, captureLayerImage(layer)]
     )
   );
 }

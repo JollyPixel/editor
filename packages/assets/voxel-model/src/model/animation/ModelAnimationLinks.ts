@@ -45,7 +45,7 @@ export class ModelAnimationLinks {
     id: string,
     path: string
   ): AnimationBindingJSON | undefined {
-    return this.#links.get(id)?.bindingOf(path);
+    return this.#links.get(id)?.findBinding(path);
   }
 
   * values(): IterableIterator<AnimationSetLinkJSON> {
@@ -65,7 +65,7 @@ export class ModelAnimationLinks {
       case "animation-set-linked":
         return !this.#links.has(command.link.id) &&
           (command.link.own !== true || this.#ownedLink() === undefined) &&
-          AnimationSetLink.problemOf(command.link) === null;
+          AnimationSetLink.findProblem(command.link) === null;
       case "animation-set-unlinked":
         return this.#links.has(command.id);
       case "animation-set-owned": {

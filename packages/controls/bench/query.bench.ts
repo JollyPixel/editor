@@ -8,15 +8,6 @@ import {
 // Import Internal Dependencies
 import { createActiveInput } from "./tick-active.bench.ts";
 
-/**
- * What behaviors actually call. `Camera3DControls` alone issues six
- * `keyboard.isDown()` plus two mouse queries every frame, so these run an order
- * of magnitude more often than `update()` does.
- */
-/**
- * Assigning results to a module-level binding keeps V8 from eliminating the
- * calls as dead code.
- */
 let sink: unknown;
 
 const suite = defineSuite("controls / query", (bench) => {

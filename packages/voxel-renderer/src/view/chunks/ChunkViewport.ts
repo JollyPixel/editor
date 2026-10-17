@@ -13,11 +13,6 @@ export interface ChunkViewportOptions {
   farDistance?: number;
 }
 
-/**
- * Immutable snapshot of where the camera looks from and how far chunks stay
- * meshed and drawn. The focus is copied, so a caller may keep mutating the
- * vector it passed in.
- */
 export class ChunkViewport {
   readonly focus: THREE.Vector3Like | null;
   readonly viewDistance: ViewDistance;

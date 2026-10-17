@@ -84,7 +84,7 @@ export class LiveRoom<
     clientId: string,
     payload: unknown
   ): void {
-    const parsed = MessageParser.of<TCommand>(
+    const parsed = MessageParser.fromProtocol<TCommand>(
       this.extension.protocols.inbound!
     ).parse(payload);
     if (parsed.ok) {

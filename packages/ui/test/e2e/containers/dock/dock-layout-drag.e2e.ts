@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
-  boxOf,
-  centerOf,
+  measureBox,
+  measureCenter,
   dragTo,
   hold
 } from "@jolly-pixel/e2e";
@@ -12,8 +12,8 @@ import {
   expect
 } from "../../fixtures.ts";
 import {
-  partStyleOf,
-  styleOf
+  readPartStyle,
+  readStyle
 } from "../../support/styles.ts";
 import { Dock } from "../../support/dock.ts";
 import { FloatingWindow } from "../../support/floating.ts";
@@ -27,8 +27,8 @@ test.describe("DockLayout drag", () => {
   test("a docked pane is carried as a themed header replica at its grab offset", async({ page }) => {
     const inspector = new Pane(page, "inspector");
     const [source, header] = await Promise.all([
-      boxOf(inspector.root),
-      boxOf(inspector.header)
+      measureBox(inspector.root),
+      measureBox(inspector.header)
     ]);
     const from = {
       x: header.x + header.width - 40,
@@ -47,15 +47,15 @@ test.describe("DockLayout drag", () => {
     await expect(ghost.locator("jolly-folder")).toHaveCount(0);
     await expect(ghost).not.toHaveAttribute("collapsed");
 
-    const carried = await boxOf(ghost);
+    const carried = await measureBox(ghost);
     expect(carried.x).toBeCloseTo(source.x + 120, 0);
     expect(carried.y).toBeCloseTo(source.y + 90, 0);
     expect(carried.width).toBeCloseTo(source.width, 0);
     expect(carried.height).toBeCloseTo(header.height, 0);
 
     await expect.poll(
-      () => partStyleOf(page.locator(".jolly-drag-ghost"), ".header", "background-color")
-    ).toBe(await partStyleOf(inspector.root, ".header", "background-color"));
+      () => readPartStyle(page.locator(".jolly-drag-ghost"), ".header", "background-color")
+    ).toBe(await readPartStyle(inspector.root, ".header", "background-color"));
 
     await page.mouse.up();
     await expect(page.locator(".jolly-drag-overlay")).toHaveCount(0);
@@ -64,9 +64,9 @@ test.describe("DockLayout drag", () => {
   test("nothing reorders until the drag is released", async({ page }) => {
     const left = new Dock(page, "left");
     const inspector = new Pane(page, "inspector");
-    const to = await centerOf(new Pane(page, "hierarchy").header);
+    const to = await measureCenter(new Pane(page, "hierarchy").header);
 
-    await hold(page, await centerOf(inspector.header), {
+    await hold(page, await measureCenter(inspector.header), {
       x: to.x,
       y: to.y - 10
     });
@@ -83,9 +83,9 @@ test.describe("DockLayout drag", () => {
 
   test("Escape cancels a drag in flight", async({ page }) => {
     const inspector = new Pane(page, "inspector");
-    const to = await centerOf(new Pane(page, "hierarchy").header);
+    const to = await measureCenter(new Pane(page, "hierarchy").header);
 
-    await hold(page, await centerOf(inspector.header), {
+    await hold(page, await measureCenter(inspector.header), {
       x: to.x,
       y: to.y - 10
     });
@@ -102,7 +102,7 @@ test.describe("DockLayout drag", () => {
     const zones = page.locator(".jolly-drag-zone");
     const armed = page.locator(".jolly-drag-zone-armed");
 
-    await hold(page, await centerOf(new Pane(page, "inspector").header), {
+    await hold(page, await measureCenter(new Pane(page, "inspector").header), {
       x: 700,
       y: 400
     });
@@ -111,21 +111,21 @@ test.describe("DockLayout drag", () => {
     await expect(zones.first()).toHaveCSS("box-shadow", "none");
     await expect(zones.first()).toHaveCSS("border-style", "none");
     await expect(zones.first()).toHaveCSS("border-radius", "0px");
-    const idle = await styleOf(zones.first(), "background-color");
+    const idle = await readStyle(zones.first(), "background-color");
 
-    const dock = await boxOf(new Dock(page, "right").root);
+    const dock = await measureBox(new Dock(page, "right").root);
     await page.mouse.move(dock.x + (dock.width / 2), 300, { steps: 12 });
     await expect(armed).toHaveCount(1);
-    const box = await boxOf(armed);
+    const box = await measureBox(armed);
     expect(box.x).toBeCloseTo(dock.x, 0);
     expect(box.width).toBeCloseTo(dock.width, 0);
-    await expect.poll(() => styleOf(armed, "background-color")).not.toBe(idle);
+    await expect.poll(() => readStyle(armed, "background-color")).not.toBe(idle);
 
     await page.mouse.up();
   });
 
   test("drop zones appear without motion under reduced motion", async({ page }) => {
-    await hold(page, await centerOf(new Pane(page, "inspector").header), {
+    await hold(page, await measureCenter(new Pane(page, "inspector").header), {
       x: 700,
       y: 400
     });
@@ -139,8 +139,8 @@ test.describe("DockLayout drag", () => {
 
   test("the insertion line shows between panes but not for the pane's own slot", async({ page }) => {
     const line = page.locator(".jolly-drag-insertion");
-    const header = await centerOf(new Pane(page, "hierarchy").header);
-    const inspector = await boxOf(new Pane(page, "inspector").root);
+    const header = await measureCenter(new Pane(page, "hierarchy").header);
+    const inspector = await measureBox(new Pane(page, "inspector").root);
 
     await hold(page, header, {
       x: header.x,
@@ -163,14 +163,14 @@ test.describe("DockLayout drag", () => {
     await dragTo(
       page,
       new Pane(page, "inspector").header,
-      await centerOf(page.locator(".dock-layout-viewport"))
+      await measureCenter(page.locator(".dock-layout-viewport"))
     );
     await expect(new FloatingWindow(page).root).toHaveCount(2);
     await expect(new FloatingWindow(page, "inspector").root).toHaveCount(1);
     await expect(left.paneKeys()).resolves.toEqual(["hierarchy"]);
 
-    const header = await centerOf(hierarchy.header);
-    const dock = await boxOf(left.root);
+    const header = await measureCenter(hierarchy.header);
+    const dock = await measureBox(left.root);
     await hold(page, header, header);
     for (const y of [header.y + 60, dock.y + dock.height - 20]) {
       await page.mouse.move(header.x, y, { steps: 8 });
@@ -196,19 +196,19 @@ test.describe("DockLayout drag", () => {
     await left.root.evaluate((dock) => dock.removeAttribute("align"));
 
     const [dock, pane, body] = await Promise.all([
-      boxOf(left.root),
-      boxOf(hierarchy.root),
-      boxOf(hierarchy.root.locator("p"))
+      measureBox(left.root),
+      measureBox(hierarchy.root),
+      measureBox(hierarchy.root.locator("p"))
     ]);
     const contentBottom = body.y + body.height;
     const aim = contentBottom + 40;
     expect(aim).toBeLessThan(pane.y + (pane.height / 2));
 
-    await hold(page, await centerOf(new FloatingWindow(page).pane("assets").header), {
+    await hold(page, await measureCenter(new FloatingWindow(page).pane("assets").header), {
       x: dock.x + (dock.width / 2),
       y: aim
     });
-    const line = await boxOf(page.locator(".jolly-drag-insertion"));
+    const line = await measureBox(page.locator(".jolly-drag-insertion"));
     expect(Math.abs(line.y - contentBottom)).toBeLessThan(4);
 
     await page.mouse.up();
@@ -217,7 +217,7 @@ test.describe("DockLayout drag", () => {
   });
 
   test("a floating pane is carried by its window, not by a replica", async({ page }) => {
-    const from = await centerOf(new FloatingWindow(page).pane("assets").header);
+    const from = await measureCenter(new FloatingWindow(page).pane("assets").header);
 
     await hold(page, from, {
       x: from.x - 120,
@@ -233,8 +233,8 @@ test.describe("DockLayout drag", () => {
   test("a dragged window keeps following the cursor over an armed dock", async({ page }) => {
     const frame = new FloatingWindow(page);
     const [dock, header] = await Promise.all([
-      boxOf(new Dock(page, "left").root),
-      boxOf(frame.pane("assets").header)
+      measureBox(new Dock(page, "left").root),
+      measureBox(frame.pane("assets").header)
     ]);
     const grab = {
       x: header.x + 40,
@@ -246,7 +246,7 @@ test.describe("DockLayout drag", () => {
     };
 
     await hold(page, grab, target, 16);
-    const moved = await boxOf(frame.root);
+    const moved = await measureBox(frame.root);
     expect(Math.round(moved.x)).toBe(Math.round(target.x - (grab.x - header.x)));
     expect(Math.round(moved.y)).toBe(Math.round(target.y - (grab.y - header.y)));
     await expect(frame.root).toHaveAttribute("dragging");
@@ -257,7 +257,7 @@ test.describe("DockLayout drag", () => {
 
   test("a window docks once its box enters, cursor short of the dock", async({ page }) => {
     const right = new Dock(page, "right");
-    const dock = await boxOf(right.root);
+    const dock = await measureBox(right.root);
 
     await dragTo(page, new FloatingWindow(page).pane("assets").header, {
       x: dock.x - 60,

@@ -8,7 +8,7 @@ import {
   type DispatchTag
 } from "./dispatch.ts";
 import { FacadeItem } from "./FacadeItem.ts";
-import { detailOf } from "../dom.ts";
+import { readDetail } from "../dom.ts";
 import type {
   JollyChangeDetail
 } from "../field/events.ts";
@@ -22,7 +22,7 @@ import {
   copyComponents,
   snapshotComponents
 } from "../math/components.ts";
-import { vec2PairOf } from "../math/guards.ts";
+import { parseVec2Pair } from "../math/guards.ts";
 
 // CONSTANTS
 const kEightDigitHex = /^#[0-9a-f]{8}$/i;
@@ -33,9 +33,6 @@ const kAxes = [
   "w"
 ] as const;
 
-/**
- * Structural surface every dispatched control shares through `JollyField`.
- */
 interface BindableElement extends HTMLElement {
   value: unknown;
   label: string;
@@ -137,7 +134,7 @@ export class FacadeBinding<
     event: Event,
     last: boolean
   ): void {
-    const detail = detailOf<JollyChangeDetail<TObject[TKey]>>(
+    const detail = readDetail<JollyChangeDetail<TObject[TKey]>>(
       event
     );
     if (detail === null) {
@@ -181,7 +178,7 @@ function buildElement<TValue>(
     case "jolly-vector2": {
       const element = document.createElement(tag);
       applyBounds(element, options);
-      element.axes = options.axes ?? vec2PairOf(value) ?? "xy";
+      element.axes = options.axes ?? parseVec2Pair(value) ?? "xy";
       if (options.axisLabels !== undefined) {
         element.axisLabels = options.axisLabels;
       }

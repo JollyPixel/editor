@@ -107,9 +107,6 @@ export interface MeshHighlightOptions {
   chips?: boolean;
 }
 
-/**
- * Owns selection state, peer state, visibility and the active renderer.
- */
 export class MeshHighlight extends EventTarget {
   readonly state: MeshHighlightState;
   readonly peerSelections: PeerSelectionRegistry;

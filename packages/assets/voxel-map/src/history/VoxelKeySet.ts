@@ -33,8 +33,8 @@ export class VoxelKeySet {
   overlaps(
     other: VoxelKeySet
   ): boolean {
-    return this.#coversLayerOf(other) ||
-      other.#coversLayerOf(this) ||
+    return this.#coversLayersIn(other) ||
+      other.#coversLayersIn(this) ||
       this.#cellsOverlap(other);
   }
 
@@ -55,7 +55,7 @@ export class VoxelKeySet {
     }
   }
 
-  #coversLayerOf(
+  #coversLayersIn(
     other: VoxelKeySet
   ): boolean {
     for (const layerId of this.layers) {

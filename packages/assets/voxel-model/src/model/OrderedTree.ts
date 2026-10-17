@@ -64,7 +64,7 @@ export class OrderedTree<T extends OrderedTreeEntry> {
     return this.#entries.values();
   }
 
-  childrenOf(
+  listChildren(
     parentId: string | null
   ): T[] {
     return [...this.#entries.values()]
@@ -72,7 +72,7 @@ export class OrderedTree<T extends OrderedTreeEntry> {
       .map((entry) => structuredClone(entry));
   }
 
-  nextSiblingOf(
+  findNextSibling(
     id: string
   ): string | undefined {
     const entry = this.#entries.get(id);
@@ -93,10 +93,10 @@ export class OrderedTree<T extends OrderedTreeEntry> {
     return undefined;
   }
 
-  subtreeOf(
+  subtreeFrom(
     id: string
   ): T[] {
-    return this.#subtreeOf(id).map((entry) => structuredClone(entry));
+    return this.#subtreeFrom(id).map((entry) => structuredClone(entry));
   }
 
   canAdd(
@@ -167,7 +167,7 @@ export class OrderedTree<T extends OrderedTreeEntry> {
   remove(
     id: string
   ): void {
-    for (const entry of this.#subtreeOf(id)) {
+    for (const entry of this.#subtreeFrom(id)) {
       this.#entries.delete(entry.id);
     }
   }
@@ -180,7 +180,7 @@ export class OrderedTree<T extends OrderedTreeEntry> {
       return;
     }
 
-    for (const child of this.childrenOf(id)) {
+    for (const child of this.listChildren(id)) {
       this.move(child.id, entry.parentId, id);
     }
   }
@@ -255,7 +255,7 @@ export class OrderedTree<T extends OrderedTreeEntry> {
     this.#entries = placed;
   }
 
-  #subtreeOf(
+  #subtreeFrom(
     id: string
   ): T[] {
     const root = this.#entries.get(id);

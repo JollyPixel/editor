@@ -41,7 +41,6 @@ describe("Controls.Gamepad axes", () => {
 
   test("should apply dead zone to axis values", () => {
     const mockGamepad = mocks.Gamepad();
-    // Small movement within dead zone
     mockGamepad.axes[0] = 0.1;
     mockGamepad.axes[1] = 0.1;
     navigatorAdapter.gamepads = [mockGamepad, null, null, null];
@@ -80,10 +79,8 @@ describe("Controls.Gamepad axes", () => {
     mockGamepad.axes[1] = 0.0;
     navigatorAdapter.gamepads = [mockGamepad, null, null, null];
 
-    // First update to press axis
     gamepad.update();
 
-    // Second update to release axis
     mockGamepad.axes[0] = 0.0;
     gamepad.update();
 

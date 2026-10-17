@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import type { GalleryExample } from "../../types.ts";
 import { renderStateMatrix } from "../../stateMatrix.ts";
-import { detailOf } from "../../../../src/dom.ts";
+import { readDetail } from "../../../../src/dom.ts";
 import { NumberField } from "../../../../src/controls/Number.ts";
 import type { JollyChangeDetail } from "../../../../src/field/events.ts";
 
@@ -52,7 +52,7 @@ function buildEventLog(
 
   for (const kind of ["input", "change"]) {
     source.addEventListener(`jolly-${kind}`, (event) => {
-      const detail = detailOf<JollyChangeDetail<number>>(event);
+      const detail = readDetail<JollyChangeDetail<number>>(event);
       if (detail === null) {
         return;
       }

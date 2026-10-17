@@ -59,9 +59,6 @@ export type { AssetInlineContent };
 
 export type AssetContent = Infer<typeof assetContentSchema>;
 
-/**
- * Shared payload for create and update events.
- */
 export type AssetWriteData = Readonly<
   & Omit<Infer<typeof assetWriteDataSchema>, "content">
   & { content: AssetInlineContent; }
@@ -92,13 +89,6 @@ export type AssetEventDataMap = {
 
 export type AssetEvent = EventStore.TypedEvent<AssetEventDataMap>;
 
-/**
- * Why an event on an asset stream did not yield an asset event.
- *
- * `foreign` means the event belongs to another domain and is none of our
- * business. `malformed` and `unsupported` both mean an asset event we cannot
- * project, and are worth reporting.
- */
 export type AssetEventRejection =
   | { reason: "foreign"; }
   | { reason: "malformed"; errors: readonly ValidationError[]; }
@@ -119,7 +109,7 @@ export function isStateNeutral(
   );
 }
 
-export function actorOf(
+export function toActor(
   identity: PeerIdentity
 ): EventStore.Actor {
   return {

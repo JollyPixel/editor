@@ -289,8 +289,8 @@ export class PaneGroup extends LitElement {
     let naturalWidth: number;
     try {
       naturalWidth = naturalTabsWidth(
-        buttons.map(tabExtentOf),
-        columnGapOf(tabs)
+        buttons.map(measureTabExtent),
+        readColumnGap(tabs)
       );
     }
     finally {
@@ -458,7 +458,7 @@ export class PaneGroup extends LitElement {
   }
 }
 
-function tabExtentOf(
+function measureTabExtent(
   tab: HTMLButtonElement
 ): TabExtent {
   const label = tab.querySelector(".label");
@@ -468,11 +468,11 @@ function tabExtentOf(
     labelWidth: label?.clientWidth ?? 0,
     labelContentWidth: label?.scrollWidth ?? 0,
     labelHidden: tab.hasAttribute("data-icon-only"),
-    innerGap: columnGapOf(tab)
+    innerGap: readColumnGap(tab)
   };
 }
 
-function columnGapOf(
+function readColumnGap(
   element: Element
 ): number {
   return Number.parseFloat(getComputedStyle(element).columnGap) || 0;

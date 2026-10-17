@@ -7,7 +7,7 @@ import type {
 // Import Internal Dependencies
 import { emitContainerEvent } from "../events.ts";
 import type { Folder } from "../folder/Folder.ts";
-import { detailOf } from "../../dom.ts";
+import { readDetail } from "../../dom.ts";
 import { headerGhost } from "../../interaction/drag/dragGhost.ts";
 import {
   startDragSession,
@@ -50,9 +50,6 @@ export interface FolderListOptions {
   discovered(): void;
 }
 
-/**
- * Owns folder identity and ordering for the pane that slots them.
- */
 export class FolderListController implements ReactiveController {
   readonly #options: FolderListOptions;
   readonly #store: NamespacedStore;
@@ -141,7 +138,7 @@ export class FolderListController implements ReactiveController {
     }
 
     event.stopPropagation();
-    const detail = detailOf<FolderDragDetail>(event);
+    const detail = readDetail<FolderDragDetail>(event);
     if (detail === null || this.#session !== null) {
       return;
     }
@@ -154,7 +151,7 @@ export class FolderListController implements ReactiveController {
       return;
     }
 
-    const bounds = rectOf(this.#options.content());
+    const bounds = readRect(this.#options.content());
     const candidates = ordered.map(({ folder }) => {
       const rect = folder.getBoundingClientRect();
 
@@ -204,7 +201,7 @@ export class FolderListController implements ReactiveController {
     }
 
     event.stopPropagation();
-    const detail = detailOf<FolderReorderDetail>(event);
+    const detail = readDetail<FolderReorderDetail>(event);
     if (detail === null) {
       return;
     }
@@ -335,7 +332,7 @@ function folderKeys(
   });
 }
 
-function rectOf(
+function readRect(
   element: Element
 ) {
   const rect = element.getBoundingClientRect();

@@ -56,11 +56,6 @@ export interface VoxelTemplateLayerOptions extends VoxelTemplateCaptureOptions {
   id: string;
 }
 
-/**
- * An immutable group of voxels saved with the world and copied into a layer
- * on placement. Positions are template-local, with the lowest corner of the
- * voxels at `0, 0, 0`.
- */
 export class VoxelTemplate {
   static fromLayer(
     layer: VoxelLayer,

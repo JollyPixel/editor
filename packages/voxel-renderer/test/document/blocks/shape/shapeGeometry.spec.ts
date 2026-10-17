@@ -18,7 +18,7 @@ import { FACE } from "../../../../src/document/geometry/faceDirection.ts";
 import { VoxelTransform } from "../../../../src/document/geometry/VoxelTransform.ts";
 import { rotateVertex } from "../../../../src/document/geometry/rotation.ts";
 
-function rangeOf(
+function faceRange(
   geometry: ShapeGeometry,
   face: FACE
 ) {
@@ -27,7 +27,7 @@ function rangeOf(
   );
 }
 
-function slotOf(
+function findSlot(
   geometry: ShapeGeometry,
   slot: string
 ) {
@@ -63,7 +63,7 @@ describe("buildShapeGeometry", () => {
   it("exposes the polygons a slot was built from", () => {
     const shape = new Stair();
     const geometry = buildShapeGeometry(shape);
-    const range = slotOf(geometry, "right")!;
+    const range = findSlot(geometry, "right")!;
 
     assert.equal(range.definitions.length, 2);
     assert.deepEqual(
@@ -74,7 +74,7 @@ describe("buildShapeGeometry", () => {
 
   it("triangulates a three vertex face into a single triangle", () => {
     const geometry = buildShapeGeometry(new Ramp());
-    const range = rangeOf(geometry, FACE.NegX);
+    const range = faceRange(geometry, FACE.NegX);
 
     assert.equal(range?.count, 3);
     assert.deepEqual(
@@ -93,7 +93,7 @@ describe("buildShapeGeometry", () => {
 
   it("copies the face normal onto every vertex of that polygon", () => {
     const geometry = buildShapeGeometry(new Cube());
-    const range = rangeOf(geometry, FACE.PosX)!;
+    const range = faceRange(geometry, FACE.PosX)!;
 
     for (let index = range.start; index < range.start + range.count; index++) {
       assert.deepEqual(
@@ -160,7 +160,7 @@ describe("buildShapeGeometry", () => {
         const geometry = buildShapeGeometry(shape, transform);
 
         for (let index = 0; index < geometry.indices.length; index += 3) {
-          const facing = facingOf(geometry, index);
+          const facing = readFacing(geometry, index);
 
           assert.ok(
             facing > 0,
@@ -197,7 +197,7 @@ function vertexKeys(
   return keys;
 }
 
-function facingOf(
+function readFacing(
   geometry: ShapeGeometry,
   index: number
 ): number {

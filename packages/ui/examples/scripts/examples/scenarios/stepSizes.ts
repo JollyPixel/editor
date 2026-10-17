@@ -3,7 +3,7 @@ import "../../../../src/controls/Number.ts";
 import "../../../../src/controls/Range.ts";
 import "../../../../src/controls/Slider.ts";
 import type { GalleryExample } from "../../types.ts";
-import { detailOf } from "../../../../src/dom.ts";
+import { readDetail } from "../../../../src/dom.ts";
 import type { JollyChangeDetail } from "../../../../src/field/events.ts";
 import type { NumberField } from "../../../../src/controls/Number.ts";
 import type { Slider } from "../../../../src/controls/Slider.ts";
@@ -103,7 +103,7 @@ function bind<
   function writeBack(
     event: Event
   ): void {
-    const detail = detailOf<JollyChangeDetail<TValue>>(event);
+    const detail = readDetail<JollyChangeDetail<TValue>>(event);
     if (detail !== null) {
       field.value = detail.value;
     }

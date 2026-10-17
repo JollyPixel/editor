@@ -240,15 +240,12 @@ describe("Controls.Fullscreen", () => {
       states.push(state);
     });
 
-    // Enter fullscreen
     documentAdapter.fullscreenElement = canvas;
     documentAdapter.dispatchEvent("fullscreenchange");
 
-    // Exit fullscreen
     documentAdapter.fullscreenElement = null;
     documentAdapter.dispatchEvent("fullscreenchange");
 
-    // Enter again
     documentAdapter.fullscreenElement = canvas;
     documentAdapter.dispatchEvent("fullscreenchange");
 

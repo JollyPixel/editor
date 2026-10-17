@@ -29,9 +29,6 @@ export interface AssetManifestData {
   readonly assets: readonly AssetRecordData[];
 }
 
-/**
- * Owns the persistent asset records for one project or session.
- */
 export class AssetCatalog implements Iterable<AssetRecord> {
   #records = new Map<string, AssetRecord>();
 

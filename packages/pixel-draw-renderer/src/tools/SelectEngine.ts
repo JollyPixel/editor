@@ -59,9 +59,6 @@ export interface SelectTool {
    * deposits it; `delete()` cancels it.
    */
   readonly isFloating: boolean;
-  /**
-   * Returns `false` when there is no active selection.
-   */
   rotate(
     direction?: RotationDirection
   ): boolean;
@@ -381,7 +378,6 @@ export class SelectEngine extends Emitter<SelectEngineEvent> implements SelectTo
     this.#floatingSelection.clear();
     this.#publishPresence();
 
-    // An interrupted gesture has no command, so clear its peer ghost explicitly.
     if (interruptedGesture) {
       this.emit("selection-idle");
     }

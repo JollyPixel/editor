@@ -9,7 +9,7 @@ import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 import {
   DEFAULT_VIEW_SETTINGS,
   ViewSettingsStore,
-  backgroundOf,
+  resolveBackground,
   type ViewSettings
 } from "#src/state/index.ts";
 
@@ -98,17 +98,17 @@ describe("ViewSettingsStore", () => {
 
   test("shows the lighting's background until a custom colour is picked, then until it is reset", () => {
     const store = new ViewSettingsStore();
-    const night = backgroundOf({ lighting: "night", background: null });
+    const night = resolveBackground({ lighting: "night", background: null });
     store.update({ lighting: "night" });
-    assert.equal(backgroundOf(store.settings), night);
+    assert.equal(resolveBackground(store.settings), night);
 
     store.update({ background: "#AA3300" });
-    assert.equal(backgroundOf(store.settings), "#aa3300");
+    assert.equal(resolveBackground(store.settings), "#aa3300");
     store.update({ lighting: "day" });
-    assert.equal(backgroundOf(store.settings), "#aa3300");
+    assert.equal(resolveBackground(store.settings), "#aa3300");
 
     store.update({ background: null });
-    assert.notEqual(backgroundOf(store.settings), "#aa3300");
-    assert.notEqual(backgroundOf(store.settings), night);
+    assert.notEqual(resolveBackground(store.settings), "#aa3300");
+    assert.notEqual(resolveBackground(store.settings), night);
   });
 });

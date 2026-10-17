@@ -7,9 +7,6 @@ export interface PostProcessingContext {
   camera: THREE.Camera;
 }
 
-/**
- * Builds the output node of a camera's `THREE.RenderPipeline`.
- */
 export type PostProcessing = (
   context: PostProcessingContext
 ) => THREE.Node;

@@ -60,7 +60,7 @@ describe("UVRegionLayer — region labels", () => {
       id: "r1",
       name: "Grass block"
     });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.select(region.id, "front");
 
     map.showRegionLabels = true;
@@ -125,7 +125,7 @@ describe("UVRegionLayer — region labels", () => {
       height: RECT_SIZE_THAT_FITS_A_LABEL,
       id: "r2"
     });
-    map.setState(b.id, "free");
+    map.applyState(b.id, "free");
     map.showAll = true;
     map.showRegionLabels = true;
 

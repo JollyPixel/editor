@@ -9,9 +9,6 @@ export interface ColorFunction {
   legacy: boolean;
 }
 
-/**
- * Tokenizes comma or slash syntax and rejects mixed separators.
- */
 export function parseFunction(
   input: string
 ): ColorFunction | null {

@@ -149,8 +149,8 @@ describe("applyPixelCommand", () => {
     }));
 
     const region = state.uv.get("r1")!;
-    assert.deepStrictEqual(region.rectFor("top"), { x: 4, y: 4, width: 2, height: 2 });
-    assert.deepStrictEqual(region.rectFor("front"), { x: 0, y: 0, width: 2, height: 2 });
+    assert.deepStrictEqual(region.slotRect("top"), { x: 4, y: 4, width: 2, height: 2 });
+    assert.deepStrictEqual(region.slotRect("front"), { x: 0, y: 0, width: 2, height: 2 });
   });
 
   test("uv-region-state-changed replaces the stored region", () => {
@@ -188,7 +188,7 @@ describe("applyPixelCommand — uv rotation", () => {
     }));
 
     assert.deepStrictEqual(
-      state.uv.get("r1")!.geometryFor("front"),
+      state.uv.get("r1")!.slotGeometry("front"),
       { x: 4, y: 4, width: 2, height: 2, rotation: 1 }
     );
   });
@@ -205,8 +205,8 @@ describe("applyPixelCommand — uv rotation", () => {
     }));
 
     const region = state.uv.get("r1")!;
-    assert.deepStrictEqual(region.geometryFor("top"), geometry);
-    assert.strictEqual(region.geometryFor("front").rotation, undefined);
+    assert.deepStrictEqual(region.slotGeometry("top"), geometry);
+    assert.strictEqual(region.slotGeometry("front").rotation, undefined);
   });
 
   test("a region rotation replaces the stored region", () => {

@@ -71,17 +71,17 @@ export async function openStudioAccounts(
         defaultRole: options.defaultRole
       }),
     cookie: new SessionCookie({
-      name: cookieNameFor(root)
+      name: hashCookieName(root)
     }),
     throttle: options.throttle,
-    masterPassword: masterPasswordFor(
+    masterPassword: resolveMasterPassword(
       project,
       options
     )
   });
 }
 
-function masterPasswordFor(
+function resolveMasterPassword(
   project: StudioProject,
   options: StudioAccountsOptions
 ): MasterPasswordOptions | undefined {
@@ -107,7 +107,7 @@ function masterPasswordFor(
   };
 }
 
-function cookieNameFor(
+function hashCookieName(
   root: string
 ): string {
   const digest = createHash("sha256")

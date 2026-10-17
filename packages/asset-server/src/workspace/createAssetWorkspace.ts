@@ -103,14 +103,6 @@ export interface AssetWorkspace extends AsyncDisposable {
   close(): Promise<void>;
 }
 
-/**
- * Assembles the pieces a host needs to edit an asset workspace live: a
- * source, an event log, the back-end and the network server its rooms are
- * attached to.
- *
- * Owns only what it creates. A source, event store or server passed in is
- * left open by `close()`.
- */
 export async function createAssetWorkspace(
   options: AssetWorkspaceOptions
 ): Promise<AssetWorkspace> {

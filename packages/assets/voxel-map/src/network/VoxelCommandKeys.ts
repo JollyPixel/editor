@@ -53,10 +53,10 @@ export function voxelCellPositions(
   switch (command.action) {
     case "voxel-set":
     case "voxel-removed":
-      return [coordOf(command.metadata.position)];
+      return [toCoord(command.metadata.position)];
     case "voxels-set":
     case "voxels-removed":
-      return command.metadata.entries.map((entry) => coordOf(entry.position));
+      return command.metadata.entries.map((entry) => toCoord(entry.position));
     default: {
       const { cells } = command.metadata;
       const positions: VoxelCoord[] = [];
@@ -148,7 +148,7 @@ export function narrowVoxelCellCommand<TCommand extends VoxelCellCommand>(
   }
 }
 
-function coordOf(
+function toCoord(
   position: { x: number; y: number; z: number; }
 ): VoxelCoord {
   return {

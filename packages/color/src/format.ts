@@ -12,9 +12,6 @@ import type {
 } from "./types.ts";
 
 // CONSTANTS
-/**
- * Preserves byte round trips without exposing floating-point noise.
- */
 const kAlphaDigits = 3;
 const kPercentDigits = 1;
 const kHueDigits = 1;
@@ -27,9 +24,6 @@ const kByteAlphas = byteTable(
   (byte) => String(trim(byte / BYTE_MAX, kAlphaDigits))
 );
 
-/**
- * Emits lowercase full-length hex after clamping channels.
- */
 export function formatHex(
   color: RGBA,
   withAlpha = false
@@ -74,9 +68,6 @@ export function formatRgba(
   return `rgba(${r}, ${g}, ${b}, ${alpha(color.a)})`;
 }
 
-/**
- * Emits legacy comma syntax and uses `hsla()` for non-opaque colors.
- */
 export function formatHsl(
   color: HSLA
 ): string {

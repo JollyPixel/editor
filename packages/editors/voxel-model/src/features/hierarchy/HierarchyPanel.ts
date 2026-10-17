@@ -47,7 +47,7 @@ export class HierarchyPanel extends LitElement {
 
   #menu = new ContextMenuController(
     () => this.rowMenu,
-    (id) => this.#tree.menuFor(id)
+    (id) => this.#tree.openMenu(id)
   );
 
   @query("jolly-tree")

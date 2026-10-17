@@ -14,21 +14,22 @@ oxlint's `RuleTester`.
   `private declare` fields and `private constructor` stay allowed.
 - `errors-in-errors-folder` (`src/` only): classes extending `*Error` live in
   an `errors/` folder.
-
-## Rules enabled per workspace
-
-These rules have a backlog, so `oxlint.config.ts` enables them on `scripts/`
-and on the workspaces that already pass them. Add a workspace to the list once
-it is clean.
-
 - `no-comments`: only import headers, `// CONSTANTS`, bare `eslint`/`oxlint`
-  and `@ts-` directives, leading license blocks, and JSDoc on interface or type
-  literal properties.
-- `no-of-names`: no function or method named `of` or ending with `Of`.
+  and `@ts-` directives, leading license blocks, JSDoc on interface or type
+  literal properties, and a lone `@type`/`@satisfies` JSDoc tag. In `*.tst.ts`
+  files, `@ts-expect-error` keeps the error fragment tstyche requires.
+- `no-of-names`: no function or method named `of` or ending with `Of` or
+  `For`. Name what it does instead.
 - `no-get-set-prefix`: no method named `getX`/`setX`. `override` methods and
   common Web APIs that test fakes implement are allowed.
 
 `no-of-names` and `no-get-set-prefix` accept `{ allow: string[] }`.
+`oxlint.config.ts` allows the published `engine` and `voxel-renderer`
+accessors (`kPublicAccessors`); add a name there only for an existing public
+API, never for new code.
+
+Empty `catch` blocks are allowed, since a comment can no longer explain them.
+Empty functions are allowed in `test/` and `bench/` for fakes.
 
 ## `unicorn/no-new-array`
 

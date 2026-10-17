@@ -99,7 +99,7 @@ describe("PixelDocument history", () => {
     const doc = createNormalMapDocument();
     addRegion(doc, "a");
     doc.enableNormalMap();
-    doc.setNormalMapZone({ regionId: "a", settings: "off" });
+    doc.assignNormalMapZone({ regionId: "a", settings: "off" });
     doc.uv.delete("a");
     const seen: string[][] = [];
     doc.history.on("change", () => seen.push(zoneIds(doc)));

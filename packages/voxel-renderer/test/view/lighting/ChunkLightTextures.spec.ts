@@ -22,7 +22,7 @@ const kOrigin = {
 };
 const kSpan = 18;
 
-function texturesOf(
+function createTextures(
   { field, sources }: LitWorld
 ): ChunkLightTextures {
   return new ChunkLightTextures({
@@ -48,7 +48,7 @@ describe("ChunkLightTextures", () => {
     const world = litWorld();
     world.field.update();
 
-    assert.equal(texturesOf(world).resolveLightTexture(kOrigin), null);
+    assert.equal(createTextures(world).resolveLightTexture(kOrigin), null);
   });
 
   it("stores the chunk and a one-cell apron as stacked z slices", () => {
@@ -57,7 +57,7 @@ describe("ChunkLightTextures", () => {
     world.place({ x: 3, y: 0, z: 0 }, STONE_ID);
     world.field.update();
 
-    const texture = texturesOf(world).resolveLightTexture(kOrigin);
+    const texture = createTextures(world).resolveLightTexture(kOrigin);
 
     assert.ok(texture instanceof THREE.Data3DTexture);
     assert.equal(texture.image.width, kSpan);
@@ -72,7 +72,7 @@ describe("ChunkLightTextures", () => {
   it("refills the same texture and frees it once the light is gone", () => {
     const world = litWorld();
     const { field, place, remove } = world;
-    const textures = texturesOf(world);
+    const textures = createTextures(world);
     place({ x: 0, y: 0, z: 0 }, GLOW_ID);
     field.update();
     const texture = textures.resolveLightTexture(kOrigin);
@@ -91,7 +91,7 @@ describe("ChunkLightTextures", () => {
   });
 
   it("includes the apron when matching changed chunks", () => {
-    const textures = texturesOf(litWorld());
+    const textures = createTextures(litWorld());
 
     assert.ok(textures.affects(kOrigin, new Set([lightChunkKey(-1, 0, 0)])));
     assert.ok(textures.affects(kOrigin, new Set([lightChunkKey(1, 1, 1)])));

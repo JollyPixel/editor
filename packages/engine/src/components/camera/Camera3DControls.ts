@@ -44,7 +44,6 @@ export class Camera3DControls extends CameraComponent<any> {
   #rotationSpeed: number;
   #movementSpeed: number;
 
-  // Reused each frame to avoid allocations.
   #orientation = new THREE.Quaternion();
   #euler = new THREE.Euler(0, 0, 0, "YXZ");
   #direction = new THREE.Vector3();
@@ -89,11 +88,6 @@ export class Camera3DControls extends CameraComponent<any> {
     this.#movementSpeed = speed;
   }
 
-  /**
-   * The underlying THREE camera. Read-only as far as the transform goes:
-   * position and quaternion are overwritten from `actor.transform` every frame.
-   * Move the camera through `actor.transform` instead.
-   */
   get camera(): THREE.PerspectiveCamera {
     return this.threeCamera as THREE.PerspectiveCamera;
   }

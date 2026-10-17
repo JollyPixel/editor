@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   NO_MIRROR,
-  shapeOf
+  readShape
 } from "../../fixtures/hierarchy.ts";
 import {
   createHierarchyHarness,
@@ -34,7 +34,7 @@ describe("HierarchyController.addBlock", () => {
       }
     });
     const [body] = harness.hierarchy.nodes();
-    assert.deepEqual(shapeOf(harness.hierarchy.nodes()), [["Body", ["Arm"]]]);
+    assert.deepEqual(readShape(harness.hierarchy.nodes()), [["Body", ["Arm"]]]);
     assert.deepEqual(body.children[0].shape, { type: "plane" });
     assert.deepEqual(harness.controller.selected, [body.children[0].id]);
   });
@@ -70,7 +70,7 @@ describe("HierarchyController.addBlock", () => {
 
     await harness.controller.addBlock();
 
-    assert.deepEqual(shapeOf(harness.hierarchy.nodes()), ["Body", "Arm"]);
+    assert.deepEqual(readShape(harness.hierarchy.nodes()), ["Body", "Arm"]);
   });
 
   test("adds nothing when the dialog is dismissed", async() => {
@@ -110,7 +110,7 @@ describe("HierarchyController.addFolder", () => {
 
     await harness.controller.addFolder();
 
-    assert.deepEqual(shapeOf(harness.hierarchy.nodes()), [["Body", ["Limbs"]]]);
+    assert.deepEqual(readShape(harness.hierarchy.nodes()), [["Body", ["Limbs"]]]);
     assert.equal(harness.hierarchy.nodes()[0].children[0].kind, "folder");
   });
 });
@@ -162,7 +162,7 @@ describe("HierarchyController.duplicateSelected", () => {
       hasChildren: true
     });
     assert.equal(validate?.("body"), "A root block is already named \"body\"");
-    assert.deepEqual(shapeOf(harness.hierarchy.nodes()), [
+    assert.deepEqual(readShape(harness.hierarchy.nodes()), [
       ["Body", ["Arm"]],
       ["Body Copy", ["Arm"]]
     ]);
@@ -178,7 +178,7 @@ describe("HierarchyController.duplicateSelected", () => {
 
     await harness.controller.duplicateSelected();
 
-    assert.deepEqual(shapeOf(harness.hierarchy.nodes()), ["Body"]);
+    assert.deepEqual(readShape(harness.hierarchy.nodes()), ["Body"]);
   });
 });
 
@@ -199,7 +199,7 @@ describe("HierarchyController.deleteSelected", () => {
         hasChildren: true
       }
     ]);
-    assert.deepEqual(shapeOf(harness.hierarchy.nodes()), [
+    assert.deepEqual(readShape(harness.hierarchy.nodes()), [
       ["Body", ["Arm"]]
     ]);
   });
@@ -216,7 +216,7 @@ describe("HierarchyController.deleteSelected", () => {
 
     await harness.controller.deleteSelected();
 
-    assert.deepEqual(shapeOf(harness.hierarchy.nodes()), ["Arm"]);
+    assert.deepEqual(readShape(harness.hierarchy.nodes()), ["Arm"]);
     assert.equal(harness.selection.selected, null);
   });
 

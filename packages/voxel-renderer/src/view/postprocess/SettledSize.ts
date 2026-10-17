@@ -1,10 +1,6 @@
 // CONSTANTS
 const kSettleFrames = 6;
 
-/**
- * Holds an allocated size back while the requested one is still changing,
- * so a live resize does not reallocate GPU targets on every frame.
- */
 export class SettledSize {
   #width = 0;
   #height = 0;

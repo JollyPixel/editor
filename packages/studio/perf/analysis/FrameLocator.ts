@@ -45,7 +45,7 @@ export class FrameLocator {
       };
     }
 
-    const map = callFrame.lineNumber >= 0 ? this.#sourceMapOf(callFrame.url) : null;
+    const map = callFrame.lineNumber >= 0 ? this.#loadSourceMap(callFrame.url) : null;
     const position = map?.originalPosition(callFrame.lineNumber, callFrame.columnNumber) ?? null;
     if (position === null) {
       const url = callFrame.url.replace(/^https?:\/\/[^/]+/, "");
@@ -70,7 +70,7 @@ export class FrameLocator {
     url: string
   ): string {
     if (url.startsWith("file:")) {
-      return SourceMapFile.packageOf(url);
+      return SourceMapFile.parsePackage(url);
     }
     if (url.startsWith("node:")) {
       return "(node)";
@@ -79,7 +79,7 @@ export class FrameLocator {
     return this.#editors.servingUrl(url) === null ? "(studio shell)" : "(editor, unmapped)";
   }
 
-  #sourceMapOf(
+  #loadSourceMap(
     url: string
   ): SourceMapFile | null {
     if (!this.#maps.has(url)) {

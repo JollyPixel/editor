@@ -61,7 +61,7 @@ function uvAt(
 
 function facesPointOutward(
   geometry: THREE.BufferGeometry,
-  centerOf: (point: THREE.Vector3) => THREE.Vector3 = () => new THREE.Vector3()
+  measureCenter: (point: THREE.Vector3) => THREE.Vector3 = () => new THREE.Vector3()
 ): boolean {
   const index = geometry.getIndex()!;
   for (let triangle = 0; triangle < index.count; triangle += 3) {
@@ -72,7 +72,7 @@ function facesPointOutward(
       .add(c)
       .divideScalar(3);
     const stored = vertex(geometry, "normal", index.getX(triangle));
-    if (wound.dot(centroid.clone().sub(centerOf(centroid))) <= 0 || stored.dot(wound) <= 0) {
+    if (wound.dot(centroid.clone().sub(measureCenter(centroid))) <= 0 || stored.dot(wound) <= 0) {
       return false;
     }
   }
@@ -100,8 +100,8 @@ describe("blockGeometry", () => {
     for (const shape of kShapes.filter((each) => each.type !== "plane")) {
       for (const axes of kMirrors) {
         const { geometry } = blockGeometry(shape, kUnit, axes);
-        const centerOf = shape.type === "torus" ? tubeCenter : undefined;
-        assert.ok(facesPointOutward(geometry, centerOf), `${shape.type} ${label(axes)}`);
+        const measureCenter = shape.type === "torus" ? tubeCenter : undefined;
+        assert.ok(facesPointOutward(geometry, measureCenter), `${shape.type} ${label(axes)}`);
       }
     }
   });

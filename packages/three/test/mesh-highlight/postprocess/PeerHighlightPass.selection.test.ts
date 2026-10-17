@@ -20,7 +20,7 @@ describe("peer selection", () => {
     const entries = lastEntries(highlight);
     assert.strictEqual(entries.length, 1);
     assert.strictEqual(entries[0].target, mesh);
-    assert.strictEqual(entries[0].color, registry.colorOf("peer-a"));
+    assert.strictEqual(entries[0].color, registry.peerColor("peer-a"));
     assert.ok(!entries[0].priority, "a peer-only entry should not be marked priority");
   });
 
@@ -31,7 +31,7 @@ describe("peer selection", () => {
 
     const entries = lastEntries(highlight);
     assert.strictEqual(entries.length, 1);
-    assert.strictEqual(entries[0].color, registry.colorOf("peer-a"));
+    assert.strictEqual(entries[0].color, registry.peerColor("peer-a"));
   });
 
   test("the primary peer deselecting promotes the next peer's color", () => {
@@ -43,7 +43,7 @@ describe("peer selection", () => {
 
     const entries = lastEntries(highlight);
     assert.strictEqual(entries.length, 1);
-    assert.strictEqual(entries[0].color, registry.colorOf("peer-b"));
+    assert.strictEqual(entries[0].color, registry.peerColor("peer-b"));
   });
 
   test("a peer deselecting entirely clears the entries", () => {
@@ -104,7 +104,7 @@ describe("local selection", () => {
     const entries = lastEntries(highlight);
     assert.strictEqual(entries.length, 1);
     assert.strictEqual(entries[0].color, selection.appearance.selected.color);
-    assert.notStrictEqual(entries[0].color, registry.colorOf("peer-a"));
+    assert.notStrictEqual(entries[0].color, registry.peerColor("peer-a"));
   });
 
   test("coexists with a peer's own entry on a different object, only the local one marked priority", () => {
@@ -118,7 +118,7 @@ describe("local selection", () => {
     assert.strictEqual(entries.length, 2);
 
     const localEntry = entries.find((entry) => entry.color === selection.appearance.selected.color);
-    const peerEntry = entries.find((entry) => entry.color === registry.colorOf("peer-a"));
+    const peerEntry = entries.find((entry) => entry.color === registry.peerColor("peer-a"));
     assert.strictEqual(localEntry?.priority, true);
     assert.ok(!peerEntry?.priority, "the peer's own entry should not be marked priority");
   });
@@ -131,7 +131,7 @@ describe("local selection", () => {
 
     const entries = lastEntries(highlight);
     assert.strictEqual(entries.length, 1);
-    assert.strictEqual(entries[0].color, registry.colorOf("peer-a"));
+    assert.strictEqual(entries[0].color, registry.peerColor("peer-a"));
   });
 });
 

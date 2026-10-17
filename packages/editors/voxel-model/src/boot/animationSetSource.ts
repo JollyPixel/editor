@@ -51,7 +51,7 @@ export function sessionAnimationSets(
         };
       }),
 
-    usersOf: (id) => catalog.dependentsOf(id).length,
+    countUsers: (id) => catalog.listDependents(id).length,
 
     subscribe(listener) {
       catalog.on("change", listener);

@@ -193,7 +193,7 @@ export class BlockLibraryViewport extends LitElement {
       this.#build();
     }
     else if (changed.has("_laidOut")) {
-      this.#renderer?.setBlocks(this._laidOut);
+      this.#renderer?.showBlocks(this._laidOut);
     }
     else {
       return;
@@ -529,7 +529,7 @@ export class BlockLibraryViewport extends LitElement {
       this.sources
     );
     this.#renderer.selectedId = this.selectedId;
-    this.#renderer.setBlocks(this._laidOut);
+    this.#renderer.showBlocks(this._laidOut);
     this.#renderer.onLayoutChange = () => this.#syncGrid();
   }
 

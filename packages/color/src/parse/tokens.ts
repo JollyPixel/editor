@@ -36,9 +36,6 @@ export function parsePercent(
   return value === null ? null : value / kPercentMax;
 }
 
-/**
- * Reads percentages or byte-scale numbers and clamps to 0-1.
- */
 export function parseUnitFromByte(
   token: string
 ): number | null {
@@ -52,9 +49,6 @@ export function parseUnitFromByte(
   return value === null ? null : clamp(value, 0, BYTE_MAX) / BYTE_MAX;
 }
 
-/**
- * Reads bare numbers as CSS percentage values and clamps to 0-1.
- */
 export function parseUnitChannel(
   token: string
 ): number | null {
@@ -85,9 +79,6 @@ export function parseAlpha(
   return value === null ? null : clampUnit(value);
 }
 
-/**
- * Accepts CSS angle units and wraps the result to 0-360.
- */
 export function parseHue(
   token: string
 ): number | null {

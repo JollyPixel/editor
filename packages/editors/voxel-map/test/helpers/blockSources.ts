@@ -13,7 +13,7 @@ import {
 import { BlockRenderSources } from "../../src/features/blocks/rendering/BlockRenderSources.ts";
 import { TileOpacityProbe } from "../../src/features/blocks/rendering/tileOpacity.ts";
 
-export function sourcesOf(
+export function createSources(
   atlases: BlocksetAtlases
 ): BlockRenderSources {
   return new BlockRenderSources({
@@ -52,10 +52,10 @@ export function texturedSources(): BlockRenderSources {
     new THREE.Texture<AtlasImage>(canvas)
   );
 
-  return sourcesOf(atlases);
+  return createSources(atlases);
 }
 
-export function blockOf(
+export function createBlock(
   patch: Partial<BlockDefinition>
 ) {
   return resolveBlockDefinition({

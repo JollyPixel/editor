@@ -17,9 +17,6 @@ export type Model = {
 
 export const ModelAssetType = new AssetType<Model>("model");
 
-/**
- * Loads model records through Three.js while preserving the asset package boundary.
- */
 export class ModelAssetLoader implements AssetLoader<Model> {
   #manager: THREE.LoadingManager;
 

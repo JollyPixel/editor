@@ -9,7 +9,7 @@ import { setTimeout as nextTimer } from "node:timers/promises";
 // Import Internal Dependencies
 import {
   createClient,
-  serverEnvelopeOf,
+  toServerEnvelope,
   withoutSync
 } from "../helpers/server/clientHandle.ts";
 import { RecordingExtension } from "../helpers/server/RecordingExtension.ts";
@@ -81,7 +81,7 @@ describe("Server — profile updates", () => {
     ];
     assert.deepEqual(a.sent, expected);
     assert.deepEqual(b.sent, expected);
-    const sync = serverEnvelopeOf(c.sent[0]);
+    const sync = toServerEnvelope(c.sent[0]);
     assert.ok(sync.kind === "sync");
     assert.deepEqual(sync.members.map((member) => member.profile), [
       { username: "alice", avatar: "/alice?v=2" },

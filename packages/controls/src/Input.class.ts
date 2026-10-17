@@ -15,14 +15,8 @@ import type {
   KeyCode
 } from "./types.ts";
 
-/**
- * @note default stand for mouse + keyboard
- */
 export type InputDevicePreference = "default" | "gamepad";
 
-/**
- * Dot-path names for every event emitted across `Input` and its devices
- */
 export type InputListenerType =
   | "input.devicePreferenceChange"
   | "input.exit"

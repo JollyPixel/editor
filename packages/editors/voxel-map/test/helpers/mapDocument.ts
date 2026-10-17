@@ -9,7 +9,7 @@ import { Emitter } from "@openally/emitt";
 // Import Internal Dependencies
 import type { MapDocumentEvents } from "../../src/document/MapDocument.ts";
 
-export function mapDocumentOf(
+export function createMapDocument(
   world: VoxelWorld
 ): Emitter<MapDocumentEvents> {
   const mapDocument = new Emitter<MapDocumentEvents>();

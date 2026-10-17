@@ -73,7 +73,7 @@ function setup() {
         };
       }))
     },
-    scopeOf: () => "main"
+    resolveScope: () => "main"
   });
 
   return {

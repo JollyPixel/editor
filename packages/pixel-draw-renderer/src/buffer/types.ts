@@ -31,7 +31,7 @@ export interface DefaultPixelBuffer {
   samplePixels(
     positions: Vec2[]
   ): RGBA8[];
-  positionsOf(
+  findPositions(
     color: RGBA8,
     mask?: Uint8Array
   ): Vec2[];

@@ -51,7 +51,7 @@ describe("UVMap — restore", () => {
     });
 
     assert.strictEqual(stored.state, "free");
-    assert.deepStrictEqual(stored.rectFor("top"), { x: 8, y: 0, width: 2, height: 2 });
+    assert.deepStrictEqual(stored.slotRect("top"), { x: 8, y: 0, width: 2, height: 2 });
   });
 
   test("does not affect cascading placement of subsequent create() calls", () => {
@@ -65,7 +65,7 @@ describe("UVMap — restore", () => {
     const created = map.create({ width: 2, height: 2 });
 
     assert.deepStrictEqual(
-      created.rectFor("front"),
+      created.slotRect("front"),
       { x: 0, y: 0, width: 2, height: 2 }
     );
   });

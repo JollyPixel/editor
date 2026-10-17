@@ -55,7 +55,7 @@ export class VoxelSyncClient extends CommandSync<
     this.#onCommand = (command, { origin }) => {
       if (origin === "local" && isVoxelWorldCommand(command)) {
         reconciler.capture(
-          this.sendChange(command, edits.changeFor(command)!)
+          this.sendChange(command, edits.trackedChange(command)!)
         );
       }
       reconciler.observe();

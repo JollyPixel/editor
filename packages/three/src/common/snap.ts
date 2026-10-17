@@ -6,7 +6,7 @@ import type { Axis } from "./axes.ts";
 
 export type SnapStep = number | THREE.Vector3Like | null;
 
-export function snapStepFor(
+export function resolveSnapStep(
   snap: SnapStep,
   axis: Axis
 ): number {
@@ -17,9 +17,6 @@ export function snapStepFor(
   return typeof snap === "number" ? snap : snap[axis];
 }
 
-/**
- * Snaps to `step`; invalid or non-positive steps return `value`.
- */
 export function snapValue(
   value: number,
   step: number

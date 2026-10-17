@@ -15,7 +15,7 @@ import {
   hierarchyAction
 } from "../support/hierarchy.ts";
 import { numberField } from "../support/fields.ts";
-import { editorOf } from "../support/scene.ts";
+import { resolveEditor } from "../support/scene.ts";
 import { historyButton } from "../support/history.ts";
 
 function shapeField(
@@ -24,11 +24,11 @@ function shapeField(
   return page.getByTitle("Shape").getByRole("combobox");
 }
 
-async function faceSlotsOf(
+async function readFaceSlots(
   page: Page,
   name: string
 ): Promise<string[]> {
-  const editor = await editorOf(page);
+  const editor = await resolveEditor(page);
 
   return editor.evaluate(({ workspace }, blockName) => {
     const block = [...workspace.blocks.values()].find((candidate) => candidate.name === blockName);
@@ -37,11 +37,11 @@ async function faceSlotsOf(
   }, name);
 }
 
-async function storedShapeOf(
+async function readStoredShape(
   page: Page,
   name: string
 ): Promise<unknown> {
-  const editor = await editorOf(page);
+  const editor = await resolveEditor(page);
 
   return editor.evaluate(({ workspace }, blockName) => {
     const block = [...workspace.blocks.values()].find((candidate) => candidate.name === blockName);
@@ -81,17 +81,17 @@ test("a cylinder from the Add Block menu takes its Sides from the Shape section"
   const shape = page.locator("jolly-model-editor-shape");
   await expect(shapeField(page).locator("option:checked")).toHaveText("Cylinder");
   await expect(numberField(shape, "Sides")).toHaveValue("8");
-  expect(await faceSlotsOf(page, "Pillar")).toHaveLength(8 + 2);
+  expect(await readFaceSlots(page, "Pillar")).toHaveLength(8 + 2);
 
   await numberField(shape, "Sides").fill("5");
   await numberField(shape, "Sides").press("Enter");
-  await expect.poll(() => faceSlotsOf(page, "Pillar")).toHaveLength(5 + 2);
+  await expect.poll(() => readFaceSlots(page, "Pillar")).toHaveLength(5 + 2);
 
   const undo = historyButton(page, "Undo");
   await expect(undo).toHaveAttribute("title", "Undo Set shape of Pillar (Ctrl+Z)");
   await undo.getByRole("button").click();
   await expect(numberField(shape, "Sides")).toHaveValue("8");
-  expect(await faceSlotsOf(page, "Pillar")).toHaveLength(8 + 2);
+  expect(await readFaceSlots(page, "Pillar")).toHaveLength(8 + 2);
 });
 
 test("a torus keeps its segment faces while its ring sides and thickness change", async({ page }) => {
@@ -104,13 +104,13 @@ test("a torus keeps its segment faces while its ring sides and thickness change"
   await numberField(shape, "Thickness").fill("0.6");
   await numberField(shape, "Thickness").press("Enter");
 
-  await expect.poll(() => storedShapeOf(page, "Halo")).toEqual({
+  await expect.poll(() => readStoredShape(page, "Halo")).toEqual({
     type: "torus",
     sides: 8,
     ringSides: 10,
     thickness: 0.6
   });
-  expect(await faceSlotsOf(page, "Halo")).toHaveLength(8);
+  expect(await readFaceSlots(page, "Halo")).toHaveLength(8);
 });
 
 test("the Shape select reshapes the selected block as one undoable step", async({ page }) => {

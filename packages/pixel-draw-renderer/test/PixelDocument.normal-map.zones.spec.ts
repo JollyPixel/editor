@@ -22,7 +22,7 @@ describe("PixelDocument normal map", () => {
       const changes: (string[] | null)[] = [];
       doc.on("normal-map-changed", (event) => changes.push(event.regionIds));
 
-      doc.setNormalMapZone({ regionId: "a", settings: { invert: true } });
+      doc.assignNormalMapZone({ regionId: "a", settings: { invert: true } });
       assert.deepEqual(events.at(-1), {
         action: "normal-map-zone-set",
         metadata: {
@@ -44,23 +44,23 @@ describe("PixelDocument normal map", () => {
       const events: PixelCommand[] = [];
       const doc = createNormalMapDocument(events);
       doc.enableNormalMap();
-      doc.setNormalMapZone({ regionId: "a", settings: { invert: true } });
+      doc.assignNormalMapZone({ regionId: "a", settings: { invert: true } });
 
-      doc.setNormalMapZone({ regionId: "a", settings: "off" });
+      doc.assignNormalMapZone({ regionId: "a", settings: "off" });
       assert.deepEqual(events.at(-1)?.metadata, {
         zone: { regionId: "a", settings: "off" },
         index: 0
       });
 
       doc.undo();
-      assert.deepEqual(doc.normalMap?.zoneOf("a")?.settings, { invert: true });
+      assert.deepEqual(doc.normalMap?.findZone("a")?.settings, { invert: true });
     });
 
     test("undoing a deletion restores the zone at its index", () => {
       const doc = createNormalMapDocument();
       doc.enableNormalMap();
       for (const regionId of ["a", "b", "c"]) {
-        doc.setNormalMapZone({ regionId, settings: "off" });
+        doc.assignNormalMapZone({ regionId, settings: "off" });
       }
 
       doc.deleteNormalMapZone("b");
@@ -73,7 +73,7 @@ describe("PixelDocument normal map", () => {
     test("redoing a new zone puts it back at its index", () => {
       const doc = createNormalMapDocument();
       doc.enableNormalMap();
-      doc.setNormalMapZone({ regionId: "a", settings: "off" });
+      doc.assignNormalMapZone({ regionId: "a", settings: "off" });
       doc.undo();
       doc.applyRemoteCommand({
         action: "normal-map-zone-set",
@@ -91,8 +91,8 @@ describe("PixelDocument normal map", () => {
       doc.enableNormalMap();
       addRegion(doc, "a");
       addRegion(doc, "b");
-      doc.setNormalMapZone({ regionId: "a", settings: "off" });
-      doc.setNormalMapZone({ regionId: "b", settings: "off" });
+      doc.assignNormalMapZone({ regionId: "a", settings: "off" });
+      doc.assignNormalMapZone({ regionId: "b", settings: "off" });
 
       doc.uv.delete("a");
       assert.deepEqual(zoneIds(doc), ["b"]);
@@ -118,7 +118,7 @@ describe("PixelDocument normal map", () => {
       doc.enableNormalMap();
       doc.disownUvRegions((id) => id === "block");
       addRegion(doc, "block");
-      doc.setNormalMapZone({ regionId: "block", settings: "off" });
+      doc.assignNormalMapZone({ regionId: "block", settings: "off" });
 
       doc.uv.delete("block");
 

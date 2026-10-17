@@ -26,23 +26,23 @@ describe("UVRegion", () => {
       const region = makeStacked().movedTo(position);
 
       assert.strictEqual(region.state, "stacked");
-      assert.deepStrictEqual(region.rectFor("back"), movedRect);
+      assert.deepStrictEqual(region.slotRect("back"), movedRect);
     });
 
     test("ignores the slot argument when stacked", () => {
       const region = makeStacked().movedTo(position, "top");
 
       for (const face of DEFAULT_UV_SLOTS) {
-        assert.deepStrictEqual(region.rectFor(face), movedRect, `${face} must follow the shared rect`);
+        assert.deepStrictEqual(region.slotRect(face), movedRect, `${face} must follow the shared rect`);
       }
     });
 
     test("moves only the named slot when free", () => {
       const region = makeFree().movedTo(position, "left");
 
-      assert.deepStrictEqual(region.rectFor("left"), movedRect);
+      assert.deepStrictEqual(region.slotRect("left"), movedRect);
       for (const face of DEFAULT_UV_SLOTS.filter((value) => value !== "left")) {
-        assert.deepStrictEqual(region.rectFor(face), REGION_RECT, `${face} must stay put`);
+        assert.deepStrictEqual(region.slotRect(face), REGION_RECT, `${face} must stay put`);
       }
     });
 
@@ -74,7 +74,7 @@ describe("UVRegion", () => {
       const region = makeFree();
       region.movedTo(position, "left");
 
-      assert.deepStrictEqual(region.rectFor("left"), REGION_RECT);
+      assert.deepStrictEqual(region.slotRect("left"), REGION_RECT);
     });
 
     test("preserves the name through geometry and state changes", () => {

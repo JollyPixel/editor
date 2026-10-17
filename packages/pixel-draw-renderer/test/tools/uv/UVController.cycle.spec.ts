@@ -13,7 +13,7 @@ describe("UVController — cycling through an overlapping stack", () => {
   test("a repeat click advances to the next face of the stack", () => {
     const { map, controller } = makeUvControllerSetup();
     const region = map.create({ width: 8, height: 8 });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.showAll = true;
 
     const picked: (string | null)[] = [];
@@ -33,7 +33,7 @@ describe("UVController — cycling through an overlapping stack", () => {
   test("wraps back to the first face after the last one", () => {
     const { map, controller } = makeUvControllerSetup();
     const region = map.create({ width: 8, height: 8 });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.showAll = true;
 
     for (let index = 0; index < DEFAULT_UV_SLOTS.length; index++) {
@@ -48,7 +48,7 @@ describe("UVController — cycling through an overlapping stack", () => {
   test("dragging a face out of the stack changes the stack, resetting the cycle", () => {
     const { map, controller } = makeUvControllerSetup();
     const region = map.create({ width: 8, height: 8 });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.showAll = true;
 
     controller.handleStart({ x: 2, y: 2 });
@@ -63,7 +63,7 @@ describe("UVController — cycling through an overlapping stack", () => {
   test("an external selection change restarts the cycle on the selected face", () => {
     const { map, controller } = makeUvControllerSetup();
     const region = map.create({ width: 8, height: 8 });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.showAll = true;
 
     controller.handleStart({ x: 2, y: 2 });
@@ -92,7 +92,7 @@ describe("UVController — cycling through an overlapping stack", () => {
   test("a miss resets the cycle", () => {
     const { map, controller } = makeUvControllerSetup();
     const region = map.create({ width: 8, height: 8 });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.showAll = true;
 
     controller.handleStart({ x: 2, y: 2 });
@@ -108,7 +108,7 @@ describe("UVController — cycling through an overlapping stack", () => {
   test("dragging moves the face the cycle landed on", () => {
     const { map, controller } = makeUvControllerSetup();
     const region = map.create({ width: 8, height: 8 });
-    map.setState(region.id, "free");
+    map.applyState(region.id, "free");
     map.showAll = true;
 
     controller.handleStart({ x: 2, y: 2 });
@@ -119,12 +119,12 @@ describe("UVController — cycling through an overlapping stack", () => {
 
     const stored = map.get(region.id)!;
     assert.deepStrictEqual(
-      stored.rectFor("back"),
+      stored.slotRect("back"),
       { x: 4, y: 4, width: 8, height: 8 },
       "the second click selected back, so back is what moves"
     );
     assert.deepStrictEqual(
-      stored.rectFor("front"),
+      stored.slotRect("front"),
       { x: 0, y: 0, width: 8, height: 8 },
       "front must stay where it was"
     );

@@ -33,10 +33,10 @@ describe("UVRegionLayer — resize handles", () => {
     layer.resizable = true;
     assert.equal(handles(svg), 4);
 
-    map.setState(region.id, "unfolded");
+    map.applyState(region.id, "unfolded");
     assert.equal(handles(svg), 0);
 
-    map.setState(region.id, "stacked");
+    map.applyState(region.id, "stacked");
     map.select(null);
     assert.equal(handles(svg), 0);
   });
@@ -50,12 +50,12 @@ describe("UVRegionLayer — resize handles", () => {
     layer.editing = true;
     layer.resizable = true;
 
-    layer.setLivePreview({
+    layer.showLivePreview({
       regions: [region.resized({ ...region.bounds, width: 10 })],
       slot: null
     });
     assert.equal(handles(svg), 0);
-    layer.setLivePreview(null);
+    layer.showLivePreview(null);
     assert.equal(handles(svg), 4);
   });
 });

@@ -36,7 +36,7 @@ describe("KeyEditor through the timeline", () => {
     keys.move(2);
     keys.remove();
     keys.paste();
-    keys.setInterpolation("step");
+    keys.applyInterpolation("step");
 
     assert.deepEqual(ticks(), before);
     assert.equal(model.set.set.clip(model.clipId)!.tracks[0].position![0].interpolation, "linear");

@@ -14,7 +14,6 @@ import {
 import { emitContainerEvent } from "../events.ts";
 import { folderStyles } from "./Folder.styles.ts";
 
-// Registers the chevron and grip glyphs.
 import "../../icon/Icon.ts";
 import { isButtonElement } from "../../dom.ts";
 import { defaultStorageAdapter } from "../../storage/defaultStorage.ts";

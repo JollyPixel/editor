@@ -9,19 +9,19 @@ import type { AtlasImage } from "@jolly-pixel/voxel.renderer";
 // Import Internal Dependencies
 import { BlockPreviewMeshes } from "../../../../src/features/blocks/rendering/BlockPreviewMeshes.ts";
 import {
-  blockOf,
+  createBlock,
   texturedSources
 } from "../../../helpers/blockSources.ts";
 
 describe("BlockPreviewMeshes", () => {
   it("keeps the mesh of an unchanged block and replaces a redefined one", () => {
     const meshes = new BlockPreviewMeshes(texturedSources());
-    const kept = blockOf({ id: 1 });
-    const redefined = blockOf({ id: 2 });
+    const kept = createBlock({ id: 1 });
+    const redefined = createBlock({ id: 2 });
     meshes.sync([kept, redefined]);
     const [keptMesh, redefinedMesh] = meshes.entries.map((entry) => entry.mesh);
 
-    meshes.sync([kept, blockOf({ id: 2, shapeId: "ramp" })]);
+    meshes.sync([kept, createBlock({ id: 2, shapeId: "ramp" })]);
 
     assert.equal(meshes.entries[0].mesh, keptMesh);
     assert.notEqual(meshes.entries[1].mesh, redefinedMesh);
@@ -30,7 +30,7 @@ describe("BlockPreviewMeshes", () => {
   it("rebuilds every mesh once the atlases change", () => {
     const sources = texturedSources();
     const meshes = new BlockPreviewMeshes(sources);
-    meshes.sync([blockOf({ id: 1 })]);
+    meshes.sync([createBlock({ id: 1 })]);
     const [before] = meshes.entries;
 
     sources.atlases.registerTexture(

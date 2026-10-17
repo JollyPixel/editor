@@ -12,10 +12,6 @@ import {
 import type { EditorArchives } from "../session/EditorArchives.ts";
 import "./archiveIcons.ts";
 
-/**
- * Export, import and reset buttons for an `EditorArchives`, with the notice
- * of a volatile workspace and the error of the last failed flow.
- */
 export class ArchiveActions extends LitElement {
   static override properties: PropertyDeclarations = {
     archives: { attribute: false },

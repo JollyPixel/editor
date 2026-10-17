@@ -17,10 +17,10 @@ import {
   TEXTURE_SIZE,
   TORSO_REGION_ID,
   createTextureHarness,
-  regionIdOf,
+  readRegionId,
   stackedAt,
   torsoSnapshot,
-  uvOf
+  readUv
 } from "./textureHarness.ts";
 
 describe("BlockTextures texture", () => {
@@ -72,8 +72,8 @@ describe("BlockTextures model layouts", () => {
     const { addBlock, uv } = createTextureHarness();
     const block = addBlock({ uv: stackedAt(0) });
 
-    assert.equal(uv.get(regionIdOf(block))?.name, "Block");
-    assert.deepEqual(uvOf(block, 1), [16 / TEXTURE_SIZE.x, 1]);
+    assert.equal(uv.get(readRegionId(block))?.name, "Block");
+    assert.deepEqual(readUv(block, 1), [16 / TEXTURE_SIZE.x, 1]);
   });
 
   test("maps a remote block added with its UV layout", () => {
@@ -93,7 +93,7 @@ describe("BlockTextures model layouts", () => {
 
     const block = blocks.get("late");
     assert.ok(block);
-    assert.deepEqual(uvOf(block, 1), [48 / TEXTURE_SIZE.x, 1]);
+    assert.deepEqual(readUv(block, 1), [48 / TEXTURE_SIZE.x, 1]);
   });
 
   test("rebinds a reshaped block's new mesh to the layout that came with the shape", () => {
@@ -101,18 +101,18 @@ describe("BlockTextures model layouts", () => {
     const block = addBlock({ uv: stackedAt(0) });
     const plane = { type: "plane" } as const;
 
-    document.setShape(block.uuid, plane, BlockUvLayouts.net({ x: 32, y: 0 }, plane));
+    document.updateShape(block.uuid, plane, BlockUvLayouts.net({ x: 32, y: 0 }, plane));
 
-    assert.deepEqual(uv.get(regionIdOf(block))?.slots, ["top"]);
-    assert.deepEqual(uvOf(block, 1), [48 / TEXTURE_SIZE.x, 1]);
+    assert.deepEqual(uv.get(readRegionId(block))?.slots, ["top"]);
+    assert.deepEqual(readUv(block, 1), [48 / TEXTURE_SIZE.x, 1]);
   });
 
   test("shows the default net of a block added without a layout", () => {
     const { addBlock, uv, changes } = createTextureHarness();
     const block = addBlock({ name: "Head" });
 
-    assert.equal(uv.get(regionIdOf(block))?.state, "unfolded");
-    assert.equal(uv.get(regionIdOf(block))?.name, "Head");
+    assert.equal(uv.get(readRegionId(block))?.state, "unfolded");
+    assert.equal(uv.get(readRegionId(block))?.name, "Head");
     assert.deepEqual(
       changes.map((change) => change.command.action),
       ["node-added"]
@@ -128,10 +128,10 @@ describe("BlockTextures model layouts", () => {
     const block = blocks.get("torso");
     assert.ok(block);
     uv.move(TORSO_REGION_ID, { x: 0, y: 0, width: 48, height: 32 });
-    const [u, v] = uvOf(block, 1);
+    const [u, v] = readUv(block, 1);
     uv.move(TORSO_REGION_ID, { x: 64, y: 0, width: 48, height: 32 });
 
-    assert.deepEqual(uvOf(block, 1), [u + (64 / TEXTURE_SIZE.x), v]);
+    assert.deepEqual(readUv(block, 1), [u + (64 / TEXTURE_SIZE.x), v]);
   });
 
   test("the model layout wins over a region the texture carries", () => {
@@ -142,7 +142,7 @@ describe("BlockTextures model layouts", () => {
     document.load(torsoSnapshot(stackedAt(0)));
 
     assert.deepEqual(
-      uv.get(TORSO_REGION_ID)?.geometryFor("front"),
+      uv.get(TORSO_REGION_ID)?.slotGeometry("front"),
       { x: 0, y: 0, width: 16, height: 16 }
     );
   });
@@ -157,7 +157,7 @@ describe("BlockTextures model layouts", () => {
 
     assert.deepEqual(deleted, []);
     assert.deepEqual(
-      uv.get(TORSO_REGION_ID)?.geometryFor("front"),
+      uv.get(TORSO_REGION_ID)?.slotGeometry("front"),
       { x: 32, y: 0, width: 16, height: 16 }
     );
   });
@@ -170,7 +170,7 @@ describe("BlockTextures model layouts", () => {
 
     const block = blocks.get("torso");
     assert.ok(block);
-    assert.deepEqual(uvOf(block, 1), [48 / TEXTURE_SIZE.x, 1]);
+    assert.deepEqual(readUv(block, 1), [48 / TEXTURE_SIZE.x, 1]);
   });
 
   test("binds the meshes a second snapshot re-creates", () => {
@@ -181,7 +181,7 @@ describe("BlockTextures model layouts", () => {
 
     const block = blocks.get("torso");
     assert.ok(block);
-    assert.deepEqual(uvOf(block, 1), [48 / TEXTURE_SIZE.x, 1]);
+    assert.deepEqual(readUv(block, 1), [48 / TEXTURE_SIZE.x, 1]);
   });
 
   test("drops texture regions of blocks the model does not have", () => {
@@ -206,20 +206,20 @@ describe("BlockTextures model layouts", () => {
     );
 
     assert.deepEqual(
-      uv.get(regionIdOf(block))?.geometryFor("front"),
+      uv.get(readRegionId(block))?.slotGeometry("front"),
       { x: 32, y: 0, width: 16, height: 16 }
     );
-    assert.deepEqual(uvOf(block, 1), [48 / TEXTURE_SIZE.x, 1]);
+    assert.deepEqual(readUv(block, 1), [48 / TEXTURE_SIZE.x, 1]);
   });
 
   test("deletes a block's region when the block is removed", () => {
     const { document, addBlock, uv } = createTextureHarness();
     const block = addBlock({ uv: stackedAt(0) });
-    assert.ok(uv.get(regionIdOf(block)));
+    assert.ok(uv.get(readRegionId(block)));
 
     document.remove(block.uuid);
 
-    assert.equal(uv.get(regionIdOf(block)), undefined);
+    assert.equal(uv.get(readRegionId(block)), undefined);
   });
 });
 
@@ -227,13 +227,13 @@ describe("BlockTextures rename", () => {
   test("a local block rename renames its region in place", () => {
     const { document, addBlock, uv } = createTextureHarness();
     const block = addBlock({ name: "Torso", uv: stackedAt(32) });
-    const before = uv.get(regionIdOf(block))?.toJSON();
+    const before = uv.get(readRegionId(block))?.toJSON();
     assert.ok(before);
 
     document.rename(block.uuid, "Chest");
 
     assert.deepEqual(
-      uv.get(regionIdOf(block))?.toJSON(),
+      uv.get(readRegionId(block))?.toJSON(),
       { ...before, name: "Chest" }
     );
   });
@@ -249,7 +249,7 @@ describe("BlockTextures rename", () => {
     });
 
     assert.equal(block.name, "Chest");
-    assert.equal(uv.get(regionIdOf(block))?.name, "Chest");
+    assert.equal(uv.get(readRegionId(block))?.name, "Chest");
   });
 
   test("keeps the renamed region mapped onto the mesh", () => {
@@ -257,9 +257,9 @@ describe("BlockTextures rename", () => {
     const block = addBlock({ name: "Torso", uv: stackedAt(0) });
     document.rename(block.uuid, "Chest");
 
-    uv.move(regionIdOf(block), { x: 32, y: 0, width: 16, height: 16 });
+    uv.move(readRegionId(block), { x: 32, y: 0, width: 16, height: 16 });
 
-    assert.deepEqual(uvOf(block, 1), [48 / TEXTURE_SIZE.x, 1]);
+    assert.deepEqual(readUv(block, 1), [48 / TEXTURE_SIZE.x, 1]);
   });
 });
 
@@ -270,9 +270,9 @@ describe("BlockTextures selection", () => {
     const second = addBlock({ uv: stackedAt(32) });
 
     selection.select(first.uuid);
-    assert.equal(uv.selectedRegionId, regionIdOf(first));
+    assert.equal(uv.selectedRegionId, readRegionId(first));
 
-    uv.select(regionIdOf(second));
+    uv.select(readRegionId(second));
     assert.equal(selection.selected, second.uuid);
   });
 });

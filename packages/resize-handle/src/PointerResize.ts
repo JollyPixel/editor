@@ -16,9 +16,6 @@ export interface PointerResizeOptions {
   onEnd: () => void;
 }
 
-/**
- * Owns pointer capture and temporary drag listeners for one resize handle.
- */
 export class PointerResize {
   #handle: HTMLElement;
   #dragToken: string;
@@ -126,7 +123,6 @@ export class PointerResize {
       this.#handle.releasePointerCapture(pointerId);
     }
     catch {
-      // Pointer cancellation may release capture before the handler runs.
     }
 
     this.#handle.removeEventListener(

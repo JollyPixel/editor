@@ -72,7 +72,7 @@ export class TreeRowView {
   readonly reorderable: boolean;
   readonly match: Readonly<SearchMatch> | null;
 
-  static indentOf(
+  static indentStyle(
     depth: number
   ): string {
     kIndents[depth] ??= `calc(${depth} * var(--jolly-tree-indent, 16px))`;
@@ -110,7 +110,7 @@ export class TreeRowView {
     this.branch = isExpandable(node);
     this.leaf = node.children === undefined;
     this.depth = depth;
-    this.indent = TreeRowView.indentOf(depth);
+    this.indent = TreeRowView.indentStyle(depth);
     this.position = state.position;
     this.setSize = state.setSize;
     this.expanded = state.expanded;
@@ -257,7 +257,7 @@ export class TreeRowViewList {
 
   update(
     rows: readonly FlatTreeRow<unknown>[],
-    stateOf: (row: FlatTreeRow<unknown>) => TreeRowState
+    rowStateSelecting: (row: FlatTreeRow<unknown>) => TreeRowState
   ): TreeRowView[] {
     const previous = this.#views;
     const generation = ++this.#generation;
@@ -266,7 +266,7 @@ export class TreeRowViewList {
       [];
     for (let index = 0; index < rows.length; index++) {
       const row = rows[index];
-      const view = this.#viewFor(row, stateOf(row), generation);
+      const view = this.#reuseView(row, rowStateSelecting(row), generation);
       if (views === null && view !== previous[index]) {
         views = previous.slice(0, index);
       }
@@ -282,7 +282,7 @@ export class TreeRowViewList {
     return this.#views;
   }
 
-  #viewFor(
+  #reuseView(
     row: FlatTreeRow<unknown>,
     state: TreeRowState,
     generation: number

@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { notMultipleOf } from "@jolly-pixel/network";
+import { notMultiple } from "@jolly-pixel/network";
 import {
   NORMAL_MAP_BEVEL_PROFILES,
   NORMAL_MAP_BORDERS,
@@ -10,7 +10,7 @@ import * as z from "zod/mini";
 // CONSTANTS
 const kNonNegative = z.number().check(z.minimum(0));
 
-const kOddLevels = notMultipleOf(z.int().check(z.minimum(3)), 2);
+const kOddLevels = notMultiple(z.int().check(z.minimum(3)), 2);
 
 const kSettingsShape = {
   height: z.enum(NORMAL_MAP_HEIGHTS),

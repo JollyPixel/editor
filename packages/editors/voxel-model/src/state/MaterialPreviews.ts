@@ -5,9 +5,6 @@ import type {
   MaterialSurfacePatchJSON
 } from "@jolly-pixel/asset.voxel-model/client";
 
-/**
- * `null` for this person, a client id for a peer.
- */
 export type PreviewOwner = string | null;
 
 export type MaterialPreviewsEvents = {
@@ -49,7 +46,7 @@ export class MaterialPreviews extends Emitter<MaterialPreviewsEvents> {
     this.emit("change", materialId, owner);
   }
 
-  surfaceOf(
+  previewSurface(
     materialId: string,
     stored: MaterialSurfaceJSON
   ): MaterialSurfaceJSON {

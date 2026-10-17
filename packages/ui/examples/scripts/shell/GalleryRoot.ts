@@ -6,11 +6,11 @@ import "../../../src/containers/dock/Dock.ts";
 import "../../../src/containers/folder/Folder.ts";
 import "../../../src/controls/Checkbox.ts";
 import "../../../src/theme/components/ThemePreferences.ts";
-import { detailOf } from "../../../src/dom.ts";
+import { readDetail } from "../../../src/dom.ts";
 import { themeStyles } from "../../../src/theme/styles/themeStyles.ts";
 import type { Checkbox } from "../../../src/controls/Checkbox.ts";
 import { manifest } from "../manifest.ts";
-import { groupLabelOf } from "../groups.ts";
+import { resolveGroupLabel } from "../groups.ts";
 import { exampleStyles } from "../examples/shared/exampleStyles.ts";
 import { shellStyles } from "./styles.ts";
 import type {
@@ -74,7 +74,7 @@ export class GalleryRoot extends HTMLElement {
     }
   }
 
-  setActive(
+  activate(
     id: string
   ) {
     this.#activeLink?.removeAttribute("aria-current");
@@ -103,7 +103,7 @@ export class GalleryRoot extends HTMLElement {
     checkbox.align = "end";
     checkbox.dataset.option = option.key;
     checkbox.addEventListener("jolly-change", (event) => {
-      const detail = detailOf<{ value: boolean; }>(event);
+      const detail = readDetail<{ value: boolean; }>(event);
       if (detail === null) {
         return;
       }
@@ -167,7 +167,7 @@ export class GalleryRoot extends HTMLElement {
     const groups = new Map<string, HTMLElementTagNameMap["jolly-folder"]>();
     const navs = new Map<string, HTMLElement>();
     for (const example of manifest) {
-      const label = groupLabelOf(example.id);
+      const label = resolveGroupLabel(example.id);
       let nav = navs.get(label);
       if (nav === undefined) {
         const folder = document.createElement("jolly-folder");

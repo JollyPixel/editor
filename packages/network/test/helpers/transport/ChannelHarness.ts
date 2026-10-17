@@ -163,12 +163,12 @@ export class ChannelHarness {
 
         return socket;
       },
-      socketPort: setup.hostPorts ? (id) => this.#channelOf(id).port1 : undefined
+      socketPort: setup.hostPorts ? (id) => this.#ensureChannel(id).port1 : undefined
     });
     this.transport = new ChannelTransport({
       host: HOST_ID,
       port: this.shared.port2,
-      socketPort: setup.clientPorts ? (id) => this.#channelOf(id).port2 : undefined
+      socketPort: setup.clientPorts ? (id) => this.#ensureChannel(id).port2 : undefined
     });
   }
 
@@ -231,7 +231,7 @@ export class ChannelHarness {
     }
   }
 
-  serverOf(
+  relayedServer(
     client: ClientEnd
   ): RelayedSocket | undefined {
     return this.servers.get(client.id);
@@ -265,14 +265,14 @@ export class ChannelHarness {
   ): RelayedSocket | undefined {
     const client = this.#client(index);
 
-    return client === undefined ? undefined : this.serverOf(client);
+    return client === undefined ? undefined : this.relayedServer(client);
   }
 
   #deliverable(): ManualPort[] {
     return this.ports.filter((port) => port.deliverable);
   }
 
-  #channelOf(
+  #ensureChannel(
     id: string
   ): ManualChannel {
     let channel = this.dedicated.get(id);

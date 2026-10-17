@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { identityOf } from "../helpers/server/identity.ts";
+import { createIdentity } from "../helpers/server/identity.ts";
 import { createClient } from "../helpers/server/clientHandle.ts";
 import { RecordingExtension } from "../helpers/server/RecordingExtension.ts";
 import { Server } from "#src/index.ts";
@@ -18,7 +18,7 @@ describe("Server", () => {
     server.register(extension);
 
     const { client } = createClient("A");
-    const connectionA = server.connect(client, identityOf(client));
+    const connectionA = server.connect(client, createIdentity(client));
     assert.deepEqual(extension.connected, []);
 
     await connectionA.receive({ room: "pixel-draw", kind: "join" });
@@ -33,7 +33,7 @@ describe("Server", () => {
     server.register(voxel);
 
     const { client } = createClient("A");
-    const connectionA = server.connect(client, identityOf(client));
+    const connectionA = server.connect(client, createIdentity(client));
     await connectionA.receive({ room: "pixel-draw", kind: "join" });
     await connectionA.receive({
       room: "pixel-draw",
@@ -56,7 +56,7 @@ describe("Server", () => {
     server.register(extension);
 
     const { client } = createClient("A");
-    const connectionA = server.connect(client, identityOf(client));
+    const connectionA = server.connect(client, createIdentity(client));
     await connectionA.receive({ room: "pixel-draw", kind: "join" });
     await connectionA.receive({ room: "pixel-draw", kind: "leave" });
     await connectionA.receive({
@@ -77,7 +77,7 @@ describe("Server", () => {
     server.register(voxel);
 
     const { client } = createClient("A");
-    const connectionA = server.connect(client, identityOf(client));
+    const connectionA = server.connect(client, createIdentity(client));
     await connectionA.receive({ room: "pixel-draw", kind: "join" });
     await connectionA.close();
 
@@ -91,7 +91,7 @@ describe("Server", () => {
     server.register(extension);
 
     const { client } = createClient("A");
-    const connectionA = server.connect(client, identityOf(client));
+    const connectionA = server.connect(client, createIdentity(client));
     await connectionA.receive({ room: "pixel-draw", kind: "join" });
     const closing = connectionA.close();
     await connectionA.receive({ room: "pixel-draw", kind: "message", payload: {} });
@@ -107,7 +107,7 @@ describe("Server", () => {
     server.register(extension);
 
     const { client } = createClient("A");
-    const connectionA = server.connect(client, identityOf(client));
+    const connectionA = server.connect(client, createIdentity(client));
 
     await connectionA.receive({ room: "pixel-draw", kind: "join" });
     await connectionA.receive({

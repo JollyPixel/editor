@@ -258,7 +258,7 @@ export class CommandHistory<
       return;
     }
 
-    const scope = registration.scopeOf(change);
+    const scope = registration.resolveScope(change);
     if (scope !== null) {
       this.record(
         scope,

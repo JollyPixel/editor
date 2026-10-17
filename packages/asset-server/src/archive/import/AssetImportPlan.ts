@@ -18,7 +18,7 @@ import type {
   ImportPlan,
   SharedDependents
 } from "./AssetImport.ts";
-import { archiveEntryOf } from "../format/ArchiveManifest.ts";
+import { toArchiveEntry } from "../format/ArchiveManifest.ts";
 import { AssetArchiveError } from "../errors/AssetArchiveError.ts";
 import { readableAsset } from "../readableAsset.ts";
 import type { CatalogProjection } from "../../catalog/CatalogProjection.ts";
@@ -30,7 +30,7 @@ export class AssetImportPlan {
   #sharedDependents: SharedDependents[] = [];
   #incompatible: AssetArchiveEntry[] = [];
 
-  static of(
+  static fromArchive(
     backend: ArchiveBackend,
     archive: AssetArchive
   ): Result<AssetImportPlan, AssetImportError> {
@@ -102,7 +102,7 @@ export class AssetImportPlan {
       return;
     }
 
-    const current = archiveEntryOf(record);
+    const current = toArchiveEntry(record);
     this.#live.set(asset.id, current);
     if (current.kind !== asset.kind) {
       this.#incompatible.push(current);
@@ -111,9 +111,9 @@ export class AssetImportPlan {
     }
 
     const dependents = catalog
-      .dependentsOf(asset.id)
+      .listDependents(asset.id)
       .filter((dependent) => !archived.has(dependent.id.value))
-      .map((dependent) => archiveEntryOf(dependent));
+      .map((dependent) => toArchiveEntry(dependent));
     if (dependents.length > 0) {
       this.#sharedDependents.push({
         ...current,

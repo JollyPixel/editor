@@ -41,7 +41,7 @@ function assertLooksAtTarget(
   assert.ok(lookDirection(pose).distanceTo(expected) < 1e-6);
 }
 
-function distanceOf(
+function measureDistance(
   pose: SpawnPose
 ): number {
   return pose.position.distanceTo(pose.target);
@@ -87,8 +87,8 @@ describe("SpawnPose.frame", () => {
       createLayer({ x: 0, y: 0, z: 0 }, { x: 400, y: 8, z: 400 })
     ]);
 
-    assert.ok(Math.abs(distanceOf(small) - 16) < 1e-6);
-    assert.ok(distanceOf(large) > 16);
-    assert.ok(Math.abs(distanceOf(huge) - 64) < 1e-6);
+    assert.ok(Math.abs(measureDistance(small) - 16) < 1e-6);
+    assert.ok(measureDistance(large) > 16);
+    assert.ok(Math.abs(measureDistance(huge) - 64) < 1e-6);
   });
 });

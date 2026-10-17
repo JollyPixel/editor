@@ -22,7 +22,6 @@ import {
   type IconTone
 } from "./registry.ts";
 
-// Registers built-in glyphs with the element.
 import "./builtins.ts";
 
 // CONSTANTS

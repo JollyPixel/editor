@@ -48,11 +48,6 @@ export interface AssetProjectorOptions {
   logger?: Logger;
 }
 
-/**
- * Projects each asset's folded event stream into physical storage.
- *
- * Idempotent writes make stale checkpoints safe to replay.
- */
 export class AssetProjector extends Emitter<
   AssetProjectorEventMap
 > {
@@ -387,7 +382,7 @@ export class AssetProjector extends Emitter<
       try {
         await this.#source.write(
           written,
-          await this.#contentOf(fold)
+          await this.#readContent(fold)
         );
       }
       finally {
@@ -424,7 +419,7 @@ export class AssetProjector extends Emitter<
       .warn("external edit backed up before projection");
   }
 
-  async #contentOf(
+  async #readContent(
     fold: AssetFold
   ): Promise<Uint8Array> {
     const data = await fold.read(this.#source);

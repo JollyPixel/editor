@@ -32,7 +32,7 @@ function base64url(
     .replaceAll("=", "");
 }
 
-function protocolsFor(
+function buildProtocols(
   credential: string | undefined
 ): string[] {
   return credential === undefined ?
@@ -51,6 +51,6 @@ export function connectWebSocket(
 ): ClientSocket {
   return new WebSocket(
     options.url ?? defaultUrl(),
-    protocolsFor(options.credential)
+    buildProtocols(options.credential)
   );
 }

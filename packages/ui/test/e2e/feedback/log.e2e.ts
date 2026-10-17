@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { boxOf } from "@jolly-pixel/e2e";
+import { measureBox } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
@@ -9,8 +9,8 @@ import {
 import { openExample } from "../support/gallery.ts";
 import { runUntilGone } from "../support/clock.ts";
 import {
-  styleOf,
-  partStyleOf
+  readStyle,
+  readPartStyle
 } from "../support/styles.ts";
 
 test.describe("Log", () => {
@@ -28,8 +28,8 @@ test.describe("Log", () => {
     await expect(rows).toHaveCount(2);
     await expect(rows.nth(0)).toContainText("Camera switched to pivot");
     await expect(rows.nth(1)).toContainText("Camera switched to free fly");
-    expect((await boxOf(rows.nth(0))).y)
-      .toBeGreaterThan((await boxOf(rows.nth(1))).y);
+    expect((await measureBox(rows.nth(0))).y)
+      .toBeGreaterThan((await measureBox(rows.nth(1))).y);
   });
 
   test("colours a peer name inside an entry", async({ page }) => {
@@ -37,7 +37,7 @@ test.describe("Log", () => {
 
     const name = page.locator("jolly-log .content b");
     await expect(name).toHaveText("Ada");
-    expect(await styleOf(name, "color")).not.toBe("rgb(0, 0, 0)");
+    expect(await readStyle(name, "color")).not.toBe("rgb(0, 0, 0)");
   });
 
   test("pairs its halo with the ink of the color scheme", async({ page }) => {
@@ -52,8 +52,8 @@ test.describe("Log", () => {
       }, scheme);
 
       return {
-        ink: await styleOf(log, "color"),
-        halo: await partStyleOf(log, ".content", "text-shadow")
+        ink: await readStyle(log, "color"),
+        halo: await readPartStyle(log, ".content", "text-shadow")
       };
     }
 

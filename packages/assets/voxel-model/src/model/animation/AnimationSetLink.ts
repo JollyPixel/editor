@@ -9,7 +9,7 @@ import type {
 import { InvalidModelTreeError } from "../errors/InvalidModelTreeError.ts";
 
 export class AnimationSetLink {
-  static problemOf(
+  static findProblem(
     link: AnimationSetLinkJSON
   ): string | null {
     const paths = new Set<string>();
@@ -29,7 +29,7 @@ export class AnimationSetLink {
   constructor(
     link: AnimationSetLinkJSON
   ) {
-    const problem = AnimationSetLink.problemOf(link);
+    const problem = AnimationSetLink.findProblem(link);
     if (problem !== null) {
       throw new InvalidModelTreeError("animation-set", link.id, problem);
     }
@@ -45,7 +45,7 @@ export class AnimationSetLink {
     return this.#json.own === true;
   }
 
-  bindingOf(
+  findBinding(
     path: string
   ): AnimationBindingJSON | undefined {
     const track = new TrackPath(path);

@@ -1,24 +1,8 @@
 export type HistoryRefusal =
-  /**
-   * A peer changed a value the step would write back.
-   */
   | { reason: "peer"; clientId: string | null; }
-  /**
-   * The server refused the step's edit, or the undo or redo of it.
-   */
   | { reason: "server"; }
-  /**
-   * A document the step touched is not open in this history.
-   */
   | { reason: "closed"; documentId: string; }
-  /**
-   * A value the step would write back changed through a write no change
-   * reported, such as a snapshot load or a voxel layer moved under its cells.
-   */
   | { reason: "changed"; }
-  /**
-   * The documents refused every command of the step.
-   */
   | { reason: "gone"; };
 
 export interface HistoryStepInfo {

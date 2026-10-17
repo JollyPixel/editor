@@ -74,7 +74,6 @@ describe("Controls.Gamepad queries", () => {
 
       assert.doesNotThrow(() => gamepad.update());
       assert.strictEqual(gamepad.buttons[0][0].isDown, true);
-      // Buttons the controller never reported stay at their reset state.
       assert.strictEqual(gamepad.buttons[0][5].isDown, false);
     });
 
@@ -87,7 +86,6 @@ describe("Controls.Gamepad queries", () => {
 
       assert.strictEqual(gamepad.axisValue(0, 0), 0.9);
       assert.strictEqual(gamepad.axisValue(0, 1), -0.9);
-      // The absent second stick must not be poisoned with NaN/undefined.
       assert.strictEqual(gamepad.axisValue(0, 2), 0);
       assert.strictEqual(gamepad.axisValue(0, 3), 0);
     });

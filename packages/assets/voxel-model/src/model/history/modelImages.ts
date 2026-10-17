@@ -23,16 +23,16 @@ export interface ModelImage {
   readonly order: EntryOrder;
 }
 
-export function modelImageOf(
+export function captureModelImage(
   tree: ModelTreeReader,
   command: VoxelModelCommand
 ): ModelImage {
   return {
-    before: tree.imagesOf(command),
+    before: tree.captureImages(command),
     order: {
-      nodes: idsOf(tree.values()),
-      materials: idsOf(tree.materials.values()),
-      animationSets: idsOf(tree.animationSets.values())
+      nodes: collectIds(tree.values()),
+      materials: collectIds(tree.materials.values()),
+      animationSets: collectIds(tree.animationSets.values())
     }
   };
 }
@@ -64,7 +64,7 @@ function restored<TField extends ModelEntryField>(
   return order.flatMap((id) => entries.get(id) ?? []);
 }
 
-function idsOf(
+function collectIds(
   entries: Iterable<{ id: string; }>
 ): string[] {
   return Array.from(entries, ({ id }) => id);

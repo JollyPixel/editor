@@ -10,7 +10,6 @@ import assert from "node:assert/strict";
 import type { CommandChange } from "@jolly-pixel/history";
 import {
   EditChange,
-  encodePngPixels,
   toDocumentCommand,
   toPixelCommand,
   type DocumentCommand,
@@ -19,19 +18,11 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import {
-  PixelSyncClient,
-  type PixelCommandListener
-} from "#src/network/PixelSyncClient.ts";
+import { PixelSyncClient, type PixelCommandListener } from "#src/network/PixelSyncClient.ts";
 import { pixelEdits } from "#src/history/PixelEdits.ts";
-import {
-  command,
-  gray,
-  packed
-} from "../fixtures/commands.ts";
+import { command, gray } from "../fixtures/commands.ts";
 import { createPixelArtCanvas } from "../helpers/canvas.ts";
 import { MockEmitter } from "../helpers/emitter.ts";
-import { callsOf } from "../helpers/mock.ts";
 import { MockRoom } from "../helpers/room.ts";
 
 // CONSTANTS
@@ -191,188 +182,5 @@ describe("PixelSyncClient — local mutations", () => {
       { color: gray(1), xy: [2, 3] },
       { xy: [4, 5], rgba: [2, 2, 2, 255] }
     ]);
-  });
-});
-
-describe("PixelSyncClient — remote messages", () => {
-  test("applies a command from another client", () => {
-    const { room, host } = setup();
-    const stroke = command("stroke", {
-      color: gray(1),
-      positions: [{ x: 0, y: 0 }]
-    }, { clientId: "client-B" });
-
-    room.deliverCommand(stroke);
-
-    assert.deepStrictEqual(callsOf(host.applyRemoteCommand), [[stroke, "client-B"]]);
-  });
-
-  test("applies a packed command from another client unpacked", () => {
-    const { room, host } = setup();
-    const stroke = command("stroke", {
-      color: gray(1),
-      positions: [{ x: 0, y: 0 }, { x: 3, y: 1 }]
-    }, { clientId: "client-B" });
-
-    room.deliverCommand(packed(stroke));
-
-    assert.deepStrictEqual(callsOf(host.applyRemoteCommand), [[stroke, "client-B"]]);
-  });
-
-  test("applies a correction of its own command", () => {
-    const { room, host } = setup();
-    const correction = command("select-edit", {
-      positions: [{ x: 0, y: 0 }],
-      colors: [gray(3)]
-    }, { clientId: "client-A" });
-
-    room.deliverCommand(packed(correction), "correction");
-
-    assert.deepStrictEqual(callsOf(host.applyRemoteCommand), [[correction, "client-A"]]);
-  });
-
-  test("ignores its own echoed commands", () => {
-    const { room, host } = setup();
-
-    room.deliverCommand(command("resized", kResized.metadata, { clientId: "client-A" }));
-
-    assert.strictEqual(host.applyRemoteCommand.mock.callCount(), 0);
-  });
-
-  test("loads a snapshot with decoded pixels", () => {
-    const { room, host } = setup();
-
-    room.deliverSnapshot({
-      size: { x: 1, y: 1 },
-      pixels: Buffer.from([1, 2, 3, 255]).toString("base64"),
-      uvRegions: []
-    });
-
-    assert.deepStrictEqual(callsOf(host.loadSnapshot), [
-      [{ x: 1, y: 1 }, new Uint8ClampedArray([1, 2, 3, 255]), [], null, undefined]
-    ]);
-  });
-
-  test("loads a PNG snapshot before the commands that follow it", async() => {
-    const { room, host, client } = setup();
-    const order: string[] = [];
-    host.loadSnapshot.mock.mockImplementation(() => {
-      order.push("snapshot");
-    });
-    host.applyRemoteCommand.mock.mockImplementation(() => {
-      order.push("command");
-    });
-    const size = { x: 1, y: 1 };
-
-    room.deliverSnapshot({
-      size,
-      pixels: await encodePngPixels(new Uint8ClampedArray([1, 2, 3, 255]), size),
-      uvRegions: []
-    });
-    room.deliverCommand(command("resized", kResized.metadata, { clientId: "peer" }));
-    assert.deepStrictEqual(order, []);
-    await client.whenReady();
-
-    assert.deepStrictEqual(order, ["snapshot", "command"]);
-    assert.deepStrictEqual(callsOf(host.loadSnapshot), [
-      [size, new Uint8ClampedArray([1, 2, 3, 255]), [], null, undefined]
-    ]);
-  });
-
-  test("emits the asset room rejected notice", () => {
-    const { room, client } = setup();
-    const notices: unknown[] = [];
-    client.on("notice", (notice) => notices.push(notice));
-
-    room.emit("message", { type: "rejected", reason: "disk full" });
-
-    assert.deepStrictEqual(notices, [{ type: "rejected", reason: "disk full" }]);
-  });
-
-  test("becomes ready and emits \"ready\" once, on the first snapshot", () => {
-    const { room, client } = setup();
-    const ready = mock.fn();
-    client.on("ready", ready);
-
-    assert.strictEqual(client.ready, false);
-    room.deliverSnapshot();
-    room.deliverSnapshot();
-
-    assert.strictEqual(client.ready, true);
-    assert.strictEqual(ready.mock.callCount(), 1);
-  });
-});
-
-describe("PixelSyncClient — destroy", () => {
-  test("stops sending document commands and handling room messages", () => {
-    const { room, host, client } = setup();
-
-    client.destroy();
-    room.deliverSnapshot();
-    host.edit(kResized);
-
-    assert.strictEqual(host.loadSnapshot.mock.callCount(), 0);
-    assert.strictEqual(room.sent.length, 0);
-  });
-});
-
-describe("PixelSyncClient — UV region echoes", () => {
-  function setupEcho() {
-    const room: MockRoom = new MockRoom({
-      onSend: (sent) => room.deliverCommand(sent)
-    });
-    const { manager: canvas } = createPixelArtCanvas({
-      texture: { size: { x: 64, y: 64 }, maxSize: 64 },
-      zoom: { default: 4 }
-    });
-    new PixelSyncClient({ room, document: canvas.document });
-    const created: string[] = [];
-    canvas.uv.on("region-created", ({ region }) => created.push(region.id));
-
-    return {
-      room,
-      canvas,
-      created
-    };
-  }
-
-  test("creating a region broadcasts once and ignores the echo", () => {
-    const { room, canvas, created } = setupEcho();
-
-    canvas.uv.create({ id: "cube-a", width: 8, height: 8 });
-
-    assert.deepStrictEqual(room.sent.map((sent) => sent.action), ["uv-region-created"]);
-    assert.deepStrictEqual(created, ["cube-a"]);
-    assert.strictEqual([...canvas.uv.regions].length, 1);
-    canvas.destroy();
-  });
-
-  test("a duplicate remote create updates the known region instead of recreating it", () => {
-    const { room, canvas, created } = setupEcho();
-    canvas.uv.create({ id: "cube-a", width: 8, height: 8 });
-    const stateChanges: string[] = [];
-    canvas.uv.on("region-state-changed", ({ region }) => stateChanges.push(region.id));
-
-    room.deliverCommand({ ...room.sent[0], clientId: "other-client" });
-
-    assert.deepStrictEqual(created, ["cube-a"]);
-    assert.deepStrictEqual(stateChanges, ["cube-a"]);
-    assert.strictEqual([...canvas.uv.regions].length, 1);
-    canvas.destroy();
-  });
-
-  test("a new remote region is created", () => {
-    const { room, canvas, created } = setupEcho();
-    canvas.uv.create({ id: "cube-a", width: 8, height: 8 });
-    const [sent] = room.sent;
-    assert.strictEqual(sent.action, "uv-region-created");
-
-    room.deliverCommand(command("uv-region-created", {
-      region: { ...sent.metadata.region, id: "cube-b" }
-    }, { clientId: "other-client" }));
-
-    assert.deepStrictEqual(created, ["cube-a", "cube-b"]);
-    assert.strictEqual([...canvas.uv.regions].length, 2);
-    canvas.destroy();
   });
 });

@@ -73,11 +73,11 @@ export function shape(
   ));
 }
 
-export function dependenciesOf(
+export function createDependencies(
   edges: Record<string, string[]>
 ): AssetDependencies {
   return {
-    dependenciesOf: (assetId) => (edges[assetId] ?? []).map(
+    listDependencies: (assetId) => (edges[assetId] ?? []).map(
       (id): AssetReferenceData => {
         return {
           id,
@@ -85,22 +85,22 @@ export function dependenciesOf(
         };
       }
     ),
-    dependentsOf: (assetId) => Object.keys(edges).filter(
+    listDependents: (assetId) => Object.keys(edges).filter(
       (dependentId) => edges[dependentId]?.includes(assetId)
     )
   };
 }
 
-export function companionModelOf(
+export function createCompanionModel(
   records: AssetRecordData[] = COMPANION_RECORDS,
   edges: Record<string, string[]> = COMPANION_EDGES
 ): AssetTreeModel {
   return new AssetTreeModel(records, {
-    dependencies: dependenciesOf(edges)
+    dependencies: createDependencies(edges)
   });
 }
 
-export function labelOf(
+export function findLabel(
   nodes: readonly AssetTreeNode[],
   nodeId: string
 ): string | undefined {
@@ -109,7 +109,7 @@ export function labelOf(
       return node.label;
     }
 
-    const label = labelOf(node.children ?? [], nodeId);
+    const label = findLabel(node.children ?? [], nodeId);
     if (label !== undefined) {
       return label;
     }
@@ -119,7 +119,7 @@ export function labelOf(
 }
 
 export class FakeTreeCatalog implements AssetTreeCatalog {
-  readonly dependencies = dependenciesOf({});
+  readonly dependencies = createDependencies({});
   readonly byId = new Map<string, AssetRecordData>();
   readonly folderPaths: Set<string>;
   failure: string | null = null;

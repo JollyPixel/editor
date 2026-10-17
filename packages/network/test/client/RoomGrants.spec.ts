@@ -48,7 +48,7 @@ function setup() {
 
 describe("CapabilityTable", () => {
   test("withholds a capability when any of its events is not writable", () => {
-    const grants = kTable.grantsFor({
+    const grants = kTable.resolveGrants({
       can: (event) => (event === "fill" ? "read" : "write")
     });
 
@@ -57,7 +57,7 @@ describe("CapabilityTable", () => {
   });
 
   test("grants nothing to a role that only reads", () => {
-    const grants = kTable.grantsFor({
+    const grants = kTable.resolveGrants({
       can: () => "read"
     });
 

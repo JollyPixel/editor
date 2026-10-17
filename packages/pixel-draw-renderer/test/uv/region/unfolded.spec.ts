@@ -28,7 +28,7 @@ function rects(
   region: UVRegion
 ): Record<UVSlot, SelectionRect> {
   return Object.fromEntries(
-    region.slotsOf().map(({ slot, geometry }) => [slot, "shape" in geometry ? geometry.rect : geometry])
+    region.listSlots().map(({ slot, geometry }) => [slot, "shape" in geometry ? geometry.rect : geometry])
   );
 }
 
@@ -53,7 +53,7 @@ describe("UVRegion — unfold", () => {
 
     assert.deepStrictEqual(unfolded.bounds, bounds);
     for (const face of DEFAULT_UV_SLOTS) {
-      assert.deepStrictEqual(unfolded.rectFor(face), bounds);
+      assert.deepStrictEqual(unfolded.slotRect(face), bounds);
     }
   });
 
@@ -107,7 +107,7 @@ describe("UVRegion — unfold", () => {
       }
     }).unfold();
 
-    assert.deepStrictEqual(ramp.geometryFor("left"), {
+    assert.deepStrictEqual(ramp.slotGeometry("left"), {
       shape: "triangle",
       corner: "bottom-right",
       rect: { x: 4, y: 0, width: 4, height: 4 }
@@ -115,8 +115,8 @@ describe("UVRegion — unfold", () => {
     assert.deepStrictEqual(ramp.bounds, { x: 0, y: 0, width: 8, height: 12 });
   });
 
-  test("facesOf yields one entry per active face, none of them null", () => {
-    const faces = stackedRegion().unfold().slotsOf();
+  test("countViewFaces yields one entry per active face, none of them null", () => {
+    const faces = stackedRegion().unfold().listSlots();
 
     assert.deepStrictEqual(
       faces.map(({ slot }) => slot),
@@ -142,7 +142,7 @@ describe("UVRegion — transitions out of unfolded", () => {
     assert.strictEqual(stacked.state, "stacked");
     assert.strictEqual(stacked.stackedFace, "front");
     assert.deepStrictEqual(
-      stacked.rectFor("front"),
+      stacked.slotRect("front"),
       { x: 8, y: 8, width: 4, height: 4 }
     );
   });
@@ -152,7 +152,7 @@ describe("UVRegion — transitions out of unfolded", () => {
 
     assert.strictEqual(stacked.stackedFace, "bottom");
     assert.deepStrictEqual(
-      stacked.rectFor("front"),
+      stacked.slotRect("front"),
       { x: 4, y: 8, width: 4, height: 4 }
     );
   });

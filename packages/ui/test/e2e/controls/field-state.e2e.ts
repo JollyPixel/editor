@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
-  boxOf,
-  widthOf
+  measureBox,
+  measureWidth
 } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
@@ -16,7 +16,7 @@ import {
   fieldControl as control
 } from "../support/field.ts";
 import { fieldRow as row, openExample } from "../support/gallery.ts";
-import { styleOf } from "../support/styles.ts";
+import { readStyle } from "../support/styles.ts";
 
 // CONSTANTS
 const kFields = [
@@ -40,13 +40,13 @@ const kInputlessFields = [
   { id: "controls/layer-grid", tag: "jolly-layer-grid" }
 ];
 
-function paintOf(
+function readPaint(
   field: Locator,
   track: string | undefined
 ): Promise<string> {
   return track === undefined ?
-    styleOf(control(field), "accent-color") :
-    styleOf(field.locator(track), "background-image", "::before");
+    readStyle(control(field), "accent-color") :
+    readStyle(field.locator(track), "background-image", "::before");
 }
 
 async function expectLabelColumn(
@@ -56,7 +56,7 @@ async function expectLabelColumn(
   const field = page.locator(tag).first();
 
   await expect(field).toHaveCSS("--jolly-label-width", "14ch");
-  expect(await widthOf(field.locator(".label-cell").first()))
+  expect(await measureWidth(field.locator(".label-cell").first()))
     .toBeGreaterThanOrEqual(80);
 }
 
@@ -68,12 +68,12 @@ async function expectStableLockedLayout(
   const locked = row(page, tag, "locked");
   const [plainLabel, lockedLabel, plainValue, lockedValue, plainRow, lockedRow] =
     await Promise.all([
-      boxOf(plain.locator(".label")),
-      boxOf(locked.locator(".label")),
-      boxOf(plain.locator(".value")),
-      boxOf(locked.locator(".value")),
-      boxOf(plain),
-      boxOf(locked)
+      measureBox(plain.locator(".label")),
+      measureBox(locked.locator(".label")),
+      measureBox(plain.locator(".value")),
+      measureBox(locked.locator(".value")),
+      measureBox(plain),
+      measureBox(locked)
     ]);
 
   expect(lockedLabel.x).toBe(plainLabel.x);
@@ -88,10 +88,10 @@ async function expectStackedChrome(
 ): Promise<void> {
   const field = row(page, tag, "stacked+modified+peers");
   const [label, peers, revert, value] = await Promise.all([
-    boxOf(field.locator(".label")),
-    boxOf(field.locator(".peers")),
-    boxOf(field.locator(".revert")),
-    boxOf(field.locator(".value"))
+    measureBox(field.locator(".label")),
+    measureBox(field.locator(".peers")),
+    measureBox(field.locator(".revert")),
+    measureBox(field.locator(".value"))
   ]);
 
   expect(peers.y + peers.height).toBeLessThanOrEqual(value.y);
@@ -150,7 +150,7 @@ test.describe("controls: state matrix", () => {
         await expect(revert).toBeVisible();
         await expect(revert).toHaveCSS(
           "color",
-          await styleOf(modified.locator(".label"), "color")
+          await readStyle(modified.locator(".label"), "color")
         );
         await expect(
           row(page, tag, "mixed+modified").locator(".revert")
@@ -177,8 +177,8 @@ test.describe("controls: state matrix", () => {
           await expect(neutral).not.toHaveAttribute("colored", "");
           await expect(accented).toHaveJSProperty("colored", true);
           await expect(accented).toHaveAttribute("colored", "");
-          expect(await paintOf(neutral, track))
-            .not.toBe(await paintOf(accented, track));
+          expect(await readPaint(neutral, track))
+            .not.toBe(await readPaint(accented, track));
         });
       }
 
@@ -194,11 +194,11 @@ test.describe("controls: state matrix", () => {
 
         for (const target of [tint, chip]) {
           await expect.poll(
-            () => styleOf(target, "opacity", "::after")
+            () => readStyle(target, "opacity", "::after")
           ).toBe("0");
           await target.hover();
           await expect.poll(
-            () => styleOf(target, "opacity", "::after"),
+            () => readStyle(target, "opacity", "::after"),
             { timeout: 500 }
           ).toBe("1");
         }
@@ -216,23 +216,23 @@ test.describe("controls: state matrix", () => {
         expect(
           await input.evaluate((node: HTMLInputElement) => node.disabled)
         ).toBe(false);
-        await expect.poll(() => styleOf(tint, "background-color"))
+        await expect.poll(() => readStyle(tint, "background-color"))
           .toBe(TRANSPARENT);
 
         await input.focus();
         await expect(input).toBeFocused();
-        await expect.poll(() => styleOf(tint, "background-color"))
+        await expect.poll(() => readStyle(tint, "background-color"))
           .not.toBe(TRANSPARENT);
 
         await expect(locked).toHaveCSS("box-shadow", /inset/);
         await expect(locked).not.toHaveCSS("background-color", TRANSPARENT);
         await expect(locked).toHaveCSS("padding-block-start", "0px");
-        expect(await styleOf(locked, "--jolly-locked-ring")).not.toBe("");
+        expect(await readStyle(locked, "--jolly-locked-ring")).not.toBe("");
 
         const [field, inner, value] = await Promise.all([
-          boxOf(locked),
-          boxOf(tint),
-          boxOf(input)
+          measureBox(locked),
+          measureBox(tint),
+          measureBox(input)
         ]);
         expect(inner.y).toBe(field.y);
         expect(value.y).toBeGreaterThanOrEqual(field.y);

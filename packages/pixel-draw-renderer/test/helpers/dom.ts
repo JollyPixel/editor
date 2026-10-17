@@ -51,7 +51,7 @@ export function makeContainer(
   return container;
 }
 
-export function overlayOf(
+export function findOverlay(
   container: Element
 ): SVGSVGElement {
   const overlay = container.querySelector<SVGSVGElement>(

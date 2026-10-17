@@ -12,7 +12,7 @@ import * as THREE from "three";
 import { createAxisHandleGeometry } from "#src/transform-controls/handles/geometry.ts";
 import { assertClose } from "./harness.ts";
 
-function boundsOf(
+function measureBounds(
   geometry: THREE.BufferGeometry
 ): THREE.Box3 {
   geometry.computeBoundingBox();
@@ -27,7 +27,7 @@ describe("createAxisHandleGeometry", () => {
       shaftLength: 1,
       size: 0.2
     });
-    const bounds = boundsOf(geometry);
+    const bounds = measureBounds(geometry);
 
     assertClose(bounds.max.x - bounds.min.x, 0.2, "width");
     assertClose(bounds.max.z - bounds.min.z, 0.2, "breadth");
@@ -43,7 +43,7 @@ describe("createAxisHandleGeometry", () => {
       depth: 0.04
     });
 
-    assertClose(boundsOf(geometry).max.y, 1.02, "tip");
+    assertClose(measureBounds(geometry).max.y, 1.02, "tip");
     assertClose(length, 1.02, "length");
   });
 
@@ -53,7 +53,7 @@ describe("createAxisHandleGeometry", () => {
       shaftLength: 1,
       radius: 0.1
     });
-    const bounds = boundsOf(geometry);
+    const bounds = measureBounds(geometry);
 
     assertClose(bounds.max.x - bounds.min.x, 0.2, "width");
     assertClose(bounds.max.y, 1.1, "tip");

@@ -34,9 +34,6 @@ export interface AddLayerResult {
   name: string;
 }
 
-/**
- * Creates layers or objects; default names follow the kind until edited.
- */
 @customElement("add-layer-dialog")
 export class AddLayerDialog extends LitElement {
   static override styles = css`
@@ -77,9 +74,6 @@ export class AddLayerDialog extends LitElement {
     this._canAddObject = false;
   }
 
-  /**
-   * Resolves to null when dismissed or given a blank name.
-   */
   async open(
     context: AddLayerContext
   ): Promise<AddLayerResult | null> {

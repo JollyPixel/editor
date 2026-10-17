@@ -18,10 +18,10 @@ import {
   assetNodeId,
   folderNodeId
 } from "../../src/catalog/AssetTreeModel.ts";
-import { companionModelOf } from "../helpers/assetTree.ts";
+import { createCompanionModel } from "../helpers/assetTree.ts";
 
 // CONSTANTS
-const kModel = companionModelOf();
+const kModel = createCompanionModel();
 const kKinds = new AssetKindSet({
   kinds: [
     {
@@ -39,7 +39,7 @@ const kKinds = new AssetKindSet({
   editable: ["voxelmap"]
 });
 
-function summaryOf(
+function createSummary(
   ...nodeIds: string[]
 ): AssetSummary {
   return summarizeSelection(new AssetSelection(kModel, nodeIds), kKinds);
@@ -47,7 +47,7 @@ function summaryOf(
 
 describe("AssetSummary", () => {
   test("an editable asset names its kind, its folder and the asset to open", () => {
-    assert.deepEqual(summaryOf(assetNodeId("map-cave")), {
+    assert.deepEqual(createSummary(assetNodeId("map-cave")), {
       subject: "asset",
       title: "cave.voxelmap.json",
       icon: "voxel-map",
@@ -58,21 +58,21 @@ describe("AssetSummary", () => {
   });
 
   test("an asset without an editor offers nothing to open", () => {
-    assert.partialDeepStrictEqual(summaryOf(assetNodeId("blockset-overworld")), {
+    assert.partialDeepStrictEqual(createSummary(assetNodeId("blockset-overworld")), {
       kindLabel: "Blockset",
       editableAssetId: null
     });
   });
 
   test("an asset of an unknown kind falls back to the raw kind", () => {
-    assert.partialDeepStrictEqual(summaryOf(assetNodeId("notes-hero")), {
+    assert.partialDeepStrictEqual(createSummary(assetNodeId("notes-hero")), {
       kindLabel: "binary",
       editableAssetId: null
     });
   });
 
   test("a folder is described from its parent", () => {
-    assert.deepEqual(summaryOf(folderNodeId(AssetPath.parse("models"))), {
+    assert.deepEqual(createSummary(folderNodeId(AssetPath.parse("models"))), {
       subject: "folder",
       title: "models",
       icon: "folder",
@@ -82,7 +82,7 @@ describe("AssetSummary", () => {
   });
 
   test("several nodes only report how many are selected", () => {
-    const summary = summaryOf(
+    const summary = createSummary(
       assetNodeId("map-cave"),
       assetNodeId("model-hero")
     );
@@ -94,7 +94,7 @@ describe("AssetSummary", () => {
   });
 
   test("an empty or stale selection describes nothing", () => {
-    assert.equal(summaryOf(), NO_ASSET_SUMMARY);
-    assert.equal(summaryOf(assetNodeId("gone")), NO_ASSET_SUMMARY);
+    assert.equal(createSummary(), NO_ASSET_SUMMARY);
+    assert.equal(createSummary(assetNodeId("gone")), NO_ASSET_SUMMARY);
   });
 });

@@ -25,10 +25,6 @@ export interface FramePlotOptions {
   samples?: number;
 }
 
-/**
- * Scheduler limits the plot cannot read from a `FrameSchedule`.
- * Drawn as dashed reference lines so a moved slider shows up on the plot.
- */
 export interface FramePlotLimits {
   maxFrameDelta?: number;
   maxStepsPerFrame?: number;
@@ -63,14 +59,7 @@ interface Mark {
   label: string;
 }
 
-/**
- * Plots frame delta, step count, and accumulator depth per frame.
- * Clamp and panic states use distinct colors.
- */
 export class FramePlot {
-  /**
-   * Mutable so a demo can keep the reference lines in sync with its sliders.
-   */
   limits: FramePlotLimits = {};
 
   #canvas: HTMLCanvasElement;
@@ -111,19 +100,12 @@ export class FramePlot {
     this.#dropScrolledMarks();
   }
 
-  /**
-   * Flags the current frame, so a settings change stays legible on the plot.
-   */
   mark(
     label: string
   ): void {
     this.#marks.push({ at: this.#pushed, label });
   }
 
-  /**
-   * Replaces retained frames with the latest schedules.
-   * A replayed tape owns the full width instead of one column per capacity.
-   */
   replace(
     schedules: Iterable<FrameSchedule>
   ): void {
@@ -203,10 +185,6 @@ export class FramePlot {
     context.font = "11px monospace";
     context.textAlign = "left";
     context.fillStyle = kColors.text;
-    /*
-     * Every lane auto-scales to its window. Without the top printed, the same
-     * settings can draw two plots that look nothing alike.
-     */
     context.fillText(`${lane.label} (top ${lane.format(scale)})`, 8, top + 15);
     if (last) {
       context.fillStyle = lane.color;
@@ -227,7 +205,7 @@ export class FramePlot {
     this.#samples.forEach((schedule, index) => {
       const value = Math.min(lane.value(schedule), scale);
       const barHeight = Math.max((value / scale) * plotHeight, 1);
-      context.fillStyle = colorOf(schedule, lane.color);
+      context.fillStyle = scheduleColor(schedule, lane.color);
       context.fillRect(
         index * columnWidth,
         plotTop + plotHeight - barHeight,
@@ -298,9 +276,6 @@ export class FramePlot {
     }
   }
 
-  /**
-   * Resizes the backing store and returns its CSS-pixel dimensions.
-   */
   #resize(): { width: number; height: number; } {
     const ratio = window.devicePixelRatio || 1;
     const width = this.#canvas.clientWidth;
@@ -321,10 +296,7 @@ export class FramePlot {
   }
 }
 
-/**
- * Gives panic color precedence over clamp color.
- */
-function colorOf(
+function scheduleColor(
   schedule: FrameSchedule,
   fallback: string
 ): string {
@@ -362,10 +334,6 @@ function createLanes(): Lane[] {
     {
       label: "steps per frame",
       value: ({ steps }) => steps,
-      /*
-       * The budget is part of the scale, so its line is on screen before the
-       * first frame ever reaches it.
-       */
       scale: (samples, { maxStepsPerFrame = 0 }) => Math.max(
         2,
         maxStepsPerFrame,
@@ -374,10 +342,6 @@ function createLanes(): Lane[] {
       format: (value) => `${value}`,
       style: "bar",
       color: kColors.normal,
-      /*
-       * Read from the live limit, never from the first panic in the window:
-       * that one reports the budget as it was, not as it is now.
-       */
       reference: (_samples, { maxStepsPerFrame }) => (
         maxStepsPerFrame === undefined ?
           null :

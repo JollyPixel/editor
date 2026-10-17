@@ -39,7 +39,7 @@ history.register({
     }))
   },
   // a change made outside record() becomes its own step in this scope
-  scopeOf: () => "build"
+  resolveScope: () => "build"
 });
 
 history.record("build", "Set hp", () => stats.set("hp", 20));

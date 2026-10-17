@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import type { Locator, Page } from "@playwright/test";
-import { boxOf, dragTo } from "@jolly-pixel/e2e";
+import { measureBox, dragTo } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import { Pane } from "./pane.ts";
@@ -38,7 +38,7 @@ export class FloatingWindow {
   async resizeTo(
     size: { width: number; height: number; }
   ): Promise<void> {
-    const box = await boxOf(this.root);
+    const box = await measureBox(this.root);
     await dragTo(this.#page, this.resizeHandle("right"), {
       x: box.x + size.width,
       y: box.y + (box.height / 2)

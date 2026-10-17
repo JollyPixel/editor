@@ -73,7 +73,7 @@ export class SessionOpener {
     }
     void early?.then((session) => session.dispose(), () => undefined);
 
-    this.#connection ??= this.#connectFor(launch);
+    this.#connection ??= this.#openConnection(launch);
 
     return this.#openOn(this.#connection, launch);
   }
@@ -101,7 +101,7 @@ export class SessionOpener {
     });
   }
 
-  #connectFor(
+  #openConnection(
     launch: EditorLaunch
   ): Promise<SessionConnection> {
     if (this.#connect === undefined) {

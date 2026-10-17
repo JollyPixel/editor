@@ -32,7 +32,7 @@ import { MockRoom } from "../helpers/room.ts";
 const kColor = { r: 12, g: 34, b: 56, a: 128 };
 const kOtherColor = { r: 200, g: 100, b: 50, a: 255 };
 
-function stateOf(): PixelDocumentState {
+function createState(): PixelDocumentState {
   return new PixelDocumentState({
     buffer: new PixelBuffer({ size: { x: 1, y: 1 } })
   });
@@ -55,7 +55,7 @@ describe("palette network commands", () => {
       })).ok, false);
     }
     const snapshots = new SchemaParser(pixelSnapshotSchema);
-    const snapshot = pixelArtSnapshot(stateOf());
+    const snapshot = pixelArtSnapshot(createState());
     assert.equal(snapshots.parse(snapshot).ok, true);
     assert.equal(snapshots.parse({ ...snapshot, palette: [] }).ok, false);
     delete snapshot.palette;
@@ -63,7 +63,7 @@ describe("palette network commands", () => {
   });
 
   test("different slots survive while stale same-slot replays lose after restart", () => {
-    const state = stateOf();
+    const state = createState();
     const newer = command("palette-color-changed", {
       index: 3, color: kColor
     }, { clientId: "B", timestamp: 900 });
@@ -96,7 +96,7 @@ describe("palette network commands", () => {
     const peer = new PixelDocument({ size: { x: 1, y: 1 } });
     const room = new MockRoom({ clientId: "A" });
     const sync = new PixelSyncClient({ room, document: local });
-    room.deliverSnapshot(pixelArtSnapshot(stateOf()));
+    room.deliverSnapshot(pixelArtSnapshot(createState()));
     local.changePaletteColor(2, kColor);
     const pending = room.sent[0];
     peer.applyRemoteCommand(unpackPixelCommand(pending));
@@ -117,7 +117,7 @@ describe("palette network commands", () => {
   });
 
   test("base64 and PNG reconnect snapshots carry palette alpha and reset legacy state", async() => {
-    const state = stateOf();
+    const state = createState();
     applyPixelCommand(state, command("palette-color-changed", {
       index: 9, color: kColor
     }));

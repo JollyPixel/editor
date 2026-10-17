@@ -20,7 +20,7 @@ import { TileOpacityProbe } from "../../../../src/features/blocks/rendering/tile
 import { BlockRenderSources } from "../../../../src/features/blocks/rendering/BlockRenderSources.ts";
 import type { GhostTarget } from "../../../../src/features/painting/model/ghostTarget.ts";
 
-function ghostOf(): GhostBlock {
+function createGhost(): GhostBlock {
   const atlases = new BlocksetAtlases();
 
   return new GhostBlock({
@@ -55,7 +55,7 @@ function resolveTarget(
   };
 }
 
-function meshOf(
+function readMesh(
   ghost: GhostBlock
 ): THREE.Mesh<THREE.BufferGeometry, THREE.Material[]> {
   const [mesh] = ghost.children;
@@ -67,11 +67,11 @@ function meshOf(
 
 describe("GhostBlock", () => {
   test("starts hidden", () => {
-    assert.equal(ghostOf().visible, false);
+    assert.equal(createGhost().visible, false);
   });
 
   test("centres the block on its cell", () => {
-    const ghost = ghostOf();
+    const ghost = createGhost();
 
     assert.equal(ghost.draw(resolveTarget()), true);
     assert.equal(ghost.visible, true);
@@ -84,9 +84,9 @@ describe("GhostBlock", () => {
   });
 
   test("draws semi-transparent without writing depth", () => {
-    const ghost = ghostOf();
+    const ghost = createGhost();
     ghost.draw(resolveTarget());
-    const [material] = meshOf(ghost).material;
+    const [material] = readMesh(ghost).material;
 
     assert.equal(material.transparent, true);
     assert.ok(material.opacity < 1);
@@ -94,29 +94,29 @@ describe("GhostBlock", () => {
   });
 
   test("slightly grows over an existing block", () => {
-    const ghost = ghostOf();
+    const ghost = createGhost();
     ghost.draw(resolveTarget({ overlay: true }));
 
     assert.ok(ghost.scale.x > 1);
   });
 
   test("reuses the geometry of an orientation it already built", () => {
-    const ghost = ghostOf();
+    const ghost = createGhost();
 
     ghost.draw(resolveTarget());
-    const identity = meshOf(ghost).geometry;
+    const identity = readMesh(ghost).geometry;
     ghost.draw(resolveTarget({
       transform: new VoxelTransform({ rotation: 1 })
     }));
-    const rotated = meshOf(ghost).geometry;
+    const rotated = readMesh(ghost).geometry;
     ghost.draw(resolveTarget());
 
     assert.notEqual(rotated, identity);
-    assert.equal(meshOf(ghost).geometry, identity);
+    assert.equal(readMesh(ghost).geometry, identity);
   });
 
   test("hides itself for an unknown block", () => {
-    const ghost = ghostOf();
+    const ghost = createGhost();
     ghost.draw(resolveTarget());
 
     assert.equal(ghost.draw(resolveTarget({ blockId: 99 })), false);

@@ -57,7 +57,7 @@ describe("voxel map created without content", () => {
       .find((record) => record.source === "maps/new.blockset.json");
     assert.strictEqual(blockset?.kind, BLOCKSET_KIND);
     assert.deepEqual(
-      backend.catalog.dependencies.dependenciesOf(map.assetId),
+      backend.catalog.dependencies.listDependencies(map.assetId),
       [blocksetAsset(blockset.id)]
     );
 

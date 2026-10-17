@@ -12,10 +12,6 @@ export interface EulerAngles {
   readonly z: number;
 }
 
-/**
- * Converts a quaternion to XYZ Euler radians.
- * Near the poles, equivalent triples may change discontinuously.
- */
 export function quaternionToEuler(
   quaternion: QuatLike
 ): EulerAngles {
@@ -41,10 +37,6 @@ export function quaternionToEuler(
     };
   }
 
-  /*
-   * Gimbal lock: X and Z become coupled around this axis, so Z collapses to
-   * zero and X absorbs the combined rotation.
-   */
   return {
     x: Math.atan2(m32, m22),
     y,
@@ -52,9 +44,6 @@ export function quaternionToEuler(
   };
 }
 
-/**
- * Euler angles, in radians order "XYZ", to a quaternion.
- */
 export function eulerToQuaternion(
   euler: EulerAngles
 ): QuatLike {
@@ -75,9 +64,6 @@ export function eulerToQuaternion(
   };
 }
 
-/**
- * Tests an Euler round trip by dot-product magnitude, treating q and -q alike.
- */
 export function eulerRoundTrips(
   euler: EulerAngles,
   target: QuatLike,

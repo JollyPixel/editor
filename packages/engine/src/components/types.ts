@@ -20,16 +20,10 @@ export interface Component {
   bind?(): void;
   awake?(): void;
   start?(): void;
-  /**
-   * Called per rendered frame. Use `alpha` in [0, 1) for interpolation.
-   */
   update?(
     deltaTime: number,
     alpha?: number
   ): void;
-  /**
-   * Called per fixed step. `stepIndex` starts at zero for each frame.
-   */
   fixedUpdate?(
     deltaTime: number,
     stepIndex?: number

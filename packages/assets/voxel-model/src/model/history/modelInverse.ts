@@ -14,7 +14,7 @@ import type { EntryTreeReader } from "./modelCommands.ts";
 import type { ModelTreeReader } from "../ModelTree.ts";
 import type { OrderedTreeEntry } from "../OrderedTree.ts";
 
-export function inverseOf(
+export function invert(
   tree: ModelTreeReader,
   command: VoxelModelCommand
 ): VoxelModelCommand[] {
@@ -44,7 +44,7 @@ export function inverseOf(
             transform: existing(tree.block(id), "node", id).transform
           };
         }),
-        ...withBefore(tree.nextSiblingOf(node.id))
+        ...withBefore(tree.findNextSibling(node.id))
       }];
     }
 
@@ -73,7 +73,7 @@ export function inverseOf(
       return [{
         action: "node-shape-changed",
         id: block.id,
-        shape: BlockShape.of(block),
+        shape: BlockShape.fromBlock(block),
         uv: block.uv
       }];
     }
@@ -82,7 +82,7 @@ export function inverseOf(
       return [{
         action: "node-material-changed",
         id: command.id,
-        materialId: tree.materialIdOf(command.id) ?? null
+        materialId: tree.blockMaterialId(command.id) ?? null
       }];
 
     case "material-added":
@@ -103,7 +103,7 @@ export function inverseOf(
         action: "material-moved",
         id: entry.id,
         parentId: entry.parentId,
-        ...withBefore(tree.materials.nextSiblingOf(entry.id))
+        ...withBefore(tree.materials.findNextSibling(entry.id))
       }];
     }
 
@@ -220,9 +220,9 @@ function readded<T extends OrderedTreeEntry>(
   kind: ModelTreeEntry
 ): ReaddedEntry<T>[] {
   const root = existing(entries.get(id), kind, id);
-  const before = withBefore(entries.nextSiblingOf(id));
+  const before = withBefore(entries.findNextSibling(id));
 
-  return preorder(root, (parentId) => entries.childrenOf(parentId)).map(
+  return preorder(root, (parentId) => entries.listChildren(parentId)).map(
     (entry, index) => {
       return {
         entry,
@@ -242,9 +242,9 @@ function refoldMaterials(
     {
       action: "material-folder-added",
       folder,
-      ...withBefore(tree.materials.nextSiblingOf(id))
+      ...withBefore(tree.materials.findNextSibling(id))
     },
-    ...tree.materials.childrenOf(id).map((child): VoxelModelCommand => {
+    ...tree.materials.listChildren(id).map((child): VoxelModelCommand => {
       return {
         action: "material-moved",
         id: child.id,
@@ -268,10 +268,10 @@ function existingFolder(
 
 function preorder<T extends OrderedTreeEntry>(
   root: T,
-  childrenOf: (parentId: string) => T[]
+  listChildren: (parentId: string) => T[]
 ): T[] {
   return [
     root,
-    ...childrenOf(root.id).flatMap((child) => preorder(child, childrenOf))
+    ...listChildren(root.id).flatMap((child) => preorder(child, listChildren))
   ];
 }

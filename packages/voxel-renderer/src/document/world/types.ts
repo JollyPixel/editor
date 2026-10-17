@@ -43,9 +43,6 @@ export interface VoxelCellChange {
 }
 
 export interface VoxelEditRecorder {
-  /**
-   * Receives the cells changed by one non-silent voxel mutation.
-   */
   record(changes: VoxelCellChange[]): void;
 }
 

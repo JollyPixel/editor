@@ -1,6 +1,3 @@
-/**
- * Immutable pixel bounds for a resize interaction.
- */
 export class ResizeBounds {
   readonly min: number;
   readonly max: number;

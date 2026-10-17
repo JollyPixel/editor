@@ -29,7 +29,6 @@ export const COLOR_EXAMPLE: GalleryExample<"alpha"> = {
       modified(field) {
         field.value = options.alpha ? "#ff660080" : "#ff6600";
       },
-      // Keep the swatch synced while the popup streams drag input.
       liveInput: true
     });
   }

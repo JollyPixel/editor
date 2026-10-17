@@ -3,8 +3,8 @@ import type { Rule } from "../Rule.ts";
 import { ForbiddenName } from "../ForbiddenName.ts";
 
 // CONSTANTS
-const kOfName = /^of$|[a-z0-9]Of$/;
-const kDefaultAllowed = ["indexOf", "lastIndexOf", "valueOf"];
+const kOfName = /^of$|[a-z0-9](?:Of|For)$/;
+const kDefaultAllowed = ["indexOf", "lastIndexOf", "valueOf", "waitFor"];
 
 function isFunction(
   node: { type: string; } | null | undefined
@@ -16,10 +16,10 @@ export const noOfNames: Rule = {
   meta: {
     type: "suggestion",
     docs: {
-      description: "Disallow functions and methods named `of` or ending with `Of`"
+      description: "Disallow functions and methods named `of` or ending with `Of` or `For`"
     },
     messages: {
-      ofName: "`{{name}}` hides its intent: name the action (`parseX`, `fromX`, `xFor`) instead of `of`."
+      ofName: "`{{name}}` hides its intent: name what it does (`parseX`, `findX`), not a preposition."
     },
     schema: ForbiddenName.schema
   },

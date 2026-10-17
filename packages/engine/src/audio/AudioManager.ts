@@ -73,7 +73,7 @@ export class GlobalAudioManager implements AudioManager {
     this.#loadBuffer = loadBuffer;
   }
 
-  #bufferFor(
+  #fetchBuffer(
     url: string
   ): Promise<AudioBuffer> {
     let buffer = this.#buffers.get(url);
@@ -111,14 +111,14 @@ export class GlobalAudioManager implements AudioManager {
     url: string,
     options: AudioLoadingOptions = {}
   ): Promise<THREE.Audio> {
-    return this.createAudio(await this.#bufferFor(url), options);
+    return this.createAudio(await this.#fetchBuffer(url), options);
   }
 
   async loadPositionalAudio(
     url: string,
     options: AudioLoadingOptions = {}
   ): Promise<THREE.PositionalAudio> {
-    return this.createPositionalAudio(await this.#bufferFor(url), options);
+    return this.createPositionalAudio(await this.#fetchBuffer(url), options);
   }
 
   createAudio(

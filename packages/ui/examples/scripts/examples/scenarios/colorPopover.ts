@@ -10,7 +10,7 @@ import {
 import "../../../../src/controls/ColorPicker.ts";
 import type { GalleryExample } from "../../types.ts";
 import { PopoverController } from "../../../../src/field/PopoverController.ts";
-import { detailOf } from "../../../../src/dom.ts";
+import { readDetail } from "../../../../src/dom.ts";
 import type { JollyChangeDetail } from "../../../../src/field/events.ts";
 
 // CONSTANTS
@@ -29,7 +29,6 @@ export const COLOR_POPOVER_EXAMPLE: GalleryExample = {
       "Swatch, popup and picker with no jolly-color row. The same PopoverController " +
       "an editor uses for a brush colour.";
 
-    // A nested scope would reset color-scheme to the system preference.
     root.append(
       hint,
       document.createElement(kTag)
@@ -98,7 +97,7 @@ function define(): void {
     #onChange(
       event: Event
     ): void {
-      const detail = detailOf<JollyChangeDetail<string>>(event);
+      const detail = readDetail<JollyChangeDetail<string>>(event);
       if (detail !== null) {
         this.value = detail.value;
       }

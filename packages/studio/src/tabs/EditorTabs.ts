@@ -241,7 +241,7 @@ export class EditorTabs {
   focus(
     id: string
   ): boolean {
-    if (this.#itemOf(id) === null) {
+    if (this.#findItem(id) === null) {
       return false;
     }
 
@@ -259,7 +259,7 @@ export class EditorTabs {
   close(
     id: string
   ): boolean {
-    const item = this.#itemOf(id);
+    const item = this.#findItem(id);
     if (item === null || id === HOME_TAB_ID) {
       return false;
     }
@@ -330,7 +330,7 @@ export class EditorTabs {
     id: string,
     index: number
   ): boolean {
-    const item = this.#itemOf(id);
+    const item = this.#findItem(id);
     if (item === null || id === HOME_TAB_ID) {
       return false;
     }
@@ -397,7 +397,7 @@ export class EditorTabs {
     return item;
   }
 
-  #itemOf(
+  #findItem(
     id: string
   ): HTMLElement | null {
     const item = this.#open.get(id)?.item ?? this.#pages.get(id)?.item;

@@ -74,7 +74,7 @@ export class BlockUvBridge {
     );
   }
 
-  setActiveBlockset(
+  activateBlockset(
     slot: BlocksetSlot,
     tileSize: number
   ): void {
@@ -123,7 +123,7 @@ export class BlockUvBridge {
     );
   }
 
-  #regionFor(
+  #resolveRegion(
     block: ResolvedBlockDefinition
   ): UVRegion {
     return this.#resolveBlockUv(block).region();
@@ -132,7 +132,7 @@ export class BlockUvBridge {
   #rebuild(): void {
     const desired = new Map(
       this.#blocksOnActiveBlockset().map((block) => {
-        const region = this.#regionFor(block);
+        const region = this.#resolveRegion(block);
 
         return [region.id, region] as const;
       })
@@ -142,7 +142,7 @@ export class BlockUvBridge {
       this.#runLocalRestore(() => {
         for (const region of [...this.#uv.regions]) {
           if (
-            BlockProjection.localBlockIdOf(region.id) !== null &&
+            BlockProjection.parseLocalBlockId(region.id) !== null &&
             !desired.has(region.id)
           ) {
             this.#uv.delete(region.id);
@@ -163,10 +163,10 @@ export class BlockUvBridge {
     this.#selection.refresh();
   }
 
-  #restoreRegionFor(
+  #restoreRegion(
     block: ResolvedBlockDefinition
   ): void {
-    const region = this.#regionFor(block);
+    const region = this.#resolveRegion(block);
     const existing = this.#uv.get(region.id);
     if (existing && BlockUv.sameRegion(existing, region)) {
       return;
@@ -211,7 +211,7 @@ export class BlockUvBridge {
     this.#forgetDrag(event.region.id);
 
     const block = this.#resolveBlock(event.region.id);
-    if (!block || BlockUv.sameRegion(this.#regionFor(block), event.region)) {
+    if (!block || BlockUv.sameRegion(this.#resolveRegion(block), event.region)) {
       return;
     }
 
@@ -237,7 +237,7 @@ export class BlockUvBridge {
 
     for (const region of dragged) {
       const block = this.#resolveBlock(region.id);
-      if (block && !BlockUv.sameRegion(this.#regionFor(block), region)) {
+      if (block && !BlockUv.sameRegion(this.#resolveRegion(block), region)) {
         this.#applyRegionToBlock(region);
       }
     }
@@ -279,7 +279,7 @@ export class BlockUvBridge {
       return;
     }
     const block = this.#resolveBlock(event.region.id);
-    if (!block || BlockUv.sameRegion(this.#regionFor(block), event.region)) {
+    if (!block || BlockUv.sameRegion(this.#resolveRegion(block), event.region)) {
       return;
     }
 
@@ -304,7 +304,7 @@ export class BlockUvBridge {
     try {
       this.#runLocalRestore(() => {
         this.#uv.restore(uv.freeRegion());
-        this.#uv.setState(id, state);
+        this.#uv.applyState(id, state);
       });
     }
     finally {
@@ -353,7 +353,7 @@ export class BlockUvBridge {
       return;
     }
 
-    this.#restoreRegionFor(block);
+    this.#restoreRegion(block);
     this.#selection.refresh();
   };
 }

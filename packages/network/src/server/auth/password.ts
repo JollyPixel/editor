@@ -20,7 +20,7 @@ export interface PasswordHash {
   salt: Buffer;
 }
 
-function digestOf(
+function computeDigest(
   value: string,
   salt: Buffer
 ): Promise<Buffer> {
@@ -53,7 +53,7 @@ export async function hashPassword(
   password: string
 ): Promise<PasswordHash> {
   const salt = randomBytes(kSaltLength);
-  const digest = await digestOf(
+  const digest = await computeDigest(
     password,
     salt
   );
@@ -68,7 +68,7 @@ export async function verifyPassword(
   password: string,
   hash: PasswordHash
 ): Promise<boolean> {
-  const digest = await digestOf(
+  const digest = await computeDigest(
     password,
     hash.salt
   );

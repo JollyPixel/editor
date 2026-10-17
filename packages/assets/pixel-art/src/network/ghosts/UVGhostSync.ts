@@ -48,7 +48,7 @@ function decodeUVGhost(
 
 export class UVGhostSync {
   #canvas: PixelArtCanvas;
-  #colorOf: PeerStyle;
+  #peerColor: PeerStyle;
   #stream: PeerGhostStream<UVGhostPayload>;
   #onRemoteRegionDragging: ((region: UVRegion) => void) | undefined;
 
@@ -85,7 +85,7 @@ export class UVGhostSync {
     const { uv } = canvas.peerPresence;
 
     this.#canvas = canvas;
-    this.#colorOf = peerStyle(options.room, options.color);
+    this.#peerColor = peerStyle(options.room, options.color);
     this.#onRemoteRegionDragging = options.onRemoteRegionDragging;
     this.#stream = new PeerGhostStream({
       room: options.room,
@@ -93,7 +93,7 @@ export class UVGhostSync {
       decode: decodeUVGhost,
       layer: {
         set: (clientId, payload) => {
-          const color = this.#colorOf(clientId);
+          const color = this.#peerColor(clientId);
           const region = UVRegion.fromLayout(payload.layout, {
             id: payload.id,
             color

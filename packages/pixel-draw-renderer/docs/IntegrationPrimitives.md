@@ -9,7 +9,7 @@ importing renderer source files.
 [`PixelDocumentState`](./PixelDocumentState.md) applies [`PixelCommand`](./PixelCommand.md)s
 without a DOM, with the same code a `PixelDocument` runs for remote commands,
 undo and redo. `toDocumentCommand()` decodes a command's texture bytes before
-it is applied. `PixelBuffer.positionsOf()` returns the positions a
+it is applied. `PixelBuffer.findPositions()` returns the positions a
 `global-fill` repaints, for adapters that compute its conflict keys.
 `groupPositionsByColor()` converts parallel position and RGBA arrays into
 `ColorGroup` records for `drawColorGroups()`.
@@ -46,7 +46,7 @@ positions (positions outside `size` are skipped; `null` when none remain).
 | `union(rect)` | the smallest area containing both |
 | `grown(amount)` | the area expanded by `amount` pixels on every side |
 | `resized(handle, delta)` | the area with one `ResizeHandle` moved, never below 1px |
-| `touchesEdgeOf(rect)` | `true` when any side lies on the same side of `rect` |
+| `touchesEdge(rect)` | `true` when any side lies on the same side of `rect` |
 | `rowsWithin(size)` | the in-texture rows as `RectRow` records with source and texture indices |
 
 ## Selection presence

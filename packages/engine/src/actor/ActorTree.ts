@@ -74,11 +74,6 @@ export class ActorTree<
     }
   }
 
-  /**
-   * @example
-   * const player = tree.getActor("player");
-   * const playerPhysicsBox = tree.getActor("player/physics_box");
-   */
   getActor(
     name: string
   ): Actor<TContext> | null {

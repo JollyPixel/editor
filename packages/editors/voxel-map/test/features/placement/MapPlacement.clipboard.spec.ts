@@ -13,13 +13,13 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { mapHistoryOf } from "../../helpers/mapHistory.ts";
+import { createWorldHistory } from "../../helpers/mapHistory.ts";
 import { MAP_HISTORY_SCOPE } from "../../../src/shared/mapHistory.ts";
 import { MapLayers } from "../../../src/features/layers/MapLayers.ts";
 import { CellRegion } from "../../../src/features/placement/CellRegion.ts";
 import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
 import { SelectionStore } from "../../../src/state/index.ts";
-import { mapDocumentOf } from "../../helpers/mapDocument.ts";
+import { createMapDocument } from "../../helpers/mapDocument.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
 
 // CONSTANTS
@@ -30,8 +30,8 @@ const kLowerCorner = CellRegion.spanning(
 
 function setup() {
   const world = new VoxelWorld();
-  const history = mapHistoryOf(world);
-  const mapDocument = mapDocumentOf(world);
+  const history = createWorldHistory(world);
+  const mapDocument = createMapDocument(world);
   const selection = new SelectionStore();
   const layers = new MapLayers({
     world,
@@ -74,7 +74,7 @@ function setup() {
   };
 }
 
-function blocksOf(
+function readBlocks(
   layer: VoxelLayer
 ): string[] {
   const { x: ox, y: oy, z: oz } = layer.position;
@@ -123,12 +123,12 @@ describe("MapPlacement copy and paste", () => {
     assert.equal(current.target, "Draft");
     assert.equal(current.caption, "Selection → Draft");
     assert.equal(placement.lifted, null);
-    assert.deepEqual(blocksOf(draft), ["0,0,3:1", "1,0,3:2", "2,0,0:1"]);
+    assert.deepEqual(readBlocks(draft), ["0,0,3:1", "1,0,3:2", "2,0,0:1"]);
 
     const depth = history.state(MAP_HISTORY_SCOPE).undoCount;
     assert.equal(placement.commit(), true);
     assert.equal(history.state(MAP_HISTORY_SCOPE).undoCount, depth + 1);
-    assert.deepEqual(blocksOf(draft), [
+    assert.deepEqual(readBlocks(draft), [
       "0,0,3:1",
       "1,0,3:2",
       "2,0,0:1",

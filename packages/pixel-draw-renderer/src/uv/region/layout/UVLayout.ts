@@ -76,15 +76,15 @@ export abstract class UVLayout {
 
   abstract get bounds(): SelectionRect;
 
-  abstract rectFor(
+  abstract slotRect(
     slot: UVSlot | null
   ): SelectionRect;
 
-  abstract geometryFor(
+  abstract slotGeometry(
     slot: UVSlot
   ): UVGeometry;
 
-  abstract slotsOf(): UVRegionSlot[];
+  abstract listSlots(): UVRegionSlot[];
 
   abstract spreadFaces(): UVSlotMap;
 

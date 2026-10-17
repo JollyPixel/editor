@@ -64,9 +64,6 @@ const kStairFaces: readonly FaceDefinition[] = [
   })
 ];
 
-/**
- * Straight stair that occludes NegY and PosZ.
- */
 export class Stair extends BlockShapeBase {
   readonly id: BlockShapeID;
   readonly collisionHint: BlockCollisionHint = "trimesh";

@@ -2,7 +2,7 @@
 import type { Vec2 } from "../../types.ts";
 import {
   geometryAt,
-  rectOf
+  boundingRect
 } from "../geometry/geometry.ts";
 import type {
   UVGeometry,
@@ -69,7 +69,7 @@ export class UVNet {
     const rows: number[] = [];
     for (const cell of cells) {
       const { row, column } = this.#cells.get(cell.face)!;
-      const rect = rectOf(cell.geometry);
+      const rect = boundingRect(cell.geometry);
       columns[column] = Math.max(columns[column] ?? 0, rect.width);
       rows[row] = Math.max(rows[row] ?? 0, rect.height);
     }
@@ -80,7 +80,7 @@ export class UVNet {
       placed.set(
         cell.face,
         geometryAt(cell.geometry, {
-          ...rectOf(cell.geometry),
+          ...boundingRect(cell.geometry),
           x: origin.x + offset(columns, column),
           y: origin.y + offset(rows, row)
         })

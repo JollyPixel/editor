@@ -92,7 +92,7 @@ describe("ShellChannel message guards", () => {
   });
 
   test("parses a launch identity and nulls a blank or partial one", () => {
-    function identityOf(identity: unknown) {
+    function createIdentity(identity: unknown) {
       return parseLaunchMessage({
         type: LAUNCH_MESSAGE_TYPE,
         target: "x",
@@ -100,23 +100,23 @@ describe("ShellChannel message guards", () => {
       })?.identity;
     }
 
-    assert.deepEqual(identityOf({ username: " alice ", peerId: "p-1" }), {
+    assert.deepEqual(createIdentity({ username: " alice ", peerId: "p-1" }), {
       username: "alice",
       peerId: "p-1"
     });
-    assert.deepEqual(identityOf({ username: "alice", peerId: "p-1", avatar: "/a.webp" }), {
+    assert.deepEqual(createIdentity({ username: "alice", peerId: "p-1", avatar: "/a.webp" }), {
       username: "alice",
       peerId: "p-1",
       avatar: "/a.webp"
     });
     assert.equal(
-      identityOf({ username: "alice", peerId: "p-1", avatar: 42 })?.avatar,
+      createIdentity({ username: "alice", peerId: "p-1", avatar: 42 })?.avatar,
       undefined
     );
-    assert.equal(identityOf({ username: "  ", peerId: "p-1" }), null);
-    assert.equal(identityOf({ username: "alice" }), null);
-    assert.equal(identityOf("alice"), null);
-    assert.equal(identityOf(undefined), null);
+    assert.equal(createIdentity({ username: "  ", peerId: "p-1" }), null);
+    assert.equal(createIdentity({ username: "alice" }), null);
+    assert.equal(createIdentity("alice"), null);
+    assert.equal(createIdentity(undefined), null);
   });
 });
 

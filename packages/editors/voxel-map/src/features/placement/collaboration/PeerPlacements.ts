@@ -183,7 +183,7 @@ export class PeerPlacements extends ActorComponent {
     const presence = this.#channel.values.get(clientId) ?? null;
     const color = peerProfileColor(clientId, peer.profile);
     if (presence instanceof MarqueePresence) {
-      this.#previewFor(clientId, color).outline(presence.region);
+      this.#ensurePreview(clientId, color).outline(presence.region);
 
       return;
     }
@@ -198,7 +198,7 @@ export class PeerPlacements extends ActorComponent {
       return;
     }
 
-    this.#previewFor(clientId, color).draw(placement, template);
+    this.#ensurePreview(clientId, color).draw(placement, template);
   }
 
   #resolvePeerPlacement(
@@ -255,7 +255,7 @@ export class PeerPlacements extends ActorComponent {
       null;
   }
 
-  #previewFor(
+  #ensurePreview(
     clientId: string,
     color: string
   ): PlacementPreview {

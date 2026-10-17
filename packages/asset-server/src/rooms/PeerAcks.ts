@@ -48,7 +48,7 @@ export class PeerAcks {
       { acks: { [clientId]: seq } };
   }
 
-  of(
+  collectAcks(
     clientIds: Iterable<string>
   ): AcksField {
     const acks: NetworkAcks = {};
@@ -63,6 +63,6 @@ export class PeerAcks {
   }
 
   ofEveryone(): AcksField {
-    return this.of(this.#processed.keys());
+    return this.collectAcks(this.#processed.keys());
   }
 }

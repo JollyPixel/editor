@@ -10,9 +10,6 @@ import type {
   BlockShapeID
 } from "../BlockShape.ts";
 
-/**
- * Full unit cube with counter-clockwise outward face winding.
- */
 export class Cube extends BlockShapeBase {
   readonly id: BlockShapeID;
   readonly collisionHint: BlockCollisionHint = "box";

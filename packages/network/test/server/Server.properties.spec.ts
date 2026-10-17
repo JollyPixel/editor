@@ -11,7 +11,7 @@ import fc from "fast-check";
 // Import Internal Dependencies
 import { Server } from "#src/index.ts";
 import { Envelope } from "#src/protocol/envelope/Envelope.ts";
-import { identityOf } from "../helpers/server/identity.ts";
+import { createIdentity } from "../helpers/server/identity.ts";
 import {
   createClient,
   withoutSync
@@ -59,7 +59,7 @@ describe("Server properties", () => {
           const extension = new RecordingExtension(kRoom);
           server.register(extension);
           const { client, sent } = createClient("A");
-          const connectionA = server.connect(client, identityOf(client));
+          const connectionA = server.connect(client, createIdentity(client));
           await connectionA.receive(JSON.stringify({ room: kRoom, kind: "join" }));
 
           for (const frame of frames) {

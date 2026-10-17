@@ -45,7 +45,7 @@ addSelectionLighting(scene);
 const colorPalette = new ColorPalette();
 const peerRegistry = new PeerSelectionRegistry({
   colorAllocator: {
-    colorOf: (peerId) => colorPalette.forKey(peerId),
+    peerColor: (peerId) => colorPalette.forKey(peerId),
     release: () => void 0
   }
 });
@@ -284,9 +284,9 @@ function withPeerBadges(
 ): TreeNode {
   return {
     ...node,
-    badges: peerRegistry.selectorsOf(node.id).map((peerId) => {
+    badges: peerRegistry.listSelectors(node.id).map((peerId) => {
       return {
-        color: peerRegistry.colorOf(peerId),
+        color: peerRegistry.peerColor(peerId),
         title: peerId
       };
     }),
@@ -330,8 +330,8 @@ statusFolder.addMonitor(status, "hovered");
 statusFolder.addMonitor(status, "selected");
 
 function refreshStatus(): void {
-  status.hovered = selectables.labelOf(hoveredId);
-  status.selected = selectables.labelOf(highlight.selected);
+  status.hovered = selectables.displayLabel(hoveredId);
+  status.selected = selectables.displayLabel(highlight.selected);
   statusFolder.refresh();
 }
 

@@ -175,7 +175,7 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
 
     const wanted = new Map<string, AssetDocumentKind<unknown>>();
     const { dependencies } = this.catalog;
-    for (const reference of dependencies.closureOf(this.target.record.id)) {
+    for (const reference of dependencies.transitiveDependencies(this.target.record.id)) {
       const record = this.catalog.record(reference.id);
       const kind = this.#kinds.get(reference.kind);
       if (record?.kind === reference.kind && kind !== undefined) {

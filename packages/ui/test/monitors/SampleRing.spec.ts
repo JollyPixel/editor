@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { SampleRing } from "../../src/monitors/SampleRing.ts";
 
-function samplesOf(
+function readSamples(
   ring: SampleRing
 ): number[] {
   return Array.from(
@@ -34,7 +34,7 @@ describe("monitors.SampleRing", () => {
     ring.push(5, 3);
     ring.reset(7);
 
-    assert.deepEqual(samplesOf(ring), [7]);
+    assert.deepEqual(readSamples(ring), [7]);
   });
 
   test("keeps the newest samples, oldest first", () => {
@@ -43,7 +43,7 @@ describe("monitors.SampleRing", () => {
       ring.push(value, 3);
     }
 
-    assert.deepEqual(samplesOf(ring), [3, 4, 5]);
+    assert.deepEqual(readSamples(ring), [3, 4, 5]);
   });
 
   test("keeps existing samples when the limit grows", () => {
@@ -53,7 +53,7 @@ describe("monitors.SampleRing", () => {
     ring.push(3, 4);
     ring.push(4, 4);
 
-    assert.deepEqual(samplesOf(ring), [1, 2, 3, 4]);
+    assert.deepEqual(readSamples(ring), [1, 2, 3, 4]);
   });
 
   test("drops down to the newest samples when the limit shrinks", () => {
@@ -63,7 +63,7 @@ describe("monitors.SampleRing", () => {
     }
     ring.push(7, 2);
 
-    assert.deepEqual(samplesOf(ring), [6, 7]);
+    assert.deepEqual(readSamples(ring), [6, 7]);
   });
 
   test("grows past its initial capacity in order", () => {
@@ -74,7 +74,7 @@ describe("monitors.SampleRing", () => {
       spliceModel(expected, value, 200);
     }
 
-    assert.deepEqual(samplesOf(ring), expected);
+    assert.deepEqual(readSamples(ring), expected);
   });
 
   test("trims like Array#splice for degenerate limits", () => {
@@ -86,7 +86,7 @@ describe("monitors.SampleRing", () => {
         spliceModel(expected, value, limit);
       }
 
-      assert.deepEqual(samplesOf(ring), expected, `limit ${limit}`);
+      assert.deepEqual(readSamples(ring), expected, `limit ${limit}`);
     }
   });
 

@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import {
-  blockPathOf,
+  buildBlockPath,
   type ModelDocument
 } from "@jolly-pixel/asset.voxel-model/client";
 import { MenuSession } from "@jolly-pixel/ui";
@@ -12,7 +12,7 @@ export function rebindMenu(
 ): MenuSession {
   const { tree } = document;
   const options = [...tree.blocks()].map(({ id }) => {
-    const target = blockPathOf(tree, id);
+    const target = buildBlockPath(tree, id);
 
     return { label: target, value: target };
   });

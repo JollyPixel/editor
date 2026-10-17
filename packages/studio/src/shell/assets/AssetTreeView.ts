@@ -217,7 +217,7 @@ export class AssetTreeView {
     nodeId: string,
     name: string
   ): Promise<void> {
-    const relocation = this.#plan(() => this.#model.renameOf(nodeId, name));
+    const relocation = this.#plan(() => this.#model.planRename(nodeId, name));
     if (relocation !== null) {
       await this.#relocate([relocation], "rename");
     }
@@ -226,7 +226,7 @@ export class AssetTreeView {
   async move(
     detail: JollyReparentDetail
   ): Promise<void> {
-    const relocations = this.#plan(() => this.#model.movesOf(detail)) ?? [];
+    const relocations = this.#plan(() => this.#model.planMoves(detail)) ?? [];
     if (relocations.length > 0) {
       await this.#relocate(relocations, "move");
     }
@@ -251,7 +251,7 @@ export class AssetTreeView {
     kind: string,
     folder: AssetPath
   ): Promise<void> {
-    const entry = this.#kinds.entryOf(kind);
+    const entry = this.#kinds.findEntry(kind);
     if (entry === undefined) {
       return;
     }
@@ -270,7 +270,7 @@ export class AssetTreeView {
     nodeIds: readonly string[],
     confirm: (deletion: AssetDeletion) => Promise<AssetDeleteChoice | null>
   ): Promise<void> {
-    const deletion = this.#model.deletionOf(nodeIds);
+    const deletion = this.#model.planDeletion(nodeIds);
     if (deletion.isEmpty) {
       await this.#commands.remove(deletion, false);
 

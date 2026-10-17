@@ -51,7 +51,7 @@ const synced = new SyncedAnimationDocument(room);
 room.join();
 await synced.ready;
 const walk = synced.document.addClip({ name: "Walk" });
-synced.document.setKey(walk!, "Body/Arm.L", "rotation", {
+synced.document.writeKey(walk!, "Body/Arm.L", "rotation", {
   tick: new FrameRate(24).toTick(12),
   value: { x: 45, y: 0, z: 0 },
   interpolation: "smooth"

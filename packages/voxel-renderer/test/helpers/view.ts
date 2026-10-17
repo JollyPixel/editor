@@ -112,13 +112,13 @@ export function chunkMeshes(
   );
 }
 
-export function faceCountOf(
+export function countFaces(
   mesh: THREE.Mesh
 ): number {
   return (mesh.geometry as PulledChunkGeometry).faceCount;
 }
 
-export function chunkCoordsOf(
+export function readChunkCoords(
   object: THREE.Object3D
 ): string {
   const [coords] = kChunkCoords.exec(object.name) ?? [""];
@@ -129,5 +129,5 @@ export function chunkCoordsOf(
 export function sortedChunkCoords(
   objects: Iterable<THREE.Object3D>
 ): string[] {
-  return [...objects].map(chunkCoordsOf).sort();
+  return [...objects].map(readChunkCoords).sort();
 }

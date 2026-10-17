@@ -272,17 +272,10 @@ export type VoxelCommand =
 
 export type VoxelCommandAction = VoxelCommand["action"];
 
-/**
- * Commands a `VoxelWorld` applies and emits: its layers and templates.
- */
 export type VoxelWorldContentCommand =
   | VoxelLayerCommand
   | VoxelTemplateCommand;
 
-/**
- * Commands a world persists and shares: its content and its blockset links.
- * Blocks, material groups and blend groups belong to the blocksets.
- */
 export type VoxelWorldCommand =
   | VoxelWorldContentCommand
   | VoxelBlocksetCommand;
@@ -300,10 +293,6 @@ export type BlocksetMaterialGroupRenameCommand = {
   to: string;
 };
 
-/**
- * Commands a blockset document applies to its own blocks, material groups,
- * blend groups and tile size.
- */
 export type BlocksetDocumentCommand =
   | VoxelBlockCommand
   | VoxelMaterialGroupCommand

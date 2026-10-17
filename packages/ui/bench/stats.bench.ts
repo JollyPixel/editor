@@ -9,14 +9,14 @@ import { resolveMetricRange } from "../src/stats/MetricDefinition.ts";
 import { StatsRecorder } from "../src/stats/StatsRecorder.ts";
 import {
   BATCH,
-  batchOf
+  createBatch
 } from "./_fixtures.ts";
 
 // CONSTANTS
 const kHistorySize = 60;
 
 const suite = defineSuite("stats", (bench) => {
-  const history = batchOf((rng) => rng() * 33).slice(0, kHistorySize);
+  const history = createBatch((rng) => rng() * 33).slice(0, kHistorySize);
   const bounded = {
     id: "ms",
     label: "MS",

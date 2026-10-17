@@ -101,7 +101,7 @@ export function sameRect(
     a.height === b.height;
 }
 
-export function rotationOf(
+export function geometryRotation(
   geometry: UVGeometry
 ): UVQuarterTurn {
   return geometry.rotation ?? 0;
@@ -128,7 +128,7 @@ export function copyGeometry(
   if (!("shape" in geometry)) {
     return withRotation(
       copyRect(geometry),
-      rotationOf(geometry)
+      geometryRotation(geometry)
     );
   }
 
@@ -144,10 +144,10 @@ export function copyGeometry(
       rect: copyRect(geometry.rect)
     };
 
-  return withRotation(copied, rotationOf(geometry));
+  return withRotation(copied, geometryRotation(geometry));
 }
 
-export function rectOf(
+export function boundingRect(
   geometry: UVGeometry
 ): SelectionRect {
   return copyRect(
@@ -166,13 +166,13 @@ export function geometryAt(
       ...copied,
       rect: copyRect(rect)
     } :
-    withRotation(copyRect(rect), rotationOf(geometry));
+    withRotation(copyRect(rect), geometryRotation(geometry));
 }
 
 export function geometryKey(
   geometry: UVGeometry
 ): string {
-  const { x, y, width, height } = rectOf(geometry);
+  const { x, y, width, height } = boundingRect(geometry);
 
   if (!("shape" in geometry)) {
     return `${x},${y},${width},${height}`;
@@ -189,7 +189,7 @@ export function pointInGeometry(
   pos: Vec2,
   geometry: UVGeometry
 ): boolean {
-  const rect = rectOf(geometry);
+  const rect = boundingRect(geometry);
   if (!pointInRect(pos, rect)) {
     return false;
   }
@@ -237,7 +237,7 @@ export function* coveredPixels(
   geometry: UVGeometry,
   size: Vec2
 ): IterableIterator<number> {
-  const bounds = rectOf(geometry);
+  const bounds = boundingRect(geometry);
   const minX = Math.max(0, Math.ceil(bounds.x - 0.5));
   const minY = Math.max(0, Math.ceil(bounds.y - 0.5));
   const maxX = Math.min(size.x, Math.ceil(bounds.x + bounds.width - 0.5));
@@ -256,7 +256,7 @@ export function* coveredPixels(
   }
 }
 
-export function triangleCornerOf(
+export function triangleCorner(
   geometry: UVGeometry
 ): UVTriangleCorner | null {
   return "shape" in geometry && geometry.shape === "triangle" ?
@@ -270,7 +270,7 @@ export function quarterTurn(
   return kQuarterTurns[((turns % 4) + 4) % 4];
 }
 
-export function quarterTurnsOf(
+export function directionQuarterTurns(
   direction: RotationDirection
 ): UVQuarterTurn {
   return direction === "cw" ? 1 : 3;
@@ -340,8 +340,8 @@ export function rotateGeometry(
     return copyGeometry(geometry);
   }
 
-  const rect = rotateRect(rectOf(geometry), quarter);
-  const rotation = rotationOf(geometry) + quarter;
+  const rect = rotateRect(boundingRect(geometry), quarter);
+  const rotation = geometryRotation(geometry) + quarter;
   if (!("shape" in geometry)) {
     return withRotation(rect, rotation);
   }

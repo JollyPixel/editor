@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import {
-  colorModelOf,
+  findColorModel,
   type ColorModel
 } from "./pixels.ts";
 import { InvalidPngError } from "./errors/InvalidPngError.ts";
@@ -46,7 +46,7 @@ export function readHeader(
   if (interlace !== 0) {
     throw new InvalidPngError("interlaced images are not supported.");
   }
-  const color = colorModelOf(colorType);
+  const color = findColorModel(colorType);
   if (color === undefined) {
     throw new InvalidPngError(`unsupported color type ${colorType}.`);
   }

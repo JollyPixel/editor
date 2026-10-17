@@ -11,9 +11,18 @@ ruleTester.run("no-comments", noComments, {
     "const a = /*#__PURE__*/ make();\nawait import(/* @vite-ignore */ url);",
     "/*\n * Copyright (c) 2020 Someone. MIT License.\n */\nexport const a = 1;",
     "export interface Options {\n  /**\n   * Size in pixels.\n   */\n  size: number;\n}",
-    "type Options = {\n  /**\n   * Size in pixels.\n   */\n  size: number;\n};"
+    "type Options = {\n  /**\n   * Size in pixels.\n   */\n  size: number;\n};",
+    "/**\n * @type {import(\"stylelint\").Config}\n */\nexport default {};",
+    {
+      code: "// @ts-expect-error Cannot assign to 'a'\nA.a = 1;",
+      filename: "packages/controls/test/A.tst.ts"
+    }
   ],
   invalid: [
+    {
+      code: "/**\n * The config.\n * @type {Config}\n */\nexport default {};",
+      errors: 1
+    },
     {
       code: "// keeps the order stable\nconst a = 1;",
       errors: 1

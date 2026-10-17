@@ -46,9 +46,6 @@ export interface CornerResizeHandleOptions {
   maxHeight?: number;
 }
 
-/**
- * Resizes a target element on both axes at once from a single pointer drag.
- */
 export class CornerResizeHandle extends EventTarget implements ResizeHandleLike {
   #handleElt: HTMLElement;
   #targetElt: HTMLElement;

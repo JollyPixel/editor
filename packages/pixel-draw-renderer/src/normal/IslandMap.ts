@@ -23,7 +23,7 @@ export class IslandMap {
   ): IslandMap {
     const faces: IslandFace[] = [];
     for (const region of regions) {
-      for (const { geometry } of region.slotsOf()) {
+      for (const { geometry } of region.listSlots()) {
         faces.push({
           regionId: region.id,
           geometry
@@ -164,7 +164,7 @@ export class IslandMap {
     return this.islands[this.indices[(y * this.size.x) + x]];
   }
 
-  islandsOf(
+  islandsInRegion(
     regionId: string
   ): Island[] {
     return this.islands.filter(

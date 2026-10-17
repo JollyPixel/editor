@@ -23,11 +23,11 @@ describe("DependencyIndex", () => {
     index.set("map", [ref("a"), ref("b")]);
     index.set("model", [ref("a")]);
 
-    assert.deepEqual(index.dependenciesOf("map"), [ref("a"), ref("b")]);
-    assert.deepEqual(index.dependentsOf("a"), ["map", "model"]);
-    assert.deepEqual(index.dependentsOf("b"), ["map"]);
-    assert.deepEqual(index.dependenciesOf("unknown"), []);
-    assert.deepEqual(index.dependentsOf("unknown"), []);
+    assert.deepEqual(index.listDependencies("map"), [ref("a"), ref("b")]);
+    assert.deepEqual(index.listDependents("a"), ["map", "model"]);
+    assert.deepEqual(index.listDependents("b"), ["map"]);
+    assert.deepEqual(index.listDependencies("unknown"), []);
+    assert.deepEqual(index.listDependents("unknown"), []);
   });
 
   test("set replaces the outgoing edges and reports a change", () => {
@@ -37,8 +37,8 @@ describe("DependencyIndex", () => {
     assert.strictEqual(index.set("map", [ref("a")]), false);
     assert.strictEqual(index.set("map", [ref("b")]), true);
 
-    assert.deepEqual(index.dependentsOf("a"), []);
-    assert.deepEqual(index.dependentsOf("b"), ["map"]);
+    assert.deepEqual(index.listDependents("a"), []);
+    assert.deepEqual(index.listDependents("b"), ["map"]);
   });
 
   test("an empty edge list is still an entry", () => {
@@ -56,31 +56,31 @@ describe("DependencyIndex", () => {
 
     assert.strictEqual(index.delete("a"), true);
     assert.strictEqual(index.delete("a"), false);
-    assert.deepEqual(index.dependenciesOf("a"), []);
-    assert.deepEqual(index.dependentsOf("a"), ["map"]);
-    assert.deepEqual(index.dependentsOf("b"), []);
+    assert.deepEqual(index.listDependencies("a"), []);
+    assert.deepEqual(index.listDependents("a"), ["map"]);
+    assert.deepEqual(index.listDependents("b"), []);
   });
 
-  test("closureOf walks transitive edges breadth first", () => {
+  test("transitiveDependencies walks transitive edges breadth first", () => {
     const index = new DependencyIndex();
     index.set("map", [ref("a"), ref("b")]);
     index.set("a", [ref("c")]);
     index.set("b", [ref("c"), ref("d")]);
 
     assert.deepEqual(
-      index.closureOf("map").map(({ id }) => id),
+      index.transitiveDependencies("map").map(({ id }) => id),
       ["a", "b", "c", "d"]
     );
   });
 
-  test("closureOf terminates on cycles and never lists the root", () => {
+  test("transitiveDependencies terminates on cycles and never lists the root", () => {
     const index = new DependencyIndex();
     index.set("a", [ref("b")]);
     index.set("b", [ref("c")]);
     index.set("c", [ref("a"), ref("b")]);
 
     assert.deepEqual(
-      index.closureOf("a").map(({ id }) => id),
+      index.transitiveDependencies("a").map(({ id }) => id),
       ["b", "c"]
     );
   });
@@ -104,10 +104,10 @@ describe("DependencyIndex", () => {
     index.set("map", input);
     input[0].id = "mutated";
 
-    assert.deepEqual(index.dependenciesOf("map"), [ref("a")]);
+    assert.deepEqual(index.listDependencies("map"), [ref("a")]);
     assert.notStrictEqual(
-      index.dependenciesOf("map")[0],
-      index.dependenciesOf("map")[0]
+      index.listDependencies("map")[0],
+      index.listDependencies("map")[0]
     );
   });
 

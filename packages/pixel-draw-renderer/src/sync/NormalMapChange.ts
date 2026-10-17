@@ -8,7 +8,7 @@ import type {
 } from "../normal/types.ts";
 
 export class NormalMapChange {
-  static of(
+  static fromCommand(
     current: NormalMapConfig | null,
     command: NormalMapCommand
   ): NormalMapChange | null {
@@ -21,7 +21,7 @@ export class NormalMapChange {
       case "normal-map-defaults-patched":
         return NormalMapChange.patchDefaults(current, command.metadata.patch);
       case "normal-map-zone-set":
-        return NormalMapChange.setZone(current, command.metadata.zone);
+        return NormalMapChange.assignZone(current, command.metadata.zone);
       case "normal-map-zone-deleted":
         return NormalMapChange.deleteZone(current, command.metadata.regionId);
     }
@@ -72,7 +72,7 @@ export class NormalMapChange {
     );
   }
 
-  static setZone(
+  static assignZone(
     current: NormalMapConfig | null,
     zone: NormalMapZone
   ): NormalMapChange | null {
@@ -82,7 +82,7 @@ export class NormalMapChange {
 
     const next = current.withZone(zone);
     const index = next.indexOf(zone.regionId);
-    const existing = NormalMapChange.zoneOf(current, zone.regionId);
+    const existing = NormalMapChange.indexedZone(current, zone.regionId);
 
     return new NormalMapChange(
       {
@@ -108,7 +108,7 @@ export class NormalMapChange {
     current: NormalMapConfig | null,
     regionId: string
   ): NormalMapChange | null {
-    const deleted = NormalMapChange.zoneOf(current, regionId);
+    const deleted = NormalMapChange.indexedZone(current, regionId);
     if (deleted === null) {
       return null;
     }
@@ -125,7 +125,7 @@ export class NormalMapChange {
     );
   }
 
-  static zoneOf(
+  static indexedZone(
     config: NormalMapConfig | null,
     regionId: string
   ): IndexedNormalMapZone | null {

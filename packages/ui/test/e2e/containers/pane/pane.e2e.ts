@@ -5,8 +5,8 @@ import {
 } from "../../fixtures.ts";
 import { openExample } from "../../support/gallery.ts";
 import {
-  resolvedColorOf,
-  styleOf
+  resolveColor,
+  readStyle
 } from "../../support/styles.ts";
 
 test("a pane header paints the accent fill under a left-origin pixel pattern", async({ page }) => {
@@ -14,16 +14,16 @@ test("a pane header paints the accent fill under a left-origin pixel pattern", a
 
   const header = page.locator("jolly-pane > .header").first();
   const [accent, textOnFill] = await Promise.all([
-    resolvedColorOf(header, "var(--jolly-accent-fill)"),
-    resolvedColorOf(header, "var(--jolly-text-on-fill)")
+    resolveColor(header, "var(--jolly-accent-fill)"),
+    resolveColor(header, "var(--jolly-text-on-fill)")
   ]);
 
   await expect(header).toHaveCSS("background-color", accent);
   await expect(header).toHaveCSS("color", textOnFill);
-  expect(await styleOf(header, "background-image", "::before"))
+  expect(await readStyle(header, "background-image", "::before"))
     .toContain("conic-gradient");
-  expect(await styleOf(header, "mask-image", "::before"))
+  expect(await readStyle(header, "mask-image", "::before"))
     .toContain("linear-gradient");
-  expect(await styleOf(header, "color", "::before")).toBe(textOnFill);
-  expect(await styleOf(header, "inset-inline-start", "::before")).toBe("0px");
+  expect(await readStyle(header, "color", "::before")).toBe(textOnFill);
+  expect(await readStyle(header, "inset-inline-start", "::before")).toBe("0px");
 });

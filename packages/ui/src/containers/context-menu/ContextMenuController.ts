@@ -11,15 +11,15 @@ export type MenuSurface = Pick<ContextMenu, "items" | "openAt">;
 
 export class ContextMenuController {
   #menu: () => MenuSurface;
-  #sessionFor: (id: string | null) => MenuSession;
+  #openSession: (id: string | null) => MenuSession;
   #opened: { session: MenuSession; point: MenuPoint; } | null = null;
 
   constructor(
     menu: () => MenuSurface,
-    sessionFor: (id: string | null) => MenuSession
+    openSession: (id: string | null) => MenuSession
   ) {
     this.#menu = menu;
-    this.#sessionFor = sessionFor;
+    this.#openSession = openSession;
   }
 
   open(
@@ -40,14 +40,14 @@ export class ContextMenuController {
     actionId: string,
     point: MenuPoint
   ): Promise<void> | void {
-    return this.#sessionFor(id).run(actionId, point);
+    return this.#openSession(id).run(actionId, point);
   }
 
   readonly onContextRequest = (
     event: CustomEvent<JollyContextRequestDetail>
   ): void => {
     const { id, x, y } = event.detail;
-    this.open(this.#sessionFor(id), { x, y });
+    this.open(this.#openSession(id), { x, y });
   };
 
   readonly onContextAction = (

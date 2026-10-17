@@ -1,9 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 
-/**
- * Concatenates the `position` attributes of `geometries` into one non-indexed geometry
- */
 export function mergePositions(
   geometries: THREE.BufferGeometry[]
 ): THREE.BufferGeometry {

@@ -8,7 +8,7 @@ import {
   BlockGrid
 } from "../../../../src/features/blocks/library/BlockGrid.ts";
 
-function layoutOf(
+function readLayout(
   grid: BlockGrid
 ) {
   return {
@@ -17,7 +17,7 @@ function layoutOf(
   };
 }
 
-function rectOf(
+function readRect(
   cell: BlockCell
 ) {
   return {
@@ -29,11 +29,11 @@ function rectOf(
 
 describe("BlockGrid.fit", () => {
   it("fits as many 64px cells as the width allows", () => {
-    assert.deepEqual(layoutOf(BlockGrid.fit(256)), { cols: 4, cellSize: 64 });
+    assert.deepEqual(readLayout(BlockGrid.fit(256)), { cols: 4, cellSize: 64 });
   });
 
   it("spreads the leftover width across the cells", () => {
-    assert.deepEqual(layoutOf(BlockGrid.fit(300)), { cols: 4, cellSize: 75 });
+    assert.deepEqual(readLayout(BlockGrid.fit(300)), { cols: 4, cellSize: 75 });
   });
 
   it("returns whole pixel cell sizes", () => {
@@ -53,13 +53,13 @@ describe("BlockGrid.fit", () => {
   });
 
   it("falls back to a single cell below one column", () => {
-    assert.deepEqual(layoutOf(BlockGrid.fit(40)), { cols: 1, cellSize: 40 });
-    assert.deepEqual(layoutOf(BlockGrid.fit(0)), { cols: 1, cellSize: 1 });
-    assert.deepEqual(layoutOf(BlockGrid.fit(-10)), { cols: 1, cellSize: 1 });
+    assert.deepEqual(readLayout(BlockGrid.fit(40)), { cols: 1, cellSize: 40 });
+    assert.deepEqual(readLayout(BlockGrid.fit(0)), { cols: 1, cellSize: 1 });
+    assert.deepEqual(readLayout(BlockGrid.fit(-10)), { cols: 1, cellSize: 1 });
   });
 
   it("clamps a non finite width to a single cell", () => {
-    assert.deepEqual(layoutOf(BlockGrid.fit(Number.NaN)), {
+    assert.deepEqual(readLayout(BlockGrid.fit(Number.NaN)), {
       cols: 1,
       cellSize: 1
     });
@@ -75,27 +75,27 @@ describe("BlockGrid.cellAt", () => {
   const grid = new BlockGrid(4, 64);
 
   it("places the first cell at the grid origin", () => {
-    assert.deepEqual(rectOf(grid.cellAt(0)), { x: 0, y: 0, size: 64 });
+    assert.deepEqual(readRect(grid.cellAt(0)), { x: 0, y: 0, size: 64 });
   });
 
   it("walks a row before wrapping", () => {
-    assert.deepEqual(rectOf(grid.cellAt(3)), { x: 192, y: 0, size: 64 });
-    assert.deepEqual(rectOf(grid.cellAt(4)), { x: 0, y: 64, size: 64 });
+    assert.deepEqual(readRect(grid.cellAt(3)), { x: 192, y: 0, size: 64 });
+    assert.deepEqual(readRect(grid.cellAt(4)), { x: 0, y: 64, size: 64 });
   });
 
   it("stacks rows downward", () => {
-    assert.deepEqual(rectOf(grid.cellAt(9)), { x: 64, y: 128, size: 64 });
+    assert.deepEqual(readRect(grid.cellAt(9)), { x: 64, y: 128, size: 64 });
   });
 
   it("follows a single column layout", () => {
     assert.deepEqual(
-      rectOf(new BlockGrid(1, 40).cellAt(2)),
+      readRect(new BlockGrid(1, 40).cellAt(2)),
       { x: 0, y: 80, size: 40 }
     );
   });
 
   it("shrinks the rect on every side of the inset", () => {
-    assert.deepEqual(rectOf(grid.cellAt(1, 3)), { x: 67, y: 3, size: 58 });
+    assert.deepEqual(readRect(grid.cellAt(1, 3)), { x: 67, y: 3, size: 58 });
   });
 
   it("never inverts a rect smaller than the inset", () => {

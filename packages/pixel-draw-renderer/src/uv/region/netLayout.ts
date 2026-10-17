@@ -5,7 +5,7 @@ import type {
 } from "../../types.ts";
 import {
   geometryAt,
-  rectOf
+  boundingRect
 } from "../geometry/geometry.ts";
 import type {
   UVGeometry,
@@ -34,18 +34,13 @@ interface NetLayout {
   height: number;
 }
 
-/**
- * Packs the cells side by side, tallest first, and keeps the arrangement whose
- * bounding box has the smallest perimeter, then the smallest area. Cells keep
- * their own size; only their position changes.
- */
 export function packNet(
   cells: readonly UVNetCell[],
   origin: Vec2
 ): Map<UVSlot, UVGeometry> {
   const packed = new Map<UVSlot, UVGeometry>();
   const rects = cells.map(
-    (cell) => rectOf(cell.geometry)
+    (cell) => boundingRect(cell.geometry)
   );
   const layout = bestLayout(rects);
 
@@ -63,10 +58,6 @@ export function packNet(
   return packed;
 }
 
-/**
- * Rows a shelf packer would need at worst, widest strip included, so both a
- * single row and a single column are always among the candidates.
- */
 function candidateWidths(
   rects: readonly SelectionRect[],
   order: readonly number[]
@@ -133,10 +124,6 @@ function isBetterLayout(
   return area === bestArea ? layout.width < best.width : area < bestArea;
 }
 
-/**
- * Bottom-left skyline fill: every cell lands on the lowest free spot of the
- * strip, leftmost on a tie.
- */
 function packWithin(
   rects: readonly SelectionRect[],
   order: readonly number[],

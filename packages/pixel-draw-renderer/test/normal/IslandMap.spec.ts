@@ -137,7 +137,7 @@ describe("IslandMap", () => {
 
     assert.deepEqual(islandRows(map), ["03132"]);
     assert.deepEqual(
-      map.islandsOf("net").map((island) => island.index),
+      map.islandsInRegion("net").map((island) => island.index),
       [0, 1]
     );
     assert.deepEqual([...map.islands[2].regionIds], ["cap"]);
@@ -150,7 +150,7 @@ describe("IslandMap", () => {
       face("b", 2, 0)
     ]);
 
-    assert.deepEqual(map.islandsOf("b").map((island) => island.index), [1]);
+    assert.deepEqual(map.islandsInRegion("b").map((island) => island.index), [1]);
     assert.deepEqual(
       map.islandsWithin({ x: 1, y: 0, width: 2, height: 1 })
         .map((island) => island.index),

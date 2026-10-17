@@ -9,10 +9,6 @@ import { customElement } from "lit/decorators.js";
 // Import Internal Dependencies
 import { themeStyles } from "../styles/themeStyles.ts";
 
-/**
- * Declarative theme scope host; set `theme` or `density` on it.
- * No `:host { display }` rule, so the consumer's own rule wins.
- */
 @customElement("jolly-scope")
 export class ScopeHost extends LitElement {
   static override styles = [

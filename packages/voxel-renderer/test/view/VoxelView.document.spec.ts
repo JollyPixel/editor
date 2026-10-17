@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import {
   chunkMeshes,
   createView,
-  faceCountOf,
+  countFaces,
   makeView,
   placeCube
 } from "../helpers/view.ts";
@@ -73,7 +73,7 @@ describe("VoxelView - blocksets", () => {
     const meshes = chunkMeshes(view);
     assert.equal(meshes.length, 1);
     assert.ok(meshes[0].name.includes(MISSING_BLOCKSET_ID));
-    assert.equal(faceCountOf(meshes[0]), 6);
+    assert.equal(countFaces(meshes[0]), 6);
   });
 
   it("keeps culling against a block drawn with the missing texture", () => {
@@ -90,7 +90,7 @@ describe("VoxelView - blocksets", () => {
 
     assert.deepEqual(
       chunkMeshes(view)
-        .map(faceCountOf)
+        .map(countFaces)
         .sort(),
       [5, 5]
     );
@@ -109,6 +109,6 @@ describe("VoxelView - blocksets", () => {
 
     const meshes = chunkMeshes(view);
     assert.equal(meshes.length, 1);
-    assert.equal(faceCountOf(meshes[0]), 6);
+    assert.equal(countFaces(meshes[0]), 6);
   });
 });

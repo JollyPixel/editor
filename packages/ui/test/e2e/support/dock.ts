@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import type { Locator, Page } from "@playwright/test";
-import { boxOf, dragTo } from "@jolly-pixel/e2e";
+import { measureBox, dragTo } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import { Pane } from "./pane.ts";
@@ -88,7 +88,7 @@ export class Dock {
     handle: Locator,
     offsetFromBottom = 40
   ): Promise<void> {
-    const box = await boxOf(this.root);
+    const box = await measureBox(this.root);
     await dragTo(this.#page, handle, {
       x: box.x + (box.width / 2),
       y: box.y + box.height - offsetFromBottom

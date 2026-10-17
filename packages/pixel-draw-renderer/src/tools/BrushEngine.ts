@@ -100,7 +100,7 @@ export class BrushEngine implements BrushTool {
     this.endStroke();
     this.#stroke = new Stroke(
       source,
-      this.#brush.colorFor(source)
+      this.#brush.paintColor(source)
     );
     this.#stamp(this.#stroke, tx, ty);
   }

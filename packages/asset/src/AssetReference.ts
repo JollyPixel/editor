@@ -23,9 +23,6 @@ export type AssetReferenceGroup = Readonly<
   Record<string, AssetReference<unknown>>
 >;
 
-/**
- * Stores the stable ID and runtime kind expected by a scene or component.
- */
 export class AssetReference<
   TValue = unknown
 > {

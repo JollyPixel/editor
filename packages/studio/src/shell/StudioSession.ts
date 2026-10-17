@@ -125,9 +125,9 @@ export class StudioSession {
     return this.tabs.open(
       {
         id: assetId,
-        ...this.#titleOf(record),
+        ...this.#tabTitle(record),
         url,
-        icon: this.kinds.iconFor(record.kind)
+        icon: this.kinds.kindIcon(record.kind)
       },
       options
     );
@@ -164,7 +164,7 @@ export class StudioSession {
       const record = this.#catalog.record(assetId);
       if (
         record !== undefined &&
-        this.#editors.editorFor(record.kind)?.name === name
+        this.#editors.findEditor(record.kind)?.name === name
       ) {
         this.tabs.reload(assetId);
       }
@@ -179,13 +179,13 @@ export class StudioSession {
     this.#frames.dispose();
   }
 
-  #titleOf(
+  #tabTitle(
     record: AssetRecordData
   ): EditorTabTitle {
     const path = AssetPath.parse(record.source);
 
     return {
-      label: this.kinds.displayNameFor(record.kind, path.name),
+      label: this.kinds.trimExtension(record.kind, path.name),
       tooltip: path.toString()
     };
   }
@@ -252,7 +252,7 @@ export class StudioSession {
       else {
         this.tabs.relabel(
           assetId,
-          this.#titleOf(record)
+          this.#tabTitle(record)
         );
       }
     }

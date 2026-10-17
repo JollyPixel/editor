@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { boxOf, hold } from "@jolly-pixel/e2e";
+import { measureBox, hold } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
@@ -10,7 +10,7 @@ import {
 import { openExample } from "../support/gallery.ts";
 import { Dock } from "../support/dock.ts";
 import { Pane } from "../support/pane.ts";
-import { styleOf } from "../support/styles.ts";
+import { readStyle } from "../support/styles.ts";
 
 async function dropBrushNearTop(
   page: Page,
@@ -18,9 +18,9 @@ async function dropBrushNearTop(
   y?: number
 ): Promise<void> {
   const [header, target, firstHeader] = await Promise.all([
-    boxOf(new Pane(page, "brush").header),
-    boxOf(dock.root),
-    boxOf(dock.root.locator(":scope > jolly-pane .header").first())
+    measureBox(new Pane(page, "brush").header),
+    measureBox(dock.root),
+    measureBox(dock.root.locator(":scope > jolly-pane .header").first())
   ]);
 
   await hold(page, {
@@ -40,7 +40,7 @@ test.describe("editor scenario", () => {
     const dock = new Dock(page, "inspector");
     await dropBrushNearTop(page, dock);
     await expect(dock.paneKeys()).resolves.toEqual(["brush", "inspector"]);
-    expect(await styleOf(new Pane(page, "brush").root, "--jolly-label-width"))
+    expect(await readStyle(new Pane(page, "brush").root, "--jolly-label-width"))
       .toBe("10ch");
   });
 
@@ -52,7 +52,7 @@ test.describe("editor scenario", () => {
 
       const inspector = new Dock(page, "inspector");
       const dock = inspector.root;
-      const target = await boxOf(dock);
+      const target = await measureBox(dock);
       await dropBrushNearTop(page, inspector, target.y + target.height - 20);
       await expect(inspector.paneKeys())
         .resolves.toEqual(["inspector", "brush"]);
@@ -71,11 +71,11 @@ test.describe("editor scenario", () => {
       });
 
       const brush = new Pane(page, "brush").root;
-      const stranded = await boxOf(brush);
+      const stranded = await measureBox(brush);
       expect(stranded.y + stranded.height).toBeGreaterThan(520);
 
       await brush.scrollIntoViewIfNeeded();
-      const reached = await boxOf(brush);
+      const reached = await measureBox(brush);
       expect(reached.y).toBeGreaterThanOrEqual(0);
       expect(reached.y + reached.height).toBeLessThanOrEqual(521);
 

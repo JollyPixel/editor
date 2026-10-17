@@ -60,10 +60,10 @@ export class PeerFrustums extends ActorComponent {
     });
   }
 
-  poseOf(
+  peerPose(
     clientId: string
   ): PeerFrustumPose | undefined {
-    return this.#sync.poseOf(clientId);
+    return this.#sync.peerPose(clientId);
   }
 
   update(): void {

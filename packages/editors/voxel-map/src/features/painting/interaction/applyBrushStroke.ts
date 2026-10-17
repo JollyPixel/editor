@@ -44,7 +44,7 @@ export function applyBrushStroke(
       const half = stroke.mode === "replace" && entry !== undefined ?
         stroke.aimedHalfAt(position, entry) :
         null;
-      const replacement = half?.replacementFor(paint, view.complements);
+      const replacement = half?.findReplacement(paint, view.complements);
       if (half && replacement) {
         if (
           replacement.blockId !== half.aimed.blockId ||

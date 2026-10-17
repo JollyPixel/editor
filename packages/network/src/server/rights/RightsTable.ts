@@ -16,10 +16,6 @@ interface Permission {
   right: Right;
 }
 
-/**
- * Per-role access lookup by glob against `${extension.name}.${event}`.
- * No table means "write"; with one, anything unmatched is "void".
- */
 export class RightsTable {
   readonly defaultRole: string;
 

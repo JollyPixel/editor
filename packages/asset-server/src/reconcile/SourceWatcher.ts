@@ -30,11 +30,6 @@ export interface SourceWatcherOptions {
   logger?: Logger;
 }
 
-/**
- * Coalesces source notifications into sequential `onChange` calls, each
- * receiving the file paths notified since the previous one. A batch of
- * folder notifications alone calls `onChange` with no file.
- */
 export class SourceWatcher {
   #source: AssetSource;
   #onChange: SourceChangeHandler;

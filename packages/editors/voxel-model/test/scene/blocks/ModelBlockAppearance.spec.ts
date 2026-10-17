@@ -14,7 +14,7 @@ import { createBlock } from "./blockHelpers.ts";
 
 type TexturedMesh = THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardNodeMaterial>;
 
-function pivotMarkerOf(
+function findPivotMarker(
   block: ModelBlock
 ): THREE.Sprite | undefined {
   return block.node.children.find(
@@ -22,7 +22,7 @@ function pivotMarkerOf(
   );
 }
 
-function textureGhostOf(
+function findTextureGhost(
   block: ModelBlock
 ): TexturedMesh | undefined {
   return block.mesh.children.find(
@@ -36,7 +36,7 @@ describe("ModelBlock selection ghost", () => {
 
     block.showSelectionGhost();
 
-    const ghost = textureGhostOf(block);
+    const ghost = findTextureGhost(block);
     assert.equal(ghost?.material.side, THREE.FrontSide);
     assert.equal(ghost?.material.depthTest, true);
     assert.equal(ghost?.material.depthFunc, THREE.GreaterDepth);
@@ -49,20 +49,20 @@ describe("ModelBlock selection ghost", () => {
     const block = createBlock();
 
     block.showSelectionGhost();
-    const first = textureGhostOf(block);
+    const first = findTextureGhost(block);
     block.showSelectionGhost();
 
-    assert.equal(textureGhostOf(block), first);
+    assert.equal(findTextureGhost(block), first);
   });
 
   test("is removed on hide", () => {
     const block = createBlock();
     block.showSelectionGhost();
-    const ghost = textureGhostOf(block);
+    const ghost = findTextureGhost(block);
 
     block.hideSelectionGhost();
 
-    assert.equal(textureGhostOf(block), undefined);
+    assert.equal(findTextureGhost(block), undefined);
     assert.equal(ghost?.parent, null);
   });
 
@@ -73,7 +73,7 @@ describe("ModelBlock selection ghost", () => {
 
     block.texture = texture;
 
-    assert.equal(textureGhostOf(block)?.material.map, texture);
+    assert.equal(findTextureGhost(block)?.material.map, texture);
   });
 
   test("takes the block material while shown", () => {
@@ -85,7 +85,7 @@ describe("ModelBlock selection ghost", () => {
       metalness: 0.7
     });
 
-    const ghost = textureGhostOf(block);
+    const ghost = findTextureGhost(block);
     assert.equal(ghost?.material.opacity, 0.5 * 0.35);
     assert.equal(ghost?.material.metalness, 0.7);
     assert.equal(ghost?.material.depthFunc, THREE.GreaterDepth);
@@ -94,7 +94,7 @@ describe("ModelBlock selection ghost", () => {
   test("repaints material values in place, without rebuilding any shader", () => {
     const block = createBlock();
     block.showSelectionGhost();
-    const ghostMaterial = textureGhostOf(block)?.material;
+    const ghostMaterial = findTextureGhost(block)?.material;
     const versions = [block.mesh.material.version, ghostMaterial?.version];
 
     block.surface = MaterialSurface.create({
@@ -103,7 +103,7 @@ describe("ModelBlock selection ghost", () => {
       metalness: 0.5
     });
 
-    assert.ok(textureGhostOf(block)?.material === ghostMaterial);
+    assert.ok(findTextureGhost(block)?.material === ghostMaterial);
     assert.deepEqual(
       [block.mesh.material.version, ghostMaterial?.version],
       versions
@@ -115,7 +115,7 @@ describe("ModelBlock selection ghost", () => {
 
     block.emphasize(0x00ff00);
 
-    assert.equal(textureGhostOf(block), undefined);
+    assert.equal(findTextureGhost(block), undefined);
   });
 });
 
@@ -158,7 +158,7 @@ describe("ModelBlock shading", () => {
     const shading = new FlatShading();
     const block = new ModelBlock({ flatShading: shading });
     block.showSelectionGhost();
-    const ghost = textureGhostOf(block);
+    const ghost = findTextureGhost(block);
     const versions = [block.mesh.material.version, ghost?.material.version];
 
     shading.flat = true;
@@ -184,14 +184,14 @@ describe("ModelBlock shading", () => {
 describe("ModelBlock emphasis", () => {
   test("shows and tints the pivot marker on emphasize, hides it again on clear", () => {
     const block = createBlock();
-    assert.equal(pivotMarkerOf(block)?.visible, false);
+    assert.equal(findPivotMarker(block)?.visible, false);
 
     block.emphasize(0x00ff00);
-    assert.equal(pivotMarkerOf(block)?.visible, true);
-    assert.equal(pivotMarkerOf(block)?.material.color.getHex(), 0x00ff00);
+    assert.equal(findPivotMarker(block)?.visible, true);
+    assert.equal(findPivotMarker(block)?.material.color.getHex(), 0x00ff00);
 
     block.clearEmphasis();
-    assert.equal(pivotMarkerOf(block)?.visible, false);
+    assert.equal(findPivotMarker(block)?.visible, false);
   });
 
   test("keeps the local pivot marker visible after a peer's emphasis clears", () => {
@@ -202,8 +202,8 @@ describe("ModelBlock emphasis", () => {
     block.clearEmphasis("bob");
 
     assert.equal(block.pivotMarkerVisible, true);
-    assert.equal(pivotMarkerOf(block)?.visible, true);
-    assert.equal(pivotMarkerOf(block)?.material.color.getHex(), NEUTRAL_HIGHLIGHT_COLOR);
+    assert.equal(findPivotMarker(block)?.visible, true);
+    assert.equal(findPivotMarker(block)?.material.color.getHex(), NEUTRAL_HIGHLIGHT_COLOR);
   });
 
   test("falls back to the remaining peer's color when one of two peers clears", () => {
@@ -213,9 +213,9 @@ describe("ModelBlock emphasis", () => {
     block.emphasize(0x0000ff, "cleo");
     block.clearEmphasis("cleo");
 
-    assert.equal(pivotMarkerOf(block)?.material.color.getHex(), 0xff0000);
+    assert.equal(findPivotMarker(block)?.material.color.getHex(), 0xff0000);
 
     block.clearEmphasis("bob");
-    assert.equal(pivotMarkerOf(block)?.visible, false);
+    assert.equal(findPivotMarker(block)?.visible, false);
   });
 });

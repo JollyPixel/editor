@@ -9,9 +9,6 @@ const kMaxDigits = 8;
 const kHexDigits = "0123456789abcdef";
 const kNibbles = nibbleTable();
 
-/**
- * Accepts short or full hex, with an optional hash and alpha.
- */
 export function parseHex(
   input: string
 ): RGBA | null {
@@ -25,7 +22,7 @@ export function parseHex(
   let packed = 0;
   let invalid = 0;
   for (let i = start; i < value.length; i++) {
-    const nibble = nibbleOf(value.charCodeAt(i));
+    const nibble = parseNibble(value.charCodeAt(i));
     invalid |= nibble;
     packed = (packed << 4) | nibble;
   }
@@ -48,7 +45,7 @@ export function parseHex(
   }
 }
 
-function nibbleOf(
+function parseNibble(
   code: number
 ): number {
   return kNibbles[code & 0x7f] | -(code >> kAsciiBits);

@@ -193,7 +193,7 @@ describe("AssetCatalog", () => {
 });
 
 describe("AssetCatalog kind lookup", () => {
-  function catalogOf(
+  function createCatalog(
     ...kinds: string[]
   ): AssetCatalog {
     return new AssetCatalog(
@@ -206,7 +206,7 @@ describe("AssetCatalog kind lookup", () => {
   }
 
   test("byKind yields matching records in insertion order", () => {
-    const catalog = catalogOf("model", "texture", "model");
+    const catalog = createCatalog("model", "texture", "model");
 
     assert.deepEqual(
       Array.from(
@@ -219,13 +219,13 @@ describe("AssetCatalog kind lookup", () => {
 
   test("byKind yields nothing for an unknown kind", () => {
     assert.deepEqual(
-      Array.from(catalogOf("model").byKind("texture")),
+      Array.from(createCatalog("model").byKind("texture")),
       []
     );
   });
 
   test("byKind is lazy", () => {
-    const catalog = catalogOf("model", "model");
+    const catalog = createCatalog("model", "model");
     const iterator = catalog.byKind("model");
 
     assert.equal(iterator.next().value?.id.value, "asset-0");

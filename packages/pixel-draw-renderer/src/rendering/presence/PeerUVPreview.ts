@@ -32,6 +32,6 @@ export class PeerUVPreview extends PeerLayer<PeerUVPreviewState> {
   }
 
   #sync(): void {
-    this.#uvOverlay.setPeerPreviews(new Map(this.states()));
+    this.#uvOverlay.showPeerPreviews(new Map(this.states()));
   }
 }

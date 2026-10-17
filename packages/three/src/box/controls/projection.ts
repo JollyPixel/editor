@@ -1,17 +1,11 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 
-/*
- * CONSTANTS
- * Reject angles below about four degrees, where the result diverges.
- */
+// CONSTANTS
 const kParallelEpsilon = 0.005;
 
 const _delta = new THREE.Vector3();
 
-/**
- * Returns false near parallel without changing `target`.
- */
 export function closestPointOnAxis(
   ray: THREE.Ray,
   axisOrigin: THREE.Vector3,

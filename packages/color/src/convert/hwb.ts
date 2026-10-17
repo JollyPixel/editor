@@ -31,9 +31,6 @@ export function rgbToHwb(
   };
 }
 
-/**
- * Follows CSS Color 4 by collapsing `w + b >= 1` to gray.
- */
 export function hwbToRgb(
   color: HWBA
 ): RGBA {

@@ -70,7 +70,7 @@ export class ToyDocument {
     }
   }
 
-  subtreeOf(
+  subtreeFrom(
     id: string
   ): string[] {
     const subtree = [id];
@@ -138,7 +138,7 @@ export class ToyDocument {
   #remove(
     id: string
   ): ToyInverse {
-    const removed = this.subtreeOf(id).map(
+    const removed = this.subtreeFrom(id).map(
       (node) => [node, this.tree.get(node) ?? null] as const
     );
     for (const [node] of removed) {

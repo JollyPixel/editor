@@ -11,7 +11,7 @@ import {
 } from "../fixtures/canvas.ts";
 import {
   makeContainer,
-  overlayOf
+  findOverlay
 } from "./dom.ts";
 
 // CONSTANTS
@@ -79,7 +79,7 @@ export function createPixelArtCanvas(
   return {
     manager,
     canvas: manager.canvas(),
-    overlay: overlayOf(container),
+    overlay: findOverlay(container),
     container
   };
 }

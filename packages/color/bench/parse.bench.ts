@@ -8,7 +8,7 @@ import {
 import { parseColor } from "../src/parse/index.ts";
 import {
   BATCH,
-  batchOf,
+  createBatch,
   byte,
   colorName,
   hexDigit,
@@ -18,29 +18,29 @@ import {
 
 const suite = defineSuite("parse", (bench) => {
   const notations: Record<string, string[]> = {
-    "hex #rgb": batchOf((rng) => `#${hexDigit(rng)}${hexDigit(rng)}${hexDigit(rng)}`),
-    "hex #rrggbb": batchOf((rng) => `#${hexPair(rng)}${hexPair(rng)}${hexPair(rng)}`),
-    "hex #rrggbbaa": batchOf(
+    "hex #rgb": createBatch((rng) => `#${hexDigit(rng)}${hexDigit(rng)}${hexDigit(rng)}`),
+    "hex #rrggbb": createBatch((rng) => `#${hexPair(rng)}${hexPair(rng)}${hexPair(rng)}`),
+    "hex #rrggbbaa": createBatch(
       (rng) => `#${hexPair(rng)}${hexPair(rng)}${hexPair(rng)}${hexPair(rng)}`
     ),
-    "hex uppercase, no hash": batchOf(
+    "hex uppercase, no hash": createBatch(
       (rng) => `${hexPair(rng)}${hexPair(rng)}${hexPair(rng)}`.toUpperCase()
     ),
-    "hex padded": batchOf((rng) => `  #${hexPair(rng)}${hexPair(rng)}${hexPair(rng)} `),
-    named: batchOf(colorName),
-    "rgb() legacy": batchOf((rng) => `rgb(${byte(rng)}, ${byte(rng)}, ${byte(rng)})`),
-    "rgb() modern alpha": batchOf(
+    "hex padded": createBatch((rng) => `  #${hexPair(rng)}${hexPair(rng)}${hexPair(rng)} `),
+    named: createBatch(colorName),
+    "rgb() legacy": createBatch((rng) => `rgb(${byte(rng)}, ${byte(rng)}, ${byte(rng)})`),
+    "rgb() modern alpha": createBatch(
       (rng) => `rgb(${byte(rng)} ${byte(rng)} ${byte(rng)} / ${(rng() * 100).toFixed(0)}%)`
     ),
-    "rgba() percent": batchOf(
+    "rgba() percent": createBatch(
       (rng) => `rgba(${(rng() * 100).toFixed(1)}%, 50%, 25%, ${rng().toFixed(2)})`
     ),
-    "hsl() legacy": batchOf(
+    "hsl() legacy": createBatch(
       (rng) => `hsl(${byte(rng)}, ${byte(rng) % 101}%, ${byte(rng) % 101}%)`
     ),
-    "hsl() turn": batchOf((rng) => `hsl(${rng().toFixed(3)}turn 40% 60%)`),
-    "hwb()": batchOf((rng) => `hwb(${byte(rng)} ${byte(rng) % 50}% ${byte(rng) % 50}%)`),
-    rejected: batchOf(rejectedInput)
+    "hsl() turn": createBatch((rng) => `hsl(${rng().toFixed(3)}turn 40% 60%)`),
+    "hwb()": createBatch((rng) => `hwb(${byte(rng)} ${byte(rng) % 50}% ${byte(rng) % 50}%)`),
+    rejected: createBatch(rejectedInput)
   };
 
   for (const [name, inputs] of Object.entries(notations)) {

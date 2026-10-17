@@ -5,12 +5,6 @@ import {
   type FolderOptions
 } from "./Folder.ts";
 
-/**
- * Adds facade items inside an element the caller already owns, such as a
- * `jolly-pane` authored in HTML. Creates no element of its own, so several
- * hosts can contribute to one pane and `dispose()` removes only what this
- * host added.
- */
 export class FacadeHost extends FacadeContainer {
   readonly element: HTMLElement;
 

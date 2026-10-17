@@ -60,10 +60,8 @@ describe("double-click — collapse / expand", () => {
       collapsible: true
     });
 
-    // Collapse first (width=200 > 0 → collapse path)
     fireMouseEvent(rh.handleElt, "dblclick", { button: 0 });
 
-    // Now mock the rect as collapsed so the next dblclick takes the expand path
     mockBoundingRect(target, 0, 150);
     fireMouseEvent(rh.handleElt, "dblclick", { button: 0 });
 
@@ -93,10 +91,8 @@ describe("double-click — collapse / expand", () => {
       collapsible: true
     });
 
-    // Collapse first (height=150 > 0 → collapse path)
     fireMouseEvent(rh.handleElt, "dblclick", { button: 0 });
 
-    // Mock rect as collapsed so next dblclick takes the expand path
     mockBoundingRect(target, 200, 0);
     fireMouseEvent(rh.handleElt, "dblclick", { button: 0 });
 
@@ -106,7 +102,6 @@ describe("double-click — collapse / expand", () => {
 
   test("expand when savedSize is null falls back to 0", () => {
     const container = makeContainer();
-    // Target starts with zero size → first dblclick goes straight to expand path
     const target = makeTarget(container, 0, 0);
     const rh = new ResizeHandle(target, {
       direction: "left",
@@ -115,7 +110,6 @@ describe("double-click — collapse / expand", () => {
 
     fireMouseEvent(rh.handleElt, "dblclick", { button: 0 });
 
-    // savedSize was null → newSize = null ?? 0 = 0
     assert.strictEqual(target.style.display, "");
     assert.strictEqual(target.style.width, "0px");
   });

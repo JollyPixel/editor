@@ -46,7 +46,7 @@ Each method returns `false` when the model refuses the command. Every linked set
 
 ## Block paths
 
-`blockPathOf(tree, id)` is a block's path: the names of its block ancestors and its own, joined by `/`, folders left out, so moving a block between folders keeps its path. Paths compare as a `TrackPath`: segment by segment, trimmed and in any case. A name holding `/` cannot be told apart from a path.
+`buildBlockPath(tree, id)` is a block's path: the names of its block ancestors and its own, joined by `/`, folders left out, so moving a block between folders keeps its path. Paths compare as a `TrackPath`: segment by segment, trimmed and in any case. A name holding `/` cannot be told apart from a path.
 
 ## `TrackBinding`
 
@@ -74,7 +74,7 @@ Resolves each track path to a `TrackResolution` `{ state, blockId, remap }`. A r
 | `get(path)` | The resolution of one track. |
 | `[Symbol.iterator]()` | `[path, resolution]` pairs, in the order of `paths`. |
 | `bound()` | The bound tracks, as a path-to-block-ID map. |
-| `pathOf(blockId)` | The track that drives a block: a bound track among `paths`, else the track a remap points at the block's path, else `blockPathOf`. |
+| `trackPath(blockId)` | The track that drives a block: a bound track among `paths`, else the track a remap points at the block's path, else `buildBlockPath`. |
 
 ## Posing
 

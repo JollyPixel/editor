@@ -158,13 +158,13 @@ export class PreviewPane {
   }
 
   readonly #applyTheme = (): void => {
-    this.scene.setAppearance(this.#panel.resolvedTheme);
+    this.scene.applyAppearance(this.#panel.resolvedTheme);
   };
 
   readonly #followActiveTexture = (): void => {
     const canvas = this.#panel.canvasManager;
     if (canvas !== null) {
-      this.scene.setCanvas(canvas);
+      this.scene.attachCanvas(canvas);
     }
   };
 }

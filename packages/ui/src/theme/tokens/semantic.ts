@@ -4,18 +4,12 @@ import { css } from "lit";
 // Import Internal Dependencies
 import { rampTokens } from "./ramps.ts";
 
-/**
- * Opaque planes, painted only by window-level containers; leaves tint instead.
- */
 const surfaceTokens = css`
   --jolly-surface: light-dark(var(--jolly-neutral-100), var(--jolly-neutral-900));
   --jolly-surface-sunken: light-dark(var(--jolly-neutral-200), var(--jolly-neutral-950));
   --jolly-surface-raised: light-dark(var(--jolly-neutral-0), var(--jolly-neutral-800));
 `;
 
-/**
- * Control backgrounds are the ink at alpha stops, so nesting stays coherent.
- */
 const inkTokens = css`
   --jolly-ink: light-dark(var(--jolly-neutral-900), var(--jolly-neutral-50));
   --jolly-ink-danger: var(--jolly-danger-500);

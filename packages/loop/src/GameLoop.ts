@@ -62,10 +62,6 @@ export interface GameLoopOptions extends FrameSchedulerOptions {
   idleDelay?: number;
 }
 
-/**
- * Connects a frame source and scheduler to host callbacks.
- * Configure scheduling through `scheduler`; set pause-aware `timeScale` here.
- */
 export class GameLoop extends Emitter<GameLoopEvents> {
   readonly scheduler: FrameScheduler;
 

@@ -10,7 +10,7 @@ export function hueSector(
   return hue / kSector;
 }
 
-export function hueOf(
+export function computeHue(
   r: number,
   g: number,
   b: number,

@@ -50,7 +50,7 @@ export function withEvent<
   return schema;
 }
 
-function eventNameOf(
+function resolveEventName(
   variant: Schema,
   discriminator: string
 ): string {
@@ -59,7 +59,7 @@ function eventNameOf(
     return named.event;
   }
 
-  const tag = tagOf(variant, discriminator);
+  const tag = readTag(variant, discriminator);
   if (tag !== null) {
     return tag;
   }
@@ -76,13 +76,13 @@ function eventNameOf(
   );
 }
 
-function tagOf(
+function readTag(
   variant: Schema,
   discriminator: string
 ): string | null {
   const options = SchemaShape.options(variant);
   if (options !== null) {
-    const tags = new Set(options.map((option) => tagOf(option, discriminator)));
+    const tags = new Set(options.map((option) => readTag(option, discriminator)));
     const [tag] = tags;
 
     return tags.size === 1 && tag !== undefined ? tag : null;
@@ -122,8 +122,8 @@ export class MessageProtocol<
     this.discriminator = discriminator;
     this.#variants = Object.freeze(variants.map((variant) => {
       return {
-        event: eventNameOf(variant, discriminator),
-        tag: tagOf(variant, discriminator),
+        event: resolveEventName(variant, discriminator),
+        tag: readTag(variant, discriminator),
         schema: variant
       };
     }));

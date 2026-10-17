@@ -15,7 +15,7 @@ import { mapTrackKeys } from "./values/trackKeys.ts";
 import { TrackPath } from "./values/TrackPath.ts";
 
 export class AnimationClip {
-  static problemOf(
+  static findProblem(
     clip: AnimationClipJSON
   ): string | null {
     if (!FrameRate.isValid(clip.fps)) {
@@ -44,7 +44,7 @@ export class AnimationClip {
   constructor(
     clip: AnimationClipJSON
   ) {
-    const problem = AnimationClip.problemOf(clip);
+    const problem = AnimationClip.findProblem(clip);
     if (problem !== null) {
       throw new InvalidAnimationSetError(clip.id, problem);
     }
@@ -77,7 +77,7 @@ export class AnimationClip {
   track(
     path: string
   ): AnimationTrackJSON | undefined {
-    const track = this.#trackOf(path);
+    const track = this.#findTrack(path);
 
     return track === undefined ? undefined : structuredClone(track);
   }
@@ -87,7 +87,7 @@ export class AnimationClip {
     channel: AnimationChannel,
     tick: number
   ): AnimationKeyJSON | undefined {
-    const key = this.#trackOf(path)?.[channel]?.find((candidate) => candidate.tick === tick);
+    const key = this.#findTrack(path)?.[channel]?.find((candidate) => candidate.tick === tick);
 
     return key === undefined ? undefined : structuredClone(key);
   }
@@ -96,11 +96,11 @@ export class AnimationClip {
     path: string,
     to: string
   ): boolean {
-    const track = this.#trackOf(path);
+    const track = this.#findTrack(path);
 
     return track !== undefined &&
       track.path !== to &&
-      (this.#trackOf(to) === undefined || new TrackPath(path).equals(to));
+      (this.#findTrack(to) === undefined || new TrackPath(path).equals(to));
   }
 
   withPatch(
@@ -117,7 +117,7 @@ export class AnimationClip {
     channel: AnimationChannel,
     key: AnimationKeyJSON
   ): AnimationClip {
-    const track = this.#trackOf(path) ?? { path };
+    const track = this.#findTrack(path) ?? { path };
     const keys = [
       ...(track[channel] ?? []).filter(({ tick }) => tick !== key.tick),
       key
@@ -134,7 +134,7 @@ export class AnimationClip {
     channel: AnimationChannel,
     tick: number
   ): AnimationClip {
-    const track = this.#trackOf(path);
+    const track = this.#findTrack(path);
     if (track === undefined) {
       return this;
     }
@@ -179,7 +179,7 @@ export class AnimationClip {
     return structuredClone(this.#json);
   }
 
-  #trackOf(
+  #findTrack(
     path: string
   ): AnimationTrackJSON | undefined {
     const wanted = new TrackPath(path);
@@ -192,7 +192,7 @@ export class AnimationClip {
     track: AnimationTrackJSON
   ): AnimationClip {
     const wanted = new TrackPath(path);
-    const exists = this.#trackOf(path) !== undefined;
+    const exists = this.#findTrack(path) !== undefined;
 
     return this.#withTracks(exists ?
       this.#json.tracks.map((candidate) => (wanted.equals(candidate.path) ? track : candidate)) :

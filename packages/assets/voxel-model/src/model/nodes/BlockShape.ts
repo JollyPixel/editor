@@ -146,7 +146,7 @@ export class BlockShape {
     };
   }
 
-  static of(
+  static fromBlock(
     block: Pick<BlockNodeJSON, "shape">
   ): BlockShapeJSON {
     return { ...block.shape ?? BlockShape.box };

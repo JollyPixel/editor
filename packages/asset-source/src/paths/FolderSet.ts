@@ -22,13 +22,13 @@ export class FolderSet implements Iterable<string> {
   add(
     folder: string
   ): this {
-    this.addParentsOf(folder);
+    this.addParents(folder);
     this.#paths.add(folder);
 
     return this;
   }
 
-  addParentsOf(
+  addParents(
     assetPath: string
   ): this {
     const segments = assetPath.split("/").slice(0, -1);
@@ -51,7 +51,7 @@ export class FolderSet implements Iterable<string> {
   ): string[] {
     const held = new FolderSet();
     for (const file of files) {
-      held.addParentsOf(file);
+      held.addParents(file);
     }
 
     const pruned = this.subtree(root).filter((folder) => !held.has(folder));

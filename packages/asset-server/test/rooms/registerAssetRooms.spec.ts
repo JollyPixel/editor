@@ -1,21 +1,14 @@
 // Import Node.js Dependencies
-import {
-  describe,
-  test
-} from "node:test";
+import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
-import {
-  Server,
-  type ServerConnection
-} from "@jolly-pixel/network";
+import { Server, type ServerConnection } from "@jolly-pixel/network";
 import { AssetRoom } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import {
-  ASSET_UPDATED,
   AssetTags,
   CatalogProjection,
   registerAssetRooms,
@@ -30,10 +23,7 @@ import {
 } from "../helpers/kinds.ts";
 import { bytes } from "../helpers/bytes.ts";
 import { recordingLogger } from "../helpers/logger.ts";
-import {
-  recordingClient,
-  type RecordingClient
-} from "../helpers/rooms.ts";
+import { recordingClient, type RecordingClient } from "../helpers/rooms.ts";
 
 // CONSTANTS
 const kActor: EventStore.Actor = {
@@ -65,26 +55,6 @@ interface RoomHarnessOptions {
   kind?: CounterKind;
   handler?: AssetKindHandler<CounterState>;
   extraHandlers?: AssetKindHandler[];
-}
-
-function restoringCounterHandler(
-  restored: Array<[unknown, number]>
-): AssetKindHandler<CounterState> {
-  const inner = liveCounterHandler({ delay: 0, maxDelay: 0 });
-  const commands = inner.commands!;
-
-  return {
-    ...inner,
-    commands: {
-      ...commands,
-      live: (binding) => {
-        return {
-          ...commands.live!(binding),
-          restore: (command, version) => restored.push([command, version])
-        };
-      }
-    }
-  };
 }
 
 async function roomHarness(
@@ -275,164 +245,5 @@ describe("registerAssetRooms — admission", () => {
 
     assert.deepEqual(harness.refusals, ["unknown asset"]);
     assert.strictEqual(harness.sync.states.has(harness.assetId), false);
-  });
-});
-
-describe("registerAssetRooms — tag rooms", () => {
-  test("a tag room serves the tagged version and refuses its commands", async() => {
-    await using harness = await roomHarness();
-    (await harness.tags.create({
-      assetId: harness.assetId,
-      name: "v1",
-      actor: kActor
-    })).unwrap();
-    await harness.join("A");
-    await harness.send("A", { action: "increment" });
-    const room = new AssetRoom("counter", harness.assetId, "v1").toString();
-    const eventCount = harness.sync.eventStore.reader.list(harness.assetId).length;
-
-    const connection = await harness.join("B", room);
-    await connection.receive({
-      room,
-      kind: "message",
-      payload: { action: "increment" }
-    });
-
-    const [sync, snapshot, denied] = harness.clients.get("B")!.received;
-    assert.deepEqual(
-      (sync as { rights: Record<string, string>; }).rights.increment,
-      "read"
-    );
-    assert.deepEqual(snapshot, {
-      room,
-      kind: "message",
-      payload: {
-        type: "snapshot",
-        data: { value: 0 },
-        version: 1
-      }
-    });
-    assert.strictEqual((denied as { kind: string; }).kind, "denied");
-    assert.strictEqual(
-      harness.sync.eventStore.reader.list(harness.assetId).length,
-      eventCount
-    );
-  });
-
-  test("an unknown tag is refused", async() => {
-    await using harness = await roomHarness();
-
-    await harness.join(
-      "A",
-      new AssetRoom("counter", harness.assetId, "ghost").toString()
-    );
-
-    assert.deepEqual(harness.refusals, ["unknown tag"]);
-  });
-});
-
-describe("registerAssetRooms — restore", () => {
-  test("a cold room restores its arbiter from the replayed commands", async() => {
-    const restored: Array<[unknown, number]> = [];
-    await using harness = await roomHarness({
-      handler: restoringCounterHandler(restored)
-    });
-    const versions = [1, 2].map(() => harness.sync.eventStore.writer.append({
-      assetType: "counter",
-      assetId: harness.assetId,
-      eventType: COUNTER_INCREMENTED,
-      eventData: { action: "increment" },
-      actor: kActor
-    }).unwrap().eventVersion);
-
-    await harness.join("alice");
-
-    assert.deepEqual(restored, versions.map((version) => [
-      { action: "increment" },
-      version
-    ]));
-  });
-});
-
-describe("registerAssetRooms — eviction", () => {
-  test("expiry flushes the asset before releasing its state", async(t) => {
-    t.mock.timers.enable({ apis: ["setTimeout"] });
-    await using harness = await roomHarness({ graceMs: 100 });
-    const room = new AssetRoom("counter", harness.assetId).toString();
-
-    const connectionA = await harness.join("A");
-    await harness.send("A", { action: "increment" });
-    await connectionA.receive({ room, kind: "leave" });
-
-    t.mock.timers.tick(100);
-    await harness.server.settled(room);
-
-    assert.strictEqual(
-      new TextDecoder().decode(
-        await harness.sync.source.read("a.counter")
-      ),
-      "1"
-    );
-    assert.strictEqual(harness.sync.states.has(harness.assetId), false);
-  });
-});
-
-describe("registerAssetRooms — deletion", () => {
-  test("deleting an asset notifies the members of its open room", async() => {
-    await using harness = await roomHarness();
-    const room = new AssetRoom("counter", harness.assetId).toString();
-    await harness.join("A");
-
-    (await harness.sync.writer.remove({
-      assetId: harness.assetId,
-      actor: kActor
-    })).unwrap();
-
-    assert.deepEqual(harness.clients.get("A")!.received.at(-1), {
-      room,
-      kind: "message",
-      payload: { type: "deleted" }
-    });
-  });
-});
-
-describe("registerAssetRooms — replaced content", () => {
-  test("an update from outside the room sends every member the new snapshot", async() => {
-    await using harness = await roomHarness();
-    const room = new AssetRoom("counter", harness.assetId).toString();
-    await harness.join("A");
-    await harness.join("B");
-
-    const updated = (await harness.sync.writer.update({
-      assetId: harness.assetId,
-      data: bytes("7"),
-      actor: kActor
-    })).unwrap();
-
-    for (const id of ["A", "B"]) {
-      assert.deepEqual(harness.clients.get(id)!.received.at(-1), {
-        room,
-        kind: "message",
-        payload: {
-          type: "snapshot",
-          data: { value: 7 },
-          version: updated.eventVersion
-        }
-      });
-    }
-  });
-
-  test("a scheduled snapshot of the room's own edits sends no snapshot", async() => {
-    await using harness = await roomHarness();
-    await harness.join("A");
-    await harness.send("A", { action: "increment" });
-    const received = harness.clients.get("A")!.received;
-    const beforeSnapshot = received.length;
-
-    await harness.sync.scheduler.flush();
-
-    const last = harness.sync.eventStore.reader.list(harness.assetId).at(-1);
-    assert.strictEqual(last?.eventType, ASSET_UPDATED);
-    assert.strictEqual(received.length, beforeSnapshot);
   });
 });

@@ -33,13 +33,11 @@ describe("Controls.Gamepad buttons", () => {
   });
 
   test("should reset all button and axis states", () => {
-    // Modify some states first
     gamepad.buttons[0][0].isDown = true;
     gamepad.axes[0][0].value = 0.8;
 
     gamepad.reset();
 
-    // Check all buttons are reset
     for (let gamepadIndex = 0; gamepadIndex < 4; gamepadIndex++) {
       for (let buttonIndex = 0; buttonIndex < 16; buttonIndex++) {
         const button = gamepad.buttons[gamepadIndex][buttonIndex];
@@ -50,7 +48,6 @@ describe("Controls.Gamepad buttons", () => {
       }
     }
 
-    // Check all axes are reset
     for (let gamepadIndex = 0; gamepadIndex < 4; gamepadIndex++) {
       for (let axisIndex = 0; axisIndex < 4; axisIndex++) {
         const axis = gamepad.axes[gamepadIndex][axisIndex];
@@ -93,10 +90,8 @@ describe("Controls.Gamepad buttons", () => {
     mockGamepad.buttons[0] = { pressed: true, value: 1.0 };
     navigatorAdapter.gamepads = [mockGamepad, null, null, null];
 
-    // First update to press the button
     gamepad.update();
 
-    // Second update to release the button
     mockGamepad.buttons[0] = { pressed: false, value: 0.0 };
     gamepad.update();
 

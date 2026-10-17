@@ -52,12 +52,6 @@ const kChannelTransportMessageSchema = z.discriminatedUnion("type", [
 
 type PortListener = (event: { data: unknown; }) => void;
 
-/**
- * The part of a `BroadcastChannel`, `MessagePort` or `Worker` the channel
- * transport relies on. `start()` is called when present, as a `MessagePort`
- * only delivers to `addEventListener` listeners once started. `close()` is
- * called on a per-socket port when its socket closes.
- */
 export interface ChannelPort {
   postMessage(
     message: unknown

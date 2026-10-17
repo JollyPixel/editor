@@ -10,8 +10,8 @@ import { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 import { Grants } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
-import { mapHistoryOf } from "../../helpers/mapHistory.ts";
-import { mapDocumentOf } from "../../helpers/mapDocument.ts";
+import { createWorldHistory } from "../../helpers/mapHistory.ts";
+import { createMapDocument } from "../../helpers/mapDocument.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
 import { CellRegion } from "../../../src/features/placement/CellRegion.ts";
 import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
@@ -33,9 +33,9 @@ function setup() {
   const access = mapAccess();
   const placement = new MapPlacement({
     world,
-    history: mapHistoryOf(world),
+    history: createWorldHistory(world),
     selection,
-    mapDocument: mapDocumentOf(world),
+    mapDocument: createMapDocument(world),
     access
   });
   world.addLayer("Draft");

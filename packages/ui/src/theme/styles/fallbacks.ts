@@ -1,72 +1,21 @@
 // Import Third-party Dependencies
 import { unsafeCSS } from "lit";
 
-/**
- * Usage-site fallbacks, applied only when no scope host declares the tokens.
- */
 export const kFallback = {
-  /**
-   * --jolly-neutral-900
-   */
   text: unsafeCSS("#1b2027"),
-  /**
-   * --jolly-control-bg
-   */
   controlBg: unsafeCSS("rgb(128 128 128 / 0.15)"),
-  /**
-   * --jolly-folder-header-bg
-   */
   folderHeaderBg: unsafeCSS("rgb(47 111 216 / 0.12)"),
-  /**
-   * --jolly-folder-header-bg-hover
-   */
   folderHeaderBgHover: unsafeCSS("rgb(47 111 216 / 0.18)"),
-  /**
-   * --jolly-folder-action-fg
-   */
   folderActionFg: unsafeCSS("#1b2027"),
-  /**
-   * --jolly-folder-action-bg
-   */
   folderActionBg: unsafeCSS("rgb(47 111 216 / 0.22)"),
-  /**
-   * --jolly-folder-action-danger-fg
-   */
   folderActionDangerFg: unsafeCSS("#c0362c"),
-  /**
-   * --jolly-folder-action-danger-bg
-   */
   folderActionDangerBg: unsafeCSS("rgb(192 54 44 / 0.16)"),
-  /**
-   * --jolly-pane-header-bg
-   */
   paneHeaderBg: unsafeCSS("#2f6fd8"),
-  /**
-   * --jolly-tab-close-bg-hover
-   */
   tabCloseBgHover: unsafeCSS("rgb(221 68 51 / 0.22)"),
-  /**
-   * --jolly-tab-badge-bg
-   */
   tabBadgeBg: unsafeCSS("oklch(70% 0.125 75deg / 0.24)"),
-  /**
-   * --jolly-warning-500
-   */
   tabBadgeFg: unsafeCSS("oklch(70% 0.125 75deg)"),
-  /**
-   * --jolly-danger-500
-   */
   inkDanger: unsafeCSS("oklch(58% 0.190 26.4)"),
-  /**
-   * --jolly-neutral-500
-   */
   borderStrong: unsafeCSS("#7b828c"),
-  /**
-   * --jolly-accent-600
-   */
   focusRing: unsafeCSS("#2f6fd8"),
-  /**
-   * --jolly-scrim
-   */
   scrim: unsafeCSS("light-dark(rgb(30 38 52 / 46%), rgb(5 10 18 / 62%))")
 } as const;

@@ -40,7 +40,7 @@ const kDeletedData = {
   kind: "binary"
 };
 
-function rejectionOf(
+function readRejection(
   eventType: string,
   eventData: unknown
 ) {
@@ -91,7 +91,7 @@ describe("parseAssetEvent", () => {
   });
 
   test("rejects a reference content payload as unsupported", () => {
-    const rejection = rejectionOf(ASSET_CREATED, {
+    const rejection = readRejection(ASSET_CREATED, {
       ...kWriteData,
       content: {
         type: "ref",
@@ -109,11 +109,11 @@ describe("parseAssetEvent", () => {
 
   test("rejects a payload belonging to another lifecycle type", () => {
     assert.strictEqual(
-      rejectionOf(ASSET_CREATED, kRenamedData).reason,
+      readRejection(ASSET_CREATED, kRenamedData).reason,
       "malformed"
     );
     assert.strictEqual(
-      rejectionOf(ASSET_RENAMED, kWriteData).reason,
+      readRejection(ASSET_RENAMED, kWriteData).reason,
       "malformed"
     );
   });
@@ -124,7 +124,7 @@ describe("parseAssetEvent", () => {
       delete eventData[field];
 
       assert.strictEqual(
-        rejectionOf(ASSET_CREATED, eventData).reason,
+        readRejection(ASSET_CREATED, eventData).reason,
         "malformed",
         `expected a missing "${field}" to be rejected`
       );
@@ -132,7 +132,7 @@ describe("parseAssetEvent", () => {
   });
 
   test("reports the offending field of a mistyped payload", () => {
-    const rejection = rejectionOf(ASSET_CREATED, {
+    const rejection = readRejection(ASSET_CREATED, {
       ...kWriteData,
       size: "5"
     });
@@ -143,7 +143,7 @@ describe("parseAssetEvent", () => {
 
   test("rejects malformed inline content", () => {
     assert.strictEqual(
-      rejectionOf(ASSET_CREATED, {
+      readRejection(ASSET_CREATED, {
         ...kWriteData,
         content: {
           type: "inline",
@@ -158,14 +158,14 @@ describe("parseAssetEvent", () => {
   test("rejects a non-object payload", () => {
     for (const eventData of [null, undefined, "a.png", 42]) {
       assert.strictEqual(
-        rejectionOf(ASSET_CREATED, eventData).reason,
+        readRejection(ASSET_CREATED, eventData).reason,
         "malformed"
       );
     }
   });
 
   test("reports a domain event on an asset stream as foreign", () => {
-    const rejection = rejectionOf("counter.incremented", {});
+    const rejection = readRejection("counter.incremented", {});
 
     assert.strictEqual(rejection.reason, "foreign");
     assert.strictEqual(

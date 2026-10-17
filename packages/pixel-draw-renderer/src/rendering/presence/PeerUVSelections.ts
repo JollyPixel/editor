@@ -39,6 +39,6 @@ export class PeerUVSelections extends PeerLayer<PeerUVSelectionState> {
         colorByRegion.set(regionId, color);
       }
     }
-    this.#uvOverlay.setPeerSelections(colorByRegion);
+    this.#uvOverlay.showPeerSelections(colorByRegion);
   }
 }

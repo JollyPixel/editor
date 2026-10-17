@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { rectOf } from "#src/uv/geometry/geometry.ts";
+import { boundingRect } from "#src/uv/geometry/geometry.ts";
 import {
   UVRegion,
   type UVGeometry,
@@ -44,7 +44,7 @@ describe("UVRegion.rotated", () => {
 
     assert.deepStrictEqual(rotated.bounds, { x: 0, y: 0, width: 8, height: 16 });
     for (const slot of rotated.slots) {
-      assert.strictEqual(rotated.geometryFor(slot).rotation, 1);
+      assert.strictEqual(rotated.slotGeometry(slot).rotation, 1);
     }
     assert.deepStrictEqual(rotated.toJSON(), {
       id: "a",
@@ -68,8 +68,8 @@ describe("UVRegion.rotated", () => {
 
     for (const region of [rotated.free(), rotated.unfold()]) {
       for (const slot of region.activeSlots) {
-        assert.strictEqual(region.geometryFor(slot).rotation, 3);
-        assert.strictEqual(rectOf(region.geometryFor(slot)).width, 8);
+        assert.strictEqual(region.slotGeometry(slot).rotation, 3);
+        assert.strictEqual(boundingRect(region.slotGeometry(slot)).width, 8);
       }
     }
   });
@@ -77,14 +77,14 @@ describe("UVRegion.rotated", () => {
   test("an unfolded net turns as one piece around its bounds", () => {
     const rotated = unfoldedPair().rotated("cw");
 
-    assert.deepStrictEqual(rotated.geometryFor("front"), {
+    assert.deepStrictEqual(rotated.slotGeometry("front"), {
       x: 0,
       y: 0,
       width: 8,
       height: 16,
       rotation: 1
     });
-    assert.deepStrictEqual(rotated.geometryFor("top"), {
+    assert.deepStrictEqual(rotated.slotGeometry("top"), {
       x: 0,
       y: 16,
       width: 8,
@@ -125,14 +125,14 @@ describe("UVRegion.rotated", () => {
 
     const rotated = region.rotated("cw", "front");
 
-    assert.deepStrictEqual(rotated.geometryFor("front"), {
+    assert.deepStrictEqual(rotated.slotGeometry("front"), {
       x: 4,
       y: 4,
       width: 8,
       height: 16,
       rotation: 1
     });
-    assert.deepStrictEqual(rotated.geometryFor("top"), region.geometryFor("top"));
+    assert.deepStrictEqual(rotated.slotGeometry("top"), region.slotGeometry("top"));
     assert.strictEqual(region.rotated("cw"), region);
     assert.strictEqual(region.rotated("cw", "unknown"), region);
   });
@@ -149,7 +149,7 @@ describe("UVRegion.rotated", () => {
 
     const moved = region.movedTo({ x: 10, y: 10 }, "front");
 
-    assert.strictEqual(moved.geometryFor("front").rotation, 1);
+    assert.strictEqual(moved.slotGeometry("front").rotation, 1);
   });
 
   test("withGeometry replaces one free slot and ignores other states", () => {
@@ -164,7 +164,7 @@ describe("UVRegion.rotated", () => {
     const geometry: UVGeometry = { x: 0, y: 0, width: 8, height: 4, rotation: 1 };
 
     assert.deepStrictEqual(
-      region.withGeometry("front", geometry).geometryFor("front"),
+      region.withGeometry("front", geometry).slotGeometry("front"),
       geometry
     );
     assert.strictEqual(region.withGeometry("top", geometry), region);
@@ -187,8 +187,8 @@ describe("UVRegion.stack rotation", () => {
 
     const stacked = region.stack();
 
-    assert.strictEqual(stacked.geometryFor("top").rotation, 1);
-    assert.strictEqual(stacked.free().geometryFor("top").rotation, 1);
+    assert.strictEqual(stacked.slotGeometry("top").rotation, 1);
+    assert.strictEqual(stacked.free().slotGeometry("top").rotation, 1);
   });
 
   test("a tie keeps the rotation of the slot being stacked on", () => {
@@ -202,8 +202,8 @@ describe("UVRegion.stack rotation", () => {
       }
     });
 
-    assert.strictEqual(region.stack("top").geometryFor("front").rotation, undefined);
-    assert.strictEqual(region.stack("front").geometryFor("top").rotation, 1);
+    assert.strictEqual(region.stack("top").slotGeometry("front").rotation, undefined);
+    assert.strictEqual(region.stack("front").slotGeometry("top").rotation, 1);
   });
 
   test("an outvoted stack target turns back to the dominant rotation", () => {
@@ -220,14 +220,14 @@ describe("UVRegion.stack rotation", () => {
 
     const stacked = region.stack("front");
 
-    assert.deepStrictEqual(stacked.geometryFor("front"), {
+    assert.deepStrictEqual(stacked.slotGeometry("front"), {
       x: 0,
       y: 0,
       width: 16,
       height: 8
     });
     assert.deepStrictEqual(
-      stacked.free().geometryFor("front"),
+      stacked.free().slotGeometry("front"),
       { x: 0, y: 0, width: 16, height: 8 }
     );
   });

@@ -15,9 +15,6 @@ export interface TextRendererOptions extends Omit<Text3DOptions, "font"> {
   text?: string;
 }
 
-/**
- * Builds Three.js text from a prepared font asset during awake.
- */
 export class TextRenderer extends ActorComponent<any> {
   #asset: AssetReference<Font>;
 

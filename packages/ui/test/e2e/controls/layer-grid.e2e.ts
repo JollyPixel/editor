@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import {
-  centerOf,
+  measureCenter,
   dragTo,
   hold
 } from "@jolly-pixel/e2e";
@@ -41,7 +41,7 @@ test.describe("controls: layer grid", () => {
     const grid = row(page, "jolly-layer-grid", "default");
 
     await cell(grid, "2: Player").click();
-    await dragTo(page, cell(grid, "6"), await centerOf(cell(grid, "8")));
+    await dragTo(page, cell(grid, "6"), await measureCenter(cell(grid, "8")));
 
     for (const name of ["2: Player", "6", "7", "8"]) {
       await expect(cell(grid, name)).toHaveAttribute("aria-checked", "true");
@@ -58,8 +58,8 @@ test.describe("controls: layer grid", () => {
 
     await hold(
       page,
-      await centerOf(cell(grid, "4")),
-      await centerOf(cell(grid, "5"))
+      await measureCenter(cell(grid, "4")),
+      await measureCenter(cell(grid, "5"))
     );
     await expect(cell(grid, "5")).toHaveAttribute("aria-checked", "true");
     await page.keyboard.press("Escape");
@@ -109,7 +109,7 @@ test.describe("controls: layer grid index mode", () => {
     await dragTo(
       page,
       cell(grid, "1: Default", "radio"),
-      await centerOf(cell(grid, "10", "radio"))
+      await measureCenter(cell(grid, "10", "radio"))
     );
     await page.keyboard.press("ArrowLeft");
 

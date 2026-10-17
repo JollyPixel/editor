@@ -33,7 +33,7 @@ const kMask = [true, false, false, true];
 const kAsymmetricMask = [true, false, true, true, false, false];
 const kPixels2x2 = [COLOR_A, COLOR_B, COLOR_C, COLOR_D];
 
-function contentOf(
+function createContent(
   rect: SelectionRect,
   pixels: RGBA8[],
   mask: boolean[] = filledArray(pixels.length, true)
@@ -97,7 +97,7 @@ describe("SelectionContent", () => {
     });
 
     test("round-trips through toJSON with its mask", () => {
-      const content = contentOf({ x: 3, y: 3, width: 2, height: 2 }, kPixels2x2, kMask);
+      const content = createContent({ x: 3, y: 3, width: 2, height: 2 }, kPixels2x2, kMask);
 
       assert.deepStrictEqual(SelectionContent.parse(content.toJSON())?.toJSON(), content.toJSON());
     });
@@ -105,13 +105,13 @@ describe("SelectionContent", () => {
 
   test("the constructor throws on content that does not match its rect", () => {
     assert.throws(
-      () => contentOf({ x: 0, y: 0, width: 2, height: 2 }, [kRed]),
+      () => createContent({ x: 0, y: 0, width: 2, height: 2 }, [kRed]),
       RangeError
     );
   });
 
   test("hitTest follows the mask, so holes are not grab handles", () => {
-    const content = contentOf({ x: 0, y: 0, width: 2, height: 2 }, SNAPSHOT_2X3.slice(0, 4), kMask);
+    const content = createContent({ x: 0, y: 0, width: 2, height: 2 }, SNAPSHOT_2X3.slice(0, 4), kMask);
 
     assert.ok(content.hitTest({ x: 0, y: 0 }));
     assert.ok(!content.hitTest({ x: 1, y: 0 }));
@@ -121,13 +121,13 @@ describe("SelectionContent", () => {
   });
 
   test("positions lists only masked-in pixels in texture coordinates", () => {
-    const content = contentOf({ x: 4, y: 2, width: 2, height: 2 }, SNAPSHOT_2X3.slice(0, 4), kMask);
+    const content = createContent({ x: 4, y: 2, width: 2, height: 2 }, SNAPSHOT_2X3.slice(0, 4), kMask);
 
     assert.deepStrictEqual([...content.positions()], [{ x: 4, y: 2 }, { x: 5, y: 3 }]);
   });
 
   test("movedTo keeps the size, pixels and mask", () => {
-    const content = contentOf({ x: 0, y: 0, width: 2, height: 2 }, kPixels2x2, kMask);
+    const content = createContent({ x: 0, y: 0, width: 2, height: 2 }, kPixels2x2, kMask);
 
     const moved = content.movedTo({ x: 7, y: 8 });
 
@@ -137,14 +137,14 @@ describe("SelectionContent", () => {
   });
 
   test("erased only overwrites masked-in cells", () => {
-    const content = contentOf({ x: 0, y: 0, width: 2, height: 2 }, kPixels2x2, kMask);
+    const content = createContent({ x: 0, y: 0, width: 2, height: 2 }, kPixels2x2, kMask);
 
     assert.deepStrictEqual(content.erased(kWhite).pixels, [kWhite, COLOR_B, COLOR_C, kWhite]);
   });
 
   describe("transforms", () => {
     test("rotated swaps the rect dimensions around its center and rotates the pixels", () => {
-      const content = contentOf({ x: 5, y: 5, width: 2, height: 3 }, SNAPSHOT_2X3);
+      const content = createContent({ x: 5, y: 5, width: 2, height: 3 }, SNAPSHOT_2X3);
 
       const rotated = content.rotated("cw");
 
@@ -153,7 +153,7 @@ describe("SelectionContent", () => {
     });
 
     test("rotated four times returns to the original rect and pixels", () => {
-      let content = contentOf({ x: 5, y: 5, width: 2, height: 4 }, SNAPSHOT_2X4);
+      let content = createContent({ x: 5, y: 5, width: 2, height: 4 }, SNAPSHOT_2X4);
       for (let turn = 0; turn < 4; turn++) {
         content = content.rotated("cw");
       }
@@ -163,7 +163,7 @@ describe("SelectionContent", () => {
     });
 
     test("rotated counter-clockwise undoes the pixels and mask of a clockwise turn", () => {
-      const content = contentOf({ x: 1, y: 1, width: 2, height: 3 }, SNAPSHOT_2X3, kAsymmetricMask);
+      const content = createContent({ x: 1, y: 1, width: 2, height: 3 }, SNAPSHOT_2X3, kAsymmetricMask);
 
       const restored = content.rotated("cw").rotated("ccw");
 
@@ -172,19 +172,19 @@ describe("SelectionContent", () => {
     });
 
     test("rotated keeps a square footprint in place", () => {
-      const content = contentOf({ x: 3, y: 4, width: 2, height: 2 }, SNAPSHOT_2X3.slice(0, 4));
+      const content = createContent({ x: 3, y: 4, width: 2, height: 2 }, SNAPSHOT_2X3.slice(0, 4));
 
       assert.deepStrictEqual(content.rotated("cw").rect, { x: 3, y: 4, width: 2, height: 2 });
     });
 
     test("rotated turns the mask with the pixels", () => {
-      const content = contentOf({ x: 0, y: 0, width: 2, height: 3 }, SNAPSHOT_2X3, kAsymmetricMask);
+      const content = createContent({ x: 0, y: 0, width: 2, height: 3 }, SNAPSHOT_2X3, kAsymmetricMask);
 
       assert.deepStrictEqual(content.rotated("cw").mask, [false, true, true, false, true, false]);
     });
 
     test("flippedHorizontal mirrors pixels and mask left-right", () => {
-      const content = contentOf({ x: 1, y: 1, width: 2, height: 3 }, SNAPSHOT_2X3, kAsymmetricMask);
+      const content = createContent({ x: 1, y: 1, width: 2, height: 3 }, SNAPSHOT_2X3, kAsymmetricMask);
 
       const flipped = content.flippedHorizontal();
 
@@ -194,7 +194,7 @@ describe("SelectionContent", () => {
     });
 
     test("flippedVertical mirrors pixels and mask top-bottom", () => {
-      const content = contentOf({ x: 1, y: 1, width: 2, height: 3 }, SNAPSHOT_2X3, kAsymmetricMask);
+      const content = createContent({ x: 1, y: 1, width: 2, height: 3 }, SNAPSHOT_2X3, kAsymmetricMask);
 
       const flipped = content.flippedVertical();
 

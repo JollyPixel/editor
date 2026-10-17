@@ -21,9 +21,9 @@ const hovers = new PeerHoverRegistry();
 selections.select("peer-a", "crate");
 hovers.hover("peer-b", "crate");
 
-selections.selectorsOf("crate");       // ["peer-a"]
-selections.primarySelectorOf("crate"); // "peer-a"
-selections.colorOf("peer-a");          // stable color for this peer id
+selections.listSelectors("crate");       // ["peer-a"]
+selections.primarySelector("crate"); // "peer-a"
+selections.peerColor("peer-a");          // stable color for this peer id
 ```
 
 Each peer has at most one selected id and one hovered id. Pass `null` to clear
@@ -33,11 +33,11 @@ point at one object, the oldest active peer is primary.
 | Selection registry | Hover registry | Result |
 |---|---|---|
 | `select(peerId, id)` | `hover(peerId, id)` | Set or clear remote state |
-| `selectionOf(peerId)` | `hoverOf(peerId)` | Current id for one peer |
-| `selectorsOf(id)` | `hoverersOf(id)` | Peers for one object, oldest first |
+| `selectedObject(peerId)` | `hoveredObject(peerId)` | Current id for one peer |
+| `listSelectors(id)` | `listHoverers(id)` | Peers for one object, oldest first |
 | `selectedObjectIds()` | `hoveredObjectIds()` | Objects with remote state |
-| `primarySelectorOf(id)` | `primaryHovererOf(id)` | Oldest active peer |
-| `colorOf(peerId)` | `colorOf(peerId)` | Assigned peer color |
+| `primarySelector(id)` | `primaryHoverer(id)` | Oldest active peer |
+| `peerColor(peerId)` | `peerColor(peerId)` | Assigned peer color |
 | `dispose()` | `dispose()` | Clear registry state |
 
 Changes dispatch `peerSelectionChange` or `peerHoverChange`. Both events are
@@ -58,7 +58,7 @@ stateful palette:
 
 ```ts
 interface PeerColorAllocator {
-  colorOf(peerId: string): string;
+  peerColor(peerId: string): string;
   release(peerId: string): void;
 }
 ```

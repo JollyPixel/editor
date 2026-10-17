@@ -64,7 +64,7 @@ Disposes rooms and workers. Await it; close transport resources too.
 
 ## Dynamic rooms
 
-`setRoomResolver(resolver)` handles unknown names on join. Return
+`useRoomResolver(resolver)` handles unknown names on join. Return
 `{ extension, onEvict?, graceMs?, readOnly? }` or `null`; promises are
 supported.
 

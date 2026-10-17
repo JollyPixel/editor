@@ -6,7 +6,7 @@ import {
   type ButtonVariant
 } from "../../controls/Button.ts";
 import { Text } from "../../controls/Text.ts";
-import { detailOf } from "../../dom.ts";
+import { readDetail } from "../../dom.ts";
 import type {
   IconName,
   IconTone
@@ -97,7 +97,7 @@ export function showPrompt({
   function captureValue(
     event: Event
   ): void {
-    const detail = detailOf<JollyChangeDetail<string>>(event);
+    const detail = readDetail<JollyChangeDetail<string>>(event);
     if (detail !== null) {
       value = detail.value;
     }
@@ -251,7 +251,7 @@ function settleHelper<TResult>(
   }
 
   dialog.addEventListener("jolly-close", (event) => {
-    const detail = detailOf<{ returnValue: string; }>(event);
+    const detail = readDetail<{ returnValue: string; }>(event);
     if (detail !== null) {
       settle(detail.returnValue);
     }

@@ -16,10 +16,6 @@ const kJitter = Array.from(
   (_, index) => Math.sin(index * 12.9898) * 0.75
 );
 
-/**
- * Measures steady, high-refresh, snapped, catch-up, panic, and capped paths.
- * The steady path tracks the cost of allocating `FrameSchedule` per frame.
- */
 const suite = defineSuite("loop / FrameScheduler#advance", (bench) => {
   const steady = advancer(new FrameScheduler(), kFrame60);
   const highRefresh = advancer(new FrameScheduler(), kFrame144);

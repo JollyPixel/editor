@@ -28,7 +28,7 @@ function makeWorld(): VoxelWorld {
   return world;
 }
 
-function voxelsOf(
+function readVoxels(
   template: VoxelTemplate | undefined
 ): number[][] {
   assert.ok(template !== undefined);
@@ -52,7 +52,7 @@ describe("VoxelWorld.templates.createFromLayer", () => {
 
     const template = world.templates.createFromLayer("Source", { name: "Steps" });
 
-    assert.deepEqual(voxelsOf(template), [
+    assert.deepEqual(readVoxels(template), [
       [0, 0, 0, 1],
       [1, 0, 0, 2],
       [2, 1, 0, 3]
@@ -84,7 +84,7 @@ describe("VoxelWorld.templates.createFromLayer", () => {
       }
     });
 
-    assert.deepEqual(voxelsOf(template), [
+    assert.deepEqual(readVoxels(template), [
       [0, 0, 0, 1],
       [1, 0, 0, 2]
     ]);
@@ -127,7 +127,7 @@ describe("VoxelWorld.templates.createFromSnapshot", () => {
     assert.equal(template?.id, "template_0");
     assert.equal(template?.name, "Turned");
     assert.deepEqual(template?.pivot, snapshot.pivot);
-    assert.deepEqual(voxelsOf(template), voxelsOf(snapshot));
+    assert.deepEqual(readVoxels(template), readVoxels(snapshot));
   });
 
   it("creates nothing for an empty snapshot", () => {

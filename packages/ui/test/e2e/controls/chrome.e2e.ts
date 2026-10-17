@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { boxOf } from "@jolly-pixel/e2e";
+import { measureBox } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
 import {
@@ -7,7 +7,7 @@ import {
   expect
 } from "../fixtures.ts";
 import { openExample } from "../support/gallery.ts";
-import { styleOf } from "../support/styles.ts";
+import { readStyle } from "../support/styles.ts";
 
 test.describe("controls: chrome", () => {
   test("buttons, separators and property rows expose their content", async({ page }) => {
@@ -19,8 +19,8 @@ test.describe("controls: chrome", () => {
 
     const accent = page.locator('jolly-button[variant="accent"] button').first();
     const plain = page.locator('jolly-button[variant="default"] button').first();
-    expect(await styleOf(accent, "background-color"))
-      .not.toBe(await styleOf(plain, "background-color"));
+    expect(await readStyle(accent, "background-color"))
+      .not.toBe(await readStyle(plain, "background-color"));
 
     await expect(page.locator("jolly-button[disabled] button")).toBeDisabled();
     await expect(
@@ -52,11 +52,11 @@ test.describe("controls: chrome", () => {
 
     const actions = withActions.locator('jolly-button[slot="actions"]');
     const [plain, host, trailing, first, second] = await Promise.all([
-      boxOf(separators.first()),
-      boxOf(withActions),
-      boxOf(withActions.locator(".rule").last()),
-      boxOf(actions.first()),
-      boxOf(actions.last())
+      measureBox(separators.first()),
+      measureBox(withActions),
+      measureBox(withActions.locator(".rule").last()),
+      measureBox(actions.first()),
+      measureBox(actions.last())
     ]);
     expect(host.height).toBe(plain.height);
     expect(first.x - (trailing.x + trailing.width)).toBe(4);
@@ -77,26 +77,26 @@ test.describe("controls: chrome", () => {
     await expect(rules).toHaveCount(2);
 
     const [captionBox, labelBox, leading, trailing] = await Promise.all([
-      boxOf(caption),
-      boxOf(fieldLabel),
-      boxOf(rules.first()),
-      boxOf(rules.last())
+      measureBox(caption),
+      measureBox(fieldLabel),
+      measureBox(rules.first()),
+      measureBox(rules.last())
     ]);
     expect(captionBox.x).toBe(labelBox.x);
     expect(captionBox.x - (leading.x + leading.width)).toBe(4);
     expect(trailing.x - (captionBox.x + captionBox.width)).toBe(4);
 
-    expect(await styleOf(caption, "color"))
-      .not.toBe(await styleOf(fieldLabel, "color"));
+    expect(await readStyle(caption, "color"))
+      .not.toBe(await readStyle(fieldLabel, "color"));
     await expect(caption).toHaveCSS(
       "font-size",
-      await styleOf(fieldLabel, "font-size")
+      await readStyle(fieldLabel, "font-size")
     );
     await expect(labelled).toHaveCSS("margin-block-start", "2px");
 
     const plainRule = page.locator("jolly-separator .unlabelled .rule").first();
-    expect(await styleOf(rules.last(), "background-color"))
-      .not.toBe(await styleOf(plainRule, "background-color"));
+    expect(await readStyle(rules.last(), "background-color"))
+      .not.toBe(await readStyle(plainRule, "background-color"));
   });
 
   test("labelled and plain separators share one height", async({ page }) => {
@@ -113,8 +113,8 @@ test.describe("controls: chrome", () => {
 
     const unlabelled = separators.locator(".unlabelled").first();
     const [labelledBox, unlabelledBox] = await Promise.all([
-      boxOf(separators.locator(".labelled").first()),
-      boxOf(unlabelled)
+      measureBox(separators.locator(".labelled").first()),
+      measureBox(unlabelled)
     ]);
     expect(unlabelledBox.height).toBe(labelledBox.height);
     await expect(unlabelled).toHaveCSS("margin-block-start", "2px");

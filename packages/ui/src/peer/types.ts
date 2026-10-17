@@ -1,6 +1,3 @@
-/**
- * Collaboration presence consumed by field controls.
- */
 export interface CollaboratorPresence {
   clientId: string;
   displayName: string;

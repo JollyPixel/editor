@@ -17,7 +17,7 @@ import type { SqliteDatabase } from "./database.ts";
 import { SqliteTagTable } from "./tags.ts";
 import {
   escapeGlob,
-  placeholdersFor
+  sqlPlaceholders
 } from "./sql.ts";
 
 // CONSTANTS
@@ -290,7 +290,7 @@ export class SqliteEventLog implements EventLog {
       sql: `WITH heads AS (
          SELECT asset_id, MAX(event_version) AS head
          FROM events
-         WHERE event_type IN (${placeholdersFor(eventTypes)}) ${assetCondition}
+         WHERE event_type IN (${sqlPlaceholders(eventTypes)}) ${assetCondition}
          GROUP BY asset_id
        )`,
       parameters

@@ -19,7 +19,6 @@ import {
 } from "../dom.ts";
 import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
 
-// Side-effect import: renders the search and close glyphs.
 import "../icon/Icon.ts";
 
 @customElement("jolly-search")

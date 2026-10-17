@@ -1,10 +1,7 @@
 // Import Internal Dependencies
 import type { FaceRanges } from "../../../../src/mesh-texturing/types.ts";
 
-/*
- * CONSTANTS
- * THREE.BoxGeometry emits its six faces in this order, four vertices each.
- */
+// CONSTANTS
 const kBoxFaceRanges: FaceRanges = {
   right: [{ start: 0, count: 4 }],
   left: [{ start: 4, count: 4 }],
@@ -22,16 +19,10 @@ const kRampFaceRanges: FaceRanges = {
   top: [{ start: 14, count: 4 }]
 };
 
-/**
- * Vertex ranges for a one-segment `THREE.BoxGeometry`.
- */
 export function boxFaceRanges(): FaceRanges {
   return { ...kBoxFaceRanges };
 }
 
-/**
- * Vertex ranges for a box with one corner removed.
- */
 export function rampFaceRanges(): FaceRanges {
   return { ...kRampFaceRanges };
 }

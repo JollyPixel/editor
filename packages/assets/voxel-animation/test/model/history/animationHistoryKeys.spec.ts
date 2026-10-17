@@ -22,7 +22,7 @@ function setup() {
     id: "set:humanoid",
     document,
     keys: animationHistoryKeys(document.set),
-    scopeOf: () => "animate"
+    resolveScope: () => "animate"
   });
 
   return { document, history };
@@ -32,7 +32,7 @@ describe("animationHistoryKeys", () => {
   test("a peer key on the same frame refuses the step, one on another frame does not", () => {
     const { document, history } = setup();
 
-    document.setKey("walk", "Body/Arm", "position", key(0, 1));
+    document.writeKey("walk", "Body/Arm", "position", key(0, 1));
     document.apply(networkCommand({
       action: "key-set", clipId: "walk", path: "body/arm", channel: "position", key: key(12, 5)
     }));

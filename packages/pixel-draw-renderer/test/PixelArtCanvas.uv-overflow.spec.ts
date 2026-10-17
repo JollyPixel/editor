@@ -28,7 +28,7 @@ describe("PixelArtCanvas — uv overflow", () => {
       drag(manager, { x: 84, y: 84 }, { x: 44, y: 84 });
 
       assert.deepEqual(
-        manager.uv.get(region.id)!.rectFor("front"),
+        manager.uv.get(region.id)!.slotRect("front"),
         { x: expected, y: 0, width: 4, height: 4 }
       );
       manager.destroy();

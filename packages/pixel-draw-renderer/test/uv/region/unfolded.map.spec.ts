@@ -13,7 +13,7 @@ import {
 import type { SelectionRect } from "#src/types.ts";
 import { makeUvMap } from "../../helpers/uv/map.ts";
 
-describe("UVMap — setState unfolded", () => {
+describe("UVMap — applyState unfolded", () => {
   test("stores the packed net and reports the previous region", () => {
     const map = makeUvMap({ x: 64, y: 64 });
     const region = map.create({ width: 4, height: 4 });
@@ -22,7 +22,7 @@ describe("UVMap — setState unfolded", () => {
       events.push({ state: next.state, previous: previous.state });
     });
 
-    assert.ok(map.setState(region.id, "unfolded"));
+    assert.ok(map.applyState(region.id, "unfolded"));
     assert.strictEqual(map.get(region.id)!.state, "unfolded");
     assert.deepStrictEqual(events, [{ state: "unfolded", previous: "stacked" }]);
   });
@@ -32,7 +32,7 @@ describe("UVMap — setState unfolded", () => {
     const region = map.create({ width: 8, height: 8 });
     map.move(region.id, { x: 8, y: 8, width: 8, height: 8 });
 
-    map.setState(region.id, "unfolded");
+    map.applyState(region.id, "unfolded");
 
     assert.deepStrictEqual(
       map.get(region.id)!.bounds,
@@ -48,12 +48,12 @@ describe("UVMap — setState unfolded", () => {
     assert.deepStrictEqual(region.bounds, { x: 0, y: 0, width: 8, height: 12 });
   });
 
-  test("unfolds through the map net on setState and create", () => {
+  test("unfolds through the map net on applyState and create", () => {
     const map = makeUvMap({ x: 64, y: 64 });
     map.net = new UVNet([["front", "back", "left", "right", "top", "bottom"]]);
     const stacked = map.create({ width: 4, height: 4 });
 
-    map.setState(stacked.id, "unfolded");
+    map.applyState(stacked.id, "unfolded");
     const created = map.create({ width: 4, height: 4, state: "unfolded" });
 
     assert.deepStrictEqual(map.get(stacked.id)!.bounds, { x: 0, y: 0, width: 24, height: 4 });
@@ -63,7 +63,7 @@ describe("UVMap — setState unfolded", () => {
   test("selects the region without a face", () => {
     const map = makeUvMap({ x: 64, y: 64 });
     const region = map.create({ width: 4, height: 4 });
-    map.setState(region.id, "unfolded");
+    map.applyState(region.id, "unfolded");
 
     map.select(region.id, "top");
 
@@ -74,7 +74,7 @@ describe("UVMap — setState unfolded", () => {
   test("moves as a whole, reporting a null face", () => {
     const map = makeUvMap({ x: 64, y: 64 });
     const region = map.create({ width: 4, height: 4 });
-    map.setState(region.id, "unfolded");
+    map.applyState(region.id, "unfolded");
     const events: { face: UVSlot | null; previousRect: SelectionRect; }[] = [];
     map.on("region-moved", ({ face, previousRect }) => events.push({ face, previousRect }));
 

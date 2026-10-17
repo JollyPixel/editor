@@ -49,7 +49,7 @@ const kDelivery: fc.Arbitrary<Delivery> = fc.tuple(
   fc.oneof(jsonPayload, fc.string({ unit: "binary", maxLength: 8 }))
 );
 
-function payloadsFor(
+function roomPayloads(
   deliveries: readonly Delivery[],
   room: number
 ): unknown[] {
@@ -165,7 +165,7 @@ describe("transport parity properties", () => {
               }
 
               for (const [index, extension] of extensions.entries()) {
-                const expected = payloadsFor(deliveries, index);
+                const expected = roomPayloads(deliveries, index);
                 await waitFor(() => payloadsFrom(extension, clientId).length === expected.length);
                 assert.deepStrictEqual(payloadsFrom(extension, clientId), expected);
 

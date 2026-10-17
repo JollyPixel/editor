@@ -20,32 +20,32 @@ afterEach(disposeHarness);
 
 describe("EditorTabs", () => {
   test("opens a tab with its frame and activates it", async() => {
-    const { tabs, strip, itemValues, frameOf, visibleFrames } = harness();
+    const { tabs, strip, itemValues, findFrame, visibleFrames } = harness();
 
     assert.equal(await tabs.open(MAP_TAB), true);
 
     assert.deepEqual(itemValues(), [HOME_TAB_ID, "map-1"]);
     assert.equal(strip.value, "map-1");
     assert.equal(tabs.active, "map-1");
-    assert.ok(frameOf("map-1").src.endsWith(MAP_TAB.url));
-    assert.equal(frameOf("map-1").title, MAP_TAB.label);
+    assert.ok(findFrame("map-1").src.endsWith(MAP_TAB.url));
+    assert.equal(findFrame("map-1").title, MAP_TAB.label);
     assert.equal(visibleFrames().length, 1);
   });
 
   test("focuses an already open tab instead of duplicating it", async() => {
-    const { tabs, itemValues, frameOf } = harness();
+    const { tabs, itemValues, findFrame } = harness();
     await tabs.open(MAP_TAB);
     await tabs.open(MODEL_TAB);
 
     assert.equal(tabs.active, "model-1");
-    assert.equal(frameOf("map-1").hidden, true);
+    assert.equal(findFrame("map-1").hidden, true);
 
     assert.equal(await tabs.open(MAP_TAB), true);
 
     assert.deepEqual(itemValues(), [HOME_TAB_ID, "map-1", "model-1"]);
     assert.equal(tabs.active, "map-1");
-    assert.equal(frameOf("map-1").hidden, false);
-    assert.equal(frameOf("model-1").hidden, true);
+    assert.equal(findFrame("map-1").hidden, false);
+    assert.equal(findFrame("model-1").hidden, true);
   });
 
   test("closes a tab and focuses the most recently activated one", async() => {
@@ -176,7 +176,7 @@ describe("EditorTabs", () => {
   });
 
   test("relabels an open tab", async() => {
-    const { tabs, strip, frameOf } = harness();
+    const { tabs, strip, findFrame } = harness();
     await tabs.open({
       ...MAP_TAB,
       tooltip: "maps/overworld.voxelmap.json"
@@ -191,7 +191,7 @@ describe("EditorTabs", () => {
     const item = strip.children[1];
     assert.equal(Reflect.get(item, "label"), "renamed");
     assert.equal(Reflect.get(item, "tooltip"), "maps/renamed.voxelmap.json");
-    assert.equal(frameOf("map-1").title, "renamed");
+    assert.equal(findFrame("map-1").title, "renamed");
     assert.deepEqual(tabs.list(), [
       {
         ...MAP_TAB,
@@ -205,7 +205,7 @@ describe("EditorTabs", () => {
   });
 
   test("opens a tab in the background without loading its frame", async() => {
-    const { tabs, frames, itemValues, frameOf } = harness();
+    const { tabs, frames, itemValues, findFrame } = harness();
     await tabs.open(MAP_TAB);
 
     assert.equal(await tabs.open(MODEL_TAB, { focus: false }), true);
@@ -216,8 +216,8 @@ describe("EditorTabs", () => {
 
     tabs.focus("model-1");
 
-    assert.equal(frameOf("model-1").hidden, false);
-    assert.equal(frameOf("map-1").hidden, true);
+    assert.equal(findFrame("model-1").hidden, false);
+    assert.equal(findFrame("map-1").hidden, true);
   });
 
   test("reports each open, focus, move and close", async() => {
@@ -239,23 +239,23 @@ describe("EditorTabs", () => {
   });
 
   test("reloads the active frame and defers an inactive one", async() => {
-    const { tabs, frames, frameOf } = harness();
+    const { tabs, frames, findFrame } = harness();
     await tabs.open(MAP_TAB);
     await tabs.open(MODEL_TAB);
-    const model = frameOf("model-1");
+    const model = findFrame("model-1");
 
     assert.equal(tabs.reload("model-1"), true);
     assert.equal(tabs.reload("map-1"), true);
     assert.equal(tabs.reload("missing"), false);
 
-    assert.notEqual(frameOf("model-1"), model);
-    assert.equal(frameOf("model-1").hidden, false);
+    assert.notEqual(findFrame("model-1"), model);
+    assert.equal(findFrame("model-1").hidden, false);
     assert.equal(frames.querySelectorAll("iframe").length, 1);
 
     tabs.focus("map-1");
 
     assert.equal(frames.querySelectorAll("iframe").length, 2);
-    assert.equal(frameOf("map-1").hidden, false);
+    assert.equal(findFrame("map-1").hidden, false);
   });
 
   test("dispose removes every tab, reports no change and stops listening", async() => {

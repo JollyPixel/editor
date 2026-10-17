@@ -25,9 +25,6 @@ export interface LayerChunkCacheOptions {
   window?: Int32Array | null;
 }
 
-/**
- * Prefetches a 3×3×3 chunk window for hot-path voxel lookup.
- */
 export class LayerChunkCache {
   readonly layer: MeshableLayer;
   readonly empty: boolean = true;
@@ -41,9 +38,6 @@ export class LayerChunkCache {
   #baseCx: number;
   #baseCy: number;
   #baseCz: number;
-  /**
-   * Pre-filled with `null` rather than left holey, so reads stay monomorphic.
-   */
   // oxlint-disable-next-line unicorn/no-new-array
   #chunks: (MeshableChunk | null)[] = new Array(kSpan ** 3).fill(null);
 

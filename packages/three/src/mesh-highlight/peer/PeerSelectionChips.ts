@@ -134,7 +134,7 @@ export class PeerSelectionChips {
   #refresh(
     objectId: string
   ): void {
-    const selectors = this.#registry.selectorsOf(objectId);
+    const selectors = this.#registry.listSelectors(objectId);
     const visible = this.#visibility === null || this.#visibility.isVisible(objectId);
     const existing = this.#groups.get(objectId);
 
@@ -167,7 +167,7 @@ export class PeerSelectionChips {
       this.#groups.delete(objectId);
     }
 
-    const target = this.#selection.targetFor(objectId);
+    const target = this.#selection.findTarget(objectId);
     if (!target) {
       return;
     }
@@ -197,14 +197,14 @@ export class PeerSelectionChips {
     if (selectors.length <= kMaxChips) {
       return selectors.map((peerId) => {
         return {
-          color: this.#registry.colorOf(peerId)
+          color: this.#registry.peerColor(peerId)
         };
       });
     }
 
     const slots: PeerSelectionChipOptions[] = selectors.slice(0, kMaxChips).map((peerId) => {
       return {
-        color: this.#registry.colorOf(peerId)
+        color: this.#registry.peerColor(peerId)
       };
     });
     slots.push({

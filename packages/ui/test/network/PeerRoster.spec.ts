@@ -56,7 +56,7 @@ function createHarness(
   };
 }
 
-function messagesOf(
+function readMessages(
   log: LogQueue
 ): string[] {
   return log.entries.map((entry) => {
@@ -182,7 +182,7 @@ describe("PeerRoster", () => {
 
     harness.emit("peer-joined", { clientId: "client-a" });
 
-    assert.deepStrictEqual(messagesOf(harness.log), ["Alan has joined"]);
+    assert.deepStrictEqual(readMessages(harness.log), ["Alan has joined"]);
   });
 
   test("announces a peer that left under its last known name", () => {
@@ -193,7 +193,7 @@ describe("PeerRoster", () => {
     harness.removePeer("client-a");
     harness.emit("peer-left", { clientId: "client-a" });
 
-    assert.deepStrictEqual(messagesOf(harness.log), [
+    assert.deepStrictEqual(readMessages(harness.log), [
       "Alan has left",
       "Alan has joined"
     ]);
@@ -205,7 +205,7 @@ describe("PeerRoster", () => {
 
     harness.emit("sync");
 
-    assert.deepStrictEqual(messagesOf(harness.log), []);
+    assert.deepStrictEqual(readMessages(harness.log), []);
   });
 
   test("says nothing about the local peer", () => {
@@ -213,7 +213,7 @@ describe("PeerRoster", () => {
 
     harness.emit("peer-joined", { clientId: harness.room.clientId });
 
-    assert.deepStrictEqual(messagesOf(harness.log), []);
+    assert.deepStrictEqual(readMessages(harness.log), []);
   });
 
   test("tracks peers without a log", () => {

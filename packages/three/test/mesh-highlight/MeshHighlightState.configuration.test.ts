@@ -132,7 +132,7 @@ describe("technique", () => {
 
     state.technique = "highlight";
 
-    assert.strictEqual(state.techniqueFor("mesh-1"), "outline");
+    assert.strictEqual(state.resolveTechnique("mesh-1"), "outline");
     state.select("mesh-1");
     assert.ok(mesh.children[0] instanceof HighlightOutline);
   });

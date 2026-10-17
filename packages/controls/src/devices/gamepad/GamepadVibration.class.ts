@@ -17,11 +17,6 @@ export interface GamepadVibrationOptions {
   effectType?: GamepadHapticEffectType;
 }
 
-/**
- * Wraps the haptic actuator of a single connected gamepad (if any).
- *
- * @see https://developer.mozilla.org/en-US/docs/Web/API/GamepadHapticActuator
- */
 export class GamepadVibration {
   #actuator: GamepadHapticActuator | null;
 
@@ -35,9 +30,6 @@ export class GamepadVibration {
     return this.#actuator !== null;
   }
 
-  /**
-   * @internal Refreshed by `Gamepad#update()` from the latest actuator snapshot.
-   */
   set actuator(
     actuator: GamepadHapticActuator | null
   ) {

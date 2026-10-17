@@ -87,7 +87,7 @@ export class BlocksetTab {
   }
 
   #apply(): void {
-    this.#uvBridge.setActiveBlockset(
+    this.#uvBridge.activateBlockset(
       this.binding.slot,
       this.binding.opened.blockset.tileSize
     );

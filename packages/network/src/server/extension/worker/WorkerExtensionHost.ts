@@ -110,7 +110,6 @@ async function dispatch(
     .exhaustive();
 }
 
-// Preserve Worker startup errors.
 const mod = await import(modulePath);
 const Ctor = mod[exportName ?? "default"];
 const extension: Extension = new Ctor(extensionWorkerData);

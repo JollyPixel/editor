@@ -25,7 +25,7 @@ const kRed = {
   a: 255
 };
 
-function snapshotOf(
+function createSnapshot(
   size: { x: number; y: number; }
 ) {
   return {
@@ -47,7 +47,7 @@ describe("SyncedPixelDocument", () => {
     await Promise.resolve();
     assert.strictEqual(settled, false);
 
-    room.deliverSnapshot(snapshotOf({ x: 4, y: 2 }));
+    room.deliverSnapshot(createSnapshot({ x: 4, y: 2 }));
     await synced.ready;
 
     assert.deepStrictEqual(synced.document.size(), { x: 4, y: 2 });
@@ -57,7 +57,7 @@ describe("SyncedPixelDocument", () => {
   test("sends local document edits without any canvas", () => {
     const room = new MockRoom({ clientId: "client-A" });
     const synced = new SyncedPixelDocument(room);
-    room.deliverSnapshot(snapshotOf({ x: 4, y: 4 }));
+    room.deliverSnapshot(createSnapshot({ x: 4, y: 4 }));
 
     synced.document.paintPixels([{ x: 1, y: 1 }], kRed);
 
@@ -69,7 +69,7 @@ describe("SyncedPixelDocument", () => {
   test("applies peer commands to the document", () => {
     const room = new MockRoom({ clientId: "client-A" });
     const synced = new SyncedPixelDocument(room);
-    room.deliverSnapshot(snapshotOf({ x: 4, y: 4 }));
+    room.deliverSnapshot(createSnapshot({ x: 4, y: 4 }));
 
     room.deliverCommand(command(
       "stroke",
@@ -87,11 +87,11 @@ describe("SyncedPixelDocument", () => {
   test("dispose stops sending and applying", () => {
     const room = new MockRoom({ clientId: "client-A" });
     const synced = new SyncedPixelDocument(room);
-    room.deliverSnapshot(snapshotOf({ x: 4, y: 4 }));
+    room.deliverSnapshot(createSnapshot({ x: 4, y: 4 }));
 
     synced.dispose();
     synced.document.paintPixels([{ x: 0, y: 0 }], kRed);
-    room.deliverSnapshot(snapshotOf({ x: 8, y: 8 }));
+    room.deliverSnapshot(createSnapshot({ x: 8, y: 8 }));
 
     assert.deepStrictEqual(room.sent, []);
     assert.deepStrictEqual(synced.document.size(), { x: 4, y: 4 });

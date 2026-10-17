@@ -34,9 +34,6 @@ export interface HighlightBoundingBoxOptions {
   fillOpacity?: number;
 }
 
-/**
- * Draws the local bounds of a target's mesh descendants.
- */
 export class HighlightBoundingBox extends THREE.LineSegments<THREE.BufferGeometry, THREE.LineBasicMaterial> {
   readonly target: THREE.Object3D;
 

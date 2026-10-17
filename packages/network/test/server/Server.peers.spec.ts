@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { identityOf } from "../helpers/server/identity.ts";
+import { createIdentity } from "../helpers/server/identity.ts";
 import {
   createClient,
   withoutSync
@@ -22,8 +22,8 @@ describe("Server — peer presence", () => {
 
     const a = createClient("A");
     const b = createClient("B");
-    const connectionA = server.connect(a.client, identityOf(a.client));
-    const connectionB = server.connect(b.client, identityOf(b.client));
+    const connectionA = server.connect(a.client, createIdentity(a.client));
+    const connectionB = server.connect(b.client, createIdentity(b.client));
     await connectionA.receive({ room: "pixel-draw", kind: "join" });
     await connectionB.receive({ room: "pixel-draw", kind: "join" });
     a.sent.length = 0;
@@ -40,8 +40,8 @@ describe("Server — peer presence", () => {
 
     const a = createClient("A");
     const b = createClient("B");
-    const connectionA = server.connect(a.client, identityOf(a.client));
-    const connectionB = server.connect(b.client, identityOf(b.client));
+    const connectionA = server.connect(a.client, createIdentity(a.client));
+    const connectionB = server.connect(b.client, createIdentity(b.client));
     await connectionA.receive({ room: "pixel-draw", kind: "join" });
     extension.onClientConnect = () => {
       throw new Error("snapshot unavailable");
@@ -64,8 +64,8 @@ describe("Server — peer presence", () => {
 
     const a = createClient("A");
     const b = createClient("B");
-    const connectionA = server.connect(a.client, identityOf(a.client));
-    const connectionB = server.connect(b.client, identityOf(b.client));
+    const connectionA = server.connect(a.client, createIdentity(a.client));
+    const connectionB = server.connect(b.client, createIdentity(b.client));
     await connectionA.receive({ room: "voxel", kind: "join" });
 
     await connectionB.receive({ room: "pixel-draw", kind: "join" });
@@ -81,9 +81,9 @@ describe("Server — peer metadata", () => {
 
     const a = createClient("A");
     const b = createClient("B");
-    const connectionA = server.connect(a.client, identityOf(a.client));
+    const connectionA = server.connect(a.client, createIdentity(a.client));
     const connectionB = server.connect(b.client, {
-      ...identityOf(b.client),
+      ...createIdentity(b.client),
       profile: { username: "bob" }
     });
     await connectionA.receive({ room: "pixel-draw", kind: "join" });
@@ -117,8 +117,8 @@ describe("Server — peer metadata", () => {
 
     const a = createClient("A");
     const b = createClient("B");
-    const connectionA = server.connect(a.client, identityOf(a.client));
-    const connectionB = server.connect(b.client, identityOf(b.client));
+    const connectionA = server.connect(a.client, createIdentity(a.client));
+    const connectionB = server.connect(b.client, createIdentity(b.client));
     await connectionA.receive({
       room: "pixel-draw",
       kind: "join",
@@ -163,9 +163,9 @@ describe("Server — peer metadata", () => {
     const a = createClient("A");
     const b = createClient("B");
     const c = createClient("C");
-    const connectionA = server.connect(a.client, identityOf(a.client));
-    const connectionB = server.connect(b.client, identityOf(b.client));
-    const connectionC = server.connect(c.client, identityOf(c.client));
+    const connectionA = server.connect(a.client, createIdentity(a.client));
+    const connectionB = server.connect(b.client, createIdentity(b.client));
+    const connectionC = server.connect(c.client, createIdentity(c.client));
     await connectionA.receive({
       room: "pixel-draw",
       kind: "join",

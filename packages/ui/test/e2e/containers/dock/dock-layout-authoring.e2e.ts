@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
 import {
-  boxOf,
-  centerOf,
+  measureBox,
+  measureCenter,
   hold,
-  widthOf,
+  measureWidth,
   type Point
 } from "@jolly-pixel/e2e";
 
@@ -14,8 +14,8 @@ import {
   type Page
 } from "../../fixtures.ts";
 import {
-  partStyleOf,
-  shadowBlurOf
+  readPartStyle,
+  readShadowBlur
 } from "../../support/styles.ts";
 import {
   DOCK_HANDLE_SIZE,
@@ -74,27 +74,27 @@ test.describe("DockLayout", () => {
     await expect(overlay).toHaveCSS("text-align", "start");
     await expect(hud).toHaveCSS("pointer-events", "auto");
     await expect.poll(
-      () => partStyleOf(overlay, ".resize-handle", "background-color")
+      () => readPartStyle(overlay, ".resize-handle", "background-color")
     ).toBe("rgba(0, 0, 0, 0)");
     await expect.poll(
-      () => partStyleOf(left.root, ".content", "overflow-y")
+      () => readPartStyle(left.root, ".content", "overflow-y")
     ).toBe("auto");
     await expect.poll(
-      () => partStyleOf(overlay, ".content", "overflow")
+      () => readPartStyle(overlay, ".content", "overflow")
     ).toBe("auto");
 
     const [dockBox, paneBox] = await Promise.all([
-      boxOf(overlay),
-      boxOf(hud)
+      measureBox(overlay),
+      measureBox(hud)
     ]);
     expect(paneBox.x).toBeGreaterThanOrEqual(dockBox.x);
     expect(paneBox.x + paneBox.width).toBeLessThanOrEqual(dockBox.x + dockBox.width);
     expect(paneBox.y).toBeGreaterThanOrEqual(dockBox.y);
     expect(paneBox.y + paneBox.height).toBeLessThanOrEqual(dockBox.y + dockBox.height);
 
-    const cast = await shadowBlurOf(hud);
+    const cast = await readShadowBlur(hud);
     expect(cast).toBeGreaterThan(0);
-    expect(cast).toBeLessThan(await shadowBlurOf(new FloatingWindow(page).root));
+    expect(cast).toBeLessThan(await readShadowBlur(new FloatingWindow(page).root));
   });
 
   test("an overlay dock resizes from its keyboard and pointer edge", async({ page }) => {
@@ -103,19 +103,19 @@ test.describe("DockLayout", () => {
     const handle = right.resizeHandle;
     await expect(handle).toHaveCount(1);
 
-    const width = await widthOf(overlay);
+    const width = await measureWidth(overlay);
     await handle.focus();
     await handle.press("ArrowLeft");
-    await expect.poll(() => widthOf(overlay)).not.toBe(width);
+    await expect.poll(() => measureWidth(overlay)).not.toBe(width);
 
-    const resized = await widthOf(overlay);
-    const center = await centerOf(handle);
+    const resized = await measureWidth(overlay);
+    const center = await measureCenter(handle);
     await hold(page, center, {
       x: center.x - 40,
       y: center.y
     }, 8);
     await page.mouse.up();
-    await expect.poll(() => widthOf(overlay)).not.toBe(resized);
+    await expect.poll(() => measureWidth(overlay)).not.toBe(resized);
   });
 
   test("an overlay dock lets clicks through despite page CSS re-enabling it", async({ page }) => {
@@ -126,8 +126,8 @@ test.describe("DockLayout", () => {
 
     const pane = new Pane(page, "hud").root;
     const [dock, hud] = await Promise.all([
-      boxOf(new Dock(page, "right").root),
-      boxOf(pane)
+      measureBox(new Dock(page, "right").root),
+      measureBox(pane)
     ]);
     expect(hud.y - dock.y).toBeGreaterThan(20);
 
@@ -137,7 +137,7 @@ test.describe("DockLayout", () => {
     };
     await expect.poll(() => hitsInside(page, voidPoint, "jolly-dock")).toBe(false);
     await expect.poll(
-      async() => hitsInside(page, await centerOf(pane), "jolly-pane")
+      async() => hitsInside(page, await measureCenter(pane), "jolly-pane")
     ).toBe(true);
 
     const pressed = await page.evaluateHandle(() => {
@@ -163,12 +163,12 @@ test.describe("DockLayout", () => {
 
     await expect.poll(async() => hitsInside(
       page,
-      await centerOf(new Dock(page, "left").root),
+      await measureCenter(new Dock(page, "left").root),
       "jolly-dock"
     )).toBe(true);
     await expect.poll(async() => hitsInside(
       page,
-      await centerOf(new FloatingWindow(page).root),
+      await measureCenter(new FloatingWindow(page).root),
       "jolly-floating"
     )).toBe(true);
   });
@@ -195,9 +195,9 @@ test.describe("DockLayout", () => {
     const original = await size();
 
     await handle.dblclick();
-    await expect.poll(() => widthOf(dock)).toBe(DOCK_HANDLE_SIZE);
+    await expect.poll(() => measureWidth(dock)).toBe(DOCK_HANDLE_SIZE);
 
-    const point = await centerOf(handle);
+    const point = await measureCenter(handle);
     await hold(page, point, {
       x: point.x + 3,
       y: point.y
@@ -206,6 +206,6 @@ test.describe("DockLayout", () => {
     await expect.poll(size).toBe(original);
 
     await handle.dblclick();
-    await expect.poll(() => widthOf(dock)).toBe(original + DOCK_HANDLE_SIZE);
+    await expect.poll(() => measureWidth(dock)).toBe(original + DOCK_HANDLE_SIZE);
   });
 });

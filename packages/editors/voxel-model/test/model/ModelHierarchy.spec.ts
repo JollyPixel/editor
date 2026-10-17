@@ -12,7 +12,7 @@ import {
   NO_MIRROR,
   at,
   createHierarchyFixture,
-  shapeOf
+  readShape
 } from "../fixtures/hierarchy.ts";
 
 describe("ModelHierarchy.nodes", () => {
@@ -23,7 +23,7 @@ describe("ModelHierarchy.nodes", () => {
     const arm = addBlock({ name: "Arm", parentId: folderId });
     addBlock({ name: "Hand", parentId: arm.uuid });
 
-    assert.deepEqual(shapeOf(hierarchy.nodes()), [
+    assert.deepEqual(readShape(hierarchy.nodes()), [
       "Body",
       ["Arms", [["Arm", ["Hand"]]]]
     ]);
@@ -37,7 +37,7 @@ describe("ModelHierarchy.nodes", () => {
     const outer = hierarchy.createFolder("Outer", body.uuid);
     hierarchy.createFolder("Inner", outer);
 
-    assert.deepEqual(shapeOf(hierarchy.nodes()), [
+    assert.deepEqual(readShape(hierarchy.nodes()), [
       ["Body", ["Head", ["Outer", ["Inner"]]]]
     ]);
   });
@@ -60,7 +60,7 @@ describe("ModelHierarchy.nodes", () => {
     document.addFolder({ name: "" });
     document.addBlock({ name: "" });
 
-    assert.deepEqual(shapeOf(hierarchy.nodes()), ["Folder", "Block"]);
+    assert.deepEqual(readShape(hierarchy.nodes()), ["Folder", "Block"]);
   });
 });
 
@@ -96,7 +96,7 @@ describe("ModelHierarchy.createBlock", () => {
     const uuid = hierarchy.createBlock("Child", parent.uuid);
 
     assert.ok(uuid);
-    assert.equal(document.tree.transformParentOf(uuid), parent.uuid);
+    assert.equal(document.tree.findTransformParent(uuid), parent.uuid);
     assert.deepStrictEqual(
       blocks.get(uuid)?.worldPosition,
       new THREE.Vector3(4, 0, 0)

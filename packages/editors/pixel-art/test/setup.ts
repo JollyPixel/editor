@@ -12,11 +12,6 @@ const kElementConstructors = Object.fromEntries(
     ])
 );
 
-/*
- * happy-dom has no browser to run in, so DOM-touching src/ code (instanceof
- * checks, document.createElement) needs these globals, wired through
- * `node --import ./test/setup.ts`.
- */
 Object.assign(globalThis, {
   ...kElementConstructors,
   window: kEmulatedBrowserWindow,

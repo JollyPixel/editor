@@ -505,7 +505,7 @@ export class EditorScene extends Systems.Scene {
         mapDocument.load(data);
       },
       teleportToPeer: (clientId) => {
-        const pose = frustums.poseOf(clientId);
+        const pose = frustums.peerPose(clientId);
         if (pose !== undefined) {
           camera.teleport(pose);
         }

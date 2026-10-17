@@ -45,9 +45,6 @@ export interface ResizeHandleOptions {
   maxSize?: number;
 }
 
-/**
- * Resizes a target element through pointer and keyboard input.
- */
 export class ResizeHandle extends EventTarget implements ResizeHandleLike {
   #handleElt: HTMLElement;
   #targetElt: HTMLElement;

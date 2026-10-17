@@ -6,10 +6,10 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { identityOf } from "../../helpers/server/identity.ts";
+import { createIdentity } from "../../helpers/server/identity.ts";
 import {
   createClient,
-  serverEnvelopeOf
+  toServerEnvelope
 } from "../../helpers/server/clientHandle.ts";
 import {
   createExtension,
@@ -26,7 +26,7 @@ describe("ServerRoom — inbound protocol", () => {
     const extension = createExtension(syncProtocols);
     const a = createClient("A");
     const room = createRoom(extension);
-    await room.join({ handle: a.client, identity: identityOf("A") });
+    await room.join({ handle: a.client, identity: createIdentity("A") });
 
     await room.message("A", { action: "voxel-set" });
 
@@ -37,7 +37,7 @@ describe("ServerRoom — inbound protocol", () => {
     const extension = createExtension(syncProtocols);
     const a = createClient("A");
     const room = createRoom(extension);
-    await room.join({ handle: a.client, identity: identityOf("A") });
+    await room.join({ handle: a.client, identity: createIdentity("A") });
     a.sent.length = 0;
 
     await room.message("A", { action: "not-a-known-action" });
@@ -45,7 +45,7 @@ describe("ServerRoom — inbound protocol", () => {
     assert.deepEqual(extension.messages, []);
     assert.strictEqual(a.sent.length, 1);
 
-    const sent = serverEnvelopeOf(a.sent[0]);
+    const sent = toServerEnvelope(a.sent[0]);
     assert.strictEqual(sent.room, "pixel-draw");
     assert.ok(sent.kind === "error");
     assert.strictEqual(sent.event, "$message");
@@ -68,8 +68,8 @@ describe("ServerRoom — outbound protocol", () => {
         "pixel-draw.voxel-set": "read"
       }
     }));
-    await room.join({ handle: a.client, identity: identityOf("A", "blocked") });
-    await room.join({ handle: b.client, identity: identityOf("B", "allowed") });
+    await room.join({ handle: a.client, identity: createIdentity("A", "blocked") });
+    await room.join({ handle: b.client, identity: createIdentity("B", "allowed") });
     a.sent.length = 0;
     b.sent.length = 0;
 
@@ -98,8 +98,8 @@ describe("ServerRoom — outbound protocol", () => {
         "pixel-draw.$snapshot": "read"
       }
     }));
-    await room.join({ handle: a.client, identity: identityOf("A", "blocked") });
-    await room.join({ handle: b.client, identity: identityOf("B", "allowed") });
+    await room.join({ handle: a.client, identity: createIdentity("A", "blocked") });
+    await room.join({ handle: b.client, identity: createIdentity("B", "allowed") });
     a.sent.length = 0;
     b.sent.length = 0;
 
@@ -113,7 +113,7 @@ describe("ServerRoom — outbound protocol", () => {
     const extension = createExtension(syncProtocols);
     const a = createClient("A");
     const room = createRoom(extension);
-    await room.join({ handle: a.client, identity: identityOf("A") });
+    await room.join({ handle: a.client, identity: createIdentity("A") });
     a.sent.length = 0;
 
     extension.lastContext.room.broadcast({ type: "command", data: { action: "unheard-of" } });
@@ -141,9 +141,9 @@ describe("ServerRoom — outbound protocol", () => {
         send: (data) => serialized.push(JSON.stringify(data)),
         sendSerialized: (json) => serialized.push(json)
       },
-      identity: identityOf("A", "allowed")
+      identity: createIdentity("A", "allowed")
     });
-    await room.join({ handle: blocked.client, identity: identityOf("B", "blocked") });
+    await room.join({ handle: blocked.client, identity: createIdentity("B", "blocked") });
     serialized.length = 0;
     blocked.sent.length = 0;
 
@@ -166,7 +166,7 @@ describe("ServerRoom — outbound protocol", () => {
         "pixel-draw.voxel-set": "void"
       }
     }));
-    await room.join({ handle: a.client, identity: identityOf("A", "blocked") });
+    await room.join({ handle: a.client, identity: createIdentity("A", "blocked") });
     a.sent.length = 0;
 
     extension.lastContext.room.sendTo("A", {
@@ -198,9 +198,9 @@ describe("Server — outbound identified without validation", () => {
 
     const a = createClient("A");
     const b = createClient("B");
-    await server.connect(a.client, identityOf("A", "blocked"))
+    await server.connect(a.client, createIdentity("A", "blocked"))
       .receive({ room: "pixel-draw", kind: "join" });
-    await server.connect(b.client, identityOf("B", "allowed"))
+    await server.connect(b.client, createIdentity("B", "allowed"))
       .receive({ room: "pixel-draw", kind: "join" });
     a.sent.length = 0;
     b.sent.length = 0;

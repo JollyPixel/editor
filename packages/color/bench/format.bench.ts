@@ -15,7 +15,7 @@ import {
 } from "../src/format.ts";
 import {
   BATCH,
-  batchOf,
+  createBatch,
   byteRgba,
   hsla,
   rgba8,
@@ -28,28 +28,28 @@ import type {
 } from "../src/types.ts";
 
 const suite = defineSuite("format", (bench) => {
-  const bytes = batchOf(byteRgba);
-  const units = batchOf(unitRgba);
-  const bytes8 = batchOf(rgba8);
-  const hslColors = batchOf(hsla);
+  const bytes = createBatch(byteRgba);
+  const units = createBatch(unitRgba);
+  const bytes8 = createBatch(rgba8);
+  const hslColors = createBatch(hsla);
 
   bench
-    .add("formatHex", () => lengthOf(units, (color) => formatHex(color)))
-    .add("formatHex alpha", () => lengthOf(units, (color) => formatHex(color, true)))
-    .add("formatHex8", () => lengthOf(bytes8, (color) => formatHex8(color)))
-    .add("formatRgb", () => lengthOf(units, formatRgb))
-    .add("formatRgba byte alpha", () => lengthOf(bytes, formatRgba))
-    .add("formatRgba unit alpha", () => lengthOf(units, formatRgba))
-    .add("formatRgba(fromRGBA8)", () => lengthOf(
+    .add("formatHex", () => totalLength(units, (color) => formatHex(color)))
+    .add("formatHex alpha", () => totalLength(units, (color) => formatHex(color, true)))
+    .add("formatHex8", () => totalLength(bytes8, (color) => formatHex8(color)))
+    .add("formatRgb", () => totalLength(units, formatRgb))
+    .add("formatRgba byte alpha", () => totalLength(bytes, formatRgba))
+    .add("formatRgba unit alpha", () => totalLength(units, formatRgba))
+    .add("formatRgba(fromRGBA8)", () => totalLength(
       bytes8,
       (color: RGBA8) => formatRgba(fromRGBA8(color))
     ))
-    .add("formatHsl", () => lengthOf(hslColors, formatHsl));
+    .add("formatHsl", () => totalLength(hslColors, formatHsl));
 }, { opsPerIteration: BATCH });
 
 export default suite;
 
-function lengthOf<T extends RGBA | RGBA8 | HSLA>(
+function totalLength<T extends RGBA | RGBA8 | HSLA>(
   colors: T[],
   format: (color: T) => string
 ): number {

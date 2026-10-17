@@ -1,6 +1,3 @@
-/**
- * Installs a document-level stylesheet once, including under server rendering.
- */
 export function ensureDocumentStyles(
   id: string,
   css: string,

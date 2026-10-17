@@ -2,9 +2,6 @@
 import type { AssetId } from "../AssetId.ts";
 import type { AssetStatus } from "../runtime/AssetHandle.ts";
 
-/**
- * Reports synchronous access to an asset that has not finished loading.
- */
 export class AssetNotReadyError extends Error {
   readonly id: AssetId;
   readonly status: AssetStatus;

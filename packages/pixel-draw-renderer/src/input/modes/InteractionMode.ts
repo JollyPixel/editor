@@ -1,4 +1,3 @@
-// Concrete modes override these intentional no-op extension points.
 /* eslint-disable no-empty-function */
 
 // Import Internal Dependencies

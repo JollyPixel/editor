@@ -28,7 +28,7 @@ import { summarizeSelection } from "../../catalog/AssetSummary.ts";
 import {
   AssetSelection,
   isAssetAction,
-  newAssetKindOf,
+  parseNewAssetKind,
   type AssetAction
 } from "../../catalog/AssetSelection.ts";
 import { AssetTreeModel } from "../../catalog/AssetTreeModel.ts";
@@ -371,7 +371,7 @@ export class AssetBrowser extends LitElement {
       onChange: () => this.requestUpdate(),
       onError: (message) => this.#error(message),
       onCreated: (nodeId) => {
-        void this.#beginRenameOf(nodeId);
+        void this.#beginRenameNode(nodeId);
       }
     });
     this.requestUpdate();
@@ -436,7 +436,7 @@ export class AssetBrowser extends LitElement {
     this.dispatchEvent(assetOpenEvent(assetId));
   }
 
-  async #beginRenameOf(
+  async #beginRenameNode(
     nodeId: string
   ): Promise<void> {
     await this.updateComplete;
@@ -603,7 +603,7 @@ export class AssetBrowser extends LitElement {
       return;
     }
 
-    const kind = newAssetKindOf(action);
+    const kind = parseNewAssetKind(action);
     if (kind !== null) {
       void this.#view?.createAsset(
         kind,

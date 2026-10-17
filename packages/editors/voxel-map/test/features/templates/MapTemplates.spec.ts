@@ -13,7 +13,7 @@ import {
 
 // Import Internal Dependencies
 import { MapTemplates } from "../../../src/features/templates/MapTemplates.ts";
-import { mapDocumentOf } from "../../helpers/mapDocument.ts";
+import { createMapDocument } from "../../helpers/mapDocument.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
 import { MAP_CAPABILITIES } from "../../../src/access/MapAccess.ts";
 
@@ -25,7 +25,7 @@ function setup(
   const prompts: string[] = [];
   const templates = new MapTemplates({
     world,
-    mapDocument: mapDocumentOf(world),
+    mapDocument: createMapDocument(world),
     confirm: () => Promise.resolve(true),
     prompt: (options) => {
       prompts.push(options.defaultValue ?? "");
@@ -54,7 +54,7 @@ function setup(
   };
 }
 
-function snapshotOf(
+function takeSnapshot(
   world: VoxelWorld
 ): VoxelTemplate {
   return VoxelTemplate.fromLayer(world.getLayer("Draft")!, {
@@ -87,7 +87,7 @@ describe("MapTemplates.saveSnapshot", () => {
   test("saves the snapshot under the prompted name and selects it", async() => {
     const { world, templates, prompts } = setup();
 
-    const id = await templates.saveSnapshot(snapshotOf(world), "Draft selection");
+    const id = await templates.saveSnapshot(takeSnapshot(world), "Draft selection");
 
     assert.notEqual(id, null);
     assert.deepEqual(prompts, ["Draft selection"]);
@@ -99,7 +99,7 @@ describe("MapTemplates.saveSnapshot", () => {
   test("saves nothing when the name prompt is cancelled", async() => {
     const { world, templates } = setup(mapAccess(), () => null);
 
-    assert.equal(await templates.saveSnapshot(snapshotOf(world), "Draft"), null);
+    assert.equal(await templates.saveSnapshot(takeSnapshot(world), "Draft"), null);
     assert.equal(world.templates.size, 0);
   });
 
@@ -111,7 +111,7 @@ describe("MapTemplates.saveSnapshot", () => {
       return "Wall";
     });
 
-    assert.equal(await templates.saveSnapshot(snapshotOf(world), "Draft"), null);
+    assert.equal(await templates.saveSnapshot(takeSnapshot(world), "Draft"), null);
     assert.equal(world.templates.size, 0);
   });
 });
@@ -133,7 +133,7 @@ describe("MapTemplates.remove", () => {
     const prompts: string[] = [];
     const templates = new MapTemplates({
       world,
-      mapDocument: mapDocumentOf(world),
+      mapDocument: createMapDocument(world),
       confirm: (options) => {
         prompts.push(options.message);
 
@@ -157,7 +157,7 @@ describe("MapTemplates access", () => {
 
     assert.equal(templates.editable, false);
     assert.equal(templates.saveLayer("Draft"), null);
-    assert.equal(await templates.saveSnapshot(snapshotOf(world), "Draft"), null);
+    assert.equal(await templates.saveSnapshot(takeSnapshot(world), "Draft"), null);
     assert.deepEqual(prompts, []);
     assert.equal(templates.rename(id, "Wall"), false);
     assert.equal(await templates.remove(id), false);

@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
-  boxOf,
-  centerOf,
+  measureBox,
+  measureCenter,
   hold
 } from "@jolly-pixel/e2e";
 
@@ -12,7 +12,7 @@ import {
   type Page
 } from "../../fixtures.ts";
 import { openExample } from "../../support/gallery.ts";
-import { styleOf } from "../../support/styles.ts";
+import { readStyle } from "../../support/styles.ts";
 
 function openTabs(
   page: Page,
@@ -102,8 +102,8 @@ test.describe("Tabs (badge, action, list-end)", () => {
 
       const host = page.locator("jolly-tabs");
       const [listBox, addBox] = await Promise.all([
-        boxOf(host.locator("[part=list]")),
-        boxOf(host.getByRole("button", { name: "Add tab" }))
+        measureBox(host.locator("[part=list]")),
+        measureBox(host.getByRole("button", { name: "Add tab" }))
       ]);
       const gap = addBox.x - (listBox.x + listBox.width);
 
@@ -145,8 +145,8 @@ test.describe("Tabs (closable)", () => {
     const item = page.locator("jolly-tabs [part~=tab]").nth(1);
     const close = page.locator("jolly-tabs [part~=close]").nth(1);
     const [itemBox, closeBox] = await Promise.all([
-      boxOf(item),
-      boxOf(close)
+      measureBox(item),
+      measureBox(close)
     ]);
 
     expect(closeBox.x).toBeGreaterThanOrEqual(itemBox.x);
@@ -154,9 +154,9 @@ test.describe("Tabs (closable)", () => {
     expect(closeBox.y).toBeGreaterThanOrEqual(itemBox.y);
     expect(closeBox.y + closeBox.height).toBeLessThanOrEqual(itemBox.y + itemBox.height);
 
-    const idle = await styleOf(item, "background-color");
+    const idle = await readStyle(item, "background-color");
     await close.hover();
-    await expect.poll(() => styleOf(item, "background-color")).not.toBe(idle);
+    await expect.poll(() => readStyle(item, "background-color")).not.toBe(idle);
   });
 });
 
@@ -219,15 +219,15 @@ test.describe("Tabs (reorder)", () => {
 
     const tabs = page.locator("jolly-tabs [role=tab]");
     const stone = tabs.nth(1);
-    const before = await boxOf(stone);
-    const water = await boxOf(tabs.nth(2));
-    const from = await centerOf(tabs.first());
+    const before = await measureBox(stone);
+    const water = await measureBox(tabs.nth(2));
+    const from = await measureCenter(tabs.first());
     await hold(page, from, {
       x: water.x + (water.width * 0.75),
       y: from.y
     });
 
-    await expect.poll(async() => (await boxOf(stone)).x).toBeLessThan(before.x);
+    await expect.poll(async() => (await measureBox(stone)).x).toBeLessThan(before.x);
     await expect(page.locator(".jolly-drag-overlay")).toHaveCount(0);
 
     await page.mouse.up();
@@ -239,7 +239,7 @@ test.describe("Tabs (reorder)", () => {
     await openTabs(page, { reorderable: true });
 
     const tabs = page.locator("jolly-tabs [role=tab]");
-    const from = await centerOf(tabs.nth(1));
+    const from = await measureCenter(tabs.nth(1));
     await hold(page, from, {
       x: from.x + 10,
       y: from.y
@@ -256,18 +256,18 @@ test.describe("Tabs (reorder)", () => {
 
     const tabs = page.locator("jolly-tabs [role=tab]");
     const stone = tabs.nth(1);
-    const before = await boxOf(stone);
-    const water = await boxOf(tabs.nth(2));
-    const from = await centerOf(tabs.first());
+    const before = await measureBox(stone);
+    const water = await measureBox(tabs.nth(2));
+    const from = await measureCenter(tabs.first());
     await hold(page, from, {
       x: water.x + (water.width * 0.75),
       y: from.y
     });
-    await expect.poll(async() => (await boxOf(stone)).x).toBeLessThan(before.x);
+    await expect.poll(async() => (await measureBox(stone)).x).toBeLessThan(before.x);
 
     await page.keyboard.press("Escape");
     await page.mouse.up();
     await expect(tabs).toHaveText(["grass", "stone", "water", "lava"]);
-    await expect.poll(async() => (await boxOf(stone)).x).toBeCloseTo(before.x, 0);
+    await expect.poll(async() => (await measureBox(stone)).x).toBeCloseTo(before.x, 0);
   });
 });

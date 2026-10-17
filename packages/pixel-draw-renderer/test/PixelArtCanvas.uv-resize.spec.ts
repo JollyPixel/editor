@@ -106,10 +106,10 @@ describe("PixelArtCanvas — uv resize", () => {
   test("resizes the grabbed face of an unfolded net", () => {
     const manager = makeManager({ uv: { resizable: true } });
     const region = manager.uv.create({ width: 2, height: 2 });
-    manager.uv.setState(region.id, "unfolded");
+    manager.uv.applyState(region.id, "unfolded");
     manager.uv.select(region.id);
     const before = manager.uv.get(region.id)!;
-    const front = before.geometryFor("front");
+    const front = before.slotGeometry("front");
     assert.ok(!("shape" in front));
     const edge = 84 + (front.x + front.width) * 4;
     const middle = 84 + (front.y + 1) * 4;
@@ -117,7 +117,7 @@ describe("PixelArtCanvas — uv resize", () => {
     drag(manager, { x: edge - 1, y: middle }, { x: edge + 3, y: middle });
 
     const after = manager.uv.get(region.id)!;
-    assert.deepEqual(after.geometryFor("front"), { ...front, width: 3 });
+    assert.deepEqual(after.slotGeometry("front"), { ...front, width: 3 });
     assert.equal(after.bounds.width, before.bounds.width + 1);
     manager.destroy();
   });
@@ -129,10 +129,10 @@ describe("PixelArtCanvas — uv resize", () => {
     });
     manager.mode = "uv";
     const region = manager.uv.create({ width: 2, height: 2 });
-    manager.uv.setState(region.id, "unfolded");
+    manager.uv.applyState(region.id, "unfolded");
     manager.uv.select(region.id);
     manager.uv.showSizeLabels = true;
-    const front = manager.uv.get(region.id)!.geometryFor("front");
+    const front = manager.uv.get(region.id)!.slotGeometry("front");
     assert.ok(!("shape" in front));
     const edge = 84 + (front.x + front.width) * 4;
     const middle = 84 + (front.y + 1) * 4;
@@ -157,15 +157,15 @@ describe("PixelArtCanvas — uv resize", () => {
   test("holding the line modifier mid-drag resizes the aligned row of a net", () => {
     const manager = makeManager({ uv: { resizable: true } });
     const region = manager.uv.create({ width: 2, height: 2 });
-    manager.uv.setState(region.id, "unfolded");
+    manager.uv.applyState(region.id, "unfolded");
     manager.uv.select(region.id);
     const before = manager.uv.get(region.id)!;
-    const front = before.geometryFor("front");
+    const front = before.slotGeometry("front");
     assert.ok(!("shape" in front));
     const bottom = 84 + (front.y + front.height) * 4;
     const middle = 84 + (front.x + 1) * 4;
     const row = before.activeSlots.filter((slot) => {
-      const geometry = before.geometryFor(slot);
+      const geometry = before.slotGeometry(slot);
 
       return !("shape" in geometry) && geometry.y === front.y;
     });
@@ -181,7 +181,7 @@ describe("PixelArtCanvas — uv resize", () => {
     const after = manager.uv.get(region.id)!;
     assert.ok(row.length > 1);
     for (const slot of row) {
-      const geometry = after.geometryFor(slot);
+      const geometry = after.slotGeometry(slot);
       assert.ok(!("shape" in geometry));
       assert.equal(geometry.height, 3, slot);
     }

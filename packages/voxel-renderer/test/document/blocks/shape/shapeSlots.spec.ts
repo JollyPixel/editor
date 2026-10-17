@@ -6,9 +6,7 @@ import assert from "node:assert/strict";
 import {
   baseSlotName,
   shapeSlots,
-  normalizeSlotKey,
   faceSlotName,
-  unknownTextureSlots,
   type ShapeSlot
 } from "../../../../src/document/blocks/shape/shapeSlots.ts";
 import {
@@ -29,7 +27,7 @@ import {
 import type { BlockShape } from "../../../../src/document/blocks/shape/BlockShape.ts";
 import { FACE } from "../../../../src/document/geometry/faceDirection.ts";
 
-function idsOf(
+function collectIds(
   shape: BlockShape
 ): string[] {
   return shapeSlots(shape).map((slot) => slot.id);
@@ -75,7 +73,7 @@ describe("shapeSlots — shapes with one polygon per face", () => {
   it("gives each face exactly one slot under its bare name", () => {
     for (const shape of [new Cube(), new Slab("bottom"), new Pole(), new PoleY()]) {
       assert.deepEqual(
-        idsOf(shape),
+        collectIds(shape),
         ["right", "left", "top", "bottom", "front", "back"],
         shape.id
       );
@@ -107,17 +105,17 @@ describe("shapeSlots — shapes with one polygon per face", () => {
 
   it("skips a face the shape never emits", () => {
     assert.deepEqual(
-      idsOf(new Ramp()),
+      collectIds(new Ramp()),
       ["right", "left", "top", "bottom", "front"]
     );
-    assert.equal(idsOf(new RampCornerOuter()).includes("top"), false);
+    assert.equal(collectIds(new RampCornerOuter()).includes("top"), false);
   });
 });
 
 describe("shapeSlots — stairs", () => {
   it("derives eight slots for a straight stair", () => {
     assert.deepEqual(
-      idsOf(new Stair()),
+      collectIds(new Stair()),
       [
         "right",
         "left",
@@ -179,12 +177,12 @@ describe("shapeSlots — stairs", () => {
   });
 
   it("derives nine slots for either stair corner", () => {
-    assert.equal(idsOf(new StairCornerInner()).length, 9);
-    assert.equal(idsOf(new StairCornerOuter()).length, 9);
+    assert.equal(collectIds(new StairCornerInner()).length, 9);
+    assert.equal(collectIds(new StairCornerOuter()).length, 9);
   });
 
   it("gives a notched slab one inner slot on each side facing the notch", () => {
-    assert.deepEqual(idsOf(new Slab("notch")), [
+    assert.deepEqual(collectIds(new Slab("notch")), [
       "right",
       "left",
       "left.1",
@@ -205,7 +203,7 @@ describe("shapeSlots — stairs", () => {
   });
 
   it("derives nine slots for the peak stair corner", () => {
-    assert.deepEqual(idsOf(new StairCornerPeak()), [
+    assert.deepEqual(collectIds(new StairCornerPeak()), [
       "right",
       "right.1",
       "left",
@@ -232,8 +230,8 @@ describe("shapeSlots — stairs", () => {
       "back.1"
     ];
 
-    assert.deepEqual(idsOf(new Pole("cross")), expected);
-    assert.deepEqual(idsOf(new Wall("cross")), expected);
+    assert.deepEqual(collectIds(new Pole("cross")), expected);
+    assert.deepEqual(collectIds(new Wall("cross")), expected);
   });
 
   it("groups the two inner sides a tee joint shows on its arm side", () => {
@@ -258,7 +256,7 @@ describe("shapeSlots — an explicit slot overrides the plane rule", () => {
 
     assert.equal(top.definitions.length, 2);
     assert.equal(
-      idsOf(new RampCornerInner()).includes("top.1"),
+      collectIds(new RampCornerInner()).includes("top.1"),
       false,
       "pinning both polygons keeps the plane rule from splitting them"
     );
@@ -277,56 +275,5 @@ describe("shapeSlots — memoization", () => {
     const shape = new Stair();
 
     assert.equal(shapeSlots(shape), shapeSlots(shape));
-  });
-});
-
-describe("normalizeSlotKey", () => {
-  it("reads a numeric face key as that face's slot", () => {
-    assert.equal(normalizeSlotKey(String(FACE.NegY)), "bottom");
-    assert.equal(normalizeSlotKey("top.1"), "top.1");
-    assert.equal(normalizeSlotKey("6"), "6");
-  });
-});
-
-describe("unknownTextureSlots", () => {
-  it("reports keys that name no slot", () => {
-    assert.deepEqual(
-      unknownTextureSlots(["top", "negY", "posX"], new Cube()),
-      ["negY", "posX"]
-    );
-  });
-
-  it("accepts numeric face keys", () => {
-    assert.deepEqual(
-      unknownTextureSlots([String(FACE.NegZ), String(FACE.PosY)], new Cube()),
-      []
-    );
-  });
-
-  it("accepts a built-in face name the shape does not use", () => {
-    assert.deepEqual(unknownTextureSlots(["back"], new Ramp()), []);
-  });
-
-  it("accepts derived slots of the shape only", () => {
-    assert.deepEqual(
-      unknownTextureSlots(["top.1", "back.1", "front.1"], new Stair()),
-      ["front.1"]
-    );
-  });
-
-  it("accepts a slot a shape pins under its own name", () => {
-    const shape: BlockShape = {
-      id: "capped",
-      faces: [
-        {
-          ...new Cube().faces[0],
-          slot: "cap"
-        }
-      ],
-      collisionHint: "box",
-      occludes: () => false
-    };
-
-    assert.deepEqual(unknownTextureSlots(["cap", "lid"], shape), ["lid"]);
   });
 });

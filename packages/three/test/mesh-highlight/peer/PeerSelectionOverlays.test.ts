@@ -52,7 +52,7 @@ function createHarness(
   };
 }
 
-function colorOf(
+function readColor(
   mesh: THREE.Mesh
 ): string {
   const overlay = mesh.children[0] as THREE.LineSegments;
@@ -68,7 +68,7 @@ describe("peer selection", () => {
 
     assert.strictEqual(mesh.children.length, 1);
     assert.ok("material" in mesh.children[0]);
-    assert.strictEqual(colorOf(mesh), registry.colorOf("peer-a"));
+    assert.strictEqual(readColor(mesh), registry.peerColor("peer-a"));
   });
 
   test(
@@ -79,7 +79,7 @@ describe("peer selection", () => {
       registry.select("peer-b", "mesh-1");
 
       assert.strictEqual(mesh.children.length, 1);
-      assert.strictEqual(colorOf(mesh), registry.colorOf("peer-a"));
+      assert.strictEqual(readColor(mesh), registry.peerColor("peer-a"));
     }
   );
 
@@ -97,7 +97,7 @@ describe("peer selection", () => {
       overlayBefore,
       "must reuse the same overlay instance, not rebuild it"
     );
-    assert.strictEqual(colorOf(mesh), registry.colorOf("peer-b"));
+    assert.strictEqual(readColor(mesh), registry.peerColor("peer-b"));
   });
 
   test("all peers deselecting disposes the overlay", () => {
@@ -123,7 +123,7 @@ describe("peer selection", () => {
     selection.select(null);
 
     assert.strictEqual(mesh.children.length, 1);
-    assert.strictEqual(colorOf(mesh), registry.colorOf("peer-a"));
+    assert.strictEqual(readColor(mesh), registry.peerColor("peer-a"));
   });
 
   test("falls back to \"outline\" for an id resolved to a scene-pipeline technique", () => {
@@ -145,7 +145,7 @@ describe("peer selection", () => {
     new PeerSelectionOverlays({ registry, selection });
 
     assert.strictEqual(mesh.children.length, 1);
-    assert.strictEqual(colorOf(mesh), registry.colorOf("peer-a"));
+    assert.strictEqual(readColor(mesh), registry.peerColor("peer-a"));
   });
 
   test("an xray change applies x-ray to peer overlays", () => {

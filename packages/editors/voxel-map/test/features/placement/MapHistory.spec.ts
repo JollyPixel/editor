@@ -11,13 +11,13 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { mapHistoryOf } from "../../helpers/mapHistory.ts";
+import { createWorldHistory } from "../../helpers/mapHistory.ts";
 import { MAP_HISTORY_SCOPE } from "../../../src/shared/mapHistory.ts";
 import { CellRegion } from "../../../src/features/placement/CellRegion.ts";
 import { MapHistory } from "../../../src/features/placement/MapHistory.ts";
 import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
 import { SelectionStore } from "../../../src/state/index.ts";
-import { mapDocumentOf } from "../../helpers/mapDocument.ts";
+import { createMapDocument } from "../../helpers/mapDocument.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
 
 // CONSTANTS
@@ -29,12 +29,12 @@ const kOrigin = CellRegion.spanning(
 function setup() {
   const world = new VoxelWorld();
   world.addLayer("Draft");
-  const voxels = mapHistoryOf(world);
+  const voxels = createWorldHistory(world);
   const placement = new MapPlacement({
     world,
     history: voxels,
     selection: new SelectionStore(),
-    mapDocument: mapDocumentOf(world),
+    mapDocument: createMapDocument(world),
     access: mapAccess()
   });
   const history = new MapHistory({

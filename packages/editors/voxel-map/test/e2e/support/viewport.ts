@@ -9,7 +9,7 @@ import { nextFrames } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
 import {
-  clientPointOf,
+  toClientPoint,
   type ScreenPoint,
   type ViewSnapshot
 } from "./projection.ts";
@@ -75,7 +75,7 @@ export class Viewport {
       };
     });
 
-    return clientPointOf(view, point);
+    return toClientPoint(view, point);
   }
 
   cellTop(

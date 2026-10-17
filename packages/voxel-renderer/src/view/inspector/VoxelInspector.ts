@@ -68,10 +68,6 @@ export interface VoxelInspectorOptions {
   chunkBoundsColor?: THREE.ColorRepresentation;
 }
 
-/**
- * Entry point for the inspector views. Owns the registry of built chunks and
- * forwards every build to the views drawn from it.
- */
 export class VoxelInspector {
   readonly mesh: VoxelMeshInspector;
   readonly blocks: VoxelBlockInspector;

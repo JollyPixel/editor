@@ -16,7 +16,7 @@ import {
   type AssetRoomRejectedMessage
 } from "../kinds/AssetLiveProtocol.ts";
 import {
-  actorOf,
+  toActor,
   isStateNeutral
 } from "../events/AssetEvents.ts";
 import type { RecordedCommand } from "../state/AssetStateStore.ts";
@@ -170,7 +170,7 @@ export class AssetRoomExtension<
 
     context.room.sendTo(
       clientId,
-      this.#snapshot(this.#acks.of([clientId]))
+      this.#snapshot(this.#acks.collectAcks([clientId]))
     );
   }
 
@@ -211,7 +211,7 @@ export class AssetRoomExtension<
       assetId: this.#assetId,
       eventType: this.#commands.eventType,
       eventData: arbitration.command,
-      actor: actorOf(context.identity)
+      actor: toActor(context.identity)
     });
     if (!appended.ok) {
       context.room.sendTo(clientId, {
@@ -230,7 +230,7 @@ export class AssetRoomExtension<
 
     arbitration.commit?.(appended.val.eventVersion);
     context.room.broadcast(
-      this.#broadcastOf(
+      this.#toBroadcast(
         arbitration.command,
         appended.val.eventVersion
       )
@@ -353,7 +353,7 @@ export class AssetRoomExtension<
       command,
       admitted
     ) ?? null;
-    const acks = this.#acks.of([clientId]);
+    const acks = this.#acks.collectAcks([clientId]);
     const refused = admitted === null && typeof command.seq === "number" ?
       { refused: command.seq } :
       {};
@@ -374,7 +374,7 @@ export class AssetRoomExtension<
     });
   }
 
-  #broadcastOf(
+  #toBroadcast(
     command: TCommand,
     version: number
   ): AssetSyncMessage {

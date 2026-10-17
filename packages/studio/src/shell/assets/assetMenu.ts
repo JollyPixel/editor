@@ -100,7 +100,7 @@ export function newAssetMenu(
     return {
       id: newAssetAction(entry.kind),
       label: entry.label,
-      icon: kinds.iconFor(entry.kind)
+      icon: kinds.kindIcon(entry.kind)
     };
   });
 }

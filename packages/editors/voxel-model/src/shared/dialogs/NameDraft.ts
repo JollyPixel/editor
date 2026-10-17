@@ -1,6 +1,3 @@
-/**
- * Why a name is refused, or `null` to accept it.
- */
 export type NameValidator = (name: string) => string | null;
 
 export interface NameFieldOptions {

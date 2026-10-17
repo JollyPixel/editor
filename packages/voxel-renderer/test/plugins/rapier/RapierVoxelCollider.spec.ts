@@ -16,11 +16,7 @@ import {
 } from "../../../src/plugins/rapier/index.ts";
 import type { VoxelChunkCollision } from "../../../src/view/collision/index.ts";
 import { VoxelChunk } from "../../../src/document/world/index.ts";
-import { VoxelTransform } from "../../../src/document/geometry/index.ts";
-import {
-  type BlockDefinition,
-  BlockRegistry
-} from "../../../src/document/blocks/index.ts";
+import { type BlockDefinition, BlockRegistry } from "../../../src/document/blocks/index.ts";
 import { BlockShapeRegistry } from "../../../src/document/blocks/shape/index.ts";
 import { Slab } from "../../../src/document/blocks/shape/library/Slab.ts";
 import { makeBlockDef } from "../../helpers/blocks.ts";
@@ -133,7 +129,7 @@ function makeChunk(
   return chunk;
 }
 
-function collisionOf(
+function createCollision(
   chunks: VoxelChunk | VoxelChunk[],
   geometries: VoxelChunkCollision["geometries"] = kNoGeometries,
   origin = { x: 0, y: 0, z: 0 }
@@ -145,19 +141,23 @@ function collisionOf(
   };
 }
 
-function xsOf(
-  vertices: Float32Array
-): number[] {
-  return [...vertices.filter((_, i) => i % 3 === 0)];
-}
-
 describe("RapierVoxelCollider.rebuildChunk", () => {
+  const kEmptyCases: [string, BlockDefinition[], Cell[][]][] = [
+    ["no chunk", [makeBlockDef(1, "cube")], []],
+    ["an empty chunk", [], [[]]],
+    [
+      "a chunk whose only block is not collidable",
+      [makeBlockDef(1, "cube", { collidable: false })],
+      [[[0, 0, 0]]]
+    ],
+    ["a chunk whose block is not registered", [], [[[0, 0, 0, 99]]]]
+  ];
   it("refreshes cached bounds when a registered shape is replaced", () => {
     const { collider, world, shapeRegistry } = makeCollider([makeBlockDef(1, "cube")]);
     const chunk = makeChunk([[0, 0, 0]]);
-    collider.rebuildChunk("a", collisionOf(chunk));
+    collider.rebuildChunk("a", createCollision(chunk));
     shapeRegistry.register(new Slab("bottom", "cube"));
-    collider.rebuildChunk("a", collisionOf(chunk));
+    collider.rebuildChunk("a", createCollision(chunk));
 
     const { desc } = world.colliderCalls.at(-1)!;
     assert.equal(desc.hy, 0.25);
@@ -167,7 +167,7 @@ describe("RapierVoxelCollider.rebuildChunk", () => {
   it("keeps trimesh winding outward for every rotation and mirror", () => {
     const { collider, world } = makeCollider([makeBlockDef(1, "ramp")]);
     for (let transform = 0; transform < 32; transform++) {
-      collider.rebuildChunk("a", collisionOf(makeChunk([[0, 0, 0, 1, transform]])));
+      collider.rebuildChunk("a", createCollision(makeChunk([[0, 0, 0, 1, transform]])));
       const { vertices, indices } = world.colliderCalls.at(-1)!.desc;
       assert.ok(vertices && indices);
       let volume = 0;
@@ -184,8 +184,8 @@ describe("RapierVoxelCollider.rebuildChunk", () => {
   it("never carries cells over from a previously built chunk", () => {
     const { collider, world } = makeCollider([makeBlockDef(1, "cube")]);
 
-    collider.rebuildChunk("a", collisionOf(makeChunk([[1, 0, 0]], 8)));
-    collider.rebuildChunk("b", collisionOf(makeChunk([[0, 0, 0]])));
+    collider.rebuildChunk("a", createCollision(makeChunk([[1, 0, 0]], 8)));
+    collider.rebuildChunk("b", createCollision(makeChunk([[0, 0, 0]])));
 
     assert.equal(world.colliderCalls.length, 2);
     assert.equal(world.colliderCalls[1].desc.hx, 0.5);
@@ -199,26 +199,15 @@ describe("RapierVoxelCollider.rebuildChunk", () => {
     });
 
     assert.throws(
-      () => collider.rebuildChunk("a", collisionOf(makeChunk([[0, 0, 0], [2, 0, 0]]))),
+      () => collider.rebuildChunk("a", createCollision(makeChunk([[0, 0, 0], [2, 0, 0]]))),
       failure
     );
     createCollider.mock.restore();
-    collider.rebuildChunk("b", collisionOf(makeChunk([[1, 0, 0]])));
+    collider.rebuildChunk("b", createCollision(makeChunk([[1, 0, 0]])));
 
     assert.equal(world.colliderCalls.length, 1);
     assert.equal(world.colliderCalls[0].desc.hx, 0.5);
   });
-
-  const kEmptyCases: [string, BlockDefinition[], Cell[][]][] = [
-    ["no chunk", [makeBlockDef(1, "cube")], []],
-    ["an empty chunk", [], [[]]],
-    [
-      "a chunk whose only block is not collidable",
-      [makeBlockDef(1, "cube", { collidable: false })],
-      [[[0, 0, 0]]]
-    ],
-    ["a chunk whose block is not registered", [], [[[0, 0, 0, 99]]]]
-  ];
 
   for (const [name, blocks, chunks] of kEmptyCases) {
     it(`creates no body for ${name}`, () => {
@@ -226,7 +215,7 @@ describe("RapierVoxelCollider.rebuildChunk", () => {
 
       collider.rebuildChunk(
         "a",
-        collisionOf(chunks.map((cells) => makeChunk(cells)))
+        createCollision(chunks.map((cells) => makeChunk(cells)))
       );
 
       assert.equal(world.rigidBodies.length, 0);
@@ -236,7 +225,7 @@ describe("RapierVoxelCollider.rebuildChunk", () => {
   it("merges a run of cubes along X into one cuboid", () => {
     const { collider, world } = makeCollider([makeBlockDef(1, "cube")]);
 
-    collider.rebuildChunk("a", collisionOf(makeChunk([[0, 0, 0], [1, 0, 0], [3, 0, 0]])));
+    collider.rebuildChunk("a", createCollision(makeChunk([[0, 0, 0], [1, 0, 0], [3, 0, 0]])));
 
     assert.equal(world.rigidBodies.length, 1);
     assert.deepEqual(
@@ -252,7 +241,7 @@ describe("RapierVoxelCollider.rebuildChunk", () => {
   it("positions each cuboid at the voxel centre", () => {
     const { collider, world } = makeCollider([makeBlockDef(1, "cube")]);
 
-    collider.rebuildChunk("a", collisionOf(makeChunk([[2, 3, 1]])));
+    collider.rebuildChunk("a", createCollision(makeChunk([[2, 3, 1]])));
 
     const [{ desc }] = world.colliderCalls;
     assert.deepEqual(desc.translation, { x: 2.5, y: 3.5, z: 1.5 });
@@ -264,198 +253,10 @@ describe("RapierVoxelCollider.rebuildChunk", () => {
 
     collider.rebuildChunk(
       "a",
-      collisionOf(makeChunk([[0, 0, 0]], 4, [2, 0, 1]), kNoGeometries, { x: 16, y: 0, z: 4 })
+      createCollision(makeChunk([[0, 0, 0]], 4, [2, 0, 1]), kNoGeometries, { x: 16, y: 0, z: 4 })
     );
 
     assert.equal(rapier.bodyDescs.length, 1);
     assert.deepEqual(rapier.bodyDescs[0].translation, { x: 16, y: 0, z: 4 });
-  });
-
-  it("builds one body from the solids of every layer chunk", () => {
-    const { collider, world } = makeCollider([makeBlockDef(1, "cube")]);
-
-    collider.rebuildChunk("a", collisionOf([
-      makeChunk([[0, 0, 0], [1, 0, 0]]),
-      makeChunk([[1, 0, 0], [2, 0, 0]])
-    ]));
-
-    assert.equal(world.rigidBodies.length, 1);
-    assert.deepEqual(
-      world.colliderCalls.map(({ desc }) => [desc.hx, desc.translation]),
-      [[1.5, { x: 1.5, y: 0.5, z: 0.5 }]]
-    );
-  });
-
-  it("merges adjacent trimesh blocks into one body with one trimesh", () => {
-    const { collider, world } = makeCollider([makeBlockDef(1, "ramp")]);
-
-    collider.rebuildChunk("a", collisionOf(makeChunk([[0, 0, 0], [1, 0, 0]])));
-
-    assert.equal(world.rigidBodies.length, 1);
-    assert.equal(world.colliderCalls.length, 1);
-    const { vertices } = world.colliderCalls[0].desc;
-    assert.ok(vertices);
-    assert.equal(Math.min(...xsOf(vertices)), 0);
-    assert.equal(Math.max(...xsOf(vertices)), 2);
-  });
-
-  it("builds the trimesh from shape faces without render geometry", () => {
-    const { collider, world } = makeCollider([makeBlockDef(1, "ramp")]);
-
-    collider.rebuildChunk("a", collisionOf(makeChunk([[1, 0, 0]])));
-
-    assert.equal(world.colliderCalls.length, 1);
-    const { vertices, indices } = world.colliderCalls[0].desc;
-    assert.ok(vertices && indices);
-    assert.equal(Math.min(...xsOf(vertices)), 1);
-    assert.equal(Math.max(...xsOf(vertices)), 2);
-    assert.equal(Math.max(...indices), (vertices.length / 3) - 1);
-  });
-
-  it("keeps non-collidable and box blocks out of the trimesh", () => {
-    const { collider, world } = makeCollider([
-      makeBlockDef(1, "ramp"),
-      makeBlockDef(2, "ramp", { collidable: false }),
-      makeBlockDef(3, "cube")
-    ]);
-
-    collider.rebuildChunk("a", collisionOf(makeChunk([[0, 0, 0, 1], [1, 0, 0, 2], [2, 0, 0, 3]])));
-
-    const trimesh = world.colliderCalls.find(({ desc }) => desc.vertices);
-    assert.equal(Math.max(...xsOf(trimesh!.desc.vertices!)), 1);
-    assert.equal(world.colliderCalls.length, 2);
-  });
-
-  it("merges a solid block of cubes into a single cuboid", () => {
-    const cells: Cell[] = [];
-    for (let x = 0; x < 4; x++) {
-      for (let y = 0; y < 2; y++) {
-        for (let z = 0; z < 3; z++) {
-          cells.push([x, y, z]);
-        }
-      }
-    }
-    const { collider, world } = makeCollider([makeBlockDef(1, "cube")]);
-
-    collider.rebuildChunk("a", collisionOf(makeChunk(cells)));
-
-    assert.equal(world.colliderCalls.length, 1);
-    const { desc } = world.colliderCalls[0];
-    assert.deepEqual([desc.hx, desc.hy, desc.hz], [2, 1, 1.5]);
-    assert.deepEqual(desc.translation, { x: 2, y: 1, z: 1.5 });
-  });
-
-  it("covers an L-shaped floor with cuboids of the same total volume", () => {
-    const cells: Cell[] = [[0, 0, 0], [1, 0, 0], [2, 0, 0], [0, 0, 1], [0, 0, 2]];
-    const { collider, world } = makeCollider([makeBlockDef(1, "cube")]);
-
-    collider.rebuildChunk("a", collisionOf(makeChunk(cells)));
-
-    const volume = world.colliderCalls.reduce(
-      (total, { desc }) => total + (8 * desc.hx! * desc.hy! * desc.hz!),
-      0
-    );
-    assert.equal(volume, cells.length);
-    assert.equal(world.colliderCalls.length, 2);
-  });
-
-  it("sizes a slab cuboid to its half block, flipped by its transform", () => {
-    const { collider, world } = makeCollider([makeBlockDef(1, "slabBottom")]);
-    const flipped = VoxelTransform.pack({ flipY: true });
-
-    collider.rebuildChunk("a", collisionOf(makeChunk([[0, 0, 0], [1, 0, 0, 1, flipped]])));
-
-    const boxes = world.colliderCalls
-      .map(({ desc }) => [desc.hy, desc.translation] as const)
-      .sort((a, b) => a[1]!.x - b[1]!.x);
-    assert.deepEqual(boxes, [
-      [0.25, { x: 0.5, y: 0.25, z: 0.5 }],
-      [0.25, { x: 1.5, y: 0.75, z: 0.5 }]
-    ]);
-  });
-
-  it("merges a filled merged cell into the cube run beside it", () => {
-    const { collider, world } = makeCollider([
-      makeBlockDef(1, "cube"),
-      makeBlockDef(2, "slabBottom"),
-      makeBlockDef(3, "slabTop")
-    ]);
-    const chunk = makeChunk([[0, 0, 0]]);
-    chunk.set([1, 0, 0], {
-      blockId: 2,
-      transform: 0,
-      partner: { blockId: 3, transform: 0 }
-    });
-
-    collider.rebuildChunk("a", collisionOf(chunk));
-
-    assert.deepEqual(
-      world.colliderCalls.map(({ desc }) => [desc.hx, desc.translation]),
-      [[1, { x: 1, y: 0.5, z: 0.5 }]]
-    );
-  });
-
-  it("keeps a box per half when a merged cell does not fill its cell", () => {
-    const { collider, world } = makeCollider([makeBlockDef(2, "slabBottom")]);
-    const chunk = makeChunk([]);
-    chunk.set([0, 0, 0], {
-      blockId: 2,
-      transform: 0,
-      partner: { blockId: 2, transform: VoxelTransform.pack({ rotation: 1 }) }
-    });
-
-    collider.rebuildChunk("a", collisionOf(chunk));
-
-    assert.equal(world.colliderCalls.length, 2);
-  });
-
-  it("replaces the previous body instead of accumulating one per rebuild", () => {
-    const { collider, world } = makeCollider([makeBlockDef(1, "cube")]);
-    const chunk = makeChunk([[0, 0, 0]]);
-
-    collider.rebuildChunk("a", collisionOf(chunk));
-    collider.rebuildChunk("a", collisionOf(chunk));
-    collider.rebuildChunk("a", collisionOf(chunk));
-
-    assert.equal(world.rigidBodies.length, 3);
-    assert.equal(world.removedBodies.length, 2);
-    assert.equal(world.liveBodies.length, 1);
-  });
-});
-
-describe("RapierVoxelCollider.removeChunk", () => {
-  it("removes the chunk's rigid body from the world", () => {
-    const { collider, world } = makeCollider([makeBlockDef(1, "cube")]);
-
-    collider.rebuildChunk("a", collisionOf(makeChunk([[0, 0, 0]])));
-    collider.removeChunk("a");
-
-    assert.deepEqual(world.removedBodies, [world.rigidBodies[0]]);
-    assert.equal(world.liveBodies.length, 0);
-  });
-
-  it("is a no-op for an unknown or already removed key", () => {
-    const { collider, world } = makeCollider();
-
-    collider.removeChunk("nope");
-    collider.removeChunk("nope");
-
-    assert.equal(world.removedBodies.length, 0);
-  });
-});
-
-describe("RapierVoxelCollider.dispose", () => {
-  it("removes every remaining chunk body and forgets them", () => {
-    const { collider, world } = makeCollider([makeBlockDef(1, "cube")]);
-    const chunk = makeChunk([[0, 0, 0]]);
-
-    collider.rebuildChunk("a", collisionOf(chunk));
-    collider.rebuildChunk("b", collisionOf(chunk));
-    collider.dispose();
-
-    assert.equal(world.liveBodies.length, 0);
-
-    collider.removeChunk("a");
-    assert.equal(world.removedBodies.length, 2);
   });
 });

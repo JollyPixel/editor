@@ -74,10 +74,6 @@ describe("Controls.Mouse wheel", () => {
   });
 
   test("accumulates several wheel events arriving within one frame", () => {
-    /*
-     * Two upward notches in the same frame must not cancel or be discarded:
-     * the deltas used to be replaced rather than summed, dropping the first.
-     */
     canvas.dispatchWheelEvent({ wheelDelta: 120 });
     canvas.dispatchWheelEvent({ wheelDelta: 120 });
     mouse.update();
@@ -171,7 +167,7 @@ describe("Controls.Mouse wheel source", () => {
     mouse.disconnect();
   });
 
-  function sourceOf(
+  function detectSource(
     eventData: WheelEventData
   ): ScrollSource | null {
     canvas.dispatchWheelEvent(eventData);
@@ -195,30 +191,30 @@ describe("Controls.Mouse wheel source", () => {
   ];
   for (const [name, eventData, expected] of cases) {
     test(`reads ${name} as ${expected}`, () => {
-      assert.strictEqual(sourceOf(eventData), expected);
+      assert.strictEqual(detectSource(eventData), expected);
     });
   }
 
   test("keeps a touchpad gesture through a whole-notch event", () => {
-    sourceOf({ wheelDeltaY: 36, timeStamp: 0 });
+    detectSource({ wheelDeltaY: 36, timeStamp: 0 });
 
     assert.strictEqual(
-      sourceOf({ wheelDeltaY: 120, timeStamp: 16 }),
+      detectSource({ wheelDeltaY: 120, timeStamp: 16 }),
       "touchpad"
     );
   });
 
   test("starts a new gesture after a pause", () => {
-    sourceOf({ wheelDeltaY: 36, timeStamp: 0 });
+    detectSource({ wheelDeltaY: 36, timeStamp: 0 });
 
     assert.strictEqual(
-      sourceOf({ wheelDeltaY: 120, timeStamp: 1000 }),
+      detectSource({ wheelDeltaY: 120, timeStamp: 1000 }),
       "wheel"
     );
   });
 
   test("clears the source once the scroll is consumed", () => {
-    sourceOf({ wheelDeltaY: 36 });
+    detectSource({ wheelDeltaY: 36 });
     mouse.update();
 
     assert.strictEqual(mouse.scrollSource, null);
@@ -235,12 +231,12 @@ describe("Controls.Mouse wheel source", () => {
 
   test("scrollDevice overrides detection but still reports zooms", () => {
     mouse.scrollDevice = "touchpad";
-    assert.strictEqual(sourceOf({ wheelDeltaY: 120 }), "touchpad");
+    assert.strictEqual(detectSource({ wheelDeltaY: 120 }), "touchpad");
 
     mouse.scrollDevice = "wheel";
-    assert.strictEqual(sourceOf({ wheelDeltaY: 36 }), "wheel");
+    assert.strictEqual(detectSource({ wheelDeltaY: 36 }), "wheel");
     assert.strictEqual(
-      sourceOf({ wheelDeltaY: 12, ctrlKey: true }),
+      detectSource({ wheelDeltaY: 12, ctrlKey: true }),
       "zoom"
     );
   });

@@ -59,7 +59,7 @@ export class AssetKindSet implements AssetKindPresenter {
     return this.#byKind.has(kind);
   }
 
-  entryOf(
+  findEntry(
     kind: string
   ): AssetKindEntry | undefined {
     return this.#byKind.get(kind);
@@ -73,13 +73,13 @@ export class AssetKindSet implements AssetKindPresenter {
     );
   }
 
-  labelFor(
+  kindLabel(
     kind: string
   ): string {
     return this.#byKind.get(kind)?.label ?? kind;
   }
 
-  iconFor(
+  kindIcon(
     kind: string
   ): IconName {
     return this.#byKind.get(
@@ -93,7 +93,7 @@ export class AssetKindSet implements AssetKindPresenter {
     return this.#editable.has(kind);
   }
 
-  detailFor(
+  kindDetail(
     kind: string
   ): string | undefined {
     return this.canEdit(kind)
@@ -101,7 +101,7 @@ export class AssetKindSet implements AssetKindPresenter {
       : kNoEditorDetail;
   }
 
-  displayNameFor(
+  trimExtension(
     kind: string,
     name: string
   ): string {
@@ -122,7 +122,7 @@ export class AssetKindSet implements AssetKindPresenter {
       return {
         value: kind,
         label,
-        icon: this.iconFor(kind)
+        icon: this.kindIcon(kind)
       };
     });
   }

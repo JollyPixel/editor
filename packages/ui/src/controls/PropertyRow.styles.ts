@@ -5,9 +5,6 @@ import { css } from "lit";
 import { kFallback } from "../theme/styles/fallbacks.ts";
 import { truncate } from "../theme/styles/mixins.ts";
 
-/**
- * Matches `JollyField` geometry for custom rows.
- */
 export const propertyRowStyles = css`
   :host {
     display: block;

@@ -3,8 +3,8 @@ import { contrastingColor } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import {
-  rectOf,
-  triangleCornerOf
+  boundingRect,
+  triangleCorner
 } from "../../uv/geometry/geometry.ts";
 import { RectArea } from "../../utils/RectArea.ts";
 import {
@@ -38,7 +38,7 @@ export class UVSizeLabels {
     draggedSlot: UVSlot | null
   ): void {
     const measured = this.#uvMap.showSizeLabels ?
-      UVSizeLabels.#measuredOf(entries) :
+      UVSizeLabels.#collectMeasured(entries) :
       new Map<string, UVOverlayEntry>();
     for (const [key, label] of this.#labels) {
       if (!measured.has(key)) {
@@ -56,7 +56,7 @@ export class UVSizeLabels {
       label.paint(paint);
 
       const inside = this.#inside(label, entry);
-      const outside = label.outside(rectOf(entry.geometry));
+      const outside = label.outside(boundingRect(entry.geometry));
       const prefersInside = (
         entry.region.state === "unfolded" && entry.slot !== draggedSlot
       ) || (inside !== null && this.#covers(outside, key, entries));
@@ -89,8 +89,8 @@ export class UVSizeLabels {
     label: SizeLabel,
     entry: UVOverlayEntry
   ): SizeLabelPlacement | null {
-    const rect = rectOf(entry.geometry);
-    const corner = triangleCornerOf(entry.geometry);
+    const rect = boundingRect(entry.geometry);
+    const corner = triangleCorner(entry.geometry);
     if (corner === null) {
       return label.inside(rect);
     }
@@ -114,12 +114,12 @@ export class UVSizeLabels {
 
     return entries.some((entry) => entry.shapeKey !== shapeKey &&
       area.clippedTo(
-        this.#viewport.toScreenRect(rectOf(entry.geometry))
+        this.#viewport.toScreenRect(boundingRect(entry.geometry))
       ) !== null
     );
   }
 
-  static #measuredOf(
+  static #collectMeasured(
     entries: readonly UVOverlayEntry[]
   ): Map<string, UVOverlayEntry> {
     const measured = new Map<string, UVOverlayEntry>();

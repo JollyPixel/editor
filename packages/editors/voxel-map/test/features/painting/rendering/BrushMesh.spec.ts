@@ -30,7 +30,7 @@ const kCursor: BrushFootprintOptions = {
   pattern: "square"
 };
 
-function edgeLinesOf(
+function findEdgeLines(
   mesh: BrushMesh
 ): LineSegments2[] {
   return mesh.children
@@ -54,7 +54,7 @@ function renderFrom(
   camera.updateMatrixWorld();
   mesh.updateMatrixWorld();
 
-  const [first] = edgeLinesOf(mesh);
+  const [first] = findEdgeLines(mesh);
   Reflect.apply(first.onBeforeRender, first, [
     null,
     null,
@@ -65,14 +65,14 @@ function renderFrom(
 function segmentCount(
   mesh: BrushMesh
 ): number {
-  const [, border] = edgeLinesOf(mesh);
+  const [, border] = findEdgeLines(mesh);
 
   return border.geometry.getAttribute("instanceStart").count;
 }
 
 describe("BrushMesh", () => {
   test("depth-tests every edge pass so blocks hide the outline", () => {
-    const passes = edgeLinesOf(drawnMesh());
+    const passes = findEdgeLines(drawnMesh());
 
     assert.equal(passes.length, 2);
     for (const lines of passes) {
@@ -84,7 +84,7 @@ describe("BrushMesh", () => {
   });
 
   test("backs the border with a wider dark halo", () => {
-    const [halo, border] = edgeLinesOf(drawnMesh());
+    const [halo, border] = findEdgeLines(drawnMesh());
 
     assert.equal(border.material.linewidth, kEdgeWidth);
     assert.ok(halo.material.linewidth > border.material.linewidth);
@@ -94,7 +94,7 @@ describe("BrushMesh", () => {
   });
 
   test("shares one edge geometry across the passes", () => {
-    const [halo, border] = edgeLinesOf(drawnMesh());
+    const [halo, border] = findEdgeLines(drawnMesh());
 
     assert.equal(halo.geometry, border.geometry);
   });
@@ -129,7 +129,7 @@ describe("BrushMesh", () => {
       color: 0xff0000
     });
     mesh.draw(new BrushFootprint(kCursor));
-    const [halo, border] = edgeLinesOf(mesh);
+    const [halo, border] = findEdgeLines(mesh);
     const surfaces = mesh.children.filter(
       (child) => !(child instanceof LineSegments2)
     );
@@ -187,7 +187,7 @@ describe("BrushMesh", () => {
       subdued: true
     });
     mesh.draw(new BrushFootprint(kCursor));
-    const [halo, border] = edgeLinesOf(mesh);
+    const [halo, border] = findEdgeLines(mesh);
 
     assert.equal(halo.visible, false);
     assert.equal(border.visible, true);
@@ -234,12 +234,12 @@ describe("BrushMesh", () => {
 
     assert.equal(fill.visible, false);
     assert.equal(face.visible, true);
-    for (const lines of edgeLinesOf(mesh)) {
+    for (const lines of findEdgeLines(mesh)) {
       assert.equal(lines.visible, false);
     }
 
     mesh.shelled = true;
     assert.equal(fill.visible, true);
-    assert.equal(edgeLinesOf(mesh)[1].visible, true);
+    assert.equal(findEdgeLines(mesh)[1].visible, true);
   });
 });

@@ -25,9 +25,6 @@ export type SceneLifecycleEvents = {
   destroy: () => void;
 };
 
-/**
- * Declares scene dependencies and provides synchronous ECS lifecycle hooks.
- */
 export abstract class Scene<
   TContext = WorldDefaultContext
 > extends Emitter<SceneLifecycleEvents> {
@@ -37,9 +34,6 @@ export abstract class Scene<
   readonly name: string;
   readonly assets: readonly AssetReference<unknown>[];
 
-  /**
-   * Set by SceneManager when the scene is activated.
-   */
   world!: World<any, TContext>;
 
   #logger: Logger | undefined;
@@ -54,10 +48,6 @@ export abstract class Scene<
     this.assets = parseSceneAssets(options.assets ?? []);
   }
 
-  /**
-   * A child logger scoped to this scene's namespace (`scenes.<name>`).
-   * Created lazily on first access; safe to use from `awake()` onwards.
-   */
   get logger(): Logger {
     this.#logger ??= this.world.logger.child({
       namespace: `Scene.${this.name}`
@@ -66,39 +56,20 @@ export abstract class Scene<
     return this.#logger;
   }
 
-  /**
-   * Called once when the scene is first activated (before the first start/update).
-   * Populate actors here.
-   */
   awake(): void { }
 
-  /**
-   * Called once at the beginning of the first frame after awake.
-   * Useful for cross-actor initialization that requires all awake() calls to have run.
-   */
   start(): void { }
 
-  /**
-   * Runs per rendered frame with interpolation `alpha` in [0, 1).
-   */
   update(
     _deltaTime: number,
     _alpha?: number
   ): void { }
 
-  /**
-   * Runs per fixed step. `stepIndex` starts at zero for each frame.
-   */
   fixedUpdate(
     _deltaTime: number,
     _stepIndex?: number
   ): void { }
 
-  /**
-   * Called when the scene is being replaced or explicitly unloaded.
-   * Clean up timers, subscriptions, etc. Actor destruction is handled
-   * automatically by SceneManager.
-   */
   destroy(): void { }
 }
 

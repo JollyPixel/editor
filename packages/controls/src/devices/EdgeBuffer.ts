@@ -1,9 +1,6 @@
 // Import Internal Dependencies
 import type { InputReader } from "../types.ts";
 
-/**
- * Edge bits observed once and kept for both readers until each takes them.
- */
 export class EdgeBuffer {
   #step = 0;
   #frame = 0;

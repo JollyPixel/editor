@@ -12,7 +12,7 @@ import {
   type PeerProfileMetadata
 } from "#src/protocol/profile/PeerProfile.ts";
 
-function avatarOf(
+function parseAvatar(
   avatar: unknown
 ): string | undefined {
   return parsePeerProfile({ avatar }).avatar;
@@ -48,11 +48,11 @@ describe("parsePeerProfile", () => {
   });
 
   test("keeps an avatar only when it is a same-origin path", () => {
-    assert.equal(avatarOf("/api/accounts/a/avatar?v=1"), "/api/accounts/a/avatar?v=1");
-    assert.equal(avatarOf(null), undefined);
-    assert.equal(avatarOf("https://example.com/a.png"), undefined);
-    assert.equal(avatarOf("//example.com/a.png"), undefined);
-    assert.equal(avatarOf("/\\example.com/a.png"), undefined);
-    assert.equal(avatarOf("data:image/png;base64,AA"), undefined);
+    assert.equal(parseAvatar("/api/accounts/a/avatar?v=1"), "/api/accounts/a/avatar?v=1");
+    assert.equal(parseAvatar(null), undefined);
+    assert.equal(parseAvatar("https://example.com/a.png"), undefined);
+    assert.equal(parseAvatar("//example.com/a.png"), undefined);
+    assert.equal(parseAvatar("/\\example.com/a.png"), undefined);
+    assert.equal(parseAvatar("data:image/png;base64,AA"), undefined);
   });
 });

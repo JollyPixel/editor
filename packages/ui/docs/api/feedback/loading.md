@@ -7,8 +7,8 @@ const loading = document.createElement("jolly-loading");
 document.body.append(loading);
 
 await loading.start();
-loading.setAsset("textures/world-atlas.png");
-loading.setProgress(37, 120);
+loading.showAsset("textures/world-atlas.png");
+loading.updateProgress(37, 120);
 await loading.complete();
 ```
 
@@ -27,15 +27,15 @@ interface Loading {
 
 Shows the screen on the next animation frame.
 
-### `setAsset(name: string): void`
+### `showAsset(name: string): void`
 
 Sets the asset text.
 
-### `setProgress(value: number, max: number): void`
+### `updateProgress(value: number, max: number): void`
 
 Updates the progress, clamped.
 
-### `getProgressPercentage(): number`
+### `progressPercentage: number`
 
 ### `complete(callback?: () => void): Promise<void>`
 

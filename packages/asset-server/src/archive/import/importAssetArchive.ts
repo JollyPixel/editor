@@ -31,7 +31,7 @@ export function planAssetImport(
   backend: ArchiveBackend,
   archive: AssetArchive
 ): Result<ImportPlan, AssetImportError> {
-  return AssetImportPlan.of(backend, archive).map((plan) => plan.toJSON());
+  return AssetImportPlan.fromArchive(backend, archive).map((plan) => plan.toJSON());
 }
 
 export async function importAssetArchive(
@@ -40,7 +40,7 @@ export async function importAssetArchive(
   options: ImportAssetArchiveOptions
 ): Promise<Result<ImportReport, AssetImportError>> {
   const { onConflict, actor } = options;
-  const plan = AssetImportPlan.of(backend, archive);
+  const plan = AssetImportPlan.fromArchive(backend, archive);
   if (!plan.ok) {
     return plan;
   }

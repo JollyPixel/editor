@@ -20,7 +20,7 @@ function faces(
   region: UVRegion
 ): Record<UVSlot, UVGeometry> {
   return Object.fromEntries(
-    region.slots.map((slot) => [slot, region.geometryFor(slot)])
+    region.slots.map((slot) => [slot, region.slotGeometry(slot)])
   );
 }
 
@@ -91,11 +91,11 @@ describe("UVRegion.resized", () => {
       });
 
       assert.deepEqual(
-        region.resized({ x: 0, y: 0, width: 6, height: 4 }, "front").geometryFor("back"),
+        region.resized({ x: 0, y: 0, width: 6, height: 4 }, "front").slotGeometry("back"),
         { x: 8, y: 0, width: 4, height: 4 }
       );
       assert.deepEqual(
-        region.resized({ x: 0, y: 0, width: 10, height: 4 }, "front").geometryFor("back"),
+        region.resized({ x: 0, y: 0, width: 10, height: 4 }, "front").slotGeometry("back"),
         { x: 10, y: 0, width: 4, height: 4 }
       );
     });
@@ -114,7 +114,7 @@ describe("UVRegion.resized", () => {
 
       const resized = region.resized({ x: 0, y: 0, width: 2, height: 4 }, "front");
 
-      assert.deepEqual(resized.geometryFor("back"), { x: 4, y: 0, width: 4, height: 8 });
+      assert.deepEqual(resized.slotGeometry("back"), { x: 4, y: 0, width: 4, height: 8 });
     });
 
     test("moves an aligned row's bottom edge together", () => {
@@ -206,12 +206,12 @@ describe("UVRegion.resized", () => {
         "front"
       );
 
-      assert.deepEqual(resized.geometryFor("right"), {
+      assert.deepEqual(resized.slotGeometry("right"), {
         ...cell(0, 1),
         y: cell(0, 1).y - 2
       });
       for (const [slot, column] of [["top", 1], ["bottom", 2]] as const) {
-        assert.deepEqual(resized.geometryFor(slot), cell(column, 1));
+        assert.deepEqual(resized.slotGeometry(slot), cell(column, 1));
       }
     });
   });

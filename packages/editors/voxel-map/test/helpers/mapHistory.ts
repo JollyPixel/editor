@@ -14,7 +14,7 @@ import {
   type MapHistoryScope
 } from "../../src/shared/mapHistory.ts";
 
-export function mapHistoryOf(
+export function createWorldHistory(
   world: VoxelWorld
 ): CommandHistory<MapHistoryScope> {
   const document = Object.assign(

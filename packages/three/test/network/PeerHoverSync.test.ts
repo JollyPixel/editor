@@ -43,7 +43,7 @@ describe("remote peers", () => {
       throttleMs: 0
     });
 
-    assert.equal(registry.hoverOf("alice"), "box-1");
+    assert.equal(registry.hoveredObject("alice"), "box-1");
   });
 
   test("applies hover patches from \"peer-presence\"", () => {
@@ -52,7 +52,7 @@ describe("remote peers", () => {
 
     room.emitPresence("alice", { hover: "box-2" });
 
-    assert.equal(registry.hoverOf("alice"), "box-2");
+    assert.equal(registry.hoveredObject("alice"), "box-2");
   });
 
   test("clears a peer's hover when it publishes null", () => {
@@ -61,7 +61,7 @@ describe("remote peers", () => {
 
     room.emitPresence("alice", { hover: null });
 
-    assert.equal(registry.hoverOf("alice"), null);
+    assert.equal(registry.hoveredObject("alice"), null);
   });
 
   test("removes a peer's hover on \"peer-left\"", () => {
@@ -70,7 +70,7 @@ describe("remote peers", () => {
 
     room.emitLeft("alice");
 
-    assert.equal(registry.hoverOf("alice"), null);
+    assert.equal(registry.hoveredObject("alice"), null);
   });
 });
 
@@ -82,7 +82,7 @@ describe("presence key", () => {
     selection.register("box-2", new THREE.Object3D());
     selection.hover("box-2");
 
-    assert.equal(registry.hoverOf("alice"), "box-1");
+    assert.equal(registry.hoveredObject("alice"), "box-1");
     assert.deepEqual(room.lastPatch, { point: "box-2" });
   });
 });
@@ -184,11 +184,11 @@ describe("lifecycle", () => {
   test("destroy() removes every peer this instance applied", () => {
     const { room, registry, sync } = setup();
     joinPeer(room, "alice", { hover: "box-1" });
-    assert.equal(registry.hoverOf("alice"), "box-1");
+    assert.equal(registry.hoveredObject("alice"), "box-1");
 
     sync.destroy();
 
-    assert.equal(registry.hoverOf("alice"), null);
+    assert.equal(registry.hoveredObject("alice"), null);
   });
 
   test("stops applying peer presence after destroy()", () => {
@@ -197,6 +197,6 @@ describe("lifecycle", () => {
 
     joinPeer(room, "bob", { hover: "box-1" });
 
-    assert.equal(registry.hoverOf("bob"), null);
+    assert.equal(registry.hoveredObject("bob"), null);
   });
 });

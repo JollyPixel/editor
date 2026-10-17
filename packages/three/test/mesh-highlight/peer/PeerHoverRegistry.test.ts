@@ -15,8 +15,8 @@ describe("hover", () => {
     const registry = new PeerHoverRegistry();
     registry.hover("peer-a", "box");
 
-    assert.strictEqual(registry.hoverOf("peer-a"), "box");
-    assert.deepStrictEqual(registry.hoverersOf("box"), ["peer-a"]);
+    assert.strictEqual(registry.hoveredObject("peer-a"), "box");
+    assert.deepStrictEqual(registry.listHoverers("box"), ["peer-a"]);
   });
 
   test("a second peer hovering the same object is appended after the first", () => {
@@ -24,8 +24,8 @@ describe("hover", () => {
     registry.hover("peer-a", "box");
     registry.hover("peer-b", "box");
 
-    assert.deepStrictEqual(registry.hoverersOf("box"), ["peer-a", "peer-b"]);
-    assert.strictEqual(registry.primaryHovererOf("box"), "peer-a");
+    assert.deepStrictEqual(registry.listHoverers("box"), ["peer-a", "peer-b"]);
+    assert.strictEqual(registry.primaryHoverer("box"), "peer-a");
   });
 
   test("moving a peer from one object to another removes it from the first", () => {
@@ -33,9 +33,9 @@ describe("hover", () => {
     registry.hover("peer-a", "box");
     registry.hover("peer-a", "cone");
 
-    assert.deepStrictEqual(registry.hoverersOf("box"), []);
-    assert.deepStrictEqual(registry.hoverersOf("cone"), ["peer-a"]);
-    assert.strictEqual(registry.hoverOf("peer-a"), "cone");
+    assert.deepStrictEqual(registry.listHoverers("box"), []);
+    assert.deepStrictEqual(registry.listHoverers("cone"), ["peer-a"]);
+    assert.strictEqual(registry.hoveredObject("peer-a"), "cone");
   });
 
   test("un-hovering the primary peer promotes the next-oldest remaining peer", () => {
@@ -44,8 +44,8 @@ describe("hover", () => {
     registry.hover("peer-b", "box");
     registry.hover("peer-a", null);
 
-    assert.strictEqual(registry.primaryHovererOf("box"), "peer-b");
-    assert.deepStrictEqual(registry.hoverersOf("box"), ["peer-b"]);
+    assert.strictEqual(registry.primaryHoverer("box"), "peer-b");
+    assert.deepStrictEqual(registry.listHoverers("box"), ["peer-b"]);
   });
 
   test("is a no-op (and does not dispatch) when re-hovering the same object", () => {
@@ -107,26 +107,26 @@ describe("removePeer", () => {
     registry.hover("peer-a", "box");
     registry.removePeer("peer-a");
 
-    assert.strictEqual(registry.hoverOf("peer-a"), null);
-    assert.deepStrictEqual(registry.hoverersOf("box"), []);
+    assert.strictEqual(registry.hoveredObject("peer-a"), null);
+    assert.deepStrictEqual(registry.listHoverers("box"), []);
   });
 });
 
-describe("colorOf", () => {
+describe("peerColor", () => {
   test("resolves a peer to the same color on another registry, whatever was asked first", () => {
     const registry = new PeerHoverRegistry();
-    registry.colorOf("peer-b");
+    registry.peerColor("peer-b");
 
-    assert.strictEqual(registry.colorOf("peer-a"), new PeerSelectionRegistry().colorOf("peer-a"));
+    assert.strictEqual(registry.peerColor("peer-a"), new PeerSelectionRegistry().peerColor("peer-a"));
   });
 });
 
 describe("colorAllocator", () => {
-  test("delegates colorOf to the injected allocator", () => {
+  test("delegates peerColor to the injected allocator", () => {
     const allocator = createStubColorAllocator();
     const registry = new PeerHoverRegistry({ colorAllocator: allocator });
 
-    assert.strictEqual(registry.colorOf("peer-a"), "stub:peer-a");
+    assert.strictEqual(registry.peerColor("peer-a"), "stub:peer-a");
   });
 
   test("calls release on removePeer", () => {
@@ -156,8 +156,8 @@ describe("dispose", () => {
     registry.hover("peer-a", "box");
     registry.dispose();
 
-    assert.strictEqual(registry.hoverOf("peer-a"), null);
-    assert.deepStrictEqual(registry.hoverersOf("box"), []);
-    assert.strictEqual(registry.primaryHovererOf("box"), null);
+    assert.strictEqual(registry.hoveredObject("peer-a"), null);
+    assert.deepStrictEqual(registry.listHoverers("box"), []);
+    assert.strictEqual(registry.primaryHoverer("box"), null);
   });
 });

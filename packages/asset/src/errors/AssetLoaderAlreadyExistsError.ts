@@ -1,6 +1,3 @@
-/**
- * Reports an attempt to register a second loader for the same asset kind.
- */
 export class AssetLoaderAlreadyExistsError extends Error {
   readonly kind: string;
 

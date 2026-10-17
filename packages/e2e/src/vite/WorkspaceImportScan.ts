@@ -81,7 +81,7 @@ export class WorkspaceImportScan {
     if (code === null) {
       return;
     }
-    for (const imported of await importsOf(code)) {
+    for (const imported of await parseImports(code)) {
       await this.#follow(imported, id);
     }
   }
@@ -116,7 +116,7 @@ export function containerModuleSource(
         return typeof loaded === "string" ? loaded : loaded.code;
       }
 
-      return isVirtual(id) ? null : fs.readFile(fileOf(id), "utf8");
+      return isVirtual(id) ? null : fs.readFile(toFilePath(id), "utf8");
     }
   };
 }
@@ -128,7 +128,7 @@ function isScanned(
     return true;
   }
 
-  const file = fileOf(id);
+  const file = toFilePath(id);
 
   return !file.includes("/node_modules/") &&
     kScannedExtensions.has(path.extname(file));
@@ -140,13 +140,13 @@ function isVirtual(
   return id.startsWith(kVirtualPrefix);
 }
 
-function fileOf(
+function toFilePath(
   id: string
 ): string {
   return id.split("?")[0];
 }
 
-async function importsOf(
+async function parseImports(
   code: string
 ): Promise<string[]> {
   const { parseAstAsync } = await import("vite");
@@ -199,20 +199,20 @@ function importedBy(
     case "ImportDeclaration":
       return "importKind" in node && node.importKind === "type" ?
         null :
-        literalOf(node.source);
+        readLiteral(node.source);
     case "ExportAllDeclaration":
     case "ExportNamedDeclaration":
       return "exportKind" in node && node.exportKind === "type" ?
         null :
-        literalOf(node.source);
+        readLiteral(node.source);
     case "ImportExpression":
-      return literalOf(node.source);
+      return readLiteral(node.source);
     default:
       return null;
   }
 }
 
-function literalOf(
+function readLiteral(
   source: unknown
 ): string | null {
   return typeof source === "object" &&

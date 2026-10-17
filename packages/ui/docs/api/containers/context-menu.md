@@ -193,16 +193,16 @@ Lists and runs nothing.
 A copy where every item with `disabled(id)` true is disabled. A submenu whose
 items all end up disabled is disabled too.
 
-### `new ContextMenuController(menu, sessionFor)`
+### `new ContextMenuController(menu, openSession)`
 
 ```ts
 new ContextMenuController(
   menu: () => Pick<ContextMenu, "items" | "openAt">,
-  sessionFor: (id: string | null) => MenuSession
+  openSession: (id: string | null) => MenuSession
 )
 ```
 
-`sessionFor(null)` is asked when nothing was hit. Pass
+`openSession(null)` is asked when nothing was hit. Pass
 `() => MenuSession.EMPTY` when menus only open through `open()`.
 
 - `open(session, point)`: fills the menu and opens it.
@@ -210,5 +210,5 @@ new ContextMenuController(
   open session, then forgets it.
 - `onContextRequest`: bound listener for the
   [`jolly-tree`](../data/tree.md#opening-a-row-menu) `jolly-context-request`.
-- `run(id, actionId, point)`: runs an action of `sessionFor(id)` without
+- `run(id, actionId, point)`: runs an action of `openSession(id)` without
   opening the menu, for a toolbar button.

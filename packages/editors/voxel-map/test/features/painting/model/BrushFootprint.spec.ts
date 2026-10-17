@@ -29,13 +29,13 @@ function footprint(
   });
 }
 
-function keysOf(
+function listKeys(
   cells: Iterable<{ x: number; y: number; z: number; }>
 ): string[] {
   return [...cells].map((cell) => `${cell.x},${cell.y},${cell.z}`).sort();
 }
 
-describe("BrushFootprint.boundsOf", () => {
+describe("BrushFootprint.measureBounds", () => {
   test("centers X and Z on the aimed cell and stays one layer thick", () => {
     assert.deepStrictEqual(
       footprint({ position: { x: 4, y: 2, z: -1 }, size: 3 }).bounds,
@@ -47,7 +47,7 @@ describe("BrushFootprint.boundsOf", () => {
   });
 });
 
-describe("BrushFootprint.cellsOf", () => {
+describe("BrushFootprint.affectedCells", () => {
   test("a size of 1 covers the aimed cell with every pattern", () => {
     for (const pattern of ["square", "circle"] as const) {
       assert.deepStrictEqual(footprint({ pattern }).cells(), [kOrigin]);
@@ -60,7 +60,7 @@ describe("BrushFootprint.cellsOf", () => {
 
   test("an even square leans towards the negative side of X and Z", () => {
     assert.deepStrictEqual(
-      keysOf(footprint({ size: 2 }).cells()),
+      listKeys(footprint({ size: 2 }).cells()),
       ["-1,0,-1", "-1,0,0", "0,0,-1", "0,0,0"]
     );
   });
@@ -68,14 +68,14 @@ describe("BrushFootprint.cellsOf", () => {
   test("a circle matches the square up to a size of 3", () => {
     for (const size of [1, 2, 3]) {
       assert.deepStrictEqual(
-        keysOf(footprint({ size, pattern: "circle" }).cells()),
-        keysOf(footprint({ size }).cells())
+        listKeys(footprint({ size, pattern: "circle" }).cells()),
+        listKeys(footprint({ size }).cells())
       );
     }
   });
 
   test("a circle drops the corners of a size 4 disc", () => {
-    const cells = keysOf(footprint({ size: 4, pattern: "circle" }).cells());
+    const cells = listKeys(footprint({ size: 4, pattern: "circle" }).cells());
 
     assert.strictEqual(cells.length, 12);
     assert.ok(!cells.includes("-2,0,-2"));
@@ -85,7 +85,7 @@ describe("BrushFootprint.cellsOf", () => {
 
   test("an even circle is symmetric around its center", () => {
     const cells = footprint({ size: 8, pattern: "circle" }).cells();
-    const keys = new Set(keysOf(cells));
+    const keys = new Set(listKeys(cells));
 
     for (const cell of cells) {
       assert.ok(keys.has(`${-cell.x - 1},0,${cell.z}`));

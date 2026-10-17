@@ -9,7 +9,7 @@ export const hostileKey = fc.oneof(
   fc.string({ maxLength: 4 })
 );
 
-export function objectOf<T>(
+export function arbitraryRecord<T>(
   value: fc.Arbitrary<T>
 ): fc.Arbitrary<Record<string, T>> {
   return fc
@@ -23,12 +23,12 @@ export const jsonPayload: fc.Arbitrary<unknown> = fc.letrec((tie) => {
       { depthSize: "small" },
       fc.jsonValue({ maxDepth: 0 }),
       fc.array(tie("value"), { maxLength: 3 }),
-      objectOf(tie("value"))
+      arbitraryRecord(tie("value"))
     )
   };
 }).value;
 
-export const metadata: fc.Arbitrary<PeerMetadata> = objectOf(jsonPayload);
+export const metadata: fc.Arbitrary<PeerMetadata> = arbitraryRecord(jsonPayload);
 
 function isPrototypeCarrier(
   key: string,

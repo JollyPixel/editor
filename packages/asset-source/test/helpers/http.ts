@@ -23,10 +23,6 @@ export type ConnectHandler = (
   next: () => void
 ) => void;
 
-/**
- * Runs one request through a connect-style handler over a real socket. The
- * raw `url` is sent as is, so dot segments reach the handler untouched.
- */
 export async function send(
   handler: ConnectHandler,
   options: RequestOptions
@@ -51,7 +47,7 @@ export async function send(
   try {
     const request = http.request({
       host: "127.0.0.1",
-      port: portOf(server.address()),
+      port: parsePort(server.address()),
       method,
       path: url,
       headers
@@ -78,7 +74,7 @@ export async function send(
   }
 }
 
-function portOf(
+function parsePort(
   address: string | AddressInfo | null
 ): number {
   if (address === null || typeof address === "string") {

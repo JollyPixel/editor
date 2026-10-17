@@ -51,6 +51,6 @@ Projects `region` onto the mesh without adopting it, for an in-progress drag rep
 
 `follow(uv)` subscribes to `region-moved`, `region-dragging`, `region-state-changed` and `region-rotated`, filtered to the bound region's id. A region moved as a whole reprojects every active face. A rotated slot's UVs are turned inside its rect with `rotateUv()`, after the triangle corner orientation. `region-dragging` carries the region as a move or resize drag shows it, so the geometry tracks the pointer instead of jumping on release. Following a map already followed is a no-op; `unfollow()` is idempotent.
 
-## `setRegion()` / `setTextureSize()`
+## `bindRegion()` / `resizeTexture()`
 
-Both reproject every active face. `setRegion` also changes what `regionId` reports and what `follow()` filters on.
+Both reproject every active face. `bindRegion` also changes what `regionId` reports and what `follow()` filters on.

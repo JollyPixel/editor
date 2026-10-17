@@ -14,9 +14,6 @@ import type {
   BlockShapeID
 } from "../BlockShape.ts";
 
-/**
- * Concave ramp corner that occludes NegY, PosZ, and PosX.
- */
 export class RampCornerInner extends BlockShapeBase {
   readonly id: BlockShapeID;
   readonly collisionHint: BlockCollisionHint = "trimesh";
@@ -69,9 +66,6 @@ export class RampCornerInner extends BlockShapeBase {
   ];
 }
 
-/**
- * Convex ramp corner whose bottom is its only fully occluding face.
- */
 export class RampCornerOuter extends BlockShapeBase {
   readonly id: BlockShapeID;
   readonly collisionHint: BlockCollisionHint = "trimesh";

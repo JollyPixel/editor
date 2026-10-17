@@ -82,11 +82,6 @@ export function SceneActorComponent(
   };
 }
 
-/**
- * Binds a Behavior method to an input event (by dot-path name, see
- * `InputListenerType`). The listener is wired automatically during
- * behavior initialization by `BehaviorInitializer`.
- */
 export function InputListener(
   type: InputListenerType
 ) {

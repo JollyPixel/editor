@@ -143,13 +143,13 @@ describe("CommandSync", () => {
     const first = { basis: 2 };
     const second = {};
     const answers: string[] = [];
-    function nameOf(
+    function readName(
       change: SentChange
     ): string {
       return change === first ? "first" : "second";
     }
-    receipts.on("confirmed", (change, version) => answers.push(`${nameOf(change)}@${version}`));
-    receipts.on("refused", (change) => answers.push(`${nameOf(change)} refused`));
+    receipts.on("confirmed", (change, version) => answers.push(`${readName(change)}@${version}`));
+    receipts.on("refused", (change) => answers.push(`${readName(change)} refused`));
 
     sync.sendValue(1, first);
     sync.sendValue(2, second);

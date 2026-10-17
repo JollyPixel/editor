@@ -1,6 +1,3 @@
-/**
- * monotonic wall-clock time in milliseconds.
- */
 export interface Clock {
   now(): number;
 }
@@ -11,9 +8,6 @@ export class PerformanceClock implements Clock {
   }
 }
 
-/**
- * Advances only through `set()` or `advance()`.
- */
 export class ManualClock implements Clock {
   #time: number;
 

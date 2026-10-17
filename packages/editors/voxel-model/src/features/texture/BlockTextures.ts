@@ -40,10 +40,6 @@ export interface BlockTexturesOptions {
   requestFrame?: () => void;
 }
 
-/**
- * Projects the UV layouts stored on model blocks onto the texture UV map,
- * and writes UV edits made on the texture back to the model.
- */
 export class BlockTextures {
   #pixels: PixelDocument;
   #document: ModelDocument;
@@ -105,7 +101,7 @@ export class BlockTextures {
         }
       }
       for (const block of this.#document.tree.blocks()) {
-        this.#pixels.uv.restore(regionOf(block));
+        this.#pixels.uv.restore(createBlockRegion(block));
       }
     });
     for (const block of this.#blocks.values()) {
@@ -117,7 +113,7 @@ export class BlockTextures {
     event: { size: Vec2; }
   ): void => {
     for (const binding of this.#bindings.values()) {
-      binding.setTextureSize(event.size);
+      binding.resizeTexture(event.size);
     }
   };
 
@@ -143,7 +139,7 @@ export class BlockTextures {
       return;
     }
     if (this.#access.current.has("uv")) {
-      this.#document.setUv(uuid, event.region.toLayout());
+      this.#document.updateUv(uuid, event.region.toLayout());
 
       return;
     }
@@ -252,7 +248,7 @@ export class BlockTextures {
   #project(
     block: BlockNodeJSON
   ): void {
-    this.#restore(() => this.#pixels.uv.restore(regionOf(block)));
+    this.#restore(() => this.#pixels.uv.restore(createBlockRegion(block)));
     if (!this.#bindings.has(block.id)) {
       this.#bindByUuid(block.id);
     }
@@ -298,7 +294,7 @@ export class BlockTextures {
   }
 }
 
-function regionOf(
+function createBlockRegion(
   block: BlockNodeJSON
 ): UVRegion {
   return UVRegion.fromLayout(block.uv, {

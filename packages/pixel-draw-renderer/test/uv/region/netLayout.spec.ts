@@ -27,7 +27,7 @@ function cells(
   });
 }
 
-function boundsOf(
+function measureBounds(
   packed: ReadonlyMap<string, UVGeometry>
 ) {
   let width = 0;
@@ -86,7 +86,7 @@ describe("packNet", () => {
       { x: 0, y: 0 }
     );
 
-    assert.deepStrictEqual(boundsOf(packed), { width: 24, height: 16 });
+    assert.deepStrictEqual(measureBounds(packed), { width: 24, height: 16 });
     assert.deepStrictEqual(packed.get("left"), { x: 8, y: 0, width: 16, height: 4 });
     assert.deepStrictEqual(packed.get("right"), { x: 8, y: 4, width: 16, height: 4 });
   });

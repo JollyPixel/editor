@@ -88,7 +88,7 @@ export class TreeRowLayout<TData = unknown> {
       return cached;
     }
 
-    const continues = this.#continuesFor(id);
+    const continues = this.#railContinuations(id);
     const last = continues.length - 1;
     const rails = continues.map((next, level): TreeRail => {
       if (level === last) {
@@ -130,7 +130,7 @@ export class TreeRowLayout<TData = unknown> {
     return drawn;
   }
 
-  #continuesFor(
+  #railContinuations(
     id: string
   ): readonly boolean[] {
     const cached = this.#continues.get(id);
@@ -142,7 +142,7 @@ export class TreeRowLayout<TData = unknown> {
     const placement = this.#snapshot.placement(id);
     const continues = parentId === undefined || parentId === null || placement === undefined ?
       [] :
-      [...this.#continuesFor(parentId), placement.position < placement.size];
+      [...this.#railContinuations(parentId), placement.position < placement.size];
     this.#continues.set(id, continues);
 
     return continues;

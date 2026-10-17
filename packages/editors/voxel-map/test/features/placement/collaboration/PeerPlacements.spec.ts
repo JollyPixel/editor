@@ -28,7 +28,7 @@ import {
 } from "../../../../src/features/placement/PlacementSource.ts";
 import { RegionSource } from "../../../../src/features/placement/RegionSource.ts";
 import { sceneActor } from "../../../helpers/actors.ts";
-import { sourcesOf } from "../../../helpers/blockSources.ts";
+import { createSources } from "../../../helpers/blockSources.ts";
 import { FakeRoom } from "../../../helpers/rooms.ts";
 
 // CONSTANTS
@@ -67,7 +67,7 @@ function replica(): Replica {
         shapeId: "cube"
       }
     ]),
-    sources: sourcesOf(new BlocksetAtlases()),
+    sources: createSources(new BlocksetAtlases()),
     mapDocument: new Emitter<MapDocumentEvents>()
   });
 
@@ -98,7 +98,7 @@ function relay(
   }
 }
 
-function previewOf(
+function readPreview(
   replica: Replica
 ): PlacementPreview | undefined {
   const object = replica.actor.object3D.getObjectByName(
@@ -118,7 +118,7 @@ describe("PeerPlacements", () => {
     placer.placements.publishLocal(placement);
     relay(placer, observer);
 
-    const preview = previewOf(observer);
+    const preview = readPreview(observer);
     const { min } = placement.boundsIn(placer.world.templates.get("wall")!);
     assert.ok(preview?.visible);
     assert.deepEqual(preview.marquee.position.toArray(), [min.x, min.y, min.z]);
@@ -134,10 +134,10 @@ describe("PeerPlacements", () => {
 
     placer.placements.publishLocal(null);
     relay(placer, observer);
-    assert.equal(previewOf(observer)?.visible, false);
+    assert.equal(readPreview(observer)?.visible, false);
 
     observer.room.leavePeer(kPlacer);
-    assert.equal(previewOf(observer), undefined);
+    assert.equal(readPreview(observer), undefined);
   });
 
   test("shows nothing for a template the observer does not have", () => {
@@ -152,7 +152,7 @@ describe("PeerPlacements", () => {
     );
     relay(placer, observer);
 
-    assert.notEqual(previewOf(observer)?.visible, true);
+    assert.notEqual(readPreview(observer)?.visible, true);
   });
 
   test("draws a peer's layer transform from the observer's copy of the layer", () => {
@@ -169,7 +169,7 @@ describe("PeerPlacements", () => {
     );
     relay(placer, observer);
 
-    const preview = previewOf(observer);
+    const preview = readPreview(observer);
     assert.ok(preview?.visible);
     assert.deepEqual(preview.marquee.position.toArray(), [0, 0, 5]);
     assert.deepEqual(preview.marquee.copySizeTo().toArray(), [3, 1, 1]);
@@ -200,7 +200,7 @@ describe("PeerPlacements", () => {
     );
     relay(placer, observer);
 
-    const preview = previewOf(observer);
+    const preview = readPreview(observer);
     assert.ok(preview?.visible);
     assert.deepEqual(preview.marquee.position.toArray(), [1, 0, 5]);
     assert.deepEqual(preview.marquee.copySizeTo().toArray(), [2, 1, 1]);
@@ -218,10 +218,10 @@ describe("PeerPlacements", () => {
     placer.placements.publishLocal(Placement.at(source, source.pivot));
     const [regionPatch, placementPatch] = placer.room.presence.splice(0);
     observer.room.receivePresence(kPlacer, JSON.parse(JSON.stringify(placementPatch)));
-    assert.notEqual(previewOf(observer)?.visible, true);
+    assert.notEqual(readPreview(observer)?.visible, true);
 
     observer.room.receivePresence(kPlacer, JSON.parse(JSON.stringify(regionPatch)));
-    assert.equal(previewOf(observer)?.visible, true);
+    assert.equal(readPreview(observer)?.visible, true);
   });
 
   test("draws a peer's pasted copy from the voxels it sent once, then swaps them for the next copy", () => {
@@ -238,7 +238,7 @@ describe("PeerPlacements", () => {
     );
     relay(placer, observer);
 
-    const preview = previewOf(observer);
+    const preview = readPreview(observer);
     assert.ok(preview?.visible);
     assert.deepEqual(preview.marquee.position.toArray(), [4, 2, 5]);
     assert.deepEqual(preview.marquee.copySizeTo().toArray(), [3, 1, 1]);
@@ -261,7 +261,7 @@ describe("PeerPlacements", () => {
     ));
     relay(placer, observer);
 
-    const preview = previewOf(observer);
+    const preview = readPreview(observer);
     assert.ok(preview?.visible);
     assert.deepEqual(preview.marquee.position.toArray(), [-1, 0, 0]);
     assert.deepEqual(preview.marquee.copySizeTo().toArray(), [5, 2, 3]);

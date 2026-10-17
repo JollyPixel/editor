@@ -13,7 +13,7 @@ import { parseSetCookie } from "cookie";
 import {
   createDirectory,
   databaseWith,
-  sessionFor
+  openSession
 } from "../helpers/accounts.ts";
 import type { AccountDirectory } from "#src/AccountDirectory.ts";
 import type { Account } from "#src/index.ts";
@@ -110,7 +110,7 @@ describe("CookieSessions", () => {
     using database = databaseWith("Alice");
     const [alice] = database.accounts;
     const { sessions } = createSessions(database);
-    const cookie = `jolly_session=${sessionFor(database, alice.id)}`;
+    const cookie = `jolly_session=${openSession(database, alice.id)}`;
 
     assert.equal(sessions.account(headers(cookie, "http://evil.example")), null);
     assert.notEqual(sessions.account(headers(cookie, "http://studio.local")), null);
@@ -123,7 +123,7 @@ describe("CookieSessions", () => {
       database,
       new SessionCookie({ name: "project_session" })
     );
-    const token = sessionFor(database, alice.id);
+    const token = openSession(database, alice.id);
 
     assert.equal(sessions.account(headers(`jolly_session=${token}`)), null);
     assert.notEqual(sessions.account(headers(`project_session=${token}`)), null);
@@ -142,7 +142,7 @@ describe("CookieSessions", () => {
     using database = databaseWith("Alice");
     const [alice] = database.accounts;
     const { sessions, directory } = createSessions(database);
-    const cookie = headers(`jolly_session=${sessionFor(database, alice.id)}`);
+    const cookie = headers(`jolly_session=${openSession(database, alice.id)}`);
     const revoked: string[] = [];
     directory.subscribe("revoked", (accountId) => revoked.push(accountId));
 

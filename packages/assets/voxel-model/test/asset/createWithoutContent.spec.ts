@@ -54,7 +54,7 @@ describe("voxel model created without content", () => {
       kind: PIXEL_ART_KIND
     };
     assert.deepEqual(
-      backend.catalog.dependencies.dependenciesOf(model.assetId),
+      backend.catalog.dependencies.listDependencies(model.assetId),
       [reference]
     );
 

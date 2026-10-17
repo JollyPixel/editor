@@ -119,8 +119,8 @@ describe("FolderSet", () => {
     ]);
   });
 
-  test("addParentsOf adds the folders above a path but not the path", () => {
-    const folders = new FolderSet().addParentsOf("maps/world/a.json");
+  test("addParents adds the folders above a path but not the path", () => {
+    const folders = new FolderSet().addParents("maps/world/a.json");
 
     assert.deepEqual(folders.toJSON(), [
       "maps",

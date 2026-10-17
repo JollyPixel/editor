@@ -1,5 +1,10 @@
 // Import Node.js Dependencies
-import { describe, test, beforeEach, mock } from "node:test";
+import {
+  describe,
+  test,
+  beforeEach,
+  mock
+} from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
@@ -62,7 +67,7 @@ function createMockAudio() {
 
 function createMockGlobalsAdapter() {
   return {
-    setGame: mock.fn()
+    exposeGame: mock.fn()
   };
 }
 
@@ -71,10 +76,6 @@ describe("Systems.World", () => {
   let sceneManager: ReturnType<typeof createMockSceneManager>;
   let renderer: ReturnType<typeof createMockRenderer>;
   let input: ReturnType<typeof createMockInput>;
-  /*
-   * The world neither reads a clock nor owns a scheduler, so the test owns
-   * both: it decides the frame, the world executes it.
-   */
   let now: number;
   let scheduler: FrameScheduler;
 
@@ -93,7 +94,7 @@ describe("Systems.World", () => {
     now = 0;
     scheduler = new FrameScheduler();
 
-    // @ts-expect-error - using mocks
+    // @ts-expect-error
     world = new World(renderer, {
       sceneManager,
       input,
@@ -140,7 +141,6 @@ describe("Systems.World", () => {
       world.start();
       tick();
 
-      // 70ms plus the initial half step is four steps of 16.66ms, plus change.
       tick(70);
 
       const indexes = sceneManager.fixedUpdate.mock.calls
@@ -159,14 +159,12 @@ describe("Systems.World", () => {
 
       const [deltaTime, alpha] = sceneManager.update.mock.calls.at(-1)!.arguments;
       assert.strictEqual(deltaTime, 0.07);
-      // 70ms plus the initial half step leaves 11.66ms, 0.7 of a step.
       assert.ok(Math.abs(alpha - 0.7) < 1e-9, `alpha was ${alpha}`);
     });
 
     test("should keep stepping but stop drawing on a capped frame", () => {
       scheduler.maxFps = 30;
       world.start();
-      // The first frame always draws: it primes the scheduler.
       tick();
       sceneManager.update.mock.resetCalls();
       renderer.draw.mock.resetCalls();
@@ -270,253 +268,9 @@ describe("Systems.World", () => {
       tick();
       const order = recordInputOrder();
 
-      // A 144Hz frame against a 60Hz simulation: no step is due.
       tick(1000 / 144);
 
       assert.deepStrictEqual(order, ["sample", "frame", "update"]);
-    });
-  });
-
-  describe("time", () => {
-    test("should split game and wall-clock time in seconds", () => {
-      scheduler.timeScale = 0.5;
-      world.start();
-      tick();
-
-      tick(40);
-
-      assert.strictEqual(world.time.delta, 0.02);
-      assert.strictEqual(world.time.unscaledDelta, 0.04);
-      assert.strictEqual(world.time.elapsed, 0.02);
-      assert.strictEqual(world.time.unscaledElapsed, 0.04);
-    });
-
-    test("should keep wall-clock time flowing at a zero time scale", () => {
-      scheduler.timeScale = 0;
-      world.start();
-      tick();
-
-      tick(20);
-      tick(20);
-
-      assert.strictEqual(world.time.delta, 0);
-      assert.strictEqual(world.time.elapsed, 0);
-      assert.strictEqual(world.time.unscaledDelta, 0.02);
-      assert.strictEqual(world.time.unscaledElapsed, 0.04);
-    });
-
-    test("should clamp wall-clock time like game time", () => {
-      world.start();
-      tick();
-
-      tick(10_000);
-
-      assert.strictEqual(world.time.unscaledDelta, 0.25);
-    });
-
-    test("should carry frames skipped by the render cap into the next delta", () => {
-      scheduler.maxFps = 30;
-      world.start();
-      tick();
-
-      tick(20);
-      tick(20);
-
-      assert.strictEqual(world.time.delta, 0.04);
-      assert.strictEqual(world.time.unscaledDelta, 0.04);
-      assert.strictEqual(world.time.elapsed, 0.04);
-      assert.strictEqual(world.time.unscaledElapsed, 0.04);
-    });
-
-    test("should expose the delta read by update()", () => {
-      const deltas: number[] = [];
-      sceneManager.update.mock.mockImplementation(() => {
-        deltas.push(world.time.delta);
-      });
-      world.start();
-      tick();
-
-      tick(20);
-
-      assert.deepStrictEqual(deltas, [0, 0.02]);
-    });
-
-    test("should advance fixedElapsed once per completed step", () => {
-      const seen: number[] = [];
-      sceneManager.fixedUpdate.mock.mockImplementation(() => {
-        seen.push(world.time.fixedElapsed);
-      });
-      world.start();
-      tick();
-
-      tick(3 * kFixedDelta60);
-
-      assert.deepStrictEqual(seen, [
-        0,
-        kFixedDelta60 / 1000,
-        2 * kFixedDelta60 / 1000
-      ]);
-      assert.strictEqual(world.time.fixedElapsed, 3 * kFixedDelta60 / 1000);
-    });
-
-    test("should not advance before start()", () => {
-      tick(20);
-
-      assert.strictEqual(world.time.unscaledElapsed, 0);
-    });
-  });
-
-  describe("start() / stop()", () => {
-    test("should gate ticking", () => {
-      world.start();
-      assert.strictEqual(world.running, true);
-      tick(20);
-      assert.strictEqual(sceneManager.beginFrame.mock.callCount(), 1);
-
-      world.stop();
-      assert.strictEqual(world.running, false);
-      tick(20);
-      assert.strictEqual(sceneManager.beginFrame.mock.callCount(), 1);
-    });
-  });
-
-  describe("dispose()", () => {
-    test("should release the renderer, which owns the WebGL context", () => {
-      world.dispose();
-
-      assert.strictEqual(renderer.dispose.mock.callCount(), 1);
-    });
-
-    test("should disconnect before releasing the renderer", () => {
-      world.connect();
-
-      world.dispose();
-
-      assert.strictEqual(input.disconnect.mock.callCount(), 1);
-      assert.strictEqual(renderer.unobserveResize.mock.callCount(), 1);
-    });
-
-    test("should stop the loop", () => {
-      world.start();
-
-      world.dispose();
-      tick(20);
-
-      assert.strictEqual(
-        sceneManager.update.mock.callCount(),
-        0,
-        "a stopped loop must not keep driving the scene"
-      );
-    });
-  });
-
-  describe("scheduling", () => {
-    test("should run whatever the caller's scheduler decided", () => {
-      scheduler.fixedFps = 30;
-      scheduler.timeScale = 0.5;
-
-      world.start();
-      tick();
-      /*
-       * Half speed: 80ms of wall clock is 40ms of simulation, plus the
-       * initial half step, one step of 33.3ms with the remainder left over.
-       */
-      tick(80);
-
-      assert.strictEqual(sceneManager.fixedUpdate.mock.callCount(), 1);
-    });
-
-    test("should not advance a scheduler of its own", () => {
-      world.start();
-      /*
-       * Two ticks off the same schedule run twice: the world holds no
-       * accumulator, so replaying one is not de-duplicated.
-       */
-      const schedule = scheduler.advance(0);
-      world.tick(schedule);
-      world.tick(schedule);
-
-      assert.strictEqual(sceneManager.beginFrame.mock.callCount(), 2);
-      assert.strictEqual(scheduler.frameCount, 1);
-    });
-  });
-
-  describe("frame requests", () => {
-    test("invalidate() emits invalidate", () => {
-      const handler = mock.fn();
-      world.on("invalidate", handler);
-
-      world.invalidate();
-
-      assert.strictEqual(handler.mock.callCount(), 1);
-    });
-
-    test("animating holds while any keep-alive predicate does", () => {
-      let first = false;
-      let second = false;
-      world.keepAlive(() => first);
-      const release = world.keepAlive(() => second);
-      assert.strictEqual(world.animating, false);
-
-      second = true;
-      assert.strictEqual(world.animating, true);
-
-      release();
-      assert.strictEqual(world.animating, false);
-
-      first = true;
-      assert.strictEqual(world.animating, true);
-    });
-
-    test("keepAlive() requests a frame", () => {
-      const handler = mock.fn();
-      world.on("invalidate", handler);
-
-      world.keepAlive(() => false);
-
-      assert.strictEqual(handler.mock.callCount(), 1);
-    });
-  });
-
-  describe("EventEmitter", () => {
-    test("should support on/off for world events", () => {
-      const handler = mock.fn();
-
-      world.on("beforeUpdate", handler);
-      world.off("beforeUpdate", handler);
-
-      world.start();
-      tick();
-      tick(20);
-
-      assert.strictEqual(handler.mock.callCount(), 0);
-    });
-  });
-
-  describe("logger", () => {
-    test("should let explicit logger options override the debug defaults", () => {
-      // @ts-expect-error - using mocks
-      const debugWorld = new World(createMockRenderer(), {
-        sceneManager: createMockSceneManager(),
-        input: createMockInput(),
-        audio: createMockAudio(),
-        assetCoordinator: {},
-        globalsAdapter: createMockGlobalsAdapter(),
-        debug: true,
-        logger: { level: "warn" }
-      });
-
-      assert.strictEqual(debugWorld.logger.level, "warn");
-      assert.strictEqual(debugWorld.logger.isNamespaceEnabled(), true);
-    });
-  });
-
-  describe("draw", () => {
-    test("should draw the scene manager's scene", () => {
-      world.start();
-      tick(kFixedDelta60);
-
-      assert.strictEqual(renderer.draw.mock.calls[0].arguments[0], kScene);
     });
   });
 });

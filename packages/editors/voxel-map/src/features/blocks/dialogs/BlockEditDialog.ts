@@ -152,7 +152,7 @@ export class BlockEditDialog extends WorkspaceElement {
             stage: workspace.previewStage,
             sources: workspace.blockSources,
             block,
-            size: BlockTextures.fromBlock(block).size ?? blocksets.tileSizeFor(blocksetId),
+            size: BlockTextures.fromBlock(block).size ?? blocksets.blocksetTileSize(blocksetId),
             onSizeChange: this.#onSizeChange
           })}
         </div>

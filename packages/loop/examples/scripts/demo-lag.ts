@@ -63,7 +63,7 @@ const injection = {
 
 const readout = {
   mode: kLiveMode,
-  budget: budgetOf(loop.scheduler),
+  budget: computeBudget(loop.scheduler),
   behind: "0 ms",
   droppedMs: 0,
   clamps: 0,
@@ -176,7 +176,7 @@ loop.start({
   }
 });
 
-function budgetOf(
+function computeBudget(
   scheduler: FrameScheduler
 ): number {
   return scheduler.maxStepsPerFrame * scheduler.fixedDelta;
@@ -189,7 +189,7 @@ function useLimits(
     maxFrameDelta: scheduler.maxFrameDelta,
     maxStepsPerFrame: scheduler.maxStepsPerFrame
   };
-  readout.budget = budgetOf(scheduler);
+  readout.budget = computeBudget(scheduler);
 }
 
 function stall(

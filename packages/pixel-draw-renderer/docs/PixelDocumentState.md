@@ -39,7 +39,7 @@ readonly palette: ColorPalette;
 ```ts
 apply(command: DocumentCommand): void;
 load(snapshot: PixelDocumentSnapshot, owns?: (regionId: string) => boolean): void;
-removeNormalMapZoneOf(regionId: string): IndexedNormalMapZone | null;
+removeNormalMapZone(regionId: string): IndexedNormalMapZone | null;
 
 interface PixelDocumentSnapshot {
   size: Vec2;
@@ -50,7 +50,7 @@ interface PixelDocumentSnapshot {
 }
 ```
 
-`apply` mutates the state as described in [`PixelCommand`](./PixelCommand.md#applying). `load` replaces the pixels, the regions `owns` accepts (every region by default) and the normal map settings; a snapshot without `normalMap` turns the feature off. `removeNormalMapZoneOf` drops a region's zone and returns it with its index, or `null`.
+`apply` mutates the state as described in [`PixelCommand`](./PixelCommand.md#applying). `load` replaces the pixels, the regions `owns` accepts (every region by default) and the normal map settings; a snapshot without `normalMap` turns the feature off. `removeNormalMapZone` drops a region's zone and returns it with its index, or `null`.
 
 [Serialization](./serialization/index.md) reads and writes a state.
 

@@ -54,10 +54,6 @@ interface ReconcileOperation {
   run(): Promise<Result<EventStore.Event, Error>>;
 }
 
-/**
- * One scanned path with its hash, or `null` when it could not be read.
- * Pairing both in one value keeps the caller from re-indexing the batch.
- */
 interface ReadOutcome {
   readonly path: string;
   readonly entry: ObservedEntry | null;
@@ -80,11 +76,6 @@ export interface ReconcilerOptions {
   logger?: Logger;
 }
 
-/**
- * Reconciles physical files against the last projected event state.
- *
- * Hash equality suppresses echoed writes and makes notifications idempotent.
- */
 export class Reconciler {
   #source: AssetSource;
   #projector: AssetProjector;

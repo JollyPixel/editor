@@ -24,9 +24,6 @@ export interface CreateHighlightOverlayOptions extends HighlightOverlayCreateOpt
   technique: HighlightTechnique;
 }
 
-/**
- * Resolves the requested, default, then fallback overlay factory.
- */
 export class HighlightOverlayRegistry {
   #factories = new Map<string, HighlightOverlayFactory>();
   #defaultId: string;
@@ -39,9 +36,6 @@ export class HighlightOverlayRegistry {
     this.#fallbackId = options.fallbackId;
   }
 
-  /**
-   * Replaces any factory registered with the same id.
-   */
   register(
     factory: HighlightOverlayFactory
   ): void {

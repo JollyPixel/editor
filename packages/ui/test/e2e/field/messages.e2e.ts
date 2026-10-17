@@ -4,7 +4,7 @@ import {
   expect
 } from "../fixtures.ts";
 import { fieldRow as row, openExample } from "../support/gallery.ts";
-import { styleOf } from "../support/styles.ts";
+import { readStyle } from "../support/styles.ts";
 
 test("field messages use visible, aligned semantic badges", async({ page }) => {
   await openExample(page, "controls/number");
@@ -24,10 +24,10 @@ test("field messages use visible, aligned semantic badges", async({ page }) => {
     await expect(message).toHaveCSS("margin-block-end", "2px");
   }
 
-  const infoColor = await styleOf(info, "color");
-  expect(infoColor).not.toBe(await styleOf(description, "color"));
-  expect(await styleOf(info.locator("svg > circle").first(), "fill"))
+  const infoColor = await readStyle(info, "color");
+  expect(infoColor).not.toBe(await readStyle(description, "color"));
+  expect(await readStyle(info.locator("svg > circle").first(), "fill"))
     .toBe(infoColor);
-  expect(await styleOf(warning.locator("svg > path").first(), "fill"))
-    .toBe(await styleOf(warning, "color"));
+  expect(await readStyle(warning.locator("svg > path").first(), "fill"))
+    .toBe(await readStyle(warning, "color"));
 });

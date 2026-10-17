@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import {
-  detailOf,
+  readDetail,
   showChoice,
   type JollyChangeDetail
 } from "@jolly-pixel/ui";
@@ -71,13 +71,13 @@ function textField(
   field.placeholder = placeholder;
   field.value = "";
   field.addEventListener("jolly-input", (event) => {
-    const detail = detailOf<JollyChangeDetail<string>>(event);
+    const detail = readDetail<JollyChangeDetail<string>>(event);
     if (detail !== null) {
       capture(detail.value);
     }
   });
   field.addEventListener("jolly-change", (event) => {
-    const detail = detailOf<JollyChangeDetail<string>>(event);
+    const detail = readDetail<JollyChangeDetail<string>>(event);
     if (detail !== null) {
       capture(detail.value);
       field.value = detail.value;

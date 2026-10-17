@@ -19,7 +19,7 @@ describe("PixelArtCanvas — uv resize handles", () => {
       });
       manager.mode = "uv";
       const region = manager.uv.create({ width: 4, height: 4 });
-      manager.uv.setState(region.id, state);
+      manager.uv.applyState(region.id, state);
       manager.uv.select(region.id, "front");
       const before = manager.uv.get(region.id)!;
       const preview = {
@@ -50,7 +50,7 @@ describe("PixelArtCanvas — uv resize handles", () => {
       manager.peerPresence.uv.clearAll();
       assert.equal(handles().length, 4);
       drag(manager, { x: 100, y: 100 }, { x: 108, y: 104 });
-      assert.equal(manager.uv.get(region.id)!.rectFor("front").width, 6);
+      assert.equal(manager.uv.get(region.id)!.slotRect("front").width, 6);
       manager.destroy();
     });
   }

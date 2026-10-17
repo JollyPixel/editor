@@ -3,10 +3,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 
-/*
- * CONSTANTS
- * BoxGeometry group order: +X, -X, +Y, -Y, +Z, -Z.
- */
+// CONSTANTS
 const kFaceShading = [0.74, 0.54, 1, 0.36, 0.88, 0.45];
 const kBoxFaceCount = 6;
 const kVerticesPerFace = 4;
@@ -14,7 +11,6 @@ const kVerticesPerFace = 4;
 const kSmokeColor = new THREE.Color("#080b11");
 const kFillSmoke = 0.45;
 
-// Render after the camera-following grid so opacity controls its blend.
 const kRenderOrder = 1;
 const kDepthBias = 2;
 
@@ -24,9 +20,6 @@ export interface AreaBoxFillOptions {
   shadeFaces: boolean;
 }
 
-/**
- * Translucent unit box scaled to the area extent, and its raycast target.
- */
 export class AreaBoxFill extends THREE.Mesh<
   THREE.BoxGeometry,
   THREE.MeshBasicMaterial

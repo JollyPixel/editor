@@ -17,13 +17,12 @@ import { MIXED_PLACEHOLDER } from "../field/mixed.ts";
 import { parseFieldColor } from "../color/draft.ts";
 import { colorStyles } from "./Color.styles.ts";
 import {
-  detailOf
+  readDetail
 } from "../dom.ts";
 import type { JollyChangeDetail } from "../field/events.ts";
 import { PointerFocusController } from "../field/PointerFocusController.ts";
 import { PopoverController } from "../field/PopoverController.ts";
 
-// Registers the popover panel custom element.
 import {
   ColorPicker
 } from "./ColorPicker.ts";
@@ -32,10 +31,6 @@ export interface ColorDefaults {
   value: string;
 }
 
-/**
- * Colour field with a swatch popover and draftable hex input.
- * Escape restores the value held when the popover opened.
- */
 @customElement("jolly-color")
 export class Color extends JollyField<string> {
   static readonly Defaults: ColorDefaults = {
@@ -47,9 +42,6 @@ export class Color extends JollyField<string> {
     colorStyles
   ];
 
-  /**
-   * Enables alpha controls and `#rrggbbaa` output.
-   */
   @property({ type: Boolean, reflect: true })
   declare alpha: boolean;
 
@@ -79,7 +71,6 @@ export class Color extends JollyField<string> {
       this.#valueAtOpen = null;
     },
     onCancel: (event) => {
-      // Let the hex field handle its own Escape cancellation.
       if (!event.composedPath().includes(this._hex)) {
         this.#revert();
       }
@@ -93,9 +84,6 @@ export class Color extends JollyField<string> {
     this.alpha = false;
   }
 
-  /**
-   * Compares normalized colour values.
-   */
   protected override valuesEqual(
     a: string,
     b: string
@@ -182,9 +170,6 @@ export class Color extends JollyField<string> {
     `;
   }
 
-  /**
-   * Restores the value captured when the popover opened.
-   */
   #revert(): void {
     const opening = this.#valueAtOpen;
     if (
@@ -217,15 +202,12 @@ export class Color extends JollyField<string> {
     }
   }
 
-  /**
-   * Stops picker events and re-emits them through the field.
-   */
   #readPicker(
     event: Event
   ): string | null {
     event.stopPropagation();
 
-    const detail = detailOf<JollyChangeDetail<string>>(event);
+    const detail = readDetail<JollyChangeDetail<string>>(event);
     if (detail === null || !this.editable) {
       return null;
     }

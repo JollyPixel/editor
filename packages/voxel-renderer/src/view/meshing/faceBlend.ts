@@ -6,11 +6,6 @@ import type {
 import { FACE } from "../../document/geometry/faceDirection.ts";
 import type { BlockVariantFace } from "./variants/types.ts";
 
-/**
- * In-plane `[du, dv]` offsets of the blend neighbours, in the order their
- * palette indices are packed: four edges, then four corners. `u` and `v`
- * are the face's AO axes.
- */
 export const FACE_BLEND_OFFSETS: readonly (readonly [du: number, dv: number])[] = [
   [1, 0],
   [-1, 0],

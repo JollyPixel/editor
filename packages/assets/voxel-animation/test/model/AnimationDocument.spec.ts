@@ -8,7 +8,7 @@ import {
   type AnimationChange
 } from "#src/model/AnimationDocument.ts";
 import { InvalidAnimationSetError } from "#src/model/errors/InvalidAnimationSetError.ts";
-import { inverseOf } from "#src/model/history/animationInverse.ts";
+import { invert } from "#src/model/history/animationInverse.ts";
 import { TICKS_PER_SECOND } from "#src/model/values/FrameRate.ts";
 import { key } from "../helpers/clips.ts";
 
@@ -17,9 +17,9 @@ function createDocument(): AnimationDocument {
   document.renameRig("Humanoid");
   document.addClip({ id: "walk", name: "Walk" });
   document.addClip({ id: "run", name: "Run" });
-  document.setKey("walk", "body/arm", "rotation", key(0, 0));
-  document.setKey("walk", "body/arm", "rotation", key(12000, 90));
-  document.setKey("walk", "body/arm", "position", key(6000, 1));
+  document.writeKey("walk", "body/arm", "rotation", key(0, 0));
+  document.writeKey("walk", "body/arm", "rotation", key(12000, 90));
+  document.writeKey("walk", "body/arm", "position", key(6000, 1));
 
   return document;
 }
@@ -52,7 +52,7 @@ describe("AnimationDocument", () => {
     const document = new AnimationDocument();
 
     const id = document.addClip({ name: "Walk", tracks })!;
-    source.setKey("walk", "body/arm", "rotation", key(0, 45));
+    source.writeKey("walk", "body/arm", "rotation", key(0, 45));
 
     assert.deepEqual(document.set.clip(id)?.tracks, createDocument().set.clip("walk")?.tracks);
   });
@@ -70,7 +70,7 @@ describe("AnimationDocument", () => {
     };
 
     const id = document.addClip({ name: "Spin", tracks: [{ path: "ring", rotation: [noisy] }] })!;
-    document.setKey(id, "ring", "position", noisy);
+    document.writeKey(id, "ring", "position", noisy);
 
     assert.deepStrictEqual(document.set.keyAt(id, "ring", "rotation", 0), rounded);
     assert.deepStrictEqual(document.set.keyAt(id, "ring", "position", 0), rounded);
@@ -81,8 +81,8 @@ describe("AnimationDocument", () => {
     "remove a clip": (document) => document.removeClip("walk"),
     "change a clip": (document) => document.changeClip("walk", { name: "Stroll", fps: 30 }),
     "move a clip": (document) => document.moveClip("run", "walk"),
-    "add a key": (document) => document.setKey("walk", "body/leg", "scale", key(0, 2)),
-    "replace a key": (document) => document.setKey("walk", "body/arm", "rotation", key(12000, 45)),
+    "add a key": (document) => document.writeKey("walk", "body/leg", "scale", key(0, 2)),
+    "replace a key": (document) => document.writeKey("walk", "body/arm", "rotation", key(12000, 45)),
     "remove a key": (document) => document.removeKey("walk", "body/arm", "position", 6000),
     "remove a track": (document) => document.removeTrack("walk", "body/arm"),
     "rename a track": (document) => document.renameTrack("walk", "body/arm", "Torso/Arm")
@@ -119,7 +119,7 @@ describe("AnimationDocument", () => {
     const document = createDocument();
 
     assert.throws(
-      () => inverseOf(document.set, { action: "clip-removed", id: "missing" }),
+      () => invert(document.set, { action: "clip-removed", id: "missing" }),
       InvalidAnimationSetError
     );
   });

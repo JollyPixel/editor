@@ -59,7 +59,7 @@ test("creates a map, a model and a texture from the tree and opens each", async(
     }
 
     await assets.open(asset.file);
-    await studio.frames.expectReady(studio.frames.of(asset.editor));
+    await studio.frames.expectReady(studio.frames.locate(asset.editor));
     await studio.tabs.home.click();
   }
 });
@@ -84,7 +84,7 @@ test("an editor frame opens the shell console, which themes every frame", async(
   await expect(texture.locator("jolly-scope").first()).toHaveAttribute("theme", "light");
 
   await studio.openFromHome(MAP);
-  await expect(studio.frames.of("voxel-map").locator("jolly-scope").first())
+  await expect(studio.frames.locate("voxel-map").locator("jolly-scope").first())
     .toHaveAttribute("theme", "light", { timeout: 30_000 });
 });
 

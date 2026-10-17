@@ -52,7 +52,7 @@ export function isLit(
   return settings.lighting !== "flat";
 }
 
-export function backgroundOf(
+export function resolveBackground(
   settings: Pick<ViewSettings, "lighting" | "background">
 ): string {
   return settings.background ?? kLightingBackgrounds[settings.lighting];

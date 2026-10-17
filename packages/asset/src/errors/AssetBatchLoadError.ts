@@ -1,9 +1,6 @@
 // Import Internal Dependencies
 import type { AssetLoadFailure } from "../runtime/AssetLoadBatch.ts";
 
-/**
- * Collects every failure produced by one requested asset batch.
- */
 export class AssetBatchLoadError extends Error {
   readonly failures: readonly AssetLoadFailure[];
 

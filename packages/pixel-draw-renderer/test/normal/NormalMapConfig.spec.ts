@@ -167,7 +167,7 @@ describe("NormalMapConfig", () => {
         config.zones.map((zone) => zone.regionId),
         ["brick", "glass", "moss"]
       );
-      assert.equal(config.zoneOf("brick")?.settings, "off");
+      assert.equal(config.findZone("brick")?.settings, "off");
     });
 
     test("withZone inserts a new zone at the given index", () => {

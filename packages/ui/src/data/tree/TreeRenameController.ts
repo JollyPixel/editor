@@ -14,7 +14,7 @@ import { isInputElement } from "../../dom.ts";
 export interface TreeRenameOptions {
   validateRename(): TreeRenameValidator | null;
   interaction(): TreeInteraction;
-  setInteraction(next: TreeInteraction): void;
+  switchInteraction(next: TreeInteraction): void;
   focusRow(id: string): void;
 }
 
@@ -49,7 +49,6 @@ export class TreeRenameController {
     event: KeyboardEvent,
     view: TreeRowView
   ): void {
-    // The tree's own navigation must not read the keys typed into the field.
     event.stopPropagation();
 
     if (event.key === "Escape") {
@@ -59,7 +58,6 @@ export class TreeRenameController {
     else if (event.key === "Enter") {
       event.preventDefault();
       if (this.#validate(event.target, view) && isInputElement(event.target)) {
-        // Blur commits, so the two paths cannot double-emit.
         event.target.blur();
       }
     }
@@ -74,8 +72,8 @@ export class TreeRenameController {
       return;
     }
 
-    this.#options.setInteraction(idleTreeInteraction());
-    const name = draftOf(event.target, view);
+    this.#options.switchInteraction(idleTreeInteraction());
+    const name = readDraft(event.target, view);
     if (name !== null && interaction.error === null) {
       emitDataEvent(this.#host, "jolly-rename", { id: view.id, name });
     }
@@ -91,12 +89,12 @@ export class TreeRenameController {
       return false;
     }
 
-    const name = draftOf(target, view);
+    const name = readDraft(target, view);
     const validator = this.#options.validateRename();
     const error = name === null || validator === null ?
       null :
       validator({ id: view.id, name });
-    this.#options.setInteraction({
+    this.#options.switchInteraction({
       ...interaction,
       error
     });
@@ -106,14 +104,14 @@ export class TreeRenameController {
 
   #cancel(): void {
     const interaction = this.#options.interaction();
-    this.#options.setInteraction(idleTreeInteraction());
+    this.#options.switchInteraction(idleTreeInteraction());
     if (interaction.kind === "renaming") {
       this.#options.focusRow(interaction.id);
     }
   }
 }
 
-function draftOf(
+function readDraft(
   target: EventTarget | null,
   view: TreeRowView
 ): string | null {

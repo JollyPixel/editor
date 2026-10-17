@@ -25,7 +25,7 @@ describe("PixelArtCanvas — uv mode", () => {
     canvas.dispatchEvent(mouseEvent("mouseup", 92, 92));
 
     assert.deepStrictEqual(
-      manager.uv.get(region.id)!.rectFor("front"),
+      manager.uv.get(region.id)!.slotRect("front"),
       { x: 2, y: 2, width: 4, height: 4 }
     );
   });
@@ -91,8 +91,8 @@ describe("PixelArtCanvas — uv mode", () => {
     canvas.dispatchEvent(mouseEvent("mouseup", 92, 92));
 
     assert.deepStrictEqual(
-      manager.uv.get(region.id)!.rectFor("front"),
-      region.rectFor("front")
+      manager.uv.get(region.id)!.slotRect("front"),
+      region.slotRect("front")
     );
   });
 

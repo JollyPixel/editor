@@ -36,8 +36,8 @@ describe("EditorRegistry", () => {
   test("resolves the editor that opens a kind", () => {
     const registry = new EditorRegistry().registerEditor(kMapEditor);
 
-    assert.deepEqual(registry.editorFor("voxelmap"), kMapEditor);
-    assert.equal(registry.editorFor("texture"), undefined);
+    assert.deepEqual(registry.findEditor("voxelmap"), kMapEditor);
+    assert.equal(registry.findEditor("texture"), undefined);
   });
 
   test("builds the page url with the encoded target", () => {
@@ -82,7 +82,7 @@ describe("EditorRegistry", () => {
 
   test("registers the icon of a kind under its own name", () => {
     const registry = new EditorRegistry().registerKind(kMapKind);
-    const icon = registry.kindSet().iconFor("voxelmap");
+    const icon = registry.kindSet().kindIcon("voxelmap");
 
     assert.equal(icon, "kind:voxelmap");
     assert.notEqual(getIcon(icon), null);
@@ -101,7 +101,7 @@ describe("EditorRegistry", () => {
       },
       convertsFrom: []
     });
-    const icon = registry.kindSet().iconFor("blockset");
+    const icon = registry.kindSet().kindIcon("blockset");
 
     assert.equal(iconViewBox(icon), "0 0 64 64");
     assert.equal(iconTone(icon), null);
@@ -139,8 +139,8 @@ describe("EditorRegistry", () => {
     const registry = new EditorRegistry().registerEditor(kMapEditor);
     const kinds = registry.kindSet();
 
-    assert.equal(kinds.detailFor("voxelmap"), undefined);
-    assert.equal(kinds.detailFor("texture"), "no editor");
+    assert.equal(kinds.kindDetail("voxelmap"), undefined);
+    assert.equal(kinds.kindDetail("texture"), "no editor");
   });
 
   test("a snapshot ignores later registrations", () => {
@@ -149,7 +149,7 @@ describe("EditorRegistry", () => {
     registry.registerKind(kMapKind).registerEditor(kMapEditor);
 
     assert.equal(kinds.has("voxelmap"), false);
-    assert.equal(kinds.detailFor("voxelmap"), "no editor");
+    assert.equal(kinds.kindDetail("voxelmap"), "no editor");
   });
 
   test("rejects a kind registered twice", () => {
@@ -184,7 +184,7 @@ describe("EditorRegistry", () => {
       }),
       /already opens in editor "voxel-map"/
     );
-    assert.equal(registry.editorFor("heightmap"), undefined);
+    assert.equal(registry.findEditor("heightmap"), undefined);
   });
 
   test("copies the registered editor", () => {
@@ -195,7 +195,7 @@ describe("EditorRegistry", () => {
     });
     kinds.push("voxelmodel");
 
-    assert.equal(registry.editorFor("voxelmodel"), undefined);
-    assert.deepEqual(registry.editorFor("voxelmap")?.kinds, ["voxelmap"]);
+    assert.equal(registry.findEditor("voxelmodel"), undefined);
+    assert.deepEqual(registry.findEditor("voxelmap")?.kinds, ["voxelmap"]);
   });
 });

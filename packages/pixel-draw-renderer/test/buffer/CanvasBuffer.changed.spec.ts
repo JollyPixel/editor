@@ -32,7 +32,7 @@ describe("CanvasBuffer", () => {
   });
 
   describe("changed bounds", () => {
-    function boundsOf(
+    function measureBounds(
       buf: CanvasBuffer
     ): () => SelectionRect[] {
       const seen: SelectionRect[] = [];
@@ -45,7 +45,7 @@ describe("CanvasBuffer", () => {
 
     test("drawPixels reports the bounding box of the written pixels", () => {
       const buf = new CanvasBuffer({ size: { x: 8, y: 8 }, maxSize: TEST_MAX_SIZE });
-      const bounds = boundsOf(buf);
+      const bounds = measureBounds(buf);
 
       buf.drawPixels(
         [{ x: 1, y: 2 }, { x: 4, y: 3 }],
@@ -60,7 +60,7 @@ describe("CanvasBuffer", () => {
 
     test("drawColorGroups writes every group and reports their union once", () => {
       const buf = new CanvasBuffer({ size: { x: 8, y: 8 }, maxSize: TEST_MAX_SIZE });
-      const bounds = boundsOf(buf);
+      const bounds = measureBounds(buf);
 
       buf.drawColorGroups([
         {
@@ -83,7 +83,7 @@ describe("CanvasBuffer", () => {
 
     test("drawMaskedRegion reports the written rect", () => {
       const buf = new CanvasBuffer({ size: { x: 8, y: 8 }, maxSize: TEST_MAX_SIZE });
-      const bounds = boundsOf(buf);
+      const bounds = measureBounds(buf);
       const rect = { x: 0, y: 0, width: 2, height: 2 };
 
       buf.drawMaskedRegion(

@@ -12,9 +12,6 @@ import {
 
 export const FontAssetType = new AssetType<Font>("font");
 
-/**
- * Loads font records with the Three.js font loader used by TextRenderer.
- */
 export class FontAssetLoader implements AssetLoader<Font> {
   #manager: THREE.LoadingManager;
 

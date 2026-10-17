@@ -35,7 +35,7 @@ function rects(
   region: UVRegion
 ): Record<UVSlot, SelectionRect> {
   return Object.fromEntries(
-    region.slotsOf().map(({ slot, geometry }) => [slot, "shape" in geometry ? geometry.rect : geometry])
+    region.listSlots().map(({ slot, geometry }) => [slot, "shape" in geometry ? geometry.rect : geometry])
   );
 }
 

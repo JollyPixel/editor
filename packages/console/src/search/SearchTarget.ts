@@ -6,7 +6,7 @@ import { SearchText } from "./SearchText.ts";
 export class SearchTarget {
   static #cache = new WeakMap<RegisteredEntry, SearchTarget>();
 
-  static of(
+  static fromEntry(
     entry: RegisteredEntry
   ): SearchTarget {
     let target = SearchTarget.#cache.get(entry);

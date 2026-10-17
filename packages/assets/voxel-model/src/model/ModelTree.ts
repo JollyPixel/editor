@@ -15,8 +15,8 @@ import {
   type ModelAnimationLinksReader
 } from "./animation/ModelAnimationLinks.ts";
 import {
-  entryImagesOf,
-  entrySlotOf,
+  captureEntryImages,
+  findEntrySlot,
   type ModelEntryTree
 } from "./history/modelCommands.ts";
 import type { ModelImages } from "./history/modelImages.ts";
@@ -33,15 +33,15 @@ export type ModelTreeReader = Pick<
   | "has"
   | "get"
   | "block"
-  | "materialIdOf"
+  | "blockMaterialId"
   | "values"
   | "blocks"
-  | "childrenOf"
-  | "nextSiblingOf"
-  | "subtreeOf"
-  | "imagesOf"
-  | "enclosingBlockOf"
-  | "transformParentOf"
+  | "listChildren"
+  | "findNextSibling"
+  | "subtreeFrom"
+  | "captureImages"
+  | "findEnclosingBlock"
+  | "findTransformParent"
   | "blockNamesUnder"
   | "blockNameClashes"
   | "placeable"
@@ -87,10 +87,10 @@ export class ModelTree {
     return this.#nodes.block(id);
   }
 
-  materialIdOf(
+  blockMaterialId(
     id: string
   ): string | undefined {
-    return this.#nodes.materialIdOf(id);
+    return this.#nodes.blockMaterialId(id);
   }
 
   values(): IterableIterator<ModelNodeJSON> {
@@ -101,34 +101,34 @@ export class ModelTree {
     return this.#nodes.blocks();
   }
 
-  childrenOf(
+  listChildren(
     parentId: string | null
   ): ModelNodeJSON[] {
-    return this.#nodes.childrenOf(parentId);
+    return this.#nodes.listChildren(parentId);
   }
 
-  nextSiblingOf(
+  findNextSibling(
     id: string
   ): string | undefined {
-    return this.#nodes.nextSiblingOf(id);
+    return this.#nodes.findNextSibling(id);
   }
 
-  subtreeOf(
+  subtreeFrom(
     id: string
   ): ModelNodeJSON[] {
-    return this.#nodes.subtreeOf(id);
+    return this.#nodes.subtreeFrom(id);
   }
 
-  enclosingBlockOf(
+  findEnclosingBlock(
     id: string | null
   ): string | null {
-    return this.#nodes.enclosingBlockOf(id);
+    return this.#nodes.findEnclosingBlock(id);
   }
 
-  transformParentOf(
+  findTransformParent(
     id: string
   ): string | null {
-    return this.#nodes.transformParentOf(id);
+    return this.#nodes.findTransformParent(id);
   }
 
   blockNamesUnder(
@@ -162,16 +162,16 @@ export class ModelTree {
     return uses;
   }
 
-  imagesOf(
+  captureImages(
     command: VoxelModelCommand
   ): ModelImages {
-    return entryImagesOf(this, command);
+    return captureEntryImages(this, command);
   }
 
   placeable(
     command: VoxelModelCommand
   ): VoxelModelCommand {
-    const slot = entrySlotOf(command);
+    const slot = findEntrySlot(command);
     if (
       slot?.beforeId === undefined ||
       this.#entries(slot.which).isSiblingSlot(slot.beforeId, slot.parentId, slot.id)

@@ -42,7 +42,7 @@ export function createEditorHistory(
     id: "model",
     document,
     keys: modelHistoryKeys(document.tree),
-    scopeOf: (change) => scopeOfModelChange(change, document.tree.animationSets),
+    resolveScope: (change) => scopeOfModelChange(change, document.tree.animationSets),
     label: describeModelChange
   });
 

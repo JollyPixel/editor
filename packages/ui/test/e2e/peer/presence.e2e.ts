@@ -4,7 +4,7 @@ import {
   test
 } from "../fixtures.ts";
 import { openExample } from "../support/gallery.ts";
-import { styleOf } from "../support/styles.ts";
+import { readStyle } from "../support/styles.ts";
 
 test.describe("Presence", () => {
   test("caps the snapshot, keeps the local peer, and selects only remote peers", async({ page }) => {
@@ -30,7 +30,7 @@ test.describe("Presence", () => {
     const peers = page.locator("jolly-presence [part=peer]");
     await expect(peers.nth(1).locator(".self")).toHaveCSS(
       "color",
-      await styleOf(peers.first(), "color")
+      await readStyle(peers.first(), "color")
     );
   });
 });

@@ -83,11 +83,6 @@ function pasteResult(
   };
 }
 
-/**
- * Reads and writes selections through a clipboard adapter, with an in-memory
- * fallback. Decoding only: where a pasted selection lands is the canvas's
- * call, so `read` returns an unplaced {@link DecodedSelection}.
- */
 export class SelectionClipboard {
   #adapter: ClipboardAdapter | null;
   #decodeRaster: RasterBlobDecoder;

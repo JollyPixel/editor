@@ -22,7 +22,7 @@ function loadCompiler(): void {
   );
 }
 
-function compiledFor(
+function compileSchema(
   schema: Schema
 ): Schema | null {
   if (compile === null) {
@@ -52,7 +52,7 @@ export class SchemaValidator {
   isValid(
     value: unknown
   ): boolean {
-    this.#compiled ??= compiledFor(this.#schema);
+    this.#compiled ??= compileSchema(this.#schema);
 
     return z.safeParse(this.#compiled ?? this.#schema, value).success;
   }

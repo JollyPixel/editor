@@ -296,11 +296,11 @@ export class CanvasBuffer extends Emitter<
     return this.#buffer.samplePixels(positions);
   }
 
-  positionsOf(
+  findPositions(
     color: RGBA8,
     mask?: Uint8Array
   ): Vec2[] {
-    return this.#buffer.positionsOf(color, mask);
+    return this.#buffer.findPositions(color, mask);
   }
 
   hasTransparency(

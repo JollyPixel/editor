@@ -27,7 +27,6 @@ const kWheelDeltaMode = {
   page: 2
 } as const;
 
-// Approximate CSS-pixel equivalents for line and page wheel deltas.
 const kWheelLineDeltaPixels = 16;
 const kWheelPageDeltaPixels = 100;
 const kPinchDeltaPerScaleLog = 100;
@@ -102,7 +101,7 @@ export class PointerController {
     this.#inputWindow.removeEventListener("blur", this.#handleWindowBlur);
   }
 
-  #positionOf(
+  #toPosition(
     event: MouseEvent
   ): PointerPosition {
     const bounds = this.#canvas.getBoundingClientRect();
@@ -199,7 +198,7 @@ export class PointerController {
       this.#endDrag();
     }
 
-    if (this.#actions.onPointerDown(slot, this.#positionOf(event), event.ctrlKey)) {
+    if (this.#actions.onPointerDown(slot, this.#toPosition(event), event.ctrlKey)) {
       this.#dragging = slot;
     }
   };
@@ -210,7 +209,7 @@ export class PointerController {
     event.preventDefault();
     this.#controlHeld = event.ctrlKey;
 
-    const position = this.#positionOf(event);
+    const position = this.#toPosition(event);
     this.#actions.onHover(position);
 
     if (
@@ -262,7 +261,7 @@ export class PointerController {
       return;
     }
 
-    const position = this.#positionOf(event);
+    const position = this.#toPosition(event);
     if (pinch) {
       this.#viewport.applyScale(
         Math.exp(-delta / kPinchDeltaPerScaleLog),
@@ -297,7 +296,7 @@ export class PointerController {
       ) {
         this.#actions.onPointerMove(
           this.#dragging,
-          this.#positionOf(event)
+          this.#toPosition(event)
         );
       }
 

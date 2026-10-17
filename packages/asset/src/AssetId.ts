@@ -1,6 +1,3 @@
-/**
- * Identifies one catalog asset independently from its physical source.
- */
 export class AssetId {
   static from(
     id: string | AssetId

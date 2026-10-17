@@ -10,7 +10,7 @@ import { setImmediate } from "node:timers/promises";
 import { SelectEngine } from "#src/tools/SelectEngine.ts";
 import type { ClipboardOperationResult } from "#src/clipboard/types.ts";
 import {
-  contextOf,
+  context2d,
   readPixel
 } from "./fixtures/canvas.ts";
 import { mouseEvent } from "./helpers/events.ts";
@@ -210,7 +210,7 @@ describe("PixelArtCanvas — select mode clipboard", () => {
     const source = document.createElement("canvas");
     source.width = 1;
     source.height = 1;
-    contextOf(source).fillStyle = "rgba(12, 34, 56, 1)";
+    context2d(source).fillStyle = "rgba(12, 34, 56, 1)";
     source.getContext("2d")!.fillRect(0, 0, 1, 1);
 
     context.mock.method(

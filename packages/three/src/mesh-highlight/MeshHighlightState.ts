@@ -317,13 +317,13 @@ export class MeshHighlightState extends EventTarget {
     this.#techniques.clear();
   }
 
-  techniqueFor(
+  resolveTechnique(
     id: string
   ): HighlightTechnique {
     return this.#techniques.get(id) ?? this.#technique;
   }
 
-  targetFor(
+  findTarget(
     id: string
   ): SelectableObject | undefined {
     return this.#targets.get(id);
@@ -401,7 +401,7 @@ export class MeshHighlightState extends EventTarget {
     const target = this.#requireTarget(id);
     if (
       !this.#renderOverlays ||
-      (isScenePipelineTechnique(this.techniqueFor(id)) &&
+      (isScenePipelineTechnique(this.resolveTechnique(id)) &&
         target instanceof THREE.Mesh)
     ) {
       return null;
@@ -422,7 +422,7 @@ export class MeshHighlightState extends EventTarget {
     opacity: number
   ): HighlightOverlay {
     const target = this.#requireTarget(id);
-    const technique = this.techniqueFor(id);
+    const technique = this.resolveTechnique(id);
 
     return this.#overlayRegistry.create(target, {
       technique,

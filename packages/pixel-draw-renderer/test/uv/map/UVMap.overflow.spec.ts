@@ -52,7 +52,7 @@ describe("UVMap — overflow", () => {
     const map = makeUvMap({ x: 32, y: 32 });
     map.overflow = 2;
     const region = map.create({ width: 4, height: 4 });
-    map.setState(region.id, "unfolded");
+    map.applyState(region.id, "unfolded");
     const { width, height } = map.get(region.id)!.bounds;
 
     map.move(region.id, { x: 100, y: -100, width, height });

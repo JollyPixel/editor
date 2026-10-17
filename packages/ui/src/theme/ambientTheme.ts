@@ -14,7 +14,7 @@ export function ambientThemeMode(
     const carriesTheme = resolveThemeToken(parent, "--jolly-surface") !== "";
 
     if (carriesTheme) {
-      const mode = themeModeOf(parentStyle);
+      const mode = readThemeMode(parentStyle);
       if (mode !== null) {
         return mode;
       }
@@ -23,7 +23,7 @@ export function ambientThemeMode(
 
   const active = element.ownerDocument.activeElement;
   if (active !== null && !element.contains(active)) {
-    const mode = themeModeOf(
+    const mode = readThemeMode(
       getComputedStyle(active)
     );
     if (mode !== null) {
@@ -36,7 +36,7 @@ export function ambientThemeMode(
     return documentMode;
   }
 
-  return themeModeOf(getComputedStyle(parent));
+  return readThemeMode(getComputedStyle(parent));
 }
 
 export function resolveAmbientTheme(
@@ -70,7 +70,7 @@ export function documentThemeMode(
   doc: Document = document
 ): ResolvedThemeMode | null {
   for (const host of doc.querySelectorAll("jolly-scope")) {
-    const mode = themeModeOf(
+    const mode = readThemeMode(
       getComputedStyle(host)
     );
     if (mode !== null) {
@@ -91,7 +91,7 @@ function flatTreeParent(
   return parent instanceof HTMLElement ? parent : null;
 }
 
-function themeModeOf(
+function readThemeMode(
   style: CSSStyleDeclaration
 ): ResolvedThemeMode | null {
   const schemes = new Set(
