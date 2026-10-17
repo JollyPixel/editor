@@ -9,6 +9,8 @@ import { registerIcon } from "@jolly-pixel/ui/icon";
 // Import Internal Dependencies
 import type { NormalMapIconName } from "./normalMapIcons.ts";
 import "./normalMapIcons.ts";
+import type { TextureIconName } from "./textureIcons.ts";
+import "./textureIcons.ts";
 
 // CONSTANTS
 const kTextGlyphs = {
@@ -53,7 +55,8 @@ export type IconName =
   | "eyeOpen"
   | "eyeOff"
   | "dockPicker"
-  | NormalMapIconName;
+  | NormalMapIconName
+  | TextureIconName;
 
 registerIcon("move", svg`
     <path

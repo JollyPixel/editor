@@ -33,7 +33,8 @@ export const textures = new Tour({
       target: () => document.querySelector("texture-editor"),
       side: "right",
       title: "Blocksets",
-      body: "Each tab is a blockset texture. Draw on it with the pixel tools.\n\n" +
+      body: "Each tab is a blockset texture. Draw on it with the pixel tools, " +
+        "and double click its tab to edit the blockset.\n\n" +
         "The UV tool outlines the faces of each block: " +
         "move or resize one to change what the block shows.",
       enter: showTextureEditor

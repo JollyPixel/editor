@@ -37,13 +37,25 @@ describe("texture console", () => {
     const handle = textureConsole(commands, { state });
 
     await commands.submit("texture.uvSync live");
-    assert.equal(state.uvSync.mode, "live");
+    assert.equal(state.uvSync.value, "live");
 
     await commands.submit("texture.uvSync realtime");
-    assert.equal(state.uvSync.mode, "live");
+    assert.equal(state.uvSync.value, "live");
 
     handle.unregister();
 
     assert.equal(commands.registry.namespace("texture"), undefined);
+  });
+
+  test("tabs switches the blockset tab style and saves it", async() => {
+    const commands = new CommandConsole();
+    const storage = new MemoryStorageAdapter();
+    const state = new EditorState({ storage });
+    textureConsole(commands, { state });
+
+    await commands.submit("texture.tabs line");
+
+    assert.equal(state.textureTabs.value, "line");
+    assert.equal(storage.get("voxel-map:texture-tabs"), "line");
   });
 });

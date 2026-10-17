@@ -107,6 +107,17 @@ control tab actions with `textures-addable`, `textures-editable` and
 `textures-closable`. `texture-import-policy` is `replace` (default), `add` or
 `ask`.
 
+With `textures-editable`, double clicking a tab, disabled ones included, or
+pressing F2 on the focused tab emits `texture-edit-request`. The tab tooltip
+says so.
+
+`texture-tabs-line` draws the strip as a thin line of segments, one per
+texture, that name their texture on hover. It hides the Add button. While the
+strip shows, a toggle at the top of the left rail switches it and emits
+`texture-tabs-line-change`; the host saves the choice if it wants to keep it.
+`texture-tabs-variant` (`default` or `skew`) styles the strip when it is not a
+line.
+
 ## Color palette
 
 The color dock shows ten saved colors in five rows and two columns, centered
@@ -142,12 +153,14 @@ announce(message: string): void
 | Member | Contract |
 |---|---|
 | `canvasManager` | Active canvas, or `null` before a texture is added. |
-| `textures` | Texture records in tab order: `id`, `name`, `tooltip`, `badge`, `disabled`, `canvas`. |
+| `textures` | Texture records in tab order: `id`, `name`, `tooltip`, `disabled`, `canvas`. |
 | `activeTextureId` | Active id; setting it switches canvas. Unknown ids throw. |
 | `keyBindings` | [`PixelArtKeyBindings`](../keybindings/KeyBindingSettings.md#pixelartkeybindings) used by the panel. |
 | `uvAccess` | `"edit" \| "view" \| "none"`; defaults to `"edit"`. |
 | `textureImportPolicy` | `"replace" \| "add" \| "ask"`; defaults to `"replace"`. |
 | `textureTabs` | `"auto" \| "always"`; defaults to `"auto"`. |
+| `textureTabsVariant` | `"default" \| "skew"`; defaults to `"default"`. |
+| `textureTabsLine` | Thin line strip when true. Defaults to false. |
 | `normalMap` | Shows normal-map controls when true. Defaults to false. |
 | `theme` / `resolvedTheme` | Requested `"light" \| "dark" \| "auto"` theme and resolved `"light" \| "dark"` theme. |
 
@@ -164,7 +177,8 @@ or its left neighbor when it was last.
 | `texture-change` | `{ id, source: "user" \| "api" }` | Active texture changes after initial creation. |
 | `texture-add-request` | `TextureAddRequestDetail` | Import asks the host to add an image. |
 | `texture-create-request` | none | Host-managed Add button is clicked. |
-| `texture-edit-request` | `{ id }` | Active or disabled tab edit button is clicked. |
+| `texture-edit-request` | `{ id }` | A tab is double clicked, or F2 is pressed on it, with `textures-editable`. |
+| `texture-tabs-line-change` | `boolean` | The rail toggle switches the line strip. |
 | `texture-close-request` | `{ id }` | Tab close button or middle click is used. |
 | `color-docked-change` | `boolean` | Docked color picker is toggled. |
 | `theme-change` | resolved theme | Theme changes or system preference changes in `auto`. |

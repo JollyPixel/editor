@@ -4,7 +4,8 @@ export type {
   TextureChangeSource,
   TextureCloseRequestDetail,
   TextureEditRequestDetail,
-  TextureTabsMode
+  TextureTabsMode,
+  TextureTabsVariant
 } from "./textures/TextureTabStrip.ts";
 export type {
   PixelDrawTextureOptions,

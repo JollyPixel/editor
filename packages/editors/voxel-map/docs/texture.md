@@ -19,3 +19,14 @@ re-meshes the map and sends a `block-defined` command to every peer.
 
 In both modes, peers see a drag outline of the moving region on their texture
 panel. The value is saved in the browser under `voxel-map:uv-sync`.
+
+## Blockset tabs
+
+Each blockset has a tab above the panel. Double click a tab, or press F2 on the
+focused tab, to edit its blockset. Unlinked blocksets keep a disabled tab that
+still opens the editor.
+
+`texture.tabs` is `tabs` (default) or `line`. `line` draws the strip as a thin
+bar of segments that show the blockset name and tile size on hover. The toggle
+at the top of the panel's left rail switches the same value, saved in the
+browser under `voxel-map:texture-tabs`.

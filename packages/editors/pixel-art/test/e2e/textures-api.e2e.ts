@@ -40,25 +40,9 @@ test.describe("texture API", () => {
     expect(await userSource).toBe("user");
   });
 
-  test("texture-tabs always shows the strip for a single texture, with its badge", async({ panel }) => {
+  test("a single always-shown tab and its add button only raise request events", async({ panel }) => {
     await expect(panel.textures.strip).toHaveCount(0);
 
-    await panel.root.evaluate((element: PixelDrawPanel) => {
-      element.textureTabs = "always";
-      element.updateTexture(element.activeTextureId!, { badge: "3" });
-    });
-
-    const tab = panel.textures.tabs;
-    await expect(tab).toHaveCount(1);
-    await expect(tab.locator("[part~=badge]")).toHaveText("3");
-
-    await panel.root.evaluate((element: PixelDrawPanel) => {
-      element.updateTexture(element.activeTextureId!, { badge: "" });
-    });
-    await expect(tab.locator("[part~=badge]")).toHaveCount(0);
-  });
-
-  test("the add and edit buttons only raise their request events", async({ panel }) => {
     await panel.root.evaluate((element: PixelDrawPanel) => {
       element.textureTabs = "always";
       element.texturesAddable = true;
@@ -71,11 +55,12 @@ test.describe("texture API", () => {
       });
     });
     const before = await panel.textures.activeState();
+    await expect(panel.textures.tabs).toHaveCount(1);
 
     await panel.root.getByRole("button", { name: "Add texture" }).click();
     await expect(panel.root).toHaveAttribute("data-created", "yes");
 
-    await panel.root.getByRole("button", { name: /^Edit / }).click();
+    await panel.textures.tabs.dblclick();
     await expect(panel.root).toHaveAttribute("data-edited", before.activeTextureId!);
     expect(await panel.textures.activeState()).toMatchObject({
       activeTextureId: before.activeTextureId,
@@ -83,7 +68,7 @@ test.describe("texture API", () => {
     });
   });
 
-  test("a disabled texture keeps a tab and its edit button but never activates", async({ panel }) => {
+  test("a disabled texture keeps an editable tab but never activates", async({ panel }) => {
     const result = await panel.root.evaluate((element: PixelDrawPanel) => {
       element.texturesEditable = true;
       element.addEventListener("texture-edit-request", (event) => {
@@ -104,9 +89,42 @@ test.describe("texture API", () => {
     });
     expect(result.activeId).toBe(result.firstId);
 
-    await expect(panel.root.getByRole("tab", { name: "Unlinked" })).toBeDisabled();
-    await panel.root.getByRole("button", { name: "Edit Unlinked" }).click();
+    const unlinked = panel.root.getByRole("tab", { name: "Unlinked" });
+    await expect(unlinked).toBeDisabled();
+    await unlinked.dblclick({ force: true });
     await expect(panel.root).toHaveAttribute("data-edited", "unlinked");
     expect((await panel.textures.activeState()).activeTextureId).toBe(result.firstId);
+  });
+
+  test("the rail toggle turns the strip into a line that names a texture on hover", async({ panel }) => {
+    const toggle = panel.root.getByRole("button", { name: "Line texture tabs" });
+    await expect(toggle).toHaveCount(0);
+
+    await panel.root.evaluate((element: PixelDrawPanel) => {
+      const details: boolean[] = [];
+      element.addEventListener("texture-tabs-line-change", (event) => {
+        details.push(event.detail);
+        element.dataset.lineChanges = details.join(",");
+      });
+      element.texturesAddable = true;
+      element.addTexture(
+        { id: "trim", name: "Trim" },
+        { activate: false }
+      );
+    });
+
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await expect(panel.textures.strip).toHaveAttribute("variant", "line");
+    await expect(panel.root.getByRole("button", { name: "Add texture" })).toHaveCount(0);
+
+    const trim = panel.root.getByRole("tab", { name: "Trim" });
+    expect((await trim.boundingBox())!.height).toBeLessThanOrEqual(8);
+    await trim.hover();
+    await expect(panel.textures.strip.locator("[part=tip]").nth(1)).toBeVisible();
+
+    await toggle.click();
+    await expect(panel.textures.strip).toHaveAttribute("variant", "default");
+    await expect(panel.root).toHaveAttribute("data-line-changes", "true,false");
   });
 });

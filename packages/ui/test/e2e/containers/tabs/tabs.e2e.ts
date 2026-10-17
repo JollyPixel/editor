@@ -35,6 +35,40 @@ test.describe("Tabs", () => {
     await expect(tabs.first()).toHaveAttribute("aria-selected", "true");
   });
 
+  test("a double click or F2 emits jolly-tab-edit for that tab, a disabled one too", async({ page }) => {
+    await openTabs(page);
+
+    const host = page.locator("jolly-tabs");
+    const tabs = host.locator("[role=tab]");
+    await expect(tabs.nth(3)).toBeDisabled();
+    await tabs.nth(3).dblclick({ force: true });
+    await expect(host).toHaveAttribute("data-edit", "lava");
+
+    await tabs.nth(1).dblclick();
+    await expect(host).toHaveAttribute("data-edit", "stone");
+    await expect(tabs.nth(1)).toHaveAttribute("aria-selected", "true");
+    await expect(tabs.nth(1)).not.toBeFocused();
+
+    await tabs.nth(3).press("F2");
+    await expect(host).toHaveAttribute("data-edit", "lava");
+    await expect(tabs.nth(3)).toBeFocused();
+    await expect(tabs.nth(1)).toHaveAttribute("aria-selected", "true");
+  });
+
+  test("the line variant shows a segment label only on hover", async({ page }) => {
+    await openTabs(page, { line: true });
+
+    const host = page.locator("jolly-tabs");
+    const water = host.getByRole("tab", { name: "water" });
+    const tip = host.locator("[part=tip]").nth(2);
+    await expect(tip).toBeHidden();
+    expect((await measureBox(water)).height).toBeLessThanOrEqual(8);
+
+    await water.hover();
+    await expect(tip).toBeVisible();
+    await expect(tip).toHaveText("water");
+  });
+
   test("keeps a value assigned before its tabs are slotted", async({ page }) => {
     const warnings: string[] = [];
     page.on("console", (message) => {

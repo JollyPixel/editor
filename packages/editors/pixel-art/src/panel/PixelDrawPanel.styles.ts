@@ -21,6 +21,7 @@ export const panelStyles = css`
     --color-accent: var(--jolly-area-fill, light-dark(#2f6fd8, #3a6fc2));
     --color-canvas-bg: light-dark(#d7e3ee, #0d151d);
     --color-swatch-edge: light-dark(transparent, rgb(255 255 255 / 22%));
+    --texture-tab-height: calc(var(--jolly-control-height, 20px) + 2px);
     --jolly-ink: var(--color-text);
     --jolly-text: var(--color-text);
     --jolly-surface-raised: var(--color-bg-overlay);
@@ -153,14 +154,21 @@ export const panelStyles = css`
     font-size: 12px;
     user-select: none;
 
-    --texture-tab-height: calc(var(--jolly-control-height, 20px) + 8px);
+    --jolly-tab-line-fill: var(--color-divider);
+    --jolly-tab-line-fill-hover: var(--color-text-muted);
   }
 
   .texture-tabs:not([variant="skew"]) {
     background: var(--color-bg-surface);
   }
 
-  .texture-tabs::part(tab) {
+  .texture-tabs[variant="line"] {
+    position: relative;
+    z-index: 4;
+    padding-inline: 6px;
+  }
+
+  .texture-tabs:not([variant="line"])::part(tab) {
     min-height: var(--texture-tab-height);
   }
 
@@ -168,9 +176,29 @@ export const panelStyles = css`
     --jolly-control-height: var(--texture-tab-height);
   }
 
-  .texture-tabs::part(list) {
+  .texture-tabs:not([variant="line"])::part(list) {
     overflow-x: auto;
     scrollbar-width: thin;
+  }
+
+  .line-tabs-toggle.rail-btn {
+    position: absolute;
+    top: 0;
+    width: 24px;
+    height: var(--texture-tab-height);
+  }
+
+  .line-tabs-toggle .icon {
+    width: 15px;
+    height: 15px;
+  }
+
+  .line-tabs-toggle[aria-pressed="true"] {
+    color: var(--color-accent);
+  }
+
+  .rail:has(> .line-tabs-toggle) {
+    padding-top: calc(var(--texture-tab-height) + 8px);
   }
 
   .top-row {

@@ -24,18 +24,16 @@ test("a single blockset keeps its tab, and the add button creates a new one", as
   const { texture } = map;
   const blockset = texture.blocksetTab(/^blockset/);
   await expect(blockset).toHaveAttribute("aria-selected", "true");
-  await expect(blockset.locator("[part~=badge]")).toHaveText("32");
   await expect(page.locator("blockset-folder")).toHaveCount(0);
 
   await texture.addBlankBlockset("stone");
 
   const stone = texture.blocksetTab(/^stone/);
   await expect(stone).toHaveAttribute("aria-selected", "true");
-  await expect(stone.locator("[part~=badge]")).toHaveText("0");
   await expect.poll(async() => (await blocksetSources(map)).length).toBe(2);
 });
 
-test("the tab edit button renames the blockset asset", async({ map, target }) => {
+test("double clicking a tab renames the blockset asset", async({ map, target }) => {
   const { texture } = map;
   const editor = await texture.editBlockset("blockset");
   const name = textField(editor, "Name");

@@ -1,11 +1,8 @@
 // Import Third-party Dependencies
-import {
-  MemoryStorageAdapter,
-  type StorageAdapter
-} from "@jolly-pixel/ui";
+import type { StorageAdapter } from "@jolly-pixel/ui";
 
-// CONSTANTS
-const kStorageKey = "voxel-map:uv-sync";
+// Import Internal Dependencies
+import { StoredChoice } from "./StoredChoice.ts";
 
 export const UV_SYNC_MODES = Object.freeze([
   "live",
@@ -14,31 +11,15 @@ export const UV_SYNC_MODES = Object.freeze([
 
 export type UvSyncMode = typeof UV_SYNC_MODES[number];
 
-export class UvSyncStore {
-  static parse(
-    raw: string | null
-  ): UvSyncMode {
-    return UV_SYNC_MODES.find((mode) => mode === raw) ?? "commit";
-  }
-
-  #storage: StorageAdapter;
-  #mode: UvSyncMode;
-
+export class UvSyncStore extends StoredChoice<UvSyncMode> {
   constructor(
-    storage: StorageAdapter = new MemoryStorageAdapter()
+    storage?: StorageAdapter
   ) {
-    this.#storage = storage;
-    this.#mode = UvSyncStore.parse(storage.get(kStorageKey));
-  }
-
-  get mode(): UvSyncMode {
-    return this.#mode;
-  }
-
-  set mode(
-    mode: UvSyncMode
-  ) {
-    this.#mode = mode;
-    this.#storage.set(kStorageKey, mode);
+    super({
+      key: "voxel-map:uv-sync",
+      values: UV_SYNC_MODES,
+      fallback: "commit",
+      storage
+    });
   }
 }

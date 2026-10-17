@@ -22,12 +22,6 @@ export interface PixelDrawTextureOptions extends PixelArtCanvasOptions {
    */
   tooltip?: string;
   /**
-   * Short chip rendered after the tab label, such as a usage count.
-   * The panel gives it no meaning.
-   * @default ""
-   */
-  badge?: string;
-  /**
    * A disabled texture keeps its tab but can never become the active one.
    * Its edit button stays usable.
    * @default false
@@ -50,10 +44,6 @@ export interface TextureUpdate {
    */
   tooltip?: string;
   /**
-   * New tab badge, an empty string removes it. Left unchanged when omitted.
-   */
-  badge?: string;
-  /**
    * New access, applied to the canvas at once. Left unchanged when omitted.
    */
   access?: PixelArtAccess;
@@ -63,7 +53,6 @@ export interface TextureEntryInit {
   id: string;
   name: string;
   tooltip: string;
-  badge: string;
   disabled: boolean;
   access: PixelArtAccess;
   host: HTMLDivElement;
@@ -77,7 +66,6 @@ export class TextureEntry {
   readonly canvas: PixelArtCanvas;
   name: string;
   tooltip: string;
-  badge: string;
   access: PixelArtAccess;
 
   constructor(
@@ -86,7 +74,6 @@ export class TextureEntry {
     this.id = init.id;
     this.name = init.name;
     this.tooltip = init.tooltip;
-    this.badge = init.badge;
     this.disabled = init.disabled;
     this.access = init.access;
     this.host = init.host;
@@ -98,7 +85,6 @@ export class TextureEntry {
   ): void {
     this.name = changes.name ?? this.name;
     this.tooltip = changes.tooltip ?? this.tooltip;
-    this.badge = changes.badge ?? this.badge;
     this.access = changes.access ?? this.access;
   }
 
