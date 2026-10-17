@@ -1,5 +1,18 @@
 # @jolly-pixel/controls
 
+## 4.0.0
+
+### Major Changes
+
+- [#849](https://github.com/JollyPixel/editor/pull/849) [`5f66fe9`](https://github.com/JollyPixel/editor/commit/5f66fe99d7d1b7cb1df7c1383f2fa60ba6acf6cd) Thanks [@fraxken](https://github.com/fraxken)! - Breaking: `publishFrameState()` is replaced by `publish(reader)` on `Input` and every device, with `InputReader` `"step"` or `"frame"`; `sample()` reads input without publishing, and `update()` is `sample()` then `publish("step")`.
+  Each reader sees every edge once, so a fixed-step host samples once per frame and a frame without a step no longer drops edges.
+
+### Minor Changes
+
+- [#984](https://github.com/JollyPixel/editor/pull/984) [`51c9b58`](https://github.com/JollyPixel/editor/commit/51c9b58a6d5d6f279413d82be26c9d92609905c9) Thanks [@fraxken](https://github.com/fraxken)! - `Mouse.scrollSource` tells wheel notches, two-finger touchpad swipes and zooms (pinch or Ctrl+wheel) apart; `scrollDevice` overrides the detection.
+  `OrbitFlyCamera` looks around on a two-finger swipe and with I/J/K/L (`touchpadLookSensitivity`, `keyLookSpeed`); a pinch does what the wheel does.
+  `OrbitFlyCamera` eases in and out of movement (`accelerationTime`, `brakingTime`); `responsiveness` now only damps the pivot and trail.
+
 ## 3.0.0
 
 ### Major Changes

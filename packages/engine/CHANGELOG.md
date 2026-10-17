@@ -1,5 +1,44 @@
 # @jolly-pixel/engine
 
+## 7.1.0
+
+### Minor Changes
+
+- [#1015](https://github.com/JollyPixel/editor/pull/1015) [`02b3191`](https://github.com/JollyPixel/editor/commit/02b3191adf3f5b2dbc5df5e8768d5434ae3b0351) Thanks [@fraxken](https://github.com/fraxken)! - `ThreeRenderer` compiles every render pipeline asynchronously and adds `pendingCompiles`, `compiled()` and a `compiled` event; `Renderer` gains `compiled()`.
+  `Runtime` requests a frame when compiles settle and adds `compiledFrame()`.
+
+- [#1015](https://github.com/JollyPixel/editor/pull/1015) [`48dd303`](https://github.com/JollyPixel/editor/commit/48dd3038b36246492b62bdd6e71137dd1d3d9c3e) Thanks [@fraxken](https://github.com/fraxken)! - `Logger.step()` records a `performance.measure()` named `<namespace>:<name>` when the step resolves, whatever the log level and namespaces.
+
+- [#951](https://github.com/JollyPixel/editor/pull/951) [`86af3d5`](https://github.com/JollyPixel/editor/commit/86af3d5b5e2fcc0ca9db56460add568776bde5eb) Thanks [@fraxken](https://github.com/fraxken)! - KTX2 textures: `TextureAssetLoader` and `createDefaultAssetLoaders` take a `ktx2` loader for `.ktx2` sources, and `Runtime` builds one from `assets.ktx2.transcoderPath`.
+  The `texture` asset kind claims `.ktx2`, served as `image/ktx2`; `loadBlocksets` accepts a `KTX2Loader`, and `AtlasTexture` includes `THREE.CompressedTexture`.
+
+- [#849](https://github.com/JollyPixel/editor/pull/849) [`5f66fe9`](https://github.com/JollyPixel/editor/commit/5f66fe99d7d1b7cb1df7c1383f2fa60ba6acf6cd) Thanks [@fraxken](https://github.com/fraxken)! - Time scale support: `FrameSchedule.unscaledDelta`, `GameLoop.step()` for frame-by-frame debugging, and a step budget that grows with `timeScale` above 1.
+  Add `world.time` (game, wall-clock and fixed-step time); `Camera3DControls` and `OrbitFlyCamera` move in wall-clock time, so they work in slow motion and while paused.
+  `World.tick` samples input once per frame and publishes it to each fixed step and to the rendered frame, so a press on a frame without a step reaches the next one.
+
+- [#917](https://github.com/JollyPixel/editor/pull/917) [`deaf77f`](https://github.com/JollyPixel/editor/commit/deaf77f2cdd8ecd8e24602c0014efd17672617c0) Thanks [@fraxken](https://github.com/fraxken)! - `ThreeRenderer` emits `deviceLost`, and the runtime logs it as an error. The model loader decodes Meshopt-compressed glTF, and `Transform` no longer allocates on each call.
+  `VoxelView.meshVersion` counts chunk mesh changes, so a host can keep a static shadow map.
+
+- [#984](https://github.com/JollyPixel/editor/pull/984) [`51c9b58`](https://github.com/JollyPixel/editor/commit/51c9b58a6d5d6f279413d82be26c9d92609905c9) Thanks [@fraxken](https://github.com/fraxken)! - `Mouse.scrollSource` tells wheel notches, two-finger touchpad swipes and zooms (pinch or Ctrl+wheel) apart; `scrollDevice` overrides the detection.
+  `OrbitFlyCamera` looks around on a two-finger swipe and with I/J/K/L (`touchpadLookSensitivity`, `keyLookSpeed`); a pinch does what the wheel does.
+  `OrbitFlyCamera` eases in and out of movement (`accelerationTime`, `brakingTime`); `responsiveness` now only damps the pivot and trail.
+
+### Patch Changes
+
+- [#1018](https://github.com/JollyPixel/editor/pull/1018) [`c9726dc`](https://github.com/JollyPixel/editor/commit/c9726dc516927b5d119e066e7dfa0a1bca536eaf) Thanks [@fraxken](https://github.com/fraxken)! - The model asset loader and `Runtime` import the three.js model loaders, meshopt decoder and `KTX2Loader` on first use; `BakedRoomEnvironment.load()` starts its request one microtask after the call.
+  `AssetCatalog`, `AssetRecord` and `AssetReference` validate with `zod/mini`, so a malformed shape throws `$ZodError` instead of the classic `ZodError`.
+
+- [#1014](https://github.com/JollyPixel/editor/pull/1014) [`e5178c2`](https://github.com/JollyPixel/editor/commit/e5178c28b3650f6edddc97208f0f31168f628768) Thanks [@fraxken](https://github.com/fraxken)! - `GlobalAudio` creates its `AudioListener`, and the browser `AudioContext` behind it, on first use instead of in the constructor, so a world that plays no sound opens no audio context.
+
+- [#875](https://github.com/JollyPixel/editor/pull/875) [`98cbd2b`](https://github.com/JollyPixel/editor/commit/98cbd2b36acf3752a62d18a2bb5b6c8a505cc311) Thanks [@fraxken](https://github.com/fraxken)! - Declare `sideEffects: false` so bundlers drop three.js and reflect-metadata when only `Systems.Logger` is imported.
+  `ThreeRenderer` skips zero and unchanged sizes, so a canvas hidden then shown at the same size keeps its frame buffers.
+
+- [#908](https://github.com/JollyPixel/editor/pull/908) [`0436e3c`](https://github.com/JollyPixel/editor/commit/0436e3c645a2d717b90bb407ce41eb412beb4943) Thanks [@fraxken](https://github.com/fraxken)! - Add `renderDelta`/`unscaledRenderDelta` so `update` and `world.time` include frames skipped by `maxFps`; renders land on the nearest frame so a cap at the display rate no longer drops frames.
+- Updated dependencies [[`5f66fe9`](https://github.com/JollyPixel/editor/commit/5f66fe99d7d1b7cb1df7c1383f2fa60ba6acf6cd), [`c9726dc`](https://github.com/JollyPixel/editor/commit/c9726dc516927b5d119e066e7dfa0a1bca536eaf), [`837a08f`](https://github.com/JollyPixel/editor/commit/837a08fc80a0b41a1f2c0549fff8f6423db9066b), [`f949b80`](https://github.com/JollyPixel/editor/commit/f949b807ba586adee8b88f476261334eef8a703a), [`5f66fe9`](https://github.com/JollyPixel/editor/commit/5f66fe99d7d1b7cb1df7c1383f2fa60ba6acf6cd), [`0436e3c`](https://github.com/JollyPixel/editor/commit/0436e3c645a2d717b90bb407ce41eb412beb4943), [`02ab0a3`](https://github.com/JollyPixel/editor/commit/02ab0a3a9eeef46f26b5d45846c057249729b3c3), [`6b9daee`](https://github.com/JollyPixel/editor/commit/6b9daee5304c6bf06fd77086633e682d35640afc), [`51c9b58`](https://github.com/JollyPixel/editor/commit/51c9b58a6d5d6f279413d82be26c9d92609905c9)]:
+  - @jolly-pixel/controls@4.0.0
+  - @jolly-pixel/asset@3.1.0
+  - @jolly-pixel/loop@2.0.0
+
 ## 7.0.0
 
 ### Major Changes
