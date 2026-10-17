@@ -23,7 +23,7 @@ import {
   type ClientSocket,
   type Room
 } from "#src/index.ts";
-import { WebsocketTransport } from "#src/transport/websocket.ts";
+import { WebsocketTransport } from "#src/transport/websocket/WebsocketTransport.ts";
 import { RecordingExtension } from "../helpers/server/RecordingExtension.ts";
 import { waitFor } from "../helpers/waitFor.ts";
 import {

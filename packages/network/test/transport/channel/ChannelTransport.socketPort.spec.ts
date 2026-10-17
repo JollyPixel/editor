@@ -11,16 +11,14 @@ import {
   Client,
   type ClientSocketEvent
 } from "#src/index.ts";
-import {
-  ChannelTransportHost,
-  CHANNEL_TRANSPORT_TAG
-} from "#src/transport/channel.ts";
-import { LoopbackTransport } from "#src/transport/loopback.ts";
+import { ChannelTransportHost } from "#src/transport/channel/ChannelTransportHost.ts";
+import { CHANNEL_TRANSPORT_TAG } from "#src/transport/channel/ChannelMessage.ts";
+import { LoopbackTransport } from "#src/transport/loopback/LoopbackTransport.ts";
 import {
   createSocketRelay,
   recordingPort
-} from "../helpers/transport/channelRelay.ts";
-import { waitFor } from "../helpers/waitFor.ts";
+} from "../../helpers/transport/channelRelay.ts";
+import { waitFor } from "../../helpers/waitFor.ts";
 
 describe("ChannelTransport + ChannelTransportHost with a port per socket", () => {
   test("relays a session while only the connect travels on the shared port", async() => {

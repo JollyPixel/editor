@@ -9,22 +9,20 @@ import assert from "node:assert/strict";
 import {
   Server,
   Client,
-  readCredential,
   type ClientSocketEvent
 } from "#src/index.ts";
+import { ChannelTransport } from "#src/transport/channel/ChannelTransport.ts";
+import { ChannelTransportHost } from "#src/transport/channel/ChannelTransportHost.ts";
 import {
-  ChannelTransport,
-  ChannelTransportHost,
   CHANNEL_TRANSPORT_TAG,
-  isChannelTransportMessage
-} from "#src/transport/channel.ts";
-import { parseChannelTransportMessage } from "#src/transport/channel/protocol.ts";
-import { LoopbackTransport } from "#src/transport/loopback.ts";
+  parseChannelMessage
+} from "#src/transport/channel/ChannelMessage.ts";
+import { LoopbackTransport } from "#src/transport/loopback/LoopbackTransport.ts";
 import {
   createRelay,
   recordingPort
-} from "../helpers/transport/channelRelay.ts";
-import { waitFor } from "../helpers/waitFor.ts";
+} from "../../helpers/transport/channelRelay.ts";
+import { waitFor } from "../../helpers/waitFor.ts";
 
 describe("ChannelTransport + ChannelTransportHost", () => {
   test("relays a client session across a message port", async() => {
@@ -78,7 +76,7 @@ describe("ChannelTransport + ChannelTransportHost", () => {
     const server = new Server({
       auth: {
         authenticate: (attempt) => {
-          received.push(readCredential(attempt));
+          received.push(attempt.credential ?? null);
 
           return {
             subject: attempt.clientId,
@@ -178,38 +176,43 @@ describe("ChannelTransport + ChannelTransportHost", () => {
   });
 
   test("tagged messages with a malformed shape are rejected", () => {
+    function accepts(
+      value: unknown
+    ): boolean {
+      return parseChannelMessage(value) !== undefined;
+    }
     const address = {
       tag: CHANNEL_TRANSPORT_TAG,
       host: "host-a",
       socket: "s1"
     };
 
-    assert.strictEqual(isChannelTransportMessage({ ...address, type: "connect", dedicated: false }), true);
-    assert.strictEqual(isChannelTransportMessage({ ...address, type: "connect" }), false);
-    assert.strictEqual(isChannelTransportMessage({ ...address, type: "send", data: "x" }), true);
+    assert.strictEqual(accepts({ ...address, type: "connect", dedicated: false }), true);
+    assert.strictEqual(accepts({ ...address, type: "connect" }), false);
+    assert.strictEqual(accepts({ ...address, type: "send", data: "x" }), true);
     assert.strictEqual(
-      isChannelTransportMessage({ ...address, type: "event", event: "close", data: { code: 1000 } }),
+      accepts({ ...address, type: "event", event: "close", data: { code: 1000 } }),
       true
     );
 
-    assert.strictEqual(isChannelTransportMessage({ tag: CHANNEL_TRANSPORT_TAG, type: "connect" }), false);
-    assert.strictEqual(isChannelTransportMessage({ ...address, host: 1, type: "connect" }), false);
-    assert.strictEqual(isChannelTransportMessage({ ...address, type: "unknown" }), false);
-    assert.strictEqual(isChannelTransportMessage({ ...address, type: "send" }), false);
-    assert.strictEqual(isChannelTransportMessage({ ...address, type: "send", data: {} }), false);
+    assert.strictEqual(accepts({ tag: CHANNEL_TRANSPORT_TAG, type: "connect" }), false);
+    assert.strictEqual(accepts({ ...address, host: 1, type: "connect" }), false);
+    assert.strictEqual(accepts({ ...address, type: "unknown" }), false);
+    assert.strictEqual(accepts({ ...address, type: "send" }), false);
+    assert.strictEqual(accepts({ ...address, type: "send", data: {} }), false);
     assert.strictEqual(
-      isChannelTransportMessage({ ...address, type: "event", event: "unknown", data: {} }),
+      accepts({ ...address, type: "event", event: "unknown", data: {} }),
       false
     );
-    assert.strictEqual(isChannelTransportMessage({ ...address, type: "event", event: "close" }), false);
+    assert.strictEqual(accepts({ ...address, type: "event", event: "close" }), false);
     assert.strictEqual(
-      isChannelTransportMessage({ ...address, type: "event", event: "close", data: { code: "1000" } }),
+      accepts({ ...address, type: "event", event: "close", data: { code: "1000" } }),
       false
     );
   });
 
   test("parsing keeps only the fields of the message shape", () => {
-    const message = parseChannelTransportMessage({
+    const message = parseChannelMessage({
       tag: CHANNEL_TRANSPORT_TAG,
       host: "host-a",
       socket: "s1",
@@ -227,7 +230,7 @@ describe("ChannelTransport + ChannelTransportHost", () => {
       event: "message",
       data: { data: "payload" }
     });
-    assert.strictEqual(parseChannelTransportMessage({ type: "connect" }), undefined);
+    assert.strictEqual(parseChannelMessage({ type: "connect" }), undefined);
   });
 
   test("a socket ignores events once it is closed", async() => {
@@ -237,7 +240,9 @@ describe("ChannelTransport + ChannelTransportHost", () => {
     const events: string[] = [];
     socket.addEventListener("message", () => events.push("message"));
     socket.addEventListener("close", () => events.push("close"));
-    const [connect] = port.posted.filter(isChannelTransportMessage);
+    const connect = parseChannelMessage(port.posted[0]);
+    assert.ok(connect !== undefined);
+    const socketId = connect.socket;
     function event(
       type: string
     ) {
@@ -245,7 +250,7 @@ describe("ChannelTransport + ChannelTransportHost", () => {
         tag: CHANNEL_TRANSPORT_TAG,
         type: "event",
         host: "host-a",
-        socket: connect.socket,
+        socket: socketId,
         event: type,
         data: {}
       };
@@ -258,7 +263,7 @@ describe("ChannelTransport + ChannelTransportHost", () => {
 
     assert.deepEqual(events, ["message", "close"]);
     assert.deepEqual(
-      port.posted.filter(isChannelTransportMessage).map((message) => message.type),
+      port.posted.map((message) => parseChannelMessage(message)?.type),
       ["connect", "close"]
     );
   });

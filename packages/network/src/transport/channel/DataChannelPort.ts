@@ -1,5 +1,8 @@
 // Import Internal Dependencies
-import type { ChannelPort } from "./protocol.ts";
+import type {
+  ChannelPort,
+  ChannelPortListener
+} from "./ChannelPort.ts";
 
 // CONSTANTS
 const kMoreFrame = "+";
@@ -8,8 +11,6 @@ const kDefaultFrameLength = 8_192;
 const kDefaultHighWaterMark = 1024 * 1024;
 const kDefaultMaxMessageLength = 16 * 1024 * 1024;
 const kMinFrameLength = 2;
-
-type PortListener = (event: { data: unknown; }) => void;
 
 export type DataChannelState =
   | "connecting"
@@ -64,7 +65,7 @@ export class DataChannelPort implements ChannelPort {
   readonly #frameLength: number;
   readonly #highWaterMark: number;
   readonly #maxMessageLength: number;
-  readonly #listeners = new Set<PortListener>();
+  readonly #listeners = new Set<ChannelPortListener>();
   readonly #pending: unknown[] = [];
   #outgoing: string[] = [];
   #incoming: string[] = [];
@@ -129,14 +130,14 @@ export class DataChannelPort implements ChannelPort {
 
   addEventListener(
     _type: "message",
-    listener: PortListener
+    listener: ChannelPortListener
   ): void {
     this.#listeners.add(listener);
   }
 
   removeEventListener(
     _type: "message",
-    listener: PortListener
+    listener: ChannelPortListener
   ): void {
     this.#listeners.delete(listener);
   }

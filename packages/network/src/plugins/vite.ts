@@ -7,8 +7,8 @@ import {
   WebsocketTransport,
   type WebsocketCompressionOptions,
   type WebsocketTransportOptions
-} from "../transport/websocket.ts";
-import { DEFAULT_WEBSOCKET_PATH } from "../transport/constants.ts";
+} from "../transport/websocket/WebsocketTransport.ts";
+import { DEFAULT_WEBSOCKET_PATH } from "../transport/websocket/constants.ts";
 import type { Extension } from "../server/extension/Extension.ts";
 import type { RightsMap } from "../server/rights/RightsTable.ts";
 import type { AuthenticationProvider } from "../server/auth/AuthenticationProvider.ts";

@@ -26,7 +26,7 @@ import {
   type WorkerToMainMessage
 } from "./protocol.ts";
 import type { MessageProtocols } from "../../../protocol/message/MessageProtocol.ts";
-import type { ClientHandle } from "../../../transport/ClientHandle.ts";
+import type { ClientHandle } from "../ClientHandle.ts";
 
 // CONSTANTS
 const kDefaultRpcTimeoutMs = 10_000;

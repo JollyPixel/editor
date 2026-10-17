@@ -5,7 +5,7 @@ import { setImmediate } from "node:timers";
 import type {
   DataChannelLike,
   DataChannelState
-} from "#src/transport/channel.ts";
+} from "#src/transport/channel/DataChannelPort.ts";
 
 // CONSTANTS
 const kEncoder = new TextEncoder();

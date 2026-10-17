@@ -1,9 +1,10 @@
 // Import Internal Dependencies
 import { createIdentity } from "./identity.ts";
+import { createConnection } from "./clientConnection.ts";
 import {
   Server,
   Extension,
-  type ClientHandle,
+  type ClientConnection,
   type ServerConnection,
   type MessageProtocols,
   type RoomResolution
@@ -42,8 +43,8 @@ export class AssetExtension extends Extension {
 
 export function client(
   id: string
-): ClientHandle {
-  return { id, send: () => void 0 };
+): ClientConnection {
+  return createConnection(id);
 }
 
 export interface Harness {

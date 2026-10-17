@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { createIdentity } from "../helpers/server/identity.ts";
-import { createClient } from "../helpers/server/clientHandle.ts";
+import { createClient } from "../helpers/server/clientConnection.ts";
 import { RecordingExtension } from "../helpers/server/RecordingExtension.ts";
 import {
   Server,

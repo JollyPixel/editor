@@ -11,7 +11,7 @@ import {
   createClient,
   toServerEnvelope,
   withoutSync
-} from "../helpers/server/clientHandle.ts";
+} from "../helpers/server/clientConnection.ts";
 import { RecordingExtension } from "../helpers/server/RecordingExtension.ts";
 import {
   Server,

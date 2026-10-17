@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { createIdentity } from "../helpers/server/identity.ts";
-import { createClient } from "../helpers/server/clientHandle.ts";
+import { createClient } from "../helpers/server/clientConnection.ts";
 import { EnvelopeDispatcher } from "#src/server/EnvelopeDispatcher.ts";
 import { ClientSessions } from "#src/server/ClientSessions.ts";
 import { RoomRegistry } from "#src/server/room/RoomRegistry.ts";

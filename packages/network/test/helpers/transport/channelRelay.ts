@@ -1,11 +1,9 @@
 // Import Internal Dependencies
 import { Server } from "#src/index.ts";
-import {
-  ChannelTransport,
-  ChannelTransportHost,
-  type ChannelPort
-} from "#src/transport/channel.ts";
-import { LoopbackTransport } from "#src/transport/loopback.ts";
+import { ChannelTransport } from "#src/transport/channel/ChannelTransport.ts";
+import { ChannelTransportHost } from "#src/transport/channel/ChannelTransportHost.ts";
+import type { ChannelPort } from "#src/transport/channel/ChannelPort.ts";
+import { LoopbackTransport } from "#src/transport/loopback/LoopbackTransport.ts";
 import { RecordingExtension } from "../server/RecordingExtension.ts";
 
 export function createRelay(

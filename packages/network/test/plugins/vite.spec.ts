@@ -13,7 +13,7 @@ import {
   connectWebSocket
 } from "#src/index.ts";
 import { createWebSocketNetworkPlugin } from "#src/plugins/vite.ts";
-import { DEFAULT_WEBSOCKET_PATH } from "#src/transport/constants.ts";
+import { DEFAULT_WEBSOCKET_PATH } from "#src/transport/websocket/constants.ts";
 import { RecordingExtension } from "../helpers/server/RecordingExtension.ts";
 import { waitFor } from "../helpers/waitFor.ts";
 

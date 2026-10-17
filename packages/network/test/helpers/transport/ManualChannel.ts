@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { ChannelPort } from "#src/transport/channel.ts";
+import type { ChannelPort } from "#src/transport/channel/ChannelPort.ts";
 
 type PortListener = (event: { data: unknown; }) => void;
 

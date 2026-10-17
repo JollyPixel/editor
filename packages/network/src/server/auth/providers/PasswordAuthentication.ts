@@ -2,7 +2,6 @@
 import { Mutex } from "@openally/mutex";
 
 // Import Internal Dependencies
-import { readCredential } from "../credentials.ts";
 import {
   hashPassword,
   verifyPassword,
@@ -69,15 +68,8 @@ export class PasswordAuthentication implements AuthenticationProvider {
   async authenticate(
     request: AuthenticationRequest
   ): Promise<PeerIdentity | null> {
-    let credential: string | null;
-    try {
-      credential = readCredential(request);
-    }
-    catch {
-      return null;
-    }
-
-    if (credential === null) {
+    const { credential } = request;
+    if (credential === undefined) {
       if (this.#mandatory) {
         return null;
       }

@@ -13,6 +13,7 @@ import {
   commandVariant,
   serverMessageProtocol,
   withCommandHeader,
+  type ClientConnection,
   type ClientHandle,
   type Logger,
   type MessageProtocols,
@@ -149,7 +150,7 @@ export const GATED_RIGHTS: RightsMap = {
   }
 };
 
-export class SinkHandle implements ClientHandle {
+export class SinkHandle implements ClientConnection {
   readonly id: string;
   bytes = 0;
   messages = 0;
@@ -160,17 +161,15 @@ export class SinkHandle implements ClientHandle {
     this.id = id;
   }
 
-  send(
-    data: unknown
-  ): void {
-    this.sendSerialized(JSON.stringify(data));
-  }
-
   sendSerialized(
     json: string
   ): void {
     this.bytes += json.length;
     this.messages++;
+  }
+
+  close(): void {
+    return;
   }
 }
 

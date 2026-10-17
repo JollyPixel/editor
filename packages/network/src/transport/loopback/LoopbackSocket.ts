@@ -1,37 +1,31 @@
+// Import Third-party Dependencies
+import { Emitter } from "@openally/emitt";
+
 // Import Internal Dependencies
-import type {
-  Server,
-  ServerConnection
-} from "../server/Server.ts";
+import type { Server } from "../../server/Server.ts";
+import type { ServerConnection } from "../../server/connection/ServerConnection.ts";
+import {
+  UNAUTHORIZED_CLOSE_CODE,
+  UNAUTHORIZED_CLOSE_REASON
+} from "../../protocol/constants.ts";
 import type {
   ClientSocket,
   ClientSocketEvent,
   ClientSocketEventType,
-  SocketConnectOptions
-} from "./ClientSocket.ts";
-import {
-  UNAUTHORIZED_CLOSE_CODE,
-  UNAUTHORIZED_CLOSE_REASON
-} from "./constants.ts";
+  ClientSocketListener
+} from "../ClientSocket.ts";
+import { NORMAL_CLOSE_CODE } from "../constants.ts";
 
 // CONSTANTS
 const kLoopbackUrl = "loopback:";
-const kNormalCloseCode = 1000;
 
-type SocketListener = (event: ClientSocketEvent) => void;
-
-export interface LoopbackTransportOptions {
-  server: Server;
-}
-
-class LoopbackSocket implements ClientSocket {
+export class LoopbackSocket implements ClientSocket {
   readonly id = crypto.randomUUID();
 
   readonly #server: Server;
   readonly #credential: string | undefined;
-  readonly #listeners = new Map<
-    ClientSocketEventType,
-    SocketListener[]
+  readonly #events = new Emitter<
+    Record<ClientSocketEventType, ClientSocketListener>
   >();
   #connection: ServerConnection | null = null;
   #closed = false;
@@ -56,22 +50,16 @@ class LoopbackSocket implements ClientSocket {
 
   close(): void {
     this.#terminate({
-      code: kNormalCloseCode,
+      code: NORMAL_CLOSE_CODE,
       reason: ""
     });
   }
 
   addEventListener(
     type: ClientSocketEventType,
-    listener: SocketListener
+    listener: ClientSocketListener
   ): void {
-    const registered = this.#listeners.get(type) ?? [];
-    registered.push(listener);
-
-    this.#listeners.set(
-      type,
-      registered
-    );
+    this.#events.on(type, listener);
   }
 
   async #open(): Promise<void> {
@@ -96,7 +84,6 @@ class LoopbackSocket implements ClientSocket {
     this.#connection = this.#server.connect(
       {
         id: this.id,
-        send: (data) => this.#deliver(JSON.stringify(data)),
         sendSerialized: (json) => this.#deliver(json),
         close: (code, reason) => this.#terminate({
           code,
@@ -105,7 +92,7 @@ class LoopbackSocket implements ClientSocket {
       },
       identity
     );
-    this.#emit("open");
+    this.#events.emit("open", {});
   }
 
   #deliver(
@@ -113,7 +100,7 @@ class LoopbackSocket implements ClientSocket {
   ): void {
     queueMicrotask(() => {
       if (!this.#closed) {
-        this.#emit("message", { data: json });
+        this.#events.emit("message", { data: json });
       }
     });
   }
@@ -129,33 +116,7 @@ class LoopbackSocket implements ClientSocket {
     void this.#connection?.close();
 
     queueMicrotask(
-      () => this.#emit("close", event)
+      () => this.#events.emit("close", event)
     );
-  }
-
-  #emit(
-    type: ClientSocketEventType,
-    event: ClientSocketEvent = {}
-  ): void {
-    const registered = this.#listeners.get(type) ?? [];
-    for (const listener of registered) {
-      listener(event);
-    }
-  }
-}
-
-export class LoopbackTransport {
-  #server: Server;
-
-  constructor(
-    options: LoopbackTransportOptions
-  ) {
-    this.#server = options.server;
-  }
-
-  connect(
-    options: SocketConnectOptions = {}
-  ): ClientSocket {
-    return new LoopbackSocket(this.#server, options.credential);
   }
 }

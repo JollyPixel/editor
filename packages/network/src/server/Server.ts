@@ -29,20 +29,13 @@ import {
   EnvelopeDispatcher,
   type DispatchOutcome
 } from "./EnvelopeDispatcher.ts";
-import type { ClientHandle } from "../transport/ClientHandle.ts";
+import type { ClientConnection } from "./connection/ClientConnection.ts";
+import type { ServerConnection } from "./connection/ServerConnection.ts";
 import type { PeerMetadata } from "../protocol/types.ts";
 import {
   REAUTHENTICATE_CLOSE_CODE,
   REAUTHENTICATE_CLOSE_REASON
-} from "../transport/constants.ts";
-
-export interface ServerConnection {
-  readonly id: string;
-  receive(
-    raw: unknown
-  ): Promise<void>;
-  close(): Promise<void>;
-}
+} from "../protocol/constants.ts";
 
 export interface ServerOptions {
   logger?: Logger;
@@ -126,7 +119,7 @@ export class Server {
   ): void {
     for (const handle of this.#sessions.revoke(subject)) {
       void this.#sessions.drain(handle.id).then(
-        () => handle.close?.(
+        () => handle.close(
           REAUTHENTICATE_CLOSE_CODE,
           REAUTHENTICATE_CLOSE_REASON
         )
@@ -188,11 +181,11 @@ export class Server {
   }
 
   connect(
-    client: ClientHandle,
+    connection: ClientConnection,
     identity: PeerIdentity
   ): ServerConnection {
-    const clientId = client.id;
-    this.#sessions.open(client, identity);
+    const clientId = connection.id;
+    this.#sessions.open(connection, identity);
     this.logger
       .withMetadata({
         clientId,

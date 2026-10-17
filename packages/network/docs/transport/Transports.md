@@ -21,6 +21,8 @@ Default URL uses the page host and `/ws-sync`; supply it explicitly in Node.
 `WebsocketTransport`
 from `/node` takes `{ httpServer, server, path, ...options }`.
 Options control hosts, origins, payload limits, heartbeat, and compression.
+It decodes the credential offered by `connectWebSocket` into
+`request.credential`.
 
 Messages sent to one socket during an event loop turn leave in a single write
 once the turn ends, so a broadcast costs one write per recipient rather than
@@ -48,7 +50,8 @@ applies, with `credential` set on the authentication attempt.
 over BroadcastChannel, MessagePort, or Worker. Share `host.id` before connecting.
 
 Optional `socketPort` isolates socket traffic. Close host and transport separately;
-shared ports remain caller-owned.
+shared ports remain caller-owned. Transport messages carry
+`tag: CHANNEL_TRANSPORT_TAG`, so other traffic can share the port.
 
 A `credential` given to `ChannelTransport` travels with each connection. The
 host passes it to `open({ credential })`, typed `SocketConnectOptions` like the

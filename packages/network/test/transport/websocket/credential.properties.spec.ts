@@ -19,33 +19,19 @@ import fc from "fast-check";
 import {
   Server,
   connectWebSocket,
-  readCredential,
-  InvalidCredentialError,
-  type AuthenticationRequest
+  UNAUTHORIZED_CLOSE_CODE
 } from "#src/index.ts";
-import { WebsocketTransport } from "#src/transport/websocket.ts";
+import { WebsocketTransport } from "#src/transport/websocket/WebsocketTransport.ts";
+import { parseCredential } from "#src/transport/websocket/credential.ts";
 import {
   DEFAULT_WEBSOCKET_PATH,
   WEBSOCKET_AUTH_PROTOCOL_PREFIX,
   WEBSOCKET_PROTOCOL
-} from "#src/transport/constants.ts";
+} from "#src/transport/websocket/constants.ts";
 
 // CONSTANTS
 const kHandshakeRuns = 25;
 const kContinuationByte = 0x80;
-
-function request(
-  header: string | string[] | undefined
-): AuthenticationRequest {
-  return {
-    clientId: "client-1",
-    url: DEFAULT_WEBSOCKET_PATH,
-    defaultRole: "default",
-    headers: {
-      "sec-websocket-protocol": header
-    }
-  };
-}
 
 function token(
   credential: string
@@ -69,7 +55,7 @@ const kInvalidUtf8 = fc.uint8Array({ maxLength: 12 }).map(
   (bytes) => Buffer.from([kContinuationByte, ...bytes]).toString("base64url")
 );
 
-describe("readCredential properties", () => {
+describe("parseCredential properties", () => {
   test("finds the credential among any offered protocols and spacing", () => {
     fc.assert(
       fc.property(
@@ -84,44 +70,44 @@ describe("readCredential properties", () => {
           const header = asArray ?
             offered.map((value) => `${spacing}${value}${spacing}`) :
             offered.join(`${spacing},${spacing}`);
+          const parsed = parseCredential(header);
 
-          assert.strictEqual(readCredential(request(header)), credential);
+          assert.ok(parsed.ok);
+          assert.strictEqual(parsed.val, credential);
         }
       )
     );
   });
 
-  test("is null when no credential protocol is offered", () => {
+  test("is undefined when no credential protocol is offered", () => {
     fc.assert(
       fc.property(
         fc.option(fc.array(kOtherProtocol, { maxLength: 4 }), { nil: undefined }),
         (others) => {
-          const header = others?.join(", ");
+          const parsed = parseCredential(others?.join(", "));
 
-          assert.strictEqual(readCredential(request(header)), null);
+          assert.ok(parsed.ok);
+          assert.strictEqual(parsed.val, undefined);
         }
       )
     );
   });
 
-  test("throws InvalidCredentialError for a token that is not base64url UTF-8", () => {
+  test("fails for a token that is not base64url UTF-8", () => {
     fc.assert(
       fc.property(
         fc.oneof(kOutOfAlphabet, kTruncatedQuantum, kInvalidUtf8),
         (encoded) => {
           const header = `${WEBSOCKET_PROTOCOL}, ${WEBSOCKET_AUTH_PROTOCOL_PREFIX}${encoded}`;
 
-          assert.throws(
-            () => readCredential(request(header)),
-            InvalidCredentialError
-          );
+          assert.strictEqual(parseCredential(header).ok, false);
         }
       )
     );
   });
 });
 
-describe("connectWebSocket credential handshake properties", () => {
+describe("WebsocketTransport credential handshake", () => {
   let httpServer: HttpServer;
   let url: string;
   const received: (string | null)[] = [];
@@ -143,7 +129,7 @@ describe("connectWebSocket credential handshake properties", () => {
       server: new Server({
         auth: {
           authenticate: (attempt) => {
-            received.push(readCredential(attempt));
+            received.push(attempt.credential ?? null);
 
             return null;
           }
@@ -172,5 +158,18 @@ describe("connectWebSocket credential handshake properties", () => {
       ),
       { numRuns: kHandshakeRuns }
     );
+  });
+
+  test("a malformed credential is refused before the provider runs", async() => {
+    received.length = 0;
+    const socket = new WebSocket(url, [
+      WEBSOCKET_PROTOCOL,
+      `${WEBSOCKET_AUTH_PROTOCOL_PREFIX}!!!!`
+    ]);
+    const closed = Promise.withResolvers<number>();
+    socket.addEventListener("close", (event) => closed.resolve(event.code));
+
+    assert.strictEqual(await closed.promise, UNAUTHORIZED_CLOSE_CODE);
+    assert.deepStrictEqual(received, []);
   });
 });

@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type {
+  ClientConnection,
   ClientHandle,
   RoomContext,
   RoomPeer
@@ -17,7 +18,7 @@ import { counterCommandProtocol } from "./protocols.ts";
 export const COUNTER_ROOM_ASSET_ID = "asset-1";
 export const COUNTER_COMMAND = "counter.command";
 
-export interface RecordingClient extends ClientHandle {
+export interface RecordingClient extends ClientConnection, ClientHandle {
   readonly received: unknown[];
 }
 
@@ -40,7 +41,9 @@ export function recordingClient(
   return {
     id,
     received,
-    send: (payload) => received.push(payload)
+    send: (payload) => received.push(payload),
+    sendSerialized: (json) => received.push(JSON.parse(json)),
+    close: () => void 0
   };
 }
 

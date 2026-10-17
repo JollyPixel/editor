@@ -1,19 +1,19 @@
+// Import Third-party Dependencies
+import { Emitter } from "@openally/emitt";
+
 // Import Internal Dependencies
 import type {
   ClientSocket,
   ClientSocketEvent,
-  ClientSocketEventType
+  ClientSocketEventType,
+  ClientSocketListener
 } from "../ClientSocket.ts";
+import { NORMAL_CLOSE_CODE } from "../constants.ts";
+import type { ChannelPort } from "./ChannelPort.ts";
 import {
   CHANNEL_TRANSPORT_TAG,
-  type ChannelPort,
-  type ChannelTransportMessage
-} from "./protocol.ts";
-
-// CONSTANTS
-const kNormalCloseCode = 1000;
-
-type SocketListener = (event: ClientSocketEvent) => void;
+  type ChannelMessage
+} from "./ChannelMessage.ts";
 
 export interface ChannelSocketOptions {
   id: string;
@@ -39,9 +39,8 @@ export class ChannelSocket implements ClientSocket {
   readonly #port: ChannelPort;
   readonly #host: string;
   readonly #onClose: (id: string) => void;
-  readonly #listeners = new Map<
-    ClientSocketEventType,
-    SocketListener[]
+  readonly #events = new Emitter<
+    Record<ClientSocketEventType, ClientSocketListener>
   >();
   #closed = false;
 
@@ -67,21 +66,15 @@ export class ChannelSocket implements ClientSocket {
 
   close(): void {
     this.terminate({
-      code: kNormalCloseCode
+      code: NORMAL_CLOSE_CODE
     });
   }
 
   addEventListener(
     type: ClientSocketEventType,
-    listener: SocketListener
+    listener: ClientSocketListener
   ): void {
-    const registered = this.#listeners.get(type) ?? [];
-    registered.push(listener);
-
-    this.#listeners.set(
-      type,
-      registered
-    );
+    this.#events.on(type, listener);
   }
 
   receive(
@@ -96,7 +89,7 @@ export class ChannelSocket implements ClientSocket {
       this.#closed = true;
       this.#onClose(this.id);
     }
-    this.#emit(type, event);
+    this.#events.emit(type, event);
   }
 
   terminate(
@@ -113,18 +106,8 @@ export class ChannelSocket implements ClientSocket {
     this.#onClose(this.id);
 
     queueMicrotask(
-      () => this.#emit("close", event)
+      () => this.#events.emit("close", event)
     );
-  }
-
-  #emit(
-    type: ClientSocketEventType,
-    event: ClientSocketEvent
-  ): void {
-    const registered = this.#listeners.get(type) ?? [];
-    for (const listener of registered) {
-      listener(event);
-    }
   }
 
   #post(
@@ -137,6 +120,6 @@ export class ChannelSocket implements ClientSocket {
       host: this.#host,
       socket: this.id,
       ...message
-    } satisfies ChannelTransportMessage);
+    } satisfies ChannelMessage);
   }
 }

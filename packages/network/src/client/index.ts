@@ -13,6 +13,6 @@ export * from "../protocol/index.ts";
 export * from "../sync/ConflictResolver.ts";
 export * from "../sync/types.ts";
 export * from "../transport/ClientSocket.ts";
-export * from "../transport/connectWebSocket.ts";
+export * from "../transport/websocket/connectWebSocket.ts";
 export * from "../transport/channel/ChannelTransport.ts";
 export * from "../transport/channel/DataChannelPort.ts";

@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { HandshakePolicy } from "#src/transport/HandshakePolicy.ts";
+import { HandshakePolicy } from "#src/transport/websocket/HandshakePolicy.ts";
 
 describe("HandshakePolicy — hosts", () => {
   test("accepts IP addresses, localhost and *.localhost by default", () => {

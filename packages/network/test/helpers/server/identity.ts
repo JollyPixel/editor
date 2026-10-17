@@ -1,9 +1,9 @@
 // Import Internal Dependencies
-import type { ClientHandle } from "#src/transport/ClientHandle.ts";
+import type { ClientHandle } from "#src/server/extension/ClientHandle.ts";
 import type { PeerIdentity } from "#src/server/auth/AuthenticationProvider.ts";
 
 export function createIdentity(
-  handle: ClientHandle | string,
+  handle: Pick<ClientHandle, "id"> | string,
   role = "default"
 ): PeerIdentity {
   return {

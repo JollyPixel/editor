@@ -78,10 +78,9 @@ export function guestUpgrade(
   return {
     clientId: "guest",
     url: "/ws-sync",
-    headers: {
-      "sec-websocket-protocol": guestProtocols(token).join(", ")
-    },
-    defaultRole: "spectator"
+    headers: {},
+    defaultRole: "spectator",
+    credential: token
   };
 }
 

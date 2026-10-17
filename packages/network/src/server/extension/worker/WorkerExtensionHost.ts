@@ -12,7 +12,7 @@ import type {
   Extension,
   RoomContext
 } from "../Extension.ts";
-import type { ClientHandle } from "../../../transport/ClientHandle.ts";
+import type { ClientHandle } from "../ClientHandle.ts";
 import type { PeerIdentity } from "../../auth/AuthenticationProvider.ts";
 import { createLogger } from "../../logger.ts";
 import {

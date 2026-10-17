@@ -24,9 +24,9 @@ optionally through a promise. Identity lasts for one connection.
 
 Client profile cannot assign identity or role; server profile fields override it.
 
-`readCredential(request)` returns `request.credential` when a loopback or
-channel transport set one, otherwise the credential offered in the WebSocket
-handshake, or `null`.
+`request.credential` is the credential the client offered, decoded by its
+transport, or `undefined`. A malformed WebSocket credential is refused with
+`4401` before any provider runs.
 
 ### BypassAuthentication
 

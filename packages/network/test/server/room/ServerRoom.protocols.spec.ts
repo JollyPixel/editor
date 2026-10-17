@@ -10,11 +10,12 @@ import { createIdentity } from "../../helpers/server/identity.ts";
 import {
   createClient,
   toServerEnvelope
-} from "../../helpers/server/clientHandle.ts";
+} from "../../helpers/server/clientConnection.ts";
 import {
   createExtension,
   createRoom
 } from "../../helpers/server/serverRoom.ts";
+import { ConnectedClient } from "#src/server/connection/ConnectedClient.ts";
 import {
   RightsTable,
   Server
@@ -136,11 +137,11 @@ describe("ServerRoom — outbound protocol", () => {
       }
     }));
     await room.join({
-      handle: {
+      handle: new ConnectedClient({
         id: "A",
-        send: (data) => serialized.push(JSON.stringify(data)),
-        sendSerialized: (json) => serialized.push(json)
-      },
+        sendSerialized: (json) => serialized.push(json),
+        close: () => void 0
+      }),
       identity: createIdentity("A", "allowed")
     });
     await room.join({ handle: blocked.client, identity: createIdentity("B", "blocked") });

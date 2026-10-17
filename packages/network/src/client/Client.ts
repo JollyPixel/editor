@@ -7,8 +7,8 @@ import {
   Envelope,
   type ClientEnvelope
 } from "../protocol/envelope/Envelope.ts";
-import { UNAUTHORIZED_CLOSE_CODE } from "../transport/constants.ts";
-import { connectWebSocket } from "../transport/connectWebSocket.ts";
+import { UNAUTHORIZED_CLOSE_CODE } from "../protocol/constants.ts";
+import { connectWebSocket } from "../transport/websocket/connectWebSocket.ts";
 import type {
   ClientSocket,
   ClientSocketEvent

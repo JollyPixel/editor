@@ -10,18 +10,16 @@ import {
   Server,
   Client
 } from "#src/index.ts";
-import {
-  ChannelTransport,
-  ChannelTransportHost,
-  DataChannelPort
-} from "#src/transport/channel.ts";
-import { LoopbackTransport } from "#src/transport/loopback.ts";
+import { ChannelTransport } from "#src/transport/channel/ChannelTransport.ts";
+import { ChannelTransportHost } from "#src/transport/channel/ChannelTransportHost.ts";
+import { DataChannelPort } from "#src/transport/channel/DataChannelPort.ts";
+import { LoopbackTransport } from "#src/transport/loopback/LoopbackTransport.ts";
 import {
   FakeDataChannel,
   fakeDataChannelPair
-} from "../helpers/transport/FakeDataChannel.ts";
-import { RecordingExtension } from "../helpers/server/RecordingExtension.ts";
-import { waitFor } from "../helpers/waitFor.ts";
+} from "../../helpers/transport/FakeDataChannel.ts";
+import { RecordingExtension } from "../../helpers/server/RecordingExtension.ts";
+import { waitFor } from "../../helpers/waitFor.ts";
 
 // CONSTANTS
 const kFrameLength = 4_097;

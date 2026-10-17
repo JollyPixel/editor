@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import {
-  readCredential,
   type AuthenticationProvider,
   type AuthenticationRequest,
   type PeerIdentity
@@ -31,8 +30,8 @@ export class PeerInvites implements AuthenticationProvider {
   authenticate(
     request: AuthenticationRequest
   ): PeerIdentity | null {
-    const credential = readCredential(request);
-    if (credential === null) {
+    const { credential } = request;
+    if (credential === undefined) {
       return {
         subject: request.clientId,
         role: request.defaultRole

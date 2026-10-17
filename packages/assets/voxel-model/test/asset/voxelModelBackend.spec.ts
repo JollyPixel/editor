@@ -13,7 +13,7 @@ import * as EventStore from "@jolly-pixel/event-store";
 import { FilesystemAssetSource } from "@jolly-pixel/asset-source/node";
 import {
   Server,
-  type ClientHandle
+  type ClientConnection
 } from "@jolly-pixel/network";
 import { AssetRoom } from "@jolly-pixel/asset";
 import { createAssetBackend } from "@jolly-pixel/asset-server";
@@ -51,12 +51,13 @@ interface SentMessage {
 function client(
   id: string,
   sent: SentMessage[] = []
-): ClientHandle {
+): ClientConnection {
   return {
     id,
-    send: (message) => {
-      sent.push(message as SentMessage);
-    }
+    sendSerialized: (json) => {
+      sent.push(JSON.parse(json));
+    },
+    close: () => void 0
   };
 }
 

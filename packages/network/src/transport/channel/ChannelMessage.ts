@@ -2,10 +2,19 @@
 import * as z from "zod/mini";
 
 // Import Internal Dependencies
-import type { ClientSocketEvent } from "../ClientSocket.ts";
+import type {
+  ClientSocketEvent,
+  ClientSocketEventType
+} from "../ClientSocket.ts";
 
 // CONSTANTS
 export const CHANNEL_TRANSPORT_TAG = "jolly-pixel.channel-transport";
+export const CHANNEL_SOCKET_EVENTS = [
+  "open",
+  "message",
+  "error",
+  "close"
+] as const satisfies readonly ClientSocketEventType[];
 
 const kAddressShape = {
   tag: z.literal(CHANNEL_TRANSPORT_TAG),
@@ -13,20 +22,13 @@ const kAddressShape = {
   socket: z.string()
 };
 
-const kSocketEventTypeSchema = z.enum([
-  "open",
-  "message",
-  "error",
-  "close"
-]);
-
 const kSocketEventSchema = z.object({
   data: z.optional(z.unknown()),
   code: z.optional(z.number()),
   reason: z.optional(z.string())
 });
 
-const kChannelTransportMessageSchema = z.discriminatedUnion("type", [
+const kChannelMessageSchema = z.discriminatedUnion("type", [
   z.object({
     ...kAddressShape,
     type: z.literal("connect"),
@@ -45,56 +47,24 @@ const kChannelTransportMessageSchema = z.discriminatedUnion("type", [
   z.object({
     ...kAddressShape,
     type: z.literal("event"),
-    event: kSocketEventTypeSchema,
+    event: z.enum(CHANNEL_SOCKET_EVENTS),
     data: kSocketEventSchema
   })
 ]);
 
-type PortListener = (event: { data: unknown; }) => void;
-
-export interface ChannelPort {
-  postMessage(
-    message: unknown
-  ): void;
-
-  addEventListener(
-    type: "message",
-    listener: PortListener
-  ): void;
-
-  removeEventListener(
-    type: "message",
-    listener: PortListener
-  ): void;
-
-  start?(): void;
-
-  close?(): void;
-}
-
-export type ChannelSocketPortFactory = (
-  socket: string
-) => ChannelPort;
-
-export type ChannelTransportMessage = z.infer<
-  typeof kChannelTransportMessageSchema
+export type ChannelMessage = z.infer<
+  typeof kChannelMessageSchema
 >;
 
-export function parseChannelTransportMessage(
+export function parseChannelMessage(
   value: unknown
-): ChannelTransportMessage | undefined {
-  const result = kChannelTransportMessageSchema.safeParse(value);
+): ChannelMessage | undefined {
+  const result = kChannelMessageSchema.safeParse(value);
 
   return result.success ? result.data : undefined;
 }
 
-export function isChannelTransportMessage(
-  value: unknown
-): value is ChannelTransportMessage {
-  return kChannelTransportMessageSchema.safeParse(value).success;
-}
-
-export function toPlainEvent(
+export function toWireEvent(
   event: ClientSocketEvent
 ): ClientSocketEvent {
   const { data, code, reason } = event;

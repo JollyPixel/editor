@@ -1,13 +1,14 @@
 // Import Internal Dependencies
-import type { ClientHandle } from "../transport/ClientHandle.ts";
 import type { PeerIdentity } from "./auth/AuthenticationProvider.ts";
+import type { ClientConnection } from "./connection/ClientConnection.ts";
+import { ConnectedClient } from "./connection/ConnectedClient.ts";
 import type { PeerMetadata } from "../protocol/types.ts";
 
 // CONSTANTS
 const kSettled = Promise.resolve();
 
 export interface ClientSession {
-  handle: ClientHandle;
+  handle: ConnectedClient;
   identity: PeerIdentity;
   revoked: boolean;
 }
@@ -26,11 +27,11 @@ export class ClientSessions {
   }
 
   open(
-    handle: ClientHandle,
+    connection: ClientConnection,
     identity: PeerIdentity
   ): void {
-    this.#sessions.set(handle.id, {
-      handle,
+    this.#sessions.set(connection.id, {
+      handle: new ConnectedClient(connection),
       identity,
       revoked: false
     });
@@ -38,8 +39,8 @@ export class ClientSessions {
 
   revoke(
     subject: string
-  ): ClientHandle[] {
-    const handles: ClientHandle[] = [];
+  ): ConnectedClient[] {
+    const handles: ConnectedClient[] = [];
     for (const session of this.#sessions.values()) {
       if (session.identity.subject === subject) {
         session.revoked = true;

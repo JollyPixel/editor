@@ -6,6 +6,8 @@ export interface ClientSocketEvent {
   readonly reason?: string;
 }
 
+export type ClientSocketListener = (event: ClientSocketEvent) => void;
+
 export interface SocketConnectOptions {
   /**
    * Opaque credential handed to the server's authentication provider.
@@ -22,6 +24,6 @@ export interface ClientSocket {
 
   addEventListener(
     type: ClientSocketEventType,
-    listener: (event: ClientSocketEvent) => void
+    listener: ClientSocketListener
   ): void;
 }

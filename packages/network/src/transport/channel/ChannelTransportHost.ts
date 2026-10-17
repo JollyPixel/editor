@@ -6,25 +6,21 @@ import type {
   SocketConnectOptions
 } from "../ClientSocket.ts";
 import {
+  GOING_AWAY_CLOSE_CODE,
+  PROTOCOL_ERROR_CLOSE_CODE
+} from "../constants.ts";
+import type {
+  ChannelPort,
+  ChannelPortListener,
+  ChannelSocketPortFactory
+} from "./ChannelPort.ts";
+import {
+  CHANNEL_SOCKET_EVENTS,
   CHANNEL_TRANSPORT_TAG,
-  parseChannelTransportMessage,
-  toPlainEvent,
-  type ChannelPort,
-  type ChannelSocketPortFactory,
-  type ChannelTransportMessage
-} from "./protocol.ts";
-
-// CONSTANTS
-const kGoingAwayCloseCode = 1001;
-const kProtocolErrorCloseCode = 1002;
-const kSocketEvents = [
-  "open",
-  "message",
-  "close",
-  "error"
-] as const;
-
-type PortListener = (event: { data: unknown; }) => void;
+  parseChannelMessage,
+  toWireEvent,
+  type ChannelMessage
+} from "./ChannelMessage.ts";
 
 export interface ChannelTransportHostOptions {
   /**
@@ -56,7 +52,7 @@ interface Relay {
   readonly id: string;
   readonly socket: ClientSocket;
   readonly port: ChannelPort;
-  readonly listener: PortListener | null;
+  readonly listener: ChannelPortListener | null;
 }
 
 export class ChannelTransportHost {
@@ -69,7 +65,7 @@ export class ChannelTransportHost {
   #closed = false;
 
   readonly #onMessage = (event: { data: unknown; }): void => {
-    const message = parseChannelTransportMessage(event.data);
+    const message = parseChannelMessage(event.data);
     if (
       message === undefined ||
       message.host !== this.id
@@ -115,7 +111,7 @@ export class ChannelTransportHost {
     );
     for (const relay of [...this.#relays.values()]) {
       this.#postEvent(relay.port, relay.id, "close", {
-        code: kGoingAwayCloseCode,
+        code: GOING_AWAY_CLOSE_CODE,
         reason: "Channel transport host closed."
       });
       this.#release(relay);
@@ -125,7 +121,7 @@ export class ChannelTransportHost {
 
   #receive(
     relay: Relay,
-    message: ChannelTransportMessage
+    message: ChannelMessage
   ): void {
     if (message.type === "send") {
       relay.socket.send(message.data);
@@ -137,7 +133,7 @@ export class ChannelTransportHost {
   }
 
   #connect(
-    message: Extract<ChannelTransportMessage, { type: "connect"; }>
+    message: Extract<ChannelMessage, { type: "connect"; }>
   ): void {
     const {
       socket: id,
@@ -147,7 +143,7 @@ export class ChannelTransportHost {
     const port = dedicated ? this.#socketPort?.(id) ?? null : null;
     if (dedicated && port === null) {
       this.#postEvent(this.#port, id, "close", {
-        code: kProtocolErrorCloseCode,
+        code: PROTOCOL_ERROR_CLOSE_CODE,
         reason: "The channel transport host opens no socket ports."
       });
 
@@ -161,13 +157,13 @@ export class ChannelTransportHost {
       listener: port === null ? null : this.#listenTo(id, port)
     };
     this.#relays.set(id, relay);
-    for (const type of kSocketEvents) {
+    for (const type of CHANNEL_SOCKET_EVENTS) {
       relay.socket.addEventListener(type, (event) => {
         if (this.#closed || this.#relays.get(id) !== relay) {
           return;
         }
 
-        this.#postEvent(relay.port, id, type, toPlainEvent(event));
+        this.#postEvent(relay.port, id, type, toWireEvent(event));
         if (type === "close") {
           this.#release(relay);
         }
@@ -188,15 +184,15 @@ export class ChannelTransportHost {
       type: "event",
       event,
       data
-    } satisfies ChannelTransportMessage);
+    } satisfies ChannelMessage);
   }
 
   #listenTo(
     id: string,
     port: ChannelPort
-  ): PortListener {
-    const listener: PortListener = (event) => {
-      const message = parseChannelTransportMessage(event.data);
+  ): ChannelPortListener {
+    const listener: ChannelPortListener = (event) => {
+      const message = parseChannelMessage(event.data);
       const relay = this.#relays.get(id);
       if (
         relay !== undefined &&

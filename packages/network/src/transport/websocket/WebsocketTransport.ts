@@ -15,14 +15,15 @@ import {
 } from "ws";
 
 // Import Internal Dependencies
-import type { Server } from "../server/Server.ts";
-import type { Logger } from "../server/logger.ts";
-import type { PeerIdentity } from "../server/auth/AuthenticationProvider.ts";
+import type { Server } from "../../server/Server.ts";
+import type { Logger } from "../../server/logger.ts";
+import type { PeerIdentity } from "../../server/auth/AuthenticationProvider.ts";
 import {
   UNAUTHORIZED_CLOSE_CODE,
-  UNAUTHORIZED_CLOSE_REASON,
-  WEBSOCKET_PROTOCOL
-} from "./constants.ts";
+  UNAUTHORIZED_CLOSE_REASON
+} from "../../protocol/constants.ts";
+import { WEBSOCKET_PROTOCOL } from "./constants.ts";
+import { parseCredential } from "./credential.ts";
 import { HandshakePolicy } from "./HandshakePolicy.ts";
 import { WebsocketConnection } from "./WebsocketConnection.ts";
 import { WriteBatch } from "./WriteBatch.ts";
@@ -219,13 +220,7 @@ export class WebsocketTransport implements Disposable {
 
     const clientId = randomUUID();
 
-    void this.#server
-      .authenticate({
-        clientId,
-        url: req.url ?? "",
-        headers: req.headers,
-        remoteAddress
-      })
+    void this.#authenticate(req, clientId)
       .then((identity) => {
         socket.off("error", destroySocket);
         if (socket.destroyed) {
@@ -251,6 +246,34 @@ export class WebsocketTransport implements Disposable {
         });
       });
   };
+
+  async #authenticate(
+    req: IncomingMessage,
+    clientId: string
+  ): Promise<PeerIdentity | null> {
+    const remoteAddress = req.socket.remoteAddress;
+    const credential = parseCredential(req.headers["sec-websocket-protocol"]);
+    if (!credential.ok) {
+      this.#logger
+        .withMetadata({
+          clientId,
+          remoteAddress,
+          outcome: "unauthorized",
+          reason: credential.val
+        })
+        .warn("client rejected");
+
+      return null;
+    }
+
+    return this.#server.authenticate({
+      clientId,
+      url: req.url ?? "",
+      headers: req.headers,
+      remoteAddress,
+      credential: credential.val
+    });
+  }
 
   #onHttpServerClose = (): void => {
     this[Symbol.dispose]();

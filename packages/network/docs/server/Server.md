@@ -43,7 +43,21 @@ Mounts a static room at `extension.id`.
 
 Resolves a trusted identity or `null`.
 
-### `connect(handle, identity): ServerConnection`
+### `connect(connection, identity): ServerConnection`
+
+`connection` is how the server reaches the client:
+
+```ts
+interface ClientConnection {
+  readonly id: string;
+  sendSerialized(json: string): void;
+  close(code: number, reason: string): void;
+}
+```
+
+The server serializes every message it sends, once per broadcast.
+Extension hooks receive the client as a `ClientHandle`, `{ id, send }`,
+whose `send` serializes its argument.
 
 Returns a session with `receive(raw)` and `close()`.
 Activity is ordered per connection and room.

@@ -8,7 +8,7 @@ import path from "node:path";
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
 import { FilesystemAssetSource } from "@jolly-pixel/asset-source/node";
-import { Server, type ClientHandle } from "@jolly-pixel/network";
+import { Server, type ClientConnection } from "@jolly-pixel/network";
 import { AssetRoom } from "@jolly-pixel/asset";
 import { createAssetBackend, foldAssetEvent } from "@jolly-pixel/asset-server";
 import { decodeVoxelWorld, encodeVoxelWorld } from "@jolly-pixel/voxel.renderer";
@@ -28,10 +28,11 @@ const kDocumentPath = "maps/overworld.voxelmap.json";
 
 function client(
   id: string
-): ClientHandle {
+): ClientConnection {
   return {
     id,
-    send: () => void 0
+    sendSerialized: () => void 0,
+    close: () => void 0
   };
 }
 

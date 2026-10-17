@@ -8,11 +8,9 @@ import type {
   ClientSocketEvent,
   ClientSocketEventType
 } from "#src/index.ts";
-import {
-  ChannelTransport,
-  ChannelTransportHost,
-  isChannelTransportMessage
-} from "#src/transport/channel.ts";
+import { ChannelTransport } from "#src/transport/channel/ChannelTransport.ts";
+import { ChannelTransportHost } from "#src/transport/channel/ChannelTransportHost.ts";
+import { parseChannelMessage } from "#src/transport/channel/ChannelMessage.ts";
 import {
   ManualChannel,
   type ManualPort
@@ -144,8 +142,8 @@ export class ChannelHarness {
 
   #connecting: string | null = null;
   #observer = (event: { data: unknown; }): void => {
-    const message = event.data;
-    if (isChannelTransportMessage(message) && message.type === "connect") {
+    const message = parseChannelMessage(event.data);
+    if (message?.type === "connect") {
       this.#connecting = message.socket;
     }
   };
@@ -249,8 +247,8 @@ export class ChannelHarness {
     }
 
     const socket = this.transport.connect();
-    const connect = this.shared.port2.posted.at(-1);
-    assert.ok(isChannelTransportMessage(connect));
+    const connect = parseChannelMessage(this.shared.port2.posted.at(-1));
+    assert.ok(connect !== undefined);
     this.clients.push(new ClientEnd(connect.socket, socket));
   }
 

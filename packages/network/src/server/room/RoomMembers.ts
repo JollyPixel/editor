@@ -1,15 +1,15 @@
 // Import Internal Dependencies
 import type { PeerMetadata } from "../../protocol/types.ts";
 import { PRESENCE_EVENT } from "../../protocol/constants.ts";
-import type { ClientHandle } from "../../transport/ClientHandle.ts";
 import type { PeerIdentity } from "../auth/AuthenticationProvider.ts";
+import type { ConnectedClient } from "../connection/ConnectedClient.ts";
 import type { RightsGate } from "../rights/RightsGate.ts";
 import type { RoomContext } from "../extension/Extension.ts";
 import type { PeerPresence } from "./PeerPresence.ts";
 import type { SerializedEnvelope } from "./SerializedEnvelope.ts";
 
 export interface PeerRecord {
-  handle: ClientHandle;
+  handle: ConnectedClient;
   identity: PeerIdentity;
   profile: PeerMetadata;
   presence: PeerPresence;

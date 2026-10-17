@@ -11,11 +11,12 @@ import {
   createClient,
   toServerEnvelope,
   withoutSync
-} from "../../helpers/server/clientHandle.ts";
+} from "../../helpers/server/clientConnection.ts";
 import {
   createExtension,
   createRoom
 } from "../../helpers/server/serverRoom.ts";
+import { ConnectedClient } from "#src/server/connection/ConnectedClient.ts";
 
 describe("ServerRoom", () => {
   test("join notifies existing members but not the joiner itself", async() => {
@@ -172,18 +173,18 @@ describe("ServerRoom", () => {
     assert.deepEqual(b.sent, [{ room: "pixel-draw", kind: "message", payload: { hello: "world" } }]);
   });
 
-  test("room.broadcast serializes once for members that accept serialized JSON", async() => {
+  test("room.broadcast serializes once for every member", async() => {
     const extension = createExtension();
     const a = createClient("A");
     const serialized: string[] = [];
     function serializingClient(
       id: string
     ) {
-      return {
+      return new ConnectedClient({
         id,
-        send: () => void 0,
-        sendSerialized: (json: string) => serialized.push(json)
-      };
+        sendSerialized: (json) => serialized.push(json),
+        close: () => void 0
+      });
     }
     const room = createRoom(extension);
     await room.join({ handle: a.client, identity: createIdentity("A") });
@@ -205,7 +206,7 @@ describe("ServerRoom", () => {
     const expected = "{\"room\":\"pixel-draw\",\"kind\":\"message\",\"payload\":{\"hello\":\"world\"}}";
     assert.strictEqual(serializations, 1);
     assert.deepEqual(serialized, [expected, expected]);
-    assert.deepEqual(a.sent, [{ room: "pixel-draw", kind: "message", payload }]);
+    assert.deepEqual(a.sent, [JSON.parse(expected)]);
   });
 
   test("join hands the resume payload to onClientConnect", async() => {
