@@ -2,17 +2,17 @@
 import type { Rule } from "../Rule.ts";
 
 // CONSTANTS
-const kAllowedLine = [
+const kRuleList = String.raw`(?:\s+[@\w/-]+(?:\s*,\s*[@\w/-]+)*)?`;
+const kAllowed = [
   /^ Import [A-Za-z.-]+ Dependenc(?:y|ies)$/,
   /^ CONSTANTS$/,
-  /^\/ <reference /
+  /^\/ <reference /,
+  new RegExp(
+    String.raw`^\s*(?:eslint|oxlint)-(?:disable|enable)(?:-next-line|-line)?${kRuleList}\s*$`
+  ),
+  /^\s*@ts-(?:expect-error|ignore|nocheck|check)\s*$/,
+  /^\s*(?:[#@]__PURE__|@vite-ignore|c8 ignore[\w\s-]*)\s*$/
 ];
-const kRuleList = String.raw`(?:\s+[@\w/-]+(?:\s*,\s*[@\w/-]+)*)?`;
-const kDirective = new RegExp(
-  String.raw`^\s*(?:eslint|oxlint)-(?:disable|enable)(?:-next-line|-line)?${kRuleList}\s*$`
-);
-const kTsDirective = /^\s*@ts-(?:expect-error|ignore|nocheck|check)\s*$/;
-const kAnnotation = /^\s*(?:[#@]__PURE__|@vite-ignore|c8 ignore[\w\s-]*)\s*$/;
 const kLicense = /license|copyright/i;
 
 export const noComments: Rule = {
@@ -43,10 +43,7 @@ export const noComments: Rule = {
 
         for (const comment of sourceCode.getAllComments()) {
           const allowed =
-            kAllowedLine.some((pattern) => pattern.test(comment.value)) ||
-            kDirective.test(comment.value) ||
-            kTsDirective.test(comment.value) ||
-            kAnnotation.test(comment.value) ||
+            kAllowed.some((pattern) => pattern.test(comment.value)) ||
             propertyDocs.has(comment.range[0]) ||
             (comment.range[0] < firstToken && kLicense.test(comment.value));
 

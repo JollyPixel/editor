@@ -1,7 +1,6 @@
 // Import Internal Dependencies
 import type { Rule } from "../Rule.ts";
-import { DeclaredName, type KeyNode } from "../DeclaredName.ts";
-import { NameAllowList } from "../NameAllowList.ts";
+import { ForbiddenName } from "../ForbiddenName.ts";
 
 // CONSTANTS
 const kAccessorPrefix = /^(get|set)[A-Z0-9_]/;
@@ -32,35 +31,24 @@ export const noGetSetPrefix: Rule = {
     messages: {
       prefix: "`{{name}}`: use a real getter/setter or name the method after what it does."
     },
-    schema: NameAllowList.schema
+    schema: ForbiddenName.schema
   },
   create(context) {
-    const allowed = NameAllowList.parse(context.options, kWebApis);
-
-    function check(
-      key: KeyNode
-    ): void {
-      const name = DeclaredName.read(key);
-      if (name !== null && kAccessorPrefix.test(name.text) && !allowed.has(name.text)) {
-        context.report({
-          node: name.node,
-          messageId: "prefix",
-          data: {
-            name: name.text
-          }
-        });
-      }
-    }
+    const forbidden = new ForbiddenName(context, {
+      pattern: kAccessorPrefix,
+      allowed: kWebApis,
+      messageId: "prefix"
+    });
 
     return {
       MethodDefinition(node) {
         if (node.kind === "method" && node.override !== true) {
-          check(node.key);
+          forbidden.check(node.key);
         }
       },
       TSMethodSignature(node) {
         if (node.kind === "method") {
-          check(node.key);
+          forbidden.check(node.key);
         }
       }
     };

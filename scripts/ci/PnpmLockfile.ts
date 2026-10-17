@@ -6,50 +6,69 @@ const kResolutionSections = new Set([
 ]);
 const kEntry = /^ {2}(?! )('[^']*'|"[^"]*"|[^:]+):(.*)$/;
 
-export class PnpmLockfile {
-  readonly #blocks: Map<string, string>;
+interface LockfileEntry {
+  document: number;
+  section: string;
+  name: string;
+  body: string;
+}
 
+export class PnpmLockfile {
   static parse(
     text: string
   ): PnpmLockfile {
-    const blocks = new Map<string, string>();
-    let documentIndex = 0;
+    const entries: LockfileEntry[] = [];
+    let document = 0;
     let section = "";
-    let key: string | null = null;
+    let current: LockfileEntry | null = null;
 
     for (const line of text.split(/\r?\n/)) {
       if (line.trim() === "") {
         continue;
       }
       if (line === "---") {
-        documentIndex++;
+        document++;
         section = "";
-        key = null;
+        current = null;
         continue;
       }
 
       const entry = kEntry.exec(line);
       if (/^\S/.test(line)) {
         section = line;
-        key = [documentIndex, section, ""].join("\n");
-        blocks.set(key, "");
+        current = {
+          document,
+          section,
+          name: "",
+          body: ""
+        };
+        entries.push(current);
       }
       else if (entry !== null) {
-        key = [documentIndex, section, entry[1]].join("\n");
-        blocks.set(key, entry[2]);
+        current = {
+          document,
+          section,
+          name: entry[1],
+          body: entry[2]
+        };
+        entries.push(current);
       }
-      else if (key !== null) {
-        blocks.set(key, `${blocks.get(key)}\n${line}`);
+      else if (current !== null) {
+        current.body += `\n${line}`;
       }
     }
 
-    return new PnpmLockfile(blocks);
+    return new PnpmLockfile(entries);
   }
 
+  readonly #entries = new Map<string, LockfileEntry>();
+
   constructor(
-    blocks: Map<string, string>
+    entries: Iterable<LockfileEntry>
   ) {
-    this.#blocks = new Map(blocks);
+    for (const entry of entries) {
+      this.#entries.set(`${entry.document}\n${entry.section}\n${entry.name}`, entry);
+    }
   }
 
   importersChangedSince(
@@ -57,18 +76,19 @@ export class PnpmLockfile {
   ): Set<string> | null {
     const importers = new Set<string>();
     const keys = new Set([
-      ...this.#blocks.keys(),
-      ...base.#blocks.keys()
+      ...this.#entries.keys(),
+      ...base.#entries.keys()
     ]);
 
     for (const key of keys) {
-      const current = this.#blocks.get(key);
-      const previous = base.#blocks.get(key);
-      if (current === previous) {
+      const current = this.#entries.get(key);
+      const previous = base.#entries.get(key);
+      const entry = current ?? previous;
+      if (entry === undefined || current?.body === previous?.body) {
         continue;
       }
 
-      const [, section, name] = key.split("\n");
+      const { section, name } = entry;
       if (section === kImporters && name !== "" && name !== ".") {
         if (current !== undefined) {
           importers.add(name);

@@ -3,6 +3,7 @@ import { defineConfig } from "oxlint";
 import { typescriptConfig } from "@openally/config.oxlint";
 
 // CONSTANTS
+const kScriptsGlob = "scripts/**";
 const kNoCommentsWorkspaces = [
   "accounts",
   "assets/voxel-animation",
@@ -93,19 +94,19 @@ export default defineConfig(typescriptConfig({
       }
     },
     {
-      files: workspaceGlobs(kNoCommentsWorkspaces),
+      files: [kScriptsGlob, ...workspaceGlobs(kNoCommentsWorkspaces)],
       rules: {
         "@jolly-pixel/no-comments": "error"
       }
     },
     {
-      files: workspaceGlobs(kNoOfNamesWorkspaces),
+      files: [kScriptsGlob, ...workspaceGlobs(kNoOfNamesWorkspaces)],
       rules: {
         "@jolly-pixel/no-of-names": "error"
       }
     },
     {
-      files: workspaceGlobs(kNoGetSetPrefixWorkspaces),
+      files: [kScriptsGlob, ...workspaceGlobs(kNoGetSetPrefixWorkspaces)],
       rules: {
         "@jolly-pixel/no-get-set-prefix": "error"
       }

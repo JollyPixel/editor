@@ -17,8 +17,9 @@ oxlint's `RuleTester`.
 
 ## Rules enabled per workspace
 
-These rules have a backlog, so `oxlint.config.ts` lists the workspaces that
-already pass them. Add a workspace to the list once it is clean.
+These rules have a backlog, so `oxlint.config.ts` enables them on `scripts/`
+and on the workspaces that already pass them. Add a workspace to the list once
+it is clean.
 
 - `no-comments`: only import headers, `// CONSTANTS`, bare `eslint`/`oxlint`
   and `@ts-` directives, leading license blocks, and JSDoc on interface or type
