@@ -16,11 +16,15 @@ broadcasts it, and a refused edit is answered with a correction.
 | `setTier` | A chunk coordinate and its new tier |
 | Layer and point-of-interest commands | Create, update, delete |
 
-A patch is cut into 16×16 tiles. Each tile carries its chunk, its position in
-the chunk, the new values and the previous ones. The previous values make the
-inverse for undo and the correction for a refusal.
+A patch is cut into 16×16 tiles; a chunk at ×1 has 4×4 of them. Each tile
+carries its chunk, its position in the chunk, the new values and the previous
+ones. The previous values make the inverse for undo and the correction for a
+refusal.
 
-Patches are deflate-compressed on the wire.
+Height values travel as the raw bytes of a `Float32Array`, base64-encoded in
+the JSON envelope, so they arrive exactly as written. Compression comes from
+the WebSocket's permessage-deflate, enabled for terrain rooms; patches are not
+compressed one by one.
 
 ### Collision keys
 
@@ -62,12 +66,16 @@ What a peer receives about someone else's stroke depends on where it is:
 The roster and camera frustums from `@jolly-pixel/editor.host` stay
 room-wide.
 
-### Network change
+### Routing
 
-Today the presence channel forwards every value to the whole room. V1 adds
-routing by interest region to `@jolly-pixel/network`: presence values and
-ephemeral messages that carry chunk coordinates go only to the peers whose
-presence region contains them.
+The interest region and the brush ring are presence values. Presence goes to
+the whole room, and each client draws a peer's ring only inside its own
+presence radius.
+
+Live patches are messages to the terrain kind's server extension. The
+extension forwards each one with `sendTo` to the peers whose presence region
+overlaps the patch's chunks. `@jolly-pixel/network` does not change for this;
+routing moves into it only if another kind needs it.
 
 ## Asset parts
 
@@ -90,7 +98,8 @@ The client side of `@jolly-pixel/network`, `CommandSync` and the pending
 ledger, does not change. `TerrainSyncClient` manages subscriptions from the
 camera.
 
-Until M2 lands, the server loads and sends the whole asset.
+Until M2 lands, the server loads and sends the whole asset, and `addChunk` is
+refused past 256 chunks, about 17 MB of heights at ×1.
 
 ## Corrections
 
@@ -99,7 +108,15 @@ is refused, in whole or in part, when:
 
 - a tile's chunk was removed in the meantime;
 - a tile's chunk changed tier, so the patch no longer matches its grid;
+- a tile holds a height that is not finite or lies outside `[-4096, 4096]` m;
 - the author lacks the right to edit the terrain.
+
+Rights go through the room's existing rights gate on the terrain command
+event, as for the other kinds, and refuse the whole commit. There are no
+per-chunk rights in V1.
+
+Since each sample belongs to one chunk, a refused tile cannot leave two
+copies of an edge out of step.
 
 The room answers the author alone with a correction: the refused tiles with
 their current values. Live patches are never corrected; the commit that

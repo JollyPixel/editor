@@ -14,29 +14,35 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
 - **Package skeletons: done** (2026-10-18). `asset.terrain`,
   `terrain.renderer` and `editor.terrain` exist, are referenced from the root
   `tsconfig.json`, and contain only an empty `src/index.ts`.
-- **Next: the M1 grilling**, then the rest of M1's first item: the editor
-  manifest, Vite config, dev port and `kWorkspaceBrowserEntries` entries.
+- **M1 grilling: done** (2026-10-18). Its answers are in `docs/`: one owner
+  per sample, the region quadtrees and node mesh, the wire format, routing in
+  the terrain extension, the M1 chunk cap and the slope overlay.
+- **Next:** the rest of M1's first item: the editor manifest, Vite config, dev
+  port and test scripts.
 
 Tick a box when its item lands, and move **Next** along with it.
 
 ## M1: Collaborative sculpt
 
 Proves the riskiest parts first: collaboration and LoD. The server still loads
-and sends the whole asset.
+and sends the whole asset, capped at 256 chunks. Brushes do not create
+chunks yet.
 
 - [ ] Scaffold `@jolly-pixel/asset.terrain`, `@jolly-pixel/terrain.renderer`
-  and `@jolly-pixel/editor.terrain`, with the editor manifest and the
-  `kWorkspaceBrowserEntries` entries.
-- [ ] Headless `TerrainDocument`: sparse chunk grid, height samples, add and
-  remove chunk.
-- [ ] CDLOD view: quadtree selection, one grid mesh per node, heights sampled
-  in the vertex shader, morphing between levels, skirts.
+  and `@jolly-pixel/editor.terrain`, with the editor manifest, the Vite
+  config, a dev port and a `test` script in each package.
+- [ ] Headless `TerrainDocument`: sparse chunk grid, 64×64 owned samples,
+  world-space sampling, add and remove chunk with edge seeding.
+- [ ] CDLOD view: region quadtrees, one 33×33 grid mesh per node, height
+  textures with neighbour aprons, morphing between levels, skirts.
 - [ ] Brushes: raise and lower, smooth, flatten.
 - [ ] Stroke commits: tile patches, collision keys, arbiter, corrections.
 - [ ] Undo and redo through `CommandHistory`.
-- [ ] Interest-routed presence in `@jolly-pixel/network`: peer brush rings and
-  live ephemeral patches inside the presence radius.
+- [ ] Interest routing in the terrain extension: live patches inside the
+  presence radius; peer brush rings drawn inside it.
 - [ ] Slope overlay.
+- [ ] E2E: two-peer sculpt with undo, LoD seams render, a far peer receives
+  the commit only.
 
 ## M2: Streaming
 
@@ -46,6 +52,7 @@ and sends the whole asset.
   and command broadcast filtered by subscription.
 - [ ] Overview map, rebuilt incrementally from edited chunks.
 - [ ] Camera-driven chunk loading and unloading within the stream radius.
+- [ ] Lift the 256-chunk cap.
 
 ## M3: Texturing
 
@@ -60,6 +67,8 @@ and sends the whole asset.
 - [ ] Resolution tiers ×2 and ×4, with seam morphing.
 - [ ] Points of interest: LoD bias and minimum detail at distance.
 - [ ] Ramp and terrace brushes.
+- [ ] Strokes that cross into empty ground create the chunk in the same
+  commit.
 - [ ] Heightmap and splat map import and export.
 - [ ] Debug overlays: chunk grid, LoD levels, holes.
 

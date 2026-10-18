@@ -36,6 +36,13 @@ ray. With nothing hit, the brush has no target and hides.
 A stroke is one undo step. It writes the finest grid of each chunk under it,
 so one stamp can span chunks of different tiers.
 
+Brushes read heights through the document's world-space sampling, from a copy
+taken before the stamp, so smooth and flatten see across chunk edges. A read
+outside every chunk clamps to the nearest existing sample. Writes stay inside
+existing chunks: until a commit can carry `addChunk` with its patch, the part
+of a stamp over empty ground is dropped. Written heights are clamped to
+`[-4096, 4096]` m.
+
 ## Sculpt brushes
 
 - **Raise and lower.** Left button raises, right button lowers, by

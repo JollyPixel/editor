@@ -23,15 +23,21 @@ in [collaboration](./collaboration.md); how brushes write is in
 The world is a sparse grid of chunks, 64 m on a side. Chunk `(x, z)` covers
 `[x × 64, (x + 1) × 64)` on X and the same on Z. A chunk exists only once
 someone creates it, by adding it next to an existing one or by sculpting
-across an edge. Removing a chunk deletes its data.
+across an edge. Removing a chunk deletes its data. A new terrain starts with
+one flat chunk at `(0, 0)`, and removing the last chunk is refused.
 
-Neighbouring chunks share their edge samples: both store them, and an edit on
-an edge writes both copies in the same command.
+Each sample belongs to exactly one chunk: chunk `(x, z)` owns the samples in
+`[x × 64, (x + 1) × 64)` on X and Z, and the row and column at `(x + 1) × 64`
+belong to its neighbours. No sample is stored twice, so an edit on an edge
+writes it once. A new chunk starts with its edge samples copied from the
+chunks next to it, so adding one never opens a cliff.
+
+Heights are clamped to `[-4096, 4096]` m.
 
 ## Grid
 
-Heights are a regular grid of `(2^n + 1)²` samples per chunk. At the base
-spacing of 1 m that is 65×65.
+Heights are a regular grid with `2^n × 2^n` samples per chunk. At the base
+spacing of 1 m that is 64×64, or 4×4 tiles of 16×16.
 
 Each quad is split into two triangles, and the diagonal alternates from one
 quad to the next in a diamond pattern:
@@ -74,7 +80,7 @@ one place.
 ## Resolution tiers
 
 WebGPU has no tessellation stage, so extra detail is stored, not generated. A
-chunk can be refined to ×2 (129², 0.5 m) or ×4 (257², 0.25 m). Brushes then
+chunk can be refined to ×2 (128², 0.5 m) or ×4 (256², 0.25 m). Brushes then
 edit the finer grid, and the quadtree has extra levels over that chunk.
 
 Refining a chunk resamples its heights bilinearly, so the surface does not
@@ -86,13 +92,26 @@ done with morphing (see below), not by changing the data.
 
 The view uses CDLOD:
 
-- A quadtree over the chunk grid picks nodes by distance to the camera.
-- Every node draws the same N×N grid mesh. The vertex shader reads the heights
-  from the chunk's height texture. The mesh comes from a `NodeMeshProvider`,
-  so a tessellated mesh can replace the grid later.
+- The world is split into regions of 16×16 chunks, 1024 m on a side and
+  aligned to the chunk grid. Each region that holds a chunk has its own
+  quadtree, which picks nodes by distance to the camera.
+- A leaf node covers 32 m, a quarter of a chunk, and the root covers the
+  region: six levels from 32 m to 1024 m. A ×2 chunk adds one level under its
+  leaves, a ×4 chunk two.
+- Every node draws the same 33×33 grid mesh, 32 quads, so a leaf draws at full
+  1 m detail. The vertex shader reads the heights from the chunk's height
+  texture. The mesh comes from a `NodeMeshProvider`, so a tessellated mesh can
+  replace the grid later.
 - Near the boundary of a level, vertices morph toward the coarser level's
   positions, so levels meet without cracks or popping.
 - Skirts hang under chunk edges and hide what morphing cannot.
+
+### Slope overlay
+
+An overlay colours the surface by slope, on a ramp from 0° to 60° and above,
+and highlights everything steeper than a maximum walkable angle, 45° by
+default. The angle comes from the same finite-difference normal as the
+lighting. The overlay and the angle are view settings.
 
 ### Overview map
 
@@ -156,7 +175,7 @@ Accepted drawbacks:
 
 | Channel | Format | Size at ×1 |
 |---|---|---|
-| Heights | `Float32`, one per sample | 65×65 |
+| Heights | `Float32`, one per sample | 64×64 |
 | Splat indices | `RGBA8`: the four strongest layers | 128×128, 0.5 m per texel |
 | Splat weights | `RGBA8`: their weights, summing to 255 | 128×128 |
 | Holes | One bit per quad | 64×64 |
@@ -167,6 +186,13 @@ change with the tier.
 
 On the GPU each chunk has an `R32F` height texture, two `RGBA8` splat textures
 and an `R8` hole texture. Edits upload only the changed rectangle.
+
+The height texture is 66×66 at ×1: the chunk's own samples plus a one-sample
+apron on every side, copied from the neighbours. The apron gives the mesh its
+last row and column and gives the normals their neighbours across the edge.
+An edit on an edge tile also uploads the matching strip of the neighbour's
+apron. Where no neighbour exists, the apron repeats the chunk's outer row,
+which leaves a flat 1 m strip along the edge of the world.
 
 ## Packages
 
