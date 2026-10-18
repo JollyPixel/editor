@@ -5,6 +5,7 @@ import type { MeshStandardNodeMaterial } from "three/webgpu";
 // Import Internal Dependencies
 import type { ChunkCoord } from "../document/ChunkCoord.ts";
 import type { TerrainReader } from "../document/TerrainDocument.ts";
+import type { TileCoord } from "../document/TileCoord.ts";
 import { LodRanges } from "./lod/LodRanges.ts";
 import {
   QuadtreeSelection,
@@ -103,6 +104,13 @@ export class TerrainView {
     coord: ChunkCoord
   ): void {
     this.#textures.chunkRemoved(coord);
+    this.#requestFrame();
+  }
+
+  tilesChanged(
+    tiles: Iterable<TileCoord>
+  ): void {
+    this.#textures.tilesChanged(tiles);
     this.#requestFrame();
   }
 

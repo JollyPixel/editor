@@ -3,6 +3,10 @@ import {
   CHUNK_SAMPLES,
   type ChunkCoord
 } from "./ChunkCoord.ts";
+import {
+  TILE_SAMPLE_COUNT,
+  TILE_SAMPLES
+} from "./TileCoord.ts";
 
 // CONSTANTS
 export const HEIGHT_RANGE = {
@@ -33,9 +37,9 @@ export interface HeightRange {
 
 export class TerrainChunk {
   readonly coord: ChunkCoord;
-  readonly heightRange: HeightRange;
 
   #heights: Float32Array;
+  #heightRange: HeightRange;
 
   constructor(
     coord: ChunkCoord,
@@ -50,10 +54,11 @@ export class TerrainChunk {
 
     this.coord = coord;
     this.#heights = heights.slice();
-    this.heightRange = {
-      min: this.#heights.reduce((min, height) => Math.min(min, height)),
-      max: this.#heights.reduce((max, height) => Math.max(max, height))
-    };
+    this.#heightRange = measureRange(this.#heights);
+  }
+
+  get heightRange(): HeightRange {
+    return this.#heightRange;
   }
 
   height(
@@ -66,4 +71,51 @@ export class TerrainChunk {
   copyHeights(): Float32Array {
     return this.#heights.slice();
   }
+
+  tileHeights(
+    tileX: number,
+    tileZ: number
+  ): Float32Array {
+    const heights = new Float32Array(TILE_SAMPLE_COUNT);
+    for (let row = 0; row < TILE_SAMPLES; row++) {
+      const start = (tileZ * TILE_SAMPLES + row) * CHUNK_SAMPLES + tileX * TILE_SAMPLES;
+      heights.set(this.#heights.subarray(start, start + TILE_SAMPLES), row * TILE_SAMPLES);
+    }
+
+    return heights;
+  }
+
+  writeTile(
+    tileX: number,
+    tileZ: number,
+    heights: Float32Array
+  ): void {
+    if (heights.length !== TILE_SAMPLE_COUNT || !heights.every(isValidHeight)) {
+      throw new RangeError(
+        `Tile ${tileX},${tileZ} of chunk ${this.coord.key} needs ${TILE_SAMPLE_COUNT} finite heights ` +
+        `within [${HEIGHT_RANGE.min}, ${HEIGHT_RANGE.max}].`
+      );
+    }
+
+    for (let row = 0; row < TILE_SAMPLES; row++) {
+      this.#heights.set(
+        heights.subarray(row * TILE_SAMPLES, (row + 1) * TILE_SAMPLES),
+        (tileZ * TILE_SAMPLES + row) * CHUNK_SAMPLES + tileX * TILE_SAMPLES
+      );
+    }
+    this.#heightRange = measureRange(this.#heights);
+  }
+}
+
+function measureRange(
+  heights: Float32Array
+): HeightRange {
+  let min = Infinity;
+  let max = -Infinity;
+  for (const height of heights) {
+    min = Math.min(min, height);
+    max = Math.max(max, height);
+  }
+
+  return { min, max };
 }

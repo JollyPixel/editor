@@ -81,6 +81,20 @@ export class HeightApronStore {
     return this.#rewriteNeighbours(coord, kChunkRect);
   }
 
+  samplesChanged(
+    coord: ChunkCoord,
+    samples: SampleRect
+  ): ApronUpdate[] {
+    if (!this.#buffers.has(coord.key)) {
+      return [];
+    }
+
+    return [
+      this.#rewrite(coord, samples),
+      ...this.#rewriteNeighbours(coord, samples)
+    ];
+  }
+
   #rewriteNeighbours(
     coord: ChunkCoord,
     rect: SampleRect

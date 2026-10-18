@@ -7,6 +7,10 @@ import type {
   ChunkKey
 } from "../../document/ChunkCoord.ts";
 import {
+  TILE_SAMPLES,
+  type TileCoord
+} from "../../document/TileCoord.ts";
+import {
   APRON_SIZE,
   type ApronUpdate,
   type HeightApronStore
@@ -124,6 +128,22 @@ export class ChunkTextureStore {
     this.#upload(this.#aprons.chunkRemoved(coord));
   }
 
+  tilesChanged(
+    tiles: Iterable<TileCoord>
+  ): void {
+    const updates: ApronUpdate[] = [];
+    for (const tile of tiles) {
+      const { x, z } = tile.localSample;
+      updates.push(...this.#aprons.samplesChanged(tile.chunk, {
+        x,
+        z,
+        width: TILE_SAMPLES,
+        depth: TILE_SAMPLES
+      }));
+    }
+    this.#upload(updates);
+  }
+
   dispose(): void {
     this.heights.dispose();
     this.lookup.dispose();
@@ -133,15 +153,17 @@ export class ChunkTextureStore {
     updates: readonly ApronUpdate[]
   ): void {
     const data = this.heights.image.data as Float32Array;
+    const uploaded = new Set<number>();
     for (const { coord } of updates) {
       const layer = this.#layers.get(coord.key);
       const buffer = this.#aprons.buffer(coord);
-      if (layer !== undefined && buffer !== undefined) {
+      if (layer !== undefined && buffer !== undefined && !uploaded.has(layer)) {
+        uploaded.add(layer);
         data.set(buffer, layer * kLayerTexels);
         this.heights.addLayerUpdate(layer);
       }
     }
-    if (updates.length > 0) {
+    if (uploaded.size > 0) {
       this.heights.needsUpdate = true;
     }
   }

@@ -10,7 +10,10 @@ import {
   CHUNK_SAMPLES,
   ChunkCoord,
   HeightApronStore,
-  TerrainDocument
+  TerrainDocument,
+  TILE_SAMPLE_COUNT,
+  TILE_SAMPLES,
+  TileCoord
 } from "#src/index.ts";
 
 // CONSTANTS
@@ -132,5 +135,38 @@ describe("HeightApronStore", () => {
 
     assert.equal(store.buffer(new ChunkCoord(1, 0)), undefined);
     assert.equal(texel(buffer(0, 0), CHUNK_SAMPLES, 5), texel(buffer(0, 0), kLast, 5));
+  });
+
+  test("an edit on an edge tile rewrites the matching strip of the neighbour's apron", () => {
+    const { add, terrain, store, buffer } = setup();
+    add(0, 0, 100);
+    add(1, 0, 200);
+    add(0, 1, 300);
+    const tile = new TileCoord(new ChunkCoord(0, 0), 3, 1);
+    terrain.writeTile(tile, new Float32Array(TILE_SAMPLE_COUNT).fill(-5));
+    const updates = store.samplesChanged(tile.chunk, {
+      ...tile.localSample,
+      width: TILE_SAMPLES,
+      depth: TILE_SAMPLES
+    });
+
+    assert.deepEqual(
+      updates.map(({ coord, texels }) => [coord.key, texels]),
+      [
+        ["0,0", {
+          x: 3 * TILE_SAMPLES + APRON_MARGIN,
+          z: TILE_SAMPLES + APRON_MARGIN,
+          width: TILE_SAMPLES,
+          depth: TILE_SAMPLES
+        }],
+        ["1,0", { x: 0, z: TILE_SAMPLES + APRON_MARGIN, width: APRON_MARGIN, depth: TILE_SAMPLES }]
+      ]
+    );
+    assert.equal(texel(buffer(0, 0), kLast, TILE_SAMPLES), -5);
+    assert.equal(texel(buffer(1, 0), -1, TILE_SAMPLES), -5);
+    assert.equal(
+      texel(buffer(1, 0), -1, TILE_SAMPLES - 1),
+      Math.fround(100 + kLast + (TILE_SAMPLES - 1) * 0.01)
+    );
   });
 });

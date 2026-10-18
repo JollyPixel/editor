@@ -8,6 +8,7 @@ import {
   CHUNK_SAMPLE_COUNT,
   TerrainChunk
 } from "./TerrainChunk.ts";
+import type { TileCoord } from "./TileCoord.ts";
 
 export interface TerrainReader {
   readonly size: number;
@@ -74,6 +75,21 @@ export class TerrainDocument implements TerrainReader {
 
   clear(): void {
     this.#chunks.clear();
+  }
+
+  writeTile(
+    tile: TileCoord,
+    heights: Float32Array
+  ): Float32Array {
+    const chunk = this.#chunks.get(tile.chunk.key);
+    if (chunk === undefined) {
+      throw new Error(`Chunk ${tile.chunk.key} does not exist.`);
+    }
+
+    const previous = chunk.tileHeights(tile.x, tile.z);
+    chunk.writeTile(tile.x, tile.z, heights);
+
+    return previous;
   }
 
   sampleAt(

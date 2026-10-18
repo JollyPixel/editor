@@ -12,7 +12,9 @@ import {
   HeightApronStore,
   LOOKUP_SIZE,
   lookupSlot,
-  TerrainDocument
+  TerrainDocument,
+  TILE_SAMPLE_COUNT,
+  TileCoord
 } from "#src/index.ts";
 
 // CONSTANTS
@@ -95,5 +97,23 @@ describe("ChunkTextureStore", () => {
 
     assert.equal(store.size, 0);
     assert.deepEqual(lookupEntry(coord), [0, 0, 0]);
+  });
+
+  test("an edited tile re-uploads its own layer and the neighbours whose apron it reaches", () => {
+    const { add, terrain, store, layerData } = setup();
+    const edited = add(0, 0, 1);
+    const facing = add(1, 0, 2);
+    add(-1, 0, 3);
+    store.heights.clearLayerUpdates();
+    const tile = new TileCoord(edited, 3, 0);
+    terrain.writeTile(tile, new Float32Array(TILE_SAMPLE_COUNT).fill(8));
+    store.tilesChanged([tile]);
+
+    assert.deepEqual(
+      [...store.heights.layerUpdates].sort(),
+      [store.layer(edited)!, store.layer(facing)!].sort()
+    );
+    assert.equal(layerData(edited)[APRON_MARGIN * APRON_SIZE + APRON_SIZE - APRON_MARGIN - 1], 8);
+    assert.equal(layerData(facing)[APRON_MARGIN * APRON_SIZE + APRON_MARGIN - 1], 8);
   });
 });

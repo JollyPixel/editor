@@ -8,7 +8,10 @@ import {
   CHUNK_SAMPLES,
   ChunkCoord,
   HEIGHT_RANGE,
-  TerrainDocument
+  TerrainDocument,
+  TILE_SAMPLE_COUNT,
+  TILE_SAMPLES,
+  TileCoord
 } from "#src/index.ts";
 
 function rampHeights(): Float32Array {
@@ -107,5 +110,41 @@ describe("TerrainDocument", () => {
 
     assert.equal(document.touches(new ChunkCoord(0, 1)), true);
     assert.equal(document.touches(new ChunkCoord(1, 1)), false);
+  });
+
+  test("writeTile replaces one tile's samples and returns the ones it held", () => {
+    const document = new TerrainDocument();
+    const chunk = document.addChunk(new ChunkCoord(0, 0), rampHeights());
+    const tile = new TileCoord(chunk.coord, 2, 1);
+    const previous = document.writeTile(tile, new Float32Array(TILE_SAMPLE_COUNT).fill(-7));
+
+    assert.equal(previous[0], 2 * TILE_SAMPLES + TILE_SAMPLES * 50);
+    assert.equal(previous[TILE_SAMPLE_COUNT - 1], 3 * TILE_SAMPLES - 1 + (2 * TILE_SAMPLES - 1) * 50);
+    assert.equal(chunk.height(2 * TILE_SAMPLES, TILE_SAMPLES), -7);
+    assert.equal(chunk.height(3 * TILE_SAMPLES - 1, 2 * TILE_SAMPLES - 1), -7);
+    assert.equal(chunk.height(3 * TILE_SAMPLES, TILE_SAMPLES), 3 * TILE_SAMPLES + TILE_SAMPLES * 50);
+    assert.equal(chunk.height(2 * TILE_SAMPLES, 2 * TILE_SAMPLES), 2 * TILE_SAMPLES + 2 * TILE_SAMPLES * 50);
+    assert.deepEqual(chunk.tileHeights(2, 1), new Float32Array(TILE_SAMPLE_COUNT).fill(-7));
+    assert.deepEqual(chunk.heightRange, { min: -7, max: CHUNK_SAMPLES - 1 + (CHUNK_SAMPLES - 1) * 50 });
+  });
+
+  test("writeTile refuses invalid heights and a missing chunk", () => {
+    const document = new TerrainDocument();
+    const chunk = document.addChunk(new ChunkCoord(0, 0));
+    const heights = new Float32Array(TILE_SAMPLE_COUNT);
+    heights[3] = Number.POSITIVE_INFINITY;
+
+    assert.throws(() => document.writeTile(new TileCoord(chunk.coord, 0, 0), heights), RangeError);
+    assert.equal(chunk.height(3, 0), 0);
+    assert.throws(() => document.writeTile(
+      new TileCoord(new ChunkCoord(1, 0), 0, 0),
+      new Float32Array(TILE_SAMPLE_COUNT)
+    ));
+  });
+
+  test("the tile containing a sample counts from the chunk's corner", () => {
+    const tile = TileCoord.containing(-1, CHUNK_SAMPLES + TILE_SAMPLES);
+
+    assert.deepEqual([tile.chunk.key, tile.x, tile.z, tile.key], ["-1,1", 3, 1, "-1,1:7"]);
   });
 });
