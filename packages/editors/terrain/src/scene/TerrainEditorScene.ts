@@ -15,16 +15,23 @@ import {
 import { TerrainRenderer } from "@jolly-pixel/terrain.renderer/engine";
 import * as THREE from "three";
 
+// Import Internal Dependencies
+import type { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
+import { SculptBrush } from "../features/sculpt/SculptBrush.ts";
+
 export class TerrainEditorScene extends Systems.Scene {
   #document: TerrainCommandDocument;
+  #sculpt: SculptSettings;
   #view: TerrainView | null = null;
   #disposables: Array<() => void> = [];
 
   constructor(
-    document: TerrainCommandDocument
+    document: TerrainCommandDocument,
+    sculpt: SculptSettings
   ) {
     super("terrain-editor");
     this.#document = document;
+    this.#sculpt = sculpt;
   }
 
   get view(): TerrainView | null {
@@ -59,6 +66,14 @@ export class TerrainEditorScene extends Systems.Scene {
         camera: () => camera.camera
       });
     this.#view = view;
+    this.world
+      .createActor("sculpt-brush")
+      .addComponent(SculptBrush, {
+        document: this.#document,
+        view,
+        settings: this.#sculpt,
+        camera: () => camera.camera
+      });
 
     function onChange(
       { command }: TerrainChange

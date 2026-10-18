@@ -21,7 +21,10 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   port 3008 and opens a seeded terrain; chunks can be added and removed.
 - **CDLOD view: done** (2026-10-18). The editor draws the terrain with LoD,
   morphing and per-pixel normals.
-- **Next:** brushes.
+- **Brushes: done** (2026-10-18). Raise and lower, smooth and flatten edit
+  the local terrain; nothing reaches peers or the saved asset until stroke
+  commits land.
+- **Next:** stroke commits.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -39,7 +42,8 @@ chunks yet.
 - [x] CDLOD view: region quadtrees, one 33×33 grid mesh per node, height
   textures with neighbour aprons, morphing between levels, skirts. It
   replaces the editor's placeholder ground grid.
-- [ ] Brushes: raise and lower, smooth, flatten.
+- [x] Brushes: raise and lower, smooth, flatten.
+- [ ] Flatten to a fixed height set in the toolbar; Ctrl+click picks it.
 - [ ] Stroke commits: tile patches, collision keys, arbiter, corrections.
 - [ ] Undo and redo through `CommandHistory`.
 - [ ] Interest routing in the terrain extension: live patches inside the

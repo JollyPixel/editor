@@ -7,7 +7,8 @@ import {
 import {
   ChunkCoord,
   TerrainDocument,
-  type TerrainReader
+  type TerrainReader,
+  type TilePatch
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
@@ -39,10 +40,24 @@ export class TerrainCommandDocument extends CommandDocument<
 > {
   readonly terrain: TerrainReader;
 
+  #terrain: TerrainDocument;
+
   constructor() {
     const terrain = new TerrainDocument();
     super(terrainState(terrain));
     this.terrain = terrain;
+    this.#terrain = terrain;
+  }
+
+  writeTiles(
+    patches: Iterable<TilePatch>
+  ): TilePatch[] {
+    const previous: TilePatch[] = [];
+    for (const { tile, heights } of patches) {
+      previous.push({ tile, heights: this.#terrain.writeTile(tile, heights) });
+    }
+
+    return previous;
   }
 
   addChunk(

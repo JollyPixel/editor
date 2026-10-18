@@ -17,6 +17,9 @@
       "path": "../../asset-server"
     },
     {
+      "path": "../../controls"
+    },
+    {
       "path": "../../engine"
     },
     {

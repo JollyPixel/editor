@@ -19,7 +19,7 @@
     "build": "pnpm run typecheck && vite build",
     "build:watch": "vite build --watch",
     "preview": "vite preview",
-    "test-only": "node --test \"test/**/*.spec.ts\"",
+    "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit -p test/tsconfig.json",
@@ -43,11 +43,14 @@
   "dependencies": {
     "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/asset.terrain": "workspace:*",
+    "@jolly-pixel/controls": "workspace:*",
     "@jolly-pixel/editor.host": "workspace:*",
     "@jolly-pixel/engine": "workspace:*",
     "@jolly-pixel/runtime": "workspace:*",
     "@jolly-pixel/terrain.renderer": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",
+    "@openally/emitt": "1.1.0",
+    "lit": "3.3.3",
     "three": "0.186.1"
   }
 }

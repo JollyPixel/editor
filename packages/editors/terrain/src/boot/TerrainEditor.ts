@@ -13,10 +13,13 @@ import {
   type RuntimeEditorContext
 } from "@jolly-pixel/editor.host";
 import "@jolly-pixel/editor.host/ui";
+import { LocalStorageAdapter } from "@jolly-pixel/ui";
 
 import type { TerrainView } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
+import { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
+import "../features/sculpt/toolbar/SculptToolbar.ts";
 import { TerrainEditorScene } from "../scene/TerrainEditorScene.ts";
 
 // CONSTANTS
@@ -60,7 +63,13 @@ export class TerrainEditor {
       toolbar.sources = context.toolbar;
     }
 
-    const scene = new TerrainEditorScene(target.document);
+    const sculpt = new SculptSettings(new LocalStorageAdapter());
+    const sculptToolbar = document.querySelector("terrain-sculpt-toolbar");
+    if (sculptToolbar !== null) {
+      sculptToolbar.settings = sculpt;
+    }
+
+    const scene = new TerrainEditorScene(target.document, sculpt);
     await editorRuntime.load(scene);
 
     return new TerrainEditor({

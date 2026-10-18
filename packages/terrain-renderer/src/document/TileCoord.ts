@@ -12,6 +12,14 @@ export const TILE_SAMPLE_COUNT = TILE_SAMPLES * TILE_SAMPLES;
 
 export type TileKey = `${ChunkKey}:${number}`;
 
+export interface TilePatch {
+  readonly tile: TileCoord;
+  /**
+   * `TILE_SAMPLE_COUNT` heights, row-major by Z.
+   */
+  readonly heights: Float32Array;
+}
+
 export class TileCoord {
   readonly chunk: ChunkCoord;
   readonly x: number;
