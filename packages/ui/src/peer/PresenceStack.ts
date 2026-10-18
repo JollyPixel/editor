@@ -10,6 +10,7 @@ import {
 // Import Internal Dependencies
 import { presenceStackStyles } from "./PresenceStack.styles.ts";
 import { PeerListElement } from "./PeerListElement.ts";
+import { preventDefault } from "../dom.ts";
 import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
 import type { PresencePeer } from "./types.ts";
 
@@ -71,6 +72,7 @@ export class PresenceStack extends PeerListElement {
           type="button"
           style=${color}
           aria-label=${`Select ${peer.displayName}`}
+          @mousedown=${preventDefault}
           @click=${() => this.select(peer)}
         >${body}</button>
       </li>

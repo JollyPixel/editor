@@ -112,6 +112,37 @@ describe("OrbitFlyCamera orbit focus (lock)", () => {
     );
   });
 
+  test("a wheel notch zooms by the same ratio near and far from the pivot", () => {
+    function zoomRatio(distance: number): number {
+      const harness = createHarness({
+        focusMode: "lock",
+        position: { x: 0, y: 0, z: 0 }
+      });
+      const pivot = new THREE.Vector3(0, 0, -distance);
+      harness.camera.enterOrbitFocus(pivot);
+
+      harness.scroll(1);
+      harness.advance();
+      harness.scroll(0);
+      harness.advance(300);
+
+      return harness.position.distanceTo(pivot) / distance;
+    }
+
+    const near = zoomRatio(2);
+    const far = zoomRatio(100);
+
+    assert.ok(near < 1, "scrolling in did not move closer");
+    assert.ok(Math.abs(near - far) < 1e-3, `near ${near} vs far ${far}`);
+  });
+
+  test("rejects a minPivotDistance that the zoom ratio could never leave", () => {
+    assert.throws(
+      () => createHarness({ focusMode: "lock", minPivotDistance: 0 }),
+      RangeError
+    );
+  });
+
   test("only exitOrbitFocus releases the lock", () => {
     const harness = createHarness({
       focusMode: "lock",

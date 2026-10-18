@@ -26,6 +26,11 @@ export interface OrbitFocusOptions {
   minPivotDistance: number;
   maxPivotDistance: number;
   /**
+   * Per wheel notch, the pivot distance is multiplied by `1 + pivotZoomStep`
+   * zooming out and divided by it zooming in.
+   */
+  pivotZoomStep: number;
+  /**
    * Distance nudged per key press while orbiting.
    */
   pivotNudgeStep: number;
@@ -39,6 +44,7 @@ export interface OrbitFocusOptions {
 export class OrbitFocus implements CameraFocus {
   #minPivotDistance: number;
   #maxPivotDistance: number;
+  #pivotZoomStep: number;
   #pivotNudgeStep: number;
   #marker: PivotMarker;
 
@@ -58,8 +64,15 @@ export class OrbitFocus implements CameraFocus {
   constructor(
     options: OrbitFocusOptions
   ) {
+    if (options.minPivotDistance <= 0) {
+      throw new RangeError(
+        `minPivotDistance must be greater than 0, got ${options.minPivotDistance}`
+      );
+    }
+
     this.#minPivotDistance = options.minPivotDistance;
     this.#maxPivotDistance = options.maxPivotDistance;
+    this.#pivotZoomStep = options.pivotZoomStep;
     this.#pivotNudgeStep = options.pivotNudgeStep;
     this.#marker = new PivotMarker({
       enabled: options.showPivotMarker,
@@ -172,15 +185,14 @@ export class OrbitFocus implements CameraFocus {
   }
 
   handleScroll(
-    scrollY: number,
-    scrollSpeed: number
+    scrollY: number
   ): boolean {
     if (!this.#isOrbiting) {
       return false;
     }
 
     this.#targetPivotDistance = this.#clampPivotDistance(
-      this.#targetPivotDistance - (scrollY * scrollSpeed)
+      this.#targetPivotDistance * Math.pow(1 + this.#pivotZoomStep, -scrollY)
     );
 
     return true;

@@ -22,6 +22,8 @@ Same as [`jolly-presence`](./presence.md#properties): `peers`, `max`,
 - Peers are drawn in the given order.
 - Peers past `max` collapse into a `+N` circle whose tooltip lists their names.
 - A selectable remote avatar is a button labelled "Select" and the name.
+  Clicking it leaves focus where it was, so keys such as Space keep reaching
+  the viewport. Tab still reaches it.
 
 ## Tooltip
 

@@ -60,4 +60,14 @@ test.describe("Presence stack", () => {
     await lin.click();
     await expect(page.locator("output")).toHaveText("Selected: lin");
   });
+
+  test("selects a peer on click without taking focus", async({ page }) => {
+    await openExample(page, "peer/presence-stack");
+
+    const lin = page.locator("jolly-presence-stack")
+      .getByRole("button", { name: "Select Lin" });
+    await lin.click();
+    await expect(page.locator("output")).toHaveText("Selected: lin");
+    await expect(lin).not.toBeFocused();
+  });
 });
