@@ -24,7 +24,10 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
 - **Brushes: done** (2026-10-18). Raise and lower, smooth and flatten edit
   the local terrain; nothing reaches peers or the saved asset until stroke
   commits land.
-- **Next:** stroke commits.
+- **Stroke commits: done** (2026-10-18). A stroke reaches peers and the saved
+  asset as `heights-patched` commits, at its end, every 2 s and once 4 chunks
+  are touched.
+- **Next:** undo and redo.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -44,7 +47,7 @@ chunks yet.
   replaces the editor's placeholder ground grid.
 - [x] Brushes: raise and lower, smooth, flatten.
 - [ ] Flatten to a fixed height set in the toolbar; Ctrl+click picks it.
-- [ ] Stroke commits: tile patches, collision keys, arbiter, corrections.
+- [x] Stroke commits: tile patches, collision keys, arbiter, corrections.
 - [ ] Undo and redo through `CommandHistory`.
 - [ ] Interest routing in the terrain extension: live patches inside the
   presence radius; peer brush rings drawn inside it.
@@ -62,6 +65,8 @@ chunks yet.
 - [ ] Overview map, rebuilt incrementally from edited chunks.
 - [ ] Camera-driven chunk loading and unloading within the stream radius.
 - [ ] Lift the 256-chunk cap.
+- [ ] Tile corrections for refused commits, refused per tile, instead of the
+  snapshot the room sends back today.
 
 ## M3: Texturing
 

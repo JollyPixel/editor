@@ -39,6 +39,13 @@ export class TileCoord {
     );
   }
 
+  static fromIndex(
+    chunk: ChunkCoord,
+    index: number
+  ): TileCoord {
+    return new TileCoord(chunk, index % TILES_PER_CHUNK, Math.floor(index / TILES_PER_CHUNK));
+  }
+
   constructor(
     chunk: ChunkCoord,
     x: number,

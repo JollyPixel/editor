@@ -8,6 +8,7 @@ import { ChunkCoord } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import {
+  encodeHeights,
   encodeTerrainAssetDocument,
   MAX_TERRAIN_CHUNKS,
   terrainAssetKind,
@@ -18,7 +19,8 @@ import {
 import { LiveRoom } from "../helpers/liveRoom.ts";
 import {
   heights,
-  networkCommand
+  networkCommand,
+  tileHeights
 } from "../helpers/terrain.ts";
 
 function liveRoom() {
@@ -91,5 +93,24 @@ describe("terrain asset kind", () => {
 
     assert.equal(room.state.size, MAX_TERRAIN_CHUNKS);
     assert.equal(room.state.has(new ChunkCoord(MAX_TERRAIN_CHUNKS, 0)), false);
+  });
+
+  test("a height patch is refused whole when one of its tiles is invalid", () => {
+    const room = liveRoom();
+    function flat(tile: number) {
+      return { x: 0, z: 0, tile, heights: encodeHeights(tileHeights(4)) };
+    }
+    for (const tiles of [
+      [flat(0), { ...flat(1), x: 5 }],
+      [flat(0), { ...flat(1), heights: encodeHeights(tileHeights(5000)) }],
+      [flat(0), { ...flat(1), heights: heights(4) }],
+      [flat(0), flat(0)]
+    ]) {
+      room.receive("A", networkCommand({ action: "heights-patched", tiles }));
+    }
+
+    assert.ok(room.state.chunk(new ChunkCoord(0, 0))!.copyHeights().every((height) => height === 0));
+    room.receive("A", networkCommand({ action: "heights-patched", tiles: [flat(5)] }));
+    assert.deepEqual(room.state.chunk(new ChunkCoord(0, 0))!.tileHeights(1, 1), tileHeights(4));
   });
 });

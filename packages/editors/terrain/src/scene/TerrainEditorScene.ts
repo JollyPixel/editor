@@ -10,6 +10,7 @@ import type {
 import {
   CHUNK_SAMPLES,
   ChunkCoord,
+  TileCoord,
   type TerrainView
 } from "@jolly-pixel/terrain.renderer";
 import { TerrainRenderer } from "@jolly-pixel/terrain.renderer/engine";
@@ -78,6 +79,14 @@ export class TerrainEditorScene extends Systems.Scene {
     function onChange(
       { command }: TerrainChange
     ): void {
+      if (command.action === "heights-patched") {
+        view.tilesChanged(command.tiles.map(
+          ({ x, z, tile }) => TileCoord.fromIndex(new ChunkCoord(x, z), tile)
+        ));
+
+        return;
+      }
+
       const coord = new ChunkCoord(command.x, command.z);
       if (command.action === "chunk-added") {
         view.chunkAdded(coord);

@@ -23,6 +23,7 @@ import {
   StampSpacer,
   type GroundPoint
 } from "./model/StampSpacer.ts";
+import { StrokeRecorder } from "./model/StrokeRecorder.ts";
 import { BrushRing } from "./rendering/BrushRing.ts";
 
 // CONSTANTS
@@ -51,6 +52,7 @@ export class SculptBrush extends ActorComponent {
   #raycaster = new THREE.Raycaster();
   #pointer = new THREE.Vector2();
   #stroke: Stroke | null = null;
+  #recorder = new StrokeRecorder();
   #ringKey = "";
   #keepAlive: (() => void) | null = null;
 
@@ -78,7 +80,7 @@ export class SculptBrush extends ActorComponent {
     const { input } = this.actor.world;
     const { mouse } = input;
     if (!mouse.hovering || mouse.isDown("middle") || InputCombination.Alt.evaluate(input)) {
-      this.#stroke = null;
+      this.#endStroke();
       this.#hideRing();
 
       return;
@@ -86,16 +88,21 @@ export class SculptBrush extends ActorComponent {
 
     const aim = this.#aim();
     if (InputCombination.Control.evaluate(input)) {
-      this.#stroke = null;
+      this.#endStroke();
       this.#resize(mouse.isDown("scrollUp"), mouse.isDown("scrollDown"));
     }
     else {
       this.#updateStroke(aim);
     }
+    this.#recorder.tick(this.actor.world.time.unscaledDelta);
+    if (this.#recorder.due) {
+      this.#document.commitTiles(this.#recorder.take());
+    }
     this.#drawRing(aim);
   }
 
   override destroy(): void {
+    this.#endStroke();
     this.#keepAlive?.();
     this.actor.object3D.remove(this.#ring);
     this.#ring.dispose();
@@ -134,7 +141,7 @@ export class SculptBrush extends ActorComponent {
   ): void {
     const { mouse } = this.actor.world.input;
     if (this.#stroke !== null && !mouse.isDown("left") && !mouse.isDown("right")) {
-      this.#stroke = null;
+      this.#endStroke();
     }
     if (aim === null) {
       return;
@@ -185,7 +192,7 @@ export class SculptBrush extends ActorComponent {
         lift: stroke.lower ? -options.size : options.size,
         target: stroke.target
       });
-      this.#document.writeTiles(patches);
+      this.#recorder.record(this.#document.writeTiles(patches));
       for (const { tile } of patches) {
         changed.set(tile.key, tile);
       }
@@ -193,6 +200,13 @@ export class SculptBrush extends ActorComponent {
     if (changed.size > 0) {
       this.#view.tilesChanged(changed.values());
       this.#ringKey = "";
+    }
+  }
+
+  #endStroke(): void {
+    this.#stroke = null;
+    if (this.#recorder.size > 0) {
+      this.#document.commitTiles(this.#recorder.take());
     }
   }
 

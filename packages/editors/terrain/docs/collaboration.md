@@ -9,7 +9,7 @@ broadcasts it, and a refused edit is answered with a correction.
 
 | Command | Content |
 |---|---|
-| `heightPatch` | Tile patches of height samples |
+| `heights-patched` | Tile patches of height samples |
 | `splatPatch` | Tile patches of splat indices and weights |
 | `holePatch` | Tile patches of the hole mask |
 | `chunk-added` | A chunk coordinate and its seeded heights |
@@ -18,9 +18,10 @@ broadcasts it, and a refused edit is answered with a correction.
 | Layer and point-of-interest commands | Create, update, delete |
 
 A patch is cut into 16×16 tiles; a chunk at ×1 has 4×4 of them. Each tile
-carries its chunk, its position in the chunk, the new values and the previous
-ones. The previous values make the inverse for undo and the correction for a
-refusal.
+carries its chunk, its index in the chunk (`z × 4 + x`) and its new values. A
+commit holds at most 1024 tiles. The author's document captures the values
+the stroke replaced when it commits, and builds the inverse for undo from
+them.
 
 Height values travel as the raw bytes of a `Float32Array`, base64-encoded in
 the JSON envelope, so they arrive exactly as written. Compression comes from
@@ -30,9 +31,11 @@ compressed one by one.
 ### Collision keys
 
 Each tile has the key `chunk:<x>,<z>:<channel>:<tile>`, where the channel is
-`h`, `s` or `x` (holes). Two commands collide when they share a key. A
-collision resolves last write wins: the later command is admitted and
-overwrites the tile.
+`h`, `s` or `x` (holes). `chunk-added` and `chunk-removed` hold the key
+`chunk:<x>,<z>` and every tile key of their chunk, so undoing a chunk's
+creation is refused once someone has sculpted it. Two commands collide when
+they share a key. A collision resolves last write wins: the later command is
+admitted and overwrites the tile.
 
 ## Strokes
 
@@ -122,6 +125,9 @@ copies of an edge out of step.
 The room answers the author alone with a correction: the refused tiles with
 their current values. Live patches are never corrected; the commit that
 follows replaces them.
+
+Until M2, a commit is refused whole, and the room answers with its full
+snapshot instead of a tile correction.
 
 ## Undo
 

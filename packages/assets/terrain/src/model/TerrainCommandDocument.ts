@@ -13,6 +13,10 @@ import {
 
 // Import Internal Dependencies
 import { encodeHeights } from "../network/heights.ts";
+import {
+  decodeTilePatch,
+  encodeTilePatch
+} from "../network/tilePatches.ts";
 import type {
   ChunkSnapshot,
   TerrainCommand,
@@ -25,11 +29,13 @@ import {
   terrainSnapshot
 } from "./terrainState.ts";
 
-export interface TerrainImage {
+export interface ChunkImage {
   readonly x: number;
   readonly z: number;
   readonly heights: string | null;
 }
+
+export type TerrainImage = readonly ChunkImage[];
 
 export type TerrainChange = CommandChange<TerrainCommand, TerrainImage>;
 
@@ -47,17 +53,6 @@ export class TerrainCommandDocument extends CommandDocument<
     super(terrainState(terrain));
     this.terrain = terrain;
     this.#terrain = terrain;
-  }
-
-  writeTiles(
-    patches: Iterable<TilePatch>
-  ): TilePatch[] {
-    const previous: TilePatch[] = [];
-    for (const { tile, heights } of patches) {
-      previous.push({ tile, heights: this.#terrain.writeTile(tile, heights) });
-    }
-
-    return previous;
   }
 
   addChunk(
@@ -83,6 +78,33 @@ export class TerrainCommandDocument extends CommandDocument<
   ): boolean {
     return this.commit({ action: "chunk-removed", x, z });
   }
+
+  writeTiles(
+    patches: Iterable<TilePatch>
+  ): TilePatch[] {
+    const previous: TilePatch[] = [];
+    for (const { tile, heights } of patches) {
+      previous.push({ tile, heights: this.#terrain.writeTile(tile, heights) });
+    }
+
+    return previous;
+  }
+
+  commitTiles(
+    previous: Iterable<TilePatch>
+  ): boolean {
+    const stroke = this.writeTiles(
+      [...previous].filter(({ tile }) => this.terrain.has(tile.chunk))
+    );
+    if (stroke.length === 0) {
+      return false;
+    }
+
+    return this.commit({
+      action: "heights-patched",
+      tiles: stroke.map(encodeTilePatch)
+    });
+  }
 }
 
 function terrainState(
@@ -93,26 +115,60 @@ function terrainState(
     placeable: (command) => command,
     apply: (command) => applyTerrainCommand(terrain, command),
     load: (snapshot) => loadTerrainSnapshot(terrain, snapshot),
-    captureImage: ({ x, z }) => {
+    captureImage: (command) => touchedChunks(command).map(({ x, z }) => {
       return {
         x,
         z,
         heights: encodedHeightsAt(terrain, x, z)
       };
-    },
-    invert: (command) => {
-      if (command.action === "chunk-added") {
-        return [{ action: "chunk-removed", x: command.x, z: command.z }];
-      }
+    }),
+    invert: (command) => invertCommand(terrain, command),
+    restored: (images) => restoreImages(terrainSnapshot(terrain), images)
+  };
+}
 
+function invertCommand(
+  terrain: TerrainReader,
+  command: TerrainCommand
+): TerrainCommand[] {
+  switch (command.action) {
+    case "chunk-added":
+      return [{ action: "chunk-removed", x: command.x, z: command.z }];
+    case "chunk-removed": {
       const heights = encodedHeightsAt(terrain, command.x, command.z);
 
       return heights === null ?
         [] :
         [{ action: "chunk-added", x: command.x, z: command.z, heights }];
-    },
-    restored: (images) => restoreImages(terrainSnapshot(terrain), images)
-  };
+    }
+    default:
+      return [{
+        action: "heights-patched",
+        tiles: command.tiles.map((encoded) => {
+          const { tile } = decodeTilePatch(encoded)!;
+
+          return encodeTilePatch({
+            tile,
+            heights: terrain.chunk(tile.chunk)!.tileHeights(tile.x, tile.z)
+          });
+        })
+      }];
+  }
+}
+
+function touchedChunks(
+  command: TerrainCommand
+): Array<{ x: number; z: number; }> {
+  if (command.action !== "heights-patched") {
+    return [{ x: command.x, z: command.z }];
+  }
+
+  const chunks = new Map<string, { x: number; z: number; }>();
+  for (const { x, z } of command.tiles) {
+    chunks.set(`${x},${z}`, { x, z });
+  }
+
+  return [...chunks.values()];
 }
 
 function encodedHeightsAt(
@@ -132,12 +188,14 @@ function restoreImages(
   const chunks = new Map<string, ChunkSnapshot>(
     snapshot.chunks.map((chunk) => [`${chunk.x},${chunk.z}`, chunk])
   );
-  for (const { x, z, heights } of [...images].reverse()) {
-    if (heights === null) {
-      chunks.delete(`${x},${z}`);
-    }
-    else {
-      chunks.set(`${x},${z}`, { x, z, heights });
+  for (const image of [...images].reverse()) {
+    for (const { x, z, heights } of image) {
+      if (heights === null) {
+        chunks.delete(`${x},${z}`);
+      }
+      else {
+        chunks.set(`${x},${z}`, { x, z, heights });
+      }
     }
   }
 

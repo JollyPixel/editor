@@ -6,10 +6,12 @@ import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import type {
   chunkSnapshotSchema,
   terrainCommandSchema,
-  terrainSnapshotSchema
+  terrainSnapshotSchema,
+  tilePatchSchema
 } from "./TerrainCommand.schema.ts";
 
 export type ChunkSnapshot = network.Infer<typeof chunkSnapshotSchema>;
+export type EncodedTilePatch = network.Infer<typeof tilePatchSchema>;
 export type TerrainSnapshot = network.Infer<typeof terrainSnapshotSchema>;
 
 export type TerrainCommand = network.Infer<typeof terrainCommandSchema>;

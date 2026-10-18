@@ -6,11 +6,13 @@ import assert from "node:assert/strict";
 import { DocumentSyncClient } from "@jolly-pixel/network/client";
 import {
   ChunkCoord,
+  TileCoord,
   type TerrainDocument
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import {
+  encodeTilePatch,
   TerrainCommandDocument,
   terrainAssetKind,
   terrainSnapshot,
@@ -22,8 +24,13 @@ import { LiveRoom } from "../helpers/liveRoom.ts";
 import { createMockRoom } from "../helpers/room.ts";
 import {
   heights,
-  networkCommand
+  networkCommand,
+  tileHeights
 } from "../helpers/terrain.ts";
+
+// CONSTANTS
+const kEdgeTile = new TileCoord(new ChunkCoord(1, 0), 0, 2);
+const kOriginTile = new TileCoord(new ChunkCoord(0, 0), 3, 2);
 
 function setup() {
   const server = new LiveRoom<TerrainDocument, TerrainNetworkCommand>(
@@ -38,6 +45,14 @@ function setup() {
   const document = new TerrainCommandDocument();
   new DocumentSyncClient(room, { document, keys: terrainWriteKeys });
 
+  function sculpt(height: number, tiles = [kEdgeTile]): boolean {
+    return document.commitTiles(
+      document.writeTiles(tiles.map((tile) => {
+        return { tile, heights: tileHeights(height) };
+      }))
+    );
+  }
+
   function deliver(): void {
     for (const message of server.take("B")) {
       room.deliver(message as TerrainServerMessage);
@@ -51,6 +66,7 @@ function setup() {
     server,
     document,
     deliver,
+    sculpt,
     flush(): void {
       for (const sent of room.sent.splice(0)) {
         server.receive("B", sent);
@@ -102,6 +118,62 @@ describe("terrain convergence", () => {
     deliver();
 
     assert.ok(document.terrain.chunk(new ChunkCoord(1, 1))?.copyHeights().every((height) => height === -3));
+    assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
+  });
+
+  test("a stroke reaches the server as one patch of its final heights", () => {
+    const { server, document, deliver, flush, sculpt } = setup();
+    document.writeTiles([{ tile: kEdgeTile, heights: tileHeights(2) }]);
+
+    assert.equal(sculpt(5), true);
+    flush();
+    deliver();
+
+    assert.deepEqual(server.state.chunk(kEdgeTile.chunk)!.tileHeights(0, 2), tileHeights(5));
+    assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
+  });
+
+  test("a stroke on a chunk a peer removed meanwhile is refused and the author converges", () => {
+    const { server, document, deliver, flush, sculpt } = setup();
+    sculpt(5, [kEdgeTile, kOriginTile]);
+    server.receive("A", networkCommand({ action: "chunk-removed", x: 1, z: 0 }, { clientId: "A" }));
+    flush();
+    deliver();
+
+    assert.equal(document.terrain.has(kEdgeTile.chunk), false);
+    assert.deepEqual(document.terrain.chunk(kOriginTile.chunk)!.tileHeights(3, 2), tileHeights(0));
+    assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
+  });
+
+  test("the inverse of a stroke restores the heights from before it", () => {
+    const { server, document, deliver, flush, sculpt } = setup();
+    const inverses: unknown[] = [];
+    document.subscribe("change", (change) => {
+      if (change.origin === "local") {
+        inverses.push(...change.inverse);
+      }
+    });
+    sculpt(5);
+    document.applyStep(inverses[0] as Parameters<typeof document.applyStep>[0], undefined);
+    flush();
+    deliver();
+
+    assert.deepEqual(server.state.chunk(kEdgeTile.chunk)!.tileHeights(0, 2), tileHeights(8));
+    assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
+  });
+
+  test("two strokes on the same tile settle on the last one admitted", () => {
+    const { server, document, deliver, flush, sculpt } = setup();
+
+    sculpt(5);
+    server.receive("A", networkCommand(
+      { action: "heights-patched", tiles: [encodeTilePatch({ tile: kEdgeTile, heights: tileHeights(-1) })] },
+      { clientId: "A" }
+    ));
+    flush();
+    deliver();
+
+    assert.deepEqual(document.terrain.chunk(kEdgeTile.chunk)!.tileHeights(0, 2), tileHeights(5));
     assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
   });
 });

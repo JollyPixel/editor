@@ -1,12 +1,11 @@
 // Import Third-party Dependencies
 import {
   CHUNK_SAMPLE_COUNT,
-  isValidHeights
+  isValidHeight
 } from "@jolly-pixel/terrain.renderer";
 
 // CONSTANTS
 const kBytesPerHeight = Float32Array.BYTES_PER_ELEMENT;
-const kChunkBytes = CHUNK_SAMPLE_COUNT * kBytesPerHeight;
 const kBinaryBatch = 0x8000;
 
 export function encodeHeights(
@@ -27,7 +26,8 @@ export function encodeHeights(
 }
 
 export function decodeHeights(
-  encoded: string
+  encoded: string,
+  count: number = CHUNK_SAMPLE_COUNT
 ): Float32Array | null {
   let binary: string;
   try {
@@ -36,18 +36,19 @@ export function decodeHeights(
   catch {
     return null;
   }
-  if (binary.length !== kChunkBytes) {
+  const byteLength = count * kBytesPerHeight;
+  if (binary.length !== byteLength) {
     return null;
   }
 
-  const view = new DataView(new ArrayBuffer(kChunkBytes));
-  for (let index = 0; index < kChunkBytes; index++) {
+  const view = new DataView(new ArrayBuffer(byteLength));
+  for (let index = 0; index < byteLength; index++) {
     view.setUint8(index, binary.charCodeAt(index));
   }
-  const heights = new Float32Array(CHUNK_SAMPLE_COUNT);
-  for (let index = 0; index < CHUNK_SAMPLE_COUNT; index++) {
+  const heights = new Float32Array(count);
+  for (let index = 0; index < count; index++) {
     heights[index] = view.getFloat32(index * kBytesPerHeight, true);
   }
 
-  return isValidHeights(heights) ? heights : null;
+  return heights.every(isValidHeight) ? heights : null;
 }

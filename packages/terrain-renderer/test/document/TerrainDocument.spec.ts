@@ -146,5 +146,6 @@ describe("TerrainDocument", () => {
     const tile = TileCoord.containing(-1, CHUNK_SAMPLES + TILE_SAMPLES);
 
     assert.deepEqual([tile.chunk.key, tile.x, tile.z, tile.key], ["-1,1", 3, 1, "-1,1:7"]);
+    assert.deepEqual(TileCoord.fromIndex(tile.chunk, tile.index), tile);
   });
 });
