@@ -14,13 +14,14 @@ import {
 import { TurntableAngles } from "./TurntableAngles.ts";
 import { Turntable } from "../../preview/Turntable.ts";
 import {
-  PREVIEW_ROTATION_STEP,
-  PREVIEW_STILL_ROTATION,
+  PREVIEW_REST_ANGLE,
+  type PreviewAngle,
   type PreviewStage
 } from "../../preview/PreviewStage.ts";
 
 // CONSTANTS
 const kSettleFrames = 6;
+const kRotationStep = 0.005;
 
 interface LiftedBlock {
   blockId: number;
@@ -40,7 +41,7 @@ export class BlockLibraryRenderer extends Turntable {
   #captures = new CellCaptures();
   #capturing = new Set<number>();
   #capturingGhost = false;
-  #angles = new TurntableAngles(PREVIEW_STILL_ROTATION, PREVIEW_ROTATION_STEP);
+  #angles = new TurntableAngles(PREVIEW_REST_ANGLE, kRotationStep);
   #grid = new BlockGrid(1, 1);
   #canvasWidth = 0;
   #canvasHeight = 0;
@@ -193,11 +194,11 @@ export class BlockLibraryRenderer extends Turntable {
   #paintCell(
     index: number,
     mesh: THREE.Mesh,
-    rotation: number
+    angle: PreviewAngle
   ): void {
     const ticket = this.#captures.issue();
     this.#capturing.add(index);
-    this.stage.capture(this.#cell, mesh, rotation)
+    this.stage.capture(this.#cell, mesh, angle)
       .then((image) => {
         if (this.#captures.land(index, ticket)) {
           const { x, y } = this.#cellOrigin(index);

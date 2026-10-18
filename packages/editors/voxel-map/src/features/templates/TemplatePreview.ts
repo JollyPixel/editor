@@ -34,7 +34,6 @@ export class TemplatePreview extends WorkspaceElement {
       }
 
       .well {
-        position: relative;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -44,34 +43,6 @@ export class TemplatePreview extends WorkspaceElement {
       .hint {
         position: absolute;
         text-align: center;
-      }
-
-      .toggle {
-        position: absolute;
-        top: var(--jolly-space-1, 4px);
-        left: var(--jolly-space-1, 4px);
-        z-index: 1;
-        display: grid;
-        place-items: center;
-        width: 24px;
-        height: 24px;
-        padding: 0;
-        border: 0;
-        border-radius: var(--jolly-radius-sm, 3px);
-        background: transparent;
-        color: var(--jolly-text-muted);
-        cursor: pointer;
-      }
-
-      .toggle:hover,
-      .toggle:focus-visible {
-        background: var(--jolly-control-bg-hover);
-        color: var(--jolly-text);
-      }
-
-      .toggle jolly-icon {
-        width: 14px;
-        height: 14px;
       }
     `
   ];
