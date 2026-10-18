@@ -19,6 +19,7 @@ import { TerrainRenderer } from "@jolly-pixel/terrain.renderer/engine";
 import * as THREE from "three";
 
 // Import Internal Dependencies
+import { PeerBrushRings } from "../features/sculpt/collaboration/PeerBrushRings.ts";
 import type { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
 import { SculptBrush } from "../features/sculpt/SculptBrush.ts";
 import {
@@ -86,6 +87,13 @@ export class TerrainEditorScene extends Systems.Scene {
         camera: () => camera.camera
       });
     this.#view = view;
+    const peerRings = this.world
+      .createActor("peer-brush-rings")
+      .addComponentAndGet(PeerBrushRings, {
+        room: this.#room,
+        terrain: this.#document.terrain,
+        camera: () => camera.camera
+      });
     this.world
       .createActor("sculpt-brush")
       .addComponent(SculptBrush, {
@@ -93,7 +101,8 @@ export class TerrainEditorScene extends Systems.Scene {
         view,
         settings: this.#sculpt,
         history: this.#history,
-        camera: () => camera.camera
+        camera: () => camera.camera,
+        publishRing: (shape) => peerRings.publishLocalRing(shape)
       });
     this.#disposables.push(bindHistoryShortcuts(this.world.input.keyboard, this.#history));
 
@@ -117,6 +126,7 @@ export class TerrainEditorScene extends Systems.Scene {
         view.tilesChanged(command.tiles.map(
           ({ x, z, tile }) => TileCoord.fromIndex(new ChunkCoord(x, z), tile)
         ));
+        peerRings.refresh();
 
         return;
       }

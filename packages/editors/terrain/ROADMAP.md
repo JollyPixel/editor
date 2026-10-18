@@ -29,7 +29,10 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   are touched.
 - **Undo and redo: done** (2026-10-18). A stroke is one step, Ctrl+Z and
   Ctrl+Y or the toolbar buttons; a step a peer has changed since is skipped.
-- **Next:** interest routing.
+- **Presence: done** (2026-10-19). Peers show in the presence stack and as
+  camera frustums; each client publishes its interest region and brush ring,
+  and draws peers' rings inside its presence radius.
+- **Next:** live patches, routed by the terrain extension.
 
 Tick a box when its item lands, and move **Next** along with it.
 

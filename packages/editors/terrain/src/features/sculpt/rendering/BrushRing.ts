@@ -25,19 +25,26 @@ export interface BrushRingShape {
   readonly innerRadius: number | null;
 }
 
+export interface BrushRingColors {
+  outer?: THREE.ColorRepresentation;
+  inner?: THREE.ColorRepresentation;
+}
+
 export class BrushRing extends THREE.Group {
   #outer = new LineSegmentsGeometry();
   #inner = new LineSegmentsGeometry();
   #lines: LineSegments2[];
 
-  constructor() {
+  constructor(
+    colors: BrushRingColors = {}
+  ) {
     super();
 
     this.name = "brush-ring";
     this.#lines = [
       ringLines(this.#outer, { color: kHaloColor, linewidth: 4 }, 10),
-      ringLines(this.#outer, { color: kOuterColor, linewidth: 2 }, 11),
-      ringLines(this.#inner, { color: kInnerColor, linewidth: 1.5 }, 11)
+      ringLines(this.#outer, { color: colors.outer ?? kOuterColor, linewidth: 2 }, 11),
+      ringLines(this.#inner, { color: colors.inner ?? kInnerColor, linewidth: 1.5 }, 11)
     ];
     this.add(...this.#lines);
     this.visible = false;

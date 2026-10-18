@@ -4,5 +4,6 @@ export * from "./model/terrainState.ts";
 export * from "./model/TerrainCommandDocument.ts";
 export * from "./network/heights.ts";
 export * from "./network/tilePatches.ts";
+export * from "./network/TerrainInterest.ts";
 export * from "./network/types.ts";
 export * from "./history/terrainHistoryRegistration.ts";

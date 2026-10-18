@@ -29,7 +29,10 @@ import {
   type GroundPoint
 } from "./model/StampSpacer.ts";
 import { StrokeRecorder } from "./model/StrokeRecorder.ts";
-import { BrushRing } from "./rendering/BrushRing.ts";
+import {
+  BrushRing,
+  type BrushRingShape
+} from "./rendering/BrushRing.ts";
 
 // CONSTANTS
 const kResizeStep = 1.1;
@@ -41,6 +44,7 @@ export interface SculptBrushOptions {
   settings: SculptSettings;
   history: Pick<TerrainHistory, "open">;
   camera: () => THREE.Camera | null;
+  publishRing?: (shape: BrushRingShape | null) => void;
 }
 
 interface Stroke {
@@ -56,6 +60,7 @@ export class SculptBrush extends ActorComponent {
   #settings: SculptSettings;
   #history: Pick<TerrainHistory, "open">;
   #camera: () => THREE.Camera | null;
+  #publishRing: (shape: BrushRingShape | null) => void;
   #ring = new BrushRing();
   #raycaster = new THREE.Raycaster();
   #pointer = new THREE.Vector2();
@@ -78,6 +83,7 @@ export class SculptBrush extends ActorComponent {
     this.#settings = options.settings;
     this.#history = options.history;
     this.#camera = options.camera;
+    this.#publishRing = options.publishRing ?? (() => undefined);
   }
 
   awake(): void {
@@ -242,12 +248,14 @@ export class SculptBrush extends ActorComponent {
     }
 
     const inner = halfWeightDistance(falloff);
-    this.#ring.draw(this.#document.terrain, {
+    const shape: BrushRingShape = {
       x: aim.point.x,
       z: aim.point.z,
       radius: size,
       innerRadius: inner === null ? null : inner * size
-    });
+    };
+    this.#ring.draw(this.#document.terrain, shape);
+    this.#publishRing(shape);
     this.#ringKey = key;
     this.actor.world.invalidate();
   }
@@ -256,6 +264,7 @@ export class SculptBrush extends ActorComponent {
     if (this.#ring.visible) {
       this.#ring.visible = false;
       this.#ringKey = "";
+      this.#publishRing(null);
       this.actor.world.invalidate();
     }
   }

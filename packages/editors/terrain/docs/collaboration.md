@@ -56,7 +56,9 @@ The event log records one command per commit, not one every 100 ms.
 Each client publishes its interest region: the chunk under its camera and two
 radii.
 
-- `presenceRadius`: 4 chunks by default, set in the view settings.
+- `presenceRadius`: 4 chunks by default, set in the view settings. The
+  region is the square of chunks within that many chunks of the centre on
+  each axis.
 - `streamRadius`: larger, set by the LoD. It decides which chunks are loaded.
 
 What a peer receives about someone else's stroke depends on where it is:
