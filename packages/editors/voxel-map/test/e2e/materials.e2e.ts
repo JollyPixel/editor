@@ -42,7 +42,7 @@ function readMaterial(
   );
 }
 
-test("a material made in the Materials pane is renamed, applied, recoloured and edited", async({ map }) => {
+test("a material made in the Materials pane is applied, recoloured, edited, copied", async({ map }) => {
   const { materials } = map;
   const { library } = materials;
   await map.panes.open("Materials");
@@ -73,6 +73,13 @@ test("a material made in the Materials pane is renamed, applied, recoloured and 
 
   await materials.changeRoughness(0);
   await expect.poll(async() => (await readFinish(map, goldId))?.roughness).toBe(0);
+
+  const copyId = `${DEFAULT_BLOCKSET_ID}/Gold copy`;
+  await materials.choose("Gold", "Duplicate");
+  await expect(materials.selected).toHaveText("Gold copy");
+  await expect.poll(async() => (await readFinish(map, copyId))?.roughness).toBe(0);
+  await materials.choose("Gold copy", "Delete");
+  await expect.poll(() => readFinish(map, copyId)).toBeNull();
 
   await map.panes.open("Blocks");
   await expect(map.blocks.library.swatch(first.id)).toBeVisible();

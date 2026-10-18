@@ -19,6 +19,7 @@ export class MaterialsPane {
   readonly color: Locator;
   readonly roughness: Locator;
   readonly materialLibrary: Locator;
+  readonly menu: Locator;
   readonly viewSettings: Locator;
   readonly noBlocksHint: Locator;
 
@@ -37,10 +38,11 @@ export class MaterialsPane {
     this.removeButton = this.root.getByRole("button", { name: "Remove from selected block" });
     this.color = this.root
       .locator("jolly-color")
-      .filter({ hasText: "Color" })
+      .filter({ hasText: "Swatch" })
       .locator("input.hex");
     this.roughness = this.root.getByRole("spinbutton", { name: "Roughness" });
     this.materialLibrary = this.root.locator("material-library");
+    this.menu = this.materialLibrary.getByRole("menu", { name: "Material actions" });
     this.viewSettings = this.root.locator("map-config-panel");
     this.noBlocksHint = this.root.getByText("Add a block to the map to edit materials.");
   }
@@ -49,6 +51,25 @@ export class MaterialsPane {
     name: string
   ): Locator {
     return this.viewSettings.getByRole("radio", { name });
+  }
+
+  row(
+    name: string
+  ): Locator {
+    return this.materialLibrary
+      .getByRole("treeitem")
+      .filter({ has: this.materialLibrary.page().getByText(name, { exact: true }) });
+  }
+
+  async choose(
+    name: string,
+    label: string
+  ): Promise<void> {
+    await this.row(name).locator(".label").click({ button: "right" });
+    await this.menu.getByRole("menuitem", {
+      name: label,
+      exact: true
+    }).click();
   }
 
   async create(

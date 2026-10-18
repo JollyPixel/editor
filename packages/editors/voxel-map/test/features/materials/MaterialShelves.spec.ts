@@ -67,9 +67,11 @@ describe("MaterialShelves", () => {
 
     assert.equal(terrain.children?.[0].renamable, true);
     assert.equal(rock.children?.[0].renamable, false);
+    assert.equal(terrain.badges, undefined);
+    assert.deepEqual(rock.badges?.map((badge) => badge.icon), ["lock"]);
   });
 
-  it("groups materials under one node per blockset", () => {
+  it("groups materials under one collapsible node per blockset, counting them", () => {
     const shelves = new MaterialShelves([
       shelf(kTerrain, "Terrain", [new MaterialGroup({ id: "terrain/wet" })]),
       shelf(kRock, "Rock", [])
@@ -78,6 +80,8 @@ describe("MaterialShelves", () => {
     const nodes = shelves.toTreeNodes();
 
     assert.deepEqual(nodes.map((node) => node.label), ["Terrain", "Rock"]);
+    assert.deepEqual(nodes.map((node) => node.detail), ["1", "0"]);
+    assert.ok(nodes.every((node) => node.icon === undefined && node.collapsible !== false));
     assert.deepEqual(nodes[0].children?.map((node) => node.id), ["terrain/wet"]);
     assert.equal(nodes[0].children?.[0].detail, undefined);
     assert.equal(shelves.materialCount, 1);

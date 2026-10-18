@@ -9,21 +9,36 @@ import {
   state
 } from "lit/decorators.js";
 import {
-  formatCount,
-  showConfirm,
+  ContextMenuController,
+  MenuSession,
+  disableEntries,
+  type ContextMenu,
   type JollyActivateSwatchDetail,
   type JollyChangeDetail,
   type JollyRenameDetail,
   type JollySelectDetail,
-  type Tree
+  type JollyToggleExpandDetail,
+  type Tree,
+  type TreeRenameValidator
 } from "@jolly-pixel/ui";
-import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
+import type {
+  BlocksetSlot,
+  ResolvedBlockDefinition
+} from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
 import { hintStyles } from "../../shared/styles/hint.styles.ts";
-import type { MapMaterial } from "./MapMaterial.ts";
+import type {
+  MapMaterial,
+  SelectedBlockUse
+} from "./MapMaterial.ts";
+import { MaterialCommands } from "./MaterialCommands.ts";
+import {
+  MaterialMenu,
+  SHELF_MENU
+} from "./MaterialMenu.ts";
 import {
   MaterialShelves,
   type MaterialShelf
@@ -38,12 +53,24 @@ export class MaterialLibrary extends WorkspaceElement {
   @state()
   private declare _selectedId: string | null;
 
+  @state()
+  private declare _collapsed: ReadonlySet<string>;
+
   @query("jolly-tree")
   private declare _tree: Tree | null;
+
+  @query("jolly-context-menu")
+  private declare _contextMenu: ContextMenu;
+
+  #menu = new ContextMenuController(
+    () => this._contextMenu,
+    (id) => this.#openMenu(id)
+  );
 
   constructor() {
     super();
     this._selectedId = null;
+    this._collapsed = new Set();
   }
 
   protected override watchWorkspace(
@@ -76,7 +103,6 @@ export class MaterialLibrary extends WorkspaceElement {
       undefined :
       shelves.material(selectedId);
     const editable = material !== undefined && shelves.canEdit(material.id);
-    const block = this.#block(workspace);
 
     return html`
       <jolly-folder
@@ -92,7 +118,10 @@ export class MaterialLibrary extends WorkspaceElement {
           label="New material"
           title="New material"
           ?disabled=${shelves.editableShelves.length === 0}
-          @click=${this.#create}
+          @click=${() => this.#create(
+            workspace,
+            this.#defaultSlot(workspace, shelves)
+          )}
         ></jolly-button>
         <jolly-button
           slot="actions"
@@ -109,11 +138,17 @@ export class MaterialLibrary extends WorkspaceElement {
             <jolly-tree
               .nodes=${shelves.toTreeNodes()}
               .selected=${selectedId === null ? [] : [selectedId]}
+              .expanded=${this.#expanded(shelves)}
+              .validateRename=${this.#validateRename}
               renamable
+              indent-guides
+              toggle-style="box"
               swatch-position="start"
               @jolly-select=${this.#onSelect}
               @jolly-activate-swatch=${this.#onActivateSwatch}
               @jolly-rename=${this.#onRename}
+              @jolly-toggle-expand=${this.#onToggleExpand}
+              @jolly-context-request=${this.#menu.onContextRequest}
             ></jolly-tree>
             ${shelves.materialCount === 0 ?
               html`<p class="hint">No materials yet.</p>` :
@@ -122,29 +157,38 @@ export class MaterialLibrary extends WorkspaceElement {
           <section class="editor">
             ${material === undefined ?
               html`<p class="hint">Pick a material or create one.</p>` :
-              this.#renderFields(workspace, material, block, editable)}
+              this.#renderFields(workspace, material, editable)}
           </section>
         </div>
       </jolly-folder>
+      <jolly-context-menu
+        label="Material actions"
+        @jolly-context-action=${this.#menu.onContextAction}
+      ></jolly-context-menu>
     `;
   }
 
   #renderFields(
     workspace: VoxelMapWorkspace,
     material: MapMaterial,
-    block: ResolvedBlockDefinition | undefined,
     editable: boolean
   ) {
     return html`
       <div class="apply">
-        ${this.#renderApply(workspace, material, block)}
+        ${this.#renderApply(
+          workspace,
+          material,
+          this.#blockUse(workspace, material)
+        )}
       </div>
+      ${editable ?
+        nothing :
+        html`<p class="hint">This blockset's materials are read-only.</p>`}
       <div class="fields">
-        <jolly-separator label="Properties"></jolly-separator>
         <jolly-color
-          label="Color"
+          label="Swatch"
           label-position="auto"
-          description="Swatch shown on the blocks using this material"
+          description="Marks this material in the tree and on block library tiles"
           description-display="tooltip"
           ?disabled=${!editable}
           .value=${material.swatch.color}
@@ -166,40 +210,149 @@ export class MaterialLibrary extends WorkspaceElement {
   #renderApply(
     workspace: VoxelMapWorkspace,
     material: MapMaterial,
-    block: ResolvedBlockDefinition | undefined
+    use: SelectedBlockUse
   ) {
-    if (
-      block === undefined ||
-      !material.slot.ownsBlockId(block.id) ||
-      !workspace.blocksets.canEditBlock(block.id)
-    ) {
-      return html`
-        <jolly-button
-          icon="material"
-          title=${applyBlockedReason(material, block)}
-          disabled
-        >Apply to selected block</jolly-button>
-      `;
+    switch (use.kind) {
+      case "blocked":
+        return html`
+          <jolly-button
+            icon="material"
+            title=${use.reason}
+            disabled
+          >Apply to selected block</jolly-button>
+        `;
+      case "unapply":
+        return html`
+          <jolly-button
+            icon="close"
+            variant="danger"
+            title="Remove ${material.name} from ${use.block.name}"
+            @click=${() => workspace.materials.assign(use.block.id, null)}
+          >Remove from selected block</jolly-button>
+        `;
+      case "apply":
+        return html`
+          <jolly-button
+            icon="material"
+            variant="accent"
+            title="Apply ${material.name} to ${use.block.name}"
+            @click=${() => workspace.materials.assign(use.block.id, material.id)}
+          >Apply to selected block</jolly-button>
+        `;
     }
-    if (material.usedBy(block.id)) {
-      return html`
-        <jolly-button
-          icon="close"
-          variant="danger"
-          title="Remove ${material.name} from ${block.name}"
-          @click=${() => workspace.materials.assign(block.id, null)}
-        >Remove from selected block</jolly-button>
-      `;
+  }
+
+  #blockUse(
+    workspace: VoxelMapWorkspace,
+    material: MapMaterial
+  ): SelectedBlockUse {
+    return material.useOn(
+      this.#block(workspace),
+      (blockId) => workspace.blocksets.canEditBlock(blockId)
+    );
+  }
+
+  #openMenu(
+    id: string | null
+  ): MenuSession {
+    const workspace = this.workspace;
+    if (workspace === null) {
+      return MenuSession.EMPTY;
     }
 
-    return html`
-      <jolly-button
-        icon="material"
-        variant="accent"
-        title="Apply ${material.name} to ${block.name}"
-        @click=${() => workspace.materials.assign(block.id, material.id)}
-      >Apply to selected block</jolly-button>
-    `;
+    const shelves = this.#shelves(workspace);
+    if (id === null) {
+      return this.#shelfMenu(workspace, this.#defaultSlot(workspace, shelves));
+    }
+
+    const material = shelves.material(id);
+    if (material !== undefined) {
+      return this.#materialMenu(workspace, shelves, material);
+    }
+
+    const shelf = shelves.findShelf(id);
+
+    return this.#shelfMenu(
+      workspace,
+      shelf?.editable === true ? shelf.slot : undefined
+    );
+  }
+
+  #shelfMenu(
+    workspace: VoxelMapWorkspace,
+    slot: BlocksetSlot | undefined
+  ): MenuSession {
+    return MenuSession.from(
+      disableEntries(SHELF_MENU, () => slot === undefined),
+      () => this.#create(workspace, slot)
+    );
+  }
+
+  #materialMenu(
+    workspace: VoxelMapWorkspace,
+    shelves: MaterialShelves,
+    material: MapMaterial
+  ): MenuSession {
+    const commands = this.#commands(workspace);
+    const menu = new MaterialMenu({
+      editable: shelves.canEdit(material.id),
+      pristine: material.isDefault(),
+      blockUse: this.#blockUse(workspace, material).kind
+    });
+
+    return menu.session({
+      exists: () => this.#shelves(workspace).has(material.id),
+      run: (command) => commands.run(command, material)
+    });
+  }
+
+  #commands(
+    workspace: VoxelMapWorkspace
+  ): MaterialCommands {
+    return new MaterialCommands({
+      materials: workspace.materials,
+      selectedBlock: () => this.#block(workspace),
+      rename: (materialId) => this._tree?.beginRename(materialId),
+      select: (materialId) => this.#select(workspace, materialId)
+    });
+  }
+
+  #expanded(
+    shelves: MaterialShelves
+  ): string[] {
+    return [...shelves]
+      .map((shelf) => MaterialShelves.shelfNodeId(shelf.blocksetId))
+      .filter((id) => !this._collapsed.has(id));
+  }
+
+  #collapse(
+    shelfNodeId: string,
+    collapsed: boolean
+  ): void {
+    const next = new Set(this._collapsed);
+    if (collapsed) {
+      next.add(shelfNodeId);
+    }
+    else {
+      next.delete(shelfNodeId);
+    }
+    this._collapsed = next;
+  }
+
+  async #select(
+    workspace: VoxelMapWorkspace,
+    materialId: string | null
+  ): Promise<void> {
+    const shelf = materialId === null ?
+      undefined :
+      this.#shelves(workspace).findShelf(materialId);
+    if (shelf !== undefined) {
+      this.#collapse(MaterialShelves.shelfNodeId(shelf.blocksetId), false);
+    }
+
+    this._selectedId = materialId;
+    await this.updateComplete;
+    await this._tree?.updateComplete;
   }
 
   #shelves(
@@ -290,13 +443,30 @@ export class MaterialLibrary extends WorkspaceElement {
       material.id;
   };
 
-  async #create(): Promise<void> {
+  readonly #onToggleExpand = (
+    event: CustomEvent<JollyToggleExpandDetail>
+  ): void => {
+    const { id, expanded } = event.detail;
+    this.#collapse(id, !expanded);
+  };
+
+  readonly #validateRename: TreeRenameValidator = ({ id, name }) => {
     const workspace = this.workspace;
     if (workspace === null) {
-      return;
+      return null;
     }
 
-    const shelves = this.#shelves(workspace);
+    const material = this.#shelves(workspace).material(id);
+    const taken = material !== undefined &&
+      workspace.materials.isNameTaken(material, name);
+
+    return taken ? `${name.trim()} already exists` : null;
+  };
+
+  #defaultSlot(
+    workspace: VoxelMapWorkspace,
+    shelves: MaterialShelves
+  ): BlocksetSlot | undefined {
     const selectedId = this.#selectedIn(workspace, shelves);
     const selectedShelf = selectedId === null ?
       undefined :
@@ -309,17 +479,22 @@ export class MaterialLibrary extends WorkspaceElement {
     const preferred = [selectedShelf?.slot, blockOwner?.slot].find(
       (slot) => writable.some((shelf) => shelf.slot === slot)
     );
-    const target = preferred ?? writable[0]?.slot;
-    const materialId = target === undefined ?
+
+    return preferred ?? writable[0]?.slot;
+  }
+
+  async #create(
+    workspace: VoxelMapWorkspace,
+    slot: BlocksetSlot | undefined
+  ): Promise<void> {
+    const materialId = slot === undefined ?
       null :
-      workspace.materials.create(target);
+      workspace.materials.create(slot);
     if (materialId === null) {
       return;
     }
 
-    this._selectedId = materialId;
-    await this.updateComplete;
-    await this._tree?.updateComplete;
+    await this.#select(workspace, materialId);
     this._tree?.beginRename(materialId);
   }
 
@@ -334,37 +509,10 @@ export class MaterialLibrary extends WorkspaceElement {
     const material = selectedId === null ?
       undefined :
       shelves.material(selectedId);
-    if (material === undefined || !shelves.canEdit(material.id)) {
-      return;
-    }
-
-    const users = material.blockIds.length;
-    const confirmed = users <= 1 || await showConfirm({
-      title: "Delete material",
-      message: `${material.name} is used by ${formatCount(users, "block")}. ` +
-        "They will have no material.",
-      confirmLabel: "Delete",
-      icon: "trash",
-      danger: true
-    });
-    if (confirmed) {
-      this._selectedId = null;
-      workspace.materials.remove(material);
+    if (material !== undefined && shelves.canEdit(material.id)) {
+      await this.#commands(workspace).run("delete", material);
     }
   }
-}
-
-function applyBlockedReason(
-  material: MapMaterial,
-  block: ResolvedBlockDefinition | undefined
-): string {
-  if (block === undefined) {
-    return "Select a block to apply this material";
-  }
-
-  return material.slot.ownsBlockId(block.id) ?
-    "You can only view the blocks of this blockset" :
-    `${block.name} belongs to another blockset`;
 }
 
 declare global {

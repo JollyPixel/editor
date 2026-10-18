@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import type { TreeNode } from "@jolly-pixel/ui";
+import type {
+  TreeBadge,
+  TreeNode
+} from "@jolly-pixel/ui";
 import type { BlocksetSlot } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -7,6 +10,11 @@ import type { MapMaterial } from "./MapMaterial.ts";
 
 // CONSTANTS
 const kShelfPrefix = "blockset:";
+const kReadOnlyBadge: TreeBadge = {
+  color: "var(--jolly-text-muted)",
+  icon: "lock",
+  title: "Read-only blockset"
+};
 
 export interface MaterialShelf {
   readonly blocksetId: string;
@@ -91,8 +99,8 @@ export class MaterialShelves implements Iterable<MaterialShelf> {
       return {
         id: MaterialShelves.shelfNodeId(shelf.blocksetId),
         label: shelf.label,
-        icon: "folder",
-        collapsible: false,
+        detail: String(shelf.materials.length),
+        ...(shelf.editable ? {} : { badges: [kReadOnlyBadge] }),
         children: materialNodes(shelf)
       };
     });

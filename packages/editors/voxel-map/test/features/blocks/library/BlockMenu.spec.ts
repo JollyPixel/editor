@@ -7,10 +7,7 @@ import {
   BlocksetSlot,
   MaterialGroup
 } from "@jolly-pixel/voxel.renderer";
-import type {
-  ContextMenuEntry,
-  MenuSession
-} from "@jolly-pixel/ui";
+import type { MenuSession } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -19,6 +16,7 @@ import {
   type BlockMenuTarget
 } from "../../../../src/features/blocks/library/BlockMenu.ts";
 import { MapMaterial } from "../../../../src/features/materials/MapMaterial.ts";
+import { choices } from "../../../helpers/menus.ts";
 
 // CONSTANTS
 const kSlot = new BlocksetSlot({ id: "terrain", slot: 1 });
@@ -66,18 +64,6 @@ function open(
   });
 
   return { session, ran };
-}
-
-function choices(
-  entries: readonly ContextMenuEntry[]
-): string[] {
-  return entries.flatMap((entry) => {
-    if (entry === "separator" || entry.disabled === true) {
-      return [];
-    }
-
-    return entry.items === undefined ? [entry.id] : choices(entry.items);
-  });
 }
 
 describe("BlockMenu", () => {
