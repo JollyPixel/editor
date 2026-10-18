@@ -120,9 +120,10 @@ The view uses CDLOD:
   vertices onto their neighbours only works with a fixed diagonal.
 - Node and quarter-node corners fall on even grid lines, so one mesh per
   resolution serves every node: 32 quads for a node, 16 for a quarter.
-- Skirts hang under node edges and hide what morphing cannot. A skirt
-  collapses where no chunk lies across its edge, so the world's border ends
-  cleanly.
+- Skirts hide the hairline cracks that rounding leaves where two levels meet.
+  A node only has them on edges that face a node of another level, one grid
+  spacing deep, and they collapse where no chunk lies across the edge, so the
+  world's border ends cleanly.
 - A node can cover ground with no chunk; its fragments there are discarded.
   Chunk borders fall on vertex lines at every level, so no triangle straddles
   one.

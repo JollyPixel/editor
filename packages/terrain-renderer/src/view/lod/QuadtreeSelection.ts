@@ -8,6 +8,7 @@ import {
   LodRanges,
   REGION_SIZE
 } from "./LodRanges.ts";
+import { skirtMasks } from "./skirtMasks.ts";
 
 export interface Point3 {
   readonly x: number;
@@ -33,7 +34,14 @@ export interface SelectedNode {
    */
   readonly size: number;
   readonly bounds: NodeBounds;
+  /**
+   * One bit per edge, in `SKIRT_EDGES` order, set where a node of another
+   * level lies across the edge.
+   */
+  readonly skirts: number;
 }
+
+type WalkedNode = Omit<SelectedNode, "skirts">;
 
 export interface QuadtreeSelectOptions {
   visible?: (bounds: NodeBounds) => boolean;
@@ -56,7 +64,7 @@ export class QuadtreeSelection {
     camera: Point3,
     options: QuadtreeSelectOptions = {}
   ): SelectedNode[] {
-    const selected: SelectedNode[] = [];
+    const selected: WalkedNode[] = [];
     const walk = new SelectionWalk(
       this.#terrain,
       this.ranges,
@@ -71,8 +79,11 @@ export class QuadtreeSelection {
         this.ranges.rootLevel
       );
     }
+    const masks = skirtMasks(selected);
 
-    return selected;
+    return selected.map((node, index) => {
+      return { ...node, skirts: masks[index] };
+    });
   }
 
   #regions(): Iterable<{ x: number; z: number; }> {
@@ -93,7 +104,7 @@ class SelectionWalk {
   #ranges: LodRanges;
   #camera: Point3;
   #visible: (bounds: NodeBounds) => boolean;
-  #selected: SelectedNode[];
+  #selected: WalkedNode[];
   #bounds = new Map<string, NodeBounds | null>();
 
   constructor(
@@ -101,7 +112,7 @@ class SelectionWalk {
     ranges: LodRanges,
     camera: Point3,
     visible: (bounds: NodeBounds) => boolean,
-    selected: SelectedNode[]
+    selected: WalkedNode[]
   ) {
     this.#terrain = terrain;
     this.#ranges = ranges;

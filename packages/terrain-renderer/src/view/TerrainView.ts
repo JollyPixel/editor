@@ -29,7 +29,7 @@ import { HeightApronStore } from "./textures/HeightApronStore.ts";
 
 // CONSTANTS
 export const NODE_RESOLUTION = 32;
-const kSkirtDepthPerSpacing = 2;
+const kSkirtDepthPerSpacing = 1;
 const kInitialCapacity = 64;
 
 export interface TerrainViewOptions {
@@ -200,7 +200,7 @@ class NodeBatch {
     nodes.forEach((node, index) => {
       const spacing = ranges.nodeSize(node.level) / NODE_RESOLUTION;
       data.setXYZW(index, node.x, node.z, spacing, spacing * kSkirtDepthPerSpacing);
-      morph.setXY(index, ranges.morphStart(node.level), ranges.morphEnd(node.level));
+      morph.setXYZ(index, ranges.morphStart(node.level), ranges.morphEnd(node.level), node.skirts);
     });
     data.needsUpdate = true;
     morph.needsUpdate = true;
@@ -222,7 +222,7 @@ class NodeBatch {
     );
     this.mesh.geometry.setAttribute(
       NODE_MORPH_ATTRIBUTE,
-      new THREE.InstancedBufferAttribute(new Float32Array(capacity * 2), 2)
+      new THREE.InstancedBufferAttribute(new Float32Array(capacity * 3), 3)
     );
   }
 }

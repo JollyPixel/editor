@@ -62,7 +62,7 @@ describe("TerrainView", () => {
     assert.equal(nodes.geometry.instanceCount + quarters.geometry.instanceCount, selected.length);
   });
 
-  test("an instance carries its corner, grid spacing, skirt depth and morph band", () => {
+  test("an instance carries its corner, grid spacing, skirt depth, morph band and skirt edges", () => {
     const view = new TerrainView(stripTerrain(20));
     const selected = view.update(camera({ x: 10, y: 30, z: -40 }, { x: 600, y: 0, z: 32 }));
     const [nodes] = batches(view);
@@ -74,11 +74,11 @@ describe("TerrainView", () => {
 
     assert.deepEqual(
       [data.getX(0), data.getY(0), data.getZ(0), data.getW(0)],
-      [first.x, first.z, spacing, spacing * 2]
+      [first.x, first.z, spacing, spacing]
     );
     assert.deepEqual(
-      [morph.getX(0), morph.getY(0)],
-      [ranges.morphStart(first.level), ranges.morphEnd(first.level)].map(Math.fround)
+      [morph.getX(0), morph.getY(0), morph.getZ(0)],
+      [ranges.morphStart(first.level), ranges.morphEnd(first.level), first.skirts].map(Math.fround)
     );
   });
 

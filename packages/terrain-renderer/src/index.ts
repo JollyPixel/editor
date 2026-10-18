@@ -9,3 +9,4 @@ export * from "./view/mesh/GridMeshProvider.ts";
 export * from "./view/textures/ChunkTextureStore.ts";
 export * from "./view/shading/terrainNodes.ts";
 export * from "./view/TerrainView.ts";
+export * from "./view/lod/skirtMasks.ts";

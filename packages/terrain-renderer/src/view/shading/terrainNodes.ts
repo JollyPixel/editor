@@ -148,7 +148,7 @@ export function createTerrainShading(
   }
 
   const node = attribute(NODE_DATA_ATTRIBUTE, "vec4");
-  const morphRange = attribute(NODE_MORPH_ATTRIBUTE, "vec2");
+  const morphRange = attribute(NODE_MORPH_ATTRIBUTE, "vec3");
   const grid = attribute(GRID_ATTRIBUTE, "vec4");
   const offsets = attribute(MORPH_OFFSETS_ATTRIBUTE, "vec4");
   const spacing = node.z;
@@ -167,8 +167,16 @@ export function createTerrainShading(
   );
   const outward = grid.zw;
   const across = chunkLayer(floor(world.add(outward.mul(0.5)).div(CHUNK_SAMPLES)));
+  const edgeBit = select(
+    outward.y.lessThan(0),
+    float(1),
+    select(outward.x.greaterThan(0), float(2), select(outward.y.greaterThan(0), float(4), float(8)))
+  );
+  const edgeSkirted = floor(morphRange.z.div(edgeBit)).mod(2).greaterThan(0.5);
   const skirtDepth = select(
-    length(outward).greaterThan(0).and(across.greaterThanEqual(int(0))),
+    length(outward).greaterThan(0)
+      .and(edgeSkirted)
+      .and(across.greaterThanEqual(int(0))),
     node.w,
     float(0)
   );

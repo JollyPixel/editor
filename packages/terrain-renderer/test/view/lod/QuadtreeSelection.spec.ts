@@ -9,6 +9,7 @@ import {
   ChunkCoord,
   LodRanges,
   QuadtreeSelection,
+  SKIRT_EDGES,
   TerrainDocument,
   type SelectedNode
 } from "#src/index.ts";
@@ -46,6 +47,25 @@ function touching(
   const overlapZ = Math.min(left.z + left.size, right.z + right.size) - Math.max(left.z, right.z);
 
   return (overlapX === 0 && overlapZ > 0) || (overlapZ === 0 && overlapX > 0);
+}
+
+function acrossEdge(
+  node: SelectedNode,
+  other: SelectedNode,
+  [outX, outZ]: readonly [number, number]
+): boolean {
+  const overlapX = Math.min(node.x + node.size, other.x + other.size) -
+    Math.max(node.x, other.x);
+  const overlapZ = Math.min(node.z + node.size, other.z + other.size) -
+    Math.max(node.z, other.z);
+  if (outX === 0) {
+    const touches = outZ < 0 ? other.z + other.size === node.z : other.z === node.z + node.size;
+
+    return touches && overlapX > 0;
+  }
+  const touches = outX < 0 ? other.x + other.size === node.x : other.x === node.x + node.size;
+
+  return touches && overlapZ > 0;
 }
 
 describe("QuadtreeSelection", () => {
@@ -91,6 +111,41 @@ describe("QuadtreeSelection", () => {
         }
       }
     }
+  });
+
+  test("a node has a skirt exactly on the edges facing another level", () => {
+    const terrain = stripTerrain(20);
+    for (let x = 0; x < 3; x++) {
+      terrain.addChunk(new ChunkCoord(x, 1));
+      terrain.addChunk(new ChunkCoord(x, -1));
+    }
+    const selection = new QuadtreeSelection(terrain);
+    let skirted = 0;
+    let bare = 0;
+
+    for (const camera of [{ x: 10, y: 20, z: 30 }, { x: 700, y: 5, z: 60 }, { x: 95, y: 150, z: -20 }]) {
+      const nodes = selection.select(camera);
+      for (const node of nodes) {
+        for (const { bit, outward } of SKIRT_EDGES) {
+          const expected = nodes.some(
+            (other) => other.level !== node.level && acrossEdge(node, other, outward)
+          );
+          assert.equal(
+            (node.skirts & bit) !== 0,
+            expected,
+            `edge ${bit} of the node at (${node.x}, ${node.z})`
+          );
+          if (expected) {
+            skirted++;
+          }
+          else {
+            bare++;
+          }
+        }
+      }
+    }
+
+    assert.ok(skirted > 0 && bare > 0);
   });
 
   test("chunks beyond the coarsest range are not drawn", () => {
