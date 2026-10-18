@@ -118,7 +118,6 @@ export class EditToolbar extends WorkspaceElement {
         ${renderSegment("edit", mode !== "place", this.#renderEdit())}
         ${renderSegment("select", mode === "select", this.#renderSelect())}
         ${renderSegment("brush", mode === "paint", html`
-          <span class="separator" aria-hidden="true"></span>
           <voxel-brush-controls .workspace=${workspace}></voxel-brush-controls>
         `)}
         ${renderSegment("placement", mode === "place", html`
@@ -151,8 +150,7 @@ export class EditToolbar extends WorkspaceElement {
           @click=${() => this.#selectTool("select")}
         ></jolly-tool-button>
       </div>
-      <span class="separator" aria-hidden="true"></span>
-      <div class="group" role="group" aria-label="History">
+      <div class="group divided" role="group" aria-label="History">
         <jolly-tool-button
           data-tool="undo"
           icon="undo"
@@ -168,8 +166,7 @@ export class EditToolbar extends WorkspaceElement {
           @click=${this.#onRedo}
         >${renderStepCount(this._redoDepth)}</jolly-tool-button>
       </div>
-      <span class="separator" aria-hidden="true"></span>
-      <div class="group" role="group" aria-label="Clipboard">
+      <div class="group divided" role="group" aria-label="Clipboard">
         <jolly-tool-button
           data-tool="paste"
           icon="paste"
@@ -186,8 +183,7 @@ export class EditToolbar extends WorkspaceElement {
     const cycle = this.#shortcut(TOOL_SHORTCUTS.select);
 
     return html`
-      <span class="separator" aria-hidden="true"></span>
-      <div class="group" role="group" aria-label="Select mode">
+      <div class="group divided" role="group" aria-label="Select mode">
         <jolly-tool-button
           data-select-mode="box"
           icon="marquee"

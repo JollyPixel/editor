@@ -137,16 +137,48 @@ async function center(
 export class BlocksPane {
   readonly root: Locator;
   readonly library: BlockLibrary;
-  readonly orderButton: Locator;
-  readonly orderMenu: Locator;
+  readonly settingsButton: Locator;
+  readonly settingsMenu: Locator;
+  readonly searchButton: Locator;
+  readonly searchBox: Locator;
+  readonly noMatches: Locator;
 
   constructor(
     page: Page
   ) {
     this.root = page.locator("blocks-panel");
     this.library = new BlockLibrary(this.root);
-    this.orderButton = this.root.getByRole("button", { name: /^Order:/ });
-    this.orderMenu = page.getByRole("menu", { name: "Block order" });
+    this.settingsButton = this.root.getByRole("button", {
+      name: "Library settings"
+    });
+    this.settingsMenu = page.getByRole("menu", {
+      name: "Block library settings"
+    });
+    this.searchButton = this.root.getByRole("button", {
+      name: "Search blocks"
+    });
+    this.searchBox = this.root.getByRole("searchbox", {
+      name: "Search blocks"
+    });
+    this.noMatches = this.root.getByRole("status").filter({
+      hasText: "No matching blocks"
+    });
+  }
+
+  async chooseSetting(
+    name: string
+  ): Promise<void> {
+    await this.settingsButton.click();
+    await this.settingsMenu.getByRole("menuitemradio", { name }).click();
+  }
+
+  async search(
+    text: string
+  ): Promise<void> {
+    if (!await this.searchBox.isVisible()) {
+      await this.searchButton.click();
+    }
+    await this.searchBox.fill(text);
   }
 }
 

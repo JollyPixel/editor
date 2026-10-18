@@ -6,8 +6,7 @@ import { viewportToolbarStyles } from "../../shared/styles/viewportToolbar.style
 
 export const placementControlsStyles = [viewportToolbarStyles, css`
   :host {
-    display: inline-flex;
-    align-items: center;
+    display: contents;
   }
 
   .axis {

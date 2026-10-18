@@ -132,6 +132,12 @@ export class MapBlocksets
     this.#assignActive(blocksetId);
   }
 
+  get active(): BlocksetEntry | undefined {
+    const blocksetId = this.#activeBlocksetId;
+
+    return blocksetId === null ? undefined : this.entry(blocksetId);
+  }
+
   entry(
     blocksetId: string
   ): BlocksetEntry | undefined {

@@ -1,9 +1,13 @@
 // Import Third-party Dependencies
 import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 
+// Import Internal Dependencies
+import { BlockLibraryOption } from "./BlockLibraryOption.ts";
+
 export type BlockLibraryOrderKind = "registry" | "usage";
 
-export class BlockLibraryOrder {
+export class BlockLibraryOrder
+  extends BlockLibraryOption<BlockLibraryOrderKind> {
   static readonly Registry = new BlockLibraryOrder(
     "registry",
     "order-registry",
@@ -26,20 +30,6 @@ export class BlockLibraryOrder {
   ): BlockLibraryOrder {
     return BlockLibraryOrder.all.find((order) => order.value === value) ??
       BlockLibraryOrder.Registry;
-  }
-
-  readonly value: BlockLibraryOrderKind;
-  readonly icon: string;
-  readonly label: string;
-
-  constructor(
-    value: BlockLibraryOrderKind,
-    icon: string,
-    label: string
-  ) {
-    this.value = value;
-    this.icon = icon;
-    this.label = label;
   }
 
   get reorderable(): boolean {

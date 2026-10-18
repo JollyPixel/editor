@@ -41,11 +41,11 @@ export const textures = new Tour({
     },
     {
       id: "edit-block",
-      target: ["blocks-panel", "[data-tour=edit-block]"],
+      target: ["blocks-panel", "block-library"],
       side: "right",
       title: "Edit a block",
-      body: "Change the picked block's blockset, shape and transparency here.\n\n" +
-        "Duplicate it first to keep the original untouched.",
+      body: "Double click a block to change its blockset, shape and transparency.\n\n" +
+        "Right click it and duplicate it first to keep the original untouched.",
       enter: showPane("blocks")
     },
     {

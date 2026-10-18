@@ -134,6 +134,23 @@ export const folderStyles = css`
     --jolly-icon-tone-rest: 100%;
   }
 
+  ::slotted(jolly-search[slot="actions"]) {
+    --jolly-text: var(
+      --jolly-folder-action-fg,
+      ${kFallback.folderActionFg}
+    );
+    --jolly-control-height: var(--jolly-folder-action-size);
+    --jolly-search-trigger-width: calc(var(--jolly-folder-action-size) + 4px);
+    --jolly-search-trigger-height: var(--jolly-folder-action-size);
+    --jolly-search-trigger-icon-size: 16px;
+    --jolly-search-trigger-opacity: 1;
+    --jolly-search-trigger-bg: var(
+      --jolly-folder-action-bg,
+      ${kFallback.folderActionBg}
+    );
+    --jolly-search-trigger-bg-hover: var(--jolly-folder-action-bg-hover);
+  }
+
   ::slotted(jolly-button[slot="actions"][variant="danger"]) {
     --jolly-danger: var(
       --jolly-folder-action-danger-fg,

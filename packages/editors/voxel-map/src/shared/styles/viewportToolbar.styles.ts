@@ -18,17 +18,6 @@ export const viewportToolbarStyles = css`
     );
   }
 
-  jolly-rail {
-    --jolly-icon-button-size: var(--voxel-toolbar-button-size);
-
-    align-items: center;
-    gap: 0;
-    padding-inline: 4px;
-    border-radius: var(--jolly-radius-sm, 2px);
-    background: var(--jolly-surface-raised);
-    box-shadow: var(--jolly-shadow-floating);
-  }
-
   .group {
     display: flex;
     align-items: center;
@@ -48,7 +37,8 @@ export const viewportToolbarStyles = css`
     display: none;
   }
 
-  .separator {
+  .divided::before {
+    content: "";
     flex: 0 0 auto;
     width: 1px;
     height: 22px;

@@ -46,6 +46,12 @@ duplicate, set or remove its material, copy its ID, remove its voxels from the
 map, or delete it. Removing voxels always asks first; deleting asks only when
 voxels still use the block. Right-clicking an empty spot offers a new block.
 The library in the Materials pane only offers the material and ID actions.
+Double-clicking a block opens its editor.
+
+The settings button in the Block Library header picks the block order and which
+blocks the library shows: those of every blockset, or only those of the active
+blockset (the selected texture tab). The browser remembers both choices.
+The search button next to it filters the shown blocks by name.
 
 ## 🧪 Tests and checks
 

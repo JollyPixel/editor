@@ -151,12 +151,10 @@ test("Delete removes the selected blocks only", async({ map, page }) => {
 });
 
 test("a click in connected mode selects the touching blocks only", async({ map, page }) => {
-  const { placement, toolbar, viewport, world } = map;
+  const { placement, viewport, world } = map;
   await seed(map, [...kRow, kOutside]);
-  await toolbar.selectButton.click();
-  await toolbar.connectedSelectButton.click();
 
-  await viewport.click(kRow[2]);
+  await map.selectConnected(kRow[2]);
 
   await expect.poll(async() => (await placement.current())?.cells.length)
     .toBe(kRow.length);

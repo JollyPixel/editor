@@ -6,6 +6,9 @@ import type {
 
 export class EditToolbar {
   readonly root: Locator;
+  readonly rail: Locator;
+  readonly railButtons: Locator;
+  readonly railCaptions: Locator;
   readonly status: Locator;
   readonly brushTools: Locator;
   readonly history: Locator;
@@ -23,6 +26,13 @@ export class EditToolbar {
     page: Page
   ) {
     this.root = page.locator("voxel-edit-toolbar");
+    this.rail = this.root.locator("jolly-rail");
+    this.railButtons = this.rail
+      .locator("jolly-tool-button:not([slot])")
+      .filter({ visible: true });
+    this.railCaptions = this.rail
+      .getByRole("status")
+      .filter({ visible: true });
     this.status = this.root.getByRole("status");
     this.brushTools = this.root.getByRole("group", { name: "Brush" });
     this.history = this.root.getByRole("group", { name: "History" });

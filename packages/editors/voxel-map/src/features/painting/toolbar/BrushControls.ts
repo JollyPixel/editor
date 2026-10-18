@@ -109,7 +109,7 @@ export class BrushControls extends WorkspaceElement {
 
     return html`
       <div
-        class="group brush"
+        class="group divided brush"
         role="group"
         aria-label="Brush"
         aria-disabled=${String(this.disabled)}

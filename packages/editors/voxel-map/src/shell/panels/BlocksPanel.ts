@@ -8,6 +8,9 @@ import {
 } from "lit/decorators.js";
 import {
   LocalStorageAdapter,
+  SearchQuery,
+  type Folder,
+  type JollyChangeDetail,
   type StorageAdapter
 } from "@jolly-pixel/ui";
 
@@ -15,14 +18,18 @@ import {
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
 import { BlockLibraryOrder } from "../../features/blocks/library/BlockLibraryOrder.ts";
-import type { BlockOrderChangeDetail } from "../../features/blocks/library/BlockOrderMenu.ts";
-import type { BlockLibrary } from "../../features/blocks/library/BlockLibrary.ts";
+import { BlockLibraryScope } from "../../features/blocks/library/BlockLibraryScope.ts";
+import { BlockLibraryView } from "../../features/blocks/library/BlockLibraryView.ts";
+import type {
+  BlockLibrarySettingsChangeDetail
+} from "../../features/blocks/library/BlockLibrarySettings.ts";
 import "../../features/blocks/library/BlockLibrary.ts";
-import "../../features/blocks/library/BlockOrderMenu.ts";
+import "../../features/blocks/library/BlockLibrarySettings.ts";
 import "../../features/painting/toolbar/BrushOrientation.ts";
 
 // CONSTANTS
 const kOrderStorageKey = "voxel-map:block-library:order";
+const kScopeStorageKey = "voxel-map:block-library:scope";
 
 @customElement("blocks-panel")
 export class BlocksPanel extends WorkspaceElement {
@@ -43,6 +50,11 @@ export class BlocksPanel extends WorkspaceElement {
       min-height: 0;
     }
 
+    jolly-search[expanded] {
+      flex: 0 1 200px;
+      min-width: 64px;
+    }
+
     brush-orientation {
       margin: 0 var(--jolly-space-1, 4px) var(--jolly-space-1, 4px);
     }
@@ -59,96 +71,63 @@ export class BlocksPanel extends WorkspaceElement {
   declare storage: StorageAdapter;
 
   @state()
-  declare _canEditBlock: boolean;
-
-  @state()
-  declare _order: BlockLibraryOrder;
+  declare _view: BlockLibraryView;
 
   @query("jolly-folder.library")
-  declare _folder: HTMLElementTagNameMap["jolly-folder"] | null;
-
-  @query("block-library")
-  declare _blockLibrary: BlockLibrary | null;
+  declare _library: Folder | null;
 
   constructor() {
     super();
     this.hostsTextureEditor = false;
-    this._canEditBlock = false;
     this.storage = new LocalStorageAdapter();
-    this._order = BlockLibraryOrder.parse(
-      this.storage.get(kOrderStorageKey)
-    );
+    this._view = BlockLibraryView.Default.with({
+      order: BlockLibraryOrder.parse(this.storage.get(kOrderStorageKey)),
+      scope: BlockLibraryScope.parse(this.storage.get(kScopeStorageKey))
+    });
   }
 
   protected override watchWorkspace(
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
-    const refreshEditable = (): void => {
-      const block = workspace.state.block.resolve(workspace.mapDocument.blocks);
-
-      this._canEditBlock = block !== undefined &&
-        workspace.blocksets.canEditBlock(block.id);
-    };
-    refreshEditable();
-
     return [
       workspace.mapDocument.subscribe(
         "reset",
         () => this.requestUpdate()
       ),
-      workspace.mapDocument.subscribe(
-        "blockRegistryChanged",
-        refreshEditable
-      ),
-      workspace.state.block.subscribe(
-        "change",
-        refreshEditable
-      ),
       workspace.blocksets.subscribe(
         "change",
-        refreshEditable
+        () => this.requestUpdate()
+      ),
+      workspace.blocksets.subscribe(
+        "activeChange",
+        () => this.requestUpdate()
       )
     ];
   }
 
-  readonly #onOrderChange = (
-    event: CustomEvent<BlockOrderChangeDetail>
+  readonly #onSettingsChange = (
+    event: CustomEvent<BlockLibrarySettingsChangeDetail>
   ): void => {
-    this._order = event.detail.order;
+    const { order, scope } = event.detail;
+    this._view = this._view.with({ order, scope });
 
-    this.storage.set(
-      kOrderStorageKey,
-      this._order.value
-    );
+    this.storage.set(kOrderStorageKey, order.value);
+    this.storage.set(kScopeStorageKey, scope.value);
   };
 
-  readonly #editBlock = async(): Promise<void> => {
-    this.#openFolder();
-    await this._blockLibrary?.editBlock();
-  };
-
-  readonly #duplicateBlock = (): void => {
-    const workspace = this.workspace;
-    const block = workspace?.state.block.resolve(workspace.mapDocument.blocks);
-    if (workspace === null || block === undefined) {
+  readonly #onSearchInput = (
+    event: CustomEvent<JollyChangeDetail<string>>
+  ): void => {
+    const search = new SearchQuery(event.detail.value);
+    if (search.equals(this._view.search)) {
       return;
     }
 
-    const id = workspace.blocksets.duplicateBlock(block.id);
-    if (id !== null) {
-      this.#openFolder();
-      workspace.state.block.id = id;
+    this._view = this._view.with({ search });
+    if (!search.isEmpty && this._library !== null) {
+      this._library.open = true;
     }
   };
-
-  #openFolder(): void {
-    if (
-      this._folder !== null &&
-      !this._folder.open
-    ) {
-      this._folder.open = true;
-    }
-  }
 
   override render() {
     const workspace = this.workspace;
@@ -164,33 +143,23 @@ export class BlocksPanel extends WorkspaceElement {
         label="Block Library"
         storage-key="voxel-map:folder:block-library"
       >
-        <block-order-menu
+        <jolly-search
           slot="actions"
-          .value=${this._order}
-          @block-order-change=${this.#onOrderChange}
-        ></block-order-menu>
-        <jolly-button
+          compact
+          label="Search blocks"
+          placeholder="Search blocks"
+          @jolly-input=${this.#onSearchInput}
+        ></jolly-search>
+        <block-library-settings
           slot="actions"
-          icon="block-edit"
-          icon-only
-          data-tour="edit-block"
-          label="Edit block"
-          title="Edit block"
-          ?disabled=${!this._canEditBlock}
-          @click=${this.#editBlock}
-        ></jolly-button>
-        <jolly-button
-          slot="actions"
-          icon="block-duplicate"
-          icon-only
-          label="Duplicate block"
-          title="Duplicate block"
-          ?disabled=${!this._canEditBlock}
-          @click=${this.#duplicateBlock}
-        ></jolly-button>
+          .order=${this._view.order}
+          .scope=${this._view.scope}
+          .activeBlockset=${workspace.blocksets.active?.label ?? null}
+          @block-library-settings-change=${this.#onSettingsChange}
+        ></block-library-settings>
         <block-library
           .workspace=${workspace}
-          .order=${this._order}
+          .view=${this._view}
           .layout=${this.hostsTextureEditor ? "compact" : "fill"}
         >
           <brush-orientation .workspace=${workspace}></brush-orientation>

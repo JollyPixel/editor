@@ -1,18 +1,30 @@
 // Import Third-party Dependencies
-import { LitElement, html, css } from "lit";
+import {
+  LitElement,
+  html,
+  css,
+  nothing
+} from "lit";
 import { customElement, property, query } from "lit/decorators.js";
 import { PopoverController } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
+import type { BlockLibraryOption } from "./BlockLibraryOption.ts";
 import { BlockLibraryOrder } from "./BlockLibraryOrder.ts";
+import { BlockLibraryScope } from "./BlockLibraryScope.ts";
 import "../blockIcons.ts";
+import "../../blocksets/blocksetIcons.ts";
 
-export interface BlockOrderChangeDetail {
+// CONSTANTS
+const kChangeEvent = "block-library-settings-change";
+
+export interface BlockLibrarySettingsChangeDetail {
   order: BlockLibraryOrder;
+  scope: BlockLibraryScope;
 }
 
-@customElement("block-order-menu")
-export class BlockOrderMenu extends LitElement {
+@customElement("block-library-settings")
+export class BlockLibrarySettings extends LitElement {
   static override styles = css`
     :host {
       display: inline-flex;
@@ -94,10 +106,35 @@ export class BlockOrderMenu extends LitElement {
     .item[aria-checked="false"] .check {
       visibility: hidden;
     }
+
+    .group + .group {
+      margin-block-start: var(--jolly-space-1, 4px);
+      padding-block-start: var(--jolly-space-1, 4px);
+      border-block-start: 1px solid var(--jolly-border);
+    }
+
+    .heading {
+      padding: 2px var(--jolly-space-2, 8px);
+      color: var(--jolly-text-muted);
+      font-size: 0.85em;
+    }
+
+    .hint {
+      max-width: 12em;
+      overflow: hidden;
+      color: var(--jolly-text-muted);
+      text-overflow: ellipsis;
+    }
   `;
 
   @property({ attribute: false })
-  declare value: BlockLibraryOrder;
+  declare order: BlockLibraryOrder;
+
+  @property({ attribute: false })
+  declare scope: BlockLibraryScope;
+
+  @property({ attribute: false })
+  declare activeBlockset: string | null;
 
   @query(".trigger")
   declare private _trigger: HTMLElement | null;
@@ -131,7 +168,9 @@ export class BlockOrderMenu extends LitElement {
 
   constructor() {
     super();
-    this.value = BlockLibraryOrder.Registry;
+    this.order = BlockLibraryOrder.Registry;
+    this.scope = BlockLibraryScope.All;
+    this.activeBlockset = null;
   }
 
   get open(): boolean {
@@ -147,15 +186,13 @@ export class BlockOrderMenu extends LitElement {
   }
 
   override render() {
-    const active = this.value;
-
     return html`
       <jolly-button
         class="trigger"
-        icon=${active.icon}
+        icon="library-settings"
         icon-only
-        label=${`Order: ${active.label}`}
-        title=${`Order: ${active.label}`}
+        label="Library settings"
+        title="Library settings"
         aria-haspopup="menu"
         aria-expanded=${String(this.#popup.open)}
         @pointerenter=${this.#popup.onPointerEnter}
@@ -169,29 +206,70 @@ export class BlockOrderMenu extends LitElement {
         class="menu"
         popover="auto"
         role="menu"
-        aria-label="Block order"
+        aria-label="Block library settings"
         @pointerenter=${this.#popup.onPointerEnter}
         @pointerleave=${this.#popup.onPointerLeave}
         @beforetoggle=${this.#popup.onBeforeToggle}
         @toggle=${this.#popup.onToggle}
         @keydown=${this.#onMenuKeyDown}
       >
-        ${BlockLibraryOrder.all.map((option) => html`
+        ${this.#renderGroup(
+          "Order",
+          BlockLibraryOrder.all,
+          this.order,
+          (order) => this.#select({ order, scope: this.scope }),
+          () => null
+        )}
+        ${this.#renderGroup(
+          "Show",
+          BlockLibraryScope.all,
+          this.scope,
+          (scope) => this.#select({ order: this.order, scope }),
+          (scope) => (
+            scope === BlockLibraryScope.Active ? this.activeBlockset : null
+          )
+        )}
+      </div>
+    `;
+  }
+
+  #renderGroup<TOption extends BlockLibraryOption>(
+    heading: string,
+    options: readonly TOption[],
+    checked: TOption,
+    select: (option: TOption) => void,
+    hint: (option: TOption) => string | null
+  ) {
+    return html`
+      <div class="group" role="group" aria-label=${heading}>
+        <div class="heading" aria-hidden="true">${heading}</div>
+        ${options.map((option) => html`
           <button
             type="button"
             class="item"
             role="menuitemradio"
             data-value=${option.value}
-            aria-checked=${String(option === active)}
-            @click=${() => this.#select(option)}
+            aria-checked=${String(option === checked)}
+            @click=${() => select(option)}
           >
             <jolly-icon name=${option.icon} aria-hidden="true"></jolly-icon>
             <span>${option.label}</span>
+            ${this.#renderHint(hint(option))}
             <jolly-icon class="check" name="check" aria-hidden="true"></jolly-icon>
           </button>
         `)}
       </div>
     `;
+  }
+
+  #renderHint(
+    hint: string | null
+  ) {
+    if (hint === null) {
+      return nothing;
+    }
+
+    return html`<span class="hint">${hint}</span>`;
   }
 
   #onTriggerPointerDown(): void {
@@ -240,17 +318,18 @@ export class BlockOrderMenu extends LitElement {
   }
 
   #select(
-    order: BlockLibraryOrder
+    detail: BlockLibrarySettingsChangeDetail
   ): void {
     this.hide();
-    if (order === this.value) {
+    if (detail.order === this.order && detail.scope === this.scope) {
       return;
     }
 
-    this.value = order;
+    this.order = detail.order;
+    this.scope = detail.scope;
     this.dispatchEvent(
-      new CustomEvent<BlockOrderChangeDetail>("block-order-change", {
-        detail: { order },
+      new CustomEvent<BlockLibrarySettingsChangeDetail>(kChangeEvent, {
+        detail,
         bubbles: true,
         composed: true
       })
@@ -260,6 +339,6 @@ export class BlockOrderMenu extends LitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "block-order-menu": BlockOrderMenu;
+    "block-library-settings": BlockLibrarySettings;
   }
 }
