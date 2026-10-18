@@ -72,7 +72,9 @@ Other triangulations were compared:
 | Centre vertex per quad, as in WoW | About twice the data; centre samples do not halve into LoD levels. |
 | Diagonal chosen per quad from the heights | Not engine-standard, and does not continue into bisection tessellation. |
 
-The split rule lives in one function, `quadDiagonal(x, z)`. The node meshes,
+The split rule lives in one function, `quadDiagonal(x, z)`: quad `(x, z)`
+takes the `main` diagonal, from `(x, z)` to `(x + 1, z + 1)`, when `x + z` is
+even, and the `anti` diagonal otherwise. The node meshes,
 the brush ray cast, height queries, and later colliders and exports all call
 it, so what is drawn, aimed at and walked on agree, and the rule can change in
 one place.
@@ -110,6 +112,14 @@ The view uses CDLOD:
 - Near the boundary of a level, vertices morph toward the coarser level's
   positions, so levels meet without cracks or popping. The morph runs over
   the last 30% of each level's distance band.
+- Morphing moves heights, not positions. A vertex the coarser level drops
+  keeps its X and Z and blends toward the average height of two neighbours:
+  the ends of the coarse edge it sits on, or, for the centre of a coarse
+  quad, the ends of that quad's diagonal. Fully morphed, the mesh lies on the
+  coarser level's triangles, which the alternating diagonals require: sliding
+  vertices onto their neighbours only works with a fixed diagonal.
+- Node and quarter-node corners fall on even grid lines, so one mesh per
+  resolution serves every node: 32 quads for a node, 16 for a quarter.
 - Skirts hang under chunk edges and hide what morphing cannot.
 
 ### Slope overlay
