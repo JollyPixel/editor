@@ -18,7 +18,8 @@ Presses `Control+k` and waits until the prompt has focus.
 
 ### `close(): Promise<void>`
 
-Presses `Escape`.
+Presses `Escape` and waits until the prompt is hidden, so a following
+`submit()` never mistakes a console that is still closing for an open one.
 
 ### `submit(line): Promise<void>`
 

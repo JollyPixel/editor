@@ -6,7 +6,10 @@ import type { Result } from "@openally/result";
 
 // Import Internal Dependencies
 import { ensureStateGitignore } from "./stateDirectory.ts";
-import type { AssetEventDataMap } from "./events/AssetEvents.ts";
+import {
+  ASSET_CHECKPOINT_EVENT_TYPES,
+  type AssetEventDataMap
+} from "./events/AssetEvents.ts";
 import { IdentitySidecar } from "./identity/IdentitySidecar.ts";
 import { AssetKindRegistry } from "./kinds/AssetKindRegistry.ts";
 import type {
@@ -78,6 +81,12 @@ export interface AssetBackendOptions {
    * @default true
    */
   catalogDeleteProtection?: boolean;
+  /**
+   * Drops the events superseded by each asset's newest lifecycle checkpoint
+   * before the projections load.
+   * @default false
+   */
+  compactOnOpen?: boolean;
   compactOnSnapshot?: boolean;
   /**
    * Extra entries for the `.gitignore` of the state directory, relative to
@@ -129,6 +138,7 @@ export async function createAssetBackend(
     catalogMaxContentBytes,
     catalogArchiveLimits,
     catalogDeleteProtection,
+    compactOnOpen = false,
     compactOnSnapshot = false,
     stateIgnores = [],
     logger = silentLogger()
@@ -174,7 +184,18 @@ export async function createAssetBackend(
   const kinds = new AssetKindRegistry(handlers);
   await ensureStateGitignore(source, stateIgnores);
 
-  const state = await ProjectionState.load(source, logger);
+  if (compactOnOpen) {
+    const report = eventStore.compact({
+      checkpointEventTypes: ASSET_CHECKPOINT_EVENT_TYPES
+    });
+    logger
+      .withMetadata(report)
+      .debug("event log compacted");
+  }
+
+  const state = eventStore.reader.listAll({ limit: 1 }).length === 0 ?
+    new ProjectionState(source) :
+    await ProjectionState.load(source, logger);
   const objects = new ContentObjects(source, logger);
   const projector = new AssetProjector({
     source,

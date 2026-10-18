@@ -154,6 +154,11 @@ IndexedDB database (`name` defaults to `"default"`). One tab owns it; other
 tabs use the owner's catalog and rooms over BroadcastChannel and never call
 `project`. Without Web Locks, the workspace lives in memory.
 
+The back-end's event log goes to a second database,
+`jolly-events:jolly-workspace:<name>`. Each edit is written there when the
+back-end records it, so a reload right after an edit keeps it even before the
+asset itself is saved. `reset()` deletes both databases.
+
 `seed` is applied only while the storage holds no asset, so a seeded asset the
 user deleted does not come back. Give seeded assets random ids: a fixed id
 makes every user's first asset the same, and their archives collide on

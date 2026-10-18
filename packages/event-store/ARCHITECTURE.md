@@ -39,6 +39,11 @@ consumers validate stored data before treating it as a typed domain event.
 |---|---|---|---|
 | Memory | `persistence.memory()` | One store instance | Browser or Node.js |
 | SQLite | `await persistence.sqlite(location?)` | SQLite connection, optionally backed by a file | Node.js |
+| IndexedDB | `await persistence.indexeddb({ name })` | IndexedDB database | Browser |
+
+The IndexedDB backend is a `MemoryEventLog` loaded from the database and given
+an `EventJournal`. The memory log calls the journal before it changes, so a
+failed write leaves the log as it was.
 
 The main entry loads the Node-only SQLite backend when its factory is called.
 The separate `@jolly-pixel/event-store/node` entry exposes the SQLite factory

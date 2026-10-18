@@ -18,10 +18,11 @@ flowchart TB
 ## Startup order
 
 1. `seedAssetSource()` writes missing starter files, if `seed` is set.
-2. The workspace opens the event store. With `compactOnOpen: true`, it
-   removes events superseded by each asset's latest lifecycle checkpoint.
-3. `createAssetBackend()` loads projection state and starts the projector,
-   live state store, and snapshot scheduler.
+2. The workspace opens the event store.
+3. `createAssetBackend()` runs. With `compactOnOpen: true`, it removes events
+   superseded by each asset's latest lifecycle checkpoint. It loads
+   projection state, or starts from none when the event log is empty, then
+   starts the projector, live state store, and snapshot scheduler.
 4. The backend scans physical storage when `reconcileOnStart` is enabled,
    loads the catalog, backfills missing dependency edges, and starts the
    watcher when `watch` is enabled.

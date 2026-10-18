@@ -26,6 +26,23 @@ export interface TagLog {
   ): boolean;
 }
 
+export interface EventJournal {
+  putEvent(
+    event: Event
+  ): void;
+  deleteEvents(
+    events: Iterable<Event>
+  ): void;
+  putTag(
+    tag: EventTag
+  ): void;
+  deleteTag(
+    assetId: string,
+    name: string
+  ): void;
+  close(): void;
+}
+
 export interface EventLog extends EventReader {
   readonly tags: TagLog;
   insert(

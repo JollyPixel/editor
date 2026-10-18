@@ -56,10 +56,12 @@ import * as EventStore from "@jolly-pixel/event-store";
 
 EventStore.persistence.memory();
 await EventStore.persistence.sqlite();
+await EventStore.persistence.indexeddb({ name: "events" });
 ```
 
 - [`Memory`](./docs/Memory.md): in-process storage
 - [`Sqlite`](./docs/Sqlite.md): durable Node.js storage
+- [`IndexedDb`](./docs/IndexedDb.md): durable browser storage
 
 > [!NOTE]
 > The package entrypoint is safe to import from browser code. `persistence.sqlite`

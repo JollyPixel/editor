@@ -6,6 +6,7 @@ Shared API returned by the built-in persistence factories.
 |---|---|---|---|
 | [Memory](./Memory.md) | `persistence.memory()` | One store instance | Browser or Node.js |
 | [SQLite](./Sqlite.md) | `await persistence.sqlite(location?)` | File-backed, or one connection with `":memory:"` | Node.js |
+| [IndexedDB](./IndexedDb.md) | `await persistence.indexeddb({ name })` | IndexedDB database `name` | Browser |
 
 ```ts
 export interface EventStore {

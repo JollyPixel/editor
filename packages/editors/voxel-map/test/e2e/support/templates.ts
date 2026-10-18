@@ -89,6 +89,9 @@ export class TemplateList {
     await pressAt(this.#page, [
       await measureCenter(this.row),
       await this.#viewport.cellTop(cell)
-    ], { settle: nextFrames });
+    ], {
+      settle: nextFrames,
+      target: this.row
+    });
   }
 }

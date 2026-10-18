@@ -42,7 +42,7 @@ describe("defineE2EConfig", () => {
       retries: 0,
       use: {
         baseURL: "http://localhost:3100",
-        trace: "retain-on-failure"
+        trace: "off"
       },
       webServer: {
         command: "pnpm run dev:e2e",
@@ -101,7 +101,7 @@ describe("defineE2EConfig", () => {
 
     assert.deepEqual(config.use, {
       baseURL: "http://localhost:3100",
-      trace: "retain-on-failure",
+      trace: "off",
       viewport: {
         width: 960,
         height: 540
