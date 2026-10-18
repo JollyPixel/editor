@@ -11,7 +11,11 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
 
 - **Design: done** (2026-10-18). The decisions in `docs/` are settled; change
   them there first, then here, before changing code.
-- **Next: M1, first item.** Scaffold the three packages. No code exists yet.
+- **Package skeletons: done** (2026-10-18). `asset.terrain`,
+  `terrain.renderer` and `editor.terrain` exist, are referenced from the root
+  `tsconfig.json`, and contain only an empty `src/index.ts`.
+- **Next: the M1 grilling**, then the rest of M1's first item: the editor
+  manifest, Vite config, dev port and `kWorkspaceBrowserEntries` entries.
 
 Tick a box when its item lands, and move **Next** along with it.
 

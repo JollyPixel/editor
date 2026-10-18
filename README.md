@@ -28,6 +28,7 @@ We provide agnostic renderers and engines (often used by our editors below):
 
 - [@jolly-pixel/voxel.renderer](./packages/voxel-renderer) - Voxel Engine
 - [@jolly-pixel/voxel.tiled](./packages/voxel-tiled) - Tiled map import for the Voxel Engine (experimental)
+- [@jolly-pixel/terrain.renderer](./packages/terrain-renderer) - Heightfield Terrain Engine (work in progress)
 - [@jolly-pixel/pixel-draw.renderer](./packages/pixel-draw-renderer) - Pixel Art Canvas API
 
 ### Backend
@@ -45,6 +46,7 @@ We provide agnostic renderers and engines (often used by our editors below):
 - [@jolly-pixel/asset.voxel-map](./packages/assets/voxel-map)
 - [@jolly-pixel/asset.voxel-model](./packages/assets/voxel-model)
 - [@jolly-pixel/asset.voxel-animation](./packages/assets/voxel-animation)
+- [@jolly-pixel/asset.terrain](./packages/assets/terrain)
 
 ### UI
 
@@ -69,6 +71,7 @@ We provide agnostic renderers and engines (often used by our editors below):
 - [Voxel Map](./packages/editors/voxel-map/): 3D Voxel Terrain editor
 - [Voxel Model](./packages/editors/voxel-model/): Low-poly/voxel 3D model editor
 - [Pixel Art](./packages/editors/pixel-art/): 2D Pixel-Art texturing editor
+- [Terrain](./packages/editors/terrain/): Collaborative heightfield terrain editor (work in progress)
 
 ---
 

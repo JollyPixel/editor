@@ -1,0 +1,33 @@
+{
+  "name": "@jolly-pixel/terrain.renderer",
+  "description": "Jolly Pixel heightfield terrain engine and renderer",
+  "version": "0.1.0",
+  "type": "module",
+  "sideEffects": false,
+  "private": true,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "imports": {
+    "#src/*": "./src/*"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "lint": "oxlint src test",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/terrain-renderer"
+  },
+  "keywords": [],
+  "files": [
+    "dist"
+  ],
+  "author": "MALAJ Alexandre <alexandre.malaj@gmail.com>",
+  "license": "MIT"
+}

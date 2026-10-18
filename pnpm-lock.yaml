@@ -379,6 +379,8 @@ importers:
         specifier: workspace:*
         version: link:../../event-store
 
+  packages/assets/terrain: {}
+
   packages/assets/voxel-animation:
     dependencies:
       '@jolly-pixel/asset':
@@ -640,6 +642,8 @@ importers:
       '@jolly-pixel/runtime':
         specifier: workspace:*
         version: link:../../runtime
+
+  packages/editors/terrain: {}
 
   packages/editors/voxel-map:
     dependencies:
@@ -1054,6 +1058,8 @@ importers:
       cookie:
         specifier: 2.0.1
         version: 2.0.1
+
+  packages/terrain-renderer: {}
 
   packages/three:
     dependencies:

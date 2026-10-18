@@ -160,7 +160,7 @@ Accepted drawbacks:
 | Splat indices | `RGBA8`: the four strongest layers | 128×128, 0.5 m per texel |
 | Splat weights | `RGBA8`: their weights, summing to 255 | 128×128 |
 | Holes | One bit per quad | 64×64 |
-| Tier | 1, 2 or 4 | — |
+| Tier | 1, 2 or 4 | One value |
 
 Tiers multiply the height and hole sizes. The splat resolution does not
 change with the tier.
