@@ -252,7 +252,7 @@ export class TextureEditor extends WorkspaceElement {
     panel.addEventListener("texture-create-request", this.#addBlockset);
     panel.addEventListener("texture-edit-request", this.#onEditRequest);
     this.#releaseKeyBindings =
-      this.workspace?.state.pixelArtKeyBindings.bind(panel) ?? null;
+      this.workspace?.state.pixelArtKeyBindings.sync(panel) ?? null;
     await panel.configure(kCanvasOptions);
   }
 

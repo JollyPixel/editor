@@ -9,25 +9,38 @@ import {
   property,
   state
 } from "lit/decorators.js";
-import type { KeyChordString } from "@jolly-pixel/controls";
 import type { HistoryScopeState } from "@jolly-pixel/history";
 
 // Import Internal Dependencies
-import type {
-  EditorTool,
-  SelectMode
+import {
+  SELECT_MODES,
+  type EditorTool,
+  type SelectMode
 } from "../../state/index.ts";
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
-import { HISTORY_SHORTCUTS } from "../../shared/historyShortcuts.ts";
-import { TOOL_SHORTCUTS } from "../../shared/toolShortcuts.ts";
-import { CLIPBOARD_SHORTCUTS } from "../../features/placement/clipboardShortcuts.ts";
 import { editToolbarStyles } from "./EditToolbar.styles.ts";
 import "../../features/painting/toolbar/BrushControls.ts";
 import "../../features/painting/toolbar/PaintNotice.ts";
 import "../../features/placement/PlacementControls.ts";
 import "../../features/templates/editing/TemplateEditBar.ts";
 import "../../features/marquee/marqueeIcons.ts";
+
+// CONSTANTS
+const kSelectModeButtons = {
+  box: {
+    icon: "marquee",
+    label: "Box select"
+  },
+  corners: {
+    icon: "select-corners",
+    label: "Corner select"
+  },
+  connected: {
+    icon: "select-connected",
+    label: "Connected select"
+  }
+} as const satisfies Record<SelectMode, { icon: string; label: string; }>;
 
 export type EditMode = "paint" | "select" | "place";
 
@@ -70,7 +83,7 @@ export class EditToolbar extends WorkspaceElement {
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
     const { placement } = workspace;
-    const { tool, keyboardLayout } = workspace.state;
+    const { tool, shortcuts } = workspace.state;
     const { history } = workspace;
     const refreshMode = (): void => {
       if (placement.placing) {
@@ -97,7 +110,7 @@ export class EditToolbar extends WorkspaceElement {
         this._selectMode = selectMode;
       }),
       workspace.access.subscribe("change", () => this.requestUpdate()),
-      keyboardLayout.subscribe("change", () => this.requestUpdate())
+      shortcuts.subscribe(() => this.requestUpdate())
     ];
   }
 
@@ -136,20 +149,21 @@ export class EditToolbar extends WorkspaceElement {
   #renderEdit(): TemplateResult {
     const selecting = this.mode === "select";
     const { access, placement } = this.attached;
+    const { shortcuts } = this.attached.state;
 
     return html`
       <div class="group" role="group" aria-label="Tools">
         <jolly-tool-button
           data-tool="brush"
           icon="pencil"
-          label=${`Brush (${this.#shortcut(TOOL_SHORTCUTS.brush)})`}
+          label=${shortcuts.label("Brush", "tool.brush")}
           ?active=${!selecting}
           @click=${() => this.#selectTool("brush")}
         ></jolly-tool-button>
         <jolly-tool-button
           data-tool="select"
           icon="marquee"
-          label=${`Select (${this.#shortcut(TOOL_SHORTCUTS.select)})`}
+          label=${shortcuts.label("Select", "tool.select")}
           ?active=${selecting}
           @click=${() => this.#selectTool("select")}
         ></jolly-tool-button>
@@ -158,14 +172,14 @@ export class EditToolbar extends WorkspaceElement {
         <jolly-tool-button
           data-tool="undo"
           icon="undo"
-          label=${`Undo (${this.#shortcut(HISTORY_SHORTCUTS.undo)})`}
+          label=${shortcuts.label("Undo", "edit.undo")}
           ?disabled=${access.current.readOnly || this._undoDepth === 0}
           @click=${this.#onUndo}
         >${renderStepCount(this._undoDepth)}</jolly-tool-button>
         <jolly-tool-button
           data-tool="redo"
           icon="redo"
-          label=${`Redo (${this.#shortcut(HISTORY_SHORTCUTS.redo)})`}
+          label=${shortcuts.label("Redo", "edit.redo")}
           ?disabled=${access.current.readOnly || this._redoDepth === 0}
           @click=${this.#onRedo}
         >${renderStepCount(this._redoDepth)}</jolly-tool-button>
@@ -174,7 +188,7 @@ export class EditToolbar extends WorkspaceElement {
         <jolly-tool-button
           data-tool="paste"
           icon="paste"
-          label=${`Paste (${this.#shortcut(CLIPBOARD_SHORTCUTS.paste)})`}
+          label=${shortcuts.label("Paste", "edit.paste")}
           ?disabled=${!placement.canPlace("copy") || !this._canPaste}
           @click=${this.#onPaste}
         ></jolly-tool-button>
@@ -183,33 +197,26 @@ export class EditToolbar extends WorkspaceElement {
   }
 
   #renderSelect(): TemplateResult {
-    const connected = this._selectMode === "connected";
-    const cycle = this.#shortcut(TOOL_SHORTCUTS.select);
+    const selectMode = this._selectMode;
+    const { shortcuts } = this.attached.state;
 
     return html`
       <div class="group divided" role="group" aria-label="Select mode">
-        <jolly-tool-button
-          data-select-mode="box"
-          icon="marquee"
-          label=${`Box select (${cycle})`}
-          ?active=${!connected}
-          @click=${() => this.#selectMode("box")}
-        ></jolly-tool-button>
-        <jolly-tool-button
-          data-select-mode="connected"
-          icon="select-connected"
-          label=${`Connected select (${cycle})`}
-          ?active=${connected}
-          @click=${() => this.#selectMode("connected")}
-        ></jolly-tool-button>
+        ${SELECT_MODES.map((mode) => {
+          const { icon, label } = kSelectModeButtons[mode];
+
+          return html`
+            <jolly-tool-button
+              data-select-mode=${mode}
+              icon=${icon}
+              label=${shortcuts.label(label, "tool.select")}
+              ?active=${selectMode === mode}
+              @click=${() => this.#selectMode(mode)}
+            ></jolly-tool-button>
+          `;
+        })}
       </div>
     `;
-  }
-
-  #shortcut(
-    chords: readonly KeyChordString[]
-  ): string {
-    return this.attached.state.keyboardLayout.format(chords[0]);
   }
 
   #selectTool(

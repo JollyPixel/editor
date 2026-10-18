@@ -69,6 +69,8 @@ if (dashCombo()) {
       printed letter, and layout-aware labels.
     - [KeyBindingMap](./docs/key-binding-map.md): rebindable shortcuts named
       by action.
+    - [KeyBindingSettings](./docs/key-binding-settings.md): the current
+      shortcut map of a feature, saved to a storage.
   - [Gamepad](./docs/gamepad.md)
   - [Touchpad](./docs/touchpad.md)
   - [Screen](./docs/screen.md)

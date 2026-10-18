@@ -20,7 +20,9 @@ import {
   createWorldHistory,
   mapSteps
 } from "../../helpers/mapHistory.ts";
-import { bindMarqueeShortcuts } from "../../../src/features/marquee/marqueeShortcuts.ts";
+import { marqueeShortcuts } from "../../../src/features/marquee/marqueeShortcuts.ts";
+import { clipboardShortcuts } from "../../../src/features/placement/clipboardShortcuts.ts";
+import { defaultKeyBindings } from "../../helpers/shortcuts.ts";
 import { CellRegion } from "../../../src/features/placement/CellRegion.ts";
 import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
 import {
@@ -31,15 +33,14 @@ import { createMapDocument } from "../../helpers/mapDocument.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
 
 // CONSTANTS
-const kSelectAll: KeyboardEventInit = isApplePlatform() ?
-  {
-    key: "a",
-    metaKey: true
-  } :
-  {
-    key: "a",
-    ctrlKey: true
-  };
+const kMod: KeyboardEventInit = isApplePlatform() ?
+  { metaKey: true } :
+  { ctrlKey: true };
+const kAim = { x: 9, y: 0, z: 9 };
+const kSelectAll: KeyboardEventInit = {
+  key: "a",
+  ...kMod
+};
 
 function setup() {
   const keyboard = new KeyBindings();
@@ -68,12 +69,17 @@ function setup() {
     mapDocument: createMapDocument(world),
     access: mapAccess()
   });
-  bindMarqueeShortcuts({
-    keyboard,
-    world,
-    tool,
-    selection,
-    placement
+  defaultKeyBindings().bind(keyboard, {
+    ...marqueeShortcuts({
+      world,
+      tool,
+      selection,
+      placement
+    }),
+    ...clipboardShortcuts({
+      placement,
+      aimPoint: () => kAim
+    })
   });
 
   function press(
@@ -141,6 +147,27 @@ describe("MarqueeShortcuts", () => {
 
     assert.equal(placement.current?.template.voxelCount, 2);
     assert.equal(world.getLayer("Draft")!.voxelCount, 0);
+  });
+
+  test("Mod+X copies a lifted region, then deletes it", () => {
+    const { world, templateId, placement, press } = setup();
+    const draft = world.getLayer("Draft")!;
+
+    placement.placeTemplate(templateId, { x: 9, y: 0, z: 9 });
+    press("KeyX", { key: "x", ...kMod });
+    assert.equal(placement.current?.kind, "template");
+    assert.equal(placement.clipboard.content === null, true);
+
+    placement.cancel();
+    placement.liftRegion("Draft", CellRegion.spanning(
+      { x: 0, y: 0, z: 0 },
+      { x: 0, y: 0, z: 0 }
+    ));
+    press("KeyX", { key: "x", ...kMod });
+
+    assert.equal(placement.placing, false);
+    assert.equal(draft.voxelCount, 1);
+    assert.equal(placement.clipboard.content?.voxelCount, 1);
   });
 
   test("Mod+A leaves a template placement alone", () => {

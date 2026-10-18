@@ -6,16 +6,18 @@ import assert from "node:assert/strict";
 import { KeyBindings } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
-import { bindToolShortcuts } from "../../src/shared/toolShortcuts.ts";
+import {
+  bindToolExit,
+  toolShortcuts
+} from "../../src/shared/toolShortcuts.ts";
 import { ToolStore } from "../../src/state/index.ts";
+import { defaultKeyBindings } from "../helpers/shortcuts.ts";
 
 function setup() {
   const keyboard = new KeyBindings();
   const tool = new ToolStore();
-  bindToolShortcuts({
-    keyboard,
-    tool
-  });
+  defaultKeyBindings().bind(keyboard, toolShortcuts({ tool }));
+  bindToolExit(keyboard, tool);
 
   function press(
     code: string,
@@ -48,6 +50,9 @@ describe("ToolShortcuts", () => {
   it("cycles the select mode on M while the select tool is active", () => {
     const { tool, press } = setup();
     tool.current = "select";
+
+    press("KeyM", "m");
+    assert.equal(tool.selectMode, "corners");
 
     press("KeyM", "m");
     assert.equal(tool.selectMode, "connected");

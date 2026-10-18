@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import type {
-  Keyboard,
-  KeyChordString
-} from "@jolly-pixel/controls";
+import type { KeyBindingHandlers } from "@jolly-pixel/controls";
 import type { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -13,13 +10,7 @@ import type {
 import { CellRegion } from "../placement/CellRegion.ts";
 import type { MapPlacement } from "../placement/MapPlacement.ts";
 
-export const MARQUEE_SHORTCUTS = {
-  delete: ["Delete", "Backspace"],
-  selectLayer: ["Mod+a"]
-} as const satisfies Record<string, readonly KeyChordString[]>;
-
 export interface MarqueeShortcutsOptions {
-  keyboard: Pick<Keyboard, "bind">;
   world: VoxelWorld;
   tool: ToolStore;
   selection: Pick<SelectionStore, "voxelLayer">;
@@ -29,11 +20,10 @@ export interface MarqueeShortcutsOptions {
   >;
 }
 
-export function bindMarqueeShortcuts(
+export function marqueeShortcuts(
   options: MarqueeShortcutsOptions
-): () => void {
+): KeyBindingHandlers<"edit.delete" | "edit.selectLayer"> {
   const {
-    keyboard,
     world,
     tool,
     selection,
@@ -59,17 +49,8 @@ export function bindMarqueeShortcuts(
     );
   }
 
-  const releases = [
-    keyboard.bind(
-      MARQUEE_SHORTCUTS.delete,
-      () => placement.deleteRegion()
-    ),
-    keyboard.bind(MARQUEE_SHORTCUTS.selectLayer, selectLayer)
-  ];
-
-  return () => {
-    for (const release of releases) {
-      release();
-    }
+  return {
+    "edit.delete": () => placement.deleteRegion(),
+    "edit.selectLayer": selectLayer
   };
 }

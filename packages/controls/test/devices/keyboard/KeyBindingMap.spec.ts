@@ -104,6 +104,19 @@ describe("Controls.KeyBindingMap", () => {
     }
   });
 
+  test("rebind() and restore() return new maps and leave the source alone", () => {
+    const map = new KeyBindingMap(kDefaults, { remove: [] });
+    const rebound = map.rebind("undo", "Mod+u");
+
+    assert.deepEqual(rebound.overrides, {
+      undo: ["Mod+u"],
+      remove: []
+    });
+    assert.deepEqual(rebound.restore("undo").overrides, { remove: [] });
+    assert.deepEqual(rebound.restore().overrides, {});
+    assert.deepEqual(map.overrides, { remove: [] });
+  });
+
   test("format() labels every chord of an action", () => {
     const map = new KeyBindingMap(kDefaults);
 
@@ -113,7 +126,7 @@ describe("Controls.KeyBindingMap", () => {
     );
   });
 
-  test("bind() routes each chord to its action handler until released", () => {
+  test("bind() routes each chord to its action handler until released, and skips actions without one", () => {
     const map = new KeyBindingMap(kDefaults);
     const bindings = new KeyBindings();
     const calls: string[] = [];
@@ -123,8 +136,7 @@ describe("Controls.KeyBindingMap", () => {
       },
       redo: () => {
         calls.push("redo");
-      },
-      remove: () => false
+      }
     });
 
     assert.equal(bindings.dispatch(keydown({ code: "KeyY", key: "y", ...kMod })), true);
@@ -134,5 +146,50 @@ describe("Controls.KeyBindingMap", () => {
     assert.equal(bindings.dispatch(keydown({ code: "KeyY", key: "y", ...kMod })), false);
 
     assert.deepEqual(calls, ["redo", "undo"]);
+  });
+});
+
+describe("Controls.KeyBindingMap.parse", () => {
+  test("drops a corrupt entry with its reason and keeps the others", () => {
+    const { keyBindings, dropped } = KeyBindingMap.parse(
+      kDefaults,
+      JSON.stringify({
+        undo: ["Mod+u"],
+        redo: 42,
+        jump: "j",
+        remove: "Mod+u"
+      })
+    );
+
+    assert.deepEqual(keyBindings.overrides, { undo: ["Mod+u"] });
+    assert.equal(dropped.length, 3);
+    assert.match(dropped[0], /"redo": not a string or a list of strings/);
+    assert.match(dropped[1], /"jump": unknown action/);
+    assert.match(dropped[2], /"remove": Key chord "Mod\+u" is bound to both/);
+  });
+
+  test("drops a chord that is not in the canonical form", () => {
+    const { keyBindings, dropped } = KeyBindingMap.parse(
+      kDefaults,
+      JSON.stringify({
+        undo: "mod+u",
+        remove: "Backspace"
+      })
+    );
+
+    assert.equal(dropped.length, 1);
+    assert.match(dropped[0], /"undo": Invalid key chord: "mod\+u"/);
+    assert.deepEqual(keyBindings.overrides, { remove: ["Backspace"] });
+  });
+
+  test("drops every entry of a value that is not a JSON object", () => {
+    for (const raw of ["{not json", "[]", "null"]) {
+      const { keyBindings, dropped } = KeyBindingMap.parse(kDefaults, raw);
+
+      assert.deepEqual(keyBindings.overrides, {});
+      assert.deepEqual(dropped, [
+        "Dropped the stored keybindings: not a JSON object"
+      ]);
+    }
   });
 });

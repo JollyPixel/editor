@@ -1,10 +1,12 @@
 // Import Third-party Dependencies
-import type { KeyChordString } from "@jolly-pixel/controls";
 import type {
   Axis,
   AxisSign
 } from "@jolly-pixel/three";
 import type { VoxelTransformOptions } from "@jolly-pixel/voxel.renderer";
+
+// Import Internal Dependencies
+import type { MapGroupAction } from "../../keybindings/MapKeyBindings.ts";
 
 export type PlacementAxis = Axis;
 
@@ -12,11 +14,12 @@ export interface PlacementTransform {
   icon: string;
   title: string;
   transform: VoxelTransformOptions;
+  action?: MapGroupAction<"orient">;
 }
 
 export interface PlacementRotation extends PlacementTransform {
   turns: AxisSign;
-  chords: readonly KeyChordString[];
+  action: MapGroupAction<"orient">;
 }
 
 export interface PlacementMirror extends PlacementTransform {
@@ -28,14 +31,14 @@ export const PLACEMENT_ROTATIONS: readonly PlacementRotation[] = [
     icon: "rotateCounterClockwise",
     title: "Rotate 90° counter-clockwise",
     turns: 1,
-    chords: ["KeyQ"],
+    action: "orient.rotateCounterClockwise",
     transform: { rotation: 1 }
   },
   {
     icon: "rotateClockwise",
     title: "Rotate 90° clockwise",
     turns: -1,
-    chords: ["KeyE"],
+    action: "orient.rotateClockwise",
     transform: { rotation: 3 }
   }
 ];
@@ -57,6 +60,7 @@ export const PLACEMENT_MIRRORS: readonly PlacementMirror[] = [
     icon: "flip-y",
     title: "Mirror along Y",
     axis: "y",
+    action: "orient.flipVertical",
     transform: { flipY: true }
   }
 ];

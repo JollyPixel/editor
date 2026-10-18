@@ -33,7 +33,8 @@ export const basics = new Tour({
       title: "Block library",
       body: "Pick the block you want to place here, " +
         "or right-click it for quick actions. " +
-        "Rotation and Flip Y set how it is oriented.",
+        "Rotation and Flip Y set how it is oriented: `Q` and `E` turn it, " +
+        "`V` flips it and `T` goes back to automatic rotation.",
       enter: showPane("blocks")
     },
     {
@@ -58,7 +59,8 @@ export const basics = new Tour({
       target: ["voxel-edit-toolbar"],
       side: "above",
       title: "Tools",
-      body: "Switch between the brush (`B`) and selection (`M`). " +
+      body: "Switch between the brush (`B`) and selection (`M`), " +
+        "and press `F` to frame the selected layer. " +
         "Selection grabs a box or every connected block, ready to copy and paste.\n\n" +
         "Undo and redo live here too."
     },

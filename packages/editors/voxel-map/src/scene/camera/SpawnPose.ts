@@ -87,6 +87,21 @@ export class SpawnPose {
     return nearest;
   }
 
+  static unionBounds(
+    layers: Iterable<SpawnLayer>
+  ): THREE.Box3 | null {
+    let union: THREE.Box3 | null = null;
+
+    for (const layer of layers) {
+      const bounds = layer.visible ? layer.worldBounds() : null;
+      if (bounds !== null) {
+        union = union === null ? bounds.clone() : union.union(bounds);
+      }
+    }
+
+    return union;
+  }
+
   readonly position: THREE.Vector3;
   readonly target: THREE.Vector3;
   readonly quaternion: THREE.Quaternion;

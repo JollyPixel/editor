@@ -27,7 +27,7 @@ import {
   type RuntimeEditorContext
 } from "@jolly-pixel/editor.host";
 import {
-  KeyBindingSettings,
+  PixelArtKeyBindingSettings,
   pixelArtConsole
 } from "@jolly-pixel/editor.pixel-art";
 import { LocalStorageAdapter } from "@jolly-pixel/ui";
@@ -141,7 +141,7 @@ export class VoxelModelEditor {
       }),
       roomEnvironment
     });
-    const keyBindingSettings = new KeyBindingSettings({
+    const keyBindingSettings = new PixelArtKeyBindingSettings({
       storage: new LocalStorageAdapter(),
       onDropped: (message) => console.warn(message)
     });

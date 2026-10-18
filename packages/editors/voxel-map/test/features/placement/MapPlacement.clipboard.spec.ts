@@ -108,6 +108,26 @@ describe("MapPlacement copy and paste", () => {
     assert.equal(world.getLayer("Draft")!.voxelCount, 1);
   });
 
+  test("cuts a lifted region into the clipboard, but not a template placement", () => {
+    const { world, placement } = setup();
+    const changes: unknown[] = [];
+    placement.clipboard.subscribe("change", (content) => changes.push(content));
+    const templateId = world.templates.createFromLayer("Draft", { name: "Row" })!.id;
+    placement.placeTemplate(templateId, { x: 0, y: 4, z: 0 });
+
+    assert.equal(placement.cut(), false);
+    assert.deepEqual(changes, []);
+
+    placement.cancel();
+    placement.liftRegion("Draft", kLowerCorner);
+
+    assert.equal(placement.cut(), true);
+    assert.equal(changes.length, 1);
+    assert.deepEqual(placement.clipboard.content?.size, { x: 2, y: 1, z: 1 });
+    assert.equal(placement.placing, false);
+    assert.deepEqual(readBlocks(world.getLayer("Draft")!), ["2,0,0:1"]);
+  });
+
   test("refuses to copy or paste without content", () => {
     const { placement } = setup();
 

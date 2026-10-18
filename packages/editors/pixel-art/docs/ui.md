@@ -98,4 +98,4 @@ properties and respond to their events. `PixelDrawPanel.ts` shows the wiring
 used by the full panel. Their definitions and event types are in `src/`.
 
 The package root also exports key-binding settings and defaults. See
-[KeyBindingSettings](./keybindings/KeyBindingSettings.md).
+[PixelArtKeyBindingSettings](./keybindings/PixelArtKeyBindingSettings.md).

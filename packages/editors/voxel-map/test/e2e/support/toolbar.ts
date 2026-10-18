@@ -17,6 +17,7 @@ export class EditToolbar {
   readonly redoButton: Locator;
   readonly ghostButton: Locator;
   readonly selectButton: Locator;
+  readonly cornerSelectButton: Locator;
   readonly connectedSelectButton: Locator;
   readonly pasteButton: Locator;
   readonly saveTemplateButton: Locator;
@@ -41,6 +42,7 @@ export class EditToolbar {
     this.redoButton = this.button(/^Redo/);
     this.ghostButton = this.button(/^Ghost block/);
     this.selectButton = this.button(/^Select/);
+    this.cornerSelectButton = this.button(/^Corner select/);
     this.connectedSelectButton = this.button(/^Connected select/);
     this.pasteButton = this.root.getByRole("button", {
       name: /^Paste/,

@@ -42,11 +42,3 @@ export interface BrushToolOption<TValue extends string>
   extends ChoiceOption<TValue> {
   icon?: string;
 }
-
-export function toolLabel(
-  label: string,
-  shortcut: string,
-  blockedReason: string | null
-): string {
-  return blockedReason ?? `${label} (${shortcut})`;
-}

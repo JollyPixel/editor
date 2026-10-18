@@ -13,9 +13,7 @@ import {
 // Import Internal Dependencies
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
-import { MARQUEE_SHORTCUTS } from "../marquee/marqueeShortcuts.ts";
 import type { ActivePlacement } from "./ActivePlacement.ts";
-import { CLIPBOARD_SHORTCUTS } from "./clipboardShortcuts.ts";
 import { placementControlsStyles } from "./PlacementControls.styles.ts";
 import { PLACEMENT_SHORTCUTS } from "./placementShortcuts.ts";
 import {
@@ -61,10 +59,7 @@ export class PlacementControls extends WorkspaceElement {
       placement.clipboard.subscribe("change", (content) => {
         this._canPaste = content !== null;
       }),
-      workspace.state.keyboardLayout.subscribe(
-        "change",
-        () => this.requestUpdate()
-      ),
+      workspace.state.shortcuts.subscribe(() => this.requestUpdate()),
       workspace.access.subscribe("change", () => this.requestUpdate())
     ];
   }
@@ -74,6 +69,8 @@ export class PlacementControls extends WorkspaceElement {
     if (current === null) {
       return nothing;
     }
+
+    const { shortcuts } = this.attached.state;
 
     return html`
       <span
@@ -85,15 +82,13 @@ export class PlacementControls extends WorkspaceElement {
         <span>${current.caption}</span>
       </span>
       <div class="group divided" role="group" aria-label="Rotate">
-        ${PLACEMENT_ROTATIONS.map((rotation) => this.#renderTransform(
-          rotation,
-          `${rotation.title} (${this.#shortcut(rotation.chords)})`
-        ))}
+        ${PLACEMENT_ROTATIONS.map(
+          (rotation) => this.#renderTransform(rotation)
+        )}
       </div>
       <div class="group divided" role="group" aria-label="Mirror">
         ${PLACEMENT_MIRRORS.map((mirror) => this.#renderTransform(
           mirror,
-          mirror.title,
           axisBadge(mirror.axis)
         ))}
       </div>
@@ -101,13 +96,13 @@ export class PlacementControls extends WorkspaceElement {
         <jolly-tool-button
           data-tool="copy"
           icon="copy"
-          label=${`Copy (${this.#shortcut(CLIPBOARD_SHORTCUTS.copy)})`}
+          label=${shortcuts.label("Copy", "edit.copy")}
           @click=${this.#onCopy}
         ></jolly-tool-button>
         <jolly-tool-button
           data-tool="paste"
           icon="paste"
-          label=${`Paste (${this.#shortcut(CLIPBOARD_SHORTCUTS.paste)})`}
+          label=${shortcuts.label("Paste", "edit.paste")}
           ?disabled=${!this._canPaste}
           @click=${this.#onPaste}
         ></jolly-tool-button>
@@ -126,7 +121,7 @@ export class PlacementControls extends WorkspaceElement {
           <jolly-tool-button
             data-tool="delete"
             icon="trash"
-            label=${`Delete blocks (${this.#shortcut(MARQUEE_SHORTCUTS.delete)})`}
+            label=${shortcuts.label("Delete blocks", "edit.delete")}
             @click=${this.#onDelete}
           ></jolly-tool-button>
         ` : nothing}
@@ -149,13 +144,15 @@ export class PlacementControls extends WorkspaceElement {
 
   #renderTransform(
     placementTransform: PlacementTransform,
-    label: string,
     badge: TemplateResult | typeof nothing = nothing
   ): TemplateResult {
+    const { title, action } = placementTransform;
+    const { shortcuts } = this.attached.state;
+
     return html`
       <jolly-tool-button
         icon=${placementTransform.icon}
-        label=${label}
+        label=${action === undefined ? title : shortcuts.label(title, action)}
         @click=${() => this.attached.placement.turn(
           placementTransform.transform
         )}

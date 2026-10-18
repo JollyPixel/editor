@@ -9,7 +9,8 @@ import {
 } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
-import { bindHistoryShortcuts } from "../../src/shared/historyShortcuts.ts";
+import { historyShortcuts } from "../../src/shared/historyShortcuts.ts";
+import { defaultKeyBindings } from "../helpers/shortcuts.ts";
 
 // CONSTANTS
 const kMod: KeyboardEventInit = isApplePlatform() ?
@@ -22,13 +23,12 @@ const kOtherMod: KeyboardEventInit = isApplePlatform() ?
 function setup() {
   const keyboard = new KeyBindings();
   const calls: string[] = [];
-  const release = bindHistoryShortcuts({
-    keyboard,
+  const release = defaultKeyBindings().bind(keyboard, historyShortcuts({
     history: {
       undo: () => calls.push("undo") > 0,
       redo: () => calls.push("redo") > 0
     }
-  });
+  }));
 
   function press(
     init: KeyboardEventInit

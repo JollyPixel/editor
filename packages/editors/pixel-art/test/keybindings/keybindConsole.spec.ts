@@ -12,15 +12,15 @@ import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 // Import Internal Dependencies
 import {
   KEY_BINDINGS_STORAGE_KEY,
-  KeyBindingSettings
-} from "../../src/keybindings/KeyBindingSettings.ts";
+  PixelArtKeyBindingSettings
+} from "../../src/keybindings/PixelArtKeyBindingSettings.ts";
 import { pixelArtConsole } from "../../src/console/pixelArtConsole.ts";
 
 function boot(
   storage: MemoryStorageAdapter
 ) {
   const commands = new CommandConsole();
-  const keyBindingSettings = new KeyBindingSettings({ storage });
+  const keyBindingSettings = new PixelArtKeyBindingSettings({ storage });
   pixelArtConsole(commands, { keyBindingSettings });
 
   return {

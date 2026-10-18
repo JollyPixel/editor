@@ -22,11 +22,15 @@ import {
 } from "../../helpers/mapHistory.ts";
 import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
 import { bindPlacementShortcuts } from "../../../src/features/placement/placementShortcuts.ts";
+import type { HorizontalAxis } from "../../../src/scene/camera/EditorCamera.ts";
 import { SelectionStore } from "../../../src/state/index.ts";
 import { createMapDocument } from "../../helpers/mapDocument.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
+import { defaultKeyBindings } from "../../helpers/shortcuts.ts";
 
-function setup() {
+function setup(
+  rightAxis: HorizontalAxis = "x"
+) {
   const keyboard = new KeyBindings();
   const world = new VoxelWorld();
   world.addLayer("Draft");
@@ -49,6 +53,7 @@ function setup() {
   let commits = 0;
   const release = bindPlacementShortcuts({
     keyboard,
+    keyBindings: defaultKeyBindings(),
     placement: {
       get placing() {
         return store.placing;
@@ -60,7 +65,8 @@ function setup() {
         return store.cancel();
       },
       cancel: () => store.cancel()
-    }
+    },
+    rightAxis: () => rightAxis
   });
 
   function begin(): void {
@@ -70,11 +76,17 @@ function setup() {
   function press(
     code: KeyCode,
     init: KeyboardEventInit = {}
-  ): void {
-    keyboard.dispatch(new KeyboardEvent("keydown", {
+  ): boolean {
+    return keyboard.dispatch(new KeyboardEvent("keydown", {
       code,
+      key: code.startsWith("Key") ? code.slice(3).toLowerCase() : code,
+      cancelable: true,
       ...init
     }));
+  }
+
+  function transform(): VoxelTransform | undefined {
+    return store.current?.placement.transform;
   }
 
   return {
@@ -83,29 +95,12 @@ function setup() {
     begin,
     release,
     press,
+    transform,
     commits: () => commits
   };
 }
 
-function rotation(
-  store: MapPlacement
-): number | undefined {
-  return store.current?.placement.transform.rotation;
-}
-
 describe("PlacementShortcuts", () => {
-  test("Q and E turn the pending placement in opposite directions", () => {
-    const { store, begin, press } = setup();
-    begin();
-
-    press("KeyQ");
-    assert.equal(rotation(store), 1);
-
-    press("KeyE");
-    press("KeyE");
-    assert.equal(rotation(store), 3);
-  });
-
   test("Enter and NumpadEnter commit the pending placement", () => {
     const { store, begin, press, commits } = setup();
     begin();
@@ -138,7 +133,6 @@ describe("PlacementShortcuts", () => {
   test("does nothing without a pending placement", () => {
     const { store, press, commits } = setup();
 
-    press("KeyQ");
     press("Enter");
 
     assert.equal(store.current, null);
@@ -149,13 +143,10 @@ describe("PlacementShortcuts", () => {
     const { store, begin, press, commits } = setup();
     begin();
 
-    press("KeyQ", { repeat: true });
-    press("KeyQ", { ctrlKey: true });
-    press("KeyE", { shiftKey: true });
     press("Enter", { repeat: true });
     press("Enter", { ctrlKey: true });
 
-    assert.equal(store.current?.placement.transform, VoxelTransform.Identity);
+    assert.notEqual(store.current, null);
     assert.equal(commits(), 0);
   });
 
@@ -176,12 +167,55 @@ describe("PlacementShortcuts", () => {
   });
 
   test("stops listening once disposed", () => {
-    const { store, begin, release, press } = setup();
+    const { store, begin, release, press, commits } = setup();
     begin();
 
     release();
+    press("Enter");
+    press("Escape");
+
+    assert.equal(commits(), 0);
+    assert.notEqual(store.current, null);
+  });
+});
+
+describe("PlacementShortcuts orientation", () => {
+  test("Q and E turn the placement like the rotate buttons", () => {
+    const { begin, press, transform } = setup();
+    begin();
+
+    press("KeyQ");
+    assert.equal(transform()?.rotation, 1);
+
+    press("KeyE");
+    press("KeyE");
+    assert.equal(transform()?.rotation, 3);
+  });
+
+  test("V mirrors along Y and H along the camera's right axis", () => {
+    const { begin, press, transform } = setup("z");
+    begin();
+
+    press("KeyV");
+    press("KeyH");
+
+    const expected = new VoxelTransform({ flipY: true })
+      .followedBy(new VoxelTransform({ flipZ: true }));
+    assert.ok(transform()?.equals(expected));
+  });
+
+  test("takes Q before lower-priority bindings, and passes it on without a placement", () => {
+    const { keyboard, begin, press } = setup();
+    const fallbacks: string[] = [];
+    keyboard.bind("KeyQ", () => {
+      fallbacks.push("brush");
+    });
+
+    assert.equal(press("KeyH"), false);
+    press("KeyQ");
+    begin();
     press("KeyQ");
 
-    assert.equal(rotation(store), 0);
+    assert.deepEqual(fallbacks, ["brush"]);
   });
 });

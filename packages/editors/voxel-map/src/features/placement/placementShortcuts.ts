@@ -1,13 +1,22 @@
 // Import Third-party Dependencies
 import type {
-  Keyboard,
   KeyBindingHandler,
+  KeyBindingTarget,
   KeyChordString
 } from "@jolly-pixel/controls";
+import type { VoxelTransformOptions } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type { MapPlacement } from "./MapPlacement.ts";
-import { PLACEMENT_ROTATIONS } from "./placementTransforms.ts";
+import {
+  PLACEMENT_MIRRORS,
+  PLACEMENT_ROTATIONS
+} from "./placementTransforms.ts";
+import type { HorizontalAxis } from "../../scene/camera/EditorCamera.ts";
+import type {
+  MapGroupAction,
+  MapKeyBindingSettings
+} from "../../keybindings/MapKeyBindings.ts";
 
 export const PLACEMENT_SHORTCUTS = {
   commit: ["Enter", "NumpadEnter"],
@@ -15,39 +24,59 @@ export const PLACEMENT_SHORTCUTS = {
 } as const satisfies Record<string, readonly KeyChordString[]>;
 
 export interface PlacementShortcutsOptions {
-  keyboard: Pick<Keyboard, "bind">;
+  keyboard: KeyBindingTarget;
+  keyBindings: Pick<MapKeyBindingSettings, "bind">;
   placement: Pick<MapPlacement, "placing" | "turn" | "commit" | "cancel">;
+  rightAxis: () => HorizontalAxis;
 }
 
 export function bindPlacementShortcuts(
   options: PlacementShortcutsOptions
 ): () => void {
-  const { keyboard, placement } = options;
+  const {
+    keyboard,
+    keyBindings,
+    placement,
+    rightAxis
+  } = options;
 
-  function whilePlacing(
-    action: (event: KeyboardEvent) => boolean | void
-  ): KeyBindingHandler {
-    return (event) => placement.placing && action(event) !== false;
+  function turn(
+    transform: VoxelTransformOptions | undefined
+  ): boolean {
+    if (!placement.placing || transform === undefined) {
+      return false;
+    }
+    placement.turn(transform);
+
+    return true;
   }
 
-  const { commit, cancel } = PLACEMENT_SHORTCUTS;
+  const orient: Partial<Record<MapGroupAction<"orient">, KeyBindingHandler>> = {
+    "orient.mirrorHorizontal": () => turn(
+      PLACEMENT_MIRRORS.find((mirror) => mirror.axis === rightAxis())?.transform
+    )
+  };
+  for (const { action, transform } of [
+    ...PLACEMENT_ROTATIONS,
+    ...PLACEMENT_MIRRORS
+  ]) {
+    if (action !== undefined) {
+      orient[action] = () => turn(transform);
+    }
+  }
+
   const releases = [
-    ...PLACEMENT_ROTATIONS.map(({ chords, transform }) => keyboard.bind(
-      chords,
-      whilePlacing(() => {
-        placement.turn(transform);
-      })
-    )),
-    keyboard.bind(commit, whilePlacing((event) => {
-      if (pressesButton(event)) {
+    keyBindings.bind(keyboard, orient, { priority: 1 }),
+    keyboard.bind(PLACEMENT_SHORTCUTS.commit, (event) => {
+      if (!placement.placing || pressesButton(event)) {
         return false;
       }
       placement.commit();
 
       return true;
-    })),
+    }),
     keyboard.bind(
-      cancel,
+      PLACEMENT_SHORTCUTS.cancel,
       () => placement.cancel(),
       { priority: 1 }
     )
