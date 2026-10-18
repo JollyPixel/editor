@@ -9,6 +9,7 @@ import { KeyBindingSettings } from "@jolly-pixel/editor.pixel-art";
 // Import Internal Dependencies
 import { BlockSelection } from "./BlockSelection.ts";
 import { BrushStore } from "./BrushStore.ts";
+import { EditContext } from "./EditContext.ts";
 import { KeyboardLayoutStore } from "./KeyboardLayoutStore.ts";
 import { PointerCapture } from "./PointerCapture.ts";
 import { PresenceStore } from "./PresenceStore.ts";
@@ -24,6 +25,7 @@ export interface EditorStateOptions {
 
 export class EditorState {
   readonly selection = new SelectionStore();
+  readonly editContext = new EditContext();
   readonly block = new BlockSelection();
   readonly tool = new ToolStore();
   readonly presence = new PresenceStore();

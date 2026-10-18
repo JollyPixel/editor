@@ -23,7 +23,7 @@ describe("templateTreeNodes", () => {
       voxels: [packVoxel(1, 0), packVoxel(1, 0)]
     });
 
-    assert.deepEqual(templateTreeNodes([house]), [
+    assert.deepEqual(templateTreeNodes([house], new Map()), [
       {
         id: "template_0",
         label: "House",
@@ -33,5 +33,28 @@ describe("templateTreeNodes", () => {
         data: "template_0"
       }
     ]);
+  });
+
+  test("marks a template that has a draft and badges the peers in it", () => {
+    const templates = ["house", "tower"].map((id) => new VoxelTemplate({
+      id,
+      name: id,
+      positions: [0, 0, 0],
+      voxels: [packVoxel(1, 0)]
+    }));
+    const bob = {
+      color: "#ff0000",
+      title: "bob"
+    };
+
+    const [house, tower] = templateTreeNodes(templates, new Map([
+      ["house", []],
+      ["tower", [bob]]
+    ]));
+
+    assert.equal(house.detail, "1 voxel · draft");
+    assert.equal(house.badges, undefined);
+    assert.equal(tower.detail, "1 voxel · draft");
+    assert.deepEqual(tower.badges, [bob]);
   });
 });

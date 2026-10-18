@@ -4,7 +4,10 @@ import type {
   VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 import type { EditorArchives } from "@jolly-pixel/editor.host";
-import type { Vector3Like } from "three";
+import type {
+  Box3,
+  Vector3Like
+} from "three";
 
 // Import Internal Dependencies
 import type { MapDocument } from "../document/MapDocument.ts";
@@ -18,6 +21,7 @@ import type { LocalBrush } from "../features/painting/LocalBrush.ts";
 import type { MapHistory } from "../features/placement/MapHistory.ts";
 import type { MapPlacement } from "../features/placement/MapPlacement.ts";
 import type { MapTemplates } from "../features/templates/MapTemplates.ts";
+import type { TemplateEditing } from "../features/templates/editing/TemplateEditing.ts";
 import type { MapBlocksets } from "../features/blocksets/MapBlocksets.ts";
 import type { MapMaterials } from "../features/materials/MapMaterials.ts";
 import type { MapGrants } from "../access/MapAccess.ts";
@@ -30,6 +34,7 @@ export interface VoxelMapWorkspace {
   blockSources: BlockRenderSources;
   previewStage: PreviewStage;
   templates: MapTemplates;
+  templateEditing: TemplateEditing;
   placement: MapPlacement;
   history: MapHistory;
   layerVisibility: LayerVisibilityStore;
@@ -46,4 +51,5 @@ export interface VoxelMapWorkspace {
   ): Vector3Like | null;
   loadWorld(data: VoxelWorldJSON): void;
   teleportToPeer(clientId: string): void;
+  frame(bounds: Box3): void;
 }

@@ -7,21 +7,24 @@ import type {
 // Import Internal Dependencies
 import type { MapPlacement } from "./MapPlacement.ts";
 import {
-  MAP_HISTORY_SCOPE,
+  editScope,
   type MapHistoryScope
 } from "../../shared/mapHistory.ts";
 import type { MapAccessSource } from "../../access/MapAccess.ts";
+import type { EditContext } from "../../state/index.ts";
 
 export interface MapHistoryOptions {
   history: CommandHistory<MapHistoryScope>;
   placement: Pick<MapPlacement, "cancelLift">;
   access: MapAccessSource;
+  context: Pick<EditContext, "draft" | "subscribe">;
 }
 
 export class MapHistory {
   readonly #history: CommandHistory<MapHistoryScope>;
   readonly #placement: Pick<MapPlacement, "cancelLift">;
   readonly #access: MapAccessSource;
+  readonly #context: Pick<EditContext, "draft" | "subscribe">;
 
   constructor(
     options: MapHistoryOptions
@@ -29,10 +32,11 @@ export class MapHistory {
     this.#history = options.history;
     this.#placement = options.placement;
     this.#access = options.access;
+    this.#context = options.context;
   }
 
   get state(): HistoryScopeState {
-    return this.#history.state(MAP_HISTORY_SCOPE);
+    return this.#history.state(this.#scope);
   }
 
   undo(): boolean {
@@ -40,7 +44,7 @@ export class MapHistory {
       return false;
     }
 
-    return this.#placement.cancelLift() || this.#history.undo(MAP_HISTORY_SCOPE);
+    return this.#placement.cancelLift() || this.#history.undo(this.#scope);
   }
 
   redo(): boolean {
@@ -50,16 +54,33 @@ export class MapHistory {
 
     this.#placement.cancelLift();
 
-    return this.#history.redo(MAP_HISTORY_SCOPE);
+    return this.#history.redo(this.#scope);
   }
 
   subscribe(
     event: "change",
     listener: (state: HistoryScopeState) => void
   ): () => void {
-    return this.#history.subscribe(
-      event,
-      (_scope, state) => listener(state)
-    );
+    const unsubscribers = [
+      this.#history.subscribe(
+        event,
+        (scope, state) => {
+          if (scope === this.#scope) {
+            listener(state);
+          }
+        }
+      ),
+      this.#context.subscribe("change", () => listener(this.state))
+    ];
+
+    return () => {
+      for (const unsubscribe of unsubscribers) {
+        unsubscribe();
+      }
+    };
+  }
+
+  get #scope(): MapHistoryScope {
+    return editScope(this.#context.draft);
   }
 }

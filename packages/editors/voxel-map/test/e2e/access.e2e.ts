@@ -31,7 +31,7 @@ test("a role change applies live: view only for a spectator, editing again once 
   baseURL,
   grant
 }) => {
-  const { viewport, world, toolbar, layers, templates, texture } = map;
+  const { viewport, world, toolbar, layers, texture } = map;
   await viewport.pinCamera();
   await map.brush.change({ blockId: 3 });
   await map.panes.open("Layers");
@@ -44,7 +44,6 @@ test("a role change applies live: view only for a spectator, editing again once 
 
   await expect(toolbar.status).toContainText("View only");
   await expect(layers.addButton).toBeDisabled();
-  await expect(templates.saveButton).toBeDisabled();
   await viewport.click(kCell);
   expect(await world.blocks([kCell])).toEqual([null]);
 

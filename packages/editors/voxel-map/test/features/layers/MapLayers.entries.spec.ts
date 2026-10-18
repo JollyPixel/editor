@@ -9,6 +9,7 @@ import { Grants } from "@jolly-pixel/network/client";
 // Import Internal Dependencies
 import { MapLayers, type ConfirmPrompt } from "../../../src/features/layers/MapLayers.ts";
 import {
+  EditContext,
   ObjectLayerRef,
   ObjectRef,
   SelectionStore,
@@ -60,6 +61,7 @@ function createMapLayers(
 ): MapLayers {
   return new MapLayers({
     world,
+    editContext: new EditContext(),
     selection: new SelectionStore(),
     mapDocument: createMapDocument(world),
     confirm,
@@ -73,6 +75,7 @@ describe("MapLayers entries", () => {
     const selection = new SelectionStore();
     const layers = new MapLayers({
       world,
+      editContext: new EditContext(),
       selection,
       mapDocument: createMapDocument(world),
       access: mapAccess()
@@ -135,6 +138,7 @@ describe("MapLayers entries", () => {
     const selection = new SelectionStore();
     new MapLayers({
       world,
+      editContext: new EditContext(),
       selection,
       mapDocument: createMapDocument(world),
       access: mapAccess()
@@ -144,24 +148,93 @@ describe("MapLayers entries", () => {
     assert.equal(world.getLayers().length, 4);
   });
 
-  test("merges into the picked target and selects it", async() => {
+  test("selects a clone of an object in the same layer", () => {
+    const world = makeWorld();
+    const selection = new SelectionStore();
+    new MapLayers({
+      world,
+      editContext: new EditContext(),
+      selection,
+      mapDocument: createMapDocument(world),
+      access: mapAccess()
+    }).clone(new ObjectRef("Triggers", "obj_1"));
+
+    const [original, clone] = world.objectLayers.get("Triggers")!.objects;
+    assert.notEqual(clone.id, original.id);
+    assert.deepEqual({ ...clone, id: original.id }, original);
+    assert.deepEqual(selection.object, new ObjectRef("Triggers", clone.id));
+  });
+
+  test("merges into the given target and selects it", async() => {
     const world = makeWorld();
     const selection = new SelectionStore();
     const layers = new MapLayers({
       world,
+      editContext: new EditContext(),
       selection,
       mapDocument: createMapDocument(world),
       access: mapAccess()
     });
 
-    await layers.merge(new VoxelLayerRef("C"), (context) => {
-      assert.equal(context.defaultTarget, "B");
-
-      return Promise.resolve("A");
-    });
+    await layers.mergeInto(new VoxelLayerRef("C"), "A");
 
     assert.deepEqual(stack(world), ["B", "A"]);
     assert.equal(selection.voxelLayer, "A");
+  });
+
+  test("merges nothing into itself, an unknown layer or past a refused warning", async() => {
+    const world = makeWorld();
+    world.updateLayer("C", { visible: false });
+    const prompts: string[] = [];
+    const layers = createMapLayers(world, (options) => {
+      prompts.push(options.message);
+
+      return Promise.resolve(false);
+    });
+
+    await layers.mergeInto(new VoxelLayerRef("C"), "C");
+    await layers.mergeInto(new VoxelLayerRef("C"), "NoSuch");
+    await layers.mergeInto(new VoxelLayerRef("C"), "A");
+
+    assert.equal(prompts.length, 1);
+    assert.deepEqual(stack(world), ["C", "B", "A"]);
+  });
+
+  test("bounds a voxel layer by its voxels and an object layer by its objects", () => {
+    const world = makeWorld();
+    world.setVoxel("A", { position: { x: 2, y: 1, z: 3 }, blockId: 1 });
+    world.objectLayers.addObject("Triggers", {
+      id: "obj_2",
+      name: "Wide",
+      visible: true,
+      x: 4,
+      y: 0,
+      z: 0,
+      width: 2,
+      height: 3
+    });
+    const layers = createMapLayers(world);
+
+    const voxel = layers.bounds(new VoxelLayerRef("A"));
+    const objects = layers.bounds(new ObjectLayerRef("Triggers"));
+
+    assert.deepEqual([voxel?.min.toArray(), voxel?.max.toArray()], [[2, 1, 3], [3, 2, 4]]);
+    assert.deepEqual([objects?.min.toArray(), objects?.max.toArray()], [[0, 0, 0], [6, 1, 3]]);
+    assert.equal(layers.bounds(new VoxelLayerRef("B")), null);
+    assert.equal(layers.bounds(new ObjectLayerRef("Spawns")), null);
+  });
+
+  test("moves an object into another object layer with the objects grant", () => {
+    const world = makeWorld();
+    const door = new ObjectRef("Triggers", "obj_1");
+
+    createMapLayers(world, undefined, mapAccess(new Grants<MapCapability>(["layers"])))
+      .moveTo(door, "Spawns");
+    assert.deepEqual(objectIds(world, "Spawns"), []);
+
+    createMapLayers(world).moveTo(door, "Spawns");
+    assert.deepEqual(objectIds(world, "Triggers"), []);
+    assert.deepEqual(objectIds(world, "Spawns"), ["obj_1"]);
   });
 
   test("edits only the entries the role can write", async() => {
@@ -188,6 +261,7 @@ describe("MapLayers selection", () => {
     const selection = new SelectionStore();
     new MapLayers({
       world,
+      editContext: new EditContext(),
       selection,
       mapDocument: createMapDocument(world),
       access: mapAccess()
@@ -207,6 +281,7 @@ describe("MapLayers selection", () => {
     const selection = new SelectionStore();
     const layers = new MapLayers({
       world,
+      editContext: new EditContext(),
       selection,
       mapDocument: createMapDocument(world),
       access: mapAccess()

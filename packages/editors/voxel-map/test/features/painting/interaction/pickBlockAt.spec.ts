@@ -3,9 +3,10 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type {
-  VoxelCoord,
-  VoxelView
+import {
+  VoxelLayerVisibility,
+  VoxelWorld,
+  type VoxelView
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -28,29 +29,24 @@ function footprint(
 }
 
 function createView(
-  blocks: Record<string, number>
+  blocks: Record<string, number>,
+  layerVisibility = new VoxelLayerVisibility()
 ): VoxelView {
+  const world = new VoxelWorld();
+  world.addLayer("Ground");
+  for (const [key, blockId] of Object.entries(blocks)) {
+    const [x, y, z] = key.split(",").map(Number);
+    world.setVoxel("Ground", {
+      position: { x, y, z },
+      blockId
+    });
+  }
   const view = {
-    document: {
-      world: {
-        getVoxelAt(position: VoxelCoord) {
-          const blockId = blocks[cellKey(position)];
-
-          return blockId === undefined ?
-            undefined :
-            { blockId, transform: 0 };
-        }
-      }
-    }
+    document: { world },
+    layerVisibility
   };
 
   return view as unknown as VoxelView;
-}
-
-function cellKey(
-  cell: VoxelCoord
-): string {
-  return `${cell.x},${cell.y},${cell.z}`;
 }
 
 describe("pickBlockAt", () => {
@@ -98,5 +94,23 @@ describe("pickBlockAt", () => {
 
     assert.equal(pickBlockAt(view, footprint(4)), 9);
     assert.equal(pickBlockAt(view, footprint(4, { pattern: "circle" })), null);
+  });
+
+  it("reads only the layers the view draws, saved-hidden ones included", () => {
+    const layerVisibility = new VoxelLayerVisibility();
+    const view = createView({ "0,0,0": 7 }, layerVisibility);
+    const { world } = view.document;
+    world.addLayer("Draft", { visible: false });
+    world.setVoxel("Draft", {
+      position: { x: 0, y: 0, z: 0 },
+      blockId: 3
+    });
+
+    assert.equal(pickBlockAt(view, footprint(1)), 7);
+
+    layerVisibility.override("Ground", false);
+    layerVisibility.override("Draft", true);
+
+    assert.equal(pickBlockAt(view, footprint(1)), 3);
   });
 });

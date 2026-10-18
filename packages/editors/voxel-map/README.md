@@ -48,6 +48,15 @@ voxels still use the block. Right-clicking an empty spot offers a new block.
 The library in the Materials pane only offers the material and ID actions.
 Double-clicking a block opens its editor.
 
+The Edit button in the Templates folder opens the selected template in place
+of the map. Its voxels are copied into a draft layer that stays hidden in the
+map, and the view shows only that layer. Everyone who opens the same template
+paints on the same draft. Apply saves the draft into the template. Done goes
+back to the map and removes the draft once nothing is left to apply and nobody
+else is editing it; otherwise the template row shows "draft" and the next Edit
+resumes it. Discard drops the draft. Undo and redo inside a template step only
+through its edits.
+
 The settings button in the Block Library header picks the block order and which
 blocks the library shows: those of every blockset, or only those of the active
 blockset (the selected texture tab). The browser remembers both choices.

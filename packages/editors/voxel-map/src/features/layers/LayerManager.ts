@@ -2,16 +2,22 @@
 import { html, nothing } from "lit";
 import {
   customElement,
+  property,
   query,
   state
 } from "lit/decorators.js";
 import {
+  ContextMenuController,
+  MenuSession,
   formatCount,
+  type ContextMenu,
   type JollyRenameDetail,
   type JollyReparentDetail,
   type JollySelectDetail,
   type JollyToggleLockDetail,
   type JollyToggleVisibleDetail,
+  type Tree,
+  type TreeDragOut,
   type TreeNode
 } from "@jolly-pixel/ui";
 
@@ -24,7 +30,8 @@ import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
 import { AddLayerDialog } from "./dialogs/AddLayerDialog.ts";
 import { layerManagerStyles } from "./LayerManager.styles.ts";
-import { MergeLayerDialog } from "./dialogs/MergeLayerDialog.ts";
+import { LayerCommands } from "./LayerCommands.ts";
+import { LayerMenu } from "./LayerMenu.ts";
 import { MapLayers } from "./MapLayers.ts";
 import {
   layerTreeNodes,
@@ -37,6 +44,9 @@ import "./layerIcons.ts";
 @customElement("layer-manager")
 export class LayerManager extends WorkspaceElement {
   static override styles = layerManagerStyles;
+
+  @property({ attribute: false })
+  declare dragOut: TreeDragOut | null;
 
   @state()
   private declare _nodes: TreeNode<LayerRef>[];
@@ -53,11 +63,20 @@ export class LayerManager extends WorkspaceElement {
   @query("add-layer-dialog")
   private declare _addDialog: AddLayerDialog;
 
-  @query("merge-layer-dialog")
-  private declare _mergeDialog: MergeLayerDialog;
+  @query("jolly-tree")
+  private declare _tree: Tree<LayerRef> | null;
+
+  @query("jolly-context-menu")
+  private declare _contextMenu: ContextMenu;
+
+  #menu = new ContextMenuController(
+    () => this._contextMenu,
+    (id) => this.#openMenu(id)
+  );
 
   constructor() {
     super();
+    this.dragOut = null;
     this._nodes = [];
     this._selection = null;
     this._expanded = [];
@@ -78,6 +97,10 @@ export class LayerManager extends WorkspaceElement {
       workspace.layerVisibility.subscribe("change", refresh),
       workspace.access.subscribe("change", refresh),
       workspace.usage.subscribe("change", () => this.requestUpdate()),
+      workspace.state.editContext.subscribe(
+        "change",
+        () => this.requestUpdate()
+      ),
       selection.subscribe("change", (current) => {
         this._selection = current;
         this.#expandSelectedLayer(current);
@@ -91,8 +114,22 @@ export class LayerManager extends WorkspaceElement {
       return nothing;
     }
 
+    if (workspace.state.editContext.draft !== null) {
+      return html`
+        <jolly-folder
+          key="layers"
+          label="Layers"
+          storage-key="voxel-map:folder:layers"
+        >
+          <p class="hint">
+            Map layers are hidden while you edit a template. Press Done in the
+            viewport to go back to the map.
+          </p>
+        </jolly-folder>
+      `;
+    }
+
     const { layers } = workspace;
-    const world = workspace.mapDocument.world;
     const selection = this._selection;
     const voxelLayerSelected = selection?.kind === "voxel-layer" &&
       layers.canEdit(selection.kind);
@@ -129,15 +166,6 @@ export class LayerManager extends WorkspaceElement {
         ></jolly-button>
         <jolly-button
           slot="actions"
-          icon="merge"
-          icon-only
-          label="Merge layer"
-          title="Merge layer into another"
-          ?disabled=${!voxelLayerSelected || world.getLayers().length < 2}
-          @click=${this.#mergeLayer}
-        ></jolly-button>
-        <jolly-button
-          slot="actions"
           icon="trash"
           icon-only
           variant="danger"
@@ -157,6 +185,8 @@ export class LayerManager extends WorkspaceElement {
             .selected=${this._selection === null ? [] : [this._selection.key]}
             .expanded=${this._expanded}
             .acceptDrop=${MapLayers.acceptsDrop}
+            .dragOut=${this.dragOut}
+            @jolly-context-request=${this.#menu.onContextRequest}
             @jolly-select=${this.#onSelect}
             @jolly-toggle-expand=${this.#onToggleExpand}
             @jolly-toggle-visible=${this.#onToggleVisible}
@@ -169,8 +199,33 @@ export class LayerManager extends WorkspaceElement {
       </jolly-folder>
 
       <add-layer-dialog></add-layer-dialog>
-      <merge-layer-dialog></merge-layer-dialog>
+      <jolly-context-menu
+        label="Layer actions"
+        @jolly-context-action=${this.#menu.onContextAction}
+      ></jolly-context-menu>
     `;
+  }
+
+  #openMenu(
+    id: string | null
+  ): MenuSession {
+    const workspace = this.workspace;
+    if (workspace === null) {
+      return MenuSession.EMPTY;
+    }
+
+    const menu = new LayerMenu({
+      world: workspace.mapDocument.world,
+      layers: workspace.layers,
+      templatesEditable: workspace.templates.editable,
+      commands: new LayerCommands({
+        workspace,
+        rename: (ref) => this._tree?.beginRename(ref.key),
+        addLayer: this.#addLayer
+      })
+    });
+
+    return id === null ? menu.rootSession() : menu.session(parseLayerRef(id));
   }
 
   #renderInspector(
@@ -331,18 +386,6 @@ export class LayerManager extends WorkspaceElement {
     if (workspace !== null && this._selection !== null) {
       workspace.layers.clone(this._selection);
     }
-  };
-
-  readonly #mergeLayer = async(): Promise<void> => {
-    const workspace = this.workspace;
-    if (workspace === null || this._selection === null) {
-      return;
-    }
-
-    await workspace.layers.merge(
-      this._selection,
-      (context) => this._mergeDialog.open(context)
-    );
   };
 }
 

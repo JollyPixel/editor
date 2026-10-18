@@ -7,6 +7,7 @@ import {
   type BlockRedefinition,
   type VoxelCommand,
   type VoxelCommandContext,
+  type VoxelLayer,
   type VoxelLayerCommand,
   type VoxelWorld,
   type VoxelWorldJSON
@@ -18,6 +19,7 @@ import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type { MapAccessSource } from "../access/MapAccess.ts";
+import { TemplateDraftId } from "./TemplateDraftId.ts";
 
 export type BlockRegistryChange =
   | "added"
@@ -67,6 +69,12 @@ export interface MapDocumentOptions {
 }
 
 export class MapDocument extends Emitter<MapDocumentEvents> {
+  static layers(
+    world: Pick<VoxelWorld, "getLayers">
+  ): VoxelLayer[] {
+    return world.getLayers().filter((layer) => !TemplateDraftId.isDraft(layer));
+  }
+
   #map: SyncedMap;
   #defaultLayerName: string;
   readonly #access: MapAccessSource;
@@ -156,7 +164,7 @@ export class MapDocument extends Emitter<MapDocumentEvents> {
   #seedDefaultLayer(): void {
     if (
       this.#access.current.has("layers") &&
-      this.world.getLayers().length === 0
+      MapDocument.layers(this.world).length === 0
     ) {
       this.world.addLayer(this.#defaultLayerName);
     }

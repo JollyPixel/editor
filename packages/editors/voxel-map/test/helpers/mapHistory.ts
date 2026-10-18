@@ -13,6 +13,8 @@ import {
   createMapHistory,
   type MapHistoryScope
 } from "../../src/shared/mapHistory.ts";
+import { MapSteps } from "../../src/shared/MapSteps.ts";
+import { EditContext } from "../../src/state/index.ts";
 
 export function createWorldHistory(
   world: VoxelWorld
@@ -24,4 +26,10 @@ export function createWorldHistory(
   world.on("command", (command) => document.emit("command", command, { origin: "local" }));
 
   return createMapHistory(new VoxelEdits(document));
+}
+
+export function mapSteps(
+  history: CommandHistory<MapHistoryScope>
+): MapSteps {
+  return new MapSteps(history, new EditContext());
 }

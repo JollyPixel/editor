@@ -56,6 +56,24 @@ export class ObjectRef {
     return this.objectIn(world) !== undefined;
   }
 
+  cloneIn(
+    world: VoxelWorld
+  ): ObjectRef | null {
+    const object = this.objectIn(world);
+    if (object === undefined) {
+      return null;
+    }
+
+    const clone = {
+      ...structuredClone(object),
+      id: crypto.randomUUID()
+    };
+
+    return world.objectLayers.addObject(this.layerName, clone) ?
+      new ObjectRef(this.layerName, clone.id) :
+      null;
+  }
+
   objectIn(
     world: VoxelWorld
   ): VoxelObjectJSON | undefined {

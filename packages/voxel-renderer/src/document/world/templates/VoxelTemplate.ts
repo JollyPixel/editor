@@ -286,6 +286,35 @@ export class VoxelTemplate {
     return counts;
   }
 
+  sameVoxels(
+    other: VoxelTemplate
+  ): boolean {
+    if (!this.#sameFrame(other)) {
+      return false;
+    }
+
+    const indices = new Map<number, number>();
+    for (let i = 0; i < this.#voxels.length; i++) {
+      indices.set(this.#cellKey(
+        this.#positions[i * 3],
+        this.#positions[(i * 3) + 1],
+        this.#positions[(i * 3) + 2]
+      ), i);
+    }
+    for (const [x, y, z, packed, partner] of other.localVoxels()) {
+      const index = indices.get(this.#cellKey(x, y, z));
+      if (
+        index === undefined ||
+        this.#voxels[index] !== packed ||
+        (this.#partners?.[index] ?? VOXEL_ABSENT) !== partner
+      ) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   withPatch(
     patch: VoxelTemplatePatch
   ): VoxelTemplate {
@@ -298,6 +327,28 @@ export class VoxelTemplate {
       voxels: this.#voxels,
       partners: this.#partners ?? undefined
     });
+  }
+
+  #sameFrame(
+    other: VoxelTemplate
+  ): boolean {
+    const { size, pivot } = this;
+
+    return other.voxelCount === this.voxelCount &&
+      other.size.x === size.x &&
+      other.size.y === size.y &&
+      other.size.z === size.z &&
+      other.pivot.x === pivot.x &&
+      other.pivot.y === pivot.y &&
+      other.pivot.z === pivot.z;
+  }
+
+  #cellKey(
+    x: number,
+    y: number,
+    z: number
+  ): number {
+    return x + (this.size.x * (y + (this.size.y * z)));
   }
 
   #turnedCorners(

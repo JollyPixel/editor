@@ -47,6 +47,13 @@ export interface VoxelLayerConfigurableOptions {
   properties?: Record<string, any>;
 }
 
+export interface VoxelLayerAddOptions extends VoxelLayerConfigurableOptions {
+  /**
+   * @default a random UUID
+   */
+  id?: string;
+}
+
 export interface VoxelLayerUpdate extends Partial<VoxelLayerConfigurableOptions> {
   name?: string;
 }

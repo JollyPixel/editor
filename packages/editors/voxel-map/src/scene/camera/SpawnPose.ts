@@ -30,7 +30,7 @@ export interface SpawnPoseOptions {
 
 export class SpawnPose {
   static frame(
-    layers: Iterable<SpawnLayer>,
+    bounds: THREE.Box3 | null,
     options: SpawnPoseOptions = {}
   ): SpawnPose {
     const {
@@ -39,7 +39,6 @@ export class SpawnPose {
       maxDistance = kDefaultMaxDistance
     } = options;
 
-    const bounds = SpawnPose.#nearestBounds(layers);
     const target = bounds?.getCenter(new THREE.Vector3()) ??
       new THREE.Vector3();
     const radius = bounds?.getBoundingSphere(
@@ -62,7 +61,7 @@ export class SpawnPose {
     );
   }
 
-  static #nearestBounds(
+  static nearestBounds(
     layers: Iterable<SpawnLayer>
   ): THREE.Box3 | null {
     let nearest: THREE.Box3 | null = null;

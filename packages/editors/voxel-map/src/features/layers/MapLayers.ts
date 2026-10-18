@@ -1,17 +1,30 @@
 // Import Third-party Dependencies
-import type { VoxelWorld } from "@jolly-pixel/voxel.renderer";
-import type { Vector3Like } from "three";
+import type {
+  VoxelObjectJSON,
+  VoxelWorld
+} from "@jolly-pixel/voxel.renderer";
+import {
+  Box3,
+  Vector3,
+  type Vector3Like
+} from "three";
 import {
   showConfirm,
   type JollyReparentDetail
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { MapDocumentSignals } from "../../document/MapDocument.ts";
+import {
+  MapDocument,
+  type MapDocumentSignals
+} from "../../document/MapDocument.ts";
 import type { MapAccessSource } from "../../access/MapAccess.ts";
 import {
+  ObjectLayerRef,
   ObjectRef,
   parseLayerRef,
+  VoxelLayerRef,
+  type EditContext,
   type LayerRef,
   type SelectionStore
 } from "../../state/index.ts";
@@ -21,7 +34,6 @@ import type {
   AddKind,
   AddLayerResult
 } from "./dialogs/AddLayerDialog.ts";
-import type { MergeLayerContext } from "./dialogs/MergeLayerDialog.ts";
 import { MergePlan } from "./MergePlan.ts";
 
 export type ConfirmPrompt = typeof showConfirm;
@@ -31,6 +43,7 @@ export interface MapLayersOptions {
   selection: SelectionStore;
   mapDocument: MapDocumentSignals;
   access: MapAccessSource;
+  editContext: Pick<EditContext, "draft" | "subscribe">;
   confirm?: ConfirmPrompt;
 }
 
@@ -49,6 +62,7 @@ export class MapLayers {
   readonly #selection: SelectionStore;
   readonly #access: MapAccessSource;
   readonly #confirm: ConfirmPrompt;
+  readonly #editContext: Pick<EditContext, "draft">;
   readonly #subscriptions: Array<() => void>;
 
   constructor(
@@ -58,11 +72,13 @@ export class MapLayers {
     this.#selection = options.selection;
     this.#access = options.access;
     this.#confirm = options.confirm ?? showConfirm;
+    this.#editContext = options.editContext;
 
-    const { mapDocument } = options;
+    const { mapDocument, editContext } = options;
     this.#subscriptions = [
       mapDocument.subscribe("layerUpdated", this.#reconcileSelection),
-      mapDocument.subscribe("reset", this.#reconcileSelection)
+      mapDocument.subscribe("reset", this.#reconcileSelection),
+      editContext.subscribe("change", this.#reconcileSelection)
     ];
     this.#reconcileSelection();
   }
@@ -81,7 +97,7 @@ export class MapLayers {
 
   defaultNames(): Record<AddKind, string> {
     return {
-      "voxel-layer": `Layer ${this.#world.getLayers().length + 1}`,
+      "voxel-layer": `Layer ${MapDocument.layers(this.#world).length + 1}`,
       "object-layer": `Objects ${this.#world.objectLayers.size + 1}`,
       object: "Object"
     };
@@ -148,38 +164,47 @@ export class MapLayers {
     }
   }
 
-  clone(
+  bounds(
     ref: LayerRef
-  ): void {
-    if (ref.kind !== "voxel-layer" || !this.canEdit(ref.kind)) {
-      return;
-    }
+  ): Box3 | null {
+    switch (ref.kind) {
+      case "voxel-layer":
+        return this.#world.getLayer(ref.name)?.worldBounds() ?? null;
+      case "object-layer":
+        return objectBounds(
+          this.#world.objectLayers.get(ref.name)?.objects ?? []
+        );
+      default: {
+        const object = ref.objectIn(this.#world);
 
-    const clone = this.#world.cloneLayer(ref.name);
-    if (clone !== undefined) {
-      this.#selection.selectVoxelLayer(clone.name);
+        return object === undefined ? null : objectBounds([object]);
+      }
     }
   }
 
-  async merge(
+  clone(
+    ref: LayerRef
+  ): void {
+    if (!this.canEdit(ref.kind)) {
+      return;
+    }
+
+    const clone = ref.cloneIn(this.#world);
+    if (clone !== null) {
+      this.#selection.current = clone;
+    }
+  }
+
+  async mergeInto(
     ref: LayerRef,
-    pickTarget: (context: MergeLayerContext) => Promise<string | null>
+    target: string
   ): Promise<void> {
     if (ref.kind !== "voxel-layer" || !this.canEdit(ref.kind)) {
       return;
     }
 
     const plan = MergePlan.planMerge(this.#world, ref.name);
-    if (plan.defaultTarget === null) {
-      return;
-    }
-
-    const target = await pickTarget({
-      sourceName: ref.name,
-      options: [...plan.options],
-      defaultTarget: plan.defaultTarget
-    });
-    if (target === null) {
+    if (!plan.targets.includes(target)) {
       return;
     }
 
@@ -215,6 +240,15 @@ export class MapLayers {
     }
   }
 
+  moveTo(
+    ref: LayerRef,
+    objectLayer: string
+  ): void {
+    if (this.canEdit(ref.kind)) {
+      ref.moveOnto(this.#world, new ObjectLayerRef(objectLayer), "inside");
+    }
+  }
+
   #createObject(
     focus: Vector3Like,
     name: string
@@ -230,6 +264,30 @@ export class MapLayers {
   }
 
   readonly #reconcileSelection = (): void => {
-    this.#selection.reconcile(collectLayerSelections(this.#world));
+    this.#selection.reconcile(this.#selectable());
   };
+
+  #selectable(): LayerRef[] {
+    const { draft } = this.#editContext;
+    if (draft === null) {
+      return collectLayerSelections(this.#world);
+    }
+
+    const layer = this.#world.getLayerById(draft.layerId);
+
+    return layer === undefined ? [] : [new VoxelLayerRef(layer.name)];
+  }
+}
+
+function objectBounds(
+  objects: Iterable<VoxelObjectJSON>
+): Box3 | null {
+  const bounds = new Box3();
+  for (const object of objects) {
+    const { position, size } = new MapObject(object).area;
+    const min = new Vector3().copy(position);
+    bounds.expandByPoint(min).expandByPoint(min.add(size));
+  }
+
+  return bounds.isEmpty() ? null : bounds;
 }

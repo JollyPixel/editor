@@ -21,9 +21,11 @@ export class TemplateList {
   readonly root: Locator;
   readonly row: Locator;
   readonly renameBox: Locator;
-  readonly saveButton: Locator;
+  readonly selectedLayer: Locator;
   readonly placeButton: Locator;
   readonly deleteButton: Locator;
+  readonly editButton: Locator;
+  readonly editBar: Locator;
   readonly preview: Locator;
   readonly previewWell: Locator;
   readonly previewCanvas: Locator;
@@ -40,9 +42,12 @@ export class TemplateList {
     this.root = page.locator("template-manager");
     this.row = this.root.getByRole("treeitem");
     this.renameBox = this.root.getByRole("textbox", { name: "Rename" });
-    this.saveButton = this.root.getByRole("button", { name: "Save layer as template" });
+    this.selectedLayer = page.locator("layer-manager")
+      .locator("[role=\"treeitem\"][aria-selected=\"true\"]");
     this.placeButton = this.root.getByRole("button", { name: "Place template" });
     this.deleteButton = this.root.getByRole("button", { name: "Delete template" });
+    this.editButton = this.root.getByRole("button", { name: "Edit template" });
+    this.editBar = page.getByRole("toolbar", { name: "Template editing" });
     this.preview = page.locator("template-preview");
     this.previewWell = this.preview.locator(".well");
     this.previewCanvas = this.previewWell.locator("canvas");
@@ -50,7 +55,10 @@ export class TemplateList {
   }
 
   async saveLayer(): Promise<void> {
-    await this.saveButton.click();
+    await this.selectedLayer.locator(".label").click({ button: "right" });
+    await this.#page.getByRole("menu", { name: "Layer actions" })
+      .getByRole("menuitem", { name: "Save as template" })
+      .click();
   }
 
   async place(): Promise<void> {
@@ -65,6 +73,43 @@ export class TemplateList {
     await dialog(this.#page, "Delete template")
       .getByRole("button", { name: "Delete" })
       .click();
+  }
+
+  async edit(
+    row: Locator
+  ): Promise<void> {
+    await row.locator(".label").click();
+    await this.editButton.click();
+  }
+
+  async applyEdits(): Promise<void> {
+    await this.editBar.getByRole("button", { name: "Apply" }).click();
+  }
+
+  async finishEditing(): Promise<void> {
+    await this.editBar.getByRole("button", { name: "Done" }).click();
+  }
+
+  draftVoxelCount(): Promise<number | null> {
+    return this.#page.evaluate(() => {
+      const { world } = window.voxelMapEditor!.workspace.view.document;
+      const draft = world.getLayers()
+        .find((layer) => layer.id.startsWith("template-draft:"));
+
+      return draft?.voxelCount ?? null;
+    });
+  }
+
+  peerInDraft(): Promise<boolean> {
+    return this.#page.evaluate(() => [
+      ...window.voxelMapEditor!.workspace.state.presence.layerSelections.keys()
+    ].some((key) => key.includes("template-draft:")));
+  }
+
+  voxelCounts(): Promise<number[]> {
+    return this.#page.evaluate(() => window.voxelMapEditor!.workspace.view.document.world
+      .templates.toArray()
+      .map((template) => template.voxelCount));
   }
 
   async name(

@@ -5,20 +5,26 @@ import type {
 } from "@jolly-pixel/voxel.renderer";
 import {
   showConfirm,
-  showPrompt
+  showPrompt,
+  type LogQueue
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { MapDocumentSignals } from "../../document/MapDocument.ts";
 import type { MapAccessSource } from "../../access/MapAccess.ts";
 import { TemplateStore } from "./TemplateStore.ts";
+import { TemplateDraft } from "./editing/TemplateDraft.ts";
 
-export type TemplateWorld = Pick<VoxelWorld, "templates">;
+export type TemplateWorld = Pick<
+  VoxelWorld,
+  "templates" | "getLayerById" | "removeLayer" | "unrecorded"
+>;
 
 export interface MapTemplatesOptions {
   world: TemplateWorld;
   mapDocument: MapDocumentSignals;
   access: MapAccessSource;
+  log: Pick<LogQueue, "push">;
   store?: TemplateStore;
   confirm?: typeof showConfirm;
   prompt?: typeof showPrompt;
@@ -29,6 +35,7 @@ export class MapTemplates {
 
   readonly #world: TemplateWorld;
   readonly #access: MapAccessSource;
+  readonly #log: Pick<LogQueue, "push">;
   readonly #confirm: typeof showConfirm;
   readonly #prompt: typeof showPrompt;
   readonly #unsubscribe: () => void;
@@ -38,6 +45,7 @@ export class MapTemplates {
   ) {
     this.#world = options.world;
     this.#access = options.access;
+    this.#log = options.log;
     this.store = options.store ?? new TemplateStore();
     this.#confirm = options.confirm ?? showConfirm;
     this.#prompt = options.prompt ?? showPrompt;
@@ -62,11 +70,16 @@ export class MapTemplates {
       return null;
     }
 
-    return this.#select(
+    const templateId = this.#select(
       this.#world.templates.createFromLayer(layerName, {
         name: layerName
       })
     );
+    if (templateId === null) {
+      this.#log.push(`${layerName} has no voxels to save as a template`);
+    }
+
+    return templateId;
   }
 
   async saveSnapshot(
@@ -122,7 +135,14 @@ export class MapTemplates {
       danger: true
     });
 
-    return confirmed && this.#world.templates.remove(templateId);
+    if (!confirmed || !this.#world.templates.remove(templateId)) {
+      return false;
+    }
+    if (this.#access.current.has("layers")) {
+      TemplateDraft.find(this.#world, templateId)?.removeFrom(this.#world);
+    }
+
+    return true;
   }
 
   #select(

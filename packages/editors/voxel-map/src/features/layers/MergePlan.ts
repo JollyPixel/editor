@@ -1,28 +1,23 @@
 // Import Third-party Dependencies
 import type { VoxelWorld } from "@jolly-pixel/voxel.renderer";
-import type { JollyOption } from "@jolly-pixel/ui";
+
+// Import Internal Dependencies
+import { MapDocument } from "../../document/MapDocument.ts";
 
 export class MergePlan {
   static planMerge(
     world: VoxelWorld,
     sourceName: string
   ): MergePlan {
-    const layers = world.getLayers();
-    const sourceIndex = layers.findIndex((layer) => layer.name === sourceName);
-    const source = layers[sourceIndex];
+    const layers = MapDocument.layers(world);
+    const source = layers.find((layer) => layer.name === sourceName);
     if (source === undefined) {
-      return new MergePlan(sourceName, [], null, []);
+      return new MergePlan([], []);
     }
 
-    const options = layers
+    const targets = layers
       .filter((layer) => layer.name !== sourceName)
-      .map((layer): JollyOption<string> => {
-        return {
-          value: layer.name,
-          label: layer.name
-        };
-      });
-    const below = layers[sourceIndex + 1];
+      .map((layer) => layer.name);
     const warnings: string[] = [];
     const propertyCount = Object.keys(source.properties).length;
     if (propertyCount > 0) {
@@ -35,28 +30,17 @@ export class MergePlan {
       warnings.push("It is hidden, so its voxels become visible once merged.");
     }
 
-    return new MergePlan(
-      sourceName,
-      options,
-      options.length === 0 ? null : below?.name ?? options[0].value,
-      warnings
-    );
+    return new MergePlan(targets, warnings);
   }
 
-  readonly sourceName: string;
-  readonly options: readonly JollyOption<string>[];
-  readonly defaultTarget: string | null;
+  readonly targets: readonly string[];
   readonly warnings: readonly string[];
 
   constructor(
-    sourceName: string,
-    options: readonly JollyOption<string>[],
-    defaultTarget: string | null,
+    targets: readonly string[],
     warnings: readonly string[]
   ) {
-    this.sourceName = sourceName;
-    this.options = options;
-    this.defaultTarget = defaultTarget;
+    this.targets = targets;
     this.warnings = warnings;
   }
 }

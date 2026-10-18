@@ -12,13 +12,19 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { createWorldHistory } from "../../helpers/mapHistory.ts";
+import {
+  createWorldHistory,
+  mapSteps
+} from "../../helpers/mapHistory.ts";
 import { MAP_HISTORY_SCOPE } from "../../../src/shared/mapHistory.ts";
 import { MapLayers } from "../../../src/features/layers/MapLayers.ts";
 import { CellRegion } from "../../../src/features/placement/CellRegion.ts";
 import type { ActivePlacement } from "../../../src/features/placement/ActivePlacement.ts";
 import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
-import { SelectionStore } from "../../../src/state/index.ts";
+import {
+  EditContext,
+  SelectionStore
+} from "../../../src/state/index.ts";
 import { createMapDocument } from "../../helpers/mapDocument.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
 
@@ -29,6 +35,7 @@ function setup() {
   const selection = new SelectionStore();
   const layers = new MapLayers({
     world,
+    editContext: new EditContext(),
     selection,
     mapDocument,
     access: mapAccess()
@@ -36,7 +43,7 @@ function setup() {
   const concealed: string[] = [];
   const placement = new MapPlacement({
     world,
-    history,
+    history: mapSteps(history),
     selection,
     mapDocument,
     conceal: (layerName) => {

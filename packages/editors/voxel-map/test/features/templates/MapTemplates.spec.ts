@@ -10,9 +10,11 @@ import {
   VoxelTemplate,
   VoxelWorld
 } from "@jolly-pixel/voxel.renderer";
+import { LogQueue } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { MapTemplates } from "../../../src/features/templates/MapTemplates.ts";
+import { TemplateDraft } from "../../../src/features/templates/editing/TemplateDraft.ts";
 import { createMapDocument } from "../../helpers/mapDocument.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
 import { MAP_CAPABILITIES } from "../../../src/access/MapAccess.ts";
@@ -23,6 +25,7 @@ function setup(
 ) {
   const world = new VoxelWorld();
   const prompts: string[] = [];
+  const log = new LogQueue();
   const templates = new MapTemplates({
     world,
     mapDocument: createMapDocument(world),
@@ -32,7 +35,8 @@ function setup(
 
       return Promise.resolve(answer());
     },
-    access
+    access,
+    log
   });
   world.addLayer("Draft");
   world.addLayer("Ground");
@@ -50,7 +54,8 @@ function setup(
   return {
     world,
     templates,
-    prompts
+    prompts,
+    log
   };
 }
 
@@ -75,11 +80,15 @@ describe("MapTemplates.saveLayer", () => {
     assert.equal(world.templates.get(id!)?.voxelCount, 2);
   });
 
-  test("returns null for an empty layer", () => {
-    const { world, templates } = setup();
+  test("returns null and reports an empty layer", () => {
+    const { world, templates, log } = setup();
 
     assert.equal(templates.saveLayer("Ground"), null);
     assert.equal(world.templates.size, 0);
+    assert.deepEqual(
+      log.entries.map((entry) => entry.content),
+      ["Ground has no voxels to save as a template"]
+    );
   });
 });
 
@@ -139,7 +148,8 @@ describe("MapTemplates.remove", () => {
 
         return Promise.resolve(true);
       },
-      access: mapAccess()
+      access: mapAccess(),
+      log: new LogQueue()
     });
     const id = templates.saveLayer("Draft")!;
 
@@ -147,6 +157,20 @@ describe("MapTemplates.remove", () => {
     assert.equal(await templates.remove(id), true);
     assert.equal(world.templates.size, 0);
     assert.equal(prompts.length, 1);
+  });
+
+  test("removes the draft of a template along with it", async() => {
+    const { world, templates } = setup();
+    const id = templates.saveLayer("Draft")!;
+    TemplateDraft.open(world, world.templates.get(id)!);
+
+    await templates.remove(id);
+
+    assert.equal(TemplateDraft.find(world, id), null);
+    assert.deepEqual(
+      world.getLayers().map((layer) => layer.name),
+      ["Ground", "Draft"]
+    );
   });
 });
 

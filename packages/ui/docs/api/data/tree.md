@@ -35,6 +35,7 @@ interface Tree<TData> {
   filter: string;
   virtual: boolean;
   acceptDrop: TreeDropAccept | null; // property only
+  dragOut: TreeDragOut | null; // property only
   validateRename: TreeRenameValidator | null; // property only
 }
 ```
@@ -140,6 +141,40 @@ tree.acceptDrop = ({ movedIds, targetId, where }) =>
 
 - It runs on every pointer move and on commit, so keep it cheap.
 - A rejected move paints no drop indicator and never emits `jolly-reparent`.
+
+## Dragging rows out
+
+`dragOut` lets a pointer drag of rows end on a target outside the tree, such
+as another panel.
+
+```ts
+interface TreeDragOut {
+  over(drag: TreeDragOutPoint): boolean;
+  drop(drag: TreeDragOutPoint): void;
+  leave(): void;
+}
+
+interface TreeDragOutPoint {
+  movedIds: readonly string[];
+  clientX: number;
+  clientY: number;
+}
+
+tree.dragOut = {
+  over: ({ clientX, clientY }) => contains(panel, clientX, clientY),
+  drop: ({ movedIds }) => adopt(movedIds),
+  leave: () => panel.classList.remove("drop-target")
+};
+```
+
+- `over` runs on every pointer move of a row drag, before the tree resolves
+  its own drop. Returning `true` claims the point: the tree paints no drop
+  indicator there.
+- Releasing on a claimed point calls `drop` with that point and emits no
+  `jolly-reparent`.
+- `leave` runs when the pointer moves from a claimed point to an unclaimed one,
+  and when the drag is cancelled on a claimed point.
+- Keyboard moves never call it.
 
 ## Renaming
 

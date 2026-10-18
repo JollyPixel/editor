@@ -114,6 +114,37 @@ test.describe("Tree", () => {
     });
   });
 
+  test("a drag claimed outside the tree drops there instead of reparenting", async({ page }) => {
+    const tree = page.locator(TREE_SELECTOR);
+    await tree.evaluate((element: HTMLElementTagNameMap["jolly-tree"]) => {
+      const { right } = element.getBoundingClientRect();
+      element.dataset.dragOut = "";
+      element.dragOut = {
+        over: ({ clientX }) => clientX > right,
+        drop: ({ movedIds }) => {
+          element.dataset.dragOut += `drop:${movedIds.join(",")} `;
+        },
+        leave: () => {
+          element.dataset.dragOut += "leave ";
+        }
+      };
+    });
+    const box = await measureBox(tree);
+    const outside = {
+      x: box.x + box.width + 40,
+      y: box.y + box.height + 40
+    };
+
+    await hold(page, await measureCenter(findRow(page, "scene").locator(".grip")), outside, 4);
+    await expect(findRow(page, "lighting")).not.toHaveAttribute("data-drop", /.+/);
+    await page.mouse.move(box.x + 8, outside.y, { steps: 4 });
+    await page.mouse.move(outside.x, outside.y, { steps: 4 });
+    await page.mouse.up();
+
+    await expect(tree).toHaveAttribute("data-drag-out", "leave drop:scene ");
+    expect(await rootIds(page)).toEqual(["scene", "lighting"]);
+  });
+
   test("whole-row cancellation and disconnection clean up the gesture", async({ page }) => {
     const camera = findRow(page, "camera");
     const box = await measureBox(camera);

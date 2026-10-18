@@ -12,10 +12,7 @@ import { Emitter } from "@openally/emitt";
 import type { MapDocumentSignals } from "../../document/MapDocument.ts";
 import type { SelectionStore } from "../../state/index.ts";
 import type { MapAccessSource } from "../../access/MapAccess.ts";
-import {
-  MAP_HISTORY_SCOPE,
-  type MapSteps
-} from "../../shared/mapHistory.ts";
+import type { MapSteps } from "../../shared/MapSteps.ts";
 import { ActivePlacement } from "./ActivePlacement.ts";
 import type { CellRegion } from "./CellRegion.ts";
 import { CopySource } from "./CopySource.ts";
@@ -265,7 +262,7 @@ export class MapPlacement {
       return false;
     }
 
-    const step = this.#history.open(MAP_HISTORY_SCOPE, kCommitLabels[source.kind]);
+    const step = this.#history.open(kCommitLabels[source.kind]);
     let committed = false;
     try {
       switch (source.kind) {

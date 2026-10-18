@@ -5,7 +5,7 @@ import type { Vector3Like } from "three";
 // Import Internal Dependencies
 import type {
   VoxelLayer,
-  VoxelLayerConfigurableOptions,
+  VoxelLayerAddOptions,
   VoxelLayerOptions,
   VoxelLayerUpdate
 } from "./VoxelLayer.ts";
@@ -157,9 +157,12 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
 
   addLayer(
     name: string,
-    options: VoxelLayerConfigurableOptions = {}
+    addOptions: VoxelLayerAddOptions = {}
   ): VoxelLayer {
-    const layerId = crypto.randomUUID();
+    const {
+      id: layerId = crypto.randomUUID(),
+      ...options
+    } = addOptions;
     this.#dispatch({
       action: "added",
       layerId,

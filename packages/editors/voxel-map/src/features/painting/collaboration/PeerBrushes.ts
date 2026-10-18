@@ -17,16 +17,20 @@ import { peerProfileColor } from "@jolly-pixel/ui/network";
 // Import Internal Dependencies
 import { BrushFootprint } from "../model/BrushFootprint.ts";
 import { BrushMesh } from "../rendering/BrushMesh.ts";
+import type { PeerEditContext } from "../../templates/editing/PeerEditContext.ts";
 
 // CONSTANTS
 const kPresenceCursorKey = "brush";
 
 export interface PeerBrushesOptions {
   room: Room<VoxelMapNetworkCommand, VoxelMapServerMessage>;
+  peers: Pick<PeerEditContext, "shares" | "subscribe">;
 }
 
 export class PeerBrushes extends ActorComponent {
   #room: Room<VoxelMapNetworkCommand, VoxelMapServerMessage>;
+  #peers: Pick<PeerEditContext, "shares">;
+  #unsubscribePeers: () => void;
   #channel: PresenceChannel<BrushFootprint | null>;
   #meshes = new Map<string, BrushMesh>();
   #localCursor: BrushFootprint | null = null;
@@ -53,16 +57,19 @@ export class PeerBrushes extends ActorComponent {
     });
 
     this.#room = options.room;
+    this.#peers = options.peers;
     this.#channel = new PresenceChannel(options.room, {
       key: kPresenceCursorKey,
       decode: BrushFootprint.parse,
       equals: (left, right) => left === right || left?.equals(right) === true
     });
 
-    for (const clientId of this.#channel.values.keys()) {
-      this.#render(clientId);
-    }
+    this.#renderAll();
     this.#channel.on("change", this.#onPeerChange);
+    this.#unsubscribePeers = options.peers.subscribe("change", () => {
+      this.#renderAll();
+      this.actor.world.invalidate();
+    });
   }
 
   publishLocalCursor(
@@ -73,12 +80,11 @@ export class PeerBrushes extends ActorComponent {
     }
 
     this.#localCursor = next;
-    for (const clientId of this.#channel.values.keys()) {
-      this.#render(clientId);
-    }
+    this.#renderAll();
   }
 
   override destroy(): void {
+    this.#unsubscribePeers();
     this.#channel.off("change", this.#onPeerChange);
     this.#channel.destroy();
 
@@ -87,6 +93,12 @@ export class PeerBrushes extends ActorComponent {
     }
 
     super.destroy();
+  }
+
+  #renderAll(): void {
+    for (const clientId of this.#channel.values.keys()) {
+      this.#render(clientId);
+    }
   }
 
   #render(
@@ -105,7 +117,8 @@ export class PeerBrushes extends ActorComponent {
 
     if (
       peerCursor === null ||
-      peerCursor.overlaps(this.#localCursor)
+      peerCursor.overlaps(this.#localCursor) ||
+      !this.#peers.shares(clientId)
     ) {
       mesh.hide();
 
