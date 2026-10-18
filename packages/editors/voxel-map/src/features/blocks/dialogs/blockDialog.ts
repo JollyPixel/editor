@@ -20,6 +20,8 @@ import type { BlockRenderSources } from "../rendering/BlockRenderSources.ts";
 import type { PreviewStage } from "../../preview/PreviewStage.ts";
 import type { BlocksetEntry } from "../../blocksets/BlocksetEntry.ts";
 import { tileSizeSegments } from "../../blocksets/tileSizes.ts";
+import { ShapeChoices } from "../shapes/ShapeChoices.ts";
+import type { ShapePreview } from "./ShapePreview.ts";
 import "../rendering/BlockShapePreview.ts";
 
 // CONSTANTS
@@ -67,15 +69,32 @@ export interface BlockShapeColumn {
   onSizeChange: (event: CustomEvent<JollyChangeDetail<number>>) => void;
 }
 
-export function shapeOptions(
-  shapes: BlockShapeRegistry
-): JollyOption<BlockShapeID>[] {
-  return [...shapes.ids()].map((id) => {
-    return {
-      label: id,
-      value: id
-    };
-  });
+export interface BlockShapeSelect {
+  shapes: BlockShapeRegistry;
+  value: BlockShapeID;
+  preview: ShapePreview;
+  onChange: (event: CustomEvent<JollyChangeDetail<BlockShapeID>>) => void;
+}
+
+export function renderShapeSelect(
+  select: BlockShapeSelect
+): TemplateResult {
+  return html`
+    <jolly-select
+      label="Shape"
+      layout="grid"
+      .columns=${ShapeChoices.COLUMNS}
+      .options=${ShapeChoices.from(select.shapes).options}
+      .value=${select.value}
+      @jolly-input=${(event: CustomEvent<JollyChangeDetail<BlockShapeID>>) => {
+        select.preview.show(event.detail.value);
+      }}
+      @jolly-change=${(event: CustomEvent<JollyChangeDetail<BlockShapeID>>) => {
+        select.preview.clear();
+        select.onChange(event);
+      }}
+    ></jolly-select>
+  `;
 }
 
 export function blocksetOptions(

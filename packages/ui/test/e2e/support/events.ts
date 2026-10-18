@@ -44,3 +44,30 @@ export function fieldInputCount(
 ): Promise<number> {
   return page.evaluate(() => window.__inputs ?? 0);
 }
+
+export async function recordFieldInputValues(
+  page: Page
+): Promise<void> {
+  await page.evaluate(() => {
+    window.__inputValues = [];
+    document.addEventListener("jolly-input", (event) => {
+      if (!(event instanceof CustomEvent)) {
+        return;
+      }
+
+      const detail: unknown = event.detail;
+      if (typeof detail !== "object" || detail === null ||
+        !("value" in detail)) {
+        return;
+      }
+
+      window.__inputValues?.push(detail.value);
+    });
+  });
+}
+
+export function fieldInputValues(
+  page: Page
+): Promise<unknown[]> {
+  return page.evaluate(() => window.__inputValues ?? []);
+}

@@ -17,6 +17,7 @@ import {
   resolveTemplatePreview,
   type TemplatePreviewView
 } from "./TemplatePreviewView.ts";
+import "./templateIcons.ts";
 
 @customElement("template-preview")
 export class TemplatePreview extends WorkspaceElement {
@@ -33,7 +34,6 @@ export class TemplatePreview extends WorkspaceElement {
       }
 
       .well {
-        position: relative;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -63,11 +63,12 @@ export class TemplatePreview extends WorkspaceElement {
   protected override watchWorkspace(
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
-    const { mapDocument, templates } = workspace;
+    const { mapDocument, templates, state } = workspace;
     const sync = (): void => {
       this._view = resolveTemplatePreview(
         mapDocument.world.templates,
-        templates.store.selected
+        templates.store.selected,
+        state.templatePreview.value
       );
     };
     sync();
@@ -76,6 +77,7 @@ export class TemplatePreview extends WorkspaceElement {
       mapDocument.subscribe("templatesChanged", sync),
       mapDocument.subscribe("reset", sync),
       templates.store.subscribe("selectionChange", sync),
+      state.templatePreview.subscribe("change", sync),
       mapDocument.subscribe(
         "blockRegistryChanged",
         () => this.#renderer?.subject.invalidate()
@@ -90,15 +92,40 @@ export class TemplatePreview extends WorkspaceElement {
       return nothing;
     }
 
+    const enabled = view.kind !== "disabled";
+
     return html`
       <div class="frame">
         <div class="well">
-          ${view.kind === "empty" ? html`
-            <p class="hint">Select a template to preview it.</p>
-          ` : nothing}
+          <button
+            class="toggle"
+            type="button"
+            aria-label=${enabled ? "Hide preview" : "Show preview"}
+            aria-pressed=${enabled ? "true" : "false"}
+            @click=${this.#onToggle}
+          ><jolly-icon name=${enabled ? "eye" : "eye-off"} aria-hidden="true"></jolly-icon></button>
+          ${this.#renderHint(view)}
         </div>
       </div>
     `;
+  }
+
+  readonly #onToggle = (): void => {
+    const store = this.attached.state.templatePreview;
+    store.value = store.value === "enabled" ? "disabled" : "enabled";
+  };
+
+  #renderHint(
+    view: TemplatePreviewView
+  ) {
+    switch (view.kind) {
+      case "empty":
+        return html`<p class="hint">Select a template to preview it.</p>`;
+      case "disabled":
+        return html`<p class="hint">Preview disabled</p>`;
+      default:
+        return nothing;
+    }
   }
 
   override updated(): void {

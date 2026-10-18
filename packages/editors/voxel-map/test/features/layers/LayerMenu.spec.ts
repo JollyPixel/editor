@@ -5,7 +5,6 @@ import { describe, test } from "node:test";
 // Import Third-party Dependencies
 import { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 import { Grants } from "@jolly-pixel/network/client";
-import type { ContextMenuEntry } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { LayerMenu } from "../../../src/features/layers/LayerMenu.ts";
@@ -21,6 +20,7 @@ import {
 } from "../../../src/state/index.ts";
 import { createMapDocument } from "../../helpers/mapDocument.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
+import { choices } from "../../helpers/menus.ts";
 
 // CONSTANTS
 const kPoint = { x: 0, y: 0 };
@@ -82,18 +82,6 @@ function open(
   const session = menu.session(ref);
 
   return { menu, session, ran, world };
-}
-
-function choices(
-  entries: readonly ContextMenuEntry[]
-): string[] {
-  return entries.flatMap((entry) => {
-    if (entry === "separator" || entry.disabled === true) {
-      return [];
-    }
-
-    return entry.items === undefined ? [entry.id] : choices(entry.items);
-  });
 }
 
 describe("LayerMenu", () => {

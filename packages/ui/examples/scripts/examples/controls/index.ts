@@ -53,6 +53,11 @@ export const CONTROLS_EXAMPLES: readonly GalleryEntry[] = [
     load: async() => (await import("./select.ts")).SELECT_EXAMPLE
   },
   {
+    id: "controls/select-grid",
+    title: "Select grid",
+    load: async() => (await import("./selectGrid.ts")).SELECT_GRID_EXAMPLE
+  },
+  {
     id: "controls/color",
     title: "Color",
     load: async() => (await import("./color.ts")).COLOR_EXAMPLE

@@ -1,10 +1,13 @@
+// Import Internal Dependencies
+import type { PreviewAngle } from "../../preview/PreviewStage.ts";
+
 export class TurntableAngles {
-  readonly #rest: number;
+  readonly #rest: PreviewAngle;
   readonly #step: number;
-  #angles = new Map<number, number>();
+  #yaws = new Map<number, number>();
 
   constructor(
-    rest: number,
+    rest: PreviewAngle,
     step: number
   ) {
     this.#rest = rest;
@@ -13,27 +16,42 @@ export class TurntableAngles {
 
   angleForBlock(
     blockId: number
-  ): number {
-    return this.#angles.get(blockId) ?? this.#rest;
+  ): PreviewAngle {
+    return this.#angle(this.#yawForBlock(blockId));
   }
 
   advance(
     blockId: number
-  ): number {
-    const angle = this.angleForBlock(blockId) + this.#step;
-    this.#angles.set(blockId, angle);
+  ): PreviewAngle {
+    const yaw = this.#yawForBlock(blockId) + this.#step;
+    this.#yaws.set(blockId, yaw);
 
-    return angle;
+    return this.#angle(yaw);
   }
 
   keep(
     blockIds: Iterable<number>
   ): void {
     const kept = new Set(blockIds);
-    for (const blockId of this.#angles.keys()) {
+    for (const blockId of this.#yaws.keys()) {
       if (!kept.has(blockId)) {
-        this.#angles.delete(blockId);
+        this.#yaws.delete(blockId);
       }
     }
+  }
+
+  #yawForBlock(
+    blockId: number
+  ): number {
+    return this.#yaws.get(blockId) ?? this.#rest.yaw;
+  }
+
+  #angle(
+    yaw: number
+  ): PreviewAngle {
+    return {
+      yaw,
+      pitch: this.#rest.pitch
+    };
   }
 }

@@ -35,7 +35,7 @@ describe("resolveTemplatePreview", () => {
     const world = new VoxelWorld();
 
     assert.deepEqual(
-      resolveTemplatePreview(world.templates, "template_0"),
+      resolveTemplatePreview(world.templates, "template_0", "enabled"),
       { kind: "hidden" }
     );
   });
@@ -43,19 +43,32 @@ describe("resolveTemplatePreview", () => {
   test("shows an empty well until an existing template is selected", () => {
     const { world } = worldWithTemplate();
 
-    assert.deepEqual(resolveTemplatePreview(world.templates, null), { kind: "empty" });
-    assert.deepEqual(resolveTemplatePreview(world.templates, "removed"), { kind: "empty" });
+    assert.deepEqual(resolveTemplatePreview(world.templates, null, "enabled"), { kind: "empty" });
+    assert.deepEqual(resolveTemplatePreview(world.templates, "removed", "enabled"), { kind: "empty" });
   });
 
   test("shows the selected template", () => {
     const { world, template } = worldWithTemplate();
 
     assert.deepEqual(
-      resolveTemplatePreview(world.templates, template.id),
+      resolveTemplatePreview(world.templates, template.id, "enabled"),
       {
         kind: "template",
         template
       }
+    );
+  });
+
+  test("shows a disabled well only while templates exist", () => {
+    const { world, template } = worldWithTemplate();
+
+    assert.deepEqual(
+      resolveTemplatePreview(world.templates, template.id, "disabled"),
+      { kind: "disabled" }
+    );
+    assert.deepEqual(
+      resolveTemplatePreview(new VoxelWorld().templates, null, "disabled"),
+      { kind: "hidden" }
     );
   });
 });

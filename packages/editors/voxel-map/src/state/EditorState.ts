@@ -16,6 +16,7 @@ import { PresenceStore } from "./PresenceStore.ts";
 import { SelectionStore } from "./SelectionStore.ts";
 import { ToolStore } from "./ToolStore.ts";
 import { TextureTabsStore } from "./TextureTabsStore.ts";
+import { TemplatePreviewStore } from "./TemplatePreviewStore.ts";
 import { UvSyncStore } from "./UvSyncStore.ts";
 import { ViewStore } from "./ViewStore.ts";
 
@@ -36,6 +37,7 @@ export class EditorState {
   readonly brush: BrushStore;
   readonly uvSync: UvSyncStore;
   readonly textureTabs: TextureTabsStore;
+  readonly templatePreview: TemplatePreviewStore;
   readonly pixelArtKeyBindings: KeyBindingSettings;
 
   constructor(
@@ -49,6 +51,7 @@ export class EditorState {
     this.brush = new BrushStore(storage);
     this.uvSync = new UvSyncStore(storage);
     this.textureTabs = new TextureTabsStore(storage);
+    this.templatePreview = new TemplatePreviewStore(storage);
     this.pixelArtKeyBindings = new KeyBindingSettings({
       storage,
       onDropped: (message) => this.log.push(message)

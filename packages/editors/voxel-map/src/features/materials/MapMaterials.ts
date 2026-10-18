@@ -4,16 +4,22 @@ import {
   type BlockDefinition,
   type BlocksetSlot,
   type MaterialGroupChanges,
+  type MaterialGroupFinish,
   type MaterialGroupList,
   type ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { MapMaterial } from "./MapMaterial.ts";
+import {
+  FINISH_FIELDS,
+  MapMaterial,
+  type FinishField
+} from "./MapMaterial.ts";
 import { MaterialSwatch } from "./MaterialSwatch.ts";
 
 // CONSTANTS
 const kDefaultName = "Material";
+const kCopySuffix = " copy";
 
 export type MaterialRename = "renamed" | "unchanged" | "taken";
 
@@ -132,15 +138,17 @@ export class MapMaterials {
   create(
     slot: BlocksetSlot
   ): string | null {
-    const groupId = slot.qualifyGroupId(this.#freeName(slot));
-    const defined = this.#blocksets.defineMaterialGroup(
-      new MaterialGroup({
-        id: groupId,
-        swatch: MaterialSwatch.derivedColor(groupId)
-      })
-    );
+    return this.#define(slot, kDefaultName);
+  }
 
-    return defined ? groupId : null;
+  duplicate(
+    material: MapMaterial
+  ): string | null {
+    return this.#define(
+      material.slot,
+      `${material.name}${kCopySuffix}`,
+      this.#currentFinish(material).toJSON()
+    );
   }
 
   createForBlock(
@@ -161,8 +169,7 @@ export class MapMaterials {
     material: MapMaterial,
     changes: MaterialGroupChanges
   ): boolean {
-    const current = this.#document.materialGroups.get(material.id) ??
-      material.finish;
+    const current = this.#currentFinish(material);
     const next = MaterialGroup.parse({
       ...current.toJSON(),
       ...changes
@@ -172,6 +179,27 @@ export class MapMaterials {
     }
 
     return this.#blocksets.defineMaterialGroup(next);
+  }
+
+  resetFinish(
+    material: MapMaterial,
+    fields: readonly FinishField[] = FINISH_FIELDS
+  ): boolean {
+    const changes: Partial<MaterialGroupFinish> = {};
+    for (const field of fields) {
+      copyDefault(changes, field);
+    }
+
+    return this.refinish(material, changes);
+  }
+
+  isNameTaken(
+    material: MapMaterial,
+    name: string
+  ): boolean {
+    const groupId = material.slot.qualifyGroupId(name.trim());
+
+    return groupId !== material.id && this.#taken(groupId);
   }
 
   rename(
@@ -203,12 +231,36 @@ export class MapMaterials {
     this.#blocksets.removeMaterialGroup(material.id);
   }
 
+  #define(
+    slot: BlocksetSlot,
+    base: string,
+    finish: MaterialGroupChanges = {}
+  ): string | null {
+    const groupId = slot.qualifyGroupId(this.#freeName(slot, base));
+    const defined = this.#blocksets.defineMaterialGroup(
+      new MaterialGroup({
+        ...finish,
+        id: groupId,
+        swatch: MaterialSwatch.derivedColor(groupId)
+      })
+    );
+
+    return defined ? groupId : null;
+  }
+
+  #currentFinish(
+    material: MapMaterial
+  ): MaterialGroup {
+    return this.#document.materialGroups.get(material.id) ?? material.finish;
+  }
+
   #freeName(
-    slot: BlocksetSlot
+    slot: BlocksetSlot,
+    base: string
   ): string {
-    let name = kDefaultName;
+    let name = base;
     for (let index = 2; this.#taken(slot.qualifyGroupId(name)); index++) {
-      name = `${kDefaultName} ${index}`;
+      name = `${base} ${index}`;
     }
 
     return name;
@@ -229,6 +281,13 @@ export class MapMaterials {
 
     return false;
   }
+}
+
+function copyDefault<TField extends FinishField>(
+  changes: Partial<MaterialGroupFinish>,
+  field: TField
+): void {
+  changes[field] = MaterialGroup.defaults[field];
 }
 
 function withMaterialGroup(

@@ -45,13 +45,23 @@ export const materialLibraryStyles = css`
     flex: 1 1 auto;
     min-height: 0;
     overflow: auto;
-    padding-inline: var(--jolly-space-1, 4px);
+    padding-inline: 2px;
   }
 
   .editor {
+    --jolly-field-inset-end: 0px;
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--jolly-row-gap, 4px);
     min-width: 0;
     min-height: 0;
     overflow: auto;
+    padding-block-end: var(--jolly-space-1, 4px);
+  }
+
+  .editor .hint {
+    padding-block: 0;
   }
 
   .apply,
@@ -59,13 +69,11 @@ export const materialLibraryStyles = css`
     display: flex;
     flex-direction: column;
     gap: var(--jolly-row-gap, 4px);
-    padding-inline: var(--jolly-space-1, 4px);
+    padding-inline: var(--jolly-space-1, 4px) 0;
   }
 
   .fields {
     --jolly-label-width: 18ch;
     --jolly-label-max-width: 60%;
-
-    padding-block-end: var(--jolly-space-1, 4px);
   }
 `;

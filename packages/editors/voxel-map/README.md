@@ -48,6 +48,15 @@ voxels still use the block. Right-clicking an empty spot offers a new block.
 The library in the Materials pane only offers the material and ID actions.
 Double-clicking a block opens its editor.
 
+The Materials tree groups materials by blockset when the map has more than one;
+each group collapses and shows its material count, with a lock on read-only
+blocksets. Right-clicking a material opens a menu to apply it to the selected
+block or remove it, rename, duplicate, reset its finish, or delete it. The copy
+keeps the finish under a "copy" name with a new swatch. Right-clicking a
+blockset offers a new material in it. The fields split into Surface (roughness,
+metalness, normal strength) and Emission (colour, intensity, light level); each
+section header has a button that resets its fields.
+
 The Edit button in the Templates folder opens the selected template in place
 of the map. Its voxels are copied into a draft layer that stays hidden in the
 map, and the view shows only that layer. Everyone who opens the same template

@@ -3,6 +3,17 @@
 import { svg } from "lit";
 import { registerIcon } from "@jolly-pixel/ui";
 
+registerIcon("eye-off", svg`
+  <path
+    d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.25"
+    stroke-linejoin="round"
+  />
+  <path d="M4 20 20 4" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" />
+`);
+
 registerIcon("template", svg`
   <path
     class="tone-ink"

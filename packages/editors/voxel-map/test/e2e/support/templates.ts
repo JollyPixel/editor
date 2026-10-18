@@ -30,6 +30,8 @@ export class TemplateList {
   readonly previewWell: Locator;
   readonly previewCanvas: Locator;
   readonly previewHint: Locator;
+  readonly previewToggle: Locator;
+  readonly previewDisabledHint: Locator;
   readonly #page: Page;
   readonly #viewport: Viewport;
 
@@ -52,6 +54,8 @@ export class TemplateList {
     this.previewWell = this.preview.locator(".well");
     this.previewCanvas = this.previewWell.locator("canvas");
     this.previewHint = this.preview.getByText("Select a template to preview it.");
+    this.previewToggle = this.preview.getByRole("button", { name: /^(Hide|Show) preview$/ });
+    this.previewDisabledHint = this.preview.getByText("Preview disabled");
   }
 
   async saveLayer(): Promise<void> {

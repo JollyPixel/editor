@@ -17,9 +17,15 @@ const kSamples = 4;
 
 export const PREVIEW_FIT_RADIUS = Math.tan((kCameraFov * Math.PI) / 360) *
   kCameraZ * kFitFactor;
-export const PREVIEW_TILT = 0.4;
-export const PREVIEW_ROTATION_STEP = 0.005;
-export const PREVIEW_STILL_ROTATION = Math.PI / 4;
+export interface PreviewAngle {
+  readonly yaw: number;
+  readonly pitch: number;
+}
+
+export const PREVIEW_REST_ANGLE: PreviewAngle = {
+  yaw: Math.PI / 4,
+  pitch: 0.4
+};
 
 export interface PreviewStageOptions {
   renderer: Systems.Renderer<THREE.WebGPURenderer>;
@@ -69,14 +75,14 @@ export class PreviewStage {
   async capture(
     target: THREE.RenderTarget,
     mesh: THREE.Mesh,
-    rotation: number
+    angle: PreviewAngle
   ): Promise<ImageData> {
     if (this.#scene.environment === null && needsEnvironment(mesh)) {
       this.#scene.environment = this.#environmentMap();
       this.#scene.environmentIntensity = kEnvironmentIntensity;
     }
 
-    mesh.rotation.set(PREVIEW_TILT, rotation, 0);
+    mesh.rotation.set(angle.pitch, angle.yaw, 0);
     this.#scene.add(mesh);
     try {
       this.#render(target);

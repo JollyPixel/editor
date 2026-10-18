@@ -24,7 +24,7 @@ interface PopoverControllerOptions {
   popover: () => HTMLElement | null;
   gap?: number; // default 4
   side?: PopoverSide | (() => PopoverSide); // callback runs on each placement
-  align?: "center" | "start"; // default "start"
+  align?: "center" | "start" | "end"; // default "start"
   openOnHover?: { delay?: number; }; // ms, default 200
   closeOnHoverLeave?: { delay?: number; }; // ms, default 200
   claimsInput?: boolean; // default true, holds an input layer while open

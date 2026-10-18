@@ -29,9 +29,10 @@ import {
   blockDialogStyles,
   MISSING_BLOCKSET,
   renderShapeColumn,
-  shapeOptions,
+  renderShapeSelect,
   blocksetOptions
 } from "./blockDialog.ts";
+import { ShapePreview } from "./ShapePreview.ts";
 import type { PropertiesChangeDetail } from "../../../shared/properties/CustomPropertiesEditor.ts";
 import "../../../shared/properties/CustomPropertiesEditor.ts";
 import "../blockIcons.ts";
@@ -58,6 +59,8 @@ export class BlockEditDialog extends WorkspaceElement {
 
   @query("jolly-dialog")
   declare private _dialog: Dialog;
+
+  #shapePreview = new ShapePreview(this);
 
   constructor() {
     super();
@@ -132,12 +135,12 @@ export class BlockEditDialog extends WorkspaceElement {
               .error=${owner === undefined ? MISSING_BLOCKSET : null}
               disabled
             ></jolly-select>
-            <jolly-select
-              label="Shape"
-              .options=${shapeOptions(view.shapes)}
-              .value=${block.shapeId}
-              @jolly-change=${this.#onShapeChange}
-            ></jolly-select>
+            ${renderShapeSelect({
+              shapes: view.shapes,
+              value: block.shapeId,
+              preview: this.#shapePreview,
+              onChange: this.#onShapeChange
+            })}
             ${this.#renderTransparency(block)}
             ${keyed(block.id, html`
               <custom-properties-editor
@@ -151,7 +154,7 @@ export class BlockEditDialog extends WorkspaceElement {
             open: this._open,
             stage: workspace.previewStage,
             sources: workspace.blockSources,
-            block,
+            block: this.#shapePreview.apply(block),
             size: BlockTextures.fromBlock(block).size ?? blocksets.blocksetTileSize(blocksetId),
             onSizeChange: this.#onSizeChange
           })}
@@ -244,11 +247,11 @@ export class BlockEditDialog extends WorkspaceElement {
     this.#applyEdit({ name: event.detail.heading });
   }
 
-  #onShapeChange(
+  readonly #onShapeChange = (
     event: CustomEvent<JollyChangeDetail<BlockShapeID>>
-  ): void {
+  ): void => {
     this.#applyEdit({ shapeId: event.detail.value });
-  }
+  };
 
   #onAlphaModeChange(
     event: CustomEvent<JollyChangeDetail<BlockAlphaMode>>
@@ -319,6 +322,7 @@ export class BlockEditDialog extends WorkspaceElement {
   }
 
   #onExited(): void {
+    this.#shapePreview.clear();
     this._open = false;
   }
 

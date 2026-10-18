@@ -4,6 +4,7 @@ declare global {
     __galleryDisposed?: string[];
     __galleryReady?: boolean;
     __inputs?: number;
+    __inputValues?: unknown[];
   }
 }
 
