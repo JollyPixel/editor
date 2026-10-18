@@ -8,7 +8,7 @@
 
 ## 📌 About
 
-Private editor workspace for large, streamed heightfield terrains, edited by several users at once. Nothing is implemented yet: this directory holds the V1 design, and the [roadmap][roadmap] lists the order in which it lands.
+Private editor workspace for large, streamed heightfield terrains, edited by several users at once. The editor boots and opens a terrain asset, with an empty viewport for now. This directory holds the V1 design, and the [roadmap][roadmap] lists the order in which the rest lands.
 
 V1 is split over three packages, following the voxel-map layout:
 
@@ -19,6 +19,10 @@ V1 is split over three packages, following the voxel-map layout:
 | `@jolly-pixel/editor.terrain` | `packages/editors/terrain` | This editor, booted through [`@jolly-pixel/editor.host`][editor-host] |
 
 V1 also extends [`@jolly-pixel/asset-server`][asset-server] with asset parts, so an asset can be loaded chunk by chunk, Live strokes are routed by interest region in the terrain kind's server extension; [`@jolly-pixel/network`][network] does not change.
+
+## 💃 Getting Started
+
+Run `pnpm run dev` in this directory. The dev server listens on port 3008 and seeds `assets/` with a terrain of one flat chunk on first start.
 
 ## 📚 Documents
 

@@ -1,0 +1,68 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--jolly-groove) transparent;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  flex-direction: row;
+  background: #0e1316;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+}
+
+jolly-scope {
+  display: contents;
+
+  --jolly-label-width: 15ch;
+}
+
+jolly-pane-group::part(tab) {
+  flex: 1 1 0;
+}
+
+jolly-pane::part(content) {
+  padding: 0;
+}
+
+jolly-dock {
+  --jolly-dock-handle-size: 8px;
+  --jolly-dock-resize-bg: transparent;
+}
+
+.viewport-column {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+#game-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+}
+
+#game-container canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+
+#game-container jolly-presence-stack {
+  position: absolute;
+  inset-block-end: 16px;
+  inset-inline-start: 16px;
+  z-index: 5;
+}

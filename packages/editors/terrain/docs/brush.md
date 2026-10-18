@@ -39,7 +39,7 @@ so one stamp can span chunks of different tiers.
 Brushes read heights through the document's world-space sampling, from a copy
 taken before the stamp, so smooth and flatten see across chunk edges. A read
 outside every chunk clamps to the nearest existing sample. Writes stay inside
-existing chunks: until a commit can carry `addChunk` with its patch, the part
+existing chunks: until a commit can carry `chunk-added` with its patch, the part
 of a stamp over empty ground is dropped. Written heights are clamped to
 `[-4096, 4096]` m.
 

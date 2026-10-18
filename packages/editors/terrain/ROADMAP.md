@@ -12,13 +12,14 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
 - **Design: done** (2026-10-18). The decisions in `docs/` are settled; change
   them there first, then here, before changing code.
 - **Package skeletons: done** (2026-10-18). `asset.terrain`,
-  `terrain.renderer` and `editor.terrain` exist, are referenced from the root
-  `tsconfig.json`, and contain only an empty `src/index.ts`.
+  `terrain.renderer` and `editor.terrain` exist and are referenced from the
+  root `tsconfig.json`.
 - **M1 grilling: done** (2026-10-18). Its answers are in `docs/`: one owner
   per sample, the region quadtrees and node mesh, the wire format, routing in
   the terrain extension, the M1 chunk cap and the slope overlay.
-- **Next:** the rest of M1's first item: the editor manifest, Vite config, dev
-  port and test scripts.
+- **Scaffold and headless document: done** (2026-10-18). The editor boots on
+  port 3008 and opens a seeded terrain; chunks can be added and removed.
+- **Next:** the CDLOD view.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -28,13 +29,14 @@ Proves the riskiest parts first: collaboration and LoD. The server still loads
 and sends the whole asset, capped at 256 chunks. Brushes do not create
 chunks yet.
 
-- [ ] Scaffold `@jolly-pixel/asset.terrain`, `@jolly-pixel/terrain.renderer`
+- [x] Scaffold `@jolly-pixel/asset.terrain`, `@jolly-pixel/terrain.renderer`
   and `@jolly-pixel/editor.terrain`, with the editor manifest, the Vite
-  config, a dev port and a `test` script in each package.
-- [ ] Headless `TerrainDocument`: sparse chunk grid, 64×64 owned samples,
+  config, dev port 3008 and a `test` script in each package.
+- [x] Headless `TerrainDocument`: sparse chunk grid, 64×64 owned samples,
   world-space sampling, add and remove chunk with edge seeding.
 - [ ] CDLOD view: region quadtrees, one 33×33 grid mesh per node, height
-  textures with neighbour aprons, morphing between levels, skirts.
+  textures with neighbour aprons, morphing between levels, skirts. It
+  replaces the editor's placeholder ground grid.
 - [ ] Brushes: raise and lower, smooth, flatten.
 - [ ] Stroke commits: tile patches, collision keys, arbiter, corrections.
 - [ ] Undo and redo through `CommandHistory`.

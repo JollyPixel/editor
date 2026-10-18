@@ -12,7 +12,8 @@ broadcasts it, and a refused edit is answered with a correction.
 | `heightPatch` | Tile patches of height samples |
 | `splatPatch` | Tile patches of splat indices and weights |
 | `holePatch` | Tile patches of the hole mask |
-| `addChunk`, `removeChunk` | A chunk coordinate |
+| `chunk-added` | A chunk coordinate and its seeded heights |
+| `chunk-removed` | A chunk coordinate |
 | `setTier` | A chunk coordinate and its new tier |
 | Layer and point-of-interest commands | Create, update, delete |
 
@@ -98,8 +99,8 @@ The client side of `@jolly-pixel/network`, `CommandSync` and the pending
 ledger, does not change. `TerrainSyncClient` manages subscriptions from the
 camera.
 
-Until M2 lands, the server loads and sends the whole asset, and `addChunk` is
-refused past 256 chunks, about 17 MB of heights at ×1.
+Until M2 lands, the server loads and sends the whole asset, and `chunk-added`
+is refused past 256 chunks, about 17 MB of heights at ×1.
 
 ## Corrections
 

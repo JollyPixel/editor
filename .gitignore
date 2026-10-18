@@ -149,6 +149,7 @@ perf-results/
 # Dev-server asset workspace seeded by the voxel-map editor
 packages/editors/voxel-map/assets/
 packages/editors/voxel-model/assets/
+packages/editors/terrain/assets/
 packages/studio/project/
 
 # Pixel-art editor page served by the studio

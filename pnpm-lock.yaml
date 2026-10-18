@@ -379,7 +379,30 @@ importers:
         specifier: workspace:*
         version: link:../../event-store
 
-  packages/assets/terrain: {}
+  packages/assets/terrain:
+    dependencies:
+      '@jolly-pixel/asset-server':
+        specifier: workspace:*
+        version: link:../../asset-server
+      '@jolly-pixel/history':
+        specifier: workspace:*
+        version: link:../../history
+      '@jolly-pixel/network':
+        specifier: workspace:*
+        version: link:../../network
+      '@jolly-pixel/terrain.renderer':
+        specifier: workspace:*
+        version: link:../../terrain-renderer
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
+    devDependencies:
+      '@jolly-pixel/asset':
+        specifier: workspace:*
+        version: link:../../asset
+      '@jolly-pixel/event-store':
+        specifier: workspace:*
+        version: link:../../event-store
 
   packages/assets/voxel-animation:
     dependencies:
@@ -643,7 +666,39 @@ importers:
         specifier: workspace:*
         version: link:../../runtime
 
-  packages/editors/terrain: {}
+  packages/editors/terrain:
+    dependencies:
+      '@jolly-pixel/asset-server':
+        specifier: workspace:*
+        version: link:../../asset-server
+      '@jolly-pixel/asset.terrain':
+        specifier: workspace:*
+        version: link:../../assets/terrain
+      '@jolly-pixel/editor.host':
+        specifier: workspace:*
+        version: link:../host
+      '@jolly-pixel/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@jolly-pixel/runtime':
+        specifier: workspace:*
+        version: link:../../runtime
+      '@jolly-pixel/terrain.renderer':
+        specifier: workspace:*
+        version: link:../../terrain-renderer
+      '@jolly-pixel/three':
+        specifier: workspace:*
+        version: link:../../three
+      '@jolly-pixel/ui':
+        specifier: workspace:*
+        version: link:../../ui
+      three:
+        specifier: 0.186.1
+        version: 0.186.1
+    devDependencies:
+      '@jolly-pixel/e2e':
+        specifier: workspace:*
+        version: link:../../e2e
 
   packages/editors/voxel-map:
     dependencies:

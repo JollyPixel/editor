@@ -1,0 +1,95 @@
+// Import Node.js Dependencies
+import { describe, test } from "node:test";
+import assert from "node:assert/strict";
+
+// Import Third-party Dependencies
+import { InvalidAssetDocumentError } from "@jolly-pixel/asset-server";
+import { ChunkCoord } from "@jolly-pixel/terrain.renderer";
+
+// Import Internal Dependencies
+import {
+  encodeTerrainAssetDocument,
+  MAX_TERRAIN_CHUNKS,
+  terrainAssetKind,
+  terrainSnapshot,
+  TERRAIN_DOCUMENT_VERSION,
+  type TerrainNetworkCommand
+} from "#src/index.ts";
+import { LiveRoom } from "../helpers/liveRoom.ts";
+import {
+  heights,
+  networkCommand
+} from "../helpers/terrain.ts";
+
+function liveRoom() {
+  return new LiveRoom(terrainAssetKind());
+}
+
+function chunkKeys(
+  room: LiveRoom<ReturnType<ReturnType<typeof terrainAssetKind>["create"]>, TerrainNetworkCommand>
+): string[] {
+  return [...room.state.chunks()].map(({ coord }) => coord.key).sort();
+}
+
+describe("terrain asset kind", () => {
+  test("a new terrain holds one flat chunk at the origin", () => {
+    const terrain = terrainAssetKind().create("asset");
+
+    assert.deepEqual([...terrain.chunks()].map(({ coord }) => coord.key), ["0,0"]);
+    assert.ok(terrain.chunk(new ChunkCoord(0, 0))!.copyHeights().every((height) => height === 0));
+  });
+
+  test("serialize and load round-trip the chunks and their heights", async() => {
+    const handler = terrainAssetKind();
+    const room = new LiveRoom(handler);
+    room.receive("A", networkCommand({ action: "chunk-added", x: 1, z: 0, heights: heights(12.5) }));
+
+    const loaded = handler.create("copy");
+    handler.load(loaded, await handler.serialize(room.state));
+
+    assert.deepEqual(terrainSnapshot(loaded), terrainSnapshot(room.state));
+  });
+
+  test("load rejects a document with invalid heights", () => {
+    const handler = terrainAssetKind();
+    const content = encodeTerrainAssetDocument({
+      version: TERRAIN_DOCUMENT_VERSION,
+      chunks: [{ x: 0, z: 0, heights: "AAAA" }]
+    });
+
+    assert.throws(() => handler.load(handler.create("asset"), content), InvalidAssetDocumentError);
+  });
+
+  test("a chunk is admitted only next to an existing one", () => {
+    const room = liveRoom();
+    room.receive("A", networkCommand({ action: "chunk-added", x: 2, z: 0, heights: heights(0) }));
+    room.receive("A", networkCommand({ action: "chunk-added", x: 1, z: 1, heights: heights(0) }));
+    room.receive("A", networkCommand({ action: "chunk-added", x: 0, z: -1, heights: heights(0) }));
+
+    assert.deepEqual(chunkKeys(room), ["0,-1", "0,0"]);
+  });
+
+  test("a chunk with heights outside the range is refused", () => {
+    const room = liveRoom();
+    room.receive("A", networkCommand({ action: "chunk-added", x: 1, z: 0, heights: heights(5000) }));
+
+    assert.deepEqual(chunkKeys(room), ["0,0"]);
+  });
+
+  test("the last chunk cannot be removed", () => {
+    const room = liveRoom();
+    room.receive("A", networkCommand({ action: "chunk-removed", x: 0, z: 0 }));
+
+    assert.deepEqual(chunkKeys(room), ["0,0"]);
+  });
+
+  test(`no chunk is admitted past ${MAX_TERRAIN_CHUNKS}`, () => {
+    const room = liveRoom();
+    for (let x = 1; x <= MAX_TERRAIN_CHUNKS; x++) {
+      room.receive("A", networkCommand({ action: "chunk-added", x, z: 0, heights: heights(0) }));
+    }
+
+    assert.equal(room.state.size, MAX_TERRAIN_CHUNKS);
+    assert.equal(room.state.has(new ChunkCoord(MAX_TERRAIN_CHUNKS, 0)), false);
+  });
+});
