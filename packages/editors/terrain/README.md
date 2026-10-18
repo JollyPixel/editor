@@ -8,7 +8,7 @@
 
 ## 📌 About
 
-Private editor workspace for large, streamed heightfield terrains, edited by several users at once. The editor boots and opens a terrain asset, with an empty viewport for now. This directory holds the V1 design, and the [roadmap][roadmap] lists the order in which the rest lands.
+Private editor workspace for large, streamed heightfield terrains, edited by several users at once. The editor boots, opens a terrain asset and draws it with CDLOD. This directory holds the V1 design, and the [roadmap][roadmap] lists the order in which the rest lands.
 
 V1 is split over three packages, following the voxel-map layout:
 

@@ -6,3 +6,6 @@ export * from "./view/lod/QuadtreeSelection.ts";
 export * from "./view/textures/HeightApronStore.ts";
 export * from "./document/quadDiagonal.ts";
 export * from "./view/mesh/GridMeshProvider.ts";
+export * from "./view/textures/ChunkTextureStore.ts";
+export * from "./view/shading/terrainNodes.ts";
+export * from "./view/TerrainView.ts";

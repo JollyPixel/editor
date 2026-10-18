@@ -8,10 +8,12 @@
 
 ## 💃 Getting Started
 
-This workspace-private package holds the headless terrain data: chunk
+This workspace-private package holds the headless terrain data (chunk
 coordinates, chunks of 64×64 owned samples, and the `TerrainDocument` with
-world-space sampling. The CDLOD view, the TSL materials and the engine plugin
-come next; see the terrain editor [design][design] and [roadmap][roadmap].
+world-space sampling) and the CDLOD view that draws it: quadtree selection,
+node meshes, height texture arrays and the TSL material. The
+`@jolly-pixel/terrain.renderer/engine` entry adds the `TerrainRenderer`
+component. See the terrain editor [design][design] and [roadmap][roadmap].
 
 ## License
 

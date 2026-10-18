@@ -19,7 +19,9 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   the terrain extension, the M1 chunk cap and the slope overlay.
 - **Scaffold and headless document: done** (2026-10-18). The editor boots on
   port 3008 and opens a seeded terrain; chunks can be added and removed.
-- **Next:** the CDLOD view.
+- **CDLOD view: done** (2026-10-18). The editor draws the terrain with LoD,
+  morphing and per-pixel normals.
+- **Next:** brushes.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -34,7 +36,7 @@ chunks yet.
   config, dev port 3008 and a `test` script in each package.
 - [x] Headless `TerrainDocument`: sparse chunk grid, 64×64 owned samples,
   world-space sampling, add and remove chunk with edge seeding.
-- [ ] CDLOD view: region quadtrees, one 33×33 grid mesh per node, height
+- [x] CDLOD view: region quadtrees, one 33×33 grid mesh per node, height
   textures with neighbour aprons, morphing between levels, skirts. It
   replaces the editor's placeholder ground grid.
 - [ ] Brushes: raise and lower, smooth, flatten.

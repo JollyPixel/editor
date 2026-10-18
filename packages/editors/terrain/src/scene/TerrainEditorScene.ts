@@ -3,36 +3,35 @@ import {
   OrbitFlyCamera,
   Systems
 } from "@jolly-pixel/engine";
-import { Grid } from "@jolly-pixel/three";
-import { CHUNK_SAMPLES } from "@jolly-pixel/terrain.renderer";
+import type {
+  TerrainChange,
+  TerrainCommandDocument
+} from "@jolly-pixel/asset.terrain/client";
+import {
+  CHUNK_SAMPLES,
+  ChunkCoord
+} from "@jolly-pixel/terrain.renderer";
+import { TerrainRenderer } from "@jolly-pixel/terrain.renderer/engine";
+import * as THREE from "three";
 
 export class TerrainEditorScene extends Systems.Scene {
-  constructor() {
+  #document: TerrainCommandDocument;
+  #disposables: Array<() => void> = [];
+
+  constructor(
+    document: TerrainCommandDocument
+  ) {
     super("terrain-editor");
+    this.#document = document;
   }
 
   override awake(): void {
-    this.world.sceneManager.getSource().add(
-      new Grid({
-        extent: CHUNK_SAMPLES * 4,
-        cell: {
-          color: "#3a3a3a",
-          thickness: 1
-        },
-        section: {
-          show: true
-        },
-        fade: {
-          from: "origin",
-          distance: CHUNK_SAMPLES * 4
-        },
-        axes: {
-          show: true
-        }
-      })
-    );
+    const scene = this.world.sceneManager.getSource();
+    const sun = new THREE.DirectionalLight("#fff4e0", 2.4);
+    sun.position.set(-0.6, 1, 0.35);
+    scene.add(sun, new THREE.HemisphereLight("#b9d4ff", "#4a3f30", 0.9));
 
-    this.world
+    const camera = this.world
       .createActor("camera")
       .addComponentAndGet(OrbitFlyCamera, {
         focusMode: "elastic",
@@ -46,5 +45,41 @@ export class TerrainEditorScene extends Systems.Scene {
         maxPivotDistance: CHUNK_SAMPLES * 16,
         initialTrailDistance: CHUNK_SAMPLES * 1.5
       });
+
+    const { view } = this.world
+      .createActor("terrain")
+      .addComponentAndGet(TerrainRenderer, {
+        terrain: this.#document.terrain,
+        camera: () => camera.camera
+      });
+
+    const onChange = ({ command }: TerrainChange): void => {
+      const coord = new ChunkCoord(command.x, command.z);
+      if (command.action === "chunk-added") {
+        view.chunkAdded(coord);
+      }
+      else {
+        view.chunkRemoved(coord);
+      }
+      this.world.invalidate();
+    };
+    const onReset = (): void => {
+      view.reset();
+      this.world.invalidate();
+    };
+    this.#document.on("change", onChange);
+    this.#document.on("reset", onReset);
+    this.#disposables.push(() => {
+      this.#document.off("change", onChange);
+      this.#document.off("reset", onReset);
+    });
+  }
+
+  override destroy(): void {
+    for (const dispose of this.#disposables.splice(0)) {
+      dispose();
+    }
+
+    super.destroy();
   }
 }

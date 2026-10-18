@@ -7,12 +7,13 @@ import {
 import type { TerrainReader } from "../../document/TerrainDocument.ts";
 
 // CONSTANTS
-export const APRON_SIZE = CHUNK_SAMPLES + 2;
+export const APRON_MARGIN = 2;
+export const APRON_SIZE = CHUNK_SAMPLES + APRON_MARGIN * 2;
 
 export interface SampleRect {
   /**
-   * Local sample X and Z of the rectangle's corner; the apron spans -1 to
-   * `CHUNK_SAMPLES`.
+   * Local sample X and Z of the rectangle's corner; the apron spans
+   * `-APRON_MARGIN` to `CHUNK_SAMPLES + APRON_MARGIN - 1`.
    */
   readonly x: number;
   readonly z: number;
@@ -35,8 +36,8 @@ const kChunkRect: SampleRect = {
   depth: CHUNK_SAMPLES
 };
 const kApronRect: SampleRect = {
-  x: -1,
-  z: -1,
+  x: -APRON_MARGIN,
+  z: -APRON_MARGIN,
   width: APRON_SIZE,
   depth: APRON_SIZE
 };
@@ -66,6 +67,10 @@ export class HeightApronStore {
       this.#rewrite(coord, kApronRect),
       ...this.#rewriteNeighbours(coord, kChunkRect)
     ];
+  }
+
+  clear(): void {
+    this.#buffers.clear();
   }
 
   chunkRemoved(
@@ -116,7 +121,7 @@ export class HeightApronStore {
       for (let localX = texels.x; localX < texels.x + texels.width; localX++) {
         const owner = ChunkCoord.containing(origin.x + localX, origin.z + localZ);
         const chunk = this.#terrain.chunk(owner);
-        buffer[(localZ + 1) * APRON_SIZE + localX + 1] = chunk === undefined ?
+        buffer[(localZ + APRON_MARGIN) * APRON_SIZE + localX + APRON_MARGIN] = chunk === undefined ?
           own.height(clampLocal(localX), clampLocal(localZ)) :
           chunk.height(
             origin.x + localX - owner.originSample.x,
@@ -129,8 +134,8 @@ export class HeightApronStore {
       coord,
       texels: {
         ...texels,
-        x: texels.x + 1,
-        z: texels.z + 1
+        x: texels.x + APRON_MARGIN,
+        z: texels.z + APRON_MARGIN
       }
     };
   }

@@ -120,7 +120,12 @@ The view uses CDLOD:
   vertices onto their neighbours only works with a fixed diagonal.
 - Node and quarter-node corners fall on even grid lines, so one mesh per
   resolution serves every node: 32 quads for a node, 16 for a quarter.
-- Skirts hang under chunk edges and hide what morphing cannot.
+- Skirts hang under node edges and hide what morphing cannot. A skirt
+  collapses where no chunk lies across its edge, so the world's border ends
+  cleanly.
+- A node can cover ground with no chunk; its fragments there are discarded.
+  Chunk borders fall on vertex lines at every level, so no triangle straddles
+  one.
 
 ### Slope overlay
 
@@ -200,14 +205,18 @@ Accepted drawbacks:
 Tiers multiply the height and hole sizes. The splat resolution does not
 change with the tier.
 
-On the GPU each chunk has an `R32F` height texture, two `RGBA8` splat textures
-and an `R8` hole texture. Edits upload only the changed rectangle.
+On the GPU, heights live in one `R32F` texture array with a layer per chunk,
+so a node spanning many chunks is still one draw. A 256×256 lookup texture,
+indexed by chunk coordinates modulo 256, gives each chunk's layer and its own
+coordinates, which rejects a chunk 256 away that shares the slot. Splat and
+hole maps will follow the same layout. An edit re-uploads the layers it
+changed.
 
-The height texture is 66×66 at ×1: the chunk's own samples plus a one-sample
-apron on every side, copied from the neighbours. The apron gives the mesh its
-last row and column and gives the normals their neighbours across the edge.
-An edit on an edge tile also uploads the matching strip of the neighbour's
-apron. Where no neighbour exists, the apron repeats the chunk's outer row,
+A layer is 68×68 at ×1: the chunk's own samples plus a two-sample apron on
+every side, copied from the neighbours. The apron gives the mesh its last row
+and column, and gives the normals, which blend the gradients of four samples,
+their neighbours across the edge. An edit on an edge tile also rewrites the
+matching strip of the neighbour's apron. Where no neighbour exists, the apron repeats the chunk's outer row,
 which leaves a flat 1 m strip along the edge of the world.
 
 ## Packages

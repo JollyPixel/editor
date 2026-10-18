@@ -2,13 +2,15 @@
 import { quadDiagonal } from "../../document/quadDiagonal.ts";
 
 // CONSTANTS
-const kGridComponents = 3;
+const kGridComponents = 4;
+const kInside: Outward = [0, 0];
 const kMorphComponents = 4;
 
 export interface NodeMeshData {
   readonly resolution: number;
   /**
-   * Per vertex: grid X, grid Z, and 1 for a skirt vertex or 0.
+   * Per vertex: grid X, grid Z, then the outward direction of a skirt vertex,
+   * or zero for a surface vertex.
    */
   readonly grid: Float32Array;
   /**
@@ -16,9 +18,11 @@ export interface NodeMeshData {
    * the coarser level's surface there; zero for vertices the coarser level
    * keeps.
    */
-  readonly morph: Int8Array;
+  readonly morph: Float32Array;
   readonly indices: Uint16Array;
 }
+
+type Outward = [number, number];
 
 export interface NodeMeshProvider {
   mesh(resolution: number): NodeMeshData;
@@ -51,13 +55,13 @@ export function buildGridMesh(
   const surfaceCount = side * side;
   const vertexCount = surfaceCount + side * 4;
   const grid = new Float32Array(vertexCount * kGridComponents);
-  const morph = new Int8Array(vertexCount * kMorphComponents);
+  const morph = new Float32Array(vertexCount * kMorphComponents);
   const buffers = { grid, morph };
   const indices: number[] = [];
 
   for (let z = 0; z <= resolution; z++) {
     for (let x = 0; x <= resolution; x++) {
-      writeVertex(buffers, z * side + x, x, z, 0);
+      writeVertex(buffers, z * side + x, x, z, kInside);
     }
   }
 
@@ -76,17 +80,17 @@ export function buildGridMesh(
     }
   }
 
-  const edges: Array<(step: number) => [number, number]> = [
-    (step) => [step, 0],
-    (step) => [resolution, step],
-    (step) => [resolution - step, resolution],
-    (step) => [0, resolution - step]
+  const edges: Array<{ outward: Outward; at: (step: number) => [number, number]; }> = [
+    { outward: [0, -1], at: (step) => [step, 0] },
+    { outward: [1, 0], at: (step) => [resolution, step] },
+    { outward: [0, 1], at: (step) => [resolution - step, resolution] },
+    { outward: [-1, 0], at: (step) => [0, resolution - step] }
   ];
-  edges.forEach((edge, edgeIndex) => {
+  edges.forEach(({ outward, at: edge }, edgeIndex) => {
     const first = surfaceCount + edgeIndex * side;
     for (let step = 0; step <= resolution; step++) {
       const [x, z] = edge(step);
-      writeVertex(buffers, first + step, x, z, 1);
+      writeVertex(buffers, first + step, x, z, outward);
     }
     for (let step = 0; step < resolution; step++) {
       const [x0, z0] = edge(step);
@@ -112,9 +116,9 @@ function writeVertex(
   vertex: number,
   x: number,
   z: number,
-  skirt: number
+  outward: Outward
 ): void {
-  buffers.grid.set([x, z, skirt], vertex * kGridComponents);
+  buffers.grid.set([x, z, ...outward], vertex * kGridComponents);
   buffers.morph.set(morphOffsets(x, z), vertex * kMorphComponents);
 }
 

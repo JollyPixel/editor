@@ -58,7 +58,7 @@ export class TerrainEditor {
       toolbar.sources = context.toolbar;
     }
 
-    const scene = new TerrainEditorScene();
+    const scene = new TerrainEditorScene(target.document);
     await editorRuntime.load(scene);
 
     return new TerrainEditor({

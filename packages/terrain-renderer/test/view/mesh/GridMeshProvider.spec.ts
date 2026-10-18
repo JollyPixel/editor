@@ -28,9 +28,9 @@ function vertex(
   index: number,
   height: (x: number, z: number) => number
 ): Vec3 {
-  const x = mesh.grid[index * 3];
-  const z = mesh.grid[index * 3 + 1];
-  const skirt = mesh.grid[index * 3 + 2];
+  const x = mesh.grid[index * 4];
+  const z = mesh.grid[index * 4 + 1];
+  const skirt = mesh.grid[index * 4 + 2] !== 0 || mesh.grid[index * 4 + 3] !== 0 ? 1 : 0;
 
   return [x, height(x, z) - skirt * kSkirtDepth, z];
 }
@@ -124,6 +124,21 @@ describe("buildGridMesh", () => {
     }
   });
 
+  test("each skirt vertex points away from the node", () => {
+    const mesh = buildGridMesh(kResolution);
+    const center = kResolution / 2;
+    const side = kResolution + 1;
+    const skirtCount = mesh.grid.length / 4 - side * side;
+
+    assert.equal(skirtCount, side * 4);
+    for (let index = side * side; index < side * side + skirtCount; index++) {
+      const [x, z, outwardX, outwardZ] = mesh.grid.subarray(index * 4, index * 4 + 4);
+
+      assert.equal(Math.abs(outwardX) + Math.abs(outwardZ), 1);
+      assert.ok(outwardX * (x - center) + outwardZ * (z - center) > 0, `vertex (${x}, ${z})`);
+    }
+  });
+
   test("each quad is split along its quadDiagonal", () => {
     const mesh = buildGridMesh(kResolution);
     const surface = triangles(mesh).filter((triangle) => !isSkirt(triangle));
@@ -146,8 +161,8 @@ describe("buildGridMesh", () => {
     const side = kResolution + 1;
 
     for (let index = 0; index < side * side; index++) {
-      const x = mesh.grid[index * 3];
-      const z = mesh.grid[index * 3 + 1];
+      const x = mesh.grid[index * 4];
+      const z = mesh.grid[index * 4 + 1];
       const [ax, az, bx, bz] = mesh.morph.subarray(index * 4, index * 4 + 4);
       const morphed = ax === 0 && az === 0 && bx === 0 && bz === 0 ?
         hashHeight(x, z) :

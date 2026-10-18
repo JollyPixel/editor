@@ -47,7 +47,6 @@
     "@jolly-pixel/engine": "workspace:*",
     "@jolly-pixel/runtime": "workspace:*",
     "@jolly-pixel/terrain.renderer": "workspace:*",
-    "@jolly-pixel/three": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",
     "three": "0.186.1"
   }

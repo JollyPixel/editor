@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
+  APRON_MARGIN,
   APRON_SIZE,
   CHUNK_SAMPLE_COUNT,
   CHUNK_SAMPLES,
@@ -33,7 +34,7 @@ function texel(
   localX: number,
   localZ: number
 ): number {
-  return buffer[(localZ + 1) * APRON_SIZE + localX + 1];
+  return buffer[(localZ + APRON_MARGIN) * APRON_SIZE + localX + APRON_MARGIN];
 }
 
 function setup() {
@@ -103,22 +104,22 @@ describe("HeightApronStore", () => {
       updates.map(({ coord, texels }) => [coord.key, texels]),
       [
         ["1,0", { x: 0, z: 0, width: APRON_SIZE, depth: APRON_SIZE }],
-        ["0,0", { x: APRON_SIZE - 1, z: 1, width: 1, depth: CHUNK_SAMPLES }],
-        ["1,1", { x: 1, z: 0, width: CHUNK_SAMPLES, depth: 1 }]
+        ["0,0", { x: APRON_SIZE - APRON_MARGIN, z: APRON_MARGIN, width: APRON_MARGIN, depth: CHUNK_SAMPLES }],
+        ["1,1", { x: APRON_MARGIN, z: 0, width: CHUNK_SAMPLES, depth: APRON_MARGIN }]
       ]
     );
     assert.equal(texel(buffer(0, 0), CHUNK_SAMPLES, 5), Math.fround(200 + 0.05));
     assert.equal(texel(buffer(1, 1), 5, -1), Math.fround(200 + 5 + kLast * 0.01));
   });
 
-  test("a diagonal neighbour updates a single corner texel", () => {
+  test("a diagonal neighbour updates a single corner block", () => {
     const { add, buffer } = setup();
     add(0, 0, 100);
     const updates = add(-1, -1, 500);
 
     assert.deepEqual(
       updates.slice(1).map(({ coord, texels }) => [coord.key, texels]),
-      [["0,0", { x: 0, z: 0, width: 1, depth: 1 }]]
+      [["0,0", { x: 0, z: 0, width: APRON_MARGIN, depth: APRON_MARGIN }]]
     );
     assert.equal(texel(buffer(0, 0), -1, -1), Math.fround(500 + kLast + kLast * 0.01));
   });

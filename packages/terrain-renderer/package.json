@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./engine": {
+      "types": "./dist/plugins/engine/index.d.ts",
+      "default": "./dist/plugins/engine/index.js"
     }
   },
   "imports": {
@@ -31,5 +35,19 @@
     "dist"
   ],
   "author": "MALAJ Alexandre <alexandre.malaj@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "three": "0.186.1"
+  },
+  "peerDependencies": {
+    "@jolly-pixel/engine": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@jolly-pixel/engine": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@jolly-pixel/engine": "workspace:*"
+  }
 }

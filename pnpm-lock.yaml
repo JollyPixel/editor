@@ -686,9 +686,6 @@ importers:
       '@jolly-pixel/terrain.renderer':
         specifier: workspace:*
         version: link:../../terrain-renderer
-      '@jolly-pixel/three':
-        specifier: workspace:*
-        version: link:../../three
       '@jolly-pixel/ui':
         specifier: workspace:*
         version: link:../../ui
@@ -1117,7 +1114,15 @@ importers:
         specifier: 2.0.1
         version: 2.0.1
 
-  packages/terrain-renderer: {}
+  packages/terrain-renderer:
+    dependencies:
+      three:
+        specifier: 0.186.1
+        version: 0.186.1
+    devDependencies:
+      '@jolly-pixel/engine':
+        specifier: workspace:*
+        version: link:../engine
 
   packages/three:
     dependencies:
