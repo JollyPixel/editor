@@ -28,14 +28,14 @@ test("defaults are typed chords while overrides are untrusted strings", () => {
   );
 });
 
-test("bind() requires a handler for every action", () => {
+test("bind() accepts handlers for a subset of the known actions", () => {
   const bindings = new KeyBindings();
 
   expect(map.bind).type.toBeCallableWith(bindings, {
-    undo: () => true,
-    redo: () => undefined
+    undo: () => true
   });
   expect(map.bind).type.not.toBeCallableWith(bindings, {
-    undo: () => true
+    undo: () => true,
+    paste: () => undefined
   });
 });

@@ -52,6 +52,9 @@ describe("ToolShortcuts", () => {
     tool.current = "select";
 
     press("KeyM", "m");
+    assert.equal(tool.selectMode, "corners");
+
+    press("KeyM", "m");
     assert.equal(tool.selectMode, "connected");
 
     press("KeyM", "m");

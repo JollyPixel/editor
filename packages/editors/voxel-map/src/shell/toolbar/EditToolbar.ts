@@ -12,9 +12,10 @@ import {
 import type { HistoryScopeState } from "@jolly-pixel/history";
 
 // Import Internal Dependencies
-import type {
-  EditorTool,
-  SelectMode
+import {
+  SELECT_MODES,
+  type EditorTool,
+  type SelectMode
 } from "../../state/index.ts";
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
@@ -24,6 +25,22 @@ import "../../features/painting/toolbar/PaintNotice.ts";
 import "../../features/placement/PlacementControls.ts";
 import "../../features/templates/editing/TemplateEditBar.ts";
 import "../../features/marquee/marqueeIcons.ts";
+
+// CONSTANTS
+const kSelectModeButtons = {
+  box: {
+    icon: "marquee",
+    label: "Box select"
+  },
+  corners: {
+    icon: "select-corners",
+    label: "Corner select"
+  },
+  connected: {
+    icon: "select-connected",
+    label: "Connected select"
+  }
+} as const satisfies Record<SelectMode, { icon: string; label: string; }>;
 
 export type EditMode = "paint" | "select" | "place";
 
@@ -180,25 +197,24 @@ export class EditToolbar extends WorkspaceElement {
   }
 
   #renderSelect(): TemplateResult {
-    const connected = this._selectMode === "connected";
+    const selectMode = this._selectMode;
     const { shortcuts } = this.attached.state;
 
     return html`
       <div class="group divided" role="group" aria-label="Select mode">
-        <jolly-tool-button
-          data-select-mode="box"
-          icon="marquee"
-          label=${shortcuts.label("Box select", "tool.select")}
-          ?active=${!connected}
-          @click=${() => this.#selectMode("box")}
-        ></jolly-tool-button>
-        <jolly-tool-button
-          data-select-mode="connected"
-          icon="select-connected"
-          label=${shortcuts.label("Connected select", "tool.select")}
-          ?active=${connected}
-          @click=${() => this.#selectMode("connected")}
-        ></jolly-tool-button>
+        ${SELECT_MODES.map((mode) => {
+          const { icon, label } = kSelectModeButtons[mode];
+
+          return html`
+            <jolly-tool-button
+              data-select-mode=${mode}
+              icon=${icon}
+              label=${shortcuts.label(label, "tool.select")}
+              ?active=${selectMode === mode}
+              @click=${() => this.#selectMode(mode)}
+            ></jolly-tool-button>
+          `;
+        })}
       </div>
     `;
   }

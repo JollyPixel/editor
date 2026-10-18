@@ -9,7 +9,8 @@ on R with AZERTY. A code such as `KeyQ` follows the key position.
 `tool`:
 
 - `tool.brush`: `b`, picks the brush.
-- `tool.select`: `m`, picks selection, then switches between box and connected select.
+- `tool.select`: `m`, picks selection, then cycles through box, corner and connected select.
+  Corner select takes two clicks: the first sets a corner, the second lifts the box.
 
 `edit`:
 
@@ -41,8 +42,8 @@ on R with AZERTY. A code such as `KeyQ` follows the key position.
 - `view.grid`, `view.glow`, `view.chunkBounds`: toggle that view setting. Unbound.
 - `view.inspector`: steps through `off`, `overlay` and `wireframe`. Unbound.
 
-`Enter` commits a placement and `Escape` cancels it, leaves the camera pivot, then leaves the
-select tool. These two keys cannot be rebound.
+`Enter` commits a placement. `Escape` cancels it, drops an unfinished marquee, leaves the
+camera pivot, then leaves the select tool. These two keys cannot be rebound.
 
 ## Console
 

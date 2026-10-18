@@ -130,7 +130,7 @@ describe("ViewShortcuts", () => {
 
   test("F frames every visible layer without a selection", () => {
     const { selection, framed, press } = setup();
-    selection.current = null;
+    selection.reconcile([]);
 
     press("KeyF");
 

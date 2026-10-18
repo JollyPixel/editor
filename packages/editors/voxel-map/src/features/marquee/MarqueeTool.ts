@@ -1,12 +1,18 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { InputCombination } from "@jolly-pixel/controls";
+import {
+  InputCombination,
+  type KeyChordString
+} from "@jolly-pixel/controls";
 import {
   type Actor,
   ActorComponent
 } from "@jolly-pixel/engine";
 import { MarqueeBox } from "@jolly-pixel/three";
-import type { VoxelView } from "@jolly-pixel/voxel.renderer";
+import type {
+  VoxelCoord,
+  VoxelView
+} from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type {
@@ -26,6 +32,14 @@ import { MarqueeDraft } from "./MarqueeDraft.ts";
 const kMarqueeShade = "#1a1a1a";
 const kGroundPlaneSize = 4096;
 const kMaxDistance = 512;
+const kCancelShortcut = [
+  "Escape"
+] as const satisfies readonly KeyChordString[];
+
+interface MarqueeGesture {
+  anchored: boolean;
+  startEyeHeight: number;
+}
 
 export interface MarqueeToolOptions {
   view: VoxelView;
@@ -53,8 +67,7 @@ export class MarqueeTool extends ActorComponent {
   #pointer = new THREE.Vector2();
   #eye = new THREE.Vector3();
   #shown: MarqueeDraft | null = null;
-  #dragging = false;
-  #startEyeHeight = 0;
+  #gesture: MarqueeGesture | null = null;
   #unsubscribers: Array<() => void> = [];
 
   constructor(
@@ -86,8 +99,15 @@ export class MarqueeTool extends ActorComponent {
 
     const { document } = options.view;
     const invalidateAim = (): void => this.#aimer.invalidate();
+    const cancel = (): boolean => this.#cancel();
     document.on("command", invalidateAim);
-    this.#unsubscribers.push(() => document.off("command", invalidateAim));
+    this.#unsubscribers.push(
+      () => document.off("command", invalidateAim),
+      options.tool.subscribe("selectMode", cancel),
+      actor.world.input.keyboard.bind(kCancelShortcut, cancel, {
+        priority: 1
+      })
+    );
   }
 
   get presence(): MarqueePresence | null {
@@ -106,7 +126,7 @@ export class MarqueeTool extends ActorComponent {
     for (const unsubscribe of this.#unsubscribers.splice(0)) {
       unsubscribe();
     }
-    this.#dragging = false;
+    this.#gesture = null;
     this.#show(null);
     this.#box.removeFromParent();
     this.#box.dispose();
@@ -121,14 +141,15 @@ export class MarqueeTool extends ActorComponent {
       layerName === null ||
       !this.#available()
     ) {
-      this.#dragging = false;
+      this.#gesture = null;
       this.#show(null);
 
       return;
     }
 
     const draft = this.#shown;
-    if (!this.#dragging || draft === null) {
+    const gesture = this.#gesture;
+    if (gesture === null || draft === null) {
       if (this.#pressed()) {
         this.#begin(layerName);
       }
@@ -142,20 +163,58 @@ export class MarqueeTool extends ActorComponent {
       return;
     }
 
-    const { mouse } = this.actor.world.input;
-    if (!mouse.isDown("left")) {
+    if (this.#closing(gesture)) {
       this.#lift(draft);
 
       return;
     }
+    if (gesture.anchored && !this.#pointerFree()) {
+      return;
+    }
 
-    const corner = this.#aimer.aimAtHeight(
-      mouse.viewportPositionTo(this.#pointer),
-      draft.start.y + Math.round(this.#eyeHeight() - this.#startEyeHeight)
-    );
+    const corner = this.#corner(gesture, draft);
     if (corner !== null) {
       this.#show(draft.stretchedTo(corner));
     }
+  }
+
+  #cancel(): boolean {
+    if (this.#gesture === null) {
+      return false;
+    }
+
+    this.#gesture = null;
+    this.#show(null);
+
+    return true;
+  }
+
+  #closing(
+    gesture: MarqueeGesture
+  ): boolean {
+    return gesture.anchored ?
+      this.#pressed() :
+      !this.actor.world.input.mouse.isDown("left");
+  }
+
+  #corner(
+    gesture: MarqueeGesture,
+    draft: MarqueeDraft
+  ): VoxelCoord | null {
+    const pointer = this.actor.world.input.mouse.viewportPositionTo(
+      this.#pointer
+    );
+    if (gesture.anchored) {
+      const aim = this.#aimer.resolve(pointer);
+      if (aim !== null && aim.probe !== null) {
+        return aim.remove;
+      }
+    }
+
+    return this.#aimer.aimAtHeight(
+      pointer,
+      draft.start.y + Math.round(this.#eyeHeight() - gesture.startEyeHeight)
+    );
   }
 
   #available(): boolean {
@@ -206,8 +265,10 @@ export class MarqueeTool extends ActorComponent {
       return;
     }
 
-    this.#startEyeHeight = this.#eyeHeight();
-    this.#dragging = true;
+    this.#gesture = {
+      anchored: this.#tool.selectMode === "corners",
+      startEyeHeight: this.#eyeHeight()
+    };
     this.#show(MarqueeDraft.begin(layerName, aim.remove));
   }
 
@@ -218,7 +279,7 @@ export class MarqueeTool extends ActorComponent {
   #lift(
     draft: MarqueeDraft
   ): void {
-    this.#dragging = false;
+    this.#gesture = null;
     this.#show(null);
     this.#placement.liftRegion(
       draft.layerName,
