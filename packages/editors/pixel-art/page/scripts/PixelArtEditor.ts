@@ -15,7 +15,7 @@ import { LocalStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
-  KeyBindingSettings,
+  PixelArtKeyBindingSettings,
   pixelArtConsole,
   type PixelDrawPanel
 } from "../../src/index.ts";
@@ -98,11 +98,11 @@ export class PixelArtEditor {
     );
     await panel.updateComplete;
 
-    const keyBindingSettings = new KeyBindingSettings({
+    const keyBindingSettings = new PixelArtKeyBindingSettings({
       storage: new LocalStorageAdapter(),
       onDropped: (message) => console.warn(message)
     });
-    const keybindings = keyBindingSettings.bind(panel);
+    const keybindings = keyBindingSettings.sync(panel);
 
     const target = session.targetLease(kTextureKind);
     const { record } = target;

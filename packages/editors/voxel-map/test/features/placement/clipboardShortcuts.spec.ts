@@ -13,7 +13,8 @@ import {
 import type { VoxelCoord } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { bindClipboardShortcuts } from "../../../src/features/placement/clipboardShortcuts.ts";
+import { clipboardShortcuts } from "../../../src/features/placement/clipboardShortcuts.ts";
+import { defaultKeyBindings } from "../../helpers/shortcuts.ts";
 
 // CONSTANTS
 const kMod: KeyboardEventInit = isApplePlatform() ?
@@ -28,10 +29,10 @@ function setup(
   const keyboard = new KeyBindings();
   const copies: number[] = [];
   const pasted: VoxelCoord[] = [];
-  const release = bindClipboardShortcuts({
-    keyboard,
+  const release = defaultKeyBindings().bind(keyboard, clipboardShortcuts({
     placement: {
       copy: () => copies.push(1) > 0 && placing,
+      cut: () => false,
       paste: (position) => {
         pasted.push(position);
 
@@ -39,7 +40,7 @@ function setup(
       }
     },
     aimPoint: () => kAim
-  });
+  }));
 
   function press(
     letter: string,

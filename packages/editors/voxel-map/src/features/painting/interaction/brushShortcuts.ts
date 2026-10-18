@@ -1,9 +1,13 @@
 // Import Third-party Dependencies
 import type {
-  Keyboard,
   KeyBindingHandler,
-  KeyChordString
+  KeyBindingHandlers
 } from "@jolly-pixel/controls";
+import type { AxisSign } from "@jolly-pixel/three";
+import {
+  VoxelTransform,
+  type VoxelRotationStep
+} from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type {
@@ -11,59 +15,89 @@ import type {
   SelectionStore
 } from "../../../state/index.ts";
 
-export const BRUSH_SHORTCUTS = {
-  mode: ["r"],
-  pattern: ["c"],
-  ghost: ["g"],
-  shrink: ["BracketLeft"],
-  grow: ["BracketRight"]
-} as const satisfies Record<string, readonly KeyChordString[]>;
+export type BrushAction =
+  | "brush.mode"
+  | "brush.pattern"
+  | "brush.ghost"
+  | "orient.rotateCounterClockwise"
+  | "orient.rotateClockwise"
+  | "orient.flipVertical"
+  | "orient.autoRotation";
+
+export type BrushResizeAction = "brush.shrink" | "brush.grow";
 
 export interface BrushShortcutsOptions {
-  keyboard: Pick<Keyboard, "bind">;
   brush: BrushStore;
-  selection: SelectionStore;
+  selection: Pick<SelectionStore, "voxelLayer">;
 }
 
-export function bindBrushShortcuts(
-  options: BrushShortcutsOptions
-): () => void {
-  const { keyboard, brush, selection } = options;
+export interface BrushOrientationOptions extends BrushShortcutsOptions {
+  rotation: () => VoxelRotationStep;
+}
 
-  function whilePaintable(
-    action: () => void
+export function brushShortcuts(
+  options: BrushOrientationOptions
+): KeyBindingHandlers<BrushAction> {
+  const { brush, rotation } = options;
+
+  function rotate(
+    turns: AxisSign
   ): KeyBindingHandler {
-    return () => {
-      if (selection.voxelLayer === null || brush.suspended) {
-        return false;
-      }
-      action();
-
-      return true;
-    };
+    return whilePaintable(options, () => {
+      brush.rotationMode = new VoxelTransform({
+        rotation: rotation() + turns
+      }).rotation;
+    });
   }
 
-  const releases = [
-    keyboard.bind(BRUSH_SHORTCUTS.mode, whilePaintable(() => {
+  return {
+    "brush.mode": whilePaintable(options, () => {
       brush.mode = brush.mode === "build" ? "replace" : "build";
-    })),
-    keyboard.bind(BRUSH_SHORTCUTS.pattern, whilePaintable(() => {
+    }),
+    "brush.pattern": whilePaintable(options, () => {
       brush.pattern = brush.pattern === "square" ? "circle" : "square";
-    })),
-    keyboard.bind(BRUSH_SHORTCUTS.ghost, whilePaintable(() => {
+    }),
+    "brush.ghost": whilePaintable(options, () => {
       brush.ghost = !brush.ghost;
-    })),
-    keyboard.bind(BRUSH_SHORTCUTS.shrink, whilePaintable(() => {
+    }),
+    "orient.rotateCounterClockwise": rotate(1),
+    "orient.rotateClockwise": rotate(-1),
+    "orient.flipVertical": whilePaintable(options, () => {
+      brush.flipY = !brush.flipY;
+    }),
+    "orient.autoRotation": whilePaintable(options, () => {
+      brush.rotationMode = "auto";
+    })
+  };
+}
+
+export function brushResizeShortcuts(
+  options: BrushShortcutsOptions
+): KeyBindingHandlers<BrushResizeAction> {
+  const { brush } = options;
+
+  return {
+    "brush.shrink": whilePaintable(options, () => {
       brush.resize(-1);
-    }), { repeat: true }),
-    keyboard.bind(BRUSH_SHORTCUTS.grow, whilePaintable(() => {
+    }),
+    "brush.grow": whilePaintable(options, () => {
       brush.resize(1);
-    }), { repeat: true })
-  ];
+    })
+  };
+}
+
+function whilePaintable(
+  options: BrushShortcutsOptions,
+  action: () => void
+): KeyBindingHandler {
+  const { brush, selection } = options;
 
   return () => {
-    for (const release of releases) {
-      release();
+    if (selection.voxelLayer === null || brush.suspended) {
+      return false;
     }
+    action();
+
+    return true;
   };
 }

@@ -78,7 +78,8 @@ export class BrushOrientation extends WorkspaceElement {
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
     return [
-      workspace.state.brush.subscribe("change", () => this.requestUpdate())
+      workspace.state.brush.subscribe("change", () => this.requestUpdate()),
+      workspace.state.shortcuts.subscribe(() => this.requestUpdate())
     ];
   }
 
@@ -87,15 +88,27 @@ export class BrushOrientation extends WorkspaceElement {
       return nothing;
     }
 
+    const { shortcuts } = this.workspace.state;
+    const rotationTitle = [
+      shortcuts.label(
+        "Rotate counter-clockwise",
+        "orient.rotateCounterClockwise"
+      ),
+      shortcuts.label("clockwise", "orient.rotateClockwise"),
+      shortcuts.label("auto", "orient.autoRotation")
+    ].join(", ");
+
     return html`
       <jolly-button-group
         aria-label="Rotation"
+        title=${rotationTitle}
         .options=${kRotationOptions}
         .value=${this.#rotation.value}
         @jolly-change=${this.#rotation.commit}
       ></jolly-button-group>
       <jolly-toggle
         label="Flip Y"
+        title=${shortcuts.label("Flip Y", "orient.flipVertical")}
         .value=${this.#flipY.value}
         @jolly-change=${this.#flipY.commit}
       ></jolly-toggle>

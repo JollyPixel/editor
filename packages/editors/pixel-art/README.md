@@ -88,7 +88,7 @@ studio's own builds compile `page/index.html` with the shell instead.
 
 - [UI components](./docs/ui.md): panel setup, texture ownership and UV access
 - [`PixelDrawPanel`](./docs/panel/PixelDrawPanel.md): component API and events
-- [`KeyBindingSettings`](./docs/keybindings/KeyBindingSettings.md): per-browser shortcuts and the console `pixelart.keybinds` namespace
+- [`PixelArtKeyBindingSettings`](./docs/keybindings/PixelArtKeyBindingSettings.md): per-browser shortcuts and the console `pixelart.keybinds` namespace
 - [Mesh texturing](./docs/mesh-texturing/README.md): canvas, normal-map and UV geometry adapters
 
 ## 🧪 Running the E2E tests

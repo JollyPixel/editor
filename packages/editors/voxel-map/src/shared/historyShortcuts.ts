@@ -1,38 +1,24 @@
 // Import Third-party Dependencies
-import type {
-  Keyboard,
-  KeyChordString
-} from "@jolly-pixel/controls";
-
-export const HISTORY_SHORTCUTS = {
-  undo: ["Mod+z"],
-  redo: ["Mod+y", "Mod+Shift+z"]
-} as const satisfies Record<string, readonly KeyChordString[]>;
+import type { KeyBindingHandlers } from "@jolly-pixel/controls";
 
 export interface HistoryShortcutsOptions {
-  keyboard: Pick<Keyboard, "bind">;
   history: {
     undo(): boolean;
     redo(): boolean;
   };
 }
 
-export function bindHistoryShortcuts(
+export function historyShortcuts(
   options: HistoryShortcutsOptions
-): () => void {
-  const { keyboard, history } = options;
-  const releases = [
-    keyboard.bind(HISTORY_SHORTCUTS.undo, () => {
-      history.undo();
-    }),
-    keyboard.bind(HISTORY_SHORTCUTS.redo, () => {
-      history.redo();
-    })
-  ];
+): KeyBindingHandlers<"edit.undo" | "edit.redo"> {
+  const { history } = options;
 
-  return () => {
-    for (const release of releases) {
-      release();
+  return {
+    "edit.undo": () => {
+      history.undo();
+    },
+    "edit.redo": () => {
+      history.redo();
     }
   };
 }

@@ -9,7 +9,6 @@ import {
   property,
   state
 } from "lit/decorators.js";
-import type { KeyChordString } from "@jolly-pixel/controls";
 import type { HistoryScopeState } from "@jolly-pixel/history";
 
 // Import Internal Dependencies
@@ -19,9 +18,6 @@ import type {
 } from "../../state/index.ts";
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
-import { HISTORY_SHORTCUTS } from "../../shared/historyShortcuts.ts";
-import { TOOL_SHORTCUTS } from "../../shared/toolShortcuts.ts";
-import { CLIPBOARD_SHORTCUTS } from "../../features/placement/clipboardShortcuts.ts";
 import { editToolbarStyles } from "./EditToolbar.styles.ts";
 import "../../features/painting/toolbar/BrushControls.ts";
 import "../../features/painting/toolbar/PaintNotice.ts";
@@ -70,7 +66,7 @@ export class EditToolbar extends WorkspaceElement {
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
     const { placement } = workspace;
-    const { tool, keyboardLayout } = workspace.state;
+    const { tool, shortcuts } = workspace.state;
     const { history } = workspace;
     const refreshMode = (): void => {
       if (placement.placing) {
@@ -97,7 +93,7 @@ export class EditToolbar extends WorkspaceElement {
         this._selectMode = selectMode;
       }),
       workspace.access.subscribe("change", () => this.requestUpdate()),
-      keyboardLayout.subscribe("change", () => this.requestUpdate())
+      shortcuts.subscribe(() => this.requestUpdate())
     ];
   }
 
@@ -136,20 +132,21 @@ export class EditToolbar extends WorkspaceElement {
   #renderEdit(): TemplateResult {
     const selecting = this.mode === "select";
     const { access, placement } = this.attached;
+    const { shortcuts } = this.attached.state;
 
     return html`
       <div class="group" role="group" aria-label="Tools">
         <jolly-tool-button
           data-tool="brush"
           icon="pencil"
-          label=${`Brush (${this.#shortcut(TOOL_SHORTCUTS.brush)})`}
+          label=${shortcuts.label("Brush", "tool.brush")}
           ?active=${!selecting}
           @click=${() => this.#selectTool("brush")}
         ></jolly-tool-button>
         <jolly-tool-button
           data-tool="select"
           icon="marquee"
-          label=${`Select (${this.#shortcut(TOOL_SHORTCUTS.select)})`}
+          label=${shortcuts.label("Select", "tool.select")}
           ?active=${selecting}
           @click=${() => this.#selectTool("select")}
         ></jolly-tool-button>
@@ -158,14 +155,14 @@ export class EditToolbar extends WorkspaceElement {
         <jolly-tool-button
           data-tool="undo"
           icon="undo"
-          label=${`Undo (${this.#shortcut(HISTORY_SHORTCUTS.undo)})`}
+          label=${shortcuts.label("Undo", "edit.undo")}
           ?disabled=${access.current.readOnly || this._undoDepth === 0}
           @click=${this.#onUndo}
         >${renderStepCount(this._undoDepth)}</jolly-tool-button>
         <jolly-tool-button
           data-tool="redo"
           icon="redo"
-          label=${`Redo (${this.#shortcut(HISTORY_SHORTCUTS.redo)})`}
+          label=${shortcuts.label("Redo", "edit.redo")}
           ?disabled=${access.current.readOnly || this._redoDepth === 0}
           @click=${this.#onRedo}
         >${renderStepCount(this._redoDepth)}</jolly-tool-button>
@@ -174,7 +171,7 @@ export class EditToolbar extends WorkspaceElement {
         <jolly-tool-button
           data-tool="paste"
           icon="paste"
-          label=${`Paste (${this.#shortcut(CLIPBOARD_SHORTCUTS.paste)})`}
+          label=${shortcuts.label("Paste", "edit.paste")}
           ?disabled=${!placement.canPlace("copy") || !this._canPaste}
           @click=${this.#onPaste}
         ></jolly-tool-button>
@@ -184,32 +181,26 @@ export class EditToolbar extends WorkspaceElement {
 
   #renderSelect(): TemplateResult {
     const connected = this._selectMode === "connected";
-    const cycle = this.#shortcut(TOOL_SHORTCUTS.select);
+    const { shortcuts } = this.attached.state;
 
     return html`
       <div class="group divided" role="group" aria-label="Select mode">
         <jolly-tool-button
           data-select-mode="box"
           icon="marquee"
-          label=${`Box select (${cycle})`}
+          label=${shortcuts.label("Box select", "tool.select")}
           ?active=${!connected}
           @click=${() => this.#selectMode("box")}
         ></jolly-tool-button>
         <jolly-tool-button
           data-select-mode="connected"
           icon="select-connected"
-          label=${`Connected select (${cycle})`}
+          label=${shortcuts.label("Connected select", "tool.select")}
           ?active=${connected}
           @click=${() => this.#selectMode("connected")}
         ></jolly-tool-button>
       </div>
     `;
-  }
-
-  #shortcut(
-    chords: readonly KeyChordString[]
-  ): string {
-    return this.attached.state.keyboardLayout.format(chords[0]);
   }
 
   #selectTool(

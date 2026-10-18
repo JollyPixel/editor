@@ -4,7 +4,7 @@ import {
   LogQueue,
   type StorageAdapter
 } from "@jolly-pixel/ui";
-import { KeyBindingSettings } from "@jolly-pixel/editor.pixel-art";
+import { PixelArtKeyBindingSettings } from "@jolly-pixel/editor.pixel-art";
 
 // Import Internal Dependencies
 import { BlockSelection } from "./BlockSelection.ts";
@@ -19,6 +19,8 @@ import { TextureTabsStore } from "./TextureTabsStore.ts";
 import { TemplatePreviewStore } from "./TemplatePreviewStore.ts";
 import { UvSyncStore } from "./UvSyncStore.ts";
 import { ViewStore } from "./ViewStore.ts";
+import { MapKeyBindingSettings } from "../keybindings/MapKeyBindings.ts";
+import { ShortcutLabels } from "../keybindings/ShortcutLabels.ts";
 
 export interface EditorStateOptions {
   storage?: StorageAdapter;
@@ -38,7 +40,9 @@ export class EditorState {
   readonly uvSync: UvSyncStore;
   readonly textureTabs: TextureTabsStore;
   readonly templatePreview: TemplatePreviewStore;
-  readonly pixelArtKeyBindings: KeyBindingSettings;
+  readonly mapKeyBindings: MapKeyBindingSettings;
+  readonly shortcuts: ShortcutLabels;
+  readonly pixelArtKeyBindings: PixelArtKeyBindingSettings;
 
   constructor(
     options: EditorStateOptions = {}
@@ -52,7 +56,15 @@ export class EditorState {
     this.uvSync = new UvSyncStore(storage);
     this.textureTabs = new TextureTabsStore(storage);
     this.templatePreview = new TemplatePreviewStore(storage);
-    this.pixelArtKeyBindings = new KeyBindingSettings({
+    this.mapKeyBindings = new MapKeyBindingSettings({
+      storage,
+      onDropped: (message) => this.log.push(message)
+    });
+    this.shortcuts = new ShortcutLabels(
+      this.keyboardLayout,
+      this.mapKeyBindings
+    );
+    this.pixelArtKeyBindings = new PixelArtKeyBindingSettings({
       storage,
       onDropped: (message) => this.log.push(message)
     });

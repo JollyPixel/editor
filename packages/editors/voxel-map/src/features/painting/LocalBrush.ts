@@ -23,7 +23,10 @@ import {
   BrushFootprint,
   type BrushShape
 } from "./model/BrushFootprint.ts";
-import { resolveBrushOrientation } from "./model/brushOrientation.ts";
+import {
+  resolveBrushOrientation,
+  type BrushOrientation
+} from "./model/brushOrientation.ts";
 import { AimedHalf } from "./model/AimedHalf.ts";
 import {
   BrushStroke,
@@ -170,6 +173,15 @@ export class LocalBrush extends ActorComponent {
       }),
       selection.subscribe("change", rearmBlockedPaint)
     ];
+  }
+
+  get orientation(): BrushOrientation {
+    return resolveBrushOrientation(
+      this.#camera,
+      this.#brush.rotationMode,
+      this.#brush.flipY,
+      this.#block.resolve(this.view.document.blocks)?.shapeId
+    );
   }
 
   override destroy(): void {
@@ -370,12 +382,7 @@ export class LocalBrush extends ActorComponent {
       null :
       {
         blockId: block.id,
-        ...resolveBrushOrientation(
-          this.#camera,
-          this.#brush.rotationMode,
-          this.#brush.flipY,
-          block.shapeId
-        )
+        ...this.orientation
       };
   }
 

@@ -21,6 +21,9 @@ import { CameraPostProcessing } from "./CameraPostProcessing.ts";
 const kPivotMaxDistance = 32;
 const kPivotFallbackDistance = 24;
 const kDefaultSamples = 4;
+const kRight = new THREE.Vector3();
+
+export type HorizontalAxis = "x" | "z";
 
 export interface EditorCameraOptions {
   world: Systems.World;
@@ -159,6 +162,12 @@ export class EditorCamera {
       })
     );
     this.#announceMode();
+  }
+
+  rightAxis(): HorizontalAxis {
+    kRight.setFromMatrixColumn(this.camera.matrixWorld, 0);
+
+    return Math.abs(kRight.x) >= Math.abs(kRight.z) ? "x" : "z";
   }
 
   focusPoint(

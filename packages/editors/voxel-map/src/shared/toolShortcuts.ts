@@ -1,58 +1,52 @@
 // Import Third-party Dependencies
 import type {
-  Keyboard,
+  KeyBindingHandlers,
+  KeyBindingTarget,
   KeyChordString
 } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
-import type {
-  EditorTool,
-  ToolStore
-} from "../state/index.ts";
-
-export const TOOL_SHORTCUTS = {
-  brush: ["b"],
-  select: ["m"]
-} as const satisfies Record<EditorTool, readonly KeyChordString[]>;
+import type { ToolStore } from "../state/index.ts";
+import type { MapGroupAction } from "../keybindings/MapKeyBindings.ts";
 
 export const TOOL_EXIT_SHORTCUT = [
   "Escape"
 ] as const satisfies readonly KeyChordString[];
 
 export interface ToolShortcutsOptions {
-  keyboard: Pick<Keyboard, "bind">;
   tool: ToolStore;
 }
 
-export function bindToolShortcuts(
+export function toolShortcuts(
   options: ToolShortcutsOptions
-): () => void {
-  const { keyboard, tool } = options;
-  const releases = [
-    keyboard.bind(TOOL_SHORTCUTS.brush, () => {
+): KeyBindingHandlers<MapGroupAction<"tool">> {
+  const { tool } = options;
+
+  return {
+    "tool.brush": () => {
       tool.current = "brush";
-    }),
-    keyboard.bind(TOOL_SHORTCUTS.select, () => {
+    },
+    "tool.select": () => {
       if (tool.selecting) {
         tool.cycleSelectMode();
       }
       else {
         tool.current = "select";
       }
-    }),
-    keyboard.bind(TOOL_EXIT_SHORTCUT, () => {
-      if (!tool.selecting) {
-        return false;
-      }
-      tool.current = "brush";
-
-      return true;
-    })
-  ];
-
-  return () => {
-    for (const release of releases) {
-      release();
     }
   };
+}
+
+export function bindToolExit(
+  keyboard: KeyBindingTarget,
+  tool: ToolStore
+): () => void {
+  return keyboard.bind(TOOL_EXIT_SHORTCUT, () => {
+    if (!tool.selecting) {
+      return false;
+    }
+    tool.current = "brush";
+
+    return true;
+  });
 }

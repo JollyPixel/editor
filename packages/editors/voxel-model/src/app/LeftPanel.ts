@@ -19,7 +19,7 @@ import type {
 } from "@jolly-pixel/pixel-draw.renderer";
 import {
   RoomAccess,
-  type KeyBindingSettings,
+  type PixelArtKeyBindingSettings,
   type PixelDrawPanel
 } from "@jolly-pixel/editor.pixel-art";
 import {
@@ -75,7 +75,7 @@ export class LeftPanel extends LitElement {
   declare workspace: LeftPanelWorkspace | null;
 
   @property({ attribute: false })
-  declare keyBindingSettings: KeyBindingSettings | null;
+  declare keyBindingSettings: PixelArtKeyBindingSettings | null;
 
   @query("pixel-draw-panel")
   declare private panelElement: PixelDrawPanel;
@@ -228,7 +228,7 @@ export class LeftPanel extends LitElement {
     if (changedProperties.has("keyBindingSettings")) {
       this.#releaseKeyBindings?.();
       this.#releaseKeyBindings =
-        this.keyBindingSettings?.bind(this.panelElement) ?? null;
+        this.keyBindingSettings?.sync(this.panelElement) ?? null;
     }
   }
 

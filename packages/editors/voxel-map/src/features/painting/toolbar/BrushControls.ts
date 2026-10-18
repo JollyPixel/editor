@@ -10,7 +10,6 @@ import {
   state
 } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
-import type { KeyChordString } from "@jolly-pixel/controls";
 import { FieldBinding } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -21,24 +20,23 @@ import {
 } from "../../../state/index.ts";
 import type { VoxelMapWorkspace } from "../../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../../workspace/WorkspaceElement.ts";
+import type { MapAction } from "../../../keybindings/MapKeyBindings.ts";
 import { brushControlsStyles } from "./BrushControls.styles.ts";
 import { PaintAvailability } from "./PaintAvailability.ts";
 import {
   BRUSH_MODE_OPTIONS,
   BRUSH_PATTERN_OPTIONS,
   ghostLabel,
-  toolLabel,
   type BrushToolOption
 } from "./brushToolOptions.ts";
 import { resolveToolChoice } from "./toolChoice.ts";
-import { BRUSH_SHORTCUTS } from "../interaction/brushShortcuts.ts";
 import "./brushIcons.ts";
 
 interface ChoiceTool<TValue extends string> {
   tool: string;
   options: readonly BrushToolOption<TValue>[];
   current: TValue;
-  shortcut: string;
+  action: MapAction;
   select: (value: TValue) => void;
 }
 
@@ -81,10 +79,7 @@ export class BrushControls extends WorkspaceElement {
     return [
       ...PaintAvailability.watch(workspace, refresh),
       brush.subscribe("change", () => this.requestUpdate()),
-      workspace.state.keyboardLayout.subscribe(
-        "change",
-        () => this.requestUpdate()
-      )
+      workspace.state.shortcuts.subscribe(() => this.requestUpdate())
     ];
   }
 
@@ -95,17 +90,6 @@ export class BrushControls extends WorkspaceElement {
     }
 
     const { brush } = workspace.state;
-    const { keyboardLayout } = workspace.state;
-    function shortcut(
-      chords: readonly KeyChordString[]
-    ): string {
-      return keyboardLayout.format(chords[0]);
-    }
-
-    const sizeShortcut = [
-      shortcut(BRUSH_SHORTCUTS.shrink),
-      shortcut(BRUSH_SHORTCUTS.grow)
-    ].join(" / ");
 
     return html`
       <div
@@ -118,7 +102,7 @@ export class BrushControls extends WorkspaceElement {
           tool: "mode",
           options: BRUSH_MODE_OPTIONS,
           current: brush.mode,
-          shortcut: shortcut(BRUSH_SHORTCUTS.mode),
+          action: "brush.mode",
           select: (value) => {
             brush.mode = value;
           }
@@ -126,10 +110,10 @@ export class BrushControls extends WorkspaceElement {
         <jolly-tool-button
           data-tool="size"
           flyout-side="above"
-          label=${toolLabel(
+          label=${this.#label(
             `Size ${this.#size.value}`,
-            sizeShortcut,
-            this._availability.reason
+            "brush.shrink",
+            "brush.grow"
           )}
           ?disabled=${this.disabled}
         >
@@ -149,7 +133,7 @@ export class BrushControls extends WorkspaceElement {
           tool: "pattern",
           options: BRUSH_PATTERN_OPTIONS,
           current: brush.pattern,
-          shortcut: shortcut(BRUSH_SHORTCUTS.pattern),
+          action: "brush.pattern",
           select: (value) => {
             brush.pattern = value;
           }
@@ -157,11 +141,7 @@ export class BrushControls extends WorkspaceElement {
         <jolly-tool-button
           data-tool="ghost"
           icon="brush-ghost"
-          label=${toolLabel(
-            ghostLabel(this.#size.value),
-            shortcut(BRUSH_SHORTCUTS.ghost),
-            this._availability.reason
-          )}
+          label=${this.#label(ghostLabel(this.#size.value), "brush.ghost")}
           ?active=${brush.ghost}
           ?disabled=${this.disabled}
           @click=${this.#onGhostToggle}
@@ -177,7 +157,7 @@ export class BrushControls extends WorkspaceElement {
       tool,
       options,
       current,
-      shortcut,
+      action,
       select
     } = choice;
     const { active, alternatives } = resolveToolChoice(options, current);
@@ -188,7 +168,7 @@ export class BrushControls extends WorkspaceElement {
         data-value=${active.value}
         flyout-side="above"
         icon=${ifDefined(active.icon)}
-        label=${toolLabel(active.label, shortcut, this._availability.reason)}
+        label=${this.#label(active.label, action)}
         ?disabled=${this.disabled}
       >
         ${alternatives.map((option) => html`
@@ -203,6 +183,14 @@ export class BrushControls extends WorkspaceElement {
         `)}
       </jolly-tool-button>
     `;
+  }
+
+  #label(
+    text: string,
+    ...actions: MapAction[]
+  ): string {
+    return this._availability.reason ??
+      this.attached.state.shortcuts.label(text, ...actions);
   }
 
   #onGhostToggle(): void {

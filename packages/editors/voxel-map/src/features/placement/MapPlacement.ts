@@ -326,6 +326,10 @@ export class MapPlacement {
     return true;
   }
 
+  cut(): boolean {
+    return this.#lifted !== null && this.copy() && this.deleteRegion();
+  }
+
   paste(
     position: VoxelCoord
   ): boolean {

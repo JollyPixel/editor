@@ -8,6 +8,7 @@ import {
 
 // Import Internal Dependencies
 import { brushConsole } from "../features/painting/brushConsole.ts";
+import { keybindsConsole } from "../keybindings/keybindsConsole.ts";
 import {
   textureConsole,
   textureShortcutsConsole
@@ -18,6 +19,7 @@ import type { VoxelMapWorkspace } from "../workspace/VoxelMapWorkspace.ts";
 // CONSTANTS
 const kFeatures: readonly ConsoleFeature<MapConsoleContext>[] = [
   brushConsole,
+  keybindsConsole,
   textureConsole,
   textureShortcutsConsole,
   viewConsole

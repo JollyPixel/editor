@@ -25,13 +25,16 @@ import type {
 
 // Import Internal Dependencies
 import { MapDocument } from "../document/MapDocument.ts";
-import { bindHistoryShortcuts } from "../shared/historyShortcuts.ts";
+import { historyShortcuts } from "../shared/historyShortcuts.ts";
 import {
   createMapHistory,
   skippedMessage
 } from "../shared/mapHistory.ts";
 import { MapSteps } from "../shared/MapSteps.ts";
-import { bindToolShortcuts } from "../shared/toolShortcuts.ts";
+import {
+  bindToolExit,
+  toolShortcuts
+} from "../shared/toolShortcuts.ts";
 import type {
   EditorState,
   ViewSettings
@@ -51,9 +54,12 @@ import {
   type MissingPaintSource
 } from "../features/painting/LocalBrush.ts";
 import { PeerBrushes } from "../features/painting/collaboration/PeerBrushes.ts";
-import { bindBrushShortcuts } from "../features/painting/interaction/brushShortcuts.ts";
+import {
+  brushResizeShortcuts,
+  brushShortcuts
+} from "../features/painting/interaction/brushShortcuts.ts";
 import { MarqueeTool } from "../features/marquee/MarqueeTool.ts";
-import { bindMarqueeShortcuts } from "../features/marquee/marqueeShortcuts.ts";
+import { marqueeShortcuts } from "../features/marquee/marqueeShortcuts.ts";
 import { MapHistory } from "../features/placement/MapHistory.ts";
 import { MapMaterials } from "../features/materials/MapMaterials.ts";
 import { MapPlacement } from "../features/placement/MapPlacement.ts";
@@ -61,7 +67,7 @@ import { PlacementClick } from "../features/placement/PlacementClick.ts";
 import { PlacementGizmo } from "../features/placement/PlacementGizmo.ts";
 import { PeerPlacements } from "../features/placement/collaboration/PeerPlacements.ts";
 import { bindPlacementShortcuts } from "../features/placement/placementShortcuts.ts";
-import { bindClipboardShortcuts } from "../features/placement/clipboardShortcuts.ts";
+import { clipboardShortcuts } from "../features/placement/clipboardShortcuts.ts";
 import { MapTemplates } from "../features/templates/MapTemplates.ts";
 import { TemplateEditing } from "../features/templates/editing/TemplateEditing.ts";
 import { PeerEditContext } from "../features/templates/editing/PeerEditContext.ts";
@@ -74,6 +80,7 @@ import { SceneLighting } from "../scene/environment/SceneLighting.ts";
 import { SceneEnvironment } from "../scene/environment/SceneEnvironment.ts";
 import { EditorCamera } from "../scene/camera/EditorCamera.ts";
 import { PivotClick } from "../scene/camera/PivotClick.ts";
+import { viewShortcuts } from "../scene/viewShortcuts.ts";
 import { MAP_CAPABILITIES } from "../access/MapAccess.ts";
 
 // CONSTANTS
@@ -455,35 +462,43 @@ export class EditorScene extends Systems.Scene {
         applyGlow(state.view.settings.glow);
         world.invalidate();
       }),
-      bindBrushShortcuts({
-        keyboard,
+      state.mapKeyBindings.bind(keyboard, {
+        ...toolShortcuts({ tool: state.tool }),
+        ...historyShortcuts({ history }),
+        ...clipboardShortcuts({
+          placement,
+          aimPoint: () => camera.aimPoint(view.root)
+        }),
+        ...marqueeShortcuts({
+          world: view.document.world,
+          tool: state.tool,
+          selection: state.selection,
+          placement
+        }),
+        ...brushShortcuts({
+          brush,
+          selection: state.selection,
+          rotation: () => localBrush.orientation.rotation
+        }),
+        ...viewShortcuts({
+          view: state.view,
+          camera,
+          world: view.document.world,
+          layers,
+          selection: state.selection
+        })
+      }),
+      state.mapKeyBindings.bind(keyboard, brushResizeShortcuts({
         brush,
         selection: state.selection
-      }),
-      bindHistoryShortcuts({
-        keyboard,
-        history
-      }),
+      }), { repeat: true }),
       bindPlacementShortcuts({
         keyboard,
-        placement
-      }),
-      bindClipboardShortcuts({
-        keyboard,
+        keyBindings: state.mapKeyBindings,
         placement,
-        aimPoint: () => camera.aimPoint(view.root)
+        rightAxis: () => camera.rightAxis()
       }),
-      bindToolShortcuts({
-        keyboard,
-        tool: state.tool
-      }),
-      bindMarqueeShortcuts({
-        keyboard,
-        world: view.document.world,
-        tool: state.tool,
-        selection: state.selection,
-        placement
-      }),
+      bindToolExit(keyboard, state.tool),
       state.keyboardLayout.watch(window),
       () => camera.dispose(),
       () => environment.dispose(),

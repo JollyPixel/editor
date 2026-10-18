@@ -8,13 +8,15 @@ scope. The code lives in `src/features/painting/`.
 - `size`: 1 to 16, default 1. Keys `[` and `]`, or Ctrl+wheel.
 - `mode`: `build` (default) or `replace`. Key `R`.
 - `pattern`: `square` (default) or `circle`. Key `C`.
-- `rotationMode`: `auto` (default) or a fixed 0/90/180/270.
-- `flipY`: places blocks upside down. Off by default.
+- `rotationMode`: `auto` (default) or a fixed 0/90/180/270. Keys `Q` and `E`
+  turn it, `T` sets it back to `auto`.
+- `flipY`: places blocks upside down. Off by default. Key `V`.
 - `ghost`: block preview, size 1 only. Key `G`.
 - `skyRadius`: 24 by default, 0 turns sky aiming off. Console only.
 
-All of them are under the `brush.` console namespace. The keys work only while
-a voxel layer is selected. Every change is saved in the browser under
+All of them are under the `brush.` console namespace. The keys are the
+defaults of [keybinds](./keybinds.md) and work only while a voxel layer is
+selected. Every change is saved in the browser under
 `voxel-map:brush` and comes back after a reload; a stored value that is out of
 range or unknown falls back to its default.
 

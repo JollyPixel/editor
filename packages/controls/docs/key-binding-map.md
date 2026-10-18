@@ -81,9 +81,15 @@ get overrides(): Partial<Record<TAction, KeyChordString[]>>;
 
 chordsBoundTo(action: TAction): readonly KeyChord[];
 format(action: TAction, options?: KeyChordFormatOptions): string[];
+rebind(
+  action: TAction,
+  chords: string | readonly string[]
+): KeyBindingMap<TAction>;
+restore(action?: TAction): KeyBindingMap<TAction>;
+toJSON(): Partial<Record<TAction, KeyChordString[]>>;
 bind(
   target: KeyBindingTarget,
-  handlers: KeyBindingHandlers<TAction>,
+  handlers: Partial<KeyBindingHandlers<TAction>>,
   options?: KeyBindingOptions
 ): () => void;
 
@@ -108,37 +114,64 @@ same defaults and these overrides has the same chords, so store this value.
 `format()` labels each chord of an action for a tooltip or a settings screen,
 with the same options as [`KeyChord.format()`](./key-chords.md#labels).
 
-`bind()` registers one binding per action on a `Keyboard` or a
-[`KeyBindings`](./key-chords.md#keybindings) registry, with the same `repeat`
-and `priority` options for every action. The handler types require one
-handler per action. A handler that returns `false` passes the key on to the
+`rebind()` returns a new map where `chords` replace the chords of `action`, and
+`restore()` returns one where `action`, or every action when it is omitted, is
+back to its defaults. Both keep the other overrides, leave the source map
+unchanged, and throw the constructor errors.
+
+`toJSON()` returns `overrides`, so `JSON.stringify(map)` gives the value to
+store.
+
+`bind()` registers one binding per action that has a handler, on a `Keyboard`
+or a [`KeyBindings`](./key-chords.md#keybindings) registry, with the same
+`repeat` and `priority` options for every action. An action without a handler
+stays unbound, so several `bind()` calls can split the actions by option, or
+give one action a second handler. A handler that returns `false` passes the key on to the
 next matching binding and keeps the browser default. `bind()` returns one
 function that removes every binding it made.
 
-## Rebinding
-
-Rebuild the map from the current overrides when one action changes, and store
-the new `overrides`:
+## Parsing stored overrides
 
 ```ts
-let map = new KeyBindingMap(DEFAULTS, JSON.parse(stored));
+static parse<TAction extends string>(
+  defaults: KeyBindingDefaults<TAction>,
+  json: string
+): ParsedKeyBindings<TAction>;
+
+interface ParsedKeyBindings<TAction extends string> {
+  keyBindings: KeyBindingMap<TAction>;
+  dropped: string[];
+}
+```
+
+`parse()` reads a stored `JSON.stringify(map)` value and never throws. It
+applies each entry in order and drops one that names an unknown action, is not
+a string or a list of strings, or makes the constructor throw. `dropped` holds
+one message per dropped entry, such as
+`Dropped the stored keybinding "jump": unknown action`. A value that is not a
+JSON object drops every entry with a single message.
+
+## Rebinding
+
+Build the next map before releasing the old bindings, so a rejected chord
+leaves the previous shortcuts in place:
+
+```ts
+let map = KeyBindingMap.parse(DEFAULTS, stored).keyBindings;
 let release = map.bind(keyboard, handlers);
 
 function rebind(action: Action, chords: readonly string[]): void {
-  const next = new KeyBindingMap(DEFAULTS, {
-    ...map.overrides,
-    [action]: chords
-  });
+  const next = map.rebind(action, chords);
 
   release();
   map = next;
   release = map.bind(keyboard, handlers);
-  storage.set(key, JSON.stringify(map.overrides));
+  storage.set(key, JSON.stringify(map));
 }
 ```
 
-Building the map before releasing the old bindings leaves the previous
-shortcuts in place when the new overrides are rejected.
+[`KeyBindingSettings`](./key-binding-settings.md) holds the current map, saves
+each new one and emits it, and its `bind()` does this rebinding for you.
 
 `KEY_CODES` lists every key code a chord accepts, for a settings screen that
 offers them.
