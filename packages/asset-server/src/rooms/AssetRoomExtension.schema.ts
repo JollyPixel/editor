@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
+  MessageProtocol,
   serverMessageProtocol,
-  type MessageProtocol,
   type Schema
 } from "@jolly-pixel/network";
 import * as z from "zod/mini";
@@ -29,14 +29,35 @@ export const assetRoomResumeSchema = z.object({
 
 export function assetRoomOutboundProtocol(
   command: MessageProtocol,
-  snapshot: Schema
+  snapshot: Schema,
+  relay: readonly Schema[] = []
 ): MessageProtocol {
   return serverMessageProtocol({
     command,
     snapshot,
     notices: [
       kAssetRoomDeletedSchema,
-      kAssetRoomRejectedSchema
+      kAssetRoomRejectedSchema,
+      ...relay
     ]
   });
+}
+
+export function assetRoomInboundProtocol(
+  command: MessageProtocol,
+  relay: readonly Schema[]
+): MessageProtocol {
+  if (relay.length === 0) {
+    return command;
+  }
+
+  return new MessageProtocol(
+    z.union([
+      ...command.variants.map(({ schema }) => schema),
+      ...relay
+    ]),
+    {
+      discriminator: command.discriminator
+    }
+  );
 }

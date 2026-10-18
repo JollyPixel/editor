@@ -3,152 +3,18 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import * as EventStore from "@jolly-pixel/event-store";
-import { Server, type ServerConnection } from "@jolly-pixel/network";
+import * as z from "zod/mini";
 import { AssetRoom } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
+import type { AssetRelay } from "#src/index.ts";
 import {
-  AssetTags,
-  CatalogProjection,
-  registerAssetRooms,
-  type AssetKindHandler
-} from "#src/index.ts";
-import { syncHarness, type SyncHarness } from "../helpers/backend.ts";
-import {
-  counterHandler,
   liveCounterHandler,
-  COUNTER_INCREMENTED,
-  type CounterState
+  relayCounterHandler,
+  COUNTER_INCREMENTED
 } from "../helpers/kinds.ts";
-import { bytes } from "../helpers/bytes.ts";
-import { recordingLogger } from "../helpers/logger.ts";
-import { recordingClient, type RecordingClient } from "../helpers/rooms.ts";
-
-// CONSTANTS
-const kActor: EventStore.Actor = {
-  type: "user",
-  id: "alice"
-};
-
-type CounterKind = "live" | "plain";
-
-const counterKinds: Record<CounterKind, () => AssetKindHandler<CounterState>> = {
-  live: () => liveCounterHandler({ delay: 0, maxDelay: 0 }),
-  plain: () => counterHandler()
-};
-
-interface RoomHarness extends AsyncDisposable {
-  readonly sync: SyncHarness;
-  readonly server: Server;
-  readonly catalog: CatalogProjection;
-  readonly tags: AssetTags;
-  readonly assetId: string;
-  readonly clients: Map<string, RecordingClient>;
-  readonly refusals: string[];
-  join(clientId: string, room?: string): Promise<ServerConnection>;
-  send(clientId: string, payload: unknown): Promise<void>;
-}
-
-interface RoomHarnessOptions {
-  graceMs?: number;
-  kind?: CounterKind;
-  handler?: AssetKindHandler<CounterState>;
-  extraHandlers?: AssetKindHandler[];
-}
-
-async function roomHarness(
-  options: RoomHarnessOptions = {}
-): Promise<RoomHarness> {
-  const { graceMs = 1_000, kind = "live" } = options;
-  const sync = await syncHarness({
-    handlers: [
-      options.handler ?? counterKinds[kind](),
-      ...options.extraHandlers ?? []
-    ],
-    snapshot: { delay: 0, maxDelay: 0 }
-  });
-
-  const created = (await sync.writer.create({
-    path: "a.counter",
-    data: bytes("0"),
-    actor: kActor
-  })).unwrap();
-  await sync.projector.flush();
-
-  const catalog = new CatalogProjection({ projector: sync.projector });
-  catalog.load();
-  catalog.start();
-
-  const server = new Server({
-    roomGraceMs: graceMs
-  });
-  const { logger, records } = recordingLogger();
-  async function flush(
-    assetId: string
-  ): Promise<void> {
-    await sync.scheduler.flush(assetId);
-    await sync.projector.flush(assetId);
-  }
-  const tags = new AssetTags({
-    eventStore: sync.eventStore,
-    projector: sync.projector,
-    writer: sync.writer,
-    flush,
-    objects: sync.objects
-  });
-  registerAssetRooms({
-    server,
-    events: sync.eventStore.writer,
-    kinds: sync.kinds,
-    catalog,
-    states: sync.states,
-    flush,
-    tags,
-    logger
-  });
-
-  const clients = new Map<string, RecordingClient>();
-  const connections = new Map<string, ServerConnection>();
-
-  return {
-    sync,
-    server,
-    catalog,
-    tags,
-    clients,
-    assetId: created.assetId,
-    get refusals() {
-      return records
-        .filter((record) => record.message === "asset room refused")
-        .map((record) => record.metadata.reason as string);
-    },
-    async join(
-      clientId,
-      room = new AssetRoom("counter", created.assetId).toString()
-    ) {
-      const handle = recordingClient(clientId);
-      clients.set(clientId, handle);
-      const connection = server.connect(handle, { subject: handle.id, role: "default" });
-      connections.set(clientId, connection);
-      await connection.receive({ room, kind: "join" });
-
-      return connection;
-    },
-    async send(clientId, payload) {
-      await connections.get(clientId)?.receive({
-        room: new AssetRoom("counter", created.assetId).toString(),
-        kind: "message",
-        payload
-      });
-    },
-    async [Symbol.asyncDispose]() {
-      await server.close();
-      catalog.close();
-      await sync[Symbol.asyncDispose]();
-    }
-  };
-}
+import type { RecordingClient } from "../helpers/rooms.ts";
+import { roomHarness } from "../helpers/rooms/roomHarness.ts";
 
 describe("registerAssetRooms — admission", () => {
   test("an unregistered kind is refused", async() => {
@@ -244,6 +110,107 @@ describe("registerAssetRooms — admission", () => {
     await harness.join("A", new AssetRoom("gauge", harness.assetId).toString());
 
     assert.deepEqual(harness.refusals, ["unknown asset"]);
+    assert.strictEqual(harness.sync.states.has(harness.assetId), false);
+  });
+});
+
+describe("registerAssetRooms — relay", () => {
+  const kNudge = z.object({
+    action: z.literal("nudge"),
+    to: z.string()
+  });
+  const kNudged = z.object({
+    type: z.literal("nudged"),
+    from: z.string()
+  });
+
+  function nudgeRelay(
+    left: string[]
+  ): AssetRelay {
+    return {
+      schemas: {
+        inbound: [kNudge],
+        outbound: [kNudged]
+      },
+      receive: (clientId, message, room) => {
+        const { to } = message as z.infer<typeof kNudge>;
+        room.sendTo(to, {
+          type: "nudged",
+          from: clientId
+        });
+      },
+      leave: (clientId) => left.push(clientId)
+    };
+  }
+
+  function payloads(
+    client: RecordingClient
+  ): unknown[] {
+    return client.received.map((envelope) => (envelope as { payload?: unknown; }).payload);
+  }
+
+  test("a relay message reaches the relay and its reply reaches the peer, outside the event log", async() => {
+    await using harness = await roomHarness({ handler: relayCounterHandler(nudgeRelay([])) });
+    await harness.join("A");
+    await harness.join("B");
+    const before = harness.sync.eventStore.reader.list(harness.assetId).length;
+
+    await harness.send("A", { action: "nudge", to: "B" });
+    await harness.send("A", { action: "nudge" });
+
+    assert.deepEqual(payloads(harness.clients.get("B")!).at(-1), {
+      type: "nudged",
+      from: "A"
+    });
+    assert.strictEqual(harness.sync.eventStore.reader.list(harness.assetId).length, before);
+    assert.strictEqual(
+      harness.clients.get("A")!.received
+        .filter((envelope) => (envelope as { kind: string; }).kind === "error").length,
+      1
+    );
+  });
+
+  test("commands still go through arbitration next to the relay", async() => {
+    await using harness = await roomHarness({ handler: relayCounterHandler(nudgeRelay([])) });
+    await harness.join("A");
+
+    await harness.send("A", { action: "increment" });
+
+    const appended = harness.sync.eventStore.reader
+      .list(harness.assetId)
+      .filter((event) => event.eventType === COUNTER_INCREMENTED);
+    assert.strictEqual(appended.length, 1);
+  });
+
+  test("a peer leaving the room leaves the relay", async() => {
+    const left: string[] = [];
+    await using harness = await roomHarness({ handler: relayCounterHandler(nudgeRelay(left)) });
+    const connection = await harness.join("A");
+    await harness.join("B");
+
+    await connection.receive({
+      room: new AssetRoom("counter", harness.assetId).toString(),
+      kind: "leave"
+    });
+
+    assert.deepEqual(left, ["A"]);
+  });
+
+  test("a relay message sharing a command tag keeps the room closed and the state released", async() => {
+    const relay = nudgeRelay([]);
+    await using harness = await roomHarness({
+      handler: relayCounterHandler({
+        ...relay,
+        schemas: {
+          ...relay.schemas,
+          inbound: [z.object({ action: z.literal("increment"), extra: z.string() })]
+        }
+      })
+    });
+
+    await harness.join("A");
+
+    assert.deepEqual(harness.clients.get("A")!.received, []);
     assert.strictEqual(harness.sync.states.has(harness.assetId), false);
   });
 });

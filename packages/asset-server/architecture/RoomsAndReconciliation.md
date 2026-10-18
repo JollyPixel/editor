@@ -34,6 +34,15 @@ The room validates and arbitrates a command, appends it, then commits and
 broadcasts it. The event store folds the command into live state. A failed
 append sends `rejected` to the sender and leaves the room state unchanged.
 
+A live protocol may also carry a `relay` for ephemeral messages that are
+neither arbitrated nor logged, such as live previews of an edit. Its
+`schemas.inbound` join the command protocol, each with its own literal tag on
+the command discriminator, and its `schemas.outbound` join the notices the room
+may send. The room hands each relay message to `receive(clientId, message,
+room)`, which forwards it with `room.sendTo` or `room.broadcast`, and calls
+`leave(clientId)` when a member disconnects. A relay tag shared with a command
+or with another relay message fails room resolution.
+
 ## Changes outside the backend
 
 An external tool can edit files in `AssetSource`. `SourceWatcher` groups

@@ -125,15 +125,22 @@ export function registerAssetRooms(
   ): Promise<RoomResolution> {
     const { assetId } = room;
     const entry = await states.acquire(assetId, room.handler.kind);
-    const extension = roomExtension(
-      room,
-      entry.state,
-      () => states.openVersion(assetId),
-      {
-        reader,
-        restore: states.takeCommandsSinceCheckpoint(assetId)
-      }
-    );
+    let extension: AssetRoomExtension;
+    try {
+      extension = roomExtension(
+        room,
+        entry.state,
+        () => states.openVersion(assetId),
+        {
+          reader,
+          restore: states.takeCommandsSinceCheckpoint(assetId)
+        }
+      );
+    }
+    catch (error) {
+      states.release(assetId);
+      throw error;
+    }
     liveRooms.set(assetId, extension);
 
     return {

@@ -1,7 +1,8 @@
 // Import Third-party Dependencies
 import type {
   Schema,
-  NetworkCommandHeader
+  NetworkCommandHeader,
+  RoomBroadcast
 } from "@jolly-pixel/network";
 
 // CONSTANTS
@@ -34,6 +35,32 @@ export interface AssetArbitration<
   commit?(version?: number): void;
 }
 
+export interface AssetRelaySchemas {
+  /**
+   * Client messages the relay receives. Each one carries a literal tag on the
+   * command protocol's discriminator that no command uses.
+   */
+  readonly inbound: readonly Schema[];
+  /**
+   * Messages the relay sends to clients, tagged by a literal `type`.
+   */
+  readonly outbound: readonly Schema[];
+}
+
+export interface AssetRelay {
+  readonly schemas: AssetRelaySchemas;
+
+  receive(
+    clientId: string,
+    message: unknown,
+    room: RoomBroadcast
+  ): void;
+
+  leave?(
+    clientId: string
+  ): void;
+}
+
 export interface AssetLiveProtocol<
   TCommand extends AssetCommandHeader = AssetCommandHeader
 > {
@@ -60,4 +87,6 @@ export interface AssetLiveProtocol<
     command: TCommand,
     version: number
   ): void;
+
+  readonly relay?: AssetRelay;
 }

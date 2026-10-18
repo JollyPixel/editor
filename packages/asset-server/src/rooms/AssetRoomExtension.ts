@@ -12,6 +12,7 @@ import {
   ASSET_ROOM_REJECTED,
   type AssetCommandHeader,
   type AssetLiveProtocol,
+  type AssetRelaySchemas,
   type AssetRoomDeletedMessage,
   type AssetRoomRejectedMessage
 } from "../kinds/AssetLiveProtocol.ts";
@@ -21,6 +22,7 @@ import {
 } from "../events/AssetEvents.ts";
 import type { RecordedCommand } from "../state/AssetStateStore.ts";
 import {
+  assetRoomInboundProtocol,
   assetRoomOutboundProtocol,
   assetRoomResumeSchema
 } from "./AssetRoomExtension.schema.ts";
@@ -36,8 +38,18 @@ const kDefaultDepartureTimeout = 5_000;
 const kResumeParser = new network.SchemaParser(assetRoomResumeSchema);
 const kRoomProtocols = new WeakMap<
   network.MessageProtocol,
-  Map<network.Schema, network.MessageProtocols>
+  Map<network.Schema, RoomProtocolsByRelay>
 >();
+
+interface RoomProtocols extends network.MessageProtocols {
+  readonly inbound: network.MessageProtocol;
+  readonly relayEvents: ReadonlySet<string>;
+}
+
+interface RoomProtocolsByRelay {
+  plain: RoomProtocols | null;
+  readonly relays: WeakMap<AssetRelaySchemas, RoomProtocols>;
+}
 
 export interface AssetRoomExtensionOptions<TCommand = unknown> {
   reader?: EventStore.EventReader;
@@ -64,6 +76,8 @@ export class AssetRoomExtension<
   #version: () => number | undefined;
   #commands: AssetCommands<unknown, TCommand>;
   #protocol: AssetLiveProtocol<TCommand>;
+  #relayEvents: ReadonlySet<string>;
+  #discriminator: string;
   #events: EventStore.EventWriter;
   #reader: EventStore.EventReader | null;
   #resumeLimit: number;
@@ -86,10 +100,13 @@ export class AssetRoomExtension<
 
     this.id = binding.roomId;
     this.name = binding.kind;
-    this.protocols = assetRoomProtocols(
+    const protocols = assetRoomProtocols(
       commands.protocol,
       protocol
     );
+    this.protocols = protocols;
+    this.#relayEvents = protocols.relayEvents;
+    this.#discriminator = protocols.inbound.discriminator;
     this.#assetId = binding.assetId;
     this.#version = binding.version ?? (() => undefined);
     this.#commands = commands;
@@ -179,6 +196,7 @@ export class AssetRoomExtension<
   ): void {
     this.#members.delete(clientId);
     this.#acks.depart(clientId);
+    this.#protocol.relay?.leave?.(clientId);
     this.#departures.get(clientId)?.();
   }
 
@@ -188,6 +206,11 @@ export class AssetRoomExtension<
     context: network.RoomContext
   ): void {
     if (this.#deleted) {
+      return;
+    }
+    if (this.#isRelayed(message)) {
+      this.#protocol.relay?.receive(clientId, message, context.room);
+
       return;
     }
 
@@ -243,6 +266,18 @@ export class AssetRoomExtension<
         arbitration.command
       );
     }
+  }
+
+  #isRelayed(
+    message: TCommand
+  ): boolean {
+    if (this.#relayEvents.size === 0) {
+      return false;
+    }
+
+    const tag = Reflect.get(message, this.#discriminator);
+
+    return typeof tag === "string" && this.#relayEvents.has(tag);
   }
 
   #restore(
@@ -399,7 +434,7 @@ export class AssetRoomExtension<
 function assetRoomProtocols(
   command: network.MessageProtocol,
   live: AssetLiveProtocol
-): network.MessageProtocols {
+): RoomProtocols {
   const snapshot = live.snapshotSchema;
   let bySnapshot = kRoomProtocols.get(command);
   if (bySnapshot === undefined) {
@@ -407,14 +442,52 @@ function assetRoomProtocols(
     kRoomProtocols.set(command, bySnapshot);
   }
 
-  let protocols = bySnapshot.get(snapshot);
-  if (protocols === undefined) {
-    protocols = {
-      inbound: command,
-      outbound: assetRoomOutboundProtocol(command, snapshot)
+  let byRelay = bySnapshot.get(snapshot);
+  if (byRelay === undefined) {
+    byRelay = {
+      plain: null,
+      relays: new WeakMap()
     };
-    bySnapshot.set(snapshot, protocols);
+    bySnapshot.set(snapshot, byRelay);
+  }
+
+  const schemas = live.relay?.schemas;
+  const cached = schemas === undefined ? byRelay.plain : byRelay.relays.get(schemas);
+  if (cached !== undefined && cached !== null) {
+    return cached;
+  }
+
+  const protocols = buildRoomProtocols(command, snapshot, schemas);
+  if (schemas === undefined) {
+    byRelay.plain = protocols;
+  }
+  else {
+    byRelay.relays.set(schemas, protocols);
   }
 
   return protocols;
+}
+
+function buildRoomProtocols(
+  command: network.MessageProtocol,
+  snapshot: network.Schema,
+  relay: AssetRelaySchemas | undefined
+): RoomProtocols {
+  const inbound = assetRoomInboundProtocol(command, relay?.inbound ?? []);
+  const commandTags = new Set(command.variants.map(({ tag }) => tag));
+  const relayEvents = new Set<string>();
+  for (const { tag } of inbound.variants.slice(command.variants.length)) {
+    if (tag === null || commandTags.has(tag) || relayEvents.has(tag)) {
+      throw new Error(
+        `every relay message needs its own literal "${command.discriminator}", got ${tag}`
+      );
+    }
+    relayEvents.add(tag);
+  }
+
+  return {
+    inbound,
+    outbound: assetRoomOutboundProtocol(command, snapshot, relay?.outbound),
+    relayEvents
+  };
 }

@@ -3,6 +3,7 @@ import type {
   AssetCommandHeader,
   AssetCommands,
   AssetKindHandler,
+  AssetRelay,
   SnapshotPolicy
 } from "#src/index.ts";
 import {
@@ -80,6 +81,25 @@ export function liveCounterHandler(
           arbitrate: (command) => {
             return { command };
           }
+        };
+      }
+    }
+  };
+}
+
+export function relayCounterHandler(
+  relay: AssetRelay
+): AssetKindHandler<CounterState, CounterCommand> {
+  const live = liveCounterHandler({ delay: 0, maxDelay: 0 });
+
+  return {
+    ...live,
+    commands: {
+      ...kCounterCommands,
+      live: (binding) => {
+        return {
+          ...live.commands!.live!(binding),
+          relay
         };
       }
     }
