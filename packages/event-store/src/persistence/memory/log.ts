@@ -4,28 +4,67 @@ import type {
   CompactOptions,
   CompactReport,
   Event,
+  EventTag,
   ListAllOptions,
   ListFromCheckpointsOptions
 } from "../../EventStore.ts";
-import type { EventLog } from "../EventLog.ts";
+import type {
+  EventJournal,
+  EventLog
+} from "../EventLog.ts";
 import { EventLogClosedError } from "../errors/EventLogClosedError.ts";
 import { EventRecord } from "../EventRecord.ts";
 import { EventVersionConflictError } from "../errors/EventVersionConflictError.ts";
 import { MemoryTagTable } from "./tags.ts";
 
+// CONSTANTS
+const kNoJournal: EventJournal = {
+  putEvent: () => undefined,
+  deleteEvents: () => undefined,
+  putTag: () => undefined,
+  deleteTag: () => undefined,
+  close: () => undefined
+};
+
 type EventPredicate = (
   event: Event
 ) => boolean;
+
+export interface MemoryEventLogOptions {
+  events?: Iterable<Event>;
+  tags?: Iterable<EventTag>;
+  journal?: EventJournal;
+}
 
 export class MemoryEventLog implements EventLog {
   #events: Event[] = [];
   #streams = new Map<string, Event[]>();
   #nextEventId = 1;
   #versionByAsset = new Map<string, number>();
+  #journal: EventJournal;
   #closed = false;
-  readonly tags = new MemoryTagTable(
-    (assetId, eventVersion) => this.#find(assetId, eventVersion) !== undefined
-  );
+  readonly tags: MemoryTagTable;
+
+  constructor(
+    options: MemoryEventLogOptions = {}
+  ) {
+    this.#journal = options.journal ?? kNoJournal;
+    this.tags = new MemoryTagTable(
+      (assetId, eventVersion) => this.#find(assetId, eventVersion) !== undefined,
+      this.#journal,
+      options.tags
+    );
+    for (const event of options.events ?? []) {
+      this.#events.push(event);
+      this.#nextEventId = Math.max(this.#nextEventId, event.eventId + 1);
+      this.#versionByAsset.set(
+        event.assetId,
+        Math.max(this.#versionByAsset.get(event.assetId) ?? 0, event.eventVersion)
+      );
+    }
+    this.#events.sort((left, right) => left.eventId - right.eventId);
+    this.#reindex();
+  }
 
   insert(
     input: AppendInput
@@ -48,11 +87,11 @@ export class MemoryEventLog implements EventLog {
       eventId: this.#nextEventId,
       eventVersion: head + 1
     };
+    const stored = record.toEvent(position);
+    this.#journal.putEvent(stored);
 
     this.#nextEventId++;
     this.#versionByAsset.set(assetId, position.eventVersion);
-
-    const stored = record.toEvent(position);
     this.#events.push(stored);
     this.#stream(assetId).push(stored);
 
@@ -130,16 +169,22 @@ export class MemoryEventLog implements EventLog {
       options.assetId
     );
     const tagged = this.tags.versionsByAsset();
-    const before = this.#events.length;
+    function kept(
+      event: Event
+    ): boolean {
+      return event.eventId >= (heads.get(event.assetId) ?? 0) ||
+        tagged.get(event.assetId)?.has(event.eventVersion) === true;
+    }
 
-    this.#events = this.#events.filter(
-      (event) => event.eventId >= (heads.get(event.assetId) ?? 0) ||
-        tagged.get(event.assetId)?.has(event.eventVersion) === true
-    );
-    this.#reindex();
+    const removed = this.#events.filter((event) => !kept(event));
+    if (removed.length > 0) {
+      this.#journal.deleteEvents(removed);
+      this.#events = this.#events.filter(kept);
+      this.#reindex();
+    }
 
     return {
-      removed: before - this.#events.length,
+      removed: removed.length,
       assets: heads.size
     };
   }
@@ -151,6 +196,7 @@ export class MemoryEventLog implements EventLog {
     this.#versionByAsset.clear();
     this.#nextEventId = 1;
     this.#closed = true;
+    this.#journal.close();
   }
 
   #find(

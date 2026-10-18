@@ -821,6 +821,9 @@ importers:
       '@jolly-pixel/bench':
         specifier: workspace:*
         version: link:../bench
+      fake-indexeddb:
+        specifier: 6.2.5
+        version: 6.2.5
 
   packages/history:
     dependencies:

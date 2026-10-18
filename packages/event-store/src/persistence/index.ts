@@ -4,9 +4,18 @@ import type {
   TypedEventStore
 } from "../EventStore.ts";
 import { createMemoryEventStore } from "./memory/index.ts";
+import {
+  createIndexedDbEventStore,
+  destroyIndexedDbEventStore
+} from "./indexeddb/index.ts";
+
+export type { IndexedDbEventStoreOptions } from "./indexeddb/index.ts";
 
 export const persistence = {
   memory: createMemoryEventStore,
+  indexeddb: Object.assign(createIndexedDbEventStore, {
+    destroy: destroyIndexedDbEventStore
+  }),
   sqlite: async<
     TMap extends EventDataMap = EventDataMap
   >(

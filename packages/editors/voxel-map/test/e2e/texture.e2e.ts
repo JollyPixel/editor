@@ -39,7 +39,7 @@ test("the texture follows the selected block", async({ map, page }) => {
 test("texture edits reach a peer", async({ map, peerMap }) => {
   test.slow();
   await peerMap.panes.open("Paint");
-  const texel = await map.texture.blockTileCenter(2);
+  const texel = await map.texture.blockTileCenter(18);
   await expect.poll(() => peerMap.texture.pixelAlpha(texel)).toBe(255);
 
   await map.texture.selectMode("Erase");

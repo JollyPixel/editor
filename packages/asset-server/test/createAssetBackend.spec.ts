@@ -114,6 +114,54 @@ describe("createAssetBackend — reconcile", () => {
   });
 });
 
+describe("createAssetBackend — projection state", () => {
+  test("a new event log ignores the checkpoints of the previous one", async() => {
+    const source = new MemoryAssetSource();
+    const actor: EventStore.Actor = {
+      type: "user",
+      id: "tester"
+    };
+    function open(): Promise<AssetBackend> {
+      return createAssetBackend({
+        source,
+        eventStore: EventStore.persistence.memory(),
+        watch: false
+      });
+    }
+
+    const first = await open();
+    await first.writer.create({
+      path: "a.png",
+      data: bytes("first"),
+      assetId: "a1",
+      actor
+    });
+    for (const revision of ["two", "three", "four"]) {
+      await first.writer.update({
+        assetId: "a1",
+        data: bytes(revision),
+        actor
+      });
+    }
+    await first.writer.remove({
+      assetId: "a1",
+      actor
+    });
+    await first.close();
+
+    await using second = await open();
+    await second.writer.create({
+      path: "a.png",
+      data: bytes("again"),
+      assetId: "a1",
+      actor
+    });
+    await second.flush();
+
+    assert.deepEqual(await source.read("a.png"), bytes("again"));
+  });
+});
+
 describe("createAssetBackend — append errors", () => {
   test("leaves a failed conditional append to the appender", async() => {
     const { logger, records } = recordingLogger();

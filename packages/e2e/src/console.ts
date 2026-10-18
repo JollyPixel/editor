@@ -25,6 +25,7 @@ export class CommandConsole {
 
   async close(): Promise<void> {
     await this.#page.keyboard.press("Escape");
+    await expect(this.prompt).toBeHidden();
   }
 
   async submit(

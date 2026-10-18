@@ -7,6 +7,7 @@ import type { PixelDrawPanel } from "@jolly-pixel/editor.pixel-art";
 import {
   buttonGroup,
   dialog,
+  measureBox,
   textField
 } from "@jolly-pixel/e2e";
 
@@ -18,6 +19,7 @@ export interface TexturePoint {
 export class TextureEditor {
   readonly host: Locator;
   readonly panel: Locator;
+  readonly canvasHost: Locator;
   readonly accessBadge: Locator;
   readonly addBlocksetButton: Locator;
   readonly #page: Page;
@@ -28,6 +30,7 @@ export class TextureEditor {
     this.#page = page;
     this.host = page.locator("texture-editor");
     this.panel = this.host.locator("pixel-draw-panel");
+    this.canvasHost = this.panel.locator("[part~='canvas-host']");
     this.accessBadge = this.panel.locator("[part=access-badge]");
     this.addBlocksetButton = this.host.getByRole("button", { name: "Add blockset" });
   }
@@ -81,10 +84,13 @@ export class TextureEditor {
         canvasManager.canvas().getBoundingClientRect()
       );
     }, point);
-    const { mouse } = this.#page;
-    await mouse.move(screen.x, screen.y);
-    await mouse.down();
-    await mouse.up();
+    const box = await measureBox(this.canvasHost);
+    await this.canvasHost.click({
+      position: {
+        x: screen.x - box.x,
+        y: screen.y - box.y
+      }
+    });
   }
 
   blockTileCenter(

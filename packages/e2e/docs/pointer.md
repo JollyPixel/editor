@@ -18,3 +18,16 @@ Geometry and pointer helpers built on a `Locator`'s bounding box.
 pointer step. Editors sample input once per frame, so they pass
 `settle: nextFrames` ([editor navigation](./editor-navigation.md#frames)) to
 hold the button across frames.
+
+Raw mouse presses skip Playwright's actionability checks, so an element
+covering the point takes the press without any error. Pass `target`, a
+`Locator`, to reach the first point with `target.hover()` instead: Playwright
+scrolls `target` into view and waits until it receives pointer events at that
+point, or fails naming the element on top.
+
+```ts
+await pressAt(page, [rowCenter, cellTop], {
+  settle: nextFrames,
+  target: templateRow
+});
+```

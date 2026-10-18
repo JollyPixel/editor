@@ -46,7 +46,7 @@ export function defineE2EConfig(
     retries: ci ? 1 : 0,
     use: {
       baseURL: baseUrl(port),
-      trace: ci ? "on-first-retry" : "retain-on-failure",
+      trace: ci ? "on-first-retry" : "off",
       ...(viewport === undefined ? {} : { viewport }),
       ...(reducedMotion === undefined ? {} : { reducedMotion })
     },

@@ -3,7 +3,10 @@ import type {
   EventTag,
   EventTagInput
 } from "../../EventStore.ts";
-import type { TagLog } from "../EventLog.ts";
+import type {
+  EventJournal,
+  TagLog
+} from "../EventLog.ts";
 import { TagRecord } from "../TagRecord.ts";
 import { EventLogClosedError } from "../errors/EventLogClosedError.ts";
 import { EventTagConflictError } from "../errors/EventTagConflictError.ts";
@@ -17,12 +20,19 @@ export type EventLookup = (
 export class MemoryTagTable implements TagLog {
   #tags = new Map<string, EventTag>();
   #holds: EventLookup;
+  #journal: EventJournal;
   #closed = false;
 
   constructor(
-    holds: EventLookup
+    holds: EventLookup,
+    journal: EventJournal,
+    tags: Iterable<EventTag> = []
   ) {
     this.#holds = holds;
+    this.#journal = journal;
+    for (const tag of tags) {
+      this.#tags.set(tagKey(tag.assetId, tag.name), tag);
+    }
   }
 
   insert(
@@ -39,7 +49,9 @@ export class MemoryTagTable implements TagLog {
     if (this.#tags.has(key)) {
       throw new EventTagConflictError(record.assetId, record.name);
     }
-    this.#tags.set(key, record.toEventTag());
+    const tag = record.toEventTag();
+    this.#journal.putTag(tag);
+    this.#tags.set(key, tag);
 
     return record.toEventTag();
   }
@@ -76,7 +88,13 @@ export class MemoryTagTable implements TagLog {
   ): boolean {
     this.#assertOpen();
 
-    return this.#tags.delete(tagKey(assetId, name));
+    const key = tagKey(assetId, name);
+    if (!this.#tags.has(key)) {
+      return false;
+    }
+    this.#journal.deleteTag(assetId, name);
+
+    return this.#tags.delete(key);
   }
 
   versionsByAsset(): Map<string, Set<number>> {

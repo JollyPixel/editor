@@ -39,9 +39,10 @@ spread it to override anything else.
 | `viewport` | Playwright's | |
 | `reuseExistingServer` | `!CI` | |
 
-Locally a failed test keeps its trace. On CI a failed test retries once, and
-only the retry records a trace: tracing slows a test enough to hide races, so
-the first attempt runs at full speed.
+Tracing is off locally: recording every test made the voxel-map suite about
+30% slower. Rerun a failure with `--trace=on` to get its trace. On CI a failed
+test retries once, and only the retry records a trace: tracing slows a test
+enough to hide races, so the first attempt runs at full speed.
 
 ## Ports
 

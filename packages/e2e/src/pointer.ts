@@ -18,6 +18,7 @@ export type MouseButton = "left" | "right" | "middle";
 export interface PressOptions {
   button?: MouseButton;
   settle?: (page: Page) => Promise<void>;
+  target?: Locator;
 }
 
 export async function measureBox(
@@ -118,14 +119,26 @@ export async function pressAt(
 ): Promise<void> {
   const {
     button = "left",
-    settle = async() => undefined
+    settle = async() => undefined,
+    target
   } = options;
   const [first, ...rest] = points;
   if (first === undefined) {
     return;
   }
 
-  await page.mouse.move(first.x, first.y);
+  if (target === undefined) {
+    await page.mouse.move(first.x, first.y);
+  }
+  else {
+    const box = await measureBox(target);
+    await target.hover({
+      position: {
+        x: first.x - box.x,
+        y: first.y - box.y
+      }
+    });
+  }
   await settle(page);
   await page.mouse.down({ button });
   await settle(page);

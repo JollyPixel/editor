@@ -199,6 +199,7 @@ flowchart TB
 - The workspace runs the asset back-end in the page, so session and leases work unchanged.
 - `./offline` is a separate entry, loaded only when needed.
 - With IndexedDB, one tab holds the lock; other tabs reach it over a BroadcastChannel.
+- With IndexedDB, the event log is stored too, in its own database, so edits outlive a reload before their snapshot.
 - Only the owner tab loads the back-end and the editor's handlers and seed.
 - Without Web Locks the shared opener falls back to memory storage.
 - A `GuestWorkspace` only needs a `ChannelTransport`: follower tabs build it on a BroadcastChannel, peer guests on a `DataChannelPort`.

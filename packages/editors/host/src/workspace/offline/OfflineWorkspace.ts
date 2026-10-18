@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import {
   createAssetBackend,
-  PROJECTION_STATE_PATH,
   seedAssetSource,
   silentLogger,
   type AssetBackend,
@@ -49,6 +48,7 @@ const kPersistentSnapshotPolicy: SnapshotPolicy = {
   delay: 500,
   maxDelay: 5_000
 };
+const kEventLogDatabasePrefix = "jolly-events:";
 
 export type OfflineStorage = "memory" | "indexeddb";
 
@@ -130,6 +130,7 @@ export class OfflineWorkspace implements StandaloneWorkspace {
     auth?: AuthenticationProvider
   ): Promise<OfflineWorkspace> {
     const { source, storage, release } = opened;
+    const persistent = storage === "indexeddb";
 
     let eventStore: EventStore.TypedEventStore<AssetEventDataMap> | undefined;
     let backend: AssetBackend | undefined;
@@ -140,7 +141,11 @@ export class OfflineWorkspace implements StandaloneWorkspace {
         seed,
         backend: tuning = {}
       } = await project();
-      await source.delete(PROJECTION_STATE_PATH);
+      eventStore = persistent ?
+        await EventStore.persistence.indexeddb<AssetEventDataMap>({
+          name: `${kEventLogDatabasePrefix}${databaseName}`
+        }) :
+        EventStore.persistence.memory<AssetEventDataMap>();
       if (seed !== undefined && (await source.list()).length === 0) {
         await seedAssetSource(
           source,
@@ -149,14 +154,15 @@ export class OfflineWorkspace implements StandaloneWorkspace {
         );
       }
 
-      eventStore = EventStore.persistence.memory<AssetEventDataMap>();
       backend = await createAssetBackend({
         ...tuning,
         source,
         eventStore,
         handlers,
         snapshot: tuning.snapshot ??
-          (storage === "indexeddb" ? kPersistentSnapshotPolicy : undefined),
+          (persistent ? kPersistentSnapshotPolicy : undefined),
+        compactOnOpen: tuning.compactOnOpen ?? persistent,
+        compactOnSnapshot: tuning.compactOnSnapshot ?? persistent,
         watch: false
       });
       server = new Server({
@@ -307,9 +313,14 @@ export class OfflineWorkspace implements StandaloneWorkspace {
   async reset(): Promise<void> {
     await this.close();
     if (this.persistent && this.#databaseName !== undefined) {
-      await IndexedDbAssetSource.destroy({
-        name: this.#databaseName
-      });
+      await Promise.all([
+        IndexedDbAssetSource.destroy({
+          name: this.#databaseName
+        }),
+        EventStore.persistence.indexeddb.destroy({
+          name: `${kEventLogDatabasePrefix}${this.#databaseName}`
+        })
+      ]);
     }
   }
 

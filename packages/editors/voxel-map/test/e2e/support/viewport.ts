@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import type { Page } from "@playwright/test";
+import type {
+  Locator,
+  Page
+} from "@playwright/test";
 import type { Vector3Like } from "three";
 import {
   pressAt,
@@ -33,12 +36,14 @@ export interface Cell {
 }
 
 export class Viewport {
+  readonly canvas: Locator;
   readonly #page: Page;
 
   constructor(
     page: Page
   ) {
     this.#page = page;
+    this.canvas = page.locator("#game-container > canvas");
   }
 
   async pinCamera(): Promise<void> {
@@ -150,7 +155,8 @@ export class Viewport {
   ): Promise<void> {
     await pressAt(this.#page, points, {
       button,
-      settle: nextFrames
+      settle: nextFrames,
+      target: this.canvas
     });
   }
 

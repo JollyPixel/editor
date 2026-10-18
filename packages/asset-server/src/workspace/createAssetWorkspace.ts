@@ -19,10 +19,7 @@ import {
 // Import Internal Dependencies
 import { EVENTS_DB_PATH } from "../stateDirectory.ts";
 import type { AssetKindHandler } from "../kinds/AssetKindHandler.ts";
-import {
-  ASSET_CHECKPOINT_EVENT_TYPES,
-  type AssetEventDataMap
-} from "../events/AssetEvents.ts";
+import type { AssetEventDataMap } from "../events/AssetEvents.ts";
 import {
   createAssetBackend,
   type AssetBackend,
@@ -136,16 +133,8 @@ export async function createAssetWorkspace(
       path.join(root, EVENTS_DB_PATH)
     ));
 
-  if (compactOnOpen) {
-    const report = eventStore.compact({
-      checkpointEventTypes: ASSET_CHECKPOINT_EVENT_TYPES
-    });
-    logger
-      .withMetadata(report)
-      .debug("event log compacted");
-  }
-
   const backend = await createAssetBackend({
+    compactOnOpen,
     compactOnSnapshot: compactOnOpen,
     ...tuning,
     source,
