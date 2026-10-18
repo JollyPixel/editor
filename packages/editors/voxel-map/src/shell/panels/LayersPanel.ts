@@ -4,10 +4,15 @@ import {
   css,
   nothing
 } from "lit";
-import { customElement } from "lit/decorators.js";
+import {
+  customElement,
+  query
+} from "lit/decorators.js";
 
 // Import Internal Dependencies
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
+import { LayerTemplateDrop } from "../../features/templates/LayerTemplateDrop.ts";
+import type { TemplateManager } from "../../features/templates/TemplateManager.ts";
 import "../../features/layers/LayerManager.ts";
 import "../../features/templates/TemplateManager.ts";
 import "../../features/templates/TemplatePreview.ts";
@@ -37,6 +42,22 @@ export class LayersPanel extends WorkspaceElement {
     }
   `;
 
+  @query("template-manager")
+  private declare _templates: TemplateManager | null;
+
+  readonly #templateDrop = new LayerTemplateDrop({
+    zone: {
+      bounds: () => this._templates?.getBoundingClientRect() ?? null,
+      highlight: (active) => {
+        if (this._templates !== null) {
+          this._templates.dropTarget = active;
+        }
+      }
+    },
+    editable: () => this.workspace?.templates.editable === true,
+    save: (layerName) => this.workspace?.templates.saveLayer(layerName)
+  });
+
   override render() {
     const workspace = this.workspace;
     if (workspace === null) {
@@ -45,7 +66,10 @@ export class LayersPanel extends WorkspaceElement {
 
     return html`
       <div class="managers">
-        <layer-manager .workspace=${workspace}></layer-manager>
+        <layer-manager
+          .workspace=${workspace}
+          .dragOut=${this.#templateDrop}
+        ></layer-manager>
         <template-manager .workspace=${workspace}></template-manager>
       </div>
       <template-preview .workspace=${workspace}></template-preview>

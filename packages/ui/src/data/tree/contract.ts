@@ -115,6 +115,18 @@ export type TreeDropAccept = (
   detail: JollyReparentDetail
 ) => boolean;
 
+export interface TreeDragOutPoint {
+  movedIds: readonly string[];
+  clientX: number;
+  clientY: number;
+}
+
+export interface TreeDragOut {
+  over(drag: TreeDragOutPoint): boolean;
+  drop(drag: TreeDragOutPoint): void;
+  leave(): void;
+}
+
 export interface DataEventMap {
   "jolly-select": JollySelectDetail;
   "jolly-activate": JollyActivateDetail;

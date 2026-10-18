@@ -68,7 +68,7 @@ export const basics = new Tour({
       side: "right",
       title: "Layers",
       body: "A map is split into layers. The brush paints on the selected voxel layer.\n\n" +
-        "Add, clone or merge layers from the buttons above the list.",
+        "Right-click a layer to frame, duplicate, merge or isolate it.",
       enter: showPane("layers")
     },
     {
@@ -76,7 +76,7 @@ export const basics = new Tour({
       target: ["layers-panel", "template-manager"],
       side: "right",
       title: "Templates",
-      body: "Save a voxel layer as a template, then place it again anywhere in the map.",
+      body: "Drag a voxel layer here to save it as a template, then place it again anywhere in the map.",
       enter: showPane("layers")
     },
     {

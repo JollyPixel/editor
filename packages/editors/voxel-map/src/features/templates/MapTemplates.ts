@@ -5,7 +5,8 @@ import type {
 } from "@jolly-pixel/voxel.renderer";
 import {
   showConfirm,
-  showPrompt
+  showPrompt,
+  type LogQueue
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -19,6 +20,7 @@ export interface MapTemplatesOptions {
   world: TemplateWorld;
   mapDocument: MapDocumentSignals;
   access: MapAccessSource;
+  log: Pick<LogQueue, "push">;
   store?: TemplateStore;
   confirm?: typeof showConfirm;
   prompt?: typeof showPrompt;
@@ -29,6 +31,7 @@ export class MapTemplates {
 
   readonly #world: TemplateWorld;
   readonly #access: MapAccessSource;
+  readonly #log: Pick<LogQueue, "push">;
   readonly #confirm: typeof showConfirm;
   readonly #prompt: typeof showPrompt;
   readonly #unsubscribe: () => void;
@@ -38,6 +41,7 @@ export class MapTemplates {
   ) {
     this.#world = options.world;
     this.#access = options.access;
+    this.#log = options.log;
     this.store = options.store ?? new TemplateStore();
     this.#confirm = options.confirm ?? showConfirm;
     this.#prompt = options.prompt ?? showPrompt;
@@ -62,11 +66,16 @@ export class MapTemplates {
       return null;
     }
 
-    return this.#select(
+    const templateId = this.#select(
       this.#world.templates.createFromLayer(layerName, {
         name: layerName
       })
     );
+    if (templateId === null) {
+      this.#log.push(`${layerName} has no voxels to save as a template`);
+    }
+
+    return templateId;
   }
 
   async saveSnapshot(

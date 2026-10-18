@@ -4,7 +4,10 @@ import type {
   VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 import type { EditorArchives } from "@jolly-pixel/editor.host";
-import type { Vector3Like } from "three";
+import type {
+  Box3,
+  Vector3Like
+} from "three";
 
 // Import Internal Dependencies
 import type { MapDocument } from "../document/MapDocument.ts";
@@ -46,4 +49,5 @@ export interface VoxelMapWorkspace {
   ): Vector3Like | null;
   loadWorld(data: VoxelWorldJSON): void;
   teleportToPeer(clientId: string): void;
+  frame(bounds: Box3): void;
 }

@@ -2,6 +2,7 @@
 import { html, css, nothing } from "lit";
 import {
   customElement,
+  property,
   state
 } from "lit/decorators.js";
 import {
@@ -35,11 +36,23 @@ export class TemplateManager extends WorkspaceElement {
         display: block;
       }
 
+      :host([drop-target]) {
+        outline: 1px solid var(--jolly-accent-fill);
+        outline-offset: -1px;
+      }
+
       .tree-host {
         max-height: 160px;
       }
     `
   ];
+
+  @property({
+    type: Boolean,
+    reflect: true,
+    attribute: "drop-target"
+  })
+  declare dropTarget: boolean;
 
   @state()
   private declare _nodes: TreeNode<string>[];
@@ -47,28 +60,23 @@ export class TemplateManager extends WorkspaceElement {
   @state()
   private declare _selected: string | null;
 
-  @state()
-  private declare _canSave: boolean;
-
   #drag: PointerDragSessionHandle | null = null;
 
   constructor() {
     super();
+    this.dropTarget = false;
     this._nodes = [];
     this._selected = null;
-    this._canSave = false;
   }
 
   protected override watchWorkspace(
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
     const { templates, mapDocument } = workspace;
-    const { selection } = workspace.state;
     const refresh = (): void => {
       this._nodes = templateTreeNodes(workspace.mapDocument.world.templates);
     };
     this._selected = templates.store.selected;
-    this._canSave = selection.voxelLayer !== null;
     refresh();
 
     return [
@@ -76,9 +84,6 @@ export class TemplateManager extends WorkspaceElement {
       mapDocument.subscribe("reset", refresh),
       templates.store.subscribe("selectionChange", (templateId) => {
         this._selected = templateId;
-      }),
-      selection.subscribe("change", () => {
-        this._canSave = selection.voxelLayer !== null;
       }),
       workspace.access.subscribe("change", () => this.requestUpdate()),
       () => this.#drag?.cancel()
@@ -99,15 +104,6 @@ export class TemplateManager extends WorkspaceElement {
         label="Templates"
         storage-key="voxel-map:folder:templates"
       >
-        <jolly-button
-          slot="actions"
-          icon="template-save"
-          icon-only
-          label="Save layer as template"
-          title="Save the selected voxel layer as a template"
-          ?disabled=${!templates.editable || !this._canSave}
-          @click=${this.#saveTemplate}
-        ></jolly-button>
         <jolly-button
           slot="actions"
           icon="template-place"
@@ -144,7 +140,7 @@ export class TemplateManager extends WorkspaceElement {
   ) {
     if (this._nodes.length === 0) {
       return html`<p class="hint">
-        Save a voxel layer or a selection to create a template.
+        Drop a voxel layer here or save a selection to create a template.
       </p>`;
     }
 
@@ -160,19 +156,6 @@ export class TemplateManager extends WorkspaceElement {
       ></jolly-tree>
     `;
   }
-
-  readonly #saveTemplate = (): void => {
-    const workspace = this.workspace;
-    const layerName = workspace?.state.selection.voxelLayer ?? null;
-    if (workspace === null || layerName === null) {
-      return;
-    }
-
-    const templateId = workspace.templates.saveLayer(layerName);
-    if (templateId === null) {
-      workspace.state.log.push(`${layerName} has no voxels to save as a template`);
-    }
-  };
 
   readonly #place = (): void => {
     const workspace = this.workspace;

@@ -70,6 +70,20 @@ test("a saved layer is placed, moved, turned and committed as one undo step", as
   expect(await world.blocks(original)).toEqual([1, 1, 1]);
 });
 
+test("dropping a voxel layer on the templates saves it without moving the layer", async({ map }) => {
+  const { layers, templates } = map;
+  await layers.add("Voxel", "Top");
+  await map.world.seed([{ x: 0, y: 0, z: 0, blockId: 1 }], "Top");
+
+  await layers.dragOnto(layers.row("Top"), templates.root);
+
+  await expect.poll(() => templateNames(map)).toEqual(["Top"]);
+  await expect(templates.row).toHaveAttribute("aria-selected", "true");
+  await expect(templates.root).not.toHaveAttribute("drop-target");
+  await expect(layers.rows.nth(0)).toHaveAttribute("data-id", "voxel:Top");
+  await expect(layers.rows.nth(1)).toHaveAttribute("data-id", "voxel:Ground");
+});
+
 test("Escape cancels a placement and leaves the world untouched", async({ map, page }) => {
   const { placement, templates } = map;
   await seedCell(map);

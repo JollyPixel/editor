@@ -21,7 +21,7 @@ export class TemplateList {
   readonly root: Locator;
   readonly row: Locator;
   readonly renameBox: Locator;
-  readonly saveButton: Locator;
+  readonly selectedLayer: Locator;
   readonly placeButton: Locator;
   readonly deleteButton: Locator;
   readonly preview: Locator;
@@ -40,7 +40,8 @@ export class TemplateList {
     this.root = page.locator("template-manager");
     this.row = this.root.getByRole("treeitem");
     this.renameBox = this.root.getByRole("textbox", { name: "Rename" });
-    this.saveButton = this.root.getByRole("button", { name: "Save layer as template" });
+    this.selectedLayer = page.locator("layer-manager")
+      .locator("[role=\"treeitem\"][aria-selected=\"true\"]");
     this.placeButton = this.root.getByRole("button", { name: "Place template" });
     this.deleteButton = this.root.getByRole("button", { name: "Delete template" });
     this.preview = page.locator("template-preview");
@@ -50,7 +51,10 @@ export class TemplateList {
   }
 
   async saveLayer(): Promise<void> {
-    await this.saveButton.click();
+    await this.selectedLayer.locator(".label").click({ button: "right" });
+    await this.#page.getByRole("menu", { name: "Layer actions" })
+      .getByRole("menuitem", { name: "Save as template" })
+      .click();
   }
 
   async place(): Promise<void> {

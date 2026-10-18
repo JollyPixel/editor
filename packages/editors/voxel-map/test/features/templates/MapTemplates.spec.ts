@@ -10,6 +10,7 @@ import {
   VoxelTemplate,
   VoxelWorld
 } from "@jolly-pixel/voxel.renderer";
+import { LogQueue } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { MapTemplates } from "../../../src/features/templates/MapTemplates.ts";
@@ -23,6 +24,7 @@ function setup(
 ) {
   const world = new VoxelWorld();
   const prompts: string[] = [];
+  const log = new LogQueue();
   const templates = new MapTemplates({
     world,
     mapDocument: createMapDocument(world),
@@ -32,7 +34,8 @@ function setup(
 
       return Promise.resolve(answer());
     },
-    access
+    access,
+    log
   });
   world.addLayer("Draft");
   world.addLayer("Ground");
@@ -50,7 +53,8 @@ function setup(
   return {
     world,
     templates,
-    prompts
+    prompts,
+    log
   };
 }
 
@@ -75,11 +79,15 @@ describe("MapTemplates.saveLayer", () => {
     assert.equal(world.templates.get(id!)?.voxelCount, 2);
   });
 
-  test("returns null for an empty layer", () => {
-    const { world, templates } = setup();
+  test("returns null and reports an empty layer", () => {
+    const { world, templates, log } = setup();
 
     assert.equal(templates.saveLayer("Ground"), null);
     assert.equal(world.templates.size, 0);
+    assert.deepEqual(
+      log.entries.map((entry) => entry.content),
+      ["Ground has no voxels to save as a template"]
+    );
   });
 });
 
@@ -139,7 +147,8 @@ describe("MapTemplates.remove", () => {
 
         return Promise.resolve(true);
       },
-      access: mapAccess()
+      access: mapAccess(),
+      log: new LogQueue()
     });
     const id = templates.saveLayer("Draft")!;
 

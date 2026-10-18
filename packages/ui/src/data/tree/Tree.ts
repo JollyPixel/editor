@@ -54,6 +54,7 @@ import { TreeRenameController } from "./TreeRenameController.ts";
 import { TreeSelectionController } from "./TreeSelectionController.ts";
 import {
   emitDataEvent,
+  type TreeDragOut,
   type TreeDropAccept,
   type TreeIndentGuidesScope,
   type TreeNode,
@@ -155,6 +156,9 @@ export class Tree<TData = unknown> extends LitElement
   @property({ attribute: false })
   declare acceptDrop: TreeDropAccept | null;
 
+  @property({ attribute: false })
+  declare dragOut: TreeDragOut | null;
+
   @property({ type: Boolean, reflect: true })
   declare virtual: boolean;
 
@@ -214,6 +218,7 @@ export class Tree<TData = unknown> extends LitElement
     this.toggleStyle = "chevron";
     this.swatchPosition = "end";
     this.acceptDrop = null;
+    this.dragOut = null;
     this.virtual = false;
     this.validateRename = null;
     this.filter = "";
@@ -230,6 +235,7 @@ export class Tree<TData = unknown> extends LitElement
       reorderable: () => this.#reorderable,
       rowDrag: () => this.rowDrag && this.#filtered.query.isEmpty,
       acceptDrop: () => this.acceptDrop,
+      dragOut: () => this.dragOut,
       interaction: () => this._interaction,
       switchInteraction: (next) => {
         this._interaction = next;

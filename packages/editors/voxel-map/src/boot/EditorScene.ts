@@ -234,7 +234,8 @@ export class EditorScene extends Systems.Scene {
     const templates = new MapTemplates({
       world: view.document.world,
       mapDocument,
-      access
+      access,
+      log: state.log
     });
     const localVisibility = new LocalLayerVisibility({
       world: view.document.world,
@@ -509,7 +510,8 @@ export class EditorScene extends Systems.Scene {
         if (pose !== undefined) {
           camera.teleport(pose);
         }
-      }
+      },
+      frame: (bounds) => camera.frame(bounds)
     });
   }
 

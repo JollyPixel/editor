@@ -45,6 +45,12 @@ export class ObjectLayerRef {
     return world.objectLayers.get(this.name) !== undefined;
   }
 
+  cloneIn(
+    _world: VoxelWorld
+  ): null {
+    return null;
+  }
+
   canMoveOnto(
     _target: LayerRef,
     _where: LayerDropPosition

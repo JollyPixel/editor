@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
 
+// Import Internal Dependencies
+import type { LayerRef } from "../../state/index.ts";
+
 export type LayerVisibilityStoreEvents = {
   change: (key: string) => void;
 };
@@ -35,6 +38,30 @@ export class LayerVisibilityStore extends Emitter<LayerVisibilityStoreEvents> {
 
     this.#overrides.set(key, visible);
     this.emit("change", key);
+  }
+
+  showOnly(
+    ref: LayerRef,
+    entries: Iterable<LayerRef>
+  ): void {
+    const path = ref.kind === "object" ? [ref, ref.layer] : [ref];
+    for (const entry of entries) {
+      const onPath = path.some((step) => step.equals(entry));
+      const sibling = path.some(
+        (step) => parentName(step) === parentName(entry)
+      );
+      if (onPath || sibling) {
+        this.override(entry.key, onPath);
+      }
+    }
+  }
+
+  showAll(
+    entries: Iterable<LayerRef>
+  ): void {
+    for (const entry of entries) {
+      this.override(entry.key, true);
+    }
   }
 
   forget(
@@ -72,4 +99,10 @@ export class LayerVisibilityStore extends Emitter<LayerVisibilityStoreEvents> {
       }
     }
   }
+}
+
+function parentName(
+  ref: LayerRef
+): string | null {
+  return ref.kind === "object" ? ref.layerName : null;
 }

@@ -22,6 +22,8 @@ import {
 } from "./interaction.ts";
 import {
   emitDataEvent,
+  type TreeDragOut,
+  type TreeDragOutPoint,
   type TreeDropAccept
 } from "./contract.ts";
 import {
@@ -42,6 +44,7 @@ export interface TreeDragOptions<TData> {
   reorderable(): boolean;
   rowDrag(): boolean;
   acceptDrop(): TreeDropAccept | null;
+  dragOut(): TreeDragOut | null;
   interaction(): TreeInteraction;
   switchInteraction(next: TreeInteraction): void;
   rowsRect(): { top: number; left: number; } | undefined;
@@ -55,6 +58,7 @@ export class TreeDragController<TData> implements ReactiveController {
   #session: PointerDragSessionHandle | null = null;
   #dragSourceIds: readonly string[] | null = null;
   #dragSources: ReadonlySet<string> = new Set();
+  #outside: TreeDragOutPoint | null = null;
 
   dropIndicatorRow: DropIndicatorRow | null = null;
 
@@ -185,7 +189,9 @@ export class TreeDragController<TData> implements ReactiveController {
         });
       },
       onMove: (clientX, clientY) => {
-        this.#previewDrop(clientX, clientY, movedIds);
+        if (!this.#dragOutOver({ movedIds, clientX, clientY })) {
+          this.#previewDrop(clientX, clientY, movedIds);
+        }
       },
       onFinish: (result, started) => {
         const interaction = this.#options.interaction();
@@ -193,6 +199,7 @@ export class TreeDragController<TData> implements ReactiveController {
           interaction.preview :
           null;
         this.#session = null;
+        this.#settleDragOut(result === "commit");
         this.#options.switchInteraction(idleTreeInteraction(
           started && result === "commit"
         ));
@@ -205,6 +212,41 @@ export class TreeDragController<TData> implements ReactiveController {
         }
       }
     });
+  }
+
+  #dragOutOver(
+    point: TreeDragOutPoint
+  ): boolean {
+    const dragOut = this.#options.dragOut();
+    const claimed = dragOut?.over(point) === true;
+    if (claimed) {
+      this.#outside = point;
+      this.#showPointerPreview(null);
+    }
+    else if (this.#outside !== null) {
+      this.#outside = null;
+      dragOut?.leave();
+    }
+
+    return claimed;
+  }
+
+  #settleDragOut(
+    dropped: boolean
+  ): void {
+    const outside = this.#outside;
+    const dragOut = this.#options.dragOut();
+    this.#outside = null;
+    if (outside === null || dragOut === null) {
+      return;
+    }
+
+    if (dropped) {
+      dragOut.drop(outside);
+    }
+    else {
+      dragOut.leave();
+    }
   }
 
   #drop(

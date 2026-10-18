@@ -7,6 +7,8 @@ import {
 import {
   buttonGroup,
   dialog,
+  dragTo,
+  measureCenter,
   textField
 } from "@jolly-pixel/e2e";
 
@@ -18,8 +20,8 @@ export class LayersPane {
   readonly renameBox: Locator;
   readonly addButton: Locator;
   readonly cloneButton: Locator;
-  readonly mergeButton: Locator;
   readonly removeButton: Locator;
+  readonly menu: Locator;
   readonly panel: Locator;
   readonly properties: Locator;
   readonly rebaseButton: Locator;
@@ -35,8 +37,8 @@ export class LayersPane {
     this.renameBox = this.tree.getByRole("textbox", { name: "Rename" });
     this.addButton = this.tree.getByRole("button", { name: "Add layer" });
     this.cloneButton = this.tree.getByRole("button", { name: "Clone layer" });
-    this.mergeButton = this.tree.getByRole("button", { name: "Merge layer" });
     this.removeButton = this.tree.getByRole("button", { name: "Remove layer" });
+    this.menu = this.tree.getByRole("menu", { name: "Layer actions" });
     this.panel = page.locator("layer-panel");
     this.properties = this.panel.locator("custom-properties-editor");
     this.rebaseButton = this.panel.getByRole("button", { name: "Rebase to content origin" });
@@ -67,6 +69,28 @@ export class LayersPane {
     await textField(form, "Name").fill(name);
     await form.getByRole("button", { name: "Create" }).click();
     await expect(form).toBeHidden();
+  }
+
+  async choose(
+    row: Locator,
+    ...labels: string[]
+  ): Promise<void> {
+    await row.locator(".label").click({ button: "right" });
+    let menu = this.menu;
+    for (const label of labels) {
+      await menu.getByRole("menuitem", {
+        name: label,
+        exact: true
+      }).click();
+      menu = menu.getByRole("menu", { name: label });
+    }
+  }
+
+  async dragOnto(
+    row: Locator,
+    target: Locator
+  ): Promise<void> {
+    await dragTo(this.#page, row.locator(".label"), await measureCenter(target));
   }
 
   async rename(

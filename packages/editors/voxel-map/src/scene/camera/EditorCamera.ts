@@ -59,7 +59,7 @@ export class EditorCamera {
         focusMode: "lock",
         postProcessing: this.#postProcessing.select(false)
       });
-    controls.teleport(SpawnPose.frame([]));
+    controls.teleport(SpawnPose.frame(null));
     this.#controls = controls;
     this.#viewRay = new ViewRay({
       camera: controls.camera
@@ -139,9 +139,15 @@ export class EditorCamera {
     }
 
     this.#spawnPending = false;
+    this.frame(SpawnPose.nearestBounds(layers));
+  }
+
+  frame(
+    bounds: THREE.Box3 | null
+  ): void {
     this.#controls.exitOrbitFocus();
     this.#controls.teleport(
-      SpawnPose.frame(layers, {
+      SpawnPose.frame(bounds, {
         fov: this.camera.fov
       })
     );

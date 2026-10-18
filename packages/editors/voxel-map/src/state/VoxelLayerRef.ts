@@ -45,6 +45,14 @@ export class VoxelLayerRef {
     return world.getLayer(this.name) !== undefined;
   }
 
+  cloneIn(
+    world: VoxelWorld
+  ): VoxelLayerRef | null {
+    const clone = world.cloneLayer(this.name);
+
+    return clone === undefined ? null : new VoxelLayerRef(clone.name);
+  }
+
   canMoveOnto(
     target: LayerRef,
     where: LayerDropPosition

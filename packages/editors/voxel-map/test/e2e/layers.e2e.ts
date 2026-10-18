@@ -1,8 +1,7 @@
 // Import Third-party Dependencies
 import {
   measureBox,
-  dialog,
-  selectField
+  dialog
 } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
@@ -216,17 +215,13 @@ test("cloning copies the voxels and removing asks first", async({ map, page }) =
   expect((await voxelLayers(map)).map((layer) => layer.name)).toEqual(["Ground"]);
 });
 
-test("merging folds a layer into the chosen target", async({ map, page }) => {
+test("the row menu merges a layer into the chosen target", async({ map }) => {
   const { layers, world } = map;
   await layers.add("Voxel", "Top");
   await world.seed([{ x: 0, y: 1, z: 0, blockId: 2 }], "Top");
   await world.seed([{ x: 0, y: 0, z: 0, blockId: 1 }]);
 
-  await layers.row("Top").click();
-  await layers.mergeButton.click();
-  const form = dialog(page, "Merge layer");
-  await selectField(form, "Into").selectOption({ label: "Ground" });
-  await form.getByRole("button", { name: "Merge" }).click();
+  await layers.choose(layers.row("Top"), "Merge into", "Ground");
 
   await expect(layers.rows).toHaveCount(1);
   expect(await voxelLayers(map)).toEqual([
