@@ -146,7 +146,8 @@ export const fieldStyles = css`
   }
 
   .value input:not([type="color"]),
-  .value select {
+  .value select,
+  .value .trigger {
     flex: 1 1 auto;
     min-width: 0;
     height: var(--jolly-control-height, 20px);
@@ -162,12 +163,14 @@ export const fieldStyles = css`
   }
 
   .value input:hover:not(:disabled),
-  .value select:hover:not(:disabled) {
+  .value select:hover:not(:disabled),
+  .value .trigger:hover:not(:disabled) {
     background: var(--jolly-control-bg-hover);
   }
 
   .value input:focus,
-  .value select:focus {
+  .value select:focus,
+  .value .trigger:focus {
     background: var(--jolly-control-bg-focus);
     outline: none;
   }
@@ -178,22 +181,26 @@ export const fieldStyles = css`
   }
 
   :host([invalid]) .value input,
-  :host([invalid]) .value select {
+  :host([invalid]) .value select,
+  :host([invalid]) .value .trigger {
     background: var(--jolly-invalid-bg);
   }
 
   :host([invalid]) .value input:hover:not(:disabled),
-  :host([invalid]) .value select:hover:not(:disabled) {
+  :host([invalid]) .value select:hover:not(:disabled),
+  :host([invalid]) .value .trigger:hover:not(:disabled) {
     background: var(--jolly-invalid-bg-hover);
   }
 
   :host([invalid]) .value input:focus,
-  :host([invalid]) .value select:focus {
+  :host([invalid]) .value select:focus,
+  :host([invalid]) .value .trigger:focus {
     background: var(--jolly-invalid-bg-focus);
   }
 
   :host([readonly]) .value input,
-  :host([readonly]) .value select {
+  :host([readonly]) .value select,
+  :host([readonly]) .value .trigger {
     background: var(--jolly-control-bg-muted);
   }
 
@@ -247,7 +254,8 @@ export const fieldStyles = css`
 
   :host(:not([stacked])) .row:has(.revert) .value > input[type="text"]:first-child,
   :host(:not([stacked])) .row:has(.revert) .value > .wrap:first-child > input,
-  :host(:not([stacked])) .row:has(.revert) .value select {
+  :host(:not([stacked])) .row:has(.revert) .value select,
+  :host(:not([stacked])) .row:has(.revert) .value .trigger {
     border-start-start-radius: 0;
     border-end-start-radius: 0;
   }

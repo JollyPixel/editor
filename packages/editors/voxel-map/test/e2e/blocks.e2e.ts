@@ -234,6 +234,20 @@ test("a lone blockset leaves the blockset field disabled", async({ map }) => {
   await expect(map.blockDialog(first).disabledBlockset).toHaveCount(1);
 });
 
+test("the shape grid reshapes the block", async({ map }) => {
+  const [first] = await blockNames(map);
+
+  await map.blocks.library.edit(first);
+  const editor = map.blockDialog(first);
+  await editor.pickShape("Inner stair corner");
+
+  await expect.poll(() => map.page.evaluate(
+    () => window.voxelMapEditor!.workspace.view.document.blocks.get(1)?.shapeId
+  )).toBe("stairCornerInner");
+  await expect(editor.shape.locator(".trigger"))
+    .toHaveText("Inner stair corner");
+});
+
 test("the UV size group resizes the block tiles", async({ map }) => {
   const [first] = await blockNames(map);
 

@@ -190,6 +190,7 @@ export class BlockDialog {
   readonly alpha: Locator;
   readonly sides: Locator;
   readonly uvSizes: Locator;
+  readonly shape: Locator;
   readonly properties: Locator;
   readonly disabledBlockset: Locator;
   readonly createButton: Locator;
@@ -207,6 +208,7 @@ export class BlockDialog {
     this.alpha = buttonGroup(this.root, "Alpha");
     this.sides = buttonGroup(this.root, "Sides");
     this.uvSizes = buttonGroup(this.root, "UV size");
+    this.shape = this.root.locator("jolly-select[label='Shape']");
     this.properties = this.root.locator("custom-properties-editor");
     this.disabledBlockset = this.root.locator("jolly-select[disabled]");
     this.createButton = this.root.getByRole("button", { name: "Create" });
@@ -220,5 +222,15 @@ export class BlockDialog {
   ): Promise<void> {
     await this.title.fill(name);
     await this.title.press(commitKey);
+  }
+
+  async pickShape(
+    label: string
+  ): Promise<void> {
+    await this.shape.locator(".trigger").click();
+    await this.shape.getByRole("option", {
+      name: label,
+      exact: true
+    }).click();
   }
 }

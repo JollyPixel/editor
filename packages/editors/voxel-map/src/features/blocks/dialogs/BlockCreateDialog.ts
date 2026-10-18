@@ -21,9 +21,10 @@ import { BlockDraft } from "./BlockDraft.ts";
 import {
   blockDialogStyles,
   renderShapeColumn,
-  shapeOptions,
+  renderShapeSelect,
   blocksetOptions
 } from "./blockDialog.ts";
+import { ShapePreview } from "./ShapePreview.ts";
 import "../blockIcons.ts";
 
 @customElement("block-create-dialog")
@@ -40,6 +41,7 @@ export class BlockCreateDialog extends WorkspaceElement {
   declare private _dialog: Dialog;
 
   #previewBlock: ResolvedBlockDefinition | null = null;
+  #shapePreview = new ShapePreview(this);
 
   constructor() {
     super();
@@ -94,18 +96,18 @@ export class BlockCreateDialog extends WorkspaceElement {
               ?disabled=${writable.length <= 1}
               @jolly-change=${this.#onBlocksetChange}
             ></jolly-select>
-            <jolly-select
-              label="Shape"
-              .options=${shapeOptions(view.shapes)}
-              .value=${draft.shapeId}
-              @jolly-change=${this.#onShapeChange}
-            ></jolly-select>
+            ${renderShapeSelect({
+              shapes: view.shapes,
+              value: draft.shapeId,
+              preview: this.#shapePreview,
+              onChange: this.#onShapeChange
+            })}
           </div>
           ${renderShapeColumn({
             open: this._open,
             stage: workspace.previewStage,
             sources: workspace.blockSources,
-            block: this.#previewBlock,
+            block: this.#shapePreview.apply(this.#previewBlock),
             size: draft.size ?? blocksets.blocksetTileSize(draft.blocksetId),
             onSizeChange: this.#onSizeChange
           })}
@@ -136,11 +138,11 @@ export class BlockCreateDialog extends WorkspaceElement {
     this._draft = this._draft.with({ blocksetId: event.detail.value });
   }
 
-  #onShapeChange(
+  readonly #onShapeChange = (
     event: CustomEvent<JollyChangeDetail<BlockShapeID>>
-  ): void {
+  ): void => {
     this._draft = this._draft.with({ shapeId: event.detail.value });
-  }
+  };
 
   readonly #onSizeChange = (
     event: CustomEvent<JollyChangeDetail<number>>
@@ -149,6 +151,7 @@ export class BlockCreateDialog extends WorkspaceElement {
   };
 
   #onExited(): void {
+    this.#shapePreview.clear();
     this._open = false;
   }
 

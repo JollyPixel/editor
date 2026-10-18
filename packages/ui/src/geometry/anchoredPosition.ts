@@ -18,7 +18,7 @@ export interface AnchoredPositionOptions {
   viewport: ViewportSize;
   gap: number;
   side?: "above" | "below" | "left" | "right";
-  align?: "center" | "start";
+  align?: "center" | "start" | "end";
 }
 
 export function anchoredPosition({
@@ -57,9 +57,7 @@ function anchoredVertical({
     ? alternative + panel.height <= viewport.height
     : alternative >= 0;
   const y = !preferredFits && alternativeFits ? alternative : preferred;
-  const x = align === "center"
-    ? anchor.left + ((anchor.right - anchor.left - panel.width) / 2)
-    : anchor.left;
+  const x = alignedStart(anchor.left, anchor.right, panel.width, align);
 
   return clampToViewport({
     x,
@@ -88,9 +86,7 @@ function anchoredHorizontal({
     ? alternative + panel.width <= viewport.width
     : alternative >= 0;
   const x = !preferredFits && alternativeFits ? alternative : preferred;
-  const y = align === "center"
-    ? anchor.top + ((anchor.bottom - anchor.top - panel.height) / 2)
-    : anchor.top;
+  const y = alignedStart(anchor.top, anchor.bottom, panel.height, align);
 
   return clampToViewport({
     x,
@@ -98,6 +94,22 @@ function anchoredHorizontal({
     rect: panel,
     viewport
   });
+}
+
+function alignedStart(
+  start: number,
+  end: number,
+  size: number,
+  align: "center" | "start" | "end"
+): number {
+  switch (align) {
+    case "center":
+      return start + ((end - start - size) / 2);
+    case "end":
+      return end - size;
+    default:
+      return start;
+  }
 }
 
 export interface AnchorOriginOptions {

@@ -39,7 +39,7 @@ export interface PopoverControllerOptions {
   /**
    * Alignment perpendicular to the side; defaults to start.
    */
-  align?: "center" | "start";
+  align?: "center" | "start" | "end";
   /**
    * Enable hover opening; bind both pointer handlers to the trigger.
    */

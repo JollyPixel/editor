@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import { css } from "lit";
 
+// Import Internal Dependencies
+import { truncate } from "../theme/styles/mixins.ts";
+
 export const selectStyles = css`
   .value .select-wrap {
     position: relative;
@@ -47,5 +50,33 @@ export const selectStyles = css`
 
   :host([disabled]) .value select {
     cursor: default;
+  }
+
+  .value .trigger {
+    display: flex;
+    align-items: center;
+    gap: var(--jolly-space-1, 4px);
+    padding-inline-end: calc(var(--jolly-space-1, 4px) * 2 + 12px);
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .value .trigger[aria-expanded="true"] {
+    background: var(--jolly-control-bg-focus);
+  }
+
+  :host([disabled]) .value .trigger {
+    cursor: default;
+  }
+
+  .value .trigger-icon {
+    --jolly-icon-size: 16px;
+  }
+
+  .value .trigger-label {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    ${truncate}
   }
 `;

@@ -245,4 +245,31 @@ test("Numeric.anchoredPosition", async(context) => {
       }
     );
   });
+
+  await context.test("lines the panel's right edge up with the anchor's at end alignment", () => {
+    assert.deepEqual(
+      anchoredPosition({
+        anchor: {
+          top: 10,
+          bottom: 30,
+          left: 50,
+          right: 80
+        },
+        panel: {
+          width: 60,
+          height: 20
+        },
+        viewport: {
+          width: 100,
+          height: 100
+        },
+        gap: 4,
+        align: "end"
+      }),
+      {
+        x: 20,
+        y: 34
+      }
+    );
+  });
 });
