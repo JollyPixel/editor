@@ -6,6 +6,7 @@ import {
   type TerrainCommandDocument
 } from "@jolly-pixel/asset.terrain/client";
 import {
+  bindPresenceStack,
   EditorRuntime,
   type AssetLease,
   type EditorSession,
@@ -17,6 +18,7 @@ import {
   LocalStorageAdapter,
   LogQueue
 } from "@jolly-pixel/ui";
+import { PeerRoster } from "@jolly-pixel/ui/network";
 
 import type { TerrainView } from "@jolly-pixel/terrain.renderer";
 
@@ -24,6 +26,7 @@ import type { TerrainView } from "@jolly-pixel/terrain.renderer";
 import { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
 import "../features/sculpt/toolbar/SculptToolbar.ts";
 import { TerrainEditorScene } from "../scene/TerrainEditorScene.ts";
+import { PresenceStore } from "../shared/PresenceStore.ts";
 import {
   createTerrainHistory,
   skippedMessage
@@ -38,6 +41,7 @@ export interface TerrainEditorParts {
   scene: TerrainEditorScene;
   session: EditorSession;
   target: AssetLease<TerrainCommandDocument>;
+  disposables: Array<() => void>;
 }
 
 export class TerrainEditor {
@@ -88,18 +92,38 @@ export class TerrainEditor {
       sculptToolbar.history = history;
     }
 
-    const scene = new TerrainEditorScene(target.document, sculpt, history);
+    const scene = new TerrainEditorScene(target.document, sculpt, history, target.room);
     await editorRuntime.load(scene);
+
+    const presence = new PresenceStore();
+    const roster = new PeerRoster({
+      room: target.room,
+      publish: (peers) => {
+        presence.peers = peers;
+      },
+      log
+    });
+    const disposables = [() => roster.dispose()];
+    const presenceStack = document.querySelector("jolly-presence-stack");
+    if (presenceStack !== null) {
+      disposables.push(bindPresenceStack(
+        presenceStack,
+        presence,
+        (clientId) => scene.teleportToPeer(clientId)
+      ));
+    }
 
     return new TerrainEditor({
       runtime: editorRuntime.runtime,
       scene,
       session,
-      target
+      target,
+      disposables
     });
   }
 
   #target: AssetLease<TerrainCommandDocument>;
+  #disposables: Array<() => void>;
 
   readonly ready: Promise<void>;
   readonly runtime: Runtime;
@@ -113,6 +137,7 @@ export class TerrainEditor {
     this.scene = parts.scene;
     this.session = parts.session;
     this.#target = parts.target;
+    this.#disposables = parts.disposables;
     this.ready = parts.target.ready;
   }
 
@@ -125,6 +150,9 @@ export class TerrainEditor {
   }
 
   dispose(): void {
+    for (const dispose of this.#disposables.splice(0)) {
+      dispose();
+    }
     this.#target.release();
   }
 }

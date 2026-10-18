@@ -3,6 +3,8 @@ import {
   OrbitFlyCamera,
   Systems
 } from "@jolly-pixel/engine";
+import { PeerFrustums } from "@jolly-pixel/editor.host";
+import type { Room } from "@jolly-pixel/network/client";
 import type {
   TerrainChange,
   TerrainCommandDocument
@@ -28,22 +30,32 @@ export class TerrainEditorScene extends Systems.Scene {
   #document: TerrainCommandDocument;
   #sculpt: SculptSettings;
   #history: TerrainHistory;
+  #room: Room;
   #view: TerrainView | null = null;
+  #teleport: (clientId: string) => void = () => undefined;
   #disposables: Array<() => void> = [];
 
   constructor(
     document: TerrainCommandDocument,
     sculpt: SculptSettings,
-    history: TerrainHistory
+    history: TerrainHistory,
+    room: Room
   ) {
     super("terrain-editor");
     this.#document = document;
     this.#sculpt = sculpt;
     this.#history = history;
+    this.#room = room;
   }
 
   get view(): TerrainView | null {
     return this.#view;
+  }
+
+  teleportToPeer(
+    clientId: string
+  ): void {
+    this.#teleport(clientId);
   }
 
   override awake(): void {
@@ -84,6 +96,19 @@ export class TerrainEditorScene extends Systems.Scene {
         camera: () => camera.camera
       });
     this.#disposables.push(bindHistoryShortcuts(this.world.input.keyboard, this.#history));
+
+    const frustums = this.world
+      .createActor("peer-frustums")
+      .addComponentAndGet(PeerFrustums, {
+        room: this.#room,
+        camera: camera.camera
+      });
+    this.#teleport = (clientId) => {
+      const pose = frustums.peerPose(clientId);
+      if (pose !== undefined) {
+        camera.teleport(pose);
+      }
+    };
 
     function onChange(
       { command }: TerrainChange

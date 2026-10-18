@@ -26,6 +26,9 @@
       "path": "../../history"
     },
     {
+      "path": "../../network"
+    },
+    {
       "path": "../../runtime"
     },
     {
