@@ -98,12 +98,18 @@ The view uses CDLOD:
 - A leaf node covers 32 m, a quarter of a chunk, and the root covers the
   region: six levels from 32 m to 1024 m. A ×2 chunk adds one level under its
   leaves, a ×4 chunk two.
+- Leaves are drawn within 80 m of the camera, and each coarser level doubles
+  that range. A node is refined when its children's range reaches its bounds,
+  which span the heights of the chunks under it. Where only some children are
+  in range, the other quarters are drawn at the node's own level, so
+  neighbouring nodes never differ by more than one level.
 - Every node draws the same 33×33 grid mesh, 32 quads, so a leaf draws at full
   1 m detail. The vertex shader reads the heights from the chunk's height
   texture. The mesh comes from a `NodeMeshProvider`, so a tessellated mesh can
   replace the grid later.
 - Near the boundary of a level, vertices morph toward the coarser level's
-  positions, so levels meet without cracks or popping.
+  positions, so levels meet without cracks or popping. The morph runs over
+  the last 30% of each level's distance band.
 - Skirts hang under chunk edges and hide what morphing cannot.
 
 ### Slope overlay

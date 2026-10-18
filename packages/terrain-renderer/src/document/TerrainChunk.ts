@@ -26,8 +26,14 @@ export function isValidHeights(
     heights.every(isValidHeight);
 }
 
+export interface HeightRange {
+  readonly min: number;
+  readonly max: number;
+}
+
 export class TerrainChunk {
   readonly coord: ChunkCoord;
+  readonly heightRange: HeightRange;
 
   #heights: Float32Array;
 
@@ -44,6 +50,10 @@ export class TerrainChunk {
 
     this.coord = coord;
     this.#heights = heights.slice();
+    this.heightRange = {
+      min: this.#heights.reduce((min, height) => Math.min(min, height)),
+      max: this.#heights.reduce((max, height) => Math.max(max, height))
+    };
   }
 
   height(
