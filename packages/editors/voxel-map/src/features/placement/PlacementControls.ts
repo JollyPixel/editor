@@ -84,23 +84,20 @@ export class PlacementControls extends WorkspaceElement {
         <jolly-icon name=${current.icon}></jolly-icon>
         <span>${current.caption}</span>
       </span>
-      <span class="separator" aria-hidden="true"></span>
-      <div class="group" role="group" aria-label="Rotate">
+      <div class="group divided" role="group" aria-label="Rotate">
         ${PLACEMENT_ROTATIONS.map((rotation) => this.#renderTransform(
           rotation,
           `${rotation.title} (${this.#shortcut(rotation.chords)})`
         ))}
       </div>
-      <span class="separator" aria-hidden="true"></span>
-      <div class="group" role="group" aria-label="Mirror">
+      <div class="group divided" role="group" aria-label="Mirror">
         ${PLACEMENT_MIRRORS.map((mirror) => this.#renderTransform(
           mirror,
           mirror.title,
           axisBadge(mirror.axis)
         ))}
       </div>
-      <span class="separator" aria-hidden="true"></span>
-      <div class="group" role="group" aria-label="Clipboard">
+      <div class="group divided" role="group" aria-label="Clipboard">
         <jolly-tool-button
           data-tool="copy"
           icon="copy"
@@ -124,8 +121,7 @@ export class PlacementControls extends WorkspaceElement {
           ></jolly-tool-button>
         ` : nothing}
       </div>
-      <span class="separator" aria-hidden="true"></span>
-      <div class="group" role="group" aria-label="Finish">
+      <div class="group divided" role="group" aria-label="Finish">
         ${current.deletable ? html`
           <jolly-tool-button
             data-tool="delete"

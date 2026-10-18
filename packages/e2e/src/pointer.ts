@@ -31,6 +31,26 @@ export async function measureBox(
   return box;
 }
 
+export function measureBoxes(
+  locator: Locator
+): Promise<Box[]> {
+  return locator.evaluateAll((elements) => elements.map((element) => {
+    const { x, y, width, height } = element.getBoundingClientRect();
+
+    return { x, y, width, height };
+  }));
+}
+
+export function boxesOverlap(
+  a: Box,
+  b: Box
+): boolean {
+  return a.x < b.x + b.width &&
+    b.x < a.x + a.width &&
+    a.y < b.y + b.height &&
+    b.y < a.y + a.height;
+}
+
 export async function measureCenter(
   locator: Locator
 ): Promise<Point> {

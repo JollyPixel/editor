@@ -9,7 +9,7 @@ export const brushControlsStyles = [viewportToolbarStyles, css`
     display: inline-flex;
   }
 
-  :host([disabled]) .brush {
+  :host([disabled]) .brush > * {
     opacity: 0.6;
   }
 

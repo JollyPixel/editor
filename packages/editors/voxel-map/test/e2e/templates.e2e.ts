@@ -257,9 +257,7 @@ test("a selection is saved as a named template and stays lifted", async({ map })
   }));
   await map.viewport.pinCamera();
 
-  await toolbar.selectButton.click();
-  await toolbar.connectedSelectButton.click();
-  await map.viewport.click(row[0]);
+  await map.selectConnected(row[0]);
   await expect.poll(async() => (await placement.current())?.cells.length)
     .toBe(row.length);
 

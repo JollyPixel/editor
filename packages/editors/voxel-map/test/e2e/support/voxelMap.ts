@@ -22,7 +22,10 @@ import { Placement } from "./placement.ts";
 import { TemplateList } from "./templates.ts";
 import { TextureEditor } from "./texture.ts";
 import { EditToolbar } from "./toolbar.ts";
-import { Viewport } from "./viewport.ts";
+import {
+  Viewport,
+  type Cell
+} from "./viewport.ts";
 import { MapWorld } from "./world.ts";
 
 // CONSTANTS
@@ -80,6 +83,14 @@ export class VoxelMapPage {
     username: string
   ): Locator {
     return this.page.getByRole("button", { name: `Select ${username}` });
+  }
+
+  async selectConnected(
+    cell: Cell
+  ): Promise<void> {
+    await this.toolbar.selectButton.click();
+    await this.toolbar.connectedSelectButton.click();
+    await this.viewport.click(cell);
   }
 
   async openOffline(): Promise<void> {

@@ -10,6 +10,10 @@ export const editToolbarStyles = [viewportToolbarStyles, css`
     --voxel-segment-resize: var(--jolly-duration-base, 160ms);
     --voxel-segment-fade-in: var(--jolly-duration-base, 160ms);
     --voxel-segment-easing: var(--jolly-easing, cubic-bezier(0.2, 0, 0.2, 1));
+    --voxel-segment-settle: calc(
+      var(--voxel-segment-fade-out) + var(--voxel-segment-resize)
+    );
+    --voxel-toolbar-row-gap: 4px;
 
     display: inline-flex;
     flex-direction: column;
@@ -17,40 +21,64 @@ export const editToolbarStyles = [viewportToolbarStyles, css`
     gap: 4px;
   }
 
+  jolly-rail {
+    --jolly-icon-button-size: var(--voxel-toolbar-button-size);
+
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: var(--voxel-toolbar-row-gap) 0;
+    height: auto;
+    padding: var(--voxel-toolbar-row-gap) 4px;
+    border-radius: var(--jolly-radius-sm, 2px);
+    background: var(--jolly-surface-raised);
+    box-shadow: var(--jolly-shadow-floating);
+  }
+
   .segment {
     display: grid;
     grid-template-columns: 1fr;
+    align-content: center;
     opacity: 1;
     transition:
       grid-template-columns var(--voxel-segment-resize)
         var(--voxel-segment-easing) var(--voxel-segment-fade-out),
       opacity var(--voxel-segment-fade-in) var(--voxel-segment-easing)
-        calc(var(--voxel-segment-fade-out) + var(--voxel-segment-resize)),
+        var(--voxel-segment-settle),
       visibility 0s;
   }
 
   .segment[inert] {
     grid-template-columns: 0fr;
+    height: 0;
     opacity: 0;
     visibility: hidden;
     transition:
       grid-template-columns var(--voxel-segment-resize)
         var(--voxel-segment-easing) var(--voxel-segment-fade-out),
       opacity var(--voxel-segment-fade-out) var(--voxel-segment-easing),
-      visibility 0s linear
-        calc(var(--voxel-segment-fade-out) + var(--voxel-segment-resize));
+      visibility 0s linear var(--voxel-segment-settle),
+      height 0s linear var(--voxel-segment-settle);
+    transition-behavior: allow-discrete;
   }
 
   .segment-content {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     align-items: center;
-    min-width: 0;
-    transition: translate var(--voxel-segment-fade-in)
-      var(--voxel-segment-easing)
-      calc(var(--voxel-segment-fade-out) + var(--voxel-segment-resize));
+    row-gap: var(--voxel-toolbar-row-gap);
+    min-width: min-content;
+    transition:
+      translate var(--voxel-segment-fade-in) var(--voxel-segment-easing)
+        var(--voxel-segment-settle),
+      min-width 0s linear var(--voxel-segment-settle);
+    transition-behavior: allow-discrete;
   }
 
   .segment[inert] > .segment-content {
+    flex-wrap: nowrap;
+    min-width: 0;
     overflow-x: clip;
     translate: 0 3px;
     transition: translate 0s var(--voxel-segment-fade-out);
