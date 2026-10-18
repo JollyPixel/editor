@@ -17,6 +17,10 @@ export interface ElasticFocusOptions {
    */
   maxTrailDistance: number;
   /**
+   * Trail distance changed per wheel notch, in world units.
+   */
+  trailScrollStep: number;
+  /**
    * Starting trail distance, in world units.
    * @default 0
    */
@@ -32,6 +36,7 @@ export class ElasticFocus implements CameraFocus {
   readonly isLocked = false;
 
   #maxTrailDistance: number;
+  #trailScrollStep: number;
   #marker: PivotMarker;
 
   #pivotPosition: THREE.Vector3;
@@ -45,6 +50,7 @@ export class ElasticFocus implements CameraFocus {
     options: ElasticFocusOptions
   ) {
     this.#maxTrailDistance = options.maxTrailDistance;
+    this.#trailScrollStep = options.trailScrollStep;
     this.#marker = new PivotMarker({
       enabled: options.showPivotMarker,
       sceneProvider: options.sceneProvider
@@ -93,11 +99,10 @@ export class ElasticFocus implements CameraFocus {
   }
 
   handleScroll(
-    scrollY: number,
-    scrollSpeed: number
+    scrollY: number
   ): boolean {
     this.#targetTrailDistance = THREE.MathUtils.clamp(
-      this.#targetTrailDistance - (scrollY * scrollSpeed),
+      this.#targetTrailDistance - (scrollY * this.#trailScrollStep),
       0,
       this.#maxTrailDistance
     );

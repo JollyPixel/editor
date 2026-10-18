@@ -73,7 +73,7 @@ export interface OrbitFlyCameraOptions extends CameraOptions {
   keyLookSpeed?: number;
   maxPitch?: number;
   /**
-   * Pivot or trail distance changed per wheel notch, in world units.
+   * "elastic" mode's trail distance changed per wheel notch, in world units.
    */
   scrollSpeed?: number;
   /**
@@ -90,11 +90,17 @@ export interface OrbitFlyCameraOptions extends CameraOptions {
    */
   focusMode?: OrbitFlyCameraFocusMode;
   /**
-   * Bounds for the scroll-adjusted pivot distance in "lock" mode; also
-   * doubles as "elastic" mode's max trail distance.
+   * Bounds for the scroll-adjusted pivot distance in "lock" mode; the min
+   * must be greater than 0. The max doubles as "elastic" mode's max trail.
    */
   minPivotDistance?: number;
   maxPivotDistance?: number;
+  /**
+   * Per wheel notch, the "lock" pivot distance is multiplied by
+   * `1 + pivotZoomStep` zooming out and divided by it zooming in.
+   * @default 0.1
+   */
+  pivotZoomStep?: number;
   /**
    * Distance nudged per key press while orbiting in "lock" mode.
    * @default 1
@@ -136,7 +142,6 @@ export class OrbitFlyCamera extends CameraComponent {
   #touchpadLookSensitivity: number;
   #keyLookSpeed: number;
   #maxPitch: number;
-  #scrollSpeed: number;
   #speedAdjustStep: number;
   #focus: CameraFocus;
 
@@ -197,6 +202,7 @@ export class OrbitFlyCamera extends CameraComponent {
       focusMode = "none",
       minPivotDistance = 1,
       maxPivotDistance = 200,
+      pivotZoomStep = 0.1,
       pivotNudgeStep = 1,
       initialTrailDistance = 0,
       showPivotMarker = true
@@ -216,7 +222,6 @@ export class OrbitFlyCamera extends CameraComponent {
     this.#touchpadLookSensitivity = touchpadLookSensitivity;
     this.#keyLookSpeed = keyLookSpeed;
     this.#maxPitch = maxPitch;
-    this.#scrollSpeed = scrollSpeed;
     this.#speedAdjustStep = speedAdjustStep;
 
     const initialPosition = options.position ?? { x: 16, y: 20, z: 40 };
@@ -226,6 +231,7 @@ export class OrbitFlyCamera extends CameraComponent {
         this.#focus = new OrbitFocus({
           minPivotDistance,
           maxPivotDistance,
+          pivotZoomStep,
           pivotNudgeStep,
           showPivotMarker,
           sceneProvider
@@ -235,6 +241,7 @@ export class OrbitFlyCamera extends CameraComponent {
         this.#focus = new ElasticFocus({
           initialPosition: options.pivotPosition ?? initialPosition,
           maxTrailDistance: maxPivotDistance,
+          trailScrollStep: scrollSpeed,
           initialTrailDistance,
           showPivotMarker,
           sceneProvider
@@ -444,7 +451,7 @@ export class OrbitFlyCamera extends CameraComponent {
 
     if (
       wheel !== 0 &&
-      !this.#focus.handleScroll(wheel, this.#scrollSpeed)
+      !this.#focus.handleScroll(wheel)
     ) {
       this.moveSpeed = this.#moveSpeed *
         Math.pow(1 + this.#speedAdjustStep, wheel);

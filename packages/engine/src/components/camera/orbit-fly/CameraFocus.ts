@@ -43,8 +43,7 @@ export interface CameraFocus {
   ): CameraFocusOrientation | null;
   exit(): void;
   handleScroll(
-    scrollY: number,
-    scrollSpeed: number
+    scrollY: number
   ): boolean;
   nudge(
     input: CameraFocusInput,
