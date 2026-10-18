@@ -46,6 +46,7 @@
     "@jolly-pixel/controls": "workspace:*",
     "@jolly-pixel/editor.host": "workspace:*",
     "@jolly-pixel/engine": "workspace:*",
+    "@jolly-pixel/history": "workspace:*",
     "@jolly-pixel/runtime": "workspace:*",
     "@jolly-pixel/terrain.renderer": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",

@@ -13,7 +13,10 @@ import {
   type RuntimeEditorContext
 } from "@jolly-pixel/editor.host";
 import "@jolly-pixel/editor.host/ui";
-import { LocalStorageAdapter } from "@jolly-pixel/ui";
+import {
+  LocalStorageAdapter,
+  LogQueue
+} from "@jolly-pixel/ui";
 
 import type { TerrainView } from "@jolly-pixel/terrain.renderer";
 
@@ -21,6 +24,10 @@ import type { TerrainView } from "@jolly-pixel/terrain.renderer";
 import { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
 import "../features/sculpt/toolbar/SculptToolbar.ts";
 import { TerrainEditorScene } from "../scene/TerrainEditorScene.ts";
+import {
+  createTerrainHistory,
+  skippedMessage
+} from "../shared/terrainHistory.ts";
 
 // CONSTANTS
 const kCanvas = "#game-container canvas";
@@ -64,12 +71,24 @@ export class TerrainEditor {
     }
 
     const sculpt = new SculptSettings(new LocalStorageAdapter());
+    const history = createTerrainHistory(target.document);
+    const log = new LogQueue();
+    history.on("skipped", (_scope, step) => {
+      log.push(skippedMessage(step));
+    });
+    const activityLog = document.querySelector("jolly-log");
+    if (activityLog !== null) {
+      log.subscribe((entries) => {
+        activityLog.entries = entries;
+      });
+    }
     const sculptToolbar = document.querySelector("terrain-sculpt-toolbar");
     if (sculptToolbar !== null) {
       sculptToolbar.settings = sculpt;
+      sculptToolbar.history = history;
     }
 
-    const scene = new TerrainEditorScene(target.document, sculpt);
+    const scene = new TerrainEditorScene(target.document, sculpt, history);
     await editorRuntime.load(scene);
 
     return new TerrainEditor({

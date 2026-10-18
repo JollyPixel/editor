@@ -683,6 +683,9 @@ importers:
       '@jolly-pixel/engine':
         specifier: workspace:*
         version: link:../../engine
+      '@jolly-pixel/history':
+        specifier: workspace:*
+        version: link:../../history
       '@jolly-pixel/runtime':
         specifier: workspace:*
         version: link:../../runtime

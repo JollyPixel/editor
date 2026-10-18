@@ -19,20 +19,27 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import type { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
 import { SculptBrush } from "../features/sculpt/SculptBrush.ts";
+import {
+  bindHistoryShortcuts,
+  type TerrainHistory
+} from "../shared/terrainHistory.ts";
 
 export class TerrainEditorScene extends Systems.Scene {
   #document: TerrainCommandDocument;
   #sculpt: SculptSettings;
+  #history: TerrainHistory;
   #view: TerrainView | null = null;
   #disposables: Array<() => void> = [];
 
   constructor(
     document: TerrainCommandDocument,
-    sculpt: SculptSettings
+    sculpt: SculptSettings,
+    history: TerrainHistory
   ) {
     super("terrain-editor");
     this.#document = document;
     this.#sculpt = sculpt;
+    this.#history = history;
   }
 
   get view(): TerrainView | null {
@@ -73,8 +80,10 @@ export class TerrainEditorScene extends Systems.Scene {
         document: this.#document,
         view,
         settings: this.#sculpt,
+        history: this.#history,
         camera: () => camera.camera
       });
+    this.#disposables.push(bindHistoryShortcuts(this.world.input.keyboard, this.#history));
 
     function onChange(
       { command }: TerrainChange

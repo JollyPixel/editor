@@ -27,7 +27,9 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
 - **Stroke commits: done** (2026-10-18). A stroke reaches peers and the saved
   asset as `heights-patched` commits, at its end, every 2 s and once 4 chunks
   are touched.
-- **Next:** undo and redo.
+- **Undo and redo: done** (2026-10-18). A stroke is one step, Ctrl+Z and
+  Ctrl+Y or the toolbar buttons; a step a peer has changed since is skipped.
+- **Next:** interest routing.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -48,7 +50,7 @@ chunks yet.
 - [x] Brushes: raise and lower, smooth, flatten.
 - [ ] Flatten to a fixed height set in the toolbar; Ctrl+click picks it.
 - [x] Stroke commits: tile patches, collision keys, arbiter, corrections.
-- [ ] Undo and redo through `CommandHistory`.
+- [x] Undo and redo through `CommandHistory`.
 - [ ] Interest routing in the terrain extension: live patches inside the
   presence radius; peer brush rings drawn inside it.
 - [x] Debug overlays: chunk grid and LoD levels.

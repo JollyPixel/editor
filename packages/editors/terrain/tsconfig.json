@@ -23,6 +23,9 @@
       "path": "../../engine"
     },
     {
+      "path": "../../history"
+    },
+    {
       "path": "../../runtime"
     },
     {

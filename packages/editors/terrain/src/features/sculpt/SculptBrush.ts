@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import type { TerrainCommandDocument } from "@jolly-pixel/asset.terrain/client";
 import { InputCombination } from "@jolly-pixel/controls";
+import type { OpenStep } from "@jolly-pixel/history";
 import {
   Actor,
   ActorComponent
@@ -18,6 +19,10 @@ import * as THREE from "three";
 import { stampStrength } from "./model/brushRate.ts";
 import { halfWeightDistance } from "./model/falloff.ts";
 import type { SculptSettings } from "./model/SculptSettings.ts";
+import {
+  TERRAIN_HISTORY_SCOPE,
+  type TerrainHistory
+} from "../../shared/terrainHistory.ts";
 import { sculptStamp } from "./model/sculptStamp.ts";
 import {
   StampSpacer,
@@ -34,10 +39,12 @@ export interface SculptBrushOptions {
   document: TerrainCommandDocument;
   view: TerrainView;
   settings: SculptSettings;
+  history: Pick<TerrainHistory, "open">;
   camera: () => THREE.Camera | null;
 }
 
 interface Stroke {
+  readonly step: OpenStep;
   readonly spacer: StampSpacer;
   readonly lower: boolean;
   readonly target: number;
@@ -47,6 +54,7 @@ export class SculptBrush extends ActorComponent {
   #document: TerrainCommandDocument;
   #view: TerrainView;
   #settings: SculptSettings;
+  #history: Pick<TerrainHistory, "open">;
   #camera: () => THREE.Camera | null;
   #ring = new BrushRing();
   #raycaster = new THREE.Raycaster();
@@ -68,6 +76,7 @@ export class SculptBrush extends ActorComponent {
     this.#document = options.document;
     this.#view = options.view;
     this.#settings = options.settings;
+    this.#history = options.history;
     this.#camera = options.camera;
   }
 
@@ -154,7 +163,12 @@ export class SculptBrush extends ActorComponent {
         return;
       }
 
-      this.#stroke = { spacer: new StampSpacer(point), lower, target: aim.point.y };
+      this.#stroke = {
+        step: this.#history.open(TERRAIN_HISTORY_SCOPE, "Sculpt"),
+        spacer: new StampSpacer(point),
+        lower,
+        target: aim.point.y
+      };
       this.#apply([point]);
 
       return;
@@ -204,10 +218,12 @@ export class SculptBrush extends ActorComponent {
   }
 
   #endStroke(): void {
+    const stroke = this.#stroke;
     this.#stroke = null;
     if (this.#recorder.size > 0) {
       this.#document.commitTiles(this.#recorder.take());
     }
+    stroke?.step.commit();
   }
 
   #drawRing(

@@ -10,6 +10,7 @@ import {
   customElement,
   property
 } from "lit/decorators.js";
+import type { HistoryScopeState } from "@jolly-pixel/history";
 import { FieldBinding } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -25,6 +26,11 @@ import {
   SCULPT_TOOLS,
   type SculptTool
 } from "../model/sculptStamp.ts";
+import {
+  TERRAIN_HISTORY_SCOPE,
+  type TerrainHistory
+} from "../../../shared/terrainHistory.ts";
+import "../../../shared/historyIcons.ts";
 import "./sculptIcons.ts";
 
 // CONSTANTS
@@ -79,6 +85,15 @@ export class SculptToolbar extends LitElement {
       display: none;
     }
 
+    .step-count {
+      position: absolute;
+      inset-block-end: 1px;
+      inset-inline-end: 2px;
+      font-size: 9px;
+      font-weight: 600;
+      pointer-events: none;
+    }
+
     .value {
       min-width: 3ch;
       font-weight: 600;
@@ -88,6 +103,9 @@ export class SculptToolbar extends LitElement {
 
   @property({ attribute: false })
   declare settings: SculptSettings | null;
+
+  @property({ attribute: false })
+  declare history: TerrainHistory | null;
 
   #size = new FieldBinding<number>(this, {
     read: () => this.settings?.options.size ?? BRUSH_SIZE.min,
@@ -100,16 +118,20 @@ export class SculptToolbar extends LitElement {
   });
 
   #unsubscribe: (() => void) | null = null;
+  #unsubscribeHistory: (() => void) | null = null;
 
   constructor() {
     super();
     this.settings = null;
+    this.history = null;
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.#unsubscribe?.();
     this.#unsubscribe = null;
+    this.#unsubscribeHistory?.();
+    this.#unsubscribeHistory = null;
   }
 
   protected override willUpdate(
@@ -118,6 +140,10 @@ export class SculptToolbar extends LitElement {
     if (changed.has("settings")) {
       this.#unsubscribe?.();
       this.#unsubscribe = this.settings?.subscribe("change", () => this.requestUpdate()) ?? null;
+    }
+    if (changed.has("history")) {
+      this.#unsubscribeHistory?.();
+      this.#unsubscribeHistory = this.history?.subscribe("change", () => this.requestUpdate()) ?? null;
     }
   }
 
@@ -131,7 +157,8 @@ export class SculptToolbar extends LitElement {
 
     return html`
       <jolly-rail orientation="horizontal" role="toolbar" aria-label="Sculpt">
-        <div class="group" role="group" aria-label="Brush">
+        ${this.#renderHistory()}
+        <div class="group divided" role="group" aria-label="Brush">
           ${SCULPT_TOOLS.map((option) => html`
             <jolly-tool-button
               data-tool=${option}
@@ -199,6 +226,40 @@ export class SculptToolbar extends LitElement {
       </jolly-rail>
     `;
   }
+
+  #renderHistory(): TemplateResult | typeof nothing {
+    const history = this.history;
+    if (history === null) {
+      return nothing;
+    }
+
+    const state: HistoryScopeState = history.state(TERRAIN_HISTORY_SCOPE);
+
+    return html`
+      <div class="group" role="group" aria-label="History">
+        <jolly-tool-button
+          data-tool="undo"
+          icon="undo"
+          label="Undo (Ctrl+Z)"
+          ?disabled=${state.undoCount === 0}
+          @click=${() => history.undo(TERRAIN_HISTORY_SCOPE)}
+        >${renderStepCount(state.undoCount)}</jolly-tool-button>
+        <jolly-tool-button
+          data-tool="redo"
+          icon="redo"
+          label="Redo (Ctrl+Y)"
+          ?disabled=${state.redoCount === 0}
+          @click=${() => history.redo(TERRAIN_HISTORY_SCOPE)}
+        >${renderStepCount(state.redoCount)}</jolly-tool-button>
+      </div>
+    `;
+  }
+}
+
+function renderStepCount(
+  count: number
+): TemplateResult | typeof nothing {
+  return count === 0 ? nothing : html`<span class="step-count" aria-hidden="true">${count}</span>`;
 }
 
 function formatMetres(

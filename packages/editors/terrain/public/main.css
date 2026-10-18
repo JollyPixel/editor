@@ -60,6 +60,13 @@ jolly-dock {
   outline: none;
 }
 
+#game-container jolly-log {
+  position: absolute;
+  inset-block-start: 12px;
+  inset-inline-start: 16px;
+  z-index: 5;
+}
+
 #game-container jolly-presence-stack {
   position: absolute;
   inset-block-end: 16px;
