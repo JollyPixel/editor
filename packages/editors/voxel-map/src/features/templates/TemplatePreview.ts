@@ -17,6 +17,7 @@ import {
   resolveTemplatePreview,
   type TemplatePreviewView
 } from "./TemplatePreviewView.ts";
+import "./templateIcons.ts";
 
 @customElement("template-preview")
 export class TemplatePreview extends WorkspaceElement {
@@ -44,6 +45,34 @@ export class TemplatePreview extends WorkspaceElement {
         position: absolute;
         text-align: center;
       }
+
+      .toggle {
+        position: absolute;
+        top: var(--jolly-space-1, 4px);
+        left: var(--jolly-space-1, 4px);
+        z-index: 1;
+        display: grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        border: 0;
+        border-radius: var(--jolly-radius-sm, 3px);
+        background: transparent;
+        color: var(--jolly-text-muted);
+        cursor: pointer;
+      }
+
+      .toggle:hover,
+      .toggle:focus-visible {
+        background: var(--jolly-control-bg-hover);
+        color: var(--jolly-text);
+      }
+
+      .toggle jolly-icon {
+        width: 14px;
+        height: 14px;
+      }
     `
   ];
 
@@ -63,11 +92,12 @@ export class TemplatePreview extends WorkspaceElement {
   protected override watchWorkspace(
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
-    const { mapDocument, templates } = workspace;
+    const { mapDocument, templates, state } = workspace;
     const sync = (): void => {
       this._view = resolveTemplatePreview(
         mapDocument.world.templates,
-        templates.store.selected
+        templates.store.selected,
+        state.templatePreview.value
       );
     };
     sync();
@@ -76,6 +106,7 @@ export class TemplatePreview extends WorkspaceElement {
       mapDocument.subscribe("templatesChanged", sync),
       mapDocument.subscribe("reset", sync),
       templates.store.subscribe("selectionChange", sync),
+      state.templatePreview.subscribe("change", sync),
       mapDocument.subscribe(
         "blockRegistryChanged",
         () => this.#renderer?.subject.invalidate()
@@ -90,15 +121,40 @@ export class TemplatePreview extends WorkspaceElement {
       return nothing;
     }
 
+    const enabled = view.kind !== "disabled";
+
     return html`
       <div class="frame">
         <div class="well">
-          ${view.kind === "empty" ? html`
-            <p class="hint">Select a template to preview it.</p>
-          ` : nothing}
+          <button
+            class="toggle"
+            type="button"
+            aria-label=${enabled ? "Hide preview" : "Show preview"}
+            aria-pressed=${enabled ? "true" : "false"}
+            @click=${this.#onToggle}
+          ><jolly-icon name=${enabled ? "eye" : "eye-off"} aria-hidden="true"></jolly-icon></button>
+          ${this.#renderHint(view)}
         </div>
       </div>
     `;
+  }
+
+  readonly #onToggle = (): void => {
+    const store = this.attached.state.templatePreview;
+    store.value = store.value === "enabled" ? "disabled" : "enabled";
+  };
+
+  #renderHint(
+    view: TemplatePreviewView
+  ) {
+    switch (view.kind) {
+      case "empty":
+        return html`<p class="hint">Select a template to preview it.</p>`;
+      case "disabled":
+        return html`<p class="hint">Preview disabled</p>`;
+      default:
+        return nothing;
+    }
   }
 
   override updated(): void {

@@ -243,7 +243,7 @@ test("a saved template reaches a peer and survives a reload", async({ map, peerM
   await expect(map.templates.row).toHaveText(/Ground/);
 });
 
-test("the Layers tab previews the selected template while templates exist", async({ map }) => {
+test("the Layers tab previews the selected template unless the preview is turned off", async({ map }) => {
   const { templates } = map;
   await seedCell(map);
   await expect(templates.previewWell).toHaveCount(0);
@@ -251,6 +251,15 @@ test("the Layers tab previews the selected template while templates exist", asyn
   await templates.saveLayer();
   await expect(templates.previewCanvas).toBeVisible();
   await expect(templates.previewHint).toHaveCount(0);
+
+  await templates.previewToggle.click();
+  await expect(templates.previewToggle).toHaveAttribute("aria-pressed", "false");
+  await expect(templates.previewDisabledHint).toBeVisible();
+  await expect(templates.previewCanvas).toHaveCount(0);
+
+  await templates.previewToggle.click();
+  await expect(templates.previewDisabledHint).toHaveCount(0);
+  await expect(templates.previewCanvas).toBeVisible();
 
   await templates.saveLayer();
   await templates.remove(templates.row.last());

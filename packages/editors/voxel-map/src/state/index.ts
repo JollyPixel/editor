@@ -12,6 +12,7 @@ export * from "./PresenceStore.ts";
 export * from "./SelectionStore.ts";
 export * from "./ToolStore.ts";
 export * from "./TextureTabsStore.ts";
+export * from "./TemplatePreviewStore.ts";
 export * from "./UvSyncStore.ts";
 export * from "./ViewStore.ts";
 export * from "./ViewSettings.ts";
