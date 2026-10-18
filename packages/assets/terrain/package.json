@@ -1,0 +1,33 @@
+{
+  "name": "@jolly-pixel/asset.terrain",
+  "description": "Heightfield terrain assets",
+  "version": "0.1.0",
+  "type": "module",
+  "sideEffects": false,
+  "private": true,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "imports": {
+    "#src/*": "./src/*"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "lint": "oxlint src test",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/assets/terrain"
+  },
+  "keywords": [],
+  "files": [
+    "dist"
+  ],
+  "author": "MALAJ Alexandre <alexandre.malaj@gmail.com>",
+  "license": "MIT"
+}

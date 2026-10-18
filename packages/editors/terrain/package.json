@@ -1,0 +1,14 @@
+{
+  "name": "@jolly-pixel/editor.terrain",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit -p test/tsconfig.json",
+    "lint": "oxlint src test"
+  },
+  "keywords": [],
+  "imports": {
+    "#src/*": "./src/*"
+  }
+}

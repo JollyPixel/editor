@@ -53,6 +53,9 @@
       "path": "./packages/voxel-tiled"
     },
     {
+      "path": "./packages/terrain-renderer"
+    },
+    {
       "path": "./packages/pixel-draw-renderer"
     },
     {
@@ -65,6 +68,9 @@
       "path": "./packages/assets/voxel-model"
     },
     {
+      "path": "./packages/assets/terrain"
+    },
+    {
       "path": "./packages/editors/host"
     },
     {
@@ -75,6 +81,9 @@
     },
     {
       "path": "./packages/editors/voxel-model"
+    },
+    {
+      "path": "./packages/editors/terrain"
     },
     {
       "path": "./packages/studio"
