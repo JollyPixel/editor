@@ -121,6 +121,13 @@ export class EditorCamera {
     this.#announceMode();
   }
 
+  pose(): CameraPose {
+    return {
+      position: this.camera.getWorldPosition(new THREE.Vector3()),
+      quaternion: this.camera.getWorldQuaternion(new THREE.Quaternion())
+    };
+  }
+
   teleport(
     pose: CameraPose
   ): void {

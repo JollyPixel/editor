@@ -30,6 +30,7 @@ import {
   createMapHistory,
   skippedMessage
 } from "../shared/mapHistory.ts";
+import { MapSteps } from "../shared/MapSteps.ts";
 import { bindToolShortcuts } from "../shared/toolShortcuts.ts";
 import type {
   EditorState,
@@ -62,6 +63,8 @@ import { PeerPlacements } from "../features/placement/collaboration/PeerPlacemen
 import { bindPlacementShortcuts } from "../features/placement/placementShortcuts.ts";
 import { bindClipboardShortcuts } from "../features/placement/clipboardShortcuts.ts";
 import { MapTemplates } from "../features/templates/MapTemplates.ts";
+import { TemplateEditing } from "../features/templates/editing/TemplateEditing.ts";
+import { PeerEditContext } from "../features/templates/editing/PeerEditContext.ts";
 import {
   MapBlocksets,
   type BlocksetCatalog
@@ -243,19 +246,22 @@ export class EditorScene extends Systems.Scene {
       mapDocument,
       visibility: layerVisibility
     });
+    const { editContext } = state;
     const layers = new MapLayers({
       world: view.document.world,
       selection: state.selection,
       mapDocument,
-      access
+      access,
+      editContext
     });
     const mapHistory = createMapHistory(session.map.edits);
     mapHistory.on("skipped", (_scope, step) => {
       state.log.push(skippedMessage(step));
     });
+    const steps = new MapSteps(mapHistory, editContext);
     const placement = new MapPlacement({
       world: view.document.world,
-      history: mapHistory,
+      history: steps,
       selection: state.selection,
       mapDocument,
       conceal: (layerName) => localVisibility.conceal(layerName),
@@ -264,7 +270,21 @@ export class EditorScene extends Systems.Scene {
     const history = new MapHistory({
       history: mapHistory,
       placement,
-      access
+      access,
+      context: editContext
+    });
+    const templateEditing = new TemplateEditing({
+      world: view.document.world,
+      context: editContext,
+      selection: state.selection,
+      mapDocument,
+      access,
+      isolate: (layerName) => localVisibility.isolate(layerName),
+      camera,
+      history: mapHistory,
+      placement,
+      presence: state.presence,
+      log: state.log
     });
     const usage = new BlockUsageStore({
       mapDocument,
@@ -298,10 +318,16 @@ export class EditorScene extends Systems.Scene {
       selection: state.selection,
       presence: state.presence
     });
+    const peers = new PeerEditContext({
+      world: view.document.world,
+      context: editContext,
+      presence: state.presence
+    });
     const peerBrushes = world
       .createActor("peer-brushes")
       .addComponentAndGet(PeerBrushes, {
-        room: session.room
+        room: session.room,
+        peers
       });
     const peerPlacements = world
       .createActor("peer-placements")
@@ -310,7 +336,8 @@ export class EditorScene extends Systems.Scene {
         world: view.document.world,
         blockRegistry: view.document.blocks,
         sources: blockSources,
-        mapDocument
+        mapDocument,
+        peers
       });
     const frustums = world
       .createActor("peer-frustums")
@@ -329,7 +356,7 @@ export class EditorScene extends Systems.Scene {
         block: state.block,
         selection: state.selection,
         pointer: state.pointer,
-        history: mapHistory,
+        history: steps,
         color: session.identity.color,
         onCursorChange: (cursor) => peerBrushes.publishLocalCursor(cursor),
         onPaintBlocked: (missing) => {
@@ -357,7 +384,8 @@ export class EditorScene extends Systems.Scene {
         placement,
         pointer: state.pointer
       });
-    world.createActor("object-layer-renderer")
+    const objectLayers = world.createActor("object-layer-renderer");
+    objectLayers
       .addComponent(ObjectLayerRenderer, {
         world: view.document.world,
         camera: camera.camera,
@@ -408,7 +436,11 @@ export class EditorScene extends Systems.Scene {
         brush.suspended = false;
       },
       mapDocument.subscribe("reset", () => {
-        camera.spawn(view.document.world.getLayers());
+        camera.spawn(MapDocument.layers(view.document.world));
+      }),
+      editContext.subscribe("change", (draft) => {
+        objectLayers.object3D.visible = draft === null;
+        world.invalidate();
       }),
       state.view.subscribe("change", (settings) => {
         applyView(settings);
@@ -467,6 +499,8 @@ export class EditorScene extends Systems.Scene {
       () => usage.dispose(),
       () => placement.dispose(),
       () => mapHistory.dispose(),
+      () => templateEditing.dispose(),
+      () => peers.dispose(),
       () => layers.dispose(),
       () => templates.dispose(),
       () => localVisibility.dispose(),
@@ -475,7 +509,7 @@ export class EditorScene extends Systems.Scene {
     );
 
     if (mapDocument.ready) {
-      camera.spawn(view.document.world.getLayers());
+      camera.spawn(MapDocument.layers(view.document.world));
     }
 
     this.#workspace.resolve({
@@ -486,6 +520,7 @@ export class EditorScene extends Systems.Scene {
       blockSources,
       previewStage,
       templates,
+      templateEditing,
       placement,
       history,
       layerVisibility,

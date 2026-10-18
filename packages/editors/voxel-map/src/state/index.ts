@@ -1,4 +1,5 @@
 export * from "./EditorState.ts";
+export * from "./EditContext.ts";
 export * from "./LayerRef.ts";
 export * from "./VoxelLayerRef.ts";
 export * from "./ObjectLayerRef.ts";

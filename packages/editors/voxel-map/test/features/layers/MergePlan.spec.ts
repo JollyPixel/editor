@@ -25,6 +25,13 @@ describe("MergePlan targets", () => {
     assert.deepEqual(MergePlan.planMerge(makeWorld(), "B").targets, ["C", "A"]);
   });
 
+  test("never offers a template draft as a target", () => {
+    const world = makeWorld();
+    world.addLayer("House draft", { id: "template-draft:house" });
+
+    assert.deepEqual(MergePlan.planMerge(world, "B").targets, ["C", "A"]);
+  });
+
   test("has no target in a single-layer world", () => {
     const world = new VoxelWorld(4);
     world.addLayer("Only");

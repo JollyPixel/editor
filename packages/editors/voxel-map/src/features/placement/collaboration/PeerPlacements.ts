@@ -31,6 +31,7 @@ import {
 } from "../PlacementSource.ts";
 import type { CopySourceRef } from "../CopySource.ts";
 import type { RegionSourceRef } from "../RegionSource.ts";
+import type { PeerEditContext } from "../../templates/editing/PeerEditContext.ts";
 
 // CONSTANTS
 const kPresencePlacementKey = "placement";
@@ -47,10 +48,12 @@ export interface PeerPlacementsOptions {
   blockRegistry: BlockRegistry;
   sources: BlockRenderSources;
   mapDocument: MapDocumentSignals;
+  peers: Pick<PeerEditContext, "shares" | "subscribe">;
 }
 
 export class PeerPlacements extends ActorComponent {
   #room: VoxelMapRoom;
+  #peers: Pick<PeerEditContext, "shares">;
   #world: VoxelWorld;
   #blockRegistry: BlockRegistry;
   #sources: BlockRenderSources;
@@ -90,6 +93,7 @@ export class PeerPlacements extends ActorComponent {
     });
 
     this.#room = options.room;
+    this.#peers = options.peers;
     this.#world = options.world;
     this.#blockRegistry = options.blockRegistry;
     this.#sources = options.sources;
@@ -110,7 +114,8 @@ export class PeerPlacements extends ActorComponent {
       options.mapDocument.subscribe("layerUpdated", this.#recapture),
       options.mapDocument.subscribe("reset", this.#recapture),
       options.mapDocument.subscribe("blockRegistryChanged", this.#rebuild),
-      options.mapDocument.subscribe("blocksetsChanged", this.#rebuild)
+      options.mapDocument.subscribe("blocksetsChanged", this.#rebuild),
+      options.peers.subscribe("change", this.#renderAll)
     ];
 
     this.#renderAll();
@@ -177,6 +182,11 @@ export class PeerPlacements extends ActorComponent {
   ): void {
     const peer = this.#room.peers.get(clientId);
     if (!peer) {
+      return;
+    }
+    if (!this.#peers.shares(clientId)) {
+      this.#previews.get(clientId)?.hide();
+
       return;
     }
 

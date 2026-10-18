@@ -12,6 +12,7 @@ import { LayerMenu } from "../../../src/features/layers/LayerMenu.ts";
 import { MapLayers } from "../../../src/features/layers/MapLayers.ts";
 import type { MapCapability } from "../../../src/access/MapAccess.ts";
 import {
+  EditContext,
   ObjectLayerRef,
   ObjectRef,
   SelectionStore,
@@ -55,6 +56,7 @@ function open(
     world,
     layers: new MapLayers({
       world,
+      editContext: new EditContext(),
       selection: new SelectionStore(),
       mapDocument: createMapDocument(world),
       access

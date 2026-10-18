@@ -111,7 +111,8 @@ step, labelled Paint or Replace. An erase click is one step, labelled Erase.
 ## Pick
 
 Ctrl+click picks the aimed shape at size 1. Otherwise it picks the first block
-found in the remove footprint, starting from its centre, on any layer.
+found in the remove footprint, starting from its centre, on any layer the view
+shows.
 
 ## Preview
 

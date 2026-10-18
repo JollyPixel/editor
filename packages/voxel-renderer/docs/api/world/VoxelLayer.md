@@ -20,8 +20,9 @@ layer.worldBounds();
 
 ## Options
 
-`VoxelLayerConfigurableOptions` is what `world.addLayer()` and
-`world.updateLayer()` accept.
+`VoxelLayerConfigurableOptions` is what `world.updateLayer()` accepts.
+`world.addLayer()` takes `VoxelLayerAddOptions`, the same options plus an
+optional `id`.
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |

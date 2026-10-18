@@ -11,10 +11,14 @@ import {
   type JollyRenameDetail,
   type JollySelectDetail,
   type PointerDragSessionHandle,
+  type TreeBadge,
   type TreeNode
 } from "@jolly-pixel/ui";
+import { peerBadges } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
+import { TemplateDraftId } from "../../document/TemplateDraftId.ts";
+import { VoxelLayerRef } from "../../state/index.ts";
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
 import { treeHostStyles } from "../../shared/styles/treeHost.styles.ts";
@@ -73,15 +77,19 @@ export class TemplateManager extends WorkspaceElement {
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
     const { templates, mapDocument } = workspace;
-    const refresh = (): void => {
-      this._nodes = templateTreeNodes(workspace.mapDocument.world.templates);
-    };
+    const refresh = (): void => this.#refreshNodes(workspace);
     this._selected = templates.store.selected;
     refresh();
 
     return [
       mapDocument.subscribe("templatesChanged", refresh),
+      mapDocument.subscribe("layerUpdated", refresh),
       mapDocument.subscribe("reset", refresh),
+      workspace.state.presence.subscribe("layerSelectionsChange", refresh),
+      workspace.state.editContext.subscribe(
+        "change",
+        () => this.requestUpdate()
+      ),
       templates.store.subscribe("selectionChange", (templateId) => {
         this._selected = templateId;
       }),
@@ -96,7 +104,10 @@ export class TemplateManager extends WorkspaceElement {
       return nothing;
     }
 
-    const { templates, placement } = workspace;
+    const { templates, templateEditing, placement } = workspace;
+    const editable = templateEditing.canOpen &&
+      this._selected !== null &&
+      this._selected !== workspace.state.editContext.draft?.templateId;
 
     return html`
       <jolly-folder
@@ -112,6 +123,15 @@ export class TemplateManager extends WorkspaceElement {
           title="Place the selected template in the world"
           ?disabled=${!placement.canPlace("template") || this._selected === null}
           @click=${this.#place}
+        ></jolly-button>
+        <jolly-button
+          slot="actions"
+          icon="pencil"
+          icon-only
+          label="Edit template"
+          title="Edit the selected template with everyone in the room"
+          ?disabled=${!editable}
+          @click=${this.#edit}
         ></jolly-button>
         <jolly-button
           slot="actions"
@@ -167,6 +187,12 @@ export class TemplateManager extends WorkspaceElement {
     workspace.placement.placeTemplate(templateId, workspace.focusPoint());
   };
 
+  readonly #edit = (): void => {
+    if (this.workspace !== null && this._selected !== null) {
+      this.workspace.templateEditing.open(this._selected);
+    }
+  };
+
   readonly #removeTemplate = async(): Promise<void> => {
     const workspace = this.workspace;
     if (workspace !== null && this._selected !== null) {
@@ -192,7 +218,26 @@ export class TemplateManager extends WorkspaceElement {
     }
 
     workspace.templates.rename(event.detail.id, event.detail.name);
-    this._nodes = templateTreeNodes(workspace.mapDocument.world.templates);
+    this.#refreshNodes(workspace);
+  }
+
+  #refreshNodes(
+    workspace: VoxelMapWorkspace
+  ): void {
+    const { world } = workspace.mapDocument;
+    const marks = workspace.state.presence.layerSelections;
+    const drafts = new Map<string, TreeBadge[]>();
+    for (const layer of world.getLayers()) {
+      const draft = TemplateDraftId.parse(layer.id);
+      if (draft !== null) {
+        drafts.set(
+          draft.templateId,
+          peerBadges(new VoxelLayerRef(layer.name).key, marks)
+        );
+      }
+    }
+
+    this._nodes = templateTreeNodes(world.templates, drafts);
   }
 
   #onActivate(

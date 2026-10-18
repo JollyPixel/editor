@@ -94,10 +94,11 @@ as local commands. `mergeAllLayers()` and `clear()` emit nothing.
 
 Layer methods take names; commands carry layer ids.
 
-#### `addLayer(name: string, options?: VoxelLayerConfigurableOptions): VoxelLayer`
+#### `addLayer(name: string, options?: VoxelLayerAddOptions): VoxelLayer`
 
 Adds a layer on top of the stack. A taken name gets a ` (n)` suffix. See
-[`VoxelLayer`](./VoxelLayer.md#options) for the options.
+[`VoxelLayer`](./VoxelLayer.md#options) for the options. `options.id` replaces
+the random UUID; an id already in use adds nothing and returns that layer.
 
 #### `getLayer(name: string): VoxelLayer | undefined`
 

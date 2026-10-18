@@ -125,6 +125,11 @@ Copies with turned voxels, or with another `name`, `pivot` or `properties`.
 
 #### `countBlocks(): Map<number, number>`
 
+#### `sameVoxels(other: VoxelTemplate): boolean`
+
+`true` when `other` has the same size, pivot and voxels in every cell, second
+shapes included. Id, name, properties and voxel order are ignored.
+
 #### `VoxelTemplate.fromLayer(layer: VoxelLayer, options): VoxelTemplate`
 
 Builds a template that belongs to no world, for example to preview a layer.

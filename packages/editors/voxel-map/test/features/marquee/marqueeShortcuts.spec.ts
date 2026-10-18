@@ -16,7 +16,10 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { createWorldHistory } from "../../helpers/mapHistory.ts";
+import {
+  createWorldHistory,
+  mapSteps
+} from "../../helpers/mapHistory.ts";
 import { bindMarqueeShortcuts } from "../../../src/features/marquee/marqueeShortcuts.ts";
 import { CellRegion } from "../../../src/features/placement/CellRegion.ts";
 import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
@@ -60,7 +63,7 @@ function setup() {
   const tool = new ToolStore();
   const placement = new MapPlacement({
     world,
-    history: createWorldHistory(world),
+    history: mapSteps(createWorldHistory(world)),
     selection,
     mapDocument: createMapDocument(world),
     access: mapAccess()

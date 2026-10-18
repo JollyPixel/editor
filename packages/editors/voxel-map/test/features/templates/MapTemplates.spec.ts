@@ -14,6 +14,7 @@ import { LogQueue } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { MapTemplates } from "../../../src/features/templates/MapTemplates.ts";
+import { TemplateDraft } from "../../../src/features/templates/editing/TemplateDraft.ts";
 import { createMapDocument } from "../../helpers/mapDocument.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
 import { MAP_CAPABILITIES } from "../../../src/access/MapAccess.ts";
@@ -156,6 +157,20 @@ describe("MapTemplates.remove", () => {
     assert.equal(await templates.remove(id), true);
     assert.equal(world.templates.size, 0);
     assert.equal(prompts.length, 1);
+  });
+
+  test("removes the draft of a template along with it", async() => {
+    const { world, templates } = setup();
+    const id = templates.saveLayer("Draft")!;
+    TemplateDraft.open(world, world.templates.get(id)!);
+
+    await templates.remove(id);
+
+    assert.equal(TemplateDraft.find(world, id), null);
+    assert.deepEqual(
+      world.getLayers().map((layer) => layer.name),
+      ["Ground", "Draft"]
+    );
   });
 });
 

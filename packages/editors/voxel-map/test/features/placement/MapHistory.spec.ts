@@ -11,12 +11,18 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { createWorldHistory } from "../../helpers/mapHistory.ts";
+import {
+  createWorldHistory,
+  mapSteps
+} from "../../helpers/mapHistory.ts";
 import { MAP_HISTORY_SCOPE } from "../../../src/shared/mapHistory.ts";
 import { CellRegion } from "../../../src/features/placement/CellRegion.ts";
 import { MapHistory } from "../../../src/features/placement/MapHistory.ts";
 import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
-import { SelectionStore } from "../../../src/state/index.ts";
+import {
+  EditContext,
+  SelectionStore
+} from "../../../src/state/index.ts";
 import { createMapDocument } from "../../helpers/mapDocument.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
 
@@ -32,7 +38,7 @@ function setup() {
   const voxels = createWorldHistory(world);
   const placement = new MapPlacement({
     world,
-    history: voxels,
+    history: mapSteps(voxels),
     selection: new SelectionStore(),
     mapDocument: createMapDocument(world),
     access: mapAccess()
@@ -40,7 +46,8 @@ function setup() {
   const history = new MapHistory({
     history: voxels,
     placement,
-    access: mapAccess()
+    access: mapAccess(),
+    context: new EditContext()
   });
   world.setVoxel("Draft", {
     position: { x: 0, y: 0, z: 0 },

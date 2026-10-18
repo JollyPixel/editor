@@ -9,6 +9,7 @@ import { Grants } from "@jolly-pixel/network/client";
 // Import Internal Dependencies
 import { MapLayers, type ConfirmPrompt } from "../../../src/features/layers/MapLayers.ts";
 import {
+  EditContext,
   ObjectLayerRef,
   ObjectRef,
   SelectionStore,
@@ -60,6 +61,7 @@ function createMapLayers(
 ): MapLayers {
   return new MapLayers({
     world,
+    editContext: new EditContext(),
     selection: new SelectionStore(),
     mapDocument: createMapDocument(world),
     confirm,
@@ -73,6 +75,7 @@ describe("MapLayers entries", () => {
     const selection = new SelectionStore();
     const layers = new MapLayers({
       world,
+      editContext: new EditContext(),
       selection,
       mapDocument: createMapDocument(world),
       access: mapAccess()
@@ -135,6 +138,7 @@ describe("MapLayers entries", () => {
     const selection = new SelectionStore();
     new MapLayers({
       world,
+      editContext: new EditContext(),
       selection,
       mapDocument: createMapDocument(world),
       access: mapAccess()
@@ -149,6 +153,7 @@ describe("MapLayers entries", () => {
     const selection = new SelectionStore();
     new MapLayers({
       world,
+      editContext: new EditContext(),
       selection,
       mapDocument: createMapDocument(world),
       access: mapAccess()
@@ -165,6 +170,7 @@ describe("MapLayers entries", () => {
     const selection = new SelectionStore();
     const layers = new MapLayers({
       world,
+      editContext: new EditContext(),
       selection,
       mapDocument: createMapDocument(world),
       access: mapAccess()
@@ -255,6 +261,7 @@ describe("MapLayers selection", () => {
     const selection = new SelectionStore();
     new MapLayers({
       world,
+      editContext: new EditContext(),
       selection,
       mapDocument: createMapDocument(world),
       access: mapAccess()
@@ -274,6 +281,7 @@ describe("MapLayers selection", () => {
     const selection = new SelectionStore();
     const layers = new MapLayers({
       world,
+      editContext: new EditContext(),
       selection,
       mapDocument: createMapDocument(world),
       access: mapAccess()

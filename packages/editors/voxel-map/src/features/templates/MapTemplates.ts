@@ -13,8 +13,12 @@ import {
 import type { MapDocumentSignals } from "../../document/MapDocument.ts";
 import type { MapAccessSource } from "../../access/MapAccess.ts";
 import { TemplateStore } from "./TemplateStore.ts";
+import { TemplateDraft } from "./editing/TemplateDraft.ts";
 
-export type TemplateWorld = Pick<VoxelWorld, "templates">;
+export type TemplateWorld = Pick<
+  VoxelWorld,
+  "templates" | "getLayerById" | "removeLayer" | "unrecorded"
+>;
 
 export interface MapTemplatesOptions {
   world: TemplateWorld;
@@ -131,7 +135,14 @@ export class MapTemplates {
       danger: true
     });
 
-    return confirmed && this.#world.templates.remove(templateId);
+    if (!confirmed || !this.#world.templates.remove(templateId)) {
+      return false;
+    }
+    if (this.#access.current.has("layers")) {
+      TemplateDraft.find(this.#world, templateId)?.removeFrom(this.#world);
+    }
+
+    return true;
   }
 
   #select(

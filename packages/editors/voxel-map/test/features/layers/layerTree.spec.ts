@@ -6,7 +6,7 @@ import {
 } from "node:test";
 
 // Import Third-party Dependencies
-import type { VoxelWorld } from "@jolly-pixel/voxel.renderer";
+import { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 import type {
   PresencePeer,
   TreeNode
@@ -38,6 +38,7 @@ describe("layerTreeNodes", () => {
     const world = {
       getLayers: () => [
         {
+          id: "ground",
           name: "Ground",
           visible: true,
           voxelCount: 1234
@@ -86,6 +87,7 @@ describe("layerTreeNodes", () => {
     const world = {
       getLayers: () => [
         {
+          id: "ground",
           name: "Ground",
           visible: true,
           voxelCount: 0
@@ -121,6 +123,16 @@ describe("layerTreeNodes", () => {
     assert.strictEqual(ground.visible, false);
     assert.strictEqual(triggers.visible, true);
     assert.strictEqual(triggers.children?.[0].visible, false);
+  });
+
+  test("leaves template drafts out of the map tree", () => {
+    const world = new VoxelWorld(4);
+    world.addLayer("Ground");
+    world.addLayer("House draft", { id: "template-draft:house" });
+
+    const nodes = layerTreeNodes(world, new LayerVisibilityStore(), kEditable);
+
+    assert.deepStrictEqual(nodes.map((node) => node.label), ["Ground"]);
   });
 
   test("drops the lock toggle of objects the user cannot change", () => {

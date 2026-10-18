@@ -97,6 +97,10 @@ export class LayerManager extends WorkspaceElement {
       workspace.layerVisibility.subscribe("change", refresh),
       workspace.access.subscribe("change", refresh),
       workspace.usage.subscribe("change", () => this.requestUpdate()),
+      workspace.state.editContext.subscribe(
+        "change",
+        () => this.requestUpdate()
+      ),
       selection.subscribe("change", (current) => {
         this._selection = current;
         this.#expandSelectedLayer(current);
@@ -108,6 +112,21 @@ export class LayerManager extends WorkspaceElement {
     const workspace = this.workspace;
     if (workspace === null) {
       return nothing;
+    }
+
+    if (workspace.state.editContext.draft !== null) {
+      return html`
+        <jolly-folder
+          key="layers"
+          label="Layers"
+          storage-key="voxel-map:folder:layers"
+        >
+          <p class="hint">
+            Map layers are hidden while you edit a template. Press Done in the
+            viewport to go back to the map.
+          </p>
+        </jolly-folder>
+      `;
     }
 
     const { layers } = workspace;

@@ -27,6 +27,7 @@ export class LocalLayerVisibility {
   #visibility: LayerVisibilityStore;
   #subscriptions: Array<() => void>;
   #concealed = new Set<string>();
+  #isolated: string | null = null;
 
   constructor(
     options: LocalLayerVisibilityOptions
@@ -56,6 +57,20 @@ export class LocalLayerVisibility {
     };
   }
 
+  isolate(
+    layerName: string
+  ): () => void {
+    this.#isolated = layerName;
+    this.#applyAll();
+
+    return () => {
+      if (this.#isolated === layerName) {
+        this.#isolated = null;
+        this.#applyAll();
+      }
+    };
+  }
+
   dispose(): void {
     for (const unsubscribe of this.#subscriptions.splice(0)) {
       unsubscribe();
@@ -70,9 +85,7 @@ export class LocalLayerVisibility {
       return;
     }
 
-    const visible = this.#concealed.has(ref.name) ?
-      false :
-      this.#visibility.visibilityOverride(key);
+    const visible = this.#visible(ref.name, key);
     if (visible === undefined) {
       this.#layers.reset(ref.name);
     }
@@ -87,23 +100,22 @@ export class LocalLayerVisibility {
     );
     this.#layers.clear();
     this.#applyAll();
-    for (const layerName of this.#concealed) {
-      this.#layers.override(layerName, false);
-    }
   };
 
   readonly #onLayerUpdated = (
     command: VoxelLayerCommand
   ): void => {
     switch (command.action) {
+      case "added":
+        this.#apply(new VoxelLayerRef(command.metadata.name).key);
+        break;
       case "cloned": {
+        const clone = new VoxelLayerRef(command.metadata.options.name).key;
         const source = this.#world.getLayerById(command.layerId);
         if (source !== undefined) {
-          this.#visibility.copy(
-            new VoxelLayerRef(source.name).key,
-            new VoxelLayerRef(command.metadata.options.name).key
-          );
+          this.#visibility.copy(new VoxelLayerRef(source.name).key, clone);
         }
+        this.#apply(clone);
         break;
       }
       case "removed":
@@ -140,8 +152,22 @@ export class LocalLayerVisibility {
   };
 
   #applyAll(): void {
-    for (const key of [...this.#visibility.keys]) {
-      this.#apply(key);
+    for (const layer of this.#world.getLayers()) {
+      this.#apply(new VoxelLayerRef(layer.name).key);
     }
+  }
+
+  #visible(
+    layerName: string,
+    key: string
+  ): boolean | undefined {
+    if (this.#concealed.has(layerName)) {
+      return false;
+    }
+    if (this.#isolated !== null) {
+      return layerName === this.#isolated;
+    }
+
+    return this.#visibility.visibilityOverride(key);
   }
 }

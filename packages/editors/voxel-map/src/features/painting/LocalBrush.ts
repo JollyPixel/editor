@@ -49,10 +49,7 @@ import { applyBrushStroke } from "./interaction/applyBrushStroke.ts";
 import { DragThreshold } from "./interaction/DragThreshold.ts";
 import { pickBlockAt } from "./interaction/pickBlockAt.ts";
 import type { BlockRenderSources } from "../blocks/rendering/BlockRenderSources.ts";
-import {
-  MAP_HISTORY_SCOPE,
-  type MapSteps
-} from "../../shared/mapHistory.ts";
+import type { MapSteps } from "../../shared/MapSteps.ts";
 
 // CONSTANTS
 const kDefaultMaxDistance = 32;
@@ -361,7 +358,7 @@ export class LocalBrush extends ActorComponent {
       this.actor.world.input.mouse.position,
       kDragThreshold
     );
-    this.#step = this.#history.open(MAP_HISTORY_SCOPE, kStrokeLabels[mode]);
+    this.#step = this.#history.open(kStrokeLabels[mode]);
     this.#frameCenter = stroke.origin;
     this.#apply(stroke, stroke.advance(stroke.origin));
   }

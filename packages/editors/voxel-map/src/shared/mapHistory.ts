@@ -9,22 +9,35 @@ import {
   type VoxelEdits
 } from "@jolly-pixel/asset.voxel-map/client";
 
+// Import Internal Dependencies
+import { TemplateDraftId } from "../document/TemplateDraftId.ts";
+
 // CONSTANTS
 const kLimit = 10;
 
 export const MAP_HISTORY_SCOPE = "map";
+export const TEMPLATE_HISTORY_SCOPE = "template";
 
-export type MapHistoryScope = typeof MAP_HISTORY_SCOPE;
+export type MapHistoryScope =
+  | typeof MAP_HISTORY_SCOPE
+  | typeof TEMPLATE_HISTORY_SCOPE;
 
-export type MapSteps = Pick<CommandHistory<MapHistoryScope>, "open">;
+export function editScope(
+  draft: TemplateDraftId | null
+): MapHistoryScope {
+  return draft === null ? MAP_HISTORY_SCOPE : TEMPLATE_HISTORY_SCOPE;
+}
 
 export function createMapHistory(
   edits: VoxelEdits
 ): CommandHistory<MapHistoryScope> {
   const history = new CommandHistory<MapHistoryScope>({ limit: kLimit });
-  history.register(
-    voxelHistoryRegistration(edits, { scope: MAP_HISTORY_SCOPE })
-  );
+  history.register({
+    ...voxelHistoryRegistration(edits, { scope: MAP_HISTORY_SCOPE }),
+    resolveScope: ({ command }) => editScope(
+      "layerId" in command ? TemplateDraftId.parse(command.layerId) : null
+    )
+  });
 
   return history;
 }

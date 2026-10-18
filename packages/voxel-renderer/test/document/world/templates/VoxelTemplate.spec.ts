@@ -171,3 +171,45 @@ describe("VoxelTemplate.fromLayer", () => {
     assert.equal(template.voxelCount, 2);
   });
 });
+
+describe("VoxelTemplate.sameVoxels", () => {
+  test("matches the same cells listed in another order under another id", () => {
+    const reordered = new VoxelTemplate({
+      id: "copy",
+      name: "Copy",
+      positions: [
+        0, 0, 1,
+        0, 1, 0,
+        2, 0, 0,
+        1, 0, 0,
+        0, 0, 0
+      ],
+      voxels: Array.from({ length: 5 }, () => packVoxel(1, 0))
+    });
+
+    assert.equal(lShapedTemplate().sameVoxels(reordered), true);
+  });
+
+  test("tells a turned voxel, a second shape and a moved pivot apart", () => {
+    const template = lShapedTemplate();
+    const positions = [0, 0, 0, 1, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 1];
+    const voxels = Array.from({ length: 5 }, () => packVoxel(1, 0));
+    const turned = new VoxelTemplate({
+      id: "l",
+      name: "L",
+      positions,
+      voxels: voxels.map((voxel, i) => (i === 0 ? packVoxel(1, 1) : voxel))
+    });
+    const merged = new VoxelTemplate({
+      id: "l",
+      name: "L",
+      positions,
+      voxels,
+      partners: voxels.map((_, i) => (i === 0 ? packVoxel(2, 0) : VOXEL_ABSENT))
+    });
+
+    assert.equal(template.sameVoxels(turned), false);
+    assert.equal(template.sameVoxels(merged), false);
+    assert.equal(template.sameVoxels(lShapedTemplate({ x: 0, y: 0, z: 0 })), false);
+  });
+});

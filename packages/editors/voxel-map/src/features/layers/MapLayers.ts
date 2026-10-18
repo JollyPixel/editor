@@ -14,12 +14,17 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { MapDocumentSignals } from "../../document/MapDocument.ts";
+import {
+  MapDocument,
+  type MapDocumentSignals
+} from "../../document/MapDocument.ts";
 import type { MapAccessSource } from "../../access/MapAccess.ts";
 import {
   ObjectLayerRef,
   ObjectRef,
   parseLayerRef,
+  VoxelLayerRef,
+  type EditContext,
   type LayerRef,
   type SelectionStore
 } from "../../state/index.ts";
@@ -38,6 +43,7 @@ export interface MapLayersOptions {
   selection: SelectionStore;
   mapDocument: MapDocumentSignals;
   access: MapAccessSource;
+  editContext: Pick<EditContext, "draft" | "subscribe">;
   confirm?: ConfirmPrompt;
 }
 
@@ -56,6 +62,7 @@ export class MapLayers {
   readonly #selection: SelectionStore;
   readonly #access: MapAccessSource;
   readonly #confirm: ConfirmPrompt;
+  readonly #editContext: Pick<EditContext, "draft">;
   readonly #subscriptions: Array<() => void>;
 
   constructor(
@@ -65,11 +72,13 @@ export class MapLayers {
     this.#selection = options.selection;
     this.#access = options.access;
     this.#confirm = options.confirm ?? showConfirm;
+    this.#editContext = options.editContext;
 
-    const { mapDocument } = options;
+    const { mapDocument, editContext } = options;
     this.#subscriptions = [
       mapDocument.subscribe("layerUpdated", this.#reconcileSelection),
-      mapDocument.subscribe("reset", this.#reconcileSelection)
+      mapDocument.subscribe("reset", this.#reconcileSelection),
+      editContext.subscribe("change", this.#reconcileSelection)
     ];
     this.#reconcileSelection();
   }
@@ -88,7 +97,7 @@ export class MapLayers {
 
   defaultNames(): Record<AddKind, string> {
     return {
-      "voxel-layer": `Layer ${this.#world.getLayers().length + 1}`,
+      "voxel-layer": `Layer ${MapDocument.layers(this.#world).length + 1}`,
       "object-layer": `Objects ${this.#world.objectLayers.size + 1}`,
       object: "Object"
     };
@@ -255,8 +264,19 @@ export class MapLayers {
   }
 
   readonly #reconcileSelection = (): void => {
-    this.#selection.reconcile(collectLayerSelections(this.#world));
+    this.#selection.reconcile(this.#selectable());
   };
+
+  #selectable(): LayerRef[] {
+    const { draft } = this.#editContext;
+    if (draft === null) {
+      return collectLayerSelections(this.#world);
+    }
+
+    const layer = this.#world.getLayerById(draft.layerId);
+
+    return layer === undefined ? [] : [new VoxelLayerRef(layer.name)];
+  }
 }
 
 function objectBounds(

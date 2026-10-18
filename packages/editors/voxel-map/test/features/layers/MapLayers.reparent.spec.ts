@@ -9,6 +9,7 @@ import type { JollyReparentDetail } from "@jolly-pixel/ui";
 // Import Internal Dependencies
 import { MapLayers, type ConfirmPrompt } from "../../../src/features/layers/MapLayers.ts";
 import {
+  EditContext,
   ObjectLayerRef,
   ObjectRef,
   SelectionStore,
@@ -65,6 +66,7 @@ function createMapLayers(
 ): MapLayers {
   return new MapLayers({
     world,
+    editContext: new EditContext(),
     selection: new SelectionStore(),
     mapDocument: createMapDocument(world),
     confirm,

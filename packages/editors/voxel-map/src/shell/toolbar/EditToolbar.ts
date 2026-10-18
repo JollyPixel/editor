@@ -26,6 +26,7 @@ import { editToolbarStyles } from "./EditToolbar.styles.ts";
 import "../../features/painting/toolbar/BrushControls.ts";
 import "../../features/painting/toolbar/PaintNotice.ts";
 import "../../features/placement/PlacementControls.ts";
+import "../../features/templates/editing/TemplateEditBar.ts";
 import "../../features/marquee/marqueeIcons.ts";
 
 export type EditMode = "paint" | "select" | "place";
@@ -109,6 +110,9 @@ export class EditToolbar extends WorkspaceElement {
     const { mode } = this;
 
     return html`
+      <voxel-template-edit-bar
+        .workspace=${workspace}
+      ></voxel-template-edit-bar>
       <voxel-paint-notice .workspace=${workspace}></voxel-paint-notice>
       <jolly-rail
         orientation="horizontal"

@@ -27,6 +27,29 @@ describe("VoxelWorld — layer lifecycle", () => {
     assert.equal(world.getLayer("NoSuchLayer"), undefined);
   });
 
+  it("adds a layer under a given id once, and hands that layer back after", () => {
+    const world = new VoxelWorld(4);
+    const commands: VoxelWorldContentCommand[] = [];
+    world.on("command", (command) => commands.push(command));
+
+    const draft = world.addLayer("Draft", { id: "draft", visible: false });
+    const again = world.addLayer("Other", { id: "draft" });
+
+    assert.equal(again, draft);
+    assert.equal(world.getLayerById("draft"), draft);
+    assert.deepEqual(layerNames(world), ["Draft"]);
+    assert.deepEqual(commands.map((command) => command.action), ["added"]);
+    assert.deepEqual(commands[0], {
+      action: "added",
+      layerId: "draft",
+      metadata: {
+        name: "Draft",
+        rank: draft.rank,
+        options: { visible: false }
+      }
+    });
+  });
+
   it("hands layers back highest-priority first", () => {
     const world = new VoxelWorld(4);
     const base = world.addLayer("Base");

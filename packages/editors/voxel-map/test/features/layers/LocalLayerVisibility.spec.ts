@@ -191,6 +191,33 @@ describe("LocalLayerVisibility", () => {
     assert.strictEqual(groundShown(world, layers), true);
   });
 
+  test("isolates one layer, hides layers added meanwhile, then restores overrides", () => {
+    const { world, layers, visibility, local } = setup();
+    world.addLayer("Draft", { visible: false });
+    world.addLayer("Sky");
+    visibility.override("voxel:Sky", false);
+    function shown(
+      name: string
+    ): boolean {
+      return layers.isVisible(world.getLayer(name)!);
+    }
+
+    const release = local.isolate("Draft");
+    world.addLayer("Late");
+
+    assert.deepStrictEqual(
+      ["Ground", "Draft", "Sky", "Late"].map(shown),
+      [false, true, false, false]
+    );
+
+    release();
+
+    assert.deepStrictEqual(
+      ["Ground", "Draft", "Sky", "Late"].map(shown),
+      [true, false, false, true]
+    );
+  });
+
   test("keeps a concealed layer hidden across a reset", () => {
     const { world, layers, mapDocument, local } = setup();
     const release = local.conceal("Ground");

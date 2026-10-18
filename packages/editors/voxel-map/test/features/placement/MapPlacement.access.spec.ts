@@ -10,7 +10,10 @@ import { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 import { Grants } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
-import { createWorldHistory } from "../../helpers/mapHistory.ts";
+import {
+  createWorldHistory,
+  mapSteps
+} from "../../helpers/mapHistory.ts";
 import { createMapDocument } from "../../helpers/mapDocument.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
 import { CellRegion } from "../../../src/features/placement/CellRegion.ts";
@@ -33,7 +36,7 @@ function setup() {
   const access = mapAccess();
   const placement = new MapPlacement({
     world,
-    history: createWorldHistory(world),
+    history: mapSteps(createWorldHistory(world)),
     selection,
     mapDocument: createMapDocument(world),
     access

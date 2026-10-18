@@ -27,6 +27,11 @@ import {
   TemplateSource
 } from "../../../../src/features/placement/PlacementSource.ts";
 import { RegionSource } from "../../../../src/features/placement/RegionSource.ts";
+import { PeerEditContext } from "../../../../src/features/templates/editing/PeerEditContext.ts";
+import {
+  EditContext,
+  PresenceStore
+} from "../../../../src/state/index.ts";
 import { sceneActor } from "../../../helpers/actors.ts";
 import { createSources } from "../../../helpers/blockSources.ts";
 import { FakeRoom } from "../../../helpers/rooms.ts";
@@ -68,7 +73,12 @@ function replica(): Replica {
       }
     ]),
     sources: createSources(new BlocksetAtlases()),
-    mapDocument: new Emitter<MapDocumentEvents>()
+    mapDocument: new Emitter<MapDocumentEvents>(),
+    peers: new PeerEditContext({
+      world,
+      context: new EditContext(),
+      presence: new PresenceStore()
+    })
   });
 
   return {

@@ -1,12 +1,15 @@
 // Import Third-party Dependencies
 import type { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 
+// Import Internal Dependencies
+import { MapDocument } from "../../document/MapDocument.ts";
+
 export class MergePlan {
   static planMerge(
     world: VoxelWorld,
     sourceName: string
   ): MergePlan {
-    const layers = world.getLayers();
+    const layers = MapDocument.layers(world);
     const source = layers.find((layer) => layer.name === sourceName);
     if (source === undefined) {
       return new MergePlan([], []);
