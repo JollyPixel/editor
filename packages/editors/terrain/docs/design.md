@@ -127,6 +127,13 @@ The view uses CDLOD:
   Chunk borders fall on vertex lines at every level, so no triangle straddles
   one.
 
+### Debug overlays
+
+`TerrainView.overlay` switches the surface between `none`, `chunks`, which
+draws a one-pixel line on every chunk border, and `lod`, which adds a tint per
+LoD level. A uniform selects the mode, so switching does not recompile the
+shader.
+
 ### Slope overlay
 
 An overlay colours the surface by slope, on a ramp from 0° to 60° and above,

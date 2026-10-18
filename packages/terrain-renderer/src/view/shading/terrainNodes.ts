@@ -5,22 +5,30 @@ import {
   type Node
 } from "three/webgpu";
 import {
+  abs,
   attribute,
   cameraPosition,
   clamp,
+  cos,
   Discard,
   float,
   floor,
   Fn,
+  fract,
+  fwidth,
   int,
   ivec2,
   length,
+  log2,
+  max,
+  min,
   mix,
   normalize,
   round,
   select,
   textureLoad,
   transformNormalToView,
+  uniform,
   varying,
   vec2,
   vec3
@@ -40,6 +48,11 @@ export const NODE_MORPH_ATTRIBUTE = "terrainMorph";
 export const GRID_ATTRIBUTE = "terrainGrid";
 export const MORPH_OFFSETS_ATTRIBUTE = "terrainMorphOffsets";
 const kAlbedo = vec3(0.42, 0.47, 0.33);
+const kLineColor = vec3(0.08, 0.09, 0.07);
+const kLevelTint = 0.45;
+
+export const TERRAIN_OVERLAYS = ["none", "chunks", "lod"] as const;
+export type TerrainOverlay = typeof TERRAIN_OVERLAYS[number];
 
 type FloatNode = Node<"float">;
 type IntNode = Node<"int">;
@@ -50,14 +63,19 @@ export interface TerrainTextures {
   lookup: THREE.DataTexture;
 }
 
+export interface TerrainShading {
+  material: MeshStandardNodeMaterial;
+  overlay(mode: TerrainOverlay): void;
+}
+
 interface ChunkTexel {
   layer: IntNode;
   texel: Vec2Node;
 }
 
-export function createTerrainMaterial(
+export function createTerrainShading(
   textures: TerrainTextures
-): MeshStandardNodeMaterial {
+): TerrainShading {
   const material = new MeshStandardNodeMaterial({
     roughness: 0.95,
     metalness: 0
@@ -190,11 +208,24 @@ export function createTerrainMaterial(
   material.normalNode = transformNormalToView(
     normalize(vec3(gradient.x.negate(), float(1), gradient.y.negate()))
   );
+  const overlay = uniform(0);
+  const chunkCoord = fragmentWorld.div(CHUNK_SAMPLES);
+  const lineDistance = abs(fract(chunkCoord.sub(0.5)).sub(0.5))
+    .div(max(fwidth(chunkCoord), vec2(1e-4)));
+  const line = float(1).sub(min(min(lineDistance.x, lineDistance.y), float(1)));
+  const level = log2(varying(spacing, "vTerrainSpacing"));
+  const levelColor = cos(level.mul(1.1).add(vec3(0, 2.1, 4.2))).mul(0.5).add(0.5);
+  const surfaceColor = select(overlay.greaterThan(1.5), mix(kAlbedo, levelColor, kLevelTint), kAlbedo);
   material.colorNode = Fn(() => {
     Discard(fragmentLayer.lessThan(int(0)));
 
-    return kAlbedo;
+    return mix(surfaceColor, kLineColor, line.mul(select(overlay.greaterThan(0.5), float(1), float(0))));
   })();
 
-  return material;
+  return {
+    material,
+    overlay(mode) {
+      overlay.value = TERRAIN_OVERLAYS.indexOf(mode);
+    }
+  };
 }

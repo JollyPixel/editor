@@ -22,7 +22,7 @@ V1 also extends [`@jolly-pixel/asset-server`][asset-server] with asset parts, so
 
 ## 💃 Getting Started
 
-Run `pnpm run dev` in this directory. The dev server listens on port 3008 and seeds `assets/` with a terrain of one flat chunk on first start.
+Run `pnpm run dev` in this directory. The dev server listens on port 3008 and seeds `assets/` with a terrain of one flat chunk on first start. In the browser console, `terrainEditor.view.overlay = "chunks"` draws the chunk borders and `"lod"` also tints each LoD level; `"none"` turns it off.
 
 ## 📚 Documents
 

@@ -9,13 +9,15 @@ import type {
 } from "@jolly-pixel/asset.terrain/client";
 import {
   CHUNK_SAMPLES,
-  ChunkCoord
+  ChunkCoord,
+  type TerrainView
 } from "@jolly-pixel/terrain.renderer";
 import { TerrainRenderer } from "@jolly-pixel/terrain.renderer/engine";
 import * as THREE from "three";
 
 export class TerrainEditorScene extends Systems.Scene {
   #document: TerrainCommandDocument;
+  #view: TerrainView | null = null;
   #disposables: Array<() => void> = [];
 
   constructor(
@@ -23,6 +25,10 @@ export class TerrainEditorScene extends Systems.Scene {
   ) {
     super("terrain-editor");
     this.#document = document;
+  }
+
+  get view(): TerrainView | null {
+    return this.#view;
   }
 
   override awake(): void {
@@ -52,8 +58,11 @@ export class TerrainEditorScene extends Systems.Scene {
         terrain: this.#document.terrain,
         camera: () => camera.camera
       });
+    this.#view = view;
 
-    const onChange = ({ command }: TerrainChange): void => {
+    function onChange(
+      { command }: TerrainChange
+    ): void {
       const coord = new ChunkCoord(command.x, command.z);
       if (command.action === "chunk-added") {
         view.chunkAdded(coord);
@@ -61,12 +70,10 @@ export class TerrainEditorScene extends Systems.Scene {
       else {
         view.chunkRemoved(coord);
       }
-      this.world.invalidate();
-    };
-    const onReset = (): void => {
+    }
+    function onReset(): void {
       view.reset();
-      this.world.invalidate();
-    };
+    }
     this.#document.on("change", onChange);
     this.#document.on("reset", onReset);
     this.#disposables.push(() => {

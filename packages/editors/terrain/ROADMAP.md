@@ -44,6 +44,7 @@ chunks yet.
 - [ ] Undo and redo through `CommandHistory`.
 - [ ] Interest routing in the terrain extension: live patches inside the
   presence radius; peer brush rings drawn inside it.
+- [x] Debug overlays: chunk grid and LoD levels.
 - [ ] Slope overlay.
 - [ ] E2E: two-peer sculpt with undo, LoD seams render, a far peer receives
   the commit only.
@@ -74,7 +75,7 @@ chunks yet.
 - [ ] Strokes that cross into empty ground create the chunk in the same
   commit.
 - [ ] Heightmap and splat map import and export.
-- [ ] Debug overlays: chunk grid, LoD levels, holes.
+- [ ] Debug overlay for holes.
 
 ## Not planned for V1
 

@@ -37,10 +37,17 @@ export class TerrainRenderer extends ActorComponent {
     const {
       terrain,
       camera,
+      requestFrame,
       ...viewOptions
     } = options;
     this.#camera = camera;
-    this.view = new TerrainView(terrain, viewOptions);
+    this.view = new TerrainView(terrain, {
+      ...viewOptions,
+      requestFrame: () => {
+        actor.world.invalidate();
+        requestFrame?.();
+      }
+    });
   }
 
   awake(): void {

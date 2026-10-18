@@ -14,6 +14,8 @@ import {
 } from "@jolly-pixel/editor.host";
 import "@jolly-pixel/editor.host/ui";
 
+import type { TerrainView } from "@jolly-pixel/terrain.renderer";
+
 // Import Internal Dependencies
 import { TerrainEditorScene } from "../scene/TerrainEditorScene.ts";
 
@@ -84,6 +86,10 @@ export class TerrainEditor {
     this.session = parts.session;
     this.#target = parts.target;
     this.ready = parts.target.ready;
+  }
+
+  get view(): TerrainView | null {
+    return this.scene.view;
   }
 
   get document(): TerrainCommandDocument {

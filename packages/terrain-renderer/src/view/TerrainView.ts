@@ -16,11 +16,13 @@ import {
   type NodeMeshProvider
 } from "./mesh/GridMeshProvider.ts";
 import {
-  createTerrainMaterial,
+  createTerrainShading,
   GRID_ATTRIBUTE,
   MORPH_OFFSETS_ATTRIBUTE,
   NODE_DATA_ATTRIBUTE,
-  NODE_MORPH_ATTRIBUTE
+  NODE_MORPH_ATTRIBUTE,
+  type TerrainOverlay,
+  type TerrainShading
 } from "./shading/terrainNodes.ts";
 import { ChunkTextureStore } from "./textures/ChunkTextureStore.ts";
 import { HeightApronStore } from "./textures/HeightApronStore.ts";
@@ -33,6 +35,11 @@ const kInitialCapacity = 64;
 export interface TerrainViewOptions {
   ranges?: LodRanges;
   meshes?: NodeMeshProvider;
+  /**
+   * Called when the view changes without the camera moving, for renderers
+   * that draw on demand.
+   */
+  requestFrame?: () => void;
 }
 
 export class TerrainView {
@@ -41,6 +48,9 @@ export class TerrainView {
   readonly material: MeshStandardNodeMaterial;
 
   #terrain: TerrainReader;
+  #requestFrame: () => void;
+  #shading: TerrainShading;
+  #overlay: TerrainOverlay = "none";
   #textures: ChunkTextureStore;
   #nodes: NodeBatch;
   #quarters: NodeBatch;
@@ -54,12 +64,15 @@ export class TerrainView {
   ) {
     const {
       ranges = new LodRanges(),
-      meshes = new GridMeshProvider()
+      meshes = new GridMeshProvider(),
+      requestFrame = () => undefined
     } = options;
     this.#terrain = terrain;
+    this.#requestFrame = requestFrame;
     this.selection = new QuadtreeSelection(terrain, ranges);
     this.#textures = new ChunkTextureStore(new HeightApronStore(terrain));
-    this.material = createTerrainMaterial(this.#textures);
+    this.#shading = createTerrainShading(this.#textures);
+    this.material = this.#shading.material;
     this.#nodes = new NodeBatch(meshes.mesh(NODE_RESOLUTION), this.material);
     this.#quarters = new NodeBatch(meshes.mesh(NODE_RESOLUTION / 2), this.material);
     this.root.name = "TerrainView";
@@ -67,16 +80,30 @@ export class TerrainView {
     this.reset();
   }
 
+  get overlay(): TerrainOverlay {
+    return this.#overlay;
+  }
+
+  set overlay(
+    mode: TerrainOverlay
+  ) {
+    this.#overlay = mode;
+    this.#shading.overlay(mode);
+    this.#requestFrame();
+  }
+
   chunkAdded(
     coord: ChunkCoord
   ): void {
     this.#textures.chunkAdded(coord);
+    this.#requestFrame();
   }
 
   chunkRemoved(
     coord: ChunkCoord
   ): void {
     this.#textures.chunkRemoved(coord);
+    this.#requestFrame();
   }
 
   reset(): void {
@@ -84,6 +111,7 @@ export class TerrainView {
     for (const { coord } of this.#terrain.chunks()) {
       this.#textures.chunkAdded(coord);
     }
+    this.#requestFrame();
   }
 
   update(
