@@ -11,6 +11,7 @@ import {
   KeyBindings,
   type KeyCode
 } from "@jolly-pixel/controls";
+import { Preferences } from "@jolly-pixel/editor.host/preferences";
 import { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -68,7 +69,7 @@ function setup() {
     mapDocument: createMapDocument(world),
     access: mapAccess()
   });
-  const view = new ViewStore();
+  const view = new ViewStore(new Preferences());
   const settings = defaultKeyBindings();
   const framed: Array<THREE.Box3 | null> = [];
   settings.bind(keyboard, viewShortcuts({

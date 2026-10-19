@@ -22,6 +22,8 @@ import {
   StudioSignedIn,
   type StudioAccountsClient
 } from "../../src/accounts/StudioSignedIn.ts";
+import { AccountPreferences } from "../../src/preferences/AccountPreferences.ts";
+import { PreferencesClient } from "../../src/preferences/PreferencesClient.ts";
 import { ProjectArchiveClient } from "../../src/project/ProjectArchiveClient.ts";
 import { ShareLinksClient } from "../../src/shares/ShareLinksClient.ts";
 
@@ -95,6 +97,13 @@ function signedInAs(
       }),
       projectArchive: new ProjectArchiveClient({
         url: "http://localhost/api/project/"
+      }),
+      preferences: new AccountPreferences([], {
+        accountId: kAlice.id,
+        client: new PreferencesClient({
+          url: "http://localhost/api/preferences/"
+        }),
+        channel: null
       }),
       connect: (profile) => new Client({
         profile,

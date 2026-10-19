@@ -77,7 +77,8 @@ export function voxelMapEditor(
     kinds: ["voxelmap"],
     dist,
     prebuilt,
-    page
+    page,
+    preferences: []
   });
 }
 

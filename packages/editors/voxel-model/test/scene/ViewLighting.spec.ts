@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as THREE from "three";
+import { Preferences } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import { ViewLighting } from "#src/scene/ViewLighting.ts";
@@ -11,7 +12,7 @@ import { ViewSettingsStore } from "#src/state/index.ts";
 
 function createHarness() {
   const scene = new THREE.Scene();
-  const view = new ViewSettingsStore();
+  const view = new ViewSettingsStore(new Preferences());
   const environment = new THREE.RenderTarget();
   const lighting = new ViewLighting({
     scene,

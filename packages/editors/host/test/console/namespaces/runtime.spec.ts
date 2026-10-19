@@ -7,7 +7,6 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { CommandConsole } from "@jolly-pixel/console";
-import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { runtimeConsole } from "#src/console/namespaces/runtime.ts";
@@ -23,7 +22,7 @@ function registerRuntime(
   const commands = new CommandConsole();
   runtimeConsole(commands, {
     runtime: {
-      widgets: new RuntimeWidgets(runtime, new MemoryStorageAdapter())
+      widgets: new RuntimeWidgets(runtime)
     }
   });
 

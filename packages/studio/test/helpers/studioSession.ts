@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type { AssetRecordData } from "@jolly-pixel/asset";
+import { Preferences } from "@jolly-pixel/editor.host/preferences";
 import {
   MemoryStorageAdapter,
   type StorageAdapter
@@ -7,7 +8,8 @@ import {
 
 // Import Internal Dependencies
 import { EditorRegistry } from "../../src/editors/EditorRegistry.ts";
-import { StudioPreferences } from "../../src/preferences/StudioPreferences.ts";
+import { BrowserState } from "../../src/browser/BrowserState.ts";
+import { PreferenceScopes } from "../../src/preferences/PreferenceScopes.ts";
 import {
   StudioSession,
   type StudioCatalog,
@@ -121,8 +123,12 @@ export function session(
       launchOrigin: "http://localhost",
       share: idleShare()
     },
-    preferences: new StudioPreferences(storage),
-    ...extra
+    browserState: new BrowserState(storage),
+    ...extra,
+    preferences: extra.preferences ?? {
+      values: new Preferences(),
+      scopes: new PreferenceScopes([])
+    }
   });
 
   return current;

@@ -48,4 +48,11 @@ CREATE TABLE IF NOT EXISTS avatars (
   hash TEXT NOT NULL,
   bytes BLOB NOT NULL
 ) STRICT;
+
+CREATE TABLE IF NOT EXISTS preferences (
+  user_id TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  scope TEXT NOT NULL,
+  overrides TEXT NOT NULL,
+  PRIMARY KEY (user_id, scope)
+) STRICT;
 `;

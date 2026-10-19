@@ -101,17 +101,10 @@ export class AccountBadge {
     await this.#choose(username, "Sign out");
   }
 
-  async changeAvatar(
-    username: string,
-    png: Buffer
+  async openSettings(
+    username: string
   ): Promise<void> {
-    const chooser = this.#page.waitForEvent("filechooser");
-    await this.#choose(username, "Change avatar…");
-    await (await chooser).setFiles({
-      name: "avatar.png",
-      mimeType: "image/png",
-      buffer: png
-    });
+    await this.#choose(username, "Settings");
   }
 
   async #choose(

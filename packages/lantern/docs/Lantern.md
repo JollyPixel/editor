@@ -96,8 +96,9 @@ register, on release and at the end of a session.
 ## LanternSeen
 
 `lantern.seen` records, per tour id, the version the user last finished or skipped. It stores the
-version as a string under `jolly-pixel:lantern:<id>`. The state is local to the browser: it is not
-synced to the project, the asset server or the other peers in a room.
+version as a string under `jolly-pixel:lantern:<id>`, in the `StorageAdapter` it is given. It is
+not synced to the project, the asset server or the other peers in a room. The editor host backs
+it with the user's preferences.
 
 ### `new LanternSeen(storage: StorageAdapter)`
 

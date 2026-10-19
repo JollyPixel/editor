@@ -1,0 +1,75 @@
+// Import Node.js Dependencies
+import {
+  describe,
+  test
+} from "node:test";
+import assert from "node:assert/strict";
+
+// Import Third-party Dependencies
+import {
+  Preferences,
+  RUNTIME_PREFERENCES,
+  defineKeyBindings
+} from "@jolly-pixel/editor.host/preferences";
+
+// Import Internal Dependencies
+import { KeybindingTable } from "../../src/keybindings/KeybindingTable.ts";
+
+// CONSTANTS
+const kMap = defineKeyBindings({
+  name: "map-keys",
+  label: "Voxel map",
+  defaults: {
+    "tool.brush": "b",
+    "edit.undo": "Mod+z",
+    "edit.redo": ["Mod+y", "Mod+Shift+z"]
+  },
+  actions: {
+    "tool.brush": {
+      label: "Brush tool",
+      group: "Tools"
+    },
+    "edit.undo": {
+      label: "Undo",
+      group: "Editing"
+    },
+    "edit.redo": {
+      label: "Redo",
+      group: "Editing"
+    }
+  }
+});
+const kPlatform = { apple: false };
+
+describe("KeybindingTable", () => {
+  test("lists each scope with chords, groups and what was customized", () => {
+    const preferences = new Preferences({
+      overrides: [["map-keys", { "tool.brush": ["p"] }]]
+    });
+    const [section, ...others] = new KeybindingTable(
+      [RUNTIME_PREFERENCES, kMap],
+      preferences,
+      kPlatform
+    ).sections();
+
+    assert.equal(others.length, 0);
+    assert.equal(section.customized, true);
+    assert.deepEqual(section.groups.map((group) => [
+      group.label,
+      group.rows.map((row) => [row.label, row.chords.map((chord) => chord.label), row.customized])
+    ]), [
+      ["Tools", [["Brush tool", ["P"], true]]],
+      ["Editing", [["Undo", ["Ctrl+Z"], false], ["Redo", ["Ctrl+Y", "Ctrl+Shift+Z"], false]]]
+    ]);
+  });
+
+  test("filters by action label or chord label", () => {
+    const table = new KeybindingTable([kMap], new Preferences(), kPlatform);
+
+    assert.deepEqual(
+      table.sections("shift+z")[0].groups.flatMap((group) => group.rows.map((row) => row.action)),
+      ["edit.redo"]
+    );
+    assert.deepEqual(table.sections("nothing like it"), []);
+  });
+});

@@ -10,10 +10,13 @@ import {
   HOST_PARAMS,
   withOfflineFallback
 } from "@jolly-pixel/editor.host";
+import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 import { Client } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import { StudioSignedIn } from "./accounts/StudioSignedIn.ts";
+import { PreferencesClient } from "./preferences/PreferencesClient.ts";
+import { PREFERENCES_URL_PATH } from "./preferences/routes.ts";
 import { ProjectArchiveClient } from "./project/ProjectArchiveClient.ts";
 import { PROJECT_URL_PATH } from "./project/routes.ts";
 import { ShareLinksClient } from "./shares/ShareLinksClient.ts";
@@ -24,6 +27,7 @@ export interface StudioConnection {
   share: CatalogShare;
   editorQuery: Readonly<Record<string, string>>;
   signedIn: StudioSignedIn | null;
+  preferences: Preferences;
 }
 
 export function connectStudio(): Promise<StudioConnection> {
@@ -53,6 +57,9 @@ async function connectOnline(): Promise<StudioConnection> {
     projectArchive: new ProjectArchiveClient({
       url: new URL(`.${PROJECT_URL_PATH}`, document.baseURI)
     }),
+    preferences: new PreferencesClient({
+      url: new URL(`.${PREFERENCES_URL_PATH}`, document.baseURI)
+    }),
     connect: (profile) => new Client({ profile }),
     reload: () => location.reload()
   });
@@ -62,7 +69,8 @@ async function connectOnline(): Promise<StudioConnection> {
       timeoutMs: CATALOG_TIMEOUT_MS
     }),
     editorQuery: {},
-    signedIn
+    signedIn,
+    preferences: signedIn.preferences.preferences
   };
 }
 

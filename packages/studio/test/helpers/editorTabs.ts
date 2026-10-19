@@ -1,6 +1,9 @@
 // Import Node.js Dependencies
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { Preferences } from "@jolly-pixel/editor.host/preferences";
+
 // Import Internal Dependencies
 import { EditorFrames } from "../../src/tabs/EditorFrames.ts";
 import { idleShare } from "./catalogShare.ts";
@@ -55,7 +58,8 @@ export function harness(
   document.body.append(strip, frames, home, page);
   const editorFrames = new EditorFrames({
     container: frames,
-    share: idleShare()
+    share: idleShare(),
+    preferences: new Preferences()
   });
   const tabs = new EditorTabs({
     strip,

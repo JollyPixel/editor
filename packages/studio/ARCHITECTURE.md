@@ -84,6 +84,15 @@ flowchart TB
   `GET /api/project/archive` with every asset in one asset archive, named
   after the project root. It goes over HTTP, so the catalog content limit
   does not apply. `GET /api/project/` answers `canExport` for the caller.
+- Preferences: `PreferencesController` answers `GET /api/preferences/` with
+  the caller's overrides and `PUT /api/preferences/<scope>`. Both go
+  through `PreferenceScopes`, the descriptors the server knows: a `PUT`
+  refuses unknown fields and values, a read drops them
+  ([ADR-0023](./docs/adr/0023-preferences-follow-the-account.md)). The
+  scopes are the studio's, the host's (`HOST_PREFERENCES`) and those each
+  editor package's `jollypixel.editor.preferences` module exports, which
+  `EditorPackage.read` imports and the manifest carries
+  ([ADR-0024](./docs/adr/0024-editors-read-preferences-from-the-shell.md)).
 
 | Mode | Project file | Back-end | Editor pages |
 |---|---|---|---|
@@ -117,6 +126,12 @@ sequenceDiagram
 - `StudioSignedIn` holds the signed-in account and what derives from it: the
   peer identity, the shell's client, the roster, the share links and the
   session renewal. A new avatar changes the identity the next launch carries.
+- `StudioSignedIn.open` loads the preferences right after `me`.
+  `AccountPreferences` sends each change, one request per scope in flight,
+  and posts it on a `BroadcastChannel` for the other tabs. Offline,
+  `LocalPreferences` keeps them in `localStorage`. `StudioAppearance` applies
+  the theme and density from them and is what the console's `theme` and
+  `density` variables write.
 - Editor frames connect with the same cookie; `jolly-launch` carries the
   identity only.
 - A refused socket (`unauthorized`), the shell's or a frame's, goes through
@@ -157,10 +172,11 @@ sequenceDiagram
 | Message | Direction | Carries |
 |---|---|---|
 | `jolly-ready` | frame → shell | nothing |
-| `jolly-launch` | shell → frame | target asset, theme, density, the shell's peer identity, a port to the shell catalog and a port for the frame's console |
+| `jolly-launch` | shell → frame | target asset, theme, density, the shell's peer identity, the preference overrides, a port to the shell catalog and a port for the frame's console |
 | `jolly-catalog-open` | frame → shell, on the launch port | a port for one catalog |
-| `jolly-shell` | frame → shell | `open-asset`, `toggle-console`, `session-refused`, `unsaved` or `editor-state` |
+| `jolly-shell` | frame → shell | `open-asset`, `toggle-console`, `session-refused`, `unsaved`, `editor-state` or `update-preferences` |
 | `jolly-appearance` | shell → frame | new theme or density |
+| `jolly-preferences` | shell → frame | one scope's new overrides |
 | `jolly-session-renewed` | shell → frame | nothing; refused clients reconnect |
 
 - `EditorFrames` ignores messages from any other window.
@@ -178,6 +194,10 @@ sequenceDiagram
   `editor-state` `ready`, spins again while it posts `switching`, and shows a
   warning on `failed`. A tab opened in the background stays still until its
   frame loads.
+- `update-preferences` goes through the shell's `Preferences`; every change,
+  from a frame, Settings or another tab, is pushed to every frame. A refused
+  patch pushes the shell's overrides of that scope back instead
+  ([ADR-0024](./docs/adr/0024-editors-read-preferences-from-the-shell.md)).
 - One console for the whole studio: Ctrl+K in a frame posts `toggle-console`
   ([ADR-0015](./docs/adr/0015-the-studio-console-takes-precedence.md)).
 - The frame serves its console namespaces on the console port, and
@@ -192,9 +212,12 @@ sequenceDiagram
 | `studio:home-layout` | `localStorage` | asset dock size |
 | `studio:asset-kind` | `localStorage` | kind filter |
 | `studio:asset-expanded` | `localStorage` | expanded folder node ids |
+| `studio:appearance` | `localStorage` | last applied theme and density, painted before the preferences load |
+| `jolly-pixel:preferences:<scope>` | `localStorage` | preference overrides of the offline studio |
+| `preferences` table | `.jollypixel/accounts.db` | preference overrides per account and scope |
 | `jolly_session_<hash>` | HttpOnly cookie | session token, unreadable from scripts |
 
-`StudioPreferences` reads and writes the `studio:` keys through one
+`BrowserState` reads and writes the `studio:` keys through one
 `StorageAdapter`, and parses each one once; an unreadable value reads as
 empty. Restoring tabs skips missing assets and kinds without an editor, stops
 at the cap, and loads only the active frame.
@@ -333,6 +356,7 @@ flowchart TB
 | `src/project/` | project routes, `ProjectArchiveClient`, `AttachmentDisposition` |
 | `src/files/` | `DroppedFile`, `FileDownload` |
 | `src/editors/` | `EditorRegistry`, `ProjectManifest` |
-| `src/preferences/` | `StudioPreferences` |
+| `src/browser/` | `BrowserState` |
+| `src/preferences/` | preference routes and scopes, `AccountPreferences`, `StudioAppearance` |
 | `src/tabs/` | `EditorTabs`, `EditorFrames`, `SavedTabs` |
-| `src/shell/` | `<jolly-studio>`, `StudioSession`, Home, asset browser (`AssetTreeView`), sign-in dialog, Users pane |
+| `src/shell/` | `<jolly-studio>`, `StudioSession`, Home, Settings, asset browser (`AssetTreeView`), sign-in dialog, Users pane |

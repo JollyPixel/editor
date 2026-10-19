@@ -18,6 +18,7 @@ export const FOLLOW_UP_PHASE = z.enum(PHASES).exclude(["first"]);
 const kVariantSchema = z.object({
   label: z.string().min(1),
   storage: STORAGE_SCHEMA.default({}),
+  prefetch: z.boolean().default(false),
   prewarm: z.boolean().default(false),
   base: z.url().default(STUDIO_URL)
 });

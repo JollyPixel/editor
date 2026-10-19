@@ -90,6 +90,7 @@ interface EditorContext {
   logger: HostLogger;
   commands: CommandConsole;
   lantern: Lantern;
+  preferences: Preferences;
 }
 
 interface RuntimeEditorContext extends EditorContext {
@@ -104,7 +105,12 @@ interface RuntimeEditorContext extends EditorContext {
   frame launched the page.
 - `logger` is the `editor` namespace of the [boot trace](#boot-tracing).
 - `commands` is the page's [console](#console).
-- `lantern` holds the page's [guided tours](#tours).
+- `lantern` holds the page's [guided tours](#tours). Which tours were
+  finished is the `lantern` [preference scope](../preferences/Preferences.md#host-scopes).
+- `preferences` holds the user's [preferences](../preferences/Preferences.md).
+  Under a shell they come from the launch and follow the shell's pushes, and a
+  change goes back as an `update-preferences` command. Otherwise they are a
+  `LocalPreferences`. Before `mount`, the runtime widgets follow them.
 
 ## Editor handle
 
@@ -262,7 +268,8 @@ namespaces when the launch carries a [console port](../launch/ShellChannel.md#co
 The console registers two root variables, `theme` (`light`, `dark`, `auto`)
 and `density` (`compact`, `default`, `comfortable`). They write every
 `jolly-scope` of the page and persist under `jolly-pixel:theme` and
-`jolly-pixel:density`, except under a shell, whose appearance wins.
+`jolly-pixel:density`, except under a shell, whose appearance wins. In the
+studio, they are the account's preferences.
 
 ## Tours
 
@@ -309,6 +316,7 @@ the same console itself:
 function mountConsole(options?: {
   parent?: HTMLElement;
   storage?: StorageAdapter;
+  appearance?: Appearance;
 }): EditorConsole;
 
 interface EditorConsole {
@@ -317,6 +325,11 @@ interface EditorConsole {
   dispose(): void;
 }
 ```
+
+The `theme` and `density` console variables read and write `appearance`.
+Without it, the console restores them from `storage` and stores them there,
+under `jolly-pixel:theme` and `jolly-pixel:density`. The studio passes its own,
+backed by the account's preferences.
 
 ## Boot tracing
 

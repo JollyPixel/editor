@@ -5,11 +5,7 @@ import {
   type RuntimeCanvasTarget,
   type RuntimeOptions
 } from "@jolly-pixel/runtime";
-import {
-  inputLayers,
-  LocalStorageAdapter,
-  type StorageAdapter
-} from "@jolly-pixel/ui";
+import { inputLayers } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { suspendOnHover } from "./suspendOnHover.ts";
@@ -29,11 +25,6 @@ export interface EditorRuntimeCreateOptions extends RuntimeOptions {
    * @default window.parent !== window
    */
   framed?: boolean;
-  /**
-   * Where the visibility of the runtime widgets is kept.
-   * @default new LocalStorageAdapter()
-   */
-  storage?: StorageAdapter;
 }
 
 export interface EditorRuntimeLoadOptions {
@@ -58,7 +49,6 @@ export class EditorRuntime {
       params = HOST_PARAMS.read(),
       renderOnDemand = true,
       framed = window.parent !== window,
-      storage,
       renderer = {},
       ...runtimeOptions
     } = options;
@@ -76,10 +66,7 @@ export class EditorRuntime {
       inputLayers
     );
 
-    const editorRuntime = new EditorRuntime(runtime, params, storage);
-    editorRuntime.widgets.restore();
-
-    return editorRuntime;
+    return new EditorRuntime(runtime, params);
   }
 
   readonly runtime: Runtime;
@@ -92,12 +79,11 @@ export class EditorRuntime {
 
   constructor(
     runtime: Runtime,
-    params: HostParams = HOST_PARAMS.read(),
-    storage: StorageAdapter = new LocalStorageAdapter()
+    params: HostParams = HOST_PARAMS.read()
   ) {
     this.runtime = runtime;
     this.params = params;
-    this.widgets = new RuntimeWidgets(runtime, storage);
+    this.widgets = new RuntimeWidgets(runtime);
   }
 
   async load(
@@ -132,7 +118,7 @@ export class EditorRuntime {
         key: kPerformancePaneKey,
         title: "Performance",
         storageKey,
-        hidden: this.widgets.startsHidden("metrics", true),
+        hidden: this.widgets.startsHidden("metrics"),
         signal: unmount.signal
       })
     ).catch(() => undefined);

@@ -5,6 +5,7 @@ import {
   isShellCommand,
   launchMessage,
   PageAppearance,
+  preferencesMessage,
   readDebugLogger,
   sessionRenewedMessage,
   type Appearance,
@@ -15,6 +16,10 @@ import {
   type LaunchPorts,
   type ShellCommand
 } from "@jolly-pixel/editor.host";
+import type {
+  PreferenceOverrides,
+  Preferences
+} from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import type { EditorTab } from "./EditorTabs.ts";
@@ -39,6 +44,10 @@ export interface EditorFramesOptions {
    */
   identity?: () => LaunchIdentity | null;
   consoles?: Pick<FrameConsoles, "connect" | "focus">;
+  /**
+   * Sent with each launch, and every later change pushed to every frame.
+   */
+  preferences: Preferences;
   onShellCommand?: (command: ShellCommand, from: string) => void;
   /**
    * @default readDebugLogger()
@@ -53,6 +62,8 @@ export class EditorFrames {
   #share: Pick<CatalogShare, "serve">;
   #identity: () => LaunchIdentity | null;
   #consoles: Pick<FrameConsoles, "connect" | "focus"> | undefined;
+  #preferences: Preferences;
+  #stopPreferences: () => void;
   #onShellCommand: ((command: ShellCommand, from: string) => void) | undefined;
   #logger: HostLogger;
   #frames = new Map<string, HTMLIFrameElement>();
@@ -68,6 +79,7 @@ export class EditorFrames {
     this.#share = options.share;
     this.#identity = options.identity ?? (() => null);
     this.#consoles = options.consoles;
+    this.#preferences = options.preferences;
     this.#onShellCommand = options.onShellCommand;
     this.#logger = (options.logger ?? readDebugLogger()).child({
       namespace: "studio.tabs"
@@ -76,6 +88,9 @@ export class EditorFrames {
     const { signal } = this.#listening;
     window.addEventListener("message", this.#onMessage, { signal });
     this.#appearance.watch(this.#shareAppearance, signal);
+    this.#stopPreferences = this.#preferences.subscribe(
+      this.#sharePreferences
+    );
   }
 
   show(
@@ -110,6 +125,12 @@ export class EditorFrames {
     }
   }
 
+  sharePreferences(
+    scope: string
+  ): void {
+    this.#sharePreferences(scope, this.#preferences.overrides(scope));
+  }
+
   remove(
     id: string
   ): void {
@@ -120,6 +141,7 @@ export class EditorFrames {
 
   dispose(): void {
     this.#listening.abort();
+    this.#stopPreferences();
     for (const id of [...this.#launchPorts.keys()]) {
       this.#stopPorts(id);
     }
@@ -191,6 +213,7 @@ export class EditorFrames {
         target: id,
         appearance: this.#appearance.toJSON(),
         identity: this.#identity(),
+        preferences: Object.fromEntries(this.#preferences),
         ports
       }),
       Object.values(ports).filter((port) => port !== undefined)
@@ -226,6 +249,16 @@ export class EditorFrames {
         ...event.data
       });
       this.#onShellCommand?.(event.data, id);
+    }
+  };
+
+  readonly #sharePreferences = (
+    scope: string,
+    overrides: PreferenceOverrides
+  ): void => {
+    const message = preferencesMessage(scope, overrides);
+    for (const frame of this.#frames.values()) {
+      this.#post(frame, message);
     }
   };
 

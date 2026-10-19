@@ -115,7 +115,7 @@ export class StudioProject {
 
     return new StudioProject(
       file,
-      EditorPackages.read(
+      await EditorPackages.read(
         section.data.editors,
         resolver
       ),

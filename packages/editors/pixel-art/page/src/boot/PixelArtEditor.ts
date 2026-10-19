@@ -4,10 +4,11 @@ import {
   PIXEL_ART_KIND,
   pixelArtDocumentKind
 } from "@jolly-pixel/asset.pixel-art/client";
-import type {
-  EditorContext,
-  EditorSession,
-  PageEditorDefinition
+import {
+  PreferenceStorage,
+  type EditorContext,
+  type EditorSession,
+  type PageEditorDefinition
 } from "@jolly-pixel/editor.host";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 import type { Runtime } from "@jolly-pixel/runtime";
@@ -21,6 +22,7 @@ import {
   pixelArtConsole,
   type PixelDrawPanel
 } from "#src/index.ts";
+import { PIXEL_ART_PREFERENCES } from "#src/preferences.ts";
 import { PanelScope } from "./PanelScope.ts";
 import type { PixelArtFeatures } from "./PixelArtFeatures.ts";
 import { EditorPreferences } from "../state/EditorPreferences.ts";
@@ -88,7 +90,13 @@ export class PixelArtEditor {
     panel.uvResize = features.uvResize;
     panel.uvOverflow = kUvOverflow;
     panel.textureImportPolicy = features.importPolicy;
-    const uvNets = new UvNetLibrary({ storage: kStorage });
+    const uvNets = new UvNetLibrary({
+      storage: new PreferenceStorage(
+        context.preferences,
+        PIXEL_ART_PREFERENCES,
+        "uvNets"
+      )
+    });
     panel.uvNets = uvNets;
 
     const previewType = loadPreview === null
@@ -101,15 +109,15 @@ export class PixelArtEditor {
     );
     await panel.updateComplete;
 
-    const keyBindingSettings = new PixelArtKeyBindingSettings({
-      storage: new LocalStorageAdapter(),
-      onDropped: (message) => console.warn(message)
-    });
+    const keyBindingSettings = PixelArtKeyBindingSettings.follow(
+      context.preferences,
+      (message) => console.warn(message)
+    );
     const keybindings = keyBindingSettings.sync(panel);
 
     const target = session.targetLease(kTextureKind);
     const { record } = target;
-    const preferences = new EditorPreferences(kStorage);
+    const preferences = new EditorPreferences(kStorage, context.preferences);
     const canvas = await panel.initialize({
       id: record.id,
       name: TextureName.fromPath(record.source).value,

@@ -15,7 +15,8 @@ import {
 const kEditors = [
   {
     name: "voxel-map",
-    kinds: ["voxelmap"]
+    kinds: ["voxelmap"],
+    preferences: []
   }
 ];
 const kKinds = [
@@ -68,6 +69,39 @@ describe("ProjectManifest", () => {
 
     assert.deepEqual(manifest.editors, kEditors);
     assert.deepEqual(manifest.kinds, [kKinds[1]]);
+  });
+
+  test("lists the preference scopes of every editor and skips invalid ones", () => {
+    const manifest = new ProjectManifest({
+      editors: [
+        {
+          name: "voxel-map",
+          kinds: ["voxelmap"],
+          preferences: [
+            {
+              name: "voxel-map",
+              label: "Voxel map",
+              fields: {
+                grid: {
+                  type: "boolean",
+                  label: "Grid",
+                  default: true
+                }
+              }
+            },
+            {
+              name: "Not Kebab"
+            }
+          ]
+        }
+      ],
+      kinds: []
+    });
+
+    assert.deepEqual(
+      [...manifest.preferences()].map((scope) => scope.name),
+      ["voxel-map"]
+    );
   });
 
   test("names the manifest file it rejects", () => {

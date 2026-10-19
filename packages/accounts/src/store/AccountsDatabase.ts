@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import { AccountRepository } from "./AccountRepository.ts";
 import { AvatarRepository } from "./AvatarRepository.ts";
+import { PreferenceRepository } from "./PreferenceRepository.ts";
 import { SQL_SCHEMA } from "./schema.ts";
 import { SessionRepository } from "./SessionRepository.ts";
 import { ShareLinkRepository } from "./ShareLinkRepository.ts";
@@ -25,6 +26,7 @@ export class AccountsDatabase implements Disposable {
   readonly sessions: SessionRepository;
   readonly avatars: AvatarRepository;
   readonly shareLinks: ShareLinkRepository;
+  readonly preferences: PreferenceRepository;
 
   #db: SqliteDatabase;
 
@@ -37,6 +39,7 @@ export class AccountsDatabase implements Disposable {
     this.sessions = new SessionRepository(db);
     this.avatars = new AvatarRepository(db);
     this.shareLinks = new ShareLinkRepository(db);
+    this.preferences = new PreferenceRepository(db);
   }
 
   transaction<TResult>(

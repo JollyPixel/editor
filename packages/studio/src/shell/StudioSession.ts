@@ -1,12 +1,18 @@
 // Import Third-party Dependencies
 import type { AssetRecordData } from "@jolly-pixel/asset";
 import type { ShellCommand } from "@jolly-pixel/editor.host";
+import {
+  InvalidPreferencesError,
+  type PreferenceOverrides,
+  type Preferences
+} from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import type { AssetKindSet } from "../catalog/AssetKindSet.ts";
 import { AssetPath } from "../catalog/AssetPath.ts";
 import type { EditorRegistry } from "../editors/EditorRegistry.ts";
-import { StudioPreferences } from "../preferences/StudioPreferences.ts";
+import type { PreferenceScopes } from "../preferences/PreferenceScopes.ts";
+import { BrowserState } from "../browser/BrowserState.ts";
 import {
   EditorFrames,
   type EditorFramesOptions
@@ -40,6 +46,11 @@ export interface StudioSessionRenewal {
   ): () => void;
 }
 
+export interface StudioSessionPreferences {
+  values: Preferences;
+  scopes: PreferenceScopes;
+}
+
 export interface StudioSessionConsole {
   toggle(): void;
 }
@@ -48,14 +59,18 @@ export interface StudioSessionOptions {
   catalog: StudioCatalog;
   editors: EditorRegistry;
   tabs: Omit<EditorTabsOptions, "frames" | "onChange">;
-  frames: Omit<EditorFramesOptions, "onShellCommand">;
+  frames: Omit<EditorFramesOptions, "onShellCommand" | "preferences">;
+  /**
+   * What frames read with their launch and change with `update-preferences`.
+   */
+  preferences: StudioSessionPreferences;
   onTabsChange?: () => void;
   console?: StudioSessionConsole;
   renewal?: StudioSessionRenewal;
   /**
-   * @default new StudioPreferences()
+   * @default new BrowserState()
    */
-  preferences?: StudioPreferences;
+  browserState?: BrowserState;
 }
 
 export class StudioSession {
@@ -65,10 +80,11 @@ export class StudioSession {
   #catalog: StudioCatalog;
   #frames: EditorFrames;
   #editors: EditorRegistry;
-  #preferences: StudioPreferences;
+  #browserState: BrowserState;
   #onTabsChange: (() => void) | undefined;
   #console: StudioSessionConsole | undefined;
   #renewal: StudioSessionRenewal | undefined;
+  #preferences: StudioSessionPreferences;
   #stopRenewal: (() => void) | undefined;
   #restoring = false;
   #listening = new AbortController();
@@ -78,13 +94,15 @@ export class StudioSession {
   ) {
     this.#catalog = options.catalog;
     this.#editors = options.editors;
-    this.#preferences = options.preferences ?? new StudioPreferences();
+    this.#browserState = options.browserState ?? new BrowserState();
     this.#onTabsChange = options.onTabsChange;
     this.#console = options.console;
     this.#renewal = options.renewal;
+    this.#preferences = options.preferences;
     this.kinds = options.editors.kindSet();
     this.#frames = new EditorFrames({
       ...options.frames,
+      preferences: options.preferences.values,
       onShellCommand: this.#onShellCommand
     });
     this.tabs = new EditorTabs({
@@ -134,7 +152,7 @@ export class StudioSession {
   }
 
   async restoreTabs(): Promise<void> {
-    const saved = this.#preferences.tabs;
+    const saved = this.#browserState.tabs;
 
     this.#restoring = true;
     try {
@@ -210,6 +228,9 @@ export class StudioSession {
       case "editor-state":
         this.tabs.markState(from, command.state);
         break;
+      case "update-preferences":
+        this.#updatePreferences(command.scope, command.patch);
+        break;
       default: {
         const unhandled: never = command;
         throw new Error(
@@ -218,6 +239,26 @@ export class StudioSession {
       }
     }
   };
+
+  #updatePreferences(
+    name: string,
+    patch: PreferenceOverrides
+  ): void {
+    const scope = this.#preferences.scopes.find(name);
+    if (scope === undefined) {
+      return;
+    }
+
+    try {
+      this.#preferences.values.update(scope, patch);
+    }
+    catch (error) {
+      if (!(error instanceof InvalidPreferencesError)) {
+        throw error;
+      }
+      this.#frames.sharePreferences(scope.name);
+    }
+  }
 
   readonly #onBeforeUnload = (
     event: BeforeUnloadEvent
@@ -237,7 +278,7 @@ export class StudioSession {
       return;
     }
 
-    this.#preferences.tabs = new SavedTabs(
+    this.#browserState.tabs = new SavedTabs(
       this.tabs.ids(),
       this.tabs.active
     );

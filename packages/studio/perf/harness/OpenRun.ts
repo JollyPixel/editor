@@ -196,6 +196,7 @@ export class OpenRun {
       base: variant.base,
       mode,
       storage: variant.storage,
+      prefetch: variant.prefetch,
       prewarm: variant.prewarm,
       probe: true,
       cpuThrottle: this.#settings.cpuThrottle,

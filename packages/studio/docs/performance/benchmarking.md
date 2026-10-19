@@ -56,7 +56,8 @@ $ pnpm run perf:summary perf-results/baseline.json --steps --phase reload
 - `--phases reopen,reload,cold,restart`: the phases measured after `first`, which always runs.
 - `--runs 6`: repetitions. Each run shuffles modes and editors and launches a new browser per editor. A measurement's `run` is its repetition, and profile files end with it.
 - `--label`: tags every measurement, for summaries that mix files.
-- `--storage '{"key":"value"}'`: `localStorage` entries written before any page script runs. The harness writes `"studio:prefetch-editors": "off"` first, so the shell does not download the editors' files ahead of the open; set it to `"on"` to measure the prefetch.
+- `--storage '{"key":"value"}'`: `localStorage` entries written before any page script runs.
+- `--prefetch`: lets the shell download the editors' files ahead of the open. Without it, the harness turns the studio's "Prefetch editors" preference off: on the new account online, in `localStorage` offline.
 - `--prewarm`: the shell requests a WebGPU adapter as soon as it loads.
 - `--cpu 4`: CDP CPU throttling.
 - `--network fast-4g`: CDP network throttling with the DevTools presets, `fast-4g` (9 Mbit/s, 165 ms) or `slow-4g` (1.6 Mbit/s, 563 ms), both at 90% of the nominal throughput. It starts after the shell's first load, so the unbundled `dev:e2e` shell does not dominate the run; a `reload` reloads the shell throttled. On localhost, transfer size barely shows in `ready`; use it to measure what bytes cost. It delivers a large uncompressed WebSocket frame about ten times slower than the preset's throughput, so keep socket compression on when reading room timings ([Over a real link](./editor-startup-2026-10-16.md#over-a-real-link)).
@@ -83,7 +84,8 @@ Drift between runs can be large: in October 2026 the same warm open went from ab
 
 A plan file lists the `editors`, `modes` and follow-up `phases` as arrays, plus its `variants`. It is validated before the first browser starts. A variant has a `label` and any of:
 
-- `storage`: `localStorage` entries. This covers editor settings that persist there (`voxel-model:view` for glow and environment) and the `bench:*` flags of an experiment patch.
+- `storage`: `localStorage` entries: the `bench:*` flags of an experiment patch, and offline the editor preferences, such as `jolly-pixel:preferences:voxel-model` for glow and environment.
+- `prefetch`: the shell downloads the editors ahead of the open, as `--prefetch` does.
 - `prewarm`: shell-side WebGPU warm-up.
 - `base`: another studio URL, to compare two servers.
 

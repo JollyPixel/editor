@@ -31,17 +31,27 @@ keep their native Select All behavior. Rebind it with `pixelart.keybinds.selectA
 
 ```ts
 class PixelArtKeyBindingSettings extends KeyBindingSettings<PixelArtAction> {
-  constructor(options: {
-    storage: StorageAdapter;
+  static follow(
+    preferences: Preferences,
+    onDropped?: (message: string) => void
+  ): PixelArtKeyBindingSettings;
+
+  constructor(options?: {
+    overrides?: unknown;
     onDropped?: (message: string) => void;
   });
 }
 ```
 
 A [`KeyBindingSettings`](../../../../controls/docs/key-binding-settings.md) over
-`PIXEL_ART_KEY_BINDINGS`, saved under `KEY_BINDINGS_STORAGE_KEY` (`"pixel-art:keybindings"`).
-`keyBindings` is ready for `panel.keyBindings`, and `sync(panel)` keeps it there after every
+`PIXEL_ART_KEY_BINDINGS`. `keyBindings` is ready for `panel.keyBindings`, and `sync(panel)` keeps it there after every
 change.
+
+`follow` keeps the bindings in the `pixel-art-keybindings` preference scope
+(`PIXEL_ART_KEYBINDINGS` from `@jolly-pixel/editor.pixel-art/preferences`) with
+[`followKeyBindings`](../../../host/docs/preferences/Preferences.md#followkeybindings),
+and rebinds when the scope changes in the studio's Settings tab. The three editors that show the
+panel use it, so one set of panel shortcuts follows the account.
 
 Bindings are [key chords](../../../../controls/docs/key-chords.md) such as `"Mod+Shift+z"`. A
 lowercase letter follows the printed key and a code such as `"KeyZ"` follows the key position.

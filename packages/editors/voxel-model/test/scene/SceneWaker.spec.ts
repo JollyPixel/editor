@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
 // Import Third-party Dependencies
+import { Preferences } from "@jolly-pixel/editor.host/preferences";
 import { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -21,7 +22,7 @@ function createHarness() {
   const presence = new PresenceStore();
   const room = createRoomHarness();
   const lock = new TransformLock({ room: room.room });
-  const view = new ViewSettingsStore();
+  const view = new ViewSettingsStore(new Preferences());
   const frames = { requested: 0 };
   const waker = new SceneWaker({
     document,

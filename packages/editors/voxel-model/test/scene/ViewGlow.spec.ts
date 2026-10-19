@@ -2,6 +2,9 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { Preferences } from "@jolly-pixel/editor.host/preferences";
+
 // Import Internal Dependencies
 import {
   ViewGlow,
@@ -15,7 +18,7 @@ describe("ViewGlow", () => {
     let glows = false;
     const glow = new ViewGlow({
       target,
-      view: new ViewSettingsStore(),
+      view: new ViewSettingsStore(new Preferences()),
       glows: () => glows
     });
     assert.equal(target.postProcessing, null);
@@ -31,7 +34,7 @@ describe("ViewGlow", () => {
 
   test("keeps the same glow pass when the glow setting is switched", () => {
     const target: GlowTarget = { postProcessing: null };
-    const view = new ViewSettingsStore();
+    const view = new ViewSettingsStore(new Preferences());
     const glow = new ViewGlow({
       target,
       view,

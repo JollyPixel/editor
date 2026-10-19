@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import * as z from "zod";
 import type { LoadedAssetKind } from "@jolly-pixel/asset-server";
+import { PreferenceScope } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import type { EditorDescriptor } from "./EditorDescriptor.ts";
@@ -10,7 +11,8 @@ export const PROJECT_MANIFEST_FILE = "project-manifest.json";
 const kProjectManifestSchema = z.object({
   editors: z.array(z.object({
     name: z.string(),
-    kinds: z.array(z.string())
+    kinds: z.array(z.string()),
+    preferences: z.array(z.unknown()).default([])
   })),
   kinds: z.array(z.object({
     kind: z.string(),
@@ -64,5 +66,27 @@ export class ProjectManifest implements ProjectManifestData {
   ) {
     this.editors = [...data.editors];
     this.kinds = [...data.kinds];
+  }
+
+  * preferences(): IterableIterator<PreferenceScope> {
+    for (const editor of this.editors) {
+      for (const descriptor of editor.preferences ?? []) {
+        const scope = parseScope(descriptor);
+        if (scope !== null) {
+          yield scope;
+        }
+      }
+    }
+  }
+}
+
+function parseScope(
+  descriptor: unknown
+): PreferenceScope | null {
+  try {
+    return PreferenceScope.from(descriptor);
+  }
+  catch {
+    return null;
   }
 }

@@ -70,7 +70,7 @@ if (dashCombo()) {
     - [KeyBindingMap](./docs/key-binding-map.md): rebindable shortcuts named
       by action.
     - [KeyBindingSettings](./docs/key-binding-settings.md): the current
-      shortcut map of a feature, saved to a storage.
+      shortcut map of a feature, with a change event to save it.
   - [Gamepad](./docs/gamepad.md)
   - [Touchpad](./docs/touchpad.md)
   - [Screen](./docs/screen.md)

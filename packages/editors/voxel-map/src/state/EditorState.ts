@@ -8,6 +8,9 @@ import {
   PixelArtKeyBindingSettings,
   UvNetLibrary
 } from "@jolly-pixel/editor.pixel-art";
+import { PreferenceStorage } from "@jolly-pixel/editor.host";
+import type { Preferences } from "@jolly-pixel/editor.host/preferences";
+import { PIXEL_ART_PREFERENCES } from "@jolly-pixel/editor.pixel-art/preferences";
 
 // Import Internal Dependencies
 import { BlockSelection } from "./BlockSelection.ts";
@@ -31,6 +34,7 @@ import {
 
 export interface EditorStateOptions {
   storage?: StorageAdapter;
+  preferences: Preferences;
 }
 
 export class EditorState {
@@ -51,33 +55,40 @@ export class EditorState {
   readonly shortcuts: ShortcutLabels;
   readonly pixelArtKeyBindings: PixelArtKeyBindingSettings;
   readonly uvNets: UvNetLibrary;
+  readonly preferences: Preferences;
 
   constructor(
-    options: EditorStateOptions = {}
+    options: EditorStateOptions
   ) {
     const {
-      storage = new LocalStorageAdapter()
+      storage = new LocalStorageAdapter(),
+      preferences
     } = options;
 
-    this.view = new ViewStore(storage);
+    this.preferences = preferences;
+    this.view = new ViewStore(preferences);
     this.brush = new BrushStore(storage);
-    this.uvSync = new UvSyncStore(storage);
+    this.uvSync = new UvSyncStore(preferences);
     this.textureTabs = new TextureTabsStore(storage);
     this.templatePreview = new TemplatePreviewStore(storage);
-    this.mapKeyBindings = new MapKeyBindingSettings({
-      storage,
-      onDropped: (message) => this.log.push(message)
-    });
+    this.mapKeyBindings = MapKeyBindingSettings.follow(
+      preferences,
+      (message) => this.log.push(message)
+    );
     this.shortcuts = new ShortcutLabels(
       this.keyboardLayout,
       this.mapKeyBindings
     );
-    this.pixelArtKeyBindings = new PixelArtKeyBindingSettings({
-      storage,
-      onDropped: (message) => this.log.push(message)
-    });
+    this.pixelArtKeyBindings = PixelArtKeyBindingSettings.follow(
+      preferences,
+      (message) => this.log.push(message)
+    );
     this.uvNets = new UvNetLibrary({
-      storage,
+      storage: new PreferenceStorage(
+        preferences,
+        PIXEL_ART_PREFERENCES,
+        "uvNets"
+      ),
       presets: BLOCK_UV_NETS,
       defaultId: DEFAULT_BLOCK_UV_NET
     });

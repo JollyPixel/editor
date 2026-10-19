@@ -41,9 +41,20 @@ export class KeyBindingMap<TAction extends string> {
     defaults: KeyBindingDefaults<TAction>,
     json: string
   ): ParsedKeyBindings<TAction> {
+    try {
+      return KeyBindingMap.from(defaults, JSON.parse(json));
+    }
+    catch {
+      return KeyBindingMap.from(defaults, null);
+    }
+  }
+
+  static from<TAction extends string>(
+    defaults: KeyBindingDefaults<TAction>,
+    stored: unknown
+  ): ParsedKeyBindings<TAction> {
     let keyBindings = new KeyBindingMap(defaults);
-    const stored = parseJson(json);
-    if (!isRecord(stored)) {
+    if (typeof stored !== "object" || stored === null || Array.isArray(stored)) {
       return {
         keyBindings,
         dropped: ["Dropped the stored keybindings: not a JSON object"]
@@ -51,13 +62,43 @@ export class KeyBindingMap<TAction extends string> {
     }
 
     const dropped: string[] = [];
+    const overrides: KeyBindingOverrides<TAction> = {};
     for (const [name, value] of Object.entries(stored)) {
-      const accepted = keyBindings.#accept(name, value);
-      if (typeof accepted === "string") {
-        dropped.push(`Dropped the stored keybinding "${name}": ${accepted}`);
+      const action = keyBindings.actions.find((known) => known === name);
+      const chords: unknown[] = [value].flat();
+      if (action === undefined) {
+        dropped.push(`Dropped the stored keybinding "${name}": unknown action`);
+      }
+      else if (chords.every((chord): chord is string => typeof chord === "string")) {
+        overrides[action] = chords;
       }
       else {
-        keyBindings = accepted;
+        dropped.push(
+          `Dropped the stored keybinding "${name}": not a string or a list of strings`
+        );
+      }
+    }
+
+    try {
+      return {
+        keyBindings: new KeyBindingMap(defaults, overrides),
+        dropped
+      };
+    }
+    catch {
+      for (const action of keyBindings.actions) {
+        const chords = overrides[action];
+        if (chords === undefined) {
+          continue;
+        }
+
+        try {
+          keyBindings = keyBindings.rebind(action, chords);
+        }
+        catch (error) {
+          const reason = error instanceof Error ? error.message : String(error);
+          dropped.push(`Dropped the stored keybinding "${action}": ${reason}`);
+        }
       }
     }
 
@@ -80,7 +121,8 @@ export class KeyBindingMap<TAction extends string> {
 
     const owners = new Map<string, TAction>();
     for (const action of this.actions) {
-      const chords = toList(overrides[action] ?? defaults[action])
+      const chords = [overrides[action] ?? defaults[action]]
+        .flat()
         .map((value) => KeyChord.from(value));
 
       for (const chord of chords) {
@@ -99,7 +141,10 @@ export class KeyBindingMap<TAction extends string> {
     const overrides: Partial<Record<TAction, KeyChordString[]>> = {};
     for (const action of this.actions) {
       const chords = this.chordsBoundTo(action).map((chord) => chord.toString());
-      if (!sameChords(chords, toList(this.#defaults[action]))) {
+      if (
+        JSON.stringify(chords) !==
+        JSON.stringify([this.#defaults[action]].flat())
+      ) {
         overrides[action] = chords;
       }
     }
@@ -166,66 +211,4 @@ export class KeyBindingMap<TAction extends string> {
       }
     };
   }
-
-  #accept(
-    name: string,
-    value: unknown
-  ): KeyBindingMap<TAction> | string {
-    const action = this.actions.find((known) => known === name);
-    if (action === undefined) {
-      return "unknown action";
-    }
-    if (!isChordList(value)) {
-      return "not a string or a list of strings";
-    }
-
-    try {
-      return this.rebind(action, value);
-    }
-    catch (error) {
-      return error instanceof Error ? error.message : String(error);
-    }
-  }
-}
-
-function parseJson(
-  raw: string
-): unknown {
-  try {
-    return JSON.parse(raw);
-  }
-  catch {
-    return null;
-  }
-}
-
-function isRecord(
-  value: unknown
-): value is Record<string, unknown> {
-  return typeof value === "object" &&
-    value !== null &&
-    !Array.isArray(value);
-}
-
-function isChordList(
-  value: unknown
-): value is string | string[] {
-  return typeof value === "string" || (
-    Array.isArray(value) &&
-    value.every((item) => typeof item === "string")
-  );
-}
-
-function sameChords(
-  left: readonly string[],
-  right: readonly string[]
-): boolean {
-  return left.length === right.length &&
-    left.every((chord, index) => chord === right[index]);
-}
-
-function toList(
-  value: string | readonly string[]
-): readonly string[] {
-  return typeof value === "string" ? [value] : value;
 }

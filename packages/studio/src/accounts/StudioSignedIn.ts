@@ -14,6 +14,10 @@ import {
 import { toPeerProfileMetadata } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
+import {
+  AccountPreferences,
+  type AccountPreferencesClient
+} from "../preferences/AccountPreferences.ts";
 import type { ProjectArchiveClient } from "../project/ProjectArchiveClient.ts";
 import type { ShareLinksClient } from "../shares/ShareLinksClient.ts";
 import { StudioShareLinks } from "../shares/StudioShareLinks.ts";
@@ -35,6 +39,7 @@ export interface StudioSignInOptions {
   signIn: () => Promise<Account>;
   shareLinks: ShareLinksClient;
   projectArchive: ProjectArchiveClient;
+  preferences: AccountPreferencesClient;
   /**
    * Opens the shell's connection, joined with the account's peer profile.
    */
@@ -42,13 +47,27 @@ export interface StudioSignInOptions {
   reload: () => void;
 }
 
+export interface StudioSignedInOptions extends Omit<
+  StudioSignInOptions,
+  "preferences"
+> {
+  preferences: AccountPreferences;
+}
+
 export class StudioSignedIn extends EventTarget {
   static async open(
     options: StudioSignInOptions
   ): Promise<StudioSignedIn> {
     const account = await options.accounts.me() ?? await options.signIn();
+    const preferences = await AccountPreferences.load({
+      accountId: account.id,
+      client: options.preferences
+    });
 
-    return new StudioSignedIn(account, options);
+    return new StudioSignedIn(account, {
+      ...options,
+      preferences
+    });
   }
 
   readonly client: Client;
@@ -56,6 +75,7 @@ export class StudioSignedIn extends EventTarget {
   readonly shares: StudioShareLinks;
   readonly renewal: SessionRenewal;
   readonly projectArchive: ProjectArchiveClient;
+  readonly preferences: AccountPreferences;
 
   #account: Account;
   #accounts: StudioAccountsClient;
@@ -63,7 +83,7 @@ export class StudioSignedIn extends EventTarget {
 
   constructor(
     account: Account,
-    options: StudioSignInOptions
+    options: StudioSignedInOptions
   ) {
     super();
     this.#account = account;
@@ -73,6 +93,7 @@ export class StudioSignedIn extends EventTarget {
     this.roster = AccountsRoster.join(this.client);
     this.shares = new StudioShareLinks(options.shareLinks, this.roster);
     this.projectArchive = options.projectArchive;
+    this.preferences = options.preferences;
     this.renewal = new SessionRenewal({
       accountId: account.id,
       currentAccount: () => this.#accounts.me(),

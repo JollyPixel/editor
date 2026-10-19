@@ -20,6 +20,7 @@ import type {
 } from "#src/editor/EditorDefinition.ts";
 import { HOST_PARAMS } from "#src/params/HostParams.ts";
 import { EditorRuntime } from "#src/runtime/EditorRuntime.ts";
+import type { RuntimeWidgetHost } from "#src/runtime/RuntimeWidgets.ts";
 import { EDITOR_STATE_ATTRIBUTE } from "#src/state/EditorState.ts";
 import { LaunchNotFoundError } from "#src/launch/errors/LaunchNotFoundError.ts";
 import { LAUNCH_MESSAGE_TYPE } from "#src/launch/ShellChannel.ts";
@@ -65,7 +66,12 @@ function definition(
 function recordingRuntimes() {
   const created: Array<EditorRuntime> = [];
   let disposed = 0;
-  const runtime: Pick<Runtime, "dispose"> = {
+  const runtime: Pick<Runtime, "dispose"> & RuntimeWidgetHost = {
+    statsHud: null,
+    viewHelper: null,
+    metrics: {
+      panel: null
+    },
     dispose: () => {
       disposed++;
     }

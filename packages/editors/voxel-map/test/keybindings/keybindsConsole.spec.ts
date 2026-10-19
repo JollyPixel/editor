@@ -7,18 +7,17 @@ import {
 
 // Import Third-party Dependencies
 import { CommandConsole } from "@jolly-pixel/console";
-import { MemoryStorageAdapter } from "@jolly-pixel/ui";
+import { Preferences } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import { keybindsConsole } from "../../src/keybindings/keybindsConsole.ts";
-import { KEY_BINDINGS_STORAGE_KEY } from "../../src/keybindings/MapKeyBindings.ts";
 import { EditorState } from "../../src/state/EditorState.ts";
 
 function boot(
-  storage = new MemoryStorageAdapter()
+  preferences = new Preferences()
 ) {
   const commands = new CommandConsole();
-  const state = new EditorState({ storage });
+  const state = new EditorState({ preferences });
   const handle = keybindsConsole(commands, { state });
 
   function lastLine(): string {
@@ -47,15 +46,15 @@ describe("keybinds console", () => {
   });
 
   test("a write rebinds the action and survives a reboot", async() => {
-    const storage = new MemoryStorageAdapter();
-    const first = boot(storage);
+    const preferences = new Preferences();
+    const first = boot(preferences);
 
     await first.commands.submit("keybinds.view.grid Digit1");
     assert.deepEqual(first.state.mapKeyBindings.chordsBoundTo("view.grid"), [
       "Digit1"
     ]);
 
-    const second = boot(storage);
+    const second = boot(preferences);
     assert.deepEqual(second.state.mapKeyBindings.chordsBoundTo("view.grid"), [
       "Digit1"
     ]);
@@ -71,8 +70,8 @@ describe("keybinds console", () => {
   });
 
   test("reset restores one action, or every action", async() => {
-    const storage = new MemoryStorageAdapter();
-    const { commands, state, lastLine } = boot(storage);
+    const preferences = new Preferences();
+    const { commands, state, lastLine } = boot(preferences);
     await commands.submit("keybinds.tool.brush p");
     await commands.submit("keybinds.tool.select n");
 
@@ -81,7 +80,7 @@ describe("keybinds console", () => {
     assert.deepEqual(state.mapKeyBindings.chordsBoundTo("tool.select"), ["n"]);
 
     await commands.submit("/keybinds.reset");
-    assert.deepEqual(JSON.parse(storage.get(KEY_BINDINGS_STORAGE_KEY)!), {});
+    assert.deepEqual(preferences.overrides("voxel-map-keybindings"), {});
   });
 
   test("unregister removes every keybinds namespace", () => {

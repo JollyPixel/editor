@@ -11,18 +11,13 @@ import {
 } from "./KeyBindingMap.ts";
 import type { KeyBindingOptions } from "./KeyBindings.ts";
 
-export interface KeyBindingStorage {
-  get(key: string): string | null;
-  set(
-    key: string,
-    value: string
-  ): void;
-}
-
 export interface KeyBindingSettingsOptions<TAction extends string> {
   defaults: KeyBindingDefaults<TAction>;
-  storage: KeyBindingStorage;
-  storageKey: string;
+  /**
+   * Stored overrides, read with `KeyBindingMap.from()`.
+   * @default {}
+   */
+  overrides?: unknown;
   onDropped?: (message: string) => void;
 }
 
@@ -36,8 +31,8 @@ export interface KeyBindingsReceiver<TAction extends string> {
 
 export class KeyBindingSettings<TAction extends string>
   extends Emitter<KeyBindingSettingsEvents<TAction>> {
-  readonly #storage: KeyBindingStorage;
-  readonly #storageKey: string;
+  readonly #defaults: KeyBindingDefaults<TAction>;
+  readonly #onDropped: ((message: string) => void) | undefined;
   #keyBindings: KeyBindingMap<TAction>;
 
   constructor(
@@ -45,30 +40,9 @@ export class KeyBindingSettings<TAction extends string>
   ) {
     super();
 
-    const {
-      defaults,
-      storage,
-      storageKey,
-      onDropped
-    } = options;
-    this.#storage = storage;
-    this.#storageKey = storageKey;
-
-    const raw = storage.get(storageKey);
-    if (raw === null) {
-      this.#keyBindings = new KeyBindingMap(defaults);
-
-      return;
-    }
-
-    const { keyBindings, dropped } = KeyBindingMap.parse(defaults, raw);
-    this.#keyBindings = keyBindings;
-    if (dropped.length > 0) {
-      for (const message of dropped) {
-        onDropped?.(message);
-      }
-      this.#save();
-    }
+    this.#defaults = options.defaults;
+    this.#onDropped = options.onDropped;
+    this.#keyBindings = this.#read(options.overrides ?? {});
   }
 
   get keyBindings(): KeyBindingMap<TAction> {
@@ -123,18 +97,35 @@ export class KeyBindingSettings<TAction extends string>
     this.#commit(this.#keyBindings.restore(action));
   }
 
+  load(
+    overrides: unknown
+  ): void {
+    const keyBindings = this.#read(overrides);
+    if (
+      JSON.stringify(keyBindings) !== JSON.stringify(this.#keyBindings)
+    ) {
+      this.#commit(keyBindings);
+    }
+  }
+
+  #read(
+    overrides: unknown
+  ): KeyBindingMap<TAction> {
+    const { keyBindings, dropped } = KeyBindingMap.from(
+      this.#defaults,
+      overrides
+    );
+    for (const message of dropped) {
+      this.#onDropped?.(message);
+    }
+
+    return keyBindings;
+  }
+
   #commit(
     keyBindings: KeyBindingMap<TAction>
   ): void {
     this.#keyBindings = keyBindings;
-    this.#save();
     this.emit("change", keyBindings);
-  }
-
-  #save(): void {
-    this.#storage.set(
-      this.#storageKey,
-      JSON.stringify(this.#keyBindings)
-    );
   }
 }

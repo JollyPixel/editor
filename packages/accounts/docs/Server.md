@@ -62,6 +62,14 @@ Encodes `image` with [`AvatarImage.encode`](#avatarimageencodeinput), stores it 
 
 The stored avatar, `{ hash, bytes }`, or `null` when the account has none.
 
+### `preferences(accountId)`
+
+A `Map` from scope name to that scope's overrides, a JSON object. Scopes without overrides are absent. The accounts store the objects as given: the caller validates them.
+
+### `replacePreferences(accountId, scope, overrides)`
+
+Replaces the overrides of one scope. An empty object removes the scope. Deleting the account deletes its preferences.
+
 ### `authenticate(request)`
 
 The network `AuthenticationProvider`: pass the accounts as the server's `auth`. It reads the session from the cookie of a same-origin upgrade and resolves it to:

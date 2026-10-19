@@ -5,57 +5,53 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import { MemoryStorageAdapter } from "@jolly-pixel/ui";
-
 // Import Internal Dependencies
+import { Preferences } from "#src/preferences/index.ts";
 import { RuntimeWidgets } from "#src/runtime/RuntimeWidgets.ts";
 import { createWidgetHost } from "../helpers/runtime/widgetHost.ts";
 
-// CONSTANTS
-const kKey = "jolly-pixel:runtime-widgets";
-
 describe("RuntimeWidgets", () => {
-  test("restores the visibility a previous page stored", () => {
-    const storage = new MemoryStorageAdapter();
-    const widgets = new RuntimeWidgets(createWidgetHost(), storage);
+  test("shows the widgets as the preferences say and follows their changes", () => {
+    const host = createWidgetHost();
+    const preferences = new Preferences({
+      overrides: [["runtime", { stats: false, metrics: true }]]
+    });
+
+    new RuntimeWidgets(host).follow(preferences);
+
+    assert.equal(host.statsHud?.hidden, true);
+    assert.equal(host.metrics.panel?.hidden, false);
+    assert.equal(host.viewHelper?.hidden, false);
+
+    preferences.receive("runtime", {});
+
+    assert.equal(host.statsHud?.hidden, false);
+    assert.equal(host.metrics.panel?.hidden, true);
+  });
+
+  test("keeps a widget shown or hidden from the console in the preferences", () => {
+    const preferences = new Preferences();
+    const widgets = new RuntimeWidgets(createWidgetHost());
+    widgets.follow(preferences);
+
     widgets.show("stats", false);
     widgets.show("metrics", true);
 
-    const reloaded = createWidgetHost();
-    new RuntimeWidgets(reloaded, storage).restore();
-
-    assert.equal(reloaded.statsHud?.hidden, true);
-    assert.equal(reloaded.metrics.panel?.hidden, false);
-    assert.equal(reloaded.viewHelper?.hidden, false);
-  });
-
-  test("starts a widget hidden from its stored visibility, else the fallback", () => {
-    const storage = new MemoryStorageAdapter();
-    new RuntimeWidgets(createWidgetHost(), storage).show("metrics", true);
-    const widgets = new RuntimeWidgets(createWidgetHost(), storage);
-
-    assert.equal(widgets.startsHidden("metrics", true), false);
-    assert.equal(widgets.startsHidden("stats", true), true);
-    assert.equal(widgets.startsHidden("stats", false), false);
-  });
-
-  test("keeps the defaults when the stored value is not usable", () => {
-    const storage = new MemoryStorageAdapter();
-    storage.set(kKey, JSON.stringify({
-      stats: "off",
+    assert.deepEqual(preferences.overrides("runtime"), {
+      stats: false,
       metrics: true
+    });
+  });
+
+  test("starts the performance pane hidden unless a preference shows it", () => {
+    const widgets = new RuntimeWidgets(createWidgetHost());
+
+    assert.equal(widgets.startsHidden("metrics"), true);
+
+    widgets.follow(new Preferences({
+      overrides: [["runtime", { metrics: true }]]
     }));
-    const host = createWidgetHost();
-    new RuntimeWidgets(host, storage).restore();
 
-    assert.equal(host.statsHud?.hidden, false);
-    assert.equal(host.metrics.panel?.hidden, false);
-
-    storage.set(kKey, "{not json");
-    const fresh = createWidgetHost();
-    new RuntimeWidgets(fresh, storage).restore();
-
-    assert.equal(fresh.metrics.panel?.hidden, true);
+    assert.equal(widgets.startsHidden("metrics"), false);
   });
 });

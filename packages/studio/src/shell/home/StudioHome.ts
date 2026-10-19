@@ -16,7 +16,7 @@ import type { Account } from "@jolly-pixel/accounts";
 
 // Import Internal Dependencies
 import type { StudioSignedIn } from "../../accounts/StudioSignedIn.ts";
-import { StudioPreferences } from "../../preferences/StudioPreferences.ts";
+import { BrowserState } from "../../browser/BrowserState.ts";
 import { StudioErrorEvent } from "../StudioErrorEvent.ts";
 import type { AssetBrowserOptions } from "../assets/AssetBrowser.ts";
 import type { EditorTab } from "../../tabs/EditorTabs.ts";
@@ -136,7 +136,7 @@ export class StudioHome extends LitElement {
   declare account: Account | null;
 
   @property({ attribute: false })
-  declare preferences: StudioPreferences;
+  declare browserState: BrowserState;
 
   @state()
   declare _exporting: boolean;
@@ -150,7 +150,7 @@ export class StudioHome extends LitElement {
     this.openTabs = [];
     this.signedIn = null;
     this.account = null;
-    this.preferences = new StudioPreferences();
+    this.browserState = new BrowserState();
     this._exporting = false;
     this._canExport = false;
   }
@@ -167,7 +167,7 @@ export class StudioHome extends LitElement {
     return html`
       <jolly-dock-layout
         storage-key=${HOME_LAYOUT_STORAGE_KEY}
-        .storage=${this.preferences.storage}
+        .storage=${this.browserState.storage}
       >
         <jolly-dock
           id="asset-dock"

@@ -30,6 +30,7 @@ import type {
   RegistrationBody
 } from "./http/routes.schema.ts";
 import { AccountsDatabase } from "./store/AccountsDatabase.ts";
+import type { PreferenceOverrides } from "./store/PreferenceRepository.ts";
 import { PasswordDigest } from "./session/PasswordDigest.ts";
 import { SessionCookie } from "./session/SessionCookie.ts";
 import { CookieSessions } from "./session/CookieSessions.ts";
@@ -216,6 +217,20 @@ export class Accounts implements AuthenticationProvider, Disposable {
     accountId: string
   ): StoredAvatar | null {
     return this.#directory.avatar(accountId);
+  }
+
+  preferences(
+    accountId: string
+  ): Map<string, PreferenceOverrides> {
+    return this.#database.preferences.findAll(accountId);
+  }
+
+  replacePreferences(
+    accountId: string,
+    scope: string,
+    overrides: PreferenceOverrides
+  ): void {
+    this.#database.preferences.replace(accountId, scope, overrides);
   }
 
   authenticate(

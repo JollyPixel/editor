@@ -35,6 +35,7 @@ import { ProjectArchive } from "./project/ProjectArchive.ts";
 import type { StudioProject } from "./project/StudioProject.ts";
 import { SharePage } from "./shares/SharePage.ts";
 import { StudioShares } from "./shares/StudioShares.ts";
+import { PreferenceScopes } from "../src/preferences/PreferenceScopes.ts";
 import { createStudioSeed } from "../src/seed.ts";
 
 // CONSTANTS
@@ -127,6 +128,7 @@ export class StudioBackend implements AsyncDisposable {
         backend: workspace.backend,
         name: path.basename(project.file.root)
       }),
+      preferences: PreferenceScopes.studio(project.editors.preferences()),
       requestsPerMinute: options.requestsPerMinute,
       trustProxy: options.trustProxy
     });

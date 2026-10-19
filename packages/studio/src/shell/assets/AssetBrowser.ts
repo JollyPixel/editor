@@ -32,7 +32,7 @@ import {
   type AssetAction
 } from "../../catalog/AssetSelection.ts";
 import { AssetTreeModel } from "../../catalog/AssetTreeModel.ts";
-import type { StudioPreferences } from "../../preferences/StudioPreferences.ts";
+import type { BrowserState } from "../../browser/BrowserState.ts";
 import type { StudioShareLinks } from "../../shares/StudioShareLinks.ts";
 import { cardStyles } from "../cardStyles.ts";
 import { StudioErrorEvent } from "../StudioErrorEvent.ts";
@@ -64,7 +64,7 @@ export interface AssetBrowserOptions {
   catalog: CatalogClient;
   kinds: AssetKindSet;
   shares: StudioShareLinks | null;
-  preferences: StudioPreferences;
+  browserState: BrowserState;
 }
 
 interface AssetSharing {
@@ -367,7 +367,7 @@ export class AssetBrowser extends LitElement {
     this.#view = options === null ? null : new AssetTreeView({
       catalog: options.catalog,
       kinds: options.kinds,
-      preferences: options.preferences,
+      browserState: options.browserState,
       onChange: () => this.requestUpdate(),
       onError: (message) => this.#error(message),
       onCreated: (nodeId) => {

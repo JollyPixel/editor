@@ -7,6 +7,11 @@ export const EDITOR_PAGE_REBUILT_EVENT = "studio:editor-page-rebuilt";
 export interface EditorDescriptor {
   name: string;
   kinds: readonly string[];
+  /**
+   * Descriptors of the preference scopes the editor declares, as
+   * `PreferenceScope.toJSON` writes them.
+   */
+  preferences?: readonly unknown[];
 }
 
 export interface EditorPageRebuilt {

@@ -16,7 +16,7 @@ import {
   assetNodeId,
   folderNodeId
 } from "../../../src/catalog/AssetTreeModel.ts";
-import { StudioPreferences } from "../../../src/preferences/StudioPreferences.ts";
+import { BrowserState } from "../../../src/browser/BrowserState.ts";
 import { AssetTreeView } from "../../../src/shell/assets/AssetTreeView.ts";
 import {
   FakeTreeCatalog,
@@ -59,7 +59,7 @@ const kKinds = new AssetKindSet({
 
 interface TreeViewProbe {
   view: AssetTreeView;
-  preferences: StudioPreferences;
+  browserState: BrowserState;
   errors: string[];
   created: string[];
 }
@@ -67,13 +67,13 @@ interface TreeViewProbe {
 function treeView(
   catalog: FakeTreeCatalog
 ): TreeViewProbe {
-  const preferences = new StudioPreferences(new MemoryStorageAdapter());
+  const browserState = new BrowserState(new MemoryStorageAdapter());
   const errors: string[] = [];
   const created: string[] = [];
   const view = new AssetTreeView({
     catalog,
     kinds: kKinds,
-    preferences,
+    browserState,
     onChange: () => undefined,
     onError: (message) => errors.push(message),
     onCreated: (nodeId) => created.push(nodeId)
@@ -81,7 +81,7 @@ function treeView(
 
   return {
     view,
-    preferences,
+    browserState,
     errors,
     created
   };
@@ -133,7 +133,7 @@ describe("AssetTreeView", () => {
 
   test("keeps a renamed folder expanded and selected under its new path", async() => {
     const catalog = new FakeTreeCatalog([kMap], ["maps"]);
-    const { view, preferences } = treeView(catalog);
+    const { view, browserState } = treeView(catalog);
     const maps = folderNodeId(AssetPath.parse("maps"));
     const world = folderNodeId(AssetPath.parse("world"));
     view.toggle(maps, true);
@@ -146,7 +146,7 @@ describe("AssetTreeView", () => {
     assert.ok(view.model.has(world));
     assert.ok(view.expanded.has(world));
     assert.deepEqual(view.selected, [world]);
-    assert.ok(preferences.expandedFolders.has(world));
+    assert.ok(browserState.expandedFolders.has(world));
   });
 
   test("asks once per convertible format and adds the dropped files in the folder", async() => {

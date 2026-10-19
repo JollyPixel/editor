@@ -36,7 +36,8 @@ const kManifest = {
   editors: [
     {
       name: "voxel-map",
-      kinds: ["voxelmap"]
+      kinds: ["voxelmap"],
+      preferences: []
     }
   ],
   kinds: [BLOCKSET_ASSET, VOXEL_MAP_ASSET].map((descriptor) => {

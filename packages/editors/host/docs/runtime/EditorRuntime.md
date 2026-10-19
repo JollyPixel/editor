@@ -22,7 +22,6 @@ static create(
   options?: RuntimeOptions & {
     params?: HostParams;
     framed?: boolean;
-    storage?: StorageAdapter;
   }
 ): Promise<EditorRuntime>;
 ```
@@ -53,10 +52,6 @@ The `gpu-time` query parameter adds `trackTimestamp: true` to the
 [GPU time](../../../../runtime/docs/api/RuntimeMetrics.md#renderer-counters)
 of each frame.
 
-`storage` keeps the [widget visibility](#runtime-widgets) between page loads.
-It defaults to a `LocalStorageAdapter`; `create` restores the stored
-visibility of the performance HUD and the view helper once the runtime exists.
-
 An editor booted by [`mountStandalone`](../editor/mountStandalone.md#editor-definition)
 creates it in its static `createRuntime(logger)`, which the host calls before
 the session opens.
@@ -77,33 +72,36 @@ multisampled render targets. `dispose()` disposes `runtime`.
 ## Runtime widgets
 
 `widgets` shows or hides the corner performance HUD (`"stats"`), the axis
-gizmo (`"viewHelper"`) and the metrics panel (`"metrics"`), and saves every
-change under `jolly-pixel:runtime-widgets`.
+gizmo (`"viewHelper"`) and the metrics panel (`"metrics"`). Their visibility
+is the `runtime` scope of the [preferences](../preferences/Preferences.md#host-scopes).
 
 ```ts
 mounted(widget: RuntimeWidget): boolean;
 visible(widget: RuntimeWidget): boolean;
 show(widget: RuntimeWidget, visible: boolean): void;
-startsHidden(widget: RuntimeWidget, fallback: boolean): boolean;
-restore(): void;
+startsHidden(widget: RuntimeWidget): boolean;
+follow(preferences: Preferences): void;
 ```
 
 `mounted` is `false` while the runtime has no such widget, for example before
 `runtime.mountMetricsPanel` resolves. `show` throws on a widget that is not
 mounted.
 
-`startsHidden` is the saved visibility of a widget, or `fallback` when it was
-never toggled. Pass it as the `hidden` option of the metrics panel so the pane
-opens the way it was left:
+`mountStandalone` calls `follow` with the editor's preferences before `mount`:
+it applies their visibility to the mounted widgets, and keeps applying it when
+they change, from the Settings tab for example. After that, `show` writes the
+choice to the preferences too. Before it, `startsHidden` reads the defaults
+and `show` changes the page only.
+
+`startsHidden` is the preferred visibility of a widget: the metrics panel
+starts hidden, the other two shown. Pass it as the `hidden` option of the
+metrics panel so the pane opens the way it was left:
 
 ```ts
 await editorRuntime.runtime.mountMetricsPanel({
-  hidden: editorRuntime.widgets.startsHidden("metrics", true)
+  hidden: editorRuntime.widgets.startsHidden("metrics")
 });
 ```
-
-`restore` applies the saved visibility to the mounted widgets and leaves the
-others alone.
 
 ## Loading a scene
 

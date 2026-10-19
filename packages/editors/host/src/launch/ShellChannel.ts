@@ -10,6 +10,7 @@ import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import type { Appearance } from "../appearance/PageAppearance.ts";
+import type { PreferenceOverrides } from "../preferences/scope/PreferenceScope.ts";
 import {
   EDITOR_STATES,
   type EditorState
@@ -22,6 +23,9 @@ export const LAUNCH_MESSAGE_TYPE = "jolly-launch";
 export const SHELL_MESSAGE_TYPE = "jolly-shell";
 export const APPEARANCE_MESSAGE_TYPE = "jolly-appearance";
 export const SESSION_RENEWED_MESSAGE_TYPE = "jolly-session-renewed";
+export const PREFERENCES_MESSAGE_TYPE = "jolly-preferences";
+const kOverridesSchema = z.record(z.string(), z.unknown());
+const kLaunchPreferencesSchema = z.record(z.string(), kOverridesSchema);
 const kAppearanceSchema = z.object({
   theme: z.enum(THEME_MODES),
   density: z.enum(DENSITIES)
@@ -43,6 +47,7 @@ const kLaunchMessageSchema = z.object({
   target: z.string(),
   appearance: z.catch(z.optional(kAppearanceSchema), undefined),
   identity: z.catch(z.nullable(kLaunchIdentitySchema), null),
+  preferences: z.catch(kLaunchPreferencesSchema, {}),
   ports: z.catch(kLaunchPortsSchema, {})
 });
 const kShellCommandSchema = z.discriminatedUnion("command", [
@@ -68,6 +73,12 @@ const kShellCommandSchema = z.discriminatedUnion("command", [
     type: z.literal(SHELL_MESSAGE_TYPE),
     command: z.literal("editor-state"),
     state: z.enum(EDITOR_STATES)
+  }),
+  z.object({
+    type: z.literal(SHELL_MESSAGE_TYPE),
+    command: z.literal("update-preferences"),
+    scope: z.string(),
+    patch: kOverridesSchema
   })
 ]);
 const kAppearanceMessageSchema = z.object({
@@ -76,6 +87,11 @@ const kAppearanceMessageSchema = z.object({
 });
 const kSessionRenewedMessageSchema = z.object({
   type: z.literal(SESSION_RENEWED_MESSAGE_TYPE)
+});
+const kPreferencesMessageSchema = z.object({
+  type: z.literal(PREFERENCES_MESSAGE_TYPE),
+  scope: z.string(),
+  overrides: kOverridesSchema
 });
 
 export interface ShellReadyMessage {
@@ -87,6 +103,10 @@ export interface LaunchMessage {
   target: string;
   appearance?: Appearance;
   identity: LaunchIdentity | null;
+  /**
+   * Preference overrides by scope name: the editor's scopes and the host's.
+   */
+  preferences: Readonly<Record<string, PreferenceOverrides>>;
   ports: LaunchPorts;
 }
 
@@ -101,6 +121,10 @@ export interface LaunchMessageOptions {
    * @default null
    */
   identity?: LaunchIdentity | null;
+  /**
+   * @default {}
+   */
+  preferences?: Readonly<Record<string, PreferenceOverrides>>;
 }
 
 export interface LaunchIdentity {
@@ -145,12 +169,20 @@ export interface ShellEditorStateCommand {
   state: EditorState;
 }
 
+export interface ShellUpdatePreferencesCommand {
+  type: typeof SHELL_MESSAGE_TYPE;
+  command: "update-preferences";
+  scope: string;
+  patch: PreferenceOverrides;
+}
+
 export type ShellCommand =
   | ShellOpenAssetCommand
   | ShellToggleConsoleCommand
   | ShellSessionRefusedCommand
   | ShellUnsavedCommand
-  | ShellEditorStateCommand;
+  | ShellEditorStateCommand
+  | ShellUpdatePreferencesCommand;
 
 export interface AppearanceMessage {
   type: typeof APPEARANCE_MESSAGE_TYPE;
@@ -159,6 +191,12 @@ export interface AppearanceMessage {
 
 export interface SessionRenewedMessage {
   type: typeof SESSION_RENEWED_MESSAGE_TYPE;
+}
+
+export interface PreferencesMessage {
+  type: typeof PREFERENCES_MESSAGE_TYPE;
+  scope: string;
+  overrides: PreferenceOverrides;
 }
 
 export interface RenewableClient {
@@ -195,6 +233,10 @@ export interface ShellChannelOptions {
    * @default null
    */
   identity?: LaunchIdentity | null;
+  /**
+   * @default {}
+   */
+  preferences?: Readonly<Record<string, PreferenceOverrides>>;
 }
 
 export class ShellChannel {
@@ -203,6 +245,7 @@ export class ShellChannel {
   readonly catalog: ShellCatalog | null;
   readonly console: MessagePort | null;
   readonly identity: PeerIdentity | null;
+  readonly preferences: Readonly<Record<string, PreferenceOverrides>>;
 
   #port: ShellPort;
 
@@ -214,6 +257,7 @@ export class ShellChannel {
     this.appearance = options.appearance ?? null;
     this.catalog = options.catalog ?? null;
     this.console = options.console ?? null;
+    this.preferences = options.preferences ?? {};
     this.identity = options.identity ?
       peerIdentity(
         options.identity.username,
@@ -260,6 +304,18 @@ export class ShellChannel {
     });
   }
 
+  updatePreferences(
+    scope: string,
+    patch: PreferenceOverrides
+  ): void {
+    this.#post({
+      type: SHELL_MESSAGE_TYPE,
+      command: "update-preferences",
+      scope,
+      patch
+    });
+  }
+
   renewWhenRefused(
     client: RenewableClient
   ): void {
@@ -295,6 +351,20 @@ export class ShellChannel {
     }, { signal });
   }
 
+  onPreferences(
+    listener: (scope: string, overrides: PreferenceOverrides) => void,
+    signal: AbortSignal
+  ): void {
+    window.addEventListener("message", (event) => {
+      if (this.#isFromShell(event)) {
+        const message = kPreferencesMessageSchema.safeParse(event.data);
+        if (message.success) {
+          listener(message.data.scope, message.data.overrides);
+        }
+      }
+    }, { signal });
+  }
+
   #isFromShell(
     event: MessageEvent
   ): boolean {
@@ -316,6 +386,7 @@ export function launchMessage(
     target: options.target,
     appearance: options.appearance,
     identity: options.identity ?? null,
+    preferences: options.preferences ?? {},
     ports: options.ports ?? {}
   };
 }
@@ -326,6 +397,17 @@ export function appearanceMessage(
   return {
     type: APPEARANCE_MESSAGE_TYPE,
     appearance
+  };
+}
+
+export function preferencesMessage(
+  scope: string,
+  overrides: PreferenceOverrides
+): PreferencesMessage {
+  return {
+    type: PREFERENCES_MESSAGE_TYPE,
+    scope,
+    overrides
   };
 }
 

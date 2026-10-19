@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { Preferences } from "@jolly-pixel/editor.host/preferences";
 import {
   BlockRegistry,
   BlockShapeRegistry,
@@ -52,7 +53,7 @@ export function makeFakeVoxelEngine(): {
   const bridgeOptions: FakeBridgeOptions = {
     block: new BlockSelection(),
     mapDocument: new Emitter<MapDocumentEvents>(),
-    uvSync: new UvSyncStore()
+    uvSync: new UvSyncStore(new Preferences())
   };
   const registry = new BlockRegistry();
   const document = {

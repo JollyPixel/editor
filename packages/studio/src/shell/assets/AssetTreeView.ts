@@ -30,7 +30,7 @@ import {
   type AssetTreeNode
 } from "../../catalog/AssetTreeModel.ts";
 import type { DroppedFile } from "../../files/DroppedFile.ts";
-import type { StudioPreferences } from "../../preferences/StudioPreferences.ts";
+import type { BrowserState } from "../../browser/BrowserState.ts";
 import {
   AssetCommands,
   type AssetCommandCatalog,
@@ -65,8 +65,8 @@ export interface AssetTreeCatalog extends AssetCommandCatalog {
   ): unknown;
 }
 
-export type AssetTreePreferences = Pick<
-  StudioPreferences,
+export type AssetTreeState = Pick<
+  BrowserState,
   "assetKind" | "expandedFolders"
 >;
 
@@ -84,7 +84,7 @@ export interface AssetDropQuestions {
 export interface AssetTreeViewOptions {
   catalog: AssetTreeCatalog;
   kinds: AssetKindSet;
-  preferences: AssetTreePreferences;
+  browserState: AssetTreeState;
   onChange: () => void;
   onError: (message: string) => void;
   /**
@@ -96,7 +96,7 @@ export interface AssetTreeViewOptions {
 export class AssetTreeView {
   #catalog: AssetTreeCatalog;
   #kinds: AssetKindSet;
-  #preferences: AssetTreePreferences;
+  #browserState: AssetTreeState;
   #commands: AssetCommands;
   #onChange: () => void;
   #onError: (message: string) => void;
@@ -118,7 +118,7 @@ export class AssetTreeView {
   ) {
     this.#catalog = options.catalog;
     this.#kinds = options.kinds;
-    this.#preferences = options.preferences;
+    this.#browserState = options.browserState;
     this.#onChange = options.onChange;
     this.#onError = options.onError;
     this.#onCreated = options.onCreated;
@@ -126,8 +126,8 @@ export class AssetTreeView {
       catalog: options.catalog,
       onError: options.onError
     });
-    this.#kind = options.preferences.assetKind;
-    this.#expanded = options.preferences.expandedFolders;
+    this.#kind = options.browserState.assetKind;
+    this.#expanded = options.browserState.expandedFolders;
     this.#catalog.on("change", this.#onCatalogChange);
     this.#catalog.on("dependencies", this.#onDependenciesChange);
     this.refresh();
@@ -181,7 +181,7 @@ export class AssetTreeView {
     kind: string
   ): void {
     this.#kind = kind;
-    this.#preferences.assetKind = kind;
+    this.#browserState.assetKind = kind;
     this.#stale = true;
     this.#onChange();
   }
@@ -324,7 +324,7 @@ export class AssetTreeView {
     expanded: ReadonlySet<string>
   ): void {
     this.#expanded = expanded;
-    this.#preferences.expandedFolders = expanded;
+    this.#browserState.expandedFolders = expanded;
     this.#onChange();
   }
 

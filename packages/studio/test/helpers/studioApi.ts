@@ -21,6 +21,8 @@ import {
   type StudioApiOptions
 } from "../../server/api/StudioApi.ts";
 import { ProjectArchive } from "../../server/project/ProjectArchive.ts";
+import { PreferenceScopes } from "../../src/preferences/PreferenceScopes.ts";
+import { STUDIO_PREFERENCES } from "../../src/preferences/studioScope.ts";
 import { StudioAccess } from "../../server/project/StudioAccess.ts";
 import { StudioShares } from "../../server/shares/StudioShares.ts";
 import { sharedCatalog } from "./shares.ts";
@@ -63,8 +65,13 @@ export interface StudioApiAccountsOptions extends Omit<
 }
 
 export type StudioApiListenOptions = Omit<
-  StudioApiOptions, "accounts" | "shares" | "archive"
->;
+  StudioApiOptions, "accounts" | "shares" | "archive" | "preferences"
+> & {
+  /**
+   * @default new PreferenceScopes([STUDIO_PREFERENCES])
+   */
+  preferences?: PreferenceScopes;
+};
 
 export async function listenStudioApi(
   options: StudioApiAccountsOptions = {},
@@ -96,6 +103,7 @@ export async function listenStudioApi(
     inMemory: true
   });
   const api = await StudioApi.open({
+    preferences: new PreferenceScopes([STUDIO_PREFERENCES]),
     ...apiOptions,
     accounts,
     shares,

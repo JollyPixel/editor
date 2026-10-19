@@ -41,5 +41,6 @@ active editor ([ADR-0019](./0019-the-active-editor-namespaces-join-the-studio-co
   "never replies" holds for commands only.
 - An appearance change made by anything other than the console, such as a future settings pane,
   reaches the frames the same way, because the shell watches the scope attributes.
-- The shell's `theme` and `density` are stored in `localStorage` by `mountConsole` and restored
-  before the first frame launches, so frames boot on the restored values. Frames store nothing.
+- The shell's `theme` and `density` are the account's preferences
+  ([ADR-0023](./0023-preferences-follow-the-account.md)), painted from a `localStorage` copy
+  before they load, so frames boot on them. Frames store nothing.

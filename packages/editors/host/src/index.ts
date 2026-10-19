@@ -43,6 +43,7 @@ export {
 } from "./runtime/EditorRuntime.ts";
 export * from "./runtime/PeerFrustums.ts";
 export * from "./runtime/RuntimeWidgets.ts";
+export * from "./preferences/adapters/followCameraPreferences.ts";
 export * from "./presence/bindPresenceStack.ts";
 export * from "./editor/EditorDefinition.ts";
 export * from "./editor/mountStandalone.ts";
@@ -54,6 +55,9 @@ export { DEBUG_HANDLE } from "./editor/StandaloneEditor.ts";
 export * from "./editor/bootStandalone.ts";
 export * from "./editor/offerOffline.ts";
 export * from "./appearance/PageAppearance.ts";
+export * from "./preferences/index.ts";
+export * from "./preferences/store/LocalPreferences.ts";
+export * from "./preferences/adapters/PreferenceStorage.ts";
 export * from "./console/mountConsole.ts";
 export * from "./console/FrameConsoles.ts";
 export * from "./console/namespaces/archive.ts";

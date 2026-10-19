@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   CatalogShare,
+  LocalPreferences,
   offlineWorkspaceQuery
 } from "@jolly-pixel/editor.host";
 import { openSharedTabWorkspace } from "@jolly-pixel/editor.host/offline";
@@ -27,6 +28,7 @@ export async function connectOffline(): Promise<StudioConnection> {
   return {
     share: await CatalogShare.open(workspace.connect().client),
     editorQuery: offlineWorkspaceQuery(kWorkspace),
-    signedIn: null
+    signedIn: null,
+    preferences: new LocalPreferences().preferences
   };
 }

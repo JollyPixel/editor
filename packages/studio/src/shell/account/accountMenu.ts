@@ -12,8 +12,9 @@ import { roleLabel } from "../../accounts/UsersTreeModel.ts";
 const kOwnerLabel = "Owner";
 const kActions: readonly ContextMenuEntry[] = [
   {
-    id: "change-avatar",
-    label: "Change avatar…"
+    id: "settings",
+    label: "Settings",
+    icon: "settings"
   },
   "separator",
   {

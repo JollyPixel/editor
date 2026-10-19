@@ -18,7 +18,7 @@ re-meshes the map and sends a `block-defined` command to every peer.
   re-mesh on every frame too, so this mode costs the most on large maps.
 
 In both modes, peers see a drag outline of the moving region on their texture
-panel. The value is saved in the browser under `voxel-map:uv-sync`.
+panel. The value is the `uvSync` field of the `voxel-map` preference scope.
 
 ## Blockset tabs
 

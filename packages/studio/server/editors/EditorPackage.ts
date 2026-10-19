@@ -1,9 +1,11 @@
 // Import Node.js Dependencies
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 // Import Third-party Dependencies
 import * as z from "zod";
+import { PreferenceScope } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import type { EditorDescriptor } from "../../src/editors/EditorDescriptor.ts";
@@ -16,7 +18,8 @@ const kPackageManifestSchema = z.object({
       name: z.string().regex(/^[a-z0-9][a-z0-9-]*$/),
       kinds: z.array(z.string().min(1)).min(1),
       dist: z.string().default("dist"),
-      page: z.string().min(1).optional()
+      page: z.string().min(1).optional(),
+      preferences: z.string().min(1).optional()
     })
   })
 });
@@ -37,6 +40,10 @@ export interface EditorPackageData extends EditorDescriptor {
    * prebuilt package ships only its built page.
    */
   page: string | null;
+  /**
+   * The scopes exported by the module the manifest's `preferences` names.
+   */
+  preferences: readonly PreferenceScope[];
 }
 
 export class EditorPackage implements EditorPackageData {
@@ -46,11 +53,12 @@ export class EditorPackage implements EditorPackageData {
   readonly dist: string;
   readonly prebuilt: boolean;
   readonly page: string | null;
+  readonly preferences: readonly PreferenceScope[];
 
-  static read(
+  static async read(
     packageName: string,
     root: string
-  ): EditorPackage {
+  ): Promise<EditorPackage> {
     const rawData = fs.readFileSync(
       path.join(root, "package.json"),
       "utf8"
@@ -70,7 +78,8 @@ export class EditorPackage implements EditorPackageData {
       name,
       kinds,
       dist,
-      page
+      page,
+      preferences
     } = manifest.data.jollypixel.editor;
     const prebuilt = root.split(/[\\/]/).includes(kInstallFolder);
     const source = page === undefined ?
@@ -89,7 +98,10 @@ export class EditorPackage implements EditorPackageData {
       kinds,
       dist: path.resolve(root, dist),
       prebuilt,
-      page: shipsPage ? source : null
+      page: shipsPage ? source : null,
+      preferences: preferences === undefined ?
+        [] :
+        await loadPreferences(packageName, path.resolve(root, preferences))
     });
   }
 
@@ -102,12 +114,36 @@ export class EditorPackage implements EditorPackageData {
     this.dist = data.dist;
     this.prebuilt = data.prebuilt;
     this.page = data.page;
+    this.preferences = [...data.preferences];
   }
 
   toDescriptor(): EditorDescriptor {
     return {
       name: this.name,
-      kinds: [...this.kinds]
+      kinds: [...this.kinds],
+      preferences: this.preferences.map((scope) => scope.toJSON())
     };
+  }
+}
+
+async function loadPreferences(
+  packageName: string,
+  file: string
+): Promise<PreferenceScope[]> {
+  try {
+    const module: { default?: unknown; } = await import(pathToFileURL(file).href);
+    const exported = Array.isArray(module.default) ?
+      module.default :
+      [module.default];
+
+    return exported.map(
+      (scope) => PreferenceScope.from(JSON.parse(JSON.stringify(scope)))
+    );
+  }
+  catch (error) {
+    throw new TypeError(
+      `"${packageName}" exports no valid preference scopes from "${file}".`,
+      { cause: error }
+    );
   }
 }

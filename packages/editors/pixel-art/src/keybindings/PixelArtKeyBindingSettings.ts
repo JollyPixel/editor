@@ -3,30 +3,41 @@ import {
   KeyBindingSettings,
   type KeyBindingSettingsOptions
 } from "@jolly-pixel/controls";
+import {
+  followKeyBindings,
+  type Preferences
+} from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import {
   PIXEL_ART_KEY_BINDINGS,
   type PixelArtAction
 } from "./PixelArtKeyBindings.ts";
-
-// CONSTANTS
-export const KEY_BINDINGS_STORAGE_KEY = "pixel-art:keybindings";
+import { PIXEL_ART_KEYBINDINGS } from "../preferences.ts";
 
 export type PixelArtKeyBindingSettingsOptions = Omit<
   KeyBindingSettingsOptions<PixelArtAction>,
-  "defaults" | "storageKey"
+  "defaults"
 >;
 
 export class PixelArtKeyBindingSettings
   extends KeyBindingSettings<PixelArtAction> {
+  static follow(
+    preferences: Preferences,
+    onDropped?: (message: string) => void
+  ): PixelArtKeyBindingSettings {
+    const settings = new PixelArtKeyBindingSettings({ onDropped });
+    followKeyBindings(settings, preferences, PIXEL_ART_KEYBINDINGS);
+
+    return settings;
+  }
+
   constructor(
-    options: PixelArtKeyBindingSettingsOptions
+    options: PixelArtKeyBindingSettingsOptions = {}
   ) {
     super({
       ...options,
-      defaults: PIXEL_ART_KEY_BINDINGS,
-      storageKey: KEY_BINDINGS_STORAGE_KEY
+      defaults: PIXEL_ART_KEY_BINDINGS
     });
   }
 }

@@ -69,11 +69,12 @@ opening. Region State, visibility and export popovers fade and scale from their
 anchor over 120ms when opening and 90ms when closing. Reduced motion disables
 the transitions.
 
-The page editor saves the active drawing mode, the visibility settings and the
-grid settings in local storage under `pixel-art:preferences`. They survive
-refresh and apply when switching textures, the saved cell size included.
-Missing or invalid values use Paint with every visibility setting off and a
-hidden 16-pixel grid without snapping. The reusable panel carries the view
+The page editor keeps the visibility settings and the grid settings in the
+`pixel-art` preference scope (`PIXEL_ART_PREFERENCES`), which the studio's
+Settings tab edits too, and the active drawing mode in local storage under
+`pixel-art:mode`. They survive refresh and apply when switching textures, the
+saved cell size included. The defaults are Paint with every visibility setting
+off and a hidden 16-pixel grid without snapping. The reusable panel carries the view
 options except the cell size across texture switches, and leaves persistence to
 its host.
 
