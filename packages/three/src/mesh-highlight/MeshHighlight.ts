@@ -4,10 +4,11 @@ import * as THREE from "three/webgpu";
 // Import Internal Dependencies
 import {
   MeshHighlightState,
-  type SelectableObject,
-  type MeshHighlightStateChangeEventDetail,
-  type MeshHighlightStateChangeKind,
-  type HighlightTechnique
+  changedIds,
+  type HighlightTechnique,
+  type MeshHighlightChangeEventDetail,
+  type MeshHighlightMode,
+  type SelectableObject
 } from "./MeshHighlightState.ts";
 import {
   MeshHighlightAppearance,
@@ -16,26 +17,20 @@ import {
 import { HighlightResolver } from "./HighlightResolver.ts";
 import type { HighlightOverlayRegistry } from "./overlays/HighlightOverlayRegistry.ts";
 import { createDefaultHighlightOverlayRegistry } from "./overlays/builtinHighlightOverlayFactories.ts";
+import { HighlightPass } from "./postprocess/HighlightPass.ts";
+import { HighlightPassJfa } from "./postprocess/HighlightPassJfa.ts";
 import {
-  HighlightPass,
-  type HighlightPassOptions
-} from "./postprocess/HighlightPass.ts";
+  PeerHighlights,
+  type PeerHighlightChangeEventDetail
+} from "./peer/PeerHighlights.ts";
 import {
-  HighlightPassJfa,
-  type HighlightPassJfaOptions
-} from "./postprocess/HighlightPassJfa.ts";
-import { PeerSelectionRegistry } from "./peer/PeerSelectionRegistry.ts";
-import { PeerHoverRegistry } from "./peer/PeerHoverRegistry.ts";
-import {
-  PeerSelectionVisibility,
-  type PeerSelectionVisibilityOptions
-} from "./peer/PeerSelectionVisibility.ts";
+  PeerVisibility,
+  type PeerVisibilityOptions
+} from "./peer/PeerVisibility.ts";
 import { PeerSelectionChips } from "./peer/PeerSelectionChips.ts";
 import type { MeshHighlightRenderer } from "./renderers/MeshHighlightRenderer.ts";
 import { ObjectOverlayRenderer } from "./renderers/ObjectOverlayRenderer.ts";
 import { HighlightPassRenderer } from "./renderers/HighlightPassRenderer.ts";
-
-export type MeshHighlightMode = "outline" | "highlight" | "highlightJfa";
 
 export interface MeshHighlightRendererContext {
   mode: MeshHighlightMode;
@@ -50,14 +45,6 @@ export type MeshHighlightRendererFactory = (
   context: MeshHighlightRendererContext
 ) => MeshHighlightRenderer;
 
-export type MeshHighlightChangeKind = MeshHighlightStateChangeKind |
-  "peers" | "visibility";
-
-export interface MeshHighlightChangeEventDetail {
-  kind: MeshHighlightChangeKind;
-  objectIds: readonly string[];
-}
-
 export interface MeshHighlightEventMap {
   selectionChange: Event;
   hoverChange: Event;
@@ -65,7 +52,7 @@ export interface MeshHighlightEventMap {
   targetsChange: CustomEvent<MeshHighlightChangeEventDetail>;
   appearanceChange: CustomEvent<MeshHighlightChangeEventDetail>;
   techniqueChange: CustomEvent<MeshHighlightChangeEventDetail>;
-  peerChange: CustomEvent<MeshHighlightChangeEventDetail>;
+  peersChange: CustomEvent<MeshHighlightChangeEventDetail>;
   visibilityChange: CustomEvent<MeshHighlightChangeEventDetail>;
   change: CustomEvent<MeshHighlightChangeEventDetail>;
   dispose: Event;
@@ -95,12 +82,11 @@ export interface MeshHighlightOptions {
    * Replaces the built-in object-overlay and postprocess renderer factory.
    */
   rendererFactory?: MeshHighlightRendererFactory;
-  peerSelections?: PeerSelectionRegistry;
-  peerHovers?: PeerHoverRegistry;
+  peers?: PeerHighlights;
   /**
    * Pass `false` to disable peer frustum and distance culling.
    */
-  visibility?: false | Pick<PeerSelectionVisibilityOptions, "maxDistance">;
+  visibility?: false | Pick<PeerVisibilityOptions, "maxDistance">;
   /**
    * @default false
    */
@@ -108,12 +94,11 @@ export interface MeshHighlightOptions {
 }
 
 export class MeshHighlight extends EventTarget {
-  readonly state: MeshHighlightState;
-  readonly peerSelections: PeerSelectionRegistry;
-  readonly peerHovers: PeerHoverRegistry;
-  readonly visibility: PeerSelectionVisibility | null;
+  readonly peers: PeerHighlights;
+  readonly visibility: PeerVisibility | null;
   readonly chips: PeerSelectionChips;
 
+  #state: MeshHighlightState;
   #renderer: THREE.WebGPURenderer;
   #scene: THREE.Scene;
   #camera: THREE.Camera;
@@ -121,24 +106,19 @@ export class MeshHighlight extends EventTarget {
   #overlayRegistry: HighlightOverlayRegistry;
   #rendererFactory: MeshHighlightRendererFactory | null;
   #presentation: MeshHighlightRenderer;
-  #mode: MeshHighlightMode;
-  #synchronize = true;
   #disposed = false;
 
-  #onStateChange = (
-    event: CustomEvent<MeshHighlightStateChangeEventDetail>
+  #onPeerChange = (
+    event: CustomEvent<PeerHighlightChangeEventDetail>
   ): void => {
-    if (!this.#synchronize || this.#disposed) {
-      return;
-    }
-    this.#sync();
-    this.#dispatchChange(event.detail);
-  };
-  #onPeerChange = (): void => {
-    this.#syncAndDispatch("peers");
+    const { objectId, previousObjectId } = event.detail;
+    this.#commit([{
+      kind: "peers",
+      objectIds: changedIds(previousObjectId, objectId)
+    }]);
   };
   #onVisibilityChange = (): void => {
-    this.#syncAndDispatch("visibility");
+    this.#commit([{ kind: "visibility", objectIds: [] }]);
   };
 
   constructor(
@@ -148,47 +128,36 @@ export class MeshHighlight extends EventTarget {
     this.#renderer = options.renderer;
     this.#scene = options.scene;
     this.#camera = options.camera;
-    this.#mode = options.mode ?? "outline";
     this.#overlayRegistry = options.overlayRegistry ??
       createDefaultHighlightOverlayRegistry();
     this.#rendererFactory = options.rendererFactory ?? null;
 
-    this.state = new MeshHighlightState({
+    this.#state = new MeshHighlightState({
       appearance: options.appearance,
-      technique: this.#mode,
-      overlayRegistry: this.#overlayRegistry,
-      renderOverlays: false
+      technique: options.mode
     });
-    this.peerSelections = options.peerSelections ?? new PeerSelectionRegistry();
-    this.peerHovers = options.peerHovers ?? new PeerHoverRegistry();
+    this.peers = options.peers ?? new PeerHighlights();
     this.visibility = options.visibility === false ? null :
-      new PeerSelectionVisibility({
-        registry: this.peerSelections,
-        hoverRegistry: this.peerHovers,
-        selection: this.state,
+      new PeerVisibility({
+        peers: this.peers,
+        state: this.#state,
         camera: this.#camera,
         maxDistance: options.visibility?.maxDistance
       });
     this.chips = new PeerSelectionChips({
-      registry: this.peerSelections,
-      selection: this.state,
+      peers: this.peers,
+      state: this.#state,
       visibility: this.visibility ?? undefined,
       enabled: options.chips ?? false
     });
     this.#resolver = new HighlightResolver({
-      state: this.state,
-      peerSelections: this.peerSelections,
-      peerHovers: this.peerHovers,
+      state: this.#state,
+      peers: this.peers,
       visibility: this.visibility ?? undefined
     });
-    this.#presentation = this.#createRenderer(this.#mode);
+    this.#presentation = this.#createRenderer(this.#state.technique);
 
-    this.state.addEventListener("change", this.#onStateChange);
-    this.peerSelections.addEventListener(
-      "peerSelectionChange",
-      this.#onPeerChange
-    );
-    this.peerHovers.addEventListener("peerHoverChange", this.#onPeerChange);
+    this.peers.addEventListener("change", this.#onPeerChange);
     this.visibility?.addEventListener(
       "visibilityChange",
       this.#onVisibilityChange
@@ -196,64 +165,73 @@ export class MeshHighlight extends EventTarget {
     this.#sync();
   }
 
+  get overlayRegistry(): HighlightOverlayRegistry {
+    return this.#overlayRegistry;
+  }
+
   get mode(): MeshHighlightMode {
-    return this.#mode;
+    return this.#state.technique;
   }
 
   set mode(
     mode: MeshHighlightMode
   ) {
     this.#assertActive();
-    if (mode === this.#mode) {
+    const previousMode = this.#state.technique;
+    if (mode === previousMode) {
       return;
     }
 
-    const previousTechnique = this.state.technique;
     const next = this.#createRenderer(mode);
-    this.#synchronize = false;
+    this.#state.technique = mode;
     try {
-      this.state.technique = mode;
-      next.sync(this.#resolver.resolve(), this.state.appearance);
+      next.sync(this.#resolver.resolve(), this.#state.appearance);
     }
     catch (error) {
       next.dispose();
-      this.state.technique = previousTechnique;
+      this.#state.technique = previousMode;
       throw error;
     }
-    finally {
-      this.#synchronize = true;
-    }
 
-    const previous = this.#presentation;
+    this.#presentation.dispose();
     this.#presentation = next;
-    this.#mode = mode;
-    previous.dispose();
-    this.#dispatchChange({
-      kind: "technique",
-      objectIds: []
-    });
+    this.#dispatchChange({ kind: "technique", objectIds: [] });
   }
 
   get appearance(): MeshHighlightAppearance {
-    return this.state.appearance;
+    return this.#state.appearance;
   }
 
   set appearance(
     appearance: MeshHighlightAppearance
   ) {
     this.#assertActive();
-    if (appearance === this.state.appearance) {
+    const previousAppearance = this.#state.appearance;
+    if (appearance === previousAppearance) {
       return;
     }
-    this.#replaceAppearance(appearance);
+
+    this.#state.appearance = appearance;
+    try {
+      this.#sync();
+    }
+    catch (error) {
+      this.#state.appearance = previousAppearance;
+      throw error;
+    }
+    this.#dispatchChange({ kind: "appearance", objectIds: [] });
   }
 
   get selected(): string | null {
-    return this.state.selected;
+    return this.#state.selected;
   }
 
   get hovered(): string | null {
-    return this.state.hovered;
+    return this.#state.hovered;
+  }
+
+  get emphasized(): ReadonlySet<string> {
+    return this.#state.emphasized;
   }
 
   register(
@@ -262,46 +240,42 @@ export class MeshHighlight extends EventTarget {
     options: { technique?: HighlightTechnique; } = {}
   ): void {
     this.#assertActive();
-    this.state.register(id, target, options);
+    this.#commit(this.#state.register(id, target, options));
   }
 
   unregister(
     id: string
   ): void {
     this.#assertActive();
-    this.state.unregister(id);
+    this.#commit(this.#state.unregister(id));
   }
 
   select(
     id: string | null
   ): void {
     this.#assertActive();
-    this.state.select(id);
+    this.#commit(this.#state.select(id));
   }
 
   hover(
     id: string | null
   ): void {
     this.#assertActive();
-    this.state.hover(id);
-  }
-
-  get emphasized(): ReadonlySet<string> {
-    return this.state.emphasized;
+    this.#commit(this.#state.hover(id));
   }
 
   emphasize(
     ids: Iterable<string>
   ): void {
     this.#assertActive();
-    this.state.emphasize(ids);
+    this.#commit(this.#state.emphasize(ids));
   }
 
   configure(
     appearance: MeshHighlightAppearanceOptions
   ): void {
     this.#assertActive();
-    this.appearance = this.state.appearance.with(appearance);
+    this.appearance = this.#state.appearance.with(appearance);
   }
 
   update(): void {
@@ -320,12 +294,7 @@ export class MeshHighlight extends EventTarget {
     }
     this.#disposed = true;
 
-    this.state.removeEventListener("change", this.#onStateChange);
-    this.peerSelections.removeEventListener(
-      "peerSelectionChange",
-      this.#onPeerChange
-    );
-    this.peerHovers.removeEventListener("peerHoverChange", this.#onPeerChange);
+    this.peers.removeEventListener("change", this.#onPeerChange);
     this.visibility?.removeEventListener(
       "visibilityChange",
       this.#onVisibilityChange
@@ -334,38 +303,9 @@ export class MeshHighlight extends EventTarget {
     this.#presentation.dispose();
     this.chips.dispose();
     this.visibility?.dispose();
-    this.state.dispose();
-    this.peerSelections.dispose();
-    this.peerHovers.dispose();
+    this.#state.dispose();
+    this.peers.dispose();
     this.dispatchEvent(new Event("dispose"));
-  }
-
-  #replaceAppearance(
-    nextAppearance: MeshHighlightAppearance
-  ): void {
-    const previousAppearance = this.state.appearance;
-    const next = this.#createRenderer(this.#mode, nextAppearance);
-    this.#synchronize = false;
-    try {
-      this.state.appearance = nextAppearance;
-      next.sync(this.#resolver.resolve(), this.state.appearance);
-    }
-    catch (error) {
-      next.dispose();
-      this.state.appearance = previousAppearance;
-      throw error;
-    }
-    finally {
-      this.#synchronize = true;
-    }
-
-    const previous = this.#presentation;
-    this.#presentation = next;
-    previous.dispose();
-    this.#dispatchChange({
-      kind: "appearance",
-      objectIds: []
-    });
   }
 
   #assertActive(): void {
@@ -374,27 +314,25 @@ export class MeshHighlight extends EventTarget {
     }
   }
 
-  #sync(): void {
-    if (!this.#synchronize || this.#disposed) {
+  #commit(
+    changes: readonly MeshHighlightChangeEventDetail[]
+  ): void {
+    if (changes.length === 0 || this.#disposed) {
       return;
     }
-    this.#presentation.sync(
-      this.#resolver.resolve(),
-      this.state.appearance
-    );
+
+    this.#sync();
+    for (const change of changes) {
+      this.#dispatchChange(change);
+    }
   }
 
-  #syncAndDispatch(
-    kind: "peers" | "visibility"
-  ): void {
-    if (!this.#synchronize || this.#disposed) {
-      return;
-    }
-    this.#sync();
-    this.#dispatchChange({
-      kind,
-      objectIds: []
-    });
+  #sync(): void {
+    this.#presentation.sync(
+      this.#resolver.resolve(),
+      this.#state.appearance
+    );
+    this.chips.sync();
   }
 
   #dispatchChange(
@@ -412,9 +350,9 @@ export class MeshHighlight extends EventTarget {
   }
 
   #createRenderer(
-    mode: MeshHighlightMode,
-    appearance = this.state.appearance
+    mode: MeshHighlightMode
   ): MeshHighlightRenderer {
+    const appearance = this.#state.appearance;
     if (this.#rendererFactory) {
       return this.#rendererFactory({
         mode,
@@ -434,24 +372,36 @@ export class MeshHighlight extends EventTarget {
       });
     }
 
-    const highlight = mode === "highlight" ?
-      new HighlightPass(
-        this.#renderer,
-        this.#scene,
-        this.#camera,
-        appearance.highlight satisfies HighlightPassOptions
-      ) :
-      new HighlightPassJfa(
-        this.#renderer,
-        this.#scene,
-        this.#camera,
-        appearance.highlightJfa satisfies HighlightPassJfaOptions
-      );
-
-    return new HighlightPassRenderer({
-      highlight,
+    const overlays = {
       overlayRegistry: this.#overlayRegistry,
       camera: this.#camera
+    };
+    if (mode === "highlight") {
+      const highlight = new HighlightPass(
+        this.#renderer,
+        this.#scene,
+        this.#camera,
+        appearance.highlight
+      );
+
+      return new HighlightPassRenderer({
+        ...overlays,
+        highlight,
+        configure: (next) => highlight.configure(next.highlight)
+      });
+    }
+
+    const highlight = new HighlightPassJfa(
+      this.#renderer,
+      this.#scene,
+      this.#camera,
+      appearance.highlightJfa
+    );
+
+    return new HighlightPassRenderer({
+      ...overlays,
+      highlight,
+      configure: (next) => highlight.configure(next.highlightJfa)
     });
   }
 }

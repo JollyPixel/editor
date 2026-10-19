@@ -1,60 +1,86 @@
 # Peer selection and hover
 
-The peer layer keeps remote state separate from the local
-[`MeshHighlightState`](./index.md). It does not require a network library. Feed
-the registries from a test, another transport, or the optional
+`PeerHighlights` holds what remote peers select and hover, separate from the
+local state of [`MeshHighlight`](./index.md). It does not require a network
+library. Feed it from a test, another transport, or the optional
 `@jolly-pixel/three/network` entry point.
 
 Every client must register the same object ids before remote state can render.
 
-## Registries
+## PeerHighlights
 
 ```ts
-import {
-  PeerHoverRegistry,
-  PeerSelectionRegistry
-} from "@jolly-pixel/three";
+import { PeerHighlights } from "@jolly-pixel/three";
 
-const selections = new PeerSelectionRegistry();
-const hovers = new PeerHoverRegistry();
+const peers = new PeerHighlights();
 
-selections.select("peer-a", "crate");
-hovers.hover("peer-b", "crate");
+peers.select("peer-a", "crate");
+peers.hover("peer-b", "crate");
 
-selections.listSelectors("crate");       // ["peer-a"]
-selections.primarySelector("crate"); // "peer-a"
-selections.peerColor("peer-a");          // stable color for this peer id
+peers.selectors("crate");    // ["peer-a"]
+peers.peerColor("peer-a");   // stable color for this peer id
 ```
 
 Each peer has at most one selected id and one hovered id. Pass `null` to clear
-it, or call `removePeer(peerId)` when the peer disconnects. If several peers
-point at one object, the oldest active peer is primary.
-
-| Selection registry | Hover registry | Result |
-|---|---|---|
-| `select(peerId, id)` | `hover(peerId, id)` | Set or clear remote state |
-| `selectedObject(peerId)` | `hoveredObject(peerId)` | Current id for one peer |
-| `listSelectors(id)` | `listHoverers(id)` | Peers for one object, oldest first |
-| `selectedObjectIds()` | `hoveredObjectIds()` | Objects with remote state |
-| `primarySelector(id)` | `primaryHoverer(id)` | Oldest active peer |
-| `peerColor(peerId)` | `peerColor(peerId)` | Assigned peer color |
-| `dispose()` | `dispose()` | Clear registry state |
-
-Changes dispatch `peerSelectionChange` or `peerHoverChange`. Both events are
-`CustomEvent` objects with this detail:
+one of them. When several peers mark one object, the earliest one comes first.
 
 ```ts
-{
+class PeerHighlights extends EventTarget {
+  constructor(options?: { colorAllocator?: PeerColorAllocator });
+
+  select(peerId: string, objectId: string | null): void;
+  hover(peerId: string, objectId: string | null): void;
+  mark(
+    role: HighlightIndicatorRole,
+    peerId: string,
+    objectId: string | null
+  ): void;
+  removePeer(peerId: string): void;
+
+  selectedObject(peerId: string): string | null;
+  hoveredObject(peerId: string): string | null;
+  selectors(objectId: string): readonly string[];
+  hoverers(objectId: string): readonly string[];
+  selectedObjectIds(): readonly string[];
+  hoveredObjectIds(): readonly string[];
+  peerColor(peerId: string): string;
+
+  dispose(): void;
+}
+```
+
+### mark(role, peerId, objectId): void
+
+Sets the peer's `"selection"` or `"hover"` mark. `select()` and `hover()` call
+it with their role.
+
+### removePeer(peerId): void
+
+Clears the peer's selection and hover, then releases its color once.
+
+### dispose(): void
+
+Clears every mark without releasing colors.
+
+### Events
+
+Every change dispatches a `change` `CustomEvent`. A repeated value dispatches
+nothing.
+
+```ts
+interface PeerHighlightChangeEventDetail {
   peerId: string;
+  role: "selection" | "hover";
   objectId: string | null;
   previousObjectId: string | null;
 }
 ```
 
+### Color allocator
+
 The default allocator, exported as `createDefaultColorAllocator()`, hashes peer
-ids across eight colors and never releases. Supply the same custom
-`PeerColorAllocator` to both registries when selection and hover must share a
-stateful palette:
+ids across eight colors and never releases. Supply your own to share a palette
+with the rest of the application:
 
 ```ts
 interface PeerColorAllocator {
@@ -63,138 +89,68 @@ interface PeerColorAllocator {
 }
 ```
 
-`removePeer()` calls `release()`. `dispose()` only clears the registry.
-
 ## Draw peer indicators
 
-`MeshHighlight` creates the registries and renders their state with the same
-priority rules as local selection:
+`MeshHighlight` creates a `PeerHighlights` as `highlight.peers` and renders it
+with the same priority rules as local state:
 
 ```ts
-import {
-  MeshHighlight
-} from "@jolly-pixel/three";
+import { MeshHighlight } from "@jolly-pixel/three";
 
-const meshHighlight = new MeshHighlight({
+const highlight = new MeshHighlight({
   renderer,
   scene,
   camera,
   chips: true
 });
-meshHighlight.register("crate", crateMesh);
+highlight.register("crate", crateMesh);
 
-meshHighlight.peerSelections.select("peer-a", "crate");
-meshHighlight.peerHovers.hover("peer-b", "crate");
-
-renderer.setAnimationLoop(() => {
-  meshHighlight.update();
-  meshHighlight.render();
-});
-```
-
-The resolver emits one indicator per object. Local selection has priority,
-followed by peer selection, local hover, and peer hover. The oldest peer wins
-when several peers have the same state on one object.
-
-### Low-level adapters
-
-For a custom composition, create `PeerSelectionOverlays` and
-`PeerHoverOverlays` around a `MeshHighlightState` and the registries. Both
-adapters react to selection, registration, technique, and appearance changes.
-
-`PeerSelectionOverlays` draws one full-strength overlay per selected object.
-`PeerHoverOverlays` draws one faded overlay per hovered object at opacity
-`0.35` by default; mesh outlines are dashed. Local state has priority, and any
-selection suppresses a hover on the same object. With a postprocess technique,
-these classes fall back to object outlines.
-
-Both classes expose `refreshAll()` for an explicit resynchronization and
-`dispose()` for cleanup.
-
-For colored postprocess rings, use `PeerHighlightPass` instead of the two
-object-overlay renderers. Set the matching state technique first:
-
-```ts
-state.technique = "highlight";
-
-const highlight = new HighlightPass(renderer, scene, camera);
-const peerHighlight = new PeerHighlightPass({
-  registry,
-  hoverRegistry,
-  selection: state,
-  highlight
-});
-```
-
-It includes local selection and hover even when no remote peers exist. Local
-selection wins overlaps. The class exposes `refresh()` and `dispose()`; it
-does not dispose `highlight`. See [highlight rendering](./rendering.md) for
-`HighlightPass` and `HighlightPassJfa`.
-
-## Cull remote indicators
-
-`PeerSelectionVisibility` culls remote indicators outside the camera frustum
-or beyond `maxDistance`. Local selection and hover are never culled.
-
-```ts
-const visibility = new PeerSelectionVisibility({
-  registry,
-  hoverRegistry,
-  selection: state,
-  camera,
-  maxDistance: 40
-});
-
-const peerHighlight = new PeerHighlightPass({
-  registry,
-  hoverRegistry,
-  selection: state,
-  highlight,
-  visibility
-});
+highlight.peers.select("peer-a", "crate");
+highlight.peers.hover("peer-b", "crate");
 
 renderer.setAnimationLoop(() => {
-  visibility.update();
+  highlight.update();
   highlight.render();
 });
 ```
 
-`maxDistance` defaults to `Infinity`, leaving frustum culling enabled. `camera`
-and `maxDistance` are writable properties. The API also provides
-`isVisible(id)`, `update()`, and `dispose()`. `update()` dispatches
-`visibilityChange` when a result changes.
+The resolver emits one indicator per object, in this priority order:
 
-Pass the same visibility instance to `PeerSelectionOverlays`,
-`PeerHoverOverlays`, or `PeerSelectionChips` as needed.
+1. Local selection.
+2. Peer selection, colored after the earliest selector.
+3. Local hover or emphasis.
+4. Peer hover, colored after the earliest hoverer.
+
+Every mode applies the same order.
+
+## Cull remote indicators
+
+`highlight.visibility` drops peer indicators outside the camera frustum or
+beyond `maxDistance`. Local selection and hover are never culled. `update()`
+re-evaluates it; call it once per frame.
+
+```ts
+highlight.visibility!.maxDistance = 40;
+highlight.visibility!.camera = otherCamera;
+```
+
+`maxDistance` defaults to `Infinity`, leaving frustum culling enabled. Pass
+`visibility: false` to the constructor to disable culling; the property is then
+`null`.
 
 ## Show multiple selectors
 
-The primary ring shows one peer color. `PeerSelectionChips` can add billboard
-chips above objects selected by several peers:
+An indicator shows one peer color. `highlight.chips` adds billboard chips above
+an object selected by several peers: up to three peer colors, then a `+N`
+badge. Chips are off unless `chips: true` is passed; `enabled` is writable.
 
 ```ts
-const chips = new PeerSelectionChips({
-  registry,
-  selection: state,
-  visibility,
-  enabled: true
-});
+highlight.chips.enabled = true;
 ```
 
-Chips are disabled by default. The component shows up to three peer colors,
-then adds a `+N` badge. `enabled` is writable; call `dispose()` for cleanup.
+Culled objects show no chips.
 
 ## Network transport
 
-The registries accept any transport. For the optional
-`@jolly-pixel/network` adapters, see [network selection sync](../network/selection.md).
-
-## Exported types
-
-| Area | Types |
-|---|---|
-| Selection registry | `PeerSelectionRegistryOptions`, `PeerSelectionChangeEventDetail`, `PeerSelectionRegistryEventMap` |
-| Hover registry | `PeerHoverRegistryOptions`, `PeerHoverChangeEventDetail`, `PeerHoverRegistryEventMap` |
-| Object renderers | `PeerSelectionOverlaysOptions`, `PeerHoverOverlaysOptions` |
-| Postprocess adapter | `PeerHighlightPassOptions`, `HighlightTarget` |
-| Visibility and chips | `PeerSelectionVisibilityOptions`, `PeerSelectionChipsOptions` |
+`PeerHighlights` accepts any transport. For the optional `@jolly-pixel/network`
+adapter, see [network selection sync](../network/selection.md).

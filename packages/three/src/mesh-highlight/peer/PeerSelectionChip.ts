@@ -2,7 +2,7 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { CanvasSprite } from "../../common/CanvasSprite.ts";
+import { CanvasSprite } from "../../common/texture/CanvasSprite.ts";
 
 // CONSTANTS
 const kChipCanvasSize = 64;

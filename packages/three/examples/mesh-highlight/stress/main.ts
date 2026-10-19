@@ -3,10 +3,10 @@ import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import {
-  MeshHighlightState,
+  MeshHighlightAppearance,
   HighlightPass,
   HighlightPassJfa,
-  PeerSelectionRegistry,
+  PeerHighlights,
   MergedHighlightOverlay,
   type HighlightEntry
 } from "../../../src/index.ts";
@@ -47,10 +47,10 @@ addSelectionLighting(scene);
 camera.far = 500;
 camera.updateProjectionMatrix();
 
-const highlightState = new MeshHighlightState();
+let appearance = new MeshHighlightAppearance();
 const highlight = new HighlightPass(renderer, scene, camera);
 const highlightJfa = new HighlightPassJfa(renderer, scene, camera);
-const peerRegistry = new PeerSelectionRegistry();
+const peerRegistry = new PeerHighlights();
 const peers = new SimulatedPeers(peerRegistry);
 
 const grid = new InstanceGrid(
@@ -67,7 +67,6 @@ let selectionOverlay: MergedHighlightOverlay | null = null;
 let hoverOverlay: MergedHighlightOverlay | null = null;
 
 function refreshHighlightEntries(): void {
-  const { appearance } = highlightState;
   const entries: HighlightEntry[] = selection.selected.map((instanceId) => {
     return {
       target: grid.mesh,
@@ -93,8 +92,8 @@ function refreshHighlightEntries(): void {
       continue;
     }
 
-    const peerId = peerRegistry.primarySelector(objectId);
-    if (peerId === null) {
+    const [peerId] = peerRegistry.selectors(objectId);
+    if (peerId === undefined) {
       continue;
     }
 
@@ -116,7 +115,6 @@ function rebuildOverlays(): void {
   hoverOverlay = null;
 
   if (renderMode === "outline") {
-    const { appearance } = highlightState;
     const { hovered } = selection;
 
     if (hovered !== null) {
@@ -180,7 +178,7 @@ function clusterPeersAroundSelection(
   );
 }
 
-peerRegistry.addEventListener("peerSelectionChange", refreshHighlightEntries);
+peerRegistry.addEventListener("change", refreshHighlightEntries);
 
 onCanvasPick(canvas, {
   camera,
@@ -244,11 +242,11 @@ selectionFolder
     updateControlVisibility();
   });
 
-const xraySettings = { xray: highlightState.appearance.xray };
+const xraySettings = { xray: appearance.xray };
 const xrayBinding = selectionFolder
   .addBinding(xraySettings, "xray", { label: "x-ray (hover)" })
   .on("change", ({ value }) => {
-    highlightState.configure({ xray: value });
+    appearance = appearance.with({ xray: value });
     rebuildOverlays();
   });
 

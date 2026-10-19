@@ -6,17 +6,18 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import {
-  PeerHoverRegistry,
-  PeerSelectionRegistry,
-  MeshHighlightState,
-  HighlightResolver
-} from "#src/index.ts";
+import { PeerHighlights } from "#src/index.ts";
+import { MeshHighlightState } from "#src/mesh-highlight/MeshHighlightState.ts";
+import { HighlightResolver } from "#src/mesh-highlight/HighlightResolver.ts";
+import { PeerVisibility } from "#src/mesh-highlight/peer/PeerVisibility.ts";
+import { createFrontCamera } from "./peer/helpers.ts";
 
-function createHarness(): {
+function createHarness(
+  options: { visibility?: boolean; } = {}
+): {
   state: MeshHighlightState;
-  selections: PeerSelectionRegistry;
-  hovers: PeerHoverRegistry;
+  peers: PeerHighlights;
+  visibility: PeerVisibility | undefined;
   resolver: HighlightResolver;
 } {
   const state = new MeshHighlightState({
@@ -28,41 +29,51 @@ function createHarness(): {
         color: "#00ff00",
         opacity: 0.4
       }
-    },
-    renderOverlays: false
+    }
   });
-  state.register("box", new THREE.Mesh());
-  state.register("sphere", new THREE.Mesh());
+  state.register("box", new THREE.Mesh(new THREE.BoxGeometry()));
+  state.register("sphere", new THREE.Mesh(new THREE.BoxGeometry()));
 
-  const allocator = {
-    peerColor: (peerId: string) => (peerId === "peer-a" ? "#ff0000" : "#0000ff"),
-    release: () => void 0
-  };
-  const selections = new PeerSelectionRegistry({
-    colorAllocator: allocator
+  const peers = new PeerHighlights({
+    colorAllocator: {
+      peerColor: (peerId) => (peerId === "peer-a" ? "#ff0000" : "#0000ff"),
+      release: () => void 0
+    }
   });
-  const hovers = new PeerHoverRegistry({
-    colorAllocator: allocator
-  });
+  const visibility = options.visibility ?
+    new PeerVisibility({
+      peers,
+      state,
+      camera: createFrontCamera()
+    }) :
+    undefined;
 
   return {
     state,
-    selections,
-    hovers,
+    peers,
+    visibility,
     resolver: new HighlightResolver({
       state,
-      peerSelections: selections,
-      peerHovers: hovers
+      peers,
+      visibility
     })
   };
 }
 
+function summarize(
+  resolver: HighlightResolver
+) {
+  return resolver.resolve().map(({ objectId, role, source, peerId }) => {
+    return { objectId, role, source, peerId };
+  });
+}
+
 describe("HighlightResolver", () => {
   test("resolves overlapping local and peer intent to one local selection", () => {
-    const { state, selections, hovers, resolver } = createHarness();
-    hovers.hover("peer-a", "box");
+    const { state, peers, resolver } = createHarness();
+    peers.hover("peer-a", "box");
     state.hover("box");
-    selections.select("peer-b", "box");
+    peers.select("peer-b", "box");
     state.select("box");
 
     const indicators = resolver.resolve();
@@ -75,10 +86,33 @@ describe("HighlightResolver", () => {
     assert.strictEqual(indicator.color, "#ffffff");
   });
 
-  test("colors a shared object after its primary peer", () => {
-    const { selections, resolver } = createHarness();
-    selections.select("peer-a", "box");
-    selections.select("peer-b", "box");
+  test("ranks a peer's selection above a local hover on the same object", () => {
+    const { state, peers, resolver } = createHarness();
+    state.hover("box");
+    peers.select("peer-a", "box");
+
+    assert.deepStrictEqual(summarize(resolver), [
+      { objectId: "box", role: "selection", source: "peer", peerId: "peer-a" }
+    ]);
+  });
+
+  test("ranks a local hover or emphasis above a peer's hover", () => {
+    const { state, peers, resolver } = createHarness();
+    state.hover("box");
+    state.emphasize(["sphere"]);
+    peers.hover("peer-a", "box");
+    peers.hover("peer-b", "sphere");
+
+    assert.deepStrictEqual(summarize(resolver), [
+      { objectId: "box", role: "hover", source: "local", peerId: undefined },
+      { objectId: "sphere", role: "hover", source: "local", peerId: undefined }
+    ]);
+  });
+
+  test("colors a shared object after its first peer", () => {
+    const { peers, resolver } = createHarness();
+    peers.select("peer-a", "box");
+    peers.select("peer-b", "box");
 
     const [indicator] = resolver.resolve();
 
@@ -87,58 +121,56 @@ describe("HighlightResolver", () => {
     assert.strictEqual(indicator.source, "peer");
   });
 
-  test("draws an emphasized object as a local hover, under a peer's selection", () => {
-    const { state, selections, hovers, resolver } = createHarness();
-    state.emphasize(["box", "sphere"]);
-    hovers.hover("peer-a", "box");
-    selections.select("peer-b", "sphere");
-
-    assert.deepStrictEqual(
-      resolver.resolve().map(({ objectId, role, source, color }) => {
-        return { objectId, role, source, color };
-      }),
-      [
-        { objectId: "box", role: "hover", source: "local", color: "#00ff00" },
-        { objectId: "sphere", role: "selection", source: "peer", color: "#0000ff" }
-      ]
-    );
-  });
-
-  test("keeps local hover and peer selection on separate objects", () => {
-    const { state, selections, resolver } = createHarness();
-    state.hover("box");
-    selections.select("peer-a", "sphere");
-
-    const indicators = resolver.resolve();
-
-    assert.deepStrictEqual(
-      indicators.map(({ objectId, role, source }) => {
-        return { objectId, role, source };
-      }),
-      [
-        { objectId: "box", role: "hover", source: "local" },
-        { objectId: "sphere", role: "selection", source: "peer" }
-      ]
-    );
-  });
-
   test("draws a peer's hover at the hover opacity when nothing else claims the object", () => {
-    const { hovers, resolver } = createHarness();
-    hovers.hover("peer-b", "sphere");
+    const { peers, resolver } = createHarness();
+    peers.hover("peer-b", "sphere");
+
+    const [indicator] = resolver.resolve();
 
     assert.deepStrictEqual(
-      resolver.resolve().map(({ objectId, role, source, peerId, color, opacity }) => {
-        return { objectId, role, source, peerId, color, opacity };
+      {
+        role: indicator.role,
+        source: indicator.source,
+        color: indicator.color,
+        opacity: indicator.opacity
+      },
+      {
+        role: "hover",
+        source: "peer",
+        color: "#0000ff",
+        opacity: 0.4
+      }
+    );
+  });
+
+  test("drops peer indicators on culled objects and keeps the local hover", () => {
+    const { state, peers, visibility, resolver } = createHarness({ visibility: true });
+    state.findTarget("box")!.position.set(0, 0, 10);
+    state.findTarget("sphere")!.position.set(0, 0, 10);
+    state.hover("box");
+    peers.select("peer-a", "box");
+    peers.hover("peer-b", "sphere");
+
+    visibility!.update();
+
+    assert.deepStrictEqual(summarize(resolver), [
+      { objectId: "box", role: "hover", source: "local", peerId: undefined }
+    ]);
+  });
+
+  test("uses the per-object technique over the default one", () => {
+    const { state, resolver } = createHarness();
+    state.register("sphere", state.findTarget("sphere")!, { technique: "silhouette" });
+    state.select("box");
+    state.hover("sphere");
+
+    assert.deepStrictEqual(
+      resolver.resolve().map(({ objectId, technique }) => {
+        return { objectId, technique };
       }),
       [
-        {
-          objectId: "sphere",
-          role: "hover",
-          source: "peer",
-          peerId: "peer-b",
-          color: "#0000ff",
-          opacity: 0.4
-        }
+        { objectId: "box", technique: "outline" },
+        { objectId: "sphere", technique: "silhouette" }
       ]
     );
   });

@@ -6,135 +6,85 @@ import assert from "node:assert/strict";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import {
-  type ResolvedHighlightIndicator,
-  type MeshHighlightAppearance,
-  type MeshHighlightRenderer,
-  type MeshHighlightRendererContext,
-  type MeshHighlightChangeEventDetail,
-  MeshHighlight
-} from "#src/index.ts";
-
-class TestHighlightRenderer implements MeshHighlightRenderer {
-  snapshots: Array<readonly ResolvedHighlightIndicator[]> = [];
-  appearances: MeshHighlightAppearance[] = [];
-  renderCount = 0;
-  disposeCount = 0;
-  failSync = false;
-
-  sync(
-    indicators: readonly ResolvedHighlightIndicator[],
-    appearance: MeshHighlightAppearance
-  ): void {
-    if (this.failSync) {
-      throw new Error("sync failed");
-    }
-    this.snapshots.push(indicators);
-    this.appearances.push(appearance);
-  }
-
-  render(): void {
-    this.renderCount += 1;
-  }
-
-  dispose(): void {
-    this.disposeCount += 1;
-  }
-}
-
-function createHarness(): {
-  system: MeshHighlight;
-  contexts: MeshHighlightRendererContext[];
-  presentations: TestHighlightRenderer[];
-} {
-  const contexts: MeshHighlightRendererContext[] = [];
-  const presentations: TestHighlightRenderer[] = [];
-  const renderer = {
-    render: () => void 0
-  } as unknown as THREE.WebGPURenderer;
-  const system = new MeshHighlight({
-    renderer,
-    scene: new THREE.Scene(),
-    camera: new THREE.PerspectiveCamera(),
-    visibility: false,
-    rendererFactory: (context) => {
-      const presentation = new TestHighlightRenderer();
-      contexts.push(context);
-      presentations.push(presentation);
-
-      return presentation;
-    }
-  });
-
-  return { system, contexts, presentations };
-}
+import type { MeshHighlightChangeEventDetail } from "#src/index.ts";
+import { createHarness } from "./helpers.ts";
 
 describe("MeshHighlight", () => {
   test("owns state resolution and rendering behind one API", () => {
-    const { system, presentations } = createHarness();
+    const { highlight, presentations } = createHarness();
     const mesh = new THREE.Mesh();
 
-    system.register("mesh", mesh);
-    system.select("mesh");
-    system.render();
+    highlight.register("mesh", mesh);
+    highlight.select("mesh");
+    highlight.render();
 
-    const active = presentations[0];
-    const latest = active.snapshots.at(-1)!;
-    assert.strictEqual(system.selected, "mesh");
-    assert.strictEqual(latest.length, 1);
-    assert.strictEqual(latest[0].target, mesh);
-    assert.strictEqual(latest[0].source, "local");
+    const [active] = presentations;
+    assert.strictEqual(highlight.selected, "mesh");
+    assert.strictEqual(active.latest.length, 1);
+    assert.strictEqual(active.latest[0].target, mesh);
+    assert.strictEqual(active.latest[0].source, "local");
     assert.strictEqual(active.renderCount, 1);
   });
 
   test("peer changes use the same resolver and active renderer", () => {
-    const { system, presentations } = createHarness();
-    system.register("mesh", new THREE.Mesh());
+    const { highlight, presentations } = createHarness();
+    highlight.register("mesh", new THREE.Mesh());
 
-    system.peerSelections.select("peer-a", "mesh");
+    highlight.peers.select("peer-a", "mesh");
 
-    const [indicator] = presentations[0].snapshots.at(-1)!;
+    const [indicator] = presentations[0].latest;
     assert.strictEqual(indicator.source, "peer");
     assert.strictEqual(indicator.peerId, "peer-a");
   });
 
   test("forwards local and peer changes from the facade", () => {
-    const { system } = createHarness();
+    const { highlight } = createHarness();
     const changes: MeshHighlightChangeEventDetail[] = [];
-    system.addEventListener("change", ({ detail }) => changes.push(detail));
+    const peerChanges: MeshHighlightChangeEventDetail[] = [];
+    highlight.addEventListener("change", ({ detail }) => changes.push(detail));
+    highlight.addEventListener("peersChange", ({ detail }) => peerChanges.push(detail));
 
-    system.register("mesh", new THREE.Mesh());
-    system.select("mesh");
-    system.peerSelections.select("peer-a", "mesh");
+    highlight.register("mesh", new THREE.Mesh());
+    highlight.select("mesh");
+    highlight.peers.select("peer-a", "mesh");
 
     assert.deepStrictEqual(
       changes.map(({ kind }) => kind),
       ["targets", "selection", "peers"]
     );
     assert.deepStrictEqual(changes[1].objectIds, ["mesh"]);
+    assert.deepStrictEqual(peerChanges, [{ kind: "peers", objectIds: ["mesh"] }]);
   });
 
   test("mode replaces and disposes the renderer without losing state", () => {
-    const { system, contexts, presentations } = createHarness();
-    system.register("mesh", new THREE.Mesh());
-    system.select("mesh");
+    const { highlight, contexts, presentations } = createHarness();
+    highlight.register("mesh", new THREE.Mesh());
+    highlight.register("custom", new THREE.Mesh(), { technique: "silhouette" });
+    highlight.select("mesh");
+    highlight.hover("custom");
 
-    system.mode = "highlight";
+    highlight.mode = "highlight";
 
-    assert.strictEqual(system.mode, "highlight");
-    assert.strictEqual(system.state.technique, "highlight");
+    assert.strictEqual(highlight.mode, "highlight");
     assert.strictEqual(contexts.at(-1)!.mode, "highlight");
     assert.strictEqual(presentations[0].disposeCount, 1);
-    assert.strictEqual(
-      presentations[1].snapshots.at(-1)![0].objectId,
-      "mesh"
+    assert.deepStrictEqual(
+      presentations[1].latest.map(({ objectId, technique }) => {
+        return { objectId, technique };
+      }),
+      [
+        { objectId: "mesh", technique: "highlight" },
+        { objectId: "custom", technique: "silhouette" }
+      ]
     );
   });
 
-  test("configure swaps renderer configuration atomically", () => {
-    const { system, contexts, presentations } = createHarness();
+  test("configure re-syncs the active renderer without rebuilding it", () => {
+    const { highlight, contexts, presentations } = createHarness();
+    const appearances: string[] = [];
+    highlight.addEventListener("appearanceChange", ({ detail }) => appearances.push(detail.kind));
 
-    system.configure({
+    highlight.configure({
       selected: {
         color: "#ff0000"
       },
@@ -143,73 +93,61 @@ describe("MeshHighlight", () => {
       }
     });
 
-    assert.strictEqual(system.appearance.selected.color, "#ff0000");
-    assert.strictEqual(system.appearance.highlight.edgeThickness, 4);
-    assert.strictEqual(contexts.at(-1)!.appearance, system.appearance);
-    assert.strictEqual(presentations[0].disposeCount, 1);
+    assert.strictEqual(highlight.appearance.selected.color, "#ff0000");
+    assert.strictEqual(highlight.appearance.highlight.edgeThickness, 4);
+    assert.strictEqual(contexts.length, 1);
+    assert.strictEqual(presentations[0].disposeCount, 0);
+    assert.strictEqual(presentations[0].appearances.at(-1), highlight.appearance);
+    assert.deepStrictEqual(appearances, ["appearance"]);
   });
 
   test("a failed mode synchronization leaves the old renderer active", () => {
-    const { system, presentations } = createHarness();
-    system.register("mesh", new THREE.Mesh());
-    system.select("mesh");
-
-    const previous = presentations[0];
-    assert.strictEqual(presentations.length, 1);
-
-    system.state.addEventListener("techniqueChange", () => {
-      presentations.at(-1)!.failSync = true;
-    }, { once: true });
+    const { highlight, presentations } = createHarness({ failingModes: ["highlight"] });
+    highlight.register("mesh", new THREE.Mesh());
+    highlight.select("mesh");
+    const [previous] = presentations;
 
     assert.throws(() => {
-      system.mode = "highlight";
+      highlight.mode = "highlight";
     }, /sync failed/);
-    assert.strictEqual(system.mode, "outline");
-    assert.strictEqual(system.state.technique, "outline");
+    assert.strictEqual(highlight.mode, "outline");
     assert.strictEqual(previous.disposeCount, 0);
     assert.strictEqual(presentations[1].disposeCount, 1);
 
-    system.render();
+    highlight.render();
     assert.strictEqual(previous.renderCount, 1);
   });
 
-  test("a failed configure synchronization keeps the old appearance and renderer", () => {
-    const { system, presentations } = createHarness();
-    system.register("mesh", new THREE.Mesh());
-    system.select("mesh");
-
-    const previous = presentations[0];
-    const appearance = system.appearance;
-    system.state.addEventListener("appearanceChange", () => {
-      presentations.at(-1)!.failSync = true;
-    }, { once: true });
+  test("a failed configure synchronization keeps the old appearance", () => {
+    const { highlight, presentations } = createHarness();
+    highlight.register("mesh", new THREE.Mesh());
+    highlight.select("mesh");
+    const appearance = highlight.appearance;
+    presentations[0].failSync = true;
 
     assert.throws(() => {
-      system.configure({
+      highlight.configure({
         selected: {
           color: "#ff0000"
         }
       });
     }, /sync failed/);
-    assert.strictEqual(system.appearance, appearance);
-    assert.strictEqual(previous.disposeCount, 0);
-    assert.strictEqual(presentations[1].disposeCount, 1);
-
-    system.render();
-    assert.strictEqual(previous.renderCount, 1);
+    assert.strictEqual(highlight.appearance, appearance);
+    assert.strictEqual(presentations[0].disposeCount, 0);
   });
 
   test("dispose releases the active renderer and owned state", () => {
-    const { system, presentations } = createHarness();
-    system.register("mesh", new THREE.Mesh());
-    system.peerSelections.select("peer-a", "mesh");
+    const { highlight, presentations } = createHarness();
+    highlight.register("mesh", new THREE.Mesh());
+    highlight.select("mesh");
+    highlight.peers.select("peer-a", "mesh");
 
-    system.dispose();
-    system.dispose();
+    highlight.dispose();
+    highlight.dispose();
 
     assert.strictEqual(presentations[0].disposeCount, 1);
-    assert.deepStrictEqual(system.peerSelections.selectedObjectIds(), []);
-    assert.strictEqual(system.state.findTarget("mesh"), undefined);
-    assert.throws(() => system.render(), /disposed/);
+    assert.deepStrictEqual(highlight.peers.selectedObjectIds(), []);
+    assert.strictEqual(highlight.selected, null);
+    assert.throws(() => highlight.render(), /disposed/);
   });
 });

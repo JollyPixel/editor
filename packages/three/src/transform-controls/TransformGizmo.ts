@@ -5,9 +5,9 @@ import * as THREE from "three";
 import {
   type Axis,
   AXES
-} from "../common/axes.ts";
-import { eyeDirection } from "../common/eyeDirection.ts";
-import { screenScaleFactor } from "../common/screenScaleFactor.ts";
+} from "../common/math/axes.ts";
+import { eyeDirection } from "../common/screen/eyeDirection.ts";
+import { screenScaleFactor } from "../common/screen/scaleFactor.ts";
 import {
   centerReach,
   type ResolvedAppearance,

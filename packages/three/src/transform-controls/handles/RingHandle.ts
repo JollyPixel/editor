@@ -5,7 +5,7 @@ import * as THREE from "three";
 import {
   type Axis,
   AXIS_DIRECTION
-} from "../../common/axes.ts";
+} from "../../common/math/axes.ts";
 import type { ResolvedRings } from "../appearance.ts";
 import { createRingGeometry } from "./geometry.ts";
 import {

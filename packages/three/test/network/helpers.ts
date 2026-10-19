@@ -4,12 +4,19 @@ import type { PeerMetadata } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import { FakeRoom } from "../fixtures/room.ts";
-import { PeerFrustum } from "#src/index.ts";
+import {
+  PeerFrustum,
+  PeerHighlights,
+  type PeerColorAllocator
+} from "#src/index.ts";
 import {
   PeerFrustumSync,
+  PeerHighlightSync,
   type PeerFrustumPose,
-  type PeerFrustumSyncOptions
+  type PeerFrustumSyncOptions,
+  type PeerHighlightSyncOptions
 } from "#src/network/index.ts";
+import { createHarness } from "../mesh-highlight/helpers.ts";
 
 export type FrustumSetupOptions = Partial<
   Omit<PeerFrustumSyncOptions, "room" | "parent">
@@ -57,4 +64,27 @@ export function findFrustums(
   return parent.children.filter(
     (child): child is PeerFrustum => child instanceof PeerFrustum
   );
+}
+
+export function setupHighlightSync(
+  options: Partial<Omit<PeerHighlightSyncOptions, "room" | "highlight">> & {
+    colorAllocator?: PeerColorAllocator;
+    room?: FakeRoom;
+  } = {}
+) {
+  const { colorAllocator, room = new FakeRoom(), ...syncOptions } = options;
+  const { highlight } = createHarness({
+    peers: new PeerHighlights({ colorAllocator })
+  });
+  highlight.register("box-1", new THREE.Object3D());
+  highlight.register("box-2", new THREE.Object3D());
+  highlight.register("box-3", new THREE.Object3D());
+  const sync = new PeerHighlightSync({
+    hoverThrottleMs: 0,
+    ...syncOptions,
+    room,
+    highlight
+  });
+
+  return { room, highlight, peers: highlight.peers, sync };
 }

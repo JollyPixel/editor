@@ -45,6 +45,35 @@ describe("ObjectOverlayRenderer", () => {
     assert.strictEqual(overlays[0].xray, true);
   });
 
+  test("rebuilds overlays when a build-time appearance field changes", () => {
+    const overlays: TestOverlay[] = [];
+    const renderer = createObjectOverlayRenderer(overlays);
+    const target = new THREE.Mesh();
+    const appearance = new MeshHighlightAppearance();
+    renderer.sync([indicator(target)], appearance);
+
+    renderer.sync([indicator(target)], appearance.with({ renderOrder: 5 }));
+    renderer.sync([indicator(target)], appearance.with({
+      renderOrder: 5,
+      xrayDepthWrite: true
+    }));
+
+    assert.deepStrictEqual(
+      overlays.map(({ createOptions, disposeCount }) => {
+        return {
+          renderOrder: createOptions.renderOrder,
+          xrayDepthWrite: createOptions.xrayDepthWrite,
+          disposeCount
+        };
+      }),
+      [
+        { renderOrder: undefined, xrayDepthWrite: false, disposeCount: 1 },
+        { renderOrder: 5, xrayDepthWrite: false, disposeCount: 1 },
+        { renderOrder: 5, xrayDepthWrite: true, disposeCount: 0 }
+      ]
+    );
+  });
+
   test("replaces incompatible overlays and disposes removed ones", () => {
     const overlays: TestOverlay[] = [];
     const renderer = createObjectOverlayRenderer(overlays);

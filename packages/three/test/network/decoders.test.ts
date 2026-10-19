@@ -4,8 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  decodePeerSelectionId,
-  decodePeerHoverId,
+  decodePeerObjectId,
   decodePeerFrustumPose
 } from "#src/network/index.ts";
 
@@ -14,10 +13,6 @@ const kPose = {
   position: { x: 1, y: 2, z: 3 },
   quaternion: { x: 0, y: 1, z: 0, w: 0 }
 };
-const kIdDecoders = [
-  ["decodePeerSelectionId", decodePeerSelectionId],
-  ["decodePeerHoverId", decodePeerHoverId]
-] as const;
 const kMalformedIds: Array<[string, unknown]> = [
   ["a missing value", undefined],
   ["a number", 42],
@@ -44,23 +39,21 @@ const kMalformedPoses: Array<[string, unknown]> = [
   ]
 ];
 
-for (const [name, decode] of kIdDecoders) {
-  describe(name, () => {
-    test("accepts a string id", () => {
-      assert.equal(decode("box-1"), "box-1");
-    });
-
-    test("accepts null as an explicit clear", () => {
-      assert.equal(decode(null), null);
-    });
-
-    for (const [label, value] of kMalformedIds) {
-      test(`rejects ${label}`, () => {
-        assert.equal(decode(value), undefined);
-      });
-    }
+describe("decodePeerObjectId", () => {
+  test("accepts a string id", () => {
+    assert.equal(decodePeerObjectId("box-1"), "box-1");
   });
-}
+
+  test("accepts null as an explicit clear", () => {
+    assert.equal(decodePeerObjectId(null), null);
+  });
+
+  for (const [label, value] of kMalformedIds) {
+    test(`rejects ${label}`, () => {
+      assert.equal(decodePeerObjectId(value), undefined);
+    });
+  }
+});
 
 describe("decodePeerFrustumPose", () => {
   test("accepts a complete pose", () => {

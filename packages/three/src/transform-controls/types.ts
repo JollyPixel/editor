@@ -5,8 +5,8 @@ import type * as THREE from "three";
 import type {
   Axis,
   AxisSign
-} from "../common/axes.ts";
-import type { SnapStep } from "../common/snap.ts";
+} from "../common/math/axes.ts";
+import type { SnapStep } from "../common/math/snap.ts";
 
 export type TransformAxis = Axis;
 export type TransformDirection = AxisSign;

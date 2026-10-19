@@ -95,7 +95,7 @@ techniques. `"boxSilhouette"` only accepts a `BoxGeometry` mesh.
 ### MergedHighlightOverlay
 
 Use `MergedHighlightOverlay` for a bulk selection that is outside
-`MeshHighlightState`'s single-selection model. It bakes several mesh outlines
+`MeshHighlight`'s single-selection model. It bakes several mesh outlines
 into one world-space `THREE.LineSegments` draw call.
 
 ```ts
@@ -159,9 +159,10 @@ entry from the background.
 
 Both expose `pipeline`, writable `entries`, `render()`, and `dispose()`.
 
-`HighlightPass` exposes writable `edgeThickness` and `edgeGlow` properties.
-`HighlightPassJfa` exposes writable `ringThickness`, `borderThickness`, and
-`isolatedFillOpacity` properties.
+`HighlightPass` exposes writable `edgeThickness`, `edgeGlow`, and
+`downSampleRatio` properties. `HighlightPassJfa` exposes writable
+`ringThickness`, `borderThickness`, and `isolatedFillOpacity` properties.
+`configure(options)` sets the given properties and keeps the others.
 
 Both passes draw rings without scene occlusion. `MeshHighlightAppearance.xray`
 only affects object overlays.
@@ -186,15 +187,10 @@ highlight.select("crate");
 renderer.setAnimationLoop(() => highlight.render());
 ```
 
-The lower-level `PeerHighlightPass` remains available for custom compositions.
-It adapts a `MeshHighlightState` and peer registries to a pass supplied by the
-caller. Disposing the adapter clears its entries but does not dispose the pass.
-See [peer selection and hover](./peers.md).
-
 ## Custom object techniques
 
-An overlay factory implements `HighlightOverlayFactory`. Register it on the
-state's `overlayRegistry`, then use its id as a technique.
+An overlay factory implements `HighlightOverlayFactory`. Register it on
+`highlight.overlayRegistry`, then use its id as a technique.
 
 ```ts
 import * as THREE from "three";
@@ -213,8 +209,8 @@ const factory: HighlightOverlayFactory = {
   })
 };
 
-state.overlayRegistry.register(factory);
-state.register("crate", crateMesh, { technique: "dashed-outline" });
+highlight.overlayRegistry.register(factory);
+highlight.register("crate", crateMesh, { technique: "dashed-outline" });
 ```
 
 A custom overlay must implement:
@@ -232,8 +228,8 @@ interface HighlightOverlay {
 ```
 
 For full control, construct `HighlightOverlayRegistry` with `defaultId` and
-`fallbackId`, register the required factories, and pass it to
-`MeshHighlightState`. `resolve(id, target)` tries the requested factory, the
+`fallbackId`, register the required factories, and pass it as the
+`overlayRegistry` option of `MeshHighlight`. `resolve(id, target)` tries the requested factory, the
 default, then the fallback. `create(target, options)` resolves and constructs
 the overlay.
 
@@ -243,13 +239,10 @@ the overlay.
 |---|---|
 | Facade | `MeshHighlightOptions`, `MeshHighlightMode`, `MeshHighlightEventMap` |
 | Appearance | `MeshHighlightAppearanceOptions` and the renderer-specific appearance option types |
-| Resolution | `ResolvedHighlightIndicator`, `HighlightResolverOptions` |
-| Renderer strategies | `MeshHighlightRenderer`, `MeshHighlightRendererFactory`, `MeshHighlightRendererContext` |
+| Resolution | `ResolvedHighlightIndicator`, `HighlightIndicatorRole`, `HighlightIndicatorSource` |
+| Renderer strategies | `MeshHighlightRenderer`, `MeshHighlightRendererFactory`, `MeshHighlightRendererContext`, `HighlightPassTarget` |
 | Overlay contract | `HighlightOverlay`, `HighlightOverlayFactory`, `HighlightOverlayCreateOptions` |
 | Overlay registry | `HighlightOverlayRegistryOptions`, `CreateHighlightOverlayOptions` |
 | Built-in overlays | `HighlightOutlineOptions`, `HighlightBoundingBoxOptions`, `HighlightSilhouetteOptions`, `HighlightBoxSilhouetteOptions`, `HighlightMeshSilhouetteOptions`, `MergedHighlightOverlayOptions` |
 | Postprocess | `HighlightEntry`, `HighlightPassOptions`, `HighlightPassJfaOptions` |
-| Peer adapter | `HighlightTarget`, `PeerHighlightPassOptions` |
-
-`HighlightTarget` is the writable `entries` part of `HighlightPass`, which lets
-the adapter work with either built-in pass or a compatible wrapper.
+| Peers | `PeerHighlightsOptions`, `PeerHighlightChangeEventDetail`, `PeerHighlightsEventMap`, `PeerColorAllocator` |

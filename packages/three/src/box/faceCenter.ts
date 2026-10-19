@@ -5,7 +5,7 @@ import type * as THREE from "three";
 import type {
   Axis,
   AxisSign
-} from "../common/axes.ts";
+} from "../common/math/axes.ts";
 
 export interface BoxFace {
   axis: Axis;

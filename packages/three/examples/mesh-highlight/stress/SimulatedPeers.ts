@@ -1,12 +1,12 @@
 // Import Internal Dependencies
-import type { PeerSelectionRegistry } from "../../../src/index.ts";
+import type { PeerHighlights } from "../../../src/index.ts";
 
 export class SimulatedPeers {
-  #registry: PeerSelectionRegistry;
+  #registry: PeerHighlights;
   #names: string[] = [];
 
   constructor(
-    registry: PeerSelectionRegistry
+    registry: PeerHighlights
   ) {
     this.#registry = registry;
   }

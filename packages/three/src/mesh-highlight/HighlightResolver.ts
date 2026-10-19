@@ -6,11 +6,12 @@ import type {
   MeshHighlightState,
   HighlightTechnique
 } from "./MeshHighlightState.ts";
-import type { PeerSelectionRegistry } from "./peer/PeerSelectionRegistry.ts";
-import type { PeerHoverRegistry } from "./peer/PeerHoverRegistry.ts";
-import type { PeerSelectionVisibility } from "./peer/PeerSelectionVisibility.ts";
+import type {
+  HighlightIndicatorRole,
+  PeerHighlights
+} from "./peer/PeerHighlights.ts";
+import type { PeerVisibility } from "./peer/PeerVisibility.ts";
 
-export type HighlightIndicatorRole = "selection" | "hover";
 export type HighlightIndicatorSource = "local" | "peer";
 
 export interface ResolvedHighlightIndicator {
@@ -26,23 +27,20 @@ export interface ResolvedHighlightIndicator {
 
 export interface HighlightResolverOptions {
   state: MeshHighlightState;
-  peerSelections?: PeerSelectionRegistry;
-  peerHovers?: PeerHoverRegistry;
-  visibility?: PeerSelectionVisibility;
+  peers: PeerHighlights;
+  visibility?: PeerVisibility;
 }
 
 export class HighlightResolver {
   #state: MeshHighlightState;
-  #peerSelections: PeerSelectionRegistry | null;
-  #peerHovers: PeerHoverRegistry | null;
-  #visibility: PeerSelectionVisibility | null;
+  #peers: PeerHighlights;
+  #visibility: PeerVisibility | null;
 
   constructor(
     options: HighlightResolverOptions
   ) {
     this.#state = options.state;
-    this.#peerSelections = options.peerSelections ?? null;
-    this.#peerHovers = options.peerHovers ?? null;
+    this.#peers = options.peers;
     this.#visibility = options.visibility ?? null;
   }
 
@@ -57,10 +55,10 @@ export class HighlightResolver {
     for (const id of this.#state.emphasized) {
       objectIds.add(id);
     }
-    for (const id of this.#peerSelections?.selectedObjectIds() ?? []) {
+    for (const id of this.#peers.selectedObjectIds()) {
       objectIds.add(id);
     }
-    for (const id of this.#peerHovers?.hoveredObjectIds() ?? []) {
+    for (const id of this.#peers.hoveredObjectIds()) {
       objectIds.add(id);
     }
 
@@ -98,7 +96,7 @@ export class HighlightResolver {
 
     const peersVisible = this.#visibility?.isVisible(objectId) ?? true;
     const selectorId = peersVisible ?
-      this.#peerSelections?.primarySelector(objectId) ?? null :
+      this.#peers.selectors(objectId)[0] ?? null :
       null;
     if (selectorId !== null) {
       return {
@@ -107,7 +105,7 @@ export class HighlightResolver {
         role: "selection",
         source: "peer",
         peerId: selectorId,
-        color: this.#peerSelections!.peerColor(selectorId),
+        color: this.#peers.peerColor(selectorId),
         opacity: this.#state.appearance.selected.opacity,
         technique
       };
@@ -126,7 +124,7 @@ export class HighlightResolver {
     }
 
     const hovererId = peersVisible ?
-      this.#peerHovers?.primaryHoverer(objectId) ?? null :
+      this.#peers.hoverers(objectId)[0] ?? null :
       null;
     if (hovererId === null) {
       return null;
@@ -138,7 +136,7 @@ export class HighlightResolver {
       role: "hover",
       source: "peer",
       peerId: hovererId,
-      color: this.#peerHovers!.peerColor(hovererId),
+      color: this.#peers.peerColor(hovererId),
       opacity: this.#state.appearance.hovered.opacity,
       technique
     };

@@ -7,15 +7,9 @@ import {
   PeerSelectionChip,
   type PeerSelectionChipOptions
 } from "./PeerSelectionChip.ts";
-import type {
-  PeerSelectionRegistry,
-  PeerSelectionChangeEventDetail
-} from "./PeerSelectionRegistry.ts";
-import type { PeerSelectionVisibility } from "./PeerSelectionVisibility.ts";
-import type {
-  MeshHighlightState,
-  MeshHighlightStateChangeEventDetail
-} from "../MeshHighlightState.ts";
+import type { PeerHighlights } from "./PeerHighlights.ts";
+import type { PeerVisibility } from "./PeerVisibility.ts";
+import type { MeshHighlightState } from "../MeshHighlightState.ts";
 
 // CONSTANTS
 const kChipSpacing = 0.4;
@@ -24,12 +18,12 @@ const kMaxChips = 3;
 const kOverflowChipColor = "#4a4a4a";
 
 export interface PeerSelectionChipsOptions {
-  registry: PeerSelectionRegistry;
-  selection: MeshHighlightState;
+  peers: PeerHighlights;
+  state: MeshHighlightState;
   /**
    * Suppresses chip rows for objects reported as invisible.
    */
-  visibility?: PeerSelectionVisibility;
+  visibility?: PeerVisibility;
   /**
    * Enables chip rows.
    * @default false
@@ -38,59 +32,19 @@ export interface PeerSelectionChipsOptions {
 }
 
 export class PeerSelectionChips {
-  #registry: PeerSelectionRegistry;
-  #selection: MeshHighlightState;
-  #visibility: PeerSelectionVisibility | null;
+  #peers: PeerHighlights;
+  #state: MeshHighlightState;
+  #visibility: PeerVisibility | null;
   #enabled: boolean;
   #groups = new Map<string, THREE.Group>();
-
-  #onPeerSelectionChange: (event: CustomEvent<PeerSelectionChangeEventDetail>) => void;
-  #onVisibilityChange: () => void;
-  #onTargetsChange: (
-    event: CustomEvent<MeshHighlightStateChangeEventDetail>
-  ) => void;
-  #onSelectionDispose: () => void;
 
   constructor(
     options: PeerSelectionChipsOptions
   ) {
-    this.#registry = options.registry;
-    this.#selection = options.selection;
+    this.#peers = options.peers;
+    this.#state = options.state;
     this.#visibility = options.visibility ?? null;
     this.#enabled = options.enabled ?? false;
-
-    this.#onPeerSelectionChange = (event) => {
-      const { objectId, previousObjectId } = event.detail;
-
-      if (previousObjectId !== null) {
-        this.#refresh(previousObjectId);
-      }
-      if (objectId !== null) {
-        this.#refresh(objectId);
-      }
-    };
-
-    this.#onVisibilityChange = () => {
-      for (const objectId of this.#registry.selectedObjectIds()) {
-        this.#refresh(objectId);
-      }
-    };
-    this.#onTargetsChange = (event) => {
-      for (const objectId of event.detail.objectIds) {
-        const existing = this.#groups.get(objectId);
-        if (existing) {
-          this.#disposeGroup(existing);
-          this.#groups.delete(objectId);
-        }
-        this.#refresh(objectId);
-      }
-    };
-    this.#onSelectionDispose = () => this.dispose();
-
-    this.#registry.addEventListener("peerSelectionChange", this.#onPeerSelectionChange);
-    this.#visibility?.addEventListener("visibilityChange", this.#onVisibilityChange);
-    this.#selection.addEventListener("targetsChange", this.#onTargetsChange);
-    this.#selection.addEventListener("dispose", this.#onSelectionDispose);
   }
 
   get enabled(): boolean {
@@ -104,27 +58,20 @@ export class PeerSelectionChips {
       return;
     }
     this.#enabled = enabled;
+    this.sync();
+  }
 
-    if (!enabled) {
-      for (const group of this.#groups.values()) {
-        this.#disposeGroup(group);
-      }
-      this.#groups.clear();
-
-      return;
-    }
-
-    for (const objectId of this.#registry.selectedObjectIds()) {
+  sync(): void {
+    const objectIds = new Set([
+      ...this.#groups.keys(),
+      ...this.#peers.selectedObjectIds()
+    ]);
+    for (const objectId of objectIds) {
       this.#refresh(objectId);
     }
   }
 
   dispose(): void {
-    this.#registry.removeEventListener("peerSelectionChange", this.#onPeerSelectionChange);
-    this.#visibility?.removeEventListener("visibilityChange", this.#onVisibilityChange);
-    this.#selection.removeEventListener("targetsChange", this.#onTargetsChange);
-    this.#selection.removeEventListener("dispose", this.#onSelectionDispose);
-
     for (const group of this.#groups.values()) {
       this.#disposeGroup(group);
     }
@@ -134,11 +81,12 @@ export class PeerSelectionChips {
   #refresh(
     objectId: string
   ): void {
-    const selectors = this.#registry.listSelectors(objectId);
+    const selectors = this.#peers.selectors(objectId);
+    const target = this.#state.findTarget(objectId);
     const visible = this.#visibility === null || this.#visibility.isVisible(objectId);
     const existing = this.#groups.get(objectId);
 
-    if (!this.#enabled || selectors.length <= 1 || !visible) {
+    if (!this.#enabled || selectors.length <= 1 || !visible || !target) {
       if (existing) {
         this.#disposeGroup(existing);
         this.#groups.delete(objectId);
@@ -149,14 +97,22 @@ export class PeerSelectionChips {
 
     const slots = this.#buildSlots(selectors);
 
-    if (existing && existing.children.length === slots.length) {
+    if (
+      existing &&
+      existing.parent === target &&
+      existing.children.length === slots.length
+    ) {
       slots.forEach((slot, index) => {
         const chip = existing.children[index];
         if (!(chip instanceof PeerSelectionChip)) {
           return;
         }
-        chip.color = slot.color;
-        chip.label = slot.label;
+        if (chip.color !== slot.color) {
+          chip.color = slot.color;
+        }
+        if (chip.label !== slot.label) {
+          chip.label = slot.label;
+        }
       });
 
       return;
@@ -165,11 +121,6 @@ export class PeerSelectionChips {
     if (existing) {
       this.#disposeGroup(existing);
       this.#groups.delete(objectId);
-    }
-
-    const target = this.#selection.findTarget(objectId);
-    if (!target) {
-      return;
     }
 
     const box = computeLocalBoundingBox(target);
@@ -197,14 +148,14 @@ export class PeerSelectionChips {
     if (selectors.length <= kMaxChips) {
       return selectors.map((peerId) => {
         return {
-          color: this.#registry.peerColor(peerId)
+          color: this.#peers.peerColor(peerId)
         };
       });
     }
 
     const slots: PeerSelectionChipOptions[] = selectors.slice(0, kMaxChips).map((peerId) => {
       return {
-        color: this.#registry.peerColor(peerId)
+        color: this.#peers.peerColor(peerId)
       };
     });
     slots.push({

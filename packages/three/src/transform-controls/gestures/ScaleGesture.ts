@@ -5,8 +5,8 @@ import * as THREE from "three";
 import {
   type Axis,
   AXES
-} from "../../common/axes.ts";
-import { snapValue } from "../../common/snap.ts";
+} from "../../common/math/axes.ts";
+import { snapValue } from "../../common/math/snap.ts";
 import { PLANE_AXES } from "../handles/handleId.ts";
 import {
   type GestureContext,
