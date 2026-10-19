@@ -12,7 +12,7 @@ import type {
   UVSlot
 } from "../geometry/types.ts";
 
-export interface UVNetCell {
+export interface UVNetFace {
   face: UVSlot;
   geometry: UVGeometry;
 }
@@ -35,7 +35,7 @@ interface NetLayout {
 }
 
 export function packNet(
-  cells: readonly UVNetCell[],
+  cells: readonly UVNetFace[],
   origin: Vec2
 ): Map<UVSlot, UVGeometry> {
   const packed = new Map<UVSlot, UVGeometry>();

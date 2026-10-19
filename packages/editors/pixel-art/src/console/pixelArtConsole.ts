@@ -11,13 +11,18 @@ import {
   keybindConsole,
   type KeybindConsoleContext
 } from "../keybindings/keybindConsole.ts";
+import {
+  uvNetConsole,
+  type UvNetConsoleContext
+} from "../uv/nets/uvNetConsole.ts";
 
 // CONSTANTS
 const kFeatures: readonly ConsoleFeature<PixelArtConsoleContext>[] = [
-  keybindConsole
+  keybindConsole,
+  uvNetConsole
 ];
 
-export type PixelArtConsoleContext = KeybindConsoleContext;
+export type PixelArtConsoleContext = KeybindConsoleContext & UvNetConsoleContext;
 
 export function pixelArtConsole(
   commands: CommandConsole,

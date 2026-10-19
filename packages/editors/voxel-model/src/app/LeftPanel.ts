@@ -20,7 +20,8 @@ import type {
 import {
   RoomAccess,
   type PixelArtKeyBindingSettings,
-  type PixelDrawPanel
+  type PixelDrawPanel,
+  type UvNetLibrary
 } from "@jolly-pixel/editor.pixel-art";
 import {
   PixelCollaboration,
@@ -77,6 +78,9 @@ export class LeftPanel extends LitElement {
   @property({ attribute: false })
   declare keyBindingSettings: PixelArtKeyBindingSettings | null;
 
+  @property({ attribute: false })
+  declare uvNets: UvNetLibrary | null;
+
   @query("pixel-draw-panel")
   declare private panelElement: PixelDrawPanel;
 
@@ -114,6 +118,7 @@ export class LeftPanel extends LitElement {
     this._canvas = null;
     this.workspace = null;
     this.keyBindingSettings = null;
+    this.uvNets = null;
   }
 
   showTexture(
@@ -229,6 +234,9 @@ export class LeftPanel extends LitElement {
       this.#releaseKeyBindings?.();
       this.#releaseKeyBindings =
         this.keyBindingSettings?.sync(this.panelElement) ?? null;
+    }
+    if (changedProperties.has("uvNets") && this.uvNets !== null) {
+      this.panelElement.uvNets = this.uvNets;
     }
   }
 

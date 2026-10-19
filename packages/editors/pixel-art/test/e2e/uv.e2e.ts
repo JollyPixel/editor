@@ -69,7 +69,7 @@ test.beforeEach(async({ panel }) => {
 
 test("the state menu follows the selection and lists the other two states", async({ panel, page }) => {
   const trigger = panel.uv.stateMenu;
-  const menuItems = panel.root.getByRole("menuitem");
+  const menuItems = panel.uv.stateOptions;
   await expect(trigger).toHaveCount(0);
 
   await panel.canvas.click(kCubeCell);

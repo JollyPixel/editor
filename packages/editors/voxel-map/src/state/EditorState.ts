@@ -4,7 +4,10 @@ import {
   LogQueue,
   type StorageAdapter
 } from "@jolly-pixel/ui";
-import { PixelArtKeyBindingSettings } from "@jolly-pixel/editor.pixel-art";
+import {
+  PixelArtKeyBindingSettings,
+  UvNetLibrary
+} from "@jolly-pixel/editor.pixel-art";
 
 // Import Internal Dependencies
 import { BlockSelection } from "./BlockSelection.ts";
@@ -21,6 +24,10 @@ import { UvSyncStore } from "./UvSyncStore.ts";
 import { ViewStore } from "./ViewStore.ts";
 import { MapKeyBindingSettings } from "../keybindings/MapKeyBindings.ts";
 import { ShortcutLabels } from "../keybindings/ShortcutLabels.ts";
+import {
+  BLOCK_UV_NETS,
+  DEFAULT_BLOCK_UV_NET
+} from "../features/texture/uv/BlockUvNets.ts";
 
 export interface EditorStateOptions {
   storage?: StorageAdapter;
@@ -43,6 +50,7 @@ export class EditorState {
   readonly mapKeyBindings: MapKeyBindingSettings;
   readonly shortcuts: ShortcutLabels;
   readonly pixelArtKeyBindings: PixelArtKeyBindingSettings;
+  readonly uvNets: UvNetLibrary;
 
   constructor(
     options: EditorStateOptions = {}
@@ -67,6 +75,11 @@ export class EditorState {
     this.pixelArtKeyBindings = new PixelArtKeyBindingSettings({
       storage,
       onDropped: (message) => this.log.push(message)
+    });
+    this.uvNets = new UvNetLibrary({
+      storage,
+      presets: BLOCK_UV_NETS,
+      defaultId: DEFAULT_BLOCK_UV_NET
     });
   }
 }

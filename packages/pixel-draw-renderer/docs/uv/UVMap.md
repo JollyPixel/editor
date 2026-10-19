@@ -74,7 +74,7 @@ A region with `activeSlots` or `slotGeometries` starts free. Other regions start
 | `"region-moved"` | `region`, `face`, `previousRect` |
 | `"region-dragging"` | `region`, `face` |
 | `"region-drag-ended"` | `id`, `committed` |
-| `"region-state-changed"` | `region`, `previous` |
+| `"region-state-changed"` | `region`, `previous`, `net` |
 | `"region-rotated"` | `region`, `previous`, `face` |
 | `"selection-changed"` | `selectedRegionId`, `selectedSlot` |
 | `"visibility-changed"` | `showAll` |
@@ -82,7 +82,7 @@ A region with `activeSlots` or `slotGeometries` starts free. Other regions start
 | `"size-label-visibility-changed"` | `showSizeLabels` |
 | `"label-scope-changed"` | `labelScope` |
 
-`face` is `null` for anything but a free region, since stacked and unfolded regions move, resize and rotate whole. `"region-dragging"` is the preview event of a move or resize: `region` is the region as the drag shows it, and `face` names the only slot that changes. Canvas gestures emit it on pointer-down with the initial geometry, then whenever the preview changes. It does not mutate the map. `"region-drag-ended"` closes that preview lifecycle and allows presence consumers to clear cancelled or no-op drags. `"changed"` is the consolidated rendering invalidation emitted after stored state or view preferences change.
+`net` is the [net](./UVNet.md) an unfold used, from [`applyState()`](#applystateid-state-slot) or [`unfold()`](#unfoldid-net), and `null` for every other replacement. A listener that rebuilds the region can unfold it again with that net. `face` is `null` for anything but a free region, since stacked and unfolded regions move, resize and rotate whole. `"region-dragging"` is the preview event of a move or resize: `region` is the region as the drag shows it, and `face` names the only slot that changes. Canvas gestures emit it on pointer-down with the initial geometry, then whenever the preview changes. It does not mutate the map. `"region-drag-ended"` closes that preview lifecycle and allows presence consumers to clear cancelled or no-op drags. `"changed"` is the consolidated rendering invalidation emitted after stored state or view preferences change.
 
 ## Properties
 
@@ -92,7 +92,7 @@ A region with `activeSlots` or `slotGeometries` starts free. Other regions start
 net: UVNet
 ```
 
-The [net](./UVNet.md) used when a region unfolds through `applyState()` or is created unfolded. The default is `UVNet.packed`. Changing it leaves existing nets where they are. It is local configuration and is not synchronized: a state change sends the resulting region, so peers do not need the same net.
+The [net](./UVNet.md) used when a region unfolds through `applyState()`, is created unfolded, or is passed to `unfold()` without a net. The default is `UVNet.packed`. Changing it leaves existing nets where they are. It is local configuration and is not synchronized: a state change sends the resulting region, so peers do not need the same net.
 
 ### `overflow`
 
@@ -282,7 +282,15 @@ Moves a region to one of the three states, emitting `"region-state-changed"` wit
 
 `"unfolded"` is the one transition this map corrects after the fact. `UVRegion.unfold()` lays out the map's [`net`](#net) wherever the region already sits, then `applyState()` shifts the whole net back inside the canvas, extended by [`overflow`](#overflow), if it overhangs. A net larger than that area is shifted to its top-left corner and left hanging off the far edge; the transition still succeeds, so peers never disagree about whether it happened.
 
-Unfolding repacks from any state, so a free region's hand-placed faces are lost. Undo restores them, because a state change undoes with the whole previous region.
+Unfolding repacks from any state, so a free region's hand-placed faces are lost. Undo restores them, because a state change undoes with the whole previous region. A region that is already unfolded is left alone; use [`unfold()`](#unfoldid-net) to lay it out again.
+
+### `unfold(id, net?)`
+
+```ts
+unfold(id: string, net?: UVNet): boolean
+```
+
+Unfolds a region through `net`, which defaults to the map's [`net`](#net), and shifts it inside the canvas like `applyState(id, "unfolded")`. Unlike `applyState()`, it also lays out a region that is already unfolded, so a different net can be applied at any time. Emits `"region-state-changed"` with `net`. Returns `false` for an unknown id or when every face is already where the net puts it.
 
 ### `rename(id, name)`
 

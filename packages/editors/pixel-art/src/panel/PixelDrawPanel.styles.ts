@@ -540,6 +540,24 @@ export const panelStyles = css`
     outline-offset: -2px;
   }
 
+  .uv-state-option[aria-disabled="true"] {
+    cursor: default;
+    opacity: 0.45;
+  }
+
+  .uv-state-caption {
+    padding: 2px 8px;
+    color: var(--color-text-muted);
+    font-size: 0.85em;
+  }
+
+  .uv-state-tag {
+    margin-inline-start: auto;
+    padding-inline-start: 12px;
+    color: var(--color-text-muted);
+    font-size: 0.85em;
+  }
+
   .view-options-menu .uv-state-option {
     box-sizing: border-box;
   }

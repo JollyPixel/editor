@@ -7,6 +7,7 @@ import type {
 import type {
   UVMap,
   UVMapListener,
+  UVNet,
   UVRegion,
   UVRegionData
 } from "@jolly-pixel/pixel-draw.renderer";
@@ -288,9 +289,10 @@ export class BlockUvBridge {
 
   #rederivedFromStacked(
     block: ResolvedBlockDefinition,
-    event: { region: UVRegion; previous: UVRegionData; }
+    event: { region: UVRegion; previous: UVRegionData; net: UVNet | null; }
   ): boolean {
     const { state, id } = event.region;
+    const { net } = event;
     if (state === "stacked" || event.previous.state !== "stacked") {
       return false;
     }
@@ -304,7 +306,12 @@ export class BlockUvBridge {
     try {
       this.#runLocalRestore(() => {
         this.#uv.restore(uv.freeRegion());
-        this.#uv.applyState(id, state);
+        if (net === null) {
+          this.#uv.applyState(id, state);
+        }
+        else {
+          this.#uv.unfold(id, net);
+        }
       });
     }
     finally {

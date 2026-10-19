@@ -256,6 +256,9 @@ export class TextureEditor extends WorkspaceElement {
     panel.addEventListener("texture-edit-request", this.#onEditRequest);
     this.#releaseKeyBindings =
       this.workspace?.state.pixelArtKeyBindings.sync(panel) ?? null;
+    if (this.workspace) {
+      panel.uvNets = this.workspace.state.uvNets;
+    }
     await panel.configure(kCanvasOptions);
   }
 

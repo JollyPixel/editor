@@ -60,6 +60,22 @@ describe("UVMap — applyState unfolded", () => {
     assert.deepStrictEqual(created.bounds, { x: 16, y: 0, width: 24, height: 4 });
   });
 
+  test("unfolds an unfolded region again through another net, which applyState never does", () => {
+    const map = makeUvMap({ x: 64, y: 64 });
+    const region = map.create({ width: 4, height: 4, state: "unfolded" });
+    const strip = new UVNet([["front", "back", "left", "right", "top", "bottom"]]);
+    const events: [string, UVNet | null][] = [];
+    map.on("region-state-changed", ({ previous, net }) => events.push([previous.state, net]));
+
+    map.net = strip;
+    assert.strictEqual(map.applyState(region.id, "unfolded"), false);
+    assert.ok(map.unfold(region.id));
+    assert.strictEqual(map.unfold(region.id, strip), false);
+
+    assert.deepStrictEqual(map.get(region.id)!.bounds, { x: 0, y: 0, width: 24, height: 4 });
+    assert.deepStrictEqual(events, [["unfolded", strip]]);
+  });
+
   test("selects the region without a face", () => {
     const map = makeUvMap({ x: 64, y: 64 });
     const region = map.create({ width: 4, height: 4 });

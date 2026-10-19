@@ -2,6 +2,7 @@
 import {
   geometryAt,
   boundingRect,
+  rectKey,
   sameRect
 } from "../../geometry/geometry.ts";
 import { UVNet } from "../UVNet.ts";
@@ -21,7 +22,10 @@ import {
   UV_NET_RESIZE_HANDLES,
   type UVLayoutResizeTarget
 } from "./UVResizeTarget.ts";
-import type { UVSlot } from "../../geometry/types.ts";
+import type {
+  UVGeometry,
+  UVSlot
+} from "../../geometry/types.ts";
 import type {
   SelectionRect,
   Vec2
@@ -77,10 +81,12 @@ export class NetLayout extends SpreadLayout {
     if (sameRect(previous, rect)) {
       return this;
     }
+    const cells = this.#cells(slot);
+    const leads = [...cells.keys()];
     if (options.aligned) {
       return alignedResizes(
         this.faces,
-        this.activeSlots,
+        leads,
         slot,
         previous,
         rect
@@ -93,12 +99,19 @@ export class NetLayout extends SpreadLayout {
       );
     }
 
-    return this.withFaces(
-      this.faces.withSlots(
-        slidNeighbors(this.faces, this.activeSlots, slot, previous, rect)
-          .set(slot, geometryAt(this.faces.get(slot), rect))
-      )
-    );
+    const slid = slidNeighbors(this.faces, leads, slot, previous, rect)
+      .set(slot, geometryAt(this.faces.get(slot), rect));
+    const moved = new Map<UVSlot, UVGeometry>();
+    for (const [lead, geometry] of slid) {
+      for (const member of cells.get(lead)!) {
+        moved.set(
+          member,
+          geometryAt(this.faces.get(member), boundingRect(geometry))
+        );
+      }
+    }
+
+    return this.withFaces(this.faces.withSlots(moved));
   }
 
   rotated(
@@ -108,13 +121,29 @@ export class NetLayout extends SpreadLayout {
   }
 
   resizeTargets(): UVLayoutResizeTarget[] {
-    return this.listSlots().map(({ slot, geometry }) => {
+    return [...this.#cells(null).keys()].map((slot) => {
       return {
         slot,
-        rect: boundingRect(geometry),
+        rect: boundingRect(this.faces.get(slot)),
         handles: UV_NET_RESIZE_HANDLES
       };
     });
+  }
+
+  #cells(
+    lead: UVSlot | null
+  ): Map<UVSlot, UVSlot[]> {
+    const cells = Map.groupBy(
+      this.activeSlots,
+      (slot) => rectKey(boundingRect(this.faces.get(slot)))
+    );
+
+    return new Map(
+      [...cells.values()].map((members) => [
+        lead !== null && members.includes(lead) ? lead : members[0],
+        members
+      ])
+    );
   }
 
   withFaces(

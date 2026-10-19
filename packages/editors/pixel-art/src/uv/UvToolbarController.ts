@@ -20,6 +20,7 @@ import {
   RAIL_DIVIDER,
   renderRailButton
 } from "../shared/railButton.ts";
+import type { UvNetController } from "./nets/UvNetController.ts";
 
 // CONSTANTS
 const kUvCreateSize = {
@@ -84,14 +85,17 @@ export class UvToolbarController {
   readonly #host: UvToolbarHost;
   readonly #canvas: () => PixelArtCanvas | null;
   readonly #statePopup: PopoverController;
+  readonly #nets: UvNetController;
   #uvNextId = 0;
 
   constructor(
     host: UvToolbarHost,
-    canvas: () => PixelArtCanvas | null
+    canvas: () => PixelArtCanvas | null,
+    nets: UvNetController
   ) {
     this.#host = host;
     this.#canvas = canvas;
+    this.#nets = nets;
     this.#statePopup = new PopoverController(host, {
       anchor: () => this.#stateElement("[part=\"uv-state-button\"]"),
       popover: () => this.#stateElement("[part=\"uv-state-menu\"]"),
@@ -203,6 +207,7 @@ export class UvToolbarController {
               <span>${kStateLabels[state]}</span>
             </button>
           `)}
+        ${this.#nets.renderMenu(regionId, region, () => this.#statePopup.hide())}
       </div>
     `;
   }

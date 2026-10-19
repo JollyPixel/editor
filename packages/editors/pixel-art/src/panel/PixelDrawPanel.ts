@@ -29,6 +29,9 @@ import { panelStyles } from "./PixelDrawPanel.styles.ts";
 import { railButtonStyles } from "../shared/railButton.styles.ts";
 import { iconStyles } from "../shared/icon.styles.ts";
 import { UvToolbarController } from "../uv/UvToolbarController.ts";
+import { UvNetController } from "../uv/nets/UvNetController.ts";
+import type { UvNetLibrary } from "../uv/nets/UvNetLibrary.ts";
+import "../uv/nets/UvNetDialog.ts";
 import { ViewOptionsController } from "./ViewOptionsController.ts";
 import { SelectToolbarController } from "../tools/SelectToolbarController.ts";
 import { TextureDropController } from "../textures/import/TextureDropController.ts";
@@ -229,7 +232,18 @@ export class PixelDrawPanel extends LitElement {
     dialog: () => this.#dialog("import-texture-dialog")
   });
   readonly #activeCanvas = (): PixelArtCanvas | null => this.canvasManager;
-  readonly #uvToolbar = new UvToolbarController(this, this.#activeCanvas);
+  readonly #uvNets = new UvNetController(this, {
+    canvas: this.#activeCanvas,
+    dialog: () => this.#dialog("uv-net-dialog"),
+    adopt: (net) => {
+      this.#textures.uvNet = net;
+    }
+  });
+  readonly #uvToolbar = new UvToolbarController(
+    this,
+    this.#activeCanvas,
+    this.#uvNets
+  );
   readonly #viewOptions = new ViewOptionsController(
     this,
     this.#activeCanvas
@@ -286,6 +300,16 @@ export class PixelDrawPanel extends LitElement {
     keyBindings: PixelArtKeyBindings
   ) {
     this.#keyboard.keyBindings = keyBindings;
+  }
+
+  get uvNets(): UvNetLibrary {
+    return this.#uvNets.library;
+  }
+
+  set uvNets(
+    library: UvNetLibrary
+  ) {
+    this.#uvNets.library = library;
   }
 
   get canvasManager(): PixelArtCanvas | null {
@@ -481,7 +505,7 @@ export class PixelDrawPanel extends LitElement {
     return element;
   }
 
-  #dialog<TName extends "clear-texture-dialog" | "import-texture-dialog">(
+  #dialog<TName extends "clear-texture-dialog" | "import-texture-dialog" | "uv-net-dialog">(
     name: TName
   ): HTMLElementTagNameMap[TName] {
     const dialog = this.renderRoot.querySelector(name);
@@ -694,6 +718,7 @@ export class PixelDrawPanel extends LitElement {
       ${this.#colors.renderPopover()}
       <clear-texture-dialog></clear-texture-dialog>
       <import-texture-dialog></import-texture-dialog>
+      <uv-net-dialog></uv-net-dialog>
     `;
   }
 }

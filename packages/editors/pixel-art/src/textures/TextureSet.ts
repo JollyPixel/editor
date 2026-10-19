@@ -2,6 +2,7 @@
 import type { ReactiveControllerHost } from "lit";
 import {
   PixelArtCanvas,
+  UVNet,
   type ClipboardOperationResult,
   type Mode,
   type PixelArtCanvasOptions
@@ -55,6 +56,7 @@ export class TextureSet {
   #settings: CarriedSettings | null = null;
   #uvResizable = false;
   #uvOverflow = 0;
+  #uvNet = UVNet.packed;
   #uvAccess: UvAccess = "edit";
 
   constructor(
@@ -109,6 +111,15 @@ export class TextureSet {
     this.#uvOverflow = value;
     for (const { canvas } of this.#entries.values()) {
       canvas.uv.overflow = value;
+    }
+  }
+
+  set uvNet(
+    value: UVNet
+  ) {
+    this.#uvNet = value;
+    for (const { canvas } of this.#entries.values()) {
+      canvas.uv.net = value;
     }
   }
 
@@ -309,6 +320,7 @@ export class TextureSet {
       }
     });
     canvas.uv.overflow = this.#uvOverflow;
+    canvas.uv.net = this.#uvNet;
 
     return canvas;
   }

@@ -15,13 +15,17 @@ import {
   PixelArtKeyBindingSettings
 } from "../../src/keybindings/PixelArtKeyBindingSettings.ts";
 import { pixelArtConsole } from "../../src/console/pixelArtConsole.ts";
+import { UvNetLibrary } from "../../src/uv/nets/UvNetLibrary.ts";
 
 function boot(
   storage: MemoryStorageAdapter
 ) {
   const commands = new CommandConsole();
   const keyBindingSettings = new PixelArtKeyBindingSettings({ storage });
-  pixelArtConsole(commands, { keyBindingSettings });
+  pixelArtConsole(commands, {
+    keyBindingSettings,
+    uvNets: new UvNetLibrary({ storage })
+  });
 
   return {
     commands,
