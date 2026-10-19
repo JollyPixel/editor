@@ -38,7 +38,11 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   press or a fixed height from the toolbar; Ctrl+click picks it.
 - **Slope overlay: done** (2026-10-19). `TerrainView.overlay = "slope"` colours
   the surface by slope and marks it red above `walkableSlope`.
-- **Next:** the M1 end-to-end test.
+- **M1 end-to-end test: done** (2026-10-19). Two peers sculpt and undo, a far
+  peer receives only the commit, and the surface shows no gap across LoD
+  levels.
+- **M1: done** (2026-10-19).
+- **Next:** M2, asset parts in `@jolly-pixel/asset-server`.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -64,7 +68,7 @@ chunks yet.
   presence radius; peer brush rings drawn inside it.
 - [x] Debug overlays: chunk grid and LoD levels.
 - [x] Slope overlay.
-- [ ] E2E: two-peer sculpt with undo, LoD seams render, a far peer receives
+- [x] E2E: two-peer sculpt with undo, LoD seams render, a far peer receives
   the commit only.
 
 ## M2: Streaming

@@ -44,6 +44,7 @@ export class TerrainEditorScene extends Systems.Scene {
   #history: TerrainHistory;
   #room: Room;
   #view: TerrainView | null = null;
+  #camera: OrbitFlyCamera | null = null;
   #teleport: (clientId: string) => void = () => undefined;
   #disposables: Array<() => void> = [];
 
@@ -60,6 +61,10 @@ export class TerrainEditorScene extends Systems.Scene {
 
   get view(): TerrainView | null {
     return this.#view;
+  }
+
+  get camera(): OrbitFlyCamera | null {
+    return this.#camera;
   }
 
   teleportToPeer(
@@ -88,6 +93,7 @@ export class TerrainEditorScene extends Systems.Scene {
         maxPivotDistance: CHUNK_SAMPLES * 16,
         initialTrailDistance: CHUNK_SAMPLES * 1.5
       });
+    this.#camera = camera;
 
     const { view } = this.world
       .createActor("terrain")

@@ -7,8 +7,8 @@ import {
 export default defineE2EConfig({
   port: PORTS.terrain,
   command: "pnpm run dev:e2e",
-  ciWorkers: 2,
-  localWorkers: "50%",
+  ciWorkers: 1,
+  localWorkers: 1,
   viewport: {
     width: 820,
     height: 540

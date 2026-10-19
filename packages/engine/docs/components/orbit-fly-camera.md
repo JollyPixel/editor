@@ -140,7 +140,9 @@ interface OrbitFlyCamera {
   // True while the camera glides or its pivot/trail distance damps.
   get moving(): boolean;
 
-  // Snaps position/orientation, dropping any carried momentum.
+  // Snaps position/orientation, dropping any carried momentum. In "elastic"
+  // mode the pivot moves to keep its trail distance ahead of the new pose;
+  // in "lock" mode the orbit is released.
   teleport(pose: CameraPose): void;
 
   // "lock" mode only: engages a fixed pivot, optionally facing `point`.
