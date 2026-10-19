@@ -21,10 +21,6 @@ import {
 import { iconStyles } from "../shared/icon.styles.ts";
 import { railButtonStyles } from "../shared/railButton.styles.ts";
 import {
-  UvAccessPolicy,
-  type UvAccess
-} from "../uv/UvAccessPolicy.ts";
-import {
   DEFAULT_TOOL_OPTIONS,
   toolOptionsChanged,
   type ToolOption,
@@ -161,8 +157,11 @@ export class ModeRail extends LitElement {
   @property({ attribute: false, hasChanged: toolOptionsChanged })
   declare options: ToolOptions;
 
-  @property({ type: String })
-  declare uvAccess: UvAccess;
+  @property({ attribute: false })
+  declare uvMode: boolean;
+
+  @property({ attribute: false })
+  declare fillClip: boolean;
 
   @property({ attribute: false })
   declare unavailableModes: ReadonlySet<Mode>;
@@ -173,7 +172,8 @@ export class ModeRail extends LitElement {
     super();
     this.mode = "paint";
     this.options = DEFAULT_TOOL_OPTIONS;
-    this.uvAccess = "edit";
+    this.uvMode = true;
+    this.fillClip = true;
     this.unavailableModes = new Set();
   }
 
@@ -197,8 +197,7 @@ export class ModeRail extends LitElement {
   }
 
   #flyoutButtons(
-    item: ModeItem,
-    fillClip: boolean
+    item: ModeItem
   ): FlyoutButton[] {
     const buttons: FlyoutButton[] = [];
     const { variant, uvToggle } = item;
@@ -213,7 +212,7 @@ export class ModeRail extends LitElement {
         }
       });
     }
-    if (uvToggle && fillClip) {
+    if (uvToggle && this.fillClip) {
       const on = this.options[uvToggle.option];
       buttons.push({
         icon: uvToggle.icon,
@@ -259,16 +258,15 @@ export class ModeRail extends LitElement {
   }
 
   #renderItem(
-    item: ModeItem,
-    fillClip: boolean
+    item: ModeItem
   ) {
     const { mode, icon, label, variant, uvToggle } = item;
     const unavailable = this.unavailableModes.has(mode);
     const flyoutButtons = unavailable ?
       [] :
-      this.#flyoutButtons(item, fillClip);
+      this.#flyoutButtons(item);
     const displayIcon = variant && this.options[variant.option] ? variant.icon : icon;
-    const showBadge = uvToggle && fillClip && this.options[uvToggle.option];
+    const showBadge = uvToggle && this.fillClip && this.options[uvToggle.option];
 
     return html`
       <div
@@ -303,14 +301,13 @@ export class ModeRail extends LitElement {
   }
 
   override render() {
-    const policy = UvAccessPolicy.forAccess(this.uvAccess);
     const items = kModeItems.filter(
-      (item) => item.mode !== "uv" || policy.uvMode
+      (item) => item.mode !== "uv" || this.uvMode
     );
 
     return html`
       <jolly-rail role="group" aria-label="Drawing mode">
-        ${items.map((item) => this.#renderItem(item, policy.fillClip))}
+        ${items.map((item) => this.#renderItem(item))}
       </jolly-rail>
     `;
   }

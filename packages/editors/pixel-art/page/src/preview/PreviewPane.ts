@@ -12,7 +12,7 @@ import { css } from "lit";
 import {
   CANVAS_HOVER_CHANGE_EVENT,
   type PixelDrawPanel
-} from "../../../src/index.ts";
+} from "#src/index.ts";
 import { PixelPreviewScene } from "./PixelPreviewScene.ts";
 import { previewConsole } from "./previewConsole.ts";
 

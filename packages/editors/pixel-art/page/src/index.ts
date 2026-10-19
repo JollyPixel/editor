@@ -6,9 +6,9 @@ import {
 } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
-import "../../src/index.ts";
-import { PixelArtEditor } from "./PixelArtEditor.ts";
-import { PixelArtFeatures } from "./PixelArtFeatures.ts";
+import "#src/index.ts";
+import { PixelArtEditor } from "./boot/PixelArtEditor.ts";
+import { PixelArtFeatures } from "./boot/PixelArtFeatures.ts";
 
 declare global {
   interface Window {
@@ -35,8 +35,11 @@ void bootStandalone(editor, {
   debugHandle: "pixelArtEditor",
   forceOffline: import.meta.env.MODE === "static",
   offline: async() => {
-    const [{ createPixelArtSeed }, { default: createHandlers }] = await Promise.all([
-      import("./pixelArtProject.ts"),
+    const [
+      { createPixelArtSeed },
+      { default: createHandlers }
+    ] = await Promise.all([
+      import("./boot/pixelArtProject.ts"),
       import("virtual:jolly-pixel/handlers")
     ]);
 

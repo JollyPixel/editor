@@ -7,7 +7,7 @@ import * as z from "zod/mini";
 import {
   ViewSettings,
   type ViewCanvas
-} from "../../src/panel/ViewSettings.ts";
+} from "#src/panel/ViewSettings.ts";
 
 // CONSTANTS
 const kStorageKey = "pixel-art:preferences";

@@ -16,6 +16,7 @@ import {
   renderRailButton
 } from "../shared/railButton.ts";
 import { TransientStatus } from "../shared/TransientStatus.ts";
+import type { TextureEvents } from "../textures/TextureSet.ts";
 
 function resultMessage(
   result: ClipboardOperationResult
@@ -50,36 +51,28 @@ export class SelectToolbarController implements ReactiveController {
 
   constructor(
     host: ReactiveControllerHost,
-    canvas: () => PixelArtCanvas | null
+    canvas: () => PixelArtCanvas | null,
+    events: TextureEvents
   ) {
     this.#host = host;
     this.#canvas = canvas;
     this.#status = new TransientStatus(host);
     host.addController(this);
+    events.subscribe("active-change", () => this.#status.clear());
+    events.subscribe("mode-change", (mode) => {
+      if (mode !== "select") {
+        this.#status.clear();
+      }
+    });
+    events.subscribe("clipboard-result", (result) => {
+      const message = resultMessage(result);
+      if (message) {
+        this.#status.set(message);
+      }
+    });
   }
 
   hostDisconnected(): void {
-    this.clearStatus();
-  }
-
-  onModeChange(
-    active: boolean
-  ): void {
-    if (!active) {
-      this.clearStatus();
-    }
-  }
-
-  onClipboardResult(
-    result: ClipboardOperationResult
-  ): void {
-    const message = resultMessage(result);
-    if (message) {
-      this.#status.set(message);
-    }
-  }
-
-  clearStatus(): void {
     this.#status.clear();
   }
 

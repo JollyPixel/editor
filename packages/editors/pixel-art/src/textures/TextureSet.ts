@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
 import type { ReactiveControllerHost } from "lit";
+import { Emitter } from "@openally/emitt";
 import {
   PixelArtCanvas,
-  UVNet,
   type ClipboardOperationResult,
   type Mode,
   type PixelArtCanvasOptions
@@ -14,16 +14,17 @@ import {
   type PixelDrawTextureOptions,
   type TextureUpdate
 } from "./TextureEntry.ts";
+import {
+  CanvasDefaults,
+  type CanvasDefaultsInit
+} from "./CanvasDefaults.ts";
 import { ToolSettings } from "../tools/ToolSettings.ts";
 import { ViewSettings } from "../panel/ViewSettings.ts";
+import { PIXEL_ART_CAPABILITIES } from "../access/PixelArtAccess.ts";
 import {
-  PIXEL_ART_CAPABILITIES,
-  type PixelArtAccess
-} from "../access/PixelArtAccess.ts";
-import {
-  UvAccessPolicy,
+  TextureAccess,
   type UvAccess
-} from "../uv/UvAccessPolicy.ts";
+} from "../access/TextureAccess.ts";
 
 // CONSTANTS
 const kUvRefreshEvents = [
@@ -36,35 +37,44 @@ const kUvRefreshEvents = [
   "size-label-visibility-changed"
 ] as const;
 
+export type TextureChangeSource = "user" | "api";
+
+export interface TextureChangeDetail {
+  id: string;
+  source: TextureChangeSource;
+}
+
+export type TextureSetEvents = {
+  "active-change": () => void;
+  "mode-change": (mode: Mode) => void;
+  "clipboard-result": (result: ClipboardOperationResult) => void;
+};
+
+export type TextureEvents = Pick<Emitter<TextureSetEvents>, "subscribe">;
+
+export type TextureSetHost = ReactiveControllerHost & EventTarget;
+
 interface CarriedSettings {
   tools: ToolSettings;
   view: ViewSettings;
 }
 
-export interface TextureSetOptions {
-  container: () => HTMLElement;
-  onActivate: (entry: TextureEntry) => void;
-  onModeChange: (mode: Mode) => void;
-  onClipboardResult: (result: ClipboardOperationResult) => void;
-}
-
-export class TextureSet {
-  readonly #host: ReactiveControllerHost;
-  readonly #options: TextureSetOptions;
+export class TextureSet extends Emitter<TextureSetEvents> {
+  readonly #host: TextureSetHost;
+  readonly #container: () => HTMLElement;
   readonly #entries = new Map<string, TextureEntry>();
   #active: TextureEntry | null = null;
   #settings: CarriedSettings | null = null;
-  #uvResizable = false;
-  #uvOverflow = 0;
-  #uvNet = UVNet.packed;
+  #defaults = new CanvasDefaults();
   #uvAccess: UvAccess = "edit";
 
   constructor(
-    host: ReactiveControllerHost,
-    options: TextureSetOptions
+    host: TextureSetHost,
+    container: () => HTMLElement
   ) {
+    super();
     this.#host = host;
-    this.#options = options;
+    this.#container = container;
   }
 
   get active(): TextureEntry | null {
@@ -79,12 +89,11 @@ export class TextureSet {
     return this.#settings !== null;
   }
 
-  get activeAccess(): PixelArtAccess {
-    return this.#active?.access ?? PIXEL_ART_CAPABILITIES.full;
-  }
-
-  get activeUvPolicy(): UvAccessPolicy {
-    return this.#uvPolicy(this.activeAccess);
+  get activeAccess(): TextureAccess {
+    return new TextureAccess(
+      this.#uvAccess,
+      this.#active?.access ?? PIXEL_ART_CAPABILITIES.full
+    );
   }
 
   set uvAccess(
@@ -92,34 +101,16 @@ export class TextureSet {
   ) {
     this.#uvAccess = value;
     for (const entry of this.#entries.values()) {
-      this.#applyAccess(entry);
+      this.#access(entry).applyTo(entry.canvas);
     }
   }
 
-  set uvResizable(
-    value: boolean
-  ) {
-    this.#uvResizable = value;
+  configureCanvases(
+    changes: Partial<CanvasDefaultsInit>
+  ): void {
+    this.#defaults = this.#defaults.with(changes);
     for (const { canvas } of this.#entries.values()) {
-      canvas.tools.uv.resizable = value;
-    }
-  }
-
-  set uvOverflow(
-    value: number
-  ) {
-    this.#uvOverflow = value;
-    for (const { canvas } of this.#entries.values()) {
-      canvas.uv.overflow = value;
-    }
-  }
-
-  set uvNet(
-    value: UVNet
-  ) {
-    this.#uvNet = value;
-    for (const { canvas } of this.#entries.values()) {
-      canvas.uv.net = value;
+      this.#defaults.applyTo(canvas);
     }
   }
 
@@ -169,14 +160,15 @@ export class TextureSet {
     const host = document.createElement("div");
     host.className = "texture-host";
     host.dataset.textureId = id;
-    this.#options.container().append(host);
+    this.#container().append(host);
     this.#show(host);
 
+    const textureAccess = new TextureAccess(this.#uvAccess, access);
     let canvas: PixelArtCanvas;
     try {
       canvas = this.#createCanvas(host, {
         ...canvasOptions,
-        defaultMode: this.#uvPolicy(access).constrain(
+        defaultMode: textureAccess.constrain(
           canvasOptions.defaultMode ?? "paint"
         )
       });
@@ -199,10 +191,10 @@ export class TextureSet {
       host,
       canvas
     });
-    this.#applyAccess(entry);
+    textureAccess.applyTo(canvas);
     this.#entries.set(id, entry);
     if (!disabled && (activate || this.#active === null)) {
-      this.activate(entry);
+      this.#activate(entry, "api");
     }
     else {
       this.#show(this.#active?.host ?? null);
@@ -219,35 +211,21 @@ export class TextureSet {
     const entry = this.get(id);
     entry.update(changes);
     if (changes.access !== undefined) {
-      this.#applyAccess(entry);
+      this.#access(entry).applyTo(entry.canvas);
     }
     this.#host.requestUpdate();
   }
 
   activate(
-    entry: TextureEntry
+    id: string,
+    source: TextureChangeSource
   ): void {
-    if (entry === this.#active || entry.disabled) {
-      return;
-    }
-
-    this.#deactivate();
-    this.#active = entry;
-    this.#show(entry.host);
-    if (this.#settings !== null) {
-      this.#settings.tools.applyTo(entry.canvas);
-      this.#settings.view.applyTo(entry.canvas);
-      this.#applyAccess(entry);
-    }
-    this.#subscribe(entry.canvas);
-    entry.canvas.onResize();
-    this.#options.onActivate(entry);
-    this.#host.requestUpdate();
+    this.#activate(this.get(id), source);
   }
 
   remove(
     id: string
-  ): TextureEntry | null {
+  ): void {
     const entry = this.get(id);
     if (this.#entries.size === 1 && !entry.disabled) {
       throw new Error(`PixelDrawPanel: cannot remove "${id}", the last texture`);
@@ -257,24 +235,62 @@ export class TextureSet {
     this.#entries.delete(id);
 
     if (next !== null) {
-      this.activate(next);
+      this.#activate(next, "api");
     }
     else if (entry === this.#active) {
-      this.#deactivate();
+      this.#release();
     }
 
     entry.destroy();
     this.#host.requestUpdate();
-
-    return next;
   }
 
   clear(): void {
-    this.#deactivate();
+    this.#release();
     for (const entry of this.#entries.values()) {
       entry.destroy();
     }
     this.#entries.clear();
+  }
+
+  #activate(
+    entry: TextureEntry,
+    source: TextureChangeSource
+  ): void {
+    if (entry === this.#active || entry.disabled) {
+      return;
+    }
+
+    const switched = this.#active !== null;
+    this.#deactivate();
+    this.#active = entry;
+    this.#show(entry.host);
+    if (this.#settings !== null) {
+      this.#settings.tools.applyTo(entry.canvas);
+      this.#settings.view.applyTo(entry.canvas);
+      this.#access(entry).applyTo(entry.canvas);
+    }
+    this.#subscribe(entry.canvas);
+    entry.canvas.onResize();
+    this.emit("active-change");
+    if (switched) {
+      this.#host.dispatchEvent(new CustomEvent<TextureChangeDetail>("texture-change", {
+        bubbles: true,
+        composed: true,
+        detail: {
+          id: entry.id,
+          source
+        }
+      }));
+    }
+    this.#host.requestUpdate();
+  }
+
+  #release(): void {
+    if (this.#active !== null) {
+      this.#deactivate();
+      this.emit("active-change");
+    }
   }
 
   #successor(
@@ -295,10 +311,6 @@ export class TextureSet {
 
     const canvas = new PixelArtCanvas(host, {
       ...options,
-      uv: {
-        ...options.uv,
-        resizable: this.#uvResizable
-      },
       onHistoryChange: (state) => {
         if (isActive()) {
           this.#host.requestUpdate();
@@ -307,40 +319,27 @@ export class TextureSet {
       },
       onModeChange: (mode, previousMode) => {
         if (isActive()) {
-          this.#options.onModeChange(mode);
+          this.emit("mode-change", mode);
           this.#host.requestUpdate();
         }
         options.onModeChange?.(mode, previousMode);
       },
       onClipboardResult: (result) => {
         if (isActive()) {
-          this.#options.onClipboardResult(result);
+          this.emit("clipboard-result", result);
         }
         options.onClipboardResult?.(result);
       }
     });
-    canvas.uv.overflow = this.#uvOverflow;
-    canvas.uv.net = this.#uvNet;
+    this.#defaults.applyTo(canvas);
 
     return canvas;
   }
 
-  #uvPolicy(
-    access: PixelArtAccess
-  ): UvAccessPolicy {
-    return UvAccessPolicy.forAccess(this.#uvAccess, access.has("uv"));
-  }
-
-  #applyAccess(
+  #access(
     entry: TextureEntry
-  ): void {
-    const { canvas, access } = entry;
-    const policy = this.#uvPolicy(access);
-    canvas.mode = policy.constrain(canvas.mode);
-    if (!policy.fillClip) {
-      canvas.tools.fill.uvClip = false;
-    }
-    canvas.pixelsLocked = !access.has("pixels");
+  ): TextureAccess {
+    return new TextureAccess(this.#uvAccess, entry.access);
   }
 
   #deactivate(): void {

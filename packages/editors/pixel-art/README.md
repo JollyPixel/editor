@@ -49,7 +49,7 @@ const canvas = await panel.initialize({
 ```
 
 > [!TIP]
-> See [Voxel-Map](../voxel-map/README.md) editor for a live integration on this editor.
+> See [Voxel-Map](../voxel-map/README.md) or [Voxel-Model](../voxel-model/README.md) for a live integrations on this library/editor.
 
 ## 🖼️ Editor page
 
@@ -59,6 +59,15 @@ for `pixelart` assets (declared by the `jollypixel.editor` field of
 through [`@jolly-pixel/editor.host`](../host/README.md) `bootStandalone()`,
 and `PixelArtEditor` mounts `<pixel-draw-panel>` over the launch target with
 presence, the stored key bindings and texture tabs.
+
+`page/` has the layout of the other editors: `index.html`, `public/` and
+`src/`, with the `index.ts` entry, `boot/`, `state/`, `textures/` and
+`preview/`. It uses only what the package exports, imported through
+`#src/index.ts` and `#src/mesh-texturing/index.ts`. Unit-tested page modules
+import an exported class by its module path instead, such as
+`#src/panel/ViewSettings.ts`, because `node --test` can't load the Lit
+elements the root entry registers. Editors that embed `<pixel-draw-panel>` get
+none of the page code.
 
 `PixelArtFeatures` picks what the app turns on:
 
@@ -72,7 +81,7 @@ presence, the stored key bindings and texture tabs.
 | Scope appearance | dark, comfortable | from the OS |
 
 The built page reads no feature query parameters, and the preview code
-(`page/scripts/preview/`, Cube and Ramp shapes in Three.js) is left out of
+(`page/src/preview/`, Cube and Ramp shapes in Three.js) is left out of
 its bundle.
 
 ```bash

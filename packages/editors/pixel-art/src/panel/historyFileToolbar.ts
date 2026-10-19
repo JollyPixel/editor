@@ -5,21 +5,20 @@ import {
   type TemplateResult
 } from "lit";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
-import { encodePng } from "@jolly-pixel/image";
 
 // Import Internal Dependencies
 import { renderRailButton } from "../shared/railButton.ts";
 import { renderIcon } from "../shared/icons.ts";
 import { isInputElement } from "../shared/dom.ts";
-import { PngFile } from "../shared/PngFile.ts";
 import type { TextureImporter } from "../textures/import/TextureImporter.ts";
+import type { TextureExporter } from "../textures/export/TextureExporter.ts";
 import type { ClearTextureDialog } from "../textures/dialogs/ClearTextureDialog.ts";
 
 export interface HistoryFileToolbarOptions {
   canvas: () => PixelArtCanvas | null;
   importer: TextureImporter;
+  exporter: Pick<TextureExporter, "render">;
   clearDialog: () => Pick<ClearTextureDialog, "open">;
-  exportMenu: (exportAlbedo: () => void) => TemplateResult | typeof nothing;
   trailing: readonly (TemplateResult | typeof nothing)[];
   viewOnly: boolean;
 }
@@ -45,26 +44,6 @@ async function clearTexture(
   }
 }
 
-async function exportPng(
-  canvas: PixelArtCanvas
-): Promise<void> {
-  const texture = canvas.textureCanvas();
-  const context = texture.getContext("2d", { willReadFrequently: true });
-  if (!context) {
-    return;
-  }
-
-  const { width, height } = texture;
-  const { data } = context.getImageData(0, 0, width, height);
-  const png = await encodePng({
-    width,
-    height,
-    data
-  });
-
-  new PngFile("texture.png", png).download();
-}
-
 function openFilePicker(
   event: Event
 ): void {
@@ -83,17 +62,11 @@ function openFilePicker(
 export function renderHistoryFileToolbar(
   options: HistoryFileToolbarOptions
 ) {
-  const { importer, exportMenu, trailing } = options;
+  const { importer, exporter, trailing } = options;
 
   const canvas = options.canvas();
   const readOnly = canvas?.pixelsReadOnly ?? false;
   const importing = importer.busy.state?.origin === "import";
-  function exportAlbedo(): void {
-    if (canvas) {
-      void exportPng(canvas);
-    }
-  }
-  const menu = exportMenu(exportAlbedo);
 
   function onFileSelected(
     event: Event
@@ -145,13 +118,7 @@ export function renderHistoryFileToolbar(
         disabled: importing || readOnly,
         onClick: openFilePicker
       })}
-      ${menu === nothing ? renderRailButton({
-        part: "export-button",
-        label: "Export texture",
-        tooltip: "Export",
-        icon: "export",
-        onClick: exportAlbedo
-      }) : menu}
+      ${exporter.render()}
       ${renderRailButton({
         part: "clear-texture-button",
         label: "Clear texture",

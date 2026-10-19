@@ -3,13 +3,11 @@ import type {
   BlocksetDocumentListener,
   VoxelView
 } from "@jolly-pixel/voxel.renderer";
-import { PixelCollaboration } from "@jolly-pixel/asset.pixel-art/client";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 import {
-  RoomAccess,
+  TextureRoom,
   type AccessPanel
 } from "@jolly-pixel/editor.pixel-art";
-import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import type { MapDocument } from "../../document/MapDocument.ts";
@@ -38,8 +36,7 @@ export class BlocksetTab {
   readonly binding: BlocksetBinding;
   readonly #canvas: PixelArtCanvas;
   readonly #uvBridge: BlockUvBridge;
-  readonly #collaboration: PixelCollaboration;
-  readonly #access: RoomAccess;
+  readonly #room: TextureRoom;
 
   readonly #onBlocksetCommand: BlocksetDocumentListener = (command) => {
     if (command.action === "tile-size-updated") {
@@ -58,10 +55,11 @@ export class BlocksetTab {
 
     this.binding = binding;
     this.#canvas = canvas;
-    this.#collaboration = new PixelCollaboration({
+    this.#room = new TextureRoom({
       room: binding.opened.room,
       canvas,
-      color: peerProfileColor
+      panel: options.panel,
+      textureId: binding.definition.id
     });
     this.#uvBridge = new BlockUvBridge(canvas.uv, view, {
       runLocalRestore: (fn) => canvas.document.runLocalRestore(fn),
@@ -70,11 +68,6 @@ export class BlocksetTab {
       blocks: options.blocks,
       uvSync: options.uvSync
     });
-    this.#access = new RoomAccess(
-      binding.opened.room,
-      options.panel,
-      binding.definition.id
-    );
     binding.opened.blockset.on("command", this.#onBlocksetCommand);
     binding.opened.blockset.on("loaded", this.#onBlocksetLoaded);
     this.#apply();
@@ -84,8 +77,7 @@ export class BlocksetTab {
     this.binding.opened.blockset.off("command", this.#onBlocksetCommand);
     this.binding.opened.blockset.off("loaded", this.#onBlocksetLoaded);
     this.#uvBridge.dispose();
-    this.#collaboration.destroy();
-    this.#access.dispose();
+    this.#room.dispose();
   }
 
   #apply(): void {

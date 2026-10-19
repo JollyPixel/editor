@@ -1,7 +1,12 @@
 export * from "./panel/PixelDrawPanel.ts";
+export * from "./panel/ViewSettings.ts";
+export * from "./textures/TextureName.ts";
+export * from "./textures/TextureRoom.ts";
 export type {
   TextureChangeDetail,
-  TextureChangeSource,
+  TextureChangeSource
+} from "./textures/TextureSet.ts";
+export type {
   TextureCloseRequestDetail,
   TextureEditRequestDetail,
   TextureTabsMode,
@@ -16,9 +21,9 @@ export type {
   TextureImportOrigin,
   TextureImportPolicy
 } from "./textures/import/TextureImporter.ts";
-export type { UvAccess } from "./uv/UvAccessPolicy.ts";
+export type { UvAccess } from "./access/TextureAccess.ts";
 export * from "./access/PixelArtAccess.ts";
-export * from "./access/RoomAccess.ts";
+export type { AccessPanel } from "./access/RoomAccess.ts";
 export type {
   ToolOption,
   ToolOptionName,

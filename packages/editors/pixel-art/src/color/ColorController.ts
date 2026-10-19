@@ -25,6 +25,7 @@ import {
   readBrushColor,
   writeBrushColor
 } from "./brushColor.ts";
+import type { TextureEvents } from "../textures/TextureSet.ts";
 
 // CONSTANTS
 const kDefaultForeground: ColorChangeDetail = {
@@ -57,13 +58,15 @@ export class ColorController {
 
   constructor(
     host: ReactiveControllerHost & HTMLElement,
-    canvas: () => PixelArtCanvas | null
+    canvas: () => PixelArtCanvas | null,
+    events: TextureEvents
   ) {
     this.#host = host;
     this.#canvas = canvas;
     host.addController(this);
     this.#palette = new PaletteController(host, {
       canvas,
+      events,
       onDocumentChange: () => this.#onDocumentChange(),
       onSelectedColorChange: (color) => {
         if (this.#docked && this.#draft === null) {

@@ -5,7 +5,6 @@ import {
   type ReactiveControllerHost,
   type TemplateResult
 } from "lit";
-import { PopoverController } from "@jolly-pixel/ui";
 import type {
   PixelArtCanvas,
   TextureView
@@ -13,15 +12,12 @@ import type {
 
 // Import Internal Dependencies
 import {
-  NormalMapPng,
-  type NormalMapConvention
-} from "./NormalMapPng.ts";
-import {
   renderIcon,
   type IconName
 } from "../shared/icons.ts";
 import { renderRailButton } from "../shared/railButton.ts";
 import type { DockSlot } from "../panel/DockSlot.ts";
+import type { TextureEvents } from "../textures/TextureSet.ts";
 
 // CONSTANTS
 const kViews: readonly {
@@ -43,48 +39,30 @@ const kViews: readonly {
     tooltip: "Normal map, generated from the albedo"
   }
 ];
-const kConventions: readonly {
-  convention: NormalMapConvention;
-  label: string;
-}[] = [
-  {
-    convention: "opengl",
-    label: "OpenGL (Y+)"
-  },
-  {
-    convention: "directx",
-    label: "DirectX (Y-)"
-  }
-];
-
-export type NormalMapHost = ReactiveControllerHost & {
-  renderRoot: DocumentFragment | HTMLElement;
-};
 
 export interface NormalMapControllerOptions {
   canvas: () => PixelArtCanvas | null;
   canvases: () => Iterable<PixelArtCanvas>;
   docks: DockSlot;
+  events: TextureEvents;
   locked: () => boolean;
 }
 
 export class NormalMapController {
-  readonly #host: NormalMapHost;
+  readonly #host: ReactiveControllerHost;
   readonly #options: NormalMapControllerOptions;
-  readonly #exportPopup: PopoverController;
 
   constructor(
-    host: NormalMapHost,
+    host: ReactiveControllerHost,
     options: NormalMapControllerOptions
   ) {
     this.#host = host;
     this.#options = options;
     host.addController(this);
-    this.#exportPopup = new PopoverController(host, {
-      anchor: () => this.#element("[part=\"export-button\"]"),
-      popover: () => this.#element("[part=\"export-menu\"]"),
-      side: "above",
-      align: "start"
+    options.events.subscribe("active-change", () => {
+      if (this.view === "normal") {
+        options.docks.show("normal-map");
+      }
     });
   }
 
@@ -122,12 +100,6 @@ export class NormalMapController {
     }
   }
 
-  onActivate(): void {
-    if (this.view === "normal") {
-      this.#options.docks.show("normal-map");
-    }
-  }
-
   overrideSelectedRegion(): void {
     const doc = this.#canvas()?.document;
     const regionId = doc?.uv.selectedRegionId ?? null;
@@ -146,21 +118,6 @@ export class NormalMapController {
       });
     }
     this.#options.docks.show("normal-map");
-  }
-
-  async export(
-    convention: NormalMapConvention
-  ): Promise<void> {
-    this.#exportPopup.hide();
-    const doc = this.#canvas()?.document;
-    if (!doc || doc.normalMap === null) {
-      return;
-    }
-
-    await NormalMapPng.capture(
-      doc.normals,
-      convention
-    ).download();
   }
 
   renderDock(): TemplateResult {
@@ -215,60 +172,6 @@ export class NormalMapController {
     `;
   }
 
-  renderExportButton(
-    exportAlbedo: () => void
-  ): TemplateResult | typeof nothing {
-    if ((this.#canvas()?.document.normalMap ?? null) === null) {
-      return nothing;
-    }
-
-    return html`
-      <button
-        class="rail-btn uv-state-trigger"
-        part="export-button"
-        popovertarget="export-menu"
-        aria-haspopup="menu"
-        aria-expanded=${this.#exportPopup.open}
-        aria-label="Export textures"
-      >
-        ${renderIcon("export")}
-        ${renderIcon("chevronDown")}
-        <span class="tooltip">Export textures</span>
-      </button>
-      <div
-        class="uv-state-menu"
-        part="export-menu"
-        id="export-menu"
-        role="menu"
-        popover
-        @beforetoggle=${this.#exportPopup.onBeforeToggle}
-        @toggle=${this.#exportPopup.onToggle}
-      >
-        <button
-          class="uv-state-option"
-          part="export-albedo-button"
-          role="menuitem"
-          @click=${() => {
-            this.#exportPopup.hide();
-            exportAlbedo();
-          }}
-        >
-          <span>Albedo texture</span>
-        </button>
-        ${kConventions.map(({ convention, label }) => html`
-          <button
-            class="uv-state-option"
-            part="export-normal-${convention}"
-            role="menuitem"
-            @click=${() => void this.export(convention)}
-          >
-            <span>Normal map — ${label}</span>
-          </button>
-        `)}
-      </div>
-    `;
-  }
-
   renderOverrideButton(): TemplateResult | typeof nothing {
     const doc = this.#canvas()?.document;
     if (
@@ -293,11 +196,5 @@ export class NormalMapController {
 
   #canvas(): PixelArtCanvas | null {
     return this.#options.canvas();
-  }
-
-  #element(
-    selector: string
-  ): HTMLElement | null {
-    return this.#host.renderRoot.querySelector<HTMLElement>(selector);
   }
 }

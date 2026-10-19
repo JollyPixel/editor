@@ -7,13 +7,22 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { render } from "lit";
+import { Emitter } from "@openally/emitt";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import { SelectToolbarController } from "../../src/tools/SelectToolbarController.ts";
+import type { TextureSetEvents } from "../../src/textures/TextureSet.ts";
 import { TestHost } from "../fixtures/host.ts";
 
 type ClipboardOperationResult = Awaited<ReturnType<PixelArtCanvas["copySelection"]>>;
+
+function createController(
+  canvas: () => PixelArtCanvas | null,
+  events = new Emitter<TextureSetEvents>()
+): SelectToolbarController {
+  return new SelectToolbarController(new TestHost(), canvas, events);
+}
 
 interface FakeCanvasState {
   canvas: PixelArtCanvas;
@@ -95,7 +104,7 @@ function disabledStates(
 
 describe("SelectToolbarController", () => {
   test("renders nothing outside Select mode", () => {
-    const controller = new SelectToolbarController(new TestHost(), () => null);
+    const controller = createController(() => null);
     const container = document.createElement("div");
 
     render(controller.render(false), container);
@@ -105,7 +114,7 @@ describe("SelectToolbarController", () => {
 
   test("renders the stable button order and reads the selection at render time", () => {
     const fake = makeCanvas();
-    const controller = new SelectToolbarController(new TestHost(), () => fake.canvas);
+    const controller = createController(() => fake.canvas);
     const container = document.createElement("div");
 
     render(controller.render(true), container);
@@ -130,7 +139,7 @@ describe("SelectToolbarController", () => {
 
   test("keeps copy but disables paste and edits while pixels are read-only", () => {
     const fake = makeCanvas();
-    const controller = new SelectToolbarController(new TestHost(), () => fake.canvas);
+    const controller = createController(() => fake.canvas);
     const container = document.createElement("div");
     fake.select(true);
     fake.lockPixels();
@@ -141,7 +150,7 @@ describe("SelectToolbarController", () => {
   });
 
   test("disables selection actions without a canvas", () => {
-    const controller = new SelectToolbarController(new TestHost(), () => null);
+    const controller = createController(() => null);
     const container = document.createElement("div");
 
     render(controller.render(true), container);
@@ -151,7 +160,7 @@ describe("SelectToolbarController", () => {
 
   test("dispatches actions and blocks repeated clipboard work while pending", async() => {
     const fake = makeCanvas();
-    const controller = new SelectToolbarController(new TestHost(), () => fake.canvas);
+    const controller = createController(() => fake.canvas);
     fake.select(true);
 
     const firstCopy = controller.copy();
@@ -178,22 +187,41 @@ describe("SelectToolbarController", () => {
   });
 
   test("renders clipboard status in a polite live region and clears it on mode exit", () => {
-    const controller = new SelectToolbarController(new TestHost(), () => null);
+    const events = new Emitter<TextureSetEvents>();
+    const controller = createController(() => null, events);
     const container = document.createElement("div");
+    function status(): string | null {
+      render(controller.render(true), container);
 
-    controller.onClipboardResult({
+      return container.querySelector("[aria-live='polite']")!.textContent;
+    }
+
+    events.emit("clipboard-result", {
       operation: "paste",
       code: "image-too-large",
       maxSize: 64
     });
-    render(controller.render(true), container);
-    assert.strictEqual(
-      container.querySelector("[aria-live='polite']")!.textContent,
-      "Image exceeds the maximum texture size of 64×64"
-    );
+    assert.strictEqual(status(), "Image exceeds the maximum texture size of 64×64");
 
-    controller.onModeChange(false);
+    events.emit("mode-change", "select");
+    assert.strictEqual(status(), "Image exceeds the maximum texture size of 64×64");
+
+    events.emit("mode-change", "paint");
+    assert.strictEqual(status(), "");
+  });
+
+  test("clears the clipboard status when another texture becomes active", () => {
+    const events = new Emitter<TextureSetEvents>();
+    const controller = createController(() => null, events);
+    const container = document.createElement("div");
+
+    events.emit("clipboard-result", {
+      operation: "copy",
+      code: "copied"
+    });
+    events.emit("active-change");
     render(controller.render(true), container);
+
     assert.strictEqual(
       container.querySelector("[aria-live='polite']")!.textContent,
       ""

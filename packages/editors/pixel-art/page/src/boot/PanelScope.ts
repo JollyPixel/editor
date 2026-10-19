@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { PixelDrawPanel } from "./PixelDrawPanel.ts";
+import type { PixelDrawPanel } from "#src/index.ts";
 
 // CONSTANTS
 const kScopeAttributes = ["theme", "density"];

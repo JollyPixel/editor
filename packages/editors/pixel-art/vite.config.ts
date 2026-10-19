@@ -17,7 +17,7 @@ import {
 import {
   createPixelArtSeed,
   TEXTURE_SIZE
-} from "./page/scripts/pixelArtProject.ts";
+} from "./page/src/boot/pixelArtProject.ts";
 
 // CONSTANTS
 const kTextureAssetId = "texture-default";

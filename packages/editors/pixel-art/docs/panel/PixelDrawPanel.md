@@ -84,18 +84,27 @@ room. Pass `access` to `addTexture()` or change it with
 `updateTexture(id, { access })`; it defaults to `PIXEL_ART_CAPABILITIES.full`.
 The panel hides or disables what the active texture does not grant.
 
-`RoomAccess` keeps one texture in step with its room. It applies the room's
-grants at once, then again whenever a `sync` changes them, because a role
-change reconnects the room. It also announces the pixel-art commands the
-server refuses:
+`TextureRoom` keeps one texture in step with its room. It shows the peers'
+cursors, stroke, selection and UV ghosts, and applies the room's grants at
+once, then again whenever a `sync` changes them, because a role change
+reconnects the room. It also announces the pixel-art commands the server
+refuses:
 
 ```ts
-import { RoomAccess } from "@jolly-pixel/editor.pixel-art";
+import { TextureRoom } from "@jolly-pixel/editor.pixel-art";
 
-const access = new RoomAccess(room, panel, textureId);
+const canvas = panel.addTexture({ id: textureId, name, document });
+const textureRoom = new TextureRoom({
+  room,
+  canvas,
+  panel,
+  textureId,
+  // optional, called while a peer drags a UV region
+  onRemoteUvDragging: (region) => {}
+});
 
 // once the texture is closed
-access.dispose();
+textureRoom.dispose();
 ```
 
 Create it after `addTexture()`.
@@ -207,6 +216,31 @@ or its left neighbor when it was last.
 | `color-docked-change` | `boolean` | Docked color picker is toggled. |
 | `theme-change` | resolved theme | Theme changes or system preference changes in `auto`. |
 | `canvas-hover-change` | `{ hovering: boolean }` | Pointer enters or leaves the canvas. |
+
+## View settings and texture names
+
+`ViewSettings` is a frozen copy of the view toggles a host may save between
+sessions. The grid cell size is not part of it, because it belongs to each
+texture.
+
+```ts
+class ViewSettings {
+  static capture(canvas: ViewCanvas): ViewSettings;
+
+  readonly showAll: boolean;
+  readonly showRegionLabels: boolean;
+  readonly showSizeLabels: boolean;
+  readonly showGrid: boolean;
+  readonly snapToGrid: boolean;
+
+  constructor(init: ViewSettingsInit);
+  applyTo(canvas: ViewCanvas): void;
+}
+```
+
+`TextureName.fromPath(path)` keeps the file name without its folders and
+extension, so `"art/hero.pixelart"` gives `"hero"`. An empty name becomes
+`"Texture"`.
 
 ## Exported subcomponents
 
