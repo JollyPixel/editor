@@ -27,6 +27,8 @@ import {
   InjectedLaunchSource,
   QueryLaunchSource
 } from "../launch/index.ts";
+import { LANTERN_PREFERENCES } from "../preferences/scope/hostPreferences.ts";
+import { PreferenceStorage } from "../preferences/adapters/PreferenceStorage.ts";
 import type { EditorRuntime } from "../runtime/EditorRuntime.ts";
 import { rememberQueryUsername } from "../session/rememberQueryUsername.ts";
 import { PageState } from "../state/PageState.ts";
@@ -76,10 +78,15 @@ export class StandaloneEditor<
     ))();
     runtime.catch(() => undefined);
     this.#runtime = runtime;
-    this.#mountDefinition = async(context) => definition.mount({
-      ...context,
-      runtime: await runtime
-    });
+    this.#mountDefinition = async(context) => {
+      const created = await runtime;
+      created.widgets.follow(context.preferences);
+
+      return definition.mount({
+        ...context,
+        runtime: created
+      });
+    };
   }
 
   get handle(): THandle {
@@ -124,9 +131,15 @@ export class StandaloneEditor<
       const placement = new Placement(launch);
       placement.reportState(this.#page, this.#leaving.signal);
       const pageConsole = placement.openConsole();
+      const preferences = placement.openPreferences(this.#leaving.signal);
       editorConsole = pageConsole;
       const pageLantern = mountLantern({
         commands: pageConsole.commands,
+        storage: new PreferenceStorage(
+          preferences,
+          LANTERN_PREFERENCES,
+          "seen"
+        ),
         logger: logger.child({ namespace: "host.lantern" })
       });
       editorLantern = pageLantern;
@@ -144,7 +157,8 @@ export class StandaloneEditor<
           shell: parts.launch.shell,
           logger: logger.child({ namespace: "editor" }),
           commands: pageConsole.commands,
-          lantern
+          lantern,
+          preferences
         }),
         history: placement.history(),
         logger,

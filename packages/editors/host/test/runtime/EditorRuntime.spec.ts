@@ -15,7 +15,6 @@ import {
   type RuntimeLoadOptions,
   type RuntimeOptions
 } from "@jolly-pixel/runtime";
-import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { EditorRuntime } from "#src/runtime/EditorRuntime.ts";
@@ -164,8 +163,7 @@ describe("EditorRuntime", () => {
 
     const editorRuntime = new EditorRuntime(
       runtime as Runtime,
-      HOST_PARAMS.read(""),
-      new MemoryStorageAdapter()
+      HOST_PARAMS.read("")
     );
 
     const dispose = editorRuntime.mountPerformancePane({

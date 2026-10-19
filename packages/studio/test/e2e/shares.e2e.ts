@@ -26,7 +26,7 @@ test("a share link opens an asset for a guest and closes when revoked", async({
   await studio.assets.action("Share").click();
   const url = await studio.assets.shareDialog.createLink();
 
-  await shareLinks.open();
+  await shareLinks.open(account);
   await expect(shareLinks.links).toHaveCount(1);
   await expect(shareLinks.links).toContainText(`models/${MODEL}`);
   await expect(shareLinks.links).toContainText(`By ${account}`);

@@ -22,13 +22,18 @@ export const propertyRowStyles = css`
     /*
      * Match the field's leading inset and collapsible gutter.
      */
-    padding-inline: calc(var(--jolly-gutter-width, 0px) + var(--jolly-space-1, 4px))
+    padding-inline: calc(
+        var(--jolly-gutter-width, 0px) +
+          var(--jolly-field-inset-end, var(--jolly-space-1, 4px))
+      )
       var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
   }
 
   .row:has(.label-cell > *) {
     padding-inline-start: calc(
-      var(--jolly-gutter-width, 0px) + (var(--jolly-space-1, 4px) * 2)
+      var(--jolly-gutter-width, 0px) +
+        var(--jolly-field-inset-start, var(--jolly-space-1, 4px)) +
+        var(--jolly-space-1, 4px)
     );
   }
 
@@ -118,9 +123,11 @@ export const propertyRowStyles = css`
     gap: var(--jolly-space-1, 4px);
     margin-block: calc(var(--jolly-space-1, 4px) / 2);
     margin-inline: calc(
-        var(--jolly-gutter-width, 0px) + (var(--jolly-space-1, 4px) * 2)
+        var(--jolly-gutter-width, 0px) +
+          var(--jolly-field-inset-start, var(--jolly-space-1, 4px)) +
+          var(--jolly-space-1, 4px)
       )
-      var(--jolly-space-1, 4px);
+      var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
     color: var(--jolly-text-muted);
     font-size: 0.9em;
   }

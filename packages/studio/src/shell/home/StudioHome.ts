@@ -4,7 +4,6 @@ import {
   css,
   html,
   nothing,
-  type PropertyValues,
   type TemplateResult
 } from "lit";
 import {
@@ -16,14 +15,13 @@ import type { Account } from "@jolly-pixel/accounts";
 
 // Import Internal Dependencies
 import type { StudioSignedIn } from "../../accounts/StudioSignedIn.ts";
-import { StudioPreferences } from "../../preferences/StudioPreferences.ts";
+import { BrowserState } from "../../browser/BrowserState.ts";
 import { StudioErrorEvent } from "../StudioErrorEvent.ts";
 import type { AssetBrowserOptions } from "../assets/AssetBrowser.ts";
 import type { EditorTab } from "../../tabs/EditorTabs.ts";
 import "../assets/AssetBrowser.ts";
 import "./ProjectOverview.ts";
 import "../users/UsersPane.ts";
-import "../shares/ShareLinksPane.ts";
 
 // CONSTANTS
 export const HOME_LAYOUT_STORAGE_KEY = "studio:home-layout";
@@ -136,13 +134,10 @@ export class StudioHome extends LitElement {
   declare account: Account | null;
 
   @property({ attribute: false })
-  declare preferences: StudioPreferences;
+  declare browserState: BrowserState;
 
   @state()
   declare _exporting: boolean;
-
-  @state()
-  declare _canExport: boolean;
 
   constructor() {
     super();
@@ -150,24 +145,15 @@ export class StudioHome extends LitElement {
     this.openTabs = [];
     this.signedIn = null;
     this.account = null;
-    this.preferences = new StudioPreferences();
+    this.browserState = new BrowserState();
     this._exporting = false;
-    this._canExport = false;
-  }
-
-  override willUpdate(
-    changed: PropertyValues<this>
-  ): void {
-    if (changed.has("signedIn") || changed.has("account")) {
-      void this.#loadExportRight();
-    }
   }
 
   override render(): TemplateResult {
     return html`
       <jolly-dock-layout
         storage-key=${HOME_LAYOUT_STORAGE_KEY}
-        .storage=${this.preferences.storage}
+        .storage=${this.browserState.storage}
       >
         <jolly-dock
           id="asset-dock"
@@ -233,48 +219,13 @@ export class StudioHome extends LitElement {
             icon-only
             label="Export project"
             title="Export project"
-            ?disabled=${this._exporting || !this._canExport}
+            ?disabled=${this._exporting || !signedIn.project.rights.canExport}
             @click=${this.#export}
           ></jolly-button>
         </jolly-toolbar>
-        ${this.assets === null ? users : html`
-          <jolly-pane-group active="users">
-            ${users}
-            <jolly-pane
-              key="share-links"
-              heading="Share links"
-              icon="share"
-              locked
-            >
-              <studio-share-links
-                .links=${signedIn.shares}
-                .catalog=${this.assets.catalog}
-              ></studio-share-links>
-            </jolly-pane>
-          </jolly-pane-group>
-        `}
+        ${users}
       </jolly-dock>
     `;
-  }
-
-  async #loadExportRight(): Promise<void> {
-    const signedIn = this.signedIn;
-    this._canExport = false;
-    if (signedIn === null) {
-      return;
-    }
-
-    try {
-      const canExport = await signedIn.projectArchive.canExport();
-      if (this.signedIn === signedIn) {
-        this._canExport = canExport;
-      }
-    }
-    catch (error) {
-      this.dispatchEvent(
-        StudioErrorEvent.from(error, "Could not check the export right")
-      );
-    }
   }
 
   readonly #openSettings = (): void => {

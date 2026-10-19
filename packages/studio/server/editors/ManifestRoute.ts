@@ -21,7 +21,13 @@ export class ManifestRoute {
   ) {
     this.source = JSON.stringify(new ProjectManifest({
       editors: project.editors.descriptors(),
-      kinds: project.kinds.descriptors()
+      kinds: project.kinds.descriptors(),
+      kindPackages: project.kinds.packages.map((kindPackage) => {
+        return {
+          name: kindPackage.name,
+          kinds: kindPackage.descriptors.map(({ kind }) => kind)
+        };
+      })
     }));
     const bytes = new TextEncoder().encode(this.source);
     const serve = servo(

@@ -205,14 +205,19 @@ as an exclusive lower bound.
 ```ts
 export interface ListAllOptions {
   fromEventId?: number;
+  beforeEventId?: number;
   eventTypePrefix?: string;
   limit?: number;
+  newestFirst?: boolean;
 }
 ```
 
 - `fromEventId` is an exclusive lower bound.
+- `beforeEventId` is an exclusive upper bound.
 - `eventTypePrefix` matches the start of `eventType` literally.
 - `limit` truncates the ordered result.
+- `newestFirst` reverses the order, so `limit` keeps the newest events. Pass
+  the last `eventId` read as `beforeEventId` to read the next page.
 
 ### `listFromCheckpoints`
 

@@ -70,9 +70,16 @@ Opaque inbound protocols cannot be registered with configured rights.
 
 `RightsTable`
 resolves keys with `check`; `scope` returns a namespace-bound `RightsGate`.
+`replace(rights, defaultRole?)` swaps the rules of a configured table, and
+its gates drop what they cached.
 `scope(namespace, { readOnly: true })` caps every message right at `read`.
 `gate.gated` is `true` when the table is configured or the scope is read-only;
 a room then checks each message against the gate.
+
+### RightsPattern
+
+`new RightsPattern(source).matches(key)` tests one rule pattern against a key,
+with the same `*` matching as the table.
 
 ### Client access
 

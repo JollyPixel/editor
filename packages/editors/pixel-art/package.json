@@ -11,13 +11,18 @@
         "pixelart"
       ],
       "dist": "dist-page",
-      "page": "page/index.html"
+      "page": "page/index.html",
+      "preferences": "src/preferences.ts"
     }
   },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./preferences": {
+      "types": "./dist/preferences.d.ts",
+      "default": "./dist/preferences.js"
     },
     "./mesh-texturing": {
       "types": "./dist/mesh-texturing/index.d.ts",
@@ -62,7 +67,6 @@
   "devDependencies": {
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-server": "workspace:*",
-    "@jolly-pixel/editor.host": "workspace:*",
     "@jolly-pixel/e2e": "workspace:*",
     "@jolly-pixel/engine": "workspace:*",
     "@jolly-pixel/runtime": "workspace:*"
@@ -71,6 +75,7 @@
     "@jolly-pixel/asset.pixel-art": "workspace:*",
     "@jolly-pixel/color": "workspace:*",
     "@jolly-pixel/console": "workspace:*",
+    "@jolly-pixel/editor.host": "workspace:*",
     "@jolly-pixel/controls": "workspace:*",
     "@jolly-pixel/image": "workspace:*",
     "@jolly-pixel/network": "workspace:*",

@@ -17,7 +17,8 @@ import type { BenchEditor } from "./BenchEditors.ts";
 export const STUDIO_URL = `${baseUrl(PORTS.studio)}/`;
 export const STUDIO_MODES = ["online", "offline"] as const;
 export const TABS_STORAGE_KEY = "studio:tabs";
-export const PREFETCH_EDITORS_STORAGE_KEY = "studio:prefetch-editors";
+export const STUDIO_PREFERENCES_STORAGE_KEY = "jolly-pixel:preferences:studio";
+export const STUDIO_PREFERENCES_PATH = "/api/preferences/studio";
 const kShellTimeoutMs = 30_000;
 const kIdleBeforeOpenMs = 500;
 

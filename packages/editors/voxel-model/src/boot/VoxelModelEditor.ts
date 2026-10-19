@@ -19,6 +19,7 @@ import {
 import { voxelAnimationDocumentKind } from "@jolly-pixel/asset.voxel-animation/client";
 import {
   EditorRuntime,
+  PreferenceStorage,
   archiveConsole,
   runtimeConsole,
   type AssetLease,
@@ -31,7 +32,7 @@ import {
   UvNetLibrary,
   pixelArtConsole
 } from "@jolly-pixel/editor.pixel-art";
-import { LocalStorageAdapter } from "@jolly-pixel/ui";
+import { PIXEL_ART_PREFERENCES } from "@jolly-pixel/editor.pixel-art/preferences";
 import { BakedRoomEnvironment } from "@jolly-pixel/three";
 
 // Import Internal Dependencies
@@ -132,22 +133,25 @@ export class VoxelModelEditor {
       presence: new PresenceStore(),
       pixels: texture.document,
       animationSets: sessionAnimationSets(session, kAnimationKind),
-      view: new ViewSettingsStore({
-        storage: new LocalStorageAdapter()
-      }),
+      view: new ViewSettingsStore(context.preferences),
       archives: session.archives({
         fallbackName: "model",
         resetWarning: "Every model and texture stored in this browser is " +
           "deleted. Export what you want to keep first."
       }),
-      roomEnvironment
+      roomEnvironment,
+      preferences: context.preferences
     });
-    const keyBindingSettings = new PixelArtKeyBindingSettings({
-      storage: new LocalStorageAdapter(),
-      onDropped: (message) => console.warn(message)
-    });
+    const keyBindingSettings = PixelArtKeyBindingSettings.follow(
+      context.preferences,
+      (message) => console.warn(message)
+    );
     const uvNets = new UvNetLibrary({
-      storage: new LocalStorageAdapter()
+      storage: new PreferenceStorage(
+        context.preferences,
+        PIXEL_ART_PREFERENCES,
+        "uvNets"
+      )
     });
     const shell = new EditorShell({
       runtime: editorRuntime,

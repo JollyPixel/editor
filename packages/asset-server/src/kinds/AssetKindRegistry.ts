@@ -51,30 +51,18 @@ export class AssetKindRegistry {
         `Asset kind "${handler.kind}" is already registered.`
       );
     }
+    this.#kinds.set(handler.kind, registeredKind(handler));
 
-    const extensions = Object.keys(handler.extensions);
-    if (extensions.length === 0) {
-      throw new TypeError(
-        `Asset kind "${handler.kind}" declares no extensions.`
-      );
-    }
-    const invalid = [
-      ...extensions,
-      ...Object.keys(handler.conversions ?? {})
-    ].find((extension) => !isExtension(extension));
-    if (invalid !== undefined) {
-      throw new TypeError(
-        `Asset kind "${handler.kind}" declares an invalid extension "${invalid}".`
-      );
-    }
+    return this;
+  }
 
-    this.#kinds.set(handler.kind, {
-      handler,
-      extensions,
-      isMatch: handler.match === undefined ?
-        null :
-        picomatch([...handler.match], { dot: true })
-    });
+  replace(
+    handler: AssetKindHandler
+  ): this {
+    if (!this.#kinds.has(handler.kind)) {
+      throw new UnknownAssetKindError(handler.kind);
+    }
+    this.#kinds.set(handler.kind, registeredKind(handler));
 
     return this;
   }
@@ -182,6 +170,34 @@ export class AssetKindRegistry {
 
     return table;
   }
+}
+
+function registeredKind(
+  handler: AssetKindHandler
+): RegisteredKind {
+  const extensions = Object.keys(handler.extensions);
+  if (extensions.length === 0) {
+    throw new TypeError(
+      `Asset kind "${handler.kind}" declares no extensions.`
+    );
+  }
+  const invalid = [
+    ...extensions,
+    ...Object.keys(handler.conversions ?? {})
+  ].find((extension) => !isExtension(extension));
+  if (invalid !== undefined) {
+    throw new TypeError(
+      `Asset kind "${handler.kind}" declares an invalid extension "${invalid}".`
+    );
+  }
+
+  return {
+    handler,
+    extensions,
+    isMatch: handler.match === undefined ?
+      null :
+      picomatch([...handler.match], { dot: true })
+  };
 }
 
 function isExtension(

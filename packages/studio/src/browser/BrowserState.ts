@@ -12,20 +12,16 @@ import { SavedTabs } from "../tabs/SavedTabs.ts";
 export const TABS_STORAGE_KEY = "studio:tabs";
 export const ASSET_KIND_STORAGE_KEY = "studio:asset-kind";
 export const EXPANDED_FOLDERS_STORAGE_KEY = "studio:asset-expanded";
-export const PREFETCH_EDITORS_STORAGE_KEY = "studio:prefetch-editors";
+export const SETTINGS_SECTION_STORAGE_KEY = "studio:settings-section";
 const kNodeIdsSchema = z.array(z.string());
 
-export class StudioPreferences {
+export class BrowserState {
   readonly storage: StorageAdapter;
 
   constructor(
     storage: StorageAdapter = new LocalStorageAdapter()
   ) {
     this.storage = storage;
-  }
-
-  get prefetchEditors(): boolean {
-    return this.storage.get(PREFETCH_EDITORS_STORAGE_KEY) !== "off";
   }
 
   get tabs(): SavedTabs {
@@ -55,6 +51,21 @@ export class StudioPreferences {
     this.storage.set(
       ASSET_KIND_STORAGE_KEY,
       kind
+    );
+  }
+
+  get settingsSection(): string {
+    return this.storage.get(
+      SETTINGS_SECTION_STORAGE_KEY
+    ) ?? "";
+  }
+
+  set settingsSection(
+    id: string
+  ) {
+    this.storage.set(
+      SETTINGS_SECTION_STORAGE_KEY,
+      id
     );
   }
 

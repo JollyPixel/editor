@@ -19,6 +19,12 @@ import {
   NoCameraFocus
 } from "./CameraFocus.ts";
 
+// CONSTANTS
+export const TOUCHPAD_SWIPE_MODES = ["look", "pan"] as const;
+const kPanPerNotch = 0.05;
+
+export type TouchpadSwipeMode = typeof TOUCHPAD_SWIPE_MODES[number];
+
 export type OrbitFlyCameraFocusMode = "none" | "lock" | "elastic";
 
 export interface OrbitFlyCameraOptions extends CameraOptions {
@@ -66,6 +72,18 @@ export interface OrbitFlyCameraOptions extends CameraOptions {
    * @default 0.36
    */
   touchpadLookSensitivity?: number;
+  /**
+   * What a two-finger touchpad swipe does: "look" turns the camera, "pan"
+   * moves it sideways and up or down, a twentieth of `moveSpeed` per notch.
+   * While orbiting a "lock" pivot, a swipe always orbits.
+   * @default "look"
+   */
+  touchpadSwipe?: TouchpadSwipeMode;
+  /**
+   * Turns the camera down when the mouse or the fingers move up.
+   * @default false
+   */
+  invertY?: boolean;
   /**
    * Radians per second turned while I/J/K/L is held.
    * @default Math.PI / 2
@@ -140,6 +158,8 @@ export class OrbitFlyCamera extends CameraComponent {
   #responsiveness: number;
   #mouseSensitivity: number;
   #touchpadLookSensitivity: number;
+  #touchpadSwipe: TouchpadSwipeMode;
+  #invertY: boolean;
   #keyLookSpeed: number;
   #maxPitch: number;
   #speedAdjustStep: number;
@@ -150,6 +170,7 @@ export class OrbitFlyCamera extends CameraComponent {
   #up = new THREE.Vector3(0, 1, 0);
   #move = new THREE.Vector3();
   #offset = new THREE.Vector3();
+  #pan = new THREE.Vector3();
   #scroll = { x: 0, y: 0 };
   #euler = new THREE.Euler(0, 0, 0, "YXZ");
   #orientation = new THREE.Quaternion();
@@ -193,6 +214,8 @@ export class OrbitFlyCamera extends CameraComponent {
       responsiveness = 18,
       mouseSensitivity = 0.003,
       touchpadLookSensitivity = 0.36,
+      touchpadSwipe = "look",
+      invertY = false,
       keyLookSpeed = Math.PI / 2,
       maxPitch = Math.PI / 2 - 0.01,
       scrollSpeed = 2.5,
@@ -220,6 +243,8 @@ export class OrbitFlyCamera extends CameraComponent {
     this.#responsiveness = responsiveness;
     this.#mouseSensitivity = mouseSensitivity;
     this.#touchpadLookSensitivity = touchpadLookSensitivity;
+    this.#touchpadSwipe = touchpadSwipe;
+    this.#invertY = invertY;
     this.#keyLookSpeed = keyLookSpeed;
     this.#maxPitch = maxPitch;
     this.#speedAdjustStep = speedAdjustStep;
@@ -280,16 +305,17 @@ export class OrbitFlyCamera extends CameraComponent {
     let yawDelta = -this.#axes.value("lookRight") * keyTurn;
     let pitchDelta = this.#axes.value("lookUp") * keyTurn;
 
+    const pitchSign = this.#invertY ? -1 : 1;
     const isDragging = input.mouse.isDown("middle") ||
       (InputCombination.Alt.evaluate(input) && input.mouse.isDown("left"));
     if (isDragging && input.mouse.isMoving()) {
       const delta = input.mouse.viewportDelta(false);
       yawDelta -= delta.x * this.#mouseSensitivity;
-      pitchDelta += delta.y * this.#mouseSensitivity;
+      pitchDelta += pitchSign * delta.y * this.#mouseSensitivity;
     }
     if (swipe !== null) {
       yawDelta += swipe.x * this.#touchpadLookSensitivity;
-      pitchDelta -= swipe.y * this.#touchpadLookSensitivity;
+      pitchDelta -= pitchSign * swipe.y * this.#touchpadLookSensitivity;
     }
     if (yawDelta === 0 && pitchDelta === 0) {
       return;
@@ -330,6 +356,46 @@ export class OrbitFlyCamera extends CameraComponent {
     speed: number
   ) {
     this.#moveSpeed = this.#clampMoveSpeed(speed);
+  }
+
+  get mouseSensitivity(): number {
+    return this.#mouseSensitivity;
+  }
+
+  set mouseSensitivity(
+    sensitivity: number
+  ) {
+    this.#mouseSensitivity = sensitivity;
+  }
+
+  get touchpadLookSensitivity(): number {
+    return this.#touchpadLookSensitivity;
+  }
+
+  set touchpadLookSensitivity(
+    sensitivity: number
+  ) {
+    this.#touchpadLookSensitivity = sensitivity;
+  }
+
+  get touchpadSwipe(): TouchpadSwipeMode {
+    return this.#touchpadSwipe;
+  }
+
+  set touchpadSwipe(
+    mode: TouchpadSwipeMode
+  ) {
+    this.#touchpadSwipe = mode;
+  }
+
+  get invertY(): boolean {
+    return this.#invertY;
+  }
+
+  set invertY(
+    invertY: boolean
+  ) {
+    this.#invertY = invertY;
   }
 
   get moving(): boolean {
@@ -421,8 +487,12 @@ export class OrbitFlyCamera extends CameraComponent {
     const isSwiping = !isCtrl && input.mouse.scrollSource === "touchpad";
     const wheel = isCtrl || isSwiping ? 0 : scroll.y;
 
+    const isPanning = isSwiping &&
+      this.#touchpadSwipe === "pan" &&
+      !this.#focus.isLocked;
+
     this.#axes.update(input);
-    this.#look(input, isSwiping ? scroll : null, deltaTime);
+    this.#look(input, isSwiping && !isPanning ? scroll : null, deltaTime);
 
     const { transform } = this.actor;
     transform.getForward(this.#forward);
@@ -464,6 +534,14 @@ export class OrbitFlyCamera extends CameraComponent {
         this.#offset.copy(this.#velocity.value).multiplyScalar(deltaTime),
         transform
       );
+    }
+    if (isPanning && (scroll.x !== 0 || scroll.y !== 0)) {
+      const step = this.#moveSpeed * kPanPerNotch;
+      this.#pan
+        .copy(this.#right)
+        .multiplyScalar(-scroll.x * step)
+        .addScaledVector(this.#up, -scroll.y * step);
+      this.#focus.move(this.#pan, transform);
     }
 
     this.#updateFocusPose(deltaTime);

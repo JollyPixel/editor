@@ -122,3 +122,57 @@ describe("tree arrow keys on a non-collapsible branch", () => {
     });
   });
 });
+
+describe("tree keys around heading rows", () => {
+  const nodes: TreeNode[] = [
+    { id: "first", label: "First" },
+    {
+      id: "heading",
+      label: "Heading",
+      selectable: false,
+      children: [{ id: "child", label: "Child" }]
+    }
+  ];
+  const expanded = new Set(["heading"]);
+  const rows = flattenVisible(nodes, expanded);
+
+  function keyOn(
+    key: string,
+    activeId: string
+  ): TreeKeyAction | null {
+    return resolveTreeKey({
+      key,
+      rows,
+      activeId,
+      interaction: idleTreeInteraction(),
+      selected: [activeId],
+      expanded,
+      reorderable: true,
+      renamableIds: new Set()
+    });
+  }
+
+  test("ArrowDown and ArrowUp skip the heading", () => {
+    assert.deepEqual(keyOn("ArrowDown", "first"), {
+      kind: "select",
+      id: "child"
+    });
+    assert.deepEqual(keyOn("ArrowUp", "child"), {
+      kind: "select",
+      id: "first"
+    });
+  });
+
+  test("ArrowLeft on a child never selects its heading", () => {
+    assert.equal(keyOn("ArrowLeft", "child"), null);
+  });
+
+  test("Enter folds the heading and nothing else acts on it", () => {
+    assert.deepEqual(keyOn("Enter", "heading"), {
+      kind: "toggle-expand",
+      id: "heading",
+      expanded: false
+    });
+    assert.equal(keyOn(" ", "heading"), null);
+  });
+});

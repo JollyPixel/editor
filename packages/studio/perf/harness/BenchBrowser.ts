@@ -10,7 +10,8 @@ import { registerAccount } from "../../test/e2e/support/account.ts";
 import { installProbe } from "./openProbe.ts";
 import {
   StudioPage,
-  PREFETCH_EDITORS_STORAGE_KEY,
+  STUDIO_PREFERENCES_PATH,
+  STUDIO_PREFERENCES_STORAGE_KEY,
   TABS_STORAGE_KEY,
   type StudioMode
 } from "./StudioPage.ts";
@@ -19,6 +20,9 @@ import {
 const kViewport = {
   width: 1600,
   height: 900
+};
+const kNoPrefetch = {
+  prefetchEditors: false
 };
 const kArgs = [
   "--disable-renderer-backgrounding",
@@ -39,6 +43,11 @@ export interface StudioPageOptions {
   base: string;
   mode: StudioMode;
   storage?: Record<string, string>;
+  /**
+   * Lets the shell download the editors ahead of the open.
+   * @default false
+   */
+  prefetch?: boolean;
   prewarm?: boolean;
   probe?: boolean;
 }
@@ -98,7 +107,9 @@ export class BenchBrowser {
     await context.addInitScript(
       seedStorage,
       {
-        [PREFETCH_EDITORS_STORAGE_KEY]: "off",
+        ...(options.prefetch ? {} : {
+          [STUDIO_PREFERENCES_STORAGE_KEY]: JSON.stringify(kNoPrefetch)
+        }),
         ...options.storage
       }
     );
@@ -111,6 +122,11 @@ export class BenchBrowser {
     }
     if (options.mode === "online") {
       await registerAccount(context.request);
+      if (!options.prefetch) {
+        await context.request.put(STUDIO_PREFERENCES_PATH, {
+          data: kNoPrefetch
+        });
+      }
     }
 
     return new StudioPage(

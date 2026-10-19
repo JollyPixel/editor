@@ -74,17 +74,19 @@ describe("ShellChannel message guards", () => {
     assert.equal(isReadyMessage(null), false);
   });
 
-  test("parses a launch and drops an invalid appearance or ports", () => {
+  test("parses a launch and drops invalid appearance, preferences or ports", () => {
     assert.deepEqual(parseLaunchMessage({
       type: LAUNCH_MESSAGE_TYPE,
       target: "x",
       appearance: { theme: "pink", density: "compact" },
+      preferences: { runtime: "stats" },
       ports: { catalog: "not a port" }
     }), {
       type: LAUNCH_MESSAGE_TYPE,
       target: "x",
       appearance: undefined,
       identity: null,
+      preferences: {},
       ports: {}
     });
     assert.equal(parseLaunchMessage({ type: LAUNCH_MESSAGE_TYPE }), undefined);
@@ -123,10 +125,12 @@ describe("ShellChannel message guards", () => {
 describe("launchMessage", () => {
   test("reaches the frame with only the username and peer id of a peer", () => {
     const appearance = { theme: "dark", density: "default" } as const;
+    const preferences = { runtime: { stats: false } };
     const message = launchMessage({
       target: "x",
       appearance,
-      identity: peerIdentity("alice", "p-1")
+      identity: peerIdentity("alice", "p-1"),
+      preferences
     });
 
     assert.deepEqual(parseLaunchMessage(message), {
@@ -137,6 +141,7 @@ describe("launchMessage", () => {
         username: "alice",
         peerId: "p-1"
       },
+      preferences,
       ports: {}
     });
   });

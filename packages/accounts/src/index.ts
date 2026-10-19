@@ -1,4 +1,5 @@
 export * from "./account/Account.ts";
+export type { AccountActivity } from "./AccountActivity.ts";
 export {
   ACCOUNTS_URL_PATH,
   ACCOUNTS_ROUTES,

@@ -1,6 +1,9 @@
 // Import Node.js Dependencies
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { Preferences } from "@jolly-pixel/editor.host/preferences";
+
 // Import Internal Dependencies
 import {
   EditorFrames,
@@ -22,7 +25,8 @@ export function editorFrames(
     container,
     launchOrigin: FRAME_ORIGIN,
     share: idleShare(),
-    ...options
+    ...options,
+    preferences: options.preferences ?? new Preferences()
   });
 
   return current;

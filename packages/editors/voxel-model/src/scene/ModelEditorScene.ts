@@ -3,7 +3,11 @@ import { Systems, OrbitFlyCamera } from "@jolly-pixel/engine";
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 import { registerPixelHistory } from "@jolly-pixel/asset.pixel-art/client";
 import type { PresenceSource } from "@jolly-pixel/ui";
-import type { EditorArchives } from "@jolly-pixel/editor.host";
+import {
+  followCameraPreferences,
+  type EditorArchives
+} from "@jolly-pixel/editor.host";
+import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 import type {
   ModelDocument,
   VoxelModelRoom
@@ -74,6 +78,7 @@ export interface ModelEditorSceneOptions {
   archives: EditorArchives;
   view: ViewSettingsStore;
   roomEnvironment: BakedRoomEnvironment | null;
+  preferences: Preferences;
 }
 
 export interface ModelWorkspace {
@@ -147,6 +152,10 @@ export class ModelEditorScene extends Systems.Scene {
         maxPivotDistance: 20,
         initialTrailDistance: 12
       });
+    this.#disposables.push(followCameraPreferences(
+      camera,
+      this.#options.preferences
+    ));
 
     const access = new RoomGrants(room, MODEL_CAPABILITIES)
       .setMaxListeners(kMaxAccessListeners);

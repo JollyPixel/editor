@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import {
-  MemoryStorageAdapter,
-  type StorageAdapter
-} from "@jolly-pixel/ui";
+import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
@@ -10,27 +7,32 @@ import {
   ViewSettings,
   type ViewSettingsJSON
 } from "./ViewSettings.ts";
-
-// CONSTANTS
-const kStorageKey = "voxel-map:view";
+import { VOXEL_MAP_PREFERENCES } from "../preferences.ts";
 
 export type ViewStoreEvents = {
   change: (settings: ViewSettings) => void;
 };
 
 export class ViewStore extends Emitter<ViewStoreEvents> {
-  #storage: StorageAdapter;
+  #preferences: Preferences;
   #settings: ViewSettings;
 
   constructor(
-    storage: StorageAdapter = new MemoryStorageAdapter()
+    preferences: Preferences
   ) {
     super();
 
-    this.#storage = storage;
-    this.#settings = ViewSettings.parse(
-      storage.get(kStorageKey)
+    this.#preferences = preferences;
+    this.#settings = new ViewSettings(
+      preferences.values(VOXEL_MAP_PREFERENCES)
     );
+    preferences.watch(VOXEL_MAP_PREFERENCES, (values) => {
+      const next = new ViewSettings(values);
+      if (!next.equals(this.#settings)) {
+        this.#settings = next;
+        this.emit("change", next);
+      }
+    });
   }
 
   get settings(): ViewSettings {
@@ -40,16 +42,6 @@ export class ViewStore extends Emitter<ViewStoreEvents> {
   update(
     patch: Partial<ViewSettingsJSON>
   ): void {
-    const next = this.#settings.with(patch);
-    if (next.equals(this.#settings)) {
-      return;
-    }
-
-    this.#settings = next;
-    this.#storage.set(
-      kStorageKey,
-      JSON.stringify(next)
-    );
-    this.emit("change", next);
+    this.#preferences.update(VOXEL_MAP_PREFERENCES, patch);
   }
 }

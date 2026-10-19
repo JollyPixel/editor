@@ -63,6 +63,12 @@ export class ShareLinks implements Disposable {
     };
     this.#repository.insert(link);
     this.#scheduleExpiry();
+    this.#directory.record({
+      type: "share-link-created",
+      actorId: link.createdBy,
+      linkId: link.id,
+      assetId: link.assetId
+    });
 
     return link;
   }
@@ -114,6 +120,12 @@ export class ShareLinks implements Disposable {
 
     this.#repository.delete(linkId);
     this.#directory.revoke(shareLinkSubject(linkId));
+    this.#directory.record({
+      type: "share-link-revoked",
+      actorId,
+      linkId,
+      assetId: link.assetId
+    });
 
     return link;
   }

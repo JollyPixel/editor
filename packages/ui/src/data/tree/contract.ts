@@ -42,6 +42,10 @@ export interface TreeNode<
    * `false` keeps the children shown, with no expand toggle.
    */
   collapsible?: boolean;
+  /**
+   * `false` makes the row a heading that only folds and unfolds.
+   */
+  selectable?: boolean;
   icon?: IconName;
   /**
    * Drawn in place of `icon`, for a row that stands for a person.

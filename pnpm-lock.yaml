@@ -625,6 +625,9 @@ importers:
       '@jolly-pixel/controls':
         specifier: workspace:*
         version: link:../../controls
+      '@jolly-pixel/editor.host':
+        specifier: workspace:*
+        version: link:../host
       '@jolly-pixel/image':
         specifier: workspace:*
         version: link:../../image
@@ -659,9 +662,6 @@ importers:
       '@jolly-pixel/e2e':
         specifier: workspace:*
         version: link:../../e2e
-      '@jolly-pixel/editor.host':
-        specifier: workspace:*
-        version: link:../host
       '@jolly-pixel/engine':
         specifier: workspace:*
         version: link:../../engine
@@ -1082,6 +1082,9 @@ importers:
       '@jolly-pixel/asset.voxel-model':
         specifier: workspace:*
         version: link:../assets/voxel-model
+      '@jolly-pixel/controls':
+        specifier: workspace:*
+        version: link:../controls
       '@jolly-pixel/editor.host':
         specifier: workspace:*
         version: link:../editors/host
@@ -1094,6 +1097,9 @@ importers:
       '@jolly-pixel/editor.voxel-model':
         specifier: workspace:*
         version: link:../editors/voxel-model
+      '@jolly-pixel/event-store':
+        specifier: workspace:*
+        version: link:../event-store
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../network
@@ -1122,9 +1128,6 @@ importers:
       '@jolly-pixel/e2e':
         specifier: workspace:*
         version: link:../e2e
-      '@jolly-pixel/event-store':
-        specifier: workspace:*
-        version: link:../event-store
       '@jridgewell/trace-mapping':
         specifier: 0.3.31
         version: 0.3.31

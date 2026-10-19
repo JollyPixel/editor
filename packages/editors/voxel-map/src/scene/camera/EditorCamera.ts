@@ -5,6 +5,8 @@ import {
   type CameraPose,
   type Systems
 } from "@jolly-pixel/engine";
+import { followCameraPreferences } from "@jolly-pixel/editor.host";
+import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 import { clientToNdc } from "@jolly-pixel/three";
 import type { LogQueue } from "@jolly-pixel/ui";
 
@@ -30,6 +32,7 @@ export interface EditorCameraOptions {
   pointer: Pick<PointerCapture, "subscribe">;
   log: Pick<LogQueue, "push">;
   samples?: number;
+  preferences: Preferences;
 }
 
 export class EditorCamera {
@@ -50,7 +53,8 @@ export class EditorCamera {
       world,
       pointer,
       log,
-      samples = kDefaultSamples
+      samples = kDefaultSamples,
+      preferences
     } = options;
     this.#world = world;
     this.#log = log;
@@ -69,6 +73,7 @@ export class EditorCamera {
     });
 
     this.#disposables = [
+      followCameraPreferences(controls, preferences),
       world.input.keyboard.bind("Escape", () => {
         if (!controls.isOrbiting) {
           return false;

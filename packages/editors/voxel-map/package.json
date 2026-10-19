@@ -10,7 +10,8 @@
       "kinds": [
         "voxelmap"
       ],
-      "page": "index.html"
+      "page": "index.html",
+      "preferences": "src/preferences.ts"
     }
   },
   "scripts": {

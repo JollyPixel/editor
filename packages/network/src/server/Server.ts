@@ -114,6 +114,13 @@ export class Server {
     return this.#rooms.settled(roomName);
   }
 
+  replaceRights(
+    rights: RightsMap,
+    defaultRole?: string
+  ): void {
+    this.#rights.replace(rights, defaultRole);
+  }
+
   revoke(
     subject: string
   ): void {

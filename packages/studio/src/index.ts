@@ -1,7 +1,13 @@
 // Import Third-party Dependencies
 import "@jolly-pixel/ui";
-import { mountConsole } from "@jolly-pixel/editor.host";
-import { showConfirm } from "@jolly-pixel/ui";
+import {
+  PageAppearance,
+  mountConsole
+} from "@jolly-pixel/editor.host";
+import {
+  LocalStorageAdapter,
+  showConfirm
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { usersConsole } from "./accounts/usersConsole.ts";
@@ -14,7 +20,14 @@ import { ProjectManifest } from "./editors/ProjectManifest.ts";
 import { EditorRegistry } from "./editors/EditorRegistry.ts";
 import { EditorPrefetch } from "./editors/EditorPrefetch.ts";
 import "./icons.ts";
-import { StudioPreferences } from "./preferences/StudioPreferences.ts";
+import {
+  PreferenceScopes,
+  SHELL_PREFERENCES
+} from "./preferences/PreferenceScopes.ts";
+import { StudioAppearance } from "./preferences/StudioAppearance.ts";
+import { STUDIO_PREFERENCES } from "./preferences/studioScope.ts";
+import { SettingsSections } from "./shell/settings/SettingsSections.ts";
+import { settingsConsole } from "./shell/settings/settingsConsole.ts";
 import type { Studio } from "./shell/Studio.ts";
 import "./shell/Studio.ts";
 
@@ -48,17 +61,36 @@ function prewarmWebGPU(): void {
 
 async function boot(): Promise<void> {
   prewarmWebGPU();
-  const editorConsole = mountConsole();
+  const appearance = new StudioAppearance({
+    page: new PageAppearance(document),
+    hint: new LocalStorageAdapter()
+  });
+  const editorConsole = mountConsole({ appearance });
   const [connection, manifest] = await Promise.all([
     connectStudio(),
     ProjectManifest.fetch(document.baseURI)
   ]);
+  const { preferences } = connection;
+  appearance.follow(preferences);
+  const scopes = PreferenceScopes.studio(manifest.preferences());
+  const editors = createEditorRegistry(manifest, connection.editorQuery);
+  const settings = new SettingsSections({
+    signedIn: connection.signedIn !== null,
+    shellScopes: SHELL_PREFERENCES,
+    editors: manifest.editorScopes(),
+    kindPackages: manifest.kindPackages,
+    kinds: editors.kindSet(),
+    project: connection.signedIn?.project.rights
+  });
   const studio = required("jolly-studio");
   await studio.attach({
     console: editorConsole,
     share: connection.share,
     signedIn: connection.signedIn,
-    editors: createEditorRegistry(manifest, connection.editorQuery),
+    preferences,
+    scopes,
+    settings,
+    editors,
     confirmEvict: (tab) => showConfirm({
       title: "Editor limit reached",
       message: `Close "${tab.label}" to open another editor?`,
@@ -66,6 +98,7 @@ async function boot(): Promise<void> {
     })
   });
 
+  settingsConsole(editorConsole.commands, studio, settings);
   if (connection.signedIn?.isAdmin) {
     usersConsole(
       editorConsole.commands,
@@ -74,8 +107,8 @@ async function boot(): Promise<void> {
   }
 
   if (
-    new StudioPreferences().prefetchEditors &&
-      navigator.connection?.saveData !== true
+    preferences.values(STUDIO_PREFERENCES).prefetchEditors &&
+    navigator.connection?.saveData !== true
   ) {
     whenIdle(
       () => void new EditorPrefetch(manifest.editors, document.baseURI).run()

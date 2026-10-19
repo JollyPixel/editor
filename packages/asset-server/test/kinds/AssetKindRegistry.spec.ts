@@ -112,6 +112,22 @@ describe("AssetKindRegistry — lookup", () => {
     );
   });
 
+  test("replace swaps the handler of a registered kind only", () => {
+    const registry = new AssetKindRegistry([
+      handler("voxelmap", { ".map": "application/json" })
+    ]);
+    const replacement = handler("voxelmap", { ".map": "application/json" });
+
+    registry.replace(replacement);
+
+    assert.strictEqual(registry.get("voxelmap"), replacement);
+    assert.strictEqual(registry.resolve("a.map"), replacement);
+    assert.throws(
+      () => registry.replace(handler("pixelart", { ".png": "image/png" })),
+      { name: "UnknownAssetKindError", kind: "pixelart" }
+    );
+  });
+
   test("kinds() lists registrations without the fallback", () => {
     const registry = new AssetKindRegistry([
       handler("pixelart", { ".png": "image/png" }),

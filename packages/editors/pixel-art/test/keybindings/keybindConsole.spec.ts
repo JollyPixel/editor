@@ -7,24 +7,25 @@ import {
 
 // Import Third-party Dependencies
 import { CommandConsole } from "@jolly-pixel/console";
+import { Preferences } from "@jolly-pixel/editor.host/preferences";
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import {
-  KEY_BINDINGS_STORAGE_KEY,
-  PixelArtKeyBindingSettings
-} from "../../src/keybindings/PixelArtKeyBindingSettings.ts";
+import { PixelArtKeyBindingSettings } from "../../src/keybindings/PixelArtKeyBindingSettings.ts";
 import { pixelArtConsole } from "../../src/console/pixelArtConsole.ts";
 import { UvNetLibrary } from "../../src/uv/nets/UvNetLibrary.ts";
 
+// CONSTANTS
+const kScope = "pixel-art-keybindings";
+
 function boot(
-  storage: MemoryStorageAdapter
+  preferences = new Preferences()
 ) {
   const commands = new CommandConsole();
-  const keyBindingSettings = new PixelArtKeyBindingSettings({ storage });
+  const keyBindingSettings = PixelArtKeyBindingSettings.follow(preferences);
   pixelArtConsole(commands, {
     keyBindingSettings,
-    uvNets: new UvNetLibrary({ storage })
+    uvNets: new UvNetLibrary({ storage: new MemoryStorageAdapter() })
   });
 
   return {
@@ -43,7 +44,7 @@ function lastLine(
 
 describe("keybind console", () => {
   test("exposes the Select All binding and a reset command", async() => {
-    const { commands } = boot(new MemoryStorageAdapter());
+    const { commands } = boot();
     await commands.submit("pixelart.keybinds.selectAll");
 
     assert.equal(lastLine(commands), "info: Mod+a");
@@ -51,22 +52,22 @@ describe("keybind console", () => {
   });
 
   test("a read prints every binding of the action", async() => {
-    const { commands } = boot(new MemoryStorageAdapter());
+    const { commands } = boot();
 
     await commands.submit("pixelart.keybinds.redo");
 
     assert.equal(lastLine(commands), "info: Mod+y Mod+Shift+z");
   });
 
-  test("a write survives a reboot on the same storage", async() => {
-    const storage = new MemoryStorageAdapter();
-    const first = boot(storage);
+  test("a write survives a reboot on the same preferences", async() => {
+    const preferences = new Preferences();
+    const first = boot(preferences);
 
     await first.commands.submit("pixelart.keybinds.undo \"Mod+u\"");
     await first.commands.submit("pixelart.keybinds.redo Mod+y Mod+Shift+u");
     assert.equal(lastLine(first.commands), "info: Mod+y Mod+Shift+u");
 
-    const second = boot(storage);
+    const second = boot(preferences);
     assert.deepEqual(second.keyBindingSettings.keyBindings.overrides, {
       undo: ["Mod+u"],
       redo: ["Mod+y", "Mod+Shift+u"]
@@ -75,8 +76,8 @@ describe("keybind console", () => {
   });
 
   test("a conflict prints the KeyChordConflictError message and stores nothing", async() => {
-    const storage = new MemoryStorageAdapter();
-    const { commands, keyBindingSettings } = boot(storage);
+    const preferences = new Preferences();
+    const { commands, keyBindingSettings } = boot(preferences);
 
     await commands.submit("pixelart.keybinds.copy \"Mod+z\"");
 
@@ -85,11 +86,11 @@ describe("keybind console", () => {
       "error: Key chord \"Mod+z\" is bound to both \"copy\" and \"undo\""
     );
     assert.deepEqual(keyBindingSettings.chordsBoundTo("copy"), ["Mod+c"]);
-    assert.equal(storage.get(KEY_BINDINGS_STORAGE_KEY), null);
+    assert.deepEqual(preferences.overrides(kScope), {});
   });
 
   test("an empty value unbinds the action", async() => {
-    const { commands, keyBindingSettings } = boot(new MemoryStorageAdapter());
+    const { commands, keyBindingSettings } = boot();
 
     await commands.submit("pixelart.keybinds.delete \"\"");
 
@@ -98,7 +99,7 @@ describe("keybind console", () => {
   });
 
   test("a malformed binding prints the InvalidKeyChordError message", async() => {
-    const { commands } = boot(new MemoryStorageAdapter());
+    const { commands } = boot();
 
     await commands.submit("pixelart.keybinds.undo \"mod+z\"");
 
@@ -106,8 +107,8 @@ describe("keybind console", () => {
   });
 
   test("/pixelart.keybinds.reset restores one action and clears its stored entry", async() => {
-    const storage = new MemoryStorageAdapter();
-    const { commands, keyBindingSettings } = boot(storage);
+    const preferences = new Preferences();
+    const { commands, keyBindingSettings } = boot(preferences);
     await commands.submit("pixelart.keybinds.undo \"Mod+u\"");
     await commands.submit("pixelart.keybinds.delete \"Backspace\"");
 
@@ -115,15 +116,12 @@ describe("keybind console", () => {
 
     assert.equal(lastLine(commands), "info: undo restored to Mod+z");
     assert.deepEqual(keyBindingSettings.keyBindings.overrides, { delete: ["Backspace"] });
-    assert.deepEqual(
-      JSON.parse(storage.get(KEY_BINDINGS_STORAGE_KEY)!),
-      { delete: ["Backspace"] }
-    );
+    assert.deepEqual(preferences.overrides(kScope), { delete: ["Backspace"] });
   });
 
   test("/pixelart.keybinds.reset without an action restores every shortcut", async() => {
-    const storage = new MemoryStorageAdapter();
-    const { commands, keyBindingSettings } = boot(storage);
+    const preferences = new Preferences();
+    const { commands, keyBindingSettings } = boot(preferences);
     await commands.submit("pixelart.keybinds.undo \"Mod+u\"");
     await commands.submit("pixelart.keybinds.delete \"Backspace\"");
 
@@ -131,6 +129,6 @@ describe("keybind console", () => {
 
     assert.equal(lastLine(commands), "info: Every shortcut restored");
     assert.deepEqual(keyBindingSettings.keyBindings.overrides, {});
-    assert.deepEqual(JSON.parse(storage.get(KEY_BINDINGS_STORAGE_KEY)!), {});
+    assert.deepEqual(preferences.overrides(kScope), {});
   });
 });

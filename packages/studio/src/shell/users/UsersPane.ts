@@ -59,6 +59,9 @@ export class UsersPane extends LitElement {
   @property({ attribute: false })
   declare self: Account | null;
 
+  @property({ type: Boolean })
+  declare manage: boolean;
+
   @state()
   declare _collapsed: ReadonlySet<string>;
 
@@ -79,6 +82,7 @@ export class UsersPane extends LitElement {
   constructor() {
     super();
     this.self = null;
+    this.manage = false;
     this._collapsed = new Set();
   }
 
@@ -100,7 +104,7 @@ export class UsersPane extends LitElement {
         @jolly-toggle-expand=${this.#onToggleExpand}
         @jolly-context-request=${this.#onContextRequest}
       ></jolly-tree>
-      ${model.viewerIsAdmin ? html`
+      ${this.#manages(model) ? html`
         <jolly-context-menu
           label="User actions"
           @jolly-context-action=${this.#onContextAction}
@@ -121,6 +125,12 @@ export class UsersPane extends LitElement {
       roster.requests,
       this.self?.id ?? null
     );
+  }
+
+  #manages(
+    model: UsersTreeModel
+  ): boolean {
+    return this.manage && model.viewerIsAdmin;
   }
 
   #expanded(
@@ -151,7 +161,7 @@ export class UsersPane extends LitElement {
     const { id, x, y } = event.detail;
     const model = this.#model();
     if (
-      !model.viewerIsAdmin ||
+      !this.#manages(model) ||
       this._menu === null ||
       id === null
     ) {

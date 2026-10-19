@@ -4,22 +4,18 @@ import type {
   PerformanceStatsHud,
   ViewHelperSettings
 } from "@jolly-pixel/runtime";
-import type { StorageAdapter } from "@jolly-pixel/ui";
-import * as z from "zod/mini";
+
+// Import Internal Dependencies
+import { RUNTIME_PREFERENCES } from "../preferences/scope/hostPreferences.ts";
+import type { Preferences } from "../preferences/store/Preferences.ts";
+import type { PreferenceValues } from "../preferences/scope/PreferenceScope.ts";
 
 // CONSTANTS
-const kStorageKey = "jolly-pixel:runtime-widgets";
 const kWidgets = [
   "stats",
   "viewHelper",
   "metrics"
 ] as const;
-const kStoredFlag = z.catch(z.optional(z.boolean()), undefined);
-const kStoredVisibilitySchema = z.catch(z.object({
-  stats: kStoredFlag,
-  viewHelper: kStoredFlag,
-  metrics: kStoredFlag
-}), {});
 const kMissingMessages: Readonly<Record<RuntimeWidget, string>> = {
   stats: "No performance HUD is mounted.",
   viewHelper: "No view helper is mounted.",
@@ -40,19 +36,16 @@ interface Visibility {
   hidden: boolean;
 }
 
-type StoredVisibility = Partial<Record<RuntimeWidget, boolean>>;
+type WidgetValues = PreferenceValues<typeof RUNTIME_PREFERENCES.fields>;
 
 export class RuntimeWidgets {
-  #storage: StorageAdapter;
-  #stored: StoredVisibility;
+  #preferences: Preferences | null = null;
+  #unwatch: (() => void) | null = null;
   #targets: Readonly<Record<RuntimeWidget, () => Visibility | null>>;
 
   constructor(
-    host: RuntimeWidgetHost,
-    storage: StorageAdapter
+    host: RuntimeWidgetHost
   ) {
-    this.#storage = storage;
-    this.#stored = parseStoredVisibility(storage.get(kStorageKey));
     this.#targets = {
       stats: () => host.statsHud,
       viewHelper: () => host.viewHelper,
@@ -73,12 +66,9 @@ export class RuntimeWidgets {
   }
 
   startsHidden(
-    widget: RuntimeWidget,
-    fallback: boolean
+    widget: RuntimeWidget
   ): boolean {
-    const visible = this.#stored[widget];
-
-    return visible === undefined ? fallback : !visible;
+    return !this.#values()[widget];
   }
 
   show(
@@ -91,37 +81,31 @@ export class RuntimeWidgets {
     }
 
     target.hidden = !visible;
-    this.#stored = {
-      ...this.#stored,
-      [widget]: visible
-    };
-    this.#storage.set(kStorageKey, JSON.stringify(this.#stored));
+    this.#preferences?.assign(RUNTIME_PREFERENCES, widget, visible);
   }
 
-  restore(): void {
-    for (const widget of kWidgets) {
-      const visible = this.#stored[widget];
-      if (visible === undefined) {
-        continue;
-      }
+  follow(
+    preferences: Preferences
+  ): void {
+    this.#unwatch?.();
+    this.#preferences = preferences;
+    this.#apply(this.#values());
+    this.#unwatch = preferences.watch(RUNTIME_PREFERENCES, this.#apply);
+  }
 
+  #values(): WidgetValues {
+    return this.#preferences?.values(RUNTIME_PREFERENCES) ??
+      RUNTIME_PREFERENCES.defaults;
+  }
+
+  readonly #apply = (
+    values: WidgetValues
+  ): void => {
+    for (const widget of kWidgets) {
       const target = this.#targets[widget]();
       if (target !== null) {
-        target.hidden = !visible;
+        target.hidden = !values[widget];
       }
     }
-  }
-}
-
-function parseStoredVisibility(
-  raw: string | null
-): StoredVisibility {
-  try {
-    return kStoredVisibilitySchema.parse(
-      raw === null ? null : JSON.parse(raw)
-    );
-  }
-  catch {
-    return {};
-  }
+  };
 }

@@ -62,6 +62,14 @@ Encodes `image` with [`AvatarImage.encode`](#avatarimageencodeinput), stores it 
 
 The stored avatar, `{ hash, bytes }`, or `null` when the account has none.
 
+### `preferences(accountId)`
+
+A `Map` from scope name to that scope's overrides, a JSON object. Scopes without overrides are absent. The accounts store the objects as given: the caller validates them.
+
+### `replacePreferences(accountId, scope, overrides)`
+
+Replaces the overrides of one scope. An empty object removes the scope. Deleting the account deletes its preferences.
+
 ### `authenticate(request)`
 
 The network `AuthenticationProvider`: pass the accounts as the server's `auth`. It reads the session from the cookie of a same-origin upgrade and resolves it to:
@@ -105,6 +113,21 @@ Calls `listener` with the account id after a role change or a removal in the [`a
 
 It also calls `listener` with a link's guest subject, `share:<link id>`, when the link is revoked, expires, or its creator is removed, so its guests are disconnected and refused.
 
+### `watchActivity(listener)`
+
+Calls `listener` with an `AccountActivity` after each change an account makes, and returns a function that stops the calls. Every activity names its `type` and the `actorId` of the account behind it:
+
+```ts
+type AccountActivity =
+  | { type: "registered"; actorId; accountId; username; pending: boolean }
+  | { type: "approved"; actorId; accountId; username; role }
+  | { type: "denied" | "owner-transferred" | "removed"; actorId; accountId; username }
+  | { type: "role-changed"; actorId; accountId; username; from; to }
+  | { type: "share-link-created" | "share-link-revoked"; actorId; linkId; assetId };
+```
+
+A registration is its own actor. A share link that expires reports nothing.
+
 ### `watchProfiles(listener)`
 
 Calls `listener` with the account id and its new `profile`, shaped as in `authenticate`, after a [`PUT avatar`](#put-avatar). It returns a function that stops the calls. The network server watches it and sends the profile to every room the account's connections are in, without reconnecting them.
@@ -119,7 +142,27 @@ The [`accounts` room](#accounts-room), to register on the network server.
 
 ### `roles`
 
-The `AccountRoles` the accounts were built with.
+The current `AccountRoles`.
+
+### `replaceRoles(roles)`
+
+Replaces the roles. Later role changes and approvals check the new ones, a stored role that is no longer declared reads as the new `defaultRole`, and the [`accounts` room](#accounts-room) sends its roster again. Open connections keep their role until they [authenticate](#authenticaterequest) again.
+
+### `account(accountId)`
+
+The `Account` with that id, access requests included, or `null` once it is removed or denied.
+
+### `holders(role)`
+
+The ids of the accounts and access requests that store `role`.
+
+### `accessRequests`
+
+Whether a registration without the master password creates an access request.
+
+### `replaceAccessRequests(enabled)`
+
+Turns access requests on or off. Waiting requests stay. Throws a `TypeError` to turn them on without a `masterPassword`.
 
 ### `cookie`
 

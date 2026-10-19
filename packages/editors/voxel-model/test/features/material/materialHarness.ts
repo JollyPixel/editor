@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import type { ReactiveControllerHost } from "lit";
 import { MaterialSurface } from "@jolly-pixel/asset.voxel-model/client";
+import { Preferences } from "@jolly-pixel/editor.host/preferences";
 import type { MenuPoint } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -80,7 +81,7 @@ export function createMaterialHarness(
   };
   const controller = new MaterialLibraryController(host, prompts);
   const surface = new MaterialSurfaceController(host);
-  const view = new ViewSettingsStore();
+  const view = new ViewSettingsStore(new Preferences());
   const access = modelAccess();
   const workspace = {
     ...fixture,

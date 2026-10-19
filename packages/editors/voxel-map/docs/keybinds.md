@@ -59,7 +59,8 @@ keybinds.brush.ghost ""                  unbinds the ghost toggle
 
 A chord that another action already uses is refused with an error, and nothing changes.
 
-Changes are saved in the browser under `voxel-map:keybindings`, as the difference from the
-defaults. An entry that no longer parses is dropped at load and logged.
+Changes are saved in the `voxel-map-keybindings` preference scope, as the difference from the
+defaults, and the studio's Settings › Keybindings page edits the same scope. An entry that no
+longer parses is dropped at load and logged.
 
 The texture panel keeps its own shortcuts under `pixelart.keybinds`.

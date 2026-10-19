@@ -179,4 +179,31 @@ describe("ProjectKinds", () => {
       }
     );
   });
+
+  test("replace swaps a package for one with other options", async() => {
+    const load = packageLoader({
+      "kind-a": {
+        ASSET_KINDS: kindPackage(["alpha"])
+      },
+      "kind-b": {
+        ASSET_KINDS: kindPackage(["beta"])
+      }
+    });
+    const kinds = await ProjectKinds.load(
+      projectFile({ "kind-a": { size: 8 } }),
+      { load }
+    );
+    const other = await ProjectKinds.load(
+      projectFile({ "kind-b": {} }),
+      { load }
+    );
+    const [current] = kinds.packages;
+    const resized = current.withOptions({ size: 16 });
+
+    kinds.replace(resized);
+
+    assert.strictEqual(kinds.find("kind-a"), resized);
+    assert.strictEqual(kinds.handlers()[0], resized.handlers[0]);
+    assert.throws(() => kinds.replace(other.packages[0]), TypeError);
+  });
 });

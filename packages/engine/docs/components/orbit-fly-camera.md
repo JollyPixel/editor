@@ -66,6 +66,8 @@ interface OrbitFlyCameraOptions extends CameraOptions {
   responsiveness?: number;
   mouseSensitivity?: number;
   touchpadLookSensitivity?: number;
+  touchpadSwipe?: TouchpadSwipeMode; // "look" | "pan"
+  invertY?: boolean;
   keyLookSpeed?: number;
   maxPitch?: number;
   scrollSpeed?: number;
@@ -94,6 +96,8 @@ interface OrbitFlyCameraOptions extends CameraOptions {
 | `responsiveness` | `18` | Frame-rate-independent damping rate of the "lock" pivot and distance and the "elastic" trail distance, in 1/s |
 | `mouseSensitivity` | `0.003` | Mouse-look sensitivity |
 | `touchpadLookSensitivity` | `0.36` | Radians turned per wheel notch of a two-finger touchpad swipe; a negative value inverts it |
+| `touchpadSwipe` | `"look"` | `"look"`: a two-finger swipe turns the camera. `"pan"`: it moves the camera sideways and up or down, a twentieth of `moveSpeed` per notch. While a "lock" pivot is engaged, a swipe always orbits |
+| `invertY` | `false` | Turns the camera down when the mouse or the fingers move up. I/J/K/L keep their direction |
 | `keyLookSpeed` | `π / 2` | Radians per second turned while I/J/K/L is held |
 | `maxPitch` | `π / 2 - 0.01` | Maximum look-up/down pitch, in radians |
 | `scrollSpeed` | `2.5` | Trail distance changed per wheel notch in "elastic" mode, in world units |
@@ -131,6 +135,12 @@ interface OrbitFlyCamera {
 
   // Change moveSpeed at runtime (clamped to minMoveSpeed/maxMoveSpeed).
   set moveSpeed(value: number);
+
+  // The look options, read and written at runtime.
+  mouseSensitivity: number;
+  touchpadLookSensitivity: number;
+  touchpadSwipe: TouchpadSwipeMode;
+  invertY: boolean;
 
   // Whether a "lock" pivot is engaged, or an "elastic" pivot has a
   // non-zero trail distance.

@@ -32,6 +32,9 @@
       "path": "../asset"
     },
     {
+      "path": "../controls"
+    },
+    {
       "path": "../editors/host"
     },
     {

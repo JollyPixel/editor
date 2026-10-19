@@ -137,6 +137,10 @@ static parse<TAction extends string>(
   defaults: KeyBindingDefaults<TAction>,
   json: string
 ): ParsedKeyBindings<TAction>;
+static from<TAction extends string>(
+  defaults: KeyBindingDefaults<TAction>,
+  stored: unknown
+): ParsedKeyBindings<TAction>;
 
 interface ParsedKeyBindings<TAction extends string> {
   keyBindings: KeyBindingMap<TAction>;
@@ -144,9 +148,11 @@ interface ParsedKeyBindings<TAction extends string> {
 }
 ```
 
-`parse()` reads a stored `JSON.stringify(map)` value and never throws. It
-applies each entry in order and drops one that names an unknown action, is not
-a string or a list of strings, or makes the constructor throw. `dropped` holds
+`parse()` reads a stored `JSON.stringify(map)` value, and `from()` reads the
+already parsed object. Neither throws. A set of overrides that builds a valid
+map is taken whole, so two actions can trade chords. Otherwise each entry is
+applied in order, and one that names an unknown action, is not a string or a
+list of strings, or makes the constructor throw is dropped. `dropped` holds
 one message per dropped entry, such as
 `Dropped the stored keybinding "jump": unknown action`. A value that is not a
 JSON object drops every entry with a single message.
@@ -170,8 +176,8 @@ function rebind(action: Action, chords: readonly string[]): void {
 }
 ```
 
-[`KeyBindingSettings`](./key-binding-settings.md) holds the current map, saves
-each new one and emits it, and its `bind()` does this rebinding for you.
+[`KeyBindingSettings`](./key-binding-settings.md) holds the current map and
+emits each new one, and its `bind()` does this rebinding for you.
 
 `KEY_CODES` lists every key code a chord accepts, for a settings screen that
 offers them.

@@ -32,7 +32,10 @@ export const separatorStyles = css`
   .labelled {
     display: grid;
     grid-template-columns:
-      calc(var(--jolly-gutter-width, 0px) + var(--jolly-space-1, 4px))
+      calc(
+        var(--jolly-gutter-width, 0px) +
+          var(--jolly-field-inset-start, var(--jolly-space-1, 4px))
+      )
       auto
       minmax(0, 1fr);
     gap: var(--jolly-space-1, 4px);

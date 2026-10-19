@@ -75,7 +75,7 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    Shell["parent shell"] -->|"jolly-launch, jolly-appearance"| Page["editor page"]
+    Shell["parent shell"] -->|"jolly-launch, jolly-appearance, jolly-preferences"| Page["editor page"]
     Page -->|"jolly-shell commands"| Shell
     Page -->|"console namespaces"| Port["console port"]
 ```
@@ -85,6 +85,9 @@ flowchart TB
 - It posts `unsaved` when its documents gain or lose unacknowledged changes.
 - It posts `editor-state` on every page state change (`PageState`).
 - It posts `session-refused` and reconnects after `jolly-session-renewed`.
+- Its `context.preferences` start from the launch, follow `jolly-preferences`,
+  and post `update-preferences` on a change; standalone, they live in
+  `localStorage` (`Placement.openPreferences`).
 - Messages and ports: [ShellChannel](./docs/launch/ShellChannel.md).
 
 ## Placement

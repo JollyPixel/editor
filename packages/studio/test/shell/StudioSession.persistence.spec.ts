@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { TABS_STORAGE_KEY } from "../../src/preferences/StudioPreferences.ts";
+import { TABS_STORAGE_KEY } from "../../src/browser/BrowserState.ts";
 import { HOME_TAB_ID } from "../../src/tabs/EditorTabs.ts";
 import {
   CAVE_RECORD,
@@ -20,6 +20,7 @@ import {
   MAP_RECORD,
   MODEL_RECORD,
   session,
+  SETTINGS_PAGE_ID,
   TEXTURE_RECORD
 } from "../helpers/studioSession.ts";
 
@@ -45,6 +46,23 @@ describe("StudioSession tab persistence", () => {
     assert.deepEqual(frameTargets(), ["model-1"]);
   });
 
+  test("reopens the Settings page and keeps it active across a reload", async() => {
+    const catalog = new FakeCatalog([MAP_RECORD]);
+    const storage = new MemoryStorageAdapter();
+    const first = session(catalog, storage);
+    await first.openAsset("map-1");
+    first.tabs.openPage(SETTINGS_PAGE_ID);
+    disposeSession();
+
+    const second = session(catalog, storage);
+    await second.restoreTabs();
+
+    assert.deepEqual(second.tabs.ids(), ["map-1"]);
+    assert.deepEqual(second.tabs.openPages(), [SETTINGS_PAGE_ID]);
+    assert.equal(second.tabs.active, SETTINGS_PAGE_ID);
+    assert.deepEqual(frameTargets(), []);
+  });
+
   test("restores up to the cap, skipping assets it cannot open", async() => {
     const storage = new MemoryStorageAdapter();
     storage.set(TABS_STORAGE_KEY, JSON.stringify({
@@ -64,7 +82,8 @@ describe("StudioSession tab persistence", () => {
     assert.deepEqual(frameTargets(), []);
     assert.deepEqual(JSON.parse(storage.get(TABS_STORAGE_KEY) ?? ""), {
       ids: ["map-1", "model-1"],
-      active: HOME_TAB_ID
+      active: HOME_TAB_ID,
+      pages: []
     });
   });
 
@@ -91,7 +110,8 @@ describe("StudioSession tab persistence", () => {
 
     assert.deepEqual(JSON.parse(storage.get(TABS_STORAGE_KEY) ?? ""), {
       ids: ["model-1"],
-      active: "model-1"
+      active: "model-1",
+      pages: []
     });
   });
 });

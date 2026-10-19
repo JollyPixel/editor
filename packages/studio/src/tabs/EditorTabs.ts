@@ -172,6 +172,12 @@ export class EditorTabs {
     return this.list().map((tab) => tab.id);
   }
 
+  openPages(): string[] {
+    return [...this.#pages.keys()].filter(
+      (id) => id !== HOME_TAB_ID && this.#findItem(id) !== null
+    );
+  }
+
   list(): EditorTab[] {
     const items = [...this.#strip.children];
 

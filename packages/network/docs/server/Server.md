@@ -62,6 +62,14 @@ whose `send` serializes its argument.
 Returns a session with `receive(raw)` and `close()`.
 Activity is ordered per connection and room.
 
+### `replaceRights(rights, defaultRole?): void`
+
+Swaps the rules of the [rights table](./Access.md#rights) for every room.
+Later checks use the new rules; connected sessions keep their role, and
+rooms they joined keep them. Revoke a subject to make it join again under
+the new rules. Throws a `TypeError` when the server was built without
+rights or `rights` is empty.
+
 ### `revoke(subject): void`
 
 Blocks further activity, then requests reauthentication after in-flight work drains.

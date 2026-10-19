@@ -16,6 +16,7 @@ import {
   type SeedOptions
 } from "./assets.ts";
 import { Home } from "./home.ts";
+import { SettingsPage } from "./settings.ts";
 import { ShareLinksPane } from "./shares.ts";
 import {
   EditorFrames,
@@ -35,6 +36,7 @@ export class StudioShell {
   readonly account: AccountBadge;
   readonly roster: Roster;
   readonly shareLinks: ShareLinksPane;
+  readonly settings: SettingsPage;
   readonly theme: Locator;
   readonly offlineFallback: Locator;
 
@@ -49,7 +51,8 @@ export class StudioShell {
     this.signIn = new SignInDialog(page);
     this.account = new AccountBadge(page);
     this.roster = new Roster(page);
-    this.shareLinks = new ShareLinksPane(page);
+    this.settings = new SettingsPage(page);
+    this.shareLinks = new ShareLinksPane(page, this.account, this.settings);
     this.theme = page.locator("jolly-scope").first();
     this.offlineFallback = page.getByRole("button", { name: "Open offline workspace" });
   }

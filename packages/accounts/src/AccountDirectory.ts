@@ -11,6 +11,7 @@ import {
 } from "@jolly-pixel/network/node";
 
 // Import Internal Dependencies
+import type { AccountActivity } from "./AccountActivity.ts";
 import type {
   AccessRequest,
   Account
@@ -68,12 +69,12 @@ export type AccountDirectoryEventMap = {
   changed: () => void;
   revoked: (subject: string) => void;
   profile: (account: Account) => void;
+  activity: (activity: AccountActivity) => void;
 };
 
 export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
   implements Iterable<Account> {
-  readonly roles: AccountRoles;
-
+  #roles: AccountRoles;
   #database: AccountsDatabase;
   #throttle: AccountsThrottle;
   #hashes: Mutex;
@@ -87,7 +88,7 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     super();
 
     this.#database = options.database;
-    this.roles = options.roles;
+    this.#roles = options.roles;
     this.#throttle = new AccountsThrottle(options.throttle);
     this.#hashes = new Mutex({
       concurrency: options.maxConcurrentHashes ?? kDefaultMaxConcurrentHashes
@@ -113,19 +114,23 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     const hash = await this.#hashing(
       () => hashPassword(password.value)
     );
-    if (status === "pending") {
-      this.#requestAccess(username, hash);
-      this.emit("changed");
+    const account = status === "pending" ?
+      this.#requestAccess(username, hash) :
+      this.#register(username, hash);
+    this.#changed({
+      type: "registered",
+      actorId: account.id,
+      accountId: account.id,
+      username: account.username,
+      pending: account.pending
+    });
 
-      return { status };
-    }
-    const account = this.#register(username, hash);
-    this.emit("changed");
-
-    return {
-      status,
-      account: this.#account(account)
-    };
+    return status === "pending" ?
+      { status } :
+      {
+        status,
+        account: this.#account(account)
+      };
   }
 
   async login(
@@ -154,6 +159,47 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     return this.#account(stored.account);
   }
 
+  get roles(): AccountRoles {
+    return this.#roles;
+  }
+
+  get accessRequests(): boolean {
+    return this.#masterPassword?.accessRequests ?? false;
+  }
+
+  replaceRoles(
+    roles: AccountRoles
+  ): void {
+    this.#roles = roles;
+    this.emit("changed");
+  }
+
+  replaceAccessRequests(
+    enabled: boolean
+  ): void {
+    if (this.#masterPassword === null) {
+      if (enabled) {
+        throw new TypeError("access requests need a master password");
+      }
+
+      return;
+    }
+    this.#masterPassword.accessRequests = enabled;
+  }
+
+  holders(
+    role: string
+  ): string[] {
+    const ids: string[] = [];
+    for (const account of this.#database.accounts) {
+      if (account.role === role) {
+        ids.push(account.id);
+      }
+    }
+
+    return ids;
+  }
+
   account(
     id: string
   ): Account | null {
@@ -173,7 +219,7 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     username: Username,
     role: string
   ): Account {
-    const account = this.#database.transaction(() => {
+    const { account, from } = this.#database.transaction(() => {
       this.#actor(actorId).assertAdmin();
       this.#assertDeclared(role);
       const target = this.#existingAccount(username);
@@ -181,9 +227,19 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
       const changed = target.withRole(role);
       this.#database.accounts.save(changed);
 
-      return changed;
+      return {
+        account: changed,
+        from: target.role
+      };
     });
-    this.emit("changed");
+    this.#changed({
+      type: "role-changed",
+      actorId,
+      accountId: account.id,
+      username: account.username,
+      from,
+      to: role
+    });
     this.revoke(account.id);
 
     return this.#account(account);
@@ -202,7 +258,13 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
 
       return approved;
     });
-    this.emit("changed");
+    this.#changed({
+      type: "approved",
+      actorId,
+      accountId: account.id,
+      username: account.username,
+      role
+    });
 
     return this.#account(account);
   }
@@ -211,13 +273,19 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     actorId: string,
     username: Username
   ): void {
-    this.#database.transaction(() => {
+    const request = this.#database.transaction(() => {
       this.#actor(actorId).assertAdmin();
-      this.#database.accounts.delete(
-        this.#existingRequest(username).id
-      );
+      const denied = this.#existingRequest(username);
+      this.#database.accounts.delete(denied.id);
+
+      return denied;
     });
-    this.emit("changed");
+    this.#changed({
+      type: "denied",
+      actorId,
+      accountId: request.id,
+      username: request.username
+    });
   }
 
   remove(
@@ -236,7 +304,12 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
         links: createdLinks
       };
     });
-    this.emit("changed");
+    this.#changed({
+      type: "removed",
+      actorId,
+      accountId: account.id,
+      username: account.username
+    });
     this.revoke(account.id);
     for (const link of links) {
       this.revoke(shareLinkSubject(link.id));
@@ -258,7 +331,12 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
 
       return transferred;
     });
-    this.emit("changed");
+    this.#changed({
+      type: "owner-transferred",
+      actorId,
+      accountId: owner.id,
+      username: owner.username
+    });
     this.revoke(owner.id);
 
     return this.#account(owner);
@@ -294,6 +372,12 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     this.emit("revoked", subject);
   }
 
+  record(
+    activity: AccountActivity
+  ): void {
+    this.emit("activity", activity);
+  }
+
   * [Symbol.iterator](): IterableIterator<Account> {
     for (const account of this.#database.accounts) {
       if (!account.pending) {
@@ -321,7 +405,7 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
       this.#assertAvailable(username);
       const account = this.#database.accounts.size === 0 ?
         AccountEntity.claim(username) :
-        AccountEntity.register(username, this.roles.defaultRole);
+        AccountEntity.register(username, this.#roles.defaultRole);
       this.#database.accounts.insert(account, username, hash);
 
       return account;
@@ -331,18 +415,24 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
   #requestAccess(
     username: Username,
     hash: PasswordHash
-  ): void {
-    this.#database.transaction(() => {
+  ): AccountEntity {
+    return this.#database.transaction(() => {
       if (this.#database.accounts.pendingSize >= this.#maxAccessRequests) {
         throw new AccessRequestsFullError(this.#maxAccessRequests);
       }
       this.#assertAvailable(username);
-      this.#database.accounts.insert(
-        AccountEntity.request(username, this.roles.defaultRole),
-        username,
-        hash
-      );
+      const request = AccountEntity.request(username, this.#roles.defaultRole);
+      this.#database.accounts.insert(request, username, hash);
+
+      return request;
     });
+  }
+
+  #changed(
+    activity: AccountActivity
+  ): void {
+    this.emit("changed");
+    this.record(activity);
   }
 
   #assertAvailable(
@@ -393,7 +483,7 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
   #assertDeclared(
     role: string
   ): void {
-    if (!this.roles.has(role)) {
+    if (!this.#roles.has(role)) {
       throw new AccountChangeRefusedError(`"${role}" is not a role`);
     }
   }
@@ -404,7 +494,7 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     return {
       id: account.id,
       username: account.username,
-      role: this.roles.effective(account.role),
+      role: this.#roles.effective(account.role),
       owner: account.owner,
       avatar: account.avatarHash === null ?
         undefined :

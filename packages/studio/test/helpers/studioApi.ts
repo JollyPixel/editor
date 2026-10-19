@@ -13,14 +13,27 @@ import {
   AccountRoles,
   type AccountsOpenOptions
 } from "@jolly-pixel/accounts/node";
-import { createAssetWorkspace } from "@jolly-pixel/asset-server/node";
+import {
+  createAssetWorkspace,
+  PackageResolver,
+  ProjectFile,
+  ProjectKinds
+} from "@jolly-pixel/asset-server/node";
 
 // Import Internal Dependencies
 import {
   StudioApi,
   type StudioApiOptions
 } from "../../server/api/StudioApi.ts";
+import { AssetLog } from "../../server/audit/AssetLog.ts";
+import { AuditFeed } from "../../server/audit/AuditFeed.ts";
+import { AuditLog } from "../../server/audit/AuditLog.ts";
+import { EditorPackages } from "../../server/editors/EditorPackages.ts";
 import { ProjectArchive } from "../../server/project/ProjectArchive.ts";
+import { ProjectSettings } from "../../server/project/ProjectSettings.ts";
+import { StudioProject } from "../../server/project/StudioProject.ts";
+import { PreferenceScopes } from "../../src/preferences/PreferenceScopes.ts";
+import { STUDIO_PREFERENCES } from "../../src/preferences/studioScope.ts";
 import { StudioAccess } from "../../server/project/StudioAccess.ts";
 import { StudioShares } from "../../server/shares/StudioShares.ts";
 import { sharedCatalog } from "./shares.ts";
@@ -63,8 +76,14 @@ export interface StudioApiAccountsOptions extends Omit<
 }
 
 export type StudioApiListenOptions = Omit<
-  StudioApiOptions, "accounts" | "shares" | "archive"
->;
+  StudioApiOptions,
+  "accounts" | "shares" | "archive" | "settings" | "audit" | "preferences"
+> & {
+  /**
+   * @default new PreferenceScopes([STUDIO_PREFERENCES])
+   */
+  preferences?: PreferenceScopes;
+};
 
 export async function listenStudioApi(
   options: StudioApiAccountsOptions = {},
@@ -85,24 +104,45 @@ export async function listenStudioApi(
       defaultRole
     })
   });
-  const access = StudioAccess.read({ version: 1 }, "project.json");
+  const project = new StudioProject(
+    new ProjectFile("project", { version: 1 }, { inMemory: true }),
+    new EditorPackages([]),
+    new ProjectKinds([], new PackageResolver("project")),
+    StudioAccess.read({ version: 1 }, "project.json")
+  );
   const shares = new StudioShares({
     accounts,
-    access,
+    project,
     catalog: Promise.resolve(sharedCatalog(closures))
   });
   const workspace = await createAssetWorkspace({
     root: "project",
     inMemory: true
   });
+  const audit = await AuditLog.open(null);
   const api = await StudioApi.open({
+    preferences: new PreferenceScopes([STUDIO_PREFERENCES]),
     ...apiOptions,
     accounts,
     shares,
     archive: new ProjectArchive({
-      access,
+      project,
       backend: workspace.backend,
       name: "project"
+    }),
+    audit: new AuditFeed({
+      project,
+      assets: new AssetLog(workspace.eventStore),
+      audit,
+      account: (accountId) => accounts.account(accountId),
+      assetPath: () => undefined
+    }),
+    settings: new ProjectSettings({
+      project,
+      accounts,
+      server: workspace.server,
+      registry: workspace.backend.kinds,
+      audit
     })
   });
   const server = http.createServer((request, response) => {
@@ -132,6 +172,7 @@ export async function listenStudioApi(
       });
       await api[Symbol.asyncDispose]();
       await workspace.close();
+      audit[Symbol.dispose]();
       accounts[Symbol.dispose]();
     }
   };

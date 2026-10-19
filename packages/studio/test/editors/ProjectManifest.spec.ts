@@ -15,7 +15,9 @@ import {
 const kEditors = [
   {
     name: "voxel-map",
-    kinds: ["voxelmap"]
+    kinds: ["voxelmap"],
+    preferences: [],
+    sharedPreferences: []
   }
 ];
 const kKinds = [
@@ -36,18 +38,26 @@ const kKinds = [
     convertsFrom: [".png"]
   }
 ];
+const kKindPackages = [
+  {
+    name: "@jolly-pixel/asset.voxel-map",
+    kinds: ["voxelmap", "blockset"]
+  }
+];
 
 describe("ProjectManifest", () => {
   test("parses back the JSON it serializes to", () => {
     const manifest = ProjectManifest.parse(JSON.parse(JSON.stringify(
       new ProjectManifest({
         editors: kEditors,
-        kinds: kKinds
+        kinds: kKinds,
+        kindPackages: kKindPackages
       })
     )));
 
     assert.deepEqual(manifest.editors, kEditors);
     assert.deepEqual(manifest.kinds, kKinds);
+    assert.deepEqual(manifest.kindPackages, kKindPackages);
   });
 
   test("drops the properties a descriptor does not declare", () => {
@@ -63,11 +73,62 @@ describe("ProjectManifest", () => {
           ...kKinds[1],
           handler: "code"
         }
-      ]
+      ],
+      kindPackages: []
     });
 
     assert.deepEqual(manifest.editors, kEditors);
     assert.deepEqual(manifest.kinds, [kKinds[1]]);
+  });
+
+  test("lists the declared and shared scopes of every editor, skipping invalid ones", () => {
+    const manifest = new ProjectManifest({
+      editors: [
+        {
+          name: "voxel-map",
+          kinds: ["voxelmap"],
+          preferences: [
+            {
+              name: "voxel-map",
+              label: "Voxel map",
+              fields: {
+                grid: {
+                  type: "boolean",
+                  label: "Grid",
+                  default: true
+                }
+              }
+            },
+            {
+              name: "Not Kebab"
+            }
+          ],
+          sharedPreferences: [
+            {
+              name: "pixel-art",
+              label: "Pixel art",
+              fields: {
+                palette: {
+                  type: "boolean",
+                  label: "Palette",
+                  default: false
+                }
+              }
+            }
+          ]
+        }
+      ],
+      kinds: [],
+      kindPackages: []
+    });
+    const [voxelMap] = manifest.editorScopes();
+
+    assert.deepEqual(voxelMap.scopes.map((scope) => scope.name), ["voxel-map"]);
+    assert.deepEqual(voxelMap.shared.map((scope) => scope.name), ["pixel-art"]);
+    assert.deepEqual(
+      [...manifest.preferences()].map((scope) => scope.name),
+      ["voxel-map", "pixel-art"]
+    );
   });
 
   test("names the manifest file it rejects", () => {

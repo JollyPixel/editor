@@ -59,7 +59,9 @@ new UvNetLibrary(options?: UvNetLibraryOptions)
 
 `storage` defaults to a `MemoryStorageAdapter`, which forgets user nets on reload. User nets and
 the chosen default are stored under `UV_NETS_STORAGE_KEY` (`"pixel-art:uv-nets"`). A stored net
-that no longer parses, or reuses a locked id, is dropped.
+that no longer parses, or reuses a locked id, is dropped. The editors pass a
+[`PreferenceStorage`](../../../host/docs/preferences/Preferences.md#preferencestorage) over the
+`uvNets` field of the `pixel-art` scope, so the nets follow the account in every editor.
 
 `rows` follows the [`UVNet` constructor](../../../../pixel-draw-renderer/docs/uv/UVNet.md#constructor);
 `null` is the packing net. `defaultId` is the default until the user picks another one, and when

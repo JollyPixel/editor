@@ -34,6 +34,11 @@ export interface MountConsoleOptions {
    * @default new LocalStorageAdapter()
    */
   storage?: StorageAdapter;
+  /**
+   * What the `theme` and `density` variables read and write. Without it,
+   * the page restores and stores them in `storage`.
+   */
+  appearance?: Appearance;
 }
 
 export function mountConsole(
@@ -44,11 +49,8 @@ export function mountConsole(
     storage = new LocalStorageAdapter()
   } = options;
 
-  const appearance = new StoredAppearance({
-    page: new PageAppearance(parent.ownerDocument),
-    storage
-  });
-  appearance.restore();
+  const appearance = options.appearance ??
+    restoredAppearance(parent.ownerDocument, storage);
 
   const commands = new CommandConsole();
   registerAppearanceVariables(commands, appearance);
@@ -67,6 +69,19 @@ export function mountConsole(
       commands.unregister();
     }
   };
+}
+
+function restoredAppearance(
+  document: Document,
+  storage: StorageAdapter
+): Appearance {
+  const appearance = new StoredAppearance({
+    page: new PageAppearance(document),
+    storage
+  });
+  appearance.restore();
+
+  return appearance;
 }
 
 function registerAppearanceVariables(

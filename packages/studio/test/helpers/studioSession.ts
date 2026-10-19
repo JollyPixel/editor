@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type { AssetRecordData } from "@jolly-pixel/asset";
+import { Preferences } from "@jolly-pixel/editor.host/preferences";
 import {
   MemoryStorageAdapter,
   type StorageAdapter
@@ -7,7 +8,8 @@ import {
 
 // Import Internal Dependencies
 import { EditorRegistry } from "../../src/editors/EditorRegistry.ts";
-import { StudioPreferences } from "../../src/preferences/StudioPreferences.ts";
+import { BrowserState } from "../../src/browser/BrowserState.ts";
+import { PreferenceScopes } from "../../src/preferences/PreferenceScopes.ts";
 import {
   StudioSession,
   type StudioCatalog,
@@ -16,6 +18,7 @@ import {
 import { idleShare } from "./catalogShare.ts";
 
 // CONSTANTS
+export const SETTINGS_PAGE_ID = "studio:settings";
 export const MAP_RECORD: AssetRecordData = {
   id: "map-1",
   kind: "voxelmap",
@@ -93,7 +96,8 @@ export function session(
   });
   const frames = document.createElement("div");
   const home = document.createElement("section");
-  document.body.append(strip, frames, home);
+  const settings = document.createElement("section");
+  document.body.append(strip, frames, home, settings);
   current = new StudioSession({
     catalog,
     editors: new EditorRegistry()
@@ -114,6 +118,14 @@ export function session(
     tabs: {
       strip,
       home,
+      pages: [
+        {
+          id: SETTINGS_PAGE_ID,
+          label: "Settings",
+          icon: "settings",
+          element: settings
+        }
+      ],
       cap
     },
     frames: {
@@ -121,8 +133,12 @@ export function session(
       launchOrigin: "http://localhost",
       share: idleShare()
     },
-    preferences: new StudioPreferences(storage),
-    ...extra
+    browserState: new BrowserState(storage),
+    ...extra,
+    preferences: extra.preferences ?? {
+      values: new Preferences(),
+      scopes: new PreferenceScopes([])
+    }
   });
 
   return current;

@@ -12,30 +12,46 @@ import { ApiError } from "../errors/ApiError.ts";
 import { accountsFailure } from "../errors/accountsFailure.ts";
 import { requireAccount } from "../requireAccount.ts";
 import { AttachmentDisposition } from "../../../src/project/AttachmentDisposition.ts";
-import type { ProjectReply } from "../../../src/project/routes.ts";
+import type {
+  AccessSection,
+  KindOptions,
+  ProjectReply,
+  ProjectSettingsReply
+} from "../../../src/project/routes.ts";
 import type { ProjectArchive } from "../../project/ProjectArchive.ts";
+import type { ProjectSettings } from "../../project/ProjectSettings.ts";
+import { InvalidSettingsError } from "../../project/errors/InvalidSettingsError.ts";
 import { ProjectExportRefusedError } from "../../project/errors/ProjectExportRefusedError.ts";
+import { RoleInUseError } from "../../project/errors/RoleInUseError.ts";
+import { SettingsRefusedError } from "../../project/errors/SettingsRefusedError.ts";
+
+export interface ReplaceKindsRoute {
+  Body: KindOptions;
+}
+
+export interface ReplaceAccessRoute {
+  Body: AccessSection;
+}
 
 export class ProjectController {
   #accounts: Accounts;
   #archive: ProjectArchive;
+  #settings: ProjectSettings;
 
   constructor(
     accounts: Accounts,
-    archive: ProjectArchive
+    archive: ProjectArchive,
+    settings: ProjectSettings
   ) {
     this.#accounts = accounts;
     this.#archive = archive;
+    this.#settings = settings;
   }
 
   access(
     request: FastifyRequest
   ): ProjectReply {
-    return {
-      canExport: this.#archive.canExport(
-        requireAccount(this.#accounts, request)
-      )
-    };
+    return this.#settings.rights(requireAccount(this.#accounts, request));
   }
 
   async archive(
@@ -53,6 +69,30 @@ export class ProjectController {
       .send(Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength));
   }
 
+  settings(
+    request: FastifyRequest
+  ): ProjectSettingsReply {
+    return this.#settings.read(requireAccount(this.#accounts, request));
+  }
+
+  replaceKinds(
+    request: FastifyRequest<ReplaceKindsRoute>
+  ): Promise<ProjectSettingsReply> {
+    return this.#settings.replaceKinds(
+      requireAccount(this.#accounts, request),
+      request.body
+    );
+  }
+
+  replaceAccess(
+    request: FastifyRequest<ReplaceAccessRoute>
+  ): Promise<ProjectSettingsReply> {
+    return this.#settings.replaceAccess(
+      requireAccount(this.#accounts, request),
+      request.body
+    );
+  }
+
   failure(
     error: unknown
   ): unknown {
@@ -61,6 +101,15 @@ export class ProjectController {
     }
     if (error instanceof ProjectExportRefusedError) {
       return new ApiError(403, "export-refused", error.message);
+    }
+    if (error instanceof SettingsRefusedError) {
+      return new ApiError(403, "settings-refused", error.message);
+    }
+    if (error instanceof InvalidSettingsError) {
+      return new ApiError(400, "invalid-settings", error.message);
+    }
+    if (error instanceof RoleInUseError) {
+      return new ApiError(409, "role-in-use", error.message);
     }
 
     return error;

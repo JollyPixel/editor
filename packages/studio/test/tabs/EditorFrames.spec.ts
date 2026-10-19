@@ -12,9 +12,14 @@ import {
   parseLaunchMessage,
   READY_MESSAGE_TYPE,
   SHELL_MESSAGE_TYPE,
+  preferencesMessage,
   type LaunchIdentity,
   type ShellCommand
 } from "@jolly-pixel/editor.host";
+import {
+  Preferences,
+  RUNTIME_PREFERENCES
+} from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import {
@@ -51,13 +56,34 @@ describe("EditorFrames", () => {
             type: LAUNCH_MESSAGE_TYPE,
             target: "map-1",
             appearance: { theme: "dark", density: "comfortable" },
-            identity: null
+            identity: null,
+            preferences: {}
           },
           ["catalog"],
           FRAME_ORIGIN
         ]
       ]
     );
+  });
+
+  test("launches with the shell's preferences, then pushes each change", () => {
+    const preferences = new Preferences({
+      overrides: [["runtime", { stats: false }]]
+    });
+    editorFrames({ preferences }).show(MAP_TAB);
+    const posted = recordPosts(frame());
+
+    postFrom(frame().contentWindow, { type: READY_MESSAGE_TYPE });
+    preferences.assign(RUNTIME_PREFERENCES, "metrics", true);
+
+    assert.deepEqual(
+      parseLaunchMessage(posted[0]?.[0])?.preferences,
+      { runtime: { stats: false } }
+    );
+    assert.deepEqual(posted[1], [
+      preferencesMessage("runtime", { stats: false, metrics: true }),
+      FRAME_ORIGIN
+    ]);
   });
 
   test("launches every frame as the shell's current peer", () => {

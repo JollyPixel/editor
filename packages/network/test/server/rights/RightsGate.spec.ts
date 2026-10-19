@@ -52,4 +52,18 @@ describe("RightsGate", () => {
 
     assert.strictEqual(gate.canWrite("viewer", "voxel-set"), true);
   });
+
+  test("answers from the replacing rules after a check cached the old right", () => {
+    const table = new RightsTable({
+      viewer: { "voxel.renderer.*": "write" }
+    });
+    const gate = table.scope("voxel.renderer");
+    assert.strictEqual(gate.check("viewer", "voxel-set"), "write");
+
+    table.replace({
+      viewer: { "voxel.renderer.*": "read" }
+    });
+
+    assert.strictEqual(gate.check("viewer", "voxel-set"), "read");
+  });
 });

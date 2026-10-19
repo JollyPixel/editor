@@ -13,6 +13,7 @@ import {
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
+import type { AccountActivity } from "./AccountActivity.ts";
 import {
   GUEST_ROLE,
   type Account
@@ -30,6 +31,7 @@ import type {
   RegistrationBody
 } from "./http/routes.schema.ts";
 import { AccountsDatabase } from "./store/AccountsDatabase.ts";
+import type { PreferenceOverrides } from "./store/PreferenceRepository.ts";
 import { PasswordDigest } from "./session/PasswordDigest.ts";
 import { SessionCookie } from "./session/SessionCookie.ts";
 import { CookieSessions } from "./session/CookieSessions.ts";
@@ -123,7 +125,6 @@ export class Accounts implements AuthenticationProvider, Disposable {
     });
   }
 
-  readonly roles: AccountRoles;
   readonly cookie: SessionCookie;
   readonly extension: AccountsExtension;
   readonly shareLinks: ShareLinks;
@@ -136,7 +137,6 @@ export class Accounts implements AuthenticationProvider, Disposable {
     options: AccountsOptions
   ) {
     this.#database = options.database;
-    this.roles = options.roles;
     this.#directory = new AccountDirectory({
       database: options.database,
       roles: options.roles,
@@ -156,6 +156,38 @@ export class Accounts implements AuthenticationProvider, Disposable {
       options.database.shareLinks,
       this.#directory
     );
+  }
+
+  get roles(): AccountRoles {
+    return this.#directory.roles;
+  }
+
+  get accessRequests(): boolean {
+    return this.#directory.accessRequests;
+  }
+
+  replaceRoles(
+    roles: AccountRoles
+  ): void {
+    this.#directory.replaceRoles(roles);
+  }
+
+  replaceAccessRequests(
+    enabled: boolean
+  ): void {
+    this.#directory.replaceAccessRequests(enabled);
+  }
+
+  holders(
+    role: string
+  ): string[] {
+    return this.#directory.holders(role);
+  }
+
+  account(
+    accountId: string
+  ): Account | null {
+    return this.#directory.account(accountId);
   }
 
   async register(
@@ -218,6 +250,20 @@ export class Accounts implements AuthenticationProvider, Disposable {
     return this.#directory.avatar(accountId);
   }
 
+  preferences(
+    accountId: string
+  ): Map<string, PreferenceOverrides> {
+    return this.#database.preferences.findAll(accountId);
+  }
+
+  replacePreferences(
+    accountId: string,
+    scope: string,
+    overrides: PreferenceOverrides
+  ): void {
+    this.#database.preferences.replace(accountId, scope, overrides);
+  }
+
   authenticate(
     request: AuthenticationRequest
   ): PeerIdentity | null {
@@ -244,6 +290,12 @@ export class Accounts implements AuthenticationProvider, Disposable {
     listener: (accountId: string) => void
   ): () => void {
     return this.#directory.subscribe("revoked", listener);
+  }
+
+  watchActivity(
+    listener: (activity: AccountActivity) => void
+  ): () => void {
+    return this.#directory.subscribe("activity", listener);
   }
 
   watchProfiles(

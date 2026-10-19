@@ -12,6 +12,7 @@ import type {
 import type {
   AssetDocumentKind
 } from "../lease/AssetLease.ts";
+import type { Preferences } from "../preferences/store/Preferences.ts";
 import type { EditorRuntime } from "../runtime/EditorRuntime.ts";
 import type { EditorSession } from "../session/EditorSession.ts";
 import type { EditorIdentityOptions } from "../session/SessionConnection.ts";
@@ -25,6 +26,10 @@ export interface EditorContext {
   logger: HostLogger;
   commands: CommandConsole;
   lantern: Lantern;
+  /**
+   * The shell's preferences under a shell, otherwise `LocalPreferences`.
+   */
+  preferences: Preferences;
 }
 
 export interface RuntimeEditorContext extends EditorContext {

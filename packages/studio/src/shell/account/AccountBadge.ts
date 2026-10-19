@@ -16,10 +16,6 @@ import type { Account } from "@jolly-pixel/accounts";
 // Import Internal Dependencies
 import { accountMenu } from "./accountMenu.ts";
 
-export interface AvatarChangeDetail {
-  image: File;
-}
-
 @customElement("studio-account")
 export class AccountBadge extends LitElement {
   static override styles = css`
@@ -62,9 +58,6 @@ export class AccountBadge extends LitElement {
   @query("jolly-context-menu")
   declare _menu: HTMLElementTagNameMap["jolly-context-menu"] | null;
 
-  @query("input[type=file]")
-  declare _picker: HTMLInputElement | null;
-
   constructor() {
     super();
     this.account = null;
@@ -95,12 +88,6 @@ export class AccountBadge extends LitElement {
         .items=${accountMenu(this.account)}
         @jolly-context-action=${this.#onAction}
       ></jolly-context-menu>
-      <input
-        type="file"
-        accept="image/*"
-        hidden
-        @change=${this.#onPick}
-      />
     `;
   }
 
@@ -120,8 +107,11 @@ export class AccountBadge extends LitElement {
     event: HTMLElementEventMap["jolly-context-action"]
   ): void => {
     switch (event.detail.id) {
-      case "change-avatar":
-        this._picker?.click();
+      case "settings":
+        this.dispatchEvent(new Event("settings-open", {
+          bubbles: true,
+          composed: true
+        }));
         break;
       case "sign-out":
         this.dispatchEvent(new CustomEvent("sign-out", {
@@ -130,24 +120,6 @@ export class AccountBadge extends LitElement {
         }));
         break;
     }
-  };
-
-  readonly #onPick = (): void => {
-    const image = this._picker?.files?.[0];
-    if (this._picker !== null) {
-      this._picker.value = "";
-    }
-    if (image === undefined) {
-      return;
-    }
-
-    this.dispatchEvent(new CustomEvent<AvatarChangeDetail>("avatar-change", {
-      bubbles: true,
-      composed: true,
-      detail: {
-        image
-      }
-    }));
   };
 }
 
@@ -158,6 +130,5 @@ declare global {
 
   interface HTMLElementEventMap {
     "sign-out": CustomEvent<undefined>;
-    "avatar-change": CustomEvent<AvatarChangeDetail>;
   }
 }

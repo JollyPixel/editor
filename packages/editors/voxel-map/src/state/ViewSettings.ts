@@ -2,19 +2,19 @@
 import type { VoxelInspectorMode } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { StoredFields } from "./StoredFields.ts";
+import {
+  VOXEL_MAP_PREFERENCES,
+  type VoxelMapPreferences
+} from "../preferences.ts";
 
-// CONSTANTS
-const kLightingModes = ["flat", "studio", "day", "night"] as const;
+export type LightingMode = VoxelMapPreferences["lighting"];
+export type InspectorMode = VoxelMapPreferences["inspector"];
 
-export const INSPECTOR_MODES = Object.freeze([
-  "off",
-  "overlay",
-  "wireframe"
-] as const satisfies readonly VoxelInspectorMode[]);
-
-export type LightingMode = typeof kLightingModes[number];
-export type InspectorMode = typeof INSPECTOR_MODES[number];
+export const INSPECTOR_MODES = Object.freeze(
+  VOXEL_MAP_PREFERENCES.fields.inspector.options.map(
+    (option) => option.value
+  ) satisfies readonly VoxelInspectorMode[]
+);
 
 export interface ViewSettingsJSON {
   lighting: LightingMode;
@@ -29,34 +29,7 @@ export interface ViewSettingsJSON {
 }
 
 export class ViewSettings implements ViewSettingsJSON {
-  static readonly DEFAULT = new ViewSettings({
-    lighting: "studio",
-    reflections: false,
-    ambientOcclusion: false,
-    shadows: false,
-    blockLight: true,
-    glow: true,
-    grid: true,
-    inspector: "off",
-    chunkBounds: false
-  });
-
-  static parse(
-    raw: string | null
-  ): ViewSettings {
-    if (raw === null) {
-      return ViewSettings.DEFAULT;
-    }
-
-    try {
-      return ViewSettings.DEFAULT.#merged(
-        JSON.parse(raw)
-      );
-    }
-    catch {
-      return ViewSettings.DEFAULT;
-    }
-  }
+  static readonly DEFAULT = new ViewSettings(VOXEL_MAP_PREFERENCES.defaults);
 
   readonly lighting: LightingMode;
   readonly reflections: boolean;
@@ -82,12 +55,6 @@ export class ViewSettings implements ViewSettingsJSON {
     this.chunkBounds = settings.chunkBounds;
 
     Object.freeze(this);
-  }
-
-  with(
-    patch: Partial<ViewSettingsJSON>
-  ): ViewSettings {
-    return this.#merged(patch);
   }
 
   equals(
@@ -116,26 +83,5 @@ export class ViewSettings implements ViewSettingsJSON {
       inspector: this.inspector,
       chunkBounds: this.chunkBounds
     };
-  }
-
-  #merged(
-    value: unknown
-  ): ViewSettings {
-    const fields = new StoredFields(value);
-
-    return new ViewSettings({
-      lighting: fields.choice("lighting", kLightingModes, this.lighting),
-      inspector: fields.choice("inspector", INSPECTOR_MODES, this.inspector),
-      grid: fields.boolean("grid", this.grid),
-      chunkBounds: fields.boolean("chunkBounds", this.chunkBounds),
-      reflections: fields.boolean("reflections", this.reflections),
-      ambientOcclusion: fields.boolean(
-        "ambientOcclusion",
-        this.ambientOcclusion
-      ),
-      shadows: fields.boolean("shadows", this.shadows),
-      blockLight: fields.boolean("blockLight", this.blockLight),
-      glow: fields.boolean("glow", this.glow)
-    });
   }
 }

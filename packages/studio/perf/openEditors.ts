@@ -24,6 +24,7 @@ const { values: args } = parseArgs({
     out: { type: "string", default: "perf-results/open.json" },
     label: { type: "string", default: "baseline" },
     storage: { type: "string", default: "{}" },
+    prefetch: { type: "boolean", default: false },
     prewarm: { type: "boolean", default: false },
     base: { type: "string", default: STUDIO_URL },
     ...OPEN_RUN_OPTIONS
@@ -39,6 +40,7 @@ const plan = OpenPlan.parse(
       {
         label: args.label,
         storage: JSON.parse(args.storage),
+        prefetch: args.prefetch,
         prewarm: args.prewarm,
         base: args.base
       }

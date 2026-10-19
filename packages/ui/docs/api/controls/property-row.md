@@ -24,4 +24,6 @@ interface PropertyRow {
 
 - Layout and description options work as on a
   [field](../field/shared-field-api.md#label-position), `stacked` included.
+- The row follows the field
+  [insets](../field/shared-field-api.md#insets).
 - `applySearch(query)` matches on `label`, like a field.

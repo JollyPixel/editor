@@ -18,6 +18,7 @@ import type {
   CameraPose,
   Systems
 } from "@jolly-pixel/engine";
+import { Preferences } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import { EditorCamera } from "../../../src/scene/camera/EditorCamera.ts";
@@ -72,7 +73,8 @@ function setup(
     world,
     pointer,
     log,
-    samples
+    samples,
+    preferences: new Preferences()
   });
 
   function pressEscape(): boolean {

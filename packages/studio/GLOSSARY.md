@@ -73,9 +73,12 @@ icon. The shell registers one per kind it can show.
 ### Editor manifest
 
 The `jollypixel.editor` field of an editor package's `package.json`:
-`{ name, kinds, dist?, page? }`. It tells the studio which kinds the editor
-opens, which folder holds its built page and, with `page`, which source HTML
-the studio build compiles together with the shell.
+`{ name, kinds, dist?, page?, preferences? }`. It tells the studio which kinds
+the editor opens, which folder holds its built page, with `page`, which source
+HTML the studio build compiles together with the shell, and with
+`preferences`, which module exports the editor's preference scopes: by
+default the ones it declares, as `shared` the ones it reads from another
+editor.
 
 ### Project manifest
 
@@ -154,6 +157,18 @@ Whoever opens a share link: the built-in `guest` role, read-only, shown as
 
 The accounts, their role and whether they are online, pushed by the
 `accounts` room to every shell and drawn by the Users pane.
+
+### Preference
+
+A choice one account makes for itself, such as the theme, stored on the
+server with that account. Fields are grouped in scopes (`studio`, an editor's
+name); only values that differ from the field's default are kept. Settings ›
+You shows them.
+
+### Browser state
+
+What one browser remembers and Settings never shows: open tabs, dock
+layouts, expanded folders, the kind filter.
 
 ### Offline workspace
 

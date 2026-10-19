@@ -65,8 +65,10 @@ export type TypedAppendInput<
 
 export interface ListAllOptions {
   fromEventId?: number;
+  beforeEventId?: number;
   eventTypePrefix?: string;
   limit?: number;
+  newestFirst?: boolean;
 }
 
 export interface EventWriter {

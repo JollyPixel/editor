@@ -10,6 +10,7 @@ import type {
 } from "./contract.ts";
 import {
   isExpandable,
+  isHeading,
   type FlatTreeRow
 } from "./model.ts";
 import type {
@@ -53,6 +54,7 @@ export class TreeRowView {
   readonly badges: readonly Readonly<TreeBadge>[];
   readonly branch: boolean;
   readonly leaf: boolean;
+  readonly selectable: boolean;
   readonly depth: number;
   readonly indent: string;
   readonly position: number;
@@ -109,6 +111,7 @@ export class TreeRowView {
       Object.freeze(node.badges.map((badge) => Object.freeze({ ...badge })));
     this.branch = isExpandable(node);
     this.leaf = node.children === undefined;
+    this.selectable = !isHeading(node);
     this.depth = depth;
     this.indent = TreeRowView.indentStyle(depth);
     this.position = state.position;
@@ -125,7 +128,7 @@ export class TreeRowView {
     this.spacer = state.spacer;
     this.rails = state.rails;
     this.swatchPosition = state.swatchPosition;
-    this.reorderable = state.reorderable;
+    this.reorderable = state.reorderable && this.selectable;
     this.match = state.match;
     Object.freeze(this);
   }
@@ -146,6 +149,7 @@ export class TreeRowView {
       this.locked === node.locked &&
       this.branch === isExpandable(node) &&
       this.leaf === (node.children === undefined) &&
+      this.selectable === !isHeading(node) &&
       this.depth === row.depth &&
       this.position === state.position &&
       this.setSize === state.setSize &&
@@ -161,7 +165,7 @@ export class TreeRowView {
       this.spacer === state.spacer &&
       sameRails(this.rails, state.rails) &&
       this.swatchPosition === state.swatchPosition &&
-      this.reorderable === state.reorderable &&
+      this.reorderable === (state.reorderable && !isHeading(node)) &&
       sameMatch(this.match, state.match) &&
       sameSwatch(this.swatch, node.swatch) &&
       sameBadges(this.badges, node.badges ?? kNoBadges);

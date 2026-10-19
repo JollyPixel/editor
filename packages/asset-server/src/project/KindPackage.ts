@@ -2,7 +2,8 @@
 import {
   describeErrors,
   isSchema,
-  SchemaParser
+  SchemaParser,
+  type Schema
 } from "@jolly-pixel/network";
 import * as z from "zod/mini";
 
@@ -37,6 +38,8 @@ export class KindPackage {
   readonly descriptors: readonly LoadedAssetKind[];
   readonly handlers: readonly AssetKindHandler[];
 
+  #kinds: AssetKindPackage;
+
   static async load(
     name: string,
     options: Readonly<Record<string, unknown>>,
@@ -59,6 +62,14 @@ export class KindPackage {
       throw new TypeError(`"${name}" does not export "${KINDS_EXPORT}".`);
     }
 
+    return KindPackage.#from(name, kinds, options);
+  }
+
+  static #from(
+    name: string,
+    kinds: AssetKindPackage,
+    options: Readonly<Record<string, unknown>>
+  ): KindPackage {
     const descriptors = kDescriptorsParser.parse(
       kinds.descriptors
     );
@@ -79,6 +90,7 @@ export class KindPackage {
 
     return new KindPackage({
       name,
+      kinds,
       options,
       descriptors: descriptors.val,
       handlers: kinds.handlers(options)
@@ -88,6 +100,7 @@ export class KindPackage {
   constructor(
     data: {
       name: string;
+      kinds: AssetKindPackage;
       options: Readonly<Record<string, unknown>>;
       descriptors: readonly AssetKindDescriptor[];
       handlers: readonly AssetKindHandler[];
@@ -112,7 +125,31 @@ export class KindPackage {
     this.name = data.name;
     this.options = structuredClone(data.options);
     this.handlers = [...data.handlers];
+    this.#kinds = data.kinds;
   }
+
+  get optionsSchema(): Schema {
+    return this.#kinds.optionsSchema;
+  }
+
+  withOptions(
+    options: Readonly<Record<string, unknown>>
+  ): KindPackage {
+    const next = KindPackage.#from(this.name, this.#kinds, options);
+    if (handledKinds(next) !== handledKinds(this)) {
+      throw new TypeError(
+        `"${this.name}" cannot change the asset kinds it handles.`
+      );
+    }
+
+    return next;
+  }
+}
+
+function handledKinds(
+  kindPackage: KindPackage
+): string {
+  return kindPackage.handlers.map((handler) => handler.kind).join(",");
 }
 
 function isAssetKindPackage(

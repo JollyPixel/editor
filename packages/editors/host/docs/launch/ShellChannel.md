@@ -15,6 +15,7 @@ none, and an editor hides what only a shell can do.
 { type: "jolly-shell", command: "session-refused" }
 { type: "jolly-shell", command: "unsaved", unsaved: boolean }
 { type: "jolly-shell", command: "editor-state", state: EditorState }
+{ type: "jolly-shell", command: "update-preferences", scope: string, patch: PreferenceOverrides }
 
 // shell → frame
 {
@@ -22,17 +23,19 @@ none, and an editor hides what only a shell can do.
   target: string,
   appearance?: Appearance,
   identity: { username: string; peerId: string; avatar?: string; } | null,
+  preferences: Record<string, PreferenceOverrides>,
   ports: { catalog?: MessagePort; console?: MessagePort; }
 }
 { type: "jolly-appearance", appearance: Appearance }
+{ type: "jolly-preferences", scope: string, overrides: PreferenceOverrides }
 { type: "jolly-session-renewed" }
 ```
 
-The shell builds its messages with `launchMessage`, `appearanceMessage` and
-`sessionRenewedMessage`, and narrows what a frame posts with
-`isReadyMessage` and `isShellCommand`. The frame reads `jolly-launch` with
-`parseLaunchMessage`, which drops an invalid `appearance`, `identity` or
-`ports` instead of rejecting the message.
+The shell builds its messages with `launchMessage`, `appearanceMessage`,
+`preferencesMessage` and `sessionRenewedMessage`, and narrows what a frame
+posts with `isReadyMessage` and `isShellCommand`. The frame reads
+`jolly-launch` with `parseLaunchMessage`, which drops an invalid `appearance`,
+`identity`, `preferences` or `ports` instead of rejecting the message.
 
 ## ShellChannel
 
@@ -43,18 +46,25 @@ class ShellChannel {
   readonly catalog: ShellCatalog | null;
   readonly console: MessagePort | null;
   readonly identity: PeerIdentity | null;
+  readonly preferences: Readonly<Record<string, PreferenceOverrides>>;
 
   openAsset(id: AssetId | string): void;
   toggleConsole(): void;
   reportUnsaved(unsaved: boolean): void;
   reportState(state: EditorState): void;
+  updatePreferences(scope: string, patch: PreferenceOverrides): void;
   renewWhenRefused(client: RenewableClient): void;
   onAppearance(listener: (appearance: Appearance) => void, signal: AbortSignal): void;
+  onPreferences(
+    listener: (scope: string, overrides: PreferenceOverrides) => void,
+    signal: AbortSignal
+  ): void;
 }
 ```
 
 The channel is bound to the parent and the origin of its `jolly-launch`. It
-posts commands and receives appearance changes; commands get no reply.
+posts commands and receives appearance and preference changes; commands get
+no reply.
 
 ### identity
 
@@ -73,6 +83,18 @@ and a presence color.
 [page state](../editor/mountStandalone.md#page-lifecycle) once the launch is
 read, then on every change. The studio shows a spinner on the tab while the
 state is `booting` or `switching`, and a warning once it is `failed`.
+
+### Preferences
+
+`preferences` holds the [preference](../preferences/Preferences.md) overrides
+the launch carried, by scope. The studio sends every scope it holds, not only
+the editor's. `updatePreferences` posts `update-preferences` with the values
+one change set; the shell validates the patch against the scope's descriptor,
+stores it, and pushes the scope's new overrides to every frame as
+`jolly-preferences`, the sender included. When it refuses a patch, it pushes
+its own overrides of that scope instead, so the frames drop the refused values.
+`onPreferences` follows those pushes. `mountStandalone` wires the three into
+the editor's [`context.preferences`](../editor/mountStandalone.md#editor-context).
 
 ### renewWhenRefused(client)
 

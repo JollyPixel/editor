@@ -5,14 +5,15 @@ Open work, in the order it should land. Decisions already taken are in the
 `pnpm --filter @jolly-pixel/studio test`, `pnpm run typecheck` and
 `pnpm run lint` green.
 
-## 1. Preferences and settings pane
-
-A per-user store the shell owns, shown in the Settings tab that the Home
-tools open (empty for now). The open tabs, the dock layout and the kind
-filter move there from `localStorage`. It becomes the home of the account:
-the avatar upload moves there from the `AccountBadge` menu.
-
 ## Waiting for a trigger
+
+- **Voxel-model shortcuts.** Undo, redo and the `k` keying shortcut are
+  hardcoded, so they are missing from Settings › Keybindings. Give voxel-model
+  an action list when one of them needs rebinding.
+
+- **Per-editor launch preferences.** Each frame gets every scope's overrides,
+  since a frame does not know which editor it hosts. Filter them once a scope
+  holds something an editor should not see.
 
 - **Confirm closing an unsaved tab.** Closing, evicting or reloading a marked
   tab drops its frame without asking. Changes already sent usually reach the
@@ -24,12 +25,30 @@ the avatar upload moves there from the `AccountBadge` menu.
   voxel-map Paint action was dropped. A title is the expected next command;
   add it when an editor needs the shell to show one.
 
+- **Export and import preferences.** Preferences belong to one project's
+  account. A JSON file would carry keybindings and the rest to another
+  project.
+
+- **Rename a role.** `users.role` stores the role name, so a rename rewrites
+  accounts too. Until then, add a role and reassign its members.
+
 ## Long-term goals
 
-### Browser-hosted sessions
+### Project policy for editors
 
-Editor sessions served from a browser tab, with guests joining over WebRTC.
-See [HOSTING.md](./HOSTING.md).
+Kind options are the only editor configuration a project sets. A project
+could also give defaults for editor preferences, or force values a user
+cannot override, such as baked voxel-map lighting or `uvSync: live` for
+collaboration. Preference descriptors leave room for a project scope per
+field.
+
+### Audit history
+
+Diffs for asset edit runs, opening an asset at the version a row points to,
+CSV export and retention. Edits only reach back to each asset's last
+snapshot, because compaction drops older events from `events.db`, and
+folder changes write no event. Keeping that history means recording it in
+`audit.db` as it happens, or compacting less.
 
 ### Runtime tab
 

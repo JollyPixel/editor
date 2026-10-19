@@ -16,6 +16,7 @@ import {
   type CatalogShare,
   type EditorConsole
 } from "@jolly-pixel/editor.host";
+import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 import {
   LogQueue,
   type LogEntry
@@ -28,8 +29,10 @@ import {
   type StudioSignedIn
 } from "../accounts/StudioSignedIn.ts";
 import { StudioSession } from "./StudioSession.ts";
+import type { PreferenceScopes } from "../preferences/PreferenceScopes.ts";
+import { SettingsSections } from "./settings/SettingsSections.ts";
 import type { EditorRegistry } from "../editors/EditorRegistry.ts";
-import { StudioPreferences } from "../preferences/StudioPreferences.ts";
+import { BrowserState } from "../browser/BrowserState.ts";
 import { SETTINGS_TAB_ID } from "./settings/StudioSettings.ts";
 import type { StudioErrorEvent } from "./StudioErrorEvent.ts";
 import type {
@@ -46,6 +49,9 @@ export interface StudioOptions {
   editors: EditorRegistry;
   console?: EditorConsole;
   signedIn?: StudioSignedIn | null;
+  preferences: Preferences;
+  scopes: PreferenceScopes;
+  settings: SettingsSections;
 }
 
 @customElement("jolly-studio")
@@ -215,6 +221,12 @@ export class Studio extends LitElement {
   @state()
   declare _account: Account | null;
 
+  @state()
+  declare _preferences: Preferences | null;
+
+  @state()
+  declare _sections: SettingsSections;
+
   @query("jolly-tabs")
   declare _strip: HTMLElementTagNameMap["jolly-tabs"] | null;
 
@@ -225,12 +237,13 @@ export class Studio extends LitElement {
   declare _home: HTMLElement | null;
 
   @query("#studio-settings")
-  declare _settings: HTMLElement | null;
+  declare _settings: HTMLElementTagNameMap["studio-settings"] | null;
 
   #session: StudioSession | null = null;
-  #preferences = new StudioPreferences();
+  #browserState = new BrowserState();
   #queue = new LogQueue();
   #unsubscribe: (() => void) | null = null;
+  #stopPreferenceErrors: (() => void) | null = null;
 
   constructor() {
     super();
@@ -239,6 +252,8 @@ export class Studio extends LitElement {
     this._log = [];
     this._signedIn = null;
     this._account = null;
+    this._preferences = null;
+    this._sections = SettingsSections.EMPTY;
   }
 
   async attach(
@@ -260,7 +275,7 @@ export class Studio extends LitElement {
     const session = new StudioSession({
       catalog,
       editors: options.editors,
-      preferences: this.#preferences,
+      browserState: this.#browserState,
       tabs: {
         strip: this._strip,
         home: this._home,
@@ -282,20 +297,35 @@ export class Studio extends LitElement {
           undefined :
           new FrameConsoles({ commands: options.console.commands })
       },
+      preferences: {
+        values: options.preferences,
+        scopes: options.scopes
+      },
       onTabsChange: this.#syncOpenTabs,
       console: options.console?.element,
       renewal: signedIn?.renewal
     });
     this.#session = session;
+    this._preferences = options.preferences;
+    this._sections = options.settings;
     this.#follow(signedIn);
     this._assets = {
       catalog,
       kinds: session.kinds,
       shares: signedIn?.shares ?? null,
-      preferences: this.#preferences
+      browserState: this.#browserState
     };
     await session.restoreTabs();
     this.#syncOpenTabs();
+  }
+
+  openSettings(
+    section?: string
+  ): void {
+    if (section !== undefined && this._settings !== null) {
+      this._settings.section = section;
+    }
+    this.#session?.tabs.openPage(SETTINGS_TAB_ID);
   }
 
   reloadEditor(
@@ -338,7 +368,7 @@ export class Studio extends LitElement {
             .account=${this._account}
             .avatar=${this._account?.avatar ?? ""}
             @sign-out=${this.#signOut}
-            @avatar-change=${this.#replaceAvatar}
+            @settings-open=${this.#openSettings}
           ></studio-account>
         </jolly-toolbar>
       </header>
@@ -355,7 +385,7 @@ export class Studio extends LitElement {
             @settings-open=${this.#openSettings}
             .signedIn=${this._signedIn}
             .account=${this._account}
-            .preferences=${this.#preferences}
+            .browserState=${this.#browserState}
             @studio-error=${this.#logError}
           ></studio-home>
           <studio-settings
@@ -363,6 +393,13 @@ export class Studio extends LitElement {
             role="region"
             aria-label="Settings"
             hidden
+            .sections=${this._sections}
+            .preferences=${this._preferences}
+            .account=${this._account}
+            .signedIn=${this._signedIn}
+            .catalog=${this._assets?.catalog ?? null}
+            .browserState=${this.#browserState}
+            @avatar-change=${this.#replaceAvatar}
           ></studio-settings>
         </div>
         <jolly-log .entries=${this._log}></jolly-log>
@@ -376,6 +413,10 @@ export class Studio extends LitElement {
     this._signedIn?.removeEventListener(SIGNED_IN_CHANGE, this.#syncAccount);
     this._signedIn = signedIn;
     signedIn?.addEventListener(SIGNED_IN_CHANGE, this.#syncAccount);
+    this.#stopPreferenceErrors?.();
+    this.#stopPreferenceErrors = signedIn?.preferences.onError(
+      (message) => this.#queue.push(message)
+    ) ?? null;
     this.#syncAccount();
   }
 
@@ -409,7 +450,7 @@ export class Studio extends LitElement {
   };
 
   readonly #openSettings = (): void => {
-    this.#session?.tabs.openPage(SETTINGS_TAB_ID);
+    this.openSettings();
   };
 
   readonly #onAssetOpen = (

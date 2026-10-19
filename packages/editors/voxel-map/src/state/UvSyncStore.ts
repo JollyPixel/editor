@@ -1,25 +1,51 @@
 // Import Third-party Dependencies
-import type { StorageAdapter } from "@jolly-pixel/ui";
+import type { Preferences } from "@jolly-pixel/editor.host/preferences";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import { StoredChoice } from "./StoredChoice.ts";
+import {
+  VOXEL_MAP_PREFERENCES,
+  type VoxelMapPreferences
+} from "../preferences.ts";
 
-export const UV_SYNC_MODES = Object.freeze([
-  "live",
-  "commit"
-] as const);
+export type UvSyncMode = VoxelMapPreferences["uvSync"];
 
-export type UvSyncMode = typeof UV_SYNC_MODES[number];
+export const UV_SYNC_MODES: readonly UvSyncMode[] = Object.freeze(
+  VOXEL_MAP_PREFERENCES.fields.uvSync.options.map((option) => option.value)
+);
 
-export class UvSyncStore extends StoredChoice<UvSyncMode> {
+export type UvSyncStoreEvents = {
+  change: (value: UvSyncMode) => void;
+};
+
+export class UvSyncStore extends Emitter<UvSyncStoreEvents> {
+  readonly values = UV_SYNC_MODES;
+
+  #preferences: Preferences;
+  #value: UvSyncMode;
+
   constructor(
-    storage?: StorageAdapter
+    preferences: Preferences
   ) {
-    super({
-      key: "voxel-map:uv-sync",
-      values: UV_SYNC_MODES,
-      fallback: "commit",
-      storage
+    super();
+
+    this.#preferences = preferences;
+    this.#value = preferences.values(VOXEL_MAP_PREFERENCES).uvSync;
+    preferences.watch(VOXEL_MAP_PREFERENCES, ({ uvSync }) => {
+      if (uvSync !== this.#value) {
+        this.#value = uvSync;
+        this.emit("change", uvSync);
+      }
     });
+  }
+
+  get value(): UvSyncMode {
+    return this.#value;
+  }
+
+  set value(
+    value: UvSyncMode
+  ) {
+    this.#preferences.assign(VOXEL_MAP_PREFERENCES, "uvSync", value);
   }
 }

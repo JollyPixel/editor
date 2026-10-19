@@ -7,6 +7,7 @@ import {
 
 // Import Third-party Dependencies
 import { CommandConsole } from "@jolly-pixel/console";
+import { Preferences } from "@jolly-pixel/editor.host/preferences";
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -19,7 +20,10 @@ import { EditorState } from "../../../src/state/EditorState.ts";
 describe("texture console", () => {
   test("exposes the pixel-art shortcuts of the texture panel", async() => {
     const commands = new CommandConsole();
-    const state = new EditorState({ storage: new MemoryStorageAdapter() });
+    const state = new EditorState({
+      storage: new MemoryStorageAdapter(),
+      preferences: new Preferences()
+    });
     const handle = textureShortcutsConsole(commands, { state });
 
     await commands.submit("pixelart.keybinds.undo \"Mod+u\"");
@@ -33,7 +37,10 @@ describe("texture console", () => {
 
   test("uvSync switches the UV write mode of the blocks", async() => {
     const commands = new CommandConsole();
-    const state = new EditorState({ storage: new MemoryStorageAdapter() });
+    const state = new EditorState({
+      storage: new MemoryStorageAdapter(),
+      preferences: new Preferences()
+    });
     const handle = textureConsole(commands, { state });
 
     await commands.submit("texture.uvSync live");
@@ -50,7 +57,10 @@ describe("texture console", () => {
   test("tabs switches the blockset tab style and saves it", async() => {
     const commands = new CommandConsole();
     const storage = new MemoryStorageAdapter();
-    const state = new EditorState({ storage });
+    const state = new EditorState({
+      storage,
+      preferences: new Preferences()
+    });
     textureConsole(commands, { state });
 
     await commands.submit("texture.tabs line");

@@ -169,7 +169,8 @@ export class EditorScene extends Systems.Scene {
       world,
       pointer: state.pointer,
       log: state.log,
-      samples
+      samples,
+      preferences: state.preferences
     });
     this.#camera = camera;
 

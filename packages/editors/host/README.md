@@ -109,6 +109,12 @@ await mountStandalone(MyEditor, {
 - [`EditorToolbar`](./docs/session/EditorToolbar.md): the bar above the viewport, its
   target picker and the tags of the target.
 
+### Preferences
+
+- [`Preferences`](./docs/preferences/Preferences.md): scope declarations, the
+  overrides holder, its `localStorage` store, keybinding and camera helpers,
+  and the host's scopes.
+
 ### Scene
 
 - [`EditorRuntime`](./docs/runtime/EditorRuntime.md): runtime boot with the editor

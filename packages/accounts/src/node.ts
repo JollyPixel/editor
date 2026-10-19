@@ -20,3 +20,4 @@ export * from "./registration/errors/MasterPasswordRequiredError.ts";
 export * from "./registration/errors/InvalidMasterPasswordError.ts";
 export * from "./registration/errors/AccountPendingError.ts";
 export * from "./registration/errors/AccessRequestsFullError.ts";
+export type { PreferenceOverrides } from "./store/PreferenceRepository.ts";

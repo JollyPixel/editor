@@ -20,12 +20,19 @@ import {
 
 // Import Internal Dependencies
 import { accountsRoutes } from "./accounts/accountsRoutes.ts";
+import { auditRoutes } from "./audit/auditRoutes.ts";
 import { ApiError } from "./errors/ApiError.ts";
+import { preferencesRoutes } from "./preferences/preferencesRoutes.ts";
 import { projectRoutes } from "./project/projectRoutes.ts";
 import { sharesRoutes } from "./shares/sharesRoutes.ts";
+import type { PreferenceScopes } from "../../src/preferences/PreferenceScopes.ts";
+import { PREFERENCES_URL_PATH } from "../../src/preferences/routes.ts";
+import { AUDIT_URL_PATH } from "../../src/audit/routes.ts";
 import { PROJECT_URL_PATH } from "../../src/project/routes.ts";
 import { SHARES_URL_PATH } from "../../src/shares/routes.ts";
+import type { AuditFeed } from "../audit/AuditFeed.ts";
 import type { ProjectArchive } from "../project/ProjectArchive.ts";
+import type { ProjectSettings } from "../project/ProjectSettings.ts";
 import type { StudioShares } from "../shares/StudioShares.ts";
 
 // CONSTANTS
@@ -46,6 +53,9 @@ export interface StudioApiOptions {
   accounts: Accounts;
   shares: StudioShares;
   archive: ProjectArchive;
+  settings: ProjectSettings;
+  audit: AuditFeed;
+  preferences: PreferenceScopes;
   requestsPerMinute?: number;
   trustProxy?: TrustProxy;
 }
@@ -121,7 +131,18 @@ export class StudioApi implements AsyncDisposable {
     await app.register(projectRoutes, {
       prefix: PROJECT_URL_PATH,
       accounts: options.accounts,
-      archive: options.archive
+      archive: options.archive,
+      settings: options.settings
+    });
+    await app.register(auditRoutes, {
+      prefix: AUDIT_URL_PATH,
+      accounts: options.accounts,
+      feed: options.audit
+    });
+    await app.register(preferencesRoutes, {
+      prefix: PREFERENCES_URL_PATH,
+      accounts: options.accounts,
+      scopes: options.preferences
     });
     await app.ready();
 

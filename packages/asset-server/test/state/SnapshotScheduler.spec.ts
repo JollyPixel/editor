@@ -177,4 +177,19 @@ describe("SnapshotScheduler — cadence", () => {
       assert.strictEqual(await pendingAfter(t, harness, 1), 0);
     });
   }
+
+  test("an open asset follows the delay of the handler that replaced its kind", async(t) => {
+    t.mock.timers.enable({ apis: ["Date", "setTimeout"] });
+    await using harness = await syncHarness({
+      handlers: [counterHandler({ delay: 1_000 })],
+      snapshot: { delay: 1_000, maxDelay: 10_000 }
+    });
+    const assetId = await counterAsset(harness);
+
+    harness.kinds.replace(counterHandler({ delay: 100 }));
+    increment(harness, assetId);
+
+    assert.strictEqual(await pendingAfter(t, harness, 99), 1);
+    assert.strictEqual(await pendingAfter(t, harness, 1), 0);
+  });
 });

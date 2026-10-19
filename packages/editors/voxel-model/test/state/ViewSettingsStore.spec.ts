@@ -3,11 +3,13 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { MemoryStorageAdapter } from "@jolly-pixel/ui";
+import {
+  Preferences,
+  type PreferenceChange
+} from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import {
-  DEFAULT_VIEW_SETTINGS,
   ViewSettingsStore,
   resolveBackground,
   type ViewSettings
@@ -15,14 +17,21 @@ import {
 
 describe("ViewSettingsStore", () => {
   test("starts from the defaults without stored settings", () => {
-    const store = new ViewSettingsStore();
+    const store = new ViewSettingsStore(new Preferences());
 
-    assert.deepEqual(store.settings, DEFAULT_VIEW_SETTINGS);
+    assert.deepEqual(store.settings, {
+      lighting: "studio",
+      keyLight: "front-right",
+      background: null,
+      reflections: true,
+      shadows: false,
+      glow: true
+    });
   });
 
-  test("emits and remembers an update across instances", () => {
-    const storage = new MemoryStorageAdapter();
-    const store = new ViewSettingsStore({ storage });
+  test("writes an update to the preferences and emits it once", () => {
+    const preferences = new Preferences();
+    const store = new ViewSettingsStore(preferences);
     const emitted: ViewSettings[] = [];
     store.on("change", (settings) => emitted.push(settings));
 
@@ -30,28 +39,17 @@ describe("ViewSettingsStore", () => {
 
     assert.equal(emitted.length, 1);
     assert.equal(emitted[0].lighting, "night");
-    assert.deepEqual(
-      new ViewSettingsStore({ storage }).settings,
-      {
-        ...DEFAULT_VIEW_SETTINGS,
-        lighting: "night",
-        keyLight: "top"
-      }
-    );
+    assert.deepEqual(preferences.overrides("voxel-model"), {
+      lighting: "night",
+      keyLight: "top"
+    });
   });
 
-  test("neither persists nor emits a patch that changes nothing", () => {
-    const writes: string[] = [];
-    const storage = new MemoryStorageAdapter();
-    const store = new ViewSettingsStore({
-      storage: {
-        get: (key) => storage.get(key),
-        set: (key, value) => {
-          writes.push(value);
-          storage.set(key, value);
-        }
-      }
-    });
+  test("neither writes nor emits a patch that changes nothing", () => {
+    const writes: PreferenceChange[] = [];
+    const store = new ViewSettingsStore(new Preferences({
+      write: (change) => writes.push(change)
+    }));
     let emitted = 0;
     store.on("change", () => emitted++);
 
@@ -65,39 +63,21 @@ describe("ViewSettingsStore", () => {
   });
 
   test("follows the settings from now until unsubscribed", () => {
-    const store = new ViewSettingsStore();
+    const preferences = new Preferences();
+    const store = new ViewSettingsStore(preferences);
     const lightings: string[] = [];
 
     const unfollow = store.follow((settings) => lightings.push(settings.lighting));
     store.update({ lighting: "flat" });
+    preferences.receive("voxel-model", { lighting: "day" });
     unfollow();
     store.update({ lighting: "night" });
 
-    assert.deepEqual(lightings, ["studio", "flat"]);
-  });
-
-  test("drops unknown or malformed stored values", () => {
-    const storage = new MemoryStorageAdapter();
-    storage.set("voxel-model:view", JSON.stringify({
-      lighting: "dusk",
-      background: "red",
-      keyLight: "behind",
-      reflections: "yes",
-      glow: "on",
-      shadows: "on",
-      exposure: 2
-    }));
-
-    const store = new ViewSettingsStore({ storage });
-
-    assert.deepEqual(store.settings, DEFAULT_VIEW_SETTINGS);
-
-    storage.set("voxel-model:view", "{not json");
-    assert.deepEqual(new ViewSettingsStore({ storage }).settings, DEFAULT_VIEW_SETTINGS);
+    assert.deepEqual(lightings, ["studio", "flat", "day"]);
   });
 
   test("shows the lighting's background until a custom colour is picked, then until it is reset", () => {
-    const store = new ViewSettingsStore();
+    const store = new ViewSettingsStore(new Preferences());
     const night = resolveBackground({ lighting: "night", background: null });
     store.update({ lighting: "night" });
     assert.equal(resolveBackground(store.settings), night);

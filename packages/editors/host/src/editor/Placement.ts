@@ -14,6 +14,8 @@ import {
 } from "../launch/LaunchHistory.ts";
 import type { LaunchNavigator } from "../launch/LaunchNavigator.ts";
 import type { ShellChannel } from "../launch/ShellChannel.ts";
+import { LocalPreferences } from "../preferences/store/LocalPreferences.ts";
+import { Preferences } from "../preferences/store/Preferences.ts";
 import { LastOpenedLaunchSource } from "../launch/sources/LastOpenedLaunchSource.ts";
 import type { AssetRoomLease } from "../lease/AssetLease.ts";
 import type { AssetLeases } from "../lease/AssetLeases.ts";
@@ -55,6 +57,31 @@ export class Placement {
     return this.shell === null ?
       mountConsole() :
       forwardConsole(this.shell);
+  }
+
+  openPreferences(
+    signal: AbortSignal
+  ): Preferences {
+    const { shell } = this;
+    if (shell === null) {
+      const local = new LocalPreferences();
+      signal.addEventListener("abort", () => local[Symbol.dispose](), {
+        once: true
+      });
+
+      return local.preferences;
+    }
+
+    const preferences = new Preferences({
+      overrides: Object.entries(shell.preferences),
+      write: (change) => shell.updatePreferences(change.scope, change.patch)
+    });
+    shell.onPreferences(
+      (scope, overrides) => preferences.receive(scope, overrides),
+      signal
+    );
+
+    return preferences;
   }
 
   history(): LaunchHistory {

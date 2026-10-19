@@ -74,8 +74,9 @@ export class StudioProject {
   readonly file: ProjectFile;
   readonly editors: EditorPackages;
   readonly kinds: ProjectKinds;
-  readonly access: StudioAccess;
   readonly privateFiles: PrivateFiles;
+
+  #access: StudioAccess;
 
   static resolveRoot(
     base: string,
@@ -115,7 +116,7 @@ export class StudioProject {
 
     return new StudioProject(
       file,
-      EditorPackages.read(
+      await EditorPackages.read(
         section.data.editors,
         resolver
       ),
@@ -136,10 +137,24 @@ export class StudioProject {
     this.file = file;
     this.editors = editors;
     this.kinds = kinds;
-    this.access = access;
+    this.#access = access;
     this.privateFiles = new PrivateFiles(
       file.root,
       kinds.descriptors().map((descriptor) => descriptor.extension)
     );
+  }
+
+  get name(): string {
+    return path.basename(this.file.root);
+  }
+
+  get access(): StudioAccess {
+    return this.#access;
+  }
+
+  replaceAccess(
+    access: StudioAccess
+  ): void {
+    this.#access = access;
   }
 }

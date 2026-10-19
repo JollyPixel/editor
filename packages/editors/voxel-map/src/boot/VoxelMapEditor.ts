@@ -89,9 +89,10 @@ export class VoxelMapEditor {
       session,
       commands,
       logger,
+      preferences,
       runtime: editorRuntime
     } = context;
-    const state = new EditorState();
+    const state = new EditorState({ preferences });
     const target = session.targetLease(kMapKind);
     const roomEnvironment = await BakedRoomEnvironment.load()
       .catch((error: unknown) => {

@@ -15,6 +15,7 @@ restore never asks to evict. A saved value that does not parse restores nothing.
 
 ## Considered Options
 
-- **The project or a per-user store.** Neither exists yet; tabs move there with the other
-  preferences when one does.
+- **The account's preferences.** Tabs are browser state
+  ([ADR-0023](./0023-preferences-follow-the-account.md)): another browser of the same account
+  opens on its own tabs.
 - **Restoring every frame.** A reload would boot up to four editors at once.

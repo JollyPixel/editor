@@ -52,7 +52,9 @@ export async function shareAccounts(
     owner: registration.account,
     shares: new StudioShares({
       accounts,
-      access: StudioAccess.read({ version: 1 }, "project.json"),
+      project: {
+        access: StudioAccess.read({ version: 1 }, "project.json")
+      },
       catalog: Promise.resolve(sharedCatalog(closures))
     }),
     [Symbol.dispose]() {

@@ -1,35 +1,28 @@
 // Import Third-party Dependencies
+import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 import type { Mode } from "@jolly-pixel/pixel-draw.renderer";
 import type { StorageAdapter } from "@jolly-pixel/ui";
-import * as z from "zod/mini";
 
 // Import Internal Dependencies
+import {
+  PIXEL_ART_PREFERENCES,
+  type PixelArtPreferences
+} from "#src/preferences.ts";
 import {
   ViewSettings,
   type ViewCanvas
 } from "#src/panel/ViewSettings.ts";
 
 // CONSTANTS
-const kStorageKey = "pixel-art:preferences";
-const kPreferences = z.object({
-  mode: z.catch(
-    z.enum([
-      "paint",
-      "erase",
-      "move",
-      "fill",
-      "select",
-      "uv"
-    ]),
-    "paint"
-  ),
-  showAll: z.catch(z.boolean(), false),
-  showRegionLabels: z.catch(z.boolean(), false),
-  showSizeLabels: z.catch(z.boolean(), false),
-  showGrid: z.catch(z.boolean(), false),
-  snapToGrid: z.catch(z.boolean(), false),
-  gridSize: z.catch(z.int().check(z.minimum(1)), 16)
-});
+export const MODE_STORAGE_KEY = "pixel-art:mode";
+const kModes = [
+  "paint",
+  "erase",
+  "move",
+  "fill",
+  "select",
+  "uv"
+] as const satisfies readonly Mode[];
 const kVisibilityEvents = [
   "visibility-changed",
   "label-visibility-changed",
@@ -38,33 +31,32 @@ const kVisibilityEvents = [
 
 export class EditorPreferences {
   readonly #storage: StorageAdapter;
-  readonly #state: z.infer<typeof kPreferences>;
+  readonly #preferences: Preferences;
+  #mode: Mode;
   #canvas: ViewCanvas | null = null;
+  #unwatch: (() => void) | null = null;
+  #applying = false;
 
   constructor(
-    storage: StorageAdapter
+    storage: StorageAdapter,
+    preferences: Preferences
   ) {
     this.#storage = storage;
-    try {
-      this.#state = kPreferences.parse(
-        JSON.parse(storage.get(kStorageKey) ?? "{}")
-      );
-    }
-    catch {
-      this.#state = kPreferences.parse({});
-    }
+    this.#preferences = preferences;
+    const stored = storage.get(MODE_STORAGE_KEY);
+    this.#mode = kModes.find((mode) => mode === stored) ?? "paint";
   }
 
   get mode(): Mode {
-    return this.#state.mode;
+    return this.#mode;
   }
 
   set mode(
     value: Mode
   ) {
-    if (value !== this.#state.mode) {
-      this.#state.mode = value;
-      this.#save();
+    if (value !== this.#mode) {
+      this.#mode = value;
+      this.#storage.set(MODE_STORAGE_KEY, value);
     }
   }
 
@@ -77,12 +69,15 @@ export class EditorPreferences {
 
     this.dispose();
     this.#canvas = canvas;
-    new ViewSettings(this.#state).applyTo(canvas);
-    canvas.grid.size = this.#state.gridSize;
+    this.#apply(this.#preferences.values(PIXEL_ART_PREFERENCES));
     for (const type of kVisibilityEvents) {
       canvas.uv.on(type, this.#saveView);
     }
     canvas.grid.on("changed", this.#saveView);
+    this.#unwatch = this.#preferences.watch(
+      PIXEL_ART_PREFERENCES,
+      this.#apply
+    );
   }
 
   dispose(): void {
@@ -90,23 +85,43 @@ export class EditorPreferences {
       this.#canvas?.uv.off(type, this.#saveView);
     }
     this.#canvas?.grid.off("changed", this.#saveView);
+    this.#unwatch?.();
+    this.#unwatch = null;
     this.#canvas = null;
   }
 
-  readonly #saveView = (): void => {
+  readonly #apply = (
+    values: PixelArtPreferences
+  ): void => {
     const canvas = this.#canvas;
-    if (canvas) {
-      Object.assign(this.#state, ViewSettings.capture(canvas), {
-        gridSize: canvas.grid.size
-      });
-      this.#save();
+    if (canvas === null) {
+      return;
+    }
+
+    this.#applying = true;
+    try {
+      new ViewSettings(values).applyTo(canvas);
+      canvas.grid.size = values.gridSize;
+    }
+    finally {
+      this.#applying = false;
     }
   };
 
-  #save(): void {
-    this.#storage.set(
-      kStorageKey,
-      JSON.stringify(this.#state)
-    );
-  }
+  readonly #saveView = (): void => {
+    const canvas = this.#canvas;
+    if (canvas === null || this.#applying) {
+      return;
+    }
+
+    const view = ViewSettings.capture(canvas);
+    this.#preferences.update(PIXEL_ART_PREFERENCES, {
+      showAll: view.showAll,
+      showRegionLabels: view.showRegionLabels,
+      showSizeLabels: view.showSizeLabels,
+      showGrid: view.showGrid,
+      snapToGrid: view.snapToGrid,
+      gridSize: canvas.grid.size
+    });
+  };
 }

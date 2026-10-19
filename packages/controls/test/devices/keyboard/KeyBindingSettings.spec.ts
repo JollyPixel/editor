@@ -16,13 +16,11 @@ import {
   KeyBindingSettings,
   KeyChordConflictError,
   type KeyBindingDefaults,
-  type KeyBindingMap,
-  type KeyBindingStorage
+  type KeyBindingMap
 } from "../../../src/index.ts";
 
 // CONSTANTS
 const kWindow = new Window();
-const kStorageKey = "test:keybindings";
 const kDefaults = {
   undo: "Mod+z",
   redo: ["Mod+y", "Mod+Shift+z"],
@@ -43,50 +41,13 @@ function keydown(
   }) as unknown as KeyboardEvent;
 }
 
-class MapStorage implements KeyBindingStorage {
-  readonly entries = new Map<string, string>();
-
-  get(
-    key: string
-  ): string | null {
-    return this.entries.get(key) ?? null;
-  }
-
-  set(
-    key: string,
-    value: string
-  ): void {
-    this.entries.set(key, value);
-  }
-
-  stored(): unknown {
-    const raw = this.get(kStorageKey);
-    assert.ok(raw !== null);
-
-    return JSON.parse(raw);
-  }
-}
-
-function stored(
-  value: unknown
-): MapStorage {
-  const storage = new MapStorage();
-  storage.set(
-    kStorageKey,
-    typeof value === "string" ? value : JSON.stringify(value)
-  );
-
-  return storage;
-}
-
 function load(
-  storage: MapStorage
+  overrides: unknown = {}
 ) {
   const warnings: string[] = [];
   const settings = new KeyBindingSettings({
     defaults: kDefaults,
-    storage,
-    storageKey: kStorageKey,
+    overrides,
     onDropped: (message) => warnings.push(message)
   });
 
@@ -97,45 +58,23 @@ function load(
 }
 
 describe("Controls.KeyBindingSettings", () => {
-  test("stores only the difference from the defaults", () => {
-    const storage = new MapStorage();
-    const { settings } = load(storage);
-
-    settings.assign("undo", ["Mod+u"]);
-    settings.assign("redo", ["Mod+y", "Mod+Shift+z"]);
-
-    assert.deepEqual(storage.stored(), { undo: ["Mod+u"] });
-    assert.deepEqual(settings.chordsBoundTo("undo"), ["Mod+u"]);
-  });
-
-  test("reports each dropped entry and rewrites the storage without it", () => {
-    const storage = stored({
+  test("starts from the overrides and reports each dropped entry", () => {
+    const { settings, warnings } = load({
       undo: ["Mod+u"],
       jump: "j"
     });
 
-    const { settings, warnings } = load(storage);
-
     assert.deepEqual(warnings, [
       "Dropped the stored keybinding \"jump\": unknown action"
     ]);
-    assert.deepEqual(settings.keyBindings.overrides, { undo: ["Mod+u"] });
-    assert.deepEqual(storage.stored(), { undo: ["Mod+u"] });
+    assert.deepEqual(settings.chordsBoundTo("undo"), ["Mod+u"]);
   });
 
-  test("leaves the storage alone when every entry is current", () => {
-    const raw = JSON.stringify({ undo: ["Mod+u"] });
-    const storage = stored(raw);
-
-    load(storage);
-
-    assert.equal(storage.get(kStorageKey), raw);
-  });
-
-  test("a rejected assign leaves the bindings and storage unchanged", () => {
-    const storage = new MapStorage();
-    const { settings } = load(storage);
+  test("a rejected assign leaves the bindings unchanged and emits nothing", () => {
+    const { settings } = load();
     const keyBindings = settings.keyBindings;
+    let changes = 0;
+    settings.on("change", () => changes++);
 
     assert.throws(
       () => settings.assign("copy", ["Mod+z"]),
@@ -147,11 +86,39 @@ describe("Controls.KeyBindingSettings", () => {
     );
 
     assert.equal(settings.keyBindings, keyBindings);
-    assert.equal(storage.get(kStorageKey), null);
+    assert.equal(changes, 0);
+  });
+
+  test("load() swaps two chords in a single change", () => {
+    const { settings } = load();
+    const received: KeyBindingMap<keyof typeof kDefaults>[] = [];
+    settings.on("change", (keyBindings) => received.push(keyBindings));
+
+    settings.load({
+      undo: ["Mod+c"],
+      copy: ["Mod+z"]
+    });
+
+    assert.equal(received.length, 1);
+    assert.deepEqual(settings.chordsBoundTo("undo"), ["Mod+c"]);
+    assert.deepEqual(settings.chordsBoundTo("copy"), ["Mod+z"]);
+  });
+
+  test("load() of the current bindings emits nothing", () => {
+    const { settings } = load({ undo: ["Mod+u"] });
+    let changes = 0;
+    settings.on("change", () => changes++);
+
+    settings.load({
+      undo: ["Mod+u"],
+      redo: ["Mod+y", "Mod+Shift+z"]
+    });
+
+    assert.equal(changes, 0);
   });
 
   test("emits the new map on every change", () => {
-    const { settings } = load(stored({ undo: ["Mod+u"] }));
+    const { settings } = load({ undo: ["Mod+u"] });
     const received: KeyBindingMap<keyof typeof kDefaults>[] = [];
     settings.on("change", (keyBindings) => received.push(keyBindings));
 
@@ -165,7 +132,7 @@ describe("Controls.KeyBindingSettings", () => {
   });
 
   test("bind() routes the current chords and follows changes until released", () => {
-    const { settings } = load(stored({ undo: ["Mod+u"] }));
+    const { settings } = load({ undo: ["Mod+u"] });
     const bindings = new KeyBindings();
     const calls: string[] = [];
     const release = settings.bind(bindings, {
@@ -185,7 +152,7 @@ describe("Controls.KeyBindingSettings", () => {
   });
 
   test("sync() applies the current map and follows changes until released", () => {
-    const { settings } = load(stored({ undo: ["Mod+u"] }));
+    const { settings } = load({ undo: ["Mod+u"] });
     const initial = settings.keyBindings;
     const target = {
       keyBindings: initial.restore()

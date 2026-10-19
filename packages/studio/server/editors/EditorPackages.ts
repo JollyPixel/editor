@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type { PackageResolver } from "@jolly-pixel/asset-server/node";
+import type { PreferenceScope } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import type { EditorDescriptor } from "../../src/editors/EditorDescriptor.ts";
@@ -8,18 +9,18 @@ import { EditorPackage } from "./EditorPackage.ts";
 export class EditorPackages implements Iterable<EditorPackage> {
   #editors: readonly EditorPackage[];
 
-  static read(
+  static async read(
     packageNames: Iterable<string>,
     resolver: PackageResolver
-  ): EditorPackages {
+  ): Promise<EditorPackages> {
     return new EditorPackages(
-      Array.from(
+      await Promise.all(Array.from(
         packageNames,
         (packageName) => EditorPackage.read(
           packageName,
           resolver.locate(packageName)
         )
-      )
+      ))
     );
   }
 
@@ -48,6 +49,12 @@ export class EditorPackages implements Iterable<EditorPackage> {
     kind: string
   ): EditorPackage | undefined {
     return this.#editors.find((editor) => editor.kinds.includes(kind));
+  }
+
+  preferences(): PreferenceScope[] {
+    return this.#editors.flatMap(
+      (editor) => [...editor.preferences, ...editor.sharedPreferences]
+    );
   }
 
   descriptors(): EditorDescriptor[] {

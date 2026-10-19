@@ -226,6 +226,7 @@ export async function createAssetBackend(
   const scheduler = new SnapshotScheduler({
     eventStore,
     states,
+    kinds,
     projector,
     writer,
     snapshot,

@@ -10,6 +10,7 @@ import {
   CommandConsole,
   type RegisteredVariable
 } from "@jolly-pixel/console";
+import { Preferences } from "@jolly-pixel/editor.host/preferences";
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -20,11 +21,12 @@ import { EditorState } from "../../src/state/EditorState.ts";
 const kChordKeys = "abcdefghijklmnopqrstuvwxyz";
 
 function openConsole(
-  storage: MemoryStorageAdapter
+  storage: MemoryStorageAdapter,
+  preferences: Preferences
 ): CommandConsole {
   const commands = new CommandConsole();
   mapConsole(commands, {
-    state: new EditorState({ storage })
+    state: new EditorState({ storage, preferences })
   });
 
   return commands;
@@ -73,8 +75,9 @@ async function change(
 describe("mapConsole", () => {
   test("every variable keeps its value after a reload", async() => {
     const storage = new MemoryStorageAdapter();
+    const preferences = new Preferences();
     const written = new Map<string, unknown>();
-    const before = openConsole(storage);
+    const before = openConsole(storage, preferences);
     let index = 0;
     for (const variable of listVariables(before)) {
       const initial = variable.def.get();
@@ -83,7 +86,7 @@ describe("mapConsole", () => {
       written.set(variable.address, value);
     }
 
-    const after = openConsole(storage);
+    const after = openConsole(storage, preferences);
 
     assert.ok(written.size > 0);
     for (const [address, value] of written) {

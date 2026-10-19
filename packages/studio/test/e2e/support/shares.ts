@@ -5,6 +5,10 @@ import {
   type Page
 } from "@playwright/test";
 
+// Import Internal Dependencies
+import type { AccountBadge } from "./account.ts";
+import type { SettingsPage } from "./settings.ts";
+
 export class AssetShareDialog {
   readonly root: Locator;
   readonly createButton: Locator;
@@ -33,15 +37,20 @@ export class AssetShareDialog {
 }
 
 export class ShareLinksPane {
-  readonly tab: Locator;
   readonly links: Locator;
   readonly revokeDialog: Locator;
   readonly confirmRevokeButton: Locator;
 
+  #account: AccountBadge;
+  #settings: SettingsPage;
+
   constructor(
-    page: Page
+    page: Page,
+    account: AccountBadge,
+    settings: SettingsPage
   ) {
-    this.tab = page.getByRole("tab", { name: "Share links" });
+    this.#account = account;
+    this.#settings = settings;
     this.links = page.locator("studio-share-links share-link-list")
       .getByRole("listitem");
     this.revokeDialog = page.getByRole("alertdialog", { name: "Revoke link?" });
@@ -53,8 +62,11 @@ export class ShareLinksPane {
       });
   }
 
-  async open(): Promise<void> {
-    await this.tab.click();
+  async open(
+    username: string
+  ): Promise<void> {
+    await this.#account.openSettings(username);
+    await this.#settings.section("Share links").click();
   }
 
   async revoke(): Promise<void> {

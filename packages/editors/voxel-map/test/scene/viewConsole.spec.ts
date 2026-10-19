@@ -7,6 +7,7 @@ import {
 
 // Import Third-party Dependencies
 import { CommandConsole } from "@jolly-pixel/console";
+import { Preferences } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import { viewConsole } from "../../src/scene/viewConsole.ts";
@@ -14,7 +15,7 @@ import { ViewStore } from "../../src/state/ViewStore.ts";
 
 function registerView() {
   const commands = new CommandConsole();
-  const view = new ViewStore();
+  const view = new ViewStore(new Preferences());
   viewConsole(commands, { state: { view } });
 
   return {

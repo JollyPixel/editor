@@ -126,7 +126,9 @@ describe("StudioServer", () => {
       [
         {
           name: "voxel-map",
-          kinds: ["voxelmap"]
+          kinds: ["voxelmap"],
+          preferences: [],
+          sharedPreferences: []
         }
       ]
     );

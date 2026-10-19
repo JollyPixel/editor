@@ -18,6 +18,7 @@ import {
   type AssetWorkspace
 } from "@jolly-pixel/asset-server/node";
 import type { Accounts } from "@jolly-pixel/accounts/node";
+import { STATE_DIRECTORY } from "@jolly-pixel/asset-source";
 import { DEFAULT_WEBSOCKET_PATH } from "@jolly-pixel/network";
 import { WebsocketTransport } from "@jolly-pixel/network/node";
 
@@ -31,10 +32,19 @@ import {
   StudioApi,
   type TrustProxy
 } from "./api/StudioApi.ts";
+import { AssetLog } from "./audit/AssetLog.ts";
+import { AuditFeed } from "./audit/AuditFeed.ts";
+import {
+  AUDIT_DATABASE_FILE,
+  AUDIT_STATE_IGNORES,
+  AuditLog
+} from "./audit/AuditLog.ts";
 import { ProjectArchive } from "./project/ProjectArchive.ts";
+import { ProjectSettings } from "./project/ProjectSettings.ts";
 import type { StudioProject } from "./project/StudioProject.ts";
 import { SharePage } from "./shares/SharePage.ts";
 import { StudioShares } from "./shares/StudioShares.ts";
+import { PreferenceScopes } from "../src/preferences/PreferenceScopes.ts";
 import { createStudioSeed } from "../src/seed.ts";
 
 // CONSTANTS
@@ -89,10 +99,18 @@ export class StudioBackend implements AsyncDisposable {
     options: StudioBackendOptions = {}
   ): Promise<StudioBackend> {
     const accounts = await openStudioAccounts(project, options.accounts);
+    const audit = await AuditLog.open(
+      options.inMemory ?
+        null :
+        path.join(project.file.root, STATE_DIRECTORY, AUDIT_DATABASE_FILE)
+    );
+    const unwatchActivity = accounts.watchActivity(
+      (activity) => audit.recordAccount(activity)
+    );
     const catalog = Promise.withResolvers<CatalogProjection>();
     const shares = new StudioShares({
       accounts,
-      access: project.access,
+      project,
       catalog: catalog.promise
     });
 
@@ -109,7 +127,10 @@ export class StudioBackend implements AsyncDisposable {
       auth: accounts,
       extensions: [accounts.extension],
       backend: {
-        stateIgnores: ACCOUNTS_STATE_IGNORES
+        stateIgnores: [
+          ...ACCOUNTS_STATE_IGNORES,
+          ...AUDIT_STATE_IGNORES
+        ]
       },
       admits: (identity, room) => shares.admits(identity, room)
     });
@@ -119,20 +140,43 @@ export class StudioBackend implements AsyncDisposable {
       scope: (identity) => shares.scope(identity)
     }));
 
+    const settings = new ProjectSettings({
+      project,
+      accounts,
+      server: workspace.server,
+      registry: workspace.backend.kinds,
+      audit,
+      accountsOptions: options.accounts
+    });
+
     const api = await StudioApi.open({
       accounts,
       shares,
-      archive: new ProjectArchive({
-        access: project.access,
-        backend: workspace.backend,
-        name: path.basename(project.file.root)
+      settings,
+      audit: new AuditFeed({
+        project,
+        assets: new AssetLog(workspace.eventStore),
+        audit,
+        account: (accountId) => accounts.account(accountId),
+        assetPath: (assetId) => workspace.backend.catalog.record(assetId)?.source
       }),
+      archive: new ProjectArchive({
+        project,
+        backend: workspace.backend,
+        name: project.name
+      }),
+      preferences: PreferenceScopes.studio(project.editors.preferences()),
       requestsPerMinute: options.requestsPerMinute,
       trustProxy: options.trustProxy
     });
 
+    const resources = new DisposableStack();
+    resources.defer(unwatchActivity);
+    resources.use(audit);
+
     return new StudioBackend(
       accounts,
+      resources,
       workspace,
       api,
       new SharePage({
@@ -145,17 +189,20 @@ export class StudioBackend implements AsyncDisposable {
   readonly middleware: StudioBackendMiddleware;
 
   #accounts: Accounts;
+  #resources: DisposableStack;
   #workspace: AssetWorkspace;
   #api: StudioApi;
   #transports = new DisposableStack();
 
   private constructor(
     accounts: Accounts,
+    resources: DisposableStack,
     workspace: AssetWorkspace,
     api: StudioApi,
     sharePage: SharePage
   ) {
     this.#accounts = accounts;
+    this.#resources = resources;
     this.#workspace = workspace;
     this.#api = api;
     this.middleware = (request, response, next) => {
@@ -182,6 +229,7 @@ export class StudioBackend implements AsyncDisposable {
     this.#transports.dispose();
     await this.#api[Symbol.asyncDispose]();
     await this.#workspace.close();
+    this.#resources.dispose();
     this.#accounts[Symbol.dispose]();
   }
 }

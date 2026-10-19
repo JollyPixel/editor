@@ -25,10 +25,11 @@ test("creates an account from the dialog, then signs out", async({ studio }) => 
   await expect(studio.signIn.root).toBeVisible();
 });
 
-test("uploads an avatar from the account menu", async({ studio, account }) => {
+test("uploads an avatar from Settings, opened from the account menu", async({ studio, account }) => {
   await studio.goto();
 
-  await studio.account.changeAvatar(account, kOnePixelPng);
+  await studio.account.openSettings(account);
+  await studio.settings.changeAvatar(kOnePixelPng);
 
   const avatar = /\/avatar\?v=[0-9a-f]{16}$/;
   await expect(studio.account.avatar).toHaveAttribute("src", avatar);
