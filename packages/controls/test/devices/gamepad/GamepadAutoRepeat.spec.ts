@@ -2,127 +2,91 @@
 import {
   describe,
   test,
-  beforeEach,
-  mock
+  beforeEach
 } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import type { Gamepad } from "../../../src/index.ts";
-import * as mocks from "../../mocks/index.ts";
+import type * as mocks from "../../mocks/index.ts";
 import { createGamepadFixture } from "./Gamepad.fixture.ts";
 
 describe("Controls.Gamepad auto repeat", () => {
   let gamepad: Gamepad;
-  let navigatorAdapter: mocks.NavigatorAdapter;
+  let pad: mocks.GamepadMock;
+
+  function repeated(
+    axis: number,
+    positive = true
+  ): boolean {
+    return gamepad.wasAxisJustPressed(0, axis, { positive, autoRepeat: true }) &&
+      !gamepad.wasAxisJustPressed(0, axis, { positive });
+  }
 
   beforeEach(() => {
-    ({
-      gamepad,
-      navigatorAdapter
-    } = createGamepadFixture());
+    const fixture = createGamepadFixture();
+    gamepad = fixture.gamepad;
+    pad = fixture.plug();
   });
 
-  test("should create auto repeat when axis is pressed", () => {
-    const mockGamepad = mocks.Gamepad();
-    mockGamepad.axes[0] = 0.8;
-    mockGamepad.axes[1] = 0.0;
-    navigatorAdapter.gamepads = [mockGamepad, null, null, null];
-
+  test("repeats a held direction after the delay, then at the rate", (t) => {
+    t.mock.timers.enable({ apis: ["Date"], now: 1000 });
+    pad.axes = [0.8, 0, 0, 0];
     gamepad.update();
 
-    const autoRepeat = gamepad.autoRepeats[0];
-    assert.ok(autoRepeat !== null);
-    assert.strictEqual(autoRepeat.axis, 0);
-    assert.strictEqual(autoRepeat.positive, true);
-    assert.ok(autoRepeat.time > Date.now());
+    t.mock.timers.tick(499);
+    gamepad.update();
+    assert.strictEqual(repeated(0), false);
+
+    t.mock.timers.tick(1);
+    gamepad.update();
+    assert.strictEqual(repeated(0), true);
+
+    t.mock.timers.tick(10);
+    gamepad.update();
+    assert.strictEqual(repeated(0), false);
+
+    t.mock.timers.tick(23);
+    gamepad.update();
+    assert.strictEqual(repeated(0), true);
   });
 
-  test("should trigger auto repeat after delay", () => {
-    const originalDateNow = Date.now;
-    let mockTime = 1000;
-
-    Date.now = mock.fn(() => mockTime);
-
-    const mockGamepad = mocks.Gamepad();
-    mockGamepad.axes[0] = 0.8;
-    mockGamepad.axes[1] = 0.0;
-    navigatorAdapter.gamepads = [mockGamepad, null, null, null];
-
+  test("reports a repeat only when asked for one", (t) => {
+    t.mock.timers.enable({ apis: ["Date"], now: 1000 });
+    pad.axes = [0.8, 0, 0, 0];
     gamepad.update();
 
-    mockTime = 1600;
-
+    t.mock.timers.tick(500);
     gamepad.update();
 
-    const xAxis = gamepad.axes[0][0];
-    assert.strictEqual(xAxis.wasPositiveJustAutoRepeated, true);
-
-    Date.now = originalDateNow;
+    assert.strictEqual(gamepad.wasAxisJustPressed(0, 0, { positive: true }), false);
   });
 
-  test("should cancel auto repeat when axis is released", () => {
-    const mockGamepad = mocks.Gamepad();
-    mockGamepad.axes[0] = 0.8;
-    mockGamepad.axes[1] = 0.0;
-    navigatorAdapter.gamepads = [mockGamepad, null, null, null];
-
+  test("releasing the direction restarts the delay", (t) => {
+    t.mock.timers.enable({ apis: ["Date"], now: 1000 });
+    pad.axes = [0.8, 0, 0, 0];
+    gamepad.update();
+    t.mock.timers.tick(400);
+    pad.axes = [0, 0, 0, 0];
     gamepad.update();
 
-    mockGamepad.axes[0] = 0.0;
+    pad.axes = [0.8, 0, 0, 0];
+    gamepad.update();
+    t.mock.timers.tick(400);
     gamepad.update();
 
-    const autoRepeat = gamepad.autoRepeats[0];
-    assert.strictEqual(autoRepeat, null);
+    assert.strictEqual(repeated(0), false);
   });
 
-  test("should handle multiple gamepads", () => {
-    const mockGamepad1 = mocks.Gamepad();
-    const mockGamepad2 = mocks.Gamepad();
-
-    mockGamepad1.buttons[0] = { pressed: true, value: 1.0 };
-    mockGamepad2.buttons[1] = { pressed: true, value: 0.8 };
-
-    navigatorAdapter.gamepads = [mockGamepad1, mockGamepad2, null, null];
-
+  test("the first direction pressed in a poll owns the repeat", (t) => {
+    t.mock.timers.enable({ apis: ["Date"], now: 1000 });
+    pad.axes = [0.8, 0.6, 0, 0];
     gamepad.update();
 
-    const button1 = gamepad.buttons[0][0];
-    assert.strictEqual(button1.isDown, true);
-    assert.strictEqual(button1.value, 1.0);
-
-    const button2 = gamepad.buttons[1][1];
-    assert.strictEqual(button2.isDown, true);
-    assert.strictEqual(button2.value, 0.8);
-  });
-
-  test("should handle second stick axes correctly", () => {
-    const mockGamepad = mocks.Gamepad();
-    mockGamepad.axes[2] = 0.7;
-    mockGamepad.axes[3] = -0.5;
-    navigatorAdapter.gamepads = [mockGamepad, null, null, null];
-
+    t.mock.timers.tick(500);
     gamepad.update();
 
-    const xAxis = gamepad.axes[0][2];
-    const yAxis = gamepad.axes[0][3];
-
-    assert.strictEqual(xAxis.value, 0.7);
-    assert.strictEqual(yAxis.value, -0.5);
-    assert.strictEqual(xAxis.wasPositiveJustPressed, true);
-    assert.strictEqual(yAxis.wasNegativeJustPressed, false);
-  });
-
-  test("should prioritize first axis for auto repeat when both are pressed", () => {
-    const mockGamepad = mocks.Gamepad();
-    mockGamepad.axes[0] = 0.8;
-    mockGamepad.axes[1] = 0.6;
-    navigatorAdapter.gamepads = [mockGamepad, null, null, null];
-
-    gamepad.update();
-
-    const autoRepeat = gamepad.autoRepeats[0];
-    assert.ok(autoRepeat !== null);
-    assert.strictEqual(autoRepeat.axis, 0);
+    assert.strictEqual(repeated(0), true);
+    assert.strictEqual(repeated(1), false);
   });
 });

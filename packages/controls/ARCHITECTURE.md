@@ -30,11 +30,13 @@ flowchart TB
 | `InputCombination` | conditions across devices | no, the application creates it |
 | `AxisMap` | samples inputs into named scalar values | no, the application creates it |
 
-Links between devices:
+Devices do not call each other. Each listens on the canvas for what it needs:
 
-- Touch events are mirrored into `Mouse`.
-- A mouse press can complete a pending fullscreen request in `Screen`.
-- `Input` tracks the device preference: gamepad, or mouse, keyboard, and touch.
+- `Mouse` follows the first touch as its left button and position.
+- `Screen` completes a pending fullscreen request on a mousedown, mouseup, or
+  touchend.
+- `Input` only tracks the device preference: gamepad, or mouse, keyboard, and
+  touch.
 
 ## Browser adapters
 
@@ -88,16 +90,29 @@ flowchart TB
 | Paused, then one step | every edge since the last step | each frame's edges |
 | Render skipped by `maxFps` | as in the rows above | nothing; the edges wait for the next drawn frame |
 
-### Buffers
+### Control bank
 
-`EdgeBuffer` sits in `src/devices/`; the others live in their device folder.
+`ControlBank` in `src/devices/` owns the edge rules for every device:
 
-| Buffer | Keeps |
-| --- | --- |
-| `EdgeBuffer` | button, touch, and gamepad edges, as bits |
-| `MouseMask` | an `EdgeBuffer`, plus bits queued by DOM events between samples |
-| `MotionBuffer` | mouse movement and wheel deltas, summed |
-| `KeyEdgeBuffer` | key codes and typed characters |
+- DOM handlers and gamepad polls call `press()`, `release()`, and `repeat()`.
+  Held state changes at once; the edge is queued.
+- `sample()` copies queued edges to the step and frame readers, so a press
+  and release between two samples reports both edges.
+- `publish(reader)` swaps in that reader's edges for the queries, `"ANY"` and
+  `"NONE"` included.
+- A release that is the first edge of a control in a window records the
+  control as held when the window started. `wasDownBefore()` reads it, which
+  lets aliases tell a tap then a hold from a release then a press.
+
+Each device only maps its controls: key codes, mouse button indexes, touch
+slots, and gamepad buttons plus axis directions (`GamepadSlot`).
+
+Every per-reader value goes through one `ReaderBuffer` that holds queued,
+step, frame, and published samples. The sample type implements `addTo()`,
+`clear()`, and `empty`: `ControlEdges` for edges, `MotionSample` for mouse
+movement and wheel deltas, and `TypedText` for typed characters. Mouse wheel
+direction is a press and release of `scrollUp` or `scrollDown` in the bank,
+so `scrollUp` and `isDown("scrollUp")` read the same edge.
 
 ## Keyboard
 
@@ -148,6 +163,12 @@ letter for letter chords. On a keydown:
 - A physical chord prints the QWERTY character, or the user's keycap when
   given the map from `loadKeyboardLayout()`.
 - The layout is only read for labels; matching never depends on it.
+
+### Layout
+
+`src/devices/keyboard/` holds the device. `chords/` holds `KeyChord`, letter
+resolution, and keyboard layouts; `bindings/` holds `KeyBindings`,
+`KeyBindingMap`, and `KeyBindingSettings`.
 
 ## See also
 

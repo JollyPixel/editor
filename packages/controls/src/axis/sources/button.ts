@@ -1,22 +1,45 @@
 // Import Internal Dependencies
-import type { Input } from "../../Input.class.ts";
-import type { InputCondition } from "../../combination/index.ts";
+import type { InputDevices } from "../../types.ts";
+import {
+  InputCombination,
+  type CombinedKeyboardInputAction,
+  type InputCondition
+} from "../../combination/index.ts";
+import type { InputKeyboardAction } from "../../devices/index.ts";
 import type { AxisSource } from "./AxisSource.ts";
 
+export type AxisHalf =
+  | InputCondition
+  | CombinedKeyboardInputAction
+  | InputKeyboardAction
+  | null;
+
 export class ButtonAxisSource implements AxisSource {
+  static #condition(
+    half: AxisHalf
+  ): InputCondition | null {
+    if (half === null || typeof half !== "string") {
+      return half;
+    }
+
+    return InputCombination.isCombinedAction(half) ?
+      InputCombination.key(half) :
+      InputCombination.key(half, "down");
+  }
+
   #positive: InputCondition | null;
   #negative: InputCondition | null;
 
   constructor(
-    positive: InputCondition | null,
-    negative: InputCondition | null
+    positive: AxisHalf,
+    negative: AxisHalf
   ) {
-    this.#positive = positive;
-    this.#negative = negative;
+    this.#positive = ButtonAxisSource.#condition(positive);
+    this.#negative = ButtonAxisSource.#condition(negative);
   }
 
   sample(
-    input: Input
+    input: InputDevices
   ): number {
     let value = 0;
 

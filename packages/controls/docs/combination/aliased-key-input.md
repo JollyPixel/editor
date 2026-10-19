@@ -100,6 +100,10 @@ An alias reports transitions for the whole group:
 - `pressed` is true on the frame the first key goes down while no other key
   was held.
 - `released` is true on the frame the last held key goes up.
+- A key pressed and released within one frame, while no other key was held,
+  reports both `pressed` and `released`.
+- A key tapped then held again within one frame reports `pressed`; a held key
+  released and pressed again within one frame reports nothing.
 
 Pressing a second key while the first is held produces no group transition.
 Swapping keys within one frame also produces no transition. Use separate
@@ -121,10 +125,10 @@ every read and share the resolved key list. For a condition whose state is
 `"down"`, `condition.pressed.down === condition`.
 
 `reset()` does nothing because an aliased condition keeps no progress. Like
-the other concrete conditions, it can be bound to an `Input`:
+any condition, it can be bound to an `Input`:
 
 ```ts
-const isShiftHeld = InputCombination.Shift.bind(input);
+const isShiftHeld = bindInputCondition(InputCombination.Shift, input);
 
 if (isShiftHeld()) {
   console.log("Shift is held");

@@ -1,5 +1,8 @@
 export type { AxisSource } from "./AxisSource.ts";
-export { ButtonAxisSource } from "./button.ts";
+export {
+  ButtonAxisSource,
+  type AxisHalf
+} from "./button.ts";
 export {
   GamepadAxisSource,
   type GamepadAxisSourceOptions

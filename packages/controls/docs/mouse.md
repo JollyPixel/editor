@@ -75,8 +75,11 @@ interface MouseButtonState {
 ```
 
 `scrollUp` and `scrollDown` are virtual buttons created from the wheel's Y
-direction. They publish one-frame button transitions and discard wheel
-magnitude. Use `scroll` when magnitude or horizontal input matters.
+direction. Each sample whose summed wheel Y moved one way presses and releases
+that button, and they are down until the reader's next publish. Wheel up then
+down across two samples reports both buttons while `scroll.y` sums to 0. They
+discard wheel magnitude. Use `scroll` when magnitude or horizontal input
+matters.
 
 ## Frame state
 
@@ -94,7 +97,7 @@ interface Mouse {
 }
 ```
 
-DOM and synchronized touch events write live input state. `update()` samples
+DOM and touch events write live input state; `isDown()` follows them at once. `update()` samples
 that state and publishes button transitions, double-clicks, wheel input, and
 movement for the current input step. A complete press and release between two
 updates still publishes both edges.
@@ -143,9 +146,6 @@ on the following update.
 
 ```ts
 interface Mouse {
-  newPosition: { x: number; y: number } | null;
-  newDelta: { x: number; y: number };
-
   readonly position: { x: number; y: number };
   readonly delta: { x: number; y: number };
   readonly viewportPosition: Vector2Like;
@@ -184,10 +184,6 @@ new objects. The `*To()` methods write into a caller-owned object such as a
 `Vector2Like` is the structural `{ x: number; y: number }` shape used by these
 methods. It is exported from the package root.
 
-`newPosition` and `newDelta` are public in the current declaration but are
-staging objects written by DOM handlers before `update()`. Polling consumers
-should use `position` and `delta`.
-
 ## Wheel input
 
 ```ts
@@ -199,9 +195,14 @@ interface Mouse {
   scrollTo<T extends Vector2Like>(out: T): T;
 }
 
+type LegacyWheelEvent = WheelEvent & {
+  readonly wheelDeltaX?: number;
+  readonly wheelDeltaY?: number;
+};
+
 declare class Mouse {
   static wheelDelta(
-    event: WheelEvent
+    event: LegacyWheelEvent
   ): [number, number];
 }
 ```
@@ -211,10 +212,10 @@ means scrolling away from the user. Several wheel events in one update are
 summed, including horizontal input and magnitude. `scrollTo()` writes the same
 state into a caller-owned object.
 
-`wheelDelta()` normalizes browser wheel events into `[x, y]` notches. The
-current `MouseEvents` declaration types the `wheel` listener argument as
-`MouseEvent`, although browsers deliver a `WheelEvent`; callers passing that
-argument to `wheelDelta()` need to narrow or cast it.
+`wheelDelta()` normalizes browser wheel events into `[x, y]` notches. Outside
+Apple platforms it reads the non-standard `wheelDeltaX` and `wheelDeltaY`
+fields, which `LegacyWheelEvent` declares; a missing field counts as 0. Any
+`WheelEvent`, including the `wheel` listener argument, can be passed as is.
 
 ## Wheel source
 
@@ -267,19 +268,12 @@ then comes from `movementX` and `movementY` while lock is active.
 it. `visible = false` sets the canvas cursor to `"none"`; `true` sets it to
 `"auto"`.
 
-## Touch synchronization
+## Touch
 
-```ts
-synchronizeWithTouch(
-  touch: Touch,
-  buttonValue?: boolean,
-  position?: TouchPosition
-): void
-```
-
-Mirrors the primary touch into the left mouse button and mouse position.
-Touches with another identifier are ignored. `Input` wires this method to its
-`Touchpad` automatically.
+The first touch on the canvas drives the left button and the position until it
+ends or is cancelled. Touches that start while it is held are ignored. Touch
+handlers prevent their browser defaults, so the browser does not send
+compatibility mouse events.
 
 ## Events
 
@@ -289,7 +283,7 @@ type MouseEvents = {
   down: (event: MouseEvent) => void;
   up: (event: MouseEvent) => void;
   move: (event: MouseEvent) => void;
-  wheel: (event: MouseEvent) => void;
+  wheel: (event: WheelEvent) => void;
   enter: () => void;
   leave: () => void;
 };
@@ -312,5 +306,6 @@ connect(): void
 disconnect(): void
 ```
 
-`connect()` registers canvas and document listeners. `disconnect()` removes
+`connect()` registers canvas mouse, wheel, and touch listeners, and document
+listeners. `disconnect()` removes
 them. It does not reset the published state.

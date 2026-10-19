@@ -5,7 +5,8 @@ import { Emitter } from "@openally/emitt";
 import {
   BrowserDocumentAdapter,
   type DocumentAdapter,
-  type CanvasAdapter
+  type CanvasAdapter,
+  type EventTargetListener
 } from "../../adapters/index.ts";
 import type {
   InputControl,
@@ -14,26 +15,28 @@ import type {
   Vector2Like
 } from "../../types.ts";
 import {
-  TouchIdentifier,
-  type TouchPosition
-} from "../Touchpad.class.ts";
-import { MouseMask } from "./MouseMask.ts";
-import { MotionBuffer } from "./MotionBuffer.ts";
+  ControlBank,
+  type ControlQuery
+} from "../ControlBank.ts";
+import { ReaderBuffer } from "../ReaderBuffer.ts";
+import { MotionSample } from "./MotionSample.ts";
 import {
   WheelGesture,
+  type LegacyWheelEvent,
   type ScrollDevice,
   type ScrollSource
 } from "./WheelGesture.ts";
 import { isApplePlatform } from "../../platform.ts";
 
 export type {
+  LegacyWheelEvent,
   ScrollDevice,
   ScrollSource
 } from "./WheelGesture.ts";
 
 // CONSTANTS
 const kButtonCount = 7;
-const kScrollMask = (1 << 5) | (1 << 6);
+const kDragButtonCount = 5;
 
 export interface MouseButtonState {
   isDown: boolean;
@@ -61,7 +64,7 @@ export type MouseEvents = {
   down: (event: MouseEvent) => void;
   up: (event: MouseEvent) => void;
   move: (event: MouseEvent) => void;
-  wheel: (event: MouseEvent) => void;
+  wheel: (event: WheelEvent) => void;
   enter: () => void;
   leave: () => void;
 };
@@ -75,7 +78,7 @@ export class Mouse extends Emitter<
   MouseEvents
 > implements InputControl {
   static wheelDelta(
-    event: WheelEvent
+    event: LegacyWheelEvent
   ): [number, number] {
     if (isApplePlatform()) {
       switch (event.deltaMode) {
@@ -95,8 +98,8 @@ export class Mouse extends Emitter<
     }
     else {
       return [
-        -(event as any).wheelDeltaX / 120,
-        (event as any).wheelDeltaY / 120
+        -(event.wheelDeltaX ?? 0) / 120,
+        (event.wheelDeltaY ?? 0) / 120
       ];
     }
   }
@@ -104,40 +107,25 @@ export class Mouse extends Emitter<
   #canvas: CanvasAdapter;
   #documentAdapter: DocumentAdapter;
 
-  #downMask = 0;
-  #prevMask = 0;
-  #pressed = new MouseMask();
-  #released = new MouseMask();
-  #doubleClicked = new MouseMask();
-  #scroll = new MouseMask();
+  #buttons = new ControlBank<number>();
 
   #position = {
     x: 0,
     y: 0
   };
-  newPosition: { x: number; y: number; } | null = null;
-
+  #newPosition: Vector2Like | null = null;
   #newPositionSlot = {
     x: 0,
     y: 0
   };
 
-  #delta = new MotionBuffer();
-  newDelta = {
-    x: 0,
-    y: 0
-  };
-  #scrollDelta = {
-    x: 0,
-    y: 0
-  };
-  #scrollDeltaSource: ScrollSource | null = null;
-  #scrollSample = new MotionBuffer<ScrollSource>();
+  #delta = new ReaderBuffer(() => new MotionSample());
+  #scroll = new ReaderBuffer(() => new MotionSample<ScrollSource>());
   #wheelGesture = new WheelGesture();
 
   #canvasEvent: MouseEvent | null = null;
+  #touchIdentifier: number | null = null;
   #hovering = false;
-  #wasActive = false;
   #wantsPointerLock = false;
   #wasPointerLocked = false;
 
@@ -156,7 +144,7 @@ export class Mouse extends Emitter<
   }
 
   get wasActive() {
-    return this.#wasActive;
+    return this.#buttons.active;
   }
 
   get hovering() {
@@ -164,133 +152,69 @@ export class Mouse extends Emitter<
   }
 
   connect() {
-    this.#canvas.addEventListener(
-      "mousemove",
-      this.#onMouseMove
-    );
-    this.#canvas.addEventListener(
-      "mousedown",
-      this.#onMouseDown
-    );
-    this.#canvas.addEventListener(
-      "mouseup",
-      this.#onMouseUp
-    );
-    this.#canvas.addEventListener(
-      "dblclick",
-      this.#onMouseDoubleClick
-    );
-    this.#canvas.addEventListener(
-      "wheel",
-      this.#onMouseWheel
-    );
-    this.#canvas.addEventListener(
-      "mouseenter",
-      this.#onMouseEnter
-    );
-    this.#canvas.addEventListener(
-      "mouseleave",
-      this.#onMouseLeave
-    );
-    this.#documentAdapter.addEventListener(
-      "mousemove",
-      this.#onDocumentMouseMove
-    );
-    this.#documentAdapter.addEventListener(
-      "mouseup",
-      this.#onDocumentMouseUp
-    );
-    this.#documentAdapter.addEventListener(
-      "pointerlockchange",
-      this.#onPointerLockChange,
-      false
-    );
-    this.#documentAdapter.addEventListener(
-      "pointerlockerror",
-      this.#onPointerLockError,
-      false
-    );
+    for (const [type, listener] of this.#canvasListeners()) {
+      this.#canvas.addEventListener(type, listener);
+    }
+    for (const [type, listener] of this.#documentListeners()) {
+      this.#documentAdapter.addEventListener(type, listener);
+    }
   }
 
   disconnect() {
-    this.#canvas.removeEventListener(
-      "mousemove",
-      this.#onMouseMove
-    );
-    this.#canvas.removeEventListener(
-      "mousedown",
-      this.#onMouseDown
-    );
-    this.#canvas.removeEventListener(
-      "mouseup",
-      this.#onMouseUp
-    );
-    this.#canvas.removeEventListener(
-      "dblclick",
-      this.#onMouseDoubleClick
-    );
-    this.#canvas.removeEventListener(
-      "wheel",
-      this.#onMouseWheel
-    );
-    this.#canvas.removeEventListener(
-      "mouseenter",
-      this.#onMouseEnter
-    );
-    this.#canvas.removeEventListener(
-      "mouseleave",
-      this.#onMouseLeave
-    );
-    this.#documentAdapter.removeEventListener(
-      "mousemove",
-      this.#onDocumentMouseMove
-    );
-    this.#documentAdapter.removeEventListener(
-      "mouseup",
-      this.#onDocumentMouseUp
-    );
-    this.#documentAdapter.removeEventListener(
-      "pointerlockchange",
-      this.#onPointerLockChange,
-      false
-    );
-    this.#documentAdapter.removeEventListener(
-      "pointerlockerror",
-      this.#onPointerLockError,
-      false
-    );
+    for (const [type, listener] of this.#canvasListeners()) {
+      this.#canvas.removeEventListener(type, listener);
+    }
+    for (const [type, listener] of this.#documentListeners()) {
+      this.#documentAdapter.removeEventListener(type, listener);
+    }
+  }
+
+  #canvasListeners(): Array<[string, EventTargetListener]> {
+    return [
+      ["mousemove", this.#onMouseMove],
+      ["mousedown", this.#onMouseDown],
+      ["mouseup", this.#onMouseUp],
+      ["dblclick", this.#onMouseDoubleClick],
+      ["wheel", this.#onMouseWheel],
+      ["mouseenter", this.#onMouseEnter],
+      ["mouseleave", this.#onMouseLeave],
+      ["touchstart", this.#onTouchStart],
+      ["touchmove", this.#onTouchMove],
+      ["touchend", this.#onTouchEnd],
+      ["touchcancel", this.#onTouchEnd]
+    ];
+  }
+
+  #documentListeners(): Array<[string, EventTargetListener]> {
+    return [
+      ["mousemove", this.#onDocumentMouseMove],
+      ["mouseup", this.#onDocumentMouseUp],
+      ["pointerlockchange", this.#onPointerLockChange],
+      ["pointerlockerror", this.#onPointerLockError]
+    ];
   }
 
   reset() {
-    this.#scrollDelta.x = 0;
-    this.#scrollDelta.y = 0;
-    this.#scrollDeltaSource = null;
-    this.#scrollSample.reset();
+    this.#scroll.reset();
     this.#wheelGesture.reset();
     this.#canvasEvent = null;
+    this.#touchIdentifier = null;
     this.#updateHovering(false);
-    this.#downMask = 0;
-    this.#prevMask = 0;
-    this.#pressed.reset();
-    this.#released.reset();
-    this.#doubleClicked.reset();
-    this.#scroll.reset();
+    this.#buttons.reset();
 
     this.#position.x = 0;
     this.#position.y = 0;
-    this.newPosition = null;
+    this.#newPosition = null;
 
     this.#delta.reset();
-    this.newDelta.x = 0;
-    this.newDelta.y = 0;
   }
 
   get scrollUp() {
-    return (this.#downMask & (1 << MouseEventButton.scrollUp)) !== 0;
+    return this.#buttons.wasPressed(MouseEventButton.scrollUp);
   }
 
   get scrollDown() {
-    return (this.#downMask & (1 << MouseEventButton.scrollDown)) !== 0;
+    return this.#buttons.wasPressed(MouseEventButton.scrollDown);
   }
 
   get scroll() {
@@ -300,14 +224,14 @@ export class Mouse extends Emitter<
   scrollTo<T extends Vector2Like>(
     out: T
   ): T {
-    out.x = this.#scrollSample.value.x;
-    out.y = this.#scrollSample.value.y;
+    out.x = this.#scroll.published.x;
+    out.y = this.#scroll.published.y;
 
     return out;
   }
 
   get scrollSource(): ScrollSource | null {
-    return this.#scrollSample.value.source;
+    return this.#scroll.published.source;
   }
 
   get scrollDevice(): ScrollDevice {
@@ -321,8 +245,8 @@ export class Mouse extends Emitter<
   }
 
   isScrolling(): boolean {
-    return this.#scrollSample.value.x !== 0 ||
-      this.#scrollSample.value.y !== 0;
+    return this.#scroll.published.x !== 0 ||
+      this.#scroll.published.y !== 0;
   }
 
   get position() {
@@ -345,8 +269,8 @@ export class Mouse extends Emitter<
   deltaTo<T extends Vector2Like>(
     out: T
   ): T {
-    out.x = this.#delta.value.x;
-    out.y = this.#delta.value.y;
+    out.x = this.#delta.published.x;
+    out.y = this.#delta.published.y;
 
     return out;
   }
@@ -361,8 +285,7 @@ export class Mouse extends Emitter<
     }
 
     this.#wantsPointerLock = true;
-    this.newDelta.x = 0;
-    this.newDelta.y = 0;
+    this.#delta.queued.clear();
   }
 
   unlock() {
@@ -426,33 +349,16 @@ export class Mouse extends Emitter<
     normalizeWithSize = false
   ): T {
     if (normalizeWithSize) {
-      out.x = this.#delta.value.x / (this.#canvas.clientWidth / 2);
-      out.y = -this.#delta.value.y / (this.#canvas.clientHeight / 2);
+      out.x = this.#delta.published.x / (this.#canvas.clientWidth / 2);
+      out.y = -this.#delta.published.y / (this.#canvas.clientHeight / 2);
 
       return out;
     }
 
-    out.x = this.#delta.value.x;
-    out.y = -this.#delta.value.y;
+    out.x = this.#delta.published.x;
+    out.y = -this.#delta.published.y;
 
     return out;
-  }
-
-  synchronizeWithTouch(
-    touch: Touch,
-    buttonValue?: boolean,
-    position?: TouchPosition
-  ) {
-    if (touch.identifier !== TouchIdentifier.primary) {
-      return;
-    }
-    if (typeof buttonValue === "boolean") {
-      this.#updateButton(MouseEventButton.left, buttonValue);
-      this.#updateHovering(buttonValue);
-    }
-    if (position) {
-      this.newPosition = position;
-    }
   }
 
   update() {
@@ -461,180 +367,130 @@ export class Mouse extends Emitter<
   }
 
   sample(): void {
-    if (this.#isQuiet()) {
-      return;
-    }
-
-    const scrollBits =
-      (Number(this.#scrollDelta.y > 0) << MouseEventButton.scrollUp) |
-      (Number(this.#scrollDelta.y < 0) << MouseEventButton.scrollDown);
-    this.#scroll.sample(scrollBits);
-    this.#scrollSample.push(
-      this.#scrollDelta.x,
-      this.#scrollDelta.y,
-      this.#scrollDeltaSource
-    );
-    this.#scrollDelta.x = 0;
-    this.#scrollDelta.y = 0;
-    this.#scrollDeltaSource = null;
-
-    if (this.#wantsPointerLock && this.#wasPointerLocked) {
-      this.#delta.push(this.newDelta.x, this.newDelta.y);
-      this.newDelta.x = 0;
-      this.newDelta.y = 0;
-    }
-    else if (this.newPosition !== null) {
-      this.#delta.push(
-        this.newPosition.x - this.#position.x,
-        this.newPosition.y - this.#position.y
-      );
-      this.#position.x = this.newPosition.x;
-      this.#position.y = this.newPosition.y;
-
-      this.newPosition = null;
-    }
-
-    const isDown = (this.#downMask & ~kScrollMask) | scrollBits;
-    const wasDown = this.#prevMask;
-
-    this.#pressed.sample(~wasDown & isDown);
-    this.#released.sample(wasDown & ~isDown);
-    this.#doubleClicked.sample();
-    this.#prevMask = isDown;
-    this.#wasActive = isDown !== 0;
+    this.#sampleScroll();
+    this.#sampleMotion();
+    this.#buttons.sample();
+    this.#delta.sample();
+    this.#scroll.sample();
   }
 
   publish(
     reader: InputReader
   ): void {
-    this.#pressed.take(reader);
-    this.#released.take(reader);
-    this.#doubleClicked.take(reader);
-    this.#scroll.take(reader);
-    this.#downMask = (this.#downMask & ~kScrollMask) |
-      this.#scroll.value;
-    this.#delta.take(reader);
-    this.#scrollSample.take(reader);
+    this.#buttons.publish(reader);
+    this.#delta.publish(reader);
+    this.#scroll.publish(reader);
   }
 
-  #isQuiet(): boolean {
-    return this.newPosition === null &&
-      this.#scrollDelta.x === 0 &&
-      this.#scrollDelta.y === 0 &&
-      this.newDelta.x === 0 &&
-      this.newDelta.y === 0 &&
-      !this.#pressed.queued &&
-      !this.#released.queued &&
-      !this.#doubleClicked.queued &&
-      this.#prevMask === 0;
+  #sampleScroll(): void {
+    const { y } = this.#scroll.queued;
+    if (y === 0) {
+      return;
+    }
+
+    const button = y > 0 ?
+      MouseEventButton.scrollUp :
+      MouseEventButton.scrollDown;
+    this.#buttons.press(button);
+    this.#buttons.release(button);
+  }
+
+  #sampleMotion(): void {
+    if (
+      this.#newPosition === null ||
+      (this.#wantsPointerLock && this.#wasPointerLocked)
+    ) {
+      return;
+    }
+
+    this.#delta.queued.add(
+      this.#newPosition.x - this.#position.x,
+      this.#newPosition.y - this.#position.y
+    );
+    this.#position.x = this.#newPosition.x;
+    this.#position.y = this.#newPosition.y;
+    this.#newPosition = null;
   }
 
   isMoving(): boolean {
-    return this.#delta.value.x !== 0 || this.#delta.value.y !== 0;
+    return this.#delta.published.x !== 0 || this.#delta.published.y !== 0;
   }
 
   isDown(
     action: InputMouseAction
   ): boolean {
-    if (action === "ANY") {
-      return this.#downMask !== 0;
+    const query = Mouse.#buttonQuery(action);
+    switch (query) {
+      case "ANY":
+        return this.#buttons.isDown("ANY") || this.scrollUp || this.scrollDown;
+      case "NONE":
+        return !this.isDown("ANY");
+      case MouseEventButton.scrollUp:
+      case MouseEventButton.scrollDown:
+        return this.#buttons.wasPressed(query);
+      default:
+        return this.#buttons.isDown(query);
     }
-    if (action === "NONE") {
-      return this.#downMask === 0;
-    }
-
-    return (
-      this.#downMask & this.#buttonBit(action)
-    ) !== 0;
   }
 
   wasJustPressed(
     action: InputMouseAction
   ): boolean {
-    if (action === "ANY") {
-      return this.#pressed.any;
-    }
-    if (action === "NONE") {
-      return !this.#pressed.any;
-    }
-
-    return this.#pressed.has(
-      this.#buttonBit(action)
-    );
+    return this.#buttons.wasPressed(Mouse.#buttonQuery(action));
   }
 
   wasJustReleased(
     action: InputMouseAction
   ): boolean {
-    if (action === "ANY") {
-      return this.#released.any;
-    }
-    if (action === "NONE") {
-      return !this.#released.any;
-    }
-
-    return this.#released.has(
-      this.#buttonBit(action)
-    );
+    return this.#buttons.wasReleased(Mouse.#buttonQuery(action));
   }
 
   buttonState(
     action: number | MouseAction
   ): Readonly<MouseButtonState> {
-    const bit = this.#buttonBit(action);
+    const button = Mouse.#buttonIndex(action);
 
     return {
-      isDown: (this.#prevMask & bit) !== 0,
-      doubleClicked: this.#doubleClicked.has(bit),
-      wasJustPressed: this.#pressed.has(bit),
-      wasJustReleased: this.#released.has(bit)
+      isDown: this.isDown(button),
+      doubleClicked: this.#buttons.wasRepeated(button),
+      wasJustPressed: this.#buttons.wasPressed(button),
+      wasJustReleased: this.#buttons.wasReleased(button)
     };
   }
 
-  #buttonBit(
-    action: number | MouseAction
-  ): number {
-    const index = typeof action === "number" ?
-      action :
-      MouseEventButton[action];
-
-    return index >= 0 && index < kButtonCount ? 1 << index : 0;
-  }
-
-  #updateButton(
-    index: number,
-    value: boolean
+  #toggle(
+    button: number,
+    down: boolean
   ): void {
-    const bit = this.#buttonBit(index);
-    const wasDown = (this.#downMask & bit) !== 0;
-
-    if (value && !wasDown) {
-      this.#pressed.queue(bit);
+    if (button !== -1) {
+      this.#buttons.follow(button, down);
     }
-    else if (!value && wasDown) {
-      this.#released.queue(bit);
-    }
-
-    this.#downMask = value ?
-      this.#downMask | bit :
-      this.#downMask & ~bit;
   }
 
   #isDragging(): boolean {
-    return (this.#downMask & ~kScrollMask) !== 0;
+    for (let button = 0; button < kDragButtonCount; button++) {
+      if (this.#buttons.isDown(button)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   #canvasRelativePosition(
-    event: MouseEvent,
-    out: { x: number; y: number; }
+    point: {
+      clientX: number;
+      clientY: number;
+    }
   ): boolean {
     const rect = this.#canvas.getBoundingClientRect?.();
     if (!rect) {
       return false;
     }
 
-    out.x = event.clientX - rect.left;
-    out.y = event.clientY - rect.top;
+    this.#newPositionSlot.x = point.clientX - rect.left;
+    this.#newPositionSlot.y = point.clientY - rect.top;
+    this.#newPosition = this.#newPositionSlot;
 
     return true;
   }
@@ -648,6 +504,19 @@ export class Mouse extends Emitter<
 
     this.#hovering = hovering;
     this.emit(hovering ? "enter" : "leave");
+  }
+
+  #primaryTouch(
+    event: TouchEvent
+  ): Touch | null {
+    for (let index = 0; index < event.changedTouches.length; index++) {
+      const touch = event.changedTouches[index];
+      if (touch.identifier === this.#touchIdentifier) {
+        return touch;
+      }
+    }
+
+    return null;
   }
 
   #onMouseEnter = () => {
@@ -665,8 +534,7 @@ export class Mouse extends Emitter<
 
     if (this.#wantsPointerLock) {
       if (this.#wasPointerLocked && event.movementX !== null) {
-        this.newDelta.x += event.movementX;
-        this.newDelta.y += event.movementY;
+        this.#delta.queued.add(event.movementX, event.movementY);
       }
     }
     else {
@@ -685,7 +553,7 @@ export class Mouse extends Emitter<
         position.y = event.clientY - rect.top;
       }
 
-      this.newPosition = position;
+      this.#newPosition = position;
     }
 
     this.emit("move", event);
@@ -694,7 +562,7 @@ export class Mouse extends Emitter<
   #onMouseDown = (event: MouseEvent) => {
     event.preventDefault();
     this.#canvas.focus();
-    this.#updateButton(event.button, true);
+    this.#toggle(Mouse.#buttonIndex(event.button), true);
 
     if (this.#wantsPointerLock && !this.#wasPointerLocked) {
       this.#canvas.requestPointerLock();
@@ -707,7 +575,7 @@ export class Mouse extends Emitter<
     if (this.isDown(event.button)) {
       event.preventDefault();
     }
-    this.#updateButton(event.button, false);
+    this.#toggle(Mouse.#buttonIndex(event.button), false);
 
     if (this.#wantsPointerLock && !this.#wasPointerLocked) {
       this.#canvas.requestPointerLock();
@@ -717,21 +585,57 @@ export class Mouse extends Emitter<
 
   #onMouseDoubleClick = (event: MouseEvent) => {
     event.preventDefault();
-    this.#doubleClicked.queue(
-      this.#buttonBit(event.button)
-    );
+    const button = Mouse.#buttonIndex(event.button);
+    if (button !== -1) {
+      this.#buttons.repeat(button);
+    }
   };
 
-  #onMouseWheel = (event: WheelEvent) => {
+  #onMouseWheel = (event: LegacyWheelEvent) => {
     event.preventDefault();
-    this.#scrollDeltaSource = this.#wheelGesture.classify(event);
+    const source = this.#wheelGesture.classify(event);
     const [deltaX, deltaY] = Mouse.wheelDelta(event);
 
-    this.#scrollDelta.x += deltaX;
-    this.#scrollDelta.y += deltaY;
+    this.#scroll.queued.add(deltaX, deltaY, source);
     this.emit("wheel", event);
 
     return false;
+  };
+
+  #onTouchStart = (event: TouchEvent) => {
+    event.preventDefault();
+    if (this.#touchIdentifier !== null) {
+      return;
+    }
+
+    const touch = event.changedTouches[0];
+    if (touch === undefined) {
+      return;
+    }
+
+    this.#touchIdentifier = touch.identifier;
+    this.#canvasRelativePosition(touch);
+    this.#buttons.press(MouseEventButton.left);
+    this.#updateHovering(true);
+  };
+
+  #onTouchMove = (event: TouchEvent) => {
+    event.preventDefault();
+    const touch = this.#primaryTouch(event);
+    if (touch !== null) {
+      this.#canvasRelativePosition(touch);
+    }
+  };
+
+  #onTouchEnd = (event: TouchEvent) => {
+    event.preventDefault();
+    if (this.#primaryTouch(event) === null) {
+      return;
+    }
+
+    this.#touchIdentifier = null;
+    this.#buttons.release(MouseEventButton.left);
+    this.#updateHovering(false);
   };
 
   #onDocumentMouseMove = (event: MouseEvent) => {
@@ -743,11 +647,9 @@ export class Mouse extends Emitter<
       return;
     }
 
-    const position = this.#newPositionSlot;
-    if (!this.#canvasRelativePosition(event, position)) {
+    if (!this.#canvasRelativePosition(event)) {
       return;
     }
-    this.newPosition = position;
 
     this.emit("move", event);
   };
@@ -760,7 +662,7 @@ export class Mouse extends Emitter<
       return;
     }
 
-    this.#updateButton(event.button, false);
+    this.#toggle(Mouse.#buttonIndex(event.button), false);
 
     this.emit("up", event);
   };
@@ -785,4 +687,22 @@ export class Mouse extends Emitter<
       this.#wasPointerLocked = false;
     }
   };
+
+  static #buttonIndex(
+    action: number | MouseAction
+  ): number {
+    const index = typeof action === "number" ?
+      action :
+      MouseEventButton[action];
+
+    return index >= 0 && index < kButtonCount ? index : -1;
+  }
+
+  static #buttonQuery(
+    action: InputMouseAction
+  ): ControlQuery<number> {
+    return action === "ANY" || action === "NONE" ?
+      action :
+      Mouse.#buttonIndex(action);
+  }
 }

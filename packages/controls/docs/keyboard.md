@@ -59,11 +59,12 @@ and typed characters.
 type InputKeyboardAction = ExtendedKeyCode | "ANY" | "NONE";
 
 isDown(key: InputKeyboardAction): boolean
+wasDownLastUpdate(key: ExtendedKeyCode): boolean
 wasJustPressed(key: InputKeyboardAction): boolean
 wasJustReleased(key: InputKeyboardAction): boolean
 wasJustAutoRepeated(key: ExtendedKeyCode): boolean
 
-char: string
+readonly char: string
 readonly wasActive: boolean
 ```
 
@@ -71,12 +72,16 @@ Keys are physical `KeyboardEvent.code` values (`"KeyW"`, `"Space"`,
 `"ArrowUp"`), so WASD stays a cluster on every layout. `"W"` and `"7"` are
 shorthands for `"KeyW"` and `"Digit7"`; lowercase letters are rejected.
 
-`isDown()` reads the held state. The `wasJust*` flags last until the next
-`publish()`.
+`isDown()` reads the held state as soon as the keydown arrives. The `wasJust*`
+flags last until the next `publish()`. A key pressed and released between two
+samples reports both `wasJustPressed()` and `wasJustReleased()`.
+`wasDownLastUpdate()` is the key's held state at the reader's previous
+`publish()`: a key tapped and held again since then was up, a held key
+released and pressed again was down.
 `"ANY"` is true when at least one key matches, `"NONE"` when none does.
 
 `char` holds the printable characters the current reader has not seen yet.
-`wasActive` is `true` while a key is held or auto-repeating.
+`wasActive` is `true` when the latest sample had a key held or an edge.
 
 ## Bindings
 
@@ -105,19 +110,6 @@ keyboard.bind("Escape", () => placement.cancel(), { priority: 1 });
   handles it: later bindings are skipped and the event gets
   `preventDefault()`.
 
-## Pausing
-
-```ts
-enabled: boolean
-readonly suspended: boolean
-suspend(): () => void
-```
-
-Setting `enabled` to `false` resets the state and ignores key events until it
-is `true` again. `suspend()` does the same without touching `enabled` and
-returns a release function; the keyboard resumes once every suspension is
-released.
-
 ## Ignored keys
 
 Keydowns and keypresses from a text `input`, a `textarea`, or a
@@ -137,7 +129,17 @@ addGuard(guard: KeyboardGuard): () => void
 ```
 
 A keydown or keypress that a guard `blocks()` is ignored like an editable
-target. Calling the `onEngage` listener releases every held key.
+target. Keyups are never blocked. Calling the `onEngage` listener releases
+every held key, with a `wasJustReleased()` edge.
+
+```ts
+readonly suspended: boolean
+suspend(): () => void
+```
+
+`suspend()` adds a guard that blocks every key and releases the held ones. It
+returns a release function; the keyboard listens again once every suspension
+is released.
 
 ```ts
 import { inputLayers } from "@jolly-pixel/ui";

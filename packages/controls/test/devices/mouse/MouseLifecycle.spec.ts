@@ -3,18 +3,18 @@ import {
   afterEach,
   beforeEach,
   describe,
-  mock,
   test
 } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Mouse } from "../../../src/index.ts";
+import type { Mouse } from "../../../src/index.ts";
 import { MouseEventButton } from "../../../src/devices/mouse/Mouse.class.ts";
 import {
   createConnectedMouseFixture,
   MouseCanvasAdapter
 } from "./Mouse.fixture.ts";
+import { createTouch } from "../../mocks/index.ts";
 
 describe("Controls.Mouse lifecycle", () => {
   let mouse: Mouse;
@@ -49,16 +49,16 @@ describe("Controls.Mouse lifecycle", () => {
 
   test("should reset mouse state correctly", () => {
     canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.left });
-    mouse.update();
-    mouse.newPosition = { x: 100, y: 200 };
-    mouse.newDelta = { x: 5, y: 10 };
+    canvas.dispatchMouseEvent("mousemove", { clientX: 100, clientY: 200 });
 
     mouse.reset();
+    mouse.update();
 
     assert.strictEqual(mouse.isDown(MouseEventButton.left), false);
     assert.strictEqual(mouse.buttonState(MouseEventButton.left).isDown, false);
-    assert.strictEqual(mouse.newPosition, null);
-    assert.deepStrictEqual(mouse.newDelta, { x: 0, y: 0 });
+    assert.strictEqual(mouse.wasJustPressed(MouseEventButton.left), false);
+    assert.deepStrictEqual(mouse.position, { x: 0, y: 0 });
+    assert.strictEqual(mouse.isMoving(), false);
   });
 
   test("visible accessor toggles the canvas cursor style", () => {
@@ -69,81 +69,16 @@ describe("Controls.Mouse lifecycle", () => {
     assert.strictEqual(mouse.visible, true);
   });
 
-  test("should properly connect and disconnect event listeners", () => {
-    const canvasAddEventListener = mock.fn();
-    const canvasRemoveEventListener = mock.fn();
-    const docAddEventListener = mock.fn();
-    const docRemoveEventListener = mock.fn();
+  test("disconnect() stops listening to the canvas", () => {
+    mouse.disconnect();
 
-    const mockCanvas = {
-      addEventListener: canvasAddEventListener,
-      removeEventListener: canvasRemoveEventListener
-    };
+    canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.left });
+    canvas.dispatchMouseEvent("mousemove", { clientX: 10, clientY: 10 });
+    canvas.dispatchTouchEvent("touchstart", [createTouch(0, 20, 20)]);
+    mouse.update();
 
-    const mockDocumentAdapter = {
-      addEventListener: docAddEventListener,
-      removeEventListener: docRemoveEventListener
-    };
-
-    const newMouse = new Mouse({
-      // @ts-expect-error
-      canvas: mockCanvas, documentAdapter: mockDocumentAdapter
-    });
-
-    newMouse.connect();
-
-    assert.strictEqual(canvasAddEventListener.mock.calls.length, 7);
-    assert.strictEqual(
-      canvasAddEventListener.mock.calls[0].arguments[0],
-      "mousemove"
-    );
-    assert.strictEqual(
-      canvasAddEventListener.mock.calls[1].arguments[0],
-      "mousedown"
-    );
-    assert.strictEqual(
-      canvasAddEventListener.mock.calls[2].arguments[0],
-      "mouseup"
-    );
-    assert.strictEqual(
-      canvasAddEventListener.mock.calls[3].arguments[0],
-      "dblclick"
-    );
-    assert.strictEqual(
-      canvasAddEventListener.mock.calls[4].arguments[0],
-      "wheel"
-    );
-    assert.strictEqual(
-      canvasAddEventListener.mock.calls[5].arguments[0],
-      "mouseenter"
-    );
-    assert.strictEqual(
-      canvasAddEventListener.mock.calls[6].arguments[0],
-      "mouseleave"
-    );
-
-    assert.strictEqual(docAddEventListener.mock.calls.length, 4);
-    assert.strictEqual(
-      docAddEventListener.mock.calls[0].arguments[0],
-      "mousemove"
-    );
-    assert.strictEqual(
-      docAddEventListener.mock.calls[1].arguments[0],
-      "mouseup"
-    );
-    assert.strictEqual(
-      docAddEventListener.mock.calls[2].arguments[0],
-      "pointerlockchange"
-    );
-    assert.strictEqual(
-      docAddEventListener.mock.calls[3].arguments[0],
-      "pointerlockerror"
-    );
-
-    newMouse.disconnect();
-
-    assert.strictEqual(canvasRemoveEventListener.mock.calls.length, 7);
-    assert.strictEqual(docRemoveEventListener.mock.calls.length, 4);
+    assert.strictEqual(mouse.isDown("ANY"), false);
+    assert.strictEqual(mouse.isMoving(), false);
   });
 
   test("should handle complete mouse interaction lifecycle", () => {

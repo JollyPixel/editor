@@ -13,12 +13,10 @@ import type {
   InputReader
 } from "../../types.ts";
 import { GamepadVibration } from "./GamepadVibration.class.ts";
-import { EdgeBuffer } from "../EdgeBuffer.ts";
-
-// CONSTANTS
-const kAxisPressedValue = 0.5;
-const kStickCount = 2;
-const kAxisEdgeCount = 6;
+import {
+  GamepadSlot,
+  type GamepadTuning
+} from "./GamepadSlot.ts";
 
 export type GamepadIndex = 0 | 1 | 2 | 3;
 
@@ -54,44 +52,6 @@ export const GamepadAxis = {
   RightStickY: 3
 } as const;
 
-export interface GamepadButtonState {
-  isDown: boolean;
-  wasJustPressed: boolean;
-  wasJustReleased: boolean;
-  value: number;
-}
-
-export interface GamepadAxisState {
-  wasPositiveJustPressed: boolean;
-  wasPositiveJustAutoRepeated: boolean;
-  wasPositiveJustReleased: boolean;
-  wasNegativeJustPressed: boolean;
-  wasNegativeJustAutoRepeated: boolean;
-  wasNegativeJustReleased: boolean;
-  value: number;
-}
-
-export interface GamepadAutoRepeat {
-  axis: number;
-  positive: boolean;
-  time: number;
-}
-
-interface AxisDownState {
-  positive: boolean;
-  negative: boolean;
-}
-
-interface GamepadEdges {
-  pressed: EdgeBuffer;
-  released: EdgeBuffer;
-  axes: EdgeBuffer;
-  /**
-   * Non-zero while any `wasJust*` flag of this gamepad is set.
-   */
-  published: number;
-}
-
 export type GamepadEvents = {
   connect: (gamepad: globalThis.Gamepad) => void;
   disconnect: (gamepad: globalThis.Gamepad) => void;
@@ -102,34 +62,24 @@ export interface GamepadOptions {
   windowAdapter?: WindowAdapter;
 }
 
-export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
-  static MaxGamepads = 4;
-  static MaxButtons = 16;
-  static MaxAxes = 4;
+export class Gamepad extends Emitter<
+  GamepadEvents
+> implements InputControl, GamepadTuning {
+  static readonly MaxGamepads = 4;
+  static readonly MaxButtons = 17;
+  static readonly MaxAxes = 4;
   static IdlePollFrames = 30;
 
   #navigatorAdapter: NavigatorAdapter;
   #windowAdapter: WindowAdapter;
 
+  #connectedGamepads = 0;
   #wasActive = false;
   #idlePollCountdown = 0;
   #presentGamepads = 0;
-  #edges: GamepadEdges[] = [];
+  #slots: GamepadSlot[] = [];
 
-  #stickScratch: [GamepadAxisState, GamepadAxisState] = [
-    null as unknown as GamepadAxisState,
-    null as unknown as GamepadAxisState
-  ];
-  #downScratch: [AxisDownState, AxisDownState] = [
-    { positive: false, negative: false },
-    { positive: false, negative: false }
-  ];
-
-  connectedGamepads = 0;
-  buttons: GamepadButtonState[][] = [];
-  axes: GamepadAxisState[][] = [];
-  autoRepeats: (GamepadAutoRepeat | null)[] = [];
-  vibration: GamepadVibration[] = [];
+  readonly vibration: GamepadVibration[] = [];
 
   axisDeadZone = 0.25;
   axisAutoRepeatDelayMs = 500;
@@ -146,20 +96,19 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
 
     this.#navigatorAdapter = navigatorAdapter;
     this.#windowAdapter = windowAdapter;
-    for (let gamepadIndex = 0; gamepadIndex < Gamepad.MaxGamepads; gamepadIndex++) {
-      this.buttons[gamepadIndex] = [];
-      this.axes[gamepadIndex] = [];
-      this.autoRepeats[gamepadIndex] = null;
-      this.vibration[gamepadIndex] = new GamepadVibration();
-      this.#edges[gamepadIndex] = {
-        pressed: new EdgeBuffer(),
-        released: new EdgeBuffer(),
-        axes: new EdgeBuffer(),
-        published: 0
-      };
+    for (let index = 0; index < Gamepad.MaxGamepads; index++) {
+      this.#slots.push(
+        new GamepadSlot(
+          Gamepad.MaxButtons,
+          Gamepad.MaxAxes
+        )
+      );
+      this.vibration.push(new GamepadVibration());
     }
+  }
 
-    this.reset();
+  get connectedGamepads(): number {
+    return this.#connectedGamepads;
   }
 
   get wasActive() {
@@ -189,81 +138,64 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
   }
 
   reset() {
-    for (let gamepadIndex = 0; gamepadIndex < Gamepad.MaxGamepads; gamepadIndex++) {
-      const edges = this.#edges[gamepadIndex];
-      edges.pressed.reset();
-      edges.released.reset();
-      edges.axes.reset();
-      edges.published = 0;
-      for (let button = 0; button < Gamepad.MaxButtons; button++) {
-        this.buttons[gamepadIndex][button] = {
-          isDown: false,
-          wasJustPressed: false,
-          wasJustReleased: false,
-          value: 0
-        };
-      }
-      for (let axes = 0; axes < Gamepad.MaxAxes; axes++) {
-        this.axes[gamepadIndex][axes] = {
-          wasPositiveJustPressed: false,
-          wasPositiveJustAutoRepeated: false,
-          wasPositiveJustReleased: false,
-          wasNegativeJustPressed: false,
-          wasNegativeJustAutoRepeated: false,
-          wasNegativeJustReleased: false,
-          value: 0
-        };
-      }
+    this.#wasActive = false;
+    for (const slot of this.#slots) {
+      slot.reset();
     }
   }
 
   isButtonDown(
     gamepad: GamepadIndex,
-    buttonIndex: number | keyof typeof GamepadButton
+    button: number | keyof typeof GamepadButton
   ): boolean {
-    return this.#resolveButton(gamepad, buttonIndex).isDown;
+    return this.#slot(gamepad).isButtonDown(
+      Gamepad.#buttonIndex(button)
+    );
   }
 
   wasButtonJustPressed(
     gamepad: GamepadIndex,
-    buttonIndex: number | keyof typeof GamepadButton
+    button: number | keyof typeof GamepadButton
   ): boolean {
-    return this.#resolveButton(gamepad, buttonIndex).wasJustPressed;
+    return this.#slot(gamepad).wasButtonPressed(
+      Gamepad.#buttonIndex(button)
+    );
   }
 
   wasButtonJustReleased(
     gamepad: GamepadIndex,
-    buttonIndex: number | keyof typeof GamepadButton
+    button: number | keyof typeof GamepadButton
   ): boolean {
-    return this.#resolveButton(gamepad, buttonIndex).wasJustReleased;
+    return this.#slot(gamepad).wasButtonReleased(
+      Gamepad.#buttonIndex(button)
+    );
   }
 
   buttonValue(
     gamepad: GamepadIndex,
-    buttonIndex: number | keyof typeof GamepadButton
+    button: number | keyof typeof GamepadButton
   ): number {
-    return this.#resolveButton(gamepad, buttonIndex).value;
+    return this.#slot(gamepad).buttonValue(
+      Gamepad.#buttonIndex(button)
+    );
   }
 
   wasAxisJustPressed(
     gamepad: GamepadIndex,
     axis: number | keyof typeof GamepadAxis,
-    options: { autoRepeat?: boolean; positive?: boolean; } = {}
+    options: {
+      autoRepeat?: boolean; positive?: boolean;
+    } = {}
   ): boolean {
-    const axisInfo = this.#resolveAxis(gamepad, axis);
     const {
       autoRepeat = false,
       positive = false
     } = options;
 
-    if (positive) {
-      return axisInfo.wasPositiveJustPressed || (
-        autoRepeat && axisInfo.wasPositiveJustAutoRepeated
-      );
-    }
-
-    return axisInfo.wasNegativeJustPressed || (
-      autoRepeat && axisInfo.wasNegativeJustAutoRepeated
+    return this.#slot(gamepad).wasAxisPressed(
+      Gamepad.#axisIndex(axis),
+      positive,
+      autoRepeat
     );
   }
 
@@ -272,48 +204,19 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
     axis: number | keyof typeof GamepadAxis,
     options: { positive?: boolean; } = {}
   ): boolean {
-    const axisInfo = this.#resolveAxis(gamepad, axis);
-
-    return options.positive ?
-      axisInfo.wasPositiveJustReleased :
-      axisInfo.wasNegativeJustReleased;
+    return this.#slot(gamepad).wasAxisReleased(
+      Gamepad.#axisIndex(axis),
+      options.positive ?? false
+    );
   }
 
   axisValue(
     gamepad: GamepadIndex,
     axis: number | keyof typeof GamepadAxis
   ): number {
-    return this.#resolveAxis(gamepad, axis).value;
-  }
-
-  #resolveButton(
-    gamepad: GamepadIndex,
-    buttonIndex: number | keyof typeof GamepadButton
-  ): GamepadButtonState {
-    const index = typeof buttonIndex === "string" ?
-      GamepadButton[buttonIndex] : buttonIndex;
-
-    const state = this.buttons[gamepad][index];
-    if (!state) {
-      throw new Error("Invalid gamepad info");
-    }
-
-    return state;
-  }
-
-  #resolveAxis(
-    gamepad: GamepadIndex,
-    axis: number | keyof typeof GamepadAxis
-  ): GamepadAxisState {
-    const index = typeof axis === "string" ?
-      GamepadAxis[axis] : axis;
-
-    const state = this.axes[gamepad][index];
-    if (!state) {
-      throw new Error("Invalid gamepad info");
-    }
-
-    return state;
+    return this.#slot(gamepad).axisValue(
+      Gamepad.#axisIndex(axis)
+    );
   }
 
   update() {
@@ -328,315 +231,96 @@ export class Gamepad extends Emitter<GamepadEvents> implements InputControl {
       return;
     }
 
-    for (let gamepadIndex = 0; gamepadIndex < Gamepad.MaxGamepads; gamepadIndex++) {
-      if ((this.#presentGamepads & (1 << gamepadIndex)) === 0) {
-        continue;
-      }
-
-      const edges = this.#edges[gamepadIndex];
-      const pressed = edges.pressed.take(reader);
-      const released = edges.released.take(reader);
-      const axes = edges.axes.take(reader);
-      if ((pressed | released | axes | edges.published) === 0) {
-        continue;
-      }
-
-      writeButtonEdges(this.buttons[gamepadIndex], pressed, released);
-      writeAxisEdges(this.axes[gamepadIndex], axes);
-      edges.published = pressed | released | axes;
+    for (const slot of this.#slots) {
+      slot.publish(reader);
     }
   }
 
   sample(): void {
-    if (this.#presentGamepads === 0 && this.connectedGamepads <= 0) {
+    if (
+      this.#presentGamepads === 0 &&
+      this.#connectedGamepads <= 0
+    ) {
       if (this.#idlePollCountdown > 0) {
         this.#idlePollCountdown--;
-        this.#wasActive = false;
 
         return;
       }
+
       this.#idlePollCountdown = Gamepad.IdlePollFrames;
     }
 
     const gamepads = this.#navigatorAdapter.getGamepads();
-    this.#wasActive = false;
-    if (gamepads === null) {
-      this.#presentGamepads = 0;
-
-      return;
-    }
-
     let present = 0;
-    for (let gamepadIndex = 0; gamepadIndex < Gamepad.MaxGamepads; gamepadIndex++) {
-      const gamepad = gamepads[gamepadIndex];
+    let active = false;
+    for (let index = 0; index < Gamepad.MaxGamepads; index++) {
+      const gamepad = gamepads?.[index];
       if (gamepad) {
-        present |= 1 << gamepadIndex;
-        this.#updateButtons(gamepad, gamepadIndex);
-        this.#updateAxes(gamepad, gamepadIndex);
-        this.#edges[gamepadIndex].axes.push(
-          axisEdgeBits(this.axes[gamepadIndex])
-        );
-        this.vibration[gamepadIndex].actuator =
-          gamepad.vibrationActuator ?? null;
+        present |= 1 << index;
+        this.#slots[index].sample(gamepad, this);
+        active ||= this.#slots[index].active;
+        this.vibration[index].actuator = gamepad.vibrationActuator ?? null;
+      }
+      else if ((this.#presentGamepads & (1 << index)) !== 0) {
+        this.#slots[index].reset();
       }
     }
     this.#presentGamepads = present;
+    this.#wasActive = active;
   }
 
-  #updateButtons(
-    gamepad: globalThis.Gamepad,
-    gamepadIndex: number
-  ): void {
-    const states = this.buttons[gamepadIndex];
-    const count = Math.min(states.length, gamepad.buttons.length);
-    let active = 0;
-    let pressed = 0;
-    let released = 0;
-
-    for (let buttonIndex = 0; buttonIndex < count; buttonIndex++) {
-      const source = gamepad.buttons[buttonIndex];
-      if (!source) {
-        continue;
-      }
-
-      const button = states[buttonIndex];
-      const wasDown = button.isDown;
-      const isDown = source.pressed;
-
-      button.isDown = isDown;
-      button.value = source.value;
-      pressed |= Number(!wasDown && isDown) << buttonIndex;
-      released |= Number(wasDown && !isDown) << buttonIndex;
-
-      active |= Number(isDown);
-    }
-
-    if ((pressed | released) !== 0) {
-      const edges = this.#edges[gamepadIndex];
-      edges.pressed.push(pressed);
-      edges.released.push(released);
-    }
-    if (active !== 0) {
-      this.#wasActive = true;
-    }
-  }
-
-  #updateAxes(
-    gamepad: globalThis.Gamepad,
-    gamepadIndex: number
-  ): void {
-    const now = Date.now();
-
-    for (let stick = 0; stick < kStickCount; stick++) {
-      const stickIndex = stick * 2;
-      if (
-        typeof gamepad.axes[stickIndex] !== "number" ||
-        typeof gamepad.axes[stickIndex + 1] !== "number"
-      ) {
-        continue;
-      }
-
-      const axes = this.#stickScratch;
-      axes[0] = this.axes[gamepadIndex][stickIndex];
-      axes[1] = this.axes[gamepadIndex][stickIndex + 1];
-
-      const wasPositive0 = axes[0].value > kAxisPressedValue;
-      const wasNegative0 = axes[0].value < -kAxisPressedValue;
-      const wasPositive1 = axes[1].value > kAxisPressedValue;
-      const wasNegative1 = axes[1].value < -kAxisPressedValue;
-
-      this.#updateAxisValues(gamepad, axes, stickIndex);
-
-      const isPositive0 = axes[0].value > kAxisPressedValue;
-      const isNegative0 = axes[0].value < -kAxisPressedValue;
-      const isPositive1 = axes[1].value > kAxisPressedValue;
-      const isNegative1 = axes[1].value < -kAxisPressedValue;
-
-      axes[0].wasPositiveJustPressed = !wasPositive0 && isPositive0;
-      axes[0].wasPositiveJustReleased = wasPositive0 && !isPositive0;
-      axes[0].wasPositiveJustAutoRepeated = false;
-      axes[0].wasNegativeJustPressed = !wasNegative0 && isNegative0;
-      axes[0].wasNegativeJustReleased = wasNegative0 && !isNegative0;
-      axes[0].wasNegativeJustAutoRepeated = false;
-
-      axes[1].wasPositiveJustPressed = !wasPositive1 && isPositive1;
-      axes[1].wasPositiveJustReleased = wasPositive1 && !isPositive1;
-      axes[1].wasPositiveJustAutoRepeated = false;
-      axes[1].wasNegativeJustPressed = !wasNegative1 && isNegative1;
-      axes[1].wasNegativeJustReleased = wasNegative1 && !isNegative1;
-      axes[1].wasNegativeJustAutoRepeated = false;
-
-      const down = this.#downScratch;
-      down[0].positive = isPositive0;
-      down[0].negative = isNegative0;
-      down[1].positive = isPositive1;
-      down[1].negative = isNegative1;
-
-      this.#processCurrentAutoRepeat(
-        gamepadIndex,
-        stickIndex,
-        axes,
-        down,
-        now
-      );
-      this.#createNewAutoRepeat(
-        gamepadIndex,
-        stickIndex,
-        axes,
-        now
-      );
-
-      if (isPositive0 || isNegative0 || isPositive1 || isNegative1) {
-        this.#wasActive = true;
-      }
-    }
-  }
-
-  #updateAxisValues(
-    gamepad: globalThis.Gamepad,
-    axes: [GamepadAxisState, GamepadAxisState],
-    stickIndex: number
-  ): void {
-    const x = gamepad.axes[stickIndex];
-    const y = gamepad.axes[stickIndex + 1];
-
-    const live = Number((x * x) + (y * y) >= this.axisDeadZone * this.axisDeadZone);
-
-    axes[0].value = x * live;
-    axes[1].value = y * live;
-  }
-
-  #processCurrentAutoRepeat(
-    gamepadIndex: number,
-    stick: number,
-    axes: GamepadAxisState[],
-    isAxisDown: Array<AxisDownState>,
-    now: number
-  ): void {
-    const currentAutoRepeat = this.autoRepeats[gamepadIndex];
-    if (currentAutoRepeat === null) {
-      return;
-    }
-
-    const axisIndex = currentAutoRepeat.axis - (stick * 2);
-    if (axisIndex !== 0 && axisIndex !== 1) {
-      return;
-    }
-
-    const shouldReleaseAutoRepeat =
-      (currentAutoRepeat.positive && !isAxisDown[axisIndex].positive) ||
-      (!currentAutoRepeat.positive && !isAxisDown[axisIndex].negative);
-
-    if (shouldReleaseAutoRepeat) {
-      this.autoRepeats[gamepadIndex] = null;
-    }
-    else if (currentAutoRepeat.time <= now) {
-      const autoRepeatedAxis = axes[axisIndex];
-      if (currentAutoRepeat.positive) {
-        autoRepeatedAxis.wasPositiveJustAutoRepeated = true;
-      }
-      else {
-        autoRepeatedAxis.wasNegativeJustAutoRepeated = true;
-      }
-      currentAutoRepeat.time = now + this.axisAutoRepeatRateMs;
-    }
-  }
-
-  #createNewAutoRepeat(
-    gamepadIndex: number,
-    stick: number,
-    axes: GamepadAxisState[],
-    now: number
-  ): void {
-    let newAutoRepeat: GamepadAutoRepeat | null = null;
-
-    if (
-      axes[0].wasPositiveJustPressed ||
-      axes[0].wasNegativeJustPressed
-    ) {
-      newAutoRepeat = {
-        axis: stick * 2,
-        positive: axes[0].wasPositiveJustPressed,
-        time: now + this.axisAutoRepeatDelayMs
-      };
-    }
-    else if (
-      axes[1].wasPositiveJustPressed ||
-      axes[1].wasNegativeJustPressed
-    ) {
-      newAutoRepeat = {
-        axis: (stick * 2) + 1,
-        positive: axes[1].wasPositiveJustPressed,
-        time: now + this.axisAutoRepeatDelayMs
-      };
-    }
-
-    const currentAutoRepeat = this.autoRepeats[gamepadIndex];
-    const shouldSetNewAutoRepeat =
-      newAutoRepeat !== null &&
-      (currentAutoRepeat === null ||
-        currentAutoRepeat.axis !== newAutoRepeat.axis ||
-        currentAutoRepeat.positive !== newAutoRepeat.positive);
-
-    if (shouldSetNewAutoRepeat) {
-      this.autoRepeats[gamepadIndex] = newAutoRepeat;
-    }
+  #slot(
+    gamepad: GamepadIndex
+  ): GamepadSlot {
+    return this.#slots[
+      Gamepad.#index(gamepad, Gamepad.MaxGamepads)
+    ];
   }
 
   #onGamepadConnected = (event: GamepadEvent) => {
-    this.connectedGamepads++;
+    this.#connectedGamepads++;
     this.#idlePollCountdown = 0;
     this.emit("connect", event.gamepad);
   };
 
   #onGamepadDisconnected = (event: GamepadEvent) => {
-    this.connectedGamepads = Math.max(0, this.connectedGamepads - 1);
+    this.#connectedGamepads = Math.max(
+      0,
+      this.#connectedGamepads - 1
+    );
     this.emit("disconnect", event.gamepad);
   };
-}
 
-function axisEdgeBits(
-  axes: GamepadAxisState[]
-): number {
-  let axisBits = 0;
-  for (let index = 0; index < kStickCount * 2; index++) {
-    const axis = axes[index];
-    const bits = Number(axis.wasPositiveJustPressed) |
-      (Number(axis.wasPositiveJustAutoRepeated) << 1) |
-      (Number(axis.wasPositiveJustReleased) << 2) |
-      (Number(axis.wasNegativeJustPressed) << 3) |
-      (Number(axis.wasNegativeJustAutoRepeated) << 4) |
-      (Number(axis.wasNegativeJustReleased) << 5);
-    axisBits |= bits << (index * kAxisEdgeCount);
+  static #buttonIndex(
+    button: number | keyof typeof GamepadButton
+  ): number {
+    return Gamepad.#index(
+      typeof button === "string" ? GamepadButton[button] : button,
+      Gamepad.MaxButtons
+    );
   }
 
-  return axisBits;
-}
-
-function writeButtonEdges(
-  buttons: GamepadButtonState[],
-  pressed: number,
-  released: number
-): void {
-  for (let index = 0; index < buttons.length; index++) {
-    const bit = 1 << index;
-    buttons[index].wasJustPressed = (pressed & bit) !== 0;
-    buttons[index].wasJustReleased = (released & bit) !== 0;
+  static #axisIndex(
+    axis: number | keyof typeof GamepadAxis
+  ): number {
+    return Gamepad.#index(
+      typeof axis === "string" ? GamepadAxis[axis] : axis,
+      Gamepad.MaxAxes
+    );
   }
-}
 
-function writeAxisEdges(
-  axes: GamepadAxisState[],
-  axisBits: number
-): void {
-  for (let index = 0; index < kStickCount * 2; index++) {
-    const axis = axes[index];
-    const bits = axisBits >>> (index * kAxisEdgeCount);
-    axis.wasPositiveJustPressed = (bits & 1) !== 0;
-    axis.wasPositiveJustAutoRepeated = (bits & (1 << 1)) !== 0;
-    axis.wasPositiveJustReleased = (bits & (1 << 2)) !== 0;
-    axis.wasNegativeJustPressed = (bits & (1 << 3)) !== 0;
-    axis.wasNegativeJustAutoRepeated = (bits & (1 << 4)) !== 0;
-    axis.wasNegativeJustReleased = (bits & (1 << 5)) !== 0;
+  static #index(
+    index: number,
+    count: number
+  ): number {
+    if (
+      !Number.isInteger(index) ||
+      index < 0 ||
+      index >= count
+    ) {
+      throw new Error("Invalid gamepad info");
+    }
+
+    return index;
   }
 }

@@ -41,7 +41,7 @@ export function Gamepad(): GamepadMock {
     connected: true,
     timestamp: Date.now(),
     mapping: "standard",
-    buttons: Array.from({ length: 16 }, () => {
+    buttons: Array.from({ length: 17 }, () => {
       return { pressed: false, value: 0 };
     }),
     axes: Array.from({ length: 4 }, () => 0),

@@ -11,6 +11,7 @@ import {
   type WindowAdapter
 } from "./adapters/index.ts";
 import type {
+  InputControl,
   InputReader,
   KeyCode
 } from "./types.ts";
@@ -57,12 +58,13 @@ export interface InputOptions {
 export class Input extends Emitter<InputEvents> {
   #windowAdapter: WindowAdapter;
   #preference: InputDevicePreference = "default";
+  #controls: readonly InputControl[];
 
-  mouse: devices.Mouse;
-  touchpad: devices.Touchpad;
-  gamepad: devices.Gamepad;
-  screen: devices.Screen;
-  keyboard: devices.Keyboard;
+  readonly mouse: devices.Mouse;
+  readonly touchpad: devices.Touchpad;
+  readonly gamepad: devices.Gamepad;
+  readonly screen: devices.Screen;
+  readonly keyboard: devices.Keyboard;
 
   exited = false;
 
@@ -78,7 +80,7 @@ export class Input extends Emitter<InputEvents> {
     } = options;
 
     this.#windowAdapter = windowAdapter;
-    const fullscreen = new devices.Screen({
+    this.screen = new devices.Screen({
       canvas,
       documentAdapter
     });
@@ -86,23 +88,9 @@ export class Input extends Emitter<InputEvents> {
       canvas,
       documentAdapter
     });
-    this.mouse.on("down", fullscreen.requestFullscreenIfWanted);
-    this.mouse.on("up", fullscreen.requestFullscreenIfWanted);
-
-    this.screen = fullscreen;
     this.touchpad = new devices.Touchpad({
       canvas
     });
-    this.touchpad.on("start", (touch, position) => {
-      this.mouse.synchronizeWithTouch(touch, true, position);
-    });
-    this.touchpad.on("end", (touch) => {
-      this.mouse.synchronizeWithTouch(touch, false);
-    });
-    this.touchpad.on("move", (touch, position) => {
-      this.mouse.synchronizeWithTouch(touch, void 0, position);
-    });
-
     this.gamepad = new devices.Gamepad({
       navigatorAdapter: this.#windowAdapter.navigator,
       windowAdapter: this.#windowAdapter
@@ -110,6 +98,12 @@ export class Input extends Emitter<InputEvents> {
     this.keyboard = new devices.Keyboard({
       documentAdapter
     });
+    this.#controls = [
+      this.mouse,
+      this.touchpad,
+      this.keyboard,
+      this.gamepad
+    ];
 
     if (enableOnExit) {
       this.#windowAdapter.onbeforeunload = this.#doExitCallback;
@@ -117,10 +111,9 @@ export class Input extends Emitter<InputEvents> {
   }
 
   connect() {
-    this.mouse.connect();
-    this.touchpad.connect();
-    this.keyboard.connect();
-    this.gamepad.connect();
+    for (const control of this.#controls) {
+      control.connect();
+    }
     this.screen.connect();
     this.#windowAdapter.addEventListener(
       "blur",
@@ -133,10 +126,9 @@ export class Input extends Emitter<InputEvents> {
   }
 
   disconnect() {
-    this.mouse.disconnect();
-    this.touchpad.disconnect();
-    this.keyboard.disconnect();
-    this.gamepad.disconnect();
+    for (const control of this.#controls) {
+      control.disconnect();
+    }
     this.screen.disconnect();
     this.#windowAdapter.removeEventListener(
       "blur",
@@ -153,10 +145,13 @@ export class Input extends Emitter<InputEvents> {
   }
 
   get wasActive(): boolean {
-    return this.keyboard.wasActive ||
-      this.mouse.wasActive ||
-      this.touchpad.wasActive ||
-      this.gamepad.wasActive;
+    for (const control of this.#controls) {
+      if (control.wasActive) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   update() {
@@ -165,20 +160,18 @@ export class Input extends Emitter<InputEvents> {
   }
 
   sample(): void {
-    this.mouse.sample();
-    this.touchpad.sample();
-    this.keyboard.sample();
-    this.gamepad.sample();
+    for (const control of this.#controls) {
+      control.sample();
+    }
     this.#updatePreference();
   }
 
   publish(
     reader: InputReader
   ): void {
-    this.mouse.publish(reader);
-    this.touchpad.publish(reader);
-    this.keyboard.publish(reader);
-    this.gamepad.publish(reader);
+    for (const control of this.#controls) {
+      control.publish(reader);
+    }
   }
 
   #updatePreference(): void {
@@ -211,10 +204,9 @@ export class Input extends Emitter<InputEvents> {
   }
 
   #onBlur = () => {
-    this.mouse.reset();
-    this.touchpad.reset();
-    this.keyboard.reset();
-    this.gamepad.reset();
+    for (const control of this.#controls) {
+      control.reset();
+    }
   };
 
   #onContextMenu = (event: MouseEvent) => {

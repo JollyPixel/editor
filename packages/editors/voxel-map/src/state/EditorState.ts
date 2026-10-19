@@ -11,12 +11,12 @@ import {
 import { PreferenceStorage } from "@jolly-pixel/editor.host";
 import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 import { PIXEL_ART_PREFERENCES } from "@jolly-pixel/editor.pixel-art/preferences";
+import { KeyboardLayoutStore } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
 import { BlockSelection } from "./BlockSelection.ts";
 import { BrushStore } from "./BrushStore.ts";
 import { EditContext } from "./EditContext.ts";
-import { KeyboardLayoutStore } from "./KeyboardLayoutStore.ts";
 import { PointerCapture } from "./PointerCapture.ts";
 import { PresenceStore } from "./PresenceStore.ts";
 import { SelectionStore } from "./SelectionStore.ts";

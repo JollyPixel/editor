@@ -1,7 +1,7 @@
 # Touchpad
 
-`Touchpad` tracks up to ten browser touch identifiers with per-touch position
-and frame transitions. It is intended for touch-screen events. Laptop
+`Touchpad` tracks up to ten simultaneous touches with per-touch position and
+frame transitions. It is intended for touch-screen events. Laptop
 trackpads normally appear through [Mouse](mouse.md).
 
 `Input` connects and updates one automatically, or the device can be used on
@@ -66,21 +66,20 @@ interface TouchState {
   isDown: boolean;
   wasStarted: boolean;
   wasEnded: boolean;
-  position: { x: number; y: number };
+  position: TouchPosition;
 }
 ```
 
-The names map directly to browser touch identifiers `0`, `1`, and `2`.
-Numeric actions can address any identifier from `0` through `9`.
+Each touch takes the lowest free slot when it starts and keeps it until it
+ends, whatever its browser `identifier`. `TouchIdentifier` names slots `0`,
+`1`, and `2`; numeric actions address slots `0` through `9`. Touches beyond
+the tenth are ignored.
 
 ## State and gestures
 
 ```ts
 declare class Touchpad {
   static readonly MaxTouches: 10;
-
-  touches: TouchState[];
-  touchesDown: boolean[];
 
   readonly wasActive: boolean;
   readonly isOneFingerGesture: boolean;
@@ -94,24 +93,19 @@ declare class Touchpad {
 }
 ```
 
-`touchesDown` changes immediately when touch events arrive. `update()`
-compares it with the previous state and publishes `wasStarted` and `wasEnded`
-for one input step. A start and end must be separated by an update if the
-caller needs to observe both transitions.
+`isDown()` changes as soon as touch events arrive. `update()` publishes
+`wasStarted` and `wasEnded` for one input step. A touch that starts and ends
+between two updates reports both.
 
 `update()` is `sample()` then `publish("step")`. A fixed-step engine calls
 `sample()` and `publish(reader)` separately; see
 [Input](./input.md#publishreader).
 
-The gesture getters read `touchesDown` directly. They report whether
-identifiers `0`, `0 + 1`, or `0 + 1 + 2` are currently down. They do not
-count arbitrary active identifiers.
+The gesture getters report whether slots `0`, `0 + 1`, or `0 + 1 + 2` are
+currently down.
 
-`wasActive` is true while any touch is down. `reset()` replaces all ten
-states with their initial values and clears every raw down flag.
-
-`touches` and `touchesDown` are mutable public arrays. Query methods are the
-safer surface for ordinary polling.
+`wasActive` is true when the latest sample had a touch down or an edge.
+`reset()` frees every slot and drops pending edges without reporting an end.
 
 ## Queries
 
@@ -124,10 +118,9 @@ interface Touchpad {
 }
 ```
 
-`touchState()` returns the live `TouchState` stored by the device. The three
-flag methods read that same object.
+`touchState()` returns a new snapshot of one slot.
 
-An identifier below `0` or at least `Touchpad.MaxTouches` throws an error
+A slot below `0` or at least `Touchpad.MaxTouches` throws an error
 whose message contains the invalid index. A named action resolves through
 `TouchIdentifier`.
 
@@ -172,9 +165,9 @@ type TouchEvents = {
 };
 ```
 
-`start` and `move` receive the live position object stored in the matching
-`TouchState`. Later movement mutates that object, so copy it if the listener
-needs a snapshot. `end` receives only the browser `Touch`.
+`start` and `move` receive the live position object of the touch's slot.
+Later movement mutates that object, so copy it if the listener needs a
+snapshot. `end` receives only the browser `Touch`.
 
 Touch start, move, end, and cancel handlers call `preventDefault()`. A cancel
 updates down state and emits `end`.

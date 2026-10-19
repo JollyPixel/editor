@@ -10,7 +10,7 @@ import type {
 import {
   BrowserDocumentAdapter,
   type DocumentAdapter
-} from "./../../adapters/index.ts";
+} from "../../adapters/index.ts";
 import {
   mapKeyToExtendedKey,
   type KeyCode,
@@ -21,8 +21,13 @@ import {
   type KeyBindingChords,
   type KeyBindingHandler,
   type KeyBindingOptions
-} from "./KeyBindings.ts";
-import { KeyEdgeBuffer } from "./KeyEdgeBuffer.ts";
+} from "./bindings/KeyBindings.ts";
+import { TypedText } from "./TypedText.ts";
+import {
+  ControlBank,
+  type ControlQuery
+} from "../ControlBank.ts";
+import { ReaderBuffer } from "../ReaderBuffer.ts";
 
 // CONSTANTS
 const kControlKeys = new Set([
@@ -76,6 +81,10 @@ const kTextInputTypes = new Set([
   "time",
   "week"
 ]);
+
+const kEditableTargetGuard: KeyboardGuard = {
+  blocks: isEditableTarget
+};
 
 function isEditableElement(
   target: unknown
@@ -134,14 +143,6 @@ export type KeyboardEvents =
     press: (event: KeyboardEvent) => void;
   };
 
-export interface KeyState {
-  code: string;
-  isDown: boolean;
-  wasJustPressed: boolean;
-  wasJustAutoRepeated: boolean;
-  wasJustReleased: boolean;
-}
-
 export type InputKeyboardAction = ExtendedKeyCode | InputCustomAction;
 
 export interface KeyboardGuard {
@@ -160,18 +161,11 @@ export class Keyboard extends Emitter<
   #documentAdapter: DocumentAdapter;
   #preventControlKeys: boolean;
 
-  #wasActive = false;
-  #enabled = true;
   #guards = new Map<KeyboardGuard, (() => void) | null>();
-  #bindings = new KeyBindings();
   #suspensions = 0;
-  #edges = new KeyEdgeBuffer();
-  #publishedEdges = false;
-  buttons = new Map<string, KeyState>();
-  buttonsDown = new Set<string>();
-  autoRepeatedCode: string | null = null;
-  char = "";
-  newChar = "";
+  #bindings = new KeyBindings();
+  #keys = new ControlBank<string>();
+  #text = new ReaderBuffer(() => new TypedText());
 
   constructor(
     options: KeyboardOptions = {}
@@ -182,30 +176,17 @@ export class Keyboard extends Emitter<
       preventControlKeys = true
     } = options;
 
-    this.reset();
     this.#documentAdapter = documentAdapter;
     this.#preventControlKeys = preventControlKeys;
+    this.addGuard(kEditableTargetGuard);
   }
 
   get wasActive() {
-    return this.#wasActive;
+    return this.#keys.active;
   }
 
-  get enabled() {
-    return this.#enabled;
-  }
-
-  set enabled(
-    enabled: boolean
-  ) {
-    if (this.#enabled === enabled) {
-      return;
-    }
-
-    this.#enabled = enabled;
-    if (!enabled) {
-      this.reset();
-    }
+  get char(): string {
+    return this.#text.published.value;
   }
 
   get suspended(): boolean {
@@ -213,10 +194,8 @@ export class Keyboard extends Emitter<
   }
 
   suspend(): () => void {
-    if (this.#suspensions === 0) {
-      this.reset();
-    }
     this.#suspensions++;
+    this.#releaseHeldKeys();
 
     let released = false;
 
@@ -234,10 +213,6 @@ export class Keyboard extends Emitter<
     options: KeyBindingOptions = {}
   ): () => void {
     return this.#bindings.bind(chords, handler, options);
-  }
-
-  get #listening(): boolean {
-    return this.#enabled && this.#suspensions === 0;
   }
 
   addGuard(
@@ -265,14 +240,13 @@ export class Keyboard extends Emitter<
   }
 
   #releaseHeldKeys = () => {
-    this.buttonsDown.clear();
-    this.autoRepeatedCode = null;
+    this.#keys.releaseAll();
   };
 
   #isBlocked(
     event: KeyboardEvent
   ): boolean {
-    if (isEditableTarget(event)) {
+    if (this.suspended) {
       return true;
     }
 
@@ -316,26 +290,20 @@ export class Keyboard extends Emitter<
   }
 
   reset() {
-    this.buttons.clear();
-    this.buttonsDown.clear();
-    this.char = "";
-    this.newChar = "";
-    this.autoRepeatedCode = null;
-    this.#edges.reset();
-    this.#publishedEdges = false;
+    this.#keys.reset();
+    this.#text.reset();
   }
 
   isDown(
     key: InputKeyboardAction
   ): boolean {
-    if (key === "ANY") {
-      return this.buttonsDown.size > 0;
-    }
-    if (key === "NONE") {
-      return this.buttonsDown.size === 0;
-    }
+    return this.#keys.isDown(Keyboard.#keyQuery(key));
+  }
 
-    return this.buttonsDown.has(
+  wasDownLastUpdate(
+    key: ExtendedKeyCode
+  ): boolean {
+    return this.#keys.wasDownBefore(
       mapKeyToExtendedKey(key)
     );
   }
@@ -343,58 +311,29 @@ export class Keyboard extends Emitter<
   wasJustPressed(
     key: InputKeyboardAction
   ): boolean {
-    if (key === "ANY") {
-      return this.#anyButton("wasJustPressed");
-    }
-    if (key === "NONE") {
-      return !this.#anyButton("wasJustPressed");
-    }
-
-    return this.buttons.get(
-      mapKeyToExtendedKey(key)
-    )?.wasJustPressed ?? false;
+    return this.#keys.wasPressed(
+      Keyboard.#keyQuery(key)
+    );
   }
 
   wasJustReleased(
     key: InputKeyboardAction
   ): boolean {
-    if (key === "ANY") {
-      return this.#anyButton("wasJustReleased");
-    }
-    if (key === "NONE") {
-      return !this.#anyButton("wasJustReleased");
-    }
-
-    return this.buttons.get(
-      mapKeyToExtendedKey(key)
-    )?.wasJustReleased ?? false;
-  }
-
-  #anyButton(
-    flag: "wasJustPressed" | "wasJustReleased"
-  ): boolean {
-    for (const button of this.buttons.values()) {
-      if (button[flag]) {
-        return true;
-      }
-    }
-
-    return false;
+    return this.#keys.wasReleased(
+      Keyboard.#keyQuery(key)
+    );
   }
 
   wasJustAutoRepeated(
     key: ExtendedKeyCode
   ): boolean {
-    return this.buttons.get(
+    return this.#keys.wasRepeated(
       mapKeyToExtendedKey(key)
-    )?.wasJustAutoRepeated ?? false;
+    );
   }
 
   #onKeyDown = (event: KeyboardEvent) => {
-    if (
-      !this.#listening ||
-      this.#isBlocked(event)
-    ) {
+    if (this.#isBlocked(event)) {
       return;
     }
 
@@ -407,21 +346,8 @@ export class Keyboard extends Emitter<
       event.preventDefault();
     }
 
-    if (!this.buttons.has(event.code)) {
-      this.buttons.set(event.code, {
-        code: event.code,
-        isDown: false,
-        wasJustPressed: false,
-        wasJustAutoRepeated: false,
-        wasJustReleased: false
-      });
-    }
-
-    if (this.buttonsDown.has(event.code)) {
-      this.autoRepeatedCode = event.code;
-    }
-    else {
-      this.buttonsDown.add(event.code);
+    if (!this.#keys.press(event.code)) {
+      this.#keys.repeat(event.code);
     }
     this.emit("down", event);
     this.emit(event.code as KeyCode, event);
@@ -429,10 +355,7 @@ export class Keyboard extends Emitter<
   };
 
   #onKeyPress = (event: KeyboardEvent) => {
-    if (
-      !this.#listening ||
-      this.#isBlocked(event)
-    ) {
+    if (this.#isBlocked(event)) {
       return;
     }
 
@@ -440,17 +363,13 @@ export class Keyboard extends Emitter<
       event.key.length === 1 &&
       event.key.charCodeAt(0) >= 32
     ) {
-      this.newChar += event.key;
+      this.#text.queued.append(event.key);
       this.emit("press", event);
     }
   };
 
   #onKeyUp = (event: KeyboardEvent) => {
-    if (!this.#listening) {
-      return;
-    }
-
-    this.buttonsDown.delete(event.code);
+    this.#keys.release(event.code);
     this.emit("up", event);
   };
 
@@ -460,60 +379,23 @@ export class Keyboard extends Emitter<
   }
 
   sample(): void {
-    if (
-      !this.#wasActive &&
-      this.buttonsDown.size === 0 &&
-      this.autoRepeatedCode === null &&
-      this.newChar === ""
-    ) {
-      return;
-    }
-
-    let active = 0;
-    for (const keyState of this.buttons.values()) {
-      const wasDown = keyState.isDown;
-      const isDown = this.buttonsDown.has(keyState.code);
-
-      keyState.isDown = isDown;
-      if (!wasDown && isDown) {
-        this.#edges.push("pressed", keyState.code);
-      }
-      else if (wasDown && !isDown) {
-        this.#edges.push("released", keyState.code);
-      }
-      active |= Number(isDown);
-    }
-
-    if (
-      this.autoRepeatedCode !== null &&
-      this.buttons.has(this.autoRepeatedCode)
-    ) {
-      this.#edges.push("autoRepeated", this.autoRepeatedCode);
-      active |= 1;
-    }
-    this.autoRepeatedCode = null;
-
-    this.#edges.pushChar(this.newChar);
-    this.newChar = "";
-
-    this.#wasActive = active !== 0;
+    this.#keys.sample();
+    this.#text.sample();
   }
 
   publish(
     reader: InputReader
   ): void {
-    const edges = this.#edges.take(reader);
-    if (edges.empty && !this.#publishedEdges) {
-      return;
-    }
+    this.#keys.publish(reader);
+    this.#text.publish(reader);
+  }
 
-    for (const keyState of this.buttons.values()) {
-      keyState.wasJustPressed = edges.pressed.has(keyState.code);
-      keyState.wasJustAutoRepeated = edges.autoRepeated.has(keyState.code);
-      keyState.wasJustReleased = edges.released.has(keyState.code);
-    }
-    this.char = edges.char;
-    this.#publishedEdges = !edges.empty;
+  static #keyQuery(
+    key: InputKeyboardAction
+  ): ControlQuery<string> {
+    return key === "ANY" || key === "NONE" ?
+      key :
+      mapKeyToExtendedKey(key);
   }
 }
 
@@ -522,9 +404,5 @@ export {
   type KeyCode,
   type ExtendedKeyCode
 } from "./code.ts";
-export * from "./errors/index.ts";
-export * from "./KeyBindingMap.ts";
-export * from "./KeyBindingSettings.ts";
-export * from "./KeyBindings.ts";
-export * from "./KeyChord.ts";
-export * from "./layout.ts";
+export * from "./bindings/index.ts";
+export * from "./chords/index.ts";

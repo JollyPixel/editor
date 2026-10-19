@@ -7,18 +7,18 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { Input } from "../../../src/index.ts";
 import { bindInputCondition } from "../../../src/combination/conditions/index.ts";
+import { stubCondition } from "../Combination.fixture.ts";
 import {
-  createCombinationFixture,
-  stubCondition
-} from "../Combination.fixture.ts";
+  createInputFixture,
+  type InputFixture
+} from "../../helpers/input.ts";
 
 describe("Controls.bindInputCondition", () => {
-  let input: Input;
+  let input: InputFixture["input"];
 
   beforeEach(() => {
-    ({ input } = createCombinationFixture());
+    ({ input } = createInputFixture());
   });
 
   test("binds a plain InputCondition object", () => {

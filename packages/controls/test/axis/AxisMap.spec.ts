@@ -8,35 +8,28 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  Input,
   Axis,
   AxisMap,
   UnknownAxisError,
-  InputCombination,
-  type KeyCode
+  InputCombination
 } from "../../src/index.ts";
-import * as mocks from "../mocks/index.ts";
+import {
+  createAxisFixture,
+  type AxisFixture
+} from "./Axis.fixture.ts";
 
 describe("Controls.AxisMap", () => {
-  let input: Input;
+  let input: AxisFixture["input"];
+  let press: AxisFixture["press"];
+  let release: AxisFixture["release"];
   let axes: AxisMap<"moveRight" | "moveUp" | "moveForward">;
 
-  function press(
-    code: KeyCode
-  ) {
-    input.keyboard.buttonsDown.add(code);
-  }
-
-  function release(
-    code: KeyCode
-  ) {
-    input.keyboard.buttonsDown.delete(code);
-  }
-
   beforeEach(() => {
-    input = new Input(new mocks.CanvasAdapter(), {
-      documentAdapter: new mocks.DocumentAdapter()
-    });
+    ({
+      input,
+      press,
+      release
+    } = createAxisFixture());
 
     axes = new AxisMap({
       moveRight: Axis.buttons("KeyD.down", "KeyA.down"),

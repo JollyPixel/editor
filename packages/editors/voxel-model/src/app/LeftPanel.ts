@@ -91,7 +91,6 @@ export class LeftPanel extends LitElement {
   #peerRegionSelections: PeerRegionSelections | null = null;
   #initializing = false;
   #initialized: CanvasSources | null = null;
-  #releaseKeyBindings: (() => void) | null = null;
 
   static override styles = css`
     :host {
@@ -225,10 +224,11 @@ export class LeftPanel extends LitElement {
       this.#syncPeerRegionSelections();
       void this.#initializeCanvas();
     }
-    if (changedProperties.has("keyBindingSettings")) {
-      this.#releaseKeyBindings?.();
-      this.#releaseKeyBindings =
-        this.keyBindingSettings?.sync(this.panelElement) ?? null;
+    if (
+      changedProperties.has("keyBindingSettings") &&
+      this.keyBindingSettings !== null
+    ) {
+      this.panelElement.keyBindings = this.keyBindingSettings;
     }
     if (changedProperties.has("uvNets") && this.uvNets !== null) {
       this.panelElement.uvNets = this.uvNets;
@@ -260,8 +260,6 @@ export class LeftPanel extends LitElement {
       this.#releaseModelAccess = null;
       this.#peerRegionSelections?.dispose();
       this.#peerRegionSelections = null;
-      this.#releaseKeyBindings?.();
-      this.#releaseKeyBindings = null;
     });
   }
 

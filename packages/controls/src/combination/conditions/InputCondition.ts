@@ -1,9 +1,9 @@
 // Import Internal Dependencies
-import type { Input } from "../../Input.class.ts";
+import type { InputDevices } from "../../types.ts";
 
 export interface InputCondition {
   evaluate(
-    input: Input
+    input: InputDevices
   ): boolean;
   reset(): void;
 }
@@ -15,7 +15,7 @@ export interface BoundInputCondition {
 
 export function bindInputCondition(
   condition: InputCondition,
-  input: Input
+  input: InputDevices
 ): BoundInputCondition {
   return Object.assign(
     () => condition.evaluate(input),

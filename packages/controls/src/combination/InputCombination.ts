@@ -32,21 +32,48 @@ const kCombinedInputStates = new Set<string>([
 ]);
 
 export class InputCombination {
-  static readonly Control = new AliasedKeyInput(["ControlLeft", "ControlRight"]);
-  static readonly Shift = new AliasedKeyInput(["ShiftLeft", "ShiftRight"]);
-  static readonly Alt = new AliasedKeyInput(["AltLeft", "AltRight"]);
-  static readonly Meta = new AliasedKeyInput(["MetaLeft", "MetaRight"]);
+  static readonly Control = new AliasedKeyInput([
+    "ControlLeft",
+    "ControlRight"
+  ]);
+  static readonly Shift = new AliasedKeyInput([
+    "ShiftLeft",
+    "ShiftRight"
+  ]);
+  static readonly Alt = new AliasedKeyInput([
+    "AltLeft",
+    "AltRight"
+  ]);
+  static readonly Meta = new AliasedKeyInput([
+    "MetaLeft",
+    "MetaRight"
+  ]);
   static readonly Mod = new AliasedKeyInput(
     () => (isApplePlatform() ?
       ["MetaLeft", "MetaRight"] :
       ["ControlLeft", "ControlRight"]
     )
   );
-  static readonly Enter = new AliasedKeyInput(["Enter", "NumpadEnter"]);
-  static readonly MoveUp = new AliasedKeyInput(["KeyW", "ArrowUp"]);
-  static readonly MoveDown = new AliasedKeyInput(["KeyS", "ArrowDown"]);
-  static readonly MoveLeft = new AliasedKeyInput(["KeyA", "ArrowLeft"]);
-  static readonly MoveRight = new AliasedKeyInput(["KeyD", "ArrowRight"]);
+  static readonly Enter = new AliasedKeyInput([
+    "Enter",
+    "NumpadEnter"
+  ]);
+  static readonly MoveUp = new AliasedKeyInput([
+    "KeyW",
+    "ArrowUp"
+  ]);
+  static readonly MoveDown = new AliasedKeyInput([
+    "KeyS",
+    "ArrowDown"
+  ]);
+  static readonly MoveLeft = new AliasedKeyInput([
+    "KeyA",
+    "ArrowLeft"
+  ]);
+  static readonly MoveRight = new AliasedKeyInput([
+    "KeyD",
+    "ArrowRight"
+  ]);
 
   static isCombinedAction(
     action: unknown

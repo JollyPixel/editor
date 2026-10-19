@@ -91,7 +91,7 @@ describe("Controls.Gamepad polling", () => {
       mockGamepad.buttons[0] = { pressed: false, value: 0 };
       gamepad.update();
 
-      assert.strictEqual(gamepad.buttons[0][0].wasJustReleased, true);
+      assert.strictEqual(gamepad.wasButtonJustReleased(0, "A"), true);
     });
 
     test("clears wasActive when getGamepads() returns null", () => {

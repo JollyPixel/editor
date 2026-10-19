@@ -104,8 +104,7 @@ InputCombination.key("NONE", "down");
 ```
 
 `InputKeyboardAction` includes the `"ANY"` and `"NONE"` sentinels. They query
-the selected state across the whole keyboard, as described by
-[InputActionQuery](inputactionquery.md). Sentinels use the separate `state`
+the selected state across the whole keyboard. Sentinels use the separate `state`
 argument; combined forms such as `"ANY.down"` are not part of
 `CombinedKeyboardInputAction`.
 
@@ -257,9 +256,8 @@ completion, and reset behavior.
 
 ## Binding conditions
 
-Every concrete condition has `bind(input)`, which returns a callable condition
-for the supplied `Input`. The package also exports `bindInputCondition()` for
-custom implementations of `InputCondition`.
+`bindInputCondition(condition, input)` returns a callable condition for the
+supplied `Input`.
 
 See [Binding to an Input](combination/input-conditions.md#binding-to-an-input)
 for the bound function contract and state-sharing behavior.

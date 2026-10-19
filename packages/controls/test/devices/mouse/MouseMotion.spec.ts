@@ -8,17 +8,14 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import {
-  TouchIdentifier,
-  type Mouse
-} from "../../../src/index.ts";
+import type { Mouse } from "../../../src/index.ts";
 import { MouseEventButton } from "../../../src/devices/mouse/Mouse.class.ts";
 import {
   createConnectedMouseFixture,
-  createTouch,
   MouseCanvasAdapter,
   MouseDocumentAdapter
 } from "./Mouse.fixture.ts";
+import { createTouch } from "../../mocks/index.ts";
 
 describe("Controls.Mouse motion", () => {
   let mouse: Mouse;
@@ -40,14 +37,14 @@ describe("Controls.Mouse motion", () => {
   test("isMoving reflects the current delta", () => {
     assert.strictEqual(mouse.isMoving(), false);
 
-    mouse.newPosition = { x: 10, y: 0 };
+    canvas.dispatchMouseEvent("mousemove", { clientX: 10, clientY: 0 });
     mouse.update();
 
     assert.strictEqual(mouse.isMoving(), true);
   });
 
   test("viewportPosition normalizes canvas-space coordinates into [-1, 1] with Y flipped", () => {
-    mouse.newPosition = { x: 800, y: 0 };
+    canvas.dispatchMouseEvent("mousemove", { clientX: 800, clientY: 0 });
     mouse.update();
 
     assert.deepStrictEqual(
@@ -57,7 +54,7 @@ describe("Controls.Mouse motion", () => {
   });
 
   test("worldPosition scales the viewport position by half the canvas size", () => {
-    mouse.newPosition = { x: 800, y: 0 };
+    canvas.dispatchMouseEvent("mousemove", { clientX: 800, clientY: 0 });
     mouse.update();
 
     assert.deepStrictEqual(
@@ -67,7 +64,7 @@ describe("Controls.Mouse motion", () => {
   });
 
   test("viewportDelta inverts Y, and normalizes against canvas size when requested", () => {
-    mouse.newPosition = { x: 10, y: 20 };
+    canvas.dispatchMouseEvent("mousemove", { clientX: 10, clientY: 20 });
     mouse.update();
 
     assert.deepStrictEqual(
@@ -91,21 +88,20 @@ describe("Controls.Mouse motion", () => {
       { clientX: 150, clientY: 200 }
     );
 
+    mouse.update();
+
     assert.strictEqual(moveEvents.length, 1);
-    assert.deepStrictEqual(
-      mouse.newPosition,
-      { x: 150, y: 200 }
-    );
+    assert.deepStrictEqual(mouse.position, { x: 150, y: 200 });
   });
 
   test("should calculate position delta correctly", () => {
-    mouse.newPosition = { x: 100, y: 150 };
+    canvas.dispatchMouseEvent("mousemove", { clientX: 100, clientY: 150 });
     mouse.update();
 
     assert.deepStrictEqual(mouse.position, { x: 100, y: 150 });
     assert.deepStrictEqual(mouse.delta, { x: 100, y: 150 });
 
-    mouse.newPosition = { x: 120, y: 160 };
+    canvas.dispatchMouseEvent("mousemove", { clientX: 120, clientY: 160 });
     mouse.update();
 
     assert.deepStrictEqual(mouse.position, { x: 120, y: 160 });
@@ -113,7 +109,7 @@ describe("Controls.Mouse motion", () => {
   });
 
   test("should reset delta when no new position", () => {
-    mouse.newPosition = { x: 100, y: 150 };
+    canvas.dispatchMouseEvent("mousemove", { clientX: 100, clientY: 150 });
     mouse.update();
 
     mouse.update();
@@ -121,29 +117,34 @@ describe("Controls.Mouse motion", () => {
     assert.deepStrictEqual(mouse.delta, { x: 0, y: 0 });
   });
 
-  test("should synchronize with primary touch for button state", () => {
-    const touch = createTouch(TouchIdentifier.primary, 100, 150);
+  test("the first touch drives the left button and the position", () => {
+    const touch = createTouch(4096, 100, 150);
 
-    mouse.synchronizeWithTouch(touch, true);
+    canvas.dispatchTouchEvent("touchstart", [touch]);
+    mouse.update();
+    assert.strictEqual(mouse.wasJustPressed("left"), true);
+    assert.deepStrictEqual(mouse.position, { x: 100, y: 150 });
 
-    assert.strictEqual(mouse.isDown(MouseEventButton.left), true);
+    canvas.dispatchTouchEvent("touchmove", [createTouch(4096, 120, 160)]);
+    mouse.update();
+    assert.deepStrictEqual(mouse.delta, { x: 20, y: 10 });
+
+    canvas.dispatchTouchEvent("touchend", [touch]);
+    mouse.update();
+    assert.strictEqual(mouse.wasJustReleased("left"), true);
   });
 
-  test("should synchronize with primary touch for position", () => {
-    const touch = createTouch(TouchIdentifier.primary, 100, 150);
+  test("a second touch leaves the mouse alone", () => {
+    canvas.dispatchTouchEvent("touchstart", [createTouch(1, 100, 150)]);
+    mouse.update();
 
-    mouse.synchronizeWithTouch(touch, undefined, { x: 100, y: 150 });
+    canvas.dispatchTouchEvent("touchstart", [createTouch(2, 300, 300)]);
+    canvas.dispatchTouchEvent("touchmove", [createTouch(2, 310, 310)]);
+    canvas.dispatchTouchEvent("touchend", [createTouch(2, 310, 310)]);
+    mouse.update();
 
-    assert.deepStrictEqual(mouse.newPosition, { x: 100, y: 150 });
-  });
-
-  test("should not synchronize with non-primary touch", () => {
-    const touch = createTouch(1, 100, 150);
-
-    mouse.synchronizeWithTouch(touch, true, { x: 100, y: 150 });
-
-    assert.strictEqual(mouse.isDown(MouseEventButton.left), false);
-    assert.strictEqual(mouse.newPosition, null);
+    assert.strictEqual(mouse.isDown("left"), true);
+    assert.deepStrictEqual(mouse.position, { x: 100, y: 150 });
   });
 
   test("keeps tracking a drag once the cursor leaves the canvas", () => {
@@ -175,8 +176,9 @@ describe("Controls.Mouse motion", () => {
     canvas.rect = { left: 100, top: 50 };
 
     canvas.dispatchMouseEvent("mousemove", { clientX: 250, clientY: 200 });
+    mouse.update();
 
-    assert.deepStrictEqual(mouse.newPosition, { x: 150, y: 150 });
+    assert.deepStrictEqual(mouse.position, { x: 150, y: 150 });
   });
 
   test("does not force a layout read when the event exposes offsetX/offsetY", () => {
@@ -187,8 +189,10 @@ describe("Controls.Mouse motion", () => {
       canvas.dispatchMouseEvent("mousemove", { clientX: 250, clientY: 200 });
     }
 
+    mouse.update();
+
     assert.strictEqual(canvas.boundingClientRectCalls, 0);
-    assert.deepStrictEqual(mouse.newPosition, { x: 150, y: 150 });
+    assert.deepStrictEqual(mouse.position, { x: 150, y: 150 });
   });
 
   test("falls back to getBoundingClientRect() when offsets are unavailable", () => {
@@ -201,8 +205,10 @@ describe("Controls.Mouse motion", () => {
       omitOffsets: true
     });
 
+    mouse.update();
+
     assert.strictEqual(canvas.boundingClientRectCalls, 1);
-    assert.deepStrictEqual(mouse.newPosition, { x: 150, y: 150 });
+    assert.deepStrictEqual(mouse.position, { x: 150, y: 150 });
   });
 
   test("movement arriving after idle ticks still updates position and delta", () => {
@@ -218,16 +224,6 @@ describe("Controls.Mouse motion", () => {
 
     mouse.update();
     assert.strictEqual(mouse.isMoving(), false);
-  });
-
-  test("reuses the newPosition object across events instead of reallocating", () => {
-    canvas.dispatchMouseEvent("mousemove", { clientX: 10, clientY: 10 });
-    const first = mouse.newPosition;
-
-    canvas.dispatchMouseEvent("mousemove", { clientX: 20, clientY: 20 });
-
-    assert.strictEqual(mouse.newPosition, first);
-    assert.deepStrictEqual(mouse.newPosition, { x: 20, y: 20 });
   });
 
   test("is not hovering until the pointer reaches the canvas", () => {
@@ -272,13 +268,13 @@ describe("Controls.Mouse motion", () => {
     assert.strictEqual(mouse.hovering, false);
   });
 
-  test("keeps hovering while a primary touch holds the canvas", () => {
-    const touch = createTouch(TouchIdentifier.primary, 100, 150);
+  test("keeps hovering while the first touch holds the canvas", () => {
+    const touch = createTouch(0, 100, 150);
 
-    mouse.synchronizeWithTouch(touch, true, { x: 100, y: 150 });
+    canvas.dispatchTouchEvent("touchstart", [touch]);
     assert.strictEqual(mouse.hovering, true);
 
-    mouse.synchronizeWithTouch(touch, false);
+    canvas.dispatchTouchEvent("touchend", [touch]);
     assert.strictEqual(mouse.hovering, false);
   });
 });

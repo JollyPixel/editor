@@ -2,13 +2,13 @@
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import type { CanvasAdapter } from "./../adapters/canvas.ts";
+import type { CanvasAdapter } from "../adapters/canvas.ts";
 import type {
   InputControl,
   InputReader,
   Vector2Like
 } from "../types.ts";
-import { EdgeBuffer } from "./EdgeBuffer.ts";
+import { ControlBank } from "./ControlBank.ts";
 
 export const TouchIdentifier = {
   primary: 0,
@@ -33,7 +33,7 @@ export interface TouchState {
   isDown: boolean;
   wasStarted: boolean;
   wasEnded: boolean;
-  position: { x: number; y: number; };
+  position: TouchPosition;
 }
 
 export interface TouchpadOptions {
@@ -51,12 +51,9 @@ export class Touchpad extends Emitter<
 
   #canvas: CanvasAdapter;
 
-  #wasActive = false;
-  #started = new EdgeBuffer();
-  #ended = new EdgeBuffer();
-  #publishedEdges = 0;
-  touches: TouchState[] = [];
-  touchesDown: boolean[] = [];
+  #touches = new ControlBank<number>();
+  #slots = new Map<number, number>();
+  #positions: TouchPosition[] = [];
 
   constructor(
     options: TouchpadOptions
@@ -67,88 +64,104 @@ export class Touchpad extends Emitter<
     } = options;
 
     this.#canvas = canvas;
-    this.reset();
+    for (let slot = 0; slot < Touchpad.MaxTouches; slot++) {
+      this.#positions.push({
+        x: 0,
+        y: 0
+      });
+    }
   }
 
   get wasActive() {
-    return this.#wasActive;
+    return this.#touches.active;
   }
 
   connect() {
     this.#canvas.addEventListener("touchstart", this.#onTouchStart);
     this.#canvas.addEventListener("touchend", this.#onTouchEnd);
     this.#canvas.addEventListener("touchmove", this.#onTouchMove);
-    this.#canvas.addEventListener("touchcancel", this.#onTouchCancel);
+    this.#canvas.addEventListener("touchcancel", this.#onTouchEnd);
   }
 
   disconnect() {
     this.#canvas.removeEventListener("touchstart", this.#onTouchStart);
     this.#canvas.removeEventListener("touchend", this.#onTouchEnd);
     this.#canvas.removeEventListener("touchmove", this.#onTouchMove);
-    this.#canvas.removeEventListener("touchcancel", this.#onTouchCancel);
+    this.#canvas.removeEventListener("touchcancel", this.#onTouchEnd);
   }
 
   get isOneFingerGesture(): boolean {
-    return this.touchesDown[TouchIdentifier.primary];
-  }
-
-  get isTwoFingerGesture(): boolean {
-    return (
-      this.touchesDown[TouchIdentifier.primary] &&
-      this.touchesDown[TouchIdentifier.secondary]
+    return this.#touches.isDown(
+      TouchIdentifier.primary
     );
   }
 
+  get isTwoFingerGesture(): boolean {
+    return this.isOneFingerGesture &&
+      this.#touches.isDown(
+        TouchIdentifier.secondary
+      );
+  }
+
   get isThreeFingerGesture(): boolean {
-    return (
-      this.touchesDown[TouchIdentifier.primary] &&
-      this.touchesDown[TouchIdentifier.secondary] &&
-      this.touchesDown[TouchIdentifier.tertiary]
+    return this.isTwoFingerGesture && this.#touches.isDown(
+      TouchIdentifier.tertiary
     );
   }
 
   touchState(
     identifier: TouchAction
   ): TouchState {
-    const finalizedIdentifier = typeof identifier === "string" ?
-      TouchIdentifier[identifier] : identifier;
+    const slot = Touchpad.#touchSlot(identifier);
 
-    if (finalizedIdentifier < 0 || finalizedIdentifier >= Touchpad.MaxTouches) {
-      throw new Error(`Touch index ${finalizedIdentifier} is out of bounds.`);
-    }
-
-    return this.touches[finalizedIdentifier];
+    return {
+      isDown: this.#touches.isDown(slot),
+      wasStarted: this.#touches.wasPressed(slot),
+      wasEnded: this.#touches.wasReleased(slot),
+      position: {
+        ...this.#positions[slot]
+      }
+    };
   }
 
   isDown(
     identifier: TouchAction
   ): boolean {
-    return this.touchState(identifier).isDown;
+    return this.#touches.isDown(
+      Touchpad.#touchSlot(identifier)
+    );
   }
 
   wasStarted(
     identifier: TouchAction
   ): boolean {
-    return this.touchState(identifier).wasStarted;
+    return this.#touches.wasPressed(
+      Touchpad.#touchSlot(identifier)
+    );
   }
 
   wasEnded(
     identifier: TouchAction
   ): boolean {
-    return this.touchState(identifier).wasEnded;
+    return this.#touches.wasReleased(
+      Touchpad.#touchSlot(identifier)
+    );
   }
 
   viewportPosition(
     identifier: TouchAction
   ): Vector2Like {
-    return this.viewportPositionTo(identifier, { x: 0, y: 0 });
+    return this.viewportPositionTo(
+      identifier,
+      { x: 0, y: 0 }
+    );
   }
 
   viewportPositionTo<T extends Vector2Like>(
     identifier: TouchAction,
     out: T
   ): T {
-    const { position } = this.touchState(identifier);
+    const position = this.#positions[Touchpad.#touchSlot(identifier)];
     const x = (position.x / this.#canvas.clientWidth) * 2;
     const y = (position.y / this.#canvas.clientHeight) * 2;
 
@@ -159,21 +172,12 @@ export class Touchpad extends Emitter<
   }
 
   reset() {
-    for (let i = 0; i < Touchpad.MaxTouches; i++) {
-      this.touches[i] = {
-        isDown: false,
-        wasStarted: false,
-        wasEnded: false,
-        position: {
-          x: 0,
-          y: 0
-        }
-      };
-      this.touchesDown[i] = false;
+    this.#touches.reset();
+    this.#slots.clear();
+    for (const position of this.#positions) {
+      position.x = 0;
+      position.y = 0;
     }
-    this.#started.reset();
-    this.#ended.reset();
-    this.#publishedEdges = 0;
   }
 
   update() {
@@ -182,77 +186,54 @@ export class Touchpad extends Emitter<
   }
 
   sample(): void {
-    if (!this.#wasActive && !this.#anyTouchDown()) {
-      return;
-    }
-
-    let active = 0;
-    let started = 0;
-    let ended = 0;
-
-    for (let i = 0; i < this.touches.length; i++) {
-      const touch = this.touches[i];
-      const wasDown = touch.isDown;
-      const isDown = this.touchesDown[i];
-
-      touch.isDown = isDown;
-      active |= Number(isDown);
-      started |= Number(!wasDown && isDown) << i;
-      ended |= Number(wasDown && !isDown) << i;
-    }
-
-    this.#started.push(started);
-    this.#ended.push(ended);
-    this.#wasActive = active !== 0;
+    this.#touches.sample();
   }
 
   publish(
     reader: InputReader
   ): void {
-    const started = this.#started.take(reader);
-    const ended = this.#ended.take(reader);
-    if ((started | ended | this.#publishedEdges) === 0) {
-      return;
-    }
-
-    for (let i = 0; i < this.touches.length; i++) {
-      const touch = this.touches[i];
-      touch.wasStarted = (started & (1 << i)) !== 0;
-      touch.wasEnded = (ended & (1 << i)) !== 0;
-    }
-    this.#publishedEdges = started | ended;
+    this.#touches.publish(reader);
   }
 
-  #anyTouchDown(): boolean {
-    for (let i = 0; i < this.touchesDown.length; i++) {
-      if (this.touchesDown[i]) {
-        return true;
+  #claimSlot(
+    identifier: number
+  ): number | null {
+    const claimed = this.#slots.get(identifier);
+    if (claimed !== undefined) {
+      return claimed;
+    }
+
+    for (let slot = 0; slot < Touchpad.MaxTouches; slot++) {
+      if (!this.#touches.isDown(slot)) {
+        this.#slots.set(identifier, slot);
+
+        return slot;
       }
     }
 
-    return false;
+    return null;
   }
 
   #onTouchStart = (event: TouchEvent) => {
     event.preventDefault();
 
-    const rect = boundingRect(event);
-    if (rect === null) {
+    const rect = this.#canvas.getBoundingClientRect?.();
+    if (!rect) {
       return;
     }
 
     for (let i = 0; i < event.changedTouches.length; i++) {
       const touch = event.changedTouches[i];
-      const { identifier } = touch;
-      if (identifier >= Touchpad.MaxTouches) {
+      const slot = this.#claimSlot(touch.identifier);
+      if (slot === null) {
         continue;
       }
 
-      const state = this.touches[identifier];
-      state.position.x = touch.clientX - rect.left;
-      state.position.y = touch.clientY - rect.top;
-      this.touchesDown[identifier] = true;
-      this.emit("start", touch, state.position);
+      const position = this.#positions[slot];
+      position.x = touch.clientX - rect.left;
+      position.y = touch.clientY - rect.top;
+      this.#touches.press(slot);
+      this.emit("start", touch, position);
     }
   };
 
@@ -261,19 +242,13 @@ export class Touchpad extends Emitter<
 
     for (let i = 0; i < event.changedTouches.length; i++) {
       const touch = event.changedTouches[i];
+      const slot = this.#slots.get(touch.identifier);
+      if (slot === undefined) {
+        continue;
+      }
 
-      this.touchesDown[touch.identifier] = false;
-      this.emit("end", touch);
-    }
-  };
-
-  #onTouchCancel = (event: TouchEvent) => {
-    event.preventDefault();
-
-    for (let i = 0; i < event.changedTouches.length; i++) {
-      const touch = event.changedTouches[i];
-
-      this.touchesDown[touch.identifier] = false;
+      this.#slots.delete(touch.identifier);
+      this.#touches.release(slot);
       this.emit("end", touch);
     }
   };
@@ -281,32 +256,36 @@ export class Touchpad extends Emitter<
   #onTouchMove = (event: TouchEvent) => {
     event.preventDefault();
 
-    const rect = boundingRect(event);
-    if (rect === null) {
+    const rect = this.#canvas.getBoundingClientRect?.();
+    if (!rect) {
       return;
     }
 
     for (let i = 0; i < event.changedTouches.length; i++) {
       const touch = event.changedTouches[i];
-      const { identifier } = touch;
-      if (identifier >= Touchpad.MaxTouches) {
+      const slot = this.#slots.get(touch.identifier);
+      if (slot === undefined) {
         continue;
       }
 
-      const state = this.touches[identifier];
-      state.position.x = touch.clientX - rect.left;
-      state.position.y = touch.clientY - rect.top;
-      this.emit("move", touch, state.position);
+      const position = this.#positions[slot];
+      position.x = touch.clientX - rect.left;
+      position.y = touch.clientY - rect.top;
+      this.emit("move", touch, position);
     }
   };
-}
 
-function boundingRect(
-  event: TouchEvent
-): DOMRect | null {
-  if (!event.target) {
-    return null;
+  static #touchSlot(
+    identifier: TouchAction
+  ): number {
+    const slot = typeof identifier === "string" ?
+      TouchIdentifier[identifier] :
+      identifier;
+
+    if (slot < 0 || slot >= Touchpad.MaxTouches) {
+      throw new Error(`Touch index ${slot} is out of bounds.`);
+    }
+
+    return slot;
   }
-
-  return (event.target as Element).getBoundingClientRect();
 }

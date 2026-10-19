@@ -115,15 +115,12 @@ describe("Controls.Keyboard bind", () => {
     assert.deepEqual(calls, ["second"]);
   });
 
-  test("does not run while the keyboard ignores keydown", () => {
+  test("does not run while the keyboard is suspended", () => {
     let calls = 0;
     keyboard.bind("KeyR", () => {
       calls++;
     });
 
-    keyboard.enabled = false;
-    press({ code: "KeyR" });
-    keyboard.enabled = true;
     const release = keyboard.suspend();
     press({ code: "KeyR" });
     release();

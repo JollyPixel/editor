@@ -1,10 +1,6 @@
 // Import Internal Dependencies
-import type { Input } from "../../Input.class.ts";
-import {
-  bindInputCondition,
-  type InputCondition,
-  type BoundInputCondition
-} from "./InputCondition.ts";
+import type { InputDevices } from "../../types.ts";
+import type { InputCondition } from "./InputCondition.ts";
 import { HoldInput } from "./HoldInput.ts";
 
 export class SequenceInputs implements InputCondition {
@@ -27,7 +23,7 @@ export class SequenceInputs implements InputCondition {
   }
 
   evaluate(
-    input: Input
+    input: InputDevices
   ): boolean {
     const now = this.#now();
 
@@ -75,14 +71,8 @@ export class SequenceInputs implements InputCondition {
     }
   }
 
-  bind(
-    input: Input
-  ): BoundInputCondition {
-    return bindInputCondition(this, input);
-  }
-
   #rollbackReleasedStep(
-    input: Input
+    input: InputDevices
   ): void {
     for (let index = 0; index < this.#currentIndex; index++) {
       const condition = this.#conditions[index];

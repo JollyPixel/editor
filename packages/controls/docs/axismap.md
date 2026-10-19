@@ -63,7 +63,7 @@ The seam every contributor implements:
 
 ```ts
 interface AxisSource {
-  sample(input: Input): number;
+  sample(input: InputDevices): number;
   reset(): void;
 }
 ```
@@ -75,19 +75,28 @@ does not validate values outside this contract.
 ### ButtonAxisSource
 
 ```ts
+type AxisHalf =
+  | InputCondition
+  | CombinedKeyboardInputAction
+  | InputKeyboardAction
+  | null;
+
 new ButtonAxisSource(
-  positive: InputCondition | null,
-  negative: InputCondition | null
+  positive: AxisHalf,
+  negative: AxisHalf
 )
 ```
 
-The source returns `1` when only the positive condition holds, `-1` when only
-the negative one does, and `0` when both or neither do. Pass `null` for a
+The source returns `1` when only the positive half holds, `-1` when only the
+negative one does, and `0` when both or neither do. Pass `null` for a
 direction that is never driven.
 
-Because it takes an `InputCondition`, everything
-[`InputCombination`](combinedinput.md) builds works as a half, including
-alternatives (`KeyW` or `ArrowUp`), chords, and exclusions.
+A `string` half is read as a keyboard action. A bare action such as `"KeyW"`,
+`"ANY"`, or `"NONE"` defaults to the `down` state because axes are
+level-triggered. A combined action such as `"KeyW.pressed"` uses its explicit
+state. Everything [`InputCombination`](combinedinput.md) builds also works as
+a half, including mouse buttons, alternatives (`KeyW` or `ArrowUp`), chords,
+and exclusions.
 
 ### GamepadAxisSource
 
@@ -121,12 +130,6 @@ largest magnitude combine by direction without increasing the magnitude, so
 equal opposing sources cancel.
 
 ```ts
-type AxisHalf =
-  | InputCondition
-  | CombinedKeyboardInputAction
-  | InputKeyboardAction
-  | null;
-
 interface AxisOptions {
   invert?: boolean;
   scale?: number;
@@ -156,11 +159,8 @@ Axis.buttons(
 ): Axis
 ```
 
-Builds a `ButtonAxisSource` axis. A `string` half is read as a keyboard
-action. A bare action such as `"KeyW"`, `"ANY"`, or `"NONE"` defaults to the
-`down` state because axes are level-triggered. A combined action such as
-`"KeyW.pressed"` uses its explicit state. Pass an `InputCondition` for mouse
-buttons or composites.
+Builds an axis from one [`ButtonAxisSource`](#buttonaxissource), which reads
+each half.
 
 ### Axis.gamepadStick(gamepad, axis, options?)
 
@@ -188,7 +188,7 @@ or a custom `AxisSource`. A resolved `Axis` is not a source and cannot nest.
 ### axis.sample(input)
 
 ```ts
-axis.sample(input: Input): number
+axis.sample(input: InputDevices): number
 ```
 
 Resolves the axis against the current input state. `AxisMap` calls this for
@@ -228,7 +228,7 @@ class AxisMap<TName extends string = string> {
   constructor(definition: AxisDefinition<TName>);
 
   get names(): Iterable<TName>;
-  update(input: Input): void;
+  update(input: InputDevices): void;
   value(name: TName): number;
   vector2<T extends Vector2Like>(
     x: TName,

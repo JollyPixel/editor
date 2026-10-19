@@ -8,103 +8,73 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import type { Gamepad } from "../../../src/index.ts";
-import * as mocks from "../../mocks/index.ts";
+import type * as mocks from "../../mocks/index.ts";
 import { createGamepadFixture } from "./Gamepad.fixture.ts";
 
 describe("Controls.Gamepad axes", () => {
   let gamepad: Gamepad;
-  let navigatorAdapter: mocks.NavigatorAdapter;
+  let pad: mocks.GamepadMock;
 
   beforeEach(() => {
-    ({
-      gamepad,
-      navigatorAdapter
-    } = createGamepadFixture());
+    const fixture = createGamepadFixture();
+    gamepad = fixture.gamepad;
+    pad = fixture.plug();
   });
 
-  test("should update axis values when stick is moved beyond dead zone", () => {
-    const mockGamepad = mocks.Gamepad();
-    mockGamepad.axes[0] = 0.8;
-    mockGamepad.axes[1] = 0.6;
-    navigatorAdapter.gamepads = [mockGamepad, null, null, null];
-
+  test("reports stick values beyond the dead zone", () => {
+    pad.axes = [0.8, -0.6, 0.7, 0];
     gamepad.update();
 
-    const xAxis = gamepad.axes[0][0];
-    const yAxis = gamepad.axes[0][1];
-
-    assert.strictEqual(xAxis.value, 0.8);
-    assert.strictEqual(yAxis.value, 0.6);
-    assert.strictEqual(xAxis.wasPositiveJustPressed, true);
-    assert.strictEqual(yAxis.wasPositiveJustPressed, true);
+    assert.strictEqual(gamepad.axisValue(0, "LeftStickX"), 0.8);
+    assert.strictEqual(gamepad.axisValue(0, "LeftStickY"), -0.6);
+    assert.strictEqual(gamepad.axisValue(0, "RightStickX"), 0.7);
   });
 
-  test("should apply dead zone to axis values", () => {
-    const mockGamepad = mocks.Gamepad();
-    mockGamepad.axes[0] = 0.1;
-    mockGamepad.axes[1] = 0.1;
-    navigatorAdapter.gamepads = [mockGamepad, null, null, null];
-
+  test("zeroes both axes of a stick inside the dead zone", () => {
+    pad.axes = [0.1, 0.1, 0, 0];
     gamepad.update();
 
-    const xAxis = gamepad.axes[0][0];
-    const yAxis = gamepad.axes[0][1];
-
-    assert.strictEqual(xAxis.value, 0);
-    assert.strictEqual(yAxis.value, 0);
-    assert.strictEqual(xAxis.wasPositiveJustPressed, false);
-    assert.strictEqual(yAxis.wasPositiveJustPressed, false);
+    assert.strictEqual(gamepad.axisValue(0, 0), 0);
+    assert.strictEqual(gamepad.axisValue(0, 1), 0);
+    assert.strictEqual(gamepad.wasAxisJustPressed(0, 0, { positive: true }), false);
   });
 
-  test("should handle negative axis values", () => {
-    const mockGamepad = mocks.Gamepad();
-    mockGamepad.axes[0] = -0.8;
-    mockGamepad.axes[1] = -0.6;
-    navigatorAdapter.gamepads = [mockGamepad, null, null, null];
-
+  test("a push past half publishes a directional press then release", () => {
+    pad.axes = [0.8, -0.6, 0, 0];
     gamepad.update();
 
-    const xAxis = gamepad.axes[0][0];
-    const yAxis = gamepad.axes[0][1];
+    assert.strictEqual(gamepad.wasAxisJustPressed(0, 0, { positive: true }), true);
+    assert.strictEqual(gamepad.wasAxisJustPressed(0, 0), false);
+    assert.strictEqual(gamepad.wasAxisJustPressed(0, 1), true);
+    assert.strictEqual(gamepad.wasActive, true);
 
-    assert.strictEqual(xAxis.value, -0.8);
-    assert.strictEqual(yAxis.value, -0.6);
-    assert.strictEqual(xAxis.wasNegativeJustPressed, true);
-    assert.strictEqual(yAxis.wasNegativeJustPressed, true);
+    pad.axes = [0, 0, 0, 0];
+    gamepad.update();
+
+    assert.strictEqual(gamepad.wasAxisJustReleased(0, 0, { positive: true }), true);
+    assert.strictEqual(gamepad.wasAxisJustReleased(0, 1), true);
+    assert.strictEqual(gamepad.wasAxisJustPressed(0, 0, { positive: true }), false);
   });
 
-  test("should detect axis release", () => {
-    const mockGamepad = mocks.Gamepad();
-    mockGamepad.axes[0] = 0.8;
-    mockGamepad.axes[1] = 0.0;
-    navigatorAdapter.gamepads = [mockGamepad, null, null, null];
-
+  test("a value under half moves the stick without a press", () => {
+    pad.axes = [0, 0, 0.7, -0.5];
     gamepad.update();
 
-    mockGamepad.axes[0] = 0.0;
-    gamepad.update();
-
-    const xAxis = gamepad.axes[0][0];
-
-    assert.strictEqual(xAxis.value, 0);
-    assert.strictEqual(xAxis.wasPositiveJustReleased, true);
-    assert.strictEqual(xAxis.wasPositiveJustPressed, false);
+    assert.strictEqual(gamepad.wasAxisJustPressed(0, "RightStickX", { positive: true }), true);
+    assert.strictEqual(gamepad.wasAxisJustPressed(0, "RightStickY"), false);
+    assert.strictEqual(gamepad.axisValue(0, "RightStickY"), -0.5);
   });
 
-  test("should skip axes when null", () => {
-    const mockGamepad = mocks.Gamepad();
-    mockGamepad.axes[0] = null;
-    mockGamepad.axes[1] = null;
-    navigatorAdapter.gamepads = [mockGamepad, null, null, null];
+  test("skips a stick without numeric axes", () => {
+    pad.axes = [null, null];
+    gamepad.update();
 
-    assert.doesNotThrow(() => {
-      gamepad.update();
-    });
+    assert.strictEqual(gamepad.axisValue(0, 0), 0);
+    assert.strictEqual(gamepad.axisValue(0, 3), 0);
+  });
 
-    const xAxis = gamepad.axes[0][0];
-    const yAxis = gamepad.axes[0][1];
-
-    assert.strictEqual(xAxis.value, 0);
-    assert.strictEqual(yAxis.value, 0);
+  test("rejects an axis out of range", () => {
+    assert.throws(() => gamepad.axisValue(0, 4), /Invalid gamepad info/);
+    assert.throws(() => gamepad.wasAxisJustPressed(0, -1), /Invalid gamepad info/);
   });
 });

@@ -6,6 +6,11 @@ const kGestureGapMs = 200;
 export type ScrollSource = "wheel" | "touchpad" | "zoom";
 export type ScrollDevice = "auto" | "wheel" | "touchpad";
 
+export type LegacyWheelEvent = WheelEvent & {
+  readonly wheelDeltaX?: number;
+  readonly wheelDeltaY?: number;
+};
+
 export class WheelGesture {
   device: ScrollDevice = "auto";
 
@@ -13,7 +18,7 @@ export class WheelGesture {
   #lastTimeStamp = Number.NEGATIVE_INFINITY;
 
   classify(
-    event: WheelEvent
+    event: LegacyWheelEvent
   ): ScrollSource {
     if (event.ctrlKey) {
       return "zoom";
@@ -37,16 +42,13 @@ export class WheelGesture {
   }
 
   static #looksLikeTouchpad(
-    event: WheelEvent
+    event: LegacyWheelEvent
   ): boolean {
     if (event.deltaMode !== kDomDeltaPixel) {
       return false;
     }
 
-    const { wheelDeltaX = 0, wheelDeltaY = 0 } = event as WheelEvent & {
-      wheelDeltaX?: number;
-      wheelDeltaY?: number;
-    };
+    const { wheelDeltaX = 0, wheelDeltaY = 0 } = event;
 
     return wheelDeltaX % kNotchDelta !== 0 ||
       wheelDeltaY % kNotchDelta !== 0 ||

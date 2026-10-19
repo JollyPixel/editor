@@ -1,10 +1,6 @@
 // Import Internal Dependencies
-import type { Input } from "../../Input.class.ts";
-import {
-  bindInputCondition,
-  type InputCondition,
-  type BoundInputCondition
-} from "./InputCondition.ts";
+import type { InputDevices } from "../../types.ts";
+import type { InputCondition } from "./InputCondition.ts";
 
 export class HoldInput implements InputCondition {
   readonly entry: InputCondition;
@@ -19,7 +15,7 @@ export class HoldInput implements InputCondition {
   }
 
   evaluate(
-    input: Input
+    input: InputDevices
   ): boolean {
     return this.sustain.evaluate(input);
   }
@@ -27,11 +23,5 @@ export class HoldInput implements InputCondition {
   reset(): void {
     this.entry.reset();
     this.sustain.reset();
-  }
-
-  bind(
-    input: Input
-  ): BoundInputCondition {
-    return bindInputCondition(this, input);
   }
 }

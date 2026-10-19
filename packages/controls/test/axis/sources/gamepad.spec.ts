@@ -15,13 +15,14 @@ import {
 
 describe("Controls.GamepadAxisSource", () => {
   let input: AxisFixture["input"];
+  let tilt: AxisFixture["tilt"];
 
   beforeEach(() => {
-    ({ input } = createAxisFixture());
+    ({ input, tilt } = createAxisFixture());
   });
 
   test("reads the device axis value", () => {
-    input.gamepad.axes[0][1].value = 0.75;
+    tilt([0, 0.75, 0, 0]);
 
     assert.strictEqual(
       new GamepadAxisSource(0, "LeftStickY").sample(input),
@@ -30,7 +31,7 @@ describe("Controls.GamepadAxisSource", () => {
   });
 
   test("invert flips the sign", () => {
-    input.gamepad.axes[0][1].value = 0.75;
+    tilt([0, 0.75, 0, 0]);
 
     assert.strictEqual(
       new GamepadAxisSource(0, "LeftStickY", { invert: true }).sample(input),

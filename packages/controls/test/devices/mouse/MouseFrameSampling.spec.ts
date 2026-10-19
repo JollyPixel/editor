@@ -67,6 +67,29 @@ describe("Controls.Mouse frame sampling", () => {
     assert.strictEqual(mouse.scrollUp, false);
   });
 
+  test("wheel up and down sampled before one step agree across every query", () => {
+    canvas.dispatchWheelEvent({ wheelDelta: 120 });
+    mouse.sample();
+    canvas.dispatchWheelEvent({ wheelDelta: -120 });
+    mouse.sample();
+    mouse.publish("step");
+
+    assert.deepStrictEqual(
+      {
+        scrollUp: mouse.scrollUp,
+        isDown: mouse.isDown("scrollUp"),
+        wasJustPressed: mouse.wasJustPressed("scrollUp"),
+        scrollDown: mouse.scrollDown
+      },
+      {
+        scrollUp: true,
+        isDown: true,
+        wasJustPressed: true,
+        scrollDown: true
+      }
+    );
+  });
+
   test("reset() drops pending edges", () => {
     canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.left });
     mouse.sample();

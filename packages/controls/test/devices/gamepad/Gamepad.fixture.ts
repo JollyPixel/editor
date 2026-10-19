@@ -5,6 +5,7 @@ import * as mocks from "../../mocks/index.ts";
 export interface GamepadFixture {
   gamepad: Gamepad;
   navigatorAdapter: mocks.NavigatorAdapter;
+  plug(index?: number): mocks.GamepadMock;
 }
 
 export function createGamepadFixture(): GamepadFixture {
@@ -15,6 +16,12 @@ export function createGamepadFixture(): GamepadFixture {
 
   return {
     gamepad,
-    navigatorAdapter
+    navigatorAdapter,
+    plug(index = 0) {
+      const pad = mocks.Gamepad();
+      navigatorAdapter.gamepads[index] = pad;
+
+      return pad;
+    }
   };
 }

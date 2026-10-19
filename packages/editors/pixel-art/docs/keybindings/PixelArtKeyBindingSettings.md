@@ -4,18 +4,17 @@ Per-browser keyboard shortcuts for a `PixelDrawPanel`. They are stored as the di
 `PIXEL_ART_KEY_BINDINGS` and can be edited from the console's `pixelart.keybinds` namespace.
 
 ```ts
-import { LocalStorageAdapter } from "@jolly-pixel/ui";
 import {
   PixelArtKeyBindingSettings,
   pixelArtConsole
 } from "@jolly-pixel/editor.pixel-art";
 
-const keyBindingSettings = new PixelArtKeyBindingSettings({
-  storage: new LocalStorageAdapter(),
-  onDropped: (message) => console.warn(message)
-});
+const keyBindingSettings = PixelArtKeyBindingSettings.follow(
+  preferences,
+  (message) => console.warn(message)
+);
 
-const release = keyBindingSettings.sync(panel);
+panel.keyBindings = keyBindingSettings;
 const features = pixelArtConsole(commands, { keyBindingSettings, uvNets });
 ```
 
@@ -44,8 +43,8 @@ class PixelArtKeyBindingSettings extends KeyBindingSettings<PixelArtAction> {
 ```
 
 A [`KeyBindingSettings`](../../../../controls/docs/key-binding-settings.md) over
-`PIXEL_ART_KEY_BINDINGS`. `keyBindings` is ready for `panel.keyBindings`, and `sync(panel)` keeps it there after every
-change.
+`PIXEL_ART_KEY_BINDINGS`. Assign it to `panel.keyBindings`: the panel binds it while
+connected and follows every change.
 
 `follow` keeps the bindings in the `pixel-art-keybindings` preference scope
 (`PIXEL_ART_KEYBINDINGS` from `@jolly-pixel/editor.pixel-art/preferences`) with
@@ -74,13 +73,10 @@ const PIXEL_ART_KEY_BINDINGS: {
 };
 
 type PixelArtAction = keyof typeof PIXEL_ART_KEY_BINDINGS;
-type PixelArtKeyBindings = KeyBindingMap<PixelArtAction>;
 ```
 
-`new KeyBindingMap(PIXEL_ART_KEY_BINDINGS, overrides)` builds a `PixelArtKeyBindings` without a
-storage, for example to set `panel.keyBindings` directly. See
-[KeyBindingMap](../../../../controls/docs/key-binding-map.md) for `rebind()`, `restore()` and
-`parse()`.
+`new PixelArtKeyBindingSettings({ overrides })` builds settings without preferences, for
+example to set `panel.keyBindings` directly.
 
 ## Console
 

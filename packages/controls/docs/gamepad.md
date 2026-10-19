@@ -86,51 +86,20 @@ const GamepadAxis = {
 The names follow the W3C standard mapping. Button availability still depends
 on the connected controller.
 
-The current implementation allocates `Gamepad.MaxButtons` as `16`, covering
-indices `0` through `15`. `GamepadButton.Home` is exported as index `16`,
-but no state is allocated for it, so querying `"Home"` throws
-`Error("Invalid gamepad info")`.
-
 Axis values range from `-1` to `1`. X is negative to the left and positive
 to the right. Y is negative upward and positive downward.
 
 ## State
 
 ```ts
-interface GamepadButtonState {
-  isDown: boolean;
-  wasJustPressed: boolean;
-  wasJustReleased: boolean;
-  value: number;
-}
-
-interface GamepadAxisState {
-  wasPositiveJustPressed: boolean;
-  wasPositiveJustAutoRepeated: boolean;
-  wasPositiveJustReleased: boolean;
-  wasNegativeJustPressed: boolean;
-  wasNegativeJustAutoRepeated: boolean;
-  wasNegativeJustReleased: boolean;
-  value: number;
-}
-
-interface GamepadAutoRepeat {
-  axis: number;
-  positive: boolean;
-  time: number;
-}
-
 declare class Gamepad {
-  static MaxGamepads: number;
-  static MaxButtons: number;
-  static MaxAxes: number;
+  static readonly MaxGamepads: 4;
+  static readonly MaxButtons: 17;
+  static readonly MaxAxes: 4;
   static IdlePollFrames: number;
 
-  connectedGamepads: number;
-  buttons: GamepadButtonState[][];
-  axes: GamepadAxisState[][];
-  autoRepeats: (GamepadAutoRepeat | null)[];
-  vibration: GamepadVibration[];
+  readonly connectedGamepads: number;
+  readonly vibration: GamepadVibration[];
 
   axisDeadZone: number;
   axisAutoRepeatDelayMs: number;
@@ -140,13 +109,12 @@ declare class Gamepad {
 }
 ```
 
-The arrays are indexed by gamepad first, then button or axis. They are mutable
-public state. The query methods provide name resolution and consistent error
-handling.
+State is read through the query methods below, indexed by gamepad first, then
+button or axis.
 
 `connectedGamepads` is updated by connection events. It never drops below
-zero. `wasActive` is true when the latest poll found a pressed button or an
-axis beyond the directional press threshold.
+zero. `wasActive` is true when the latest poll found a pressed button, an axis
+beyond the directional press threshold, or an edge.
 
 The default tuning values are:
 
@@ -157,7 +125,7 @@ gamepad.axisAutoRepeatDelayMs = 500;
 gamepad.axisAutoRepeatRateMs = 33;
 ```
 
-All four static fields are mutable in the current declaration.
+`IdlePollFrames` is the only mutable static field.
 
 ## Button queries
 
@@ -185,12 +153,14 @@ interface Gamepad {
 }
 ```
 
-The transition methods compare the latest poll with the previous one.
+The transition methods compare the latest poll with the previous one. A
+gamepad that disappears from `getGamepads()` drops its held buttons without
+reporting a release.
 `buttonValue()` returns the controller's analog button value, normally in the
 range `0` through `1`.
 
-A button index without allocated state throws
-`Error("Invalid gamepad info")`. `"ANY"` and `"NONE"` are not accepted.
+A gamepad index outside `0` through `3`, or a button outside `0` through `16`,
+throws `Error("Invalid gamepad info")`. `"ANY"` and `"NONE"` are not accepted.
 
 ## Axis queries
 
@@ -229,10 +199,10 @@ option queries the negative direction. Set `positive: true` for right or down.
 
 `autoRepeat` defaults to `false`. When enabled for a press query, it also
 returns true on a held direction after `axisAutoRepeatDelayMs`, then every
-`axisAutoRepeatRateMs`. Auto-repeat tracks one axis direction per gamepad.
+`axisAutoRepeatRateMs`. Auto-repeat tracks one axis direction per gamepad: the
+first one pressed in a poll.
 
-An axis index without allocated state throws
-`Error("Invalid gamepad info")`.
+An axis index outside `0` through `3` throws `Error("Invalid gamepad info")`.
 
 ## Polling
 
@@ -253,7 +223,7 @@ controller present at page load when `gamepadconnected` did not fire. After a
 controller appears, polling returns to every update.
 
 Set `Gamepad.IdlePollFrames = 1` for unconditional polling while disconnected.
-`reset()` clears every allocated button and axis state. It leaves tuning,
+`reset()` clears every button and axis state. It leaves tuning,
 connection count, and vibration wrappers in place.
 
 ## Vibration

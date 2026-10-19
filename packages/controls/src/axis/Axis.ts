@@ -1,55 +1,19 @@
 // Import Internal Dependencies
-import type { Input } from "../Input.class.ts";
-import {
-  InputCombination,
-  type InputCondition,
-  type CombinedKeyboardInputAction
-} from "../combination/index.ts";
+import type { InputDevices } from "../types.ts";
 import type {
   GamepadAxis,
-  GamepadIndex,
-  InputKeyboardAction
+  GamepadIndex
 } from "../devices/index.ts";
 import {
   ButtonAxisSource,
   GamepadAxisSource,
+  type AxisHalf,
   type AxisSource
 } from "./sources/index.ts";
-
-export type AxisHalf =
-  | InputCondition
-  | CombinedKeyboardInputAction
-  | InputKeyboardAction
-  | null;
 
 export interface AxisOptions {
   invert?: boolean;
   scale?: number;
-}
-
-function toCondition(
-  half: AxisHalf
-): InputCondition | null {
-  if (half === null || typeof half !== "string") {
-    return half;
-  }
-
-  return InputCombination.isCombinedAction(half) ?
-    InputCombination.key(half) :
-    InputCombination.key(half, "down");
-}
-
-function clamp(
-  value: number
-): number {
-  if (value > 1) {
-    return 1;
-  }
-  if (value < -1) {
-    return -1;
-  }
-
-  return value;
 }
 
 export class Axis {
@@ -60,10 +24,7 @@ export class Axis {
   ): Axis {
     return new Axis(
       [
-        new ButtonAxisSource(
-          toCondition(positive),
-          toCondition(negative)
-        )
+        new ButtonAxisSource(positive, negative)
       ],
       options
     );
@@ -99,7 +60,9 @@ export class Axis {
       scale = 1
     } = options;
 
-    this.#sources = [...sources];
+    this.#sources = [
+      ...sources
+    ];
     this.#sign = invert ? -1 : 1;
     this.#scale = scale;
     this.#factor = this.#sign * this.#scale;
@@ -118,7 +81,7 @@ export class Axis {
   }
 
   sample(
-    input: Input
+    input: InputDevices
   ): number {
     const sources = this.#sources;
     if (sources.length === 1) {
@@ -131,7 +94,9 @@ export class Axis {
     let magnitude = 0;
 
     for (const source of sources) {
-      const sampled = clamp(source.sample(input));
+      const sampled = clamp(
+        source.sample(input)
+      );
       const sampledMagnitude = Math.abs(sampled);
 
       if (sampledMagnitude > magnitude) {
@@ -151,4 +116,17 @@ export class Axis {
       source.reset();
     }
   }
+}
+
+function clamp(
+  value: number
+): number {
+  if (value > 1) {
+    return 1;
+  }
+  if (value < -1) {
+    return -1;
+  }
+
+  return value;
 }
