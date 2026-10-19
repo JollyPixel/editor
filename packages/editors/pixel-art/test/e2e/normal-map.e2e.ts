@@ -85,7 +85,7 @@ test("enable, view, override a region and export the normal map", async({ panel,
     .toEqual([expect.not.stringMatching(kFlat), kFlat]);
 
   await panel.modes.select("uv");
-  await panel.visibility.apply({ all: true });
+  await panel.viewOptions.apply({ all: true });
   await panel.uv.createCube.click();
   await panel.canvas.click(kCubeCell);
   await normalMap.override.click();

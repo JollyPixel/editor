@@ -36,6 +36,7 @@ export interface BlocksetTabOptions {
 
 export class BlocksetTab {
   readonly binding: BlocksetBinding;
+  readonly #canvas: PixelArtCanvas;
   readonly #uvBridge: BlockUvBridge;
   readonly #collaboration: PixelCollaboration;
   readonly #access: RoomAccess;
@@ -56,6 +57,7 @@ export class BlocksetTab {
     const { canvas, view, binding } = options;
 
     this.binding = binding;
+    this.#canvas = canvas;
     this.#collaboration = new PixelCollaboration({
       room: binding.opened.room,
       canvas,
@@ -87,9 +89,11 @@ export class BlocksetTab {
   }
 
   #apply(): void {
+    const { tileSize } = this.binding.opened.blockset;
+    this.#canvas.grid.size = tileSize;
     this.#uvBridge.activateBlockset(
       this.binding.slot,
-      this.binding.opened.blockset.tileSize
+      tileSize
     );
   }
 }

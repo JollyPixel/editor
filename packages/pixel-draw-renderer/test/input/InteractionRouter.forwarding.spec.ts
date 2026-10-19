@@ -99,15 +99,20 @@ describe("InteractionRouter", () => {
     );
   });
 
-  test("lineHeld reports each change once to the active mode", () => {
-    const { router, modes } = makeRouter();
+  for (const [modifier, call] of [
+    ["lineHeld", "line"],
+    ["snapBypassHeld", "snap-bypass"]
+  ] as const) {
+    test(`${modifier} reports each change once to the active mode`, () => {
+      const { router, modes } = makeRouter();
 
-    router.lineHeld = true;
-    router.lineHeld = true;
-    router.lineHeld = false;
-    router.lineHeld = false;
+      router[modifier] = true;
+      router[modifier] = true;
+      router[modifier] = false;
+      router[modifier] = false;
 
-    assert.strictEqual(router.lineHeld, false);
-    assert.deepStrictEqual(modes[0].calls, ["line-held", "line-released"]);
-  });
+      assert.strictEqual(router[modifier], false);
+      assert.deepStrictEqual(modes[0].calls, [`${call}-held`, `${call}-released`]);
+    });
+  }
 });

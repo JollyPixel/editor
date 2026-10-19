@@ -14,6 +14,7 @@ import {
   type TextureUpdate
 } from "./TextureEntry.ts";
 import { ToolSettings } from "../tools/ToolSettings.ts";
+import { ViewSettings } from "../panel/ViewSettings.ts";
 import {
   PIXEL_ART_CAPABILITIES,
   type PixelArtAccess
@@ -34,6 +35,11 @@ const kUvRefreshEvents = [
   "size-label-visibility-changed"
 ] as const;
 
+interface CarriedSettings {
+  tools: ToolSettings;
+  view: ViewSettings;
+}
+
 export interface TextureSetOptions {
   container: () => HTMLElement;
   onActivate: (entry: TextureEntry) => void;
@@ -46,7 +52,7 @@ export class TextureSet {
   readonly #options: TextureSetOptions;
   readonly #entries = new Map<string, TextureEntry>();
   #active: TextureEntry | null = null;
-  #settings: ToolSettings | null = null;
+  #settings: CarriedSettings | null = null;
   #uvResizable = false;
   #uvOverflow = 0;
   #uvAccess: UvAccess = "edit";
@@ -218,7 +224,8 @@ export class TextureSet {
     this.#active = entry;
     this.#show(entry.host);
     if (this.#settings !== null) {
-      this.#settings.applyTo(entry.canvas);
+      this.#settings.tools.applyTo(entry.canvas);
+      this.#settings.view.applyTo(entry.canvas);
       this.#applyAccess(entry);
     }
     this.#subscribe(entry.canvas);
@@ -330,7 +337,10 @@ export class TextureSet {
       return;
     }
 
-    this.#settings = ToolSettings.capture(previous.canvas);
+    this.#settings = {
+      tools: ToolSettings.capture(previous.canvas),
+      view: ViewSettings.capture(previous.canvas)
+    };
     this.#unsubscribe(previous.canvas);
     this.#active = null;
   }

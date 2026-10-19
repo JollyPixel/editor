@@ -40,7 +40,7 @@ test("UV regions made and rotated from the toolbar converge on a peer", async({
   }
 
   await panel.modes.select("uv");
-  await panel.visibility.apply({ all: true });
+  await panel.viewOptions.apply({ all: true });
   await panel.uv.createCube.click();
   await panel.canvas.click({ x: 8, y: 8 });
   await panel.uv.rotateClockwise.click();

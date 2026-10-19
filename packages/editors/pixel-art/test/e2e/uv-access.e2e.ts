@@ -2,24 +2,23 @@
 import { test, expect } from "./fixtures.ts";
 import type { PixelDrawPanel } from "../../src/index.ts";
 
-test("region visibility stays in the top row for every tool", async({ panel }) => {
-  const trigger = panel.topRow.getByRole("button", { name: "Region visibility" });
+test("view options stay in the top row for every tool", async({ panel }) => {
+  const trigger = panel.topRow.getByRole("button", { name: "View options" });
   for (const mode of ["paint", "erase", "move", "fill", "select", "uv"] as const) {
     await panel.modes.select(mode);
     await expect(trigger).toBeVisible();
   }
-  await expect(panel.bottomToolbar.getByRole("button", { name: "Region visibility" }))
+  await expect(panel.bottomToolbar.getByRole("button", { name: "View options" }))
     .toHaveCount(0);
 });
 
-test("view keeps region visibility in the top row and opens it on hover", async({ panel, page }) => {
+test("view keeps region visibility in the view options and opens them on hover", async({ panel, page }) => {
   await panel.changeUvAccess("view");
 
   await expect(panel.modes.button("uv")).toHaveCount(0);
   await expect(panel.uv.root).toHaveCount(0);
 
-  const trigger = panel.topRow.getByRole("button", { name: "Region visibility" });
-  const { menu } = panel.visibility;
+  const { trigger, menu } = panel.viewOptions;
   await trigger.hover();
   await expect(menu).toBeVisible();
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
@@ -35,7 +34,8 @@ test("view keeps region visibility in the top row and opens it on hover", async(
   await page.keyboard.press("Escape");
   await expect(menu).not.toBeVisible();
   await panel.changeUvAccess("none");
-  await expect(trigger).toHaveCount(0);
+  await expect(trigger).toBeVisible();
+  await expect(panel.viewOptions.showAll).toHaveCount(0);
 });
 
 test("leaving edit while in UV mode falls back to Paint", async({ panel }) => {
@@ -62,9 +62,10 @@ test("none removes every UV control and turns the fill clip off", async({ panel 
   await panel.changeUvAccess("none");
 
   expect(await uvClip()).toBe(false);
-  for (const name of ["UV", "Clip to UV", "Region visibility"]) {
+  for (const name of ["UV", "Clip to UV"]) {
     await expect(panel.root.getByRole("button", { name, exact: true })).toHaveCount(0);
   }
+  await expect(panel.viewOptions.showAll).toHaveCount(0);
   await expect(panel.modes.clipBadge).toHaveCount(0);
 });
 
@@ -72,7 +73,7 @@ test("hover delays cancel across the trigger, gap and visibility popover", async
   await panel.changeUvAccess("view");
   await page.clock.install();
   await page.clock.pauseAt(new Date());
-  const { trigger, menu } = panel.visibility;
+  const { trigger, menu } = panel.viewOptions;
   await trigger.hover();
   await page.clock.runFor(199);
   await expect(menu).not.toBeVisible();
@@ -128,7 +129,7 @@ test("removing the uv-access attribute restores edit", async({ panel }) => {
 
 test("visibility popovers animate quickly and respect reduced motion", async({ panel, page }) => {
   await panel.changeUvAccess("view");
-  const menu = panel.root.locator("[part=uv-visibility-menu]");
+  const menu = panel.root.locator("[part=view-options-menu]");
   for (const reducedMotion of ["no-preference", "reduce"] as const) {
     await page.emulateMedia({ reducedMotion });
     const motion = await menu.evaluate((element: HTMLElement) => {

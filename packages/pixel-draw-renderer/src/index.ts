@@ -65,6 +65,7 @@ export type {
 } from "./rendering/Viewport.ts";
 export { PeerPresence } from "./rendering/presence/PeerPresence.ts";
 export * from "./rendering/Zoom.ts";
+export * from "./grid/TextureGrid.ts";
 export type {
   ByteColorInput,
   PeerStrokePixel,

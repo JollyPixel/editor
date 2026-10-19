@@ -16,6 +16,11 @@ import {
   Viewport
 } from "./rendering/Viewport.ts";
 import { NormalMapImage } from "./rendering/NormalMapImage.ts";
+import {
+  TextureGrid,
+  type TextureGridOptions
+} from "./grid/TextureGrid.ts";
+import { GridLines } from "./grid/GridLines.ts";
 import type { SelectionEraseColor } from "./selection/SelectionEraseColor.ts";
 import type { ZoomOptions } from "./rendering/Zoom.ts";
 import type {
@@ -36,6 +41,7 @@ export interface CanvasViewOptions {
   brushHighlight: BrushHighlight;
   eraseColor?: SelectionEraseColor;
   selectionSizeLabel?: boolean;
+  grid?: TextureGridOptions;
 }
 
 export class CanvasView {
@@ -67,6 +73,7 @@ export class CanvasView {
   };
 
   readonly viewport: Viewport;
+  readonly grid: TextureGrid;
   readonly renderer: CanvasRenderer;
   readonly overlays: OverlayLayer;
   readonly peerPresence: PeerPresence;
@@ -101,9 +108,14 @@ export class CanvasView {
         : "#424242"
     );
 
+    this.grid = new TextureGrid(options.grid);
     this.renderer = new CanvasRenderer({
       viewport: this.viewport,
       canvasBuffer: doc.buffer,
+      gridLines: new GridLines({
+        grid: this.grid,
+        viewport: this.viewport
+      }),
       bgSquareSize: options.backgroundTransparency?.squareSize,
       bgColors: options.backgroundTransparency?.colors,
       backgroundColor,
@@ -134,6 +146,7 @@ export class CanvasView {
     });
 
     doc.on("changed", this.#onRenderStateChanged);
+    this.grid.on("changed", this.#onRenderStateChanged);
     doc.on("resized", this.#onTextureSizeChanged);
     doc.on("replaced", this.#onTextureSizeChanged);
   }
@@ -215,6 +228,7 @@ export class CanvasView {
       "changed",
       this.#onRenderStateChanged
     );
+    this.grid.off("changed", this.#onRenderStateChanged);
     this.#doc.off("resized", this.#onTextureSizeChanged);
     this.#doc.off("replaced", this.#onTextureSizeChanged);
 

@@ -111,6 +111,7 @@ The canvas does not listen to the keyboard and ships no default keys. The host b
 | Flip the selection | `flipHorizontal()`, `flipVertical()` |
 | Pan with a left-drag | `panHeld = true` while the key is down |
 | Draw a straight line | `lineHeld = true` while the key is down |
+| Drag a UV region off the grid | `snapBypassHeld = true` while the key is down |
 
 ```ts
 keyboard.bind("Mod+z", () => manager.shortcuts.undo());
@@ -153,6 +154,7 @@ manager.redo();
   - [`FillTool`](./docs/tools/FillTool.md)
   - [`SelectTool`](./docs/tools/SelectTool.md)
   - [`CanvasShortcuts`](./docs/input/CanvasShortcuts.md)
+  - [`TextureGrid`](./docs/grid/TextureGrid.md)
 - [`PixelBuffer`](./docs/buffer/PixelBuffer.md)
 - [`PixelDocumentState`](./docs/PixelDocumentState.md)
 - [`ColorPalette`](./docs/ColorPalette.md)

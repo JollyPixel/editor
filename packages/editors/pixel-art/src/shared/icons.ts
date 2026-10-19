@@ -11,6 +11,8 @@ import type { NormalMapIconName } from "./normalMapIcons.ts";
 import "./normalMapIcons.ts";
 import type { TextureIconName } from "./textureIcons.ts";
 import "./textureIcons.ts";
+import type { GridIconName } from "./gridIcons.ts";
+import "./gridIcons.ts";
 
 // CONSTANTS
 const kTextGlyphs = {
@@ -56,7 +58,8 @@ export type IconName =
   | "eyeOff"
   | "dockPicker"
   | NormalMapIconName
-  | TextureIconName;
+  | TextureIconName
+  | GridIconName;
 
 registerIcon("move", svg`
     <path

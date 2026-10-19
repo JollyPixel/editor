@@ -6,6 +6,7 @@ import { createCanvas2D } from "./Canvas2D.ts";
 import { toCssColor } from "../utils/colors.ts";
 import type { ByteColorInput } from "../types.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
+import type { GridLines } from "../grid/GridLines.ts";
 import type { DefaultViewport } from "./Viewport.ts";
 import { SelectionEraseColor } from "../selection/SelectionEraseColor.ts";
 import {
@@ -26,6 +27,7 @@ interface ContentLayer extends Pick<Emitter<{ changed: () => void; }>, "on" | "o
 export interface CanvasRendererOptions {
   viewport: DefaultViewport;
   canvasBuffer: CanvasBuffer;
+  gridLines: GridLines;
   /**
    * Checkerboard square size.
    * @default 8
@@ -66,6 +68,7 @@ export class CanvasRenderer {
   #backgroundColor: string;
   #viewport: DefaultViewport;
   #canvasBuffer: CanvasBuffer;
+  #gridLines: GridLines;
   #textureSource: HTMLCanvasElement | null = null;
 
   readonly floatingSelection: FloatingSelection = new FloatingSelection();
@@ -89,6 +92,7 @@ export class CanvasRenderer {
 
     this.#viewport = viewport;
     this.#canvasBuffer = canvasBuffer;
+    this.#gridLines = options.gridLines;
     this.peerFloatingSelections = new PeerFloatingSelections(
       canvasBuffer,
       eraseColor
@@ -214,6 +218,7 @@ export class CanvasRenderer {
       );
     }
 
+    this.#gridLines.draw(this.#ctx, texPx);
     this.#ctx.restore();
   }
 

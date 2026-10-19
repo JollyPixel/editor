@@ -11,7 +11,7 @@ import { ColorControls } from "./colors.ts";
 import type { PngFile } from "./files.ts";
 import { ModeRail } from "./modeRail.ts";
 import { NormalMapDock } from "./normalMap.ts";
-import { RegionVisibility } from "./regionVisibility.ts";
+import { ViewOptions } from "./viewOptions.ts";
 import {
   ImportDialog,
   TextureTabs
@@ -27,7 +27,7 @@ export class PixelArtPanel {
   readonly root: Locator;
   readonly canvas: TextureCanvas;
   readonly modes: ModeRail;
-  readonly visibility: RegionVisibility;
+  readonly viewOptions: ViewOptions;
   readonly colors: ColorControls;
   readonly normalMap: NormalMapDock;
   readonly uv: UvToolbar;
@@ -51,7 +51,7 @@ export class PixelArtPanel {
     this.root = page.locator("pixel-draw-panel");
     this.canvas = new TextureCanvas(this.root);
     this.modes = new ModeRail(this.root);
-    this.visibility = new RegionVisibility(this.root);
+    this.viewOptions = new ViewOptions(this.root);
     this.colors = new ColorControls(this.root);
     this.normalMap = new NormalMapDock(this.root);
     this.uv = new UvToolbar(this.root);

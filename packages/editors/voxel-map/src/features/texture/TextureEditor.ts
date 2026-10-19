@@ -46,6 +46,9 @@ const kCanvasOptions: PixelArtCanvasOptions = {
   },
   uv: {
     deselectOnEmptyClick: false
+  },
+  grid: {
+    visible: true
   }
 };
 
@@ -386,6 +389,7 @@ export class TextureEditor extends WorkspaceElement {
             texture-add-label="Add blockset"
             textures-editable
             normal-map
+            grid-size-locked
             .uvAccess=${this.uvAccess}
             .texturesAddable=${addable}
             .texturesClosable=${false}

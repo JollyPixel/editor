@@ -36,6 +36,7 @@ export class InteractionRouter implements InputActions {
   #hoverPosition: Vec2 | null = null;
   #panHeld = false;
   #lineHeld = false;
+  #snapBypassHeld = false;
   #isPanning = false;
   onExternalCursorMove: ExternalCursorMoveListener | undefined;
 
@@ -151,6 +152,21 @@ export class InteractionRouter implements InputActions {
     this.#active.onLineHeldChange(held);
   }
 
+  get snapBypassHeld(): boolean {
+    return this.#snapBypassHeld;
+  }
+
+  set snapBypassHeld(
+    held: boolean
+  ) {
+    if (held === this.#snapBypassHeld) {
+      return;
+    }
+
+    this.#snapBypassHeld = held;
+    this.#active.onSnapBypassHeldChange(held);
+  }
+
   onPointerDown(
     slot: BrushColorSlot,
     position: PointerPosition,
@@ -228,6 +244,7 @@ export class InteractionRouter implements InputActions {
       this.#panHeld = false;
     });
     this.#lineHeld = false;
+    this.#snapBypassHeld = false;
     this.#active.onBlur();
     this.#syncCursor();
   }

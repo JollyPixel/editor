@@ -46,6 +46,16 @@ export class Shortcuts implements CanvasShortcuts {
     this.#router.lineHeld = held;
   }
 
+  get snapBypassHeld(): boolean {
+    return this.#router.snapBypassHeld;
+  }
+
+  set snapBypassHeld(
+    held: boolean
+  ) {
+    this.#router.snapBypassHeld = held;
+  }
+
   selectAll(): boolean {
     return this.#router.selectAll();
   }

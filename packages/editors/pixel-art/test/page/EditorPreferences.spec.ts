@@ -6,7 +6,10 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { UVMap } from "@jolly-pixel/pixel-draw.renderer";
+import {
+  TextureGrid,
+  UVMap
+} from "@jolly-pixel/pixel-draw.renderer";
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -26,15 +29,27 @@ function restore(
       return { x: 16, y: 16 };
     }
   });
-  preferences.activate({ uv });
+  const grid = new TextureGrid();
+  preferences.activate({ uv, grid });
 
   return {
     mode: preferences.mode,
     showAll: uv.showAll,
     showRegionLabels: uv.showRegionLabels,
-    showSizeLabels: uv.showSizeLabels
+    showSizeLabels: uv.showSizeLabels,
+    grid: {
+      visible: grid.visible,
+      snap: grid.snap,
+      size: grid.size
+    }
   };
 }
+
+const kDefaultGrid = {
+  visible: false,
+  snap: false,
+  size: 16
+};
 
 describe("EditorPreferences", () => {
   test("an unreadable stored value falls back to every default", () => {
@@ -42,7 +57,8 @@ describe("EditorPreferences", () => {
       mode: "paint",
       showAll: false,
       showRegionLabels: false,
-      showSizeLabels: false
+      showSizeLabels: false,
+      grid: kDefaultGrid
     });
   });
 
@@ -50,12 +66,18 @@ describe("EditorPreferences", () => {
     assert.deepEqual(restore(JSON.stringify({
       mode: "unknown",
       showAll: "true",
-      showSizeLabels: true
+      showSizeLabels: true,
+      showGrid: true,
+      gridSize: 0
     })), {
       mode: "paint",
       showAll: false,
       showRegionLabels: false,
-      showSizeLabels: true
+      showSizeLabels: true,
+      grid: {
+        ...kDefaultGrid,
+        visible: true
+      }
     });
     assert.deepEqual(restore(JSON.stringify({
       mode: "uv",
@@ -64,7 +86,30 @@ describe("EditorPreferences", () => {
       mode: "uv",
       showAll: false,
       showRegionLabels: false,
-      showSizeLabels: false
+      showSizeLabels: false,
+      grid: kDefaultGrid
     });
+  });
+
+  test("grid changes on the active canvas are restored on the next canvas", () => {
+    const storage = new MemoryStorageAdapter();
+    const uv = new UVMap({
+      getCanvasSize: () => {
+        return { x: 16, y: 16 };
+      }
+    });
+    const first = new TextureGrid();
+    new EditorPreferences(storage).activate({ uv, grid: first });
+
+    first.visible = true;
+    first.snap = true;
+    first.size = 32;
+    const next = new TextureGrid();
+    new EditorPreferences(storage).activate({ uv, grid: next });
+
+    assert.deepEqual(
+      [next.visible, next.snap, next.size],
+      [true, true, 32]
+    );
   });
 });

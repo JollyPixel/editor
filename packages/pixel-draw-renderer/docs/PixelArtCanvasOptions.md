@@ -34,6 +34,7 @@ interface PixelArtCanvasOptions {
   brush?: BrushOptions;
   select?: SelectOptions;
   uv?: UVOptions;
+  grid?: TextureGridOptions;
   onDrawEnd?: () => void;
   history?: PixelArtCanvasHistory;
   onHistoryChange?: (state: PixelHistoryState) => void;
@@ -148,6 +149,10 @@ Sets the checkerboard colors and square size behind transparent pixels. Omit it 
 ### `backgroundColor`
 
 Sets the canvas area outside the texture. When omitted, the canvas uses the parent's non-transparent computed background color or `"#424242"`.
+
+### `grid`
+
+Initial cell size, visibility, snapping and line color of [`canvas.grid`](./grid/TextureGrid.md). The grid starts hidden, without snapping, with 16-pixel cells.
 
 ## Drawing and selection
 

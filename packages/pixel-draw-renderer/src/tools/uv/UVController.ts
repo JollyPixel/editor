@@ -5,7 +5,10 @@ import {
   resizeHandleAt,
   type UVResizeHit
 } from "./resizeHandles.ts";
-import { UVGesture } from "./UVGesture.ts";
+import {
+  UVGesture,
+  type UVSnap
+} from "./UVGesture.ts";
 import { UVPickCycle } from "./UVPickCycle.ts";
 import type {
   UVMap,
@@ -15,6 +18,7 @@ import type {
   UVRegionLayer
 } from "../../rendering/overlays/UVRegions.ts";
 import type { ScreenProjection } from "../../rendering/Viewport.ts";
+import type { TextureGrid } from "../../grid/TextureGrid.ts";
 import type {
   RotationDirection,
   Vec2
@@ -29,6 +33,7 @@ export interface UVControllerOptions {
    */
   deselectOnEmptyClick?: boolean;
   viewport: ScreenProjection;
+  grid: TextureGrid;
   resizable?: boolean;
 }
 
@@ -43,10 +48,12 @@ export class UVController implements UVTool {
   #picks: UVPickCycle;
   #deselectOnEmptyClick: boolean;
   #viewport: ScreenProjection;
+  #grid: TextureGrid;
   #resizable: boolean;
   #active = false;
   #hoverPoint: Vec2 | null = null;
   #lineHeld = false;
+  #snapBypassed = false;
 
   constructor(
     options: UVControllerOptions
@@ -56,6 +63,7 @@ export class UVController implements UVTool {
     this.#picks = new UVPickCycle(options.uvMap);
     this.#deselectOnEmptyClick = options.deselectOnEmptyClick ?? true;
     this.#viewport = options.viewport;
+    this.#grid = options.grid;
     this.#resizable = options.resizable ?? false;
     this.#overlay.resizable = this.#resizable;
   }
@@ -112,9 +120,22 @@ export class UVController implements UVTool {
     }
 
     this.#lineHeld = value;
-    if (this.#gesture?.moved) {
-      this.#showPreview(this.#gesture);
+    this.#refreshDrag();
+  }
+
+  get snapBypassed(): boolean {
+    return this.#snapBypassed;
+  }
+
+  set snapBypassed(
+    value: boolean
+  ) {
+    if (this.#snapBypassed === value) {
+      return;
     }
+
+    this.#snapBypassed = value;
+    this.#refreshDrag();
   }
 
   hover(
@@ -184,7 +205,7 @@ export class UVController implements UVTool {
     point: Vec2
   ): void {
     const gesture = this.#gesture;
-    if (gesture?.move(this.#viewport.toTexture(point))) {
+    if (gesture?.move(this.#viewport.toTexture(point), this.#snap())) {
       this.#showPreview(gesture);
     }
   }
@@ -243,6 +264,21 @@ export class UVController implements UVTool {
     this.#uvMap.endPreview(gesture.id, committed);
   }
 
+  #snap(): UVSnap {
+    const grid = this.#grid;
+
+    return grid.snap && !this.#snapBypassed ?
+      (value) => grid.nearestLine(value) :
+      unsnapped;
+  }
+
+  #refreshDrag(): void {
+    const gesture = this.#gesture;
+    if (gesture !== null && (gesture.resnap(this.#snap()) || gesture.moved)) {
+      this.#showPreview(gesture);
+    }
+  }
+
   #nestedMoves(
     dragged: UVMove
   ): UVMove[] {
@@ -275,4 +311,10 @@ export class UVController implements UVTool {
       this.#viewport
     );
   }
+}
+
+function unsnapped(
+  value: number
+): number {
+  return value;
 }

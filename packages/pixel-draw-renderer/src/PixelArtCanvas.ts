@@ -47,6 +47,10 @@ import {
   CanvasView
 } from "./CanvasView.ts";
 import type { UVMap } from "./uv/map/UVMap.ts";
+import type {
+  TextureGrid,
+  TextureGridOptions
+} from "./grid/TextureGrid.ts";
 import {
   uvSlotGeometries,
   uvSlotMask
@@ -103,6 +107,7 @@ export interface PixelArtCanvasOptions {
     deselectOnEmptyClick?: boolean;
     resizable?: boolean;
   };
+  grid?: TextureGridOptions;
   onDrawEnd?: () => void;
   history?: PixelArtCanvasHistory;
   onHistoryChange?: (state: PixelHistoryState) => void;
@@ -137,6 +142,7 @@ export class PixelArtCanvas {
   readonly document: PixelDocument;
   readonly brush: Brush;
   readonly viewport: CanvasViewport;
+  readonly grid: TextureGrid;
   readonly uv: UVMap;
   readonly tools: Toolset;
   readonly shortcuts: CanvasShortcuts;
@@ -187,9 +193,11 @@ export class PixelArtCanvas {
       backgroundTransparency: options.backgroundTransparency,
       brushHighlight: this.brush,
       eraseColor,
-      selectionSizeLabel: options.select?.sizeLabel
+      selectionSizeLabel: options.select?.sizeLabel,
+      grid: options.grid
     });
     this.viewport = this.#view.viewport;
+    this.grid = this.#view.grid;
     this.peerPresence = this.#view.peerPresence;
 
     this.#tools = new Tools({
@@ -203,6 +211,7 @@ export class PixelArtCanvas {
       uvDeselectOnEmptyClick: options.uv?.deselectOnEmptyClick,
       uvResizable: options.uv?.resizable,
       viewport: this.#view.viewport,
+      grid: this.grid,
       onProgress: (pixels) => this.#onStrokeProgress?.(pixels),
       paintSelectionEdit: (edit) => this.#history.recordSelectionEdit(
         { before: edit.before, after: edit.after },

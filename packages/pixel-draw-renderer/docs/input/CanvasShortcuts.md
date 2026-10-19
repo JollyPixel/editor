@@ -25,6 +25,7 @@ keyboard.on("up", (event) => {
 interface CanvasShortcuts {
   panHeld: boolean;
   lineHeld: boolean;
+  snapBypassHeld: boolean;
   selectAll(): boolean;
   copy(): boolean;
   paste(): boolean;
@@ -61,7 +62,16 @@ Setting it during a stroke of either button commits the stroke and draws a line 
 
 In `"uv"` mode it resizes a net face together with its aligned row or column, as [`UVTool`](../tools/UVTool.md#resizable) describes, and a move drag carries the regions nested in the dragged one, as [Carrying nested regions](../tools/UVTool.md#carrying-nested-regions) describes. Bind it to a held key, usually `Shift`.
 
-Both setters ignore a value equal to the current one, so auto-repeated keydowns are harmless. A window blur sets both back to `false`, so a key released outside the page does not stay held.
+### `snapBypassHeld`
+
+```ts
+get snapBypassHeld(): boolean
+set snapBypassHeld(value: boolean)
+```
+
+While `true` in `"uv"` mode, move and resize drags ignore [`grid.snap`](../grid/TextureGrid.md#snapping) and follow the pointer pixel by pixel. Changing it mid-drag updates the preview at once. Bind it to a held key, usually `Alt`.
+
+The setters ignore a value equal to the current one, so auto-repeated keydowns are harmless. A window blur sets them back to `false`, so a key released outside the page does not stay held.
 
 ## Intents
 
