@@ -92,7 +92,8 @@ describe("defineSuite", () => {
   it("should measure the heap bytes each operation allocates", async() => {
     configure({
       allocations: true,
-      batch: 10
+      batch: 10,
+      iterations: 200
     });
     const sink: unknown[][] = [];
     const suite = defineSuite("unit / allocations", (bench) => {
