@@ -50,11 +50,13 @@ payloads.
 Region overlays still follow `UVMap.isVisible()` in every mode. Use `view` when
 the host owns UV selection and `none` when the texture has no UV layout.
 
-Region visibility uses one eye-and-chevron button at the top of the canvas,
-after the active tool's toolbar, in every tool mode when access is `edit` or
-`view`. Click it or hover for 200ms to open independent Show all regions, Show
-region labels and Show UV size checkboxes. Show UV size draws the selected
-region or slot size in texture pixels, like the selection size. The popover
+View options use one eye-and-chevron button at the top of the canvas, after
+the active tool's toolbar, in every tool mode. Click it or hover for 200ms to
+open the popover. With access `edit` or `view`, it starts with independent Show
+all regions, Show region labels and Show UV size checkboxes; Show UV size draws
+the selected region or slot size in texture pixels, like the selection size.
+The grid settings follow, as [Grid](#grid) describes. With access `none`, only
+the grid settings remain and the button shows a grid icon. The popover
 stays open while changing any option. Leaving both the button and popover for
 200ms closes it unless keyboard focus is inside. Mouse clicks on checkboxes
 still allow hover closing; Escape or clicking outside also closes it.
@@ -67,16 +69,32 @@ opening. Region State, visibility and export popovers fade and scale from their
 anchor over 120ms when opening and 90ms when closing. Reduced motion disables
 the transitions.
 
-The page editor saves the active drawing mode and both visibility settings in
-local storage under `pixel-art:preferences`. They survive refresh and apply
-when switching textures. Missing or invalid values use Paint with both
-visibility settings off. The reusable panel leaves persistence to its host.
+The page editor saves the active drawing mode, the visibility settings and the
+grid settings in local storage under `pixel-art:preferences`. They survive
+refresh and apply when switching textures, the saved cell size included.
+Missing or invalid values use Paint with every visibility setting off and a
+hidden 16-pixel grid without snapping. The reusable panel carries the view
+options except the cell size across texture switches, and leaves persistence to
+its host.
 
-CSS parts: `top-row`, `uv-visibility-toolbar`, `uv-visibility-button`,
-`uv-visibility-menu`, `uv-show-all-checkbox`,
-`uv-show-region-labels-checkbox` and `uv-show-size-labels-checkbox`. The first
-two checkboxes replace the previous
-`uv-show-all-button` and `uv-show-region-labels-button` parts.
+CSS parts: `top-row`, `view-options-toolbar`, `view-options-button`,
+`view-options-menu`, `uv-show-all-checkbox`,
+`uv-show-region-labels-checkbox` and `uv-show-size-labels-checkbox`. The
+`view-options-*` parts replace the previous `uv-visibility-*` parts, and the
+first two checkboxes replace the previous `uv-show-all-button` and
+`uv-show-region-labels-button` parts.
+
+## Grid
+
+The view options popover ends with the grid settings, after a divider:
+
+- Show grid draws a line every cell over the texture.
+- Snap UVs to grid makes UV moves and resizes land on cell lines. It only shows
+  when `uv-access` is `edit`. Hold `Alt` during a drag to ignore it.
+- Cell size picks 8, 16, 32 or 64 pixels, and is hidden by
+  `grid-size-locked`.
+
+CSS parts: `grid-visible-checkbox`, `grid-snap-checkbox` and `grid-size`.
 
 ## Layout composition
 

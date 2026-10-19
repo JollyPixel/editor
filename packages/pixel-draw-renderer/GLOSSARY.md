@@ -53,6 +53,14 @@ of the canvas element.
 
 *In code:* `PixelArtCanvas.viewport`, with `toScreen()` and `toTexture()`.
 
+### Grid
+
+Lines drawn over the texture every few pixels, splitting it into square
+*cells*, such as the tiles of an atlas. With *snapping* on, UV drags land on
+cell lines. Like the texture view, it is view state, never saved or shared.
+
+*In code:* `TextureGrid`, reached through `PixelArtCanvas.grid`.
+
 ### Texture view
 
 What the canvas draws: the texture's own colors (*albedo*) or its normal map

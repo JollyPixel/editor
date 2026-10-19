@@ -23,6 +23,7 @@ import type { ScreenProjection } from "../rendering/Viewport.ts";
 import type { UVRegionLayer } from "../rendering/overlays/UVRegions.ts";
 import type { CanvasRenderer } from "../rendering/CanvasRenderer.ts";
 import type { PixelDocument } from "../PixelDocument.ts";
+import type { TextureGrid } from "../grid/TextureGrid.ts";
 import type { SelectionEdit } from "../sync/LocalEdit.types.ts";
 import type { LinePreview } from "../rendering/overlays/LinePreview.ts";
 import type { SelectionOutline } from "../rendering/overlays/SelectionOutline.ts";
@@ -42,6 +43,7 @@ export interface ToolsOptions {
   uvDeselectOnEmptyClick?: boolean;
   uvResizable?: boolean;
   viewport: ScreenProjection;
+  grid: TextureGrid;
   onProgress?: (pixels: PeerStrokePixel[]) => void;
   paintSelectionEdit?: (edit: SelectionEdit) => void;
 }
@@ -101,7 +103,8 @@ export class Tools {
       overlay: options.uvOverlay,
       deselectOnEmptyClick: options.uvDeselectOnEmptyClick,
       resizable: options.uvResizable,
-      viewport: options.viewport
+      viewport: options.viewport,
+      grid: options.grid
     });
   }
 }

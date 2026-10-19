@@ -540,17 +540,32 @@ export const panelStyles = css`
     outline-offset: -2px;
   }
 
-  .uv-visibility-menu .uv-state-option {
+  .view-options-menu .uv-state-option {
     box-sizing: border-box;
   }
 
-  .uv-visibility-menu input {
+  .view-options-menu input {
     margin: 0;
     accent-color: var(--color-accent);
   }
 
-  .uv-visibility-menu .uv-state-option:focus-within {
+  .view-options-menu .uv-state-option:focus-within {
     background: var(--color-divider);
+  }
+
+  .view-options-divider {
+    height: 1px;
+    margin: 4px 0;
+    background: var(--color-divider);
+  }
+
+  .view-options-menu .grid-size {
+    --jolly-gutter-width: 0px;
+    --jolly-field-inset-start: 0px;
+    --jolly-field-inset-end: 0px;
+
+    display: block;
+    padding: 4px 8px;
   }
 
   .view-switch {

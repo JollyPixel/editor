@@ -38,6 +38,7 @@ export abstract class InteractionMode {
   onCursorMove(_position: Vec2 | null): void {}
   onMouseUp(): void {}
   onLineHeldChange(_held: boolean): void {}
+  onSnapBypassHeldChange(_held: boolean): void {}
   onBlur(): void {}
   onCtrlWheel(_delta: number): boolean {
     return false;

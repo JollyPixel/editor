@@ -36,6 +36,7 @@ class FakeShortcuts implements CanvasShortcuts {
   handles = true;
   panHeld = false;
   lineHeld = false;
+  snapBypassHeld = false;
 
   #record(
     name: string
@@ -244,6 +245,18 @@ describe("CanvasKeyboardController", () => {
 
     assert.equal(first.lineHeld, false);
     assert.deepEqual(active.calls, []);
+  });
+
+  test("Alt holds the snap bypass without reaching the browser menu", () => {
+    const shortcuts = active!;
+
+    const keydown = press("keydown", { key: "Alt", code: "AltLeft", altKey: true });
+    assert.equal(keydown.defaultPrevented, true);
+    assert.equal(shortcuts.snapBypassHeld, true);
+
+    const keyup = press("keyup", { key: "Alt", code: "AltLeft" });
+    assert.equal(keyup.defaultPrevented, true);
+    assert.equal(shortcuts.snapBypassHeld, false);
   });
 
   test("a new key binding map replaces the previous chords", () => {

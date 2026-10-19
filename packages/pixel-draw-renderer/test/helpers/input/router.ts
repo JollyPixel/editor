@@ -94,6 +94,12 @@ export class FakeMode extends InteractionMode {
     this.calls.push(held ? "line-held" : "line-released");
   }
 
+  onSnapBypassHeldChange(
+    held: boolean
+  ): void {
+    this.calls.push(held ? "snap-bypass-held" : "snap-bypass-released");
+  }
+
   onBlur(): void {
     this.calls.push("blur");
   }

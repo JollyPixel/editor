@@ -26,7 +26,7 @@ export interface CanvasHoverChangeDetail {
 
 export type CanvasKeyboardHost = ReactiveControllerHost & EventTarget;
 
-type HeldModifier = "panHeld" | "lineHeld";
+type HeldModifier = "panHeld" | "lineHeld" | "snapBypassHeld";
 
 export interface CanvasKeyboardControllerOptions {
   keyboard?: Keyboard;
@@ -167,6 +167,10 @@ export class CanvasKeyboardController implements ReactiveController {
     else if (event.key === "Shift") {
       this.#hold("lineHeld", shortcuts);
     }
+    else if (event.key === "Alt") {
+      event.preventDefault();
+      this.#hold("snapBypassHeld", shortcuts);
+    }
   };
 
   readonly #onKeyUp = (
@@ -177,6 +181,10 @@ export class CanvasKeyboardController implements ReactiveController {
     }
     else if (event.key === "Shift") {
       this.#release("lineHeld");
+    }
+    else if (event.key === "Alt") {
+      event.preventDefault();
+      this.#release("snapBypassHeld");
     }
   };
 }

@@ -16,6 +16,8 @@ import type {
   Vec2
 } from "../../types.ts";
 
+export type UVSnap = (value: number) => number;
+
 export interface UVGestureTarget {
   id: string;
   slot: UVSlot | null;
@@ -25,7 +27,7 @@ export interface UVGestureTarget {
 
 interface UVRectEdit {
   readonly cursor: string;
-  rectAt(pointer: Vec2): SelectionRect;
+  rectAt(pointer: Vec2, snap: UVSnap): SelectionRect;
   preview(rect: SelectionRect, lineHeld: boolean): UVLivePreview | null;
   commit(rect: SelectionRect, lineHeld: boolean): boolean;
 }
@@ -35,6 +37,7 @@ export class UVGesture {
   readonly #edit: UVRectEdit;
   readonly #baseRect: SelectionRect;
   #liveRect: SelectionRect;
+  #pointer: Vec2 | null = null;
 
   static move(
     uvMap: UVMap,
@@ -53,9 +56,17 @@ export class UVGesture {
 
     return new UVGesture(target, {
       cursor: UV_RESIZE_CURSORS[handle],
-      rectAt: (pointer) => RectArea.from(rect).resized(handle, {
-        x: Math.round(pointer.x - origin.x),
-        y: Math.round(pointer.y - origin.y)
+      rectAt: (pointer, snap) => RectArea.from(rect).resized(handle, {
+        x: snappedDelta(
+          handle.includes("w") ? rect.x : rect.x + rect.width,
+          Math.round(pointer.x - origin.x),
+          snap
+        ),
+        y: snappedDelta(
+          handle.startsWith("n") ? rect.y : rect.y + rect.height,
+          Math.round(pointer.y - origin.y),
+          snap
+        )
       }).bounds,
       preview: (live, lineHeld) => {
         const region = uvMap.previewResize(id, live, slot, { aligned: lineHeld });
@@ -85,9 +96,11 @@ export class UVGesture {
   }
 
   move(
-    pointer: Vec2
+    pointer: Vec2,
+    snap: UVSnap
   ): boolean {
-    const rect = this.#edit.rectAt(pointer);
+    this.#pointer = pointer;
+    const rect = this.#edit.rectAt(pointer, snap);
     if (sameRect(rect, this.#liveRect)) {
       return false;
     }
@@ -95,6 +108,12 @@ export class UVGesture {
     this.#liveRect = rect;
 
     return true;
+  }
+
+  resnap(
+    snap: UVSnap
+  ): boolean {
+    return this.#pointer !== null && this.move(this.#pointer, snap);
   }
 
   preview(
@@ -141,14 +160,15 @@ class UVMoveEdit implements UVRectEdit {
   }
 
   rectAt(
-    pointer: Vec2
+    pointer: Vec2,
+    snap: UVSnap
   ): SelectionRect {
     const { rect } = this.#dragged;
 
     return this.#uvMap.bounds.fit({
       ...rect,
-      x: rect.x + Math.floor(pointer.x) - this.#origin.x,
-      y: rect.y + Math.floor(pointer.y) - this.#origin.y
+      x: snap(rect.x + Math.floor(pointer.x) - this.#origin.x),
+      y: snap(rect.y + Math.floor(pointer.y) - this.#origin.y)
     });
   }
 
@@ -214,4 +234,12 @@ class UVMoveEdit implements UVRectEdit {
       };
     });
   }
+}
+
+function snappedDelta(
+  edge: number,
+  delta: number,
+  snap: UVSnap
+): number {
+  return snap(edge + delta) - edge;
 }

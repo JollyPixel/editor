@@ -32,6 +32,7 @@ export class UVMode extends InteractionMode {
   onExit(): void {
     this.#uv.cancelDrag();
     this.#uv.lineHeld = false;
+    this.#uv.snapBypassed = false;
     this.#uv.active = false;
   }
 
@@ -49,6 +50,12 @@ export class UVMode extends InteractionMode {
     held: boolean
   ): void {
     this.#uv.lineHeld = held;
+  }
+
+  onSnapBypassHeldChange(
+    held: boolean
+  ): void {
+    this.#uv.snapBypassed = held;
   }
 
   onPointerDown(
@@ -94,5 +101,6 @@ export class UVMode extends InteractionMode {
   onBlur(): void {
     this.#uv.cancelDrag();
     this.#uv.lineHeld = false;
+    this.#uv.snapBypassed = false;
   }
 }

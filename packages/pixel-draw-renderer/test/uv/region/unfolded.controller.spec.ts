@@ -6,22 +6,12 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { UVController } from "#src/tools/uv/UVController.ts";
 import type { UVSlot } from "#src/uv/region/UVRegion.ts";
-import type { UVRegionLayer } from "#src/rendering/overlays/UVRegions.ts";
-import { makeUvMap } from "../../helpers/uv/map.ts";
-import { FakeOverlay } from "../../helpers/uv/overlay.ts";
-import { makeViewport } from "../../helpers/overlay.ts";
+import { makeUvControllerSetup } from "../../helpers/uv/controller.ts";
 
 describe("UVController — dragging an unfolded region", () => {
   function makeSetup() {
-    const map = makeUvMap({ x: 64, y: 64 });
-    const overlay = new FakeOverlay();
-    const controller = new UVController({
-      uvMap: map,
-      overlay: overlay as unknown as UVRegionLayer,
-      viewport: makeViewport(1)
-    });
+    const { map, overlay, controller } = makeUvControllerSetup({ x: 64, y: 64 });
     const region = map.create({ width: 4, height: 4 });
     map.applyState(region.id, "unfolded");
     map.select(region.id);

@@ -40,6 +40,16 @@ While a peer drag preview is active, that region's handles hide and new local mo
 
 While [`shortcuts.lineHeld`](../input/CanvasShortcuts.md#lineheld) is `true`, usually bound to `Shift`, resizing a net face resizes its aligned row or column with it: every face whose bottom (or right) edge lies on the same line and touches the dragged face along it, directly or through another such face, moves that edge too. Changing it mid-drag updates the preview at once. Stacked and free regions ignore it.
 
+## Snapping to the grid
+
+While [`canvas.grid.snap`](../grid/TextureGrid.md) is `true`:
+
+- a move drag puts the dragged unit's top-left corner on the nearest cell line, so an unaligned region aligns on its first move. A unit's corner is its bounding box corner, for rotated and compound faces too;
+- a resize drag puts each grabbed edge on the nearest cell line. The opposite edge stays where it is, aligned or not;
+- nested units carried with `lineHeld` move by the dragged unit's snapped delta.
+
+Snapping happens before the drag is clamped to the canvas, so a unit pushed against an edge can stop off the grid. Holding [`shortcuts.snapBypassHeld`](../input/CanvasShortcuts.md#snapbypassheld) turns it off for the drag.
+
 ## Carrying nested regions
 
 While [`shortcuts.lineHeld`](../input/CanvasShortcuts.md#lineheld) is `true`, usually bound to `Shift`, a move drag also carries every visible movement unit nested in the dragged one, as [`UVMap.targetsWithin()`](../uv/UVMap.md#targetswithinrect) lists them. A unit is a stacked or unfolded region, or one slot of a free region. The nested units are taken on pointer-down. Units that only overlap the dragged one stay in place, and so do the regions a peer is dragging.

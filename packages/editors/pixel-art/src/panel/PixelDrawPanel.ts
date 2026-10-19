@@ -29,7 +29,7 @@ import { panelStyles } from "./PixelDrawPanel.styles.ts";
 import { railButtonStyles } from "../shared/railButton.styles.ts";
 import { iconStyles } from "../shared/icon.styles.ts";
 import { UvToolbarController } from "../uv/UvToolbarController.ts";
-import { RegionVisibilityController } from "../uv/RegionVisibilityController.ts";
+import { ViewOptionsController } from "./ViewOptionsController.ts";
 import { SelectToolbarController } from "../tools/SelectToolbarController.ts";
 import { TextureDropController } from "../textures/import/TextureDropController.ts";
 import { renderHistoryFileToolbar } from "./historyFileToolbar.ts";
@@ -207,6 +207,9 @@ export class PixelDrawPanel extends LitElement {
   @property({ type: Boolean, attribute: "texture-tabs-line" })
   declare textureTabsLine: boolean;
 
+  @property({ type: Boolean, attribute: "grid-size-locked" })
+  declare gridSizeLocked: boolean;
+
   readonly #status = new TransientStatus(this);
   readonly #textures = new TextureSet(this, {
     container: () => this.#element(".canvas-host"),
@@ -227,7 +230,7 @@ export class PixelDrawPanel extends LitElement {
   });
   readonly #activeCanvas = (): PixelArtCanvas | null => this.canvasManager;
   readonly #uvToolbar = new UvToolbarController(this, this.#activeCanvas);
-  readonly #regionVisibility = new RegionVisibilityController(
+  readonly #viewOptions = new ViewOptionsController(
     this,
     this.#activeCanvas
   );
@@ -272,6 +275,7 @@ export class PixelDrawPanel extends LitElement {
     this.textureAddLabel = "Add texture";
     this.textureTabsVariant = "default";
     this.textureTabsLine = false;
+    this.gridSizeLocked = false;
   }
 
   get keyBindings(): PixelArtKeyBindings {
@@ -664,7 +668,11 @@ export class PixelDrawPanel extends LitElement {
               this.allowUvCreateDelete && access.has("uvStructure"),
               normalMaps?.renderOverrideButton() ?? nothing
             )}
-            ${this.#regionVisibility.render(policy.regionVisibility)}
+            ${this.#viewOptions.render({
+              regions: policy.regionVisibility,
+              gridSnap: policy.uvMode,
+              gridSizeLocked: this.gridSizeLocked
+            })}
           </div>
           ${renderHistoryFileToolbar({
             canvas: this.#activeCanvas,

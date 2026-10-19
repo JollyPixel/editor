@@ -1,13 +1,13 @@
 // Import Third-party Dependencies
 import type { Locator } from "@playwright/test";
 
-export interface RegionVisibilityState {
+export interface ViewOptionsState {
   all?: boolean;
   labels?: boolean;
   size?: boolean;
 }
 
-export class RegionVisibility {
+export class ViewOptions {
   readonly trigger: Locator;
   readonly menu: Locator;
   readonly showAll: Locator;
@@ -17,8 +17,8 @@ export class RegionVisibility {
   constructor(
     panel: Locator
   ) {
-    this.trigger = panel.getByRole("button", { name: "Region visibility" });
-    this.menu = panel.getByRole("dialog", { name: "Region visibility" });
+    this.trigger = panel.getByRole("button", { name: "View options" });
+    this.menu = panel.getByRole("dialog", { name: "View options" });
     this.showAll = panel.getByRole("checkbox", { name: "Show all regions" });
     this.labels = panel.getByRole("checkbox", { name: "Show region labels" });
     this.size = panel.getByRole("checkbox", { name: "Show UV size" });
@@ -33,7 +33,7 @@ export class RegionVisibility {
   }
 
   async apply(
-    state: RegionVisibilityState
+    state: ViewOptionsState
   ): Promise<void> {
     await this.open();
     if (state.all !== undefined) {

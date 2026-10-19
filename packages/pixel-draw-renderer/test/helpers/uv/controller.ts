@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import type { UVMap } from "#src/uv/map/UVMap.ts";
 import { UVController } from "#src/tools/uv/UVController.ts";
+import { TextureGrid } from "#src/grid/TextureGrid.ts";
 import type { UVRegionLayer } from "#src/rendering/overlays/UVRegions.ts";
 import type { Vec2 } from "#src/types.ts";
 import { makeUvMap } from "./map.ts";
@@ -10,6 +11,7 @@ import { makeViewport } from "../overlay.ts";
 export interface UVControllerSetup {
   map: UVMap;
   overlay: FakeOverlay;
+  grid: TextureGrid;
   controller: UVController;
 }
 
@@ -19,16 +21,19 @@ export function makeUvControllerSetup(
 ): UVControllerSetup {
   const map = makeUvMap(size);
   const overlay = new FakeOverlay();
+  const grid = new TextureGrid();
   const controller = new UVController({
     uvMap: map,
     overlay: overlay as unknown as UVRegionLayer,
     deselectOnEmptyClick,
-    viewport: makeViewport(1)
+    viewport: makeViewport(1),
+    grid
   });
 
   return {
     map,
     overlay,
+    grid,
     controller
   };
 }

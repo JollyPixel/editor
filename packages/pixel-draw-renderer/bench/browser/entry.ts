@@ -1,6 +1,8 @@
 // Import Internal Dependencies
 import { CanvasBuffer } from "../../src/buffer/CanvasBuffer.ts";
 import { CanvasRenderer } from "../../src/rendering/CanvasRenderer.ts";
+import { TextureGrid } from "../../src/grid/TextureGrid.ts";
+import { GridLines } from "../../src/grid/GridLines.ts";
 import { Viewport } from "../../src/rendering/Viewport.ts";
 import type {
   RGBA8,
@@ -106,7 +108,11 @@ function runBenchmarks(): BrowserBenchmarkReport {
   viewport.centerTexture();
   const renderer = new CanvasRenderer({
     viewport,
-    canvasBuffer: buffer
+    canvasBuffer: buffer,
+    gridLines: new GridLines({
+      grid: new TextureGrid(),
+      viewport
+    })
   });
   renderer.resize(1024, 768);
   const rendererContext = renderer.canvas().getContext("2d")!;

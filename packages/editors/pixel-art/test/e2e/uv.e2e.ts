@@ -63,7 +63,7 @@ function sixFaces<TValue>(
 
 test.beforeEach(async({ panel }) => {
   await panel.modes.select("uv");
-  await panel.visibility.apply({ all: true });
+  await panel.viewOptions.apply({ all: true });
   await panel.uv.createCube.click();
 });
 
@@ -241,7 +241,7 @@ test("Create ramp adds a region with triangular sides and a true-length slope", 
 });
 
 test("Show all and region labels toggle independently", async({ panel }) => {
-  const { trigger, menu } = panel.visibility;
+  const { trigger, menu } = panel.viewOptions;
   await trigger.focus();
   await trigger.press("Enter");
   const labels = menu.getByRole("checkbox", { name: "Show region labels" });

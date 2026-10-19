@@ -15,8 +15,8 @@ test("the rail, toolbars and dialogs keep working after a DOM move", async({ pan
   await panel.modes.select("uv");
   await expect.poll(() => panel.modes.active()).toBe("uv");
 
-  const { showAll } = panel.visibility;
-  await panel.visibility.open();
+  const { showAll } = panel.viewOptions;
+  await panel.viewOptions.open();
   const shown = await showAll.isChecked();
   await showAll.setChecked(!shown);
   await expect(showAll).toBeChecked({ checked: !shown });

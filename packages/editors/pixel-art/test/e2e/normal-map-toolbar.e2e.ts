@@ -3,7 +3,7 @@ import { test, expect } from "./fixtures.ts";
 import type { PixelDrawPanel } from "../../src/index.ts";
 
 test("top and bottom toolbars stay reachable as the panel narrows", async({ panel }) => {
-  const { normalMap, visibility } = panel;
+  const { normalMap, viewOptions } = panel;
   await normalMap.enable();
   await panel.changeUvAccess("view");
 
@@ -29,13 +29,13 @@ test("top and bottom toolbars stay reachable as the panel narrows", async({ pane
     await normalMap.normalView.click();
     await expect(normalMap.normalView).toHaveAttribute("aria-checked", "true");
     await normalMap.albedoView.click();
-    await visibility.open();
-    await expect(visibility.menu.getByRole("checkbox", { name: "Show region labels" }))
+    await viewOptions.open();
+    await expect(viewOptions.menu.getByRole("checkbox", { name: "Show region labels" }))
       .toBeVisible();
-    const menuBox = await visibility.menu.boundingBox();
-    const triggerBox = await visibility.trigger.boundingBox();
+    const menuBox = await viewOptions.menu.boundingBox();
+    const triggerBox = await viewOptions.trigger.boundingBox();
     expect(menuBox!.y).toBeGreaterThanOrEqual(triggerBox!.y + triggerBox!.height);
-    await visibility.menu.getByRole("checkbox", { name: "Show region labels" })
+    await viewOptions.menu.getByRole("checkbox", { name: "Show region labels" })
       .press("Escape");
   }
 });

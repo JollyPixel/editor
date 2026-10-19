@@ -23,9 +23,9 @@ again. For multiple textures from startup, use `configure()` followed by
 
 ## Texture lifecycle
 
-Each texture is a separate `PixelArtCanvas`. The panel shares tool mode, colors
-and tool options while switching canvases. The host creates assets and handles
-requests from the panel:
+Each texture is a separate `PixelArtCanvas`. The panel shares tool mode, colors,
+tool options and view options while switching canvases. The host creates assets
+and handles requests from the panel:
 
 ```ts
 panel.textureImportPolicy = "add";
@@ -52,6 +52,22 @@ editing tools; `view` exposes visibility controls and fill clipping; `none`
 hides UV controls and disables clipping. UV region overlays still follow
 `UVMap.isVisible()` in all modes. `allow-uv-create-delete` controls the UV
 Create/Delete buttons and defaults to false.
+
+## Grid
+
+The view options popover at the top of the canvas edits the active canvas's
+[`TextureGrid`](../../../../pixel-draw-renderer/docs/grid/TextureGrid.md):
+visibility, UV snapping (with `uv-access="edit"` only) and cell size.
+Grid visibility and snapping carry over when switching textures, like the region
+toggles; the cell size belongs to each texture. Set `grid-size-locked` when the host decides the size,
+such as an atlas tile size, to hide the size picker:
+
+```ts
+panel.gridSizeLocked = true;
+panel.addTexture({ id, name, grid: { size: tileSize, visible: true } });
+```
+
+Holding `Alt` over the canvas drags UV regions off the grid.
 
 ## Access rights
 
@@ -162,6 +178,7 @@ announce(message: string): void
 | `textureTabsVariant` | `"default" \| "skew"`; defaults to `"default"`. |
 | `textureTabsLine` | Thin line strip when true. Defaults to false. |
 | `normalMap` | Shows normal-map controls when true. Defaults to false. |
+| `gridSizeLocked` | Hides the grid cell size picker when true. Defaults to false. |
 | `theme` / `resolvedTheme` | Requested `"light" \| "dark" \| "auto"` theme and resolved `"light" \| "dark"` theme. |
 
 `configure()` sets the canvas options used by later `addTexture()` calls. Per-
