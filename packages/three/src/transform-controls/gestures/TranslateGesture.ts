@@ -2,12 +2,12 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { AXES } from "../../common/axes.ts";
+import { AXES } from "../../common/math/axes.ts";
 import {
   type SnapStep,
   resolveSnapStep,
   snapValue
-} from "../../common/snap.ts";
+} from "../../common/math/snap.ts";
 import { PLANE_AXES } from "../handles/handleId.ts";
 import {
   type GestureContext,

@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 // Import Internal Dependencies
-import type { Axis, AxisSign } from "../../common/axes.ts";
+import type { Axis, AxisSign } from "../../common/math/axes.ts";
 
 export interface VisibleFaces {
   posX: boolean;

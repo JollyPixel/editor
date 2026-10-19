@@ -6,7 +6,7 @@ import {
   type Axis,
   type AxisSign,
   AXIS_DIRECTION
-} from "../../common/axes.ts";
+} from "../../common/math/axes.ts";
 import type { TransformMode } from "../types.ts";
 import type { AxisHandleGeometry } from "./geometry.ts";
 import {

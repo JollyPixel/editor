@@ -6,8 +6,8 @@ import {
   type ArrowGeometry,
   createArrowGeometry,
   createArrowShaftGeometry
-} from "../../common/arrowGeometry.ts";
-import { mergePositions } from "../../common/mergePositions.ts";
+} from "../../common/geometry/arrow.ts";
+import { mergePositions } from "../../common/geometry/mergePositions.ts";
 import type { ResolvedRings } from "../appearance.ts";
 import type { TransformAxisHandleOptions } from "../types.ts";
 import {

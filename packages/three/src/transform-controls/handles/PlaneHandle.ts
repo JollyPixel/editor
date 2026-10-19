@@ -5,7 +5,7 @@ import * as THREE from "three";
 import {
   type Axis,
   AXIS_DIRECTION
-} from "../../common/axes.ts";
+} from "../../common/math/axes.ts";
 import type { ResolvedPlanes } from "../appearance.ts";
 import type { TransformMode } from "../types.ts";
 import {

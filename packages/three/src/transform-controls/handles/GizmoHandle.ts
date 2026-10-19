@@ -2,7 +2,7 @@
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import type { Axis } from "../../common/axes.ts";
+import type { Axis } from "../../common/math/axes.ts";
 import type { ResolvedOutline } from "../appearance.ts";
 import type {
   TransformHandle,

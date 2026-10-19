@@ -3,14 +3,14 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import {
-  MeshHighlightState,
-  PeerSelectionRegistry,
+  PeerHighlights,
   type PeerColorAllocator
 } from "#src/index.ts";
+import { MeshHighlightState } from "#src/mesh-highlight/MeshHighlightState.ts";
 
 export interface PeerScene {
-  selection: MeshHighlightState;
-  registry: PeerSelectionRegistry;
+  state: MeshHighlightState;
+  peers: PeerHighlights;
   mesh: THREE.Mesh;
 }
 
@@ -32,14 +32,14 @@ export function createBox(): THREE.Mesh {
 }
 
 export function createPeerScene(): PeerScene {
-  const selection = new MeshHighlightState();
-  const registry = new PeerSelectionRegistry();
+  const state = new MeshHighlightState();
+  const peers = new PeerHighlights();
   const mesh = createBox();
-  selection.register("mesh-1", mesh);
+  state.register("mesh-1", mesh);
 
   return {
-    selection,
-    registry,
+    state,
+    peers,
     mesh
   };
 }

@@ -33,6 +33,7 @@ export class ObjectOverlayRenderer implements MeshHighlightRenderer {
   #camera: THREE.Camera;
   #boundsOnly: boolean;
   #overlays = new Map<string, ActiveHighlightOverlay>();
+  #appearance: MeshHighlightAppearance | null = null;
   #cameraWorldPosition = new THREE.Vector3();
 
   constructor(
@@ -50,6 +51,10 @@ export class ObjectOverlayRenderer implements MeshHighlightRenderer {
   ): void {
     const next = new Map<string, ActiveHighlightOverlay>();
     const created: HighlightOverlay[] = [];
+    const rebuild = this.#appearance !== null && (
+      this.#appearance.renderOrder !== appearance.renderOrder ||
+      this.#appearance.xrayDepthWrite !== appearance.xrayDepthWrite
+    );
 
     try {
       for (const indicator of indicators) {
@@ -59,6 +64,7 @@ export class ObjectOverlayRenderer implements MeshHighlightRenderer {
         const current = this.#overlays.get(indicator.objectId);
         if (
           current &&
+          !rebuild &&
           current.target === indicator.target &&
           current.technique === technique &&
           current.dashed === dashed &&
@@ -119,6 +125,7 @@ export class ObjectOverlayRenderer implements MeshHighlightRenderer {
       }
     }
     this.#overlays = next;
+    this.#appearance = appearance;
   }
 
   render(): void {

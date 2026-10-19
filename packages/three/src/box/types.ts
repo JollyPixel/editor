@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { Axis } from "../common/axes.ts";
+import type { Axis } from "../common/math/axes.ts";
 
 export type BoxAxisPolicy = "xz" | "xyz";
 

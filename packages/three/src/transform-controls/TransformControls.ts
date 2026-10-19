@@ -2,13 +2,19 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { eyeDirection } from "../common/eyeDirection.ts";
-import { PointerDrag } from "../common/PointerDrag.ts";
-import type { SnapStep } from "../common/snap.ts";
-import { RotateGesture } from "./gestures/RotateGesture.ts";
+import { eyeDirection } from "../common/screen/eyeDirection.ts";
+import {
+  PointerDrag,
+  type PointerDragRelease
+} from "../common/interaction/PointerDrag.ts";
+import type { SnapStep } from "../common/math/snap.ts";
+import { RotateGesture } from "../common/interaction/RotateGesture.ts";
 import { ScaleGesture } from "./gestures/ScaleGesture.ts";
 import { TranslateGesture } from "./gestures/TranslateGesture.ts";
-import type { GestureContext } from "./gestures/GestureContext.ts";
+import {
+  type GestureContext,
+  rotationAxis
+} from "./gestures/GestureContext.ts";
 import {
   type ResolvedOrientation,
   type ResolvedPivot,
@@ -37,7 +43,6 @@ import {
 // CONSTANTS
 const kModes: readonly TransformMode[] = ["translate", "rotate", "scale"];
 const kPivotEpsilon = 1e-12;
-const kCancelKey = "Escape";
 
 const kPointer = new THREE.Vector2();
 const kDelta = new THREE.Vector3();
@@ -71,7 +76,6 @@ interface TransformSession {
   lastQuaternion: THREE.Quaternion;
   lastScale: THREE.Vector3;
   changed: boolean;
-  cancelled: boolean;
 }
 
 export class TransformControls extends THREE.Controls<
@@ -82,7 +86,7 @@ export class TransformControls extends THREE.Controls<
 
   limits: THREE.Box3 | null;
 
-  #drag: PointerDrag;
+  #drag: PointerDrag<TransformSession>;
   #frame = new TransformFrame();
   #gizmo: TransformGizmo;
   #target: THREE.Object3D | null = null;
@@ -92,8 +96,6 @@ export class TransformControls extends THREE.Controls<
     scale: null
   };
   #raycaster = new THREE.Raycaster();
-  #session: TransformSession | null = null;
-  #keyTarget: Document | null = null;
 
   constructor(
     camera: THREE.Camera,
@@ -108,11 +110,13 @@ export class TransformControls extends THREE.Controls<
       options.appearance
     );
     this.helper = this.#gizmo;
-    this.#drag = new PointerDrag({
+    this.#drag = new PointerDrag<TransformSession>({
+      enabled: () => this.enabled,
       press: (event) => this.#claim(event),
       hover: (event) => this.#hover(event),
-      drag: (event) => this.#applyDrag(event),
-      release: () => this.#finishSession()
+      drag: (session, event) => this.#applyDrag(session, event),
+      cancel: (session) => this.#restore(session),
+      release: (session, release) => this.#finishSession(session, release)
     });
     this.mode = options.mode ?? "translate";
     this.orientation = options.orientation ?? "world";
@@ -135,7 +139,7 @@ export class TransformControls extends THREE.Controls<
   }
 
   get dragging(): boolean {
-    return this.#session !== null;
+    return this.#drag.active;
   }
 
   get hoveredHandle(): TransformHandle | null {
@@ -241,12 +245,12 @@ export class TransformControls extends THREE.Controls<
   }
 
   cancel(): void {
-    const session = this.#session;
-    if (session === null) {
-      return;
-    }
+    this.#drag.cancel();
+  }
 
-    session.cancelled = true;
+  #restore(
+    session: TransformSession
+  ): void {
     if (session.changed && session.target.parent === session.parent) {
       session.target.position.copy(session.startPosition);
       session.target.quaternion.copy(session.startQuaternion);
@@ -259,7 +263,6 @@ export class TransformControls extends THREE.Controls<
       });
     }
     session.changed = false;
-    this.#drag.end();
   }
 
   isOverHandle(
@@ -288,28 +291,20 @@ export class TransformControls extends THREE.Controls<
 
   #claim(
     event: PointerEvent
-  ): void {
-    if (
-      !this.enabled ||
-      event.button !== 0 ||
-      this.#session !== null
-    ) {
-      return;
-    }
-
+  ): boolean {
     const target = this.#target;
     const handle = this.#pick(event);
     if (target === null || handle === null) {
-      return;
+      return false;
     }
 
-    this.#beginSession(event, target, handle);
+    return this.#beginSession(event, target, handle);
   }
 
   #hover(
     event: PointerEvent
   ): boolean {
-    if (!this.enabled || this.#target === null) {
+    if (this.#target === null) {
       return false;
     }
 
@@ -323,7 +318,7 @@ export class TransformControls extends THREE.Controls<
     event: PointerEvent,
     target: THREE.Object3D,
     handle: TransformHandle
-  ): void {
+  ): boolean {
     const origin = new THREE.Vector3();
     const frameQuaternion = new THREE.Quaternion();
     this.#gizmo.copyFrameTo(origin, frameQuaternion);
@@ -341,7 +336,7 @@ export class TransformControls extends THREE.Controls<
     };
     const gesture = this.#beginGesture(context, target);
     if (gesture === null) {
-      return;
+      return false;
     }
 
     const session: TransformSession = {
@@ -361,19 +356,18 @@ export class TransformControls extends THREE.Controls<
       lastPosition: target.position.clone(),
       lastQuaternion: target.quaternion.clone(),
       lastScale: target.scale.clone(),
-      changed: false,
-      cancelled: false
+      changed: false
     };
-    this.#session = session;
     this.#gizmo.hover(null);
     this.#gizmo.activate(handle);
-    this.#drag.begin(event);
-    this.#listenForCancel();
+    this.#drag.begin(event, session);
 
     this.dispatchEvent({
       type: "start",
       ...this.#gestureEvent(session)
     });
+
+    return true;
   }
 
   #beginGesture(
@@ -381,8 +375,17 @@ export class TransformControls extends THREE.Controls<
     target: THREE.Object3D
   ): TransformGesture | null {
     switch (this.#gizmo.mode) {
-      case "rotate":
-        return RotateGesture.begin(context);
+      case "rotate": {
+        const axis = rotationAxis(context);
+
+        return axis === null ? null : RotateGesture.begin({
+          ray: context.ray,
+          axis,
+          origin: context.origin,
+          eye: context.eye,
+          radius: context.size
+        });
+      }
       case "scale":
         return ScaleGesture.begin(context, target.scale);
       default:
@@ -391,14 +394,10 @@ export class TransformControls extends THREE.Controls<
   }
 
   #applyDrag(
+    session: TransformSession,
     event: PointerEvent
   ): void {
-    const session = this.#session;
-    if (
-      !this.enabled ||
-      session === null ||
-      !this.#updateRay(event)
-    ) {
+    if (!this.#updateRay(event)) {
       return;
     }
     if (session.target.parent !== session.parent) {
@@ -520,32 +519,17 @@ export class TransformControls extends THREE.Controls<
     }
   }
 
-  #finishSession(): void {
-    const session = this.#session;
-    if (session === null) {
-      return;
-    }
-
-    this.#session = null;
-    this.#stopListeningForCancel();
+  #finishSession(
+    session: TransformSession,
+    release: PointerDragRelease
+  ): void {
     this.#gizmo.activate(null);
     this.dispatchEvent({
       type: "end",
       ...this.#gestureEvent(session),
       changed: session.changed,
-      cancelled: session.cancelled
+      cancelled: release.cancelled
     });
-  }
-
-  #listenForCancel(): void {
-    const keyTarget = this.#drag.element?.ownerDocument ?? null;
-    this.#keyTarget = keyTarget;
-    keyTarget?.addEventListener("keydown", this.#onKeyDown);
-  }
-
-  #stopListeningForCancel(): void {
-    this.#keyTarget?.removeEventListener("keydown", this.#onKeyDown);
-    this.#keyTarget = null;
   }
 
   #pick(
@@ -596,14 +580,6 @@ export class TransformControls extends THREE.Controls<
       worldPosition: target.getWorldPosition(new THREE.Vector3())
     };
   }
-
-  readonly #onKeyDown = (
-    event: KeyboardEvent
-  ): void => {
-    if (event.key === kCancelKey) {
-      this.cancel();
-    }
-  };
 }
 
 function resolveTranslateSnap(

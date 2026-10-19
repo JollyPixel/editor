@@ -1,8 +1,8 @@
 # Mesh Highlight
 
 `MeshHighlight` is the main API for drawing local and remote selection. It
-owns the state store, peer registries, visibility culling, optional peer
-chips, and the active renderer. Picking stays in the application.
+owns local state, peer highlights, visibility culling, optional peer chips, and
+the active renderer. Picking stays in the application.
 
 ```ts
 import { MeshHighlight } from "@jolly-pixel/three";
@@ -70,7 +70,7 @@ highlight.addEventListener("change", ({ detail }) => {
 
 `selectionChange` and `hoverChange` are plain events. The unified `change`
 event and the `emphasisChange`, `targetsChange`, `appearanceChange`, `techniqueChange`,
-`peerChange`, and `visibilityChange` events include `{ kind, objectIds }` in
+`peersChange`, and `visibilityChange` events include `{ kind, objectIds }` in
 `detail`.
 
 ## Change rendering and appearance
@@ -101,7 +101,8 @@ highlight.appearance = compact;
 ```
 
 Use `highlight.configure()` for a partial update or assign a complete
-`MeshHighlightAppearance`. Both rebuild the active renderer with the new value.
+`MeshHighlightAppearance`. Both re-sync the active renderer with the new value;
+only a `mode` change creates a new renderer.
 
 | Appearance field | Default | Purpose |
 |---|---:|---|
@@ -146,49 +147,50 @@ That override survives later `mode` changes.
 
 ## Peer state
 
-Both peer registries are created for you. Feed them from any transport:
+`highlight.peers` holds every remote selection and hover. Feed it from any
+transport:
 
 ```ts
-highlight.peerSelections.select("peer-a", "crate");
-highlight.peerHovers.hover("peer-a", "building");
+highlight.peers.select("peer-a", "crate");
+highlight.peers.hover("peer-a", "building");
 highlight.chips.enabled = true;
 highlight.visibility!.maxDistance = 40;
 ```
 
-Pass custom registries in the constructor when local and remote colors must
-share an application allocator. `MeshHighlight` takes ownership and disposes
-them. Pass `visibility: false` to disable remote frustum and distance culling.
+Pass your own `PeerHighlights` in the constructor to supply a color allocator.
+`MeshHighlight` takes ownership and disposes it. Pass `visibility: false` to
+disable remote frustum and distance culling.
 
-## Low-level building blocks
+## Custom renderers
 
-`MeshHighlightState` is the state and registration component. It can still own
-local object overlays when constructed directly. Pass `renderOverlays: false`
-when another renderer presents its state.
+Supply `rendererFactory` to replace the built-in renderer creation. The factory
+receives the mode, renderer, scene, camera, initial appearance, and overlay
+registry, and returns a `MeshHighlightRenderer`:
 
 ```ts
-import {
-  MeshHighlightAppearance,
-  MeshHighlightState
-} from "@jolly-pixel/three";
-
-const state = new MeshHighlightState({
-  appearance: new MeshHighlightAppearance({ xray: true })
-});
-state.register("crate", crateMesh);
-state.select("crate");
-state.configure({ outline: { linewidth: 2 } });
-state.technique = "highlight";
+interface MeshHighlightRenderer {
+  sync(
+    indicators: readonly ResolvedHighlightIndicator[],
+    appearance: MeshHighlightAppearance
+  ): void;
+  render(): void;
+  dispose(): void;
+}
 ```
 
-`HighlightResolver`, `ObjectOverlayRenderer`, and `HighlightPassRenderer` are
-exported for applications that need a custom composition. Supply
-`rendererFactory` to `MeshHighlight` to replace the built-in strategy creation
-without reimplementing state ownership. An `ObjectOverlayRenderer` without
-`renderScene` only places its overlays, for a scene the application draws
-itself.
+`sync()` runs after every local, peer, visibility, or appearance change. It
+receives one indicator per object: the winner of the priority policy. `ObjectOverlayRenderer` and
+`HighlightPassRenderer` are the built-in renderers. An `ObjectOverlayRenderer`
+without `renderScene` only places its overlays, for a scene the application
+draws itself. A `HighlightPassRenderer` passes each synced appearance to its
+optional `configure` callback, such as
+`(appearance) => pass.configure(appearance.highlight)`.
+
+`highlight.overlayRegistry` holds the overlay factories; see
+[custom object techniques](./rendering.md#custom-object-techniques).
 
 Call `highlight.dispose()` to release renderers, overlays, visibility, chips,
-registries, and state. A disposed `MeshHighlight` cannot be reused.
+peer highlights, and state. A disposed `MeshHighlight` cannot be reused.
 
 ## More
 
@@ -196,5 +198,5 @@ registries, and state. A disposed `MeshHighlight` cannot be reused.
   postprocess passes, bulk selection, and custom factories.
 - [Peer selection and hover](./peers.md) covers transport-independent remote
   state and lower-level adapters.
-- [Network selection sync](../network/selection.md) connects the state store
-  and registries to `@jolly-pixel/network`.
+- [Network selection sync](../network/selection.md) connects `MeshHighlight`
+  to `@jolly-pixel/network`.

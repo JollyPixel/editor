@@ -6,7 +6,7 @@ import {
   type Axis,
   AXIS_COLOR,
   HANDLE_HIGHLIGHT_COLOR
-} from "../common/axes.ts";
+} from "../common/math/axes.ts";
 import type { GizmoHandleStyle } from "./handles/GizmoHandle.ts";
 import type {
   TransformAxisHandleOptions,

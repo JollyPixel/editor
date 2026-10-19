@@ -2,39 +2,105 @@
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import {
-  MeshHighlightState,
-  PeerHighlightPass,
-  PeerHoverRegistry,
-  PeerSelectionRegistry,
-  PeerSelectionVisibility,
-  type HighlightEntry
-} from "#src/index.ts";
-import {
-  createFrontCamera,
-  createPeerScene
-} from "../peer/helpers.ts";
+import type { HighlightEntry } from "#src/index.ts";
 
-export interface HighlightSpy {
-  entries: HighlightEntry[];
-  calls: HighlightEntry[][];
+export interface MaskDraw {
+  target: THREE.RenderTarget | null;
+  object: THREE.Object3D;
+  material: THREE.Material;
 }
 
-export interface PeerHighlightHarness {
-  selection: MeshHighlightState;
-  registry: PeerSelectionRegistry;
-  hoverRegistry: PeerHoverRegistry | undefined;
-  highlight: HighlightSpy;
-  peerHighlight: PeerHighlightPass;
-  visibility: PeerSelectionVisibility | undefined;
-  mesh: THREE.Mesh;
+type RenderObjectFunction = Parameters<
+  THREE.WebGPURenderer["setRenderObjectFunction"]
+>[0];
+
+export class RecordingRenderer {
+  toneMapping = THREE.NoToneMapping;
+  outputColorSpace = THREE.SRGBColorSpace;
+  autoClear = true;
+  clearColor = new THREE.Color(0x123456);
+  clearAlpha = 1;
+  draws: MaskDraw[] = [];
+  clears: Array<THREE.RenderTarget | null> = [];
+
+  #target: THREE.RenderTarget | null = null;
+  #renderObject: RenderObjectFunction = null;
+
+  getRenderTarget = (): THREE.RenderTarget | null => this.#target;
+
+  setRenderTarget = (
+    target: THREE.RenderTarget | null
+  ): void => {
+    this.#target = target;
+  };
+
+  getRenderObjectFunction = (): RenderObjectFunction => this.#renderObject;
+
+  setRenderObjectFunction = (
+    renderObject: RenderObjectFunction
+  ): void => {
+    this.#renderObject = renderObject;
+  };
+
+  getClearColor = (
+    target: THREE.Color
+  ): THREE.Color => target.copy(this.clearColor);
+
+  getClearAlpha = (): number => this.clearAlpha;
+
+  setClearColor = (
+    color: THREE.ColorRepresentation,
+    alpha: number
+  ): void => {
+    this.clearColor.set(color);
+    this.clearAlpha = alpha;
+  };
+
+  getDrawingBufferSize = (
+    target: THREE.Vector2
+  ): THREE.Vector2 => target.set(64, 32);
+
+  clear(): void {
+    this.clears.push(this.#target);
+  }
+
+  render(
+    scene: THREE.Scene,
+    camera: THREE.Camera
+  ): void {
+    scene.traverse((object) => {
+      if (object instanceof THREE.Mesh) {
+        this.#renderObject?.(
+          object,
+          scene,
+          camera,
+          object.geometry,
+          object.material,
+          null,
+          null as never,
+          null as never
+        );
+      }
+    });
+  }
+
+  renderObject(
+    object: THREE.Object3D,
+    _scene: THREE.Scene,
+    _camera: THREE.Camera,
+    _geometry: THREE.BufferGeometry,
+    material: THREE.Material
+  ): void {
+    this.draws.push({
+      target: this.#target,
+      object,
+      material
+    });
+  }
 }
 
 export function createRendererStub(): THREE.WebGPURenderer {
-  return {
-    toneMapping: THREE.NoToneMapping,
-    outputColorSpace: THREE.SRGBColorSpace
-  } as unknown as THREE.WebGPURenderer;
+  return new RecordingRenderer() as unknown as THREE.WebGPURenderer;
 }
 
 export function createMesh(): THREE.Mesh {
@@ -76,59 +142,4 @@ export function createEntriesOfEveryShape(): HighlightEntry[] {
       priority: true
     }
   ];
-}
-
-export function createHighlightSpy(): HighlightSpy {
-  const calls: HighlightEntry[][] = [];
-
-  return {
-    set entries(entries: HighlightEntry[]) {
-      calls.push(entries);
-    },
-    get entries(): HighlightEntry[] {
-      return calls.at(-1) ?? [];
-    },
-    calls
-  };
-}
-
-export function createPeerHighlightHarness(
-  options?: { visibility?: boolean; hover?: boolean; }
-): PeerHighlightHarness {
-  const { selection, registry, mesh } = createPeerScene();
-  const hoverRegistry = options?.hover ? new PeerHoverRegistry() : undefined;
-  const highlight = createHighlightSpy();
-
-  const visibility = options?.visibility ?
-    new PeerSelectionVisibility({
-      registry,
-      selection,
-      camera: createFrontCamera(),
-      hoverRegistry
-    }) :
-    undefined;
-
-  const peerHighlight = new PeerHighlightPass({
-    registry,
-    selection,
-    highlight,
-    visibility,
-    hoverRegistry
-  });
-
-  return {
-    selection,
-    registry,
-    hoverRegistry,
-    highlight,
-    peerHighlight,
-    visibility,
-    mesh
-  };
-}
-
-export function lastEntries(
-  spy: HighlightSpy
-): HighlightEntry[] {
-  return spy.calls.at(-1) ?? [];
 }

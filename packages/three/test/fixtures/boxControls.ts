@@ -10,6 +10,7 @@ import {
   BoxControls,
   type BoxControlsOptions,
   type BoxDragEvent,
+  type BoxEndEvent,
   type BoxFlipEvent,
   type BoxRotateEvent,
   type BoxVolume
@@ -30,7 +31,7 @@ export interface Harness<TBox extends BoxVolume = AreaBox> {
   scene: THREE.Scene;
   changes: BoxDragEvent[];
   starts: unknown[];
-  ends: BoxDragEvent[];
+  ends: BoxEndEvent[];
   rotations: BoxRotateEvent[];
   flips: BoxFlipEvent[];
   render: () => void;
@@ -82,7 +83,7 @@ export function createHarness(
 
   const changes: BoxDragEvent[] = [];
   const starts: unknown[] = [];
-  const ends: BoxDragEvent[] = [];
+  const ends: BoxEndEvent[] = [];
   const rotations: BoxRotateEvent[] = [];
   const flips: BoxFlipEvent[] = [];
   controls.addEventListener("start", (event) => starts.push(event));

@@ -1,11 +1,9 @@
-export {
-  MeshHighlightState,
-  type HighlightTechnique,
-  type MeshHighlightStateChangeEventDetail,
-  type MeshHighlightStateChangeKind,
-  type MeshHighlightStateEventMap,
-  type MeshHighlightStateOptions,
-  type SelectableObject
+export type {
+  HighlightTechnique,
+  MeshHighlightChangeEventDetail,
+  MeshHighlightChangeKind,
+  MeshHighlightMode,
+  SelectableObject
 } from "./MeshHighlightState.ts";
 export {
   MeshHighlightAppearance,
@@ -21,19 +19,13 @@ export {
   type HighlightPassJfaAppearanceOptions,
   type MeshHighlightAppearanceOptions
 } from "./MeshHighlightAppearance.ts";
-export {
-  HighlightResolver,
-  type HighlightIndicatorRole,
-  type HighlightIndicatorSource,
-  type HighlightResolverOptions,
-  type ResolvedHighlightIndicator
+export type {
+  HighlightIndicatorSource,
+  ResolvedHighlightIndicator
 } from "./HighlightResolver.ts";
 export {
   MeshHighlight,
-  type MeshHighlightChangeEventDetail,
-  type MeshHighlightChangeKind,
   type MeshHighlightEventMap,
-  type MeshHighlightMode,
   type MeshHighlightOptions,
   type MeshHighlightRendererContext,
   type MeshHighlightRendererFactory
@@ -92,39 +84,15 @@ export {
   type HighlightPassJfaOptions
 } from "./postprocess/HighlightPassJfa.ts";
 export {
-  PeerHighlightPass,
-  type HighlightTarget,
-  type PeerHighlightPassOptions
-} from "./postprocess/PeerHighlightPass.ts";
-export {
   createDefaultColorAllocator,
   type PeerColorAllocator
 } from "./peer/PeerColorAllocator.ts";
 export {
-  PeerSelectionRegistry,
-  type PeerSelectionChangeEventDetail,
-  type PeerSelectionRegistryEventMap,
-  type PeerSelectionRegistryOptions
-} from "./peer/PeerSelectionRegistry.ts";
-export {
-  PeerSelectionOverlays,
-  type PeerSelectionOverlaysOptions
-} from "./peer/PeerSelectionOverlays.ts";
-export {
-  PeerSelectionVisibility,
-  type PeerSelectionVisibilityOptions
-} from "./peer/PeerSelectionVisibility.ts";
-export {
-  PeerSelectionChips,
-  type PeerSelectionChipsOptions
-} from "./peer/PeerSelectionChips.ts";
-export {
-  PeerHoverRegistry,
-  type PeerHoverChangeEventDetail,
-  type PeerHoverRegistryEventMap,
-  type PeerHoverRegistryOptions
-} from "./peer/PeerHoverRegistry.ts";
-export {
-  PeerHoverOverlays,
-  type PeerHoverOverlaysOptions
-} from "./peer/PeerHoverOverlays.ts";
+  PeerHighlights,
+  type HighlightIndicatorRole,
+  type PeerHighlightChangeEventDetail,
+  type PeerHighlightsEventMap,
+  type PeerHighlightsOptions
+} from "./peer/PeerHighlights.ts";
+export type { PeerVisibility } from "./peer/PeerVisibility.ts";
+export type { PeerSelectionChips } from "./peer/PeerSelectionChips.ts";

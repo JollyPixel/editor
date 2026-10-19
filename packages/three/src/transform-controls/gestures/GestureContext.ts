@@ -5,7 +5,7 @@ import * as THREE from "three";
 import {
   type Axis,
   AXIS_DIRECTION
-} from "../../common/axes.ts";
+} from "../../common/math/axes.ts";
 import type { TransformHandle } from "../types.ts";
 
 // CONSTANTS
@@ -33,6 +33,20 @@ export function frameAxis(
     .copy(AXIS_DIRECTION[axis])
     .applyQuaternion(context.quaternion)
     .normalize();
+}
+
+export function rotationAxis(
+  context: GestureContext
+): THREE.Vector3 | null {
+  const { handle } = context;
+  if (handle.kind === "axis") {
+    return frameAxis(context, handle.axis, new THREE.Vector3());
+  }
+  if (handle.kind === "view") {
+    return context.eye.clone();
+  }
+
+  return null;
 }
 
 export function viewDirection(

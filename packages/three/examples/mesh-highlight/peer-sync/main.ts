@@ -10,14 +10,12 @@ import {
 // Import Internal Dependencies
 import {
   MeshHighlight,
-  PeerSelectionRegistry,
-  PeerHoverRegistry,
+  PeerHighlights,
   type MeshHighlightMode
 } from "../../../src/index.ts";
 import {
   PeerFrustumSync,
-  PeerSelectionSync,
-  PeerHoverSync
+  PeerHighlightSync
 } from "../../../src/network/index.ts";
 import {
   createExample,
@@ -145,8 +143,7 @@ const peerFrustumSync = new PeerFrustumSync({
 });
 peerFrustumSync.attach(camera);
 
-const peerRegistry = new PeerSelectionRegistry({ colorAllocator });
-const peerHoverRegistry = new PeerHoverRegistry({ colorAllocator });
+const peerRegistry = new PeerHighlights({ colorAllocator });
 
 const storedTechnique = kModeStorage.get(
   kModeStorageKey
@@ -158,24 +155,16 @@ const highlight = new MeshHighlight({
   mode: storedTechnique && kKnownTechniques.includes(storedTechnique) ?
     storedTechnique :
     "outline",
-  peerSelections: peerRegistry,
-  peerHovers: peerHoverRegistry,
+  peers: peerRegistry,
   chips: true
 });
 for (const { id, object } of selectables.items) {
   highlight.register(id, object);
 }
 
-const peerSelectionSync = new PeerSelectionSync({
+const peerHighlightSync = new PeerHighlightSync({
   room,
-  registry: peerRegistry,
-  selection: highlight.state
-});
-
-const peerHoverSync = new PeerHoverSync({
-  room,
-  registry: peerHoverRegistry,
-  selection: highlight.state
+  highlight
 });
 
 let hoveredId: string | null = null;
@@ -256,7 +245,7 @@ function refreshStatus(): void {
 }
 
 highlight.addEventListener("selectionChange", refreshStatus);
-peerRegistry.addEventListener("peerSelectionChange", refreshPeersLegend);
+peerRegistry.addEventListener("change", refreshPeersLegend);
 room.on("sync", refreshPeersLegend);
 room.on("peer-joined", refreshPeersLegend);
 room.on("peer-left", refreshPeersLegend);
@@ -278,8 +267,7 @@ start({
 });
 
 window.addEventListener("beforeunload", () => {
-  peerSelectionSync.destroy();
-  peerHoverSync.destroy();
+  peerHighlightSync.destroy();
   peerFrustumSync.destroy();
   highlight.dispose();
 });

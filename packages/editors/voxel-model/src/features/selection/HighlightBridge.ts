@@ -3,8 +3,7 @@ import type * as THREE from "three/webgpu";
 import {
   MeshHighlight,
   ObjectOverlayRenderer,
-  PeerHoverRegistry,
-  PeerSelectionRegistry,
+  PeerHighlights,
   type PeerColorAllocator
 } from "@jolly-pixel/three";
 import type { PeerMarkMap } from "@jolly-pixel/ui/network";
@@ -124,8 +123,7 @@ export class HighlightBridge {
         outline: { linewidth: kOutlineThickness },
         occludedOpacityScale: kOccludedOpacityScale
       },
-      peerSelections: new PeerSelectionRegistry({ colorAllocator: peerColorAllocator }),
-      peerHovers: new PeerHoverRegistry({ colorAllocator: peerColorAllocator })
+      peers: new PeerHighlights({ colorAllocator: peerColorAllocator })
     });
 
     for (const block of this.#blocks.values()) {
@@ -163,13 +161,13 @@ export class HighlightBridge {
   #applyPresence(
     selections: PeerMarkMap<string>
   ): void {
-    const { peerSelections } = this.#meshHighlight;
+    const { peers } = this.#meshHighlight;
     this.#highlightedUuidByClient = reconcilePeerMarks(
       selections,
       this.#highlightedUuidByClient,
       {
-        hold: (peer, uuid) => peerSelections.select(peer.clientId, uuid),
-        release: (clientId) => peerSelections.select(clientId, null)
+        hold: (peer, uuid) => peers.select(peer.clientId, uuid),
+        release: (clientId) => peers.select(clientId, null)
       }
     );
   }
@@ -177,13 +175,13 @@ export class HighlightBridge {
   #applyHoverPresence(
     hovers: PeerMarkMap<string>
   ): void {
-    const { peerHovers } = this.#meshHighlight;
+    const { peers } = this.#meshHighlight;
     this.#hoveredUuidByClient = reconcilePeerMarks(
       hovers,
       this.#hoveredUuidByClient,
       {
-        hold: (peer, uuid) => peerHovers.hover(peer.clientId, uuid),
-        release: (clientId) => peerHovers.hover(clientId, null)
+        hold: (peer, uuid) => peers.hover(peer.clientId, uuid),
+        release: (clientId) => peers.hover(clientId, null)
       }
     );
   }

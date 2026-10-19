@@ -158,6 +158,14 @@ canvas.addEventListener("pointerdown", (event) => {
 
 The host chooses the area using its own layers, visibility and identity rules. Calling `detach()` during a gesture ends it and emits `end`.
 
+### `cancel()`
+
+```ts
+cancel(): void
+```
+
+Ends the active gesture and puts the area back where it started; a moved or resized area fires one more `change` for the restore. <kbd>Escape</kbd> does the same while a gesture runs. Turns and mirrors already requested are not undone, and a cancelled click on an arc or chip requests nothing.
+
 ### `isOverHandle()`
 
 ```ts
@@ -184,9 +192,9 @@ dispose(): void
 | `change` | `{ mode, axis, min, size }` | The area moved or resized. |
 | `rotate` | `{ axis: "y", turns }` | A quarter turn was requested; `turns` is `1` or `-1`. |
 | `flip` | `{ axis }` | A mirror along `axis` was requested. |
-| `end` | `{ mode, axis, min, size }` | The gesture ended. |
+| `end` | `{ mode, axis, min, size, changed, cancelled }` | The gesture ended, was cancelled or was interrupted. |
 
-`mode` is `"move"`, `"resize"`, `"rotate"` or `"flip"`. `axis` is the resized, turned or mirrored axis, or `null` for a move. `min` and `size` are safe-to-keep copies.
+`mode` is `"move"`, `"resize"`, `"rotate"` or `"flip"`. `axis` is the resized, turned or mirrored axis, or `null` for a move. `min` and `size` are safe-to-keep copies. On `end`, `changed` tells whether the gesture emitted a `change` that no cancel undid, and `cancelled` whether Escape or `cancel()` ended it.
 
 `change` is deduplicated, so snapped drags emit at most once per grid step. Persist `change` for live updates. The `end` event confirms the final value, while free drags (`snap: null` or <kbd>Alt</kbd>) normally emit on every pointer event.
 

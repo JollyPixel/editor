@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
 import {
-  vec4,
   uniform,
   texture,
   pass
@@ -9,7 +8,7 @@ import {
 
 // Import Internal Dependencies
 import type { HighlightEntry } from "./HighlightPass.ts";
-import { InstancedHighlightMask } from "./InstancedHighlightMask.ts";
+import { HighlightMask } from "./HighlightMask.ts";
 import { buildJfaSeedInit } from "./tsl/jfa/seed.ts";
 import { buildJfaPropagateStep } from "./tsl/jfa/propagate.ts";
 import { buildJfaRingComposite, type JfaRingChannel } from "./tsl/jfa/resolve.ts";
@@ -19,6 +18,10 @@ import type { TslTextureNode } from "./tsl/tslNode.ts";
 const kIsolatedRefreshIntervalBase = 6;
 const kIsolatedRefreshIntervalReferencePixels = 1920 * 1080;
 const kIsolatedRefreshIntervalMax = 16;
+const kNearestFilter = {
+  magFilter: THREE.NearestFilter,
+  minFilter: THREE.NearestFilter
+} as const;
 
 export interface HighlightPassJfaOptions {
   /**
@@ -38,21 +41,25 @@ export interface HighlightPassJfaOptions {
   isolatedFillOpacity?: number;
 }
 
+interface FloodChannel {
+  seedA: THREE.RenderTarget;
+  seedB: THREE.RenderTarget;
+  sourceIsA: boolean;
+  seedInitMaterial: THREE.NodeMaterial;
+  stepMaterial: THREE.NodeMaterial;
+  positionSource: TslTextureNode;
+  colorSource: TslTextureNode;
+  ring: JfaRingChannel;
+}
+
 export class HighlightPassJfa {
   readonly pipeline: THREE.RenderPipeline;
 
   #renderer: THREE.WebGPURenderer;
-  #scene: THREE.Scene;
-  #camera: THREE.Camera;
-
-  #entryByMesh = new Map<THREE.Mesh, THREE.Color>();
-  #entries: HighlightEntry[] = [];
-  #lastEntryCount = 0;
+  #mask: HighlightMask;
+  #size = new THREE.Vector2();
   #isolatedDirty = true;
   #isolatedFrameCounter = 0;
-  #priorityMeshes = new Set<THREE.Mesh>();
-  #isolatedEntryByMesh = new Map<THREE.Mesh, THREE.Color>();
-  #instancedMask = new InstancedHighlightMask();
 
   #ringThickness: number;
   #ringThicknessUniform;
@@ -65,58 +72,17 @@ export class HighlightPassJfa {
   #invSize = new THREE.Vector2();
   #resolutionUniform;
   #invSizeUniform;
-  #maskColor = new THREE.Color();
-  #maskColorUniform;
   #hasPriorityUniform;
   #hasIsolatedUniform;
 
   #stepSizes: number[] = [];
   #jfaStepUniform;
 
-  #renderTargetMask: THREE.RenderTarget;
-  #renderTargetSeedA: THREE.RenderTarget;
-  #renderTargetSeedB: THREE.RenderTarget;
-  #renderTargetComposite: THREE.RenderTarget;
+  #shared: FloodChannel;
+  #priority: FloodChannel;
+  #isolated: FloodChannel;
 
-  #renderTargetPriorityMask: THREE.RenderTarget;
-  #renderTargetPrioritySeedA: THREE.RenderTarget;
-  #renderTargetPrioritySeedB: THREE.RenderTarget;
-
-  #renderTargetIsolatedMask: THREE.RenderTarget;
-  #renderTargetIsolatedSeedA: THREE.RenderTarget;
-  #renderTargetIsolatedSeedB: THREE.RenderTarget;
-
-  #maskTexture: TslTextureNode;
-  #compositeTexture: TslTextureNode;
-  #jfaPositionSourceTexture: TslTextureNode;
-  #jfaColorSourceTexture: TslTextureNode;
-  #finalPositionTexture: TslTextureNode;
-  #finalColorTexture: TslTextureNode;
-
-  #priorityMaskTexture: TslTextureNode;
-  #jfaPriorityPositionSourceTexture: TslTextureNode;
-  #jfaPriorityColorSourceTexture: TslTextureNode;
-  #finalPriorityPositionTexture: TslTextureNode;
-  #finalPriorityColorTexture: TslTextureNode;
-
-  #isolatedMaskTexture: TslTextureNode;
-  #jfaIsolatedPositionSourceTexture: TslTextureNode;
-  #jfaIsolatedColorSourceTexture: TslTextureNode;
-  #finalIsolatedPositionTexture: TslTextureNode;
-  #finalIsolatedColorTexture: TslTextureNode;
-
-  #maskMaterial: THREE.NodeMaterial;
-  #seedInitMaterial: THREE.NodeMaterial;
-  #jfaStepMaterial: THREE.NodeMaterial;
   #compositeMaterial: THREE.NodeMaterial;
-
-  #priorityMaskMaterial: THREE.NodeMaterial;
-  #prioritySeedInitMaterial: THREE.NodeMaterial;
-  #jfaPriorityStepMaterial: THREE.NodeMaterial;
-
-  #isolatedSeedInitMaterial: THREE.NodeMaterial;
-  #jfaIsolatedStepMaterial: THREE.NodeMaterial;
-
   #quad: THREE.QuadMesh;
 
   constructor(
@@ -128,8 +94,7 @@ export class HighlightPassJfa {
     const { ringThickness = 2, borderThickness = 1, isolatedFillOpacity = 0.15 } = options;
 
     this.#renderer = renderer;
-    this.#scene = scene;
-    this.#camera = camera;
+    this.#mask = new HighlightMask(renderer, scene, camera, kNearestFilter);
     this.#ringThickness = ringThickness;
     this.#borderThickness = borderThickness;
     this.#isolatedFillOpacity = isolatedFillOpacity;
@@ -139,160 +104,35 @@ export class HighlightPassJfa {
     this.#isolatedFillOpacityUniform = uniform(isolatedFillOpacity);
     this.#resolutionUniform = uniform(this.#resolution);
     this.#invSizeUniform = uniform(this.#invSize);
-    this.#maskColorUniform = uniform(this.#maskColor);
     this.#jfaStepUniform = uniform(1);
     this.#hasPriorityUniform = uniform(0);
     this.#hasIsolatedUniform = uniform(0);
 
-    const ringThicknessNode = this.#ringThicknessUniform;
-    const borderThicknessNode = this.#borderThicknessUniform;
-    const isolatedFillOpacityNode = this.#isolatedFillOpacityUniform;
-    const resolutionNode = this.#resolutionUniform;
-    const invSizeNode = this.#invSizeUniform;
-    const maskColorNode = this.#maskColorUniform;
-    const jfaStepNode = this.#jfaStepUniform;
-    const hasPriorityNode = this.#hasPriorityUniform;
-    const hasIsolatedNode = this.#hasIsolatedUniform;
-
-    const nearestFilter = { magFilter: THREE.NearestFilter, minFilter: THREE.NearestFilter };
-
-    this.#renderTargetMask = new THREE.RenderTarget(1, 1, nearestFilter);
-    this.#renderTargetComposite = new THREE.RenderTarget(1, 1, { depthBuffer: false });
-
-    this.#renderTargetSeedA = this.#createSeedRenderTarget(nearestFilter);
-    this.#renderTargetSeedB = this.#createSeedRenderTarget(nearestFilter);
-
-    this.#renderTargetPriorityMask = new THREE.RenderTarget(1, 1, { depthBuffer: false, ...nearestFilter });
-    this.#renderTargetPrioritySeedA = this.#createSeedRenderTarget(nearestFilter);
-    this.#renderTargetPrioritySeedB = this.#createSeedRenderTarget(nearestFilter);
-
-    this.#renderTargetIsolatedMask = new THREE.RenderTarget(1, 1, { depthBuffer: false, ...nearestFilter });
-    this.#renderTargetIsolatedSeedA = this.#createSeedRenderTarget(nearestFilter);
-    this.#renderTargetIsolatedSeedB = this.#createSeedRenderTarget(nearestFilter);
-
-    this.#maskTexture = texture(this.#renderTargetMask.texture);
-    this.#compositeTexture = texture(this.#renderTargetComposite.texture);
-    this.#jfaPositionSourceTexture = texture(this.#renderTargetSeedA.textures[0]);
-    this.#jfaColorSourceTexture = texture(this.#renderTargetSeedA.textures[1]);
-    this.#finalPositionTexture = texture(this.#renderTargetSeedA.textures[0]);
-    this.#finalColorTexture = texture(this.#renderTargetSeedA.textures[1]);
-
-    this.#priorityMaskTexture = texture(this.#renderTargetPriorityMask.texture);
-    this.#jfaPriorityPositionSourceTexture = texture(this.#renderTargetPrioritySeedA.textures[0]);
-    this.#jfaPriorityColorSourceTexture = texture(this.#renderTargetPrioritySeedA.textures[1]);
-    this.#finalPriorityPositionTexture = texture(this.#renderTargetPrioritySeedA.textures[0]);
-    this.#finalPriorityColorTexture = texture(this.#renderTargetPrioritySeedA.textures[1]);
-
-    this.#isolatedMaskTexture = texture(this.#renderTargetIsolatedMask.texture);
-    this.#jfaIsolatedPositionSourceTexture = texture(this.#renderTargetIsolatedSeedA.textures[0]);
-    this.#jfaIsolatedColorSourceTexture = texture(this.#renderTargetIsolatedSeedA.textures[1]);
-    this.#finalIsolatedPositionTexture = texture(this.#renderTargetIsolatedSeedA.textures[0]);
-    this.#finalIsolatedColorTexture = texture(this.#renderTargetIsolatedSeedA.textures[1]);
-
-    const scenePassNode = pass(scene, camera);
-
-    this.#maskMaterial = new THREE.NodeMaterial();
-    this.#maskMaterial.name = "HighlightPassJfa.mask";
-    this.#maskMaterial.colorNode = vec4(maskColorNode, 1);
-
-    this.#priorityMaskMaterial = new THREE.NodeMaterial();
-    this.#priorityMaskMaterial.name = "HighlightPassJfa.priorityMask";
-    this.#priorityMaskMaterial.colorNode = vec4(maskColorNode, 1);
-    this.#priorityMaskMaterial.depthTest = false;
-
-    this.#seedInitMaterial = new THREE.NodeMaterial();
-    this.#seedInitMaterial.name = "HighlightPassJfa.seedInit";
-    this.#seedInitMaterial.fragmentNode = buildJfaSeedInit(this.#maskTexture, resolutionNode);
-
-    this.#prioritySeedInitMaterial = new THREE.NodeMaterial();
-    this.#prioritySeedInitMaterial.name = "HighlightPassJfa.prioritySeedInit";
-    this.#prioritySeedInitMaterial.fragmentNode = buildJfaSeedInit(this.#priorityMaskTexture, resolutionNode);
-
-    this.#isolatedSeedInitMaterial = new THREE.NodeMaterial();
-    this.#isolatedSeedInitMaterial.name = "HighlightPassJfa.isolatedSeedInit";
-    this.#isolatedSeedInitMaterial.fragmentNode = buildJfaSeedInit(this.#isolatedMaskTexture, resolutionNode);
-
-    this.#jfaStepMaterial = new THREE.NodeMaterial();
-    this.#jfaStepMaterial.name = "HighlightPassJfa.jfaStep";
-    this.#jfaStepMaterial.fragmentNode = buildJfaPropagateStep(
-      this.#jfaPositionSourceTexture,
-      this.#jfaColorSourceTexture,
-      jfaStepNode,
-      invSizeNode,
-      resolutionNode
-    );
-
-    this.#jfaPriorityStepMaterial = new THREE.NodeMaterial();
-    this.#jfaPriorityStepMaterial.name = "HighlightPassJfa.jfaPriorityStep";
-    this.#jfaPriorityStepMaterial.fragmentNode = buildJfaPropagateStep(
-      this.#jfaPriorityPositionSourceTexture,
-      this.#jfaPriorityColorSourceTexture,
-      jfaStepNode,
-      invSizeNode,
-      resolutionNode
-    );
-
-    this.#jfaIsolatedStepMaterial = new THREE.NodeMaterial();
-    this.#jfaIsolatedStepMaterial.name = "HighlightPassJfa.jfaIsolatedStep";
-    this.#jfaIsolatedStepMaterial.fragmentNode = buildJfaPropagateStep(
-      this.#jfaIsolatedPositionSourceTexture,
-      this.#jfaIsolatedColorSourceTexture,
-      jfaStepNode,
-      invSizeNode,
-      resolutionNode
-    );
-
-    const sharedChannel: JfaRingChannel = {
-      positionTexture: this.#finalPositionTexture,
-      colorTexture: this.#finalColorTexture,
-      maskTexture: this.#maskTexture
-    };
-    const priorityChannel: JfaRingChannel = {
-      positionTexture: this.#finalPriorityPositionTexture,
-      colorTexture: this.#finalPriorityColorTexture,
-      maskTexture: this.#priorityMaskTexture
-    };
-    const isolatedChannel: JfaRingChannel = {
-      positionTexture: this.#finalIsolatedPositionTexture,
-      colorTexture: this.#finalIsolatedColorTexture,
-      maskTexture: this.#isolatedMaskTexture
-    };
+    this.#shared = this.#createChannel(this.#mask.shared, "shared");
+    this.#priority = this.#createChannel(this.#mask.priority, "priority");
+    this.#isolated = this.#createChannel(this.#mask.isolated, "isolated");
 
     this.#compositeMaterial = new THREE.NodeMaterial();
     this.#compositeMaterial.name = "HighlightPassJfa.composite";
     this.#compositeMaterial.fragmentNode = buildJfaRingComposite(
       {
-        resolutionNode,
-        ringThicknessNode,
-        borderThicknessNode,
-        isolatedFillOpacityNode,
-        hasPriorityNode,
-        hasIsolatedNode
+        resolutionNode: this.#resolutionUniform,
+        ringThicknessNode: this.#ringThicknessUniform,
+        borderThicknessNode: this.#borderThicknessUniform,
+        isolatedFillOpacityNode: this.#isolatedFillOpacityUniform,
+        hasPriorityNode: this.#hasPriorityUniform,
+        hasIsolatedNode: this.#hasIsolatedUniform
       },
-      sharedChannel,
-      priorityChannel,
-      isolatedChannel
+      this.#shared.ring,
+      this.#priority.ring,
+      this.#isolated.ring
     );
 
-    this.#quad = new THREE.QuadMesh(this.#seedInitMaterial);
+    this.#quad = new THREE.QuadMesh(this.#compositeMaterial);
 
     this.pipeline = new THREE.RenderPipeline(renderer);
-    this.pipeline.outputNode = this.#compositeTexture.add(scenePassNode);
-  }
-
-  #createSeedRenderTarget(
-    nearestFilter: {
-      magFilter: THREE.MagnificationTextureFilter;
-      minFilter: THREE.MinificationTextureFilter;
-    }
-  ): THREE.RenderTarget {
-    const target = new THREE.RenderTarget(1, 1, {
-      depthBuffer: false, type: THREE.FloatType, count: 2, ...nearestFilter
-    });
-    target.textures[0].name = "position";
-    target.textures[1].name = "color";
-
-    return target;
+    this.pipeline.outputNode = texture(this.#mask.composite.texture)
+      .add(pass(scene, camera));
   }
 
   get ringThickness(): number {
@@ -328,386 +168,167 @@ export class HighlightPassJfa {
     this.#isolatedFillOpacityUniform.value = isolatedFillOpacity;
   }
 
+  configure(
+    options: HighlightPassJfaOptions
+  ): void {
+    const {
+      ringThickness = this.#ringThickness,
+      borderThickness = this.#borderThickness,
+      isolatedFillOpacity = this.#isolatedFillOpacity
+    } = options;
+
+    this.ringThickness = ringThickness;
+    this.borderThickness = borderThickness;
+    this.isolatedFillOpacity = isolatedFillOpacity;
+  }
+
   get entries(): HighlightEntry[] {
-    return [...this.#entries];
+    return this.#mask.entries;
   }
 
   set entries(
     entries: HighlightEntry[]
   ) {
-    this.#entries = [...entries];
     this.#isolatedDirty = true;
-
-    this.#entryByMesh.clear();
-    this.#priorityMeshes.clear();
-    this.#isolatedEntryByMesh.clear();
-    this.#instancedMask.clear();
-
-    for (const { target, color, priority = false, isolated = false, instanceId } of entries) {
-      const threeColor = color instanceof THREE.Color ? color.clone() : new THREE.Color(color);
-
-      if (instanceId !== undefined) {
-        this.#instancedMask.add(target, instanceId, threeColor, priority);
-        continue;
-      }
-
-      if (isolated) {
-        target.traverse((object) => {
-          if (object instanceof THREE.Mesh) {
-            this.#isolatedEntryByMesh.set(object, threeColor);
-          }
-        });
-        continue;
-      }
-
-      target.traverse((object) => {
-        if (object instanceof THREE.Mesh) {
-          this.#entryByMesh.set(object, threeColor);
-          if (priority) {
-            this.#priorityMeshes.add(object);
-          }
-        }
-      });
-    }
-
-    this.#instancedMask.sync();
+    this.#mask.entries = entries;
   }
 
   render(): void {
-    this.#renderJumpFlood();
+    let isolated = false;
+    if (this.#mask.size > 0) {
+      const size = this.#renderer.getDrawingBufferSize(this.#size);
+      this.#resize(size.width, size.height);
+      isolated = this.#isolatedDue(size.width * size.height);
+    }
+    if (this.#mask.render(isolated)) {
+      this.#renderJumpFlood(isolated);
+    }
     this.pipeline.render();
   }
 
   dispose(): void {
-    this.#entries = [];
-    this.#entryByMesh.clear();
-    this.#priorityMeshes.clear();
-    this.#isolatedEntryByMesh.clear();
-    this.#instancedMask.dispose();
-
-    this.#renderTargetMask.dispose();
-    this.#renderTargetSeedA.dispose();
-    this.#renderTargetSeedB.dispose();
-    this.#renderTargetComposite.dispose();
-    this.#renderTargetPriorityMask.dispose();
-    this.#renderTargetPrioritySeedA.dispose();
-    this.#renderTargetPrioritySeedB.dispose();
-    this.#renderTargetIsolatedMask.dispose();
-    this.#renderTargetIsolatedSeedA.dispose();
-    this.#renderTargetIsolatedSeedB.dispose();
-
-    this.#maskMaterial.dispose();
-    this.#priorityMaskMaterial.dispose();
-    this.#seedInitMaterial.dispose();
-    this.#prioritySeedInitMaterial.dispose();
-    this.#jfaStepMaterial.dispose();
-    this.#jfaPriorityStepMaterial.dispose();
-    this.#isolatedSeedInitMaterial.dispose();
-    this.#jfaIsolatedStepMaterial.dispose();
+    this.#mask.dispose();
+    for (const channel of [this.#shared, this.#priority, this.#isolated]) {
+      channel.seedA.dispose();
+      channel.seedB.dispose();
+      channel.seedInitMaterial.dispose();
+      channel.stepMaterial.dispose();
+    }
     this.#compositeMaterial.dispose();
-
     this.pipeline.dispose();
   }
 
-  #renderJumpFlood(): void {
-    const renderer = this.#renderer;
-    const scene = this.#scene;
-    const camera = this.#camera;
+  #createChannel(
+    mask: THREE.RenderTarget,
+    name: string
+  ): FloodChannel {
+    const seedA = this.#createSeedRenderTarget();
+    const seedB = this.#createSeedRenderTarget();
+    const maskTexture = texture(mask.texture);
+    const positionSource = texture(seedA.textures[0]);
+    const colorSource = texture(seedA.textures[1]);
 
-    if (
-      this.#entryByMesh.size === 0
-      && this.#isolatedEntryByMesh.size === 0
-      && this.#instancedMask.size === 0
-    ) {
-      if (this.#lastEntryCount > 0) {
-        this.#clearComposite();
-        this.#lastEntryCount = 0;
-      }
+    const seedInitMaterial = new THREE.NodeMaterial();
+    seedInitMaterial.name = `HighlightPassJfa.${name}SeedInit`;
+    seedInitMaterial.fragmentNode = buildJfaSeedInit(maskTexture, this.#resolutionUniform);
 
-      return;
-    }
-    this.#lastEntryCount = this.#entryByMesh.size + this.#isolatedEntryByMesh.size + this.#instancedMask.size;
-    const hasPriority = this.#priorityMeshes.size > 0 || this.#instancedMask.size > 0;
-    this.#hasPriorityUniform.value = hasPriority ? 1 : 0;
-    const isolatedPresent = this.#isolatedEntryByMesh.size > 0;
-    this.#hasIsolatedUniform.value = isolatedPresent ? 1 : 0;
-
-    const size = renderer.getDrawingBufferSize(new THREE.Vector2());
-    const isolatedResolutionScale = Math.max(
-      1,
-      (size.width * size.height) / kIsolatedRefreshIntervalReferencePixels
+    const stepMaterial = new THREE.NodeMaterial();
+    stepMaterial.name = `HighlightPassJfa.${name}Step`;
+    stepMaterial.fragmentNode = buildJfaPropagateStep(
+      positionSource,
+      colorSource,
+      this.#jfaStepUniform,
+      this.#invSizeUniform,
+      this.#resolutionUniform
     );
-    const isolatedRefreshInterval = Math.min(
+
+    return {
+      seedA,
+      seedB,
+      sourceIsA: true,
+      seedInitMaterial,
+      stepMaterial,
+      positionSource,
+      colorSource,
+      ring: {
+        positionTexture: texture(seedA.textures[0]),
+        colorTexture: texture(seedA.textures[1]),
+        maskTexture
+      }
+    };
+  }
+
+  #isolatedDue(
+    pixels: number
+  ): boolean {
+    if (!this.#mask.hasIsolated) {
+      return false;
+    }
+
+    const resolutionScale = Math.max(1, pixels / kIsolatedRefreshIntervalReferencePixels);
+    const refreshInterval = Math.min(
       kIsolatedRefreshIntervalMax,
-      Math.round(kIsolatedRefreshIntervalBase * isolatedResolutionScale)
+      Math.round(kIsolatedRefreshIntervalBase * resolutionScale)
     );
-
-    let hasIsolated = false;
-    if (isolatedPresent) {
-      this.#isolatedFrameCounter++;
-      hasIsolated = this.#isolatedDirty || this.#isolatedFrameCounter % isolatedRefreshInterval === 0;
-      if (hasIsolated) {
-        this.#isolatedDirty = false;
-      }
+    this.#isolatedFrameCounter++;
+    const due = this.#isolatedDirty || this.#isolatedFrameCounter % refreshInterval === 0;
+    if (due) {
+      this.#isolatedDirty = false;
     }
 
+    return due;
+  }
+
+  #renderJumpFlood(
+    isolated: boolean
+  ): void {
+    const renderer = this.#renderer;
     const previousTarget = renderer.getRenderTarget();
-    const previousAutoClear = renderer.autoClear;
-    const previousRenderObjectFunction = renderer.getRenderObjectFunction();
-    const previousClearColor = new THREE.Color();
-    renderer.getClearColor(previousClearColor);
-    const previousClearAlpha = renderer.getClearAlpha();
-    const previousBackground = scene.background;
+    this.#hasPriorityUniform.value = this.#mask.hasPriority ? 1 : 0;
+    this.#hasIsolatedUniform.value = this.#mask.hasIsolated ? 1 : 0;
 
-    scene.background = null;
-
-    this.#resize(size.width, size.height);
-
-    renderer.autoClear = true;
-    renderer.setClearColor(0x000000, 0);
-
-    renderer.setRenderObjectFunction(
-      // eslint-disable-next-line max-params
-      (object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext) => {
-        if (object instanceof THREE.InstancedMesh) {
-          const instanced = this.#instancedMask.maskMaterials(object);
-          if (instanced) {
-            renderer.renderObject(
-              object,
-              objectScene,
-              objectCamera,
-              geometry,
-              instanced.material,
-              group,
-              lightsNode,
-              clippingContext
-            );
-
-            return;
-          }
-        }
-
-        if (!(object instanceof THREE.Mesh)) {
-          return;
-        }
-        const color = this.#entryByMesh.get(object);
-        if (color === undefined) {
-          return;
-        }
-
-        this.#maskColor.copy(color);
-        renderer.renderObject(
-          object,
-          objectScene,
-          objectCamera,
-          geometry,
-          this.#maskMaterial,
-          group,
-          lightsNode,
-          clippingContext
-        );
-      }
-    );
-
-    renderer.setRenderTarget(this.#renderTargetMask);
-    renderer.render(scene, camera);
-
-    if (hasPriority) {
-      renderer.autoClear = false;
-      renderer.setRenderObjectFunction(
-        // eslint-disable-next-line max-params
-        (object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext) => {
-          if (object instanceof THREE.InstancedMesh) {
-            const instanced = this.#instancedMask.maskMaterials(object);
-            if (instanced) {
-              renderer.renderObject(
-                object,
-                objectScene,
-                objectCamera,
-                geometry,
-                instanced.priorityMaterial,
-                group,
-                lightsNode,
-                clippingContext
-              );
-
-              return;
-            }
-          }
-
-          if (!(object instanceof THREE.Mesh) || !this.#priorityMeshes.has(object)) {
-            return;
-          }
-          const color = this.#entryByMesh.get(object);
-          if (color === undefined) {
-            return;
-          }
-
-          this.#maskColor.copy(color);
-          renderer.renderObject(
-            object,
-            objectScene,
-            objectCamera,
-            geometry,
-            this.#priorityMaskMaterial,
-            group,
-            lightsNode,
-            clippingContext
-          );
-        }
-      );
-      renderer.render(scene, camera);
-
-      renderer.autoClear = true;
-      renderer.setRenderTarget(this.#renderTargetPriorityMask);
-      renderer.render(scene, camera);
+    const channels = [this.#shared];
+    if (this.#mask.hasPriority) {
+      channels.push(this.#priority);
+    }
+    if (isolated) {
+      channels.push(this.#isolated);
     }
 
-    if (hasIsolated) {
-      renderer.autoClear = true;
-      renderer.setRenderObjectFunction(
-        // eslint-disable-next-line max-params
-        (object, objectScene, objectCamera, geometry, _material, group, lightsNode, clippingContext) => {
-          if (!(object instanceof THREE.Mesh)) {
-            return;
-          }
-          const color = this.#isolatedEntryByMesh.get(object);
-          if (color === undefined) {
-            return;
-          }
-
-          this.#maskColor.copy(color);
-          renderer.renderObject(
-            object,
-            objectScene,
-            objectCamera,
-            geometry,
-            this.#priorityMaskMaterial,
-            group,
-            lightsNode,
-            clippingContext
-          );
-        }
-      );
-      renderer.setRenderTarget(this.#renderTargetIsolatedMask);
-      renderer.render(scene, camera);
+    for (const channel of channels) {
+      this.#drawQuad(channel.seedInitMaterial, channel.seedA);
+      channel.sourceIsA = true;
     }
 
-    renderer.setRenderObjectFunction(previousRenderObjectFunction);
-
-    renderer.autoClear = previousAutoClear;
-    renderer.setClearColor(previousClearColor, previousClearAlpha);
-    scene.background = previousBackground;
-
-    this.#quad.material = this.#seedInitMaterial;
-    renderer.setRenderTarget(this.#renderTargetSeedA);
-    this.#quad.render(renderer);
-
-    if (hasPriority) {
-      this.#quad.material = this.#prioritySeedInitMaterial;
-      renderer.setRenderTarget(this.#renderTargetPrioritySeedA);
-      this.#quad.render(renderer);
-    }
-
-    if (hasIsolated) {
-      this.#quad.material = this.#isolatedSeedInitMaterial;
-      renderer.setRenderTarget(this.#renderTargetIsolatedSeedA);
-      this.#quad.render(renderer);
-    }
-
-    let sourceIsA = true;
-    let prioritySourceIsA = true;
-    let isolatedSourceIsA = true;
     for (const step of this.#stepSizes) {
-      const source = sourceIsA ? this.#renderTargetSeedA : this.#renderTargetSeedB;
-      const dest = sourceIsA ? this.#renderTargetSeedB : this.#renderTargetSeedA;
-
       this.#jfaStepUniform.value = step;
-      this.#jfaPositionSourceTexture.value = source.textures[0];
-      this.#jfaColorSourceTexture.value = source.textures[1];
-
-      this.#quad.material = this.#jfaStepMaterial;
-      renderer.setRenderTarget(dest);
-      this.#quad.render(renderer);
-
-      sourceIsA = !sourceIsA;
-
-      if (hasPriority) {
-        const prioritySource = prioritySourceIsA
-          ? this.#renderTargetPrioritySeedA
-          : this.#renderTargetPrioritySeedB;
-        const priorityDest = prioritySourceIsA
-          ? this.#renderTargetPrioritySeedB
-          : this.#renderTargetPrioritySeedA;
-
-        this.#jfaPriorityPositionSourceTexture.value = prioritySource.textures[0];
-        this.#jfaPriorityColorSourceTexture.value = prioritySource.textures[1];
-
-        this.#quad.material = this.#jfaPriorityStepMaterial;
-        renderer.setRenderTarget(priorityDest);
-        this.#quad.render(renderer);
-
-        prioritySourceIsA = !prioritySourceIsA;
-      }
-
-      if (hasIsolated) {
-        const isolatedSource = isolatedSourceIsA
-          ? this.#renderTargetIsolatedSeedA
-          : this.#renderTargetIsolatedSeedB;
-        const isolatedDest = isolatedSourceIsA
-          ? this.#renderTargetIsolatedSeedB
-          : this.#renderTargetIsolatedSeedA;
-
-        this.#jfaIsolatedPositionSourceTexture.value = isolatedSource.textures[0];
-        this.#jfaIsolatedColorSourceTexture.value = isolatedSource.textures[1];
-
-        this.#quad.material = this.#jfaIsolatedStepMaterial;
-        renderer.setRenderTarget(isolatedDest);
-        this.#quad.render(renderer);
-
-        isolatedSourceIsA = !isolatedSourceIsA;
+      for (const channel of channels) {
+        const source = channel.sourceIsA ? channel.seedA : channel.seedB;
+        const destination = channel.sourceIsA ? channel.seedB : channel.seedA;
+        channel.positionSource.value = source.textures[0];
+        channel.colorSource.value = source.textures[1];
+        this.#drawQuad(channel.stepMaterial, destination);
+        channel.sourceIsA = !channel.sourceIsA;
       }
     }
 
-    const finalTarget = sourceIsA ? this.#renderTargetSeedA : this.#renderTargetSeedB;
-    this.#finalPositionTexture.value = finalTarget.textures[0];
-    this.#finalColorTexture.value = finalTarget.textures[1];
-
-    if (hasPriority) {
-      const finalPriorityTarget = prioritySourceIsA
-        ? this.#renderTargetPrioritySeedA
-        : this.#renderTargetPrioritySeedB;
-      this.#finalPriorityPositionTexture.value = finalPriorityTarget.textures[0];
-      this.#finalPriorityColorTexture.value = finalPriorityTarget.textures[1];
-    }
-    if (hasIsolated) {
-      const finalIsolatedTarget = isolatedSourceIsA
-        ? this.#renderTargetIsolatedSeedA
-        : this.#renderTargetIsolatedSeedB;
-      this.#finalIsolatedPositionTexture.value = finalIsolatedTarget.textures[0];
-      this.#finalIsolatedColorTexture.value = finalIsolatedTarget.textures[1];
+    for (const channel of channels) {
+      const final = channel.sourceIsA ? channel.seedA : channel.seedB;
+      channel.ring.positionTexture.value = final.textures[0];
+      channel.ring.colorTexture.value = final.textures[1];
     }
 
-    this.#quad.material = this.#compositeMaterial;
-    renderer.setRenderTarget(this.#renderTargetComposite);
-    this.#quad.render(renderer);
-
+    this.#drawQuad(this.#compositeMaterial, this.#mask.composite);
     renderer.setRenderTarget(previousTarget);
   }
 
-  #clearComposite(): void {
-    const renderer = this.#renderer;
-    const previousTarget = renderer.getRenderTarget();
-    const previousClearColor = new THREE.Color();
-    renderer.getClearColor(previousClearColor);
-    const previousClearAlpha = renderer.getClearAlpha();
-
-    renderer.setRenderTarget(this.#renderTargetComposite);
-    renderer.setClearColor(0x000000, 0);
-    renderer.clear();
-
-    renderer.setRenderTarget(previousTarget);
-    renderer.setClearColor(previousClearColor, previousClearAlpha);
+  #drawQuad(
+    material: THREE.NodeMaterial,
+    target: THREE.RenderTarget
+  ): void {
+    this.#quad.material = material;
+    this.#renderer.setRenderTarget(target);
+    this.#quad.render(this.#renderer);
   }
 
   #resize(
@@ -720,17 +341,11 @@ export class HighlightPassJfa {
 
     this.#resolution.set(width, height);
     this.#invSize.set(1 / width, 1 / height);
-
-    this.#renderTargetMask.setSize(width, height);
-    this.#renderTargetComposite.setSize(width, height);
-    this.#renderTargetSeedA.setSize(width, height);
-    this.#renderTargetSeedB.setSize(width, height);
-    this.#renderTargetPriorityMask.setSize(width, height);
-    this.#renderTargetPrioritySeedA.setSize(width, height);
-    this.#renderTargetPrioritySeedB.setSize(width, height);
-    this.#renderTargetIsolatedMask.setSize(width, height);
-    this.#renderTargetIsolatedSeedA.setSize(width, height);
-    this.#renderTargetIsolatedSeedB.setSize(width, height);
+    this.#mask.resize(width, height);
+    for (const channel of [this.#shared, this.#priority, this.#isolated]) {
+      channel.seedA.setSize(width, height);
+      channel.seedB.setSize(width, height);
+    }
 
     this.#stepSizes = [];
     let step = 1;
@@ -741,5 +356,18 @@ export class HighlightPassJfa {
       this.#stepSizes.push(step);
       step = Math.floor(step / 2);
     }
+  }
+
+  #createSeedRenderTarget(): THREE.RenderTarget {
+    const target = new THREE.RenderTarget(1, 1, {
+      depthBuffer: false,
+      type: THREE.FloatType,
+      count: 2,
+      ...kNearestFilter
+    });
+    target.textures[0].name = "position";
+    target.textures[1].name = "color";
+
+    return target;
   }
 }

@@ -6,15 +6,15 @@ import {
   type Axis,
   type AxisSign,
   AXIS_DIRECTION
-} from "../../common/axes.ts";
-import { eyeDirection } from "../../common/eyeDirection.ts";
-import { PointerDrag } from "../../common/PointerDrag.ts";
-import type { SnapStep } from "../../common/snap.ts";
-import type { BoxVolume } from "../BoxVolume.ts";
+} from "../../common/math/axes.ts";
+import { eyeDirection } from "../../common/screen/eyeDirection.ts";
 import {
-  type BoxFace,
-  faceCenter
-} from "../faceCenter.ts";
+  PointerDrag,
+  type PointerDragRelease
+} from "../../common/interaction/PointerDrag.ts";
+import type { SnapStep } from "../../common/math/snap.ts";
+import type { BoxVolume } from "../BoxVolume.ts";
+import type { BoxFace } from "../faceCenter.ts";
 import {
   type BoxAxisPolicy,
   type BoxDragMode,
@@ -23,65 +23,59 @@ import {
   type BoxRotatePolicy,
   axisPolicyIncludes
 } from "../types.ts";
-import { AxisConstraints } from "./AxisConstraints.ts";
+import { AxisConstraints } from "./gestures/AxisConstraints.ts";
+import { MoveDrag } from "./gestures/MoveDrag.ts";
+import { ResizeDrag } from "./gestures/ResizeDrag.ts";
+import { RotateDrag } from "./gestures/RotateDrag.ts";
 import {
   BoxHandleSet,
   type BoxHandlePick
-} from "./BoxHandleSet.ts";
-import { closestPointOnAxis } from "./projection.ts";
-import { RotateDrag } from "./RotateDrag.ts";
-import {
-  moveAxis,
-  resizeAxis
-} from "./snapping.ts";
+} from "./gizmo/BoxHandleSet.ts";
 
 // CONSTANTS
-const kGroundAxes: readonly Axis[] = ["x", "z"];
-const kVerticalAxes: readonly Axis[] = ["y"];
 const kDefaultHandleSize = 0.035;
 
-const _pointer = new THREE.Vector2();
-const _bounds = new THREE.Box3();
-const _hit = new THREE.Vector3();
-const _point = new THREE.Vector3();
-const _size = new THREE.Vector3();
-const _axisOrigin = new THREE.Vector3();
-const _normal = new THREE.Vector3();
-const _pivot = new THREE.Vector3();
-const _corner = new THREE.Vector3();
-const _eye = new THREE.Vector3();
-const _world = new THREE.Vector3();
+const kPointer = new THREE.Vector2();
+const kBounds = new THREE.Box3();
+const kHit = new THREE.Vector3();
+const kMin = new THREE.Vector3();
+const kSize = new THREE.Vector3();
+const kPreviousMin = new THREE.Vector3();
+const kPreviousSize = new THREE.Vector3();
+const kNormal = new THREE.Vector3();
+const kPivot = new THREE.Vector3();
+const kCorner = new THREE.Vector3();
+const kEye = new THREE.Vector3();
+const kWorld = new THREE.Vector3();
+const kInverse = new THREE.Matrix4();
 
-interface MoveSession {
+interface SessionBase {
+  startMin: THREE.Vector3;
+  startSize: THREE.Vector3;
+  changed: boolean;
+}
+
+interface MoveSession extends SessionBase {
   mode: "move";
   axis: null;
-  moved: boolean;
-  /**
-   * Ctrl/Cmd mode, latched after the first effective change.
-   */
-  vertical: boolean;
-  grabOffset: THREE.Vector3;
-  plane: THREE.Plane;
-  grabPoint: THREE.Vector3;
+  gesture: MoveDrag;
 }
 
-interface ResizeSession extends BoxFace {
+interface ResizeSession extends SessionBase {
   mode: "resize";
-  moved: boolean;
-  faceOffset: number;
+  axis: Axis;
+  gesture: ResizeDrag;
 }
 
-interface RotateSession {
+interface RotateSession extends SessionBase {
   mode: "rotate";
   axis: "y";
-  moved: boolean;
-  drag: RotateDrag;
+  gesture: RotateDrag;
 }
 
-interface FlipSession {
+interface FlipSession extends SessionBase {
   mode: "flip";
   axis: Axis;
-  moved: boolean;
 }
 
 type DragSession = MoveSession | ResizeSession | RotateSession | FlipSession;
@@ -102,6 +96,17 @@ export interface BoxDragEvent {
   size: THREE.Vector3;
 }
 
+export interface BoxEndEvent extends BoxDragEvent {
+  /**
+   * At least one change was emitted and not undone by a cancel.
+   */
+  changed: boolean;
+  /**
+   * Ended by Escape or `cancel()`.
+   */
+  cancelled: boolean;
+}
+
 export interface BoxControlsEventMap {
   start: {
     mode: BoxDragMode;
@@ -113,7 +118,7 @@ export interface BoxControlsEventMap {
   change: BoxDragEvent;
   rotate: BoxRotateEvent;
   flip: BoxFlipEvent;
-  end: BoxDragEvent;
+  end: BoxEndEvent;
 }
 
 export interface BoxAttachOptions {
@@ -162,14 +167,10 @@ export class BoxControls<
   pivot: THREE.Vector3 | null;
 
   #handles: BoxHandleSet;
-  #drag: PointerDrag;
+  #drag: PointerDrag<DragSession>;
   #raycaster = new THREE.Raycaster();
-  #box: TBox | null = null;
-  #session: DragSession | null = null;
   #parentRay = new THREE.Ray();
-  #parentInverse = new THREE.Matrix4();
-  #lastMin = new THREE.Vector3();
-  #lastSize = new THREE.Vector3();
+  #box: TBox | null = null;
 
   constructor(
     camera: THREE.Camera,
@@ -206,13 +207,13 @@ export class BoxControls<
     this.resizeAxes = resizeAxes;
     this.rotateAxes = rotateAxes;
     this.flipAxes = flipAxes;
-    this.#drag = new PointerDrag({
-      press: (event) => {
-        this.#claim(event);
-      },
+    this.#drag = new PointerDrag<DragSession>({
+      enabled: () => this.enabled,
+      press: (event) => this.#claim(event),
       hover: (event) => this.#hover(event),
-      drag: (event) => this.#applyDrag(event),
-      release: (event) => this.#finishSession(event)
+      drag: (session, event) => this.#applyDrag(session, event),
+      cancel: (session) => this.#restore(session),
+      release: (session, release) => this.#finishSession(session, release)
     });
 
     if (domElement !== null) {
@@ -229,7 +230,7 @@ export class BoxControls<
   }
 
   get dragging(): boolean {
-    return this.#session !== null;
+    return this.#drag.active;
   }
 
   get resizeAxes(): BoxResizePolicy {
@@ -275,13 +276,19 @@ export class BoxControls<
 
     const { from } = options;
 
-    return from === undefined ? false : this.#claim(from);
+    return from === undefined ? false : this.#drag.claim(from);
   }
 
   isOverHandle(
     event: PointerEvent
   ): boolean {
-    return this.#castParentRay(event) && this.#pickHandle() !== null;
+    const caster = this.#castPointer(event);
+
+    return caster !== null && this.#handles.pick(caster) !== null;
+  }
+
+  cancel(): void {
+    this.#drag.cancel();
   }
 
   detach(): void {
@@ -318,25 +325,31 @@ export class BoxControls<
     event: PointerEvent
   ): boolean {
     const box = this.#box;
-    if (
-      !this.enabled ||
-      box === null ||
-      event.button !== 0 ||
-      this.#session !== null ||
-      !this.#castParentRay(event)
-    ) {
+    const caster = this.#castPointer(event);
+    if (box === null || caster === null) {
       return false;
     }
 
-    const handle = this.#pickHandle();
+    const ray = this.#toParentRay(box, caster);
+    const handle = this.#handles.pick(caster);
     if (handle !== null) {
-      return this.#beginHandle(event, box, handle);
+      return this.#beginHandle(event, box, ray, handle);
     }
-    if (!this.#pickBody(box, _hit)) {
+    if (!this.#pickBody(box, ray, kHit)) {
       return false;
     }
 
-    this.#beginMove(event, box, _hit);
+    this.#startSession(event, {
+      mode: "move",
+      axis: null,
+      gesture: new MoveDrag({
+        min: box.position,
+        hit: kHit,
+        vertical: this.#isVerticalMove(event),
+        verticalNormal: this.#verticalPlaneNormal(box)
+      }),
+      ...this.#sessionBase(box)
+    });
 
     return true;
   }
@@ -345,146 +358,119 @@ export class BoxControls<
     event: PointerEvent
   ): boolean {
     const box = this.#box;
-    if (!this.enabled || box === null || !this.#castParentRay(event)) {
+    const caster = this.#castPointer(event);
+    if (box === null || caster === null) {
       return false;
     }
 
-    const handle = this.#pickHandle();
+    const handle = this.#handles.pick(caster);
     this.#handles.hover(handle);
 
-    return handle !== null || this.#pickBody(box, _hit);
+    return handle !== null ||
+      this.#pickBody(box, this.#toParentRay(box, caster), kHit);
   }
 
   #pickBody(
     box: BoxVolume,
+    ray: THREE.Ray,
     hit: THREE.Vector3
   ): boolean {
-    box.toBox3(_bounds);
+    box.toBox3(kBounds);
 
-    return !_bounds.containsPoint(this.#parentRay.origin) &&
-      this.#parentRay.intersectBox(_bounds, hit) !== null;
-  }
-
-  #applyDrag(
-    event: PointerEvent
-  ): void {
-    const session = this.#session;
-    const box = this.#box;
-    if (
-      !this.enabled ||
-      session === null ||
-      box === null ||
-      !this.#castParentRay(event)
-    ) {
-      return;
-    }
-
-    switch (session.mode) {
-      case "move":
-        this.#applyMove(session, box, event);
-        break;
-      case "resize":
-        this.#applyResize(session, box, event);
-        break;
-      case "rotate":
-        this.#applyRotate(session, event);
-        break;
-      default:
-        this.#trackFlip(session);
-    }
-  }
-
-  #pickHandle(): BoxHandlePick | null {
-    return this.#handles.pick(this.#raycaster);
+    return !kBounds.containsPoint(ray.origin) &&
+      ray.intersectBox(kBounds, hit) !== null;
   }
 
   #beginHandle(
     event: PointerEvent,
     box: BoxVolume,
+    ray: THREE.Ray,
     handle: BoxHandlePick
   ): boolean {
     switch (handle.kind) {
       case "resize":
-        return this.#beginResize(event, box, handle.face);
+        return this.#beginResize(event, box, ray, handle.face);
       case "rotate":
-        return this.#beginRotate(event, box, handle.direction);
+        return this.#beginRotate(event, box, ray, handle.direction);
       default:
-        this.#startSession(
-          event,
-          {
-            mode: "flip",
-            axis: handle.axis,
-            moved: false
-          },
-          box
-        );
+        this.#startSession(event, {
+          mode: "flip",
+          axis: handle.axis,
+          ...this.#sessionBase(box)
+        });
 
         return true;
     }
   }
 
-  #beginMove(
-    event: PointerEvent,
-    box: BoxVolume,
-    hit: THREE.Vector3
-  ): void {
-    const vertical = this.#isVerticalMove(event);
-    const plane = new THREE.Plane();
-    plane.setFromNormalAndCoplanarPoint(
-      vertical ? this.#verticalPlaneNormal() : AXIS_DIRECTION.y,
-      hit
-    );
-
-    this.#startSession(
-      event,
-      {
-        mode: "move",
-        axis: null,
-        vertical,
-        grabOffset: hit.clone().sub(box.position),
-        plane,
-        grabPoint: hit.clone(),
-        moved: false
-      },
-      box
-    );
-  }
-
   #beginResize(
     event: PointerEvent,
     box: BoxVolume,
+    ray: THREE.Ray,
     face: BoxFace
   ): boolean {
-    if (!this.#projectOnFaceAxis(box, face)) {
+    const gesture = ResizeDrag.begin(ray, box.position, box.copySizeTo(kSize), face);
+    if (gesture === null) {
       return false;
     }
 
-    const { axis, sign } = face;
-    this.#startSession(
-      event,
-      {
-        mode: "resize",
-        axis,
-        sign,
-        faceOffset: _point[axis] - _axisOrigin[axis],
-        moved: false
-      },
-      box
-    );
+    this.#startSession(event, {
+      mode: "resize",
+      axis: face.axis,
+      gesture,
+      ...this.#sessionBase(box)
+    });
 
     return true;
   }
 
+  #beginRotate(
+    event: PointerEvent,
+    box: BoxVolume,
+    ray: THREE.Ray,
+    direction: AxisSign
+  ): boolean {
+    this.#resolvePivot(box, kPivot);
+    const corner = this.#handles.copyCornerTo(box, kCorner);
+    const origin = new THREE.Vector3(kPivot.x, corner.y, kPivot.z);
+    const gesture = RotateDrag.begin({
+      ray,
+      origin,
+      corner,
+      eye: this.#eyeAt(box, origin, kEye),
+      direction,
+      press: event
+    });
+    if (gesture === null) {
+      return false;
+    }
+
+    this.#startSession(event, {
+      mode: "rotate",
+      axis: "y",
+      gesture,
+      ...this.#sessionBase(box)
+    });
+    this.#handles.beginRotate(corner);
+
+    return true;
+  }
+
+  #sessionBase(
+    box: BoxVolume
+  ): SessionBase {
+    return {
+      startMin: box.position.clone(),
+      startSize: box.copySizeTo(new THREE.Vector3()),
+      changed: false
+    };
+  }
+
   #startSession(
     event: PointerEvent,
-    session: DragSession,
-    box: BoxVolume
+    session: DragSession
   ): void {
-    this.#session = session;
-    this.#lastMin.copy(box.position);
-    box.copySizeTo(this.#lastSize);
-    this.#drag.begin(event);
-
+    this.#drag.begin(event, session);
     this.dispatchEvent({
       type: "start",
       mode: session.mode,
@@ -492,105 +478,63 @@ export class BoxControls<
     });
   }
 
-  #finishSession(
-    event: PointerEvent | null
-  ): void {
-    const session = this.#session;
-    const box = this.#box;
-    if (session === null) {
-      return;
-    }
-
-    this.#session = null;
-    this.#handles.endGesture();
-
-    if (box !== null) {
-      if (event !== null) {
-        this.#confirmRelease(session, event);
-      }
-      this.dispatchEvent({
-        type: "end",
-        mode: session.mode,
-        axis: session.axis,
-        min: box.position.clone(),
-        size: box.size
-      });
-    }
-  }
-
-  #confirmRelease(
+  #applyDrag(
     session: DragSession,
     event: PointerEvent
   ): void {
-    if (session.mode === "rotate") {
-      if (session.drag.isClick(event)) {
-        this.dispatchEvent({
-          type: "rotate",
-          axis: "y",
-          turns: session.drag.direction
-        });
-      }
-    }
-    else if (
-      session.mode === "flip" &&
-      this.#castParentRay(event) &&
-      this.#isOverFlip(session.axis)
-    ) {
-      this.dispatchEvent({
-        type: "flip",
-        axis: session.axis
-      });
-    }
-  }
-
-  #beginRotate(
-    event: PointerEvent,
-    box: BoxVolume,
-    direction: AxisSign
-  ): boolean {
-    this.#resolvePivot(box, _pivot);
-    const corner = this.#handles.copyCornerTo(box, _corner);
-    const origin = new THREE.Vector3(_pivot.x, corner.y, _pivot.z);
-    const drag = RotateDrag.begin({
-      ray: this.#parentRay,
-      origin,
-      corner,
-      eye: this.#eyeAt(origin, _eye),
-      direction,
-      press: event
-    });
-    if (drag === null) {
-      return false;
+    const box = this.#box;
+    const caster = this.#castPointer(event);
+    if (box === null || caster === null) {
+      return;
     }
 
-    this.#startSession(
-      event,
-      {
-        mode: "rotate",
-        axis: "y",
-        moved: false,
-        drag
-      },
-      box
-    );
-    this.#handles.beginRotate(corner);
-
-    return true;
+    const ray = this.#toParentRay(box, caster);
+    const free = this.snapBypass && event.altKey;
+    kMin.copy(box.position);
+    box.copySizeTo(kSize);
+    switch (session.mode) {
+      case "move":
+        session.gesture.update({
+          ray,
+          free,
+          vertical: this.#isVerticalMove(event),
+          verticalNormal: this.#verticalPlaneNormal(box),
+          constraints: this.#constraints(),
+          axes: this.moveAxes
+        }, kMin, kSize);
+        this.#applyExtent(session, box);
+        break;
+      case "resize":
+        session.gesture.update({
+          ray,
+          free,
+          constraints: this.#constraints()
+        }, kMin, kSize);
+        this.#applyExtent(session, box);
+        break;
+      case "rotate":
+        this.#applyRotate(session, ray, event);
+        break;
+      default:
+        this.#handles.previewFlip(
+          this.#isOverFlip(caster, session.axis) ? session.axis : null
+        );
+    }
   }
 
   #applyRotate(
     session: RotateSession,
+    ray: THREE.Ray,
     event: PointerEvent
   ): void {
-    const steps = session.drag.update(this.#parentRay, event);
-    this.#handles.sweepTo(session.drag.angle);
+    const steps = session.gesture.update(ray, event);
+    this.#handles.sweepTo(session.gesture.angle);
 
     for (const turns of steps) {
-      if (this.#session !== session) {
+      if (this.#drag.session !== session) {
         return;
       }
 
-      session.moved = true;
       this.dispatchEvent({
         type: "rotate",
         axis: "y",
@@ -599,18 +543,107 @@ export class BoxControls<
     }
   }
 
-  #trackFlip(
-    session: FlipSession
+  #applyExtent(
+    session: DragSession,
+    box: BoxVolume
   ): void {
-    this.#handles.previewFlip(
-      this.#isOverFlip(session.axis) ? session.axis : null
-    );
+    kPreviousMin.copy(box.position);
+    box.copySizeTo(kPreviousSize);
+    box.position.copy(kMin);
+    if (!kSize.equals(kPreviousSize)) {
+      box.size = kSize;
+    }
+    if (
+      box.position.equals(kPreviousMin) &&
+      box.copySizeTo(kSize).equals(kPreviousSize)
+    ) {
+      return;
+    }
+
+    session.changed = true;
+    this.#dispatchChange(session, box);
+  }
+
+  #restore(
+    session: DragSession
+  ): void {
+    const box = this.#box;
+    if (box === null || !session.changed) {
+      return;
+    }
+
+    box.position.copy(session.startMin);
+    box.size = session.startSize;
+    session.changed = false;
+    this.#dispatchChange(session, box);
+  }
+
+  #dispatchChange(
+    session: DragSession,
+    box: BoxVolume
+  ): void {
+    this.dispatchEvent({
+      type: "change",
+      mode: session.mode,
+      axis: session.axis,
+      min: box.position.clone(),
+      size: box.size
+    });
+  }
+
+  #finishSession(
+    session: DragSession,
+    release: PointerDragRelease
+  ): void {
+    const box = this.#box;
+    this.#handles.endGesture();
+    if (box === null) {
+      return;
+    }
+
+    if (release.event !== null && !release.cancelled) {
+      this.#confirmRelease(session, release.event);
+    }
+    this.dispatchEvent({
+      type: "end",
+      mode: session.mode,
+      axis: session.axis,
+      min: box.position.clone(),
+      size: box.size,
+      changed: session.changed,
+      cancelled: release.cancelled
+    });
+  }
+
+  #confirmRelease(
+    session: DragSession,
+    event: PointerEvent
+  ): void {
+    if (session.mode === "rotate") {
+      if (session.gesture.isClick(event)) {
+        this.dispatchEvent({
+          type: "rotate",
+          axis: "y",
+          turns: session.gesture.direction
+        });
+      }
+    }
+    else if (session.mode === "flip") {
+      const caster = this.#castPointer(event);
+      if (caster !== null && this.#isOverFlip(caster, session.axis)) {
+        this.dispatchEvent({
+          type: "flip",
+          axis: session.axis
+        });
+      }
+    }
   }
 
   #isOverFlip(
+    caster: THREE.Raycaster,
     axis: Axis
   ): boolean {
-    const handle = this.#pickHandle();
+    const handle = this.#handles.pick(caster);
 
     return handle?.kind === "flip" && handle.axis === axis;
   }
@@ -630,144 +663,16 @@ export class BoxControls<
   }
 
   #eyeAt(
+    box: BoxVolume,
     point: THREE.Vector3,
     target: THREE.Vector3
   ): THREE.Vector3 {
-    _world.copy(point);
-    const parent = this.#box?.parent ?? null;
-    if (parent !== null) {
-      _world.applyMatrix4(parent.matrixWorld);
+    kWorld.copy(point);
+    if (box.parent !== null) {
+      kWorld.applyMatrix4(box.parent.matrixWorld);
     }
 
-    return eyeDirection(this.object, _world, target)
-      .transformDirection(this.#parentInverse);
-  }
-
-  #applyMove(
-    session: MoveSession,
-    box: BoxVolume,
-    event: PointerEvent
-  ): void {
-    const free = this.snapBypass && event.altKey;
-    this.#retargetPlane(session, event);
-    if (this.#parentRay.intersectPlane(session.plane, _point) === null) {
-      return;
-    }
-
-    _point.sub(session.grabOffset);
-    box.copySizeTo(_size);
-
-    const constraints = this.#constraints();
-    const axes = session.vertical ? kVerticalAxes : kGroundAxes;
-    for (const axis of axes) {
-      if (!axisPolicyIncludes(this.moveAxes, axis)) {
-        continue;
-      }
-
-      box.position[axis] = moveAxis({
-        target: constraints.snapOn(axis, _point[axis], free),
-        size: _size[axis],
-        bounds: constraints.axisRange(axis)
-      });
-    }
-
-    this.#emitChange(session, box);
-  }
-
-  #applyResize(
-    session: ResizeSession,
-    box: BoxVolume,
-    event: PointerEvent
-  ): void {
-    if (!this.#projectOnFaceAxis(box, session)) {
-      return;
-    }
-
-    const free = this.snapBypass && event.altKey;
-    const { axis, sign } = session;
-    box.copySizeTo(_size);
-    const constraints = this.#constraints();
-    const extent = resizeAxis({
-      min: box.position[axis],
-      size: _size[axis],
-      sign,
-      faceCoord: constraints.snapOn(
-        axis,
-        _point[axis] - session.faceOffset,
-        free
-      ),
-      minSize: constraints.axisMinSize(axis),
-      bounds: constraints.axisRange(axis)
-    });
-
-    box.position[axis] = extent.min;
-    _size[axis] = extent.size;
-    box.size = _size;
-
-    this.#emitChange(session, box);
-  }
-
-  #emitChange(
-    session: DragSession,
-    box: BoxVolume
-  ): void {
-    box.copySizeTo(_size);
-    if (
-      box.position.equals(this.#lastMin) &&
-      _size.equals(this.#lastSize)
-    ) {
-      return;
-    }
-
-    this.#lastMin.copy(box.position);
-    this.#lastSize.copy(_size);
-    session.moved = true;
-
-    this.dispatchEvent({
-      type: "change",
-      mode: session.mode,
-      axis: session.axis,
-      min: box.position.clone(),
-      size: _size.clone()
-    });
-  }
-
-  #projectOnFaceAxis(
-    box: BoxVolume,
-    face: BoxFace
-  ): boolean {
-    faceCenter(
-      box.position,
-      box.copySizeTo(_size),
-      face,
-      _axisOrigin
-    );
-
-    return closestPointOnAxis(
-      this.#parentRay,
-      _axisOrigin,
-      AXIS_DIRECTION[face.axis],
-      _point
-    );
-  }
-
-  #retargetPlane(
-    session: MoveSession,
-    event: PointerEvent
-  ): void {
-    const vertical = this.#isVerticalMove(event);
-    if (
-      session.moved ||
-      vertical === session.vertical
-    ) {
-      return;
-    }
-
-    session.vertical = vertical;
-    session.plane.setFromNormalAndCoplanarPoint(
-      vertical ? this.#verticalPlaneNormal() : AXIS_DIRECTION.y,
-      session.grabPoint
-    );
+    return this.#toParentSpace(box, eyeDirection(this.object, kWorld, target));
   }
 
   #isVerticalMove(
@@ -777,45 +682,55 @@ export class BoxControls<
       axisPolicyIncludes(this.moveAxes, "y");
   }
 
-  #verticalPlaneNormal(): THREE.Vector3 {
-    this.object.getWorldDirection(_normal);
-    _normal.transformDirection(this.#parentInverse);
-    _normal.y = 0;
+  #verticalPlaneNormal(
+    box: BoxVolume
+  ): THREE.Vector3 {
+    this.#toParentSpace(box, this.object.getWorldDirection(kNormal));
+    kNormal.y = 0;
 
-    return _normal.lengthSq() < 1e-6
+    return kNormal.lengthSq() < 1e-6
       ? AXIS_DIRECTION.z
-      : _normal.normalize();
+      : kNormal.normalize();
   }
 
-  #castParentRay(
+  #toParentSpace(
+    box: BoxVolume,
+    direction: THREE.Vector3
+  ): THREE.Vector3 {
+    return box.parent === null ?
+      direction :
+      direction.transformDirection(kInverse.copy(box.parent.matrixWorld).invert());
+  }
+
+  #castPointer(
     event: PointerEvent
-  ): boolean {
-    const box = this.#box;
-    if (box === null || !this.#drag.toNdc(event, _pointer)) {
-      return false;
+  ): THREE.Raycaster | null {
+    if (this.#box === null || !this.#drag.toNdc(event, kPointer)) {
+      return null;
     }
 
-    this.#raycaster.setFromCamera(_pointer, this.object);
-    if (box.parent === null) {
-      this.#parentInverse.identity();
-    }
-    else {
-      this.#parentInverse.copy(box.parent.matrixWorld).invert();
-    }
-    this.#parentRay
-      .copy(this.#raycaster.ray)
-      .applyMatrix4(this.#parentInverse);
+    this.#raycaster.setFromCamera(kPointer, this.object);
 
-    return true;
+    return this.#raycaster;
+  }
+
+  #toParentRay(
+    box: BoxVolume,
+    caster: THREE.Raycaster
+  ): THREE.Ray {
+    this.#parentRay.copy(caster.ray);
+    if (box.parent !== null) {
+      this.#parentRay.applyMatrix4(kInverse.copy(box.parent.matrixWorld).invert());
+    }
+
+    return this.#parentRay;
   }
 
   #constraints(): AxisConstraints {
-    const { snap, minSize, bounds } = this;
-
     return new AxisConstraints({
-      snap,
-      minSize,
-      bounds
+      snap: this.snap,
+      minSize: this.minSize,
+      bounds: this.bounds
     });
   }
 }

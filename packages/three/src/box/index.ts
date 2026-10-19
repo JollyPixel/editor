@@ -14,7 +14,7 @@ export type { BoxFace } from "./faceCenter.ts";
 export type {
   Axis,
   AxisSign
-} from "../common/axes.ts";
+} from "../common/math/axes.ts";
 export * from "./area/index.ts";
 export * from "./marquee/index.ts";
 export * from "./controls/index.ts";

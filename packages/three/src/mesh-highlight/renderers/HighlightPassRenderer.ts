@@ -23,16 +23,22 @@ export interface HighlightPassRendererOptions {
   highlight: HighlightPassTarget;
   overlayRegistry: HighlightOverlayRegistry;
   camera: THREE.Camera;
+  /**
+   * Applies each synced appearance to `highlight`.
+   */
+  configure?: (appearance: MeshHighlightAppearance) => void;
 }
 
 export class HighlightPassRenderer implements MeshHighlightRenderer {
   #highlight: HighlightPassTarget;
+  #configure: ((appearance: MeshHighlightAppearance) => void) | null;
   #overlays: ObjectOverlayRenderer;
 
   constructor(
     options: HighlightPassRendererOptions
   ) {
     this.#highlight = options.highlight;
+    this.#configure = options.configure ?? null;
     this.#overlays = new ObjectOverlayRenderer({
       registry: options.overlayRegistry,
       camera: options.camera
@@ -43,6 +49,7 @@ export class HighlightPassRenderer implements MeshHighlightRenderer {
     indicators: readonly ResolvedHighlightIndicator[],
     appearance: MeshHighlightAppearance
   ): void {
+    this.#configure?.(appearance);
     const highlighted = indicators.filter(isHighlightIndicator);
     const entries = highlighted.map((indicator): HighlightEntry => {
       const peerHover = indicator.role === "hover" &&

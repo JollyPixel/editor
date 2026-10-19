@@ -10,11 +10,7 @@ import {
   HighlightPassJfa,
   type HighlightPassJfaOptions
 } from "#src/index.ts";
-import {
-  createEntriesOfEveryShape,
-  createMesh,
-  createRendererStub
-} from "./helpers.ts";
+import { createRendererStub } from "./helpers.ts";
 
 function createPass(
   options?: HighlightPassJfaOptions
@@ -71,42 +67,26 @@ describe("ringThickness, borderThickness and isolatedFillOpacity", () => {
   });
 });
 
-describe("entries", () => {
-  test("returns a copy of the assigned entries", () => {
-    const highlight = createPass();
-    const entry = {
-      target: createMesh(),
-      color: "#ff0000"
-    };
-    highlight.entries = [entry];
+describe("configure", () => {
+  test("applies the given options and keeps the others", () => {
+    const highlight = createPass({ isolatedFillOpacity: 0.5 });
 
-    const entries = highlight.entries;
-    entries.length = 0;
+    highlight.configure({
+      ringThickness: 4,
+      borderThickness: 0
+    });
 
-    assert.deepStrictEqual(highlight.entries, [entry]);
-  });
-
-  test("replaces the previous entries rather than accumulating them", () => {
-    const highlight = createPass();
-    const entry = {
-      target: createMesh(),
-      color: "#0000ff"
-    };
-
-    highlight.entries = createEntriesOfEveryShape();
-    highlight.entries = [entry];
-
-    assert.deepStrictEqual(highlight.entries, [entry]);
-  });
-});
-
-describe("dispose", () => {
-  test("clears the assigned entries", () => {
-    const highlight = createPass();
-    highlight.entries = createEntriesOfEveryShape();
-
-    highlight.dispose();
-
-    assert.deepStrictEqual(highlight.entries, []);
+    assert.deepStrictEqual(
+      {
+        ringThickness: highlight.ringThickness,
+        borderThickness: highlight.borderThickness,
+        isolatedFillOpacity: highlight.isolatedFillOpacity
+      },
+      {
+        ringThickness: 4,
+        borderThickness: 0,
+        isolatedFillOpacity: 0.5
+      }
+    );
   });
 });

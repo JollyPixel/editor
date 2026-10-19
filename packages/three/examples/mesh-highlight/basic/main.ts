@@ -6,7 +6,7 @@ import type { TreeNode } from "@jolly-pixel/ui";
 // Import Internal Dependencies
 import {
   MeshHighlight,
-  PeerSelectionRegistry
+  PeerHighlights
 } from "../../../src/index.ts";
 import {
   createExample,
@@ -43,7 +43,7 @@ const {
 addSelectionLighting(scene);
 
 const colorPalette = new ColorPalette();
-const peerRegistry = new PeerSelectionRegistry({
+const peerRegistry = new PeerHighlights({
   colorAllocator: {
     peerColor: (peerId) => colorPalette.forKey(peerId),
     release: () => void 0
@@ -54,7 +54,7 @@ const highlight = new MeshHighlight({
   scene,
   camera,
   appearance: { xray: true },
-  peerSelections: peerRegistry,
+  peers: peerRegistry,
   chips: true
 });
 
@@ -244,7 +244,7 @@ tree.expanded = ["cluster"];
 outlinerPane.append(tree);
 refreshOutliner();
 
-peerRegistry.addEventListener("peerSelectionChange", () => {
+peerRegistry.addEventListener("change", () => {
   refreshOutliner();
 });
 
@@ -284,7 +284,7 @@ function withPeerBadges(
 ): TreeNode {
   return {
     ...node,
-    badges: peerRegistry.listSelectors(node.id).map((peerId) => {
+    badges: peerRegistry.selectors(node.id).map((peerId) => {
       return {
         color: peerRegistry.peerColor(peerId),
         title: peerId

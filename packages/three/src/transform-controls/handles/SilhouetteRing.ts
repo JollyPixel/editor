@@ -2,7 +2,7 @@
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { AXIS_DIRECTION } from "../../common/axes.ts";
+import { AXIS_DIRECTION } from "../../common/math/axes.ts";
 import type { ResolvedRings } from "../appearance.ts";
 import { createRingGeometry } from "./geometry.ts";
 import type { GizmoView } from "./GizmoHandle.ts";

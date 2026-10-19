@@ -1,59 +1,46 @@
 # Selection and hover sync
 
-`PeerSelectionSync` and `PeerHoverSync` publish the local ids held by a
-`MeshHighlightState` through room presence, and apply remote ids to the peer
-registries. The renderers remain transport-independent; see
+`PeerHighlightSync` publishes the local selection and hover of a
+`MeshHighlight` through room presence, and applies remote ones to
+`highlight.peers`. The renderers stay transport-independent; see
 [peer selection and hover](../mesh-highlight/peers.md).
 
 ```ts
 import * as network from "@jolly-pixel/network/client";
-import {
-  MeshHighlightState,
-  PeerHoverRegistry,
-  PeerSelectionRegistry
-} from "@jolly-pixel/three";
-import {
-  PeerHoverSync,
-  PeerSelectionSync
-} from "@jolly-pixel/three/network";
+import { MeshHighlight } from "@jolly-pixel/three";
+import { PeerHighlightSync } from "@jolly-pixel/three/network";
 
 const client = new network.Client({ identity: { username } });
 const room = client.room("my-room");
 room.join();
 
-const selection = new MeshHighlightState();
-const registry = new PeerSelectionRegistry();
-const hoverRegistry = new PeerHoverRegistry();
-
-const selectionSync = new PeerSelectionSync({
-  room,
-  registry,
-  selection
-});
-const hoverSync = new PeerHoverSync({
-  room,
-  registry: hoverRegistry,
-  selection
-});
+const highlight = new MeshHighlight({ renderer, scene, camera });
+const sync = new PeerHighlightSync({ room, highlight });
 ```
 
 Every client must register the same id for the same scene object. The sync
-classes transport ids and do not reconcile scene graphs.
+transports ids and does not reconcile scene graphs.
 
-| Class | Presence key | Other defaults |
-|---|---|---|
-| `PeerSelectionSync` | `"selection"` | none |
-| `PeerHoverSync` | `"hover"` | `throttleMs: 80` |
+```ts
+interface PeerHighlightSyncOptions {
+  room: Room;
+  highlight: MeshHighlight;
+  selectionKey?: string;    // default "selection"
+  hoverKey?: string;        // default "hover"
+  hoverThrottleMs?: number; // default 80
+}
+```
 
-Both read presence through `network.PresenceChannel`. Hover throttling keeps
-the latest state and sends it after the throttle window.
+- Each role reads its key through `network.PresenceChannel`.
+- Hover throttling keeps the latest hover and sends it once the window ends.
+- A peer missing from both keys, for example after it leaves the room, is
+  removed with `peers.removePeer()`, which releases its color.
 
-Call `destroy()` on both sync objects during room teardown. This removes their
-listeners and clears the remote peers they added without calling
-`room.leave()`.
+### destroy(): void
 
-The entry point also exports `PeerSelectionId`, `PeerHoverId`,
-`PeerSelectionSyncOptions`, `PeerHoverSyncOptions`,
-`decodePeerSelectionId()`, and `decodePeerHoverId()`. Each decoder accepts a
-string or `null`; malformed values return `undefined`, which removes that peer
-from the registry.
+Removes the listeners, drops a pending hover, and clears the remote peers this
+instance applied. It does not call `room.leave()`.
+
+The entry point also exports `PeerObjectId` and `decodePeerObjectId()`. The
+decoder accepts a string or `null`; a malformed value returns `undefined`,
+which clears that peer's mark.

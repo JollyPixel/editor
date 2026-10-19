@@ -21,6 +21,28 @@ function visibleArrowCount(
   return count;
 }
 
+describe("cancel", () => {
+  test("Escape puts the box back and ends the drag as cancelled", () => {
+    const harness = createHarness();
+    harness.send({ type: "pointerdown", target: harness.at(4, 1, 4) });
+    harness.send({ type: "pointermove", target: harness.at(7, 1, 4) });
+
+    harness.element.ownerDocument.dispatchEvent(
+      new window.KeyboardEvent("keydown", { key: "Escape" })
+    );
+    harness.send({ type: "pointermove", target: harness.at(9, 1, 4) });
+
+    assert.deepEqual(harness.box.position.toArray(), [0, 0, 0]);
+    assert.deepEqual(harness.changes.at(-1)?.min.toArray(), [0, 0, 0]);
+    assert.deepEqual(
+      harness.ends.map(({ changed, cancelled }) => {
+        return { changed, cancelled };
+      }),
+      [{ changed: false, cancelled: true }]
+    );
+  });
+});
+
 describe("move", () => {
   test("drags the box on the ground plane, snapped to the grid", () => {
     const harness = createHarness();

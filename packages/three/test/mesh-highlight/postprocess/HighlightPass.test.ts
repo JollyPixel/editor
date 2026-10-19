@@ -10,11 +10,7 @@ import {
   HighlightPass,
   type HighlightPassOptions
 } from "#src/index.ts";
-import {
-  createEntriesOfEveryShape,
-  createMesh,
-  createRendererStub
-} from "./helpers.ts";
+import { createRendererStub } from "./helpers.ts";
 
 function createPass(
   options?: HighlightPassOptions
@@ -42,11 +38,12 @@ describe("constructor", () => {
   });
 });
 
-describe("edgeThickness and edgeGlow", () => {
+describe("tunables", () => {
   test("round-trip through the constructor options and the setters", () => {
     const cases = [
       ["edgeThickness", 3],
-      ["edgeGlow", 0.5]
+      ["edgeGlow", 0.5],
+      ["downSampleRatio", 4]
     ] as const;
 
     for (const [property, value] of cases) {
@@ -59,42 +56,26 @@ describe("edgeThickness and edgeGlow", () => {
   });
 });
 
-describe("entries", () => {
-  test("returns a copy of the assigned entries", () => {
-    const highlight = createPass();
-    const entry = {
-      target: createMesh(),
-      color: "#ff0000"
-    };
-    highlight.entries = [entry];
+describe("configure", () => {
+  test("applies the given options and keeps the others", () => {
+    const highlight = createPass({ downSampleRatio: 4 });
 
-    const entries = highlight.entries;
-    entries.length = 0;
+    highlight.configure({
+      edgeThickness: 3,
+      edgeGlow: 0.5
+    });
 
-    assert.deepStrictEqual(highlight.entries, [entry]);
-  });
-
-  test("replaces the previous entries rather than accumulating them", () => {
-    const highlight = createPass();
-    const entry = {
-      target: createMesh(),
-      color: "#0000ff"
-    };
-
-    highlight.entries = createEntriesOfEveryShape();
-    highlight.entries = [entry];
-
-    assert.deepStrictEqual(highlight.entries, [entry]);
-  });
-});
-
-describe("dispose", () => {
-  test("clears the assigned entries", () => {
-    const highlight = createPass();
-    highlight.entries = createEntriesOfEveryShape();
-
-    highlight.dispose();
-
-    assert.deepStrictEqual(highlight.entries, []);
+    assert.deepStrictEqual(
+      {
+        edgeThickness: highlight.edgeThickness,
+        edgeGlow: highlight.edgeGlow,
+        downSampleRatio: highlight.downSampleRatio
+      },
+      {
+        edgeThickness: 3,
+        edgeGlow: 0.5,
+        downSampleRatio: 4
+      }
+    );
   });
 });

@@ -107,6 +107,25 @@ describe("HighlightPassRenderer", () => {
     assert.ok(new THREE.Color(highlight.entries[2].color).r < 1);
   });
 
+  test("hands every synced appearance to configure", () => {
+    const appearances: MeshHighlightAppearance[] = [];
+    const renderer = new HighlightPassRenderer({
+      highlight: new TestHighlight(),
+      overlayRegistry: createRegistry([]),
+      camera: CAMERA,
+      configure: (appearance) => appearances.push(appearance)
+    });
+    const appearance = new MeshHighlightAppearance().with({
+      highlight: {
+        edgeThickness: 3
+      }
+    });
+
+    renderer.sync([], appearance);
+
+    assert.deepStrictEqual(appearances, [appearance]);
+  });
+
   test("owns rendering and disposal of both strategies", () => {
     const overlays: TestOverlay[] = [];
     const highlight = new TestHighlight();
