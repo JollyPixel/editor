@@ -22,15 +22,25 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import { PeerBrushRings } from "../features/sculpt/collaboration/PeerBrushRings.ts";
 import type { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
+import type { ViewSettings } from "../features/view/model/ViewSettings.ts";
 import { SculptBrush } from "../features/sculpt/SculptBrush.ts";
 import {
   bindHistoryShortcuts,
   type TerrainHistory
 } from "../shared/terrainHistory.ts";
 
+export interface TerrainEditorSceneOptions {
+  document: TerrainCommandDocument;
+  sculpt: SculptSettings;
+  viewSettings: ViewSettings;
+  history: TerrainHistory;
+  room: Room;
+}
+
 export class TerrainEditorScene extends Systems.Scene {
   #document: TerrainCommandDocument;
   #sculpt: SculptSettings;
+  #viewSettings: ViewSettings;
   #history: TerrainHistory;
   #room: Room;
   #view: TerrainView | null = null;
@@ -38,16 +48,14 @@ export class TerrainEditorScene extends Systems.Scene {
   #disposables: Array<() => void> = [];
 
   constructor(
-    document: TerrainCommandDocument,
-    sculpt: SculptSettings,
-    history: TerrainHistory,
-    room: Room
+    options: TerrainEditorSceneOptions
   ) {
     super("terrain-editor");
-    this.#document = document;
-    this.#sculpt = sculpt;
-    this.#history = history;
-    this.#room = room;
+    this.#document = options.document;
+    this.#sculpt = options.sculpt;
+    this.#viewSettings = options.viewSettings;
+    this.#history = options.history;
+    this.#room = options.room;
   }
 
   get view(): TerrainView | null {
@@ -88,6 +96,13 @@ export class TerrainEditorScene extends Systems.Scene {
         camera: () => camera.camera
       });
     this.#view = view;
+    const viewSettings = this.#viewSettings;
+    function applyViewSettings(): void {
+      view.overlay = viewSettings.options.overlay;
+      view.walkableSlope = viewSettings.options.walkableSlope;
+    }
+    applyViewSettings();
+    this.#disposables.push(viewSettings.subscribe("change", applyViewSettings));
     const live = new TerrainLiveSync({
       room: this.#room,
       document: this.#document

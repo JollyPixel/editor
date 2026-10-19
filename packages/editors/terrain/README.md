@@ -22,7 +22,7 @@ V1 also extends [`@jolly-pixel/asset-server`][asset-server] with asset parts, so
 
 ## 💃 Getting Started
 
-Run `pnpm run dev` in this directory. The dev server listens on port 3008 and seeds `assets/` with a terrain of one flat chunk on first start. In the browser console, `terrainEditor.view.overlay = "chunks"` draws the chunk borders and `"lod"` also tints each LoD level; `"none"` turns it off.
+Run `pnpm run dev` in this directory. The dev server listens on port 3008 and seeds `assets/` with a terrain of one flat chunk on first start. The view toolbar in the top-left corner switches the overlay: none, the chunk borders, the chunk borders with a tint per LoD level, or the surface coloured by slope, with a walkable angle above which it turns red. The choice is saved in the browser; `terrainEditor.view.overlay` and `terrainEditor.view.walkableSlope` set the same values from the console.
 
 ## 📚 Documents
 

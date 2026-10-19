@@ -25,6 +25,8 @@ import type { TerrainView } from "@jolly-pixel/terrain.renderer";
 // Import Internal Dependencies
 import { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
 import "../features/sculpt/toolbar/SculptToolbar.ts";
+import { ViewSettings } from "../features/view/model/ViewSettings.ts";
+import "../features/view/toolbar/ViewToolbar.ts";
 import { TerrainEditorScene } from "../scene/TerrainEditorScene.ts";
 import { PresenceStore } from "../shared/PresenceStore.ts";
 import {
@@ -92,7 +94,19 @@ export class TerrainEditor {
       sculptToolbar.history = history;
     }
 
-    const scene = new TerrainEditorScene(target.document, sculpt, history, target.room);
+    const viewSettings = new ViewSettings(new LocalStorageAdapter());
+    const viewToolbar = document.querySelector("terrain-view-toolbar");
+    if (viewToolbar !== null) {
+      viewToolbar.settings = viewSettings;
+    }
+
+    const scene = new TerrainEditorScene({
+      document: target.document,
+      sculpt,
+      viewSettings,
+      history,
+      room: target.room
+    });
     await editorRuntime.load(scene);
 
     const presence = new PresenceStore();

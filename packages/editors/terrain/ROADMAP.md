@@ -36,7 +36,9 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   whose presence region overlaps them, through the terrain room's relay.
 - **Fixed flatten: done** (2026-10-19). Flatten targets the height under the
   press or a fixed height from the toolbar; Ctrl+click picks it.
-- **Next:** slope overlay.
+- **Slope overlay: done** (2026-10-19). `TerrainView.overlay = "slope"` colours
+  the surface by slope and marks it red above `walkableSlope`.
+- **Next:** the M1 end-to-end test.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -61,7 +63,7 @@ chunks yet.
 - [x] Interest routing in the terrain extension: live patches inside the
   presence radius; peer brush rings drawn inside it.
 - [x] Debug overlays: chunk grid and LoD levels.
-- [ ] Slope overlay.
+- [x] Slope overlay.
 - [ ] E2E: two-peer sculpt with undo, LoD seams render, a far peer receives
   the commit only.
 

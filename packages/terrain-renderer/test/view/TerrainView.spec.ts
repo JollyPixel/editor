@@ -8,6 +8,8 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import {
   ChunkCoord,
+  DEFAULT_WALKABLE_SLOPE,
+  MAX_WALKABLE_SLOPE,
   NODE_DATA_ATTRIBUTE,
   NODE_MORPH_ATTRIBUTE,
   LodRanges,
@@ -103,5 +105,19 @@ describe("TerrainView", () => {
 
     assert.ok(selected.length > 64);
     assert.equal(nodes.geometry.instanceCount + quarters.geometry.instanceCount, selected.length);
+  });
+
+  test("the walkable slope starts at its default, stays within its bounds and redraws on change", () => {
+    let frames = 0;
+    const view = new TerrainView(stripTerrain(1), { requestFrame: () => frames++ });
+    frames = 0;
+    const slopes = [DEFAULT_WALKABLE_SLOPE];
+    for (const degrees of [30, -10, 120, Number.NaN]) {
+      view.walkableSlope = degrees;
+      slopes.push(view.walkableSlope);
+    }
+
+    assert.deepEqual(slopes, [DEFAULT_WALKABLE_SLOPE, 30, 0, MAX_WALKABLE_SLOPE, DEFAULT_WALKABLE_SLOPE]);
+    assert.equal(frames, 4);
   });
 });

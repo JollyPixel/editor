@@ -6,6 +6,7 @@ import {
 } from "three/webgpu";
 import {
   abs,
+  atan,
   attribute,
   cameraPosition,
   clamp,
@@ -50,8 +51,15 @@ export const MORPH_OFFSETS_ATTRIBUTE = "terrainMorphOffsets";
 const kAlbedo = vec3(0.42, 0.47, 0.33);
 const kLineColor = vec3(0.08, 0.09, 0.07);
 const kLevelTint = 0.45;
+const kSlopeRampTop = Math.PI / 3;
+const kSlopeFlat = vec3(0.24, 0.58, 0.32);
+const kSlopeMid = vec3(0.86, 0.8, 0.26);
+const kSlopeHigh = vec3(0.9, 0.48, 0.16);
+const kSlopeTooSteep = vec3(0.82, 0.12, 0.12);
 
-export const TERRAIN_OVERLAYS = ["none", "chunks", "lod"] as const;
+export const TERRAIN_OVERLAYS = ["none", "chunks", "lod", "slope"] as const;
+export const DEFAULT_WALKABLE_SLOPE = 45;
+export const MAX_WALKABLE_SLOPE = 90;
 export type TerrainOverlay = typeof TERRAIN_OVERLAYS[number];
 
 type FloatNode = Node<"float">;
@@ -66,6 +74,7 @@ export interface TerrainTextures {
 export interface TerrainShading {
   material: MeshStandardNodeMaterial;
   overlay(mode: TerrainOverlay): void;
+  walkableSlope(degrees: number): void;
 }
 
 interface ChunkTexel {
@@ -217,23 +226,45 @@ export function createTerrainShading(
     normalize(vec3(gradient.x.negate(), float(1), gradient.y.negate()))
   );
   const overlay = uniform(0);
+  const walkable = uniform(degreesToRadians(DEFAULT_WALKABLE_SLOPE));
+  const slope = atan(length(gradient));
+  const slopeRamp = clamp(slope.div(kSlopeRampTop), 0, 1).mul(2);
+  const slopeColor = select(
+    slope.greaterThan(walkable),
+    kSlopeTooSteep,
+    mix(mix(kSlopeFlat, kSlopeMid, clamp(slopeRamp, 0, 1)), kSlopeHigh, clamp(slopeRamp.sub(1), 0, 1))
+  );
   const chunkCoord = fragmentWorld.div(CHUNK_SAMPLES);
   const lineDistance = abs(fract(chunkCoord.sub(0.5)).sub(0.5))
     .div(max(fwidth(chunkCoord), vec2(1e-4)));
   const line = float(1).sub(min(min(lineDistance.x, lineDistance.y), float(1)));
   const level = log2(varying(spacing, "vTerrainSpacing"));
   const levelColor = cos(level.mul(1.1).add(vec3(0, 2.1, 4.2))).mul(0.5).add(0.5);
-  const surfaceColor = select(overlay.greaterThan(1.5), mix(kAlbedo, levelColor, kLevelTint), kAlbedo);
+  const surfaceColor = select(
+    overlay.equal(2),
+    mix(kAlbedo, levelColor, kLevelTint),
+    select(overlay.equal(3), slopeColor, kAlbedo)
+  );
+  const showLines = overlay.equal(1).or(overlay.equal(2));
   material.colorNode = Fn(() => {
     Discard(fragmentLayer.lessThan(int(0)));
 
-    return mix(surfaceColor, kLineColor, line.mul(select(overlay.greaterThan(0.5), float(1), float(0))));
+    return mix(surfaceColor, kLineColor, line.mul(select(showLines, float(1), float(0))));
   })();
 
   return {
     material,
     overlay(mode) {
       overlay.value = TERRAIN_OVERLAYS.indexOf(mode);
+    },
+    walkableSlope(degrees) {
+      walkable.value = degreesToRadians(degrees);
     }
   };
+}
+
+function degreesToRadians(
+  degrees: number
+): number {
+  return degrees * Math.PI / 180;
 }

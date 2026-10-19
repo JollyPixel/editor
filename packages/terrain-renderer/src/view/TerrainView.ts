@@ -18,7 +18,9 @@ import {
 } from "./mesh/GridMeshProvider.ts";
 import {
   createTerrainShading,
+  DEFAULT_WALKABLE_SLOPE,
   GRID_ATTRIBUTE,
+  MAX_WALKABLE_SLOPE,
   MORPH_OFFSETS_ATTRIBUTE,
   NODE_DATA_ATTRIBUTE,
   NODE_MORPH_ATTRIBUTE,
@@ -52,6 +54,7 @@ export class TerrainView {
   #requestFrame: () => void;
   #shading: TerrainShading;
   #overlay: TerrainOverlay = "none";
+  #walkableSlope = DEFAULT_WALKABLE_SLOPE;
   #textures: ChunkTextureStore;
   #nodes: NodeBatch;
   #quarters: NodeBatch;
@@ -90,6 +93,20 @@ export class TerrainView {
   ) {
     this.#overlay = mode;
     this.#shading.overlay(mode);
+    this.#requestFrame();
+  }
+
+  get walkableSlope(): number {
+    return this.#walkableSlope;
+  }
+
+  set walkableSlope(
+    degrees: number
+  ) {
+    this.#walkableSlope = Number.isFinite(degrees) ?
+      Math.min(Math.max(degrees, 0), MAX_WALKABLE_SLOPE) :
+      DEFAULT_WALKABLE_SLOPE;
+    this.#shading.walkableSlope(this.#walkableSlope);
     this.#requestFrame();
   }
 
