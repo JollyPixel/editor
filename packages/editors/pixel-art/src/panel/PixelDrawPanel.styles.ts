@@ -481,6 +481,7 @@ export const panelStyles = css`
     opacity: 0;
     transform: scale(0.96);
     transform-origin: var(--jolly-overlay-origin, center);
+    will-change: transform;
     pointer-events: none;
     transition:
       opacity 90ms var(--jolly-easing-overlay, ease-out),
