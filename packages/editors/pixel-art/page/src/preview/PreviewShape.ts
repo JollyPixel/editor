@@ -2,7 +2,7 @@
 import type * as THREE from "three";
 
 // Import Internal Dependencies
-import type { FaceRanges } from "../../../src/mesh-texturing/types.ts";
+import type { FaceRanges } from "#src/mesh-texturing/index.ts";
 
 // CONSTANTS
 export const PREVIEW_SHAPE_SIZE = 1.5;

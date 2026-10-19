@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { PixelArtFeatures } from "../../page/scripts/PixelArtFeatures.ts";
+import { PixelArtFeatures } from "../../../page/src/boot/PixelArtFeatures.ts";
 
 describe("PixelArtFeatures", () => {
   test("runtime=off and empty turn the preview and starter region off", () => {

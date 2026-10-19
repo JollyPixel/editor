@@ -40,7 +40,7 @@
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "test:e2e": "playwright test",
     "lint": "oxlint src test page vite.config.ts && pnpm run lint:css",
-    "lint:css": "stylelint \"src/**/*.ts\" \"page/scripts/**/*.ts\" \"page/public/**/*.css\" --cache",
+    "lint:css": "stylelint \"src/**/*.ts\" \"page/src/**/*.ts\" \"page/public/**/*.css\" --cache",
     "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p page/tsconfig.json"
   },
   "repository": {

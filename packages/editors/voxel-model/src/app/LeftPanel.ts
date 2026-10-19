@@ -18,18 +18,16 @@ import type {
   UVRegion
 } from "@jolly-pixel/pixel-draw.renderer";
 import {
-  RoomAccess,
+  TextureRoom,
   type PixelArtKeyBindingSettings,
   type PixelDrawPanel,
   type UvNetLibrary
 } from "@jolly-pixel/editor.pixel-art";
 import {
-  PixelCollaboration,
   SharedPixelHistory,
   type PixelArtRoom
 } from "@jolly-pixel/asset.pixel-art/client";
 import "@jolly-pixel/ui";
-import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import "./BuildTab.ts";
@@ -88,8 +86,7 @@ export class LeftPanel extends LitElement {
 
   #resizeObserver: ResizeObserver | null = null;
   #texture: LeftPanelTexture | null = null;
-  #collaboration: PixelCollaboration | null = null;
-  #access: RoomAccess | null = null;
+  #room: TextureRoom | null = null;
   #releaseModelAccess: (() => void) | null = null;
   #peerRegionSelections: PeerRegionSelections | null = null;
   #initializing = false;
@@ -180,10 +177,8 @@ export class LeftPanel extends LitElement {
     sources: CanvasSources
   ): Promise<void> {
     const { texture, workspace } = sources;
-    this.#collaboration?.destroy();
-    this.#collaboration = null;
-    this.#access?.dispose();
-    this.#access = null;
+    this.#room?.dispose();
+    this.#room = null;
 
     const canvas = await this.panelElement.initialize({
       document: texture.document,
@@ -199,15 +194,15 @@ export class LeftPanel extends LitElement {
     canvas.mode = canvasModeForTab(this.mode);
     this._canvas = canvas;
 
-    this.#collaboration = new PixelCollaboration({
-      room: texture.room,
-      canvas,
-      color: peerProfileColor,
-      onRemoteUvDragging: (region) => this.onPeerUvDragging?.(region)
-    });
     const textureId = this.panelElement.activeTextureId;
     if (textureId !== null) {
-      this.#access = new RoomAccess(texture.room, this.panelElement, textureId);
+      this.#room = new TextureRoom({
+        room: texture.room,
+        canvas,
+        panel: this.panelElement,
+        textureId,
+        onRemoteUvDragging: (region) => this.onPeerUvDragging?.(region)
+      });
     }
     this.#syncPeerRegionSelections();
   }
@@ -259,10 +254,8 @@ export class LeftPanel extends LitElement {
 
       this.#resizeObserver?.disconnect();
       this.#resizeObserver = null;
-      this.#collaboration?.destroy();
-      this.#collaboration = null;
-      this.#access?.dispose();
-      this.#access = null;
+      this.#room?.dispose();
+      this.#room = null;
       this.#releaseModelAccess?.();
       this.#releaseModelAccess = null;
       this.#peerRegionSelections?.dispose();

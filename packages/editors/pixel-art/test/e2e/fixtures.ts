@@ -17,7 +17,7 @@ import {
 // Import Internal Dependencies
 import { TEXTURE_SIZE } from "./support/canvas.ts";
 import { PixelArtPanel } from "./support/panel.ts";
-import type { PixelArtEditor } from "../../page/scripts/PixelArtEditor.ts";
+import type { PixelArtEditor } from "../../page/src/boot/PixelArtEditor.ts";
 import type { TextureImportPolicy } from "../../src/index.ts";
 
 export { expect } from "@playwright/test";

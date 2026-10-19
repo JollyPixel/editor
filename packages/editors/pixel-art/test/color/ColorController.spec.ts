@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { ReactiveController, ReactiveControllerHost } from "lit";
+import { Emitter } from "@openally/emitt";
 import {
   ColorPalette,
   type PixelArtCanvas,
@@ -13,40 +13,8 @@ import {
 // Import Internal Dependencies
 import { ColorController } from "../../src/color/ColorController.ts";
 import type { ColorChangeDetail } from "../../src/color/ColorSwatch.ts";
-
-type TestHost = HTMLElement & ReactiveControllerHost & {
-  updateCount: number;
-  connect(): void;
-  update(): void;
-};
-
-function createHost(): TestHost {
-  const controllers: ReactiveController[] = [];
-
-  return Object.assign(document.createElement("div"), {
-    updateComplete: Promise.resolve(true),
-    updateCount: 0,
-    addController(controller: ReactiveController): void {
-      controllers.push(controller);
-    },
-    removeController(_controller: ReactiveController): void {
-      void _controller;
-    },
-    requestUpdate(): void {
-      this.updateCount++;
-    },
-    connect(): void {
-      for (const controller of controllers) {
-        controller.hostConnected?.();
-      }
-    },
-    update(): void {
-      for (const controller of controllers) {
-        controller.hostUpdate?.();
-      }
-    }
-  });
-}
+import type { TextureSetEvents } from "../../src/textures/TextureSet.ts";
+import { createElementHost as createHost } from "../fixtures/host.ts";
 
 class FakeDocument {
   palette = ColorPalette.create();
@@ -143,7 +111,11 @@ function color(
 function setup() {
   const host = createHost();
   const { canvas, brush, doc } = makeCanvas();
-  const controller = new ColorController(host, () => canvas);
+  const controller = new ColorController(
+    host,
+    () => canvas,
+    new Emitter<TextureSetEvents>()
+  );
 
   return {
     host,
@@ -164,7 +136,11 @@ describe("UI.ColorController", () => {
   });
 
   test("reads default colors without a canvas", () => {
-    const controller = new ColorController(createHost(), () => null);
+    const controller = new ColorController(
+      createHost(),
+      () => null,
+      new Emitter<TextureSetEvents>()
+    );
 
     assert.deepEqual(controller.foreground, color("#000000"));
     assert.deepEqual(controller.background, color("#ffffff"));
@@ -218,7 +194,11 @@ describe("UI.ColorController", () => {
   test("docking before a canvas exists applies once the canvas is adopted", () => {
     const { canvas, brush } = makeCanvas();
     let current: PixelArtCanvas | null = null;
-    const controller = new ColorController(createHost(), () => current);
+    const controller = new ColorController(
+      createHost(),
+      () => current,
+      new Emitter<TextureSetEvents>()
+    );
 
     controller.docked = true;
     current = canvas;

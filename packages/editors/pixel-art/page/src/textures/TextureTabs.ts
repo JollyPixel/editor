@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import {
-  PixelCollaboration,
   createPixelArtAsset,
   PIXEL_ART_EXTENSION,
   type PixelArtDocumentKind,
@@ -18,15 +17,14 @@ import type {
   AssetLease,
   EditorSession
 } from "@jolly-pixel/editor.host";
-import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import {
-  RoomAccess,
+  TextureRoom,
   type PixelDrawPanel,
   type TextureAddRequestDetail,
   type TextureCloseRequestDetail
-} from "../../src/index.ts";
+} from "#src/index.ts";
 
 export type TextureLease = AssetLease<
   PixelDocument,
@@ -43,8 +41,7 @@ export interface TextureTabsOptions {
 
 interface BoundTab {
   texture: TextureLease;
-  collaboration: PixelCollaboration;
-  access: RoomAccess;
+  room: TextureRoom;
 }
 
 export class TextureTabs {
@@ -80,12 +77,12 @@ export class TextureTabs {
     const textureId = texture.record.id;
     this.#bound.set(textureId, {
       texture,
-      collaboration: new PixelCollaboration({
+      room: new TextureRoom({
         room: texture.room,
         canvas,
-        color: peerProfileColor
-      }),
-      access: new RoomAccess(texture.room, this.#panel, textureId)
+        panel: this.#panel,
+        textureId
+      })
     });
 
     return texture.ready.then(() => {
@@ -161,8 +158,7 @@ export class TextureTabs {
       return;
     }
 
-    bound.collaboration.destroy();
-    bound.access.dispose();
+    bound.room.dispose();
     bound.texture.release();
     this.#bound.delete(textureId);
     this.#synced.delete(textureId);

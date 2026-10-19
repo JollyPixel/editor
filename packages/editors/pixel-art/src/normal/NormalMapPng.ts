@@ -5,9 +5,6 @@ import type {
 } from "@jolly-pixel/pixel-draw.renderer";
 import { encodePng } from "@jolly-pixel/image";
 
-// Import Internal Dependencies
-import { PngFile } from "../shared/PngFile.ts";
-
 export type NormalMapConvention = "opengl" | "directx";
 
 export class NormalMapPng {
@@ -60,12 +57,5 @@ export class NormalMapPng {
       height: this.size.y,
       data: this.pixels
     });
-  }
-
-  async download(): Promise<void> {
-    new PngFile(
-      NormalMapPng.FILE_NAME,
-      await this.encode()
-    ).download();
   }
 }

@@ -15,6 +15,7 @@ import {
   rgba8ToColorChange,
   colorChangeToRgba8
 } from "./pickerChange.ts";
+import type { TextureEvents } from "../textures/TextureSet.ts";
 
 // CONSTANTS
 const kDefaultPalette = ColorPalette.create();
@@ -23,6 +24,7 @@ const kKeepsSelection =
 
 export interface PaletteControllerOptions {
   canvas: () => PixelArtCanvas | null;
+  events: TextureEvents;
   onDocumentChange: () => void;
   onSelectedColorChange: (color: ColorChangeDetail) => void;
   onDismiss: () => void;
@@ -43,6 +45,7 @@ export class PaletteController implements ReactiveController {
     this.#host = host;
     this.#options = options;
     host.addController(this);
+    options.events.subscribe("active-change", () => this.#bind());
   }
 
   get palette(): ColorPalette | null {
@@ -57,10 +60,6 @@ export class PaletteController implements ReactiveController {
 
   hostConnected(): void {
     document.addEventListener("pointerdown", this.#onPointerDown, true);
-    this.#bind();
-  }
-
-  hostUpdate(): void {
     this.#bind();
   }
 

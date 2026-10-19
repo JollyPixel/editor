@@ -5,7 +5,7 @@ import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 import type { ResolvedThemeMode } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { PixelCanvasTexture } from "../../../src/mesh-texturing/PixelCanvasTexture.ts";
+import { PixelCanvasTexture } from "#src/mesh-texturing/index.ts";
 import {
   RegionPreviewBehavior,
   type RegionPreviewStyle

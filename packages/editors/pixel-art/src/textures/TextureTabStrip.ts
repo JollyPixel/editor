@@ -24,13 +24,6 @@ export type TextureTabsMode = "auto" | "always";
 
 export type TextureTabsVariant = Exclude<TabsVariant, "line">;
 
-export type TextureChangeSource = "user" | "api";
-
-export interface TextureChangeDetail {
-  id: string;
-  source: TextureChangeSource;
-}
-
 export interface TextureCloseRequestDetail {
   id: string;
 }
@@ -65,31 +58,6 @@ export class TextureTabStrip {
     return this.#host.textureTabs === "always" || this.#textures.size > 1;
   }
 
-  activate(
-    id: string,
-    source: TextureChangeSource
-  ): void {
-    const entry = this.#textures.get(id);
-    if (entry !== this.#textures.active) {
-      this.#textures.activate(entry);
-      this.emitChange(entry.id, source);
-    }
-  }
-
-  emitChange(
-    id: string,
-    source: TextureChangeSource
-  ): void {
-    this.#host.dispatchEvent(new CustomEvent<TextureChangeDetail>("texture-change", {
-      bubbles: true,
-      composed: true,
-      detail: {
-        id,
-        source
-      }
-    }));
-  }
-
   render(): TemplateResult | typeof nothing {
     if (!this.#visible) {
       return nothing;
@@ -106,7 +74,7 @@ export class TextureTabStrip {
         .value=${this.#textures.active?.id ?? ""}
         @jolly-tab-change=${(event: CustomEvent<JollyTabChangeDetail>) => {
           event.stopPropagation();
-          this.activate(event.detail.value, "user");
+          this.#textures.activate(event.detail.value, "user");
         }}
         @jolly-tab-close=${(event: CustomEvent<JollyTabChangeDetail>) => {
           event.stopPropagation();

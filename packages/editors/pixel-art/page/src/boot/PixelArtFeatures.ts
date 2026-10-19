@@ -5,16 +5,19 @@ import {
 } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
-import type { TextureImportPolicy } from "../../src/index.ts";
-import { TextureImporter } from "../../src/textures/import/TextureImporter.ts";
+import type { TextureImportPolicy } from "#src/index.ts";
 
 // CONSTANTS
+const kImportPolicies: readonly TextureImportPolicy[] = [
+  "replace",
+  "add",
+  "ask"
+];
 const kFeatureParams = new QueryParams((query) => {
   return {
     runtimeOff: query.string("runtime") === "off",
     empty: query.flag("empty"),
-    importPolicy: TextureImporter.parsePolicy(query.string("import-policy")) ??
-      undefined,
+    importPolicy: parseImportPolicy(query.string("import-policy")),
     addDelay: parseDelay(query.number("add-delay"))
   };
 });
@@ -88,6 +91,12 @@ export class PixelArtFeatures {
       addDelay: params.addDelay ?? this.addDelay
     });
   }
+}
+
+function parseImportPolicy(
+  value: string | undefined
+): TextureImportPolicy | undefined {
+  return kImportPolicies.find((policy) => policy === value);
 }
 
 function parseDelay(

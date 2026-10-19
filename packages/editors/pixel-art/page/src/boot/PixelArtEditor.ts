@@ -16,19 +16,19 @@ import { LocalStorageAdapter } from "@jolly-pixel/ui";
 // Import Internal Dependencies
 import {
   PixelArtKeyBindingSettings,
+  TextureName,
   UvNetLibrary,
   pixelArtConsole,
   type PixelDrawPanel
-} from "../../src/index.ts";
-import { PanelScope } from "../../src/panel/PanelScope.ts";
-import { TextureName } from "../../src/textures/TextureName.ts";
+} from "#src/index.ts";
+import { PanelScope } from "./PanelScope.ts";
 import type { PixelArtFeatures } from "./PixelArtFeatures.ts";
-import { EditorPreferences } from "./EditorPreferences.ts";
+import { EditorPreferences } from "../state/EditorPreferences.ts";
 import {
   TextureTabs,
   type TextureLease
-} from "./TextureTabs.ts";
-import type { PreviewPane } from "./preview/PreviewPane.ts";
+} from "../textures/TextureTabs.ts";
+import type { PreviewPane } from "../preview/PreviewPane.ts";
 
 // CONSTANTS
 const kStorage = new LocalStorageAdapter();

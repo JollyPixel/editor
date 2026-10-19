@@ -16,7 +16,7 @@ import {
 
 // Import Internal Dependencies
 import { UVGeometryBinding } from "#src/mesh-texturing/UVGeometryBinding.ts";
-import { boxFaceRanges } from "../../page/scripts/preview/shapes/faceRanges.ts";
+import { boxFaceRanges } from "../../page/src/preview/shapes/faceRanges.ts";
 
 // CONSTANTS
 const kTextureSize: Vec2 = { x: 64, y: 64 };

@@ -44,9 +44,9 @@ import {
   type ColorPickedDetail
 } from "../color/ColorController.ts";
 import {
-  UvAccessPolicy,
+  TextureAccess,
   type UvAccess
-} from "../uv/UvAccessPolicy.ts";
+} from "../access/TextureAccess.ts";
 import { TransientStatus } from "../shared/TransientStatus.ts";
 import {
   applyToolOption,
@@ -54,7 +54,11 @@ import {
   readToolOptions,
   type ToolOption
 } from "../tools/toolOptions.ts";
-import { TextureSet } from "../textures/TextureSet.ts";
+import {
+  TextureSet,
+  type TextureChangeDetail
+} from "../textures/TextureSet.ts";
+import { TextureExporter } from "../textures/export/TextureExporter.ts";
 import type {
   PixelDrawTextureOptions,
   TextureUpdate
@@ -66,7 +70,6 @@ import {
 } from "../textures/import/TextureImporter.ts";
 import {
   TextureTabStrip,
-  type TextureChangeDetail,
   type TextureCloseRequestDetail,
   type TextureEditRequestDetail,
   type TextureTabsMode,
@@ -145,7 +148,7 @@ export class PixelDrawPanel extends LitElement {
     attribute: "uv-access",
     converter: {
       fromAttribute(value) {
-        return (value !== null && UvAccessPolicy.isAccess(value)) ? value : "edit";
+        return (value !== null && TextureAccess.isUvAccess(value)) ? value : "edit";
       }
     }
   })
@@ -214,16 +217,10 @@ export class PixelDrawPanel extends LitElement {
   declare gridSizeLocked: boolean;
 
   readonly #status = new TransientStatus(this);
-  readonly #textures = new TextureSet(this, {
-    container: () => this.#element(".canvas-host"),
-    onActivate: () => {
-      this.#selectToolbar.clearStatus();
-      this.#status.clear();
-      this.#normalMaps.onActivate();
-    },
-    onModeChange: (mode) => this.#selectToolbar.onModeChange(mode === "select"),
-    onClipboardResult: (result) => this.#selectToolbar.onClipboardResult(result)
-  });
+  readonly #textures = new TextureSet(
+    this,
+    () => this.#element(".canvas-host")
+  );
   readonly #tabs = new TextureTabStrip(this, this.#textures);
   readonly #importer = new TextureImporter(this, {
     textures: this.#textures,
@@ -236,7 +233,7 @@ export class PixelDrawPanel extends LitElement {
     canvas: this.#activeCanvas,
     dialog: () => this.#dialog("uv-net-dialog"),
     adopt: (net) => {
-      this.#textures.uvNet = net;
+      this.#textures.configureCanvases({ uvNet: net });
     }
   });
   readonly #uvToolbar = new UvToolbarController(
@@ -248,18 +245,31 @@ export class PixelDrawPanel extends LitElement {
     this,
     this.#activeCanvas
   );
-  readonly #selectToolbar = new SelectToolbarController(this, this.#activeCanvas);
+  readonly #selectToolbar = new SelectToolbarController(
+    this,
+    this.#activeCanvas,
+    this.#textures
+  );
   readonly #textureDrop = new TextureDropController(this, {
     canvas: this.#activeCanvas,
     importer: this.#importer
   });
-  readonly #colors = new ColorController(this, this.#activeCanvas);
+  readonly #exporter = new TextureExporter(this, {
+    canvas: this.#activeCanvas,
+    normalMap: () => this.normalMap
+  });
+  readonly #colors = new ColorController(
+    this,
+    this.#activeCanvas,
+    this.#textures
+  );
   readonly #docks = new DockSlot(this, () => this.#syncColorDocked());
   readonly #normalMaps = new NormalMapController(this, {
     canvas: this.#activeCanvas,
     canvases: () => [...this.#textures].map((entry) => entry.canvas),
     docks: this.#docks,
-    locked: () => !this.#textures.activeAccess.has("normalMap")
+    events: this.#textures,
+    locked: () => !this.#textures.activeAccess.normalMap
   });
   readonly #keyboard = new CanvasKeyboardController(
     this,
@@ -290,6 +300,7 @@ export class PixelDrawPanel extends LitElement {
     this.textureTabsVariant = "default";
     this.textureTabsLine = false;
     this.gridSizeLocked = false;
+    this.#textures.subscribe("active-change", () => this.#status.clear());
   }
 
   get keyBindings(): PixelArtKeyBindings {
@@ -339,7 +350,7 @@ export class PixelDrawPanel extends LitElement {
   set activeTextureId(
     id: string
   ) {
-    this.#tabs.activate(id, "api");
+    this.#textures.activate(id, "api");
   }
 
   override connectedCallback() {
@@ -374,12 +385,12 @@ export class PixelDrawPanel extends LitElement {
       this.#textures.uvAccess = this.uvAccess;
     }
     if (changedProperties.has("uvResize")) {
-      this.#textures.uvResizable = this.uvResize;
+      this.#textures.configureCanvases({ uvResizable: this.uvResize });
     }
     if (changedProperties.has("uvOverflow")) {
-      this.#textures.uvOverflow = this.uvOverflow;
+      this.#textures.configureCanvases({ uvOverflow: this.uvOverflow });
     }
-    this.#colors.paletteLocked = !this.#textures.activeAccess.has("palette");
+    this.#colors.paletteLocked = !this.#textures.activeAccess.palette;
   }
 
   override firstUpdated(
@@ -440,7 +451,6 @@ export class PixelDrawPanel extends LitElement {
 
     const first = this.canvasManager === null;
     const fresh = first && !this.#textures.carriesSettings;
-    const previous = this.activeTextureId;
     const canvas = this.#createTexture(
       {
         ...this.#baseOptions,
@@ -454,9 +464,6 @@ export class PixelDrawPanel extends LitElement {
     if (first && this.canvasManager !== null) {
       void this.updateComplete.then(() => this.setAttribute("data-ready", ""));
     }
-    if (previous !== null && this.activeTextureId !== previous) {
-      this.#tabs.emitChange(options.id, "api");
-    }
 
     return canvas;
   }
@@ -464,10 +471,7 @@ export class PixelDrawPanel extends LitElement {
   removeTexture(
     id: string
   ): void {
-    const next = this.#textures.remove(id);
-    if (next !== null) {
-      this.#tabs.emitChange(next.id, "api");
-    }
+    this.#textures.remove(id);
   }
 
   renameTexture(
@@ -537,11 +541,8 @@ export class PixelDrawPanel extends LitElement {
     options: PixelDrawTextureOptions,
     activate: boolean
   ): PixelArtCanvas {
-    const { canvas } = this.#textures.create({
-      ...options,
-      backgroundColor: this.#canvasBackground() || options.backgroundColor
-    }, activate);
     this.#syncCanvasBackground();
+    const { canvas } = this.#textures.create(options, activate);
 
     return canvas;
   }
@@ -601,25 +602,16 @@ export class PixelDrawPanel extends LitElement {
   }
 
   #syncCanvasBackground(): void {
-    const canvasBg = this.#canvasBackground();
-    if (!canvasBg) {
-      return;
+    const backgroundColor = resolveThemeColor(this, "--color-canvas-bg");
+    if (backgroundColor) {
+      this.#textures.configureCanvases({ backgroundColor });
     }
-
-    for (const { canvas } of this.#textures) {
-      canvas.backgroundColor = canvasBg;
-    }
-  }
-
-  #canvasBackground(): string {
-    return resolveThemeColor(this, "--color-canvas-bg");
   }
 
   override render() {
     const canvas = this.canvasManager;
     const mode = canvas?.mode ?? "paint";
     const access = this.#textures.activeAccess;
-    const policy = this.#textures.activeUvPolicy;
     const normalMaps = this.normalMap ? this.#normalMaps : null;
 
     return html`
@@ -628,7 +620,8 @@ export class PixelDrawPanel extends LitElement {
         <mode-rail
           .mode=${mode}
           .options=${canvas ? readToolOptions(canvas) : DEFAULT_TOOL_OPTIONS}
-          .uvAccess=${policy.access}
+          .uvMode=${access.uvMode}
+          .fillClip=${access.fillClip}
           .unavailableModes=${canvas?.unavailableModes ?? kNoModes}
           @mode-change=${(event: CustomEvent<Mode>) => {
             this.#editCanvas((target) => {
@@ -688,24 +681,22 @@ export class PixelDrawPanel extends LitElement {
               nothing}
             ${this.#selectToolbar.render(mode === "select")}
             ${this.#uvToolbar.render(
-              mode === "uv" && policy.uvMode,
-              this.allowUvCreateDelete && access.has("uvStructure"),
+              mode === "uv" && access.uvMode,
+              this.allowUvCreateDelete && access.uvStructure,
               normalMaps?.renderOverrideButton() ?? nothing
             )}
             ${this.#viewOptions.render({
-              regions: policy.regionVisibility,
-              gridSnap: policy.uvMode,
+              regions: access.regionVisibility,
+              gridSnap: access.uvMode,
               gridSizeLocked: this.gridSizeLocked
             })}
           </div>
           ${renderHistoryFileToolbar({
             canvas: this.#activeCanvas,
             importer: this.#importer,
+            exporter: this.#exporter,
             clearDialog: () => this.#dialog("clear-texture-dialog"),
-            viewOnly: access.readOnly,
-            exportMenu: (exportAlbedo) => (
-              normalMaps?.renderExportButton(exportAlbedo) ?? nothing
-            ),
+            viewOnly: access.viewOnly,
             trailing: [
               normalMaps?.renderViewSwitch() ?? nothing
             ]

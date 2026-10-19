@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { FaceRanges } from "../../../../src/mesh-texturing/types.ts";
+import type { FaceRanges } from "#src/mesh-texturing/index.ts";
 
 // CONSTANTS
 const kBoxFaceRanges: FaceRanges = {

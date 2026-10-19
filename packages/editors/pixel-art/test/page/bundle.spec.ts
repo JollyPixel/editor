@@ -23,7 +23,7 @@ describe("pixel-art page bundle", () => {
         write: false,
         minify: false,
         rolldownOptions: {
-          input: path.join(kPixelArtRoot, "page", "scripts", "main.ts"),
+          input: path.join(kPixelArtRoot, "page", "src", "index.ts"),
           external: [/^virtual:/]
         }
       }

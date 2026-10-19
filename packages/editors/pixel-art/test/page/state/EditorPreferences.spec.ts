@@ -13,7 +13,7 @@ import {
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { EditorPreferences } from "../../page/scripts/EditorPreferences.ts";
+import { EditorPreferences } from "../../../page/src/state/EditorPreferences.ts";
 
 // CONSTANTS
 const kStorageKey = "pixel-art:preferences";
