@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { HEIGHT_RANGE } from "@jolly-pixel/terrain.renderer";
 import {
   MemoryStorageAdapter,
   type StorageAdapter
@@ -20,6 +21,9 @@ const kStorageKey = "terrain:sculpt";
 
 export const BRUSH_SIZE = Object.freeze({ min: 0.5, max: 128 });
 export const BRUSH_SPACING = Object.freeze({ min: 0.05, max: 1 });
+export const FLATTEN_TARGETS = ["press", "fixed"] as const;
+
+export type FlattenTarget = typeof FLATTEN_TARGETS[number];
 
 export interface SculptOptions {
   tool: SculptTool;
@@ -27,6 +31,8 @@ export interface SculptOptions {
   strength: number;
   falloff: FalloffCurve;
   spacing: number;
+  flattenTarget: FlattenTarget;
+  flattenHeight: number;
 }
 
 export type SculptSettingsEvents = {
@@ -38,7 +44,9 @@ const kDefaultOptions: Readonly<SculptOptions> = Object.freeze({
   size: 8,
   strength: 0.25,
   falloff: "smooth",
-  spacing: 0.25
+  spacing: 0.25,
+  flattenTarget: "press",
+  flattenHeight: 0
 });
 
 export class SculptSettings extends Emitter<SculptSettingsEvents> {
@@ -60,7 +68,9 @@ export class SculptSettings extends Emitter<SculptSettingsEvents> {
       size: clamp(number("size"), BRUSH_SIZE.min, BRUSH_SIZE.max),
       strength: clamp(number("strength"), 0, 1),
       falloff: choice("falloff", FALLOFF_CURVES),
-      spacing: clamp(number("spacing"), BRUSH_SPACING.min, BRUSH_SPACING.max)
+      spacing: clamp(number("spacing"), BRUSH_SPACING.min, BRUSH_SPACING.max),
+      flattenTarget: choice("flattenTarget", FLATTEN_TARGETS),
+      flattenHeight: clamp(number("flattenHeight"), HEIGHT_RANGE.min, HEIGHT_RANGE.max)
     });
   }
 

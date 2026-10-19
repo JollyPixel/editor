@@ -108,6 +108,9 @@ export class SculptBrush extends ActorComponent {
     if (InputCombination.Control.evaluate(input)) {
       this.#endStroke();
       this.#resize(mouse.isDown("scrollUp"), mouse.isDown("scrollDown"));
+      if (aim !== null && mouse.wasJustPressed("left")) {
+        this.#pickFlattenHeight(aim.point.y);
+      }
     }
     else {
       this.#updateStroke(aim);
@@ -154,6 +157,17 @@ export class SculptBrush extends ActorComponent {
     }
   }
 
+  #pickFlattenHeight(
+    height: number
+  ): void {
+    if (this.#settings.options.tool === "flatten") {
+      this.#settings.update({
+        flattenTarget: "fixed",
+        flattenHeight: Math.round(height * 100) / 100
+      });
+    }
+  }
+
   #updateStroke(
     aim: TerrainHit | null
   ): void {
@@ -172,11 +186,12 @@ export class SculptBrush extends ActorComponent {
         return;
       }
 
+      const { flattenTarget, flattenHeight } = this.#settings.options;
       this.#stroke = {
         step: this.#history.open(TERRAIN_HISTORY_SCOPE, "Sculpt"),
         spacer: new StampSpacer(point),
         lower,
-        target: aim.point.y
+        target: flattenTarget === "fixed" ? flattenHeight : aim.point.y
       };
       this.#apply([point]);
 

@@ -34,7 +34,9 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   and draws peers' rings inside its presence radius.
 - **Interest routing: done** (2026-10-19). Live patches reach only the peers
   whose presence region overlaps them, through the terrain room's relay.
-- **Next:** flatten to a fixed height.
+- **Fixed flatten: done** (2026-10-19). Flatten targets the height under the
+  press or a fixed height from the toolbar; Ctrl+click picks it.
+- **Next:** slope overlay.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -53,7 +55,7 @@ chunks yet.
   textures with neighbour aprons, morphing between levels, skirts. It
   replaces the editor's placeholder ground grid.
 - [x] Brushes: raise and lower, smooth, flatten.
-- [ ] Flatten to a fixed height set in the toolbar; Ctrl+click picks it.
+- [x] Flatten to a fixed height set in the toolbar; Ctrl+click picks it.
 - [x] Stroke commits: tile patches, collision keys, arbiter, corrections.
 - [x] Undo and redo through `CommandHistory`.
 - [x] Interest routing in the terrain extension: live patches inside the

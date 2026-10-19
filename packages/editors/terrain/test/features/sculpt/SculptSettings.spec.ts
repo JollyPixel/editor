@@ -3,6 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import { HEIGHT_RANGE } from "@jolly-pixel/terrain.renderer";
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -14,16 +15,46 @@ import {
 describe("SculptSettings", () => {
   test("stored settings come back after a reload, clamped, with unknown values replaced by defaults", () => {
     const storage = new MemoryStorageAdapter();
-    new SculptSettings(storage).update({ tool: "flatten", falloff: "sharp", size: 500, strength: 0.7 });
+    new SculptSettings(storage).update({
+      tool: "flatten",
+      falloff: "sharp",
+      size: 500,
+      strength: 0.7,
+      flattenTarget: "fixed",
+      flattenHeight: -9000
+    });
     const reloaded = new SculptSettings(storage).options;
 
     assert.deepEqual(
       { ...reloaded },
-      { tool: "flatten", size: BRUSH_SIZE.max, strength: 0.7, falloff: "sharp", spacing: 0.25 }
+      {
+        tool: "flatten",
+        size: BRUSH_SIZE.max,
+        strength: 0.7,
+        falloff: "sharp",
+        spacing: 0.25,
+        flattenTarget: "fixed",
+        flattenHeight: HEIGHT_RANGE.min
+      }
     );
     assert.deepEqual(
-      { ...SculptSettings.parse(JSON.stringify({ tool: "dig", strength: "high", spacing: -1 })) },
-      { tool: "raise", size: 8, strength: 0.25, falloff: "smooth", spacing: 0.05 }
+      {
+        ...SculptSettings.parse(JSON.stringify({
+          tool: "dig",
+          strength: "high",
+          spacing: -1,
+          flattenTarget: "peak"
+        }))
+      },
+      {
+        tool: "raise",
+        size: 8,
+        strength: 0.25,
+        falloff: "smooth",
+        spacing: 0.05,
+        flattenTarget: "press",
+        flattenHeight: 0
+      }
     );
     assert.equal(SculptSettings.parse("{not json").tool, "raise");
   });

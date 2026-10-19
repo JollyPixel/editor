@@ -56,7 +56,9 @@ of a stamp over empty ground is dropped. Written heights are clamped to
   neighbours, closing `weight × strength × 8` of the gap per second.
 - **Flatten.** Moves each sample toward a target height at the same rate as
   smooth: the height under the press, or a fixed value set in the toolbar.
-  Ctrl+click picks the target.
+  With flatten selected, Ctrl+click switches to a fixed target and picks the
+  height under the cursor, rounded to the centimetre. Both settings are saved
+  with the others.
 - **Ramp.** Drag from A to B. Samples within `size` of the segment move toward
   the line from A's height to B's, with the falloff across its width. Written
   on release, as one stroke.

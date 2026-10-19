@@ -53,6 +53,26 @@ registerIcon("sculpt-flatten", svg`
   />
 `, { tone: "amber" });
 
+registerIcon("flatten-fixed", svg`
+  <path
+    class="tone-ink"
+    d="M3 15h18M12 3v8M9 8l3 3 3-3"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M3 20h18"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.25"
+    stroke-opacity="0.5"
+    stroke-dasharray="2 2"
+  />
+`, { tone: "amber" });
+
 for (const [curve, profile] of [
   ["smooth", "M3 6C10 6 14 19 21 19"],
   ["linear", "M3 6 21 19"],

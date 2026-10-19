@@ -11,6 +11,7 @@ import {
   property
 } from "lit/decorators.js";
 import type { HistoryScopeState } from "@jolly-pixel/history";
+import { HEIGHT_RANGE } from "@jolly-pixel/terrain.renderer";
 import { FieldBinding } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -37,7 +38,7 @@ import "./sculptIcons.ts";
 const kToolLabels: Readonly<Record<SculptTool, string>> = {
   raise: "Raise and lower (right button lowers)",
   smooth: "Smooth",
-  flatten: "Flatten to the height under the press"
+  flatten: "Flatten"
 };
 const kFalloffLabels: Readonly<Record<FalloffCurve, string>> = {
   smooth: "Smooth",
@@ -115,6 +116,11 @@ export class SculptToolbar extends LitElement {
   #strength = new FieldBinding<number>(this, {
     read: () => Math.round((this.settings?.options.strength ?? 0) * 100),
     write: (percent) => this.settings?.update({ strength: percent / 100 })
+  });
+
+  #flattenHeight = new FieldBinding<number>(this, {
+    read: () => this.settings?.options.flattenHeight ?? 0,
+    write: (flattenHeight) => this.settings?.update({ flattenHeight })
   });
 
   #unsubscribe: (() => void) | null = null;
@@ -223,7 +229,47 @@ export class SculptToolbar extends LitElement {
             `)}
           </jolly-tool-button>
         </div>
+        ${tool === "flatten" ? this.#renderFlattenTarget(settings) : nothing}
       </jolly-rail>
+    `;
+  }
+
+  #renderFlattenTarget(
+    settings: SculptSettings
+  ): TemplateResult {
+    const fixed = settings.options.flattenTarget === "fixed";
+
+    return html`
+      <div class="group divided" role="group" aria-label="Flatten target">
+        <jolly-tool-button
+          data-tool="flatten-target"
+          icon="flatten-fixed"
+          label=${fixed ?
+            "Flatten to a fixed height (Ctrl+click picks it)" :
+            "Flatten to the height under the press (Ctrl+click picks a fixed height)"}
+          ?active=${fixed}
+          @click=${() => settings.update({ flattenTarget: fixed ? "press" : "fixed" })}
+        ></jolly-tool-button>
+        ${fixed ? html`
+          <jolly-tool-button
+            data-tool="flatten-height"
+            flyout-side="above"
+            label=${`Fixed height ${formatMetres(this.#flattenHeight.value)}`}
+          >
+            <span class="value">${Math.round(this.#flattenHeight.value)}</span>
+            <jolly-number
+              slot="flyout"
+              label="Height (m)"
+              min=${HEIGHT_RANGE.min}
+              max=${HEIGHT_RANGE.max}
+              step="0.1"
+              .value=${this.#flattenHeight.value}
+              @jolly-input=${this.#flattenHeight.input}
+              @jolly-change=${this.#flattenHeight.commit}
+            ></jolly-number>
+          </jolly-tool-button>
+        ` : nothing}
+      </div>
     `;
   }
 
