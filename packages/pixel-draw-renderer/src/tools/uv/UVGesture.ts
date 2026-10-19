@@ -37,7 +37,9 @@ export class UVGesture {
   readonly #edit: UVRectEdit;
   readonly #baseRect: SelectionRect;
   #liveRect: SelectionRect;
+  readonly #origin: Vec2;
   #pointer: Vec2 | null = null;
+  #dragged = false;
 
   static move(
     uvMap: UVMap,
@@ -85,6 +87,7 @@ export class UVGesture {
     this.#edit = edit;
     this.#baseRect = { ...target.rect };
     this.#liveRect = { ...target.rect };
+    this.#origin = { ...target.origin };
   }
 
   get cursor(): string {
@@ -95,11 +98,18 @@ export class UVGesture {
     return !sameRect(this.#liveRect, this.#baseRect);
   }
 
+  get dragged(): boolean {
+    return this.#dragged;
+  }
+
   move(
     pointer: Vec2,
     snap: UVSnap
   ): boolean {
     this.#pointer = pointer;
+    if (!samePixel(pointer, this.#origin)) {
+      this.#dragged = true;
+    }
     const rect = this.#edit.rectAt(pointer, snap);
     if (sameRect(rect, this.#liveRect)) {
       return false;
@@ -242,4 +252,12 @@ function snappedDelta(
   snap: UVSnap
 ): number {
   return snap(edge + delta) - edge;
+}
+
+function samePixel(
+  a: Vec2,
+  b: Vec2
+): boolean {
+  return Math.floor(a.x) === Math.floor(b.x) &&
+    Math.floor(a.y) === Math.floor(b.y);
 }

@@ -6,7 +6,8 @@ import {
 } from "@jolly-pixel/editor.host";
 import {
   CANVAS_HOVER_CHANGE_EVENT,
-  type PixelArtKeyBindingSettings
+  type PixelArtKeyBindingSettings,
+  type UvNetLibrary
 } from "@jolly-pixel/editor.pixel-art";
 import "@jolly-pixel/editor.host/ui";
 import type {
@@ -61,6 +62,7 @@ export interface EditorShellOptions {
   runtime: EditorRuntime;
   texture: LeftPanelTexture;
   keyBindingSettings: PixelArtKeyBindingSettings;
+  uvNets: UvNetLibrary;
   toolbar: EditorToolbarSources;
 }
 
@@ -82,6 +84,7 @@ export class EditorShell {
       runtime,
       texture,
       keyBindingSettings,
+      uvNets,
       toolbar
     } = options;
 
@@ -123,6 +126,7 @@ export class EditorShell {
 
     this.#leftPanel.showTexture(texture);
     this.#leftPanel.keyBindingSettings = keyBindingSettings;
+    this.#leftPanel.uvNets = uvNets;
     for (const type of kLayoutEvents) {
       layout.addEventListener(type, this.#onLayoutChange);
       this.#disposables.push(

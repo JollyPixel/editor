@@ -18,6 +18,7 @@ export class UvToolbar {
   readonly createCube: Locator;
   readonly createRamp: Locator;
   readonly stateMenu: Locator;
+  readonly stateOptions: Locator;
   readonly rotateClockwise: Locator;
   readonly #panel: Locator;
 
@@ -35,6 +36,9 @@ export class UvToolbar {
       exact: true
     });
     this.stateMenu = panel.getByRole("button", { name: /^Region state: / });
+    this.stateOptions = panel.getByRole("menuitem", {
+      name: /^(Stacked|Unfolded|Free)$/
+    });
     this.rotateClockwise = panel.getByRole("button", {
       name: /^Rotate .* clockwise$/
     });

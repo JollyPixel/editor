@@ -16,7 +16,7 @@ const keyBindingSettings = new PixelArtKeyBindingSettings({
 });
 
 const release = keyBindingSettings.sync(panel);
-const features = pixelArtConsole(commands, { keyBindingSettings });
+const features = pixelArtConsole(commands, { keyBindingSettings, uvNets });
 ```
 
 Keybinds are per browser. They are not part of the asset and are not sent to peers. Every editor
@@ -74,10 +74,11 @@ storage, for example to set `panel.keyBindings` directly. See
 
 ## Console
 
-`pixelArtConsole(commands, { keyBindingSettings })` is a
+`pixelArtConsole(commands, { keyBindingSettings, uvNets })` is a
 [console feature](../../../../console/docs/features.md) that registers every pixel-art namespace
 under `pixelart`, and returns one handle for all of them. Editors that embed the panel call it
-next to their own features. It registers `pixelart.keybinds` through `keybindConsole`:
+next to their own features. `uvNets` is the panel's [`UvNetLibrary`](../uv/UvNetLibrary.md), behind
+`pixelart.nets`. It registers `pixelart.keybinds` through `keybindConsole`:
 
 | Input | Effect |
 |---|---|

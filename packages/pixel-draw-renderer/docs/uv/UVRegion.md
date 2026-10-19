@@ -5,7 +5,7 @@ An immutable texture region mapped onto a mesh. It holds one of three states:
 | State | Face geometry | Moves as |
 |---|---|---|
 | `"stacked"` | one rectangle shared by every face | the whole region |
-| `"unfolded"` | a packed net, one cell per active face | the whole region |
+| `"unfolded"` | a net, one cell per active face or group of faces | the whole region |
 | `"free"` | a rectangle per active face | each face on its own |
 
 ```ts
@@ -150,7 +150,9 @@ Lays the active faces out as a net anchored on the current `bounds` top-left. Ea
 
 The packing net places the tallest face first, then fills the lowest free spot left of the strip, so a short cell slides in beside a tall neighbour instead of starting a new row. It repeats that over every strip width a shelf packer could need and keeps the net whose bounding box has the smallest perimeter, then the smallest area. Six equal faces give a 2x3 net; a pole's two horizontal side strips end up stacked on top of each other rather than side by side, and a stair's half-height back and top slots pair into full rows.
 
-Unfolding always lays the net out again, whatever state it starts from, so a hand-arranged free layout is discarded. That transition undoes with the whole previous region, so undo brings the arrangement back. The result is idempotent: unfolding a net returns `this`.
+A grid net can put several slots in one cell. They share the rectangle of the first one listed, so their faces show the same pixels.
+
+Unfolding always lays the net out again, whatever state it starts from, so a hand-arranged free layout is discarded. An unfolded region is laid out again too, which is how a different net applies to it. That transition undoes with the whole previous region, so undo brings the arrangement back. It returns `this` when the net would put every face where it already is.
 
 Nothing here knows about the canvas. A net larger than the texture keeps going past the edge; [`UVMap.applyState()`](./UVMap.md#setstateid-state-face) is what pulls it back inside.
 
@@ -193,7 +195,7 @@ interface UVResizeOptions {
 Gives the region or one of its faces a new rectangle, independent of the mesh size:
 
 - **stacked**: `rect` becomes the shared rectangle and every face is reset to it, so a later `unfold()` lays out faces of that size. A triangle or compound face keeps its corner or parts, scaled to `rect`. `slot` is ignored.
-- **unfolded**: only `slot` changes size, and the faces of the net behave like solid boxes. A growing edge pushes the faces it would overlap, and they push the faces they reach in turn. A shrinking edge pulls back the faces that touched it, and the faces touching those, each stopping where it would hit a face that stays. Faces out of contact never move, faces never overlap, and face order never changes. Faces that already overlapped, as in a net saved by an older version, are pushed apart right or down, whichever is shorter. With `options.aligned`, every face whose same edge lies on the same line and touches `slot` along it, directly or through another such face, moves that edge by the same amount, so a row keeps its bottom aligned and a column its right side.
+- **unfolded**: only `slot` changes size, and the faces of the net behave like solid boxes. A growing edge pushes the faces it would overlap, and they push the faces they reach in turn. A shrinking edge pulls back the faces that touched it, and the faces touching those, each stopping where it would hit a face that stays. Faces out of contact never move, faces never overlap, and face order never changes. Faces that already overlapped, as in a net saved by an older version, are pushed apart right or down, whichever is shorter. Faces with the exact same rectangle are one cell, as a grid net with shared cells lays them out: they resize and push together, and they stay on one rectangle. With `options.aligned`, every face whose same edge lies on the same line and touches `slot` along it, directly or through another such face, moves that edge by the same amount, so a row keeps its bottom aligned and a column its right side.
 - **free**: only `slot` changes.
 
 Rotation is kept, and so is the shape of a triangle or compound face: its rectangle changes and its parts scale with it. Returns `this` when `slot` is missing or inactive outside the stacked state, or nothing changes. Throws a `RangeError` when `rect` is smaller than 1px on either axis. Nothing here knows about the canvas.
@@ -235,7 +237,7 @@ interface UVResizeTarget {
 }
 ```
 
-The rectangles a resize drag can grab, with the edges and corners each offers: the shared rectangle with every handle when stacked, every net face with only its east and south edges when unfolded, and `selectedSlot` with every handle when free. A triangle or compound face offers the handles of its bounding rectangle.
+The rectangles a resize drag can grab, with the edges and corners each offers: the shared rectangle with every handle when stacked, every net cell with only its east and south edges when unfolded, faces sharing a rectangle counting once under the first active one, and `selectedSlot` with every handle when free. A triangle or compound face offers the handles of its bounding rectangle.
 
 ### `translated(delta)`
 

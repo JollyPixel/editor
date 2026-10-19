@@ -41,6 +41,7 @@ describe("UVController — cycling through an overlapping stack", () => {
       controller.handleEnd();
     }
     controller.handleStart({ x: 2, y: 2 });
+    controller.handleEnd();
 
     assert.strictEqual(map.selectedSlot, DEFAULT_UV_SLOTS[0]);
   });
@@ -81,6 +82,7 @@ describe("UVController — cycling through an overlapping stack", () => {
 
     controller.handleEnd();
     controller.handleStart({ x: 2, y: 2 });
+    controller.handleEnd();
 
     assert.strictEqual(
       map.selectedSlot,
@@ -105,12 +107,31 @@ describe("UVController — cycling through an overlapping stack", () => {
     assert.strictEqual(map.selectedSlot, "front");
   });
 
-  test("dragging moves the face the cycle landed on", () => {
+  test("a repeat click cycles on release, not on press", () => {
     const { map, controller } = makeUvControllerSetup();
     const region = map.create({ width: 8, height: 8 });
     map.applyState(region.id, "free");
     map.showAll = true;
 
+    controller.handleStart({ x: 2, y: 2 });
+    controller.handleEnd();
+    controller.handleStart({ x: 2, y: 2 });
+
+    assert.strictEqual(map.selectedSlot, "front");
+
+    controller.handleEnd();
+
+    assert.strictEqual(map.selectedSlot, "back");
+  });
+
+  test("dragging moves the face the cycle landed on without cycling", () => {
+    const { map, controller } = makeUvControllerSetup();
+    const region = map.create({ width: 8, height: 8 });
+    map.applyState(region.id, "free");
+    map.showAll = true;
+
+    controller.handleStart({ x: 2, y: 2 });
+    controller.handleEnd();
     controller.handleStart({ x: 2, y: 2 });
     controller.handleEnd();
     controller.handleStart({ x: 2, y: 2 });
@@ -124,10 +145,42 @@ describe("UVController — cycling through an overlapping stack", () => {
       "the second click selected back, so back is what moves"
     );
     assert.deepStrictEqual(
-      stored.slotRect("front"),
+      stored.slotRect("top"),
       { x: 0, y: 0, width: 8, height: 8 },
-      "front must stay where it was"
+      "pressing back must not cycle to top"
     );
+    assert.strictEqual(map.selectedSlot, "back");
+  });
+
+  test("a cancelled press does not cycle", () => {
+    const { map, controller } = makeUvControllerSetup();
+    const region = map.create({ width: 8, height: 8 });
+    map.applyState(region.id, "free");
+    map.showAll = true;
+
+    controller.handleStart({ x: 2, y: 2 });
+    controller.handleEnd();
+    controller.handleStart({ x: 2, y: 2 });
+    controller.cancelDrag();
+    controller.handleEnd();
+
+    assert.strictEqual(map.selectedSlot, "front");
+  });
+
+  test("a drag released where it started does not cycle", () => {
+    const { map, controller } = makeUvControllerSetup();
+    const region = map.create({ width: 8, height: 8 });
+    map.applyState(region.id, "free");
+    map.showAll = true;
+
+    controller.handleStart({ x: 2, y: 2 });
+    controller.handleEnd();
+    controller.handleStart({ x: 2, y: 2 });
+    controller.handleMove({ x: 20, y: 20 });
+    controller.handleMove({ x: 2, y: 2 });
+    controller.handleEnd();
+
+    assert.strictEqual(map.selectedSlot, "front");
   });
 
   test("a face dragged over another one stays selected on the next click", () => {

@@ -3,7 +3,10 @@ import {
   geometryKey,
   pointInGeometry
 } from "../../uv/geometry/geometry.ts";
-import { uvTargetKey } from "../../uv/region/UVTarget.ts";
+import {
+  uvTargetKey,
+  type UVTarget
+} from "../../uv/region/UVTarget.ts";
 import type { UVMap } from "../../uv/map/UVMap.ts";
 import type {
   UVSlot,
@@ -18,16 +21,17 @@ export interface UVPick {
   geometry: UVGeometry;
 }
 
-interface LastPick {
+interface UVStack {
   key: string;
+  targets: UVTarget[];
   index: number;
-  regionId: string;
   face: UVSlot | null;
 }
 
 export class UVPickCycle {
   #uvMap: UVMap;
-  #last: LastPick | null = null;
+  #stack: UVStack | null = null;
+  #cycleOnRelease = false;
 
   constructor(
     uvMap: UVMap
@@ -36,12 +40,14 @@ export class UVPickCycle {
   }
 
   reset(): void {
-    this.#last = null;
+    this.#stack = null;
+    this.#cycleOnRelease = false;
   }
 
-  pickAt(
+  press(
     position: Vec2
   ): UVPick | null {
+    this.#cycleOnRelease = false;
     const hits = this.#hitsAt(position);
     if (hits.length === 0) {
       this.reset();
@@ -50,24 +56,50 @@ export class UVPickCycle {
     }
 
     const candidates = this.#topStack(hits);
-    const key = JSON.stringify(
-      candidates.map(({ region, face }) => uvTargetKey({ regionId: region.id, slot: face }))
-    );
-    const last = this.#last;
-    const index = last !== null && this.#advances(last, key) ?
-      (last.index + 1) % candidates.length :
-      Math.max(candidates.findIndex((candidate) => this.#isSelected(candidate)), 0);
-    const pick = candidates[index];
+    const targets = candidates.map(({ region, face }) => {
+      return {
+        regionId: region.id,
+        slot: face
+      };
+    });
+    const key = JSON.stringify(targets.map(uvTargetKey));
+    const stack = this.#stack;
+    if (stack !== null && stack.key === key && this.#holds(stack)) {
+      this.#cycleOnRelease = true;
 
-    this.#uvMap.select(pick.region.id, pick.face);
-    this.#last = {
-      key,
-      index,
-      regionId: pick.region.id,
+      return candidates[stack.index];
+    }
+
+    const index = Math.max(
+      candidates.findIndex((candidate) => this.#isSelected(candidate)),
+      0
+    );
+    this.#select({ key, targets, index });
+
+    return candidates[index];
+  }
+
+  release(): void {
+    const stack = this.#stack;
+    if (this.#cycleOnRelease && stack !== null && this.#holds(stack)) {
+      this.#select({
+        ...stack,
+        index: (stack.index + 1) % stack.targets.length
+      });
+    }
+    this.#cycleOnRelease = false;
+  }
+
+  #select(
+    stack: Omit<UVStack, "face">
+  ): void {
+    const { regionId, slot } = stack.targets[stack.index];
+
+    this.#uvMap.select(regionId, slot);
+    this.#stack = {
+      ...stack,
       face: this.#uvMap.selectedSlot
     };
-
-    return pick;
   }
 
   #hitsAt(
@@ -108,12 +140,12 @@ export class UVPickCycle {
       (selectedSlot === null || pick.face === selectedSlot);
   }
 
-  #advances(
-    last: LastPick,
-    key: string
+  #holds(
+    stack: UVStack
   ): boolean {
-    return last.key === key &&
-      this.#uvMap.selectedRegionId === last.regionId &&
-      this.#uvMap.selectedSlot === last.face;
+    const { regionId } = stack.targets[stack.index];
+
+    return this.#uvMap.selectedRegionId === regionId &&
+      this.#uvMap.selectedSlot === stack.face;
   }
 }

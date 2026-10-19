@@ -6,6 +6,8 @@ import type {
 import {
   copyGeometry,
   geometryAt,
+  geometryKey,
+  geometryRotation,
   quarterTurn,
   boundingRect,
   rotateGeometry,
@@ -133,6 +135,22 @@ export class UVSlotMap {
       }
 
       return geometry;
+    });
+  }
+
+  equals(
+    other: UVSlotMap
+  ): boolean {
+    if (other.#slots.size !== this.#slots.size) {
+      return false;
+    }
+
+    return [...this.#slots].every(([slot, geometry]) => {
+      const theirs = other.#slots.get(slot);
+
+      return theirs !== undefined &&
+        geometryKey(theirs) === geometryKey(geometry) &&
+        geometryRotation(theirs) === geometryRotation(geometry);
     });
   }
 

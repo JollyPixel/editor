@@ -10,14 +10,17 @@ import type {
 } from "../geometry/types.ts";
 import {
   packNet,
-  type UVNetCell
+  type UVNetFace
 } from "./netLayout.ts";
 
-export type UVNetRow = readonly (UVSlot | null)[];
+export type UVNetCell = readonly UVSlot[];
+export type UVNetRow = readonly (UVNetCell | null)[];
+export type UVNetCellInput = UVSlot | Iterable<UVSlot> | null;
 
 interface GridCell {
   row: number;
   column: number;
+  slots: UVNetCell;
 }
 
 export class UVNet {
@@ -27,7 +30,7 @@ export class UVNet {
   readonly #cells: ReadonlyMap<UVSlot, GridCell>;
 
   constructor(
-    rows?: Iterable<Iterable<UVSlot | null>>
+    rows?: Iterable<Iterable<UVNetCellInput>>
   ) {
     if (rows === undefined) {
       this.rows = null;
@@ -36,17 +39,28 @@ export class UVNet {
       return;
     }
 
-    const grid = Array.from(rows, (row) => Object.freeze([...row]));
+    const grid = Array.from(
+      rows,
+      (row) => Object.freeze(Array.from(row, normalizedCell))
+    );
     const cells = new Map<UVSlot, GridCell>();
     grid.forEach((row, rowIndex) => {
-      row.forEach((slot, column) => {
-        if (slot === null) {
+      row.forEach((slots, column) => {
+        if (slots === null) {
           return;
         }
-        if (cells.has(slot)) {
-          throw new RangeError(`UV slot "${slot}" appears twice in the net`);
+
+        const cell = {
+          row: rowIndex,
+          column,
+          slots
+        };
+        for (const slot of slots) {
+          if (cells.has(slot)) {
+            throw new RangeError(`UV slot "${slot}" appears twice in the net`);
+          }
+          cells.set(slot, cell);
         }
-        cells.set(slot, { row: rowIndex, column });
       });
     });
     if (cells.size === 0) {
@@ -57,38 +71,78 @@ export class UVNet {
     this.#cells = cells;
   }
 
-  place(
-    cells: readonly UVNetCell[],
-    origin: Vec2
-  ): Map<UVSlot, UVGeometry> {
-    if (!cells.every((cell) => this.#cells.has(cell.face))) {
-      return packNet(cells, origin);
+  missingSlots(
+    slots: Iterable<UVSlot>
+  ): UVSlot[] {
+    if (this.rows === null) {
+      return [];
     }
 
+    return [...slots].filter((slot) => !this.#cells.has(slot));
+  }
+
+  place(
+    faces: readonly UVNetFace[],
+    origin: Vec2
+  ): Map<UVSlot, UVGeometry> {
+    if (!faces.every((face) => this.#cells.has(face.face))) {
+      return packNet(faces, origin);
+    }
+
+    const cells = [...Map.groupBy(faces, (face) => this.#cells.get(face.face)!)]
+      .map(([cell, members]) => {
+        return {
+          cell,
+          members,
+          rect: boundingRect(leadFace(cell, members).geometry)
+        };
+      });
     const columns: number[] = [];
     const rows: number[] = [];
-    for (const cell of cells) {
-      const { row, column } = this.#cells.get(cell.face)!;
-      const rect = boundingRect(cell.geometry);
-      columns[column] = Math.max(columns[column] ?? 0, rect.width);
-      rows[row] = Math.max(rows[row] ?? 0, rect.height);
+    for (const { cell, rect } of cells) {
+      columns[cell.column] = Math.max(columns[cell.column] ?? 0, rect.width);
+      rows[cell.row] = Math.max(rows[cell.row] ?? 0, rect.height);
     }
 
     const placed = new Map<UVSlot, UVGeometry>();
-    for (const cell of cells) {
-      const { row, column } = this.#cells.get(cell.face)!;
-      placed.set(
-        cell.face,
-        geometryAt(cell.geometry, {
-          ...boundingRect(cell.geometry),
-          x: origin.x + offset(columns, column),
-          y: origin.y + offset(rows, row)
-        })
-      );
+    for (const { cell, members, rect } of cells) {
+      const target = {
+        ...rect,
+        x: origin.x + offset(columns, cell.column),
+        y: origin.y + offset(rows, cell.row)
+      };
+      for (const member of members) {
+        placed.set(member.face, geometryAt(member.geometry, target));
+      }
     }
 
     return placed;
   }
+}
+
+function leadFace(
+  cell: GridCell,
+  members: readonly UVNetFace[]
+): UVNetFace {
+  return members.reduce(
+    (lead, member) => (
+      cell.slots.indexOf(member.face) < cell.slots.indexOf(lead.face) ?
+        member :
+        lead
+    )
+  );
+}
+
+function normalizedCell(
+  cell: UVNetCellInput
+): UVNetCell | null {
+  if (cell === null) {
+    return null;
+  }
+
+  const slots = typeof cell === "string" ? [cell] : [...cell];
+
+  return slots.length === 0 ? null : Object.freeze(slots);
 }
 
 function offset(

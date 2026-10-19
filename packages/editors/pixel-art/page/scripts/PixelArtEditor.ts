@@ -16,6 +16,7 @@ import { LocalStorageAdapter } from "@jolly-pixel/ui";
 // Import Internal Dependencies
 import {
   PixelArtKeyBindingSettings,
+  UvNetLibrary,
   pixelArtConsole,
   type PixelDrawPanel
 } from "../../src/index.ts";
@@ -87,6 +88,8 @@ export class PixelArtEditor {
     panel.uvResize = features.uvResize;
     panel.uvOverflow = kUvOverflow;
     panel.textureImportPolicy = features.importPolicy;
+    const uvNets = new UvNetLibrary({ storage: kStorage });
+    panel.uvNets = uvNets;
 
     const previewType = loadPreview === null
       ? null
@@ -149,7 +152,10 @@ export class PixelArtEditor {
       tabs,
       preferences,
       keybindings,
-      consoleFeatures: pixelArtConsole(commands, { keyBindingSettings })
+      consoleFeatures: pixelArtConsole(commands, {
+        keyBindingSettings,
+        uvNets
+      })
     });
   }
 

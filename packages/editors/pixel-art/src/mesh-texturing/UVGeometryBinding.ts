@@ -57,9 +57,9 @@ export class UVGeometryBinding {
     this.preview(region);
   };
 
-  readonly #onRegionReplaced: UVMapListener<"region-state-changed"> = ({
+  readonly #onRegionReplaced = ({
     region
-  }) => {
+  }: { region: UVRegion; }): void => {
     if (region.id !== this.#region.id) {
       return;
     }

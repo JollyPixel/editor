@@ -144,10 +144,15 @@ stacked or unfolded, one slot when free.
 ### UV net
 
 The arrangement of an unfolded region's slots. By default they are packed into
-the smallest box; a grid net gives each slot a fixed cell instead. The net is
-local configuration: only the resulting region is saved and shared.
+the smallest box; a grid net gives each slot a fixed cell instead. A *shared
+cell* holds several slots on one rectangle, such as a block's top and bottom.
+A net *fits* a region when it has a cell for every active slot; otherwise the
+region is packed. The net is local configuration: only the resulting region is
+saved and shared, and in an unfolded region, slots with the same rectangle act
+as one cell.
 
-*In code:* `UVNet`, set through `canvas.uv.net`.
+*In code:* `UVNet`, set through `canvas.uv.net`; `UVNet.missingSlots()`;
+`UVMap.unfold()` applies another net.
 
 ### UV ownership
 

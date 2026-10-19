@@ -169,20 +169,26 @@ export function geometryAt(
     withRotation(copyRect(rect), geometryRotation(geometry));
 }
 
+export function rectKey(
+  rect: SelectionRect
+): string {
+  return `${rect.x},${rect.y},${rect.width},${rect.height}`;
+}
+
 export function geometryKey(
   geometry: UVGeometry
 ): string {
-  const { x, y, width, height } = boundingRect(geometry);
+  const rect = rectKey(boundingRect(geometry));
 
   if (!("shape" in geometry)) {
-    return `${x},${y},${width},${height}`;
+    return rect;
   }
 
   const shape = geometry.shape === "compound" ?
     `compound:${JSON.stringify(geometry.parts)}` :
     `triangle:${geometry.corner}`;
 
-  return `${shape}:${x},${y},${width},${height}`;
+  return `${shape}:${rect}`;
 }
 
 export function pointInGeometry(

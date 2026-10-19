@@ -93,8 +93,44 @@ describe("UVNet", () => {
     );
   });
 
+  test("places a shared cell's slots on the rectangle of its first listed active slot", () => {
+    const at = { x: 10, y: 20 };
+    const net = new UVNet([[["top", "bottom", "front"], "back"]]);
+    const region = new UVRegion({
+      state: "free",
+      id: "r1",
+      color: "#f00",
+      faces: {
+        top: { ...at, width: 9, height: 9 },
+        bottom: { ...at, width: 2, height: 3 },
+        front: { ...at, width: 5, height: 1 },
+        back: { ...at, width: 4, height: 4 }
+      },
+      activeFaces: ["bottom", "front", "back"]
+    }).unfold(net);
+
+    assert.deepStrictEqual(rects(region), {
+      bottom: { x: 10, y: 20, width: 2, height: 3 },
+      front: { x: 10, y: 20, width: 2, height: 3 },
+      back: { x: 12, y: 20, width: 4, height: 4 }
+    });
+  });
+
+  test("keeps every cell as a frozen slot list, empty groups becoming null", () => {
+    const net = new UVNet([["top", ["front", "back"], [], null]]);
+
+    assert.deepStrictEqual(net.rows, [[["top"], ["front", "back"], null, null]]);
+    assert.ok(Object.isFrozen(net.rows![0][1]));
+  });
+
+  test("lists the slots it has no cell for", () => {
+    assert.deepStrictEqual(kBoxNet.missingSlots(["top", "top.1", "front", "lid"]), ["top.1", "lid"]);
+    assert.deepStrictEqual(UVNet.packed.missingSlots(["lid"]), []);
+  });
+
   test("rejects a grid without slots or with a repeated slot", () => {
     assert.throws(() => new UVNet([[null], []]), RangeError);
     assert.throws(() => new UVNet([["top"], [null, "top"]]), RangeError);
+    assert.throws(() => new UVNet([[["top", "bottom"], ["bottom"]]]), RangeError);
   });
 });

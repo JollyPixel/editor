@@ -28,6 +28,7 @@ import {
 } from "@jolly-pixel/editor.host";
 import {
   PixelArtKeyBindingSettings,
+  UvNetLibrary,
   pixelArtConsole
 } from "@jolly-pixel/editor.pixel-art";
 import { LocalStorageAdapter } from "@jolly-pixel/ui";
@@ -145,10 +146,14 @@ export class VoxelModelEditor {
       storage: new LocalStorageAdapter(),
       onDropped: (message) => console.warn(message)
     });
+    const uvNets = new UvNetLibrary({
+      storage: new LocalStorageAdapter()
+    });
     const shell = new EditorShell({
       runtime: editorRuntime,
       texture,
       keyBindingSettings,
+      uvNets,
       toolbar: context.toolbar
     });
     await editorRuntime.load(scene, {
@@ -184,6 +189,7 @@ export class VoxelModelEditor {
         ],
         {
           keyBindingSettings,
+          uvNets,
           archives: workspace.archives,
           runtime: editorRuntime
         }

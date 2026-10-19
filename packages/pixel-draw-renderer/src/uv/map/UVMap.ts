@@ -419,7 +419,18 @@ export class UVMap extends Emitter<
     return this.#replace(
       id,
       (region) => this.#withState(region, state, slot),
-      this.#stateChanged
+      this.#stateChange(state === "unfolded" ? this.net : null)
+    );
+  }
+
+  unfold(
+    id: string,
+    net: UVNet = this.net
+  ): boolean {
+    return this.#replace(
+      id,
+      (region) => this.#unfolded(region, net),
+      this.#stateChange(net)
     );
   }
 
@@ -479,12 +490,21 @@ export class UVMap extends Emitter<
       case "stacked":
         return region.stack(slot);
       case "unfolded":
-        return this.bounds.clamp(region.unfold(this.net));
+        return region.state === "unfolded" ?
+          region :
+          this.#unfolded(region, this.net);
       case "free":
         return region.free();
       default:
         return state satisfies never;
     }
+  }
+
+  #unfolded(
+    region: UVRegion,
+    net: UVNet
+  ): UVRegion {
+    return this.bounds.clamp(region.unfold(net));
   }
 
   #replace(
@@ -516,9 +536,15 @@ export class UVMap extends Emitter<
     return true;
   }
 
-  readonly #stateChanged: UVRegionChange = (region, previous) => {
-    this.emit("region-state-changed", { region, previous });
-  };
+  readonly #stateChanged = this.#stateChange(null);
+
+  #stateChange(
+    net: UVNet | null
+  ): UVRegionChange {
+    return (region, previous) => {
+      this.emit("region-state-changed", { region, previous, net });
+    };
+  }
 
   #rotated(
     face: UVSlot | null

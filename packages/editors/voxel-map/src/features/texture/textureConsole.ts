@@ -47,6 +47,7 @@ export function textureShortcutsConsole(
   { state }: TextureConsoleContext
 ): RegistrationHandle {
   return pixelArtConsole(commands, {
-    keyBindingSettings: state.pixelArtKeyBindings
+    keyBindingSettings: state.pixelArtKeyBindings,
+    uvNets: state.uvNets
   });
 }

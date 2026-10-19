@@ -53,6 +53,12 @@ hides UV controls and disables clipping. UV region overlays still follow
 `UVMap.isVisible()` in all modes. `allow-uv-create-delete` controls the UV
 Create/Delete buttons and defaults to false.
 
+## UV nets
+
+`uvNets` is the [`UvNetLibrary`](../uv/UvNetLibrary.md) behind the "Unfold with" entries of the
+region state menu and the "Edit nets" dialog. Every texture of the panel unfolds through its
+default net. Without a host library, the panel keeps an in-memory one with the built-in nets.
+
 ## Grid
 
 The view options popover at the top of the canvas edits the active canvas's
@@ -173,6 +179,7 @@ announce(message: string): void
 | `activeTextureId` | Active id; setting it switches canvas. Unknown ids throw. |
 | `keyBindings` | [`PixelArtKeyBindings`](../keybindings/PixelArtKeyBindingSettings.md#defaults) used by the panel. |
 | `uvAccess` | `"edit" \| "view" \| "none"`; defaults to `"edit"`. |
+| `uvNets` | [`UvNetLibrary`](../uv/UvNetLibrary.md) of the nets regions unfold with. |
 | `textureImportPolicy` | `"replace" \| "add" \| "ask"`; defaults to `"replace"`. |
 | `textureTabs` | `"auto" \| "always"`; defaults to `"auto"`. |
 | `textureTabsVariant` | `"default" \| "skew"`; defaults to `"default"`. |

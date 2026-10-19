@@ -45,6 +45,8 @@ export type {
 export { DEFAULT_UV_SLOTS } from "../geometry/types.ts";
 export {
   UVNet,
+  type UVNetCell,
+  type UVNetCellInput,
   type UVNetRow
 } from "./UVNet.ts";
 
@@ -155,9 +157,11 @@ export class UVRegion {
   unfold(
     net: UVNet = UVNet.packed
   ): UVRegion {
-    return this.state === "unfolded" ?
+    const layout = NetLayout.unfolding(this.#layout, net);
+
+    return this.state === "unfolded" && layout.faces.equals(this.#layout.faces) ?
       this :
-      this.#with(NetLayout.unfolding(this.#layout, net));
+      this.#with(layout);
   }
 
   free(): UVRegion {

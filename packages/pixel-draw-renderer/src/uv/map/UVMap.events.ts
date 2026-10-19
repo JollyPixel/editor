@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import type { SelectionRect } from "../../types.ts";
 import type {
+  UVNet,
   UVSlot,
   UVRegion,
   UVRegionData
@@ -27,6 +28,7 @@ export type UVMapEvent = {
   "region-state-changed": (event: {
     region: UVRegion;
     previous: UVRegionData;
+    net: UVNet | null;
   }) => void;
   "region-rotated": (event: {
     region: UVRegion;
