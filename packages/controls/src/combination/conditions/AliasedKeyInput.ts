@@ -1,15 +1,11 @@
 // Import Internal Dependencies
-import type { Input } from "../../Input.class.ts";
+import type { InputDevices } from "../../types.ts";
 import {
   mapKeyToExtendedKey,
   type KeyCode,
   type ExtendedKeyCode
 } from "../../devices/keyboard/code.ts";
-import {
-  bindInputCondition,
-  type InputCondition,
-  type BoundInputCondition
-} from "./InputCondition.ts";
+import type { InputCondition } from "./InputCondition.ts";
 import type { CombinedInputState } from "../types.ts";
 
 export type AliasedKeys =
@@ -32,9 +28,13 @@ export class AliasedKeyInput implements InputCondition {
   ) {
     this.state = state;
     this.#family = {
-      source: typeof keys === "function" ? keys : [...keys],
+      source: typeof keys === "function"
+        ? keys
+        : [...keys],
       keys: null,
-      members: new Map([[state, this]])
+      members: new Map([
+        [state, this]
+      ])
     };
   }
 
@@ -55,7 +55,7 @@ export class AliasedKeyInput implements InputCondition {
   }
 
   evaluate(
-    input: Input
+    input: InputDevices
   ): boolean {
     const keys = this.#resolveKeys();
     const { keyboard } = input;
@@ -66,19 +66,20 @@ export class AliasedKeyInput implements InputCondition {
 
     let isDown = false;
     let wasDown = false;
+    let pressed = false;
+    let released = false;
     for (const key of keys) {
-      const keyIsDown = keyboard.isDown(key);
-
-      isDown ||= keyIsDown;
-      wasDown ||= keyboard.wasJustReleased(key) ||
-        (keyIsDown && !keyboard.wasJustPressed(key));
+      isDown ||= keyboard.isDown(key);
+      wasDown ||= keyboard.wasDownLastUpdate(key);
+      pressed ||= keyboard.wasJustPressed(key);
+      released ||= keyboard.wasJustReleased(key);
     }
 
     switch (this.state) {
       case "pressed":
-        return isDown && !wasDown;
+        return pressed && !wasDown;
       case "released":
-        return !isDown && wasDown;
+        return released && !isDown;
       default:
         return false;
     }
@@ -86,12 +87,6 @@ export class AliasedKeyInput implements InputCondition {
 
   reset(): void {
     return;
-  }
-
-  bind(
-    input: Input
-  ): BoundInputCondition {
-    return bindInputCondition(this, input);
   }
 
   #resolveKeys(): readonly KeyCode[] {

@@ -58,24 +58,17 @@ bind(
   handlers: Partial<KeyBindingHandlers<TAction>>,
   options?: KeyBindingOptions
 ): () => void;
-sync(target: KeyBindingsReceiver<TAction>): () => void;
 chordsBoundTo(action: TAction): KeyChordString[];
 assign(action: TAction, chords: readonly string[]): void;
 reset(action?: TAction): void;
 load(overrides: unknown): void;
-
-interface KeyBindingsReceiver<TAction extends string> {
-  keyBindings: KeyBindingMap<TAction>;
-}
 ```
 
 `bind()` binds the handlers with
 [`KeyBindingMap.bind()`](./key-binding-map.md#members), then binds them again
-with each new map, until the returned function is called.
-
-`sync()` sets `target.keyBindings` to the current map and again on every
-change, until the returned function is called. It suits an object that binds
-the map itself, such as a component that listens only while it is mounted.
+with each new map, until the returned function is called. A component that
+listens only while it is mounted keeps the settings and calls `bind()` when it
+connects.
 
 `chordsBoundTo()` returns the chords of an action in canonical form, such as
 `["Mod+y", "Mod+Shift+z"]`.

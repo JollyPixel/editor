@@ -6,7 +6,6 @@ export * from "./ObjectLayerRef.ts";
 export * from "./ObjectRef.ts";
 export * from "./BlockSelection.ts";
 export * from "./BrushStore.ts";
-export * from "./KeyboardLayoutStore.ts";
 export * from "./PointerCapture.ts";
 export * from "./PresenceStore.ts";
 export * from "./SelectionStore.ts";

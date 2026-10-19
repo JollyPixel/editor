@@ -7,18 +7,18 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { Input } from "../../../src/index.ts";
 import { NoneInputs } from "../../../src/combination/conditions/index.ts";
+import { stubCondition } from "../Combination.fixture.ts";
 import {
-  createCombinationFixture,
-  stubCondition
-} from "../Combination.fixture.ts";
+  createInputFixture,
+  type InputFixture
+} from "../../helpers/input.ts";
 
 describe("Controls.NoneInputs", () => {
-  let input: Input;
+  let input: InputFixture["input"];
 
   beforeEach(() => {
-    ({ input } = createCombinationFixture());
+    ({ input } = createInputFixture());
   });
 
   test("is satisfied only when no condition is satisfied", () => {
@@ -30,14 +30,5 @@ describe("Controls.NoneInputs", () => {
       new NoneInputs([stubCondition(false), stubCondition(true)]).evaluate(input),
       false
     );
-  });
-
-  describe("bind", () => {
-    test("binds to the same result as evaluate()", () => {
-      assert.strictEqual(
-        new NoneInputs([stubCondition(false)]).bind(input)(),
-        true
-      );
-    });
   });
 });

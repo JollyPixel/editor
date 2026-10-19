@@ -1,9 +1,9 @@
 // Import Internal Dependencies
-import type { Input } from "../../Input.class.ts";
+import type { InputDevices } from "../../types.ts";
 
 export interface AxisSource {
   sample(
-    input: Input
+    input: InputDevices
   ): number;
   reset(): void;
 }

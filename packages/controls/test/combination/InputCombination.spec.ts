@@ -7,25 +7,32 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { Input } from "../../src/index.ts";
 import {
+  bindInputCondition,
   HoldInput,
   SequenceInputs,
   InputCombination
 } from "../../src/combination/index.ts";
-import { isApplePlatform } from "../../src/platform.ts";
-import * as mocks from "../mocks/index.ts";
+import { stubCondition } from "./Combination.fixture.ts";
 import {
-  createCombinationFixture,
-  stubCondition
-} from "./Combination.fixture.ts";
+  createInputFixture,
+  type InputFixture
+} from "../helpers/input.ts";
+import { isApplePlatform } from "../../src/platform.ts";
 
 describe("Controls.InputCombination", () => {
-  let canvas: mocks.CanvasAdapter;
-  let input: Input;
+  let canvas: InputFixture["canvas"];
+  let input: InputFixture["input"];
+  let press: InputFixture["press"];
+  let plug: InputFixture["plug"];
 
   beforeEach(() => {
-    ({ canvas, input } = createCombinationFixture());
+    ({
+      canvas,
+      input,
+      press,
+      plug
+    } = createInputFixture());
   });
 
   test("isCombinedAction() distinguishes a dot-path action from a plain key", () => {
@@ -47,13 +54,13 @@ describe("Controls.InputCombination", () => {
   });
 
   test("key() resolves an uppercase letter shorthand", () => {
-    input.keyboard.buttonsDown.add("KeyA");
+    press("KeyA");
 
     assert.strictEqual(InputCombination.key("A.down").evaluate(input), true);
   });
 
   test("key() accepts a bare key with a default/explicit state, or a dot-path action", () => {
-    input.keyboard.buttonsDown.add("KeyA");
+    press("KeyA");
 
     assert.strictEqual(InputCombination.key("KeyA").evaluate(input), false);
     assert.strictEqual(InputCombination.key("KeyA", "down").evaluate(input), true);
@@ -61,12 +68,9 @@ describe("Controls.InputCombination", () => {
   });
 
   test("mouse() accepts a bare button with a default/explicit state, or a dot-path action", () => {
-    canvas.dispatch(
-      "mousedown",
-      { button: 0, preventDefault: () => void 0 }
-    );
-    input.mouse.update();
-    input.mouse.update();
+    canvas.dispatchMouseEvent("mousedown", { button: 0 });
+    input.update();
+    input.update();
 
     assert.strictEqual(InputCombination.mouse("left").evaluate(input), false);
     assert.strictEqual(InputCombination.mouse("left", "down").evaluate(input), true);
@@ -74,13 +78,17 @@ describe("Controls.InputCombination", () => {
   });
 
   test("gamepad() builds an atomic gamepad condition", () => {
-    input.gamepad.buttons[0][0].isDown = true;
+    plug().buttons[0] = {
+      pressed: true,
+      value: 1
+    };
+    input.update();
 
     assert.strictEqual(InputCombination.gamepad(0, "A", "down").evaluate(input), true);
   });
 
   test("all() / atLeastOne() / none() accept a mix of conditions and dot-path actions", () => {
-    input.keyboard.buttonsDown.add("KeyA");
+    press("KeyA");
 
     assert.strictEqual(
       InputCombination.all("KeyA.down", stubCondition(true)).evaluate(input),
@@ -97,8 +105,8 @@ describe("Controls.InputCombination", () => {
   });
 
   test("sequence() / sequenceWithTimeout() build a SequenceInputs from dot-path actions", () => {
-    input.keyboard.buttonsDown.add("KeyA");
-    input.keyboard.buttonsDown.add("KeyB");
+    press("KeyA");
+    press("KeyB");
 
     const sequence = InputCombination.sequenceWithTimeout(
       50,
@@ -112,7 +120,7 @@ describe("Controls.InputCombination", () => {
   });
 
   test("hold() builds a pressed/down HoldInput from a key", () => {
-    input.keyboard.buttonsDown.add("ControlLeft");
+    press("ControlLeft");
 
     const hold = InputCombination.hold("ControlLeft");
 
@@ -187,31 +195,29 @@ describe("Controls.InputCombination", () => {
   });
 
   test("a preset composes into a chord", () => {
-    input.keyboard.buttonsDown.add("ControlRight");
-    input.keyboard.buttons.set("KeyS", {
-      code: "KeyS",
-      isDown: true,
-      wasJustPressed: true,
-      wasJustAutoRepeated: false,
-      wasJustReleased: false
-    });
+    press("ControlRight");
+    press("KeyS");
+    input.update();
 
-    const save = InputCombination.all(
-      InputCombination.Control,
-      "KeyS.pressed"
-    ).bind(input);
+    const save = bindInputCondition(
+      InputCombination.all(InputCombination.Control, "KeyS.pressed"),
+      input
+    );
 
     assert.strictEqual(save(), true);
   });
 
   test("chains off an InputCombination factory", () => {
-    input.keyboard.buttonsDown.add("ShiftLeft");
-    input.keyboard.buttonsDown.add("ArrowRight");
+    press("ShiftLeft");
+    press("ArrowRight");
 
-    const dash = InputCombination.all(
-      InputCombination.key("ShiftLeft", "down"),
-      InputCombination.key("ArrowRight", "down")
-    ).bind(input);
+    const dash = bindInputCondition(
+      InputCombination.all(
+        InputCombination.key("ShiftLeft", "down"),
+        InputCombination.key("ArrowRight", "down")
+      ),
+      input
+    );
 
     assert.strictEqual(dash(), true);
   });

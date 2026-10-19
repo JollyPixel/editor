@@ -135,8 +135,8 @@ own shortcuts. `event` is a `CustomEvent` whose `detail` is
 The returned function removes the listener and releases that binding's
 suspension, including when called during hover. Repeated calls do nothing.
 Overlapping bindings keep input suspended until the last hovering binding
-releases it. The suspension uses `Keyboard.suspend()`, so it never changes
-`keyboard.enabled`.
+releases it. The suspension uses `Keyboard.suspend()`, which releases held keys
+and lets keyups through.
 
 ## Console
 

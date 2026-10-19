@@ -49,12 +49,18 @@ gameLoop();
 For advanced input combinations:
 
 ```ts
-import { InputCombination } from "@jolly-pixel/controls";
+import {
+  InputCombination,
+  bindInputCondition
+} from "@jolly-pixel/controls";
 
-const dashCombo = InputCombination.all(
-  InputCombination.key("ShiftLeft", "down"),
-  InputCombination.key("ArrowRight")
-).bind(input);
+const dashCombo = bindInputCondition(
+  InputCombination.all(
+    InputCombination.key("ShiftLeft", "down"),
+    InputCombination.key("ArrowRight")
+  ),
+  input
+);
 if (dashCombo()) {
   console.log("dash!");
 }
@@ -82,8 +88,6 @@ if (dashCombo()) {
     combinations](./docs/combination/aliased-key-input.md)
   - [Input conditions](./docs/combination/input-conditions.md)
   - [Sequences and held steps](./docs/combination/sequences.md)
-- [InputActionQuery](./docs/inputactionquery.md): dispatch helper for
-  `"ANY"`, `"NONE"`, and concrete actions.
 
 ## 🧪 Benchmarks
 

@@ -96,7 +96,7 @@ describe("Controls.Keyboard guards", () => {
     const event = documentAdapter.dispatchEvent("keydown", { code: "KeyA" });
 
     assert.deepEqual(seen, [event]);
-    assert.equal(keyboard.buttonsDown.has("KeyA"), true);
+    assert.equal(keyboard.isDown("KeyA"), true);
   });
 
   test("keyup is never guarded so held keys cannot stick", () => {
@@ -136,7 +136,7 @@ describe("Controls.Keyboard guards", () => {
     dispose();
     documentAdapter.dispatchEvent("keydown", { code: "KeyA" });
 
-    assert.equal(keyboard.buttonsDown.has("KeyA"), true);
+    assert.equal(keyboard.isDown("KeyA"), true);
     assert.equal(guard.listeners.size, 0);
   });
 
@@ -155,6 +155,6 @@ describe("Controls.Keyboard guards", () => {
     });
 
     assert.equal(input.defaultPrevented, false);
-    assert.equal(keyboard.buttonsDown.has("KeyA"), false);
+    assert.equal(keyboard.isDown("KeyA"), false);
   });
 });

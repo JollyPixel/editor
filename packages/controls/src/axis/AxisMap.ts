@@ -1,6 +1,6 @@
 // Import Internal Dependencies
-import type { Input } from "../Input.class.ts";
 import type {
+  InputDevices,
   Vector2Like,
   Vector3Like
 } from "../types.ts";
@@ -31,7 +31,9 @@ export class AxisMap<
     this.#states = [];
     this.#axes = new Map();
 
-    const entries = Object.entries<Axis>(definition) as [TName, Axis][];
+    const entries = Object.entries<Axis>(
+      definition
+    ) as [TName, Axis][];
     for (const [name, axis] of entries) {
       const state = {
         axis,
@@ -47,7 +49,7 @@ export class AxisMap<
   }
 
   update(
-    input: Input
+    input: InputDevices
   ): void {
     const states = this.#states;
 

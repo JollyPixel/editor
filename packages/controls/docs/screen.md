@@ -1,8 +1,8 @@
 # Screen
 
 `Screen` manages fullscreen intent for one canvas and reports whether that
-canvas is the document's fullscreen element. `Input` owns one instance and
-connects its pending request to mouse down and up events.
+canvas is the document's fullscreen element. `Input` owns one instance, or the
+device can be used on its own.
 
 ```ts
 import { Screen } from "@jolly-pixel/controls";
@@ -18,13 +18,13 @@ screen.on("stateChange", (state) => {
   console.log("Fullscreen:", state);
 });
 
-// The next call to requestFullscreenIfWanted() requests fullscreen.
+// The next click or tap on the canvas requests fullscreen.
 screen.enter();
 ```
 
-When `Screen` is used through `Input`, the pending request is checked on the
-next mouse down and mouse up. Standalone callers must invoke
-`requestFullscreenIfWanted()` from a user gesture accepted by the browser.
+Browsers accept a fullscreen request only during a user gesture, so a
+connected `Screen` checks the pending request on every mousedown, mouseup, and
+touchend on the canvas.
 
 ## Constructor
 
@@ -62,7 +62,6 @@ interface Screen {
   wasFullscreen: boolean;
 
   enter(): void;
-  requestFullscreenIfWanted(): void;
   exit(): void;
   reset(): void;
 }
@@ -70,16 +69,10 @@ interface Screen {
 
 ### `enter()`
 
-Sets `wantsFullscreen` to `true`. It does not call
-`canvas.requestFullscreen()` immediately because browsers require the request
-to occur during an accepted user gesture.
-
-### `requestFullscreenIfWanted()`
-
-Calls `canvas.requestFullscreen()` when fullscreen is wanted and the canvas
-is not already tracked as fullscreen. The method leaves
-`wantsFullscreen` set, so later gestures can retry until a fullscreen change
-is observed.
+Sets `wantsFullscreen` to `true`. The next gesture on the canvas calls
+`canvas.requestFullscreen()` unless the canvas is already tracked as
+fullscreen. `wantsFullscreen` stays set, so later gestures retry until a
+fullscreen change is observed.
 
 ### `exit()`
 
@@ -145,6 +138,6 @@ connect(): void
 disconnect(): void
 ```
 
-`connect()` registers fullscreenchange and fullscreenerror listeners on the
-document adapter. `disconnect()` removes them without leaving fullscreen or
+`connect()` registers the gesture listeners on the canvas, and fullscreenchange
+and fullscreenerror listeners on the document adapter. `disconnect()` removes them without leaving fullscreen or
 resetting state.

@@ -60,11 +60,11 @@ assignment remains installed after `disconnect()`.
 
 ```ts
 interface Input {
-  mouse: Mouse;
-  keyboard: Keyboard;
-  gamepad: Gamepad;
-  touchpad: Touchpad;
-  screen: Screen;
+  readonly mouse: Mouse;
+  readonly keyboard: Keyboard;
+  readonly gamepad: Gamepad;
+  readonly touchpad: Touchpad;
+  readonly screen: Screen;
 }
 ```
 
@@ -76,9 +76,9 @@ The device instances can also be constructed and used on their own:
 - [Touchpad](touchpad.md)
 - [Screen](screen.md)
 
-`Input` mirrors primary touch events into the left mouse button and mouse
-position. It also connects mouse down and up events to the pending fullscreen
-request owned by `screen`.
+`Input` satisfies `InputDevices`, the `keyboard`, `mouse`, and `gamepad`
+members read by [input conditions](combination/input-conditions.md) and
+[axes](axismap.md).
 
 ## Lifecycle
 

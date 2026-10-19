@@ -42,8 +42,9 @@ describe("Controls.Mouse pointer lock", () => {
       movementX: 10,
       movementY: -5
     });
+    mouse.update();
 
-    assert.deepStrictEqual(mouse.newDelta, { x: 10, y: -5 });
+    assert.deepStrictEqual(mouse.delta, { x: 10, y: -5 });
   });
 
   test("should accumulate movement delta with pointer lock", () => {
@@ -59,8 +60,9 @@ describe("Controls.Mouse pointer lock", () => {
       "mousemove",
       { movementX: 2, movementY: -1 }
     );
+    mouse.update();
 
-    assert.deepStrictEqual(mouse.newDelta, { x: 7, y: 2 });
+    assert.deepStrictEqual(mouse.delta, { x: 7, y: 2 });
   });
 
   test("should request pointer lock on mouse down when wanted", () => {
@@ -171,16 +173,19 @@ describe("Controls.Mouse pointer lock", () => {
     assert.deepStrictEqual(mouse.position, { x: 120, y: 80 });
   });
 
-  test("should use delta from newDelta when pointer locked", () => {
+  test("consumes the locked movement once", () => {
     mouse.lock();
     documentAdapter.pointerLockElement = canvas;
     documentAdapter.dispatchEvent("pointerlockchange");
 
-    mouse.newDelta = { x: 15, y: -10 };
+    canvas.dispatchMouseEvent("mousemove", {
+      movementX: 15,
+      movementY: -10
+    });
+    mouse.update();
     mouse.update();
 
-    assert.deepStrictEqual(mouse.delta, { x: 15, y: -10 });
-    assert.deepStrictEqual(mouse.newDelta, { x: 0, y: 0 });
+    assert.deepStrictEqual(mouse.delta, { x: 0, y: 0 });
   });
 
   test("should not emit lockStateChange when lock state has not changed", () => {

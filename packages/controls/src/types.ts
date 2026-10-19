@@ -1,8 +1,17 @@
 // Import Internal Dependencies
 import type {
   ExtendedKeyCode,
-  KeyCode
+  Gamepad,
+  KeyCode,
+  Keyboard,
+  Mouse
 } from "./devices/index.ts";
+
+export interface InputDevices {
+  readonly keyboard: Keyboard;
+  readonly mouse: Mouse;
+  readonly gamepad: Gamepad;
+}
 
 export interface Vector2Like {
   x: number;
@@ -17,19 +26,19 @@ export interface Vector3Like {
 
 export type InputReader = "step" | "frame";
 
-export interface InputUpdateable {
+export interface InputConnectable {
+  connect(): void;
+  disconnect(): void;
+}
+
+export interface InputControl extends InputConnectable {
+  readonly wasActive: boolean;
+
   reset(): void;
   update(): void;
-
-  readonly wasActive: boolean;
+  sample(): void;
+  publish(reader: InputReader): void;
 }
-
-export interface InputConnectable {
-  connect?(): void;
-  disconnect?(): void;
-}
-
-export interface InputControl extends InputUpdateable, InputConnectable {}
 
 export type InputCustomAction = "ANY" | "NONE";
 

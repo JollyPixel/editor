@@ -21,12 +21,14 @@ describe("Controls.Axis", () => {
   let input: AxisFixture["input"];
   let press: AxisFixture["press"];
   let release: AxisFixture["release"];
+  let tilt: AxisFixture["tilt"];
 
   beforeEach(() => {
     ({
       input,
       press,
-      release
+      release,
+      tilt
     } = createAxisFixture());
   });
 
@@ -96,7 +98,7 @@ describe("Controls.Axis", () => {
 
   test("gamepadStick() binds one stick axis", () => {
     const axis = Axis.gamepadStick(0, "LeftStickX");
-    input.gamepad.axes[0][0].value = -0.5;
+    tilt([-0.5, 0, 0, 0]);
 
     assert.strictEqual(axis.sample(input), -0.5);
   });
@@ -107,7 +109,7 @@ describe("Controls.Axis", () => {
       "LeftStickY",
       { invert: true }
     );
-    input.gamepad.axes[0][1].value = 0.75;
+    tilt([0, 0.75, 0, 0]);
 
     assert.strictEqual(axis.sample(input), -0.75);
   });

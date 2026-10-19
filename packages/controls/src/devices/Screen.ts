@@ -6,11 +6,18 @@ import {
   BrowserDocumentAdapter,
   type DocumentAdapter,
   type CanvasAdapter
-} from "./../adapters/index.ts";
+} from "../adapters/index.ts";
 import type {
   InputConnectable,
   Vector2Like
 } from "../types.ts";
+
+// CONSTANTS
+const kUserGestures = [
+  "mousedown",
+  "mouseup",
+  "touchend"
+];
 
 export interface ScreenBounds {
   left: number;
@@ -57,6 +64,12 @@ export class Screen extends Emitter<
   }
 
   connect() {
+    for (const type of kUserGestures) {
+      this.#canvas.addEventListener(
+        type,
+        this.#onUserGesture
+      );
+    }
     this.#documentAdapter.addEventListener(
       "fullscreenchange",
       this.#onFullscreenChange,
@@ -70,6 +83,12 @@ export class Screen extends Emitter<
   }
 
   disconnect() {
+    for (const type of kUserGestures) {
+      this.#canvas.removeEventListener(
+        type,
+        this.#onUserGesture
+      );
+    }
     this.#documentAdapter.removeEventListener(
       "fullscreenchange",
       this.#onFullscreenChange,
@@ -162,7 +181,7 @@ export class Screen extends Emitter<
     }
   };
 
-  requestFullscreenIfWanted = () => {
+  #onUserGesture = () => {
     if (
       this.wantsFullscreen &&
       !this.wasFullscreen

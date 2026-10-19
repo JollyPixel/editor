@@ -8,21 +8,21 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { Input } from "../../../src/index.ts";
 import {
   SequenceInputs,
   type InputCondition
 } from "../../../src/combination/conditions/index.ts";
+import { stubCondition } from "../Combination.fixture.ts";
 import {
-  createCombinationFixture,
-  stubCondition
-} from "../Combination.fixture.ts";
+  createInputFixture,
+  type InputFixture
+} from "../../helpers/input.ts";
 
 describe("Controls.SequenceInputs", () => {
-  let input: Input;
+  let input: InputFixture["input"];
 
   beforeEach(() => {
-    ({ input } = createCombinationFixture());
+    ({ input } = createInputFixture());
   });
 
   test("returns true once every condition has fired in order within the timeout", () => {
@@ -76,24 +76,5 @@ describe("Controls.SequenceInputs", () => {
       [1, 1]
     );
     assert.strictEqual(sequence.evaluate(input), false);
-  });
-
-  describe("bind", () => {
-    test("a bound SequenceInputs shares progress with its condition", () => {
-      const sequence = new SequenceInputs(
-        [stubCondition(true), stubCondition(true)],
-        100,
-        () => 0
-      );
-      const bound = sequence.bind(input);
-
-      assert.strictEqual(bound(), false);
-      assert.strictEqual(sequence.evaluate(input), true);
-
-      bound();
-      bound.reset();
-      assert.strictEqual(bound(), false);
-      assert.strictEqual(bound(), true);
-    });
   });
 });

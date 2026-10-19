@@ -3,13 +3,12 @@ import {
   describe,
   test,
   beforeEach,
-  afterEach,
-  mock
+  afterEach
 } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Screen } from "../../../src/index.ts";
+import type { Screen } from "../../../src/index.ts";
 import type * as mocks from "../../mocks/index.ts";
 import {
   createConnectedScreenFixture,
@@ -154,84 +153,44 @@ describe("Controls.Fullscreen", () => {
     assert.strictEqual(eventCount, 0);
   });
 
-  test("should request fullscreen on user gesture when wants fullscreen", () => {
-    fullscreen.wantsFullscreen = true;
-    fullscreen.wasFullscreen = false;
+  for (const gesture of ["mousedown", "mouseup", "touchend"]) {
+    test(`a ${gesture} on the canvas completes a wanted fullscreen`, () => {
+      fullscreen.enter();
 
-    fullscreen.requestFullscreenIfWanted();
+      canvas.dispatch(gesture, {});
 
-    assert.strictEqual(
-      canvas.requestFullscreen.mock.calls.length,
-      1
-    );
-  });
-
-  test("should not request fullscreen on user gesture when already fullscreen", () => {
-    fullscreen.wantsFullscreen = true;
-    fullscreen.wasFullscreen = true;
-
-    fullscreen.requestFullscreenIfWanted();
-
-    assert.strictEqual(
-      canvas.requestFullscreen.mock.calls.length,
-      0
-    );
-  });
-
-  test("should not request fullscreen on user gesture when not wants fullscreen", () => {
-    fullscreen.wantsFullscreen = false;
-    fullscreen.wasFullscreen = false;
-
-    fullscreen.requestFullscreenIfWanted();
-
-    assert.strictEqual(
-      canvas.requestFullscreen.mock.calls.length,
-      0
-    );
-  });
-
-  test("should properly connect and disconnect event listeners", () => {
-    const addEventListener = mock.fn();
-    const removeEventListener = mock.fn();
-
-    const newFullscreen = new Screen({
-      canvas,
-      // @ts-expect-error
-      documentAdapter: {
-        addEventListener,
-        removeEventListener
-      }
+      assert.strictEqual(canvas.requestFullscreen.mock.calls.length, 1);
     });
+  }
 
-    newFullscreen.connect();
+  test("a gesture requests nothing while already fullscreen", () => {
+    fullscreen.enter();
+    documentAdapter.fullscreenElement = canvas;
+    documentAdapter.dispatchEvent("fullscreenchange");
 
-    assert.strictEqual(
-      addEventListener.mock.calls.length,
-      2
-    );
-    assert.strictEqual(
-      addEventListener.mock.calls[0].arguments[0],
-      "fullscreenchange"
-    );
-    assert.strictEqual(
-      addEventListener.mock.calls[1].arguments[0],
-      "fullscreenerror"
-    );
+    canvas.dispatch("mousedown", {});
 
-    newFullscreen.disconnect();
+    assert.strictEqual(canvas.requestFullscreen.mock.calls.length, 0);
+  });
 
-    assert.strictEqual(
-      removeEventListener.mock.calls.length,
-      2
-    );
-    assert.strictEqual(
-      removeEventListener.mock.calls[0].arguments[0],
-      "fullscreenchange"
-    );
-    assert.strictEqual(
-      removeEventListener.mock.calls[1].arguments[0],
-      "fullscreenerror"
-    );
+  test("a gesture requests nothing until fullscreen is wanted", () => {
+    canvas.dispatch("mousedown", {});
+
+    assert.strictEqual(canvas.requestFullscreen.mock.calls.length, 0);
+  });
+
+  test("disconnect() stops listening to gestures and fullscreen changes", () => {
+    const states: string[] = [];
+    fullscreen.on("stateChange", (state) => states.push(state));
+    fullscreen.enter();
+    fullscreen.disconnect();
+
+    canvas.dispatch("mousedown", {});
+    documentAdapter.fullscreenElement = canvas;
+    documentAdapter.dispatchEvent("fullscreenchange");
+
+    assert.strictEqual(canvas.requestFullscreen.mock.calls.length, 0);
+    assert.deepStrictEqual(states, []);
   });
 
   test("should handle multiple state changes correctly", () => {

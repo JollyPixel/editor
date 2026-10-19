@@ -7,36 +7,20 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { Input, KeyCode } from "../../../src/index.ts";
+import type { KeyCode } from "../../../src/index.ts";
 import { AliasedKeyInput } from "../../../src/combination/conditions/index.ts";
-import { createCombinationFixture } from "../Combination.fixture.ts";
+import {
+  createInputFixture,
+  type InputFixture
+} from "../../helpers/input.ts";
 
 describe("Controls.AliasedKeyInput", () => {
-  let input: Input;
-
-  function press(
-    code: KeyCode
-  ) {
-    if (!input.keyboard.buttons.has(code)) {
-      input.keyboard.buttons.set(code, {
-        code,
-        isDown: false,
-        wasJustPressed: false,
-        wasJustAutoRepeated: false,
-        wasJustReleased: false
-      });
-    }
-    input.keyboard.buttonsDown.add(code);
-  }
-
-  function release(
-    code: KeyCode
-  ) {
-    input.keyboard.buttonsDown.delete(code);
-  }
+  let input: InputFixture["input"];
+  let press: InputFixture["press"];
+  let release: InputFixture["release"];
 
   function tick() {
-    input.keyboard.update();
+    input.update();
   }
 
   function snapshot(
@@ -50,7 +34,11 @@ describe("Controls.AliasedKeyInput", () => {
   }
 
   beforeEach(() => {
-    ({ input } = createCombinationFixture());
+    ({
+      input,
+      press,
+      release
+    } = createInputFixture());
   });
 
   test("defaults to the down state", () => {
@@ -154,6 +142,38 @@ describe("Controls.AliasedKeyInput", () => {
     });
   });
 
+  test("a tap then a hold in the same frame fires pressed", () => {
+    const condition = new AliasedKeyInput(["ShiftLeft", "ShiftRight"]);
+
+    press("ShiftLeft");
+    release("ShiftLeft");
+    press("ShiftLeft");
+    tick();
+
+    assert.deepStrictEqual(snapshot(condition), {
+      down: true,
+      pressed: true,
+      released: false
+    });
+  });
+
+  test("re-pressing a held alias in the same frame produces no edge", () => {
+    const condition = new AliasedKeyInput(["ShiftLeft", "ShiftRight"]);
+
+    press("ShiftLeft");
+    tick();
+
+    release("ShiftLeft");
+    press("ShiftLeft");
+    tick();
+
+    assert.deepStrictEqual(snapshot(condition), {
+      down: true,
+      pressed: false,
+      released: false
+    });
+  });
+
   test("state getters return shared instances across the family", () => {
     const condition = new AliasedKeyInput(["KeyW", "ArrowUp"]);
 
@@ -198,14 +218,23 @@ describe("Controls.AliasedKeyInput", () => {
     assert.strictEqual(calls, 1);
   });
 
-  test("bind() evaluates against the bound input", () => {
+  test("a tap between two frames fires pressed and released once", () => {
     const condition = new AliasedKeyInput(["Enter", "NumpadEnter"]);
-    const isEntering = condition.pressed.bind(input);
 
-    press("NumpadEnter");
+    press("Enter");
+    release("Enter");
     tick();
+    assert.deepStrictEqual(snapshot(condition), {
+      down: false,
+      pressed: true,
+      released: true
+    });
 
-    assert.strictEqual(isEntering(), true);
-    assert.doesNotThrow(() => isEntering.reset());
+    tick();
+    assert.deepStrictEqual(snapshot(condition), {
+      down: false,
+      pressed: false,
+      released: false
+    });
   });
 });

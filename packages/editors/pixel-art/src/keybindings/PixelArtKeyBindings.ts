@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import type {
-  KeyBindingDefaults,
-  KeyBindingMap
-} from "@jolly-pixel/controls";
+import type { KeyBindingDefaults } from "@jolly-pixel/controls";
 
 export const PIXEL_ART_KEY_BINDINGS = Object.freeze({
   selectAll: "Mod+a",
@@ -18,4 +15,3 @@ export const PIXEL_ART_KEY_BINDINGS = Object.freeze({
 } as const satisfies KeyBindingDefaults<string>);
 
 export type PixelArtAction = keyof typeof PIXEL_ART_KEY_BINDINGS;
-export type PixelArtKeyBindings = KeyBindingMap<PixelArtAction>;

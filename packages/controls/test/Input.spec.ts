@@ -12,37 +12,19 @@ import {
   Input,
   MouseEventButton
 } from "../src/index.ts";
-import type { CanvasAdapter } from "../src/adapters/index.ts";
 import * as mocks from "./mocks/index.ts";
-
-function createFakeCanvas(): CanvasAdapter {
-  return {
-    clientWidth: 800,
-    clientHeight: 600,
-    style: {
-      cursor: "auto"
-    },
-    addEventListener: mock.fn(),
-    removeEventListener: mock.fn(),
-    requestFullscreen: mock.fn(() => Promise.resolve()),
-    requestPointerLock: mock.fn(() => Promise.resolve()),
-    focus: mock.fn()
-  };
-}
-
-class FakeWindowAdapter {
-  navigator = new mocks.NavigatorAdapter();
-  onbeforeunload: (() => void) | null = null;
-
-  addEventListener = mock.fn();
-  removeEventListener = mock.fn();
-}
+import {
+  createInputFixture,
+  type InputFixture
+} from "./helpers/input.ts";
 
 describe("Controls.Input", () => {
+  let fixture: InputFixture;
   let input: Input;
 
   beforeEach(() => {
-    input = new Input(createFakeCanvas());
+    fixture = createInputFixture();
+    ({ input } = fixture);
   });
 
   test("constructs one instance of each device, defaulting to the \"default\" preference", () => {
@@ -54,111 +36,129 @@ describe("Controls.Input", () => {
     assert.strictEqual(input.devicePreference, "default");
   });
 
-  test("sample() reaches every edge-reporting device", () => {
-    const calls = [
-      input.mouse,
-      input.touchpad,
-      input.keyboard,
-      input.gamepad
-    ].map((device) => mock.method(device, "sample", () => void 0));
+  test("update() publishes the edges of every device", () => {
+    fixture.press("KeyA");
+    fixture.canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.right });
+    fixture.canvas.dispatchTouchEvent("touchstart", [mocks.createTouch(9, 0, 0)]);
+    fixture.plug().buttons[0] = {
+      pressed: true,
+      value: 1
+    };
 
+    input.update();
+
+    assert.strictEqual(input.keyboard.wasJustPressed("KeyA"), true);
+    assert.strictEqual(input.mouse.wasJustPressed("right"), true);
+    assert.strictEqual(input.touchpad.wasStarted("primary"), true);
+    assert.strictEqual(input.gamepad.wasButtonJustPressed(0, "A"), true);
+    assert.strictEqual(input.wasActive, true);
+  });
+
+  test("one sample reaches the frame and the step readers once each", () => {
+    fixture.press("KeyA");
     input.sample();
 
-    assert.deepStrictEqual(
-      calls.map((call) => call.mock.callCount()),
-      [1, 1, 1, 1]
-    );
-  });
-
-  test("publish() hands the reader to every edge-reporting device", () => {
-    const calls = [
-      input.mouse,
-      input.touchpad,
-      input.keyboard,
-      input.gamepad
-    ].map((device) => mock.method(device, "publish", () => void 0));
-
     input.publish("frame");
-
-    assert.deepStrictEqual(
-      calls.map((call) => call.mock.calls.map((entry) => entry.arguments)),
-      [[["frame"]], [["frame"]], [["frame"]], [["frame"]]]
-    );
+    assert.strictEqual(input.keyboard.wasJustPressed("KeyA"), true);
+    input.publish("step");
+    assert.strictEqual(input.keyboard.wasJustPressed("KeyA"), true);
+    input.publish("step");
+    assert.strictEqual(input.keyboard.wasJustPressed("KeyA"), false);
   });
 
-  describe("device preference", () => {
-    test("switches to gamepad on gamepad activity, and back to default on mouse activity", () => {
-      const windowAdapter = new FakeWindowAdapter();
-      const localCanvas = new mocks.CanvasAdapter();
-      const localInput = new Input(localCanvas, {
-        windowAdapter,
-        documentAdapter: new mocks.DocumentAdapter()
-      });
-      localInput.mouse.connect();
+  test("a touch on the canvas drives the mouse left button", () => {
+    const touch = mocks.createTouch(4096, 30, 40);
 
-      const preferences: string[] = [];
-      localInput.on(
-        "devicePreferenceChange",
-        (preference) => preferences.push(preference)
-      );
+    fixture.canvas.dispatchTouchEvent("touchstart", [touch]);
+    input.update();
+    assert.strictEqual(input.mouse.wasJustPressed("left"), true);
+    assert.deepStrictEqual(input.mouse.position, { x: 30, y: 40 });
 
-      assert.strictEqual(localInput.devicePreference, "default");
-
-      const fakeGamepad = mocks.Gamepad();
-      const button = fakeGamepad.buttons[0];
-      assert.ok(button !== null);
-      button.pressed = true;
-      windowAdapter.navigator.gamepads[0] = fakeGamepad;
-
-      localInput.update();
-      assert.strictEqual(localInput.devicePreference, "gamepad");
-
-      windowAdapter.navigator.gamepads[0] = null;
-      localCanvas.dispatch(
-        "mousedown",
-        {
-          button: MouseEventButton.left,
-          preventDefault: () => void 0
-        }
-      );
-      localInput.update();
-
-      assert.strictEqual(localInput.devicePreference, "default");
-      assert.deepStrictEqual(preferences, ["gamepad", "default"]);
-    });
+    fixture.canvas.dispatchTouchEvent("touchend", [touch]);
+    input.update();
+    assert.strictEqual(input.mouse.wasJustReleased("left"), true);
   });
 
-  describe("wasActive", () => {
-    test("is false while no device is active", () => {
-      assert.strictEqual(input.wasActive, false);
-    });
+  test("a touch completes a wanted fullscreen", () => {
+    input.screen.enter();
 
-    test("is true while any one device is active", () => {
-      mock.getter(input.touchpad, "wasActive", () => true);
+    fixture.canvas.dispatchTouchEvent("touchend", [mocks.createTouch(0, 0, 0)]);
 
-      assert.strictEqual(input.wasActive, true);
-    });
+    assert.strictEqual(fixture.canvas.requestFullscreen.mock.calls.length, 1);
   });
 
-  describe("vibrate", () => {
-    test("delegates to the window adapter's navigator", () => {
-      const windowAdapter = new FakeWindowAdapter();
-      const vibrateMock = mock.fn(
-        (_pattern: VibratePattern) => true
-      );
-      windowAdapter.navigator.vibrate = vibrateMock;
-      const localInput = new Input(
-        createFakeCanvas(),
-        { windowAdapter }
-      );
+  test("switches to gamepad on gamepad activity, and back to default on mouse activity", () => {
+    const preferences: string[] = [];
+    input.on("devicePreferenceChange", (preference) => preferences.push(preference));
 
-      localInput.vibrate([100, 50, 100]);
+    fixture.plug().buttons[0] = {
+      pressed: true,
+      value: 1
+    };
+    input.update();
+    assert.strictEqual(input.devicePreference, "gamepad");
 
-      assert.strictEqual(vibrateMock.mock.calls.length, 1);
-      assert.deepStrictEqual(
-        vibrateMock.mock.calls[0].arguments[0],
-        [100, 50, 100]
-      );
+    fixture.windowAdapter.navigator.gamepads[0] = null;
+    fixture.canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.left });
+    input.update();
+
+    assert.strictEqual(input.devicePreference, "default");
+    assert.deepStrictEqual(preferences, ["gamepad", "default"]);
+  });
+
+  test("a window blur releases every held control", () => {
+    fixture.press("KeyW");
+    fixture.canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.left });
+
+    fixture.windowAdapter.dispatch("blur", {});
+    input.update();
+
+    assert.strictEqual(input.keyboard.isDown("ANY"), false);
+    assert.strictEqual(input.mouse.isDown("ANY"), false);
+    assert.strictEqual(input.wasActive, false);
+  });
+
+  test("prevents the context menu", () => {
+    const preventDefault = mock.fn();
+
+    fixture.windowAdapter.dispatch("contextmenu", { preventDefault });
+
+    assert.strictEqual(preventDefault.mock.calls.length, 1);
+  });
+
+  test("disconnect() stops listening to every device", () => {
+    input.disconnect();
+
+    fixture.press("KeyA");
+    fixture.canvas.dispatchMouseEvent("mousedown", { button: MouseEventButton.left });
+    input.update();
+
+    assert.strictEqual(input.keyboard.isDown("ANY"), false);
+    assert.strictEqual(input.mouse.isDown("ANY"), false);
+  });
+
+  test("emits exit once when the page unloads, if enabled", () => {
+    const windowAdapter = new mocks.WindowAdapter();
+    const local = new Input(new mocks.CanvasAdapter(), {
+      enableOnExit: true,
+      windowAdapter,
+      documentAdapter: new mocks.DocumentAdapter()
     });
+    let exits = 0;
+    local.on("exit", () => exits++);
+
+    windowAdapter.onbeforeunload?.();
+    windowAdapter.onbeforeunload?.();
+
+    assert.strictEqual(exits, 1);
+    assert.strictEqual(local.exited, true);
+  });
+
+  test("vibrate() delegates to the window adapter's navigator", () => {
+    const vibrate = mock.method(fixture.windowAdapter.navigator, "vibrate");
+
+    input.vibrate([100, 50, 100]);
+
+    assert.deepStrictEqual(vibrate.mock.calls[0].arguments, [[100, 50, 100]]);
   });
 });

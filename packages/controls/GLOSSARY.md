@@ -169,8 +169,8 @@ An open dialog uses one to take keys away from the canvas.
 
 ### Suspension
 
-A pause taken with `Keyboard.suspend()`. The keyboard resets and ignores key
-events until every suspension is released. Unlike `enabled`, several owners
+A pause taken with `Keyboard.suspend()`. It is a guard that blocks every key
+and releases the held ones, until every suspension is released. Several owners
 can suspend at once.
 
 ## Keys and chords

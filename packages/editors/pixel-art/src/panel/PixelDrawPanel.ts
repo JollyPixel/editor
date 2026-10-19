@@ -22,6 +22,7 @@ import {
   type ResolvedThemeMode
 } from "@jolly-pixel/ui";
 import { StandalonePixelHistory } from "@jolly-pixel/asset.pixel-art/client";
+import type { KeyBindingSettings } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
 import type { ColorChangeDetail } from "../color/ColorSwatch.ts";
@@ -81,7 +82,7 @@ import {
   CanvasKeyboardController,
   type CanvasHoverChangeDetail
 } from "./CanvasKeyboardController.ts";
-import type { PixelArtKeyBindings } from "../keybindings/PixelArtKeyBindings.ts";
+import type { PixelArtAction } from "../keybindings/PixelArtKeyBindings.ts";
 import "../color/ColorPickerRail.ts";
 import "../color/ColorDock.ts";
 import "../color/ColorPickerPopover.ts";
@@ -303,12 +304,12 @@ export class PixelDrawPanel extends LitElement {
     this.#textures.subscribe("active-change", () => this.#status.clear());
   }
 
-  get keyBindings(): PixelArtKeyBindings {
+  get keyBindings(): KeyBindingSettings<PixelArtAction> {
     return this.#keyboard.keyBindings;
   }
 
   set keyBindings(
-    keyBindings: PixelArtKeyBindings
+    keyBindings: KeyBindingSettings<PixelArtAction>
   ) {
     this.#keyboard.keyBindings = keyBindings;
   }

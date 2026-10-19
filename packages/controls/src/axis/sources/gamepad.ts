@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { Input } from "../../Input.class.ts";
+import type { InputDevices } from "../../types.ts";
 import type {
   GamepadAxis,
   GamepadIndex
@@ -28,7 +28,7 @@ export class GamepadAxisSource implements AxisSource {
   }
 
   sample(
-    input: Input
+    input: InputDevices
   ): number {
     return input.gamepad.axisValue(
       this.#gamepad,

@@ -1,26 +1,35 @@
 // Import Internal Dependencies
-import {
+import type {
+  AxisSource,
   Input,
-  type AxisSource,
-  type KeyCode
+  KeyCode
 } from "../../src/index.ts";
-import * as mocks from "../mocks/index.ts";
+import { createInputFixture } from "../helpers/input.ts";
 
 export interface AxisFixture {
   input: Input;
   press: (code: KeyCode) => void;
   release: (code: KeyCode) => void;
+  tilt: (axes: number[]) => void;
 }
 
 export function createAxisFixture(): AxisFixture {
-  const input = new Input(new mocks.CanvasAdapter(), {
-    documentAdapter: new mocks.DocumentAdapter()
-  });
+  const {
+    input,
+    press,
+    release,
+    plug
+  } = createInputFixture();
+  const pad = plug();
 
   return {
     input,
-    press: (code) => input.keyboard.buttonsDown.add(code),
-    release: (code) => input.keyboard.buttonsDown.delete(code)
+    press,
+    release,
+    tilt(axes) {
+      pad.axes = axes;
+      input.update();
+    }
   };
 }
 

@@ -9,41 +9,43 @@ import {
   Input,
   InputCombination,
   bindInputCondition,
-  type BoundInputCondition
+  type BoundInputCondition,
+  type InputDevices
 } from "../../../src/index.ts";
 
 declare const input: Input;
 
-test("bind() returns a BoundInputCondition", () => {
-  const bound = InputCombination.all(
-    InputCombination.key("ShiftLeft", "down"),
-    InputCombination.key("ArrowRight")
-  ).bind(input);
+test("bindInputCondition() returns a BoundInputCondition", () => {
+  const bound = bindInputCondition(
+    InputCombination.all(
+      InputCombination.key("ShiftLeft", "down"),
+      InputCombination.key("ArrowRight")
+    ),
+    input
+  );
 
   expect(bound).type.toBe<BoundInputCondition>();
   expect(bound()).type.toBe<boolean>();
   expect(bound.reset()).type.toBe<void>();
+  expect(bound).type.not.toBeCallableWith(input);
 });
 
-test("every condition exposes bind()", () => {
-  expect(InputCombination.key("KeyA").bind(input)).type.toBe<BoundInputCondition>();
-  expect(InputCombination.mouse("left").bind(input)).type.toBe<BoundInputCondition>();
-  expect(InputCombination.atLeastOne("KeyA.down").bind(input)).type.toBe<BoundInputCondition>();
-  expect(InputCombination.none("KeyA.down").bind(input)).type.toBe<BoundInputCondition>();
-  expect(InputCombination.sequence("KeyA.pressed").bind(input)).type.toBe<BoundInputCondition>();
-});
-
-test("bind() requires an Input", () => {
+test("bindInputCondition() requires the devices to read", () => {
   const condition = InputCombination.key("KeyA");
 
-  expect(condition.bind).type.not.toBeCallableWith();
-  expect(condition.bind).type.not.toBeCallableWith({});
+  expect(bindInputCondition).type.not.toBeCallableWith(condition);
+  expect(bindInputCondition).type.not.toBeCallableWith(condition, {});
 });
 
-test("the bound function takes no argument", () => {
-  const bound = InputCombination.key("KeyA").bind(input);
+test("conditions read only the devices, not the whole Input", () => {
+  const devices: InputDevices = {
+    keyboard: input.keyboard,
+    mouse: input.mouse,
+    gamepad: input.gamepad
+  };
 
-  expect(bound).type.not.toBeCallableWith(input);
+  expect(InputCombination.key("KeyA").evaluate).type.toBeCallableWith(devices);
+  expect(InputCombination.key("KeyA").evaluate).type.toBeCallableWith(input);
 });
 
 test("bindInputCondition() accepts a structural condition", () => {

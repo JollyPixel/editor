@@ -10,7 +10,7 @@ import {
 // Import Third-party Dependencies
 import {
   isApplePlatform,
-  KeyBindingMap
+  KeyBindingSettings
 } from "@jolly-pixel/controls";
 import type { CanvasShortcuts } from "@jolly-pixel/pixel-draw.renderer";
 import type {
@@ -259,15 +259,21 @@ describe("CanvasKeyboardController", () => {
     assert.equal(shortcuts.snapBypassHeld, false);
   });
 
-  test("a new key binding map replaces the previous chords", () => {
-    controller.keyBindings = new KeyBindingMap(PIXEL_ART_KEY_BINDINGS, {
-      undo: "Mod+u"
+  test("follows new key binding settings and their rebinds", () => {
+    controller.keyBindings = new KeyBindingSettings({
+      defaults: PIXEL_ART_KEY_BINDINGS,
+      overrides: {
+        undo: "Mod+u"
+      }
     });
-
     press("keydown", { key: "z", code: "KeyZ", ...kMod });
     press("keydown", { key: "u", code: "KeyU", ...kMod });
 
-    assert.deepEqual(active!.calls, ["undo"]);
+    controller.keyBindings.assign("undo", ["Mod+j"]);
+    press("keydown", { key: "u", code: "KeyU", ...kMod });
+    press("keydown", { key: "j", code: "KeyJ", ...kMod });
+
+    assert.deepEqual(active!.calls, ["undo", "undo"]);
   });
 
   test("does nothing without an active canvas", () => {

@@ -1,10 +1,6 @@
 // Import Internal Dependencies
-import type { Input } from "../../Input.class.ts";
-import {
-  bindInputCondition,
-  type InputCondition,
-  type BoundInputCondition
-} from "./InputCondition.ts";
+import type { InputDevices } from "../../types.ts";
+import type { InputCondition } from "./InputCondition.ts";
 
 export class NoneInputs implements InputCondition {
   #conditions: InputCondition[];
@@ -16,7 +12,7 @@ export class NoneInputs implements InputCondition {
   }
 
   evaluate(
-    input: Input
+    input: InputDevices
   ): boolean {
     for (const condition of this.#conditions) {
       if (condition.evaluate(input)) {
@@ -31,11 +27,5 @@ export class NoneInputs implements InputCondition {
     for (const condition of this.#conditions) {
       condition.reset();
     }
-  }
-
-  bind(
-    input: Input
-  ): BoundInputCondition {
-    return bindInputCondition(this, input);
   }
 }

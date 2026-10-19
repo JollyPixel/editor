@@ -1,5 +1,7 @@
+// Import Third-party Dependencies
+import type { KeyboardLayoutStore } from "@jolly-pixel/controls";
+
 // Import Internal Dependencies
-import type { KeyboardLayoutStore } from "../state/KeyboardLayoutStore.ts";
 import type {
   MapAction,
   MapKeyBindingSettings

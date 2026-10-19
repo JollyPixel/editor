@@ -4,12 +4,19 @@ Every object built by `InputCombination` implements `InputCondition`:
 
 ```ts
 interface InputCondition {
-  evaluate(input: Input): boolean;
+  evaluate(input: InputDevices): boolean;
   reset(): void;
+}
+
+interface InputDevices {
+  readonly keyboard: Keyboard;
+  readonly mouse: Mouse;
+  readonly gamepad: Gamepad;
 }
 ```
 
-`evaluate()` reads the current frame state from `Input`. `reset()` clears
+`evaluate()` reads the current frame state from the devices. An `Input`
+satisfies `InputDevices`. `reset()` clears
 condition-owned progress. Atomic conditions have no progress to clear;
 composite conditions forward the reset to their children.
 
@@ -82,27 +89,30 @@ Stateful composition is provided by
 
 ## Binding to an Input
 
-Every concrete condition class has a `bind(input)` method:
-
 ```ts
 interface BoundInputCondition {
   (): boolean;
   reset(): void;
 }
 
-condition.bind(
-  input: Input
+bindInputCondition(
+  condition: InputCondition,
+  input: InputDevices
 ): BoundInputCondition
 ```
 
 The returned function calls `condition.evaluate(input)`. Its `reset()` method
-calls `condition.reset()`.
+calls `condition.reset()`. Any `InputCondition` can be bound, including a
+custom implementation.
 
 ```ts
-const dash = InputCombination.all(
-  InputCombination.key("ShiftLeft", "down"),
-  InputCombination.key("ArrowRight", "pressed")
-).bind(input);
+const dash = bindInputCondition(
+  InputCombination.all(
+    InputCombination.key("ShiftLeft", "down"),
+    InputCombination.key("ArrowRight", "pressed")
+  ),
+  input
+);
 
 function gameLoop() {
   input.update();
@@ -119,16 +129,6 @@ A bound function does not copy the condition. Functions bound from the same
 condition share its state. A `SequenceInputs` instance bound to two inputs,
 for example, advances when either function evaluates it. Call a bound
 sequence once per frame, as with `evaluate()`.
-
-Custom implementations of `InputCondition` do not have to provide `bind()`.
-Use the exported helper instead:
-
-```ts
-bindInputCondition(
-  condition: InputCondition,
-  input: Input
-): BoundInputCondition
-```
 
 `BoundInputCondition` and `bindInputCondition()` are exported from the package
 root.

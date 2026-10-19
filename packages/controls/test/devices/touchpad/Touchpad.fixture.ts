@@ -1,6 +1,3 @@
-// Import Third-party Dependencies
-import { Event } from "happy-dom";
-
 // Import Internal Dependencies
 import { Touchpad } from "../../../src/index.ts";
 import * as mocks from "../../mocks/index.ts";
@@ -13,22 +10,6 @@ export class TouchpadCanvasAdapter extends mocks.CanvasAdapter {
 
   getBoundingClientRect() {
     return this.rect;
-  }
-
-  dispatchEvent(
-    type: "touchstart" | "touchend" | "touchmove" | "touchcancel",
-    touches: Touch[]
-  ) {
-    const listeners = this.listeners.get(type) ?? new Set();
-    const event = {
-      type,
-      changedTouches: touches,
-      target: this,
-      preventDefault: () => {
-      }
-    } as unknown as Event;
-
-    listeners.forEach((listener) => listener(event));
   }
 }
 
@@ -48,25 +29,4 @@ export function createConnectedTouchpadFixture(): TouchpadFixture {
     touchpad,
     canvas
   };
-}
-
-export function createTouch(
-  identifier: number,
-  clientX: number,
-  clientY: number
-): Touch {
-  return {
-    identifier,
-    clientX,
-    clientY,
-    screenX: clientX,
-    screenY: clientY,
-    pageX: clientX,
-    pageY: clientY,
-    radiusX: 0,
-    radiusY: 0,
-    rotationAngle: 0,
-    force: 1,
-    target: null as any
-  } as Touch;
 }

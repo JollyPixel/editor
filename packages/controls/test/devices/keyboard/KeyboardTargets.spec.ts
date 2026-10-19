@@ -38,8 +38,7 @@ describe("Controls.Keyboard targets", () => {
       });
       keyboard.update();
 
-      assert.equal(keyboard.buttonsDown.has("KeyW"), false);
-      assert.equal(keyboard.buttons.size, 0);
+      assert.equal(keyboard.isDown("ANY"), false);
     });
 
     test("keypress inside an editable control does not accumulate char", () => {
@@ -55,7 +54,7 @@ describe("Controls.Keyboard targets", () => {
     test("keyup is never ignored, so a key held on the canvas releases inside a field", () => {
       documentAdapter.dispatchEvent("keydown", { code: "KeyW" });
       keyboard.update();
-      assert.equal(keyboard.buttonsDown.has("KeyW"), true);
+      assert.equal(keyboard.isDown("KeyW"), true);
 
       documentAdapter.dispatchEvent("keyup", {
         code: "KeyW",
@@ -63,7 +62,7 @@ describe("Controls.Keyboard targets", () => {
       });
       keyboard.update();
 
-      assert.equal(keyboard.buttonsDown.has("KeyW"), false);
+      assert.equal(keyboard.isDown("KeyW"), false);
     });
 
     test("keydown on a non editable target is still tracked", () => {
@@ -73,7 +72,7 @@ describe("Controls.Keyboard targets", () => {
       });
       keyboard.update();
 
-      assert.equal(keyboard.buttonsDown.has("KeyW"), true);
+      assert.equal(keyboard.isDown("KeyW"), true);
     });
   });
 
@@ -82,7 +81,7 @@ describe("Controls.Keyboard targets", () => {
       const event = documentAdapter.dispatchEvent("keydown", { code: "Tab" });
 
       assert.equal(event.defaultPrevented, false);
-      assert.equal(keyboard.buttonsDown.has("Tab"), true);
+      assert.equal(keyboard.isDown("Tab"), true);
     });
 
     test("Escape is not prevented, so native dialog can close on it", () => {
@@ -92,7 +91,7 @@ describe("Controls.Keyboard targets", () => {
       );
 
       assert.equal(event.defaultPrevented, false);
-      assert.equal(keyboard.buttonsDown.has("Escape"), true);
+      assert.equal(keyboard.isDown("Escape"), true);
     });
 
     test("other control keys are still prevented", () => {

@@ -58,7 +58,6 @@ export interface PixelArtEditorParts {
   session: EditorSession;
   target: TextureLease;
   tabs: TextureTabs;
-  keybindings: () => void;
   consoleFeatures: RegistrationHandle;
   preferences: EditorPreferences;
 }
@@ -113,7 +112,7 @@ export class PixelArtEditor {
       context.preferences,
       (message) => console.warn(message)
     );
-    const keybindings = keyBindingSettings.sync(panel);
+    panel.keyBindings = keyBindingSettings;
 
     const target = session.targetLease(kTextureKind);
     const { record } = target;
@@ -159,7 +158,6 @@ export class PixelArtEditor {
       target,
       tabs,
       preferences,
-      keybindings,
       consoleFeatures: pixelArtConsole(commands, {
         keyBindingSettings,
         uvNets
@@ -168,7 +166,6 @@ export class PixelArtEditor {
   }
 
   readonly #scope: PanelScope;
-  readonly #keybindings: () => void;
   readonly #consoleFeatures: RegistrationHandle;
   readonly #preferences: EditorPreferences;
 
@@ -187,7 +184,6 @@ export class PixelArtEditor {
     this.session = parts.session;
     this.tabs = parts.tabs;
     this.#scope = parts.scope;
-    this.#keybindings = parts.keybindings;
     this.#consoleFeatures = parts.consoleFeatures;
     this.#preferences = parts.preferences;
     this.#activatePreferences();
@@ -208,7 +204,6 @@ export class PixelArtEditor {
       this.#saveColorDocked
     );
     this.#consoleFeatures.unregister();
-    this.#keybindings();
     this.preview?.dispose();
     this.#scope.dispose();
     this.tabs.dispose();

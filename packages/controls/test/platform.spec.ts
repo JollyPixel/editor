@@ -6,29 +6,23 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import {
-  detectApplePlatform,
-  isApplePlatform
-} from "../src/platform.ts";
+import { isApplePlatform } from "../src/platform.ts";
+import { mockPlatform } from "./helpers/platform.ts";
 
 describe("Controls.platform", () => {
-  test("detectApplePlatform() matches Apple platform strings", () => {
-    assert.strictEqual(detectApplePlatform("MacIntel"), true);
-    assert.strictEqual(detectApplePlatform("iPhone"), true);
-    assert.strictEqual(detectApplePlatform("iPad"), true);
-  });
+  for (const platform of ["MacIntel", "iPhone", "iPad"]) {
+    test(`isApplePlatform() is true on ${platform}`, (t) => {
+      mockPlatform(t, platform);
 
-  test("detectApplePlatform() rejects other or missing platforms", () => {
-    assert.strictEqual(detectApplePlatform("Win32"), false);
-    assert.strictEqual(detectApplePlatform("Linux x86_64"), false);
-    assert.strictEqual(detectApplePlatform(undefined), false);
-  });
+      assert.strictEqual(isApplePlatform(), true);
+    });
+  }
 
-  test("isApplePlatform() reflects the current navigator", () => {
-    const platform = typeof navigator === "undefined" ?
-      undefined :
-      navigator.platform;
+  for (const platform of ["Win32", "Linux x86_64"]) {
+    test(`isApplePlatform() is false on ${platform}`, (t) => {
+      mockPlatform(t, platform);
 
-    assert.strictEqual(isApplePlatform(), detectApplePlatform(platform));
-  });
+      assert.strictEqual(isApplePlatform(), false);
+    });
+  }
 });

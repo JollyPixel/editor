@@ -29,7 +29,7 @@ describe("Controls.Keyboard suspend", () => {
     keyboard.disconnect();
   });
 
-  test("releases held keys and ignores keys while suspended", () => {
+  test("releases held keys with an edge and ignores keys while suspended", () => {
     documentAdapter.dispatchEvent("keydown", { code: "KeyW" });
     keyboard.update();
 
@@ -39,6 +39,7 @@ describe("Controls.Keyboard suspend", () => {
 
     assert.equal(keyboard.suspended, true);
     assert.equal(keyboard.isDown("KeyW"), false);
+    assert.equal(keyboard.wasJustReleased("KeyW"), true);
     assert.equal(keyboard.isDown("KeyA"), false);
   });
 
@@ -56,12 +57,5 @@ describe("Controls.Keyboard suspend", () => {
 
     assert.equal(keyboard.suspended, false);
     assert.equal(keyboard.isDown("KeyA"), true);
-  });
-
-  test("leaves the enabled state untouched", () => {
-    keyboard.enabled = false;
-    keyboard.suspend()();
-
-    assert.equal(keyboard.enabled, false);
   });
 });

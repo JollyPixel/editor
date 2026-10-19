@@ -11,4 +11,6 @@ export type CombinedInputState =
 
 export type CombinedKeyboardInputAction = `${ExtendedKeyCode}.${CombinedInputState}`;
 export type CombinedMouseInputAction = `${MouseAction}.${CombinedInputState}`;
-export type CombinedInputAction = CombinedKeyboardInputAction | CombinedMouseInputAction;
+export type CombinedInputAction =
+  | CombinedKeyboardInputAction
+  | CombinedMouseInputAction;

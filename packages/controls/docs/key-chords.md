@@ -93,6 +93,35 @@ iframe without `allow="keyboard-map"`), and `format()` then keeps the QWERTY
 label. Browsers do not announce layout changes, so load it again when the
 window regains focus.
 
+`KeyboardLayoutStore` keeps the latest layout and does that reload:
+
+```ts
+class KeyboardLayoutStore {
+  readonly layout: KeyboardLayout | null;
+
+  format(chord: KeyChordString): string;
+  refresh(): Promise<void>;
+  watch(target: EventTargetAdapter): () => void;
+}
+
+type KeyboardLayoutStoreEvents = {
+  change: (layout: KeyboardLayout | null) => void;
+};
+```
+
+- `format()` labels a chord with the current layout.
+- `refresh()` loads the layout and emits `change` only when it differs.
+- `watch(window)` refreshes now and on every `focus`, until the returned
+  function is called.
+
+```ts
+const layouts = new KeyboardLayoutStore();
+const stop = layouts.watch(window);
+
+layouts.subscribe("change", () => toolbar.requestUpdate());
+layouts.format("KeyQ"); // "A" on AZERTY once loaded
+```
+
 ## KeyBindings
 
 ```ts
