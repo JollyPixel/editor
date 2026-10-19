@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terrain Editor</title>
+  <link rel="stylesheet" href="./main.css">
+</head>
+
+<body>
+  <jolly-scope theme="dark" density="comfortable">
+    <jolly-dock-layout storage-key="terrain:layout">
+      <jolly-dock
+        key="left"
+        side="left"
+        drop="tabs"
+        collapsible
+        size="320"
+        min-size="200"
+        max-size="600"
+      ></jolly-dock>
+      <div class="viewport-column">
+        <jolly-editor-toolbar></jolly-editor-toolbar>
+        <div id="game-container">
+          <canvas tabindex="-1"></canvas>
+          <div class="viewport-top-left">
+            <terrain-view-toolbar></terrain-view-toolbar>
+            <jolly-log></jolly-log>
+          </div>
+          <jolly-presence-stack selectable max="6" hidden></jolly-presence-stack>
+          <div class="viewport-toolbars">
+            <terrain-sculpt-toolbar></terrain-sculpt-toolbar>
+          </div>
+        </div>
+      </div>
+      <jolly-dock
+        key="right"
+        side="right"
+        drop="tabs"
+        collapsible
+        size="320"
+        min-size="200"
+        max-size="600"
+      ></jolly-dock>
+    </jolly-dock-layout>
+  </jolly-scope>
+  <script type="module" src="./src/index.ts"></script>
+</body>
+
+</html>

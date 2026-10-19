@@ -12,31 +12,64 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
 - **Design: done** (2026-10-18). The decisions in `docs/` are settled; change
   them there first, then here, before changing code.
 - **Package skeletons: done** (2026-10-18). `asset.terrain`,
-  `terrain.renderer` and `editor.terrain` exist, are referenced from the root
-  `tsconfig.json`, and contain only an empty `src/index.ts`.
-- **Next: the M1 grilling**, then the rest of M1's first item: the editor
-  manifest, Vite config, dev port and `kWorkspaceBrowserEntries` entries.
+  `terrain.renderer` and `editor.terrain` exist and are referenced from the
+  root `tsconfig.json`.
+- **M1 grilling: done** (2026-10-18). Its answers are in `docs/`: one owner
+  per sample, the region quadtrees and node mesh, the wire format, routing in
+  the terrain extension, the M1 chunk cap and the slope overlay.
+- **Scaffold and headless document: done** (2026-10-18). The editor boots on
+  port 3008 and opens a seeded terrain; chunks can be added and removed.
+- **CDLOD view: done** (2026-10-18). The editor draws the terrain with LoD,
+  morphing and per-pixel normals.
+- **Brushes: done** (2026-10-18). Raise and lower, smooth and flatten edit
+  the local terrain; nothing reaches peers or the saved asset until stroke
+  commits land.
+- **Stroke commits: done** (2026-10-18). A stroke reaches peers and the saved
+  asset as `heights-patched` commits, at its end, every 2 s and once 4 chunks
+  are touched.
+- **Undo and redo: done** (2026-10-18). A stroke is one step, Ctrl+Z and
+  Ctrl+Y or the toolbar buttons; a step a peer has changed since is skipped.
+- **Presence: done** (2026-10-19). Peers show in the presence stack and as
+  camera frustums; each client publishes its interest region and brush ring,
+  and draws peers' rings inside its presence radius.
+- **Interest routing: done** (2026-10-19). Live patches reach only the peers
+  whose presence region overlaps them, through the terrain room's relay.
+- **Fixed flatten: done** (2026-10-19). Flatten targets the height under the
+  press or a fixed height from the toolbar; Ctrl+click picks it.
+- **Slope overlay: done** (2026-10-19). `TerrainView.overlay = "slope"` colours
+  the surface by slope and marks it red above `walkableSlope`.
+- **M1 end-to-end test: done** (2026-10-19). Two peers sculpt and undo, a far
+  peer receives only the commit, and the surface shows no gap across LoD
+  levels.
+- **M1: done** (2026-10-19).
+- **Next:** M2, asset parts in `@jolly-pixel/asset-server`.
 
 Tick a box when its item lands, and move **Next** along with it.
 
 ## M1: Collaborative sculpt
 
 Proves the riskiest parts first: collaboration and LoD. The server still loads
-and sends the whole asset.
+and sends the whole asset, capped at 256 chunks. Brushes do not create
+chunks yet.
 
-- [ ] Scaffold `@jolly-pixel/asset.terrain`, `@jolly-pixel/terrain.renderer`
-  and `@jolly-pixel/editor.terrain`, with the editor manifest and the
-  `kWorkspaceBrowserEntries` entries.
-- [ ] Headless `TerrainDocument`: sparse chunk grid, height samples, add and
-  remove chunk.
-- [ ] CDLOD view: quadtree selection, one grid mesh per node, heights sampled
-  in the vertex shader, morphing between levels, skirts.
-- [ ] Brushes: raise and lower, smooth, flatten.
-- [ ] Stroke commits: tile patches, collision keys, arbiter, corrections.
-- [ ] Undo and redo through `CommandHistory`.
-- [ ] Interest-routed presence in `@jolly-pixel/network`: peer brush rings and
-  live ephemeral patches inside the presence radius.
-- [ ] Slope overlay.
+- [x] Scaffold `@jolly-pixel/asset.terrain`, `@jolly-pixel/terrain.renderer`
+  and `@jolly-pixel/editor.terrain`, with the editor manifest, the Vite
+  config, dev port 3008 and a `test` script in each package.
+- [x] Headless `TerrainDocument`: sparse chunk grid, 64×64 owned samples,
+  world-space sampling, add and remove chunk with edge seeding.
+- [x] CDLOD view: region quadtrees, one 33×33 grid mesh per node, height
+  textures with neighbour aprons, morphing between levels, skirts. It
+  replaces the editor's placeholder ground grid.
+- [x] Brushes: raise and lower, smooth, flatten.
+- [x] Flatten to a fixed height set in the toolbar; Ctrl+click picks it.
+- [x] Stroke commits: tile patches, collision keys, arbiter, corrections.
+- [x] Undo and redo through `CommandHistory`.
+- [x] Interest routing in the terrain extension: live patches inside the
+  presence radius; peer brush rings drawn inside it.
+- [x] Debug overlays: chunk grid and LoD levels.
+- [x] Slope overlay.
+- [x] E2E: two-peer sculpt with undo, LoD seams render, a far peer receives
+  the commit only.
 
 ## M2: Streaming
 
@@ -46,6 +79,9 @@ and sends the whole asset.
   and command broadcast filtered by subscription.
 - [ ] Overview map, rebuilt incrementally from edited chunks.
 - [ ] Camera-driven chunk loading and unloading within the stream radius.
+- [ ] Lift the 256-chunk cap.
+- [ ] Tile corrections for refused commits, refused per tile, instead of the
+  snapshot the room sends back today.
 
 ## M3: Texturing
 
@@ -60,8 +96,10 @@ and sends the whole asset.
 - [ ] Resolution tiers ×2 and ×4, with seam morphing.
 - [ ] Points of interest: LoD bias and minimum detail at distance.
 - [ ] Ramp and terrace brushes.
+- [ ] Strokes that cross into empty ground create the chunk in the same
+  commit.
 - [ ] Heightmap and splat map import and export.
-- [ ] Debug overlays: chunk grid, LoD levels, holes.
+- [ ] Debug overlay for holes.
 
 ## Not planned for V1
 

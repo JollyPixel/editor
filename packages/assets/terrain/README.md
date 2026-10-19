@@ -8,10 +8,10 @@
 
 ## 💃 Getting Started
 
-This workspace-private package will hold the terrain asset kind, its command
-schemas, the server arbiter, the client sync and the history registration.
-It is empty for now; see the terrain editor [design][design] and
-[roadmap][roadmap].
+This workspace-private package holds the terrain asset kind, its command
+schemas, the server arbiter and the client sync. Its entry points are `.`
+(kind and document), `./client` and `./server`. See the terrain editor
+[design][design] and [roadmap][roadmap].
 
 ## License
 

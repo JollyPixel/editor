@@ -98,6 +98,18 @@ export class ElasticFocus implements CameraFocus {
     this.#pivotPosition.add(offset);
   }
 
+  place(
+    position: THREE.Vector3Like,
+    orientation: THREE.Quaternion
+  ): void {
+    this.#trailDistance = this.#targetTrailDistance;
+    this.#forward.set(0, 0, -1).applyQuaternion(orientation);
+    this.#pivotPosition
+      .copy(position)
+      .addScaledVector(this.#forward, this.#trailDistance);
+    this.#marker.moveTo(this.#pivotPosition);
+  }
+
   handleScroll(
     scrollY: number
   ): boolean {

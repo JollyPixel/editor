@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./engine": {
+      "types": "./dist/plugins/engine/index.d.ts",
+      "default": "./dist/plugins/engine/index.js"
     }
   },
   "imports": {
@@ -16,6 +20,8 @@
   },
   "scripts": {
     "build": "tsc -b",
+    "test-only": "node --test \"test/**/*.spec.ts\"",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "lint": "oxlint src test",
     "typecheck": "tsc --noEmit -p test/tsconfig.json"
   },
@@ -29,5 +35,19 @@
     "dist"
   ],
   "author": "MALAJ Alexandre <alexandre.malaj@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "three": "0.186.1"
+  },
+  "peerDependencies": {
+    "@jolly-pixel/engine": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@jolly-pixel/engine": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@jolly-pixel/engine": "workspace:*"
+  }
 }

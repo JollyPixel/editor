@@ -9,25 +9,33 @@ broadcasts it, and a refused edit is answered with a correction.
 
 | Command | Content |
 |---|---|
-| `heightPatch` | Tile patches of height samples |
+| `heights-patched` | Tile patches of height samples |
 | `splatPatch` | Tile patches of splat indices and weights |
 | `holePatch` | Tile patches of the hole mask |
-| `addChunk`, `removeChunk` | A chunk coordinate |
+| `chunk-added` | A chunk coordinate and its seeded heights |
+| `chunk-removed` | A chunk coordinate |
 | `setTier` | A chunk coordinate and its new tier |
 | Layer and point-of-interest commands | Create, update, delete |
 
-A patch is cut into 16×16 tiles. Each tile carries its chunk, its position in
-the chunk, the new values and the previous ones. The previous values make the
-inverse for undo and the correction for a refusal.
+A patch is cut into 16×16 tiles; a chunk at ×1 has 4×4 of them. Each tile
+carries its chunk, its index in the chunk (`z × 4 + x`) and its new values. A
+commit holds at most 1024 tiles. The author's document captures the values
+the stroke replaced when it commits, and builds the inverse for undo from
+them.
 
-Patches are deflate-compressed on the wire.
+Height values travel as the raw bytes of a `Float32Array`, base64-encoded in
+the JSON envelope, so they arrive exactly as written. Compression comes from
+the WebSocket's permessage-deflate, enabled for terrain rooms; patches are not
+compressed one by one.
 
 ### Collision keys
 
 Each tile has the key `chunk:<x>,<z>:<channel>:<tile>`, where the channel is
-`h`, `s` or `x` (holes). Two commands collide when they share a key. A
-collision resolves last write wins: the later command is admitted and
-overwrites the tile.
+`h`, `s` or `x` (holes). `chunk-added` and `chunk-removed` hold the key
+`chunk:<x>,<z>` and every tile key of their chunk, so undoing a chunk's
+creation is refused once someone has sculpted it. Two commands collide when
+they share a key. A collision resolves last write wins: the later command is
+admitted and overwrites the tile.
 
 ## Strokes
 
@@ -48,7 +56,9 @@ The event log records one command per commit, not one every 100 ms.
 Each client publishes its interest region: the chunk under its camera and two
 radii.
 
-- `presenceRadius`: 4 chunks by default, set in the view settings.
+- `presenceRadius`: 4 chunks by default, set in the view settings. The
+  region is the square of chunks within that many chunks of the centre on
+  each axis.
 - `streamRadius`: larger, set by the LoD. It decides which chunks are loaded.
 
 What a peer receives about someone else's stroke depends on where it is:
@@ -62,12 +72,24 @@ What a peer receives about someone else's stroke depends on where it is:
 The roster and camera frustums from `@jolly-pixel/editor.host` stay
 room-wide.
 
-### Network change
+### Routing
 
-Today the presence channel forwards every value to the whole room. V1 adds
-routing by interest region to `@jolly-pixel/network`: presence values and
-ephemeral messages that carry chunk coordinates go only to the peers whose
-presence region contains them.
+The interest region and the brush ring are presence values. Presence goes to
+the whole room, and each client draws a peer's ring only inside its own
+presence radius.
+
+Live patches are messages to the terrain kind's server extension. The
+extension forwards each one with `sendTo` to the peers whose presence region
+overlaps the patch's chunks. `@jolly-pixel/network` does not change for this;
+routing moves into it only if another kind needs it.
+
+The extension is the terrain live protocol's relay (`TerrainLiveRelay`).
+Server extensions do not see presence updates, so each client also sends its
+interest region to the relay as `interest-changed`, and again after a resync.
+Live patches travel as `live-patched`. A peer that applies one keeps the
+heights it replaced. A commit or another change to the tile discards them;
+they are written back when the author leaves, or when no commit arrives within
+5 s of the author's last live patch.
 
 ## Asset parts
 
@@ -90,7 +112,8 @@ The client side of `@jolly-pixel/network`, `CommandSync` and the pending
 ledger, does not change. `TerrainSyncClient` manages subscriptions from the
 camera.
 
-Until M2 lands, the server loads and sends the whole asset.
+Until M2 lands, the server loads and sends the whole asset, and `chunk-added`
+is refused past 256 chunks, about 17 MB of heights at ×1.
 
 ## Corrections
 
@@ -99,11 +122,22 @@ is refused, in whole or in part, when:
 
 - a tile's chunk was removed in the meantime;
 - a tile's chunk changed tier, so the patch no longer matches its grid;
+- a tile holds a height that is not finite or lies outside `[-4096, 4096]` m;
 - the author lacks the right to edit the terrain.
+
+Rights go through the room's existing rights gate on the terrain command
+event, as for the other kinds, and refuse the whole commit. There are no
+per-chunk rights in V1.
+
+Since each sample belongs to one chunk, a refused tile cannot leave two
+copies of an edge out of step.
 
 The room answers the author alone with a correction: the refused tiles with
 their current values. Live patches are never corrected; the commit that
 follows replaces them.
+
+Until M2, a commit is refused whole, and the room answers with its full
+snapshot instead of a tile correction.
 
 ## Undo
 

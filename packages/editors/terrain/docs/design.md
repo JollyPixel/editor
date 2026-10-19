@@ -23,15 +23,21 @@ in [collaboration](./collaboration.md); how brushes write is in
 The world is a sparse grid of chunks, 64 m on a side. Chunk `(x, z)` covers
 `[x × 64, (x + 1) × 64)` on X and the same on Z. A chunk exists only once
 someone creates it, by adding it next to an existing one or by sculpting
-across an edge. Removing a chunk deletes its data.
+across an edge. Removing a chunk deletes its data. A new terrain starts with
+one flat chunk at `(0, 0)`, and removing the last chunk is refused.
 
-Neighbouring chunks share their edge samples: both store them, and an edit on
-an edge writes both copies in the same command.
+Each sample belongs to exactly one chunk: chunk `(x, z)` owns the samples in
+`[x × 64, (x + 1) × 64)` on X and Z, and the row and column at `(x + 1) × 64`
+belong to its neighbours. No sample is stored twice, so an edit on an edge
+writes it once. A new chunk starts with its edge samples copied from the
+chunks next to it, so adding one never opens a cliff.
+
+Heights are clamped to `[-4096, 4096]` m.
 
 ## Grid
 
-Heights are a regular grid of `(2^n + 1)²` samples per chunk. At the base
-spacing of 1 m that is 65×65.
+Heights are a regular grid with `2^n × 2^n` samples per chunk. At the base
+spacing of 1 m that is 64×64, or 4×4 tiles of 16×16.
 
 Each quad is split into two triangles, and the diagonal alternates from one
 quad to the next in a diamond pattern:
@@ -66,7 +72,9 @@ Other triangulations were compared:
 | Centre vertex per quad, as in WoW | About twice the data; centre samples do not halve into LoD levels. |
 | Diagonal chosen per quad from the heights | Not engine-standard, and does not continue into bisection tessellation. |
 
-The split rule lives in one function, `quadDiagonal(x, z)`. The node meshes,
+The split rule lives in one function, `quadDiagonal(x, z)`: quad `(x, z)`
+takes the `main` diagonal, from `(x, z)` to `(x + 1, z + 1)`, when `x + z` is
+even, and the `anti` diagonal otherwise. The node meshes,
 the brush ray cast, height queries, and later colliders and exports all call
 it, so what is drawn, aimed at and walked on agree, and the rule can change in
 one place.
@@ -74,7 +82,7 @@ one place.
 ## Resolution tiers
 
 WebGPU has no tessellation stage, so extra detail is stored, not generated. A
-chunk can be refined to ×2 (129², 0.5 m) or ×4 (257², 0.25 m). Brushes then
+chunk can be refined to ×2 (128², 0.5 m) or ×4 (256², 0.25 m). Brushes then
 edit the finer grid, and the quadtree has extra levels over that chunk.
 
 Refining a chunk resamples its heights bilinearly, so the surface does not
@@ -86,13 +94,57 @@ done with morphing (see below), not by changing the data.
 
 The view uses CDLOD:
 
-- A quadtree over the chunk grid picks nodes by distance to the camera.
-- Every node draws the same N×N grid mesh. The vertex shader reads the heights
-  from the chunk's height texture. The mesh comes from a `NodeMeshProvider`,
-  so a tessellated mesh can replace the grid later.
+- The world is split into regions of 16×16 chunks, 1024 m on a side and
+  aligned to the chunk grid. Each region that holds a chunk has its own
+  quadtree, which picks nodes by distance to the camera.
+- A leaf node covers 32 m, a quarter of a chunk, and the root covers the
+  region: six levels from 32 m to 1024 m. A ×2 chunk adds one level under its
+  leaves, a ×4 chunk two.
+- Leaves are drawn within 80 m of the camera, and each coarser level doubles
+  that range. A node is refined when its children's range reaches its bounds,
+  which span the heights of the chunks under it. Where only some children are
+  in range, the other quarters are drawn at the node's own level, so
+  neighbouring nodes never differ by more than one level.
+- Every node draws the same 33×33 grid mesh, 32 quads, so a leaf draws at full
+  1 m detail. The vertex shader reads the heights from the chunk's height
+  texture. The mesh comes from a `NodeMeshProvider`, so a tessellated mesh can
+  replace the grid later.
 - Near the boundary of a level, vertices morph toward the coarser level's
-  positions, so levels meet without cracks or popping.
-- Skirts hang under chunk edges and hide what morphing cannot.
+  positions, so levels meet without cracks or popping. The morph runs over
+  the last 30% of each level's distance band.
+- Morphing moves heights, not positions. A vertex the coarser level drops
+  keeps its X and Z and blends toward the average height of two neighbours:
+  the ends of the coarse edge it sits on, or, for the centre of a coarse
+  quad, the ends of that quad's diagonal. Fully morphed, the mesh lies on the
+  coarser level's triangles, which the alternating diagonals require: sliding
+  vertices onto their neighbours only works with a fixed diagonal.
+- Node and quarter-node corners fall on even grid lines, so one mesh per
+  resolution serves every node: 32 quads for a node, 16 for a quarter.
+- Skirts hide the hairline cracks that rounding leaves where two levels meet.
+  A node only has them on edges that face a node of another level, one grid
+  spacing deep, and they collapse where no chunk lies across the edge, so the
+  world's border ends cleanly.
+- A node can cover ground with no chunk; its fragments there are discarded.
+  Chunk borders fall on vertex lines at every level, so no triangle straddles
+  one.
+
+### Debug overlays
+
+`TerrainView.overlay` switches the surface between `none`, `chunks`, which
+draws a one-pixel line on every chunk border, `lod`, which adds a tint per
+LoD level, and `slope`, described below. A uniform selects the mode, so switching does not recompile the
+shader.
+
+### Slope overlay
+
+An overlay colours the surface by slope, on a ramp from 0° to 60° and above,
+and highlights everything steeper than a maximum walkable angle, 45° by
+default. The angle comes from the same finite-difference normal as the
+lighting. The overlay and the angle are view settings: `TerrainView.overlay`
+and `TerrainView.walkableSlope`, in degrees from 0 to 90, set from the
+editor's view toolbar and saved in the browser. The ramp runs from
+green on flat ground through yellow to orange at 60°; steeper than the
+walkable angle is red.
 
 ### Overview map
 
@@ -156,7 +208,7 @@ Accepted drawbacks:
 
 | Channel | Format | Size at ×1 |
 |---|---|---|
-| Heights | `Float32`, one per sample | 65×65 |
+| Heights | `Float32`, one per sample | 64×64 |
 | Splat indices | `RGBA8`: the four strongest layers | 128×128, 0.5 m per texel |
 | Splat weights | `RGBA8`: their weights, summing to 255 | 128×128 |
 | Holes | One bit per quad | 64×64 |
@@ -165,8 +217,19 @@ Accepted drawbacks:
 Tiers multiply the height and hole sizes. The splat resolution does not
 change with the tier.
 
-On the GPU each chunk has an `R32F` height texture, two `RGBA8` splat textures
-and an `R8` hole texture. Edits upload only the changed rectangle.
+On the GPU, heights live in one `R32F` texture array with a layer per chunk,
+so a node spanning many chunks is still one draw. A 256×256 lookup texture,
+indexed by chunk coordinates modulo 256, gives each chunk's layer and its own
+coordinates, which rejects a chunk 256 away that shares the slot. Splat and
+hole maps will follow the same layout. An edit re-uploads the layers it
+changed.
+
+A layer is 68×68 at ×1: the chunk's own samples plus a two-sample apron on
+every side, copied from the neighbours. The apron gives the mesh its last row
+and column, and gives the normals, which blend the gradients of four samples,
+their neighbours across the edge. An edit on an edge tile also rewrites the
+matching strip of the neighbour's apron. Where no neighbour exists, the apron repeats the chunk's outer row,
+which leaves a flat 1 m strip along the edge of the world.
 
 ## Packages
 

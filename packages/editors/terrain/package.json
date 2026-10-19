@@ -1,14 +1,58 @@
 {
   "name": "@jolly-pixel/editor.terrain",
+  "description": "Collaborative heightfield terrain editor for JollyPixel",
   "version": "0.1.0",
   "type": "module",
   "private": true,
+  "jollypixel": {
+    "editor": {
+      "name": "terrain",
+      "kinds": [
+        "terrain"
+      ],
+      "page": "index.html"
+    }
+  },
   "scripts": {
+    "dev": "vite",
+    "dev:e2e": "vite --mode e2e",
+    "build": "pnpm run typecheck && vite build",
+    "build:watch": "vite build --watch",
+    "preview": "vite preview",
+    "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
+    "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit -p test/tsconfig.json",
-    "lint": "oxlint src test"
+    "lint": "oxlint src test vite.config.ts playwright.config.ts && pnpm run lint:css",
+    "lint:css": "stylelint \"src/**/*.ts\" \"public/**/*.css\" --cache"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/editors/terrain"
   },
   "keywords": [],
   "imports": {
     "#src/*": "./src/*"
+  },
+  "author": "MALAJ Alexandre <alexandre.malaj@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@jolly-pixel/e2e": "workspace:*"
+  },
+  "dependencies": {
+    "@jolly-pixel/asset-server": "workspace:*",
+    "@jolly-pixel/asset.terrain": "workspace:*",
+    "@jolly-pixel/controls": "workspace:*",
+    "@jolly-pixel/editor.host": "workspace:*",
+    "@jolly-pixel/engine": "workspace:*",
+    "@jolly-pixel/history": "workspace:*",
+    "@jolly-pixel/network": "workspace:*",
+    "@jolly-pixel/runtime": "workspace:*",
+    "@jolly-pixel/terrain.renderer": "workspace:*",
+    "@jolly-pixel/ui": "workspace:*",
+    "@openally/emitt": "1.1.0",
+    "lit": "3.3.3",
+    "three": "0.186.1"
   }
 }

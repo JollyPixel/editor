@@ -61,8 +61,9 @@ only on cliffs pay for each technique only where they show.
 View modes, drawn over the shaded terrain. They are local and never sent to
 peers.
 
-- **Slope.** Faces steeper than a threshold angle, 45° by default, are tinted
-  red. Useful to see where a character cannot walk.
+- **Slope.** A colour ramp by slope, from 0° to 60°, with faces steeper than
+  the walkable angle, 45° by default, in red. Useful to see where a character
+  cannot walk. See [slope overlay](./design.md#slope-overlay).
 - **Chunk grid.** Chunk edges and coordinates.
 - **LoD.** One colour per level.
 - **Holes.** Hole cells, outlined, with the surface under them shown.

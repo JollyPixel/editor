@@ -379,7 +379,33 @@ importers:
         specifier: workspace:*
         version: link:../../event-store
 
-  packages/assets/terrain: {}
+  packages/assets/terrain:
+    dependencies:
+      '@jolly-pixel/asset-server':
+        specifier: workspace:*
+        version: link:../../asset-server
+      '@jolly-pixel/history':
+        specifier: workspace:*
+        version: link:../../history
+      '@jolly-pixel/network':
+        specifier: workspace:*
+        version: link:../../network
+      '@jolly-pixel/terrain.renderer':
+        specifier: workspace:*
+        version: link:../../terrain-renderer
+      '@openally/emitt':
+        specifier: 1.1.0
+        version: 1.1.0
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
+    devDependencies:
+      '@jolly-pixel/asset':
+        specifier: workspace:*
+        version: link:../../asset
+      '@jolly-pixel/event-store':
+        specifier: workspace:*
+        version: link:../../event-store
 
   packages/assets/voxel-animation:
     dependencies:
@@ -643,7 +669,51 @@ importers:
         specifier: workspace:*
         version: link:../../runtime
 
-  packages/editors/terrain: {}
+  packages/editors/terrain:
+    dependencies:
+      '@jolly-pixel/asset-server':
+        specifier: workspace:*
+        version: link:../../asset-server
+      '@jolly-pixel/asset.terrain':
+        specifier: workspace:*
+        version: link:../../assets/terrain
+      '@jolly-pixel/controls':
+        specifier: workspace:*
+        version: link:../../controls
+      '@jolly-pixel/editor.host':
+        specifier: workspace:*
+        version: link:../host
+      '@jolly-pixel/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@jolly-pixel/history':
+        specifier: workspace:*
+        version: link:../../history
+      '@jolly-pixel/network':
+        specifier: workspace:*
+        version: link:../../network
+      '@jolly-pixel/runtime':
+        specifier: workspace:*
+        version: link:../../runtime
+      '@jolly-pixel/terrain.renderer':
+        specifier: workspace:*
+        version: link:../../terrain-renderer
+      '@jolly-pixel/ui':
+        specifier: workspace:*
+        version: link:../../ui
+      '@openally/emitt':
+        specifier: 1.1.0
+        version: 1.1.0
+      lit:
+        specifier: 3.3.3
+        version: 3.3.3
+      three:
+        specifier: 0.186.1
+        version: 0.186.1
+    devDependencies:
+      '@jolly-pixel/e2e':
+        specifier: workspace:*
+        version: link:../../e2e
 
   packages/editors/voxel-map:
     dependencies:
@@ -1062,7 +1132,15 @@ importers:
         specifier: 2.0.1
         version: 2.0.1
 
-  packages/terrain-renderer: {}
+  packages/terrain-renderer:
+    dependencies:
+      three:
+        specifier: 0.186.1
+        version: 0.186.1
+    devDependencies:
+      '@jolly-pixel/engine':
+        specifier: workspace:*
+        version: link:../engine
 
   packages/three:
     dependencies:

@@ -1,3 +1,41 @@
 {
-  "extends": "../../../tsconfig/lib.json"
+  "extends": "../../../tsconfig/lib.json",
+  "compilerOptions": {
+    "types": [
+      "node",
+      "vite/client"
+    ]
+  },
+  "references": [
+    {
+      "path": "../host"
+    },
+    {
+      "path": "../../assets/terrain"
+    },
+    {
+      "path": "../../asset-server"
+    },
+    {
+      "path": "../../controls"
+    },
+    {
+      "path": "../../engine"
+    },
+    {
+      "path": "../../history"
+    },
+    {
+      "path": "../../network"
+    },
+    {
+      "path": "../../runtime"
+    },
+    {
+      "path": "../../terrain-renderer"
+    },
+    {
+      "path": "../../ui"
+    }
+  ]
 }

@@ -54,6 +54,10 @@ export interface CameraFocus {
     offset: THREE.Vector3,
     transform: CameraFocusTransform
   ): void;
+  place(
+    position: THREE.Vector3Like,
+    orientation: THREE.Quaternion
+  ): void;
   updatePose(
     pose: CameraFocusPose
   ): void;
@@ -87,6 +91,10 @@ export class NoCameraFocus implements CameraFocus {
     transform: CameraFocusTransform
   ): void {
     transform.moveGlobal(offset);
+  }
+
+  place(): void {
+    return;
   }
 
   updatePose(): void {

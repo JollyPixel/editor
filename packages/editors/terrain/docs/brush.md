@@ -26,9 +26,14 @@ ray. With nothing hit, the brush has no target and hides.
 ## Pipeline
 
 1. **Aim** gives the hit point and the surface normal.
-2. **Stroke** places stamps along the mouse path, `spacing` apart.
-3. **Apply** runs the brush on every sample under each stamp. The weight of a
-   sample is `strength × falloff(distance / size)`, measured on X and Z.
+2. **Stroke** places stamps along the mouse path, `spacing` apart, or one
+   stamp under the cursor while it holds still. The brush keeps working for as
+   long as the button is held.
+3. **Apply** runs the brush on every sample under each stamp. The effect is a
+   rate per second: each frame's share, up to 50 ms of it, is split between
+   that frame's stamps, so dragging speed changes where the effect lands, not
+   how much of it there is. The weight of a sample is
+   `falloff(distance / size)`, measured on X and Z.
 4. **Patch batcher** collects the changed tiles. It sends the live patches
    every 100 ms and the commit when the stroke ends; see
    [strokes](./collaboration.md#strokes).
@@ -36,13 +41,24 @@ ray. With nothing hit, the brush has no target and hides.
 A stroke is one undo step. It writes the finest grid of each chunk under it,
 so one stamp can span chunks of different tiers.
 
+Brushes read heights through the document's world-space sampling, from a copy
+taken before the stamp, so smooth and flatten see across chunk edges. A read
+outside every chunk clamps to the nearest existing sample. Writes stay inside
+existing chunks: until a commit can carry `chunk-added` with its patch, the part
+of a stamp over empty ground is dropped. Written heights are clamped to
+`[-4096, 4096]` m.
+
 ## Sculpt brushes
 
-- **Raise and lower.** Left button raises, right button lowers, by
-  `weight × strength` per stamp.
-- **Smooth.** Moves each sample toward a Gaussian average of its neighbours.
-- **Flatten.** Moves each sample toward a target height: the height under the
-  press, or a fixed value set in the toolbar. Ctrl+click picks the target.
+- **Raise and lower.** Left button raises, right button lowers, at
+  `weight × strength × size` metres per second.
+- **Smooth.** Moves each sample toward a Gaussian average of its 3×3
+  neighbours, closing `weight × strength × 8` of the gap per second.
+- **Flatten.** Moves each sample toward a target height at the same rate as
+  smooth: the height under the press, or a fixed value set in the toolbar.
+  With flatten selected, Ctrl+click switches to a fixed target and picks the
+  height under the cursor, rounded to the centimetre. Both settings are saved
+  with the others.
 - **Ramp.** Drag from A to B. Samples within `size` of the segment move toward
   the line from A's height to B's, with the falloff across its width. Written
   on release, as one stroke.
@@ -63,7 +79,8 @@ renormalised to sum to 255. See [texture](./texture.md#splat).
 
 ## Previews
 
-- The brush ring is drawn on the terrain at the hit point, in the falloff
-  colour, with an inner ring where the falloff starts.
+- The brush ring is drawn on the terrain at the hit point, with an inner ring
+  where the falloff weight drops to one half. The constant falloff has no
+  inner ring.
 - Ramp draws its segment and its width while dragging.
 - Peers' rings are drawn in their profile colour, inside the presence radius.

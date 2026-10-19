@@ -1,3 +1,23 @@
 {
-  "extends": "../../../tsconfig/lib.json"
+  "extends": "../../../tsconfig/lib.json",
+  "references": [
+    {
+      "path": "../../asset"
+    },
+    {
+      "path": "../../asset-server"
+    },
+    {
+      "path": "../../event-store"
+    },
+    {
+      "path": "../../history"
+    },
+    {
+      "path": "../../network"
+    },
+    {
+      "path": "../../terrain-renderer"
+    }
+  ]
 }
