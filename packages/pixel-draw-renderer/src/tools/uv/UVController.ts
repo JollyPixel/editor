@@ -170,7 +170,7 @@ export class UVController implements UVTool {
       x: Math.floor(pointer.x),
       y: Math.floor(pointer.y)
     };
-    const pick = this.#picks.pickAt(position);
+    const pick = this.#picks.press(position);
     if (pick === null) {
       if (this.#deselectOnEmptyClick) {
         this.#uvMap.select(null);
@@ -211,7 +211,11 @@ export class UVController implements UVTool {
   }
 
   handleEnd(): void {
+    const gesture = this.#gesture;
     this.#finish(true);
+    if (!gesture?.dragged) {
+      this.#picks.release();
+    }
   }
 
   cancelDrag(): void {

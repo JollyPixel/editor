@@ -146,7 +146,7 @@ test("freeing stacks six faces in place and clicks cycle through them", async({ 
   expect(picked).toEqual(["front", "back", "left", "right", "top", "bottom", "front"]);
 });
 
-test("dragging a free region moves only the face under the press", async({ panel }) => {
+test("dragging a free region moves only the selected face under the press", async({ panel }) => {
   await panel.canvas.click(kCubeCell);
   await panel.uv.changeState("Free");
   await panel.canvas.click(kCubeCell);
@@ -155,11 +155,11 @@ test("dragging a free region moves only the face under the press", async({ panel
   await panel.canvas.drag([kCubeCell, { x: 40, y: 8 }], { steps: 1 });
 
   const { selectedSlot, faces } = await uvSnapshot(panel);
-  expect(selectedSlot).toBe("left");
+  expect(selectedSlot).toBe("back");
   expect(faces).toMatchObject({
-    left: { x: 32, y: 0 },
+    back: { x: 32, y: 0 },
     front: kOrigin,
-    back: kOrigin
+    left: kOrigin
   });
 });
 

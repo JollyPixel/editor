@@ -316,7 +316,7 @@ In UV mode, `shortcuts.rotate("cw")` and `shortcuts.rotate("ccw")` rotate the se
 select(id: string | null, slot?: UVSlot | null): void
 ```
 
-Selects a region or clears selection with `null`. For a free region, an omitted or inactive slot falls back to the first active slot; every other state ignores `slot`. A click picks the slot the overlay paints last: the selected one when it is under the cursor, otherwise the last one in region order. Repeated clicks cycle in region order through the slots that are exactly coincident with it. A slot that merely overlaps sits below and is reachable only where it is uncovered. A click outside every region restarts that cycle whether or not it clears the selection.
+Selects a region or clears selection with `null`. For a free region, an omitted or inactive slot falls back to the first active slot; every other state ignores `slot`. A click picks the slot the overlay paints last: the selected one when it is under the cursor, otherwise the last one in region order. Repeated clicks cycle in region order through the slots that are exactly coincident with it. The cycle advances on release, so pressing the selected slot and dragging it moves that slot. A press counts as a drag, not a click, once the pointer leaves the pixel it started on. A slot that merely overlaps sits below and is reachable only where it is uncovered. A click outside every region restarts that cycle whether or not it clears the selection.
 
 ### `restore(region)` / `restoreState(region)` / `restoreRotation(region, face?)` / `restoreMove(id, rect, slot?)`
 

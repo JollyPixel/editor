@@ -120,13 +120,17 @@ describe("UVController — deselectOnEmptyClick: false", () => {
     map.showAll = true;
 
     controller.handleStart({ x: 2, y: 2 });
+    controller.handleEnd();
     assert.strictEqual(map.selectedRegionId, first.id);
     controller.handleStart({ x: 2, y: 2 });
+    controller.handleEnd();
     assert.strictEqual(map.selectedRegionId, second.id);
 
     controller.handleStart({ x: 20, y: 20 });
+    controller.handleEnd();
     assert.strictEqual(map.selectedRegionId, second.id);
     controller.handleStart({ x: 2, y: 2 });
+    controller.handleEnd();
 
     assert.strictEqual(
       map.selectedRegionId,
@@ -135,6 +139,7 @@ describe("UVController — deselectOnEmptyClick: false", () => {
     );
 
     controller.handleStart({ x: 2, y: 2 });
+    controller.handleEnd();
 
     assert.strictEqual(map.selectedRegionId, first.id);
   });
