@@ -52,7 +52,9 @@ export class EditorPackages implements Iterable<EditorPackage> {
   }
 
   preferences(): PreferenceScope[] {
-    return this.#editors.flatMap((editor) => editor.preferences);
+    return this.#editors.flatMap(
+      (editor) => [...editor.preferences, ...editor.sharedPreferences]
+    );
   }
 
   descriptors(): EditorDescriptor[] {

@@ -166,6 +166,9 @@ export class StudioSession {
           { focus: false }
         );
       }
+      for (const id of saved.pages) {
+        this.tabs.openPage(id);
+      }
     }
     finally {
       this.#restoring = false;
@@ -280,7 +283,8 @@ export class StudioSession {
 
     this.#browserState.tabs = new SavedTabs(
       this.tabs.ids(),
-      this.tabs.active
+      this.tabs.active,
+      this.tabs.openPages()
     );
   };
 

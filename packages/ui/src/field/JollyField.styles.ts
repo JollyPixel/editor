@@ -348,7 +348,8 @@ export const fieldStyles = css`
     margin-block: calc(var(--jolly-space-1, 4px) / 2);
     margin-inline: calc(
         var(--jolly-gutter-width, 0px) +
-          (var(--jolly-field-inset-start, var(--jolly-space-1, 4px)) * 2)
+          var(--jolly-field-inset-start, var(--jolly-space-1, 4px)) +
+          var(--jolly-space-1, 4px)
       )
       var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
     font-size: 0.9em;

@@ -8,13 +8,18 @@ import {
 // Import Internal Dependencies
 import { STUDIO_PREFERENCES } from "./studioScope.ts";
 
+// CONSTANTS
+export const SHELL_PREFERENCES: readonly PreferenceScope[] = [
+  STUDIO_PREFERENCES,
+  ...HOST_PREFERENCES
+];
+
 export class PreferenceScopes implements Iterable<PreferenceScope> {
   static studio(
     editorScopes: Iterable<PreferenceScope>
   ): PreferenceScopes {
     return new PreferenceScopes([
-      STUDIO_PREFERENCES,
-      ...HOST_PREFERENCES,
+      ...SHELL_PREFERENCES,
       ...editorScopes
     ]);
   }

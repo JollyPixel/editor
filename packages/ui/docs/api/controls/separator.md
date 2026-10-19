@@ -15,6 +15,9 @@ interface Separator {
 }
 ```
 
+The caption lines up with field labels: it follows
+[`--jolly-field-inset-start`](../field/shared-field-api.md#insets).
+
 ## Trailing actions
 
 `actions` elements sit after the rule, on the same row, without changing its

@@ -18,6 +18,7 @@ import {
 import { idleShare } from "./catalogShare.ts";
 
 // CONSTANTS
+export const SETTINGS_PAGE_ID = "studio:settings";
 export const MAP_RECORD: AssetRecordData = {
   id: "map-1",
   kind: "voxelmap",
@@ -95,7 +96,8 @@ export function session(
   });
   const frames = document.createElement("div");
   const home = document.createElement("section");
-  document.body.append(strip, frames, home);
+  const settings = document.createElement("section");
+  document.body.append(strip, frames, home, settings);
   current = new StudioSession({
     catalog,
     editors: new EditorRegistry()
@@ -116,6 +118,14 @@ export function session(
     tabs: {
       strip,
       home,
+      pages: [
+        {
+          id: SETTINGS_PAGE_ID,
+          label: "Settings",
+          icon: "settings",
+          element: settings
+        }
+      ],
       cap
     },
     frames: {

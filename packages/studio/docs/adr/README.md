@@ -30,3 +30,5 @@ Structure is described in [ARCHITECTURE.md](../../ARCHITECTURE.md), open work in
 | [0022](./0022-a-refused-session-renews-in-place.md) | A refused session renews in place |
 | [0023](./0023-preferences-follow-the-account.md) | Preferences follow the account; browser state stays in the browser |
 | [0024](./0024-editors-read-preferences-from-the-shell.md) | Editors read their preferences from the shell |
+| [0025](./0025-the-server-writes-the-project-file.md) | The server writes the project file and applies it live |
+| [0026](./0026-the-audit-merges-the-asset-log.md) | The audit merges the asset log with its own |

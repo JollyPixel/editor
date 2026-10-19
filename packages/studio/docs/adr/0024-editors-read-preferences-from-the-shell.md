@@ -8,7 +8,8 @@ An editor page in a studio tab has no account of its own to load preferences wit
 ([ADR-0023](./0023-preferences-follow-the-account.md)), so the shell hands them over:
 
 1. Each editor package names a module in its manifest, `jollypixel.editor.preferences`. Its
-   default export is a list of `definePreferences` scopes. The server `import()`s the module at
+   default export is the list of `definePreferences` scopes the editor declares, and its
+   `shared` export the scopes it reads from another editor. The server `import()`s the module at
    startup, validates writes against the scopes, and the project manifest carries their
    descriptors to the shell, which renders the Settings pages from them.
 2. `jolly-launch` carries the overrides of every scope the shell holds.
@@ -34,7 +35,9 @@ An editor opened outside the studio keeps the same scopes in `localStorage`.
 
 - An editor's preferences module must load in Node.js: it imports only
   `@jolly-pixel/editor.host/preferences` and other modules that are just as plain.
-- A scope shared by several editors, such as the pixel-art panel shortcuts, is declared once and
-  listed by each editor. Two different declarations of one scope name stop the server at startup.
+- A scope shared by several editors, such as the pixel-art panel shortcuts, is declared once, by
+  the editor that owns it, and listed under `shared` by the others. Settings shows it on its
+  owner's page, or on the first editor sharing it when the owner is not installed. Two different
+  declarations of one scope name stop the server at startup.
 - The shell answers no command: `jolly-preferences` goes to every frame, the sender included,
   which ignores overrides it already has.

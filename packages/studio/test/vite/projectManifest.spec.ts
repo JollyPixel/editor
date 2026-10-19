@@ -37,7 +37,8 @@ const kManifest = {
     {
       name: "voxel-map",
       kinds: ["voxelmap"],
-      preferences: []
+      preferences: [],
+      sharedPreferences: []
     }
   ],
   kinds: [BLOCKSET_ASSET, VOXEL_MAP_ASSET].map((descriptor) => {
@@ -45,7 +46,13 @@ const kManifest = {
       ...descriptor,
       convertsFrom: []
     };
-  })
+  }),
+  kindPackages: [
+    {
+      name: "@jolly-pixel/asset.voxel-map",
+      kinds: [BLOCKSET_ASSET.kind, VOXEL_MAP_ASSET.kind]
+    }
+  ]
 };
 
 describe("projectManifest", () => {

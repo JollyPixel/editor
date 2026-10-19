@@ -29,17 +29,19 @@ describe("projectHandlersModule", () => {
     const options = {
       chunkSize: 8
     };
-    const kinds = new ProjectKinds([
+    const kinds = kindPackage(["alpha"]);
+    const project = new ProjectKinds([
       new KindPackage({
         name: "@scope/kind-a",
+        kinds,
         options,
         descriptors: [],
-        handlers: kindPackage(["alpha"]).handlers(options)
+        handlers: kinds.handlers(options)
       })
     ], new PackageResolver(import.meta.dirname));
 
     assert.strictEqual(
-      projectHandlersModule(kinds),
+      projectHandlersModule(project),
       "import { builtInAssetKinds } from \"@jolly-pixel/asset-server\";\n" +
       "import { ASSET_KINDS as kinds0 } from \"@scope/kind-a\";\n" +
       "\n" +

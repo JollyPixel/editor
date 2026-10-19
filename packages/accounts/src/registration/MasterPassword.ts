@@ -33,6 +33,16 @@ export class MasterPassword {
     this.#accessRequests = options.accessRequests ?? false;
   }
 
+  get accessRequests(): boolean {
+    return this.#accessRequests;
+  }
+
+  set accessRequests(
+    enabled: boolean
+  ) {
+    this.#accessRequests = enabled;
+  }
+
   admit(
     given: string | undefined,
     unclaimed: boolean

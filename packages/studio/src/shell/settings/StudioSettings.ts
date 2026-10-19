@@ -8,28 +8,37 @@ import {
 } from "lit";
 import {
   customElement,
-  property
+  property,
+  state
 } from "lit/decorators.js";
+import { keyed } from "lit/directives/keyed.js";
 import type { Account } from "@jolly-pixel/accounts";
+import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
+import type { StudioSignedIn } from "../../accounts/StudioSignedIn.ts";
+import { BrowserState } from "../../browser/BrowserState.ts";
 import { cardStyles } from "../cardStyles.ts";
 import {
   SettingsSections,
-  type SettingsSection,
-  type SettingsTier
+  type SettingsSection
 } from "./SettingsSections.ts";
-import "./KeybindingSettings.ts";
-import "./PreferenceForm.ts";
+import "../shares/ShareLinksPane.ts";
+import "./PreferencesPage.ts";
 import "./ProfileSettings.ts";
+import "./access/AccessSettings.ts";
+import "./audit/AuditView.ts";
+import "./project/ProjectGeneral.ts";
+import "./project/ProjectKindPackage.ts";
 
 // CONSTANTS
 export const SETTINGS_TAB_ID = "studio:settings";
-const kTierLabels: Record<SettingsTier, string> = {
-  you: "You",
-  project: "Project"
-};
+
+type ProjectSection = Exclude<
+  SettingsSection,
+  { kind: "profile" | "preferences"; }
+>;
 
 @customElement("studio-settings")
 export class StudioSettings extends LitElement {
@@ -47,50 +56,67 @@ export class StudioSettings extends LitElement {
 
     nav {
       display: flex;
-      flex: 0 0 200px;
+      flex: 0 0 220px;
       flex-direction: column;
-      gap: var(--jolly-space-1);
-      padding: var(--jolly-space-2);
+      min-height: 0;
+      padding: var(--jolly-space-2) var(--jolly-space-1);
     }
 
-    nav h2 {
-      margin: var(--jolly-space-2) 0 0;
-      padding-inline: var(--jolly-space-2);
-      color: var(--jolly-text-muted);
-      font-size: 0.85em;
-      font-weight: 600;
-      text-transform: uppercase;
+    jolly-tree {
+      flex: 1 1 auto;
+      min-height: 0;
+      --jolly-row-height: 26px;
+      --jolly-tree-indent: 10px;
     }
 
-    nav button {
-      padding: var(--jolly-space-1) var(--jolly-space-2);
-      border: 0;
-      border-radius: var(--jolly-radius-sm);
-      background: transparent;
-      color: inherit;
-      font: inherit;
-      text-align: start;
-      cursor: pointer;
+    jolly-tree::part(leaf) {
+      margin-block: 1px;
+      border: 1px solid var(--jolly-border);
+      background: var(--jolly-surface-raised);
     }
 
-    nav button:hover {
+    jolly-tree::part(leaf):hover {
       background: var(--jolly-control-bg-hover);
     }
 
-    nav button[aria-current="page"] {
+    jolly-tree::part(selected) {
       background: var(--jolly-control-bg-active);
       font-weight: 600;
     }
 
-    .card {
+    section.card {
       flex: 1 1 auto;
+    }
+
+    section.card > .card-head {
+      min-height: calc(var(--studio-card-head-height) + var(--jolly-space-3));
+    }
+
+    section.card .card-title {
+      align-items: center;
+      font-size: 1.4em;
+    }
+
+    .card-title jolly-icon {
+      flex: 0 0 auto;
+      width: 20px;
+      height: 20px;
     }
 
     .card-body {
       display: flex;
       flex-direction: column;
       gap: var(--jolly-space-4);
-      max-width: 640px;
+      max-width: var(--studio-settings-column);
+
+      --studio-settings-column: 640px;
+      --jolly-label-width: 22ch;
+      --jolly-field-inset-start: 0px;
+      --jolly-field-inset-end: 0px;
+    }
+
+    .card-body.wide {
+      max-width: calc(var(--studio-settings-column) * 2 + var(--jolly-space-4));
     }
   `];
 
@@ -103,15 +129,38 @@ export class StudioSettings extends LitElement {
   @property({ attribute: false })
   declare account: Account | null;
 
-  @property()
-  declare section: string;
+  @property({ attribute: false })
+  declare signedIn: StudioSignedIn | null;
+
+  @property({ attribute: false })
+  declare catalog: CatalogClient | null;
+
+  @property({ attribute: false })
+  declare browserState: BrowserState;
+
+  @state()
+  declare _collapsed: ReadonlySet<string>;
 
   constructor() {
     super();
     this.sections = SettingsSections.EMPTY;
     this.preferences = null;
     this.account = null;
-    this.section = "";
+    this.signedIn = null;
+    this.catalog = null;
+    this.browserState = new BrowserState();
+    this._collapsed = new Set();
+  }
+
+  get section(): string {
+    return this.browserState.settingsSection;
+  }
+
+  set section(
+    id: string
+  ) {
+    this.browserState.settingsSection = id;
+    this.requestUpdate();
   }
 
   override render(): TemplateResult {
@@ -119,70 +168,125 @@ export class StudioSettings extends LitElement {
 
     return html`
       <nav class="card" aria-label="Settings sections">
-        ${this.#tier("you", current)}
-        ${this.#tier("project", current)}
+        <jolly-tree
+          toggle-style="box"
+          indent-guides
+          require-selection
+          .nodes=${this.sections.nodes}
+          .selected=${current === undefined ? [] : [current.id]}
+          .expanded=${this.sections.headings.filter(
+            (id) => !this._collapsed.has(id)
+          )}
+          @jolly-select=${this.#onSelect}
+          @jolly-toggle-expand=${this.#onToggleExpand}
+        ></jolly-tree>
       </nav>
       <section class="card" aria-label=${current?.label ?? "Settings"}>
         <header class="card-head">
-          <h2 class="card-title">${current?.label ?? ""}</h2>
+          <h2 class="card-title">
+            ${current?.icon === undefined ?
+              nothing :
+              html`<jolly-icon name=${current.icon}></jolly-icon>`}
+            ${current?.label ?? ""}
+          </h2>
         </header>
-        <div class="card-body">
+        <div class="card-body ${current?.kind === "preferences" ? "wide" : ""}">
           ${current === undefined ? nothing : this.#content(current)}
         </div>
       </section>
     `;
   }
 
-  #tier(
-    tier: SettingsTier,
-    current: SettingsSection | undefined
-  ): TemplateResult | typeof nothing {
-    const sections = this.sections.inTier(tier);
-    if (sections.length === 0) {
-      return nothing;
+  readonly #onSelect = (
+    event: HTMLElementEventMap["jolly-select"]
+  ): void => {
+    const [id] = event.detail.selected;
+    if (id !== undefined && this.sections.find(id) !== undefined) {
+      this.section = id;
     }
+  };
 
-    return html`
-      <h2>${kTierLabels[tier]}</h2>
-      ${sections.map((section) => html`
-        <button
-          type="button"
-          data-section=${section.id}
-          aria-current=${section === current ? "page" : "false"}
-          @click=${() => {
-            this.section = section.id;
-          }}
-        >${section.label}</button>
-      `)}
-    `;
-  }
+  readonly #onToggleExpand = (
+    event: HTMLElementEventMap["jolly-toggle-expand"]
+  ): void => {
+    const { id, expanded } = event.detail;
+    const collapsed = new Set(this._collapsed);
+    if (expanded) {
+      collapsed.delete(id);
+    }
+    else {
+      collapsed.add(id);
+    }
+    this._collapsed = collapsed;
+  };
 
   #content(
     section: SettingsSection
-  ): TemplateResult {
-    if (section.kind === "profile") {
-      return html`
-        <studio-profile-settings
-          .account=${this.account}
-        ></studio-profile-settings>
-      `;
+  ): TemplateResult | typeof nothing {
+    switch (section.kind) {
+      case "profile":
+        return html`
+          <studio-profile-settings
+            .account=${this.account}
+          ></studio-profile-settings>
+        `;
+      case "preferences":
+        return html`
+          <studio-preferences-page
+            .forms=${section.forms}
+            .keyBindings=${section.keyBindings}
+            .preferences=${this.preferences}
+          ></studio-preferences-page>
+        `;
+      default:
+        return this.signedIn === null ?
+          nothing :
+          this.#projectContent(section, this.signedIn);
     }
+  }
 
-    if (section.kind === "keybindings") {
-      return html`
-        <studio-keybinding-settings
-          .scopes=${section.scopes}
-          .preferences=${this.preferences}
-        ></studio-keybinding-settings>
-      `;
+  #projectContent(
+    section: ProjectSection,
+    signedIn: StudioSignedIn
+  ): TemplateResult | typeof nothing {
+    switch (section.kind) {
+      case "share-links":
+        return this.catalog === null ? nothing : html`
+          <studio-share-links
+            .links=${signedIn.shares}
+            .catalog=${this.catalog}
+          ></studio-share-links>
+        `;
+      case "general":
+        return html`
+          <studio-project-general
+            .project=${signedIn.project}
+          ></studio-project-general>
+        `;
+      case "kind-package":
+        return html`${keyed(section.id, html`
+          <studio-project-kind-package
+            .project=${signedIn.project}
+            .packageName=${section.packageName}
+          ></studio-project-kind-package>
+        `)}`;
+      case "access":
+        return html`
+          <studio-access-settings
+            .project=${signedIn.project}
+            .signedIn=${signedIn}
+          ></studio-access-settings>
+        `;
+      case "audit":
+        return html`
+          <studio-audit-view
+            .signedIn=${signedIn}
+            .catalog=${this.catalog}
+          ></studio-audit-view>
+        `;
+      default:
+        return section satisfies never;
     }
-
-    return html`${section.scopes.map((scope) => html`
-      <studio-preference-form
-        .scope=${scope}
-        .preferences=${this.preferences}
-      ></studio-preference-form>
-    `)}`;
   }
 }
 

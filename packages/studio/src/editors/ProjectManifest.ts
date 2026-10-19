@@ -12,7 +12,8 @@ const kProjectManifestSchema = z.object({
   editors: z.array(z.object({
     name: z.string(),
     kinds: z.array(z.string()),
-    preferences: z.array(z.unknown()).default([])
+    preferences: z.array(z.unknown()).default([]),
+    sharedPreferences: z.array(z.unknown()).default([])
   })),
   kinds: z.array(z.object({
     kind: z.string(),
@@ -24,17 +25,35 @@ const kProjectManifestSchema = z.object({
       viewBox: z.string().optional()
     }).optional(),
     convertsFrom: z.array(z.string())
+  })),
+  kindPackages: z.array(z.object({
+    name: z.string(),
+    kinds: z.array(z.string())
   }))
 });
+
+export interface KindPackageDescriptor {
+  name: string;
+  kinds: readonly string[];
+}
+
+export interface EditorScopes {
+  name: string;
+  kinds: readonly string[];
+  scopes: readonly PreferenceScope[];
+  shared: readonly PreferenceScope[];
+}
 
 export interface ProjectManifestData {
   editors: readonly EditorDescriptor[];
   kinds: readonly LoadedAssetKind[];
+  kindPackages: readonly KindPackageDescriptor[];
 }
 
 export class ProjectManifest implements ProjectManifestData {
   readonly editors: readonly EditorDescriptor[];
   readonly kinds: readonly LoadedAssetKind[];
+  readonly kindPackages: readonly KindPackageDescriptor[];
 
   static async fetch(
     base: string | URL
@@ -66,27 +85,37 @@ export class ProjectManifest implements ProjectManifestData {
   ) {
     this.editors = [...data.editors];
     this.kinds = [...data.kinds];
+    this.kindPackages = [...data.kindPackages];
+  }
+
+  * editorScopes(): IterableIterator<EditorScopes> {
+    for (const editor of this.editors) {
+      yield {
+        name: editor.name,
+        kinds: editor.kinds,
+        scopes: parseScopes(editor.preferences ?? []),
+        shared: parseScopes(editor.sharedPreferences ?? [])
+      };
+    }
   }
 
   * preferences(): IterableIterator<PreferenceScope> {
-    for (const editor of this.editors) {
-      for (const descriptor of editor.preferences ?? []) {
-        const scope = parseScope(descriptor);
-        if (scope !== null) {
-          yield scope;
-        }
-      }
+    for (const { scopes, shared } of this.editorScopes()) {
+      yield* scopes;
+      yield* shared;
     }
   }
 }
 
-function parseScope(
-  descriptor: unknown
-): PreferenceScope | null {
-  try {
-    return PreferenceScope.from(descriptor);
-  }
-  catch {
-    return null;
-  }
+function parseScopes(
+  descriptors: readonly unknown[]
+): PreferenceScope[] {
+  return descriptors.flatMap((descriptor) => {
+    try {
+      return [PreferenceScope.from(descriptor)];
+    }
+    catch {
+      return [];
+    }
+  });
 }

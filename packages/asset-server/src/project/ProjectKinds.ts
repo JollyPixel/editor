@@ -28,8 +28,9 @@ export interface ProjectKindsLoadOptions {
 }
 
 export class ProjectKinds {
-  readonly packages: readonly KindPackage[];
   readonly resolver: PackageResolver;
+
+  #packages: KindPackage[];
 
   static async load(
     file: ProjectFile,
@@ -76,8 +77,33 @@ export class ProjectKinds {
       }
     }
 
-    this.packages = list;
+    this.#packages = list;
     this.resolver = resolver;
+  }
+
+  get packages(): readonly KindPackage[] {
+    return this.#packages;
+  }
+
+  find(
+    name: string
+  ): KindPackage | undefined {
+    return this.#packages.find((kindPackage) => kindPackage.name === name);
+  }
+
+  replace(
+    kindPackage: KindPackage
+  ): void {
+    const index = this.#packages.findIndex(
+      (current) => current.name === kindPackage.name
+    );
+    if (index === -1) {
+      throw new TypeError(
+        `The project does not use the kind package "${kindPackage.name}".`
+      );
+    }
+
+    this.#packages[index] = kindPackage;
   }
 
   handlers(): AssetKindHandler[] {

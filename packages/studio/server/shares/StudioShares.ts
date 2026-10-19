@@ -12,7 +12,7 @@ import type { PeerIdentity } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import type { ShareLifetime } from "../../src/shares/ShareLifetime.ts";
-import type { StudioAccess } from "../project/StudioAccess.ts";
+import type { StudioProject } from "../project/StudioProject.ts";
 import { UnknownAssetError } from "./errors/UnknownAssetError.ts";
 
 export interface SharedCatalog {
@@ -31,27 +31,27 @@ export interface SharedAsset {
 
 export interface StudioSharesOptions {
   accounts: Accounts;
-  access: StudioAccess;
+  project: Pick<StudioProject, "access">;
   catalog: Promise<SharedCatalog>;
 }
 
 export class StudioShares {
   #accounts: Accounts;
-  #access: StudioAccess;
+  #project: Pick<StudioProject, "access">;
   #catalog: Promise<SharedCatalog>;
 
   constructor(
     options: StudioSharesOptions
   ) {
     this.#accounts = options.accounts;
-    this.#access = options.access;
+    this.#project = options.project;
     this.#catalog = options.catalog;
   }
 
   canShare(
     account: Account
   ): boolean {
-    return this.#access.canShare(account.role);
+    return this.#project.access.canShare(account.role);
   }
 
   async create(

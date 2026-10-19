@@ -169,4 +169,45 @@ describe("KindPackage", () => {
     );
     assert.deepEqual(received, []);
   });
+
+  test("withOptions rebuilds the handlers after checking the new options", async() => {
+    const received: object[] = [];
+    const loaded = await KindPackage.load("kind-a", { size: 8 }, packageLoader({
+      "kind-a": {
+        ASSET_KINDS: {
+          ...kindPackage(["alpha"], received),
+          optionsSchema: z.object({
+            size: z.optional(z.number())
+          })
+        }
+      }
+    }));
+
+    const resized = loaded.withOptions({ size: 16 });
+
+    assert.deepEqual(resized.options, { size: 16 });
+    assert.deepEqual(received, [{ size: 8 }, { size: 16 }]);
+    assert.throws(() => loaded.withOptions({ size: "16" }), TypeError);
+    assert.deepEqual(loaded.options, { size: 8 });
+  });
+
+  test("withOptions refuses options that change the handled asset kinds", async() => {
+    const alpha = kindPackage(["alpha"]);
+    const alphaBeta = kindPackage(["alpha", "beta"]);
+    const loaded = await KindPackage.load("kind-a", {}, packageLoader({
+      "kind-a": {
+        ASSET_KINDS: {
+          ...alpha,
+          handlers: (options: { beta?: boolean; } = {}) => (
+            options.beta ? alphaBeta : alpha
+          ).handlers(options)
+        }
+      }
+    }));
+
+    assert.throws(() => loaded.withOptions({ beta: true }), {
+      name: "TypeError",
+      message: "\"kind-a\" cannot change the asset kinds it handles."
+    });
+  });
 });

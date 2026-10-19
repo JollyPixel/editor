@@ -25,6 +25,7 @@ import {
   type KeybindingRow,
   type KeybindingSection
 } from "../../keybindings/KeybindingTable.ts";
+import { settingsStyles } from "./settingsStyles.ts";
 
 interface Recording {
   scope: PreferenceScope;
@@ -33,36 +34,20 @@ interface Recording {
 
 @customElement("studio-keybinding-settings")
 export class KeybindingSettings extends LitElement {
-  static override styles = css`
-    :host {
-      display: flex;
-      flex-direction: column;
-      gap: var(--jolly-space-3);
+  static override styles = [settingsStyles, css`
+    jolly-search {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: var(--studio-card);
     }
 
-    section {
-      display: flex;
-      flex-direction: column;
-      gap: var(--jolly-space-1);
-    }
-
-    header {
-      display: flex;
-      align-items: center;
-      gap: var(--jolly-space-2);
-    }
-
-    h3,
     h4 {
-      flex: 1;
-      margin: 0;
+      margin: var(--jolly-space-2) 0 0;
       padding-inline: var(--jolly-space-1);
+      color: var(--jolly-accent-text);
       font-size: 1em;
-    }
-
-    h4 {
-      color: var(--jolly-text-muted);
-      font-weight: 600;
+      font-weight: 700;
     }
 
     .row {
@@ -70,7 +55,7 @@ export class KeybindingSettings extends LitElement {
       align-items: center;
       gap: var(--jolly-space-2);
       min-height: var(--jolly-control-height);
-      padding-inline: var(--jolly-space-1);
+      padding-inline-start: var(--jolly-space-1);
     }
 
     .label {
@@ -89,13 +74,7 @@ export class KeybindingSettings extends LitElement {
     .recording {
       color: var(--jolly-text-muted);
     }
-
-    .error {
-      margin: 0;
-      padding-inline: var(--jolly-space-1);
-      color: var(--jolly-danger);
-    }
-  `;
+  `];
 
   @property({ attribute: false })
   declare scopes: readonly PreferenceScope[];
@@ -175,14 +154,14 @@ export class KeybindingSettings extends LitElement {
 
     return html`
       <section data-scope=${scope.name}>
-        <header>
-          <h3>${scope.label}</h3>
+        <jolly-separator label=${scope.label}>
           <jolly-button
+            slot="actions"
             icon="revert"
             ?disabled=${!section.customized}
             @click=${() => this.#write(scope, (preferences) => preferences.reset(scope))}
           >Reset all</jolly-button>
-        </header>
+        </jolly-separator>
         ${section.groups.map((group) => html`
           ${group.label === null ? nothing : html`<h4>${group.label}</h4>`}
           ${group.rows.map((row) => this.#row(scope, row))}

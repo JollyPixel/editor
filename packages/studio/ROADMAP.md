@@ -5,78 +5,11 @@ Open work, in the order it should land. Decisions already taken are in the
 `pnpm --filter @jolly-pixel/studio test`, `pnpm run typecheck` and
 `pnpm run lint` green.
 
-## Settings
-
-The Settings tab has two halves. **You**, the signed-in account's
-preferences, is built ([ADR-0023](./docs/adr/0023-preferences-follow-the-account.md),
-[ADR-0024](./docs/adr/0024-editors-read-preferences-from-the-shell.md)).
-**Project** holds the settings everyone shares, and shows only the sections
-the caller's role can read.
-
-### 1. Project settings and the audit log
-
-- `project.json` stays the source of truth and the studio server becomes its
-  only writer. `PUT /api/project/settings/<section>` validates with the
-  schemas `StudioAccess` and the kind options already use, then rewrites the
-  file. Comments and hand-picked key order are lost.
-- Changes apply without a restart. `access` swaps the `RightsTable` and
-  invalidates the network rights cache; kind options reach new assets and the
-  snapshot timers. The dev watcher ignores the server's own writes and still
-  restarts on hand edits.
-- `studio.$settings` and `studio.$audit` count only when a role names them:
-  `*` and `studio.*` do not grant them, so by default only admins see
-  Project. `$share` and `$export` keep matching wildcards.
-- The Access section is admin only by a fixed rule, like role changes in
-  `AccountEntity`.
-- `.jollypixel/audit.db` is a `TypedEventStore`. Accounts emits domain events
-  (register, approve, deny, role change, owner transfer, share link created
-  or revoked) and the studio records them, with every settings change and the
-  section before and after it.
-- Project › General shows the project name. Export stays on Home, in the
-  asset browser and the right column, and is disabled without `canExport`.
-- Project › Editors lists the editor packages read-only and edits the kind
-  options: pixel-art and blockset `defaultSize`, blockset `tileSize`,
-  voxelmap `chunkSize`, snapshot `delay` and `maxDelay`.
-
-### 2. Access section
-
-- Roles. The built-in `admin` and `guest` show read-only. A role's rules are
-  an ordered list of pattern and right where the first match wins, reordered
-  by dragging. A "check a room" field shows which rule matches a key and the
-  right it gives. `$settings` and `$audit` are two checkboxes.
-- Adding a role takes a name. Deleting one is refused while an account holds
-  it or while it is the `defaultRole`. No rename.
-- The default role and the `accessRequests` toggle.
-- Members: role change and owner transfer leave the Home Users pane, which
-  keeps a read-only roster.
-- Requests: approve with a role, or deny.
-- Share links leave the tab they share with Users on Home. Members see their
-  own links, admins see all.
-- A saved change re-checks rights for connected sessions, and a client that
-  loses read on an open room leaves it. Find out whether network can re-run
-  the check for a live session or needs a new primitive.
-
-### 3. Audit view
-
-- `GET /api/audit` merges `events.db` and `audit.db` by time, pages with a
-  cursor and resolves actor ids to usernames, or "deleted user".
-- Asset events by one actor on one asset, less than 5 minutes apart, fold
-  into one row: actor, asset, change count, time span. Catalog events, tags
-  and `audit.db` events get a row each; a settings change expands to its
-  before and after.
-- Filters: actor, asset, category (edits, structure, accounts, settings) and
-  a date range. Account rows show to admins only.
-- A refresh button, no subscription.
-
 ## Waiting for a trigger
 
 - **Voxel-model shortcuts.** Undo, redo and the `k` keying shortcut are
   hardcoded, so they are missing from Settings › Keybindings. Give voxel-model
   an action list when one of them needs rebinding.
-
-- **Camera preferences in the pixel-art preview.** The preview turntable is
-  an `OrbitFlyCamera` too, but only voxel-map and voxel-model apply the
-  `camera` scope. Add it if users move around the preview.
 
 - **Per-editor launch preferences.** Each frame gets every scope's overrides,
   since a frame does not know which editor it hosts. Filter them once a scope
@@ -101,11 +34,6 @@ the caller's role can read.
 
 ## Long-term goals
 
-### Browser-hosted sessions
-
-Editor sessions served from a browser tab, with guests joining over WebRTC.
-See [HOSTING.md](./HOSTING.md).
-
 ### Project policy for editors
 
 Kind options are the only editor configuration a project sets. A project
@@ -117,7 +45,10 @@ field.
 ### Audit history
 
 Diffs for asset edit runs, opening an asset at the version a row points to,
-CSV export and retention.
+CSV export and retention. Edits only reach back to each asset's last
+snapshot, because compaction drops older events from `events.db`, and
+folder changes write no event. Keeping that history means recording it in
+`audit.db` as it happens, or compacting less.
 
 ### Runtime tab
 

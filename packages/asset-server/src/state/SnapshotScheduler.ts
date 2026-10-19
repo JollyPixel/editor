@@ -13,6 +13,7 @@ import {
   SNAPSHOT_ACTOR
 } from "../events/AssetEvents.ts";
 import type { SnapshotPolicy } from "../kinds/AssetKindHandler.ts";
+import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
 import type { AssetStateStore } from "./AssetStateStore.ts";
 import type { AssetProjector } from "../projection/AssetProjector.ts";
 import type { AssetWriter } from "../writer/AssetWriter.ts";
@@ -34,6 +35,7 @@ type SnapshotOutcome = "written" | "skipped" | "superseded";
 export interface SnapshotSchedulerOptions {
   eventStore: EventStore.EventStore;
   states: AssetStateStore;
+  kinds: AssetKindRegistry;
   projector: AssetProjector;
   writer: AssetWriter;
   snapshot?: SnapshotPolicy;
@@ -44,6 +46,7 @@ export interface SnapshotSchedulerOptions {
 export class SnapshotScheduler {
   #eventStore: EventStore.EventStore;
   #states: AssetStateStore;
+  #kinds: AssetKindRegistry;
   #projector: AssetProjector;
   #writer: AssetWriter;
   #policy: Required<SnapshotPolicy>;
@@ -59,6 +62,7 @@ export class SnapshotScheduler {
   ) {
     this.#eventStore = options.eventStore;
     this.#states = options.states;
+    this.#kinds = options.kinds;
     this.#projector = options.projector;
     this.#writer = options.writer;
     this.#policy = {
@@ -96,7 +100,7 @@ export class SnapshotScheduler {
       return;
     }
 
-    const { snapshot } = entry.handler;
+    const { snapshot } = this.#kinds.get(entry.kind);
     const delay = snapshot?.delay ?? this.#policy.delay;
     const maxDelay = snapshot?.maxDelay ?? this.#policy.maxDelay;
     const now = Date.now();

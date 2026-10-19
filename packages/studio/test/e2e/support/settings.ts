@@ -20,13 +20,27 @@ export class SettingsPage {
   ): Locator {
     return this.root
       .getByRole("navigation", { name: "Settings sections" })
-      .getByRole("button", { name, exact: true });
+      .getByRole("treeitem", { name, exact: true });
+  }
+
+  editor(
+    name: string
+  ): Locator {
+    return this.root.locator(
+      `[role="treeitem"][data-id="editor:${name}"]`
+    );
   }
 
   field(
     key: string
   ): Locator {
     return this.root.locator(`[data-preference="${key}"]`);
+  }
+
+  column(
+    name: "preferences" | "shortcuts"
+  ): Locator {
+    return this.root.locator(`[data-column="${name}"]`);
   }
 
   shortcut(

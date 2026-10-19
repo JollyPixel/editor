@@ -20,7 +20,10 @@ import { ProjectManifest } from "./editors/ProjectManifest.ts";
 import { EditorRegistry } from "./editors/EditorRegistry.ts";
 import { EditorPrefetch } from "./editors/EditorPrefetch.ts";
 import "./icons.ts";
-import { PreferenceScopes } from "./preferences/PreferenceScopes.ts";
+import {
+  PreferenceScopes,
+  SHELL_PREFERENCES
+} from "./preferences/PreferenceScopes.ts";
 import { StudioAppearance } from "./preferences/StudioAppearance.ts";
 import { STUDIO_PREFERENCES } from "./preferences/studioScope.ts";
 import { SettingsSections } from "./shell/settings/SettingsSections.ts";
@@ -70,9 +73,14 @@ async function boot(): Promise<void> {
   const { preferences } = connection;
   appearance.follow(preferences);
   const scopes = PreferenceScopes.studio(manifest.preferences());
+  const editors = createEditorRegistry(manifest, connection.editorQuery);
   const settings = new SettingsSections({
     signedIn: connection.signedIn !== null,
-    scopes
+    shellScopes: SHELL_PREFERENCES,
+    editors: manifest.editorScopes(),
+    kindPackages: manifest.kindPackages,
+    kinds: editors.kindSet(),
+    project: connection.signedIn?.project.rights
   });
   const studio = required("jolly-studio");
   await studio.attach({
@@ -82,7 +90,7 @@ async function boot(): Promise<void> {
     preferences,
     scopes,
     settings,
-    editors: createEditorRegistry(manifest, connection.editorQuery),
+    editors,
     confirmEvict: (tab) => showConfirm({
       title: "Editor limit reached",
       message: `Close "${tab.label}" to open another editor?`,

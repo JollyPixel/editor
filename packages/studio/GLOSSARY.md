@@ -76,7 +76,9 @@ The `jollypixel.editor` field of an editor package's `package.json`:
 `{ name, kinds, dist?, page?, preferences? }`. It tells the studio which kinds
 the editor opens, which folder holds its built page, with `page`, which source
 HTML the studio build compiles together with the shell, and with
-`preferences`, which module exports the editor's preference scopes.
+`preferences`, which module exports the editor's preference scopes: by
+default the ones it declares, as `shared` the ones it reads from another
+editor.
 
 ### Project manifest
 

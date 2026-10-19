@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import {
   LitElement,
-  css,
   html,
   nothing,
   type PropertyValues,
@@ -18,29 +17,12 @@ import type {
   Preferences
 } from "@jolly-pixel/editor.host/preferences";
 
+// Import Internal Dependencies
+import { settingsStyles } from "./settingsStyles.ts";
+
 @customElement("studio-preference-form")
 export class PreferenceForm extends LitElement {
-  static override styles = css`
-    :host {
-      display: flex;
-      flex-direction: column;
-      gap: var(--jolly-space-3);
-    }
-
-    section {
-      display: flex;
-      flex-direction: column;
-      gap: var(--jolly-space-1);
-    }
-
-    h3 {
-      margin: 0;
-      padding-inline: var(--jolly-space-1);
-      color: var(--jolly-text-muted);
-      font-size: 1em;
-      font-weight: 600;
-    }
-  `;
+  static override styles = settingsStyles;
 
   @property({ attribute: false })
   declare scope: PreferenceScope | null;
@@ -89,7 +71,9 @@ export class PreferenceForm extends LitElement {
 
     return html`${scope.form.map((group) => html`
       <section>
-        ${group.label === null ? nothing : html`<h3>${group.label}</h3>`}
+        ${group.label === null ? nothing : html`
+          <jolly-separator label=${group.label}></jolly-separator>
+        `}
         ${group.fields.map(([key, field]) => this.#field(key, field, values[key]))}
       </section>
     `)}`;
@@ -120,6 +104,7 @@ export class PreferenceForm extends LitElement {
             data-preference=${key}
             label=${field.label}
             description=${field.description ?? ""}
+            description-display="tooltip"
             .value=${value}
             .default=${field.default}
             @jolly-change=${onChange}
@@ -131,6 +116,7 @@ export class PreferenceForm extends LitElement {
             data-preference=${key}
             label=${field.label}
             description=${field.description ?? ""}
+            description-display="tooltip"
             .options=${field.options}
             .value=${value}
             .default=${field.default}
@@ -143,6 +129,7 @@ export class PreferenceForm extends LitElement {
             data-preference=${key}
             label=${field.label}
             description=${field.description ?? ""}
+            description-display="tooltip"
             .min=${field.min}
             .max=${field.max}
             .step=${field.step ?? 1}
@@ -157,6 +144,7 @@ export class PreferenceForm extends LitElement {
             data-preference=${key}
             label=${field.label}
             description=${field.description ?? ""}
+            description-display="tooltip"
             .value=${value ?? ""}
             .default=${field.default ?? ""}
             @jolly-change=${(event: CustomEvent<{ value: string; }>) => {
@@ -169,6 +157,7 @@ export class PreferenceForm extends LitElement {
           <jolly-property-row
             label=${field.label}
             description=${field.description ?? ""}
+            description-display="tooltip"
           >
             <jolly-button
               data-preference=${key}

@@ -6,14 +6,14 @@ import {
 } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
-import type { StudioAccess } from "./StudioAccess.ts";
+import type { StudioProject } from "./StudioProject.ts";
 import { ProjectExportRefusedError } from "./errors/ProjectExportRefusedError.ts";
 
 // CONSTANTS
 const kArchiveExtension = ".zip";
 
 export interface ProjectArchiveOptions {
-  access: StudioAccess;
+  project: Pick<StudioProject, "access">;
   backend: ArchiveBackend;
   name: string;
 }
@@ -21,13 +21,13 @@ export interface ProjectArchiveOptions {
 export class ProjectArchive {
   readonly fileName: string;
 
-  #access: StudioAccess;
+  #project: Pick<StudioProject, "access">;
   #backend: ArchiveBackend;
 
   constructor(
     options: ProjectArchiveOptions
   ) {
-    this.#access = options.access;
+    this.#project = options.project;
     this.#backend = options.backend;
     this.fileName = `${options.name}${kArchiveExtension}`;
   }
@@ -35,7 +35,7 @@ export class ProjectArchive {
   canExport(
     account: Account
   ): boolean {
-    return this.#access.canExport(account.role);
+    return this.#project.access.canExport(account.role);
   }
 
   async export(

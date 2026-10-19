@@ -111,6 +111,37 @@ describe("StudioAccess.read", () => {
     });
   }
 
+  test("counts studio.$settings and studio.$audit only for admins and roles naming them", () => {
+    const access = StudioAccess.read({
+      access: {
+        roles: {
+          ...DEFAULT_ACCESS.roles,
+          reviewer: {
+            "studio.$settings": "read",
+            "studio.$audit": "write",
+            "*": "write"
+          }
+        }
+      }
+    }, kSource);
+    const roles = ["admin", "member", "reviewer", "spectator", "guest"];
+
+    const rights = roles.map((role) => access.projectRights(role));
+
+    assert.deepEqual(
+      rights.map(({ canReadSettings, canEditSettings }) => [canReadSettings, canEditSettings]),
+      [[true, true], [false, false], [true, false], [false, false], [false, false]]
+    );
+    assert.deepEqual(
+      roles.filter((_role, index) => rights[index].canAudit),
+      ["admin", "reviewer"]
+    );
+    assert.deepEqual(
+      roles.filter((_role, index) => rights[index].canManageAccess),
+      ["admin"]
+    );
+  });
+
   test("keeps guests out of the catalog and accounts rooms, read-only elsewhere", () => {
     const access = StudioAccess.read({ version: 1 }, kSource);
     const table = new RightsTable(access.rights, access.roles.defaultRole);

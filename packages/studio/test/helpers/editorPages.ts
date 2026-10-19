@@ -78,7 +78,8 @@ export function voxelMapEditor(
     dist,
     prebuilt,
     page,
-    preferences: []
+    preferences: [],
+    sharedPreferences: []
   });
 }
 
@@ -105,6 +106,7 @@ export function voxelMapProject(
     new ProjectKinds([
       new KindPackage({
         name: "@jolly-pixel/asset.voxel-map",
+        kinds: ASSET_KINDS,
         options: {},
         descriptors: ASSET_KINDS.descriptors,
         handlers: ASSET_KINDS.handlers()

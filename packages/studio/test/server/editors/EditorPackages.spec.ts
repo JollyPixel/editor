@@ -33,6 +33,17 @@ const kGridScope = {
     }
   }
 };
+const kPaletteScope = {
+  name: "pixel-art",
+  label: "Pixel art",
+  fields: {
+    palette: {
+      type: "boolean",
+      label: "Palette",
+      default: false
+    }
+  }
+};
 
 async function createRoot(): Promise<string> {
   const root = await fs.realpath(await createTempDir("studio-editor-"));
@@ -100,7 +111,8 @@ describe("EditorPackages", () => {
         dist: path.join(voxelMap, "dist"),
         prebuilt: false,
         page: path.join(voxelMap, "index.html"),
-        preferences: []
+        preferences: [],
+        sharedPreferences: []
       }),
       new EditorPackage({
         package: "./pixel-art",
@@ -109,19 +121,22 @@ describe("EditorPackages", () => {
         dist: path.join(pixelArt, "dist-page"),
         prebuilt: false,
         page: null,
-        preferences: []
+        preferences: [],
+        sharedPreferences: []
       })
     ]);
     assert.deepEqual(editors.descriptors(), [
       {
         name: "voxel-map",
         kinds: ["voxelmap"],
-        preferences: []
+        preferences: [],
+        sharedPreferences: []
       },
       {
         name: "pixel-art",
         kinds: ["pixelart"],
-        preferences: []
+        preferences: [],
+        sharedPreferences: []
       }
     ]);
   });
@@ -144,19 +159,28 @@ describe("EditorPackages", () => {
     assert.ok(!voxelMap.prebuilt);
   });
 
-  test("reads the preference scopes the package's module exports", async() => {
+  test("reads the scopes the package's module exports by default and as shared", async() => {
     const root = await createRoot();
     await createPreferencesPackage(
       root,
-      `export default [${JSON.stringify(kGridScope)}];`
+      [
+        `export default [${JSON.stringify(kGridScope)}];`,
+        `export const shared = [${JSON.stringify(kPaletteScope)}];`
+      ].join("\n")
     );
 
-    const [editor] = await EditorPackages.read(
+    const editors = await EditorPackages.read(
       ["./editor"],
       new PackageResolver(root)
     );
+    const [editor] = editors;
 
     assert.deepEqual(editor.toDescriptor().preferences, [kGridScope]);
+    assert.deepEqual(editor.toDescriptor().sharedPreferences, [kPaletteScope]);
+    assert.deepEqual(
+      editors.preferences().map((scope) => scope.name),
+      ["voxel-map", "pixel-art"]
+    );
   });
 
   test("rejects a preferences module that exports no valid scope", async() => {

@@ -20,6 +20,7 @@ export class RightsGate {
   #namespace: string;
   #readOnly: boolean;
   #resolved = new Map<string, Map<string, Right>>();
+  #revision: number;
 
   constructor(
     table: RightsTable,
@@ -29,6 +30,7 @@ export class RightsGate {
     this.#table = table;
     this.#namespace = namespace;
     this.#readOnly = readOnly;
+    this.#revision = table.revision;
   }
 
   get gated(): boolean {
@@ -39,6 +41,11 @@ export class RightsGate {
     role: string,
     event: string
   ): Right {
+    if (this.#revision !== this.#table.revision) {
+      this.#resolved.clear();
+      this.#revision = this.#table.revision;
+    }
+
     let byEvent = this.#resolved.get(role);
     if (byEvent === undefined) {
       byEvent = new Map();

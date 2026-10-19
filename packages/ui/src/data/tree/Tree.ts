@@ -21,6 +21,7 @@ import { virtualize } from "@lit-labs/virtualizer/virtualize.js";
 import {
   TreeSnapshot,
   idListChanged,
+  isHeading,
   type FlatTreeRow
 } from "./model.ts";
 import {
@@ -424,7 +425,7 @@ export class Tree<TData = unknown> extends LitElement
         aria-level=${view.depth + 1}
         aria-posinset=${view.position}
         aria-setsize=${view.setSize}
-        aria-selected=${view.selected ? "true" : "false"}
+        aria-selected=${view.selectable ? String(view.selected) : nothing}
         aria-expanded=${view.branch ? String(view.expanded) : nothing}
         data-dragging=${view.dragSource ? "true" : nothing}
         data-drop=${view.drop ?? nothing}
@@ -433,10 +434,10 @@ export class Tree<TData = unknown> extends LitElement
         data-warning=${view.warning === undefined ? nothing : "true"}
         data-spacer=${view.spacer === "outside" ? "outside" : nothing}
         style=${styleMap(rowStyle)}
-        @click=${(event: MouseEvent) => this.#selection.onRowClick(event, id)}
+        @click=${(event: MouseEvent) => this.#selection.onRowClick(event, view)}
         @dblclick=${(event: MouseEvent) => this.#onRowDoubleClick(event, id)}
         @contextmenu=${(event: MouseEvent) => this.#onRowContextMenu(event, id)}
-        @pointerdown=${(event: PointerEvent) => this.#drag.onRowPointerDown(event, id)}
+        @pointerdown=${(event: PointerEvent) => this.#drag.onRowPointerDown(event, view)}
       >
         ${renderGuides(view.rails)}
         ${view.branch ? html`
@@ -595,7 +596,14 @@ export class Tree<TData = unknown> extends LitElement
     id: string
   ): boolean {
     return this.renamable &&
-      this.#snapshot.node(id)?.renamable === true;
+      this.#snapshot.node(id)?.renamable === true &&
+      !this.#isHeading(id);
+  }
+
+  #isHeading(
+    id: string
+  ): boolean {
+    return isHeading(this.#snapshot.node(id));
   }
 
   #startRename(
@@ -621,6 +629,9 @@ export class Tree<TData = unknown> extends LitElement
     }
 
     event.preventDefault();
+    if (this.#isHeading(id)) {
+      return;
+    }
     if (!this.selected.includes(id)) {
       this.#selection.selectSingle(id);
     }
@@ -654,7 +665,7 @@ export class Tree<TData = unknown> extends LitElement
     event: MouseEvent,
     id: string
   ): void {
-    if (originatesInButton(event.target)) {
+    if (originatesInButton(event.target) || this.#isHeading(id)) {
       return;
     }
 

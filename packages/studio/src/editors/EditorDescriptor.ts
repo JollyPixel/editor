@@ -12,6 +12,10 @@ export interface EditorDescriptor {
    * `PreferenceScope.toJSON` writes them.
    */
   preferences?: readonly unknown[];
+  /**
+   * Descriptors of the scopes another editor declares and this one reads too.
+   */
+  sharedPreferences?: readonly unknown[];
 }
 
 export interface EditorPageRebuilt {

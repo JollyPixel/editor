@@ -150,4 +150,42 @@ describe("ProjectFile", () => {
       );
     }
   });
+
+  test("replace writes one section and keeps the file fresh", async() => {
+    await using workspace = await tempWorkspace();
+    const projectFile = await ProjectFile.readOrCreate(workspace.root, {
+      version: 1,
+      editors: ["editor-a"]
+    });
+
+    await projectFile.replace("kinds", { "kind-a": { size: 8 } });
+
+    const expected = {
+      version: 1,
+      editors: ["editor-a"],
+      kinds: { "kind-a": { size: 8 } }
+    };
+    assert.deepEqual(
+      JSON.parse(await fs.readFile(projectFile.path, "utf8")),
+      expected
+    );
+    assert.deepEqual(projectFile.document, expected);
+    assert.deepEqual([...projectFile.kinds.keys()], ["kind-a"]);
+    assert.strictEqual(await projectFile.isStale(), false);
+  });
+
+  test("replace refuses an invalid section and keeps the document", async() => {
+    await using workspace = await tempWorkspace();
+    const projectFile = await ProjectFile.readOrCreate(workspace.root, {
+      version: 1
+    });
+
+    await assert.rejects(
+      projectFile.replace("kinds", { "kind-a": 1 }),
+      TypeError
+    );
+
+    assert.deepEqual(projectFile.document, { version: 1 });
+    assert.strictEqual(await projectFile.isStale(), false);
+  });
 });

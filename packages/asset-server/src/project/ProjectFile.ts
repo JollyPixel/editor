@@ -39,8 +39,8 @@ export class ProjectFile {
   readonly root: string;
   readonly path: string;
   readonly inMemory: boolean;
-  readonly document: Readonly<Record<string, unknown>>;
-  readonly kinds: ReadonlyMap<string, Readonly<Record<string, unknown>>>;
+
+  #document: ProjectFileData;
 
   static async read(
     root: string
@@ -75,7 +75,7 @@ export class ProjectFile {
     try {
       await fs.writeFile(
         file,
-        `${JSON.stringify(data, null, 2)}\n`,
+        serialize(data),
         { flag: "wx" }
       );
     }
@@ -131,15 +131,52 @@ export class ProjectFile {
     data: ProjectFileData,
     options: ProjectFileOpenOptions = {}
   ) {
-    const document = structuredClone(data);
-
     this.root = root;
     this.path = path.join(root, PROJECT_FILE_PATH);
     this.inMemory = options.inMemory ?? false;
-    this.document = document;
-    this.kinds = new Map(
-      Object.entries(document.kinds ?? {})
+    this.#document = structuredClone(data);
+  }
+
+  get document(): Readonly<Record<string, unknown>> {
+    return this.#document;
+  }
+
+  get kinds(): ReadonlyMap<string, Readonly<Record<string, unknown>>> {
+    return new Map(
+      Object.entries(this.#document.kinds ?? {})
     );
+  }
+
+  async replace(
+    section: string,
+    value: unknown
+  ): Promise<void> {
+    const result = kProjectFileParser.parse({
+      ...this.#document,
+      [section]: value
+    });
+    if (result.err) {
+      throw new TypeError(
+        `"${section}" is invalid: ${describeErrors(result.val)}`
+      );
+    }
+
+    const previous = this.#document;
+    this.#document = structuredClone(result.val);
+    if (this.inMemory) {
+      return;
+    }
+
+    try {
+      const temporary = `${this.path}.tmp`;
+      await fs.writeFile(temporary, serialize(this.#document));
+      await fs.rename(temporary, this.path);
+    }
+    catch (error) {
+      this.#document = previous;
+
+      throw error;
+    }
   }
 
   async isStale(): Promise<boolean> {
@@ -149,12 +186,18 @@ export class ProjectFile {
         await fs.readFile(this.path, "utf8")
       );
 
-      return !isDeepStrictEqual(current.document, this.document);
+      return !isDeepStrictEqual(current.document, this.#document);
     }
     catch {
       return true;
     }
   }
+}
+
+function serialize(
+  document: ProjectFileData
+): string {
+  return `${JSON.stringify(document, null, 2)}\n`;
 }
 
 function hasErrorCode(

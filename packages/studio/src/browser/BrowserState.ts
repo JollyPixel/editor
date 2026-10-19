@@ -12,6 +12,7 @@ import { SavedTabs } from "../tabs/SavedTabs.ts";
 export const TABS_STORAGE_KEY = "studio:tabs";
 export const ASSET_KIND_STORAGE_KEY = "studio:asset-kind";
 export const EXPANDED_FOLDERS_STORAGE_KEY = "studio:asset-expanded";
+export const SETTINGS_SECTION_STORAGE_KEY = "studio:settings-section";
 const kNodeIdsSchema = z.array(z.string());
 
 export class BrowserState {
@@ -50,6 +51,21 @@ export class BrowserState {
     this.storage.set(
       ASSET_KIND_STORAGE_KEY,
       kind
+    );
+  }
+
+  get settingsSection(): string {
+    return this.storage.get(
+      SETTINGS_SECTION_STORAGE_KEY
+    ) ?? "";
+  }
+
+  set settingsSection(
+    id: string
+  ) {
+    this.storage.set(
+      SETTINGS_SECTION_STORAGE_KEY,
+      id
     );
   }
 

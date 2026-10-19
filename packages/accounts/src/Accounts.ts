@@ -13,6 +13,7 @@ import {
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
+import type { AccountActivity } from "./AccountActivity.ts";
 import {
   GUEST_ROLE,
   type Account
@@ -124,7 +125,6 @@ export class Accounts implements AuthenticationProvider, Disposable {
     });
   }
 
-  readonly roles: AccountRoles;
   readonly cookie: SessionCookie;
   readonly extension: AccountsExtension;
   readonly shareLinks: ShareLinks;
@@ -137,7 +137,6 @@ export class Accounts implements AuthenticationProvider, Disposable {
     options: AccountsOptions
   ) {
     this.#database = options.database;
-    this.roles = options.roles;
     this.#directory = new AccountDirectory({
       database: options.database,
       roles: options.roles,
@@ -157,6 +156,38 @@ export class Accounts implements AuthenticationProvider, Disposable {
       options.database.shareLinks,
       this.#directory
     );
+  }
+
+  get roles(): AccountRoles {
+    return this.#directory.roles;
+  }
+
+  get accessRequests(): boolean {
+    return this.#directory.accessRequests;
+  }
+
+  replaceRoles(
+    roles: AccountRoles
+  ): void {
+    this.#directory.replaceRoles(roles);
+  }
+
+  replaceAccessRequests(
+    enabled: boolean
+  ): void {
+    this.#directory.replaceAccessRequests(enabled);
+  }
+
+  holders(
+    role: string
+  ): string[] {
+    return this.#directory.holders(role);
+  }
+
+  account(
+    accountId: string
+  ): Account | null {
+    return this.#directory.account(accountId);
   }
 
   async register(
@@ -259,6 +290,12 @@ export class Accounts implements AuthenticationProvider, Disposable {
     listener: (accountId: string) => void
   ): () => void {
     return this.#directory.subscribe("revoked", listener);
+  }
+
+  watchActivity(
+    listener: (activity: AccountActivity) => void
+  ): () => void {
+    return this.#directory.subscribe("activity", listener);
   }
 
   watchProfiles(

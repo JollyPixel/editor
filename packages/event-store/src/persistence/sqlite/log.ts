@@ -150,12 +150,18 @@ export class SqliteEventLog implements EventLog {
   ): Event[] {
     const {
       fromEventId = 0,
+      beforeEventId,
       eventTypePrefix,
-      limit
+      limit,
+      newestFirst = false
     } = options;
 
     const conditions = ["event_id > ?"];
     const parameters: SQLInputValue[] = [fromEventId];
+    if (beforeEventId !== undefined) {
+      conditions.push("event_id < ?");
+      parameters.push(beforeEventId);
+    }
     if (eventTypePrefix !== undefined) {
       conditions.push("event_type GLOB ?");
       parameters.push(`${escapeGlob(eventTypePrefix)}*`);
@@ -168,7 +174,7 @@ export class SqliteEventLog implements EventLog {
       `SELECT ${kEventColumns}
        FROM events
        WHERE ${conditions.join(" AND ")}
-       ORDER BY event_id ASC
+       ORDER BY event_id ${newestFirst ? "DESC" : "ASC"}
        ${limit === undefined ? "" : "LIMIT ?"}`,
       ...parameters
     );

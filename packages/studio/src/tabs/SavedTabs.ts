@@ -7,7 +7,8 @@ import { HOME_TAB_ID } from "./EditorTabs.ts";
 // CONSTANTS
 const kSavedTabsSchema = z.object({
   ids: z.array(z.string()),
-  active: z.string()
+  active: z.string(),
+  pages: z.array(z.string()).default([])
 });
 
 export type SavedTabsJSON = z.infer<typeof kSavedTabsSchema>;
@@ -37,21 +38,27 @@ export class SavedTabs {
 
     return new SavedTabs(
       saved.data.ids,
-      saved.data.active
+      saved.data.active,
+      saved.data.pages
     );
   }
 
   readonly ids: readonly string[];
   readonly active: string;
+  readonly pages: readonly string[];
 
   constructor(
     ids: Iterable<string>,
-    active: string
+    active: string,
+    pages: Iterable<string> = []
   ) {
     this.ids = Object.freeze([
       ...new Set(ids)
     ]);
     this.active = active;
+    this.pages = Object.freeze([
+      ...new Set(pages)
+    ]);
   }
 
   toJSON(): SavedTabsJSON {
@@ -59,7 +66,10 @@ export class SavedTabs {
       ids: [
         ...this.ids
       ],
-      active: this.active
+      active: this.active,
+      pages: [
+        ...this.pages
+      ]
     };
   }
 }

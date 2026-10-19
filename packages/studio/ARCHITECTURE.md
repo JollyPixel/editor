@@ -50,7 +50,8 @@ flowchart TB
   studio's. `./` or `../` means a project folder.
 - An editor from `node_modules` is prebuilt and never watched
   ([ADR-0017](./docs/adr/0017-project-packages-are-trusted-code.md)).
-- Editing the project file restarts the dev server.
+- Editing the project file by hand restarts the dev server. The server's own
+  writes do not.
 - `server/` knows nothing of Vite; `vite/` only adapts it.
 - `StudioBackend` opens the online back-end: the accounts, the asset
   workspace and its catalog view, `StudioApi` and `SharePage`. `vite/backend`
@@ -83,13 +84,35 @@ flowchart TB
 - Project export: `ProjectArchive` checks `studio.$export` and answers
   `GET /api/project/archive` with every asset in one asset archive, named
   after the project root. It goes over HTTP, so the catalog content limit
-  does not apply. `GET /api/project/` answers `canExport` for the caller.
+  does not apply. `GET /api/project/` answers the caller's project rights,
+  `StudioAccess.projectRights`: `canExport`, `canReadSettings`,
+  `canEditSettings`, `canAudit` and `canManageAccess`.
+- Project settings: `ProjectSettings` is the only writer of `project.json`
+  and checks the caller's rights itself. `PUT /api/project/settings/kinds`
+  needs write on `studio.$settings`, `PUT /api/project/settings/access` an
+  admin. A save builds and checks everything first (the rebuilt kind
+  packages, the new `StudioAccess` and its `AccountsAccess`), then writes the
+  file and applies it: kind handlers are replaced, the network rights table
+  and the account roles are swapped, and the sessions of a role whose rules
+  changed are revoked so they reconnect under the new rules.
+- `AccountsAccess` turns an access section into the accounts' roles and
+  master password, at startup and on each save.
+- Editors lists each kind package's options with `KindOptionFields`: every
+  number in its `optionsSchema`, labelled by its title or key.
+- `studio.$settings` and `studio.$audit` count only when a role names them;
+  wildcards do not grant them. Admins always have both.
+- Audit: `AuditLog` writes `.jollypixel/audit.db` (settings changes and
+  account activity) and reads it back. `AuditFeed` answers `GET /api/audit`:
+  `NewestFirst` merges that log with the asset events and tags `AssetLog`
+  reads, `EditRuns` folds one actor's edits on one asset less than 5 minutes
+  apart, and `AuditCursor` holds the position in each source. Account rows go
+  to admins only.
 - Preferences: `PreferencesController` answers `GET /api/preferences/` with
   the caller's overrides and `PUT /api/preferences/<scope>`. Both go
   through `PreferenceScopes`, the descriptors the server knows: a `PUT`
   refuses unknown fields and values, a read drops them
   ([ADR-0023](./docs/adr/0023-preferences-follow-the-account.md)). The
-  scopes are the studio's, the host's (`HOST_PREFERENCES`) and those each
+  scopes are `SHELL_PREFERENCES`, the studio's and the host's, and those each
   editor package's `jollypixel.editor.preferences` module exports, which
   `EditorPackage.read` imports and the manifest carries
   ([ADR-0024](./docs/adr/0024-editors-read-preferences-from-the-shell.md)).
@@ -215,6 +238,7 @@ sequenceDiagram
 | `studio:appearance` | `localStorage` | last applied theme and density, painted before the preferences load |
 | `jolly-pixel:preferences:<scope>` | `localStorage` | preference overrides of the offline studio |
 | `preferences` table | `.jollypixel/accounts.db` | preference overrides per account and scope |
+| `.jollypixel/audit.db` | SQLite | settings changes and account activity |
 | `jolly_session_<hash>` | HttpOnly cookie | session token, unreadable from scripts |
 
 `BrowserState` reads and writes the `studio:` keys through one
@@ -231,30 +255,55 @@ flowchart TB
   Overview["project-overview"]
   Browser["asset-browser"]
   Users["studio-users"]
-  Links["studio-share-links"]
   Home --> Dock
   Home --> Overview
   Home --> Users
-  Home --> Links
   Dock --> Browser
 ```
 
 - Home is a fixed tab. Opening an editor hides it, so the tree keeps its state
   ([ADR-0014](./docs/adr/0014-the-asset-browser-lives-on-home.md)).
-- Settings is a shell page like Home, but closable: no frame, outside the cap
-  and the saved tabs.
+- Settings is a shell page like Home, but closable: no frame, outside the cap.
+  `SavedTabs.pages` reopens it after a reload, and `BrowserState` keeps its
+  last section.
 - The Home tools, online only: Settings opens the Settings tab, Search the
   console, Export downloads the project archive. Export stays disabled when
   the role has no write on `studio.$export`.
 - `project-overview` counts assets per kind (`AssetTally`) and lists open
   editors.
 - `studio-users`, in the right dock when online, draws the `accounts` room
-  roster through `UsersTreeModel`; admins get a role menu.
-- `studio-share-links`, under it, lists the links the account may manage
-  (its own, every one for admins), newest first, with asset, creator, dates,
-  Copy link and Revoke. The Share dialog shows the same `share-link-list` for
-  one asset. Both read one `StudioShareLinks`, so a link created or revoked
-  in this shell shows in both; Refresh picks up other accounts' changes.
+  roster through `UsersTreeModel`, read-only.
+
+## Settings
+
+| Tier | Section | Shown to |
+|---|---|---|
+| You | Profile, Appearance, other host scopes | everyone |
+| You › Editors | one per editor: its forms and shortcuts | everyone |
+| You | Share links | signed-in |
+| Project | General, Assets › one per kind package | read on `studio.$settings` |
+| Project | Access | admins |
+| Project | Audit | read on `studio.$audit` |
+
+- `SettingsSections` builds the `jolly-tree` nodes from the manifest (editor
+  scopes, kind packages, kind icons) and the project rights `StudioSignedIn`
+  loads after `me`. You, Project, Editors and Assets are fold-only headings.
+- An editor page shows the scopes its module exports by default. A scope it
+  lists under `shared` shows there only when no installed editor declares it.
+- A kind package page edits a `KindOptionsDraft` through the fields the server
+  lists; a package without fields shows its options read-only. Switching
+  package drops unsaved edits. `StudioProjectSettings` loads and saves both
+  sections.
+- Access edits an `AccessDraft`: roles as ordered `RoleRules` (drag or
+  Alt+Arrow to reorder, a "check a room" field), the default role and access
+  requests. Members and requests reuse `studio-users` with its menu.
+- Both panes hold their draft in a `SettingsDraftController`, which enables
+  Save once the draft differs from the saved section.
+- Share links: `studio-share-links` lists the links the account may manage
+  (its own, every one for admins), newest first. The Share dialog shows the
+  same `share-link-list` for one asset. Both read one `StudioShareLinks`.
+- Audit: `AuditPages` loads and pages the rows for the filters (actor,
+  asset, category, dates) and drops a reply a newer request replaced.
 
 ## Asset browser
 
@@ -341,9 +390,9 @@ flowchart TB
 |---|---|
 | `server/StudioBackend.ts` | the online back-end, opened and closed as one |
 | `server/StudioServer.ts`, `server/start.ts` | hosted entry and its environment |
-| `server/project/` | project file, `access` section, private files |
+| `server/project/` | project file, `access` section, `ProjectSettings`, `KindOptionFields`, private files |
 | `server/editors/` | editor packages and pages, manifest route, dist watcher |
-| `server/accounts.ts` | project accounts |
+| `server/accounts.ts`, `server/AccountsAccess.ts` | project accounts, their roles and master password |
 | `server/shares/` | share rules, guest admission, `/view/` page |
 | `vite.config.ts`, `vite/` | Vite plugins |
 | `src/index.ts` | boot |
@@ -353,7 +402,9 @@ flowchart TB
 | `src/accounts/` | `StudioSignedIn`, `SessionRenewal`, `UsersTreeModel`, `/users` console |
 | `src/api/` | `ApiEndpoint`: fetch and failure shape shared by the HTTP clients |
 | `src/shares/` | share routes, lifetimes, `ShareLinksClient`, `StudioShareLinks` |
-| `src/project/` | project routes, `ProjectArchiveClient`, `AttachmentDisposition` |
+| `src/project/` | project routes and clients, `StudioProjectSettings`, `AccessDraft`, `RoleRules`, `KindOptionsDraft` |
+| `src/audit/` | audit routes, `AuditClient`, `AuditPages`, `AuditFilters`, `AuditRowText` |
+| `server/audit/` | `AuditLog`, `AssetLog`, `AuditFeed` and its merge, edit runs and cursor |
 | `src/files/` | `DroppedFile`, `FileDownload` |
 | `src/editors/` | `EditorRegistry`, `ProjectManifest` |
 | `src/browser/` | `BrowserState` |

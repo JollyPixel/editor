@@ -14,11 +14,14 @@ import {
 import { toPeerProfileMetadata } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
+import type { AuditClient } from "../audit/AuditClient.ts";
 import {
   AccountPreferences,
   type AccountPreferencesClient
 } from "../preferences/AccountPreferences.ts";
 import type { ProjectArchiveClient } from "../project/ProjectArchiveClient.ts";
+import type { ProjectSettingsClient } from "../project/ProjectSettingsClient.ts";
+import { StudioProjectSettings } from "../project/StudioProjectSettings.ts";
 import type { ShareLinksClient } from "../shares/ShareLinksClient.ts";
 import { StudioShareLinks } from "../shares/StudioShareLinks.ts";
 import { SessionRenewal } from "./SessionRenewal.ts";
@@ -39,6 +42,8 @@ export interface StudioSignInOptions {
   signIn: () => Promise<Account>;
   shareLinks: ShareLinksClient;
   projectArchive: ProjectArchiveClient;
+  projectSettings: ProjectSettingsClient;
+  audit: AuditClient;
   preferences: AccountPreferencesClient;
   /**
    * Opens the shell's connection, joined with the account's peer profile.
@@ -49,9 +54,10 @@ export interface StudioSignInOptions {
 
 export interface StudioSignedInOptions extends Omit<
   StudioSignInOptions,
-  "preferences"
+  "preferences" | "projectSettings"
 > {
   preferences: AccountPreferences;
+  project: StudioProjectSettings;
 }
 
 export class StudioSignedIn extends EventTarget {
@@ -59,14 +65,18 @@ export class StudioSignedIn extends EventTarget {
     options: StudioSignInOptions
   ): Promise<StudioSignedIn> {
     const account = await options.accounts.me() ?? await options.signIn();
-    const preferences = await AccountPreferences.load({
-      accountId: account.id,
-      client: options.preferences
-    });
+    const [preferences, rights] = await Promise.all([
+      AccountPreferences.load({
+        accountId: account.id,
+        client: options.preferences
+      }),
+      options.projectSettings.rights()
+    ]);
 
     return new StudioSignedIn(account, {
       ...options,
-      preferences
+      preferences,
+      project: new StudioProjectSettings(options.projectSettings, rights)
     });
   }
 
@@ -75,6 +85,8 @@ export class StudioSignedIn extends EventTarget {
   readonly shares: StudioShareLinks;
   readonly renewal: SessionRenewal;
   readonly projectArchive: ProjectArchiveClient;
+  readonly project: StudioProjectSettings;
+  readonly audit: AuditClient;
   readonly preferences: AccountPreferences;
 
   #account: Account;
@@ -93,6 +105,8 @@ export class StudioSignedIn extends EventTarget {
     this.roster = AccountsRoster.join(this.client);
     this.shares = new StudioShareLinks(options.shareLinks, this.roster);
     this.projectArchive = options.projectArchive;
+    this.project = options.project;
+    this.audit = options.audit;
     this.preferences = options.preferences;
     this.renewal = new SessionRenewal({
       accountId: account.id,

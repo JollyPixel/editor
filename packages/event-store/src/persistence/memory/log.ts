@@ -128,13 +128,16 @@ export class MemoryEventLog implements EventLog {
 
     const {
       fromEventId = 0,
+      beforeEventId = Infinity,
       eventTypePrefix,
-      limit
+      limit,
+      newestFirst = false
     } = options;
 
     return copyMatching(
-      this.#events,
+      newestFirst ? backwards(this.#events) : this.#events,
       (event) => event.eventId > fromEventId &&
+        event.eventId < beforeEventId &&
         matchesPrefix(event.eventType, eventTypePrefix),
       limit
     );
@@ -268,8 +271,16 @@ export class MemoryEventLog implements EventLog {
   }
 }
 
+function* backwards(
+  events: readonly Event[]
+): IterableIterator<Event> {
+  for (let index = events.length - 1; index >= 0; index--) {
+    yield events[index];
+  }
+}
+
 function copyMatching(
-  source: readonly Event[],
+  source: Iterable<Event>,
   matches: EventPredicate,
   limit?: number
 ): Event[] {

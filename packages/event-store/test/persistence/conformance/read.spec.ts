@@ -188,6 +188,26 @@ for (const backend of backends) {
       );
     });
 
+    test("newestFirst pages backwards from beforeEventId", async() => {
+      using store = await backend.create();
+      seed(store);
+
+      const first = store.reader.listAll({
+        newestFirst: true,
+        limit: 2
+      });
+      const next = store.reader.listAll({
+        newestFirst: true,
+        beforeEventId: first.at(-1)?.eventId,
+        limit: 2
+      });
+
+      assert.deepEqual(
+        [...first, ...next].map((event) => event.eventId),
+        [4, 3, 2, 1]
+      );
+    });
+
     test("returns an empty array on an empty log", async() => {
       using store = await backend.create();
 

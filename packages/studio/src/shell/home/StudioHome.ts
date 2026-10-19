@@ -4,7 +4,6 @@ import {
   css,
   html,
   nothing,
-  type PropertyValues,
   type TemplateResult
 } from "lit";
 import {
@@ -23,7 +22,6 @@ import type { EditorTab } from "../../tabs/EditorTabs.ts";
 import "../assets/AssetBrowser.ts";
 import "./ProjectOverview.ts";
 import "../users/UsersPane.ts";
-import "../shares/ShareLinksPane.ts";
 
 // CONSTANTS
 export const HOME_LAYOUT_STORAGE_KEY = "studio:home-layout";
@@ -141,9 +139,6 @@ export class StudioHome extends LitElement {
   @state()
   declare _exporting: boolean;
 
-  @state()
-  declare _canExport: boolean;
-
   constructor() {
     super();
     this.assets = null;
@@ -152,15 +147,6 @@ export class StudioHome extends LitElement {
     this.account = null;
     this.browserState = new BrowserState();
     this._exporting = false;
-    this._canExport = false;
-  }
-
-  override willUpdate(
-    changed: PropertyValues<this>
-  ): void {
-    if (changed.has("signedIn") || changed.has("account")) {
-      void this.#loadExportRight();
-    }
   }
 
   override render(): TemplateResult {
@@ -233,48 +219,13 @@ export class StudioHome extends LitElement {
             icon-only
             label="Export project"
             title="Export project"
-            ?disabled=${this._exporting || !this._canExport}
+            ?disabled=${this._exporting || !signedIn.project.rights.canExport}
             @click=${this.#export}
           ></jolly-button>
         </jolly-toolbar>
-        ${this.assets === null ? users : html`
-          <jolly-pane-group active="users">
-            ${users}
-            <jolly-pane
-              key="share-links"
-              heading="Share links"
-              icon="share"
-              locked
-            >
-              <studio-share-links
-                .links=${signedIn.shares}
-                .catalog=${this.assets.catalog}
-              ></studio-share-links>
-            </jolly-pane>
-          </jolly-pane-group>
-        `}
+        ${users}
       </jolly-dock>
     `;
-  }
-
-  async #loadExportRight(): Promise<void> {
-    const signedIn = this.signedIn;
-    this._canExport = false;
-    if (signedIn === null) {
-      return;
-    }
-
-    try {
-      const canExport = await signedIn.projectArchive.canExport();
-      if (this.signedIn === signedIn) {
-        this._canExport = canExport;
-      }
-    }
-    catch (error) {
-      this.dispatchEvent(
-        StudioErrorEvent.from(error, "Could not check the export right")
-      );
-    }
   }
 
   readonly #openSettings = (): void => {

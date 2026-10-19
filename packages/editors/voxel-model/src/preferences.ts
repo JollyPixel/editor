@@ -88,8 +88,6 @@ export type VoxelModelPreferences = PreferenceValues<
   typeof VOXEL_MODEL_PREFERENCES.fields
 >;
 
-export default [
-  VOXEL_MODEL_PREFERENCES,
-  PIXEL_ART_PREFERENCES,
-  PIXEL_ART_KEYBINDINGS
-];
+export const shared = [PIXEL_ART_PREFERENCES, PIXEL_ART_KEYBINDINGS];
+
+export default [VOXEL_MODEL_PREFERENCES];

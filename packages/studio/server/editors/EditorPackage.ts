@@ -12,6 +12,10 @@ import type { EditorDescriptor } from "../../src/editors/EditorDescriptor.ts";
 
 // CONSTANTS
 const kInstallFolder = "node_modules";
+const kNoPreferences = {
+  preferences: [],
+  sharedPreferences: []
+};
 const kPackageManifestSchema = z.object({
   jollypixel: z.object({
     editor: z.object({
@@ -41,10 +45,21 @@ export interface EditorPackageData extends EditorDescriptor {
    */
   page: string | null;
   /**
-   * The scopes exported by the module the manifest's `preferences` names.
+   * The scopes the module named by the manifest's `preferences` exports by
+   * default: the ones this editor declares.
    */
   preferences: readonly PreferenceScope[];
+  /**
+   * The scopes the same module exports as `shared`: declared by another
+   * editor and read by this one too.
+   */
+  sharedPreferences: readonly PreferenceScope[];
 }
+
+type EditorPreferences = Pick<
+  EditorPackageData,
+  "preferences" | "sharedPreferences"
+>;
 
 export class EditorPackage implements EditorPackageData {
   readonly package: string;
@@ -54,6 +69,7 @@ export class EditorPackage implements EditorPackageData {
   readonly prebuilt: boolean;
   readonly page: string | null;
   readonly preferences: readonly PreferenceScope[];
+  readonly sharedPreferences: readonly PreferenceScope[];
 
   static async read(
     packageName: string,
@@ -92,6 +108,10 @@ export class EditorPackage implements EditorPackageData {
       );
     }
 
+    const scopes = preferences === undefined ?
+      kNoPreferences :
+      await loadPreferences(packageName, path.resolve(root, preferences));
+
     return new EditorPackage({
       package: packageName,
       name,
@@ -99,9 +119,7 @@ export class EditorPackage implements EditorPackageData {
       dist: path.resolve(root, dist),
       prebuilt,
       page: shipsPage ? source : null,
-      preferences: preferences === undefined ?
-        [] :
-        await loadPreferences(packageName, path.resolve(root, preferences))
+      ...scopes
     });
   }
 
@@ -115,13 +133,15 @@ export class EditorPackage implements EditorPackageData {
     this.prebuilt = data.prebuilt;
     this.page = data.page;
     this.preferences = [...data.preferences];
+    this.sharedPreferences = [...data.sharedPreferences];
   }
 
   toDescriptor(): EditorDescriptor {
     return {
       name: this.name,
       kinds: [...this.kinds],
-      preferences: this.preferences.map((scope) => scope.toJSON())
+      preferences: this.preferences.map((scope) => scope.toJSON()),
+      sharedPreferences: this.sharedPreferences.map((scope) => scope.toJSON())
     };
   }
 }
@@ -129,16 +149,19 @@ export class EditorPackage implements EditorPackageData {
 async function loadPreferences(
   packageName: string,
   file: string
-): Promise<PreferenceScope[]> {
+): Promise<EditorPreferences> {
   try {
-    const module: { default?: unknown; } = await import(pathToFileURL(file).href);
-    const exported = Array.isArray(module.default) ?
-      module.default :
-      [module.default];
+    const module: {
+      default?: unknown;
+      shared?: unknown;
+    } = await import(pathToFileURL(file).href);
 
-    return exported.map(
-      (scope) => PreferenceScope.from(JSON.parse(JSON.stringify(scope)))
-    );
+    return {
+      preferences: parseScopes(module.default),
+      sharedPreferences: module.shared === undefined ?
+        [] :
+        parseScopes(module.shared)
+    };
   }
   catch (error) {
     throw new TypeError(
@@ -146,4 +169,14 @@ async function loadPreferences(
       { cause: error }
     );
   }
+}
+
+function parseScopes(
+  exported: unknown
+): PreferenceScope[] {
+  const scopes = Array.isArray(exported) ? exported : [exported];
+
+  return scopes.map(
+    (scope) => PreferenceScope.from(JSON.parse(JSON.stringify(scope)))
+  );
 }

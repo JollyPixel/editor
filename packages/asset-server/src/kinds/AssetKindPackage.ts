@@ -8,8 +8,14 @@ import type { AssetKindHandler } from "./AssetKindHandler.ts";
 
 // CONSTANTS
 export const SNAPSHOT_POLICY_SCHEMA = z.strictObject({
-  delay: z.optional(z.number().check(z.minimum(0))),
-  maxDelay: z.optional(z.number().check(z.minimum(0)))
+  delay: z.optional(z.number().check(
+    z.minimum(0),
+    z.meta({ title: "Delay (ms)" })
+  )),
+  maxDelay: z.optional(z.number().check(
+    z.minimum(0),
+    z.meta({ title: "Max delay (ms)" })
+  ))
 });
 
 export interface AssetKindPackage<

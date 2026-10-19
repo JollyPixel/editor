@@ -24,7 +24,10 @@ import {
 } from "../../src/accounts/StudioSignedIn.ts";
 import { AccountPreferences } from "../../src/preferences/AccountPreferences.ts";
 import { PreferencesClient } from "../../src/preferences/PreferencesClient.ts";
+import { AuditClient } from "../../src/audit/AuditClient.ts";
 import { ProjectArchiveClient } from "../../src/project/ProjectArchiveClient.ts";
+import { ProjectSettingsClient } from "../../src/project/ProjectSettingsClient.ts";
+import { StudioProjectSettings } from "../../src/project/StudioProjectSettings.ts";
 import { ShareLinksClient } from "../../src/shares/ShareLinksClient.ts";
 
 // CONSTANTS
@@ -98,6 +101,21 @@ function signedInAs(
       projectArchive: new ProjectArchiveClient({
         url: "http://localhost/api/project/"
       }),
+      audit: new AuditClient({
+        url: "http://localhost/api/audit/"
+      }),
+      project: new StudioProjectSettings(
+        new ProjectSettingsClient({
+          url: "http://localhost/api/project/"
+        }),
+        {
+          canExport: false,
+          canReadSettings: false,
+          canEditSettings: false,
+          canAudit: false,
+          canManageAccess: false
+        }
+      ),
       preferences: new AccountPreferences([], {
         accountId: kAlice.id,
         client: new PreferencesClient({

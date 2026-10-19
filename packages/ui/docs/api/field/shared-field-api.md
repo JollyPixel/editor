@@ -78,7 +78,8 @@ commits a concrete value.
 
 - `--jolly-field-inset-start` and `--jolly-field-inset-end` set the row insets,
   default `--jolly-space-1`. The start inset also indents description and
-  error lines.
+  error lines. `jolly-property-row` and a `jolly-separator` caption follow the
+  same insets, so they stay aligned with the labels.
 - Set both to `0` inside a padded container, such as a dialog body.
 - Set the end inset to `0` to align rows with a folder header edge.
 

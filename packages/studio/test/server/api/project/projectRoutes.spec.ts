@@ -61,7 +61,6 @@ describe("GET /api/project/archive", () => {
     const client = archiveClient(backend, owner);
     const download = await client.download();
 
-    assert.equal(await client.canExport(), true);
     assert.equal(download.fileName, "project.zip");
     const archive = readAssetArchive(
       new Uint8Array(await download.blob.arrayBuffer())
@@ -79,7 +78,6 @@ describe("GET /api/project/archive", () => {
     await signedIn(backend, "Alice");
     const spectator = archiveClient(backend, await signedIn(backend, "Bob"));
 
-    assert.equal(await spectator.canExport(), false);
     await assert.rejects(
       spectator.download(),
       {

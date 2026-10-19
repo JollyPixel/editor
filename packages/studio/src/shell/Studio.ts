@@ -396,6 +396,9 @@ export class Studio extends LitElement {
             .sections=${this._sections}
             .preferences=${this._preferences}
             .account=${this._account}
+            .signedIn=${this._signedIn}
+            .catalog=${this._assets?.catalog ?? null}
+            .browserState=${this.#browserState}
             @avatar-change=${this.#replaceAvatar}
           ></studio-settings>
         </div>
