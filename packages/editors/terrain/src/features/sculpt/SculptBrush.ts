@@ -45,6 +45,7 @@ export interface SculptBrushOptions {
   history: Pick<TerrainHistory, "open">;
   camera: () => THREE.Camera | null;
   publishRing?: (shape: BrushRingShape | null) => void;
+  liveTiles?: (tiles: Iterable<TileCoord>) => void;
 }
 
 interface Stroke {
@@ -61,6 +62,7 @@ export class SculptBrush extends ActorComponent {
   #history: Pick<TerrainHistory, "open">;
   #camera: () => THREE.Camera | null;
   #publishRing: (shape: BrushRingShape | null) => void;
+  #liveTiles: (tiles: Iterable<TileCoord>) => void;
   #ring = new BrushRing();
   #raycaster = new THREE.Raycaster();
   #pointer = new THREE.Vector2();
@@ -84,6 +86,7 @@ export class SculptBrush extends ActorComponent {
     this.#history = options.history;
     this.#camera = options.camera;
     this.#publishRing = options.publishRing ?? (() => undefined);
+    this.#liveTiles = options.liveTiles ?? (() => undefined);
   }
 
   awake(): void {
@@ -219,6 +222,7 @@ export class SculptBrush extends ActorComponent {
     }
     if (changed.size > 0) {
       this.#view.tilesChanged(changed.values());
+      this.#liveTiles(changed.values());
       this.#ringKey = "";
     }
   }

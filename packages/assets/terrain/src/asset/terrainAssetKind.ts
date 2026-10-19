@@ -38,6 +38,7 @@ import {
   terrainSnapshotSchema
 } from "../network/TerrainCommand.schema.ts";
 import { TerrainCommandArbiter } from "../network/TerrainCommandArbiter.ts";
+import { TerrainLiveRelay } from "../network/TerrainLiveRelay.ts";
 import type { TerrainNetworkCommand } from "../network/types.ts";
 
 // CONSTANTS
@@ -150,7 +151,8 @@ export function terrainAssetKind(
           snapshotSchema: terrainSnapshotSchema,
           snapshot: () => terrainSnapshot(state),
           arbitrate: (command) => arbiter.admit(state, command),
-          restore: (command, version) => arbiter.restore(command, version)
+          restore: (command, version) => arbiter.restore(command, version),
+          relay: new TerrainLiveRelay()
         };
       }
     }

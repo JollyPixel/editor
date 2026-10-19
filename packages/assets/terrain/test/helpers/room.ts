@@ -11,6 +11,7 @@ import type {
 export interface MockRoom extends TerrainRoom {
   readonly sent: TerrainNetworkCommand[];
   deliver(message: TerrainServerMessage): void;
+  emit(type: string, payload: unknown): void;
 }
 
 export function createMockRoom(
@@ -49,8 +50,11 @@ export function createMockRoom(
       listeners.get(type)?.delete(listener as (payload: never) => void);
     },
     deliver: (message) => {
-      for (const listener of listeners.get("message") ?? []) {
-        (listener as (payload: TerrainServerMessage) => void)(message);
+      room.emit("message", message);
+    },
+    emit: (type, payload) => {
+      for (const listener of listeners.get(type) ?? []) {
+        (listener as (event: unknown) => void)(payload);
       }
     }
   };

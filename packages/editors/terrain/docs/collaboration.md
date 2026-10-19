@@ -83,6 +83,14 @@ extension forwards each one with `sendTo` to the peers whose presence region
 overlaps the patch's chunks. `@jolly-pixel/network` does not change for this;
 routing moves into it only if another kind needs it.
 
+The extension is the terrain live protocol's relay (`TerrainLiveRelay`).
+Server extensions do not see presence updates, so each client also sends its
+interest region to the relay as `interest-changed`, and again after a resync.
+Live patches travel as `live-patched`. A peer that applies one keeps the
+heights it replaced. A commit or another change to the tile discards them;
+they are written back when the author leaves, or when no commit arrives within
+5 s of the author's last live patch.
+
 ## Asset parts
 
 The asset server keeps one live state per asset, sends it whole on join and

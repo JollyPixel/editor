@@ -7,7 +7,7 @@ export const TERRAIN_INTEREST_KEY = "terrain-interest";
 export const DEFAULT_PRESENCE_RADIUS = 4;
 export const MAX_PRESENCE_RADIUS = 16;
 
-const kInterestSchema = z.object({
+export const terrainInterestSchema = z.object({
   x: z.int(),
   z: z.int(),
   radius: z.int().check(z.gte(0), z.lte(MAX_PRESENCE_RADIUS))
@@ -23,7 +23,7 @@ export class TerrainInterest {
   static parse(
     value: unknown
   ): TerrainInterest | undefined {
-    const result = z.safeParse(kInterestSchema, value);
+    const result = z.safeParse(terrainInterestSchema, value);
 
     return result.success ?
       new TerrainInterest(new ChunkCoord(result.data.x, result.data.z), result.data.radius) :

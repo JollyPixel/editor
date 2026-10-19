@@ -32,7 +32,9 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
 - **Presence: done** (2026-10-19). Peers show in the presence stack and as
   camera frustums; each client publishes its interest region and brush ring,
   and draws peers' rings inside its presence radius.
-- **Next:** live patches, routed by the terrain extension.
+- **Interest routing: done** (2026-10-19). Live patches reach only the peers
+  whose presence region overlaps them, through the terrain room's relay.
+- **Next:** flatten to a fixed height.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -54,7 +56,7 @@ chunks yet.
 - [ ] Flatten to a fixed height set in the toolbar; Ctrl+click picks it.
 - [x] Stroke commits: tile patches, collision keys, arbiter, corrections.
 - [x] Undo and redo through `CommandHistory`.
-- [ ] Interest routing in the terrain extension: live patches inside the
+- [x] Interest routing in the terrain extension: live patches inside the
   presence radius; peer brush rings drawn inside it.
 - [x] Debug overlays: chunk grid and LoD levels.
 - [ ] Slope overlay.

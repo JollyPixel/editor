@@ -31,12 +31,14 @@ export interface PeerBrushRingsOptions {
   room: Room;
   terrain: TerrainReader;
   camera: () => THREE.Camera | null;
+  interestChanged?: (interest: TerrainInterest) => void;
 }
 
 export class PeerBrushRings extends ActorComponent {
   #room: Room;
   #terrain: TerrainReader;
   #camera: () => THREE.Camera | null;
+  #interestChanged: (interest: TerrainInterest) => void;
   #interests: PresenceChannel<TerrainInterest>;
   #brushes: PresenceChannel<BrushRingShape | null>;
   #rings = new Map<string, BrushRing>();
@@ -66,6 +68,7 @@ export class PeerBrushRings extends ActorComponent {
     this.#room = options.room;
     this.#terrain = options.terrain;
     this.#camera = options.camera;
+    this.#interestChanged = options.interestChanged ?? (() => undefined);
     this.#interests = new PresenceChannel(options.room, {
       key: TERRAIN_INTEREST_KEY,
       decode: TerrainInterest.parse,
@@ -121,10 +124,13 @@ export class PeerBrushRings extends ActorComponent {
     }
 
     camera.getWorldPosition(this.#cameraPosition);
+    const interest = TerrainInterest.around(this.#cameraPosition.x, this.#cameraPosition.z);
+    if (!this.#interests.publish(interest)) {
+      return false;
+    }
+    this.#interestChanged(interest);
 
-    return this.#interests.publish(
-      TerrainInterest.around(this.#cameraPosition.x, this.#cameraPosition.z)
-    );
+    return true;
   }
 
   #render(

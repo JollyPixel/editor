@@ -5,9 +5,10 @@ import {
 } from "@jolly-pixel/engine";
 import { PeerFrustums } from "@jolly-pixel/editor.host";
 import type { Room } from "@jolly-pixel/network/client";
-import type {
-  TerrainChange,
-  TerrainCommandDocument
+import {
+  TerrainLiveSync,
+  type TerrainChange,
+  type TerrainCommandDocument
 } from "@jolly-pixel/asset.terrain/client";
 import {
   CHUNK_SAMPLES,
@@ -87,13 +88,24 @@ export class TerrainEditorScene extends Systems.Scene {
         camera: () => camera.camera
       });
     this.#view = view;
+    const live = new TerrainLiveSync({
+      room: this.#room,
+      document: this.#document
+    });
     const peerRings = this.world
       .createActor("peer-brush-rings")
       .addComponentAndGet(PeerBrushRings, {
         room: this.#room,
         terrain: this.#document.terrain,
-        camera: () => camera.camera
+        camera: () => camera.camera,
+        interestChanged: (interest) => live.publishInterest(interest)
       });
+    live.on("tilesChanged", (tiles) => {
+      view.tilesChanged(tiles);
+      peerRings.refresh();
+      this.world.invalidate();
+    });
+    this.#disposables.push(() => live.dispose());
     this.world
       .createActor("sculpt-brush")
       .addComponent(SculptBrush, {
@@ -102,7 +114,8 @@ export class TerrainEditorScene extends Systems.Scene {
         settings: this.#sculpt,
         history: this.#history,
         camera: () => camera.camera,
-        publishRing: (shape) => peerRings.publishLocalRing(shape)
+        publishRing: (shape) => peerRings.publishLocalRing(shape),
+        liveTiles: (tiles) => live.queue(tiles)
       });
     this.#disposables.push(bindHistoryShortcuts(this.world.input.keyboard, this.#history));
 

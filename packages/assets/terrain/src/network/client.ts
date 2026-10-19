@@ -2,6 +2,8 @@ export * from "./types.ts";
 export * from "./heights.ts";
 export * from "./tilePatches.ts";
 export * from "./TerrainInterest.ts";
+export * from "./TerrainLive.schema.ts";
+export * from "./TerrainLiveSync.ts";
 export * from "./TerrainCommandKeys.ts";
 export * from "./SyncedTerrainDocument.ts";
 export * from "../model/TerrainCommandDocument.ts";
