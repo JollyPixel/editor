@@ -4,11 +4,11 @@ import type {
   Page
 } from "@playwright/test";
 import type { Vector3Like } from "three";
+import type { MouseButton } from "@jolly-pixel/e2e";
 import {
-  pressAt,
-  type MouseButton
-} from "@jolly-pixel/e2e";
-import { nextFrames } from "@jolly-pixel/e2e/editor";
+  nextFrames,
+  pressAt
+} from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
 import {
@@ -155,7 +155,6 @@ export class Viewport {
   ): Promise<void> {
     await pressAt(this.#page, points, {
       button,
-      settle: nextFrames,
       target: this.canvas
     });
   }

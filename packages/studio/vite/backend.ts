@@ -49,15 +49,16 @@ export function backend(
 function backendOptions(
   mode: RunMode
 ): StudioBackendOptions {
+  const { inMemory } = mode.workspace;
   if (mode.e2e) {
     return {
-      inMemory: mode.inMemory,
+      inMemory,
       ...E2E_BACKEND_OPTIONS
     };
   }
 
   return {
-    inMemory: mode.inMemory,
+    inMemory,
     accounts: {
       env: process.env,
       logger: createLogger()

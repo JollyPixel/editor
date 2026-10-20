@@ -5,12 +5,15 @@
 editor's viewport.
 
 ```ts
-import { EditorToolbar } from "@jolly-pixel/e2e/editor";
+import {
+  EditorToolbar,
+  followEditor
+} from "@jolly-pixel/e2e/editor";
 
 const toolbar = new EditorToolbar(page);
 await toolbar.saveVersion("v1", "First pass");
 await toolbar.viewVersion(/v1 ·/);
-await toolbar.afterNavigation(/tag=v1/);
+await followEditor(page, /tag=v1/);
 ```
 
 ## Locators
@@ -34,5 +37,6 @@ await toolbar.afterNavigation(/tag=v1/);
   `label`. A tag entry reads `name · date · message`.
 - `confirm(heading, button)`: clicks `button` in the open dialog whose banner
   shows `heading`, such as `confirm("Restore tag", "Restore")`.
-- `afterNavigation(url)`: waits for the URL to match, then for the editor to
-  be ready again. The editor switches in place, so the page does not reload.
+
+Picking an asset or a version switches the editor in place; wait for it with
+[`followEditor(page, url)`](./navigation.md#navigation).

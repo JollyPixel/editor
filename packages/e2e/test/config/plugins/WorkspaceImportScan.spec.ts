@@ -11,7 +11,7 @@ import {
 import {
   WorkspaceImportScan,
   type ModuleSource
-} from "../../src/vite/WorkspaceImportScan.ts";
+} from "../../../src/config/plugins/WorkspaceImportScan.ts";
 import {
   EXPECTED_ENTRIES,
   FIXTURE_PAGE,
@@ -19,7 +19,7 @@ import {
   HANDLERS_MODULE,
   MAIN_MODULE,
   VIRTUAL_MODULES
-} from "../helpers/workspaceFixture.ts";
+} from "../../helpers/workspaceFixture.ts";
 
 function fixtureModules(
   loaded: string[]

@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { waitForEditor } from "@jolly-pixel/e2e/editor";
+import { followEditor } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
 import {
@@ -46,8 +46,7 @@ test("exports the map, resets the workspace and imports it back", async({ map, p
   expect(reseeded.mapId).not.toBe(exported.mapId);
 
   await map.archives.importArchive(archivePath);
-  await page.waitForURL(new RegExp(`target=${exported.mapId}`));
-  await waitForEditor(page);
+  await followEditor(page, new RegExp(`target=${exported.mapId}`));
 
   expect(await offlineIds(map)).toEqual(exported);
   const state = await page.evaluate(() => {
@@ -73,12 +72,11 @@ test("imports a map and its blockset as a copy", async({ map, page }) => {
   const download = await map.archives.exportArchive();
   await map.archives.importArchive(await download.path());
   await map.archives.importCopyButton.click();
-  await page.waitForURL((url) => {
+  await followEditor(page, (url) => {
     const target = url.searchParams.get("target");
 
     return target !== null && target !== original.mapId;
   });
-  await waitForEditor(page);
 
   const copied = await offlineIds(map);
   expect(copied.mapId).not.toBe(original.mapId);

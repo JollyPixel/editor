@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
 import type { Page } from "@playwright/test";
 import type { Vector3Like } from "three";
-import { treeRow, pressAt } from "@jolly-pixel/e2e";
-import { nextFrames } from "@jolly-pixel/e2e/editor";
+import { treeRow } from "@jolly-pixel/e2e";
+import { pressAt } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
 import {
@@ -156,7 +156,7 @@ test("clicking the viewport selects a block, and empty space clears it", async({
         x: canvas.x + 8,
         y: canvas.y + (canvas.height / 2)
       }
-    ], { settle: nextFrames });
+    ]);
 
     await expect(treeRow(page, "Arm")).toHaveAttribute("aria-selected", "false");
     await expect(page.getByRole("textbox", { name: "X" })).toBeDisabled();
@@ -167,9 +167,7 @@ test("clicking the viewport selects a block, and empty space clears it", async({
 test("dragging a size handle resizes that axis around the block's center", async({ page }) => {
   await chooseMode(page, "Size");
 
-  await pressAt(page, await gizmoHandlePoints(page, "X"), {
-    settle: nextFrames
-  });
+  await pressAt(page, await gizmoHandlePoints(page, "X"));
 
   const resized = await blockSummary(page, "Block");
   if (resized === null) {
@@ -220,9 +218,7 @@ test("moving the pivot of a rotated block leaves the box in place", async({ page
   expect(await boxCenter()).toEqual(center);
   expect((await blockSummary(page, "Block"))?.pivotOffset).toEqual({ x: 0.5, y: 0, z: 0 });
 
-  await pressAt(page, await gizmoHandlePoints(page, "X"), {
-    settle: nextFrames
-  });
+  await pressAt(page, await gizmoHandlePoints(page, "X"));
   const moved = await blockSummary(page, "Block");
   expect(moved?.pivotOffset.x).not.toBe(0.5);
   const drifted = (await boxCenter())!.map((value, index) => Math.abs(value - center![index]));
@@ -232,9 +228,7 @@ test("moving the pivot of a rotated block leaves the box in place", async({ page
 test("dragging a gizmo arrow moves the block along that axis only", async({ page }) => {
   await chooseMode(page, "Pos");
 
-  await pressAt(page, await gizmoHandlePoints(page, "X"), {
-    settle: nextFrames
-  });
+  await pressAt(page, await gizmoHandlePoints(page, "X"));
 
   const moved = await blockSummary(page, "Block");
   if (moved === null) {

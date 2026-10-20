@@ -1,6 +1,8 @@
 // Import Third-party Dependencies
 import type { Page } from "@playwright/test";
 
+export type EditorUrl = string | RegExp | ((url: URL) => boolean);
+
 export interface OpenEditorOptions {
   target?: string;
   username?: string;
@@ -46,6 +48,25 @@ export async function openEditor(
   options: OpenEditorOptions = {}
 ): Promise<void> {
   await page.goto(editorPath(options));
+  await waitForEditor(page);
+}
+
+export async function reloadEditor(
+  page: Page,
+  reload: () => Promise<unknown> = () => page.reload()
+): Promise<void> {
+  await Promise.all([
+    page.waitForEvent("load"),
+    reload()
+  ]);
+  await waitForEditor(page);
+}
+
+export async function followEditor(
+  page: Page,
+  url: EditorUrl
+): Promise<void> {
+  await page.waitForURL(url);
   await waitForEditor(page);
 }
 

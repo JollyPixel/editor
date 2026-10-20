@@ -5,7 +5,7 @@ import {
 } from "@jolly-pixel/e2e";
 import {
   nextFrames,
-  waitForEditor
+  reloadEditor
 } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
@@ -46,8 +46,7 @@ test("the hierarchy and transforms survive a reload", async({ page, peer }) => {
   await expect.poll(() => blockSurface(peer, "Arm"))
     .toMatchObject({ metalness: 0.8 });
 
-  await page.reload();
-  await waitForEditor(page);
+  await reloadEditor(page);
 
   await expect(treeRow(page, "Arm")).toBeVisible();
   expect(await outline(page)).toEqual(["Block", "Limbs/", "  Arm"]);

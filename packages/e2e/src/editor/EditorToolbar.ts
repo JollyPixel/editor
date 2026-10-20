@@ -8,8 +8,7 @@ import type {
 import {
   dialog,
   textField
-} from "../locators.ts";
-import { waitForEditor } from "./open.ts";
+} from "../browser/locators.ts";
 
 export class EditorToolbar {
   readonly root: Locator;
@@ -73,13 +72,6 @@ export class EditorToolbar {
     await dialog(this.#page, heading)
       .getByRole("button", { name: button })
       .click();
-  }
-
-  async afterNavigation(
-    url: RegExp | ((url: URL) => boolean)
-  ): Promise<void> {
-    await this.#page.waitForURL(url);
-    await waitForEditor(this.#page);
   }
 }
 

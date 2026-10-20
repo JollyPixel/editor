@@ -9,7 +9,7 @@ import {
 import {
   editorPath,
   type OpenEditorOptions
-} from "../../src/editor/open.ts";
+} from "../../src/editor/navigation.ts";
 
 function toQuery(
   options: OpenEditorOptions

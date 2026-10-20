@@ -7,7 +7,7 @@ import {
   CommandConsole,
   dialog
 } from "@jolly-pixel/e2e";
-import { waitForEditor } from "@jolly-pixel/e2e/editor";
+import { reloadEditor } from "@jolly-pixel/e2e/editor";
 
 export async function exportArchive(
   page: Page
@@ -32,9 +32,7 @@ export async function resetWorkspace(
   page: Page
 ): Promise<void> {
   await new CommandConsole(page).submit("/archive.reset");
-  await dialog(page, "Reset workspace")
+  await reloadEditor(page, () => dialog(page, "Reset workspace")
     .getByRole("button", { name: "Reset" })
-    .click();
-  await page.waitForEvent("load");
-  await waitForEditor(page);
+    .click());
 }

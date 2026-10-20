@@ -3,6 +3,7 @@ import type { Page } from "@playwright/test";
 import {
   EditorToolbar,
   e2eFolder,
+  followEditor,
   withCatalog
 } from "@jolly-pixel/e2e/editor";
 import {
@@ -69,7 +70,7 @@ test("the Asset select opens another model and its texture in place", async({ pa
   const pageLoad = await page.evaluate(() => performance.timeOrigin);
 
   await editorToolbar.openAsset(`${folder}/other`);
-  await editorToolbar.afterNavigation((url) => url.searchParams.get("target") === other.id);
+  await followEditor(page, (url) => url.searchParams.get("target") === other.id);
   await expect.poll(() => openedModel(page, other.textureId)).toEqual({
     modelId: other.id,
     paintsTexture: true

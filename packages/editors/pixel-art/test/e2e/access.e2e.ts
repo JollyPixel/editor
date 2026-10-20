@@ -1,41 +1,15 @@
-// Import Third-party Dependencies
-import {
-  changeRole,
-  grantRole,
-  type RoleGrant
-} from "@jolly-pixel/e2e";
-
 // Import Internal Dependencies
-import { test as base, expect } from "./fixtures.ts";
-
-const test = base.extend<{ grant: RoleGrant; }>({
-  grant: [
-    {
-      role: "member",
-      subject: "pixel-art-access-e2e"
-    },
-    { option: true }
-  ],
-  context: async({ context, baseURL, grant }, use) => {
-    await grantRole(context, baseURL!, grant);
-    await use(context);
-  }
-});
+import { test, expect } from "./fixtures.ts";
 
 test("a role change applies live: view only for a spectator, editing again once promoted", async({
   panel,
-  context,
-  baseURL,
-  grant
+  access
 }) => {
   const { modes, colors } = panel;
   await modes.select("fill");
   await expect(panel.accessBadge).toHaveCount(0);
 
-  await changeRole(context, baseURL!, {
-    ...grant,
-    role: "spectator"
-  });
+  await access.become("spectator");
 
   await expect(panel.accessBadge).toHaveText("View only");
   for (const mode of ["paint", "erase", "fill"] as const) {
@@ -52,7 +26,7 @@ test("a role change applies live: view only for a spectator, editing again once 
   await expect(slot).not.toHaveAttribute("aria-haspopup");
   await expect(panel.root.getByRole("dialog", { name: "Edit palette color" })).toHaveCount(0);
 
-  await changeRole(context, baseURL!, grant);
+  await access.become("member");
 
   await expect(panel.accessBadge).toHaveCount(0);
   await expect(modes.button("paint")).toBeEnabled();

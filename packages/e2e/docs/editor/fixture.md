@@ -36,16 +36,32 @@ export const test = editorFixture({
 | Option | |
 |---|---|
 | `create(catalog)` | creates the documents; returns a record with the `id` to open |
-| `editor` | default [`OpenEditorOptions`](./editor-navigation.md#openeditoroptions) without `target` |
+| `editor` | default [`OpenEditorOptions`](./navigation.md#openeditoroptions) without `target` |
 
 | Fixture | |
 |---|---|
 | `target` | auto; the record `create` returned, typed from it |
 | `editor` | option; replace it per file with `test.use({ editor })`; `username` defaults to `"E2E"` when it is unset |
+| `role` | option, `"member"` by default; see [Roles](#roles) |
+| `access` | the [`ContextAccess`](../roles.md#contextaccess) of the test's browser context, granted `role` before the editor opens |
 | `peer` | a `Page` in a second browser context on the same target, as `"Peer"`; the context closes on teardown |
 
 A test that asserts what happens after the peer leaves closes it itself with
 `await peer.context().close()`.
+
+## Roles
+
+Every test's browser context is granted `role` before the editor opens, under
+a subject unique to the test, so parallel tests never revoke each other.
+`access.become(role)` switches it live. Start from another role with
+`test.use({ role })`. The `peer` context gets no grant and authenticates as
+its connection.
+
+```ts
+test("a spectator only views", async({ access }) => {
+  await access.become("spectator");
+});
+```
 
 ## Catalog
 

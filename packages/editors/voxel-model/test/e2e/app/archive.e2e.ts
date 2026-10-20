@@ -8,7 +8,7 @@ import {
   dialog,
   treeRow
 } from "@jolly-pixel/e2e";
-import { waitForEditor } from "@jolly-pixel/e2e/editor";
+import { followEditor } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
 import {
@@ -57,8 +57,7 @@ test("exports the model, resets the workspace and imports it back", async({ page
   expect((await offlineIds(page)).modelId).not.toBe(exported.modelId);
 
   await importArchive(page, archivePath);
-  await page.waitForURL(new RegExp(`target=${exported.modelId}`));
-  await waitForEditor(page);
+  await followEditor(page, new RegExp(`target=${exported.modelId}`));
 
   expect(await offlineIds(page)).toEqual(exported);
   expect(await outline(page)).toEqual(["Block", "Arm"]);
@@ -80,12 +79,11 @@ test("imports a model and its texture as a copy", async({ page }) => {
   await dialog(page, "Import archive")
     .getByRole("button", { name: "Import as copy" })
     .click();
-  await page.waitForURL((url) => {
+  await followEditor(page, (url) => {
     const target = url.searchParams.get("target");
 
     return target !== null && target !== original.modelId;
   });
-  await waitForEditor(page);
 
   const copied = await offlineIds(page);
   expect(copied.modelId).not.toBe(original.modelId);

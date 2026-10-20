@@ -9,11 +9,15 @@ import {
 import type { ConfigEnv } from "vite";
 
 // Import Internal Dependencies
-import { RunMode } from "../../src/vite/RunMode.ts";
-import { CookieRoles } from "../../src/roles.ts";
+import { RunMode } from "../../src/config/RunMode.ts";
+import { CookieAuthentication } from "../../src/roles/CookieAuthentication.ts";
 
 // CONSTANTS
 const kPort = 3999;
+const kSharedPlugins = [
+  "jolly-pixel:prebundle-workspace",
+  "jolly-pixel:precompress"
+];
 
 describe("RunMode", () => {
   const cases: {
@@ -21,7 +25,7 @@ describe("RunMode", () => {
     env: ConfigEnv;
     inMemory: boolean;
     server: object;
-    cookieRoles: boolean;
+    cookieAuthentication: boolean;
   }[] = [
     {
       name: "dev keeps the workspace on disk and answers any host",
@@ -31,7 +35,7 @@ describe("RunMode", () => {
       },
       inMemory: false,
       server: { allowedHosts: true },
-      cookieRoles: false
+      cookieAuthentication: false
     },
     {
       name: "e2e serves in memory on the suite port with cookie roles",
@@ -44,7 +48,7 @@ describe("RunMode", () => {
         port: kPort,
         strictPort: true
       },
-      cookieRoles: true
+      cookieAuthentication: true
     },
     {
       name: "a build never touches the workspace",
@@ -54,7 +58,7 @@ describe("RunMode", () => {
       },
       inMemory: true,
       server: { allowedHosts: true },
-      cookieRoles: false
+      cookieAuthentication: false
     }
   ];
 
@@ -62,13 +66,18 @@ describe("RunMode", () => {
     it(testCase.name, () => {
       const mode = new RunMode(testCase.env, { port: kPort });
 
-      assert.equal(mode.inMemory, testCase.inMemory);
+      assert.equal(mode.workspace.inMemory, testCase.inMemory);
       assert.deepEqual(mode.server, testCase.server);
       assert.equal(
-        mode.access.auth instanceof CookieRoles,
-        testCase.cookieRoles
+        mode.workspace.auth instanceof CookieAuthentication,
+        testCase.cookieAuthentication
       );
-      assert.equal(mode.plugins().length > 0, testCase.cookieRoles);
+      assert.deepEqual(
+        mode.plugins().map((plugin) => plugin.name),
+        testCase.cookieAuthentication ?
+          [...kSharedPlugins, "jolly-pixel:cookie-authentication"] :
+          kSharedPlugins
+      );
     });
   }
 });

@@ -15,12 +15,6 @@ export type Box = NonNullable<
 
 export type MouseButton = "left" | "right" | "middle";
 
-export interface PressOptions {
-  button?: MouseButton;
-  settle?: (page: Page) => Promise<void>;
-  target?: Locator;
-}
-
 export async function measureBox(
   locator: Locator
 ): Promise<Box> {
@@ -110,42 +104,4 @@ export async function scrubBy(
     y: from.y
   }, 4);
   await page.mouse.up();
-}
-
-export async function pressAt(
-  page: Page,
-  points: Iterable<Point>,
-  options: PressOptions = {}
-): Promise<void> {
-  const {
-    button = "left",
-    settle = async() => undefined,
-    target
-  } = options;
-  const [first, ...rest] = points;
-  if (first === undefined) {
-    return;
-  }
-
-  if (target === undefined) {
-    await page.mouse.move(first.x, first.y);
-  }
-  else {
-    const box = await measureBox(target);
-    await target.hover({
-      position: {
-        x: first.x - box.x,
-        y: first.y - box.y
-      }
-    });
-  }
-  await settle(page);
-  await page.mouse.down({ button });
-  await settle(page);
-  for (const point of rest) {
-    await page.mouse.move(point.x, point.y, { steps: 4 });
-    await settle(page);
-  }
-  await page.mouse.up({ button });
-  await settle(page);
 }
