@@ -1,9 +1,5 @@
-<h1 align="center">
-  asset.voxel-map
-</h1>
-
 <p align="center">
-  Voxel-map and blockset assets
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💃 Getting Started

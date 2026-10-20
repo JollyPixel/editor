@@ -1,9 +1,5 @@
-<h1 align="center">
-  runtime
-</h1>
-
 <p align="center">
-  JollyPixel Three.js runtime
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💡 Features

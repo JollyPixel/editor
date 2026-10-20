@@ -1,9 +1,5 @@
-<h1 align="center">
-  Pixel-Art Editor
-</h1>
-
 <p align="center">
-  Reusable pixel-art editor with UI on top of <a href="../../pixel-draw-renderer/">@jolly-pixel/pixel-draw.renderer</a>
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 📌 About

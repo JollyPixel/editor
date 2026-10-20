@@ -1,9 +1,5 @@
-<h1 align="center">
-  lantern
-</h1>
-
 <p align="center">
-  Guided tours for JollyPixel's editors
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💃 Getting Started

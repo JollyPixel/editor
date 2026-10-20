@@ -1,9 +1,5 @@
-<h1 align="center">
-  Studio
-</h1>
-
 <p align="center">
-  One JollyPixel project, its assets and one editor per tab
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 📌 About

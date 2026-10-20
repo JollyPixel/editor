@@ -1,9 +1,5 @@
-<h1 align="center">
-  pixel-draw.renderer
-</h1>
-
 <p align="center">
-  JollyPixel Pixel Art canvas renderer
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 <p align="center">

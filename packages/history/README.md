@@ -1,9 +1,5 @@
-<h1 align="center">
-  history
-</h1>
-
 <p align="center">
-  Command documents and per-person undo history that survives collaboration
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💃 Getting Started

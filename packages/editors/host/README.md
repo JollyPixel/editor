@@ -1,9 +1,5 @@
-<h1 align="center">
-  editor.host
-</h1>
-
 <p align="center">
-  Shared launch, session and runtime boot for JollyPixel editors
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💃 Getting Started

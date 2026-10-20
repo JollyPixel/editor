@@ -1,9 +1,5 @@
-<h1 align="center">
-  accounts
-</h1>
-
 <p align="center">
-  User accounts and session tokens for JollyPixel servers
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💃 Getting Started

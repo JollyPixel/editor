@@ -1,9 +1,5 @@
-<h1 align="center">
-  Terrain Editor
-</h1>
-
 <p align="center">
-  Collaborative heightfield terrain editing for JollyPixel
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 📌 About

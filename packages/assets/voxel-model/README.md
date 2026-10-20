@@ -1,9 +1,5 @@
-<h1 align="center">
-  asset.voxel-model
-</h1>
-
 <p align="center">
-  Voxel-model assets
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💃 Getting Started

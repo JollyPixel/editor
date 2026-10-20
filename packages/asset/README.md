@@ -1,9 +1,5 @@
-<h1 align="center">
-  asset
-</h1>
-
 <p align="center">
-  Asset references, catalogs, and loading orchestration for browser and Node.js
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💃 Getting Started

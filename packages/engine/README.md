@@ -1,9 +1,5 @@
-<h1 align="center">
-  engine
-</h1>
-
 <p align="center">
-  JollyPixel Three.js engine
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 📌 About

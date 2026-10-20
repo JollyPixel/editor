@@ -2,10 +2,6 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
-<p align="center">
-  The collaborative 3D HTML5 game maker
-</p>
-
 ## ⚙️ Requirements
 - [Node.js](https://nodejs.org/en/) version 24 or higher
 - [pnpm](https://pnpm.io/) v12+ for workspaces (the repository pins it through the `packageManager` field)
@@ -72,9 +68,10 @@ Asset kinds that the editors read and write, and that `asset-server` stores.
 
 ### 🗄️ Asset Management
 
-- [@jolly-pixel/event-store](./packages/event-store) - Append-only event log (event sourcing)
+- [@jolly-pixel/asset](./packages/asset) - Asset references, catalogs and loading orchestration for browser and Node.js
 - [@jolly-pixel/asset-server](./packages/asset-server) - Event-sourced asset projection, reconciliation and catalog delivery
 - [@jolly-pixel/asset-source](./packages/asset-source) - Physical asset storage (filesystem, memory, IndexedDB)
+- [@jolly-pixel/event-store](./packages/event-store) - Append-only event log (event sourcing)
 
 ### 🏗️ Build
 
@@ -88,7 +85,6 @@ Planned. It will turn a project's assets into the catalog manifest the runtime l
 - [@jolly-pixel/engine](./packages/engine) - Minimal ECS framework on top of Three.js
 - [@jolly-pixel/loop](./packages/loop) - Frame scheduling and time primitives (FrameScheduler, GameLoop)
 - [@jolly-pixel/controls](./packages/controls) - Input controls (screen, mouse, touchpad, keyboard, gamepad)
-- [@jolly-pixel/asset](./packages/asset) - Asset references, catalogs and loading orchestration for browser and Node.js
 
 #### Renderers
 

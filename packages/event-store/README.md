@@ -1,9 +1,5 @@
-<h1 align="center">
-  event-store
-</h1>
-
 <p align="center">
-  Append-only log for JollyPixel's events
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💃 Getting Started

@@ -1,9 +1,5 @@
-<h1 align="center">
-  Voxel.Renderer
-</h1>
-
 <p align="center">
-  Three.js Voxel Engine
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 <p align="center">

@@ -1,9 +1,5 @@
-<h1 align="center">
-  asset-server
-</h1>
-
 <p align="center">
-  Server-side asset storage, synchronization and catalog delivery
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💃 Getting Started
