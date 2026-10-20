@@ -33,7 +33,8 @@ Implement these in the room's [Extension](../server/Extension.md):
    in `acks` and the refused local sequence in `refused`.
 
 The feature supplies versions and recovery state. Client and server share conflict
-policy. Validate resume data, then return catch-up or a snapshot.
+policy, which [`KeyedCommandArbiter`](../server/Arbitration.md) applies on the server.
+Validate resume data, then return catch-up or a snapshot.
 
 ## Cleanup
 

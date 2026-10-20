@@ -17,11 +17,11 @@ await map.ready;
 // On teardown: map.dispose(); room.leave();
 ```
 
-Pending edits, acknowledgements, rebase and resume follow [`CommandSync`](../../../network/docs/client/CommandSync.md).
+Pending edits, acknowledgements, rebase and resume follow `CommandSync`.
 
 ## Map synchronization
 
-`new SyncedVoxelMap(room, options?)` is a network [`SyncedDocument`](../../../network/docs/client/CommandSync.md#synceddocument) whose `document` is the map itself, so `voxelMapDocumentKind(options?)` hands it to an `@jolly-pixel/editor.host` lease as is.
+`new SyncedVoxelMap(room, options?)` is a network `SyncedDocument` whose `document` is the map itself, so `voxelMapDocumentKind(options?)` hands it to an `@jolly-pixel/editor.host` lease as is.
 
 - `voxels` is the `VoxelDocument`. Options set its `chunkSize`, initial `layers` and `blocks`, and `logger`.
 - `edits` is the document's [`VoxelEdits`](./history.md); the server's answers reach its receipts, so undo refuses steps a peer overwrote.
@@ -59,7 +59,7 @@ interface BlocksetSnapshot extends BlocksetDocumentJSON {
 
 ## Server protocol
 
-- `VoxelCommandArbiter` and `BlocksetCommandArbiter` are network [`KeyedCommandArbiter`](../../../network/docs/client/CommandSync.md#conflict-resolution)s over `VOXEL_COMMAND_RULES` and `BLOCKSET_COMMAND_RULES`. [Architecture](../ARCHITECTURE.md) lists the keys of both rooms.
+- `VoxelCommandArbiter` and `BlocksetCommandArbiter` are network `KeyedCommandArbiter`s over `VOXEL_COMMAND_RULES` and `BLOCKSET_COMMAND_RULES`. [Architecture](../ARCHITECTURE.md) lists the keys of both rooms.
 - A voxel write to a missing layer is refused. Bulk `voxels-set`, `voxels-removed` and `voxels-patched` can be narrowed to the cells that win.
 - `world-replace` is admitted when its document loads into a scratch world, and resets every key.
 - Blockset pixel commands follow pixel-art's `PIXEL_COMMAND_RULES`. A `block-defined` the renderer's `localBlock()` refuses is rejected.
@@ -68,4 +68,4 @@ interface BlocksetSnapshot extends BlocksetDocumentJSON {
 - `voxelCommandKeys(command)` and `voxelCellKeys(command)` return the keys the arbiter and the client reconciler share: `<layerId>:x,y,z` per cell and `layer-order:<layerId>` for a `layer-moved`.
 - `voxelCommandProtocol` and `blocksetCommandProtocol` validate commands. `voxelWorldSchema` and `blocksetSnapshotSchema` check snapshot headers.
 
-Restricted rooms use the `voxelmap` and `blockset` extensions and their command actions in a rights table. Resolve roles from a trusted server session; see [network rights](../../../network/docs/server/Access.md#rights).
+Restricted rooms use the `voxelmap` and `blockset` extensions and their command actions in a rights table. Resolve roles from a trusted server session.

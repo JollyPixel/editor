@@ -45,4 +45,4 @@ Use `room.updatePresence({ tool: "brush" })` to share activity separately.
 Call `room.leave()` when the feature closes and `client.destroy()` when finished.
 Applications hosting a server also await `server.close()`.
 
-See [Client](../client/Client.md) and [Transports](../transport/Transports.md).
+See [Client](../client/Client.md) and [WebsocketTransport](../server/WebsocketTransport.md).

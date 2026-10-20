@@ -30,7 +30,7 @@ interface SyncedDocument<TDocument> {
 ```
 
 `pendingChanges` is the network
-[`PendingChanges`](../../../../network/docs/client/CommandSync.md#syncedcommanddocument)
+`PendingChanges`
 of the document's sync client.
 
 A document kind pairs an asset kind with the factory of its synced document. Asset
@@ -120,7 +120,7 @@ When `signal` aborts first, it rejects with `UnsettledChangesError`, whose
 
 On a server session, each current-version document keeps its unacknowledged
 changes in IndexedDB until the server answers them, through
-[`pendingChanges.keepIn()`](../../../../network/docs/client/CommandSync.md#keepin-outbox-void).
+`pendingChanges.keepIn()`.
 A page that closes or reloads with changes still pending leaves them there.
 The next page claims them when its session opens; when it opens the same
 asset, it replays them over its first snapshot and sends them. Releasing and

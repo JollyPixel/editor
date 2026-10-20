@@ -79,7 +79,7 @@ Holding `Alt` over the canvas drags UV regions off the grid.
 
 Rights belong to the room of a texture, so each texture has its own
 `PixelArtAccess`, the
-[`Grants`](../../../../network/docs/client/Client.md#roomgrants-api) of its
+`Grants` of its
 room. Pass `access` to `addTexture()` or change it with
 `updateTexture(id, { access })`; it defaults to `PIXEL_ART_CAPABILITIES.full`.
 The panel hides or disables what the active texture does not grant.

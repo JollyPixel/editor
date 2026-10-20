@@ -34,8 +34,23 @@ The default `BypassAuthentication` assigns `defaultRole`.
 
 ### PasswordAuthentication
 
-Node's `PasswordAuthentication` grants its role for a correct credential.
+`PasswordAuthentication` from `/node` grants its role for a correct credential.
 Missing credentials use the default role unless `mandatory` is true.
+
+The same entry exports the scrypt helpers it uses:
+
+```ts
+interface PasswordHash {
+  digest: Buffer;
+  salt: Buffer;
+}
+
+function hashPassword(password: string): Promise<PasswordHash>;
+function verifyPassword(password: string, hash: PasswordHash): Promise<boolean>;
+```
+
+`hashPassword` draws a fresh random salt on every call. `verifyPassword`
+compares digests in constant time.
 
 ### Revocation
 
