@@ -1,9 +1,5 @@
-<h1 align="center">
-  bench
-</h1>
-
 <p align="center">
-  Shared benchmarking harness and CLI for JollyPixel workspaces
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💃 Getting Started

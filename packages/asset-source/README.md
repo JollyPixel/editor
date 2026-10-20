@@ -1,9 +1,5 @@
-<h1 align="center">
-  asset-source
-</h1>
-
 <p align="center">
-  Physical asset storage
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💡 About 

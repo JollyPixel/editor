@@ -1,9 +1,5 @@
-<h1 align="center">
-  loop
-</h1>
-
 <p align="center">
-  Frame scheduling and time primitives (FrameScheduler, GameLoop)
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💃 Getting Started

@@ -1,9 +1,5 @@
-<h1 align="center">
-  controls
-</h1>
-
 <p align="center">
-  Input controls (Screen, Mouse, Touchpad, Keyboard, Gamepad)
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💃 Getting Started

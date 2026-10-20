@@ -1,6 +1,6 @@
-<h1 align="center">
-  Arbor
-</h1>
+<p align="center">
+  <img src="./docs/banner.png" alt="JollyPixel">
+</p>
 
 <p align="center">
   A modern fork/re-implementation of <a href="https://github.com/sparklinlabs/dnd-tree-view">dnd-tree-view</a> from Sparklin Labs, rewritten to be fully compatible with the Web Platform using <code>EventTarget</code> and native <code>ES2022</code> features.

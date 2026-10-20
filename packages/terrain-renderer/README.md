@@ -1,9 +1,5 @@
-<h1 align="center">
-  terrain.renderer
-</h1>
-
 <p align="center">
-  Heightfield terrain engine and renderer
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💃 Getting Started

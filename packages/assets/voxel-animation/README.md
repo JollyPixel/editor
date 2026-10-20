@@ -1,9 +1,5 @@
-<h1 align="center">
-  asset.voxel-animation
-</h1>
-
 <p align="center">
-  Voxel animation set assets
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💃 Getting Started

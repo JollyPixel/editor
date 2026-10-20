@@ -1,9 +1,5 @@
-<h1 align="center">
-  asset.terrain
-</h1>
-
 <p align="center">
-  Heightfield terrain assets
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💃 Getting Started

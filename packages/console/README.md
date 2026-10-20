@@ -1,9 +1,5 @@
-<h1 align="center">
-  console
-</h1>
-
 <p align="center">
-  Command palette and developer console for JollyPixel's editors
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💃 Getting Started

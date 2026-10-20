@@ -1,9 +1,5 @@
-<h1 align="center">
-  asset.pixel-art
-</h1>
-
 <p align="center">
-  Pixel-art assets
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💃 Getting Started

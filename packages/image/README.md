@@ -1,9 +1,5 @@
-<h1 align="center">
-  image
-</h1>
-
 <p align="center">
-  PNG codecs and browser raster decoding
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💃 Getting Started

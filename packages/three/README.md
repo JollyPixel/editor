@@ -1,9 +1,5 @@
-<h1 align="center">
-  three
-</h1>
-
 <p align="center">
-  Common Three.js utilities and components for JollyPixel's workspaces and editors
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💃 Getting Started

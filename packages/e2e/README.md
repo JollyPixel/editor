@@ -1,9 +1,5 @@
-<h1 align="center">
-  e2e
-</h1>
-
 <p align="center">
-  Shared Playwright config, locators and editor fixtures for JollyPixel e2e suites
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💃 Getting Started

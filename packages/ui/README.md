@@ -1,9 +1,5 @@
-<h1 align="center">
-  ui
-</h1>
-
 <p align="center">
-  Common and System's UI for JollyPixel's editors
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 📌 About

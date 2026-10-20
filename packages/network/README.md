@@ -1,9 +1,5 @@
-<h1 align="center">
-  network
-</h1>
-
 <p align="center">
-  Networking primitives for JollyPixel's collaborative editors
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💃 Getting Started

@@ -1,9 +1,5 @@
-<h1 align="center">
-  voxel.tiled
-</h1>
-
 <p align="center">
-  Tiled map import for <code>@jolly-pixel/voxel.renderer</code>
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💃 Getting Started

@@ -1,9 +1,5 @@
-<h1 align="center">
-  color
-</h1>
-
 <p align="center">
-  The color utilities for JollyPixel's editors
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 ## 💃 Getting Started
