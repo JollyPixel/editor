@@ -60,29 +60,11 @@ for (const message of server.take<MySnapshot>("B")) {
 }
 ```
 
-`new LiveAssetRoom(handler)` creates the kind's state for the asset id
-`"asset-1"`, folds an in-memory event store into it and serves the room through
-an `AssetRoomExtension` built from `handler.commands.live()`. `TState`,
-`TCommand` and `TRelay` are inferred from `handler`. It throws a `TypeError`
-when the kind has no live commands. `state` is the server state.
-
-- `connect(clientId)` joins a client; the room's first answer is queued for it.
-- `receive(clientId, payload)` parses `payload` with the room's inbound
-  protocol and handles it as a message from that client. It throws a
-  `TypeError` when the payload does not parse.
-- `resync(clientId)` handles a resync request from that client.
-- `take<TSnapshot = unknown>(clientId)` returns and clears the messages queued
-  for that client, as `AssetServerMessage<TCommand, TSnapshot>`. `TSnapshot`
-  only types the snapshots, so name the type the kind's `snapshotSchema`
-  parses. Each message is parsed with the room's outbound protocol, as a client
-  room would, and `take()` throws a `TypeError` when one does not parse. Relay
-  messages are queued too, although that type does not name them.
-
-`mockAssetRoom(clientId?)` returns a client `Room` that never touches a
-transport. `clientId` defaults to `"client-A"`. `sent` collects what the client
-sends. `joins`, `leaves` and `resyncs` count calls to `join()`, `leave()` and
-`resync()`. `deliver(message)` emits an `AssetServerMessage<TCommand, TSnapshot>`
-to the room's `message` listeners, and `emit(type, ...args)` emits any room event.
+- `LiveAssetRoom` serves the kind's live room for asset `"asset-1"`. Drive it
+  with `connect()`, `receive()` and `resync()`, then read what it sent a client
+  with `take()`.
+- `mockAssetRoom()` returns a client `Room` with no transport. It records what
+  the client sends in `sent`, and `deliver()` feeds it server messages.
 
 ## 📈 Benchmarks
 
@@ -92,19 +74,8 @@ $ pnpm --filter @jolly-pixel/asset-server bench catalog --allocations
 $ pnpm --filter @jolly-pixel/asset-server bench:load --scenario edit --clients 50
 ```
 
-`bench` runs the micro suites in `bench/*.bench.ts` on the shared
-`@jolly-pixel/bench` harness: asset room commands, snapshot writes from 4 KB
-to 4 MB, catalog joins, renames and HTTP reads up to 10,000 assets, and the
-event primitives. The backend is seeded by appending events, so a suite does
-not pay the reconciler's cost. `--allocations` adds a `B/op` column.
-
-`bench:load` starts a seeded backend in a child process and drives it over
-real WebSockets and HTTP from worker threads. `edit` sends grid commands,
-`join` opens and leaves the catalog room, `catalog` renames assets, `http`
-fetches the catalog (`--etag` revalidates it), and `open` joins and leaves
-asset rooms so each round replays the asset. The event store is a temporary
-sqlite file unless `--store memory` is passed. `--help` lists the knobs. Treat a
-run as saturated when the server's event loop utilization nears 1.
+`bench` runs the micro suites in `bench/`. `bench:load` drives a backend over
+real WebSockets and HTTP. Run `bench:load --help` to see the scenarios and options.
 
 ## ✨ Contributors guide
 

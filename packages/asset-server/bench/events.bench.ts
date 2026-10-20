@@ -19,7 +19,7 @@ import {
   parseAssetEvent,
   writeData
 } from "../src/index.ts";
-import { contentHash } from "../src/utils/contentHash.ts";
+import { contentHash } from "../src/common/contentHash.ts";
 
 // CONSTANTS
 const kSizes = [4_096, 1_048_576];

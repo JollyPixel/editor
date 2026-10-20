@@ -11,7 +11,7 @@ import { Emitter } from "@openally/emitt";
 import type { CatalogChange } from "./client/protocol.ts";
 import type { CatalogProjection } from "./CatalogProjection.ts";
 import { FolderMovedIntoItselfError } from "./errors/FolderMovedIntoItselfError.ts";
-import { TaskChain } from "../utils/TaskChain.ts";
+import { TaskChain } from "../common/TaskChain.ts";
 
 export type CatalogFoldersEventMap = {
   changed: (

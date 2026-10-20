@@ -11,11 +11,11 @@ import {
 import type {
   AssetKindHandler,
   AssetRoomBinding
-} from "../kinds/AssetKindHandler.ts";
-import type { AssetCommandHeader } from "../kinds/AssetLiveProtocol.ts";
-import { foldAssetEvent } from "../kinds/foldAssetEvent.ts";
-import { AssetRoomExtension } from "../rooms/AssetRoomExtension.ts";
-import { AssetRoomProtocols } from "../rooms/AssetRoomProtocols.ts";
+} from "../model/kinds/AssetKindHandler.ts";
+import type { AssetCommandHeader } from "../model/kinds/AssetLiveProtocol.ts";
+import { foldAssetEvent } from "../model/kinds/foldAssetEvent.ts";
+import { AssetRoomExtension } from "../live/AssetRoomExtension.ts";
+import { AssetRoomProtocols } from "../live/AssetRoomProtocols.ts";
 import type { AssetServerMessage } from "./MockAssetRoom.ts";
 
 // CONSTANTS

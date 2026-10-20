@@ -32,7 +32,7 @@ import {
   type AssetKindHandler,
   type SnapshotPolicy
 } from "../src/index.ts";
-import { encodeBase64 } from "../src/utils/base64.ts";
+import { encodeBase64 } from "../src/common/base64.ts";
 
 // CONSTANTS
 export const GRID_KIND = "grid";

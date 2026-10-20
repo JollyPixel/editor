@@ -6,7 +6,7 @@ import {
   type CatalogChange,
   type CatalogMessage
 } from "./client/protocol.ts";
-import type { AssetTag } from "../tags/AssetTags.schema.ts";
+import type { AssetTag } from "./tags/AssetTags.schema.ts";
 
 export class CatalogOutbox {
   readonly #send: (message: CatalogMessage) => void;

@@ -14,20 +14,18 @@ import {
   type CatalogProjection,
   type SnapshotPolicy
 } from "#src/index.ts";
-import { IdentitySidecar } from "#src/identity/index.ts";
-import { ContentObjects } from "#src/objects/index.ts";
+import { IdentitySidecar } from "#src/storage/IdentitySidecar.ts";
+import { ContentObjects } from "#src/storage/ContentObjects.ts";
 import {
   AssetProjector,
   ProjectionState
-} from "#src/projection/index.ts";
-import {
-  AssetStateStore,
-  SnapshotScheduler
-} from "#src/state/index.ts";
+} from "#src/storage/projection/index.ts";
+import { AssetStateStore } from "#src/live/AssetStateStore.ts";
+import { SnapshotScheduler } from "#src/live/SnapshotScheduler.ts";
 import {
   Reconciler,
   SourceWatcher
-} from "#src/reconcile/index.ts";
+} from "#src/storage/reconcile/index.ts";
 
 export interface SyncHarness extends AsyncDisposable {
   readonly source: MemoryAssetSource;

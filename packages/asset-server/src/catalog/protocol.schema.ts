@@ -31,26 +31,26 @@ import {
 import {
   assetInlineContentSchema,
   assetReferenceSchema
-} from "../events/AssetEvents.schema.ts";
+} from "../model/events/AssetEvents.schema.ts";
 import {
   ASSET_CREATED,
   ASSET_DELETED,
   ASSET_RENAMED,
   ASSET_UPDATED
-} from "../events/AssetEvents.ts";
-import { PATH_CONFLICT_POLICIES } from "../writer/AssetPathAllocator.ts";
+} from "../model/events/AssetEvents.ts";
+import { PATH_CONFLICT_POLICIES } from "../model/PathConflictPolicy.ts";
 import {
   IMPORT_CONFLICT_POLICIES,
   importPlanSchema,
   importReportSchema
-} from "../archive/import/AssetImport.ts";
+} from "./archive/import/AssetImport.ts";
 import {
   assetTagSchema,
   restoreReportSchema,
   tagMessageSchema,
   tagNameSchema,
   tagReferenceSchema
-} from "../tags/AssetTags.schema.ts";
+} from "./tags/AssetTags.schema.ts";
 
 // CONSTANTS
 const kString = z.string();
