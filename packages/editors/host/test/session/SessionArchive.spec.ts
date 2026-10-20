@@ -20,7 +20,7 @@ import {
 } from "#src/session/SessionArchive.ts";
 import { ArchiveImportDisabledError } from "#src/session/errors/ArchiveImportDisabledError.ts";
 import { SessionConnection } from "#src/session/SessionConnection.ts";
-import { OfflineWorkspace } from "#src/workspace/offline/OfflineWorkspace.ts";
+import { OfflineServer } from "#src/offline/server/OfflineServer.ts";
 
 // CONSTANTS
 const kPlan: ImportPlan = {
@@ -94,7 +94,7 @@ describe("CatalogSessionArchive", () => {
     ]);
   });
 
-  test("refuses to import when the workspace does not persist", async() => {
+  test("refuses to import when the offline data does not persist", async() => {
     const catalog = recordingCatalog();
     const archive = new CatalogSessionArchive({ catalog, canImport: false });
 
@@ -108,7 +108,7 @@ describe("CatalogSessionArchive", () => {
 
 describe("SessionConnection archive port", () => {
   test("a memory-backed offline connection exports but cannot import", async() => {
-    const workspace = await OfflineWorkspace.open({
+    const server = await OfflineServer.open({
       handlers: [],
       seed: {
         "notes/readme.bin": {
@@ -118,9 +118,9 @@ describe("SessionConnection archive port", () => {
         }
       }
     });
-    const connection = await SessionConnection.connect(workspace.connect());
+    const connection = await SessionConnection.connect(server.connect());
 
-    assert.strictEqual(connection.workspace, workspace);
+    assert.strictEqual(connection.offline, server);
     assert.strictEqual(connection.archive.canImport, false);
 
     const blob = await connection.archive.export("readme");
@@ -130,6 +130,6 @@ describe("SessionConnection archive port", () => {
     ]);
 
     connection.dispose();
-    await workspace.close();
+    await server.close();
   });
 });

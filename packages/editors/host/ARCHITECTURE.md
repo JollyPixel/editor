@@ -21,7 +21,7 @@ flowchart TB
 - `editor/`: `mountStandalone`, `bootStandalone`, `EditorMount`, `Placement`.
 - `state/`: the page state (`data-editor-state`) and its loading bar.
 - `runtime/`: the 3D runtime wrapper and `PeerFrustums`.
-- `workspace/`: offline, shared-tab and peer connections, behind the `./offline` entry.
+- `offline/`: offline mode (in-page server, shared-tab and peer guests), behind the `./offline` entry.
 
 ## Who owns what
 
@@ -104,7 +104,7 @@ flowchart TB
 - Placement reads the launch, never the session: an early session cannot tell
   a shell or share-link launch from a plain page.
 - `targets` exist only outside a shell, `tags` only on a server connection, and neither for a share link.
-- A workspace-backed session remembers its target for the next offline launch.
+- An offline session remembers its target for the next offline launch.
 
 ## Target and dependencies
 
@@ -171,44 +171,44 @@ flowchart TB
 - A tag view puts only the target on its read-only tag room.
 - A failed remount reloads the page on the requested launch.
 
-## Archives and workspace
+## Archives and offline mode
 
 ```mermaid
 flowchart TB
     Editor["editor"] --> Archive["session.archive"]
     Archive --> Catalog["catalog commands"]
-    Workspace["session.workspace"] -->|"persistent?"| Archive
+    Offline["session.offline"] -->|"persistent?"| Archive
 ```
 
 - `export`, `plan` and `import` go through the catalog, online or offline.
-- A memory workspace cannot import: `archive.canImport` is `false`.
-- `session.workspace` is `null` on the default server connection.
+- Offline data kept in memory cannot import: `archive.canImport` is `false`.
+- `session.offline` is `null` on the default server connection.
 - API: [archives](./docs/session/Archives.md).
 
 ## Offline
 
 ```mermaid
 flowchart TB
-    Boot["bootStandalone"] -->|"?offline or no server"| Open["open workspace"]
+    Boot["bootStandalone"] -->|"?offline or no server"| Open["openOfflineBackend"]
     Boot -->|"#peer= invite"| Peer["PeerLink to the owner tab"]
-    Open --> Owner["owner tab: OwnerWorkspace"]
-    Open --> Remote["other tab: GuestWorkspace"]
+    Open --> Owner["owner tab: OfflineOwner"]
+    Open --> Remote["other tab: OfflineGuest"]
     Peer --> Remote
     Owner --> Connect["connect()"]
     Remote --> Connect
     Connect --> Mount["same mount path"]
 ```
 
-- The workspace runs the asset back-end in the page, so session and leases work unchanged.
+- `OfflineServer` runs the asset back-end in the page, so session and leases work unchanged.
 - `./offline` is a separate entry, loaded only when needed.
 - With IndexedDB, one tab holds the lock; other tabs reach it over a BroadcastChannel.
 - With IndexedDB, the event log is stored too, in its own database, so edits outlive a reload before their snapshot.
 - Only the owner tab loads the back-end and the editor's handlers and seed.
 - Without Web Locks the shared opener falls back to memory storage.
-- A `GuestWorkspace` only needs a `ChannelTransport`: follower tabs build it on a BroadcastChannel, peer guests on a `DataChannelPort`.
+- An `OfflineGuest` only needs a `ChannelTransport`: follower tabs build it on a BroadcastChannel, peer guests on a `DataChannelPort`.
 - The owner's `PeerHost` answers offers through `PeerSignaling` and relays each guest to the in-page server.
 - `PeerInvites` is that server's authentication provider: no credential means a same-browser tab, any other credential must be an issued token.
-- Storage, seeds and reset: [bootStandalone](./docs/editor/bootStandalone.md#offline-workspace); invites: [peer invites](./docs/editor/bootStandalone.md#peer-invites).
+- Storage, seeds and reset: [bootStandalone](./docs/editor/bootStandalone.md#offline-mode); invites: [peer invites](./docs/editor/bootStandalone.md#peer-invites).
 
 ## Failure and teardown
 

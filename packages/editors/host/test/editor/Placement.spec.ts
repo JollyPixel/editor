@@ -20,7 +20,7 @@ import {
   isShellCommand
 } from "#src/launch/ShellChannel.ts";
 import { PageState } from "#src/state/PageState.ts";
-import type { SessionWorkspace } from "#src/workspace/SessionWorkspace.ts";
+import type { OfflineMode } from "#src/session/OfflineMode.ts";
 import { fakeDocumentKind, record } from "../helpers/rooms.ts";
 import {
   FakeNavigator,
@@ -34,18 +34,18 @@ const kShell = new ShellChannel({
   port: { postMessage: () => undefined },
   origin: "http://studio.test"
 });
-const kWorkspace: SessionWorkspace = {
+const kOffline: OfflineMode = {
   persistent: true,
   reset: () => Promise.resolve()
 };
 
 function toolbar(
   launch: EditorLaunch,
-  workspace: SessionWorkspace | null = null
+  offline: OfflineMode | null = null
 ) {
   return new Placement(launch).toolbar(launch, {
     catalog: new FakeSessionCatalog(),
-    workspace,
+    offline,
     assets: { unsaved: false },
     connectionStatus: null,
     target: { record: record("map", "voxelmap") }
@@ -71,31 +71,31 @@ describe("Placement toolbar", () => {
     assert.equal(tags?.viewing, "v1");
   });
 
-  for (const { title, launch, workspace, hasTargets, hasTags } of [
+  for (const { title, launch, offline, hasTargets, hasTags } of [
     {
       title: "a shell picks the target itself but offers tags",
       launch: new EditorLaunch(new AssetId("map"), kShell),
-      workspace: null,
+      offline: null,
       hasTargets: false,
       hasTags: true
     },
     {
       title: "a share link offers neither",
       launch: new EditorLaunch(new AssetId("map"), null, "token"),
-      workspace: null,
+      offline: null,
       hasTargets: false,
       hasTags: false
     },
     {
-      title: "an offline workspace offers targets but no tags",
+      title: "offline mode offers targets but no tags",
       launch: new EditorLaunch(new AssetId("map")),
-      workspace: kWorkspace,
+      offline: kOffline,
       hasTargets: true,
       hasTags: false
     }
   ]) {
     test(title, () => {
-      const { targets, tags } = toolbar(launch, workspace);
+      const { targets, tags } = toolbar(launch, offline);
 
       assert.equal(targets !== null, hasTargets);
       assert.equal(tags !== null, hasTags);

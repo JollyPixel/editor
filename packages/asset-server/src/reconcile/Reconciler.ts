@@ -59,7 +59,7 @@ interface ReadOutcome {
   readonly entry: ObservedEntry | null;
 }
 
-interface WorkspaceScan {
+interface SourceScan {
   readonly entries: ObservedEntry[];
   /**
    * Listed but unreadable. Excluded from both sides of the diff.
@@ -105,7 +105,7 @@ export class Reconciler {
   async #reconcile(
     scope: ReadonlySet<string> | null
   ): Promise<Result<ReconcileReport, Error>> {
-    let scan: WorkspaceScan;
+    let scan: SourceScan;
     try {
       scan = await this.#observe(
         scope === null ? await this.#source.list() : await this.#present(scope)
@@ -267,7 +267,7 @@ export class Reconciler {
 
   async #observe(
     paths: readonly string[]
-  ): Promise<WorkspaceScan> {
+  ): Promise<SourceScan> {
     const entries: ObservedEntry[] = [];
     const unreadable = new Set<string>();
     const writing = new Set<string>();

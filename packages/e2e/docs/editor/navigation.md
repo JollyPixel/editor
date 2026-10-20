@@ -13,7 +13,7 @@ throws when the editor reports `"failed"`.
 - `reloadEditor(page, reload?)`: listens for the next `load` event, then runs
   `reload`, so an early load is never missed. `reload` defaults to
   `page.reload()`; pass the action when the page reloads itself, such as a
-  click on Reset workspace.
+  click on Reset offline data.
 - `followEditor(page, url)`: waits until the URL matches `url` (a string, a
   `RegExp` or a predicate on `URL`), after an archive import or a version
   switch. The editor may switch in place without a page load.

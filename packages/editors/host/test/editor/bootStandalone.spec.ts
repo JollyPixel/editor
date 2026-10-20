@@ -159,7 +159,7 @@ describe("bootStandalone", () => {
     window.history.replaceState(null, "", "/");
   });
 
-  test("mounts on the in-page workspace with the offline query flag", async() => {
+  test("mounts on the in-page offline server with the offline query flag", async() => {
     window.history.replaceState(null, "", "/?offline");
     const mounted: Array<string> = [];
 
@@ -209,7 +209,7 @@ describe("bootStandalone", () => {
     assert.equal(document.body.querySelector("jolly-console"), null);
   });
 
-  test("opens the offline workspace when the user picks it", async() => {
+  test("opens offline mode when the user picks it", async() => {
     const mounted: Array<string> = [];
 
     const pending = bootStandalone(definition(mounted), {

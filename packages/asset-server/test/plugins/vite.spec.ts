@@ -28,9 +28,9 @@ import type {
 
 // Import Internal Dependencies
 import {
-  createAssetWorkspacePlugin,
+  createAssetServerPlugin,
   type AssetLaunchRequest,
-  type AssetWorkspacePluginOptions
+  type AssetServerPluginOptions
 } from "#src/plugins/vite.ts";
 import { LAUNCH_ELEMENT_ID } from "#src/launch.ts";
 import type { AssetEventDataMap } from "#src/index.ts";
@@ -47,14 +47,14 @@ interface PluginHarness extends AsyncDisposable {
 }
 
 async function pluginHarness(
-  options: Partial<AssetWorkspacePluginOptions>,
+  options: Partial<AssetServerPluginOptions>,
   httpServer: http.Server | null = null
 ): Promise<PluginHarness> {
   const eventStore = EventStore.persistence.memory<AssetEventDataMap>();
   const source = new MemoryAssetSource();
   await source.write("maps/a.png", new Uint8Array([1]));
 
-  const plugin: Plugin = createAssetWorkspacePlugin({
+  const plugin: Plugin = createAssetServerPlugin({
     root: "unused",
     source,
     eventStore,
@@ -130,7 +130,7 @@ function callHook(
     undefined;
 }
 
-describe("createAssetWorkspacePlugin — launch", () => {
+describe("createAssetServerPlugin — launch", () => {
   test("injects the launch target as a JSON script", async() => {
     const requests: AssetLaunchRequest[] = [];
     await using harness = await pluginHarness({
@@ -184,7 +184,7 @@ describe("createAssetWorkspacePlugin — launch", () => {
   });
 });
 
-describe("createAssetWorkspacePlugin — HTTP routes", () => {
+describe("createAssetServerPlugin — HTTP routes", () => {
   test("serves the catalog and the asset files by default", async() => {
     await using harness = await pluginHarness({});
 
@@ -206,7 +206,7 @@ describe("createAssetWorkspacePlugin — HTTP routes", () => {
   });
 });
 
-describe("createAssetWorkspacePlugin — WebSocket", () => {
+describe("createAssetServerPlugin — WebSocket", () => {
   test("negotiates no compression by default", async() => {
     assert.strictEqual(await negotiatedExtensions({}), "");
   });
@@ -220,7 +220,7 @@ describe("createAssetWorkspacePlugin — WebSocket", () => {
 });
 
 async function negotiatedExtensions(
-  options: Partial<AssetWorkspacePluginOptions>
+  options: Partial<AssetServerPluginOptions>
 ): Promise<string> {
   const httpServer = http.createServer();
   httpServer.listen(0, "127.0.0.1");

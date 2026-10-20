@@ -56,15 +56,18 @@ interface HostParams {
   samples: number | undefined;
   gpuTime: boolean;
   username: string | undefined;
-  offline: boolean;
-  workspace: string | undefined;
+  offline: OfflineParam | undefined;
   render: "continuous" | "on-demand" | undefined;
+}
+
+interface OfflineParam {
+  name: string | undefined;
 }
 
 HOST_PARAMS.read("?max-fps=10&samples=0&username=Ada&offline");
 // {
-//   maxFps: 10, samples: 0, gpuTime: false, username: "Ada", offline: true,
-//   workspace: undefined, render: undefined
+//   maxFps: 10, samples: 0, gpuTime: false, username: "Ada",
+//   offline: { name: undefined }, render: undefined
 // }
 ```
 
@@ -76,18 +79,18 @@ HOST_PARAMS.read("?max-fps=10&samples=0&username=Ada&offline");
   [`EditorRuntime.create`](../runtime/EditorRuntime.md#creation).
 - `username`: stored by [`rememberQueryUsername`](../session/EditorSession.md#identity)
   in dev.
-- `offline` and `workspace`: open the
-  [offline workspace](../editor/bootStandalone.md#fallback).
+- `offline`: opens [offline mode](../editor/bootStandalone.md#fallback); its
+  value, when set, names the offline data (`offline.name`).
 - `render`: `continuous` or `on-demand`, see
   [`EditorRuntime.create`](../runtime/EditorRuntime.md#creation).
 
 Strings are trimmed and must not be blank. Any other value reads as
-`undefined`, and an absent `offline` or `gpu-time` as `false`.
+`undefined`, and an absent `gpu-time` as `false`.
 
-`offlineWorkspaceQuery(workspace)` writes the `offline` and `workspace`
-parameters, for a shell that opens editor pages on its own offline workspace:
+`offlineQuery(name)` writes the `offline` parameter, for a shell that opens
+editor pages on its own offline data:
 
 ```ts
-new URLSearchParams(offlineWorkspaceQuery("studio")).toString();
-// "offline=&workspace=studio"
+new URLSearchParams(offlineQuery("studio")).toString();
+// "offline=studio"
 ```

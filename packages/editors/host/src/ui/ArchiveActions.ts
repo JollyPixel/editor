@@ -94,19 +94,19 @@ export class ArchiveActions extends LitElement {
         ${archives.canReset ?
           html`
             <jolly-button
-              id="reset-workspace"
+              id="reset-offline"
               icon="revert"
               variant="danger"
               ?disabled=${this.busy}
               @click=${this.#onReset}
-            >Reset workspace</jolly-button>
+            >Reset offline data</jolly-button>
           ` :
           nothing}
       </div>
       ${archives.volatile ?
         html`
           <p class="notice">
-            This workspace is open in another tab. Changes made here are not
+            Another tab holds this offline data. Changes made here are not
             saved and importing is disabled.
           </p>
         ` :

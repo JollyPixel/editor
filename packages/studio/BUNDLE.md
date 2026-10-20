@@ -35,7 +35,7 @@ Largest packages in the eager code, in KB of brotli. A package's share is its ch
 | zod | 23 (classic) | 6 (mini) | 6 (mini) | 8 (mini) |
 | picomatch | 7 | 8 | 8 | 7 |
 
-The lazy chunks that matter are the offline back-end (ata-validator chunk 95 KB brotli, `OfflineWorkspace` 34 KB), the three.js model loaders (GLTF, FBX, OBJ, KTX2, meshopt), `basis_transcoder.wasm` (199 KB brotli, only fetched for a KTX2 texture) and `roomEnvironment.bin` (672 KB raw, 77 KB brotli, awaited during voxel-map boot).
+The lazy chunks that matter are the offline back-end (ata-validator chunk 95 KB brotli, `OfflineServer` 34 KB), the three.js model loaders (GLTF, FBX, OBJ, KTX2, meshopt), `basis_transcoder.wasm` (199 KB brotli, only fetched for a KTX2 texture) and `roomEnvironment.bin` (672 KB raw, 77 KB brotli, awaited during voxel-map boot).
 
 No dependency is bundled twice in different versions: one each of three `0.186.1`, lit `3.3.3`, zod `4.6.5`.
 

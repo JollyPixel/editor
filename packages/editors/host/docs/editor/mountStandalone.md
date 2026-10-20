@@ -164,7 +164,7 @@ Stores the `username` query parameter so the prompt is skipped (see
 ### connect
 
 Replaces the username prompt and the WebSocket client, for example with an
-[offline workspace](./bootStandalone.md#offline-workspace). The session
+[offline mode](./bootStandalone.md#offline-mode). The session
 destroys the returned client when it is disposed or fails to open. With a
 `?target=` in the URL, the session opens while the launch is read, so
 `connect` runs twice when the parent's launch names another target.

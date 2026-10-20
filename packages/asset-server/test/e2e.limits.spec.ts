@@ -16,17 +16,17 @@ import {
   CATALOG_REJECTED,
   CATALOG_ROOM
 } from "#src/index.ts";
-import { tempWorkspace } from "./helpers/tempWorkspace.ts";
+import { tempDirectory } from "./helpers/tempDirectory.ts";
 import { bytes } from "./helpers/bytes.ts";
 import { recordingClient } from "./helpers/rooms.ts";
 
 describe("asset-server — end to end", () => {
   test("catalogMaxContentBytes caps catalog:create payloads", async() => {
-    await using workspace = await tempWorkspace();
+    await using directory = await tempDirectory();
     using eventStore = EventStore.persistence.memory();
 
     await using backend = await createAssetBackend({
-      source: new FilesystemAssetSource(workspace.root),
+      source: new FilesystemAssetSource(directory.root),
       eventStore,
       watch: false,
       catalogMaxContentBytes: 4

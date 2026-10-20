@@ -68,15 +68,14 @@ describe("EditorRegistry", () => {
   test("puts the registry query before the target", () => {
     const registry = new EditorRegistry({
       query: {
-        offline: "",
-        workspace: "studio"
+        offline: "studio"
       },
       prefix: "/pages/"
     }).registerEditor(kMapEditor);
 
     assert.equal(
       registry.pageUrl("voxelmap", "map"),
-      "/pages/voxel-map/?offline=&workspace=studio&target=map"
+      "/pages/voxel-map/?offline=studio&target=map"
     );
   });
 

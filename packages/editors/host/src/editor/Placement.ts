@@ -30,13 +30,13 @@ import {
 } from "../session/EditorTargets.ts";
 import { EditorToolbarSources } from "../session/EditorToolbarSources.ts";
 import type { PageState } from "../state/PageState.ts";
-import type { SessionWorkspace } from "../workspace/SessionWorkspace.ts";
+import type { OfflineMode } from "../session/OfflineMode.ts";
 
 export type UnsavedLeases = Pick<AssetLeases, "unsaved" | "subscribe">;
 
 export interface PlacedSession {
   readonly catalog: EditorTargetsCatalog & EditorTagsCatalog;
-  readonly workspace: SessionWorkspace | null;
+  readonly offline: OfflineMode | null;
   readonly assets: Pick<AssetLeases, "unsaved">;
   readonly connectionStatus: ConnectionStatus | null;
   readonly target: Pick<AssetRoomLease, "record">;
@@ -138,7 +138,7 @@ export class Placement {
           current: id,
           navigator
         }),
-      tags: this.shared || session.workspace !== null ?
+      tags: this.shared || session.offline !== null ?
         null :
         new EditorTags({
           catalog,
@@ -155,7 +155,7 @@ export class Placement {
   rememberOpened(
     session: PlacedSession
   ): void {
-    if (session.workspace !== null) {
+    if (session.offline !== null) {
       const { kind, id } = session.target.record;
       LastOpenedLaunchSource.remember(kind, id);
     }

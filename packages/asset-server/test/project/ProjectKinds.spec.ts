@@ -23,7 +23,7 @@ import {
   packageLoader
 } from "../helpers/kindPackages.ts";
 import { writeKindPackage } from "../helpers/packages.ts";
-import { tempWorkspace } from "../helpers/tempWorkspace.ts";
+import { tempDirectory } from "../helpers/tempDirectory.ts";
 
 function projectFile(
   kinds: Record<string, Record<string, unknown>>
@@ -68,12 +68,12 @@ describe("ProjectKinds", () => {
   });
 
   test("resolves the packages from the project root", async() => {
-    await using workspace = await tempWorkspace();
+    await using directory = await tempDirectory();
     await writeKindPackage(
-      path.join(workspace.root, "node_modules", "kind-a"),
+      path.join(directory.root, "node_modules", "kind-a"),
       "kind-a"
     );
-    const file = path.join(workspace.root, PROJECT_FILE_PATH);
+    const file = path.join(directory.root, PROJECT_FILE_PATH);
     await fs.mkdir(path.dirname(file), { recursive: true });
     await fs.writeFile(file, JSON.stringify({
       version: 1,
@@ -85,7 +85,7 @@ describe("ProjectKinds", () => {
     }));
 
     const kinds = await ProjectKinds.load(
-      await ProjectFile.read(workspace.root)
+      await ProjectFile.read(directory.root)
     );
 
     assert.deepEqual(kinds.packages[0].handlers, [
@@ -99,9 +99,9 @@ describe("ProjectKinds", () => {
   });
 
   test("loads local folders and packages from the resolver's fallbacks", async() => {
-    await using workspace = await tempWorkspace();
-    const project = path.join(workspace.root, "project");
-    const host = path.join(workspace.root, "host");
+    await using directory = await tempDirectory();
+    const project = path.join(directory.root, "project");
+    const host = path.join(directory.root, "host");
     await writeKindPackage(
       path.join(project, "kinds", "local"),
       "local-kind",

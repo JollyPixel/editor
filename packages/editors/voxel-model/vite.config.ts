@@ -7,7 +7,7 @@ import {
   type UserConfig
 } from "vite";
 import {
-  createAssetWorkspacePlugin,
+  createAssetServerPlugin,
   createProjectFileWatchPlugin,
   createProjectKindsPlugin,
   ProjectFile,
@@ -48,7 +48,7 @@ export default defineConfig(async(env): Promise<UserConfig> => {
   const projectFile = await ProjectFile.open(
     kAssetsRoot,
     kProjectFile,
-    mode.workspace
+    mode.assetServer
   );
   const kinds = await ProjectKinds.load(projectFile);
 
@@ -59,9 +59,9 @@ export default defineConfig(async(env): Promise<UserConfig> => {
       mode.plugins(),
       createProjectKindsPlugin(kinds),
       createProjectFileWatchPlugin(projectFile),
-      createAssetWorkspacePlugin({
+      createAssetServerPlugin({
         root: kAssetsRoot,
-        ...mode.workspace,
+        ...mode.assetServer,
         ...createModelProject(kTextureAssetId),
         handlers: kinds.handlers(),
         launch({ catalog }) {

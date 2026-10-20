@@ -4,7 +4,7 @@ import type {
   Plugin,
   ServerOptions
 } from "vite";
-import type { AssetWorkspaceOptions } from "@jolly-pixel/asset-server/node";
+import type { AssetServerOptions } from "@jolly-pixel/asset-server/node";
 
 // Import Internal Dependencies
 import { CookieAuthentication } from "../roles/CookieAuthentication.ts";
@@ -22,8 +22,8 @@ export interface RunModeOptions {
   port: number;
 }
 
-export interface RunModeWorkspace extends Required<
-  Pick<AssetWorkspaceOptions, "inMemory" | "rights" | "defaultRole">
+export interface RunModeAssetServer extends Required<
+  Pick<AssetServerOptions, "inMemory" | "rights" | "defaultRole">
 > {
   auth: CookieAuthentication | undefined;
 }
@@ -32,7 +32,7 @@ export class RunMode {
   readonly serve: boolean;
   readonly e2e: boolean;
   readonly server: ServerOptions;
-  readonly workspace: RunModeWorkspace;
+  readonly assetServer: RunModeAssetServer;
 
   constructor(
     env: ConfigEnv,
@@ -48,7 +48,7 @@ export class RunMode {
       {
         allowedHosts: true
       };
-    this.workspace = {
+    this.assetServer = {
       inMemory: this.e2e || !this.serve,
       auth: this.e2e ? new CookieAuthentication() : undefined,
       rights: RIGHTS,
@@ -57,7 +57,7 @@ export class RunMode {
   }
 
   plugins(): Plugin[] {
-    const { auth } = this.workspace;
+    const { auth } = this.assetServer;
     const plugins = [
       prebundleWorkspace(),
       precompress()

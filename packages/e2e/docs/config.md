@@ -89,7 +89,7 @@ only to a config without `RunMode`, such as the `@jolly-pixel/ui` gallery's.
 ## `RunMode`
 
 Reads Vite's `command` and `mode` once and hands a `vite.config.ts` the
-finished pieces: server options, the shared plugins and the asset workspace
+finished pieces: server options, the shared plugins and the asset server
 options.
 
 ```ts
@@ -105,16 +105,16 @@ export default defineConfig(async(env) => {
   const projectFile = await ProjectFile.open(
     kAssetsRoot,
     kProjectFile,
-    mode.workspace
+    mode.assetServer
   );
 
   return {
     server: mode.server,
     plugins: [
       mode.plugins(),
-      createAssetWorkspacePlugin({
+      createAssetServerPlugin({
         root: kAssetsRoot,
-        ...mode.workspace
+        ...mode.assetServer
       })
     ]
   };
@@ -138,14 +138,14 @@ export default defineConfig(async(env) => {
 `{ port, strictPort: true }` in e2e, so Playwright finds the server on the
 suite port, and `{ allowedHosts: true }` otherwise.
 
-### `workspace: RunModeWorkspace`
+### `assetServer: RunModeAssetServer`
 
-Spread into `createAssetWorkspacePlugin`, or pass to `ProjectFile.open`. The
-fields come from `AssetWorkspaceOptions` of `@jolly-pixel/asset-server/node`,
+Spread into `createAssetServerPlugin`, or pass to `ProjectFile.open`. The
+fields come from `AssetServerOptions` of `@jolly-pixel/asset-server/node`,
 made required.
 
 ```ts
-interface RunModeWorkspace {
+interface RunModeAssetServer {
   inMemory: boolean;
   auth: CookieAuthentication | undefined;
   rights: RightsMap;
@@ -154,7 +154,7 @@ interface RunModeWorkspace {
 ```
 
 `inMemory` is `true` for e2e and for every build: a test run and a build
-never read or write the workspace on disk. Every connection is a `member`
+never read or write the project on disk. Every connection is a `member`
 that writes everything; a `spectator` reads and may only join and share
 presence. In e2e, `auth` is a
 [`CookieAuthentication`](./roles.md#cookieauthentication), so a suite picks
@@ -163,7 +163,7 @@ the role per browser context. Outside e2e, `auth` is `undefined`.
 ### `plugins(): Plugin[]`
 
 `prebundleWorkspace()`, the precompress plugin and, in e2e only, the revoke
-endpoint of `workspace.auth`. Each plugin checks the mode itself, so the list
+endpoint of `assetServer.auth`. Each plugin checks the mode itself, so the list
 is safe to add to every config.
 
 The precompress plugin runs only on `vite build`. Once the bundle is written,

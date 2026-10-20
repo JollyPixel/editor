@@ -88,7 +88,7 @@ class EditorToolbarSources {
 `mountStandalone` opens the sources from the launch it read and passes them to
 `mount` as `context.toolbar`. `targets` is `null` inside a shell, which picks
 the target itself, and for a share link. `tags` is `null` for a share link and
-for an offline workspace, whose in-memory event store loses tags on reload.
+in offline mode, whose in-memory event store loses tags on reload.
 `tags.viewing` is the tag of the launch. `connectionStatus` is the session's
 [`connectionStatus`](./EditorSession.md#connectionstatus), `null` by default
 and off a server.

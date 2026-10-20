@@ -20,6 +20,6 @@ test("offers a shared offline catalog when the socket closes", async({ studio, p
   await expect(studio.frames.all).toHaveCount(1);
   await expect(studio.frames.all).toHaveAttribute(
     "src",
-    /offline=.*workspace=studio.*target=map-overworld/
+    /offline=studio.*target=map-overworld/
   );
 });

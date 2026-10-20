@@ -24,7 +24,7 @@ import {
   encodeVoxelModelDocument,
   voxelModelAssetKind
 } from "@jolly-pixel/asset.voxel-model";
-import { createAssetWorkspacePlugin } from "@jolly-pixel/asset-server/node";
+import { createAssetServerPlugin } from "@jolly-pixel/asset-server/node";
 import { defineConfig } from "vite";
 
 const texture = {
@@ -34,7 +34,7 @@ const texture = {
 
 export default defineConfig({
   plugins: [
-    createAssetWorkspacePlugin({
+    createAssetServerPlugin({
       root: import.meta.dirname,
       handlers: [
         voxelModelAssetKind(),

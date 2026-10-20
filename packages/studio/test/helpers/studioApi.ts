@@ -14,7 +14,7 @@ import {
   type AccountsOpenOptions
 } from "@jolly-pixel/accounts/node";
 import {
-  createAssetWorkspace,
+  AssetServer,
   PackageResolver,
   ProjectFile,
   ProjectKinds
@@ -115,7 +115,7 @@ export async function listenStudioApi(
     project,
     catalog: Promise.resolve(sharedCatalog(closures))
   });
-  const workspace = await createAssetWorkspace({
+  const assetServer = await AssetServer.open({
     root: "project",
     inMemory: true
   });
@@ -127,12 +127,12 @@ export async function listenStudioApi(
     shares,
     archive: new ProjectArchive({
       project,
-      backend: workspace.backend,
+      backend: assetServer.backend,
       name: "project"
     }),
     audit: new AuditFeed({
       project,
-      assets: new AssetLog(workspace.eventStore),
+      assets: new AssetLog(assetServer.eventStore),
       audit,
       account: (accountId) => accounts.account(accountId),
       assetPath: () => undefined
@@ -140,8 +140,8 @@ export async function listenStudioApi(
     settings: new ProjectSettings({
       project,
       accounts,
-      server: workspace.server,
-      registry: workspace.backend.kinds,
+      server: assetServer.network,
+      registry: assetServer.backend.kinds,
       audit
     })
   });
@@ -171,7 +171,7 @@ export async function listenStudioApi(
         server.close(resolve);
       });
       await api[Symbol.asyncDispose]();
-      await workspace.close();
+      await assetServer.close();
       audit[Symbol.dispose]();
       accounts[Symbol.dispose]();
     }

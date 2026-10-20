@@ -8,22 +8,23 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   HOST_PARAMS,
-  offlineWorkspaceQuery
+  offlineQuery
 } from "#src/params/HostParams.ts";
 
 describe("HOST_PARAMS", () => {
   test("reads every host parameter", () => {
     assert.deepEqual(
       HOST_PARAMS.read(
-        "?max-fps=10&samples=0&gpu-time&username=Ada&offline&workspace=%20demo%20"
+        "?max-fps=10&samples=0&gpu-time&username=Ada&offline=%20demo%20"
       ),
       {
         maxFps: 10,
         samples: 0,
         gpuTime: true,
         username: "Ada",
-        offline: true,
-        workspace: "demo",
+        offline: {
+          name: "demo"
+        },
         render: undefined
       }
     );
@@ -35,22 +36,22 @@ describe("HOST_PARAMS", () => {
       samples: undefined,
       gpuTime: false,
       username: undefined,
-      offline: false,
-      workspace: undefined,
+      offline: undefined,
       render: undefined
     });
   });
 
   test("drops values the runtime cannot use", () => {
     assert.deepEqual(
-      HOST_PARAMS.read("?max-fps=0&samples=1.5&username=%20&workspace="),
+      HOST_PARAMS.read("?max-fps=0&samples=1.5&username=%20&offline=%20"),
       {
         maxFps: undefined,
         samples: undefined,
         gpuTime: false,
         username: undefined,
-        offline: false,
-        workspace: undefined,
+        offline: {
+          name: undefined
+        },
         render: undefined
       }
     );
@@ -64,11 +65,12 @@ describe("HOST_PARAMS", () => {
     assert.equal(HOST_PARAMS.read("?render=always").render, undefined);
   });
 
-  test("offlineWorkspaceQuery reads back as an offline workspace", () => {
-    const query = new URLSearchParams(offlineWorkspaceQuery("studio"));
+  test("offlineQuery reads back as named offline data", () => {
+    const query = new URLSearchParams(offlineQuery("studio"));
     const params = HOST_PARAMS.read(`?${query}`);
 
-    assert.equal(params.offline, true);
-    assert.equal(params.workspace, "studio");
+    assert.deepEqual(params.offline, {
+      name: "studio"
+    });
   });
 });

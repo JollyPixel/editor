@@ -13,12 +13,12 @@ import {
   writeKindPackage,
   writePackage
 } from "../helpers/packages.ts";
-import { tempWorkspace } from "../helpers/tempWorkspace.ts";
+import { tempDirectory } from "../helpers/tempDirectory.ts";
 
 describe("PackageResolver", () => {
   test("resolves a package name from the project's node_modules", async() => {
-    await using workspace = await tempWorkspace();
-    const project = path.join(workspace.root, "project");
+    await using temporary = await tempDirectory();
+    const project = path.join(temporary.root, "project");
     const directory = await writeKindPackage(
       path.join(project, "node_modules", "kind-a"),
       "kind-a"
@@ -33,9 +33,9 @@ describe("PackageResolver", () => {
   });
 
   test("falls back to the next directories for a package name", async() => {
-    await using workspace = await tempWorkspace();
-    const project = path.join(workspace.root, "project");
-    const host = path.join(workspace.root, "host");
+    await using temporary = await tempDirectory();
+    const project = path.join(temporary.root, "project");
+    const host = path.join(temporary.root, "host");
     await fs.mkdir(project);
     const directory = await writeKindPackage(
       path.join(host, "node_modules", "kind-a"),
@@ -54,9 +54,9 @@ describe("PackageResolver", () => {
   });
 
   test("prefers the project's copy of a package", async() => {
-    await using workspace = await tempWorkspace();
-    const project = path.join(workspace.root, "project");
-    const host = path.join(workspace.root, "host");
+    await using temporary = await tempDirectory();
+    const project = path.join(temporary.root, "project");
+    const host = path.join(temporary.root, "host");
     const directory = await writeKindPackage(
       path.join(project, "node_modules", "kind-a"),
       "kind-a"
@@ -70,13 +70,13 @@ describe("PackageResolver", () => {
   });
 
   test("resolves a local folder against the project root", async() => {
-    await using workspace = await tempWorkspace();
+    await using temporary = await tempDirectory();
     const exported = await writeKindPackage(
-      path.join(workspace.root, "kinds", "exported"),
+      path.join(temporary.root, "kinds", "exported"),
       "exported-kind"
     );
     const main = await writePackage(
-      path.join(workspace.root, "kinds", "main"),
+      path.join(temporary.root, "kinds", "main"),
       {
         main: "./entry.js"
       },
@@ -84,7 +84,7 @@ describe("PackageResolver", () => {
         "entry.js": "export const value = 1;\n"
       }
     );
-    const resolver = new PackageResolver(workspace.root);
+    const resolver = new PackageResolver(temporary.root);
 
     assert.strictEqual(
       resolver.locate("./kinds/exported"),
@@ -101,9 +101,9 @@ describe("PackageResolver", () => {
   });
 
   test("never resolves a local folder from a fallback", async() => {
-    await using workspace = await tempWorkspace();
-    const project = path.join(workspace.root, "project");
-    const host = path.join(workspace.root, "host");
+    await using temporary = await tempDirectory();
+    const project = path.join(temporary.root, "project");
+    const host = path.join(temporary.root, "host");
     await fs.mkdir(project);
     await writeKindPackage(path.join(host, "kinds", "local"), "local");
     const resolver = new PackageResolver(project, {
@@ -123,8 +123,8 @@ describe("PackageResolver", () => {
   });
 
   test("names a package it cannot find", async() => {
-    await using workspace = await tempWorkspace();
-    const resolver = new PackageResolver(workspace.root);
+    await using temporary = await tempDirectory();
+    const resolver = new PackageResolver(temporary.root);
 
     assert.throws(
       () => resolver.locate("missing-kind"),

@@ -127,7 +127,7 @@ asset, it replays them over its first snapshot and sends them. Releasing and
 reopening an asset in the same page picks up its changes the same way.
 
 - A page never takes the changes of another page that is still open.
-- Tag views, offline, shared-tab and peer workspaces keep nothing.
+- Tag views and every offline backend (in-page, shared-tab, peer) keep nothing.
 - A change the server applied but whose answer was lost with the page is
   skipped, as long as the server still remembers the closed page's client.
   After a server restart it is sent again.

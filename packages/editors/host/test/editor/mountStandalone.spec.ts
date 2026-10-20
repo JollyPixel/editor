@@ -23,7 +23,7 @@ import {
   definition,
   editorState,
   offlineOptions,
-  openWorkspace,
+  openServer,
   resetStandalonePage,
   trackedConnection
 } from "../helpers/standalone.ts";
@@ -50,7 +50,7 @@ describe("mountStandalone", () => {
   });
 
   test("walks booting to ready and publishes the handle once ready", async() => {
-    const workspace = await openWorkspace();
+    const server = await openServer();
     const ready = Promise.withResolvers<void>();
     const mounted = Promise.withResolvers<void>();
 
@@ -61,7 +61,7 @@ describe("mountStandalone", () => {
 
       return Promise.resolve(editorHandle(context.session, ready.promise));
     }), {
-      ...offlineOptions(workspace),
+      ...offlineOptions(server),
       dev: true,
       debugHandle: "hostTestHandle"
     });
@@ -82,17 +82,17 @@ describe("mountStandalone", () => {
     }
     finally {
       editor.dispose();
-      await workspace.close();
+      await server.close();
     }
   });
 
   test("publishes no handle outside dev", async() => {
-    const workspace = await openWorkspace();
+    const server = await openServer();
 
     const editor = await mountStandalone(definition(
       (context) => Promise.resolve(editorHandle(context.session))
     ), {
-      ...offlineOptions(workspace),
+      ...offlineOptions(server),
       debugHandle: "hostTestHandle"
     });
 
@@ -101,11 +101,11 @@ describe("mountStandalone", () => {
     assert.equal(Reflect.get(globalThis, "hostTestHandle"), undefined);
 
     editor.dispose();
-    await workspace.close();
+    await server.close();
   });
 
   test("a page kept in the back/forward cache leaves its rooms and reloads when restored", async(t) => {
-    const workspace = await openWorkspace();
+    const server = await openServer();
     const reload = t.mock.method(location, "reload", () => undefined);
     let disposed = 0;
     let destroyed = false;
@@ -115,8 +115,8 @@ describe("mountStandalone", () => {
         disposed++;
       }
     })), {
-      ...offlineOptions(workspace),
-      connect: () => trackedConnection(workspace, () => {
+      ...offlineOptions(server),
+      connect: () => trackedConnection(server, () => {
         destroyed = true;
       })
     });
@@ -128,25 +128,25 @@ describe("mountStandalone", () => {
     assert.equal(disposed, 1);
     assert.equal(destroyed, true);
     assert.ok(reload.mock.callCount() >= 1);
-    await workspace.close();
+    await server.close();
   });
 
   test("marks the page failed when mount throws", async() => {
-    const workspace = await openWorkspace();
+    const server = await openServer();
 
     await assert.rejects(
       mountStandalone(definition(
         () => Promise.reject(new Error("mount failed"))
-      ), offlineOptions(workspace)),
+      ), offlineOptions(server)),
       /mount failed/
     );
     assert.equal(editorState(), "failed");
 
-    await workspace.close();
+    await server.close();
   });
 
   test("disposes the handle and fails when ready rejects", async() => {
-    const workspace = await openWorkspace();
+    const server = await openServer();
     let disposed = false;
 
     await assert.rejects(
@@ -164,7 +164,7 @@ describe("mountStandalone", () => {
           }
         });
       }), {
-        ...offlineOptions(workspace),
+        ...offlineOptions(server),
         dev: true
       }),
       /scene failed/
@@ -173,11 +173,11 @@ describe("mountStandalone", () => {
     assert.equal(editorState(), "failed");
     assert.equal(Reflect.get(globalThis, DEBUG_HANDLE), undefined);
 
-    await workspace.close();
+    await server.close();
   });
 
   test("traces each boot step in order", async() => {
-    const workspace = await openWorkspace();
+    const server = await openServer();
     const { logger, lines, metas } = captureLogs([
       "host.boot",
       "host.session"
@@ -189,7 +189,7 @@ describe("mountStandalone", () => {
 
       return Promise.resolve(editorHandle(context.session));
     }), {
-      ...offlineOptions(workspace),
+      ...offlineOptions(server),
       logger
     });
 
@@ -220,17 +220,17 @@ describe("mountStandalone", () => {
     assert.equal(editorLogger?.namespace, "editor");
 
     editor.dispose();
-    await workspace.close();
+    await server.close();
   });
 
   test("names the boot step that failed", async() => {
-    const workspace = await openWorkspace();
+    const server = await openServer();
     const { logger, lines, metas } = captureLogs(["host.boot"]);
     const error = new Error("mount failed");
 
     await assert.rejects(
       mountStandalone(definition(() => Promise.reject(error)), {
-        ...offlineOptions(workspace),
+        ...offlineOptions(server),
         logger
       }),
       error
@@ -241,11 +241,11 @@ describe("mountStandalone", () => {
     ]);
     assert.equal(metas.at(-2)?.error, error);
 
-    await workspace.close();
+    await server.close();
   });
 
   test("disposes the session when the declared runtime cannot be created", async() => {
-    const workspace = await openWorkspace();
+    const server = await openServer();
     let mounted = false;
     let destroyed = false;
 
@@ -263,8 +263,8 @@ describe("mountStandalone", () => {
           return Promise.reject(new Error("unreachable"));
         }
       }, {
-        ...offlineOptions(workspace),
-        connect: () => trackedConnection(workspace, () => {
+        ...offlineOptions(server),
+        connect: () => trackedConnection(server, () => {
           destroyed = true;
         })
       }),
@@ -274,6 +274,6 @@ describe("mountStandalone", () => {
     assert.equal(destroyed, true);
     assert.equal(editorState(), "failed");
 
-    await workspace.close();
+    await server.close();
   });
 });

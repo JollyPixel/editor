@@ -31,16 +31,16 @@ const kActor: EventStore.Actor = {
   id: "alice"
 };
 
-interface LinkedWorkspace extends AsyncDisposable {
+interface LinkedProject extends AsyncDisposable {
   readonly backend: AssetBackend;
   readonly catalog: CatalogClient;
   readonly targetId: string;
   readonly linkId: string;
 }
 
-async function linkedWorkspace(
+async function linkedProject(
   catalogDeleteProtection?: boolean
-): Promise<LinkedWorkspace> {
+): Promise<LinkedProject> {
   const eventStore = EventStore.persistence.memory();
   const backend = await createAssetBackend({
     source: new MemoryAssetSource(),
@@ -77,10 +77,10 @@ async function linkedWorkspace(
 
 describe("catalog delete protection", () => {
   test("refuses a delete while another asset references the target", async() => {
-    await using workspace = await linkedWorkspace();
+    await using project = await linkedProject();
 
     await assert.rejects(
-      workspace.catalog.remove(workspace.targetId),
+      project.catalog.remove(project.targetId),
       (error: CatalogRejectedError) => {
         assert.strictEqual(error.name, "CatalogRejectedError");
         assert.match(error.message, /still referenced by "a\.link"/);
@@ -88,48 +88,48 @@ describe("catalog delete protection", () => {
         return true;
       }
     );
-    await workspace.backend.flush();
+    await project.backend.flush();
 
     assert.notStrictEqual(
-      workspace.backend.catalog.record(workspace.targetId),
+      project.backend.catalog.record(project.targetId),
       undefined
     );
     assert.notStrictEqual(
-      workspace.catalog.record(workspace.targetId),
+      project.catalog.record(project.targetId),
       undefined
     );
   });
 
   test("deletes a referenced asset when the caller forces it", async() => {
-    await using workspace = await linkedWorkspace();
+    await using project = await linkedProject();
 
-    await workspace.catalog.remove(workspace.targetId, { force: true });
-    await workspace.backend.flush();
+    await project.catalog.remove(project.targetId, { force: true });
+    await project.backend.flush();
 
     assert.strictEqual(
-      workspace.backend.catalog.record(workspace.targetId),
+      project.backend.catalog.record(project.targetId),
       undefined
     );
   });
 
   test("deletes freely once the last dependent is gone", async() => {
-    await using workspace = await linkedWorkspace();
+    await using project = await linkedProject();
 
-    await workspace.catalog.remove(workspace.linkId);
-    await workspace.catalog.remove(workspace.targetId);
-    await workspace.backend.flush();
+    await project.catalog.remove(project.linkId);
+    await project.catalog.remove(project.targetId);
+    await project.backend.flush();
 
-    assert.strictEqual(workspace.backend.catalog.size, 0);
+    assert.strictEqual(project.backend.catalog.size, 0);
   });
 
   test("lets the backend opt out of the protection", async() => {
-    await using workspace = await linkedWorkspace(false);
+    await using project = await linkedProject(false);
 
-    await workspace.catalog.remove(workspace.targetId);
-    await workspace.backend.flush();
+    await project.catalog.remove(project.targetId);
+    await project.backend.flush();
 
     assert.strictEqual(
-      workspace.backend.catalog.record(workspace.targetId),
+      project.backend.catalog.record(project.targetId),
       undefined
     );
   });

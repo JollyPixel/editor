@@ -91,8 +91,8 @@ await mountStandalone(MyEditor, {
 
 - [`mountStandalone`](./docs/editor/mountStandalone.md): the editor definition and
   context, switching, page lifecycle, console and boot tracing.
-- [`bootStandalone`](./docs/editor/bootStandalone.md): the offline fallback and the
-  in-page workspace.
+- [`bootStandalone`](./docs/editor/bootStandalone.md): the offline fallback and
+  offline mode.
 - [`EditorLaunch`](./docs/launch/EditorLaunch.md): launch sources and the target, tag
   and shell of a page.
 - [`ShellChannel`](./docs/launch/ShellChannel.md): the protocol between a shell and

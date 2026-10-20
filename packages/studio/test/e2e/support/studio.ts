@@ -54,7 +54,7 @@ export class StudioShell {
     this.settings = new SettingsPage(page);
     this.shareLinks = new ShareLinksPane(page, this.account, this.settings);
     this.theme = page.locator("jolly-scope").first();
-    this.offlineFallback = page.getByRole("button", { name: "Open offline workspace" });
+    this.offlineFallback = page.getByRole("button", { name: "Work offline" });
   }
 
   async goto(

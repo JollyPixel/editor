@@ -53,10 +53,10 @@ flowchart TB
 - Editing the project file by hand restarts the dev server. The server's own
   writes do not.
 - `server/` knows nothing of Vite; `vite/` only adapts it.
-- `StudioBackend` opens the online back-end: the accounts, the asset
-  workspace and its catalog view, `StudioApi` and `SharePage`. `vite/backend`
+- `StudioBackend` opens the online back-end: the accounts, the
+  `AssetServer` and its catalog view, `StudioApi` and `SharePage`. `vite/backend`
   mounts its middleware and attaches its WebSocket to the dev server. It
-  closes its WebSocket transports, the API, the workspace, then the accounts.
+  closes its WebSocket transports, the API, the asset server, then the accounts.
 - `StudioServer` is the hosted entry, started by `server/start.ts`. One
   `node:http` server chains the back-end, `ManifestRoute` and the built shell,
   which holds every editor page under `editors/<name>/`. It refuses to start
@@ -75,12 +75,12 @@ flowchart TB
 - `StudioProject.privateFiles` lists the globs Vite must not serve: every
   `.jollypixel/` folder and the project's asset files. Assets reach the
   browser through the rooms only, which apply the rights table: the asset
-  workspace runs with `http: false`.
+  server runs with `http: false`.
 - Share links: `StudioShares` checks `studio.$share`, creates links for
   `/api/shares/` and walks the closure for the network server's `admits`. `SharePage` answers
   `/view/<token>` with the editor page plus a `<base>` and the launch.
-  Guests read the `asset-catalog-view` room, registered once the workspace
-  is ready.
+  Guests read the `asset-catalog-view` room, registered once the asset
+  server is ready.
 - Project export: `ProjectArchive` checks `studio.$export` and answers
   `GET /api/project/archive` with every asset in one asset archive, named
   after the project root. It goes over HTTP, so the catalog content limit
@@ -162,8 +162,8 @@ sequenceDiagram
   account reloads
   ([ADR-0022](./docs/adr/0022-a-refused-session-renews-in-place.md)).
 - Catalog unreachable: Retry, or go offline.
-- Offline adds `{ offline, workspace: "studio" }` to every editor URL, so the
-  frames join the same browser workspace.
+- Offline adds `{ offline: "studio" }` to every editor URL, so the frames
+  join the same offline data.
 
 ## Opening an asset
 

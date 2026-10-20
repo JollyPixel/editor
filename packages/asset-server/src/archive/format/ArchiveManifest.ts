@@ -113,7 +113,7 @@ function checkEntry(
   if (!safe.ok || safe.val !== entry.path) {
     const error = new AssetArchiveError(
       "unsafe-path",
-      `Asset path "${entry.path}" is not a safe workspace path.`,
+      `Asset path "${entry.path}" is not a safe project path.`,
       { assetId: entry.id }
     );
 

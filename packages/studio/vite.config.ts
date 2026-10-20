@@ -45,7 +45,7 @@ export default defineConfig(async(env): Promise<UserConfig> => {
   );
   const project = await StudioProject.open(
     StudioProject.resolveRoot(import.meta.dirname),
-    mode.workspace
+    mode.assetServer
   );
 
   return {

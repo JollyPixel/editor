@@ -10,8 +10,8 @@ import { CommandConsole } from "@jolly-pixel/console";
 
 // Import Internal Dependencies
 import { peerConsole } from "#src/console/namespaces/peer.ts";
-import { PeerInvite } from "#src/workspace/peer/PeerInvite.ts";
-import type { PeerSharing } from "#src/workspace/SessionWorkspace.ts";
+import { PeerInvite } from "#src/offline/peer/PeerInvite.ts";
+import type { PeerSharing } from "#src/session/OfflineMode.ts";
 
 describe("peer console", () => {
   test("invite prints a link that opens a guest on this page", async() => {
@@ -31,7 +31,7 @@ describe("peer console", () => {
     assert.deepEqual(PeerInvite.fromHash(link.hash), invite);
   });
 
-  test("offers no peer commands on a workspace that cannot share", async() => {
+  test("offers no peer commands when offline mode cannot share", async() => {
     const commands = new CommandConsole();
     peerConsole(commands, {});
 

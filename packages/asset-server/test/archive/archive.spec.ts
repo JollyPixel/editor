@@ -15,38 +15,38 @@ import {
 } from "#src/index.ts";
 import {
   ARCHIVE_ACTOR,
-  archiveWorkspace,
-  type ArchiveWorkspace
+  archiveProject,
+  type ArchiveProject
 } from "../helpers/archive.ts";
 import { linkContent, linkReference } from "../helpers/kinds.ts";
 import { text } from "../helpers/bytes.ts";
 
 async function exported(
-  workspace: ArchiveWorkspace,
+  project: ArchiveProject,
   root?: string
 ): Promise<AssetArchive> {
   return readAssetArchive(
-    (await exportAssetArchive(workspace.backend, { root })).unwrap()
+    (await exportAssetArchive(project.backend, { root })).unwrap()
   ).unwrap();
 }
 
 async function editLive(
-  workspace: ArchiveWorkspace,
+  project: ArchiveProject,
   assetId: string,
   ...targets: string[]
 ): Promise<void> {
-  await workspace.backend.flush(assetId);
-  await workspace.editLive(assetId, ...targets);
+  await project.backend.flush(assetId);
+  await project.editLive(assetId, ...targets);
 }
 
 describe("exportAssetArchive", () => {
   test("round trip keeps ids, kinds and bytes, dependencies first", async() => {
-    await using workspace = await archiveWorkspace();
-    const texture = await workspace.link("textures/block.link");
-    const map = await workspace.link("maps/overworld.link", texture);
-    await workspace.link("unrelated.link");
+    await using project = await archiveProject();
+    const texture = await project.link("textures/block.link");
+    const map = await project.link("maps/overworld.link", texture);
+    await project.link("unrelated.link");
 
-    const archive = await exported(workspace, map);
+    const archive = await exported(project, map);
 
     assert.deepEqual(archive.root, { id: map, kind: "link" });
     assert.deepEqual(
@@ -61,11 +61,11 @@ describe("exportAssetArchive", () => {
   });
 
   test("never writes a state entry", async() => {
-    await using workspace = await archiveWorkspace();
-    const map = await workspace.link("map.link");
+    await using project = await archiveProject();
+    const map = await project.link("map.link");
 
     const names = Object.keys(unzipSync(
-      (await exportAssetArchive(workspace.backend, { root: map })).unwrap()
+      (await exportAssetArchive(project.backend, { root: map })).unwrap()
     ));
 
     assert.deepEqual(
@@ -75,12 +75,12 @@ describe("exportAssetArchive", () => {
   });
 
   test("includes a dependency added since the last snapshot", async() => {
-    await using workspace = await archiveWorkspace();
-    const texture = await workspace.link("texture.link");
-    const map = await workspace.link("map.link");
-    await editLive(workspace, map, texture);
+    await using project = await archiveProject();
+    const texture = await project.link("texture.link");
+    const map = await project.link("map.link");
+    await editLive(project, map, texture);
 
-    const archive = await exported(workspace, map);
+    const archive = await exported(project, map);
 
     assert.deepEqual(
       archive.assets.map((asset) => asset.id),
@@ -89,38 +89,38 @@ describe("exportAssetArchive", () => {
   });
 
   test("includes unflushed edits of a dependency", async() => {
-    await using workspace = await archiveWorkspace();
-    const texture = await workspace.link("texture.link");
-    const map = await workspace.link("map.link", texture);
-    await editLive(workspace, texture, "pixels");
+    await using project = await archiveProject();
+    const texture = await project.link("texture.link");
+    const map = await project.link("map.link", texture);
+    await editLive(project, texture, "pixels");
 
-    const archive = await exported(workspace, map);
+    const archive = await exported(project, map);
 
     assert.strictEqual(text(archive.assets[0].data), "pixels");
     assert.deepEqual(archive.missing, [linkReference("pixels")]);
   });
 
   test("lists a deleted dependency as missing", async() => {
-    await using workspace = await archiveWorkspace();
-    const texture = await workspace.link("texture.link");
-    const map = await workspace.link("map.link", texture);
-    await workspace.backend.writer.remove({
+    await using project = await archiveProject();
+    const texture = await project.link("texture.link");
+    const map = await project.link("map.link", texture);
+    await project.backend.writer.remove({
       assetId: texture,
       actor: ARCHIVE_ACTOR
     });
 
-    const archive = await exported(workspace, map);
+    const archive = await exported(project, map);
 
     assert.deepEqual(archive.assets.map((asset) => asset.id), [map]);
     assert.deepEqual(archive.missing, [linkReference(texture)]);
   });
 
-  test("without a root exports the whole workspace", async() => {
-    await using workspace = await archiveWorkspace();
-    const a = await workspace.link("a.link");
-    const b = await workspace.link("b.link");
+  test("without a root exports the whole project", async() => {
+    await using project = await archiveProject();
+    const a = await project.link("a.link");
+    const b = await project.link("b.link");
 
-    const archive = await exported(workspace);
+    const archive = await exported(project);
 
     assert.strictEqual(archive.root, undefined);
     assert.deepEqual(
@@ -130,9 +130,9 @@ describe("exportAssetArchive", () => {
   });
 
   test("returns an unknown root as an error", async() => {
-    await using workspace = await archiveWorkspace();
+    await using project = await archiveProject();
 
-    const exported = await exportAssetArchive(workspace.backend, {
+    const exported = await exportAssetArchive(project.backend, {
       root: "ghost"
     });
 
@@ -142,11 +142,11 @@ describe("exportAssetArchive", () => {
   });
 
   test("refuses a stored document that import would reject", async() => {
-    await using workspace = await archiveWorkspace();
-    const map = await workspace.link("map.link");
-    await workspace.source.write("map.link", linkContent("!"));
+    await using project = await archiveProject();
+    const map = await project.link("map.link");
+    await project.source.write("map.link", linkContent("!"));
 
-    const exported = await exportAssetArchive(workspace.backend, {
+    const exported = await exportAssetArchive(project.backend, {
       root: map
     });
 

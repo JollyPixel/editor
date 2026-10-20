@@ -2,9 +2,9 @@
 import {
   CatalogShare,
   LocalPreferences,
-  offlineWorkspaceQuery
+  offlineQuery
 } from "@jolly-pixel/editor.host";
-import { openSharedTabWorkspace } from "@jolly-pixel/editor.host/offline";
+import { openOfflineBackend } from "@jolly-pixel/editor.host/offline";
 import createHandlers from "virtual:jolly-pixel/handlers";
 
 // Import Internal Dependencies
@@ -12,22 +12,22 @@ import type { StudioConnection } from "./connection.ts";
 import { loadStudioSeed } from "./seed.ts";
 
 // CONSTANTS
-const kWorkspace = "studio";
+const kOfflineName = "studio";
 
 export async function connectOffline(): Promise<StudioConnection> {
-  const workspace = await openSharedTabWorkspace({
+  const backend = await openOfflineBackend({
     project: async() => {
       return {
         handlers: createHandlers(),
         seed: await loadStudioSeed()
       };
     },
-    name: kWorkspace
+    name: kOfflineName
   });
 
   return {
-    share: await CatalogShare.open(workspace.connect().client),
-    editorQuery: offlineWorkspaceQuery(kWorkspace),
+    share: await CatalogShare.open(backend.connect().client),
+    editorQuery: offlineQuery(kOfflineName),
     signedIn: null,
     preferences: new LocalPreferences().preferences
   };

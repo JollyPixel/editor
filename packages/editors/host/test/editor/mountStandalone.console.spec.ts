@@ -16,7 +16,7 @@ import {
   ASSET_ID,
   definition,
   offlineOptions,
-  openWorkspace,
+  openServer,
   resetStandalonePage
 } from "../helpers/standalone.ts";
 
@@ -24,14 +24,14 @@ describe("mountStandalone console", () => {
   afterEach(resetStandalonePage);
 
   test("hands the editor the console mounted on the page", async() => {
-    const workspace = await openWorkspace();
+    const server = await openServer();
 
     const received: EditorContext["commands"][] = [];
     const editor = await mountStandalone(definition((context) => {
       received.push(context.commands);
 
       return Promise.resolve(editorHandle(context.session));
-    }), offlineOptions(workspace));
+    }), offlineOptions(server));
 
     const elements = document.querySelectorAll("jolly-console");
     assert.equal(elements.length, 1);
@@ -47,11 +47,11 @@ describe("mountStandalone console", () => {
     );
 
     editor.dispose();
-    await workspace.close();
+    await server.close();
   });
 
   test("leaves the console to the shell that framed the page", async() => {
-    const workspace = await openWorkspace();
+    const server = await openServer();
     const shell = new ShellChannel({
       port: { postMessage: () => undefined },
       origin: "http://studio.test"
@@ -63,7 +63,7 @@ describe("mountStandalone console", () => {
 
       return Promise.resolve(editorHandle(context.session));
     }), {
-      ...offlineOptions(workspace),
+      ...offlineOptions(server),
       sources: [
         {
           read: () => Promise.resolve(EditorLaunch.fromTarget(ASSET_ID, shell))
@@ -76,20 +76,20 @@ describe("mountStandalone console", () => {
     assert.equal(received[0].registry.resolveVariable("theme"), undefined);
 
     editor.dispose();
-    await workspace.close();
+    await server.close();
   });
 
   test("removes the console when the boot fails", async() => {
-    const workspace = await openWorkspace();
+    const server = await openServer();
 
     await assert.rejects(
       mountStandalone(definition(
         () => Promise.reject(new Error("mount failed"))
-      ), offlineOptions(workspace)),
+      ), offlineOptions(server)),
       /mount failed/
     );
     assert.equal(document.querySelector("jolly-console"), null);
 
-    await workspace.close();
+    await server.close();
   });
 });

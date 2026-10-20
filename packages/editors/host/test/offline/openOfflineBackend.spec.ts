@@ -1,0 +1,66 @@
+// Import Node.js Dependencies
+import { test } from "node:test";
+import assert from "node:assert/strict";
+
+// Import Third-party Dependencies
+import { indexedDB } from "fake-indexeddb";
+import { once } from "@openally/emitt";
+import { BINARY_KIND } from "@jolly-pixel/asset-server";
+import { CATALOG_ROOM, CatalogClient } from "@jolly-pixel/asset-server/client";
+
+// Import Internal Dependencies
+import { openOfflineBackend } from "#src/offline/shared-tab/openOfflineBackend.ts";
+
+Object.assign(globalThis, { indexedDB });
+
+test("a second tab edits the persistent catalog through its owner", async() => {
+  const name = `shared-${crypto.randomUUID()}`;
+  let loads = 0;
+  const options = {
+    name,
+    project: () => {
+      loads++;
+
+      return {
+        handlers: [],
+        seed: {
+          "readme.bin": {
+            id: "readme",
+            kind: BINARY_KIND,
+            content: () => new TextEncoder().encode("hello")
+          }
+        }
+      };
+    }
+  };
+  const owner = await openOfflineBackend(options);
+  const follower = await openOfflineBackend(options);
+  assert.strictEqual(loads, 1);
+  const first = owner.connect();
+  const second = follower.connect();
+  const firstCatalog = new CatalogClient(first.client.room(CATALOG_ROOM));
+  const secondCatalog = new CatalogClient(second.client.room(CATALOG_ROOM));
+  try {
+    await Promise.all([firstCatalog.ready, secondCatalog.ready]);
+    assert.strictEqual(owner.persistent, true);
+    assert.strictEqual(follower.persistent, true);
+    const [source] = follower.launchSources(BINARY_KIND);
+    assert.strictEqual((await source.read())?.target.value, "readme");
+    const changed = once(secondCatalog, "change");
+    const id = await firstCatalog.create(
+      "second.bin",
+      new TextEncoder().encode("second"),
+      { kind: BINARY_KIND }
+    );
+    await changed;
+    assert.strictEqual(secondCatalog.record(id)?.source, "second.bin");
+  }
+  finally {
+    firstCatalog.dispose();
+    secondCatalog.dispose();
+    first.client.destroy();
+    second.client.destroy();
+    await follower.close();
+    await owner.close();
+  }
+});

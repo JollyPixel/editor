@@ -99,17 +99,17 @@ An `AssetDocumentKind` creates the `SyncedDocument` its holders share.
 
 Where the page runs, decided once from the launch: framed by another app such
 as the studio, or alone in a browser tab; connected to a server, opened from a
-share link, or on an offline workspace. It sets what the page offers. A framed
+share link, or in offline mode. It sets what the page offers. A framed
 page hands its console and its unsaved-changes warning to the app around it,
 while a page in a tab shows its own console and asks the browser to warn
 before leaving. The asset picker appears only in a tab, the version picker
 only on a server, and a share link gets neither.
 
 *In code:* read from `launch.shell`, `launch.credential` and
-`session.workspace`. An editor sees the result in `context.shell` and in which
+`session.offline`. An editor sees the result in `context.shell` and in which
 of `context.toolbar.targets` and `tags` are set.
 
-### Offline workspace
+### Offline mode
 
 Assets stored in the browser instead of on a server, so an editor works with
 no back-end. The host runs the asset back-end inside the page and the editor
@@ -119,6 +119,6 @@ Assets kept in memory are lost on reload. Without a target in the address,
 the page opens the asset last opened in this browser.
 
 *In code:* the `@jolly-pixel/editor.host/offline` entry,
-`openSharedTabWorkspace()`, and `session.workspace`, which is `null` on a
-server. [`bootStandalone`](./docs/editor/bootStandalone.md#offline-workspace)
+`openOfflineBackend()`, and `session.offline`, which is `null` on a
+server. [`bootStandalone`](./docs/editor/bootStandalone.md#offline-mode)
 offers it when the server cannot be reached.

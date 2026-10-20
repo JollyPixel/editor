@@ -26,10 +26,9 @@ import {
   serializeLaunch
 } from "../launch.ts";
 import {
-  createAssetWorkspace,
-  type AssetWorkspace,
-  type AssetWorkspaceOptions
-} from "../workspace/createAssetWorkspace.ts";
+  AssetServer,
+  type AssetServerOptions
+} from "../server/AssetServer.ts";
 
 export interface AssetCatalogPluginOptions {
   projection: CatalogProjection;
@@ -75,7 +74,7 @@ export function createAssetStaticPlugin(
   };
 }
 
-export interface AssetWorkspacePluginOptions extends AssetWorkspaceOptions {
+export interface AssetServerPluginOptions extends AssetServerOptions {
   /**
    * Serves the catalog JSON at `catalogPath` and the asset files under
    * `prefix`. Neither route authenticates the request.
@@ -87,7 +86,7 @@ export interface AssetWorkspacePluginOptions extends AssetWorkspaceOptions {
    */
   catalogPath?: string;
   /**
-   * URL prefix the workspace is served under.
+   * URL prefix the asset files are served under.
    * @default ASSET_URL_PREFIX
    */
   prefix?: string;
@@ -105,7 +104,7 @@ export interface AssetWorkspacePluginOptions extends AssetWorkspaceOptions {
    * Called once the back-end is up, for a host needing its handles.
    */
   onReady?: (
-    workspace: AssetWorkspace
+    server: AssetServer
   ) => void | Promise<void>;
   /**
    * Picks the asset an HTML page opens. The id is injected as
@@ -125,8 +124,8 @@ export interface AssetLaunchRequest {
   readonly catalog: AssetCatalog;
 }
 
-export function createAssetWorkspacePlugin(
-  options: AssetWorkspacePluginOptions
+export function createAssetServerPlugin(
+  options: AssetServerPluginOptions
 ): Plugin {
   const {
     http = true,
@@ -136,28 +135,28 @@ export function createAssetWorkspacePlugin(
     compression,
     onReady,
     launch,
-    ...workspaceOptions
+    ...serverOptions
   } = options;
 
-  let workspace: AssetWorkspace | null = null;
+  let assetServer: AssetServer | null = null;
 
   return {
-    name: "asset-server-workspace",
+    name: "asset-server",
     apply: "serve",
     async configureServer(devServer) {
-      workspace = await createAssetWorkspace(workspaceOptions);
+      assetServer = await AssetServer.open(serverOptions);
 
       if (http) {
         devServer.middlewares.use(
           createCatalogHandler({
-            projection: workspace.backend.catalog,
+            projection: assetServer.backend.catalog,
             path: catalogPath
           })
         );
         devServer.middlewares.use(
           createAssetStaticHandler({
-            source: workspace.source,
-            contentTypes: workspace.backend.kinds.contentTypes(),
+            source: assetServer.source,
+            contentTypes: assetServer.backend.kinds.contentTypes(),
             prefix
           })
         );
@@ -167,29 +166,29 @@ export function createAssetWorkspacePlugin(
         new WebsocketTransport({
           path: socketPath,
           httpServer: devServer.httpServer,
-          server: workspace.server,
+          server: assetServer.network,
           compression,
           allowedHosts: devServer.config.server.allowedHosts
         });
       }
 
-      await onReady?.(workspace);
+      await onReady?.(assetServer);
     },
     transformIndexHtml(_html, context) {
-      if (launch === undefined || workspace === null) {
+      if (launch === undefined || assetServer === null) {
         return [];
       }
 
       const target = launch({
         url: requestUrl(context),
-        catalog: workspace.backend.catalog.catalog
+        catalog: assetServer.backend.catalog.catalog
       });
 
       return target === undefined ? [] : [launchTag(target)];
     },
     async closeBundle() {
-      await workspace?.close();
-      workspace = null;
+      await assetServer?.close();
+      assetServer = null;
     }
   };
 }

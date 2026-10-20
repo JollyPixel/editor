@@ -35,10 +35,10 @@ readonly tag: string | null;
 readonly target: AssetRoomLease;
 readonly targetReady: Promise<void>;
 readonly archive: SessionArchive;
-readonly workspace: SessionWorkspace | null;
+readonly offline: OfflineMode | null;
 ```
 
-`identity`, `catalog`, `assets`, `connectionStatus`, `archive` and `workspace`
+`identity`, `catalog`, `assets`, `connectionStatus`, `archive` and `offline`
 belong to the [connection](#connection) and are shared by every session opened
 on it.
 
@@ -79,9 +79,9 @@ its socket and `true` once it reconnects. `unsaved` mirrors `assets.unsaved`.
 `change` fires when `online` flips, and when `unsaved` flips while offline.
 The [toolbar](./EditorToolbar.md#properties) shows it.
 
-### archive and workspace
+### archive and offline
 
-See [Archives](./Archives.md). `workspace` is `null` on a server session.
+See [Archives](./Archives.md). `offline` is `null` on a server session.
 
 ## Methods
 
@@ -176,7 +176,7 @@ class SessionConnection {
   readonly assets: AssetLeases;
   readonly connectionStatus: ConnectionStatus | null;
   readonly archive: SessionArchive;
-  readonly workspace: SessionWorkspace | null;
+  readonly offline: OfflineMode | null;
 
   openSession(target: EditorSessionTarget): Promise<EditorSession>;
   dispose(): void;
@@ -197,7 +197,7 @@ throws `CatalogUnavailableError` and destroys the client.
 It passes the client as `server`, so only this connection has a
 `connectionStatus` and keeps [offline changes](../lease/AssetLeases.md#offline-changes).
 
-### connect({ identity, client, workspace?, catalogTimeoutMs?, openCatalog?, server?, logger? })
+### connect({ identity, client, offline?, catalogTimeoutMs?, openCatalog?, server?, logger? })
 
 Uses a supplied client. Without `catalogTimeoutMs`, the caller owns
 connection liveness. `server` (`null` by default) is the client itself when it

@@ -13,21 +13,21 @@ import {
   ProjectFile,
   type ProjectFileData
 } from "#src/node.ts";
-import { tempWorkspace } from "../helpers/tempWorkspace.ts";
+import { tempDirectory } from "../helpers/tempDirectory.ts";
 
 describe("ProjectFile", () => {
   test("reads a missing file as a project without kinds", async() => {
-    await using workspace = await tempWorkspace();
-    const file = await ProjectFile.read(workspace.root);
+    await using directory = await tempDirectory();
+    const file = await ProjectFile.read(directory.root);
 
-    assert.strictEqual(file.path, path.join(workspace.root, PROJECT_FILE_PATH));
+    assert.strictEqual(file.path, path.join(directory.root, PROJECT_FILE_PATH));
     assert.deepEqual(file.document, { version: 1 });
     assert.strictEqual(file.kinds.size, 0);
   });
 
   test("reads the kinds and keeps the host sections", async() => {
-    await using workspace = await tempWorkspace();
-    const file = path.join(workspace.root, PROJECT_FILE_PATH);
+    await using directory = await tempDirectory();
+    const file = path.join(directory.root, PROJECT_FILE_PATH);
     await fs.mkdir(path.dirname(file), { recursive: true });
     await fs.writeFile(file, JSON.stringify({
       version: 1,
@@ -40,7 +40,7 @@ describe("ProjectFile", () => {
       }
     }));
 
-    const projectFile = await ProjectFile.read(workspace.root);
+    const projectFile = await ProjectFile.read(directory.root);
 
     assert.deepEqual(
       [...projectFile.kinds],
@@ -53,12 +53,12 @@ describe("ProjectFile", () => {
   });
 
   test("never overwrites an existing file", async() => {
-    await using workspace = await tempWorkspace();
-    const file = path.join(workspace.root, PROJECT_FILE_PATH);
+    await using directory = await tempDirectory();
+    const file = path.join(directory.root, PROJECT_FILE_PATH);
     await fs.mkdir(path.dirname(file), { recursive: true });
     await fs.writeFile(file, "{\"version\":1}");
 
-    const projectFile = await ProjectFile.readOrCreate(workspace.root, {
+    const projectFile = await ProjectFile.readOrCreate(directory.root, {
       version: 1,
       kinds: {
         "kind-a": {}
@@ -70,7 +70,7 @@ describe("ProjectFile", () => {
   });
 
   test("opens the file on disk, creating it when missing", async() => {
-    await using workspace = await tempWorkspace();
+    await using directory = await tempDirectory();
     const data: ProjectFileData = {
       version: 1,
       kinds: {
@@ -80,7 +80,7 @@ describe("ProjectFile", () => {
       }
     };
 
-    const projectFile = await ProjectFile.open(workspace.root, data);
+    const projectFile = await ProjectFile.open(directory.root, data);
 
     assert.deepEqual(
       JSON.parse(await fs.readFile(projectFile.path, "utf8")),
@@ -90,8 +90,8 @@ describe("ProjectFile", () => {
   });
 
   test("is stale only when the file on disk holds another document", async() => {
-    await using workspace = await tempWorkspace();
-    const projectFile = await ProjectFile.readOrCreate(workspace.root, {
+    await using directory = await tempDirectory();
+    const projectFile = await ProjectFile.readOrCreate(directory.root, {
       version: 1
     });
 
@@ -111,13 +111,13 @@ describe("ProjectFile", () => {
   });
 
   test("opens in memory without reading or writing the root", async() => {
-    await using workspace = await tempWorkspace();
-    const file = path.join(workspace.root, PROJECT_FILE_PATH);
+    await using directory = await tempDirectory();
+    const file = path.join(directory.root, PROJECT_FILE_PATH);
     await fs.mkdir(path.dirname(file), { recursive: true });
     await fs.writeFile(file, "{\"version\":1}");
 
     const projectFile = await ProjectFile.open(
-      workspace.root,
+      directory.root,
       {
         version: 1,
         kinds: {
@@ -152,8 +152,8 @@ describe("ProjectFile", () => {
   });
 
   test("replace writes one section and keeps the file fresh", async() => {
-    await using workspace = await tempWorkspace();
-    const projectFile = await ProjectFile.readOrCreate(workspace.root, {
+    await using directory = await tempDirectory();
+    const projectFile = await ProjectFile.readOrCreate(directory.root, {
       version: 1,
       editors: ["editor-a"]
     });
@@ -175,8 +175,8 @@ describe("ProjectFile", () => {
   });
 
   test("replace refuses an invalid section and keeps the document", async() => {
-    await using workspace = await tempWorkspace();
-    const projectFile = await ProjectFile.readOrCreate(workspace.root, {
+    await using directory = await tempDirectory();
+    const projectFile = await ProjectFile.readOrCreate(directory.root, {
       version: 1
     });
 

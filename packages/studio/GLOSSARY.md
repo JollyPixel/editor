@@ -18,8 +18,6 @@ An asset root on disk plus its configuration, `.jollypixel/project.json`,
 which lists its editor packages and kind packages. The `JOLLY_PROJECT`
 environment variable picks it, defaulting to `packages/studio/project/`.
 Its packages resolve from its own `node_modules` before the studio's.
-The back-end calls the same assets a workspace; the studio never uses that
-word for anything else.
 
 ### Seed
 
@@ -170,8 +168,8 @@ You shows them.
 What one browser remembers and Settings never shows: open tabs, dock
 layouts, expanded folders, the kind filter.
 
-### Offline workspace
+### Offline mode
 
 The asset back-end the shell runs in the browser when the catalog is
 unreachable, under `?offline`, or in a static build. The shell and its editor
-frames share it as the `studio` workspace.
+frames share it as the `studio` offline data.

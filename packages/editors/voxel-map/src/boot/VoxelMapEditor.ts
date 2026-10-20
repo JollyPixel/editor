@@ -162,7 +162,7 @@ export class VoxelMapEditor {
           state: workspace.state,
           archives: workspace.archives,
           runtime: editorRuntime,
-          peers: session.workspace?.peers
+          peers: session.offline?.peers
         }
       ),
       disposePerformancePane,
