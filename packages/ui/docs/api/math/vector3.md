@@ -20,4 +20,4 @@ interface Vector3 {
 }
 ```
 
-See [axis markers](./README.md#axis-markers).
+See [axis markers](./axis-fields.md#axis-markers).

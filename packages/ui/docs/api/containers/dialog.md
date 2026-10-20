@@ -142,7 +142,7 @@ one with `variant` `accent` or `danger`.
 
 ## Keyboard scope
 
-An open dialog holds an [input layer](../interaction/README.md#input-layers).
+An open dialog holds an [input layer](../interaction/input-layers.md).
 `inputLayers.dismissAll()` cancels it like Escape, unless `dismissible` is
 `false`.
 

@@ -1,7 +1,7 @@
 # `Pane` facade
 
 `Pane` creates a `jolly-pane` and is the entry point of the facade. It is a
-[container](./README.md#containers): it has every `add*()` method.
+[container](./builders.md#containers): it has every `add*()` method.
 
 ```ts
 new Pane(options?: PaneOptions)

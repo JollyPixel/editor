@@ -36,7 +36,7 @@ interface Dock {
 - `drop` limits what a dragged pane can do in this dock. See
   [drop rules](./dock-layout.md#drop-rules).
 - `storageKey` and `storage` persist size and collapse, see
-  [Storage](../storage/README.md).
+  [Storage](../storage.md).
 
 ## Events
 

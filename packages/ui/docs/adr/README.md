@@ -1,8 +1,8 @@
 # Architecture Decision Records
 
 Decisions behind `@jolly-pixel/ui` that are hard to reverse, surprising without context, or the
-result of a real trade-off. API reference lives in [`docs/api`](../api/README.md), usage in
-[`docs/guides`](../guides/README.md).
+result of a real trade-off. The [package README](../../README.md) indexes the guides and the API
+reference.
 
 A choice confined to one component's API belongs in that component's API page, not here. Numbers
 are never reused: gaps are records that were merged into another one or moved to the API docs.

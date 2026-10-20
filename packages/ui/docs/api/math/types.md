@@ -24,3 +24,27 @@ type VectorValue<TAxis extends string> =
 type Vector2Pair = "xy" | "xz" | "yz";
 type AxisStyle = "corner" | "chip" | "letter";
 ```
+
+## Value helpers
+
+### `isVec2Like`, `isVec3Like`, `isVec4Like`, `isQuatLike`, `isTransformLike`
+
+Structural guards. Each checks only the axes it names, so a four-axis value
+passes the narrower guards too.
+
+### `parseVec2Pair(value: unknown): Vector2Pair | null`
+
+The plane of a value with exactly two of `x`, `y` and `z`, else `null`. A
+three-axis value has none.
+
+### `snapshotComponents(value: unknown): unknown`
+
+A plain record of the value's numeric axes, one level deep for a transform.
+`Mixed` and other non-numbers are skipped.
+
+### `copyComponents(target: unknown, source: unknown): void`
+
+Writes `source`'s numeric axes onto `target` in place, keeping its identity.
+Axes `target` does not carry are skipped.
+
+[`formatVector`](../monitors/format.md) joins a value's axes for display.

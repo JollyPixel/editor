@@ -51,7 +51,7 @@ The shown pane.
   the first enabled pane.
 - When the strip is too narrow, tabs with an icon show only the icon and get
   `data-icon-only`. Tabs without an icon truncate, with an
-  [overflow title](../interaction/README.md#overflow-titles).
+  [overflow title](../interaction/overflow-titles.md).
 - Tabs size to their label. Stretch them with
   `jolly-pane-group::part(tab) { flex: 1 1 0; }`.
 - When the shown pane has a [tone](../theme/tokens.md#toned-areas), the strip

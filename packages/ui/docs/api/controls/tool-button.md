@@ -46,7 +46,7 @@ to `flyout-side`.
   dragged past its edge.
 - Closes on pointer leave, focus leaving, Escape, or a click on an enabled
   `button`, `jolly-button` or `jolly-tool-button` inside it.
-- Holds no [input layer](../interaction/README.md#input-layers).
+- Holds no [input layer](../interaction/input-layers.md).
 
 ## Styling
 

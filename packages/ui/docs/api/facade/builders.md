@@ -1,26 +1,4 @@
-# Facade API
-
-The facade builds the package's custom elements from JavaScript and binds
-them to object properties.
-
-```ts
-import {
-  DockFacade,
-  Pane
-} from "@jolly-pixel/ui";
-```
-
-- [`Pane`](./pane.md): the entry point, and `FacadeHost` for an existing
-  element.
-- [`DockFacade`](./dock.md): wraps an authored `jolly-dock`.
-- [Folders](./folder.md): group builders.
-- [Bindings](./binding.md): edit object properties.
-- [Monitors](./monitor.md): display object properties.
-- [Buttons and separators](./actions.md).
-- [Notes, elements and theme preferences](./content.md).
-- [Presence](./presence.md): peer snapshots.
-
-A walkthrough is in [Using the facade](../../guides/using-the-facade.md).
+# Builders
 
 ## Builder surface
 

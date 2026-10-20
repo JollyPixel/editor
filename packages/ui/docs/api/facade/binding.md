@@ -106,7 +106,7 @@ folder.addBinding(camera, "cullMask", { view: "layers", count: 20 });
   eight-digit value.
 - `axisLabels`: per-axis accessible names, such as `{ x: "pitch" }`.
 - `axisStyle`: `"corner"`, `"chip"` or `"letter"`, see
-  [axis markers](../math/README.md#axis-markers).
+  [axis markers](../math/axis-fields.md#axis-markers).
 - `axes`: the plane of `jolly-vector2`. Defaults to the pair the value
   carries, so `{ x, z }` edits and writes back `x` and `z`.
 - `layout`, `columns`: `jolly-button-group` layout. Zero `columns` sizes the
