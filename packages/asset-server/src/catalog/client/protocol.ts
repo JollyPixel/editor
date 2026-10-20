@@ -10,8 +10,7 @@ import type {
   catalogCommandProtocol,
   catalogMessageProtocol
 } from "../protocol.schema.ts";
-import type { Immutable } from "../../utils/Immutable.ts";
-import type { Without } from "../../utils/Without.ts";
+import type { Immutable, Without } from "../../common/types.ts";
 
 // CONSTANTS
 export const CATALOG_ROOM = "asset-catalog";

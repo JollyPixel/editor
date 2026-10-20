@@ -1,0 +1,168 @@
+// Import Third-party Dependencies
+import {
+  SchemaParser,
+  type Infer
+} from "@jolly-pixel/network";
+import {
+  writeJsonFile,
+  type AssetSource
+} from "@jolly-pixel/asset-source";
+
+// Import Internal Dependencies
+import {
+  identityEntrySchema,
+  identitySidecarSchema
+} from "./IdentitySidecar.schema.ts";
+import {
+  silentLogger,
+  type Logger
+} from "../common/logger.ts";
+import { IDENTITY_SIDECAR_PATH } from "./stateDirectory.ts";
+import {
+  keepValid,
+  readStateFile,
+  type StateFileParse
+} from "./stateFile.ts";
+
+// CONSTANTS
+const kSidecarVersion = 1;
+const kPathCollator = new Intl.Collator();
+const kEntryParser = new SchemaParser(identityEntrySchema);
+const kDocumentParser = new SchemaParser(identitySidecarSchema);
+
+export type IdentityEntry = Readonly<Infer<typeof identityEntrySchema>>;
+
+export interface IdentitySidecarData {
+  readonly version: 1;
+  readonly assets: readonly IdentityEntry[];
+}
+
+export class IdentitySidecar {
+  #source: AssetSource;
+  #byPath = new Map<string, IdentityEntry>();
+  #byId = new Map<string, IdentityEntry>();
+
+  constructor(
+    source: AssetSource,
+    entries: Iterable<IdentityEntry> = []
+  ) {
+    this.#source = source;
+    for (const entry of entries) {
+      this.set(entry);
+    }
+  }
+
+  get size(): number {
+    return this.#byPath.size;
+  }
+
+  set(
+    entry: IdentityEntry
+  ): this {
+    const previousPath = this.#byId.get(entry.id);
+    if (previousPath !== undefined) {
+      this.#byPath.delete(previousPath.path);
+    }
+
+    const previousId = this.#byPath.get(entry.path);
+    if (previousId !== undefined) {
+      this.#byId.delete(previousId.id);
+    }
+
+    const stored: IdentityEntry = {
+      id: entry.id,
+      path: entry.path,
+      kind: entry.kind
+    };
+    this.#byPath.set(stored.path, stored);
+    this.#byId.set(stored.id, stored);
+
+    return this;
+  }
+
+  removeById(
+    id: string
+  ): boolean {
+    const entry = this.#byId.get(id);
+    if (entry === undefined) {
+      return false;
+    }
+
+    this.#byId.delete(id);
+    this.#byPath.delete(entry.path);
+
+    return true;
+  }
+
+  byPath(
+    path: string
+  ): IdentityEntry | undefined {
+    return this.#byPath.get(path);
+  }
+
+  byId(
+    id: string
+  ): IdentityEntry | undefined {
+    return this.#byId.get(id);
+  }
+
+  [Symbol.iterator](): IterableIterator<IdentityEntry> {
+    return this.#byId.values();
+  }
+
+  toJSON(): IdentitySidecarData {
+    return {
+      version: kSidecarVersion,
+      assets: [...this.#byId.values()].sort(
+        (left, right) => kPathCollator.compare(left.path, right.path)
+      )
+    };
+  }
+
+  save(): Promise<void> {
+    return writeJsonFile(
+      this.#source,
+      IDENTITY_SIDECAR_PATH,
+      this.toJSON()
+    );
+  }
+
+  static async load(
+    source: AssetSource,
+    logger: Logger = silentLogger()
+  ): Promise<IdentitySidecar> {
+    const entries = await readStateFile(
+      source,
+      IDENTITY_SIDECAR_PATH,
+      IdentitySidecar.parse,
+      logger
+    );
+
+    return new IdentitySidecar(
+      source,
+      entries
+    );
+  }
+
+  static parse(
+    input: unknown
+  ): StateFileParse<IdentityEntry[]> {
+    const document = kDocumentParser.parse(input);
+    if (!document.ok) {
+      return {
+        data: [],
+        dropped: 0
+      };
+    }
+
+    const { entries, dropped } = keepValid(
+      document.val.assets.entries(),
+      kEntryParser
+    );
+
+    return {
+      data: entries.map(([, entry]) => entry),
+      dropped
+    };
+  }
+}

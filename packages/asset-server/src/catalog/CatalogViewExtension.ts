@@ -26,7 +26,7 @@ import type { CatalogProjection } from "./CatalogProjection.ts";
 import {
   ASSET_CREATED,
   ASSET_DELETED
-} from "../events/AssetEvents.ts";
+} from "../model/events/AssetEvents.ts";
 
 export type CatalogViewScope = (
   identity: PeerIdentity

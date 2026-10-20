@@ -66,6 +66,23 @@ The three views answer different questions:
 | Physical projection | What path and bytes should storage contain? | Rebuilt when the backend starts, then kept in sync with the asset source. |
 | Live state | What is the editable state of this open asset? | Replayed when its room opens and released after eviction. |
 
+## Source layout
+
+Each folder under `src/` imports only from the folders listed above it:
+
+- `common/`: helpers with no asset vocabulary (`TaskChain`, `contentHash`,
+  `Logger`).
+- `model/`: asset kinds, their handlers, and the asset event types.
+- `storage/`: the physical projection. `AssetWriter`, `AssetProjector`,
+  `Reconciler`, and the files in the state directory.
+- `catalog/`: `CatalogProjection`, the catalog room, tags, archives, and the
+  browser client served as `./client`.
+- `live/`: asset rooms, `AssetStateStore`, and `SnapshotScheduler`.
+- `server/`: the `./node` entry. `AssetServer`, the HTTP catalog handler,
+  Vite plugins, and the project file.
+
+`createAssetBackend.ts` at the root wires these together.
+
 ## Live state lifetime
 
 ```mermaid

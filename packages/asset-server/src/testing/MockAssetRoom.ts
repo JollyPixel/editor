@@ -9,7 +9,7 @@ import type {
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import type { AssetRoomNotice } from "../kinds/AssetLiveProtocol.ts";
+import type { AssetRoomNotice } from "../model/kinds/AssetLiveProtocol.ts";
 
 export type AssetServerMessage<TCommand, TSnapshot> = NetworkServerMessage<
   TCommand,

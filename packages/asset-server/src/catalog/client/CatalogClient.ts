@@ -35,20 +35,20 @@ import {
   type CatalogMessage,
   type CatalogRequest
 } from "./protocol.ts";
-import type { PathConflictPolicy } from "../../writer/AssetWriter.ts";
+import type { PathConflictPolicy } from "../../model/PathConflictPolicy.ts";
 import type {
   ImportConflictPolicy,
   ImportPlan,
   ImportReport
-} from "../../archive/import/AssetImport.ts";
+} from "../archive/import/AssetImport.ts";
 import type {
   AssetTag,
   RestoreReport
-} from "../../tags/AssetTags.schema.ts";
+} from "../tags/AssetTags.schema.ts";
 import {
   decodeContent,
   encodeContent
-} from "../../events/inlineContent.ts";
+} from "../../model/events/inlineContent.ts";
 import { CatalogRejectedError } from "./errors/CatalogRejectedError.ts";
 import { CatalogUnavailableError } from "./errors/CatalogUnavailableError.ts";
 import {

@@ -5,24 +5,24 @@ export * from "./errors/CatalogRejectedError.ts";
 export * from "./errors/CatalogUnavailableError.ts";
 export type {
   AssetInlineContent
-} from "../../events/AssetEvents.schema.ts";
+} from "../../model/events/AssetEvents.schema.ts";
 export type {
   PathConflictPolicy
-} from "../../writer/AssetWriter.ts";
+} from "../../model/PathConflictPolicy.ts";
 export type {
   AssetArchiveEntry
-} from "../../archive/AssetArchive.ts";
-export * from "../../archive/ArchiveLimits.ts";
+} from "../archive/AssetArchive.ts";
+export * from "../archive/ArchiveLimits.ts";
 export type {
   ImportConflictPolicy,
   ImportFailure,
   ImportPlan,
   ImportReport,
   SharedDependents
-} from "../../archive/import/AssetImport.ts";
+} from "../archive/import/AssetImport.ts";
 export type {
   AssetTag,
   RestoreReport
-} from "../../tags/AssetTags.schema.ts";
-export * from "../../tags/TagName.ts";
-export * from "../../tags/errors/InvalidTagNameError.ts";
+} from "../tags/AssetTags.schema.ts";
+export * from "../tags/TagName.ts";
+export * from "../tags/errors/InvalidTagNameError.ts";

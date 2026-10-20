@@ -16,8 +16,8 @@ import {
 import type {
   AssetProjectionChange,
   AssetProjector
-} from "../projection/AssetProjector.ts";
-import type { AssetProjection } from "../projection/applyProjection.ts";
+} from "../storage/projection/AssetProjector.ts";
+import type { AssetProjection } from "../storage/projection/applyProjection.ts";
 
 export type CatalogProjectionEventMap = {
   changed: (

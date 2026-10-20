@@ -53,22 +53,22 @@ import { AssetHasDependentsError } from "./errors/AssetHasDependentsError.ts";
 import {
   toActor,
   type AssetInlineContent
-} from "../events/AssetEvents.ts";
+} from "../model/events/AssetEvents.ts";
 import {
   decodeContent,
   encodeContent
-} from "../events/inlineContent.ts";
-import type { AssetArchive } from "../archive/AssetArchive.ts";
-import type { ArchiveBackend } from "../archive/ArchiveBackend.ts";
-import { exportAssetArchive } from "../archive/exportAssetArchive.ts";
-import { readAssetArchive } from "../archive/readAssetArchive.ts";
-import type { ArchiveLimits } from "../archive/ArchiveLimits.ts";
+} from "../model/events/inlineContent.ts";
+import type { AssetArchive } from "./archive/AssetArchive.ts";
+import type { ArchiveBackend } from "./archive/ArchiveBackend.ts";
+import { exportAssetArchive } from "./archive/exportAssetArchive.ts";
+import { readAssetArchive } from "./archive/readAssetArchive.ts";
+import type { ArchiveLimits } from "./archive/ArchiveLimits.ts";
 import {
   importAssetArchive,
   planAssetImport
-} from "../archive/import/importAssetArchive.ts";
-import type { AssetTags } from "../tags/AssetTags.ts";
-import { asError } from "../utils/asError.ts";
+} from "./archive/import/importAssetArchive.ts";
+import type { AssetTags } from "./tags/AssetTags.ts";
+import { asError } from "../common/asError.ts";
 
 // CONSTANTS
 export const DEFAULT_CATALOG_MAX_CONTENT_BYTES = 16 * 1024 * 1024;

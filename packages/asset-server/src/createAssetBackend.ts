@@ -5,39 +5,39 @@ import type { AssetSource } from "@jolly-pixel/asset-source";
 import type { Result } from "@openally/result";
 
 // Import Internal Dependencies
-import { ensureStateGitignore } from "./stateDirectory.ts";
+import { ensureStateGitignore } from "./storage/stateDirectory.ts";
 import {
   ASSET_CHECKPOINT_EVENT_TYPES,
   type AssetEventDataMap
-} from "./events/AssetEvents.ts";
-import { IdentitySidecar } from "./identity/IdentitySidecar.ts";
-import { AssetKindRegistry } from "./kinds/AssetKindRegistry.ts";
+} from "./model/events/AssetEvents.ts";
+import { IdentitySidecar } from "./storage/IdentitySidecar.ts";
+import { AssetKindRegistry } from "./model/kinds/AssetKindRegistry.ts";
 import type {
   AnyAssetKindHandler,
   SnapshotPolicy
-} from "./kinds/AssetKindHandler.ts";
-import { ProjectionState } from "./projection/ProjectionState.ts";
-import { AssetProjector } from "./projection/AssetProjector.ts";
-import { AssetStateStore } from "./state/AssetStateStore.ts";
-import { AssetWriter } from "./writer/AssetWriter.ts";
-import { SnapshotScheduler } from "./state/SnapshotScheduler.ts";
+} from "./model/kinds/AssetKindHandler.ts";
+import { ProjectionState } from "./storage/projection/ProjectionState.ts";
+import { AssetProjector } from "./storage/projection/AssetProjector.ts";
+import { AssetStateStore } from "./live/AssetStateStore.ts";
+import { AssetWriter } from "./storage/writer/AssetWriter.ts";
+import { SnapshotScheduler } from "./live/SnapshotScheduler.ts";
 import {
   Reconciler,
   type ReconcileReport
-} from "./reconcile/Reconciler.ts";
-import { SourceWatcher } from "./reconcile/SourceWatcher.ts";
+} from "./storage/reconcile/Reconciler.ts";
+import { SourceWatcher } from "./storage/reconcile/SourceWatcher.ts";
 import { CatalogProjection } from "./catalog/CatalogProjection.ts";
 import { CatalogFolders } from "./catalog/CatalogFolders.ts";
 import { CatalogExtension } from "./catalog/CatalogExtension.ts";
-import type { ArchiveLimits } from "./archive/ArchiveLimits.ts";
-import { backfillDependencies } from "./reconcile/backfillDependencies.ts";
-import { registerAssetRooms } from "./rooms/registerAssetRooms.ts";
-import { AssetTags } from "./tags/AssetTags.ts";
-import { ContentObjects } from "./objects/ContentObjects.ts";
+import type { ArchiveLimits } from "./catalog/archive/ArchiveLimits.ts";
+import { backfillDependencies } from "./catalog/backfillDependencies.ts";
+import { registerAssetRooms } from "./live/registerAssetRooms.ts";
+import { AssetTags } from "./catalog/tags/AssetTags.ts";
+import { ContentObjects } from "./storage/ContentObjects.ts";
 import {
   silentLogger,
   type Logger
-} from "./logger.ts";
+} from "./common/logger.ts";
 
 export interface AssetBackendOptions {
   source: AssetSource;

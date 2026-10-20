@@ -17,9 +17,9 @@ import {
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import { EVENTS_DB_PATH } from "../stateDirectory.ts";
-import type { AnyAssetKindHandler } from "../kinds/AssetKindHandler.ts";
-import type { AssetEventDataMap } from "../events/AssetEvents.ts";
+import { EVENTS_DB_PATH } from "../storage/stateDirectory.ts";
+import type { AnyAssetKindHandler } from "../model/kinds/AssetKindHandler.ts";
+import type { AssetEventDataMap } from "../model/events/AssetEvents.ts";
 import {
   createAssetBackend,
   type AssetBackend,
@@ -28,11 +28,11 @@ import {
 import {
   silentLogger,
   type Logger
-} from "../logger.ts";
+} from "../common/logger.ts";
 import {
   seedAssetSource,
   type AssetSeedMap
-} from "./seedAssetSource.ts";
+} from "../storage/seedAssetSource.ts";
 
 export interface AssetServerOptions {
   /**
