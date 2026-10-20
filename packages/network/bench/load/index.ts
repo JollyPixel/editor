@@ -1,15 +1,7 @@
-// Import Node.js Dependencies
-import { parseArgs } from "node:util";
-
 // Import Third-party Dependencies
 import {
-  LOAD_ARGS,
-  choiceArg,
-  loadUsage,
-  positiveArg,
-  printLoadResult,
-  readLoadArgs,
-  runLoad
+  Flag,
+  LoadHarness
 } from "@jolly-pixel/bench";
 
 // Import Internal Dependencies
@@ -19,54 +11,46 @@ import {
   type Workload
 } from "./protocol.ts";
 
-// CONSTANTS
-const kUsage = loadUsage(
-  `Starts a network server in a child process and drives it with WebSocket
+const harness = new LoadHarness({
+  name: "network / load",
+  summary: `Starts a network server in a child process and drives it with WebSocket
 clients spread over worker threads.`,
-  `  --scenario <name>        presence, command or churn (default presence)
-  --rooms <n>              rooms the clients spread over (default 5)
-  --variants <n>           command variants in the protocol (default 20)
-  --snapshot-bytes <n>     snapshot size sent on join (default 65536)
-  --rights                 gate every event through a rights table`
-);
+  flags: {
+    scenario: Flag.choice(SCENARIOS, "presence", "scenario"),
+    rooms: Flag.positive(5, "rooms the clients spread over"),
+    variants: Flag.positive(20, "command variants in the protocol"),
+    "snapshot-bytes": Flag.positive(65_536, "snapshot size sent on join"),
+    rights: Flag.toggle("gate every event through a rights table")
+  },
+  server: new URL("./server.ts", import.meta.url),
+  driver: new URL("./driver.ts", import.meta.url),
+  plan: (values) => {
+    const serverConfig: LoadServerConfig = {
+      rooms: values.rooms,
+      variants: values.variants,
+      snapshotBytes: values["snapshot-bytes"],
+      compression: values.compression,
+      rights: values.rights
+    };
+    const workload: Workload = {
+      scenario: values.scenario,
+      rooms: values.rooms,
+      variants: values.variants
+    };
 
-const { values } = parseArgs({
-  options: {
-    ...LOAD_ARGS,
-    scenario: { type: "string", default: "presence" },
-    rooms: { type: "string", default: "5" },
-    variants: { type: "string", default: "20" },
-    "snapshot-bytes": { type: "string", default: "65536" },
-    rights: { type: "boolean", default: false }
+    return {
+      serverConfig,
+      workload,
+      columns: {
+        scenario: values.scenario,
+        clients: values.clients,
+        rooms: values.rooms,
+        "rate (Hz)": values.rate,
+        compression: values.compression,
+        rights: values.rights
+      }
+    };
   }
 });
-const args = readLoadArgs(values, kUsage);
-const serverConfig: LoadServerConfig = {
-  rooms: positiveArg("rooms", values.rooms),
-  variants: positiveArg("variants", values.variants),
-  snapshotBytes: positiveArg("snapshot-bytes", values["snapshot-bytes"]),
-  compression: args.compression,
-  rights: values.rights
-};
-const workload: Workload = {
-  scenario: choiceArg("scenario", values.scenario, SCENARIOS),
-  rooms: serverConfig.rooms,
-  variants: serverConfig.variants
-};
 
-const run = await runLoad({
-  ...args,
-  server: new URL("./server.ts", import.meta.url),
-  serverConfig,
-  driver: new URL("./driver.ts", import.meta.url),
-  workload
-});
-
-printLoadResult({
-  scenario: workload.scenario,
-  clients: args.clients,
-  rooms: serverConfig.rooms,
-  "rate (Hz)": args.rate,
-  compression: serverConfig.compression,
-  rights: serverConfig.rights
-}, run, args.json);
+await harness.run();

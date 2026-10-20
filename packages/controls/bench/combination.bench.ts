@@ -68,7 +68,7 @@ const suite = defineSuite("controls / combinations", (bench) => {
     .add("AllInputs#evaluate — key + mouse + gamepad", batched(() => {
       mixed.evaluate(input);
     }));
-}, { opsPerIteration: "batch" });
+});
 
 export default suite;
 

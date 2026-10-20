@@ -79,7 +79,7 @@ const suite = defineSuite("controls / axis", (bench) => {
     .add("AxisMap#reset", batched(() => {
       axes.reset();
     }));
-}, { opsPerIteration: "batch" });
+});
 
 export default suite;
 

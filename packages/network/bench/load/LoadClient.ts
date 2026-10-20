@@ -1,11 +1,8 @@
-// Import Node.js Dependencies
-import type { RecordableHistogram } from "node:perf_hooks";
-
 // Import Third-party Dependencies
 import { WebSocket } from "ws";
-import {
-  recordLatency,
-  type LoadMeter
+import type {
+  LatencyOrigin,
+  LoadMeter
 } from "@jolly-pixel/bench";
 
 // Import Internal Dependencies
@@ -102,7 +99,7 @@ export class LoadClient {
       this.#self.set(envelope.room, envelope.self ?? "");
     }
     else if (envelope.kind === "peer-presence") {
-      this.#record(this.#meter.peer, now, envelope.patch?.cursor?.t);
+      this.#record("peer", now, envelope.patch?.cursor?.t);
     }
     else if (envelope.kind === "message") {
       this.#receiveMessage(envelope, now);
@@ -125,20 +122,16 @@ export class LoadClient {
     }
 
     const own = payload.data?.clientId === this.#self.get(envelope.room);
-    this.#record(
-      own ? this.#meter.own : this.#meter.peer,
-      now,
-      payload.data?.sentAt
-    );
+    this.#record(own ? "own" : "peer", now, payload.data?.sentAt);
   }
 
   #record(
-    histogram: RecordableHistogram,
+    origin: LatencyOrigin,
     now: number,
     sentAt: number | undefined
   ): void {
     if (typeof sentAt === "number") {
-      recordLatency(histogram, sentAt, now);
+      this.#meter.record(origin, sentAt, now);
     }
   }
 }

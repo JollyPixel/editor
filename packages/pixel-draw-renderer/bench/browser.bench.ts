@@ -1,5 +1,9 @@
 // Import Third-party Dependencies
-import { report } from "@jolly-pixel/bench";
+import {
+  BenchmarkConfig,
+  createReport,
+  createReporter
+} from "@jolly-pixel/bench";
 import {
   chromium,
   type Browser
@@ -39,11 +43,12 @@ try {
     () => window.runPixelDrawBenchmarks()
   );
 
-  report({
+  const reporter = createReporter(BenchmarkConfig.fromEnvironment().format);
+  reporter.print(createReport({
     suite: "pixel-draw / browser canvas and rendering",
     runtime: { userAgent: browserReport.runtime.userAgent },
     results: browserReport.results
-  });
+  }));
 }
 finally {
   await browser?.close();

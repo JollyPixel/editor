@@ -52,7 +52,7 @@ const suite = defineSuite("controls / events", (bench) => {
     }));
 
   return reportLayoutReads;
-}, { opsPerIteration: "batch" });
+});
 
 export default suite;
 

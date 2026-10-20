@@ -5,10 +5,8 @@ import { workerData } from "node:worker_threads";
 // Import Third-party Dependencies
 import {
   LoadMeter,
-  recordLatency,
   runLoadDriver,
-  type LoadDriverInit,
-  type PacedEntry
+  type LoadDriverInit
 } from "@jolly-pixel/bench";
 import { CATALOG_URL_PATH } from "@jolly-pixel/asset";
 import { DEFAULT_WEBSOCKET_PATH } from "@jolly-pixel/network";
@@ -27,7 +25,7 @@ import {
   CATALOG_ROOM
 } from "../../src/catalog/client/protocol.ts";
 
-interface DriverClient extends PacedEntry {
+interface DriverClient {
   client: LoadClient;
   index: number;
   room: string;
@@ -40,39 +38,37 @@ const { workload } = init;
 const url = `ws://127.0.0.1:${init.port}${DEFAULT_WEBSOCKET_PATH}`;
 const catalogUrl = `http://127.0.0.1:${init.port}${CATALOG_URL_PATH}`;
 const meter = new LoadMeter();
-const clients: DriverClient[] = await Promise.all(
-  init.clientIndices.map(async(index) => {
-    return {
-      client: await LoadClient.connect(url, meter),
-      index,
-      room: workload.scenario === "catalog" || workload.scenario === "join" ?
-        CATALOG_ROOM :
-        gridRoom(gridAssetId(index % workload.grids)),
-      nextAt: 0,
-      step: 0,
-      busy: false,
-      etag: null
-    };
-  })
-);
-if (workload.scenario === "edit" || workload.scenario === "catalog") {
-  await Promise.all(clients.map(({ client, room }) => client.join(room)));
-}
 
-runLoadDriver(init, {
+await runLoadDriver(init, {
   meter,
-  entries: clients,
+  connect,
   act,
-  close: () => {
-    for (const { client } of clients) {
-      client.close();
-    }
-  }
+  close: ({ client }) => client.close()
 });
+
+async function connect(
+  index: number
+): Promise<DriverClient> {
+  const client = await LoadClient.connect(url, meter);
+  const room = workload.scenario === "catalog" || workload.scenario === "join" ?
+    CATALOG_ROOM :
+    gridRoom(gridAssetId(index % workload.grids));
+  if (workload.scenario === "edit" || workload.scenario === "catalog") {
+    await client.join(room);
+  }
+
+  return {
+    client,
+    index,
+    room,
+    step: 0,
+    etag: null
+  };
+}
 
 function act(
   entry: DriverClient
-): void {
+): Promise<void> | void {
   const step = ++entry.step;
   if (workload.scenario === "edit") {
     entry.client.send({
@@ -87,13 +83,7 @@ function act(
     return;
   }
 
-  entry.busy = true;
-  const startedAt = performance.now();
-  void exchange(entry, step).then(() => {
-    recordLatency(meter.own, startedAt, performance.now());
-  }).finally(() => {
-    entry.busy = false;
-  });
+  return exchange(entry, step);
 }
 
 async function exchange(

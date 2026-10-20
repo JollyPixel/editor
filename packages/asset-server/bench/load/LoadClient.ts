@@ -2,10 +2,7 @@
 import { performance } from "node:perf_hooks";
 
 // Import Third-party Dependencies
-import {
-  recordLatency,
-  type LoadMeter
-} from "@jolly-pixel/bench";
+import type { LoadMeter } from "@jolly-pixel/bench";
 import { WEBSOCKET_PROTOCOL } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
@@ -172,10 +169,6 @@ export class LoadClient {
 
     const own = envelope.payload?.data?.clientId ===
       this.#self.get(envelope.room);
-    recordLatency(
-      own ? this.#meter.own : this.#meter.peer,
-      sentAt,
-      now
-    );
+    this.#meter.record(own ? "own" : "peer", sentAt, now);
   }
 }

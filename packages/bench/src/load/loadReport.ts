@@ -2,59 +2,16 @@
 import type { RecordableHistogram } from "node:perf_hooks";
 
 // Import Internal Dependencies
-import { runtimeMetadata } from "../report/runtime.ts";
 import type { LoadRun } from "./runLoad.ts";
 
 // CONSTANTS
-const kSaturatedElu = 0.8;
 const kBytesPerMb = 1024 * 1024;
 
-export type LoadResult = Record<string, string | number | boolean | null>;
+export type LoadColumns = Record<string, string | number | boolean | null>;
 
-export function recordLatency(
-  histogram: RecordableHistogram,
-  startedAtMs: number,
-  endedAtMs: number
-): void {
-  histogram.record(
-    Math.max(1, Math.round((endedAtMs - startedAtMs) * 1_000))
-  );
-}
-
-export function printLoadResult(
-  parameters: LoadResult,
-  run: LoadRun,
-  json: boolean
-): void {
-  const result = {
-    ...parameters,
-    ...measuredColumns(run)
-  };
-  if (json) {
-    const { node, v8, platform, cpu } = runtimeMetadata();
-    console.log(JSON.stringify({
-      runtime: {
-        node,
-        v8,
-        platform,
-        cpu
-      },
-      result
-    }));
-  }
-  else {
-    console.table(result);
-  }
-  if (run.driverElu > kSaturatedElu) {
-    console.warn(
-      "A driver worker is saturated: latencies include its own queueing."
-    );
-  }
-}
-
-function measuredColumns(
+export function measuredColumns(
   run: LoadRun
-): LoadResult {
+): LoadColumns {
   const { elapsedMs, sample, sent } = run;
   const seconds = elapsedMs / 1_000;
 

@@ -1,46 +1,17 @@
 // Import Node.js Dependencies
 import assert from "node:assert/strict";
 import {
-  after,
-  beforeEach,
   describe,
   it
 } from "node:test";
 
 // Import Internal Dependencies
-import {
-  config,
-  configure,
-  resetConfig
-} from "../src/config.ts";
+import { BenchmarkConfig } from "../src/config.ts";
 import { BenchmarkError } from "../src/errors/index.ts";
 
-// CONSTANTS
-const kEnvKeys = [
-  "BENCH_TIME_MS",
-  "BENCH_ITERATIONS",
-  "BENCH_WARMUP_TIME_MS",
-  "BENCH_WARMUP_ITERATIONS",
-  "BENCH_BATCH",
-  "BENCH_FORMAT",
-  "BENCH_TASK",
-  "BENCH_ALLOCATIONS"
-];
-
-describe("config", () => {
-  beforeEach(() => {
-    for (const key of kEnvKeys) {
-      delete process.env[key];
-    }
-    resetConfig();
-  });
-
-  after(() => {
-    resetConfig();
-  });
-
+describe("BenchmarkConfig.fromEnvironment", () => {
   it("should fall back to the built-in defaults", () => {
-    assert.deepEqual(config(), {
+    assert.deepEqual({ ...BenchmarkConfig.fromEnvironment({}) }, {
       time: 500,
       iterations: 12,
       warmupTime: 100,
@@ -53,17 +24,18 @@ describe("config", () => {
   });
 
   it("should read every knob from the environment", () => {
-    process.env.BENCH_TIME_MS = "1200";
-    process.env.BENCH_ITERATIONS = "40";
-    process.env.BENCH_WARMUP_TIME_MS = "50";
-    process.env.BENCH_WARMUP_ITERATIONS = "9";
-    process.env.BENCH_BATCH = "25";
-    process.env.BENCH_FORMAT = "json";
-    process.env.BENCH_TASK = "isDown";
-    process.env.BENCH_ALLOCATIONS = "1";
-    resetConfig();
+    const config = BenchmarkConfig.fromEnvironment({
+      BENCH_TIME_MS: "1200",
+      BENCH_ITERATIONS: "40",
+      BENCH_WARMUP_TIME_MS: "50",
+      BENCH_WARMUP_ITERATIONS: "9",
+      BENCH_BATCH: "25",
+      BENCH_FORMAT: "json",
+      BENCH_TASK: "isDown",
+      BENCH_ALLOCATIONS: "1"
+    });
 
-    assert.deepEqual(config(), {
+    assert.deepEqual({ ...config }, {
       time: 1200,
       iterations: 40,
       warmupTime: 50,
@@ -77,69 +49,46 @@ describe("config", () => {
 
   it("should reject an environment value that is not a positive number", () => {
     for (const raw of ["-1", "nope", "0", "12abc"]) {
-      process.env.BENCH_ITERATIONS = raw;
+      assert.throws(
+        () => BenchmarkConfig.fromEnvironment({ BENCH_ITERATIONS: raw }),
+        (error: Error) => {
+          assert.ok(error instanceof BenchmarkError);
+          assert.match(error.message, /BENCH_ITERATIONS expects a positive/);
 
-      assert.throws(resetConfig, (error: Error) => {
-        assert.ok(error instanceof BenchmarkError);
-        assert.match(error.message, /BENCH_ITERATIONS expects a positive/);
-
-        return true;
-      });
+          return true;
+        }
+      );
     }
   });
 
-  it("should keep the default when a variable is unset or empty", () => {
-    process.env.BENCH_TIME_MS = "";
-    resetConfig();
-
-    assert.equal(config().time, 500);
+  it("should keep the default when a variable is empty", () => {
+    assert.equal(BenchmarkConfig.fromEnvironment({ BENCH_TIME_MS: "" }).time, 500);
   });
 
   it("should reject a format it cannot print", () => {
-    process.env.BENCH_FORMAT = "csv";
+    assert.throws(
+      () => BenchmarkConfig.fromEnvironment({ BENCH_FORMAT: "csv" }),
+      (error: Error) => {
+        assert.ok(error instanceof BenchmarkError);
+        assert.match(error.message, /BENCH_FORMAT expects one of table, json/);
 
-    assert.throws(resetConfig, (error: Error) => {
-      assert.ok(error instanceof BenchmarkError);
-      assert.match(error.message, /BENCH_FORMAT expects one of table, json/);
-
-      return true;
-    });
+        return true;
+      }
+    );
   });
 
   it("should reject an allocations switch it cannot read", () => {
-    process.env.BENCH_ALLOCATIONS = "yes";
+    assert.throws(
+      () => BenchmarkConfig.fromEnvironment({ BENCH_ALLOCATIONS: "yes" }),
+      (error: Error) => {
+        assert.ok(error instanceof BenchmarkError);
+        assert.match(
+          error.message,
+          /BENCH_ALLOCATIONS expects 1, 0, true or false/
+        );
 
-    assert.throws(resetConfig, (error: Error) => {
-      assert.ok(error instanceof BenchmarkError);
-      assert.match(error.message, /BENCH_ALLOCATIONS expects 1, 0, true or false/);
-
-      return true;
-    });
-  });
-
-  it("should override only the keys it is given", () => {
-    configure({ time: 10 });
-
-    assert.equal(config().time, 10);
-    assert.equal(config().iterations, 12);
-  });
-
-  it("should ignore undefined overrides so optional flags can pass through", () => {
-    configure({ time: 10 });
-    configure({
-      time: undefined,
-      batch: 4
-    });
-
-    assert.equal(config().time, 10);
-    assert.equal(config().batch, 4);
-  });
-
-  it("should clear the task filter when given null", () => {
-    configure({ task: "query" });
-    assert.equal(config().task, "query");
-
-    configure({ task: null });
-    assert.equal(config().task, null);
+        return true;
+      }
+    );
   });
 });

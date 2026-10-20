@@ -5,10 +5,8 @@ import { workerData } from "node:worker_threads";
 // Import Third-party Dependencies
 import {
   LoadMeter,
-  recordLatency,
   runLoadDriver,
-  type LoadDriverInit,
-  type PacedEntry
+  type LoadDriverInit
 } from "@jolly-pixel/bench";
 
 // Import Internal Dependencies
@@ -20,7 +18,7 @@ import {
 import { strokeCommand } from "../_fixtures.ts";
 import { DEFAULT_WEBSOCKET_PATH } from "../../src/index.ts";
 
-interface DriverClient extends PacedEntry {
+interface DriverClient {
   client: LoadClient;
   room: string;
   step: number;
@@ -30,31 +28,29 @@ const init: LoadDriverInit<Workload> = workerData;
 const { workload } = init;
 const url = `ws://127.0.0.1:${init.port}${DEFAULT_WEBSOCKET_PATH}`;
 const meter = new LoadMeter();
-const clients: DriverClient[] = await Promise.all(
-  init.clientIndices.map(async(index) => {
-    return {
-      client: await LoadClient.connect(url, meter),
-      room: roomName(index % workload.rooms),
-      nextAt: 0,
-      step: 0,
-      busy: false
-    };
-  })
-);
-if (workload.scenario !== "churn") {
-  await Promise.all(clients.map(({ client, room }) => client.join(room)));
-}
 
-runLoadDriver(init, {
+await runLoadDriver(init, {
   meter,
-  entries: clients,
+  connect,
   act,
-  close: () => {
-    for (const { client } of clients) {
-      client.close();
-    }
-  }
+  close: ({ client }) => client.close()
 });
+
+async function connect(
+  index: number
+): Promise<DriverClient> {
+  const client = await LoadClient.connect(url, meter);
+  const room = roomName(index % workload.rooms);
+  if (workload.scenario !== "churn") {
+    await client.join(room);
+  }
+
+  return {
+    client,
+    room,
+    step: 0
+  };
+}
 
 function presenceEnvelope(
   room: string,
@@ -91,29 +87,26 @@ function commandEnvelope(
 async function churn(
   entry: DriverClient
 ): Promise<void> {
-  const sentAt = performance.now();
   await entry.client.join(entry.room);
-  recordLatency(meter.own, sentAt, performance.now());
   entry.client.leave(entry.room);
 }
 
 function act(
   entry: DriverClient
-): void {
+): Promise<void> | void {
   const step = ++entry.step;
   switch (workload.scenario) {
     case "presence":
       entry.client.send(presenceEnvelope(entry.room, step));
-      break;
+
+      return;
     case "command":
       entry.client.send(
         commandEnvelope(entry.room, step, workload.variants)
       );
-      break;
+
+      return;
     default:
-      entry.busy = true;
-      void churn(entry).finally(() => {
-        entry.busy = false;
-      });
+      return churn(entry);
   }
 }

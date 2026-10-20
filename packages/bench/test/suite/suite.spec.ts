@@ -1,42 +1,21 @@
 // Import Node.js Dependencies
 import assert from "node:assert/strict";
 import {
-  afterEach,
-  beforeEach,
   describe,
-  it,
-  mock
+  it
 } from "node:test";
 
 // Import Internal Dependencies
-import { BenchmarkError } from "../src/errors/index.ts";
-import { configure, resetConfig } from "../src/config.ts";
-import { resetTableReporter } from "../src/report/index.ts";
+import { BenchmarkError } from "../../src/errors/index.ts";
+import type { Reporter } from "../../src/report/index.ts";
+import { batched } from "../../src/suite/batched.ts";
 import {
-  batched,
   defineSuite,
   runSuites
-} from "../src/suite.ts";
+} from "../../src/suite/suite.ts";
+import { fastConfig } from "../helpers/config.ts";
 
 describe("defineSuite", () => {
-  beforeEach(() => {
-    resetConfig();
-    configure({
-      time: 1,
-      iterations: 1,
-      warmupTime: 1,
-      warmupIterations: 1,
-      format: "json"
-    });
-    mock.method(console, "log", () => void 0);
-  });
-
-  afterEach(() => {
-    mock.restoreAll();
-    resetTableReporter();
-    resetConfig();
-  });
-
   it("should report one row per task", async() => {
     const suite = defineSuite("unit / rows", (bench) => {
       bench
@@ -44,7 +23,7 @@ describe("defineSuite", () => {
         .add("second", () => void 0);
     });
 
-    const report = await suite.run();
+    const report = await suite.run(fastConfig());
 
     assert.ok(report !== null);
     assert.equal(report.suite, "unit / rows");
@@ -54,28 +33,49 @@ describe("defineSuite", () => {
     ]);
   });
 
+  it("should describe the host and the sampling budget", async() => {
+    const suite = defineSuite("unit / runtime", (bench) => {
+      bench.add("task", () => void 0);
+    });
+
+    const report = await suite.run(fastConfig({
+      time: 2,
+      iterations: 3
+    }));
+
+    assert.ok(report !== null);
+    assert.equal(report.runtime.node, process.version);
+    assert.equal(report.runtime.timeMs, 2);
+    assert.equal(report.runtime.iterations, 3);
+  });
+
   it("should omit ns/op when one iteration is one operation", async() => {
     const suite = defineSuite("unit / plain", (bench) => {
       bench.add("task", () => void 0);
     });
 
-    const report = await suite.run();
+    const report = await suite.run(fastConfig());
 
     assert.ok(report !== null);
     assert.equal(report.results[0]["ns/op"], undefined);
     assert.equal(typeof report.results[0]["ops/sec"], "number");
   });
 
-  it("should divide batched measurements back out into ns/op", async() => {
-    configure({ batch: 10 });
+  it("should divide only batched tasks by the batch size", async() => {
     const suite = defineSuite("unit / batched", (bench) => {
-      bench.add("task", batched(() => void 0));
-    }, { opsPerIteration: "batch" });
+      bench
+        .add("plain", () => void 0)
+        .add("batched", batched(() => void 0));
+    }, { opsPerIteration: 2 });
 
-    const report = await suite.run();
+    const report = await suite.run(fastConfig({ batch: 10 }));
 
     assert.ok(report !== null);
-    assert.equal(typeof report.results[0]["ns/op"], "number");
+    const [plain, batch] = report.results;
+    for (const [row, opsPerIteration] of [[plain, 2], [batch, 20]] as const) {
+      const expected = Number(row["mean (ms)"]) * 1e6 / opsPerIteration;
+      assert.ok(Math.abs(Number(row["ns/op"]) - expected) < 0.5, row.task);
+    }
   });
 
   it("should report no B/op unless allocations are enabled", async() => {
@@ -83,18 +83,13 @@ describe("defineSuite", () => {
       bench.add("task", () => void 0);
     });
 
-    const report = await suite.run();
+    const report = await suite.run(fastConfig());
 
     assert.ok(report !== null);
     assert.equal(report.results[0]["B/op"], undefined);
   });
 
   it("should measure the heap bytes each operation allocates", async() => {
-    configure({
-      allocations: true,
-      batch: 10,
-      iterations: 200
-    });
     const sink: unknown[][] = [];
     const suite = defineSuite("unit / allocations", (bench) => {
       bench
@@ -102,9 +97,12 @@ describe("defineSuite", () => {
           sink[0] = Array.from({ length: 1_000 }, () => 0);
         }))
         .add("idle", batched(() => void 0));
-    }, { opsPerIteration: "batch" });
+    });
 
-    const report = await suite.run();
+    const report = await suite.run(fastConfig({
+      allocations: true,
+      batch: 10
+    }));
 
     assert.ok(report !== null);
     const [allocating, idle] = report.results;
@@ -113,14 +111,13 @@ describe("defineSuite", () => {
   });
 
   it("should skip B/op for tasks whose per-iteration hooks allocate", async() => {
-    configure({ allocations: true });
     const suite = defineSuite("unit / hooked allocations", (bench) => {
       bench.add("task", () => void 0, {
         beforeEach: () => void 0
       });
     });
 
-    const report = await suite.run();
+    const report = await suite.run(fastConfig({ allocations: true }));
 
     assert.ok(report !== null);
     assert.equal(report.results[0]["B/op"], undefined);
@@ -133,8 +130,8 @@ describe("defineSuite", () => {
       bench.add("task", () => void 0);
     });
 
-    await suite.run();
-    await suite.run();
+    await suite.run(fastConfig());
+    await suite.run(fastConfig());
 
     assert.equal(setups, 2);
   });
@@ -149,7 +146,7 @@ describe("defineSuite", () => {
       };
     });
 
-    await suite.run();
+    await suite.run(fastConfig());
 
     assert.equal(order.at(-1), "teardown");
     assert.ok(order.includes("task"));
@@ -167,7 +164,7 @@ describe("defineSuite", () => {
       };
     });
 
-    const report = await suite.run();
+    const report = await suite.run(fastConfig());
 
     assert.ok(released);
     assert.ok(report !== null);
@@ -175,49 +172,40 @@ describe("defineSuite", () => {
   });
 
   it("should keep only the tasks matching the filter", async() => {
-    configure({ task: "kept" });
     const suite = defineSuite("unit / filter", (bench) => {
       bench
         .add("kept task", () => void 0)
         .add("dropped task", () => void 0);
     });
 
-    const report = await suite.run();
+    const report = await suite.run(fastConfig({ task: "kept" }));
 
     assert.ok(report !== null);
     assert.deepEqual(report.results.map((row) => row.task), ["kept task"]);
   });
 
   it("should resolve to null when the filter drops every task", async() => {
-    configure({ task: "absent" });
     const suite = defineSuite("unit / no match", (bench) => {
       bench.add("task", () => void 0);
     });
 
-    assert.equal(await suite.run(), null);
+    assert.equal(await suite.run(fastConfig({ task: "absent" })), null);
   });
 });
 
 describe("runSuites", () => {
-  beforeEach(() => {
-    resetConfig();
-    configure({
-      time: 1,
-      iterations: 1,
-      warmupTime: 1,
-      warmupIterations: 1,
-      format: "json"
-    });
-    mock.method(console, "log", () => void 0);
-  });
+  function collect(
+    printed: string[]
+  ): Reporter {
+    return {
+      print: (report) => {
+        printed.push(report.suite);
+      }
+    };
+  }
 
-  afterEach(() => {
-    mock.restoreAll();
-    resetTableReporter();
-    resetConfig();
-  });
-
-  it("should run every suite in order", async() => {
+  it("should run and print every suite in order", async() => {
+    const printed: string[] = [];
     const first = defineSuite("unit / first", (bench) => {
       bench.add("task", () => void 0);
     });
@@ -225,16 +213,23 @@ describe("runSuites", () => {
       bench.add("task", () => void 0);
     });
 
-    const reports = await runSuites([first, second]);
+    const reports = await runSuites([first, second], {
+      config: fastConfig(),
+      reporter: collect(printed)
+    });
 
     assert.deepEqual(reports.map((report) => report.suite), [
+      "unit / first",
+      "unit / second"
+    ]);
+    assert.deepEqual(printed, [
       "unit / first",
       "unit / second"
     ]);
   });
 
   it("should skip the suites the filter emptied", async() => {
-    configure({ task: "kept" });
+    const printed: string[] = [];
     const matching = defineSuite("unit / matching", (bench) => {
       bench.add("kept task", () => void 0);
     });
@@ -242,21 +237,27 @@ describe("runSuites", () => {
       bench.add("dropped task", () => void 0);
     });
 
-    const reports = await runSuites([matching, other]);
+    const reports = await runSuites([matching, other], {
+      config: fastConfig({ task: "kept" }),
+      reporter: collect(printed)
+    });
 
     assert.deepEqual(reports.map((report) => report.suite), [
       "unit / matching"
     ]);
+    assert.deepEqual(printed, ["unit / matching"]);
   });
 
   it("should throw when the filter matched no task at all", async() => {
-    configure({ task: "absent" });
     const suite = defineSuite("unit / empty", (bench) => {
       bench.add("task", () => void 0);
     });
 
     await assert.rejects(
-      () => runSuites([suite]),
+      () => runSuites([suite], {
+        config: fastConfig({ task: "absent" }),
+        reporter: collect([])
+      }),
       (error: Error) => {
         assert.ok(error instanceof BenchmarkError);
         assert.match(error.message, /No benchmark task matched "absent"/);
@@ -268,7 +269,7 @@ describe("runSuites", () => {
 
   it("should throw when there is no suite to run", async() => {
     await assert.rejects(
-      () => runSuites([]),
+      () => runSuites([], { config: fastConfig() }),
       (error: Error) => {
         assert.ok(error instanceof BenchmarkError);
         assert.match(error.message, /No benchmark suite to run/);

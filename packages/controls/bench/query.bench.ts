@@ -80,7 +80,7 @@ const suite = defineSuite("controls / query", (bench) => {
       throw new Error("unreachable");
     }
   };
-}, { opsPerIteration: "batch" });
+});
 
 export default suite;
 

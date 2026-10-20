@@ -63,7 +63,7 @@ const suite = defineSuite("png / chunks and header", (bench) => {
       console.log(sink);
     }
   };
-}, { opsPerIteration: "batch" });
+});
 
 export default suite;
 

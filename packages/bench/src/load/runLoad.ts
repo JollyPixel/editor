@@ -22,7 +22,7 @@ import type {
   ServerCommand,
   ServerEvent
 } from "./protocol.ts";
-import type { ServerSample } from "./ServerProbe.ts";
+import type { ServerSample } from "./server/ServerProbe.ts";
 
 // CONSTANTS
 const kDrainMs = 250;

@@ -36,7 +36,7 @@ const suite = defineSuite("controls / tick — idle", (bench) => {
     .add("Gamepad#update() — idle, no gamepad", batched(() => {
       idle.input.gamepad.update();
     }));
-}, { opsPerIteration: "batch" });
+});
 
 export default suite;
 

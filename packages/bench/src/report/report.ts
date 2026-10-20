@@ -2,13 +2,13 @@
 import type { TaskResult } from "tinybench";
 
 // Import Internal Dependencies
-import { config } from "../config.ts";
-import { jsonReporter } from "./json.ts";
+import type { BenchmarkFormat } from "../config.ts";
+import { JsonReporter } from "./JsonReporter.ts";
 import {
-  runtimeMetadata,
+  hostMetadata,
   type RuntimeMetadata
 } from "./runtime.ts";
-import { tableReporter } from "./table.ts";
+import { TableReporter } from "./TableReporter.ts";
 
 export interface BenchmarkRow {
   task: string;
@@ -30,19 +30,23 @@ export interface BenchmarkRow {
   "B/op"?: number;
 }
 
-export interface BenchmarkReport {
+export interface BenchmarkReport<TRow extends object = BenchmarkRow> {
   suite: string;
   runtime: RuntimeMetadata;
-  results: BenchmarkRow[];
+  results: TRow[];
 }
 
-export interface ReportInput {
+export interface ReportInput<TRow extends object = BenchmarkRow> {
   suite: string;
-  results: BenchmarkRow[];
+  results: TRow[];
   /**
-   * Metadata from an external runtime, merged over host metadata.
+   * Merged over the host metadata, such as a browser user agent.
    */
   runtime?: Partial<RuntimeMetadata>;
+}
+
+export interface Reporter {
+  print(report: BenchmarkReport<object>): void;
 }
 
 export function hasFailure(
@@ -51,24 +55,21 @@ export function hasFailure(
   return report.results.some((row) => row.error !== undefined);
 }
 
-export function report(
-  input: ReportInput
-): BenchmarkReport {
-  const value: BenchmarkReport = {
+export function createReporter(
+  format: BenchmarkFormat
+): Reporter {
+  return format === "json" ? new JsonReporter() : new TableReporter();
+}
+
+export function createReport<TRow extends object = BenchmarkRow>(
+  input: ReportInput<TRow>
+): BenchmarkReport<TRow> {
+  return {
     suite: input.suite,
     runtime: {
-      ...runtimeMetadata(),
+      ...hostMetadata(),
       ...input.runtime
     },
     results: input.results
   };
-
-  if (config().format === "json") {
-    jsonReporter(value);
-  }
-  else {
-    tableReporter(value);
-  }
-
-  return value;
 }

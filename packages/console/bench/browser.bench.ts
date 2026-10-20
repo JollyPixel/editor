@@ -1,5 +1,9 @@
 // Import Third-party Dependencies
-import { report } from "@jolly-pixel/bench";
+import {
+  BenchmarkConfig,
+  createReport,
+  createReporter
+} from "@jolly-pixel/bench";
 import {
   chromium,
   type Browser
@@ -53,11 +57,12 @@ try {
     () => window.runConsoleBenchmarks()
   );
 
-  report({
+  const reporter = createReporter(BenchmarkConfig.fromEnvironment().format);
+  reporter.print(createReport({
     suite: "console / browser keystroke to layout",
     runtime: { userAgent: browserReport.runtime.userAgent },
     results: browserReport.results
-  });
+  }));
 }
 finally {
   await browser?.close();

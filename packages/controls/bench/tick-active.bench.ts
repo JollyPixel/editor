@@ -42,7 +42,7 @@ const suite = defineSuite("controls / tick — active", (bench) => {
     .add("Gamepad#update() — 1 gamepad, sticks deflected", batched(() => {
       gamepadOnly.input.gamepad.update();
     }));
-}, { opsPerIteration: "batch" });
+});
 
 export default suite;
 
