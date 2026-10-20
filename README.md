@@ -1,81 +1,118 @@
 <p align="center">
-<img width="300" src="https://github.com/JollyPixel/.github/blob/main/logo.png?raw=true" alt="openally">
-</p>
-
-<p align="center">
-  <h1 align="center">JollyPixel</h1>
+  <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
 <p align="center">
   The collaborative 3D HTML5 game maker
 </p>
 
-## Requirements
+## ⚙️ Requirements
 - [Node.js](https://nodejs.org/en/) version 24 or higher
 - [pnpm](https://pnpm.io/) v12+ for workspaces (the repository pins it through the `packageManager` field)
 
-## Available packages
+## 🧭 Workspaces
 
-Click on one of the links to access the documentation of the package;
+Workspaces are grouped by sub-domain. Each arrow shows what one sub-domain provides to another.
 
-- [@jolly-pixel/engine](./packages/engine) - Entity Component System (ECS)
-- [@jolly-pixel/controls](./packages/controls) - Input controls (Screen, Mouse, Touchpad, Keyboard, Gamepad)
-- [@jolly-pixel/loop](./packages/loop) - Frame scheduling and time primitives (FrameScheduler, GameLoop)
-- [@jolly-pixel/runtime](./packages/runtime) - Browser/Electron runtime
-- [@jolly-pixel/asset](./packages/asset) - Platform-agnostic asset references and loading orchestration
+```mermaid
+flowchart TB
+    Collaboration["Collaboration<br/>network, accounts, history"]
+    Authoring["Authoring<br/>studio, editors, formats"]
+    Assets["Asset Management<br/>event-store, asset-server"]
+    Build["Build<br/>planned"]
+    Runtime["Runtime<br/>engine, renderers"]
 
-We provide agnostic renderers and engines (often used by our editors below):
+    Collaboration -- "presence, access" --> Authoring
+    Collaboration -- "real time" --> Assets
+    Assets -- "asset rooms, catalog" --> Authoring
+    Authoring -- "asset kinds" --> Assets
+    Assets -- "assets" --> Build
+    Build -- "catalog manifest" --> Runtime
+    Runtime -- "viewport" --> Authoring
+```
 
-- [@jolly-pixel/voxel.renderer](./packages/voxel-renderer) - Voxel Engine
-- [@jolly-pixel/voxel.tiled](./packages/voxel-tiled) - Tiled map import for the Voxel Engine (experimental)
-- [@jolly-pixel/terrain.renderer](./packages/terrain-renderer) - Heightfield Terrain Engine (work in progress)
-- [@jolly-pixel/pixel-draw.renderer](./packages/pixel-draw-renderer) - Pixel Art Canvas API
+Packages marked 🚧 are work in progress.
 
-### Backend
+### 🤝 Collaboration
 
-- [@jolly-pixel/event-store](./packages/event-store) - Append-only log (Event Sourcing pattern)
-- [@jolly-pixel/network](./packages/network) - Shared wire for multiplayer editors
-- [@jolly-pixel/accounts](./packages/accounts) - User accounts and session tokens for the network server
+- [@jolly-pixel/network](./packages/network) - Rooms, peers and state sync for the collaborative editors
+- [@jolly-pixel/accounts](./packages/accounts) - User accounts and session tokens for JollyPixel servers
 - [@jolly-pixel/history](./packages/history) - Command documents and per-person undo history that survives collaboration
-- [@jolly-pixel/asset-server](./packages/asset-server) - Back-end asset orchestration: event-sourced projection, reconciliation and catalog delivery
-- [@jolly-pixel/asset-source](./packages/asset-source) - Physical asset storage
 
-#### Assets
+### 🎨 Authoring
 
-- [@jolly-pixel/asset.pixel-art](./packages/assets/pixel-art)
-- [@jolly-pixel/asset.voxel-map](./packages/assets/voxel-map)
-- [@jolly-pixel/asset.voxel-model](./packages/assets/voxel-model)
-- [@jolly-pixel/asset.voxel-animation](./packages/assets/voxel-animation)
-- [@jolly-pixel/asset.terrain](./packages/assets/terrain)
-
-### UI
+#### Shell
 
 - [@jolly-pixel/studio](./packages/studio) - One project, its assets and one editor per tab
-- [@jolly-pixel/ui](./packages/ui) - Design System (declarative UI components + Facade API)
-- [@jolly-pixel/arbor](./packages/arbor) - Stylable tree view widget with drag'n'drop support
-- [@jolly-pixel/resize-handle](./packages/resize-handle) - Resize handles / splitters
-- [@jolly-pixel/console](./packages/console) - Command palette and developer console for JollyPixel's editors
-- [@jolly-pixel/lantern](./packages/lantern) - Guided tours for JollyPixel's editors
+- [@jolly-pixel/editor.host](./packages/editors/host) - Shared launch, session and runtime boot for the editors
 
-### Utilities
+#### Editors
 
-- [@jolly-pixel/three](./packages/three) - Three.js utilities (Grid, Frustum, ...)
-- [@jolly-pixel/color](./packages/color) - Color utilities (Parsing, Palettes, Color Spaces, Color Conversions ...)
-- [@jolly-pixel/bench](./packages/bench) - Shared benchmarking harness and CLI
-- [@jolly-pixel/e2e](./packages/e2e) - Shared Playwright config, locators and editor fixtures for e2e suites
+- [@jolly-pixel/editor.voxel-map](./packages/editors/voxel-map) - Collaborative voxel-map editor
+- [@jolly-pixel/editor.voxel-model](./packages/editors/voxel-model) - Low-poly and voxel 3D model editor
+- [@jolly-pixel/editor.pixel-art](./packages/editors/pixel-art) - Pixel-art texture editor built on `pixel-draw.renderer`
+- [@jolly-pixel/editor.terrain](./packages/editors/terrain) - Collaborative heightfield terrain editor 🚧
+
+#### Formats
+
+Asset kinds that the editors read and write, and that `asset-server` stores.
+
+- [@jolly-pixel/asset.pixel-art](./packages/assets/pixel-art) - `.pixelart` textures
+- [@jolly-pixel/asset.voxel-map](./packages/assets/voxel-map) - `.voxelmap.json` worlds and the `.blockset.json` blocksets they link
+- [@jolly-pixel/asset.voxel-model](./packages/assets/voxel-model) - `.voxelmodel.json` models
+- [@jolly-pixel/asset.voxel-animation](./packages/assets/voxel-animation) - `.voxelanim.json` animation sets
+- [@jolly-pixel/asset.terrain](./packages/assets/terrain) - `.terrain.json` heightfield terrains 🚧
+
+#### UI
+
+- [@jolly-pixel/ui](./packages/ui) - Design system (declarative UI components and a facade API)
+- [@jolly-pixel/resize-handle](./packages/resize-handle) - Resize handles and splitters
+- [@jolly-pixel/console](./packages/console) - Command palette and developer console for the editors
+- [@jolly-pixel/lantern](./packages/lantern) - Guided tours for the editors
+
+### 🗄️ Asset Management
+
+- [@jolly-pixel/event-store](./packages/event-store) - Append-only event log (event sourcing)
+- [@jolly-pixel/asset-server](./packages/asset-server) - Event-sourced asset projection, reconciliation and catalog delivery
+- [@jolly-pixel/asset-source](./packages/asset-source) - Physical asset storage (filesystem, memory, IndexedDB)
+
+### 🏗️ Build
+
+Planned. It will turn a project's assets into the catalog manifest the runtime loads.
+
+### 🎮 Runtime
+
+#### Core
+
+- [@jolly-pixel/runtime](./packages/runtime) - Game runtime for web browsers and Electron
+- [@jolly-pixel/engine](./packages/engine) - Minimal ECS framework on top of Three.js
+- [@jolly-pixel/loop](./packages/loop) - Frame scheduling and time primitives (FrameScheduler, GameLoop)
+- [@jolly-pixel/controls](./packages/controls) - Input controls (screen, mouse, touchpad, keyboard, gamepad)
+- [@jolly-pixel/asset](./packages/asset) - Asset references, catalogs and loading orchestration for browser and Node.js
+
+#### Renderers
+
+- [@jolly-pixel/voxel.renderer](./packages/voxel-renderer) - Voxel engine and renderer
+- [@jolly-pixel/voxel.tiled](./packages/voxel-tiled) - Tiled map import for `voxel.renderer` 🚧
+- [@jolly-pixel/terrain.renderer](./packages/terrain-renderer) - Heightfield terrain engine and renderer 🚧
+- [@jolly-pixel/pixel-draw.renderer](./packages/pixel-draw-renderer) - Pixel-art canvas drawing and rendering
+
+## 🧩 Shared libraries
+
+Generic packages used by more than one sub-domain.
+
+- [@jolly-pixel/three](./packages/three) - Three.js components and utilities (grid, transform controls, selection highlight...)
+- [@jolly-pixel/color](./packages/color) - Color parsing, palettes, color spaces and conversions
 - [@jolly-pixel/image](./packages/image) - PNG codecs and browser raster decoding
 
-### Editors
+## 🛠️ Tooling
 
-- [Editor Host](./packages/editors/host/): Shared launch, session and runtime boot for JollyPixel editors
-- [Voxel Map](./packages/editors/voxel-map/): 3D Voxel Terrain editor
-- [Voxel Model](./packages/editors/voxel-model/): Low-poly/voxel 3D model editor
-- [Pixel Art](./packages/editors/pixel-art/): 2D Pixel-Art texturing editor
-- [Terrain](./packages/editors/terrain/): Collaborative heightfield terrain editor (work in progress)
+- [@jolly-pixel/bench](./packages/bench) - Benchmarking harness and CLI
+- [@jolly-pixel/e2e](./packages/e2e) - Playwright config, locators and editor fixtures for e2e suites
 
----
+## 💃 Getting started
 
-These packages are available in the Node Package Repository and can be easily installed with [npm](https://docs.npmjs.com/getting-started/what-is-npm) or [yarn](https://yarnpkg.com).
+Public packages are published on npm and can be installed with [npm](https://docs.npmjs.com/getting-started/what-is-npm) or [yarn](https://yarnpkg.com). The studio, editors, formats, tooling and 🚧 renderers are private workspaces.
 
 ```bash
 $ npm i @jolly-pixel/engine
@@ -83,7 +120,7 @@ $ npm i @jolly-pixel/engine
 $ yarn add @jolly-pixel/engine
 ```
 
-## Build
+### Build
 To install and compile all workspaces, just run the following command at the root
 
 ```bash
@@ -91,14 +128,14 @@ $ pnpm install
 $ pnpm run build
 ```
 
-## Run
+### Run
 [@jolly-pixel/studio](./packages/studio) is the full application
 
 ```bash
 $ pnpm --filter @jolly-pixel/studio dev
 ```
 
-## Test
+### Test
 Run tests for one workspace, then run the repository type checks:
 
 ```bash
@@ -106,15 +143,15 @@ $ pnpm --filter <workspace> test
 $ pnpm run typecheck
 ```
 
-## Linter
-Running ESLint for all workspaces
+### Linter
+Lint all workspaces with oxlint (the script also checks package exports and CSS):
 
 ```bash
 $ pnpm run lint
 ```
 
-## Publishing package
-Each packages has his own `prepublishOnly` to build TypeScript source before publishing.
+## 📦 Publishing package
+Each public package has its own `prepublishOnly` script that builds the TypeScript source before publishing.
 
 ```bash
 $ pnpm publish --filter <workspace>
@@ -147,5 +184,5 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
-## License
+## 📃 License
 MIT
