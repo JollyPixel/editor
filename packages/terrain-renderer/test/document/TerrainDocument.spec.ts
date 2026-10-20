@@ -3,16 +3,23 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { CHUNK_SAMPLES, ChunkCoord } from "#src/document/ChunkCoord.ts";
+import { BORDER_SAMPLES } from "#src/document/SampleBlock.ts";
 import {
   CHUNK_SAMPLE_COUNT,
-  CHUNK_SAMPLES,
-  ChunkCoord,
-  HEIGHT_RANGE,
-  TerrainDocument,
+  HEIGHT_RANGE
+} from "#src/document/TerrainChunk.ts";
+import { TerrainDocument } from "#src/document/TerrainDocument.ts";
+import {
   TILE_SAMPLE_COUNT,
   TILE_SAMPLES,
   TileCoord
-} from "#src/index.ts";
+} from "#src/document/TileCoord.ts";
+import {
+  randomInteger,
+  seededRandom,
+  type Random
+} from "../helpers/random.ts";
 
 function rampHeights(): Float32Array {
   const heights = new Float32Array(CHUNK_SAMPLE_COUNT);
@@ -23,6 +30,56 @@ function rampHeights(): Float32Array {
   }
 
   return heights;
+}
+
+function noiseHeights(
+  random: Random
+): Float32Array {
+  const heights = new Float32Array(CHUNK_SAMPLE_COUNT);
+  heights.forEach((_, index) => {
+    heights[index] = randomInteger(random, -700, 700) / 7;
+  });
+
+  return heights;
+}
+
+function samplesAround(
+  document: TerrainDocument,
+  coord: ChunkCoord,
+  margin: number
+): number[] {
+  const origin = coord.originSample;
+  const samples: number[] = [];
+  for (let localZ = -margin; localZ < CHUNK_SAMPLES + margin; localZ++) {
+    for (let localX = -margin; localX < CHUNK_SAMPLES + margin; localX++) {
+      samples.push(document.sampleAt(origin.x + localX, origin.z + localZ));
+    }
+  }
+
+  return samples;
+}
+
+function assertSeededAddKeepsShownHeights(
+  document: TerrainDocument,
+  coord: ChunkCoord
+): void {
+  const shown = new Map(
+    [...document.chunks()].map(
+      ({ coord: shownCoord }) => [shownCoord.key, samplesAround(document, shownCoord, BORDER_SAMPLES)]
+    )
+  );
+  const own = samplesAround(document, coord, 0);
+  document.addChunk(coord);
+
+  assert.deepEqual(samplesAround(document, coord, 0), own, `chunk ${coord.key} keeps its sampled heights`);
+  for (const [key, samples] of shown) {
+    const [x, z] = key.split(",").map(Number);
+    assert.deepEqual(
+      samplesAround(document, new ChunkCoord(x, z), BORDER_SAMPLES),
+      samples,
+      `adding ${coord.key} keeps the border chunk ${key} shows`
+    );
+  }
 }
 
 describe("TerrainDocument", () => {
@@ -63,12 +120,76 @@ describe("TerrainDocument", () => {
     assert.equal(document.sampleAt(0, 3), 150);
   });
 
-  test("sampleAt over empty ground clamps to the nearest existing sample", () => {
+  test("sampleAt beside a chunk repeats its outer sample, and is 0 farther out", () => {
     const document = new TerrainDocument();
     document.addChunk(new ChunkCoord(0, 0), rampHeights());
 
-    assert.equal(document.sampleAt(500, 10), CHUNK_SAMPLES - 1 + 500);
-    assert.equal(document.sampleAt(-500, -500), 0);
+    assert.equal(document.sampleAt(CHUNK_SAMPLES + 1, 10), CHUNK_SAMPLES - 1 + 500);
+    assert.equal(document.sampleAt(-1, -1), 0);
+    assert.equal(document.sampleAt(500, 10), 0);
+  });
+
+  test("a chunk seeded far from the terrain still extends the nearest sample", () => {
+    const document = new TerrainDocument();
+    document.addChunk(new ChunkCoord(0, 0), rampHeights());
+    const added = document.addChunk(new ChunkCoord(7, 0));
+
+    assert.equal(added.height(0, 10), CHUNK_SAMPLES - 1 + 500);
+  });
+
+  test("a seeded corner between a left and a below neighbour takes the below one", () => {
+    const document = new TerrainDocument();
+    document.addChunk(new ChunkCoord(0, -1), new Float32Array(CHUNK_SAMPLE_COUNT).fill(5));
+    document.addChunk(new ChunkCoord(-1, 0), new Float32Array(CHUNK_SAMPLE_COUNT).fill(9));
+    const added = document.addChunk(new ChunkCoord(0, 0));
+
+    assert.equal(added.height(0, 0), 5);
+    assert.equal(added.height(0, 2), 9);
+  });
+
+  test("a seeded chunk beside a corner keeps the border its neighbour shows", () => {
+    const document = new TerrainDocument();
+    document.addChunk(new ChunkCoord(0, 0), noiseHeights(seededRandom(3)));
+
+    assertSeededAddKeepsShownHeights(document, new ChunkCoord(-1, 1));
+  });
+
+  test("seeded chunks added next to the terrain keep every height it shows", () => {
+    const random = seededRandom(2024);
+    for (let layout = 0; layout < 12; layout++) {
+      const document = new TerrainDocument();
+      document.addChunk(new ChunkCoord(1, 1), noiseHeights(random));
+      for (let index = 0; index < 4; index++) {
+        const coord = new ChunkCoord(randomInteger(random, 0, 3), randomInteger(random, 0, 3));
+        if (!document.has(coord)) {
+          document.addChunk(coord, noiseHeights(random));
+        }
+      }
+      for (let index = 0; index < 3; index++) {
+        const coord = new ChunkCoord(randomInteger(random, -1, 4), randomInteger(random, -1, 4));
+        if (!document.has(coord) && document.sampleBlock(coord).heightRange !== null) {
+          assertSeededAddKeepsShownHeights(document, coord);
+        }
+      }
+    }
+  });
+
+  test("a seeded chunk keeps the heights sampled at its place before it was added", () => {
+    const document = new TerrainDocument();
+    const coord = new ChunkCoord(0, 0);
+    document.addChunk(new ChunkCoord(0, -1), new Float32Array(CHUNK_SAMPLE_COUNT).fill(5));
+    document.addChunk(new ChunkCoord(-1, 0), rampHeights());
+    document.addChunk(new ChunkCoord(1, 1), new Float32Array(CHUNK_SAMPLE_COUNT).fill(-3));
+    document.addChunk(new ChunkCoord(3, 0), new Float32Array(CHUNK_SAMPLE_COUNT).fill(40));
+    const origin = coord.originSample;
+    const displayed = new Float32Array(CHUNK_SAMPLE_COUNT);
+    for (let localZ = 0; localZ < CHUNK_SAMPLES; localZ++) {
+      for (let localX = 0; localX < CHUNK_SAMPLES; localX++) {
+        displayed[localZ * CHUNK_SAMPLES + localX] = document.sampleAt(origin.x + localX, origin.z + localZ);
+      }
+    }
+
+    assert.deepEqual(document.addChunk(coord).copyHeights(), displayed);
   });
 
   test("sampleAt on an empty terrain is 0", () => {

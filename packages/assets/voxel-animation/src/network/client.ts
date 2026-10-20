@@ -1,6 +1,6 @@
 export * from "./types.ts";
 export * from "./AnimationCommandKeys.ts";
-export * from "./SyncedAnimationDocument.ts";
+export * from "./voxelAnimationDocumentKind.ts";
 export * from "../model/index.ts";
 export {
   ANIMATION_CHANNELS,

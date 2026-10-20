@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
 import {
-  css,
   html,
   LitElement,
   nothing,
+  type PropertyValues,
   type TemplateResult
 } from "lit";
 import {
@@ -15,10 +15,14 @@ import {
   TERRAIN_OVERLAYS,
   type TerrainOverlay
 } from "@jolly-pixel/terrain.renderer";
-import { FieldBinding } from "@jolly-pixel/ui";
+import {
+  FieldBinding,
+  SubscriptionController
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { ViewSettings } from "../model/ViewSettings.ts";
+import { viewportToolbarStyles } from "../../../shared/toolbar.styles.ts";
 import "./viewIcons.ts";
 
 // CONSTANTS
@@ -31,48 +35,7 @@ const kOverlayLabels: Readonly<Record<TerrainOverlay, string>> = {
 
 @customElement("terrain-view-toolbar")
 export class ViewToolbar extends LitElement {
-  static override styles = css`
-    :host {
-      display: inline-flex;
-    }
-
-    jolly-rail {
-      gap: 0;
-      height: auto;
-      padding: 4px;
-      border-radius: var(--jolly-radius-sm, 2px);
-      background: var(--jolly-surface-raised);
-      box-shadow: var(--jolly-shadow-floating);
-    }
-
-    .group {
-      display: flex;
-      align-items: center;
-    }
-
-    .divided::before {
-      content: "";
-      width: 1px;
-      height: 22px;
-      margin-inline: 6px;
-      background: var(--jolly-divider);
-    }
-
-    jolly-tool-button {
-      --jolly-tool-button-size: 30px;
-      --jolly-tool-button-gap: 10px;
-    }
-
-    jolly-tool-button::part(notch) {
-      display: none;
-    }
-
-    .value {
-      min-width: 3ch;
-      font-weight: 600;
-      text-align: center;
-    }
-  `;
+  static override styles = viewportToolbarStyles;
 
   @property({ attribute: false })
   declare settings: ViewSettings | null;
@@ -82,25 +45,23 @@ export class ViewToolbar extends LitElement {
     write: (walkableSlope) => this.settings?.update({ walkableSlope })
   });
 
-  #unsubscribe: (() => void) | null = null;
+  #settingsSubscription = new SubscriptionController<ViewSettings | null>(
+    this,
+    (settings) => (settings === null ?
+      [] :
+      [settings.subscribe("change", () => this.requestUpdate())])
+  );
 
   constructor() {
     super();
     this.settings = null;
   }
 
-  override disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this.#unsubscribe?.();
-    this.#unsubscribe = null;
-  }
-
   protected override willUpdate(
-    changed: Map<string, unknown>
+    changed: PropertyValues<this>
   ): void {
     if (changed.has("settings")) {
-      this.#unsubscribe?.();
-      this.#unsubscribe = this.settings?.subscribe("change", () => this.requestUpdate()) ?? null;
+      this.#settingsSubscription.attach(this.settings);
     }
   }
 

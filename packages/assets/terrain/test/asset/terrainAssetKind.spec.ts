@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { InvalidAssetDocumentError } from "@jolly-pixel/asset-server";
+import { LiveAssetRoom } from "@jolly-pixel/asset-server/testing";
 import { ChunkCoord } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
@@ -13,10 +14,8 @@ import {
   MAX_TERRAIN_CHUNKS,
   terrainAssetKind,
   terrainSnapshot,
-  TERRAIN_DOCUMENT_VERSION,
-  type TerrainNetworkCommand
+  TERRAIN_DOCUMENT_VERSION
 } from "#src/index.ts";
-import { LiveRoom } from "../helpers/liveRoom.ts";
 import {
   heights,
   networkCommand,
@@ -24,11 +23,11 @@ import {
 } from "../helpers/terrain.ts";
 
 function liveRoom() {
-  return new LiveRoom(terrainAssetKind());
+  return new LiveAssetRoom(terrainAssetKind());
 }
 
 function chunkKeys(
-  room: LiveRoom<ReturnType<ReturnType<typeof terrainAssetKind>["create"]>, TerrainNetworkCommand>
+  room: ReturnType<typeof liveRoom>
 ): string[] {
   return [...room.state.chunks()].map(({ coord }) => coord.key).sort();
 }
@@ -43,7 +42,7 @@ describe("terrain asset kind", () => {
 
   test("serialize and load round-trip the chunks and their heights", async() => {
     const handler = terrainAssetKind();
-    const room = new LiveRoom(handler);
+    const room = new LiveAssetRoom(handler);
     room.receive("A", networkCommand({ action: "chunk-added", x: 1, z: 0, heights: heights(12.5) }));
 
     const loaded = handler.create("copy");

@@ -239,9 +239,12 @@ which leaves a flat 1 m strip along the edge of the world.
 
 - `src/asset/`: the kind, its descriptor and builders in `terrain.ts`; the
   state, decoder and kind handler in `terrainAssetKind.ts`.
-- `src/network/`: `TerrainCommand.schema.ts`, `TerrainCommandArbiter.ts`,
-  `TerrainCommandKeys.ts`, `TerrainCorrection.ts`, `TerrainReconciler.ts`,
-  `TerrainSyncClient.ts`.
+- `src/model/`: `TerrainCommandDocument`, the command state, and
+  `TerrainPreview`, the displayed copy that layers live strokes over confirmed
+  heights.
+- `src/network/`: `TerrainCommand.schema.ts`, `TerrainCommandKeys.ts`,
+  `terrainDocumentKind.ts`, the live relay (`TerrainLiveRelay.ts`) and the
+  client live halves (`TerrainLiveSender.ts`, `TerrainLiveReceiver.ts`).
 - `src/history/`: the `CommandHistory` registration.
 
 ### `@jolly-pixel/terrain.renderer`

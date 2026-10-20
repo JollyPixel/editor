@@ -3,6 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import { LiveAssetRoom } from "@jolly-pixel/asset-server/testing";
 import {
   rankBetween,
   VoxelDocument,
@@ -12,8 +13,7 @@ import {
 // Import Internal Dependencies
 import { voxelMapAssetKind, type VoxelMapState } from "../../src/index.ts";
 import { VoxelSyncClient } from "../../src/network/client.ts";
-import type { VoxelMapNetworkCommand, VoxelMapServerMessage } from "../../src/network/types.ts";
-import { LiveRoom } from "../helpers/liveRoom.ts";
+import type { VoxelMapNetworkCommand } from "../../src/network/types.ts";
 import { createMockRoom } from "../helpers/room.ts";
 import { mapHistory, MAP_SCOPE } from "../helpers/history.ts";
 import { makeAddedCommand } from "../helpers/networkCommands.ts";
@@ -65,9 +65,7 @@ function peerPatch(
 }
 
 function setup() {
-  const server = new LiveRoom<VoxelMapState, VoxelMapNetworkCommand>(
-    voxelMapAssetKind({ chunkSize: 16 })
-  );
+  const server = new LiveAssetRoom(voxelMapAssetKind({ chunkSize: 16 }));
   ["L3", "L2", "L1"].forEach((name, index) => server.receive("A", {
     ...makeAddedCommand(name),
     ...header("A", index + 1)
@@ -81,8 +79,8 @@ function setup() {
   });
 
   function deliver(): void {
-    for (const message of server.take("B")) {
-      room.deliver(message as VoxelMapServerMessage);
+    for (const message of server.take<VoxelWorldJSON>("B")) {
+      room.deliver(message);
     }
   }
 

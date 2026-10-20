@@ -6,19 +6,15 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { DocumentSyncClient } from "@jolly-pixel/network/client";
+import { LiveAssetRoom } from "@jolly-pixel/asset-server/testing";
 
 // Import Internal Dependencies
 import {
-  ModelDocument,
   voxelModelAssetKind,
-  type VoxelModelState
+  type ModelDocument
 } from "#src/index.ts";
-import { voxelModelWriteKeys } from "#src/network/VoxelModelCommandKeys.ts";
-import type {
-  VoxelModelNetworkCommand,
-  VoxelModelServerMessage
-} from "#src/network/types.ts";
+import type { VoxelModelSnapshot } from "#src/network/types.ts";
+import { voxelModelDocumentKind } from "#src/network/voxelModelDocumentKind.ts";
 import {
   TRANSFORM,
   blockAdded,
@@ -26,7 +22,6 @@ import {
   materialAdded,
   networkCommand
 } from "../helpers/commands.ts";
-import { LiveRoom } from "../helpers/liveRoom.ts";
 import { createMockRoom } from "../helpers/room.ts";
 
 function nodeIds(
@@ -46,20 +41,17 @@ function takeSnapshot(
 }
 
 function setup() {
-  const server = new LiveRoom<VoxelModelState, VoxelModelNetworkCommand>(
-    voxelModelAssetKind()
-  );
+  const server = new LiveAssetRoom(voxelModelAssetKind());
   server.receive("A", networkCommand(folderAdded("N"), { clientId: "A" }));
   server.receive("A", networkCommand(blockAdded("M"), { clientId: "A" }));
   server.receive("A", networkCommand(blockAdded("K"), { clientId: "A" }));
 
   const room = createMockRoom("B");
-  const document = new ModelDocument();
-  new DocumentSyncClient(room, { document, keys: voxelModelWriteKeys });
+  const { document } = voxelModelDocumentKind().createDocument(room);
 
   function deliver(): void {
-    for (const message of server.take("B")) {
-      room.deliver(message as VoxelModelServerMessage);
+    for (const message of server.take<VoxelModelSnapshot>("B")) {
+      room.deliver(message);
     }
   }
 

@@ -8,6 +8,8 @@ import {
   AssetTags,
   CatalogProjection,
   registerAssetRooms,
+  type AnyAssetKindHandler,
+  type AssetCommandHeader,
   type AssetKindHandler
 } from "#src/index.ts";
 import { syncHarness, type SyncHarness } from "../backend.ts";
@@ -48,8 +50,8 @@ export interface RoomHarness extends AsyncDisposable {
 export interface RoomHarnessOptions {
   graceMs?: number;
   kind?: CounterKind;
-  handler?: AssetKindHandler<CounterState>;
-  extraHandlers?: AssetKindHandler[];
+  handler?: AssetKindHandler<CounterState, AssetCommandHeader, object>;
+  extraHandlers?: AnyAssetKindHandler[];
 }
 
 export async function roomHarness(
@@ -92,16 +94,24 @@ export async function roomHarness(
     flush,
     objects: sync.objects
   });
-  registerAssetRooms({
-    server,
-    events: sync.eventStore.writer,
-    kinds: sync.kinds,
-    catalog,
-    states: sync.states,
-    flush,
-    tags,
-    logger
-  });
+  try {
+    registerAssetRooms({
+      server,
+      events: sync.eventStore.writer,
+      kinds: sync.kinds,
+      catalog,
+      states: sync.states,
+      flush,
+      tags,
+      logger
+    });
+  }
+  catch (error) {
+    await server.close();
+    catalog.close();
+    await sync[Symbol.asyncDispose]();
+    throw error;
+  }
 
   const clients = new Map<string, RecordingClient>();
   const connections = new Map<string, ServerConnection>();
@@ -116,7 +126,7 @@ export async function roomHarness(
     get refusals() {
       return records
         .filter((record) => record.message === "asset room refused")
-        .map((record) => record.metadata.reason as string);
+        .map((record) => String(record.metadata.reason));
     },
     async join(
       clientId,

@@ -230,9 +230,7 @@ export class SceneManager<
   #activateScene(
     scene: Scene<TContext>
   ): void {
-    for (const load of [...this.#appendLoads.values()]) {
-      load.cancel();
-    }
+    this.#cancelAppendLoads();
 
     if (this.#currentScene !== null) {
       this.#teardownCurrentScene(this.#currentScene);
@@ -250,6 +248,12 @@ export class SceneManager<
 
     this.#sceneStartPending = true;
     this.emit("sceneChanged", scene);
+  }
+
+  #cancelAppendLoads(): void {
+    for (const load of [...this.#appendLoads.values()]) {
+      load.cancel();
+    }
   }
 
   #teardownCurrentScene(
@@ -275,6 +279,7 @@ export class SceneManager<
 
     this.#componentsToStart.length = 0;
     this.#componentsToDestroy.length = 0;
+    this.#cachedActors.length = 0;
     this.default.clear();
     this.#registeredActors.clear();
   }
@@ -308,6 +313,22 @@ export class SceneManager<
     this.#appendedScenesPendingStart.add(scene.id);
 
     this.emit("sceneAppended", scene);
+  }
+
+  unloadScene(
+    scene: Scene<TContext>
+  ): void {
+    if (this.#replacementLoad?.scene === scene) {
+      this.#replacementLoad.cancel();
+    }
+    if (this.#currentScene !== scene) {
+      return;
+    }
+
+    this.#cancelAppendLoads();
+    this.#teardownCurrentScene(scene);
+    this.#currentScene = null;
+    this.#sceneStartPending = false;
   }
 
   removeScene(scene: Scene<TContext>): void;

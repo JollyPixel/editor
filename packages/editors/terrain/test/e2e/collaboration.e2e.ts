@@ -14,14 +14,19 @@ const kStroke = {
   z: CHUNK_SAMPLES * 1.5
 };
 const kNearPose = {
-  x: kStroke.x,
-  y: 60,
-  z: kStroke.z + 70,
+  position: {
+    x: kStroke.x,
+    y: 60,
+    z: kStroke.z + 70
+  },
   pitch: -0.7
 };
 const kFarPose = {
   ...kNearPose,
-  x: kStroke.x + CHUNK_SAMPLES * 8
+  position: {
+    ...kNearPose.position,
+    x: kStroke.x + CHUNK_SAMPLES * 8
+  }
 };
 
 test.slow();
@@ -32,14 +37,14 @@ test("a stroke reaches a near peer while it runs and a far peer only once commit
   farPeer
 }) => {
   const far = new TerrainPage(farPeer);
-  await terrain.pinCamera(kNearPose);
-  await peerTerrain.pinCamera(kNearPose);
-  await far.pinCamera(kFarPose);
+  await terrain.viewport.pinCamera(kNearPose);
+  await peerTerrain.viewport.pinCamera(kNearPose);
+  await far.viewport.pinCamera(kFarPose);
   const before = await terrain.heightAt(kStroke.x, kStroke.z);
 
   const release = await terrain.pressBrush(kStroke.x, kStroke.z);
   await expect.poll(() => peerTerrain.heightAt(kStroke.x, kStroke.z)).toBeGreaterThan(before);
-  expect(await far.heightAt(kStroke.x, kStroke.z)).toBe(before);
+  expect(await far.heightAt(kStroke.x, kStroke.z)).toBe(await far.confirmedHeightAt(kStroke.x, kStroke.z));
   await release();
 
   const committed = await terrain.heightAt(kStroke.x, kStroke.z);
@@ -48,11 +53,10 @@ test("a stroke reaches a near peer while it runs and a far peer only once commit
 });
 
 test("undoing a stroke restores the heights a peer sees", async({ terrain, peerTerrain }) => {
-  await terrain.pinCamera(kNearPose);
+  await terrain.viewport.pinCamera(kNearPose);
   const before = await terrain.heightAt(kStroke.x, kStroke.z);
 
-  const release = await terrain.pressBrush(kStroke.x, kStroke.z);
-  await release();
+  await terrain.sculptAt(kStroke.x, kStroke.z);
   await expect.poll(() => peerTerrain.heightAt(kStroke.x, kStroke.z)).toBeGreaterThan(before);
 
   await terrain.undo();

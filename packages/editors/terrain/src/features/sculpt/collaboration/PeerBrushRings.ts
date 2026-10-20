@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import {
-  TERRAIN_INTEREST_KEY,
-  TerrainInterest
-} from "@jolly-pixel/asset.terrain/client";
+import type { TerrainLiveSender } from "@jolly-pixel/asset.terrain/client";
 import {
   Actor,
   ActorComponent
@@ -14,7 +11,6 @@ import {
 } from "@jolly-pixel/network/client";
 import type { TerrainReader } from "@jolly-pixel/terrain.renderer";
 import { peerProfileColor } from "@jolly-pixel/ui/network";
-import * as THREE from "three";
 
 // Import Internal Dependencies
 import {
@@ -30,19 +26,15 @@ import {
 export interface PeerBrushRingsOptions {
   room: Room;
   terrain: TerrainReader;
-  camera: () => THREE.Camera | null;
-  interestChanged?: (interest: TerrainInterest) => void;
+  sender: Pick<TerrainLiveSender, "interest">;
 }
 
 export class PeerBrushRings extends ActorComponent {
   #room: Room;
   #terrain: TerrainReader;
-  #camera: () => THREE.Camera | null;
-  #interestChanged: (interest: TerrainInterest) => void;
-  #interests: PresenceChannel<TerrainInterest>;
+  #sender: Pick<TerrainLiveSender, "interest">;
   #brushes: PresenceChannel<BrushRingShape | null>;
   #rings = new Map<string, BrushRing>();
-  #cameraPosition = new THREE.Vector3();
 
   #onBrushChange = (
     change: PresenceChange<BrushRingShape | null>
@@ -67,13 +59,7 @@ export class PeerBrushRings extends ActorComponent {
 
     this.#room = options.room;
     this.#terrain = options.terrain;
-    this.#camera = options.camera;
-    this.#interestChanged = options.interestChanged ?? (() => undefined);
-    this.#interests = new PresenceChannel(options.room, {
-      key: TERRAIN_INTEREST_KEY,
-      decode: TerrainInterest.parse,
-      equals: (left, right) => left.equals(right)
-    });
+    this.#sender = options.sender;
     this.#brushes = new PresenceChannel(options.room, {
       key: BRUSH_RING_PRESENCE_KEY,
       decode: decodeBrushRing,
@@ -83,15 +69,7 @@ export class PeerBrushRings extends ActorComponent {
 
   awake(): void {
     this.#brushes.on("change", this.#onBrushChange);
-    this.#publishInterest();
     this.refresh();
-  }
-
-  update(): void {
-    if (this.#publishInterest()) {
-      this.refresh();
-      this.actor.world.invalidate();
-    }
   }
 
   publishLocalRing(
@@ -109,7 +87,6 @@ export class PeerBrushRings extends ActorComponent {
   override destroy(): void {
     this.#brushes.off("change", this.#onBrushChange);
     this.#brushes.destroy();
-    this.#interests.destroy();
     for (const clientId of [...this.#rings.keys()]) {
       this.#removeRing(clientId);
     }
@@ -117,32 +94,16 @@ export class PeerBrushRings extends ActorComponent {
     super.destroy();
   }
 
-  #publishInterest(): boolean {
-    const camera = this.#camera();
-    if (camera === null) {
-      return false;
-    }
-
-    camera.getWorldPosition(this.#cameraPosition);
-    const interest = TerrainInterest.around(this.#cameraPosition.x, this.#cameraPosition.z);
-    if (!this.#interests.publish(interest)) {
-      return false;
-    }
-    this.#interestChanged(interest);
-
-    return true;
-  }
-
   #render(
     clientId: string
   ): void {
     const peer = this.#room.peers.get(clientId);
     const shape = this.#brushes.values.get(clientId) ?? null;
-    const interest = this.#interests.published;
+    const { interest } = this.#sender;
     if (
       peer === undefined ||
       shape === null ||
-      interest === undefined ||
+      interest === null ||
       !interest.containsSample(shape.x, shape.z)
     ) {
       this.#hideRing(clientId);

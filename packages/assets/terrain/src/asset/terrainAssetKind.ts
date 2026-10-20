@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   describeErrors,
+  KeyedCommandArbiter,
   SchemaParser,
   type ConflictResolver
 } from "@jolly-pixel/network";
@@ -29,6 +30,7 @@ import {
   type TerrainAssetDocument
 } from "./terrain.ts";
 import {
+  acceptsTerrainCommand,
   applyTerrainCommand,
   loadTerrainSnapshot,
   terrainSnapshot
@@ -37,7 +39,11 @@ import {
   terrainCommandProtocol,
   terrainSnapshotSchema
 } from "../network/TerrainCommand.schema.ts";
-import { TerrainCommandArbiter } from "../network/TerrainCommandArbiter.ts";
+import { terrainWriteKeys } from "../network/TerrainCommandKeys.ts";
+import {
+  TERRAIN_RELAY_SCHEMAS,
+  type TerrainLiveMessage
+} from "../network/TerrainLive.schema.ts";
 import { TerrainLiveRelay } from "../network/TerrainLiveRelay.ts";
 import type { TerrainNetworkCommand } from "../network/types.ts";
 
@@ -80,7 +86,11 @@ export interface TerrainAssetKindOptions {
 
 export function terrainAssetKind(
   options: TerrainAssetKindOptions = {}
-): AssetKindHandler<TerrainDocument, TerrainNetworkCommand> {
+): AssetKindHandler<
+  TerrainDocument,
+  TerrainNetworkCommand,
+  TerrainLiveMessage
+> {
   const {
     snapshot,
     conflictResolver
@@ -137,13 +147,19 @@ export function terrainAssetKind(
     commands: {
       eventType: TERRAIN_COMMAND,
       protocol: terrainCommandProtocol,
+      relay: TERRAIN_RELAY_SCHEMAS,
 
       apply(state, command) {
         applyTerrainCommand(state, command);
       },
 
       live({ state }) {
-        const arbiter = new TerrainCommandArbiter({
+        const arbiter = new KeyedCommandArbiter<
+          TerrainNetworkCommand,
+          TerrainDocument
+        >({
+          accepts: acceptsTerrainCommand,
+          keys: terrainWriteKeys,
           conflictResolver
         });
 

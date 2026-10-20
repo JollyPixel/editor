@@ -38,6 +38,7 @@ export interface HeightRange {
 export class TerrainChunk {
   readonly coord: ChunkCoord;
 
+  #origin: { readonly x: number; readonly z: number; };
   #heights: Float32Array;
   #heightRange: HeightRange;
 
@@ -53,6 +54,7 @@ export class TerrainChunk {
     }
 
     this.coord = coord;
+    this.#origin = coord.originSample;
     this.#heights = heights.slice();
     this.#heightRange = measureRange(this.#heights);
   }
@@ -66,6 +68,29 @@ export class TerrainChunk {
     localZ: number
   ): number {
     return this.#heights[localZ * CHUNK_SAMPLES + localX];
+  }
+
+  nearestHeight(
+    sampleX: number,
+    sampleZ: number
+  ): number {
+    const origin = this.#origin;
+
+    return this.height(
+      clampLocal(sampleX - origin.x),
+      clampLocal(sampleZ - origin.z)
+    );
+  }
+
+  squaredDistanceTo(
+    sampleX: number,
+    sampleZ: number
+  ): number {
+    const origin = this.#origin;
+    const dx = sampleX - origin.x - clampLocal(sampleX - origin.x);
+    const dz = sampleZ - origin.z - clampLocal(sampleZ - origin.z);
+
+    return dx * dx + dz * dz;
   }
 
   copyHeights(): Float32Array {
@@ -118,4 +143,10 @@ function measureRange(
   }
 
   return { min, max };
+}
+
+function clampLocal(
+  local: number
+): number {
+  return Math.min(Math.max(local, 0), CHUNK_SAMPLES - 1);
 }

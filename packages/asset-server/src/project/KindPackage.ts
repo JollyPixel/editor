@@ -12,7 +12,7 @@ import type {
   AssetKindDescriptor,
   LoadedAssetKind
 } from "../kinds/AssetKindDescriptor.ts";
-import type { AssetKindHandler } from "../kinds/AssetKindHandler.ts";
+import type { AnyAssetKindHandler } from "../kinds/AssetKindHandler.ts";
 import type { AssetKindPackage } from "../kinds/AssetKindPackage.ts";
 
 // CONSTANTS
@@ -36,7 +36,7 @@ export class KindPackage {
   readonly name: string;
   readonly options: Readonly<Record<string, unknown>>;
   readonly descriptors: readonly LoadedAssetKind[];
-  readonly handlers: readonly AssetKindHandler[];
+  readonly handlers: readonly AnyAssetKindHandler[];
 
   #kinds: AssetKindPackage;
 
@@ -103,7 +103,7 @@ export class KindPackage {
       kinds: AssetKindPackage;
       options: Readonly<Record<string, unknown>>;
       descriptors: readonly AssetKindDescriptor[];
-      handlers: readonly AssetKindHandler[];
+      handlers: readonly AnyAssetKindHandler[];
     }
   ) {
     const handlers = new Map(

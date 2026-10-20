@@ -4,7 +4,7 @@ The browser entry point is `@jolly-pixel/asset.voxel-animation/client`. Server p
 
 ## Synchronization
 
-`new SyncedAnimationDocument(room)` creates an [`AnimationDocument`](./animation-set.md) as `document` with a private sync client. Construct it before `room.join()`. Its `ready` promise resolves after the first snapshot and `loaded` reports it; `dispose()` destroys the sync client. The caller still leaves the room and owns the shared network client. `voxelAnimationDocumentKind()` provides the corresponding `@jolly-pixel/editor.host` lease adapter.
+`voxelAnimationDocumentKind()` is the `@jolly-pixel/editor.host` lease adapter, built with `commandDocumentKind` from `@jolly-pixel/network/client`. Its `createDocument(room)` returns a `SyncedAnimationDocument`: a new [`AnimationDocument`](./animation-set.md) as `document` with a private sync client. Call it before `room.join()`. Its `ready` promise resolves after the first snapshot and `loaded` reports it; `dispose()` destroys the sync client. The caller still leaves the room and owns the shared network client.
 
 The sync client is a `DocumentSyncClient` from `@jolly-pixel/network/client`, keyed by `animationWriteKeys`. It sends local changes, an undo or redo with the `basis` of its step, and writes the server's answers to `document.receipts`, so a [`CommandHistory`](./history.md) refuses steps a peer overwrote. Local commands stay pending until the server acknowledges them. A peer command is applied under the pending commands, which are then replayed on top with a `"replay"` origin. Snapshots call `document.load()`. To listen to the sync client's `snapshot`, `ready`, `command` and `notice` events, build it yourself with `new DocumentSyncClient(room, { document, keys: animationWriteKeys })`.
 
@@ -28,6 +28,6 @@ The sync client is a `DocumentSyncClient` from `@jolly-pixel/network/client`, ke
 
 ## Server protocol
 
-`AnimationCommandArbiter.admit(state, command)` returns an admission, or `null` when `state.accepts(command)` is false or a conflict key rejects it. `animationConflictKeys(command)` returns the keys listed in [architecture](../ARCHITECTURE.md#collision-keys). `animationWriteKeys(command)` returns the values a command sets, for the client reconciler, or `null` for clip and track structure commands.
+The kind's live protocol arbitrates commands with a `KeyedCommandArbiter` from `@jolly-pixel/network`: a command is refused when `state.accepts(command)` is false or a conflict key rejects it. `animationConflictKeys(command)` returns the keys listed in [architecture](../ARCHITECTURE.md#collision-keys). `animationWriteKeys(command)` returns the values a command sets, for the client reconciler, or `null` for clip and track structure commands.
 
 `animationCommandProtocol` validates command messages and `animationSetSnapshotSchema` validates snapshots.

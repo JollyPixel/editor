@@ -9,6 +9,7 @@ import { AssetRoom } from "@jolly-pixel/asset";
 // Import Internal Dependencies
 import type { AssetRelay } from "#src/index.ts";
 import {
+  failingLiveCounterHandler,
   liveCounterHandler,
   relayCounterHandler,
   COUNTER_INCREMENTED
@@ -114,6 +115,17 @@ describe("registerAssetRooms — admission", () => {
   });
 });
 
+describe("registerAssetRooms — live room opening", () => {
+  test("a live protocol that fails to open keeps the room closed and releases the state", async() => {
+    await using harness = await roomHarness({ handler: failingLiveCounterHandler() });
+
+    await harness.join("A");
+
+    assert.deepEqual(harness.clients.get("A")!.received, []);
+    assert.strictEqual(harness.sync.states.has(harness.assetId), false);
+  });
+});
+
 describe("registerAssetRooms — relay", () => {
   const kNudge = z.object({
     action: z.literal("nudge"),
@@ -124,16 +136,16 @@ describe("registerAssetRooms — relay", () => {
     from: z.string()
   });
 
+  const kNudgeSchemas = {
+    inbound: [kNudge],
+    outbound: [kNudged]
+  };
+
   function nudgeRelay(
     left: string[]
-  ): AssetRelay {
+  ): AssetRelay<z.infer<typeof kNudge>> {
     return {
-      schemas: {
-        inbound: [kNudge],
-        outbound: [kNudged]
-      },
-      receive: (clientId, message, room) => {
-        const { to } = message as z.infer<typeof kNudge>;
+      receive: (clientId, { to }, room) => {
         room.sendTo(to, {
           type: "nudged",
           from: clientId
@@ -150,7 +162,7 @@ describe("registerAssetRooms — relay", () => {
   }
 
   test("a relay message reaches the relay and its reply reaches the peer, outside the event log", async() => {
-    await using harness = await roomHarness({ handler: relayCounterHandler(nudgeRelay([])) });
+    await using harness = await roomHarness({ handler: relayCounterHandler(kNudgeSchemas, nudgeRelay([])) });
     await harness.join("A");
     await harness.join("B");
     const before = harness.sync.eventStore.reader.list(harness.assetId).length;
@@ -171,7 +183,7 @@ describe("registerAssetRooms — relay", () => {
   });
 
   test("commands still go through arbitration next to the relay", async() => {
-    await using harness = await roomHarness({ handler: relayCounterHandler(nudgeRelay([])) });
+    await using harness = await roomHarness({ handler: relayCounterHandler(kNudgeSchemas, nudgeRelay([])) });
     await harness.join("A");
 
     await harness.send("A", { action: "increment" });
@@ -184,7 +196,9 @@ describe("registerAssetRooms — relay", () => {
 
   test("a peer leaving the room leaves the relay", async() => {
     const left: string[] = [];
-    await using harness = await roomHarness({ handler: relayCounterHandler(nudgeRelay(left)) });
+    await using harness = await roomHarness({
+      handler: relayCounterHandler(kNudgeSchemas, nudgeRelay(left))
+    });
     const connection = await harness.join("A");
     await harness.join("B");
 
@@ -196,21 +210,23 @@ describe("registerAssetRooms — relay", () => {
     assert.deepEqual(left, ["A"]);
   });
 
-  test("a relay message sharing a command tag keeps the room closed and the state released", async() => {
-    const relay = nudgeRelay([]);
-    await using harness = await roomHarness({
-      handler: relayCounterHandler({
-        ...relay,
-        schemas: {
-          ...relay.schemas,
-          inbound: [z.object({ action: z.literal("increment"), extra: z.string() })]
-        }
-      })
-    });
-
-    await harness.join("A");
-
-    assert.deepEqual(harness.clients.get("A")!.received, []);
-    assert.strictEqual(harness.sync.states.has(harness.assetId), false);
+  test("a relay message sharing a command tag fails registration", async() => {
+    await assert.rejects(
+      roomHarness({
+        handler: relayCounterHandler(
+          {
+            inbound: [z.object({ action: z.literal("increment"), extra: z.string() })],
+            outbound: []
+          },
+          {
+            receive: () => assert.fail("no relay message reaches a room that never opened")
+          }
+        )
+      }),
+      {
+        name: "TypeError",
+        message: /own literal "action", got increment/
+      }
+    );
   });
 });

@@ -6,7 +6,7 @@
 flowchart TB
     Document["ModelDocument"] --> Sync["DocumentSyncClient"]
     Sync --> Room["Model room"]
-    Room --> Arbiter["VoxelModelCommandArbiter"]
+    Room --> Arbiter["KeyedCommandArbiter"]
     Arbiter --> Log["Event log"]
     Log --> State["VoxelModelState"]
     State --> Nodes["Nodes"]

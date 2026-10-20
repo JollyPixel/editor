@@ -1,11 +1,16 @@
 // Import Third-party Dependencies
-import { TILES_PER_CHUNK } from "@jolly-pixel/terrain.renderer";
+import {
+  ChunkCoord,
+  TileCoord
+} from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
+import { CHUNK_TILE_COUNT } from "./TerrainCommand.schema.ts";
 import type { TerrainCommand } from "./types.ts";
 
-// CONSTANTS
-const kTilesPerChunk = TILES_PER_CHUNK * TILES_PER_CHUNK;
+export type TerrainWriteRef =
+  | { readonly kind: "chunk"; readonly chunk: ChunkCoord; }
+  | { readonly kind: "tile"; readonly tile: TileCoord; };
 
 export function terrainChunkKey(
   x: number,
@@ -22,15 +27,43 @@ export function terrainHeightTileKey(
   return `${terrainChunkKey(x, z)}:h:${tile}`;
 }
 
+export function terrainWriteRefKey(
+  ref: TerrainWriteRef
+): string {
+  if (ref.kind === "chunk") {
+    return terrainChunkKey(ref.chunk.x, ref.chunk.z);
+  }
+
+  return terrainHeightTileKey(ref.tile.chunk.x, ref.tile.chunk.z, ref.tile.index);
+}
+
+export function terrainWriteRefs(
+  command: TerrainCommand
+): TerrainWriteRef[] {
+  if (command.action === "heights-patched") {
+    return command.tiles.map(({ x, z, tile }) => {
+      return {
+        kind: "tile",
+        tile: TileCoord.fromIndex(new ChunkCoord(x, z), tile)
+      };
+    });
+  }
+
+  const chunk = new ChunkCoord(command.x, command.z);
+
+  return [
+    { kind: "chunk", chunk },
+    ...Array.from({ length: CHUNK_TILE_COUNT }, (_, index): TerrainWriteRef => {
+      return {
+        kind: "tile",
+        tile: TileCoord.fromIndex(chunk, index)
+      };
+    })
+  ];
+}
+
 export function terrainWriteKeys(
   command: TerrainCommand
 ): string[] {
-  if (command.action === "heights-patched") {
-    return command.tiles.map(({ x, z, tile }) => terrainHeightTileKey(x, z, tile));
-  }
-
-  return [
-    terrainChunkKey(command.x, command.z),
-    ...Array.from({ length: kTilesPerChunk }, (_, tile) => terrainHeightTileKey(command.x, command.z, tile))
-  ];
+  return terrainWriteRefs(command).map(terrainWriteRefKey);
 }

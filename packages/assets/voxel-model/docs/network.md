@@ -4,7 +4,7 @@ The browser entry point is `@jolly-pixel/asset.voxel-model/client`. Server proto
 
 ## Synchronization
 
-`new SyncedModelDocument(room)` creates a [`ModelDocument`](./model.md) as `document` with a private sync client. Construct it before `room.join()`. Its `ready` promise resolves after the first snapshot and `loaded` reports it; `dispose()` destroys the sync client. The caller still leaves the room and owns the shared network client. `voxelModelDocumentKind()` provides the corresponding `@jolly-pixel/editor.host` lease adapter.
+`voxelModelDocumentKind()` is the `@jolly-pixel/editor.host` lease adapter, built with `commandDocumentKind` from `@jolly-pixel/network/client`. Its `createDocument(room)` returns a `SyncedModelDocument`: a new [`ModelDocument`](./model.md) as `document` with a private sync client. Call it before `room.join()`. Its `ready` promise resolves after the first snapshot and `loaded` reports it; `dispose()` destroys the sync client. The caller still leaves the room and owns the shared network client.
 
 The sync client is a `DocumentSyncClient` from `@jolly-pixel/network/client`, keyed by `voxelModelWriteKeys`. It sends local changes, an undo or redo with the `basis` of its step, and writes the server's answers to `document.receipts`, so a [`CommandHistory`](./history.md) refuses steps a peer overwrote. Local commands stay pending until the server acknowledges them. A peer command is applied under the pending commands, which are then replayed on top with a `"replay"` origin. A pending command the tree now refuses, such as a move into a removed folder, leaves the tree until the server's snapshot repairs it. Snapshots call `document.load()`. To listen to the sync client's `snapshot`, `ready`, `command` and `notice` events, build it yourself with `new DocumentSyncClient(room, { document, keys: voxelModelWriteKeys })`; notices report rejected edits or asset deletion.
 
@@ -37,6 +37,6 @@ The [model](./model.md), [material](./materials.md) and [animation](./animation.
 
 ## Server protocol
 
-`VoxelModelCommandArbiter.admit(state, command)` returns an admission, or `null` when `state.accepts(command)` is false or a conflict key rejects it. `voxelModelConflictKeys(command)` returns the keys listed in [architecture](../ARCHITECTURE.md#collision-keys). `voxelModelWriteKeys(command)` returns the values a command sets, for the client reconciler.
+The kind's live protocol arbitrates commands with a `KeyedCommandArbiter` from `@jolly-pixel/network`: a command is refused when `state.accepts(command)` is false or a conflict key rejects it. `voxelModelConflictKeys(command)` returns the keys listed in [architecture](../ARCHITECTURE.md#collision-keys). `voxelModelWriteKeys(command)` returns the values a command sets, for the client reconciler.
 
 `voxelModelCommandProtocol` validates command messages and `voxelModelSnapshotSchema` validates snapshots.

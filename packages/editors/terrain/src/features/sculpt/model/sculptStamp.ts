@@ -29,25 +29,29 @@ const kSmoothKernel = [
 
 export type SculptTool = typeof SCULPT_TOOLS[number];
 
-export interface SculptStamp {
-  readonly tool: SculptTool;
-  /**
-   * World X and Z of the stamp's centre, in metres.
-   */
+interface StampFootprint {
   readonly x: number;
   readonly z: number;
   readonly radius: number;
   readonly strength: number;
   readonly falloff: FalloffCurve;
-  /**
-   * Metres a full-weight sample moves per stamp; negative lowers. Raise only.
-   */
-  readonly lift?: number;
-  /**
-   * Height flatten moves samples toward.
-   */
-  readonly target?: number;
 }
+
+interface RaiseStamp extends StampFootprint {
+  readonly tool: "raise";
+  readonly lift: number;
+}
+
+interface SmoothStamp extends StampFootprint {
+  readonly tool: "smooth";
+}
+
+interface FlattenStamp extends StampFootprint {
+  readonly tool: "flatten";
+  readonly target: number;
+}
+
+export type SculptStamp = RaiseStamp | SmoothStamp | FlattenStamp;
 
 export function sculptStamp(
   terrain: TerrainReader,
@@ -94,10 +98,10 @@ function stampDelta(
 ): number {
   switch (stamp.tool) {
     case "raise":
-      return stamp.lift ?? 0;
+      return stamp.lift;
     case "flatten":
-      return (stamp.target ?? height) - height;
-    default:
+      return stamp.target - height;
+    case "smooth":
       return smoothed(terrain, x, z) - height;
   }
 }

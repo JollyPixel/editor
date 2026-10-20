@@ -102,7 +102,7 @@ interface OrbitFlyCameraOptions extends CameraOptions {
 | `maxPitch` | `π / 2 - 0.01` | Maximum look-up/down pitch, in radians |
 | `scrollSpeed` | `2.5` | Trail distance changed per wheel notch in "elastic" mode, in world units |
 | `speedAdjustStep` | `0.15` | Fraction `moveSpeed` grows per wheel notch in "none" mode, and in "lock" mode while not orbiting |
-| `focusMode` | `"none"` | `"none"`: no pivot. `"lock"`: `enterOrbitFocus` engages a fixed pivot; scroll adjusts distance, only `exitOrbitFocus` releases it. `"elastic"`: WASD/look pilot a free-floating pivot; scroll trails the camera behind it, reaching 0 (free-fly) at full zoom-in |
+| `focusMode` | `"none"` | `"none"`: no pivot. `"lock"`: `enterOrbitFocus` engages a fixed pivot; scroll adjusts distance; `exitOrbitFocus` or `teleport` releases it. `"elastic"`: WASD/look pilot a free-floating pivot; scroll trails the camera behind it, reaching 0 (free-fly) at full zoom-in |
 | `minPivotDistance` / `maxPivotDistance` | `1` / `200` | Bounds for the scroll-adjusted pivot distance in "lock" mode; `minPivotDistance` must be greater than 0 or the constructor throws a `RangeError`. `maxPivotDistance` also doubles as "elastic" mode's max trail distance |
 | `pivotZoomStep` | `0.1` | While orbiting in "lock" mode, each wheel notch multiplies the pivot distance by `1 + pivotZoomStep` zooming out and divides it zooming in, so a notch covers the same share of the distance near the pivot as far from it |
 | `pivotNudgeStep` | `1` | Distance nudged per key press while orbiting in "lock" mode |

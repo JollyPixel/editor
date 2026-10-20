@@ -154,7 +154,7 @@ export class OrbitFocus implements CameraFocus {
     transform.moveGlobal(offset);
   }
 
-  place(): void {
+  teleported(): void {
     this.exit();
   }
 

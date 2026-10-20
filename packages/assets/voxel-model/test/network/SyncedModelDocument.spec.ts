@@ -9,11 +9,7 @@ import assert from "node:assert/strict";
 import { CommandHistory } from "@jolly-pixel/history";
 
 // Import Internal Dependencies
-import {
-  SyncedModelDocument,
-  voxelModelDocumentKind
-} from "#src/network/SyncedModelDocument.ts";
-import { VOXEL_MODEL_KIND } from "#src/asset/voxelModel.ts";
+import { voxelModelDocumentKind } from "#src/network/voxelModelDocumentKind.ts";
 import { modelHistoryKeys } from "#src/model/history/modelHistoryKeys.ts";
 import { createMockRoom } from "../helpers/room.ts";
 import { networkCommand } from "../helpers/commands.ts";
@@ -35,7 +31,7 @@ const kSnapshot = {
 describe("SyncedModelDocument", () => {
   test("is ready once the first snapshot is loaded", async() => {
     const room = createMockRoom();
-    const synced = new SyncedModelDocument(room);
+    const synced = voxelModelDocumentKind().createDocument(room);
     let settled = false;
     void synced.ready.then(() => {
       settled = true;
@@ -53,7 +49,7 @@ describe("SyncedModelDocument", () => {
 
   test("sends local edits and applies remote ones without echoing", () => {
     const room = createMockRoom();
-    const synced = new SyncedModelDocument(room);
+    const synced = voxelModelDocumentKind().createDocument(room);
     room.deliverSnapshot({ nodes: [], materials: [], animationSets: [] });
 
     synced.document.addFolder({
@@ -81,7 +77,7 @@ describe("SyncedModelDocument", () => {
 
   test("converges on concurrent moves forming a cycle once the server resyncs", () => {
     const room = createMockRoom();
-    const synced = new SyncedModelDocument(room);
+    const synced = voxelModelDocumentKind().createDocument(room);
     const folderA = { kind: "folder" as const, id: "a", parentId: null, name: "A" };
     const folderB = { kind: "folder" as const, id: "b", parentId: null, name: "B" };
     room.deliverSnapshot({ nodes: [folderA, folderB], materials: [], animationSets: [] });
@@ -110,7 +106,7 @@ describe("SyncedModelDocument", () => {
 
   test("an undo carries the version its step landed at, and a peer edit after it refuses the step", () => {
     const room = createMockRoom();
-    const synced = new SyncedModelDocument(room);
+    const synced = voxelModelDocumentKind().createDocument(room);
     room.deliverSnapshot(kSnapshot);
     const history = new CommandHistory<"model">();
     history.register({
@@ -139,7 +135,7 @@ describe("SyncedModelDocument", () => {
 
   test("stops forwarding local edits once disposed", () => {
     const room = createMockRoom();
-    const synced = new SyncedModelDocument(room);
+    const synced = voxelModelDocumentKind().createDocument(room);
     room.deliverSnapshot({ nodes: [], materials: [], animationSets: [] });
 
     synced.dispose();
@@ -150,19 +146,5 @@ describe("SyncedModelDocument", () => {
 
     assert.strictEqual(room.sent.length, 0);
     assert.strictEqual(room.leaves, 0);
-  });
-});
-
-describe("voxelModelDocumentKind", () => {
-  test("builds a synced document for the voxel-model asset kind", () => {
-    const kind = voxelModelDocumentKind();
-    const room = createMockRoom();
-
-    assert.strictEqual(kind.kind, VOXEL_MODEL_KIND);
-
-    const synced = kind.createDocument(room);
-
-    assert.ok(synced instanceof SyncedModelDocument);
-    synced.dispose();
   });
 });

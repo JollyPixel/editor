@@ -2,6 +2,7 @@
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 import {
   describeErrors,
+  KeyedCommandArbiter,
   SchemaParser,
   type ConflictResolver,
   type Infer
@@ -35,7 +36,7 @@ import {
   voxelModelCommandProtocol,
   voxelModelSnapshotSchema
 } from "../network/VoxelModelCommand.schema.ts";
-import { VoxelModelCommandArbiter } from "../network/VoxelModelCommandArbiter.ts";
+import { voxelModelConflictKeys } from "../network/VoxelModelCommandKeys.ts";
 import type {
   ModelNodeJSON,
   UVLayoutData,
@@ -264,7 +265,12 @@ export function voxelModelAssetKind(
       },
 
       live({ state }) {
-        const arbiter = new VoxelModelCommandArbiter({
+        const arbiter = new KeyedCommandArbiter<
+          VoxelModelNetworkCommand,
+          VoxelModelState
+        >({
+          accepts: (model, command) => model.accepts(command),
+          keys: voxelModelConflictKeys,
           conflictResolver
         });
 

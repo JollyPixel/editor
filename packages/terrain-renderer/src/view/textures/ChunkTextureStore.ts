@@ -6,21 +6,25 @@ import type {
   ChunkCoord,
   ChunkKey
 } from "../../document/ChunkCoord.ts";
+import type { TerrainReader } from "../../document/TerrainDocument.ts";
 import {
   TILE_SAMPLES,
   type TileCoord
 } from "../../document/TileCoord.ts";
 import {
+  affectedAprons,
   APRON_SIZE,
-  type ApronUpdate,
-  type HeightApronStore
-} from "./HeightApronStore.ts";
+  APRON_TEXELS,
+  CHUNK_RECT,
+  mergeAprons,
+  writeApron,
+  type ApronRegion
+} from "./heightApron.ts";
 
 // CONSTANTS
 export const MAX_CHUNK_LAYERS = 256;
 export const LOOKUP_SIZE = 256;
 const kLookupComponents = 4;
-const kLayerTexels = APRON_SIZE * APRON_SIZE;
 
 export function lookupSlot(
   coord: ChunkCoord
@@ -35,16 +39,16 @@ export class ChunkTextureStore {
   readonly heights: THREE.DataArrayTexture;
   readonly lookup: THREE.DataTexture;
 
-  #aprons: HeightApronStore;
+  #terrain: TerrainReader;
   #layers = new Map<ChunkKey, number>();
   #freeLayers: number[] = [];
 
   constructor(
-    aprons: HeightApronStore
+    terrain: TerrainReader
   ) {
-    this.#aprons = aprons;
+    this.#terrain = terrain;
     this.heights = new THREE.DataArrayTexture(
-      new Float32Array(kLayerTexels * MAX_CHUNK_LAYERS),
+      new Float32Array(APRON_TEXELS * MAX_CHUNK_LAYERS),
       APRON_SIZE,
       APRON_SIZE,
       MAX_CHUNK_LAYERS
@@ -81,7 +85,6 @@ export class ChunkTextureStore {
       this.#freeLayers.push(layer);
     }
     this.#layers.clear();
-    this.#aprons.clear();
     (this.lookup.image.data as Float32Array).fill(0);
     this.lookup.needsUpdate = true;
   }
@@ -89,6 +92,14 @@ export class ChunkTextureStore {
   chunkAdded(
     coord: ChunkCoord
   ): void {
+    if (!this.#terrain.has(coord)) {
+      throw new Error(`Chunk ${coord.key} does not exist.`);
+    }
+
+    if (this.#layers.has(coord.key)) {
+      throw new Error(`Chunk ${coord.key} is already in the view.`);
+    }
+
     const slot = lookupSlot(coord) * kLookupComponents;
     const lookup = this.lookup.image.data as Float32Array;
     if (lookup[slot] !== 0) {
@@ -106,12 +117,16 @@ export class ChunkTextureStore {
     this.#layers.set(coord.key, layer);
     lookup.set([layer + 1, coord.x, coord.z, 0], slot);
     this.lookup.needsUpdate = true;
-    this.#upload(this.#aprons.chunkAdded(coord));
+    this.#writeAprons(affectedAprons(coord, CHUNK_RECT));
   }
 
   chunkRemoved(
     coord: ChunkCoord
   ): void {
+    if (this.#terrain.has(coord)) {
+      throw new Error(`Chunk ${coord.key} must leave the terrain before the view.`);
+    }
+
     const layer = this.#layers.get(coord.key);
     if (layer === undefined) {
       return;
@@ -125,23 +140,24 @@ export class ChunkTextureStore {
       (lookupSlot(coord) + 1) * kLookupComponents
     );
     this.lookup.needsUpdate = true;
-    this.#upload(this.#aprons.chunkRemoved(coord));
+    this.#writeAprons(affectedAprons(coord, CHUNK_RECT));
   }
 
   tilesChanged(
     tiles: Iterable<TileCoord>
   ): void {
-    const updates: ApronUpdate[] = [];
+    const regions: ApronRegion[] = [];
     for (const tile of tiles) {
-      const { x, z } = tile.localSample;
-      updates.push(...this.#aprons.samplesChanged(tile.chunk, {
-        x,
-        z,
+      const samples = {
+        ...tile.localSample,
         width: TILE_SAMPLES,
         depth: TILE_SAMPLES
-      }));
+      };
+      if (this.#layers.has(tile.chunk.key)) {
+        regions.push(...affectedAprons(tile.chunk, samples));
+      }
     }
-    this.#upload(updates);
+    this.#writeAprons(mergeAprons(regions));
   }
 
   dispose(): void {
@@ -149,22 +165,18 @@ export class ChunkTextureStore {
     this.lookup.dispose();
   }
 
-  #upload(
-    updates: readonly ApronUpdate[]
+  #writeAprons(
+    regions: Iterable<ApronRegion>
   ): void {
     const data = this.heights.image.data as Float32Array;
-    const uploaded = new Set<number>();
-    for (const { coord } of updates) {
+    for (const { coord, samples } of regions) {
       const layer = this.#layers.get(coord.key);
-      const buffer = this.#aprons.buffer(coord);
-      if (layer !== undefined && buffer !== undefined && !uploaded.has(layer)) {
-        uploaded.add(layer);
-        data.set(buffer, layer * kLayerTexels);
+      if (layer !== undefined) {
+        const apron = data.subarray(layer * APRON_TEXELS, (layer + 1) * APRON_TEXELS);
+        writeApron(this.#terrain, coord, apron, samples);
         this.heights.addLayerUpdate(layer);
+        this.heights.needsUpdate = true;
       }
-    }
-    if (uploaded.size > 0) {
-      this.heights.needsUpdate = true;
     }
   }
 }

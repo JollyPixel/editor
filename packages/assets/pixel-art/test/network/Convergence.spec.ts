@@ -5,20 +5,18 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { LiveAssetRoom } from "@jolly-pixel/asset-server/testing";
+
 // Import Internal Dependencies
 import { StandalonePixelHistory } from "#src/history/PixelCanvasHistory.ts";
 import { pixelArtAssetKind } from "#src/index.ts";
-import type { PixelArtState } from "#src/asset/pixelArtAssetKind.ts";
 import { PixelSyncClient } from "#src/network/PixelSyncClient.ts";
-import type {
-  PixelServerMessage,
-  PixelWireCommand
-} from "#src/network/types.ts";
+import type { PixelWireSnapshot } from "#src/network/types.ts";
 import { command } from "../fixtures/commands.ts";
 import { readPixel } from "../fixtures/canvas.ts";
 import { createPixelArtCanvas } from "../helpers/canvas.ts";
 import { mouseEvent } from "../helpers/events.ts";
-import { LiveRoom } from "../helpers/liveRoom.ts";
 import { MockRoom } from "../helpers/room.ts";
 
 // CONSTANTS
@@ -34,7 +32,7 @@ const kBlue = {
 function setup(
   history = false
 ) {
-  const server = new LiveRoom<PixelArtState, PixelWireCommand>(
+  const server = new LiveAssetRoom(
     pixelArtAssetKind({ defaultSize: { x: 8, y: 8 } })
   );
   const room = new MockRoom({ clientId: "B" });
@@ -46,8 +44,8 @@ function setup(
   new PixelSyncClient({ room, document: manager.document });
 
   function deliver(): void {
-    for (const message of server.take("B")) {
-      room.emit("message", message as PixelServerMessage);
+    for (const message of server.take<PixelWireSnapshot>("B")) {
+      room.emit("message", message);
     }
   }
 

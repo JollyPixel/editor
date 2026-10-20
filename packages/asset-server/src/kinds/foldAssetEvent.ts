@@ -3,7 +3,10 @@ import type * as EventStore from "@jolly-pixel/event-store";
 import { MessageParser } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import type { AssetKindHandler } from "./AssetKindHandler.ts";
+import type {
+  AnyAssetKindHandler,
+  AssetKindHandler
+} from "./AssetKindHandler.ts";
 import type { AssetCommandHeader } from "./AssetLiveProtocol.ts";
 import {
   ASSET_CREATED,
@@ -16,9 +19,10 @@ import { decodeContent } from "../events/inlineContent.ts";
 
 export function foldAssetEvent<
   TState,
-  TCommand extends AssetCommandHeader
+  TCommand extends AssetCommandHeader,
+  TRelay extends object
 >(
-  handler: AssetKindHandler<TState, TCommand>,
+  handler: AssetKindHandler<TState, TCommand, TRelay>,
   state: TState,
   event: EventStore.Event
 ): TCommand | null {
@@ -47,9 +51,9 @@ export function foldAssetEvent<
   return command.val.message;
 }
 
-function foldLifecycleEvent<TState>(
-  handler: AssetKindHandler<TState, AssetCommandHeader>,
-  state: TState,
+function foldLifecycleEvent(
+  handler: AnyAssetKindHandler,
+  state: unknown,
   event: EventStore.Event
 ): void {
   const parsed = parseAssetEvent(event);

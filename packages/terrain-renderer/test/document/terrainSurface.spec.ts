@@ -3,17 +3,22 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { CHUNK_SAMPLES, ChunkCoord } from "#src/document/ChunkCoord.ts";
+import { quadDiagonal } from "#src/document/quadDiagonal.ts";
+import { CHUNK_SAMPLE_COUNT } from "#src/document/TerrainChunk.ts";
+import { TerrainDocument } from "#src/document/TerrainDocument.ts";
 import {
-  CHUNK_SAMPLE_COUNT,
-  CHUNK_SAMPLES,
-  ChunkCoord,
-  quadDiagonal,
   raycastTerrain,
   surfaceHeight,
-  TerrainDocument,
-  type Point3,
   type TerrainRay
-} from "#src/index.ts";
+} from "#src/document/terrainSurface.ts";
+import type { Point3 } from "#src/math/point3.ts";
+import { bruteRaycastDistance } from "../helpers/bruteRaycast.ts";
+import {
+  randomInteger,
+  seededRandom,
+  type Random
+} from "../helpers/random.ts";
 
 // CONSTANTS
 const kMarchStep = 0.01;
@@ -44,16 +49,69 @@ function hills(): TerrainDocument {
   return terrain;
 }
 
-function random(
-  seed: number
-): () => number {
-  let state = seed;
+function gappedTerrain(
+  random: Random
+): TerrainDocument {
+  const terrain = new TerrainDocument();
+  for (const [x, z] of [[0, 0], [1, 0], [0, 1], [2, 1], [-1, -1]]) {
+    const heights = new Float32Array(CHUNK_SAMPLE_COUNT);
+    const amplitude = 4 + random() * 8;
+    const frequency = 0.05 + random() * 0.2;
+    const base = randomInteger(random, -10, 10);
+    heights.forEach((_, index) => {
+      heights[index] = base + amplitude * Math.sin(index * frequency) +
+        randomInteger(random, 0, 3);
+    });
+    terrain.addChunk(new ChunkCoord(x, z), heights);
+  }
 
-  return () => {
-    state = (state * 1664525 + 1013904223) % 4294967296;
+  return terrain;
+}
 
-    return state / 4294967296;
-  };
+function unit(
+  x: number,
+  y: number,
+  z: number
+): Point3 {
+  const length = Math.hypot(x, y, z);
+
+  return { x: x / length, y: y / length, z: z / length };
+}
+
+function sampleRays(
+  random: Random
+): TerrainRay[] {
+  function span(): number {
+    return randomInteger(random, -CHUNK_SAMPLES / 2, 2 * CHUNK_SAMPLES) + random();
+  }
+  function sign(): number {
+    return random() < 0.5 ? -1 : 1;
+  }
+  function border(): number {
+    return randomInteger(random, -1, 3) * CHUNK_SAMPLES;
+  }
+  function spread(): number {
+    return random() - 0.5;
+  }
+
+  const down = { x: 0, y: -1, z: 0 };
+  const rays: TerrainRay[] = [];
+  for (let index = 0; index < 4; index++) {
+    rays.push(
+      { origin: { x: span(), y: 30, z: span() }, direction: unit(spread(), -random(), spread()) },
+      { origin: { x: span(), y: 25, z: span() }, direction: unit(sign(), -random() * 0.3, 0) },
+      { origin: { x: span(), y: 25, z: span() }, direction: unit(0, -random() * 0.3, sign()) },
+      { origin: { x: span(), y: 40, z: span() }, direction: down },
+      { origin: { x: border(), y: 40, z: border() }, direction: down },
+      { origin: { x: border(), y: 30, z: span() }, direction: unit(0, -0.2, sign()) },
+      { origin: { x: border() + 0.5, y: 30, z: border() - 0.5 }, direction: unit(1, -0.15, 1) },
+      { origin: { x: span(), y: 30, z: span() }, direction: unit(-random() - 0.1, -0.2, -random() - 0.1) },
+      { origin: { x: span(), y: -30, z: span() }, direction: unit(spread(), random(), spread()) },
+      { origin: { x: span(), y: 0, z: span() }, direction: unit(spread(), -random() * 0.2, spread()) }
+    );
+  }
+
+  return rays;
 }
 
 function rayToward(
@@ -120,7 +178,7 @@ describe("surfaceHeight", () => {
 describe("raycastTerrain", () => {
   test("hits the first point where the ray meets the surface", () => {
     const terrain = hills();
-    const next = random(7);
+    const next = seededRandom(7);
     let hits = 0;
     for (let index = 0; index < 40; index++) {
       const ray = rayToward(
@@ -144,6 +202,44 @@ describe("raycastTerrain", () => {
     }
 
     assert.ok(hits > 25);
+  });
+
+  test("finds the nearest downward-facing triangle a brute-force search over every quad finds", () => {
+    const random = seededRandom(1234);
+    const terrain = gappedTerrain(random);
+    let hits = 0;
+    let misses = 0;
+    for (const [index, ray] of sampleRays(random).entries()) {
+      const maxDistance = index % 3 === 0 ? 40 + random() * 120 : Infinity;
+      const expected = bruteRaycastDistance(terrain, ray, maxDistance);
+      const hit = raycastTerrain(terrain, ray, maxDistance);
+      if (expected === null) {
+        assert.equal(hit, null, `ray ${index} should miss`);
+        misses++;
+        continue;
+      }
+
+      hits++;
+      assert.ok(hit !== null, `ray ${index} should hit at ${expected}`);
+      assert.ok(Math.abs(hit.distance - expected) < 1e-6, `ray ${index}: ${hit.distance} vs ${expected}`);
+    }
+
+    assert.ok(hits > 10 && misses > 5, `${hits} hits, ${misses} misses`);
+  });
+
+  test("a ray running along the terrain's open edge hits that edge", () => {
+    const terrain = new TerrainDocument();
+    const heights = new Float32Array(CHUNK_SAMPLE_COUNT);
+    heights.forEach((_, index) => {
+      heights[index] = 5 * Math.sin(index * 0.37) + (index % 7);
+    });
+    terrain.addChunk(new ChunkCoord(0, 0), heights);
+    const ray = { origin: { x: CHUNK_SAMPLES, y: 20, z: 72.193 }, direction: unit(0, -0.2, -1) };
+    const hit = raycastTerrain(terrain, ray);
+
+    assert.ok(hit !== null);
+    assert.ok(Math.abs(hit.distance - bruteRaycastDistance(terrain, ray)!) < 1e-6);
+    assert.equal(hit.point.x, CHUNK_SAMPLES);
   });
 
   test("the normal is the hit triangle's, pointing up", () => {

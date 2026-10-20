@@ -4,6 +4,7 @@ import {
   html,
   LitElement,
   nothing,
+  type PropertyValues,
   type TemplateResult
 } from "lit";
 import {
@@ -12,7 +13,10 @@ import {
 } from "lit/decorators.js";
 import type { HistoryScopeState } from "@jolly-pixel/history";
 import { HEIGHT_RANGE } from "@jolly-pixel/terrain.renderer";
-import { FieldBinding } from "@jolly-pixel/ui";
+import {
+  FieldBinding,
+  SubscriptionController
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -31,6 +35,7 @@ import {
   TERRAIN_HISTORY_SCOPE,
   type TerrainHistory
 } from "../../../shared/terrainHistory.ts";
+import { viewportToolbarStyles } from "../../../shared/toolbar.styles.ts";
 import "../../../shared/historyIcons.ts";
 import "./sculptIcons.ts";
 
@@ -50,57 +55,19 @@ const kFalloffLabels: Readonly<Record<FalloffCurve, string>> = {
 
 @customElement("terrain-sculpt-toolbar")
 export class SculptToolbar extends LitElement {
-  static override styles = css`
-    :host {
-      display: inline-flex;
-    }
-
-    jolly-rail {
-      gap: 0;
-      height: auto;
-      padding: 4px;
-      border-radius: var(--jolly-radius-sm, 2px);
-      background: var(--jolly-surface-raised);
-      box-shadow: var(--jolly-shadow-floating);
-    }
-
-    .group {
-      display: flex;
-      align-items: center;
-    }
-
-    .divided::before {
-      content: "";
-      width: 1px;
-      height: 22px;
-      margin-inline: 6px;
-      background: var(--jolly-divider);
-    }
-
-    jolly-tool-button {
-      --jolly-tool-button-size: 30px;
-      --jolly-tool-button-gap: 10px;
-    }
-
-    jolly-tool-button::part(notch) {
-      display: none;
-    }
-
-    .step-count {
-      position: absolute;
-      inset-block-end: 1px;
-      inset-inline-end: 2px;
-      font-size: 9px;
-      font-weight: 600;
-      pointer-events: none;
-    }
-
-    .value {
-      min-width: 3ch;
-      font-weight: 600;
-      text-align: center;
-    }
-  `;
+  static override styles = [
+    viewportToolbarStyles,
+    css`
+      .step-count {
+        position: absolute;
+        inset-block-end: 1px;
+        inset-inline-end: 2px;
+        font-size: 9px;
+        font-weight: 600;
+        pointer-events: none;
+      }
+    `
+  ];
 
   @property({ attribute: false })
   declare settings: SculptSettings | null;
@@ -123,8 +90,19 @@ export class SculptToolbar extends LitElement {
     write: (flattenHeight) => this.settings?.update({ flattenHeight })
   });
 
-  #unsubscribe: (() => void) | null = null;
-  #unsubscribeHistory: (() => void) | null = null;
+  #settingsSubscription = new SubscriptionController<SculptSettings | null>(
+    this,
+    (settings) => (settings === null ?
+      [] :
+      [settings.subscribe("change", () => this.requestUpdate())])
+  );
+
+  #historySubscription = new SubscriptionController<TerrainHistory | null>(
+    this,
+    (history) => (history === null ?
+      [] :
+      [history.subscribe("change", () => this.requestUpdate())])
+  );
 
   constructor() {
     super();
@@ -132,24 +110,14 @@ export class SculptToolbar extends LitElement {
     this.history = null;
   }
 
-  override disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this.#unsubscribe?.();
-    this.#unsubscribe = null;
-    this.#unsubscribeHistory?.();
-    this.#unsubscribeHistory = null;
-  }
-
   protected override willUpdate(
-    changed: Map<string, unknown>
+    changed: PropertyValues<this>
   ): void {
     if (changed.has("settings")) {
-      this.#unsubscribe?.();
-      this.#unsubscribe = this.settings?.subscribe("change", () => this.requestUpdate()) ?? null;
+      this.#settingsSubscription.attach(this.settings);
     }
     if (changed.has("history")) {
-      this.#unsubscribeHistory?.();
-      this.#unsubscribeHistory = this.history?.subscribe("change", () => this.requestUpdate()) ?? null;
+      this.#historySubscription.attach(this.history);
     }
   }
 

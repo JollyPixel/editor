@@ -6,7 +6,7 @@
 flowchart TB
     Document["AnimationDocument"] --> Sync["DocumentSyncClient"]
     Sync --> Room["Animation room"]
-    Room --> Arbiter["AnimationCommandArbiter"]
+    Room --> Arbiter["KeyedCommandArbiter"]
     Arbiter --> Log["Event log"]
     Log --> State["AnimationSet"]
     State --> Clips["Clips"]

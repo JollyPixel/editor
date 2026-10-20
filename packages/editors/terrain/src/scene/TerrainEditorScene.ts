@@ -1,19 +1,23 @@
 // Import Third-party Dependencies
 import {
   OrbitFlyCamera,
-  Systems
+  Systems,
+  type OrbitFlyCameraOptions
 } from "@jolly-pixel/engine";
 import { PeerFrustums } from "@jolly-pixel/editor.host";
 import type { Room } from "@jolly-pixel/network/client";
 import {
-  TerrainLiveSync,
-  type TerrainChange,
-  type TerrainCommandDocument
+  TerrainInterest,
+  TerrainLiveReceiver,
+  TerrainLiveSender,
+  TerrainPreview,
+  type TerrainCommandDocument,
+  type TerrainPreviewEvents
 } from "@jolly-pixel/asset.terrain/client";
 import {
   CHUNK_SAMPLES,
   ChunkCoord,
-  TileCoord,
+  type TerrainReader,
   type TerrainView
 } from "@jolly-pixel/terrain.renderer";
 import { TerrainRenderer } from "@jolly-pixel/terrain.renderer/engine";
@@ -29,6 +33,28 @@ import {
   type TerrainHistory
 } from "../shared/terrainHistory.ts";
 
+// CONSTANTS
+const kCameraPreset: OrbitFlyCameraOptions = {
+  focusMode: "elastic",
+  position: {
+    x: CHUNK_SAMPLES * 1.5,
+    y: CHUNK_SAMPLES,
+    z: CHUNK_SAMPLES * 1.5
+  },
+  pivotPosition: {
+    x: CHUNK_SAMPLES / 2,
+    y: 0,
+    z: CHUNK_SAMPLES / 2
+  },
+  pitch: -0.5,
+  moveSpeed: 40,
+  minMoveSpeed: 5,
+  maxMoveSpeed: 400,
+  scrollSpeed: 4,
+  maxPivotDistance: CHUNK_SAMPLES * 16,
+  initialTrailDistance: CHUNK_SAMPLES * 1.5
+};
+
 export interface TerrainEditorSceneOptions {
   document: TerrainCommandDocument;
   sculpt: SculptSettings;
@@ -37,15 +63,24 @@ export interface TerrainEditorSceneOptions {
   room: Room;
 }
 
+interface TerrainSceneParts {
+  readonly camera: OrbitFlyCamera;
+  readonly view: TerrainView;
+  readonly preview: TerrainPreview;
+  readonly live: TerrainLiveSender;
+  readonly peerRings: PeerBrushRings;
+  readonly brush: SculptBrush;
+  readonly frustums: PeerFrustums;
+}
+
 export class TerrainEditorScene extends Systems.Scene {
   #document: TerrainCommandDocument;
   #sculpt: SculptSettings;
   #viewSettings: ViewSettings;
   #history: TerrainHistory;
   #room: Room;
-  #view: TerrainView | null = null;
-  #camera: OrbitFlyCamera | null = null;
-  #teleport: (clientId: string) => void = () => undefined;
+  #parts: TerrainSceneParts | null = null;
+  #cameraPosition = new THREE.Vector3();
   #disposables: Array<() => void> = [];
 
   constructor(
@@ -59,18 +94,26 @@ export class TerrainEditorScene extends Systems.Scene {
     this.#room = options.room;
   }
 
-  get view(): TerrainView | null {
-    return this.#view;
+  get view(): TerrainView {
+    return this.#awakened().view;
   }
 
-  get camera(): OrbitFlyCamera | null {
-    return this.#camera;
+  get camera(): OrbitFlyCamera {
+    return this.#awakened().camera;
+  }
+
+  get terrain(): TerrainReader {
+    return this.#awakened().preview.terrain;
   }
 
   teleportToPeer(
     clientId: string
   ): void {
-    this.#teleport(clientId);
+    const parts = this.#awakened();
+    const pose = parts.frustums.peerPose(clientId);
+    if (pose !== undefined) {
+      parts.camera.teleport(pose);
+    }
   }
 
   override awake(): void {
@@ -79,29 +122,106 @@ export class TerrainEditorScene extends Systems.Scene {
     sun.position.set(-0.6, 1, 0.35);
     scene.add(sun, new THREE.HemisphereLight("#b9d4ff", "#4a3f30", 0.9));
 
+    const room = this.#room;
+    const preview = new TerrainPreview(this.#document);
+    const live = new TerrainLiveSender({ room, preview });
+    const receiver = new TerrainLiveReceiver({ room, preview });
+    this.#disposables.push(
+      () => preview.dispose(),
+      () => live.dispose(),
+      () => receiver.dispose()
+    );
+
     const camera = this.world
       .createActor("camera")
-      .addComponentAndGet(OrbitFlyCamera, {
-        focusMode: "elastic",
-        position: { x: CHUNK_SAMPLES * 1.5, y: CHUNK_SAMPLES, z: CHUNK_SAMPLES * 1.5 },
-        pivotPosition: { x: CHUNK_SAMPLES / 2, y: 0, z: CHUNK_SAMPLES / 2 },
-        pitch: -0.5,
-        moveSpeed: 40,
-        minMoveSpeed: 5,
-        maxMoveSpeed: 400,
-        scrollSpeed: 4,
-        maxPivotDistance: CHUNK_SAMPLES * 16,
-        initialTrailDistance: CHUNK_SAMPLES * 1.5
-      });
-    this.#camera = camera;
-
+      .addComponentAndGet(OrbitFlyCamera, kCameraPreset);
     const { view } = this.world
       .createActor("terrain")
       .addComponentAndGet(TerrainRenderer, {
-        terrain: this.#document.terrain,
+        terrain: preview.terrain,
         camera: () => camera.camera
       });
-    this.#view = view;
+    this.#bindViewSettings(view);
+
+    const peerRings = this.world
+      .createActor("peer-brush-rings")
+      .addComponentAndGet(PeerBrushRings, {
+        room,
+        terrain: preview.terrain,
+        sender: live
+      });
+    const brush = this.world
+      .createActor("sculpt-brush")
+      .addComponentAndGet(SculptBrush, {
+        preview,
+        settings: this.#sculpt,
+        history: this.#history,
+        camera: camera.camera,
+        rings: peerRings
+      });
+    const frustums = this.world
+      .createActor("peer-frustums")
+      .addComponentAndGet(PeerFrustums, {
+        room,
+        camera: camera.camera
+      });
+    this.#disposables.push(bindHistoryShortcuts(this.world.input.keyboard, this.#history));
+
+    this.#bindPreview(preview, view, () => {
+      peerRings.refresh();
+      brush.terrainChanged();
+    });
+    this.#parts = {
+      camera,
+      view,
+      preview,
+      live,
+      peerRings,
+      brush,
+      frustums
+    };
+  }
+
+  override update(): void {
+    const parts = this.#parts;
+    if (parts === null) {
+      return;
+    }
+
+    const position = parts.camera.camera.getWorldPosition(this.#cameraPosition);
+    const centre = parts.live.interest?.centre;
+    if (centre?.equals(ChunkCoord.containing(position.x, position.z))) {
+      return;
+    }
+
+    const interest = TerrainInterest.around(position.x, position.z);
+    if (parts.live.publishInterest(interest)) {
+      parts.peerRings.refresh();
+      this.world.invalidate();
+    }
+  }
+
+  override destroy(): void {
+    this.#parts?.brush.endStroke();
+    for (const dispose of this.#disposables.splice(0).reverse()) {
+      dispose();
+    }
+    this.#parts = null;
+
+    super.destroy();
+  }
+
+  #awakened(): TerrainSceneParts {
+    if (this.#parts === null) {
+      throw new Error("The terrain editor scene is not awake.");
+    }
+
+    return this.#parts;
+  }
+
+  #bindViewSettings(
+    view: TerrainView
+  ): void {
     const viewSettings = this.#viewSettings;
     function applyViewSettings(): void {
       view.overlay = viewSettings.options.overlay;
@@ -109,86 +229,38 @@ export class TerrainEditorScene extends Systems.Scene {
     }
     applyViewSettings();
     this.#disposables.push(viewSettings.subscribe("change", applyViewSettings));
-    const live = new TerrainLiveSync({
-      room: this.#room,
-      document: this.#document
-    });
-    const peerRings = this.world
-      .createActor("peer-brush-rings")
-      .addComponentAndGet(PeerBrushRings, {
-        room: this.#room,
-        terrain: this.#document.terrain,
-        camera: () => camera.camera,
-        interestChanged: (interest) => live.publishInterest(interest)
-      });
-    live.on("tilesChanged", (tiles) => {
-      view.tilesChanged(tiles);
-      peerRings.refresh();
-      this.world.invalidate();
-    });
-    this.#disposables.push(() => live.dispose());
-    this.world
-      .createActor("sculpt-brush")
-      .addComponent(SculptBrush, {
-        document: this.#document,
-        view,
-        settings: this.#sculpt,
-        history: this.#history,
-        camera: () => camera.camera,
-        publishRing: (shape) => peerRings.publishLocalRing(shape),
-        liveTiles: (tiles) => live.queue(tiles)
-      });
-    this.#disposables.push(bindHistoryShortcuts(this.world.input.keyboard, this.#history));
-
-    const frustums = this.world
-      .createActor("peer-frustums")
-      .addComponentAndGet(PeerFrustums, {
-        room: this.#room,
-        camera: camera.camera
-      });
-    this.#teleport = (clientId) => {
-      const pose = frustums.peerPose(clientId);
-      if (pose !== undefined) {
-        camera.teleport(pose);
-      }
-    };
-
-    function onChange(
-      { command }: TerrainChange
-    ): void {
-      if (command.action === "heights-patched") {
-        view.tilesChanged(command.tiles.map(
-          ({ x, z, tile }) => TileCoord.fromIndex(new ChunkCoord(x, z), tile)
-        ));
-        peerRings.refresh();
-
-        return;
-      }
-
-      const coord = new ChunkCoord(command.x, command.z);
-      if (command.action === "chunk-added") {
-        view.chunkAdded(coord);
-      }
-      else {
-        view.chunkRemoved(coord);
-      }
-    }
-    function onReset(): void {
-      view.reset();
-    }
-    this.#document.on("change", onChange);
-    this.#document.on("reset", onReset);
-    this.#disposables.push(() => {
-      this.#document.off("change", onChange);
-      this.#document.off("reset", onReset);
-    });
   }
 
-  override destroy(): void {
-    for (const dispose of this.#disposables.splice(0)) {
-      dispose();
-    }
-
-    super.destroy();
+  #bindPreview(
+    preview: TerrainPreview,
+    view: TerrainView,
+    surfaceChanged: () => void
+  ): void {
+    const listeners: Pick<
+      TerrainPreviewEvents,
+      "tilesChanged" | "chunkAdded" | "chunkRemoved" | "reset"
+    > = {
+      tilesChanged: (tiles) => {
+        view.tilesChanged(tiles);
+        surfaceChanged();
+        this.world.invalidate();
+      },
+      chunkAdded: (coord) => view.chunkAdded(coord),
+      chunkRemoved: (coord) => view.chunkRemoved(coord),
+      reset: () => {
+        view.reset();
+        surfaceChanged();
+      }
+    };
+    preview.on("tilesChanged", listeners.tilesChanged);
+    preview.on("chunkAdded", listeners.chunkAdded);
+    preview.on("chunkRemoved", listeners.chunkRemoved);
+    preview.on("reset", listeners.reset);
+    this.#disposables.push(() => {
+      preview.off("tilesChanged", listeners.tilesChanged);
+      preview.off("chunkAdded", listeners.chunkAdded);
+      preview.off("chunkRemoved", listeners.chunkRemoved);
+      preview.off("reset", listeners.reset);
+    });
   }
 }

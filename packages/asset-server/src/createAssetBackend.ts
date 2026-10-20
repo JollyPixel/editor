@@ -13,7 +13,7 @@ import {
 import { IdentitySidecar } from "./identity/IdentitySidecar.ts";
 import { AssetKindRegistry } from "./kinds/AssetKindRegistry.ts";
 import type {
-  AssetKindHandler,
+  AnyAssetKindHandler,
   SnapshotPolicy
 } from "./kinds/AssetKindHandler.ts";
 import { ProjectionState } from "./projection/ProjectionState.ts";
@@ -46,7 +46,7 @@ export interface AssetBackendOptions {
    * Kind handlers. The built-in `binary` fallback is always present and
    * claims whatever these do not.
    */
-  handlers?: AssetKindHandler[];
+  handlers?: AnyAssetKindHandler[];
   /**
    * Default snapshot cadence, overridable per kind.
    */

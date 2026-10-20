@@ -9,14 +9,20 @@ import * as z from "zod/mini";
 
 // CONSTANTS
 export const MAX_PATCH_TILES = 1024;
+export const CHUNK_TILE_COUNT = TILES_PER_CHUNK * TILES_PER_CHUNK;
 const kChunkCoordinate = z.int();
 
 export const tilePatchSchema = z.object({
   x: kChunkCoordinate,
   z: kChunkCoordinate,
-  tile: z.int().check(z.gte(0), z.lt(TILES_PER_CHUNK * TILES_PER_CHUNK)),
+  tile: z.int().check(z.gte(0), z.lt(CHUNK_TILE_COUNT)),
   heights: z.string()
 });
+
+export const tilePatchesSchema = z.array(tilePatchSchema).check(
+  z.minLength(1),
+  z.maxLength(MAX_PATCH_TILES)
+);
 
 export const chunkSnapshotSchema = z.object({
   x: kChunkCoordinate,
@@ -39,7 +45,7 @@ export const terrainCommandSchema = z.discriminatedUnion("action", [
     z: kChunkCoordinate
   }),
   commandVariant("heights-patched", {
-    tiles: z.array(tilePatchSchema).check(z.minLength(1), z.maxLength(MAX_PATCH_TILES))
+    tiles: tilePatchesSchema
   })
 ]);
 

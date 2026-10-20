@@ -19,9 +19,6 @@ export interface BrushRingShape {
   readonly x: number;
   readonly z: number;
   readonly radius: number;
-  /**
-   * Radius of the inner ring, or null to draw none.
-   */
   readonly innerRadius: number | null;
 }
 

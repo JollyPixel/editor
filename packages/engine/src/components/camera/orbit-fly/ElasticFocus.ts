@@ -98,7 +98,7 @@ export class ElasticFocus implements CameraFocus {
     this.#pivotPosition.add(offset);
   }
 
-  place(
+  teleported(
     position: THREE.Vector3Like,
     orientation: THREE.Quaternion
   ): void {

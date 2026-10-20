@@ -3,7 +3,7 @@ import { pathToFileURL } from "node:url";
 
 // Import Internal Dependencies
 import type { LoadedAssetKind } from "../kinds/AssetKindDescriptor.ts";
-import type { AssetKindHandler } from "../kinds/AssetKindHandler.ts";
+import type { AnyAssetKindHandler } from "../kinds/AssetKindHandler.ts";
 import { BINARY_KIND } from "../kinds/handlers/binary.ts";
 import {
   builtInAssetKinds,
@@ -106,7 +106,7 @@ export class ProjectKinds {
     this.#packages[index] = kindPackage;
   }
 
-  handlers(): AssetKindHandler[] {
+  handlers(): AnyAssetKindHandler[] {
     return [
       ...this.packages.flatMap(
         (kindPackage) => kindPackage.handlers

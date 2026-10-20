@@ -14,10 +14,14 @@ import type {
 } from "#src/transport/ClientSocket.ts";
 import type {
   CommandBody,
+  CommandDocumentKind,
   CommandReconciler,
   CommandSync,
+  CommandSyncableDocument,
   NetworkCommandHeader,
-  NetworkServerNoticeOf
+  NetworkServerMessage,
+  NetworkServerNoticeOf,
+  SyncedCommandDocument
 } from "#src/client/index.ts";
 import {
   PresenceChannel,
@@ -48,6 +52,11 @@ import type {
 } from "#src/server/extension/worker/protocol.ts";
 import type { ChannelMessage } from "#src/transport/channel/ChannelMessage.ts";
 import type { DataChannelLike } from "#src/transport/channel/DataChannelPort.ts";
+import type {
+  TestCommand,
+  TestSnapshot,
+  ValueDocument
+} from "./helpers/client/ValueDocument.ts";
 
 declare const room: Room;
 
@@ -92,6 +101,30 @@ describe("NetworkServerNoticeOf", () => {
     expect<NetworkServerNoticeOf<SnapshotNotice>>().type.toBe<never>();
     expect<NetworkServerNoticeOf<RejectedNotice | SnapshotNotice>>().type.toBe<never>();
     expect<NetworkServerNoticeOf<WideNotice>>().type.toBe<never>();
+  });
+});
+
+describe("CommandDocumentKind", () => {
+  type ValueKind = CommandDocumentKind<"value", ValueDocument, RejectedNotice>;
+
+  test("derives the room and synced document from the document", () => {
+    expect<Parameters<ValueKind["createDocument"]>[0]>().type.toBe<Room<
+      TestCommand,
+      NetworkServerMessage<TestCommand, TestSnapshot, RejectedNotice>
+    >>();
+    expect<SyncedCommandDocument<ValueDocument>["document"]>()
+      .type.toBe<ValueDocument>();
+  });
+
+  test("refuses a document the sync cannot drive", () => {
+    interface LoadOnly {
+      load(snapshot: TestSnapshot): void;
+    }
+
+    expect<ValueDocument>()
+      .type.toBeAssignableTo<CommandSyncableDocument<ValueDocument>>();
+    expect<LoadOnly>()
+      .type.not.toBeAssignableTo<CommandSyncableDocument<LoadOnly>>();
   });
 });
 

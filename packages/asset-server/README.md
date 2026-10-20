@@ -44,6 +44,50 @@ made through `backend.writer` are appended to the event store and written to
 the asset source. Changes made by external tools are detected and appended as
 system events.
 
+## 🧪 Testing helpers
+
+`@jolly-pixel/asset-server/testing` runs an asset kind's live room in memory,
+for the tests of packages that ship asset kinds.
+
+```ts
+import {
+  LiveAssetRoom,
+  mockAssetRoom
+} from "@jolly-pixel/asset-server/testing";
+
+const server = new LiveAssetRoom(myAssetKind());
+const room = mockAssetRoom<MyNetworkCommand, MySnapshot>("B");
+
+server.connect("B");
+for (const message of server.take<MySnapshot>("B")) {
+  room.deliver(message);
+}
+```
+
+`new LiveAssetRoom(handler)` creates the kind's state for the asset id
+`"asset-1"`, folds an in-memory event store into it and serves the room through
+an `AssetRoomExtension` built from `handler.commands.live()`. `TState`,
+`TCommand` and `TRelay` are inferred from `handler`. It throws a `TypeError`
+when the kind has no live commands. `state` is the server state.
+
+- `connect(clientId)` joins a client; the room's first answer is queued for it.
+- `receive(clientId, payload)` parses `payload` with the room's inbound
+  protocol and handles it as a message from that client. It throws a
+  `TypeError` when the payload does not parse.
+- `resync(clientId)` handles a resync request from that client.
+- `take<TSnapshot = unknown>(clientId)` returns and clears the messages queued
+  for that client, as `AssetServerMessage<TCommand, TSnapshot>`. `TSnapshot`
+  only types the snapshots, so name the type the kind's `snapshotSchema`
+  parses. Each message is parsed with the room's outbound protocol, as a client
+  room would, and `take()` throws a `TypeError` when one does not parse. Relay
+  messages are queued too, although that type does not name them.
+
+`mockAssetRoom(clientId?)` returns a client `Room` that never touches a
+transport. `clientId` defaults to `"client-A"`. `sent` collects what the client
+sends. `joins`, `leaves` and `resyncs` count calls to `join()`, `leave()` and
+`resync()`. `deliver(message)` emits an `AssetServerMessage<TCommand, TSnapshot>`
+to the room's `message` listeners, and `emit(type, ...args)` emits any room event.
+
 ## 📈 Benchmarks
 
 ```bash

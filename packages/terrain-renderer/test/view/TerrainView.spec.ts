@@ -6,17 +6,19 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 
 // Import Internal Dependencies
+import { ChunkCoord } from "#src/document/ChunkCoord.ts";
+import { TerrainDocument } from "#src/document/TerrainDocument.ts";
+import { LodRanges } from "#src/view/lod/LodRanges.ts";
 import {
-  ChunkCoord,
   DEFAULT_WALKABLE_SLOPE,
   MAX_WALKABLE_SLOPE,
   NODE_DATA_ATTRIBUTE,
-  NODE_MORPH_ATTRIBUTE,
-  LodRanges,
+  NODE_MORPH_ATTRIBUTE
+} from "#src/view/shading/terrainNodes.ts";
+import {
   NODE_RESOLUTION,
-  TerrainDocument,
   TerrainView
-} from "#src/index.ts";
+} from "#src/view/TerrainView.ts";
 
 type BatchMesh = THREE.Mesh<THREE.InstancedBufferGeometry>;
 
@@ -56,11 +58,12 @@ describe("TerrainView", () => {
     const [nodes, quarters] = batches(view);
     const { ranges } = view.selection;
 
-    assert.ok(selected.some((node) => node.size !== ranges.nodeSize(node.level)));
-    assert.equal(
-      nodes.geometry.instanceCount,
-      selected.filter((node) => node.size === ranges.nodeSize(node.level)).length
-    );
+    const full = selected.filter((node) => node.size === ranges.nodeSize(node.level));
+    const quarter = selected.filter((node) => node.size === ranges.nodeSize(node.level) / 2);
+
+    assert.ok(quarter.length > 0);
+    assert.equal(full.length + quarter.length, selected.length);
+    assert.equal(nodes.geometry.instanceCount, full.length);
     assert.equal(nodes.geometry.instanceCount + quarters.geometry.instanceCount, selected.length);
   });
 

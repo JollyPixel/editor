@@ -7,16 +7,16 @@ import {
 import {
   ChunkCoord,
   TerrainDocument,
+  TileCoord,
+  type ChunkKey,
   type TerrainReader,
   type TilePatch
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import { encodeHeights } from "../network/heights.ts";
-import {
-  decodeTilePatch,
-  encodeTilePatch
-} from "../network/tilePatches.ts";
+import { patchBatches } from "../network/patchBatches.ts";
+import { encodeTilePatch } from "../network/tilePatches.ts";
 import type {
   ChunkSnapshot,
   TerrainCommand,
@@ -46,13 +46,10 @@ export class TerrainCommandDocument extends CommandDocument<
 > {
   readonly terrain: TerrainReader;
 
-  #terrain: TerrainDocument;
-
   constructor() {
     const terrain = new TerrainDocument();
     super(terrainState(terrain));
     this.terrain = terrain;
-    this.#terrain = terrain;
   }
 
   addChunk(
@@ -79,31 +76,21 @@ export class TerrainCommandDocument extends CommandDocument<
     return this.commit({ action: "chunk-removed", x, z });
   }
 
-  writeTiles(
+  patchTiles(
     patches: Iterable<TilePatch>
-  ): TilePatch[] {
-    const previous: TilePatch[] = [];
-    for (const { tile, heights } of patches) {
-      previous.push({ tile, heights: this.#terrain.writeTile(tile, heights) });
-    }
-
-    return previous;
-  }
-
-  commitTiles(
-    previous: Iterable<TilePatch>
   ): boolean {
-    const stroke = this.writeTiles(
-      [...previous].filter(({ tile }) => this.terrain.has(tile.chunk))
-    );
-    if (stroke.length === 0) {
-      return false;
+    const tiles = [...patches]
+      .filter(({ tile }) => this.terrain.has(tile.chunk))
+      .map(encodeTilePatch);
+    let committed = false;
+    for (const batch of patchBatches(tiles)) {
+      committed = this.commit({
+        action: "heights-patched",
+        tiles: batch
+      }) || committed;
     }
 
-    return this.commit({
-      action: "heights-patched",
-      tiles: stroke.map(encodeTilePatch)
-    });
+    return committed;
   }
 }
 
@@ -144,13 +131,11 @@ function invertCommand(
     default:
       return [{
         action: "heights-patched",
-        tiles: command.tiles.map((encoded) => {
-          const { tile } = decodeTilePatch(encoded)!;
+        tiles: command.tiles.flatMap(({ x, z, tile: index }) => {
+          const tile = TileCoord.fromIndex(new ChunkCoord(x, z), index);
+          const heights = terrain.chunk(tile.chunk)?.tileHeights(tile.x, tile.z);
 
-          return encodeTilePatch({
-            tile,
-            heights: terrain.chunk(tile.chunk)!.tileHeights(tile.x, tile.z)
-          });
+          return heights === undefined ? [] : [encodeTilePatch({ tile, heights })];
         })
       }];
   }
@@ -158,14 +143,15 @@ function invertCommand(
 
 function touchedChunks(
   command: TerrainCommand
-): Array<{ x: number; z: number; }> {
+): ChunkCoord[] {
   if (command.action !== "heights-patched") {
-    return [{ x: command.x, z: command.z }];
+    return [new ChunkCoord(command.x, command.z)];
   }
 
-  const chunks = new Map<string, { x: number; z: number; }>();
+  const chunks = new Map<ChunkKey, ChunkCoord>();
   for (const { x, z } of command.tiles) {
-    chunks.set(`${x},${z}`, { x, z });
+    const coord = new ChunkCoord(x, z);
+    chunks.set(coord.key, coord);
   }
 
   return [...chunks.values()];
@@ -185,16 +171,17 @@ function restoreImages(
   snapshot: TerrainSnapshot,
   images: readonly TerrainImage[]
 ): TerrainSnapshot {
-  const chunks = new Map<string, ChunkSnapshot>(
-    snapshot.chunks.map((chunk) => [`${chunk.x},${chunk.z}`, chunk])
+  const chunks = new Map<ChunkKey, ChunkSnapshot>(
+    snapshot.chunks.map((chunk) => [new ChunkCoord(chunk.x, chunk.z).key, chunk])
   );
   for (const image of [...images].reverse()) {
     for (const { x, z, heights } of image) {
+      const key = new ChunkCoord(x, z).key;
       if (heights === null) {
-        chunks.delete(`${x},${z}`);
+        chunks.delete(key);
       }
       else {
-        chunks.set(`${x},${z}`, { x, z, heights });
+        chunks.set(key, { x, z, heights });
       }
     }
   }

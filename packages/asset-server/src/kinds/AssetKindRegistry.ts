@@ -7,7 +7,7 @@ import {
 } from "@openally/result";
 
 // Import Internal Dependencies
-import type { AssetKindHandler } from "./AssetKindHandler.ts";
+import type { AnyAssetKindHandler } from "./AssetKindHandler.ts";
 import {
   binaryAssetKind,
   BINARY_KIND
@@ -17,13 +17,13 @@ import { UnsupportedAssetConversionError } from "./errors/UnsupportedAssetConver
 import { asError } from "../utils/asError.ts";
 
 interface RegisteredKind {
-  handler: AssetKindHandler;
+  handler: AnyAssetKindHandler;
   extensions: readonly string[];
   isMatch: picomatch.Matcher | null;
 }
 
 export interface DecodedAsset {
-  readonly handler: AssetKindHandler;
+  readonly handler: AnyAssetKindHandler;
   readonly state: unknown;
 }
 
@@ -31,7 +31,7 @@ export class AssetKindRegistry {
   #kinds = new Map<string, RegisteredKind>();
 
   constructor(
-    handlers: Iterable<AssetKindHandler> = []
+    handlers: Iterable<AnyAssetKindHandler> = []
   ) {
     for (const handler of handlers) {
       this.register(handler);
@@ -39,7 +39,7 @@ export class AssetKindRegistry {
   }
 
   register(
-    handler: AssetKindHandler
+    handler: AnyAssetKindHandler
   ): this {
     if (handler.kind === BINARY_KIND) {
       throw new TypeError(
@@ -57,7 +57,7 @@ export class AssetKindRegistry {
   }
 
   replace(
-    handler: AssetKindHandler
+    handler: AnyAssetKindHandler
   ): this {
     if (!this.#kinds.has(handler.kind)) {
       throw new UnknownAssetKindError(handler.kind);
@@ -75,7 +75,7 @@ export class AssetKindRegistry {
 
   get(
     kind: string
-  ): AssetKindHandler {
+  ): AnyAssetKindHandler {
     if (kind === BINARY_KIND) {
       return binaryAssetKind;
     }
@@ -145,7 +145,7 @@ export class AssetKindRegistry {
 
   resolve(
     path: string
-  ): AssetKindHandler {
+  ): AnyAssetKindHandler {
     for (const { handler, extensions, isMatch } of this.#kinds.values()) {
       if (
         extensions.some((extension) => path.endsWith(extension)) &&
@@ -173,7 +173,7 @@ export class AssetKindRegistry {
 }
 
 function registeredKind(
-  handler: AssetKindHandler
+  handler: AnyAssetKindHandler
 ): RegisteredKind {
   const extensions = Object.keys(handler.extensions);
   if (extensions.length === 0) {

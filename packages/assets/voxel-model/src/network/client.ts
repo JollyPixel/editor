@@ -1,6 +1,6 @@
 export * from "./types.ts";
 export * from "./VoxelModelCommandKeys.ts";
-export * from "./SyncedModelDocument.ts";
+export * from "./voxelModelDocumentKind.ts";
 export * from "../model/index.ts";
 export {
   VOXEL_MODEL_EXTENSION,

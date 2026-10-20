@@ -4,7 +4,7 @@ import {
   ChunkCoord
 } from "../../document/ChunkCoord.ts";
 import type { TerrainReader } from "../../document/TerrainDocument.ts";
-import type { Point3 } from "../../document/terrainSurface.ts";
+import type { Point3 } from "../../math/point3.ts";
 import {
   LodRanges,
   REGION_SIZE
@@ -37,6 +37,7 @@ export interface SelectedNode {
 }
 
 type WalkedNode = Omit<SelectedNode, "skirts">;
+type WalkResult = "handled" | "outOfRange";
 
 export interface QuadtreeSelectOptions {
   visible?: (bounds: NodeBounds) => boolean;
@@ -120,22 +121,22 @@ class SelectionWalk {
     x: number,
     z: number,
     level: number
-  ): boolean {
+  ): WalkResult {
     const size = this.#ranges.nodeSize(level);
     const bounds = this.#nodeBounds(x, z, size);
     if (bounds === null) {
-      return true;
+      return "handled";
     }
     if (!this.#within(bounds, this.#ranges.range(level))) {
-      return false;
+      return "outOfRange";
     }
     if (!this.#visible(bounds)) {
-      return true;
+      return "handled";
     }
     if (level === 0 || !this.#within(bounds, this.#ranges.range(level - 1))) {
       this.#selected.push({ level, x, z, size, bounds });
 
-      return true;
+      return "handled";
     }
 
     const half = size / 2;
@@ -145,17 +146,23 @@ class SelectionWalk {
       [x, z + half],
       [x + half, z + half]
     ]) {
-      if (this.node(childX, childZ, level - 1)) {
+      if (this.node(childX, childZ, level - 1) === "handled") {
         continue;
       }
 
       const quarter = this.#nodeBounds(childX, childZ, half);
       if (quarter !== null && this.#visible(quarter)) {
-        this.#selected.push({ level, x: childX, z: childZ, size: half, bounds: quarter });
+        this.#selected.push({
+          level,
+          x: childX,
+          z: childZ,
+          size: half,
+          bounds: quarter
+        });
       }
     }
 
-    return true;
+    return "handled";
   }
 
   #within(

@@ -19,7 +19,7 @@ Every change is saved in the browser and comes back after a reload.
 
 ## Aim
 
-The mouse ray is cast against the terrain's heights, not its meshes, so it
+The mouse ray is cast against the displayed heights, not the meshes, so it
 hits the full-detail surface whatever LoD is drawn. Hole cells do not stop the
 ray. With nothing hit, the brush has no target and hides.
 
@@ -35,15 +35,18 @@ ray. With nothing hit, the brush has no target and hides.
    how much of it there is. The weight of a sample is
    `falloff(distance / size)`, measured on X and Z.
 4. **Patch batcher** collects the changed tiles. It sends the live patches
-   every 100 ms and the commit when the stroke ends; see
+   every 100 ms, and a commit every 2 s, once 4 chunks have been touched (at
+   most every 250 ms), and when the stroke ends; see
    [strokes](./collaboration.md#strokes).
 
 A stroke is one undo step. It writes the finest grid of each chunk under it,
 so one stamp can span chunks of different tiers.
 
-Brushes read heights through the document's world-space sampling, from a copy
-taken before the stamp, so smooth and flatten see across chunk edges. A read
-outside every chunk clamps to the nearest existing sample. Writes stay inside
+Brushes read `stroke.terrain`: the document with the stroke's own uncommitted
+tiles over it, never a peer's live preview. They sample in world space from a copy taken
+before the stamp, so smooth and flatten see across chunk edges. A read where
+no chunk exists clamps to the nearest sample of a neighbouring chunk, and is 0
+when no neighbour exists. Writes stay inside
 existing chunks: until a commit can carry `chunk-added` with its patch, the part
 of a stamp over empty ground is dropped. Written heights are clamped to
 `[-4096, 4096]` m.
