@@ -42,6 +42,11 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   peer receives only the commit, and the surface shows no gap across LoD
   levels.
 - **M1: done** (2026-10-19).
+- **M2 grilling: done** (2026-10-21). Parts live in a sibling
+  `<asset>.parts/` folder; a checkpoint is one generation (dirty parts, then
+  the manifest naming every part's version); the server keeps every part in
+  memory; the `subscribeParts` reply carries the parts. See the
+  [asset parts design](../../asset-server/architecture/AssetParts.md).
 - **Next:** M2, asset parts in `@jolly-pixel/asset-server`.
 
 Tick a box when its item lands, and move **Next** along with it.
@@ -110,3 +115,10 @@ chunks yet.
   see [future tessellation](./docs/design.md#future-tessellation).
 - **Physics colliders**, foliage, water and prop placement.
 - **Chunk locks.** Concurrent edits resolve last write wins, per tile.
+
+## After V1
+
+- **Lazy part loading on the server.** M2 keeps every part of an open
+  terrain in server memory. Load parts on first subscription or command from
+  the event store, and unload those no member subscribes to once a checkpoint
+  holds them.

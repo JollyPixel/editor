@@ -109,16 +109,21 @@ The asset server keeps one live state per asset, sends it whole on join and
 writes it as one file. A large terrain does not fit that model, so V1 adds
 asset parts to `@jolly-pixel/asset-server`:
 
-- A kind handler declares parts: binary files under `<asset>/parts/`. For a
-  terrain, one part per chunk.
+- A kind handler declares parts: binary files in a folder beside the asset
+  file, `<asset>.parts/`. For a terrain, one part per chunk.
 - The join snapshot holds the manifest, the layers, the points of interest and
   the overview map. Chunks are not in it.
 - A client sends `subscribeParts` and `unsubscribeParts` as its camera moves,
   and fetches the parts it subscribes to.
 - The room broadcasts a command only to the peers subscribed to the parts it
   touches.
-- The snapshot scheduler writes dirty parts one by one, and replay checkpoints
-  are per part.
+- The snapshot scheduler writes only the dirty parts, then one checkpoint
+  that names the latest version of every part, so replay starts from a single
+  position.
+- The server keeps every part of an open terrain in memory; streaming applies
+  to the wire and to storage.
+
+The [asset parts design][asset-parts] holds the server contract.
 
 The client side of `@jolly-pixel/network`, `CommandSync` and the pending
 ledger, does not change. `TerrainSyncClient` manages subscriptions from the
@@ -165,3 +170,4 @@ exactly.
 <!-- Reference-style links for DRYness -->
 
 [assets-arch]: ../../../assets/ARCHITECTURE.md
+[asset-parts]: ../../../asset-server/architecture/AssetParts.md
