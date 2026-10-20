@@ -86,7 +86,7 @@ Closes the menu.
 ## Keyboard and focus
 
 - The menu is a native `popover="auto"`: a click outside or Escape closes it.
-- It holds an [input layer](../interaction/README.md#input-layers) while open.
+- It holds an [input layer](../interaction/input-layers.md) while open.
 - Opening focuses the first enabled item. Hovering an item focuses it.
 - Up and Down move between enabled items and wrap. Home and End jump to the
   ends.

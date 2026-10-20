@@ -1,7 +1,7 @@
 # Folder facade
 
 `addFolder(options?)` creates a `jolly-folder`. A folder is a
-[container](./README.md#containers), with the same `add*()` methods as the
+[container](./builders.md#containers), with the same `add*()` methods as the
 pane.
 
 ```ts

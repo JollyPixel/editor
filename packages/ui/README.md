@@ -2,21 +2,11 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
-## 📌 About
+## 💡 About
 
-Browser-based Lit components for JollyPixel editor interfaces: controlled fields, actions, icons,
-theming and collaboration-aware field state.
-
-## 💡 Features
-
-- **Form controls**: text, number, slider, range, checkbox, select, flags, color and button groups
-- **Containers and chrome**: panes, folders, tabs, docks, floating panes, dialogs, toolbars and rails
-- **Actions and layout**: buttons, separators and property rows
-- **Controlled fields**: shared values, events, drafts, validation, mixed values and defaults
-- **Collaboration state**: peer presence, field locking and peer colors
-- **Feedback**: determinate and indeterminate progress plus the runtime loading screen
-- **Theming**: light/dark themes, density presets and semantic custom-property tokens
-- **Icons**: built-in glyphs and an open registry for custom icons
+Lit components for building editor interfaces: fields, panels, docks, dialogs, trees and more.
+The JollyPixel editors are built with it, with light and dark themes and live collaboration
+included.
 
 ## 💃 Getting Started
 
@@ -31,173 +21,298 @@ $ yarn add @jolly-pixel/ui
 > [!IMPORTANT]
 > `lit` is a peer dependency. Use one compatible copy in the application.
 
-## 👀 Usage Example
+## 📖 Guides
 
-Import the package to register its custom elements. Apply `themeStyles` to a shadow-root scope
-host, then bind field values and change events:
+Start with [Getting started](./docs/guides/getting-started.md), then pick the task at hand.
 
-```ts
-import { LitElement, html, css } from "lit";
-import { customElement } from "lit/decorators.js";
-import { themeStyles } from "@jolly-pixel/ui";
+Fields:
 
-@customElement("settings-pane")
-export class SettingsPane extends LitElement {
-  static override styles = [themeStyles, css`:host { display: block; }`];
+- [Building an inspector](./docs/guides/building-an-inspector.md): fields bound to a model with
+  `FieldBinding`, multi-selections and row layout.
+- [Preview and commit](./docs/guides/preview-and-commit.md): live preview on `jolly-input`, one
+  undo step and one network command on `jolly-change`.
+- [Keeping an element in sync](./docs/guides/syncing-with-a-model.md): render again when the model
+  changes elsewhere.
 
-  #opacity = 1;
+Panels and shell:
 
-  override render() {
-    return html`
-      <jolly-text
-        label="Name"
-        .value=${"Player"}
-      ></jolly-text>
+- [Hierarchy panels](./docs/guides/hierarchy-panels.md): a `jolly-tree` with renaming, drag and
+  drop and a row menu.
+- [Dialogs](./docs/guides/dialogs.md): one-question helpers, dialog elements and inline
+  confirmation.
+- [Editor layout](./docs/guides/editor-layout.md): docks, tab groups and reacting to where panes
+  are.
+- [Toolbars and menus](./docs/guides/toolbars-and-menus.md): tool buttons, menus opened from a
+  button, and keyboard ownership.
+- [Persisting settings](./docs/guides/persisting-settings.md): storage keys and the
+  `StorageAdapter` port.
+- [Theming and density](./docs/guides/theming-and-density.md): scopes, user preferences, token
+  overrides and canvases.
 
-      <jolly-number
-        label="Opacity"
-        .step=${0.01}
-        .min=${0}
-        .max=${1}
-        .value=${this.#opacity}
-        .default=${1}
-        @jolly-change=${this.#setOpacity}
-      ></jolly-number>
+Collaboration and debugging:
 
-      <jolly-button variant="accent" @click=${this.#resetOpacity}>
-        Reset opacity
-      </jolly-button>
-    `;
-  }
-
-  #setOpacity = (event: CustomEvent<{ value: number }>) => {
-    this.#opacity = event.detail.value;
-    this.requestUpdate();
-  };
-
-  #resetOpacity = () => {
-    this.#opacity = 1;
-    this.requestUpdate();
-  };
-}
-```
-
-`jolly-text`, `jolly-number` and `jolly-button` are components provided by this package. Fields are
-controlled: they render the supplied `value` and emit changes, so the handler writes the new value
-back into the component's state.
-
-Set `density` on the scope host when needed:
-
-```html
-<settings-pane density="compact"></settings-pane>
-```
+- [Collaboration](./docs/guides/collaboration.md): roster, per-row peer marks and field locks.
+- [Debug panels](./docs/guides/debug-panels.md): the facade over a plain object, and a stats
+  overlay.
 
 ## 📚 API
 
-The installation and first component example above are the starting point.
-These guides cover cross-component behavior:
+Importing `@jolly-pixel/ui` registers every element. The network adapters live in
+`@jolly-pixel/ui/network`.
 
-- [Choosing controls](./docs/guides/choosing-controls.md)
-- [Controlled fields](./docs/guides/controlled-fields.md)
-- [Composing containers](./docs/guides/composing-containers.md)
-- [Docking and persistence](./docs/guides/docking-and-persistence.md)
-- [Theming and density](./docs/guides/theming-and-density.md)
-- [Using the facade](./docs/guides/using-the-facade.md)
+Each element page lists its properties, events and slots. A property marked `property only` has no
+HTML attribute.
 
-The API reference follows the implementation folders. Each registered custom
-element has one page with its usage, properties, events, methods, slots, and
-styling surface where applicable.
+### Components
 
-- [Controls](./docs/api/controls/README.md)
-- [Containers](./docs/api/containers/README.md)
-- [Data](./docs/api/data/README.md)
-- [Feedback](./docs/api/feedback/README.md)
-- [Icons](./docs/api/icon/README.md)
-- [Math](./docs/api/math/README.md)
-- [Monitors](./docs/api/monitors/README.md)
-- [Peer presence](./docs/api/peer/README.md)
-- [Stats](./docs/api/stats/README.md)
-- [Theme components](./docs/api/theme/README.md)
-- [Facade](./docs/api/facade/README.md)
-- [Storage](./docs/api/storage/README.md)
-- [Interaction helpers](./docs/api/interaction/README.md)
-- [Color utilities](./docs/api/color/README.md)
+Each entry gives the HTML tag, then the class name.
+
+#### Controls
+
+Field controls share the [field API](./docs/api/field/shared-field-api.md).
+[Building an inspector](./docs/guides/building-an-inspector.md) maps values to controls.
+
+- [`jolly-button`](./docs/api/controls/button.md) (`Button`)
+- [`jolly-button-group`](./docs/api/controls/button-group.md) (`ButtonGroup`)
+- [`jolly-checkbox`](./docs/api/controls/checkbox.md) (`Checkbox`)
+- [`jolly-color`](./docs/api/controls/color.md) (`Color`)
+- [`jolly-color-picker`](./docs/api/controls/color-picker.md) (`ColorPicker`)
+- [`jolly-control`](./docs/api/controls/control.md) (`Control`)
+- [`jolly-controls`](./docs/api/controls/controls.md) (`Controls`)
+- [`jolly-flags`](./docs/api/controls/flags.md) (`Flags`)
+- [`jolly-layer-grid`](./docs/api/controls/layer-grid.md) (`LayerGrid`)
+- [`jolly-number`](./docs/api/controls/number.md) (`NumberField`)
+- [`jolly-property-row`](./docs/api/controls/property-row.md) (`PropertyRow`)
+- [`jolly-range`](./docs/api/controls/range.md) (`Range`)
+- [`jolly-search`](./docs/api/controls/search.md) (`Search`)
+- [`jolly-select`](./docs/api/controls/select.md) (`Select`)
+- [`jolly-separator`](./docs/api/controls/separator.md) (`Separator`)
+- [`jolly-slider`](./docs/api/controls/slider.md) (`Slider`)
+- [`jolly-spin-slider`](./docs/api/controls/spin-slider.md) (`SpinSlider`)
+- [`jolly-text`](./docs/api/controls/text.md) (`Text`)
+- [`jolly-toggle`](./docs/api/controls/toggle.md) (`Toggle`)
+- [`jolly-tool-button`](./docs/api/controls/tool-button.md) (`ToolButton`)
+
+#### Math fields
+
+The vector, quaternion and transform fields take structural values and do not depend on Three.js.
+
+- [`jolly-point2d`](./docs/api/math/point2d.md) (`Point2d`)
+- [`jolly-quaternion`](./docs/api/math/quaternion.md) (`Quaternion`)
+- [`jolly-transform`](./docs/api/math/transform.md) (`Transform`)
+- [`jolly-vector2`](./docs/api/math/vector2.md) (`Vector2`)
+- [`jolly-vector3`](./docs/api/math/vector3.md) (`Vector3`)
+- [`jolly-vector4`](./docs/api/math/vector4.md) (`Vector4`)
+- [Axis fields](./docs/api/math/axis-fields.md): rules shared by every axis, and axis markers.
+- [Math value types](./docs/api/math/types.md): `Vec3Like`, `QuatLike`, `TransformLike` and the
+  value helpers.
+
+#### Containers
+
+[Editor layout](./docs/guides/editor-layout.md) and [Dialogs](./docs/guides/dialogs.md) cover how
+they fit together.
+
+- [`jolly-context-menu`](./docs/api/containers/context-menu.md) (`ContextMenu`)
+- [`jolly-dialog`](./docs/api/containers/dialog.md) (`Dialog`)
+- [`jolly-dock`](./docs/api/containers/dock.md) (`Dock`)
+- [`jolly-dock-layout`](./docs/api/containers/dock-layout.md) (`DockLayout`)
+- [`jolly-floating`](./docs/api/containers/floating.md) (`Floating`)
+- [`jolly-folder`](./docs/api/containers/folder.md) (`Folder`)
+- [`jolly-pane`](./docs/api/containers/pane.md) (`PaneElement`)
+- [`jolly-pane-group`](./docs/api/containers/pane-group.md) (`PaneGroup`)
+- [`jolly-rail`](./docs/api/containers/rail.md) (`Rail`)
+- [`jolly-tab`](./docs/api/containers/tab.md) (`Tab`)
+- [`jolly-tabs`](./docs/api/containers/tabs.md) (`Tabs`)
+- [`jolly-toolbar`](./docs/api/containers/toolbar.md) (`Toolbar`)
+- [Layout data and functions](./docs/api/containers/layout.md): the snapshot a `jolly-dock-layout`
+  persists.
+- [Dialog helpers](./docs/api/containers/dialog-helpers.md): promise-based dialogs created under
+  `document.body`.
+
+The root entry point also exports `DockAlign`, `DockSide`, `DockSlot`, `RailOrientation`,
+`TabsOrientation` and `ToolbarOrientation`.
+
+#### Data
+
+- [`jolly-tree`](./docs/api/data/tree.md) (`Tree`)
+- [Tree data and functions](./docs/api/data/tree-utilities.md): pure helpers over `TreeNode`
+  arrays.
+
+#### Feedback
+
+Also exported from `@jolly-pixel/ui/feedback`.
+
+- [`jolly-loading`](./docs/api/feedback/loading.md) (`Loading`)
+- [`jolly-log`](./docs/api/feedback/log.md) (`LogElement`), with its `LogQueue`
+- [`jolly-progress`](./docs/api/feedback/progress.md) (`Progress`)
+- [`jolly-spinner`](./docs/api/feedback/spinner.md) (`Spinner`)
+
+#### Icons
+
+Also exported from `@jolly-pixel/ui/icon`. Importing either entry point registers the built-in
+glyphs.
+
+```ts
+import {
+  Icon,
+  getIcon,
+  hasIcon,
+  registerIcon
+} from "@jolly-pixel/ui/icon";
+```
+
+- [`jolly-icon`](./docs/api/icon/icon.md) (`Icon`)
+- [Icon registry](./docs/api/icon/registry.md): registers application glyphs and exposes them to
+  Lit templates. `BuiltinIconName`, `IconName` and `IconGlyph` describe the accepted names and
+  glyphs.
+
+#### Monitors
+
+- [`jolly-graph`](./docs/api/monitors/graph.md) (`GraphElement`)
+- [`jolly-monitor`](./docs/api/monitors/monitor.md) (`MonitorElement`)
+- [Formatting functions](./docs/api/monitors/format.md)
+
+#### Stats
+
+- [`jolly-stats`](./docs/api/stats/stats.md) (`StatsElement`): renders one
+  [recorder](#stats-recording) metric and its history.
+
+#### Peer presence
+
+- [`jolly-presence`](./docs/api/peer/presence.md) (`PresenceElement`)
+- [`jolly-presence-stack`](./docs/api/peer/presence-stack.md) (`PresenceStack`)
+- [`jolly-avatar`](./docs/api/peer/avatar.md) (`Avatar`)
+- [Field collaboration state](./docs/api/field/shared-field-api.md#collaboration)
+
+#### Theme
+
+[Theming and density](./docs/guides/theming-and-density.md) covers scope setup.
+
+- [`jolly-density-control`](./docs/api/theme/density-control.md) (`DensityControl`)
+- [`jolly-scope`](./docs/api/theme/scope-host.md) (`ScopeHost`)
+- [`jolly-theme-control`](./docs/api/theme/theme-control.md) (`ThemeControl`)
+- [`jolly-theme-preferences`](./docs/api/theme/theme-preferences.md) (`ThemePreferences`)
+- [Theme exports and tokens](./docs/api/theme/tokens.md): `themeStyles`, the theme types and the
+  token readers.
+
+### Facade
+
+The facade builds the components from JavaScript and binds them to object properties.
+[Debug panels](./docs/guides/debug-panels.md) walks through a panel.
+
+```ts
+import {
+  DockFacade,
+  Pane
+} from "@jolly-pixel/ui";
+```
+
+- [`Pane`](./docs/api/facade/pane.md): the entry point, and `FacadeHost` for an existing element.
+- [`DockFacade`](./docs/api/facade/dock.md): wraps an authored `jolly-dock`.
+- [Builders](./docs/api/facade/builders.md): the surface every builder and container shares, and
+  the exported types.
+- [Folders](./docs/api/facade/folder.md): group builders.
+- [Bindings](./docs/api/facade/binding.md): edit object properties.
+- [Monitors](./docs/api/facade/monitor.md): display object properties.
+- [Buttons and separators](./docs/api/facade/actions.md)
+- [Notes, elements and theme preferences](./docs/api/facade/content.md)
+- [Presence](./docs/api/facade/presence.md): peer snapshots.
+
+### Headless APIs
+
+Classes, ports and functions that register no element.
+
+#### Storage
+
+- [`StorageAdapter`](./docs/api/storage.md): the port stateful components persist through, with
+  `LocalStorageAdapter` and `MemoryStorageAdapter`.
+
+#### Interaction
+
+- [`PopoverController`](./docs/api/interaction/popover-controller.md): positions a native popover
+  against an anchor.
+- [Overflow titles](./docs/api/interaction/overflow-titles.md): full text as a tooltip on cut-off
+  labels.
+- [Input layers](./docs/api/interaction/input-layers.md): `inputLayers`, the keyboard events that
+  belong to the UI.
+- [Drag sessions](./docs/api/interaction/drag-sessions.md): `startPointerDragSession`.
+
+#### Stats recording
+
+Recording is separate from rendering, and `@jolly-pixel/ui/stats` loads no element:
+
+```ts
+import {
+  StatsRecorder,
+  resolveMetricFormat,
+  resolveMetricRange,
+  type MetricDefinition,
+  type MetricSource
+} from "@jolly-pixel/ui/stats";
+```
+
+- [`StatsRecorder`](./docs/api/stats/stats-recorder.md): a DOM-free frame and metric recorder.
+- [Metric definitions](./docs/api/stats/metric-definition.md): aggregation, formatting and graph
+  bounds. `MetricSource` lets another package describe metrics without depending on this one.
+
+#### Presence
+
+- [Presence and locking](./docs/api/peer/presence-source.md): the `PresenceSource` port, and its
+  `RoomPresenceSource` network adapter.
+- [Peer identity](./docs/api/peer/identity.md): `promptPeerIdentity`, `peerIdentity` and the
+  profile helpers.
+- [Room roster and peer marks](./docs/api/peer/roster.md): the `PeerRoster`, `PeerMarkTracker` and
+  `peerBadges` network adapters.
+
+#### Lit helpers
+
+- [`FieldBinding`](./docs/api/field/field-binding.md): binds a field in a Lit template to one
+  value.
+- [`SubscriptionController`](./docs/api/subscription-controller.md): keeps a host subscribed to one
+  source while connected.
+
+#### Utilities
+
+- [Colour](./docs/api/color.md): `parseColor` and `formatHex`.
+- [Search queries](./docs/api/search.md): `SearchQuery` and the `Searchable` hook.
+- [Geometry](./docs/api/geometry.md): `Rect` and anchored placement.
+- [DOM](./docs/api/dom.md): DOM guards and field event helpers.
 
 ## 🖼️ Examples Gallery
 
-Every component has a gallery entry, which is also its only end to end fixture.
+Every component has a gallery entry, which is also its end to end fixture.
 
 ```bash
 pnpm run dev
 ```
 
-The gallery exercises the shared field states. Deep-link a control with or without the surrounding
-shell:
+Open one example with `/?example=controls/number`, and add `&chrome=off` to hide the shell.
 
-```
-/?example=controls/number
-/?example=controls/number&chrome=off
-```
-
-Adding an example:
-
-- Put the module in `examples/scripts/examples/<group>/`. It exports the `render` function and any
-  `options`.
-- Register it in that folder's `index.ts` with its id `<group>/<name>`, its title and a `load`
-  that imports the module. The folder, the id prefix, and the navigation group are the same word,
-  and `groups.ts` maps it to a label. An id outside that list fails to compile. The index is the
-  only order the navigation and the manifest sweep read, and `manifest.ts` itself never changes.
-- Return a teardown from `render` only for state living outside `host`: timers, subscriptions,
-  listeners on `window` or `document`, and panes mounting themselves on `document.body`. The
-  gallery clears `host` on its own.
-- Give a component one page, and declare its variants as `options` rather than as sibling pages.
-  The shell renders one checkbox per option, remounts the example on a toggle, and keeps the state
-  in the URL (`/?example=containers/tabs&closable=1`), so a variant stays deep-linkable and survives
-  a reload. End to end tests pass them through `openExample(page, id, { options })`.
+To add an example, put its module in `examples/scripts/examples/<group>/` and register it in that
+folder's `index.ts`. Declare variants as `options` on the same page; the shell keeps them in the URL.
 
 ## Contributors Guide
 
-Read the [contributing guide][contributing] before making changes.
-
-Run the package checks with:
+Read the [contributing guide][contributing], and add tests with every feature or bug fix.
 
 ```bash
-pnpm run test
-pnpm run test:e2e
+pnpm run test      # unit (node:test) and type tests
+pnpm run test:e2e  # Playwright against the gallery
 pnpm run lint
 ```
 
-Unit tests use `node:test`; end-to-end tests use Playwright against the gallery.
-
-End-to-end tests follow the production ownership model under `test/e2e/`:
-
-- `controls/`, `containers/`, and `field/` hold component and field contracts.
-- `gallery/` verifies the gallery harness and manifest.
-- `scenarios/` holds multi-component workflows that do not belong to one source
-  module.
-- `support/` owns navigation, event capture, dock and computed-style helpers.
-  Pointer and locator helpers come from `@jolly-pixel/e2e`. Do not duplicate
-  these helpers in a spec.
-
-Keep a test with the component that owns the observed contract. Put only
-deliberately cross-component user workflows in `scenarios/`.
+End to end specs in `test/e2e/` sit with the component they cover. Cross-component workflows go in
+`scenarios/`, shared helpers in `support/`.
 
 > [!IMPORTANT]
-> Keep unit-test assertions in plain modules. Component decorators are not erasable syntax and
-> cannot be imported directly by `node --test` with type stripping.
-
-> [!CAUTION]
-> Include tests for new features and bug fixes.
+> `node --test` cannot import decorated components, so keep unit-test assertions in plain modules.
 
 ## License
 
 MIT
 
 This package embeds Roboto Mono (weight 400, latin subset), licensed under the
-[Apache License 2.0][roboto-mono]. See [NOTICE](./NOTICE) for the full attribution. The face is
-registered against the document on first import of `themeStyles`; call `ensureFontFace()` yourself
-if you declare theme tokens by hand. Without it, `--jolly-font-family` falls back to the system
-mono stack.
+[Apache License 2.0][roboto-mono]. See [NOTICE](./NOTICE) for the full attribution.
 
 <!-- Reference-style links for DRYness -->
 

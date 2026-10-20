@@ -276,7 +276,7 @@ Order after the label: `detail`, swatch, warning, badges.
 - `avatar`: a [`jolly-avatar`](../peer/avatar.md) in place of `icon`, for rows
   that stand for a person.
 - A long label truncates with an
-  [overflow title](../interaction/README.md#overflow-titles).
+  [overflow title](../interaction/overflow-titles.md).
 
 ```ts
 node.detail = `${layer.voxelCount} voxels`;

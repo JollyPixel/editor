@@ -34,5 +34,5 @@ interface Transform {
 - With `labelPosition="auto"`, the three rows stack together, measured on the
   transform's own width. It reflects `stacked` while they do.
 - `axisStyle` applies to all three rows. Unset, each row keeps its class
-  default. See [axis markers](./README.md#axis-markers).
+  default. See [axis markers](./axis-fields.md#axis-markers).
 - `TransformDefault` and `TransformFieldState` are not exported from the root.

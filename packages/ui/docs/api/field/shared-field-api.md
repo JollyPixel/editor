@@ -50,7 +50,7 @@ commits a concrete value.
 
 - The column holds the label and, while `value` differs from `default`, the
   revert button. The label truncates to make room, with an
-  [overflow title](../interaction/README.md#overflow-titles).
+  [overflow title](../interaction/overflow-titles.md).
 - `--jolly-label-width` sets the column width. At `auto`, it grows by the
   button's width.
 - `--jolly-label-max-width` caps it (`45%`). Set it to `none` for a field

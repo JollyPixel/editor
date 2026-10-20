@@ -69,4 +69,4 @@ pane.addMonitors(stats, {
 ## Builder
 
 `FacadeMonitor` adds `refresh()` to the
-[builder surface](./README.md#builder-surface).
+[builder surface](./builders.md#builder-surface).
