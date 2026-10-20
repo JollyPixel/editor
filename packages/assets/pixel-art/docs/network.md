@@ -16,12 +16,12 @@ await synced.ready;
 // On teardown: synced.dispose(); room.leave();
 ```
 
-Pending edits, acknowledgements, rebase and resume follow [`CommandSync`](../../../network/docs/client/CommandSync.md).
+Pending edits, acknowledgements, rebase and resume follow `CommandSync`.
 
 ## Document synchronization
 
 - `pixelArtRoom(client, assetId)` returns the typed room. The caller joins and leaves it.
-- `new SyncedPixelDocument(room, { maxSize? })` is a network [`SyncedDocument`](../../../network/docs/client/CommandSync.md#synceddocument). Its `document` is 1 by 1 until the first snapshot. Create it before `room.join()`.
+- `new SyncedPixelDocument(room, { maxSize? })` is a network `SyncedDocument`. Its `document` is 1 by 1 until the first snapshot. Create it before `room.join()`.
 - `pixelArtDocumentKind(options?)` builds `SyncedPixelDocument`s for an `@jolly-pixel/editor.host` lease.
 - `blankPixelDocument(options?)` creates the 1 by 1 document, for a synced document that owns more than pixels (see voxel-map's `SyncedBlockset`).
 - `createPixelArtAsset(catalog, path, document)` creates a `pixelart` asset, suffixes a conflicting path, and returns its ID.
@@ -68,7 +68,7 @@ interface PixelBufferSnapshot {
 
 ## Server protocol
 
-- `PixelCommandArbiter` is a network [`KeyedCommandArbiter`](../../../network/docs/client/CommandSync.md#conflict-resolution) over `PIXEL_COMMAND_RULES`. A narrowed stroke or selection edit is returned packed.
+- `PixelCommandArbiter` is a network `KeyedCommandArbiter` over `PIXEL_COMMAND_RULES`. A narrowed stroke or selection edit is returned packed.
 - `resized` and `texture-replaced` reset the pixel keys, and a valid `normal-map-toggled` resets the normal map keys. A `global-fill` claims the pixels it repaints and restores nothing at room start.
 - `pixelCommandKeys(command)` and `narrowPixelCommand(command, keep)` are shared by the arbiter and the client reconciler. [Architecture](../ARCHITECTURE.md) lists the keys.
 - `correctPixelCommand(buffer, command, admitted)` builds the `select-edit` correction, or returns `null` for commands that paint nothing.
@@ -77,4 +77,4 @@ interface PixelBufferSnapshot {
 - `pixelCommandProtocol` validates commands and `pixelSnapshotSchema` validates snapshots.
 - `uvRegionSchema` validates a UV region. `uvLayoutSchema` validates its geometry alone (`UVLayoutData`), for documents that keep regions a texture disowned.
 
-Restricted rooms use the `pixelart` extension and its command actions in a rights table. Resolve roles from a trusted server session; see [network rights](../../../network/docs/server/Access.md#rights).
+Restricted rooms use the `pixelart` extension and its command actions in a rights table. Resolve roles from a trusted server session.

@@ -19,7 +19,7 @@ await synced.ready;
 
 ## Synchronization
 
-- `voxelModelDocumentKind()` is the `@jolly-pixel/editor.host` lease adapter, built with network's `commandDocumentKind`. `createDocument(room)` returns a `SyncedModelDocument`: a network [`SyncedCommandDocument`](../../../network/docs/client/CommandSync.md#syncedcommanddocument) over a new `ModelDocument`.
+- `voxelModelDocumentKind()` is the `@jolly-pixel/editor.host` lease adapter, built with network's `commandDocumentKind`. `createDocument(room)` returns a `SyncedModelDocument`: a network `SyncedCommandDocument` over a new `ModelDocument`.
 - Call `createDocument()` before `room.join()`. `dispose()` destroys the sync; the caller still leaves the room.
 - The sync is a `DocumentSyncClient` keyed by `voxelModelWriteKeys`. Undo and redo carry the `basis` of their step, and the server's answers reach `document.receipts`, so the [history](./history.md) refuses steps a peer overwrote.
 - A pending command the tree now refuses, such as a move into a removed folder, stays out of the tree until the next snapshot.
@@ -50,6 +50,6 @@ type VoxelModelCommandAction =
 
 ## Server protocol
 
-- The kind arbitrates with a network [`KeyedCommandArbiter`](../../../network/docs/client/CommandSync.md#conflict-resolution): a command is refused when `state.accepts(command)` is false or it loses one of its `voxelModelConflictKeys(command)`. [Architecture](../ARCHITECTURE.md#collision-keys) lists the keys.
+- The kind arbitrates with a network `KeyedCommandArbiter`: a command is refused when `state.accepts(command)` is false or it loses one of its `voxelModelConflictKeys(command)`. [Architecture](../ARCHITECTURE.md#collision-keys) lists the keys.
 - `voxelModelWriteKeys(command)` returns the values a command sets, for the client reconciler.
 - `voxelModelCommandProtocol` validates commands and `voxelModelSnapshotSchema` validates snapshots.

@@ -19,7 +19,7 @@ await synced.ready;
 
 ## Synchronization
 
-- `voxelAnimationDocumentKind()` is the `@jolly-pixel/editor.host` lease adapter, built with network's `commandDocumentKind`. `createDocument(room)` returns a `SyncedAnimationDocument`: a network [`SyncedCommandDocument`](../../../network/docs/client/CommandSync.md#syncedcommanddocument) over a new `AnimationDocument`.
+- `voxelAnimationDocumentKind()` is the `@jolly-pixel/editor.host` lease adapter, built with network's `commandDocumentKind`. `createDocument(room)` returns a `SyncedAnimationDocument`: a network `SyncedCommandDocument` over a new `AnimationDocument`.
 - Call `createDocument()` before `room.join()`. `dispose()` destroys the sync; the caller still leaves the room.
 - The sync is a `DocumentSyncClient` keyed by `animationWriteKeys`. Undo and redo carry the `basis` of their step, and the server's answers reach `document.receipts`, so the [history](./history.md) refuses steps a peer overwrote.
 - To listen to `snapshot`, `ready`, `command` and `notice`, build the client yourself: `new DocumentSyncClient(room, { document, keys: animationWriteKeys })`.
@@ -45,6 +45,6 @@ type AnimationCommandAction =
 
 ## Server protocol
 
-- The kind arbitrates with a network [`KeyedCommandArbiter`](../../../network/docs/client/CommandSync.md#conflict-resolution): a command is refused when `state.accepts(command)` is false or it loses one of its `animationConflictKeys(command)`. [Architecture](../ARCHITECTURE.md#collision-keys) lists the keys.
+- The kind arbitrates with a network `KeyedCommandArbiter`: a command is refused when `state.accepts(command)` is false or it loses one of its `animationConflictKeys(command)`. [Architecture](../ARCHITECTURE.md#collision-keys) lists the keys.
 - `animationWriteKeys(command)` returns the values a command sets, for the client reconciler, or `null` for clip and track structure commands.
 - `animationCommandProtocol` validates commands and `animationSetSnapshotSchema` validates snapshots.

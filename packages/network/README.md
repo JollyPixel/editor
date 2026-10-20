@@ -8,6 +8,8 @@ This package is available in the Node Package Repository and can be easily insta
 
 ```bash
 $ npm i @jolly-pixel/network
+# or
+$ yarn add @jolly-pixel/network
 ```
 
 ## 👀 Usage example
@@ -48,39 +50,56 @@ room.join();
 room.send({ hello: "world" });
 ```
 
-## API
+## 📖 Guides
 
-- [Client](./docs/client/Client.md): rooms and presence
-- [CommandSync](./docs/client/CommandSync.md): document synchronization
+- [Getting started](./docs/guides/getting-started.md): host a room on Vite and
+  exchange messages between tabs
+- [Command synchronization](./docs/guides/command-sync.md): sync a command
+  document and the server's part in it
+
+## 📚 API
+
+### Client
+
+Import from `@jolly-pixel/network/client`.
+
+- [Client](./docs/client/Client.md): `Client`, `Room`, `PresenceChannel`, `RoomGrants`
+- [CommandSync](./docs/client/CommandSync.md): document synchronization and adapters
+- [connectWebSocket](./docs/client/connectWebSocket.md): browser socket factory
+
+### Server
+
+Import from `@jolly-pixel/network`; Node.js hosting comes from
+`@jolly-pixel/network/node`.
+
 - [Server](./docs/server/Server.md): connections and room lifecycle
-- [Extension](./docs/server/Extension.md): feature hooks and workers
+- [Extension](./docs/server/Extension.md): feature hooks, presence-only rooms, workers
 - [Access](./docs/server/Access.md): authentication and rights
-- [Messages](./docs/protocol/Messages.md): protocols and parsing
-- [Peer profile](./docs/protocol/PeerProfile.md): profile fields and parsing
-- [Transports](./docs/transport/Transports.md): hosting and socket adapters
+- [Arbitration](./docs/server/Arbitration.md): `KeyedCommandArbiter`
+- [WebsocketTransport](./docs/server/WebsocketTransport.md): WebSocket hosting and the Vite plugin
 
-Guides: [Getting started](./docs/guides/getting-started.md),
-[Command synchronization](./docs/guides/command-sync.md).
+### Protocol
+
+Shared by both sides.
+
+- [Messages](./docs/protocol/Messages.md): message protocols, command schemas, parsing
+- [Peer profile](./docs/protocol/PeerProfile.md): profile fields and parsing
+
+### In-process transports
+
+- [LoopbackTransport and channels](./docs/transport/InProcess.md): tests,
+  workers, and WebRTC data channels
 
 ## 📈 Benchmarks
 
 ```bash
 $ pnpm --filter @jolly-pixel/network bench
-$ pnpm --filter @jolly-pixel/network bench room --allocations
 $ pnpm --filter @jolly-pixel/network bench:load --scenario command --clients 150
 ```
 
-`bench` runs the micro suites in `bench/*.bench.ts` on the shared
-`@jolly-pixel/bench` harness: envelope parsing, message protocol matching,
-room fan-out with and without a rights table, `Server#receive`, and the client
-receive path. `--allocations` adds a `B/op` column.
-
-`bench:load` starts a server in a child process and drives it over real
-WebSockets from worker threads. The `presence`, `command` and `churn`
-scenarios report delivered messages per second, latency percentiles, and the
-server's CPU, event loop utilization, heap and GC pauses. `--help` lists the
-knobs. Treat a run as saturated when the server's event loop utilization nears
-1 or the driver warns about its own; the latencies then include queueing.
+`bench` runs the micro suites in `bench/*.bench.ts` (`--allocations` adds
+`B/op`). `bench:load` drives a server over real WebSockets; `--help` lists the
+scenarios and options.
 
 ## ✨ Contributors guide
 

@@ -1,6 +1,8 @@
-# Transports
+# In-process transports
 
-Connect sockets to server sessions and supply client socket factories.
+Connect a client to a server in the same process, a worker, or across a
+WebRTC data channel. Both ends import from `@jolly-pixel/network`; the client
+side of channels is also exported by `@jolly-pixel/network/client`.
 
 ```ts
 import { Client } from "@jolly-pixel/network/client";
@@ -10,33 +12,6 @@ const server = new Server();
 const transport = new LoopbackTransport({ server });
 const client = new Client({ socket: () => transport.connect() });
 ```
-
-## connectWebSocket
-
-`connectWebSocket({ url?, credential? })` opens a client socket.
-Default URL uses the page host and `/ws-sync`; supply it explicitly in Node.
-
-## WebsocketTransport
-
-`WebsocketTransport`
-from `/node` takes `{ httpServer, server, path, ...options }`.
-Options control hosts, origins, payload limits, heartbeat, and compression.
-It decodes the credential offered by `connectWebSocket` into
-`request.credential`.
-
-Messages sent to one socket during an event loop turn leave in a single write
-once the turn ends, so a broadcast costs one write per recipient rather than
-one per message.
-
-`[Symbol.dispose]()` terminates its sockets and stops handling upgrades. The
-HTTP server's `close` event does the same, but Node.js only emits it once every
-connection has ended, upgraded sockets included. Dispose the network server
-separately.
-
-## Vite plugin
-
-`createWebSocketNetworkPlugin` from `/node` mounts in dev and preview.
-A supplied `server` owns access policy; otherwise the plugin constructs one.
 
 ## LoopbackTransport
 
