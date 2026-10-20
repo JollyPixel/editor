@@ -6,7 +6,7 @@ import { ServerProbe } from "./ServerProbe.ts";
 import type {
   ServerCommand,
   ServerEvent
-} from "./protocol.ts";
+} from "../protocol.ts";
 
 export function loadServerConfig<TServerConfig>(): TServerConfig {
   return JSON.parse(process.argv[2]);

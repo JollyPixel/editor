@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 
 // Import Internal Dependencies
 import { BenchmarkError } from "./errors/index.ts";
-import type { BenchmarkSuite } from "./suite.ts";
+import type { BenchmarkSuite } from "./suite/suite.ts";
 
 // CONSTANTS
 const kDefaultPattern = "bench/**/*.bench.ts";

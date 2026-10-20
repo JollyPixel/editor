@@ -2,7 +2,7 @@
 import type { RecordableHistogram } from "node:perf_hooks";
 
 // Import Internal Dependencies
-import type { ServerSample } from "./ServerProbe.ts";
+import type { ServerSample } from "./server/ServerProbe.ts";
 
 export type ServerCommand =
   | { type: "mark"; }

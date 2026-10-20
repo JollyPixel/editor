@@ -37,7 +37,7 @@ const suite = defineSuite("loop / FrameScheduler#advance", (bench) => {
     .add("overloaded — budget hit, remainder dropped", batched(panicking))
     .add("catch-up — 12 steps per frame", batched(catchUp))
     .add("render capped — 60fps cap on a 144Hz source", batched(capped));
-}, { opsPerIteration: "batch" });
+});
 
 export default suite;
 

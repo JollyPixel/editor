@@ -11,22 +11,31 @@ import {
 
 // Import Internal Dependencies
 import {
-  configure,
-  resetConfig
-} from "../src/config.ts";
-import {
+  JsonReporter,
+  TableReporter,
+  createReport,
   hasFailure,
-  report,
-  resetTableReporter,
-  runtimeMetadata
+  hostMetadata,
+  type BenchmarkReport
 } from "../src/report/index.ts";
+
+function sample(
+  suite: string,
+  results: object[] = [{ task: "task" }]
+): BenchmarkReport<object> {
+  return {
+    suite,
+    runtime: hostMetadata(),
+    results
+  };
+}
 
 describe("hasFailure", () => {
   it("should be true when a row carries an error", () => {
     assert.equal(
       hasFailure({
         suite: "unit",
-        runtime: runtimeMetadata(),
+        runtime: hostMetadata(),
         results: [
           { task: "ok" },
           { task: "ko", error: "boom" }
@@ -40,7 +49,7 @@ describe("hasFailure", () => {
     assert.equal(
       hasFailure({
         suite: "unit",
-        runtime: runtimeMetadata(),
+        runtime: hostMetadata(),
         results: [{ task: "ok" }]
       }),
       false
@@ -48,73 +57,9 @@ describe("hasFailure", () => {
   });
 });
 
-describe("runtimeMetadata", () => {
-  afterEach(() => {
-    resetConfig();
-  });
-
-  it("should describe the host and the sampling budget", () => {
-    configure({
-      time: 42,
-      iterations: 7
-    });
-    const metadata = runtimeMetadata();
-
-    assert.equal(metadata.node, process.version);
-    assert.equal(metadata.timeMs, 42);
-    assert.equal(metadata.iterations, 7);
-    assert.equal(typeof metadata.cpu, "string");
-  });
-});
-
-describe("report", () => {
-  let log: Mock<typeof console.log>;
-  let table: Mock<typeof console.table>;
-
-  beforeEach(() => {
-    resetConfig();
-    log = mock.method(console, "log", () => void 0);
-    table = mock.method(console, "table", () => void 0);
-  });
-
-  afterEach(() => {
-    mock.restoreAll();
-    resetTableReporter();
-    resetConfig();
-  });
-
-  it("should print one JSON line per suite in json format", () => {
-    configure({ format: "json" });
-
-    const value = report({
-      suite: "unit / json",
-      results: [{ task: "task" }]
-    });
-
-    assert.equal(log.mock.calls.length, 1);
-    assert.deepEqual(
-      JSON.parse(String(log.mock.calls[0].arguments[0])),
-      value
-    );
-  });
-
-  it("should print the runtime table only once", () => {
-    report({
-      suite: "unit / first",
-      results: [{ task: "task" }]
-    });
-    report({
-      suite: "unit / second",
-      results: [{ task: "task" }]
-    });
-
-    assert.equal(table.mock.calls.length, 3);
-  });
-
+describe("createReport", () => {
   it("should merge a foreign runtime over the host metadata", () => {
-    configure({ format: "json" });
-
-    const value = report({
+    const value = createReport({
       suite: "unit / browser",
       runtime: { userAgent: "HeadlessChrome" },
       results: [{ task: "task" }]
@@ -122,5 +67,49 @@ describe("report", () => {
 
     assert.equal(value.runtime.userAgent, "HeadlessChrome");
     assert.equal(value.runtime.node, process.version);
+  });
+});
+
+describe("reporters", () => {
+  let log: Mock<typeof console.log>;
+  let table: Mock<typeof console.table>;
+
+  beforeEach(() => {
+    log = mock.method(console, "log", () => void 0);
+    table = mock.method(console, "table", () => void 0);
+  });
+
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
+  it("should print one JSON line per report in json format", () => {
+    const value = sample("unit / json");
+
+    new JsonReporter().print(value);
+
+    assert.equal(log.mock.calls.length, 1);
+    assert.deepEqual(JSON.parse(String(log.mock.calls[0].arguments[0])), value);
+  });
+
+  it("should print the runtime table once per table reporter", () => {
+    const reporter = new TableReporter();
+
+    reporter.print(sample("unit / first"));
+    reporter.print(sample("unit / second"));
+    new TableReporter().print(sample("unit / third"));
+
+    assert.equal(table.mock.calls.length, 5);
+  });
+
+  it("should print a single row vertically and several as a table", () => {
+    const single = { task: "only" };
+    const several = [{ task: "first" }, { task: "second" }];
+
+    new TableReporter().print(sample("unit / single", [single]));
+    new TableReporter().print(sample("unit / several", several));
+
+    assert.equal(table.mock.calls[1].arguments[0], single);
+    assert.equal(table.mock.calls[3].arguments[0], several);
   });
 });

@@ -61,7 +61,7 @@ const suite = defineSuite("loop / primitives", (bench) => {
   return () => {
     loop.stop();
   };
-}, { opsPerIteration: "batch" });
+});
 
 export default suite;
 

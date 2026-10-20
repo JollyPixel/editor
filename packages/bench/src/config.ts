@@ -1,6 +1,9 @@
 // Import Internal Dependencies
 import { BenchmarkError } from "./errors/index.ts";
-import { positiveNumber } from "./utils/parse.ts";
+import {
+  parseChoice,
+  parsePositive
+} from "./utils/parse.ts";
 
 // CONSTANTS
 const kDefaultTime = 500;
@@ -12,7 +15,7 @@ const kFormats = ["table", "json"] as const;
 
 export type BenchmarkFormat = typeof kFormats[number];
 
-export interface BenchmarkConfig {
+export interface BenchmarkConfigValues {
   /**
    * Sampling budget per task, in milliseconds.
    */
@@ -44,118 +47,79 @@ export interface BenchmarkConfig {
   allocations: boolean;
 }
 
-let current: BenchmarkConfig | null = null;
+export class BenchmarkConfig implements BenchmarkConfigValues {
+  static fromEnvironment(
+    env: NodeJS.ProcessEnv = process.env
+  ): BenchmarkConfig {
+    function read<TValue>(
+      name: string,
+      fallback: TValue,
+      parse: (label: string, raw: string) => TValue
+    ): TValue {
+      const raw = env[name];
 
-export function config(): Readonly<BenchmarkConfig> {
-  current ??= fromEnvironment();
+      return raw === undefined || raw === "" ? fallback : parse(name, raw);
+    }
 
-  return current;
-}
-
-export function configure(
-  overrides: Partial<BenchmarkConfig>
-): Readonly<BenchmarkConfig> {
-  const active = config();
-
-  current = {
-    time: pick(overrides.time, active.time),
-    iterations: pick(overrides.iterations, active.iterations),
-    warmupTime: pick(overrides.warmupTime, active.warmupTime),
-    warmupIterations: pick(overrides.warmupIterations, active.warmupIterations),
-    batch: pick(overrides.batch, active.batch),
-    format: pick(overrides.format, active.format),
-    task: pick(overrides.task, active.task),
-    allocations: pick(overrides.allocations, active.allocations)
-  };
-
-  return current;
-}
-
-export function resetConfig(): Readonly<BenchmarkConfig> {
-  current = fromEnvironment();
-
-  return current;
-}
-
-function pick<T>(
-  override: T | undefined,
-  fallback: T
-): T {
-  return override === undefined ? fallback : override;
-}
-
-function fromEnvironment(): BenchmarkConfig {
-  return {
-    time: envNumber("BENCH_TIME_MS", kDefaultTime),
-    iterations: envNumber("BENCH_ITERATIONS", kDefaultIterations),
-    warmupTime: envNumber("BENCH_WARMUP_TIME_MS", kDefaultWarmupTime),
-    warmupIterations: envNumber(
-      "BENCH_WARMUP_ITERATIONS",
-      kDefaultWarmupIterations
-    ),
-    batch: envNumber("BENCH_BATCH", kDefaultBatch),
-    format: envFormat("BENCH_FORMAT", "table"),
-    task: process.env.BENCH_TASK || null,
-    allocations: envBoolean("BENCH_ALLOCATIONS", false)
-  };
-}
-
-function envBoolean(
-  name: string,
-  fallback: boolean
-): boolean {
-  const raw = process.env[name];
-  if (raw === undefined || raw === "") {
-    return fallback;
-  }
-  if (raw === "1" || raw === "true") {
-    return true;
-  }
-  if (raw === "0" || raw === "false") {
-    return false;
+    return new BenchmarkConfig({
+      time: read("BENCH_TIME_MS", kDefaultTime, parsePositive),
+      iterations: read("BENCH_ITERATIONS", kDefaultIterations, parsePositive),
+      warmupTime: read(
+        "BENCH_WARMUP_TIME_MS",
+        kDefaultWarmupTime,
+        parsePositive
+      ),
+      warmupIterations: read(
+        "BENCH_WARMUP_ITERATIONS",
+        kDefaultWarmupIterations,
+        parsePositive
+      ),
+      batch: read("BENCH_BATCH", kDefaultBatch, parsePositive),
+      format: read<BenchmarkFormat>(
+        "BENCH_FORMAT",
+        "table",
+        (label, raw) => parseChoice(label, raw, kFormats)
+      ),
+      task: env.BENCH_TASK || null,
+      allocations: read("BENCH_ALLOCATIONS", false, BenchmarkConfig.#parseSwitch)
+    });
   }
 
-  throw new BenchmarkError(
-    `${name} expects 1, 0, true or false, got "${raw}"`
-  );
-}
+  readonly time: number;
+  readonly iterations: number;
+  readonly warmupTime: number;
+  readonly warmupIterations: number;
+  readonly batch: number;
+  readonly format: BenchmarkFormat;
+  readonly task: string | null;
+  readonly allocations: boolean;
 
-function envNumber(
-  name: string,
-  fallback: number
-): number {
-  const raw = process.env[name];
-  if (raw === undefined || raw === "") {
-    return fallback;
+  constructor(
+    values: BenchmarkConfigValues
+  ) {
+    this.time = values.time;
+    this.iterations = values.iterations;
+    this.warmupTime = values.warmupTime;
+    this.warmupIterations = values.warmupIterations;
+    this.batch = values.batch;
+    this.format = values.format;
+    this.task = values.task;
+    this.allocations = values.allocations;
   }
 
-  const value = positiveNumber(raw);
-  if (value === null) {
-    throw new BenchmarkError(`${name} expects a positive number, got "${raw}"`);
-  }
+  static #parseSwitch(
+    label: string,
+    raw: string
+  ): boolean {
+    if (raw === "1" || raw === "true") {
+      return true;
+    }
+    if (raw === "0" || raw === "false") {
+      return false;
+    }
 
-  return value;
-}
-
-function envFormat(
-  name: string,
-  fallback: BenchmarkFormat
-): BenchmarkFormat {
-  const raw = process.env[name];
-  if (raw === undefined || raw === "") {
-    return fallback;
-  }
-  if (!isFormat(raw)) {
     throw new BenchmarkError(
-      `${name} expects one of ${kFormats.join(", ")}, got "${raw}"`
+      `${label} expects 1, 0, true or false, got "${raw}"`
     );
   }
-
-  return raw;
-}
-
-function isFormat(
-  value: string
-): value is BenchmarkFormat {
-  return kFormats.some((format) => format === value);
 }
