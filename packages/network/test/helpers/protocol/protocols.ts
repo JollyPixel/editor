@@ -5,9 +5,10 @@ import * as z from "zod/mini";
 import {
   MessageProtocol,
   OPAQUE_PROTOCOLS,
+  withEvent,
   type MessageProtocols
 } from "#src/protocol/message/MessageProtocol.ts";
-import { serverMessageProtocol } from "#src/sync/serverMessageProtocol.ts";
+import { SNAPSHOT_EVENT } from "#src/protocol/constants.ts";
 
 export { OPAQUE_PROTOCOLS };
 
@@ -27,8 +28,23 @@ export const actionProtocols: MessageProtocols = {
 
 export const syncProtocols: MessageProtocols = {
   inbound: actionCommandProtocol,
-  outbound: serverMessageProtocol({
-    command: actionCommandProtocol,
-    snapshot: z.object({})
-  })
+  outbound: new MessageProtocol(
+    z.union([
+      withEvent(z.object({
+        type: z.literal("snapshot"),
+        data: z.object({})
+      }), SNAPSHOT_EVENT),
+      ...actionCommandProtocol.variants.map(({ event, schema }) => withEvent(
+        z.object({
+          type: z.literal("command"),
+          data: schema,
+          version: z.optional(z.int().check(z.minimum(0)))
+        }),
+        event
+      ))
+    ]),
+    {
+      discriminator: "type"
+    }
+  )
 };

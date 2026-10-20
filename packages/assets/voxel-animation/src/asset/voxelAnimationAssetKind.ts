@@ -2,8 +2,7 @@
 import {
   describeErrors,
   KeyedCommandArbiter,
-  SchemaParser,
-  type ConflictResolver
+  SchemaParser
 } from "@jolly-pixel/network";
 import {
   InvalidAssetDocumentError,
@@ -76,16 +75,12 @@ export function decodeVoxelAnimationDocument(
 
 export interface VoxelAnimationAssetKindOptions {
   snapshot?: SnapshotPolicy;
-  conflictResolver?: ConflictResolver<AnimationNetworkCommand>;
 }
 
 export function voxelAnimationAssetKind(
   options: VoxelAnimationAssetKindOptions = {}
 ): AssetKindHandler<AnimationSet, AnimationNetworkCommand> {
-  const {
-    snapshot,
-    conflictResolver
-  } = options;
+  const { snapshot } = options;
 
   return {
     kind: VOXEL_ANIMATION_KIND,
@@ -138,8 +133,9 @@ export function voxelAnimationAssetKind(
           AnimationSet
         >({
           accepts: (set, command) => set.accepts(command),
-          keys: animationConflictKeys,
-          conflictResolver
+          writes: (command) => {
+            return { keys: animationConflictKeys(command) };
+          }
         });
 
         return {

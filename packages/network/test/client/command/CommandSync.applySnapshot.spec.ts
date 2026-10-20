@@ -12,6 +12,7 @@ import {
   type NetworkServerMessage
 } from "#src/index.ts";
 import { RoomHarness } from "../../helpers/client/RoomHarness.ts";
+import { rebasingReconciler } from "../../helpers/client/commandSync.ts";
 
 type TestCommand = { action: "set"; value: number; } & NetworkCommandHeader;
 
@@ -39,6 +40,7 @@ function setup(
   const harness = new RoomHarness<TestCommand, TestMessage>();
   harness.admit();
   const sync = new CommandSync<TestCommand, TestSnapshot>(harness.room, {
+    reconciler: rebasingReconciler(),
     applySnapshot
   });
   const events: string[] = [];

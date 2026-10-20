@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { PendingChanges } from "@jolly-pixel/network/client";
+import { SyncedDocument } from "@jolly-pixel/network/client";
 import {
   VoxelDocument,
   type VoxelDocumentOptions,
@@ -17,32 +17,29 @@ export type SyncedVoxelMapOptions = Pick<
   "chunkSize" | "layers" | "blocks" | "logger"
 >;
 
-export class SyncedVoxelMap {
+export class SyncedVoxelMap extends SyncedDocument<SyncedVoxelMap> {
   readonly voxels: VoxelDocument;
   readonly edits: VoxelEdits;
-  readonly ready: Promise<void>;
 
   #sync: VoxelSyncClient;
 
-  get loaded(): boolean {
-    return this.#sync.ready;
-  }
-
-  get pendingChanges(): PendingChanges {
-    return this.#sync;
+  get document(): this {
+    return this;
   }
 
   constructor(
     room: VoxelMapRoom,
     options: SyncedVoxelMapOptions = {}
   ) {
-    this.voxels = new VoxelDocument(options);
-    this.#sync = new VoxelSyncClient({
+    const voxels = new VoxelDocument(options);
+    const sync = new VoxelSyncClient({
       room,
-      document: this.voxels
+      document: voxels
     });
-    this.edits = this.#sync.edits;
-    this.ready = this.#sync.whenReady();
+    super(sync);
+    this.voxels = voxels;
+    this.edits = sync.edits;
+    this.#sync = sync;
   }
 
   replaceWorld(
@@ -50,24 +47,13 @@ export class SyncedVoxelMap {
   ): void {
     this.#sync.replaceWorld(data);
   }
-
-  dispose(): void {
-    this.#sync.destroy();
-  }
-}
-
-export interface SyncedVoxelMapLease {
-  document: SyncedVoxelMap;
-  ready: Promise<void>;
-  pendingChanges: PendingChanges;
-  dispose(): void;
 }
 
 export interface VoxelMapDocumentKind {
   readonly kind: typeof VOXEL_MAP_KIND;
   createDocument(
     room: VoxelMapRoom
-  ): SyncedVoxelMapLease;
+  ): SyncedVoxelMap;
 }
 
 export function voxelMapDocumentKind(
@@ -75,15 +61,6 @@ export function voxelMapDocumentKind(
 ): VoxelMapDocumentKind {
   return {
     kind: VOXEL_MAP_KIND,
-    createDocument: (room) => {
-      const map = new SyncedVoxelMap(room, options);
-
-      return {
-        document: map,
-        ready: map.ready,
-        pendingChanges: map.pendingChanges,
-        dispose: () => map.dispose()
-      };
-    }
+    createDocument: (room) => new SyncedVoxelMap(room, options)
   };
 }

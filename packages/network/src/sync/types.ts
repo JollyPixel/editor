@@ -15,11 +15,7 @@ export interface NetworkServerNotice {
   type: string;
 }
 
-type NetworkSyncMessageType =
-  | "snapshot"
-  | "command"
-  | "correction"
-  | "catch-up";
+type NetworkSyncMessageType = NetworkSyncMessage<unknown, unknown>["type"];
 
 export type NetworkServerNoticeOf<TNotice extends NetworkServerNotice> =
   [Extract<NetworkSyncMessageType, TNotice["type"]>] extends [never] ?

@@ -1,8 +1,7 @@
 // Import Third-party Dependencies
 import {
   CommandSync,
-  type CommandReconciler,
-  type ConflictResolver
+  type CommandReconciler
 } from "@jolly-pixel/network/client";
 import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import {
@@ -35,7 +34,6 @@ export interface BlocksetSyncClientOptions {
   room: BlocksetRoom;
   pixels: PixelSyncTarget;
   blockset: BlocksetDocument;
-  resolver?: ConflictResolver;
 }
 
 export function createBlocksetReconciler(
@@ -102,7 +100,6 @@ export class BlocksetSyncClient extends CommandSync<
         options.pixels,
         options.blockset
       ),
-      resolver: options.resolver,
       applySnapshot: (snapshot) => loadBlocksetSnapshot(
         options.blockset,
         options.pixels,

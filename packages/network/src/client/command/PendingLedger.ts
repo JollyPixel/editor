@@ -1,9 +1,23 @@
 // Import Internal Dependencies
-import type { ChangeOutbox } from "./CommandSync.ts";
 import type { NetworkCommandHeader } from "../../sync/types.ts";
+
+export interface SentChange {
+  readonly basis?: number;
+}
+
+export interface ChangeOutbox {
+  restore(): readonly NetworkCommandHeader[];
+  keep(
+    command: NetworkCommandHeader
+  ): void;
+  drop(
+    command: NetworkCommandHeader
+  ): void;
+}
 
 export interface LedgerEntry<TCommand extends NetworkCommandHeader> {
   readonly command: TCommand;
+  readonly change: SentChange | null;
   sent: boolean;
   applied: boolean;
 }
@@ -27,6 +41,7 @@ export class PendingLedger<TCommand extends NetworkCommandHeader> {
     this.#entries = outbox.restore().map((command) => {
       return {
         command: command as TCommand,
+        change: null,
         sent: command.seq > 0,
         applied: false
       };

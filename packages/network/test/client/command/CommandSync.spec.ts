@@ -16,21 +16,13 @@ import {
 import { RoomHarness } from "../../helpers/client/RoomHarness.ts";
 import {
   createCommandSync,
+  rebasingReconciler,
   remote,
   type TestCommand,
   type TestMessage,
   type TestNotice,
   type TestSnapshot
 } from "../../helpers/client/commandSync.ts";
-
-class ChangeSync extends CommandSync<TestCommand, TestSnapshot, TestNotice> {
-  sendValue(
-    value: number,
-    change: SentChange
-  ): TestCommand {
-    return this.sendChange({ action: "set", value }, change);
-  }
-}
 
 describe("CommandSync", () => {
   test("send stamps the room clientId, an incrementing seq and a timestamp", (t) => {
@@ -139,7 +131,10 @@ describe("CommandSync", () => {
     const harness = new RoomHarness<TestCommand, TestMessage>();
     harness.admit();
     const receipts = new ChangeReceipts<SentChange>();
-    const sync = new ChangeSync(harness.room, { receipts });
+    const sync = new CommandSync<TestCommand, TestSnapshot, TestNotice>(harness.room, {
+      reconciler: rebasingReconciler(),
+      receipts
+    });
     const first = { basis: 2 };
     const second = {};
     const answers: string[] = [];
@@ -151,8 +146,8 @@ describe("CommandSync", () => {
     receipts.on("confirmed", (change, version) => answers.push(`${readName(change)}@${version}`));
     receipts.on("refused", (change) => answers.push(`${readName(change)} refused`));
 
-    sync.sendValue(1, first);
-    sync.sendValue(2, second);
+    sync.sendChange({ action: "set", value: 1 }, first);
+    sync.sendChange({ action: "set", value: 2 }, second);
     sync.send({ action: "set", value: 3 });
     harness.serverMessage({
       type: "snapshot",

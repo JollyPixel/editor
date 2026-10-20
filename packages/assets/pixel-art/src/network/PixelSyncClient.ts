@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import {
-  CommandSync,
-  type ConflictResolver
-} from "@jolly-pixel/network/client";
+import { CommandSync } from "@jolly-pixel/network/client";
 import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import type { ChangeSource } from "@jolly-pixel/history";
 import type {
@@ -51,7 +48,6 @@ export interface PixelSyncTarget extends Pick<
 export interface PixelSyncClientOptions {
   room: PixelArtRoom;
   document: PixelSyncTarget;
-  resolver?: ConflictResolver;
 }
 
 export class PixelSyncClient extends CommandSync<
@@ -75,7 +71,6 @@ export class PixelSyncClient extends CommandSync<
     const edits = pixelEdits(options.document);
     super(options.room, {
       reconciler: createPixelReconciler(options.document),
-      resolver: options.resolver,
       applySnapshot: (snapshot) => loadPixelSnapshot(
         options.document,
         snapshot

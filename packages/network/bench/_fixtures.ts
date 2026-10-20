@@ -7,12 +7,13 @@ import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import {
+  CATCH_UP_EVENT,
   Extension,
   MessageProtocol,
-  attributeCommand,
+  SNAPSHOT_EVENT,
   commandVariant,
-  serverMessageProtocol,
   withCommandHeader,
+  withEvent,
   type ClientConnection,
   type ClientHandle,
   type Logger,
@@ -27,6 +28,7 @@ import {
 // CONSTANTS
 const kAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 const kStrokePoints = 32;
+const kVersion = z.int().check(z.minimum(0));
 
 export const ROOM_NAME = "texture:bench";
 export const EXTENSION_NAME = "pixel-art";
@@ -83,12 +85,32 @@ export function benchProtocols(
 
   return {
     inbound: command,
-    outbound: serverMessageProtocol({
-      command,
-      snapshot: z.object({
-        pixels: z.string()
-      })
-    })
+    outbound: new MessageProtocol(
+      z.union([
+        withEvent(z.object({
+          type: z.literal("snapshot"),
+          data: z.object({
+            pixels: z.string()
+          }),
+          version: z.optional(kVersion)
+        }), SNAPSHOT_EVENT),
+        ...["command", "correction"].flatMap((type) => command.variants.map(
+          ({ event, schema }) => withEvent(z.object({
+            type: z.literal(type),
+            data: schema,
+            version: z.optional(kVersion)
+          }), event)
+        )),
+        withEvent(z.object({
+          type: z.literal("catch-up"),
+          data: z.array(z.union(command.variants.map(({ schema }) => schema))),
+          version: kVersion
+        }), CATCH_UP_EVENT)
+      ]),
+      {
+        discriminator: "type"
+      }
+    )
   };
 }
 
@@ -215,7 +237,10 @@ export class EchoExtension extends Extension<BenchCommand> {
     this.#version++;
     context.room.broadcast({
       type: "command",
-      data: attributeCommand(message, clientId),
+      data: {
+        ...message,
+        clientId
+      },
       version: this.#version
     });
   }

@@ -1,8 +1,7 @@
 // Import Third-party Dependencies
 import {
   describeErrors,
-  SchemaParser,
-  type ConflictResolver
+  SchemaParser
 } from "@jolly-pixel/network";
 import {
   InvalidAssetDocumentError,
@@ -155,7 +154,6 @@ export function createVoxelMapDocument(
 export interface VoxelMapAssetKindOptions {
   chunkSize?: number;
   snapshot?: SnapshotPolicy;
-  conflictResolver?: ConflictResolver<VoxelMapNetworkCommand>;
 }
 
 export function voxelMapAssetKind(
@@ -163,8 +161,7 @@ export function voxelMapAssetKind(
 ): AssetKindHandler<VoxelMapState, VoxelMapNetworkCommand> {
   const {
     chunkSize = DEFAULT_CHUNK_SIZE,
-    snapshot = kDefaultSnapshot,
-    conflictResolver
+    snapshot = kDefaultSnapshot
   } = options;
 
   return {
@@ -250,9 +247,7 @@ export function voxelMapAssetKind(
       },
 
       live({ state }) {
-        const arbiter = new VoxelCommandArbiter({
-          conflictResolver
-        });
+        const arbiter = new VoxelCommandArbiter();
 
         return {
           snapshotSchema: voxelWorldSchema,

@@ -1,55 +1,27 @@
 // Import Internal Dependencies
-import type { NetworkCommandHeader } from "../sync/types.ts";
-import type {
-  ConflictRecord,
-  ConflictResolver
-} from "./ConflictResolver.ts";
+import type { NetworkCommandHeader } from "../types.ts";
+import {
+  supersedes,
+  type ConflictRecord
+} from "../supersedes.ts";
 
-export interface Admission<TCommand> {
-  readonly command: TCommand;
-  commit(version?: number): void;
-}
-
-export interface PartialAdmission {
+export interface KeyAdmission {
   readonly indices: number[];
   commit(version?: number): void;
 }
 
-export class ConflictTracker<
-  THeader extends NetworkCommandHeader = NetworkCommandHeader
-> {
-  #resolver: ConflictResolver<THeader>;
+export class ConflictTracker {
   #lastByKey = new Map<string, ConflictRecord>();
   #floor: ConflictRecord | undefined;
 
-  constructor(
-    resolver: ConflictResolver<THeader>
-  ) {
-    this.#resolver = resolver;
-  }
-
-  admit<TCommand extends THeader>(
-    command: TCommand,
+  admit(
+    command: NetworkCommandHeader,
     keys: readonly string[]
-  ): Admission<TCommand> | null {
-    if (keys.some((key) => !this.#accepts(key, command))) {
-      return null;
-    }
-
-    return {
-      command,
-      commit: (version) => this.record(command, keys, version)
-    };
-  }
-
-  admitEach(
-    command: THeader,
-    keys: readonly string[]
-  ): PartialAdmission {
+  ): KeyAdmission {
     const indices: number[] = [];
     const accepted: string[] = [];
     keys.forEach((key, index) => {
-      if (this.#accepts(key, command)) {
+      if (supersedes(command, this.#lastByKey.get(key) ?? this.#floor)) {
         indices.push(index);
         accepted.push(key);
       }
@@ -78,16 +50,6 @@ export class ConflictTracker<
   ): void {
     this.#lastByKey.clear();
     this.#floor = toRecord(command, version);
-  }
-
-  #accepts(
-    key: string,
-    incoming: THeader
-  ): boolean {
-    return this.#resolver.resolve({
-      incoming,
-      existing: this.#lastByKey.get(key) ?? this.#floor
-    }) === "accept";
   }
 }
 

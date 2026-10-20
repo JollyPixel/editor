@@ -14,6 +14,7 @@ import {
   type NetworkServerMessage
 } from "#src/index.ts";
 import { RoomHarness } from "../../helpers/client/RoomHarness.ts";
+import { rebasingReconciler } from "../../helpers/client/commandSync.ts";
 
 type TestCommand = { action: "set"; value: number; } & NetworkCommandHeader;
 
@@ -66,15 +67,20 @@ function open(
   outbox: MemoryOutbox
 ) {
   const harness = new RoomHarness<TestCommand, TestMessage>();
-  const sync = new CommandSync<TestCommand, TestSnapshot>(harness.room);
   const applied: number[] = [];
   const refused: number[] = [];
-  sync.on("command", (command) => {
+  function apply(
+    command: TestCommand
+  ): void {
     if (command.value < 0) {
       throw new Error("unreadable command");
     }
     applied.push(command.value);
+  }
+  const sync = new CommandSync<TestCommand, TestSnapshot>(harness.room, {
+    reconciler: rebasingReconciler(apply)
   });
+  sync.on("command", apply);
   sync.on("refused", (command) => refused.push(command.value));
   sync.keepIn(outbox);
   harness.room.join();
@@ -179,7 +185,9 @@ describe("CommandSync outbox", () => {
 
   test("refuses an outbox once the room has joined", () => {
     const harness = new RoomHarness<TestCommand, TestMessage>();
-    const sync = new CommandSync<TestCommand, TestSnapshot>(harness.room);
+    const sync = new CommandSync<TestCommand, TestSnapshot>(harness.room, {
+      reconciler: rebasingReconciler()
+    });
     harness.room.join();
     harness.admit("A");
 

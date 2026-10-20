@@ -4,7 +4,6 @@ import {
   mulberry32,
   runSuites
 } from "@jolly-pixel/bench";
-import * as network from "@jolly-pixel/network";
 import {
   PixelBuffer,
   PixelDocumentState,
@@ -23,7 +22,6 @@ import type { PixelNetworkCommand } from "../src/network/types.ts";
 const kSide = 256;
 const kWhite: RGBA8 = { r: 255, g: 255, b: 255, a: 255 };
 const kBlack: RGBA8 = { r: 0, g: 0, b: 0, a: 255 };
-const kResolveBatch = 1000;
 
 const suite = defineSuite("Network (network/*)", (bench) => {
   const rng = mulberry32();
@@ -49,9 +47,6 @@ const suite = defineSuite("Network (network/*)", (bench) => {
     metadata: { fromColor: kWhite, toColor: kBlack }
   });
 
-  const resolver = new network.LastWriteWinsResolver();
-  const contexts = buildResolveContexts(kResolveBatch, rng);
-
   bench
     .add("applyPixelCommand / stroke (256 px)", () => {
       applyPixelCommand(strokeState, strokeCommand);
@@ -62,16 +57,6 @@ const suite = defineSuite("Network (network/*)", (bench) => {
       beforeEach() {
         fillState.buffer.replacePixels(whitePixels, size);
       }
-    })
-    .add(`LastWriteWinsResolver.resolve / x${kResolveBatch}`, () => {
-      let accepted = 0;
-      for (const ctx of contexts) {
-        if (resolver.resolve(ctx) === "accept") {
-          accepted++;
-        }
-      }
-
-      return accepted;
     });
 });
 
@@ -86,32 +71,6 @@ function header(
     seq: 1,
     timestamp: 1
   } as PixelNetworkCommand;
-}
-
-function buildResolveContexts(
-  count: number,
-  rng: () => number
-): network.ConflictContext[] {
-  const contexts: network.ConflictContext[] = [];
-
-  for (let i = 0; i < count; i++) {
-    const incoming: network.NetworkCommandHeader = {
-      clientId: `c${Math.floor(rng() * 8)}`,
-      seq: i,
-      timestamp: Math.floor(rng() * 1000)
-    };
-    const existing: network.NetworkCommandHeader | undefined = rng() < 0.5 ?
-      undefined :
-      {
-        clientId: `c${Math.floor(rng() * 8)}`,
-        seq: i,
-        timestamp: Math.floor(rng() * 1000)
-      };
-
-    contexts.push({ incoming, existing });
-  }
-
-  return contexts;
 }
 
 if (import.meta.main) {

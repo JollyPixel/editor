@@ -4,7 +4,6 @@ import {
   describeErrors,
   KeyedCommandArbiter,
   SchemaParser,
-  type ConflictResolver,
   type Infer
 } from "@jolly-pixel/network";
 import {
@@ -174,16 +173,12 @@ export class VoxelModelState {
 
 export interface VoxelModelAssetKindOptions {
   snapshot?: SnapshotPolicy;
-  conflictResolver?: ConflictResolver<VoxelModelNetworkCommand>;
 }
 
 export function voxelModelAssetKind(
   options: VoxelModelAssetKindOptions = {}
 ): AssetKindHandler<VoxelModelState, VoxelModelNetworkCommand> {
-  const {
-    snapshot,
-    conflictResolver
-  } = options;
+  const { snapshot } = options;
 
   return {
     kind: VOXEL_MODEL_KIND,
@@ -270,8 +265,9 @@ export function voxelModelAssetKind(
           VoxelModelState
         >({
           accepts: (model, command) => model.accepts(command),
-          keys: voxelModelConflictKeys,
-          conflictResolver
+          writes: (command) => {
+            return { keys: voxelModelConflictKeys(command) };
+          }
         });
 
         return {

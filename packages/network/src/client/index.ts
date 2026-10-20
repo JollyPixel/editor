@@ -3,6 +3,7 @@ export * from "./command/CommandReconciler.ts";
 export * from "./command/CommandSync.ts";
 export * from "./command/DocumentSyncClient.ts";
 export * from "./command/SyncedCommandDocument.ts";
+export * from "./command/SyncedDocument.ts";
 export * from "./grants/Grants.ts";
 export * from "./grants/RoomGrants.ts";
 export * from "./PresenceChannel.ts";
@@ -10,7 +11,6 @@ export * from "./Room.ts";
 export type { Logger } from "../logger.ts";
 
 export * from "../protocol/index.ts";
-export * from "../sync/ConflictResolver.ts";
 export * from "../sync/types.ts";
 export * from "../transport/ClientSocket.ts";
 export * from "../transport/websocket/connectWebSocket.ts";

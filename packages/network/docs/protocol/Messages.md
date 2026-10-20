@@ -52,11 +52,6 @@ Opaque protocols skip validation; no-message protocols accept no feature message
 `commandVariant(action, shape)` builds a command object schema;
 `withCommandHeader(variant)` adds the stamped header fields.
 
-### serverMessageProtocol
-
-Wraps commands, corrections, snapshots, and catch-up. `acks` tracks processed
-sequences; `refused` names a rejected local sequence.
-
 ## Schemas
 
 A schema is a zod schema without transforms or defaults: parsers return the

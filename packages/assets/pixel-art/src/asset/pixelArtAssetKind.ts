@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import type { ConflictResolver } from "@jolly-pixel/network";
 import {
   InvalidAssetDocumentError,
   SNAPSHOT_POLICY_SCHEMA,
@@ -91,7 +90,6 @@ export class PixelArtState {
 export interface PixelArtAssetKindOptions {
   defaultSize?: Vec2;
   snapshot?: SnapshotPolicy;
-  conflictResolver?: ConflictResolver;
 }
 
 export function pixelArtAssetKind(
@@ -99,8 +97,7 @@ export function pixelArtAssetKind(
 ): AssetKindHandler<PixelArtState, PixelWireCommand> {
   const {
     defaultSize = kDefaultSize,
-    snapshot,
-    conflictResolver
+    snapshot
   } = options;
 
   return {
@@ -165,9 +162,7 @@ export function pixelArtAssetKind(
       },
 
       live({ state }) {
-        const arbiter = new PixelCommandArbiter({
-          conflictResolver
-        });
+        const arbiter = new PixelCommandArbiter();
 
         return {
           snapshotSchema: pixelSnapshotSchema,

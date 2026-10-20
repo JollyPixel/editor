@@ -9,11 +9,9 @@ import assert from "node:assert/strict";
 import fc from "fast-check";
 
 // Import Internal Dependencies
-import {
-  ConflictTracker,
-  LastWriteWinsResolver,
-  type NetworkCommandHeader
-} from "#src/index.ts";
+import { ConflictTracker } from "#src/sync/arbitration/ConflictTracker.ts";
+import { supersedes } from "#src/sync/supersedes.ts";
+import type { NetworkCommandHeader } from "#src/index.ts";
 
 // CONSTANTS
 const kClients = ["A", "B", "C"];
@@ -78,17 +76,12 @@ function isNewer(
   return a.seq > b.seq;
 }
 
-describe("LastWriteWinsResolver properties", () => {
+describe("supersedes properties", () => {
   test("of two unversioned writes from different clients, exactly one wins over the other", () => {
-    const resolver = new LastWriteWinsResolver();
-
     fc.assert(
       fc.property(kHeader, kHeader, (a, b) => {
         fc.pre(a.clientId !== b.clientId);
-        const aWins = resolver.resolve({ incoming: a, existing: b }) === "accept";
-        const bWins = resolver.resolve({ incoming: b, existing: a }) === "accept";
-
-        assert.notStrictEqual(aWins, bWins);
+        assert.notStrictEqual(supersedes(a, b), supersedes(b, a));
       })
     );
   });
@@ -101,11 +94,11 @@ describe("ConflictTracker properties", () => {
         kRun,
         fc.array(fc.nat(), { maxLength: 18 }),
         (runs, picks) => {
-          const tracker = new ConflictTracker(new LastWriteWinsResolver());
+          const tracker = new ConflictTracker();
           const winners = new Map<string, NetworkCommandHeader>();
 
           for (const { header, keys } of interleave(runs, picks)) {
-            const admission = tracker.admitEach(header, keys);
+            const admission = tracker.admit(header, keys);
             admission.commit();
             for (const index of admission.indices) {
               winners.set(keys[index], header);
@@ -124,27 +117,6 @@ describe("ConflictTracker properties", () => {
 
             assert.deepStrictEqual(winners.get(key), newest, key);
           }
-        }
-      )
-    );
-  });
-
-  test("admit accepts a command exactly when admitEach accepts every one of its keys", () => {
-    fc.assert(
-      fc.property(
-        fc.array(fc.tuple(kHeader, fc.subarray(kKeys)), { maxLength: 8 }),
-        kHeader,
-        fc.subarray(kKeys),
-        (history, header, keys) => {
-          const tracker = new ConflictTracker(new LastWriteWinsResolver());
-          for (const [recorded, recordedKeys] of history) {
-            tracker.record(recorded, recordedKeys);
-          }
-
-          const admitted = tracker.admit(header, keys) !== null;
-          const partial = tracker.admitEach(header, keys);
-
-          assert.strictEqual(admitted, partial.indices.length === keys.length);
         }
       )
     );

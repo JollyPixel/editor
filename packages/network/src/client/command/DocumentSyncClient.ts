@@ -11,7 +11,6 @@ import {
   CommandSync,
   type CommandBody
 } from "./CommandSync.ts";
-import type { ConflictResolver } from "../../sync/ConflictResolver.ts";
 import type {
   NetworkCommandHeader,
   NetworkServerMessage,
@@ -43,7 +42,6 @@ export interface DocumentSyncClientOptions<
 > {
   document: SyncableDocument<TCommand, TSnapshot, TImage>;
   keys(command: TCommand): readonly string[] | null;
-  resolver?: ConflictResolver<TCommand>;
 }
 
 export class DocumentSyncClient<
@@ -52,35 +50,30 @@ export class DocumentSyncClient<
   TNotice extends NetworkServerNoticeOf<TNotice>,
   TImage
 > extends CommandSync<TCommand, TSnapshot, TNotice> {
-  #release: Array<() => void>;
+  #release: () => void;
 
   constructor(
     room: Room<TCommand, NetworkServerMessage<TCommand, TSnapshot, TNotice>>,
     options: DocumentSyncClientOptions<NoInfer<TCommand>, NoInfer<TSnapshot>, TImage>
   ) {
-    const { document, keys, resolver } = options;
+    const { document, keys } = options;
     const reconciler = new DocumentReconciler(document, keys);
     super(room, {
       reconciler,
-      resolver,
       receipts: document.receipts
     });
 
     this.on("snapshot", (snapshot) => document.load(snapshot));
     this.on("command", (command) => document.apply(command, command.clientId));
-    this.#release = [
-      document.subscribe("change", (change) => {
-        if (change.origin === "local") {
-          reconciler.capture(this.sendChange(change.command, change), change);
-        }
-      })
-    ];
+    this.#release = document.subscribe("change", (change) => {
+      if (change.origin === "local") {
+        reconciler.capture(this.sendChange(change.command, change), change);
+      }
+    });
   }
 
   override destroy(): void {
-    for (const release of this.#release.splice(0)) {
-      release();
-    }
+    this.#release();
     super.destroy();
   }
 }

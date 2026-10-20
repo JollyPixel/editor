@@ -13,6 +13,7 @@ import {
   type NetworkServerMessage
 } from "#src/index.ts";
 import { RoomHarness } from "../../helpers/client/RoomHarness.ts";
+import { rebasingReconciler } from "../../helpers/client/commandSync.ts";
 
 type TestCommand = { action: "set"; value: number; } & NetworkCommandHeader;
 
@@ -24,9 +25,16 @@ type TestMessage = NetworkServerMessage<TestCommand, TestSnapshot>;
 
 function setup() {
   const harness = new RoomHarness<TestCommand, TestMessage>();
-  const sync = new CommandSync<TestCommand, TestSnapshot>(harness.room);
   const applied: number[] = [];
-  sync.on("command", (command) => applied.push(command.value));
+  function apply(
+    command: TestCommand
+  ): void {
+    applied.push(command.value);
+  }
+  const sync = new CommandSync<TestCommand, TestSnapshot>(harness.room, {
+    reconciler: rebasingReconciler(apply)
+  });
+  sync.on("command", apply);
   harness.room.join();
   harness.admit("A");
 
@@ -170,7 +178,9 @@ describe("CommandSync resume", () => {
     const harness = new RoomHarness<TestCommand, TestMessage>();
     harness.room.join();
     harness.admit("A");
-    const sync = new CommandSync<TestCommand, TestSnapshot>(harness.room);
+    const sync = new CommandSync<TestCommand, TestSnapshot>(harness.room, {
+      reconciler: rebasingReconciler()
+    });
 
     sync.send({ action: "set", value: 1 });
     harness.room.suspend();
@@ -179,7 +189,7 @@ describe("CommandSync resume", () => {
     assert.deepEqual(joins(harness.sent).at(-1), { clientId: "A", version: 0 });
   });
 
-  test("applies the catch-up and ignores the live commands it covers", () => {
+  test("applies the catch-up over the live commands it covers, then replays pending ones", () => {
     const { harness, sync, applied, reconnect } = setup();
 
     sync.send({ action: "set", value: 1 });
@@ -191,7 +201,7 @@ describe("CommandSync resume", () => {
       version: 3
     });
 
-    assert.deepEqual(applied, [50]);
+    assert.deepEqual(applied, [50, 1]);
     assert.strictEqual(sync.pending, 0);
   });
 

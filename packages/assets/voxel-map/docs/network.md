@@ -1,37 +1,71 @@
 # Voxel-map network API
 
-The browser entry point is `@jolly-pixel/asset.voxel-map/client`. Server protocol utilities are exported from `@jolly-pixel/asset.voxel-map/server`. Use `assetRoomName("voxelmap", assetId)` to name a map room and `blocksetRoom(client, assetId)` to open a blockset room.
+Syncs a `VoxelDocument` through a `voxelmap:<assetId>` room, and a blockset through a `blockset:<assetId>` room. Browser code imports `@jolly-pixel/asset.voxel-map/client`; asset-server code imports `@jolly-pixel/asset.voxel-map/server`.
+
+```ts
+import { AssetRoom } from "@jolly-pixel/asset";
+import {
+  SyncedVoxelMap,
+  type VoxelMapRoom
+} from "@jolly-pixel/asset.voxel-map/client";
+
+const room: VoxelMapRoom = client.room(new AssetRoom("voxelmap", assetId).toString());
+const map = new SyncedVoxelMap(room, { chunkSize: 16 });
+room.join();
+await map.ready;
+
+// On teardown: map.dispose(); room.leave();
+```
+
+Pending edits, acknowledgements, rebase and resume follow [`CommandSync`](../../../network/docs/client/CommandSync.md).
 
 ## Map synchronization
 
-`new VoxelSyncClient({ room, document })` connects a `VoxelDocument` to a `VoxelMapRoom`. Construct it before `room.join()`. It sends the document's world commands with a local origin, each with the `basis` of its history change, and applies peer commands with a remote origin and the peer's `clientId`. It builds the document's [`VoxelEdits`](./history.md) as `sync.edits` and writes the server's answers to `edits.receipts`, so a `CommandHistory` the edits are registered in refuses steps a peer overwrote and sends undos the server can refuse. `SyncedVoxelMap` exposes them as `map.edits`. Block and material group commands the document emits stay local: they are projected from blockset documents, which have rooms of their own. Snapshots call `document.load()`. Local commands stay pending until the server acknowledges them. `VoxelReconciler` records their inverse: the cells a voxel write changed (undo and redo included, through a world recorder that also sees unrecorded writes), and from a shadow of each layer, the rank before a `layer-moved`, the fields an `updated` changed and the position before a `position-updated`; an `added` or `cloned` layer is removed. A peer voxel write skips the cells a pending write will win; any other peer command is applied under the pending commands, which are rolled back and replayed on top with a `"replay"` origin. A pending command with no inverse (`removed`, `merged`, `position-rebased`, objects, templates, blockset links) makes the client ask for a snapshot instead. `resolver` must match the room's `conflictResolver`. `replaceWorld(data)` sends a full `VoxelWorldJSON` replacement; the server broadcasts a fresh snapshot after applying it.
+`new SyncedVoxelMap(room, options?)` is a network [`SyncedDocument`](../../../network/docs/client/CommandSync.md#synceddocument) whose `document` is the map itself, so `voxelMapDocumentKind(options?)` hands it to an `@jolly-pixel/editor.host` lease as is.
 
-`destroy()` removes the document and room listeners. The caller still leaves the room and owns the shared network client. The inherited `snapshot`, `ready`, `command`, and `notice` events report loaded snapshots, the first load, peer commands, and rejected or deleted asset notices.
+- `voxels` is the `VoxelDocument`. Options set its `chunkSize`, initial `layers` and `blocks`, and `logger`.
+- `edits` is the document's [`VoxelEdits`](./history.md); the server's answers reach its receipts, so undo refuses steps a peer overwrote.
+- `replaceWorld(data)` sends a `world-replace` with a full `VoxelWorldJSON`. The server answers with a snapshot.
 
-`SyncedVoxelMap(room, options?)` creates a `VoxelDocument` as `voxels` with a private sync client. Its `ready` promise resolves after the first snapshot; `loaded` reports readiness; `pendingChanges` is the sync client's network `PendingChanges`. `replaceWorld(data)` and `dispose()` delegate to the sync client. `voxelMapDocumentKind(options?)` provides the corresponding `@jolly-pixel/editor.host` lease adapter. Options can set `chunkSize`, initial `layers` and `blocks`, and `logger`.
+### VoxelSyncClient
+
+`new VoxelSyncClient({ room, document })` syncs a document you already own. It is a `CommandSync`; construct it before `room.join()` and call `destroy()` before leaving.
+
+- Only world commands are sent. Block and material group commands stay local, since they come from blockset rooms.
+- A peer voxel write skips the cells a pending local write will win. Other peer commands roll the pending ones back and replay them on top with a `"replay"` origin.
+- A pending `removed`, `merged`, `position-rebased`, object, template or blockset link command cannot be rolled back, so the client asks for a snapshot instead.
 
 ## Blockset synchronization
 
-`new BlocksetSyncClient({ room, pixels, blockset })` connects a `PixelDocument` and a renderer `BlocksetDocument` to a `BlocksetRoom`. Pixel edits go out through the pixel document's `command` event; block, material group and tile size commands go out from the blockset document's local `command` events. A peer's pixel command is applied with `pixels.applyRemoteCommand()`, any other with `blockset.apply(command, { origin: "remote" })`. A snapshot loads the document, then the pixels, so a snapshot with an invalid block loads neither. PNG pixels decode asynchronously; commands that arrive meanwhile are applied after them. `destroy()` removes the listeners. `pixels` is a pixel-art `PixelSyncTarget`. `createBlocksetReconciler(pixels, blockset)` rebases pending commands: pixel commands as in a pixel-art room, blockset commands as absolute writes keyed by `blocksetWriteKeys`, except `block-moved`, which asks for a snapshot.
+`new SyncedBlockset(room, options?)` is also its own `document`, and `blocksetDocumentKind(options?)` hands it to a lease. It owns a `pixels` document and a renderer `BlocksetDocument` as `blockset`; options are pixel-art's `{ maxSize? }`. `blocksetRoom(client, assetId)` returns the typed room.
 
-`SyncedBlockset(room, options?)` creates the `pixels` and `blockset` documents with a private sync client; `ready` resolves after the first snapshot, `loaded` reports it, `pendingChanges` is the sync client's network `PendingChanges`, and `dispose()` tears both down. `SyncedBlocksetOptions` is pixel-art's `SyncedPixelDocumentOptions`: the pixel document's `maxSize` and `history`. `blocksetDocumentKind(options?)` provides the lease adapter. `createBlocksetAsset(catalog, path, document)` creates a blockset asset from a `BlocksetAssetDocument`, suffixing the path on conflict.
+- `new BlocksetSyncClient({ room, pixels, blockset })` sends pixel edits and the blockset document's local commands. Peer pixel commands go to `pixels.applyRemoteCommand()`, others to `blockset.apply(command, { origin: "remote" })`.
+- A snapshot loads the blockset, then the pixels. A snapshot with an invalid block loads neither.
+- A pending `block-moved` cannot be rebased and asks for a snapshot. Other blockset commands are absolute writes keyed by `blocksetWriteKeys`.
+- `createBlocksetAsset(catalog, path, document)` creates a blockset asset, suffixing the path on conflict.
 
 ## Wire data
 
-`VoxelMapNetworkCommand` is a renderer `VoxelWorldCommand` (layer, voxel, object and blockset link commands) or a `world-replace` command, plus `NetworkCommandHeader` (`clientId`, `seq`, `timestamp`). `VoxelMapServerMessage` carries a command, a `VoxelWorldJSON` snapshot, or an asset notice. The snapshot holds the layers and the blockset links; a link names an asset, or a URL with its tile size, and the slot the blockset's block ids occupy.
+- `VoxelMapNetworkCommand` is a renderer `VoxelWorldCommand` or a `world-replace`, plus the network command header. The renderer's [command reference](../../../voxel-renderer/docs/api/core/commands.md) defines the payloads.
+- A map snapshot is a `VoxelWorldJSON`: the layers and the blockset links. A link names an asset (or a URL with its tile size) and the slot its block ids occupy.
+- `BlocksetNetworkCommand` is a pixel-art `PixelNetworkCommand` or a renderer `BlocksetDocumentCommand`. Pixel-art's `isPixelCommand()` tells them apart.
 
-`BlocksetNetworkCommand` is a pixel-art `PixelNetworkCommand` or a renderer `BlocksetDocumentCommand` (`block-defined`, `block-removed`, `block-moved`, `material-group-defined`, `material-group-removed`, `material-group-renamed`, `blend-group-defined`, `blend-group-removed`, `tile-size-updated`) plus the header. `BlocksetServerMessage` carries a command, a `BlocksetSnapshot` (`tileSize`, `pixels`, `blocks`, `materialGroups`, optional `blendGroups`), or an asset notice. `pixels` is a pixel-art `PixelWireSnapshot`: a joining client gets PNG pixels, from `BlocksetState.encodeSnapshot()`, and the blockset's normal map settings when it has some. Pixel-art's `isPixelCommand(command)` tells the two apart; the `normal-map-*` commands are pixel commands. A material group's `normalScale` is a number of 0 or more and its optional `swatch` a `#rrggbb` colour.
-
-`world-replace` is the additional administrative command. It is admitted when its document loads into a scratch world, and produces a snapshot broadcast. A `blockset-added` the server could not link at the slot it names, because another client took that slot first, also produces a snapshot broadcast so the sender drops its local link. The renderer's [command reference](../../../voxel-renderer/docs/api/core/commands.md) defines the other command payloads.
+```ts
+// BlocksetDocumentJSON: tileSize, blocks, materialGroups, blendGroups?
+interface BlocksetSnapshot extends BlocksetDocumentJSON {
+  pixels: PixelWireSnapshot;
+}
+```
 
 ## Server protocol
 
-`VoxelCommandArbiter.admit(state, command)` returns an admission or `null`, where `state` is the room's `VoxelWorldCommandTarget`. A voxel write to a layer the world does not have is rejected. Bulk `voxels-set`, `voxels-removed` and `voxels-patched` commands may be narrowed to the cells that win; a patch whose length is not a whole number of cells is rejected. A committed `world-replace` supersedes every recorded key: a later command from another client must be newer than it. `key(command)` returns one collision key or `null`; `keys(command)` returns all keys, including each cell in a bulk command.
+- `VoxelCommandArbiter` and `BlocksetCommandArbiter` are network [`KeyedCommandArbiter`](../../../network/docs/client/CommandSync.md#conflict-resolution)s over `VOXEL_COMMAND_RULES` and `BLOCKSET_COMMAND_RULES`. [Architecture](../ARCHITECTURE.md) lists the keys of both rooms.
+- A voxel write to a missing layer is refused. Bulk `voxels-set`, `voxels-removed` and `voxels-patched` can be narrowed to the cells that win.
+- `world-replace` is admitted when its document loads into a scratch world, and resets every key.
+- Blockset pixel commands follow pixel-art's `PIXEL_COMMAND_RULES`. A `block-defined` the renderer's `localBlock()` refuses is rejected.
+- A refused or narrowed cell write gets a `voxels-patched` correction from `correctVoxelCommand(state, command, admitted)`, with air for empty cells. Any other refusal gets a snapshot.
+- A `blockset-added` that lost its slot to another client is answered with a snapshot broadcast.
+- `voxelCommandKeys(command)` and `voxelCellKeys(command)` return the keys the arbiter and the client reconciler share: `<layerId>:x,y,z` per cell and `layer-order:<layerId>` for a `layer-moved`.
+- `voxelCommandProtocol` and `blocksetCommandProtocol` validate commands. `voxelWorldSchema` and `blocksetSnapshotSchema` check snapshot headers.
 
-`BlocksetCommandArbiter.admit(state, command)` hands pixel commands to a `PixelCommandArbiter` over `state.pixels` and keys document commands per block, material group or tile size; `key(command)` returns that key. A `block-defined` whose block the renderer `localBlock()` refuses is rejected. The [architecture page](../ARCHITECTURE.md) lists the key rules of both rooms.
-
-A refused or narrowed `voxel-set`, `voxel-removed`, `voxels-set`, `voxels-removed` or `voxels-patched` gets a correction from `correctVoxelCommand(state, command, admitted)`: a `voxels-patched` holding the server's cells at the refused positions, with air for an empty cell. A write to a missing layer and any other refused command get a snapshot. `voxelCommandKeys(command)` and `voxelCellKeys(command)` return the conflict keys the arbiter and the client reconciler share: `<layerId>:x,y,z` per cell and `layer-order:<layerId>` for a `layer-moved`.
-
-`voxelCommandProtocol` and `blocksetCommandProtocol` validate command messages. `voxelWorldSchema` and `blocksetSnapshotSchema` check the snapshot headers; `voxelWorldSchema` also checks a stored map before the renderer parses the full world document. `VoxelMapState.applyCommand()` applies commands to the headless world and blockset list; `BlocksetState.applyCommand()` applies them to the pixel buffer or the blockset document.
-
-Access policies use the `voxelmap` and `blockset` extensions and protocol action names such as `voxel-set`, `stroke` and `block-defined`. Resolve roles from a trusted server session when access control matters. See [network rights](../../../network/docs/server/Access.md#rights).
+Restricted rooms use the `voxelmap` and `blockset` extensions and their command actions in a rights table. Resolve roles from a trusted server session; see [network rights](../../../network/docs/server/Access.md#rights).
