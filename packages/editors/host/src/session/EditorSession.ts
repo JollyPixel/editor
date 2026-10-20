@@ -21,7 +21,7 @@ import {
   type EditorArchivesOptions
 } from "./EditorArchives.ts";
 import type { SessionConnection } from "./SessionConnection.ts";
-import type { SessionWorkspace } from "../workspace/SessionWorkspace.ts";
+import type { OfflineMode } from "./OfflineMode.ts";
 
 export type EditorSessionEvents = {
   "dependency-added": (dependency: AssetDependency) => void;
@@ -55,7 +55,7 @@ interface SessionDependency {
 export class EditorSession extends Emitter<EditorSessionEvents> {
   readonly identity: PeerIdentity;
   readonly catalog: CatalogClient;
-  readonly workspace: SessionWorkspace | null;
+  readonly offline: OfflineMode | null;
   readonly archive: SessionArchive;
   readonly assets: AssetLeases;
   readonly connectionStatus: ConnectionStatus | null;
@@ -80,7 +80,7 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     const { launch, connection } = options;
     this.identity = connection.identity;
     this.catalog = connection.catalog;
-    this.workspace = connection.workspace;
+    this.offline = connection.offline;
     this.archive = connection.archive;
     this.assets = connection.assets;
     this.connectionStatus = connection.connectionStatus;
@@ -135,7 +135,7 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     return new EditorArchives({
       ...options,
       archive: this.archive,
-      workspace: this.workspace,
+      offline: this.offline,
       accepts: this.#accepts,
       target: () => this.catalog.record(this.target.record.id) ??
         this.target.record

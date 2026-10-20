@@ -34,8 +34,7 @@ export function askImportConflictPolicy(
 
   return showChoice<ImportConflictPolicy>({
     title: "Import archive",
-    message: `${plan.live.length} of the archived assets already exist in ` +
-      "this workspace.",
+    message: `${plan.live.length} of the archived assets already exist.`,
     content,
     actions: incompatible ? [
       {

@@ -11,7 +11,7 @@ import {
   Accounts,
   type AccountRoles
 } from "@jolly-pixel/accounts/node";
-import { createAssetWorkspace } from "@jolly-pixel/asset-server/node";
+import { AssetServer } from "@jolly-pixel/asset-server/node";
 
 // Import Internal Dependencies
 import {
@@ -48,7 +48,7 @@ async function settingsHarness(): Promise<SettingsHarness> {
   const accounts = await Accounts.open({
     roles: project.access.roles
   });
-  const workspace = await createAssetWorkspace({
+  const assetServer = await AssetServer.open({
     root: project.file.root,
     inMemory: true,
     handlers: project.kinds.handlers(),
@@ -68,19 +68,19 @@ async function settingsHarness(): Promise<SettingsHarness> {
       project,
       accounts,
       server: {
-        replaceRights: (rights, defaultRole) => workspace.server.replaceRights(
+        replaceRights: (rights, defaultRole) => assetServer.network.replaceRights(
           rights,
           defaultRole
         ),
         revoke: (subject) => {
           revoked.push(subject);
-          workspace.server.revoke(subject);
+          assetServer.network.revoke(subject);
         }
       },
-      registry: workspace.backend.kinds,
+      registry: assetServer.backend.kinds,
       audit
     }),
-    handlerDelay: (kind) => workspace.backend.kinds.get(kind).snapshot?.delay,
+    handlerDelay: (kind) => assetServer.backend.kinds.get(kind).snapshot?.delay,
     async register(username) {
       const registration = await accounts.register({
         username,
@@ -95,7 +95,7 @@ async function settingsHarness(): Promise<SettingsHarness> {
       return registration.account;
     },
     async [Symbol.asyncDispose]() {
-      await workspace.close();
+      await assetServer.close();
       audit[Symbol.dispose]();
       accounts[Symbol.dispose]();
     }

@@ -16,12 +16,12 @@ This workspace-private package stores `.voxelanim.json` animation sets: clips of
 
 ```ts
 import { voxelAnimationAssetKind } from "@jolly-pixel/asset.voxel-animation";
-import { createAssetWorkspacePlugin } from "@jolly-pixel/asset-server/node";
+import { createAssetServerPlugin } from "@jolly-pixel/asset-server/node";
 import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [
-    createAssetWorkspacePlugin({
+    createAssetServerPlugin({
       root: import.meta.dirname,
       handlers: [voxelAnimationAssetKind()]
     })

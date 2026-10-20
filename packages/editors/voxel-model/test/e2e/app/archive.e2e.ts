@@ -14,7 +14,7 @@ import { followEditor } from "@jolly-pixel/e2e/editor";
 import {
   exportArchive,
   importArchive,
-  resetWorkspace
+  resetOfflineData
 } from "../support/archives.ts";
 import { addNode } from "../support/hierarchy.ts";
 import { openOfflineEditor } from "../support/offline.ts";
@@ -41,7 +41,7 @@ function offlineIds(
   });
 }
 
-test("exports the model, resets the workspace and imports it back", async({ page }) => {
+test("exports the model, resets the offline data and imports it back", async({ page }) => {
   test.slow();
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -53,7 +53,7 @@ test("exports the model, resets the workspace and imports it back", async({ page
   expect(download.suggestedFilename()).toBe("model.zip");
   const archivePath = await download.path();
 
-  await resetWorkspace(page);
+  await resetOfflineData(page);
   expect((await offlineIds(page)).modelId).not.toBe(exported.modelId);
 
   await importArchive(page, archivePath);

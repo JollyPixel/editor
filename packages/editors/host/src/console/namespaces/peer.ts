@@ -5,7 +5,7 @@ import type {
 } from "@jolly-pixel/console";
 
 // Import Internal Dependencies
-import type { PeerSharing } from "../../workspace/SessionWorkspace.ts";
+import type { PeerSharing } from "../../session/OfflineMode.ts";
 
 export interface PeerConsoleContext {
   peers?: PeerSharing;
@@ -22,11 +22,11 @@ export function peerConsole(
   }
 
   const namespace = commands.registerNamespace("peer", {
-    description: "Invite guests into this workspace over WebRTC"
+    description: "Invite guests over WebRTC"
   });
 
   namespace.registerCommand("invite", {
-    description: "Print a link that lets a guest join this workspace",
+    description: "Print a link that lets a guest join",
     args: [],
     execute: (_args, ctx) => {
       ctx.print(peers.invite().toUrl(location.href).href);

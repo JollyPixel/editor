@@ -1,8 +1,8 @@
 # bootStandalone
 
 Entry point of an editor that can also run offline. It mounts online through
-[`mountStandalone`](./mountStandalone.md), and on an in-page
-[workspace](#offline-workspace) when asked to or when the asset server cannot
+[`mountStandalone`](./mountStandalone.md), and in
+[offline mode](#offline-mode) when asked to or when the asset server cannot
 be reached. See the [architecture guide](../../ARCHITECTURE.md#offline).
 
 ```ts
@@ -43,8 +43,8 @@ interface OfflineProject {
 
 ### offline
 
-The asset kind handlers, seed and back-end tuning of the workspace. Called
-only in the tab that owns the workspace, so import them dynamically.
+The asset kind handlers, seed and back-end tuning of the offline server.
+Called only in the tab that owns the offline data, so import them dynamically.
 
 ### forceOffline
 
@@ -59,12 +59,12 @@ Used by the online attempt only.
 The editor goes offline at once with `forceOffline` or the `offline`
 [query parameter](../params/QueryParams.md#host-parameters). Otherwise, when the
 online mount throws `CatalogUnavailableError` or `LaunchNotFoundError`, a
-dialog offers Retry or Open offline workspace. Cancelling rethrows the error,
+dialog offers Retry or Work offline. Cancelling rethrows the error,
 and any other error is rethrown without asking. The runtime is created once
 and reused by every attempt, since the canvas keeps its first context.
 
-Offline, the editor mounts on the workspace named by the `workspace` query
-parameter. Without it, the workspace is named after `definition.accepts`, so
+Offline, the editor mounts on the offline data named by the `offline` query
+parameter. Without a name, it is named after `definition.accepts`, so
 editors of different kinds served from one origin each seed their own. The
 parent's `jolly-launch` is still read first, so a page framed by the studio
 keeps its shell channel.
@@ -81,8 +81,8 @@ function withOfflineFallback<TValue>(options: {
 }): Promise<TValue>;
 ```
 
-`withOfflineFallback` retries `online` on Retry and runs `offline` on Open
-offline workspace, with the same error rules as above.
+`withOfflineFallback` retries `online` on Retry and runs `offline` on Work
+offline, with the same error rules as above.
 
 ## Share links
 
@@ -109,26 +109,26 @@ invite, or closes its tab.
 ### peerConsole
 
 A [console feature](../../../../console/docs/features.md) for the owner tab of a
-persistent workspace. `/peer.invite` prints a link to the current page with a
+persistent offline data. `/peer.invite` prints a link to the current page with a
 new invite, and `/peer.stop` revokes every invite and disconnects the guests.
 Without `peers` it registers nothing.
 
 ```ts
 registerConsoleFeatures(commands, [peerConsole], {
-  peers: session.workspace?.peers
+  peers: session.offline?.peers
 });
 ```
 
-## Offline workspace
+## Offline mode
 
 `@jolly-pixel/editor.host/offline` runs the asset back-end inside the page.
 The editor mounts through the same `mount` as online, with a catalog, rooms
 and leases.
 
 ```ts
-const { openSharedTabWorkspace } =
+const { openOfflineBackend } =
   await import("@jolly-pixel/editor.host/offline");
-const workspace = await openSharedTabWorkspace({
+const backend = await openOfflineBackend({
   project: () => ({
     handlers: [voxelMapAssetKind()],
     seed: {
@@ -142,20 +142,20 @@ const workspace = await openSharedTabWorkspace({
 });
 
 await mountStandalone(VoxelMapEditor, {
-  sources: workspace.launchSources(VoxelMapEditor.accepts),
-  connect: () => workspace.connect()
+  sources: backend.launchSources(VoxelMapEditor.accepts),
+  connect: () => backend.connect()
 });
 ```
 
 Import the entry dynamically so an online boot does not bundle the back-end.
 
-`openSharedTabWorkspace({ project, name? })` opens the `jolly-workspace:<name>`
+`openOfflineBackend({ project, name? })` opens the `jolly-offline:<name>`
 IndexedDB database (`name` defaults to `"default"`). One tab owns it; other
 tabs use the owner's catalog and rooms over BroadcastChannel and never call
-`project`. Without Web Locks, the workspace lives in memory.
+`project`. Without Web Locks, the offline data lives in memory.
 
 The back-end's event log goes to a second database,
-`jolly-events:jolly-workspace:<name>`. Each edit is written there when the
+`jolly-events:jolly-offline:<name>`. Each edit is written there when the
 back-end records it, so a reload right after an edit keeps it even before the
 asset itself is saved. `reset()` deletes both databases.
 
@@ -176,17 +176,17 @@ connected guests and `stop()` revokes every invite and disconnects the guests.
 
 ### connect()
 
-Returns a guest identity, a client and the workspace. Destroying the last
-client closes the workspace.
+Returns a guest identity, a client and the offline mode. Destroying the last
+client closes the backend.
 
 ### launchSources(accepts)
 
-The `?target=` when the workspace knows it, then the target last opened in
+The `?target=` when the catalog knows it, then the target last opened in
 this browser, then the first catalog record of the `accepts` kind.
 
 ### reset()
 
-Closes the workspace and deletes its database. `canReset` is `false` in a
+Closes the backend and deletes its databases. `canReset` is `false` in a
 follower tab.
 
 ### close()

@@ -21,7 +21,7 @@ import {
   ConnectionStatus,
   type ServerConnection
 } from "./ConnectionStatus.ts";
-import type { SessionWorkspace } from "../workspace/SessionWorkspace.ts";
+import type { OfflineMode } from "./OfflineMode.ts";
 import {
   EditorSession,
   type EditorSessionTarget
@@ -73,7 +73,7 @@ export interface SessionConnectionConnectOptions extends SessionConnectionBase {
    * @default joins the catalog room on `client`
    */
   openCatalog?: CatalogOpener;
-  workspace?: SessionWorkspace;
+  offline?: OfflineMode;
   catalogTimeoutMs?: number;
   /**
    * The client again, when it connects straight to the server: the toolbar
@@ -87,7 +87,7 @@ export interface SessionConnectionOptions {
   identity: PeerIdentity;
   catalog: CatalogClient;
   client: EditorSessionClient;
-  workspace?: SessionWorkspace;
+  offline?: OfflineMode;
   /**
    * @default null
    */
@@ -149,7 +149,7 @@ export class SessionConnection {
       identity: options.identity,
       catalog,
       client,
-      workspace: options.workspace,
+      offline: options.offline,
       server,
       outboxes: server === null ? null : await PendingOutboxes.open()
     });
@@ -157,7 +157,7 @@ export class SessionConnection {
 
   readonly identity: PeerIdentity;
   readonly catalog: CatalogClient;
-  readonly workspace: SessionWorkspace | null;
+  readonly offline: OfflineMode | null;
   readonly archive: SessionArchive;
   readonly assets: AssetLeases;
   readonly connectionStatus: ConnectionStatus | null;
@@ -171,10 +171,10 @@ export class SessionConnection {
   ) {
     this.identity = options.identity;
     this.catalog = options.catalog;
-    this.workspace = options.workspace ?? null;
+    this.offline = options.offline ?? null;
     this.archive = new CatalogSessionArchive({
       catalog: this.catalog,
-      canImport: this.workspace?.persistent ?? true
+      canImport: this.offline?.persistent ?? true
     });
     this.#client = options.client;
     this.#outboxes = options.outboxes ?? null;

@@ -10,9 +10,9 @@ the classes below are what it uses.
 An `AuthenticationProvider` for the suite's Vite server. It reads the role and
 the subject from two cookies and falls back to the server's `defaultRole` and
 the connection id when they are missing.
-[`RunMode.workspace`](./config.md#workspace-runmodeworkspace) creates one for
-`--mode e2e`, and [`RunMode.plugins()`](./config.md#plugins-plugin) adds its
-plugin.
+[`RunMode.assetServer`](./config.md#assetserver-runmodeassetserver) creates
+one for `--mode e2e`, and [`RunMode.plugins()`](./config.md#plugins-plugin)
+adds its plugin.
 
 ### `plugin(): Plugin`
 

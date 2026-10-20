@@ -149,7 +149,7 @@ describe("bootStandalone", () => {
     assert.equal(runtimes.disposed(), 1);
   });
 
-  test("rethrows any other error without offering the offline workspace", async() => {
+  test("rethrows any other error without offering offline mode", async() => {
     const error = new Error("launch failed");
 
     await assert.rejects(

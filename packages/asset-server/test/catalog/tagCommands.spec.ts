@@ -35,7 +35,7 @@ const kActor: EventStore.Actor = {
 };
 const kPath = "notes/todo.txt";
 
-interface TagWorkspace extends AsyncDisposable {
+interface TagProject extends AsyncDisposable {
   readonly backend: AssetBackend;
   readonly source: MemoryAssetSource;
   readonly connection: CatalogConnection;
@@ -44,9 +44,9 @@ interface TagWorkspace extends AsyncDisposable {
   read(): Promise<string>;
 }
 
-async function tagWorkspace(
+async function tagProject(
   options: ServerOptions = {}
-): Promise<TagWorkspace> {
+): Promise<TagProject> {
   const source = new MemoryAssetSource();
   const eventStore = EventStore.persistence.memory();
   const backend = await createAssetBackend({
@@ -88,18 +88,18 @@ async function tagWorkspace(
 
 describe("catalog tag commands over loopback", () => {
   test("tag, restore and untag round trip through the client", async() => {
-    await using workspace = await tagWorkspace();
-    const { catalog } = workspace.connection;
-    const { assetId } = workspace;
+    await using project = await tagProject();
+    const { catalog } = project.connection;
+    const { assetId } = project;
 
     const tag = await catalog.tag(assetId, "draft", "First pass");
-    await workspace.write("second");
+    await project.write("second");
     const report = await catalog.restore(assetId, "draft");
 
     assert.strictEqual(tag.message, "First pass");
     assert.strictEqual(report.restored, true);
     assert.deepEqual(report.missing, []);
-    assert.strictEqual(await workspace.read(), "first");
+    assert.strictEqual(await project.read(), "first");
     const restorePoint = report.restorePoint?.name;
     assert.match(restorePoint ?? "", /^restore\/\d+$/);
     assert.deepEqual(
@@ -116,11 +116,11 @@ describe("catalog tag commands over loopback", () => {
   });
 
   test("unknown tags and assets are rejected with the reason", async() => {
-    await using workspace = await tagWorkspace();
-    const { catalog } = workspace.connection;
+    await using project = await tagProject();
+    const { catalog } = project.connection;
 
     await assert.rejects(
-      catalog.untag(workspace.assetId, "missing"),
+      catalog.untag(project.assetId, "missing"),
       (error: CatalogRejectedError) => {
         assert.ok(error instanceof CatalogRejectedError);
         assert.match(error.message, /no tag named "missing"/);
@@ -129,7 +129,7 @@ describe("catalog tag commands over loopback", () => {
       }
     );
     await assert.rejects(
-      catalog.restore(workspace.assetId, "missing"),
+      catalog.restore(project.assetId, "missing"),
       /no tag named "missing"/
     );
     await assert.rejects(
@@ -139,10 +139,10 @@ describe("catalog tag commands over loopback", () => {
   });
 
   test("tag changes reach every member", async() => {
-    await using workspace = await tagWorkspace();
-    const { catalog } = workspace.connection;
-    const member = await workspace.connection.join();
-    const { assetId } = workspace;
+    await using project = await tagProject();
+    const { catalog } = project.connection;
+    const member = await project.connection.join();
+    const { assetId } = project;
 
     const tagged = once(member, "tags-changed");
     await catalog.tag(assetId, "draft");
@@ -151,7 +151,7 @@ describe("catalog tag commands over loopback", () => {
     assert.strictEqual(taggedId, assetId);
     assert.deepEqual(afterTag.map((entry) => entry.name), ["draft"]);
 
-    await workspace.write("second");
+    await project.write("second");
     const restored = once(member, "tags-changed");
     const report = await catalog.restore(assetId, "draft");
     const [, afterRestore] = await restored;
@@ -172,7 +172,7 @@ describe("catalog tag commands over loopback", () => {
   });
 
   test("a role without the restore right leaves the content alone", async() => {
-    await using workspace = await tagWorkspace({
+    await using project = await tagProject({
       rights: {
         default: {
           [`${CATALOG_ROOM}.${CATALOG_RESTORE}`]: "read",
@@ -180,15 +180,15 @@ describe("catalog tag commands over loopback", () => {
         }
       }
     });
-    const { catalog } = workspace.connection;
-    const { assetId } = workspace;
+    const { catalog } = project.connection;
+    const { assetId } = project;
     await catalog.tag(assetId, "draft");
-    await workspace.write("second");
+    await project.write("second");
 
     void catalog.restore(assetId, "draft").catch(() => void 0);
     const tags = await catalog.tags(assetId);
 
     assert.deepEqual(tags.map((entry) => entry.name), ["draft"]);
-    assert.strictEqual(await workspace.read(), "second");
+    assert.strictEqual(await project.read(), "second");
   });
 });

@@ -8,7 +8,7 @@ page reload.
 import { IndexedDbAssetSource } from "@jolly-pixel/asset-source";
 
 const source = await IndexedDbAssetSource.open({
-  name: "jolly-workspace:default"
+  name: "jolly-offline:default"
 });
 
 await source.write("textures/grass.png", bytes);

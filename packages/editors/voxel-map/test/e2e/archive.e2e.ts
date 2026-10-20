@@ -28,7 +28,7 @@ function offlineIds(
   });
 }
 
-test("exports the map, resets the workspace and imports it back", async({ map, page }) => {
+test("exports the map, resets the offline data and imports it back", async({ map, page }) => {
   test.setTimeout(90_000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -40,7 +40,7 @@ test("exports the map, resets the workspace and imports it back", async({ map, p
   expect(download.suggestedFilename()).toBe("overworld.zip");
   const archivePath = await download.path();
 
-  await map.archives.resetWorkspace();
+  await map.archives.resetOfflineData();
 
   const reseeded = await offlineIds(map);
   expect(reseeded.mapId).not.toBe(exported.mapId);

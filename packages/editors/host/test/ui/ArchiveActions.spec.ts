@@ -11,11 +11,11 @@ import { setTimeout } from "node:timers/promises";
 import type { ArchiveActions } from "#src/ui/index.ts";
 import "#src/ui/index.ts";
 import { EditorArchives } from "#src/session/EditorArchives.ts";
-import type { SessionWorkspace } from "#src/workspace/SessionWorkspace.ts";
+import type { OfflineMode } from "#src/session/OfflineMode.ts";
 
 interface FakeArchivesOptions {
   canImport?: boolean;
-  workspace?: SessionWorkspace | null;
+  offline?: OfflineMode | null;
   exportError?: Error;
 }
 
@@ -24,7 +24,7 @@ function createArchives(
 ): EditorArchives {
   const {
     canImport = true,
-    workspace = null,
+    offline = null,
     exportError
   } = options;
 
@@ -37,7 +37,7 @@ function createArchives(
       plan: () => Promise.reject(new Error("unused")),
       import: () => Promise.reject(new Error("unused"))
     },
-    workspace,
+    offline,
     accepts: "voxelmodel",
     fallbackName: "model",
     resetWarning: "",
@@ -82,7 +82,7 @@ describe("ArchiveActions", () => {
   test("offers reset and import only when the archives allow them", async() => {
     const element = await mount(createArchives({ canImport: false }));
 
-    assert.equal(query(element, "#reset-workspace"), null);
+    assert.equal(query(element, "#reset-offline"), null);
     assert.equal(query(element, "#import-archive")?.hasAttribute("disabled"), true);
     assert.equal(query(element, ".notice"), null);
   });
@@ -95,25 +95,25 @@ describe("ArchiveActions", () => {
 
   test("shows the volatile notice without the reset button", async() => {
     const element = await mount(createArchives({
-      workspace: {
+      offline: {
         persistent: false,
         reset: () => Promise.resolve()
       }
     }));
 
-    assert.equal(query(element, "#reset-workspace"), null);
+    assert.equal(query(element, "#reset-offline"), null);
     assert.ok(query(element, ".notice"));
   });
 
-  test("offers reset for a persistent workspace", async() => {
+  test("offers reset for persistent offline data", async() => {
     const element = await mount(createArchives({
-      workspace: {
+      offline: {
         persistent: true,
         reset: () => Promise.resolve()
       }
     }));
 
-    assert.ok(query(element, "#reset-workspace"));
+    assert.ok(query(element, "#reset-offline"));
     assert.equal(query(element, ".notice"), null);
   });
 

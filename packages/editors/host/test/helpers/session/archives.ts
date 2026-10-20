@@ -16,7 +16,7 @@ import type {
   SessionArchive,
   SessionArchiveImportOptions
 } from "#src/session/SessionArchive.ts";
-import type { SessionWorkspace } from "#src/workspace/SessionWorkspace.ts";
+import type { OfflineMode } from "#src/session/OfflineMode.ts";
 
 // CONSTANTS
 export const ARCHIVE_KIND = "voxelmodel";
@@ -157,7 +157,7 @@ export function createBrowser(
 export interface CreateArchivesOptions {
   archive?: SessionArchive;
   browser?: EditorArchiveBrowser;
-  workspace?: SessionWorkspace | null;
+  offline?: OfflineMode | null;
   target?: EditorArchiveTarget;
 }
 
@@ -167,7 +167,7 @@ export function createArchives(
   const {
     archive = createArchive(),
     browser = createBrowser(),
-    workspace = null,
+    offline = null,
     target = {
       id: "model-1",
       source: "models/robot.voxelmodel.json"
@@ -176,7 +176,7 @@ export function createArchives(
 
   return new EditorArchives({
     archive,
-    workspace,
+    offline,
     accepts: ARCHIVE_KIND,
     fallbackName: "model",
     resetWarning: RESET_WARNING,
@@ -185,19 +185,19 @@ export function createArchives(
   });
 }
 
-export function createWorkspace(
-  overrides: Partial<SessionWorkspace> = {}
-): SessionWorkspace & { resets: number; } {
-  const workspace = {
+export function createOfflineMode(
+  overrides: Partial<OfflineMode> = {}
+): OfflineMode & { resets: number; } {
+  const offline = {
     persistent: true,
     resets: 0,
     reset() {
-      workspace.resets++;
+      offline.resets++;
 
       return Promise.resolve();
     },
     ...overrides
   };
 
-  return workspace;
+  return offline;
 }

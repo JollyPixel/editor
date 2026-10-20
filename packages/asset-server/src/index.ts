@@ -9,7 +9,7 @@ export * from "./createAssetBackend.ts";
 export type { RecordedCommand } from "./state/AssetStateStore.ts";
 export * from "./launch.ts";
 export * from "./logger.ts";
-export * from "./workspace/seedAssetSource.ts";
+export * from "./server/seedAssetSource.ts";
 export {
   BACKUP_LEDGER_PATH,
   CONTENT_OBJECTS_PATH,

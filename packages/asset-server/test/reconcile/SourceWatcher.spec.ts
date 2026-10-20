@@ -29,7 +29,7 @@ import {
   SourceWatcher,
   type SourceChangeHandler
 } from "#src/reconcile/index.ts";
-import { tempWorkspace } from "../helpers/tempWorkspace.ts";
+import { tempDirectory } from "../helpers/tempDirectory.ts";
 import { bytes } from "../helpers/bytes.ts";
 
 function lifecycleCount(
@@ -153,10 +153,10 @@ describe("SourceWatcher — debounce", () => {
 
 describe("SourceWatcher — real filesystem (integration)", () => {
   test("a file written outside the editor reaches the log", async() => {
-    await using workspace = await tempWorkspace();
+    await using directory = await tempDirectory();
     using eventStore = EventStore.persistence.memory();
 
-    const source = new FilesystemAssetSource(workspace.root);
+    const source = new FilesystemAssetSource(directory.root);
     const kinds = new AssetKindRegistry();
     const state = await ProjectionState.load(source);
     const projector = new AssetProjector({
@@ -188,7 +188,7 @@ describe("SourceWatcher — real filesystem (integration)", () => {
       assert.strictEqual(watcher.watching, true);
 
       await fs.writeFile(
-        path.join(workspace.root, "external.png"),
+        path.join(directory.root, "external.png"),
         bytes("from a tool")
       );
       await waitFor(() => lifecycleCount(eventStore) === 1);

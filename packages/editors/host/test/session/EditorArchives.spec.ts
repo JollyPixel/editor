@@ -18,7 +18,7 @@ import {
   createArchive,
   createArchives,
   createBrowser,
-  createWorkspace
+  createOfflineMode
 } from "../helpers/session/archives.ts";
 
 Object.assign(globalThis, {
@@ -112,7 +112,7 @@ describe("EditorArchives", () => {
       assert.deepEqual(archive.imported, []);
     });
 
-    test("refuses a whole-workspace archive before importing", async() => {
+    test("refuses an archive without a root before importing", async() => {
       const archive = createArchive({ root: undefined });
       const archives = createArchives({ archive });
 
@@ -163,26 +163,26 @@ describe("EditorArchives", () => {
   });
 
   describe("reset", () => {
-    test("resets the workspace and reloads once the warning is confirmed", async() => {
+    test("resets the offline data and reloads once the warning is confirmed", async() => {
       const browser = createBrowser();
-      const workspace = createWorkspace();
-      const archives = createArchives({ browser, workspace });
+      const offline = createOfflineMode();
+      const archives = createArchives({ browser, offline });
 
       await archives.reset();
 
       assert.deepEqual(browser.confirmed, [RESET_WARNING]);
-      assert.equal(workspace.resets, 1);
+      assert.equal(offline.resets, 1);
       assert.equal(browser.reloads, 1);
     });
 
     test("does nothing when the warning is declined", async() => {
       const browser = createBrowser({ confirm: false });
-      const workspace = createWorkspace();
-      const archives = createArchives({ browser, workspace });
+      const offline = createOfflineMode();
+      const archives = createArchives({ browser, offline });
 
       await archives.reset();
 
-      assert.equal(workspace.resets, 0);
+      assert.equal(offline.resets, 0);
       assert.equal(browser.reloads, 0);
     });
   });
@@ -196,10 +196,10 @@ describe("EditorArchives", () => {
       assert.equal(archives.canImport, false);
     });
 
-    test("offers reset only for a persistent resettable workspace", () => {
-      const archives = createArchives({ workspace: createWorkspace() });
+    test("offers reset only for persistent resettable offline data", () => {
+      const archives = createArchives({ offline: createOfflineMode() });
       const locked = createArchives({
-        workspace: createWorkspace({ canReset: false })
+        offline: createOfflineMode({ canReset: false })
       });
 
       assert.equal(archives.canReset, true);
@@ -207,16 +207,16 @@ describe("EditorArchives", () => {
       assert.equal(locked.canReset, false);
     });
 
-    test("flags a volatile workspace", () => {
+    test("flags volatile offline data", () => {
       const archives = createArchives({
-        workspace: createWorkspace({ persistent: false })
+        offline: createOfflineMode({ persistent: false })
       });
 
       assert.equal(archives.volatile, true);
       assert.equal(archives.canReset, false);
     });
 
-    test("has nothing to reset without a workspace", () => {
+    test("has nothing to reset outside offline mode", () => {
       const archives = createArchives();
 
       assert.equal(archives.canReset, false);

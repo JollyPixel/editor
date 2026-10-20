@@ -11,27 +11,27 @@ import {
 } from "#src/index.ts";
 import {
   ARCHIVE_ACTOR,
-  archiveWorkspace,
-  type ArchiveWorkspace
+  archiveProject,
+  type ArchiveProject
 } from "../helpers/archive.ts";
 import { text } from "../helpers/bytes.ts";
 
 async function exported(
-  workspace: ArchiveWorkspace,
+  project: ArchiveProject,
   root?: string
 ): Promise<AssetArchive> {
   return readAssetArchive(
-    (await exportAssetArchive(workspace.backend, { root })).unwrap()
+    (await exportAssetArchive(project.backend, { root })).unwrap()
   ).unwrap();
 }
 
 describe("importAssetArchive — storage", () => {
   test("reports once the imported content reached the source", async() => {
-    await using origin = await archiveWorkspace();
+    await using origin = await archiveProject();
     const map = await origin.link("map.link", "one");
     const archive = await exported(origin, map);
 
-    await using target = await archiveWorkspace();
+    await using target = await archiveProject();
     (await importAssetArchive(target.backend, archive, {
       onConflict: "keep",
       actor: ARCHIVE_ACTOR

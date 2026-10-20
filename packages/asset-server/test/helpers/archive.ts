@@ -31,7 +31,7 @@ export const ARCHIVE_ACTOR: EventStore.Actor = {
 };
 const kEditor = "editor";
 
-export interface ArchiveWorkspace extends AsyncDisposable {
+export interface ArchiveProject extends AsyncDisposable {
   readonly backend: AssetBackend;
   readonly source: MemoryAssetSource;
   readonly eventStore: EventStore.EventStore;
@@ -45,14 +45,14 @@ export interface ArchiveWorkspace extends AsyncDisposable {
   ): Promise<void>;
 }
 
-export type ArchiveWorkspaceOptions = Pick<
+export type ArchiveProjectOptions = Pick<
   AssetBackendOptions,
   "catalogMaxContentBytes" | "catalogArchiveLimits"
 >;
 
-export async function archiveWorkspace(
-  options: ArchiveWorkspaceOptions = {}
-): Promise<ArchiveWorkspace> {
+export async function archiveProject(
+  options: ArchiveProjectOptions = {}
+): Promise<ArchiveProject> {
   const source = new MemoryAssetSource();
   const eventStore = EventStore.persistence.memory();
   const backend = await createAssetBackend({

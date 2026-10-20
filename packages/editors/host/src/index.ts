@@ -31,10 +31,10 @@ export * from "./session/dialogs/askImportConflictPolicy.ts";
 export * from "./session/errors/ArchiveRootError.ts";
 export * from "./session/rememberQueryUsername.ts";
 export type {
-  PeerSharing,
-  SessionWorkspace,
-  StandaloneConnection
-} from "./workspace/SessionWorkspace.ts";
+  OfflineMode,
+  PeerSharing
+} from "./session/OfflineMode.ts";
+export type { StandaloneConnection } from "./editor/StandaloneConnection.ts";
 export {
   EditorRuntime,
   type EditorRuntimeCreateOptions,

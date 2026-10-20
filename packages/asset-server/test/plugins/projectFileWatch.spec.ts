@@ -15,16 +15,16 @@ import {
   createProjectFileWatchPlugin,
   ProjectFile
 } from "#src/node.ts";
-import { tempWorkspace } from "../helpers/tempWorkspace.ts";
+import { tempDirectory } from "../helpers/tempDirectory.ts";
 
 describe("createProjectFileWatchPlugin", () => {
   test("restarts the server when the project file changes", async() => {
-    await using workspace = await tempWorkspace();
-    const projectFile = await ProjectFile.readOrCreate(workspace.root, {
+    await using directory = await tempDirectory();
+    const projectFile = await ProjectFile.readOrCreate(directory.root, {
       version: 1
     });
     const vite = await createServer({
-      root: workspace.root,
+      root: directory.root,
       configFile: false,
       logLevel: "silent",
       appType: "custom",
@@ -55,7 +55,7 @@ describe("createProjectFileWatchPlugin", () => {
       assert.strictEqual(await checks[0], false);
 
       await fs.writeFile(projectFile.path, "{\"version\":1,\"editors\":[]}");
-      vite.watcher.emit("change", path.join(workspace.root, "other.json"));
+      vite.watcher.emit("change", path.join(directory.root, "other.json"));
       assert.strictEqual(checks.length, 1);
 
       vite.watcher.emit("change", projectFile.path);
@@ -70,9 +70,9 @@ describe("createProjectFileWatchPlugin", () => {
   });
 
   test("ignores a project file kept in memory", async() => {
-    await using workspace = await tempWorkspace();
+    await using directory = await tempDirectory();
     const projectFile = await ProjectFile.open(
-      workspace.root,
+      directory.root,
       { version: 1 },
       { inMemory: true }
     );
@@ -83,7 +83,7 @@ describe("createProjectFileWatchPlugin", () => {
       return true;
     };
     const vite = await createServer({
-      root: workspace.root,
+      root: directory.root,
       configFile: false,
       logLevel: "silent",
       appType: "custom",

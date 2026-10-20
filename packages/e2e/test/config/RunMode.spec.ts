@@ -28,7 +28,7 @@ describe("RunMode", () => {
     cookieAuthentication: boolean;
   }[] = [
     {
-      name: "dev keeps the workspace on disk and answers any host",
+      name: "dev keeps the project on disk and answers any host",
       env: {
         command: "serve",
         mode: "development"
@@ -51,7 +51,7 @@ describe("RunMode", () => {
       cookieAuthentication: true
     },
     {
-      name: "a build never touches the workspace",
+      name: "a build never touches the project on disk",
       env: {
         command: "build",
         mode: "static"
@@ -66,10 +66,10 @@ describe("RunMode", () => {
     it(testCase.name, () => {
       const mode = new RunMode(testCase.env, { port: kPort });
 
-      assert.equal(mode.workspace.inMemory, testCase.inMemory);
+      assert.equal(mode.assetServer.inMemory, testCase.inMemory);
       assert.deepEqual(mode.server, testCase.server);
       assert.equal(
-        mode.workspace.auth instanceof CookieAuthentication,
+        mode.assetServer.auth instanceof CookieAuthentication,
         testCase.cookieAuthentication
       );
       assert.deepEqual(

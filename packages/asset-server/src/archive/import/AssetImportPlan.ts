@@ -69,7 +69,7 @@ export class AssetImportPlan {
     const error = new AssetArchiveError(
       "kind-mismatch",
       `Asset "${incompatible.id}" is a "${incompatible.kind}" in this ` +
-      "workspace, with a different kind in the archive.",
+      "project, with a different kind in the archive.",
       { assetId: incompatible.id }
     );
 

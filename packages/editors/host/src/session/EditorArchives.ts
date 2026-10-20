@@ -10,7 +10,7 @@ import type {
 import { EditorLaunch } from "../launch/EditorLaunch.ts";
 import { LastOpenedLaunchSource } from "../launch/sources/LastOpenedLaunchSource.ts";
 import type { SessionArchive } from "./SessionArchive.ts";
-import type { SessionWorkspace } from "../workspace/SessionWorkspace.ts";
+import type { OfflineMode } from "./OfflineMode.ts";
 import { ArchiveRootError } from "./errors/ArchiveRootError.ts";
 import { ArchiveImportDisabledError } from "./errors/ArchiveImportDisabledError.ts";
 import { askImportConflictPolicy } from "./dialogs/askImportConflictPolicy.ts";
@@ -48,7 +48,7 @@ const kDomArchiveBrowser: EditorArchiveBrowser = {
   askConflictPolicy: askImportConflictPolicy,
   confirmReset(message) {
     return showConfirm({
-      title: "Reset workspace",
+      title: "Reset offline data",
       message,
       confirmLabel: "Reset",
       danger: true
@@ -78,7 +78,7 @@ export interface EditorArchiveBrowser {
 
 export interface EditorArchivesOptions {
   archive: SessionArchive;
-  workspace: SessionWorkspace | null;
+  offline: OfflineMode | null;
   /**
    * Asset kind the editor opens; an archive rooted on another kind is refused.
    */
@@ -100,7 +100,7 @@ export interface EditorArchivesOptions {
 
 export class EditorArchives {
   #archive: SessionArchive;
-  #workspace: SessionWorkspace | null;
+  #offline: OfflineMode | null;
   #accepts: string;
   #fallbackName: string;
   #resetWarning: string;
@@ -111,7 +111,7 @@ export class EditorArchives {
     options: EditorArchivesOptions
   ) {
     this.#archive = options.archive;
-    this.#workspace = options.workspace;
+    this.#offline = options.offline;
     this.#accepts = options.accepts;
     this.#fallbackName = options.fallbackName;
     this.#resetWarning = options.resetWarning;
@@ -124,12 +124,12 @@ export class EditorArchives {
   }
 
   get canReset(): boolean {
-    return this.#workspace?.persistent === true &&
-      this.#workspace.canReset !== false;
+    return this.#offline?.persistent === true &&
+      this.#offline.canReset !== false;
   }
 
   get volatile(): boolean {
-    return this.#workspace?.persistent === false;
+    return this.#offline?.persistent === false;
   }
 
   async download(): Promise<void> {
@@ -185,7 +185,7 @@ export class EditorArchives {
       return;
     }
 
-    await this.#workspace?.reset();
+    await this.#offline?.reset();
     this.#browser.location.reload();
   }
 

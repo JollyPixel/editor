@@ -10,8 +10,8 @@ import type {
 import type { MountStandaloneOptions } from "#src/editor/mountStandalone.ts";
 import { DEBUG_HANDLE } from "#src/editor/StandaloneEditor.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
-import { OfflineWorkspace } from "#src/workspace/offline/OfflineWorkspace.ts";
-import type { StandaloneConnection } from "#src/workspace/SessionWorkspace.ts";
+import { OfflineServer } from "#src/offline/server/OfflineServer.ts";
+import type { StandaloneConnection } from "#src/editor/StandaloneConnection.ts";
 
 // CONSTANTS
 export const ASSET_ID = "debug-target";
@@ -21,8 +21,8 @@ export function editorState(): string | null {
   return document.documentElement.getAttribute(EDITOR_STATE_ATTRIBUTE);
 }
 
-export function openWorkspace(): Promise<OfflineWorkspace> {
-  return OfflineWorkspace.open({
+export function openServer(): Promise<OfflineServer> {
+  return OfflineServer.open({
     handlers: [],
     seed: {
       "notes/readme.bin": {
@@ -40,7 +40,7 @@ export function openWorkspace(): Promise<OfflineWorkspace> {
 }
 
 export function offlineOptions(
-  workspace: OfflineWorkspace
+  server: OfflineServer
 ): MountStandaloneOptions {
   return {
     sources: [
@@ -48,15 +48,15 @@ export function offlineOptions(
         read: () => Promise.resolve(EditorLaunch.fromTarget(ASSET_ID))
       }
     ],
-    connect: () => workspace.connect()
+    connect: () => server.connect()
   };
 }
 
 export function trackedConnection(
-  workspace: OfflineWorkspace,
+  server: OfflineServer,
   onDestroy: () => void
 ): StandaloneConnection {
-  const connection = workspace.connect();
+  const connection = server.connect();
   const { client } = connection;
 
   return {

@@ -22,7 +22,7 @@ import {
   OTHER_ASSET_ID,
   definition,
   offlineOptions,
-  openWorkspace,
+  openServer,
   resetStandalonePage
 } from "../helpers/standalone.ts";
 
@@ -30,24 +30,24 @@ describe("mountStandalone page query", () => {
   afterEach(resetStandalonePage);
 
   test("stores the username query param as the identity in dev", async() => {
-    const workspace = await openWorkspace();
+    const server = await openServer();
     window.history.replaceState(null, "", "/?username=Ada");
 
     const editor = await mountStandalone(definition(
       (context) => Promise.resolve(editorHandle(context.session))
     ), {
-      ...offlineOptions(workspace),
+      ...offlineOptions(server),
       dev: true
     });
 
     assert.equal(sessionStorage.getItem(IDENTITY_STORAGE_KEY), "Ada");
 
     editor.dispose();
-    await workspace.close();
+    await server.close();
   });
 
   test("opens the session of the target query param while the launch is read", async() => {
-    const workspace = await openWorkspace();
+    const server = await openServer();
     window.history.replaceState(null, "", `/?target=${ASSET_ID}`);
     const launch = Promise.withResolvers<EditorLaunch | undefined>();
     let connections = 0;
@@ -59,7 +59,7 @@ describe("mountStandalone page query", () => {
       connect: () => {
         connections++;
 
-        return workspace.connect();
+        return server.connect();
       }
     });
     await setImmediate();
@@ -71,11 +71,11 @@ describe("mountStandalone page query", () => {
     assert.equal(editor.handle.session.target.record.id, ASSET_ID);
 
     editor.dispose();
-    await workspace.close();
+    await server.close();
   });
 
   test("an early session reports its boot and unsaved changes to its shell", async() => {
-    const workspace = await openWorkspace();
+    const server = await openServer();
     window.history.replaceState(null, "", `/?target=${ASSET_ID}`);
     const posted: unknown[] = [];
     const shell = new ShellChannel({
@@ -86,7 +86,7 @@ describe("mountStandalone page query", () => {
     const editor = await mountStandalone(definition(
       (context) => Promise.resolve(editorHandle(context.session))
     ), {
-      ...offlineOptions(workspace),
+      ...offlineOptions(server),
       sources: [
         {
           read: () => Promise.resolve(EditorLaunch.fromTarget(ASSET_ID, shell))
@@ -114,7 +114,7 @@ describe("mountStandalone page query", () => {
     ]);
 
     editor.dispose();
-    await workspace.close();
+    await server.close();
   });
 
   test("views the tag of the page URL only for the target it names", async() => {
@@ -122,15 +122,15 @@ describe("mountStandalone page query", () => {
     async function mountWithQuery(
       search: string
     ): Promise<void> {
-      const workspace = await openWorkspace();
+      const server = await openServer();
       window.history.replaceState(null, "", search);
       const editor = await mountStandalone(definition((context) => {
         mounted.push(context.launch.tag);
 
         return Promise.resolve(editorHandle(context.session));
-      }), offlineOptions(workspace));
+      }), offlineOptions(server));
       editor.dispose();
-      await workspace.close();
+      await server.close();
     }
 
     await mountWithQuery(`/?target=${ASSET_ID}&tag=v1`);
@@ -140,7 +140,7 @@ describe("mountStandalone page query", () => {
   });
 
   test("drops the early session but keeps its connection when the launch names another target", async() => {
-    const workspace = await openWorkspace();
+    const server = await openServer();
     window.history.replaceState(null, "", `/?target=${ASSET_ID}`);
     let connections = 0;
 
@@ -155,7 +155,7 @@ describe("mountStandalone page query", () => {
       connect: () => {
         connections++;
 
-        return workspace.connect();
+        return server.connect();
       }
     });
     await setImmediate();
@@ -166,20 +166,20 @@ describe("mountStandalone page query", () => {
     assert.equal(connections, 1);
 
     editor.dispose();
-    await workspace.close();
+    await server.close();
   });
 
   test("ignores the username query param outside dev", async() => {
-    const workspace = await openWorkspace();
+    const server = await openServer();
     window.history.replaceState(null, "", "/?username=Ada");
 
     const editor = await mountStandalone(definition(
       (context) => Promise.resolve(editorHandle(context.session))
-    ), offlineOptions(workspace));
+    ), offlineOptions(server));
 
     assert.equal(sessionStorage.getItem(IDENTITY_STORAGE_KEY), null);
 
     editor.dispose();
-    await workspace.close();
+    await server.close();
   });
 });

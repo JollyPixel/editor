@@ -2,7 +2,7 @@
 import { defineConfig } from "vite";
 import checker from "vite-plugin-checker";
 import {
-  createAssetWorkspacePlugin,
+  createAssetServerPlugin,
   createProjectKindsPlugin,
   ProjectFile,
   ProjectKinds
@@ -55,9 +55,9 @@ export default defineConfig((env) => {
       mode.plugins(),
       mode.serve && !mode.e2e && checker({ typescript: true }),
       createProjectKindsPlugin(kinds),
-      createAssetWorkspacePlugin({
+      createAssetServerPlugin({
         root: import.meta.dirname,
-        ...mode.workspace,
+        ...mode.assetServer,
         inMemory: true,
         handlers: kinds.handlers(),
         seed: createPixelArtSeed(kTextureAssetId),

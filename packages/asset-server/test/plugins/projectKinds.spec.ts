@@ -22,7 +22,7 @@ import {
 } from "#src/node.ts";
 import { kindPackage } from "../helpers/kindPackages.ts";
 import { writeKindPackage } from "../helpers/packages.ts";
-import { tempWorkspace } from "../helpers/tempWorkspace.ts";
+import { tempDirectory } from "../helpers/tempDirectory.ts";
 
 describe("projectHandlersModule", () => {
   test("builds the handlers of each kind package with its options", () => {
@@ -57,10 +57,10 @@ describe("projectHandlersModule", () => {
 
 describe("createProjectKindsPlugin", () => {
   test("bundles kind packages resolved from the project", async() => {
-    await using workspace = await tempWorkspace();
-    const project = path.join(workspace.root, "project");
-    const host = path.join(workspace.root, "host");
-    const app = path.join(workspace.root, "app");
+    await using directory = await tempDirectory();
+    const project = path.join(directory.root, "project");
+    const host = path.join(directory.root, "host");
+    const app = path.join(directory.root, "app");
     await writeKindPackage(
       path.join(project, "kinds", "local"),
       "local-kind",

@@ -35,7 +35,8 @@ export interface StudioConnection {
 
 export function connectStudio(): Promise<StudioConnection> {
   if (
-    import.meta.env.MODE === "static" || HOST_PARAMS.read().offline
+    import.meta.env.MODE === "static" ||
+      HOST_PARAMS.read().offline !== undefined
   ) {
     return connectOffline();
   }

@@ -11,7 +11,7 @@ import type { EditorLaunch } from "../launch/index.ts";
 import type { EditorSession } from "../session/EditorSession.ts";
 import type { CatalogOpener } from "../session/openCatalog.ts";
 import { SessionConnection } from "../session/SessionConnection.ts";
-import type { StandaloneConnection } from "../workspace/SessionWorkspace.ts";
+import type { StandaloneConnection } from "./StandaloneConnection.ts";
 
 type SessionConnect = () =>
   | StandaloneConnection

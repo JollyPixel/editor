@@ -12,7 +12,7 @@ import {
   readAssetArchive
 } from "#src/index.ts";
 import { CatalogRejectedError } from "#src/catalog/client/index.ts";
-import { archiveWorkspace } from "../helpers/archive.ts";
+import { archiveProject } from "../helpers/archive.ts";
 import { text } from "../helpers/bytes.ts";
 import { connectCatalog } from "../helpers/catalog.ts";
 
@@ -21,8 +21,8 @@ const kTinyContentCap = 64;
 const kTinyEntryCap = 4;
 
 describe("catalog archive commands over loopback", () => {
-  test("export, plan and import round trip between two workspaces", async() => {
-    await using origin = await archiveWorkspace();
+  test("export, plan and import round trip between two projects", async() => {
+    await using origin = await archiveProject();
     const texture = await origin.link("texture.link");
     const map = await origin.link("map.link", texture);
     await using exporter = await connectCatalog(origin.backend);
@@ -33,7 +33,7 @@ describe("catalog archive commands over loopback", () => {
       [texture, map]
     );
 
-    await using target = await archiveWorkspace();
+    await using target = await archiveProject();
     await using importer = await connectCatalog(target.backend);
 
     const plan = await importer.catalog.planImport(archive);
@@ -55,12 +55,12 @@ describe("catalog archive commands over loopback", () => {
   });
 
   test("rejects an archive over the content cap, both ways", async() => {
-    await using origin = await archiveWorkspace();
+    await using origin = await archiveProject();
     const map = await origin.link("map.link");
     await using exporter = await connectCatalog(origin.backend);
     const archive = await exporter.catalog.exportArchive(map);
 
-    await using capped = await archiveWorkspace({
+    await using capped = await archiveProject({
       catalogMaxContentBytes: kTinyContentCap
     });
     const cappedMap = await capped.link("map.link");
@@ -78,12 +78,12 @@ describe("catalog archive commands over loopback", () => {
   });
 
   test("applies the configured archive limits to plan and import", async() => {
-    await using origin = await archiveWorkspace();
+    await using origin = await archiveProject();
     const map = await origin.link("map.link");
     await using exporter = await connectCatalog(origin.backend);
     const archive = await exporter.catalog.exportArchive(map);
 
-    await using capped = await archiveWorkspace({
+    await using capped = await archiveProject({
       catalogArchiveLimits: { maxEntryBytes: kTinyEntryCap }
     });
     await using connection = await connectCatalog(capped.backend);
@@ -100,8 +100,8 @@ describe("catalog archive commands over loopback", () => {
   });
 
   test("rejects a corrupt archive with the reason", async() => {
-    await using workspace = await archiveWorkspace();
-    await using connection = await connectCatalog(workspace.backend);
+    await using project = await archiveProject();
+    await using connection = await connectCatalog(project.backend);
 
     await assert.rejects(
       connection.catalog.planImport(new Uint8Array([1, 2, 3])),
@@ -110,12 +110,12 @@ describe("catalog archive commands over loopback", () => {
   });
 
   test("a role without the import right writes nothing", async() => {
-    await using origin = await archiveWorkspace();
+    await using origin = await archiveProject();
     const map = await origin.link("map.link");
     await using exporter = await connectCatalog(origin.backend);
     const archive = await exporter.catalog.exportArchive(map);
 
-    await using target = await archiveWorkspace();
+    await using target = await archiveProject();
     await using connection = await connectCatalog(target.backend, {
       rights: {
         default: {

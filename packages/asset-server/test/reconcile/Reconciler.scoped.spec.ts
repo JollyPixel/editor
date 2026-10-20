@@ -70,7 +70,7 @@ describe("Reconciler — scoped passes", () => {
     );
   });
 
-  test("widens to the whole workspace to match half a rename", async() => {
+  test("widens to the whole source to match half a rename", async() => {
     await using harness = await syncHarness();
     const created = (await harness.writer.create({
       path: "a.png",

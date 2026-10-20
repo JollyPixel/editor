@@ -9,7 +9,7 @@ that answers and passes it to `mount` as `context.launch`.
 1. `{ type: "jolly-launch" }` posted by the parent frame, read by
    [`HostMessageLaunchSource`](#hostmessagelaunchsource).
 2. The `target` query parameter (`QueryLaunchSource`).
-3. The JSON element injected by the `launch` option of the asset workspace
+3. The JSON element injected by the `launch` option of the asset server
    Vite plugin, written by `launchElement({ target, credential })` from
    `@jolly-pixel/asset-server`.
 

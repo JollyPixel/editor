@@ -49,7 +49,7 @@ export function backend(
 function backendOptions(
   mode: RunMode
 ): StudioBackendOptions {
-  const { inMemory } = mode.workspace;
+  const { inMemory } = mode.assetServer;
   if (mode.e2e) {
     return {
       inMemory,

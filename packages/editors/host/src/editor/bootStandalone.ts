@@ -12,13 +12,13 @@ import { StandaloneEditor } from "./StandaloneEditor.ts";
 import { readDebugLogger } from "../debug/readDebugLogger.ts";
 import { InjectedLaunchSource } from "../launch/index.ts";
 import { HOST_PARAMS } from "../params/HostParams.ts";
-import { PeerInvite } from "../workspace/peer/PeerInvite.ts";
-import { shareLinkConnection } from "../workspace/shareLinkConnection.ts";
+import { PeerInvite } from "../offline/peer/PeerInvite.ts";
+import { shareLinkConnection } from "./shareLinkConnection.ts";
 import type {
   OfflineProject,
   OfflineProjectLoader
-} from "../workspace/offline/OfflineWorkspace.ts";
-import type { StandaloneWorkspace } from "../workspace/SessionWorkspace.ts";
+} from "../offline/server/OfflineServer.ts";
+import type { OfflineBackend } from "../offline/OfflineBackend.ts";
 
 export type { OfflineProject };
 
@@ -44,24 +44,24 @@ export async function bootStandalone<
   const params = HOST_PARAMS.read();
   const editor = new StandaloneEditor(definition, logger);
 
-  async function mountWorkspace(
-    opening: Promise<StandaloneWorkspace>
+  async function mountBackend(
+    opening: Promise<OfflineBackend>
   ): Promise<StandaloneMount<THandle>> {
-    const workspace = await opening;
+    const backend = await opening;
 
     return editor.mount({
       ...mountOptions,
-      sources: workspace.launchSources(definition.accepts),
-      connect: () => workspace.connect()
+      sources: backend.launchSources(definition.accepts),
+      connect: () => backend.connect()
     });
   }
 
   function mountOffline(): Promise<StandaloneMount<THandle>> {
-    return mountWorkspace(
-      import("../workspace/shared-tab/openSharedTabWorkspace.ts")
-        .then(({ openSharedTabWorkspace }) => openSharedTabWorkspace({
+    return mountBackend(
+      import("../offline/shared-tab/openOfflineBackend.ts")
+        .then(({ openOfflineBackend }) => openOfflineBackend({
           project: offline,
-          name: params.workspace ?? definition.accepts
+          name: params.offline?.name ?? definition.accepts
         }))
     );
   }
@@ -69,9 +69,9 @@ export async function bootStandalone<
   try {
     const invite = PeerInvite.fromHash(globalThis.location?.hash ?? "");
     if (invite !== undefined) {
-      return await mountWorkspace(
-        import("../workspace/peer/openPeerWorkspace.ts")
-          .then(({ openPeerWorkspace }) => openPeerWorkspace(invite))
+      return await mountBackend(
+        import("../offline/peer/joinPeerInvite.ts")
+          .then(({ joinPeerInvite }) => joinPeerInvite(invite))
       );
     }
 
@@ -84,7 +84,7 @@ export async function bootStandalone<
         connect: () => shareLinkConnection(credential)
       });
     }
-    if (forceOffline || params.offline) {
+    if (forceOffline || params.offline !== undefined) {
       return await mountOffline();
     }
 

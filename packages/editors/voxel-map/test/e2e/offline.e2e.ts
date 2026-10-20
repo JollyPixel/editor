@@ -24,7 +24,7 @@ function seededSource(
   )?.[0];
 }
 
-test("boots the seeded map from an in-page workspace, without a socket", async({ map, page }) => {
+test("boots the seeded map from an in-page offline server, without a socket", async({ map, page }) => {
   const sockets = recordSockets(page);
   await map.openOffline();
 
@@ -34,7 +34,7 @@ test("boots the seeded map from an in-page workspace, without a socket", async({
 
     return {
       target: session.target.record.source,
-      persistent: session.workspace?.persistent,
+      persistent: session.offline?.persistent,
       username: session.identity.username,
       layers: view.document.world.getLayers().map((layer) => layer.name),
       blocks: view.document.blocks.size,
@@ -73,7 +73,7 @@ test("shares an offline catalog with a second tab", async({ map, page }) => {
       id
     )).toBe("shared.bin");
     expect(await second.page.evaluate(
-      () => window.voxelMapEditor?.session.workspace?.persistent
+      () => window.voxelMapEditor?.session.offline?.persistent
     )).toBe(true);
   }
   finally {
@@ -81,13 +81,13 @@ test("shares an offline catalog with a second tab", async({ map, page }) => {
   }
 });
 
-test("offers an offline workspace when the socket is unreachable", async({ page }) => {
+test("offers offline mode when the socket is unreachable", async({ page }) => {
   await page.routeWebSocket("**/ws-sync", (socket) => {
     socket.close();
   });
   await page.goto("/?username=Guest");
   const offline = dialog(page, "Connection unavailable")
-    .getByRole("button", { name: "Open offline workspace" });
+    .getByRole("button", { name: "Work offline" });
   await expect(offline).toBeVisible({ timeout: 10_000 });
   await expect(page.locator("html")).toHaveAttribute(
     "data-editor-state",
@@ -100,7 +100,7 @@ test("offers an offline workspace when the socket is unreachable", async({ page 
   );
 
   expect(await page.evaluate(
-    () => window.voxelMapEditor?.session.workspace?.persistent
+    () => window.voxelMapEditor?.session.offline?.persistent
   )).toBe(true);
 });
 

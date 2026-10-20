@@ -10,7 +10,7 @@ import { setImmediate } from "node:timers/promises";
 // Import Internal Dependencies
 import type { EditorContext } from "#src/editor/EditorDefinition.ts";
 import { mountStandalone } from "#src/editor/mountStandalone.ts";
-import type { OfflineWorkspace } from "#src/workspace/offline/OfflineWorkspace.ts";
+import type { OfflineServer } from "#src/offline/server/OfflineServer.ts";
 import { editorHandle } from "../helpers/editorHandle.ts";
 import {
   ASSET_ID,
@@ -18,12 +18,12 @@ import {
   definition,
   editorState,
   offlineOptions,
-  openWorkspace,
+  openServer,
   resetStandalonePage
 } from "../helpers/standalone.ts";
 
 async function mountTracked(
-  workspace: OfflineWorkspace
+  server: OfflineServer
 ) {
   const contexts: EditorContext[] = [];
   const disposed: string[] = [];
@@ -39,11 +39,11 @@ async function mountTracked(
       }
     });
   }), {
-    ...offlineOptions(workspace),
+    ...offlineOptions(server),
     connect: () => {
       connections++;
 
-      return workspace.connect();
+      return server.connect();
     }
   });
 
@@ -69,9 +69,9 @@ describe("mountStandalone navigation", () => {
   afterEach(resetStandalonePage);
 
   test("opening another target remounts the editor on the same connection and follows history", async() => {
-    const workspace = await openWorkspace();
+    const server = await openServer();
     const { editor, contexts, disposed, connections } = await mountTracked(
-      workspace
+      server
     );
 
     await contexts[0].toolbar.targets?.open(OTHER_ASSET_ID);
@@ -91,6 +91,6 @@ describe("mountStandalone navigation", () => {
     assert.deepEqual(disposed, [ASSET_ID, OTHER_ASSET_ID]);
 
     editor.dispose();
-    await workspace.close();
+    await server.close();
   });
 });

@@ -26,7 +26,7 @@ export function offerOffline(
       },
       {
         value: "offline",
-        label: "Open offline workspace"
+        label: "Work offline"
       }
     ],
     focus: "retry"

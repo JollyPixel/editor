@@ -13,10 +13,7 @@ import {
   CatalogViewExtension,
   type CatalogProjection
 } from "@jolly-pixel/asset-server";
-import {
-  createAssetWorkspace,
-  type AssetWorkspace
-} from "@jolly-pixel/asset-server/node";
+import { AssetServer } from "@jolly-pixel/asset-server/node";
 import type { Accounts } from "@jolly-pixel/accounts/node";
 import { STATE_DIRECTORY } from "@jolly-pixel/asset-source";
 import { DEFAULT_WEBSOCKET_PATH } from "@jolly-pixel/network";
@@ -114,7 +111,7 @@ export class StudioBackend implements AsyncDisposable {
       catalog: catalog.promise
     });
 
-    const workspace = await createAssetWorkspace({
+    const assetServer = await AssetServer.open({
       root: project.file.root,
       inMemory: options.inMemory,
       handlers: project.kinds.handlers(),
@@ -134,17 +131,17 @@ export class StudioBackend implements AsyncDisposable {
       },
       admits: (identity, room) => shares.admits(identity, room)
     });
-    catalog.resolve(workspace.backend.catalog);
-    workspace.server.register(new CatalogViewExtension({
-      catalog: workspace.backend.catalog,
+    catalog.resolve(assetServer.backend.catalog);
+    assetServer.network.register(new CatalogViewExtension({
+      catalog: assetServer.backend.catalog,
       scope: (identity) => shares.scope(identity)
     }));
 
     const settings = new ProjectSettings({
       project,
       accounts,
-      server: workspace.server,
-      registry: workspace.backend.kinds,
+      server: assetServer.network,
+      registry: assetServer.backend.kinds,
       audit,
       accountsOptions: options.accounts
     });
@@ -155,14 +152,14 @@ export class StudioBackend implements AsyncDisposable {
       settings,
       audit: new AuditFeed({
         project,
-        assets: new AssetLog(workspace.eventStore),
+        assets: new AssetLog(assetServer.eventStore),
         audit,
         account: (accountId) => accounts.account(accountId),
-        assetPath: (assetId) => workspace.backend.catalog.record(assetId)?.source
+        assetPath: (assetId) => assetServer.backend.catalog.record(assetId)?.source
       }),
       archive: new ProjectArchive({
         project,
-        backend: workspace.backend,
+        backend: assetServer.backend,
         name: project.name
       }),
       preferences: PreferenceScopes.studio(project.editors.preferences()),
@@ -177,7 +174,7 @@ export class StudioBackend implements AsyncDisposable {
     return new StudioBackend(
       accounts,
       resources,
-      workspace,
+      assetServer,
       api,
       new SharePage({
         shares,
@@ -190,20 +187,20 @@ export class StudioBackend implements AsyncDisposable {
 
   #accounts: Accounts;
   #resources: DisposableStack;
-  #workspace: AssetWorkspace;
+  #assetServer: AssetServer;
   #api: StudioApi;
   #transports = new DisposableStack();
 
   private constructor(
     accounts: Accounts,
     resources: DisposableStack,
-    workspace: AssetWorkspace,
+    assetServer: AssetServer,
     api: StudioApi,
     sharePage: SharePage
   ) {
     this.#accounts = accounts;
     this.#resources = resources;
-    this.#workspace = workspace;
+    this.#assetServer = assetServer;
     this.#api = api;
     this.middleware = (request, response, next) => {
       api.middleware(request, response, () => {
@@ -219,7 +216,7 @@ export class StudioBackend implements AsyncDisposable {
     this.#transports.use(new WebsocketTransport({
       path: DEFAULT_WEBSOCKET_PATH,
       httpServer,
-      server: this.#workspace.server,
+      server: this.#assetServer.network,
       compression: kSocketCompression,
       allowedHosts: options.allowedHosts
     }));
@@ -228,7 +225,7 @@ export class StudioBackend implements AsyncDisposable {
   async [Symbol.asyncDispose](): Promise<void> {
     this.#transports.dispose();
     await this.#api[Symbol.asyncDispose]();
-    await this.#workspace.close();
+    await this.#assetServer.close();
     this.#resources.dispose();
     this.#accounts[Symbol.dispose]();
   }

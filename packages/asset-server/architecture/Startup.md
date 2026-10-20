@@ -1,13 +1,13 @@
 # Startup and ownership
 
-`createAssetWorkspace()` builds a source, event store, backend, and network
-server. Hosts with their own instances can pass them in. With
-`inMemory: true`, the default source and event store live in memory and the
-workspace root is never read or written.
+`AssetServer.open()` builds a source, event store, backend, and network
+server for one project root. Hosts can pass their own source and event store.
+With `inMemory: true`, the default source and event store live in memory and
+the project root is never read or written.
 
 ```mermaid
 flowchart TB
-    Root["Workspace root"] --> Source["AssetSource"]
+    Root["Project root"] --> Source["AssetSource"]
     Root --> Log["SQLite event store"]
     Source --> Backend["AssetBackend"]
     Log --> Backend
@@ -18,7 +18,7 @@ flowchart TB
 ## Startup order
 
 1. `seedAssetSource()` writes missing starter files, if `seed` is set.
-2. The workspace opens the event store.
+2. The asset server opens the event store.
 3. `createAssetBackend()` runs. With `compactOnOpen: true`, it removes events
    superseded by each asset's latest lifecycle checkpoint. It loads
    projection state, or starts from none when the event log is empty, then
@@ -26,8 +26,8 @@ flowchart TB
 4. The backend scans physical storage when `reconcileOnStart` is enabled,
    loads the catalog, backfills missing dependency edges, and starts the
    watcher when `watch` is enabled.
-5. The workspace registers host extensions, then attaches catalog and asset
-   rooms to the server.
+5. The asset server registers host extensions, then attaches catalog and
+   asset rooms to the network server.
 
 The backend writes `.jollypixel/.gitignore` and uses these entries under the
 state directory:
@@ -47,7 +47,7 @@ event store at another location.
 
 ## Shutdown
 
-Close the server before the workspace. Evicting an asset room may flush its
-snapshot. `workspace.close()` detaches the room resolver, closes the backend,
-and closes the event store only if the workspace created it. It does not
-close the server or source.
+Close the network server before the asset server. Evicting an asset room may
+flush its snapshot. `close()` detaches the room resolver, closes the backend,
+and closes the event store only if the asset server created it. It does not
+close the network server or source.

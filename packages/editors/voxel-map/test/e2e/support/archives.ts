@@ -40,9 +40,9 @@ export class Archives {
     await chooser.setFiles(path);
   }
 
-  async resetWorkspace(): Promise<void> {
+  async resetOfflineData(): Promise<void> {
     await this.#commands.submit("/archive.reset");
-    await reloadEditor(this.#page, () => dialog(this.#page, "Reset workspace")
+    await reloadEditor(this.#page, () => dialog(this.#page, "Reset offline data")
       .getByRole("button", { name: "Reset" })
       .click());
   }

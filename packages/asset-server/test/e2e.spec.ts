@@ -23,7 +23,7 @@ import {
   PROJECTION_STATE_PATH,
   STATE_GITIGNORE_PATH
 } from "#src/index.ts";
-import { tempWorkspace } from "./helpers/tempWorkspace.ts";
+import { tempDirectory } from "./helpers/tempDirectory.ts";
 import { liveCounterHandler } from "./helpers/kinds.ts";
 import { bytes } from "./helpers/bytes.ts";
 import { serveCatalog } from "./helpers/catalog.ts";
@@ -31,20 +31,20 @@ import { recordingClient } from "./helpers/rooms.ts";
 
 describe("asset-server — end to end", () => {
   test("cold start, live edit, external drift and catalog agree", async(t) => {
-    await using workspace = await tempWorkspace();
+    await using directory = await tempDirectory();
     using eventStore = EventStore.persistence.memory();
 
     await fs.writeFile(
-      path.join(workspace.root, "counter.counter"),
+      path.join(directory.root, "counter.counter"),
       bytes("0")
     );
-    await fs.mkdir(path.join(workspace.root, "textures"));
+    await fs.mkdir(path.join(directory.root, "textures"));
     await fs.writeFile(
-      path.join(workspace.root, "textures", "grass.png"),
+      path.join(directory.root, "textures", "grass.png"),
       bytes("grass")
     );
 
-    const source = new FilesystemAssetSource(workspace.root);
+    const source = new FilesystemAssetSource(directory.root);
     t.mock.timers.enable({ apis: ["setTimeout"] });
     await using backend = await createAssetBackend({
       source,
@@ -67,21 +67,21 @@ describe("asset-server — end to end", () => {
 
     assert.match(
       await fs.readFile(
-        path.join(workspace.root, IDENTITY_SIDECAR_PATH),
+        path.join(directory.root, IDENTITY_SIDECAR_PATH),
         "utf8"
       ),
       /"assets"/
     );
     assert.match(
       await fs.readFile(
-        path.join(workspace.root, STATE_GITIGNORE_PATH),
+        path.join(directory.root, STATE_GITIGNORE_PATH),
         "utf8"
       ),
       /state\.json/
     );
     assert.match(
       await fs.readFile(
-        path.join(workspace.root, PROJECTION_STATE_PATH),
+        path.join(directory.root, PROJECTION_STATE_PATH),
         "utf8"
       ),
       /"checkpoints"/
@@ -103,7 +103,7 @@ describe("asset-server — end to end", () => {
 
     assert.strictEqual(
       await fs.readFile(
-        path.join(workspace.root, "counter.counter"),
+        path.join(directory.root, "counter.counter"),
         "utf8"
       ),
       "0"
@@ -114,19 +114,19 @@ describe("asset-server — end to end", () => {
 
     assert.strictEqual(
       await fs.readFile(
-        path.join(workspace.root, "counter.counter"),
+        path.join(directory.root, "counter.counter"),
         "utf8"
       ),
       "3"
     );
 
     await fs.writeFile(
-      path.join(workspace.root, "textures", "grass.png"),
+      path.join(directory.root, "textures", "grass.png"),
       bytes("grass-edited")
     );
-    await fs.rm(path.join(workspace.root, "textures", "grass.png"));
+    await fs.rm(path.join(directory.root, "textures", "grass.png"));
     await fs.writeFile(
-      path.join(workspace.root, "textures", "dirt.png"),
+      path.join(directory.root, "textures", "dirt.png"),
       bytes("grass-edited")
     );
     (await backend.reconcile()).unwrap();
@@ -158,12 +158,12 @@ describe("asset-server — end to end", () => {
     await server.close();
   });
 
-  test("a restart over the same workspace emits no new lifecycle events", async() => {
-    await using workspace = await tempWorkspace();
+  test("a restart over the same directory emits no new lifecycle events", async() => {
+    await using directory = await tempDirectory();
     using eventStore = EventStore.persistence.memory();
 
-    await fs.writeFile(path.join(workspace.root, "a.png"), bytes("one"));
-    const source = new FilesystemAssetSource(workspace.root);
+    await fs.writeFile(path.join(directory.root, "a.png"), bytes("one"));
+    const source = new FilesystemAssetSource(directory.root);
 
     {
       await using backend = await createAssetBackend({
@@ -178,7 +178,7 @@ describe("asset-server — end to end", () => {
       .listAll({ eventTypePrefix: "asset." }).length;
 
     await using restarted = await createAssetBackend({
-      source: new FilesystemAssetSource(workspace.root),
+      source: new FilesystemAssetSource(directory.root),
       eventStore,
       watch: false
     });
@@ -191,12 +191,12 @@ describe("asset-server — end to end", () => {
   });
 
   test("catalog commands from a client reach disk, peers and open rooms", async() => {
-    await using workspace = await tempWorkspace();
+    await using directory = await tempDirectory();
     using eventStore = EventStore.persistence.memory();
 
-    await fs.writeFile(path.join(workspace.root, "a.counter"), bytes("0"));
+    await fs.writeFile(path.join(directory.root, "a.counter"), bytes("0"));
     await using backend = await createAssetBackend({
-      source: new FilesystemAssetSource(workspace.root),
+      source: new FilesystemAssetSource(directory.root),
       eventStore,
       handlers: [liveCounterHandler()],
       watch: false
@@ -226,7 +226,7 @@ describe("asset-server — end to end", () => {
     await backend.flush();
 
     assert.strictEqual(
-      await fs.readFile(path.join(workspace.root, "textures", "grass.png"), "utf8"),
+      await fs.readFile(path.join(directory.root, "textures", "grass.png"), "utf8"),
       "grass"
     );
     const changed = peer.received.at(-1) as {
@@ -263,7 +263,7 @@ describe("asset-server — end to end", () => {
         payload: { type: "deleted" }
       }
     );
-    await assert.rejects(fs.access(path.join(workspace.root, "a.counter")));
+    await assert.rejects(fs.access(path.join(directory.root, "a.counter")));
 
     await server.close();
   });

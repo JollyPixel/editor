@@ -10,7 +10,7 @@ import {
 } from "../debug/readDebugLogger.ts";
 import type { LaunchSource } from "../launch/index.ts";
 import type { LaunchNavigator } from "../launch/LaunchNavigator.ts";
-import type { StandaloneConnection } from "../workspace/SessionWorkspace.ts";
+import type { StandaloneConnection } from "./StandaloneConnection.ts";
 
 export interface MountStandaloneOptions {
   /**

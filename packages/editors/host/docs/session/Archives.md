@@ -1,7 +1,7 @@
 # Archives
 
 Export and import of `.zip` asset archives through the catalog room, the same
-way on a server and [offline](../editor/bootStandalone.md#offline-workspace).
+way on a server and [offline](../editor/bootStandalone.md#offline-mode).
 
 ## SessionArchive
 
@@ -18,12 +18,12 @@ const report = await session.archive.import(file, {
 
 ### canImport
 
-`false` on a workspace that does not persist, where the reload after an
+`false` on offline data that does not persist, where the reload after an
 import would lose it.
 
 ### export(assetId?)
 
-The asset with everything it references, or the whole workspace.
+The asset with everything it references, or the whole catalog.
 
 ### plan(file)
 
@@ -78,7 +78,7 @@ submitted with Enter.
 
 ### reset()
 
-Asks to confirm `resetWarning`, resets the workspace and reloads.
+Asks to confirm `resetWarning`, resets the offline data and reloads.
 
 The `browser` option, an `EditorArchiveBrowser`, replaces downloads, file
 picking, dialogs and navigation. It defaults to the DOM and
@@ -87,7 +87,7 @@ picking, dialogs and navigation. It defaults to the DOM and
 ## ArchiveActions
 
 `<jolly-archive-actions>` renders the buttons of an `EditorArchives`, the
-notice of a volatile workspace and the error of the last failed flow.
+notice of volatile offline data and the error of the last failed flow.
 Importing `@jolly-pixel/editor.host/ui` defines it.
 
 ```ts

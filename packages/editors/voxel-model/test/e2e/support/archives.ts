@@ -28,11 +28,11 @@ export async function importArchive(
   await chooser.setFiles(path);
 }
 
-export async function resetWorkspace(
+export async function resetOfflineData(
   page: Page
 ): Promise<void> {
   await new CommandConsole(page).submit("/archive.reset");
-  await reloadEditor(page, () => dialog(page, "Reset workspace")
+  await reloadEditor(page, () => dialog(page, "Reset offline data")
     .getByRole("button", { name: "Reset" })
     .click());
 }
