@@ -5,8 +5,10 @@ import type {
   Object3D,
   Vector3Like
 } from "three";
-import { pressAt } from "@jolly-pixel/e2e";
-import { nextFrames } from "@jolly-pixel/e2e/editor";
+import {
+  nextFrames,
+  pressAt
+} from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
 import {
@@ -150,7 +152,5 @@ export async function clickBlock(
   page: Page,
   name: string
 ): Promise<void> {
-  await pressAt(page, [await blockPoint(page, name)], {
-    settle: nextFrames
-  });
+  await pressAt(page, [await blockPoint(page, name)]);
 }

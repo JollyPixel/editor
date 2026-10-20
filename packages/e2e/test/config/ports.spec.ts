@@ -6,7 +6,7 @@ import {
 } from "node:test";
 
 // Import Internal Dependencies
-import { PORTS } from "../src/ports.ts";
+import { PORTS } from "../../src/config/ports.ts";
 
 describe("PORTS", () => {
   it("gives every suite its own port", () => {

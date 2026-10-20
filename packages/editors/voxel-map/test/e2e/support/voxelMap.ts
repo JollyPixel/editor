@@ -5,7 +5,7 @@ import type {
 } from "@playwright/test";
 import {
   openEditor,
-  waitForEditor
+  reloadEditor
 } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
@@ -98,7 +98,6 @@ export class VoxelMapPage {
   }
 
   async reload(): Promise<void> {
-    await this.page.reload();
-    await waitForEditor(this.page);
+    await reloadEditor(this.page);
   }
 }

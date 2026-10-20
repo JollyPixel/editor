@@ -8,7 +8,7 @@ import {
   CommandConsole,
   dialog
 } from "@jolly-pixel/e2e";
-import { waitForEditor } from "@jolly-pixel/e2e/editor";
+import { reloadEditor } from "@jolly-pixel/e2e/editor";
 
 export class Archives {
   readonly importCopyButton: Locator;
@@ -42,10 +42,8 @@ export class Archives {
 
   async resetWorkspace(): Promise<void> {
     await this.#commands.submit("/archive.reset");
-    await dialog(this.#page, "Reset workspace")
+    await reloadEditor(this.#page, () => dialog(this.#page, "Reset workspace")
       .getByRole("button", { name: "Reset" })
-      .click();
-    await this.#page.waitForEvent("load");
-    await waitForEditor(this.#page);
+      .click());
   }
 }

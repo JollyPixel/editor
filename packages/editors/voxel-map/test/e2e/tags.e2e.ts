@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import { EditorToolbar } from "@jolly-pixel/e2e/editor";
+import {
+  EditorToolbar,
+  followEditor
+} from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
 import { test, expect } from "./fixtures.ts";
@@ -32,7 +35,7 @@ test("a saved version shows its map read-only and restores it without reloading"
   await paint(map, kLater);
 
   await editorToolbar.viewVersion(/v1 ·/);
-  await editorToolbar.afterNavigation(/tag=v1/);
+  await followEditor(page, /tag=v1/);
   await map.viewport.pinCamera();
 
   await expect(editorToolbar.readOnly).toBeVisible();
@@ -43,7 +46,7 @@ test("a saved version shows its map read-only and restores it without reloading"
 
   await editorToolbar.restoreButton.click();
   await editorToolbar.confirm("Restore tag", "Restore");
-  await editorToolbar.afterNavigation((url) => !url.searchParams.has("tag"));
+  await followEditor(page, (url) => !url.searchParams.has("tag"));
 
   await expect(editorToolbar.readOnly).toHaveCount(0);
   await expect(map.toolbar.status).toBeHidden();

@@ -3,7 +3,7 @@ import {
   dialog,
   treeRow
 } from "@jolly-pixel/e2e";
-import { waitForEditor } from "@jolly-pixel/e2e/editor";
+import { reloadEditor } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
 import {
@@ -126,8 +126,7 @@ test("materials reorder with the keyboard and keep their order", async({ page })
 
   await expect.poll(() => materialOutline(page)).toEqual(["Metal", "Glass"]);
 
-  await page.reload();
-  await waitForEditor(page);
+  await reloadEditor(page);
   await expect.poll(() => materialOutline(page)).toEqual(["Metal", "Glass"]);
 });
 

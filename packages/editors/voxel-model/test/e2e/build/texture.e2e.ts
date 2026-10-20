@@ -4,7 +4,7 @@ import type {
   Page
 } from "@playwright/test";
 import { treeRow } from "@jolly-pixel/e2e";
-import { waitForEditor } from "@jolly-pixel/e2e/editor";
+import { reloadEditor } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
 import { test, expect } from "../fixtures.ts";
@@ -29,8 +29,7 @@ test("a texture resized from the Build tab keeps its size after a reload", async
   await sizeField(page, "Width").selectOption({ label: "128" });
   await sizeField(page, "Height").selectOption({ label: "256" });
 
-  await page.reload();
-  await waitForEditor(page);
+  await reloadEditor(page);
 
   await expect(sizeField(page, "Width").locator("option:checked")).toHaveText("128");
   await expect(sizeField(page, "Height").locator("option:checked")).toHaveText("256");
@@ -91,8 +90,7 @@ test("a region state change is stored on the block and reaches a peer", async({ 
   await treeRow(peer, "Block").click();
   await expect(regionToolbar(peer)).toHaveAccessibleName("Region state: Stacked");
 
-  await page.reload();
-  await waitForEditor(page);
+  await reloadEditor(page);
   await treeRow(page, "Block").click();
   await expect(regionToolbar(page)).toHaveAccessibleName("Region state: Stacked");
 });

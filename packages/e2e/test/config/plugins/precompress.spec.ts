@@ -13,7 +13,7 @@ import {
 import { build } from "vite";
 
 // Import Internal Dependencies
-import { precompress } from "../../src/vite/precompress.ts";
+import { precompress } from "../../../src/config/plugins/precompress.ts";
 
 // CONSTANTS
 const kLongText = "voxel ".repeat(400);

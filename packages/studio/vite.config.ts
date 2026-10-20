@@ -18,8 +18,6 @@ import {
 } from "@jolly-pixel/asset-server/node";
 import {
   PORTS,
-  precompress,
-  prebundleWorkspace,
   RunMode
 } from "@jolly-pixel/e2e";
 
@@ -47,7 +45,7 @@ export default defineConfig(async(env): Promise<UserConfig> => {
   );
   const project = await StudioProject.open(
     StudioProject.resolveRoot(import.meta.dirname),
-    mode
+    mode.workspace
   );
 
   return {
@@ -66,8 +64,7 @@ export default defineConfig(async(env): Promise<UserConfig> => {
       }
     },
     plugins: [
-      prebundleWorkspace(),
-      precompress(),
+      mode.plugins(),
       createProjectKindsPlugin(project.kinds),
       projectManifest(project),
       createProjectFileWatchPlugin(project.file),

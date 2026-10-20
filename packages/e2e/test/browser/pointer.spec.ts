@@ -6,7 +6,7 @@ import {
 } from "node:test";
 
 // Import Internal Dependencies
-import { boxesOverlap } from "../src/pointer.ts";
+import { boxesOverlap } from "../../src/browser/pointer.ts";
 
 // CONSTANTS
 const kBox = {

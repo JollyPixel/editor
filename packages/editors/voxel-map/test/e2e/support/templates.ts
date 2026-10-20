@@ -6,10 +6,9 @@ import type {
 import {
   measureCenter,
   dialog,
-  pressAt,
   textField
 } from "@jolly-pixel/e2e";
-import { nextFrames } from "@jolly-pixel/e2e/editor";
+import { pressAt } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
 import type {
@@ -139,7 +138,6 @@ export class TemplateList {
       await measureCenter(this.row),
       await this.#viewport.cellTop(cell)
     ], {
-      settle: nextFrames,
       target: this.row
     });
   }

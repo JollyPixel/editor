@@ -9,7 +9,7 @@ import {
 } from "node:test";
 
 // Import Internal Dependencies
-import { defineE2EConfig } from "../src/config.ts";
+import { defineE2EConfig } from "../../src/config/playwright.ts";
 
 // CONSTANTS
 const kOptions = {

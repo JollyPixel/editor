@@ -1,35 +1,12 @@
-// Import Third-party Dependencies
-import {
-  changeRole,
-  grantRole,
-  type RoleGrant
-} from "@jolly-pixel/e2e";
-
 // Import Internal Dependencies
-import { test as base, expect } from "./fixtures.ts";
+import { test, expect } from "./fixtures.ts";
 
 // CONSTANTS
 const kCell = { x: 0, y: 0, z: 0 };
 
-const test = base.extend<{ grant: RoleGrant; }>({
-  grant: [
-    {
-      role: "member",
-      subject: "voxel-map-access-e2e"
-    },
-    { option: true }
-  ],
-  context: async({ context, baseURL, grant }, use) => {
-    await grantRole(context, baseURL!, grant);
-    await use(context);
-  }
-});
-
 test("a role change applies live: view only for a spectator, editing again once promoted", async({
   map,
-  context,
-  baseURL,
-  grant
+  access
 }) => {
   const { viewport, world, toolbar, layers, texture } = map;
   await viewport.pinCamera();
@@ -37,10 +14,7 @@ test("a role change applies live: view only for a spectator, editing again once 
   await map.panes.open("Layers");
   await expect(layers.addButton).toBeEnabled();
 
-  await changeRole(context, baseURL!, {
-    ...grant,
-    role: "spectator"
-  });
+  await access.become("spectator");
 
   await expect(toolbar.status).toContainText("View only");
   await expect(layers.addButton).toBeDisabled();
@@ -50,7 +24,7 @@ test("a role change applies live: view only for a spectator, editing again once 
   await map.panes.open("Blocks");
   await expect(texture.accessBadge).toHaveText("View only");
 
-  await changeRole(context, baseURL!, grant);
+  await access.become("member");
 
   await expect(toolbar.status).toBeHidden();
   await expect(texture.accessBadge).toHaveCount(0);

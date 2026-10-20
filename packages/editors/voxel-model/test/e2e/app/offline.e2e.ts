@@ -7,7 +7,7 @@ import {
   recordSockets,
   treeRow
 } from "@jolly-pixel/e2e";
-import { waitForEditor } from "@jolly-pixel/e2e/editor";
+import { reloadEditor } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
 import { addNode } from "../support/hierarchy.ts";
@@ -18,8 +18,7 @@ test("an offline model opens without a socket and keeps its edits after a reload
   await openOfflineEditor(page);
   await addNode(page, "Block", "Arm");
 
-  await page.reload();
-  await waitForEditor(page);
+  await reloadEditor(page);
 
   await expect(treeRow(page, "Arm")).toBeVisible();
   expect(sockets).toEqual([]);

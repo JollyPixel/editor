@@ -16,12 +16,12 @@ import {
 } from "vite";
 
 // Import Internal Dependencies
-import { prebundleWorkspace } from "../../src/vite/prebundleWorkspace.ts";
+import { prebundleWorkspace } from "../../../src/config/plugins/prebundleWorkspace.ts";
 import {
   EXPECTED_ENTRIES,
   FIXTURE_ROOT,
   VIRTUAL_MODULES
-} from "../helpers/workspaceFixture.ts";
+} from "../../helpers/workspaceFixture.ts";
 
 // CONSTANTS
 const kKeptEntry = "@jolly-pixel/kept";

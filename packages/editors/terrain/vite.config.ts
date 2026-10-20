@@ -17,7 +17,6 @@ import {
 import { TERRAIN_KIND } from "@jolly-pixel/asset.terrain";
 import {
   PORTS,
-  precompress,
   RunMode
 } from "@jolly-pixel/e2e";
 
@@ -41,7 +40,7 @@ export default defineConfig(async(env): Promise<UserConfig> => {
   const projectFile = await ProjectFile.open(
     kAssetsRoot,
     kProjectFile,
-    mode
+    mode.workspace
   );
   const kinds = await ProjectKinds.load(projectFile);
 
@@ -50,13 +49,11 @@ export default defineConfig(async(env): Promise<UserConfig> => {
     server: mode.server,
     plugins: [
       mode.plugins(),
-      precompress(),
       createProjectKindsPlugin(kinds),
       createProjectFileWatchPlugin(projectFile),
       createAssetWorkspacePlugin({
         root: kAssetsRoot,
-        inMemory: mode.inMemory,
-        ...mode.access,
+        ...mode.workspace,
         ...createDefaultSeed(),
         handlers: kinds.handlers(),
         launch({ catalog }) {

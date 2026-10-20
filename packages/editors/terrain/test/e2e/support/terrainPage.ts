@@ -2,10 +2,12 @@
 import type { Page } from "@playwright/test";
 import {
   measureBox,
-  pressAt,
   type Point
 } from "@jolly-pixel/e2e";
-import { nextFrames } from "@jolly-pixel/e2e/editor";
+import {
+  nextFrames,
+  pressAt
+} from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
 import {
@@ -73,7 +75,7 @@ export class TerrainPage {
   ): Promise<void> {
     await pressAt(this.page, [await this.#clientPoint(sampleX, sampleZ)], {
       target: this.viewport.canvas,
-      settle: (page) => nextFrames(page, 3)
+      frames: 3
     });
   }
 

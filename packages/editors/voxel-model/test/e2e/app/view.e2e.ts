@@ -4,7 +4,7 @@ import type {
   Page
 } from "@playwright/test";
 import { buttonGroup } from "@jolly-pixel/e2e";
-import { waitForEditor } from "@jolly-pixel/e2e/editor";
+import { reloadEditor } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
 import { test, expect } from "../fixtures.ts";
@@ -54,8 +54,7 @@ test("the lighting menu switches blocks to flat and is remembered after a reload
   await pickLighting(page, "Flat");
   expect(await blocksLit(page)).toBe(false);
 
-  await page.reload();
-  await waitForEditor(page);
+  await reloadEditor(page);
 
   await expect(page.getByRole("button", { name: "Lighting: Flat" })).toBeVisible();
   expect(await blocksLit(page)).toBe(false);

@@ -3,7 +3,7 @@ import type {
   Locator,
   Page
 } from "@playwright/test";
-import { waitForEditor } from "@jolly-pixel/e2e/editor";
+import { reloadEditor } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
 import { TextureCanvas } from "./canvas.ts";
@@ -95,7 +95,6 @@ export class PixelArtPanel {
   }
 
   async reload(): Promise<void> {
-    await this.page.reload();
-    await waitForEditor(this.page);
+    await reloadEditor(this.page);
   }
 }

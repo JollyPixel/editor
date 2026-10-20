@@ -90,18 +90,21 @@ test("opens the requested model with its default block", async({ page }) => {
 `@jolly-pixel/e2e`, for every suite:
 
 - [Config](./docs/config.md): `defineE2EConfig`, `PORTS`, `baseUrl`, the
-  `prebundleWorkspace` and `precompress` Vite plugins and `RunMode`.
-- [Pointer](./docs/pointer.md): bounding boxes, drags and multi-step presses.
-- [Locators](./docs/locators.md): dialogs, fields and tree rows of `@jolly-pixel/ui`.
-- [Sockets](./docs/sockets.md): `recordSockets`.
-- [Roles](./docs/roles.md): `CookieRoles`, `grantRole` and `changeRole`.
-- [Console](./docs/console.md): `CommandConsole`, the command console prompt and log.
+  `prebundleWorkspace` Vite plugin and `RunMode`.
+- [Roles](./docs/roles.md): `CookieAuthentication` and `ContextAccess`.
+- Browser helpers:
+  [Pointer](./docs/browser/pointer.md) (bounding boxes and drags),
+  [Locators](./docs/browser/locators.md) (dialogs, fields and tree rows of
+  `@jolly-pixel/ui`) and [Sockets](./docs/browser/sockets.md) (`recordSockets`).
+- [Console](./docs/browser/console.md): `CommandConsole`, the command console
+  prompt and log.
 
 `@jolly-pixel/e2e/editor`, for editors and the studio:
 
-- [Editor fixture](./docs/editor-fixture.md): `editorFixture`, the `peer` page and the catalog helpers.
-- [Editor navigation](./docs/editor-navigation.md): `openEditor`, `waitForEditor` and frame waits.
-- [Editor toolbar](./docs/editor-toolbar.md): `EditorToolbar`, the target picker and tags above the viewport.
+- [Editor fixture](./docs/editor/fixture.md): `editorFixture`, roles, the `peer` page and the catalog helpers.
+- [Editor navigation](./docs/editor/navigation.md): `openEditor`, `reloadEditor`, `followEditor` and `waitForEditor`.
+- [Editor frames](./docs/editor/frames.md) and [Editor press](./docs/editor/press.md): `nextFrames` and `pressAt`.
+- [Editor toolbar](./docs/editor/toolbar.md): `EditorToolbar`, the target picker and tags above the viewport.
 
 ## 🧱 Boundaries
 
