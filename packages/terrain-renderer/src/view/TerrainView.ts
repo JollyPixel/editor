@@ -6,16 +6,18 @@ import type { MeshStandardNodeMaterial } from "three/webgpu";
 import type { ChunkCoord } from "../document/ChunkCoord.ts";
 import type { TerrainReader } from "../document/TerrainDocument.ts";
 import type { TileCoord } from "../document/TileCoord.ts";
-import { LodRanges } from "./lod/LodRanges.ts";
+import {
+  LEAF_NODE_SIZE,
+  LodRanges
+} from "./lod/LodRanges.ts";
 import {
   QuadtreeSelection,
   type SelectedNode
 } from "./lod/QuadtreeSelection.ts";
 import {
-  GridMeshProvider,
-  type NodeMeshData,
-  type NodeMeshProvider
-} from "./mesh/GridMeshProvider.ts";
+  buildGridMesh,
+  type NodeMeshData
+} from "./mesh/buildGridMesh.ts";
 import {
   createTerrainShading,
   DEFAULT_WALKABLE_SLOPE,
@@ -28,16 +30,13 @@ import {
   type TerrainShading
 } from "./shading/terrainNodes.ts";
 import { ChunkTextureStore } from "./textures/ChunkTextureStore.ts";
-import { HeightApronStore } from "./textures/HeightApronStore.ts";
 
 // CONSTANTS
-export const NODE_RESOLUTION = 32;
-const kSkirtDepthPerSpacing = 1;
+export const NODE_RESOLUTION = LEAF_NODE_SIZE;
 const kInitialCapacity = 64;
 
 export interface TerrainViewOptions {
   ranges?: LodRanges;
-  meshes?: NodeMeshProvider;
   /**
    * Called when the view changes without the camera moving, for renderers
    * that draw on demand.
@@ -68,17 +67,16 @@ export class TerrainView {
   ) {
     const {
       ranges = new LodRanges(),
-      meshes = new GridMeshProvider(),
       requestFrame = () => undefined
     } = options;
     this.#terrain = terrain;
     this.#requestFrame = requestFrame;
     this.selection = new QuadtreeSelection(terrain, ranges);
-    this.#textures = new ChunkTextureStore(new HeightApronStore(terrain));
+    this.#textures = new ChunkTextureStore(terrain);
     this.#shading = createTerrainShading(this.#textures);
     this.material = this.#shading.material;
-    this.#nodes = new NodeBatch(meshes.mesh(NODE_RESOLUTION), this.material);
-    this.#quarters = new NodeBatch(meshes.mesh(NODE_RESOLUTION / 2), this.material);
+    this.#nodes = new NodeBatch(buildGridMesh(NODE_RESOLUTION), this.material);
+    this.#quarters = new NodeBatch(buildGridMesh(NODE_RESOLUTION / 2), this.material);
     this.root.name = "TerrainView";
     this.root.add(this.#nodes.mesh, this.#quarters.mesh);
     this.reset();
@@ -156,14 +154,8 @@ export class TerrainView {
       }
     });
     const { ranges } = this.selection;
-    this.#nodes.write(
-      selected.filter((node) => node.size === ranges.nodeSize(node.level)),
-      ranges
-    );
-    this.#quarters.write(
-      selected.filter((node) => node.size !== ranges.nodeSize(node.level)),
-      ranges
-    );
+    this.#nodes.write(selected.filter((node) => !isQuarter(node, ranges)), ranges);
+    this.#quarters.write(selected.filter((node) => isQuarter(node, ranges)), ranges);
 
     return selected;
   }
@@ -174,6 +166,13 @@ export class TerrainView {
     this.material.dispose();
     this.#textures.dispose();
   }
+}
+
+function isQuarter(
+  node: SelectedNode,
+  ranges: LodRanges
+): boolean {
+  return node.size < ranges.nodeSize(node.level);
 }
 
 function gridPositions(
@@ -224,7 +223,7 @@ class NodeBatch {
     const morph = geometry.getAttribute(NODE_MORPH_ATTRIBUTE) as THREE.InstancedBufferAttribute;
     nodes.forEach((node, index) => {
       const spacing = ranges.nodeSize(node.level) / NODE_RESOLUTION;
-      data.setXYZW(index, node.x, node.z, spacing, spacing * kSkirtDepthPerSpacing);
+      data.setXYZW(index, node.x, node.z, spacing, spacing);
       morph.setXYZ(index, ranges.morphStart(node.level), ranges.morphEnd(node.level), node.skirts);
     });
     data.needsUpdate = true;

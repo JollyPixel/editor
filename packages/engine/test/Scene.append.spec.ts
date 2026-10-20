@@ -8,74 +8,17 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Logger } from "../src/systems/Logger.ts";
 import { Actor } from "../src/actor/index.ts";
 import { Scene } from "../src/systems/scene/Scene.ts";
-import { SceneManager } from "../src/systems/scene/SceneManager.ts";
-import { createSceneAssets, type SceneAssets } from "./sceneAssets.ts";
+import {
+  ConcreteScene,
+  createSceneSetup,
+  activateScene,
+  activateAppendedScene
+} from "./helpers/sceneSetup.ts";
 
 // CONSTANTS
 const kDeltaTime = 1 / 60;
-
-class ConcreteScene extends Scene {
-  awakeSpy = mock.fn();
-  startSpy = mock.fn();
-  updateSpy = mock.fn();
-  fixedUpdateSpy = mock.fn();
-  destroySpy = mock.fn();
-  override awake(): void {
-    this.awakeSpy();
-  }
-
-  override start(): void {
-    this.startSpy();
-  }
-
-  override update(deltaTime: number): void {
-    this.updateSpy(deltaTime);
-  }
-
-  override fixedUpdate(deltaTime: number): void {
-    this.fixedUpdateSpy(deltaTime);
-  }
-
-  override destroy(): void {
-    this.destroySpy();
-  }
-}
-
-function createSceneSetup(
-  assets: SceneAssets = createSceneAssets()
-) {
-  const sm = new SceneManager();
-  const world = {
-    logger: new Logger(),
-    sceneManager: sm,
-    assetCoordinator: assets.coordinator,
-    createActor(name: string) {
-      return new Actor(this as any, { name });
-    }
-  };
-  sm.bindWorld(world as any);
-
-  return { sm, world };
-}
-
-function activateScene(
-  sceneManager: SceneManager,
-  scene: Scene
-): void {
-  sceneManager.loadScene(scene);
-  sceneManager.beginFrame();
-}
-
-function activateAppendedScene(
-  sceneManager: SceneManager,
-  scene: Scene
-): void {
-  sceneManager.appendScene(scene);
-  sceneManager.beginFrame();
-}
 
 describe("Scene", () => {
   beforeEach(() => {

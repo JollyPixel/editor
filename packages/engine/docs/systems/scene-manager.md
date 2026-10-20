@@ -84,6 +84,24 @@ Different appended scenes load independently. Calling `removeScene()` before
 one activates cancels its load. A replacement takes priority at a frame
 boundary and cancels additive requests that have not activated yet.
 
+## Unloading the current scene
+
+`unloadScene(scene)` tears `scene` down at once when it is the current scene:
+appended scenes and `scene` are destroyed, then every actor, and append loads
+that have not activated yet are cancelled. Afterwards `currentScene` is `null`.
+A replacement load of `scene` that has not activated yet is cancelled. Any
+other scene is left untouched, and a second call is a no-op.
+
+The teardown is immediate rather than deferred to the next `beginFrame()`, so
+a dispose path can release the scene's resources right after the call even
+when no further frame runs. Call it outside a frame where possible. When it
+runs during `update()` or `fixedUpdate()`, the rest of that frame skips the
+torn-down actors and scenes.
+
+```ts
+sceneManager.unloadScene(editorScene);
+```
+
 ## Observing loads
 
 `SceneManager.sceneLoad` points to the latest replacement request. The manager
@@ -134,6 +152,8 @@ class SceneManager<TContext> {
     scene: Scene<TContext>,
     options?: SceneLoadOptions
   ): SceneLoad<TContext>;
+
+  unloadScene(scene: Scene<TContext>): void;
 
   /** Queues `component.start()` for the next frame its actor is registered. */
   scheduleStart(component: Component): void;

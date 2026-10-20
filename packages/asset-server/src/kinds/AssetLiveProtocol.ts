@@ -4,6 +4,7 @@ import type {
   NetworkCommandHeader,
   RoomBroadcast
 } from "@jolly-pixel/network";
+import type * as z from "zod/mini";
 
 // CONSTANTS
 export const ASSET_ROOM_DELETED = "deleted";
@@ -35,24 +36,26 @@ export interface AssetArbitration<
   commit?(version?: number): void;
 }
 
-export interface AssetRelaySchemas {
+export interface AssetRelaySchemas<
+  TInbound extends object = object
+> {
   /**
    * Client messages the relay receives. Each one carries a literal tag on the
    * command protocol's discriminator that no command uses.
    */
-  readonly inbound: readonly Schema[];
+  readonly inbound: readonly z.core.$ZodType<TInbound>[];
   /**
    * Messages the relay sends to clients, tagged by a literal `type`.
    */
   readonly outbound: readonly Schema[];
 }
 
-export interface AssetRelay {
-  readonly schemas: AssetRelaySchemas;
-
+export interface AssetRelay<
+  TInbound extends object = object
+> {
   receive(
     clientId: string,
-    message: unknown,
+    message: TInbound,
     room: RoomBroadcast
   ): void;
 
@@ -62,7 +65,8 @@ export interface AssetRelay {
 }
 
 export interface AssetLiveProtocol<
-  TCommand extends AssetCommandHeader = AssetCommandHeader
+  TCommand extends AssetCommandHeader = AssetCommandHeader,
+  TRelay extends object = never
 > {
   readonly snapshotSchema: Schema;
 
@@ -88,5 +92,5 @@ export interface AssetLiveProtocol<
     version: number
   ): void;
 
-  readonly relay?: AssetRelay;
+  readonly relay?: AssetRelay<TRelay>;
 }

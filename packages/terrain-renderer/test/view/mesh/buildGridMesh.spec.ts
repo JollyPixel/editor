@@ -3,12 +3,11 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { quadDiagonal } from "#src/document/quadDiagonal.ts";
 import {
   buildGridMesh,
-  GridMeshProvider,
-  quadDiagonal,
   type NodeMeshData
-} from "#src/index.ts";
+} from "#src/view/mesh/buildGridMesh.ts";
 
 // CONSTANTS
 const kResolution = 8;
@@ -192,14 +191,5 @@ describe("buildGridMesh", () => {
   test("rejects an odd or too small resolution", () => {
     assert.throws(() => buildGridMesh(7), RangeError);
     assert.throws(() => buildGridMesh(0), RangeError);
-  });
-});
-
-describe("GridMeshProvider", () => {
-  test("shares one mesh per resolution", () => {
-    const provider = new GridMeshProvider();
-
-    assert.equal(provider.mesh(32), provider.mesh(32));
-    assert.equal(provider.mesh(16).resolution, 16);
   });
 });

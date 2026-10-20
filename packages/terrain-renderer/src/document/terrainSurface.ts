@@ -4,14 +4,21 @@ import {
   ChunkCoord
 } from "./ChunkCoord.ts";
 import { quadDiagonal } from "./quadDiagonal.ts";
-import type { TerrainChunk } from "./TerrainChunk.ts";
+import type { SampleBlock } from "./SampleBlock.ts";
+import type {
+  HeightRange,
+  TerrainChunk
+} from "./TerrainChunk.ts";
 import type { TerrainReader } from "./TerrainDocument.ts";
+import {
+  cross,
+  dot,
+  subtract,
+  type Point3
+} from "../math/point3.ts";
 
-export interface Point3 {
-  readonly x: number;
-  readonly y: number;
-  readonly z: number;
-}
+// CONSTANTS
+const kEdgeTolerance = 1e-9;
 
 export interface TerrainRay {
   readonly origin: Point3;
@@ -32,10 +39,87 @@ export interface TerrainHit {
 
 type Triangle = readonly [Point3, Point3, Point3];
 
-interface ChunkSpan {
-  readonly chunk: TerrainChunk;
+interface QuadCorner {
+  x: number;
+  y: number;
+  z: number;
+}
+
+interface RayInterval {
   readonly enter: number;
   readonly exit: number;
+}
+
+interface ChunkSpan extends RayInterval {
+  readonly quads: ChunkQuads;
+}
+
+class ChunkQuads {
+  readonly chunk: TerrainChunk;
+
+  #blocks: readonly SampleBlock[];
+  #corners: readonly [QuadCorner, QuadCorner, QuadCorner, QuadCorner];
+  #main: readonly Triangle[];
+  #anti: readonly Triangle[];
+
+  constructor(
+    terrain: TerrainReader,
+    chunk: TerrainChunk
+  ) {
+    const { x, z } = chunk.coord;
+    this.chunk = chunk;
+    this.#blocks = [[0, 0], [1, 0], [0, 1], [1, 1]].map(
+      ([dx, dz]) => terrain.sampleBlock(new ChunkCoord(x + dx, z + dz))
+    );
+    const c00 = { x: 0, y: 0, z: 0 };
+    const c10 = { x: 0, y: 0, z: 0 };
+    const c01 = { x: 0, y: 0, z: 0 };
+    const c11 = { x: 0, y: 0, z: 0 };
+    this.#corners = [c00, c10, c01, c11];
+    this.#main = [[c00, c10, c11], [c00, c11, c01]];
+    this.#anti = [[c00, c10, c01], [c10, c11, c01]];
+  }
+
+  get heightRange(): HeightRange {
+    let min = Infinity;
+    let max = -Infinity;
+    for (const block of this.#blocks) {
+      const range = block.heightRange;
+      if (range !== null) {
+        min = Math.min(min, range.min);
+        max = Math.max(max, range.max);
+      }
+    }
+
+    return { min, max };
+  }
+
+  triangles(
+    quadX: number,
+    quadZ: number
+  ): readonly Triangle[] {
+    const origin = this.chunk.coord.originSample;
+    const eastBlock = quadX + 1 - origin.x < CHUNK_SAMPLES ? 0 : 1;
+    const northBlock = quadZ + 1 - origin.z < CHUNK_SAMPLES ? 0 : 2;
+    const [c00, c10, c01, c11] = this.#corners;
+    this.#place(c00, quadX, quadZ, 0);
+    this.#place(c10, quadX + 1, quadZ, eastBlock);
+    this.#place(c01, quadX, quadZ + 1, northBlock);
+    this.#place(c11, quadX + 1, quadZ + 1, eastBlock + northBlock);
+
+    return quadDiagonal(quadX, quadZ) === "main" ? this.#main : this.#anti;
+  }
+
+  #place(
+    corner: QuadCorner,
+    sampleX: number,
+    sampleZ: number,
+    block: number
+  ): void {
+    corner.x = sampleX;
+    corner.y = this.#blocks[block].height(sampleX, sampleZ);
+    corner.z = sampleZ;
+  }
 }
 
 export function surfaceHeight(
@@ -45,15 +129,20 @@ export function surfaceHeight(
 ): number | null {
   const quadX = Math.floor(x);
   const quadZ = Math.floor(z);
-  const chunk = terrain.chunk(ChunkCoord.containing(quadX, quadZ));
-  if (chunk === undefined) {
+  const coord = ChunkCoord.containing(quadX, quadZ);
+  if (!terrain.has(coord)) {
     return null;
   }
 
-  const h00 = cornerHeight(terrain, chunk, quadX, quadZ);
-  const h10 = cornerHeight(terrain, chunk, quadX + 1, quadZ);
-  const h01 = cornerHeight(terrain, chunk, quadX, quadZ + 1);
-  const h11 = cornerHeight(terrain, chunk, quadX + 1, quadZ + 1);
+  const origin = coord.originSample;
+  const sampler: Pick<SampleBlock, "height"> =
+    quadX + 1 - origin.x < CHUNK_SAMPLES && quadZ + 1 - origin.z < CHUNK_SAMPLES ?
+      terrain.sampleBlock(coord) :
+      { height: (sampleX, sampleZ) => terrain.sampleAt(sampleX, sampleZ) };
+  const h00 = sampler.height(quadX, quadZ);
+  const h10 = sampler.height(quadX + 1, quadZ);
+  const h01 = sampler.height(quadX, quadZ + 1);
+  const h11 = sampler.height(quadX + 1, quadZ + 1);
   const fx = x - quadX;
   const fz = z - quadZ;
   if (quadDiagonal(quadX, quadZ) === "main") {
@@ -74,9 +163,16 @@ export function raycastTerrain(
 ): TerrainHit | null {
   const spans: ChunkSpan[] = [];
   for (const chunk of terrain.chunks()) {
-    const span = chunkSpan(terrain, chunk, ray, maxDistance);
+    const footprint = footprintSpan(chunk, ray, maxDistance);
+    if (footprint === null) {
+      continue;
+    }
+
+    const quads = new ChunkQuads(terrain, chunk);
+    const { min, max } = quads.heightRange;
+    const span = clipSlab(footprint, ray.origin.y, ray.direction.y, min, max);
     if (span !== null) {
-      spans.push(span);
+      spans.push({ quads, ...span });
     }
   }
   spans.sort((left, right) => left.enter - right.enter);
@@ -87,7 +183,7 @@ export function raycastTerrain(
       break;
     }
 
-    const hit = marchChunk(terrain, span, ray);
+    const hit = marchChunk(span, ray);
     const closer = hit !== null && (nearest === null || hit.distance < nearest.distance);
     if (closer && hit.distance <= maxDistance) {
       nearest = hit;
@@ -97,70 +193,57 @@ export function raycastTerrain(
   return nearest;
 }
 
-function cornerHeight(
-  terrain: TerrainReader,
-  quadChunk: TerrainChunk,
-  sampleX: number,
-  sampleZ: number
-): number {
-  const owner = terrain.chunk(ChunkCoord.containing(sampleX, sampleZ)) ?? quadChunk;
-  const origin = owner.coord.originSample;
-
-  return owner.height(
-    clampLocal(sampleX - origin.x),
-    clampLocal(sampleZ - origin.z)
-  );
-}
-
-function chunkSpan(
-  terrain: TerrainReader,
+function footprintSpan(
   chunk: TerrainChunk,
   ray: TerrainRay,
   maxDistance: number
-): ChunkSpan | null {
-  let minY = chunk.heightRange.min;
-  let maxY = chunk.heightRange.max;
-  for (let dz = -1; dz <= 1; dz++) {
-    for (let dx = -1; dx <= 1; dx++) {
-      const neighbour = terrain.chunk(new ChunkCoord(chunk.coord.x + dx, chunk.coord.z + dz));
-      if (neighbour !== undefined) {
-        minY = Math.min(minY, neighbour.heightRange.min);
-        maxY = Math.max(maxY, neighbour.heightRange.max);
-      }
-    }
-  }
-
+): RayInterval | null {
   const origin = chunk.coord.originSample;
-  let enter = 0;
-  let exit = maxDistance;
-  for (const [start, direction, min, max] of [
-    [ray.origin.x, ray.direction.x, origin.x, origin.x + CHUNK_SAMPLES],
-    [ray.origin.y, ray.direction.y, minY, maxY],
-    [ray.origin.z, ray.direction.z, origin.z, origin.z + CHUNK_SAMPLES]
-  ]) {
-    if (direction === 0) {
-      if (start < min || start > max) {
-        return null;
-      }
-      continue;
-    }
-
-    const near = (min - start) / direction;
-    const far = (max - start) / direction;
-    enter = Math.max(enter, Math.min(near, far));
-    exit = Math.min(exit, Math.max(near, far));
+  const alongX = clipSlab(
+    { enter: 0, exit: maxDistance },
+    ray.origin.x,
+    ray.direction.x,
+    origin.x,
+    origin.x + CHUNK_SAMPLES
+  );
+  if (alongX === null) {
+    return null;
   }
 
-  return enter <= exit ? { chunk, enter, exit } : null;
+  return clipSlab(
+    alongX,
+    ray.origin.z,
+    ray.direction.z,
+    origin.z,
+    origin.z + CHUNK_SAMPLES
+  );
+}
+
+function clipSlab(
+  interval: RayInterval,
+  start: number,
+  direction: number,
+  min: number,
+  max: number
+): RayInterval | null {
+  if (direction === 0) {
+    return start < min || start > max ? null : interval;
+  }
+
+  const near = (min - start) / direction;
+  const far = (max - start) / direction;
+  const enter = Math.max(interval.enter, Math.min(near, far));
+  const exit = Math.min(interval.exit, Math.max(near, far));
+
+  return enter <= exit ? { enter, exit } : null;
 }
 
 function marchChunk(
-  terrain: TerrainReader,
-  { chunk, enter, exit }: ChunkSpan,
+  { quads, enter, exit }: ChunkSpan,
   ray: TerrainRay
 ): TerrainHit | null {
   const { origin: start, direction } = ray;
-  const origin = chunk.coord.originSample;
+  const origin = quads.chunk.coord.originSample;
   const last = { x: origin.x + CHUNK_SAMPLES - 1, z: origin.z + CHUNK_SAMPLES - 1 };
   let quadX = clamp(Math.floor(start.x + direction.x * enter), origin.x, last.x);
   let quadZ = clamp(Math.floor(start.z + direction.z * enter), origin.z, last.z);
@@ -168,25 +251,25 @@ function marchChunk(
   const stepZ = Math.sign(direction.z);
   const deltaX = Math.abs(1 / direction.x);
   const deltaZ = Math.abs(1 / direction.z);
-  let nextX = boundary(start.x, direction.x, quadX);
-  let nextZ = boundary(start.z, direction.z, quadZ);
+  let eastBlock = boundary(start.x, direction.x, quadX);
+  let northBlock = boundary(start.z, direction.z, quadZ);
 
   while (quadX >= origin.x && quadX <= last.x && quadZ >= origin.z && quadZ <= last.z) {
-    const hit = hitQuad(terrain, chunk, ray, quadX, quadZ);
+    const hit = hitQuad(quads.triangles(quadX, quadZ), ray);
     if (hit !== null) {
       return hit;
     }
-    if (Math.min(nextX, nextZ) > exit) {
+    if (Math.min(eastBlock, northBlock) > exit) {
       return null;
     }
 
-    if (nextX < nextZ) {
+    if (eastBlock < northBlock) {
       quadX += stepX;
-      nextX += deltaX;
+      eastBlock += deltaX;
     }
     else {
       quadZ += stepZ;
-      nextZ += deltaZ;
+      northBlock += deltaZ;
     }
   }
 
@@ -194,23 +277,9 @@ function marchChunk(
 }
 
 function hitQuad(
-  terrain: TerrainReader,
-  chunk: TerrainChunk,
-  ray: TerrainRay,
-  quadX: number,
-  quadZ: number
+  triangles: readonly Triangle[],
+  ray: TerrainRay
 ): TerrainHit | null {
-  const [c00, c10, c01, c11] = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([dx, dz]) => {
-    return {
-      x: quadX + dx,
-      y: cornerHeight(terrain, chunk, quadX + dx, quadZ + dz),
-      z: quadZ + dz
-    };
-  });
-  const triangles: Triangle[] = quadDiagonal(quadX, quadZ) === "main" ?
-    [[c00, c10, c11], [c00, c11, c01]] :
-    [[c00, c10, c01], [c10, c11, c01]];
-
   let nearest: TerrainHit | null = null;
   for (const triangle of triangles) {
     const hit = hitTriangle(ray, triangle);
@@ -236,12 +305,12 @@ function hitTriangle(
 
   const toOrigin = subtract(origin, a);
   const u = dot(toOrigin, p) / determinant;
-  if (u < 0 || u > 1) {
+  if (u < -kEdgeTolerance || u > 1 + kEdgeTolerance) {
     return null;
   }
   const q = cross(toOrigin, edge1);
   const v = dot(direction, q) / determinant;
-  if (v < 0 || u + v > 1) {
+  if (v < -kEdgeTolerance || u + v > 1 + kEdgeTolerance) {
     return null;
   }
   const distance = dot(edge2, q) / determinant;
@@ -278,41 +347,10 @@ function boundary(
   return ((direction > 0 ? quad + 1 : quad) - start) / direction;
 }
 
-function subtract(
-  left: Point3,
-  right: Point3
-): Point3 {
-  return { x: left.x - right.x, y: left.y - right.y, z: left.z - right.z };
-}
-
-function cross(
-  left: Point3,
-  right: Point3
-): Point3 {
-  return {
-    x: left.y * right.z - left.z * right.y,
-    y: left.z * right.x - left.x * right.z,
-    z: left.x * right.y - left.y * right.x
-  };
-}
-
-function dot(
-  left: Point3,
-  right: Point3
-): number {
-  return left.x * right.x + left.y * right.y + left.z * right.z;
-}
-
 function clamp(
   value: number,
   min: number,
   max: number
 ): number {
   return Math.min(Math.max(value, min), max);
-}
-
-function clampLocal(
-  local: number
-): number {
-  return clamp(local, 0, CHUNK_SAMPLES - 1);
 }

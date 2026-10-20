@@ -34,14 +34,25 @@ The room validates and arbitrates a command, appends it, then commits and
 broadcasts it. The event store folds the command into live state. A failed
 append sends `rejected` to the sender and leaves the room state unchanged.
 
-A live protocol may also carry a `relay` for ephemeral messages that are
-neither arbitrated nor logged, such as live previews of an edit. Its
-`schemas.inbound` join the command protocol, each with its own literal tag on
-the command discriminator, and its `schemas.outbound` join the notices the room
-may send. The room hands each relay message to `receive(clientId, message,
-room)`, which forwards it with `room.sendTo` or `room.broadcast`, and calls
-`leave(clientId)` when a member disconnects. A relay tag shared with a command
-or with another relay message fails room resolution.
+A kind may also relay ephemeral messages that are neither arbitrated nor
+logged, such as live previews of an edit. The kind declares their schemas once,
+as `commands.relay`: `inbound` joins the command protocol, each schema with its
+own literal tag on the command discriminator, and `outbound` joins the notices
+the room may send. Typing `AssetCommands` with the inbound message type ties
+the schemas to the relay. A kind that relays nothing keeps the `never` default,
+which refuses relay schemas and types its room messages as its commands alone.
+The backend stores handlers of every kind as `AnyAssetKindHandler`.
+`registerAssetRooms` builds the room protocols of every live kind when it
+starts, once per declaration, so a relay tag shared with a command or with
+another relay message fails at startup.
+
+Each live room keeps its own state in `live().relay`. A kind declares the
+schemas and the relay together: a room whose `commands.relay` and
+`live().relay` are not both present or both absent throws a `TypeError` when
+it opens. The room hands every relay message, already validated and typed, to
+`receive(clientId, message, room)`, which forwards it with `room.sendTo` or
+`room.broadcast`, and calls `leave(clientId)` when a member disconnects. When `live()` or the restore of
+recorded commands throws, the room stays closed and releases the asset state.
 
 ## Changes outside the backend
 

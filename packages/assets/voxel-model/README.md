@@ -61,13 +61,13 @@ A model references one pixel-art texture, which only stores pixels: each block o
 import { assetRoomName } from "@jolly-pixel/asset";
 import { Client } from "@jolly-pixel/network/client";
 import {
-  SyncedModelDocument,
+  voxelModelDocumentKind,
   type VoxelModelRoom
 } from "@jolly-pixel/asset.voxel-model/client";
 
 const client = new Client();
 const room: VoxelModelRoom = client.room(assetRoomName("voxelmodel", assetId));
-const synced = new SyncedModelDocument(room);
+const synced = voxelModelDocumentKind().createDocument(room);
 
 room.join();
 await synced.ready;
@@ -81,8 +81,8 @@ The first snapshot loads the document. Local edits go to the room and stay pendi
 ## 📚 API
 
 - `@jolly-pixel/asset.voxel-model` exports `voxelModelAssetKind`, `VoxelModelState`, the document codec and `voxelModelDocumentSchema`, the `VOXEL_MODEL_ASSET` descriptor, `ASSET_KINDS` (the kind package, taking `{ snapshot? }` options), the kind and event constants, and everything the client entry point exports from the model.
-- `@jolly-pixel/asset.voxel-model/client` exports the [model document](./docs/model.md) (`ModelDocument`, `ModelTree`, `BlockTransform`, `BlockUvLayouts`), the [material library](./docs/materials.md) (`MaterialSurface`, the material clipboard codec), the [animation bindings](./docs/animation.md) (`TrackBinding`, `buildBlockPath`), the [undo keys](./docs/history.md) (`modelHistoryKeys`), `SyncedModelDocument`, `voxelModelWriteKeys`, `voxelModelDocumentKind`, and the wire types.
-- `@jolly-pixel/asset.voxel-model/server` exports `VoxelModelCommandArbiter`, the conflict keys, and the command and snapshot schemas.
+- `@jolly-pixel/asset.voxel-model/client` exports the [model document](./docs/model.md) (`ModelDocument`, `ModelTree`, `BlockTransform`, `BlockUvLayouts`), the [material library](./docs/materials.md) (`MaterialSurface`, the material clipboard codec), the [animation bindings](./docs/animation.md) (`TrackBinding`, `buildBlockPath`), the [undo keys](./docs/history.md) (`modelHistoryKeys`), `voxelModelDocumentKind` and its `SyncedModelDocument` type, `voxelModelWriteKeys`, and the wire types.
+- `@jolly-pixel/asset.voxel-model/server` exports the conflict keys and the command and snapshot schemas.
 
 The package root imports server dependencies. Browser code should use the client entry point. See the [network API](./docs/network.md) for commands and sync behavior and [architecture](./ARCHITECTURE.md) for tree rules and conflict keys.
 

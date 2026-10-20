@@ -42,21 +42,25 @@ admitted and overwrites the tile.
 A stroke reaches peers in two tiers.
 
 - **Live.** While the stroke runs, the author sends ephemeral tile patches
-  every 100 ms. They are neither arbitrated nor logged. They only show the
-  stroke as it happens, and the commit overwrites them.
-- **Commit.** One arbitrated command holds the tiles the stroke changed. It is
+  every 100 ms, at most 1024 tiles per message. They are neither arbitrated
+  nor logged. They only show the stroke as it happens, and the commit
+  overwrites them.
+- **Commit.** Arbitrated commands hold the tiles the stroke changed, at most
+  1024 tiles per command, so a wide commit is split into several. A commit is
   sent when the stroke ends, and earlier during a long stroke: every 2 s, or
-  once 4 chunks have been touched. That bounds how much a conflict can roll
-  back.
+  once 4 chunks have been touched and at least 250 ms have passed since the
+  last commit. That bounds how much a conflict can roll back. The 250 ms floor
+  keeps a large brush, which touches 4 chunks in one frame, from committing
+  every frame; it allows at most 4 such commits per second.
 
-The event log records one command per commit, not one every 100 ms.
+The event log records the commands of each commit, not the live patches.
 
 ## Proximity
 
 Each client publishes its interest region: the chunk under its camera and two
 radii.
 
-- `presenceRadius`: 4 chunks by default, set in the view settings. The
+- Presence radius: 4 chunks (`DEFAULT_PRESENCE_RADIUS`), at most 16. The
   region is the square of chunks within that many chunks of the centre on
   each axis.
 - `streamRadius`: larger, set by the LoD. It decides which chunks are loaded.
@@ -74,9 +78,8 @@ room-wide.
 
 ### Routing
 
-The interest region and the brush ring are presence values. Presence goes to
-the whole room, and each client draws a peer's ring only inside its own
-presence radius.
+The brush ring is a presence value. Presence goes to the whole room, and each
+client draws a peer's ring only inside its own interest region.
 
 Live patches are messages to the terrain kind's server extension. The
 extension forwards each one with `sendTo` to the peers whose presence region
@@ -84,12 +87,21 @@ overlaps the patch's chunks. `@jolly-pixel/network` does not change for this;
 routing moves into it only if another kind needs it.
 
 The extension is the terrain live protocol's relay (`TerrainLiveRelay`).
-Server extensions do not see presence updates, so each client also sends its
-interest region to the relay as `interest-changed`, and again after a resync.
-Live patches travel as `live-patched`. A peer that applies one keeps the
-heights it replaced. A commit or another change to the tile discards them;
-they are written back when the author leaves, or when no commit arrives within
-5 s of the author's last live patch.
+Each client sends its interest region to the relay as `interest-changed` when
+its camera enters another chunk, and again after a resync. Live patches travel
+as `live-patched`.
+
+A peer draws live patches in a preview layer over its document and never
+writes them into the document, so an undo or a rewind cannot keep them. A
+commit to a tile clears the previews of that tile. A rewind or a reload of the
+document keeps the previews on the chunks that still exist and drops the rest.
+The author's preview is dropped when the author leaves, or when no commit
+arrives within 5 s of its last live patch. The author's own stroke goes
+through the same layer until it commits, and its live patches are the tiles
+it writes there. A client runs one local stroke at a time. Its
+`stroke.terrain` shows the document with only that stroke's uncommitted tiles
+over it. Writes after the stroke ends are ignored, and tearing the preview
+down commits a stroke still in progress.
 
 ## Asset parts
 

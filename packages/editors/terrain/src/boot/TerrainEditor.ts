@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import type { HistoryStepInfo } from "@jolly-pixel/history";
 import type { Runtime } from "@jolly-pixel/runtime";
 import {
   TERRAIN_KIND,
@@ -71,69 +72,24 @@ export class TerrainEditor {
       runtime: editorRuntime
     } = context;
     const target = session.targetLease(kTerrainKind);
-    const toolbar = document.querySelector("jolly-editor-toolbar");
-    if (toolbar !== null) {
-      toolbar.sources = context.toolbar;
-    }
+    const disposables: Array<() => void> = [];
+    try {
+      const scene = await mountScene(context, target, disposables);
 
-    const sculpt = new SculptSettings(new LocalStorageAdapter());
-    const history = createTerrainHistory(target.document);
-    const log = new LogQueue();
-    history.on("skipped", (_scope, step) => {
-      log.push(skippedMessage(step));
-    });
-    const activityLog = document.querySelector("jolly-log");
-    if (activityLog !== null) {
-      log.subscribe((entries) => {
-        activityLog.entries = entries;
+      return new TerrainEditor({
+        runtime: editorRuntime.runtime,
+        scene,
+        session,
+        target,
+        disposables
       });
     }
-    const sculptToolbar = document.querySelector("terrain-sculpt-toolbar");
-    if (sculptToolbar !== null) {
-      sculptToolbar.settings = sculpt;
-      sculptToolbar.history = history;
+    catch (error) {
+      disposeAll(disposables);
+      target.release();
+
+      throw error;
     }
-
-    const viewSettings = new ViewSettings(new LocalStorageAdapter());
-    const viewToolbar = document.querySelector("terrain-view-toolbar");
-    if (viewToolbar !== null) {
-      viewToolbar.settings = viewSettings;
-    }
-
-    const scene = new TerrainEditorScene({
-      document: target.document,
-      sculpt,
-      viewSettings,
-      history,
-      room: target.room
-    });
-    await editorRuntime.load(scene);
-
-    const presence = new PresenceStore();
-    const roster = new PeerRoster({
-      room: target.room,
-      publish: (peers) => {
-        presence.peers = peers;
-      },
-      log
-    });
-    const disposables = [() => roster.dispose()];
-    const presenceStack = document.querySelector("jolly-presence-stack");
-    if (presenceStack !== null) {
-      disposables.push(bindPresenceStack(
-        presenceStack,
-        presence,
-        (clientId) => scene.teleportToPeer(clientId)
-      ));
-    }
-
-    return new TerrainEditor({
-      runtime: editorRuntime.runtime,
-      scene,
-      session,
-      target,
-      disposables
-    });
   }
 
   #target: AssetLease<TerrainCommandDocument>;
@@ -155,7 +111,7 @@ export class TerrainEditor {
     this.ready = parts.target.ready;
   }
 
-  get view(): TerrainView | null {
+  get view(): TerrainView {
     return this.scene.view;
   }
 
@@ -164,9 +120,94 @@ export class TerrainEditor {
   }
 
   dispose(): void {
-    for (const dispose of this.#disposables.splice(0)) {
-      dispose();
-    }
+    disposeAll(this.#disposables);
     this.#target.release();
+  }
+}
+
+async function mountScene(
+  context: RuntimeEditorContext,
+  target: AssetLease<TerrainCommandDocument>,
+  disposables: Array<() => void>
+): Promise<TerrainEditorScene> {
+  const toolbar = document.querySelector("jolly-editor-toolbar");
+  if (toolbar !== null) {
+    toolbar.sources = context.toolbar;
+  }
+
+  const sculpt = new SculptSettings(new LocalStorageAdapter());
+  const history = createTerrainHistory(target.document);
+  disposables.push(() => history.dispose());
+  const log = new LogQueue();
+  function onSkipped(
+    _scope: string,
+    step: HistoryStepInfo
+  ): void {
+    log.push(skippedMessage(step));
+  }
+  history.on("skipped", onSkipped);
+  disposables.push(() => history.off("skipped", onSkipped));
+  const activityLog = document.querySelector("jolly-log");
+  if (activityLog !== null) {
+    disposables.push(log.subscribe((entries) => {
+      activityLog.entries = entries;
+    }));
+  }
+  const sculptToolbar = document.querySelector("terrain-sculpt-toolbar");
+  if (sculptToolbar !== null) {
+    sculptToolbar.settings = sculpt;
+    sculptToolbar.history = history;
+    disposables.push(() => {
+      sculptToolbar.settings = null;
+      sculptToolbar.history = null;
+    });
+  }
+
+  const viewSettings = new ViewSettings(new LocalStorageAdapter());
+  const viewToolbar = document.querySelector("terrain-view-toolbar");
+  if (viewToolbar !== null) {
+    viewToolbar.settings = viewSettings;
+    disposables.push(() => {
+      viewToolbar.settings = null;
+    });
+  }
+
+  const scene = new TerrainEditorScene({
+    document: target.document,
+    sculpt,
+    viewSettings,
+    history,
+    room: target.room
+  });
+  const { sceneManager } = context.runtime.runtime.world;
+  disposables.push(() => sceneManager.unloadScene(scene));
+  await context.runtime.load(scene);
+
+  const presence = new PresenceStore();
+  const roster = new PeerRoster({
+    room: target.room,
+    publish: (peers) => {
+      presence.peers = peers;
+    },
+    log
+  });
+  disposables.push(() => roster.dispose());
+  const presenceStack = document.querySelector("jolly-presence-stack");
+  if (presenceStack !== null) {
+    disposables.push(bindPresenceStack(
+      presenceStack,
+      presence,
+      (clientId) => scene.teleportToPeer(clientId)
+    ));
+  }
+
+  return scene;
+}
+
+function disposeAll(
+  disposables: Array<() => void>
+): void {
+  for (const dispose of disposables.splice(0).reverse()) {
+    dispose();
   }
 }

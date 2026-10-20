@@ -2,21 +2,37 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { KeyedCommandArbiter } from "@jolly-pixel/network";
+
 // Import Internal Dependencies
-import {
-  VoxelModelCommandArbiter,
-  type VoxelModelArbiterState
-} from "#src/network/VoxelModelCommandArbiter.ts";
-import type { VoxelModelNetworkCommand } from "#src/network/types.ts";
+import { voxelModelConflictKeys } from "#src/network/VoxelModelCommandKeys.ts";
+import type {
+  VoxelModelCommand,
+  VoxelModelNetworkCommand
+} from "#src/network/types.ts";
 import { TRANSFORM, networkCommand } from "../helpers/commands.ts";
 
+interface ArbiterState {
+  accepts(command: VoxelModelCommand): boolean;
+}
+
+type ConflictArbiter = KeyedCommandArbiter<VoxelModelNetworkCommand, ArbiterState>;
+
 // CONSTANTS
-const kAcceptAll: VoxelModelArbiterState = {
+const kAcceptAll: ArbiterState = {
   accepts: () => true
 };
 
+function conflictArbiter(): ConflictArbiter {
+  return new KeyedCommandArbiter<VoxelModelNetworkCommand, ArbiterState>({
+    accepts: (state, command) => state.accepts(command),
+    keys: voxelModelConflictKeys
+  });
+}
+
 function admitted(
-  arbiter: VoxelModelCommandArbiter,
+  arbiter: ConflictArbiter,
   command: VoxelModelNetworkCommand,
   state = kAcceptAll
 ): VoxelModelNetworkCommand | null {
@@ -24,7 +40,7 @@ function admitted(
 }
 
 function commit(
-  arbiter: VoxelModelCommandArbiter,
+  arbiter: ConflictArbiter,
   command: VoxelModelNetworkCommand
 ): void {
   arbiter.admit(kAcceptAll, command)!.commit();
@@ -59,25 +75,16 @@ function moved(
   }, overrides);
 }
 
-describe("VoxelModelCommandArbiter.admit / commit", () => {
-  it("rejects a command the state does not accept", () => {
-    const arbiter = new VoxelModelCommandArbiter();
-
-    assert.equal(
-      admitted(arbiter, transformed(), { accepts: () => false }),
-      null
-    );
-  });
-
+describe("voxel-model conflict keys, admit / commit", () => {
   it("accepts the first command for a key", () => {
-    const arbiter = new VoxelModelCommandArbiter();
+    const arbiter = conflictArbiter();
     const command = transformed();
 
     assert.equal(admitted(arbiter, command), command);
   });
 
   it("accepts a later timestamp and rejects an earlier one, per key", () => {
-    const arbiter = new VoxelModelCommandArbiter();
+    const arbiter = conflictArbiter();
     const first = transformed("node-1", { clientId: "A", timestamp: 900 });
     const later = transformed("node-1", { clientId: "B", timestamp: 1500 });
     const stale = transformed("node-1", { clientId: "C", timestamp: 500 });
@@ -92,7 +99,7 @@ describe("VoxelModelCommandArbiter.admit / commit", () => {
   });
 
   it("refuses a removal based on a version older than a peer's edit of the node, as an undo is", () => {
-    const arbiter = new VoxelModelCommandArbiter();
+    const arbiter = conflictArbiter();
     arbiter.admit(kAcceptAll, networkCommand({
       action: "node-renamed",
       id: "x",
@@ -106,7 +113,7 @@ describe("VoxelModelCommandArbiter.admit / commit", () => {
   });
 
   it("never conflicts across different ids", () => {
-    const arbiter = new VoxelModelCommandArbiter();
+    const arbiter = conflictArbiter();
     commit(arbiter, transformed("a", { clientId: "A", timestamp: 900 }));
 
     const other = transformed("b", { clientId: "B", timestamp: 100 });
@@ -115,7 +122,7 @@ describe("VoxelModelCommandArbiter.admit / commit", () => {
   });
 
   it("never conflicts a rename with a transform of the same node", () => {
-    const arbiter = new VoxelModelCommandArbiter();
+    const arbiter = conflictArbiter();
     commit(arbiter, transformed("x", { clientId: "A", timestamp: 900 }));
 
     const renamed = networkCommand({
@@ -128,7 +135,7 @@ describe("VoxelModelCommandArbiter.admit / commit", () => {
   });
 
   it("settles two concurrent moves of one node as a whole", () => {
-    const arbiter = new VoxelModelCommandArbiter();
+    const arbiter = conflictArbiter();
     commit(arbiter, moved("x", ["x"], { clientId: "A", timestamp: 900 }));
 
     assert.equal(
@@ -138,7 +145,7 @@ describe("VoxelModelCommandArbiter.admit / commit", () => {
   });
 
   it("rejects a stale move that rewrites a freshly transformed block", () => {
-    const arbiter = new VoxelModelCommandArbiter();
+    const arbiter = conflictArbiter();
     commit(arbiter, transformed("arm", { clientId: "A", timestamp: 900 }));
 
     assert.equal(
@@ -148,7 +155,7 @@ describe("VoxelModelCommandArbiter.admit / commit", () => {
   });
 
   it("settles material changes per surface field", () => {
-    const arbiter = new VoxelModelCommandArbiter();
+    const arbiter = conflictArbiter();
     commit(arbiter, networkCommand({
       action: "material-changed",
       id: "glass",
@@ -171,7 +178,7 @@ describe("VoxelModelCommandArbiter.admit / commit", () => {
   });
 
   it("always admits unarbitrated actions regardless of prior state", () => {
-    const arbiter = new VoxelModelCommandArbiter();
+    const arbiter = conflictArbiter();
     const removed = networkCommand({
       action: "node-removed",
       id: "node-1"
@@ -183,9 +190,9 @@ describe("VoxelModelCommandArbiter.admit / commit", () => {
   });
 });
 
-describe("VoxelModelCommandArbiter.restore", () => {
+describe("voxel-model conflict keys, restore", () => {
   it("records a past rename, so an older replay of it loses", () => {
-    const arbiter = new VoxelModelCommandArbiter();
+    const arbiter = conflictArbiter();
     arbiter.restore(
       networkCommand({ action: "node-renamed", id: "a", name: "B" }, { clientId: "client-B" }),
       9

@@ -4,6 +4,7 @@ import {
   ChunkCoord,
   type ChunkKey
 } from "./ChunkCoord.ts";
+import { SampleBlock } from "./SampleBlock.ts";
 import {
   CHUNK_SAMPLE_COUNT,
   TerrainChunk
@@ -18,6 +19,7 @@ export interface TerrainReader {
   has(coord: ChunkCoord): boolean;
   touches(coord: ChunkCoord): boolean;
   sampleAt(sampleX: number, sampleZ: number): number;
+  sampleBlock(coord: ChunkCoord): SampleBlock;
   seedHeights(coord: ChunkCoord): Float32Array;
 }
 
@@ -96,19 +98,14 @@ export class TerrainDocument implements TerrainReader {
     sampleX: number,
     sampleZ: number
   ): number {
-    const owner = this.#chunks.get(
-      ChunkCoord.containing(sampleX, sampleZ).key
-    ) ?? this.#nearestChunk(sampleX, sampleZ);
-    if (owner === undefined) {
-      return 0;
-    }
+    return this.sampleBlock(ChunkCoord.containing(sampleX, sampleZ))
+      .height(sampleX, sampleZ);
+  }
 
-    const origin = owner.coord.originSample;
-
-    return owner.height(
-      clampLocal(sampleX - origin.x),
-      clampLocal(sampleZ - origin.z)
-    );
+  sampleBlock(
+    coord: ChunkCoord
+  ): SampleBlock {
+    return new SampleBlock(this, coord);
   }
 
   seedHeights(
@@ -119,17 +116,24 @@ export class TerrainDocument implements TerrainReader {
       return heights;
     }
 
+    const block = this.sampleBlock(coord);
+    const source = block.heightRange === null ? this.#nearestSamples() : block;
     const origin = coord.originSample;
     for (let localZ = 0; localZ < CHUNK_SAMPLES; localZ++) {
       for (let localX = 0; localX < CHUNK_SAMPLES; localX++) {
-        heights[localZ * CHUNK_SAMPLES + localX] = this.sampleAt(
-          origin.x + localX,
-          origin.z + localZ
-        );
+        heights[localZ * CHUNK_SAMPLES + localX] =
+          source.height(origin.x + localX, origin.z + localZ);
       }
     }
 
     return heights;
+  }
+
+  #nearestSamples(): Pick<SampleBlock, "height"> {
+    return {
+      height: (sampleX, sampleZ) => this.#nearestChunk(sampleX, sampleZ)
+        ?.nearestHeight(sampleX, sampleZ) ?? 0
+    };
   }
 
   #nearestChunk(
@@ -139,10 +143,7 @@ export class TerrainDocument implements TerrainReader {
     let nearest: TerrainChunk | undefined;
     let nearestDistance = Infinity;
     for (const chunk of this.#chunks.values()) {
-      const origin = chunk.coord.originSample;
-      const dx = sampleX - (origin.x + clampLocal(sampleX - origin.x));
-      const dz = sampleZ - (origin.z + clampLocal(sampleZ - origin.z));
-      const distance = dx * dx + dz * dz;
+      const distance = chunk.squaredDistanceTo(sampleX, sampleZ);
       if (distance < nearestDistance) {
         nearest = chunk;
         nearestDistance = distance;
@@ -151,10 +152,4 @@ export class TerrainDocument implements TerrainReader {
 
     return nearest;
   }
-}
-
-function clampLocal(
-  local: number
-): number {
-  return Math.min(Math.max(local, 0), CHUNK_SAMPLES - 1);
 }

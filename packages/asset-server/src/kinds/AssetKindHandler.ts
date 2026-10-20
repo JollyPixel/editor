@@ -5,7 +5,8 @@ import type { AssetReferenceData } from "@jolly-pixel/asset";
 // Import Internal Dependencies
 import type {
   AssetCommandHeader,
-  AssetLiveProtocol
+  AssetLiveProtocol,
+  AssetRelaySchemas
 } from "./AssetLiveProtocol.ts";
 
 export interface SnapshotPolicy {
@@ -33,10 +34,16 @@ export interface AssetRoomBinding<TState = unknown> {
 
 export interface AssetCommands<
   TState = unknown,
-  TCommand extends AssetCommandHeader = AssetCommandHeader
+  TCommand extends AssetCommandHeader = AssetCommandHeader,
+  TRelay extends object = never
 > {
   readonly eventType: string;
   readonly protocol: MessageProtocol;
+  /**
+   * Ephemeral messages that `live().relay` handles outside arbitration and
+   * the event log.
+   */
+  readonly relay?: AssetRelaySchemas<TRelay>;
 
   apply(
     state: TState,
@@ -45,7 +52,7 @@ export interface AssetCommands<
 
   live?(
     binding: AssetRoomBinding<TState>
-  ): AssetLiveProtocol<TCommand>;
+  ): AssetLiveProtocol<TCommand, TRelay>;
 }
 
 export type AssetConversion = (
@@ -63,13 +70,14 @@ export interface AssetKindCompanion<TState = unknown> {
 
 export interface AssetKindHandler<
   TState = unknown,
-  TCommand extends AssetCommandHeader = AssetCommandHeader
+  TCommand extends AssetCommandHeader = AssetCommandHeader,
+  TRelay extends object = never
 > {
   readonly kind: string;
   readonly extensions: Readonly<Record<string, string>>;
   readonly match?: readonly string[];
   readonly snapshot?: SnapshotPolicy;
-  readonly commands?: AssetCommands<TState, TCommand>;
+  readonly commands?: AssetCommands<TState, TCommand, TRelay>;
   readonly companions?: readonly AssetKindCompanion<TState>[];
   /**
    * Turns another format, keyed by its extension, into this kind's content
@@ -103,3 +111,9 @@ export interface AssetKindHandler<
     idMap: ReadonlyMap<string, string>
   ): void;
 }
+
+export type AnyAssetKindHandler = AssetKindHandler<
+  unknown,
+  AssetCommandHeader,
+  object
+>;

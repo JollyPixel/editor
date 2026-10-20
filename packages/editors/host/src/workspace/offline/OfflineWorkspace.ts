@@ -6,7 +6,7 @@ import {
   type AssetBackend,
   type AssetBackendTuning,
   type AssetEventDataMap,
-  type AssetKindHandler,
+  type AnyAssetKindHandler,
   type AssetSeedMap,
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
@@ -57,7 +57,7 @@ export type OfflineSeed =
   | (() => AssetSeedMap | Promise<AssetSeedMap>);
 
 export interface OfflineWorkspaceOptions {
-  handlers: AssetKindHandler[];
+  handlers: AnyAssetKindHandler[];
   seed?: OfflineSeed;
   storage?: OfflineStorage;
   name?: string;

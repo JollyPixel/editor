@@ -6,22 +6,25 @@ import assert from "node:assert/strict";
 import { CommandHistory } from "@jolly-pixel/history";
 import {
   ChunkCoord,
+  type TerrainReader,
   type TileCoord
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import {
   encodeTilePatch,
-  terrainHistoryRegistration,
   terrainSnapshot,
   type EncodedTilePatch,
   type TerrainCommand
 } from "#src/index.ts";
+import { terrainHistoryRegistration } from "#src/network/client.ts";
 import { MAX_PATCH_TILES } from "#src/network/TerrainCommand.schema.ts";
 import {
   EDGE_TILE,
   ORIGIN_TILE,
-  peerSetup
+  addWideChunkRow,
+  edgePeerSetup,
+  terrainPeers
 } from "../helpers/peers.ts";
 import {
   networkCommand,
@@ -29,7 +32,7 @@ import {
 } from "../helpers/terrain.ts";
 
 function historySetup() {
-  const peers = peerSetup();
+  const peers = edgePeerSetup();
   const history = new CommandHistory<"terrain">();
   history.register(terrainHistoryRegistration(peers.document, { scope: "terrain" }));
   const skipped: string[] = [];
@@ -41,8 +44,7 @@ function historySetup() {
       peers.sculpt(height);
     }
     step.commit();
-    peers.flush();
-    peers.deliver();
+    peers.route();
   }
 
   return { ...peers, history, skipped, stroke };
@@ -56,40 +58,45 @@ function peerTile(
 }
 
 function edgeHeight(
-  { document }: ReturnType<typeof peerSetup>
+  { document }: ReturnType<typeof edgePeerSetup>
 ): number {
   return document.terrain.chunk(EDGE_TILE.chunk)!.tileHeights(EDGE_TILE.x, EDGE_TILE.z)[0];
+}
+
+function heightAt(
+  terrain: TerrainReader,
+  tile: TileCoord
+): number | undefined {
+  return terrain.chunk(tile.chunk)?.tileHeights(tile.x, tile.z)[0];
 }
 
 describe("terrain history", () => {
   test("a stroke of several commits undoes and redoes as one step, on the server too", () => {
     const peers = historySetup();
-    const { history, server, document, flush, deliver } = peers;
+    const { history, server, document, route } = peers;
     peers.stroke(3, 5);
 
     assert.equal(history.state("terrain").undoCount, 1);
     assert.equal(history.undo("terrain"), true);
-    flush();
-    deliver();
+    route();
     assert.equal(edgeHeight(peers), 8);
     assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
 
     assert.equal(history.redo("terrain"), true);
-    flush();
-    deliver();
+    route();
     assert.equal(edgeHeight(peers), 5);
     assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
   });
 
   test("undo is skipped once a peer changed one of the stroke's tiles, not another tile", () => {
     const peers = historySetup();
-    const { history, server, deliver, skipped } = peers;
+    const { history, server, route, skipped } = peers;
     peers.stroke(5);
     server.receive("A", networkCommand(
       { action: "heights-patched", tiles: [peerTile(ORIGIN_TILE, 1)] },
       { clientId: "A", timestamp: Date.now() + 1000 }
     ));
-    deliver();
+    route();
     assert.equal(history.state("terrain").undoCount, 1);
     assert.deepEqual(skipped, []);
 
@@ -97,7 +104,7 @@ describe("terrain history", () => {
       { action: "heights-patched", tiles: [peerTile(EDGE_TILE, -2)] },
       { clientId: "A", timestamp: Date.now() + 2000 }
     ));
-    deliver();
+    route();
 
     assert.equal(history.undo("terrain"), false);
     assert.deepEqual(skipped, ["peer"]);
@@ -105,40 +112,37 @@ describe("terrain history", () => {
   });
 
   test("undoing a chunk's creation is skipped once a peer sculpted it", () => {
-    const { history, document, server, flush, deliver, skipped } = historySetup();
+    const { history, document, server, route, skipped } = historySetup();
     history.record("terrain", null, () => document.addChunk(2, 0));
-    flush();
-    deliver();
+    route();
     server.receive("A", networkCommand(
       { action: "heights-patched", tiles: [{ ...peerTile(EDGE_TILE, 4), x: 2 }] },
       { clientId: "A", timestamp: Date.now() + 1000 }
     ));
-    deliver();
+    route();
 
     assert.equal(history.undo("terrain"), false);
     assert.deepEqual(skipped, ["peer"]);
   });
 
   test("the room refuses an undo of a chunk's creation that raced a peer's sculpt", () => {
-    const { history, document, server, flush, deliver } = historySetup();
+    const { history, document, server, route } = historySetup();
     history.record("terrain", null, () => document.addChunk(2, 0));
-    flush();
-    deliver();
+    route();
     server.receive("A", networkCommand(
       { action: "heights-patched", tiles: [{ ...peerTile(EDGE_TILE, 4), x: 2 }] },
       { clientId: "A", timestamp: Date.now() + 1000 }
     ));
 
     assert.equal(history.undo("terrain"), true);
-    flush();
-    deliver();
+    route();
 
     assert.equal(server.state.has(new ChunkCoord(2, 0)), true);
     assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
   });
 
   test("merging a long stroke's inverses keeps the first heights per tile and fits the commit size", () => {
-    const { compact } = terrainHistoryRegistration(peerSetup().document, { scope: "terrain" });
+    const { compact } = terrainHistoryRegistration(edgePeerSetup().document, { scope: "terrain" });
     const tiles = Array.from({ length: MAX_PATCH_TILES + 10 }, (_, index) => {
       return { x: index, z: 0, tile: 0, heights: `late-${index}` };
     });
@@ -154,5 +158,30 @@ describe("terrain history", () => {
     );
     assert.equal(written.length, MAX_PATCH_TILES + 10);
     assert.equal(written.find(({ x }) => x === 3)!.heights, "first-3");
+  });
+
+  test("a stroke over one command's tile limit reaches the room in several and undoes as one step", (t) => {
+    const { server, join, route, dispose } = terrainPeers();
+    t.after(dispose);
+    const tiles = addWideChunkRow(server);
+    const { document, room } = join("B");
+    const history = new CommandHistory<"terrain">();
+    history.register(terrainHistoryRegistration(document, { scope: "terrain" }));
+
+    const step = history.open("terrain", null);
+    assert.equal(document.patchTiles(tiles.map((tile) => {
+      return { tile, heights: tileHeights(4) };
+    })), true);
+    step.commit();
+    assert.ok(room.sent.every((sent) => sent.action !== "heights-patched" ||
+      sent.tiles.length <= MAX_PATCH_TILES));
+    route();
+    assert.ok(tiles.every((tile) => heightAt(server.state, tile) === 4));
+
+    assert.equal(history.state("terrain").undoCount, 1);
+    assert.equal(history.undo("terrain"), true);
+    route();
+    assert.ok(tiles.every((tile) => heightAt(server.state, tile) === 0));
+    assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
   });
 });

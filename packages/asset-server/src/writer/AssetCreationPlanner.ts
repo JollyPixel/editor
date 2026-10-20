@@ -9,7 +9,7 @@ import {
 // Import Internal Dependencies
 import type {
   AssetKindCompanion,
-  AssetKindHandler
+  AnyAssetKindHandler
 } from "../kinds/AssetKindHandler.ts";
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
 import { UnknownAssetKindError } from "../kinds/errors/UnknownAssetKindError.ts";
@@ -42,7 +42,7 @@ export interface AssetCreationPlannerOptions {
 
 interface PlannedCompanion {
   companion: AssetKindCompanion;
-  handler: AssetKindHandler;
+  handler: AnyAssetKindHandler;
   extension: string;
 }
 
@@ -125,7 +125,7 @@ export class AssetCreationPlanner {
   }
 
   async #scaffold(
-    handler: AssetKindHandler,
+    handler: AnyAssetKindHandler,
     assetId: string,
     source: AssetSourcePath,
     companions: readonly PlannedCompanion[]
@@ -162,7 +162,7 @@ export class AssetCreationPlanner {
   }
 
   #planCompanions(
-    handler: AssetKindHandler,
+    handler: AnyAssetKindHandler,
     extension: string
   ): Result<PlannedCompanion[], Error> {
     const extensions = new Set([extension]);

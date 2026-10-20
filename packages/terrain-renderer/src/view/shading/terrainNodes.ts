@@ -37,10 +37,11 @@ import {
 
 // Import Internal Dependencies
 import { CHUNK_SAMPLES } from "../../document/ChunkCoord.ts";
+import { SKIRT_EDGES } from "../lod/skirtMasks.ts";
 import {
   APRON_MARGIN,
   APRON_SIZE
-} from "../textures/HeightApronStore.ts";
+} from "../textures/heightApron.ts";
 import { LOOKUP_SIZE } from "../textures/ChunkTextureStore.ts";
 
 // CONSTANTS
@@ -176,16 +177,18 @@ export function createTerrainShading(
   );
   const outward = grid.zw;
   const across = chunkLayer(floor(world.add(outward.mul(0.5)).div(CHUNK_SAMPLES)));
-  const edgeBit = select(
-    outward.y.lessThan(0),
-    float(1),
-    select(outward.x.greaterThan(0), float(2), select(outward.y.greaterThan(0), float(4), float(8)))
+  const edgeBit = SKIRT_EDGES.reduceRight<FloatNode>(
+    (otherwise, { bit, outward: [outX, outZ] }) => select(
+      outward.x.equal(outX).and(outward.y.equal(outZ)),
+      float(bit),
+      otherwise
+    ),
+    float(0)
   );
-  const edgeSkirted = floor(morphRange.z.div(edgeBit)).mod(2).greaterThan(0.5);
+  const edgeSkirted = edgeBit.greaterThan(0)
+    .and(floor(morphRange.z.div(max(edgeBit, float(1)))).mod(2).greaterThan(0.5));
   const skirtDepth = select(
-    length(outward).greaterThan(0)
-      .and(edgeSkirted)
-      .and(across.greaterThanEqual(int(0))),
+    edgeSkirted.and(across.greaterThanEqual(int(0))),
     node.w,
     float(0)
   );
@@ -240,12 +243,17 @@ export function createTerrainShading(
   const line = float(1).sub(min(min(lineDistance.x, lineDistance.y), float(1)));
   const level = log2(varying(spacing, "vTerrainSpacing"));
   const levelColor = cos(level.mul(1.1).add(vec3(0, 2.1, 4.2))).mul(0.5).add(0.5);
+  function overlayIs(
+    mode: TerrainOverlay
+  ) {
+    return overlay.equal(TERRAIN_OVERLAYS.indexOf(mode));
+  }
   const surfaceColor = select(
-    overlay.equal(2),
+    overlayIs("lod"),
     mix(kAlbedo, levelColor, kLevelTint),
-    select(overlay.equal(3), slopeColor, kAlbedo)
+    select(overlayIs("slope"), slopeColor, kAlbedo)
   );
-  const showLines = overlay.equal(1).or(overlay.equal(2));
+  const showLines = overlayIs("chunks").or(overlayIs("lod"));
   material.colorNode = Fn(() => {
     Discard(fragmentLayer.lessThan(int(0)));
 

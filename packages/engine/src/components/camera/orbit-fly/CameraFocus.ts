@@ -54,7 +54,7 @@ export interface CameraFocus {
     offset: THREE.Vector3,
     transform: CameraFocusTransform
   ): void;
-  place(
+  teleported(
     position: THREE.Vector3Like,
     orientation: THREE.Quaternion
   ): void;
@@ -93,7 +93,7 @@ export class NoCameraFocus implements CameraFocus {
     transform.moveGlobal(offset);
   }
 
-  place(): void {
+  teleported(): void {
     return;
   }
 

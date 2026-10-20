@@ -11,11 +11,9 @@ import {
   AssetRoomExtension,
   type AssetRoomExtensionOptions
 } from "./AssetRoomExtension.ts";
+import { AssetRoomProtocols } from "./AssetRoomProtocols.ts";
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
-import type {
-  AssetCommands,
-  AssetKindHandler
-} from "../kinds/AssetKindHandler.ts";
+import type { AnyAssetKindHandler } from "../kinds/AssetKindHandler.ts";
 import type { AssetCommandHeader } from "../kinds/AssetLiveProtocol.ts";
 import type { CatalogProjection } from "../catalog/CatalogProjection.ts";
 import type { CatalogChange } from "../catalog/client/protocol.ts";
@@ -42,12 +40,15 @@ export interface AssetRoomsOptions {
   logger?: Logger;
 }
 
-type LiveCommands = AssetCommands & Required<Pick<AssetCommands, "live">>;
+type AnyAssetCommands = NonNullable<AnyAssetKindHandler["commands"]>;
+type LiveCommands = AnyAssetCommands &
+  Required<Pick<AnyAssetCommands, "live">>;
+type AnyAssetRoomExtension = AssetRoomExtension<AssetCommandHeader, object>;
 
 interface ResolvedRoom {
   readonly roomId: string;
   readonly assetId: string;
-  readonly handler: AssetKindHandler;
+  readonly handler: AnyAssetKindHandler;
   readonly commands: LiveCommands;
 }
 
@@ -66,8 +67,14 @@ export function registerAssetRooms(
     graceMs,
     logger = silentLogger()
   } = options;
+  for (const kind of kinds.kinds()) {
+    const { commands } = kinds.get(kind);
+    if (hasLiveProtocol(commands)) {
+      AssetRoomProtocols.validate(commands);
+    }
+  }
 
-  const liveRooms = new Map<string, AssetRoomExtension>();
+  const liveRooms = new Map<string, AnyAssetRoomExtension>();
   function onCatalogChanged(
     change: CatalogChange
   ): void {
@@ -88,7 +95,7 @@ export function registerAssetRooms(
     state: unknown,
     version: () => number | undefined,
     extensionOptions?: AssetRoomExtensionOptions<AssetCommandHeader>
-  ): AssetRoomExtension {
+  ): AnyAssetRoomExtension {
     const binding = {
       assetId: room.assetId,
       kind: room.handler.kind,
@@ -125,7 +132,7 @@ export function registerAssetRooms(
   ): Promise<RoomResolution> {
     const { assetId } = room;
     const entry = await states.acquire(assetId, room.handler.kind);
-    let extension: AssetRoomExtension;
+    let extension: AnyAssetRoomExtension;
     try {
       extension = roomExtension(
         room,
@@ -217,7 +224,7 @@ export function registerAssetRooms(
 }
 
 function hasLiveProtocol(
-  commands: AssetCommands | undefined
+  commands: AnyAssetCommands | undefined
 ): commands is LiveCommands {
   return commands?.live !== undefined;
 }

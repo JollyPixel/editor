@@ -3,41 +3,35 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { DocumentSyncClient } from "@jolly-pixel/network/client";
+import {
+  LiveAssetRoom,
+  mockAssetRoom
+} from "@jolly-pixel/asset-server/testing";
 
 // Import Internal Dependencies
-import {
-  AnimationDocument,
-  voxelAnimationAssetKind,
-  type AnimationSet
-} from "#src/index.ts";
-import { animationWriteKeys } from "#src/network/AnimationCommandKeys.ts";
+import { voxelAnimationAssetKind } from "#src/index.ts";
+import { voxelAnimationDocumentKind } from "#src/network/client.ts";
 import type {
   AnimationNetworkCommand,
-  AnimationServerMessage
+  AnimationSetSnapshot
 } from "#src/network/types.ts";
 import {
   clip,
   key,
   networkCommand
 } from "../helpers/clips.ts";
-import { LiveRoom } from "../helpers/liveRoom.ts";
-import { createMockRoom } from "../helpers/room.ts";
 
 function setup() {
-  const server = new LiveRoom<AnimationSet, AnimationNetworkCommand>(
-    voxelAnimationAssetKind()
-  );
+  const server = new LiveAssetRoom(voxelAnimationAssetKind());
   server.receive("A", networkCommand({ action: "clip-added", clip: clip("walk") }, { clientId: "A" }));
   server.receive("A", networkCommand({ action: "clip-added", clip: clip("run") }, { clientId: "A" }));
 
-  const room = createMockRoom("B");
-  const document = new AnimationDocument();
-  new DocumentSyncClient(room, { document, keys: animationWriteKeys });
+  const room = mockAssetRoom<AnimationNetworkCommand, AnimationSetSnapshot>("B");
+  const { document } = voxelAnimationDocumentKind().createDocument(room);
 
   function deliver(): void {
-    for (const message of server.take("B")) {
-      room.deliver(message as AnimationServerMessage);
+    for (const message of server.take<AnimationSetSnapshot>("B")) {
+      room.deliver(message);
     }
   }
 

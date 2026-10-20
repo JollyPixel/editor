@@ -4,12 +4,17 @@ import {
   expect,
   test
 } from "tstyche";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import type {
+  AssetCommandHeader,
+  AssetCommands,
+  AssetKindHandler,
   AssetContent,
   AssetDeletedData,
   AssetInlineContent,
+  AssetRelaySchemas,
   AssetRenamedData,
   AssetWriteData,
   CatalogApplied,
@@ -17,6 +22,10 @@ import type {
   CatalogDeleteCommand,
   ImportPlan
 } from "#src/index.ts";
+import {
+  LiveAssetRoom,
+  type AssetServerMessage
+} from "#src/testing/index.ts";
 
 type LegacyInlineContent = {
   readonly type: "inline";
@@ -152,5 +161,76 @@ describe("schema-derived catalog types", () => {
       .type.toBe<"catalog:rename" | "catalog:delete">();
     expect<Extract<CatalogApplied, { content: unknown; }>["command"]>()
       .type.toBe<"catalog:export">();
+  });
+});
+
+describe("relay message types", () => {
+  const nudge = z.object({
+    action: z.literal("nudge"),
+    to: z.string()
+  });
+  const poke = z.object({
+    action: z.literal("poke")
+  });
+
+  test("a relay accepts schemas that parse its message", () => {
+    expect({ inbound: [nudge], outbound: [] })
+      .type.toBeAssignableTo<AssetRelaySchemas<z.infer<typeof nudge>>>();
+  });
+
+  test("a relay refuses schemas that parse another message", () => {
+    expect({ inbound: [nudge, poke], outbound: [] })
+      .type.not.toBeAssignableTo<AssetRelaySchemas<z.infer<typeof nudge>>>();
+  });
+});
+
+interface RoomCommand extends AssetCommandHeader {
+  readonly action: "increment";
+}
+
+const kNudge = z.object({
+  action: z.literal("nudge")
+});
+
+declare const kPlainKind: AssetKindHandler<unknown, RoomCommand>;
+declare const kRelayKind: AssetKindHandler<
+  unknown,
+  RoomCommand,
+  z.infer<typeof kNudge>
+>;
+declare const kProtocol: AssetCommands["protocol"];
+
+describe("asset room message types", () => {
+  test("a room without a relay receives exactly its commands", () => {
+    const room = new LiveAssetRoom(kPlainKind);
+
+    expect<Parameters<typeof room.extension.onMessage>[1]>()
+      .type.toBe<RoomCommand>();
+    expect(room.take("B"))
+      .type.toBe<AssetServerMessage<RoomCommand, unknown>[]>();
+    expect(room.take<{ value: number; }>("B"))
+      .type.toBe<AssetServerMessage<RoomCommand, { value: number; }>[]>();
+  });
+
+  test("a room with a relay receives its commands and relay messages", () => {
+    const room = new LiveAssetRoom(kRelayKind);
+
+    expect<Parameters<typeof room.extension.onMessage>[1]>()
+      .type.toBe<RoomCommand | z.infer<typeof kNudge>>();
+  });
+
+  test("commands without a relay type refuse relay schemas", () => {
+    const commands = {
+      eventType: "counter",
+      protocol: kProtocol,
+      apply: () => void 0
+    };
+
+    expect(commands)
+      .type.toBeAssignableTo<AssetCommands<unknown, RoomCommand>>();
+    expect({
+      ...commands,
+      relay: { inbound: [kNudge], outbound: [] }
+    }).type.not.toBeAssignableTo<AssetCommands<unknown, RoomCommand>>();
   });
 });

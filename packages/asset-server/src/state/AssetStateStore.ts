@@ -4,7 +4,7 @@ import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
-import type { AssetKindHandler } from "../kinds/AssetKindHandler.ts";
+import type { AnyAssetKindHandler } from "../kinds/AssetKindHandler.ts";
 import type { AssetCommandHeader } from "../kinds/AssetLiveProtocol.ts";
 import {
   ASSET_CHECKPOINT_EVENT_TYPES,
@@ -38,7 +38,7 @@ export type AssetStateStoreEventMap = {
 export interface AssetStateEntry {
   readonly assetId: string;
   readonly kind: string;
-  readonly handler: AssetKindHandler;
+  readonly handler: AnyAssetKindHandler;
   readonly state: unknown;
 }
 

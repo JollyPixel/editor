@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import { quadDiagonal } from "../../document/quadDiagonal.ts";
+import { SKIRT_EDGES } from "../lod/skirtMasks.ts";
 
 // CONSTANTS
 const kGridComponents = 4;
@@ -7,7 +8,6 @@ const kInside: Outward = [0, 0];
 const kMorphComponents = 4;
 
 export interface NodeMeshData {
-  readonly resolution: number;
   /**
    * Per vertex: grid X, grid Z, then the outward direction of a skirt vertex,
    * or zero for a surface vertex.
@@ -22,27 +22,7 @@ export interface NodeMeshData {
   readonly indices: Uint16Array;
 }
 
-type Outward = [number, number];
-
-export interface NodeMeshProvider {
-  mesh(resolution: number): NodeMeshData;
-}
-
-export class GridMeshProvider implements NodeMeshProvider {
-  #meshes = new Map<number, NodeMeshData>();
-
-  mesh(
-    resolution: number
-  ): NodeMeshData {
-    let mesh = this.#meshes.get(resolution);
-    if (mesh === undefined) {
-      mesh = buildGridMesh(resolution);
-      this.#meshes.set(resolution, mesh);
-    }
-
-    return mesh;
-  }
-}
+type Outward = readonly [number, number];
 
 export function buildGridMesh(
   resolution: number
@@ -80,13 +60,8 @@ export function buildGridMesh(
     }
   }
 
-  const edges: Array<{ outward: Outward; at: (step: number) => [number, number]; }> = [
-    { outward: [0, -1], at: (step) => [step, 0] },
-    { outward: [1, 0], at: (step) => [resolution, step] },
-    { outward: [0, 1], at: (step) => [resolution - step, resolution] },
-    { outward: [-1, 0], at: (step) => [0, resolution - step] }
-  ];
-  edges.forEach(({ outward, at: edge }, edgeIndex) => {
+  SKIRT_EDGES.forEach(({ outward }, edgeIndex) => {
+    const edge = edgeWalk(outward, resolution);
     const first = surfaceCount + edgeIndex * side;
     for (let step = 0; step <= resolution; step++) {
       const [x, z] = edge(step);
@@ -104,11 +79,22 @@ export function buildGridMesh(
   });
 
   return {
-    resolution,
     grid,
     morph,
     indices: Uint16Array.from(indices)
   };
+}
+
+function edgeWalk(
+  [outX, outZ]: Outward,
+  resolution: number
+): (step: number) => [number, number] {
+  const alongX = -outZ;
+  const alongZ = outX;
+  const startX = resolution / 2 * (1 + outX - alongX);
+  const startZ = resolution / 2 * (1 + outZ - alongZ);
+
+  return (step) => [startX + alongX * step, startZ + alongZ * step];
 }
 
 function writeVertex(

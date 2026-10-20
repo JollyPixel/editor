@@ -9,7 +9,7 @@ import {
   AssetWriter,
   CatalogFolders,
   type ArchiveBackend,
-  type AssetKindHandler,
+  type AnyAssetKindHandler,
   type CatalogBackend,
   type CatalogProjection,
   type SnapshotPolicy
@@ -46,7 +46,7 @@ export interface SyncHarness extends AsyncDisposable {
 }
 
 export interface SyncHarnessOptions {
-  handlers?: AssetKindHandler[];
+  handlers?: AnyAssetKindHandler[];
   snapshot?: SnapshotPolicy;
   source?: MemoryAssetSource;
   eventStore?: EventStore.EventStore;

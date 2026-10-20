@@ -18,7 +18,7 @@ import {
 
 // Import Internal Dependencies
 import { EVENTS_DB_PATH } from "../stateDirectory.ts";
-import type { AssetKindHandler } from "../kinds/AssetKindHandler.ts";
+import type { AnyAssetKindHandler } from "../kinds/AssetKindHandler.ts";
 import type { AssetEventDataMap } from "../events/AssetEvents.ts";
 import {
   createAssetBackend,
@@ -40,7 +40,7 @@ export interface AssetWorkspaceOptions {
    * default event log.
    */
   root: string;
-  handlers?: AssetKindHandler[];
+  handlers?: AnyAssetKindHandler[];
   /**
    * Documents written when the workspace holds no file at their path.
    */

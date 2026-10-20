@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   describeErrors,
+  KeyedCommandArbiter,
   SchemaParser,
   type ConflictResolver
 } from "@jolly-pixel/network";
@@ -30,7 +31,7 @@ import {
   animationCommandProtocol,
   animationSetSnapshotSchema
 } from "../network/AnimationCommand.schema.ts";
-import { AnimationCommandArbiter } from "../network/AnimationCommandArbiter.ts";
+import { animationConflictKeys } from "../network/AnimationCommandKeys.ts";
 import type { AnimationNetworkCommand } from "../network/types.ts";
 
 // CONSTANTS
@@ -132,7 +133,12 @@ export function voxelAnimationAssetKind(
       },
 
       live({ state }) {
-        const arbiter = new AnimationCommandArbiter({
+        const arbiter = new KeyedCommandArbiter<
+          AnimationNetworkCommand,
+          AnimationSet
+        >({
+          accepts: (set, command) => set.accepts(command),
+          keys: animationConflictKeys,
           conflictResolver
         });
 

@@ -1,23 +1,21 @@
 // Import Third-party Dependencies
+import type * as network from "@jolly-pixel/network";
 import { ChunkCoord } from "@jolly-pixel/terrain.renderer";
 import * as z from "zod/mini";
 
 // CONSTANTS
-export const TERRAIN_INTEREST_KEY = "terrain-interest";
 export const DEFAULT_PRESENCE_RADIUS = 4;
 export const MAX_PRESENCE_RADIUS = 16;
+
+const kPresenceRadius = z.int().check(z.gte(0), z.lte(MAX_PRESENCE_RADIUS));
 
 export const terrainInterestSchema = z.object({
   x: z.int(),
   z: z.int(),
-  radius: z.int().check(z.gte(0), z.lte(MAX_PRESENCE_RADIUS))
+  radius: kPresenceRadius
 });
 
-export interface TerrainInterestJSON {
-  x: number;
-  z: number;
-  radius: number;
-}
+export type TerrainInterestJSON = network.Infer<typeof terrainInterestSchema>;
 
 export class TerrainInterest {
   static parse(
@@ -25,9 +23,13 @@ export class TerrainInterest {
   ): TerrainInterest | undefined {
     const result = z.safeParse(terrainInterestSchema, value);
 
-    return result.success ?
-      new TerrainInterest(new ChunkCoord(result.data.x, result.data.z), result.data.radius) :
-      undefined;
+    return result.success ? TerrainInterest.fromJSON(result.data) : undefined;
+  }
+
+  static fromJSON(
+    json: TerrainInterestJSON
+  ): TerrainInterest {
+    return new TerrainInterest(new ChunkCoord(json.x, json.z), json.radius);
   }
 
   static around(
@@ -45,7 +47,7 @@ export class TerrainInterest {
     centre: ChunkCoord,
     radius: number
   ) {
-    if (!Number.isSafeInteger(radius) || radius < 0 || radius > MAX_PRESENCE_RADIUS) {
+    if (!z.safeParse(kPresenceRadius, radius).success) {
       throw new RangeError(
         `Presence radius must be an integer from 0 to ${MAX_PRESENCE_RADIUS}, got ${radius}.`
       );

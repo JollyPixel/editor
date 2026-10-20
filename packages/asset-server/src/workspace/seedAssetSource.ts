@@ -6,7 +6,7 @@ import {
   IdentitySidecar,
   type IdentityEntry
 } from "../identity/IdentitySidecar.ts";
-import type { AssetKindHandler } from "../kinds/AssetKindHandler.ts";
+import type { AnyAssetKindHandler } from "../kinds/AssetKindHandler.ts";
 import { AssetKindRegistry } from "../kinds/AssetKindRegistry.ts";
 
 export type AssetSeedFactory = () => Uint8Array | Promise<Uint8Array>;
@@ -26,7 +26,7 @@ export interface SeedAssetSourceOptions {
   /**
    * Handlers that build the document of an entry without `content`.
    */
-  handlers?: Iterable<AssetKindHandler>;
+  handlers?: Iterable<AnyAssetKindHandler>;
 }
 
 interface NormalizedSeed {

@@ -5,23 +5,20 @@ import {
   type HistoryRegistration,
   type KeyedGuardEntry
 } from "@jolly-pixel/history";
-import {
-  ChunkCoord,
-  TILES_PER_CHUNK,
-  TileCoord,
-  type TerrainReader
-} from "@jolly-pixel/terrain.renderer";
+import type { TerrainReader } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import type {
   TerrainCommandDocument,
   TerrainImage
 } from "../model/TerrainCommandDocument.ts";
-import { MAX_PATCH_TILES } from "../network/TerrainCommand.schema.ts";
+import { patchBatches } from "../network/patchBatches.ts";
 import {
-  terrainChunkKey,
   terrainHeightTileKey,
-  terrainWriteKeys
+  terrainWriteKeys,
+  terrainWriteRefKey,
+  terrainWriteRefs,
+  type TerrainWriteRef
 } from "../network/TerrainCommandKeys.ts";
 import type {
   EncodedTilePatch,
@@ -30,7 +27,6 @@ import type {
 
 // CONSTANTS
 const kDefaultId = "terrain";
-const kTilesPerChunk = TILES_PER_CHUNK * TILES_PER_CHUNK;
 const kLabels: Readonly<Record<TerrainCommand["action"], string>> = {
   "chunk-added": "Add chunk",
   "chunk-removed": "Remove chunk",
@@ -76,35 +72,26 @@ function guardEntries(
   terrain: TerrainReader,
   command: TerrainCommand
 ): KeyedGuardEntry[] {
-  if (command.action === "heights-patched") {
-    return command.tiles.map(
-      ({ x, z, tile }) => tileEntry(terrain, TileCoord.fromIndex(new ChunkCoord(x, z), tile))
-    );
-  }
-
-  const chunk = new ChunkCoord(command.x, command.z);
-
-  return [
-    { key: terrainChunkKey(chunk.x, chunk.z), read: () => terrain.has(chunk) },
-    ...Array.from(
-      { length: kTilesPerChunk },
-      (_, index) => tileEntry(terrain, TileCoord.fromIndex(chunk, index))
-    )
-  ];
+  return terrainWriteRefs(command).map((ref) => {
+    return {
+      key: terrainWriteRefKey(ref),
+      read: () => readWriteRef(terrain, ref)
+    };
+  });
 }
 
-function tileEntry(
+function readWriteRef(
   terrain: TerrainReader,
-  tile: TileCoord
-): KeyedGuardEntry {
-  return {
-    key: terrainHeightTileKey(tile.chunk.x, tile.chunk.z, tile.index),
-    read: () => {
-      const heights = terrain.chunk(tile.chunk)?.tileHeights(tile.x, tile.z);
+  ref: TerrainWriteRef
+): unknown {
+  if (ref.kind === "chunk") {
+    return terrain.has(ref.chunk);
+  }
 
-      return heights === undefined ? undefined : Array.from(heights);
-    }
-  };
+  const { tile } = ref;
+  const heights = terrain.chunk(tile.chunk)?.tileHeights(tile.x, tile.z);
+
+  return heights === undefined ? undefined : Array.from(heights);
 }
 
 function compactHeightPatches(
@@ -122,9 +109,8 @@ function compactHeightPatches(
       tiles.set(terrainHeightTileKey(tile.x, tile.z, tile.tile), tile);
     }
   }
-  const merged = [...tiles.values()];
-  for (let start = 0; start < merged.length; start += MAX_PATCH_TILES) {
-    kept.push({ action: "heights-patched", tiles: merged.slice(start, start + MAX_PATCH_TILES) });
+  for (const batch of patchBatches([...tiles.values()])) {
+    kept.push({ action: "heights-patched", tiles: batch });
   }
 
   return kept;

@@ -3,16 +3,15 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { CHUNK_SAMPLES, ChunkCoord } from "#src/document/ChunkCoord.ts";
+import { CHUNK_SAMPLE_COUNT } from "#src/document/TerrainChunk.ts";
+import { TerrainDocument } from "#src/document/TerrainDocument.ts";
+import { LodRanges } from "#src/view/lod/LodRanges.ts";
 import {
-  CHUNK_SAMPLE_COUNT,
-  CHUNK_SAMPLES,
-  ChunkCoord,
-  LodRanges,
   QuadtreeSelection,
-  SKIRT_EDGES,
-  TerrainDocument,
   type SelectedNode
-} from "#src/index.ts";
+} from "#src/view/lod/QuadtreeSelection.ts";
+import { SKIRT_EDGES } from "#src/view/lod/skirtMasks.ts";
 
 // CONSTANTS
 const kProbeStep = 4;

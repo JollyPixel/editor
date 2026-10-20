@@ -18,6 +18,13 @@ import {
   type SculptStamp
 } from "#src/features/sculpt/model/sculptStamp.ts";
 
+// CONSTANTS
+const kFootprint = {
+  radius: 4,
+  strength: 1,
+  falloff: "smooth"
+} as const;
+
 function flatTerrain(
   ...chunks: Array<[x: number, z: number, height: number]>
 ): TerrainDocument {
@@ -31,14 +38,9 @@ function flatTerrain(
 
 function stamp(
   terrain: TerrainDocument,
-  options: Partial<SculptStamp> & Pick<SculptStamp, "tool" | "x" | "z">
+  options: SculptStamp
 ): TerrainDocument {
-  for (const { tile, heights } of sculptStamp(terrain, {
-    radius: 4,
-    strength: 1,
-    falloff: "smooth",
-    ...options
-  })) {
+  for (const { tile, heights } of sculptStamp(terrain, options)) {
     terrain.writeTile(tile, heights);
   }
 
@@ -89,13 +91,20 @@ describe("sculptStamp", () => {
   });
 
   test("lowering stops at the height range", () => {
-    const terrain = stamp(flatTerrain([0, 0, HEIGHT_RANGE.min + 1]), { tool: "raise", x: 8, z: 8, lift: -5 });
+    const terrain = stamp(flatTerrain([0, 0, HEIGHT_RANGE.min + 1]), {
+      ...kFootprint,
+      tool: "raise",
+      x: 8,
+      z: 8,
+      lift: -5
+    });
 
     assert.equal(terrain.sampleAt(8, 8), HEIGHT_RANGE.min);
   });
 
   test("flatten moves samples toward the target by their weight", () => {
     const terrain = stamp(flatTerrain([0, 0, 10]), {
+      ...kFootprint,
       tool: "flatten",
       x: 20,
       z: 20,
@@ -114,7 +123,7 @@ describe("sculptStamp", () => {
     spike[20 * CHUNK_SAMPLES + 20] = 16;
     terrain.removeChunk(new ChunkCoord(0, 0));
     terrain.addChunk(new ChunkCoord(0, 0), spike);
-    stamp(terrain, { tool: "smooth", x: 20, z: 20, radius: 2 });
+    stamp(terrain, { ...kFootprint, tool: "smooth", x: 20, z: 20, radius: 2 });
 
     assert.equal(terrain.sampleAt(20, 20), 4);
     assert.equal(terrain.sampleAt(21, 20), 1);
@@ -130,6 +139,7 @@ describe("sculptStamp", () => {
 
   test("smooth reads the neighbour chunk across the edge, from heights before the stamp", () => {
     const terrain = stamp(flatTerrain([0, 0, 0], [1, 0, 16]), {
+      ...kFootprint,
       tool: "smooth",
       x: CHUNK_SAMPLES - 0.5,
       z: 10,

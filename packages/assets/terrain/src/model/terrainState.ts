@@ -2,7 +2,8 @@
 import {
   ChunkCoord,
   type TerrainDocument,
-  type TerrainReader
+  type TerrainReader,
+  type TilePatch
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
@@ -20,23 +21,39 @@ import type {
 // CONSTANTS
 export const MAX_TERRAIN_CHUNKS = 256;
 
+type TerrainEdit =
+  | {
+    readonly action: "chunk-added";
+    readonly coord: ChunkCoord;
+    readonly heights: Float32Array;
+  }
+  | {
+    readonly action: "chunk-removed";
+    readonly coord: ChunkCoord;
+  }
+  | {
+    readonly action: "heights-patched";
+    readonly patches: readonly TilePatch[];
+  };
+
 export function acceptsTerrainCommand(
   terrain: TerrainReader,
   command: TerrainCommand
 ): boolean {
-  if (command.action === "heights-patched") {
-    return acceptsTiles(terrain, command.tiles);
+  const edit = terrainEdit(command);
+  if (edit === null) {
+    return false;
   }
 
-  const coord = new ChunkCoord(command.x, command.z);
-  switch (command.action) {
+  switch (edit.action) {
     case "chunk-added":
-      return !terrain.has(coord) &&
+      return !terrain.has(edit.coord) &&
         terrain.size < MAX_TERRAIN_CHUNKS &&
-        (terrain.size === 0 || terrain.touches(coord)) &&
-        decodeHeights(command.heights) !== null;
+        (terrain.size === 0 || terrain.touches(edit.coord));
     case "chunk-removed":
-      return terrain.has(coord) && terrain.size > 1;
+      return terrain.has(edit.coord) && terrain.size > 1;
+    case "heights-patched":
+      return edit.patches.every(({ tile }) => terrain.has(tile.chunk));
   }
 }
 
@@ -44,40 +61,58 @@ export function applyTerrainCommand(
   terrain: TerrainDocument,
   command: TerrainCommand
 ): void {
-  if (command.action === "heights-patched") {
-    for (const encoded of command.tiles) {
-      const { tile, heights } = decodeTilePatch(encoded)!;
-      terrain.writeTile(tile, heights);
-    }
-
-    return;
+  const edit = terrainEdit(command);
+  if (edit === null) {
+    throw new RangeError(`Terrain command "${command.action}" has invalid heights.`);
   }
 
-  const coord = new ChunkCoord(command.x, command.z);
-  switch (command.action) {
+  switch (edit.action) {
     case "chunk-added":
-      terrain.addChunk(coord, decodeHeights(command.heights)!);
+      terrain.addChunk(edit.coord, edit.heights);
       break;
     case "chunk-removed":
-      terrain.removeChunk(coord);
+      terrain.removeChunk(edit.coord);
+      break;
+    case "heights-patched":
+      for (const { tile, heights } of edit.patches) {
+        terrain.writeTile(tile, heights);
+      }
       break;
   }
 }
 
-function acceptsTiles(
-  terrain: TerrainReader,
+function terrainEdit(
+  command: TerrainCommand
+): TerrainEdit | null {
+  if (command.action === "heights-patched") {
+    return decodeTilePatches(command.tiles);
+  }
+
+  const coord = new ChunkCoord(command.x, command.z);
+  if (command.action === "chunk-removed") {
+    return { action: "chunk-removed", coord };
+  }
+
+  const heights = decodeHeights(command.heights);
+
+  return heights === null ? null : { action: "chunk-added", coord, heights };
+}
+
+function decodeTilePatches(
   tiles: readonly EncodedTilePatch[]
-): boolean {
+): TerrainEdit | null {
+  const patches: TilePatch[] = [];
   const keys = new Set<string>();
   for (const encoded of tiles) {
     const patch = decodeTilePatch(encoded);
-    if (patch === null || !terrain.has(patch.tile.chunk) || keys.has(patch.tile.key)) {
-      return false;
+    if (patch === null || keys.has(patch.tile.key)) {
+      return null;
     }
     keys.add(patch.tile.key);
+    patches.push(patch);
   }
 
-  return true;
+  return { action: "heights-patched", patches };
 }
 
 export function terrainSnapshot(

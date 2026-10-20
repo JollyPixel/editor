@@ -414,7 +414,7 @@ export class OrbitFlyCamera extends CameraComponent {
     this.#velocity.stop();
 
     this.#applyOrientation();
-    this.#focus.place(pose.position, this.#orientation);
+    this.#focus.teleported(pose.position, this.#orientation);
     this.actor.transform.setLocalPosition(pose.position);
     this.actor.world.invalidate();
   }

@@ -4,7 +4,7 @@ import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import type { AssetKindDescriptor } from "./AssetKindDescriptor.ts";
-import type { AssetKindHandler } from "./AssetKindHandler.ts";
+import type { AnyAssetKindHandler } from "./AssetKindHandler.ts";
 
 // CONSTANTS
 export const SNAPSHOT_POLICY_SCHEMA = z.strictObject({
@@ -26,5 +26,5 @@ export interface AssetKindPackage<
 
   handlers(
     options?: TOptions
-  ): AssetKindHandler[];
+  ): AnyAssetKindHandler[];
 }

@@ -81,6 +81,41 @@ Its `ready` promise resolves after the first snapshot; `dispose()` detaches sync
 `pendingChanges` exposes the sync as `PendingChanges`: `pending`, `keepIn()`,
 plus `on` and `off` for the `settled` and `unsettled` events.
 
+`SyncedCommandDocument<TDocument, TNotice>` reads the command, snapshot and
+image types from the document's `apply`, `load` and `revert` signatures. The
+command type is the type `apply` takes, joined with `NetworkCommandHeader`; the
+image type is the element type `revert` takes.
+
+- `CommandSyncableDocument<TDocument>` is the `SyncableDocument` built from
+  those three types, the constraint every document must satisfy;
+- `SyncedDocumentRoom<TDocument, TNotice>` is the room the document syncs
+  through.
+
+`TNotice` defaults to `never`.
+
+### commandDocumentKind
+
+`commandDocumentKind({ kind, createDocument, keys })` returns `{ kind, createDocument(room) }`.
+Each `createDocument(room)` call builds a new document with `createDocument()`
+and returns it wrapped in a `SyncedCommandDocument` bound to `room` and `keys`.
+`CommandDocumentKind<TKind, TDocument, TNotice>` derives everything else from
+the document. Annotate the return type to name the notices the room may send:
+
+```ts
+import {
+  commandDocumentKind,
+  type CommandDocumentKind
+} from "@jolly-pixel/network/client";
+
+function counterKind(): CommandDocumentKind<"counter", CounterDocument, CounterNotice> {
+  return commandDocumentKind({
+    kind: "counter",
+    createDocument: () => new CounterDocument(),
+    keys: (command) => [command.key]
+  });
+}
+```
+
 ## Outcomes
 
 Own echoes acknowledge edits; peer commands pass through reconciliation.
@@ -106,5 +141,13 @@ Failed rollback requests a snapshot. Client and server must share conflict polic
 
 `LastWriteWinsResolver` resolves writes and protects newer peer edits from replay.
 `ConflictTracker` admissions must be committed after edits succeed.
+
+`new KeyedCommandArbiter({ accepts, keys, conflictResolver? })` is the server
+arbiter for documents whose commands claim a fixed list of conflict keys.
+`admit(state, command)` returns `null` when `accepts(state, command)` is false
+or when the tracker rejects one of `keys(command)`; otherwise it returns the
+tracker's admission. `restore(command, version)` records a past command's keys
+at `version` when a room starts. `conflictResolver` defaults to a new
+`LastWriteWinsResolver`.
 
 Use `attributeCommand` to replace claimed client identity before arbitration.

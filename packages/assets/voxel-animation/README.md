@@ -40,13 +40,13 @@ import { assetRoomName } from "@jolly-pixel/asset";
 import { Client } from "@jolly-pixel/network/client";
 import {
   FrameRate,
-  SyncedAnimationDocument,
+  voxelAnimationDocumentKind,
   type AnimationRoom
 } from "@jolly-pixel/asset.voxel-animation/client";
 
 const client = new Client();
 const room: AnimationRoom = client.room(assetRoomName("voxelanimation", assetId));
-const synced = new SyncedAnimationDocument(room);
+const synced = voxelAnimationDocumentKind().createDocument(room);
 
 room.join();
 await synced.ready;
@@ -65,8 +65,8 @@ The first snapshot loads the document. Local edits go to the room and stay pendi
 ## 📚 API
 
 - `@jolly-pixel/asset.voxel-animation` exports `voxelAnimationAssetKind`, the document codec and `voxelAnimationDocumentSchema`, the `VOXEL_ANIMATION_ASSET` descriptor, `ASSET_KINDS` (the kind package, taking `{ snapshot? }` options), the kind and event constants, and everything the client entry point exports from the model.
-- `@jolly-pixel/asset.voxel-animation/client` exports the [animation set](./docs/animation-set.md) (`AnimationDocument`, `AnimationSet`, `FrameRate`, `TrackPath`, `NameSet`), [sampling](./docs/animation-set.md#sampling) (`KeyCurve`, `ClipSampler`), the [undo keys](./docs/history.md) (`animationHistoryKeys`), `SyncedAnimationDocument`, `animationWriteKeys`, `voxelAnimationDocumentKind`, and the wire types.
-- `@jolly-pixel/asset.voxel-animation/server` exports `AnimationCommandArbiter`, the conflict keys, and the command and snapshot schemas.
+- `@jolly-pixel/asset.voxel-animation/client` exports the [animation set](./docs/animation-set.md) (`AnimationDocument`, `AnimationSet`, `FrameRate`, `TrackPath`, `NameSet`), [sampling](./docs/animation-set.md#sampling) (`KeyCurve`, `ClipSampler`), the [undo keys](./docs/history.md) (`animationHistoryKeys`), `voxelAnimationDocumentKind` and its `SyncedAnimationDocument` type, `animationWriteKeys`, and the wire types.
+- `@jolly-pixel/asset.voxel-animation/server` exports the conflict keys and the command and snapshot schemas.
 
 The package root imports server dependencies. Browser code should use the client entry point. See the [network API](./docs/network.md) for commands and sync behavior and [architecture](./ARCHITECTURE.md) for conflict keys.
 

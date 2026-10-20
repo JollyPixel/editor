@@ -8,7 +8,7 @@ import {
   BINARY_KIND,
   TEXTURE_KIND,
   textureAssetKind,
-  type AssetKindHandler
+  type AnyAssetKindHandler
 } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
@@ -29,7 +29,7 @@ interface OfflineBoot {
 
 async function bootOffline(
   accepts: string,
-  handlers: AssetKindHandler[],
+  handlers: AnyAssetKindHandler[],
   seedPath: string
 ): Promise<OfflineBoot> {
   const booted: OfflineBoot[] = [];

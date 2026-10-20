@@ -3,7 +3,10 @@ import type {
   AssetCommandHeader,
   AssetCommands,
   AssetKindHandler,
+  AssetLiveProtocol,
   AssetRelay,
+  AssetRelaySchemas,
+  AssetRoomBinding,
   SnapshotPolicy
 } from "#src/index.ts";
 import {
@@ -65,6 +68,20 @@ export function counterHandler(
   };
 }
 
+function counterLive(
+  binding: AssetRoomBinding<CounterState>
+): AssetLiveProtocol<CounterCommand> {
+  return {
+    snapshotSchema: counterSnapshotSchema,
+    snapshot: () => {
+      return { value: binding.state.value };
+    },
+    arbitrate: (command) => {
+      return { command };
+    }
+  };
+}
+
 export function liveCounterHandler(
   snapshot?: SnapshotPolicy
 ): AssetKindHandler<CounterState, CounterCommand> {
@@ -72,33 +89,35 @@ export function liveCounterHandler(
     ...counterHandler(snapshot),
     commands: {
       ...kCounterCommands,
-      live: (binding) => {
-        return {
-          snapshotSchema: counterSnapshotSchema,
-          snapshot: () => {
-            return { value: binding.state.value };
-          },
-          arbitrate: (command) => {
-            return { command };
-          }
-        };
+      live: counterLive
+    }
+  };
+}
+
+export function failingLiveCounterHandler(): AssetKindHandler<CounterState, CounterCommand> {
+  return {
+    ...counterHandler({ delay: 0, maxDelay: 0 }),
+    commands: {
+      ...kCounterCommands,
+      live: () => {
+        throw new Error("live protocol unavailable");
       }
     }
   };
 }
 
-export function relayCounterHandler(
-  relay: AssetRelay
-): AssetKindHandler<CounterState, CounterCommand> {
-  const live = liveCounterHandler({ delay: 0, maxDelay: 0 });
-
+export function relayCounterHandler<TRelay extends object>(
+  schemas: AssetRelaySchemas<TRelay>,
+  relay: AssetRelay<TRelay>
+): AssetKindHandler<CounterState, CounterCommand, TRelay> {
   return {
-    ...live,
+    ...counterHandler({ delay: 0, maxDelay: 0 }),
     commands: {
       ...kCounterCommands,
+      relay: schemas,
       live: (binding) => {
         return {
-          ...live.commands!.live!(binding),
+          ...counterLive(binding),
           relay
         };
       }
