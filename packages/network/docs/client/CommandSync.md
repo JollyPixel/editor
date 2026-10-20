@@ -17,8 +17,9 @@ Here the typed room and document share command and snapshot types.
 
 ## Constructor and readiness
 
-`new CommandSync(room, options?)` subscribes to messages and installs resume data.
-Construct before joining. `whenReady()` resolves after the first snapshot.
+`new CommandSync(room, { reconciler, applySnapshot?, receipts? })` subscribes to
+messages and installs resume data. Construct before joining. `whenReady()`
+resolves after the first snapshot.
 
 ## Properties
 
@@ -36,6 +37,11 @@ readonly version: number;
 ### `send(body, timestamp?, basis?): TCommand`
 
 Stamps an already-applied edit. `basis` is the version replayed by undo/redo.
+
+### `sendChange(body, change): TCommand`
+
+Sends `body` with `change.basis` and answers `change` in the `receipts` option
+once the server acknowledges or refuses it.
 
 ### `keepIn(outbox): void`
 
@@ -71,15 +77,34 @@ Detaches sync and clears pending work. Leave the room separately.
 
 ### DocumentSyncClient
 
-`new DocumentSyncClient(room, { document, keys, resolver? })` sends local changes
+`new DocumentSyncClient(room, { document, keys })` sends local changes
 and handles rollback/replay through the document's change images.
+
+### SyncedDocument
+
+Abstract base that pairs a document with the sync that keeps it up to date.
+
+```ts
+abstract class SyncedDocument<TDocument> {
+  abstract readonly document: TDocument;
+  readonly ready: Promise<void>;
+  readonly loaded: boolean;
+  readonly pendingChanges: PendingChanges;
+
+  constructor(sync: DocumentSync);
+  dispose(): void;
+}
+```
+
+`ready` resolves after the first snapshot and `loaded` turns `true` at the same
+time. `pendingChanges` exposes the sync as `PendingChanges`: `pending`,
+`keepIn()`, plus `on` and `off` for the `settled` and `unsettled` events.
+`dispose()` destroys the sync. A `CommandSync` satisfies `DocumentSync`.
 
 ### SyncedCommandDocument
 
-`new SyncedCommandDocument(room, { document, keys })` groups document and sync.
-Its `ready` promise resolves after the first snapshot; `dispose()` detaches sync.
-`pendingChanges` exposes the sync as `PendingChanges`: `pending`, `keepIn()`,
-plus `on` and `off` for the `settled` and `unsettled` events.
+`new SyncedCommandDocument(room, { document, keys })` is a `SyncedDocument` over
+a `DocumentSyncClient`.
 
 `SyncedCommandDocument<TDocument, TNotice>` reads the command, snapshot and
 image types from the document's `apply`, `load` and `revert` signatures. The
@@ -135,19 +160,45 @@ for it and asks for a fresh snapshot.
 ## Reconciliation and conflicts
 
 `CommandReconciler` supplies `keys`, `narrow`, `revert`, and `replay`.
-Failed rollback requests a snapshot. Client and server must share conflict policy.
+Failed rollback requests a snapshot.
 
 ### Conflict resolution
 
-`LastWriteWinsResolver` resolves writes and protects newer peer edits from replay.
-`ConflictTracker` admissions must be committed after edits succeed.
+Client and server settle each key with the same last-write-wins rule: a write
+from the same client always wins; against a write that landed at a version, a
+fresh write wins and a replay wins only when its `basis` is not older; otherwise
+the newer `timestamp` wins, then the greater `clientId`.
 
-`new KeyedCommandArbiter({ accepts, keys, conflictResolver? })` is the server
-arbiter for documents whose commands claim a fixed list of conflict keys.
-`admit(state, command)` returns `null` when `accepts(state, command)` is false
-or when the tracker rejects one of `keys(command)`; otherwise it returns the
-tracker's admission. `restore(command, version)` records a past command's keys
-at `version` when a room starts. `conflictResolver` defaults to a new
-`LastWriteWinsResolver`.
+`KeyedCommandArbiter` is the server arbiter for documents whose commands write
+conflict keys.
 
-Use `attributeCommand` to replace claimed client identity before arbitration.
+```ts
+type ConflictWrites =
+  | { readonly scope?: string; readonly keys: readonly string[]; }
+  | { readonly scope?: string; readonly reset: true; };
+
+interface KeyedCommandArbiterOptions<TCommand, TState> {
+  accepts(state: TState, command: TCommand): boolean;
+  writes(command: TCommand, state?: TState): ConflictWrites;
+  narrow?(command: TCommand, keep: readonly number[]): TCommand | null;
+}
+
+interface Admission<TCommand> {
+  readonly command: TCommand;
+  commit(version?: number): void;
+}
+```
+
+- `admit(state, command)` returns `null` when `accepts` is false. A command
+  that wins every key of `writes` is admitted whole. When it wins only some,
+  `narrow(command, keep)` receives the winning indices and the narrowed command
+  is admitted; without `narrow`, or when it returns `null` or no key wins, the
+  command is refused.
+- A `reset` write is always admitted. Its commit forgets the keys of its
+  `scope` and becomes the record every later key of that scope is compared to.
+  Scopes never see each other's keys; the default scope is `""`.
+- Call `commit(version)` once the command is stored. Nothing is recorded
+  before.
+- `restore(command, version)` records a past command when a room starts. It
+  calls `writes(command)` without a state, so keys that depend on the state at
+  the time the command landed cannot be restored.

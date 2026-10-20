@@ -86,7 +86,14 @@ const suite = defineSuite("network / Client receive", (bench) => {
   >(ROOM_NAME, {
     parser: MessageParser.fromProtocol(outbound)
   });
-  const sync = new CommandSync<BenchCommand, BenchSnapshot>(room);
+  const sync = new CommandSync<BenchCommand, BenchSnapshot>(room, {
+    reconciler: {
+      keys: () => [],
+      narrow: () => null,
+      revert: () => true,
+      replay: () => true
+    }
+  });
   let applied = 0;
   sync.on("command", () => {
     applied++;

@@ -1,8 +1,7 @@
 // Import Third-party Dependencies
 import {
   describeErrors,
-  SchemaParser,
-  type ConflictResolver
+  SchemaParser
 } from "@jolly-pixel/network";
 import {
   InvalidAssetDocumentError,
@@ -203,7 +202,6 @@ export interface BlocksetAssetKindOptions {
   tileSize?: number;
   defaultSize?: Vec2;
   snapshot?: SnapshotPolicy;
-  conflictResolver?: ConflictResolver;
 }
 
 export function blocksetAssetKind(
@@ -215,8 +213,7 @@ export function blocksetAssetKind(
       x: kDefaultGridSize * tileSize,
       y: kDefaultGridSize * tileSize
     },
-    snapshot,
-    conflictResolver
+    snapshot
   } = options;
 
   return {
@@ -265,9 +262,7 @@ export function blocksetAssetKind(
       },
 
       live({ state }) {
-        const arbiter = new BlocksetCommandArbiter({
-          conflictResolver
-        });
+        const arbiter = new BlocksetCommandArbiter();
 
         return {
           snapshotSchema: blocksetSnapshotSchema,

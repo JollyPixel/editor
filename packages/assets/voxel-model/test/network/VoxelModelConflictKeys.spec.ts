@@ -27,7 +27,9 @@ const kAcceptAll: ArbiterState = {
 function conflictArbiter(): ConflictArbiter {
   return new KeyedCommandArbiter<VoxelModelNetworkCommand, ArbiterState>({
     accepts: (state, command) => state.accepts(command),
-    keys: voxelModelConflictKeys
+    writes: (command) => {
+      return { keys: voxelModelConflictKeys(command) };
+    }
   });
 }
 

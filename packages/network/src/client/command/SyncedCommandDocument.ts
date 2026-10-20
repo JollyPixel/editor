@@ -1,10 +1,10 @@
 // Import Internal Dependencies
 import type { Room } from "../Room.ts";
-import type { PendingChanges } from "./CommandSync.ts";
 import {
   DocumentSyncClient,
   type SyncableDocument
 } from "./DocumentSyncClient.ts";
+import { SyncedDocument } from "./SyncedDocument.ts";
 import type {
   NetworkCommandHeader,
   NetworkServerMessage,
@@ -52,24 +52,8 @@ export interface SyncedCommandDocumentOptions<
 export class SyncedCommandDocument<
   TDocument extends CommandSyncableDocument<TDocument>,
   TNotice extends NetworkServerNoticeOf<TNotice> = never
-> {
+> extends SyncedDocument<TDocument> {
   readonly document: TDocument;
-  readonly ready: Promise<void>;
-
-  #sync: DocumentSyncClient<
-    SyncableDocumentCommand<TDocument>,
-    SyncableDocumentSnapshot<TDocument>,
-    TNotice,
-    SyncableDocumentImage<TDocument>
-  >;
-
-  get loaded(): boolean {
-    return this.#sync.ready;
-  }
-
-  get pendingChanges(): PendingChanges {
-    return this.#sync;
-  }
 
   constructor(
     room: SyncedDocumentRoom<TDocument, TNotice>,
@@ -78,16 +62,11 @@ export class SyncedCommandDocument<
       NoInfer<SyncableDocumentCommand<TDocument>>
     >
   ) {
-    this.document = options.document;
-    this.#sync = new DocumentSyncClient(room, {
+    super(new DocumentSyncClient(room, {
       document: options.document,
       keys: options.keys
-    });
-    this.ready = this.#sync.whenReady();
-  }
-
-  dispose(): void {
-    this.#sync.destroy();
+    }));
+    this.document = options.document;
   }
 }
 

@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import {
   CommandSync,
+  type CommandReconciler,
   type NetworkCommandHeader,
   type NetworkServerMessage
 } from "#src/index.ts";
@@ -19,6 +20,23 @@ export interface TestNotice {
 
 export type TestMessage = NetworkServerMessage<TestCommand, TestSnapshot, TestNotice>;
 
+export function rebasingReconciler<
+  TCommand extends NetworkCommandHeader
+>(
+  replay: (command: TCommand) => void = () => undefined
+): CommandReconciler<TCommand> {
+  return {
+    keys: () => null,
+    narrow: () => null,
+    revert: () => true,
+    replay: (command) => {
+      replay(command);
+
+      return true;
+    }
+  };
+}
+
 export function createCommandSync(
   options: { admitted: boolean; } = { admitted: true }
 ) {
@@ -26,11 +44,15 @@ export function createCommandSync(
   if (options.admitted) {
     harness.admit();
   }
-  const sync = new CommandSync<TestCommand, TestSnapshot, TestNotice>(harness.room);
+  const replayed: TestCommand[] = [];
+  const sync = new CommandSync<TestCommand, TestSnapshot, TestNotice>(harness.room, {
+    reconciler: rebasingReconciler((command) => replayed.push(command))
+  });
 
   return {
     harness,
-    sync
+    sync,
+    replayed
   };
 }
 

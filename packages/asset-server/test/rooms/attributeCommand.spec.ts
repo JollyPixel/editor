@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { attributeCommand } from "#src/sync/attributeCommand.ts";
+import { attributeCommand } from "#src/rooms/attributeCommand.ts";
 
 describe("attributeCommand", () => {
   test("replaces the clientId the sender claimed with the connection's id", (t) => {

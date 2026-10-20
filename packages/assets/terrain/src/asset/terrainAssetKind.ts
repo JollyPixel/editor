@@ -2,8 +2,7 @@
 import {
   describeErrors,
   KeyedCommandArbiter,
-  SchemaParser,
-  type ConflictResolver
+  SchemaParser
 } from "@jolly-pixel/network";
 import {
   InvalidAssetDocumentError,
@@ -81,7 +80,6 @@ export function decodeTerrainAssetDocument(
 
 export interface TerrainAssetKindOptions {
   snapshot?: SnapshotPolicy;
-  conflictResolver?: ConflictResolver<TerrainNetworkCommand>;
 }
 
 export function terrainAssetKind(
@@ -91,10 +89,7 @@ export function terrainAssetKind(
   TerrainNetworkCommand,
   TerrainLiveMessage
 > {
-  const {
-    snapshot,
-    conflictResolver
-  } = options;
+  const { snapshot } = options;
 
   return {
     kind: TERRAIN_KIND,
@@ -159,8 +154,9 @@ export function terrainAssetKind(
           TerrainDocument
         >({
           accepts: acceptsTerrainCommand,
-          keys: terrainWriteKeys,
-          conflictResolver
+          writes: (command) => {
+            return { keys: terrainWriteKeys(command) };
+          }
         });
 
         return {

@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { PendingChanges } from "@jolly-pixel/network/client";
+import { SyncedDocument } from "@jolly-pixel/network/client";
 import {
   PixelDocument,
   type Vec2
@@ -26,34 +26,19 @@ export function blankPixelDocument(
   });
 }
 
-export class SyncedPixelDocument {
+export class SyncedPixelDocument extends SyncedDocument<PixelDocument> {
   readonly document: PixelDocument;
-  readonly ready: Promise<void>;
-
-  #sync: PixelSyncClient;
-
-  get loaded(): boolean {
-    return this.#sync.ready;
-  }
-
-  get pendingChanges(): PendingChanges {
-    return this.#sync;
-  }
 
   constructor(
     room: PixelArtRoom,
     options: SyncedPixelDocumentOptions = {}
   ) {
-    this.document = blankPixelDocument(options);
-    this.#sync = new PixelSyncClient({
+    const document = blankPixelDocument(options);
+    super(new PixelSyncClient({
       room,
-      document: this.document
-    });
-    this.ready = this.#sync.whenReady();
-  }
-
-  dispose(): void {
-    this.#sync.destroy();
+      document
+    }));
+    this.document = document;
   }
 }
 

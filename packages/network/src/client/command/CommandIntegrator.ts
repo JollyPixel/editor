@@ -4,10 +4,10 @@ import type {
   LedgerEntry,
   PendingLedger
 } from "./PendingLedger.ts";
-import type {
-  ConflictRecord,
-  ConflictResolver
-} from "../../sync/ConflictResolver.ts";
+import {
+  supersedes,
+  type ConflictRecord
+} from "../../sync/supersedes.ts";
 import type { NetworkCommandHeader } from "../../sync/types.ts";
 
 interface KeyedEntry<TCommand extends NetworkCommandHeader> {
@@ -19,8 +19,7 @@ export interface CommandIntegratorOptions<
   TCommand extends NetworkCommandHeader
 > {
   ledger: PendingLedger<TCommand>;
-  reconciler: CommandReconciler<TCommand> | null;
-  resolver: ConflictResolver<TCommand>;
+  reconciler: CommandReconciler<TCommand>;
   apply: (command: TCommand) => void;
   resync: () => void;
   unreplayable: (entry: LedgerEntry<TCommand>) => void;
@@ -28,8 +27,7 @@ export interface CommandIntegratorOptions<
 
 export class CommandIntegrator<TCommand extends NetworkCommandHeader> {
   #ledger: PendingLedger<TCommand>;
-  #reconciler: CommandReconciler<TCommand> | null;
-  #resolver: ConflictResolver<TCommand>;
+  #reconciler: CommandReconciler<TCommand>;
   #apply: (command: TCommand) => void;
   #resync: () => void;
   #unreplayable: (entry: LedgerEntry<TCommand>) => void;
@@ -39,7 +37,6 @@ export class CommandIntegrator<TCommand extends NetworkCommandHeader> {
   ) {
     this.#ledger = options.ledger;
     this.#reconciler = options.reconciler;
-    this.#resolver = options.resolver;
     this.#apply = options.apply;
     this.#resync = options.resync;
     this.#unreplayable = options.unreplayable;
@@ -49,35 +46,26 @@ export class CommandIntegrator<TCommand extends NetworkCommandHeader> {
     command: TCommand,
     version?: number
   ): void {
-    const reconciler = this.#reconciler;
-    if (reconciler === null || this.#ledger.size === 0) {
+    if (this.#ledger.size === 0) {
       this.#apply(command);
 
       return;
     }
 
-    if (!this.#integrateKeyed(reconciler, command, version)) {
-      this.#rebase(reconciler, command);
+    const keys = this.#reconciler.keys(command);
+    const pending = keys === null ? null : this.#keyedPending();
+    if (keys === null || pending === null) {
+      this.#rebase(command);
     }
-  }
-
-  integrateCorrection(
-    correction: TCommand
-  ): void {
-    if (this.#reconciler === null) {
-      this.#apply(correction);
-      this.replayPending();
-
-      return;
+    else {
+      this.#integrateKeyed(command, keys, pending, version);
     }
-
-    this.integrate(correction);
   }
 
   replayPending(): void {
     for (const entry of [...this.#ledger.entries]) {
       try {
-        entry.applied = this.#replay(entry.command);
+        entry.applied = this.#reconciler.replay(entry.command);
       }
       catch {
         this.#unreplayable(entry);
@@ -85,40 +73,28 @@ export class CommandIntegrator<TCommand extends NetworkCommandHeader> {
     }
   }
 
-  #replay(
-    command: TCommand
-  ): boolean {
-    if (this.#reconciler === null) {
-      this.#apply(command);
-
-      return true;
-    }
-
-    return this.#reconciler.replay(command);
-  }
-
-  #integrateKeyed(
-    reconciler: CommandReconciler<TCommand>,
-    command: TCommand,
-    version: number | undefined
-  ): boolean {
-    const keys = reconciler.keys(command);
-    if (keys === null) {
-      return false;
-    }
-
+  #keyedPending(): KeyedEntry<TCommand>[] | null {
     const pending: KeyedEntry<TCommand>[] = [];
     for (const entry of this.#ledger.entries) {
-      const pendingKeys = entry.applied ? reconciler.keys(entry.command) : null;
-      if (pendingKeys === null) {
-        return false;
+      const keys = entry.applied ? this.#reconciler.keys(entry.command) : null;
+      if (keys === null) {
+        return null;
       }
       pending.push({
         entry,
-        keys: new Set(pendingKeys)
+        keys: new Set(keys)
       });
     }
 
+    return pending;
+  }
+
+  #integrateKeyed(
+    command: TCommand,
+    keys: readonly string[],
+    pending: readonly KeyedEntry<TCommand>[],
+    version: number | undefined
+  ): void {
     const existing: ConflictRecord = version === undefined ?
       command :
       { ...command, version };
@@ -126,7 +102,8 @@ export class CommandIntegrator<TCommand extends NetworkCommandHeader> {
     const outliving = new Set<LedgerEntry<TCommand>>();
     keys.forEach((key, index) => {
       const winners = pending.filter(
-        (keyed) => this.#outlives(keyed, key, existing)
+        (keyed) => keyed.keys.has(key) &&
+          supersedes(keyed.entry.command, existing)
       );
       if (winners.length === 0) {
         keep.push(index);
@@ -138,39 +115,30 @@ export class CommandIntegrator<TCommand extends NetworkCommandHeader> {
 
     if (keep.length === keys.length) {
       this.#apply(command);
+
+      return;
     }
-    else if (keep.length > 0) {
-      const narrowed = reconciler.narrow(command, keep);
-      if (narrowed === null) {
-        this.#apply(command);
-        for (const entry of outliving) {
-          entry.applied = reconciler.replay(entry.command);
-        }
-      }
-      else {
-        this.#apply(narrowed);
-      }
+    if (keep.length === 0) {
+      return;
     }
 
-    return true;
-  }
+    const narrowed = this.#reconciler.narrow(command, keep);
+    if (narrowed !== null) {
+      this.#apply(narrowed);
 
-  #outlives(
-    keyed: KeyedEntry<TCommand>,
-    key: string,
-    existing: ConflictRecord
-  ): boolean {
-    return keyed.keys.has(key) && this.#resolver.resolve({
-      incoming: keyed.entry.command,
-      existing
-    }) === "accept";
+      return;
+    }
+
+    this.#apply(command);
+    for (const entry of outliving) {
+      entry.applied = this.#reconciler.replay(entry.command);
+    }
   }
 
   #rebase(
-    reconciler: CommandReconciler<TCommand>,
     command: TCommand
   ): void {
-    if (!reconciler.revert(this.#ledger.appliedCommands())) {
+    if (!this.#reconciler.revert(this.#ledger.appliedCommands())) {
       this.#resync();
 
       return;

@@ -14,9 +14,7 @@ import {
 
 describe("CommandSync — acknowledgements", () => {
   test("a snapshot replays the pending commands its acks do not cover", () => {
-    const { harness, sync } = createCommandSync();
-    const values: number[] = [];
-    sync.on("command", (command) => values.push(command.value));
+    const { harness, sync, replayed } = createCommandSync();
 
     sync.send({ action: "set", value: 1 });
     sync.send({ action: "set", value: 2 });
@@ -25,12 +23,12 @@ describe("CommandSync — acknowledgements", () => {
     harness.serverMessage({ type: "snapshot", data: { value: 1 }, acks: { self: 2 } });
     harness.serverMessage({ type: "command", data: { ...remote("self"), seq: 3 } });
 
-    assert.deepEqual(values, [3]);
+    assert.deepEqual(replayed.map((command) => command.value), [3]);
     assert.strictEqual(sync.pending, 0);
   });
 
   test("a correction acknowledges the corrected command and replays the later ones", () => {
-    const { harness, sync } = createCommandSync();
+    const { harness, sync, replayed } = createCommandSync();
     const received: TestCommand[] = [];
     sync.on("command", (command) => received.push(command));
 
@@ -39,8 +37,8 @@ describe("CommandSync — acknowledgements", () => {
     const correction = { ...remote("self"), value: 0, seq: 1 };
     harness.serverMessage({ type: "correction", data: correction, acks: { self: 1 } });
 
-    assert.deepEqual(received.map((command) => command.value), [0, 2]);
-    assert.strictEqual(received[0], correction);
+    assert.deepEqual(received, [correction]);
+    assert.deepEqual(replayed.map((command) => command.value), [2]);
     assert.strictEqual(sync.pending, 1);
   });
 
@@ -100,16 +98,14 @@ describe("CommandSync — acknowledgements", () => {
   });
 
   test("a snapshot received before admission replays the held commands", () => {
-    const { harness, sync } = createCommandSync({ admitted: false });
-    const values: number[] = [];
-    sync.on("command", (command) => values.push(command.value));
+    const { harness, sync, replayed } = createCommandSync({ admitted: false });
 
     sync.send({ action: "set", value: 1 });
     harness.admit("A");
     harness.serverMessage({ type: "snapshot", data: { value: 0 } });
     harness.serverMessage({ type: "command", data: { ...remote("A"), seq: 1 } });
 
-    assert.deepEqual(values, [1]);
+    assert.deepEqual(replayed.map((command) => command.value), [1]);
     assert.strictEqual(sync.pending, 0);
   });
 

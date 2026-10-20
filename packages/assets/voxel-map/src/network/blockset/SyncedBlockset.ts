@@ -3,7 +3,7 @@ import {
   blankPixelDocument,
   type SyncedPixelDocumentOptions
 } from "@jolly-pixel/asset.pixel-art/client";
-import type { PendingChanges } from "@jolly-pixel/network/client";
+import { SyncedDocument } from "@jolly-pixel/network/client";
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 import { BlocksetDocument } from "@jolly-pixel/voxel.renderer";
 
@@ -14,53 +14,40 @@ import type { BlocksetRoom } from "./types.ts";
 
 export type SyncedBlocksetOptions = SyncedPixelDocumentOptions;
 
-export class SyncedBlockset {
+export class SyncedBlockset extends SyncedDocument<SyncedBlockset> {
   readonly pixels: PixelDocument;
   readonly blockset: BlocksetDocument;
-  readonly ready: Promise<void>;
 
-  #sync: BlocksetSyncClient;
-
-  get loaded(): boolean {
-    return this.#sync.ready;
-  }
-
-  get pendingChanges(): PendingChanges {
-    return this.#sync;
+  get document(): this {
+    return this;
   }
 
   constructor(
     room: BlocksetRoom,
     options: SyncedBlocksetOptions = {}
   ) {
-    this.pixels = blankPixelDocument(options);
-    this.blockset = new BlocksetDocument();
-    this.#sync = new BlocksetSyncClient({
+    const pixels = blankPixelDocument(options);
+    const blockset = new BlocksetDocument();
+    super(new BlocksetSyncClient({
       room,
-      pixels: this.pixels,
-      blockset: this.blockset
-    });
-    this.ready = this.#sync.whenReady();
+      pixels,
+      blockset
+    }));
+    this.pixels = pixels;
+    this.blockset = blockset;
   }
 
-  dispose(): void {
-    this.#sync.destroy();
+  override dispose(): void {
+    super.dispose();
     this.blockset.dispose();
   }
-}
-
-export interface SyncedBlocksetLease {
-  document: SyncedBlockset;
-  ready: Promise<void>;
-  pendingChanges: PendingChanges;
-  dispose(): void;
 }
 
 export interface BlocksetDocumentKind {
   readonly kind: typeof BLOCKSET_KIND;
   createDocument(
     room: BlocksetRoom
-  ): SyncedBlocksetLease;
+  ): SyncedBlockset;
 }
 
 export function blocksetDocumentKind(
@@ -68,15 +55,6 @@ export function blocksetDocumentKind(
 ): BlocksetDocumentKind {
   return {
     kind: BLOCKSET_KIND,
-    createDocument: (room) => {
-      const blockset = new SyncedBlockset(room, options);
-
-      return {
-        document: blockset,
-        ready: blockset.ready,
-        pendingChanges: blockset.pendingChanges,
-        dispose: () => blockset.dispose()
-      };
-    }
+    createDocument: (room) => new SyncedBlockset(room, options)
   };
 }

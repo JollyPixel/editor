@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import {
-  CommandSync,
-  type ConflictResolver
-} from "@jolly-pixel/network/client";
+import { CommandSync } from "@jolly-pixel/network/client";
 import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import {
   isVoxelWorldCommand,
@@ -22,7 +19,6 @@ import { VoxelReconciler } from "./VoxelReconciler.ts";
 export interface VoxelSyncClientOptions {
   room: VoxelMapRoom;
   document: VoxelDocument;
-  resolver?: ConflictResolver;
 }
 
 export class VoxelSyncClient extends CommandSync<
@@ -44,7 +40,6 @@ export class VoxelSyncClient extends CommandSync<
     const edits = new VoxelEdits(options.document);
     super(options.room, {
       reconciler,
-      resolver: options.resolver,
       receipts: edits.receipts
     });
     const { document } = options;

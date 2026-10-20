@@ -13,6 +13,7 @@ import {
   type NetworkServerMessage
 } from "#src/index.ts";
 import { captureLogger } from "../../helpers/captureLogger.ts";
+import { rebasingReconciler } from "../../helpers/client/commandSync.ts";
 import {
   createReconnectingClient,
   type FakeSocket
@@ -74,7 +75,9 @@ function setup(
   const { logger } = captureLogger();
   const { client, sockets } = createReconnectingClient({ logger });
   const room = client.room<TestCommand, TestMessage>(kRoom);
-  const sync = new CommandSync<TestCommand, { value: number; }>(room);
+  const sync = new CommandSync<TestCommand, { value: number; }>(room, {
+    reconciler: rebasingReconciler()
+  });
   sockets[0].open();
   room.join();
   admit(sockets[0], "A");

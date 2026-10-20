@@ -20,103 +20,52 @@ import {
   isVoxelCellCommand,
   narrowVoxelCellCommand,
   voxelCellKeys,
-  voxelCommandKeys,
-  type VoxelCellCommand
+  voxelCommandKeys
 } from "./VoxelCommandKeys.ts";
 
-type WorldReplaceCommand = Extract<
+export const VOXEL_COMMAND_RULES: network.KeyedCommandArbiterOptions<
   VoxelMapNetworkCommand,
-  { action: "world-replace"; }
->;
+  VoxelWorldCommandTarget
+> = {
+  accepts: acceptsVoxelCommand,
+  writes: (command) => (command.action === "world-replace" ?
+    { reset: true } :
+    { keys: voxelCommandKeys(command) }),
+  narrow: (command, keep) => (isVoxelCellCommand(command) ?
+    narrowVoxelCellCommand(command, keep) :
+    null)
+};
 
-type TemplateDefinedCommand = Extract<
+export class VoxelCommandArbiter extends network.KeyedCommandArbiter<
   VoxelMapNetworkCommand,
-  { action: "template-defined"; }
->;
-
-export interface VoxelCommandArbiterOptions {
-  conflictResolver?: network.ConflictResolver<VoxelMapNetworkCommand>;
+  VoxelWorldCommandTarget
+> {
+  constructor() {
+    super(VOXEL_COMMAND_RULES);
+  }
 }
 
-export class VoxelCommandArbiter {
-  #tracker: network.ConflictTracker<VoxelMapNetworkCommand>;
-
-  constructor(
-    options: VoxelCommandArbiterOptions = {}
+function acceptsVoxelCommand(
+  state: VoxelWorldCommandTarget,
+  command: VoxelMapNetworkCommand
+): boolean {
+  if (command.action === "world-replace") {
+    return loads(command.data, state.world.chunkSize);
+  }
+  if (command.action === "template-defined" && !parses(command.template)) {
+    return false;
+  }
+  if (!targetsExist(state, command)) {
+    return false;
+  }
+  if (
+    command.action === "voxels-patched" &&
+    !isWellFormedPatch(command.metadata)
   ) {
-    this.#tracker = new network.ConflictTracker(
-      options.conflictResolver ?? new network.LastWriteWinsResolver()
-    );
+    return false;
   }
 
-  admit(
-    state: VoxelWorldCommandTarget,
-    command: VoxelMapNetworkCommand
-  ): network.Admission<VoxelMapNetworkCommand> | null {
-    if (command.action === "world-replace") {
-      return this.#admitWorldReplace(state, command);
-    }
-    if (command.action === "template-defined" && !parses(command)) {
-      return null;
-    }
-    if (!targetsExist(state, command)) {
-      return null;
-    }
-    if (
-      command.action === "voxels-patched" &&
-      !isWellFormedPatch(command.metadata)
-    ) {
-      return null;
-    }
-    if (isVoxelCellCommand(command)) {
-      return this.#admitCells(command);
-    }
-
-    return this.#tracker.admit(command, voxelCommandKeys(command));
-  }
-
-  #admitWorldReplace(
-    state: VoxelWorldCommandTarget,
-    command: WorldReplaceCommand
-  ): network.Admission<VoxelMapNetworkCommand> | null {
-    if (!loads(command.data, state.world.chunkSize)) {
-      return null;
-    }
-
-    return {
-      command,
-      commit: (version) => this.#tracker.reset(command, version)
-    };
-  }
-
-  restore(
-    command: VoxelMapNetworkCommand,
-    version: number
-  ): void {
-    if (command.action === "world-replace") {
-      this.#tracker.reset(command, version);
-    }
-    else {
-      this.#tracker.record(command, voxelCommandKeys(command), version);
-    }
-  }
-
-  #admitCells<TCommand extends VoxelCellCommand & VoxelMapNetworkCommand>(
-    command: TCommand
-  ): network.Admission<TCommand> | null {
-    const keys = voxelCellKeys(command);
-    const { indices, commit } = this.#tracker.admitEach(command, keys);
-    if (indices.length === 0) {
-      return null;
-    }
-
-    return {
-      command: indices.length === keys.length ?
-        command :
-        narrowVoxelCellCommand(command, indices)!,
-      commit
-    };
-  }
+  return !isVoxelCellCommand(command) || voxelCellKeys(command).length > 0;
 }
 
 function targetsExist(
@@ -164,10 +113,10 @@ function loads(
 }
 
 function parses(
-  command: TemplateDefinedCommand
+  template: unknown
 ): boolean {
   try {
-    parseVoxelTemplate(command.template);
+    parseVoxelTemplate(template);
 
     return true;
   }

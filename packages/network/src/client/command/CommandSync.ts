@@ -8,12 +8,10 @@ import type { CommandReconciler } from "./CommandReconciler.ts";
 import { CommandIntegrator } from "./CommandIntegrator.ts";
 import {
   PendingLedger,
-  type LedgerEntry
+  type ChangeOutbox,
+  type LedgerEntry,
+  type SentChange
 } from "./PendingLedger.ts";
-import {
-  LastWriteWinsResolver,
-  type ConflictResolver
-} from "../../sync/ConflictResolver.ts";
 import type {
   NetworkAcks,
   NetworkCommandHeader,
@@ -23,30 +21,43 @@ import type {
   NetworkSyncMessage
 } from "../../sync/types.ts";
 
+export type {
+  ChangeOutbox,
+  SentChange
+};
+
 export type CommandBody<TCommand extends NetworkCommandHeader> =
   TCommand extends unknown ?
     Omit<TCommand, keyof NetworkCommandHeader> :
     never;
 
+type SyncMessageType = NetworkSyncMessage<unknown, unknown>["type"];
+
+type SyncMessage<
+  TCommand,
+  TSnapshot,
+  TType extends SyncMessageType
+> = Extract<NetworkSyncMessage<TCommand, TSnapshot>, { type: TType; }>;
+
+// CONSTANTS
+const kSyncMessageTypes = new Set<string>(Object.keys({
+  snapshot: true,
+  command: true,
+  correction: true,
+  "catch-up": true
+} satisfies Record<SyncMessageType, true>));
+
 function isSyncMessage<TCommand, TSnapshot>(
   message: { type: string; }
 ): message is NetworkSyncMessage<TCommand, TSnapshot> {
-  return message.type === "snapshot" ||
-    message.type === "command" ||
-    message.type === "correction" ||
-    message.type === "catch-up";
-}
-
-export interface SentChange {
-  readonly basis?: number;
+  return kSyncMessageTypes.has(message.type);
 }
 
 export interface CommandSyncOptions<
   TCommand extends NetworkCommandHeader,
   TSnapshot = unknown
 > {
-  reconciler?: CommandReconciler<TCommand>;
-  resolver?: ConflictResolver<TCommand>;
+  reconciler: CommandReconciler<TCommand>;
   applySnapshot?: (snapshot: TSnapshot) => void | Promise<void>;
   /**
    * Receipts of the local changes sent with "sendChange", attached until "destroy()".
@@ -55,16 +66,6 @@ export interface CommandSyncOptions<
 }
 
 export type PendingChangesEvent = "settled" | "unsettled";
-
-export interface ChangeOutbox {
-  restore(): readonly NetworkCommandHeader[];
-  keep(
-    command: NetworkCommandHeader
-  ): void;
-  drop(
-    command: NetworkCommandHeader
-  ): void;
-}
 
 export interface PendingChanges {
   readonly pending: number;
@@ -123,9 +124,8 @@ export class CommandSync<
   #deferred: NetworkServerMessage<TCommand, TSnapshot, TNotice>[] | null = null;
   #destroyed = false;
   #whenReady = Promise.withResolvers<void>();
-  #refusedOnSnapshot: TCommand[] = [];
+  #refusedOnSnapshot: LedgerEntry<TCommand>[] = [];
   #receipts: ChangeReceipts<SentChange> | null;
-  #changes = new WeakMap<TCommand, SentChange>();
   #detachReceipts: (() => void) | null;
 
   #onMessage = (
@@ -150,32 +150,16 @@ export class CommandSync<
 
     switch (message.type) {
       case "snapshot":
-        this.#receiveSnapshot(
-          message.data,
-          message.version,
-          message.acks,
-          message.refused
-        );
+        this.#receiveSnapshot(message);
         break;
       case "correction":
-        this.#handleCorrection(
-          message.data,
-          message.acks,
-          message.refused
-        );
+        this.#handleCorrection(message);
         break;
       case "catch-up":
-        this.#handleCatchUp(
-          message.data,
-          message.version,
-          message.acks
-        );
+        this.#handleCatchUp(message);
         break;
       default:
-        this.#handleCommand(
-          message.data,
-          message.version
-        );
+        this.#handleCommand(message.data, message.version);
     }
   }
 
@@ -192,7 +176,7 @@ export class CommandSync<
 
   constructor(
     room: Room<TCommand, NetworkServerMessage<TCommand, TSnapshot, TNotice>>,
-    options: CommandSyncOptions<TCommand, TSnapshot> = {}
+    options: CommandSyncOptions<TCommand, TSnapshot>
   ) {
     super();
 
@@ -200,8 +184,7 @@ export class CommandSync<
     this.#clientId = room.clientId;
     this.#integrator = new CommandIntegrator({
       ledger: this.#ledger,
-      reconciler: options.reconciler ?? null,
-      resolver: options.resolver ?? new LastWriteWinsResolver(),
+      reconciler: options.reconciler,
       apply: (command) => this.emit("command", command),
       resync: () => this.#resync(),
       unreplayable: (entry) => this.#discard(entry)
@@ -253,6 +236,37 @@ export class CommandSync<
     timestamp: number = Date.now(),
     basis?: number
   ): TCommand {
+    return this.#enqueue(body, timestamp, basis, null);
+  }
+
+  sendChange(
+    body: CommandBody<TCommand>,
+    change: SentChange
+  ): TCommand {
+    return this.#enqueue(body, Date.now(), change.basis, change);
+  }
+
+  destroy(): void {
+    this.#detachReceipts?.();
+    this.#detachReceipts = null;
+    this.#destroyed = true;
+    this.#deferred = null;
+    this.room.off("message", this.#onMessage);
+    this.room.off("sync", this.#onSync);
+    this.room.resumeWith(null);
+    this.#ledger.clear();
+  }
+
+  get #holding(): boolean {
+    return this.#resyncing || this.#resumingFrom !== null;
+  }
+
+  #enqueue(
+    body: CommandBody<TCommand>,
+    timestamp: number,
+    basis: number | undefined,
+    change: SentChange | null
+  ): TCommand {
     const entry: LedgerEntry<TCommand> = {
       command: {
         ...body,
@@ -261,6 +275,7 @@ export class CommandSync<
         timestamp,
         ...(basis === undefined ? {} : { basis })
       } as unknown as TCommand,
+      change,
       sent: false,
       applied: true
     };
@@ -274,27 +289,6 @@ export class CommandSync<
     }
 
     return entry.command;
-  }
-
-  protected sendChange(
-    body: CommandBody<TCommand>,
-    change: SentChange
-  ): TCommand {
-    const sent = this.send(body, Date.now(), change.basis);
-    this.#changes.set(sent, change);
-
-    return sent;
-  }
-
-  destroy(): void {
-    this.#detachReceipts?.();
-    this.#detachReceipts = null;
-    this.#destroyed = true;
-    this.#deferred = null;
-    this.room.off("message", this.#onMessage);
-    this.room.off("sync", this.#onSync);
-    this.room.resumeWith(null);
-    this.#ledger.clear();
   }
 
   #resume(): NetworkResume | undefined {
@@ -335,10 +329,8 @@ export class CommandSync<
   ): void {
     this.#ledger.discard(entry);
     this.#noteSettled([entry]);
-    this.#refuse(entry.command);
-    if (!this.#resyncing) {
-      this.#resync();
-    }
+    this.#refuse(entry);
+    this.#resync();
   }
 
   #noteVersion(
@@ -350,6 +342,10 @@ export class CommandSync<
   }
 
   #resync(): void {
+    if (this.#resyncing) {
+      return;
+    }
+
     this.#resyncing = true;
     this.room.resync();
   }
@@ -372,15 +368,14 @@ export class CommandSync<
     entries: readonly LedgerEntry<TCommand>[],
     version: number | undefined,
     refusedSeq?: number
-  ): TCommand | null {
-    let refused: TCommand | null = null;
-    for (const { command } of entries) {
-      if (command.seq === refusedSeq) {
-        refused = command;
+  ): LedgerEntry<TCommand> | null {
+    let refused: LedgerEntry<TCommand> | null = null;
+    for (const entry of entries) {
+      if (entry.command.seq === refusedSeq) {
+        refused = entry;
       }
       else {
-        this.emit("acknowledged", command, version);
-        this.#createReceipt(command, (change) => this.#receipts?.confirm(change, version));
+        this.#confirm(entry, version);
       }
     }
     this.#noteSettled(entries);
@@ -388,21 +383,22 @@ export class CommandSync<
     return refused;
   }
 
-  #refuse(
-    command: TCommand
+  #confirm(
+    entry: LedgerEntry<TCommand>,
+    version: number | undefined
   ): void {
-    this.emit("refused", command);
-    this.#createReceipt(command, (change) => this.#receipts?.refuse(change));
+    this.emit("acknowledged", entry.command, version);
+    if (entry.change !== null) {
+      this.#receipts?.confirm(entry.change, version);
+    }
   }
 
-  #createReceipt(
-    command: TCommand,
-    write: (change: SentChange) => void
+  #refuse(
+    entry: LedgerEntry<TCommand>
   ): void {
-    const change = this.#changes.get(command);
-    if (change !== undefined) {
-      this.#changes.delete(command);
-      write(change);
+    this.emit("refused", entry.command);
+    if (entry.change !== null) {
+      this.#receipts?.refuse(entry.change);
     }
   }
 
@@ -425,7 +421,7 @@ export class CommandSync<
     command: TCommand,
     version: number | undefined
   ): void {
-    if (this.#resyncing || this.#resumingFrom !== null) {
+    if (this.#holding) {
       if (this.#isOwn(command)) {
         this.#acknowledgeEcho(command, version);
       }
@@ -451,58 +447,50 @@ export class CommandSync<
   }
 
   #handleCorrection(
-    correction: TCommand,
-    acks: NetworkAcks | undefined,
-    refused: number | undefined
+    message: SyncMessage<TCommand, TSnapshot, "correction">
   ): void {
-    const acknowledged = this.#acknowledgeFrom(acks);
+    const { data: correction } = message;
+    const acknowledged = this.#acknowledgeFrom(message.acks);
     if (this.#isOwn(correction)) {
       acknowledged.push(
         ...this.#ledger.acknowledge(correction.clientId, correction.seq)
       );
     }
-    const refusedCommand = this.#answer(acknowledged, undefined, refused);
-    if (!this.#resyncing && this.#resumingFrom === null) {
-      this.#integrator.integrateCorrection(correction);
+    const refused = this.#answer(acknowledged, undefined, message.refused);
+    if (!this.#holding) {
+      this.#integrator.integrate(correction);
     }
-    if (refusedCommand !== null) {
-      this.#refuse(refusedCommand);
+    if (refused !== null) {
+      this.#refuse(refused);
     }
   }
 
   #handleCatchUp(
-    commands: readonly TCommand[],
-    version: number,
-    acks: NetworkAcks | undefined
+    message: SyncMessage<TCommand, TSnapshot, "catch-up">
   ): void {
-    for (const command of commands) {
-      if (!this.#isOwn(command) || this.#acknowledgeEcho(command, version)) {
+    for (const command of message.data) {
+      if (!this.#isOwn(command) || this.#acknowledgeEcho(command, message.version)) {
         this.#integrator.integrate(command);
       }
     }
-    this.#noteVersion(version);
-    const dropped = this.#acknowledgeFrom(acks);
+    this.#noteVersion(message.version);
+    const dropped = this.#acknowledgeFrom(message.acks);
     this.#noteSettled(dropped);
     if (this.#resumingFrom !== null) {
       this.#finishResume();
     }
     if (dropped.length > 0) {
-      this.#refusedOnSnapshot.push(...dropped.map(({ command }) => command));
-      if (!this.#resyncing) {
-        this.#resync();
-      }
+      this.#refusedOnSnapshot.push(...dropped);
+      this.#resync();
     }
   }
 
   #receiveSnapshot(
-    snapshot: TSnapshot,
-    version: number | undefined,
-    acks: NetworkAcks | undefined,
-    refused: number | undefined
+    message: SyncMessage<TCommand, TSnapshot, "snapshot">
   ): void {
-    const applied = this.#applySnapshot?.(snapshot);
+    const applied = this.#applySnapshot?.(message.data);
     if (applied === undefined) {
-      this.#handleSnapshot(snapshot, version, acks, refused);
+      this.#handleSnapshot(message);
 
       return;
     }
@@ -510,7 +498,7 @@ export class CommandSync<
     this.#deferred = [];
     applied.then(
       () => this.#releaseDeferred(
-        () => this.#handleSnapshot(snapshot, version, acks, refused)
+        () => this.#handleSnapshot(message)
       ),
       (error: unknown) => this.#releaseDeferred(() => {
         if (!this.#ready) {
@@ -537,30 +525,27 @@ export class CommandSync<
   }
 
   #handleSnapshot(
-    snapshot: TSnapshot,
-    version: number | undefined,
-    acks: NetworkAcks | undefined,
-    refused: number | undefined
+    message: SyncMessage<TCommand, TSnapshot, "snapshot">
   ): void {
-    const refusedCommand = this.#answer(
-      this.#acknowledgeFrom(acks),
-      version,
-      refused
+    const refused = this.#answer(
+      this.#acknowledgeFrom(message.acks),
+      message.version,
+      message.refused
     );
     this.#resyncing = false;
-    if (version !== undefined) {
-      this.#version = version;
+    if (message.version !== undefined) {
+      this.#version = message.version;
     }
-    this.emit("snapshot", snapshot);
+    this.emit("snapshot", message.data);
     this.#integrator.replayPending();
     if (this.#resumingFrom !== null) {
       this.#finishResume();
     }
-    if (refusedCommand !== null) {
-      this.#refuse(refusedCommand);
+    if (refused !== null) {
+      this.#refuse(refused);
     }
-    for (const command of this.#refusedOnSnapshot.splice(0)) {
-      this.#refuse(command);
+    for (const entry of this.#refusedOnSnapshot.splice(0)) {
+      this.#refuse(entry);
     }
 
     if (!this.#ready) {

@@ -6,26 +6,39 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import {
+  CATCH_UP_EVENT,
+  MessageParser,
+  MessageProtocol,
+  SNAPSHOT_EVENT,
+  withEvent
+} from "@jolly-pixel/network";
 import * as z from "zod/mini";
 
 // Import Internal Dependencies
-import { serverMessageProtocol } from "#src/sync/serverMessageProtocol.ts";
-import { MessageParser } from "#src/protocol/message/MessageParser.ts";
-import { withEvent } from "#src/protocol/message/MessageProtocol.ts";
-import {
-  CATCH_UP_EVENT,
-  SNAPSHOT_EVENT
-} from "#src/protocol/constants.ts";
-import { actionCommandProtocol } from "../helpers/protocol/protocols.ts";
+import { assetRoomOutboundProtocol } from "#src/rooms/AssetRoomExtension.schema.ts";
 
-describe("serverMessageProtocol", () => {
+// CONSTANTS
+const kCommandProtocol = new MessageProtocol(z.union([
+  z.object({
+    action: z.literal("voxel-set")
+  }),
+  z.object({
+    action: z.literal("object-added")
+  })
+]));
+
+function outboundParser(): MessageParser {
+  return new MessageParser(
+    assetRoomOutboundProtocol(kCommandProtocol, z.object({}))
+  );
+}
+
+describe("assetRoomOutboundProtocol", () => {
   test("names a snapshot with the reserved event and a command or correction with its action", () => {
-    const protocol = serverMessageProtocol({
-      command: actionCommandProtocol,
-      snapshot: z.object({})
-    });
+    const protocol = assetRoomOutboundProtocol(kCommandProtocol, z.object({}));
 
-    assert.deepEqual(protocol.events, [
+    assert.deepEqual(protocol.events.slice(0, 6), [
       SNAPSHOT_EVENT,
       "voxel-set",
       "object-added",
@@ -35,28 +48,22 @@ describe("serverMessageProtocol", () => {
     ]);
   });
 
-  test("appends notices named by withEvent() or their \"type\" literal", () => {
-    const protocol = serverMessageProtocol({
-      command: actionCommandProtocol,
-      snapshot: z.object({}),
-      notices: [
+  test("appends the room notices, then relay messages named by withEvent()", () => {
+    const protocol = assetRoomOutboundProtocol(
+      kCommandProtocol,
+      z.object({}),
+      [
         withEvent(z.object({
-          type: z.literal("deleted")
-        }), "$deleted"),
-        z.object({
-          type: z.literal("rejected")
-        })
+          type: z.literal("nudge")
+        }), "$nudge")
       ]
-    });
+    );
 
-    assert.deepEqual(protocol.events.slice(-2), ["$deleted", "rejected"]);
+    assert.deepEqual(protocol.events.slice(-3), ["deleted", "rejected", "$nudge"]);
   });
 
   test("resolves a server message to the inner command's event", () => {
-    const parser = new MessageParser(serverMessageProtocol({
-      command: actionCommandProtocol,
-      snapshot: z.object({})
-    }));
+    const parser = outboundParser();
 
     const snapshot = parser.parse({ type: "snapshot", data: {} });
     assert.ok(snapshot.ok);
@@ -78,10 +85,7 @@ describe("serverMessageProtocol", () => {
   });
 
   test("declares a non-negative room version and acks", () => {
-    const parser = new MessageParser(serverMessageProtocol({
-      command: actionCommandProtocol,
-      snapshot: z.object({})
-    }));
+    const parser = outboundParser();
 
     assert.ok(parser.parse({ type: "command", data: { action: "voxel-set" }, version: 4 }).ok);
     assert.ok(parser.parse({ type: "snapshot", data: {}, version: 4, acks: { A: 2 } }).ok);
@@ -96,10 +100,7 @@ describe("serverMessageProtocol", () => {
   });
 
   test("validates every command of a catch-up", () => {
-    const parser = new MessageParser(serverMessageProtocol({
-      command: actionCommandProtocol,
-      snapshot: z.object({})
-    }));
+    const parser = outboundParser();
 
     const caughtUp = parser.parse({
       type: "catch-up",

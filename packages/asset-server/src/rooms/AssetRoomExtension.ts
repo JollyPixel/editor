@@ -22,6 +22,7 @@ import {
 import type { RecordedCommand } from "../state/AssetStateStore.ts";
 import { assetRoomResumeSchema } from "./AssetRoomExtension.schema.ts";
 import { AssetRoomProtocols } from "./AssetRoomProtocols.ts";
+import { attributeCommand } from "./attributeCommand.ts";
 import {
   PeerAcks,
   type AcksField
@@ -198,7 +199,7 @@ export class AssetRoomExtension<
       return;
     }
 
-    const command = network.attributeCommand(message, clientId);
+    const command = attributeCommand(message, clientId);
     this.#acks.record(clientId, command.seq);
 
     const arbitration = this.#protocol.arbitrate(command);

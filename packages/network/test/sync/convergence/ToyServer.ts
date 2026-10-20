@@ -1,8 +1,6 @@
 // Import Internal Dependencies
 import {
-  ConflictTracker,
-  LastWriteWinsResolver,
-  type Admission,
+  KeyedCommandArbiter,
   type NetworkServerMessage
 } from "#src/index.ts";
 import {
@@ -22,7 +20,27 @@ export class ToyServer {
   version = 0;
 
   #versioned: boolean;
-  #tracker = new ConflictTracker(new LastWriteWinsResolver());
+  #arbiter = new KeyedCommandArbiter<ToyCommand, ToyDocument>({
+    accepts: (state, command) => state.accepts(command) &&
+      (command.action !== "set" || command.keys.length > 0),
+    writes: (command) => {
+      switch (command.action) {
+        case "set":
+          return { keys: command.keys };
+        case "reparent":
+          return { keys: [`parent:${command.id}`] };
+        default:
+          return { keys: [] };
+      }
+    },
+    narrow: (command, keep) => (command.action === "set" ?
+      {
+        ...command,
+        keys: keep.map((index) => command.keys[index]),
+        values: keep.map((index) => command.values[index])
+      } :
+      null)
+  });
   #members = new Map<string, Deliver>();
   #processed = new Map<string, number>();
 
@@ -54,7 +72,7 @@ export class ToyServer {
     };
     this.#processed.set(clientId, command.seq);
 
-    const admission = this.#arbitrate(command);
+    const admission = this.#arbiter.admit(this.state, command);
     if (admission === null) {
       this.#resync(clientId, command, null);
 
@@ -87,50 +105,6 @@ export class ToyServer {
         [clientId]: this.#processed.get(clientId) ?? 0
       }
     });
-  }
-
-  #arbitrate(
-    command: ToyCommand
-  ): Admission<ToyCommand> | null {
-    if (!this.state.accepts(command)) {
-      return null;
-    }
-
-    switch (command.action) {
-      case "set":
-        return this.#admitSet(command);
-      case "reparent":
-        return this.#tracker.admit(command, [`parent:${command.id}`]);
-      default:
-        return this.#tracker.admit(command, []);
-    }
-  }
-
-  #admitSet(
-    command: Extract<ToyCommand, { action: "set"; }>
-  ): Admission<ToyCommand> | null {
-    const { indices, commit } = this.#tracker.admitEach(
-      command,
-      command.keys
-    );
-    if (indices.length === 0) {
-      return null;
-    }
-    if (indices.length === command.keys.length) {
-      return {
-        command,
-        commit
-      };
-    }
-
-    return {
-      command: {
-        ...command,
-        keys: indices.map((index) => command.keys[index]),
-        values: indices.map((index) => command.values[index])
-      },
-      commit
-    };
   }
 
   #resync(

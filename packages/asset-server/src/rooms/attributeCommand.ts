@@ -1,5 +1,5 @@
-// Import Internal Dependencies
-import type { NetworkCommandHeader } from "./types.ts";
+// Import Third-party Dependencies
+import type { NetworkCommandHeader } from "@jolly-pixel/network";
 
 export function attributeCommand<
   TCommand extends Partial<NetworkCommandHeader>

@@ -1,42 +1,55 @@
 # Voxel-model network API
 
-The browser entry point is `@jolly-pixel/asset.voxel-model/client`. Server protocol utilities are exported from `@jolly-pixel/asset.voxel-model/server`. Use `assetRoomName("voxelmodel", assetId)` to name the room.
+Syncs a [`ModelDocument`](./model.md) through a `voxelmodel:<assetId>` room. Browser code imports `@jolly-pixel/asset.voxel-model/client`; asset-server code imports `@jolly-pixel/asset.voxel-model/server`.
+
+```ts
+import { AssetRoom } from "@jolly-pixel/asset";
+import {
+  voxelModelDocumentKind,
+  type VoxelModelRoom
+} from "@jolly-pixel/asset.voxel-model/client";
+
+const room: VoxelModelRoom = client.room(new AssetRoom("voxelmodel", assetId).toString());
+const synced = voxelModelDocumentKind().createDocument(room);
+room.join();
+await synced.ready;
+
+// On teardown: synced.dispose(); room.leave();
+```
 
 ## Synchronization
 
-`voxelModelDocumentKind()` is the `@jolly-pixel/editor.host` lease adapter, built with `commandDocumentKind` from `@jolly-pixel/network/client`. Its `createDocument(room)` returns a `SyncedModelDocument`: a new [`ModelDocument`](./model.md) as `document` with a private sync client. Call it before `room.join()`. Its `ready` promise resolves after the first snapshot and `loaded` reports it; `dispose()` destroys the sync client. The caller still leaves the room and owns the shared network client.
-
-The sync client is a `DocumentSyncClient` from `@jolly-pixel/network/client`, keyed by `voxelModelWriteKeys`. It sends local changes, an undo or redo with the `basis` of its step, and writes the server's answers to `document.receipts`, so a [`CommandHistory`](./history.md) refuses steps a peer overwrote. Local commands stay pending until the server acknowledges them. A peer command is applied under the pending commands, which are then replayed on top with a `"replay"` origin. A pending command the tree now refuses, such as a move into a removed folder, leaves the tree until the server's snapshot repairs it. Snapshots call `document.load()`. To listen to the sync client's `snapshot`, `ready`, `command` and `notice` events, build it yourself with `new DocumentSyncClient(room, { document, keys: voxelModelWriteKeys })`; notices report rejected edits or asset deletion.
+- `voxelModelDocumentKind()` is the `@jolly-pixel/editor.host` lease adapter, built with network's `commandDocumentKind`. `createDocument(room)` returns a `SyncedModelDocument`: a network [`SyncedCommandDocument`](../../../network/docs/client/CommandSync.md#syncedcommanddocument) over a new `ModelDocument`.
+- Call `createDocument()` before `room.join()`. `dispose()` destroys the sync; the caller still leaves the room.
+- The sync is a `DocumentSyncClient` keyed by `voxelModelWriteKeys`. Undo and redo carry the `basis` of their step, and the server's answers reach `document.receipts`, so the [history](./history.md) refuses steps a peer overwrote.
+- A pending command the tree now refuses, such as a move into a removed folder, stays out of the tree until the next snapshot.
+- To listen to `snapshot`, `ready`, `command` and `notice`, build the client yourself: `new DocumentSyncClient(room, { document, keys: voxelModelWriteKeys })`.
 
 ## Wire data
 
-`VoxelModelSnapshot` is `{ nodes, materials, animationSets }`, siblings in array order. The stored document adds a `version` and the `texture` reference, which stay outside the live snapshot. `VoxelModelNetworkCommand` is one of the commands below plus `NetworkCommandHeader` (`clientId`, `seq`, `timestamp`). `VoxelModelServerMessage` carries a command, a snapshot, or an asset notice.
+```ts
+interface VoxelModelSnapshot {
+  nodes: ModelNodeJSON[]; // siblings in array order
+  materials: MaterialEntryJSON[];
+  animationSets: AnimationSetLinkJSON[];
+}
 
-| Command | Payload |
-|---|---|
-| `node-added` | A full folder or block node, and an optional sibling `beforeId`. |
-| `node-removed` | A node ID. Removes its subtree. |
-| `node-renamed` | A node ID and a name. |
-| `node-moved` | A node ID, the new parent ID, the block transforms the move rewrites, and an optional sibling `beforeId`. |
-| `node-transformed` | A block ID, a transform, and optional flip axes. |
-| `node-uv-changed` | A block ID and its whole UV layout. |
-| `node-shape-changed` | A block ID, its shape and its whole UV layout. |
-| `node-material-changed` | A block ID and a material ID, or `null`. |
-| `material-added`, `material-folder-added` | A full entry with an unused ID, and an optional sibling `beforeId`. |
-| `material-moved` | An entry ID, a new parent folder or `null`, and an optional sibling `beforeId`. |
-| `material-removed` | An entry ID, and `keepContents: true` to remove a folder alone. |
-| `material-renamed` | An entry ID and a name. |
-| `material-changed` | A material ID and a surface patch of one or more fields. |
-| `animation-set-linked` | An `AnimationSetLinkJSON` `{ id, kind, bindings, own? }` for a set not linked yet. |
-| `animation-set-unlinked` | A linked set ID. |
-| `animation-set-owned` | A linked set ID and `own`. |
-| `animation-binding-changed` | A linked set ID, a track path, and a `target` block path or `null`. |
-| `animation-binding-cleared` | A linked set ID and a track path. |
+type VoxelModelCommandAction =
+  | "node-added" | "node-removed" | "node-renamed" | "node-moved"
+  | "node-transformed" | "node-uv-changed" | "node-shape-changed"
+  | "node-material-changed"
+  | "material-added" | "material-folder-added" | "material-moved"
+  | "material-removed" | "material-renamed" | "material-changed"
+  | "animation-set-linked" | "animation-set-unlinked" | "animation-set-owned"
+  | "animation-binding-changed" | "animation-binding-cleared";
+```
 
-The [model](./model.md), [material](./materials.md) and [animation](./animation.md) pages describe what each command does.
+- `VoxelModelNetworkCommand` is a `VoxelModelCommand` plus the network command header.
+- The stored document adds a `version` and the `texture` reference, which the live snapshot leaves out.
+- The [model](./model.md), [materials](./materials.md) and [animation](./animation.md) pages describe each command.
 
 ## Server protocol
 
-The kind's live protocol arbitrates commands with a `KeyedCommandArbiter` from `@jolly-pixel/network`: a command is refused when `state.accepts(command)` is false or a conflict key rejects it. `voxelModelConflictKeys(command)` returns the keys listed in [architecture](../ARCHITECTURE.md#collision-keys). `voxelModelWriteKeys(command)` returns the values a command sets, for the client reconciler.
-
-`voxelModelCommandProtocol` validates command messages and `voxelModelSnapshotSchema` validates snapshots.
+- The kind arbitrates with a network [`KeyedCommandArbiter`](../../../network/docs/client/CommandSync.md#conflict-resolution): a command is refused when `state.accepts(command)` is false or it loses one of its `voxelModelConflictKeys(command)`. [Architecture](../ARCHITECTURE.md#collision-keys) lists the keys.
+- `voxelModelWriteKeys(command)` returns the values a command sets, for the client reconciler.
+- `voxelModelCommandProtocol` validates commands and `voxelModelSnapshotSchema` validates snapshots.

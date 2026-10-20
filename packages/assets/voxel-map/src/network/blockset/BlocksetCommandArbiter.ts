@@ -2,7 +2,8 @@
 import * as network from "@jolly-pixel/network";
 import {
   isPixelCommand,
-  PixelCommandArbiter
+  narrowPixelCommand,
+  PIXEL_COMMAND_RULES
 } from "@jolly-pixel/asset.pixel-art/server";
 import type { PixelDocumentState } from "@jolly-pixel/pixel-draw.renderer";
 import { localBlock } from "@jolly-pixel/voxel.renderer";
@@ -14,56 +15,34 @@ import type {
   BlocksetNetworkCommand
 } from "./types.ts";
 
-export interface BlocksetCommandArbiterOptions {
-  conflictResolver?: network.ConflictResolver;
-}
-
 export interface BlocksetArbiterState {
   readonly pixels: PixelDocumentState;
 }
 
-export class BlocksetCommandArbiter {
-  #pixels: PixelCommandArbiter;
-  #tracker: network.ConflictTracker;
+export const BLOCKSET_COMMAND_RULES: network.KeyedCommandArbiterOptions<
+  BlocksetNetworkCommand,
+  BlocksetArbiterState
+> = {
+  accepts: (state, command) => (isPixelCommand(command) ?
+    PIXEL_COMMAND_RULES.accepts(state.pixels, command) :
+    isFoldable(command)),
+  writes: (command, state) => (isPixelCommand(command) ?
+    PIXEL_COMMAND_RULES.writes(command, state?.pixels) :
+    {
+      scope: "blockset",
+      keys: [blocksetCommandKey(command)]
+    }),
+  narrow: (command, keep) => (isPixelCommand(command) ?
+    narrowPixelCommand(command, keep) :
+    null)
+};
 
-  constructor(
-    options: BlocksetCommandArbiterOptions = {}
-  ) {
-    const resolver = options.conflictResolver ??
-      new network.LastWriteWinsResolver();
-    this.#pixels = new PixelCommandArbiter({
-      conflictResolver: resolver
-    });
-    this.#tracker = new network.ConflictTracker(resolver);
-  }
-
-  admit(
-    state: BlocksetArbiterState,
-    command: BlocksetNetworkCommand
-  ): network.Admission<BlocksetNetworkCommand> | null {
-    if (isPixelCommand(command)) {
-      return this.#pixels.admit(state.pixels, command);
-    }
-    if (!isFoldable(command)) {
-      return null;
-    }
-
-    return this.#tracker.admit(
-      command,
-      [blocksetCommandKey(command)]
-    );
-  }
-
-  restore(
-    command: BlocksetNetworkCommand,
-    version: number
-  ): void {
-    if (isPixelCommand(command)) {
-      this.#pixels.restore(command, version);
-    }
-    else {
-      this.#tracker.record(command, [blocksetCommandKey(command)], version);
-    }
+export class BlocksetCommandArbiter extends network.KeyedCommandArbiter<
+  BlocksetNetworkCommand,
+  BlocksetArbiterState
+> {
+  constructor() {
+    super(BLOCKSET_COMMAND_RULES);
   }
 }
 
