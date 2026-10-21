@@ -216,12 +216,6 @@ export function isExpandable<TData>(
     node.children.length > 0;
 }
 
-export function isHeading<TData>(
-  node: TreeNode<TData> | null
-): boolean {
-  return node?.selectable === false;
-}
-
 export function isOpen<TData>(
   node: TreeNode<TData>,
   expanded: ReadonlySet<string>
@@ -326,7 +320,6 @@ export function resolveSelection<TData>(
     return {
       selected: siblings
         .slice(from, to + 1)
-        .filter((row) => !isHeading(row.node))
         .map((row) => row.node.id),
       anchorId: anchorRow.node.id
     };

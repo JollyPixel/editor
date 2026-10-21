@@ -45,7 +45,9 @@ const kDefaultSize: Vec2 = {
   y: 32
 };
 const kOptionsSchema = z.strictObject({
-  defaultSize: z.optional(sizeSchema),
+  defaultSize: z.optional(
+    sizeSchema.check(z.meta({ default: kDefaultSize }))
+  ),
   snapshot: z.optional(SNAPSHOT_POLICY_SCHEMA)
 });
 

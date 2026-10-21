@@ -20,15 +20,13 @@ export class SettingsPage {
   ): Locator {
     return this.root
       .getByRole("navigation", { name: "Settings sections" })
-      .getByRole("treeitem", { name, exact: true });
+      .getByRole("button", { name, exact: true });
   }
 
   editor(
     name: string
   ): Locator {
-    return this.root.locator(
-      `[role="treeitem"][data-id="editor:${name}"]`
-    );
+    return this.root.locator(`[data-section="editor:${name}"]`);
   }
 
   field(

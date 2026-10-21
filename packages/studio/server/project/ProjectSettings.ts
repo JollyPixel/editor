@@ -12,7 +12,7 @@ import type { Server } from "@jolly-pixel/network";
 import { AccountsAccess } from "../AccountsAccess.ts";
 import type { StudioAccountsOptions } from "../accounts.ts";
 import type { AuditLog } from "../audit/AuditLog.ts";
-import { KindOptionFields } from "./KindOptionFields.ts";
+import { KindOptionSections } from "./KindOptionSections.ts";
 import { StudioAccess } from "./StudioAccess.ts";
 import type { StudioProject } from "./StudioProject.ts";
 import {
@@ -231,7 +231,10 @@ export class ProjectSettings {
     return {
       name: kindPackage.name,
       options: structuredClone(kindPackage.options),
-      fields: [...KindOptionFields.read(kindPackage.optionsSchema)]
+      sections: [...KindOptionSections.read(
+        kindPackage.optionsSchema,
+        kindPackage.descriptors
+      )]
     };
   }
 }

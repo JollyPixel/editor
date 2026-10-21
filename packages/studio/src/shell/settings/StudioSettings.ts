@@ -8,8 +8,7 @@ import {
 } from "lit";
 import {
   customElement,
-  property,
-  state
+  property
 } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
 import type { Account } from "@jolly-pixel/accounts";
@@ -22,6 +21,7 @@ import { BrowserState } from "../../browser/BrowserState.ts";
 import { cardStyles } from "../cardStyles.ts";
 import {
   SettingsSections,
+  type SettingsGroup,
   type SettingsSection
 } from "./SettingsSections.ts";
 import "../shares/ShareLinksPane.ts";
@@ -34,6 +34,10 @@ import "./project/ProjectKindPackage.ts";
 
 // CONSTANTS
 export const SETTINGS_TAB_ID = "studio:settings";
+const kWideKinds: ReadonlySet<SettingsSection["kind"]> = new Set([
+  "preferences",
+  "access"
+]);
 
 type ProjectSection = Exclude<
   SettingsSection,
@@ -55,33 +59,78 @@ export class StudioSettings extends LitElement {
     }
 
     nav {
-      display: flex;
       flex: 0 0 220px;
-      flex-direction: column;
-      min-height: 0;
-      padding: var(--jolly-space-2) var(--jolly-space-1);
+      padding-block: var(--jolly-space-2);
+      overflow-y: auto;
     }
 
-    jolly-tree {
-      flex: 1 1 auto;
-      min-height: 0;
-      --jolly-row-height: 26px;
-      --jolly-tree-indent: 10px;
+    nav section + section,
+    nav .block + .block {
+      margin-top: var(--jolly-space-3);
     }
 
-    jolly-tree::part(leaf) {
-      margin-block: 1px;
-      border: 1px solid var(--jolly-border);
-      background: var(--jolly-surface-raised);
+    nav .block + .block {
+      padding-top: var(--jolly-space-3);
+      border-top: 1px solid var(--jolly-border);
     }
 
-    jolly-tree::part(leaf):hover {
+    nav h3 {
+      margin: 0;
+      padding: var(--jolly-space-1) var(--jolly-space-3);
+      color: var(--jolly-text-muted);
+      font-size: 0.8em;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    nav ul {
+      margin: 0;
+      padding: 0 var(--jolly-space-1);
+      list-style: none;
+    }
+
+    nav button {
+      display: flex;
+      align-items: center;
+      gap: var(--jolly-space-2);
+      box-sizing: border-box;
+      width: 100%;
+      min-height: 28px;
+      padding: 0 var(--jolly-space-2);
+      border: none;
+      border-radius: var(--jolly-radius-sm);
+      background: none;
+      color: inherit;
+      font: inherit;
+      text-align: start;
+      cursor: pointer;
+    }
+
+    nav button:hover {
       background: var(--jolly-control-bg-hover);
     }
 
-    jolly-tree::part(selected) {
+    nav button[aria-current="page"] {
       background: var(--jolly-control-bg-active);
       font-weight: 600;
+    }
+
+    nav button:focus-visible {
+      outline: 2px solid var(--jolly-focus-ring);
+      outline-offset: -2px;
+    }
+
+    nav button jolly-icon {
+      flex: 0 0 auto;
+      width: 16px;
+      height: 16px;
+    }
+
+    nav button span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     section.card {
@@ -138,9 +187,6 @@ export class StudioSettings extends LitElement {
   @property({ attribute: false })
   declare browserState: BrowserState;
 
-  @state()
-  declare _collapsed: ReadonlySet<string>;
-
   constructor() {
     super();
     this.sections = SettingsSections.EMPTY;
@@ -149,7 +195,6 @@ export class StudioSettings extends LitElement {
     this.signedIn = null;
     this.catalog = null;
     this.browserState = new BrowserState();
-    this._collapsed = new Set();
   }
 
   get section(): string {
@@ -165,21 +210,15 @@ export class StudioSettings extends LitElement {
 
   override render(): TemplateResult {
     const current = this.sections.find(this.section) ?? this.sections.first;
+    const wide = current !== undefined && kWideKinds.has(current.kind);
 
     return html`
       <nav class="card" aria-label="Settings sections">
-        <jolly-tree
-          toggle-style="box"
-          indent-guides
-          require-selection
-          .nodes=${this.sections.nodes}
-          .selected=${current === undefined ? [] : [current.id]}
-          .expanded=${this.sections.headings.filter(
-            (id) => !this._collapsed.has(id)
-          )}
-          @jolly-select=${this.#onSelect}
-          @jolly-toggle-expand=${this.#onToggleExpand}
-        ></jolly-tree>
+        ${this.sections.blocks.map((block) => html`
+          <div class="block">
+            ${block.map((group) => this.#group(group, current))}
+          </div>
+        `)}
       </nav>
       <section class="card" aria-label=${current?.label ?? "Settings"}>
         <header class="card-head">
@@ -190,35 +229,51 @@ export class StudioSettings extends LitElement {
             ${current?.label ?? ""}
           </h2>
         </header>
-        <div class="card-body ${current?.kind === "preferences" ? "wide" : ""}">
+        <div class="card-body ${wide ? "wide" : ""}">
           ${current === undefined ? nothing : this.#content(current)}
         </div>
       </section>
     `;
   }
 
-  readonly #onSelect = (
-    event: HTMLElementEventMap["jolly-select"]
+  readonly #onSectionClick = (
+    event: MouseEvent
   ): void => {
-    const [id] = event.detail.selected;
-    if (id !== undefined && this.sections.find(id) !== undefined) {
-      this.section = id;
+    const { currentTarget } = event;
+    if (currentTarget instanceof HTMLElement && currentTarget.dataset.section) {
+      this.section = currentTarget.dataset.section;
     }
   };
 
-  readonly #onToggleExpand = (
-    event: HTMLElementEventMap["jolly-toggle-expand"]
-  ): void => {
-    const { id, expanded } = event.detail;
-    const collapsed = new Set(this._collapsed);
-    if (expanded) {
-      collapsed.delete(id);
-    }
-    else {
-      collapsed.add(id);
-    }
-    this._collapsed = collapsed;
-  };
+  #group(
+    group: SettingsGroup,
+    current: SettingsSection | undefined
+  ): TemplateResult {
+    const headingId = `settings-group-${group.id}`;
+
+    return html`
+      <section aria-labelledby=${headingId}>
+        <h3 id=${headingId}>${group.label}</h3>
+        <ul>
+          ${group.sections.map((section) => html`
+            <li>
+              <button
+                type="button"
+                data-section=${section.id}
+                aria-current=${section === current ? "page" : nothing}
+                @click=${this.#onSectionClick}
+              >
+                ${section.icon === undefined ?
+                  nothing :
+                  html`<jolly-icon name=${section.icon}></jolly-icon>`}
+                <span>${section.label}</span>
+              </button>
+            </li>
+          `)}
+        </ul>
+      </section>
+    `;
+  }
 
   #content(
     section: SettingsSection
@@ -275,7 +330,6 @@ export class StudioSettings extends LitElement {
         return html`
           <studio-access-settings
             .project=${signedIn.project}
-            .signedIn=${signedIn}
           ></studio-access-settings>
         `;
       case "audit":

@@ -26,7 +26,6 @@ import {
   type TreeDragOutPoint,
   type TreeDropAccept
 } from "./contract.ts";
-import type { TreeRowView } from "./TreeRowView.ts";
 import {
   startPointerDragSession,
   type PointerDragSessionHandle
@@ -139,10 +138,10 @@ export class TreeDragController<TData> implements ReactiveController {
 
   onRowPointerDown(
     event: PointerEvent,
-    row: Pick<TreeRowView, "id" | "reorderable">
+    id: string
   ): void {
     if (
-      !row.reorderable ||
+      !this.#options.reorderable() ||
       !this.#options.rowDrag() ||
       event.button !== 0 ||
       originatesInButton(event.target)
@@ -151,7 +150,7 @@ export class TreeDragController<TData> implements ReactiveController {
     }
 
     const selected = this.#options.selected();
-    const movedIds = selected.includes(row.id) ? selected : [row.id];
+    const movedIds = selected.includes(id) ? selected : [id];
     this.#beginPointerDrag(event, movedIds, {
       element: event.currentTarget as HTMLElement,
       threshold: kRowDragThreshold

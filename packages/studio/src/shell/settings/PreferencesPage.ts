@@ -16,22 +16,15 @@ import type {
 } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
+import { settingsColumnsStyles } from "./settingsStyles.ts";
 import "./KeybindingSettings.ts";
 import "./PreferenceForm.ts";
 
 @customElement("studio-preferences-page")
 export class PreferencesPage extends LitElement {
-  static override styles = css`
+  static override styles = [settingsColumnsStyles, css`
     :host {
       display: block;
-      container-type: inline-size;
-    }
-
-    .columns {
-      display: flex;
-      flex-direction: column;
-      gap: var(--jolly-space-4);
-      max-width: var(--studio-settings-column, 640px);
     }
 
     .column {
@@ -40,16 +33,7 @@ export class PreferencesPage extends LitElement {
       gap: var(--jolly-space-4);
       min-width: 0;
     }
-
-    @container (min-width: 54rem) {
-      .columns.split {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        align-items: start;
-        max-width: none;
-      }
-    }
-  `;
+  `];
 
   @property({ attribute: false })
   declare forms: readonly PreferenceScope[];

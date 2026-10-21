@@ -1,8 +1,10 @@
 // Import Internal Dependencies
-import type {
-  KindOptionField,
-  KindOptions,
-  KindPackageSettings
+import {
+  kindOptionVector2Schema,
+  type KindOptionField,
+  type KindOptions,
+  type KindOptionValue,
+  type KindPackageSettings
 } from "./routes.ts";
 
 type OptionRecord = Record<string, unknown>;
@@ -24,22 +26,30 @@ export class KindOptionsDraft {
     this.#kinds = structuredClone(kinds);
   }
 
+  value<TField extends KindOptionField>(
+    packageName: string,
+    field: TField
+  ): KindOptionValue<TField> | undefined;
   value(
     packageName: string,
     field: KindOptionField
-  ): number | undefined {
+  ): KindOptionValue | undefined {
     let current: unknown = this.#kinds[packageName];
     for (const segment of field.path) {
       current = isRecord(current) ? current[segment] : undefined;
     }
 
+    if (field.type === "vector2") {
+      return kindOptionVector2Schema.safeParse(current).data;
+    }
+
     return typeof current === "number" ? current : undefined;
   }
 
-  with(
+  with<TField extends KindOptionField>(
     packageName: string,
-    field: KindOptionField,
-    value: number
+    field: TField,
+    value: KindOptionValue<TField>
   ): KindOptionsDraft {
     return new KindOptionsDraft({
       ...this.#kinds,
@@ -55,7 +65,7 @@ export class KindOptionsDraft {
 function assign(
   record: OptionRecord,
   path: readonly string[],
-  value: number
+  value: KindOptionValue
 ): OptionRecord {
   const [head, ...rest] = path;
   const child = record[head];
@@ -63,7 +73,7 @@ function assign(
   return {
     ...record,
     [head]: rest.length === 0 ?
-      value :
+      structuredClone(value) :
       assign(isRecord(child) ? child : {}, rest, value)
   };
 }

@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import type {
-  IconName,
-  TreeNode
-} from "@jolly-pixel/ui";
+import type { IconName } from "@jolly-pixel/ui";
 import {
   LANTERN_PREFERENCES,
   RUNTIME_PREFERENCES,
@@ -91,7 +88,11 @@ export type SettingsSection =
   | PreferencesSection
   | KindPackageSection;
 
-type SettingsNode = TreeNode<SettingsSection>;
+export interface SettingsGroup {
+  id: string;
+  label: string;
+  sections: readonly SettingsSection[];
+}
 
 export interface SettingsSectionsOptions {
   signedIn: boolean;
@@ -114,8 +115,7 @@ export class SettingsSections implements Iterable<SettingsSection> {
     shellScopes: []
   });
 
-  readonly nodes: SettingsNode[];
-  readonly headings: readonly string[];
+  readonly blocks: readonly (readonly SettingsGroup[])[];
   readonly shortcutScopes: readonly PreferenceScope[];
 
   #sections: SettingsSection[];
@@ -150,23 +150,16 @@ export class SettingsSections implements Iterable<SettingsSection> {
       you.push(kPages["share-links"]);
     }
 
-    this.nodes = [
-      heading("you", "You", [
-        ...you.map(leaf),
-        heading("editors", "Editors", editorPages([...editors], kinds).map(leaf))
-      ]),
-      project === null ?
-        null :
-        projectHeading(project, [...kindPackages], kinds)
-    ].filter((node) => node !== null);
-
-    const flat = [...flatten(this.nodes)];
-    this.#sections = flat.flatMap(
-      (node) => (node.data === undefined ? [] : [node.data])
-    );
-    this.headings = flat
-      .filter((node) => node.selectable === false)
-      .map((node) => node.id);
+    this.blocks = [
+      [
+        group("you", "You", you),
+        group("editors", "Editors", editorPages([...editors], kinds))
+      ],
+      project === null ? [] : projectGroups(project, [...kindPackages], kinds)
+    ]
+      .map((block) => block.filter((entry) => entry !== null))
+      .filter((block) => block.length > 0);
+    this.#sections = this.blocks.flat().flatMap((entry) => entry.sections);
     this.shortcutScopes = [
       ...new Map(this.#sections
         .flatMap((section) => (section.kind === "preferences" ? section.keyBindings : []))
@@ -194,11 +187,11 @@ export class SettingsSections implements Iterable<SettingsSection> {
   }
 }
 
-function projectHeading(
+function projectGroups(
   project: ProjectReply,
   kindPackages: readonly KindPackageDescriptor[],
   kinds: AssetKindSet
-): SettingsNode | null {
+): (SettingsGroup | null)[] {
   const pages: SettingsSection[] = [];
   const kindPackagePages: SettingsSection[] = [];
   if (project.canReadSettings) {
@@ -219,10 +212,10 @@ function projectHeading(
     pages.push(kPages.audit);
   }
 
-  return heading("project", "Project", [
-    ...pages.map(leaf),
-    heading("assets", "Assets", kindPackagePages.map(leaf))
-  ]);
+  return [
+    group("project", "Project", pages),
+    group("assets", "Assets", kindPackagePages)
+  ];
 }
 
 function editorPages(
@@ -252,39 +245,16 @@ function editorPages(
   return pages;
 }
 
-function heading(
+function group(
   id: string,
   label: string,
-  nodes: readonly (SettingsNode | null)[]
-): SettingsNode | null {
-  const children = nodes.filter((node) => node !== null);
-
-  return children.length === 0 ? null : {
+  sections: readonly SettingsSection[]
+): SettingsGroup | null {
+  return sections.length === 0 ? null : {
     id,
     label,
-    selectable: false,
-    children
+    sections
   };
-}
-
-function leaf(
-  section: SettingsSection
-): SettingsNode {
-  return {
-    id: section.id,
-    label: section.label,
-    icon: section.icon,
-    data: section
-  };
-}
-
-function* flatten(
-  nodes: readonly SettingsNode[]
-): IterableIterator<SettingsNode> {
-  for (const node of nodes) {
-    yield node;
-    yield* flatten(node.children ?? []);
-  }
 }
 
 function hasPage(

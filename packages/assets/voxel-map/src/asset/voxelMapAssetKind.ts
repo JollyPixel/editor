@@ -13,6 +13,7 @@ import {
 import {
   applyVoxelWorldCommand,
   DEFAULT_CHUNK_SIZE,
+  DEFAULT_TILE_SIZE,
   decodeVoxelWorld,
   deserializeVoxelWorld,
   encodeVoxelWorld,
@@ -60,7 +61,9 @@ const kWorldParser = new SchemaParser(voxelWorldSchema);
 const kPositiveIntegerSchema = z.int().check(z.minimum(1));
 const kOptionsSchema = z.strictObject({
   blockset: z.optional(z.strictObject({
-    tileSize: z.optional(tileSizeSchema),
+    tileSize: z.optional(
+      tileSizeSchema.check(z.meta({ default: DEFAULT_TILE_SIZE }))
+    ),
     defaultSize: z.optional(z.object({
       x: kPositiveIntegerSchema,
       y: kPositiveIntegerSchema
@@ -68,7 +71,9 @@ const kOptionsSchema = z.strictObject({
     snapshot: z.optional(SNAPSHOT_POLICY_SCHEMA)
   })),
   voxelmap: z.optional(z.strictObject({
-    chunkSize: z.optional(kPositiveIntegerSchema),
+    chunkSize: z.optional(
+      kPositiveIntegerSchema.check(z.meta({ default: DEFAULT_CHUNK_SIZE }))
+    ),
     snapshot: z.optional(SNAPSHOT_POLICY_SCHEMA)
   }))
 });

@@ -5,27 +5,22 @@ import {
   nothing,
   type TemplateResult
 } from "lit";
-import {
-  customElement,
-  property
-} from "lit/decorators.js";
+import { customElement } from "lit/decorators.js";
 
 // Import Internal Dependencies
-import type { StudioSignedIn } from "../../../accounts/StudioSignedIn.ts";
 import { AccessDraft } from "../../../project/AccessDraft.ts";
 import type { StudioProjectSettings } from "../../../project/StudioProjectSettings.ts";
 import { ProjectSettingsController } from "../project/ProjectSettingsController.ts";
 import { SettingsDraftController } from "../project/SettingsDraftController.ts";
-import { settingsStyles } from "../settingsStyles.ts";
-import "../../users/UsersPane.ts";
+import {
+  settingsColumnsStyles,
+  settingsStyles
+} from "../settingsStyles.ts";
 import "./RolesEditor.ts";
 
 @customElement("studio-access-settings")
 export class AccessSettings extends LitElement {
-  static override styles = settingsStyles;
-
-  @property({ attribute: false })
-  declare signedIn: StudioSignedIn | null;
+  static override styles = [settingsStyles, settingsColumnsStyles];
 
   #project = new ProjectSettingsController(this);
   #draft = new SettingsDraftController(this, {
@@ -33,11 +28,6 @@ export class AccessSettings extends LitElement {
     saved: (data) => (data.access === undefined ? null : new AccessDraft(data.access)),
     save: (project, draft) => project.replaceAccess(draft.toJSON())
   });
-
-  constructor() {
-    super();
-    this.signedIn = null;
-  }
 
   set project(
     project: StudioProjectSettings
@@ -54,54 +44,46 @@ export class AccessSettings extends LitElement {
 
     return html`
       ${this.#project.error()}
-      <section aria-label="Roles">
-        <jolly-separator label="Roles"></jolly-separator>
-        <studio-roles-editor
-          .draft=${draft}
-          @access-draft=${(event: HTMLElementEventMap["access-draft"]) => {
-            this.#draft.edit(event.draft);
-          }}
-        ></studio-roles-editor>
-      </section>
-      <section aria-label="New accounts">
-        <jolly-separator label="New accounts"></jolly-separator>
-        <jolly-select
-          data-field="default-role"
-          label="Default role"
-          description="The role a new account gets"
-          description-display="tooltip"
-          .options=${draft.roles.map((role) => {
-            return {
-              value: role,
-              label: role
-            };
-          })}
-          .value=${draft.defaultRole}
-          @jolly-change=${(event: CustomEvent<{ value: string; }>) => {
-            this.#draft.edit(draft.withDefaultRole(event.detail.value));
-          }}
-        ></jolly-select>
-        <jolly-checkbox
-          data-field="access-requests"
-          label="Access requests"
-          description="Registering without the master password asks an admin first"
-          .value=${draft.accessRequests}
-          @jolly-change=${(event: CustomEvent<{ value: boolean; }>) => {
-            this.#draft.edit(draft.withAccessRequests(event.detail.value));
-          }}
-        ></jolly-checkbox>
-      </section>
-      ${this.#draft.actions("Access actions")}
-      ${this.signedIn === null ? nothing : html`
-        <section aria-label="Members">
-          <jolly-separator label="Members and requests"></jolly-separator>
-          <studio-users
-            manage
-            .roster=${this.signedIn.roster}
-            .self=${this.signedIn.account}
-          ></studio-users>
+      <div class="columns split">
+        <section aria-label="Roles">
+          <jolly-separator label="Roles"></jolly-separator>
+          <studio-roles-editor
+            .draft=${draft}
+            @access-draft=${(event: HTMLElementEventMap["access-draft"]) => {
+              this.#draft.edit(event.draft);
+            }}
+          ></studio-roles-editor>
         </section>
-      `}
+        <section aria-label="New accounts">
+          <jolly-separator label="New accounts"></jolly-separator>
+          <jolly-select
+            data-field="default-role"
+            label="Default role"
+            description="The role a new account gets"
+            description-display="tooltip"
+            .options=${draft.roles.map((role) => {
+              return {
+                value: role,
+                label: role
+              };
+            })}
+            .value=${draft.defaultRole}
+            @jolly-change=${(event: CustomEvent<{ value: string; }>) => {
+              this.#draft.edit(draft.withDefaultRole(event.detail.value));
+            }}
+          ></jolly-select>
+          <jolly-checkbox
+            data-field="access-requests"
+            label="Access requests"
+            description="Registering without the master password asks an admin first"
+            .value=${draft.accessRequests}
+            @jolly-change=${(event: CustomEvent<{ value: boolean; }>) => {
+              this.#draft.edit(draft.withAccessRequests(event.detail.value));
+            }}
+          ></jolly-checkbox>
+        </section>
+      </div>
+      ${this.#draft.actions("Access actions")}
     `;
   }
 }

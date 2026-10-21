@@ -31,7 +31,7 @@ test("reopens Settings on its last section after a reload", async({ studio, acco
 
   await expect(studio.settings.root).toBeVisible();
   await expect(studio.settings.editor("pixel-art"))
-    .toHaveAttribute("aria-selected", "true");
+    .toHaveAttribute("aria-current", "page");
   await expect(studio.settings.root.getByRole("heading", {
     name: "Pixel art",
     level: 2

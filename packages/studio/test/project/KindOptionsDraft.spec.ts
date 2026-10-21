@@ -7,16 +7,29 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { KindOptionsDraft } from "../../src/project/KindOptionsDraft.ts";
+import type { KindOptionField } from "../../src/project/routes.ts";
 
 // CONSTANTS
 const kVoxelMap = "@jolly-pixel/asset.voxel-map";
-const kTileSize = {
+const kTileSize: KindOptionField = {
+  type: "number",
   path: ["blockset", "tileSize"],
-  label: "Blockset › Tile size"
+  label: "Tile size"
 };
-const kChunkSize = {
+const kChunkSize: KindOptionField = {
+  type: "number",
   path: ["voxelmap", "chunkSize"],
-  label: "Voxelmap › Chunk size"
+  label: "Chunk size"
+};
+const kPixelArt = "@jolly-pixel/asset.pixel-art";
+const kDefaultSize: KindOptionField = {
+  type: "vector2",
+  path: ["defaultSize"],
+  label: "Default size",
+  default: {
+    x: 32,
+    y: 32
+  }
 };
 
 describe("KindOptionsDraft", () => {
@@ -32,14 +45,14 @@ describe("KindOptionsDraft", () => {
             }
           }
         },
-        fields: [kTileSize, kChunkSize]
+        sections: []
       },
       {
         name: "@acme/asset.sound",
         options: {
           rate: 44_100
         },
-        fields: []
+        sections: []
       }
     ]);
 
@@ -63,6 +76,39 @@ describe("KindOptionsDraft", () => {
       },
       "@acme/asset.sound": {
         rate: 44_100
+      }
+    });
+  });
+
+  test("reads a vector2 only when both axes are numbers and writes both axes", () => {
+    const draft = KindOptionsDraft.from([
+      {
+        name: kPixelArt,
+        options: {
+          defaultSize: {
+            x: 128
+          }
+        },
+        sections: []
+      }
+    ]);
+
+    const edited = draft.with(kPixelArt, kDefaultSize, {
+      x: 64,
+      y: 32
+    });
+
+    assert.equal(draft.value(kPixelArt, kDefaultSize), undefined);
+    assert.deepEqual(edited.value(kPixelArt, kDefaultSize), {
+      x: 64,
+      y: 32
+    });
+    assert.deepEqual(edited.toJSON(), {
+      [kPixelArt]: {
+        defaultSize: {
+          x: 64,
+          y: 32
+        }
       }
     });
   });
