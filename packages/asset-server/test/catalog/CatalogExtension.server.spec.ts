@@ -82,8 +82,8 @@ describe("CatalogExtension — server", () => {
       event: CATALOG_DELETE,
       reason: `role "author" cannot write "${CATALOG_DELETE}"`
     });
-    assert.notStrictEqual(sync.identity.byId(created.assetId), undefined);
-    assert.notStrictEqual(sync.identity.byPath("b.png"), undefined);
+    assert.notStrictEqual(sync.assetIndex.byId(created.assetId), undefined);
+    assert.notStrictEqual(sync.assetIndex.byPath("b.png"), undefined);
 
     await server.close();
     projection.close();

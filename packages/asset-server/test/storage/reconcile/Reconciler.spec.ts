@@ -19,7 +19,7 @@ function lifecycleEvents(
 }
 
 describe("Reconciler — cold start", () => {
-  test("emits one create per discovered file and persists the sidecar", async() => {
+  test("emits one create per discovered file and persists the asset index", async() => {
     const source = new MemoryAssetSource([
       ["a.png", bytes("one")],
       ["nested/b.counter", bytes("2")]
@@ -37,10 +37,10 @@ describe("Reconciler — cold start", () => {
       [ASSET_CREATED, ASSET_CREATED]
     );
     assert.strictEqual(
-      harness.identity.byPath("nested/b.counter")?.kind,
+      harness.assetIndex.byPath("nested/b.counter")?.kind,
       "counter"
     );
-    assert.strictEqual(harness.identity.byPath("a.png")?.kind, "binary");
+    assert.strictEqual(harness.assetIndex.byPath("a.png")?.kind, "binary");
   });
 
   test("a second pass over the same directory emits nothing", async() => {
@@ -60,7 +60,7 @@ describe("Reconciler — cold start", () => {
     assert.strictEqual(lifecycleEvents(harness.eventStore).length, 1);
   });
 
-  test("reuses the ids a valid sidecar already carries", async() => {
+  test("reuses the ids a valid asset index already carries", async() => {
     const source = new MemoryAssetSource([["a.png", bytes("one")]]);
     await source.write(
       ".jollypixel/assets.json",

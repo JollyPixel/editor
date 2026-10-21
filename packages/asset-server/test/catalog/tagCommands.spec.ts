@@ -52,7 +52,9 @@ async function tagProject(
   const backend = await createAssetBackend({
     source,
     eventStore,
-    watch: false
+    reconcile: {
+      watch: false
+    }
   });
   const { assetId } = (await backend.writer.create({
     path: kPath,

@@ -131,8 +131,8 @@ describe("catalog:create without content", () => {
     );
     await catalog.sync.projector.flush();
 
-    assert.strictEqual(catalog.sync.identity.byPath("a.bin")?.kind, BINARY_KIND);
-    assert.strictEqual(catalog.sync.identity.byPath("a.png")?.kind, TEXTURE_KIND);
+    assert.strictEqual(catalog.sync.assetIndex.byPath("a.bin")?.kind, BINARY_KIND);
+    assert.strictEqual(catalog.sync.assetIndex.byPath("a.png")?.kind, TEXTURE_KIND);
     assert.deepEqual(await catalog.sync.source.read("a.bin"), new Uint8Array());
     assert.deepEqual(await catalog.sync.source.read("a.png"), new Uint8Array());
   });
@@ -141,7 +141,7 @@ describe("catalog:create without content", () => {
     await using catalog = await catalogServer([textureAssetKind()]);
 
     assert.strictEqual((await catalog.create("a.png")).type, CATALOG_APPLIED);
-    assert.strictEqual(catalog.sync.identity.byPath("a.png")?.kind, TEXTURE_KIND);
+    assert.strictEqual(catalog.sync.assetIndex.byPath("a.png")?.kind, TEXTURE_KIND);
   });
 });
 
@@ -156,7 +156,7 @@ describe("catalog:create from another format", () => {
     await catalog.sync.projector.flush();
 
     assert.strictEqual(reply.type, CATALOG_APPLIED);
-    assert.strictEqual(catalog.sync.identity.byPath("score.counter")?.kind, "counter");
+    assert.strictEqual(catalog.sync.assetIndex.byPath("score.counter")?.kind, "counter");
     assert.strictEqual(text(await catalog.sync.source.read("score.counter")), "4");
   });
 
@@ -173,7 +173,7 @@ describe("catalog:create from another format", () => {
       reply.reason,
       "Asset kind \"counter\" cannot be created from \".txt\" content."
     );
-    assert.strictEqual(catalog.sync.identity.byPath("score.counter"), undefined);
+    assert.strictEqual(catalog.sync.assetIndex.byPath("score.counter"), undefined);
   });
 
   test("rejects content the conversion refuses", async() => {
@@ -187,7 +187,7 @@ describe("catalog:create from another format", () => {
 
     assert.strictEqual(reply.type, CATALOG_REJECTED);
     assert.strictEqual(reply.reason, "not a tally");
-    assert.strictEqual(catalog.sync.identity.byPath("score.counter"), undefined);
+    assert.strictEqual(catalog.sync.assetIndex.byPath("score.counter"), undefined);
   });
 
   test("refuses a format without content to convert", async() => {
@@ -204,6 +204,6 @@ describe("catalog:create from another format", () => {
     await catalog.sync.projector.flush();
 
     assert.notStrictEqual(reply.type, CATALOG_APPLIED);
-    assert.strictEqual(catalog.sync.identity.byPath("score.counter"), undefined);
+    assert.strictEqual(catalog.sync.assetIndex.byPath("score.counter"), undefined);
   });
 });

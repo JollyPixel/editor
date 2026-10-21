@@ -19,7 +19,7 @@ import {
   CATALOG_CREATE,
   CATALOG_DELETE,
   CATALOG_ROOM,
-  IDENTITY_SIDECAR_PATH,
+  ASSET_INDEX_PATH,
   PROJECTION_STATE_PATH,
   STATE_GITIGNORE_PATH
 } from "#src/index.ts";
@@ -51,7 +51,9 @@ describe("asset-server — end to end", () => {
       eventStore,
       handlers: [liveCounterHandler()],
       snapshot: { delay: 1_000, maxDelay: 5_000 },
-      watch: false
+      reconcile: {
+        watch: false
+      }
     });
 
     assert.strictEqual(backend.catalog.size, 2);
@@ -67,7 +69,7 @@ describe("asset-server — end to end", () => {
 
     assert.match(
       await fs.readFile(
-        path.join(directory.root, IDENTITY_SIDECAR_PATH),
+        path.join(directory.root, ASSET_INDEX_PATH),
         "utf8"
       ),
       /"assets"/
@@ -169,7 +171,9 @@ describe("asset-server — end to end", () => {
       await using backend = await createAssetBackend({
         source,
         eventStore,
-        watch: false
+        reconcile: {
+          watch: false
+        }
       });
       assert.strictEqual(backend.catalog.size, 1);
     }
@@ -180,7 +184,9 @@ describe("asset-server — end to end", () => {
     await using restarted = await createAssetBackend({
       source: new FilesystemAssetSource(directory.root),
       eventStore,
-      watch: false
+      reconcile: {
+        watch: false
+      }
     });
 
     assert.strictEqual(
@@ -199,7 +205,9 @@ describe("asset-server — end to end", () => {
       source: new FilesystemAssetSource(directory.root),
       eventStore,
       handlers: [liveCounterHandler()],
-      watch: false
+      reconcile: {
+        watch: false
+      }
     });
     const server = new Server();
     backend.attach(server);

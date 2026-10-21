@@ -35,7 +35,9 @@ describe("voxel model created without content", () => {
       source,
       eventStore,
       handlers: [voxelModelAssetKind(), pixelArtAssetKind()],
-      watch: false
+      reconcile: {
+        watch: false
+      }
     });
 
     const model = (await backend.writer.create({

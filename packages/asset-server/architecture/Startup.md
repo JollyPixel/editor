@@ -19,13 +19,15 @@ flowchart TB
 
 1. `seedAssetSource()` writes missing starter files, if `seed` is set.
 2. The asset server opens the event store.
-3. `createAssetBackend()` runs. With `compactOnOpen: true`, it removes events
-   superseded by each asset's latest lifecycle checkpoint. It loads
+3. `createAssetBackend()` runs. With `compaction.onOpen: true`, it removes
+   events superseded by each asset's latest lifecycle checkpoint. It loads
    projection state, or starts from none when the event log is empty, then
-   starts the projector, live state store, and snapshot scheduler.
-4. The backend scans physical storage when `reconcileOnStart` is enabled,
-   loads the catalog, backfills missing dependency edges, and starts the
-   watcher when `watch` is enabled.
+   starts the projector, catalog, live state store, and snapshot scheduler.
+4. `SourceSync` starts the watcher when `reconcile.watch` is enabled, scans
+   physical storage when `reconcile.onStart` is enabled, and refreshes the
+   folders. Source changes seen before then wait for it. The backend then
+   backfills missing dependency edges. If any step fails, the backend closes
+   what it already started, in reverse order.
 5. The asset server registers host extensions, then attaches catalog and
    asset rooms to the network server.
 
@@ -50,4 +52,6 @@ event store at another location.
 Close the network server before the asset server. Evicting an asset room may
 flush its snapshot. `close()` detaches the room resolver, closes the backend,
 and closes the event store only if the asset server created it. It does not
-close the network server or source.
+close the network server or source. The backend closes its parts in reverse
+order of startup and keeps going when one fails, so the catalog still sees
+the snapshots flushed on close.

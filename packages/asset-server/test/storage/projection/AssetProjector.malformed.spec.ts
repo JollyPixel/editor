@@ -10,7 +10,7 @@ import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 // Import Internal Dependencies
 import { AssetProjector, ProjectionState } from "#src/storage/projection/index.ts";
 import { encodeContent } from "#src/model/events/inlineContent.ts";
-import { ContentObjects } from "#src/storage/ContentObjects.ts";
+import { AssetBackups } from "#src/storage/AssetBackups.ts";
 import { syncHarness } from "../../helpers/backend.ts";
 import { bytes, text } from "../../helpers/bytes.ts";
 import { recordingLogger } from "../../helpers/logger.ts";
@@ -85,7 +85,7 @@ describe("AssetProjector — malformed events", () => {
       source,
       eventStore,
       state: await ProjectionState.load(source),
-      objects: new ContentObjects(source)
+      backups: new AssetBackups(source)
     });
 
     replayed.load();
@@ -120,7 +120,7 @@ describe("AssetProjector — rejected events", () => {
         source,
         eventStore,
         state: await ProjectionState.load(source),
-        objects: new ContentObjects(source),
+        backups: new AssetBackups(source),
         logger
       }).load();
 
@@ -157,7 +157,7 @@ describe("AssetProjector — rejected events", () => {
         source,
         eventStore,
         state: await ProjectionState.load(source),
-        objects: new ContentObjects(source),
+        backups: new AssetBackups(source),
         logger
       }).load();
 
@@ -208,7 +208,7 @@ describe("AssetProjector — rejected events", () => {
       source,
       eventStore,
       state: await ProjectionState.load(source),
-      objects: new ContentObjects(source),
+      backups: new AssetBackups(source),
       logger
     });
 

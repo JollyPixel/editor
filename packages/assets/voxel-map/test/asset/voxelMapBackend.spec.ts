@@ -92,7 +92,9 @@ describe("voxel-map asset kind over a real back-end", () => {
             }
           })
         ],
-        watch: false
+        reconcile: {
+          watch: false
+        }
       });
 
       const record = backend.catalog.snapshot().assets
@@ -177,7 +179,9 @@ describe("voxel-map asset kind over a real back-end", () => {
         source: new FilesystemAssetSource(root),
         eventStore,
         handlers: [voxelMapAssetKind({ chunkSize: kChunkSize })],
-        watch: false
+        reconcile: {
+          watch: false
+        }
       });
       const record = backend.catalog.snapshot().assets[0];
 

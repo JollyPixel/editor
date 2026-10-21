@@ -27,9 +27,11 @@ export const DEFAULT_BLOCKSET_SIZE = {
 const kMiB = 1024 * 1024;
 
 export const WORLD_BACKEND_TUNING = {
-  catalogArchiveLimits: {
-    maxEntryBytes: 64 * kMiB,
-    maxBytes: 128 * kMiB
+  catalog: {
+    archiveLimits: {
+      maxEntryBytes: 64 * kMiB,
+      maxBytes: 128 * kMiB
+    }
   }
 } as const satisfies AssetBackendTuning;
 

@@ -13,7 +13,7 @@ import {
   seedAssetSource,
   UnknownAssetKindError
 } from "#src/index.ts";
-import { IdentitySidecar } from "#src/storage/IdentitySidecar.ts";
+import { AssetIndex } from "#src/storage/AssetIndex.ts";
 import {
   bytes,
   text
@@ -101,7 +101,7 @@ describe("seedAssetSource", () => {
     );
   });
 
-  test("records the identity of an entry that declares an id", async() => {
+  test("indexes an entry that declares an id", async() => {
     const source = new MemoryAssetSource();
 
     const written = await seedAssetSource(source, {
@@ -112,13 +112,13 @@ describe("seedAssetSource", () => {
       },
       "maps/overworld.voxelmap.json": () => bytes("{}")
     });
-    const sidecar = await IdentitySidecar.load(source);
+    const assetIndex = await AssetIndex.load(source);
 
     assert.deepStrictEqual(written, [
       "textures/block.pixelart",
       "maps/overworld.voxelmap.json"
     ]);
-    assert.deepStrictEqual([...sidecar], [
+    assert.deepStrictEqual([...assetIndex], [
       {
         id: "blockset-default",
         path: "textures/block.pixelart",
@@ -127,7 +127,7 @@ describe("seedAssetSource", () => {
     ]);
   });
 
-  test("leaves the identities alone when an entry was not written", async() => {
+  test("leaves the asset index alone when an entry was not written", async() => {
     const source = new MemoryAssetSource([
       ["textures/block.pixelart", bytes("edited")]
     ]);
@@ -139,9 +139,9 @@ describe("seedAssetSource", () => {
         content: () => bytes("pixels")
       }
     });
-    const sidecar = await IdentitySidecar.load(source);
+    const assetIndex = await AssetIndex.load(source);
 
-    assert.strictEqual(sidecar.size, 0);
+    assert.strictEqual(assetIndex.size, 0);
   });
 
   test("serializes a new handler state for an entry without content", async() => {

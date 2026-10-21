@@ -101,7 +101,7 @@ export interface AssetServerPluginOptions extends AssetServerOptions {
    */
   compression?: boolean | WebsocketCompressionOptions;
   /**
-   * Called once the back-end is up, for a host needing its handles.
+   * Called once the asset server is up, for a host needing its handles.
    */
   onReady?: (
     server: AssetServer

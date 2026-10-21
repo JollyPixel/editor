@@ -9,82 +9,82 @@ import assert from "node:assert/strict";
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
-import { IDENTITY_SIDECAR_PATH } from "#src/index.ts";
-import { IdentitySidecar } from "#src/storage/IdentitySidecar.ts";
+import { ASSET_INDEX_PATH } from "#src/index.ts";
+import { AssetIndex } from "#src/storage/AssetIndex.ts";
 import { bytes } from "../helpers/bytes.ts";
 import { recordingLogger } from "../helpers/logger.ts";
 
-describe("IdentitySidecar — mapping", () => {
+describe("AssetIndex — mapping", () => {
   test("indexes entries by path and by id", () => {
-    const sidecar = new IdentitySidecar(new MemoryAssetSource(), [
+    const assetIndex = new AssetIndex(new MemoryAssetSource(), [
       { id: "1", path: "a.png", kind: "pixelart" }
     ]);
 
-    assert.deepEqual(sidecar.byPath("a.png"), {
+    assert.deepEqual(assetIndex.byPath("a.png"), {
       id: "1",
       path: "a.png",
       kind: "pixelart"
     });
-    assert.strictEqual(sidecar.byId("1")?.path, "a.png");
-    assert.strictEqual(sidecar.byPath("missing.png"), undefined);
+    assert.strictEqual(assetIndex.byId("1")?.path, "a.png");
+    assert.strictEqual(assetIndex.byPath("missing.png"), undefined);
   });
 
   test("re-setting an id moves it, dropping the previous path", () => {
-    const sidecar = new IdentitySidecar(new MemoryAssetSource(), [
+    const assetIndex = new AssetIndex(new MemoryAssetSource(), [
       { id: "1", path: "a.png", kind: "pixelart" }
     ]);
 
-    sidecar.set({ id: "1", path: "b.png", kind: "pixelart" });
+    assetIndex.set({ id: "1", path: "b.png", kind: "pixelart" });
 
-    assert.strictEqual(sidecar.byPath("a.png"), undefined);
-    assert.strictEqual(sidecar.byPath("b.png")?.id, "1");
-    assert.strictEqual(sidecar.size, 1);
+    assert.strictEqual(assetIndex.byPath("a.png"), undefined);
+    assert.strictEqual(assetIndex.byPath("b.png")?.id, "1");
+    assert.strictEqual(assetIndex.size, 1);
   });
 
   test("taking over a path drops the id that held it", () => {
-    const sidecar = new IdentitySidecar(new MemoryAssetSource(), [
+    const assetIndex = new AssetIndex(new MemoryAssetSource(), [
       { id: "1", path: "a.png", kind: "pixelart" }
     ]);
 
-    sidecar.set({ id: "2", path: "a.png", kind: "pixelart" });
+    assetIndex.set({ id: "2", path: "a.png", kind: "pixelart" });
 
-    assert.strictEqual(sidecar.byId("1"), undefined);
-    assert.strictEqual(sidecar.byPath("a.png")?.id, "2");
-    assert.strictEqual(sidecar.size, 1);
-    assert.deepEqual([...sidecar], [
+    assert.strictEqual(assetIndex.byId("1"), undefined);
+    assert.strictEqual(assetIndex.byPath("a.png")?.id, "2");
+    assert.strictEqual(assetIndex.size, 1);
+    assert.deepEqual([...assetIndex], [
       { id: "2", path: "a.png", kind: "pixelart" }
     ]);
   });
 
   test("a path is never serialized twice", () => {
-    const sidecar = new IdentitySidecar(new MemoryAssetSource(), [
+    const assetIndex = new AssetIndex(new MemoryAssetSource(), [
       { id: "1", path: "a.png", kind: "pixelart" },
       { id: "2", path: "a.png", kind: "pixelart" }
     ]);
 
-    assert.deepEqual(sidecar.toJSON().assets, [
+    assert.deepEqual(assetIndex.toJSON().assets, [
       { id: "2", path: "a.png", kind: "pixelart" }
     ]);
   });
 
   test("removeById drops both indexes", () => {
-    const sidecar = new IdentitySidecar(new MemoryAssetSource(), [
+    const assetIndex = new AssetIndex(new MemoryAssetSource(), [
       { id: "1", path: "a.png", kind: "pixelart" }
     ]);
 
-    assert.strictEqual(sidecar.removeById("1"), true);
-    assert.strictEqual(sidecar.removeById("1"), false);
-    assert.strictEqual(sidecar.size, 0);
-    assert.strictEqual(sidecar.byPath("a.png"), undefined);
+    assert.strictEqual(assetIndex.removeById("1"), true);
+    assert.strictEqual(assetIndex.removeById("1"), false);
+    assert.strictEqual(assetIndex.size, 0);
+    assert.strictEqual(assetIndex.byPath("a.png"), undefined);
   });
 
   test("serializes entries sorted by path", () => {
-    const sidecar = new IdentitySidecar(new MemoryAssetSource(), [
+    const assetIndex = new AssetIndex(new MemoryAssetSource(), [
       { id: "2", path: "b.png", kind: "binary" },
       { id: "1", path: "a.png", kind: "binary" }
     ]);
 
-    assert.deepEqual(sidecar.toJSON(), {
+    assert.deepEqual(assetIndex.toJSON(), {
       version: 1,
       assets: [
         { id: "1", path: "a.png", kind: "binary" },
@@ -94,53 +94,53 @@ describe("IdentitySidecar — mapping", () => {
   });
 });
 
-describe("IdentitySidecar — persistence", () => {
+describe("AssetIndex — persistence", () => {
   test("round-trips through an AssetSource", async() => {
     const source = new MemoryAssetSource();
-    const sidecar = new IdentitySidecar(source, [
+    const assetIndex = new AssetIndex(source, [
       { id: "1", path: "a.png", kind: "pixelart" }
     ]);
 
-    await sidecar.save();
-    const loaded = await IdentitySidecar.load(source);
+    await assetIndex.save();
+    const loaded = await AssetIndex.load(source);
 
-    assert.deepEqual(loaded.toJSON(), sidecar.toJSON());
+    assert.deepEqual(loaded.toJSON(), assetIndex.toJSON());
   });
 
-  test("writes to the reserved sidecar path, outside the listing", async() => {
+  test("writes to the reserved index path, outside the listing", async() => {
     const source = new MemoryAssetSource();
 
-    await new IdentitySidecar(source).save();
+    await new AssetIndex(source).save();
 
     assert.deepEqual(await source.list(), []);
     assert.match(
-      new TextDecoder().decode(await source.read(IDENTITY_SIDECAR_PATH)),
+      new TextDecoder().decode(await source.read(ASSET_INDEX_PATH)),
       /"assets"/
     );
   });
 
-  test("a missing sidecar loads as empty", async() => {
-    const loaded = await IdentitySidecar.load(new MemoryAssetSource());
+  test("a missing index loads as empty", async() => {
+    const loaded = await AssetIndex.load(new MemoryAssetSource());
 
     assert.strictEqual(loaded.size, 0);
   });
 
-  test("a truncated sidecar loads as empty rather than throwing", async() => {
+  test("a truncated index loads as empty rather than throwing", async() => {
     const source = new MemoryAssetSource();
     await source.write(
-      IDENTITY_SIDECAR_PATH,
+      ASSET_INDEX_PATH,
       bytes('{"version":1,"assets":[{"id":"1","path"')
     );
 
-    const loaded = await IdentitySidecar.load(source);
+    const loaded = await AssetIndex.load(source);
 
     assert.strictEqual(loaded.size, 0);
   });
 
-  test("a corrupt sidecar drops only its malformed entries", async() => {
+  test("a corrupt index drops only its malformed entries", async() => {
     const source = new MemoryAssetSource();
     await source.write(
-      IDENTITY_SIDECAR_PATH,
+      ASSET_INDEX_PATH,
       bytes(JSON.stringify({
         version: 1,
         assets: [
@@ -151,7 +151,7 @@ describe("IdentitySidecar — persistence", () => {
       }))
     );
 
-    const loaded = await IdentitySidecar.load(source);
+    const loaded = await AssetIndex.load(source);
 
     assert.strictEqual(loaded.size, 1);
     assert.strictEqual(loaded.byPath("a.png")?.id, "1");
@@ -160,18 +160,18 @@ describe("IdentitySidecar — persistence", () => {
   test("set stays in memory until save", async() => {
     const source = new MemoryAssetSource();
 
-    const loaded = await IdentitySidecar.load(source);
+    const loaded = await AssetIndex.load(source);
     loaded.set({ id: "1", path: "a.png", kind: "binary" });
 
     assert.strictEqual(loaded.size, 1);
-    await assert.rejects(source.read(IDENTITY_SIDECAR_PATH));
-    assert.strictEqual((await IdentitySidecar.load(source)).size, 0);
+    await assert.rejects(source.read(ASSET_INDEX_PATH));
+    assert.strictEqual((await AssetIndex.load(source)).size, 0);
   });
 });
 
-describe("IdentitySidecar — parse reporting", () => {
+describe("AssetIndex — parse reporting", () => {
   test("reports no drop for a document it cannot read at all", () => {
-    const { dropped, data } = IdentitySidecar.parse("nope");
+    const { dropped, data } = AssetIndex.parse("nope");
 
     assert.strictEqual(dropped, 0);
     assert.deepEqual(data, []);
@@ -180,7 +180,7 @@ describe("IdentitySidecar — parse reporting", () => {
   test("warns once when load drops entries", async() => {
     const source = new MemoryAssetSource();
     await source.write(
-      IDENTITY_SIDECAR_PATH,
+      ASSET_INDEX_PATH,
       bytes(JSON.stringify({
         version: 1,
         assets: [
@@ -191,7 +191,7 @@ describe("IdentitySidecar — parse reporting", () => {
     );
     const { logger, records } = recordingLogger();
 
-    await IdentitySidecar.load(source, logger);
+    await AssetIndex.load(source, logger);
 
     assert.strictEqual(records.length, 1);
     assert.strictEqual(records[0].level, "warn");
@@ -200,12 +200,12 @@ describe("IdentitySidecar — parse reporting", () => {
 
   test("stays silent when every entry parses", async() => {
     const source = new MemoryAssetSource();
-    await new IdentitySidecar(source, [
+    await new AssetIndex(source, [
       { id: "1", path: "a.png", kind: "binary" }
     ]).save();
     const { logger, records } = recordingLogger();
 
-    await IdentitySidecar.load(source, logger);
+    await AssetIndex.load(source, logger);
 
     assert.deepEqual(records, []);
   });

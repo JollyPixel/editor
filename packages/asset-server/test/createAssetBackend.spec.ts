@@ -1,7 +1,8 @@
 // Import Node.js Dependencies
 import {
   describe,
-  test
+  test,
+  type TestContext
 } from "node:test";
 import assert from "node:assert/strict";
 import { setTimeout } from "node:timers/promises";
@@ -47,6 +48,46 @@ class WatchedSource extends MemoryAssetSource {
   }
 }
 
+class FolderlessSource extends MemoryAssetSource {
+  override folders(): Promise<string[]> {
+    return Promise.reject(new Error("folders unavailable"));
+  }
+}
+
+function countSubscriptions(
+  t: TestContext,
+  eventStore: EventStore.EventStore
+): () => number {
+  let active = 0;
+  function counted(
+    unsubscribe: () => void
+  ): () => void {
+    active++;
+
+    return () => {
+      active--;
+      unsubscribe();
+    };
+  }
+
+  const subscribe = eventStore.subscribe.bind(eventStore);
+  const subscribeRejections = eventStore.subscribeRejections.bind(eventStore);
+  t.mock.method(
+    eventStore,
+    "subscribe",
+    (...args: Parameters<typeof subscribe>) => counted(subscribe(...args))
+  );
+  t.mock.method(
+    eventStore,
+    "subscribeRejections",
+    (...args: Parameters<typeof subscribeRejections>) => counted(
+      subscribeRejections(...args)
+    )
+  );
+
+  return () => active;
+}
+
 async function waitFor(
   predicate: () => boolean,
   timeoutMs = 5_000
@@ -67,7 +108,9 @@ async function watchedBackend(
   return createAssetBackend({
     source,
     eventStore: EventStore.persistence.memory(),
-    reconcileDebounce: 1
+    reconcile: {
+      debounce: 1
+    }
   });
 }
 
@@ -102,7 +145,9 @@ describe("createAssetBackend — reconcile", () => {
     await using backend = await createAssetBackend({
       source,
       eventStore: EventStore.persistence.memory(),
-      watch: false
+      reconcile: {
+        watch: false
+      }
     });
 
     await source.write("maps/a.png", bytes("a"));
@@ -125,7 +170,9 @@ describe("createAssetBackend — projection state", () => {
       return createAssetBackend({
         source,
         eventStore: EventStore.persistence.memory(),
-        watch: false
+        reconcile: {
+          watch: false
+        }
       });
     }
 
@@ -168,7 +215,9 @@ describe("createAssetBackend — append errors", () => {
     await using backend = await createAssetBackend({
       source: new MemoryAssetSource(),
       eventStore: EventStore.persistence.memory(),
-      watch: false,
+      reconcile: {
+        watch: false
+      },
       logger
     });
 
@@ -192,5 +241,25 @@ describe("createAssetBackend — append errors", () => {
       records.filter((record) => record.level === "error"),
       []
     );
+  });
+});
+
+describe("createAssetBackend — failed open", () => {
+  test("releases its event store subscriptions", async(t) => {
+    const eventStore = EventStore.persistence.memory();
+    const activeSubscriptions = countSubscriptions(t, eventStore);
+
+    await assert.rejects(
+      createAssetBackend({
+        source: new FolderlessSource(),
+        eventStore,
+        reconcile: {
+          watch: false
+        }
+      }),
+      /folders unavailable/
+    );
+
+    assert.strictEqual(activeSubscriptions(), 0);
   });
 });

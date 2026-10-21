@@ -6,7 +6,7 @@ import {
 } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
-import type { BackupEntry } from "#src/storage/ContentObjects.ts";
+import type { BackupEntry } from "#src/storage/AssetBackups.ts";
 import { text } from "./bytes.ts";
 
 // CONSTANTS

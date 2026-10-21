@@ -27,8 +27,14 @@ describe("AssetServer — compaction", () => {
         root: "unused",
         source,
         eventStore,
-        compactOnOpen,
-        backend: { watch: false }
+        backend: {
+          reconcile: {
+            watch: false
+          },
+          compaction: {
+            onOpen: compactOnOpen
+          }
+        }
       });
     }
 
@@ -80,7 +86,11 @@ describe("AssetServer — compaction", () => {
         root: "unused",
         source,
         eventStore,
-        backend: { watch: false }
+        backend: {
+          reconcile: {
+            watch: false
+          }
+        }
       });
     }
 

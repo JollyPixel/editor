@@ -78,7 +78,7 @@ Each folder under `src/` imports only from the folders listed above it:
 - `catalog/`: `CatalogProjection`, the catalog room, tags, archives, and the
   browser client served as `./client`.
 - `live/`: asset rooms, `AssetStateStore`, and `SnapshotScheduler`.
-- `server/`: the `./node` entry. `AssetServer`, the HTTP catalog handler,
+- `node/`: the `./node` entry. `AssetServer`, the HTTP catalog handler,
   Vite plugins, and the project file.
 
 `createAssetBackend.ts` at the root wires these together.

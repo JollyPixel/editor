@@ -12,7 +12,7 @@ import {
 } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
-import { ContentObjects } from "#src/storage/ContentObjects.ts";
+import { AssetBackups } from "#src/storage/AssetBackups.ts";
 import { bytes } from "../helpers/bytes.ts";
 import { sha256Hex } from "../helpers/hash.ts";
 import { recordingLogger } from "../helpers/logger.ts";
@@ -22,19 +22,19 @@ import {
   readObject
 } from "../helpers/backups.ts";
 
-describe("ContentObjects", () => {
+describe("AssetBackups", () => {
   test("keeps one object per content and records every backup", async() => {
     const source = new MemoryAssetSource();
-    const objects = new ContentObjects(source);
+    const backups = new AssetBackups(source);
     const data = bytes("pixels");
 
-    await objects.store(data, {
+    await backups.add(data, {
       assetId: "a1",
       path: "a.pixelart",
       reason: "tag",
       tag: { name: "v1", message: "First pass" }
     });
-    await new ContentObjects(source).store(data, {
+    await new AssetBackups(source).add(data, {
       assetId: "a1",
       path: "b.pixelart",
       reason: "external-edit"
@@ -85,8 +85,8 @@ describe("ContentObjects", () => {
     });
     const { logger, records } = recordingLogger();
 
-    const objects = new ContentObjects(source, logger);
-    await objects.store(bytes("x"), {
+    const backups = new AssetBackups(source, logger);
+    await backups.add(bytes("x"), {
       assetId: "a2",
       path: "b.txt",
       reason: "external-edit"

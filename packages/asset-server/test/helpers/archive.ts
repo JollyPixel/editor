@@ -47,7 +47,7 @@ export interface ArchiveProject extends AsyncDisposable {
 
 export type ArchiveProjectOptions = Pick<
   AssetBackendOptions,
-  "catalogMaxContentBytes" | "catalogArchiveLimits"
+  "catalog"
 >;
 
 export async function archiveProject(
@@ -60,7 +60,9 @@ export async function archiveProject(
     source,
     eventStore,
     handlers: [liveLinkHandler()],
-    watch: false
+    reconcile: {
+      watch: false
+    }
   });
 
   let server: Server | null = null;

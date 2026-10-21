@@ -31,7 +31,7 @@ import {
   createAssetServerPlugin,
   type AssetLaunchRequest,
   type AssetServerPluginOptions
-} from "#src/server/plugins/vite.ts";
+} from "#src/node/plugins/vite.ts";
 import { LAUNCH_ELEMENT_ID } from "#src/launch.ts";
 import type { AssetEventDataMap } from "#src/index.ts";
 

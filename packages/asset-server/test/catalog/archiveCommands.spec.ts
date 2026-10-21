@@ -61,7 +61,9 @@ describe("catalog archive commands over loopback", () => {
     const archive = await exporter.catalog.exportArchive(map);
 
     await using capped = await archiveProject({
-      catalogMaxContentBytes: kTinyContentCap
+      catalog: {
+        maxContentBytes: kTinyContentCap
+      }
     });
     const cappedMap = await capped.link("map.link");
     await using connection = await connectCatalog(capped.backend);
@@ -84,7 +86,11 @@ describe("catalog archive commands over loopback", () => {
     const archive = await exporter.catalog.exportArchive(map);
 
     await using capped = await archiveProject({
-      catalogArchiveLimits: { maxEntryBytes: kTinyEntryCap }
+      catalog: {
+        archiveLimits: {
+          maxEntryBytes: kTinyEntryCap
+        }
+      }
     });
     await using connection = await connectCatalog(capped.backend);
 

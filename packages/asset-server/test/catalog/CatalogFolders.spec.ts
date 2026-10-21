@@ -207,7 +207,9 @@ describe("createAssetBackend folders", () => {
     await using backend = await createAssetBackend({
       source,
       eventStore: EventStore.persistence.memory<AssetEventDataMap>(),
-      watch: false
+      reconcile: {
+        watch: false
+      }
     });
 
     assert.deepEqual(backend.folders.toJSON(), [

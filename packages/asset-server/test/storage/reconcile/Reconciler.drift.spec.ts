@@ -213,7 +213,7 @@ describe("Reconciler — external drift", () => {
     const report = (await harness.reconciler.reconcile()).unwrap();
 
     assert.strictEqual(report.deleted, 1);
-    assert.strictEqual(harness.identity.byId(target.assetId), undefined);
+    assert.strictEqual(harness.assetIndex.byId(target.assetId), undefined);
     assert.strictEqual(
       lifecycleEvents(harness.eventStore).at(-1)?.eventType,
       ASSET_DELETED

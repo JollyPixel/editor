@@ -3,9 +3,9 @@ import type { AssetSource } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
 import {
-  IdentitySidecar,
-  type IdentityEntry
-} from "./IdentitySidecar.ts";
+  AssetIndex,
+  type IndexedAsset
+} from "./AssetIndex.ts";
 import type { AnyAssetKindHandler } from "../model/kinds/AssetKindHandler.ts";
 import { AssetKindRegistry } from "../model/kinds/AssetKindRegistry.ts";
 
@@ -31,7 +31,7 @@ export interface SeedAssetSourceOptions {
 
 interface NormalizedSeed {
   content: AssetSeedFactory;
-  identity: Omit<IdentityEntry, "path"> | null;
+  indexed: Omit<IndexedAsset, "path"> | null;
 }
 
 export async function seedAssetSource(
@@ -41,10 +41,10 @@ export async function seedAssetSource(
 ): Promise<string[]> {
   const registry = new AssetKindRegistry(options.handlers);
   const written: string[] = [];
-  const identities: IdentityEntry[] = [];
+  const indexedAssets: IndexedAsset[] = [];
 
   for (const [assetPath, value] of Object.entries(seed)) {
-    const { content, identity } = normalizeSeed(value, registry);
+    const { content, indexed } = normalizeSeed(value, registry);
     if (
       await source.exists(assetPath) ||
       !await source.writeIfAbsent(assetPath, await content())
@@ -53,20 +53,20 @@ export async function seedAssetSource(
     }
 
     written.push(assetPath);
-    if (identity !== null) {
-      identities.push({
-        ...identity,
+    if (indexed !== null) {
+      indexedAssets.push({
+        ...indexed,
         path: assetPath
       });
     }
   }
 
-  if (identities.length > 0) {
-    const sidecar = await IdentitySidecar.load(source);
-    for (const identity of identities) {
-      sidecar.set(identity);
+  if (indexedAssets.length > 0) {
+    const assetIndex = await AssetIndex.load(source);
+    for (const indexed of indexedAssets) {
+      assetIndex.set(indexed);
     }
-    await sidecar.save();
+    await assetIndex.save();
   }
 
   return written;
@@ -79,13 +79,13 @@ function normalizeSeed(
   if (typeof value === "function") {
     return {
       content: value,
-      identity: null
+      indexed: null
     };
   }
 
   return {
     content: value.content ?? defaultContent(value, registry),
-    identity: {
+    indexed: {
       id: value.id,
       kind: value.kind
     }

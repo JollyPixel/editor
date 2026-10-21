@@ -146,7 +146,7 @@ describe("dependency edges on lifecycle events", () => {
     await harness.source.write("outside.link", linkContent("a"));
 
     (await harness.reconciler.reconcile()).unwrap();
-    const assetId = harness.identity.byPath("outside.link")!.id;
+    const assetId = harness.assetIndex.byPath("outside.link")!.id;
     assert.deepEqual(lastWrite(harness, assetId).dependencies, [
       linkReference("a")
     ]);

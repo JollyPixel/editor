@@ -55,7 +55,11 @@ describe("AssetServer", () => {
       seed: {
         "counter.counter": () => bytes("0")
       },
-      backend: { watch: false }
+      backend: {
+        reconcile: {
+          watch: false
+        }
+      }
     });
 
     assert.strictEqual(
@@ -90,7 +94,11 @@ describe("AssetServer", () => {
       seed: {
         "counter.counter": () => bytes("0")
       },
-      backend: { watch: false }
+      backend: {
+        reconcile: {
+          watch: false
+        }
+      }
     });
 
     assert.strictEqual(
@@ -119,7 +127,11 @@ describe("AssetServer", () => {
       seed: {
         "counter.counter": () => bytes("0")
       },
-      backend: { watch: false }
+      backend: {
+        reconcile: {
+          watch: false
+        }
+      }
     });
 
     assert.strictEqual(
@@ -143,7 +155,11 @@ describe("AssetServer", () => {
       seed: {
         "counter.counter": () => bytes("0")
       },
-      backend: { watch: false }
+      backend: {
+        reconcile: {
+          watch: false
+        }
+      }
     });
 
     assert.strictEqual(assetServer.backend.catalog.size, 1);
@@ -164,7 +180,11 @@ describe("AssetServer", () => {
       seed: {
         "a.png": () => bytes("bytes")
       },
-      backend: { watch: false }
+      backend: {
+        reconcile: {
+          watch: false
+        }
+      }
     });
 
     assert.strictEqual(assetServer.source, source);
@@ -187,7 +207,11 @@ describe("AssetServer", () => {
       source: new MemoryAssetSource(),
       eventStore,
       extensions: [extension],
-      backend: { watch: false }
+      backend: {
+        reconcile: {
+          watch: false
+        }
+      }
     });
 
     const connectionA = assetServer.network.connect(recordingClient("A"), { subject: "A", role: "default" });
@@ -206,7 +230,11 @@ describe("AssetServer", () => {
       root: "unused",
       source: new MemoryAssetSource(),
       eventStore,
-      backend: { watch: false }
+      backend: {
+        reconcile: {
+          watch: false
+        }
+      }
     });
     await assetServer.close();
 

@@ -209,8 +209,10 @@ export async function benchBackend(
       gridHandler({ contentBytes: options.contentBytes })
     ],
     snapshot: options.snapshot,
-    reconcileOnStart: false,
-    watch: false,
+    reconcile: {
+      onStart: false,
+      watch: false
+    },
     logger: silentLogger()
   });
   await backend.flush();

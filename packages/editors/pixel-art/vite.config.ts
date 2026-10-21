@@ -63,7 +63,9 @@ export default defineConfig((env) => {
         seed: createPixelArtSeed(kTextureAssetId),
         launch: () => kTextureAssetId,
         backend: {
-          catalogMaxContentBytes: kCatalogMaxContentBytes
+          catalog: {
+            maxContentBytes: kCatalogMaxContentBytes
+          }
         }
       })
     ]

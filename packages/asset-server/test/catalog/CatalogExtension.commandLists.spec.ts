@@ -74,7 +74,7 @@ describe("CatalogExtension — command lists", () => {
     const sent = broadcastsSince(commands, start);
     assert.deepEqual(sent.map(({ type }) => type), [CATALOG_FOLDERS, CATALOG_CHANGED]);
     assert.strictEqual(sent[1].changes?.length, 3);
-    assert.strictEqual(commands.sync.identity.byId(assetIds[2])?.path, "moved/sub-2/2.png");
+    assert.strictEqual(commands.sync.assetIndex.byId(assetIds[2])?.path, "moved/sub-2/2.png");
     assert.deepEqual(commands.lastDirect(), {
       clientId: "A",
       payload: {
@@ -104,7 +104,7 @@ describe("CatalogExtension — command lists", () => {
     const reply = commands.lastDirect()?.payload as { applied?: number; failure?: string; };
     assert.strictEqual(reply.applied, 1);
     assert.strictEqual(typeof reply.failure, "string");
-    assert.strictEqual(commands.sync.identity.byId(c)?.path, "c.png");
+    assert.strictEqual(commands.sync.assetIndex.byId(c)?.path, "c.png");
     const sent = broadcastsSince(commands, start);
     assert.deepEqual(sent.map(({ type }) => type), [CATALOG_CHANGED]);
     assert.strictEqual(sent[0].changes?.length, 1);
@@ -139,7 +139,7 @@ describe("CatalogExtension — command lists", () => {
     });
 
     assert.deepEqual(
-      assetIds.map((assetId) => commands.sync.identity.byId(assetId)),
+      assetIds.map((assetId) => commands.sync.assetIndex.byId(assetId)),
       [undefined, undefined]
     );
     assert.deepEqual(commands.lastDirect(), {

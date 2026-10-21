@@ -56,7 +56,9 @@ async function viewHarness(): Promise<ViewHarness> {
     source: new MemoryAssetSource(),
     eventStore,
     handlers: [linkHandler()],
-    watch: false
+    reconcile: {
+      watch: false
+    }
   });
   async function create(
     path: string,

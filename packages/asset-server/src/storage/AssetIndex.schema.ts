@@ -1,12 +1,12 @@
 // Import Third-party Dependencies
 import * as z from "zod/mini";
 
-export const identityEntrySchema = z.object({
+export const indexedAssetSchema = z.object({
   id: z.string(),
   path: z.string(),
   kind: z.string()
 });
 
-export const identitySidecarSchema = z.object({
+export const assetIndexSchema = z.object({
   assets: z.array(z.unknown())
 });

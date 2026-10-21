@@ -18,8 +18,8 @@ import {
   AssetKindRegistry,
   AssetWriter
 } from "#src/index.ts";
-import { IdentitySidecar } from "#src/storage/IdentitySidecar.ts";
-import { ContentObjects } from "#src/storage/ContentObjects.ts";
+import { AssetIndex } from "#src/storage/AssetIndex.ts";
+import { AssetBackups } from "#src/storage/AssetBackups.ts";
 import {
   AssetProjector,
   ProjectionState
@@ -163,16 +163,16 @@ describe("SourceWatcher — real filesystem (integration)", () => {
       source,
       eventStore,
       state,
-      objects: new ContentObjects(source)
+      backups: new AssetBackups(source)
     });
     projector.load();
     projector.start();
-    const identity = await IdentitySidecar.load(source);
+    const assetIndex = await AssetIndex.load(source);
     const writer = new AssetWriter({
       eventStore,
       kinds,
       projector,
-      identity
+      assetIndex
     });
     const reconciler = new Reconciler({ source, projector, writer });
     const watcher = new SourceWatcher({

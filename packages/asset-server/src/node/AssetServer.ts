@@ -75,14 +75,8 @@ export interface AssetServerOptions {
    */
   roomGraceMs?: number;
   /**
-   * Drops the events superseded by each asset's newest lifecycle
-   * checkpoint before the back-end loads its projections.
-   *
-   * Destructive and irreversible: it trades the editing history nothing
-   * reads for a log that stops growing without bound.
-   * @default true
+   * `compaction.onOpen` defaults to `true` here.
    */
-  compactOnOpen?: boolean;
   backend?: AssetBackendTuning;
 }
 
@@ -111,7 +105,6 @@ export class AssetServer implements AsyncDisposable {
       admits,
       logger = silentLogger(),
       roomGraceMs,
-      compactOnOpen = true,
       backend: tuning = {}
     } = options;
 
@@ -130,9 +123,11 @@ export class AssetServer implements AsyncDisposable {
       ));
 
     const backend = await createAssetBackend({
-      compactOnOpen,
-      compactOnSnapshot: compactOnOpen,
       ...tuning,
+      compaction: {
+        ...tuning.compaction,
+        onOpen: tuning.compaction?.onOpen ?? true
+      },
       source,
       eventStore,
       handlers,

@@ -75,7 +75,9 @@ describe("voxel animation file", () => {
       source,
       eventStore,
       handlers: [voxelAnimationAssetKind()],
-      watch: false
+      reconcile: {
+        watch: false
+      }
     });
 
     const created = (await backend.writer.create({

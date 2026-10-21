@@ -71,7 +71,9 @@ describe("createAssetBackend — dependency backfill", () => {
         source,
         eventStore,
         handlers: [linkHandler()],
-        watch: false
+        reconcile: {
+          watch: false
+        }
       });
 
       assert.deepEqual(backend.catalog.dependencies.listDependencies("old"), [
@@ -86,7 +88,9 @@ describe("createAssetBackend — dependency backfill", () => {
         source,
         eventStore,
         handlers: [linkHandler()],
-        watch: false
+        reconcile: {
+          watch: false
+        }
       });
 
       assert.deepEqual(backend.catalog.dependencies.listDependents("tex"), ["old"]);
@@ -117,7 +121,9 @@ describe("createAssetBackend — dependency backfill", () => {
     await using backend = await createAssetBackend({
       source,
       eventStore,
-      watch: false
+      reconcile: {
+        watch: false
+      }
     });
 
     assert.strictEqual(eventStore.reader.list("png").length, 1);
