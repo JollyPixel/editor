@@ -60,11 +60,24 @@ export function readAssetArchive(
 
       return Err(error);
     }
+    const partData = new Map<string, Uint8Array>();
+    for (const partId of entry.parts ?? []) {
+      const part = files.takePart(entry.path, partId);
+      if (part === undefined) {
+        const error = new AssetArchiveError(
+          "missing-entry",
+          `Archive has no part "${partId}" of "${entry.path}".`,
+          { assetId: entry.id }
+        );
+
+        return Err(error);
+      }
+      partData.set(partId, part);
+    }
     assets.push({
-      id: entry.id,
-      kind: entry.kind,
-      path: entry.path,
-      data
+      ...entry,
+      data,
+      ...(entry.parts === undefined ? {} : { partData })
     });
   }
 

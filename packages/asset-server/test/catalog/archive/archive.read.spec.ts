@@ -100,6 +100,16 @@ describe("readAssetArchive", () => {
     );
   });
 
+  test("rejects a listed part without an entry", () => {
+    assert.strictEqual(
+      rejection(zipArchive(
+        { version: 1, assets: [{ ...entry, parts: ["a"] }] },
+        { "a.link": linkContent() }
+      )),
+      "missing-entry"
+    );
+  });
+
   test("rejects a file absent from the manifest", () => {
     assert.strictEqual(
       rejection(zipArchive(

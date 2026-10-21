@@ -119,6 +119,9 @@ export function registerAssetRooms(
   ): RoomResolution {
     const state = room.handler.create(room.assetId);
     room.handler.load(state, tagged.data);
+    for (const [partId, data] of tagged.parts ?? []) {
+      room.handler.parts?.load(state, partId, data);
+    }
 
     return {
       extension: roomExtension(room, state, () => tagged.eventVersion),

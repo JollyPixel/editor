@@ -27,6 +27,7 @@ import {
 } from "./format/ArchiveManifest.ts";
 import { readableAsset } from "./readableAsset.ts";
 import { UnknownAssetError } from "../../storage/writer/errors/UnknownAssetError.ts";
+import { AssetPartFiles } from "../../storage/AssetPartFiles.ts";
 
 export type AssetExportError = AssetImportError | UnknownAssetError;
 
@@ -48,6 +49,7 @@ export async function exportAssetArchive(
     Array.from(catalog.catalog, toReference) :
     [root.val];
 
+  const partFiles = new AssetPartFiles(backend.kinds);
   const assets: AssetArchiveEntry[] = [];
   const missing: AssetReferenceData[] = [];
   const files: Zippable = {};
@@ -59,11 +61,18 @@ export async function exportAssetArchive(
       continue;
     }
 
-    const entry = toArchiveEntry(record);
-    const data = await backend.source.read(entry.path);
+    const listed = toArchiveEntry(record);
+    const data = await backend.source.read(listed.path);
+    const parts = await readPartFiles(backend, partFiles, listed, data);
+    const entry = parts === undefined ?
+      listed :
+      { ...listed, parts: [...parts.keys()] };
     const readable = readableAsset(backend.kinds, {
       ...entry,
-      data
+      data,
+      partData: new Map(
+        [...parts ?? []].map(([partId, part]) => [partId, part.data])
+      )
     });
     if (!readable.ok) {
       return readable;
@@ -71,6 +80,9 @@ export async function exportAssetArchive(
 
     assets.push(entry);
     files[entry.path] = data;
+    for (const part of parts?.values() ?? []) {
+      files[part.path] = part.data;
+    }
   }
 
   files[ASSET_ARCHIVE_MANIFEST_PATH] = encodeArchiveManifest({
@@ -81,6 +93,31 @@ export async function exportAssetArchive(
   });
 
   return Ok(zipSync(files));
+}
+
+async function readPartFiles(
+  backend: ArchiveBackend,
+  partFiles: AssetPartFiles,
+  entry: AssetArchiveEntry,
+  data: Uint8Array
+): Promise<Map<string, { path: string; data: Uint8Array; }> | undefined> {
+  const extension = partFiles.extension(entry.kind);
+  const decoded = backend.kinds.decode(entry.kind, entry.id, data);
+  if (extension === null || !decoded.ok) {
+    return undefined;
+  }
+
+  const { handler, state } = decoded.val;
+  const parts = new Map<string, { path: string; data: Uint8Array; }>();
+  for (const partId of handler.parts?.list(state) ?? []) {
+    const path = partFiles.path(entry.path, extension, partId);
+    parts.set(partId, {
+      path,
+      data: await backend.source.read(path)
+    });
+  }
+
+  return parts;
 }
 
 async function flushRoot(

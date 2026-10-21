@@ -51,8 +51,11 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
 - **Part checkpoints: done** (2026-10-21). A kind declares `parts`;
   creation, generations, replay and compaction handle them. Kinds without
   parts are unchanged.
-- **Next:** M2, part files in storage: projector, reconciler, folders,
-  archives, tags and seeding.
+- **Part files: done** (2026-10-21). Parts are stored in
+  `<asset>.parts/`; the projector, reconciler, folders, tags, archives and
+  seeding handle them.
+- **Next:** M2, the part subscription: `subscribeParts`, the parts reply and
+  the filtered broadcast.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -84,7 +87,8 @@ chunks yet.
 ## M2: Streaming
 
 - [ ] Asset parts in `@jolly-pixel/asset-server`: part files, manifest-only
-  join snapshot, per-part persistence and replay checkpoints.
+  join snapshot, per-part persistence and replay checkpoints. Part files and
+  checkpoints are done.
 - [ ] Part subscription: `subscribeParts`, `unsubscribeParts`, part fetch,
   and command broadcast filtered by subscription.
 - [ ] Overview map, rebuilt incrementally from edited chunks.

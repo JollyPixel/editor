@@ -13,6 +13,7 @@ import type {
 import { AssetArchiveError } from "../errors/AssetArchiveError.ts";
 import type { AssetKindRegistry } from "../../../model/kinds/AssetKindRegistry.ts";
 import { asError } from "../../../common/asError.ts";
+import { serializeParts } from "../../../model/kinds/serializeParts.ts";
 
 export async function copyWithFreshIds(
   archive: AssetArchive,
@@ -53,7 +54,7 @@ async function rebind(
   idMap: ReadonlyMap<string, string>,
   kinds: AssetKindRegistry
 ): Promise<Result<AssetArchiveAsset, AssetArchiveError>> {
-  const decoded = kinds.decode(asset.kind, id, asset.data);
+  const decoded = kinds.decode(asset.kind, id, asset.data, asset.partData);
   if (!decoded.ok) {
     return Err(uncopyable(asset, decoded.val));
   }
@@ -68,12 +69,18 @@ async function rebind(
       throw new Error(`Kind "${asset.kind}" cannot rebind asset references.`);
     }
     handler.rebind?.(state, idMap);
+    const partData = asset.partData === undefined ?
+      undefined :
+      await serializeParts(handler, state);
 
     return Ok({
+      ...asset,
       id,
-      kind: asset.kind,
-      path: asset.path,
-      data: await handler.serialize(state)
+      data: await handler.serialize(state),
+      ...(partData === undefined ? {} : {
+        parts: [...partData.keys()],
+        partData
+      })
     });
   }
   catch (cause) {

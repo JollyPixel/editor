@@ -60,7 +60,8 @@ An external tool can edit files in `AssetSource`. `SourceWatcher` groups
 notifications into batches. A batch holding a file change runs `Reconciler`,
 which compares scanned paths and hashes with the last projected state; every
 batch then refreshes `CatalogFolders`. `backend.reconcile()` runs the same
-scan and refresh on demand.
+scan and refresh on demand. Part files count toward their asset, as
+[asset parts](./AssetParts.md#storage-layout) describes.
 
 ```mermaid
 flowchart TB

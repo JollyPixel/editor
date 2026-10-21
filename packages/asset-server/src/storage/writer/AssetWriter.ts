@@ -363,7 +363,7 @@ export class AssetWriter {
     payload: AssetPayload,
     current: AssetProjection | null
   ): Promise<Result<AssetWriteData, Error>> {
-    const parts = this.#partsWrite(kind, payload, current);
+    const parts = this.#partsWrite(assetId, kind, payload, current);
     if (!parts.ok) {
       return parts;
     }
@@ -378,13 +378,15 @@ export class AssetWriter {
   }
 
   #partsWrite(
+    assetId: string,
     kind: string,
     payload: AssetPayload,
     current: AssetProjection | null
   ): Result<AssetPartsWrite | undefined, Error> {
-    const parted = this.#kinds.has(kind) &&
-      this.#kinds.get(kind).parts !== undefined;
-    if (!parted) {
+    const parts = this.#kinds.has(kind) ?
+      this.#kinds.get(kind).parts :
+      undefined;
+    if (parts === undefined) {
       if (payload.parts === undefined) {
         return Ok(undefined);
       }
@@ -396,6 +398,13 @@ export class AssetWriter {
       return Err(error);
     }
 
+    const decoded = this.#kinds.decode(kind, assetId, payload.data);
+    if (!decoded.ok) {
+      return decoded;
+    }
+
+    const listed = new Set(parts.list(decoded.val.state));
+
     const changes = payload.parts ?? new Map<string, Uint8Array | null>();
     const written = new Map<string, Uint8Array>();
     const kept = new Map<string, AssetPartRef>();
@@ -405,12 +414,12 @@ export class AssetWriter {
 
         return Err(error);
       }
-      if (data !== null) {
+      if (data !== null && listed.has(partId)) {
         written.set(partId, data);
       }
     }
     for (const [partId, ref] of current?.parts ?? []) {
-      if (!changes.has(partId)) {
+      if (!changes.has(partId) && listed.has(partId)) {
         kept.set(partId, ref);
       }
     }

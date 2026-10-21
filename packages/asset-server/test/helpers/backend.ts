@@ -16,6 +16,7 @@ import {
 } from "#src/index.ts";
 import { AssetIndex } from "#src/storage/AssetIndex.ts";
 import { AssetBackups } from "#src/storage/AssetBackups.ts";
+import { AssetPartFiles } from "#src/storage/AssetPartFiles.ts";
 import {
   AssetProjector,
   ProjectionState
@@ -113,13 +114,15 @@ export async function syncHarness(
   const ownsEventStore = options.eventStore === undefined;
   const eventStore = options.eventStore ?? EventStore.persistence.memory();
   const kinds = new AssetKindRegistry(options.handlers ?? []);
+  const partFiles = new AssetPartFiles(kinds);
   const state = await ProjectionState.load(source);
   const backups = new AssetBackups(source);
   const projector = new AssetProjector({
     source,
     eventStore,
     state,
-    backups
+    backups,
+    partFiles
   });
   projector.load();
   projector.start();
@@ -149,7 +152,8 @@ export async function syncHarness(
   const reconciler = new Reconciler({
     source,
     projector,
-    writer
+    writer,
+    partFiles
   });
   const watcher = new SourceWatcher({
     source,
@@ -214,7 +218,8 @@ export function catalogBackend(
     folders: new CatalogFolders({
       source: sync.source,
       catalog,
-      flush: () => backend.flush()
+      flush: () => backend.flush(),
+      kinds: sync.kinds
     }),
     tags: new AssetTags({
       eventStore: sync.eventStore,

@@ -92,6 +92,20 @@ export class ArchiveFiles {
     return data;
   }
 
+  takePart(
+    assetPath: string,
+    partId: string
+  ): Uint8Array | undefined {
+    const prefix = `${assetPath}.parts/${partId}.`;
+    for (const path of this.#files.keys()) {
+      if (path.startsWith(prefix) && !path.includes("/", prefix.length)) {
+        return this.take(path);
+      }
+    }
+
+    return undefined;
+  }
+
   firstUntaken(): string | undefined {
     const [path] = this.#files.keys();
 

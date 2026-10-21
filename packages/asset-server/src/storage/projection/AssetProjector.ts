@@ -15,12 +15,16 @@ import {
   parseAssetEvent,
   type AssetEvent,
   type AssetEventRejection,
-  type AssetEventType
+  type AssetEventType,
+  type AssetPartRef
 } from "../../model/events/AssetEvents.ts";
 import type { AssetProjection } from "./applyProjection.ts";
 import { AssetFold } from "./AssetFold.ts";
 import type { ProjectionState } from "./ProjectionState.ts";
 import type { AssetBackups } from "../AssetBackups.ts";
+import { AssetPartFiles } from "../AssetPartFiles.ts";
+import { heldPartContent } from "../../model/events/heldPartContent.ts";
+import { decodeContent } from "../../model/events/inlineContent.ts";
 import { TaskChain } from "../../common/TaskChain.ts";
 import { asError } from "../../common/asError.ts";
 import { contentHash } from "../../common/contentHash.ts";
@@ -45,6 +49,10 @@ export interface AssetProjectorOptions {
   eventStore: EventStore.EventStore;
   state: ProjectionState;
   backups: Pick<AssetBackups, "add">;
+  /**
+   * @default no kind with parts
+   */
+  partFiles?: AssetPartFiles;
   logger?: Logger;
 }
 
@@ -55,6 +63,7 @@ export class AssetProjector extends Emitter<
   #eventStore: EventStore.EventStore;
   #state: ProjectionState;
   #backups: Pick<AssetBackups, "add">;
+  #partFiles: AssetPartFiles;
   #logger: Logger;
 
   #folds = new Map<string, AssetFold>();
@@ -74,6 +83,7 @@ export class AssetProjector extends Emitter<
     this.#eventStore = options.eventStore;
     this.#state = options.state;
     this.#backups = options.backups;
+    this.#partFiles = options.partFiles ?? new AssetPartFiles();
     this.#logger = options.logger ?? silentLogger();
   }
 
@@ -378,19 +388,74 @@ export class AssetProjector extends Emitter<
     }
 
     if (written !== null) {
-      this.#writing.add(written);
-      try {
-        await this.#source.write(
-          written,
-          await this.#readContent(fold)
-        );
-      }
-      finally {
-        this.#writing.delete(written);
-      }
+      await this.#write(written, () => this.#readContent(fold));
     }
+    await this.#applyPartOperations(assetId, projected, desired);
     if (deleted !== null) {
       await this.#source.delete(deleted);
+    }
+  }
+
+  async #applyPartOperations(
+    assetId: string,
+    projected: AssetProjection | null,
+    desired: AssetProjection | null
+  ): Promise<void> {
+    const moved = projected !== null && projected.path !== desired?.path;
+    const desiredParts = desired?.parts ?? new Map<string, AssetPartRef>();
+    if (desired?.parts !== undefined) {
+      const extension = this.#partFiles.extension(desired.kind);
+      for (const [partId, ref] of desiredParts) {
+        if (
+          extension === null ||
+          (!moved && projected?.parts?.get(partId)?.hash === ref.hash)
+        ) {
+          continue;
+        }
+
+        const path = this.#partFiles.path(desired.path, extension, partId);
+        await this.#preserveExternalEdit(assetId, path, [
+          projected?.parts?.get(partId)?.hash,
+          ref.hash
+        ]);
+        await this.#write(path, () => Promise.resolve(decodeContent(
+          heldPartContent(this.#eventStore.reader, assetId, ref.at, partId)
+        )));
+      }
+    }
+    if (projected?.parts === undefined) {
+      return;
+    }
+
+    const extension = this.#partFiles.extension(projected.kind);
+    if (extension === null) {
+      return;
+    }
+
+    for (const [partId, ref] of projected.parts) {
+      if (!moved && desiredParts.has(partId)) {
+        continue;
+      }
+
+      const path = this.#partFiles.path(projected.path, extension, partId);
+      await this.#preserveExternalEdit(assetId, path, [ref.hash]);
+      await this.#source.delete(path);
+    }
+    if (moved) {
+      await this.#source.deleteFolder(this.#partFiles.folder(projected.path));
+    }
+  }
+
+  async #write(
+    path: string,
+    read: () => Promise<Uint8Array>
+  ): Promise<void> {
+    this.#writing.add(path);
+    try {
+      await this.#source.write(path, await read());
+    }
+    finally {
+      this.#writing.delete(path);
     }
   }
 

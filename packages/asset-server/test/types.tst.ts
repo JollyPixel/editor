@@ -47,6 +47,19 @@ interface LegacyWriteData {
   readonly hash: string;
   readonly size: number;
   readonly content: LegacyInlineContent;
+  readonly parts?: {
+    [partId: string]:
+      | {
+        readonly hash: string;
+        readonly size: number;
+        readonly content: LegacyInlineContent;
+      }
+      | {
+        readonly hash: string;
+        readonly size: number;
+        readonly at: number;
+      };
+  };
   readonly dependencies?: {
     readonly id: string;
     readonly kind: string;
@@ -78,7 +91,7 @@ describe("schema-derived payload types", () => {
     expect<AssetInlineContent>().type.toBe<LegacyInlineContent>();
   });
 
-  test("AssetWriteData narrows content and carries optional dependencies and restoredFrom", () => {
+  test("AssetWriteData narrows content and carries optional parts, dependencies and restoredFrom", () => {
     expect<AssetWriteData>().type.toBe<LegacyWriteData>();
   });
 

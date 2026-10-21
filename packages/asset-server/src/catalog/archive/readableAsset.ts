@@ -16,7 +16,12 @@ export function readableAsset(
   kinds: AssetKindRegistry,
   asset: AssetArchiveAsset
 ): Result<void, AssetImportError> {
-  const decoded = kinds.decode(asset.kind, asset.id, asset.data);
+  const decoded = kinds.decode(
+    asset.kind,
+    asset.id,
+    asset.data,
+    asset.partData
+  );
   if (decoded.ok) {
     return Ok(undefined);
   }

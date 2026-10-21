@@ -1,8 +1,8 @@
 # Asset parts
 
 Status: in progress for terrain milestone M2. The kind contract, writes,
-generations, replay and compaction are implemented. Part files, the
-subscription and the filtered broadcast are not yet.
+generations, replay, compaction, part files, tags, archives and seeding are
+implemented. The subscription and the filtered broadcast are not yet.
 
 An asset is one file, its live state is held whole by the room, sent whole on
 join, and every `asset.updated` checkpoint carries the whole content. A large
@@ -34,11 +34,39 @@ world.terrain.parts/
 ```
 
 The part file extension comes from the kind. The catalog keeps one path per
-asset: the manifest's. Rename, move and delete carry the sibling folder with
-the asset file. The reconciler and `CatalogFolders` never treat a `.parts`
-folder or its files as assets or folders of their own. An external edit to a
-part file is an update of its asset. Archives and tags hold the parts with
-the manifest.
+asset: the manifest's. A folder is a parts folder when its name is a path
+of a kind with parts followed by `.parts`. For any other kind, such as
+`a.png.parts/`, the folder and its files stay ordinary folders and assets.
+
+The projector writes the part files with the manifest. Rename, move and delete
+carry the parts folder with the asset file. The reconciler and
+`CatalogFolders` never treat a parts folder or its files as assets or folders
+of their own.
+
+Outside the backend:
+
+- An edited or added part file is an update of its asset, in a scoped pass
+  too.
+- A missing part file is not a change: the part stays in the asset and its
+  history.
+- An asset file found without history, as in a fresh checkout, is created
+  with the part files of its folder.
+- A manifest renamed or deleted on its own leaves its parts folder behind.
+  Move or delete the folder with it.
+
+Every write keeps only the parts the manifest lists, so a restore or an
+import that replaces the manifest drops the parts it no longer names.
+
+Tags, archives and seeding hold the parts with the manifest:
+
+- `tags.read()` returns every tagged part, and a tag room loads them.
+- A restore writes back the tagged parts that differ, even when the manifest
+  is the same.
+- A tag backup stores each part beside the manifest.
+- An archive entry lists its part IDs in `parts`. Its part files sit at the
+  same paths as on disk.
+- A seed entry without `content` writes the part files of the kind's
+  `create` state.
 
 ## Kind contract
 
@@ -94,7 +122,8 @@ generation's version, `<hash>@<version>`, since an edit can change parts
 without changing the manifest.
 
 The projector writes the manifest file and each part file whose hash changed,
-and deletes the files of parts that left the map.
+and deletes the files of parts that left the map. It reads part bytes from the
+checkpoint each `at` names.
 
 ## Server state
 

@@ -14,7 +14,8 @@ export interface AssetPayload {
   dependencies?: readonly AssetReferenceData[];
   /**
    * Parts written by this payload, or `null` for a part it removes. An update
-   * keeps the parts it does not name. Only kinds that declare parts take it.
+   * keeps the parts it does not name. Parts `data` does not list are dropped.
+   * Only kinds that declare parts take it.
    */
   parts?: ReadonlyMap<string, Uint8Array | null>;
 }
