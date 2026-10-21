@@ -68,9 +68,9 @@ export function registerAssetRooms(
     logger = silentLogger()
   } = options;
   for (const kind of kinds.kinds()) {
-    const { commands } = kinds.get(kind);
+    const { commands, parts } = kinds.get(kind);
     if (hasLiveProtocol(commands)) {
-      AssetRoomProtocols.validate(commands);
+      AssetRoomProtocols.validate(commands, parts !== undefined);
     }
   }
 
@@ -109,7 +109,10 @@ export function registerAssetRooms(
       room.commands,
       room.commands.live(binding),
       events,
-      extensionOptions
+      {
+        ...extensionOptions,
+        ...(room.handler.parts === undefined ? {} : { parts: room.handler.parts })
+      }
     );
   }
 

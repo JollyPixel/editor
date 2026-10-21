@@ -12,8 +12,13 @@ import * as z from "zod/mini";
 // Import Internal Dependencies
 import {
   ASSET_ROOM_DELETED,
-  ASSET_ROOM_REJECTED
+  ASSET_ROOM_MAX_PARTS_PER_MESSAGE,
+  ASSET_ROOM_PARTS,
+  ASSET_ROOM_REJECTED,
+  ASSET_ROOM_SUBSCRIBE_PARTS,
+  ASSET_ROOM_UNSUBSCRIBE_PARTS
 } from "../model/kinds/AssetLiveProtocol.ts";
+import { ASSET_PART_ID_PATTERN } from "../model/events/AssetEvents.schema.ts";
 
 // CONSTANTS
 const kNonNegativeInt = z.int().check(z.minimum(0));
@@ -27,6 +32,15 @@ const kAssetRoomRejectedSchema = z.object({
   type: z.literal(ASSET_ROOM_REJECTED),
   reason: z.string()
 });
+
+const kPartIdsSchema = z.array(
+  z.string().check(z.regex(ASSET_PART_ID_PATTERN))
+).check(z.maxLength(ASSET_ROOM_MAX_PARTS_PER_MESSAGE));
+
+export const ASSET_ROOM_PART_REQUESTS = [
+  ASSET_ROOM_SUBSCRIBE_PARTS,
+  ASSET_ROOM_UNSUBSCRIBE_PARTS
+] as const;
 
 export const assetRoomResumeSchema = z.object({
   clientId: z.string(),
@@ -59,7 +73,8 @@ const kSyncOptionalProperties: Record<
 export function assetRoomOutboundProtocol(
   command: MessageProtocol,
   snapshot: Schema,
-  relay: readonly Schema[] = []
+  relay: readonly Schema[] = [],
+  part?: Schema
 ): MessageProtocol {
   return new MessageProtocol(
     z.union([
@@ -73,6 +88,7 @@ export function assetRoomOutboundProtocol(
       catchUpVariant(command),
       kAssetRoomDeletedSchema,
       kAssetRoomRejectedSchema,
+      ...part === undefined ? [] : [partsVariant(part)],
       ...relay
     ]),
     {
@@ -83,21 +99,40 @@ export function assetRoomOutboundProtocol(
 
 export function assetRoomInboundProtocol(
   command: MessageProtocol,
-  relay: readonly Schema[]
+  relay: readonly Schema[],
+  parted = false
 ): MessageProtocol {
-  if (relay.length === 0) {
+  if (relay.length === 0 && !parted) {
     return command;
   }
+
+  const requests = parted ?
+    ASSET_ROOM_PART_REQUESTS.map((tag) => z.object({
+      [command.discriminator]: z.literal(tag),
+      parts: kPartIdsSchema
+    })) :
+    [];
 
   return new MessageProtocol(
     z.union([
       ...command.variants.map(({ schema }) => schema),
-      ...relay
+      ...relay,
+      ...requests
     ]),
     {
       discriminator: command.discriminator
     }
   );
+}
+
+function partsVariant(
+  part: Schema
+): Schema {
+  return z.object({
+    type: z.literal(ASSET_ROOM_PARTS),
+    version: kNonNegativeInt,
+    parts: z.record(z.string(), z.nullable(part))
+  });
 }
 
 function syncVariant(

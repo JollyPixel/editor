@@ -1,3 +1,7 @@
+// Import Third-party Dependencies
+import type { Schema } from "@jolly-pixel/network";
+import * as z from "zod/mini";
+
 // Import Internal Dependencies
 import type {
   AssetCommandHeader,
@@ -258,6 +262,44 @@ export type TileCommand = AssetCommandHeader & (
   | { action: "erase"; tile: string; }
 );
 
+const kTileCommands: AssetCommands<TileState, TileCommand> = {
+  eventType: TILE_CHANGED,
+  protocol: tileCommandProtocol,
+  apply: (state, command) => {
+    if (command.action === "paint") {
+      state.tiles.set(command.tile, command.value);
+    }
+    else {
+      state.tiles.delete(command.tile);
+    }
+  }
+};
+
+export const tileSnapshotSchema: Schema = z.array(z.string());
+
+export function liveTileHandler(): AssetKindHandler<TileState, TileCommand> {
+  return {
+    ...tileHandler({ delay: 0, maxDelay: 0 }),
+    commands: {
+      ...kTileCommands,
+      live: ({ state }) => {
+        return {
+          snapshotSchema: tileSnapshotSchema,
+          snapshot: () => [...state.tiles.keys()].sort(),
+          arbitrate: (command) => {
+            return { command };
+          },
+          parts: {
+            schema: z.string(),
+            part: (partId) => state.tiles.get(partId) ?? null,
+            outside: (command) => (command.action === "erase" ? command : null)
+          }
+        };
+      }
+    }
+  };
+}
+
 export function tileHandler(
   snapshot?: SnapshotPolicy
 ): AssetKindHandler<TileState, TileCommand> {
@@ -265,18 +307,7 @@ export function tileHandler(
     kind: "tiles",
     extensions: { ".tiles": "text/plain; charset=utf-8" },
     snapshot,
-    commands: {
-      eventType: TILE_CHANGED,
-      protocol: tileCommandProtocol,
-      apply: (state, command) => {
-        if (command.action === "paint") {
-          state.tiles.set(command.tile, command.value);
-        }
-        else {
-          state.tiles.delete(command.tile);
-        }
-      }
-    },
+    commands: kTileCommands,
     parts: {
       extension: { ".tile": "text/plain; charset=utf-8" },
       touched: (command) => [command.tile],

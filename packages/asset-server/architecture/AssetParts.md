@@ -1,8 +1,9 @@
 # Asset parts
 
 Status: in progress for terrain milestone M2. The kind contract, writes,
-generations, replay, compaction, part files, tags, archives and seeding are
-implemented. The subscription and the filtered broadcast are not yet.
+generations, replay, compaction, part files, tags, archives, seeding, the
+subscription and the filtered broadcast are implemented. No shipped kind
+declares parts yet.
 
 An asset is one file, its live state is held whole by the room, sent whole on
 join, and every `asset.updated` checkpoint carries the whole content. A large
@@ -80,8 +81,14 @@ A kind declares parts with an optional `parts` field on its handler:
 | `load(state, partId, content)` | Loads one part into the state. |
 | `serialize(state, partId)` | Bytes of one part. |
 
-The subscription adds the wire form of one part and `outside(command)`, the
-form of a command sent to members not subscribed to its parts.
+A live room needs `live().parts` as well, and refuses to open with only one
+of the two:
+
+| Member | Role |
+|---|---|
+| `schema` | Wire form of one part. |
+| `part(partId)` | Wire form of one part, or `null` when the manifest does not list it. |
+| `outside(command)` | Form of a command for members subscribed to none of its parts, or `null` to send them nothing. Optional. |
 
 For a parted kind, the handler's `serialize` and `load` handle the manifest
 only, and `live().snapshot()` is the manifest's wire form. A client applies
@@ -137,14 +144,33 @@ subscribes to, is later work.
 
 ## Subscription
 
-A client sends `subscribeParts` with part IDs, and `unsubscribeParts` when it
-no longer needs them. Both are room messages handled by the asset room, not
-by the kind's relay.
+A client subscribes to parts, and unsubscribes when it no longer needs them.
+Both are room messages handled by the asset room, not by the kind's relay.
+They carry their tag on the discriminator of the kind's command protocol,
+`action` by default, which no command or relay message may use:
 
-The room answers `subscribeParts` with a `parts` message: the wire form of
-each part at the room's current version. A subscription and its content are
-taken at the same version, so no command falls between them. A part the
-manifest does not name is answered with `null`.
+```json
+{ "action": "subscribe-parts", "parts": ["0_0", "0_1"] }
+{ "action": "unsubscribe-parts", "parts": ["0_0"] }
+```
+
+A message names at most `ASSET_ROOM_MAX_PARTS_PER_MESSAGE` (1,024) part IDs.
+
+The room answers a subscription with a `parts` message: the wire form of each
+requested part at the room's current version.
+
+```json
+{ "type": "parts", "version": 42, "parts": { "0_0": "…", "0_1": null } }
+```
+
+A subscription and its content are taken at the same version, so no command
+falls between them. A part the manifest does not list is answered with `null`
+and stays subscribed, so its later commands reach the member. A client
+receives the `parts` message as a notice; it replaces those parts and
+reapplies its pending commands that touch them.
+
+Subscriptions end when a member leaves. A client subscribes again after it
+reconnects. A tag room accepts no message, so it streams no parts yet.
 
 ## Broadcast
 
@@ -160,5 +186,6 @@ client ignores the parts it has not loaded.
 
 ## Join
 
-The join snapshot is the manifest. A resync sends the manifest and the parts
-the client subscribes to.
+The join snapshot is the manifest. A resync, a refused command and a reload
+send the manifest, then a `parts` message with the parts the client
+subscribes to.

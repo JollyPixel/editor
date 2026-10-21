@@ -54,8 +54,11 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
 - **Part files: done** (2026-10-21). Parts are stored in
   `<asset>.parts/`; the projector, reconciler, folders, tags, archives and
   seeding handle them.
-- **Next:** M2, the part subscription: `subscribeParts`, the parts reply and
-  the filtered broadcast.
+- **Part subscription: done** (2026-10-21). An asset room answers part
+  subscriptions with the parts and sends each command only to the members
+  subscribed to its parts, and `outside(command)` to the others.
+- **Next:** M2, terrain on parts: one chunk per part, the chunk list as the
+  manifest, and the editor subscribing to the chunks it loads.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -90,7 +93,8 @@ chunks yet.
   join snapshot, per-part persistence and replay checkpoints. Part files and
   checkpoints are done.
 - [ ] Part subscription: `subscribeParts`, `unsubscribeParts`, part fetch,
-  and command broadcast filtered by subscription.
+  and command broadcast filtered by subscription. The asset room side is
+  done.
 - [ ] Overview map, rebuilt incrementally from edited chunks.
 - [ ] Camera-driven chunk loading and unloading within the stream radius.
 - [ ] Lift the 256-chunk cap.

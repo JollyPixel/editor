@@ -52,6 +52,17 @@ export interface RoomHarnessOptions {
   kind?: CounterKind;
   handler?: AssetKindHandler<CounterState, AssetCommandHeader, object>;
   extraHandlers?: AnyAssetKindHandler[];
+  /**
+   * The asset the rooms open, a counter at `a.counter` by default.
+   */
+  asset?: {
+    readonly kind: string;
+    readonly path: string;
+    /**
+     * @default the kind's scaffold
+     */
+    readonly data?: Uint8Array;
+  };
 }
 
 export async function roomHarness(
@@ -66,9 +77,14 @@ export async function roomHarness(
     snapshot: { delay: 0, maxDelay: 0 }
   });
 
-  const created = (await sync.writer.create({
+  const asset = options.asset ?? {
+    kind: "counter",
     path: "a.counter",
-    data: bytes("0"),
+    data: bytes("0")
+  };
+  const created = (await sync.writer.create({
+    path: asset.path,
+    ...(asset.data === undefined ? {} : { data: asset.data }),
     actor: ROOM_ACTOR
   })).unwrap();
   await sync.projector.flush();
@@ -130,7 +146,7 @@ export async function roomHarness(
     },
     async join(
       clientId,
-      room = new AssetRoom("counter", created.assetId).toString()
+      room = new AssetRoom(asset.kind, created.assetId).toString()
     ) {
       const handle = recordingClient(clientId);
       clients.set(clientId, handle);
@@ -142,7 +158,7 @@ export async function roomHarness(
     },
     async send(clientId, payload) {
       await connections.get(clientId)?.receive({
-        room: new AssetRoom("counter", created.assetId).toString(),
+        room: new AssetRoom(asset.kind, created.assetId).toString(),
         kind: "message",
         payload
       });
