@@ -4,15 +4,15 @@ import type {
   Vec2
 } from "../types.ts";
 import type { SelectionChange } from "../selection/SelectionFootprint.ts";
-import type { DocumentCommand } from "./PixelCommand.ts";
+import type { PixelDocumentCommand } from "./PixelCommand.ts";
 import type { EditChange } from "./EditChange.ts";
 
-export type PixelChange = EditChange<DocumentCommand>;
+export type PixelChange = EditChange<PixelDocumentCommand>;
 
 export interface LocalEdit {
-  command: DocumentCommand;
-  inverse: DocumentCommand[];
-  sent?: DocumentCommand;
+  command: PixelDocumentCommand;
+  inverse: PixelDocumentCommand[];
+  sent?: PixelDocumentCommand;
 }
 
 export interface GlobalFill {

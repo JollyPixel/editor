@@ -23,7 +23,7 @@ import {
   EditContext,
   SelectionStore
 } from "../../../src/state/index.ts";
-import { createMapDocument } from "../../helpers/mapDocument.ts";
+import { createEditorMap } from "../../helpers/editorMap.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
 
 // CONSTANTS
@@ -40,7 +40,7 @@ function setup() {
     world,
     history: mapSteps(voxels),
     selection: new SelectionStore(),
-    mapDocument: createMapDocument(world),
+    editorMap: createEditorMap(world),
     access: mapAccess()
   });
   const history = new MapHistory({

@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { quadDiagonal } from "../../document/quadDiagonal.ts";
+import { quadDiagonal } from "../../terrain/quadDiagonal.ts";
 import { SKIRT_EDGES } from "../lod/skirtMasks.ts";
 
 // CONSTANTS

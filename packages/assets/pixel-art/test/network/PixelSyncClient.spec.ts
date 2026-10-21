@@ -10,9 +10,9 @@ import assert from "node:assert/strict";
 import type { CommandChange } from "@jolly-pixel/history";
 import {
   EditChange,
-  toDocumentCommand,
+  toPixelDocumentCommand,
   toPixelCommand,
-  type DocumentCommand,
+  type PixelDocumentCommand,
   type PixelChange,
   type PixelCommand
 } from "@jolly-pixel/pixel-draw.renderer";
@@ -58,7 +58,7 @@ class Host extends MockEmitter<{
   }
 
   applyStep(
-    command: DocumentCommand
+    command: PixelDocumentCommand
   ): PixelChange {
     const change = EditChange.local(command);
     this.emit("change", change);
@@ -69,8 +69,8 @@ class Host extends MockEmitter<{
 
   edit(
     command: PixelCommand
-  ): CommandChange<DocumentCommand, null> {
-    const change = EditChange.local(toDocumentCommand(command));
+  ): CommandChange<PixelDocumentCommand, null> {
+    const change = EditChange.local(toPixelDocumentCommand(command));
     this.emit("change", change);
     this.emit("command", command, change);
 
@@ -124,7 +124,7 @@ describe("PixelSyncClient — document events", () => {
 describe("PixelSyncClient — receipts", () => {
   test("confirms the change behind an acknowledged command, with its version", () => {
     const { room, host } = setup();
-    const confirmed: [CommandChange<DocumentCommand, null>, number | undefined][] = [];
+    const confirmed: [CommandChange<PixelDocumentCommand, null>, number | undefined][] = [];
     pixelEdits(host).receipts.on("confirmed", (change, version) => confirmed.push([change, version]));
     room.deliverSnapshot();
 
@@ -137,7 +137,7 @@ describe("PixelSyncClient — receipts", () => {
   test("sends an undo with the basis of its change", () => {
     const { room, host } = setup();
 
-    pixelEdits(host).applyStep(toDocumentCommand(kResized), 7);
+    pixelEdits(host).applyStep(toPixelDocumentCommand(kResized), 7);
 
     assert.strictEqual(room.sent[0].basis, 7);
   });

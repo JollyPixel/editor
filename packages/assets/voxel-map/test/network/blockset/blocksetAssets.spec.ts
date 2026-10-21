@@ -11,11 +11,11 @@ import type { CatalogCreateOptions } from "@jolly-pixel/asset-server/client";
 // Import Internal Dependencies
 import {
   createBlocksetAsset,
-  createBlocksetDocument,
+  createBlocksetFile,
   BLOCKSET_KIND,
   blocksetRoom
 } from "#src/network/client.ts";
-import { decodeBlocksetDocument } from "#src/asset/blocksetAssetKind.ts";
+import { decodeBlocksetFile } from "#src/asset/blocksetAssetKind.ts";
 import { createMockBlocksetRoom } from "../../helpers/blocksetRoom.ts";
 
 describe("blocksetRoom", () => {
@@ -49,7 +49,7 @@ describe("createBlocksetAsset", () => {
         return "asset-2";
       }
     };
-    const document = createBlocksetDocument({
+    const file = createBlocksetFile({
       tileSize: 8,
       size: { x: 16, y: 8 }
     });
@@ -57,14 +57,14 @@ describe("createBlocksetAsset", () => {
     const assetId = await createBlocksetAsset(
       catalog,
       "textures/stone.blockset.json",
-      document
+      file
     );
 
     assert.equal(assetId, "asset-2");
     assert.equal(calls.length, 1);
     const [path, content, options] = calls[0];
     assert.equal(path, "textures/stone.blockset.json");
-    assert.deepEqual(decodeBlocksetDocument(content), document);
+    assert.deepEqual(decodeBlocksetFile(content), file);
     assert.deepEqual(options, {
       kind: BLOCKSET_KIND,
       onConflict: "suffix"

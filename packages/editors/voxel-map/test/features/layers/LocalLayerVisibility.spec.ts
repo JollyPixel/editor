@@ -15,7 +15,7 @@ import {
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import type { MapDocumentEvents } from "../../../src/document/MapDocument.ts";
+import type { EditorMapEvents } from "../../../src/map/EditorMap.ts";
 import {
   LocalLayerVisibility
 } from "../../../src/features/layers/LocalLayerVisibility.ts";
@@ -28,12 +28,12 @@ function setup() {
   world.objectLayers.add("Triggers");
   world.objectLayers.add("Spawns");
 
-  const mapDocument = new Emitter<MapDocumentEvents>();
+  const editorMap = new Emitter<EditorMapEvents>();
   const commands: VoxelLayerCommand[] = [];
   world.on("command", (command) => {
     if (isVoxelLayerCommand(command)) {
       commands.push(command);
-      mapDocument.emit("layerUpdated", command);
+      editorMap.emit("layerUpdated", command);
     }
   });
 
@@ -42,14 +42,14 @@ function setup() {
   const local = new LocalLayerVisibility({
     world,
     layers,
-    mapDocument,
+    editorMap,
     visibility
   });
 
   return {
     world,
     layers,
-    mapDocument,
+    editorMap,
     commands,
     visibility,
     local
@@ -219,10 +219,10 @@ describe("LocalLayerVisibility", () => {
   });
 
   test("keeps a concealed layer hidden across a reset", () => {
-    const { world, layers, mapDocument, local } = setup();
+    const { world, layers, editorMap, local } = setup();
     const release = local.conceal("Ground");
 
-    mapDocument.emit("reset");
+    editorMap.emit("reset");
     assert.strictEqual(groundShown(world, layers), false);
 
     release();
@@ -231,12 +231,12 @@ describe("LocalLayerVisibility", () => {
   });
 
   test("re-applies overrides and prunes missing entries on reset", () => {
-    const { world, layers, mapDocument, visibility } = setup();
+    const { world, layers, editorMap, visibility } = setup();
     visibility.override("voxel:Ground", false);
     visibility.override("object:Gone", false);
     layers.override("Stale", false);
 
-    mapDocument.emit("reset");
+    editorMap.emit("reset");
 
     assert.strictEqual(groundShown(world, layers), false);
     assert.deepStrictEqual([...layers.overrides.keys()], ["Ground"]);
@@ -253,7 +253,7 @@ describe("LocalLayerVisibility", () => {
     const local = new LocalLayerVisibility({
       world,
       layers,
-      mapDocument: new Emitter<MapDocumentEvents>(),
+      editorMap: new Emitter<EditorMapEvents>(),
       visibility
     });
 

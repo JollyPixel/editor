@@ -10,7 +10,7 @@ import {
 } from "@jolly-pixel/editor.pixel-art";
 
 // Import Internal Dependencies
-import type { MapDocument } from "../../document/MapDocument.ts";
+import type { EditorMap } from "../../map/EditorMap.ts";
 import type {
   BlockSelection,
   UvSyncStore
@@ -29,7 +29,7 @@ export interface BlocksetTabOptions {
   blocks: BlockWriter;
   block: BlockSelection;
   uvSync: UvSyncStore;
-  mapDocument: MapDocument;
+  editorMap: EditorMap;
 }
 
 export class BlocksetTab {
@@ -64,7 +64,7 @@ export class BlocksetTab {
     this.#uvBridge = new BlockUvBridge(canvas.uv, view, {
       runLocalRestore: (fn) => canvas.document.runLocalRestore(fn),
       block: options.block,
-      mapDocument: options.mapDocument,
+      editorMap: options.editorMap,
       blocks: options.blocks,
       uvSync: options.uvSync
     });

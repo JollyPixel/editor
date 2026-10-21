@@ -4,7 +4,10 @@ import {
   DocumentSyncClient,
   type SyncableDocument
 } from "./DocumentSyncClient.ts";
-import { SyncedDocument } from "./SyncedDocument.ts";
+import {
+  SyncedDocument,
+  type DocumentKind
+} from "./SyncedDocument.ts";
 import type {
   NetworkCommandHeader,
   NetworkServerMessage,
@@ -80,16 +83,15 @@ export interface CommandDocumentKindOptions<
   keys(command: TCommand): readonly string[] | null;
 }
 
-export interface CommandDocumentKind<
+export type CommandDocumentKind<
   TKind extends string,
   TDocument extends CommandSyncableDocument<TDocument>,
   TNotice extends NetworkServerNoticeOf<TNotice> = never
-> {
-  readonly kind: TKind;
-  createDocument(
-    room: SyncedDocumentRoom<TDocument, TNotice>
-  ): SyncedCommandDocument<TDocument, TNotice>;
-}
+> = DocumentKind<
+  TKind,
+  SyncedDocumentRoom<TDocument, TNotice>,
+  SyncedCommandDocument<TDocument, TNotice>
+>;
 
 export function commandDocumentKind<
   TKind extends string,
@@ -106,7 +108,7 @@ export function commandDocumentKind<
 
   return {
     kind,
-    createDocument: (room) => new SyncedCommandDocument(room, {
+    syncDocument: (room) => new SyncedCommandDocument(room, {
       document: createDocument(),
       keys
     })

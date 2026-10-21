@@ -113,9 +113,9 @@ interface SelectionEdit {
 ## Changes
 
 ```ts
-type PixelChange = EditChange<DocumentCommand>;
+type PixelChange = EditChange<PixelDocumentCommand>;
 
-applyStep(command: DocumentCommand): PixelChange | null;
+applyStep(command: PixelDocumentCommand): PixelChange | null;
 ```
 
 `applyStep` applies an undo or redo command as a local edit: it emits the change, with the commands undoing it read before it applied, then the command and `draw-end`. It returns `null` and changes nothing when the command no longer applies, such as a move of a deleted UV region. See [pixel history](./history/PixelHistory.md#editchange).

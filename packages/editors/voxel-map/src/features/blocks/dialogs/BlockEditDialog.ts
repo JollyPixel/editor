@@ -78,7 +78,7 @@ export class BlockEditDialog extends WorkspaceElement {
     };
 
     return [
-      workspace.mapDocument.subscribe("blockRegistryChanged", refresh),
+      workspace.editorMap.subscribe("blockRegistryChanged", refresh),
       workspace.usage.subscribe("change", refresh)
     ];
   }
@@ -86,7 +86,7 @@ export class BlockEditDialog extends WorkspaceElement {
   async open(
     blockId: number
   ): Promise<void> {
-    if (this.workspace?.mapDocument.blocks.get(blockId) === undefined) {
+    if (this.workspace?.editorMap.blocks.get(blockId) === undefined) {
       return;
     }
 
@@ -104,7 +104,7 @@ export class BlockEditDialog extends WorkspaceElement {
   get #block(): ResolvedBlockDefinition | undefined {
     return this._blockId === null ?
       undefined :
-      this.workspace?.mapDocument.blocks.get(this._blockId);
+      this.workspace?.editorMap.blocks.get(this._blockId);
   }
 
   override render() {

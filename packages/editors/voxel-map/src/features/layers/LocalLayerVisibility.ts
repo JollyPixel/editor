@@ -6,7 +6,7 @@ import type {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { MapDocumentSignals } from "../../document/MapDocument.ts";
+import type { EditorMapSignals } from "../../map/EditorMap.ts";
 import {
   ObjectRef,
   parseLayerRef,
@@ -17,7 +17,7 @@ import type { LayerVisibilityStore } from "./LayerVisibilityStore.ts";
 export interface LocalLayerVisibilityOptions {
   world: VoxelWorld;
   layers: VoxelLayerVisibility;
-  mapDocument: MapDocumentSignals;
+  editorMap: EditorMapSignals;
   visibility: LayerVisibilityStore;
 }
 
@@ -37,8 +37,8 @@ export class LocalLayerVisibility {
     this.#visibility = options.visibility;
     this.#subscriptions = [
       options.visibility.subscribe("change", this.#apply),
-      options.mapDocument.subscribe("layerUpdated", this.#onLayerUpdated),
-      options.mapDocument.subscribe("reset", this.#onReset)
+      options.editorMap.subscribe("layerUpdated", this.#onLayerUpdated),
+      options.editorMap.subscribe("reset", this.#onReset)
     ];
 
     this.#applyAll();

@@ -16,8 +16,8 @@ import {
   pixelArtAssetKind
 } from "@jolly-pixel/asset.pixel-art";
 import {
-  createVoxelModelDocument,
-  encodeVoxelModelDocument,
+  createVoxelModelFile,
+  encodeVoxelModelFile,
   voxelModelAssetKind
 } from "@jolly-pixel/asset.voxel-model";
 import { createAssetServerPlugin } from "@jolly-pixel/asset-server/node";
@@ -38,8 +38,8 @@ export default defineConfig({
       ],
       seed: {
         "textures/model.pixelart": texture,
-        "models/model.voxelmodel.json": () => encodeVoxelModelDocument(
-          createVoxelModelDocument({ texture })
+        "models/model.voxelmodel.json": () => encodeVoxelModelFile(
+          createVoxelModelFile({ texture })
         )
       }
     })
@@ -47,9 +47,9 @@ export default defineConfig({
 });
 ```
 
-A model references one pixel-art texture, which only stores pixels: each block owns its UV layout. `createVoxelModelDocument({ texture, blocks? })` creates a model with one root block named `Block`, or one root block per name in `blocks`; `blocks: []` creates an empty tree. A model created without content comes with a pixel-art texture of the same name beside it. Every linked animation set is a catalog dependency of the model. Pass `snapshot` to `voxelModelAssetKind()` to change when snapshots are written.
+A model references one pixel-art texture, which only stores pixels: each block owns its UV layout. `createVoxelModelFile({ texture, blocks? })` creates a model with one root block named `Block`, or one root block per name in `blocks`; `blocks: []` creates an empty tree. A model created without content comes with a pixel-art texture of the same name beside it. Every linked animation set is a catalog dependency of the model. Pass `snapshot` to `voxelModelAssetKind()` to change when snapshots are written.
 
-`decodeVoxelModelDocument()` throws `InvalidAssetDocumentError` from `@jolly-pixel/asset-server` when the bytes are not JSON or do not match `voxelModelDocumentSchema`. Loading the tree then throws `InvalidModelTreeError` when an ID repeats, a parent or material is missing, or an entry is its own ancestor, and keeps the previous tree.
+`decodeVoxelModelFile()` throws `InvalidAssetFileError` from `@jolly-pixel/asset-server` when the bytes are not JSON or do not match `compactVoxelModelFileSchema`, the on-disk form that leaves out default transform values and face orders. Loading the tree then throws `InvalidModelTreeError` when an ID repeats, a parent or material is missing, or an entry is its own ancestor, and keeps the previous tree.
 
 ### Connect a model
 
@@ -63,7 +63,7 @@ import {
 
 const client = new Client();
 const room: VoxelModelRoom = client.room(assetRoomName("voxelmodel", assetId));
-const synced = voxelModelDocumentKind().createDocument(room);
+const synced = voxelModelDocumentKind().syncDocument(room);
 
 room.join();
 await synced.ready;
@@ -76,7 +76,7 @@ The first snapshot loads the document. Local edits go to the room and stay pendi
 
 ## 📚 API
 
-- `@jolly-pixel/asset.voxel-model` exports `voxelModelAssetKind`, `VoxelModelState`, the document codec and `voxelModelDocumentSchema`, the `VOXEL_MODEL_ASSET` descriptor, `ASSET_KINDS` (the kind package, taking `{ snapshot? }` options), the kind and event constants, and everything the client entry point exports from the model.
+- `@jolly-pixel/asset.voxel-model` exports `voxelModelAssetKind`, `VoxelModelState`, the file codec and `compactVoxelModelFileSchema`, the `VOXEL_MODEL_ASSET` descriptor, `ASSET_KINDS` (the kind package, taking `{ snapshot? }` options), the kind and event constants, and everything the client entry point exports from the model.
 - `@jolly-pixel/asset.voxel-model/client` exports the [model document](./docs/model.md) (`ModelDocument`, `ModelTree`, `BlockTransform`, `BlockUvLayouts`), the [material library](./docs/materials.md) (`MaterialSurface`, the material clipboard codec), the [animation bindings](./docs/animation.md) (`TrackBinding`, `buildBlockPath`), the [undo keys](./docs/history.md) (`modelHistoryKeys`), `voxelModelDocumentKind` and its `SyncedModelDocument` type, `voxelModelWriteKeys`, and the wire types.
 - `@jolly-pixel/asset.voxel-model/server` exports the conflict keys and the command and snapshot schemas.
 

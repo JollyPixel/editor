@@ -32,7 +32,8 @@ applied the same way whether it comes from a local edit, a peer, an undo or a
 redo. Undo history and what the canvas shows are not part of it.
 
 *In code:* `PixelDocument`. `PixelDocumentState` is the same data without
-events, where commands are applied. `PixelCommand`.
+events, where commands are applied. `PixelDocumentCommand` and its wire form
+`PixelCommand`. Saved, it is a `PixelArtFile`.
 
 ## View
 

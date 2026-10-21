@@ -3,17 +3,17 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { AssetKindRegistry, InvalidAssetDocumentError } from "@jolly-pixel/asset-server";
+import { AssetKindRegistry, InvalidAssetFileError } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
 import {
-  createVoxelModelDocument,
-  encodeVoxelModelDocument,
+  createVoxelModelFile,
+  encodeVoxelModelFile,
   VOXEL_MODEL_EXTENSION,
   VOXEL_MODEL_KIND
 } from "#src/asset/voxelModel.ts";
 import {
-  decodeVoxelModelDocument,
+  decodeVoxelModelFile,
   voxelModelAssetKind,
   VoxelModelState
 } from "#src/asset/voxelModelAssetKind.ts";
@@ -66,7 +66,7 @@ describe("VoxelModelState", () => {
     const state = new VoxelModelState();
     assert.deepEqual(state.dependencies(), []);
 
-    state.load(createVoxelModelDocument({ texture: kTexture }));
+    state.load(createVoxelModelFile({ texture: kTexture }));
 
     assert.deepEqual(state.dependencies(), [kTexture]);
     assert.deepEqual(state.texture, kTexture);
@@ -79,13 +79,13 @@ describe("VoxelModelState", () => {
 
     assert.throws(
       () => state.toJSON(),
-      InvalidAssetDocumentError
+      InvalidAssetFileError
     );
   });
 
-  test("round-trips through the document codec", () => {
+  test("round-trips through the file codec", () => {
     const state = new VoxelModelState();
-    state.load(createVoxelModelDocument({ texture: kTexture }));
+    state.load(createVoxelModelFile({ texture: kTexture }));
     state.applyCommand(blockAdded("a"));
     state.applyCommand(blockAdded("floor"));
     state.applyCommand({
@@ -96,13 +96,13 @@ describe("VoxelModelState", () => {
     });
 
     const reloaded = new VoxelModelState();
-    reloaded.load(decodeVoxelModelDocument(encodeVoxelModelDocument(state.toJSON())));
+    reloaded.load(decodeVoxelModelFile(encodeVoxelModelFile(state.toJSON())));
 
     assert.deepEqual(reloaded.toJSON(), state.toJSON());
   });
 });
 
-describe("decodeVoxelModelDocument", () => {
+describe("decodeVoxelModelFile", () => {
   test("rejects malformed documents", () => {
     function encode(
       value: unknown
@@ -111,41 +111,41 @@ describe("decodeVoxelModelDocument", () => {
     }
 
     assert.throws(
-      () => decodeVoxelModelDocument(new TextEncoder().encode("{")),
-      InvalidAssetDocumentError
+      () => decodeVoxelModelFile(new TextEncoder().encode("{")),
+      InvalidAssetFileError
     );
     assert.throws(
-      () => decodeVoxelModelDocument(encode({ version: 1, nodes: [] })),
-      InvalidAssetDocumentError
+      () => decodeVoxelModelFile(encode({ version: 1, nodes: [] })),
+      InvalidAssetFileError
     );
     assert.throws(
-      () => decodeVoxelModelDocument(encode({ version: 2 })),
-      InvalidAssetDocumentError
+      () => decodeVoxelModelFile(encode({ version: 2 })),
+      InvalidAssetFileError
     );
     assert.throws(
-      () => decodeVoxelModelDocument(encode({
+      () => decodeVoxelModelFile(encode({
         version: 2,
         nodes: [],
         materials: [],
         texture: "tex"
       })),
-      InvalidAssetDocumentError
+      InvalidAssetFileError
     );
     assert.throws(
-      () => decodeVoxelModelDocument(encode({
+      () => decodeVoxelModelFile(encode({
         version: 2,
         nodes: [],
         materials: []
       })),
-      InvalidAssetDocumentError
+      InvalidAssetFileError
     );
     assert.throws(
-      () => decodeVoxelModelDocument(encode({
+      () => decodeVoxelModelFile(encode({
         version: 2,
         nodes: [],
         texture: kTexture
       })),
-      InvalidAssetDocumentError
+      InvalidAssetFileError
     );
   });
 
@@ -165,7 +165,7 @@ describe("decodeVoxelModelDocument", () => {
     }));
 
     assert.throws(
-      () => decodeVoxelModelDocument(content),
+      () => decodeVoxelModelFile(content),
       /\/nodes\/0/
     );
   });
@@ -189,20 +189,20 @@ describe("decodeVoxelModelDocument", () => {
     }));
 
     assert.throws(
-      () => decodeVoxelModelDocument(content),
+      () => decodeVoxelModelFile(content),
       /\/nodes\/0/
     );
   });
 });
 
 describe("VoxelModelState.load", () => {
-  test("rejects a document whose tree is broken", () => {
+  test("rejects a file whose tree is broken", () => {
     const state = new VoxelModelState();
-    const document = createVoxelModelDocument({ texture: kTexture });
+    const file = createVoxelModelFile({ texture: kTexture });
 
     assert.throws(
       () => state.load({
-        ...document,
+        ...file,
         nodes: [folderNode("a", "ghost")]
       }),
       InvalidModelTreeError
@@ -214,7 +214,7 @@ describe("voxelModelAssetKind", () => {
   test("rebinds the texture reference on a copied model", () => {
     const handler = voxelModelAssetKind();
     const state = handler.create("model");
-    state.load(createVoxelModelDocument({
+    state.load(createVoxelModelFile({
       texture: { id: "original", kind: "pixelart" }
     }));
 
@@ -228,7 +228,7 @@ describe("voxelModelAssetKind", () => {
   test("lists linked animation sets as dependencies and rebinds them on a copy", () => {
     const handler = voxelModelAssetKind();
     const state = handler.create("model");
-    state.load(createVoxelModelDocument({ texture: kTexture }));
+    state.load(createVoxelModelFile({ texture: kTexture }));
     state.applyCommand({
       action: "animation-set-linked",
       link: { id: "walk", kind: "voxelanimation", bindings: [] }

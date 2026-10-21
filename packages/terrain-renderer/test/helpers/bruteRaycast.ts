@@ -1,8 +1,8 @@
 // Import Internal Dependencies
-import { CHUNK_SAMPLES } from "#src/document/ChunkCoord.ts";
-import { quadDiagonal } from "#src/document/quadDiagonal.ts";
-import type { TerrainReader } from "#src/document/TerrainDocument.ts";
-import type { TerrainRay } from "#src/document/terrainSurface.ts";
+import { CHUNK_SAMPLES } from "#src/terrain/ChunkCoord.ts";
+import { quadDiagonal } from "#src/terrain/quadDiagonal.ts";
+import type { TerrainReader } from "#src/terrain/Terrain.ts";
+import type { TerrainRay } from "#src/terrain/terrainSurface.ts";
 import {
   cross,
   dot,

@@ -11,7 +11,7 @@ import { TERRAIN_ICON } from "./icons.ts";
 export const TERRAIN_KIND = "terrain";
 export const TERRAIN_COMMAND = "terrain.command";
 export const TERRAIN_EXTENSION = ".terrain.json";
-export const TERRAIN_DOCUMENT_VERSION = 1;
+export const TERRAIN_FILE_VERSION = 1;
 
 export const TERRAIN_ASSET: AssetKindDescriptor = {
   kind: TERRAIN_KIND,
@@ -20,14 +20,14 @@ export const TERRAIN_ASSET: AssetKindDescriptor = {
   icon: TERRAIN_ICON
 };
 
-export const terrainAssetDocumentSchema = z.extend(terrainSnapshotSchema, {
-  version: z.literal(TERRAIN_DOCUMENT_VERSION)
+export const terrainFileSchema = z.extend(terrainSnapshotSchema, {
+  version: z.literal(TERRAIN_FILE_VERSION)
 });
 
-export type TerrainAssetDocument = Infer<typeof terrainAssetDocumentSchema>;
+export type TerrainFile = Infer<typeof terrainFileSchema>;
 
-export function encodeTerrainAssetDocument(
-  document: TerrainAssetDocument
+export function encodeTerrainFile(
+  file: TerrainFile
 ): Uint8Array {
-  return new TextEncoder().encode(JSON.stringify(document));
+  return new TextEncoder().encode(JSON.stringify(file));
 }

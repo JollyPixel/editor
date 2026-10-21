@@ -10,7 +10,7 @@ import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
 import { PixelDocumentState } from "#src/sync/PixelDocumentState.ts";
 import { NormalMapConfig } from "#src/normal/NormalMapConfig.ts";
 import {
-  toDocumentCommand,
+  toPixelDocumentCommand,
   type PixelCommand
 } from "#src/sync/PixelCommand.ts";
 import { createDocument } from "../helpers/document/document.ts";
@@ -88,7 +88,7 @@ describe("PixelDocumentState", () => {
     doc.undo();
 
     for (const command of events) {
-      peer.apply(toDocumentCommand(command));
+      peer.apply(toPixelDocumentCommand(command));
     }
 
     assert.deepEqual(peer.buffer.pixels(), doc.buffer.pixels({ copy: false }));

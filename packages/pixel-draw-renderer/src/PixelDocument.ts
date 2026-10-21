@@ -16,7 +16,7 @@ import {
   strokeCommand,
   strokeCommands,
   textureCommand,
-  type DocumentCommand,
+  type PixelDocumentCommand,
   type PixelCommand
 } from "./sync/PixelCommand.ts";
 import { NormalMapChange } from "./sync/NormalMapChange.ts";
@@ -90,7 +90,7 @@ export type PixelDocumentEvent = CanvasBufferEvent & {
 export class PixelDocument extends Emitter<
   PixelDocumentEvent
 >
-  implements EditSource<DocumentCommand> {
+  implements EditSource<PixelDocumentCommand> {
   readonly buffer: CanvasBuffer;
   readonly uv: UVMap;
 
@@ -176,11 +176,11 @@ export class PixelDocument extends Emitter<
       return;
     }
 
-    const undo: DocumentCommand = {
+    const undo: PixelDocumentCommand = {
       action: "palette-color-changed",
       metadata: { index, color: this.palette.colorAt(index) }
     };
-    const redo: DocumentCommand = {
+    const redo: PixelDocumentCommand = {
       action: "palette-color-changed",
       metadata: { index, color: palette.colorAt(index) }
     };
@@ -324,7 +324,7 @@ export class PixelDocument extends Emitter<
     size: Vec2
   ): void {
     const inverse = this.#textureSnapshot();
-    const resized: DocumentCommand = {
+    const resized: PixelDocumentCommand = {
       action: "resized",
       metadata: { size: structuredClone(size) }
     };
@@ -390,7 +390,7 @@ export class PixelDocument extends Emitter<
   }
 
   applyStep(
-    command: DocumentCommand
+    command: PixelDocumentCommand
   ): PixelChange | null {
     return this.#recorder.applyStep(command);
   }
@@ -449,12 +449,12 @@ export class PixelDocument extends Emitter<
   };
 
   #undoable(
-    build: () => DocumentCommand[]
-  ): DocumentCommand[] {
+    build: () => PixelDocumentCommand[]
+  ): PixelDocumentCommand[] {
     return this.#recorder.recording ? build() : [];
   }
 
-  #textureSnapshot(): DocumentCommand[] {
+  #textureSnapshot(): PixelDocumentCommand[] {
     return this.#undoable(() => [
       textureCommand(this.buffer.size(), this.buffer.pixels())
     ]);

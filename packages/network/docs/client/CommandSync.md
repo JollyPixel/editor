@@ -101,6 +101,18 @@ time. `pendingChanges` exposes the sync as `PendingChanges`: `pending`,
 `keepIn()`, plus `on` and `off` for the `settled` and `unsettled` events.
 `dispose()` destroys the sync. A `CommandSync` satisfies `DocumentSync`.
 
+### DocumentKind
+
+```ts
+interface DocumentKind<TKind extends string, TRoom, TSynced extends SyncedDocument<unknown>> {
+  readonly kind: TKind;
+  syncDocument(room: TRoom): TSynced;
+}
+```
+
+Pairs an asset kind with the factory of its synced document. Each
+`syncDocument(room)` call returns a new `TSynced` bound to `room`.
+
 ### SyncedCommandDocument
 
 `new SyncedCommandDocument(room, { document, keys })` is a `SyncedDocument` over
@@ -120,11 +132,11 @@ image type is the element type `revert` takes.
 
 ### commandDocumentKind
 
-`commandDocumentKind({ kind, createDocument, keys })` returns `{ kind, createDocument(room) }`.
-Each `createDocument(room)` call builds a new document with `createDocument()`
+`commandDocumentKind({ kind, createDocument, keys })` returns `{ kind, syncDocument(room) }`.
+Each `syncDocument(room)` call builds a new document with `createDocument()`
 and returns it wrapped in a `SyncedCommandDocument` bound to `room` and `keys`.
-`CommandDocumentKind<TKind, TDocument, TNotice>` derives everything else from
-the document. Annotate the return type to name the notices the room may send:
+`CommandDocumentKind<TKind, TDocument, TNotice>` is the `DocumentKind` it
+returns, with the room and the synced document derived from the document. Annotate the return type to name the notices the room may send:
 
 ```ts
 import {

@@ -25,7 +25,7 @@ import {
   EditContext,
   SelectionStore
 } from "../../../src/state/index.ts";
-import { createMapDocument } from "../../helpers/mapDocument.ts";
+import { createEditorMap } from "../../helpers/editorMap.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
 
 // CONSTANTS
@@ -37,20 +37,20 @@ const kLowerCorner = CellRegion.spanning(
 function setup() {
   const world = new VoxelWorld();
   const history = createWorldHistory(world);
-  const mapDocument = createMapDocument(world);
+  const editorMap = createEditorMap(world);
   const selection = new SelectionStore();
   const layers = new MapLayers({
     world,
     editContext: new EditContext(),
     selection,
-    mapDocument,
+    editorMap,
     access: mapAccess()
   });
   const placement = new MapPlacement({
     world,
     history: mapSteps(history),
     selection,
-    mapDocument,
+    editorMap,
     access: mapAccess()
   });
   world.addLayer("Draft");
@@ -74,7 +74,7 @@ function setup() {
   return {
     world,
     history,
-    mapDocument,
+    editorMap,
     layers,
     selection,
     placement
@@ -181,11 +181,11 @@ describe("MapPlacement copy and paste", () => {
   });
 
   test("forgets the clipboard when the map document resets", () => {
-    const { mapDocument, placement } = setup();
+    const { editorMap, placement } = setup();
     placement.liftRegion("Draft", kLowerCorner);
     placement.copy();
 
-    mapDocument.emit("reset");
+    editorMap.emit("reset");
 
     assert.equal(placement.clipboard.content, null);
   });

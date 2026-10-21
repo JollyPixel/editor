@@ -2,14 +2,14 @@
 import type { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { MapDocument } from "../../document/MapDocument.ts";
+import { EditorMap } from "../../map/EditorMap.ts";
 
 export class MergePlan {
   static planMerge(
     world: VoxelWorld,
     sourceName: string
   ): MergePlan {
-    const layers = MapDocument.layers(world);
+    const layers = EditorMap.layers(world);
     const source = layers.find((layer) => layer.name === sourceName);
     if (source === undefined) {
       return new MergePlan([], []);

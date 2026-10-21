@@ -24,7 +24,7 @@ import { voxelSetCmd } from "../helpers/networkCommands.ts";
 
 // CONSTANTS
 const kChunkSize = 16;
-const kDocumentPath = "maps/overworld.voxelmap.json";
+const kFilePath = "maps/overworld.voxelmap.json";
 
 function client(
   id: string
@@ -75,7 +75,7 @@ describe("voxel-map asset kind over a real back-end", () => {
       using eventStore = EventStore.persistence.memory();
       await fs.mkdir(path.join(root, "maps"), { recursive: true });
       await fs.writeFile(
-        path.join(root, kDocumentPath),
+        path.join(root, kFilePath),
         seededDocument()
       );
 
@@ -96,7 +96,7 @@ describe("voxel-map asset kind over a real back-end", () => {
       });
 
       const record = backend.catalog.snapshot().assets
-        .find((entry) => entry.source === kDocumentPath)!;
+        .find((entry) => entry.source === kFilePath)!;
       assert.strictEqual(record.kind, VOXEL_MAP_KIND);
 
       const server = new Server();
@@ -129,7 +129,7 @@ describe("voxel-map asset kind over a real back-end", () => {
 
       assert.strictEqual(
         stateFromFile(
-          await fs.readFile(path.join(root, kDocumentPath))
+          await fs.readFile(path.join(root, kFilePath))
         ).world.getVoxelAt({ x: 2, y: 1, z: 3 }),
         undefined
       );
@@ -138,7 +138,7 @@ describe("voxel-map asset kind over a real back-end", () => {
       await backend.flush(record.id);
 
       const onDisk = stateFromFile(
-        await fs.readFile(path.join(root, kDocumentPath))
+        await fs.readFile(path.join(root, kFilePath))
       );
       assert.strictEqual(
         onDisk.world.getVoxelAt({ x: 2, y: 1, z: 3 })?.blockId,

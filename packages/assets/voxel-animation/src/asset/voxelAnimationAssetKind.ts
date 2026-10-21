@@ -5,7 +5,7 @@ import {
   SchemaParser
 } from "@jolly-pixel/network";
 import {
-  InvalidAssetDocumentError,
+  InvalidAssetFileError,
   SNAPSHOT_POLICY_SCHEMA,
   type AssetKindHandler,
   type AssetKindPackage,
@@ -15,16 +15,16 @@ import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import {
-  encodeVoxelAnimationDocument,
-  voxelAnimationDocumentSchema,
+  compactVoxelAnimationFileSchema,
+  encodeVoxelAnimationFile,
+  expandVoxelAnimationFile,
   VOXEL_ANIMATION_ASSET,
   VOXEL_ANIMATION_COMMAND,
-  VOXEL_ANIMATION_DOCUMENT_VERSION,
+  VOXEL_ANIMATION_FILE_VERSION,
   VOXEL_ANIMATION_EXTENSION,
   VOXEL_ANIMATION_KIND,
-  type VoxelAnimationDocument
+  type VoxelAnimationFile
 } from "./voxelAnimation.ts";
-import { expandTrack } from "./storedTrack.ts";
 import { AnimationSet } from "../model/AnimationSet.ts";
 import {
   animationCommandProtocol,
@@ -37,40 +37,32 @@ import type { AnimationNetworkCommand } from "../network/types.ts";
 const kOptionsSchema = z.strictObject({
   snapshot: z.optional(SNAPSHOT_POLICY_SCHEMA)
 });
-const kDocumentParser = new SchemaParser(voxelAnimationDocumentSchema);
+const kFileParser = new SchemaParser(compactVoxelAnimationFileSchema);
 
-export function decodeVoxelAnimationDocument(
+export function decodeVoxelAnimationFile(
   content: Uint8Array
-): VoxelAnimationDocument {
+): VoxelAnimationFile {
   let parsed: unknown;
   try {
     parsed = JSON.parse(new TextDecoder().decode(content));
   }
   catch (error) {
-    throw new InvalidAssetDocumentError(
+    throw new InvalidAssetFileError(
       VOXEL_ANIMATION_KIND,
       "content is not JSON",
       { cause: error }
     );
   }
 
-  const result = kDocumentParser.parse(parsed);
+  const result = kFileParser.parse(parsed);
   if (result.err) {
-    throw new InvalidAssetDocumentError(
+    throw new InvalidAssetFileError(
       VOXEL_ANIMATION_KIND,
       describeErrors(result.val)
     );
   }
 
-  return {
-    ...result.val,
-    clips: result.val.clips.map((clip) => {
-      return {
-        ...clip,
-        tracks: clip.tracks.map(expandTrack)
-      };
-    })
-  };
+  return expandVoxelAnimationFile(result.val);
 }
 
 export interface VoxelAnimationAssetKindOptions {
@@ -98,7 +90,7 @@ export function voxelAnimationAssetKind(
       content: Uint8Array
     ): void {
       state.load(
-        decodeVoxelAnimationDocument(content)
+        decodeVoxelAnimationFile(content)
       );
     },
 
@@ -112,8 +104,8 @@ export function voxelAnimationAssetKind(
       state: AnimationSet
     ): Promise<Uint8Array> {
       return Promise.resolve(
-        encodeVoxelAnimationDocument({
-          version: VOXEL_ANIMATION_DOCUMENT_VERSION,
+        encodeVoxelAnimationFile({
+          version: VOXEL_ANIMATION_FILE_VERSION,
           ...state.toJSON()
         })
       );

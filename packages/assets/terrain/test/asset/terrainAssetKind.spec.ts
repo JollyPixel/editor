@@ -3,18 +3,18 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { InvalidAssetDocumentError } from "@jolly-pixel/asset-server";
+import { InvalidAssetFileError } from "@jolly-pixel/asset-server";
 import { LiveAssetRoom } from "@jolly-pixel/asset-server/testing";
 import { ChunkCoord } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import {
   encodeHeights,
-  encodeTerrainAssetDocument,
+  encodeTerrainFile,
   MAX_TERRAIN_CHUNKS,
   terrainAssetKind,
   terrainSnapshot,
-  TERRAIN_DOCUMENT_VERSION
+  TERRAIN_FILE_VERSION
 } from "#src/index.ts";
 import {
   heights,
@@ -51,14 +51,14 @@ describe("terrain asset kind", () => {
     assert.deepEqual(terrainSnapshot(loaded), terrainSnapshot(room.state));
   });
 
-  test("load rejects a document with invalid heights", () => {
+  test("load rejects a file with invalid heights", () => {
     const handler = terrainAssetKind();
-    const content = encodeTerrainAssetDocument({
-      version: TERRAIN_DOCUMENT_VERSION,
+    const content = encodeTerrainFile({
+      version: TERRAIN_FILE_VERSION,
       chunks: [{ x: 0, z: 0, heights: "AAAA" }]
     });
 
-    assert.throws(() => handler.load(handler.create("asset"), content), InvalidAssetDocumentError);
+    assert.throws(() => handler.load(handler.create("asset"), content), InvalidAssetFileError);
   });
 
   test("a chunk is admitted only next to an existing one", () => {

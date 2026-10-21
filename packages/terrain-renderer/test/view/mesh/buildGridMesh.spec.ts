@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { quadDiagonal } from "#src/document/quadDiagonal.ts";
+import { quadDiagonal } from "#src/terrain/quadDiagonal.ts";
 import {
   buildGridMesh,
   type NodeMeshData

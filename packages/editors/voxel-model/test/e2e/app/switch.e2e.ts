@@ -6,11 +6,12 @@ import {
   followEditor,
   withCatalog
 } from "@jolly-pixel/e2e/editor";
-import {
-  createPixelArtDocument,
-  PIXEL_ART_KIND
-} from "@jolly-pixel/asset.pixel-art";
+import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art";
 import { VOXEL_MODEL_KIND } from "@jolly-pixel/asset.voxel-model";
+import {
+  createPixelArtFile,
+  encodePixelArtFile
+} from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import {
@@ -19,7 +20,7 @@ import {
   type E2EModel
 } from "../fixtures.ts";
 import {
-  encodeModelDocument,
+  encodeModelFile,
   TEXTURE_SIZE
 } from "../../../src/boot/modelProject.ts";
 
@@ -52,12 +53,12 @@ test("the Asset select opens another model and its texture in place", async({ pa
   const other: E2EModel = await withCatalog(baseURL!, async(catalog) => {
     const textureId = await catalog.create(
       `${folder}/other.pixelart`,
-      createPixelArtDocument(TEXTURE_SIZE),
+      encodePixelArtFile(createPixelArtFile(TEXTURE_SIZE)),
       { kind: PIXEL_ART_KIND }
     );
     const id = await catalog.create(
       `${folder}/other.voxelmodel.json`,
-      encodeModelDocument(textureId),
+      encodeModelFile(textureId),
       { kind: VOXEL_MODEL_KIND }
     );
 

@@ -7,20 +7,20 @@ import {
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import type { MapDocumentEvents } from "../../src/document/MapDocument.ts";
+import type { EditorMapEvents } from "../../src/map/EditorMap.ts";
 
-export function createMapDocument(
+export function createEditorMap(
   world: VoxelWorld
-): Emitter<MapDocumentEvents> {
-  const mapDocument = new Emitter<MapDocumentEvents>();
+): Emitter<EditorMapEvents> {
+  const editorMap = new Emitter<EditorMapEvents>();
   world.on("command", (command) => {
     if (isVoxelLayerCommand(command)) {
-      mapDocument.emit("layerUpdated", command);
+      editorMap.emit("layerUpdated", command);
     }
     else if (isVoxelTemplateCommand(command)) {
-      mapDocument.emit("templatesChanged");
+      editorMap.emit("templatesChanged");
     }
   });
 
-  return mapDocument;
+  return editorMap;
 }

@@ -185,7 +185,7 @@ describe("BlockUvBridge / blockRegistryChanged", () => {
       assert.deepEqual(uv.get("block-1")?.slotRect("front"), { x: 0, y: 0, width: 16, height: 16 });
 
       view.document.blocks.register(makeBlock(1, { col: 3, row: 2, blocksetId: "atlas" }));
-      bridgeOptions.mapDocument.emit("blockRegistryChanged", "redefined");
+      bridgeOptions.editorMap.emit("blockRegistryChanged", "redefined");
 
       assert.deepEqual(uv.get("block-1")?.slotRect("front"), { x: 48, y: 32, width: 16, height: 16 });
     }
@@ -208,7 +208,7 @@ describe("BlockUvBridge / blockRegistryChanged", () => {
         ...makeBlock(1, { col: 0, row: 0, blocksetId: "atlas" }),
         name: "Grass"
       });
-      bridgeOptions.mapDocument.emit("blockRegistryChanged", "redefined");
+      bridgeOptions.editorMap.emit("blockRegistryChanged", "redefined");
 
       assert.equal(uv.get("block-1")?.name, "Grass");
     }

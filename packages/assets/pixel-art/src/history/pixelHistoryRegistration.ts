@@ -11,7 +11,7 @@ import {
 import {
   DEFAULT_UV_SLOTS,
   uvTargetKey,
-  type DocumentCommand,
+  type PixelDocumentCommand,
   type PixelDocument,
   type UVRegionData,
   type UVSlot,
@@ -28,7 +28,7 @@ import { pixelEdits } from "./PixelEdits.ts";
 
 // CONSTANTS
 const kNormalMapKey = "normal-map";
-const kLabels: Readonly<Record<DocumentCommand["action"], string>> = {
+const kLabels: Readonly<Record<PixelDocumentCommand["action"], string>> = {
   "palette-color-changed": "Change palette color",
   stroke: "Paint",
   "global-fill": "Fill",
@@ -57,7 +57,7 @@ export interface PixelHistoryRegistrationOptions<TScope extends string> {
 export function pixelHistoryRegistration<TScope extends string>(
   document: PixelDocument,
   options: PixelHistoryRegistrationOptions<TScope>
-): HistoryRegistration<TScope, DocumentCommand, null, PixelKeySet, PixelCapture> {
+): HistoryRegistration<TScope, PixelDocumentCommand, null, PixelKeySet, PixelCapture> {
   const { id = "pixels", scope } = options;
 
   return {
@@ -87,7 +87,7 @@ export function registerPixelHistory<TScope extends string>(
 
 export function pixelHistoryKeys(
   document: PixelDocument
-): HistoryKeys<DocumentCommand, null, PixelKeySet, PixelCapture> {
+): HistoryKeys<PixelDocumentCommand, null, PixelKeySet, PixelCapture> {
   return {
     written: (change) => writtenKeys(document, change),
     guard: (commands) => new PixelGuard(document, commands)
@@ -102,7 +102,7 @@ class PixelGuard implements HistoryGuard<PixelKeySet, PixelCapture> {
 
   constructor(
     document: PixelDocument,
-    commands: readonly DocumentCommand[]
+    commands: readonly PixelDocumentCommand[]
   ) {
     const positions: Vec2[] = [];
     const entries: KeyedGuardEntry[] = [];
@@ -179,7 +179,7 @@ class PixelGuard implements HistoryGuard<PixelKeySet, PixelCapture> {
 
 function writtenKeys(
   document: PixelDocument,
-  change: CommandChange<DocumentCommand, null>
+  change: CommandChange<PixelDocumentCommand, null>
 ): PixelKeySet {
   return new PixelKeySet(
     affectedArea(change.command),
@@ -188,7 +188,7 @@ function writtenKeys(
 }
 
 function affectedArea(
-  command: DocumentCommand
+  command: PixelDocumentCommand
 ): PixelArea | null {
   switch (command.action) {
     case "stroke":
@@ -205,7 +205,7 @@ function affectedArea(
 
 function namedEntries(
   document: PixelDocument,
-  command: DocumentCommand
+  command: PixelDocumentCommand
 ): KeyedGuardEntry[] {
   switch (command.action) {
     case "palette-color-changed": {

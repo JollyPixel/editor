@@ -64,7 +64,7 @@ export function setupMaterials(
   }
 
   const materials = new MapMaterials({
-    document,
+    sources: document,
     blocksets: {
       findOwner: (blockId) => blockOwner(links, blockId),
       defineBlock: (definition) => blockOwner(links, definition.id)?.defineBlock(definition) ?? false,

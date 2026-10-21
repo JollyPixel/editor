@@ -11,7 +11,7 @@ V1 is split over three packages, following the voxel-map layout:
 | Package | Directory | Role |
 |---|---|---|
 | `@jolly-pixel/asset.terrain` | `packages/assets/terrain` | Asset kind, command schemas, server arbiter, client sync, history registration |
-| `@jolly-pixel/terrain.renderer` | `packages/terrain-renderer` | Headless terrain document, CDLOD view, TSL materials, engine plugin, heightmap import and export |
+| `@jolly-pixel/terrain.renderer` | `packages/terrain-renderer` | Headless terrain, CDLOD view, TSL materials, engine plugin, heightmap import and export |
 | `@jolly-pixel/editor.terrain` | `packages/editors/terrain` | This editor, booted through [`@jolly-pixel/editor.host`][editor-host] |
 
 V1 also extends [`@jolly-pixel/asset-server`][asset-server] with asset parts, so an asset can be loaded chunk by chunk, Live strokes are routed by interest region in the terrain kind's server extension; `@jolly-pixel/network` does not change.

@@ -55,7 +55,7 @@ chunks yet.
 - [x] Scaffold `@jolly-pixel/asset.terrain`, `@jolly-pixel/terrain.renderer`
   and `@jolly-pixel/editor.terrain`, with the editor manifest, the Vite
   config, dev port 3008 and a `test` script in each package.
-- [x] Headless `TerrainDocument`: sparse chunk grid, 64×64 owned samples,
+- [x] Headless `Terrain`: sparse chunk grid, 64×64 owned samples,
   world-space sampling, add and remove chunk with edge seeding.
 - [x] CDLOD view: region quadtrees, one 33×33 grid mesh per node, height
   textures with neighbour aprons, morphing between levels, skirts. It

@@ -11,7 +11,7 @@ function readFinish(
   groupId: string
 ): Promise<{ roughness: number; swatch: string | null; } | null> {
   return map.page.evaluate((id) => {
-    const group = window.voxelMapEditor!.workspace.mapDocument.materialGroups.get(id);
+    const group = window.voxelMapEditor!.workspace.editorMap.materialGroups.get(id);
 
     return group === undefined ?
       null :
@@ -26,7 +26,7 @@ function readBlocks(
   map: VoxelMapPage
 ): Promise<{ id: number; name: string; }[]> {
   return map.page.evaluate(() => [
-    ...window.voxelMapEditor!.workspace.mapDocument.blocks.getAll()
+    ...window.voxelMapEditor!.workspace.editorMap.blocks.getAll()
   ].slice(0, 2).map((block) => {
     return { id: block.id, name: block.name };
   }));
@@ -37,7 +37,7 @@ function readMaterial(
   blockId: number
 ): Promise<string | undefined> {
   return map.page.evaluate(
-    (id) => window.voxelMapEditor!.workspace.mapDocument.blocks.get(id)?.materialGroup,
+    (id) => window.voxelMapEditor!.workspace.editorMap.blocks.get(id)?.materialGroup,
     blockId
   );
 }
@@ -90,9 +90,9 @@ test("the material fields follow the block picked in the library", async({ map }
   await map.panes.open("Materials");
   const [first, second] = await readBlocks(map);
   await map.page.evaluate(([firstId, secondId]) => {
-    const { blocksets, mapDocument } = window.voxelMapEditor!.workspace;
+    const { blocksets, editorMap } = window.voxelMapEditor!.workspace;
     for (const [blockId, name] of [[firstId, "Gold"], [secondId, "Silver"]] as const) {
-      const block = mapDocument.blocks.get(blockId)!;
+      const block = editorMap.blocks.get(blockId)!;
       const groupId = blocksets.findOwner(blockId)!.slot.qualifyGroupId(name);
       blocksets.defineBlock({ ...block, materialGroup: groupId });
     }
@@ -112,7 +112,7 @@ test("the Materials tab keeps working View settings while the map has no blocks"
 
   await map.page.evaluate(() => {
     const { workspace } = window.voxelMapEditor!;
-    for (const block of [...workspace.mapDocument.blocks.getAll()]) {
+    for (const block of [...workspace.editorMap.blocks.getAll()]) {
       workspace.blocksets.removeBlock(block.id);
     }
   });

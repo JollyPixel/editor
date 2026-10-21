@@ -7,14 +7,14 @@ import * as EventStore from "@jolly-pixel/event-store";
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import {
   createAssetBackend,
-  InvalidAssetDocumentError
+  InvalidAssetFileError
 } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
 import {
-  createVoxelAnimationDocument,
-  decodeVoxelAnimationDocument,
-  encodeVoxelAnimationDocument,
+  createVoxelAnimationFile,
+  decodeVoxelAnimationFile,
+  encodeVoxelAnimationFile,
   VOXEL_ANIMATION_KIND,
   voxelAnimationAssetKind
 } from "#src/index.ts";
@@ -29,25 +29,25 @@ const kActor: EventStore.Actor = {
   id: "alice"
 };
 
-describe("voxel animation document", () => {
+describe("voxel animation file", () => {
   test("round-trips through its codec", () => {
-    const document = createVoxelAnimationDocument({
+    const file = createVoxelAnimationFile({
       rig: "Humanoid",
       clips: [clip("walk", { tracks: [{ path: "body", rotation: [key(0, 15)] }] })]
     });
 
     assert.deepEqual(
-      decodeVoxelAnimationDocument(encodeVoxelAnimationDocument(document)),
-      document
+      decodeVoxelAnimationFile(encodeVoxelAnimationFile(file)),
+      file
     );
   });
 
   test("stores linear keys without their interpolation", () => {
-    const document = createVoxelAnimationDocument({
+    const file = createVoxelAnimationFile({
       clips: [clip("walk", { tracks: [{ path: "body", rotation: [key(0, 15), key(12, 30, "smooth")] }] })]
     });
 
-    const stored = JSON.parse(new TextDecoder().decode(encodeVoxelAnimationDocument(document)));
+    const stored = JSON.parse(new TextDecoder().decode(encodeVoxelAnimationFile(file)));
 
     assert.deepEqual(stored.clips[0].tracks[0].rotation, [
       { tick: 0, value: { x: 15, y: 0, z: 0 } },
@@ -59,12 +59,12 @@ describe("voxel animation document", () => {
     const encoder = new TextEncoder();
 
     assert.throws(
-      () => decodeVoxelAnimationDocument(encoder.encode("{")),
-      InvalidAssetDocumentError
+      () => decodeVoxelAnimationFile(encoder.encode("{")),
+      InvalidAssetFileError
     );
     assert.throws(
-      () => decodeVoxelAnimationDocument(encoder.encode(JSON.stringify({ version: 1, rig: "" }))),
-      InvalidAssetDocumentError
+      () => decodeVoxelAnimationFile(encoder.encode(JSON.stringify({ version: 1, rig: "" }))),
+      InvalidAssetFileError
     );
   });
 
@@ -89,8 +89,8 @@ describe("voxel animation document", () => {
       .find(({ id }) => id === created.assetId);
     assert.equal(record?.kind, VOXEL_ANIMATION_KIND);
     assert.deepEqual(
-      decodeVoxelAnimationDocument(await source.read("animations/humanoid.voxelanim.json")),
-      createVoxelAnimationDocument()
+      decodeVoxelAnimationFile(await source.read("animations/humanoid.voxelanim.json")),
+      createVoxelAnimationFile()
     );
   });
 });

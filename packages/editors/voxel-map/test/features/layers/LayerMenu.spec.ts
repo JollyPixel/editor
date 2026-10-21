@@ -18,7 +18,7 @@ import {
   VoxelLayerRef,
   type LayerRef
 } from "../../../src/state/index.ts";
-import { createMapDocument } from "../../helpers/mapDocument.ts";
+import { createEditorMap } from "../../helpers/editorMap.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
 import { choices } from "../../helpers/menus.ts";
 
@@ -58,7 +58,7 @@ function open(
       world,
       editContext: new EditContext(),
       selection: new SelectionStore(),
-      mapDocument: createMapDocument(world),
+      editorMap: createEditorMap(world),
       access
     }),
     templatesEditable: access.current.has("templates"),

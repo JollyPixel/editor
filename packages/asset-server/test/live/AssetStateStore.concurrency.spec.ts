@@ -9,7 +9,7 @@ import * as EventStore from "@jolly-pixel/event-store";
 import {
   ASSET_UPDATED,
   AssetKindRegistry,
-  InvalidAssetDocumentError,
+  InvalidAssetFileError,
   type AssetKindHandler
 } from "#src/index.ts";
 import { AssetStateStore } from "#src/live/AssetStateStore.ts";
@@ -162,7 +162,7 @@ describe("AssetStateStore — fault isolation", () => {
       eventStore,
       kinds: new AssetKindRegistry([
         throwingCounterHandler(
-          new InvalidAssetDocumentError("counter", "value is missing")
+          new InvalidAssetFileError("counter", "value is missing")
         )
       ]),
       logger

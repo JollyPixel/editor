@@ -9,10 +9,10 @@ import assert from "node:assert/strict";
 import {
   BlockTransform,
   BlockUvLayouts,
-  createVoxelModelDocument,
-  decodeVoxelModelDocument,
-  encodeVoxelModelDocument,
-  VOXEL_MODEL_DOCUMENT_VERSION
+  createVoxelModelFile,
+  decodeVoxelModelFile,
+  encodeVoxelModelFile,
+  VOXEL_MODEL_FILE_VERSION
 } from "#src/index.ts";
 
 // CONSTANTS
@@ -21,13 +21,13 @@ const kTexture = {
   kind: "pixelart"
 };
 
-describe("createVoxelModelDocument", () => {
+describe("createVoxelModelFile", () => {
   test("starts with one root block named Block", () => {
-    const document = createVoxelModelDocument({ texture: kTexture });
+    const file = createVoxelModelFile({ texture: kTexture });
 
-    assert.strictEqual(document.version, VOXEL_MODEL_DOCUMENT_VERSION);
-    assert.strictEqual(document.nodes.length, 1);
-    assert.partialDeepStrictEqual(document.nodes[0], {
+    assert.strictEqual(file.version, VOXEL_MODEL_FILE_VERSION);
+    assert.strictEqual(file.nodes.length, 1);
+    assert.partialDeepStrictEqual(file.nodes[0], {
       name: "Block",
       kind: "block",
       parentId: null,
@@ -43,7 +43,7 @@ describe("createVoxelModelDocument", () => {
   });
 
   test("gives each block its own identity", () => {
-    const [first, second] = createVoxelModelDocument({
+    const [first, second] = createVoxelModelFile({
       texture: kTexture,
       blocks: ["Head", "Torso"]
     }).nodes;
@@ -57,41 +57,41 @@ describe("createVoxelModelDocument", () => {
   });
 
   test("creates an empty model when no block is asked for", () => {
-    const document = createVoxelModelDocument({
+    const file = createVoxelModelFile({
       texture: kTexture,
       blocks: []
     });
 
-    assert.deepEqual(document.nodes, []);
+    assert.deepEqual(file.nodes, []);
   });
 
   test("copies the texture reference it is given", () => {
-    const document = createVoxelModelDocument({ texture: kTexture });
+    const file = createVoxelModelFile({ texture: kTexture });
 
-    assert.deepEqual(document.texture, kTexture);
-    assert.notStrictEqual(document.texture, kTexture);
+    assert.deepEqual(file.texture, kTexture);
+    assert.notStrictEqual(file.texture, kTexture);
   });
 
   test("round-trips its blocks and texture reference", () => {
-    const document = createVoxelModelDocument({ texture: kTexture });
+    const file = createVoxelModelFile({ texture: kTexture });
 
-    const decoded = decodeVoxelModelDocument(
-      encodeVoxelModelDocument(document)
+    const decoded = decodeVoxelModelFile(
+      encodeVoxelModelFile(file)
     );
 
-    assert.deepEqual(decoded, document);
+    assert.deepEqual(decoded, file);
   });
 });
 
-describe("encodeVoxelModelDocument", () => {
+describe("encodeVoxelModelFile", () => {
   test("stores only the transform parts and active faces that differ from the defaults", () => {
-    const created = createVoxelModelDocument({
+    const created = createVoxelModelFile({
       texture: kTexture,
       blocks: ["Head", "Torso"]
     });
     const [head, torso] = created.nodes;
     assert.ok(head.kind === "block" && torso.kind === "block");
-    const document = {
+    const file = {
       ...created,
       nodes: [
         {
@@ -108,13 +108,13 @@ describe("encodeVoxelModelDocument", () => {
       ]
     };
 
-    const content = encodeVoxelModelDocument(document);
+    const content = encodeVoxelModelFile(file);
     const stored = JSON.parse(new TextDecoder().decode(content));
 
     assert.deepEqual(stored.nodes[0].transform, { position: { x: 0, y: 2, z: 0 } });
     assert.equal("activeFaces" in stored.nodes[0].uv, false);
     assert.deepEqual(stored.nodes[1].transform, {});
     assert.deepEqual(stored.nodes[1].uv.activeFaces, ["front"]);
-    assert.deepEqual(decodeVoxelModelDocument(content), document);
+    assert.deepEqual(decodeVoxelModelFile(content), file);
   });
 });

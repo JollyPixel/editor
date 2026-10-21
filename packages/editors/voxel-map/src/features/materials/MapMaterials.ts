@@ -40,18 +40,18 @@ export interface MaterialBlocksets {
 }
 
 export interface MapMaterialsOptions {
-  document: MaterialSources;
+  sources: MaterialSources;
   blocksets: MaterialBlocksets;
 }
 
 export class MapMaterials {
-  readonly #document: MaterialSources;
+  readonly #sources: MaterialSources;
   readonly #blocksets: MaterialBlocksets;
 
   constructor(
     options: MapMaterialsOptions
   ) {
-    this.#document = options.document;
+    this.#sources = options.sources;
     this.#blocksets = options.blocksets;
   }
 
@@ -74,7 +74,7 @@ export class MapMaterials {
   inSlot(
     slot: BlocksetSlot
   ): MapMaterial[] {
-    const { blocks, materialGroups } = this.#document;
+    const { blocks, materialGroups } = this.#sources;
     const users = new Map<string, number[]>();
     for (const group of materialGroups) {
       if (slot.decodeLocalGroupId(group.id) !== null) {
@@ -102,7 +102,7 @@ export class MapMaterials {
   swatches(): Map<number, MaterialSwatch> {
     const byGroup = new Map<string, MaterialSwatch>();
     const swatches = new Map<number, MaterialSwatch>();
-    for (const block of this.#document.blocks.getAll()) {
+    for (const block of this.#sources.blocks.getAll()) {
       const groupId = block.materialGroup;
       if (groupId === undefined) {
         continue;
@@ -112,7 +112,7 @@ export class MapMaterials {
       if (swatch === undefined) {
         swatch = MaterialSwatch.fromMaterial(
           groupId,
-          this.#document.materialGroups.get(groupId)
+          this.#sources.materialGroups.get(groupId)
         );
         byGroup.set(groupId, swatch);
       }
@@ -126,7 +126,7 @@ export class MapMaterials {
     blockId: number,
     groupId: string | null
   ): boolean {
-    const block = this.#document.blocks.get(blockId);
+    const block = this.#sources.blocks.get(blockId);
     const next = groupId ?? undefined;
     if (block === undefined || block.materialGroup === next) {
       return false;
@@ -154,7 +154,7 @@ export class MapMaterials {
   createForBlock(
     blockId: number
   ): string | null {
-    const block = this.#document.blocks.get(blockId);
+    const block = this.#sources.blocks.get(blockId);
     const slot = this.#blocksets.findOwner(blockId)?.slot;
     if (block === undefined || slot === undefined) {
       return null;
@@ -223,7 +223,7 @@ export class MapMaterials {
     material: MapMaterial
   ): void {
     for (const blockId of material.blockIds) {
-      const block = this.#document.blocks.get(blockId);
+      const block = this.#sources.blocks.get(blockId);
       if (block !== undefined) {
         this.#blocksets.defineBlock(withMaterialGroup(block, undefined));
       }
@@ -251,7 +251,7 @@ export class MapMaterials {
   #currentFinish(
     material: MapMaterial
   ): MaterialGroup {
-    return this.#document.materialGroups.get(material.id) ?? material.finish;
+    return this.#sources.materialGroups.get(material.id) ?? material.finish;
   }
 
   #freeName(
@@ -269,11 +269,11 @@ export class MapMaterials {
   #taken(
     groupId: string
   ): boolean {
-    if (this.#document.materialGroups.has(groupId)) {
+    if (this.#sources.materialGroups.has(groupId)) {
       return true;
     }
 
-    for (const block of this.#document.blocks.getAll()) {
+    for (const block of this.#sources.blocks.getAll()) {
       if (block.materialGroup === groupId) {
         return true;
       }

@@ -20,9 +20,9 @@ export * from "./PixelDocument.ts";
 export type { UVRegionFilter } from "./sync/UVOwnership.ts";
 export * from "./sync/PixelDocumentState.ts";
 export {
-  toDocumentCommand,
+  toPixelDocumentCommand,
   toPixelCommand,
-  type DocumentCommand,
+  type PixelDocumentCommand,
   type NormalMapCommand,
   type PixelCommand,
   type PixelCommandAction,

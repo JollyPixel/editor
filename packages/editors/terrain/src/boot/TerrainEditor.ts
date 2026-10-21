@@ -4,7 +4,7 @@ import type { Runtime } from "@jolly-pixel/runtime";
 import {
   TERRAIN_KIND,
   terrainDocumentKind,
-  type TerrainCommandDocument
+  type TerrainDocument
 } from "@jolly-pixel/asset.terrain/client";
 import {
   bindPresenceStack,
@@ -43,7 +43,7 @@ export interface TerrainEditorParts {
   runtime: Runtime;
   scene: TerrainEditorScene;
   session: EditorSession;
-  target: AssetLease<TerrainCommandDocument>;
+  target: AssetLease<TerrainDocument>;
   disposables: Array<() => void>;
 }
 
@@ -92,7 +92,7 @@ export class TerrainEditor {
     }
   }
 
-  #target: AssetLease<TerrainCommandDocument>;
+  #target: AssetLease<TerrainDocument>;
   #disposables: Array<() => void>;
 
   readonly ready: Promise<void>;
@@ -115,7 +115,7 @@ export class TerrainEditor {
     return this.scene.view;
   }
 
-  get document(): TerrainCommandDocument {
+  get document(): TerrainDocument {
     return this.#target.document;
   }
 
@@ -127,7 +127,7 @@ export class TerrainEditor {
 
 async function mountScene(
   context: RuntimeEditorContext,
-  target: AssetLease<TerrainCommandDocument>,
+  target: AssetLease<TerrainDocument>,
   disposables: Array<() => void>
 ): Promise<TerrainEditorScene> {
   const toolbar = document.querySelector("jolly-editor-toolbar");

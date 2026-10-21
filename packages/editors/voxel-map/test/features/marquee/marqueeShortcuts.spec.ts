@@ -29,7 +29,7 @@ import {
   SelectionStore,
   ToolStore
 } from "../../../src/state/index.ts";
-import { createMapDocument } from "../../helpers/mapDocument.ts";
+import { createEditorMap } from "../../helpers/editorMap.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
 
 // CONSTANTS
@@ -66,7 +66,7 @@ function setup() {
     world,
     history: mapSteps(createWorldHistory(world)),
     selection,
-    mapDocument: createMapDocument(world),
+    editorMap: createEditorMap(world),
     access: mapAccess()
   });
   defaultKeyBindings().bind(keyboard, {

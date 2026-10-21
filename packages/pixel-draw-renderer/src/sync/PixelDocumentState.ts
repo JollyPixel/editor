@@ -30,7 +30,7 @@ import {
   uvRegionMoved,
   uvRegionRotated,
   uvRegionStateChanged,
-  type DocumentCommand,
+  type PixelDocumentCommand,
   type NormalMapCommand,
   type UVRegionRotation
 } from "./PixelCommand.ts";
@@ -91,7 +91,7 @@ export class PixelDocumentState<
   }
 
   apply(
-    command: DocumentCommand
+    command: PixelDocumentCommand
   ): void {
     switch (command.action) {
       case "palette-color-changed": {
@@ -151,7 +151,7 @@ export class PixelDocumentState<
   }
 
   accepts(
-    command: DocumentCommand
+    command: PixelDocumentCommand
   ): boolean {
     switch (command.action) {
       case "uv-region-deleted":
@@ -170,8 +170,8 @@ export class PixelDocumentState<
   }
 
   invert(
-    command: DocumentCommand
-  ): DocumentCommand[] {
+    command: PixelDocumentCommand
+  ): PixelDocumentCommand[] {
     switch (command.action) {
       case "palette-color-changed": {
         const { index } = command.metadata;
@@ -243,8 +243,8 @@ export class PixelDocumentState<
   }
 
   #inverseOfExisting(
-    command: DocumentCommand
-  ): DocumentCommand[] {
+    command: PixelDocumentCommand
+  ): PixelDocumentCommand[] {
     switch (command.action) {
       case "uv-region-deleted": {
         const region = this.uv.get(command.metadata.id);

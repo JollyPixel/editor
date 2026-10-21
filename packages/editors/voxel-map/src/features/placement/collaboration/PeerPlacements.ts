@@ -15,7 +15,7 @@ import type {
 import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import type { MapDocumentSignals } from "../../../document/MapDocument.ts";
+import type { EditorMapSignals } from "../../../map/EditorMap.ts";
 import type { BlockRenderSources } from "../../blocks/rendering/BlockRenderSources.ts";
 import { Placement } from "../Placement.ts";
 import { MarqueePresence } from "./MarqueePresence.ts";
@@ -47,7 +47,7 @@ export interface PeerPlacementsOptions {
   world: VoxelWorld;
   blockRegistry: BlockRegistry;
   sources: BlockRenderSources;
-  mapDocument: MapDocumentSignals;
+  editorMap: EditorMapSignals;
   peers: Pick<PeerEditContext, "shares" | "subscribe">;
 }
 
@@ -110,11 +110,11 @@ export class PeerPlacements extends ActorComponent {
       equals: sameFloating
     });
     this.#subscriptions = [
-      options.mapDocument.subscribe("templatesChanged", this.#renderAll),
-      options.mapDocument.subscribe("layerUpdated", this.#recapture),
-      options.mapDocument.subscribe("reset", this.#recapture),
-      options.mapDocument.subscribe("blockRegistryChanged", this.#rebuild),
-      options.mapDocument.subscribe("blocksetsChanged", this.#rebuild),
+      options.editorMap.subscribe("templatesChanged", this.#renderAll),
+      options.editorMap.subscribe("layerUpdated", this.#recapture),
+      options.editorMap.subscribe("reset", this.#recapture),
+      options.editorMap.subscribe("blockRegistryChanged", this.#rebuild),
+      options.editorMap.subscribe("blocksetsChanged", this.#rebuild),
       options.peers.subscribe("change", this.#renderAll)
     ];
 

@@ -106,7 +106,7 @@ export class StudioProject {
       fallbacks: [STUDIO_ROOT]
     });
     const section = kEditorsSectionSchema.safeParse(
-      file.document
+      file.data
     );
     if (!section.success) {
       throw new TypeError(
@@ -124,7 +124,7 @@ export class StudioProject {
         file,
         { resolver }
       ),
-      StudioAccess.read(file.document, file.path)
+      StudioAccess.read(file.data, file.path)
     );
   }
 

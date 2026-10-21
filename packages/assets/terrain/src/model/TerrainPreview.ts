@@ -3,7 +3,7 @@ import {
   ChunkCoord,
   HEIGHT_RANGE,
   isValidHeight,
-  TerrainDocument,
+  Terrain,
   TILE_SAMPLE_COUNT,
   TileCoord,
   type TerrainReader,
@@ -15,8 +15,8 @@ import { Emitter } from "@openally/emitt";
 // Import Internal Dependencies
 import type {
   TerrainChange,
-  TerrainCommandDocument
-} from "./TerrainCommandDocument.ts";
+  TerrainDocument
+} from "./TerrainDocument.ts";
 
 export type TerrainPreviewEvents = {
   tilesChanged: (tiles: readonly TileCoord[]) => void;
@@ -45,7 +45,7 @@ interface PreviewTile {
 
 interface ActiveStroke {
   readonly owner: symbol;
-  readonly terrain: TerrainDocument;
+  readonly terrain: Terrain;
 }
 
 interface StrokeControls {
@@ -58,8 +58,8 @@ interface StrokeControls {
 export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
   readonly terrain: TerrainReader;
 
-  #document: TerrainCommandDocument;
-  #displayed = new TerrainDocument();
+  #document: TerrainDocument;
+  #displayed = new Terrain();
   #layers = new Map<LayerOwner, Map<TileKey, PreviewTile>>();
   #stroke: ActiveStroke | null = null;
   #writes = 0;
@@ -132,7 +132,7 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
   };
 
   constructor(
-    document: TerrainCommandDocument
+    document: TerrainDocument
   ) {
     super();
 
@@ -166,7 +166,7 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
     }
 
     const owner = Symbol("stroke");
-    const terrain = new TerrainDocument();
+    const terrain = new Terrain();
     this.#mirror(terrain);
     if (!this.#disposed) {
       this.#stroke = {
@@ -202,7 +202,7 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
     this.removeAllListeners();
   }
 
-  * #terrains(): IterableIterator<TerrainDocument> {
+  * #terrains(): IterableIterator<Terrain> {
     yield this.#displayed;
     if (this.#stroke !== null) {
       yield this.#stroke.terrain;
@@ -210,7 +210,7 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
   }
 
   #mirror(
-    terrain: TerrainDocument
+    terrain: Terrain
   ): void {
     terrain.clear();
     for (const chunk of this.#document.terrain.chunks()) {
@@ -226,7 +226,7 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
 
   #strokeTerrain(
     owner: LayerOwner
-  ): TerrainDocument | undefined {
+  ): Terrain | undefined {
     return this.#stroke?.owner === owner ? this.#stroke.terrain : undefined;
   }
 
@@ -367,7 +367,7 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
   }
 
   #restore(
-    terrain: TerrainDocument,
+    terrain: Terrain,
     tiles: readonly TileCoord[],
     previewAt: (key: TileKey) => PreviewTile | undefined = () => undefined
   ): TileCoord[] {

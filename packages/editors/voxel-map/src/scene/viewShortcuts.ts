@@ -3,7 +3,7 @@ import type { KeyBindingHandlers } from "@jolly-pixel/controls";
 import type { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { MapDocument } from "../document/MapDocument.ts";
+import { EditorMap } from "../map/EditorMap.ts";
 import type { MapLayers } from "../features/layers/MapLayers.ts";
 import {
   INSPECTOR_MODES,
@@ -39,7 +39,7 @@ export function viewShortcuts(
       layers.bounds(selection.current);
 
     camera.frame(
-      selected ?? SpawnPose.unionBounds(MapDocument.layers(world))
+      selected ?? SpawnPose.unionBounds(EditorMap.layers(world))
     );
   }
 

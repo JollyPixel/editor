@@ -21,9 +21,9 @@ import {
   foldAssetEvent
 } from "@jolly-pixel/asset-server";
 import {
-  decodePixelArtDocument,
+  decodePixelArtFile,
   deserializePixelDocument,
-  encodePixelArtDocument,
+  encodePixelArtFile,
   PixelBuffer,
   PixelDocumentState,
   serializePixelDocument
@@ -48,7 +48,7 @@ const kRed = {
   b: 0,
   a: 255
 };
-const kDocumentPath = "textures/hero.pixelart";
+const kFilePath = "textures/hero.pixelart";
 
 function tempRoot(): Promise<string> {
   return fs.mkdtemp(
@@ -114,7 +114,7 @@ function bufferFromFile(
   const state = new PixelDocumentState({
     buffer: new PixelBuffer({ size: kSize })
   });
-  deserializePixelDocument(decodePixelArtDocument(data), state);
+  deserializePixelDocument(decodePixelArtFile(data), state);
 
   return state.buffer;
 }
@@ -127,8 +127,8 @@ describe("pixel-art asset kind over a real back-end", () => {
       using eventStore = EventStore.persistence.memory();
       await fs.mkdir(path.join(root, "textures"), { recursive: true });
       await fs.writeFile(
-        path.join(root, kDocumentPath),
-        encodePixelArtDocument(
+        path.join(root, kFilePath),
+        encodePixelArtFile(
           serializePixelDocument(
             new PixelDocumentState({ buffer: new PixelBuffer({ size: kSize }) })
           )
@@ -148,7 +148,7 @@ describe("pixel-art asset kind over a real back-end", () => {
       });
 
       const record = backend.catalog.snapshot().assets
-        .find((entry) => entry.source === kDocumentPath)!;
+        .find((entry) => entry.source === kFilePath)!;
       assert.strictEqual(record.kind, PIXEL_ART_KIND);
 
       const server = new Server();
@@ -174,7 +174,7 @@ describe("pixel-art asset kind over a real back-end", () => {
 
       assert.deepEqual(
         bufferFromFile(
-          await fs.readFile(path.join(root, kDocumentPath))
+          await fs.readFile(path.join(root, kFilePath))
         ).samplePixel(1, 1),
         [255, 255, 255, 255]
       );
@@ -183,7 +183,7 @@ describe("pixel-art asset kind over a real back-end", () => {
       await backend.flush(record.id);
 
       const onDisk = bufferFromFile(
-        await fs.readFile(path.join(root, kDocumentPath))
+        await fs.readFile(path.join(root, kFilePath))
       );
       assert.deepEqual(onDisk.samplePixel(1, 1), [255, 0, 0, 255]);
       assert.deepEqual(onDisk.samplePixel(2, 2), [255, 0, 0, 255]);
@@ -210,7 +210,7 @@ describe("pixel-art asset kind over a real back-end", () => {
       using eventStore = EventStore.persistence.memory();
       await fs.writeFile(
         path.join(root, "a.pixelart"),
-        encodePixelArtDocument(
+        encodePixelArtFile(
           serializePixelDocument(
             new PixelDocumentState({ buffer: new PixelBuffer({ size: kSize }) })
           )

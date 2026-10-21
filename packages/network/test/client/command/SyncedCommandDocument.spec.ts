@@ -38,8 +38,8 @@ describe("commandDocumentKind", () => {
     const kind = valueKind();
     const first = joinedRoom();
     const second = joinedRoom();
-    const a = kind.createDocument(first.room);
-    const b = kind.createDocument(second.room);
+    const a = kind.syncDocument(first.room);
+    const b = kind.syncDocument(second.room);
 
     first.serverMessage({ type: "snapshot", data: { value: 3 } });
     await a.ready;
@@ -55,7 +55,7 @@ describe("commandDocumentKind", () => {
 
   test("dispose stops the document from following its room", async() => {
     const harness = joinedRoom();
-    const synced = valueKind().createDocument(harness.room);
+    const synced = valueKind().syncDocument(harness.room);
     harness.serverMessage({ type: "snapshot", data: { value: 3 } });
     await synced.ready;
 

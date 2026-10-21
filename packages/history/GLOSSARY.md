@@ -9,6 +9,17 @@ Each term below describes the idea first. The *In code* line names where it
 shows up in the API. The [architecture](./ARCHITECTURE.md) shows how the parts
 fit together.
 
+## Documents
+
+### Document
+
+The live state that commands change and that undo attaches to, such as a voxel
+model or a texture. It only exists in memory: the same state saved on disk is
+an asset file, and the DOM's `document` is unrelated.
+
+*In code:* `CommandDocument`, and classes that play the same role without
+extending it, such as `PixelDocument` and `VoxelDocument`.
+
 ## Steps
 
 ### Scope

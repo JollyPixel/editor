@@ -11,7 +11,7 @@ import {
 import { FieldBinding } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { MapDocument } from "../../../document/MapDocument.ts";
+import type { EditorMap } from "../../../map/EditorMap.ts";
 import type { SelectionStore } from "../../../state/index.ts";
 import type { MapPlacement } from "../../placement/MapPlacement.ts";
 import { PropertyRows } from "../../../shared/properties/PropertyRows.ts";
@@ -45,7 +45,7 @@ export class VoxelLayerPanel extends LitElement {
   declare placement: MapPlacement;
 
   @property({ attribute: false })
-  declare mapDocument: MapDocument;
+  declare editorMap: EditorMap;
 
   @property({ type: Boolean })
   declare writable: boolean;
@@ -95,8 +95,8 @@ export class VoxelLayerPanel extends LitElement {
   override connectedCallback() {
     super.connectedCallback();
     this.#subscriptions.push(
-      this.mapDocument.subscribe("layerUpdated", this.#onLayerUpdated),
-      this.mapDocument.subscribe("reset", () => this.#syncFromLayer()),
+      this.editorMap.subscribe("layerUpdated", this.#onLayerUpdated),
+      this.editorMap.subscribe("reset", () => this.#syncFromLayer()),
       this.placement.subscribe("change", this.#onPlacementChange)
     );
   }

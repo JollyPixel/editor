@@ -23,7 +23,7 @@ export interface TerrainReader {
   seedHeights(coord: ChunkCoord): Float32Array;
 }
 
-export class TerrainDocument implements TerrainReader {
+export class Terrain implements TerrainReader {
   #chunks = new Map<ChunkKey, TerrainChunk>();
 
   get size(): number {

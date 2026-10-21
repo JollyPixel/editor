@@ -14,7 +14,7 @@ import {
   ColorPalette,
   NormalMapConfig,
   PixelDocument,
-  type DocumentCommand,
+  type PixelDocumentCommand,
   type RGBA8,
   type Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
@@ -43,7 +43,7 @@ const kBlue = {
 function strokeCommand(
   positions: Vec2[],
   color: RGBA8
-): DocumentCommand {
+): PixelDocumentCommand {
   return {
     action: "stroke",
     metadata: { color, positions }
@@ -51,8 +51,8 @@ function strokeCommand(
 }
 
 function localChange(
-  command: DocumentCommand
-): CommandChange<DocumentCommand, null> {
+  command: PixelDocumentCommand
+): CommandChange<PixelDocumentCommand, null> {
   return CommandChange.local(command, null);
 }
 

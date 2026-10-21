@@ -16,7 +16,7 @@ import {
   VoxelLayerRef,
   type LayerRef
 } from "../../state/index.ts";
-import { MapDocument } from "../../document/MapDocument.ts";
+import { EditorMap } from "../../map/EditorMap.ts";
 import type { LayerVisibilityStore } from "./LayerVisibilityStore.ts";
 import type { MapLayers } from "./MapLayers.ts";
 
@@ -24,7 +24,7 @@ export function collectLayerSelections(
   world: VoxelWorld
 ): LayerRef[] {
   return [
-    ...MapDocument.layers(world).map((layer) => new VoxelLayerRef(layer.name)),
+    ...EditorMap.layers(world).map((layer) => new VoxelLayerRef(layer.name)),
     ...world.objectLayers.toArray().flatMap((layer): LayerRef[] => [
       new ObjectLayerRef(layer.name),
       ...layer.objects.map((object) => new ObjectRef(layer.name, object.id))
@@ -40,7 +40,7 @@ export function layerTreeNodes(
   const lockable = layers.canEdit("object");
 
   return [
-    ...MapDocument.layers(world).map((layer): TreeNode<LayerRef> => {
+    ...EditorMap.layers(world).map((layer): TreeNode<LayerRef> => {
       const ref = new VoxelLayerRef(layer.name);
       const id = ref.key;
 

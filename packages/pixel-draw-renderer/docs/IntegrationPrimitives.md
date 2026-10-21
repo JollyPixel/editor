@@ -8,7 +8,7 @@ importing renderer source files.
 
 [`PixelDocumentState`](./PixelDocumentState.md) applies [`PixelCommand`](./PixelCommand.md)s
 without a DOM, with the same code a `PixelDocument` runs for remote commands,
-undo and redo. `toDocumentCommand()` decodes a command's texture bytes before
+undo and redo. `toPixelDocumentCommand()` decodes a command's texture bytes before
 it is applied. `PixelBuffer.findPositions()` returns the positions a
 `global-fill` repaints, for adapters that compute its conflict keys.
 `groupPositionsByColor()` converts parallel position and RGBA arrays into

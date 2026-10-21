@@ -14,7 +14,7 @@ import type {
 import { BlockProjection } from "@jolly-pixel/asset.voxel-map/client";
 
 // Import Internal Dependencies
-import type { MapDocumentSignals } from "../../../document/MapDocument.ts";
+import type { EditorMapSignals } from "../../../map/EditorMap.ts";
 import { BlockUv } from "../uv/BlockUv.ts";
 import { BlockUvSelectionSync } from "./BlockUvSelectionSync.ts";
 import { SlotRegionIds } from "./SlotRegionIds.ts";
@@ -27,7 +27,7 @@ import type { BlockWriter } from "../../blocksets/BlocksetBinding.ts";
 export interface BlockUvBridgeOptions {
   runLocalRestore?: <T>(fn: () => T) => T;
   block: BlockSelection;
-  mapDocument: MapDocumentSignals;
+  editorMap: EditorMapSignals;
   blocks?: Pick<BlockWriter, "defineBlock">;
   uvSync: Pick<UvSyncStore, "value">;
 }
@@ -69,7 +69,7 @@ export class BlockUvBridge {
     this.#uv.on("region-state-changed", this.#onRegionStateChanged);
     this.#uv.on("region-rotated", this.#onRegionRotated);
     this.#uv.on("region-deleted", this.#onRegionDeleted);
-    this.#unsubscribeRegistry = options.mapDocument.subscribe(
+    this.#unsubscribeRegistry = options.editorMap.subscribe(
       "blockRegistryChanged",
       this.#onBlockRegistryChanged
     );

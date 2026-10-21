@@ -15,11 +15,11 @@ import {
   BlockSelection,
   UvSyncStore
 } from "../../../../src/state/index.ts";
-import type { MapDocumentEvents } from "../../../../src/document/MapDocument.ts";
+import type { EditorMapEvents } from "../../../../src/map/EditorMap.ts";
 
 export interface FakeBridgeOptions {
   block: BlockSelection;
-  mapDocument: Emitter<MapDocumentEvents>;
+  editorMap: Emitter<EditorMapEvents>;
   uvSync: UvSyncStore;
 }
 
@@ -52,7 +52,7 @@ export function makeFakeVoxelEngine(): {
   const dirtyReasons: string[] = [];
   const bridgeOptions: FakeBridgeOptions = {
     block: new BlockSelection(),
-    mapDocument: new Emitter<MapDocumentEvents>(),
+    editorMap: new Emitter<EditorMapEvents>(),
     uvSync: new UvSyncStore(new Preferences())
   };
   const registry = new BlockRegistry();
@@ -69,7 +69,7 @@ export function makeFakeVoxelEngine(): {
 
       for (const def of resolved) {
         registry.register(def);
-        bridgeOptions.mapDocument.emit("blockRegistryChanged", "redefined");
+        bridgeOptions.editorMap.emit("blockRegistryChanged", "redefined");
       }
       dirtyReasons.push("block-defined");
     }

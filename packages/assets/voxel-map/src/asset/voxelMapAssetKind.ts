@@ -4,7 +4,7 @@ import {
   SchemaParser
 } from "@jolly-pixel/network";
 import {
-  InvalidAssetDocumentError,
+  InvalidAssetFileError,
   SNAPSHOT_POLICY_SCHEMA,
   type AssetKindHandler,
   type AssetKindPackage,
@@ -99,9 +99,9 @@ export class VoxelMapState implements VoxelWorldCommandTarget {
   }
 
   load(
-    document: VoxelWorldJSON
+    file: VoxelWorldJSON
   ): void {
-    deserializeVoxelWorld(document, this.world, {
+    deserializeVoxelWorld(file, this.world, {
       blocksets: this.blocksets
     });
   }
@@ -132,15 +132,15 @@ export class VoxelMapState implements VoxelWorldCommandTarget {
   }
 }
 
-export interface VoxelMapDocumentOptions {
+export interface VoxelMapFileOptions {
   chunkSize: number;
   blocksets?: Iterable<BlocksetDefinition>;
   layer?: string;
 }
 
-export function createVoxelMapDocument(
-  options: VoxelMapDocumentOptions
-): Uint8Array {
+export function createVoxelMapFile(
+  options: VoxelMapFileOptions
+): VoxelWorldJSON {
   const {
     chunkSize,
     blocksets = [],
@@ -153,7 +153,7 @@ export function createVoxelMapDocument(
   }
   state.world.addLayer(layer);
 
-  return encodeVoxelWorld(state.toJSON());
+  return state.toJSON();
 }
 
 export interface VoxelMapAssetKindOptions {
@@ -196,7 +196,7 @@ export function voxelMapAssetKind(
       content: Uint8Array
     ): void {
       state.load(
-        decodeVoxelMapDocument(content)
+        decodeVoxelMapFile(content)
       );
     },
 
@@ -286,34 +286,34 @@ export function voxelMapAssetKind(
   };
 }
 
-function decodeVoxelMapDocument(
+function decodeVoxelMapFile(
   content: Uint8Array
 ): VoxelWorldJSON {
-  let document: VoxelWorldJSON;
+  let file: VoxelWorldJSON;
   try {
-    document = decodeVoxelWorld(content);
+    file = decodeVoxelWorld(content);
   }
   catch (error) {
     if (!(error instanceof InvalidVoxelWorldError)) {
       throw error;
     }
 
-    throw new InvalidAssetDocumentError(
+    throw new InvalidAssetFileError(
       VOXEL_MAP_KIND,
       error.message,
       { cause: error }
     );
   }
 
-  const result = kWorldParser.parse(document);
+  const result = kWorldParser.parse(file);
   if (result.err) {
-    throw new InvalidAssetDocumentError(
+    throw new InvalidAssetFileError(
       VOXEL_MAP_KIND,
       describeErrors(result.val)
     );
   }
 
-  return document;
+  return file;
 }
 
 function landedAsSent(

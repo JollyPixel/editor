@@ -6,19 +6,20 @@ import {
   editorFixture
 } from "@jolly-pixel/e2e/editor";
 import {
-  createBlocksetDocument,
-  createVoxelMapDocument,
-  encodeBlocksetDocument,
+  createBlocksetFile,
+  createVoxelMapFile,
+  encodeBlocksetFile,
   BLOCKSET_KIND,
   VOXEL_MAP_KIND,
   blocksetAsset,
-  type BlocksetAssetDocument
+  type BlocksetFile
 } from "@jolly-pixel/asset.voxel-map";
-import { createPixelArtDocument } from "@jolly-pixel/pixel-draw.renderer";
+import { createPixelArtFile } from "@jolly-pixel/pixel-draw.renderer";
 import {
   blocksFromTileGrid,
   DEFAULT_CHUNK_SIZE,
-  DEFAULT_TILE_SIZE
+  DEFAULT_TILE_SIZE,
+  encodeVoxelWorld
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
@@ -45,12 +46,12 @@ export interface E2EWorld {
   blocksetId: string;
 }
 
-function createOpaqueBlockset(): BlocksetAssetDocument {
+function createOpaqueBlockset(): BlocksetFile {
   const { x, y } = DEFAULT_BLOCKSET_SIZE;
 
-  return createBlocksetDocument({
+  return createBlocksetFile({
     tileSize: DEFAULT_TILE_SIZE,
-    pixels: createPixelArtDocument(
+    pixels: createPixelArtFile(
       DEFAULT_BLOCKSET_SIZE,
       new Uint8Array(x * y * 4).fill(255)
     ),
@@ -70,20 +71,22 @@ export const test = editorFixture<E2EWorld>({
     const folder = e2eFolder();
     const blocksetId = await catalog.create(
       `${folder}/blockset.blockset.json`,
-      encodeBlocksetDocument(createOpaqueBlockset()),
+      encodeBlocksetFile(createOpaqueBlockset()),
       { kind: BLOCKSET_KIND }
     );
     const id = await catalog.create(
       `${folder}/world.voxelmap.json`,
-      createVoxelMapDocument({
-        chunkSize: DEFAULT_CHUNK_SIZE,
-        blocksets: [
-          {
-            id: DEFAULT_BLOCKSET_ID,
-            asset: blocksetAsset(blocksetId)
-          }
-        ]
-      }),
+      encodeVoxelWorld(
+        createVoxelMapFile({
+          chunkSize: DEFAULT_CHUNK_SIZE,
+          blocksets: [
+            {
+              id: DEFAULT_BLOCKSET_ID,
+              asset: blocksetAsset(blocksetId)
+            }
+          ]
+        })
+      ),
       { kind: VOXEL_MAP_KIND }
     );
 

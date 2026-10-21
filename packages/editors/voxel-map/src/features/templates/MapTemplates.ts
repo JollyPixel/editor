@@ -10,7 +10,7 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { MapDocumentSignals } from "../../document/MapDocument.ts";
+import type { EditorMapSignals } from "../../map/EditorMap.ts";
 import type { MapAccessSource } from "../../access/MapAccess.ts";
 import { TemplateStore } from "./TemplateStore.ts";
 import { TemplateDraft } from "./editing/TemplateDraft.ts";
@@ -22,7 +22,7 @@ export type TemplateWorld = Pick<
 
 export interface MapTemplatesOptions {
   world: TemplateWorld;
-  mapDocument: MapDocumentSignals;
+  editorMap: EditorMapSignals;
   access: MapAccessSource;
   log: Pick<LogQueue, "push">;
   store?: TemplateStore;
@@ -49,7 +49,7 @@ export class MapTemplates {
     this.store = options.store ?? new TemplateStore();
     this.#confirm = options.confirm ?? showConfirm;
     this.#prompt = options.prompt ?? showPrompt;
-    this.#unsubscribe = options.mapDocument.subscribe(
+    this.#unsubscribe = options.editorMap.subscribe(
       "templatesChanged",
       this.#reconcile
     );

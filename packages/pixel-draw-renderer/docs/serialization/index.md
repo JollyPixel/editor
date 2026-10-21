@@ -1,22 +1,22 @@
 # Serialization
 
-`@jolly-pixel/pixel-draw.renderer` exports the `.pixelart` document format
+`@jolly-pixel/pixel-draw.renderer` exports the `.pixelart` file format
 from its root entrypoint. Nothing here touches the network or the asset
-server, so a browser can read and write a document without pulling either in.
+server, so a browser can read and write a file without pulling either in.
 
 ```ts
 import {
-  decodePixelArtDocument,
+  decodePixelArtFile,
   deserializePixelDocument,
-  encodePixelArtDocument,
+  encodePixelArtFile,
   serializePixelDocument
 } from "@jolly-pixel/pixel-draw.renderer";
 ```
 
-## The `.pixelart` document
+## The `.pixelart` file
 
 ```ts
-interface PixelArtDocumentData {
+interface PixelArtFile {
   readonly version: 1;
   readonly size: Vec2;
   /** Base64 RGBA, row-major, 4 bytes per pixel. */
@@ -27,15 +27,15 @@ interface PixelArtDocumentData {
 }
 ```
 
-`normalMap` holds the [normal map settings](../normal/NormalMapConfig.md). A document without it loads with the feature off, so `version` stays `1`. `PixelDocumentState.normalMap` carries it through `serializePixelDocument`, `deserializePixelDocument` and `pixelArtSnapshot`.
+`normalMap` holds the [normal map settings](../normal/NormalMapConfig.md). A file without it loads with the feature off, so `version` stays `1`. `PixelDocumentState.normalMap` carries it through `serializePixelDocument`, `deserializePixelDocument` and `pixelArtSnapshot`.
 
 `palette` holds exactly ten [RGBA8 colors](../ColorPalette.md), including
-alpha. New documents and snapshots include it. Older version `1` documents
+alpha. New files and snapshots include it. Older version `1` files
 without it load the default palette. Invalid lengths or channel values are
 rejected. Palette data travels through `serializePixelDocument`,
 `deserializePixelDocument` and `pixelArtSnapshot`.
 
-Deliberately not a PNG. The document carries UV regions, which an image
+Deliberately not a PNG. The file carries UV regions, which an image
 format cannot, and encoding one needs no image codec on the server, where
 `canvas.toBlob` does not exist.
 
@@ -48,27 +48,27 @@ construction instead of by convention.
 
 | Function | Purpose |
 |---|---|
-| `createPixelArtDocument(size, pixels?)` | size + RGBA8 bytes → `PixelArtDocumentData`; `pixels` defaults to transparent |
-| `serializePixelDocument(state)` | [`PixelDocumentState`](../PixelDocumentState.md) → `PixelArtDocumentData` |
-| `deserializePixelDocument(document, state)` | `PixelArtDocumentData` → `PixelDocumentState` of a `PixelBuffer` |
+| `createPixelArtFile(size, pixels?)` | size + RGBA8 bytes → `PixelArtFile`; `pixels` defaults to transparent |
+| `serializePixelDocument(state)` | [`PixelDocumentState`](../PixelDocumentState.md) → `PixelArtFile` |
+| `deserializePixelDocument(file, state)` | `PixelArtFile` → `PixelDocumentState` of a `PixelBuffer` |
 | `pixelArtSnapshot(state)` | `PixelDocumentState` → `PixelBufferSnapshot`, for the wire |
-| `encodePixelArtDocument(document)` | document → UTF-8 JSON bytes |
-| `decodePixelArtDocument(bytes)` | JSON bytes → validated document |
-| `parsePixelArtDocument(value)` | already-parsed JSON → validated document |
+| `encodePixelArtFile(file)` | file → UTF-8 JSON bytes |
+| `decodePixelArtFile(bytes)` | JSON bytes → validated file |
+| `parsePixelArtFile(value)` | already-parsed JSON → validated file |
 | `encodePixelBytes(pixels)` | RGBA8 bytes → base64, encoding the view only |
 | `decodePixelBytes(pixels)` | base64 → `Uint8ClampedArray` |
 | `encodePngPixels(pixels, size)` | RGBA8 bytes → `PngPixels`, a base64 PNG |
 | `decodePngPixels(pixels, size)` | `PngPixels` → `Uint8ClampedArray` |
 
-`decodePixelArtDocument` validates rather than asserts, because a document
+`decodePixelArtFile` validates rather than asserts, because a file
 reaches it from persistence: an unsupported version, a size that is not a pair of positive integers,
 invalid `normalMap` settings, or pixels shorter than the declared size all throw
-`InvalidPixelArtDocumentError`. `deserializePixelDocument` throws the same error
-for a size the target buffer would refuse. `createPixelArtDocument` throws it
+`InvalidPixelArtFileError`. `deserializePixelDocument` throws the same error
+for a size the target buffer would refuse. `createPixelArtFile` throws it
 for a non-positive size or a `pixels` length other than `x * y * 4`.
 
-A loaded document is complete state, not a patch. UV regions are cleared
-before the document's are applied.
+A loaded file is complete state, not a patch. UV regions are cleared
+before the file's are applied.
 
 `encodePixelBytes` and `decodePixelBytes` are the base64 codec the other
 functions use for the `pixels` field. They are exported so a consumer that
@@ -90,15 +90,15 @@ filtering, which suits pixel art: it is faster and smaller than adaptive
 filtering. Both are asynchronous. `encodePngPixels` reads
 the first `size.x * size.y * 4` bytes before its first `await`, so the buffer
 can change while it compresses. `decodePngPixels` throws
-`InvalidPixelArtDocumentError` when the image is not `size`. Persisted
-documents keep base64 RGBA8.
+`InvalidPixelArtFileError` when the image is not `size`. Persisted
+files keep base64 RGBA8.
 
-## Seeding a document from an image
+## Seeding a file from an image
 
 ```ts
 import {
   createPixelBufferFromPng,
-  encodePixelArtDocument,
+  encodePixelArtFile,
   PixelDocumentState,
   serializePixelDocument
 } from "@jolly-pixel/pixel-draw.renderer";
@@ -106,7 +106,7 @@ import {
 const buffer = await createPixelBufferFromPng(
   await fs.readFile("textures/tileset.png")
 );
-const document = encodePixelArtDocument(
+const file = encodePixelArtFile(
   serializePixelDocument(new PixelDocumentState({ buffer }))
 );
 ```

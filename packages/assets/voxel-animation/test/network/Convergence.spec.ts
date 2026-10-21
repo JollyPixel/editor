@@ -27,7 +27,7 @@ function setup() {
   server.receive("A", networkCommand({ action: "clip-added", clip: clip("run") }, { clientId: "A" }));
 
   const room = mockAssetRoom<AnimationNetworkCommand, AnimationSetSnapshot>("B");
-  const { document } = voxelAnimationDocumentKind().createDocument(room);
+  const { document } = voxelAnimationDocumentKind().syncDocument(room);
 
   function deliver(): void {
     for (const message of server.take<AnimationSetSnapshot>("B")) {

@@ -12,7 +12,7 @@ editor [design][design] and [roadmap][roadmap].
 
 ## Preview
 
-`TerrainPreview` draws uncommitted heights over a `TerrainCommandDocument`.
+`TerrainPreview` draws uncommitted heights over a `TerrainDocument`.
 `preview.terrain` shows every layer: peers' live patches, written with
 `write(peerId, patches)` and cleared with `drop(peerId)`, and the local stroke.
 

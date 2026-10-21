@@ -13,7 +13,7 @@ import {
   isStateNeutral
 } from "../model/events/AssetEvents.ts";
 import { foldAssetEvent } from "../model/kinds/foldAssetEvent.ts";
-import { InvalidAssetDocumentError } from "../model/kinds/errors/InvalidAssetDocumentError.ts";
+import { InvalidAssetFileError } from "../model/kinds/errors/InvalidAssetFileError.ts";
 import {
   silentLogger,
   type Logger
@@ -231,7 +231,7 @@ export class AssetStateStore extends Emitter<AssetStateStoreEventMap> {
         reason: asError(error).message
       });
 
-      if (error instanceof InvalidAssetDocumentError) {
+      if (error instanceof InvalidAssetFileError) {
         log.warn("asset event not folded");
       }
       else {

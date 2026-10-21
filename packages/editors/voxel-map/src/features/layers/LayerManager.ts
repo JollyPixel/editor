@@ -91,8 +91,8 @@ export class LayerManager extends WorkspaceElement {
     refresh();
 
     return [
-      workspace.mapDocument.subscribe("layerUpdated", refresh),
-      workspace.mapDocument.subscribe("reset", refresh),
+      workspace.editorMap.subscribe("layerUpdated", refresh),
+      workspace.editorMap.subscribe("reset", refresh),
       presence.subscribe("layerSelectionsChange", refresh),
       workspace.layerVisibility.subscribe("change", refresh),
       workspace.access.subscribe("change", refresh),
@@ -215,7 +215,7 @@ export class LayerManager extends WorkspaceElement {
     }
 
     const menu = new LayerMenu({
-      world: workspace.mapDocument.world,
+      world: workspace.editorMap.world,
       layers: workspace.layers,
       templatesEditable: workspace.templates.editable,
       commands: new LayerCommands({
@@ -231,7 +231,7 @@ export class LayerManager extends WorkspaceElement {
   #renderInspector(
     workspace: VoxelMapWorkspace
   ) {
-    const { world } = workspace.mapDocument;
+    const { world } = workspace.editorMap;
     const selection = this._selection;
     if (selection === null) {
       return nothing;
@@ -244,14 +244,14 @@ export class LayerManager extends WorkspaceElement {
           .world=${world}
           .selection=${workspace.state.selection}
           .placement=${workspace.placement}
-          .mapDocument=${workspace.mapDocument}
+          .editorMap=${workspace.editorMap}
           .layerName=${selection.name}
           .writable=${writable}
         ></layer-panel>`;
       case "object":
         return html`<object-panel
           .world=${world}
-          .mapDocument=${workspace.mapDocument}
+          .editorMap=${workspace.editorMap}
           .layerName=${selection.layerName}
           .objectId=${selection.objectId}
           .writable=${writable}
@@ -268,7 +268,7 @@ export class LayerManager extends WorkspaceElement {
   ): void {
     this._nodes = withLayerBadges(
       layerTreeNodes(
-        workspace.mapDocument.world,
+        workspace.editorMap.world,
         workspace.layerVisibility,
         workspace.layers
       ),

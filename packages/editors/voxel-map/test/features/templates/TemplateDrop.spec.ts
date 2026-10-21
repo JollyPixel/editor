@@ -19,7 +19,7 @@ import {
 import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
 import { TemplateDrop } from "../../../src/features/templates/TemplateDrop.ts";
 import { SelectionStore } from "../../../src/state/index.ts";
-import { createMapDocument } from "../../helpers/mapDocument.ts";
+import { createEditorMap } from "../../helpers/editorMap.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
 
 // CONSTANTS
@@ -39,7 +39,7 @@ function setup() {
     world,
     history: mapSteps(createWorldHistory(world)),
     selection: new SelectionStore(),
-    mapDocument: createMapDocument(world),
+    editorMap: createEditorMap(world),
     access: mapAccess()
   });
   const drop = new TemplateDrop({

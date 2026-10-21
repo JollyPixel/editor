@@ -15,14 +15,14 @@ import { NormalMapConfig } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import {
-  createBlocksetDocument,
-  decodeBlocksetDocument,
-  encodeBlocksetDocument,
+  createBlocksetFile,
+  decodeBlocksetFile,
+  encodeBlocksetFile,
   BLOCKSET_COMMAND,
   BLOCKSET_EXTENSION,
   BLOCKSET_KIND,
   blocksetAssetKind,
-  type BlocksetAssetDocument
+  type BlocksetFile
 } from "#src/index.ts";
 import { type BlocksetNetworkCommand, type BlocksetSnapshot } from "#src/network/server.ts";
 import { makeBlockDef, makeResolvedBlockDef } from "../helpers/blocks.ts";
@@ -59,10 +59,10 @@ function event(
   } as EventStore.Event;
 }
 
-function documentEvent(
-  document: BlocksetAssetDocument
+function fileEvent(
+  file: BlocksetFile
 ): EventStore.Event {
-  const data = encodeBlocksetDocument(document);
+  const data = encodeBlocksetFile(file);
 
   return event(ASSET_CREATED, {
     path: "textures/stone.blockset.json",
@@ -99,8 +99,8 @@ function blockCommand(
   };
 }
 
-function seeded(): BlocksetAssetDocument {
-  return createBlocksetDocument({
+function seeded(): BlocksetFile {
+  return createBlocksetFile({
     tileSize: 8,
     size: { x: 16, y: 16 },
     blocks: [makeBlockDef(1, "cube")],
@@ -122,20 +122,20 @@ describe("blocksetAssetKind", () => {
       tileSize: 16,
       defaultSize: { x: 32, y: 16 }
     });
-    const document = decodeBlocksetDocument(
+    const file = decodeBlocksetFile(
       await handler.serialize(handler.create("asset-1"))
     );
 
-    assert.equal(document.tileSize, 16);
-    assert.deepEqual(document.pixels.size, { x: 32, y: 16 });
-    assert.deepEqual(document.blocks, []);
+    assert.equal(file.tileSize, 16);
+    assert.deepEqual(file.pixels.size, { x: 32, y: 16 });
+    assert.deepEqual(file.blocks, []);
   });
 
   test("a lifecycle event loads pixels, blocks and material groups", () => {
     const handler = blocksetAssetKind();
     const state = handler.create("asset-1");
 
-    foldAssetEvent(handler, state, documentEvent(seeded()));
+    foldAssetEvent(handler, state, fileEvent(seeded()));
 
     assert.deepEqual(state.pixels.buffer.size(), { x: 16, y: 16 });
     assert.equal(state.document.tileSize, 8);
@@ -146,7 +146,7 @@ describe("blocksetAssetKind", () => {
   test("a delete empties the blockset and keeps its sizes", () => {
     const handler = blocksetAssetKind({ tileSize: 32 });
     const state = handler.create("asset-1");
-    foldAssetEvent(handler, state, documentEvent(seeded()));
+    foldAssetEvent(handler, state, fileEvent(seeded()));
     state.pixels.buffer.drawPixels(
       [{ x: 1, y: 1 }],
       {
@@ -175,7 +175,7 @@ describe("blocksetAssetKind", () => {
   test("pixel and block commands both fold and survive serialization", async() => {
     const handler = blocksetAssetKind();
     const state = handler.create("asset-1");
-    foldAssetEvent(handler, state, documentEvent(seeded()));
+    foldAssetEvent(handler, state, fileEvent(seeded()));
 
     foldAssetEvent(handler, state, event(BLOCKSET_COMMAND, strokeCommand()));
     foldAssetEvent(handler, state, event(BLOCKSET_COMMAND, blockCommand(3, { seq: 2 })));
@@ -186,9 +186,9 @@ describe("blocksetAssetKind", () => {
       tileSize: 16
     }));
 
-    const document = decodeBlocksetDocument(await handler.serialize(state));
+    const file = decodeBlocksetFile(await handler.serialize(state));
     const restored = handler.create("asset-1");
-    foldAssetEvent(handler, restored, documentEvent(document));
+    foldAssetEvent(handler, restored, fileEvent(file));
 
     assert.deepEqual(restored.pixels.buffer.samplePixel(1, 1), [0, 0, 0, 255]);
     assert.equal(restored.document.tileSize, 16);
@@ -201,7 +201,7 @@ describe("blocksetAssetKind", () => {
   test("normal map commands fold into the pixels and survive serialization", async() => {
     const handler = blocksetAssetKind();
     const state = handler.create("asset-1");
-    foldAssetEvent(handler, state, documentEvent(seeded()));
+    foldAssetEvent(handler, state, fileEvent(seeded()));
 
     foldAssetEvent(handler, state, event(BLOCKSET_COMMAND, {
       ...kHeader,
@@ -223,18 +223,18 @@ describe("blocksetAssetKind", () => {
     const expected = NormalMapConfig.create()
       .withZone({ regionId: "block-1", settings: { strength: 4 } })
       .toJSON();
-    const document = decodeBlocksetDocument(await handler.serialize(state));
-    assert.deepEqual(document.pixels.normalMap, expected);
+    const file = decodeBlocksetFile(await handler.serialize(state));
+    assert.deepEqual(file.pixels.normalMap, expected);
 
     const restored = handler.create("asset-1");
-    foldAssetEvent(handler, restored, documentEvent(document));
+    foldAssetEvent(handler, restored, fileEvent(file));
     assert.deepEqual(restored.pixels.normalMap?.toJSON(), expected);
   });
 
   test("live() snapshots carry the normal map settings", async() => {
     const handler = blocksetAssetKind();
     const state = handler.create("asset-1");
-    foldAssetEvent(handler, state, documentEvent(seeded()));
+    foldAssetEvent(handler, state, fileEvent(seeded()));
     state.pixels.apply({
       action: "normal-map-toggled",
       metadata: { config: NormalMapConfig.create().toJSON() }

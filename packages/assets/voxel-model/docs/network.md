@@ -10,7 +10,7 @@ import {
 } from "@jolly-pixel/asset.voxel-model/client";
 
 const room: VoxelModelRoom = client.room(new AssetRoom("voxelmodel", assetId).toString());
-const synced = voxelModelDocumentKind().createDocument(room);
+const synced = voxelModelDocumentKind().syncDocument(room);
 room.join();
 await synced.ready;
 
@@ -19,8 +19,8 @@ await synced.ready;
 
 ## Synchronization
 
-- `voxelModelDocumentKind()` is the `@jolly-pixel/editor.host` lease adapter, built with network's `commandDocumentKind`. `createDocument(room)` returns a `SyncedModelDocument`: a network `SyncedCommandDocument` over a new `ModelDocument`.
-- Call `createDocument()` before `room.join()`. `dispose()` destroys the sync; the caller still leaves the room.
+- `voxelModelDocumentKind()` is the `@jolly-pixel/editor.host` lease adapter, built with network's `commandDocumentKind`. `syncDocument(room)` returns a `SyncedModelDocument`: a network `SyncedCommandDocument` over a new `ModelDocument`.
+- Call `syncDocument(room)` before `room.join()`. `dispose()` destroys the sync; the caller still leaves the room.
 - The sync is a `DocumentSyncClient` keyed by `voxelModelWriteKeys`. Undo and redo carry the `basis` of their step, and the server's answers reach `document.receipts`, so the [history](./history.md) refuses steps a peer overwrote.
 - A pending command the tree now refuses, such as a move into a removed folder, stays out of the tree until the next snapshot.
 - To listen to `snapshot`, `ready`, `command` and `notice`, build the client yourself: `new DocumentSyncClient(room, { document, keys: voxelModelWriteKeys })`.
@@ -45,7 +45,7 @@ type VoxelModelCommandAction =
 ```
 
 - `VoxelModelNetworkCommand` is a `VoxelModelCommand` plus the network command header.
-- The stored document adds a `version` and the `texture` reference, which the live snapshot leaves out.
+- The stored file adds a `version` and the `texture` reference, which the live snapshot leaves out.
 - The [model](./model.md), [materials](./materials.md) and [animation](./animation.md) pages describe each command.
 
 ## Server protocol

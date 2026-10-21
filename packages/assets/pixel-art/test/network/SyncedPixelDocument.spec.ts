@@ -103,7 +103,7 @@ describe("pixelArtDocumentKind", () => {
     const kind = pixelArtDocumentKind({ maxSize: 64 });
     const room = new MockRoom();
 
-    const synced = kind.createDocument(room);
+    const synced = kind.syncDocument(room);
 
     assert.strictEqual(kind.kind, "pixelart");
     assert.ok(synced instanceof SyncedPixelDocument);

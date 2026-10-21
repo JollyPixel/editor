@@ -17,19 +17,19 @@ import {
   EditContext,
   SelectionStore
 } from "../../../src/state/index.ts";
-import { createMapDocument } from "../../helpers/mapDocument.ts";
+import { createEditorMap } from "../../helpers/editorMap.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
 
 function setup() {
   const world = new VoxelWorld();
   const history = createWorldHistory(world);
-  const mapDocument = createMapDocument(world);
+  const editorMap = createEditorMap(world);
   const selection = new SelectionStore();
   const layers = new MapLayers({
     world,
     editContext: new EditContext(),
     selection,
-    mapDocument,
+    editorMap,
     access: mapAccess()
   });
   const concealed: string[] = [];
@@ -37,7 +37,7 @@ function setup() {
     world,
     history: mapSteps(history),
     selection,
-    mapDocument,
+    editorMap,
     conceal: (layerName) => {
       concealed.push(layerName);
 

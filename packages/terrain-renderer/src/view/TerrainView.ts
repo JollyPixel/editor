@@ -3,9 +3,9 @@ import * as THREE from "three";
 import type { MeshStandardNodeMaterial } from "three/webgpu";
 
 // Import Internal Dependencies
-import type { ChunkCoord } from "../document/ChunkCoord.ts";
-import type { TerrainReader } from "../document/TerrainDocument.ts";
-import type { TileCoord } from "../document/TileCoord.ts";
+import type { ChunkCoord } from "../terrain/ChunkCoord.ts";
+import type { TerrainReader } from "../terrain/Terrain.ts";
+import type { TileCoord } from "../terrain/TileCoord.ts";
 import {
   LEAF_NODE_SIZE,
   LodRanges

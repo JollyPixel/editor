@@ -7,7 +7,7 @@ import type {
   HeightRange,
   TerrainChunk
 } from "./TerrainChunk.ts";
-import type { TerrainReader } from "./TerrainDocument.ts";
+import type { TerrainReader } from "./Terrain.ts";
 
 // CONSTANTS
 export const BORDER_SAMPLES = 2;

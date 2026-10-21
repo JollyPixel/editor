@@ -16,9 +16,9 @@ import {
   EditChange,
   encodePixelBytes,
   encodePngPixels,
-  toDocumentCommand,
+  toPixelDocumentCommand,
   toPixelCommand,
-  type DocumentCommand,
+  type PixelDocumentCommand,
   type PixelChange,
   type PixelCommand,
   NormalMapConfig,
@@ -71,7 +71,7 @@ class PixelsRecorder extends Emitter<PixelsRecorderEvents> implements PixelSyncT
   readonly loaded: LoadedSnapshot[] = [];
 
   applyStep(
-    command: DocumentCommand
+    command: PixelDocumentCommand
   ): PixelChange {
     const change = EditChange.local(command);
     this.emit("change", change);
@@ -84,7 +84,7 @@ class PixelsRecorder extends Emitter<PixelsRecorderEvents> implements PixelSyncT
     event: PixelCommand,
     basis?: number
   ): void {
-    pixelEdits(this).applyStep(toDocumentCommand(event), basis);
+    pixelEdits(this).applyStep(toPixelDocumentCommand(event), basis);
   }
 
   replayPendingCommand(

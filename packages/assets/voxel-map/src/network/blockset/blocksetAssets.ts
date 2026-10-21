@@ -4,9 +4,9 @@ import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
 import {
-  encodeBlocksetDocument,
+  encodeBlocksetFile,
   BLOCKSET_KIND,
-  type BlocksetAssetDocument
+  type BlocksetFile
 } from "../../asset/blockset.ts";
 import type { BlocksetRoom } from "./types.ts";
 
@@ -28,11 +28,11 @@ export function blocksetRoom(
 export function createBlocksetAsset(
   catalog: BlocksetAssetWriter,
   path: string,
-  document: BlocksetAssetDocument
+  file: BlocksetFile
 ): Promise<string> {
   return catalog.create(
     path,
-    encodeBlocksetDocument(document),
+    encodeBlocksetFile(file),
     {
       kind: BLOCKSET_KIND,
       onConflict: "suffix"

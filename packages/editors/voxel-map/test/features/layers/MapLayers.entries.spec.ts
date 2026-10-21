@@ -15,7 +15,7 @@ import {
   SelectionStore,
   VoxelLayerRef
 } from "../../../src/state/index.ts";
-import { createMapDocument } from "../../helpers/mapDocument.ts";
+import { createEditorMap } from "../../helpers/editorMap.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
 import type { MapCapability } from "../../../src/access/MapAccess.ts";
 
@@ -63,7 +63,7 @@ function createMapLayers(
     world,
     editContext: new EditContext(),
     selection: new SelectionStore(),
-    mapDocument: createMapDocument(world),
+    editorMap: createEditorMap(world),
     confirm,
     access
   });
@@ -77,7 +77,7 @@ describe("MapLayers entries", () => {
       world,
       editContext: new EditContext(),
       selection,
-      mapDocument: createMapDocument(world),
+      editorMap: createEditorMap(world),
       access: mapAccess()
     });
     const focus = { x: 3.4, y: 1, z: -2.6 };
@@ -140,7 +140,7 @@ describe("MapLayers entries", () => {
       world,
       editContext: new EditContext(),
       selection,
-      mapDocument: createMapDocument(world),
+      editorMap: createEditorMap(world),
       access: mapAccess()
     }).clone(new VoxelLayerRef("A"));
 
@@ -155,7 +155,7 @@ describe("MapLayers entries", () => {
       world,
       editContext: new EditContext(),
       selection,
-      mapDocument: createMapDocument(world),
+      editorMap: createEditorMap(world),
       access: mapAccess()
     }).clone(new ObjectRef("Triggers", "obj_1"));
 
@@ -172,7 +172,7 @@ describe("MapLayers entries", () => {
       world,
       editContext: new EditContext(),
       selection,
-      mapDocument: createMapDocument(world),
+      editorMap: createEditorMap(world),
       access: mapAccess()
     });
 
@@ -263,7 +263,7 @@ describe("MapLayers selection", () => {
       world,
       editContext: new EditContext(),
       selection,
-      mapDocument: createMapDocument(world),
+      editorMap: createEditorMap(world),
       access: mapAccess()
     });
 
@@ -283,7 +283,7 @@ describe("MapLayers selection", () => {
       world,
       editContext: new EditContext(),
       selection,
-      mapDocument: createMapDocument(world),
+      editorMap: createEditorMap(world),
       access: mapAccess()
     });
     selection.selectVoxelLayer("C");

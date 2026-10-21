@@ -1,14 +1,14 @@
 // Import Internal Dependencies
 import {
-  InvalidPixelArtDocumentError
-} from "./errors/InvalidPixelArtDocumentError.ts";
+  InvalidPixelArtFileError
+} from "./errors/InvalidPixelArtFileError.ts";
 import {
   decodePixelBytes,
   encodePixelBytes
 } from "./pixelBytes.ts";
 import {
-  PIXEL_ART_DOCUMENT_VERSION,
-  type PixelArtDocumentData,
+  PIXEL_ART_FILE_VERSION,
+  type PixelArtFile,
   type PixelBufferSnapshot
 } from "./types.ts";
 import type { PixelBuffer } from "../buffer/PixelBuffer.ts";
@@ -33,36 +33,36 @@ export function pixelArtSnapshot(
 
 export function serializePixelDocument(
   state: PixelDocumentState<DefaultPixelBuffer>
-): PixelArtDocumentData {
+): PixelArtFile {
   return {
-    version: PIXEL_ART_DOCUMENT_VERSION,
+    version: PIXEL_ART_FILE_VERSION,
     ...pixelArtSnapshot(state)
   };
 }
 
 export function deserializePixelDocument(
-  document: PixelArtDocumentData,
+  file: PixelArtFile,
   state: PixelDocumentState<PixelBuffer>
 ): void {
-  if (!state.buffer.acceptsSize(document.size)) {
-    throw new InvalidPixelArtDocumentError(
-      `size ${document.size.x}x${document.size.y} exceeds the buffer bounds`
+  if (!state.buffer.acceptsSize(file.size)) {
+    throw new InvalidPixelArtFileError(
+      `size ${file.size.x}x${file.size.y} exceeds the buffer bounds`
     );
   }
 
-  const pixels = decodePixelBytes(document.pixels);
-  const expected = document.size.x * document.size.y * 4;
+  const pixels = decodePixelBytes(file.pixels);
+  const expected = file.size.x * file.size.y * 4;
   if (pixels.length < expected) {
-    throw new InvalidPixelArtDocumentError(
+    throw new InvalidPixelArtFileError(
       `pixels hold ${pixels.length} bytes, expected ${expected}`
     );
   }
 
   state.load({
-    size: document.size,
+    size: file.size,
     pixels,
-    uvRegions: document.uvRegions,
-    normalMap: document.normalMap,
-    palette: document.palette
+    uvRegions: file.uvRegions,
+    normalMap: file.normalMap,
+    palette: file.palette
   });
 }

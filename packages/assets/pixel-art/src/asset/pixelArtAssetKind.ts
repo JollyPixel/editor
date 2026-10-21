@@ -1,21 +1,21 @@
 // Import Third-party Dependencies
 import {
-  InvalidAssetDocumentError,
+  InvalidAssetFileError,
   SNAPSHOT_POLICY_SCHEMA,
   type AssetKindHandler,
   type AssetKindPackage,
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
 import {
-  decodePixelArtDocument,
+  decodePixelArtFile,
   deserializePixelDocument,
-  encodePixelArtDocument,
-  InvalidPixelArtDocumentError,
+  encodePixelArtFile,
+  InvalidPixelArtFileError,
   pixelArtSnapshot,
   PixelBuffer,
   PixelDocumentState,
   serializePixelDocument,
-  type PixelArtDocumentData,
+  type PixelArtFile,
   type Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
 import * as z from "zod/mini";
@@ -26,7 +26,7 @@ import {
   PIXEL_ART_COMMAND,
   PIXEL_ART_EXTENSION,
   PIXEL_ART_KIND,
-  pixelArtDocumentFromPng
+  pixelArtContentFromPng
 } from "./pixelArt.ts";
 import { applyPixelCommand } from "../network/PixelCommandApplier.ts";
 import { encodePixelSnapshot } from "../network/PixelSnapshotCodec.ts";
@@ -64,15 +64,15 @@ export class PixelArtState {
     });
   }
 
-  toJSON(): PixelArtDocumentData {
+  toJSON(): PixelArtFile {
     return serializePixelDocument(this.document);
   }
 
   load(
-    document: PixelArtDocumentData
+    file: PixelArtFile
   ): void {
     deserializePixelDocument(
-      document,
+      file,
       this.document
     );
   }
@@ -108,7 +108,7 @@ export function pixelArtAssetKind(
       [PIXEL_ART_EXTENSION]: "application/json; charset=utf-8"
     },
     conversions: {
-      ".png": pixelArtDocumentFromPng
+      ".png": pixelArtContentFromPng
     },
     snapshot,
 
@@ -122,14 +122,14 @@ export function pixelArtAssetKind(
     ): void {
       try {
         state.load(
-          decodePixelArtDocument(content)
+          decodePixelArtFile(content)
         );
       }
       catch (error) {
-        if (error instanceof InvalidPixelArtDocumentError) {
-          throw new InvalidAssetDocumentError(
+        if (error instanceof InvalidPixelArtFileError) {
+          throw new InvalidAssetFileError(
             PIXEL_ART_KIND,
-            "content is not a valid pixel-art document",
+            "content is not a valid pixel-art file",
             { cause: error }
           );
         }
@@ -148,7 +148,7 @@ export function pixelArtAssetKind(
       state: PixelArtState
     ): Promise<Uint8Array> {
       return Promise.resolve(
-        encodePixelArtDocument(state.toJSON())
+        encodePixelArtFile(state.toJSON())
       );
     },
 

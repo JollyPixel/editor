@@ -21,7 +21,7 @@ describe("ProjectFile", () => {
     const file = await ProjectFile.read(directory.root);
 
     assert.strictEqual(file.path, path.join(directory.root, PROJECT_FILE_PATH));
-    assert.deepEqual(file.document, { version: 1 });
+    assert.deepEqual(file.data, { version: 1 });
     assert.strictEqual(file.kinds.size, 0);
   });
 
@@ -49,7 +49,7 @@ describe("ProjectFile", () => {
         ["kind-a", {}]
       ]
     );
-    assert.deepEqual(projectFile.document.editors, ["editor-a"]);
+    assert.deepEqual(projectFile.data.editors, ["editor-a"]);
   });
 
   test("never overwrites an existing file", async() => {
@@ -86,7 +86,7 @@ describe("ProjectFile", () => {
       JSON.parse(await fs.readFile(projectFile.path, "utf8")),
       data
     );
-    assert.deepEqual(projectFile.document, data);
+    assert.deepEqual(projectFile.data, data);
   });
 
   test("is stale only when the file on disk holds another document", async() => {
@@ -169,7 +169,7 @@ describe("ProjectFile", () => {
       JSON.parse(await fs.readFile(projectFile.path, "utf8")),
       expected
     );
-    assert.deepEqual(projectFile.document, expected);
+    assert.deepEqual(projectFile.data, expected);
     assert.deepEqual([...projectFile.kinds.keys()], ["kind-a"]);
     assert.strictEqual(await projectFile.isStale(), false);
   });
@@ -185,7 +185,7 @@ describe("ProjectFile", () => {
       TypeError
     );
 
-    assert.deepEqual(projectFile.document, { version: 1 });
+    assert.deepEqual(projectFile.data, { version: 1 });
     assert.strictEqual(await projectFile.isStale(), false);
   });
 });

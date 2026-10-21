@@ -1,25 +1,27 @@
 // Import Third-party Dependencies
 import type { AssetSeedMap } from "@jolly-pixel/asset-server";
+import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art";
 import {
-  createPixelArtDocument,
-  PIXEL_ART_KIND
-} from "@jolly-pixel/asset.pixel-art";
+  createPixelArtFile,
+  encodePixelArtFile
+} from "@jolly-pixel/pixel-draw.renderer";
 import {
-  createVoxelMapDocument,
-  encodeBlocksetDocument,
+  createVoxelMapFile,
+  encodeBlocksetFile,
   blocksetAsset,
-  blocksetDocumentFromPng,
+  blocksetFileFromPng,
   BLOCKSET_KIND,
   VOXEL_MAP_KIND
 } from "@jolly-pixel/asset.voxel-map";
 import {
-  createVoxelModelDocument,
-  encodeVoxelModelDocument,
+  createVoxelModelFile,
+  encodeVoxelModelFile,
   VOXEL_MODEL_KIND
 } from "@jolly-pixel/asset.voxel-model";
 import {
   DEFAULT_CHUNK_SIZE,
-  DEFAULT_TILE_SIZE
+  DEFAULT_TILE_SIZE,
+  encodeVoxelWorld
 } from "@jolly-pixel/voxel.renderer";
 
 // CONSTANTS
@@ -37,7 +39,7 @@ const kBlocksetId = "default";
 export async function createStudioSeed(
   blocksetPng: Uint8Array
 ): Promise<AssetSeedMap> {
-  const blockset = await blocksetDocumentFromPng(blocksetPng, {
+  const blockset = await blocksetFileFromPng(blocksetPng, {
     tileSize: DEFAULT_TILE_SIZE
   });
 
@@ -45,31 +47,35 @@ export async function createStudioSeed(
     "maps/overworld.blockset.json": {
       id: kBlocksetAssetId,
       kind: BLOCKSET_KIND,
-      content: () => encodeBlocksetDocument(blockset)
+      content: () => encodeBlocksetFile(blockset)
     },
     "maps/overworld.voxelmap.json": {
       id: kMapAssetId,
       kind: VOXEL_MAP_KIND,
-      content: () => createVoxelMapDocument({
-        chunkSize: DEFAULT_CHUNK_SIZE,
-        blocksets: [
-          {
-            id: kBlocksetId,
-            asset: blocksetAsset(kBlocksetAssetId)
-          }
-        ]
-      })
+      content: () => encodeVoxelWorld(
+        createVoxelMapFile({
+          chunkSize: DEFAULT_CHUNK_SIZE,
+          blocksets: [
+            {
+              id: kBlocksetId,
+              asset: blocksetAsset(kBlocksetAssetId)
+            }
+          ]
+        })
+      )
     },
     "models/model.pixelart": {
       id: kModelTextureAssetId,
       kind: PIXEL_ART_KIND,
-      content: () => createPixelArtDocument(TEXTURE_SIZE)
+      content: () => encodePixelArtFile(
+        createPixelArtFile(TEXTURE_SIZE)
+      )
     },
     "models/model.voxelmodel.json": {
       id: kModelAssetId,
       kind: VOXEL_MODEL_KIND,
-      content: () => encodeVoxelModelDocument(
-        createVoxelModelDocument({
+      content: () => encodeVoxelModelFile(
+        createVoxelModelFile({
           texture: {
             id: kModelTextureAssetId,
             kind: PIXEL_ART_KIND

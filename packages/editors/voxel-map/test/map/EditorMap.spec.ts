@@ -15,16 +15,16 @@ import {
 
 // Import Internal Dependencies
 import {
-  MapDocument,
+  EditorMap,
   type BlockRegistryChange,
-  type MapDocumentEvents,
+  type EditorMapEvents,
   type SyncedMap
-} from "../../src/document/MapDocument.ts";
+} from "../../src/map/EditorMap.ts";
 import { MAP_CAPABILITIES } from "../../src/access/MapAccess.ts";
 import { mapAccess } from "../helpers/mapAccess.ts";
 
 // CONSTANTS
-const kEvents: Array<keyof MapDocumentEvents> = [
+const kEvents: Array<keyof EditorMapEvents> = [
   "layerUpdated",
   "blockRegistryChanged",
   "blocksetsChanged",
@@ -52,19 +52,19 @@ function setup(
   access = mapAccess()
 ) {
   const view = map.voxels;
-  const mapDocument = new MapDocument({
+  const editorMap = new EditorMap({
     map,
     defaultLayerName: kDefaultLayerName,
     access
   });
   const seen: string[] = [];
   for (const event of kEvents) {
-    mapDocument.on(event, () => seen.push(event));
+    editorMap.on(event, () => seen.push(event));
   }
   const changes: BlockRegistryChange[] = [];
-  mapDocument.on("blockRegistryChanged", (change) => changes.push(change));
+  editorMap.on("blockRegistryChanged", (change) => changes.push(change));
 
-  return { map, view, mapDocument, seen, changes };
+  return { map, view, editorMap, seen, changes };
 }
 
 function command(
@@ -94,7 +94,7 @@ function defined(
   };
 }
 
-describe("MapDocument", () => {
+describe("EditorMap", () => {
   it("routes each document command family to its own signal", () => {
     const { view, seen } = setup();
 
@@ -180,34 +180,34 @@ describe("MapDocument", () => {
   });
 
   it("reads the world, blocks and material groups of its document", () => {
-    const { view, mapDocument } = setup();
+    const { view, editorMap } = setup();
 
-    assert.equal(mapDocument.world, view.world);
-    assert.equal(mapDocument.blocks, view.blocks);
-    assert.equal(mapDocument.materialGroups, view.materialGroups);
+    assert.equal(editorMap.world, view.world);
+    assert.equal(editorMap.blocks, view.blocks);
+    assert.equal(editorMap.materialGroups, view.materialGroups);
   });
 
   it("mirrors whether its map has loaded", () => {
-    const { map, mapDocument } = setup();
+    const { map, editorMap } = setup();
 
-    assert.equal(mapDocument.ready, false);
+    assert.equal(editorMap.ready, false);
     map.loaded = true;
-    assert.equal(mapDocument.ready, true);
+    assert.equal(editorMap.ready, true);
   });
 
   it("replaces the world of its map when loading", () => {
-    const { map, mapDocument } = setup();
+    const { map, editorMap } = setup();
     const data = { layers: [] } as unknown as VoxelWorldJSON;
 
-    mapDocument.load(data);
+    editorMap.load(data);
 
     assert.deepEqual(map.replaced, [data]);
   });
 
   it("adds the default layer to a map that loads without layers", () => {
-    const { view, mapDocument } = setup();
+    const { view, editorMap } = setup();
     const layersOnReset: string[] = [];
-    mapDocument.on("reset", () => {
+    editorMap.on("reset", () => {
       layersOnReset.push(...view.world.getLayers().map((layer) => layer.name));
     });
 
@@ -249,9 +249,9 @@ describe("MapDocument", () => {
   });
 
   it("stops listening to its map once disposed", () => {
-    const { view, mapDocument, seen } = setup();
+    const { view, editorMap, seen } = setup();
 
-    mapDocument.dispose();
+    editorMap.dispose();
     view.emit("command", command("added"), { origin: "local" });
     view.emit("loaded");
 

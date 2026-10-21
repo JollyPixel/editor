@@ -77,4 +77,4 @@ interface EditSource<TCommand> {
 }
 ```
 
-`PixelDocument` is an `EditSource<DocumentCommand>`: it emits `change` for each edit, `reset` with `"load"` after a snapshot, and applies an undo or redo through `applyStep(command)`. `PixelHistoryTarget.selection` is the canvas's selection footprints as an `EditSource<SelectionChange>`: a selection change's inverse swaps `before` and `after`, and applying one restores that footprint once the step completes. This is the `ChangeSource` shape that `ChangeSourceAdapter` from `@jolly-pixel/history` wraps.
+`PixelDocument` is an `EditSource<PixelDocumentCommand>`: it emits `change` for each edit, `reset` with `"load"` after a snapshot, and applies an undo or redo through `applyStep(command)`. `PixelHistoryTarget.selection` is the canvas's selection footprints as an `EditSource<SelectionChange>`: a selection change's inverse swaps `before` and `after`, and applying one restores that footprint once the step completes. This is the `ChangeSource` shape that `ChangeSourceAdapter` from `@jolly-pixel/history` wraps.

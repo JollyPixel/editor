@@ -73,7 +73,7 @@ describe("EditorSession open", () => {
     const failure = new Error("factory failed");
     const audio: AssetDocumentKind<unknown> = {
       kind: "audio",
-      createDocument: () => {
+      syncDocument: () => {
         throw failure;
       }
     };

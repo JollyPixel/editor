@@ -2,7 +2,7 @@
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import type { TemplateDraftId } from "../document/TemplateDraftId.ts";
+import type { TemplateDraftId } from "../map/TemplateDraftId.ts";
 
 export type EditContextEvents = {
   change: (

@@ -25,7 +25,7 @@ import { VOXEL_MODEL_ICON } from "./icons.ts";
 export const VOXEL_MODEL_KIND = "voxelmodel";
 export const VOXEL_MODEL_COMMAND = "voxelmodel.command";
 export const VOXEL_MODEL_EXTENSION = ".voxelmodel.json";
-export const VOXEL_MODEL_DOCUMENT_VERSION = 2;
+export const VOXEL_MODEL_FILE_VERSION = 2;
 const kDefaultBlockName = "Block";
 
 export const VOXEL_MODEL_ASSET: AssetKindDescriptor = {
@@ -35,13 +35,13 @@ export const VOXEL_MODEL_ASSET: AssetKindDescriptor = {
   icon: VOXEL_MODEL_ICON
 };
 
-const kStoredBlockNodeSchema = z.extend(blockNodeSchema, {
+const kCompactBlockNodeSchema = z.extend(blockNodeSchema, {
   transform: z.partial(blockTransformSchema)
 });
 
-export const voxelModelDocumentSchema = z.object({
-  version: z.literal(VOXEL_MODEL_DOCUMENT_VERSION),
-  nodes: z.array(z.union([folderNodeSchema, kStoredBlockNodeSchema])),
+export const compactVoxelModelFileSchema = z.object({
+  version: z.literal(VOXEL_MODEL_FILE_VERSION),
+  nodes: z.array(z.union([folderNodeSchema, kCompactBlockNodeSchema])),
   materials: voxelModelSnapshotSchema.shape.materials,
   animationSets: voxelModelSnapshotSchema.shape.animationSets,
   texture: z.object({
@@ -50,29 +50,29 @@ export const voxelModelDocumentSchema = z.object({
   })
 });
 
-type StoredVoxelModelDocument = Infer<typeof voxelModelDocumentSchema>;
-type StoredModelNode = StoredVoxelModelDocument["nodes"][number];
+export type CompactVoxelModelFile = Infer<typeof compactVoxelModelFileSchema>;
+type CompactModelNode = CompactVoxelModelFile["nodes"][number];
 
-export type VoxelModelDocument = VoxelModelSnapshot & {
-  version: typeof VOXEL_MODEL_DOCUMENT_VERSION;
+export type VoxelModelFile = VoxelModelSnapshot & {
+  version: typeof VOXEL_MODEL_FILE_VERSION;
   texture: AssetReferenceData;
 };
 
-export interface VoxelModelDocumentOptions {
+export interface VoxelModelFileOptions {
   texture: AssetReferenceData;
   blocks?: Iterable<string>;
 }
 
-export function createVoxelModelDocument(
-  options: VoxelModelDocumentOptions
-): VoxelModelDocument {
+export function createVoxelModelFile(
+  options: VoxelModelFileOptions
+): VoxelModelFile {
   const {
     texture,
     blocks = [kDefaultBlockName]
   } = options;
 
   return {
-    version: VOXEL_MODEL_DOCUMENT_VERSION,
+    version: VOXEL_MODEL_FILE_VERSION,
     nodes: [...blocks].map((name) => {
       return {
         kind: "block",
@@ -92,20 +92,29 @@ export function createVoxelModelDocument(
   };
 }
 
-export function encodeVoxelModelDocument(
-  document: VoxelModelDocument
+export function encodeVoxelModelFile(
+  file: VoxelModelFile
 ): Uint8Array {
-  const stored: StoredVoxelModelDocument = {
-    ...document,
-    nodes: document.nodes.map(compactNode)
+  const compact: CompactVoxelModelFile = {
+    ...file,
+    nodes: file.nodes.map(compactNode)
   };
 
-  return new TextEncoder().encode(JSON.stringify(stored));
+  return new TextEncoder().encode(JSON.stringify(compact));
+}
+
+export function expandVoxelModelFile(
+  compact: CompactVoxelModelFile
+): VoxelModelFile {
+  return {
+    ...compact,
+    nodes: compact.nodes.map(expandNode)
+  };
 }
 
 function compactNode(
   node: ModelNodeJSON
-): StoredModelNode {
+): CompactModelNode {
   return node.kind === "folder" ?
     node :
     {
@@ -129,4 +138,27 @@ function compactUv(
     activeFaces.every((slot, index) => slot === slots[index]) ?
     rest :
     uv;
+}
+
+function expandNode(
+  compact: CompactModelNode
+): ModelNodeJSON {
+  return compact.kind === "folder" ?
+    compact :
+    {
+      ...compact,
+      transform: BlockTransform.create(compact.transform),
+      uv: expandUv(compact.uv)
+    };
+}
+
+function expandUv(
+  uv: UVLayoutData
+): UVLayoutData {
+  return uv.state === "stacked" || uv.activeFaces !== undefined ?
+    uv :
+    {
+      ...uv,
+      activeFaces: Object.keys(uv.faces)
+    };
 }

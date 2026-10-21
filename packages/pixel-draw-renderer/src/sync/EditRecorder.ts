@@ -6,9 +6,9 @@ import type {
 } from "./PixelDocumentState.ts";
 import {
   strokeCommand,
-  toDocumentCommand,
+  toPixelDocumentCommand,
   toPixelCommand,
-  type DocumentCommand,
+  type PixelDocumentCommand,
   type PixelCommand
 } from "./PixelCommand.ts";
 import type {
@@ -88,7 +88,7 @@ export class EditRecorder {
   }
 
   applyStep(
-    command: DocumentCommand
+    command: PixelDocumentCommand
   ): PixelChange | null {
     if (!this.#state.accepts(command)) {
       return null;
@@ -146,13 +146,13 @@ export class EditRecorder {
 
   #applyPeer(
     command: PixelCommand,
-    changeOf: (written: DocumentCommand) => PixelChange
+    changeOf: (written: PixelDocumentCommand) => PixelChange
   ): void {
     if (!this.#ownership.admits(command)) {
       return;
     }
 
-    const written = this.#written(toDocumentCommand(command));
+    const written = this.#written(toPixelDocumentCommand(command));
     this.silently(() => this.#state.apply(written));
     this.#listeners.change(changeOf(written));
     switch (command.action) {
@@ -167,8 +167,8 @@ export class EditRecorder {
   }
 
   #written(
-    command: DocumentCommand
-  ): DocumentCommand {
+    command: PixelDocumentCommand
+  ): PixelDocumentCommand {
     if (command.action !== "global-fill") {
       return command;
     }
@@ -180,7 +180,7 @@ export class EditRecorder {
 
   #emit(
     change: PixelChange,
-    sent: DocumentCommand
+    sent: PixelDocumentCommand
   ): void {
     this.#listeners.change(change);
     this.#listeners.command(toPixelCommand(sent), change);

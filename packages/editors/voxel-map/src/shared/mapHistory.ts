@@ -10,7 +10,7 @@ import {
 } from "@jolly-pixel/asset.voxel-map/client";
 
 // Import Internal Dependencies
-import { TemplateDraftId } from "../document/TemplateDraftId.ts";
+import { TemplateDraftId } from "../map/TemplateDraftId.ts";
 
 // CONSTANTS
 const kLimit = 10;

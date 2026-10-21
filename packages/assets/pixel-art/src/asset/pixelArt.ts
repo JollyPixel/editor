@@ -2,11 +2,9 @@
 import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
 import {
   createPixelBufferFromPng,
-  encodePixelArtDocument,
-  PixelBuffer,
+  encodePixelArtFile,
   PixelDocumentState,
-  serializePixelDocument,
-  type Vec2
+  serializePixelDocument
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -25,21 +23,7 @@ export const PIXEL_ART_ASSET: AssetKindDescriptor = {
   icon: PIXEL_ART_ICON
 };
 
-export function createPixelArtDocument(
-  size: Vec2
-): Uint8Array {
-  const state = new PixelDocumentState({
-    buffer: new PixelBuffer({
-      size
-    })
-  });
-
-  return encodePixelArtDocument(
-    serializePixelDocument(state)
-  );
-}
-
-export async function pixelArtDocumentFromPng(
+export async function pixelArtContentFromPng(
   png: Uint8Array
 ): Promise<Uint8Array> {
   const state = new PixelDocumentState({
@@ -48,7 +32,7 @@ export async function pixelArtDocumentFromPng(
     })
   });
 
-  return encodePixelArtDocument(
+  return encodePixelArtFile(
     serializePixelDocument(state)
   );
 }

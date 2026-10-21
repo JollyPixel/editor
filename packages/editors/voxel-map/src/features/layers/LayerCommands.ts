@@ -20,7 +20,7 @@ export type LayerRootCommand = "add-layer" | "show-all";
 export type LayerCommandsWorkspace = Pick<
   VoxelMapWorkspace,
   | "state"
-  | "mapDocument"
+  | "editorMap"
   | "layers"
   | "layerVisibility"
   | "templates"
@@ -120,6 +120,6 @@ export class LayerCommands {
   }
 
   #entries(): Iterable<LayerRef> {
-    return collectLayerSelections(this.#workspace.mapDocument.world);
+    return collectLayerSelections(this.#workspace.editorMap.world);
   }
 }

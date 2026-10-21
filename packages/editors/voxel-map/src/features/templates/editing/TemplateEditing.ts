@@ -12,8 +12,8 @@ import {
 import type { Box3 } from "three";
 
 // Import Internal Dependencies
-import type { MapDocumentSignals } from "../../../document/MapDocument.ts";
-import { TemplateDraftId } from "../../../document/TemplateDraftId.ts";
+import type { EditorMapSignals } from "../../../map/EditorMap.ts";
+import { TemplateDraftId } from "../../../map/TemplateDraftId.ts";
 import type { MapAccessSource } from "../../../access/MapAccess.ts";
 import {
   TEMPLATE_HISTORY_SCOPE,
@@ -40,7 +40,7 @@ export interface TemplateEditingOptions {
   world: VoxelWorld;
   context: EditContext;
   selection: SelectionStore;
-  mapDocument: MapDocumentSignals;
+  editorMap: EditorMapSignals;
   access: MapAccessSource;
   isolate: (layerName: string) => () => void;
   camera: TemplateEditCamera;
@@ -93,11 +93,11 @@ export class TemplateEditing {
     this.#log = options.log;
     this.#confirm = options.confirm ?? showConfirm;
 
-    const { mapDocument } = options;
+    const { editorMap } = options;
     this.#subscriptions = [
-      mapDocument.subscribe("layerUpdated", this.#reconcile),
-      mapDocument.subscribe("templatesChanged", this.#reconcile),
-      mapDocument.subscribe("reset", this.#reconcile)
+      editorMap.subscribe("layerUpdated", this.#reconcile),
+      editorMap.subscribe("templatesChanged", this.#reconcile),
+      editorMap.subscribe("reset", this.#reconcile)
     ];
   }
 

@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import { SyncedDocument } from "@jolly-pixel/network/client";
+import {
+  SyncedDocument,
+  type DocumentKind
+} from "@jolly-pixel/network/client";
 import {
   PixelDocument,
   type Vec2
@@ -42,19 +45,18 @@ export class SyncedPixelDocument extends SyncedDocument<PixelDocument> {
   }
 }
 
-export interface PixelArtDocumentKind {
-  readonly kind: typeof PIXEL_ART_KIND;
-  createDocument(
-    room: PixelArtRoom
-  ): SyncedPixelDocument;
-}
+export type PixelArtDocumentKind = DocumentKind<
+  typeof PIXEL_ART_KIND,
+  PixelArtRoom,
+  SyncedPixelDocument
+>;
 
 export function pixelArtDocumentKind(
   options: SyncedPixelDocumentOptions = {}
 ): PixelArtDocumentKind {
   return {
     kind: PIXEL_ART_KIND,
-    createDocument: (room) => new SyncedPixelDocument(
+    syncDocument: (room) => new SyncedPixelDocument(
       room,
       options
     )

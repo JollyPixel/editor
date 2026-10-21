@@ -115,7 +115,7 @@ describe("voxelMapAssetKind", () => {
     assert.throws(
       () => handler.load(handler.create("asset-1"), content),
       {
-        name: "InvalidAssetDocumentError",
+        name: "InvalidAssetFileError",
         message: /\/blocksets\/0/
       }
     );

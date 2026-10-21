@@ -9,9 +9,9 @@ import type { TerrainReader } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import type {
-  TerrainCommandDocument,
+  TerrainDocument,
   TerrainImage
-} from "../model/TerrainCommandDocument.ts";
+} from "../model/TerrainDocument.ts";
 import { patchBatches } from "../network/patchBatches.ts";
 import {
   terrainHeightTileKey,
@@ -42,7 +42,7 @@ export interface TerrainHistoryRegistrationOptions<TScope extends string> {
 }
 
 export function terrainHistoryRegistration<TScope extends string>(
-  document: TerrainCommandDocument,
+  document: TerrainDocument,
   options: TerrainHistoryRegistrationOptions<TScope>
 ): HistoryRegistration<TScope, TerrainCommand, TerrainImage> {
   const { id = kDefaultId, scope } = options;

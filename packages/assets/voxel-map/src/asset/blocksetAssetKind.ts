@@ -4,7 +4,7 @@ import {
   SchemaParser
 } from "@jolly-pixel/network";
 import {
-  InvalidAssetDocumentError,
+  InvalidAssetFileError,
   type AssetKindHandler,
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
@@ -16,12 +16,12 @@ import {
 } from "@jolly-pixel/asset.pixel-art/server";
 import {
   deserializePixelDocument,
-  parsePixelArtDocument,
+  parsePixelArtFile,
   pixelArtSnapshot,
   PixelBuffer,
   PixelDocumentState,
   serializePixelDocument,
-  type PixelArtDocumentData,
+  type PixelArtFile,
   type Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
 import {
@@ -32,14 +32,14 @@ import {
 
 // Import Internal Dependencies
 import {
-  encodeBlocksetDocument,
+  encodeBlocksetFile,
   BLOCKSET_COMMAND,
-  BLOCKSET_DOCUMENT_VERSION,
+  BLOCKSET_FILE_VERSION,
   BLOCKSET_EXTENSION,
   BLOCKSET_KIND,
-  type BlocksetAssetDocument
+  type BlocksetFile
 } from "./blockset.ts";
-import { blocksetDocumentSchema } from "./blocksetDocument.schema.ts";
+import { blocksetFileSchema } from "./blocksetFile.schema.ts";
 import {
   blocksetCommandProtocol,
   blocksetSnapshotSchema
@@ -52,25 +52,25 @@ import type {
 
 // CONSTANTS
 const kDefaultGridSize = 8;
-const kDocumentParser = new SchemaParser(blocksetDocumentSchema);
+const kFileParser = new SchemaParser(blocksetFileSchema);
 
-export function parseBlocksetDocument(
+export function parseBlocksetFile(
   value: unknown
-): BlocksetAssetDocument {
-  const result = kDocumentParser.parse(value);
+): BlocksetFile {
+  const result = kFileParser.parse(value);
   if (result.err) {
-    throw new InvalidAssetDocumentError(
+    throw new InvalidAssetFileError(
       BLOCKSET_KIND,
       describeErrors(result.val)
     );
   }
 
-  let pixels: PixelArtDocumentData;
+  let pixels: PixelArtFile;
   try {
-    pixels = parsePixelArtDocument(result.val.pixels);
+    pixels = parsePixelArtFile(result.val.pixels);
   }
   catch (error) {
-    throw new InvalidAssetDocumentError(
+    throw new InvalidAssetFileError(
       BLOCKSET_KIND,
       "pixels are invalid",
       { cause: error }
@@ -86,7 +86,7 @@ export function parseBlocksetDocument(
     });
   }
   catch (error) {
-    throw new InvalidAssetDocumentError(
+    throw new InvalidAssetFileError(
       BLOCKSET_KIND,
       "blocks are invalid",
       { cause: error }
@@ -94,28 +94,28 @@ export function parseBlocksetDocument(
   }
 
   return {
-    version: BLOCKSET_DOCUMENT_VERSION,
+    version: BLOCKSET_FILE_VERSION,
     pixels,
     ...document.toJSON()
   };
 }
 
-export function decodeBlocksetDocument(
+export function decodeBlocksetFile(
   content: Uint8Array
-): BlocksetAssetDocument {
+): BlocksetFile {
   let parsed: unknown;
   try {
     parsed = JSON.parse(new TextDecoder().decode(content));
   }
   catch (error) {
-    throw new InvalidAssetDocumentError(
+    throw new InvalidAssetFileError(
       BLOCKSET_KIND,
       "payload is not JSON",
       { cause: error }
     );
   }
 
-  return parseBlocksetDocument(parsed);
+  return parseBlocksetFile(parsed);
 }
 
 export interface BlocksetStateOptions {
@@ -140,9 +140,9 @@ export class BlocksetState {
     });
   }
 
-  toJSON(): BlocksetAssetDocument {
+  toJSON(): BlocksetFile {
     return {
-      version: BLOCKSET_DOCUMENT_VERSION,
+      version: BLOCKSET_FILE_VERSION,
       pixels: serializePixelDocument(this.pixels),
       ...this.document.toJSON()
     };
@@ -156,23 +156,23 @@ export class BlocksetState {
   }
 
   async encodeSnapshot(): Promise<BlocksetSnapshot> {
-    const document = this.document.toJSON();
+    const blockset = this.document.toJSON();
 
     return {
       pixels: await encodePixelSnapshot(this.pixels),
-      ...document
+      ...blockset
     };
   }
 
   load(
-    document: BlocksetAssetDocument
+    file: BlocksetFile
   ): void {
     this.document.load({
-      tileSize: document.tileSize,
-      blocks: document.blocks,
-      materialGroups: document.materialGroups
+      tileSize: file.tileSize,
+      blocks: file.blocks,
+      materialGroups: file.materialGroups
     });
-    deserializePixelDocument(document.pixels, this.pixels);
+    deserializePixelDocument(file.pixels, this.pixels);
   }
 
   applyCommand(
@@ -235,7 +235,7 @@ export function blocksetAssetKind(
       content: Uint8Array
     ): void {
       state.load(
-        decodeBlocksetDocument(content)
+        decodeBlocksetFile(content)
       );
     },
 
@@ -249,7 +249,7 @@ export function blocksetAssetKind(
       state: BlocksetState
     ): Promise<Uint8Array> {
       return Promise.resolve(
-        encodeBlocksetDocument(state.toJSON())
+        encodeBlocksetFile(state.toJSON())
       );
     },
 

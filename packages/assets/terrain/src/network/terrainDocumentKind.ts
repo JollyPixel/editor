@@ -8,24 +8,24 @@ import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
 import { TERRAIN_KIND } from "../asset/terrain.ts";
-import { TerrainCommandDocument } from "../model/TerrainCommandDocument.ts";
+import { TerrainDocument } from "../model/TerrainDocument.ts";
 import { terrainWriteKeys } from "./TerrainCommandKeys.ts";
 
 export type SyncedTerrainDocument = SyncedCommandDocument<
-  TerrainCommandDocument,
+  TerrainDocument,
   AssetRoomNotice
 >;
 
 export type TerrainDocumentKind = CommandDocumentKind<
   typeof TERRAIN_KIND,
-  TerrainCommandDocument,
+  TerrainDocument,
   AssetRoomNotice
 >;
 
 export function terrainDocumentKind(): TerrainDocumentKind {
   return commandDocumentKind({
     kind: TERRAIN_KIND,
-    createDocument: () => new TerrainCommandDocument(),
+    createDocument: () => new TerrainDocument(),
     keys: terrainWriteKeys
   });
 }

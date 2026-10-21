@@ -16,7 +16,7 @@ import type {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { MapDocument } from "../../../document/MapDocument.ts";
+import type { EditorMap } from "../../../map/EditorMap.ts";
 import type {
   PointerCapture,
   SelectionStore
@@ -38,7 +38,7 @@ export interface ObjectLayerRendererOptions {
   camera: THREE.PerspectiveCamera;
   selection: SelectionStore;
   pointer: PointerCapture;
-  mapDocument: MapDocument;
+  editorMap: EditorMap;
   visibility: LayerVisibilityStore;
   access: MapGrants;
 }
@@ -48,7 +48,7 @@ export class ObjectLayerRenderer extends ActorComponent {
   #camera: THREE.PerspectiveCamera;
   #selection: SelectionStore;
   #pointerCapture: PointerCapture;
-  #mapDocument: MapDocument;
+  #editorMap: EditorMap;
   #visibility: LayerVisibilityStore;
   #access: MapGrants;
   #scene: ObjectAreaScene;
@@ -71,7 +71,7 @@ export class ObjectLayerRenderer extends ActorComponent {
     this.#camera = options.camera;
     this.#selection = options.selection;
     this.#pointerCapture = options.pointer;
-    this.#mapDocument = options.mapDocument;
+    this.#editorMap = options.editorMap;
     this.#visibility = options.visibility;
     this.#access = options.access;
     this.#scene = new ObjectAreaScene({
@@ -100,8 +100,8 @@ export class ObjectLayerRenderer extends ActorComponent {
     canvas.addEventListener("pointerdown", this.#onPointerDown, true);
     this.#subscriptions.push(
       this.#selection.subscribe("change", this.#onSelectionChange),
-      this.#mapDocument.subscribe("layerUpdated", this.#onLayerUpdated),
-      this.#mapDocument.subscribe("reset", this.#onWorldReset),
+      this.#editorMap.subscribe("layerUpdated", this.#onLayerUpdated),
+      this.#editorMap.subscribe("reset", this.#onWorldReset),
       this.#visibility.subscribe("change", this.#onVisibilityChange),
       this.#access.subscribe("change", this.#onAccessChange)
     );

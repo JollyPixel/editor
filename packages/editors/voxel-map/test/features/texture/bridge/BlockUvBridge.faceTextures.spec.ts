@@ -109,7 +109,7 @@ describe("BlockUvBridge / faceTextures round-trip", () => {
       uv.applyState("block-1", "free");
       uv.move("block-1", { x: 48, y: 32, width: 16, height: 16 }, "top");
 
-      bridgeOptions.mapDocument.emit("blockRegistryChanged", "redefined");
+      bridgeOptions.editorMap.emit("blockRegistryChanged", "redefined");
 
       const region = uv.get("block-1")!;
       assert.equal(region.state, "free");

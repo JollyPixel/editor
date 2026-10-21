@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import { SyncedDocument } from "@jolly-pixel/network/client";
+import {
+  SyncedDocument,
+  type DocumentKind
+} from "@jolly-pixel/network/client";
 import {
   VoxelDocument,
   type VoxelDocumentOptions,
@@ -49,18 +52,17 @@ export class SyncedVoxelMap extends SyncedDocument<SyncedVoxelMap> {
   }
 }
 
-export interface VoxelMapDocumentKind {
-  readonly kind: typeof VOXEL_MAP_KIND;
-  createDocument(
-    room: VoxelMapRoom
-  ): SyncedVoxelMap;
-}
+export type VoxelMapDocumentKind = DocumentKind<
+  typeof VOXEL_MAP_KIND,
+  VoxelMapRoom,
+  SyncedVoxelMap
+>;
 
 export function voxelMapDocumentKind(
   options: SyncedVoxelMapOptions = {}
 ): VoxelMapDocumentKind {
   return {
     kind: VOXEL_MAP_KIND,
-    createDocument: (room) => new SyncedVoxelMap(room, options)
+    syncDocument: (room) => new SyncedVoxelMap(room, options)
   };
 }

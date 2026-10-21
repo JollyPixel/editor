@@ -29,6 +29,13 @@ state, applies the kind's domain events, and serializes that state as asset
 content. Its conversions turn other formats, such as PNG, into that content
 when an asset is created.
 
+### Asset File
+
+An asset's content decoded into its kind's typed form, such as a
+`PixelArtFile` for a `.pixelart` asset. The kind handler decodes the file when
+it loads content and encodes one when it serializes live state. Content that
+fails the kind's schema throws `InvalidAssetFileError`.
+
 ### Live State
 
 The current in-memory state of an open asset. It is rebuilt from event history
@@ -95,3 +102,5 @@ instead and accepts no command.
 - Use **snapshot** for a complete state representation and **checkpoint** for
   a recorded event that lets replay skip earlier history.
 - Use **reconciliation** for changes discovered in physical storage.
+- Use **content** for an asset's bytes and **asset file** for their decoded
+  form. Keep **document** for the live state that commands change in an editor.

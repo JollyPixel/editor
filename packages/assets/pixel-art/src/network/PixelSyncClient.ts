@@ -3,7 +3,7 @@ import { CommandSync } from "@jolly-pixel/network/client";
 import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import type { ChangeSource } from "@jolly-pixel/history";
 import type {
-  DocumentCommand,
+  PixelDocumentCommand,
   PixelChange,
   PixelCommand,
   PixelDocument
@@ -34,7 +34,7 @@ export type PixelCommandListener = (
 export interface PixelSyncTarget extends Pick<
   PixelDocument,
   "applyRemoteCommand" | "replayPendingCommand" | "loadSnapshot"
->, ChangeSource<DocumentCommand> {
+>, ChangeSource<PixelDocumentCommand> {
   on(
     event: "command",
     listener: PixelCommandListener

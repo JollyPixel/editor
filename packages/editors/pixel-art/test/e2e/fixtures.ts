@@ -8,7 +8,7 @@ import {
 } from "@jolly-pixel/e2e/editor";
 import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art";
 import {
-  encodePixelArtDocument,
+  encodePixelArtFile,
   PixelBuffer,
   PixelDocumentState,
   serializePixelDocument
@@ -74,7 +74,7 @@ export const test = editorFixture<EditorTarget>({
     });
     const id = await catalog.create(
       `${e2eFolder()}/canvas.pixelart`,
-      encodePixelArtDocument(
+      encodePixelArtFile(
         serializePixelDocument(new PixelDocumentState({ buffer: blank }))
       ),
       { kind: PIXEL_ART_KIND }

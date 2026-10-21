@@ -9,7 +9,7 @@ import {
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import type { MapDocumentSignals } from "../../document/MapDocument.ts";
+import type { EditorMapSignals } from "../../map/EditorMap.ts";
 import type { SelectionStore } from "../../state/index.ts";
 import type { MapAccessSource } from "../../access/MapAccess.ts";
 import type { MapSteps } from "../../shared/MapSteps.ts";
@@ -45,7 +45,7 @@ export interface MapPlacementOptions {
   world: VoxelWorld;
   history: MapSteps;
   selection: Pick<SelectionStore, "lastVoxelLayer" | "subscribe">;
-  mapDocument: MapDocumentSignals;
+  editorMap: EditorMapSignals;
   conceal?: LayerConcealer;
   clipboard?: PlacementClipboard;
   access: MapAccessSource;
@@ -80,12 +80,12 @@ export class MapPlacement {
     this.#access = options.access;
     this.clipboard = options.clipboard ?? new PlacementClipboard();
 
-    const { mapDocument } = options;
+    const { editorMap } = options;
     this.#subscriptions = [
-      mapDocument.subscribe("layerUpdated", this.#refresh),
-      mapDocument.subscribe("templatesChanged", this.#refresh),
-      mapDocument.subscribe("reset", this.#refresh),
-      mapDocument.subscribe("reset", () => {
+      editorMap.subscribe("layerUpdated", this.#refresh),
+      editorMap.subscribe("templatesChanged", this.#refresh),
+      editorMap.subscribe("reset", this.#refresh),
+      editorMap.subscribe("reset", () => {
         this.clipboard.content = null;
       }),
       options.selection.subscribe("change", this.#refresh)

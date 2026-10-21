@@ -15,7 +15,7 @@ import {
   TemplateEditing,
   type TemplateEditCamera
 } from "../../src/features/templates/editing/TemplateEditing.ts";
-import { TemplateDraftId } from "../../src/document/TemplateDraftId.ts";
+import { TemplateDraftId } from "../../src/map/TemplateDraftId.ts";
 import { LocalLayerVisibility } from "../../src/features/layers/LocalLayerVisibility.ts";
 import { LayerVisibilityStore } from "../../src/features/layers/LayerVisibilityStore.ts";
 import { MapLayers } from "../../src/features/layers/MapLayers.ts";
@@ -25,7 +25,7 @@ import {
   PresenceStore,
   SelectionStore
 } from "../../src/state/index.ts";
-import { createMapDocument } from "./mapDocument.ts";
+import { createEditorMap } from "./editorMap.ts";
 import { createWorldHistory } from "./mapHistory.ts";
 import { mapAccess } from "./mapAccess.ts";
 
@@ -82,13 +82,13 @@ export function templateEditingFixture(
     name: "House"
   });
 
-  const mapDocument = createMapDocument(world);
+  const editorMap = createEditorMap(world);
   const context = new EditContext();
   const selection = new SelectionStore();
   const layers = new MapLayers({
     world,
     selection,
-    mapDocument,
+    editorMap,
     access,
     editContext: context
   });
@@ -96,7 +96,7 @@ export function templateEditingFixture(
   const visibility = new LocalLayerVisibility({
     world,
     layers: view,
-    mapDocument,
+    editorMap,
     visibility: new LayerVisibilityStore()
   });
   const voxels = createWorldHistory(world);
@@ -117,7 +117,7 @@ export function templateEditingFixture(
     world,
     context,
     selection,
-    mapDocument,
+    editorMap,
     access,
     isolate: (layerName) => visibility.isolate(layerName),
     camera,

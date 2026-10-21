@@ -166,12 +166,12 @@ export class BlockLibrary extends WorkspaceElement {
         this.#resolveSelection(workspace);
         void this.#revealSelection();
       }),
-      workspace.mapDocument.subscribe("blockRegistryChanged", () => {
+      workspace.editorMap.subscribe("blockRegistryChanged", () => {
         this.#resolveSelection(workspace);
         this.#refreshBlocks(workspace);
         refreshSwatches();
       }),
-      workspace.mapDocument.subscribe("materialGroupsChanged", refreshSwatches),
+      workspace.editorMap.subscribe("materialGroupsChanged", refreshSwatches),
       presence.subscribe("blockSelectionsChange", refreshMarks),
       presence.subscribe("peersChange", refreshMarks),
       workspace.blocksets.subscribe("change", () => {
@@ -285,7 +285,7 @@ export class BlockLibrary extends WorkspaceElement {
       danger: true
     });
     if (confirmed) {
-      workspace.mapDocument.world.removeBlocks(orphanBlocks);
+      workspace.editorMap.world.removeBlocks(orphanBlocks);
     }
   }
 
@@ -357,7 +357,7 @@ export class BlockLibrary extends WorkspaceElement {
     workspace: VoxelMapWorkspace,
     blockId: number
   ): MenuSession {
-    const { mapDocument, blocksets, materials, usage, access } = workspace;
+    const { editorMap, blocksets, materials, usage, access } = workspace;
     const menu = new BlockMenu({
       blockId,
       materials: materials.availableTo(blockId),
@@ -367,7 +367,7 @@ export class BlockLibrary extends WorkspaceElement {
     });
 
     return menu.session(this.editable ? "blocks" : "materials", {
-      exists: () => mapDocument.blocks.has(blockId),
+      exists: () => editorMap.blocks.has(blockId),
       run: (command) => this.#runCommand(workspace, command, blockId),
       assign: (material) => materials.assign(blockId, material.id)
     });
@@ -417,7 +417,7 @@ export class BlockLibrary extends WorkspaceElement {
     workspace: VoxelMapWorkspace,
     blockId: number
   ): Promise<void> {
-    const block = workspace.mapDocument.blocks.get(blockId);
+    const block = workspace.editorMap.blocks.get(blockId);
     const usage = workspace.usage.inspectUsage(blockId);
     if (block === undefined || usage.unused) {
       return;
@@ -431,7 +431,7 @@ export class BlockLibrary extends WorkspaceElement {
       danger: true
     });
     if (confirmed) {
-      workspace.mapDocument.world.removeBlocks([blockId]);
+      workspace.editorMap.world.removeBlocks([blockId]);
     }
   }
 
@@ -439,7 +439,7 @@ export class BlockLibrary extends WorkspaceElement {
     workspace: VoxelMapWorkspace,
     blockId: number
   ): Promise<void> {
-    const block = workspace.mapDocument.blocks.get(blockId);
+    const block = workspace.editorMap.blocks.get(blockId);
     if (block === undefined) {
       return;
     }
@@ -499,7 +499,7 @@ export class BlockLibrary extends WorkspaceElement {
   #refreshBlocks(
     workspace: VoxelMapWorkspace
   ): void {
-    this.#showBlocks(workspace, [...workspace.mapDocument.blocks.getAll()]);
+    this.#showBlocks(workspace, [...workspace.editorMap.blocks.getAll()]);
   }
 
   #refreshUsage(

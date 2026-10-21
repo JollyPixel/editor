@@ -26,7 +26,7 @@ await createAssetBackend({
 });
 ```
 
-The handler claims `.pixelart` files. `defaultSize` is the size of a texture created without content; it defaults to 32 by 32. A deleted texture keeps its size and loses its pixels and UV regions. The renderer package owns the document codec. Use `MemoryAssetSource` and an in-memory event store for an ephemeral workspace.
+The handler claims `.pixelart` files. `defaultSize` is the size of a texture created without content; it defaults to 32 by 32. A deleted texture keeps its size and loses its pixels and UV regions. The renderer package owns the file codec. Use `MemoryAssetSource` and an in-memory event store for an ephemeral workspace.
 
 ### Connect a document
 
@@ -54,11 +54,11 @@ await synced.ready;
 
 ## 📚 API
 
-- `@jolly-pixel/asset.pixel-art` exports `pixelArtAssetKind`, `PixelArtState`, the `PIXEL_ART_ASSET` descriptor, `ASSET_KINDS` (the kind package, taking `{ defaultSize?, snapshot? }` options), the kind and event constants for server registration, and the document builders `createPixelArtDocument(size)` and `pixelArtDocumentFromPng(png)` for seeds and fixtures. Loading malformed content throws `InvalidAssetDocumentError`, with the renderer error as `cause`.
+- `@jolly-pixel/asset.pixel-art` exports `pixelArtAssetKind`, `PixelArtState`, the `PIXEL_ART_ASSET` descriptor, `ASSET_KINDS` (the kind package, taking `{ defaultSize?, snapshot? }` options), the kind and event constants for server registration, and `pixelArtContentFromPng(png)`, which turns PNG bytes into `.pixelart` content. Build a blank texture with `encodePixelArtFile(createPixelArtFile(size))` from `@jolly-pixel/pixel-draw.renderer`. Loading malformed content throws `InvalidAssetFileError`, with the renderer error as `cause`.
 - `@jolly-pixel/asset.pixel-art/client` exports `SyncedPixelDocument`, `PixelSyncClient`, `pixelArtRoom`, `createPixelArtAsset`, `PixelCollaboration`, presence helpers, wire types such as `PixelArtRoom`, and the [history](./docs/history.md) a `PixelArtCanvas` or a host records undo in.
 - `@jolly-pixel/asset.pixel-art/server` exports `PixelCommandArbiter`, `applyPixelCommand`, and the command, snapshot and UV layout schemas.
 
-The package root imports server dependencies. Browser code should use the client entry point. The [network API](./docs/network.md) covers commands, snapshots, notices, and presence helpers. [Architecture](./ARCHITECTURE.md) covers replay and conflict handling. The pixel document format and codec are documented by [pixel-draw.renderer](../../pixel-draw-renderer/docs/serialization/index.md).
+The package root imports server dependencies. Browser code should use the client entry point. The [network API](./docs/network.md) covers commands, snapshots, notices, and presence helpers. [Architecture](./ARCHITECTURE.md) covers replay and conflict handling. The `.pixelart` file format and codec are documented by [pixel-draw.renderer](../../pixel-draw-renderer/docs/serialization/index.md).
 
 ## ✨ Contributors guide
 

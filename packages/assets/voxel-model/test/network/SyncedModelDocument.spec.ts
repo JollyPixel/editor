@@ -31,7 +31,7 @@ const kSnapshot = {
 describe("SyncedModelDocument", () => {
   test("is ready once the first snapshot is loaded", async() => {
     const room = createMockRoom();
-    const synced = voxelModelDocumentKind().createDocument(room);
+    const synced = voxelModelDocumentKind().syncDocument(room);
     let settled = false;
     void synced.ready.then(() => {
       settled = true;
@@ -49,7 +49,7 @@ describe("SyncedModelDocument", () => {
 
   test("sends local edits and applies remote ones without echoing", () => {
     const room = createMockRoom();
-    const synced = voxelModelDocumentKind().createDocument(room);
+    const synced = voxelModelDocumentKind().syncDocument(room);
     room.deliverSnapshot({ nodes: [], materials: [], animationSets: [] });
 
     synced.document.addFolder({
@@ -77,7 +77,7 @@ describe("SyncedModelDocument", () => {
 
   test("converges on concurrent moves forming a cycle once the server resyncs", () => {
     const room = createMockRoom();
-    const synced = voxelModelDocumentKind().createDocument(room);
+    const synced = voxelModelDocumentKind().syncDocument(room);
     const folderA = { kind: "folder" as const, id: "a", parentId: null, name: "A" };
     const folderB = { kind: "folder" as const, id: "b", parentId: null, name: "B" };
     room.deliverSnapshot({ nodes: [folderA, folderB], materials: [], animationSets: [] });
@@ -106,7 +106,7 @@ describe("SyncedModelDocument", () => {
 
   test("an undo carries the version its step landed at, and a peer edit after it refuses the step", () => {
     const room = createMockRoom();
-    const synced = voxelModelDocumentKind().createDocument(room);
+    const synced = voxelModelDocumentKind().syncDocument(room);
     room.deliverSnapshot(kSnapshot);
     const history = new CommandHistory<"model">();
     history.register({
@@ -135,7 +135,7 @@ describe("SyncedModelDocument", () => {
 
   test("stops forwarding local edits once disposed", () => {
     const room = createMockRoom();
-    const synced = voxelModelDocumentKind().createDocument(room);
+    const synced = voxelModelDocumentKind().syncDocument(room);
     room.deliverSnapshot({ nodes: [], materials: [], animationSets: [] });
 
     synced.dispose();

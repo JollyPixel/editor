@@ -4,17 +4,18 @@ import type {
   AssetSeedMap
 } from "@jolly-pixel/asset-server";
 import {
-  createBlocksetDocument,
-  createVoxelMapDocument,
-  encodeBlocksetDocument,
+  createBlocksetFile,
+  createVoxelMapFile,
+  encodeBlocksetFile,
   blocksetAsset,
   BLOCKSET_KIND,
   VOXEL_MAP_KIND,
-  type BlocksetAssetDocument
+  type BlocksetFile
 } from "@jolly-pixel/asset.voxel-map";
 import {
   DEFAULT_CHUNK_SIZE,
-  DEFAULT_TILE_SIZE
+  DEFAULT_TILE_SIZE,
+  encodeVoxelWorld
 } from "@jolly-pixel/voxel.renderer";
 
 // CONSTANTS
@@ -37,8 +38,8 @@ export interface DefaultSeed {
   backend: AssetBackendTuning;
 }
 
-export function createDefaultBlockset(): BlocksetAssetDocument {
-  return createBlocksetDocument({
+export function createDefaultBlockset(): BlocksetFile {
+  return createBlocksetFile({
     tileSize: DEFAULT_TILE_SIZE,
     size: DEFAULT_BLOCKSET_SIZE
   });
@@ -52,20 +53,22 @@ export function createDefaultSeed(
       "overworld.blockset.json": {
         id: blocksetAssetId,
         kind: BLOCKSET_KIND,
-        content: () => encodeBlocksetDocument(createDefaultBlockset())
+        content: () => encodeBlocksetFile(createDefaultBlockset())
       },
       "overworld.voxelmap.json": {
         id: crypto.randomUUID(),
         kind: VOXEL_MAP_KIND,
-        content: () => createVoxelMapDocument({
-          chunkSize: DEFAULT_CHUNK_SIZE,
-          blocksets: [
-            {
-              id: DEFAULT_BLOCKSET_ID,
-              asset: blocksetAsset(blocksetAssetId)
-            }
-          ]
-        })
+        content: () => encodeVoxelWorld(
+          createVoxelMapFile({
+            chunkSize: DEFAULT_CHUNK_SIZE,
+            blocksets: [
+              {
+                id: DEFAULT_BLOCKSET_ID,
+                asset: blocksetAsset(blocksetAssetId)
+              }
+            ]
+          })
+        )
       }
     },
     backend: WORLD_BACKEND_TUNING

@@ -90,7 +90,7 @@ export class BlocksPanel extends WorkspaceElement {
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
     return [
-      workspace.mapDocument.subscribe(
+      workspace.editorMap.subscribe(
         "reset",
         () => this.requestUpdate()
       ),

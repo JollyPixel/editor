@@ -6,7 +6,7 @@ import type {
   Vec2
 } from "../types.ts";
 
-export const PIXEL_ART_DOCUMENT_VERSION = 1;
+export const PIXEL_ART_FILE_VERSION = 1;
 
 export interface PixelBufferSnapshot {
   size: Vec2;
@@ -19,6 +19,6 @@ export interface PixelBufferSnapshot {
   palette?: RGBA8[];
 }
 
-export interface PixelArtDocumentData extends PixelBufferSnapshot {
-  readonly version: typeof PIXEL_ART_DOCUMENT_VERSION;
+export interface PixelArtFile extends PixelBufferSnapshot {
+  readonly version: typeof PIXEL_ART_FILE_VERSION;
 }

@@ -9,7 +9,7 @@ import {
 import type { VoxelWorldContentCommand } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { TemplateDraftId } from "../../../../src/document/TemplateDraftId.ts";
+import { TemplateDraftId } from "../../../../src/map/TemplateDraftId.ts";
 import { TemplateDraft } from "../../../../src/features/templates/editing/TemplateDraft.ts";
 import { VoxelLayerRef } from "../../../../src/state/index.ts";
 import {

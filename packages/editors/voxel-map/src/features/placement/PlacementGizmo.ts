@@ -14,7 +14,7 @@ import {
 import type { VoxelView } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { MapDocumentSignals } from "../../document/MapDocument.ts";
+import type { EditorMapSignals } from "../../map/EditorMap.ts";
 import type { PointerCapture } from "../../state/index.ts";
 import type { BlockRenderSources } from "../blocks/rendering/BlockRenderSources.ts";
 import type { ActivePlacement } from "./ActivePlacement.ts";
@@ -34,7 +34,7 @@ export interface PlacementGizmoOptions {
     "current" | "subscribe" | "moveBoundsTo" | "turn"
   >;
   pointer: PointerCapture;
-  mapDocument: MapDocumentSignals;
+  editorMap: EditorMapSignals;
   color: THREE.ColorRepresentation;
 }
 
@@ -42,7 +42,7 @@ export class PlacementGizmo extends ActorComponent {
   #camera: THREE.PerspectiveCamera;
   #placement: PlacementGizmoOptions["placement"];
   #pointerCapture: PointerCapture;
-  #mapDocument: MapDocumentSignals;
+  #editorMap: EditorMapSignals;
   #preview: PlacementPreview;
   #pivot = new THREE.Vector3();
   #controls: BoxControls<MarqueeBox> | null = null;
@@ -59,7 +59,7 @@ export class PlacementGizmo extends ActorComponent {
     this.#camera = options.camera;
     this.#placement = options.placement;
     this.#pointerCapture = options.pointer;
-    this.#mapDocument = options.mapDocument;
+    this.#editorMap = options.editorMap;
     this.#preview = new PlacementPreview({
       blockRegistry: options.view.document.blocks,
       sources: options.sources,
@@ -91,8 +91,8 @@ export class PlacementGizmo extends ActorComponent {
     this.actor.addChildren(this.#preview);
     this.#subscriptions.push(
       this.#placement.subscribe("change", this.#sync),
-      this.#mapDocument.subscribe("blockRegistryChanged", this.#rebuild),
-      this.#mapDocument.subscribe("blocksetsChanged", this.#rebuild)
+      this.#editorMap.subscribe("blockRegistryChanged", this.#rebuild),
+      this.#editorMap.subscribe("blocksetsChanged", this.#rebuild)
     );
     this.#sync(this.#placement.current);
   }

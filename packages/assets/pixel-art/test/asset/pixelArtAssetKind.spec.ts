@@ -9,11 +9,11 @@ import {
   ASSET_DELETED,
   encodeContent,
   foldAssetEvent,
-  InvalidAssetDocumentError,
+  InvalidAssetFileError,
   type AssetEventData
 } from "@jolly-pixel/asset-server";
 import {
-  encodePixelArtDocument,
+  encodePixelArtFile,
   PixelBuffer,
   PixelDocumentState,
   serializePixelDocument
@@ -57,10 +57,10 @@ function event(
   } as EventStore.Event;
 }
 
-function documentEvent(
+function fileEvent(
   buffer: PixelBuffer
 ): EventStore.Event {
-  const data = encodePixelArtDocument(
+  const data = encodePixelArtFile(
     serializePixelDocument(new PixelDocumentState({ buffer }))
   );
 
@@ -117,7 +117,7 @@ describe("pixelArtAssetKind", () => {
     const source = new PixelBuffer({ size: { x: 4, y: 4 } });
     source.drawPixels([{ x: 2, y: 2 }], kRed);
 
-    foldAssetEvent(handler, state, documentEvent(source));
+    foldAssetEvent(handler, state, fileEvent(source));
 
     assert.deepEqual(state.document.buffer.size(), { x: 4, y: 4 });
     assert.deepEqual(state.document.buffer.samplePixel(2, 2), kRedTuple);
@@ -160,7 +160,7 @@ describe("pixelArtAssetKind", () => {
     const state = handler.create("asset-1");
     const source = new PixelBuffer({ size: { x: 8, y: 8 } });
     source.drawPixels([{ x: 1, y: 1 }], kRed);
-    foldAssetEvent(handler, state, documentEvent(source));
+    foldAssetEvent(handler, state, fileEvent(source));
 
     foldAssetEvent(handler, state, event(ASSET_DELETED, {
       path: "a.pixelart",
@@ -205,7 +205,7 @@ describe("pixelArtAssetKind", () => {
         size: 2,
         content: encodeContent(new TextEncoder().encode("{{"))
       }));
-    }, InvalidAssetDocumentError);
+    }, InvalidAssetFileError);
     assert.deepEqual(state.document.buffer.samplePixel(1, 1), kRedTuple);
   });
 });

@@ -24,7 +24,7 @@ import {
   TerrainLiveSender,
   TerrainPreview,
   terrainDocumentKind,
-  type TerrainCommandDocument
+  type TerrainDocument
 } from "#src/network/client.ts";
 import {
   heights,
@@ -41,7 +41,7 @@ const kWideRowChunks = Math.floor(MAX_PATCH_TILES / kChunkTiles) + 1;
 
 export interface TerrainPeer {
   readonly room: MockAssetRoom<TerrainNetworkCommand, TerrainSnapshot>;
-  readonly document: TerrainCommandDocument;
+  readonly document: TerrainDocument;
   readonly preview: TerrainPreview;
   readonly sender: TerrainLiveSender;
   readonly receiver: TerrainLiveReceiver;
@@ -74,7 +74,7 @@ export function terrainPeers() {
   ): TerrainPeer {
     const { interestChunkX } = options;
     const room = mockAssetRoom<TerrainNetworkCommand, TerrainSnapshot>(clientId);
-    const { document } = kDocumentKind.createDocument(room);
+    const { document } = kDocumentKind.syncDocument(room);
     const preview = new TerrainPreview(document);
     const sender = new TerrainLiveSender({ room, preview });
     const receiver = new TerrainLiveReceiver({ room, preview });

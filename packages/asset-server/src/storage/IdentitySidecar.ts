@@ -28,7 +28,7 @@ import {
 const kSidecarVersion = 1;
 const kPathCollator = new Intl.Collator();
 const kEntryParser = new SchemaParser(identityEntrySchema);
-const kDocumentParser = new SchemaParser(identitySidecarSchema);
+const kSidecarParser = new SchemaParser(identitySidecarSchema);
 
 export type IdentityEntry = Readonly<Infer<typeof identityEntrySchema>>;
 
@@ -147,8 +147,8 @@ export class IdentitySidecar {
   static parse(
     input: unknown
   ): StateFileParse<IdentityEntry[]> {
-    const document = kDocumentParser.parse(input);
-    if (!document.ok) {
+    const sidecar = kSidecarParser.parse(input);
+    if (!sidecar.ok) {
       return {
         data: [],
         dropped: 0
@@ -156,7 +156,7 @@ export class IdentitySidecar {
     }
 
     const { entries, dropped } = keepValid(
-      document.val.assets.entries(),
+      sidecar.val.assets.entries(),
       kEntryParser
     );
 
