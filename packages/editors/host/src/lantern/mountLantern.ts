@@ -48,8 +48,8 @@ export function mountLantern(
     page: parent.ownerDocument,
     autoStart: !navigator.webdriver,
     warn: (message) => logger.warn(message),
-    present: (session) => {
-      element.session = session;
+    present: (run) => {
+      element.run = run;
     }
   });
   const namespace = tourConsole(commands, { lantern });

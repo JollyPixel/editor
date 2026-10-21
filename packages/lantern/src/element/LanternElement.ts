@@ -12,36 +12,23 @@ import {
 import {
   AmbientThemeController,
   SubscriptionController,
-  anchoredPosition,
   deepActiveElement,
-  inputLayers,
-  originatesInButton,
-  themeStyles,
-  type AnchorRect,
-  type ViewportSize
+  themeStyles
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { LanternSession } from "../session/LanternSession.ts";
+import type { TargetFrame } from "../tour/TargetSeek.ts";
+import type { TourRun } from "../tour/TourRun.ts";
 import { parseBody } from "../tour/parseBody.ts";
 import type { TourStep } from "../tour/TourStep.ts";
 import { lanternStyles } from "./LanternElement.styles.ts";
 import {
-  borderRadius,
-  holeAround,
-  holeAtCentre,
-  spotlightPath,
-  type Hole
-} from "./spotlight.ts";
-import { stepKeyAction } from "./stepKeys.ts";
-import {
-  TargetTracker,
-  type TargetFrame
-} from "./TargetTracker.ts";
-
-// CONSTANTS
-const kHolePadding = 6;
-const kCardGap = 10;
+  SpotlightPlacement,
+  type SpotlightView,
+  type TargetAnchor
+} from "./spotlight/SpotlightPlacement.ts";
+import { StepInput } from "./StepInput.ts";
+import { TargetTracker } from "./TargetTracker.ts";
 
 @customElement("jolly-lantern")
 export class LanternElement extends LitElement {
@@ -68,54 +55,54 @@ export class LanternElement extends LitElement {
   @query(".follow-up")
   declare _followUp: HTMLElementTagNameMap["jolly-button"] | null;
 
-  #source = new SubscriptionController<LanternSession>(
+  #source = new SubscriptionController<TourRun>(
     this,
-    (session) => [
-      session.subscribe("step", () => void this.#show(session)),
-      session.subscribe("end", () => this.#close()),
+    (run) => [
+      run.subscribe("step", () => void this.#show(run)),
+      run.subscribe("end", () => this.#close()),
       () => this.#close()
     ]
   );
   #tracker = new TargetTracker(this, (frame) => this.#place(frame));
   #theme = new AmbientThemeController(this);
+  #input = new StepInput(this);
+  #placed: SpotlightPlacement | null = null;
   #open = false;
-  #layout = "";
   #restoreFocus: HTMLElement | null = null;
-  #input: AbortController | null = null;
 
-  get session(): LanternSession | null {
+  get run(): TourRun | null {
     return this.#source.current;
   }
 
-  set session(
-    session: LanternSession
+  set run(
+    run: TourRun
   ) {
-    if (session !== this.#source.current) {
-      this.#source.attach(session);
+    if (run !== this.#source.current) {
+      this.#source.attach(run);
     }
   }
 
   override render(): TemplateResult {
-    const session = this.session;
-    const step = this.#open && session !== null ? session.step : null;
+    const run = this.run;
+    const step = this.#open && run !== null ? run.step : null;
 
     return html`
       <div class="overlay" popover="manual">
-        ${step === null || session === null ? nothing : this.#renderStep(session, step)}
+        ${step === null || run === null ? nothing : this.#renderStep(run, step)}
       </div>
     `;
   }
 
   #renderStep(
-    session: LanternSession,
+    run: TourRun,
     step: TourStep
   ): TemplateResult {
-    const { steps, title } = session.tour;
-    const followUp = session.offeredFollowUp;
+    const { steps, title } = run.tour;
+    const followUp = run.offeredFollowUp;
 
     return html`
       <div class="scrim"></div>
-      <div class="shield" ?hidden=${session.waiting}></div>
+      <div class="shield" ?hidden=${run.waiting}></div>
       <div class="ring" hidden></div>
       <section
         class="card"
@@ -126,7 +113,7 @@ export class LanternElement extends LitElement {
       >
         <header>
           <span>${title}</span>
-          <span class="counter">${session.index + 1} / ${steps.length}</span>
+          <span class="counter">${run.index + 1} / ${steps.length}</span>
         </header>
         ${step.image === null ? nothing : html`
           <img
@@ -143,23 +130,23 @@ export class LanternElement extends LitElement {
           )}</p>`)}
         </div>
         <footer>
-          <jolly-button class="skip" @click=${() => session.skip()}>Skip</jolly-button>
+          <jolly-button class="skip" @click=${() => run.skip()}>Skip</jolly-button>
           <span class="spacer"></span>
-          ${session.first ? nothing : html`
-            <jolly-button class="back" @click=${() => void session.back()}>Back</jolly-button>
+          ${run.first ? nothing : html`
+            <jolly-button class="back" @click=${() => void run.back()}>Back</jolly-button>
           `}
           <jolly-button
             class="next"
             variant=${followUp === null ? "accent" : "default"}
-            ?disabled=${session.waiting}
-            @click=${() => void session.next()}
-          >${nextLabel(session)}</jolly-button>
+            ?disabled=${run.waiting}
+            @click=${() => void run.next()}
+          >${this.#nextLabel(run)}</jolly-button>
         </footer>
         ${followUp === null ? nothing : html`
           <jolly-button
             class="follow-up"
             variant="accent"
-            @click=${() => void session.startFollowUp()}
+            @click=${() => void run.startFollowUp()}
           >Next tour: ${followUp.title}</jolly-button>
         `}
       </section>
@@ -167,20 +154,19 @@ export class LanternElement extends LitElement {
   }
 
   async #show(
-    session: LanternSession
+    run: TourRun
   ): Promise<void> {
     if (!this.#open) {
       this.#restoreFocus = deepActiveElement(this.ownerDocument);
       this.#open = true;
       this.#theme.follow();
     }
-    this.#syncInput(session);
-    this.#layout = "";
+    this.#input.follow(run);
     this.requestUpdate();
     await this.updateComplete;
     if (
-      session !== this.session ||
-      session.state !== "running"
+      run !== this.run ||
+      run.state !== "running"
     ) {
       return;
     }
@@ -194,11 +180,11 @@ export class LanternElement extends LitElement {
     }
 
     const primary = this._followUp ?? this._next;
-    if (!session.waiting && primary !== null) {
+    if (!run.waiting && primary !== null) {
       await primary.updateComplete;
       primary.focus();
     }
-    this.#tracker.track(session);
+    this.#tracker.track(run);
   }
 
   #close(): void {
@@ -208,7 +194,8 @@ export class LanternElement extends LitElement {
 
     this.#open = false;
     this.#tracker.stop();
-    this.#releaseInput();
+    this.#input.release();
+    this.#placed = null;
     this.#theme.stop();
     this.removeAttribute("settled");
     const overlay = this._overlay;
@@ -224,153 +211,68 @@ export class LanternElement extends LitElement {
     }
   }
 
-  #syncInput(
-    session: LanternSession
-  ): void {
-    if (session.waiting) {
-      this.#releaseInput();
-
-      return;
-    }
-    if (this.#input !== null) {
-      return;
-    }
-
-    const input = new AbortController();
-    const releaseLayer = inputLayers.push({
-      dismiss: () => {
-        session.skip();
-
-        return true;
-      }
-    });
-    input.signal.addEventListener("abort", releaseLayer, { once: true });
-    this.#input = input;
-    const since = performance.now();
-    this.ownerDocument.defaultView?.addEventListener("keydown", (event) => {
-      const action = stepKeyAction(event);
-      if (
-        action === null ||
-        event.timeStamp < since ||
-        (event.key === "Enter" && originatesInButton(event.composedPath()[0]))
-      ) {
-        return;
-      }
-
-      event.preventDefault();
-      if (action === "skip") {
-        session.skip();
-      }
-      else {
-        void session[action]();
-      }
-    }, { signal: input.signal });
-  }
-
-  #releaseInput(): void {
-    this.#input?.abort();
-    this.#input = null;
-  }
-
   #place(
-    frame: TargetFrame
+    frame: TargetFrame<TargetAnchor>
   ): void {
     const card = this._card;
     const scrim = this._scrim;
     const ring = this._ring;
-    const session = this.session;
+    const run = this.run;
     if (
       card === null ||
       scrim === null ||
       ring === null ||
-      session === null
+      run === null
     ) {
       return;
     }
-
-    const root = this.ownerDocument.documentElement;
-    const viewport: ViewportSize = {
-      width: root.clientWidth,
-      height: root.clientHeight
-    };
-    const panel = {
-      width: card.offsetWidth,
-      height: card.offsetHeight
-    };
-    const anchor = frame.kind === "anchored" ? frame : null;
-    const rect = anchor?.rect ?? null;
-    const layout = JSON.stringify([
-      frame.kind,
-      rect?.top,
-      rect?.left,
-      rect?.bottom,
-      rect?.right,
-      anchor?.radii,
-      viewport,
-      panel
-    ]);
-    if (layout === this.#layout) {
-      return;
-    }
-    this.#layout = layout;
 
     card.toggleAttribute("data-seeking", frame.kind === "seeking");
     if (frame.kind === "seeking") {
       return;
     }
 
-    const hole = anchor === null ?
-      holeAtCentre(viewport) :
-      holeAround(anchor.rect, anchor.radii, viewport, kHolePadding);
-    const position = anchor === null ?
-      {
-        x: (viewport.width - panel.width) / 2,
-        y: (viewport.height - panel.height) / 2
-      } :
-      anchoredPosition({
-        anchor: anchorAround(hole),
-        panel,
-        viewport,
-        gap: kCardGap,
-        side: session.step.side,
-        align: "center"
-      });
+    const root = this.ownerDocument.documentElement;
+    const view: SpotlightView = {
+      viewport: {
+        width: root.clientWidth,
+        height: root.clientHeight
+      },
+      card: {
+        width: card.offsetWidth,
+        height: card.offsetHeight
+      },
+      side: run.step.side
+    };
+    const placement = frame.kind === "anchored" ?
+      SpotlightPlacement.around(frame.anchor, view) :
+      SpotlightPlacement.centred(view);
+    if (this.#placed?.equals(placement)) {
+      return;
+    }
 
-    scrim.style.clipPath = spotlightPath(hole, viewport);
-    ring.hidden = anchor === null;
-    ring.style.transform = `translate(${hole.x}px, ${hole.y}px)`;
-    ring.style.width = `${hole.width}px`;
-    ring.style.height = `${hole.height}px`;
-    ring.style.borderRadius = borderRadius(hole.radii);
-    card.style.transform = `translate(${position.x}px, ${position.y}px)`;
-
+    this.#placed = placement;
+    placement.paint({
+      scrim,
+      ring,
+      card
+    });
     if (!this.hasAttribute("settled")) {
       requestAnimationFrame(
         () => this.toggleAttribute("settled", this.#open)
       );
     }
   }
-}
 
-function nextLabel(
-  session: LanternSession
-): string {
-  if (session.waiting) {
-    return "Waiting…";
+  #nextLabel(
+    run: TourRun
+  ): string {
+    if (run.waiting) {
+      return "Waiting…";
+    }
+
+    return run.last ? "Done" : "Next";
   }
-
-  return session.last ? "Done" : "Next";
-}
-
-function anchorAround(
-  hole: Hole
-): AnchorRect {
-  return {
-    top: hole.y,
-    left: hole.x,
-    bottom: hole.y + hole.height,
-    right: hole.x + hole.width
-  };
 }
 
 declare global {

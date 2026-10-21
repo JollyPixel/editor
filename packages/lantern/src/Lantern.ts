@@ -3,8 +3,8 @@ import { Emitter } from "@openally/emitt";
 import type { StorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { LanternSeen } from "./seen/LanternSeen.ts";
-import { LanternSession } from "./session/LanternSession.ts";
+import { LanternSeen } from "./LanternSeen.ts";
+import { TourRun } from "./tour/TourRun.ts";
 import { UnknownTourError } from "./tour/errors/UnknownTourError.ts";
 import type { Tour } from "./tour/Tour.ts";
 
@@ -14,7 +14,7 @@ export type LanternEvents = {
 
 export interface LanternOptions {
   storage: StorageAdapter;
-  present?: (session: LanternSession) => void;
+  present?: (run: TourRun) => void;
   /**
    * @default document
    */
@@ -41,9 +41,8 @@ export class Lantern extends Emitter<
 
   #autoStart: boolean;
   #tours = new Map<string, Tour>();
-  #session: LanternSession | null = null;
-  #unfollow: (() => void) | null = null;
-  #present: (session: LanternSession) => void;
+  #run: TourRun | null = null;
+  #present: (run: TourRun) => void;
   #page: Document | undefined;
   #warn: ((message: string) => void) | undefined;
 
@@ -59,8 +58,8 @@ export class Lantern extends Emitter<
     this.#warn = options.warn;
   }
 
-  get session(): LanternSession | null {
-    return this.#session;
+  get current(): TourRun | null {
+    return this.#run;
   }
 
   get size(): number {
@@ -79,7 +78,7 @@ export class Lantern extends Emitter<
       }
 
       this.#tours.delete(tour.id);
-      if (this.#session?.tour === tour) {
+      if (this.#run?.tour === tour) {
         this.#interrupt();
       }
       this.emit("change");
@@ -100,34 +99,39 @@ export class Lantern extends Emitter<
   start(
     tour: Tour,
     options: LanternStartOptions = {}
-  ): LanternSession {
+  ): TourRun {
     this.#interrupt();
-    const session = new LanternSession(tour, {
+    const run = new TourRun(tour, {
       at: options.at,
       page: this.#page,
       warn: this.#warn
     });
-    this.#session = session;
-    this.#unfollow = session.subscribe("end", (_outcome, followUp) => {
-      this.#session = null;
-      this.#unfollow = null;
+    this.#run = run;
+    run.on("end", (outcome, followUp) => {
+      if (this.#run === run) {
+        this.#run = null;
+      }
+      if (outcome === "interrupted") {
+        return;
+      }
+
       this.seen.record(tour);
       this.emit("change");
       if (followUp !== null) {
         this.start(followUp);
       }
     });
-    this.#present(session);
+    this.#present(run);
 
-    return session;
+    return run;
   }
 
   offer(
     tour: Tour
-  ): LanternSession | null {
+  ): TourRun | null {
     if (
       !this.#autoStart ||
-      this.#session !== null ||
+      this.#run !== null ||
       this.#tours.get(tour.id) !== tour ||
       this.seen.has(tour)
     ) {
@@ -144,11 +148,9 @@ export class Lantern extends Emitter<
   }
 
   #interrupt(): void {
-    const session = this.#session;
-    this.#unfollow?.();
-    this.#unfollow = null;
-    this.#session = null;
-    session?.skip();
+    const run = this.#run;
+    this.#run = null;
+    run?.interrupt();
   }
 
   * [Symbol.iterator](): IterableIterator<Tour> {

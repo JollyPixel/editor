@@ -6,8 +6,8 @@ import assert from "node:assert/strict";
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { LanternSeen } from "#src/index.ts";
-import { tour } from "../helpers/tours.ts";
+import { LanternSeen } from "#src/LanternSeen.ts";
+import { tour } from "./helpers/tours.ts";
 
 describe("LanternSeen", () => {
   test("stores the recorded version under the tour id", () => {

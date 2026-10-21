@@ -1,6 +1,6 @@
 # jolly-lantern
 
-The Lit element that renders a [`LanternSession`](./LanternSession.md). It needs the `lit` and
+The Lit element that renders a [`TourRun`](./TourRun.md). It needs the `lit` and
 `@jolly-pixel/ui` peers.
 
 ```ts
@@ -8,7 +8,7 @@ import "@jolly-pixel/lantern/element";
 
 const element = document.createElement("jolly-lantern");
 document.querySelector("jolly-scope")!.append(element);
-element.session = lantern.start(basics);
+element.run = lantern.start(basics);
 ```
 
 Append it inside the page's `jolly-scope` so the theme and density apply. `editor.host` already
@@ -39,7 +39,7 @@ jump.
 The card is placed against the hole on the step's `side`, flipped when it does not fit, and
 centred when the step has no target. It shows the tour title, the step counter (`3 / 7`), the
 image, the step title, the body and the buttons Skip, Back (hidden on the first step) and Next
-(Done on the last). While `session.offeredFollowUp` is set, an accent `Next tour: {title}` button
+(Done on the last). While `run.offeredFollowUp` is set, an accent `Next tour: {title}` button
 sits under them and takes the focus instead of Done.
 
 A click on the dim area does nothing: one stray click should not throw a newcomer out of the tour.
@@ -65,7 +65,7 @@ events as usual. The arrow keys and Escape are left to the page; Skip and Back s
 
 ## Members
 
-### `element.session: LanternSession | null`
+### `element.run: TourRun | null`
 
-Assign the session before its first step shows; the `present` callback of `Lantern` does. The
+Assign the run before its first step shows; the `present` callback of `Lantern` does. The
 element opens on the first `step` event and closes on `end`.

@@ -66,7 +66,7 @@ describe("tour console", () => {
 
     await commands.submit("/tour.start editor.basics");
 
-    assert.equal(lantern.session?.tour, basics);
+    assert.equal(lantern.current?.tour, basics);
     assert.equal(closed, true);
   });
 
@@ -76,7 +76,7 @@ describe("tour console", () => {
     await commands.submit("/tour.start editor.missing");
 
     assert.match(lastLine(commands), /No tour "editor\.missing" is registered/);
-    assert.equal(lantern.session, null);
+    assert.equal(lantern.current, null);
   });
 
   test("reset forgets one tour, or every tour without an id", async() => {

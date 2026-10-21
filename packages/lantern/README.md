@@ -46,8 +46,8 @@ document.querySelector("jolly-scope")!.append(element);
 
 const lantern = new Lantern({
   storage: new LocalStorageAdapter(),
-  present: (session) => {
-    element.session = session;
+  present: (run) => {
+    element.run = run;
   }
 });
 lantern.register(basics);
@@ -59,10 +59,23 @@ its tours through `context.lantern`.
 
 ## 📚 API
 
+### Headless: `@jolly-pixel/lantern`
+
+Declares tours, runs them and remembers which ones the user has seen. It draws nothing and does
+not need Lit.
+
 - [Tour](./docs/Tour.md): `Tour`, step options, `TargetPath` and the definition errors
+- [TourRun](./docs/TourRun.md): the step machine behind a running tour
 - [Lantern](./docs/Lantern.md): registering and starting tours, `LanternSeen`
-- [LanternSession](./docs/LanternSession.md): the step machine behind a running tour
+
+### UI component: `@jolly-pixel/lantern/element`
+
+The `jolly-lantern` Lit element that draws a `TourRun` as a spotlight and a card. It needs the
+optional `lit` and `@jolly-pixel/ui` peers.
+
 - [jolly-lantern](./docs/element.md): the overlay, keys, focus and interactive steps
+
+The `present` option of `Lantern` connects the two: it hands every new run to the element.
 
 See [GLOSSARY.md](./GLOSSARY.md) for the terms used by the package.
 

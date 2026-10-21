@@ -1,7 +1,7 @@
 # Lantern
 
 `Lantern` holds the tours of one page, starts them and remembers which ones the user has seen. It
-draws nothing: `present` hands each new session to whoever owns the
+draws nothing: `present` hands each new run to whoever owns the
 [`jolly-lantern`](./element.md) element.
 
 ```ts
@@ -10,8 +10,8 @@ import { Lantern } from "@jolly-pixel/lantern";
 
 const lantern = new Lantern({
   storage: new LocalStorageAdapter(),
-  present: (session) => {
-    element.session = session;
+  present: (run) => {
+    element.run = run;
   }
 });
 ```
@@ -29,9 +29,9 @@ const release = context.lantern.register(basics);
 
 Where [`seen`](#lanternseen) reads and writes.
 
-### `present?: (session: LanternSession) => void`
+### `present?: (run: TourRun) => void`
 
-Called with every session `start` creates, before its first step shows.
+Called with every run `start` creates, before its first step shows.
 
 ### `page?: Document`
 
@@ -40,7 +40,7 @@ Defaults to `document`.
 
 ### `warn?: (message: string) => void`
 
-Receives the warnings of every session: a step hook that threw, a target that was not found.
+Receives the warnings of every run: a step hook that threw, a target that was not found.
 Defaults to `console.warn`.
 
 ### `autoStart?: boolean`
@@ -54,30 +54,30 @@ to `true`. `editor.host` sets it to `false` under browser automation.
 
 Makes the tour known to the console and the toolbar and emits `change`. Registering a second tour
 with the same id replaces the first. The returned function releases the registration; releasing
-the tour that is running skips it without recording it as seen.
+the tour that is running interrupts it, so it is not recorded as seen.
 
 ### `lantern.tour(id: string): Tour`
 
 The registered tour with this id. Throws `UnknownTourError` when none is registered.
 
-### `lantern.start(tour: Tour, options?: { at?: string }): LanternSession`
+### `lantern.start(tour: Tour, options?: { at?: string }): TourRun`
 
-Starts a tour at its first step or at the step named by `at`. A tour already running is skipped
-first, and is not recorded as seen. Throws `UnknownStepError` for an unknown `at`.
+Starts a tour at its first step or at the step named by `at`. A tour already running is
+interrupted first, and is not recorded as seen. Throws `UnknownStepError` for an unknown `at`.
 
 Finishing or skipping a tour records it in `seen` and emits `change`. Closing the page mid-tour
-records nothing. A tour finished through `session.startFollowUp()` is recorded, then its follow-up
+records nothing. A tour finished through `run.startFollowUp()` is recorded, then its follow-up
 starts.
 
-### `lantern.offer(tour: Tour): LanternSession | null`
+### `lantern.offer(tour: Tour): TourRun | null`
 
 Starts the tour for someone who has not seen it yet, such as on an editor's first load. Returns
 `null` and starts nothing when `autoStart` is off, another tour is running, the tour is not
 registered, or it is already seen.
 
-### `lantern.session: LanternSession | null`
+### `lantern.current: TourRun | null`
 
-The running session.
+The tour that is running, or `null`. It becomes `null` when that run ends, whatever the outcome.
 
 ### `lantern.size: number`
 
@@ -85,22 +85,20 @@ The number of registered tours. A `Lantern` is iterable over them, in registrati
 
 ### `lantern.dispose(): void`
 
-Skips the running session without recording it, forgets the registrations and removes every
+Interrupts the tour that is running, forgets the registrations and removes every
 listener.
 
 ### Events
 
 `lantern.on("change", listener)` and `lantern.off("change", listener)`. `change` fires on
-register, on release and at the end of a session.
+register, on release and at the end of a run.
 
 ## LanternSeen
 
 `lantern.seen` records, per tour id, the version the user last finished or skipped. It stores the
 version as a string under `jolly-pixel:lantern:<id>`, in the `StorageAdapter` it is given. It is
 not synced to the project, the asset server or the other peers in a room. The editor host backs
-it with the user's preferences.
-
-### `new LanternSeen(storage: StorageAdapter)`
+it with the user's preferences. Only `Lantern` creates it; the package exports its type.
 
 ### `seen.has(tour: Tour): boolean`
 
