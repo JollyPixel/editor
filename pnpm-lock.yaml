@@ -257,22 +257,22 @@ importers:
         specifier: 2.0.1
         version: 2.0.1
       rate-limiter-flexible:
-        specifier: 11.2.1
-        version: 11.2.1
+        specifier: 11.2.2
+        version: 11.2.2
       sharp:
         specifier: 0.35.5
         version: 0.35.5(@types/node@26.6.5)
       zod:
-        specifier: 4.6.5
-        version: 4.6.5
+        specifier: 4.6.7
+        version: 4.6.7
 
   packages/arbor: {}
 
   packages/asset:
     dependencies:
       zod:
-        specifier: 4.6.5
-        version: 4.6.5
+        specifier: 4.6.7
+        version: 4.6.7
 
   packages/asset-server:
     dependencies:
@@ -307,14 +307,14 @@ importers:
         specifier: 4.0.7
         version: 4.0.7
       ts-pattern:
-        specifier: 5.9.0
-        version: 5.9.0
+        specifier: 5.9.2
+        version: 5.9.2
       vite:
         specifier: ^8.0.0
         version: 8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(yaml@2.9.0)
       zod:
-        specifier: 4.6.5
-        version: 4.6.5
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@jolly-pixel/bench':
         specifier: workspace:*
@@ -363,8 +363,8 @@ importers:
         specifier: workspace:*
         version: link:../../pixel-draw-renderer
       zod:
-        specifier: 4.6.5
-        version: 4.6.5
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@jolly-pixel/asset-source':
         specifier: workspace:*
@@ -397,8 +397,8 @@ importers:
         specifier: 1.1.0
         version: 1.1.0
       zod:
-        specifier: 4.6.5
-        version: 4.6.5
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@jolly-pixel/asset':
         specifier: workspace:*
@@ -422,8 +422,8 @@ importers:
         specifier: workspace:*
         version: link:../../network
       zod:
-        specifier: 4.6.5
-        version: 4.6.5
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@jolly-pixel/asset-source':
         specifier: workspace:*
@@ -456,8 +456,8 @@ importers:
         specifier: 1.1.0
         version: 1.1.0
       zod:
-        specifier: 4.6.5
-        version: 4.6.5
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@jolly-pixel/asset':
         specifier: workspace:*
@@ -493,8 +493,8 @@ importers:
         specifier: workspace:*
         version: link:../../pixel-draw-renderer
       zod:
-        specifier: 4.6.5
-        version: 4.6.5
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@jolly-pixel/asset-source':
         specifier: workspace:*
@@ -604,8 +604,8 @@ importers:
         specifier: 0.186.1
         version: 0.186.1
       zod:
-        specifier: 4.6.5
-        version: 4.6.5
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       fake-indexeddb:
         specifier: 6.2.5
@@ -650,8 +650,8 @@ importers:
         specifier: 0.186.1
         version: 0.186.1
       zod:
-        specifier: 4.6.5
-        version: 4.6.5
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@jolly-pixel/asset':
         specifier: workspace:*
@@ -917,8 +917,8 @@ importers:
         specifier: 1.1.0
         version: 1.1.0
       zod:
-        specifier: 4.6.5
-        version: 4.6.5
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@jolly-pixel/e2e':
         specifier: workspace:*
@@ -973,11 +973,11 @@ importers:
         specifier: 10.4.0
         version: 10.4.0
       secure-json-parse:
-        specifier: 4.1.0
-        version: 4.1.0
+        specifier: 4.1.1
+        version: 4.1.1
       ts-pattern:
-        specifier: 5.9.0
-        version: 5.9.0
+        specifier: 5.9.2
+        version: 5.9.2
       vite:
         specifier: ^8.0.0
         version: 8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(yaml@2.9.0)
@@ -985,8 +985,8 @@ importers:
         specifier: 8.22.0
         version: 8.22.0
       zod:
-        specifier: 4.6.5
-        version: 4.6.5
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@jolly-pixel/bench':
         specifier: workspace:*
@@ -1040,8 +1040,8 @@ importers:
         specifier: workspace:*
         version: link:../ui
       '@pmndrs/detect-gpu':
-        specifier: 6.0.25
-        version: 6.0.25
+        specifier: 6.0.26
+        version: 6.0.26
       three:
         specifier: ^0.186.0
         version: 0.186.1
@@ -1116,14 +1116,14 @@ importers:
         specifier: 1.1.0
         version: 1.1.0
       fastify:
-        specifier: 5.12.5
-        version: 5.12.5
+        specifier: 5.12.7
+        version: 5.12.7
       lit:
         specifier: 3.3.3
         version: 3.3.3
       zod:
-        specifier: 4.6.5
-        version: 4.6.5
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@jolly-pixel/e2e':
         specifier: workspace:*
@@ -2377,8 +2377,8 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
-  '@pmndrs/detect-gpu@6.0.25':
-    resolution: {integrity: sha512-Vchtn1uR+calSXLbgvSn8oC5DAl3MViqsfzW9KwRIB9jJDMa7c4JzTMCzDUN/DgxbyRBO1ET7uu0rbIUEa36UQ==}
+  '@pmndrs/detect-gpu@6.0.26':
+    resolution: {integrity: sha512-bcCsgJkfe7HndAgEwd3oMQbx8Zpkndk4MQamTmEhbaboec+5WN+ZwuZ0nlyHprQCmXfMiDgHmWWvOia+efIsAw==}
 
   '@pnpm/deps.graph-sequencer@1100.0.1':
     resolution: {integrity: sha512-pOr5+q1fLYKwFN3LAJuGZEnfXDcQ73zqgDHMtGy+K+uIoUqyY+6MeDCWFwfu+4EFuq76I5EPFofoNAI+Bmmq4A==}
@@ -3686,8 +3686,8 @@ packages:
   fastify-plugin@6.0.0:
     resolution: {integrity: sha512-fZOty7z3O7vOliF6d8bHE3wiEh1KcNnKEQensSgTk9C1DvN6nRLS++XVd86v33Hw/8u9Un8A1zDrQ8ujcQDHEg==}
 
-  fastify@5.12.5:
-    resolution: {integrity: sha512-OB2k1dlxs5/NAABqeKV2FUHkSD2BbENsCak8yULVcymn3fHIPDVa9TI3SDnJSWYSllZmSYuZXy2gTnsT+Sut1A==}
+  fastify@5.12.7:
+    resolution: {integrity: sha512-v4pEPsTRPuqlDIYiQFB+BHjVN4SdHX9u0ABk0ZDUKbbdY1vsNryUd1j4Z+jQEZajvYIVk047Kimva9/AJ79GYw==}
 
   fastq@1.20.3:
     resolution: {integrity: sha512-XKv5nnLs6nLF71NgiKJLIZFLkPyIEuOselLG7ujZnGrRfQK8HpvY+WqKhAJUAdLomwVHErVS4LfxFlPq0/FTAw==}
@@ -4430,8 +4430,8 @@ packages:
   quick-format-unescaped@4.0.4:
     resolution: {integrity: sha512-tYC1Q1hgyRuHgloV/YXs2w15unPVh8qfu/qCTfhTYamaw7fyhumKa2yGpdSo87vY32rIclj+4fWYQXUMs9EHvg==}
 
-  rate-limiter-flexible@11.2.1:
-    resolution: {integrity: sha512-JAaz01HZ893zAw+Hx5MdM1z3lLAkyVvNpqR+GNp0k3kjuQB8gY91fXhf5C0osWs+A7iKgFv585qzwmjS3aBHlA==}
+  rate-limiter-flexible@11.2.2:
+    resolution: {integrity: sha512-n6M+msT0OWdril3PgkAjatDME2BEDhf8nBx4lJj9pMFQVcN6ldXtZvTX3nZdFqqX5utQ7kCUzq7LfyfmA2wglw==}
 
   readdirp@5.0.0:
     resolution: {integrity: sha512-9u/XQ1pvrQtYyMpZe7DXKv2p5CNvyVwzUB6uhLAnQwHMSgKMBR62lc7AHljaeteeHXn11XTAaLLUVZYVZyuRBQ==}
@@ -4516,8 +4516,8 @@ packages:
   search-insights@2.17.3:
     resolution: {integrity: sha512-RQPdCYTa8A68uM2jwxoY842xDhvx3E5LFL1LxvxCNMev4o5mLuokczhzjAgGwUZBAmOKZknArSxLKmXtIi2AxQ==}
 
-  secure-json-parse@4.1.0:
-    resolution: {integrity: sha512-l4KnYfEyqYJxDwlNVyRfO2E4NTHfMKAWdUuA8J0yve2Dz/E/PdBepY03RvyJpssIpRFwJoCD55wA+mEDs6ByWA==}
+  secure-json-parse@4.1.1:
+    resolution: {integrity: sha512-lnd81MQEZKjhW/Gd2TQqdd4XP6QYNdDW/EP+I7nTrFHP9y2LmaGPIHk9xsnzcOiEr1c39c/e84xFgGviQKBTRw==}
 
   semver@7.8.5:
     resolution: {integrity: sha512-Y7/KDsb8LjooZpwaqGyulO6DQlksgCncchHGk+sZIY4SBvUocMBEFH5Ur1fI4dV+Jvl0w6cjvucaIi40puRioA==}
@@ -4723,8 +4723,8 @@ packages:
     resolution: {integrity: sha512-JfJeIHke7y2egdGGgRAvpCwYFUsHlM2gPcrVOxFkznt/4uzQ7HFmvE63iFHVLBJNDuyDOQgijDK/tXH/f6Msjg==}
     engines: {node: '>=6.10'}
 
-  ts-pattern@5.9.0:
-    resolution: {integrity: sha512-6s5V71mX8qBUmlgbrfL33xDUwO0fq48rxAu2LBE11WBeGdpCPOsXksQbZJHvHwhrd3QjUusd3mAOM5Gg0mFBLg==}
+  ts-pattern@5.9.2:
+    resolution: {integrity: sha512-qAf+7M7Jjk7uebZeIo9uEzyintfuRtgHdzM9dqxRKcMi2dt76Ec+FH2wW3bnU9TuGLkZIJLoLs7cCQnU7Tu8ig==}
 
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
@@ -5017,8 +5017,8 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
-  zod@4.6.5:
-    resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
+  zod@4.6.7:
+    resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
 
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
@@ -5991,7 +5991,7 @@ snapshots:
     dependencies:
       playwright: 1.64.0
 
-  '@pmndrs/detect-gpu@6.0.25': {}
+  '@pmndrs/detect-gpu@6.0.26': {}
 
   '@pnpm/deps.graph-sequencer@1100.0.1': {}
 
@@ -7245,7 +7245,7 @@ snapshots:
 
   fastify-plugin@6.0.0: {}
 
-  fastify@5.12.5:
+  fastify@5.12.7:
     dependencies:
       '@fastify/ajv-compiler': 4.0.6
       '@fastify/error': 4.2.0
@@ -7259,7 +7259,7 @@ snapshots:
       pino: 10.4.0
       process-warning: 5.1.0
       rfdc: 1.4.1
-      secure-json-parse: 4.1.0
+      secure-json-parse: 4.1.1
       semver: 7.8.5
       toad-cache: 3.7.4
 
@@ -7968,7 +7968,7 @@ snapshots:
 
   quick-format-unescaped@4.0.4: {}
 
-  rate-limiter-flexible@11.2.1: {}
+  rate-limiter-flexible@11.2.2: {}
 
   readdirp@5.0.0: {}
 
@@ -8080,7 +8080,7 @@ snapshots:
 
   search-insights@2.17.3: {}
 
-  secure-json-parse@4.1.0: {}
+  secure-json-parse@4.1.1: {}
 
   semver@7.8.5: {}
 
@@ -8380,7 +8380,7 @@ snapshots:
 
   ts-dedent@2.3.0: {}
 
-  ts-pattern@5.9.0: {}
+  ts-pattern@5.9.2: {}
 
   tslib@2.8.1: {}
 
@@ -8636,6 +8636,6 @@ snapshots:
 
   yocto-queue@0.1.0: {}
 
-  zod@4.6.5: {}
+  zod@4.6.7: {}
 
   zwitch@2.0.4: {}
