@@ -10,24 +10,9 @@
 
 Workspaces are grouped by sub-domain. Each arrow shows what one sub-domain provides to another.
 
-```mermaid
-flowchart TB
-    Collaboration["Collaboration<br/>network, accounts, history"]
-    Authoring["Authoring<br/>studio, editors, formats"]
-    Assets["Asset Management<br/>event-store, asset-server"]
-    Build["Build<br/>planned"]
-    Runtime["Runtime<br/>engine, renderers"]
-
-    Collaboration -- "presence, access" --> Authoring
-    Collaboration -- "real time" --> Assets
-    Assets -- "asset rooms, catalog" --> Authoring
-    Authoring -- "asset kinds" --> Assets
-    Assets -- "assets" --> Build
-    Build -- "catalog manifest" --> Runtime
-    Runtime -- "viewport" --> Authoring
-```
-
-Packages marked 🚧 are work in progress.
+<p align="center">
+  <img src="./docs/context_map.png" alt="JollyPixel">
+</p>
 
 ### 🤝 Collaboration
 
