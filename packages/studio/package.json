@@ -62,8 +62,8 @@
     "@jolly-pixel/ui": "workspace:*",
     "@jolly-pixel/voxel.renderer": "workspace:*",
     "@openally/servo": "1.1.0",
-    "fastify": "5.12.5",
+    "fastify": "5.12.7",
     "lit": "3.3.3",
-    "zod": "4.6.5"
+    "zod": "4.6.7"
   }
 }

@@ -41,6 +41,6 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "zod": "4.6.5"
+    "zod": "4.6.7"
   }
 }
