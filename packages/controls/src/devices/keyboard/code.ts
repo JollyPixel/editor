@@ -35,6 +35,17 @@ export const KEY_CODES = Object.freeze([
 
 export type KeyCode = typeof KEY_CODES[number];
 
+export type ModifierKey = "Shift" | "Control" | "Alt" | "Meta";
+
+export const MODIFIER_KEY_CODES: Readonly<
+  Record<ModifierKey, readonly KeyCode[]>
+> = Object.freeze({
+  Shift: Object.freeze(["ShiftLeft", "ShiftRight"] as const),
+  Control: Object.freeze(["ControlLeft", "ControlRight"] as const),
+  Alt: Object.freeze(["AltLeft", "AltRight"] as const),
+  Meta: Object.freeze(["MetaLeft", "MetaRight"] as const)
+});
+
 export type ExtendedKeyCode =
   | KeyCode
   | Alphabet

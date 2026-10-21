@@ -19,7 +19,10 @@ import {
 // Import Internal Dependencies
 import type { TargetFrame } from "../tour/TargetSeek.ts";
 import type { TourRun } from "../tour/TourRun.ts";
-import { parseBody } from "../tour/parseBody.ts";
+import {
+  parseBody,
+  type BodySpan
+} from "../tour/parseBody.ts";
 import type { TourStep } from "../tour/TourStep.ts";
 import { lanternStyles } from "./LanternElement.styles.ts";
 import {
@@ -93,6 +96,19 @@ export class LanternElement extends LitElement {
     `;
   }
 
+  #renderSpan(
+    span: BodySpan
+  ): TemplateResult | string {
+    switch (span.kind) {
+      case "kbd":
+        return html`<kbd>${span.text}</kbd>`;
+      case "unbound":
+        return html`<kbd class="unbound">${span.text}</kbd>`;
+      default:
+        return span.text;
+    }
+  }
+
   #renderStep(
     run: TourRun,
     step: TourStep
@@ -125,8 +141,8 @@ export class LanternElement extends LitElement {
         `}
         <h2 id="title">${step.title}</h2>
         <div id="body" class="body">
-          ${parseBody(step.body).map((paragraph) => html`<p>${paragraph.map(
-            (span) => (span.kind === "kbd" ? html`<kbd>${span.text}</kbd>` : span.text)
+          ${parseBody(step.body, run.keys).map((paragraph) => html`<p>${paragraph.map(
+            (span) => this.#renderSpan(span)
           )}</p>`)}
         </div>
         <footer>

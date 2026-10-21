@@ -22,7 +22,8 @@ export const basics = new Tour({
       target: ["#game-container"],
       side: "left",
       title: "Moving around",
-      body: "`W` `A` `S` `D` fly, `Space` and `Shift` go up and down, and the wheel changes the speed.\n\n" +
+      body: "`{camera.forward}` `{camera.left}` `{camera.back}` `{camera.right}` fly, " +
+        "`{camera.up}` and `{camera.down}` go up and down, and the wheel changes the speed.\n\n" +
         "Drag with the middle button, or hold `Alt` and drag, to look around. " +
         "`Alt` + click orbits around a point and `Esc` flies free again."
     },
@@ -33,8 +34,10 @@ export const basics = new Tour({
       title: "Block library",
       body: "Pick the block you want to place here, " +
         "or right-click it for quick actions. " +
-        "Rotation and Flip Y set how it is oriented: `Q` and `E` turn it, " +
-        "`V` flips it and `T` goes back to automatic rotation.",
+        "Rotation and Flip Y set how it is oriented: " +
+        "`{map.orient.rotateCounterClockwise}` and `{map.orient.rotateClockwise}` turn it, " +
+        "`{map.orient.flipVertical}` flips it and `{map.orient.autoRotation}` " +
+        "goes back to automatic rotation.",
       enter: showPane("blocks")
     },
     {
@@ -50,17 +53,18 @@ export const basics = new Tour({
       target: ["voxel-edit-toolbar", "voxel-brush-controls"],
       side: "above",
       title: "Brush",
-      body: "`[` and `]` resize the brush. " +
-        "`R` switches between Build and Replace, `C` between a square and a circle, " +
-        "and `G` previews the block before you place it."
+      body: "`{map.brush.shrink}` and `{map.brush.grow}` resize the brush. " +
+        "`{map.brush.mode}` switches between Build and Replace, " +
+        "`{map.brush.pattern}` between a square and a circle, " +
+        "and `{map.brush.ghost}` previews the block before you place it."
     },
     {
       id: "tools",
       target: ["voxel-edit-toolbar"],
       side: "above",
       title: "Tools",
-      body: "Switch between the brush (`B`) and selection (`M`), " +
-        "and press `F` to frame the selected layer. " +
+      body: "Switch between the brush (`{map.tool.brush}`) and selection (`{map.tool.select}`), " +
+        "and press `{map.view.frame}` to frame the selected layer. " +
         "Selection grabs a box or every connected block, ready to copy and paste.\n\n" +
         "Undo and redo live here too."
     },

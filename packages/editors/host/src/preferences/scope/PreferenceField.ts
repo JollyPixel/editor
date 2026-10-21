@@ -13,6 +13,10 @@ const kChordSchema = z.string().check(
 export const CHORDS_SCHEMA = z.readonly(
   z.array(kChordSchema).check(z.maxLength(MAX_CHORDS))
 );
+const kKeySchema = z.string().check(z.regex(/^[A-Z][A-Za-z0-9]{0,31}$/));
+export const KEYS_SCHEMA = z.readonly(
+  z.array(kKeySchema).check(z.maxLength(MAX_CHORDS))
+);
 const kColorSchema = z.nullable(
   z.string().check(z.regex(/^#[\da-f]{6}$/i), z.toLowerCase())
 );
@@ -52,6 +56,11 @@ export const preferenceFieldSchema = z.discriminatedUnion("type", [
     ...kFieldBaseShape,
     type: z.literal("chord"),
     default: CHORDS_SCHEMA
+  }),
+  z.object({
+    ...kFieldBaseShape,
+    type: z.literal("key"),
+    default: KEYS_SCHEMA
   }),
   z.object({
     ...kFieldBaseShape,
@@ -112,6 +121,15 @@ export interface ChordPreference extends PreferenceFieldBase {
   default: readonly string[];
 }
 
+export interface KeyPreference extends PreferenceFieldBase {
+  type: "key";
+  /**
+   * Codes of the keys held for the action, as `KeyboardEvent.code` names
+   * them, with no modifier. An empty list leaves the action unbound.
+   */
+  default: readonly string[];
+}
+
 export interface ColorPreference extends PreferenceFieldBase {
   type: "color";
   /**
@@ -134,18 +152,21 @@ export type PreferenceField =
   | EnumPreference
   | RangePreference
   | ChordPreference
+  | KeyPreference
   | ColorPreference
   | EntriesPreference;
 
 export type PreferenceFieldType = PreferenceField["type"];
 
-export type FormPreference = Exclude<PreferenceField, ChordPreference>;
+export type BindingPreference = ChordPreference | KeyPreference;
+
+export type FormPreference = Exclude<PreferenceField, BindingPreference>;
 
 export type PreferenceValue<TField extends PreferenceField> =
   TField extends BooleanPreference ? boolean :
     TField extends EnumPreference<infer TValue> ? TValue :
       TField extends RangePreference ? number :
-        TField extends ChordPreference ? readonly string[] :
+        TField extends BindingPreference ? readonly string[] :
           TField extends ColorPreference ? string | null :
             Readonly<Record<string, string>>;
 
@@ -161,6 +182,8 @@ export function preferenceValueSchema(
       return z.number().check(z.gte(field.min), z.lte(field.max));
     case "chord":
       return CHORDS_SCHEMA;
+    case "key":
+      return KEYS_SCHEMA;
     case "color":
       return kColorSchema;
     case "entries":

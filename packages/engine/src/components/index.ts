@@ -1,6 +1,7 @@
 export * from "./camera/Camera.ts";
 export * from "./camera/Camera3DControls.ts";
 export * from "./camera/orbit-fly/OrbitFlyCamera.ts";
+export * from "./camera/orbit-fly/OrbitFlyKeys.ts";
 export * from "./renderers/index.ts";
 
 export * from "./script/Behavior.ts";

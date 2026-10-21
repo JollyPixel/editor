@@ -61,6 +61,10 @@ step starts entering.
 
 ### `run.tour: Tour`
 
+### `run.keys: TourKeys`
+
+The [`lantern.keys`](Lantern.md#lanternkeys-tourkeys) of the lantern that started the run.
+
 ### `run.offeredFollowUp: Tour | null`
 
 `tour.followUp` on a last step that waits for no action, `null` otherwise. The overlay shows its

@@ -7,7 +7,7 @@ import {
   preferenceFieldSchema,
   preferenceValueSchema,
   samePreferenceValue,
-  type ChordPreference,
+  type BindingPreference,
   type FormPreference,
   type PreferenceField,
   type PreferenceValue
@@ -78,7 +78,7 @@ export class PreferenceScope<
   readonly label: string;
   readonly fields: TFields;
   readonly form: readonly PreferenceFieldGroup<FormPreference>[];
-  readonly keyBindings: readonly PreferenceFieldGroup<ChordPreference>[];
+  readonly keyBindings: readonly PreferenceFieldGroup<BindingPreference>[];
 
   #schemas = new Map<string, z.ZodMiniType<unknown>>();
 
@@ -94,7 +94,7 @@ export class PreferenceScope<
     this.label = definition.label;
     this.fields = definition.fields;
     const form: Array<[string, FormPreference]> = [];
-    const keyBindings: Array<[string, ChordPreference]> = [];
+    const keyBindings: Array<[string, BindingPreference]> = [];
     for (const [key, field] of Object.entries(definition.fields)) {
       if (field.type === "range" && field.min > field.max) {
         throw new InvalidPreferencesError(name, `"${key}" has min above max`);
@@ -105,7 +105,7 @@ export class PreferenceScope<
         throw new InvalidPreferencesError(name, `"${key}" refuses its default`);
       }
       this.#schemas.set(key, schema);
-      if (field.type === "chord") {
+      if (field.type === "chord" || field.type === "key") {
         keyBindings.push([key, field]);
       }
       else {

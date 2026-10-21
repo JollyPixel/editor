@@ -58,6 +58,7 @@
     "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/asset-source": "workspace:*",
     "@jolly-pixel/console": "workspace:*",
+    "@jolly-pixel/controls": "workspace:*",
     "@jolly-pixel/engine": "workspace:*",
     "@jolly-pixel/event-store": "workspace:*",
     "@jolly-pixel/lantern": "workspace:*",

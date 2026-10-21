@@ -104,7 +104,9 @@ export function createHarness(
       input: {
         keyboard: {
           isDown: (code: string) => held.has(code),
-          wasJustPressed: (code: string) => justPressed.has(code)
+          wasDownLastUpdate: (code: string) => held.has(code),
+          wasJustPressed: (code: string) => justPressed.has(code),
+          wasJustReleased: () => false
         },
         mouse: {
           isDown: (button: string) => {

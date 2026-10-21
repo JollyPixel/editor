@@ -88,6 +88,66 @@ export const CAMERA_PREFERENCES = definePreferences({
       max: 4,
       step: 0.25,
       default: 1
+    },
+    forward: {
+      type: "key",
+      label: "Forward",
+      group: "Fly",
+      default: ["KeyW", "ArrowUp"]
+    },
+    back: {
+      type: "key",
+      label: "Back",
+      group: "Fly",
+      default: ["KeyS", "ArrowDown"]
+    },
+    left: {
+      type: "key",
+      label: "Left",
+      group: "Fly",
+      default: ["KeyA", "ArrowLeft"]
+    },
+    right: {
+      type: "key",
+      label: "Right",
+      group: "Fly",
+      default: ["KeyD", "ArrowRight"]
+    },
+    up: {
+      type: "key",
+      label: "Up",
+      group: "Fly",
+      default: ["Space"]
+    },
+    down: {
+      type: "key",
+      label: "Down",
+      group: "Fly",
+      default: ["ShiftLeft", "ShiftRight"]
+    },
+    lookUp: {
+      type: "key",
+      label: "Look up",
+      group: "Look",
+      default: ["KeyI"]
+    },
+    lookDown: {
+      type: "key",
+      label: "Look down",
+      group: "Look",
+      default: ["KeyK"]
+    },
+    lookLeft: {
+      type: "key",
+      label: "Look left",
+      group: "Look",
+      default: ["KeyJ"]
+    },
+    lookRight: {
+      type: "key",
+      label: "Look right",
+      group: "Look",
+      default: ["KeyL"]
     }
   }
 });

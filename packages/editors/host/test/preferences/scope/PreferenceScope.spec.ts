@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
+  CAMERA_PREFERENCES,
   ChordConflictError,
   InvalidPreferencesError,
   PreferenceScope,
@@ -160,6 +161,22 @@ describe("PreferenceScope", () => {
     );
     assert.throws(
       () => kKeys.update({ undo: ["Mod+u"] }, { copy: ["Mod+z"], undo: ["Mod+z"] }),
+      ChordConflictError
+    );
+  });
+
+  test("lists held-key fields with the bindings, refusing chords and shared keys", () => {
+    assert.deepEqual(
+      CAMERA_PREFERENCES.keyBindings.map((group) => group.label),
+      ["Fly", "Look"]
+    );
+    assert.throws(
+      () => CAMERA_PREFERENCES.update({}, { forward: ["Mod+w"] }),
+      (error: unknown) => error instanceof InvalidPreferencesError &&
+        !(error instanceof ChordConflictError)
+    );
+    assert.throws(
+      () => CAMERA_PREFERENCES.update({}, { forward: ["Space"] }),
       ChordConflictError
     );
   });

@@ -1,10 +1,10 @@
 // Import Third-party Dependencies
 import {
-  KEY_CODES,
   KeyChord,
   isApplePlatform,
+  isKeyCode,
   type KeyChordEvent,
-  type KeyCode
+  type KeyboardLayout
 } from "@jolly-pixel/controls";
 
 // CONSTANTS
@@ -17,6 +17,11 @@ export interface BoundChordOptions {
    * @default isApplePlatform()
    */
   apple?: boolean;
+  /**
+   * Names a key position by the character the user's keyboard prints.
+   * @default null
+   */
+  layout?: KeyboardLayout | null;
 }
 
 export class BoundChord {
@@ -53,6 +58,7 @@ export class BoundChord {
     }
   }
 
+  readonly chord: KeyChord;
   readonly value: string;
   readonly label: string;
 
@@ -60,8 +66,12 @@ export class BoundChord {
     chord: KeyChord,
     options: BoundChordOptions = {}
   ) {
+    this.chord = chord;
     this.value = chord.toString();
-    this.label = chord.format({ apple: options.apple });
+    this.label = chord.format({
+      apple: options.apple,
+      layout: options.layout
+    });
   }
 }
 
@@ -74,10 +84,4 @@ function typedLetter(
   }
 
   return kLetterCode.exec(event.code)?.[1].toLowerCase() ?? null;
-}
-
-function isKeyCode(
-  code: string
-): code is KeyCode {
-  return KEY_CODES.some((known) => known === code);
 }

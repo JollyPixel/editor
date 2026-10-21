@@ -73,6 +73,8 @@ describe("Controls.KeyChord", () => {
       ["BracketLeft", "[", "["],
       ["Escape", "Esc", "Esc"],
       ["NumpadEnter", "Enter", "Enter"],
+      ["ShiftRight", "Shift", "⇧"],
+      ["ControlLeft", "Ctrl", "⌃"],
       ["F2", "F2", "F2"]
     ] as const;
 

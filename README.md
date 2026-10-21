@@ -42,22 +42,19 @@ Packages marked 🚧 are work in progress.
 - [@jolly-pixel/studio](./packages/studio) - One project, its assets and one editor per tab
 - [@jolly-pixel/editor.host](./packages/editors/host) - Shared launch, session and runtime boot for the editors
 
-#### Editors
+#### Editors and formats
 
-- [@jolly-pixel/editor.voxel-map](./packages/editors/voxel-map) - Collaborative voxel-map editor
-- [@jolly-pixel/editor.voxel-model](./packages/editors/voxel-model) - Low-poly and voxel 3D model editor
-- [@jolly-pixel/editor.pixel-art](./packages/editors/pixel-art) - Pixel-art texture editor built on `pixel-draw.renderer`
-- [@jolly-pixel/editor.terrain](./packages/editors/terrain) - Collaborative heightfield terrain editor 🚧
+Each editor is listed with the formats it owns: the asset kinds it reads and writes, and that `asset-server` stores. Editors also read the formats their documents link, such as the `.pixelart` textures used by voxel maps and models.
 
-#### Formats
-
-Asset kinds that the editors read and write, and that `asset-server` stores.
-
-- [@jolly-pixel/asset.pixel-art](./packages/assets/pixel-art) - `.pixelart` textures
-- [@jolly-pixel/asset.voxel-map](./packages/assets/voxel-map) - `.voxelmap.json` worlds and the `.blockset.json` blocksets they link
-- [@jolly-pixel/asset.voxel-model](./packages/assets/voxel-model) - `.voxelmodel.json` models
-- [@jolly-pixel/asset.voxel-animation](./packages/assets/voxel-animation) - `.voxelanim.json` animation sets
-- [@jolly-pixel/asset.terrain](./packages/assets/terrain) - `.terrain.json` heightfield terrains 🚧
+- [@jolly-pixel/editor.voxel-map](./packages/editors/voxel-map) - Voxel-terrain editor
+  - [@jolly-pixel/asset.voxel-map](./packages/assets/voxel-map) - `.voxelmap.json` worlds and the `.blockset.json` blocksets
+- [@jolly-pixel/editor.voxel-model](./packages/editors/voxel-model) - Low-polygon 3D model editor
+  - [@jolly-pixel/asset.voxel-model](./packages/assets/voxel-model) - `.voxelmodel.json` models
+  - [@jolly-pixel/asset.voxel-animation](./packages/assets/voxel-animation) - `.voxelanim.json` animation sets
+- [@jolly-pixel/editor.pixel-art](./packages/editors/pixel-art) - Pixel-art texture editor (built on `pixel-draw.renderer`)
+  - [@jolly-pixel/asset.pixel-art](./packages/assets/pixel-art) - `.pixelart` textures
+- [@jolly-pixel/editor.terrain](./packages/editors/terrain) - Heightfield terrain editor 🚧
+  - [@jolly-pixel/asset.terrain](./packages/assets/terrain) - `.terrain.json` heightfield terrains 🚧
 
 #### UI
 

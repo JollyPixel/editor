@@ -13,6 +13,7 @@ import { CameraComponent, type CameraOptions } from "../Camera.ts";
 import { OrbitFocus } from "./OrbitFocus.ts";
 import { ElasticFocus } from "./ElasticFocus.ts";
 import { SmoothedVelocity } from "./SmoothedVelocity.ts";
+import { OrbitFlyKeys } from "./OrbitFlyKeys.ts";
 import {
   type CameraFocus,
   type CameraFocusInput,
@@ -24,6 +25,13 @@ export const TOUCHPAD_SWIPE_MODES = ["look", "pan"] as const;
 const kPanPerNotch = 0.05;
 
 export type TouchpadSwipeMode = typeof TOUCHPAD_SWIPE_MODES[number];
+
+type OrbitFlyAxis =
+  | "moveRight"
+  | "moveUp"
+  | "moveForward"
+  | "lookRight"
+  | "lookUp";
 
 export type OrbitFlyCameraFocusMode = "none" | "lock" | "elastic";
 
@@ -85,10 +93,15 @@ export interface OrbitFlyCameraOptions extends CameraOptions {
    */
   invertY?: boolean;
   /**
-   * Radians per second turned while I/J/K/L is held.
+   * Radians per second turned while a look key is held.
    * @default Math.PI / 2
    */
   keyLookSpeed?: number;
+  /**
+   * The keys held to fly and look around.
+   * @default OrbitFlyKeys.default
+   */
+  keys?: OrbitFlyKeys;
   maxPitch?: number;
   /**
    * "elastic" mode's trail distance changed per wheel notch, in world units.
@@ -164,6 +177,8 @@ export class OrbitFlyCamera extends CameraComponent {
   #maxPitch: number;
   #speedAdjustStep: number;
   #focus: CameraFocus;
+  #keys: OrbitFlyKeys;
+  #axes: AxisMap<OrbitFlyAxis>;
 
   #forward = new THREE.Vector3();
   #right = new THREE.Vector3();
@@ -177,23 +192,9 @@ export class OrbitFlyCamera extends CameraComponent {
 
   #descend: InputCondition = {
     evaluate: (input) => !this.#descendBlocked &&
-      InputCombination.Shift.evaluate(input),
+      this.#keys.held("down").evaluate(input),
     reset: () => void 0
   };
-
-  #axes = new AxisMap({
-    moveRight: Axis.buttons(
-      InputCombination.MoveRight,
-      InputCombination.MoveLeft
-    ),
-    moveUp: Axis.buttons("Space", this.#descend),
-    moveForward: Axis.buttons(
-      InputCombination.MoveUp,
-      InputCombination.MoveDown
-    ),
-    lookRight: Axis.buttons("KeyL", "KeyJ"),
-    lookUp: Axis.buttons("KeyI", "KeyK")
-  });
 
   constructor(
     actor: Actor,
@@ -228,7 +229,8 @@ export class OrbitFlyCamera extends CameraComponent {
       pivotZoomStep = 0.1,
       pivotNudgeStep = 1,
       initialTrailDistance = 0,
-      showPivotMarker = true
+      showPivotMarker = true,
+      keys = OrbitFlyKeys.default
     } = options;
 
     this.#yaw = yaw;
@@ -248,6 +250,8 @@ export class OrbitFlyCamera extends CameraComponent {
     this.#keyLookSpeed = keyLookSpeed;
     this.#maxPitch = maxPitch;
     this.#speedAdjustStep = speedAdjustStep;
+    this.#keys = keys;
+    this.#axes = this.#bindAxes();
 
     const initialPosition = options.position ?? { x: 16, y: 20, z: 40 };
     const sceneProvider = () => this.actor.world.sceneManager.getSource();
@@ -282,6 +286,18 @@ export class OrbitFlyCamera extends CameraComponent {
 
     this.#applyOrientation();
     this.actor.transform.setLocalPosition(initialPosition);
+  }
+
+  #bindAxes(): AxisMap<OrbitFlyAxis> {
+    const keys = this.#keys;
+
+    return new AxisMap({
+      moveRight: Axis.buttons(keys.held("right"), keys.held("left")),
+      moveUp: Axis.buttons(keys.held("up"), this.#descend),
+      moveForward: Axis.buttons(keys.held("forward"), keys.held("back")),
+      lookRight: Axis.buttons(keys.held("lookRight"), keys.held("lookLeft")),
+      lookUp: Axis.buttons(keys.held("lookUp"), keys.held("lookDown"))
+    });
   }
 
   #applyOrientation() {
@@ -398,6 +414,17 @@ export class OrbitFlyCamera extends CameraComponent {
     this.#invertY = invertY;
   }
 
+  get keys(): OrbitFlyKeys {
+    return this.#keys;
+  }
+
+  set keys(
+    keys: OrbitFlyKeys
+  ) {
+    this.#keys = keys;
+    this.#axes = this.#bindAxes();
+  }
+
   get moving(): boolean {
     return !this.#velocity.resting || !this.#focus.settled;
   }
@@ -470,7 +497,7 @@ export class OrbitFlyCamera extends CameraComponent {
   update() {
     const { input, time } = this.actor.world;
     const deltaTime = time.unscaledDelta;
-    const isDescending = InputCombination.Shift.evaluate(input);
+    const isDescending = this.#keys.held("down").evaluate(input);
 
     if (!this.enabled) {
       this.#descendBlocked = isDescending;
@@ -502,7 +529,7 @@ export class OrbitFlyCamera extends CameraComponent {
 
     this.#move.set(0, 0, 0);
     if (this.#focus.isLocked) {
-      this.#focus.nudge(input, this.#forward, this.#right);
+      this.#focus.nudge(input, this.#keys, this.#forward, this.#right);
     }
     else {
       this.#move.addScaledVector(

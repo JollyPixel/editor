@@ -59,6 +59,15 @@ Stable name, used by `start(tour, { at })` and in warnings.
 The card heading and text. The body is plain text: a blank line starts a paragraph, and a
 `` `backtick` `` span renders as `<kbd>`.
 
+A `` `{namespace.action}` `` span names a binding instead of a key. The card shows the first key
+the user has bound to it, read from [`lantern.keys`](Lantern.md#lanternkeys-tourkeys) each time the
+step renders. An action with no key shows "unbound", and a namespace nobody provides keeps the span
+as written.
+
+```ts
+body: "`{camera.forward}` `{camera.left}` `{camera.back}` `{camera.right}` fly."
+```
+
 ### `image?: { src, alt, width?, height? }`
 
 A picture above the text. `src` is a URL, so a Vite asset import works. A looping WebP or GIF covers

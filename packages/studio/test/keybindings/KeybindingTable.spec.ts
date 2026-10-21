@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
+  CAMERA_PREFERENCES,
   Preferences,
   RUNTIME_PREFERENCES,
   defineKeyBindings
@@ -71,5 +72,52 @@ describe("KeybindingTable", () => {
       ["edit.redo"]
     );
     assert.deepEqual(table.sections("nothing like it"), []);
+  });
+
+  test("labels held keys as the keyboard prints them, a two-sided modifier once", () => {
+    const layout = { layout: new Map([["KeyW", "z"]]) };
+    const [section] = new KeybindingTable(
+      [CAMERA_PREFERENCES],
+      new Preferences(),
+      { ...kPlatform, layout }
+    ).sections();
+    const rows = section.groups.flatMap((group) => group.rows);
+
+    assert.deepEqual(
+      rows
+        .filter((row) => row.action === "forward" || row.action === "down")
+        .map((row) => [row.kind, row.chords.map((chord) => chord.label)]),
+      [["key", ["Z", "↑"]], ["key", ["Shift"]]]
+    );
+  });
+
+  test("names the unmodified shortcuts of other scopes a held key also triggers", () => {
+    const preferences = new Preferences({
+      overrides: [["camera", {
+        forward: ["KeyN"],
+        left: ["KeyB"],
+        back: ["KeyZ"]
+      }]]
+    });
+    const layout = {
+      layout: new Map([["KeyN", "b"], ["KeyB", "n"]])
+    };
+    const [section] = new KeybindingTable(
+      [CAMERA_PREFERENCES],
+      preferences,
+      {
+        ...kPlatform,
+        layout,
+        shortcutScopes: [CAMERA_PREFERENCES, kMap]
+      }
+    ).sections();
+    const rows = section.groups.flatMap((group) => group.rows);
+
+    assert.deepEqual(
+      rows
+        .filter((row) => row.clashes.length > 0)
+        .map((row) => [row.action, row.clashes]),
+      [["forward", ["\"Brush tool\" (Voxel map)"]]]
+    );
   });
 });

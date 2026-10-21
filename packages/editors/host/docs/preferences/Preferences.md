@@ -8,8 +8,8 @@ on the studio server.
 `@jolly-pixel/editor.host/preferences` holds the declarations, the
 `Preferences` holder, `followKeyBindings` and the host's own scopes. It
 imports neither the DOM nor Three.js, so a Node.js server can load it.
-`LocalPreferences`, `PreferenceStorage` and `followCameraPreferences` come
-from the package root.
+`LocalPreferences`, `PreferenceStorage`, `followCameraPreferences` and
+`provideTourKeys` come from the package root.
 
 ## `definePreferences`
 
@@ -61,6 +61,10 @@ type PreferenceField =
     default: readonly string[]; // KeyChord strings, [] leaves it unbound
   }
   | {
+    type: "key";
+    default: readonly string[]; // KeyboardEvent.code values, [] leaves it unbound
+  }
+  | {
     type: "color";
     default: string | null; // "#rrggbb", stored lowercase
   }
@@ -73,6 +77,9 @@ type PreferenceField =
 - A chord field holds at most `MAX_CHORDS` (4) chords. Its strings are only
   checked for length; the editor's `KeyBindingMap` drops what it cannot read.
   Within a scope, a chord belongs to one field at most.
+- A key field lists the keys held for an action, such as a camera move, by
+  position and with no modifier: `"KeyW"`, `"ShiftLeft"`. It holds at most
+  `MAX_CHORDS` codes, and shares the one-field rule with chord fields.
 - An entries field is a string map that a store written for a `StorageAdapter`
   keeps through [`PreferenceStorage`](#preferencestorage). Its JSON is at most
   `MAX_ENTRIES_LENGTH` (32 KiB). Settings shows no form for it, only a Clear
@@ -80,7 +87,7 @@ type PreferenceField =
 
 `definePreferences` throws `InvalidPreferencesError` when the name is not
 kebab-case, a range has `min` above `max`, or a field refuses its own default,
-and its `ChordConflictError` subclass when two chord fields share a default.
+and its `ChordConflictError` subclass when two binding fields share a default.
 An enum default outside its options is a type error.
 
 ## `defineKeyBindings`
@@ -114,7 +121,7 @@ class PreferenceScope<TFields> {
   readonly label: string;
   readonly fields: TFields;
   readonly form: readonly PreferenceFieldGroup<FormPreference>[];
-  readonly keyBindings: readonly PreferenceFieldGroup<ChordPreference>[];
+  readonly keyBindings: readonly PreferenceFieldGroup<BindingPreference>[];
   readonly defaults: PreferenceValues<TFields>;
 
   has(key: string): boolean;
@@ -132,9 +139,10 @@ interface PreferenceFieldGroup<TField> {
 }
 ```
 
-- `form` holds every field but the chord ones and `keyBindings` the chord
-  ones, each split by `group` in declaration order. `FormPreference` is any
-  field type but `chord`.
+- `form` holds every field but the chord and key ones, and `keyBindings` the
+  chord and key ones, each split by `group` in declaration order.
+  `BindingPreference` is a chord or a key field, and `FormPreference` any
+  other field.
 
 - `resolve` returns every field: the valid overrides over the defaults,
   frozen. `PreferenceValues` types each field: `boolean`, the enum's option
@@ -147,8 +155,8 @@ interface PreferenceFieldGroup<TField> {
   `ChordConflictError` when the result binds one chord to two fields; its
   `chord`, `key` and `owner` name the chord, a field the patch changed and the
   field that already held it.
-- `bindings` returns the chords of every chord field, the defaults where an
-  override is missing or invalid.
+- `bindings` returns the chords or codes of every binding field, the defaults
+  where an override is missing or invalid.
 - `toJSON` is the descriptor `PreferenceScope.from` reads back.
 
 ## `Preferences`
@@ -238,8 +246,10 @@ written back without them.
   visibility of the [runtime widgets](../runtime/EditorRuntime.md#runtime-widgets).
 - `LANTERN_PREFERENCES` (`lantern`): `seen`, the tours finished, as entries.
 - `CAMERA_PREFERENCES` (`camera`): `lookSensitivity` and `flySpeed`, two
-  multipliers from 0.25 to 4, `invertY`, and `touchpadSwipe`, `look` or
-  `pan`.
+  multipliers from 0.25 to 4, `invertY`, `touchpadSwipe`, `look` or `pan`,
+  and one key field per `OrbitFlyCamera` key action: `forward`, `back`,
+  `left`, `right`, `up`, `down`, `lookUp`, `lookDown`, `lookLeft` and
+  `lookRight`. Every editor shares these keys.
 
 ```ts
 const stop = followCameraPreferences(orbitFlyCamera, context.preferences);
@@ -248,4 +258,21 @@ const stop = followCameraPreferences(orbitFlyCamera, context.preferences);
 `followCameraPreferences` takes the camera's own speeds as the base the
 multipliers scale, so each editor keeps its tuning. It sets `moveSpeed` again
 only when `flySpeed` changes, so the speed the wheel picked survives other
-changes.
+changes. It also sets the camera's `keys`.
+
+## `provideTourKeys`
+
+```ts
+const release = provideTourKeys({
+  lantern: context.lantern,
+  preferences: context.preferences,
+  scope: MAP_KEYBINDINGS,
+  layout: keyboardLayoutStore,
+  namespace: "map" // defaults to scope.name
+});
+```
+
+Lets tour bodies name the scope's bindings: `` `{map.tool.brush}` `` shows
+the key the user bound to `tool.brush`, labelled with the layout's
+characters. The host provides `camera` on every page, so a tour can write
+`` `{camera.forward}` ``.

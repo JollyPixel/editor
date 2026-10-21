@@ -91,6 +91,7 @@ interface EditorContext {
   commands: CommandConsole;
   lantern: Lantern;
   preferences: Preferences;
+  keyboardLayout: KeyboardLayoutStore;
 }
 
 interface RuntimeEditorContext extends EditorContext {
@@ -111,6 +112,9 @@ interface RuntimeEditorContext extends EditorContext {
   Under a shell they come from the launch and follow the shell's pushes, and a
   change goes back as an `update-preferences` command. Otherwise they are a
   `LocalPreferences`. Before `mount`, the runtime widgets follow them.
+- `keyboardLayout` is the page's `KeyboardLayoutStore`, refreshed when the
+  window gets the focus. Label shortcuts with it so they show the characters
+  the user's keyboard prints; the `camera` keys of tour bodies use it too.
 
 ## Editor handle
 

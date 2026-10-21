@@ -69,6 +69,7 @@ interface OrbitFlyCameraOptions extends CameraOptions {
   touchpadSwipe?: TouchpadSwipeMode; // "look" | "pan"
   invertY?: boolean;
   keyLookSpeed?: number;
+  keys?: OrbitFlyKeys;
   maxPitch?: number;
   scrollSpeed?: number;
   speedAdjustStep?: number;
@@ -97,8 +98,9 @@ interface OrbitFlyCameraOptions extends CameraOptions {
 | `mouseSensitivity` | `0.003` | Mouse-look sensitivity |
 | `touchpadLookSensitivity` | `0.36` | Radians turned per wheel notch of a two-finger touchpad swipe; a negative value inverts it |
 | `touchpadSwipe` | `"look"` | `"look"`: a two-finger swipe turns the camera. `"pan"`: it moves the camera sideways and up or down, a twentieth of `moveSpeed` per notch. While a "lock" pivot is engaged, a swipe always orbits |
-| `invertY` | `false` | Turns the camera down when the mouse or the fingers move up. I/J/K/L keep their direction |
-| `keyLookSpeed` | `π / 2` | Radians per second turned while I/J/K/L is held |
+| `invertY` | `false` | Turns the camera down when the mouse or the fingers move up. The look keys keep their direction |
+| `keyLookSpeed` | `π / 2` | Radians per second turned while a look key is held |
+| `keys` | `OrbitFlyKeys.default` | The keys held to fly and look around, see [Keys](#keys) |
 | `maxPitch` | `π / 2 - 0.01` | Maximum look-up/down pitch, in radians |
 | `scrollSpeed` | `2.5` | Trail distance changed per wheel notch in "elastic" mode, in world units |
 | `speedAdjustStep` | `0.15` | Fraction `moveSpeed` grows per wheel notch in "none" mode, and in "lock" mode while not orbiting |
@@ -110,9 +112,9 @@ interface OrbitFlyCameraOptions extends CameraOptions {
 | `fov` | `60` | Vertical field of view, in degrees |
 | `far` | `2000` | Far clipping plane |
 
-Movement is WASD (forward/right) + Space/Shift (up/down); look-around is
-middle-mouse-drag, Alt+left-drag, or I/J/K/L (look up/left/down/right). The
-wheel adjusts `moveSpeed`, or the pivot/trail distance when a focus mode
+By default, movement is WASD or the arrows + Space/Shift (up/down) and
+look-around is middle-mouse-drag, Alt+left-drag, or I/J/K/L (look
+up/left/down/right). [`keys`](#keys) rebinds the keys. The wheel adjusts `moveSpeed`, or the pivot/trail distance when a focus mode
 claims it. Ctrl is reserved for other scroll-driven interactions (e.g. brush
 size), so Ctrl+wheel is ignored.
 
@@ -122,6 +124,57 @@ the fingers right looks right. The camera reads
 [`Mouse.scrollSource`](../../../controls/docs/mouse.md#wheel-source) to tell
 swipes from wheel notches; set `input.mouse.scrollDevice` when that guess is
 wrong for a device.
+
+## Keys
+
+`OrbitFlyKeys` lists the physical keys (`KeyboardEvent.code`) held for each
+action. The camera reads held keys, so a binding is one key with no
+modifier; `ShiftLeft` or `ControlLeft` alone is a valid binding. While a
+"lock" pivot is engaged, pressing a movement key nudges the pivot instead.
+
+```ts
+type OrbitFlyAction =
+  | "forward" | "back" | "left" | "right" | "up" | "down"
+  | "lookUp" | "lookDown" | "lookLeft" | "lookRight";
+
+class OrbitFlyKeys {
+  // The default keys listed above.
+  static readonly default: OrbitFlyKeys;
+
+  // Reads every action, dropping the strings that are not key codes.
+  static from(
+    codes: Readonly<Record<OrbitFlyAction, readonly string[]>>
+  ): OrbitFlyKeys;
+
+  // An action left out keeps its default keys; an empty list unbinds it.
+  constructor(codes?: Partial<Record<OrbitFlyAction, readonly KeyCode[]>>);
+
+  readonly codes: Readonly<Record<OrbitFlyAction, readonly KeyCode[]>>;
+
+  // Down while any key of the action is held; `.pressed` on the frame the
+  // first one goes down.
+  held(action: OrbitFlyAction): AliasedKeyInput;
+}
+```
+
+```ts
+import { OrbitFlyCamera, OrbitFlyKeys } from "@jolly-pixel/engine";
+
+const camera = actor.addComponentAndGet(OrbitFlyCamera, {
+  keys: new OrbitFlyKeys({
+    forward: ["KeyE"],
+    back: ["KeyD"],
+    left: ["KeyS"],
+    right: ["KeyF"]
+  })
+});
+
+// Takes effect on the next frame.
+camera.keys = OrbitFlyKeys.default;
+```
+
+`ORBIT_FLY_ACTIONS` lists the actions, and `ORBIT_FLY_DEFAULT_KEYS` holds the
+default codes.
 
 ## Runtime properties
 
@@ -141,6 +194,9 @@ interface OrbitFlyCamera {
   touchpadLookSensitivity: number;
   touchpadSwipe: TouchpadSwipeMode;
   invertY: boolean;
+
+  // The keys held to fly and look around.
+  keys: OrbitFlyKeys;
 
   // Whether a "lock" pivot is engaged, or an "elastic" pivot has a
   // non-zero trail distance.

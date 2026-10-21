@@ -401,8 +401,11 @@ export class Keyboard extends Emitter<
 
 export {
   KEY_CODES,
+  MODIFIER_KEY_CODES,
+  isKeyCode,
   type KeyCode,
-  type ExtendedKeyCode
+  type ExtendedKeyCode,
+  type ModifierKey
 } from "./code.ts";
 export * from "./bindings/index.ts";
 export * from "./chords/index.ts";

@@ -35,6 +35,7 @@ import {
 export interface EditorStateOptions {
   storage?: StorageAdapter;
   preferences: Preferences;
+  keyboardLayout?: KeyboardLayoutStore;
 }
 
 export class EditorState {
@@ -45,7 +46,7 @@ export class EditorState {
   readonly presence = new PresenceStore();
   readonly pointer = new PointerCapture();
   readonly log = new LogQueue();
-  readonly keyboardLayout = new KeyboardLayoutStore();
+  readonly keyboardLayout: KeyboardLayoutStore;
   readonly view: ViewStore;
   readonly brush: BrushStore;
   readonly uvSync: UvSyncStore;
@@ -62,9 +63,11 @@ export class EditorState {
   ) {
     const {
       storage = new LocalStorageAdapter(),
-      preferences
+      preferences,
+      keyboardLayout = new KeyboardLayoutStore()
     } = options;
 
+    this.keyboardLayout = keyboardLayout;
     this.preferences = preferences;
     this.view = new ViewStore(preferences);
     this.brush = new BrushStore(storage);

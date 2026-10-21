@@ -116,6 +116,7 @@ export class SettingsSections implements Iterable<SettingsSection> {
 
   readonly nodes: SettingsNode[];
   readonly headings: readonly string[];
+  readonly shortcutScopes: readonly PreferenceScope[];
 
   #sections: SettingsSection[];
 
@@ -166,6 +167,12 @@ export class SettingsSections implements Iterable<SettingsSection> {
     this.headings = flat
       .filter((node) => node.selectable === false)
       .map((node) => node.id);
+    this.shortcutScopes = [
+      ...new Map(this.#sections
+        .flatMap((section) => (section.kind === "preferences" ? section.keyBindings : []))
+        .map((scope) => [scope.name, scope]))
+        .values()
+    ];
   }
 
   get ids(): string[] {

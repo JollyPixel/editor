@@ -79,6 +79,29 @@ registered, or it is already seen.
 
 The tour that is running, or `null`. It becomes `null` when that run ends, whatever the outcome.
 
+### `lantern.keys: TourKeys`
+
+Resolves the `` `{namespace.action}` `` spans of step bodies. Each namespace has one provider that
+returns the labels of the keys bound to an action, first one first, or `undefined` for an action it
+does not know.
+
+```ts
+type TourKeyLabels = (action: string) => readonly string[] | undefined;
+
+class TourKeys {
+  // Replaces the namespace's provider; the returned function removes it.
+  provide(namespace: string, labels: TourKeyLabels): () => void;
+  // "camera.forward" asks the "camera" provider for "forward".
+  labels(name: string): readonly string[] | undefined;
+}
+```
+
+```ts
+const bound = new Map([["forward", ["W", "↑"]]]);
+const release = lantern.keys.provide("camera", (action) => bound.get(action));
+// A body of "`{camera.forward}` flies" now shows "W flies".
+```
+
 ### `lantern.size: number`
 
 The number of registered tours. A `Lantern` is iterable over them, in registration order.
