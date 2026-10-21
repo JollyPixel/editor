@@ -19,7 +19,7 @@ import {
 import { decodeContent } from "../../model/events/inlineContent.ts";
 import type { AssetProjector } from "../../storage/projection/AssetProjector.ts";
 import type { AssetWriter } from "../../storage/writer/AssetWriter.ts";
-import type { ContentObjects } from "../../storage/ContentObjects.ts";
+import type { AssetBackups } from "../../storage/AssetBackups.ts";
 import { asError } from "../../common/asError.ts";
 import { UnknownAssetError } from "../../storage/writer/errors/UnknownAssetError.ts";
 import {
@@ -74,7 +74,7 @@ export interface AssetTagsOptions {
   projector: Pick<AssetProjector, "desired">;
   writer: Pick<AssetWriter, "update">;
   flush: (assetId: string) => Promise<void>;
-  objects: Pick<ContentObjects, "store">;
+  backups: Pick<AssetBackups, "add">;
   logger?: Logger;
 }
 
@@ -105,7 +105,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
   #projector: Pick<AssetProjector, "desired">;
   #writer: Pick<AssetWriter, "update">;
   #flush: (assetId: string) => Promise<void>;
-  #objects: Pick<ContentObjects, "store">;
+  #backups: Pick<AssetBackups, "add">;
   #logger: Logger;
   #contents = new Map<string, TaggedContent | null>();
 
@@ -117,7 +117,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     this.#projector = options.projector;
     this.#writer = options.writer;
     this.#flush = options.flush;
-    this.#objects = options.objects;
+    this.#backups = options.backups;
     this.#logger = options.logger ?? silentLogger();
   }
 
@@ -353,7 +353,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
   ): Promise<void> {
     const { assetId, eventData } = event;
     try {
-      await this.#objects.store(decodeContent(eventData.content), {
+      await this.#backups.add(decodeContent(eventData.content), {
         assetId,
         path: eventData.path,
         reason: "tag",

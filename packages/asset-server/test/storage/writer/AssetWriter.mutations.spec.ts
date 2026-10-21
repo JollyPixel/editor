@@ -48,7 +48,7 @@ describe("AssetWriter — rename", () => {
     await harness.projector.flush();
 
     assert.strictEqual(event.eventType, ASSET_RENAMED);
-    assert.strictEqual(harness.identity.byId(created.assetId)?.path, "b.png");
+    assert.strictEqual(harness.assetIndex.byId(created.assetId)?.path, "b.png");
     assert.deepEqual(await harness.source.list(), ["b.png"]);
   });
 
@@ -112,7 +112,7 @@ describe("AssetWriter — rename", () => {
 });
 
 describe("AssetWriter — remove", () => {
-  test("appends a deleted event and drops the identity", async() => {
+  test("appends a deleted event and drops the index entry", async() => {
     await using harness = await syncHarness();
     const created = (await harness.writer.create({
       path: "a.png",
@@ -126,7 +126,7 @@ describe("AssetWriter — remove", () => {
     })).unwrap();
 
     assert.strictEqual(event.eventType, ASSET_DELETED);
-    assert.strictEqual(harness.identity.byId(created.assetId), undefined);
+    assert.strictEqual(harness.assetIndex.byId(created.assetId), undefined);
   });
 });
 

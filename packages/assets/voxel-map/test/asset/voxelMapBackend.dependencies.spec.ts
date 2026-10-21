@@ -47,7 +47,9 @@ describe("voxel-map asset kind over a real back-end", () => {
           blocksetAssetKind(),
           voxelMapAssetKind({ chunkSize: kChunkSize })
         ],
-        watch: false
+        reconcile: {
+          watch: false
+        }
       });
       const blockset = backend.catalog.snapshot().assets
         .find((entry) => entry.kind === BLOCKSET_KIND)!;

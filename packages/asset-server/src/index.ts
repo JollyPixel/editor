@@ -12,9 +12,9 @@ export * from "./common/logger.ts";
 export * from "./storage/seedAssetSource.ts";
 export {
   BACKUP_LEDGER_PATH,
-  CONTENT_OBJECTS_PATH,
+  BACKUP_OBJECTS_PATH,
   EVENTS_DB_PATH,
-  IDENTITY_SIDECAR_PATH,
+  ASSET_INDEX_PATH,
   PROJECT_FILE_PATH,
   PROJECTION_STATE_PATH,
   STATE_GITIGNORE_PATH

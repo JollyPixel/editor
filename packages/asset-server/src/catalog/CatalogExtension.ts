@@ -78,9 +78,11 @@ export interface CatalogBackend extends ArchiveBackend {
   readonly tags: AssetTags;
 }
 
-export interface CatalogExtensionOptions {
-  backend: CatalogBackend;
-  id?: string;
+export interface CatalogPolicy {
+  /**
+   * Decoded size cap of a catalog payload: created content and archives.
+   * @default DEFAULT_CATALOG_MAX_CONTENT_BYTES
+   */
   maxContentBytes?: number;
   /**
    * Decoded size caps of an archive received by plan and import.
@@ -88,9 +90,15 @@ export interface CatalogExtensionOptions {
   archiveLimits?: ArchiveLimits;
   /**
    * Refuse a delete command aimed at an asset other assets still reference.
+   * Reconciliation is never refused.
    * @default true
    */
   deleteProtection?: boolean;
+}
+
+export interface CatalogExtensionOptions extends CatalogPolicy {
+  backend: CatalogBackend;
+  id?: string;
 }
 
 export class CatalogExtension extends Extension<CatalogCommand> {

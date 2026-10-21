@@ -43,7 +43,7 @@ describe("CatalogExtension — commands", () => {
     });
     await commands.sync.projector.flush();
 
-    const record = commands.sync.identity.byPath("textures/grass.png");
+    const record = commands.sync.assetIndex.byPath("textures/grass.png");
     assert.notStrictEqual(record, undefined);
     assert.strictEqual(
       text(await commands.sync.source.read("textures/grass.png")),
@@ -132,7 +132,7 @@ describe("CatalogExtension — commands", () => {
       content: encodeContent(bytes("two"))
     });
 
-    const record = commands.sync.identity.byPath("a-2.png");
+    const record = commands.sync.assetIndex.byPath("a-2.png");
     assert.notStrictEqual(record, undefined);
     assert.deepEqual(commands.lastDirect()?.payload, {
       type: CATALOG_APPLIED,
@@ -167,6 +167,6 @@ describe("CatalogExtension — commands", () => {
     });
 
     assert.strictEqual(lastPayloadType(commands), CATALOG_REJECTED);
-    assert.strictEqual(commands.sync.identity.byPath("a.png"), undefined);
+    assert.strictEqual(commands.sync.assetIndex.byPath("a.png"), undefined);
   });
 });

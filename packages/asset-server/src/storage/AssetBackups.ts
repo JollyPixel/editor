@@ -12,14 +12,14 @@ import {
 import {
   backupEntrySchema,
   backupLedgerSchema
-} from "./ContentObjects.schema.ts";
+} from "./AssetBackups.schema.ts";
 import {
   silentLogger,
   type Logger
 } from "../common/logger.ts";
 import {
   BACKUP_LEDGER_PATH,
-  CONTENT_OBJECTS_PATH
+  BACKUP_OBJECTS_PATH
 } from "./stateDirectory.ts";
 import { contentHash } from "../common/contentHash.ts";
 import { TaskChain } from "../common/TaskChain.ts";
@@ -43,7 +43,7 @@ interface BackupLedgerData {
   readonly entries: BackupEntry[];
 }
 
-export class ContentObjects {
+export class AssetBackups {
   #source: AssetSource;
   #logger: Logger;
   #entries: BackupEntry[] | null = null;
@@ -57,7 +57,7 @@ export class ContentObjects {
     this.#logger = logger;
   }
 
-  async store(
+  async add(
     data: Uint8Array,
     input: BackupInput
   ): Promise<BackupEntry> {
@@ -74,7 +74,7 @@ export class ContentObjects {
       this.#entries ??= await readStateFile(
         this.#source,
         BACKUP_LEDGER_PATH,
-        ContentObjects.parse,
+        AssetBackups.parse,
         this.#logger
       );
       this.#entries.push(entry);
@@ -115,5 +115,5 @@ export class ContentObjects {
 function objectPath(
   hash: string
 ): string {
-  return `${CONTENT_OBJECTS_PATH}/${hash.slice(0, 2)}/${hash.slice(2)}`;
+  return `${BACKUP_OBJECTS_PATH}/${hash.slice(0, 2)}/${hash.slice(2)}`;
 }

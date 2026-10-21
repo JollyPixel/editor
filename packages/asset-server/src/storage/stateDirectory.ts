@@ -5,13 +5,13 @@ import {
 } from "@jolly-pixel/asset-source";
 
 // CONSTANTS
-export const IDENTITY_SIDECAR_PATH = `${STATE_DIRECTORY}/assets.json`;
+export const ASSET_INDEX_PATH = `${STATE_DIRECTORY}/assets.json`;
 export const PROJECTION_STATE_PATH = `${STATE_DIRECTORY}/state.json`;
 export const STATE_GITIGNORE_PATH = `${STATE_DIRECTORY}/.gitignore`;
 export const EVENTS_DB_PATH = `${STATE_DIRECTORY}/events.db`;
 export const PROJECT_FILE_PATH = `${STATE_DIRECTORY}/project.json`;
-export const CONTENT_OBJECTS_PATH = `${STATE_DIRECTORY}/objects`;
-export const BACKUP_LEDGER_PATH = `${CONTENT_OBJECTS_PATH}/index.json`;
+export const BACKUP_OBJECTS_PATH = `${STATE_DIRECTORY}/objects`;
+export const BACKUP_LEDGER_PATH = `${BACKUP_OBJECTS_PATH}/index.json`;
 
 const kStateGitignoreEntries = [
   "state.json",

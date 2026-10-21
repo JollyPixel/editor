@@ -8,7 +8,7 @@ import {
 
 // Import Internal Dependencies
 import type { AssetKindRegistry } from "../../model/kinds/AssetKindRegistry.ts";
-import type { IdentitySidecar } from "../IdentitySidecar.ts";
+import type { AssetIndex } from "../AssetIndex.ts";
 import {
   ASSET_CREATED,
   ASSET_DELETED,
@@ -55,14 +55,14 @@ export interface AssetWriterOptions {
   eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
   kinds: AssetKindRegistry;
   projector: AssetProjector;
-  identity: IdentitySidecar;
+  assetIndex: AssetIndex;
   logger?: Logger;
 }
 
 export class AssetWriter {
   #eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
   #projector: AssetProjector;
-  #identity: IdentitySidecar;
+  #assetIndex: AssetIndex;
   #logger: Logger;
   #paths: AssetPathAllocator;
   #planner: AssetCreationPlanner;
@@ -74,11 +74,11 @@ export class AssetWriter {
   ) {
     this.#eventStore = options.eventStore;
     this.#projector = options.projector;
-    this.#identity = options.identity;
+    this.#assetIndex = options.assetIndex;
     this.#logger = options.logger ?? silentLogger();
     this.#paths = new AssetPathAllocator({
       projector: options.projector,
-      identity: options.identity
+      assetIndex: options.assetIndex
     });
     this.#planner = new AssetCreationPlanner({
       kinds: options.kinds,
@@ -170,7 +170,7 @@ export class AssetWriter {
       return appended;
     }
 
-    await this.#saveIdentity();
+    await this.#saveIndex();
 
     return appended;
   }
@@ -187,7 +187,7 @@ export class AssetWriter {
       options
     );
     if (appended.ok) {
-      this.#identity.set({
+      this.#assetIndex.set({
         id: asset.assetId,
         path: asset.path,
         kind: asset.kind
@@ -212,10 +212,10 @@ export class AssetWriter {
         },
         options
       );
-      this.#identity.removeById(asset.assetId);
+      this.#assetIndex.removeById(asset.assetId);
     }
     if (written.length > 0) {
-      await this.#saveIdentity();
+      await this.#saveIndex();
     }
   }
 
@@ -277,12 +277,12 @@ export class AssetWriter {
       return appended;
     }
 
-    this.#identity.set({
+    this.#assetIndex.set({
       id: input.assetId,
       path: to,
       kind: current.kind
     });
-    await this.#saveIdentity();
+    await this.#saveIndex();
 
     return appended;
   }
@@ -311,8 +311,8 @@ export class AssetWriter {
       return appended;
     }
 
-    this.#identity.removeById(input.assetId);
-    await this.#saveIdentity();
+    this.#assetIndex.removeById(input.assetId);
+    await this.#saveIndex();
 
     return appended;
   }
@@ -344,16 +344,16 @@ export class AssetWriter {
     );
   }
 
-  async #saveIdentity(): Promise<void> {
+  async #saveIndex(): Promise<void> {
     try {
-      await this.#identity.save();
+      await this.#assetIndex.save();
     }
     catch (error) {
       this.#logger
         .withMetadata({
           reason: asError(error).message
         })
-        .warn("identity sidecar not persisted");
+        .warn("asset index not persisted");
     }
   }
 

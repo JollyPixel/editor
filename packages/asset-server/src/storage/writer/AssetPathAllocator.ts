@@ -13,13 +13,13 @@ import {
 
 // Import Internal Dependencies
 import { AssetPathConflictError } from "./errors/AssetPathConflictError.ts";
-import type { IdentitySidecar } from "../IdentitySidecar.ts";
+import type { AssetIndex } from "../AssetIndex.ts";
 import type { AssetProjector } from "../projection/AssetProjector.ts";
 import type { PathConflictPolicy } from "../../model/PathConflictPolicy.ts";
 
 export interface AssetPathAllocatorOptions {
   projector: AssetProjector;
-  identity: IdentitySidecar;
+  assetIndex: AssetIndex;
 }
 
 export interface AssetPathRequest {
@@ -31,13 +31,13 @@ export interface AssetPathRequest {
 
 export class AssetPathAllocator {
   #projector: AssetProjector;
-  #identity: IdentitySidecar;
+  #assetIndex: AssetIndex;
 
   constructor(
     options: AssetPathAllocatorOptions
   ) {
     this.#projector = options.projector;
-    this.#identity = options.identity;
+    this.#assetIndex = options.assetIndex;
   }
 
   allocate(
@@ -76,7 +76,7 @@ export class AssetPathAllocator {
   dormantId(
     path: string
   ): string | undefined {
-    const recorded = this.#identity.byPath(path)?.id;
+    const recorded = this.#assetIndex.byPath(path)?.id;
     if (
       recorded === undefined ||
       this.#projector.desired(recorded) !== null

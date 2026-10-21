@@ -13,32 +13,52 @@ $ pnpm add @jolly-pixel/asset-server
 ## 👀 Usage example
 
 ```ts
+import http from "node:http";
+import { DEFAULT_WEBSOCKET_PATH } from "@jolly-pixel/network";
+import { WebsocketTransport } from "@jolly-pixel/network/node";
+import { textureAssetKind } from "@jolly-pixel/asset-server";
+import { AssetServer } from "@jolly-pixel/asset-server/node";
+
+await using assetServer = await AssetServer.open({
+  root: "./assets",
+  handlers: [textureAssetKind()]
+});
+
+const httpServer = http.createServer().listen(3000);
+new WebsocketTransport({
+  path: DEFAULT_WEBSOCKET_PATH,
+  httpServer,
+  server: assetServer.network
+});
+```
+
+On startup, the backend catalogs files already present in `./assets`. Changes
+made through `assetServer.backend.writer` are appended to the event store and
+written to the asset source. Changes made by external tools are detected and
+appended as system events.
+
+`AssetServer` is the backend plus a network `Server`, with a filesystem source
+and a sqlite event log under `root`. A host with its own source and event log,
+such as a browser tab, builds the backend and attaches it to a `Server`:
+
+```ts
 import * as EventStore from "@jolly-pixel/event-store";
-import { FilesystemAssetSource } from "@jolly-pixel/asset-source/node";
+import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import { Server } from "@jolly-pixel/network";
 import {
   createAssetBackend,
   textureAssetKind
 } from "@jolly-pixel/asset-server";
 
-using eventStore = await EventStore.persistence.sqlite(
-  "./assets/.jollypixel/events.db"
-);
-
 await using backend = await createAssetBackend({
-  source: new FilesystemAssetSource("./assets"),
-  eventStore,
+  source: new MemoryAssetSource(),
+  eventStore: EventStore.persistence.memory(),
   handlers: [textureAssetKind()]
 });
 
-await using server = new Server();
+const server = new Server();
 backend.attach(server);
 ```
-
-On startup, the backend catalogs files already present in `./assets`. Changes
-made through `backend.writer` are appended to the event store and written to
-the asset source. Changes made by external tools are detected and appended as
-system events.
 
 ## 🧪 Testing helpers
 

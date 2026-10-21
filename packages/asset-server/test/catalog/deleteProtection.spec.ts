@@ -39,15 +39,19 @@ interface LinkedProject extends AsyncDisposable {
 }
 
 async function linkedProject(
-  catalogDeleteProtection?: boolean
+  deleteProtection?: boolean
 ): Promise<LinkedProject> {
   const eventStore = EventStore.persistence.memory();
   const backend = await createAssetBackend({
     source: new MemoryAssetSource(),
     eventStore,
     handlers: [linkHandler()],
-    catalogDeleteProtection,
-    watch: false
+    catalog: {
+      deleteProtection
+    },
+    reconcile: {
+      watch: false
+    }
   });
   const target = (await backend.writer.create({
     path: "textures/grass.png",

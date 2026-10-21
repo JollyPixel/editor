@@ -63,7 +63,11 @@ describe("OfflineServer", () => {
   test("applies the backend tuning to the catalog room", async() => {
     const server = await openServer({
       backend: {
-        catalogArchiveLimits: { maxEntryBytes: 4 }
+        catalog: {
+          archiveLimits: {
+            maxEntryBytes: 4
+          }
+        }
       }
     });
     const { client } = server.connect();

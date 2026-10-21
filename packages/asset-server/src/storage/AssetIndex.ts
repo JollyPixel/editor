@@ -10,14 +10,14 @@ import {
 
 // Import Internal Dependencies
 import {
-  identityEntrySchema,
-  identitySidecarSchema
-} from "./IdentitySidecar.schema.ts";
+  indexedAssetSchema,
+  assetIndexSchema
+} from "./AssetIndex.schema.ts";
 import {
   silentLogger,
   type Logger
 } from "../common/logger.ts";
-import { IDENTITY_SIDECAR_PATH } from "./stateDirectory.ts";
+import { ASSET_INDEX_PATH } from "./stateDirectory.ts";
 import {
   keepValid,
   readStateFile,
@@ -25,26 +25,26 @@ import {
 } from "./stateFile.ts";
 
 // CONSTANTS
-const kSidecarVersion = 1;
+const kIndexVersion = 1;
 const kPathCollator = new Intl.Collator();
-const kEntryParser = new SchemaParser(identityEntrySchema);
-const kSidecarParser = new SchemaParser(identitySidecarSchema);
+const kEntryParser = new SchemaParser(indexedAssetSchema);
+const kIndexParser = new SchemaParser(assetIndexSchema);
 
-export type IdentityEntry = Readonly<Infer<typeof identityEntrySchema>>;
+export type IndexedAsset = Readonly<Infer<typeof indexedAssetSchema>>;
 
-export interface IdentitySidecarData {
+export interface AssetIndexData {
   readonly version: 1;
-  readonly assets: readonly IdentityEntry[];
+  readonly assets: readonly IndexedAsset[];
 }
 
-export class IdentitySidecar {
+export class AssetIndex {
   #source: AssetSource;
-  #byPath = new Map<string, IdentityEntry>();
-  #byId = new Map<string, IdentityEntry>();
+  #byPath = new Map<string, IndexedAsset>();
+  #byId = new Map<string, IndexedAsset>();
 
   constructor(
     source: AssetSource,
-    entries: Iterable<IdentityEntry> = []
+    entries: Iterable<IndexedAsset> = []
   ) {
     this.#source = source;
     for (const entry of entries) {
@@ -57,19 +57,19 @@ export class IdentitySidecar {
   }
 
   set(
-    entry: IdentityEntry
+    entry: IndexedAsset
   ): this {
-    const previousPath = this.#byId.get(entry.id);
-    if (previousPath !== undefined) {
-      this.#byPath.delete(previousPath.path);
+    const sameId = this.#byId.get(entry.id);
+    if (sameId !== undefined) {
+      this.#byPath.delete(sameId.path);
     }
 
-    const previousId = this.#byPath.get(entry.path);
-    if (previousId !== undefined) {
-      this.#byId.delete(previousId.id);
+    const samePath = this.#byPath.get(entry.path);
+    if (samePath !== undefined) {
+      this.#byId.delete(samePath.id);
     }
 
-    const stored: IdentityEntry = {
+    const stored: IndexedAsset = {
       id: entry.id,
       path: entry.path,
       kind: entry.kind
@@ -96,23 +96,23 @@ export class IdentitySidecar {
 
   byPath(
     path: string
-  ): IdentityEntry | undefined {
+  ): IndexedAsset | undefined {
     return this.#byPath.get(path);
   }
 
   byId(
     id: string
-  ): IdentityEntry | undefined {
+  ): IndexedAsset | undefined {
     return this.#byId.get(id);
   }
 
-  [Symbol.iterator](): IterableIterator<IdentityEntry> {
+  [Symbol.iterator](): IterableIterator<IndexedAsset> {
     return this.#byId.values();
   }
 
-  toJSON(): IdentitySidecarData {
+  toJSON(): AssetIndexData {
     return {
-      version: kSidecarVersion,
+      version: kIndexVersion,
       assets: [...this.#byId.values()].sort(
         (left, right) => kPathCollator.compare(left.path, right.path)
       )
@@ -122,7 +122,7 @@ export class IdentitySidecar {
   save(): Promise<void> {
     return writeJsonFile(
       this.#source,
-      IDENTITY_SIDECAR_PATH,
+      ASSET_INDEX_PATH,
       this.toJSON()
     );
   }
@@ -130,15 +130,15 @@ export class IdentitySidecar {
   static async load(
     source: AssetSource,
     logger: Logger = silentLogger()
-  ): Promise<IdentitySidecar> {
+  ): Promise<AssetIndex> {
     const entries = await readStateFile(
       source,
-      IDENTITY_SIDECAR_PATH,
-      IdentitySidecar.parse,
+      ASSET_INDEX_PATH,
+      AssetIndex.parse,
       logger
     );
 
-    return new IdentitySidecar(
+    return new AssetIndex(
       source,
       entries
     );
@@ -146,9 +146,9 @@ export class IdentitySidecar {
 
   static parse(
     input: unknown
-  ): StateFileParse<IdentityEntry[]> {
-    const sidecar = kSidecarParser.parse(input);
-    if (!sidecar.ok) {
+  ): StateFileParse<IndexedAsset[]> {
+    const parsed = kIndexParser.parse(input);
+    if (!parsed.ok) {
       return {
         data: [],
         dropped: 0
@@ -156,7 +156,7 @@ export class IdentitySidecar {
     }
 
     const { entries, dropped } = keepValid(
-      sidecar.val.assets.entries(),
+      parsed.val.assets.entries(),
       kEntryParser
     );
 

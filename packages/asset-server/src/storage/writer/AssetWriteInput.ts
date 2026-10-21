@@ -31,7 +31,7 @@ export interface CreateAssetInput extends Omit<PayloadWriteOptions, "data"> {
    */
   data?: Uint8Array;
   /**
-   * @default the id the identity sidecar records for a vacant path, else a
+   * @default the id the asset index records for a vacant path, else a
    * random UUID
    */
   assetId?: string;

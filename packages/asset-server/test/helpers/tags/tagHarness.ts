@@ -65,7 +65,7 @@ export async function tagHarness(
     projector: sync.projector,
     writer: options.writer?.(sync) ?? sync.writer,
     flush: (id) => sync.flush(id),
-    objects: sync.objects,
+    backups: sync.backups,
     logger: options.logger
   });
 

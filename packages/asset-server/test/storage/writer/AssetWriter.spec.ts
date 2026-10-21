@@ -31,7 +31,7 @@ function lifecycleTypes(
 }
 
 describe("AssetWriter — create", () => {
-  test("appends a created event, records identity and projects the file", async() => {
+  test("appends a created event, indexes the path and projects the file", async() => {
     await using harness = await syncHarness({ handlers: [counterHandler()] });
 
     const event = (await harness.writer.create({
@@ -42,7 +42,7 @@ describe("AssetWriter — create", () => {
     await harness.projector.flush();
 
     assert.strictEqual(event.eventType, ASSET_CREATED);
-    assert.strictEqual(harness.identity.byPath("nested/a.counter")?.kind, "counter");
+    assert.strictEqual(harness.assetIndex.byPath("nested/a.counter")?.kind, "counter");
     assert.strictEqual(text(await harness.source.read("nested/a.counter")), "3");
   });
 
@@ -55,7 +55,7 @@ describe("AssetWriter — create", () => {
       actor: kActor
     })).unwrap();
 
-    assert.notStrictEqual(harness.identity.byPath("textures/grass.png"), undefined);
+    assert.notStrictEqual(harness.assetIndex.byPath("textures/grass.png"), undefined);
   });
 
   test("returns a traversal as an error without appending", async() => {
@@ -156,7 +156,7 @@ describe("AssetWriter — create", () => {
     await harness.projector.flush();
 
     assert.strictEqual(
-      harness.identity.byId(created.assetId)?.path,
+      harness.assetIndex.byId(created.assetId)?.path,
       "maps/world-3.voxelmap.json"
     );
     assert.strictEqual(text(await harness.source.read("maps/world-3.voxelmap.json")), "new");
@@ -203,9 +203,9 @@ describe("AssetWriter — create", () => {
     assert.strictEqual(result.ok, true);
   });
 
-  test("reuses the id the sidecar records for a vacant path", async() => {
+  test("reuses the id the asset index records for a vacant path", async() => {
     await using harness = await syncHarness();
-    harness.identity.set({ id: "kept", path: "a.png", kind: "binary" });
+    harness.assetIndex.set({ id: "kept", path: "a.png", kind: "binary" });
 
     const event = (await harness.writer.create({
       path: "a.png",
@@ -223,7 +223,7 @@ describe("AssetWriter — create", () => {
       data: bytes("one"),
       actor: kActor
     })).unwrap();
-    harness.identity.set({ id: live.assetId, path: "b.png", kind: "binary" });
+    harness.assetIndex.set({ id: live.assetId, path: "b.png", kind: "binary" });
 
     const event = (await harness.writer.create({
       path: "b.png",
@@ -237,7 +237,7 @@ describe("AssetWriter — create", () => {
 
   test("prefers an explicit id over the recorded one", async() => {
     await using harness = await syncHarness();
-    harness.identity.set({ id: "kept", path: "a.png", kind: "binary" });
+    harness.assetIndex.set({ id: "kept", path: "a.png", kind: "binary" });
 
     const event = (await harness.writer.create({
       path: "a.png",

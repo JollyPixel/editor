@@ -158,9 +158,14 @@ export class OfflineServer implements OfflineBackend {
         handlers,
         snapshot: tuning.snapshot ??
           (persistent ? kPersistentSnapshotPolicy : undefined),
-        compactOnOpen: tuning.compactOnOpen ?? persistent,
-        compactOnSnapshot: tuning.compactOnSnapshot ?? persistent,
-        watch: false
+        compaction: {
+          ...tuning.compaction,
+          onOpen: tuning.compaction?.onOpen ?? persistent
+        },
+        reconcile: {
+          ...tuning.reconcile,
+          watch: false
+        }
       });
       server = new Server({
         logger: silentLogger(),

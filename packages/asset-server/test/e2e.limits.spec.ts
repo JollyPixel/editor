@@ -21,15 +21,19 @@ import { bytes } from "./helpers/bytes.ts";
 import { recordingClient } from "./helpers/rooms.ts";
 
 describe("asset-server — end to end", () => {
-  test("catalogMaxContentBytes caps catalog:create payloads", async() => {
+  test("catalog.maxContentBytes caps catalog:create payloads", async() => {
     await using directory = await tempDirectory();
     using eventStore = EventStore.persistence.memory();
 
     await using backend = await createAssetBackend({
       source: new FilesystemAssetSource(directory.root),
       eventStore,
-      watch: false,
-      catalogMaxContentBytes: 4
+      reconcile: {
+        watch: false
+      },
+      catalog: {
+        maxContentBytes: 4
+      }
     });
     const server = new Server();
     backend.attach(server);

@@ -83,7 +83,9 @@ async function withBackend(
       source: new FilesystemAssetSource(root),
       eventStore,
       handlers: [voxelModelAssetKind({ snapshot: { delay: 0 } })],
-      watch: false
+      reconcile: {
+        watch: false
+      }
     });
     const record = backend.catalog.snapshot().assets
       .find((entry) => entry.source === kFilePath)!;

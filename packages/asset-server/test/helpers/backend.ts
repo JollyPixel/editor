@@ -14,8 +14,8 @@ import {
   type CatalogProjection,
   type SnapshotPolicy
 } from "#src/index.ts";
-import { IdentitySidecar } from "#src/storage/IdentitySidecar.ts";
-import { ContentObjects } from "#src/storage/ContentObjects.ts";
+import { AssetIndex } from "#src/storage/AssetIndex.ts";
+import { AssetBackups } from "#src/storage/AssetBackups.ts";
 import {
   AssetProjector,
   ProjectionState
@@ -31,14 +31,14 @@ export interface SyncHarness extends AsyncDisposable {
   readonly source: MemoryAssetSource;
   readonly eventStore: EventStore.EventStore;
   readonly state: ProjectionState;
-  readonly objects: ContentObjects;
+  readonly backups: AssetBackups;
   readonly projector: AssetProjector;
   readonly states: AssetStateStore;
   readonly scheduler: SnapshotScheduler;
   readonly writer: AssetWriter;
   readonly reconciler: Reconciler;
   readonly watcher: SourceWatcher;
-  readonly identity: IdentitySidecar;
+  readonly assetIndex: AssetIndex;
   readonly kinds: AssetKindRegistry;
   flush(assetId?: string): Promise<void>;
 }
@@ -114,12 +114,12 @@ export async function syncHarness(
   const eventStore = options.eventStore ?? EventStore.persistence.memory();
   const kinds = new AssetKindRegistry(options.handlers ?? []);
   const state = await ProjectionState.load(source);
-  const objects = new ContentObjects(source);
+  const backups = new AssetBackups(source);
   const projector = new AssetProjector({
     source,
     eventStore,
     state,
-    objects
+    backups
   });
   projector.load();
   projector.start();
@@ -127,12 +127,12 @@ export async function syncHarness(
   const states = new AssetStateStore({ eventStore, kinds });
   states.start();
 
-  const identity = await IdentitySidecar.load(source);
+  const assetIndex = await AssetIndex.load(source);
   const writer = new AssetWriter({
     eventStore,
     kinds,
     projector,
-    identity
+    assetIndex
   });
 
   const scheduler = new SnapshotScheduler({
@@ -165,14 +165,14 @@ export async function syncHarness(
     source,
     eventStore,
     state,
-    objects,
+    backups,
     projector,
     states,
     scheduler,
     writer,
     reconciler,
     watcher,
-    identity,
+    assetIndex,
     kinds,
     async flush(assetId) {
       await scheduler.flush(assetId);
@@ -221,7 +221,7 @@ export function catalogBackend(
       projector: sync.projector,
       writer: sync.writer,
       flush: (assetId) => backend.flush(assetId),
-      objects: sync.objects
+      backups: sync.backups
     })
   };
 }

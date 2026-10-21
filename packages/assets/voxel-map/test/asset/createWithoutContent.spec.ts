@@ -43,7 +43,9 @@ describe("voxel map created without content", () => {
         voxelMapAssetKind(),
         blocksetAssetKind({ defaultSize: kBlocksetSize })
       ],
-      watch: false
+      reconcile: {
+        watch: false
+      }
     });
 
     const map = (await backend.writer.create({

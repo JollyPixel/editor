@@ -91,6 +91,8 @@ instead and accepts no command.
 
 ## Naming boundaries
 
+- Use **backend** for the asset core, which has no networking. Use **server**
+  only for something that owns a network `Server`, such as `AssetServer`.
 - Use the [asset glossary](../asset/GLOSSARY.md) for **asset**, **asset ID**,
   **asset kind**, and **asset catalog**.
 - Use the [event-store glossary](../event-store/GLOSSARY.md) for **event**,

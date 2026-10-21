@@ -20,7 +20,7 @@ import {
 import type { AssetProjection } from "./applyProjection.ts";
 import { AssetFold } from "./AssetFold.ts";
 import type { ProjectionState } from "./ProjectionState.ts";
-import type { ContentObjects } from "../ContentObjects.ts";
+import type { AssetBackups } from "../AssetBackups.ts";
 import { TaskChain } from "../../common/TaskChain.ts";
 import { asError } from "../../common/asError.ts";
 import { contentHash } from "../../common/contentHash.ts";
@@ -44,7 +44,7 @@ export interface AssetProjectorOptions {
   source: AssetSource;
   eventStore: EventStore.EventStore;
   state: ProjectionState;
-  objects: Pick<ContentObjects, "store">;
+  backups: Pick<AssetBackups, "add">;
   logger?: Logger;
 }
 
@@ -54,7 +54,7 @@ export class AssetProjector extends Emitter<
   #source: AssetSource;
   #eventStore: EventStore.EventStore;
   #state: ProjectionState;
-  #objects: Pick<ContentObjects, "store">;
+  #backups: Pick<AssetBackups, "add">;
   #logger: Logger;
 
   #folds = new Map<string, AssetFold>();
@@ -73,7 +73,7 @@ export class AssetProjector extends Emitter<
     this.#source = options.source;
     this.#eventStore = options.eventStore;
     this.#state = options.state;
-    this.#objects = options.objects;
+    this.#backups = options.backups;
     this.#logger = options.logger ?? silentLogger();
   }
 
@@ -409,7 +409,7 @@ export class AssetProjector extends Emitter<
       return;
     }
 
-    await this.#objects.store(data, {
+    await this.#backups.add(data, {
       assetId,
       path,
       reason: "external-edit"

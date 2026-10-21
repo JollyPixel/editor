@@ -64,7 +64,7 @@ describe("AssetWriter — create without content", () => {
     })).unwrap();
     await harness.projector.flush();
 
-    const companion = harness.identity.byPath("maps/world.counter");
+    const companion = harness.assetIndex.byPath("maps/world.counter");
     assert.strictEqual(companion?.kind, "counter");
     assert.deepEqual(createdPaths(harness.eventStore), [
       "maps/world.counter",
@@ -177,6 +177,6 @@ describe("AssetWriter — create without content", () => {
     assert.strictEqual(result.ok, false);
     assert.match(result.val.message, /no default state/);
     assert.deepEqual(createdPaths(harness.eventStore), []);
-    assert.strictEqual(harness.identity.byPath("maps/world.counter"), undefined);
+    assert.strictEqual(harness.assetIndex.byPath("maps/world.counter"), undefined);
   });
 });
