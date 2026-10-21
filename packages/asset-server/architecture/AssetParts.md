@@ -1,6 +1,8 @@
 # Asset parts
 
-Status: design, not implemented yet. It lands with terrain milestone M2.
+Status: in progress for terrain milestone M2. The kind contract, writes,
+generations, replay and compaction are implemented. Part files, the
+subscription and the filtered broadcast are not yet.
 
 An asset is one file, its live state is held whole by the room, sent whole on
 join, and every `asset.updated` checkpoint carries the whole content. A large
@@ -16,8 +18,8 @@ A kind without parts keeps today's behavior. Nothing below applies to it.
 - **Part:** a binary piece of the content, named by a part ID the kind
   chooses, such as `12_-3` for a terrain chunk. A part ID matches
   `[A-Za-z0-9_-]+`.
-- **Generation:** one checkpoint of a parted asset: the manifest and the event
-  version of every part's latest content.
+- **Generation:** one checkpoint of a parted asset: the manifest, the bytes of
+  the parts it changed and the version that holds each other part.
 
 ## Storage layout
 
@@ -44,13 +46,14 @@ A kind declares parts with an optional `parts` field on its handler:
 
 | Member | Role |
 |---|---|
-| `extension` | Part file extension and media type. |
-| `touched(command)` | Part IDs a command reads or writes. |
+| `extension` | Part file extension, mapped to its media type. |
+| `touched(command)` | Part IDs a command writes. |
 | `list(state)` | Part IDs the manifest names. |
 | `load(state, partId, content)` | Loads one part into the state. |
 | `serialize(state, partId)` | Bytes of one part. |
-| `snapshot(state, partId)` | Wire form of one part, checked by `snapshotSchema`. |
-| `outside?(command)` | The form of a command sent to members not subscribed to its parts, or `null` to send nothing. |
+
+The subscription adds the wire form of one part and `outside(command)`, the
+form of a command sent to members not subscribed to its parts.
 
 For a parted kind, the handler's `serialize` and `load` handle the manifest
 only, and `live().snapshot()` is the manifest's wire form. A client applies
@@ -58,32 +61,45 @@ commands to the parts it has loaded and skips the others.
 
 ## Checkpoints
 
-The snapshot scheduler writes a generation in one task:
+A generation is one `asset.updated` event, so it is appended whole or not at
+all. Its `content` is the manifest, and its `parts` map names every part the
+manifest lists:
 
-1. One `asset.part-written` event per dirty part, holding the part ID and its
-   bytes, or `null` for a part the manifest no longer names.
-2. One `asset.updated` event holding the manifest and a `parts` map from part
-   ID to the version of its latest `asset.part-written` event.
+```json
+{
+  "parts": {
+    "0_0": { "hash": "…", "size": 16384, "at": 12 },
+    "0_1": { "hash": "…", "size": 16384, "content": { "type": "inline", "encoding": "base64", "data": "…" } }
+  }
+}
+```
 
-A part is dirty when a command since the last generation touched it. Only
-dirty parts are written. Replay starts from the newest `asset.updated`, as
-for other kinds, so no command is folded twice. `asset.part-written` is state
-neutral: replay skips it.
+A part touched by a command since the last generation is serialized again and
+written inline when its hash changed. Any other part keeps `at`, the version
+of the checkpoint that holds its bytes. A part the manifest no longer lists
+leaves the map. The scheduler skips the generation when neither the manifest
+nor a part changed. `asset.created` takes the same `parts` map, every part
+inline.
 
-Compaction removes events below each asset's head checkpoint. For a parted
-asset it also keeps the `asset.part-written` events the head's `parts` map
-names, and those named by the checkpoint of every tag. The event store's
-`compact` takes the versions to keep for that.
+Replay starts from the newest checkpoint, as for other kinds, so no command is
+folded twice. It loads the manifest, then each part from the checkpoint its
+`at` names.
 
-The projector writes the manifest file on `asset.updated` and each part file
-on `asset.part-written`, and deletes the part file for a `null` one.
+Compaction removes events below each asset's head checkpoint. It keeps the
+checkpoints that the head and every tagged event name in `at`, through the
+`keep` option of the event store's `compact`.
+
+The catalog revision of a parted asset is the manifest hash and the
+generation's version, `<hash>@<version>`, since an edit can change parts
+without changing the manifest.
+
+The projector writes the manifest file and each part file whose hash changed,
+and deletes the files of parts that left the map.
 
 ## Server state
 
-The room's live state holds the manifest and every part. Replay loads the
-manifest from the newest `asset.updated`, then each part from the
-`asset.part-written` event its `parts` map names, then folds the commands
-since that checkpoint. Arbitration stays synchronous. Streaming applies to
+The room's live state holds the manifest and every part, loaded by replay as
+described above. Arbitration stays synchronous. Streaming applies to
 the wire and to storage, not to server memory: a 10 km² terrain at ×1 holds
 about 40 MB per open asset.
 

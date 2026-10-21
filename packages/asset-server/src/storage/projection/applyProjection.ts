@@ -7,7 +7,9 @@ import {
   ASSET_DELETED,
   ASSET_RENAMED,
   ASSET_UPDATED,
-  type AssetEvent
+  partRefs,
+  type AssetEvent,
+  type AssetPartRef
 } from "../../model/events/AssetEvents.ts";
 
 export interface AssetProjection {
@@ -15,6 +17,8 @@ export interface AssetProjection {
   readonly kind: string;
   readonly hash: string;
   readonly dependencies?: readonly AssetReferenceData[];
+  readonly parts?: ReadonlyMap<string, AssetPartRef>;
+  readonly revision?: string;
 }
 
 export function applyProjection(
@@ -31,7 +35,13 @@ export function applyProjection(
         path: eventData.path,
         kind: eventData.kind,
         hash: eventData.hash,
-        ...(dependencies === undefined ? {} : { dependencies })
+        ...(dependencies === undefined ? {} : { dependencies }),
+        ...(eventData.parts === undefined ?
+          {} :
+          {
+            parts: partRefs(eventData, event.eventVersion),
+            revision: `${eventData.hash}@${event.eventVersion}`
+          })
       };
     }
     case ASSET_RENAMED: {

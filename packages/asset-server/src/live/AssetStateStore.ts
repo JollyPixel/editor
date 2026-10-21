@@ -51,6 +51,7 @@ interface OpenAsset {
   readonly entry: AssetStateEntry;
   version: number;
   commandsSinceCheckpoint: RecordedCommand<AssetCommandHeader>[] | null;
+  readonly touchedParts: Set<string>;
 }
 
 export interface AssetStateStoreOptions {
@@ -112,6 +113,12 @@ export class AssetStateStore extends Emitter<AssetStateStoreEventMap> {
     return this.#open.get(assetId)?.version;
   }
 
+  touchedParts(
+    assetId: string
+  ): ReadonlySet<string> {
+    return new Set(this.#open.get(assetId)?.touchedParts);
+  }
+
   acquire(
     assetId: string,
     kind: string
@@ -169,7 +176,8 @@ export class AssetStateStore extends Emitter<AssetStateStoreEventMap> {
         state: handler.create(assetId)
       },
       version: 0,
-      commandsSinceCheckpoint: []
+      commandsSinceCheckpoint: [],
+      touchedParts: new Set()
     };
     let events = this.#eventStore.reader.listFromCheckpoints({
       assetId,
@@ -200,6 +208,14 @@ export class AssetStateStore extends Emitter<AssetStateStoreEventMap> {
       null :
       this.#fold(open.entry, event);
     open.version = event.eventVersion;
+    if (kCheckpointEventTypes.has(event.eventType)) {
+      open.touchedParts.clear();
+    }
+    else if (command !== null) {
+      for (const partId of open.entry.handler.parts?.touched(command) ?? []) {
+        open.touchedParts.add(partId);
+      }
+    }
 
     const commands = open.commandsSinceCheckpoint;
     if (commands === null) {
@@ -221,7 +237,12 @@ export class AssetStateStore extends Emitter<AssetStateStoreEventMap> {
     event: EventStore.Event
   ): AssetCommandHeader | null {
     try {
-      return foldAssetEvent(entry.handler, entry.state, event);
+      return foldAssetEvent(
+        entry.handler,
+        entry.state,
+        event,
+        this.#eventStore.reader
+      );
     }
     catch (error) {
       const log = this.#logger.withMetadata({

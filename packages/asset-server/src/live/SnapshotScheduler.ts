@@ -12,10 +12,15 @@ import {
   isAssetEventType,
   SNAPSHOT_ACTOR
 } from "../model/events/AssetEvents.ts";
+import { retainedPartEvents } from "../model/events/retainedPartEvents.ts";
 import type { SnapshotPolicy } from "../model/kinds/AssetKindHandler.ts";
 import type { AssetKindRegistry } from "../model/kinds/AssetKindRegistry.ts";
-import type { AssetStateStore } from "./AssetStateStore.ts";
+import type {
+  AssetStateEntry,
+  AssetStateStore
+} from "./AssetStateStore.ts";
 import type { AssetProjector } from "../storage/projection/AssetProjector.ts";
+import type { AssetProjection } from "../storage/projection/applyProjection.ts";
 import type { AssetWriter } from "../storage/writer/AssetWriter.ts";
 import { TaskChain } from "../common/TaskChain.ts";
 
@@ -217,9 +222,14 @@ export class SnapshotScheduler {
       return "skipped";
     }
 
+    const touched = this.#states.touchedParts(assetId);
     const dependencies = entry.handler.dependencies?.(entry.state);
     const data = await entry.handler.serialize(entry.state);
-    if (await contentHash(data) === desired.hash) {
+    const parts = await partChanges(entry, touched, desired);
+    if (
+      await contentHash(data) === desired.hash &&
+      (parts === undefined || parts.size === 0)
+    ) {
       return "skipped";
     }
 
@@ -230,6 +240,7 @@ export class SnapshotScheduler {
       assetId,
       data,
       dependencies,
+      parts,
       actor: SNAPSHOT_ACTOR,
       expectedVersion: version
     });
@@ -259,7 +270,8 @@ export class SnapshotScheduler {
     const report = this.#eventStore.compact({
       checkpointEventTypes: ASSET_CHECKPOINT_EVENT_TYPES,
       assetId,
-      reclaim: false
+      reclaim: false,
+      keep: retainedPartEvents(this.#eventStore, assetId)
     });
     if (report.removed > 0) {
       this.#logger
@@ -270,4 +282,36 @@ export class SnapshotScheduler {
         .debug("asset events compacted");
     }
   }
+}
+
+async function partChanges(
+  entry: AssetStateEntry,
+  touched: ReadonlySet<string>,
+  desired: AssetProjection
+): Promise<Map<string, Uint8Array | null> | undefined> {
+  const { parts } = entry.handler;
+  if (parts === undefined) {
+    return undefined;
+  }
+
+  const stored = desired.parts ?? new Map();
+  const listed = new Set(parts.list(entry.state));
+  const changes = new Map<string, Uint8Array | null>();
+  for (const partId of listed) {
+    if (!touched.has(partId) && stored.has(partId)) {
+      continue;
+    }
+
+    const data = await parts.serialize(entry.state, partId);
+    if (await contentHash(data) !== stored.get(partId)?.hash) {
+      changes.set(partId, data);
+    }
+  }
+  for (const partId of stored.keys()) {
+    if (!listed.has(partId)) {
+      changes.set(partId, null);
+    }
+  }
+
+  return changes;
 }

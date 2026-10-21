@@ -17,7 +17,8 @@ import {
   counterCommandProtocol,
   counterSnapshotSchema,
   linkCommandProtocol,
-  linkSnapshotSchema
+  linkSnapshotSchema,
+  tileCommandProtocol
 } from "./protocols.ts";
 
 export const COUNTER_INCREMENTED = "counter.incremented";
@@ -243,5 +244,79 @@ export function ownerHandler(
         }
       };
     })
+  };
+}
+
+export const TILE_CHANGED = "tile.changed";
+
+export interface TileState {
+  tiles: Map<string, string>;
+}
+
+export type TileCommand = AssetCommandHeader & (
+  | { action: "paint"; tile: string; value: string; }
+  | { action: "erase"; tile: string; }
+);
+
+export function tileHandler(
+  snapshot?: SnapshotPolicy
+): AssetKindHandler<TileState, TileCommand> {
+  return {
+    kind: "tiles",
+    extensions: { ".tiles": "text/plain; charset=utf-8" },
+    snapshot,
+    commands: {
+      eventType: TILE_CHANGED,
+      protocol: tileCommandProtocol,
+      apply: (state, command) => {
+        if (command.action === "paint") {
+          state.tiles.set(command.tile, command.value);
+        }
+        else {
+          state.tiles.delete(command.tile);
+        }
+      }
+    },
+    parts: {
+      extension: { ".tile": "text/plain; charset=utf-8" },
+      touched: (command) => [command.tile],
+      list: (state) => state.tiles.keys(),
+      load: (state, partId, content) => {
+        state.tiles.set(partId, text(content));
+      },
+      serialize: (state, partId) => Promise.resolve(
+        bytes(state.tiles.get(partId) ?? "")
+      )
+    },
+
+    create(): TileState {
+      return {
+        tiles: new Map([["a", "grass"]])
+      };
+    },
+
+    load(
+      state: TileState,
+      content: Uint8Array
+    ): void {
+      const listed = text(content);
+      state.tiles = new Map(
+        listed.length === 0 ?
+          [] :
+          listed.split(",").map((tile) => [tile, ""])
+      );
+    },
+
+    clear(
+      state: TileState
+    ): void {
+      state.tiles.clear();
+    },
+
+    serialize(
+      state: TileState
+    ): Promise<Uint8Array> {
+      return Promise.resolve(bytes([...state.tiles.keys()].sort().join(",")));
+    }
   };
 }

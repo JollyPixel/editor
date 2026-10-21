@@ -43,11 +43,16 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   levels.
 - **M1: done** (2026-10-19).
 - **M2 grilling: done** (2026-10-21). Parts live in a sibling
-  `<asset>.parts/` folder; a checkpoint is one generation (dirty parts, then
-  the manifest naming every part's version); the server keeps every part in
-  memory; the `subscribeParts` reply carries the parts. See the
+  `<asset>.parts/` folder; a checkpoint is one generation, a single
+  `asset.updated` holding the manifest, the changed parts and the version
+  that holds each other part; the server keeps every part in memory; the
+  `subscribeParts` reply carries the parts. See the
   [asset parts design](../../asset-server/architecture/AssetParts.md).
-- **Next:** M2, asset parts in `@jolly-pixel/asset-server`.
+- **Part checkpoints: done** (2026-10-21). A kind declares `parts`;
+  creation, generations, replay and compaction handle them. Kinds without
+  parts are unchanged.
+- **Next:** M2, part files in storage: projector, reconciler, folders,
+  archives, tags and seeding.
 
 Tick a box when its item lands, and move **Next** along with it.
 

@@ -5,6 +5,7 @@ export type {
   CompactReport,
   EventDataMap,
   EventListener,
+  EventPosition,
   EventReader,
   EventStore,
   EventTag,

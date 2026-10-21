@@ -10,6 +10,7 @@ import {
   ASSET_CHECKPOINT_EVENT_TYPES,
   type AssetEventDataMap
 } from "./model/events/AssetEvents.ts";
+import { retainedPartEvents } from "./model/events/retainedPartEvents.ts";
 import { AssetIndex } from "./storage/AssetIndex.ts";
 import { AssetKindRegistry } from "./model/kinds/AssetKindRegistry.ts";
 import type {
@@ -132,7 +133,8 @@ async function assembleAssetBackend(
 
   if (compactOnOpen) {
     const report = eventStore.compact({
-      checkpointEventTypes: ASSET_CHECKPOINT_EVENT_TYPES
+      checkpointEventTypes: ASSET_CHECKPOINT_EVENT_TYPES,
+      keep: retainedPartEvents(eventStore)
     });
     logger
       .withMetadata(report)

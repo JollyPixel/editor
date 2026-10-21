@@ -24,12 +24,31 @@ export const assetReferenceSchema = z.object({
   kind: z.string()
 });
 
+export const ASSET_PART_ID_PATTERN = /^[A-Za-z0-9_-]+$/;
+
+export const assetPartSchema = z.union([
+  z.strictObject({
+    hash: z.string(),
+    size: z.number(),
+    content: assetInlineContentSchema
+  }),
+  z.strictObject({
+    hash: z.string(),
+    size: z.number(),
+    at: z.int().check(z.minimum(1))
+  })
+]);
+
 export const assetWriteDataSchema = z.object({
   path: z.string(),
   kind: z.string(),
   hash: z.string(),
   size: z.number(),
   content: assetContentSchema,
+  parts: z.optional(z.record(
+    z.string().check(z.regex(ASSET_PART_ID_PATTERN)),
+    assetPartSchema
+  )),
   dependencies: z.optional(z.array(assetReferenceSchema)),
   restoredFrom: z.optional(z.object({
     name: z.string(),

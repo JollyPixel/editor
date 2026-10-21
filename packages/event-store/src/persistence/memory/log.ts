@@ -172,6 +172,14 @@ export class MemoryEventLog implements EventLog {
       options.assetId
     );
     const tagged = this.tags.versionsByAsset();
+    for (const { assetId, eventVersion } of options.keep ?? []) {
+      let versions = tagged.get(assetId);
+      if (versions === undefined) {
+        versions = new Set();
+        tagged.set(assetId, versions);
+      }
+      versions.add(eventVersion);
+    }
     function kept(
       event: Event
     ): boolean {

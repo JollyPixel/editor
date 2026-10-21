@@ -194,7 +194,7 @@ export class CatalogProjection extends Emitter<
       id: new AssetId(assetId),
       kind: projection.kind,
       path: projection.path,
-      revision: projection.hash
+      revision: projection.revision ?? projection.hash
     });
     this.#catalog.set(record);
     if (projection.dependencies !== undefined) {

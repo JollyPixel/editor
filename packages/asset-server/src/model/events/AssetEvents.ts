@@ -17,6 +17,7 @@ import {
 import {
   assetContentSchema,
   assetDeletedDataSchema,
+  assetPartSchema,
   assetRenamedDataSchema,
   assetWriteDataSchema,
   type AssetInlineContent
@@ -58,6 +59,19 @@ export const SNAPSHOT_ACTOR: EventStore.Actor = {
 export type { AssetInlineContent };
 
 export type AssetContent = Infer<typeof assetContentSchema>;
+
+export type AssetPartEntry = Infer<typeof assetPartSchema>;
+
+export interface AssetPartRef {
+  readonly hash: string;
+  readonly size: number;
+  readonly at: number;
+}
+
+export interface AssetPartsWrite {
+  readonly written: ReadonlyMap<string, Uint8Array>;
+  readonly kept?: ReadonlyMap<string, AssetPartRef>;
+}
 
 export type AssetWriteData = Readonly<
   & Omit<Infer<typeof assetWriteDataSchema>, "content">
@@ -203,11 +217,28 @@ function malformed(
   };
 }
 
+export function partRefs(
+  data: AssetWriteData,
+  eventVersion: number
+): Map<string, AssetPartRef> {
+  const refs = new Map<string, AssetPartRef>();
+  for (const [partId, entry] of Object.entries(data.parts ?? {})) {
+    refs.set(partId, {
+      hash: entry.hash,
+      size: entry.size,
+      at: "at" in entry ? entry.at : eventVersion
+    });
+  }
+
+  return refs;
+}
+
 export async function writeData(
   path: string,
   kind: string,
   data: Uint8Array,
-  dependencies: readonly AssetReferenceData[] = []
+  dependencies: readonly AssetReferenceData[] = [],
+  parts?: AssetPartsWrite
 ): Promise<AssetWriteData> {
   const size = data.byteLength;
   const content = encodeContent(data);
@@ -224,7 +255,30 @@ export async function writeData(
     hash: await contentHash(data),
     size,
     content,
+    ...(parts === undefined ? {} : { parts: await partEntries(parts) }),
     dependencies: references
   };
+}
+
+async function partEntries(
+  parts: AssetPartsWrite
+): Promise<Record<string, AssetPartEntry>> {
+  const entries: Record<string, AssetPartEntry> = {};
+  for (const [partId, ref] of parts.kept ?? []) {
+    entries[partId] = {
+      hash: ref.hash,
+      size: ref.size,
+      at: ref.at
+    };
+  }
+  for (const [partId, data] of parts.written) {
+    entries[partId] = {
+      hash: await contentHash(data),
+      size: data.byteLength,
+      content: encodeContent(data)
+    };
+  }
+
+  return entries;
 }
 

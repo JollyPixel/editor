@@ -91,6 +91,11 @@ export interface ListFromCheckpointsOptions {
   assetId?: string;
 }
 
+export interface EventPosition {
+  assetId: string;
+  eventVersion: number;
+}
+
 export interface CompactOptions {
   checkpointEventTypes: readonly string[];
   /**
@@ -99,6 +104,10 @@ export interface CompactOptions {
    */
   reclaim?: boolean;
   assetId?: string;
+  /**
+   * Events compaction leaves in place, as a tag does.
+   */
+  keep?: Iterable<EventPosition>;
 }
 
 export interface CompactReport {

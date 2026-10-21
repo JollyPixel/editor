@@ -7,6 +7,7 @@ import type {
   CompactOptions,
   CompactReport,
   Event,
+  EventPosition,
   ListAllOptions,
   ListFromCheckpointsOptions
 } from "../../EventStore.ts";
@@ -250,8 +251,14 @@ export class SqliteEventLog implements EventLog {
              WHERE t.asset_id = e.asset_id
                AND t.event_version = e.event_version
            )
+           AND NOT EXISTS (
+             SELECT 1 FROM json_each(?) k
+             WHERE k.value ->> '$.assetId' = e.asset_id
+               AND k.value ->> '$.eventVersion' = e.event_version
+           )
        )`,
-      ...heads.parameters
+      ...heads.parameters,
+      JSON.stringify(keptPositions(options.keep))
     );
 
     if (reclaim && removed > 0) {
@@ -328,5 +335,16 @@ function toEvent(
   return record.toEvent({
     eventId: row.event_id,
     eventVersion: row.event_version
+  });
+}
+
+function keptPositions(
+  keep: Iterable<EventPosition> = []
+): EventPosition[] {
+  return Array.from(keep, ({ assetId, eventVersion }) => {
+    return {
+      assetId,
+      eventVersion
+    };
   });
 }

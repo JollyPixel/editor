@@ -126,6 +126,30 @@ for (const backend of backends) {
       assert.strictEqual(store.reader.list("a2").length, 2);
     });
 
+    test("keeps the positions it is given, in their own asset only", async() => {
+      using store = await backend.create();
+      for (const assetId of ["a1", "a2"]) {
+        append(store, assetId, {}, "asset.created");
+        append(store, assetId, {}, "stroke");
+        append(store, assetId, {}, "asset.updated");
+      }
+
+      const report = store.compact({
+        ...kCheckpoints,
+        keep: [{ assetId: "a1", eventVersion: 1 }]
+      });
+
+      assert.deepEqual(report, { removed: 3, assets: 2 });
+      assert.deepEqual(
+        store.reader.list("a1").map((event) => event.eventVersion),
+        [1, 3]
+      );
+      assert.deepEqual(
+        store.reader.list("a2").map((event) => event.eventVersion),
+        [3]
+      );
+    });
+
     test("keeps a tagged event while checkpoint reads skip it", async() => {
       using store = await backend.create();
       append(store, "a1", {}, "asset.created");
