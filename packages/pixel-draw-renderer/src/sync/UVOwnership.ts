@@ -13,7 +13,7 @@ import {
   uvRegionMoved,
   uvRegionRotated,
   uvRegionStateChanged,
-  type DocumentCommand,
+  type PixelDocumentCommand,
   type PixelCommand
 } from "./PixelCommand.ts";
 import type { LocalEdit } from "./LocalEdit.types.ts";
@@ -113,7 +113,7 @@ export class UVOwnership {
     }
 
     const zone = this.#removeNormalMapZone(region.id);
-    const inverse: DocumentCommand[] = [uvRegionCreated(region.toJSON())];
+    const inverse: PixelDocumentCommand[] = [uvRegionCreated(region.toJSON())];
     if (zone) {
       inverse.push({
         action: "normal-map-zone-set",

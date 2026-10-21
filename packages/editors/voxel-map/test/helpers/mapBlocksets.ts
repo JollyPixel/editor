@@ -24,7 +24,7 @@ import { Emitter } from "@openally/emitt";
 import type { AssetRecordData } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import type { MapDocument } from "../../src/document/MapDocument.ts";
+import type { EditorMap } from "../../src/map/EditorMap.ts";
 import {
   MapBlocksets,
   type BlocksetCatalog
@@ -217,16 +217,16 @@ export function setupMapBlocksets(
   catalog.list = [TERRAIN_BLOCKSET, ROCK_BLOCKSET, MOSS_BLOCKSET].map(
     (definition) => blocksetRecord(definition.asset!.id)
   );
-  const mapDocument = Object.assign(
+  const editorMap = Object.assign(
     new Emitter<Record<string, () => void>>(),
     { ready: true }
-  ) as unknown as MapDocument;
+  ) as unknown as EditorMap;
   view.document.blocksets.replace(definitions);
   let nextId = 0;
   const blocksets = new MapBlocksets({
     view,
     catalog,
-    mapDocument,
+    editorMap,
     open: (assetId) => sources.open(assetId),
     generateId: () => `generated-${nextId++}`
   });
@@ -235,7 +235,7 @@ export function setupMapBlocksets(
     next: BlocksetDefinition[]
   ): void {
     view.document.blocksets.replace(next);
-    mapDocument.emit("blocksetsChanged");
+    editorMap.emit("blocksetsChanged");
   }
 
   return { view, catalog, sources, blocksets, relink };

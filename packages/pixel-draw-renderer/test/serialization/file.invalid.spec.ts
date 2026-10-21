@@ -7,9 +7,9 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  createPixelArtDocument,
-  decodePixelArtDocument,
-  InvalidPixelArtDocumentError,
+  createPixelArtFile,
+  decodePixelArtFile,
+  InvalidPixelArtFileError,
   deserializePixelDocument
 } from "#src/serialization/index.ts";
 import { encodePixelBytes } from "#src/serialization/pixelBytes.ts";
@@ -19,7 +19,7 @@ import {
   jsonBytes
 } from "../helpers/document/serialization.ts";
 
-describe("PixelArtDocument — invalid payloads", () => {
+describe("PixelArtFile — invalid payloads", () => {
   test("rejects malformed saved palettes", () => {
     for (const palette of [
       null,
@@ -33,16 +33,16 @@ describe("PixelArtDocument — invalid payloads", () => {
         return { ...color, r: 0.5 };
       })
     ]) {
-      assert.throws(() => decodePixelArtDocument(jsonBytes({
-        ...createPixelArtDocument({ x: 1, y: 1 }),
+      assert.throws(() => decodePixelArtFile(jsonBytes({
+        ...createPixelArtFile({ x: 1, y: 1 }),
         palette
-      })), InvalidPixelArtDocumentError);
+      })), InvalidPixelArtFileError);
     }
   });
 
   test("rejects invalid normal map settings", () => {
     assert.throws(
-      () => decodePixelArtDocument(jsonBytes({
+      () => decodePixelArtFile(jsonBytes({
         version: 1,
         size: { x: 1, y: 1 },
         pixels: "",
@@ -52,51 +52,51 @@ describe("PixelArtDocument — invalid payloads", () => {
           zones: []
         }
       })),
-      InvalidPixelArtDocumentError
+      InvalidPixelArtFileError
     );
   });
 
   test("rejects a payload that is not JSON", () => {
     assert.throws(
-      () => decodePixelArtDocument(new TextEncoder().encode("{oops")),
-      InvalidPixelArtDocumentError
+      () => decodePixelArtFile(new TextEncoder().encode("{oops")),
+      InvalidPixelArtFileError
     );
   });
 
   test("rejects an unsupported version", () => {
     assert.throws(
-      () => decodePixelArtDocument(jsonBytes({
+      () => decodePixelArtFile(jsonBytes({
         version: 2,
         size: { x: 1, y: 1 },
         pixels: "",
         uvRegions: []
       })),
-      InvalidPixelArtDocumentError
+      InvalidPixelArtFileError
     );
   });
 
   test("rejects a malformed size", () => {
     assert.throws(
-      () => decodePixelArtDocument(jsonBytes({
+      () => decodePixelArtFile(jsonBytes({
         version: 1,
         size: { x: 1.5, y: 1 },
         pixels: "",
         uvRegions: []
       })),
-      InvalidPixelArtDocumentError
+      InvalidPixelArtFileError
     );
   });
 
   test("rejects a size that is not positive", () => {
     assert.throws(
-      () => decodePixelArtDocument(jsonBytes({
+      () => decodePixelArtFile(jsonBytes({
         version: 1,
         size: { x: 0, y: 1 },
         pixels: "",
         uvRegions: []
       })),
       {
-        name: "InvalidPixelArtDocumentError",
+        name: "InvalidPixelArtFileError",
         message: /size is not a pair of positive integers/
       }
     );
@@ -104,7 +104,7 @@ describe("PixelArtDocument — invalid payloads", () => {
 
   test("rejects malformed UV region data", () => {
     assert.throws(
-      () => decodePixelArtDocument(jsonBytes({
+      () => decodePixelArtFile(jsonBytes({
         version: 1,
         size: { x: 1, y: 1 },
         pixels: "",
@@ -117,13 +117,13 @@ describe("PixelArtDocument — invalid payloads", () => {
           }
         ]
       })),
-      InvalidPixelArtDocumentError
+      InvalidPixelArtFileError
     );
   });
 
   test("rejects a stacked slot that the region does not carry", () => {
     assert.throws(
-      () => decodePixelArtDocument(jsonBytes({
+      () => decodePixelArtFile(jsonBytes({
         version: 1,
         size: { x: 1, y: 1 },
         pixels: "",
@@ -137,7 +137,7 @@ describe("PixelArtDocument — invalid payloads", () => {
           }
         ]
       })),
-      InvalidPixelArtDocumentError
+      InvalidPixelArtFileError
     );
   });
 
@@ -152,7 +152,7 @@ describe("PixelArtDocument — invalid payloads", () => {
         uvRegions: []
       }, buffer),
       {
-        name: "InvalidPixelArtDocumentError",
+        name: "InvalidPixelArtFileError",
         message: /exceeds the buffer bounds/
       }
     );
@@ -168,7 +168,7 @@ describe("PixelArtDocument — invalid payloads", () => {
         pixels: "AAAA",
         uvRegions: []
       }, buffer),
-      InvalidPixelArtDocumentError
+      InvalidPixelArtFileError
     );
   });
 });

@@ -54,7 +54,7 @@ export const test = editorFixture({
   async create(catalog) {
     const id = await catalog.create(
       `${e2eFolder()}/model.voxelmodel.json`,
-      encodeModelDocument(),
+      encodeModelFile(),
       { kind: VOXEL_MODEL_KIND }
     );
 

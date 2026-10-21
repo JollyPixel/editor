@@ -108,7 +108,7 @@ describe("CommandDocumentKind", () => {
   type ValueKind = CommandDocumentKind<"value", ValueDocument, RejectedNotice>;
 
   test("derives the room and synced document from the document", () => {
-    expect<Parameters<ValueKind["createDocument"]>[0]>().type.toBe<Room<
+    expect<Parameters<ValueKind["syncDocument"]>[0]>().type.toBe<Room<
       TestCommand,
       NetworkServerMessage<TestCommand, TestSnapshot, RejectedNotice>
     >>();

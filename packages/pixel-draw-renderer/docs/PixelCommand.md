@@ -23,16 +23,16 @@ type PixelCommandAction = PixelCommand["action"];
 
 `texture-replaced` carries base64 RGBA8 bytes. Normal map commands are listed in [`NormalMapConfig`](./normal/NormalMapConfig.md#commands).
 
-## DocumentCommand
+## PixelDocumentCommand
 
 ```ts
-type DocumentCommand = /* the same variants, with texture bytes in memory */;
+type PixelDocumentCommand = /* the same variants, with texture bytes in memory */;
 
-function toPixelCommand(command: DocumentCommand): PixelCommand;
-function toDocumentCommand(command: PixelCommand): DocumentCommand;
+function toPixelCommand(command: PixelDocumentCommand): PixelCommand;
+function toPixelDocumentCommand(command: PixelCommand): PixelDocumentCommand;
 ```
 
-`DocumentCommand` is the in-memory form: `texture-replaced` holds its bytes as a `Uint8ClampedArray`. Document changes, history steps and `PixelDocumentState.apply()` use it. The two functions convert between the forms; every other variant is returned as is.
+`PixelDocumentCommand` is the in-memory form: `texture-replaced` holds its bytes as a `Uint8ClampedArray`. Document changes, history steps and `PixelDocumentState.apply()` use it. The two functions convert between the forms; every other variant is returned as is.
 
 ## Applying
 

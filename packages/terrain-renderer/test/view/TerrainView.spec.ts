@@ -6,8 +6,8 @@ import assert from "node:assert/strict";
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { ChunkCoord } from "#src/document/ChunkCoord.ts";
-import { TerrainDocument } from "#src/document/TerrainDocument.ts";
+import { ChunkCoord } from "#src/terrain/ChunkCoord.ts";
+import { Terrain } from "#src/terrain/Terrain.ts";
 import { LodRanges } from "#src/view/lod/LodRanges.ts";
 import {
   DEFAULT_WALKABLE_SLOPE,
@@ -36,8 +36,8 @@ function camera(
 
 function stripTerrain(
   length: number
-): TerrainDocument {
-  const terrain = new TerrainDocument();
+): Terrain {
+  const terrain = new Terrain();
   for (let x = 0; x < length; x++) {
     terrain.addChunk(new ChunkCoord(x, 0));
   }
@@ -96,7 +96,7 @@ describe("TerrainView", () => {
   });
 
   test("more nodes than the initial capacity still all get an instance", () => {
-    const terrain = new TerrainDocument();
+    const terrain = new Terrain();
     for (let x = 0; x < 16; x++) {
       for (let z = 0; z < 16; z++) {
         terrain.addChunk(new ChunkCoord(x, z));

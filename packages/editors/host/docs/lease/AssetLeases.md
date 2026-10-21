@@ -16,22 +16,14 @@ lease.release();
 ## Document kinds
 
 ```ts
-interface AssetDocumentKind<TDocument, TCommand = unknown, TMessage = unknown> {
-  readonly kind: string;
-  createDocument(room: Room<TCommand, TMessage>): SyncedDocument<TDocument>;
-}
-
-interface SyncedDocument<TDocument> {
-  readonly document: TDocument;
-  readonly ready: Promise<void>;
-  readonly pendingChanges: PendingChanges;
-  dispose(): void;
-}
+type AssetDocumentKind<TDocument, TCommand = unknown, TMessage = unknown> =
+  DocumentKind<string, Room<TCommand, TMessage>, SyncedDocument<TDocument>>;
 ```
 
-`pendingChanges` is the network
-`PendingChanges`
-of the document's sync client.
+`DocumentKind` and `SyncedDocument` come from `@jolly-pixel/network/client`:
+`syncDocument(room)` returns the network base class every synced document
+extends. Its `pendingChanges` is the `PendingChanges` of the document's sync
+client.
 
 A document kind pairs an asset kind with the factory of its synced document. Asset
 packages export them, such as `pixelArtDocumentKind()` from

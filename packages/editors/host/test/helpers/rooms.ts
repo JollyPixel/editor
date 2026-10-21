@@ -9,22 +9,20 @@ import type {
   AssetReferenceData
 } from "@jolly-pixel/asset";
 import { Emitter } from "@openally/emitt";
-import type {
-  ChangeOutbox,
-  PendingChanges,
-  Peer,
-  PeerMetadata,
-  Right,
-  Room,
-  RoomEventMap,
-  RoomRights
+import {
+  SyncedDocument,
+  type ChangeOutbox,
+  type DocumentSync,
+  type Peer,
+  type PeerMetadata,
+  type Right,
+  type Room,
+  type RoomEventMap,
+  type RoomRights
 } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
-import type {
-  AssetDocumentKind,
-  SyncedDocument
-} from "#src/lease/AssetLease.ts";
+import type { AssetDocumentKind } from "#src/lease/AssetLease.ts";
 
 export class FakeRoom extends Emitter<RoomEventMap> implements Room {
   readonly id: string;
@@ -147,12 +145,23 @@ export function changedMessage(
   };
 }
 
-export class FakePendingChanges extends Emitter<{
+export class FakeDocumentSync extends Emitter<{
   settled: () => void;
   unsettled: () => void;
-}> implements PendingChanges {
+}> implements DocumentSync {
+  readonly ready = false;
+  readonly loading = Promise.withResolvers<void>();
   pending = 0;
   outbox: ChangeOutbox | null = null;
+  destroyed = false;
+
+  whenReady(): Promise<void> {
+    return this.loading.promise;
+  }
+
+  destroy(): void {
+    this.destroyed = true;
+  }
 
   keepIn(
     outbox: ChangeOutbox
@@ -173,10 +182,30 @@ export class FakePendingChanges extends Emitter<{
   }
 }
 
-export interface FakeDocument {
+export class FakeDocument {
   readonly room: Room;
-  readonly changes: FakePendingChanges;
-  disposed: boolean;
+  readonly changes = new FakeDocumentSync();
+
+  get disposed(): boolean {
+    return this.changes.destroyed;
+  }
+
+  constructor(
+    room: Room
+  ) {
+    this.room = room;
+  }
+}
+
+class FakeSyncedDocument extends SyncedDocument<FakeDocument> {
+  readonly document: FakeDocument;
+
+  constructor(
+    document: FakeDocument
+  ) {
+    super(document.changes);
+    this.document = document;
+  }
 }
 
 export interface FakeDocumentKind extends AssetDocumentKind<FakeDocument> {
@@ -189,39 +218,27 @@ export function fakeDocumentKind(
   kind: string
 ): FakeDocumentKind {
   const documents: FakeDocument[] = [];
-  const pending: Array<PromiseWithResolvers<void>> = [];
+  const pending: FakeDocumentSync[] = [];
 
   return {
     kind,
     documents,
     resolveAll: () => {
-      for (const { resolve } of pending.splice(0)) {
-        resolve();
+      for (const { loading } of pending.splice(0)) {
+        loading.resolve();
       }
     },
     rejectAll: (error) => {
-      for (const { reject } of pending.splice(0)) {
-        reject(error);
+      for (const { loading } of pending.splice(0)) {
+        loading.reject(error);
       }
     },
-    createDocument(room): SyncedDocument<FakeDocument> {
-      const document: FakeDocument = {
-        room,
-        changes: new FakePendingChanges(),
-        disposed: false
-      };
+    syncDocument(room): SyncedDocument<FakeDocument> {
+      const document = new FakeDocument(room);
       documents.push(document);
-      const resolvers = Promise.withResolvers<void>();
-      pending.push(resolvers);
+      pending.push(document.changes);
 
-      return {
-        document,
-        ready: resolvers.promise,
-        pendingChanges: document.changes,
-        dispose: () => {
-          document.disposed = true;
-        }
-      };
+      return new FakeSyncedDocument(document);
     }
   };
 }

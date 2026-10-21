@@ -24,7 +24,7 @@ import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
 import { bindPlacementShortcuts } from "../../../src/features/placement/placementShortcuts.ts";
 import type { HorizontalAxis } from "../../../src/scene/camera/EditorCamera.ts";
 import { SelectionStore } from "../../../src/state/index.ts";
-import { createMapDocument } from "../../helpers/mapDocument.ts";
+import { createEditorMap } from "../../helpers/editorMap.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
 import { defaultKeyBindings } from "../../helpers/shortcuts.ts";
 
@@ -47,7 +47,7 @@ function setup(
     world,
     history: mapSteps(createWorldHistory(world)),
     selection: new SelectionStore(),
-    mapDocument: createMapDocument(world),
+    editorMap: createEditorMap(world),
     access: mapAccess()
   });
   let commits = 0;

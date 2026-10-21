@@ -17,7 +17,7 @@ import { BlocksetIslands } from "@jolly-pixel/asset.voxel-map/client";
 import { NormalMapTexture } from "@jolly-pixel/editor.pixel-art/mesh-texturing";
 
 // Import Internal Dependencies
-import type { MapDocument } from "../../document/MapDocument.ts";
+import type { EditorMap } from "../../map/EditorMap.ts";
 import type { BlockWriter } from "./BlocksetBinding.ts";
 import { BlocksetEntry } from "./BlocksetEntry.ts";
 
@@ -26,7 +26,7 @@ export interface BlocksetAtlasBridgeOptions {
   pixels: PixelDocument;
   blockset: BlocksetDocument;
   definition: BlocksetDefinition;
-  mapDocument: MapDocument;
+  editorMap: EditorMap;
   blocks: BlockWriter;
   scheduler?: (callback: () => void) => void;
 }
@@ -35,7 +35,7 @@ export class BlocksetAtlasBridge {
   readonly #view: VoxelView;
   readonly #pixels: PixelDocument;
   readonly #blockset: BlocksetDocument;
-  readonly #mapDocument: MapDocument;
+  readonly #editorMap: EditorMap;
   readonly #blocks: BlockWriter;
   readonly #scheduler: (callback: () => void) => void;
   readonly #unsubscribe: () => void;
@@ -102,7 +102,7 @@ export class BlocksetAtlasBridge {
     this.#pixels = options.pixels;
     this.#blockset = options.blockset;
     this.#definition = options.definition;
-    this.#mapDocument = options.mapDocument;
+    this.#editorMap = options.editorMap;
     this.#blocks = options.blocks;
     this.#scheduler = options.scheduler ??
       ((callback) => requestAnimationFrame(callback));
@@ -119,7 +119,7 @@ export class BlocksetAtlasBridge {
     this.#blockset.on("command", this.#onBlocksetCommand);
     this.#pixels.normals.on("changed", this.#onNormalsChanged);
     this.#pixels.normals.on("resized", this.#onNormalsChanged);
-    this.#unsubscribe = this.#mapDocument.subscribe(
+    this.#unsubscribe = this.#editorMap.subscribe(
       "reset",
       this.#onReset
     );
@@ -153,7 +153,7 @@ export class BlocksetAtlasBridge {
   syncAlphaModes(
     bounds?: SelectionRect
   ): void {
-    if (this.#running && this.#mapDocument.ready) {
+    if (this.#running && this.#editorMap.ready) {
       this.#blocks.syncAlphaModes(this.#definition.id, bounds);
     }
   }

@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import {
-  toDocumentCommand,
+  toPixelDocumentCommand,
   type PixelDocumentState
 } from "@jolly-pixel/pixel-draw.renderer";
 
@@ -15,6 +15,6 @@ export function applyPixelCommand(
   command: PixelWireCommand
 ): void {
   state.apply(
-    toDocumentCommand(unpackPixelCommand(command))
+    toPixelDocumentCommand(unpackPixelCommand(command))
   );
 }

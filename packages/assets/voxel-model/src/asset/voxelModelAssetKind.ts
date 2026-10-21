@@ -3,11 +3,10 @@ import type { AssetReferenceData } from "@jolly-pixel/asset";
 import {
   describeErrors,
   KeyedCommandArbiter,
-  SchemaParser,
-  type Infer
+  SchemaParser
 } from "@jolly-pixel/network";
 import {
-  InvalidAssetDocumentError,
+  InvalidAssetFileError,
   SNAPSHOT_POLICY_SCHEMA,
   type AssetKindHandler,
   type AssetKindPackage,
@@ -19,89 +18,59 @@ import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import {
-  createVoxelModelDocument,
-  encodeVoxelModelDocument,
+  createVoxelModelFile,
+  encodeVoxelModelFile,
   VOXEL_MODEL_ASSET,
   VOXEL_MODEL_COMMAND,
-  VOXEL_MODEL_DOCUMENT_VERSION,
+  VOXEL_MODEL_FILE_VERSION,
   VOXEL_MODEL_EXTENSION,
   VOXEL_MODEL_KIND,
-  voxelModelDocumentSchema,
-  type VoxelModelDocument
+  compactVoxelModelFileSchema,
+  expandVoxelModelFile,
+  type VoxelModelFile
 } from "./voxelModel.ts";
 import { ModelTree } from "../model/ModelTree.ts";
-import { BlockTransform } from "../model/nodes/BlockTransform.ts";
 import {
   voxelModelCommandProtocol,
   voxelModelSnapshotSchema
 } from "../network/VoxelModelCommand.schema.ts";
 import { voxelModelConflictKeys } from "../network/VoxelModelCommandKeys.ts";
 import type {
-  ModelNodeJSON,
-  UVLayoutData,
   VoxelModelCommand,
   VoxelModelNetworkCommand,
   VoxelModelSnapshot
 } from "../network/types.ts";
 
-type StoredModelNode = Infer<typeof voxelModelDocumentSchema>["nodes"][number];
-
 // CONSTANTS
-const kDocumentParser = new SchemaParser(voxelModelDocumentSchema);
+const kFileParser = new SchemaParser(compactVoxelModelFileSchema);
 const kOptionsSchema = z.strictObject({
   snapshot: z.optional(SNAPSHOT_POLICY_SCHEMA)
 });
 
-export function decodeVoxelModelDocument(
+export function decodeVoxelModelFile(
   content: Uint8Array
-): VoxelModelDocument {
+): VoxelModelFile {
   let parsed: unknown;
   try {
     parsed = JSON.parse(new TextDecoder().decode(content));
   }
   catch (error) {
-    throw new InvalidAssetDocumentError(
+    throw new InvalidAssetFileError(
       VOXEL_MODEL_KIND,
       "content is not JSON",
       { cause: error }
     );
   }
 
-  const result = kDocumentParser.parse(parsed);
+  const result = kFileParser.parse(parsed);
   if (result.err) {
-    throw new InvalidAssetDocumentError(
+    throw new InvalidAssetFileError(
       VOXEL_MODEL_KIND,
       describeErrors(result.val)
     );
   }
 
-  return {
-    ...result.val,
-    nodes: result.val.nodes.map(expandNode)
-  };
-}
-
-function expandNode(
-  stored: StoredModelNode
-): ModelNodeJSON {
-  return stored.kind === "folder" ?
-    stored :
-    {
-      ...stored,
-      transform: BlockTransform.create(stored.transform),
-      uv: expandUv(stored.uv)
-    };
-}
-
-function expandUv(
-  uv: UVLayoutData
-): UVLayoutData {
-  return uv.state === "stacked" || uv.activeFaces !== undefined ?
-    uv :
-    {
-      ...uv,
-      activeFaces: Object.keys(uv.faces)
-    };
+  return expandVoxelModelFile(result.val);
 }
 
 export class VoxelModelState {
@@ -115,12 +84,12 @@ export class VoxelModelState {
   }
 
   load(
-    document: VoxelModelDocument
+    file: VoxelModelFile
   ): void {
-    this.#tree.load(document);
+    this.#tree.load(file);
     this.#texture = {
-      id: document.texture.id,
-      kind: document.texture.kind
+      id: file.texture.id,
+      kind: file.texture.kind
     };
   }
 
@@ -155,16 +124,16 @@ export class VoxelModelState {
     return this.#tree.toJSON();
   }
 
-  toJSON(): VoxelModelDocument {
+  toJSON(): VoxelModelFile {
     if (this.#texture === null) {
-      throw new InvalidAssetDocumentError(
+      throw new InvalidAssetFileError(
         VOXEL_MODEL_KIND,
         "texture is missing"
       );
     }
 
     return {
-      version: VOXEL_MODEL_DOCUMENT_VERSION,
+      version: VOXEL_MODEL_FILE_VERSION,
       ...this.snapshot(),
       texture: { ...this.#texture }
     };
@@ -191,7 +160,7 @@ export function voxelModelAssetKind(
         kind: PIXEL_ART_KIND,
         link(state, texture) {
           state.load(
-            createVoxelModelDocument({ texture })
+            createVoxelModelFile({ texture })
           );
         }
       }
@@ -206,7 +175,7 @@ export function voxelModelAssetKind(
       content: Uint8Array
     ): void {
       state.load(
-        decodeVoxelModelDocument(content)
+        decodeVoxelModelFile(content)
       );
     },
 
@@ -220,7 +189,7 @@ export function voxelModelAssetKind(
       state: VoxelModelState
     ): Promise<Uint8Array> {
       return Promise.resolve(
-        encodeVoxelModelDocument(state.toJSON())
+        encodeVoxelModelFile(state.toJSON())
       );
     },
 
@@ -234,10 +203,10 @@ export function voxelModelAssetKind(
       state: VoxelModelState,
       idMap: ReadonlyMap<string, string>
     ): void {
-      const document = state.toJSON();
-      const { texture, animationSets } = document;
+      const file = state.toJSON();
+      const { texture, animationSets } = file;
       state.load({
-        ...document,
+        ...file,
         texture: {
           ...texture,
           id: idMap.get(texture.id) ?? texture.id

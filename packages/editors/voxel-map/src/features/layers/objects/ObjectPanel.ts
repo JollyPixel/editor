@@ -11,7 +11,7 @@ import {
 import { FieldBinding } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { MapDocument } from "../../../document/MapDocument.ts";
+import type { EditorMap } from "../../../map/EditorMap.ts";
 import {
   objectColorSource,
   objectSizeSource,
@@ -41,7 +41,7 @@ export class ObjectPanel extends LitElement {
   @property({ type: String })
   declare objectId: string | null;
   @property({ attribute: false })
-  declare mapDocument: MapDocument;
+  declare editorMap: EditorMap;
   @property({ type: Boolean })
   declare writable: boolean;
 
@@ -99,7 +99,7 @@ export class ObjectPanel extends LitElement {
   override connectedCallback() {
     super.connectedCallback();
     this.#subscriptions.push(
-      this.mapDocument.subscribe("layerUpdated", this.#onLayerUpdated)
+      this.editorMap.subscribe("layerUpdated", this.#onLayerUpdated)
     );
   }
 

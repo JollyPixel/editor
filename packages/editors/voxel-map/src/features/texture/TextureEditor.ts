@@ -20,7 +20,7 @@ import {
 } from "@jolly-pixel/editor.pixel-art";
 
 // Import Internal Dependencies
-import type { BlockRegistryChange } from "../../document/MapDocument.ts";
+import type { BlockRegistryChange } from "../../map/EditorMap.ts";
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
 import type { AddBlocksetDialog } from "../blocksets/dialogs/AddBlocksetDialog.ts";
@@ -110,7 +110,7 @@ export class TextureEditor extends WorkspaceElement {
   protected override watchWorkspace(
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
-    const { blocksets, mapDocument } = workspace;
+    const { blocksets, editorMap } = workspace;
 
     return [
       blocksets.subscribe("change", this.#requestSync),
@@ -118,7 +118,7 @@ export class TextureEditor extends WorkspaceElement {
       workspace.state.block.subscribe("change", this.#onBlockChange),
       workspace.access.subscribe("change", this.#requestSync),
       workspace.state.textureTabs.subscribe("change", this.#requestSync),
-      mapDocument.subscribe("blockRegistryChanged", this.#onBlockRegistryChanged)
+      editorMap.subscribe("blockRegistryChanged", this.#onBlockRegistryChanged)
     ];
   }
 
@@ -198,7 +198,7 @@ export class TextureEditor extends WorkspaceElement {
         blocks: blocksets,
         block: workspace.state.block,
         uvSync: workspace.state.uvSync,
-        mapDocument: workspace.mapDocument
+        editorMap: workspace.editorMap
       }));
     }
 
@@ -302,7 +302,7 @@ export class TextureEditor extends WorkspaceElement {
       return;
     }
 
-    const block = workspace.state.block.resolve(workspace.mapDocument.blocks);
+    const block = workspace.state.block.resolve(workspace.editorMap.blocks);
     if (block === undefined) {
       return;
     }

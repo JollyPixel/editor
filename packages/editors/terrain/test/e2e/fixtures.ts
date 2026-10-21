@@ -7,8 +7,8 @@ import {
 } from "@jolly-pixel/e2e/editor";
 import {
   encodeHeights,
-  encodeTerrainAssetDocument,
-  TERRAIN_DOCUMENT_VERSION,
+  encodeTerrainFile,
+  TERRAIN_FILE_VERSION,
   TERRAIN_KIND
 } from "@jolly-pixel/asset.terrain";
 import {
@@ -69,8 +69,8 @@ function encodeRollingTerrain(): Uint8Array {
     }
   }
 
-  return encodeTerrainAssetDocument({
-    version: TERRAIN_DOCUMENT_VERSION,
+  return encodeTerrainFile({
+    version: TERRAIN_FILE_VERSION,
     chunks
   });
 }

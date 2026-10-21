@@ -10,8 +10,8 @@ import {
   encodeBase64
 } from "../utils/base64.ts";
 import {
-  InvalidPixelArtDocumentError
-} from "./errors/InvalidPixelArtDocumentError.ts";
+  InvalidPixelArtFileError
+} from "./errors/InvalidPixelArtFileError.ts";
 import type { Vec2 } from "../types.ts";
 
 export interface PngPixels {
@@ -73,7 +73,7 @@ export async function decodePngPixels(
     image.width !== size.x ||
     image.height !== size.y
   ) {
-    throw new InvalidPixelArtDocumentError(
+    throw new InvalidPixelArtFileError(
       `PNG pixels are ${image.width}x${image.height}, ` +
       `expected ${size.x}x${size.y}`
     );

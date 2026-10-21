@@ -239,7 +239,7 @@ which leaves a flat 1 m strip along the edge of the world.
 
 - `src/asset/`: the kind, its descriptor and builders in `terrain.ts`; the
   state, decoder and kind handler in `terrainAssetKind.ts`.
-- `src/model/`: `TerrainCommandDocument`, the command state, and
+- `src/model/`: `TerrainDocument`, the command state, and
   `TerrainPreview`, the displayed copy that layers live strokes over confirmed
   heights.
 - `src/network/`: `TerrainCommand.schema.ts`, `TerrainCommandKeys.ts`,
@@ -251,7 +251,7 @@ which leaves a flat 1 m strip along the edge of the world.
 
 `packages/terrain-renderer`, laid out like `packages/voxel-renderer`:
 
-- `src/document/`: `TerrainDocument`, `TerrainChunk`, `ChunkGrid`,
+- `src/terrain/`: `Terrain`, `TerrainChunk`, `ChunkGrid`,
   `OverviewMap`, `PointOfInterest`. Headless; runs in Node.
 - `src/view/`: `TerrainView`, quadtree selection, `ChunkTextureStore`, the
   streaming budget.

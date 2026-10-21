@@ -131,14 +131,14 @@ type CommandOf<TPixels> =
   }
   | NormalMapCommand;
 
-export type DocumentCommand = CommandOf<Uint8ClampedArray>;
+export type PixelDocumentCommand = CommandOf<Uint8ClampedArray>;
 
 export type PixelCommand = CommandOf<string>;
 
-export type PixelCommandAction = DocumentCommand["action"];
+export type PixelCommandAction = PixelDocumentCommand["action"];
 
 export function toPixelCommand(
-  command: DocumentCommand
+  command: PixelDocumentCommand
 ): PixelCommand {
   return command.action === "texture-replaced" ?
     {
@@ -151,9 +151,9 @@ export function toPixelCommand(
     command;
 }
 
-export function toDocumentCommand(
+export function toPixelDocumentCommand(
   command: PixelCommand
-): DocumentCommand {
+): PixelDocumentCommand {
   if (command.action !== "texture-replaced") {
     return command;
   }
@@ -170,7 +170,7 @@ export function toDocumentCommand(
 export function strokeCommand(
   positions: Vec2[],
   color: RGBA8
-): DocumentCommand {
+): PixelDocumentCommand {
   return {
     action: "stroke",
     metadata: { color, positions }
@@ -180,7 +180,7 @@ export function strokeCommand(
 export function strokeCommands(
   positions: Vec2[],
   colors: RGBA8[]
-): DocumentCommand[] {
+): PixelDocumentCommand[] {
   return groupPositionsByColor(positions, colors).map(
     (group) => strokeCommand(group.positions, group.color)
   );
@@ -189,7 +189,7 @@ export function strokeCommands(
 export function selectEditCommand(
   positions: Vec2[],
   colors: RGBA8[]
-): DocumentCommand {
+): PixelDocumentCommand {
   return {
     action: "select-edit",
     metadata: { positions, colors }
@@ -199,7 +199,7 @@ export function selectEditCommand(
 export function textureCommand(
   size: Vec2,
   pixels: Uint8ClampedArray
-): DocumentCommand {
+): PixelDocumentCommand {
   return {
     action: "texture-replaced",
     metadata: { size, pixels }
@@ -208,7 +208,7 @@ export function textureCommand(
 
 export function uvRegionCreated(
   region: UVRegionData
-): DocumentCommand {
+): PixelDocumentCommand {
   return {
     action: "uv-region-created",
     metadata: { region }
@@ -217,7 +217,7 @@ export function uvRegionCreated(
 
 export function uvRegionDeleted(
   id: string
-): DocumentCommand {
+): PixelDocumentCommand {
   return {
     action: "uv-region-deleted",
     metadata: { id }
@@ -228,7 +228,7 @@ export function uvRegionMoved(
   id: string,
   face: UVSlot | null,
   rect: SelectionRect
-): DocumentCommand {
+): PixelDocumentCommand {
   return {
     action: "uv-region-moved",
     metadata: {
@@ -241,7 +241,7 @@ export function uvRegionMoved(
 
 export function uvRegionStateChanged(
   region: UVRegionData
-): DocumentCommand {
+): PixelDocumentCommand {
   return {
     action: "uv-region-state-changed",
     metadata: { region }
@@ -251,7 +251,7 @@ export function uvRegionStateChanged(
 export function uvRegionRotated(
   region: UVRegion,
   face: UVSlot | null
-): DocumentCommand {
+): PixelDocumentCommand {
   const rotation: UVRegionRotation = face === null ?
     {
       id: region.id,

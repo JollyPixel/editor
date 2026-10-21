@@ -11,9 +11,9 @@ import type { CommandChange } from "@jolly-pixel/history";
 import {
   EditChange,
   encodePngPixels,
-  toDocumentCommand,
+  toPixelDocumentCommand,
   toPixelCommand,
-  type DocumentCommand,
+  type PixelDocumentCommand,
   type PixelChange,
   type PixelCommand
 } from "@jolly-pixel/pixel-draw.renderer";
@@ -63,7 +63,7 @@ class Host extends MockEmitter<{
   }
 
   applyStep(
-    command: DocumentCommand
+    command: PixelDocumentCommand
   ): PixelChange {
     const change = EditChange.local(command);
     this.emit("change", change);
@@ -74,8 +74,8 @@ class Host extends MockEmitter<{
 
   edit(
     command: PixelCommand
-  ): CommandChange<DocumentCommand, null> {
-    const change = EditChange.local(toDocumentCommand(command));
+  ): CommandChange<PixelDocumentCommand, null> {
+    const change = EditChange.local(toPixelDocumentCommand(command));
     this.emit("change", change);
     this.emit("command", command, change);
 

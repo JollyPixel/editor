@@ -17,7 +17,7 @@ import {
 // Import Internal Dependencies
 import {
   VOXEL_MODEL_KIND,
-  decodeVoxelModelDocument,
+  decodeVoxelModelFile,
   voxelModelAssetKind
 } from "#src/index.ts";
 
@@ -58,10 +58,10 @@ describe("voxel model created without content", () => {
       [reference]
     );
 
-    const document = decodeVoxelModelDocument(
+    const file = decodeVoxelModelFile(
       await source.read("models/new.voxelmodel.json")
     );
-    assert.deepEqual(document.texture, reference);
-    assert.deepEqual(document.nodes.map((node) => node.kind), ["block"]);
+    assert.deepEqual(file.texture, reference);
+    assert.deepEqual(file.nodes.map((node) => node.kind), ["block"]);
   });
 });

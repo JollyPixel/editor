@@ -147,7 +147,7 @@ function setup() {
       cols: 2,
       rows: 2
     },
-    mapDocument: {
+    editorMap: {
       ready: true,
       subscribe: () => () => undefined
     },

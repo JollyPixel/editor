@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
-  TerrainCommandDocument,
+  TerrainDocument,
   TerrainPreview
 } from "@jolly-pixel/asset.terrain/client";
 import {
@@ -36,7 +36,7 @@ const kFrame = 0.05;
 function strokeSetup(
   options: Partial<SculptOptions> = {}
 ) {
-  const document = new TerrainCommandDocument();
+  const document = new TerrainDocument();
   document.addChunk(0, 0);
   const preview = new TerrainPreview(document);
   const history = createTerrainHistory(document);

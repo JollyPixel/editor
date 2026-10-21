@@ -40,7 +40,7 @@ export class ProjectFile {
   readonly path: string;
   readonly inMemory: boolean;
 
-  #document: ProjectFileData;
+  #data: ProjectFileData;
 
   static async read(
     root: string
@@ -134,16 +134,16 @@ export class ProjectFile {
     this.root = root;
     this.path = path.join(root, PROJECT_FILE_PATH);
     this.inMemory = options.inMemory ?? false;
-    this.#document = structuredClone(data);
+    this.#data = structuredClone(data);
   }
 
-  get document(): Readonly<Record<string, unknown>> {
-    return this.#document;
+  get data(): Readonly<Record<string, unknown>> {
+    return this.#data;
   }
 
   get kinds(): ReadonlyMap<string, Readonly<Record<string, unknown>>> {
     return new Map(
-      Object.entries(this.#document.kinds ?? {})
+      Object.entries(this.#data.kinds ?? {})
     );
   }
 
@@ -152,7 +152,7 @@ export class ProjectFile {
     value: unknown
   ): Promise<void> {
     const result = kProjectFileParser.parse({
-      ...this.#document,
+      ...this.#data,
       [section]: value
     });
     if (result.err) {
@@ -161,19 +161,19 @@ export class ProjectFile {
       );
     }
 
-    const previous = this.#document;
-    this.#document = structuredClone(result.val);
+    const previous = this.#data;
+    this.#data = structuredClone(result.val);
     if (this.inMemory) {
       return;
     }
 
     try {
       const temporary = `${this.path}.tmp`;
-      await fs.writeFile(temporary, serialize(this.#document));
+      await fs.writeFile(temporary, serialize(this.#data));
       await fs.rename(temporary, this.path);
     }
     catch (error) {
-      this.#document = previous;
+      this.#data = previous;
 
       throw error;
     }
@@ -186,7 +186,7 @@ export class ProjectFile {
         await fs.readFile(this.path, "utf8")
       );
 
-      return !isDeepStrictEqual(current.document, this.#document);
+      return !isDeepStrictEqual(current.data, this.#data);
     }
     catch {
       return true;
@@ -195,9 +195,9 @@ export class ProjectFile {
 }
 
 function serialize(
-  document: ProjectFileData
+  data: ProjectFileData
 ): string {
-  return `${JSON.stringify(document, null, 2)}\n`;
+  return `${JSON.stringify(data, null, 2)}\n`;
 }
 
 function hasErrorCode(

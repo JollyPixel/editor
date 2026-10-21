@@ -6,7 +6,7 @@ import {
 import type { CatalogCreateOptions } from "@jolly-pixel/asset-server/client";
 import {
   createBlocksetAsset,
-  createBlocksetDocument,
+  createBlocksetFile,
   blocksetAsset,
   BLOCKSET_EXTENSION
 } from "@jolly-pixel/asset.voxel-map/client";
@@ -20,7 +20,7 @@ import type { SelectionRect } from "@jolly-pixel/pixel-draw.renderer";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import type { MapDocument } from "../../document/MapDocument.ts";
+import type { EditorMap } from "../../map/EditorMap.ts";
 import {
   BLOCKSET_CAPABILITIES,
   type BlocksetAccess,
@@ -67,7 +67,7 @@ export interface CreateBlocksetOptions {
 export interface MapBlocksetsOptions {
   view: VoxelView;
   catalog: BlocksetCatalog;
-  mapDocument: MapDocument;
+  editorMap: EditorMap;
   open: (assetId: string) => OpenedBlockset;
   generateId?: () => string;
 }
@@ -83,7 +83,7 @@ export class MapBlocksets
   implements BlockWriter {
   readonly #view: VoxelView;
   readonly #catalog: BlocksetCatalog;
-  readonly #mapDocument: MapDocument;
+  readonly #editorMap: EditorMap;
   readonly #open: (assetId: string) => OpenedBlockset;
   readonly #generateId: () => string;
   readonly #bindings = new Map<string, BlocksetBinding>();
@@ -98,7 +98,7 @@ export class MapBlocksets
     super();
     this.#view = options.view;
     this.#catalog = options.catalog;
-    this.#mapDocument = options.mapDocument;
+    this.#editorMap = options.editorMap;
     this.#open = options.open;
     this.#generateId = options.generateId ?? (() => crypto.randomUUID());
     this.#alphaModes = new BlockAlphaModes({
@@ -107,7 +107,7 @@ export class MapBlocksets
     });
 
     this.#catalog.on("change", this.refresh);
-    this.#unsubscribe = this.#mapDocument.subscribe(
+    this.#unsubscribe = this.#editorMap.subscribe(
       "blocksetsChanged",
       this.refresh
     );
@@ -322,7 +322,7 @@ export class MapBlocksets
     const assetId = await createBlocksetAsset(
       this.#catalog,
       `${kBlocksetDirectory}${options.name.trim()}${BLOCKSET_EXTENSION}`,
-      createBlocksetDocument({
+      createBlocksetFile({
         tileSize: options.tileSize,
         size: {
           x: options.cols * options.tileSize,
@@ -460,7 +460,7 @@ export class MapBlocksets
         slot: definition.slot
       }),
       opened,
-      mapDocument: this.#mapDocument,
+      editorMap: this.#editorMap,
       blocks: this
     });
     binding.access.on("change", () => this.emit("change"));

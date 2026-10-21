@@ -11,7 +11,7 @@ import type { PresencePeer } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { PeerEditContext } from "../../../../src/features/templates/editing/PeerEditContext.ts";
-import { TemplateDraftId } from "../../../../src/document/TemplateDraftId.ts";
+import { TemplateDraftId } from "../../../../src/map/TemplateDraftId.ts";
 import {
   EditContext,
   PresenceStore,

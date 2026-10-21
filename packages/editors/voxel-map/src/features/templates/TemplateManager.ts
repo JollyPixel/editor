@@ -17,7 +17,7 @@ import {
 import { peerBadges } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import { TemplateDraftId } from "../../document/TemplateDraftId.ts";
+import { TemplateDraftId } from "../../map/TemplateDraftId.ts";
 import { VoxelLayerRef } from "../../state/index.ts";
 import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
@@ -76,15 +76,15 @@ export class TemplateManager extends WorkspaceElement {
   protected override watchWorkspace(
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
-    const { templates, mapDocument } = workspace;
+    const { templates, editorMap } = workspace;
     const refresh = (): void => this.#refreshNodes(workspace);
     this._selected = templates.store.selected;
     refresh();
 
     return [
-      mapDocument.subscribe("templatesChanged", refresh),
-      mapDocument.subscribe("layerUpdated", refresh),
-      mapDocument.subscribe("reset", refresh),
+      editorMap.subscribe("templatesChanged", refresh),
+      editorMap.subscribe("layerUpdated", refresh),
+      editorMap.subscribe("reset", refresh),
       workspace.state.presence.subscribe("layerSelectionsChange", refresh),
       workspace.state.editContext.subscribe(
         "change",
@@ -146,10 +146,10 @@ export class TemplateManager extends WorkspaceElement {
 
         <div class="tree-host">${this.#renderTree(templates.editable)}</div>
         <template-panel
-          .world=${workspace.mapDocument.world}
+          .world=${workspace.editorMap.world}
           .templates=${templates}
           .placement=${placement}
-          .mapDocument=${workspace.mapDocument}
+          .editorMap=${workspace.editorMap}
         ></template-panel>
       </jolly-folder>
     `;
@@ -224,7 +224,7 @@ export class TemplateManager extends WorkspaceElement {
   #refreshNodes(
     workspace: VoxelMapWorkspace
   ): void {
-    const { world } = workspace.mapDocument;
+    const { world } = workspace.editorMap;
     const marks = workspace.state.presence.layerSelections;
     const drafts = new Map<string, TreeBadge[]>();
     for (const layer of world.getLayers()) {

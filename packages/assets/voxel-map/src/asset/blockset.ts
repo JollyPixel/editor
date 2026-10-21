@@ -1,11 +1,11 @@
 // Import Third-party Dependencies
 import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
 import {
-  createPixelArtDocument,
+  createPixelArtFile,
   createPixelBufferFromPng,
   PixelDocumentState,
   serializePixelDocument,
-  type PixelArtDocumentData,
+  type PixelArtFile,
   type Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
 import {
@@ -25,7 +25,7 @@ import { BLOCKSET_ICON } from "./icons.ts";
 export const BLOCKSET_KIND = "blockset";
 export const BLOCKSET_COMMAND = "blockset.command";
 export const BLOCKSET_EXTENSION = ".blockset.json";
-export const BLOCKSET_DOCUMENT_VERSION = 1;
+export const BLOCKSET_FILE_VERSION = 1;
 const kDefaultGridSize = 8;
 const kDefaultBlockLimit = 32;
 
@@ -36,15 +36,15 @@ export const BLOCKSET_ASSET: AssetKindDescriptor = {
   icon: BLOCKSET_ICON
 };
 
-export interface BlocksetAssetDocument {
-  version: typeof BLOCKSET_DOCUMENT_VERSION;
+export interface BlocksetFile {
+  version: typeof BLOCKSET_FILE_VERSION;
   tileSize: number;
-  pixels: PixelArtDocumentData;
+  pixels: PixelArtFile;
   blocks: ResolvedBlockDefinition[];
   materialGroups: MaterialGroupJSON[];
 }
 
-export interface BlocksetDocumentOptions {
+export interface BlocksetFileOptions {
   /**
    * @default 32
    */
@@ -54,7 +54,7 @@ export interface BlocksetDocumentOptions {
    * @default 8 by 8 tiles
    */
   size?: Vec2;
-  pixels?: PixelArtDocumentData;
+  pixels?: PixelArtFile;
   blocks?: Iterable<BlockDefinition>;
   materialGroups?: Iterable<MaterialGroupJSON>;
 }
@@ -80,15 +80,15 @@ export function blocksetAsset(
   };
 }
 
-export function createBlocksetDocument(
-  options: BlocksetDocumentOptions = {}
-): BlocksetAssetDocument {
+export function createBlocksetFile(
+  options: BlocksetFileOptions = {}
+): BlocksetFile {
   const {
     tileSize = DEFAULT_TILE_SIZE,
     blocks = [],
     materialGroups = []
   } = options;
-  const pixels = options.pixels ?? createPixelArtDocument(
+  const pixels = options.pixels ?? createPixelArtFile(
     options.size ?? {
       x: kDefaultGridSize * tileSize,
       y: kDefaultGridSize * tileSize
@@ -101,16 +101,16 @@ export function createBlocksetDocument(
   });
 
   return {
-    version: BLOCKSET_DOCUMENT_VERSION,
+    version: BLOCKSET_FILE_VERSION,
     pixels,
     ...document.toJSON()
   };
 }
 
-export async function blocksetDocumentFromPng(
+export async function blocksetFileFromPng(
   png: Uint8Array,
   options: BlocksetFromPngOptions = {}
-): Promise<BlocksetAssetDocument> {
+): Promise<BlocksetFile> {
   const {
     tileSize = DEFAULT_TILE_SIZE,
     blockLimit = kDefaultBlockLimit
@@ -118,7 +118,7 @@ export async function blocksetDocumentFromPng(
   const buffer = await createPixelBufferFromPng(png);
   const size = buffer.size();
 
-  return createBlocksetDocument({
+  return createBlocksetFile({
     tileSize,
     pixels: serializePixelDocument(new PixelDocumentState({ buffer })),
     blocks: blocksFromTileGrid(
@@ -131,8 +131,8 @@ export async function blocksetDocumentFromPng(
   });
 }
 
-export function encodeBlocksetDocument(
-  document: BlocksetAssetDocument
+export function encodeBlocksetFile(
+  file: BlocksetFile
 ): Uint8Array {
-  return new TextEncoder().encode(JSON.stringify(document));
+  return new TextEncoder().encode(JSON.stringify(file));
 }

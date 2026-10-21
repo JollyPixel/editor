@@ -5,7 +5,7 @@ import {
   SchemaParser
 } from "@jolly-pixel/network";
 import {
-  InvalidAssetDocumentError,
+  InvalidAssetFileError,
   SNAPSHOT_POLICY_SCHEMA,
   type AssetKindHandler,
   type AssetKindPackage,
@@ -13,20 +13,20 @@ import {
 } from "@jolly-pixel/asset-server";
 import {
   ChunkCoord,
-  TerrainDocument
+  Terrain
 } from "@jolly-pixel/terrain.renderer";
 import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import {
-  encodeTerrainAssetDocument,
-  terrainAssetDocumentSchema,
+  encodeTerrainFile,
+  terrainFileSchema,
   TERRAIN_ASSET,
   TERRAIN_COMMAND,
-  TERRAIN_DOCUMENT_VERSION,
+  TERRAIN_FILE_VERSION,
   TERRAIN_EXTENSION,
   TERRAIN_KIND,
-  type TerrainAssetDocument
+  type TerrainFile
 } from "./terrain.ts";
 import {
   acceptsTerrainCommand,
@@ -50,26 +50,26 @@ import type { TerrainNetworkCommand } from "../network/types.ts";
 const kOptionsSchema = z.strictObject({
   snapshot: z.optional(SNAPSHOT_POLICY_SCHEMA)
 });
-const kDocumentParser = new SchemaParser(terrainAssetDocumentSchema);
+const kFileParser = new SchemaParser(terrainFileSchema);
 
-export function decodeTerrainAssetDocument(
+export function decodeTerrainFile(
   content: Uint8Array
-): TerrainAssetDocument {
+): TerrainFile {
   let parsed: unknown;
   try {
     parsed = JSON.parse(new TextDecoder().decode(content));
   }
   catch (error) {
-    throw new InvalidAssetDocumentError(
+    throw new InvalidAssetFileError(
       TERRAIN_KIND,
       "content is not JSON",
       { cause: error }
     );
   }
 
-  const result = kDocumentParser.parse(parsed);
+  const result = kFileParser.parse(parsed);
   if (result.err) {
-    throw new InvalidAssetDocumentError(
+    throw new InvalidAssetFileError(
       TERRAIN_KIND,
       describeErrors(result.val)
     );
@@ -85,7 +85,7 @@ export interface TerrainAssetKindOptions {
 export function terrainAssetKind(
   options: TerrainAssetKindOptions = {}
 ): AssetKindHandler<
-  TerrainDocument,
+  Terrain,
   TerrainNetworkCommand,
   TerrainLiveMessage
 > {
@@ -98,23 +98,23 @@ export function terrainAssetKind(
     },
     snapshot,
 
-    create(): TerrainDocument {
-      const terrain = new TerrainDocument();
+    create(): Terrain {
+      const terrain = new Terrain();
       terrain.addChunk(new ChunkCoord(0, 0));
 
       return terrain;
     },
 
     load(
-      state: TerrainDocument,
+      state: Terrain,
       content: Uint8Array
     ): void {
-      const document = decodeTerrainAssetDocument(content);
+      const file = decodeTerrainFile(content);
       try {
-        loadTerrainSnapshot(state, document);
+        loadTerrainSnapshot(state, file);
       }
       catch (error) {
-        throw new InvalidAssetDocumentError(
+        throw new InvalidAssetFileError(
           TERRAIN_KIND,
           error instanceof Error ? error.message : String(error),
           { cause: error }
@@ -123,17 +123,17 @@ export function terrainAssetKind(
     },
 
     clear(
-      state: TerrainDocument
+      state: Terrain
     ): void {
       state.clear();
     },
 
     serialize(
-      state: TerrainDocument
+      state: Terrain
     ): Promise<Uint8Array> {
       return Promise.resolve(
-        encodeTerrainAssetDocument({
-          version: TERRAIN_DOCUMENT_VERSION,
+        encodeTerrainFile({
+          version: TERRAIN_FILE_VERSION,
           ...terrainSnapshot(state)
         })
       );
@@ -151,7 +151,7 @@ export function terrainAssetKind(
       live({ state }) {
         const arbiter = new KeyedCommandArbiter<
           TerrainNetworkCommand,
-          TerrainDocument
+          Terrain
         >({
           accepts: acceptsTerrainCommand,
           writes: (command) => {

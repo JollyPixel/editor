@@ -6,7 +6,7 @@ import {
 import type * as THREE from "three";
 
 // Import Internal Dependencies
-import type { TerrainReader } from "../../document/TerrainDocument.ts";
+import type { TerrainReader } from "../../terrain/Terrain.ts";
 import {
   TerrainView,
   type TerrainViewOptions

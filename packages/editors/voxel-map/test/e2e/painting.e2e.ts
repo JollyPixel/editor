@@ -203,7 +203,7 @@ test("nothing is painted and a warning is logged without any block", async({ map
   const { toolbar, world } = map;
   await page.evaluate(() => {
     const { workspace } = window.voxelMapEditor!;
-    for (const block of [...workspace.mapDocument.blocks.getAll()]) {
+    for (const block of [...workspace.editorMap.blocks.getAll()]) {
       workspace.blocksets.removeBlock(block.id);
     }
   });

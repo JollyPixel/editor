@@ -77,7 +77,7 @@ export class MaterialLibrary extends WorkspaceElement {
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
     const refresh = (): void => this.requestUpdate();
-    const { mapDocument } = workspace;
+    const { editorMap } = workspace;
     this.#followBlock(workspace);
 
     return [
@@ -85,9 +85,9 @@ export class MaterialLibrary extends WorkspaceElement {
         this.#followBlock(workspace);
       }),
       workspace.blocksets.subscribe("change", refresh),
-      mapDocument.subscribe("blockRegistryChanged", refresh),
-      mapDocument.subscribe("materialGroupsChanged", refresh),
-      mapDocument.subscribe("reset", refresh)
+      editorMap.subscribe("blockRegistryChanged", refresh),
+      editorMap.subscribe("materialGroupsChanged", refresh),
+      editorMap.subscribe("reset", refresh)
     ];
   }
 
@@ -391,7 +391,7 @@ export class MaterialLibrary extends WorkspaceElement {
   #block(
     workspace: VoxelMapWorkspace
   ): ResolvedBlockDefinition | undefined {
-    return workspace.state.block.resolve(workspace.mapDocument.blocks);
+    return workspace.state.block.resolve(workspace.editorMap.blocks);
   }
 
   #blockMaterial(

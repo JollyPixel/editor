@@ -10,7 +10,7 @@ import {
 } from "@jolly-pixel/asset.voxel-animation/client";
 
 const room: AnimationRoom = client.room(new AssetRoom("voxelanimation", assetId).toString());
-const synced = voxelAnimationDocumentKind().createDocument(room);
+const synced = voxelAnimationDocumentKind().syncDocument(room);
 room.join();
 await synced.ready;
 
@@ -19,8 +19,8 @@ await synced.ready;
 
 ## Synchronization
 
-- `voxelAnimationDocumentKind()` is the `@jolly-pixel/editor.host` lease adapter, built with network's `commandDocumentKind`. `createDocument(room)` returns a `SyncedAnimationDocument`: a network `SyncedCommandDocument` over a new `AnimationDocument`.
-- Call `createDocument()` before `room.join()`. `dispose()` destroys the sync; the caller still leaves the room.
+- `voxelAnimationDocumentKind()` is the `@jolly-pixel/editor.host` lease adapter, built with network's `commandDocumentKind`. `syncDocument(room)` returns a `SyncedAnimationDocument`: a network `SyncedCommandDocument` over a new `AnimationDocument`.
+- Call `syncDocument(room)` before `room.join()`. `dispose()` destroys the sync; the caller still leaves the room.
 - The sync is a `DocumentSyncClient` keyed by `animationWriteKeys`. Undo and redo carry the `basis` of their step, and the server's answers reach `document.receipts`, so the [history](./history.md) refuses steps a peer overwrote.
 - To listen to `snapshot`, `ready`, `command` and `notice`, build the client yourself: `new DocumentSyncClient(room, { document, keys: animationWriteKeys })`.
 
@@ -39,7 +39,7 @@ type AnimationCommandAction =
   | "track-removed" | "track-renamed";
 ```
 
-- `AnimationNetworkCommand` is an `AnimationCommand` plus the network command header. The stored document adds a `version` to the snapshot.
+- `AnimationNetworkCommand` is an `AnimationCommand` plus the network command header. The stored file adds a `version` to the snapshot.
 - `ANIMATION_CHANNELS` lists the key channels and `ANIMATION_INTERPOLATIONS` the interpolations.
 - The [animation set](./animation-set.md) page describes each command.
 

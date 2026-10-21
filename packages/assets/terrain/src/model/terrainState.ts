@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
   ChunkCoord,
-  type TerrainDocument,
+  type Terrain,
   type TerrainReader,
   type TilePatch
 } from "@jolly-pixel/terrain.renderer";
@@ -58,7 +58,7 @@ export function acceptsTerrainCommand(
 }
 
 export function applyTerrainCommand(
-  terrain: TerrainDocument,
+  terrain: Terrain,
   command: TerrainCommand
 ): void {
   const edit = terrainEdit(command);
@@ -130,7 +130,7 @@ export function terrainSnapshot(
 }
 
 export function loadTerrainSnapshot(
-  terrain: TerrainDocument,
+  terrain: Terrain,
   snapshot: TerrainSnapshot
 ): void {
   const chunks = snapshot.chunks.map((chunk) => {

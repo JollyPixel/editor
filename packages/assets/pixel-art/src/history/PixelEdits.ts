@@ -3,15 +3,15 @@ import {
   ChangeSourceAdapter,
   type ChangeSource
 } from "@jolly-pixel/history";
-import type { DocumentCommand } from "@jolly-pixel/pixel-draw.renderer";
+import type { PixelDocumentCommand } from "@jolly-pixel/pixel-draw.renderer";
 
 // CONSTANTS
-const kEdits = new WeakMap<ChangeSource<DocumentCommand>, PixelEdits>();
+const kEdits = new WeakMap<ChangeSource<PixelDocumentCommand>, PixelEdits>();
 
-export type PixelEdits = ChangeSourceAdapter<DocumentCommand>;
+export type PixelEdits = ChangeSourceAdapter<PixelDocumentCommand>;
 
 export function pixelEdits(
-  document: ChangeSource<DocumentCommand>
+  document: ChangeSource<PixelDocumentCommand>
 ): PixelEdits {
   let edits = kEdits.get(document);
   if (edits === undefined) {

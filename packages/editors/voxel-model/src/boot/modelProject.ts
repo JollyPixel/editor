@@ -2,8 +2,8 @@
 import type { AssetSeedMap } from "@jolly-pixel/asset-server";
 import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art";
 import {
-  createVoxelModelDocument,
-  encodeVoxelModelDocument,
+  createVoxelModelFile,
+  encodeVoxelModelFile,
   VOXEL_MODEL_KIND
 } from "@jolly-pixel/asset.voxel-model";
 
@@ -17,11 +17,11 @@ export interface ModelProject {
   seed: AssetSeedMap;
 }
 
-export function encodeModelDocument(
+export function encodeModelFile(
   textureId: string
 ): Uint8Array {
-  return encodeVoxelModelDocument(
-    createVoxelModelDocument({
+  return encodeVoxelModelFile(
+    createVoxelModelFile({
       texture: {
         id: textureId,
         kind: PIXEL_ART_KIND
@@ -42,7 +42,7 @@ export function createModelProject(
       "models/model.voxelmodel.json": {
         id: crypto.randomUUID(),
         kind: VOXEL_MODEL_KIND,
-        content: () => encodeModelDocument(textureAssetId)
+        content: () => encodeModelFile(textureAssetId)
       }
     }
   };

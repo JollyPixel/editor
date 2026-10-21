@@ -24,7 +24,7 @@ import type {
 } from "@jolly-pixel/asset.voxel-map/client";
 
 // Import Internal Dependencies
-import { MapDocument } from "../document/MapDocument.ts";
+import { EditorMap } from "../map/EditorMap.ts";
 import { historyShortcuts } from "../shared/historyShortcuts.ts";
 import {
   createMapHistory,
@@ -237,28 +237,28 @@ export class EditorScene extends Systems.Scene {
     });
     const access = new RoomGrants(session.room, MAP_CAPABILITIES)
       .setMaxListeners(kMaxAccessListeners);
-    const mapDocument = new MapDocument({
+    const editorMap = new EditorMap({
       map: session.map,
       defaultLayerName: kDefaultLayerName,
       access
     });
     const templates = new MapTemplates({
       world: view.document.world,
-      mapDocument,
+      editorMap,
       access,
       log: state.log
     });
     const localVisibility = new LocalLayerVisibility({
       world: view.document.world,
       layers: view.layerVisibility,
-      mapDocument,
+      editorMap,
       visibility: layerVisibility
     });
     const { editContext } = state;
     const layers = new MapLayers({
       world: view.document.world,
       selection: state.selection,
-      mapDocument,
+      editorMap,
       access,
       editContext
     });
@@ -271,7 +271,7 @@ export class EditorScene extends Systems.Scene {
       world: view.document.world,
       history: steps,
       selection: state.selection,
-      mapDocument,
+      editorMap,
       conceal: (layerName) => localVisibility.conceal(layerName),
       access
     });
@@ -285,7 +285,7 @@ export class EditorScene extends Systems.Scene {
       world: view.document.world,
       context: editContext,
       selection: state.selection,
-      mapDocument,
+      editorMap,
       access,
       isolate: (layerName) => localVisibility.isolate(layerName),
       camera,
@@ -295,17 +295,17 @@ export class EditorScene extends Systems.Scene {
       log: state.log
     });
     const usage = new BlockUsageStore({
-      mapDocument,
+      editorMap,
       source: view.inspector.blocks
     });
     const blocksets = new MapBlocksets({
       view,
       catalog: session.catalog,
-      mapDocument,
+      editorMap,
       open: (assetId) => openBlockset(session.assets, assetId)
     });
     const materials = new MapMaterials({
-      document: mapDocument,
+      sources: editorMap,
       blocksets
     });
 
@@ -344,7 +344,7 @@ export class EditorScene extends Systems.Scene {
         world: view.document.world,
         blockRegistry: view.document.blocks,
         sources: blockSources,
-        mapDocument,
+        editorMap,
         peers
       });
     const frustums = world
@@ -385,7 +385,7 @@ export class EditorScene extends Systems.Scene {
         camera: camera.camera,
         placement,
         pointer: state.pointer,
-        mapDocument,
+        editorMap,
         color: session.identity.color
       })
       .addComponent(PlacementClick, {
@@ -399,7 +399,7 @@ export class EditorScene extends Systems.Scene {
         camera: camera.camera,
         selection: state.selection,
         pointer: state.pointer,
-        mapDocument,
+        editorMap,
         visibility: layerVisibility,
         access
       });
@@ -426,10 +426,10 @@ export class EditorScene extends Systems.Scene {
         onChange: publishPlacement
       });
     suspendBrush();
-    state.block.reconcile(mapDocument.blocks);
+    state.block.reconcile(editorMap.blocks);
     this.#disposables.push(
-      mapDocument.subscribe("blockRegistryChanged", () => {
-        state.block.reconcile(mapDocument.blocks);
+      editorMap.subscribe("blockRegistryChanged", () => {
+        state.block.reconcile(editorMap.blocks);
       }),
       placement.subscribe("change", suspendBrush),
       state.tool.subscribe("change", suspendBrush),
@@ -443,8 +443,8 @@ export class EditorScene extends Systems.Scene {
       () => {
         brush.suspended = false;
       },
-      mapDocument.subscribe("reset", () => {
-        camera.spawn(MapDocument.layers(view.document.world));
+      editorMap.subscribe("reset", () => {
+        camera.spawn(EditorMap.layers(view.document.world));
       }),
       editContext.subscribe("change", (draft) => {
         objectLayers.object3D.visible = draft === null;
@@ -459,7 +459,7 @@ export class EditorScene extends Systems.Scene {
         applyBackdrop();
         world.invalidate();
       }),
-      mapDocument.subscribe("materialGroupsChanged", () => {
+      editorMap.subscribe("materialGroupsChanged", () => {
         applyGlow(state.view.settings.glow);
         world.invalidate();
       }),
@@ -519,18 +519,18 @@ export class EditorScene extends Systems.Scene {
       () => layers.dispose(),
       () => templates.dispose(),
       () => localVisibility.dispose(),
-      () => mapDocument.dispose(),
+      () => editorMap.dispose(),
       () => access.dispose()
     );
 
-    if (mapDocument.ready) {
-      camera.spawn(MapDocument.layers(view.document.world));
+    if (editorMap.ready) {
+      camera.spawn(EditorMap.layers(view.document.world));
     }
 
     this.#workspace.resolve({
       state,
       access,
-      mapDocument,
+      editorMap,
       usage,
       blockSources,
       previewStage,
@@ -553,7 +553,7 @@ export class EditorScene extends Systems.Scene {
       ),
       loadWorld: (data) => {
         camera.requestSpawn();
-        mapDocument.load(data);
+        editorMap.load(data);
       },
       teleportToPeer: (clientId) => {
         const pose = frustums.peerPose(clientId);

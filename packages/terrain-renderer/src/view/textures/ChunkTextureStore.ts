@@ -5,12 +5,12 @@ import * as THREE from "three";
 import type {
   ChunkCoord,
   ChunkKey
-} from "../../document/ChunkCoord.ts";
-import type { TerrainReader } from "../../document/TerrainDocument.ts";
+} from "../../terrain/ChunkCoord.ts";
+import type { TerrainReader } from "../../terrain/Terrain.ts";
 import {
   TILE_SAMPLES,
   type TileCoord
-} from "../../document/TileCoord.ts";
+} from "../../terrain/TileCoord.ts";
 import {
   affectedAprons,
   APRON_SIZE,

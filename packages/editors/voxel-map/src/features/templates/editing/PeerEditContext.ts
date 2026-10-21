@@ -3,7 +3,7 @@ import type { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import { TemplateDraftId } from "../../../document/TemplateDraftId.ts";
+import { TemplateDraftId } from "../../../map/TemplateDraftId.ts";
 import {
   parseLayerRef,
   type EditContext,

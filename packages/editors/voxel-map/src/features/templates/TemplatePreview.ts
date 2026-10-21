@@ -63,10 +63,10 @@ export class TemplatePreview extends WorkspaceElement {
   protected override watchWorkspace(
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
-    const { mapDocument, templates, state } = workspace;
+    const { editorMap, templates, state } = workspace;
     const sync = (): void => {
       this._view = resolveTemplatePreview(
-        mapDocument.world.templates,
+        editorMap.world.templates,
         templates.store.selected,
         state.templatePreview.value
       );
@@ -74,11 +74,11 @@ export class TemplatePreview extends WorkspaceElement {
     sync();
 
     return [
-      mapDocument.subscribe("templatesChanged", sync),
-      mapDocument.subscribe("reset", sync),
+      editorMap.subscribe("templatesChanged", sync),
+      editorMap.subscribe("reset", sync),
       templates.store.subscribe("selectionChange", sync),
       state.templatePreview.subscribe("change", sync),
-      mapDocument.subscribe(
+      editorMap.subscribe(
         "blockRegistryChanged",
         () => this.#renderer?.subject.invalidate()
       ),

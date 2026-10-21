@@ -8,7 +8,7 @@ import {
   CHUNK_SAMPLES,
   ChunkCoord,
   HEIGHT_RANGE,
-  TerrainDocument,
+  Terrain,
   type TilePatch
 } from "@jolly-pixel/terrain.renderer";
 
@@ -27,8 +27,8 @@ const kFootprint = {
 
 function flatTerrain(
   ...chunks: Array<[x: number, z: number, height: number]>
-): TerrainDocument {
-  const terrain = new TerrainDocument();
+): Terrain {
+  const terrain = new Terrain();
   for (const [x, z, height] of chunks) {
     terrain.addChunk(new ChunkCoord(x, z), new Float32Array(CHUNK_SAMPLE_COUNT).fill(height));
   }
@@ -37,9 +37,9 @@ function flatTerrain(
 }
 
 function stamp(
-  terrain: TerrainDocument,
+  terrain: Terrain,
   options: SculptStamp
-): TerrainDocument {
+): Terrain {
   for (const { tile, heights } of sculptStamp(terrain, options)) {
     terrain.writeTile(tile, heights);
   }

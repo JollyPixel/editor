@@ -109,7 +109,7 @@ describe("voxelMapDocumentKind", () => {
 
     assert.equal(kind.kind, VOXEL_MAP_KIND);
 
-    const lease = kind.createDocument(room);
+    const lease = kind.syncDocument(room);
 
     assert.ok(lease.document instanceof SyncedVoxelMap);
     assert.equal(lease.document.voxels.chunkSize, 8);

@@ -10,7 +10,7 @@ import type {
 } from "three";
 
 // Import Internal Dependencies
-import type { MapDocument } from "../document/MapDocument.ts";
+import type { EditorMap } from "../map/EditorMap.ts";
 import type { EditorState } from "../state/index.ts";
 import type { BlockUsageStore } from "../features/blocks/usage/BlockUsageStore.ts";
 import type { BlockRenderSources } from "../features/blocks/rendering/BlockRenderSources.ts";
@@ -29,7 +29,7 @@ import type { MapGrants } from "../access/MapAccess.ts";
 export interface VoxelMapWorkspace {
   state: EditorState;
   access: MapGrants;
-  mapDocument: MapDocument;
+  editorMap: EditorMap;
   usage: BlockUsageStore;
   blockSources: BlockRenderSources;
   previewStage: PreviewStage;

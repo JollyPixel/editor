@@ -2,8 +2,8 @@
 import { AssetRoom } from "@jolly-pixel/asset";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 import {
-  encodePixelArtDocument,
-  type PixelArtDocumentData
+  encodePixelArtFile,
+  type PixelArtFile
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -28,11 +28,11 @@ export function pixelArtRoom(
 export function createPixelArtAsset(
   catalog: PixelArtAssetWriter,
   path: string,
-  document: PixelArtDocumentData
+  file: PixelArtFile
 ): Promise<string> {
   return catalog.create(
     path,
-    encodePixelArtDocument(document),
+    encodePixelArtFile(file),
     {
       kind: PIXEL_ART_KIND,
       onConflict: "suffix"

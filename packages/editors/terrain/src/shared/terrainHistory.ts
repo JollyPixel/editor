@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
   terrainHistoryRegistration,
-  type TerrainCommandDocument
+  type TerrainDocument
 } from "@jolly-pixel/asset.terrain/client";
 import type {
   Keyboard,
@@ -26,7 +26,7 @@ export type TerrainHistoryScope = typeof TERRAIN_HISTORY_SCOPE;
 export type TerrainHistory = CommandHistory<TerrainHistoryScope>;
 
 export function createTerrainHistory(
-  document: TerrainCommandDocument
+  document: TerrainDocument
 ): TerrainHistory {
   const history = new CommandHistory<TerrainHistoryScope>({ limit: kLimit });
   history.register(

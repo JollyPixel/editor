@@ -2,19 +2,19 @@ export {
   CHUNK_SAMPLES,
   ChunkCoord,
   type ChunkKey
-} from "./document/ChunkCoord.ts";
-export type { SampleBlock } from "./document/SampleBlock.ts";
+} from "./terrain/ChunkCoord.ts";
+export type { SampleBlock } from "./terrain/SampleBlock.ts";
 export {
   CHUNK_SAMPLE_COUNT,
   HEIGHT_RANGE,
   isValidHeight,
   type HeightRange,
   type TerrainChunk
-} from "./document/TerrainChunk.ts";
+} from "./terrain/TerrainChunk.ts";
 export {
-  TerrainDocument,
+  Terrain,
   type TerrainReader
-} from "./document/TerrainDocument.ts";
+} from "./terrain/Terrain.ts";
 export {
   TILE_SAMPLE_COUNT,
   TILE_SAMPLES,
@@ -22,13 +22,13 @@ export {
   TileCoord,
   type TileKey,
   type TilePatch
-} from "./document/TileCoord.ts";
+} from "./terrain/TileCoord.ts";
 export {
   raycastTerrain,
   surfaceHeight,
   type TerrainHit,
   type TerrainRay
-} from "./document/terrainSurface.ts";
+} from "./terrain/terrainSurface.ts";
 export type { Point3 } from "./math/point3.ts";
 export {
   LodRanges,

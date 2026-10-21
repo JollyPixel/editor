@@ -6,7 +6,7 @@ import type {
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import type { MapDocumentSignals } from "../../../document/MapDocument.ts";
+import type { EditorMapSignals } from "../../../map/EditorMap.ts";
 import { BlocksetUsage } from "../../blocksets/BlocksetUsage.ts";
 import { BlockUsage } from "./BlockUsage.ts";
 
@@ -20,7 +20,7 @@ export type BlockUsageSource = Pick<
 >;
 
 export interface BlockUsageStoreOptions {
-  mapDocument: MapDocumentSignals;
+  editorMap: EditorMapSignals;
   source: BlockUsageSource;
 }
 
@@ -34,20 +34,20 @@ export class BlockUsageStore extends Emitter<BlockUsageStoreEvents> {
     options: BlockUsageStoreOptions
   ) {
     super();
-    const { mapDocument, source } = options;
+    const { editorMap, source } = options;
 
     this.#source = source;
     this.#stats = source.stats;
 
     const invalidate = () => this.invalidate();
     this.#subscriptions = [
-      mapDocument.subscribe("layerUpdated", invalidate),
-      mapDocument.subscribe("blockRegistryChanged", (change) => {
+      editorMap.subscribe("layerUpdated", invalidate),
+      editorMap.subscribe("blockRegistryChanged", (change) => {
         if (change !== "redefined" && change !== "retiled") {
           this.invalidate();
         }
       }),
-      mapDocument.subscribe("reset", invalidate)
+      editorMap.subscribe("reset", invalidate)
     ];
   }
 

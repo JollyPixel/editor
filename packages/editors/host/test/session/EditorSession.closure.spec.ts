@@ -124,7 +124,7 @@ describe("EditorSession live closure", () => {
     const kind = fakeDocumentKind("pixelart");
     const audio: AssetDocumentKind<unknown> = {
       kind: "audio",
-      createDocument: () => {
+      syncDocument: () => {
         throw new Error("factory failed");
       }
     };

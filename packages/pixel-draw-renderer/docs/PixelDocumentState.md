@@ -7,7 +7,7 @@ const state = new PixelDocumentState({
   buffer: new PixelBuffer({ size: { x: 32, y: 32 } })
 });
 
-state.apply(toDocumentCommand(command));
+state.apply(toPixelDocumentCommand(command));
 ```
 
 ## Constructor
@@ -37,7 +37,7 @@ readonly palette: ColorPalette;
 ## Methods
 
 ```ts
-apply(command: DocumentCommand): void;
+apply(command: PixelDocumentCommand): void;
 load(snapshot: PixelDocumentSnapshot, owns?: (regionId: string) => boolean): void;
 removeNormalMapZone(regionId: string): IndexedNormalMapZone | null;
 

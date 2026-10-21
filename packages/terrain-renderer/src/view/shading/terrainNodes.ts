@@ -36,7 +36,7 @@ import {
 } from "three/tsl";
 
 // Import Internal Dependencies
-import { CHUNK_SAMPLES } from "../../document/ChunkCoord.ts";
+import { CHUNK_SAMPLES } from "../../terrain/ChunkCoord.ts";
 import { SKIRT_EDGES } from "../lod/skirtMasks.ts";
 import {
   APRON_MARGIN,

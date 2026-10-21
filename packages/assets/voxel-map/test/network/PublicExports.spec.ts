@@ -16,7 +16,7 @@ describe("public entry points", () => {
     assert.strictEqual(typeof root.VoxelMapState, "function");
     assert.strictEqual(typeof root.blocksetAssetKind, "function");
     assert.strictEqual(typeof root.BlocksetState, "function");
-    assert.strictEqual(typeof root.blocksetDocumentFromPng, "function");
+    assert.strictEqual(typeof root.blocksetFileFromPng, "function");
     assert.strictEqual(root.BLOCKSET_ASSET.kind, root.BLOCKSET_KIND);
     assert.strictEqual("VoxelSyncClient" in root, false);
     assert.strictEqual("BlocksetSyncClient" in root, false);

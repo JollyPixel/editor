@@ -33,3 +33,15 @@ export abstract class SyncedDocument<TDocument> {
     this.#sync.destroy();
   }
 }
+
+export interface DocumentKind<
+  TKind extends string,
+  TRoom,
+  TSynced extends SyncedDocument<unknown>
+> {
+  readonly kind: TKind;
+
+  syncDocument(
+    room: TRoom
+  ): TSynced;
+}

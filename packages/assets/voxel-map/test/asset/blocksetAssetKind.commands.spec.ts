@@ -18,12 +18,12 @@ import { BLOCKSET_DOCUMENT_COMMAND_ACTIONS } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import {
-  createBlocksetDocument,
-  encodeBlocksetDocument,
+  createBlocksetFile,
+  encodeBlocksetFile,
   BLOCKSET_COMMAND,
   BLOCKSET_KIND,
   blocksetAssetKind,
-  type BlocksetAssetDocument
+  type BlocksetFile
 } from "#src/index.ts";
 import {
   blocksetSnapshotSchema,
@@ -64,10 +64,10 @@ function event(
   } as EventStore.Event;
 }
 
-function documentEvent(
-  document: BlocksetAssetDocument
+function fileEvent(
+  file: BlocksetFile
 ): EventStore.Event {
-  const data = encodeBlocksetDocument(document);
+  const data = encodeBlocksetFile(file);
 
   return event(ASSET_CREATED, {
     path: "textures/stone.blockset.json",
@@ -104,8 +104,8 @@ function blockCommand(
   };
 }
 
-function seeded(): BlocksetAssetDocument {
-  return createBlocksetDocument({
+function seeded(): BlocksetFile {
+  return createBlocksetFile({
     tileSize: 8,
     size: { x: 16, y: 16 },
     blocks: [makeBlockDef(1, "cube")],
@@ -117,7 +117,7 @@ describe("blocksetAssetKind", () => {
   test("a delete drops the normal map", () => {
     const handler = blocksetAssetKind();
     const state = handler.create("asset-1");
-    foldAssetEvent(handler, state, documentEvent(seeded()));
+    foldAssetEvent(handler, state, fileEvent(seeded()));
     state.pixels.apply({
       action: "normal-map-toggled",
       metadata: { config: NormalMapConfig.create().toJSON() }
@@ -144,7 +144,7 @@ describe("blocksetAssetKind", () => {
   test("ignores a command payload the protocol rejects", () => {
     const handler = blocksetAssetKind();
     const state = handler.create("asset-1");
-    foldAssetEvent(handler, state, documentEvent(seeded()));
+    foldAssetEvent(handler, state, fileEvent(seeded()));
 
     foldAssetEvent(handler, state, event(BLOCKSET_COMMAND, {
       ...kHeader,
@@ -159,7 +159,7 @@ describe("blocksetAssetKind", () => {
   test("live() encodes the snapshot pixels as a PNG", async() => {
     const handler = blocksetAssetKind();
     const state = handler.create("asset-1");
-    foldAssetEvent(handler, state, documentEvent(seeded()));
+    foldAssetEvent(handler, state, fileEvent(seeded()));
     const protocol = handler.commands!.live!({
       assetId: "asset-1",
       kind: BLOCKSET_KIND,
@@ -169,12 +169,12 @@ describe("blocksetAssetKind", () => {
     const parser = new SchemaParser(blocksetSnapshotSchema);
 
     const encoded = await protocol.encodeSnapshot!() as BlocksetSnapshot;
-    const { pixels, ...document } = encoded;
-    const { pixels: plainPixels, ...plainDocument } =
+    const { pixels, ...encodedFields } = encoded;
+    const { pixels: plainPixels, ...plainFields } =
       protocol.snapshot() as BlocksetSnapshot;
 
     assert.strictEqual(parser.parse(encoded).ok, true);
-    assert.deepEqual(document, plainDocument);
+    assert.deepEqual(encodedFields, plainFields);
     assert.ok(typeof pixels.pixels !== "string");
     assert.deepEqual(
       [...await decodePngPixels(pixels.pixels, pixels.size)],
@@ -186,7 +186,7 @@ describe("blocksetAssetKind", () => {
   test("live() snapshots the pixels next to the document", () => {
     const handler = blocksetAssetKind();
     const state = handler.create("asset-1");
-    foldAssetEvent(handler, state, documentEvent(seeded()));
+    foldAssetEvent(handler, state, fileEvent(seeded()));
     const protocol = handler.commands!.live!({
       assetId: "asset-1",
       kind: BLOCKSET_KIND,

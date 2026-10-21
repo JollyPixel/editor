@@ -3,15 +3,15 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { CHUNK_SAMPLES, ChunkCoord } from "#src/document/ChunkCoord.ts";
-import { CHUNK_SAMPLE_COUNT } from "#src/document/TerrainChunk.ts";
-import { TerrainDocument } from "#src/document/TerrainDocument.ts";
-import { surfaceHeight } from "#src/document/terrainSurface.ts";
+import { CHUNK_SAMPLES, ChunkCoord } from "#src/terrain/ChunkCoord.ts";
+import { CHUNK_SAMPLE_COUNT } from "#src/terrain/TerrainChunk.ts";
+import { Terrain } from "#src/terrain/Terrain.ts";
+import { surfaceHeight } from "#src/terrain/terrainSurface.ts";
 import {
   TILE_SAMPLE_COUNT,
   TILE_SAMPLES,
   TileCoord
-} from "#src/document/TileCoord.ts";
+} from "#src/terrain/TileCoord.ts";
 import {
   ChunkTextureStore,
   LOOKUP_SIZE,
@@ -55,7 +55,7 @@ function apronTexel(
 }
 
 function setup() {
-  const terrain = new TerrainDocument();
+  const terrain = new Terrain();
   const store = new ChunkTextureStore(terrain);
 
   return {
@@ -264,7 +264,7 @@ describe("ChunkTextureStore", () => {
   test("after any add, remove or edit every apron texel is the height picked at its sample", () => {
     const random = seededRandom(99);
     for (let sequence = 0; sequence < 3; sequence++) {
-      const terrain = new TerrainDocument();
+      const terrain = new Terrain();
       terrain.addChunk(new ChunkCoord(0, 0), rampHeights(10));
       const store = rebuildStore(terrain);
       const steps: string[] = [];
@@ -282,7 +282,7 @@ describe("ChunkTextureStore", () => {
   });
 
   test("an open corner's picked height matches the apron texel the shader reads", () => {
-    const terrain = new TerrainDocument();
+    const terrain = new Terrain();
     const store = new ChunkTextureStore(terrain);
     const low = terrain.addChunk(new ChunkCoord(0, 0), new Float32Array(CHUNK_SAMPLE_COUNT).fill(1));
     const high = terrain.addChunk(new ChunkCoord(0, 1), new Float32Array(CHUNK_SAMPLE_COUNT).fill(9));

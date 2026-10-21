@@ -43,11 +43,11 @@ function registerPixelHistory<TScope extends string>(
 function pixelHistoryRegistration<TScope extends string>(
   document: PixelDocument,
   options: { id?: string; scope: TScope; }
-): HistoryRegistration<TScope, DocumentCommand, null, PixelKeySet, PixelCapture>;
+): HistoryRegistration<TScope, PixelDocumentCommand, null, PixelKeySet, PixelCapture>;
 
 function pixelHistoryKeys(
   document: PixelDocument
-): HistoryKeys<DocumentCommand, null, PixelKeySet, PixelCapture>;
+): HistoryKeys<PixelDocumentCommand, null, PixelKeySet, PixelCapture>;
 ```
 
 `registerPixelHistory` registers the document in `history` and files each `document.batch()` as one step of `scope`; it returns the release. A document can be registered in several histories: each files the batch as one step. `pixelHistoryRegistration` alone files every local change of the document in `scope` and labels it by action ("Paint", "Resize texture", "Move UV"...).
@@ -65,9 +65,9 @@ The whole texture overlaps any set holding pixels, so a resize or a texture repl
 ## `pixelEdits`
 
 ```ts
-type PixelEdits = ChangeSourceAdapter<DocumentCommand>;
+type PixelEdits = ChangeSourceAdapter<PixelDocumentCommand>;
 
-function pixelEdits(document: ChangeSource<DocumentCommand>): PixelEdits;
+function pixelEdits(document: ChangeSource<PixelDocumentCommand>): PixelEdits;
 ```
 
 The document as a history source, with the `receipts` a sync client writes the server's answers to. It is created once per document, so `PixelSyncClient`, `registerPixelHistory` and both canvas histories share it: an undo is sent with the `basis` of its step, and the server's answers reach the history.

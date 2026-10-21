@@ -3,7 +3,10 @@ import {
   blankPixelDocument,
   type SyncedPixelDocumentOptions
 } from "@jolly-pixel/asset.pixel-art/client";
-import { SyncedDocument } from "@jolly-pixel/network/client";
+import {
+  SyncedDocument,
+  type DocumentKind
+} from "@jolly-pixel/network/client";
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 import { BlocksetDocument } from "@jolly-pixel/voxel.renderer";
 
@@ -43,18 +46,17 @@ export class SyncedBlockset extends SyncedDocument<SyncedBlockset> {
   }
 }
 
-export interface BlocksetDocumentKind {
-  readonly kind: typeof BLOCKSET_KIND;
-  createDocument(
-    room: BlocksetRoom
-  ): SyncedBlockset;
-}
+export type BlocksetDocumentKind = DocumentKind<
+  typeof BLOCKSET_KIND,
+  BlocksetRoom,
+  SyncedBlockset
+>;
 
 export function blocksetDocumentKind(
   options: SyncedBlocksetOptions = {}
 ): BlocksetDocumentKind {
   return {
     kind: BLOCKSET_KIND,
-    createDocument: (room) => new SyncedBlockset(room, options)
+    syncDocument: (room) => new SyncedBlockset(room, options)
   };
 }

@@ -194,7 +194,7 @@ describe("StudioProject", () => {
         inMemory: true
       });
 
-      assert.deepEqual(project.file.document, DEFAULT_PROJECT_FILE);
+      assert.deepEqual(project.file.data, DEFAULT_PROJECT_FILE);
       assert.deepEqual(await fs.readdir(root), []);
     });
 

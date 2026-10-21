@@ -6,7 +6,7 @@
 
 This workspace-private package holds the headless terrain data (chunk
 coordinates, chunks of 64×64 owned samples written by 16×16 tile, and the
-`TerrainDocument` with world-space sampling), the surface queries that match
+`Terrain` with world-space sampling), the surface queries that match
 what is drawn (`surfaceHeight` and `raycastTerrain`), and the CDLOD view that
 draws it: quadtree selection,
 node meshes, height texture arrays and the TSL material. The

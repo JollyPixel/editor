@@ -8,8 +8,8 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import type { CatalogCreateOptions } from "@jolly-pixel/asset-server/client";
 import {
-  createPixelArtDocument,
-  decodePixelArtDocument
+  createPixelArtFile,
+  decodePixelArtFile
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -38,7 +38,7 @@ describe("pixelArtRoom", () => {
 });
 
 describe("createPixelArtAsset", () => {
-  test("creates an encoded pixel-art document with a suffixed path on conflict", async() => {
+  test("creates an encoded pixel-art file with a suffixed path on conflict", async() => {
     const calls: [string, Uint8Array, CatalogCreateOptions | undefined][] = [];
     const catalog = {
       async create(
@@ -51,18 +51,18 @@ describe("createPixelArtAsset", () => {
         return "asset-2";
       }
     };
-    const document = createPixelArtDocument({
+    const file = createPixelArtFile({
       x: 2,
       y: 3
     });
 
-    const assetId = await createPixelArtAsset(catalog, "art.pixelart", document);
+    const assetId = await createPixelArtAsset(catalog, "art.pixelart", file);
 
     assert.equal(assetId, "asset-2");
     assert.equal(calls.length, 1);
     const [path, content, options] = calls[0];
     assert.equal(path, "art.pixelart");
-    assert.deepEqual(decodePixelArtDocument(content).size, {
+    assert.deepEqual(decodePixelArtFile(content).size, {
       x: 2,
       y: 3
     });

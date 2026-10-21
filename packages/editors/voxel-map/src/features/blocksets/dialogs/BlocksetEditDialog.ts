@@ -90,7 +90,7 @@ export class BlocksetEditDialog extends WorkspaceElement {
   ): Iterable<() => void> {
     return [
       workspace.blocksets.subscribe("change", this.#refresh),
-      workspace.mapDocument.subscribe("blockRegistryChanged", this.#refresh),
+      workspace.editorMap.subscribe("blockRegistryChanged", this.#refresh),
       workspace.usage.subscribe("change", this.#refresh),
       workspace.access.subscribe("change", this.#refresh)
     ];
@@ -248,7 +248,7 @@ export class BlocksetEditDialog extends WorkspaceElement {
       from,
       to: tileSize
     };
-    const offGrid = [...workspace.mapDocument.blocks].some(
+    const offGrid = [...workspace.editorMap.blocks].some(
       (block) => !BlockTextures.fromBlock(block).canRescaleOnGrid(rescale)
     );
     if (offGrid) {

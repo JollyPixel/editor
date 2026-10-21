@@ -22,9 +22,9 @@ import { createAssetBackend } from "@jolly-pixel/asset-server";
 import {
   VOXEL_MODEL_COMMAND,
   VOXEL_MODEL_KIND,
-  createVoxelModelDocument,
-  decodeVoxelModelDocument,
-  encodeVoxelModelDocument,
+  createVoxelModelFile,
+  decodeVoxelModelFile,
+  encodeVoxelModelFile,
   voxelModelAssetKind
 } from "#src/index.ts";
 import {
@@ -34,7 +34,7 @@ import {
 } from "../helpers/commands.ts";
 
 // CONSTANTS
-const kDocumentPath = "model.voxelmodel.json";
+const kFilePath = "model.voxelmodel.json";
 const kTexture = {
   id: "texture-1",
   kind: "pixelart"
@@ -73,8 +73,8 @@ async function withBackend(
   try {
     using eventStore = EventStore.persistence.memory();
     await fs.writeFile(
-      path.join(root, kDocumentPath),
-      encodeVoxelModelDocument(createVoxelModelDocument({
+      path.join(root, kFilePath),
+      encodeVoxelModelFile(createVoxelModelFile({
         texture: kTexture,
         blocks: []
       }))
@@ -86,7 +86,7 @@ async function withBackend(
       watch: false
     });
     const record = backend.catalog.snapshot().assets
-      .find((entry) => entry.source === kDocumentPath)!;
+      .find((entry) => entry.source === kFilePath)!;
 
     await run({
       root,
@@ -139,8 +139,8 @@ describe("voxel-model asset kind over a real back-end", () => {
       assert.equal(appended.length, 2);
 
       await backend.flush(recordId);
-      const onDisk = decodeVoxelModelDocument(
-        await fs.readFile(path.join(root, kDocumentPath))
+      const onDisk = decodeVoxelModelFile(
+        await fs.readFile(path.join(root, kFilePath))
       );
       assert.deepEqual(
         onDisk.nodes.map((node) => [node.id, node.parentId]),

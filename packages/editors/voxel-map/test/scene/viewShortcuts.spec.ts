@@ -16,7 +16,7 @@ import { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import { defaultKeyBindings } from "../helpers/shortcuts.ts";
-import { createMapDocument } from "../helpers/mapDocument.ts";
+import { createEditorMap } from "../helpers/editorMap.ts";
 import { mapAccess } from "../helpers/mapAccess.ts";
 import { MapLayers } from "../../src/features/layers/MapLayers.ts";
 import { viewShortcuts } from "../../src/scene/viewShortcuts.ts";
@@ -66,7 +66,7 @@ function setup() {
     world,
     editContext: new EditContext(),
     selection,
-    mapDocument: createMapDocument(world),
+    editorMap: createEditorMap(world),
     access: mapAccess()
   });
   const view = new ViewStore(new Preferences());

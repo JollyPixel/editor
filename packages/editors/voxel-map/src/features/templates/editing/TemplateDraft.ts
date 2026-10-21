@@ -8,7 +8,7 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { TemplateDraftId } from "../../../document/TemplateDraftId.ts";
+import { TemplateDraftId } from "../../../map/TemplateDraftId.ts";
 
 export type DraftWorld = Pick<
   VoxelWorld,

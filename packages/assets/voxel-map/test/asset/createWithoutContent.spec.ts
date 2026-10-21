@@ -13,7 +13,7 @@ import { decodeVoxelWorld } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import {
-  decodeBlocksetDocument,
+  decodeBlocksetFile,
   BLOCKSET_KIND,
   blocksetAsset,
   blocksetAssetKind,
@@ -68,9 +68,9 @@ describe("voxel map created without content", () => {
       [blocksetAsset(blockset.id)]
     );
 
-    const document = decodeBlocksetDocument(
+    const file = decodeBlocksetFile(
       await source.read("maps/new.blockset.json")
     );
-    assert.deepEqual(document.pixels.size, kBlocksetSize);
+    assert.deepEqual(file.pixels.size, kBlocksetSize);
   });
 });

@@ -39,7 +39,7 @@ const kRedefinitionChanges = {
   occlusion: "redefined"
 } as const satisfies Record<BlockRedefinition, BlockRegistryChange>;
 
-export type MapDocumentEvents = {
+export type EditorMapEvents = {
   layerUpdated: (
     command: VoxelLayerCommand
   ) => void;
@@ -52,8 +52,8 @@ export type MapDocumentEvents = {
   reset: () => void;
 };
 
-export type MapDocumentSignals = Pick<
-  Emitter<MapDocumentEvents>,
+export type EditorMapSignals = Pick<
+  Emitter<EditorMapEvents>,
   "subscribe"
 >;
 
@@ -62,13 +62,13 @@ export type SyncedMap = Pick<
   "voxels" | "loaded" | "replaceWorld"
 >;
 
-export interface MapDocumentOptions {
+export interface EditorMapOptions {
   map: SyncedMap;
   defaultLayerName: string;
   access: MapAccessSource;
 }
 
-export class MapDocument extends Emitter<MapDocumentEvents> {
+export class EditorMap extends Emitter<EditorMapEvents> {
   static layers(
     world: Pick<VoxelWorld, "getLayers">
   ): VoxelLayer[] {
@@ -135,7 +135,7 @@ export class MapDocument extends Emitter<MapDocumentEvents> {
   }
 
   constructor(
-    options: MapDocumentOptions
+    options: EditorMapOptions
   ) {
     super();
     this.setMaxListeners(kMaxListenersPerEvent);
@@ -164,7 +164,7 @@ export class MapDocument extends Emitter<MapDocumentEvents> {
   #seedDefaultLayer(): void {
     if (
       this.#access.current.has("layers") &&
-      MapDocument.layers(this.world).length === 0
+      EditorMap.layers(this.world).length === 0
     ) {
       this.world.addLayer(this.#defaultLayerName);
     }

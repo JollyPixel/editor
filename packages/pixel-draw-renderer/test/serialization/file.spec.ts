@@ -7,10 +7,10 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  createPixelArtDocument,
-  decodePixelArtDocument,
-  encodePixelArtDocument,
-  InvalidPixelArtDocumentError,
+  createPixelArtFile,
+  decodePixelArtFile,
+  encodePixelArtFile,
+  InvalidPixelArtFileError,
   deserializePixelDocument,
   serializePixelDocument
 } from "#src/serialization/index.ts";
@@ -32,7 +32,7 @@ function enableNormalMap(
   });
 }
 
-describe("PixelArtDocument", () => {
+describe("PixelArtFile", () => {
   test("round-trips the palette including alpha and resets missing palettes", () => {
     const source = createDocumentState({ x: 1, y: 1 });
     const color = { r: 12, g: 34, b: 56, a: 128 };
@@ -41,13 +41,13 @@ describe("PixelArtDocument", () => {
       metadata: { index: 9, color }
     });
     const target = createDocumentState({ x: 1, y: 1 });
-    const document = decodePixelArtDocument(
-      encodePixelArtDocument(serializePixelDocument(source))
+    const file = decodePixelArtFile(
+      encodePixelArtFile(serializePixelDocument(source))
     );
-    deserializePixelDocument(document, target);
+    deserializePixelDocument(file, target);
     assert.deepEqual(target.palette.colorAt(9), color);
-    delete document.palette;
-    deserializePixelDocument(document, target);
+    delete file.palette;
+    deserializePixelDocument(file, target);
     assert.deepEqual(target.palette.toJSON(), ColorPalette.create().toJSON());
   });
 
@@ -65,7 +65,7 @@ describe("PixelArtDocument", () => {
 
     const target = createDocumentState({ x: 1, y: 1 });
     deserializePixelDocument(
-      decodePixelArtDocument(encodePixelArtDocument(serializePixelDocument(source))),
+      decodePixelArtFile(encodePixelArtFile(serializePixelDocument(source))),
       target
     );
 
@@ -89,7 +89,7 @@ describe("PixelArtDocument", () => {
 
     const target = createDocumentState({ x: 4, y: 4 });
     deserializePixelDocument(
-      decodePixelArtDocument(encodePixelArtDocument(serializePixelDocument(source))),
+      decodePixelArtFile(encodePixelArtFile(serializePixelDocument(source))),
       target
     );
 
@@ -99,7 +99,7 @@ describe("PixelArtDocument", () => {
     );
   });
 
-  test("a document is complete state, not a patch", () => {
+  test("a file is complete state, not a patch", () => {
     const source = createDocumentState({ x: 2, y: 2 });
     const target = createDocumentState({ x: 2, y: 2 });
     target.uv.restore({
@@ -115,7 +115,7 @@ describe("PixelArtDocument", () => {
     });
 
     deserializePixelDocument(
-      decodePixelArtDocument(encodePixelArtDocument(serializePixelDocument(source))),
+      decodePixelArtFile(encodePixelArtFile(serializePixelDocument(source))),
       target
     );
 
@@ -129,35 +129,35 @@ describe("PixelArtDocument", () => {
     enableNormalMap(source, normalMap);
     const target = createDocumentState({ x: 2, y: 2 });
 
-    const document = decodePixelArtDocument(
-      encodePixelArtDocument(serializePixelDocument(source))
+    const file = decodePixelArtFile(
+      encodePixelArtFile(serializePixelDocument(source))
     );
-    deserializePixelDocument(document, target);
+    deserializePixelDocument(file, target);
 
-    assert.deepEqual(document.normalMap, normalMap.toJSON());
+    assert.deepEqual(file.normalMap, normalMap.toJSON());
     assert.deepEqual(target.normalMap?.toJSON(), normalMap.toJSON());
   });
 
-  test("a document without normal map settings leaves the feature off", () => {
+  test("a file without normal map settings leaves the feature off", () => {
     const target = createDocumentState({ x: 2, y: 2 });
     enableNormalMap(target, NormalMapConfig.create());
-    const document = serializePixelDocument(createDocumentState({ x: 2, y: 2 }));
+    const file = serializePixelDocument(createDocumentState({ x: 2, y: 2 }));
 
-    deserializePixelDocument(decodePixelArtDocument(jsonBytes(document)), target);
+    deserializePixelDocument(decodePixelArtFile(jsonBytes(file)), target);
 
-    assert.equal("normalMap" in document, false);
+    assert.equal("normalMap" in file, false);
     assert.equal(target.normalMap, null);
   });
 });
 
-describe("createPixelArtDocument", () => {
-  test("creates a transparent document of the given size", () => {
-    const document = createPixelArtDocument({ x: 2, y: 3 });
+describe("createPixelArtFile", () => {
+  test("creates a transparent file of the given size", () => {
+    const file = createPixelArtFile({ x: 2, y: 3 });
     const target = createDocumentState({ x: 1, y: 1 });
-    deserializePixelDocument(document, target);
+    deserializePixelDocument(file, target);
 
-    assert.deepEqual(document.size, { x: 2, y: 3 });
-    assert.deepEqual(document.uvRegions, []);
+    assert.deepEqual(file.size, { x: 2, y: 3 });
+    assert.deepEqual(file.uvRegions, []);
     assert.deepEqual(target.buffer.size(), { x: 2, y: 3 });
     assert.ok(target.buffer.pixels().every((value) => value === 0));
   });
@@ -165,19 +165,19 @@ describe("createPixelArtDocument", () => {
   test("encodes the given pixels as base64 RGBA8", () => {
     const pixels = new Uint8ClampedArray([1, 2, 3, 4]);
 
-    const document = createPixelArtDocument({ x: 1, y: 1 }, pixels);
+    const file = createPixelArtFile({ x: 1, y: 1 }, pixels);
 
-    assert.equal(document.pixels, "AQIDBA==");
+    assert.equal(file.pixels, "AQIDBA==");
   });
 
   test("rejects an empty size or a pixel length mismatch", () => {
     assert.throws(
-      () => createPixelArtDocument({ x: 0, y: 1 }),
-      InvalidPixelArtDocumentError
+      () => createPixelArtFile({ x: 0, y: 1 }),
+      InvalidPixelArtFileError
     );
     assert.throws(
-      () => createPixelArtDocument({ x: 1, y: 1 }, new Uint8Array(3)),
-      InvalidPixelArtDocumentError
+      () => createPixelArtFile({ x: 1, y: 1 }, new Uint8Array(3)),
+      InvalidPixelArtFileError
     );
   });
 });

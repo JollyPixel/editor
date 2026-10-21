@@ -15,9 +15,9 @@ import {
 
 // Import Internal Dependencies
 import {
-  MapDocument,
-  type MapDocumentSignals
-} from "../../document/MapDocument.ts";
+  EditorMap,
+  type EditorMapSignals
+} from "../../map/EditorMap.ts";
 import type { MapAccessSource } from "../../access/MapAccess.ts";
 import {
   ObjectLayerRef,
@@ -41,7 +41,7 @@ export type ConfirmPrompt = typeof showConfirm;
 export interface MapLayersOptions {
   world: VoxelWorld;
   selection: SelectionStore;
-  mapDocument: MapDocumentSignals;
+  editorMap: EditorMapSignals;
   access: MapAccessSource;
   editContext: Pick<EditContext, "draft" | "subscribe">;
   confirm?: ConfirmPrompt;
@@ -74,10 +74,10 @@ export class MapLayers {
     this.#confirm = options.confirm ?? showConfirm;
     this.#editContext = options.editContext;
 
-    const { mapDocument, editContext } = options;
+    const { editorMap, editContext } = options;
     this.#subscriptions = [
-      mapDocument.subscribe("layerUpdated", this.#reconcileSelection),
-      mapDocument.subscribe("reset", this.#reconcileSelection),
+      editorMap.subscribe("layerUpdated", this.#reconcileSelection),
+      editorMap.subscribe("reset", this.#reconcileSelection),
       editContext.subscribe("change", this.#reconcileSelection)
     ];
     this.#reconcileSelection();
@@ -97,7 +97,7 @@ export class MapLayers {
 
   defaultNames(): Record<AddKind, string> {
     return {
-      "voxel-layer": `Layer ${MapDocument.layers(this.#world).length + 1}`,
+      "voxel-layer": `Layer ${EditorMap.layers(this.#world).length + 1}`,
       "object-layer": `Objects ${this.#world.objectLayers.size + 1}`,
       object: "Object"
     };

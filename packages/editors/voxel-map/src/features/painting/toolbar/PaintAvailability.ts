@@ -33,12 +33,12 @@ export class PaintAvailability {
     workspace: VoxelMapWorkspace,
     listener: (availability: PaintAvailability) => void
   ): Iterable<() => void> {
-    const { mapDocument, access } = workspace;
+    const { editorMap, access } = workspace;
     const { brush, block, selection } = workspace.state;
     function refresh(): void {
       listener(PaintAvailability.evaluate({
         selection,
-        hasBlock: block.resolve(mapDocument.blocks) !== undefined,
+        hasBlock: block.resolve(editorMap.blocks) !== undefined,
         suspended: brush.suspended,
         access: access.current
       }));
@@ -51,7 +51,7 @@ export class PaintAvailability {
       brush.subscribe("suspendedChange", refresh),
       block.subscribe("change", refresh),
       selection.subscribe("change", refresh),
-      mapDocument.subscribe("layerUpdated", refresh)
+      editorMap.subscribe("layerUpdated", refresh)
     ];
   }
 

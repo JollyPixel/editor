@@ -1,11 +1,11 @@
 // Import Internal Dependencies
-import { CHUNK_SAMPLES, ChunkCoord } from "#src/document/ChunkCoord.ts";
-import { CHUNK_SAMPLE_COUNT } from "#src/document/TerrainChunk.ts";
-import type { TerrainDocument } from "#src/document/TerrainDocument.ts";
+import { CHUNK_SAMPLES, ChunkCoord } from "#src/terrain/ChunkCoord.ts";
+import { CHUNK_SAMPLE_COUNT } from "#src/terrain/TerrainChunk.ts";
+import type { Terrain } from "#src/terrain/Terrain.ts";
 import {
   TILE_SAMPLE_COUNT,
   TileCoord
-} from "#src/document/TileCoord.ts";
+} from "#src/terrain/TileCoord.ts";
 import { ChunkTextureStore } from "#src/view/textures/ChunkTextureStore.ts";
 import {
   APRON_MARGIN,
@@ -18,7 +18,7 @@ import {
 } from "./random.ts";
 
 export function rebuildStore(
-  terrain: TerrainDocument
+  terrain: Terrain
 ): ChunkTextureStore {
   const store = new ChunkTextureStore(terrain);
   for (const chunk of terrain.chunks()) {
@@ -39,7 +39,7 @@ export function apronSamples(
 }
 
 export function sampledApron(
-  terrain: TerrainDocument,
+  terrain: Terrain,
   coord: ChunkCoord
 ): Float32Array {
   const origin = coord.originSample;
@@ -56,7 +56,7 @@ export function sampledApron(
 
 export function applyRandomEdit(
   random: Random,
-  terrain: TerrainDocument,
+  terrain: Terrain,
   store: ChunkTextureStore
 ): string {
   const chunks = [...terrain.chunks()];

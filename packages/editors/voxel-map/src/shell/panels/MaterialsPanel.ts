@@ -51,15 +51,15 @@ export class MaterialsPanel extends WorkspaceElement {
   protected override watchWorkspace(
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
-    const { mapDocument } = workspace;
+    const { editorMap } = workspace;
     const refresh = (): void => {
-      this._hasBlocks = mapDocument.blocks.size > 0;
+      this._hasBlocks = editorMap.blocks.size > 0;
     };
     refresh();
 
     return [
-      mapDocument.subscribe("blockRegistryChanged", refresh),
-      mapDocument.subscribe("reset", refresh)
+      editorMap.subscribe("blockRegistryChanged", refresh),
+      editorMap.subscribe("reset", refresh)
     ];
   }
 

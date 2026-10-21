@@ -3,15 +3,15 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { CHUNK_SAMPLES, ChunkCoord } from "#src/document/ChunkCoord.ts";
-import { quadDiagonal } from "#src/document/quadDiagonal.ts";
-import { CHUNK_SAMPLE_COUNT } from "#src/document/TerrainChunk.ts";
-import { TerrainDocument } from "#src/document/TerrainDocument.ts";
+import { CHUNK_SAMPLES, ChunkCoord } from "#src/terrain/ChunkCoord.ts";
+import { quadDiagonal } from "#src/terrain/quadDiagonal.ts";
+import { CHUNK_SAMPLE_COUNT } from "#src/terrain/TerrainChunk.ts";
+import { Terrain } from "#src/terrain/Terrain.ts";
 import {
   raycastTerrain,
   surfaceHeight,
   type TerrainRay
-} from "#src/document/terrainSurface.ts";
+} from "#src/terrain/terrainSurface.ts";
 import type { Point3 } from "#src/math/point3.ts";
 import { bruteRaycastDistance } from "../helpers/bruteRaycast.ts";
 import {
@@ -39,8 +39,8 @@ function hillHeights(
   return heights;
 }
 
-function hills(): TerrainDocument {
-  const terrain = new TerrainDocument();
+function hills(): Terrain {
+  const terrain = new Terrain();
   for (const [x, z] of [[0, 0], [1, 0], [2, 0], [0, 1], [2, 1]]) {
     const coord = new ChunkCoord(x, z);
     terrain.addChunk(coord, hillHeights(coord));
@@ -51,8 +51,8 @@ function hills(): TerrainDocument {
 
 function gappedTerrain(
   random: Random
-): TerrainDocument {
-  const terrain = new TerrainDocument();
+): Terrain {
+  const terrain = new Terrain();
   for (const [x, z] of [[0, 0], [1, 0], [0, 1], [2, 1], [-1, -1]]) {
     const heights = new Float32Array(CHUNK_SAMPLE_COUNT);
     const amplitude = 4 + random() * 8;
@@ -127,7 +127,7 @@ function rayToward(
 }
 
 function marchedDistance(
-  terrain: TerrainDocument,
+  terrain: Terrain,
   { origin, direction }: TerrainRay,
   maxDistance: number
 ): number | null {
@@ -228,7 +228,7 @@ describe("raycastTerrain", () => {
   });
 
   test("a ray running along the terrain's open edge hits that edge", () => {
-    const terrain = new TerrainDocument();
+    const terrain = new Terrain();
     const heights = new Float32Array(CHUNK_SAMPLE_COUNT);
     heights.forEach((_, index) => {
       heights[index] = 5 * Math.sin(index * 0.37) + (index % 7);
@@ -243,7 +243,7 @@ describe("raycastTerrain", () => {
   });
 
   test("the normal is the hit triangle's, pointing up", () => {
-    const terrain = new TerrainDocument();
+    const terrain = new Terrain();
     const heights = new Float32Array(CHUNK_SAMPLE_COUNT);
     heights.forEach((_, index) => {
       heights[index] = (index % CHUNK_SAMPLES) * 0.5;
@@ -259,7 +259,7 @@ describe("raycastTerrain", () => {
   });
 
   test("the last quad of a chunk climbs to its taller neighbour's edge", () => {
-    const terrain = new TerrainDocument();
+    const terrain = new Terrain();
     terrain.addChunk(new ChunkCoord(0, 0));
     terrain.addChunk(new ChunkCoord(1, 0), new Float32Array(CHUNK_SAMPLE_COUNT).fill(10));
     const hit = raycastTerrain(terrain, rayToward({ x: 40, y: 9.5, z: 20.5 }, { x: 140, y: 8.5, z: 20.5 }))!;

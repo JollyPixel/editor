@@ -6,7 +6,7 @@ import {
 } from "@jolly-pixel/history";
 import {
   ChunkCoord,
-  TerrainDocument,
+  Terrain,
   TileCoord,
   type ChunkKey,
   type TerrainReader,
@@ -39,7 +39,7 @@ export type TerrainImage = readonly ChunkImage[];
 
 export type TerrainChange = CommandChange<TerrainCommand, TerrainImage>;
 
-export class TerrainCommandDocument extends CommandDocument<
+export class TerrainDocument extends CommandDocument<
   TerrainCommand,
   TerrainSnapshot,
   TerrainImage
@@ -47,7 +47,7 @@ export class TerrainCommandDocument extends CommandDocument<
   readonly terrain: TerrainReader;
 
   constructor() {
-    const terrain = new TerrainDocument();
+    const terrain = new Terrain();
     super(terrainState(terrain));
     this.terrain = terrain;
   }
@@ -95,7 +95,7 @@ export class TerrainCommandDocument extends CommandDocument<
 }
 
 function terrainState(
-  terrain: TerrainDocument
+  terrain: Terrain
 ): CommandState<TerrainCommand, TerrainSnapshot, TerrainImage> {
   return {
     accepts: (command) => acceptsTerrainCommand(terrain, command),

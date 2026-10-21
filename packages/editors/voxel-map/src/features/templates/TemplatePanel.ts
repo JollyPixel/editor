@@ -8,7 +8,7 @@ import type {
 import { FieldBinding } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { MapDocumentSignals } from "../../document/MapDocument.ts";
+import type { EditorMapSignals } from "../../map/EditorMap.ts";
 import type { MapTemplates } from "./MapTemplates.ts";
 import type { ActivePlacement } from "../placement/ActivePlacement.ts";
 import type { MapPlacement } from "../placement/MapPlacement.ts";
@@ -36,7 +36,7 @@ export class TemplatePanel extends LitElement {
   declare placement: MapPlacement;
 
   @property({ attribute: false })
-  declare mapDocument: MapDocumentSignals;
+  declare editorMap: EditorMapSignals;
 
   @state()
   private declare _template: VoxelTemplate | null;
@@ -63,7 +63,7 @@ export class TemplatePanel extends LitElement {
     this.#subscriptions.push(
       this.templates.store.subscribe("selectionChange", this.#syncTemplate),
       this.placement.subscribe("change", this.#syncPlacement),
-      this.mapDocument.subscribe("templatesChanged", this.#syncTemplate)
+      this.editorMap.subscribe("templatesChanged", this.#syncTemplate)
     );
     this.#syncTemplate();
     this.#syncPlacement(this.placement.current);

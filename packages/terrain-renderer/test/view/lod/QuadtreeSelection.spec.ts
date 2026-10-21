@@ -3,9 +3,9 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { CHUNK_SAMPLES, ChunkCoord } from "#src/document/ChunkCoord.ts";
-import { CHUNK_SAMPLE_COUNT } from "#src/document/TerrainChunk.ts";
-import { TerrainDocument } from "#src/document/TerrainDocument.ts";
+import { CHUNK_SAMPLES, ChunkCoord } from "#src/terrain/ChunkCoord.ts";
+import { CHUNK_SAMPLE_COUNT } from "#src/terrain/TerrainChunk.ts";
+import { Terrain } from "#src/terrain/Terrain.ts";
 import { LodRanges } from "#src/view/lod/LodRanges.ts";
 import {
   QuadtreeSelection,
@@ -18,8 +18,8 @@ const kProbeStep = 4;
 
 function stripTerrain(
   length: number
-): TerrainDocument {
-  const terrain = new TerrainDocument();
+): Terrain {
+  const terrain = new Terrain();
   for (let x = 0; x < length; x++) {
     terrain.addChunk(new ChunkCoord(x, 0));
   }
@@ -148,7 +148,7 @@ describe("QuadtreeSelection", () => {
   });
 
   test("chunks beyond the coarsest range are not drawn", () => {
-    const terrain = new TerrainDocument();
+    const terrain = new Terrain();
     terrain.addChunk(new ChunkCoord(0, 0));
     terrain.addChunk(new ChunkCoord(100, 0));
     const ranges = new LodRanges();

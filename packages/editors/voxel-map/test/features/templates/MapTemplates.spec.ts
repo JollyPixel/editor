@@ -15,7 +15,7 @@ import { LogQueue } from "@jolly-pixel/ui";
 // Import Internal Dependencies
 import { MapTemplates } from "../../../src/features/templates/MapTemplates.ts";
 import { TemplateDraft } from "../../../src/features/templates/editing/TemplateDraft.ts";
-import { createMapDocument } from "../../helpers/mapDocument.ts";
+import { createEditorMap } from "../../helpers/editorMap.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
 import { MAP_CAPABILITIES } from "../../../src/access/MapAccess.ts";
 
@@ -28,7 +28,7 @@ function setup(
   const log = new LogQueue();
   const templates = new MapTemplates({
     world,
-    mapDocument: createMapDocument(world),
+    editorMap: createEditorMap(world),
     confirm: () => Promise.resolve(true),
     prompt: (options) => {
       prompts.push(options.defaultValue ?? "");
@@ -142,7 +142,7 @@ describe("MapTemplates.remove", () => {
     const prompts: string[] = [];
     const templates = new MapTemplates({
       world,
-      mapDocument: createMapDocument(world),
+      editorMap: createEditorMap(world),
       confirm: (options) => {
         prompts.push(options.message);
 

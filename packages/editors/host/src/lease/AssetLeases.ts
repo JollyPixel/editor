@@ -9,7 +9,8 @@ import {
 } from "@jolly-pixel/asset";
 import type {
   ChangeOutbox,
-  Room
+  Room,
+  SyncedDocument
 } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
@@ -20,8 +21,7 @@ import { UnsettledChangesError } from "./errors/UnsettledChangesError.ts";
 import type {
   AssetLease,
   AssetDocumentKind,
-  AssetRoomLease,
-  SyncedDocument
+  AssetRoomLease
 } from "./AssetLease.ts";
 
 export interface RoomSource {
@@ -239,7 +239,7 @@ export class AssetLeases extends Emitter<AssetLeasesEvents> {
 
     let synced: SyncedDocument<unknown> | undefined;
     try {
-      synced = kind?.createDocument(room);
+      synced = kind?.syncDocument(room);
       if (synced !== undefined) {
         if (this.#outboxes !== null && tag === null) {
           synced.pendingChanges.keepIn(this.#outboxes.open(roomName));

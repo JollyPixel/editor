@@ -67,7 +67,7 @@ export class TemplateEditBar extends WorkspaceElement {
   protected override watchWorkspace(
     workspace: VoxelMapWorkspace
   ): Iterable<() => void> {
-    const { templateEditing, mapDocument } = workspace;
+    const { templateEditing, editorMap } = workspace;
     const refresh = (): void => {
       this._name = templateEditing.current?.template.name ?? null;
       this.hidden = this._name === null;
@@ -76,7 +76,7 @@ export class TemplateEditBar extends WorkspaceElement {
 
     return [
       workspace.state.editContext.subscribe("change", refresh),
-      mapDocument.subscribe("templatesChanged", refresh),
+      editorMap.subscribe("templatesChanged", refresh),
       workspace.access.subscribe("change", () => this.requestUpdate())
     ];
   }

@@ -3,9 +3,9 @@ import {
   CHUNK_SAMPLES,
   ChunkCoord,
   type ChunkKey
-} from "../../document/ChunkCoord.ts";
-import { BORDER_SAMPLES } from "../../document/SampleBlock.ts";
-import type { TerrainReader } from "../../document/TerrainDocument.ts";
+} from "../../terrain/ChunkCoord.ts";
+import { BORDER_SAMPLES } from "../../terrain/SampleBlock.ts";
+import type { TerrainReader } from "../../terrain/Terrain.ts";
 
 // CONSTANTS
 export const APRON_MARGIN = BORDER_SAMPLES;

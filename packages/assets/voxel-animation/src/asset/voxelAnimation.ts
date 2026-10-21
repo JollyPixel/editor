@@ -12,16 +12,19 @@ import {
 } from "../network/AnimationCommand.schema.ts";
 import type {
   AnimationClipJSON,
-  AnimationSetSnapshot
+  AnimationInterpolation,
+  AnimationSetSnapshot,
+  AnimationTrackJSON
 } from "../network/types.ts";
+import { mapTrackKeys } from "../model/values/trackKeys.ts";
 import { VOXEL_ANIMATION_ICON } from "./icons.ts";
-import { compactTrack } from "./storedTrack.ts";
 
 // CONSTANTS
 export const VOXEL_ANIMATION_KIND = "voxelanimation";
 export const VOXEL_ANIMATION_COMMAND = "voxelanimation.command";
 export const VOXEL_ANIMATION_EXTENSION = ".voxelanim.json";
-export const VOXEL_ANIMATION_DOCUMENT_VERSION = 1;
+export const VOXEL_ANIMATION_FILE_VERSION = 1;
+const kDefaultInterpolation: AnimationInterpolation = "linear";
 
 export const VOXEL_ANIMATION_ASSET: AssetKindDescriptor = {
   kind: VOXEL_ANIMATION_KIND,
@@ -30,56 +33,60 @@ export const VOXEL_ANIMATION_ASSET: AssetKindDescriptor = {
   icon: VOXEL_ANIMATION_ICON
 };
 
-const kStoredKeysSchema = z.optional(z.array(z.extend(animationKeySchema, {
+const kCompactKeysSchema = z.optional(z.array(z.extend(animationKeySchema, {
   interpolation: z.optional(animationKeySchema.shape.interpolation)
 })));
 
-const kStoredTrackSchema = z.extend(animationTrackSchema, {
-  position: kStoredKeysSchema,
-  rotation: kStoredKeysSchema,
-  scale: kStoredKeysSchema
+const kCompactTrackSchema = z.extend(animationTrackSchema, {
+  position: kCompactKeysSchema,
+  rotation: kCompactKeysSchema,
+  scale: kCompactKeysSchema
 });
 
-export const voxelAnimationDocumentSchema = z.object({
-  version: z.literal(VOXEL_ANIMATION_DOCUMENT_VERSION),
+export const compactVoxelAnimationFileSchema = z.object({
+  version: z.literal(VOXEL_ANIMATION_FILE_VERSION),
   rig: animationSetSnapshotSchema.shape.rig,
   clips: z.array(z.extend(animationClipSchema, {
-    tracks: z.array(kStoredTrackSchema)
+    tracks: z.array(kCompactTrackSchema)
   }))
 });
 
-type StoredAnimationDocument = Infer<typeof voxelAnimationDocumentSchema>;
+export type CompactVoxelAnimationFile = Infer<
+  typeof compactVoxelAnimationFileSchema
+>;
+type CompactAnimationTrack =
+  CompactVoxelAnimationFile["clips"][number]["tracks"][number];
 
-export type VoxelAnimationDocument = AnimationSetSnapshot & {
-  version: typeof VOXEL_ANIMATION_DOCUMENT_VERSION;
+export type VoxelAnimationFile = AnimationSetSnapshot & {
+  version: typeof VOXEL_ANIMATION_FILE_VERSION;
 };
 
-export interface VoxelAnimationDocumentOptions {
+export interface VoxelAnimationFileOptions {
   rig?: string;
   clips?: AnimationClipJSON[];
 }
 
-export function createVoxelAnimationDocument(
-  options: VoxelAnimationDocumentOptions = {}
-): VoxelAnimationDocument {
+export function createVoxelAnimationFile(
+  options: VoxelAnimationFileOptions = {}
+): VoxelAnimationFile {
   const {
     rig = "",
     clips = []
   } = options;
 
   return {
-    version: VOXEL_ANIMATION_DOCUMENT_VERSION,
+    version: VOXEL_ANIMATION_FILE_VERSION,
     rig,
     clips: structuredClone(clips)
   };
 }
 
-export function encodeVoxelAnimationDocument(
-  document: VoxelAnimationDocument
+export function encodeVoxelAnimationFile(
+  file: VoxelAnimationFile
 ): Uint8Array {
-  const stored: StoredAnimationDocument = {
-    ...document,
-    clips: document.clips.map((clip) => {
+  const compact: CompactVoxelAnimationFile = {
+    ...file,
+    clips: file.clips.map((clip) => {
       return {
         ...clip,
         tracks: clip.tracks.map(compactTrack)
@@ -87,5 +94,37 @@ export function encodeVoxelAnimationDocument(
     })
   };
 
-  return new TextEncoder().encode(JSON.stringify(stored));
+  return new TextEncoder().encode(JSON.stringify(compact));
+}
+
+export function expandVoxelAnimationFile(
+  compact: CompactVoxelAnimationFile
+): VoxelAnimationFile {
+  return {
+    ...compact,
+    clips: compact.clips.map((clip) => {
+      return {
+        ...clip,
+        tracks: clip.tracks.map(expandTrack)
+      };
+    })
+  };
+}
+
+function compactTrack(
+  track: AnimationTrackJSON
+): CompactAnimationTrack {
+  return mapTrackKeys(track, ({ interpolation, ...key }) => (
+    interpolation === kDefaultInterpolation ?
+      key :
+      { ...key, interpolation }
+  ));
+}
+
+function expandTrack(
+  compact: CompactAnimationTrack
+): AnimationTrackJSON {
+  return mapTrackKeys(compact, ({ interpolation = kDefaultInterpolation, ...key }) => {
+    return { ...key, interpolation };
+  });
 }

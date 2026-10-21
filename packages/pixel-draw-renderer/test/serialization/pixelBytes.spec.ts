@@ -13,8 +13,8 @@ import {
   encodePngPixels
 } from "#src/serialization/pixelBytes.ts";
 import {
-  InvalidPixelArtDocumentError
-} from "#src/serialization/errors/InvalidPixelArtDocumentError.ts";
+  InvalidPixelArtFileError
+} from "#src/serialization/errors/InvalidPixelArtFileError.ts";
 
 describe("pixel bytes", () => {
   test("round-trips RGBA8 bytes through base64", () => {
@@ -102,7 +102,7 @@ describe("PNG pixels", () => {
 
     await assert.rejects(
       decodePngPixels(encoded, { x: 4, y: 1 }),
-      InvalidPixelArtDocumentError
+      InvalidPixelArtFileError
     );
   });
 });

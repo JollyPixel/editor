@@ -14,7 +14,7 @@ import {
   createWorldHistory,
   mapSteps
 } from "../../helpers/mapHistory.ts";
-import { createMapDocument } from "../../helpers/mapDocument.ts";
+import { createEditorMap } from "../../helpers/editorMap.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
 import { CellRegion } from "../../../src/features/placement/CellRegion.ts";
 import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
@@ -38,7 +38,7 @@ function setup() {
     world,
     history: mapSteps(createWorldHistory(world)),
     selection,
-    mapDocument: createMapDocument(world),
+    editorMap: createEditorMap(world),
     access
   });
   world.addLayer("Draft");

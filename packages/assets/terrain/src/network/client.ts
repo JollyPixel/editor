@@ -7,7 +7,7 @@ export * from "./TerrainLiveReceiver.ts";
 export * from "./TerrainLiveSender.ts";
 export * from "./TerrainCommandKeys.ts";
 export * from "./terrainDocumentKind.ts";
-export * from "../model/TerrainCommandDocument.ts";
+export * from "../model/TerrainDocument.ts";
 export * from "../model/TerrainPreview.ts";
 export * from "../history/terrainHistoryRegistration.ts";
 export {

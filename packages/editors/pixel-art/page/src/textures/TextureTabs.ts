@@ -7,10 +7,10 @@ import {
   type PixelWireCommand
 } from "@jolly-pixel/asset.pixel-art/client";
 import {
-  createPixelArtDocument,
+  createPixelArtFile,
   UVMap,
   type PixelArtCanvas,
-  type PixelArtDocumentData,
+  type PixelArtFile,
   type PixelDocument
 } from "@jolly-pixel/pixel-draw.renderer";
 import type {
@@ -168,7 +168,7 @@ export class TextureTabs {
 function documentFromCanvas(
   source: HTMLCanvasElement,
   uvSize: number | null
-): PixelArtDocumentData {
+): PixelArtFile {
   const context = source.getContext("2d", { willReadFrequently: true });
   if (context === null) {
     throw new Error("Could not read the imported image");
@@ -179,9 +179,9 @@ function documentFromCanvas(
     y: source.height
   };
   const { data } = context.getImageData(0, 0, size.x, size.y);
-  const document = createPixelArtDocument(size, data);
+  const file = createPixelArtFile(size, data);
   if (uvSize === null) {
-    return document;
+    return file;
   }
 
   const region = new UVMap({
@@ -193,7 +193,7 @@ function documentFromCanvas(
   });
 
   return {
-    ...document,
+    ...file,
     uvRegions: [
       region.toJSON()
     ]

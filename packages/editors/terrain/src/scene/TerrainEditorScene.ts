@@ -11,7 +11,7 @@ import {
   TerrainLiveReceiver,
   TerrainLiveSender,
   TerrainPreview,
-  type TerrainCommandDocument,
+  type TerrainDocument,
   type TerrainPreviewEvents
 } from "@jolly-pixel/asset.terrain/client";
 import {
@@ -56,7 +56,7 @@ const kCameraPreset: OrbitFlyCameraOptions = {
 };
 
 export interface TerrainEditorSceneOptions {
-  document: TerrainCommandDocument;
+  document: TerrainDocument;
   sculpt: SculptSettings;
   viewSettings: ViewSettings;
   history: TerrainHistory;
@@ -74,7 +74,7 @@ interface TerrainSceneParts {
 }
 
 export class TerrainEditorScene extends Systems.Scene {
-  #document: TerrainCommandDocument;
+  #document: TerrainDocument;
   #sculpt: SculptSettings;
   #viewSettings: ViewSettings;
   #history: TerrainHistory;

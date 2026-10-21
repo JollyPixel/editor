@@ -13,8 +13,8 @@ import { encodeVoxelWorld } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import {
-  createBlocksetDocument,
-  encodeBlocksetDocument,
+  createBlocksetFile,
+  encodeBlocksetFile,
   BLOCKSET_KIND,
   blocksetAsset,
   blocksetAssetKind,
@@ -37,7 +37,7 @@ describe("voxel-map asset kind over a real back-end", () => {
       await fs.mkdir(path.join(root, "textures"), { recursive: true });
       await fs.writeFile(
         path.join(root, "textures/stone.blockset.json"),
-        encodeBlocksetDocument(createBlocksetDocument({ tileSize: 8 }))
+        encodeBlocksetFile(createBlocksetFile({ tileSize: 8 }))
       );
 
       await using backend = await createAssetBackend({

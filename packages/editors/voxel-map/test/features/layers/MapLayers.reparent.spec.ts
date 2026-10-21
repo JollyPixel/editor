@@ -15,7 +15,7 @@ import {
   SelectionStore,
   VoxelLayerRef
 } from "../../../src/state/index.ts";
-import { createMapDocument } from "../../helpers/mapDocument.ts";
+import { createEditorMap } from "../../helpers/editorMap.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
 
 function makeWorld(): VoxelWorld {
@@ -68,7 +68,7 @@ function createMapLayers(
     world,
     editContext: new EditContext(),
     selection: new SelectionStore(),
-    mapDocument: createMapDocument(world),
+    editorMap: createEditorMap(world),
     confirm,
     access
   });

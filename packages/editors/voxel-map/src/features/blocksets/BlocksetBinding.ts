@@ -19,7 +19,7 @@ import type { AssetLeases } from "@jolly-pixel/editor.host";
 import { RoomGrants } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
-import type { MapDocument } from "../../document/MapDocument.ts";
+import type { EditorMap } from "../../map/EditorMap.ts";
 import {
   BLOCKSET_CAPABILITIES,
   type BlocksetGrants
@@ -50,7 +50,7 @@ export interface BlocksetBindingOptions {
   entry: BlocksetEntry;
   slot: BlocksetSlot;
   opened: OpenedBlockset;
-  mapDocument: MapDocument;
+  editorMap: EditorMap;
   blocks: BlockWriter;
 }
 
@@ -81,7 +81,7 @@ export class BlocksetBinding {
       pixels: opened.pixels,
       blockset: opened.blockset,
       definition: entry.definition,
-      mapDocument: options.mapDocument,
+      editorMap: options.editorMap,
       blocks: options.blocks
     });
     this.access = new RoomGrants(opened.room, BLOCKSET_CAPABILITIES);

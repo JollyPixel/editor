@@ -2,8 +2,8 @@
 import {
   CHUNK_SAMPLES,
   ChunkCoord
-} from "../../document/ChunkCoord.ts";
-import type { TerrainReader } from "../../document/TerrainDocument.ts";
+} from "../../terrain/ChunkCoord.ts";
+import type { TerrainReader } from "../../terrain/Terrain.ts";
 import type { Point3 } from "../../math/point3.ts";
 import {
   LodRanges,

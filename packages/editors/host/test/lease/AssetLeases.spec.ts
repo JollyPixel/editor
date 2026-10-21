@@ -58,7 +58,7 @@ describe("AssetLeases", () => {
 
     assert.throws(() => leases.open({
       kind: "pixelart",
-      createDocument: () => {
+      syncDocument: () => {
         throw failure;
       }
     }, "tex"), failure);

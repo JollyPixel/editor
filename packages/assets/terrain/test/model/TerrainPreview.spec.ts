@@ -15,7 +15,7 @@ import {
   terrainSnapshot
 } from "#src/index.ts";
 import {
-  TerrainCommandDocument,
+  TerrainDocument,
   TerrainPreview,
   type TerrainStroke
 } from "#src/network/client.ts";
@@ -34,7 +34,7 @@ function heightAt(
 }
 
 function previewSetup() {
-  const document = new TerrainCommandDocument();
+  const document = new TerrainDocument();
   document.addChunk(0, 0);
   const preview = new TerrainPreview(document);
 

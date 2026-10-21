@@ -7,7 +7,7 @@ import type { VoxelBlockStats } from "@jolly-pixel/voxel.renderer";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import type { MapDocumentEvents } from "../../../../src/document/MapDocument.ts";
+import type { EditorMapEvents } from "../../../../src/map/EditorMap.ts";
 import {
   BlockUsageStore,
   type BlockUsageSource
@@ -33,7 +33,7 @@ function stats(
 }
 
 function setup() {
-  const mapDocument = new Emitter<MapDocumentEvents>();
+  const editorMap = new Emitter<EditorMapEvents>();
   const source: BlockUsageSource = {
     stats: stats(2),
     inspectUsage: (blockId) => {
@@ -51,9 +51,9 @@ function setup() {
       };
     }
   };
-  const usage = new BlockUsageStore({ mapDocument, source });
+  const usage = new BlockUsageStore({ editorMap, source });
 
-  return { mapDocument, source, usage };
+  return { editorMap, source, usage };
 }
 
 function flushMicrotasks(): Promise<void> {
@@ -68,13 +68,13 @@ describe("BlockUsageStore", () => {
   });
 
   it("coalesces a burst of document changes into one refresh", async() => {
-    const { mapDocument, source, usage } = setup();
+    const { editorMap, source, usage } = setup();
     const changes: number[] = [];
     usage.on("change", (next) => changes.push(next.voxels));
 
     Object.assign(source, { stats: stats(5) });
-    mapDocument.emit("blockRegistryChanged", "added");
-    mapDocument.emit("reset");
+    editorMap.emit("blockRegistryChanged", "added");
+    editorMap.emit("reset");
     assert.deepEqual(changes, []);
 
     await flushMicrotasks();
@@ -83,12 +83,12 @@ describe("BlockUsageStore", () => {
   });
 
   it("ignores redefinitions, which never change what voxels use", async() => {
-    const { mapDocument, usage } = setup();
+    const { editorMap, usage } = setup();
     const changes: number[] = [];
     usage.on("change", (next) => changes.push(next.voxels));
 
-    mapDocument.emit("blockRegistryChanged", "redefined");
-    mapDocument.emit("blockRegistryChanged", "retiled");
+    editorMap.emit("blockRegistryChanged", "redefined");
+    editorMap.emit("blockRegistryChanged", "retiled");
 
     await flushMicrotasks();
     assert.deepEqual(changes, []);
@@ -102,14 +102,14 @@ describe("BlockUsageStore", () => {
   });
 
   it("ignores the document once disposed", async() => {
-    const { mapDocument, usage } = setup();
+    const { editorMap, usage } = setup();
     let changed = false;
     usage.on("change", () => {
       changed = true;
     });
 
     usage.dispose();
-    mapDocument.emit("reset");
+    editorMap.emit("reset");
     await flushMicrotasks();
 
     assert.equal(changed, false);

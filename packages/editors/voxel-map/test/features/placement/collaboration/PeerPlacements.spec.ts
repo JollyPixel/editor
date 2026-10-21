@@ -15,7 +15,7 @@ import {
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import type { MapDocumentEvents } from "../../../../src/document/MapDocument.ts";
+import type { EditorMapEvents } from "../../../../src/map/EditorMap.ts";
 import { CellRegion } from "../../../../src/features/placement/CellRegion.ts";
 import { CopySource } from "../../../../src/features/placement/CopySource.ts";
 import { MarqueePresence } from "../../../../src/features/placement/collaboration/MarqueePresence.ts";
@@ -73,7 +73,7 @@ function replica(): Replica {
       }
     ]),
     sources: createSources(new BlocksetAtlases()),
-    mapDocument: new Emitter<MapDocumentEvents>(),
+    editorMap: new Emitter<EditorMapEvents>(),
     peers: new PeerEditContext({
       world,
       context: new EditContext(),

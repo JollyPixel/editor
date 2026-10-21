@@ -6,35 +6,35 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { InvalidAssetDocumentError } from "@jolly-pixel/asset-server";
-import { createPixelArtDocument } from "@jolly-pixel/pixel-draw.renderer";
+import { InvalidAssetFileError } from "@jolly-pixel/asset-server";
+import { createPixelArtFile } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import {
-  createBlocksetDocument,
-  decodeBlocksetDocument,
-  encodeBlocksetDocument,
-  parseBlocksetDocument,
-  BLOCKSET_DOCUMENT_VERSION,
-  blocksetDocumentFromPng
+  createBlocksetFile,
+  decodeBlocksetFile,
+  encodeBlocksetFile,
+  parseBlocksetFile,
+  BLOCKSET_FILE_VERSION,
+  blocksetFileFromPng
 } from "#src/index.ts";
 import { makeBlockDef } from "../helpers/blocks.ts";
 import { opaquePng } from "../helpers/png.ts";
 
-describe("createBlocksetDocument", () => {
+describe("createBlocksetFile", () => {
   test("defaults to a blank 8 by 8 tile grid at tile size 32", () => {
-    const document = createBlocksetDocument();
+    const file = createBlocksetFile();
 
-    assert.equal(document.version, BLOCKSET_DOCUMENT_VERSION);
-    assert.equal(document.tileSize, 32);
-    assert.deepEqual(document.pixels.size, { x: 256, y: 256 });
-    assert.deepEqual(document.blocks, []);
-    assert.deepEqual(document.materialGroups, []);
+    assert.equal(file.version, BLOCKSET_FILE_VERSION);
+    assert.equal(file.tileSize, 32);
+    assert.deepEqual(file.pixels.size, { x: 256, y: 256 });
+    assert.deepEqual(file.blocks, []);
+    assert.deepEqual(file.materialGroups, []);
   });
 
   test("keeps the given pixels and strips blockset ids from block tiles", () => {
-    const pixels = createPixelArtDocument({ x: 16, y: 8 });
-    const document = createBlocksetDocument({
+    const pixels = createPixelArtFile({ x: 16, y: 8 });
+    const file = createBlocksetFile({
       tileSize: 8,
       pixels,
       blocks: [
@@ -45,25 +45,25 @@ describe("createBlocksetDocument", () => {
       materialGroups: [{ id: "gold", metalness: 1 }]
     });
 
-    assert.equal(document.pixels, pixels);
-    assert.deepEqual(document.blocks[0].defaultTexture, { col: 1, row: 0 });
+    assert.equal(file.pixels, pixels);
+    assert.deepEqual(file.blocks[0].defaultTexture, { col: 1, row: 0 });
     assert.deepEqual(
-      document.materialGroups.map(({ id, metalness }) => [id, metalness]),
+      file.materialGroups.map(({ id, metalness }) => [id, metalness]),
       [["gold", 1]]
     );
   });
 });
 
-describe("blocksetDocumentFromPng", () => {
+describe("blocksetFileFromPng", () => {
   test("wraps the image with one cube block per tile, row-major", async() => {
-    const document = await blocksetDocumentFromPng(opaquePng(32, 16), {
+    const file = await blocksetFileFromPng(opaquePng(32, 16), {
       tileSize: 8
     });
 
-    assert.deepEqual(document.pixels.size, { x: 32, y: 16 });
-    assert.equal(document.blocks.length, 8);
+    assert.deepEqual(file.pixels.size, { x: 32, y: 16 });
+    assert.equal(file.blocks.length, 8);
     assert.deepEqual(
-      document.blocks.map(({ id, defaultTexture }) => [
+      file.blocks.map(({ id, defaultTexture }) => [
         id,
         defaultTexture?.col,
         defaultTexture?.row
@@ -73,36 +73,36 @@ describe("blocksetDocumentFromPng", () => {
   });
 
   test("caps the generated blocks", async() => {
-    const document = await blocksetDocumentFromPng(opaquePng(32, 16), {
+    const file = await blocksetFileFromPng(opaquePng(32, 16), {
       tileSize: 8,
       blockLimit: 3
     });
 
-    assert.deepEqual(document.blocks.map(({ id }) => id), [1, 2, 3]);
+    assert.deepEqual(file.blocks.map(({ id }) => id), [1, 2, 3]);
   });
 });
 
-describe("blockset document codec", () => {
+describe("blockset file codec", () => {
   test("round-trips through bytes", async() => {
-    const document = await blocksetDocumentFromPng(opaquePng(16, 16), {
+    const file = await blocksetFileFromPng(opaquePng(16, 16), {
       tileSize: 8
     });
 
     assert.deepEqual(
-      decodeBlocksetDocument(encodeBlocksetDocument(document)),
-      document
+      decodeBlocksetFile(encodeBlocksetFile(file)),
+      file
     );
   });
 
-  test("rejects a document that is not JSON", () => {
+  test("rejects a file that is not JSON", () => {
     assert.throws(
-      () => decodeBlocksetDocument(new TextEncoder().encode("{")),
-      InvalidAssetDocumentError
+      () => decodeBlocksetFile(new TextEncoder().encode("{")),
+      InvalidAssetFileError
     );
   });
 
   test("rejects an unsupported version, tile size, pixels or blocks", () => {
-    const valid = createBlocksetDocument({ tileSize: 8, size: { x: 8, y: 8 } });
+    const valid = createBlocksetFile({ tileSize: 8, size: { x: 8, y: 8 } });
 
     for (const [name, broken] of [
       ["version", { ...valid, version: 2 }],
@@ -117,11 +117,11 @@ describe("blockset document codec", () => {
       ["material groups", { ...valid, materialGroups: null }]
     ] as const) {
       assert.throws(
-        () => parseBlocksetDocument(broken),
-        InvalidAssetDocumentError,
+        () => parseBlocksetFile(broken),
+        InvalidAssetFileError,
         name
       );
     }
-    assert.deepEqual(parseBlocksetDocument(valid), valid);
+    assert.deepEqual(parseBlocksetFile(valid), valid);
   });
 });

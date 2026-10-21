@@ -47,7 +47,7 @@ function setup() {
   server.receive("A", networkCommand(blockAdded("K"), { clientId: "A" }));
 
   const room = createMockRoom("B");
-  const { document } = voxelModelDocumentKind().createDocument(room);
+  const { document } = voxelModelDocumentKind().syncDocument(room);
 
   function deliver(): void {
     for (const message of server.take<VoxelModelSnapshot>("B")) {
