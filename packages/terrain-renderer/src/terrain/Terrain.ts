@@ -4,6 +4,10 @@ import {
   ChunkCoord,
   type ChunkKey
 } from "./ChunkCoord.ts";
+import {
+  OverviewMap,
+  type OverviewReader
+} from "./OverviewMap.ts";
 import { SampleBlock } from "./SampleBlock.ts";
 import {
   CHUNK_SAMPLE_COUNT,
@@ -13,6 +17,7 @@ import type { TileCoord } from "./TileCoord.ts";
 
 export interface TerrainReader {
   readonly size: number;
+  readonly overview: OverviewReader;
 
   chunks(): IterableIterator<TerrainChunk>;
   chunk(coord: ChunkCoord): TerrainChunk | undefined;
@@ -24,6 +29,8 @@ export interface TerrainReader {
 }
 
 export class Terrain implements TerrainReader {
+  readonly overview = new OverviewMap();
+
   #chunks = new Map<ChunkKey, TerrainChunk>();
 
   get size(): number {
@@ -62,6 +69,7 @@ export class Terrain implements TerrainReader {
 
     const chunk = new TerrainChunk(coord, heights);
     this.#chunks.set(coord.key, chunk);
+    this.overview.derive(chunk);
 
     return chunk;
   }
@@ -71,12 +79,14 @@ export class Terrain implements TerrainReader {
   ): TerrainChunk | undefined {
     const chunk = this.#chunks.get(coord.key);
     this.#chunks.delete(coord.key);
+    this.overview.delete(coord);
 
     return chunk;
   }
 
   clear(): void {
     this.#chunks.clear();
+    this.overview.clear();
   }
 
   writeTile(
@@ -90,6 +100,7 @@ export class Terrain implements TerrainReader {
 
     const previous = chunk.tileHeights(tile.x, tile.z);
     chunk.writeTile(tile.x, tile.z, heights);
+    this.overview.derive(chunk);
 
     return previous;
   }

@@ -25,6 +25,12 @@ steps circle the four chunks that meet at a corner.
 Other missing samples copy the outer sample of the nearest neighbour, with
 equal-distance ties going to the left, below, then diagonal neighbour.
 
+`Terrain.overview` is the overview map: each chunk's heights at its
+2×2 points of the 32 m grid, `OVERVIEW_SPACING` samples apart. Adding,
+removing or writing a chunk updates its own samples. `overview.samples(coord)`
+returns a chunk's four samples, row by row, and `overview.heightAt(x, z)` the
+sample at a 32 m grid point, or `undefined` off the grid or without a chunk.
+
 The shader reads these samples from each chunk's height apron, which is as
 wide as that border, so its own neighbour order does not change what is
 drawn. A chunk added next to the terrain is seeded from its sample block, so

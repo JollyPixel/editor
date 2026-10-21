@@ -5,12 +5,17 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import { InvalidAssetFileError } from "@jolly-pixel/asset-server";
 import { LiveAssetRoom } from "@jolly-pixel/asset-server/testing";
-import { ChunkCoord } from "@jolly-pixel/terrain.renderer";
+import {
+  ChunkCoord,
+  OVERVIEW_SAMPLE_COUNT
+} from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import {
   encodeHeights,
   encodeTerrainFile,
+  decodeHeights,
+  decodeTerrainFile,
   MAX_TERRAIN_CHUNKS,
   terrainAssetKind,
   terrainSnapshot,
@@ -53,6 +58,19 @@ describe("terrain asset kind", () => {
 
     assert.deepEqual([...handler.parts!.list(room.state)], ["0_0", "1_0"]);
     assert.deepEqual(terrainSnapshot(loaded), terrainSnapshot(room.state));
+  });
+
+  test("the document lists each chunk with its overview samples", async() => {
+    const handler = terrainAssetKind();
+    const room = new LiveAssetRoom(handler);
+    room.receive("A", networkCommand({ action: "chunk-added", x: 1, z: 0, heights: heights(12.5) }));
+
+    const { chunks } = decodeTerrainFile(await handler.serialize(room.state));
+
+    assert.deepEqual(
+      chunks.map(({ x, z, overview }) => [x, z, [...decodeHeights(overview!, OVERVIEW_SAMPLE_COUNT)!]]),
+      [[0, 0, [0, 0, 0, 0]], [1, 0, [12.5, 12.5, 12.5, 12.5]]]
+    );
   });
 
   test("a document may hold a chunk's heights inline", () => {

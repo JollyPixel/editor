@@ -61,7 +61,12 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   and the room snapshot; each chunk's heights are a `.bin` part. The editor
   subscribes to every chunk through `TerrainPartsRoom`, and the room still
   sends every command to every member.
-- **Next:** M2, the overview map, rebuilt incrementally from edited chunks.
+- **Overview map: done** (2026-10-21). `Terrain.overview` holds each
+  chunk's heights at the 32 m grid points, updated on every edit, and the
+  asset file and room snapshot list them. Colour comes with M3; drawing from
+  it comes with camera-driven loading.
+- **Next:** M2, camera-driven chunk loading and unloading within the stream
+  radius.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -96,7 +101,7 @@ chunks yet.
   join snapshot, per-part persistence and replay checkpoints.
 - [x] Part subscription: `subscribeParts`, `unsubscribeParts`, part fetch,
   and command broadcast filtered by subscription.
-- [ ] Overview map, rebuilt incrementally from edited chunks.
+- [x] Overview map, rebuilt incrementally from edited chunks.
 - [ ] Camera-driven chunk loading and unloading within the stream radius.
 - [ ] Lift the 256-chunk cap.
 - [ ] Tile corrections for refused commits, refused per tile, instead of the

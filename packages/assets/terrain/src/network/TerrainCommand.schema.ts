@@ -37,6 +37,7 @@ export const terrainSnapshotSchema = z.object({
 export const chunkEntrySchema = z.object({
   x: kChunkCoordinate,
   z: kChunkCoordinate,
+  overview: z.optional(z.string()),
   heights: z.optional(z.string())
 });
 

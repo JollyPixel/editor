@@ -136,7 +136,13 @@ export function terrainManifest(
 ): TerrainManifest {
   return {
     chunks: Array.from(terrain.chunks(), ({ coord }) => {
-      return { x: coord.x, z: coord.z };
+      const overview = terrain.overview.samples(coord);
+
+      return {
+        x: coord.x,
+        z: coord.z,
+        ...(overview === undefined ? {} : { overview: encodeHeights(overview) })
+      };
     })
   };
 }

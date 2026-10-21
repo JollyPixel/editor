@@ -152,6 +152,18 @@ A coarse height and colour map of the whole world, one sample per 32 m, always
 in memory. Nodes beyond the stream radius draw from it, so the horizon is
 never empty. It is rebuilt incrementally from the chunks that change.
 
+- A sample is the height at a 32 m grid point, not an average. These are the
+  vertices a 1024 m root node draws, so a far node looks the same drawn from
+  the overview or from its chunks.
+- A chunk owns the 2×2 samples at local `(0, 0)`, `(32, 0)`, `(0, 32)` and
+  `(32, 32)`, as it owns its heights. Adding, removing or writing a chunk
+  updates its own samples and no other.
+- `Terrain.overview` holds them. The asset file and the room snapshot
+  list each chunk's samples, so a client knows the far terrain without loading
+  its chunks; loading a chunk derives its samples from its heights.
+- Colour arrives with the terrain layers in M3. Until then the overview holds
+  heights only.
+
 ### Points of interest
 
 A point of interest is a volume placed by a designer, such as a mountain seen

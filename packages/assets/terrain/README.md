@@ -12,9 +12,11 @@ editor [design][design] and [roadmap][roadmap].
 
 ## Storage and join
 
-A terrain is stored as asset parts: `world.terrain.json` lists the chunks,
-and `world.terrain.json.parts/<x>_<z>.bin` holds the heights of each chunk,
-64×64 little-endian `Float32`. A chunk entry may also carry its heights
+A terrain is stored as asset parts: `world.terrain.json` lists the chunks
+with their overview samples, and `world.terrain.json.parts/<x>_<z>.bin` holds
+the heights of each chunk, 64×64 little-endian `Float32`. The overview samples
+are the four heights of the chunk's 32 m grid points, base64 encoded; loading
+a chunk derives them from its heights. A chunk entry may also carry its heights
 inline, base64 encoded, as a catalog create does; the first save after an
 edit moves them to part files.
 
