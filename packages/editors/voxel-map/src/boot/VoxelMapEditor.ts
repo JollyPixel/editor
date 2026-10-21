@@ -9,6 +9,7 @@ import {
   EditorRuntime,
   archiveConsole,
   peerConsole,
+  provideTourKeys,
   runtimeConsole,
   type AssetLease,
   type EditorSession,
@@ -30,11 +31,14 @@ import { EditorShell } from "../shell/EditorShell.ts";
 import { BLOCKSET_DOCUMENT_KIND } from "../features/blocksets/BlocksetBinding.ts";
 import { mapConsole } from "./mapConsole.ts";
 import { basics } from "../tours/basics.ts";
-import { textures } from "../tours/textures.ts";
+import {
+  MAP_TOURS,
+  MAP_TOUR_KEYS
+} from "../tours/mapTours.ts";
+import { VOXEL_MAP_KEYBINDINGS } from "../preferences.ts";
 
 // CONSTANTS
 const kCanvas = "#game-container > canvas";
-const kTours = [basics, textures];
 const kPerformanceStorageKey = "voxel-map:performance-hud";
 const kMapKind = voxelMapDocumentKind();
 
@@ -92,7 +96,10 @@ export class VoxelMapEditor {
       preferences,
       runtime: editorRuntime
     } = context;
-    const state = new EditorState({ preferences });
+    const state = new EditorState({
+      preferences,
+      keyboardLayout: context.keyboardLayout
+    });
     const target = session.targetLease(kMapKind);
     const roomEnvironment = await BakedRoomEnvironment.load()
       .catch((error: unknown) => {
@@ -176,7 +183,7 @@ export class VoxelMapEditor {
   #consoleFeatures: RegistrationHandle;
   #disposePerformancePane: () => void;
   #removeInspectorMetrics: () => void;
-  #releaseTours: Array<() => void>;
+  #lanternReleases: Array<() => void>;
   #disposed = false;
 
   readonly ready: Promise<void>;
@@ -197,7 +204,16 @@ export class VoxelMapEditor {
     this.#consoleFeatures = parts.consoleFeatures;
     this.#removeInspectorMetrics = parts.removeInspectorMetrics;
     this.#disposePerformancePane = parts.disposePerformancePane;
-    this.#releaseTours = kTours.map((tour) => parts.lantern.register(tour));
+    this.#lanternReleases = [
+      ...MAP_TOURS.map((tour) => parts.lantern.register(tour)),
+      provideTourKeys({
+        lantern: parts.lantern,
+        preferences: parts.workspace.state.preferences,
+        scope: VOXEL_MAP_KEYBINDINGS,
+        layout: parts.workspace.state.keyboardLayout,
+        namespace: MAP_TOUR_KEYS
+      })
+    ];
     this.ready = Promise.all([
       parts.target.ready,
       parts.scene.ready
@@ -215,7 +231,7 @@ export class VoxelMapEditor {
     this.#disposePerformancePane();
     this.#removeInspectorMetrics();
     this.#consoleFeatures.unregister();
-    for (const release of this.#releaseTours) {
+    for (const release of this.#lanternReleases) {
       release();
     }
     this.#shell.dispose();

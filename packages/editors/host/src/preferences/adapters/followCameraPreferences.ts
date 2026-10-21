@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import type { OrbitFlyCamera } from "@jolly-pixel/engine";
+import {
+  OrbitFlyKeys,
+  type OrbitFlyCamera
+} from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
 import { CAMERA_PREFERENCES } from "../scope/hostPreferences.ts";
@@ -13,6 +16,7 @@ export type PreferenceCamera = Pick<
   | "touchpadLookSensitivity"
   | "invertY"
   | "touchpadSwipe"
+  | "keys"
 >;
 
 type CameraValues = PreferenceValues<typeof CAMERA_PREFERENCES.fields>;
@@ -36,6 +40,7 @@ export function followCameraPreferences(
       values.lookSensitivity;
     camera.invertY = values.invertY;
     camera.touchpadSwipe = values.touchpadSwipe;
+    camera.keys = OrbitFlyKeys.from(values);
     if (values.flySpeed !== flySpeed) {
       flySpeed = values.flySpeed;
       camera.moveSpeed = base.moveSpeed * flySpeed;

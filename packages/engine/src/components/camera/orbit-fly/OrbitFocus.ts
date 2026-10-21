@@ -1,12 +1,12 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import {
-  InputCombination,
-  type AliasedKeyInput
-} from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
 import { PivotMarker } from "./pivotMarker.ts";
+import type {
+  OrbitFlyAction,
+  OrbitFlyKeys
+} from "./OrbitFlyKeys.ts";
 import {
   type CameraFocus,
   type CameraFocusEnterRequest,
@@ -215,32 +215,33 @@ export class OrbitFocus implements CameraFocus {
 
   nudge(
     input: CameraFocusInput,
+    keys: OrbitFlyKeys,
     forward: THREE.Vector3,
     right: THREE.Vector3
   ): void {
     function pressed(
-      alias: AliasedKeyInput
+      action: OrbitFlyAction
     ): boolean {
-      return alias.keys.some((code) => input.keyboard.wasJustPressed(code));
+      return keys.held(action).pressed.evaluate(input);
     }
 
     let step: THREE.Vector3 | null = null;
-    if (pressed(InputCombination.MoveUp)) {
+    if (pressed("forward")) {
       step = this.#snapCardinal(forward, 1);
     }
-    else if (pressed(InputCombination.MoveDown)) {
+    else if (pressed("back")) {
       step = this.#snapCardinal(forward, -1);
     }
-    else if (pressed(InputCombination.MoveRight)) {
+    else if (pressed("right")) {
       step = this.#snapCardinal(right, 1);
     }
-    else if (pressed(InputCombination.MoveLeft)) {
+    else if (pressed("left")) {
       step = this.#snapCardinal(right, -1);
     }
-    else if (input.keyboard.wasJustPressed("Space")) {
+    else if (pressed("up")) {
       step = this.#nudgeStep.set(0, this.#pivotNudgeStep, 0);
     }
-    else if (pressed(InputCombination.Shift)) {
+    else if (pressed("down")) {
       step = this.#nudgeStep.set(0, -this.#pivotNudgeStep, 0);
     }
 

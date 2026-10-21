@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type { CommandConsole } from "@jolly-pixel/console";
+import type { KeyboardLayoutStore } from "@jolly-pixel/controls";
 import type { Lantern } from "@jolly-pixel/lantern";
 import type { Runtime } from "@jolly-pixel/runtime";
 
@@ -30,6 +31,7 @@ export interface EditorContext {
    * The shell's preferences under a shell, otherwise `LocalPreferences`.
    */
   preferences: Preferences;
+  keyboardLayout: KeyboardLayoutStore;
 }
 
 export interface RuntimeEditorContext extends EditorContext {

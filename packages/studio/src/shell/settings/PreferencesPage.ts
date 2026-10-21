@@ -58,12 +58,16 @@ export class PreferencesPage extends LitElement {
   declare keyBindings: readonly PreferenceScope[];
 
   @property({ attribute: false })
+  declare shortcutScopes: readonly PreferenceScope[];
+
+  @property({ attribute: false })
   declare preferences: Preferences | null;
 
   constructor() {
     super();
     this.forms = [];
     this.keyBindings = [];
+    this.shortcutScopes = [];
     this.preferences = null;
   }
 
@@ -86,6 +90,7 @@ export class PreferencesPage extends LitElement {
           <div class="column" data-column="shortcuts">
             <studio-keybinding-settings
               .scopes=${this.keyBindings}
+              .shortcutScopes=${this.shortcutScopes}
               .preferences=${this.preferences}
             ></studio-keybinding-settings>
           </div>

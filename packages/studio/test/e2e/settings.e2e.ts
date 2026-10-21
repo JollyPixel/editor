@@ -101,3 +101,37 @@ test("rebinds a shortcut and refuses a chord another action holds", async({ stud
     }
   });
 });
+
+test("binds a camera move to a modifier pressed alone", async({ studio, account, page }) => {
+  await studio.goto();
+  await studio.account.openSettings(account);
+  await studio.settings.section("Camera").click();
+  const down = studio.settings.shortcut("camera", "down");
+
+  await down.getByRole("button", { name: "Change" }).click();
+  await page.keyboard.press("Control");
+  await expect(down.locator("kbd")).toHaveText(["Ctrl"]);
+
+  await expect.poll(() => page.evaluate(async() => {
+    const response = await fetch("/api/preferences/");
+
+    return response.json();
+  })).toEqual({
+    scopes: {
+      camera: { down: ["ControlLeft", "ControlRight"] }
+    }
+  });
+});
+
+test("warns when a camera key also triggers an editor shortcut", async({ studio, account, page }) => {
+  await studio.goto();
+  await studio.account.openSettings(account);
+  await studio.settings.section("Camera").click();
+  const forward = studio.settings.shortcut("camera", "forward");
+
+  await forward.getByRole("button", { name: "Change" }).click();
+  await page.keyboard.press("KeyR");
+
+  await expect(studio.settings.root.locator("[data-clash=forward]"))
+    .toContainText("\"Rotate clockwise\" (Pixel art)");
+});

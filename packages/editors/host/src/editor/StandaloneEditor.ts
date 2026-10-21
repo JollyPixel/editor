@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { KeyboardLayoutStore } from "@jolly-pixel/controls";
+
 // Import Internal Dependencies
 import { BootTrace } from "./BootTrace.ts";
 import type {
@@ -21,13 +24,17 @@ import {
   mountLantern,
   type PageLantern
 } from "../lantern/mountLantern.ts";
+import { provideTourKeys } from "../lantern/provideTourKeys.ts";
 import {
   EditorLaunch,
   HostMessageLaunchSource,
   InjectedLaunchSource,
   QueryLaunchSource
 } from "../launch/index.ts";
-import { LANTERN_PREFERENCES } from "../preferences/scope/hostPreferences.ts";
+import {
+  CAMERA_PREFERENCES,
+  LANTERN_PREFERENCES
+} from "../preferences/scope/hostPreferences.ts";
 import { PreferenceStorage } from "../preferences/adapters/PreferenceStorage.ts";
 import type { EditorRuntime } from "../runtime/EditorRuntime.ts";
 import { rememberQueryUsername } from "../session/rememberQueryUsername.ts";
@@ -53,6 +60,7 @@ export class StandaloneEditor<
   readonly #mountDefinition: (context: EditorContext) => Promise<THandle>;
   readonly #leaving = new AbortController();
   readonly #page = new PageState();
+  readonly #keyboardLayout = new KeyboardLayoutStore();
   #runtime: Promise<EditorRuntime> | null = null;
   #sessions: SessionOpener | null = null;
   #console: PageConsole | null = null;
@@ -144,6 +152,18 @@ export class StandaloneEditor<
       });
       editorLantern = pageLantern;
       const { lantern } = pageLantern;
+      const keyboardLayout = this.#keyboardLayout;
+      this.#leaving.signal.addEventListener(
+        "abort",
+        keyboardLayout.watch(window),
+        { once: true }
+      );
+      provideTourKeys({
+        lantern,
+        preferences,
+        scope: CAMERA_PREFERENCES,
+        layout: keyboardLayout
+      });
       editorMount = new EditorMount({
         sessions,
         toolbar: (target, session, navigator) => placement.toolbar(
@@ -158,7 +178,8 @@ export class StandaloneEditor<
           logger: logger.child({ namespace: "editor" }),
           commands: pageConsole.commands,
           lantern,
-          preferences
+          preferences,
+          keyboardLayout
         }),
         history: placement.history(),
         logger,

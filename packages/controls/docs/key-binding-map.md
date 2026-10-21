@@ -180,4 +180,12 @@ function rebind(action: Action, chords: readonly string[]): void {
 emits each new one, and its `bind()` does this rebinding for you.
 
 `KEY_CODES` lists every key code a chord accepts, for a settings screen that
-offers them.
+offers them, and `isKeyCode(value)` narrows a string to one of them.
+`MODIFIER_KEY_CODES` gives the left and right codes of each `ModifierKey`
+(`Shift`, `Control`, `Alt`, `Meta`), so a binding recorded from one side can
+hold both.
+
+```ts
+isKeyCode("KeyW"); // true
+MODIFIER_KEY_CODES.Shift; // ["ShiftLeft", "ShiftRight"]
+```

@@ -104,6 +104,11 @@ export const lanternStyles = css`
     font: inherit;
   }
 
+  kbd.unbound {
+    color: var(--jolly-text-muted);
+    font-style: italic;
+  }
+
   footer {
     display: flex;
     align-items: center;

@@ -9,6 +9,7 @@ import {
   type TargetMeasure
 } from "./TargetSeek.ts";
 import type { Tour } from "./Tour.ts";
+import { TourKeys } from "./TourKeys.ts";
 import type {
   StepCleanup,
   TourStep
@@ -35,10 +36,16 @@ export interface TourRunOptions {
    * @default console.warn
    */
   warn?: (message: string) => void;
+  /**
+   * Resolves the `{namespace.action}` key spans of step bodies.
+   * @default new TourKeys()
+   */
+  keys?: TourKeys;
 }
 
 export class TourRun extends Emitter<TourRunEvents> {
   readonly tour: Tour;
+  readonly keys: TourKeys;
 
   #page: Document;
   #warn: (message: string) => void;
@@ -58,7 +65,8 @@ export class TourRun extends Emitter<TourRunEvents> {
     const {
       at,
       page = document,
-      warn = (message) => console.warn(message)
+      warn = (message) => console.warn(message),
+      keys = new TourKeys()
     } = options;
     const index = at === undefined ? 0 : tour.stepIndex(at);
     if (index === -1) {
@@ -68,6 +76,7 @@ export class TourRun extends Emitter<TourRunEvents> {
     }
 
     this.tour = tour;
+    this.keys = keys;
     this.#page = page;
     this.#warn = warn;
     this.#index = index;

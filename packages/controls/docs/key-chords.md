@@ -79,6 +79,7 @@ Apple platforms.
 KeyChord.parse("Mod+z").format(); // "Ctrl+Z"
 KeyChord.parse("KeyQ").format(); // "Q"
 KeyChord.parse("KeyQ").format({ layout }); // "A" on AZERTY
+KeyChord.parse("ShiftLeft").format(); // "Shift", or "⇧" on Apple platforms
 ```
 
 Without a layout, a position prints its QWERTY character. Pass the user's

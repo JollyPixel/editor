@@ -6,6 +6,7 @@ import type { StorageAdapter } from "@jolly-pixel/ui";
 import { LanternSeen } from "./LanternSeen.ts";
 import { TourRun } from "./tour/TourRun.ts";
 import { UnknownTourError } from "./tour/errors/UnknownTourError.ts";
+import { TourKeys } from "./tour/TourKeys.ts";
 import type { Tour } from "./tour/Tour.ts";
 
 export type LanternEvents = {
@@ -38,6 +39,7 @@ export class Lantern extends Emitter<
   LanternEvents
 > implements Iterable<Tour> {
   readonly seen: LanternSeen;
+  readonly keys = new TourKeys();
 
   #autoStart: boolean;
   #tours = new Map<string, Tour>();
@@ -104,7 +106,8 @@ export class Lantern extends Emitter<
     const run = new TourRun(tour, {
       at: options.at,
       page: this.#page,
-      warn: this.#warn
+      warn: this.#warn,
+      keys: this.keys
     });
     this.#run = run;
     run.on("end", (outcome, followUp) => {

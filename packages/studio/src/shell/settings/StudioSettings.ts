@@ -235,6 +235,7 @@ export class StudioSettings extends LitElement {
           <studio-preferences-page
             .forms=${section.forms}
             .keyBindings=${section.keyBindings}
+            .shortcutScopes=${this.sections.shortcutScopes}
             .preferences=${this.preferences}
           ></studio-preferences-page>
         `;

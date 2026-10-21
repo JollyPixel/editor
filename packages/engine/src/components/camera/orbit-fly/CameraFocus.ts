@@ -3,6 +3,7 @@ import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import type { Actor } from "../../../actor/Actor.ts";
+import type { OrbitFlyKeys } from "./OrbitFlyKeys.ts";
 
 // CONSTANTS
 const kSmoothingSnapEpsilon = 1e-3;
@@ -47,6 +48,7 @@ export interface CameraFocus {
   ): boolean;
   nudge(
     input: CameraFocusInput,
+    keys: OrbitFlyKeys,
     forward: THREE.Vector3,
     right: THREE.Vector3
   ): void;

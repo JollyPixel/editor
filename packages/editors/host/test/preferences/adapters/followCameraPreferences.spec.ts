@@ -5,6 +5,12 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import {
+  ORBIT_FLY_DEFAULT_KEYS,
+  OrbitFlyKeys
+} from "@jolly-pixel/engine";
+
 // Import Internal Dependencies
 import {
   CAMERA_PREFERENCES,
@@ -19,7 +25,8 @@ function createCamera(): PreferenceCamera {
     mouseSensitivity: 0.003,
     touchpadLookSensitivity: 0.36,
     invertY: false,
-    touchpadSwipe: "look"
+    touchpadSwipe: "look",
+    keys: OrbitFlyKeys.default
   };
 }
 
@@ -31,8 +38,9 @@ describe("followCameraPreferences", () => {
     });
 
     followCameraPreferences(camera, preferences);
+    const { keys: _keys, ...look } = camera;
 
-    assert.deepEqual(camera, {
+    assert.deepEqual(look, {
       moveSpeed: 3,
       mouseSensitivity: 0.006,
       touchpadLookSensitivity: 0.72,
@@ -60,5 +68,22 @@ describe("followCameraPreferences", () => {
     preferences.assign(CAMERA_PREFERENCES, "flySpeed", 2);
 
     assert.equal(camera.moveSpeed, 12);
+  });
+
+  test("binds the camera's default keys, the overrides and later rebinds", () => {
+    const camera = createCamera();
+    const preferences = new Preferences({
+      overrides: [["camera", { forward: ["KeyE"] }]]
+    });
+    followCameraPreferences(camera, preferences);
+
+    assert.deepEqual(camera.keys.codes, {
+      ...ORBIT_FLY_DEFAULT_KEYS,
+      forward: ["KeyE"]
+    });
+
+    preferences.assign(CAMERA_PREFERENCES, "down", ["ControlLeft"]);
+
+    assert.deepEqual(camera.keys.codes.down, ["ControlLeft"]);
   });
 });

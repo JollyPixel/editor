@@ -1,7 +1,9 @@
 // Import Internal Dependencies
 import {
+  MODIFIER_KEY_CODES,
   isKeyCode,
-  type KeyCode
+  type KeyCode,
+  type ModifierKey
 } from "../code.ts";
 import {
   isKeyChordLetter,
@@ -22,6 +24,12 @@ const kNamedKeyLabels: Partial<Record<KeyCode, string>> = {
   ArrowLeft: "←",
   ArrowRight: "→"
 };
+const kModifierLabels = new Map<ModifierKey, readonly [string, string]>([
+  ["Shift", ["Shift", "⇧"]],
+  ["Control", ["Ctrl", "⌃"]],
+  ["Alt", ["Alt", "⌥"]],
+  ["Meta", ["Meta", "⌘"]]
+]);
 const kPunctuationLabels: Partial<Record<KeyCode, string>> = {
   BracketLeft: "[",
   BracketRight: "]",
@@ -161,9 +169,9 @@ export class KeyChord {
   ): string {
     const {
       apple = isApplePlatform(),
-      layout
+      layout = null
     } = options;
-    const key = this.#label(layout);
+    const key = this.#label(layout, apple);
 
     if (apple) {
       return [
@@ -195,7 +203,8 @@ export class KeyChord {
   }
 
   #label(
-    layout: KeyboardLayout | null = null
+    layout: KeyboardLayout | null,
+    apple: boolean
   ): string {
     if (this.key !== null) {
       return this.key.toUpperCase();
@@ -204,16 +213,23 @@ export class KeyChord {
       return "";
     }
 
-    return codeLabel(this.code, layout);
+    return codeLabel(this.code, layout, apple);
   }
 }
 
 function codeLabel(
   code: KeyCode,
-  layout: KeyboardLayout | null
+  layout: KeyboardLayout | null,
+  apple: boolean
 ): string {
   if (code.startsWith("Digit")) {
     return code.slice(5);
+  }
+
+  for (const [modifier, labels] of kModifierLabels) {
+    if (MODIFIER_KEY_CODES[modifier].includes(code)) {
+      return labels[apple ? 1 : 0];
+    }
   }
 
   const named = kNamedKeyLabels[code];

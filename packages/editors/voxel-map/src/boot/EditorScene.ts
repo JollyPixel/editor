@@ -500,7 +500,6 @@ export class EditorScene extends Systems.Scene {
         rightAxis: () => camera.rightAxis()
       }),
       bindToolExit(keyboard, state.tool),
-      state.keyboardLayout.watch(window),
       () => camera.dispose(),
       () => environment.dispose(),
       () => world.renderer.off("compiled", invalidateShadows),
