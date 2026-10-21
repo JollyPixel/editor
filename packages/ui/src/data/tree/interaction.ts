@@ -1,8 +1,6 @@
 // Import Internal Dependencies
 import type { TreeDropWhere } from "./contract.ts";
 import {
-  isExpandable,
-  isHeading,
   isOpen,
   type FlatTreeRow
 } from "./model.ts";
@@ -186,16 +184,15 @@ export function resolveTreeKey<TData>(
 
   if (key === "ArrowDown" || key === "ArrowUp") {
     const delta = key === "ArrowDown" ? 1 : -1;
-    let index = activeIndex + delta;
-    while (
-      index >= 0 &&
-      index < rows.length &&
-      isHeading(rows[index].node)
-    ) {
-      index += delta;
-    }
+    const index = Math.min(
+      Math.max(activeIndex + delta, 0),
+      rows.length - 1
+    );
 
-    return selectRow(rows[index] ?? activeRow);
+    return {
+      kind: "select",
+      id: rows[index].node.id
+    };
   }
   if (key === "ArrowRight" && activeRow.node.children !== undefined) {
     if (!isOpen(activeRow.node, expanded)) {
@@ -207,7 +204,11 @@ export function resolveTreeKey<TData>(
     }
     const child = rows[activeIndex + 1];
 
-    return child?.parentId === activeId ? selectRow(child) : null;
+    return child?.parentId === activeId ? {
+      kind: "select",
+      id: child.node.id
+    } :
+      null;
   }
   if (key === "ArrowLeft") {
     if (
@@ -222,23 +223,16 @@ export function resolveTreeKey<TData>(
       };
     }
 
-    const parent = rows.find((row) => row.node.id === activeRow.parentId);
-
-    return parent === undefined ? null : selectRow(parent);
+    return activeRow.parentId === null ? null : {
+      kind: "select",
+      id: activeRow.parentId
+    };
   }
   if (key === "F2" && renamableIds.has(activeId)) {
     return {
       kind: "rename",
       id: activeId
     };
-  }
-  if (isHeading(activeRow.node)) {
-    return key === "Enter" && isExpandable(activeRow.node) ? {
-      kind: "toggle-expand",
-      id: activeId,
-      expanded: !expanded.has(activeId)
-    } :
-      null;
   }
   if (key === "Enter") {
     return {
@@ -254,15 +248,6 @@ export function resolveTreeKey<TData>(
   }
 
   return null;
-}
-
-function selectRow<TData>(
-  row: FlatTreeRow<TData>
-): TreeKeyAction | null {
-  return isHeading(row.node) ? null : {
-    kind: "select",
-    id: row.node.id
-  };
 }
 
 function resolveMoveKey<TData>(

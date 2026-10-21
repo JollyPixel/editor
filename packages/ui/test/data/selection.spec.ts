@@ -96,30 +96,6 @@ describe("Data.resolveSelection", () => {
     assert.deepEqual(result, { selected: ["a1", "a2", "a3"], anchorId: "a1" });
   });
 
-  test("shift range leaves heading rows out", () => {
-    const rows = flattenVisible([
-      { id: "x", label: "X" },
-      {
-        id: "heading",
-        label: "Heading",
-        selectable: false,
-        children: [{ id: "child", label: "Child" }]
-      },
-      { id: "y", label: "Y" }
-    ], new Set());
-    const result = resolveSelection({
-      rows,
-      clickedId: "y",
-      current: ["x"],
-      anchorId: "x",
-      shiftKey: true,
-      ctrlKey: false,
-      multiple: true
-    });
-
-    assert.deepEqual(result, { selected: ["x", "y"], anchorId: "x" });
-  });
-
   test("shift range works in either direction from the anchor", () => {
     const result = resolveSelection({
       rows: kRows,

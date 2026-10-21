@@ -25,8 +25,16 @@ export class ProfileSettings extends LitElement {
   static override styles = css`
     :host {
       display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--jolly-space-3);
+    }
+
+    .profile {
+      display: flex;
       align-items: center;
       gap: var(--jolly-space-3);
+      align-self: stretch;
     }
 
     jolly-avatar {
@@ -68,15 +76,17 @@ export class ProfileSettings extends LitElement {
     }
 
     return html`
-      <jolly-avatar
-        peer-id=${account.id}
-        image=${account.avatar ?? ""}
-      ></jolly-avatar>
-      <div class="identity">
-        <span class="username">${account.username}</span>
-        <span class="role">
-          ${account.owner ? "Owner" : roleLabel(account.role)}
-        </span>
+      <div class="profile">
+        <jolly-avatar
+          peer-id=${account.id}
+          image=${account.avatar ?? ""}
+        ></jolly-avatar>
+        <div class="identity">
+          <span class="username">${account.username}</span>
+          <span class="role">
+            ${account.owner ? "Owner" : roleLabel(account.role)}
+          </span>
+        </div>
       </div>
       <jolly-button
         data-action="change-avatar"

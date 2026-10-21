@@ -16,11 +16,19 @@ import { KindOptionsDraft } from "../../../project/KindOptionsDraft.ts";
 import type { StudioProjectSettings } from "../../../project/StudioProjectSettings.ts";
 import type {
   KindOptionField,
-  KindPackageSettings
+  KindOptionGroup,
+  KindOptionSection,
+  KindOptionValue,
+  KindOptionVector2
 } from "../../../project/routes.ts";
 import { settingsStyles } from "../settingsStyles.ts";
 import { ProjectSettingsController } from "./ProjectSettingsController.ts";
 import { SettingsDraftController } from "./SettingsDraftController.ts";
+
+interface KindOptionForm {
+  draft: KindOptionsDraft;
+  readonly: boolean;
+}
 
 @customElement("studio-project-kind-package")
 export class ProjectKindPackage extends LitElement {
@@ -66,43 +74,105 @@ export class ProjectKindPackage extends LitElement {
       return this.#project.error();
     }
 
-    const readonly = !project.canEdit;
+    const form: KindOptionForm = {
+      draft,
+      readonly: !project.canEdit
+    };
 
     return html`
       ${this.#project.error()}
-      <section data-kind-package=${kindPackage.name}>
-        ${kindPackage.fields.length === 0 ?
-          html`<pre>${JSON.stringify(kindPackage.options, null, 2)}</pre>` :
-          kindPackage.fields.map(
-            (field) => this.#field(draft, kindPackage, field, readonly)
-          )}
+      ${kindPackage.sections.length === 0 ?
+        html`<pre>${JSON.stringify(kindPackage.options, null, 2)}</pre>` :
+        kindPackage.sections.map((section) => this.#section(form, section))}
+      ${form.readonly ? nothing : this.#draft.actions("Kind option actions")}
+    `;
+  }
+
+  #section(
+    form: KindOptionForm,
+    section: KindOptionSection
+  ): TemplateResult {
+    return html`
+      <section aria-label=${section.label ?? nothing}>
+        ${section.label === null ? nothing : html`
+          <jolly-separator label=${section.label}></jolly-separator>
+        `}
+        ${section.fields.map((field) => this.#field(form, field))}
+        ${section.groups.map((group) => this.#group(form, group))}
       </section>
-      ${readonly ? nothing : this.#draft.actions("Kind option actions")}
+    `;
+  }
+
+  #group(
+    form: KindOptionForm,
+    group: KindOptionGroup
+  ): TemplateResult {
+    const key = `${this.packageName}:${group.path.join(".")}`;
+
+    return html`
+      <jolly-folder
+        data-option-group=${key}
+        storage-key=${`studio-kind-options:${key}`}
+        label=${group.label}
+        flush
+        .open=${false}
+      >
+        ${group.fields.map((field) => this.#field(form, field))}
+      </jolly-folder>
     `;
   }
 
   #field(
-    draft: KindOptionsDraft,
-    kindPackage: KindPackageSettings,
-    field: KindOptionField,
-    readonly: boolean
+    form: KindOptionForm,
+    field: KindOptionField
   ): TemplateResult {
+    const option = `${this.packageName}:${field.path.join(".")}`;
+    const min = field.min ?? -Infinity;
+    const max = field.max ?? Infinity;
+
+    if (field.type === "vector2") {
+      return html`
+        <jolly-vector2
+          data-option=${option}
+          label=${field.label}
+          label-position="top"
+          .min=${min}
+          .max=${max}
+          .step=${1}
+          .value=${form.draft.value(this.packageName, field) ?? field.default}
+          .default=${field.default}
+          ?readonly=${form.readonly}
+          @jolly-change=${(event: CustomEvent<{ value: KindOptionVector2; }>) => {
+            this.#edit(form, field, event.detail.value);
+          }}
+        ></jolly-vector2>
+      `;
+    }
+
     return html`
       <jolly-number
-        data-option=${`${kindPackage.name}:${field.path.join(".")}`}
+        data-option=${option}
         label=${field.label}
-        .min=${field.min}
-        .max=${field.max}
+        label-position="top"
+        .min=${min}
+        .max=${max}
         .step=${1}
-        .value=${draft.value(kindPackage.name, field)}
-        ?readonly=${readonly}
+        .value=${form.draft.value(this.packageName, field) ?? field.default}
+        .default=${field.default}
+        ?readonly=${form.readonly}
         @jolly-change=${(event: CustomEvent<{ value: number; }>) => {
-          this.#draft.edit(
-            draft.with(kindPackage.name, field, event.detail.value)
-          );
+          this.#edit(form, field, event.detail.value);
         }}
       ></jolly-number>
     `;
+  }
+
+  #edit<TField extends KindOptionField>(
+    form: KindOptionForm,
+    field: TField,
+    value: KindOptionValue<TField>
+  ): void {
+    this.#draft.edit(form.draft.with(this.packageName, field, value));
   }
 }
 

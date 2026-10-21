@@ -54,7 +54,6 @@ interface TreeNode<TData = unknown> {
   label: string;
   children?: TreeNode<TData>[]; // present, even empty, marks a branch
   collapsible?: boolean; // false: children always shown, no toggle
-  selectable?: boolean; // false: a heading row, see below
   icon?: IconName;
   avatar?: PeerAvatar; // drawn in place of icon
   visible?: boolean;
@@ -109,25 +108,6 @@ number of matching rows right away. It makes the tree
 - Clicking the empty area below the rows emits `jolly-select` with `[]`.
 - `requireSelection` stops that, and Ctrl+click no longer removes the last
   selected row. An empty `selected` set by the consumer still renders.
-
-## Heading rows
-
-A node with `selectable: false` is a heading. Clicking it, or pressing Enter
-on it, emits `jolly-toggle-expand` and nothing else. It never emits
-`jolly-select`, `jolly-activate`, `jolly-rename` or `jolly-context-request`.
-Arrow keys skip it, and ArrowLeft on one of its children does nothing. In a
-`reorderable` tree it has no grip and cannot be dragged.
-
-```ts
-tree.nodes = [
-  {
-    id: "you",
-    label: "You",
-    selectable: false,
-    children: [{ id: "profile", label: "Profile" }]
-  }
-];
-```
 
 ## Reordering
 

@@ -30,17 +30,47 @@ export const kindOptionsSchema = z.record(
   z.record(z.string(), z.unknown())
 );
 
-export const kindOptionFieldSchema = z.object({
+export const kindOptionVector2Schema = z.object({
+  x: z.number(),
+  y: z.number()
+});
+
+const kKindOptionFieldShape = {
   path: z.array(z.string()),
   label: z.string(),
   min: z.number().optional(),
   max: z.number().optional()
+};
+
+export const kindOptionFieldSchema = z.discriminatedUnion("type", [
+  z.object({
+    ...kKindOptionFieldShape,
+    type: z.literal("number"),
+    default: z.number().optional()
+  }),
+  z.object({
+    ...kKindOptionFieldShape,
+    type: z.literal("vector2"),
+    default: kindOptionVector2Schema
+  })
+]);
+
+export const kindOptionGroupSchema = z.object({
+  path: z.array(z.string()),
+  label: z.string(),
+  fields: z.array(kindOptionFieldSchema)
+});
+
+export const kindOptionSectionSchema = z.object({
+  label: z.string().nullable(),
+  fields: z.array(kindOptionFieldSchema),
+  groups: z.array(kindOptionGroupSchema)
 });
 
 export const kindPackageSchema = z.object({
   name: z.string(),
   options: z.record(z.string(), z.unknown()),
-  fields: z.array(kindOptionFieldSchema)
+  sections: z.array(kindOptionSectionSchema)
 });
 
 export const accessSectionSchema = z.object({
@@ -64,6 +94,12 @@ export const settingsSectionSchema = z.enum([KINDS_SECTION, ACCESS_SECTION]);
 export type ProjectReply = z.infer<typeof projectReplySchema>;
 export type KindOptions = z.infer<typeof kindOptionsSchema>;
 export type KindOptionField = z.infer<typeof kindOptionFieldSchema>;
+export type KindOptionVector2 = z.infer<typeof kindOptionVector2Schema>;
+export type KindOptionValue<
+  TField extends KindOptionField = KindOptionField
+> = TField extends { type: "vector2"; } ? KindOptionVector2 : number;
+export type KindOptionGroup = z.infer<typeof kindOptionGroupSchema>;
+export type KindOptionSection = z.infer<typeof kindOptionSectionSchema>;
 export type KindPackageSettings = z.infer<typeof kindPackageSchema>;
 export type AccessSection = z.infer<typeof accessSectionSchema>;
 export type ProjectSettingsReply = z.infer<typeof projectSettingsReplySchema>;

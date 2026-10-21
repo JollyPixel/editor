@@ -7,7 +7,6 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { definePreferences } from "@jolly-pixel/editor.host/preferences";
-import type { TreeNode } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { AssetKindSet } from "../../../src/catalog/AssetKindSet.ts";
@@ -15,10 +14,7 @@ import type { EditorScopes } from "../../../src/editors/ProjectManifest.ts";
 import { SHELL_PREFERENCES } from "../../../src/preferences/PreferenceScopes.ts";
 import { STUDIO_PREFERENCES } from "../../../src/preferences/studioScope.ts";
 import type { ProjectReply } from "../../../src/project/routes.ts";
-import {
-  SettingsSections,
-  type SettingsSection
-} from "../../../src/shell/settings/SettingsSections.ts";
+import { SettingsSections } from "../../../src/shell/settings/SettingsSections.ts";
 
 // CONSTANTS
 const kPixelArt = definePreferences({
@@ -96,16 +92,12 @@ const kEveryRight: ProjectReply = {
   canManageAccess: true
 };
 
-type Outline = (string | Record<string, Outline>)[];
-
 function outline(
-  nodes: readonly TreeNode<SettingsSection>[]
-): Outline {
-  return nodes.map((node) => (
-    node.children === undefined ?
-      node.id :
-      { [node.id]: outline(node.children) }
-  ));
+  settings: SettingsSections
+): Record<string, string[]>[] {
+  return settings.blocks.map((block) => Object.fromEntries(block.map(
+    (group) => [group.id, group.sections.map((section) => section.id)]
+  )));
 }
 
 function sections(
@@ -128,19 +120,13 @@ function sections(
 }
 
 describe("SettingsSections", () => {
-  test("nests editor pages under You, each scope under the editor declaring it", () => {
+  test("groups editor pages after You, each scope under the editor declaring it", () => {
     const settings = sections();
 
-    assert.deepEqual(outline(settings.nodes), [
+    assert.deepEqual(outline(settings), [
       {
-        you: [
-          "profile",
-          "appearance",
-          "camera",
-          {
-            editors: ["editor:voxel-map", "editor:pixel-art"]
-          }
-        ]
+        you: ["profile", "appearance", "camera"],
+        editors: ["editor:voxel-map", "editor:pixel-art"]
       }
     ]);
     const pixelArt = settings.find("editor:pixel-art");
@@ -173,21 +159,13 @@ describe("SettingsSections", () => {
     );
   });
 
-  test("makes every heading fold-only and leaves headings out of the sections", () => {
-    const settings = sections(kEveryRight);
+  test("leaves out a group with no section", () => {
+    const settings = sections(null, []);
 
     assert.deepEqual(
-      [...settings.headings].sort(),
-      ["assets", "editors", "project", "you"]
+      outline(settings).map((block) => Object.keys(block)),
+      [["you"]]
     );
-    for (const id of settings.headings) {
-      assert.equal(settings.find(id), undefined);
-    }
-    const branches = settings.nodes.flatMap(
-      (node) => [node, ...(node.children ?? [])]
-    ).filter((node) => node.children !== undefined);
-    assert.equal(branches.length, 4);
-    assert.ok(branches.every((node) => node.selectable === false));
   });
 
   test("has no profile without an account", () => {
@@ -200,17 +178,15 @@ describe("SettingsSections", () => {
     assert.equal(settings.find("profile"), undefined);
   });
 
-  test("shows Share links under You and the Project sections the role reads", () => {
-    assert.deepEqual(outline(sections(kEveryRight).nodes)[1], {
-      project: [
-        "project-general",
-        "project-access",
-        "project-audit",
-        {
-          assets: ["kind-package:@jolly-pixel/asset.voxel-map"]
-        }
-      ]
-    });
+  test("shows Share links under You and the Project sections the role reads in a block of their own", () => {
+    const [{ you }, { project, assets }] = outline(sections(kEveryRight));
+    assert.equal(you.at(-1), "share-links");
+    assert.deepEqual(project, [
+      "project-general",
+      "project-access",
+      "project-audit"
+    ]);
+    assert.deepEqual(assets, ["kind-package:@jolly-pixel/asset.voxel-map"]);
     const kindPackage = sections(kEveryRight)
       .find("kind-package:@jolly-pixel/asset.voxel-map");
     assert.ok(kindPackage?.kind === "kind-package");

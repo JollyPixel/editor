@@ -97,8 +97,11 @@ flowchart TB
   changed are revoked so they reconnect under the new rules.
 - `AccountsAccess` turns an access section into the accounts' roles and
   master password, at startup and on each save.
-- Editors lists each kind package's options with `KindOptionFields`: every
-  number in its `optionsSchema`, labelled by its title or key.
+- Editors lists each kind package's options with `KindOptionSections`, read
+  from its `optionsSchema`. A key named after one of the package's kinds gets
+  a section with the kind's label; any other object becomes a folded group.
+  An `x`/`y` object with a `default` meta is one vector field. Fields are
+  labelled by title or key, with the `default` meta as their revert value.
 - `studio.$settings` and `studio.$audit` count only when a role names them;
   wildcards do not grant them. Admins always have both.
 - Audit: `AuditLog` writes `.jollypixel/audit.db` (settings changes and
@@ -285,18 +288,19 @@ flowchart TB
 | Project | Access | admins |
 | Project | Audit | read on `studio.$audit` |
 
-- `SettingsSections` builds the `jolly-tree` nodes from the manifest (editor
-  scopes, kind packages, kind icons) and the project rights `StudioSignedIn`
-  loads after `me`. You, Project, Editors and Assets are fold-only headings.
+- `SettingsSections` builds the nav from the manifest (editor scopes, kind
+  packages, kind icons) and the project rights `StudioSignedIn` loads after
+  `me`: a block with You and Editors, then a block with Project and Assets.
 - An editor page shows the scopes its module exports by default. A scope it
   lists under `shared` shows there only when no installed editor declares it.
-- A kind package page edits a `KindOptionsDraft` through the fields the server
-  lists; a package without fields shows its options read-only. Switching
+- A kind package page edits a `KindOptionsDraft` through the sections the
+  server lists; a package without any shows its options read-only. Switching
   package drops unsaved edits. `StudioProjectSettings` loads and saves both
   sections.
 - Access edits an `AccessDraft`: roles as ordered `RoleRules` (drag or
   Alt+Arrow to reorder, a "check a room" field), the default role and access
-  requests. Members and requests reuse `studio-users` with its menu.
+  requests, in two columns on a wide card. Members and requests stay in the
+  Home Users pane, whose menu opens for admins.
 - Both panes hold their draft in a `SettingsDraftController`, which enables
   Save once the draft differs from the saved section.
 - Share links: `studio-share-links` lists the links the account may manage
@@ -390,7 +394,7 @@ flowchart TB
 |---|---|
 | `server/StudioBackend.ts` | the online back-end, opened and closed as one |
 | `server/StudioServer.ts`, `server/start.ts` | hosted entry and its environment |
-| `server/project/` | project file, `access` section, `ProjectSettings`, `KindOptionFields`, private files |
+| `server/project/` | project file, `access` section, `ProjectSettings`, `KindOptionSections`, private files |
 | `server/editors/` | editor packages and pages, manifest route, dist watcher |
 | `server/accounts.ts`, `server/AccountsAccess.ts` | project accounts, their roles and master password |
 | `server/shares/` | share rules, guest admission, `/view/` page |

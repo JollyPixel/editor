@@ -8,13 +8,7 @@ import {
   type TreeInteraction
 } from "./interaction.ts";
 import { emitDataEvent } from "./contract.ts";
-import type { TreeRowView } from "./TreeRowView.ts";
 import { originatesInButton } from "../../dom.ts";
-
-export type TreeClickedRow = Pick<
-  TreeRowView,
-  "id" | "selectable" | "branch" | "expanded"
->;
 
 export interface TreeSelectionOptions<TData> {
   visibleRows(): readonly FlatTreeRow<TData>[];
@@ -40,7 +34,7 @@ export class TreeSelectionController<TData> {
 
   onRowClick(
     event: MouseEvent,
-    row: TreeClickedRow
+    id: string
   ): void {
     if (this.#consumeSuppressedClick()) {
       return;
@@ -50,20 +44,9 @@ export class TreeSelectionController<TData> {
       return;
     }
 
-    if (!row.selectable) {
-      if (row.branch) {
-        emitDataEvent(this.#host, "jolly-toggle-expand", {
-          id: row.id,
-          expanded: !row.expanded
-        });
-      }
-
-      return;
-    }
-
     const result = resolveSelection({
       rows: this.#options.visibleRows(),
-      clickedId: row.id,
+      clickedId: id,
       current: this.#options.selected(),
       anchorId: this.#anchorId,
       shiftKey: event.shiftKey,

@@ -126,8 +126,7 @@ describe("Data.TreeRowView", () => {
       { badges: [{ color: "#00f", title: "Peer" }] },
       { badges: [{ color: "#0f0", title: "Peer", icon: "lock" }] },
       { children: [{ id: "arm", label: "Arm" }] },
-      { children: [] },
-      { selectable: false }
+      { children: [] }
     ];
 
     for (const change of changes) {
@@ -157,14 +156,6 @@ describe("Data.TreeRowView", () => {
     for (const change of changes) {
       assert.ok(!matches(createView(), {}, change), JSON.stringify(change));
     }
-  });
-
-  test("a heading row is never reorderable, so it shows no grip", () => {
-    const heading = createView({ selectable: false });
-
-    assert.equal(heading.selectable, false);
-    assert.equal(heading.reorderable, false);
-    assert.ok(matches(heading, { selectable: false }));
   });
 
   test("a deeper row no longer matches", () => {

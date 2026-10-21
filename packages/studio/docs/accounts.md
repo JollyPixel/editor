@@ -28,7 +28,7 @@ Set `JOLLY_MASTER_PASSWORD` so that a stranger who reaches the server first cann
 
 ## Managing accounts
 
-The Users pane on Home lists every account under its role and shows who is online. An admin manages them in Settings › Access: a role change or a removal from an account's context menu, or with the `/users` console commands. Admins also see pending access requests in their own group, and approve one with a role or deny it, which frees the username. A role change reconnects the user's open tabs under the new role.
+The Users pane on Home lists every account under its role and shows who is online. An admin manages them from the same pane: a role change or a removal from an account's context menu, or with the `/users` console commands. Admins also see pending access requests in their own group, and approve one with a role or deny it, which frees the username. A role change reconnects the user's open tabs under the new role.
 
 Settings › Access also edits the roles themselves, the default role and access requests, and saves them to `project.json` without a restart. Turning access requests on still needs `JOLLY_MASTER_PASSWORD`.
 
