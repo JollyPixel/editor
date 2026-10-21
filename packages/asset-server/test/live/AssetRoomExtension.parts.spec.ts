@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
+import { AssetRoom } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import { liveTileHandler } from "../helpers/kinds.ts";
@@ -123,6 +124,22 @@ describe("AssetRoomExtension — parts", () => {
     assert.deepEqual(since(harness, "A", seen), [
       { type: "snapshot", data: ["a"], version: 2 },
       { type: "parts", version: 2, parts: { a: "lava" } }
+    ]);
+  });
+
+  test("a tag room sends every tagged part after its snapshot", async() => {
+    await using harness = await tilesRoom();
+    (await harness.tags.create({
+      assetId: harness.assetId,
+      name: "v1",
+      actor: kActor
+    })).unwrap();
+
+    await harness.join("A", new AssetRoom("tiles", harness.assetId, "v1").toString());
+
+    assert.deepEqual(payloads(harness, "A"), [
+      { type: "snapshot", data: ["a"], version: 1 },
+      { type: "parts", version: 1, parts: { a: "grass" } }
     ]);
   });
 });

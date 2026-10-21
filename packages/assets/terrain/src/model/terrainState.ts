@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import {
+  CHUNK_SAMPLE_COUNT,
   ChunkCoord,
   type Terrain,
   type TerrainReader,
@@ -15,6 +16,7 @@ import { decodeTilePatch } from "../network/tilePatches.ts";
 import type {
   EncodedTilePatch,
   TerrainCommand,
+  TerrainManifest,
   TerrainSnapshot
 } from "../network/types.ts";
 
@@ -129,12 +131,24 @@ export function terrainSnapshot(
   };
 }
 
-export function loadTerrainSnapshot(
+export function terrainManifest(
+  terrain: TerrainReader
+): TerrainManifest {
+  return {
+    chunks: Array.from(terrain.chunks(), ({ coord }) => {
+      return { x: coord.x, z: coord.z };
+    })
+  };
+}
+
+export function loadTerrainManifest(
   terrain: Terrain,
-  snapshot: TerrainSnapshot
+  manifest: TerrainManifest
 ): void {
-  const chunks = snapshot.chunks.map((chunk) => {
-    const heights = decodeHeights(chunk.heights);
+  const chunks = manifest.chunks.map((chunk) => {
+    const heights = chunk.heights === undefined ?
+      new Float32Array(CHUNK_SAMPLE_COUNT) :
+      decodeHeights(chunk.heights);
     if (heights === null) {
       throw new RangeError(`Chunk ${chunk.x},${chunk.z} has invalid heights.`);
     }
@@ -149,4 +163,21 @@ export function loadTerrainSnapshot(
   for (const { coord, heights } of chunks) {
     terrain.addChunk(coord, heights);
   }
+}
+
+export function loadChunkHeights(
+  terrain: Terrain,
+  coord: ChunkCoord,
+  heights: Float32Array
+): void {
+  if (terrain.removeChunk(coord) !== undefined) {
+    terrain.addChunk(coord, heights);
+  }
+}
+
+export function loadTerrainSnapshot(
+  terrain: Terrain,
+  snapshot: TerrainSnapshot
+): void {
+  loadTerrainManifest(terrain, snapshot);
 }

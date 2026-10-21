@@ -31,13 +31,25 @@ import {
 import {
   acceptsTerrainCommand,
   applyTerrainCommand,
-  loadTerrainSnapshot,
-  terrainSnapshot
+  loadChunkHeights,
+  loadTerrainManifest,
+  terrainManifest
 } from "../model/terrainState.ts";
 import {
   terrainCommandProtocol,
-  terrainSnapshotSchema
+  terrainManifestSchema,
+  terrainPartSchema
 } from "../network/TerrainCommand.schema.ts";
+import {
+  chunkOfPart,
+  chunkPartId,
+  touchedChunks
+} from "../network/chunkParts.ts";
+import {
+  decodeHeightBytes,
+  encodeHeightBytes,
+  encodeHeights
+} from "../network/heights.ts";
 import { terrainWriteKeys } from "../network/TerrainCommandKeys.ts";
 import {
   TERRAIN_RELAY_SCHEMAS,
@@ -47,6 +59,7 @@ import { TerrainLiveRelay } from "../network/TerrainLiveRelay.ts";
 import type { TerrainNetworkCommand } from "../network/types.ts";
 
 // CONSTANTS
+export const TERRAIN_PART_EXTENSION = ".bin";
 const kOptionsSchema = z.strictObject({
   snapshot: z.optional(SNAPSHOT_POLICY_SCHEMA)
 });
@@ -111,7 +124,7 @@ export function terrainAssetKind(
     ): void {
       const file = decodeTerrainFile(content);
       try {
-        loadTerrainSnapshot(state, file);
+        loadTerrainManifest(state, file);
       }
       catch (error) {
         throw new InvalidAssetFileError(
@@ -134,9 +147,37 @@ export function terrainAssetKind(
       return Promise.resolve(
         encodeTerrainFile({
           version: TERRAIN_FILE_VERSION,
-          ...terrainSnapshot(state)
+          ...terrainManifest(state)
         })
       );
+    },
+
+    parts: {
+      extension: {
+        [TERRAIN_PART_EXTENSION]: "application/octet-stream"
+      },
+      touched: (command) => touchedChunks(command).map(chunkPartId),
+      list: (state) => Array.from(state.chunks(), ({ coord }) => chunkPartId(coord)),
+      load: (state, partId, content) => {
+        const coord = chunkOfPart(partId);
+        const heights = decodeHeightBytes(content);
+        if (coord === null || heights === null) {
+          throw new InvalidAssetFileError(
+            TERRAIN_KIND,
+            `part "${partId}" is not a chunk of valid heights`
+          );
+        }
+        loadChunkHeights(state, coord, heights);
+      },
+      serialize: (state, partId) => {
+        const coord = chunkOfPart(partId);
+        const chunk = coord === null ? undefined : state.chunk(coord);
+        if (chunk === undefined) {
+          return Promise.reject(new RangeError(`Terrain has no chunk "${partId}".`));
+        }
+
+        return Promise.resolve(encodeHeightBytes(chunk.copyHeights()));
+      }
     },
 
     commands: {
@@ -160,11 +201,21 @@ export function terrainAssetKind(
         });
 
         return {
-          snapshotSchema: terrainSnapshotSchema,
-          snapshot: () => terrainSnapshot(state),
+          snapshotSchema: terrainManifestSchema,
+          snapshot: () => terrainManifest(state),
           arbitrate: (command) => arbiter.admit(state, command),
           restore: (command, version) => arbiter.restore(command, version),
-          relay: new TerrainLiveRelay()
+          relay: new TerrainLiveRelay(),
+          parts: {
+            schema: terrainPartSchema,
+            part: (partId) => {
+              const coord = chunkOfPart(partId);
+              const chunk = coord === null ? undefined : state.chunk(coord);
+
+              return chunk === undefined ? null : encodeHeights(chunk.copyHeights());
+            },
+            outside: (command) => command
+          }
         };
       }
     }

@@ -14,6 +14,7 @@ import {
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
+import { touchedChunks } from "../network/chunkParts.ts";
 import { encodeHeights } from "../network/heights.ts";
 import { patchBatches } from "../network/patchBatches.ts";
 import { encodeTilePatch } from "../network/tilePatches.ts";
@@ -139,22 +140,6 @@ function invertCommand(
         })
       }];
   }
-}
-
-function touchedChunks(
-  command: TerrainCommand
-): ChunkCoord[] {
-  if (command.action !== "heights-patched") {
-    return [new ChunkCoord(command.x, command.z)];
-  }
-
-  const chunks = new Map<ChunkKey, ChunkCoord>();
-  for (const { x, z } of command.tiles) {
-    const coord = new ChunkCoord(x, z);
-    chunks.set(coord.key, coord);
-  }
-
-  return [...chunks.values()];
 }
 
 function encodedHeightsAt(

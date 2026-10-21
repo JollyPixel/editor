@@ -34,6 +34,18 @@ export const terrainSnapshotSchema = z.object({
   chunks: z.array(chunkSnapshotSchema)
 });
 
+export const chunkEntrySchema = z.object({
+  x: kChunkCoordinate,
+  z: kChunkCoordinate,
+  heights: z.optional(z.string())
+});
+
+export const terrainManifestSchema = z.object({
+  chunks: z.array(chunkEntrySchema)
+});
+
+export const terrainPartSchema = z.string();
+
 export const terrainCommandSchema = z.discriminatedUnion("action", [
   commandVariant("chunk-added", {
     x: kChunkCoordinate,

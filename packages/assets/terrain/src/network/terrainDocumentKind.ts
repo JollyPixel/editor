@@ -1,8 +1,7 @@
 // Import Third-party Dependencies
 import {
-  commandDocumentKind,
-  type CommandDocumentKind,
-  type SyncedCommandDocument
+  SyncedCommandDocument,
+  type CommandDocumentKind
 } from "@jolly-pixel/network/client";
 import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 
@@ -10,6 +9,7 @@ import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import { TERRAIN_KIND } from "../asset/terrain.ts";
 import { TerrainDocument } from "../model/TerrainDocument.ts";
 import { terrainWriteKeys } from "./TerrainCommandKeys.ts";
+import { TerrainPartsRoom } from "./TerrainPartsRoom.ts";
 
 export type SyncedTerrainDocument = SyncedCommandDocument<
   TerrainDocument,
@@ -23,9 +23,14 @@ export type TerrainDocumentKind = CommandDocumentKind<
 >;
 
 export function terrainDocumentKind(): TerrainDocumentKind {
-  return commandDocumentKind({
+  return {
     kind: TERRAIN_KIND,
-    createDocument: () => new TerrainDocument(),
-    keys: terrainWriteKeys
-  });
+    syncDocument: (room) => new SyncedCommandDocument(
+      new TerrainPartsRoom(room),
+      {
+        document: new TerrainDocument(),
+        keys: terrainWriteKeys
+      }
+    )
+  };
 }

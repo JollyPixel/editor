@@ -126,11 +126,14 @@ asset parts to `@jolly-pixel/asset-server`:
 The [asset parts design][asset-parts] holds the server contract.
 
 The client side of `@jolly-pixel/network`, `CommandSync` and the pending
-ledger, does not change. `TerrainSyncClient` manages subscriptions from the
-camera.
+ledger, does not change. `TerrainPartsRoom` sits between the room and the
+synced document: it subscribes to the chunks of each snapshot and delivers
+the snapshot once their heights arrive. For now it subscribes to every
+chunk, and the room sends every terrain command to every member; camera-driven
+loading will subscribe to the chunks within the stream radius instead.
 
-Until M2 lands, the server loads and sends the whole asset, and `chunk-added`
-is refused past 256 chunks, about 17 MB of heights at ×1.
+Until M2 lands, `chunk-added` is refused past 256 chunks, about 17 MB of
+heights at ×1.
 
 ## Corrections
 

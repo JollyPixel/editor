@@ -56,14 +56,19 @@ export function terrainPeers() {
   const peers = new Map<string, TerrainPeer>();
 
   function route(): void {
-    for (const [clientId, { room }] of peers) {
-      for (const sent of room.sent.splice(0)) {
-        server.receive(clientId, sent);
+    let delivered = true;
+    while (delivered) {
+      delivered = false;
+      for (const [clientId, { room }] of peers) {
+        for (const sent of room.sent.splice(0)) {
+          server.receive(clientId, sent);
+        }
       }
-    }
-    for (const [clientId, { room }] of peers) {
-      for (const message of server.take<TerrainSnapshot>(clientId)) {
-        room.deliver(message);
+      for (const [clientId, { room }] of peers) {
+        for (const message of server.take<TerrainSnapshot>(clientId)) {
+          room.deliver(message);
+          delivered = true;
+        }
       }
     }
   }

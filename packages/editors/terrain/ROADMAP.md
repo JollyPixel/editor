@@ -57,8 +57,11 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
 - **Part subscription: done** (2026-10-21). An asset room answers part
   subscriptions with the parts and sends each command only to the members
   subscribed to its parts, and `outside(command)` to the others.
-- **Next:** M2, terrain on parts: one chunk per part, the chunk list as the
-  manifest, and the editor subscribing to the chunks it loads.
+- **Terrain on parts: done** (2026-10-21). The chunk list is the asset file
+  and the room snapshot; each chunk's heights are a `.bin` part. The editor
+  subscribes to every chunk through `TerrainPartsRoom`, and the room still
+  sends every command to every member.
+- **Next:** M2, the overview map, rebuilt incrementally from edited chunks.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -89,12 +92,10 @@ chunks yet.
 
 ## M2: Streaming
 
-- [ ] Asset parts in `@jolly-pixel/asset-server`: part files, manifest-only
-  join snapshot, per-part persistence and replay checkpoints. Part files and
-  checkpoints are done.
-- [ ] Part subscription: `subscribeParts`, `unsubscribeParts`, part fetch,
-  and command broadcast filtered by subscription. The asset room side is
-  done.
+- [x] Asset parts in `@jolly-pixel/asset-server`: part files, manifest-only
+  join snapshot, per-part persistence and replay checkpoints.
+- [x] Part subscription: `subscribeParts`, `unsubscribeParts`, part fetch,
+  and command broadcast filtered by subscription.
 - [ ] Overview map, rebuilt incrementally from edited chunks.
 - [ ] Camera-driven chunk loading and unloading within the stream radius.
 - [ ] Lift the 256-chunk cap.

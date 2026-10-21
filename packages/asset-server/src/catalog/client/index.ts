@@ -26,3 +26,11 @@ export type {
 } from "../tags/AssetTags.schema.ts";
 export * from "../tags/TagName.ts";
 export * from "../tags/errors/InvalidTagNameError.ts";
+export {
+  ASSET_ROOM_MAX_PARTS_PER_MESSAGE,
+  ASSET_ROOM_PARTS,
+  ASSET_ROOM_SUBSCRIBE_PARTS,
+  ASSET_ROOM_UNSUBSCRIBE_PARTS,
+  type AssetPartsRequest,
+  type AssetRoomPartsMessage
+} from "../../model/kinds/AssetLiveProtocol.ts";

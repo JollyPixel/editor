@@ -47,17 +47,24 @@ export interface AssetRoomExtensionOptions<TCommand = unknown> {
   /**
    * The parts of the room's kind. The live protocol then declares `parts`.
    */
-  parts?: AssetPartsTouched<TCommand>;
+  parts?: AssetRoomParts<TCommand>;
+  /**
+   * Sends every part after the snapshot of a joining member, for a room that
+   * accepts no subscription.
+   */
+  pushParts?: boolean;
 }
 
-interface AssetPartsTouched<TCommand> {
+export interface AssetRoomParts<TCommand = unknown> {
   touched(
     command: TCommand
   ): Iterable<string>;
+
+  list(): Iterable<string>;
 }
 
 interface RoomParts<TCommand extends AssetCommandHeader> {
-  readonly kind: AssetPartsTouched<TCommand>;
+  readonly kind: AssetRoomParts<TCommand>;
   readonly live: AssetLiveParts<TCommand>;
   readonly subscriptions: Map<string, Set<string>>;
 }
@@ -93,6 +100,7 @@ export class AssetRoomExtension<
   #members = new Set<string>();
   #departures = new Map<string, () => void>();
   #parts: RoomParts<TCommand> | null;
+  #pushParts: boolean;
 
   constructor(
     binding: AssetRoomBinding,
@@ -134,6 +142,7 @@ export class AssetRoomExtension<
         live: protocol.parts,
         subscriptions: new Map()
       };
+    this.#pushParts = options.pushParts ?? false;
     this.#assetId = binding.assetId;
     this.#version = binding.version ?? (() => undefined);
     this.#commands = commands;
@@ -210,6 +219,9 @@ export class AssetRoomExtension<
     client.send(
       resume === null ? this.#snapshot({}) : this.#resumeMessage(resume)
     );
+    if (this.#pushParts && this.#parts !== null) {
+      client.send(this.#partsMessage(this.#parts.kind.list()));
+    }
   }
 
   override onResync(
@@ -483,20 +495,24 @@ export class AssetRoomExtension<
     room: network.RoomBroadcast,
     partIds: Iterable<string>
   ): void {
-    const live = this.#parts?.live;
-    if (live === undefined) {
-      return;
+    if (this.#parts !== null) {
+      room.sendTo(clientId, this.#partsMessage(partIds));
     }
+  }
 
+  #partsMessage(
+    partIds: Iterable<string>
+  ): AssetRoomPartsMessage {
     const parts: Record<string, unknown> = {};
     for (const partId of partIds) {
-      parts[partId] = live.part(partId) ?? null;
+      parts[partId] = this.#parts?.live.part(partId) ?? null;
     }
-    room.sendTo(clientId, {
+
+    return {
       type: ASSET_ROOM_PARTS,
       version: this.#version() ?? 0,
       parts
-    } satisfies AssetRoomPartsMessage);
+    };
   }
 
   #broadcast(

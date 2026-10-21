@@ -40,18 +40,49 @@ describe("terrain asset kind", () => {
     assert.ok(terrain.chunk(new ChunkCoord(0, 0))!.copyHeights().every((height) => height === 0));
   });
 
-  test("serialize and load round-trip the chunks and their heights", async() => {
+  test("serialize and load round-trip the chunk list and each chunk's part", async() => {
     const handler = terrainAssetKind();
     const room = new LiveAssetRoom(handler);
     room.receive("A", networkCommand({ action: "chunk-added", x: 1, z: 0, heights: heights(12.5) }));
 
     const loaded = handler.create("copy");
     handler.load(loaded, await handler.serialize(room.state));
+    for (const partId of handler.parts!.list(room.state)) {
+      handler.parts!.load(loaded, partId, await handler.parts!.serialize(room.state, partId));
+    }
 
+    assert.deepEqual([...handler.parts!.list(room.state)], ["0_0", "1_0"]);
     assert.deepEqual(terrainSnapshot(loaded), terrainSnapshot(room.state));
   });
 
-  test("load rejects a file with invalid heights", () => {
+  test("a document may hold a chunk's heights inline", () => {
+    const handler = terrainAssetKind();
+    const content = encodeTerrainFile({
+      version: TERRAIN_FILE_VERSION,
+      chunks: [{ x: 0, z: 0, heights: heights(3) }]
+    });
+
+    const terrain = handler.create("asset");
+    handler.load(terrain, content);
+
+    assert.ok(terrain.chunk(new ChunkCoord(0, 0))!.copyHeights().every((height) => height === 3));
+  });
+
+  test("a part that is not a chunk of valid heights is refused", () => {
+    const handler = terrainAssetKind();
+    const terrain = handler.create("asset");
+
+    assert.throws(
+      () => handler.parts!.load(terrain, "0_0", new Uint8Array(8)),
+      InvalidAssetFileError
+    );
+    assert.throws(
+      () => handler.parts!.load(terrain, "origin", new Uint8Array(0)),
+      InvalidAssetFileError
+    );
+  });
+
+  test("load rejects a document with invalid heights", () => {
     const handler = terrainAssetKind();
     const content = encodeTerrainFile({
       version: TERRAIN_FILE_VERSION,

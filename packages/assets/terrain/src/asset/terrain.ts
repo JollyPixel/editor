@@ -4,7 +4,7 @@ import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
 import * as z from "zod/mini";
 
 // Import Internal Dependencies
-import { terrainSnapshotSchema } from "../network/TerrainCommand.schema.ts";
+import { terrainManifestSchema } from "../network/TerrainCommand.schema.ts";
 import { TERRAIN_ICON } from "./icons.ts";
 
 // CONSTANTS
@@ -20,7 +20,7 @@ export const TERRAIN_ASSET: AssetKindDescriptor = {
   icon: TERRAIN_ICON
 };
 
-export const terrainFileSchema = z.extend(terrainSnapshotSchema, {
+export const terrainFileSchema = z.extend(terrainManifestSchema, {
   version: z.literal(TERRAIN_FILE_VERSION)
 });
 

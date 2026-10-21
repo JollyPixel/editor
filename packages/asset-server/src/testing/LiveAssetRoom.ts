@@ -68,15 +68,25 @@ export class LiveAssetRoom<
     };
     const live = commands.live(binding);
     const protocols = AssetRoomProtocols
-      .compile(commands)
-      .withSnapshot(live.snapshotSchema);
+      .compile(commands, live.parts !== undefined)
+      .withSnapshot(live.snapshotSchema, live.parts?.schema);
     this.#inbound = MessageParser.fromProtocol(protocols.inbound);
     this.#outbound = MessageParser.fromProtocol(protocols.outbound);
+    const { parts } = handler;
+    const state = this.state;
     this.extension = new AssetRoomExtension(
       binding,
       commands,
       live,
-      store.writer
+      store.writer,
+      parts === undefined ?
+        {} :
+        {
+          parts: {
+            touched: (command) => parts.touched(command),
+            list: () => parts.list(state)
+          }
+        }
     );
   }
 

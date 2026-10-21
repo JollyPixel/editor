@@ -111,7 +111,7 @@ export function registerAssetRooms(
       events,
       {
         ...extensionOptions,
-        ...(room.handler.parts === undefined ? {} : { parts: room.handler.parts })
+        ...roomParts(room.handler, state)
       }
     );
   }
@@ -127,7 +127,9 @@ export function registerAssetRooms(
     }
 
     return {
-      extension: roomExtension(room, state, () => tagged.eventVersion),
+      extension: roomExtension(room, state, () => tagged.eventVersion, {
+        pushParts: true
+      }),
       graceMs,
       readOnly: true
     };
@@ -227,6 +229,23 @@ export function registerAssetRooms(
     states.off("replaced", onStateReplaced);
     liveRooms.clear();
     server.useRoomResolver(null);
+  };
+}
+
+function roomParts(
+  handler: AnyAssetKindHandler,
+  state: unknown
+): Pick<AssetRoomExtensionOptions<AssetCommandHeader>, "parts"> {
+  const { parts } = handler;
+  if (parts === undefined) {
+    return {};
+  }
+
+  return {
+    parts: {
+      touched: (command) => parts.touched(command),
+      list: () => parts.list(state)
+    }
   };
 }
 

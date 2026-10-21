@@ -2,8 +2,8 @@
 
 Status: in progress for terrain milestone M2. The kind contract, writes,
 generations, replay, compaction, part files, tags, archives, seeding, the
-subscription and the filtered broadcast are implemented. No shipped kind
-declares parts yet.
+subscription and the filtered broadcast are implemented. The terrain kind
+declares parts, one per chunk.
 
 An asset is one file, its live state is held whole by the room, sent whole on
 join, and every `asset.updated` checkpoint carries the whole content. A large
@@ -170,7 +170,8 @@ receives the `parts` message as a notice; it replaces those parts and
 reapplies its pending commands that touch them.
 
 Subscriptions end when a member leaves. A client subscribes again after it
-reconnects. A tag room accepts no message, so it streams no parts yet.
+reconnects. A tag room accepts no message, so it sends every part after the
+snapshot of each joining member instead.
 
 ## Broadcast
 
