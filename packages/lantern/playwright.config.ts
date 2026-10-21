@@ -6,5 +6,6 @@ import {
 
 export default defineE2EConfig({
   port: PORTS.lantern,
-  command: "pnpm run dev"
+  command: "pnpm run serve:e2e",
+  reducedMotion: "reduce"
 });

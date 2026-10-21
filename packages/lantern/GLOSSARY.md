@@ -35,7 +35,7 @@ one at a time and remembers which ones the user has seen. It draws nothing: it
 hands each run to the overlay.
 
 *In code:* [`Lantern`](./docs/Lantern.md), with `register()` and `start()`. The
-`present` option hands the session to the overlay. Inside an editor it is
+`present` option hands the run to the overlay. Inside an editor it is
 `context.lantern`.
 
 ## Showing a step
@@ -50,7 +50,8 @@ centred, and the target is still lit if it shows up later.
 *In code:* the step's `target`. A list of selectors becomes a
 [`TargetPath`](./docs/Tour.md#targetpath), each selector searched inside the
 previous match's shadow root. A function can return an element or an
-`AnchorRect`.
+`AnchorRect`. `run.seek()` decides, frame by frame, whether the card waits,
+centres or lights the target.
 
 ### Spotlight
 
@@ -96,18 +97,17 @@ the camera, and moves on once they have. Next is disabled while it waits, and
 the page gets clicks and keys again. A hook that fails moves on too, so it
 cannot trap the user.
 
-*In code:* the step's `until` hook. `session.waiting` is `true` meanwhile.
+*In code:* the step's `until` hook. `run.waiting` is `true` meanwhile.
 
-### Session
+### Run
 
 One run of a tour. It ends **finished** when the user goes past the last step,
 or **skipped** when they press Skip or Escape; both mark the tour as seen. A
 run cut short because another tour started or the editor released its tours is
 **interrupted** and leaves the tour unseen.
 
-*In code:* [`LanternSession`](./docs/LanternSession.md) and its `end` event.
-An interrupted run also ends with `"skipped"`; only `Lantern` tells the two
-apart.
+*In code:* [`TourRun`](./docs/TourRun.md) and its `end` event, whose outcome
+is `"finished"`, `"skipped"` or `"interrupted"`.
 
 ## Remembering
 

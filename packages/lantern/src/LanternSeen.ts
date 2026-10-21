@@ -2,7 +2,7 @@
 import type { StorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { Tour } from "../tour/Tour.ts";
+import type { Tour } from "./tour/Tour.ts";
 
 // CONSTANTS
 const kKeyPrefix = "jolly-pixel:lantern:";

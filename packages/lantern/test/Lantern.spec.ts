@@ -10,7 +10,7 @@ import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 import {
   Lantern,
   UnknownTourError,
-  type LanternSession
+  type TourRun
 } from "#src/index.ts";
 import {
   step,
@@ -19,18 +19,18 @@ import {
 
 interface Page {
   lantern: Lantern;
-  presented: LanternSession[];
+  presented: TourRun[];
   changes: number;
 }
 
 function page(
   options: { autoStart?: boolean; } = {}
 ): Page {
-  const presented: LanternSession[] = [];
+  const presented: TourRun[] = [];
   const result: Page = {
     lantern: new Lantern({
       storage: new MemoryStorageAdapter(),
-      present: (session) => presented.push(session),
+      present: (run) => presented.push(run),
       autoStart: options.autoStart
     }),
     presented,
@@ -74,12 +74,12 @@ describe("Lantern", () => {
     assert.equal(lantern.tour("editor.basics"), replaced);
   });
 
-  test("starts a tour and presents its session", () => {
+  test("starts a tour and presents its run", () => {
     const { lantern, presented } = page();
-    const session = lantern.start(basics);
+    const run = lantern.start(basics);
 
-    assert.deepEqual(presented, [session]);
-    assert.equal(lantern.session, session);
+    assert.deepEqual(presented, [run]);
+    assert.equal(lantern.current, run);
   });
 
   test("records the tour once it is finished or skipped", async() => {
@@ -93,17 +93,17 @@ describe("Lantern", () => {
 
     assert.equal(lantern.seen.has(basics), true);
     assert.equal(lantern.seen.has(brushes), true);
-    assert.equal(lantern.session, null);
+    assert.equal(lantern.current, null);
   });
 
   test("offers a registered tour that was never seen", async() => {
     const { lantern } = page();
     lantern.register(basics);
-    const session = lantern.offer(basics);
-    assert.equal(session?.tour, basics);
+    const run = lantern.offer(basics);
+    assert.equal(run?.tour, basics);
 
-    session.skip();
-    await once(session, "end");
+    run.skip();
+    await once(run, "end");
 
     assert.equal(lantern.offer(basics), null);
   });
@@ -128,33 +128,58 @@ describe("Lantern", () => {
       id: "editor.intro",
       followUp: brushes
     });
-    const session = lantern.start(intro);
-    await session.startFollowUp();
+    const run = lantern.start(intro);
+    await run.startFollowUp();
 
     assert.equal(lantern.seen.has(intro), true);
-    assert.equal(lantern.session?.tour, brushes);
+    assert.equal(lantern.current?.tour, brushes);
     assert.equal(presented.length, 2);
   });
 
-  test("skips the running tour without recording it when another starts", async() => {
+  test("interrupts the running tour without recording it when another starts", async() => {
     const { lantern } = page();
     const first = lantern.start(basics);
     lantern.start(brushes);
-    await once(first, "end");
+    const [outcome] = await once(first, "end");
 
-    assert.equal(first.state, "skipped");
+    assert.equal(outcome, "interrupted");
     assert.equal(lantern.seen.has(basics), false);
-    assert.equal(lantern.session?.tour, brushes);
+    assert.equal(lantern.current?.tour, brushes);
   });
 
-  test("skips the running tour without recording it when it is released", async() => {
+  test("interrupts the running tour without recording it when it is released", async() => {
     const { lantern } = page();
     const release = lantern.register(basics);
-    const session = lantern.start(basics);
+    const run = lantern.start(basics);
     release();
-    await once(session, "end");
+    const [outcome] = await once(run, "end");
 
-    assert.equal(lantern.session, null);
+    assert.equal(outcome, "interrupted");
+    assert.equal(lantern.current, null);
     assert.equal(lantern.seen.has(basics), false);
+  });
+
+  test("forgets a run interrupted from outside and offers tours again", async() => {
+    const { lantern } = page();
+    lantern.register(basics);
+    lantern.register(brushes);
+    const run = lantern.start(basics);
+    run.interrupt();
+    await once(run, "end");
+
+    assert.equal(lantern.current, null);
+    assert.equal(lantern.seen.has(basics), false);
+    assert.equal(lantern.offer(brushes)?.tour, brushes);
+  });
+
+  test("records a tour skipped right before another starts and keeps the new one current", async() => {
+    const { lantern } = page();
+    const skipped = lantern.start(basics);
+    skipped.skip();
+    lantern.start(brushes);
+    await once(skipped, "end");
+
+    assert.equal(lantern.seen.has(basics), true);
+    assert.equal(lantern.current?.tour, brushes);
   });
 });

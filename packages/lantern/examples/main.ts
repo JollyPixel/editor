@@ -41,8 +41,8 @@ viewport.addEventListener("click", () => {
 
 const lantern = new Lantern({
   storage: new LocalStorageAdapter(),
-  present: (session) => {
-    lanternElement.session = session;
+  present: (run) => {
+    lanternElement.run = run;
   }
 });
 

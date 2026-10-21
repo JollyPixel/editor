@@ -2,22 +2,27 @@
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import { UnknownStepError } from "../tour/errors/UnknownStepError.ts";
-import type { Tour } from "../tour/Tour.ts";
+import { UnknownStepError } from "./errors/UnknownStepError.ts";
+import {
+  TargetSeek,
+  type TargetFrame,
+  type TargetMeasure
+} from "./TargetSeek.ts";
+import type { Tour } from "./Tour.ts";
 import type {
   StepCleanup,
   TourStep
-} from "../tour/TourStep.ts";
+} from "./TourStep.ts";
 
-export type SessionOutcome = "finished" | "skipped";
-export type SessionState = "running" | SessionOutcome;
+export type RunOutcome = "finished" | "skipped" | "interrupted";
+export type RunState = "running" | RunOutcome;
 
-export type LanternSessionEvents = {
+export type TourRunEvents = {
   step: (step: TourStep) => void;
-  end: (outcome: SessionOutcome, followUp: Tour | null) => void;
+  end: (outcome: RunOutcome, followUp: Tour | null) => void;
 };
 
-export interface LanternSessionOptions {
+export interface TourRunOptions {
   /**
    * Id of the first step shown.
    */
@@ -32,20 +37,21 @@ export interface LanternSessionOptions {
   warn?: (message: string) => void;
 }
 
-export class LanternSession extends Emitter<LanternSessionEvents> {
+export class TourRun extends Emitter<TourRunEvents> {
   readonly tour: Tour;
-  readonly page: Document;
 
+  #page: Document;
   #warn: (message: string) => void;
   #index: number;
-  #state: SessionState = "running";
+  #state: RunState = "running";
   #step: AbortController | null = null;
+  #seek: TargetSeek | null = null;
   #cleanup: StepCleanup | null = null;
   #queue: Promise<void> = Promise.resolve();
 
   constructor(
     tour: Tour,
-    options: LanternSessionOptions = {}
+    options: TourRunOptions = {}
   ) {
     super();
 
@@ -62,7 +68,7 @@ export class LanternSession extends Emitter<LanternSessionEvents> {
     }
 
     this.tour = tour;
-    this.page = page;
+    this.#page = page;
     this.#warn = warn;
     this.#index = index;
     void this.#enqueue(() => this.#show(index));
@@ -76,7 +82,7 @@ export class LanternSession extends Emitter<LanternSessionEvents> {
     return this.tour.steps[this.#index];
   }
 
-  get state(): SessionState {
+  get state(): RunState {
     return this.#state;
   }
 
@@ -135,22 +141,33 @@ export class LanternSession extends Emitter<LanternSessionEvents> {
     });
   }
 
-  warn(
-    message: string
-  ): void {
-    this.#warn(`Tour "${this.tour.id}" step "${this.step.id}": ${message}`);
+  skip(): void {
+    this.#stop("skipped");
   }
 
-  skip(): void {
+  interrupt(): void {
+    this.#stop("interrupted");
+  }
+
+  seek<TAnchor>(
+    now: number,
+    measure: TargetMeasure<TAnchor>
+  ): TargetFrame<TAnchor> {
+    return this.#seek?.frame(now, measure) ?? { kind: "seeking" };
+  }
+
+  #stop(
+    outcome: "skipped" | "interrupted"
+  ): void {
     if (this.#state !== "running") {
       return;
     }
 
-    this.#state = "skipped";
+    this.#state = outcome;
     this.#step?.abort();
     void this.#enqueue(async() => {
       this.#leave();
-      this.emit("end", "skipped", null);
+      this.emit("end", outcome, null);
     });
   }
 
@@ -173,11 +190,16 @@ export class LanternSession extends Emitter<LanternSessionEvents> {
     const controller = new AbortController();
     const step = this.tour.steps[index];
     const context = {
-      page: this.page,
+      page: this.#page,
       signal: controller.signal
     };
     this.#step = controller;
     this.#index = index;
+    this.#seek = new TargetSeek({
+      target: step.target,
+      page: this.#page,
+      warn: (message) => this.#warnStep(step, message)
+    });
 
     try {
       const cleanup = await step.enter?.(context);
@@ -245,8 +267,13 @@ export class LanternSession extends Emitter<LanternSessionEvents> {
     const reason = error instanceof Error
       ? error.message
       : String(error);
-    this.#warn(
-      `Tour "${this.tour.id}" step "${step.id}": ${hook} failed, ${reason}`
-    );
+    this.#warnStep(step, `${hook} failed, ${reason}`);
+  }
+
+  #warnStep(
+    step: TourStep,
+    message: string
+  ): void {
+    this.#warn(`Tour "${this.tour.id}" step "${step.id}": ${message}`);
   }
 }

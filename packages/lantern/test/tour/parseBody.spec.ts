@@ -6,15 +6,11 @@ import assert from "node:assert/strict";
 import { parseBody } from "#src/tour/parseBody.ts";
 
 describe("parseBody", () => {
-  test("starts a paragraph at each blank line", () => {
-    assert.deepEqual(parseBody("Pick a block.\n\n\nThen place it.\n"), [
-      [{ kind: "text", text: "Pick a block." }],
+  test("starts a paragraph at each blank line, not at a single line break", () => {
+    assert.deepEqual(parseBody("Pick a block.\nAny block.\n\n\nThen place it.\n"), [
+      [{ kind: "text", text: "Pick a block.\nAny block." }],
       [{ kind: "text", text: "Then place it." }]
     ]);
-  });
-
-  test("keeps a single line break inside its paragraph", () => {
-    assert.equal(parseBody("one\ntwo").length, 1);
   });
 
   test("renders backtick spans as keys", () => {

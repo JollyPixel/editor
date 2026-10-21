@@ -1,6 +1,15 @@
 export * from "./Lantern.ts";
-export * from "./session/LanternSession.ts";
-export * from "./seen/LanternSeen.ts";
+export type { LanternSeen } from "./LanternSeen.ts";
+export type {
+  TourRun,
+  TourRunEvents,
+  RunOutcome,
+  RunState
+} from "./tour/TourRun.ts";
+export type {
+  TargetFrame,
+  TargetMeasure
+} from "./tour/TargetSeek.ts";
 export * from "./tour/Tour.ts";
 export * from "./tour/TargetPath.ts";
 export type * from "./tour/TourStep.ts";

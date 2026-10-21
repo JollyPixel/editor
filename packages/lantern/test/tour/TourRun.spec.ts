@@ -1,5 +1,6 @@
 // Import Node.js Dependencies
 import { describe, test } from "node:test";
+import { setImmediate } from "node:timers/promises";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
@@ -7,32 +8,32 @@ import { once } from "@openally/emitt";
 
 // Import Internal Dependencies
 import {
-  LanternSession,
   UnknownStepError,
-  type SessionOutcome,
+  type RunOutcome,
   type StepContext,
   type Tour
 } from "#src/index.ts";
+import { TourRun } from "#src/tour/TourRun.ts";
 import {
   step,
   tour
 } from "../helpers/tours.ts";
 
 interface Recorder {
-  session: LanternSession;
+  run: TourRun;
   log: string[];
   warnings: string[];
 }
 
 function record(
-  session: LanternSession,
+  run: TourRun,
   log: string[] = []
 ): Omit<Recorder, "warnings"> {
-  session.on("step", (shown) => log.push(`step ${shown.id}`));
-  session.on("end", (outcome) => log.push(`end ${outcome}`));
+  run.on("step", (shown) => log.push(`step ${shown.id}`));
+  run.on("end", (outcome) => log.push(`end ${outcome}`));
 
   return {
-    session,
+    run,
     log
   };
 }
@@ -42,7 +43,7 @@ function start(
   at?: string
 ): Recorder {
   const warnings: string[] = [];
-  const recorder = record(new LanternSession(steps, {
+  const recorder = record(new TourRun(steps, {
     at,
     warn: (message) => warnings.push(message)
   }));
@@ -66,80 +67,80 @@ function tracked(
   });
 }
 
-describe("LanternSession", () => {
+describe("TourRun", () => {
   test("shows the first step", async() => {
-    const { session, log } = start();
-    await once(session, "step");
+    const { run, log } = start();
+    await once(run, "step");
 
-    assert.equal(session.step.id, "one");
+    assert.equal(run.step.id, "one");
     assert.deepEqual(log, ["step one"]);
   });
 
   test("starts at the step named by at", async() => {
-    const { session } = start(tour(), "two");
-    await once(session, "step");
+    const { run } = start(tour(), "two");
+    await once(run, "step");
 
-    assert.equal(session.index, 1);
+    assert.equal(run.index, 1);
   });
 
   test("throws on an unknown starting step", () => {
-    assert.throws(() => new LanternSession(tour(), { at: "missing" }), UnknownStepError);
+    assert.throws(() => new TourRun(tour(), { at: "missing" }), UnknownStepError);
   });
 
   test("finishes after next on the last step", async() => {
-    const { session, log } = start();
-    await session.next();
-    await session.next();
-    await session.next();
+    const { run, log } = start();
+    await run.next();
+    await run.next();
+    await run.next();
 
-    assert.equal(session.state, "finished");
+    assert.equal(run.state, "finished");
     assert.deepEqual(log, ["step one", "step two", "step three", "end finished"]);
   });
 
   test("finishes into its follow-up only from the last step", async() => {
     const followUp = tour([step("next")], { id: "test.next" });
-    const session = new LanternSession(tour([step("one"), step("two")], { followUp }));
-    const ends: Array<[SessionOutcome, Tour | null]> = [];
-    session.on("end", (outcome, chosen) => ends.push([outcome, chosen]));
-    await session.startFollowUp();
-    assert.equal(session.index, 0);
+    const run = new TourRun(tour([step("one"), step("two")], { followUp }));
+    const ends: Array<[RunOutcome, Tour | null]> = [];
+    run.on("end", (outcome, chosen) => ends.push([outcome, chosen]));
+    await run.startFollowUp();
+    assert.equal(run.index, 0);
 
-    await session.next();
-    await session.startFollowUp();
+    await run.next();
+    await run.startFollowUp();
 
-    assert.equal(session.state, "finished");
+    assert.equal(run.state, "finished");
     assert.deepEqual(ends, [["finished", followUp]]);
   });
 
   test("offers no follow-up on a last step that waits for an action", async() => {
     const followUp = tour([step("next")], { id: "test.next" });
     const pending = Promise.withResolvers<void>();
-    const session = new LanternSession(tour([
+    const run = new TourRun(tour([
       step("place", { until: () => pending.promise })
     ], { followUp }));
-    await session.startFollowUp();
+    await run.startFollowUp();
 
-    assert.equal(session.offeredFollowUp, null);
-    assert.equal(session.state, "running");
-    session.skip();
+    assert.equal(run.offeredFollowUp, null);
+    assert.equal(run.state, "running");
+    run.skip();
   });
 
   test("ignores back on the first step", async() => {
-    const { session, log } = start();
-    await session.back();
+    const { run, log } = start();
+    await run.back();
 
-    assert.equal(session.index, 0);
+    assert.equal(run.index, 0);
     assert.deepEqual(log, ["step one"]);
   });
 
   test("runs the cleanup of the step it leaves before entering the next", async() => {
     const log: string[] = [];
     const steps = tour([tracked("one", log), tracked("two", log)]);
-    const { session } = record(new LanternSession(steps), log);
-    await session.next();
-    await session.back();
-    await session.next();
-    await session.next();
+    const { run } = record(new TourRun(steps), log);
+    await run.next();
+    await run.back();
+    await run.next();
+    await run.next();
 
     assert.deepEqual(log, [
       "enter one", "step one",
@@ -152,28 +153,28 @@ describe("LanternSession", () => {
 
   test("runs the cleanup when the tour is skipped", async() => {
     const log: string[] = [];
-    const { session } = record(new LanternSession(tour([tracked("one", log)])), log);
-    await once(session, "step");
-    session.skip();
-    await once(session, "end");
+    const { run } = record(new TourRun(tour([tracked("one", log)])), log);
+    await once(run, "step");
+    run.skip();
+    await once(run, "end");
 
-    assert.equal(session.state, "skipped");
+    assert.equal(run.state, "skipped");
     assert.deepEqual(log, ["enter one", "step one", "cleanup one", "end skipped"]);
   });
 
   test("queues calls made while enter is pending", async() => {
     const pending = Promise.withResolvers<void>();
-    const { session, log } = start(tour([
+    const { run, log } = start(tour([
       step("one", { enter: () => pending.promise }),
       step("two"),
       step("three")
     ]));
-    const first = session.next();
-    const second = session.next();
+    const first = run.next();
+    const second = run.next();
     pending.resolve();
     await Promise.all([first, second]);
 
-    assert.equal(session.step.id, "three");
+    assert.equal(run.step.id, "three");
     assert.deepEqual(log, ["step one", "step two", "step three"]);
   });
 
@@ -181,7 +182,7 @@ describe("LanternSession", () => {
     const pending = Promise.withResolvers<() => void>();
     const entered = Promise.withResolvers<AbortSignal>();
     let cleaned = false;
-    const { session, log } = start(tour([
+    const { run, log } = start(tour([
       step("one", {
         enter: (context) => {
           entered.resolve(context.signal);
@@ -191,13 +192,13 @@ describe("LanternSession", () => {
       })
     ]));
     const signal = await entered.promise;
-    session.skip();
+    run.skip();
     assert.equal(signal.aborted, true);
 
     pending.resolve(() => {
       cleaned = true;
     });
-    await once(session, "end");
+    await once(run, "end");
 
     assert.equal(cleaned, true);
     assert.deepEqual(log, ["end skipped"]);
@@ -205,22 +206,22 @@ describe("LanternSession", () => {
 
   test("does not enter the first step when skipped right after creation", async() => {
     const log: string[] = [];
-    const { session } = record(new LanternSession(tour([tracked("one", log)])), log);
-    session.skip();
-    await once(session, "end");
+    const { run } = record(new TourRun(tour([tracked("one", log)])), log);
+    run.skip();
+    await once(run, "end");
 
     assert.deepEqual(log, ["end skipped"]);
   });
 
   test("warns and still shows a step whose enter throws", async() => {
-    const { session, warnings } = start(tour([
+    const { run, warnings } = start(tour([
       step("one", {
         enter: () => {
           throw new Error("no dock");
         }
       })
     ]));
-    await once(session, "step");
+    await once(run, "step");
 
     assert.match(warnings[0], /"test\.tour" step "one": enter failed, no dock/);
   });
@@ -234,41 +235,46 @@ describe("LanternSession", () => {
 
     test("advance when until resolves", async() => {
       const pending = Promise.withResolvers<void>();
-      const { session } = interactive(() => pending.promise);
-      await once(session, "step");
+      const { run } = interactive(() => pending.promise);
+      await once(run, "step");
       pending.resolve();
-      await once(session, "step");
+      await once(run, "step");
 
-      assert.equal(session.step.id, "done");
+      assert.equal(run.step.id, "done");
     });
 
     test("warn and advance when until rejects", async() => {
-      const { session, warnings } = interactive(() => Promise.reject(new Error("lost")));
-      await once(session, "step");
-      await once(session, "step");
+      const { run, warnings } = interactive(() => Promise.reject(new Error("lost")));
+      await once(run, "step");
+      await once(run, "step");
 
-      assert.equal(session.step.id, "done");
+      assert.equal(run.step.id, "done");
       assert.match(warnings[0], /until failed, lost/);
     });
 
     test("abort until when the step is left and ignore its late result", async() => {
       const pending = Promise.withResolvers<void>();
       let signal: AbortSignal | null = null;
-      const outcomes: SessionOutcome[] = [];
-      const { session } = interactive((context) => {
-        signal = context.signal;
+      const { run, warnings } = start(tour([
+        step("intro"),
+        step("place", {
+          until: (context) => {
+            signal = context.signal;
 
-        return pending.promise;
-      });
-      session.on("end", (outcome) => outcomes.push(outcome));
-      await once(session, "step");
-      session.skip();
-      pending.resolve();
-      await once(session, "end");
+            return pending.promise;
+          }
+        }),
+        step("done")
+      ]), "place");
+      await once(run, "step");
+      await run.back();
+      pending.reject(new Error("lost"));
+      await setImmediate();
 
       assert.equal(signal!.aborted, true);
-      assert.equal(session.step.id, "place");
-      assert.deepEqual(outcomes, ["skipped"]);
+      assert.equal(run.step.id, "intro");
+      assert.equal(run.state, "running");
+      assert.deepEqual(warnings, []);
     });
   });
 });

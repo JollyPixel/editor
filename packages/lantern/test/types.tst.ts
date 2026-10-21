@@ -6,14 +6,20 @@ import {
 } from "tstyche";
 
 // Import Internal Dependencies
+import type * as LanternPackage from "#src/index.ts";
 import type {
-  LanternSession,
-  SessionOutcome,
+  TourRun,
+  RunOutcome,
   StepEnter,
   TourStepOptions
 } from "#src/index.ts";
 
-declare const session: LanternSession;
+declare const run: TourRun;
+
+test("only Lantern creates runs and seen records", () => {
+  expect<"TourRun">().type.not.toBeAssignableTo<keyof typeof LanternPackage>();
+  expect<"LanternSeen">().type.not.toBeAssignableTo<keyof typeof LanternPackage>();
+});
 
 describe("TourStepOptions", () => {
   test("a target is a selector list, not a single selector", () => {
@@ -28,10 +34,10 @@ describe("TourStepOptions", () => {
   });
 });
 
-describe("LanternSession", () => {
+describe("TourRun", () => {
   test("end listeners receive the outcome", () => {
-    session.on("end", (outcome) => {
-      expect(outcome).type.toBe<SessionOutcome>();
+    run.on("end", (outcome) => {
+      expect(outcome).type.toBe<RunOutcome>();
     });
   });
 });

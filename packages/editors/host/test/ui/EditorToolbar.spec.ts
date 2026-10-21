@@ -153,9 +153,9 @@ describe("EditorToolbar", () => {
     button.click();
 
     assert.ok(!element.hasAttribute("empty"));
-    assert.equal(lantern.session?.tour, basics);
+    assert.equal(lantern.current?.tour, basics);
 
-    lantern.session?.skip();
+    lantern.current?.skip();
     release();
     await element.updateComplete;
     assert.ok(element.hasAttribute("empty"));
@@ -187,7 +187,7 @@ describe("EditorToolbar", () => {
         label: "Tour brushes"
       }
     ]);
-    assert.equal(lantern.session?.tour.id, "brushes");
+    assert.equal(lantern.current?.tour.id, "brushes");
   });
 
   test("hides the Asset select when the target is the only asset of its kind", async() => {
