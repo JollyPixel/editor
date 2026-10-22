@@ -10,7 +10,7 @@ of runtime value the consumer expects.
 class AssetReference<TValue = unknown> {
   readonly id: AssetId;
   readonly type: AssetType<TValue>;
-  readonly kind: string;
+  readonly kind: AssetKind;
 
   constructor(
     id: AssetId | string,
@@ -59,7 +59,9 @@ const restored = AssetReference.parse(
 );
 ```
 
-`equals()` returns `true` when both references have the same ID and kind.
+`equals()` returns `true` when both references have the same ID and the same
+`AssetType` token. A reference built from another token of the same kind is
+not equal.
 
 ## Named groups
 

@@ -79,7 +79,7 @@ describe("StudioSession", () => {
 
     catalog.records.set("map-1", {
       ...MAP_RECORD,
-      source: "maps/cave.voxelmap.json"
+      path: "maps/cave.voxelmap.json"
     });
     catalog.change();
     assert.equal(document.querySelector("iframe")?.title, "cave");
@@ -107,7 +107,7 @@ describe("StudioSession", () => {
 
     catalog.records.set("map-1", {
       ...MAP_RECORD,
-      source: "maps/cave.voxelmap.json"
+      path: "maps/cave.voxelmap.json"
     });
     catalog.change();
 

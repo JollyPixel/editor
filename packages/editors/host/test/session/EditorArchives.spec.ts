@@ -44,13 +44,13 @@ describe("EditorArchives", () => {
       assert.equal(await browser.saved[0].text, "zip");
     });
 
-    test("falls back to the given name when the source has no stem", async() => {
+    test("falls back to the given name when the path has no stem", async() => {
       const browser = createBrowser();
       const archives = createArchives({
         browser,
         target: {
           id: "model-1",
-          source: "models/"
+          path: "models/"
         }
       });
 

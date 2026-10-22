@@ -20,7 +20,7 @@ import {
 } from "@jolly-pixel/asset";
 
 interface Model {
-  readonly source: string;
+  readonly path: string;
 }
 
 const MODEL_ASSET = new AssetType<Model>("model");
@@ -28,7 +28,7 @@ const catalog = new AssetCatalog([
   new AssetRecord({
     id: "hero-model",
     kind: "model",
-    source: "project:/models/hero.glb"
+    path: "project:/models/hero.glb"
   })
 ]);
 
@@ -36,7 +36,7 @@ const loaders = new AssetLoaderRegistry();
 loaders.register(MODEL_ASSET, {
   async load(record) {
     return {
-      source: record.source
+      path: record.path.toString()
     };
   }
 });
@@ -94,7 +94,7 @@ when required:
 ```ts
 catalog.set(updatedRecord);
 
-const value = assets.evict(updatedRecord.id);
+const value = assets.evict(heroReference);
 disposeModel(value);
 ```
 

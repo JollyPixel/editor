@@ -74,7 +74,7 @@ function snapshot(
         {
           id: "a1",
           kind: "pixelart",
-          source: "textures/a.pixelart"
+          path: "textures/a.pixelart"
         }
       ]
     },
@@ -103,7 +103,7 @@ describe("CatalogClient", () => {
         record: {
           id: "a2",
           kind: "pixelart",
-          source: "textures/b.pixelart"
+          path: "textures/b.pixelart"
         }
       }]
     });
@@ -119,7 +119,7 @@ describe("CatalogClient", () => {
     assert.equal(room.joined, true);
     assert.equal(changes, 3);
     assert.deepEqual([...client.records()].map(({ id }) => id), ["a2"]);
-    assert.equal(client.record("a2")?.source, "textures/b.pixelart");
+    assert.equal(client.record("a2")?.path, "textures/b.pixelart");
   });
 
   test("toSnapshot describes its current state as a catalog:snapshot", async() => {
@@ -141,7 +141,7 @@ describe("CatalogClient", () => {
           {
             id: "a1",
             kind: "pixelart",
-            source: "textures/a.pixelart"
+            path: "textures/a.pixelart"
           }
         ]
       },

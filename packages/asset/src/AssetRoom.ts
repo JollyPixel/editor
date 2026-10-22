@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import { AssetId } from "./AssetId.ts";
-import { assertAssetKind } from "./assertAssetKind.ts";
+import { AssetKind } from "./AssetKind.ts";
 
 // CONSTANTS
 const kTagSeparator = "@";
@@ -29,24 +29,20 @@ export class AssetRoom {
     }
   }
 
-  readonly kind: string;
+  readonly kind: AssetKind;
   readonly assetId: AssetId;
   readonly tag: string | null;
 
   constructor(
-    kind: string,
+    kind: string | AssetKind,
     assetId: string | AssetId,
     tag: string | null = null
   ) {
-    assertAssetKind(kind);
-    if (kind.includes(kTagSeparator)) {
-      throw new TypeError("Asset room kind must not contain \"@\".");
-    }
     if (tag !== null && (tag.trim().length === 0 || tag.includes(":"))) {
       throw new TypeError("Asset room tag must be non-empty without a colon.");
     }
 
-    this.kind = kind;
+    this.kind = AssetKind.from(kind);
     this.assetId = AssetId.from(assetId);
     this.tag = tag;
   }
@@ -54,7 +50,7 @@ export class AssetRoom {
   equals(
     other: AssetRoom
   ): boolean {
-    const hasEqualKind = this.kind === other.kind;
+    const hasEqualKind = this.kind.equals(other.kind);
     const hasEqualAssetId = this.assetId.equals(
       other.assetId
     );
@@ -68,8 +64,8 @@ export class AssetRoom {
 
   toString(): string {
     const head = this.tag === null ?
-      this.kind :
-      `${this.kind}${kTagSeparator}${this.tag}`;
+      this.kind.value :
+      `${this.kind.value}${kTagSeparator}${this.tag}`;
 
     return `${head}:${this.assetId.value}`;
   }

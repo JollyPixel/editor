@@ -155,7 +155,7 @@ export class StudioBackend implements AsyncDisposable {
         assets: new AssetLog(assetServer.eventStore),
         audit,
         account: (accountId) => accounts.account(accountId),
-        assetPath: (assetId) => assetServer.backend.catalog.record(assetId)?.source
+        assetPath: (assetId) => assetServer.backend.catalog.record(assetId)?.path.toString()
       }),
       archive: new ProjectArchive({
         project,

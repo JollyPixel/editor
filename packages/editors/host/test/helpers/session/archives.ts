@@ -170,7 +170,7 @@ export function createArchives(
     offline = null,
     target = {
       id: "model-1",
-      source: "models/robot.voxelmodel.json"
+      path: "models/robot.voxelmodel.json"
     }
   } = options;
 

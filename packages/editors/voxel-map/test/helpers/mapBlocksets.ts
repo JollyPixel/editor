@@ -204,7 +204,7 @@ function blocksetRecord(
   return {
     id: assetId,
     kind: "blockset",
-    source: `blocksets/${assetId.replace("asset-", "")}.blockset.json`
+    path: `blocksets/${assetId.replace("asset-", "")}.blockset.json`
   } as AssetRecordData;
 }
 

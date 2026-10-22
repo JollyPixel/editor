@@ -193,7 +193,7 @@ export class CatalogProjection extends Emitter<
     const record = new AssetRecord({
       id: new AssetId(assetId),
       kind: projection.kind,
-      source: projection.path,
+      path: projection.path,
       revision: projection.hash
     });
     this.#catalog.set(record);

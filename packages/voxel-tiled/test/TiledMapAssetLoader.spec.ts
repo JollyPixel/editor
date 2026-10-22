@@ -35,14 +35,14 @@ test("TiledMapAssetLoader prepares a catalog record", async(context) => {
   const record = new AssetRecord({
     id: new AssetId("map.intro"),
     kind: TiledMapAssetType.kind,
-    source: "maps/intro.tmj"
+    path: "maps/intro.tmj"
   });
 
   const asset = await new TiledMapAssetLoader().load(record);
 
   assert.strictEqual(
     fetchMock.mock.calls[0]?.arguments[0],
-    record.source
+    record.path.toString()
   );
   assert.strictEqual(asset.world.version, VOXEL_WORLD_VERSION);
   assert.deepStrictEqual(asset.blocks, []);

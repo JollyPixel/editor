@@ -47,7 +47,7 @@ describe("catalog archive commands over loopback", () => {
 
     assert.deepEqual(report.root, { id: map, kind: "link" });
     assert.deepEqual(report.created.map((entry) => entry.id), [texture, map]);
-    assert.strictEqual(importer.catalog.record(map)?.source, "map.link");
+    assert.strictEqual(importer.catalog.record(map)?.path, "map.link");
     assert.strictEqual(text(await target.source.read("map.link")), texture);
 
     const again = await importer.catalog.planImport(archive);

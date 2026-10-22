@@ -44,7 +44,7 @@ function createArchives(
     target: () => {
       return {
         id: "model-1",
-        source: "model.json"
+        path: "model.json"
       };
     }
   });

@@ -29,7 +29,7 @@ export class ModelAssetLoader implements AssetLoader<Model> {
   async load(
     record: AssetRecord
   ): Promise<Model> {
-    const source = parse(record.source);
+    const source = parse(record.path.toString());
 
     try {
       switch (source.ext) {
@@ -46,7 +46,7 @@ export class ModelAssetLoader implements AssetLoader<Model> {
     }
     catch (error: unknown) {
       throw new Error(
-        `Failed to load model: ${record.source}`,
+        `Failed to load model: ${record.path}`,
         { cause: error }
       );
     }

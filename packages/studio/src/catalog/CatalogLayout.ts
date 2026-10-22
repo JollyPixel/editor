@@ -1,12 +1,12 @@
 export interface LaidOutRecord {
   readonly id: string;
   readonly kind: string;
-  readonly source: string;
+  readonly path: string;
 }
 
 interface Placement {
   readonly kind: string;
-  readonly source: string;
+  readonly path: string;
 }
 
 export class CatalogLayout {
@@ -22,7 +22,7 @@ export class CatalogLayout {
     this.#records = new Map(
       Array.from(
         records,
-        ({ id, kind, source }) => [id, { kind, source }]
+        ({ id, kind, path }) => [id, { kind, path }]
       )
     );
     this.#folders = new Set(folders);
@@ -33,9 +33,9 @@ export class CatalogLayout {
     folders: Iterable<string>
   ): boolean {
     let recordCount = 0;
-    for (const { id, kind, source } of records) {
+    for (const { id, kind, path } of records) {
       const placement = this.#records.get(id);
-      if (placement?.kind !== kind || placement.source !== source) {
+      if (placement?.kind !== kind || placement.path !== path) {
         return false;
       }
       recordCount++;

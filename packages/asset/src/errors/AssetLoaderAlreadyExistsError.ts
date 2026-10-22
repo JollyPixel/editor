@@ -1,8 +1,11 @@
+// Import Internal Dependencies
+import type { AssetKind } from "../AssetKind.ts";
+
 export class AssetLoaderAlreadyExistsError extends Error {
-  readonly kind: string;
+  readonly kind: AssetKind;
 
   constructor(
-    kind: string
+    kind: AssetKind
   ) {
     super(`A loader for asset kind "${kind}" is already registered.`);
     this.name = "AssetLoaderAlreadyExistsError";

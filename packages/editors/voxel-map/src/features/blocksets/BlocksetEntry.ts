@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import {
-  AssetSource,
+  AssetPath,
   type AssetRecordData
 } from "@jolly-pixel/asset";
 import { BLOCKSET_KIND } from "@jolly-pixel/asset.voxel-map/client";
@@ -37,7 +37,7 @@ export class BlocksetEntry {
         record?.id ?? null,
         record === undefined ?
           definition.id :
-          new AssetSource(record.source).name
+          new AssetPath(record.path).name
       );
     });
   }

@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import { AssetId } from "@jolly-pixel/asset";
+import {
+  AssetId,
+  AssetPath
+} from "@jolly-pixel/asset";
 import { showConfirm } from "@jolly-pixel/ui";
 import type {
   ImportConflictPolicy,
@@ -58,7 +61,7 @@ const kDomArchiveBrowser: EditorArchiveBrowser = {
 
 export interface EditorArchiveTarget {
   readonly id: string;
-  readonly source: string;
+  readonly path: string;
 }
 
 export interface EditorArchiveBrowser {
@@ -133,10 +136,10 @@ export class EditorArchives {
   }
 
   async download(): Promise<void> {
-    const { id, source } = this.#target();
+    const { id, path } = this.#target();
     const blob = await this.#archive.export(id);
 
-    this.#browser.save(blob, this.#fileName(source));
+    this.#browser.save(blob, this.#fileName(path));
   }
 
   async importFile(
@@ -190,11 +193,9 @@ export class EditorArchives {
   }
 
   #fileName(
-    source: string
+    path: string
   ): string {
-    const base = source.slice(source.lastIndexOf("/") + 1);
-    const extension = base.indexOf(".");
-    const name = extension > 0 ? base.slice(0, extension) : base;
+    const { name } = new AssetPath(path);
 
     return `${name || this.#fallbackName}${kArchiveExtension}`;
   }

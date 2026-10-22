@@ -51,7 +51,7 @@ const catalog = new AssetCatalog([
   new AssetRecord({
     id: mapId,
     kind: TiledMapAssetType.kind,
-    source: "maps/intro.tmj"
+    path: "maps/intro.tmj"
   })
 ]);
 

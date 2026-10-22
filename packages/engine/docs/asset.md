@@ -70,8 +70,8 @@ an implicit load inside the ECS lifecycle.
 
 ## Built-in types and loaders
 
-| Type | Kind | Loader | Supported source |
-| ---- | ---- | ------ | ---------------- |
+| Type | Kind | Loader | Supported formats |
+| ---- | ---- | ------ | ----------------- |
 | `AssetTypes.model` | `model` | `AssetLoaders.model` | OBJ, FBX, glTF, GLB (including `EXT_meshopt_compression`) |
 | `AssetTypes.font` | `font` | `AssetLoaders.font` | Three.js typeface JSON |
 | `AUDIO_ASSET` | `audio` | `AudioAssetLoader` | Formats supported by `THREE.AudioLoader` |
@@ -81,7 +81,7 @@ an implicit load inside the ECS lifecycle.
 holding these loaders, all sharing the given Three.js `LoadingManager`. The
 runtime starts from it and registers custom loaders on top. The model loader
 imports the three.js loader for a format (and the meshopt decoder for glTF) on
-the first source of that format, so bundles that never load a model do not
+the first file of that format, so bundles that never load a model do not
 download them.
 
 ```ts
@@ -94,9 +94,9 @@ const coordinator = new AssetCoordinator({
 
 ### KTX2 textures
 
-`TextureAssetLoader` sends `.ktx2` sources to the `ktx2` option, any object
+`TextureAssetLoader` sends `.ktx2` paths to the `ktx2` option, any object
 with `loadAsync(url): Promise<THREE.CompressedTexture>` (a
-`CompressedTextureLoader`). Without it, loading a `.ktx2` source rejects. The
+`CompressedTextureLoader`). Without it, loading a `.ktx2` path rejects. The
 same `filter` and `colorSpace` apply to both paths.
 
 ```ts

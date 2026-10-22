@@ -7,6 +7,7 @@ import {
   Accounts,
   AccountRoles
 } from "@jolly-pixel/accounts/node";
+import { AssetKind } from "@jolly-pixel/asset";
 import {
   WEBSOCKET_AUTH_PROTOCOL_PREFIX,
   WEBSOCKET_PROTOCOL,
@@ -68,7 +69,7 @@ export function sharedCatalog(
 ): SharedCatalog {
   return {
     record: (assetId) => (Object.hasOwn(closures, assetId) ?
-      { kind: "voxelmap" } :
+      { kind: new AssetKind("voxelmap") } :
       undefined),
     reachableFrom: (assetId) => new Set(closures[assetId] ?? [])
   };

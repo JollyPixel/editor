@@ -4,7 +4,7 @@
     {
       "id": "example.tiled-map",
       "kind": "tilemap",
-      "source": "tilemap/brackeys-level.tmj"
+      "path": "tilemap/brackeys-level.tmj"
     }
   ]
 }

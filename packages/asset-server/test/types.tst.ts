@@ -120,7 +120,7 @@ interface LegacyCatalogChange {
   readonly record: {
     readonly id: string;
     readonly kind: string;
-    readonly source: string;
+    readonly path: string;
     readonly revision?: string;
   } | null;
   readonly dependencies?: readonly {

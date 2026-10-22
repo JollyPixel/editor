@@ -54,7 +54,7 @@ export class RuntimeLoadingScreen {
   showAsset(
     asset: AssetRecord
   ): void {
-    this.#loading.showAsset(asset.source);
+    this.#loading.showAsset(asset.path.toString());
   }
 
   updateProgress(

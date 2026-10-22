@@ -113,7 +113,7 @@ export class AssetTreeModel {
         type: "asset",
         id: record.id,
         kind: record.kind,
-        path: AssetPath.parse(record.source)
+        path: AssetPath.parse(record.path)
       });
     }
     const dependencies = options.dependencies;

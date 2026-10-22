@@ -13,6 +13,7 @@ import {
 } from "../../src/index.ts";
 import {
   createCoordinator,
+  TEXT_ASSET,
   textReference
 } from "../helpers/coordinator.ts";
 
@@ -22,7 +23,7 @@ const kForeignTextAsset = new AssetType<string>("text");
 async function readSource(
   record: AssetRecord
 ): Promise<string> {
-  return record.source;
+  return record.path.toString();
 }
 
 describe("AssetCoordinator", () => {
@@ -65,7 +66,7 @@ describe("AssetCoordinator", () => {
     const coordinator = createCoordinator(async(record, context) => {
       received = context.signal;
 
-      return record.source;
+      return record.path.toString();
     });
 
     await coordinator.load(textReference("greeting"), {
@@ -91,7 +92,7 @@ describe("AssetCoordinator", () => {
     const coordinator = createCoordinator(async(record) => {
       loadCount++;
 
-      return record.source;
+      return record.path.toString();
     });
     const reference = textReference("greeting");
 
@@ -114,7 +115,7 @@ describe("AssetCoordinator", () => {
         throw failure;
       }
 
-      return record.source;
+      return record.path.toString();
     });
     const reference = textReference("greeting");
     const handle = coordinator.request(reference);
@@ -136,9 +137,9 @@ describe("AssetCoordinator", () => {
     const handle = coordinator.request(reference);
     await coordinator.load(reference);
 
-    assert.equal(coordinator.evict("greeting"), "memory:greeting");
+    assert.equal(coordinator.evict(reference), "memory:greeting");
     assert.equal(handle.status, "unloaded");
-    assert.equal(coordinator.evict("greeting"), undefined);
+    assert.equal(coordinator.evict(reference), undefined);
   });
 
   test("a load settling after evict does not resurrect the entry", async() => {
@@ -148,7 +149,7 @@ describe("AssetCoordinator", () => {
     const handle = coordinator.request(reference);
 
     const pending = coordinator.load(reference);
-    coordinator.evict(reference.id);
+    coordinator.evict(reference);
     resolve("stale");
 
     assert.equal(await pending, "stale");
@@ -175,7 +176,7 @@ describe("AssetCoordinator", () => {
       () => coordinator.request(foreign).status,
       {
         name: "AssetTypeMismatchError",
-        kind: "text"
+        kind: TEXT_ASSET.kind
       }
     );
     assert.throws(

@@ -119,8 +119,8 @@ export class PixelArtEditor {
     const preferences = new EditorPreferences(kStorage, context.preferences);
     const canvas = await panel.initialize({
       id: record.id,
-      name: TextureName.fromPath(record.source).value,
-      tooltip: record.source,
+      name: TextureName.fromPath(record.path).value,
+      tooltip: record.path,
       document: target.document,
       defaultMode: preferences.mode,
       onModeChange: (mode) => {

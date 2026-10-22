@@ -1,7 +1,7 @@
 # AssetLoader
 
 `AssetLoader<TValue>` converts one catalog record into a runtime value. The
-loader owns platform-specific I/O and decoding for `record.source`.
+loader owns platform-specific I/O and decoding for `record.path`.
 
 ## API
 
@@ -18,7 +18,7 @@ interface AssetLoader<TValue = unknown> {
 }
 ```
 
-The asset package treats sources as opaque. A browser loader might fetch a URL,
+The asset package treats paths as opaque. A browser loader might fetch a URL,
 while an editor loader can read a project path.
 
 `context.signal` is optional. Supporting cancellation is the loader's
@@ -30,7 +30,7 @@ its references:
 ```ts
 loaders.register(TEXT_ASSET, {
   async load(record, context) {
-    const response = await fetch(record.source, {
+    const response = await fetch(record.path.toString(), {
       signal: context.signal
     });
 

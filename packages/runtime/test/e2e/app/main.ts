@@ -67,11 +67,11 @@ function createCatalog(
   textures: Iterable<string>
 ): AssetCatalog {
   const catalog = new AssetCatalog();
-  for (const source of textures) {
+  for (const path of textures) {
     catalog.add(new AssetRecord({
-      id: new AssetId(source),
+      id: new AssetId(path),
       kind: TEXTURE_ASSET.kind,
-      source
+      path
     }));
   }
 

@@ -183,18 +183,19 @@ export function registerAssetRooms(
     }
 
     const { kind, tag } = room;
-    if (!kinds.has(kind)) {
+    if (!kinds.has(kind.value)) {
       return refuse("unknown kind");
     }
 
-    const handler = kinds.get(kind);
+    const handler = kinds.get(kind.value);
     const { commands } = handler;
     if (!hasLiveProtocol(commands)) {
       return refuse("kind has no live protocol");
     }
 
     const assetId = room.assetId.value;
-    if (catalog.record(assetId)?.kind !== kind) {
+    const record = catalog.record(assetId);
+    if (record === undefined || !record.hasKind(kind)) {
       return refuse("unknown asset");
     }
 

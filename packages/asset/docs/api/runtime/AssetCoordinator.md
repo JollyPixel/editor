@@ -14,9 +14,6 @@ interface AssetCoordinatorOptions {
 }
 
 class AssetCoordinator {
-  readonly catalog: AssetCatalog;
-  readonly loaders: AssetLoaderRegistry;
-
   constructor(options: AssetCoordinatorOptions);
 
   request<TValue>(
@@ -35,12 +32,12 @@ class AssetCoordinator {
     options?: AssetLoadBatchOptions
   ): AssetLoadBatch;
 
-  evict(id: AssetId | string): unknown | undefined;
+  evict<TValue>(reference: AssetReference<TValue>): TValue | undefined;
 }
 ```
 
 Each coordinator keeps its own loaded values. Two coordinators never share
-them.
+them. The catalog and the loader registry stay private to the coordinator.
 
 ## `request(reference)`
 
@@ -76,10 +73,11 @@ loader the batch starts.
 The coordinator retains no batch dependency list after construction. See
 [`AssetLoadBatch`](./AssetLoadBatch.md) for progress and failure behavior.
 
-## `evict(id)`
+## `evict(reference)`
 
 Forgets one asset and returns its value when it was ready, or `undefined`
-otherwise. Existing handles report `"unloaded"` afterwards, and a load still in
+otherwise. Evicting through another token of a tracked asset throws
+`AssetTypeMismatchError`. Existing handles report `"unloaded"` afterwards, and a load still in
 flight settles without restoring the entry.
 
 Eviction does not cancel in-flight work or dispose loaded resources. Callers
@@ -89,5 +87,5 @@ own platform resource disposal.
 
 Once an asset is loading, loaded, or failed, reading it through another
 `AssetType` token of the same kind throws `AssetTypeMismatchError`. Loading
-through a token other than the one registered in `loaders` throws the same
+through a token other than the one registered with the loader throws the same
 error.

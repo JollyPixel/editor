@@ -56,11 +56,11 @@ export class TextureAssetLoader implements AssetLoader<THREE.Texture> {
   ): Promise<THREE.Texture> {
     let texture: THREE.Texture;
     try {
-      texture = await this.#loadSource(record.source);
+      texture = await this.#loadSource(record.path.toString());
     }
     catch (error: unknown) {
       throw new Error(
-        `Failed to load texture: ${record.source}`,
+        `Failed to load texture: ${record.path}`,
         { cause: error }
       );
     }

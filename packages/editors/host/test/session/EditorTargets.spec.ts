@@ -17,12 +17,12 @@ function setup() {
   const catalog = new FakeSessionCatalog([
     {
       ...record("forest", "voxelmap"),
-      source: "maps/forest.voxelmap"
+      path: "maps/forest.voxelmap"
     },
     record("tex", "pixelart"),
     {
       ...record("cave", "voxelmap"),
-      source: "maps/cave.voxelmap"
+      path: "maps/cave.voxelmap"
     }
   ]);
   const navigator = new FakeNavigator();

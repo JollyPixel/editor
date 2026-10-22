@@ -15,7 +15,7 @@ import {
   type JollyChangeDetail,
   type JollyOption
 } from "@jolly-pixel/ui";
-import { AssetSource } from "@jolly-pixel/asset";
+import { AssetPath } from "@jolly-pixel/asset";
 import type { AssetTag } from "@jolly-pixel/asset-server/client";
 import type { Lantern } from "@jolly-pixel/lantern";
 
@@ -540,11 +540,9 @@ function assetSelect(
   targets: EditorTargets
 ): AssetSelect | null {
   const options = Array.from(targets, (record) => {
-    const source = new AssetSource(record.source);
-
     return {
       value: record.id,
-      label: `${source.directory}${source.name}`
+      label: new AssetPath(record.path).withoutExtension().toString()
     };
   });
 

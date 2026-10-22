@@ -88,7 +88,7 @@ async function withBackend(
       }
     });
     const record = backend.catalog.snapshot().assets
-      .find((entry) => entry.source === kFilePath)!;
+      .find((entry) => entry.path === kFilePath)!;
 
     await run({
       root,

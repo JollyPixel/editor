@@ -2,6 +2,7 @@
 import { Emitter } from "@openally/emitt";
 import {
   AssetId,
+  AssetKind,
   AssetKindMismatchError,
   AssetNotFoundError,
   AssetRoom,
@@ -221,8 +222,8 @@ export class AssetLeases extends Emitter<AssetLeasesEvents> {
     if (record.kind !== kindName) {
       throw new AssetKindMismatchError(
         new AssetId(assetId),
-        kindName,
-        record.kind
+        new AssetKind(kindName),
+        new AssetKind(record.kind)
       );
     }
 

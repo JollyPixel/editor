@@ -1,15 +1,16 @@
 // Import Internal Dependencies
 import type { AssetId } from "../AssetId.ts";
+import type { AssetKind } from "../AssetKind.ts";
 
 export class AssetKindMismatchError extends Error {
   readonly id: AssetId;
-  readonly expectedKind: string;
-  readonly actualKind: string;
+  readonly expectedKind: AssetKind;
+  readonly actualKind: AssetKind;
 
   constructor(
     id: AssetId,
-    expectedKind: string,
-    actualKind: string
+    expectedKind: AssetKind,
+    actualKind: AssetKind
   ) {
     super(
       `Asset "${id}" has kind "${actualKind}" but ` +

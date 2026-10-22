@@ -26,7 +26,7 @@ flowchart TB
 
     Reference --> Coordinator
     Coordinator -->|"resolve"| Persistent
-    Record -->|"source"| RuntimeState
+    Record -->|"path"| RuntimeState
     Coordinator -->|"load() and loadBatch()"| Loader
     Coordinator -->|"request()"| Handle
     Batch -->|"shares in-flight work"| Coordinator
@@ -104,6 +104,6 @@ failure list.
 
 Catalog records and loaded values have separate lifetimes. Replacing or
 removing an `AssetRecord` does not evict the value loaded from its previous
-source. A runtime that applies catalog revisions should update the catalog,
+path. A runtime that applies catalog revisions should update the catalog,
 call `AssetCoordinator.evict()`, dispose the returned value, and start the next load at its chosen
 boundary.

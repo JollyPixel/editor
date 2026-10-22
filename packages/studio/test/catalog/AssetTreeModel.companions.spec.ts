@@ -66,12 +66,12 @@ describe("AssetTreeModel companions", () => {
       {
         id: "map-overworld",
         kind: "voxelmap",
-        source: "maps/overworld.voxelmap.json"
+        path: "maps/overworld.voxelmap.json"
       },
       {
         id: "blockset-overworld",
         kind: "blockset",
-        source: "blocksets/overworld.blockset.json"
+        path: "blocksets/overworld.blockset.json"
       }
     ]);
 
@@ -84,7 +84,7 @@ describe("AssetTreeModel companions", () => {
       {
         id: "model-overworld",
         kind: "voxelmodel",
-        source: "maps/overworld.voxelmodel.json"
+        path: "maps/overworld.voxelmodel.json"
       }
     ];
     const model = createCompanionModel(records, {
@@ -185,7 +185,7 @@ describe("AssetTreeModel companions", () => {
       {
         id: "blockset-island",
         kind: "blockset",
-        source: "maps/island.blockset.json"
+        path: "maps/island.blockset.json"
       }
     ]);
 

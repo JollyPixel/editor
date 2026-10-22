@@ -48,7 +48,7 @@ describe("voxel model created without content", () => {
     await backend.flush();
 
     const texture = backend.catalog.snapshot().assets
-      .find((record) => record.source === "models/new.pixelart");
+      .find((record) => record.path === "models/new.pixelart");
     assert.strictEqual(texture?.kind, PIXEL_ART_KIND);
 
     const reference = {

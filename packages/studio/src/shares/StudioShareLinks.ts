@@ -47,7 +47,7 @@ export class StudioShareLinks extends EventTarget {
       this.#links.filter((link) => link.assetId === assetId);
 
     return ShareLinkRow.newestFirst(links, {
-      assetPath: (id) => catalog.record(id)?.source,
+      assetPath: (id) => catalog.record(id)?.path,
       username: (accountId) => [...this.roster].find(
         (entry) => entry.id === accountId
       )?.username,

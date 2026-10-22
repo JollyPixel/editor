@@ -16,7 +16,7 @@ $ yarn add @jolly-pixel/asset
 
 An asset keeps the same identity when its file, URL, or revision changes.
 Scenes and components store an `AssetReference`. An `AssetCatalog` resolves
-that reference to an `AssetRecord`, which describes the current source and
+that reference to an `AssetRecord`, which describes the current path and
 revision.
 
 ```mermaid
@@ -25,7 +25,7 @@ flowchart TB
     Reference["AssetReference<br/>id + expected kind"]
     Coordinator["AssetCoordinator"]
     Catalog["AssetCatalog"]
-    Record["AssetRecord<br/>source + revision"]
+    Record["AssetRecord<br/>path + revision"]
     Loader["AssetLoader"]
     Handle["AssetHandle<br/>asset value"]
 
@@ -33,7 +33,7 @@ flowchart TB
     Reference --> Coordinator
     Coordinator -->|"resolve"| Catalog
     Catalog --> Record
-    Record -->|"source"| Loader
+    Record -->|"path"| Loader
     Loader -->|"runtime value"| Coordinator
     Coordinator --> Handle
     Handle -->|"synchronous access"| Scene
@@ -84,7 +84,7 @@ class GameScene extends Systems.Scene {
 ```
 
 The engine's `SceneManager` loads `scene.assets` before activating the scene. The
-catalog supplies the source for `"hero-model"`; gameplay code keeps the stable
+catalog supplies the path for `"hero-model"`; gameplay code keeps the stable
 reference. The [game developer guide](./docs/guides/using-assets-in-a-game.md)
 shows the matching catalog and runtime setup.
 
@@ -102,12 +102,14 @@ Start here. These types define persistent asset identity and catalog lookup.
 ### Supporting domain types
 
 - [`AssetId`](./docs/api/domain/AssetId.md): validated stable identity.
+- [`AssetKind`](./docs/api/domain/AssetKind.md): the validated persistent
+  category of an asset.
 - [`AssetType`](./docs/api/domain/AssetType.md): the shared token connecting a
   persistent kind to its loaded value type.
-- [`AssetRecord`](./docs/api/domain/AssetRecord.md): source and revision metadata
+- [`AssetRecord`](./docs/api/domain/AssetRecord.md): path and revision metadata
   held by a catalog.
-- [`AssetSource`](./docs/api/domain/AssetSource.md): a workspace-relative source
-  path split into directory, name, and extension.
+- [`AssetPath`](./docs/api/domain/AssetPath.md): a workspace-relative path
+  split into directory, name, and extension.
 - [`AssetRoom`](./docs/api/domain/AssetRoom.md): the `${kind}:${assetId}`
   network room name of one asset.
 

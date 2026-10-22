@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { AssetSource as AssetSourcePath } from "@jolly-pixel/asset";
+import { AssetPath } from "@jolly-pixel/asset";
 import {
   Err,
   Ok,
@@ -14,7 +14,6 @@ import type {
 import type { AssetKindRegistry } from "../../model/kinds/AssetKindRegistry.ts";
 import { UnknownAssetKindError } from "../../model/kinds/errors/UnknownAssetKindError.ts";
 import {
-  siblingPath,
   writableAssetPath,
   type AssetPathAllocator
 } from "./AssetPathAllocator.ts";
@@ -71,7 +70,7 @@ export class AssetCreationPlanner {
       return Err(error);
     }
 
-    const requested = new AssetSourcePath(writable.val);
+    const requested = new AssetPath(writable.val);
     const handler = input.kind === undefined ?
       this.#kinds.resolve(writable.val) :
       this.#kinds.get(input.kind);
@@ -82,17 +81,17 @@ export class AssetCreationPlanner {
       return companions;
     }
 
-    const source = this.#paths.allocate({
-      source: requested,
+    const allocated = this.#paths.allocate({
+      path: requested,
       siblingExtensions: companions.val.map(({ extension }) => extension),
       assetId: input.assetId,
       onPathConflict: input.onPathConflict
     });
-    if (!source.ok) {
-      return source;
+    if (!allocated.ok) {
+      return allocated;
     }
 
-    const path = source.val.toString();
+    const path = allocated.val.toString();
     const assetId = input.assetId ??
       this.#paths.dormantId(path) ??
       crypto.randomUUID();
@@ -114,7 +113,7 @@ export class AssetCreationPlanner {
         await this.#scaffold(
           handler,
           assetId,
-          source.val,
+          allocated.val,
           companions.val
         )
       );
@@ -127,14 +126,15 @@ export class AssetCreationPlanner {
   async #scaffold(
     handler: AnyAssetKindHandler,
     assetId: string,
-    source: AssetSourcePath,
+    path: AssetPath,
     companions: readonly PlannedCompanion[]
   ): Promise<AssetCreationPlan> {
     const state = handler.create(assetId);
     const planned: PlannedAsset[] = [];
     for (const { companion, handler: companionHandler, extension } of companions) {
-      const path = siblingPath(source, extension);
-      const companionId = this.#paths.dormantId(path) ?? crypto.randomUUID();
+      const companionPath = path.withExtension(extension).toString();
+      const companionId = this.#paths.dormantId(companionPath) ??
+        crypto.randomUUID();
 
       companion.link(state, {
         id: companionId,
@@ -142,7 +142,7 @@ export class AssetCreationPlanner {
       });
       planned.push({
         assetId: companionId,
-        path,
+        path: companionPath,
         kind: companionHandler.kind,
         data: await companionHandler.serialize(
           companionHandler.create(companionId)
@@ -153,7 +153,7 @@ export class AssetCreationPlanner {
     return {
       owner: {
         assetId,
-        path: source.toString(),
+        path: path.toString(),
         kind: handler.kind,
         data: await handler.serialize(state)
       },

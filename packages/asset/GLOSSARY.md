@@ -10,7 +10,7 @@ transport belong to neighboring contexts.
 ### Asset
 
 A logical resource used by a project or runtime. An asset keeps its identity
-when its source or content changes.
+when its path or content changes.
 
 ### Asset ID
 
@@ -36,7 +36,7 @@ They do not contain a storage location.
 ### Asset Record
 
 The catalog description of one asset. A record connects its stable ID and kind
-to a source, with an optional revision.
+to a path, with an optional revision.
 
 ### Asset Catalog
 
@@ -44,7 +44,7 @@ The authoritative collection of asset records for one project or session. It
 resolves references while keeping storage details outside scenes and
 components.
 
-### Asset Source
+### Asset Path
 
 An opaque address understood by a loader. It may represent a project path,
 URL, filesystem location, database key, or another application-defined scheme.
@@ -94,7 +94,7 @@ progress and failures while sharing loaded values with other batches.
 
 ## Naming boundaries
 
-- Use **asset** for the logical resource, **source** for its address, and
+- Use **asset** for the logical resource, **path** for its address, and
   **value** for its loaded form.
 - Use **asset ID** for identity, **asset reference** for a consumer's need, and
   **asset record** for catalog metadata.

@@ -13,12 +13,12 @@ import {
 } from "../../src/assets/index.ts";
 
 function textureRecord(
-  source: string
+  path: string
 ): AssetRecord {
   return new AssetRecord({
     id: "texture.grass",
     kind: "texture",
-    source
+    path
   });
 }
 

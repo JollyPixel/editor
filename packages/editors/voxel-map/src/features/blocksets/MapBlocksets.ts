@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import {
-  AssetSource,
+  AssetPath,
   type AssetRecordData
 } from "@jolly-pixel/asset";
 import type { CatalogCreateOptions } from "@jolly-pixel/asset-server/client";
@@ -313,7 +313,7 @@ export class MapBlocksets
 
     return [...this.#catalog.records()]
       .filter((record) => BlocksetEntry.isBlocksetAsset(record) && !linked.has(record.id))
-      .sort((left, right) => left.source.localeCompare(right.source));
+      .sort((left, right) => left.path.localeCompare(right.path));
   }
 
   async create(
@@ -363,10 +363,10 @@ export class MapBlocksets
       return;
     }
 
-    const to = new AssetSource(record.source)
+    const to = new AssetPath(record.path)
       .withName(trimmed)
       .toString();
-    if (to !== record.source) {
+    if (to !== record.path) {
       await this.#catalog.rename(record.id, to);
     }
   }

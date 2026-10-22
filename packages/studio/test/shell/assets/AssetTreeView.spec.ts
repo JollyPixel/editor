@@ -27,12 +27,12 @@ import {
 const kMap: AssetRecordData = {
   id: "map-1",
   kind: "voxelmap",
-  source: "maps/overworld.voxelmap.json"
+  path: "maps/overworld.voxelmap.json"
 };
 const kModel: AssetRecordData = {
   id: "model-1",
   kind: "voxelmodel",
-  source: "maps/hero.voxelmodel.json"
+  path: "maps/hero.voxelmodel.json"
 };
 const kKinds = new AssetKindSet({
   kinds: [
@@ -174,7 +174,7 @@ describe("AssetTreeView", () => {
 
     assert.deepEqual(asked, [".png", ".vox"]);
     assert.deepEqual(
-      [...catalog.records()].map((record) => record.source).sort(),
+      [...catalog.records()].map((record) => record.path).sort(),
       [
         "maps/hero.pixelart",
         "maps/notes.txt",

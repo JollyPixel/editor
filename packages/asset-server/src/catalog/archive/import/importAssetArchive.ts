@@ -80,7 +80,7 @@ export async function importAssetArchive(
     (current === undefined ? created : replaced).push({
       id: asset.id,
       kind: asset.kind,
-      path: backend.catalog.record(asset.id)?.source ?? path
+      path: backend.catalog.record(asset.id)?.path.toString() ?? path
     });
   }
 

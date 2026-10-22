@@ -7,7 +7,7 @@ record that can change over time.
 flowchart TB
     Reference["AssetReference<br/>id + expected kind"]
     Catalog["AssetCatalog"]
-    Record["AssetRecord<br/>source + revision"]
+    Record["AssetRecord<br/>path + revision"]
     Manifest[("Asset manifest<br/>versioned JSON")]
 
     Reference -->|"resolve and validate"| Catalog
@@ -32,12 +32,12 @@ small enough for scenes, components, saved data, and network messages:
 }
 ```
 
-The reference carries no source address.
+The reference carries no asset path.
 
 ## Catalog records
 
 `AssetCatalog` owns the current `AssetRecord` for each ID. A record connects
-the ID and kind to an opaque source. Loaders interpret that source according to
+the ID and kind to an opaque path. Loaders interpret that path according to
 the platform and asset type.
 
 The optional revision can hold a content hash, entity tag, or backend revision

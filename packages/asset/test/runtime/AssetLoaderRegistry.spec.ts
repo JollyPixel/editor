@@ -15,7 +15,7 @@ import {
 // CONSTANTS
 const kTextAsset = new AssetType<string>("text");
 const kTextLoader: AssetLoader<string> = {
-  load: async(record) => record.source
+  load: async(record) => record.path.toString()
 };
 
 describe("AssetLoaderRegistry", () => {

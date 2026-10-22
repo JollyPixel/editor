@@ -28,14 +28,14 @@ export class AssetLoaderRegistry {
     type: AssetType<TValue>,
     loader: AssetLoader<TValue>
   ): this {
-    if (this.#loaders.has(type.kind)) {
+    if (this.#loaders.has(type.kind.value)) {
       throw new AssetLoaderAlreadyExistsError(
         type.kind
       );
     }
 
     this.#loaders.set(
-      type.kind,
+      type.kind.value,
       {
         type,
         loader
@@ -49,14 +49,14 @@ export class AssetLoaderRegistry {
     type: AssetType<unknown>
   ): boolean {
     return this.#loaders.get(
-      type.kind
+      type.kind.value
     )?.type === type;
   }
 
   get<TValue>(
     type: AssetType<TValue>
   ): AssetLoader<TValue> {
-    const entry = this.#loaders.get(type.kind);
+    const entry = this.#loaders.get(type.kind.value);
     if (entry === undefined) {
       throw new AssetLoaderNotFoundError(type.kind);
     }

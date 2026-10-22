@@ -23,22 +23,22 @@ const kRecords: AssetRecordData[] = [
   {
     id: "map-1",
     kind: "voxelmap",
-    source: "maps/overworld.voxelmap.json"
+    path: "maps/overworld.voxelmap.json"
   },
   {
     id: "tex-1",
     kind: "pixelart",
-    source: "textures/stone.pixelart"
+    path: "textures/stone.pixelart"
   },
   {
     id: "tex-2",
     kind: "pixelart",
-    source: "textures/old/stone.pixelart"
+    path: "textures/old/stone.pixelart"
   },
   {
     id: "readme",
     kind: "binary",
-    source: "README.bin"
+    path: "README.bin"
   }
 ];
 const kModel = new AssetTreeModel(kRecords);

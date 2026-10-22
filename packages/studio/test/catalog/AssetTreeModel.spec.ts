@@ -24,32 +24,32 @@ const kRecords: AssetRecordData[] = [
   {
     id: "tex-b",
     kind: "pixelart",
-    source: "textures/b.pixelart"
+    path: "textures/b.pixelart"
   },
   {
     id: "map-1",
     kind: "voxelmap",
-    source: "maps/overworld.voxelmap.json"
+    path: "maps/overworld.voxelmap.json"
   },
   {
     id: "readme",
     kind: "binary",
-    source: "README.bin"
+    path: "README.bin"
   },
   {
     id: "tex-a",
     kind: "pixelart",
-    source: "textures/A.pixelart"
+    path: "textures/A.pixelart"
   },
   {
     id: "tex-nested",
     kind: "pixelart",
-    source: "textures/blocks/stone.pixelart"
+    path: "textures/blocks/stone.pixelart"
   },
   {
     id: "map-2",
     kind: "voxelmap",
-    source: "maps/cave.voxelmap.json"
+    path: "maps/cave.voxelmap.json"
   }
 ];
 const kModel = new AssetTreeModel(kRecords);
@@ -166,7 +166,7 @@ describe("AssetTreeModel kind filter", () => {
       {
         id: "map-in-textures",
         kind: "voxelmap",
-        source: "textures/level.voxelmap.json"
+        path: "textures/level.voxelmap.json"
       }
     ], { kind: "pixelart" });
 
@@ -221,12 +221,12 @@ describe("AssetTreeModel.planRename", () => {
       {
         id: "inside",
         kind: "binary",
-        source: "map/a.bin"
+        path: "map/a.bin"
       },
       {
         id: "outside",
         kind: "binary",
-        source: "maps/b.bin"
+        path: "maps/b.bin"
       }
     ]);
 

@@ -158,7 +158,7 @@ describe("EditorSession archives", () => {
     const catalog = client.fakeRoom(CATALOG_ROOM);
     catalog.receive(changedMessage("map", {
       ...MAP,
-      source: "maps/overworld.voxelmap.json"
+      path: "maps/overworld.voxelmap.json"
     }));
 
     const downloading = archives.download();
