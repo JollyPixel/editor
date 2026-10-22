@@ -6,6 +6,7 @@ import {
 } from "./ChunkCoord.ts";
 import {
   OverviewMap,
+  overviewSamples,
   type OverviewReader
 } from "./OverviewMap.ts";
 import { SampleBlock } from "./SampleBlock.ts";
@@ -22,6 +23,7 @@ export interface TerrainReader {
   chunks(): IterableIterator<TerrainChunk>;
   chunk(coord: ChunkCoord): TerrainChunk | undefined;
   has(coord: ChunkCoord): boolean;
+  knows(coord: ChunkCoord): boolean;
   touches(coord: ChunkCoord): boolean;
   sampleAt(sampleX: number, sampleZ: number): number;
   sampleBlock(coord: ChunkCoord): SampleBlock;
@@ -53,23 +55,56 @@ export class Terrain implements TerrainReader {
     return this.#chunks.has(coord.key);
   }
 
+  knows(
+    coord: ChunkCoord
+  ): boolean {
+    return this.overview.has(coord);
+  }
+
   touches(
     coord: ChunkCoord
   ): boolean {
-    return coord.neighbours().some((neighbour) => this.has(neighbour));
+    return coord.neighbours().some((neighbour) => this.knows(neighbour));
   }
 
   addChunk(
     coord: ChunkCoord,
     heights: Float32Array = this.seedHeights(coord)
   ): TerrainChunk {
-    if (this.has(coord)) {
+    if (this.knows(coord)) {
       throw new Error(`Chunk ${coord.key} already exists.`);
     }
 
-    const chunk = new TerrainChunk(coord, heights);
-    this.#chunks.set(coord.key, chunk);
-    this.overview.derive(chunk);
+    return this.#load(coord, heights);
+  }
+
+  addUnloadedChunk(
+    coord: ChunkCoord,
+    samples: Float32Array
+  ): void {
+    if (this.knows(coord)) {
+      throw new Error(`Chunk ${coord.key} already exists.`);
+    }
+
+    this.overview.set(coord, samples);
+  }
+
+  loadChunk(
+    coord: ChunkCoord,
+    heights: Float32Array
+  ): TerrainChunk {
+    if (!this.knows(coord)) {
+      throw new Error(`Chunk ${coord.key} does not exist.`);
+    }
+
+    return this.#load(coord, heights);
+  }
+
+  unloadChunk(
+    coord: ChunkCoord
+  ): TerrainChunk | undefined {
+    const chunk = this.#chunks.get(coord.key);
+    this.#chunks.delete(coord.key);
 
     return chunk;
   }
@@ -100,17 +135,30 @@ export class Terrain implements TerrainReader {
 
     const previous = chunk.tileHeights(tile.x, tile.z);
     chunk.writeTile(tile.x, tile.z, heights);
-    this.overview.derive(chunk);
+    this.overview.writeTile(tile, heights);
 
     return previous;
+  }
+
+  writeOverviewTile(
+    tile: TileCoord,
+    heights: Float32Array
+  ): boolean {
+    if (this.has(tile.chunk)) {
+      throw new Error(`Chunk ${tile.chunk.key} is loaded; write its tile instead.`);
+    }
+
+    return this.overview.writeTile(tile, heights);
   }
 
   sampleAt(
     sampleX: number,
     sampleZ: number
   ): number {
-    return this.sampleBlock(ChunkCoord.containing(sampleX, sampleZ))
-      .height(sampleX, sampleZ);
+    const coord = ChunkCoord.containing(sampleX, sampleZ);
+    const overview = this.has(coord) ? undefined : this.overview.interpolate(sampleX, sampleZ);
+
+    return overview ?? this.sampleBlock(coord).height(sampleX, sampleZ);
   }
 
   sampleBlock(
@@ -138,6 +186,17 @@ export class Terrain implements TerrainReader {
     }
 
     return heights;
+  }
+
+  #load(
+    coord: ChunkCoord,
+    heights: Float32Array
+  ): TerrainChunk {
+    const chunk = new TerrainChunk(coord, heights);
+    this.#chunks.set(coord.key, chunk);
+    this.overview.set(coord, overviewSamples(chunk));
+
+    return chunk;
   }
 
   #nearestSamples(): Pick<SampleBlock, "height"> {

@@ -8,6 +8,7 @@ export {
   OVERVIEW_SAMPLES,
   OVERVIEW_SPACING,
   OverviewMap,
+  isOverviewTile,
   overviewSamples,
   type OverviewReader
 } from "./terrain/OverviewMap.ts";

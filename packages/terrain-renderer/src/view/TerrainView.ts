@@ -129,11 +129,21 @@ export class TerrainView {
     this.#requestFrame();
   }
 
+  overviewChanged(
+    coords: Iterable<ChunkCoord>
+  ): void {
+    this.#textures.overviewChanged(coords);
+    this.#requestFrame();
+  }
+
   reset(): void {
     this.#textures.clear();
     for (const { coord } of this.#terrain.chunks()) {
       this.#textures.chunkAdded(coord);
     }
+    this.#textures.overviewChanged(
+      [...this.#terrain.overview.coords()].filter((coord) => !this.#terrain.has(coord))
+    );
     this.#requestFrame();
   }
 

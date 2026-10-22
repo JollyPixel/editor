@@ -19,7 +19,7 @@ import { encodeHeights } from "../network/heights.ts";
 import { patchBatches } from "../network/patchBatches.ts";
 import { encodeTilePatch } from "../network/tilePatches.ts";
 import type {
-  ChunkSnapshot,
+  ChunkEntry,
   TerrainCommand,
   TerrainSnapshot
 } from "../network/types.ts";
@@ -29,11 +29,19 @@ import {
   loadTerrainSnapshot,
   terrainSnapshot
 } from "./terrainState.ts";
+import { TerrainStream } from "./TerrainStream.ts";
 
 export interface ChunkImage {
   readonly x: number;
   readonly z: number;
+  /**
+   * The chunk's encoded heights, or `null` when it is unloaded or absent.
+   */
   readonly heights: string | null;
+  /**
+   * The encoded overview samples of an unloaded chunk.
+   */
+  readonly overview?: string;
 }
 
 export type TerrainImage = readonly ChunkImage[];
@@ -46,11 +54,20 @@ export class TerrainDocument extends CommandDocument<
   TerrainImage
 > {
   readonly terrain: TerrainReader;
+  readonly stream: TerrainStream;
 
   constructor() {
     const terrain = new Terrain();
-    super(terrainState(terrain));
+    const stream = new TerrainStream(terrain);
+    super(terrainState(terrain, stream));
     this.terrain = terrain;
+    this.stream = stream;
+    this.on("change", ({ command }) => {
+      if (command.action !== "heights-patched") {
+        stream.refresh();
+      }
+    });
+    this.on("reset", () => stream.refresh());
   }
 
   addChunk(
@@ -58,7 +75,7 @@ export class TerrainDocument extends CommandDocument<
     z: number
   ): boolean {
     const coord = new ChunkCoord(x, z);
-    if (this.terrain.has(coord)) {
+    if (this.terrain.knows(coord)) {
       return false;
     }
 
@@ -96,20 +113,15 @@ export class TerrainDocument extends CommandDocument<
 }
 
 function terrainState(
-  terrain: Terrain
+  terrain: Terrain,
+  stream: TerrainStream
 ): CommandState<TerrainCommand, TerrainSnapshot, TerrainImage> {
   return {
     accepts: (command) => acceptsTerrainCommand(terrain, command),
     placeable: (command) => command,
-    apply: (command) => applyTerrainCommand(terrain, command),
+    apply: (command) => applyTerrainCommand(terrain, command, (coord) => stream.wants(coord)),
     load: (snapshot) => loadTerrainSnapshot(terrain, snapshot),
-    captureImage: (command) => touchedChunks(command).map(({ x, z }) => {
-      return {
-        x,
-        z,
-        heights: encodedHeightsAt(terrain, x, z)
-      };
-    }),
+    captureImage: (command) => touchedChunks(command).map(({ x, z }) => chunkImage(terrain, x, z)),
     invert: (command) => invertCommand(terrain, command),
     restored: (images) => restoreImages(terrainSnapshot(terrain), images)
   };
@@ -142,6 +154,19 @@ function invertCommand(
   }
 }
 
+function chunkImage(
+  terrain: TerrainReader,
+  x: number,
+  z: number
+): ChunkImage {
+  const coord = new ChunkCoord(x, z);
+  const overview = terrain.has(coord) ? undefined : terrain.overview.samples(coord);
+
+  return overview === undefined ?
+    { x, z, heights: encodedHeightsAt(terrain, x, z) } :
+    { x, z, heights: null, overview: encodeHeights(overview) };
+}
+
 function encodedHeightsAt(
   terrain: TerrainReader,
   x: number,
@@ -156,17 +181,18 @@ function restoreImages(
   snapshot: TerrainSnapshot,
   images: readonly TerrainImage[]
 ): TerrainSnapshot {
-  const chunks = new Map<ChunkKey, ChunkSnapshot>(
+  const chunks = new Map<ChunkKey, ChunkEntry>(
     snapshot.chunks.map((chunk) => [new ChunkCoord(chunk.x, chunk.z).key, chunk])
   );
   for (const image of [...images].reverse()) {
-    for (const { x, z, heights } of image) {
-      const key = new ChunkCoord(x, z).key;
-      if (heights === null) {
+    for (const chunk of image) {
+      const key = new ChunkCoord(chunk.x, chunk.z).key;
+      const restored = restoredEntry(chunks.get(key), chunk);
+      if (restored === null) {
         chunks.delete(key);
       }
       else {
-        chunks.set(key, { x, z, heights });
+        chunks.set(key, restored);
       }
     }
   }
@@ -174,4 +200,18 @@ function restoreImages(
   return {
     chunks: [...chunks.values()]
   };
+}
+
+function restoredEntry(
+  current: ChunkEntry | undefined,
+  { x, z, heights, overview }: ChunkImage
+): ChunkEntry | null {
+  if (heights !== null) {
+    return { x, z, heights };
+  }
+  if (overview === undefined) {
+    return null;
+  }
+
+  return current?.heights === undefined ? { x, z, overview } : current;
 }

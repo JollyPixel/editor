@@ -163,6 +163,18 @@ never empty. It is rebuilt incrementally from the chunks that change.
   its chunks; loading a chunk derives its samples from its heights.
 - Colour arrives with the terrain layers in M3. Until then the overview holds
   heights only.
+- A vertex or fragment on an unloaded chunk reads the overview, interpolated
+  bilinearly between its four nearest samples; on a loaded chunk it reads the
+  chunk's heights. The height is a function of position only, so two nodes
+  sharing an edge always agree and no crack opens where loaded ground meets
+  unloaded ground. A chunk's apron reads an unloaded neighbour the same way.
+- The view keeps the overview in one 512×512 `R32F` texture, two texels per
+  chunk on each axis, indexed by chunk coordinates modulo 256 like the
+  lookup texture. The lookup marks each known chunk, loaded or not; fragments
+  on unknown ground are discarded.
+- The quadtree covers every known chunk. An unloaded chunk's node bounds span
+  its overview samples and those of the chunks east, north and north-east of
+  it, which bound the interpolated surface.
 
 ### Points of interest
 

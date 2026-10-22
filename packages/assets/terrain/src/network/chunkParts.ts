@@ -1,14 +1,21 @@
 // Import Third-party Dependencies
 import {
   ChunkCoord,
+  isOverviewTile,
+  TileCoord,
   type ChunkKey
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
+import { CHUNK_TILE_COUNT } from "./TerrainCommand.schema.ts";
 import type { TerrainCommand } from "./types.ts";
 
 // CONSTANTS
 const kPartIdPattern = /^(-?\d+)_(-?\d+)$/;
+const kOverviewTiles = new Set(
+  Array.from({ length: CHUNK_TILE_COUNT }, (_, index) => index)
+    .filter((index) => isOverviewTile(TileCoord.fromIndex(new ChunkCoord(0, 0), index)))
+);
 
 export function chunkPartId(
   coord: ChunkCoord
@@ -40,4 +47,16 @@ export function touchedChunks(
   }
 
   return [...chunks.values()];
+}
+
+export function outsideCommand<TCommand extends TerrainCommand>(
+  command: TCommand
+): TCommand | null {
+  if (command.action !== "heights-patched") {
+    return command;
+  }
+
+  const tiles = command.tiles.filter(({ tile }) => kOverviewTiles.has(tile));
+
+  return tiles.length === 0 ? null : { ...command, tiles };
 }

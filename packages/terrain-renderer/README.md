@@ -25,18 +25,32 @@ steps circle the four chunks that meet at a corner.
 Other missing samples copy the outer sample of the nearest neighbour, with
 equal-distance ties going to the left, below, then diagonal neighbour.
 
-`Terrain.overview` is the overview map: each chunk's heights at its
-2×2 points of the 32 m grid, `OVERVIEW_SPACING` samples apart. Adding,
-removing or writing a chunk updates its own samples. `overview.samples(coord)`
-returns a chunk's four samples, row by row, and `overview.heightAt(x, z)` the
-sample at a 32 m grid point, or `undefined` off the grid or without a chunk.
-
 The shader reads these samples from each chunk's height apron, which is as
 wide as that border, so its own neighbour order does not change what is
 drawn. A chunk added next to the terrain is seeded from its sample block, so
 it keeps the heights shown before the add. Because the steps do not depend on
 which chunks exist, a sample that now stops on the added chunk reads the value
 it stepped to before, and no other chunk's apron changes.
+
+`Terrain.overview` is the overview map: each chunk's heights at its
+2×2 points of the 32 m grid, `OVERVIEW_SPACING` samples apart. Adding,
+removing or writing a chunk updates its own samples. `overview.samples(coord)`
+returns a chunk's four samples, row by row, `overview.heightAt(x, z)` the
+sample at a 32 m grid point, or `undefined` off the grid or without a chunk,
+and `overview.interpolate(x, z)` the height between the four nearest samples.
+
+The overview lists every chunk the document knows; only loaded chunks have
+heights. `knows(coord)` tells whether a chunk exists, `has(coord)` whether it
+is loaded. `addUnloadedChunk(coord, samples)` adds a chunk by its overview
+samples, `loadChunk(coord, heights)` loads a known chunk and
+`unloadChunk(coord)` drops its heights and keeps its samples.
+`writeOverviewTile(tile, heights)` writes the samples a tile of an unloaded
+chunk holds. `sampleAt` reads the interpolated overview on an unloaded chunk.
+
+`TerrainView` draws unloaded chunks from the overview, so loaded and unloaded
+ground meet without a crack. Call `chunkAdded` and `chunkRemoved` when a chunk
+loads or unloads, and `overviewChanged(coords)` when unloaded chunks are added
+or removed or their samples change.
 
 ## License
 

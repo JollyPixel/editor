@@ -37,12 +37,19 @@ import {
 
 // Import Internal Dependencies
 import { CHUNK_SAMPLES } from "../../terrain/ChunkCoord.ts";
+import {
+  OVERVIEW_SAMPLES,
+  OVERVIEW_SPACING
+} from "../../terrain/OverviewMap.ts";
 import { SKIRT_EDGES } from "../lod/skirtMasks.ts";
 import {
   APRON_MARGIN,
   APRON_SIZE
 } from "../textures/heightApron.ts";
-import { LOOKUP_SIZE } from "../textures/ChunkTextureStore.ts";
+import {
+  LOOKUP_SIZE,
+  OVERVIEW_TEXTURE_SIZE
+} from "../textures/ChunkTextureStore.ts";
 
 // CONSTANTS
 export const NODE_DATA_ATTRIBUTE = "terrainNode";
@@ -63,6 +70,7 @@ export const DEFAULT_WALKABLE_SLOPE = 45;
 export const MAX_WALKABLE_SLOPE = 90;
 export type TerrainOverlay = typeof TERRAIN_OVERLAYS[number];
 
+type BoolNode = Node<"bool">;
 type FloatNode = Node<"float">;
 type IntNode = Node<"int">;
 type Vec2Node = Node<"vec2">;
@@ -70,6 +78,7 @@ type Vec2Node = Node<"vec2">;
 export interface TerrainTextures {
   heights: THREE.DataArrayTexture;
   lookup: THREE.DataTexture;
+  overview: THREE.DataTexture;
 }
 
 export interface TerrainShading {
@@ -91,16 +100,63 @@ export function createTerrainShading(
     metalness: 0
   });
 
+  function lookupEntry(
+    chunk: Vec2Node
+  ) {
+    const slot = chunk.sub(floor(chunk.div(LOOKUP_SIZE)).mul(LOOKUP_SIZE));
+    const entry = textureLoad(textures.lookup, ivec2(slot));
+    const matches = entry.y.equal(chunk.x).and(entry.z.equal(chunk.y));
+
+    return { entry, matches };
+  }
+
   function chunkLayer(
     chunk: Vec2Node
   ): IntNode {
-    const slot = chunk.sub(floor(chunk.div(LOOKUP_SIZE)).mul(LOOKUP_SIZE));
-    const entry = textureLoad(textures.lookup, ivec2(slot));
-    const found = entry.x.greaterThan(0.5)
-      .and(entry.y.equal(chunk.x))
-      .and(entry.z.equal(chunk.y));
+    const { entry, matches } = lookupEntry(chunk);
 
-    return select(found, int(entry.x).sub(1), int(-1));
+    return select(entry.x.greaterThan(0.5).and(matches), int(entry.x).sub(1), int(-1));
+  }
+
+  function chunkKnown(
+    chunk: Vec2Node
+  ): BoolNode {
+    const { entry, matches } = lookupEntry(chunk);
+
+    return entry.w.greaterThan(0.5).and(matches);
+  }
+
+  function overviewHeight(
+    sample: Vec2Node
+  ): FloatNode {
+    const position = sample.div(OVERVIEW_SPACING);
+    const grid = floor(position);
+    const blend = position.sub(grid);
+    function corner(
+      offset: Vec2Node
+    ): { known: BoolNode; height: FloatNode; } {
+      const point = grid.add(offset);
+      const texel = point.sub(floor(point.div(OVERVIEW_TEXTURE_SIZE)).mul(OVERVIEW_TEXTURE_SIZE));
+
+      return {
+        known: chunkKnown(floor(point.div(OVERVIEW_SAMPLES))),
+        height: textureLoad(textures.overview, ivec2(texel)).x
+      };
+    }
+    const base = corner(vec2(0, 0)).height;
+    function cornerHeight(
+      offset: Vec2Node
+    ): FloatNode {
+      const { known, height } = corner(offset);
+
+      return select(known, height, base);
+    }
+
+    return mix(
+      mix(base, cornerHeight(vec2(1, 0)), blend.x),
+      mix(cornerHeight(vec2(0, 1)), cornerHeight(vec2(1, 1)), blend.x),
+      blend.y
+    );
   }
 
   function loadHeight(
@@ -153,8 +209,10 @@ export function createTerrainShading(
     sample: Vec2Node
   ): FloatNode {
     const { layer, texel } = sampleTexel(sample);
+    const chunk = floor(sample.div(CHUNK_SAMPLES));
+    const unloaded = chunkLayer(chunk).lessThan(int(0)).and(chunkKnown(chunk));
 
-    return loadHeight(layer, texel);
+    return select(unloaded, overviewHeight(sample), loadHeight(layer, texel));
   }
 
   const node = attribute(NODE_DATA_ATTRIBUTE, "vec4");
@@ -176,7 +234,7 @@ export function createTerrainShading(
     1
   );
   const outward = grid.zw;
-  const across = chunkLayer(floor(world.add(outward.mul(0.5)).div(CHUNK_SAMPLES)));
+  const across = chunkKnown(floor(world.add(outward.mul(0.5)).div(CHUNK_SAMPLES)));
   const edgeBit = SKIRT_EDGES.reduceRight<FloatNode>(
     (otherwise, { bit, outward: [outX, outZ] }) => select(
       outward.x.equal(outX).and(outward.y.equal(outZ)),
@@ -188,7 +246,7 @@ export function createTerrainShading(
   const edgeSkirted = edgeBit.greaterThan(0)
     .and(floor(morphRange.z.div(max(edgeBit, float(1)))).mod(2).greaterThan(0.5));
   const skirtDepth = select(
-    edgeSkirted.and(across.greaterThanEqual(int(0))),
+    edgeSkirted.and(across),
     node.w,
     float(0)
   );
@@ -220,10 +278,18 @@ export function createTerrainShading(
     return vec2(east.sub(west), north.sub(south)).mul(0.5);
   }
 
-  const gradient = mix(
-    mix(gradientAt(0, 0), gradientAt(1, 0), blend.x),
-    mix(gradientAt(0, 1), gradientAt(1, 1), blend.x),
-    blend.y
+  const overviewGradient = vec2(
+    overviewHeight(fragmentWorld.add(vec2(1, 0))).sub(overviewHeight(fragmentWorld.sub(vec2(1, 0)))),
+    overviewHeight(fragmentWorld.add(vec2(0, 1))).sub(overviewHeight(fragmentWorld.sub(vec2(0, 1))))
+  ).mul(0.5);
+  const gradient = select(
+    fragmentLayer.lessThan(int(0)),
+    overviewGradient,
+    mix(
+      mix(gradientAt(0, 0), gradientAt(1, 0), blend.x),
+      mix(gradientAt(0, 1), gradientAt(1, 1), blend.x),
+      blend.y
+    )
   );
   material.normalNode = transformNormalToView(
     normalize(vec3(gradient.x.negate(), float(1), gradient.y.negate()))
@@ -255,7 +321,7 @@ export function createTerrainShading(
   );
   const showLines = overlayIs("chunks").or(overlayIs("lod"));
   material.colorNode = Fn(() => {
-    Discard(fragmentLayer.lessThan(int(0)));
+    Discard(chunkKnown(fragmentChunk).not());
 
     return mix(surfaceColor, kLineColor, line.mul(select(showLines, float(1), float(0))));
   })();

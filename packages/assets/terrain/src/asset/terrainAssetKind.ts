@@ -42,6 +42,7 @@ import {
 } from "../network/TerrainCommand.schema.ts";
 import {
   chunkOfPart,
+  outsideCommand,
   chunkPartId,
   touchedChunks
 } from "../network/chunkParts.ts";
@@ -214,7 +215,7 @@ export function terrainAssetKind(
 
               return chunk === undefined ? null : encodeHeights(chunk.copyHeights());
             },
-            outside: (command) => command
+            outside: outsideCommand
           }
         };
       }

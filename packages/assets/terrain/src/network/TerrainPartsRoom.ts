@@ -11,15 +11,21 @@ import {
   ASSET_ROOM_MAX_PARTS_PER_MESSAGE,
   ASSET_ROOM_PARTS,
   ASSET_ROOM_SUBSCRIBE_PARTS,
+  ASSET_ROOM_UNSUBSCRIBE_PARTS,
   type AssetPartsRequest,
   type AssetRoomPartsMessage
 } from "@jolly-pixel/asset-server/client";
 import { ChunkCoord } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
-import { chunkPartId } from "./chunkParts.ts";
+import type { TerrainStream } from "../model/TerrainStream.ts";
+import {
+  chunkOfPart,
+  chunkPartId
+} from "./chunkParts.ts";
+import { decodeHeights } from "./heights.ts";
 import type {
-  ChunkSnapshot,
+  ChunkEntry,
   TerrainManifest,
   TerrainNetworkCommand,
   TerrainServerMessage
@@ -32,7 +38,7 @@ interface PendingSnapshot {
   readonly manifest: TerrainManifest;
   readonly heights: Map<string, string>;
   readonly waiting: Set<string>;
-  readonly held: TerrainServerMessage[];
+  readonly held: (TerrainServerMessage | AssetRoomPartsMessage)[];
 }
 
 export class TerrainPartsRoom implements Room<
@@ -40,8 +46,8 @@ export class TerrainPartsRoom implements Room<
   TerrainServerMessage
 > {
   #room: Room<TerrainNetworkCommand, unknown>;
+  #stream: TerrainStream;
   #listeners = new Set<(message: TerrainServerMessage) => void>();
-  #subscribed = new Set<string>();
   #clientId: string | null;
   #pending: PendingSnapshot | null = null;
 
@@ -64,17 +70,26 @@ export class TerrainPartsRoom implements Room<
 
   #onSync = (): void => {
     if (this.#room.clientId !== this.#clientId) {
+      const rejoined = this.#clientId !== null;
       this.#clientId = this.#room.clientId;
-      this.#subscribed.clear();
+      if (rejoined) {
+        this.#request(ASSET_ROOM_SUBSCRIBE_PARTS, [...this.#stream.subscribed()]);
+      }
     }
   };
 
   constructor(
-    room: Room<TerrainNetworkCommand, unknown>
+    room: Room<TerrainNetworkCommand, unknown>,
+    stream: TerrainStream
   ) {
     this.#room = room;
+    this.#stream = stream;
     this.#clientId = room.clientId;
     room.on("sync", this.#onSync);
+    stream.connect({
+      subscribe: (coords) => this.#request(ASSET_ROOM_SUBSCRIBE_PARTS, coords),
+      unsubscribe: (coords) => this.#request(ASSET_ROOM_UNSUBSCRIBE_PARTS, coords)
+    });
   }
 
   get id(): string {
@@ -182,12 +197,13 @@ export class TerrainPartsRoom implements Room<
     const heights = new Map<string, string>();
     const waiting = new Set<string>();
     for (const chunk of manifest.chunks) {
-      const partId = chunkPartId(new ChunkCoord(chunk.x, chunk.z));
-      if (chunk.heights === undefined) {
-        waiting.add(partId);
-      }
-      else {
+      const coord = new ChunkCoord(chunk.x, chunk.z);
+      const partId = chunkPartId(coord);
+      if (chunk.heights !== undefined) {
         heights.set(partId, chunk.heights);
+      }
+      else if (this.#stream.isSubscribed(coord)) {
+        waiting.add(partId);
       }
     }
     this.#pending = {
@@ -197,8 +213,6 @@ export class TerrainPartsRoom implements Room<
       waiting,
       held: []
     };
-
-    this.#subscribe([...waiting].filter((partId) => !this.#subscribed.has(partId)));
     this.#settle();
   }
 
@@ -207,26 +221,46 @@ export class TerrainPartsRoom implements Room<
   ): void {
     const pending = this.#pending;
     if (pending === null) {
+      this.#loadParts(message);
+
       return;
     }
 
+    const late: Record<string, unknown> = {};
     for (const [partId, heights] of Object.entries(message.parts)) {
-      if (pending.waiting.delete(partId) && typeof heights === "string") {
+      if (!pending.waiting.delete(partId)) {
+        late[partId] = heights;
+      }
+      else if (typeof heights === "string") {
         pending.heights.set(partId, heights);
       }
+    }
+    if (Object.keys(late).length > 0) {
+      pending.held.push({ ...message, parts: late });
     }
     this.#settle();
   }
 
-  #subscribe(
-    partIds: readonly string[]
+  #loadParts(
+    message: AssetRoomPartsMessage
   ): void {
-    for (const partId of partIds) {
-      this.#subscribed.add(partId);
+    for (const [partId, encoded] of Object.entries(message.parts)) {
+      const coord = chunkOfPart(partId);
+      const heights = typeof encoded === "string" ? decodeHeights(encoded) : null;
+      if (coord !== null && heights !== null) {
+        this.#stream.received(coord, heights);
+      }
     }
+  }
+
+  #request(
+    action: AssetPartsRequest["action"],
+    coords: readonly ChunkCoord[]
+  ): void {
+    const partIds = coords.map(chunkPartId);
     for (let index = 0; index < partIds.length; index += ASSET_ROOM_MAX_PARTS_PER_MESSAGE) {
       const request: AssetPartsRequest = {
-        action: ASSET_ROOM_SUBSCRIBE_PARTS,
+        action,
         parts: partIds.slice(index, index + ASSET_ROOM_MAX_PARTS_PER_MESSAGE)
       };
       this.#room.send(request as unknown as TerrainNetworkCommand);
@@ -240,19 +274,24 @@ export class TerrainPartsRoom implements Room<
     }
 
     this.#pending = null;
-    const chunks: ChunkSnapshot[] = [];
-    for (const { x, z } of pending.manifest.chunks) {
+    const chunks = pending.manifest.chunks.map(({ x, z, overview }): ChunkEntry => {
       const heights = pending.heights.get(chunkPartId(new ChunkCoord(x, z)));
-      if (heights !== undefined) {
-        chunks.push({ x, z, heights });
-      }
-    }
+
+      return heights === undefined ?
+        { x, z, ...(overview === undefined ? {} : { overview }) } :
+        { x, z, heights };
+    });
     this.#deliver({
       ...pending.message,
       data: { chunks }
     });
     for (const message of pending.held) {
-      this.#deliver(message);
+      if (isPartsMessage(message)) {
+        this.#loadParts(message);
+      }
+      else {
+        this.#deliver(message);
+      }
     }
   }
 

@@ -24,8 +24,17 @@ export function rebuildStore(
   for (const chunk of terrain.chunks()) {
     store.chunkAdded(chunk.coord);
   }
+  store.overviewChanged([...terrain.overview.coords()].filter((coord) => !terrain.has(coord)));
 
   return store;
+}
+
+export function knownFlags(
+  store: ChunkTextureStore
+): number[] {
+  const data = store.lookup.image.data as Float32Array;
+
+  return Array.from({ length: data.length / 4 }, (_, slot) => data[slot * 4 + 3]);
 }
 
 export function apronSamples(
@@ -60,7 +69,31 @@ export function applyRandomEdit(
   store: ChunkTextureStore
 ): string {
   const chunks = [...terrain.chunks()];
-  const action = randomInteger(random, 0, 3);
+  const unloaded = [...terrain.overview.coords()].filter((coord) => !terrain.has(coord));
+  const action = randomInteger(random, 0, 5);
+  if (action === 4 && chunks.length > 1) {
+    const { coord } = chunks[randomInteger(random, 0, chunks.length - 1)];
+    terrain.unloadChunk(coord);
+    store.chunkRemoved(coord);
+
+    return `unload ${coord.key}`;
+  }
+  if (action === 5 && unloaded.length > 0) {
+    const coord = unloaded[randomInteger(random, 0, unloaded.length - 1)];
+    if (randomInteger(random, 0, 1) === 0) {
+      terrain.loadChunk(coord, randomHeights(random));
+      store.chunkAdded(coord);
+
+      return `load ${coord.key}`;
+    }
+
+    const tile = new TileCoord(coord, randomInteger(random, 0, 3), randomInteger(random, 0, 3));
+    const heights = new Float32Array(TILE_SAMPLE_COUNT).map(() => randomInteger(random, -50, 50));
+    terrain.writeOverviewTile(tile, heights);
+    store.overviewChanged([coord]);
+
+    return `overview ${tile.key}`;
+  }
   if (action === 0 && chunks.length > 1) {
     const { coord } = chunks[randomInteger(random, 0, chunks.length - 1)];
     terrain.removeChunk(coord);
@@ -83,7 +116,7 @@ export function applyRandomEdit(
   }
 
   const coord = new ChunkCoord(randomInteger(random, -1, 2), randomInteger(random, -1, 2));
-  if (terrain.has(coord)) {
+  if (terrain.knows(coord)) {
     return "none";
   }
   terrain.addChunk(coord, action === 2 ? randomHeights(random) : undefined);

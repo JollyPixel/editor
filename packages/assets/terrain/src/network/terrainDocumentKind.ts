@@ -25,12 +25,16 @@ export type TerrainDocumentKind = CommandDocumentKind<
 export function terrainDocumentKind(): TerrainDocumentKind {
   return {
     kind: TERRAIN_KIND,
-    syncDocument: (room) => new SyncedCommandDocument(
-      new TerrainPartsRoom(room),
-      {
-        document: new TerrainDocument(),
-        keys: terrainWriteKeys
-      }
-    )
+    syncDocument: (room) => {
+      const document = new TerrainDocument();
+
+      return new SyncedCommandDocument(
+        new TerrainPartsRoom(room, document.stream),
+        {
+          document,
+          keys: terrainWriteKeys
+        }
+      );
+    }
   };
 }

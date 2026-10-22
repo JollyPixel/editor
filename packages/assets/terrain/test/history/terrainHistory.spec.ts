@@ -22,9 +22,10 @@ import { MAX_PATCH_TILES } from "#src/network/TerrainCommand.schema.ts";
 import {
   EDGE_TILE,
   ORIGIN_TILE,
-  addWideChunkRow,
+  addWideChunkBlock,
   edgePeerSetup,
-  terrainPeers
+  terrainPeers,
+  WIDE_BLOCK_CENTRE
 } from "../helpers/peers.ts";
 import {
   networkCommand,
@@ -163,8 +164,8 @@ describe("terrain history", () => {
   test("a stroke over one command's tile limit reaches the room in several and undoes as one step", (t) => {
     const { server, join, route, dispose } = terrainPeers();
     t.after(dispose);
-    const tiles = addWideChunkRow(server);
-    const { document, room } = join("B");
+    const tiles = addWideChunkBlock(server);
+    const { document, room } = join("B", { streamCentre: WIDE_BLOCK_CENTRE });
     const history = new CommandHistory<"terrain">();
     history.register(terrainHistoryRegistration(document, { scope: "terrain" }));
 

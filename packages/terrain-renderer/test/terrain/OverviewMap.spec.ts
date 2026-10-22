@@ -47,4 +47,31 @@ describe("OverviewMap", () => {
     assert.equal(terrain.overview.samples(kChunk), undefined);
     assert.equal(terrain.overview.size, 0);
   });
+
+  test("an unloaded chunk stays known through its samples, and its overview tiles still write them", () => {
+    const terrain = new Terrain();
+    terrain.addChunk(kChunk, rampHeights());
+    terrain.unloadChunk(kChunk);
+
+    assert.equal(terrain.has(kChunk), false);
+    assert.equal(terrain.knows(kChunk), true);
+    const flat = new Float32Array(TILE_SAMPLE_COUNT).fill(7);
+    assert.equal(terrain.writeOverviewTile(new TileCoord(kChunk, 1, 0), flat), false);
+    assert.equal(terrain.writeOverviewTile(new TileCoord(kChunk, 2, 2), flat), true);
+    assert.deepEqual(terrain.overview.samples(kChunk), Float32Array.of(0, 32, 1600, 7));
+
+    terrain.loadChunk(kChunk, new Float32Array(CHUNK_SAMPLE_COUNT).fill(3));
+    assert.deepEqual(terrain.overview.samples(kChunk), Float32Array.of(3, 3, 3, 3));
+  });
+
+  test("interpolates across chunks; a corner on unknown ground takes the height at the cell's origin", () => {
+    const terrain = new Terrain();
+    terrain.addUnloadedChunk(new ChunkCoord(0, 0), Float32Array.of(0, 10, 20, 30));
+    terrain.addUnloadedChunk(new ChunkCoord(1, 0), Float32Array.of(50, 60, 70, 80));
+
+    assert.equal(terrain.overview.interpolate(16, 16), 15);
+    assert.equal(terrain.overview.interpolate(48, 0), 30);
+    assert.equal(terrain.overview.interpolate(48, 48), 40);
+    assert.equal(terrain.overview.interpolate(-1, 0), undefined);
+  });
 });

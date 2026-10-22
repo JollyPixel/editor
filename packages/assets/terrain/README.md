@@ -20,18 +20,27 @@ a chunk derives them from its heights. A chunk entry may also carry its heights
 inline, base64 encoded, as a catalog create does; the first save after an
 edit moves them to part files.
 
-The room's snapshot is the chunk list. `terrainDocumentKind()` wraps the room
-in `TerrainPartsRoom`, which subscribes to every chunk of a snapshot and
-holds the snapshot, and the messages received after it, until those chunks
-arrive. The document then loads the full terrain, followed by the held
-messages. Until camera-driven loading lands, the room sends every terrain
-command to every member.
+The room's snapshot is the chunk list. The document knows every chunk
+through its overview samples and loads the heights of those its stream
+follows. Call `document.stream.follow(centre)` when the camera enters another
+chunk: the chunks within `STREAM_RADIUS`, 8 chunks, of the centre are
+subscribed, nearest first, and loaded chunks farther than one more chunk are
+unloaded. A chunk a peer adds loads if the stream reaches it.
+
+`terrainDocumentKind()` wraps the room in `TerrainPartsRoom`, which sends
+the stream's subscriptions and loads each part as it arrives. It holds a
+snapshot, and the messages received after it, until the subscribed chunks in
+it arrive. Members that have not subscribed to an edited chunk receive only
+the tiles of `heights-patched` that hold its overview samples, which they
+apply to the overview.
 
 ## Preview
 
 `TerrainPreview` draws uncommitted heights over a `TerrainDocument`.
 `preview.terrain` shows every layer: peers' live patches, written with
 `write(peerId, patches)` and cleared with `drop(peerId)`, and the local stroke.
+It emits `chunkAdded` and `chunkRemoved` when a chunk loads or unloads, and
+`overviewChanged` when unloaded chunks change.
 
 `beginStroke()` returns the local `TerrainStroke`; it throws while another
 stroke is in progress. `stroke.terrain` shows the document with only this

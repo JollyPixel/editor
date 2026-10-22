@@ -2,6 +2,7 @@
 import {
   CHUNK_SAMPLE_COUNT,
   ChunkCoord,
+  OVERVIEW_SAMPLE_COUNT,
   type Terrain,
   type TerrainReader,
   type TilePatch
@@ -13,6 +14,7 @@ import {
   encodeHeights
 } from "../network/heights.ts";
 import { decodeTilePatch } from "../network/tilePatches.ts";
+import { chunkOverview } from "./chunkOverview.ts";
 import type {
   EncodedTilePatch,
   TerrainCommand,
@@ -49,19 +51,20 @@ export function acceptsTerrainCommand(
 
   switch (edit.action) {
     case "chunk-added":
-      return !terrain.has(edit.coord) &&
-        terrain.size < MAX_TERRAIN_CHUNKS &&
-        (terrain.size === 0 || terrain.touches(edit.coord));
+      return !terrain.knows(edit.coord) &&
+        terrain.overview.size < MAX_TERRAIN_CHUNKS &&
+        (terrain.overview.size === 0 || terrain.touches(edit.coord));
     case "chunk-removed":
-      return terrain.has(edit.coord) && terrain.size > 1;
+      return terrain.knows(edit.coord) && terrain.overview.size > 1;
     case "heights-patched":
-      return edit.patches.every(({ tile }) => terrain.has(tile.chunk));
+      return edit.patches.every(({ tile }) => terrain.knows(tile.chunk));
   }
 }
 
 export function applyTerrainCommand(
   terrain: Terrain,
-  command: TerrainCommand
+  command: TerrainCommand,
+  loads: (coord: ChunkCoord) => boolean = () => true
 ): void {
   const edit = terrainEdit(command);
   if (edit === null) {
@@ -70,14 +73,24 @@ export function applyTerrainCommand(
 
   switch (edit.action) {
     case "chunk-added":
-      terrain.addChunk(edit.coord, edit.heights);
+      if (loads(edit.coord)) {
+        terrain.addChunk(edit.coord, edit.heights);
+      }
+      else {
+        terrain.addUnloadedChunk(edit.coord, chunkOverview(edit.heights));
+      }
       break;
     case "chunk-removed":
       terrain.removeChunk(edit.coord);
       break;
     case "heights-patched":
       for (const { tile, heights } of edit.patches) {
-        terrain.writeTile(tile, heights);
+        if (terrain.has(tile.chunk)) {
+          terrain.writeTile(tile, heights);
+        }
+        else {
+          terrain.writeOverviewTile(tile, heights);
+        }
       }
       break;
   }
@@ -121,12 +134,12 @@ export function terrainSnapshot(
   terrain: TerrainReader
 ): TerrainSnapshot {
   return {
-    chunks: Array.from(terrain.chunks(), (chunk) => {
-      return {
-        x: chunk.coord.x,
-        z: chunk.coord.z,
-        heights: encodeHeights(chunk.copyHeights())
-      };
+    chunks: Array.from(terrain.overview.coords(), (coord) => {
+      const chunk = terrain.chunk(coord);
+
+      return chunk === undefined ?
+        { x: coord.x, z: coord.z, overview: encodeHeights(terrain.overview.samples(coord)!) } :
+        { x: coord.x, z: coord.z, heights: encodeHeights(chunk.copyHeights()) };
     })
   };
 }
@@ -135,13 +148,11 @@ export function terrainManifest(
   terrain: TerrainReader
 ): TerrainManifest {
   return {
-    chunks: Array.from(terrain.chunks(), ({ coord }) => {
-      const overview = terrain.overview.samples(coord);
-
+    chunks: Array.from(terrain.overview.coords(), (coord) => {
       return {
         x: coord.x,
         z: coord.z,
-        ...(overview === undefined ? {} : { overview: encodeHeights(overview) })
+        overview: encodeHeights(terrain.overview.samples(coord)!)
       };
     })
   };
@@ -185,5 +196,40 @@ export function loadTerrainSnapshot(
   terrain: Terrain,
   snapshot: TerrainSnapshot
 ): void {
-  loadTerrainManifest(terrain, snapshot);
+  const chunks = snapshot.chunks.map((chunk) => {
+    const coord = new ChunkCoord(chunk.x, chunk.z);
+    if (chunk.heights !== undefined) {
+      return { coord, heights: decodedOrThrow(chunk.heights, CHUNK_SAMPLE_COUNT, coord) };
+    }
+
+    return {
+      coord,
+      overview: chunk.overview === undefined ?
+        new Float32Array(OVERVIEW_SAMPLE_COUNT) :
+        decodedOrThrow(chunk.overview, OVERVIEW_SAMPLE_COUNT, coord)
+    };
+  });
+
+  terrain.clear();
+  for (const chunk of chunks) {
+    if ("heights" in chunk) {
+      terrain.addChunk(chunk.coord, chunk.heights);
+    }
+    else {
+      terrain.addUnloadedChunk(chunk.coord, chunk.overview);
+    }
+  }
+}
+
+function decodedOrThrow(
+  encoded: string,
+  length: number,
+  coord: ChunkCoord
+): Float32Array {
+  const decoded = decodeHeights(encoded, length);
+  if (decoded === null) {
+    throw new RangeError(`Chunk ${coord.key} has invalid heights.`);
+  }
+
+  return decoded;
 }

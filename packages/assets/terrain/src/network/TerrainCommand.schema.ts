@@ -24,16 +24,6 @@ export const tilePatchesSchema = z.array(tilePatchSchema).check(
   z.maxLength(MAX_PATCH_TILES)
 );
 
-export const chunkSnapshotSchema = z.object({
-  x: kChunkCoordinate,
-  z: kChunkCoordinate,
-  heights: z.string()
-});
-
-export const terrainSnapshotSchema = z.object({
-  chunks: z.array(chunkSnapshotSchema)
-});
-
 export const chunkEntrySchema = z.object({
   x: kChunkCoordinate,
   z: kChunkCoordinate,

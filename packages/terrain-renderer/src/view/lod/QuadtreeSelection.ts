@@ -3,6 +3,7 @@ import {
   CHUNK_SAMPLES,
   ChunkCoord
 } from "../../terrain/ChunkCoord.ts";
+import type { HeightRange } from "../../terrain/TerrainChunk.ts";
 import type { TerrainReader } from "../../terrain/Terrain.ts";
 import type { Point3 } from "../../math/point3.ts";
 import {
@@ -10,6 +11,14 @@ import {
   REGION_SIZE
 } from "./LodRanges.ts";
 import { skirtMasks } from "./skirtMasks.ts";
+
+// CONSTANTS
+const kInterpolatedFrom = [
+  [0, 0],
+  [1, 0],
+  [0, 1],
+  [1, 1]
+] as const;
 
 export interface NodeBounds {
   readonly min: Point3;
@@ -85,7 +94,7 @@ export class QuadtreeSelection {
   #regions(): Iterable<{ x: number; z: number; }> {
     const regions = new Map<string, { x: number; z: number; }>();
     const chunksPerRegion = REGION_SIZE / CHUNK_SAMPLES;
-    for (const { coord } of this.#terrain.chunks()) {
+    for (const coord of this.#terrain.overview.coords()) {
       const x = Math.floor(coord.x / chunksPerRegion);
       const z = Math.floor(coord.z / chunksPerRegion);
       regions.set(`${x},${z}`, { x, z });
@@ -203,11 +212,11 @@ class SelectionWalk {
     let covered = false;
     for (let chunkZ = first.z; chunkZ <= last.z; chunkZ++) {
       for (let chunkX = first.x; chunkX <= last.x; chunkX++) {
-        const chunk = this.#terrain.chunk(new ChunkCoord(chunkX, chunkZ));
-        if (chunk !== undefined) {
+        const range = chunkHeightRange(this.#terrain, new ChunkCoord(chunkX, chunkZ));
+        if (range !== null) {
           covered = true;
-          minY = Math.min(minY, chunk.heightRange.min);
-          maxY = Math.max(maxY, chunk.heightRange.max);
+          minY = Math.min(minY, range.min);
+          maxY = Math.max(maxY, range.max);
         }
       }
     }
@@ -220,6 +229,31 @@ class SelectionWalk {
       max: { x: x + size, y: maxY, z: z + size }
     };
   }
+}
+
+function chunkHeightRange(
+  terrain: TerrainReader,
+  coord: ChunkCoord
+): HeightRange | null {
+  const chunk = terrain.chunk(coord);
+  if (chunk !== undefined) {
+    return chunk.heightRange;
+  }
+  if (!terrain.knows(coord)) {
+    return null;
+  }
+
+  let min = Infinity;
+  let max = -Infinity;
+  for (const [dx, dz] of kInterpolatedFrom) {
+    const samples = terrain.overview.samples(new ChunkCoord(coord.x + dx, coord.z + dz)) ?? [];
+    for (const height of samples) {
+      min = Math.min(min, height);
+      max = Math.max(max, height);
+    }
+  }
+
+  return { min, max };
 }
 
 function axisGap(

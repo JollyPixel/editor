@@ -63,7 +63,9 @@ radii.
 - Presence radius: 4 chunks (`DEFAULT_PRESENCE_RADIUS`), at most 16. The
   region is the square of chunks within that many chunks of the centre on
   each axis.
-- `streamRadius`: larger, set by the LoD. It decides which chunks are loaded.
+- Stream radius: 8 chunks (`STREAM_RADIUS`), measured from the centre
+  chunk as a circle. It decides which chunks are loaded; see
+  [Streaming](#streaming).
 
 What a peer receives about someone else's stroke depends on where it is:
 
@@ -71,7 +73,7 @@ What a peer receives about someone else's stroke depends on where it is:
 |---|---|
 | Near: presence region overlaps the edited chunks | Brush ring, live patches, commit |
 | Far: chunks loaded, outside the presence radius | The commit only, applied when the stroke ends |
-| Chunks not loaded | Nothing. The chunk's state arrives when the peer subscribes. |
+| Chunks not loaded | The commit's tiles that hold overview samples. The chunk's state arrives when the peer subscribes. |
 
 The roster and camera frustums from `@jolly-pixel/editor.host` stay
 room-wide.
@@ -127,10 +129,35 @@ The [asset parts design][asset-parts] holds the server contract.
 
 The client side of `@jolly-pixel/network`, `CommandSync` and the pending
 ledger, does not change. `TerrainPartsRoom` sits between the room and the
-synced document: it subscribes to the chunks of each snapshot and delivers
-the snapshot once their heights arrive. For now it subscribes to every
-chunk, and the room sends every terrain command to every member; camera-driven
-loading will subscribe to the chunks within the stream radius instead.
+synced document. It subscribes to the chunks the stream asks for, and holds a
+snapshot back until the heights of the subscribed chunks in it arrive.
+
+### Streaming
+
+The document knows every chunk of the terrain through the overview map, and
+holds heights only for the loaded ones. `TerrainDocument.stream`
+decides which chunks are loaded.
+
+- The editor calls `stream.follow(centre)` when its camera enters another
+  chunk. Known chunks within the stream radius of the centre are subscribed,
+  nearest first. Loaded chunks farther than the radius plus one are unloaded
+  and unsubscribed, so a camera on a chunk border does not make them
+  flicker.
+- A view holds at most 256 chunk layers, the WebGPU default for texture
+  arrays. A circle of 8 chunks holds about 200.
+- A chunk loads when its part arrives, outside any snapshot. Unloading drops
+  its heights and keeps its overview samples.
+- A chunk a peer adds is loaded with the heights in `chunk-added`. The stream
+  subscribes to it when it lies within the radius, and unloads it otherwise.
+- The room sends `heights-patched` whole to the members subscribed to its
+  chunks. The others receive `outside(command)`: the same command cut down to
+  the tiles that hold overview samples, tiles 0, 2, 8 and 10 of each chunk,
+  or nothing when no such tile changed. A client applies the tiles of an
+  unloaded chunk to its overview only. `chunk-added` and `chunk-removed` go
+  to every member.
+- A chunk without a part reply yet, or unloaded while it has pending
+  commands, stays consistent: the reply carries the heights at its version,
+  and a pending patch replayed on an unloaded chunk updates the overview.
 
 Until M2 lands, `chunk-added` is refused past 256 chunks, about 17 MB of
 heights at ×1.
@@ -165,6 +192,10 @@ Each user has their own history, through `CommandHistory` from
 `@jolly-pixel/history`. A stroke is one step. Undo sends the inverse patch as
 a new command. If a peer has changed one of the stroke's tiles since, the undo
 is refused, as for the other asset kinds.
+
+A step whose chunks are unloaded is skipped the same way, since the client
+cannot check their current heights. A step no undo tried meanwhile is
+available again once its chunks load with the same heights.
 
 Hole cuts and fills are patches like any other, so they undo the same way.
 Since heights under a hole are kept, filling a hole restores the surface
