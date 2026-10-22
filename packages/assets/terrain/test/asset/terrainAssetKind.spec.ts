@@ -164,22 +164,39 @@ describe("terrain asset kind", () => {
     assert.deepEqual(chunkKeys(room), ["0,0", `${max - 1},0`, `${max},0`]);
   });
 
-  test("a height patch is refused whole when one of its tiles is invalid", () => {
+  test("a height patch keeps its valid tiles and answers the author with the refused ones' heights", () => {
     const room = liveRoom();
+    room.connect("A");
+    room.take("A");
     function flat(tile: number) {
       return { x: 0, z: 0, tile, heights: encodeHeights(tileHeights(4)) };
     }
-    for (const tiles of [
-      [flat(0), { ...flat(1), x: 5 }],
-      [flat(0), { ...flat(1), heights: encodeHeights(tileHeights(5000)) }],
-      [flat(0), { ...flat(1), heights: heights(4) }],
-      [flat(0), flat(0)]
-    ]) {
-      room.receive("A", networkCommand({ action: "heights-patched", tiles }));
-    }
+    const invalid = [
+      { ...flat(1), x: 5 },
+      { ...flat(1), heights: encodeHeights(tileHeights(5000)) },
+      { ...flat(1), heights: heights(4) }
+    ];
+    invalid.forEach((tile, index) => {
+      room.receive("A", networkCommand({ action: "heights-patched", tiles: [flat(index + 2), tile] }));
+    });
 
-    assert.ok(room.state.chunk(new ChunkCoord(0, 0))!.copyHeights().every((height) => height === 0));
-    room.receive("A", networkCommand({ action: "heights-patched", tiles: [flat(5)] }));
-    assert.deepEqual(room.state.chunk(new ChunkCoord(0, 0))!.tileHeights(1, 1), tileHeights(4));
+    const chunk = room.state.chunk(new ChunkCoord(0, 0))!;
+    const admitted = [chunk.tileHeights(2, 0), chunk.tileHeights(3, 0), chunk.tileHeights(0, 1)];
+    assert.deepEqual(admitted.map((heights) => heights[0]), [4, 4, 4]);
+    assert.deepEqual(chunk.tileHeights(1, 0), tileHeights(0));
+    const corrections = room.take("A").filter((message) => message.type === "correction");
+    assert.deepEqual(corrections.map(({ data }) => "tiles" in data && data.tiles.map(({ tile }) => tile)), [
+      [2],
+      [1],
+      [1]
+    ]);
+  });
+
+  test("a height patch naming a tile twice is refused whole", () => {
+    const room = liveRoom();
+    const tile = { x: 0, z: 0, tile: 0, heights: encodeHeights(tileHeights(4)) };
+    room.receive("A", networkCommand({ action: "heights-patched", tiles: [tile, tile] }));
+
+    assert.deepEqual(room.state.chunk(new ChunkCoord(0, 0))!.tileHeights(0, 0), tileHeights(0));
   });
 });

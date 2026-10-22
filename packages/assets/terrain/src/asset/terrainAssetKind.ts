@@ -41,6 +41,10 @@ import {
   terrainPartSchema
 } from "../network/TerrainCommand.schema.ts";
 import {
+  admissibleTiles,
+  correctTerrainCommand
+} from "../network/TerrainCorrection.ts";
+import {
   chunkOfPart,
   outsideCommand,
   chunkPartId,
@@ -204,7 +208,12 @@ export function terrainAssetKind(
         return {
           snapshotSchema: terrainManifestSchema,
           snapshot: () => terrainManifest(state),
-          arbitrate: (command) => arbiter.admit(state, command),
+          arbitrate: (command) => {
+            const admissible = admissibleTiles(state, command);
+
+            return admissible === null ? null : arbiter.admit(state, admissible);
+          },
+          correct: (command, admitted) => correctTerrainCommand(state, command, admitted),
           restore: (command, version) => arbiter.restore(command, version),
           relay: new TerrainLiveRelay(),
           parts: {

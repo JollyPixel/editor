@@ -72,7 +72,11 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
 - **Chunk cap lifted** (2026-10-22). A terrain holds up to 4096 chunks
   within coordinates -128 to 127; LoD selection keeps node bounds between
   frames to stay under a millisecond at that size.
-- **Next:** M2, tile corrections for refused commits.
+- **Tile corrections: done** (2026-10-22). The room admits a patch's valid
+  tiles and answers the author with the refused tiles' current heights
+  instead of a snapshot; an undo that raced a peer is still refused whole.
+- **M2: done** (2026-10-22).
+- **Next:** M3 grilling: terrain layers, texture arrays and splat maps.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -110,7 +114,7 @@ chunks yet.
 - [x] Overview map, rebuilt incrementally from edited chunks.
 - [x] Camera-driven chunk loading and unloading within the stream radius.
 - [x] Lift the 256-chunk cap.
-- [ ] Tile corrections for refused commits, refused per tile, instead of the
+- [x] Tile corrections for refused commits, refused per tile, instead of the
   snapshot the room sends back today.
 
 ## M3: Texturing

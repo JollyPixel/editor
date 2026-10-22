@@ -179,12 +179,19 @@ per-chunk rights in V1.
 Since each sample belongs to one chunk, a refused tile cannot leave two
 copies of an edge out of step.
 
-The room answers the author alone with a correction: the refused tiles with
-their current values. Live patches are never corrected; the commit that
-follows replaces them.
+The room admits the tiles that pass and answers the author alone with a
+correction: the refused tiles with their current values, as a
+`heights-patched` under the author's sequence number, so the author's
+pending commit settles without a snapshot. A refused tile whose chunk is gone
+has no value to send; the author drops it when the `chunk-removed` reaches
+it. When no refused tile has a value, the correction is the admitted part of
+the commit, or, when nothing was admitted, the `chunk-removed` of a missing
+chunk: both change nothing on the author's side. Live patches are never
+corrected; the commit that follows replaces them.
 
-Until M2, a commit is refused whole, and the room answers with its full
-snapshot instead of a tile correction.
+A tile is also refused when a newer commit already wrote it, which
+last-write-wins resolves per tile. `chunk-added` and `chunk-removed` are
+still refused whole, and answered with the room's snapshot.
 
 ## Undo
 

@@ -161,6 +161,31 @@ describe("terrain history", () => {
     assert.equal(written.find(({ x }) => x === 3)!.heights, "first-3");
   });
 
+  test("an undo racing a peer's sculpt is refused whole and corrected without a snapshot", () => {
+    const peers = historySetup();
+    const { history, server, document, route } = peers;
+    let resets = 0;
+    document.on("reset", () => resets++);
+    const step = history.open("terrain", null);
+    document.patchTiles([EDGE_TILE, ORIGIN_TILE].map((tile) => {
+      return { tile, heights: tileHeights(5) };
+    }));
+    step.commit();
+    route();
+
+    assert.equal(history.undo("terrain"), true);
+    server.receive("A", networkCommand(
+      { action: "heights-patched", tiles: [peerTile(EDGE_TILE, -2)] },
+      { clientId: "A" }
+    ));
+    route();
+
+    assert.equal(edgeHeight(peers), -2);
+    assert.equal(heightAt(document.terrain, ORIGIN_TILE), 5);
+    assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
+    assert.equal(resets, 0);
+  });
+
   test("a stroke over one command's tile limit reaches the room in several and undoes as one step", (t) => {
     const { server, join, route, dispose } = terrainPeers();
     t.after(dispose);
