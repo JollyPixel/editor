@@ -5,4 +5,3 @@ export * from "./errors/ChordConflictError.ts";
 export * from "./store/Preferences.ts";
 export * from "./scope/hostPreferences.ts";
 export * from "./scope/defineKeyBindings.ts";
-export * from "./adapters/followKeyBindings.ts";

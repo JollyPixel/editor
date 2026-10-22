@@ -10,6 +10,7 @@ import {
   type EditorFramesOptions
 } from "../../src/tabs/EditorFrames.ts";
 import { idleShare } from "./catalogShare.ts";
+import { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
 
 // CONSTANTS
 export const FRAME_ORIGIN = "http://localhost";
@@ -26,7 +27,8 @@ export function editorFrames(
     launchOrigin: FRAME_ORIGIN,
     share: idleShare(),
     ...options,
-    preferences: options.preferences ?? new Preferences()
+    preferences: options.preferences ?? new Preferences(),
+    scopes: options.scopes ?? new PreferenceScopes([], [])
   });
 
   return current;

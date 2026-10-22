@@ -1,26 +1,21 @@
-// Import Third-party Dependencies
-import type { KeyboardLayoutStore } from "@jolly-pixel/controls";
-
 // Import Internal Dependencies
-import type {
-  MapAction,
-  MapKeyBindingSettings
-} from "./MapKeyBindings.ts";
+import type { KeyboardLayoutStore } from "../chords/KeyboardLayoutStore.ts";
+import type { KeyBindingSettings } from "./KeyBindingSettings.ts";
 
-export class ShortcutLabels {
+export class ShortcutLabels<TAction extends string> {
   readonly #layout: KeyboardLayoutStore;
-  readonly #settings: MapKeyBindingSettings;
+  readonly #settings: KeyBindingSettings<TAction>;
 
   constructor(
     layout: KeyboardLayoutStore,
-    settings: MapKeyBindingSettings
+    settings: KeyBindingSettings<TAction>
   ) {
     this.#layout = layout;
     this.#settings = settings;
   }
 
   format(
-    action: MapAction
+    action: TAction
   ): string | null {
     const [label = null] = this.#settings.keyBindings.format(action, {
       layout: this.#layout.layout
@@ -31,7 +26,7 @@ export class ShortcutLabels {
 
   label(
     text: string,
-    ...actions: MapAction[]
+    ...actions: TAction[]
   ): string {
     const shortcuts = actions
       .map((action) => this.format(action))
@@ -45,15 +40,12 @@ export class ShortcutLabels {
   subscribe(
     listener: () => void
   ): () => void {
-    const releases = [
-      this.#layout.subscribe("change", listener),
-      this.#settings.subscribe("change", listener)
-    ];
+    const stopLayout = this.#layout.subscribe("change", listener);
+    const stopSettings = this.#settings.subscribe("change", listener);
 
     return () => {
-      for (const release of releases) {
-        release();
-      }
+      stopLayout();
+      stopSettings();
     };
   }
 }

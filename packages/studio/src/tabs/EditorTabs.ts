@@ -29,6 +29,7 @@ export interface EditorTabTitle {
 
 export interface EditorTab extends EditorTabTitle {
   id: string;
+  editor: string;
   url: string;
   icon?: IconName;
 }

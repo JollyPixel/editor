@@ -5,13 +5,23 @@ import {
   type StorageAdapter
 } from "@jolly-pixel/ui";
 import {
-  PixelArtKeyBindingSettings,
-  UvNetLibrary
+  UvNetLibrary,
+  type PixelArtAction
 } from "@jolly-pixel/editor.pixel-art";
-import { PreferenceStorage } from "@jolly-pixel/editor.host";
+import {
+  PreferenceStorage,
+  followKeyBindings
+} from "@jolly-pixel/editor.host";
 import type { Preferences } from "@jolly-pixel/editor.host/preferences";
-import { PIXEL_ART_PREFERENCES } from "@jolly-pixel/editor.pixel-art/preferences";
-import { KeyboardLayoutStore } from "@jolly-pixel/controls";
+import {
+  PIXEL_ART_KEYBINDINGS,
+  PIXEL_ART_PREFERENCES
+} from "@jolly-pixel/editor.pixel-art/preferences";
+import {
+  KeyboardLayoutStore,
+  ShortcutLabels,
+  type KeyBindingSettings
+} from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
 import { BlockSelection } from "./BlockSelection.ts";
@@ -25,8 +35,8 @@ import { TextureTabsStore } from "./TextureTabsStore.ts";
 import { TemplatePreviewStore } from "./TemplatePreviewStore.ts";
 import { UvSyncStore } from "./UvSyncStore.ts";
 import { ViewStore } from "./ViewStore.ts";
-import { MapKeyBindingSettings } from "../keybindings/MapKeyBindings.ts";
-import { ShortcutLabels } from "../keybindings/ShortcutLabels.ts";
+import type { MapAction } from "../keybindings/mapActions.ts";
+import { VOXEL_MAP_KEYBINDINGS } from "../preferences.ts";
 import {
   BLOCK_UV_NETS,
   DEFAULT_BLOCK_UV_NET
@@ -52,9 +62,9 @@ export class EditorState {
   readonly uvSync: UvSyncStore;
   readonly textureTabs: TextureTabsStore;
   readonly templatePreview: TemplatePreviewStore;
-  readonly mapKeyBindings: MapKeyBindingSettings;
-  readonly shortcuts: ShortcutLabels;
-  readonly pixelArtKeyBindings: PixelArtKeyBindingSettings;
+  readonly mapKeyBindings: KeyBindingSettings<MapAction>;
+  readonly shortcuts: ShortcutLabels<MapAction>;
+  readonly pixelArtKeyBindings: KeyBindingSettings<PixelArtAction>;
   readonly uvNets: UvNetLibrary;
   readonly preferences: Preferences;
 
@@ -74,16 +84,18 @@ export class EditorState {
     this.uvSync = new UvSyncStore(preferences);
     this.textureTabs = new TextureTabsStore(storage);
     this.templatePreview = new TemplatePreviewStore(storage);
-    this.mapKeyBindings = MapKeyBindingSettings.follow(
+    this.mapKeyBindings = followKeyBindings(
       preferences,
+      VOXEL_MAP_KEYBINDINGS,
       (message) => this.log.push(message)
     );
     this.shortcuts = new ShortcutLabels(
       this.keyboardLayout,
       this.mapKeyBindings
     );
-    this.pixelArtKeyBindings = PixelArtKeyBindingSettings.follow(
+    this.pixelArtKeyBindings = followKeyBindings(
       preferences,
+      PIXEL_ART_KEYBINDINGS,
       (message) => this.log.push(message)
     );
     this.uvNets = new UvNetLibrary({

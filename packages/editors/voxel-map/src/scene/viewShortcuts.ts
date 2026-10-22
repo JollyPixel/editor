@@ -12,7 +12,7 @@ import {
 } from "../state/index.ts";
 import type { EditorCamera } from "./camera/EditorCamera.ts";
 import { SpawnPose } from "./camera/SpawnPose.ts";
-import type { MapGroupAction } from "../keybindings/MapKeyBindings.ts";
+import type { MapGroupAction } from "../keybindings/mapActions.ts";
 
 export interface ViewShortcutsOptions {
   view: Pick<ViewStore, "settings" | "update">;

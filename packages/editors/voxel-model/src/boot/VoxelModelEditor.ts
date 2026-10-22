@@ -21,6 +21,7 @@ import {
   EditorRuntime,
   PreferenceStorage,
   archiveConsole,
+  followKeyBindings,
   runtimeConsole,
   type AssetLease,
   type EditorSession,
@@ -28,11 +29,13 @@ import {
   type RuntimeEditorContext
 } from "@jolly-pixel/editor.host";
 import {
-  PixelArtKeyBindingSettings,
   UvNetLibrary,
   pixelArtConsole
 } from "@jolly-pixel/editor.pixel-art";
-import { PIXEL_ART_PREFERENCES } from "@jolly-pixel/editor.pixel-art/preferences";
+import {
+  PIXEL_ART_KEYBINDINGS,
+  PIXEL_ART_PREFERENCES
+} from "@jolly-pixel/editor.pixel-art/preferences";
 import { BakedRoomEnvironment } from "@jolly-pixel/three";
 
 // Import Internal Dependencies
@@ -46,6 +49,7 @@ import {
 } from "../state/index.ts";
 import { EditorShell } from "./EditorShell.ts";
 import { sessionAnimationSets } from "./animationSetSource.ts";
+import { VOXEL_MODEL_KEYBINDINGS } from "../preferences.ts";
 
 // CONSTANTS
 const kCanvas = "#three-renderer canvas";
@@ -140,10 +144,17 @@ export class VoxelModelEditor {
           "deleted. Export what you want to keep first."
       }),
       roomEnvironment,
-      preferences: context.preferences
+      preferences: context.preferences,
+      keyBindings: followKeyBindings(
+        context.preferences,
+        VOXEL_MODEL_KEYBINDINGS,
+        (message) => console.warn(message)
+      ),
+      keyboardLayout: context.keyboardLayout
     });
-    const keyBindingSettings = PixelArtKeyBindingSettings.follow(
+    const keyBindingSettings = followKeyBindings(
       context.preferences,
+      PIXEL_ART_KEYBINDINGS,
       (message) => console.warn(message)
     );
     const uvNets = new UvNetLibrary({

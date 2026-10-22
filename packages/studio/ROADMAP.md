@@ -5,33 +5,6 @@ Open work, in the order it should land. Decisions already taken are in the
 `pnpm --filter @jolly-pixel/studio test`, `pnpm run typecheck` and
 `pnpm run lint` green.
 
-## Next
-
-### 1. Voxel-model keybindings
-
-Undo, redo and `k` (key the selected block) are hardcoded in
-`historyShortcuts.ts` and `animationShortcuts.ts`, so voxel-model is the only
-editor missing from Settings › Keybindings. Follow voxel-map's layout:
-
-- `MODEL_KEY_BINDINGS` (`edit.undo`, `edit.redo`, `animation.key`) in
-  `src/keybindings/`, and `VOXEL_MODEL_KEYBINDINGS` from `defineKeyBindings`
-  in `preferences.ts`, added to its default export.
-- A `ModelKeyBindingSettings.follow(preferences)` replaces
-  `HISTORY_SHORTCUTS` and `KEY_BLOCK_SHORTCUT`. `HistoryButtons` and
-  `AnimatePanel` format their tooltips from it, so a rebind shows there too.
-
-### 2. Per-editor launch preferences
-
-Each frame gets every scope's overrides, since `EditorFrames` does not know
-which editor a tab hosts. No scope holds anything private yet; land this
-before one does.
-
-- `EditorTab` carries its editor's name. `EditorFrames` sends a frame the
-  `HOST_PREFERENCES` scopes plus that editor's `scopes` and `shared` from
-  `ProjectManifest.editorScopes()`.
-- The launch message and every later `preferences` push go through that
-  filter.
-
 ## Long-term goals
 
 ### Project policy for editors

@@ -6,6 +6,7 @@ import {
 } from "@jolly-pixel/asset.pixel-art/client";
 import {
   PreferenceStorage,
+  followKeyBindings,
   type EditorContext,
   type EditorSession,
   type PageEditorDefinition
@@ -16,13 +17,15 @@ import { LocalStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
-  PixelArtKeyBindingSettings,
   TextureName,
   UvNetLibrary,
   pixelArtConsole,
   type PixelDrawPanel
 } from "#src/index.ts";
-import { PIXEL_ART_PREFERENCES } from "#src/preferences.ts";
+import {
+  PIXEL_ART_KEYBINDINGS,
+  PIXEL_ART_PREFERENCES
+} from "#src/preferences.ts";
 import { PanelScope } from "./PanelScope.ts";
 import type { PixelArtFeatures } from "./PixelArtFeatures.ts";
 import { EditorPreferences } from "../state/EditorPreferences.ts";
@@ -108,8 +111,9 @@ export class PixelArtEditor {
     );
     await panel.updateComplete;
 
-    const keyBindingSettings = PixelArtKeyBindingSettings.follow(
+    const keyBindingSettings = followKeyBindings(
       context.preferences,
+      PIXEL_ART_KEYBINDINGS,
       (message) => console.warn(message)
     );
     panel.keyBindings = keyBindingSettings;

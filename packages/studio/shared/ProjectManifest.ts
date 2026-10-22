@@ -5,6 +5,7 @@ import { PreferenceScope } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import type { EditorDescriptor } from "./EditorDescriptor.ts";
+import type { EditorPreferenceScopes } from "./PreferenceScopes.ts";
 
 // CONSTANTS
 export const PROJECT_MANIFEST_FILE = "project-manifest.json";
@@ -37,11 +38,8 @@ export interface KindPackageDescriptor {
   kinds: readonly string[];
 }
 
-export interface EditorScopes {
-  name: string;
+export interface EditorScopes extends EditorPreferenceScopes {
   kinds: readonly string[];
-  scopes: readonly PreferenceScope[];
-  shared: readonly PreferenceScope[];
 }
 
 export interface ProjectManifestData {
@@ -96,13 +94,6 @@ export class ProjectManifest implements ProjectManifestData {
         scopes: parseScopes(editor.preferences ?? []),
         shared: parseScopes(editor.sharedPreferences ?? [])
       };
-    }
-  }
-
-  * preferences(): IterableIterator<PreferenceScope> {
-    for (const { scopes, shared } of this.editorScopes()) {
-      yield* scopes;
-      yield* shared;
     }
   }
 }

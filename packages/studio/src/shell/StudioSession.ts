@@ -141,6 +141,7 @@ export class StudioSession {
         undefined :
         new FrameConsoles({ commands }),
       preferences: user.preferences,
+      scopes: options.scopes,
       onShellCommand: this.#onShellCommand
     });
     this.tabs = new EditorTabs({
@@ -186,19 +187,17 @@ export class StudioSession {
       return false;
     }
 
-    const url = this.#editors.pageUrl(
-      record.kind,
-      assetId
-    );
-    if (url === undefined) {
+    const editor = this.#editors.findEditor(record.kind);
+    if (editor === undefined) {
       return false;
     }
 
     return this.tabs.open(
       {
         id: assetId,
+        editor: editor.name,
         ...this.#tabTitle(record),
-        url,
+        url: this.#editors.pageUrl(editor.name, assetId),
         icon: this.kinds.kindIcon(record.kind)
       },
       options

@@ -177,10 +177,9 @@ describe("EditorPackages", () => {
 
     assert.deepEqual(editor.toDescriptor().preferences, [kGridScope]);
     assert.deepEqual(editor.toDescriptor().sharedPreferences, [kPaletteScope]);
-    assert.deepEqual(
-      editors.preferences().map((scope) => scope.name),
-      ["voxel-map", "pixel-art"]
-    );
+    const [{ scopes, shared }] = editors.editorScopes();
+    assert.deepEqual(scopes.map((scope) => scope.name), ["voxel-map"]);
+    assert.deepEqual(shared.map((scope) => scope.name), ["pixel-art"]);
   });
 
   test("rejects a preferences module that exports no valid scope", async() => {

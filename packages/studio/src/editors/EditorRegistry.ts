@@ -113,19 +113,14 @@ export class EditorRegistry {
   }
 
   pageUrl(
-    kind: string,
+    editor: string,
     target: string
-  ): string | undefined {
-    const editor = this.#editors.get(kind);
-    if (editor === undefined) {
-      return undefined;
-    }
-
+  ): string {
     const query = new URLSearchParams({
       ...this.#query,
       [kTargetParam]: target
     });
 
-    return `${this.#prefix}${editor.name}/?${query}`;
+    return `${this.#prefix}${editor}/?${query}`;
   }
 }

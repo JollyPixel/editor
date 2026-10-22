@@ -186,7 +186,7 @@ announce(message: string): void
 | `canvasManager` | Active canvas, or `null` before a texture is added. |
 | `textures` | Texture records in tab order: `id`, `name`, `tooltip`, `disabled`, `canvas`. |
 | `activeTextureId` | Active id; setting it switches canvas. Unknown ids throw. |
-| `keyBindings` | [`KeyBindingSettings<PixelArtAction>`](../keybindings/PixelArtKeyBindingSettings.md#settings) the panel binds while connected. Defaults to `PIXEL_ART_KEY_BINDINGS`. |
+| `keyBindings` | [`KeyBindingSettings<PixelArtAction>`](../keybindings/PixelArtKeyBindings.md#settings) the panel binds while connected. Defaults to `PIXEL_ART_KEY_BINDINGS`. |
 | `uvAccess` | `"edit" \| "view" \| "none"`; defaults to `"edit"`. |
 | `uvNets` | [`UvNetLibrary`](../uv/UvNetLibrary.md) of the nets regions unfold with. |
 | `textureImportPolicy` | `"replace" \| "add" \| "ask"`; defaults to `"replace"`. |

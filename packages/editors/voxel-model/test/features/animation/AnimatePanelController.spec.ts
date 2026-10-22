@@ -86,6 +86,17 @@ describe("AnimatePanelController", () => {
     assert.deepEqual(keyed, ["arm"]);
   });
 
+  test("titles the key button with the chord the user bound", () => {
+    const { controller, keyBindings } = createPanelHarness();
+    assert.equal(controller.state.keyTitle, "Key selected block (K)");
+
+    keyBindings.assign("animation.key", ["j"]);
+    assert.equal(controller.state.keyTitle, "Key selected block (J)");
+
+    keyBindings.assign("animation.key", []);
+    assert.equal(controller.state.keyTitle, "Key selected block");
+  });
+
   test("a new clip of the model goes to its own set, even with a shared set focused", async() => {
     const { controller, animations, pick, names } = createPanelHarness();
     controller.actions!.linkSet(MENU_POINT);

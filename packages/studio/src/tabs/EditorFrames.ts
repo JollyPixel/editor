@@ -23,6 +23,12 @@ import type {
 
 // Import Internal Dependencies
 import type { EditorTab } from "./EditorTabs.ts";
+import type { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
+
+interface EditorFrame {
+  element: HTMLIFrameElement;
+  reads: ReadonlySet<string>;
+}
 
 export interface EditorFramesOptions {
   container: HTMLElement;
@@ -45,9 +51,14 @@ export interface EditorFramesOptions {
   identity?: () => LaunchIdentity | null;
   consoles?: Pick<FrameConsoles, "connect" | "focus">;
   /**
-   * Sent with each launch, and every later change pushed to every frame.
+   * Sent with each launch, and every later change pushed to every frame
+   * whose editor reads that scope.
    */
   preferences: Preferences;
+  /**
+   * Which scopes each editor reads, and so may update.
+   */
+  scopes: Pick<PreferenceScopes, "readBy">;
   onShellCommand?: (command: ShellCommand, from: string) => void;
   /**
    * @default readDebugLogger()
@@ -63,10 +74,11 @@ export class EditorFrames {
   #identity: () => LaunchIdentity | null;
   #consoles: Pick<FrameConsoles, "connect" | "focus"> | undefined;
   #preferences: Preferences;
+  #scopes: Pick<PreferenceScopes, "readBy">;
   #stopPreferences: () => void;
   #onShellCommand: ((command: ShellCommand, from: string) => void) | undefined;
   #logger: HostLogger;
-  #frames = new Map<string, HTMLIFrameElement>();
+  #frames = new Map<string, EditorFrame>();
   #launchPorts = new Map<string, () => void>();
   #listening = new AbortController();
 
@@ -80,6 +92,7 @@ export class EditorFrames {
     this.#identity = options.identity ?? (() => null);
     this.#consoles = options.consoles;
     this.#preferences = options.preferences;
+    this.#scopes = options.scopes;
     this.#onShellCommand = options.onShellCommand;
     this.#logger = (options.logger ?? readDebugLogger()).child({
       namespace: "studio.tabs"
@@ -100,8 +113,8 @@ export class EditorFrames {
     if (created) {
       this.#frames.set(tab.id, this.#createFrame(tab));
     }
-    for (const [id, frame] of this.#frames) {
-      frame.hidden = id !== tab?.id;
+    for (const [id, { element }] of this.#frames) {
+      element.hidden = id !== tab?.id;
     }
     this.#consoles?.focus(tab?.id ?? null);
 
@@ -114,14 +127,14 @@ export class EditorFrames {
   ): void {
     const frame = this.#frames.get(id);
     if (frame !== undefined) {
-      frame.title = title;
+      frame.element.title = title;
     }
   }
 
   notifySessionRenewed(): void {
     const message = sessionRenewedMessage();
-    for (const frame of this.#frames.values()) {
-      this.#post(frame, message);
+    for (const { element } of this.#frames.values()) {
+      this.#post(element, message);
     }
   }
 
@@ -135,7 +148,7 @@ export class EditorFrames {
     id: string
   ): void {
     this.#stopPorts(id);
-    this.#frames.get(id)?.remove();
+    this.#frames.get(id)?.element.remove();
     this.#frames.delete(id);
   }
 
@@ -145,33 +158,44 @@ export class EditorFrames {
     for (const id of [...this.#launchPorts.keys()]) {
       this.#stopPorts(id);
     }
-    for (const frame of this.#frames.values()) {
-      frame.remove();
+    for (const { element } of this.#frames.values()) {
+      element.remove();
     }
     this.#frames.clear();
   }
 
   #createFrame(
     tab: EditorTab
-  ): HTMLIFrameElement {
-    const frame = document.createElement("iframe");
-    frame.title = tab.label;
-    frame.allow = "keyboard-map";
-    frame.src = tab.url;
-    this.#container.append(frame);
+  ): EditorFrame {
+    const element = document.createElement("iframe");
+    element.title = tab.label;
+    element.allow = "keyboard-map";
+    element.src = tab.url;
+    this.#container.append(element);
 
-    return frame;
+    return {
+      element,
+      reads: this.#scopes.readBy(tab.editor)
+    };
+  }
+
+  #accepts(
+    frame: EditorFrame,
+    command: ShellCommand
+  ): boolean {
+    return command.command !== "update-preferences" ||
+      frame.reads.has(command.scope);
   }
 
   #findFrame(
     source: MessageEventSource | null
-  ): [string, HTMLIFrameElement] | undefined {
+  ): [string, EditorFrame] | undefined {
     if (source === null) {
       return undefined;
     }
 
     return [...this.#frames].find(
-      ([, frame]) => frame.contentWindow === source
+      ([, frame]) => frame.element.contentWindow === source
     );
   }
 
@@ -189,7 +213,7 @@ export class EditorFrames {
 
   #launch(
     id: string,
-    frame: HTMLIFrameElement
+    frame: EditorFrame
   ): void {
     this.#stopPorts(id);
     const catalog = new MessageChannel();
@@ -208,12 +232,14 @@ export class EditorFrames {
       }
     });
     this.#post(
-      frame,
+      frame.element,
       launchMessage({
         target: id,
         appearance: this.#appearance.toJSON(),
         identity: this.#identity(),
-        preferences: Object.fromEntries(this.#preferences),
+        preferences: Object.fromEntries(
+          [...this.#preferences].filter(([scope]) => frame.reads.has(scope))
+        ),
         ports
       }),
       Object.values(ports).filter((port) => port !== undefined)
@@ -248,7 +274,9 @@ export class EditorFrames {
         from: id,
         ...event.data
       });
-      this.#onShellCommand?.(event.data, id);
+      if (this.#accepts(frame, event.data)) {
+        this.#onShellCommand?.(event.data, id);
+      }
     }
   };
 
@@ -257,8 +285,10 @@ export class EditorFrames {
     overrides: PreferenceOverrides
   ): void => {
     const message = preferencesMessage(scope, overrides);
-    for (const frame of this.#frames.values()) {
-      this.#post(frame, message);
+    for (const { element, reads } of this.#frames.values()) {
+      if (reads.has(scope)) {
+        this.#post(element, message);
+      }
     }
   };
 
@@ -266,8 +296,8 @@ export class EditorFrames {
     appearance: Appearance
   ): void => {
     const message = appearanceMessage(appearance);
-    for (const frame of this.#frames.values()) {
-      this.#post(frame, message);
+    for (const { element } of this.#frames.values()) {
+      this.#post(element, message);
     }
   };
 }

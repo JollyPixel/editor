@@ -12,7 +12,6 @@ import {
 // Import Internal Dependencies
 import {
   ANIMATION_LIBRARY,
-  bindHistoryShortcuts,
   createEditorHistory,
   describeModelChange,
   type EditorHistoryScope
@@ -68,41 +67,6 @@ describe("describeModelChange", () => {
       "Delete Left Arm",
       "Delete Iron"
     ]);
-  });
-});
-
-describe("bindHistoryShortcuts", () => {
-  test("binds undo and redo chords to the active history, and releases them", () => {
-    const bound = new Map<string, () => void>();
-    const calls: string[] = [];
-    const release = bindHistoryShortcuts({
-      keyboard: {
-        bind: (chords, handler) => {
-          const names = [chords].flat().map(String);
-          for (const name of names) {
-            bound.set(name, () => handler(new KeyboardEvent("keydown")));
-          }
-
-          return () => {
-            for (const name of names) {
-              bound.delete(name);
-            }
-          };
-        }
-      },
-      history: {
-        undo: () => calls.push("undo") > 0,
-        redo: () => calls.push("redo") > 0
-      }
-    });
-
-    bound.get("Mod+z")?.();
-    bound.get("Mod+y")?.();
-    bound.get("Mod+Shift+z")?.();
-    assert.deepEqual(calls, ["undo", "redo", "redo"]);
-
-    release();
-    assert.equal(bound.size, 0);
   });
 });
 

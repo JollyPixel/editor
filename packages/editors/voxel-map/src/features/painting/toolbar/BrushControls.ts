@@ -20,7 +20,7 @@ import {
 } from "../../../state/index.ts";
 import type { VoxelMapWorkspace } from "../../../workspace/VoxelMapWorkspace.ts";
 import { WorkspaceElement } from "../../../workspace/WorkspaceElement.ts";
-import type { MapAction } from "../../../keybindings/MapKeyBindings.ts";
+import type { MapAction } from "../../../keybindings/mapActions.ts";
 import { brushControlsStyles } from "./BrushControls.styles.ts";
 import { PaintAvailability } from "./PaintAvailability.ts";
 import {

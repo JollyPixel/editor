@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import type { KeyBindingDefaults } from "@jolly-pixel/controls";
+
 // Import Internal Dependencies
 import type { ChordPreference } from "./PreferenceField.ts";
 import { PreferenceScope } from "./PreferenceScope.ts";
@@ -20,7 +23,7 @@ export interface KeyBindingScopeDefinition<TAction extends string> {
    * The chords each action is bound to by default, as `KeyBindingMap` takes
    * them.
    */
-  defaults: Readonly<Record<TAction, string | readonly string[]>>;
+  defaults: KeyBindingDefaults<TAction>;
   actions: Readonly<Record<NoInfer<TAction>, KeyBindingAction>>;
 }
 

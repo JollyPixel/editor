@@ -39,7 +39,6 @@ import type { KeyInspectorWorkspace } from "./keys/KeyInspectorController.ts";
 import "./timeline/timelineIcons.ts";
 import type { TransformPanel } from "../transform/TransformPanel.ts";
 import type { TransformWorkspace } from "../transform/TransformPanelController.ts";
-import { keyBlockShortcutLabel } from "./keys/animationShortcuts.ts";
 import {
   AnimatePanelController,
   CLIP_FRAME_RATES,
@@ -342,15 +341,13 @@ export class AnimatePanel extends LitElement {
   #renderTransform(
     state: AnimatePanelState
   ): TemplateResult {
-    const keyLabel = `Key selected block (${keyBlockShortcutLabel()})`;
-
     return html`
       <section class="transform" aria-label="Transform">
         <jolly-model-editor-transform></jolly-model-editor-transform>
         <jolly-button
           icon="timeline-key"
           label="Key"
-          title=${keyLabel}
+          title=${state.keyTitle}
           ?disabled=${!state.editable || state.clip === null}
           @click=${() => this.#controller.keySelected()}
         >Key</jolly-button>

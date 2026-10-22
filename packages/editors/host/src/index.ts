@@ -44,6 +44,7 @@ export {
 export * from "./runtime/PeerFrustums.ts";
 export * from "./runtime/RuntimeWidgets.ts";
 export * from "./preferences/adapters/followCameraPreferences.ts";
+export * from "./preferences/adapters/followKeyBindings.ts";
 export * from "./presence/bindPresenceStack.ts";
 export * from "./editor/EditorDefinition.ts";
 export * from "./editor/mountStandalone.ts";

@@ -6,6 +6,7 @@ import { Preferences } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import { EditorFrames } from "../../src/tabs/EditorFrames.ts";
+import { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
 import { idleShare } from "./catalogShare.ts";
 import {
   EditorTabs,
@@ -16,17 +17,20 @@ import {
 // CONSTANTS
 export const MAP_TAB: EditorTab = {
   id: "map-1",
+  editor: "voxel-map",
   label: "overworld.voxelmap.json",
   url: "/editors/voxel-map/?target=map-1"
 };
 export const MODEL_TAB: EditorTab = {
   id: "model-1",
+  editor: "voxel-model",
   label: "model.voxelmodel.json",
   url: "/editors/voxel-model/?target=model-1"
 };
 export const PAGE_ID = "settings";
 export const OTHER_TAB: EditorTab = {
   id: "map-2",
+  editor: "voxel-map",
   label: "cave.voxelmap.json",
   url: "/editors/voxel-map/?target=map-2"
 };
@@ -59,7 +63,8 @@ export function harness(
   const editorFrames = new EditorFrames({
     container: frames,
     share: idleShare(),
-    preferences: new Preferences()
+    preferences: new Preferences(),
+    scopes: new PreferenceScopes([], [])
   });
   const tabs = new EditorTabs({
     strip,

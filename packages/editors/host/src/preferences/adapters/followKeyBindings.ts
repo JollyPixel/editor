@@ -1,47 +1,35 @@
+// Import Third-party Dependencies
+import {
+  KeyBindingSettings,
+  type KeyBindingDefaults
+} from "@jolly-pixel/controls";
+
 // Import Internal Dependencies
 import type { Preferences } from "../store/Preferences.ts";
-import type {
-  PreferenceOverrides,
-  PreferenceScope
-} from "../scope/PreferenceScope.ts";
+import type { PreferenceScope } from "../scope/PreferenceScope.ts";
+import type { KeyBindingFields } from "../scope/defineKeyBindings.ts";
 
-export interface FollowedKeyBindings {
-  chordsBoundTo(
-    action: string
-  ): readonly string[];
-  load(
-    overrides: PreferenceOverrides
-  ): void;
-  subscribe(
-    event: "change",
-    listener: () => void
-  ): () => void;
-}
-
-export function followKeyBindings(
-  settings: FollowedKeyBindings,
+export function followKeyBindings<TAction extends string>(
   preferences: Preferences,
-  scope: PreferenceScope
-): () => void {
-  const actions = scope.keyBindings.flatMap(
-    (group) => group.fields.map(([action]) => action)
-  );
+  scope: PreferenceScope<KeyBindingFields<TAction>>,
+  onDropped?: (message: string) => void
+): KeyBindingSettings<TAction> {
+  const settings = new KeyBindingSettings({
+    defaults: scope.defaults as KeyBindingDefaults<TAction>,
+    overrides: preferences.values(scope),
+    onDropped
+  });
   function save(): void {
     preferences.update(scope, Object.fromEntries(
-      actions.map((action) => [action, settings.chordsBoundTo(action)])
+      settings.keyBindings.actions.map(
+        (action) => [action, settings.chordsBoundTo(action)]
+      )
     ));
   }
 
-  settings.load(preferences.values(scope));
   save();
-  const stopWatching = preferences.watch(
-    scope,
-    (values) => settings.load(values)
-  );
-  const stopSaving = settings.subscribe("change", save);
+  preferences.watch(scope, (values) => settings.load(values));
+  settings.subscribe("change", save);
 
-  return () => {
-    stopWatching();
-    stopSaving();
-  };
+  return settings;
 }

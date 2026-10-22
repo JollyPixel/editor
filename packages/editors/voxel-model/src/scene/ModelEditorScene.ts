@@ -1,5 +1,10 @@
 // Import Third-party Dependencies
 import { Systems, OrbitFlyCamera } from "@jolly-pixel/engine";
+import {
+  ShortcutLabels,
+  type KeyBindingSettings,
+  type KeyboardLayoutStore
+} from "@jolly-pixel/controls";
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 import { registerPixelHistory } from "@jolly-pixel/asset.pixel-art/client";
 import type { PresenceSource } from "@jolly-pixel/ui";
@@ -45,12 +50,12 @@ import {
 } from "../features/transform/index.ts";
 import {
   ActiveHistory,
-  bindHistoryShortcuts,
   createEditorHistory,
+  historyShortcuts,
   type EditorHistory
 } from "../features/history/index.ts";
 import {
-  bindAnimationShortcuts,
+  animationShortcuts,
   createAnimation,
   type AnimationKeyer,
   type AnimationLibrary,
@@ -65,6 +70,7 @@ import {
   MODEL_CAPABILITIES,
   type ModelGrants
 } from "../access/ModelAccess.ts";
+import type { ModelAction } from "../keybindings/modelActions.ts";
 
 // CONSTANTS
 const kMaxAccessListeners = 32;
@@ -79,6 +85,8 @@ export interface ModelEditorSceneOptions {
   view: ViewSettingsStore;
   roomEnvironment: BakedRoomEnvironment | null;
   preferences: Preferences;
+  keyBindings: KeyBindingSettings<ModelAction>;
+  keyboardLayout: KeyboardLayoutStore;
 }
 
 export interface ModelWorkspace {
@@ -106,6 +114,7 @@ export interface ModelWorkspace {
   fields: PresenceSource;
   previews: MaterialPreviews;
   view: ViewSettingsStore;
+  shortcuts: ShortcutLabels<ModelAction>;
   teleportToPeer(clientId: string): void;
 }
 
@@ -295,10 +304,9 @@ export class ModelEditorScene extends Systems.Scene {
         tool.use(active ? keyer : rest);
       }),
       access.subscribe("change", () => tool.emit("change")),
-      bindAnimationShortcuts({
-        keyboard: this.world.input.keyboard,
-        keyer,
-        selection
+      this.#options.keyBindings.bind(this.world.input.keyboard, {
+        ...historyShortcuts({ history: activeHistory }),
+        ...animationShortcuts({ keyer, selection })
       }),
       () => animation.dispose(),
       () => waker.dispose(),
@@ -312,10 +320,6 @@ export class ModelEditorScene extends Systems.Scene {
       () => this.world.renderer.off("compiled", invalidateShadow),
       unfollowLit,
       () => blocks.dispose(),
-      bindHistoryShortcuts({
-        keyboard: this.world.input.keyboard,
-        history: activeHistory
-      }),
       () => activeHistory.dispose(),
       () => unregisterPixels(),
       () => history.dispose(),
@@ -347,6 +351,10 @@ export class ModelEditorScene extends Systems.Scene {
       fields: collaboration.fields,
       previews,
       view,
+      shortcuts: new ShortcutLabels(
+        this.#options.keyboardLayout,
+        this.#options.keyBindings
+      ),
       teleportToPeer: (clientId) => {
         const pose = collaboration.frustums.peerPose(clientId);
         if (pose !== undefined) {

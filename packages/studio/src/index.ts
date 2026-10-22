@@ -80,7 +80,7 @@ async function boot(): Promise<void> {
   const { user } = connection;
   const { preferences } = user;
   appearance.follow(preferences);
-  const scopes = PreferenceScopes.studio(manifest.preferences());
+  const scopes = PreferenceScopes.studio(manifest.editorScopes());
   const editors = createEditorRegistry(manifest, connection.editorQuery);
   const settings = new SettingsSections({
     user,
