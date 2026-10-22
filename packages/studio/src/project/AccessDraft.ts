@@ -5,6 +5,7 @@ import type { Right } from "@jolly-pixel/network";
 import { RoleRules } from "./RoleRules.ts";
 import {
   BUILT_IN_ROLES,
+  type AccessChange,
   type AccessSection
 } from "./routes.ts";
 
@@ -16,12 +17,30 @@ const kNewRoleRules: Readonly<Record<string, Right>> = {
 };
 
 export class AccessDraft {
-  #section: AccessSection;
-
-  constructor(
+  static from(
     section: AccessSection
+  ): AccessDraft {
+    const roles = Object.keys(section.roles);
+
+    return new AccessDraft(
+      section,
+      new Set(roles),
+      new Map(roles.map((role) => [role, role]))
+    );
+  }
+
+  #section: AccessSection;
+  #savedRoles: ReadonlySet<string>;
+  #savedNames: ReadonlyMap<string, string>;
+
+  private constructor(
+    section: AccessSection,
+    savedRoles: ReadonlySet<string>,
+    savedNames: ReadonlyMap<string, string>
   ) {
     this.#section = structuredClone(section);
+    this.#savedRoles = savedRoles;
+    this.#savedNames = savedNames;
   }
 
   get roles(): string[] {
@@ -59,13 +78,7 @@ export class AccessDraft {
   addRole(
     name: string
   ): AccessDraft {
-    const role = name.trim();
-    if (role === "") {
-      throw new RangeError("a role needs a name");
-    }
-    if (BUILT_IN_ROLES.includes(role) || Object.hasOwn(this.#section.roles, role)) {
-      throw new RangeError(`the "${role}" role already exists`);
-    }
+    const role = this.#availableName(name);
 
     return this.#with({
       roles: {
@@ -75,6 +88,41 @@ export class AccessDraft {
     });
   }
 
+  renameRole(
+    role: string,
+    name: string
+  ): AccessDraft {
+    if (!Object.hasOwn(this.#section.roles, role)) {
+      throw new RangeError(`there is no "${role}" role`);
+    }
+    if (name.trim() === role) {
+      return this;
+    }
+
+    const renamed = this.#availableName(name, this.#savedNames.get(role));
+    function rename(
+      current: string
+    ): string {
+      return current === role ? renamed : current;
+    }
+
+    return this.#with(
+      {
+        defaultRole: rename(this.#section.defaultRole),
+        roles: Object.fromEntries(
+          Object.entries(this.#section.roles).map(
+            ([current, rules]) => [rename(current), rules]
+          )
+        )
+      },
+      new Map(
+        [...this.#savedNames].map(
+          ([current, saved]) => [rename(current), saved]
+        )
+      )
+    );
+  }
+
   deleteRole(
     role: string
   ): AccessDraft {
@@ -82,11 +130,16 @@ export class AccessDraft {
       throw new RangeError(`the "${role}" role is the default role`);
     }
 
-    return this.#with({
-      roles: Object.fromEntries(
-        Object.entries(this.#section.roles).filter(([name]) => name !== role)
+    return this.#with(
+      {
+        roles: Object.fromEntries(
+          Object.entries(this.#section.roles).filter(([name]) => name !== role)
+        )
+      },
+      new Map(
+        [...this.#savedNames].filter(([current]) => current !== role)
       )
-    });
+    );
   }
 
   withDefaultRole(
@@ -105,12 +158,48 @@ export class AccessDraft {
     return structuredClone(this.#section);
   }
 
+  toChange(): AccessChange {
+    return {
+      access: this.toJSON(),
+      renamedRoles: Object.fromEntries(
+        [...this.#savedNames]
+          .filter(([current, saved]) => current !== saved)
+          .map(([current, saved]) => [saved, current])
+      )
+    };
+  }
+
+  #availableName(
+    name: string,
+    savedName?: string
+  ): string {
+    const role = name.trim();
+    if (role === "") {
+      throw new RangeError("a role needs a name");
+    }
+    if (BUILT_IN_ROLES.includes(role) || Object.hasOwn(this.#section.roles, role)) {
+      throw new RangeError(`the "${role}" role already exists`);
+    }
+    if (role !== savedName && this.#savedRoles.has(role)) {
+      throw new RangeError(
+        `the saved settings still use the "${role}" role; save before reusing its name`
+      );
+    }
+
+    return role;
+  }
+
   #with(
-    patch: Partial<AccessSection>
+    patch: Partial<AccessSection>,
+    savedNames = this.#savedNames
   ): AccessDraft {
-    return new AccessDraft({
-      ...this.#section,
-      ...patch
-    });
+    return new AccessDraft(
+      {
+        ...this.#section,
+        ...patch
+      },
+      this.#savedRoles,
+      savedNames
+    );
   }
 }

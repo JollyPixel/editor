@@ -95,6 +95,13 @@ flowchart TB
   file and applies it: kind handlers are replaced, the network rights table
   and the account roles are swapped, and the sessions of a role whose rules
   changed are revoked so they reconnect under the new rules.
+- The access body is `{ access, renamedRoles }`. `AccessDraft` keeps each
+  role's saved name, so a rename reaches the server as `old → new` instead
+  of a removal plus an addition. The save passes the renames to
+  `Accounts.replaceRoles`, which moves and revokes the role's accounts in the
+  same swap. Every saved name, renamed or deleted, stays reserved in the
+  draft until the save, so renames never chain, swap or land on a removed
+  role.
 - `AccountsAccess` turns an access section into the accounts' roles and
   master password, at startup and on each save.
 - Editors lists each kind package's options with `KindOptionSections`, read
@@ -158,6 +165,11 @@ sequenceDiagram
   `LocalPreferences` keeps them in `localStorage`. `StudioAppearance` applies
   the theme and density from them and is what the console's `theme` and
   `density` variables write.
+- `PreferencesFile` carries the overrides of every known scope to another
+  project, from Settings › Import & export. An import drops unknown scopes and
+  fields, refuses the whole file on a shortcut conflict, then replaces each
+  scope it carries through `Preferences.update`, so the change is saved and
+  pushed like any other.
 - Editor frames connect with the same cookie; `jolly-launch` carries the
   identity only.
 - A refused socket (`unauthorized`), the shell's or a frame's, goes through
@@ -215,7 +227,10 @@ sequenceDiagram
   user has one presence color across tabs. Offline frames stay guests.
 - A frame posts `unsaved` when its documents gain or lose changes the server
   has not acknowledged. The shell marks its tab and cancels `beforeunload`
-  while any tab is marked; closing a marked tab does not ask.
+  while any tab is marked. Closing a marked tab from the strip asks first;
+  eviction at the cap always asks and warns when the tab is marked. A tab
+  whose asset left the catalog, or whose editor page was rebuilt in dev, is
+  dropped without asking.
 - A tab spins from the moment its frame is created until the frame posts
   `editor-state` `ready`, spins again while it posts `switching`, and shows a
   warning on `failed`. A tab opened in the background stays still until its
@@ -412,6 +427,6 @@ flowchart TB
 | `src/files/` | `DroppedFile`, `FileDownload` |
 | `src/editors/` | `EditorRegistry`, `ProjectManifest` |
 | `src/browser/` | `BrowserState` |
-| `src/preferences/` | preference routes and scopes, `AccountPreferences`, `StudioAppearance` |
+| `src/preferences/` | preference routes and scopes, `AccountPreferences`, `StudioAppearance`, `PreferencesFile` |
 | `src/tabs/` | `EditorTabs`, `EditorFrames`, `SavedTabs` |
 | `src/shell/` | `<jolly-studio>`, `StudioSession`, Home, Settings, asset browser (`AssetTreeView`), sign-in dialog, Users pane |

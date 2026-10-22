@@ -18,6 +18,7 @@ import type { StudioProject } from "./StudioProject.ts";
 import {
   ACCESS_SECTION,
   KINDS_SECTION,
+  type AccessChange,
   type AccessSection,
   type KindOptions,
   type KindPackageSettings,
@@ -104,13 +105,13 @@ export class ProjectSettings {
 
   replaceAccess(
     account: Account,
-    access: AccessSection
+    change: AccessChange
   ): Promise<ProjectSettingsReply> {
     return this.#serialize(account, async() => {
       if (!this.rights(account).canManageAccess) {
         throw new SettingsRefusedError("only an admin changes the access settings");
       }
-      await this.#replaceAccess(account.id, access);
+      await this.#replaceAccess(account.id, change);
     });
   }
 
@@ -156,17 +157,19 @@ export class ProjectSettings {
 
   async #replaceAccess(
     actorId: string,
-    section: AccessSection
+    change: AccessChange
   ): Promise<void> {
     const next = invalidAsSettings(
-      () => StudioAccess.from(section, ACCESS_SECTION)
+      () => StudioAccess.from(change.access, ACCESS_SECTION)
     );
     const before = this.#project.access.toJSON();
     const after = next.toJSON();
     if (isDeepStrictEqual(before, after)) {
       return;
     }
-    this.#assertRemovable(before, after);
+    const renamed = new Map(Object.entries(change.renamedRoles));
+    assertRenames(before, after, renamed);
+    this.#assertRemovable(before, after, renamed);
     const accountsAccess = invalidAsSettings(
       () => AccountsAccess.resolve(next, this.#accountsOptions, ACCESS_SECTION)
     );
@@ -174,9 +177,13 @@ export class ProjectSettings {
     await this.#project.file.replace(ACCESS_SECTION, after);
     this.#project.replaceAccess(next);
     this.#server.replaceRights(next.rights, accountsAccess.roles.defaultRole);
-    accountsAccess.applyTo(this.#accounts);
+    accountsAccess.applyTo(this.#accounts, renamed);
+    const moved = new Set(renamed.values());
     for (const role of Object.keys(after.roles)) {
-      if (!isDeepStrictEqual(before.roles[role], after.roles[role])) {
+      if (
+        !moved.has(role) &&
+        !isDeepStrictEqual(before.roles[role], after.roles[role])
+      ) {
         for (const accountId of this.#accounts.holders(role)) {
           this.#server.revoke(accountId);
         }
@@ -191,13 +198,14 @@ export class ProjectSettings {
 
   #assertRemovable(
     before: AccessSection,
-    after: AccessSection
+    after: AccessSection,
+    renamed: ReadonlyMap<string, string>
   ): void {
     for (const role of Object.keys(before.roles)) {
       if (Object.hasOwn(after.roles, role)) {
         continue;
       }
-      if (this.#accounts.holders(role).length > 0) {
+      if (!renamed.has(role) && this.#accounts.holders(role).length > 0) {
         throw new RoleInUseError(role, "an account holds it");
       }
       if (this.#accountsOptions.defaultRole === role) {
@@ -236,6 +244,27 @@ export class ProjectSettings {
         kindPackage.descriptors
       )]
     };
+  }
+}
+
+function assertRenames(
+  before: AccessSection,
+  after: AccessSection,
+  renamed: ReadonlyMap<string, string>
+): void {
+  if (new Set(renamed.values()).size !== renamed.size) {
+    throw new InvalidSettingsError("two roles cannot take the same name");
+  }
+  for (const [from, to] of renamed) {
+    const valid = Object.hasOwn(before.roles, from) &&
+      !Object.hasOwn(after.roles, from) &&
+      Object.hasOwn(after.roles, to) &&
+      !Object.hasOwn(before.roles, to);
+    if (!valid) {
+      throw new InvalidSettingsError(
+        `the "${from}" role cannot be renamed to "${to}"`
+      );
+    }
   }
 }
 

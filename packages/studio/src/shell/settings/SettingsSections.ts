@@ -18,6 +18,7 @@ import type { ProjectReply } from "../../project/routes.ts";
 // CONSTANTS
 export const PROFILE_SECTION = "profile";
 export const APPEARANCE_SECTION = "appearance";
+export const PREFERENCES_FILE_SECTION = "preferences-file";
 export const SHARE_LINKS_SECTION = "share-links";
 export const GENERAL_SECTION = "project-general";
 export const ACCESS_SETTINGS_SECTION = "project-access";
@@ -34,6 +35,11 @@ const kPages = {
     id: PROFILE_SECTION,
     label: "Profile",
     kind: "profile"
+  },
+  "preferences-file": {
+    id: PREFERENCES_FILE_SECTION,
+    label: "Import & export",
+    kind: "preferences-file"
   },
   "share-links": {
     id: SHARE_LINKS_SECTION,
@@ -66,7 +72,13 @@ interface SectionBase extends SectionPresentation {
   id: string;
 }
 
-type PageKind = "profile" | "share-links" | "general" | "access" | "audit";
+type PageKind =
+  | "profile"
+  | "preferences-file"
+  | "share-links"
+  | "general"
+  | "access"
+  | "audit";
 
 export type PageSection = {
   [TKind in PageKind]: SectionBase & { kind: TKind; };
@@ -146,6 +158,7 @@ export class SettingsSections implements Iterable<SettingsSection> {
         you.push(preferencesPage(scope.name, scope, [scope]));
       }
     }
+    you.push(kPages["preferences-file"]);
     if (project !== null) {
       you.push(kPages["share-links"]);
     }

@@ -9,7 +9,7 @@ import {
   PROJECT_SETTINGS_PATH,
   projectReplySchema,
   projectSettingsReplySchema,
-  type AccessSection,
+  type AccessChange,
   type KindOptions,
   type ProjectReply,
   type ProjectSettingsReply,
@@ -44,9 +44,9 @@ export class ProjectSettingsClient {
   }
 
   replaceAccess(
-    access: AccessSection
+    change: AccessChange
   ): Promise<ProjectSettingsReply> {
-    return this.#replace(ACCESS_SECTION, access);
+    return this.#replace(ACCESS_SECTION, change);
   }
 
   async #replace(

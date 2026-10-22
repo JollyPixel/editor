@@ -13,7 +13,7 @@ import { accountsFailure } from "../errors/accountsFailure.ts";
 import { requireAccount } from "../requireAccount.ts";
 import { AttachmentDisposition } from "../../../src/project/AttachmentDisposition.ts";
 import type {
-  AccessSection,
+  AccessChange,
   KindOptions,
   ProjectReply,
   ProjectSettingsReply
@@ -30,7 +30,7 @@ export interface ReplaceKindsRoute {
 }
 
 export interface ReplaceAccessRoute {
-  Body: AccessSection;
+  Body: AccessChange;
 }
 
 export class ProjectController {

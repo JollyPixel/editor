@@ -168,10 +168,33 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
   }
 
   replaceRoles(
-    roles: AccountRoles
+    roles: AccountRoles,
+    renamed: ReadonlyMap<string, string> = new Map()
   ): void {
+    for (const [from, to] of renamed) {
+      if (roles.has(from) || !roles.has(to)) {
+        throw new AccountChangeRefusedError(
+          `the "${from}" role cannot be renamed to "${to}"`
+        );
+      }
+    }
+    const moved = this.#database.transaction(() => {
+      const accounts = [...this.#database.accounts].flatMap((account) => {
+        const role = renamed.get(account.role);
+
+        return role === undefined ? [] : [account.withRole(role)];
+      });
+      for (const account of accounts) {
+        this.#database.accounts.save(account);
+      }
+
+      return accounts;
+    });
     this.#roles = roles;
     this.emit("changed");
+    for (const account of moved) {
+      this.revoke(account.id);
+    }
   }
 
   replaceAccessRequests(

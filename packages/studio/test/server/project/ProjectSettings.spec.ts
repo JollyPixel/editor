@@ -145,17 +145,20 @@ describe("ProjectSettings", () => {
     assert.ok(access !== undefined);
 
     await harness.settings.replaceAccess(admin, {
-      ...access,
-      defaultRole: "reviewer",
-      roles: {
-        ...access.roles,
-        spectator: {
-          "*": "void"
-        },
-        reviewer: {
-          "*": "read"
+      access: {
+        ...access,
+        defaultRole: "reviewer",
+        roles: {
+          ...access.roles,
+          spectator: {
+            "*": "void"
+          },
+          reviewer: {
+            "*": "read"
+          }
         }
-      }
+      },
+      renamedRoles: {}
     });
 
     assert.deepEqual(harness.revoked, [spectator.id]);
@@ -177,12 +180,76 @@ describe("ProjectSettings", () => {
 
     await assert.rejects(
       harness.settings.replaceAccess(admin, {
-        ...access,
-        accessRequests: true
+        access: {
+          ...access,
+          accessRequests: true
+        },
+        renamedRoles: {}
       }),
       InvalidSettingsError
     );
     assert.deepEqual(harness.project.access.toJSON(), access);
     assert.deepEqual(harness.audit.store.reader.listAll(), []);
+  });
+
+  test("a renamed role keeps its accounts, revoked once", async() => {
+    await using harness = await settingsHarness();
+    const admin = await harness.register("Alice");
+    const bob = await harness.register("Bob");
+    const { access } = harness.settings.read(admin);
+    assert.ok(access !== undefined);
+    const accountsRevoked: string[] = [];
+    harness.accounts.watchRevocations(
+      (subject) => accountsRevoked.push(subject)
+    );
+
+    await harness.settings.replaceAccess(admin, {
+      access: {
+        ...access,
+        defaultRole: "viewer",
+        roles: {
+          member: access.roles.member,
+          viewer: access.roles.spectator
+        }
+      },
+      renamedRoles: {
+        spectator: "viewer"
+      }
+    });
+
+    assert.equal(harness.accounts.account(bob.id)?.role, "viewer");
+    assert.deepEqual(roleNames(harness.accounts.roles), [
+      "admin",
+      "member",
+      "viewer"
+    ]);
+    assert.deepEqual(accountsRevoked, [bob.id]);
+    assert.deepEqual(harness.revoked, []);
+  });
+
+  test("refuses a rename onto a role that already existed", async() => {
+    await using harness = await settingsHarness();
+    const admin = await harness.register("Alice");
+    const bob = await harness.register("Bob");
+    const { access } = harness.settings.read(admin);
+    assert.ok(access !== undefined);
+
+    await assert.rejects(
+      harness.settings.replaceAccess(admin, {
+        access: {
+          ...access,
+          roles: {
+            member: access.roles.member
+          },
+          defaultRole: "member"
+        },
+        renamedRoles: {
+          spectator: "member"
+        }
+      }),
+      InvalidSettingsError
+    );
+    assert.deepEqual(harness.project.access.toJSON(), access);
+    assert.equal(harness.accounts.account(bob.id)?.role, "spectator");
   });
 });

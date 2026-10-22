@@ -71,14 +71,17 @@ describe("/api/project/settings", () => {
     const { access } = await admin.read();
     assert.ok(access !== undefined);
     await admin.replaceAccess({
-      ...access,
-      roles: {
-        ...access.roles,
-        member: {
-          "studio.$settings": "write",
-          "*": "write"
+      access: {
+        ...access,
+        roles: {
+          ...access.roles,
+          member: {
+            "studio.$settings": "write",
+            "*": "write"
+          }
         }
-      }
+      },
+      renamedRoles: {}
     });
     const member = await settingsClient(backend, "Bob");
     const kinds = KindOptionsDraft.from((await member.read()).kinds).toJSON();
@@ -103,7 +106,10 @@ describe("/api/project/settings", () => {
         maxDelay: 30_000
       }
     });
-    await assert.rejects(member.replaceAccess(access), {
+    await assert.rejects(member.replaceAccess({
+      access,
+      renamedRoles: {}
+    }), {
       name: "ApiRequestError",
       status: 403
     });
@@ -134,11 +140,14 @@ describe("/api/project/settings", () => {
     );
     await assert.rejects(
       admin.replaceAccess({
-        ...access,
-        roles: {
-          spectator: access.roles.spectator
+        access: {
+          ...access,
+          roles: {
+            spectator: access.roles.spectator
+          },
+          defaultRole: "spectator"
         },
-        defaultRole: "spectator"
+        renamedRoles: {}
       }),
       {
         name: "ApiRequestError",

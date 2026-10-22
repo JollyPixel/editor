@@ -30,6 +30,7 @@ import { SettingsSections } from "./shell/settings/SettingsSections.ts";
 import { settingsConsole } from "./shell/settings/settingsConsole.ts";
 import type { Studio } from "./shell/Studio.ts";
 import "./shell/Studio.ts";
+import type { EditorTab } from "./tabs/EditorTabs.ts";
 
 declare global {
   interface Window {
@@ -51,6 +52,12 @@ function required<TName extends keyof HTMLElementTagNameMap>(
   }
 
   return element;
+}
+
+function unsavedChanges(
+  tab: EditorTab
+): string {
+  return `"${tab.label}" has changes the server has not received.`;
 }
 
 function prewarmWebGPU(): void {
@@ -91,10 +98,19 @@ async function boot(): Promise<void> {
     scopes,
     settings,
     editors,
-    confirmEvict: (tab) => showConfirm({
+    confirmEvict: (tab, unsaved) => showConfirm({
       title: "Editor limit reached",
-      message: `Close "${tab.label}" to open another editor?`,
-      confirmLabel: "Close"
+      message: unsaved ?
+        `${unsavedChanges(tab)} Close it anyway to open another editor?` :
+        `Close "${tab.label}" to open another editor?`,
+      confirmLabel: "Close",
+      danger: unsaved
+    }),
+    confirmClose: (tab) => showConfirm({
+      title: "Unsaved changes",
+      message: `${unsavedChanges(tab)} Closing the tab loses them.`,
+      confirmLabel: "Close",
+      danger: true
     })
   });
 

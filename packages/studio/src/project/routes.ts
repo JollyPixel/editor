@@ -82,6 +82,11 @@ export const accessSectionSchema = z.object({
   accessRequests: z.boolean()
 });
 
+export const accessChangeSchema = z.object({
+  access: accessSectionSchema,
+  renamedRoles: z.record(z.string().min(1), z.string().min(1))
+});
+
 export const projectSettingsReplySchema = z.object({
   name: z.string(),
   editors: z.array(z.string()),
@@ -102,5 +107,6 @@ export type KindOptionGroup = z.infer<typeof kindOptionGroupSchema>;
 export type KindOptionSection = z.infer<typeof kindOptionSectionSchema>;
 export type KindPackageSettings = z.infer<typeof kindPackageSchema>;
 export type AccessSection = z.infer<typeof accessSectionSchema>;
+export type AccessChange = z.infer<typeof accessChangeSchema>;
 export type ProjectSettingsReply = z.infer<typeof projectSettingsReplySchema>;
 export type SettingsSectionName = z.infer<typeof settingsSectionSchema>;

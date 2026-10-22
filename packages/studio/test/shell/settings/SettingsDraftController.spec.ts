@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { AccessDraft } from "../../../src/project/AccessDraft.ts";
 import { StudioProjectSettings } from "../../../src/project/StudioProjectSettings.ts";
 import type {
-  AccessSection,
+  AccessChange,
   ProjectSettingsReply
 } from "../../../src/project/routes.ts";
 import { ProjectSettingsController } from "../../../src/shell/settings/project/ProjectSettingsController.ts";
@@ -41,7 +41,7 @@ async function accessDraft(): Promise<SettingsDraftController<AccessDraft>> {
   const project = new StudioProjectSettings({
     read: async() => reply,
     replaceKinds: async() => reply,
-    replaceAccess: async(access: AccessSection) => {
+    replaceAccess: async({ access }: AccessChange) => {
       reply = {
         ...reply,
         access
@@ -62,8 +62,8 @@ async function accessDraft(): Promise<SettingsDraftController<AccessDraft>> {
 
   return new SettingsDraftController(kHost, {
     project: controller,
-    saved: (data) => (data.access === undefined ? null : new AccessDraft(data.access)),
-    save: (settings, draft) => settings.replaceAccess(draft.toJSON())
+    saved: (data) => (data.access === undefined ? null : AccessDraft.from(data.access)),
+    save: (settings, draft) => settings.replaceAccess(draft.toChange())
   });
 }
 

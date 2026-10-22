@@ -30,22 +30,23 @@ describe("EditorTabs cap", () => {
   });
 
   test("evicts the least recently activated tab at the cap", async() => {
-    const asked: string[] = [];
+    const asked: Array<[string, boolean]> = [];
     const { tabs, itemValues } = harness({
       cap: 2,
-      confirmEvict: (tab) => {
-        asked.push(tab.id);
+      confirmEvict: (tab, unsaved) => {
+        asked.push([tab.id, unsaved]);
 
         return true;
       }
     });
     await tabs.open(MAP_TAB);
     await tabs.open(MODEL_TAB);
+    tabs.markUnsaved("model-1", true);
     tabs.focus("map-1");
 
     assert.equal(await tabs.open(OTHER_TAB), true);
 
-    assert.deepEqual(asked, ["model-1"]);
+    assert.deepEqual(asked, [["model-1", true]]);
     assert.deepEqual(itemValues(), [HOME_TAB_ID, "map-1", "map-2"]);
     assert.equal(tabs.active, "map-2");
   });
