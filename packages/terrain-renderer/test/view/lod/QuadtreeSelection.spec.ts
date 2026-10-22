@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { CHUNK_SAMPLES, ChunkCoord } from "#src/terrain/ChunkCoord.ts";
+import { OVERVIEW_SAMPLE_COUNT } from "#src/terrain/OverviewMap.ts";
 import { CHUNK_SAMPLE_COUNT } from "#src/terrain/TerrainChunk.ts";
 import { Terrain } from "#src/terrain/Terrain.ts";
 import { LodRanges } from "#src/view/lod/LodRanges.ts";
@@ -176,6 +177,16 @@ describe("QuadtreeSelection", () => {
     const nodes = new QuadtreeSelection(terrain).select({ x: 150, y: 601, z: 30 });
 
     assert.equal(nodesAt(nodes, 150, 30)[0].level, 0);
+  });
+
+  test("an unloaded chunk is still drawn, bounded by its overview samples", () => {
+    const terrain = stripTerrain(4);
+    terrain.removeChunk(new ChunkCoord(2, 0));
+    terrain.addUnloadedChunk(new ChunkCoord(2, 0), new Float32Array(OVERVIEW_SAMPLE_COUNT).fill(600));
+    const [node] = nodesAt(new QuadtreeSelection(terrain).select({ x: 150, y: 601, z: 30 }), 150, 30);
+
+    assert.equal(node.level, 0);
+    assert.deepEqual([node.bounds.min.y, node.bounds.max.y], [0, 600]);
   });
 });
 

@@ -91,7 +91,8 @@ export class AssetKindRegistry {
   decode(
     kind: string,
     assetId: string,
-    content: Uint8Array
+    content: Uint8Array,
+    parts: ReadonlyMap<string, Uint8Array> = new Map()
   ): Result<DecodedAsset, Error> {
     if (!this.has(kind)) {
       const error = new UnknownAssetKindError(kind);
@@ -103,6 +104,9 @@ export class AssetKindRegistry {
     try {
       const state = handler.create(assetId);
       handler.load(state, content);
+      for (const [partId, data] of parts) {
+        handler.parts?.load(state, partId, data);
+      }
 
       return Ok({
         handler,

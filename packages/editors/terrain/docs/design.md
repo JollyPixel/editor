@@ -26,6 +26,12 @@ someone creates it, by adding it next to an existing one or by sculpting
 across an edge. Removing a chunk deletes its data. A new terrain starts with
 one flat chunk at `(0, 0)`, and removing the last chunk is refused.
 
+Chunk coordinates lie in `[-128, 127]` on each axis, 16 km per side, so the
+view's 256×256 lookup texture never gives two chunks the same slot. A terrain
+holds at most 4096 chunks (`MAX_TERRAIN_CHUNKS`), about 17 km², while the
+server keeps every part in memory: 64 MB of heights at ×1, and a join
+snapshot of about 200 KB.
+
 Each sample belongs to exactly one chunk: chunk `(x, z)` owns the samples in
 `[x × 64, (x + 1) × 64)` on X and Z, and the row and column at `(x + 1) × 64`
 belong to its neighbours. No sample is stored twice, so an edit on an edge
@@ -151,6 +157,30 @@ walkable angle is red.
 A coarse height and colour map of the whole world, one sample per 32 m, always
 in memory. Nodes beyond the stream radius draw from it, so the horizon is
 never empty. It is rebuilt incrementally from the chunks that change.
+
+- A sample is the height at a 32 m grid point, not an average. These are the
+  vertices a 1024 m root node draws, so a far node looks the same drawn from
+  the overview or from its chunks.
+- A chunk owns the 2×2 samples at local `(0, 0)`, `(32, 0)`, `(0, 32)` and
+  `(32, 32)`, as it owns its heights. Adding, removing or writing a chunk
+  updates its own samples and no other.
+- `Terrain.overview` holds them. The asset file and the room snapshot
+  list each chunk's samples, so a client knows the far terrain without loading
+  its chunks; loading a chunk derives its samples from its heights.
+- Colour arrives with the terrain layers in M3. Until then the overview holds
+  heights only.
+- A vertex or fragment on an unloaded chunk reads the overview, interpolated
+  bilinearly between its four nearest samples; on a loaded chunk it reads the
+  chunk's heights. The height is a function of position only, so two nodes
+  sharing an edge always agree and no crack opens where loaded ground meets
+  unloaded ground. A chunk's apron reads an unloaded neighbour the same way.
+- The view keeps the overview in one 512×512 `R32F` texture, two texels per
+  chunk on each axis, indexed by chunk coordinates modulo 256 like the
+  lookup texture. The lookup marks each known chunk, loaded or not; fragments
+  on unknown ground are discarded.
+- The quadtree covers every known chunk. An unloaded chunk's node bounds span
+  its overview samples and those of the chunks east, north and north-east of
+  it, which bound the interpolated surface.
 
 ### Points of interest
 

@@ -79,15 +79,31 @@ describe("terrain convergence", () => {
     assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
   });
 
-  test("a stroke on a chunk a peer removed meanwhile is refused and the author converges", () => {
+  test("a stroke across a chunk a peer removed meanwhile keeps its other tiles, without a snapshot", () => {
     const { server, document, sculpt, route } = edgePeerSetup();
+    let resets = 0;
+    document.on("reset", () => resets++);
     sculpt(5, [EDGE_TILE, ORIGIN_TILE]);
     server.receive("A", networkCommand({ action: "chunk-removed", x: 1, z: 0 }, { clientId: "A" }));
     route();
 
     assert.equal(document.terrain.has(EDGE_TILE.chunk), false);
-    assert.deepEqual(document.terrain.chunk(ORIGIN_TILE.chunk)!.tileHeights(3, 2), tileHeights(0));
+    assert.deepEqual(document.terrain.chunk(ORIGIN_TILE.chunk)!.tileHeights(3, 2), tileHeights(5));
     assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
+    assert.equal(resets, 0);
+  });
+
+  test("a stroke wholly on a chunk a peer removed meanwhile settles without a snapshot", () => {
+    const { server, document, sculpt, route } = edgePeerSetup();
+    let resets = 0;
+    document.on("reset", () => resets++);
+    sculpt(5);
+    server.receive("A", networkCommand({ action: "chunk-removed", x: 1, z: 0 }, { clientId: "A" }));
+    route();
+
+    assert.equal(document.terrain.knows(EDGE_TILE.chunk), false);
+    assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
+    assert.equal(resets, 0);
   });
 
   test("two strokes on the same tile settle on the last one admitted", () => {

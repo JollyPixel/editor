@@ -10,6 +10,7 @@ import {
   ASSET_CHECKPOINT_EVENT_TYPES,
   type AssetEventDataMap
 } from "./model/events/AssetEvents.ts";
+import { retainedPartEvents } from "./model/events/retainedPartEvents.ts";
 import { AssetIndex } from "./storage/AssetIndex.ts";
 import { AssetKindRegistry } from "./model/kinds/AssetKindRegistry.ts";
 import type {
@@ -39,6 +40,7 @@ import { registerAssetRooms } from "./live/registerAssetRooms.ts";
 import { AssetTags } from "./catalog/tags/AssetTags.ts";
 import { AssetBackups } from "./storage/AssetBackups.ts";
 import { Teardown } from "./common/Teardown.ts";
+import { AssetPartFiles } from "./storage/AssetPartFiles.ts";
 import {
   silentLogger,
   type Logger
@@ -128,11 +130,13 @@ async function assembleAssetBackend(
 
   teardown.defer(traceAppends(eventStore, logger));
   const kinds = new AssetKindRegistry(handlers);
+  const partFiles = new AssetPartFiles(kinds);
   await ensureStateGitignore(source, options.stateIgnores);
 
   if (compactOnOpen) {
     const report = eventStore.compact({
-      checkpointEventTypes: ASSET_CHECKPOINT_EVENT_TYPES
+      checkpointEventTypes: ASSET_CHECKPOINT_EVENT_TYPES,
+      keep: retainedPartEvents(eventStore)
     });
     logger
       .withMetadata(report)
@@ -148,6 +152,7 @@ async function assembleAssetBackend(
     eventStore,
     state,
     backups,
+    partFiles,
     logger
   });
   projector.load();
@@ -207,7 +212,8 @@ async function assembleAssetBackend(
   const folders = new CatalogFolders({
     source,
     catalog,
-    flush
+    flush,
+    kinds
   });
   teardown.defer(() => folders.close());
 
@@ -217,6 +223,7 @@ async function assembleAssetBackend(
     projector,
     writer,
     afterPass: () => folders.refresh(),
+    partFiles,
     logger
   });
   teardown.defer(() => sync.close());

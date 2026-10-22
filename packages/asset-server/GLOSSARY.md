@@ -36,6 +36,18 @@ An asset's content decoded into its kind's typed form, such as a
 it loads content and encodes one when it serializes live state. Content that
 fails the kind's schema throws `InvalidAssetFileError`.
 
+### Part
+
+A piece of an asset's content that a kind stores, loads and sends on its own,
+named by a part ID such as a terrain chunk's `12_-3`. The rest of the content
+is the manifest. See [asset parts](./architecture/AssetParts.md).
+
+### Generation
+
+The checkpoint of an asset with parts: one `asset.updated` event holding the
+manifest, the bytes of the parts changed since the last generation, and the
+version that holds each other part.
+
 ### Live State
 
 The current in-memory state of an open asset. It is rebuilt from event history

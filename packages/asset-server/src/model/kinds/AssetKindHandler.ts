@@ -68,6 +68,35 @@ export interface AssetKindCompanion<TState = unknown> {
   ): void;
 }
 
+export interface AssetParts<
+  TState = unknown,
+  TCommand extends AssetCommandHeader = AssetCommandHeader
+> {
+  /**
+   * Part file extension, mapped to its media type.
+   */
+  readonly extension: Readonly<Record<string, string>>;
+
+  touched(
+    command: TCommand
+  ): Iterable<string>;
+
+  list(
+    state: TState
+  ): Iterable<string>;
+
+  load(
+    state: TState,
+    partId: string,
+    content: Uint8Array
+  ): void;
+
+  serialize(
+    state: TState,
+    partId: string
+  ): Promise<Uint8Array>;
+}
+
 export interface AssetKindHandler<
   TState = unknown,
   TCommand extends AssetCommandHeader = AssetCommandHeader,
@@ -79,6 +108,11 @@ export interface AssetKindHandler<
   readonly snapshot?: SnapshotPolicy;
   readonly commands?: AssetCommands<TState, TCommand, TRelay>;
   readonly companions?: readonly AssetKindCompanion<TState>[];
+  /**
+   * Splits the content into a manifest, which `load` and `serialize` handle,
+   * and parts stored, loaded and sent one by one.
+   */
+  readonly parts?: AssetParts<TState, TCommand>;
   /**
    * Turns another format, keyed by its extension, into this kind's content
    * when a catalog create names that extension in `from`.

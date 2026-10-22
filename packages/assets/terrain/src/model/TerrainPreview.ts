@@ -6,6 +6,7 @@ import {
   Terrain,
   TILE_SAMPLE_COUNT,
   TileCoord,
+  TILES_PER_CHUNK,
   type TerrainReader,
   type TileKey,
   type TilePatch
@@ -22,6 +23,7 @@ export type TerrainPreviewEvents = {
   tilesChanged: (tiles: readonly TileCoord[]) => void;
   chunkAdded: (coord: ChunkCoord) => void;
   chunkRemoved: (coord: ChunkCoord) => void;
+  overviewChanged: (coords: readonly ChunkCoord[]) => void;
   reset: () => void;
   strokeWritten: (patches: readonly TilePatch[]) => void;
   strokeSettled: (tiles: readonly TileCoord[]) => void;
@@ -71,16 +73,12 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
     switch (command.action) {
       case "chunk-added": {
         const coord = new ChunkCoord(command.x, command.z);
-        const confirmed = this.#document.terrain.chunk(coord);
-        if (confirmed === undefined) {
-          break;
+        if (this.#document.terrain.has(coord)) {
+          this.#chunkLoaded(coord);
         }
-        for (const terrain of this.#terrains()) {
-          if (!terrain.has(coord)) {
-            terrain.addChunk(coord, confirmed.copyHeights());
-          }
+        else {
+          this.#overviewChanged([coord]);
         }
-        this.emit("chunkAdded", coord);
         break;
       }
       case "chunk-removed": {
@@ -104,9 +102,31 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
         }
         this.#refresh(tiles);
         this.#strokeSettled(settled);
+        this.#overviewChanged(unloadedChunks(this.#document.terrain, tiles));
         break;
       }
     }
+  };
+
+  #onLoaded = (
+    coord: ChunkCoord
+  ): void => {
+    this.#chunkLoaded(coord);
+  };
+
+  #onUnloaded = (
+    coord: ChunkCoord
+  ): void => {
+    const settled = this.#forget(({ tile }) => tile.chunk.equals(coord));
+    const samples = this.#document.terrain.overview.samples(coord);
+    for (const terrain of this.#terrains()) {
+      terrain.removeChunk(coord);
+      if (samples !== undefined) {
+        terrain.addUnloadedChunk(coord, samples);
+      }
+    }
+    this.#strokeSettled(settled);
+    this.emit("chunkRemoved", coord);
   };
 
   #onReset = (): void => {
@@ -141,6 +161,8 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
     this.#mirror(this.#displayed);
     document.on("change", this.#onChange);
     document.on("reset", this.#onReset);
+    document.stream.on("loaded", this.#onLoaded);
+    document.stream.on("unloaded", this.#onUnloaded);
   }
 
   write(
@@ -198,6 +220,8 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
     this.#disposed = true;
     this.#document.off("change", this.#onChange);
     this.#document.off("reset", this.#onReset);
+    this.#document.stream.off("loaded", this.#onLoaded);
+    this.#document.stream.off("unloaded", this.#onUnloaded);
     this.#layers.clear();
     this.removeAllListeners();
   }
@@ -212,10 +236,65 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
   #mirror(
     terrain: Terrain
   ): void {
+    const confirmed = this.#document.terrain;
     terrain.clear();
-    for (const chunk of this.#document.terrain.chunks()) {
-      terrain.addChunk(chunk.coord, chunk.copyHeights());
+    for (const coord of confirmed.overview.coords()) {
+      const chunk = confirmed.chunk(coord);
+      if (chunk === undefined) {
+        terrain.addUnloadedChunk(coord, confirmed.overview.samples(coord)!);
+      }
+      else {
+        terrain.addChunk(coord, chunk.copyHeights());
+      }
     }
+  }
+
+  #chunkLoaded(
+    coord: ChunkCoord
+  ): void {
+    const confirmed = this.#document.terrain.chunk(coord);
+    if (confirmed === undefined) {
+      return;
+    }
+
+    const wasLoaded = this.#displayed.has(coord);
+    for (const terrain of this.#terrains()) {
+      terrain.removeChunk(coord);
+      terrain.addChunk(coord, confirmed.copyHeights());
+    }
+    const surviving = [...this.#layers].flatMap(([owner, layer]) => Array.from(layer.values())
+      .filter(({ patch }) => patch.tile.chunk.equals(coord))
+      .map((tile) => {
+        return { owner, tile };
+      }));
+    surviving.sort((left, right) => left.tile.order - right.tile.order);
+    for (const { owner, tile: { patch } } of surviving) {
+      this.#displayed.writeTile(patch.tile, patch.heights);
+      this.#strokeTerrain(owner)?.writeTile(patch.tile, patch.heights);
+    }
+    if (wasLoaded) {
+      this.emit("tilesChanged", chunkTiles(coord));
+    }
+    else {
+      this.emit("chunkAdded", coord);
+    }
+  }
+
+  #overviewChanged(
+    coords: readonly ChunkCoord[]
+  ): void {
+    if (coords.length === 0) {
+      return;
+    }
+
+    for (const coord of coords) {
+      const samples = this.#document.terrain.overview.samples(coord)!;
+      for (const terrain of this.#terrains()) {
+        terrain.removeChunk(coord);
+        terrain.addUnloadedChunk(coord, samples);
+      }
+    }
+    this.emit("overviewChanged", coords);
   }
 
   #isActive(
@@ -452,6 +531,29 @@ class LocalStroke implements TerrainStroke {
   cancel(): void {
     this.#controls.finish(false);
   }
+}
+
+function chunkTiles(
+  coord: ChunkCoord
+): TileCoord[] {
+  return Array.from(
+    { length: TILES_PER_CHUNK * TILES_PER_CHUNK },
+    (_, index) => TileCoord.fromIndex(coord, index)
+  );
+}
+
+function unloadedChunks(
+  terrain: TerrainReader,
+  tiles: readonly TileCoord[]
+): ChunkCoord[] {
+  const chunks = new Map<string, ChunkCoord>();
+  for (const { chunk } of tiles) {
+    if (!terrain.has(chunk) && terrain.knows(chunk)) {
+      chunks.set(chunk.key, chunk);
+    }
+  }
+
+  return [...chunks.values()];
 }
 
 function sameHeights(

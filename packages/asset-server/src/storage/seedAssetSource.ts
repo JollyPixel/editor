@@ -8,6 +8,8 @@ import {
 } from "./AssetIndex.ts";
 import type { AnyAssetKindHandler } from "../model/kinds/AssetKindHandler.ts";
 import { AssetKindRegistry } from "../model/kinds/AssetKindRegistry.ts";
+import { serializeParts } from "../model/kinds/serializeParts.ts";
+import { AssetPartFiles } from "./AssetPartFiles.ts";
 
 export type AssetSeedFactory = () => Uint8Array | Promise<Uint8Array>;
 
@@ -15,7 +17,8 @@ export interface AssetSeedEntry {
   id: string;
   kind: string;
   /**
-   * @default the serialized `create(id)` state of the kind's handler
+   * @default the serialized `create(id)` state of the kind's handler, with
+   * its part files for a kind that declares parts
    */
   content?: AssetSeedFactory;
 }
@@ -29,8 +32,13 @@ export interface SeedAssetSourceOptions {
   handlers?: Iterable<AnyAssetKindHandler>;
 }
 
+interface SeedContent {
+  data: Uint8Array;
+  parts?: Map<string, Uint8Array>;
+}
+
 interface NormalizedSeed {
-  content: AssetSeedFactory;
+  content: () => Promise<SeedContent>;
   indexed: Omit<IndexedAsset, "path"> | null;
 }
 
@@ -40,18 +48,30 @@ export async function seedAssetSource(
   options: SeedAssetSourceOptions = {}
 ): Promise<string[]> {
   const registry = new AssetKindRegistry(options.handlers);
+  const partFiles = new AssetPartFiles(registry);
   const written: string[] = [];
   const indexedAssets: IndexedAsset[] = [];
 
   for (const [assetPath, value] of Object.entries(seed)) {
     const { content, indexed } = normalizeSeed(value, registry);
-    if (
-      await source.exists(assetPath) ||
-      !await source.writeIfAbsent(assetPath, await content())
-    ) {
+    if (await source.exists(assetPath)) {
       continue;
     }
 
+    const { data, parts } = await content();
+    if (!await source.writeIfAbsent(assetPath, data)) {
+      continue;
+    }
+
+    const extension = indexed === null ? null : partFiles.extension(indexed.kind);
+    if (extension !== null) {
+      for (const [partId, part] of parts ?? []) {
+        await source.writeIfAbsent(
+          partFiles.path(assetPath, extension, partId),
+          part
+        );
+      }
+    }
     written.push(assetPath);
     if (indexed !== null) {
       indexedAssets.push({
@@ -78,13 +98,21 @@ function normalizeSeed(
 ): NormalizedSeed {
   if (typeof value === "function") {
     return {
-      content: value,
+      content: async() => {
+        return { data: await value() };
+      },
       indexed: null
     };
   }
 
+  const { content } = value;
+
   return {
-    content: value.content ?? defaultContent(value, registry),
+    content: content === undefined ?
+      defaultContent(value, registry) :
+      async() => {
+        return { data: await content() };
+      },
     indexed: {
       id: value.id,
       kind: value.kind
@@ -95,10 +123,13 @@ function normalizeSeed(
 function defaultContent(
   entry: AssetSeedEntry,
   registry: AssetKindRegistry
-): AssetSeedFactory {
-  return () => {
+): () => Promise<SeedContent> {
+  return async() => {
     const handler = registry.get(entry.kind);
+    const state = handler.create(entry.id);
+    const data = await handler.serialize(state);
+    const parts = await serializeParts(handler, state);
 
-    return handler.serialize(handler.create(entry.id));
+    return parts === undefined ? { data } : { data, parts };
   };
 }

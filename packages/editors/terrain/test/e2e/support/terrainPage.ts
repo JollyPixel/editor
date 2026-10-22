@@ -47,6 +47,18 @@ export class TerrainPage {
     );
   }
 
+  chunkLoaded(
+    chunkX: number,
+    chunkZ: number
+  ): Promise<boolean | null> {
+    return this.page.evaluate(([x, z]) => {
+      const { terrain } = window.terrainEditor!.document;
+      const coord = [...terrain.overview.coords()].find((known) => known.x === x && known.z === z);
+
+      return coord === undefined ? null : terrain.has(coord);
+    }, [chunkX, chunkZ]);
+  }
+
   async pressBrush(
     sampleX: number,
     sampleZ: number

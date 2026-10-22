@@ -18,7 +18,10 @@ import {
   bytes,
   text
 } from "../helpers/bytes.ts";
-import { counterHandler } from "../helpers/kinds.ts";
+import {
+  counterHandler,
+  tileHandler
+} from "../helpers/kinds.ts";
 
 describe("seedAssetSource", () => {
   test("writes the documents a source does not hold yet", async() => {
@@ -125,6 +128,23 @@ describe("seedAssetSource", () => {
         kind: "pixelart"
       }
     ]);
+  });
+
+  test("writes the part files of a kind with parts", async() => {
+    const source = new MemoryAssetSource();
+
+    const written = await seedAssetSource(
+      source,
+      { "w.tiles": { id: "world", kind: "tiles" } },
+      { handlers: [tileHandler()] }
+    );
+
+    assert.deepStrictEqual(written, ["w.tiles"]);
+    assert.deepStrictEqual(await source.list(), [
+      "w.tiles",
+      "w.tiles.parts/a.tile"
+    ]);
+    assert.strictEqual(text(await source.read("w.tiles.parts/a.tile")), "grass");
   });
 
   test("leaves the asset index alone when an entry was not written", async() => {

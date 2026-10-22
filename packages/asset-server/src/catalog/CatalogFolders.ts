@@ -12,6 +12,8 @@ import type { CatalogChange } from "./client/protocol.ts";
 import type { CatalogProjection } from "./CatalogProjection.ts";
 import { FolderMovedIntoItselfError } from "./errors/FolderMovedIntoItselfError.ts";
 import { TaskChain } from "../common/TaskChain.ts";
+import { AssetPartFiles } from "../storage/AssetPartFiles.ts";
+import type { AssetKindRegistry } from "../model/kinds/AssetKindRegistry.ts";
 
 export type CatalogFoldersEventMap = {
   changed: (
@@ -23,6 +25,11 @@ export interface CatalogFoldersOptions {
   source: AssetSource;
   catalog: CatalogProjection;
   flush: () => Promise<void>;
+  /**
+   * Kinds whose parts folders are left out of the folder list.
+   * @default no kind with parts
+   */
+  kinds?: AssetKindRegistry;
 }
 
 export class CatalogFolders extends Emitter<
@@ -31,6 +38,7 @@ export class CatalogFolders extends Emitter<
   #source: AssetSource;
   #catalog: CatalogProjection;
   #flush: () => Promise<void>;
+  #partFiles: AssetPartFiles;
   #folders = new FolderSet();
   #queue = new TaskChain();
 
@@ -41,6 +49,7 @@ export class CatalogFolders extends Emitter<
     this.#source = options.source;
     this.#catalog = options.catalog;
     this.#flush = options.flush;
+    this.#partFiles = new AssetPartFiles(options.kinds);
     this.#catalog.on(
       "changed",
       this.#onChanged
@@ -122,7 +131,8 @@ export class CatalogFolders extends Emitter<
 
   async #refresh(): Promise<void> {
     const folders = new FolderSet(
-      await this.#source.folders()
+      (await this.#source.folders())
+        .filter((folder) => this.#partFiles.owner(folder) === null)
     );
     for (const record of this.#catalog.catalog) {
       folders.addParents(record.path.toString());

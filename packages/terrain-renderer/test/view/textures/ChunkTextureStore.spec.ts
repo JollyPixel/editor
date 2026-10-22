@@ -24,6 +24,7 @@ import {
 import {
   apronSamples,
   applyRandomEdit,
+  knownFlags,
   rebuildStore,
   sampledApron
 } from "../../helpers/apron.ts";
@@ -261,9 +262,9 @@ describe("ChunkTextureStore", () => {
     assert.equal(texel(0, 0, CHUNK_SAMPLES + 1, TILE_SAMPLES), -5);
   });
 
-  test("after any add, remove or edit every apron texel is the height picked at its sample", () => {
+  test("after any edit, load or unload every apron texel is the height picked at its sample", () => {
     const random = seededRandom(99);
-    for (let sequence = 0; sequence < 3; sequence++) {
+    for (let sequence = 0; sequence < 6; sequence++) {
       const terrain = new Terrain();
       terrain.addChunk(new ChunkCoord(0, 0), rampHeights(10));
       const store = rebuildStore(terrain);
@@ -276,6 +277,8 @@ describe("ChunkTextureStore", () => {
           assert.deepEqual(apronSamples(store, coord), apronSamples(rebuilt, coord), message);
           assert.deepEqual(apronSamples(store, coord), sampledApron(terrain, coord), message);
         }
+        assert.deepEqual(store.overview.image.data, rebuilt.overview.image.data, steps.join(", "));
+        assert.deepEqual(knownFlags(store), knownFlags(rebuilt), steps.join(", "));
         rebuilt.dispose();
       }
     }

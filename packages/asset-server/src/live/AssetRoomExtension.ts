@@ -9,10 +9,15 @@ import type {
 } from "../model/kinds/AssetKindHandler.ts";
 import {
   ASSET_ROOM_DELETED,
+  ASSET_ROOM_PARTS,
   ASSET_ROOM_REJECTED,
+  ASSET_ROOM_SUBSCRIBE_PARTS,
   type AssetCommandHeader,
+  type AssetLiveParts,
   type AssetLiveProtocol,
+  type AssetPartsRequest,
   type AssetRoomDeletedMessage,
+  type AssetRoomPartsMessage,
   type AssetRoomRejectedMessage
 } from "../model/kinds/AssetLiveProtocol.ts";
 import {
@@ -39,6 +44,29 @@ export interface AssetRoomExtensionOptions<TCommand = unknown> {
   restore?: Iterable<RecordedCommand<TCommand>>;
   resumeLimit?: number;
   departureTimeout?: number;
+  /**
+   * The parts of the room's kind. The live protocol then declares `parts`.
+   */
+  parts?: AssetRoomParts<TCommand>;
+  /**
+   * Sends every part after the snapshot of a joining member, for a room that
+   * accepts no subscription.
+   */
+  pushParts?: boolean;
+}
+
+export interface AssetRoomParts<TCommand = unknown> {
+  touched(
+    command: TCommand
+  ): Iterable<string>;
+
+  list(): Iterable<string>;
+}
+
+interface RoomParts<TCommand extends AssetCommandHeader> {
+  readonly kind: AssetRoomParts<TCommand>;
+  readonly live: AssetLiveParts<TCommand>;
+  readonly subscriptions: Map<string, Set<string>>;
 }
 
 type AssetSyncMessage = network.NetworkSyncMessage<unknown, unknown>;
@@ -71,6 +99,8 @@ export class AssetRoomExtension<
   #acks = new PeerAcks();
   #members = new Set<string>();
   #departures = new Map<string, () => void>();
+  #parts: RoomParts<TCommand> | null;
+  #pushParts: boolean;
 
   constructor(
     binding: AssetRoomBinding,
@@ -80,6 +110,13 @@ export class AssetRoomExtension<
     options: AssetRoomExtensionOptions<TCommand> = {}
   ) {
     super();
+    if ((options.parts === undefined) !== (protocol.parts === undefined)) {
+      throw new TypeError(
+        options.parts === undefined ?
+          `Asset kind "${binding.kind}" has a live().parts but declares no parts.` :
+          `Asset kind "${binding.kind}" declares parts but has no live().parts.`
+      );
+    }
     if ((commands.relay === undefined) !== (protocol.relay === undefined)) {
       throw new TypeError(
         commands.relay === undefined ?
@@ -90,8 +127,22 @@ export class AssetRoomExtension<
 
     this.id = binding.roomId;
     this.name = binding.kind;
-    this.#roomProtocols = AssetRoomProtocols.compile(commands);
-    this.protocols = this.#roomProtocols.withSnapshot(protocol.snapshotSchema);
+    this.#roomProtocols = AssetRoomProtocols.compile(
+      commands,
+      protocol.parts !== undefined
+    );
+    this.protocols = this.#roomProtocols.withSnapshot(
+      protocol.snapshotSchema,
+      protocol.parts?.schema
+    );
+    this.#parts = options.parts === undefined || protocol.parts === undefined ?
+      null :
+      {
+        kind: options.parts,
+        live: protocol.parts,
+        subscriptions: new Map()
+      };
+    this.#pushParts = options.pushParts ?? false;
     this.#assetId = binding.assetId;
     this.#version = binding.version ?? (() => undefined);
     this.#commands = commands;
@@ -125,9 +176,17 @@ export class AssetRoomExtension<
       return;
     }
 
-    this.#room?.broadcast(
+    const room = this.#room;
+    if (room === null) {
+      return;
+    }
+
+    room.broadcast(
       this.#snapshot(this.#acks.ofEveryone())
     );
+    for (const clientId of this.#parts?.subscriptions.keys() ?? []) {
+      this.#sendSubscribedParts(clientId, room);
+    }
   }
 
   override async onClientConnect(
@@ -160,6 +219,9 @@ export class AssetRoomExtension<
     client.send(
       resume === null ? this.#snapshot({}) : this.#resumeMessage(resume)
     );
+    if (this.#pushParts && this.#parts !== null) {
+      client.send(this.#partsMessage(this.#parts.kind.list()));
+    }
   }
 
   override onResync(
@@ -174,12 +236,14 @@ export class AssetRoomExtension<
       clientId,
       this.#snapshot(this.#acks.collectAcks([clientId]))
     );
+    this.#sendSubscribedParts(clientId, context.room);
   }
 
   override onClientDisconnect(
     clientId: string
   ): void {
     this.#members.delete(clientId);
+    this.#parts?.subscriptions.delete(clientId);
     this.#acks.depart(clientId);
     this.#protocol.relay?.leave?.(clientId);
     this.#departures.get(clientId)?.();
@@ -195,6 +259,13 @@ export class AssetRoomExtension<
     }
     if (this.#roomProtocols.routesToRelay(message)) {
       this.#protocol.relay?.receive(clientId, message, context.room);
+
+      return;
+    }
+
+    const request = this.#roomProtocols.partRequest(message);
+    if (request !== null) {
+      this.#requestParts(clientId, request, context.room);
 
       return;
     }
@@ -237,11 +308,11 @@ export class AssetRoomExtension<
     }
 
     arbitration.commit?.(appended.val.eventVersion);
-    context.room.broadcast(
-      this.#toBroadcast(
-        arbitration.command,
-        appended.val.eventVersion
-      )
+    this.#broadcast(
+      clientId,
+      context.room,
+      arbitration.command,
+      appended.val.eventVersion
     );
     if (arbitration.command !== command) {
       this.#resync(
@@ -380,6 +451,102 @@ export class AssetRoomExtension<
       ...this.#snapshot(acks),
       ...refused
     });
+    this.#sendSubscribedParts(clientId, room);
+  }
+
+  #requestParts(
+    clientId: string,
+    request: AssetPartsRequest,
+    room: network.RoomBroadcast
+  ): void {
+    if (this.#parts === null) {
+      return;
+    }
+
+    const { subscriptions } = this.#parts;
+    const subscribed = subscriptions.get(clientId) ?? new Set<string>();
+    if (request.action !== ASSET_ROOM_SUBSCRIBE_PARTS) {
+      for (const partId of request.parts) {
+        subscribed.delete(partId);
+      }
+
+      return;
+    }
+
+    for (const partId of request.parts) {
+      subscribed.add(partId);
+    }
+    subscriptions.set(clientId, subscribed);
+    this.#sendParts(clientId, room, request.parts);
+  }
+
+  #sendSubscribedParts(
+    clientId: string,
+    room: network.RoomBroadcast
+  ): void {
+    const subscribed = this.#parts?.subscriptions.get(clientId);
+    if (subscribed !== undefined && subscribed.size > 0) {
+      this.#sendParts(clientId, room, subscribed);
+    }
+  }
+
+  #sendParts(
+    clientId: string,
+    room: network.RoomBroadcast,
+    partIds: Iterable<string>
+  ): void {
+    if (this.#parts !== null) {
+      room.sendTo(clientId, this.#partsMessage(partIds));
+    }
+  }
+
+  #partsMessage(
+    partIds: Iterable<string>
+  ): AssetRoomPartsMessage {
+    const parts: Record<string, unknown> = {};
+    for (const partId of partIds) {
+      parts[partId] = this.#parts?.live.part(partId) ?? null;
+    }
+
+    return {
+      type: ASSET_ROOM_PARTS,
+      version: this.#version() ?? 0,
+      parts
+    };
+  }
+
+  #broadcast(
+    authorId: string,
+    room: network.RoomBroadcast,
+    command: TCommand,
+    version: number
+  ): void {
+    const message = this.#toBroadcast(command, version);
+    const parts = this.#parts;
+    if (parts === null || message.type !== "command") {
+      room.broadcast(message);
+
+      return;
+    }
+
+    const touched = [...parts.kind.touched(command)];
+    const outside = parts.live.outside?.(command) ?? null;
+    for (const clientId of this.#members) {
+      const subscribed = parts.subscriptions.get(clientId);
+      if (
+        clientId === authorId ||
+        touched.some((partId) => subscribed?.has(partId) === true)
+      ) {
+        room.sendTo(clientId, message);
+      }
+      else if (outside !== null) {
+        room.sendTo(clientId, {
+          type: "command",
+          data: outside,
+          version
+        });
+      }
+    }
   }
 
   #toBroadcast(

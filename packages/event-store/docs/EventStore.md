@@ -321,10 +321,16 @@ points at it.
 ## Compaction
 
 ```ts
+export interface EventPosition {
+  assetId: string;
+  eventVersion: number;
+}
+
 export interface CompactOptions {
   checkpointEventTypes: readonly string[];
   reclaim?: boolean;
   assetId?: string;
+  keep?: Iterable<EventPosition>;
 }
 
 export interface CompactReport {
@@ -337,7 +343,8 @@ export interface CompactReport {
 which is the set `listFromCheckpoints` already skips, minus the events a
 [tag](#tags) points at. An asset holding no checkpoint keeps its whole stream,
 and an empty `checkpointEventTypes` removes nothing. `assetId` limits the pass
-to one asset.
+to one asset. `keep` names more events to leave in place, as a tag does, for
+a consumer whose checkpoints still read older events.
 
 Because tagged events stay, `list` and `listAll` can return a stream with gaps
 below its newest checkpoint, such as `v3, v9, v10`. `listFromCheckpoints` never

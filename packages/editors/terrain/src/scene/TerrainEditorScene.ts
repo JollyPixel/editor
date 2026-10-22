@@ -189,8 +189,12 @@ export class TerrainEditorScene extends Systems.Scene {
     }
 
     const position = parts.camera.camera.getWorldPosition(this.#cameraPosition);
+    const chunk = ChunkCoord.containing(position.x, position.z);
+    if (this.#document.stream.centre?.equals(chunk) !== true) {
+      this.#document.stream.follow(chunk);
+    }
     const centre = parts.live.interest?.centre;
-    if (centre?.equals(ChunkCoord.containing(position.x, position.z))) {
+    if (centre?.equals(chunk)) {
       return;
     }
 
@@ -238,7 +242,7 @@ export class TerrainEditorScene extends Systems.Scene {
   ): void {
     const listeners: Pick<
       TerrainPreviewEvents,
-      "tilesChanged" | "chunkAdded" | "chunkRemoved" | "reset"
+      "tilesChanged" | "chunkAdded" | "chunkRemoved" | "overviewChanged" | "reset"
     > = {
       tilesChanged: (tiles) => {
         view.tilesChanged(tiles);
@@ -247,6 +251,7 @@ export class TerrainEditorScene extends Systems.Scene {
       },
       chunkAdded: (coord) => view.chunkAdded(coord),
       chunkRemoved: (coord) => view.chunkRemoved(coord),
+      overviewChanged: (coords) => view.overviewChanged(coords),
       reset: () => {
         view.reset();
         surfaceChanged();
@@ -255,11 +260,13 @@ export class TerrainEditorScene extends Systems.Scene {
     preview.on("tilesChanged", listeners.tilesChanged);
     preview.on("chunkAdded", listeners.chunkAdded);
     preview.on("chunkRemoved", listeners.chunkRemoved);
+    preview.on("overviewChanged", listeners.overviewChanged);
     preview.on("reset", listeners.reset);
     this.#disposables.push(() => {
       preview.off("tilesChanged", listeners.tilesChanged);
       preview.off("chunkAdded", listeners.chunkAdded);
       preview.off("chunkRemoved", listeners.chunkRemoved);
+      preview.off("overviewChanged", listeners.overviewChanged);
       preview.off("reset", listeners.reset);
     });
   }

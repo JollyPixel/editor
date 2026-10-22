@@ -108,6 +108,7 @@ function write(
       path: asset.path,
       kind: asset.kind,
       data: asset.data,
+      parts: asset.partData,
       assetId: asset.id,
       onPathConflict: "suffix",
       actor
@@ -117,6 +118,7 @@ function write(
   return backend.writer.update({
     assetId: asset.id,
     data: asset.data,
+    parts: asset.partData,
     actor
   });
 }

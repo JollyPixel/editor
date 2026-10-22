@@ -21,6 +21,8 @@ import {
 } from "../../common/logger.ts";
 import type { AssetProjector } from "../projection/AssetProjector.ts";
 import type { AssetWriter } from "../writer/AssetWriter.ts";
+import { AssetPartFiles } from "../AssetPartFiles.ts";
+import type { AssetPartRef } from "../../model/events/AssetEvents.ts";
 import { asError } from "../../common/asError.ts";
 import { TaskChain } from "../../common/TaskChain.ts";
 
@@ -59,6 +61,10 @@ interface ReadOutcome {
   readonly entry: ObservedEntry | null;
 }
 
+interface ObservedPart extends ObservedEntry {
+  readonly partId: string;
+}
+
 interface SourceScan {
   readonly entries: ObservedEntry[];
   /**
@@ -66,12 +72,30 @@ interface SourceScan {
    */
   readonly unreadable: Set<string>;
   readonly writing: Set<string>;
+  /**
+   * Readable part files, by the path of their asset.
+   */
+  readonly parts: Map<string, ObservedPart[]>;
+}
+
+interface ProjectedParts {
+  readonly assetId: string;
+  readonly refs: ReadonlyMap<string, AssetPartRef>;
+}
+
+interface ChangedParts {
+  readonly assetId: string;
+  readonly observed: ObservedPart[];
 }
 
 export interface ReconcilerOptions {
   source: AssetSource;
   projector: AssetProjector;
   writer: AssetWriter;
+  /**
+   * @default no kind with parts
+   */
+  partFiles?: AssetPartFiles;
   actor?: EventStore.Actor;
   logger?: Logger;
 }
@@ -80,6 +104,7 @@ export class Reconciler {
   #source: AssetSource;
   #projector: AssetProjector;
   #writer: AssetWriter;
+  #partFiles: AssetPartFiles;
   #actor: EventStore.Actor;
   #logger: Logger;
   #passes = new TaskChain();
@@ -90,6 +115,7 @@ export class Reconciler {
     this.#source = options.source;
     this.#projector = options.projector;
     this.#writer = options.writer;
+    this.#partFiles = options.partFiles ?? new AssetPartFiles();
     this.#actor = options.actor ?? kWatcherActor;
     this.#logger = options.logger ?? silentLogger();
   }
@@ -97,7 +123,7 @@ export class Reconciler {
   reconcile(
     paths?: Iterable<string>
   ): Promise<Result<ReconcileReport, Error>> {
-    const scope = paths === undefined ? null : new Set(paths);
+    const scope = paths === undefined ? null : this.#withOwners(paths);
 
     return this.#passes.run(() => this.#reconcile(scope));
   }
@@ -116,6 +142,7 @@ export class Reconciler {
     }
 
     const projected: ProjectedEntry[] = [];
+    const projectedParts = new Map<string, ProjectedParts>();
     for (const { assetId, projection } of this.#projector.projections()) {
       if (
         scan.unreadable.has(projection.path) ||
@@ -131,6 +158,12 @@ export class Reconciler {
         kind: projection.kind,
         hash: projection.hash
       });
+      if (projection.parts !== undefined) {
+        projectedParts.set(projection.path, {
+          assetId,
+          refs: projection.parts
+        });
+      }
     }
 
     const diff = matchRenames(
@@ -151,7 +184,8 @@ export class Reconciler {
       failed: scan.unreadable.size
     };
 
-    for (const operation of this.#plan(diff)) {
+    const changedParts = changedPartsByAsset(scan, projectedParts);
+    for (const operation of this.#plan(diff, changedParts, scan.parts)) {
       await this.#apply(operation, report);
     }
 
@@ -165,7 +199,9 @@ export class Reconciler {
   }
 
   * #plan(
-    diff: RenameMatch
+    diff: RenameMatch,
+    changedParts: ReadonlyMap<string, ChangedParts>,
+    observedParts: ReadonlyMap<string, ObservedPart[]>
   ): IterableIterator<ReconcileOperation> {
     for (const entry of diff.deleted) {
       yield {
@@ -190,13 +226,20 @@ export class Reconciler {
         })
       };
     }
-    for (const entry of diff.updated) {
+    const updated = new Map(
+      diff.updated.map((entry) => [entry.path, entry.id])
+    );
+    for (const [path, { assetId }] of changedParts) {
+      updated.set(path, assetId);
+    }
+    for (const [path, assetId] of updated) {
       yield {
         outcome: "updated",
-        path: entry.path,
+        path,
         run: async() => this.#writer.update({
-          assetId: entry.id,
-          data: await this.#source.read(entry.path),
+          assetId,
+          data: await this.#source.read(path),
+          ...await this.#readParts(changedParts.get(path)?.observed),
           actor: this.#actor,
           alreadyProjected: true
         })
@@ -209,11 +252,42 @@ export class Reconciler {
         run: async() => this.#writer.create({
           path: entry.path,
           data: await this.#source.read(entry.path),
+          ...await this.#readParts(observedParts.get(entry.path)),
           actor: this.#actor,
           alreadyProjected: true
         })
       };
     }
+  }
+
+  async #readParts(
+    observed: readonly ObservedPart[] | undefined
+  ): Promise<{ parts?: Map<string, Uint8Array>; }> {
+    if (observed === undefined) {
+      return {};
+    }
+
+    const parts = new Map<string, Uint8Array>();
+    for (const { partId, path } of observed) {
+      parts.set(partId, await this.#source.read(path));
+    }
+
+    return { parts };
+  }
+
+  #withOwners(
+    paths: Iterable<string>
+  ): Set<string> {
+    const scope = new Set<string>();
+    for (const path of paths) {
+      scope.add(path);
+      const owner = this.#partFiles.owner(path);
+      if (owner !== null) {
+        scope.add(owner);
+      }
+    }
+
+    return scope;
   }
 
   async #apply(
@@ -271,6 +345,7 @@ export class Reconciler {
     const entries: ObservedEntry[] = [];
     const unreadable = new Set<string>();
     const writing = new Set<string>();
+    const parts = new Map<string, ObservedPart[]>();
 
     for (let index = 0; index < paths.length; index += kReadConcurrency) {
       const batch = paths.slice(
@@ -279,36 +354,20 @@ export class Reconciler {
       );
 
       const results = await Promise.all(
-        batch.map(async(path): Promise<ReadOutcome> => {
-          try {
-            return {
-              path,
-              entry: {
-                path,
-                hash: await contentHash(
-                  await this.#source.read(path)
-                )
-              }
-            };
-          }
-          catch (error) {
-            this.#logger
-              .withMetadata({
-                path,
-                reason: asError(error).message
-              })
-              .warn("asset not readable, left untouched");
-
-            return {
-              path,
-              entry: null
-            };
-          }
-        })
+        batch.map((path) => this.#read(path))
       );
 
       for (const { path, entry } of results) {
-        if (this.#projector.isWriting(path)) {
+        if (this.#partFiles.owner(path) !== null) {
+          const part = this.#partFiles.part(path);
+          if (part !== null && entry !== null && !this.#projector.isWriting(path)) {
+            parts.set(part.assetPath, [
+              ...parts.get(part.assetPath) ?? [],
+              { ...entry, partId: part.partId }
+            ]);
+          }
+        }
+        else if (this.#projector.isWriting(path)) {
           writing.add(path);
         }
         else if (entry === null) {
@@ -323,7 +382,63 @@ export class Reconciler {
     return {
       entries,
       unreadable,
-      writing
+      writing,
+      parts
     };
   }
+
+  async #read(
+    path: string
+  ): Promise<ReadOutcome> {
+    try {
+      return {
+        path,
+        entry: {
+          path,
+          hash: await contentHash(
+            await this.#source.read(path)
+          )
+        }
+      };
+    }
+    catch (error) {
+      this.#logger
+        .withMetadata({
+          path,
+          reason: asError(error).message
+        })
+        .warn("asset not readable, left untouched");
+
+      return {
+        path,
+        entry: null
+      };
+    }
+  }
+}
+
+function changedPartsByAsset(
+  scan: SourceScan,
+  projected: ReadonlyMap<string, ProjectedParts>
+): Map<string, ChangedParts> {
+  const present = new Set(scan.entries.map((entry) => entry.path));
+  const changed = new Map<string, ChangedParts>();
+  for (const [path, observed] of scan.parts) {
+    const parts = projected.get(path);
+    if (parts === undefined || !present.has(path)) {
+      continue;
+    }
+
+    const edited = observed.filter(
+      (part) => parts.refs.get(part.partId)?.hash !== part.hash
+    );
+    if (edited.length > 0) {
+      changed.set(path, {
+        assetId: parts.assetId,
+        observed: edited
+      });
+    }
+  }
+
+  return changed;
 }

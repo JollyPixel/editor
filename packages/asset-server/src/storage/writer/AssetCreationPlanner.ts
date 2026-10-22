@@ -13,6 +13,7 @@ import type {
 } from "../../model/kinds/AssetKindHandler.ts";
 import type { AssetKindRegistry } from "../../model/kinds/AssetKindRegistry.ts";
 import { UnknownAssetKindError } from "../../model/kinds/errors/UnknownAssetKindError.ts";
+import { serializeParts } from "../../model/kinds/serializeParts.ts";
 import {
   writableAssetPath,
   type AssetPathAllocator
@@ -102,7 +103,8 @@ export class AssetCreationPlanner {
           path,
           kind: handler.kind,
           data: input.data,
-          dependencies: input.dependencies
+          dependencies: input.dependencies,
+          parts: input.parts
         },
         companions: []
       });
@@ -144,7 +146,8 @@ export class AssetCreationPlanner {
         assetId: companionId,
         path: companionPath,
         kind: companionHandler.kind,
-        data: await companionHandler.serialize(
+        ...await serializeAsset(
+          companionHandler,
           companionHandler.create(companionId)
         )
       });
@@ -155,7 +158,7 @@ export class AssetCreationPlanner {
         assetId,
         path: path.toString(),
         kind: handler.kind,
-        data: await handler.serialize(state)
+        ...await serializeAsset(handler, state)
       },
       companions: planned
     };
@@ -198,4 +201,14 @@ export class AssetCreationPlanner {
 
     return Ok(companions);
   }
+}
+
+async function serializeAsset(
+  handler: AnyAssetKindHandler,
+  state: unknown
+): Promise<AssetPayload> {
+  const data = await handler.serialize(state);
+  const parts = await serializeParts(handler, state);
+
+  return parts === undefined ? { data } : { data, parts };
 }

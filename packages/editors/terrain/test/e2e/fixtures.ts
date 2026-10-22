@@ -21,6 +21,7 @@ import { TerrainPage } from "./support/terrainPage.ts";
 
 // CONSTANTS
 export const TERRAIN_CHUNKS = 4;
+export const STRIP_CHUNKS = { x: 20, z: 8 } as const;
 export const EDITOR_OPTIONS = {
   maxFps: 30,
   query: {
@@ -57,10 +58,13 @@ function chunkHeights(
   return encodeHeights(heights);
 }
 
-function encodeRollingTerrain(): Uint8Array {
+function encodeRollingTerrain(
+  width: number,
+  depth: number
+): Uint8Array {
   const chunks: Array<{ x: number; z: number; heights: string; }> = [];
-  for (let z = 0; z < TERRAIN_CHUNKS; z++) {
-    for (let x = 0; x < TERRAIN_CHUNKS; x++) {
+  for (let z = 0; z < depth; z++) {
+    for (let x = 0; x < width; x++) {
       chunks.push({
         x,
         z,
@@ -75,42 +79,50 @@ function encodeRollingTerrain(): Uint8Array {
   });
 }
 
-export const test = editorFixture({
-  editor: EDITOR_OPTIONS,
-  async create(catalog) {
-    const id = await catalog.create(
-      `${e2eFolder()}/world.terrain.json`,
-      encodeRollingTerrain(),
-      { kind: TERRAIN_KIND }
-    );
+function terrainFixture(
+  width: number,
+  depth: number
+) {
+  return editorFixture({
+    editor: EDITOR_OPTIONS,
+    async create(catalog) {
+      const id = await catalog.create(
+        `${e2eFolder()}/world.terrain.json`,
+        encodeRollingTerrain(width, depth),
+        { kind: TERRAIN_KIND }
+      );
 
-    return { id };
-  }
-}).extend<{
-  terrain: TerrainPage;
-  peerTerrain: TerrainPage;
-  farPeer: Page;
-}>({
-  terrain: async({ page }, use) => {
-    await use(new TerrainPage(page));
-  },
-  peerTerrain: async({ peer }, use) => {
-    await use(new TerrainPage(peer));
-  },
-  farPeer: async({ browser, editor, target }, use) => {
-    const context = await browser.newContext();
+      return { id };
+    }
+  }).extend<{
+    terrain: TerrainPage;
+    peerTerrain: TerrainPage;
+    farPeer: Page;
+  }>({
+    terrain: async({ page }, use) => {
+      await use(new TerrainPage(page));
+    },
+    peerTerrain: async({ peer }, use) => {
+      await use(new TerrainPage(peer));
+    },
+    farPeer: async({ browser, editor, target }, use) => {
+      const context = await browser.newContext();
 
-    try {
-      const page = await context.newPage();
-      await openEditor(page, {
-        ...editor,
-        target: target.id,
-        username: "Far"
-      });
-      await use(page);
+      try {
+        const page = await context.newPage();
+        await openEditor(page, {
+          ...editor,
+          target: target.id,
+          username: "Far"
+        });
+        await use(page);
+      }
+      finally {
+        await context.close();
+      }
     }
-    finally {
-      await context.close();
-    }
-  }
-});
+  });
+}
+
+export const test = terrainFixture(TERRAIN_CHUNKS, TERRAIN_CHUNKS);
+export const stripTest = terrainFixture(STRIP_CHUNKS.x, STRIP_CHUNKS.z);

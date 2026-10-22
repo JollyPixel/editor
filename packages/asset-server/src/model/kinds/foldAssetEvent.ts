@@ -13,9 +13,14 @@ import {
   ASSET_DELETED,
   ASSET_UPDATED,
   isAssetEventType,
-  parseAssetEvent
+  parseAssetEvent,
+  type AssetWriteData
 } from "../events/AssetEvents.ts";
 import { decodeContent } from "../events/inlineContent.ts";
+import {
+  heldPartContent,
+  type AssetPartReader
+} from "../events/heldPartContent.ts";
 
 export function foldAssetEvent<
   TState,
@@ -24,10 +29,11 @@ export function foldAssetEvent<
 >(
   handler: AssetKindHandler<TState, TCommand, TRelay>,
   state: TState,
-  event: EventStore.Event
+  event: EventStore.Event,
+  parts?: AssetPartReader
 ): TCommand | null {
   if (isAssetEventType(event.eventType)) {
-    foldLifecycleEvent(handler, state, event);
+    foldLifecycleEvent(handler, state, event, parts);
 
     return null;
   }
@@ -54,7 +60,8 @@ export function foldAssetEvent<
 function foldLifecycleEvent(
   handler: AnyAssetKindHandler,
   state: unknown,
-  event: EventStore.Event
+  event: EventStore.Event,
+  parts: AssetPartReader | undefined
 ): void {
   const parsed = parseAssetEvent(event);
   if (!parsed.ok) {
@@ -69,11 +76,31 @@ function foldLifecycleEvent(
         state,
         decodeContent(assetEvent.eventData.content)
       );
+      loadParts(handler, state, assetEvent.eventData, event.assetId, parts);
       break;
     case ASSET_DELETED:
       handler.clear(state);
       break;
     default:
       break;
+  }
+}
+
+function loadParts(
+  handler: AnyAssetKindHandler,
+  state: unknown,
+  data: AssetWriteData,
+  assetId: string,
+  reader: AssetPartReader | undefined
+): void {
+  if (handler.parts === undefined || data.parts === undefined) {
+    return;
+  }
+
+  for (const [partId, entry] of Object.entries(data.parts)) {
+    const content = "content" in entry ?
+      entry.content :
+      heldPartContent(reader, assetId, entry.at, partId);
+    handler.parts.load(state, partId, decodeContent(content));
   }
 }

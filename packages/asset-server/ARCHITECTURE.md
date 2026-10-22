@@ -9,6 +9,8 @@ and live state are separate views of that history.
   injected resources, and shutdown.
 - [Events and projections](./architecture/EventsAndProjections.md): which
   events change the catalog, source, and live state.
+- [Asset parts](./architecture/AssetParts.md): kinds whose content is
+  stored, loaded and sent in parts. Design for terrain M2.
 - [Rooms and reconciliation](./architecture/RoomsAndReconciliation.md): edits
   from clients and changes made directly to physical storage.
 

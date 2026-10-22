@@ -13,10 +13,12 @@ import {
   ASSET_CREATED,
   ASSET_UPDATED,
   parseAssetEvent,
+  partRefs,
   type AssetEvent,
   type AssetEventDataMap
 } from "../../model/events/AssetEvents.ts";
 import { decodeContent } from "../../model/events/inlineContent.ts";
+import { heldPartContent } from "../../model/events/heldPartContent.ts";
 import type { AssetProjector } from "../../storage/projection/AssetProjector.ts";
 import type { AssetWriter } from "../../storage/writer/AssetWriter.ts";
 import type { AssetBackups } from "../../storage/AssetBackups.ts";
@@ -67,6 +69,10 @@ export interface RestoreTagInput {
 export interface TaggedVersion {
   readonly eventVersion: number;
   readonly data: Uint8Array;
+  /**
+   * Every part of the tagged content, for a kind that declares parts.
+   */
+  readonly parts?: ReadonlyMap<string, Uint8Array>;
 }
 
 export interface AssetTagsOptions {
@@ -181,9 +187,14 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
       return tagged;
     }
 
+    const { eventVersion, eventData } = tagged.val;
+
     return Ok({
-      eventVersion: tagged.val.eventVersion,
-      data: decodeContent(tagged.val.eventData.content)
+      eventVersion,
+      data: decodeContent(eventData.content),
+      ...(eventData.parts === undefined ?
+        {} :
+        { parts: this.#parts(tagged.val) })
     });
   }
 
@@ -203,7 +214,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
 
     const tagged = found.val;
     const { event: current, head } = checkpoint.val;
-    if (tagged.eventData.hash === current.eventData.hash) {
+    if (sameContent(tagged, current)) {
       return Ok({
         restored: false,
         missing: []
@@ -219,6 +230,9 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     const updated = await this.#writer.update({
       assetId,
       data: decodeContent(content),
+      ...(tagged.eventData.parts === undefined ?
+        {} :
+        { parts: this.#parts(tagged, current) }),
       dependencies,
       actor: input.actor,
       expectedVersion: head,
@@ -283,6 +297,28 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     }
 
     return Ok(event);
+  }
+
+  #parts(
+    event: AssetWriteEvent,
+    unchanged?: AssetWriteEvent
+  ): Map<string, Uint8Array> {
+    const held = unchanged === undefined ?
+      new Map() :
+      partRefs(unchanged.eventData, unchanged.eventVersion);
+    const parts = new Map<string, Uint8Array>();
+    for (const [partId, ref] of partRefs(event.eventData, event.eventVersion)) {
+      if (held.get(partId)?.hash !== ref.hash) {
+        parts.set(partId, decodeContent(heldPartContent(
+          this.#eventStore.reader,
+          event.assetId,
+          ref.at,
+          partId
+        )));
+      }
+    }
+
+    return parts;
   }
 
   async #settledCheckpoint(
@@ -352,16 +388,22 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     tag: AssetTag
   ): Promise<void> {
     const { assetId, eventData } = event;
+    const backups = new Map([[eventData.path, decodeContent(eventData.content)]]);
+    for (const [partId, data] of eventData.parts === undefined ? [] : this.#parts(event)) {
+      backups.set(`${eventData.path}.parts/${partId}`, data);
+    }
     try {
-      await this.#backups.add(decodeContent(eventData.content), {
-        assetId,
-        path: eventData.path,
-        reason: "tag",
-        tag: {
-          name: tag.name,
-          message: tag.message
-        }
-      });
+      for (const [path, data] of backups) {
+        await this.#backups.add(data, {
+          assetId,
+          path,
+          reason: "tag",
+          tag: {
+            name: tag.name,
+            message: tag.message
+          }
+        });
+      }
     }
     catch (error) {
       this.#logger
@@ -434,6 +476,21 @@ function parseWriteEvent(
   return val.eventType === ASSET_CREATED || val.eventType === ASSET_UPDATED ?
     val :
     null;
+}
+
+function sameContent(
+  left: AssetWriteEvent,
+  right: AssetWriteEvent
+): boolean {
+  if (left.eventData.hash !== right.eventData.hash) {
+    return false;
+  }
+
+  const leftParts = partRefs(left.eventData, left.eventVersion);
+  const rightParts = partRefs(right.eventData, right.eventVersion);
+
+  return leftParts.size === rightParts.size &&
+    [...leftParts].every(([partId, ref]) => rightParts.get(partId)?.hash === ref.hash);
 }
 
 function toAssetTag(

@@ -37,7 +37,10 @@ export const EDGE_TILE = new TileCoord(new ChunkCoord(1, 0), 0, 2);
 export const ORIGIN_TILE = new TileCoord(new ChunkCoord(0, 0), 3, 2);
 const kDocumentKind = terrainDocumentKind();
 const kChunkTiles = TILES_PER_CHUNK * TILES_PER_CHUNK;
-const kWideRowChunks = Math.floor(MAX_PATCH_TILES / kChunkTiles) + 1;
+const kWideBlockChunks = Math.floor(MAX_PATCH_TILES / kChunkTiles) + 1;
+const kWideBlockColumns = 9;
+
+export const WIDE_BLOCK_CENTRE = new ChunkCoord(4, 4);
 
 export interface TerrainPeer {
   readonly room: MockAssetRoom<TerrainNetworkCommand, TerrainSnapshot>;
@@ -49,6 +52,15 @@ export interface TerrainPeer {
 
 export interface JoinOptions {
   interestChunkX?: number;
+  /**
+   * @default 0
+   */
+  interestChunkZ?: number;
+  /**
+   * Chunk the peer's stream follows.
+   * @default (0, 0)
+   */
+  streamCentre?: ChunkCoord;
 }
 
 export function terrainPeers() {
@@ -56,14 +68,19 @@ export function terrainPeers() {
   const peers = new Map<string, TerrainPeer>();
 
   function route(): void {
-    for (const [clientId, { room }] of peers) {
-      for (const sent of room.sent.splice(0)) {
-        server.receive(clientId, sent);
+    let delivered = true;
+    while (delivered) {
+      delivered = false;
+      for (const [clientId, { room }] of peers) {
+        for (const sent of room.sent.splice(0)) {
+          server.receive(clientId, sent);
+        }
       }
-    }
-    for (const [clientId, { room }] of peers) {
-      for (const message of server.take<TerrainSnapshot>(clientId)) {
-        room.deliver(message);
+      for (const [clientId, { room }] of peers) {
+        for (const message of server.take<TerrainSnapshot>(clientId)) {
+          room.deliver(message);
+          delivered = true;
+        }
       }
     }
   }
@@ -72,7 +89,11 @@ export function terrainPeers() {
     clientId: string,
     options: JoinOptions = {}
   ): TerrainPeer {
-    const { interestChunkX } = options;
+    const {
+      interestChunkX,
+      interestChunkZ = 0,
+      streamCentre = new ChunkCoord(0, 0)
+    } = options;
     const room = mockAssetRoom<TerrainNetworkCommand, TerrainSnapshot>(clientId);
     const { document } = kDocumentKind.syncDocument(room);
     const preview = new TerrainPreview(document);
@@ -86,9 +107,12 @@ export function terrainPeers() {
       receiver
     };
     peers.set(clientId, peer);
+    document.stream.follow(streamCentre);
     server.connect(clientId);
     if (interestChunkX !== undefined) {
-      sender.publishInterest(TerrainInterest.around(interestChunkX * CHUNK_SAMPLES, 0, 1));
+      sender.publishInterest(
+        TerrainInterest.around(interestChunkX * CHUNK_SAMPLES, interestChunkZ * CHUNK_SAMPLES, 1)
+      );
     }
     route();
 
@@ -136,12 +160,12 @@ export function edgePeerSetup() {
   };
 }
 
-export function addWideChunkRow(
+export function addWideChunkBlock(
   server: ReturnType<typeof terrainPeers>["server"]
 ): TileCoord[] {
   const tiles: TileCoord[] = [];
-  for (let x = 0; x < kWideRowChunks; x++) {
-    const chunk = new ChunkCoord(x, 1);
+  for (let index = 0; index < kWideBlockChunks; index++) {
+    const chunk = new ChunkCoord(index % kWideBlockColumns, 1 + Math.floor(index / kWideBlockColumns));
     server.receive("X", networkCommand(
       { action: "chunk-added", x: chunk.x, z: chunk.z, heights: heights(0) },
       { clientId: "X" }

@@ -32,6 +32,30 @@ it keeps the heights shown before the add. Because the steps do not depend on
 which chunks exist, a sample that now stops on the added chunk reads the value
 it stepped to before, and no other chunk's apron changes.
 
+`Terrain.overview` is the overview map: each chunk's heights at its
+2×2 points of the 32 m grid, `OVERVIEW_SPACING` samples apart. Adding,
+removing or writing a chunk updates its own samples. `overview.samples(coord)`
+returns a chunk's four samples, row by row, `overview.heightAt(x, z)` the
+sample at a 32 m grid point, or `undefined` off the grid or without a chunk,
+and `overview.interpolate(x, z)` the height between the four nearest samples.
+
+The overview lists every chunk the document knows; only loaded chunks have
+heights. `knows(coord)` tells whether a chunk exists, `has(coord)` whether it
+is loaded. `addUnloadedChunk(coord, samples)` adds a chunk by its overview
+samples, `loadChunk(coord, heights)` loads a known chunk and
+`unloadChunk(coord)` drops its heights and keeps its samples.
+`writeOverviewTile(tile, heights)` writes the samples a tile of an unloaded
+chunk holds. `sampleAt` reads the interpolated overview on an unloaded chunk.
+
+`TerrainView` draws unloaded chunks from the overview, so loaded and unloaded
+ground meet without a crack. Call `chunkAdded` and `chunkRemoved` when a chunk
+loads or unloads, `tilesChanged` when tiles are written, and
+`overviewChanged(coords)` when unloaded chunks are added or removed or their
+samples change. The view keeps node bounds between frames and recomputes only
+those over the chunks these calls name, so a terrain changed without them
+draws with stale bounds. It addresses chunks modulo `LOOKUP_SIZE`, 256, on
+each axis and throws when two known chunks share a slot.
+
 ## License
 
 MIT

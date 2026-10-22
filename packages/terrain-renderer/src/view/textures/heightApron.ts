@@ -4,7 +4,10 @@ import {
   ChunkCoord,
   type ChunkKey
 } from "../../terrain/ChunkCoord.ts";
-import { BORDER_SAMPLES } from "../../terrain/SampleBlock.ts";
+import {
+  BORDER_SAMPLES,
+  type SampleBlock
+} from "../../terrain/SampleBlock.ts";
 import type { TerrainReader } from "../../terrain/Terrain.ts";
 
 // CONSTANTS
@@ -105,7 +108,7 @@ export function writeApron(
         continue;
       }
 
-      const source = terrain.sampleBlock(new ChunkCoord(coord.x + dx, coord.z + dz));
+      const source = apronSource(terrain, new ChunkCoord(coord.x + dx, coord.z + dz));
       for (let localZ = block.z; localZ < block.z + block.depth; localZ++) {
         const row = (localZ + APRON_MARGIN) * APRON_SIZE + APRON_MARGIN;
         for (let localX = block.x; localX < block.x + block.width; localX++) {
@@ -114,6 +117,19 @@ export function writeApron(
       }
     }
   }
+}
+
+function apronSource(
+  terrain: TerrainReader,
+  coord: ChunkCoord
+): Pick<SampleBlock, "height"> {
+  if (terrain.has(coord) || !terrain.knows(coord)) {
+    return terrain.sampleBlock(coord);
+  }
+
+  return {
+    height: (sampleX, sampleZ) => terrain.sampleAt(sampleX, sampleZ)
+  };
 }
 
 function intersect(

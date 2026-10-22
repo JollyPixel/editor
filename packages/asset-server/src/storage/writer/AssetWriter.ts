@@ -16,8 +16,11 @@ import {
   ASSET_UPDATED,
   writeData,
   type AssetEventDataMap,
+  type AssetPartRef,
+  type AssetPartsWrite,
   type AssetWriteData
 } from "../../model/events/AssetEvents.ts";
+import { ASSET_PART_ID_PATTERN } from "../../model/events/AssetEvents.schema.ts";
 import type { AssetProjector } from "../projection/AssetProjector.ts";
 import type { AssetProjection } from "../projection/applyProjection.ts";
 import {
@@ -61,6 +64,7 @@ export interface AssetWriterOptions {
 
 export class AssetWriter {
   #eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
+  #kinds: AssetKindRegistry;
   #projector: AssetProjector;
   #assetIndex: AssetIndex;
   #logger: Logger;
@@ -73,6 +77,7 @@ export class AssetWriter {
     options: AssetWriterOptions
   ) {
     this.#eventStore = options.eventStore;
+    this.#kinds = options.kinds;
     this.#projector = options.projector;
     this.#assetIndex = options.assetIndex;
     this.#logger = options.logger ?? silentLogger();
@@ -179,11 +184,22 @@ export class AssetWriter {
     asset: PlannedAsset,
     options: WriteOptions
   ): Promise<Result<EventStore.Event, Error>> {
+    const data = await this.#writeData(
+      asset.assetId,
+      asset.path,
+      asset.kind,
+      asset,
+      null
+    );
+    if (!data.ok) {
+      return data;
+    }
+
     const appended = this.#append(
       asset.assetId,
       asset.kind,
       ASSET_CREATED,
-      await this.#writeData(asset.assetId, asset.path, asset.kind, asset),
+      data.val,
       options
     );
     if (appended.ok) {
@@ -228,14 +244,24 @@ export class AssetWriter {
     }
 
     const { path, kind } = current.val;
-    const data = await this.#writeData(input.assetId, path, kind, input);
+    const data = await this.#writeData(
+      input.assetId,
+      path,
+      kind,
+      input,
+      current.val
+    );
+    if (!data.ok) {
+      return data;
+    }
+
     const { restoredFrom } = input;
 
     return this.#append(
       input.assetId,
       kind,
       ASSET_UPDATED,
-      restoredFrom === undefined ? data : { ...data, restoredFrom },
+      restoredFrom === undefined ? data.val : { ...data.val, restoredFrom },
       input
     );
   }
@@ -330,18 +356,78 @@ export class AssetWriter {
     return Err(error);
   }
 
-  #writeData(
+  async #writeData(
     assetId: string,
     path: string,
     kind: string,
-    payload: AssetPayload
-  ): Promise<AssetWriteData> {
-    return writeData(
+    payload: AssetPayload,
+    current: AssetProjection | null
+  ): Promise<Result<AssetWriteData, Error>> {
+    const parts = this.#partsWrite(assetId, kind, payload, current);
+    if (!parts.ok) {
+      return parts;
+    }
+
+    return Ok(await writeData(
       path,
       kind,
       payload.data,
-      this.#dependencies.resolve(assetId, kind, payload)
-    );
+      this.#dependencies.resolve(assetId, kind, payload),
+      parts.val
+    ));
+  }
+
+  #partsWrite(
+    assetId: string,
+    kind: string,
+    payload: AssetPayload,
+    current: AssetProjection | null
+  ): Result<AssetPartsWrite | undefined, Error> {
+    const parts = this.#kinds.has(kind) ?
+      this.#kinds.get(kind).parts :
+      undefined;
+    if (parts === undefined) {
+      if (payload.parts === undefined) {
+        return Ok(undefined);
+      }
+
+      const error = new TypeError(
+        `Asset kind "${kind}" declares no parts.`
+      );
+
+      return Err(error);
+    }
+
+    const decoded = this.#kinds.decode(kind, assetId, payload.data);
+    if (!decoded.ok) {
+      return decoded;
+    }
+
+    const listed = new Set(parts.list(decoded.val.state));
+
+    const changes = payload.parts ?? new Map<string, Uint8Array | null>();
+    const written = new Map<string, Uint8Array>();
+    const kept = new Map<string, AssetPartRef>();
+    for (const [partId, data] of changes) {
+      if (!ASSET_PART_ID_PATTERN.test(partId)) {
+        const error = new TypeError(`Invalid asset part id "${partId}".`);
+
+        return Err(error);
+      }
+      if (data !== null && listed.has(partId)) {
+        written.set(partId, data);
+      }
+    }
+    for (const [partId, ref] of current?.parts ?? []) {
+      if (!changes.has(partId) && listed.has(partId)) {
+        kept.set(partId, ref);
+      }
+    }
+
+    return Ok({
+      written,
+      kept
+    });
   }
 
   async #saveIndex(): Promise<void> {
@@ -396,6 +482,17 @@ function copyContentInput<
     data: input.data === undefined
       ? undefined
       : Uint8Array.from(input.data),
+    parts: input.parts === undefined
+      ? undefined
+      : new Map(
+        Array.from(
+          input.parts,
+          ([partId, data]) => [
+            partId,
+            data === null ? null : Uint8Array.from(data)
+          ]
+        )
+      ),
     dependencies: input.dependencies?.map(
       (reference) => {
         return { ...reference };

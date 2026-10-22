@@ -42,7 +42,41 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   peer receives only the commit, and the surface shows no gap across LoD
   levels.
 - **M1: done** (2026-10-19).
-- **Next:** M2, asset parts in `@jolly-pixel/asset-server`.
+- **M2 grilling: done** (2026-10-21). Parts live in a sibling
+  `<asset>.parts/` folder; a checkpoint is one generation, a single
+  `asset.updated` holding the manifest, the changed parts and the version
+  that holds each other part; the server keeps every part in memory; the
+  `subscribeParts` reply carries the parts. See the
+  [asset parts design](../../asset-server/architecture/AssetParts.md).
+- **Part checkpoints: done** (2026-10-21). A kind declares `parts`;
+  creation, generations, replay and compaction handle them. Kinds without
+  parts are unchanged.
+- **Part files: done** (2026-10-21). Parts are stored in
+  `<asset>.parts/`; the projector, reconciler, folders, tags, archives and
+  seeding handle them.
+- **Part subscription: done** (2026-10-21). An asset room answers part
+  subscriptions with the parts and sends each command only to the members
+  subscribed to its parts, and `outside(command)` to the others.
+- **Terrain on parts: done** (2026-10-21). The chunk list is the asset file
+  and the room snapshot; each chunk's heights are a `.bin` part. The editor
+  subscribes to every chunk through `TerrainPartsRoom`, and the room still
+  sends every command to every member.
+- **Overview map: done** (2026-10-21). `Terrain.overview` holds each
+  chunk's heights at the 32 m grid points, updated on every edit, and the
+  asset file and room snapshot list them. Colour comes with M3; drawing from
+  it comes with camera-driven loading.
+- **Camera-driven loading: done** (2026-10-22). The document knows every
+  chunk through the overview and loads those within 8 chunks of the camera;
+  the view draws the rest from the overview. Far members receive only the
+  tiles that hold overview samples, and undo skips a step on unloaded chunks.
+- **Chunk cap lifted** (2026-10-22). A terrain holds up to 4096 chunks
+  within coordinates -128 to 127; LoD selection keeps node bounds between
+  frames to stay under a millisecond at that size.
+- **Tile corrections: done** (2026-10-22). The room admits a patch's valid
+  tiles and answers the author with the refused tiles' current heights
+  instead of a snapshot; an undo that raced a peer is still refused whole.
+- **M2: done** (2026-10-22).
+- **Next:** M3 grilling: terrain layers, texture arrays and splat maps.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -73,14 +107,14 @@ chunks yet.
 
 ## M2: Streaming
 
-- [ ] Asset parts in `@jolly-pixel/asset-server`: part files, manifest-only
+- [x] Asset parts in `@jolly-pixel/asset-server`: part files, manifest-only
   join snapshot, per-part persistence and replay checkpoints.
-- [ ] Part subscription: `subscribeParts`, `unsubscribeParts`, part fetch,
+- [x] Part subscription: `subscribeParts`, `unsubscribeParts`, part fetch,
   and command broadcast filtered by subscription.
-- [ ] Overview map, rebuilt incrementally from edited chunks.
-- [ ] Camera-driven chunk loading and unloading within the stream radius.
-- [ ] Lift the 256-chunk cap.
-- [ ] Tile corrections for refused commits, refused per tile, instead of the
+- [x] Overview map, rebuilt incrementally from edited chunks.
+- [x] Camera-driven chunk loading and unloading within the stream radius.
+- [x] Lift the 256-chunk cap.
+- [x] Tile corrections for refused commits, refused per tile, instead of the
   snapshot the room sends back today.
 
 ## M3: Texturing
@@ -110,3 +144,10 @@ chunks yet.
   see [future tessellation](./docs/design.md#future-tessellation).
 - **Physics colliders**, foliage, water and prop placement.
 - **Chunk locks.** Concurrent edits resolve last write wins, per tile.
+
+## After V1
+
+- **Lazy part loading on the server.** M2 keeps every part of an open
+  terrain in server memory. Load parts on first subscription or command from
+  the event store, and unload those no member subscribes to once a checkpoint
+  holds them.

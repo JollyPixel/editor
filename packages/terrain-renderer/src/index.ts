@@ -3,6 +3,15 @@ export {
   ChunkCoord,
   type ChunkKey
 } from "./terrain/ChunkCoord.ts";
+export {
+  OVERVIEW_SAMPLE_COUNT,
+  OVERVIEW_SAMPLES,
+  OVERVIEW_SPACING,
+  OverviewMap,
+  isOverviewTile,
+  overviewSamples,
+  type OverviewReader
+} from "./terrain/OverviewMap.ts";
 export type { SampleBlock } from "./terrain/SampleBlock.ts";
 export {
   CHUNK_SAMPLE_COUNT,
@@ -48,3 +57,4 @@ export {
   TerrainView,
   type TerrainViewOptions
 } from "./view/TerrainView.ts";
+export { LOOKUP_SIZE } from "./view/textures/ChunkTextureStore.ts";

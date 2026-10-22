@@ -25,8 +25,10 @@ import {
 } from "#src/network/client.ts";
 import { MAX_PATCH_TILES } from "#src/network/TerrainCommand.schema.ts";
 import {
-  addWideChunkRow,
+  addWideChunkBlock,
   terrainPeers,
+  WIDE_BLOCK_CENTRE,
+  type JoinOptions,
   type TerrainPeer
 } from "../helpers/peers.ts";
 import {
@@ -57,9 +59,10 @@ function livePeers(
 
   function joinLive(
     clientId: string,
-    chunkX: number
+    chunkX: number,
+    options: Omit<JoinOptions, "interestChunkX"> = {}
   ): LivePeer {
-    const peer = join(clientId, { interestChunkX: chunkX });
+    const peer = join(clientId, { ...options, interestChunkX: chunkX });
     const stroke = peer.preview.beginStroke();
 
     return {
@@ -116,12 +119,13 @@ describe("terrain live patches", () => {
   test("wider than one message's tile limit reach peers near either end of the stroke", (t) => {
     t.mock.timers.enable({ apis: ["setTimeout"] });
     const { server, join, route } = livePeers(t);
-    const tiles = addWideChunkRow(server);
+    const tiles = addWideChunkBlock(server);
     const first = tiles[0];
     const last = tiles[tiles.length - 1];
-    const author = join("A", 0);
-    const nearFirst = join("B", first.chunk.x);
-    const nearLast = join("C", last.chunk.x);
+    const streamCentre = WIDE_BLOCK_CENTRE;
+    const author = join("A", 0, { streamCentre });
+    const nearFirst = join("B", first.chunk.x, { interestChunkZ: first.chunk.z, streamCentre });
+    const nearLast = join("C", last.chunk.x, { interestChunkZ: last.chunk.z, streamCentre });
 
     author.stroke.write(tiles.map((tile) => {
       return { tile, heights: tileHeights(9) };

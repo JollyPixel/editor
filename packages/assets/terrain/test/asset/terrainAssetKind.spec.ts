@@ -5,17 +5,24 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import { InvalidAssetFileError } from "@jolly-pixel/asset-server";
 import { LiveAssetRoom } from "@jolly-pixel/asset-server/testing";
-import { ChunkCoord } from "@jolly-pixel/terrain.renderer";
+import {
+  CHUNK_SAMPLE_COUNT,
+  ChunkCoord,
+  OVERVIEW_SAMPLE_COUNT
+} from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import {
   encodeHeights,
   encodeTerrainFile,
+  decodeHeights,
+  decodeTerrainFile,
   MAX_TERRAIN_CHUNKS,
   terrainAssetKind,
   terrainSnapshot,
   TERRAIN_FILE_VERSION
 } from "#src/index.ts";
+import { CHUNK_COORDINATE_RANGE } from "#src/network/TerrainCommand.schema.ts";
 import {
   heights,
   networkCommand,
@@ -24,6 +31,10 @@ import {
 
 function liveRoom() {
   return new LiveAssetRoom(terrainAssetKind());
+}
+
+function flatChunk(): Float32Array {
+  return new Float32Array(CHUNK_SAMPLE_COUNT);
 }
 
 function chunkKeys(
@@ -40,18 +51,62 @@ describe("terrain asset kind", () => {
     assert.ok(terrain.chunk(new ChunkCoord(0, 0))!.copyHeights().every((height) => height === 0));
   });
 
-  test("serialize and load round-trip the chunks and their heights", async() => {
+  test("serialize and load round-trip the chunk list and each chunk's part", async() => {
     const handler = terrainAssetKind();
     const room = new LiveAssetRoom(handler);
     room.receive("A", networkCommand({ action: "chunk-added", x: 1, z: 0, heights: heights(12.5) }));
 
     const loaded = handler.create("copy");
     handler.load(loaded, await handler.serialize(room.state));
+    for (const partId of handler.parts!.list(room.state)) {
+      handler.parts!.load(loaded, partId, await handler.parts!.serialize(room.state, partId));
+    }
 
+    assert.deepEqual([...handler.parts!.list(room.state)], ["0_0", "1_0"]);
     assert.deepEqual(terrainSnapshot(loaded), terrainSnapshot(room.state));
   });
 
-  test("load rejects a file with invalid heights", () => {
+  test("the document lists each chunk with its overview samples", async() => {
+    const handler = terrainAssetKind();
+    const room = new LiveAssetRoom(handler);
+    room.receive("A", networkCommand({ action: "chunk-added", x: 1, z: 0, heights: heights(12.5) }));
+
+    const { chunks } = decodeTerrainFile(await handler.serialize(room.state));
+
+    assert.deepEqual(
+      chunks.map(({ x, z, overview }) => [x, z, [...decodeHeights(overview!, OVERVIEW_SAMPLE_COUNT)!]]),
+      [[0, 0, [0, 0, 0, 0]], [1, 0, [12.5, 12.5, 12.5, 12.5]]]
+    );
+  });
+
+  test("a document may hold a chunk's heights inline", () => {
+    const handler = terrainAssetKind();
+    const content = encodeTerrainFile({
+      version: TERRAIN_FILE_VERSION,
+      chunks: [{ x: 0, z: 0, heights: heights(3) }]
+    });
+
+    const terrain = handler.create("asset");
+    handler.load(terrain, content);
+
+    assert.ok(terrain.chunk(new ChunkCoord(0, 0))!.copyHeights().every((height) => height === 3));
+  });
+
+  test("a part that is not a chunk of valid heights is refused", () => {
+    const handler = terrainAssetKind();
+    const terrain = handler.create("asset");
+
+    assert.throws(
+      () => handler.parts!.load(terrain, "0_0", new Uint8Array(8)),
+      InvalidAssetFileError
+    );
+    assert.throws(
+      () => handler.parts!.load(terrain, "origin", new Uint8Array(0)),
+      InvalidAssetFileError
+    );
+  });
+
+  test("load rejects a document with invalid heights", () => {
     const handler = terrainAssetKind();
     const content = encodeTerrainFile({
       version: TERRAIN_FILE_VERSION,
@@ -86,30 +141,62 @@ describe("terrain asset kind", () => {
 
   test(`no chunk is admitted past ${MAX_TERRAIN_CHUNKS}`, () => {
     const room = liveRoom();
-    for (let x = 1; x <= MAX_TERRAIN_CHUNKS; x++) {
-      room.receive("A", networkCommand({ action: "chunk-added", x, z: 0, heights: heights(0) }));
+    const side = Math.sqrt(MAX_TERRAIN_CHUNKS);
+    for (let index = 1; index < MAX_TERRAIN_CHUNKS; index++) {
+      room.state.addChunk(new ChunkCoord(index % side, Math.floor(index / side)), flatChunk());
     }
+    room.receive("A", networkCommand({ action: "chunk-added", x: side, z: 0, heights: heights(0) }));
 
+    assert.equal(room.state.has(new ChunkCoord(side, 0)), false);
     assert.equal(room.state.size, MAX_TERRAIN_CHUNKS);
-    assert.equal(room.state.has(new ChunkCoord(MAX_TERRAIN_CHUNKS, 0)), false);
   });
 
-  test("a height patch is refused whole when one of its tiles is invalid", () => {
+  test("a chunk outside the coordinate range does not parse", () => {
     const room = liveRoom();
+    const { max } = CHUNK_COORDINATE_RANGE;
+    room.state.addChunk(new ChunkCoord(max, 0), flatChunk());
+    function add(x: number): void {
+      room.receive("A", networkCommand({ action: "chunk-added", x, z: 0, heights: heights(0) }));
+    }
+    assert.throws(() => add(max + 1), /does not parse/);
+    add(max - 1);
+
+    assert.deepEqual(chunkKeys(room), ["0,0", `${max - 1},0`, `${max},0`]);
+  });
+
+  test("a height patch keeps its valid tiles and answers the author with the refused ones' heights", () => {
+    const room = liveRoom();
+    room.connect("A");
+    room.take("A");
     function flat(tile: number) {
       return { x: 0, z: 0, tile, heights: encodeHeights(tileHeights(4)) };
     }
-    for (const tiles of [
-      [flat(0), { ...flat(1), x: 5 }],
-      [flat(0), { ...flat(1), heights: encodeHeights(tileHeights(5000)) }],
-      [flat(0), { ...flat(1), heights: heights(4) }],
-      [flat(0), flat(0)]
-    ]) {
-      room.receive("A", networkCommand({ action: "heights-patched", tiles }));
-    }
+    const invalid = [
+      { ...flat(1), x: 5 },
+      { ...flat(1), heights: encodeHeights(tileHeights(5000)) },
+      { ...flat(1), heights: heights(4) }
+    ];
+    invalid.forEach((tile, index) => {
+      room.receive("A", networkCommand({ action: "heights-patched", tiles: [flat(index + 2), tile] }));
+    });
 
-    assert.ok(room.state.chunk(new ChunkCoord(0, 0))!.copyHeights().every((height) => height === 0));
-    room.receive("A", networkCommand({ action: "heights-patched", tiles: [flat(5)] }));
-    assert.deepEqual(room.state.chunk(new ChunkCoord(0, 0))!.tileHeights(1, 1), tileHeights(4));
+    const chunk = room.state.chunk(new ChunkCoord(0, 0))!;
+    const admitted = [chunk.tileHeights(2, 0), chunk.tileHeights(3, 0), chunk.tileHeights(0, 1)];
+    assert.deepEqual(admitted.map((heights) => heights[0]), [4, 4, 4]);
+    assert.deepEqual(chunk.tileHeights(1, 0), tileHeights(0));
+    const corrections = room.take("A").filter((message) => message.type === "correction");
+    assert.deepEqual(corrections.map(({ data }) => "tiles" in data && data.tiles.map(({ tile }) => tile)), [
+      [2],
+      [1],
+      [1]
+    ]);
+  });
+
+  test("a height patch naming a tile twice is refused whole", () => {
+    const room = liveRoom();
+    const tile = { x: 0, z: 0, tile: 0, heights: encodeHeights(tileHeights(4)) };
+    room.receive("A", networkCommand({ action: "heights-patched", tiles: [tile, tile] }));
+
+    assert.deepEqual(room.state.chunk(new ChunkCoord(0, 0))!.tileHeights(0, 0), tileHeights(0));
   });
 });

@@ -43,3 +43,17 @@ export const linkCommandProtocol: MessageProtocol = new MessageProtocol(
     })
   ])
 );
+
+export const tileCommandProtocol: MessageProtocol = new MessageProtocol(
+  z.union([
+    z.object({
+      action: z.literal("paint"),
+      tile: z.string(),
+      value: z.string()
+    }),
+    z.object({
+      action: z.literal("erase"),
+      tile: z.string()
+    })
+  ])
+);

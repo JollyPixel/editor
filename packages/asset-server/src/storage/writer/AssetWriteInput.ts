@@ -12,6 +12,12 @@ export interface AssetPayload {
    * @default computed by the kind handler from `data`
    */
   dependencies?: readonly AssetReferenceData[];
+  /**
+   * Parts written by this payload, or `null` for a part it removes. An update
+   * keeps the parts it does not name. Parts `data` does not list are dropped.
+   * Only kinds that declare parts take it.
+   */
+  parts?: ReadonlyMap<string, Uint8Array | null>;
 }
 
 export interface WriteOptions {
