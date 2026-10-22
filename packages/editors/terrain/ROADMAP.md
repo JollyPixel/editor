@@ -69,7 +69,10 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   chunk through the overview and loads those within 8 chunks of the camera;
   the view draws the rest from the overview. Far members receive only the
   tiles that hold overview samples, and undo skips a step on unloaded chunks.
-- **Next:** M2, lift the 256-chunk cap.
+- **Chunk cap lifted** (2026-10-22). A terrain holds up to 4096 chunks
+  within coordinates -128 to 127; LoD selection keeps node bounds between
+  frames to stay under a millisecond at that size.
+- **Next:** M2, tile corrections for refused commits.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -106,7 +109,7 @@ chunks yet.
   and command broadcast filtered by subscription.
 - [x] Overview map, rebuilt incrementally from edited chunks.
 - [x] Camera-driven chunk loading and unloading within the stream radius.
-- [ ] Lift the 256-chunk cap.
+- [x] Lift the 256-chunk cap.
 - [ ] Tile corrections for refused commits, refused per tile, instead of the
   snapshot the room sends back today.
 

@@ -46,6 +46,24 @@ export interface SelectedNode {
 }
 
 type WalkedNode = Omit<SelectedNode, "skirts">;
+
+interface NodeRect {
+  readonly x: number;
+  readonly z: number;
+  readonly size: number;
+}
+
+interface CachedBounds {
+  readonly rect: NodeRect;
+  readonly bounds: NodeBounds | null;
+}
+
+interface WalkFrame {
+  readonly camera: Point3;
+  readonly visible: (bounds: NodeBounds) => boolean;
+  readonly selected: WalkedNode[];
+  readonly bounds: Map<string, CachedBounds>;
+}
 type WalkResult = "handled" | "outOfRange";
 
 export interface QuadtreeSelectOptions {
@@ -56,6 +74,8 @@ export class QuadtreeSelection {
   readonly ranges: LodRanges;
 
   #terrain: TerrainReader;
+  #bounds = new Map<string, CachedBounds>();
+  #regions: { x: number; z: number; }[] | null = null;
 
   constructor(
     terrain: TerrainReader,
@@ -65,19 +85,40 @@ export class QuadtreeSelection {
     this.ranges = ranges;
   }
 
+  invalidate(
+    chunks?: Iterable<ChunkCoord>
+  ): void {
+    this.#regions = null;
+    if (chunks === undefined) {
+      this.#bounds.clear();
+
+      return;
+    }
+
+    const reach: NodeRect[] = [];
+    for (const { originSample: { x, z } } of chunks) {
+      reach.push({ x: x - CHUNK_SAMPLES, z: z - CHUNK_SAMPLES, size: CHUNK_SAMPLES * 2 });
+    }
+    for (const [key, { rect }] of this.#bounds) {
+      if (reach.some((other) => overlaps(rect, other))) {
+        this.#bounds.delete(key);
+      }
+    }
+  }
+
   select(
     camera: Point3,
     options: QuadtreeSelectOptions = {}
   ): SelectedNode[] {
     const selected: WalkedNode[] = [];
-    const walk = new SelectionWalk(
-      this.#terrain,
-      this.ranges,
+    const walk = new SelectionWalk(this.#terrain, this.ranges, {
       camera,
-      options.visible ?? (() => true),
-      selected
-    );
-    for (const region of this.#regions()) {
+      visible: options.visible ?? (() => true),
+      selected,
+      bounds: this.#bounds
+    });
+    this.#regions ??= this.#knownRegions();
+    for (const region of this.#regions) {
       walk.node(
         region.x * REGION_SIZE,
         region.z * REGION_SIZE,
@@ -91,7 +132,7 @@ export class QuadtreeSelection {
     });
   }
 
-  #regions(): Iterable<{ x: number; z: number; }> {
+  #knownRegions(): { x: number; z: number; }[] {
     const regions = new Map<string, { x: number; z: number; }>();
     const chunksPerRegion = REGION_SIZE / CHUNK_SAMPLES;
     for (const coord of this.#terrain.overview.coords()) {
@@ -100,7 +141,7 @@ export class QuadtreeSelection {
       regions.set(`${x},${z}`, { x, z });
     }
 
-    return regions.values();
+    return [...regions.values()];
   }
 }
 
@@ -110,20 +151,19 @@ class SelectionWalk {
   #camera: Point3;
   #visible: (bounds: NodeBounds) => boolean;
   #selected: WalkedNode[];
-  #bounds = new Map<string, NodeBounds | null>();
+  #bounds: Map<string, CachedBounds>;
 
   constructor(
     terrain: TerrainReader,
     ranges: LodRanges,
-    camera: Point3,
-    visible: (bounds: NodeBounds) => boolean,
-    selected: WalkedNode[]
+    frame: WalkFrame
   ) {
     this.#terrain = terrain;
     this.#ranges = ranges;
-    this.#camera = camera;
-    this.#visible = visible;
-    this.#selected = selected;
+    this.#camera = frame.camera;
+    this.#visible = frame.visible;
+    this.#selected = frame.selected;
+    this.#bounds = frame.bounds;
   }
 
   node(
@@ -191,13 +231,16 @@ class SelectionWalk {
     size: number
   ): NodeBounds | null {
     const key = `${x},${z},${size}`;
-    let bounds = this.#bounds.get(key);
-    if (bounds === undefined) {
-      bounds = this.#computeBounds(x, z, size);
-      this.#bounds.set(key, bounds);
+    let cached = this.#bounds.get(key);
+    if (cached === undefined) {
+      cached = {
+        rect: { x, z, size },
+        bounds: this.#computeBounds(x, z, size)
+      };
+      this.#bounds.set(key, cached);
     }
 
-    return bounds;
+    return cached.bounds;
   }
 
   #computeBounds(
@@ -246,14 +289,22 @@ function chunkHeightRange(
   let min = Infinity;
   let max = -Infinity;
   for (const [dx, dz] of kInterpolatedFrom) {
-    const samples = terrain.overview.samples(new ChunkCoord(coord.x + dx, coord.z + dz)) ?? [];
-    for (const height of samples) {
-      min = Math.min(min, height);
-      max = Math.max(max, height);
+    const range = terrain.overview.heightRange(new ChunkCoord(coord.x + dx, coord.z + dz));
+    if (range !== undefined) {
+      min = Math.min(min, range.min);
+      max = Math.max(max, range.max);
     }
   }
 
   return { min, max };
+}
+
+function overlaps(
+  left: NodeRect,
+  right: NodeRect
+): boolean {
+  return left.x < right.x + right.size && right.x < left.x + left.size &&
+    left.z < right.z + right.size && right.z < left.z + left.size;
 }
 
 function axisGap(

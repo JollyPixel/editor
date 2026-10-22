@@ -159,8 +159,8 @@ decides which chunks are loaded.
   commands, stays consistent: the reply carries the heights at its version,
   and a pending patch replayed on an unloaded chunk updates the overview.
 
-Until M2 lands, `chunk-added` is refused past 256 chunks, about 17 MB of
-heights at ×1.
+`chunk-added` is refused past 4096 chunks, and commands naming a chunk
+outside `[-128, 127]` do not parse; see [World and chunks][world].
 
 ## Corrections
 
@@ -205,3 +205,4 @@ exactly.
 
 [assets-arch]: ../../../assets/ARCHITECTURE.md
 [asset-parts]: ../../../asset-server/architecture/AssetParts.md
+[world]: ./design.md#world-and-chunks

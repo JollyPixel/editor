@@ -49,8 +49,12 @@ chunk holds. `sampleAt` reads the interpolated overview on an unloaded chunk.
 
 `TerrainView` draws unloaded chunks from the overview, so loaded and unloaded
 ground meet without a crack. Call `chunkAdded` and `chunkRemoved` when a chunk
-loads or unloads, and `overviewChanged(coords)` when unloaded chunks are added
-or removed or their samples change.
+loads or unloads, `tilesChanged` when tiles are written, and
+`overviewChanged(coords)` when unloaded chunks are added or removed or their
+samples change. The view keeps node bounds between frames and recomputes only
+those over the chunks these calls name, so a terrain changed without them
+draws with stale bounds. It addresses chunks modulo `LOOKUP_SIZE`, 256, on
+each axis and throws when two known chunks share a slot.
 
 ## License
 

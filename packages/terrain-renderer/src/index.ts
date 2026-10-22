@@ -57,3 +57,4 @@ export {
   TerrainView,
   type TerrainViewOptions
 } from "./view/TerrainView.ts";
+export { LOOKUP_SIZE } from "./view/textures/ChunkTextureStore.ts";

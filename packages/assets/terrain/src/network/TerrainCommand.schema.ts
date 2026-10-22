@@ -4,13 +4,23 @@ import {
   MessageProtocol,
   withCommandHeader
 } from "@jolly-pixel/network";
-import { TILES_PER_CHUNK } from "@jolly-pixel/terrain.renderer";
+import {
+  LOOKUP_SIZE,
+  TILES_PER_CHUNK
+} from "@jolly-pixel/terrain.renderer";
 import * as z from "zod/mini";
 
 // CONSTANTS
 export const MAX_PATCH_TILES = 1024;
 export const CHUNK_TILE_COUNT = TILES_PER_CHUNK * TILES_PER_CHUNK;
-const kChunkCoordinate = z.int();
+export const CHUNK_COORDINATE_RANGE = {
+  min: -LOOKUP_SIZE / 2,
+  max: LOOKUP_SIZE / 2 - 1
+} as const;
+const kChunkCoordinate = z.int().check(
+  z.gte(CHUNK_COORDINATE_RANGE.min),
+  z.lte(CHUNK_COORDINATE_RANGE.max)
+);
 
 export const tilePatchSchema = z.object({
   x: kChunkCoordinate,

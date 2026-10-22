@@ -18,7 +18,9 @@ the heights of each chunk, 64×64 little-endian `Float32`. The overview samples
 are the four heights of the chunk's 32 m grid points, base64 encoded; loading
 a chunk derives them from its heights. A chunk entry may also carry its heights
 inline, base64 encoded, as a catalog create does; the first save after an
-edit moves them to part files.
+edit moves them to part files. Chunk coordinates lie within
+`CHUNK_COORDINATE_RANGE`, -128 to 127 on each axis, and a terrain holds at
+most `MAX_TERRAIN_CHUNKS`, 4096 chunks.
 
 The room's snapshot is the chunk list. The document knows every chunk
 through its overview samples and loads the heights of those its stream

@@ -8,6 +8,11 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import { ChunkCoord } from "#src/terrain/ChunkCoord.ts";
 import { Terrain } from "#src/terrain/Terrain.ts";
+import {
+  TILE_SAMPLE_COUNT,
+  TileCoord,
+  TILES_PER_CHUNK
+} from "#src/terrain/TileCoord.ts";
 import { LodRanges } from "#src/view/lod/LodRanges.ts";
 import {
   DEFAULT_WALKABLE_SLOPE,
@@ -85,6 +90,26 @@ describe("TerrainView", () => {
       [morph.getX(0), morph.getY(0), morph.getZ(0)],
       [ranges.morphStart(first.level), ranges.morphEnd(first.level), first.skirts].map(Math.fround)
     );
+  });
+
+  test("tiles raised after a frame refine the nodes over them on the next frame", () => {
+    const terrain = stripTerrain(4);
+    const view = new TerrainView(terrain);
+    const eye = camera({ x: 150, y: 601, z: 30 }, { x: 150, y: 0, z: 31 });
+    view.update(eye);
+
+    const chunk = new ChunkCoord(2, 0);
+    const tiles = Array.from(
+      { length: TILES_PER_CHUNK ** 2 },
+      (_, index) => TileCoord.fromIndex(chunk, index)
+    );
+    for (const tile of tiles) {
+      terrain.writeTile(tile, new Float32Array(TILE_SAMPLE_COUNT).fill(600));
+    }
+    view.tilesChanged(tiles);
+    const under = view.update(eye).filter((node) => node.x <= 150 && node.x + node.size > 150);
+
+    assert.deepEqual(under.map(({ level }) => level), [0]);
   });
 
   test("nodes behind the camera are culled", () => {

@@ -23,7 +23,7 @@ import type {
 } from "../network/types.ts";
 
 // CONSTANTS
-export const MAX_TERRAIN_CHUNKS = 256;
+export const MAX_TERRAIN_CHUNKS = 4096;
 
 type TerrainEdit =
   | {

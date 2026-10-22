@@ -26,6 +26,12 @@ someone creates it, by adding it next to an existing one or by sculpting
 across an edge. Removing a chunk deletes its data. A new terrain starts with
 one flat chunk at `(0, 0)`, and removing the last chunk is refused.
 
+Chunk coordinates lie in `[-128, 127]` on each axis, 16 km per side, so the
+view's 256×256 lookup texture never gives two chunks the same slot. A terrain
+holds at most 4096 chunks (`MAX_TERRAIN_CHUNKS`), about 17 km², while the
+server keeps every part in memory: 64 MB of heights at ×1, and a join
+snapshot of about 200 KB.
+
 Each sample belongs to exactly one chunk: chunk `(x, z)` owns the samples in
 `[x × 64, (x + 1) × 64)` on X and Z, and the row and column at `(x + 1) × 64`
 belong to its neighbours. No sample is stored twice, so an edit on an edge

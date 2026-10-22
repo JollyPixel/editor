@@ -4,7 +4,10 @@ import {
   ChunkCoord,
   type ChunkKey
 } from "./ChunkCoord.ts";
-import type { TerrainChunk } from "./TerrainChunk.ts";
+import type {
+  HeightRange,
+  TerrainChunk
+} from "./TerrainChunk.ts";
 import {
   TILE_SAMPLES,
   type TileCoord
@@ -21,6 +24,7 @@ export interface OverviewReader {
   has(coord: ChunkCoord): boolean;
   coords(): IterableIterator<ChunkCoord>;
   samples(coord: ChunkCoord): Float32Array | undefined;
+  heightRange(coord: ChunkCoord): HeightRange | undefined;
   heightAt(sampleX: number, sampleZ: number): number | undefined;
   interpolate(sampleX: number, sampleZ: number): number | undefined;
 }
@@ -28,6 +32,7 @@ export interface OverviewReader {
 interface OverviewEntry {
   readonly coord: ChunkCoord;
   readonly samples: Float32Array;
+  range: HeightRange;
 }
 
 export class OverviewMap implements OverviewReader {
@@ -53,6 +58,12 @@ export class OverviewMap implements OverviewReader {
     coord: ChunkCoord
   ): Float32Array | undefined {
     return this.#entries.get(coord.key)?.samples.slice();
+  }
+
+  heightRange(
+    coord: ChunkCoord
+  ): HeightRange | undefined {
+    return this.#entries.get(coord.key)?.range;
   }
 
   heightAt(
@@ -98,7 +109,8 @@ export class OverviewMap implements OverviewReader {
       );
     }
 
-    this.#entries.set(coord.key, { coord, samples: samples.slice() });
+    const copy = samples.slice();
+    this.#entries.set(coord.key, { coord, samples: copy, range: sampleRange(copy) });
   }
 
   writeTile(
@@ -121,6 +133,9 @@ export class OverviewMap implements OverviewReader {
           changed = true;
         }
       }
+    }
+    if (changed) {
+      entry.range = sampleRange(entry.samples);
     }
 
     return changed;
@@ -149,6 +164,19 @@ export class OverviewMap implements OverviewReader {
 
     return this.#entries.get(coord.key)?.samples[index];
   }
+}
+
+function sampleRange(
+  samples: Float32Array
+): HeightRange {
+  let min = Infinity;
+  let max = -Infinity;
+  for (const height of samples) {
+    min = Math.min(min, height);
+    max = Math.max(max, height);
+  }
+
+  return { min, max };
 }
 
 export function overviewSamples(

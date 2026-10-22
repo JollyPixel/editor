@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { InvalidAssetFileError } from "@jolly-pixel/asset-server";
 import { LiveAssetRoom } from "@jolly-pixel/asset-server/testing";
 import {
+  CHUNK_SAMPLE_COUNT,
   ChunkCoord,
   OVERVIEW_SAMPLE_COUNT
 } from "@jolly-pixel/terrain.renderer";
@@ -21,6 +22,7 @@ import {
   terrainSnapshot,
   TERRAIN_FILE_VERSION
 } from "#src/index.ts";
+import { CHUNK_COORDINATE_RANGE } from "#src/network/TerrainCommand.schema.ts";
 import {
   heights,
   networkCommand,
@@ -29,6 +31,10 @@ import {
 
 function liveRoom() {
   return new LiveAssetRoom(terrainAssetKind());
+}
+
+function flatChunk(): Float32Array {
+  return new Float32Array(CHUNK_SAMPLE_COUNT);
 }
 
 function chunkKeys(
@@ -135,12 +141,27 @@ describe("terrain asset kind", () => {
 
   test(`no chunk is admitted past ${MAX_TERRAIN_CHUNKS}`, () => {
     const room = liveRoom();
-    for (let x = 1; x <= MAX_TERRAIN_CHUNKS; x++) {
+    const side = Math.sqrt(MAX_TERRAIN_CHUNKS);
+    for (let index = 1; index < MAX_TERRAIN_CHUNKS; index++) {
+      room.state.addChunk(new ChunkCoord(index % side, Math.floor(index / side)), flatChunk());
+    }
+    room.receive("A", networkCommand({ action: "chunk-added", x: side, z: 0, heights: heights(0) }));
+
+    assert.equal(room.state.has(new ChunkCoord(side, 0)), false);
+    assert.equal(room.state.size, MAX_TERRAIN_CHUNKS);
+  });
+
+  test("a chunk outside the coordinate range does not parse", () => {
+    const room = liveRoom();
+    const { max } = CHUNK_COORDINATE_RANGE;
+    room.state.addChunk(new ChunkCoord(max, 0), flatChunk());
+    function add(x: number): void {
       room.receive("A", networkCommand({ action: "chunk-added", x, z: 0, heights: heights(0) }));
     }
+    assert.throws(() => add(max + 1), /does not parse/);
+    add(max - 1);
 
-    assert.equal(room.state.size, MAX_TERRAIN_CHUNKS);
-    assert.equal(room.state.has(new ChunkCoord(MAX_TERRAIN_CHUNKS, 0)), false);
+    assert.deepEqual(chunkKeys(room), ["0,0", `${max - 1},0`, `${max},0`]);
   });
 
   test("a height patch is refused whole when one of its tiles is invalid", () => {

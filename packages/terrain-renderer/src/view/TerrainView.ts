@@ -112,6 +112,7 @@ export class TerrainView {
     coord: ChunkCoord
   ): void {
     this.#textures.chunkAdded(coord);
+    this.selection.invalidate([coord]);
     this.#requestFrame();
   }
 
@@ -119,24 +120,30 @@ export class TerrainView {
     coord: ChunkCoord
   ): void {
     this.#textures.chunkRemoved(coord);
+    this.selection.invalidate([coord]);
     this.#requestFrame();
   }
 
   tilesChanged(
     tiles: Iterable<TileCoord>
   ): void {
-    this.#textures.tilesChanged(tiles);
+    const changed = [...tiles];
+    this.#textures.tilesChanged(changed);
+    this.selection.invalidate(new Map(changed.map(({ chunk }) => [chunk.key, chunk])).values());
     this.#requestFrame();
   }
 
   overviewChanged(
     coords: Iterable<ChunkCoord>
   ): void {
-    this.#textures.overviewChanged(coords);
+    const changed = [...coords];
+    this.#textures.overviewChanged(changed);
+    this.selection.invalidate(changed);
     this.#requestFrame();
   }
 
   reset(): void {
+    this.selection.invalidate();
     this.#textures.clear();
     for (const { coord } of this.#terrain.chunks()) {
       this.#textures.chunkAdded(coord);
