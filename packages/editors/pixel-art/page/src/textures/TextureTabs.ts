@@ -136,7 +136,7 @@ export class TextureTabs {
       const canvas = this.#panel.addTexture({
         id: assetId,
         name,
-        tooltip: catalog.record(assetId)?.source ?? `${name}${PIXEL_ART_EXTENSION}`,
+        tooltip: catalog.record(assetId)?.path ?? `${name}${PIXEL_ART_EXTENSION}`,
         document: lease.document
       });
       await this.attach(lease, canvas);

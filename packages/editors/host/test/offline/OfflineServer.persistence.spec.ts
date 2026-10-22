@@ -149,7 +149,7 @@ describe("OfflineServer on IndexedDB", () => {
 
     assert.deepEqual(catalogIds(second), [...kSeedIds].sort());
     assert.strictEqual(
-      second.backend.catalog.record(kSeedIds[0])?.source,
+      second.backend.catalog.record(kSeedIds[0])?.path.toString(),
       "notes/renamed.bin"
     );
     await second.close();

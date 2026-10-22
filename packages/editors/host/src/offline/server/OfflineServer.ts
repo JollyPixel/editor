@@ -273,7 +273,7 @@ export class OfflineServer implements OfflineBackend {
 
     return catalogLaunchSources({
       accepts,
-      isKnown: (assetId) => catalog.record(assetId)?.kind === accepts,
+      isKnown: (assetId) => catalog.record(assetId)?.hasKind(accepts) === true,
       first: () => {
         const [first] = catalog.catalog.byKind(accepts);
 

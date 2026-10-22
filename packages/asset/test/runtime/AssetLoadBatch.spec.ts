@@ -18,7 +18,7 @@ async function rejectWithoutError(): Promise<string> {
 describe("AssetLoadBatch", () => {
   test("loads an explicit dependency snapshot", async() => {
     const coordinator = createCoordinator(
-      async(record) => record.source
+      async(record) => record.path.toString()
     );
     const greeting = reference("greeting");
     const handle = coordinator.request(greeting);
@@ -224,7 +224,7 @@ describe("AssetLoadBatch", () => {
     const coordinator = createCoordinator(async(record, context) => {
       received.push(context.signal);
 
-      return record.source;
+      return record.path.toString();
     });
 
     await coordinator.loadBatch(

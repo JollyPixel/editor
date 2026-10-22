@@ -1,7 +1,6 @@
 // Import Internal Dependencies
 import type { AssetCatalog } from "../AssetCatalog.ts";
 import { AssetHandle } from "./AssetHandle.ts";
-import { AssetId } from "../AssetId.ts";
 import {
   type AssetLoadBatch,
   type AssetLoadBatchOptions,
@@ -20,22 +19,21 @@ export interface AssetCoordinatorOptions {
 }
 
 export class AssetCoordinator {
-  readonly catalog: AssetCatalog;
-  readonly loaders: AssetLoaderRegistry;
-
+  #catalog: AssetCatalog;
+  #loaders: AssetLoaderRegistry;
   #store = new AssetStore();
 
   constructor(
     options: AssetCoordinatorOptions
   ) {
-    this.catalog = options.catalog;
-    this.loaders = options.loaders;
+    this.#catalog = options.catalog;
+    this.#loaders = options.loaders;
   }
 
   request<TValue>(
     reference: AssetReference<TValue>
   ): AssetHandle<TValue> {
-    this.catalog.resolve(reference);
+    this.#catalog.resolve(reference);
 
     return new AssetHandle(
       reference,
@@ -46,7 +44,7 @@ export class AssetCoordinator {
   get<TValue>(
     reference: AssetReference<TValue>
   ): TValue {
-    this.catalog.resolve(reference);
+    this.#catalog.resolve(reference);
 
     return this.#store.get(reference);
   }
@@ -55,7 +53,7 @@ export class AssetCoordinator {
     reference: AssetReference<TValue>,
     context: AssetLoadContext = {}
   ): Promise<TValue> {
-    const record = this.catalog.resolve(reference);
+    const record = this.#catalog.resolve(reference);
 
     return this.#load(
       reference,
@@ -71,18 +69,19 @@ export class AssetCoordinator {
     const context: AssetLoadContext = {
       signal: options.signal
     };
-    const tasks = new Map<string, AssetLoadBatchTask>();
+    const seen = new Set<string>();
+    const pending: AssetLoadBatchTask[] = [];
 
     for (const reference of references) {
-      const record = this.catalog.resolve(reference);
-      const ready = this.#store.loadStatus(
-        reference
-      ) === "ready";
+      const record = this.#catalog.resolve(reference);
+      if (seen.has(record.id.value)) {
+        continue;
+      }
 
-      if (!tasks.has(record.id.value)) {
-        tasks.set(record.id.value, {
+      seen.add(record.id.value);
+      if (this.#store.loadStatus(reference) !== "ready") {
+        pending.push({
           record,
-          ready,
           load: async() => {
             await this.#load(
               reference,
@@ -95,17 +94,16 @@ export class AssetCoordinator {
     }
 
     return startAssetLoadBatch(
-      tasks.values(),
+      pending,
+      seen.size,
       options
     );
   }
 
-  evict(
-    id: AssetId | string
-  ): unknown | undefined {
-    return this.#store.evict(
-      AssetId.from(id)
-    );
+  evict<TValue>(
+    reference: AssetReference<TValue>
+  ): TValue | undefined {
+    return this.#store.evict(reference);
   }
 
   async #load<TValue>(
@@ -113,7 +111,7 @@ export class AssetCoordinator {
     record: AssetRecord,
     context: AssetLoadContext
   ): Promise<TValue> {
-    const loader = this.loaders.get(reference.type);
+    const loader = this.#loaders.get(reference.type);
 
     return this.#store.load(
       reference,

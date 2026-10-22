@@ -216,7 +216,7 @@ describe("EditorToolbar", () => {
     const navigator = new FakeNavigator();
     const cave = {
       ...record("cave", "voxelmap"),
-      source: "maps/cave.voxelmap.json"
+      path: "maps/cave.voxelmap.json"
     };
     const targets = new EditorTargets({
       catalog: {

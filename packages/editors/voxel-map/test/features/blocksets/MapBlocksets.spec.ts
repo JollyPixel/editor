@@ -244,7 +244,7 @@ describe("MapBlocksets", () => {
       {
         id: "asset-terrain",
         kind: "blockset",
-        source: "blocksets/granite.blockset.json"
+        path: "blocksets/granite.blockset.json"
       } as AssetRecordData
     ];
     catalog.emit("change");

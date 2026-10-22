@@ -31,7 +31,7 @@ function createFakeRuntime() {
       new AssetRecord({
         id: "pending",
         kind: kPendingAsset.kind,
-        source: "pending.bin"
+        path: "pending.bin"
       })
     ]),
     loaders: new AssetLoaderRegistry().register(kPendingAsset, {

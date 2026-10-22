@@ -203,7 +203,7 @@ export class StudioSession {
   #tabTitle(
     record: AssetRecordData
   ): EditorTabTitle {
-    const path = AssetPath.parse(record.source);
+    const path = AssetPath.parse(record.path);
 
     return {
       label: this.kinds.trimExtension(record.kind, path.name),

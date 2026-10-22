@@ -80,7 +80,7 @@ const kCommandTypes = [
 export const assetRecordSchema = z.object({
   id: kString,
   kind: kString,
-  source: kString,
+  path: kString,
   revision: z.optional(kString)
 });
 

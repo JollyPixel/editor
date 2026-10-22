@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { assertAssetKind } from "./assertAssetKind.ts";
+import { AssetKind } from "./AssetKind.ts";
 
 // CONSTANTS
 declare const kAssetValueTypeBrand: unique symbol;
@@ -7,15 +7,13 @@ declare const kAssetValueTypeBrand: unique symbol;
 export class AssetType<
   TValue = unknown
 > {
-  readonly kind: string;
+  readonly kind: AssetKind;
 
   declare readonly [kAssetValueTypeBrand]: TValue;
 
   constructor(
-    kind: string
+    kind: string | AssetKind
   ) {
-    assertAssetKind(kind);
-
-    this.kind = kind;
+    this.kind = AssetKind.from(kind);
   }
 }

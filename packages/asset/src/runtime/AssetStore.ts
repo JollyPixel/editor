@@ -1,5 +1,4 @@
 // Import Internal Dependencies
-import type { AssetId } from "../AssetId.ts";
 import type { AssetReference } from "../AssetReference.ts";
 import type { AssetType } from "../AssetType.ts";
 import type { AssetStatus } from "./AssetHandle.ts";
@@ -115,11 +114,11 @@ export class AssetStore {
     return loading.promise;
   }
 
-  evict(
-    id: AssetId
-  ): unknown | undefined {
-    const entry = this.#entries.get(id.value);
-    this.#entries.delete(id.value);
+  evict<TValue>(
+    reference: AssetReference<TValue>
+  ): TValue | undefined {
+    const entry = this.#findEntry(reference);
+    this.#entries.delete(reference.id.value);
 
     return entry?.status === "ready" ?
       entry.value :

@@ -15,13 +15,13 @@ import {
 const kCave = {
   id: "map-cave",
   kind: "voxelmap",
-  source: "maps/cave.voxelmap.json",
+  path: "maps/cave.voxelmap.json",
   revision: "a1"
 };
 const kHero = {
   id: "model-hero",
   kind: "voxelmodel",
-  source: "models/hero.voxelmodel.json",
+  path: "models/hero.voxelmodel.json",
   revision: "b1"
 };
 const kLayout = new CatalogLayout([kCave, kHero], ["maps", "models"]);
@@ -58,7 +58,7 @@ describe("CatalogLayout", () => {
 
   test("detects a moved or retyped record", () => {
     assert.ok(!kLayout.matches(
-      withChange({ source: "maps/den.voxelmap.json" }),
+      withChange({ path: "maps/den.voxelmap.json" }),
       ["maps", "models"]
     ));
     assert.ok(!kLayout.matches(
@@ -76,7 +76,7 @@ describe("CatalogLayout", () => {
         {
           id: "map-den",
           kind: "voxelmap",
-          source: "maps/den.voxelmap.json"
+          path: "maps/den.voxelmap.json"
         }
       ],
       ["maps", "models"]

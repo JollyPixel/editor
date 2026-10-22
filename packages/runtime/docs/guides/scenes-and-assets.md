@@ -14,7 +14,7 @@ Place `assets.json` in the Vite project's `public/` directory:
     {
       "id": "hero-model",
       "kind": "model",
-      "source": "models/hero.glb"
+      "path": "models/hero.glb"
     }
   ]
 }

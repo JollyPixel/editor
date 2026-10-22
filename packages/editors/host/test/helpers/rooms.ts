@@ -250,6 +250,6 @@ export function record(
   return {
     id,
     kind,
-    source: `${id}.${kind}`
+    path: `${id}.${kind}`
   };
 }

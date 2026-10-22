@@ -10,17 +10,17 @@ const kRecords = [
   {
     id: "map-1",
     kind: "voxelmap",
-    source: "maps/overworld.voxelmap.json"
+    path: "maps/overworld.voxelmap.json"
   },
   {
     id: "asset-block",
     kind: "blockset",
-    source: "blocksets/block.blockset.json"
+    path: "blocksets/block.blockset.json"
   },
   {
     id: "asset-stone",
     kind: "blockset",
-    source: "blocksets/stone.blockset.json"
+    path: "blocksets/stone.blockset.json"
   }
 ];
 

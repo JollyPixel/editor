@@ -36,7 +36,7 @@ describe("resolveRuntimeAssetCatalog", () => {
           {
             id: "hero-model",
             kind: "model",
-            source: "models/hero.glb"
+            path: "models/hero.glb"
           }
         ]
       }))

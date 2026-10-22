@@ -483,7 +483,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
       .map((record) => {
         return {
           id: record.id.value,
-          path: record.source
+          path: record.path.toString()
         };
       });
 

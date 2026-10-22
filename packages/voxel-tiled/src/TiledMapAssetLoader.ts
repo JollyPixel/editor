@@ -5,10 +5,7 @@ import {
   type AssetRecord,
   type AssetReference
 } from "@jolly-pixel/asset";
-import {
-  loadJSON,
-  pathUtils
-} from "@jolly-pixel/engine";
+import { loadJSON } from "@jolly-pixel/engine";
 import {
   loadBlocksets,
   type ResolvedBlockDefinition,
@@ -56,13 +53,13 @@ export class TiledMapAssetLoader implements AssetLoader<VoxelTiledMap> {
   async load(
     record: AssetRecord
   ): Promise<VoxelTiledMap> {
-    const source = pathUtils.parse(record.source);
-    const tilemap = await loadJSON<TiledMap>(record.source);
+    const { directory } = record.path;
+    const tilemap = await loadJSON<TiledMap>(record.path.toString());
 
     const { world, blocks } = new TiledConverter().convert(
       tilemap,
       {
-        resolveTilesetSrc: (src) => source.dir + src.replace(/\.tsx$/, ".png"),
+        resolveTilesetSrc: (src) => directory + src.replace(/\.tsx$/, ".png"),
         layerMode: "stacked",
         ...this.#options
       }

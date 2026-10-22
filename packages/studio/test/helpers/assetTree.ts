@@ -28,32 +28,32 @@ export const COMPANION_RECORDS: AssetRecordData[] = [
   {
     id: "map-overworld",
     kind: "voxelmap",
-    source: "maps/overworld.voxelmap.json"
+    path: "maps/overworld.voxelmap.json"
   },
   {
     id: "blockset-overworld",
     kind: "blockset",
-    source: "maps/overworld.blockset.json"
+    path: "maps/overworld.blockset.json"
   },
   {
     id: "map-cave",
     kind: "voxelmap",
-    source: "maps/cave.voxelmap.json"
+    path: "maps/cave.voxelmap.json"
   },
   {
     id: "model-hero",
     kind: "voxelmodel",
-    source: "models/hero.voxelmodel.json"
+    path: "models/hero.voxelmodel.json"
   },
   {
     id: "texture-hero",
     kind: "pixelart",
-    source: "models/hero.pixelart"
+    path: "models/hero.pixelart"
   },
   {
     id: "notes-hero",
     kind: "binary",
-    source: "models/hero.bin"
+    path: "models/hero.bin"
   }
 ];
 
@@ -185,7 +185,7 @@ export class FakeTreeCatalog implements AssetTreeCatalog {
     this.#staged.push(() => this.byId.set(id, {
       id,
       kind: options.kind ?? "binary",
-      source: path
+      path
     }));
 
     return id;
@@ -208,7 +208,7 @@ export class FakeTreeCatalog implements AssetTreeCatalog {
         if (record !== undefined) {
           this.byId.set(assetId, {
             ...record,
-            source: to
+            path: to
           });
         }
       }

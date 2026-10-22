@@ -73,7 +73,7 @@ function snapshot(
         {
           id: "a1",
           kind: "pixelart",
-          source: "textures/a.pixelart"
+          path: "textures/a.pixelart"
         }
       ]
     },

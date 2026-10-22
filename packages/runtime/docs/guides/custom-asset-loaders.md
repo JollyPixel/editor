@@ -33,7 +33,7 @@ class TileMapAssetLoader implements AssetLoader<TileMap> {
   }
 
   async load(record: AssetRecord): Promise<TileMap> {
-    return await this.#loader.loadAsync(record.source);
+    return await this.#loader.loadAsync(record.path.toString());
   }
 }
 
@@ -75,7 +75,7 @@ The catalog record must use the same kind as the asset type:
     {
       "id": "world-map",
       "kind": "tile-map",
-      "source": "maps/world.json"
+      "path": "maps/world.json"
     }
   ]
 }

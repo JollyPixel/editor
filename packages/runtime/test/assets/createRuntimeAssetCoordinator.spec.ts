@@ -7,12 +7,12 @@ import {
   AssetCatalog,
   AssetLoaderAlreadyExistsError,
   AssetRecord,
+  AssetReference,
   AssetType
 } from "@jolly-pixel/asset";
 import {
   AssetTypes,
   AssetLoaders,
-  AUDIO_ASSET,
   TEXTURE_ASSET
 } from "@jolly-pixel/engine";
 import * as THREE from "three/webgpu";
@@ -23,32 +23,14 @@ import {
 } from "../../src/assets/createRuntimeAssetCoordinator.ts";
 
 describe("createRuntimeAssetCoordinator", () => {
-  test("registers the default engine asset loaders", () => {
-    const coordinator = createRuntimeAssetCoordinator(
-      new THREE.LoadingManager(),
-      new AssetCatalog()
-    );
-
-    assert.strictEqual(
-      coordinator.loaders.has(AssetTypes.model),
-      true
-    );
-    assert.strictEqual(
-      coordinator.loaders.has(AssetTypes.font),
-      true
-    );
-    assert.strictEqual(
-      coordinator.loaders.has(AUDIO_ASSET),
-      true
-    );
-    assert.strictEqual(
-      coordinator.loaders.has(TEXTURE_ASSET),
-      true
-    );
-  });
-
-  test("adds custom loaders using the runtime loading manager", () => {
-    const catalog = new AssetCatalog();
+  test("adds custom loaders using the runtime loading manager", async() => {
+    const catalog = new AssetCatalog([
+      new AssetRecord({
+        id: "custom.value",
+        kind: "custom",
+        path: "custom/value.txt"
+      })
+    ]);
     const manager = new THREE.LoadingManager();
     const customType = new AssetType<string>("custom");
     let receivedManager: THREE.LoadingManager | undefined;
@@ -71,12 +53,11 @@ describe("createRuntimeAssetCoordinator", () => {
       }
     );
 
-    assert.strictEqual(coordinator.catalog, catalog);
-    assert.strictEqual(receivedManager, manager);
     assert.strictEqual(
-      coordinator.loaders.has(customType),
-      true
+      await coordinator.load(new AssetReference("custom.value", customType)),
+      "loaded"
     );
+    assert.strictEqual(receivedManager, manager);
   });
 
   test("rejects custom loaders that duplicate a default kind", () => {
@@ -101,7 +82,13 @@ describe("createRuntimeAssetCoordinator", () => {
     const requested: string[] = [];
     const coordinator = createRuntimeAssetCoordinator(
       new THREE.LoadingManager(),
-      new AssetCatalog(),
+      new AssetCatalog([
+        new AssetRecord({
+          id: "texture.grass",
+          kind: "texture",
+          path: "textures/grass.ktx2"
+        })
+      ]),
       {
         ktx2: {
           loadAsync: async(url) => {
@@ -113,13 +100,8 @@ describe("createRuntimeAssetCoordinator", () => {
       }
     );
 
-    const texture = await coordinator.loaders.get(TEXTURE_ASSET).load(
-      new AssetRecord({
-        id: "texture.grass",
-        kind: "texture",
-        source: "textures/grass.ktx2"
-      }),
-      {}
+    const texture = await coordinator.load(
+      new AssetReference("texture.grass", TEXTURE_ASSET)
     );
 
     assert.deepStrictEqual(requested, ["textures/grass.ktx2"]);

@@ -69,7 +69,7 @@ function snapshot(
         {
           id: "a1",
           kind: "pixelart",
-          source: "textures/a.pixelart"
+          path: "textures/a.pixelart"
         }
       ]
     },
@@ -100,7 +100,7 @@ describe("CatalogClient — dependencies", () => {
         record: {
           id: assetId,
           kind: "voxelmap",
-          source: `${assetId}.voxelmap.json`
+          path: `${assetId}.voxelmap.json`
         },
         dependencies
       }]
@@ -212,7 +212,7 @@ describe("CatalogClient — dependencies", () => {
       {
         id: "map",
         kind: "voxelmap",
-        source: "map.voxelmap.json"
+        path: "map.voxelmap.json"
       }
     ]);
   });
@@ -244,7 +244,7 @@ describe("CatalogClient.connect", () => {
 
     assert.deepEqual(source.names, [CATALOG_ROOM]);
     assert.strictEqual(room.joined, true);
-    assert.strictEqual(client.record("a1")?.source, "textures/a.pixelart");
+    assert.strictEqual(client.record("a1")?.path, "textures/a.pixelart");
   });
 
   test("rejects and leaves the room when no snapshot arrives in time", async(t) => {

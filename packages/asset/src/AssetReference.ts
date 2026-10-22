@@ -3,6 +3,7 @@ import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import { AssetId } from "./AssetId.ts";
+import { AssetKind } from "./AssetKind.ts";
 import {
   AssetKindMismatchError
 } from "./errors/AssetKindMismatchError.ts";
@@ -37,7 +38,7 @@ export class AssetReference<
     this.type = type;
   }
 
-  get kind(): string {
+  get kind(): AssetKind {
     return this.type.kind;
   }
 
@@ -45,15 +46,15 @@ export class AssetReference<
     other: AssetReference<unknown>
   ): boolean {
     const isIdEqual = this.id.equals(other.id);
-    const isKindEqual = this.kind === other.kind;
+    const isTypeEqual = this.type === other.type;
 
-    return isIdEqual && isKindEqual;
+    return isIdEqual && isTypeEqual;
   }
 
   toJSON(): AssetReferenceData {
     return {
       id: this.id.value,
-      kind: this.kind
+      kind: this.kind.value
     };
   }
 
@@ -63,11 +64,12 @@ export class AssetReference<
   ): AssetReference<TValue> {
     const data = kAssetReferenceSchema.parse(input);
     const id = new AssetId(data.id);
-    if (data.kind !== type.kind) {
+    const kind = new AssetKind(data.kind);
+    if (!kind.equals(type.kind)) {
       throw new AssetKindMismatchError(
         id,
         type.kind,
-        data.kind
+        kind
       );
     }
 

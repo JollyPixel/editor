@@ -19,7 +19,7 @@ import {
 const kHeroRecord = {
   id: "hero-model",
   kind: "model",
-  source: "project:/models/hero.glb",
+  path: "project:/models/hero.glb",
   revision: "sha256:abc"
 };
 const kManifest = {
@@ -28,12 +28,12 @@ const kManifest = {
 };
 
 function heroRecord(
-  source = kHeroRecord.source
+  path = kHeroRecord.path
 ): AssetRecord {
   return new AssetRecord({
     id: kHeroRecord.id,
     kind: kHeroRecord.kind,
-    source
+    path
   });
 }
 
@@ -51,8 +51,8 @@ describe("AssetCatalog", () => {
       new AssetId("hero-model")
     );
 
-    assert.equal(record.kind, "model");
-    assert.equal(record.source, "project:/models/hero.glb");
+    assert.equal(record.kind.value, "model");
+    assert.equal(record.path.toString(), "project:/models/hero.glb");
     assert.equal(record.revision, "sha256:abc");
   });
 
@@ -115,7 +115,7 @@ describe("AssetCatalog", () => {
     const second = new AssetRecord({
       id: "theme-music",
       kind: "audio",
-      source: "project:/audio/theme.ogg"
+      path: "project:/audio/theme.ogg"
     });
     const catalog = new AssetCatalog([
       first,
@@ -144,8 +144,8 @@ describe("AssetCatalog", () => {
       (error: unknown) => {
         assert.ok(error instanceof AssetKindMismatchError);
         assert.equal(error.id.value, "hero-model");
-        assert.equal(error.expectedKind, "audio");
-        assert.equal(error.actualKind, "model");
+        assert.equal(error.expectedKind.value, "audio");
+        assert.equal(error.actualKind.value, "model");
 
         return true;
       }
@@ -166,7 +166,7 @@ describe("AssetCatalog", () => {
   test("find returns undefined where get throws", () => {
     const catalog = new AssetCatalog([heroRecord()]);
 
-    assert.equal(catalog.find("hero-model")?.kind, "model");
+    assert.equal(catalog.find("hero-model")?.kind.value, "model");
     assert.equal(catalog.find("villain"), undefined);
     assert.throws(
       () => catalog.get("villain"),
@@ -200,7 +200,7 @@ describe("AssetCatalog kind lookup", () => {
       kinds.map((kind, index) => new AssetRecord({
         id: `asset-${index}`,
         kind,
-        source: `project:/asset-${index}`
+        path: `project:/asset-${index}`
       }))
     );
   }

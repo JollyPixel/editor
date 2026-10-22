@@ -20,12 +20,12 @@ export function createCoordinator(
       new AssetRecord({
         id: "greeting",
         kind: "text",
-        source: "memory:greeting"
+        path: "memory:greeting"
       }),
       new AssetRecord({
         id: "farewell",
         kind: "text",
-        source: "memory:farewell"
+        path: "memory:farewell"
       })
     ]),
     loaders: new AssetLoaderRegistry().register(TEXT_ASSET, {

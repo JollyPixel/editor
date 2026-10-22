@@ -1,7 +1,7 @@
 # AssetCatalog
 
 `AssetCatalog` owns the persistent records for one project or session. It
-resolves consumer references while keeping source addresses out of scene and
+resolves consumer references while keeping asset paths out of scene and
 component data.
 
 ## API
@@ -18,7 +18,7 @@ class AssetCatalog implements Iterable<AssetRecord> {
   find(id: AssetId | string): AssetRecord | undefined;
   get(id: AssetId | string): AssetRecord;
   remove(id: AssetId | string): AssetRecord;
-  byKind(kind: string): IterableIterator<AssetRecord>;
+  byKind(kind: AssetKind | string): IterableIterator<AssetRecord>;
   resolve(reference: AssetReference<unknown>): AssetRecord;
   toJSON(): AssetManifestData;
 
@@ -81,7 +81,7 @@ interface AssetManifestData {
     {
       "id": "hero-model",
       "kind": "model",
-      "source": "models/hero.glb",
+      "path": "models/hero.glb",
       "revision": "sha256:abc"
     }
   ]

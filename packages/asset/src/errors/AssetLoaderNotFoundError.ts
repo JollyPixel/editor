@@ -1,8 +1,11 @@
+// Import Internal Dependencies
+import type { AssetKind } from "../AssetKind.ts";
+
 export class AssetLoaderNotFoundError extends Error {
-  readonly kind: string;
+  readonly kind: AssetKind;
 
   constructor(
-    kind: string
+    kind: AssetKind
   ) {
     super(`No loader is registered for asset kind "${kind}".`);
     this.name = "AssetLoaderNotFoundError";

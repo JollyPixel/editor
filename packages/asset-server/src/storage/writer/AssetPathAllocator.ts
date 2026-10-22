@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { AssetSource as AssetSourcePath } from "@jolly-pixel/asset";
+import { AssetPath } from "@jolly-pixel/asset";
 import {
   Err,
   Ok,
@@ -23,7 +23,7 @@ export interface AssetPathAllocatorOptions {
 }
 
 export interface AssetPathRequest {
-  source: AssetSourcePath;
+  path: AssetPath;
   siblingExtensions: readonly string[];
   assetId?: string;
   onPathConflict?: PathConflictPolicy;
@@ -42,17 +42,17 @@ export class AssetPathAllocator {
 
   allocate(
     request: AssetPathRequest
-  ): Result<AssetSourcePath, AssetPathConflictError> {
-    const { source, siblingExtensions, assetId } = request;
+  ): Result<AssetPath, AssetPathConflictError> {
+    const { path, siblingExtensions, assetId } = request;
 
-    let candidate = source;
+    let candidate = path;
     let vacant = this.#vacantGroup(candidate, siblingExtensions, assetId);
     for (
       let index = 2;
       !vacant.ok && request.onPathConflict === "suffix";
       index++
     ) {
-      candidate = source.withName(`${source.name}-${index}`);
+      candidate = path.withName(`${path.name}-${index}`);
       vacant = this.#vacantGroup(candidate, siblingExtensions, assetId);
     }
 
@@ -88,17 +88,20 @@ export class AssetPathAllocator {
   }
 
   #vacantGroup(
-    source: AssetSourcePath,
+    path: AssetPath,
     siblingExtensions: readonly string[],
     assetId: string | undefined
   ): Result<void, AssetPathConflictError> {
-    const owner = this.vacant(source.toString(), assetId);
+    const owner = this.vacant(path.toString(), assetId);
     if (!owner.ok) {
       return owner;
     }
 
     for (const extension of siblingExtensions) {
-      const sibling = this.vacant(siblingPath(source, extension), undefined);
+      const sibling = this.vacant(
+        path.withExtension(extension).toString(),
+        undefined
+      );
       if (!sibling.ok) {
         return sibling;
       }
@@ -106,13 +109,6 @@ export class AssetPathAllocator {
 
     return Ok(undefined);
   }
-}
-
-export function siblingPath(
-  source: AssetSourcePath,
-  extension: string
-): string {
-  return `${source.directory}${source.name}${extension}`;
 }
 
 export function writableAssetPath(

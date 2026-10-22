@@ -61,7 +61,7 @@ describe("RuntimeLoadingScreen", () => {
       record: AssetRecord.parse({
         id: "texture:world",
         kind: "texture",
-        source: "textures/world-atlas.png"
+        path: "textures/world-atlas.png"
       })
     });
 

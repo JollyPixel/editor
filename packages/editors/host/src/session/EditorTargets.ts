@@ -50,7 +50,7 @@ export class EditorTargets extends Emitter<EditorTargetsEvents> {
   * [Symbol.iterator](): IterableIterator<AssetRecordData> {
     const records = [...this.#catalog.records()]
       .filter((record) => record.kind === this.accepts)
-      .sort((left, right) => left.source.localeCompare(right.source));
+      .sort((left, right) => left.path.localeCompare(right.path));
 
     yield* records;
   }

@@ -48,8 +48,11 @@ export interface AssetLoadBatch {
 
 export interface AssetLoadBatchTask {
   readonly record: AssetRecord;
-  readonly ready: boolean;
   load(): Promise<void>;
+}
+
+interface ProgressError {
+  readonly error: unknown;
 }
 
 class RunningAssetLoadBatch implements AssetLoadBatch {
@@ -60,19 +63,15 @@ class RunningAssetLoadBatch implements AssetLoadBatch {
   #completed: number;
   #failures: AssetLoadFailure[] = [];
   #onProgress: AssetLoadBatchOptions["onProgress"];
-  #hasProgressError = false;
-  #progressError: unknown;
+  #progressError: ProgressError | null = null;
 
   constructor(
-    tasks: readonly AssetLoadBatchTask[],
+    pendingTasks: readonly AssetLoadBatchTask[],
+    total: number,
     options: AssetLoadBatchOptions
   ) {
-    const pendingTasks = tasks.filter(
-      (task) => !task.ready
-    );
-
-    this.total = tasks.length;
-    this.#completed = tasks.length - pendingTasks.length;
+    this.total = total;
+    this.#completed = total - pendingTasks.length;
     this.#onProgress = options.onProgress;
 
     if (pendingTasks.length === 0) {
@@ -104,10 +103,10 @@ class RunningAssetLoadBatch implements AssetLoadBatch {
       tasks.map((task) => this.#runTask(task))
     );
 
-    if (this.#hasProgressError) {
+    if (this.#progressError !== null) {
       this.#status = "failed";
 
-      throw this.#progressError;
+      throw this.#progressError.error;
     }
     if (this.#failures.length > 0) {
       this.#status = "failed";
@@ -159,20 +158,21 @@ class RunningAssetLoadBatch implements AssetLoadBatch {
       this.#onProgress?.(progress);
     }
     catch (error: unknown) {
-      if (!this.#hasProgressError) {
-        this.#hasProgressError = true;
-        this.#progressError = error;
-      }
+      this.#progressError ??= {
+        error
+      };
     }
   }
 }
 
 export function startAssetLoadBatch(
-  tasks: Iterable<AssetLoadBatchTask>,
+  pendingTasks: readonly AssetLoadBatchTask[],
+  total: number,
   options: AssetLoadBatchOptions = {}
 ): AssetLoadBatch {
   return new RunningAssetLoadBatch(
-    Array.from(tasks),
+    pendingTasks,
+    total,
     options
   );
 }

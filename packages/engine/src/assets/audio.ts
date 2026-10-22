@@ -27,6 +27,6 @@ export class AudioAssetLoader implements AssetLoader<AudioBuffer> {
   load(
     record: AssetRecord
   ): Promise<AudioBuffer> {
-    return loadAudioBuffer(record.source, this.#manager);
+    return loadAudioBuffer(record.path.toString(), this.#manager);
   }
 }

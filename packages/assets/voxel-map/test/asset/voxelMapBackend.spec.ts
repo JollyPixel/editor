@@ -98,7 +98,7 @@ describe("voxel-map asset kind over a real back-end", () => {
       });
 
       const record = backend.catalog.snapshot().assets
-        .find((entry) => entry.source === kFilePath)!;
+        .find((entry) => entry.path === kFilePath)!;
       assert.strictEqual(record.kind, VOXEL_MAP_KIND);
 
       const server = new Server();

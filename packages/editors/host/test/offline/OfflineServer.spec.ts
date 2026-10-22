@@ -123,7 +123,7 @@ describe("OfflineServer", () => {
 
     const [{ session }] = contexts;
     assert.equal(session.target.record.id, kAssetId);
-    assert.equal(session.target.record.source, "notes/readme.bin");
+    assert.equal(session.target.record.path, "notes/readme.bin");
     assert.equal(session.identity.username, "Guest");
 
     editor.dispose();
@@ -153,7 +153,7 @@ describe("OfflineServer", () => {
     );
 
     assert.equal(
-      session.catalog.record(createdId)?.source,
+      session.catalog.record(createdId)?.path,
       "notes/second.bin"
     );
 

@@ -116,7 +116,7 @@ describe("ModelAssetLoader", () => {
       model = await loader.load(new AssetRecord({
         id: "model.triangle",
         kind: "model",
-        source: "models/triangle.gltf"
+        path: "models/triangle.gltf"
       }));
     }
     finally {

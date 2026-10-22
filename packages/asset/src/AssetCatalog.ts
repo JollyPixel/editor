@@ -3,6 +3,7 @@ import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import { AssetId } from "./AssetId.ts";
+import { AssetKind } from "./AssetKind.ts";
 import type { AssetReference } from "./AssetReference.ts";
 import {
   AssetRecord,
@@ -104,10 +105,11 @@ export class AssetCatalog implements Iterable<AssetRecord> {
   }
 
   * byKind(
-    kind: string
+    kind: AssetKind | string
   ): IterableIterator<AssetRecord> {
+    const expected = AssetKind.from(kind);
     for (const record of this.#records.values()) {
-      if (record.kind === kind) {
+      if (record.hasKind(expected)) {
         yield record;
       }
     }
@@ -118,7 +120,7 @@ export class AssetCatalog implements Iterable<AssetRecord> {
   ): AssetRecord {
     const record = this.get(reference.id);
 
-    if (record.kind !== reference.kind) {
+    if (!record.hasKind(reference.kind)) {
       throw new AssetKindMismatchError(
         reference.id,
         reference.kind,

@@ -32,8 +32,8 @@ export function toArchiveEntry(
 ): AssetArchiveEntry {
   return {
     id: record.id.value,
-    kind: record.kind,
-    path: record.source
+    kind: record.kind.value,
+    path: record.path.toString()
   };
 }
 

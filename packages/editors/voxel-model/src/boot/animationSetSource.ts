@@ -38,7 +38,7 @@ export function sessionAnimationSets(
   return {
     open: (id) => session.assets.open(kind, id),
     create,
-    createOwn: () => create(baseName(catalog.record(session.target.record.id)?.source ?? kOwnFallback)),
+    createOwn: () => create(baseName(catalog.record(session.target.record.id)?.path ?? kOwnFallback)),
     rename: (id, name) => catalog.rename(id, setPath(name)),
 
     records: () => [...catalog.records()]
@@ -47,7 +47,7 @@ export function sessionAnimationSets(
         return {
           id: record.id,
           kind: record.kind,
-          name: setName(record.source)
+          name: setName(record.path)
         };
       }),
 
@@ -66,9 +66,9 @@ export function sessionAnimationSets(
 }
 
 export function setName(
-  source: string
+  path: string
 ): string {
-  const file = source.split(kPathSeparators).at(-1) ?? source;
+  const file = path.split(kPathSeparators).at(-1) ?? path;
 
   return file.endsWith(VOXEL_ANIMATION_EXTENSION) ?
     file.slice(0, -VOXEL_ANIMATION_EXTENSION.length) :
@@ -84,9 +84,9 @@ function setPath(
 }
 
 function baseName(
-  source: string
+  path: string
 ): string {
-  const file = source.split(kPathSeparators).at(-1) ?? source;
+  const file = path.split(kPathSeparators).at(-1) ?? path;
 
   return file.split(".")[0] || kOwnFallback;
 }

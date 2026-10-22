@@ -53,7 +53,7 @@ test("a second tab edits the persistent catalog through its owner", async() => {
       { kind: BINARY_KIND }
     );
     await changed;
-    assert.strictEqual(secondCatalog.record(id)?.source, "second.bin");
+    assert.strictEqual(secondCatalog.record(id)?.path, "second.bin");
   }
   finally {
     firstCatalog.dispose();

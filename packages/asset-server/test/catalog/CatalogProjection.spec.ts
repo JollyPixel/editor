@@ -65,7 +65,7 @@ describe("CatalogProjection — load mirrors the projector", () => {
     projection.load();
 
     const record = projection.catalog.get(new AssetId(created.assetId));
-    assert.strictEqual(record.source, "b.png");
+    assert.strictEqual(record.path.toString(), "b.png");
     assert.strictEqual(
       record.revision,
       (updated.eventData as { hash: string; }).hash
@@ -107,7 +107,7 @@ describe("CatalogProjection — load mirrors the projector", () => {
     projection.load();
 
     assert.deepEqual(
-      projection.snapshot().assets.map((record) => record.source),
+      projection.snapshot().assets.map((record) => record.path),
       ["a.png", "b.png"]
     );
   });
@@ -155,7 +155,7 @@ describe("CatalogProjection — live changes", () => {
       changes.map((change) => change.eventType),
       ["asset.created", "asset.deleted"]
     );
-    assert.strictEqual(changes[0].record?.source, "a.png");
+    assert.strictEqual(changes[0].record?.path, "a.png");
     assert.strictEqual(changes[1].record, null);
     projection.close();
   });

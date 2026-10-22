@@ -84,7 +84,7 @@ describe("importAssetArchive", () => {
       actor: ARCHIVE_ACTOR
     })).unwrap();
 
-    assert.strictEqual(project.backend.catalog.record("a")?.kind, "binary");
+    assert.strictEqual(project.backend.catalog.record("a")?.kind.value, "binary");
     assert.strictEqual(report.created[0].kind, "link");
     assert.notStrictEqual(report.created[0].id, "a");
   });
@@ -234,13 +234,13 @@ describe("importAssetArchive", () => {
       path: "texture-2.link"
     });
     assert.strictEqual(
-      target.backend.catalog.record(squatter)?.source,
+      target.backend.catalog.record(squatter)?.path.toString(),
       "texture.link"
     );
     assert.strictEqual(
       target.backend.catalog.record(
         target.backend.catalog.dependencies.listDependencies(map)[0].id
-      )?.source,
+      )?.path.toString(),
       "texture-2.link"
     );
   });

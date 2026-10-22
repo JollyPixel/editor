@@ -31,12 +31,15 @@ describe("AssetReference", () => {
     });
   });
 
-  test("equals compares id and kind", () => {
+  test("equals compares id and type token", () => {
     const reference = new AssetReference("hero", kModelAsset);
 
     assert.ok(!reference.equals(new AssetReference("villain", kModelAsset)));
     assert.ok(
       !reference.equals(new AssetReference("hero", new AssetType("audio")))
+    );
+    assert.ok(
+      !reference.equals(new AssetReference("hero", new AssetType("model")))
     );
   });
 

@@ -68,7 +68,7 @@ function snapshot(
         {
           id: "a1",
           kind: "pixelart",
-          source: "textures/a.pixelart"
+          path: "textures/a.pixelart"
         }
       ]
     },
@@ -97,7 +97,7 @@ describe("CatalogClient", () => {
           record: {
             id: "a2",
             kind: "pixelart",
-            source: "textures/b.pixelart"
+            path: "textures/b.pixelart"
           }
         },
         {

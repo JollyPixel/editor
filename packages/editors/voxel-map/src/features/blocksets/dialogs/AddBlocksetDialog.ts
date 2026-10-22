@@ -16,7 +16,7 @@ import type {
   JollyOption
 } from "@jolly-pixel/ui";
 import {
-  AssetSource,
+  AssetPath,
   type AssetRecordData
 } from "@jolly-pixel/asset";
 import { DEFAULT_TILE_SIZE } from "@jolly-pixel/voxel.renderer";
@@ -174,7 +174,7 @@ export class AddBlocksetDialog extends LitElement {
   #renderLinkFields() {
     const options: JollyOption<string>[] = this._linkable.map((record) => {
       return {
-        label: new AssetSource(record.source).name,
+        label: new AssetPath(record.path).name,
         value: record.id
       };
     });

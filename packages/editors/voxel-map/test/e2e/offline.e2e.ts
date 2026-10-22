@@ -33,13 +33,13 @@ test("boots the seeded map from an in-page offline server, without a socket", as
     const { view } = workspace;
 
     return {
-      target: session.target.record.source,
+      target: session.target.record.path,
       persistent: session.offline?.persistent,
       username: session.identity.username,
       layers: view.document.world.getLayers().map((layer) => layer.name),
       blocks: view.document.blocks.size,
       blocksets: view.document.blocksets.definitions().map(
-        (blockset) => session.catalog.record(blockset.asset?.id ?? "")?.source
+        (blockset) => session.catalog.record(blockset.asset?.id ?? "")?.path
       )
     };
   });
@@ -69,7 +69,7 @@ test("shares an offline catalog with a second tab", async({ map, page }) => {
     );
 
     await expect.poll(() => second.page.evaluate(
-      (assetId) => window.voxelMapEditor?.session.catalog.record(assetId)?.source,
+      (assetId) => window.voxelMapEditor?.session.catalog.record(assetId)?.path,
       id
     )).toBe("shared.bin");
     expect(await second.page.evaluate(

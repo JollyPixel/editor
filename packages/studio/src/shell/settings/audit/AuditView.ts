@@ -211,7 +211,7 @@ export class AuditView extends LitElement {
       .map((record) => {
         return {
           value: record.id,
-          label: record.source
+          label: record.path
         };
       })
       .sort((left, right) => left.label.localeCompare(right.label));

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 // Import Third-party Dependencies
-import { AssetSource } from "@jolly-pixel/asset";
+import { AssetPath } from "@jolly-pixel/asset";
 import {
   BLOCKSET_KIND,
   VOXEL_MAP_KIND
@@ -17,7 +17,7 @@ function seededAsset(
 ) {
   const matches = Object.entries(createDefaultSeed("blockset-id").seed)
     .flatMap(([path, entry]) => (typeof entry === "object" && entry.kind === kind ?
-      [{ source: new AssetSource(path), entry }] :
+      [{ path: new AssetPath(path), entry }] :
       []));
   assert.equal(matches.length, 1);
 
@@ -32,7 +32,7 @@ describe("createDefaultSeed", () => {
 
     assert.equal(Object.keys(seed).length, 2);
     assert.equal(blockset.entry.id, "blockset-id");
-    assert.equal(map.source.directory, blockset.source.directory);
+    assert.equal(map.path.directory, blockset.path.directory);
   });
 
   it("seeds a blank 512x512 blockset with 32px tiles and no blocks", async() => {

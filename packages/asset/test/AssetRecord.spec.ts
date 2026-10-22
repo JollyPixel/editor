@@ -4,6 +4,7 @@ import { describe, test } from "node:test";
 
 // Import Internal Dependencies
 import {
+  AssetKind,
   AssetRecord,
   type AssetRecordOptions
 } from "../src/index.ts";
@@ -12,7 +13,7 @@ import {
 const kWorldOptions: AssetRecordOptions = {
   id: "world",
   kind: "voxelmap",
-  source: "maps/world.voxelmap"
+  path: "maps/world.voxelmap"
 };
 
 function worldRecord(): AssetRecord {
@@ -20,33 +21,32 @@ function worldRecord(): AssetRecord {
 }
 
 describe("AssetRecord", () => {
-  test("rejects an invalid kind, a blank source, or a blank revision", () => {
-    const cases: Array<[Partial<AssetRecordOptions>, RegExp]> = [
-      [{ kind: " " }, /kind must be non-empty without a colon/],
-      [{ kind: "voxel:map" }, /kind must be non-empty without a colon/],
-      [{ source: "" }, /source must not be empty/],
-      [{ revision: "" }, /revision must not be empty/]
-    ];
+  test("rejects a blank revision", () => {
+    assert.throws(
+      () => new AssetRecord({
+        ...kWorldOptions,
+        revision: ""
+      }),
+      {
+        name: "TypeError",
+        message: /revision must not be empty/
+      }
+    );
+  });
 
-    for (const [override, message] of cases) {
-      assert.throws(
-        () => new AssetRecord({
-          ...kWorldOptions,
-          ...override
-        }),
-        {
-          name: "TypeError",
-          message
-        }
-      );
-    }
+  test("hasKind accepts a kind or its name", () => {
+    const record = worldRecord();
+
+    assert.ok(record.hasKind("voxelmap"));
+    assert.ok(record.hasKind(new AssetKind("voxelmap")));
+    assert.ok(!record.hasKind("texture"));
   });
 
   test("serializes revision only when it is set", () => {
     assert.deepEqual(worldRecord().toJSON(), {
       id: "world",
       kind: "voxelmap",
-      source: "maps/world.voxelmap"
+      path: "maps/world.voxelmap"
     });
     assert.deepEqual(
       new AssetRecord({
@@ -56,7 +56,7 @@ describe("AssetRecord", () => {
       {
         id: "world",
         kind: "voxelmap",
-        source: "maps/world.voxelmap",
+        path: "maps/world.voxelmap",
         revision: "sha256:abc"
       }
     );
@@ -76,8 +76,8 @@ describe("AssetRecord", () => {
     const cases: unknown[] = [
       null,
       [],
-      { kind: "voxelmap", source: "a" },
-      { id: "world", kind: 1, source: "a" },
+      { kind: "voxelmap", path: "a" },
+      { id: "world", kind: 1, path: "a" },
       { id: "world", kind: "voxelmap" },
       {
         ...kWorldOptions,
@@ -97,11 +97,11 @@ describe("AssetRecord", () => {
     assert.throws(
       () => AssetRecord.parse({
         ...kWorldOptions,
-        source: " "
+        revision: " "
       }),
       {
         name: "TypeError",
-        message: /source must not be empty/
+        message: /revision must not be empty/
       }
     );
   });

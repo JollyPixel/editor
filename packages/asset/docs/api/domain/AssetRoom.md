@@ -8,11 +8,15 @@ and server packages. Its string form is `${kind}:${assetId}`, or
 
 ```ts
 class AssetRoom {
-  readonly kind: string;
+  readonly kind: AssetKind;
   readonly assetId: AssetId;
   readonly tag: string | null;
 
-  constructor(kind: string, assetId: string | AssetId, tag?: string | null);
+  constructor(
+    kind: string | AssetKind,
+    assetId: string | AssetId,
+    tag?: string | null
+  );
 
   equals(other: AssetRoom): boolean;
   toJSON(): string;
@@ -22,8 +26,9 @@ class AssetRoom {
 }
 ```
 
-The constructor throws a `TypeError` when `kind` is blank or contains a colon
-or `@`, and when `tag` is blank or contains a colon. `assetId` is wrapped with
+The constructor wraps `kind` with [`AssetKind.from()`](./AssetKind.md), which
+rejects a blank kind or one containing a colon or `@`. It throws a `TypeError`
+when `tag` is blank or contains a colon. `assetId` is wrapped with
 `AssetId.from()`, which rejects a blank identifier. `tag` defaults to `null`.
 
 `parse()` splits at the first colon, so later colons stay in the asset ID. An

@@ -128,6 +128,6 @@ function toReference(
 ): AssetReferenceData {
   return {
     id: record.id.value,
-    kind: record.kind
+    kind: record.kind.value
   };
 }

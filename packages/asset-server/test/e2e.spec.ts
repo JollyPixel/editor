@@ -59,11 +59,11 @@ describe("asset-server — end to end", () => {
     assert.strictEqual(backend.catalog.size, 2);
     const counterRecord = backend.catalog
       .snapshot().assets
-      .find((record) => record.source === "counter.counter")!;
+      .find((record) => record.path === "counter.counter")!;
     assert.strictEqual(counterRecord.kind, "counter");
     assert.strictEqual(
       backend.catalog.snapshot().assets
-        .find((record) => record.source === "textures/grass.png")?.kind,
+        .find((record) => record.path === "textures/grass.png")?.kind,
       "binary"
     );
 
@@ -136,7 +136,7 @@ describe("asset-server — end to end", () => {
 
     const drifted = backend.catalog.snapshot().assets
       .find((record) => record.kind === "binary")!;
-    assert.strictEqual(drifted.source, "textures/dirt.png");
+    assert.strictEqual(drifted.path, "textures/dirt.png");
     assert.deepEqual(
       eventStore.reader.listAll({ eventTypePrefix: "asset." }).at(-1)!.actor,
       { type: "system", source: "fs-watcher" }
@@ -152,7 +152,7 @@ describe("asset-server — end to end", () => {
     ));
     assert.deepEqual(
       backend.catalog.snapshot().assets
-        .map((record) => record.source)
+        .map((record) => record.path)
         .sort(),
       (await source.list()).sort()
     );
@@ -238,17 +238,17 @@ describe("asset-server — end to end", () => {
       "grass"
     );
     const changed = peer.received.at(-1) as {
-      payload: { type: string; changes: { record: { source: string; }; }[]; };
+      payload: { type: string; changes: { record: { path: string; }; }[]; };
     };
     assert.strictEqual(changed.payload.type, CATALOG_CHANGED);
-    assert.strictEqual(changed.payload.changes[0].record.source, "textures/grass.png");
+    assert.strictEqual(changed.payload.changes[0].record.path, "textures/grass.png");
     assert.strictEqual(
       (author.received.at(-1) as { payload: { type: string; }; }).payload.type,
       CATALOG_APPLIED
     );
 
     const counter = backend.catalog.snapshot().assets
-      .find((record) => record.source === "a.counter")!;
+      .find((record) => record.path === "a.counter")!;
     const room = new AssetRoom("counter", counter.id).toString();
     await connectionB.receive({ room, kind: "join" });
 

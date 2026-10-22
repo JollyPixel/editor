@@ -61,7 +61,7 @@ export function createSceneAssets(
     Array.from(ids, (id) => new AssetRecord({
       id,
       kind: kSceneAsset.kind,
-      source: `${id}.bin`
+      path: `${id}.bin`
     }))
   );
 

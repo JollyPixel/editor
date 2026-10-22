@@ -25,7 +25,7 @@ export class FontAssetLoader implements AssetLoader<Font> {
     record: AssetRecord
   ): Promise<Font> {
     return new FontLoader(this.#manager)
-      .loadAsync(record.source);
+      .loadAsync(record.path.toString());
   }
 }
 

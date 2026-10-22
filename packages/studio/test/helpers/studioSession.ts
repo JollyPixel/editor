@@ -22,22 +22,22 @@ export const SETTINGS_PAGE_ID = "studio:settings";
 export const MAP_RECORD: AssetRecordData = {
   id: "map-1",
   kind: "voxelmap",
-  source: "maps/overworld.voxelmap.json"
+  path: "maps/overworld.voxelmap.json"
 };
 export const CAVE_RECORD: AssetRecordData = {
   id: "map-2",
   kind: "voxelmap",
-  source: "maps/cave.voxelmap.json"
+  path: "maps/cave.voxelmap.json"
 };
 export const MODEL_RECORD: AssetRecordData = {
   id: "model-1",
   kind: "voxelmodel",
-  source: "models/model.voxelmodel.json"
+  path: "models/model.voxelmodel.json"
 };
 export const TEXTURE_RECORD: AssetRecordData = {
   id: "texture-1",
   kind: "texture",
-  source: "textures/block.png"
+  path: "textures/block.png"
 };
 
 export class FakeCatalog implements StudioCatalog {

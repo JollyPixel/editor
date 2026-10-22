@@ -13,12 +13,13 @@ All of them extend `Error` and set `name` to the class name.
 | `UnsupportedAssetManifestError` | `AssetCatalog.parse()` receives a version other than `1` |
 
 `AssetAlreadyExistsError` and `AssetNotFoundError` carry the `id`.
-`AssetKindMismatchError` carries the `id`, `expectedKind`, and `actualKind`.
+`AssetKindMismatchError` carries the `id`, `expectedKind`, and `actualKind`,
+the two kinds as [`AssetKind`](./domain/AssetKind.md) values.
 `UnsupportedAssetManifestError` carries the `version`.
 
 A malformed shape passed to a `parse()` method throws a `$ZodError`, the
 base error class of `zod/mini` (`z.core.$ZodError`). Blank
-values, and asset kinds containing a colon, throw `TypeError`.
+values, and asset kinds containing a colon or `@`, throw `TypeError`.
 
 ## Loader and store configuration
 
@@ -29,7 +30,8 @@ values, and asset kinds containing a colon, throw `TypeError`.
 | `AssetTypeMismatchError` | The same kind is used through another `AssetType` token |
 | `AssetNotReadyError` | Synchronous access occurs before an asset is ready |
 
-The loader errors and `AssetTypeMismatchError` carry the `kind`.
+The loader errors and `AssetTypeMismatchError` carry the `kind` as an
+`AssetKind`.
 `AssetNotReadyError` carries the `id` and the current `AssetStatus` as
 `status`.
 

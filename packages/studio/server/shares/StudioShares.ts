@@ -6,7 +6,10 @@ import {
   type ShareLink
 } from "@jolly-pixel/accounts";
 import type { Accounts } from "@jolly-pixel/accounts/node";
-import { AssetRoom } from "@jolly-pixel/asset";
+import {
+  AssetRoom,
+  type AssetKind
+} from "@jolly-pixel/asset";
 import { CATALOG_VIEW_ROOM } from "@jolly-pixel/asset-server";
 import type { PeerIdentity } from "@jolly-pixel/network";
 
@@ -18,7 +21,7 @@ import { UnknownAssetError } from "./errors/UnknownAssetError.ts";
 export interface SharedCatalog {
   record(
     assetId: string
-  ): { readonly kind: string; } | undefined;
+  ): { readonly kind: AssetKind; } | undefined;
   reachableFrom(
     assetId: string
   ): ReadonlySet<string>;
@@ -87,7 +90,7 @@ export class StudioShares {
       null :
       {
         assetId: link.assetId,
-        kind: record.kind
+        kind: record.kind.value
       };
   }
 

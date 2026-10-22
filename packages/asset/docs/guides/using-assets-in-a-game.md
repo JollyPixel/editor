@@ -15,13 +15,13 @@ Place `assets.json` in the Vite project's `public/` directory:
     {
       "id": "hero-model",
       "kind": "model",
-      "source": "models/hero.glb"
+      "path": "models/hero.glb"
     }
   ]
 }
 ```
 
-The ID remains stable when the source file changes. The `kind` must match the
+The ID remains stable when the path changes. The `kind` must match the
 asset type used by the reference.
 
 ## Create and use the reference
