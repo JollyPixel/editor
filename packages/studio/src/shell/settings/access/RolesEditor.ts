@@ -11,6 +11,7 @@ import {
   property,
   state
 } from "lit/decorators.js";
+import { live } from "lit/directives/live.js";
 import { ADMIN_ROLE, GUEST_ROLE } from "@jolly-pixel/accounts";
 import type { Right } from "@jolly-pixel/network";
 
@@ -208,6 +209,16 @@ export class RolesEditor extends LitElement {
     const match = this._probe === "" ? null : rules.match(this._probe);
 
     return html`
+      <jolly-text
+        data-field="role-name"
+        label="Name"
+        description="Accounts holding the role keep it under the new name"
+        description-display="tooltip"
+        .value=${live(role)}
+        @jolly-change=${(event: CustomEvent<{ value: string; }>) => {
+          this.#renameRole(draft, role, event.detail.value);
+        }}
+      ></jolly-text>
       <jolly-checkbox
         data-grant="settings"
         label="Project settings"
@@ -357,6 +368,23 @@ export class RolesEditor extends LitElement {
       this._error = error instanceof Error ? error.message : String(error);
     }
   };
+
+  #renameRole(
+    draft: AccessDraft,
+    role: string,
+    name: string
+  ): void {
+    try {
+      const renamed = draft.renameRole(role, name);
+      if (renamed !== draft) {
+        this.#emit(renamed);
+        this._role = name.trim();
+      }
+    }
+    catch (error) {
+      this._error = error instanceof Error ? error.message : String(error);
+    }
+  }
 
   #deleteRole(
     draft: AccessDraft,

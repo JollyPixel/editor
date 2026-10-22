@@ -25,8 +25,8 @@ export class AccessSettings extends LitElement {
   #project = new ProjectSettingsController(this);
   #draft = new SettingsDraftController(this, {
     project: this.#project,
-    saved: (data) => (data.access === undefined ? null : new AccessDraft(data.access)),
-    save: (project, draft) => project.replaceAccess(draft.toJSON())
+    saved: (data) => (data.access === undefined ? null : AccessDraft.from(data.access)),
+    save: (project, draft) => project.replaceAccess(draft.toChange())
   });
 
   set project(

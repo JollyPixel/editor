@@ -167,9 +167,10 @@ export class Accounts implements AuthenticationProvider, Disposable {
   }
 
   replaceRoles(
-    roles: AccountRoles
+    roles: AccountRoles,
+    renamed?: ReadonlyMap<string, string>
   ): void {
-    this.#directory.replaceRoles(roles);
+    this.#directory.replaceRoles(roles, renamed);
   }
 
   replaceAccessRequests(

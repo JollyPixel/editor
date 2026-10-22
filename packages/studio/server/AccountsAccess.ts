@@ -53,9 +53,10 @@ export class AccountsAccess {
   }
 
   applyTo(
-    accounts: Accounts
+    accounts: Accounts,
+    renamed: ReadonlyMap<string, string>
   ): void {
-    accounts.replaceRoles(this.roles);
+    accounts.replaceRoles(this.roles, renamed);
     accounts.replaceAccessRequests(
       this.masterPassword?.accessRequests ?? false
     );

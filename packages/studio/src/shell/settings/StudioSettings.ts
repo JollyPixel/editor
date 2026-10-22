@@ -19,6 +19,7 @@ import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 import type { StudioSignedIn } from "../../accounts/StudioSignedIn.ts";
 import { BrowserState } from "../../browser/BrowserState.ts";
 import { cardStyles } from "../cardStyles.ts";
+import type { PreferenceScopes } from "../../preferences/PreferenceScopes.ts";
 import {
   SettingsSections,
   type SettingsGroup,
@@ -26,6 +27,7 @@ import {
 } from "./SettingsSections.ts";
 import "../shares/ShareLinksPane.ts";
 import "./PreferencesPage.ts";
+import "./PreferencesTransfer.ts";
 import "./ProfileSettings.ts";
 import "./access/AccessSettings.ts";
 import "./audit/AuditView.ts";
@@ -41,7 +43,7 @@ const kWideKinds: ReadonlySet<SettingsSection["kind"]> = new Set([
 
 type ProjectSection = Exclude<
   SettingsSection,
-  { kind: "profile" | "preferences"; }
+  { kind: "profile" | "preferences" | "preferences-file"; }
 >;
 
 @customElement("studio-settings")
@@ -176,6 +178,9 @@ export class StudioSettings extends LitElement {
   declare preferences: Preferences | null;
 
   @property({ attribute: false })
+  declare scopes: PreferenceScopes | null;
+
+  @property({ attribute: false })
   declare account: Account | null;
 
   @property({ attribute: false })
@@ -191,6 +196,7 @@ export class StudioSettings extends LitElement {
     super();
     this.sections = SettingsSections.EMPTY;
     this.preferences = null;
+    this.scopes = null;
     this.account = null;
     this.signedIn = null;
     this.catalog = null;
@@ -293,6 +299,13 @@ export class StudioSettings extends LitElement {
             .shortcutScopes=${this.sections.shortcutScopes}
             .preferences=${this.preferences}
           ></studio-preferences-page>
+        `;
+      case "preferences-file":
+        return html`
+          <studio-preferences-transfer
+            .preferences=${this.preferences}
+            .scopes=${this.scopes}
+          ></studio-preferences-transfer>
         `;
       default:
         return this.signedIn === null ?

@@ -144,9 +144,11 @@ The [`accounts` room](#accounts-room), to register on the network server.
 
 The current `AccountRoles`.
 
-### `replaceRoles(roles)`
+### `replaceRoles(roles, renamed?)`
 
 Replaces the roles. Later role changes and approvals check the new ones, a stored role that is no longer declared reads as the new `defaultRole`, and the [`accounts` room](#accounts-room) sends its roster again. Open connections keep their role until they [authenticate](#authenticaterequest) again.
+
+`renamed` maps old role names to new ones. Every account and access request that stores an old name moves to the new one, and each moved account is [revoked](#watchrevocationslistener). Throws `AccountChangeRefusedError`, before changing anything, when an old name is still in `roles` or a new name is not.
 
 ### `account(accountId)`
 

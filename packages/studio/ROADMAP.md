@@ -5,32 +5,32 @@ Open work, in the order it should land. Decisions already taken are in the
 `pnpm --filter @jolly-pixel/studio test`, `pnpm run typecheck` and
 `pnpm run lint` green.
 
-## Waiting for a trigger
+## Next
 
-- **Voxel-model shortcuts.** Undo, redo and the `k` keying shortcut are
-  hardcoded, so they are missing from Settings › Keybindings. Give voxel-model
-  an action list when one of them needs rebinding.
+### 1. Voxel-model keybindings
 
-- **Per-editor launch preferences.** Each frame gets every scope's overrides,
-  since a frame does not know which editor it hosts. Filter them once a scope
-  holds something an editor should not see.
+Undo, redo and `k` (key the selected block) are hardcoded in
+`historyShortcuts.ts` and `animationShortcuts.ts`, so voxel-model is the only
+editor missing from Settings › Keybindings. Follow voxel-map's layout:
 
-- **Confirm closing an unsaved tab.** Closing, evicting or reloading a marked
-  tab drops its frame without asking. Changes already sent usually reach the
-  server; only those held while offline or refused are lost. A confirmation
-  makes `EditorTabs.close` async, like `confirmEvict`.
+- `MODEL_KEY_BINDINGS` (`edit.undo`, `edit.redo`, `animation.key`) in
+  `src/keybindings/`, and `VOXEL_MODEL_KEYBINDINGS` from `defineKeyBindings`
+  in `preferences.ts`, added to its default export.
+- A `ModelKeyBindingSettings.follow(preferences)` replaces
+  `HISTORY_SHORTCUTS` and `KEY_BLOCK_SHORTCUT`. `HistoryButtons` and
+  `AnimatePanel` format their tooltips from it, so a rebind shows there too.
 
-- **Shell commands from editors.** The host posts `toggle-console` on Ctrl+K
-  and `session-refused`, but no editor calls `context.shell` since the
-  voxel-map Paint action was dropped. A title is the expected next command;
-  add it when an editor needs the shell to show one.
+### 2. Per-editor launch preferences
 
-- **Export and import preferences.** Preferences belong to one project's
-  account. A JSON file would carry keybindings and the rest to another
-  project.
+Each frame gets every scope's overrides, since `EditorFrames` does not know
+which editor a tab hosts. No scope holds anything private yet; land this
+before one does.
 
-- **Rename a role.** `users.role` stores the role name, so a rename rewrites
-  accounts too. Until then, add a role and reassign its members.
+- `EditorTab` carries its editor's name. `EditorFrames` sends a frame the
+  `HOST_PREFERENCES` scopes plus that editor's `scopes` and `shared` from
+  `ProjectManifest.editorScopes()`.
+- The launch message and every later `preferences` push go through that
+  filter.
 
 ## Long-term goals
 

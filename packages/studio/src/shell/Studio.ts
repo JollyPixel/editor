@@ -46,6 +46,7 @@ import "./account/AccountBadge.ts";
 export interface StudioOptions {
   share: CatalogShare;
   confirmEvict?: EditorTabsOptions["confirmEvict"];
+  confirmClose?: EditorTabsOptions["confirmClose"];
   editors: EditorRegistry;
   console?: EditorConsole;
   signedIn?: StudioSignedIn | null;
@@ -240,6 +241,7 @@ export class Studio extends LitElement {
   declare _settings: HTMLElementTagNameMap["studio-settings"] | null;
 
   #session: StudioSession | null = null;
+  #scopes: PreferenceScopes | null = null;
   #browserState = new BrowserState();
   #queue = new LogQueue();
   #unsubscribe: (() => void) | null = null;
@@ -287,7 +289,8 @@ export class Studio extends LitElement {
             element: this._settings
           }
         ],
-        confirmEvict: options.confirmEvict
+        confirmEvict: options.confirmEvict,
+        confirmClose: options.confirmClose
       },
       frames: {
         container: this._frames,
@@ -307,6 +310,7 @@ export class Studio extends LitElement {
     });
     this.#session = session;
     this._preferences = options.preferences;
+    this.#scopes = options.scopes;
     this._sections = options.settings;
     this.#follow(signedIn);
     this._assets = {
@@ -395,6 +399,7 @@ export class Studio extends LitElement {
             hidden
             .sections=${this._sections}
             .preferences=${this._preferences}
+            .scopes=${this.#scopes}
             .account=${this._account}
             .signedIn=${this._signedIn}
             .catalog=${this._assets?.catalog ?? null}

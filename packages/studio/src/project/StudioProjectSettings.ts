@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import type { ProjectSettingsClient } from "./ProjectSettingsClient.ts";
 import type {
-  AccessSection,
+  AccessChange,
   KindOptions,
   ProjectReply,
   ProjectSettingsReply
@@ -54,9 +54,9 @@ export class StudioProjectSettings extends EventTarget {
   }
 
   replaceAccess(
-    access: AccessSection
+    change: AccessChange
   ): Promise<boolean> {
-    return this.#run(() => this.#client.replaceAccess(access));
+    return this.#run(() => this.#client.replaceAccess(change));
   }
 
   async #run(

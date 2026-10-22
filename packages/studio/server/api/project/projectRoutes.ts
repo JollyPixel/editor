@@ -13,7 +13,7 @@ import {
   KINDS_SECTION,
   PROJECT_ARCHIVE_PATH,
   PROJECT_SETTINGS_PATH,
-  accessSectionSchema,
+  accessChangeSchema,
   kindOptionsSchema
 } from "../../../src/project/routes.ts";
 import type { ProjectArchive } from "../../project/ProjectArchive.ts";
@@ -71,7 +71,7 @@ export async function projectRoutes(
     url: `${PROJECT_SETTINGS_PATH}/${ACCESS_SECTION}`,
     bodyLimit: kMaxSettingsBytes,
     schema: {
-      body: accessSectionSchema
+      body: accessChangeSchema
     },
     handler: (request) => controller.replaceAccess(request)
   });

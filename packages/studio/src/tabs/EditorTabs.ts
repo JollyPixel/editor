@@ -66,7 +66,15 @@ export interface EditorTabsOptions {
    * Asked before the least recently activated tab is closed to make room.
    * @default always accepts
    */
-  confirmEvict?: (tab: EditorTab) => boolean | Promise<boolean>;
+  confirmEvict?: (
+    tab: EditorTab,
+    unsaved: boolean
+  ) => boolean | Promise<boolean>;
+  /**
+   * Asked before the strip closes a tab its editor marked unsaved.
+   * @default always accepts
+   */
+  confirmClose?: (tab: EditorTab) => boolean | Promise<boolean>;
   onChange?: () => void;
 }
 
@@ -105,7 +113,8 @@ export class EditorTabs {
 
   #strip: TabStrip;
   #frames: EditorFrames;
-  #confirmEvict: (tab: EditorTab) => boolean | Promise<boolean>;
+  #confirmEvict: NonNullable<EditorTabsOptions["confirmEvict"]>;
+  #confirmClose: NonNullable<EditorTabsOptions["confirmClose"]>;
   #onChange: (() => void) | undefined;
   #open = new Map<string, OpenTab>();
   #pages = new Map<string, PageEntry>();
@@ -119,6 +128,7 @@ export class EditorTabs {
     this.#strip = options.strip;
     this.#frames = options.frames;
     this.#confirmEvict = options.confirmEvict ?? (() => true);
+    this.#confirmClose = options.confirmClose ?? (() => true);
     this.#onChange = options.onChange;
 
     const home: PageEntry = {
@@ -149,7 +159,7 @@ export class EditorTabs {
       this.focus(event.detail.value);
     }, { signal });
     this.#strip.addEventListener("jolly-tab-close", (event) => {
-      this.close(event.detail.value);
+      void this.#closeAsked(event.detail.value);
     }, { signal });
     this.#strip.addEventListener("jolly-tab-reorder", (event) => {
       this.move(event.detail.value, event.detail.index);
@@ -202,7 +212,7 @@ export class EditorTabs {
       const [victim] = this.#open.values();
       if (
         victim === undefined ||
-        !(await this.#confirmEvict(victim.tab))
+        !(await this.#confirmEvict(victim.tab, victim.item.modified))
       ) {
         return false;
       }
@@ -388,6 +398,17 @@ export class EditorTabs {
       page.item.remove();
     }
     this.#active = HOME_TAB_ID;
+  }
+
+  async #closeAsked(
+    id: string
+  ): Promise<void> {
+    const entry = this.#open.get(id);
+    if (entry?.item.modified && !(await this.#confirmClose(entry.tab))) {
+      return;
+    }
+
+    this.close(id);
   }
 
   #createItem(

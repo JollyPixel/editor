@@ -17,7 +17,10 @@ import {
   requestAccess
 } from "./helpers/accounts.ts";
 import type { AccountActivity } from "#src/index.ts";
-import { AccountRoles } from "#src/node.ts";
+import {
+  AccountChangeRefusedError,
+  AccountRoles
+} from "#src/node.ts";
 
 // CONSTANTS
 const kMasterPassword = {
@@ -124,6 +127,51 @@ describe("AccountDirectory.replaceRoles", () => {
     assert.equal(changes, 2);
     assert.equal(directory.account(bob.id)?.role, "viewer");
     assert.deepEqual([...directory.roles], ["admin", "editor", "viewer"]);
+  });
+
+  test("moves the accounts and requests of a renamed role and revokes them", () => {
+    using database = databaseWith("Alice", "Bob");
+    const [alice, bob] = database.accounts;
+    const carol = requestAccess(database, "Carol");
+    const directory = createDirectory(database);
+    const revoked: string[] = [];
+    let changes = 0;
+    directory.subscribe("revoked", (subject) => revoked.push(subject));
+    directory.subscribe("changed", () => changes++);
+
+    directory.replaceRoles(
+      new AccountRoles({
+        roles: ["member", "viewer"],
+        defaultRole: "viewer"
+      }),
+      new Map([["spectator", "viewer"]])
+    );
+
+    assert.deepEqual(directory.holders("viewer"), [bob.id, carol.id]);
+    assert.equal(directory.account(alice.id)?.role, "admin");
+    assert.deepEqual(revoked, [bob.id, carol.id]);
+    assert.equal(changes, 1);
+  });
+
+  test("refuses a rename from a declared role or to an undeclared one", () => {
+    using database = databaseWith("Alice", "Bob");
+    const [, bob] = database.accounts;
+    const directory = createDirectory(database);
+    const roles = new AccountRoles({
+      roles: ["member", "spectator"],
+      defaultRole: "member"
+    });
+
+    assert.throws(
+      () => directory.replaceRoles(roles, new Map([["spectator", "member"]])),
+      AccountChangeRefusedError
+    );
+    assert.throws(
+      () => directory.replaceRoles(roles, new Map([["editor", "viewer"]])),
+      AccountChangeRefusedError
+    );
+    assert.equal(directory.account(bob.id)?.role, "spectator");
+    assert.equal(directory.roles.has("viewer"), false);
   });
 });
 
