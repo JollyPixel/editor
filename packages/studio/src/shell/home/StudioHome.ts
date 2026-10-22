@@ -63,6 +63,13 @@ export class StudioHome extends LitElement {
       padding: 0;
     }
 
+    #studio-side {
+      display: flex;
+      flex: 0 0 240px;
+      flex-direction: column;
+      margin-inline-start: var(--studio-gutter);
+    }
+
     #studio-tools {
       flex: 0 0 auto;
       margin-block-end: var(--studio-gutter);
@@ -174,21 +181,15 @@ export class StudioHome extends LitElement {
         ></project-overview>
         ${this.signedIn === null ? nothing : this.#usersDock(this.signedIn)}
       </jolly-dock-layout>
+      ${this.signedIn === null ?
+        html`<div id="studio-side">${this.#tools(null)}</div>` :
+        nothing}
     `;
   }
 
   #usersDock(
     signedIn: StudioSignedIn
   ): TemplateResult {
-    const users = html`
-      <jolly-pane key="users" heading="Users" icon="users" locked>
-        <studio-users
-          .roster=${signedIn.roster}
-          .self=${this.account}
-        ></studio-users>
-      </jolly-pane>
-    `;
-
     return html`
       <jolly-dock
         id="users-dock"
@@ -199,32 +200,49 @@ export class StudioHome extends LitElement {
         min-size="180"
         max-size="400"
       >
-        <jolly-toolbar id="studio-tools" label="Studio tools">
-          <jolly-button
-            icon="settings"
-            icon-only
-            label="Settings"
-            title="Settings"
-            @click=${this.#openSettings}
-          ></jolly-button>
-          <jolly-button
-            icon="search"
-            icon-only
-            label="Search"
-            title="Search (opens the console)"
-            @click=${this.#search}
-          ></jolly-button>
-          <jolly-button
-            icon="export"
-            icon-only
-            label="Export project"
-            title="Export project"
-            ?disabled=${this._exporting || !signedIn.project.rights.canExport}
-            @click=${this.#export}
-          ></jolly-button>
-        </jolly-toolbar>
-        ${users}
+        ${this.#tools(signedIn)}
+        <jolly-pane key="users" heading="Users" icon="users" locked>
+          <studio-users
+            .roster=${signedIn.roster}
+            .self=${this.account}
+          ></studio-users>
+        </jolly-pane>
       </jolly-dock>
+    `;
+  }
+
+  #tools(
+    signedIn: StudioSignedIn | null
+  ): TemplateResult {
+    const canExport = signedIn?.project.rights.canExport ?? false;
+
+    return html`
+      <jolly-toolbar id="studio-tools" label="Studio tools">
+        <jolly-button
+          icon="settings"
+          icon-only
+          label="Settings"
+          title="Settings"
+          @click=${this.#openSettings}
+        ></jolly-button>
+        <jolly-button
+          icon="search"
+          icon-only
+          label="Search"
+          title="Search (opens the console)"
+          @click=${this.#search}
+        ></jolly-button>
+        <jolly-button
+          icon="export"
+          icon-only
+          label="Export project"
+          title=${signedIn === null ?
+            "Export needs the studio server" :
+            "Export project"}
+          ?disabled=${this._exporting || !canExport}
+          @click=${this.#export}
+        ></jolly-button>
+      </jolly-toolbar>
     `;
   }
 

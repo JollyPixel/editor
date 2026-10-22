@@ -23,3 +23,14 @@ test("offers a shared offline catalog when the socket closes", async({ studio, p
     /offline=studio.*target=map-overworld/
   );
 });
+
+test("opens Settings from the studio tools without an account", async({ studio }) => {
+  await studio.openOffline();
+
+  await expect(studio.home.users).toHaveCount(0);
+  await expect(studio.home.tool("Export project")).toBeDisabled();
+  await studio.home.tool("Settings").click();
+
+  await expect(studio.settings.section("Appearance")).toBeVisible();
+  await expect(studio.settings.section("Profile")).toHaveCount(0);
+});
