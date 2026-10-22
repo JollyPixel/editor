@@ -7,9 +7,9 @@ import type {
 } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
-import { FileDownload } from "../files/FileDownload.ts";
+import { FileDownload } from "../browser/FileDownload.ts";
 import { InvalidPreferencesFileError } from "./errors/InvalidPreferencesFileError.ts";
-import type { PreferenceScopes } from "./PreferenceScopes.ts";
+import type { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
 
 // CONSTANTS
 export const PREFERENCES_FILE_NAME = "jollypixel-preferences.json";

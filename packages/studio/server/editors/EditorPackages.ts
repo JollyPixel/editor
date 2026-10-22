@@ -3,7 +3,7 @@ import type { PackageResolver } from "@jolly-pixel/asset-server/node";
 import type { PreferenceScope } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
-import type { EditorDescriptor } from "../../src/editors/EditorDescriptor.ts";
+import type { EditorDescriptor } from "../../shared/EditorDescriptor.ts";
 import { EditorPackage } from "./EditorPackage.ts";
 
 export class EditorPackages implements Iterable<EditorPackage> {

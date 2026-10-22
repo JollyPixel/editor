@@ -29,7 +29,6 @@ export const TEXTURE_SIZE = {
   x: 64,
   y: 64
 };
-const kBlocksetUrl = "textures/blockset.png";
 const kBlocksetAssetId = "blockset-overworld";
 const kMapAssetId = "map-overworld";
 const kModelTextureAssetId = "model-texture";
@@ -84,15 +83,4 @@ export async function createStudioSeed(
       )
     }
   };
-}
-
-export async function loadStudioSeed(): Promise<AssetSeedMap> {
-  const response = await fetch(kBlocksetUrl);
-  if (!response.ok) {
-    throw new Error(`Unable to load "${kBlocksetUrl}" (${response.status}).`);
-  }
-
-  return createStudioSeed(
-    new Uint8Array(await response.arrayBuffer())
-  );
 }

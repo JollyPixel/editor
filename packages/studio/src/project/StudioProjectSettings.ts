@@ -5,7 +5,7 @@ import type {
   KindOptions,
   ProjectReply,
   ProjectSettingsReply
-} from "./routes.ts";
+} from "../../shared/api/project.ts";
 
 // CONSTANTS
 export const PROJECT_SETTINGS_CHANGE = "change";

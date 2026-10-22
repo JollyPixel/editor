@@ -2,7 +2,7 @@
 import * as z from "zod";
 
 // Import Internal Dependencies
-import { settingsSectionSchema } from "../project/routes.ts";
+import { settingsSectionSchema } from "./project.ts";
 
 // CONSTANTS
 export const AUDIT_URL_PATH = "/api/audit/";

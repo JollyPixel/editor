@@ -8,7 +8,7 @@ import * as z from "zod";
 import { PreferenceScope } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
-import type { EditorDescriptor } from "../../src/editors/EditorDescriptor.ts";
+import type { EditorDescriptor } from "../../shared/EditorDescriptor.ts";
 
 // CONSTANTS
 const kInstallFolder = "node_modules";

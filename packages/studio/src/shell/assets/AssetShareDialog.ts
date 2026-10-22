@@ -24,7 +24,7 @@ import type { AssetLeafData } from "../../catalog/AssetTreeModel.ts";
 import {
   ShareLifetime,
   type ShareLifetimeName
-} from "../../shares/ShareLifetime.ts";
+} from "../../../shared/ShareLifetime.ts";
 import {
   SHARE_LINKS_CHANGE,
   type StudioShareLinks

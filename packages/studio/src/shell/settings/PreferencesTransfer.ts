@@ -14,7 +14,7 @@ import {
 import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
-import type { PreferenceScopes } from "../../preferences/PreferenceScopes.ts";
+import type { PreferenceScopes } from "../../../shared/PreferenceScopes.ts";
 import { PreferencesFile } from "../../preferences/PreferencesFile.ts";
 import { settingsStyles } from "./settingsStyles.ts";
 

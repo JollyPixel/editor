@@ -4,7 +4,7 @@ import {
   AuditFilters,
   type AuditFiltersData
 } from "./AuditFilters.ts";
-import type { AuditRow } from "./routes.ts";
+import type { AuditRow } from "../../shared/api/audit.ts";
 
 // CONSTANTS
 export const AUDIT_PAGES_CHANGE = "change";

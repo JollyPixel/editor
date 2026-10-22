@@ -21,7 +21,7 @@ import {
   accessSectionSchema,
   type AccessSection,
   type ProjectReply
-} from "../../src/project/routes.ts";
+} from "../../shared/api/project.ts";
 
 // CONSTANTS
 const kAdminRights = {

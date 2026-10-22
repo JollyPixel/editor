@@ -9,7 +9,7 @@ import {
 import {
   preferencesReplySchema,
   scopePreferencesReplySchema
-} from "./routes.ts";
+} from "../../shared/api/preferences.ts";
 
 export class PreferencesClient {
   #endpoint: ApiEndpoint;

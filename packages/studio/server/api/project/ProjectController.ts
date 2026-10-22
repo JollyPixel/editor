@@ -11,13 +11,13 @@ import { ARCHIVE_MIME_TYPE } from "@jolly-pixel/asset-server/client";
 import { ApiError } from "../errors/ApiError.ts";
 import { accountsFailure } from "../errors/accountsFailure.ts";
 import { requireAccount } from "../requireAccount.ts";
-import { AttachmentDisposition } from "../../../src/project/AttachmentDisposition.ts";
+import { AttachmentDisposition } from "../../../shared/AttachmentDisposition.ts";
 import type {
   AccessChange,
   KindOptions,
   ProjectReply,
   ProjectSettingsReply
-} from "../../../src/project/routes.ts";
+} from "../../../shared/api/project.ts";
 import type { ProjectArchive } from "../../project/ProjectArchive.ts";
 import type { ProjectSettings } from "../../project/ProjectSettings.ts";
 import { InvalidSettingsError } from "../../project/errors/InvalidSettingsError.ts";

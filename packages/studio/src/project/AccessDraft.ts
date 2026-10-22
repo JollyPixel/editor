@@ -7,7 +7,7 @@ import {
   BUILT_IN_ROLES,
   type AccessChange,
   type AccessSection
-} from "./routes.ts";
+} from "../../shared/api/project.ts";
 
 // CONSTANTS
 const kNewRoleRules: Readonly<Record<string, Right>> = {

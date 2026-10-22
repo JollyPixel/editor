@@ -3,7 +3,7 @@ import * as z from "zod";
 import { shareLinkSchema } from "@jolly-pixel/accounts";
 
 // Import Internal Dependencies
-import { SHARE_LIFETIMES } from "./ShareLifetime.ts";
+import { SHARE_LIFETIMES } from "../ShareLifetime.ts";
 
 // CONSTANTS
 export const SHARES_URL_PATH = "/api/shares/";

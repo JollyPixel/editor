@@ -24,7 +24,7 @@ import {
   type KindPackageSettings,
   type ProjectReply,
   type ProjectSettingsReply
-} from "../../src/project/routes.ts";
+} from "../../shared/api/project.ts";
 import { InvalidSettingsError } from "./errors/InvalidSettingsError.ts";
 import { RoleInUseError } from "./errors/RoleInUseError.ts";
 import { SettingsRefusedError } from "./errors/SettingsRefusedError.ts";

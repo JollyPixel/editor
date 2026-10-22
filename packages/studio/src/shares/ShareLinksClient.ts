@@ -8,8 +8,8 @@ import {
   shareLinksReplySchema,
   type CreatedShareReply,
   type ShareLinksReply
-} from "./routes.ts";
-import type { ShareLifetimeName } from "./ShareLifetime.ts";
+} from "../../shared/api/shares.ts";
+import type { ShareLifetimeName } from "../../shared/ShareLifetime.ts";
 
 export class ShareLinksClient {
   #endpoint: ApiEndpoint;

@@ -15,7 +15,7 @@ import {
   PROJECT_SETTINGS_PATH,
   accessChangeSchema,
   kindOptionsSchema
-} from "../../../src/project/routes.ts";
+} from "../../../shared/api/project.ts";
 import type { ProjectArchive } from "../../project/ProjectArchive.ts";
 import type { ProjectSettings } from "../../project/ProjectSettings.ts";
 

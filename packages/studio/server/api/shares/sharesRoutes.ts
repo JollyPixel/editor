@@ -8,7 +8,7 @@ import {
   type CreateShareRoute,
   type RevokeShareRoute
 } from "./SharesController.ts";
-import { createShareBodySchema } from "../../../src/shares/routes.ts";
+import { createShareBodySchema } from "../../../shared/api/shares.ts";
 import type { StudioShares } from "../../shares/StudioShares.ts";
 
 export interface SharesRoutesOptions {

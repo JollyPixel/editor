@@ -8,7 +8,7 @@ import {
   type AuditPageRoute
 } from "./AuditController.ts";
 import type { AuditFeed } from "../../audit/AuditFeed.ts";
-import { auditQuerySchema } from "../../../src/audit/routes.ts";
+import { auditQuerySchema } from "../../../shared/api/audit.ts";
 
 export interface AuditRoutesOptions {
   accounts: Accounts;

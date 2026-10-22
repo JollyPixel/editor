@@ -172,6 +172,25 @@ export default defineConfig(typescriptConfig({
           }
         ]
       }
+    },
+    {
+      files: [
+        "packages/studio/server/**",
+        "packages/studio/shared/**",
+        "packages/studio/vite/**"
+      ],
+      rules: {
+        "no-restricted-imports": [
+          "error", {
+            patterns: [
+              {
+                group: ["**/src/**"],
+                message: "Studio src/ is browser-only: share code through shared/."
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }));

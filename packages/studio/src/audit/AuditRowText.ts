@@ -3,8 +3,8 @@ import type {
   AuditAccountActivity,
   AuditAsset,
   AuditRow
-} from "./routes.ts";
-import type { SettingsSectionName } from "../project/routes.ts";
+} from "../../shared/api/audit.ts";
+import type { SettingsSectionName } from "../../shared/api/project.ts";
 
 // CONSTANTS
 const kSectionLabels: Readonly<Record<SettingsSectionName, string>> = {

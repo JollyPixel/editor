@@ -29,7 +29,7 @@ import {
   type AssetRelocation,
   type AssetTreeNode
 } from "../../catalog/AssetTreeModel.ts";
-import type { DroppedFile } from "../../files/DroppedFile.ts";
+import type { DroppedFile } from "../../browser/DroppedFile.ts";
 import type { BrowserState } from "../../browser/BrowserState.ts";
 import {
   AssetCommands,

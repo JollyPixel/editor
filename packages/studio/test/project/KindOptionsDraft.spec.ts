@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { KindOptionsDraft } from "../../src/project/KindOptionsDraft.ts";
-import type { KindOptionField } from "../../src/project/routes.ts";
+import type { KindOptionField } from "../../shared/api/project.ts";
 
 // CONSTANTS
 const kVoxelMap = "@jolly-pixel/asset.voxel-map";

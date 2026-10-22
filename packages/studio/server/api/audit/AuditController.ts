@@ -12,7 +12,7 @@ import { AuditRefusedError } from "../../audit/errors/AuditRefusedError.ts";
 import type {
   AuditPage,
   AuditQuery
-} from "../../../src/audit/routes.ts";
+} from "../../../shared/api/audit.ts";
 
 export interface AuditPageRoute {
   Querystring: AuditQuery;

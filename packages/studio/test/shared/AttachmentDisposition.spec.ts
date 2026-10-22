@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { AttachmentDisposition } from "../../src/project/AttachmentDisposition.ts";
+import { AttachmentDisposition } from "../../shared/AttachmentDisposition.ts";
 
 describe("AttachmentDisposition", () => {
   test("round-trips a file name with quotes, spaces and non-ASCII letters", () => {

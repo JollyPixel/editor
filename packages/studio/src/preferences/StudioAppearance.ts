@@ -11,7 +11,7 @@ import type {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { STUDIO_PREFERENCES } from "./studioScope.ts";
+import { STUDIO_PREFERENCES } from "../../shared/studioScope.ts";
 
 // CONSTANTS
 export const APPEARANCE_HINT_STORAGE_KEY = "studio:appearance";

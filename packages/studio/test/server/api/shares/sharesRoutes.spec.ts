@@ -19,7 +19,7 @@ import {
   SHARES_URL_PATH,
   type CreatedShareReply,
   type ShareLinksReply
-} from "../../../../src/shares/routes.ts";
+} from "../../../../shared/api/shares.ts";
 
 // CONSTANTS
 const kPassword = "correct horse";

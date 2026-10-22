@@ -9,7 +9,7 @@ import {
 // Import Internal Dependencies
 import { EditorRegistry } from "../../src/editors/EditorRegistry.ts";
 import { BrowserState } from "../../src/browser/BrowserState.ts";
-import { PreferenceScopes } from "../../src/preferences/PreferenceScopes.ts";
+import { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
 import {
   StudioSession,
   type StudioCatalog,

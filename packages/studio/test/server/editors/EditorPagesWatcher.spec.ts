@@ -14,7 +14,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import {
   EDITOR_PAGE_REBUILT_EVENT,
   type EditorPageRebuilt
-} from "../../../src/editors/EditorDescriptor.ts";
+} from "../../../shared/EditorDescriptor.ts";
 import {
   EDITOR_PAGE_SETTLE_MS,
   EditorPagesWatcher,

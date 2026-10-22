@@ -20,7 +20,7 @@ import type {
   KindOptionSection,
   KindOptionValue,
   KindOptionVector2
-} from "../../../project/routes.ts";
+} from "../../../../shared/api/project.ts";
 import { settingsStyles } from "../settingsStyles.ts";
 import { ProjectSettingsController } from "./ProjectSettingsController.ts";
 import { SettingsDraftController } from "./SettingsDraftController.ts";

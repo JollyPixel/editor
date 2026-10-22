@@ -8,7 +8,7 @@ import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 // Import Internal Dependencies
 import { ShareLinkRow } from "./ShareLinkRow.ts";
 import type { ShareLinksClient } from "./ShareLinksClient.ts";
-import type { ShareLifetimeName } from "./ShareLifetime.ts";
+import type { ShareLifetimeName } from "../../shared/ShareLifetime.ts";
 
 // CONSTANTS
 export const SHARE_LINKS_CHANGE = "change";

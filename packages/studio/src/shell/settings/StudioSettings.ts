@@ -19,7 +19,7 @@ import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 import type { StudioSignedIn } from "../../accounts/StudioSignedIn.ts";
 import { BrowserState } from "../../browser/BrowserState.ts";
 import { cardStyles } from "../cardStyles.ts";
-import type { PreferenceScopes } from "../../preferences/PreferenceScopes.ts";
+import type { PreferenceScopes } from "../../../shared/PreferenceScopes.ts";
 import {
   SettingsSections,
   type SettingsGroup,

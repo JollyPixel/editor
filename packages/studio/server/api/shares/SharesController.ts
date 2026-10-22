@@ -10,12 +10,12 @@ import type { Accounts } from "@jolly-pixel/accounts/node";
 import { ApiError } from "../errors/ApiError.ts";
 import { accountsFailure } from "../errors/accountsFailure.ts";
 import { requireAccount } from "../requireAccount.ts";
-import { ShareLifetime } from "../../../src/shares/ShareLifetime.ts";
+import { ShareLifetime } from "../../../shared/ShareLifetime.ts";
 import type {
   CreateShareBody,
   CreatedShareReply,
   ShareLinksReply
-} from "../../../src/shares/routes.ts";
+} from "../../../shared/api/shares.ts";
 import type { StudioShares } from "../../shares/StudioShares.ts";
 import { UnknownAssetError } from "../../shares/errors/UnknownAssetError.ts";
 

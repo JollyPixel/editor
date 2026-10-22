@@ -10,8 +10,8 @@ import type {
 import { launchElement } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
-import { EDITOR_PAGES_PATH } from "../../src/editors/EditorDescriptor.ts";
-import { VIEW_PAGES_PREFIX } from "../../src/shares/routes.ts";
+import { EDITOR_PAGES_PATH } from "../../shared/EditorDescriptor.ts";
+import { VIEW_PAGES_PREFIX } from "../../shared/api/shares.ts";
 import type { EditorPackages } from "../editors/EditorPackages.ts";
 import type { StudioShares } from "./StudioShares.ts";
 

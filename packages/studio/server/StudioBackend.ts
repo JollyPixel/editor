@@ -41,8 +41,8 @@ import { ProjectSettings } from "./project/ProjectSettings.ts";
 import type { StudioProject } from "./project/StudioProject.ts";
 import { SharePage } from "./shares/SharePage.ts";
 import { StudioShares } from "./shares/StudioShares.ts";
-import { PreferenceScopes } from "../src/preferences/PreferenceScopes.ts";
-import { createStudioSeed } from "../src/seed.ts";
+import { PreferenceScopes } from "../shared/PreferenceScopes.ts";
+import { createStudioSeed } from "../shared/seed.ts";
 
 // CONSTANTS
 const kBlocksetFile = path.join(

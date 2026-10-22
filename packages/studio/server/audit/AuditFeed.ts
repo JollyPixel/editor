@@ -28,7 +28,7 @@ import {
   type AuditPage,
   type AuditQuery,
   type AuditRow
-} from "../../src/audit/routes.ts";
+} from "../../shared/api/audit.ts";
 import { AuditRefusedError } from "./errors/AuditRefusedError.ts";
 
 // CONSTANTS

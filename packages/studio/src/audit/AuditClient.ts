@@ -7,7 +7,7 @@ import {
   auditPageSchema,
   type AuditPage,
   type AuditQuery
-} from "./routes.ts";
+} from "../../shared/api/audit.ts";
 
 export class AuditClient {
   #endpoint: ApiEndpoint;

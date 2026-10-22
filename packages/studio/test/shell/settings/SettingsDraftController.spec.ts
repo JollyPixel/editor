@@ -11,7 +11,7 @@ import { StudioProjectSettings } from "../../../src/project/StudioProjectSetting
 import type {
   AccessChange,
   ProjectSettingsReply
-} from "../../../src/project/routes.ts";
+} from "../../../shared/api/project.ts";
 import { ProjectSettingsController } from "../../../src/shell/settings/project/ProjectSettingsController.ts";
 import { SettingsDraftController } from "../../../src/shell/settings/project/SettingsDraftController.ts";
 

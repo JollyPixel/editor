@@ -8,11 +8,11 @@ import { InvalidPreferencesError } from "@jolly-pixel/editor.host/preferences";
 import { ApiError } from "../errors/ApiError.ts";
 import { accountsFailure } from "../errors/accountsFailure.ts";
 import { requireAccount } from "../requireAccount.ts";
-import type { PreferenceScopes } from "../../../src/preferences/PreferenceScopes.ts";
+import type { PreferenceScopes } from "../../../shared/PreferenceScopes.ts";
 import type {
   PreferencesReply,
   ScopePreferencesReply
-} from "../../../src/preferences/routes.ts";
+} from "../../../shared/api/preferences.ts";
 
 export interface ReplacePreferencesRoute {
   Params: {

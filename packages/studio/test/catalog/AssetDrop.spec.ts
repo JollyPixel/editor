@@ -14,7 +14,7 @@ import {
   AssetKindSet,
   type AssetKindEntry
 } from "../../src/catalog/AssetKindSet.ts";
-import { DroppedFile } from "../../src/files/DroppedFile.ts";
+import { DroppedFile } from "../../src/browser/DroppedFile.ts";
 
 // CONSTANTS
 const kPixelArt: AssetKindEntry = {

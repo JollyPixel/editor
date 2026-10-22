@@ -29,7 +29,7 @@ import {
   type StudioSignedIn
 } from "../accounts/StudioSignedIn.ts";
 import { StudioSession } from "./StudioSession.ts";
-import type { PreferenceScopes } from "../preferences/PreferenceScopes.ts";
+import type { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
 import { SettingsSections } from "./settings/SettingsSections.ts";
 import type { EditorRegistry } from "../editors/EditorRegistry.ts";
 import { BrowserState } from "../browser/BrowserState.ts";

@@ -53,6 +53,10 @@ flowchart TB
 - Editing the project file by hand restarts the dev server. The server's own
   writes do not.
 - `server/` knows nothing of Vite; `vite/` only adapts it.
+- `src/` is the browser shell. `server/` and `vite/` never import it: what
+  both sides need, such as API schemas and editor descriptors, lives in
+  `shared/`. A lint rule enforces it, and `shared/` type-checks without DOM
+  types, so it runs on both sides.
 - `StudioBackend` opens the online back-end: the accounts, the
   `AssetServer` and its catalog view, `StudioApi` and `SharePage`. `vite/backend`
   mounts its middleware and attaches its WebSocket to the dev server. It
@@ -134,7 +138,7 @@ flowchart TB
 | `static` | in memory | none, no accounts, shell starts offline | `dist/editors/`, offline-only |
 
 Online and offline back-ends get the same handlers (plus `texture`) and the
-same seed (`src/seed.ts`).
+same seed (`shared/seed.ts`).
 
 ## Boot
 
@@ -413,20 +417,21 @@ flowchart TB
 | `server/editors/` | editor packages and pages, manifest route, dist watcher |
 | `server/accounts.ts`, `server/AccountsAccess.ts` | project accounts, their roles and master password |
 | `server/shares/` | share rules, guest admission, `/view/` page |
+| `server/audit/` | `AuditLog`, `AssetLog`, `AuditFeed` and its merge, edit runs and cursor |
 | `vite.config.ts`, `vite/` | Vite plugins |
+| `shared/` | `EditorDescriptor`, `ProjectManifest`, `PreferenceScopes`, `studioScope`, `ShareLifetime`, `AttachmentDisposition`, seed for both back-ends |
+| `shared/api/` | `/api/` paths, rights and zod schemas, one file per surface |
 | `src/index.ts` | boot |
-| `src/connection.ts`, `src/offlineConnection.ts` | online catalog, offline fallback |
-| `src/seed.ts` | seed for both back-ends |
+| `src/connection/` | `StudioConnection`: online catalog, offline fallback (`offline.ts`) |
+| `src/api/` | `ApiEndpoint`: fetch and failure shape shared by the HTTP clients |
+| `src/browser/` | `BrowserState`, `DroppedFile`, `FileDownload` |
 | `src/catalog/` | pure tree logic (`AssetTreeModel`, `AssetPath`, …) |
 | `src/accounts/` | `StudioSignedIn`, `SessionRenewal`, `UsersTreeModel`, `/users` console |
-| `src/api/` | `ApiEndpoint`: fetch and failure shape shared by the HTTP clients |
-| `src/shares/` | share routes, lifetimes, `ShareLinksClient`, `StudioShareLinks` |
-| `src/project/` | project routes and clients, `StudioProjectSettings`, `AccessDraft`, `RoleRules`, `KindOptionsDraft` |
-| `src/audit/` | audit routes, `AuditClient`, `AuditPages`, `AuditFilters`, `AuditRowText` |
-| `server/audit/` | `AuditLog`, `AssetLog`, `AuditFeed` and its merge, edit runs and cursor |
-| `src/files/` | `DroppedFile`, `FileDownload` |
-| `src/editors/` | `EditorRegistry`, `ProjectManifest` |
-| `src/browser/` | `BrowserState` |
-| `src/preferences/` | preference routes and scopes, `AccountPreferences`, `StudioAppearance`, `PreferencesFile` |
+| `src/shares/` | `ShareLinksClient`, `StudioShareLinks`, `ShareLinkRow` |
+| `src/project/` | project clients, `StudioProjectSettings`, `AccessDraft`, `RoleRules`, `KindOptionsDraft` |
+| `src/audit/` | `AuditClient`, `AuditPages`, `AuditFilters`, `AuditRowText` |
+| `src/editors/` | `EditorRegistry`, `EditorPrefetch` |
+| `src/preferences/` | `PreferencesClient`, `AccountPreferences`, `StudioAppearance`, `PreferencesFile` |
+| `src/keybindings/` | `KeybindingTable`, `BoundChord`, `HeldKey` |
 | `src/tabs/` | `EditorTabs`, `EditorFrames`, `SavedTabs` |
 | `src/shell/` | `<jolly-studio>`, `StudioSession`, Home, Settings, asset browser (`AssetTreeView`), sign-in dialog, Users pane |

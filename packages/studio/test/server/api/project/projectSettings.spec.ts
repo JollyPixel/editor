@@ -12,7 +12,7 @@ import { ACCOUNTS_URL_PATH } from "@jolly-pixel/accounts";
 import { DEFAULT_ACCESS } from "../../../../server/project/StudioAccess.ts";
 import { KindOptionsDraft } from "../../../../src/project/KindOptionsDraft.ts";
 import { ProjectSettingsClient } from "../../../../src/project/ProjectSettingsClient.ts";
-import { PROJECT_URL_PATH } from "../../../../src/project/routes.ts";
+import { PROJECT_URL_PATH } from "../../../../shared/api/project.ts";
 import { browser } from "../../../helpers/studioApi.ts";
 import {
   serveBackend,

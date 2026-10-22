@@ -9,7 +9,7 @@ import {
 } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
-import { DroppedFile } from "../../src/files/DroppedFile.ts";
+import { DroppedFile } from "../../src/browser/DroppedFile.ts";
 import {
   AssetCommands,
   type AssetCommandCatalog

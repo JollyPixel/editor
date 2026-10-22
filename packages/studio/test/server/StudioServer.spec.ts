@@ -17,7 +17,7 @@ import path from "node:path";
 import { DEFAULT_WEBSOCKET_PATH } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import { PROJECT_MANIFEST_FILE } from "../../src/editors/ProjectManifest.ts";
+import { PROJECT_MANIFEST_FILE } from "../../shared/ProjectManifest.ts";
 import { StudioServer } from "../../server/StudioServer.ts";
 import {
   createDist,

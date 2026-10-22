@@ -14,7 +14,7 @@ import {
 import {
   EDITOR_PAGES_PATH,
   type EditorDescriptor
-} from "./EditorDescriptor.ts";
+} from "../../shared/EditorDescriptor.ts";
 
 // CONSTANTS
 const kTargetParam = "target";

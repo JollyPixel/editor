@@ -25,7 +25,7 @@ import {
   ACCOUNTS_CATEGORY,
   type AuditCategory,
   type AuditRow
-} from "../../../audit/routes.ts";
+} from "../../../../shared/api/audit.ts";
 
 // CONSTANTS
 const kAny = "";

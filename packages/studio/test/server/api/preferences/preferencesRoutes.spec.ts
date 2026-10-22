@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { PreferencesClient } from "../../../../src/preferences/PreferencesClient.ts";
-import { PREFERENCES_URL_PATH } from "../../../../src/preferences/routes.ts";
+import { PREFERENCES_URL_PATH } from "../../../../shared/api/preferences.ts";
 import {
   listenStudioApi,
   type StudioApiServer

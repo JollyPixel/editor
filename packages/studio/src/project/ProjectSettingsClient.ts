@@ -14,7 +14,7 @@ import {
   type ProjectReply,
   type ProjectSettingsReply,
   type SettingsSectionName
-} from "./routes.ts";
+} from "../../shared/api/project.ts";
 
 export class ProjectSettingsClient {
   #endpoint: ApiEndpoint;

@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import type { AssetSeedMap } from "@jolly-pixel/asset-server";
 import {
   CatalogShare,
   LocalPreferences,
@@ -8,18 +9,19 @@ import { openOfflineBackend } from "@jolly-pixel/editor.host/offline";
 import createHandlers from "virtual:jolly-pixel/handlers";
 
 // Import Internal Dependencies
-import type { StudioConnection } from "./connection.ts";
-import { loadStudioSeed } from "./seed.ts";
+import type { StudioConnection } from "./StudioConnection.ts";
+import { createStudioSeed } from "../../shared/seed.ts";
 
 // CONSTANTS
 const kOfflineName = "studio";
+const kBlocksetUrl = "textures/blockset.png";
 
-export async function connectOffline(): Promise<StudioConnection> {
+export async function connect(): Promise<StudioConnection> {
   const backend = await openOfflineBackend({
     project: async() => {
       return {
         handlers: createHandlers(),
-        seed: await loadStudioSeed()
+        seed: await loadSeed()
       };
     },
     name: kOfflineName
@@ -31,4 +33,15 @@ export async function connectOffline(): Promise<StudioConnection> {
     signedIn: null,
     preferences: new LocalPreferences().preferences
   };
+}
+
+async function loadSeed(): Promise<AssetSeedMap> {
+  const response = await fetch(kBlocksetUrl);
+  if (!response.ok) {
+    throw new Error(`Unable to load "${kBlocksetUrl}" (${response.status}).`);
+  }
+
+  return createStudioSeed(
+    new Uint8Array(await response.arrayBuffer())
+  );
 }

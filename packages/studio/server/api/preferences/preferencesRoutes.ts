@@ -7,8 +7,8 @@ import {
   PreferencesController,
   type ReplacePreferencesRoute
 } from "./PreferencesController.ts";
-import type { PreferenceScopes } from "../../../src/preferences/PreferenceScopes.ts";
-import { preferenceOverridesSchema } from "../../../src/preferences/routes.ts";
+import type { PreferenceScopes } from "../../../shared/PreferenceScopes.ts";
+import { preferenceOverridesSchema } from "../../../shared/api/preferences.ts";
 
 // CONSTANTS
 const kMaxBodyBytes = 64 * 1_024;

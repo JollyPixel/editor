@@ -14,7 +14,7 @@ import { CATALOG_VIEW_ROOM } from "@jolly-pixel/asset-server";
 import type { PeerIdentity } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import type { ShareLifetime } from "../../src/shares/ShareLifetime.ts";
+import type { ShareLifetime } from "../../shared/ShareLifetime.ts";
 import type { StudioProject } from "../project/StudioProject.ts";
 import { UnknownAssetError } from "./errors/UnknownAssetError.ts";
 

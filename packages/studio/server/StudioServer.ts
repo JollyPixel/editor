@@ -7,7 +7,7 @@ import path from "node:path";
 import { compose } from "@openally/servo";
 
 // Import Internal Dependencies
-import { EDITOR_PAGES_DIR } from "../src/editors/EditorDescriptor.ts";
+import { EDITOR_PAGES_DIR } from "../shared/EditorDescriptor.ts";
 import { ManifestRoute } from "./editors/ManifestRoute.ts";
 import type { StudioProject } from "./project/StudioProject.ts";
 import { serveBuild } from "./serveBuild.ts";

@@ -11,9 +11,9 @@ import { AssetKindSet } from "../../catalog/AssetKindSet.ts";
 import type {
   EditorScopes,
   KindPackageDescriptor
-} from "../../editors/ProjectManifest.ts";
-import { STUDIO_PREFERENCES } from "../../preferences/studioScope.ts";
-import type { ProjectReply } from "../../project/routes.ts";
+} from "../../../shared/ProjectManifest.ts";
+import { STUDIO_PREFERENCES } from "../../../shared/studioScope.ts";
+import type { ProjectReply } from "../../../shared/api/project.ts";
 
 // CONSTANTS
 export const PROFILE_SECTION = "profile";

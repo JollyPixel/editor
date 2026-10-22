@@ -18,7 +18,7 @@ import {
   DEFAULT_ACCESS,
   StudioAccess
 } from "./StudioAccess.ts";
-import { TEXTURE_SIZE } from "../../src/seed.ts";
+import { TEXTURE_SIZE } from "../../shared/seed.ts";
 
 // CONSTANTS
 export const PROJECT_ROOT_ENV = "JOLLY_PROJECT";

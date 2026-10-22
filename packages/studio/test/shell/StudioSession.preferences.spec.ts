@@ -18,7 +18,7 @@ import {
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { PreferenceScopes } from "../../src/preferences/PreferenceScopes.ts";
+import { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
 import {
   frame,
   FRAME_ORIGIN,

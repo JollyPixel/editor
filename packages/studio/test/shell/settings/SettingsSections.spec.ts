@@ -10,10 +10,10 @@ import { definePreferences } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import { AssetKindSet } from "../../../src/catalog/AssetKindSet.ts";
-import type { EditorScopes } from "../../../src/editors/ProjectManifest.ts";
-import { SHELL_PREFERENCES } from "../../../src/preferences/PreferenceScopes.ts";
-import { STUDIO_PREFERENCES } from "../../../src/preferences/studioScope.ts";
-import type { ProjectReply } from "../../../src/project/routes.ts";
+import type { EditorScopes } from "../../../shared/ProjectManifest.ts";
+import { SHELL_PREFERENCES } from "../../../shared/PreferenceScopes.ts";
+import { STUDIO_PREFERENCES } from "../../../shared/studioScope.ts";
+import type { ProjectReply } from "../../../shared/api/project.ts";
 import { SettingsSections } from "../../../src/shell/settings/SettingsSections.ts";
 
 // CONSTANTS

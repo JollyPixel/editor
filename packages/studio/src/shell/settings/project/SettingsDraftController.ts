@@ -10,7 +10,7 @@ import type { ProjectSettingsController } from "./ProjectSettingsController.ts";
 import type {
   StudioProjectSettings
 } from "../../../project/StudioProjectSettings.ts";
-import type { ProjectSettingsReply } from "../../../project/routes.ts";
+import type { ProjectSettingsReply } from "../../../../shared/api/project.ts";
 
 export interface SettingsDraft {
   toJSON(): unknown;
