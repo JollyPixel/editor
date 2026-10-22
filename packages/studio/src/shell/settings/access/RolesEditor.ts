@@ -22,7 +22,7 @@ import {
   AUDIT_RIGHT,
   BUILT_IN_ROLES,
   SETTINGS_RIGHT
-} from "../../../project/routes.ts";
+} from "../../../../shared/api/project.ts";
 
 // CONSTANTS
 const kNewPattern = "room.*";

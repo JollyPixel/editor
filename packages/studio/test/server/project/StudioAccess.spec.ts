@@ -82,11 +82,11 @@ describe("StudioAccess.read", () => {
   for (const { right, allows } of [
     {
       right: "studio.$share",
-      allows: (access: StudioAccess, role: string) => access.canShare(role)
+      allows: (access: StudioAccess, role: string) => access.projectRights(role).allows("share")
     },
     {
       right: "studio.$export",
-      allows: (access: StudioAccess, role: string) => access.canExport(role)
+      allows: (access: StudioAccess, role: string) => access.projectRights(role).allows("export")
     }
   ]) {
     test(`grants ${right} only to roles with write on it`, () => {
@@ -129,15 +129,15 @@ describe("StudioAccess.read", () => {
     const rights = roles.map((role) => access.projectRights(role));
 
     assert.deepEqual(
-      rights.map(({ canReadSettings, canEditSettings }) => [canReadSettings, canEditSettings]),
+      rights.map((granted) => [granted.allows("readSettings"), granted.allows("editSettings")]),
       [[true, true], [false, false], [true, false], [false, false], [false, false]]
     );
     assert.deepEqual(
-      roles.filter((_role, index) => rights[index].canAudit),
+      roles.filter((_role, index) => rights[index].allows("audit")),
       ["admin", "reviewer"]
     );
     assert.deepEqual(
-      roles.filter((_role, index) => rights[index].canManageAccess),
+      roles.filter((_role, index) => rights[index].allows("manageAccess")),
       ["admin"]
     );
   });

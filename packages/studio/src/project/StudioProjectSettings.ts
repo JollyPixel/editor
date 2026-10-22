@@ -1,30 +1,27 @@
 // Import Internal Dependencies
+import { RemoteState } from "../api/RemoteState.ts";
 import type { ProjectSettingsClient } from "./ProjectSettingsClient.ts";
 import type {
   AccessChange,
   KindOptions,
-  ProjectReply,
   ProjectSettingsReply
-} from "./routes.ts";
-
-// CONSTANTS
-export const PROJECT_SETTINGS_CHANGE = "change";
+} from "../../shared/api/project.ts";
+import type { ProjectRights } from "../../shared/ProjectRights.ts";
 
 export type ProjectSettingsSource = Pick<
   ProjectSettingsClient,
   "read" | "replaceKinds" | "replaceAccess"
 >;
 
-export class StudioProjectSettings extends EventTarget {
-  readonly rights: ProjectReply;
+export class StudioProjectSettings extends RemoteState {
+  readonly rights: ProjectRights;
 
   #client: ProjectSettingsSource;
   #data: ProjectSettingsReply | null = null;
-  #error: string | null = null;
 
   constructor(
     client: ProjectSettingsSource,
-    rights: ProjectReply
+    rights: ProjectRights
   ) {
     super();
     this.#client = client;
@@ -35,46 +32,33 @@ export class StudioProjectSettings extends EventTarget {
     return this.#data;
   }
 
-  get error(): string | null {
-    return this.#error;
-  }
-
   get canEdit(): boolean {
-    return this.rights.canEditSettings;
+    return this.rights.allows("editSettings");
   }
 
   async load(): Promise<void> {
-    await this.#run(() => this.#client.read());
+    await this.#replace(() => this.#client.read());
   }
 
   replaceKinds(
     kinds: KindOptions
   ): Promise<boolean> {
-    return this.#run(() => this.#client.replaceKinds(kinds));
+    return this.#replace(() => this.#client.replaceKinds(kinds));
   }
 
   replaceAccess(
     change: AccessChange
   ): Promise<boolean> {
-    return this.#run(() => this.#client.replaceAccess(change));
+    return this.#replace(() => this.#client.replaceAccess(change));
   }
 
-  async #run(
-    action: () => Promise<ProjectSettingsReply>
+  async #replace(
+    request: () => Promise<ProjectSettingsReply>
   ): Promise<boolean> {
-    try {
-      this.#data = await action();
-      this.#error = null;
+    const data = await this.run(request, (reply) => {
+      this.#data = reply;
+    });
 
-      return true;
-    }
-    catch (error) {
-      this.#error = error instanceof Error ? error.message : String(error);
-
-      return false;
-    }
-    finally {
-      this.dispatchEvent(new Event(PROJECT_SETTINGS_CHANGE));
-    }
+    return data !== null;
   }
 }

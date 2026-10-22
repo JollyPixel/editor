@@ -14,9 +14,9 @@ import { readAssetArchive } from "@jolly-pixel/asset-server";
 // Import Internal Dependencies
 import { STUDIO_ROOT } from "../../../../server/project/StudioProject.ts";
 import { ProjectArchiveClient } from "../../../../src/project/ProjectArchiveClient.ts";
-import { PROJECT_URL_PATH } from "../../../../src/project/routes.ts";
-import { createStudioSeed } from "../../../../src/seed.ts";
-import { browser } from "../../../helpers/studioApi.ts";
+import { PROJECT_URL_PATH } from "../../../../shared/api/project.ts";
+import { createStudioSeed } from "../../../../shared/seed.ts";
+import { browser } from "../../../helpers/browser.ts";
 import {
   serveBackend,
   type ServedBackend

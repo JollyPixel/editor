@@ -5,7 +5,7 @@ import {
   type KindOptions,
   type KindOptionValue,
   type KindPackageSettings
-} from "./routes.ts";
+} from "../../shared/api/project.ts";
 
 type OptionRecord = Record<string, unknown>;
 

@@ -9,7 +9,7 @@ import {
 import {
   PROJECT_MANIFEST_FILE,
   ProjectManifest
-} from "../../src/editors/ProjectManifest.ts";
+} from "../../shared/ProjectManifest.ts";
 import type { StudioProject } from "../project/StudioProject.ts";
 
 export class ManifestRoute {

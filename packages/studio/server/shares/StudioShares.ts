@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import {
   GUEST_ROLE,
-  ShareLinkRefusedError,
   type Account,
   type ShareLink
 } from "@jolly-pixel/accounts";
@@ -14,7 +13,7 @@ import { CATALOG_VIEW_ROOM } from "@jolly-pixel/asset-server";
 import type { PeerIdentity } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import type { ShareLifetime } from "../../src/shares/ShareLifetime.ts";
+import type { ShareLifetime } from "../../shared/ShareLifetime.ts";
 import type { StudioProject } from "../project/StudioProject.ts";
 import { UnknownAssetError } from "./errors/UnknownAssetError.ts";
 
@@ -51,10 +50,10 @@ export class StudioShares {
     this.#catalog = options.catalog;
   }
 
-  canShare(
+  list(
     account: Account
-  ): boolean {
-    return this.#project.access.canShare(account.role);
+  ): ShareLink[] {
+    return this.#accounts.shareLinks.visibleTo(account.id);
   }
 
   async create(
@@ -62,9 +61,7 @@ export class StudioShares {
     assetId: string,
     lifetime: ShareLifetime
   ): Promise<ShareLink> {
-    if (!this.canShare(account)) {
-      throw new ShareLinkRefusedError("this role cannot share assets");
-    }
+    this.#project.access.projectRights(account.role).require("share");
     if ((await this.#catalog).record(assetId) === undefined) {
       throw new UnknownAssetError(assetId);
     }
@@ -74,6 +71,13 @@ export class StudioShares {
       createdBy: account.id,
       expiresAt: lifetime.expiresAt(Date.now())
     });
+  }
+
+  revoke(
+    account: Account,
+    linkId: string
+  ): void {
+    this.#accounts.shareLinks.revoke(account.id, linkId);
   }
 
   async opened(

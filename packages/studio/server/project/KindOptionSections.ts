@@ -8,7 +8,7 @@ import {
   kindOptionVector2Schema,
   type KindOptionField,
   type KindOptionSection
-} from "../../src/project/routes.ts";
+} from "../../shared/api/project.ts";
 
 // CONSTANTS
 const kLabelSeparator = " › ";

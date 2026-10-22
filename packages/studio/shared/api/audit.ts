@@ -2,10 +2,17 @@
 import * as z from "zod";
 
 // Import Internal Dependencies
-import { settingsSectionSchema } from "../project/routes.ts";
+import type { ApiRoute } from "./common.ts";
+import { settingsSectionSchema } from "./project.ts";
 
 // CONSTANTS
 export const AUDIT_URL_PATH = "/api/audit/";
+export const AUDIT_ROUTES = {
+  page: {
+    method: "GET",
+    path: ""
+  }
+} as const satisfies Record<string, ApiRoute>;
 export const AUDIT_CATEGORIES = [
   "edits",
   "structure",

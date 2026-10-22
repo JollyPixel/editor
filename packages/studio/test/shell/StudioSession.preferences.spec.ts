@@ -18,7 +18,7 @@ import {
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { PreferenceScopes } from "../../src/preferences/PreferenceScopes.ts";
+import { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
 import {
   frame,
   FRAME_ORIGIN,
@@ -42,10 +42,12 @@ describe("StudioSession preferences", () => {
       new MemoryStorageAdapter(),
       undefined,
       {
-        preferences: {
-          values: preferences,
-          scopes: new PreferenceScopes([RUNTIME_PREFERENCES])
-        }
+        user: {
+          identity: null,
+          preferences,
+          renewal: null
+        },
+        scopes: new PreferenceScopes([RUNTIME_PREFERENCES])
       }
     );
     await studio.openAsset("map-1");

@@ -17,7 +17,7 @@ import {
 import {
   EDITOR_PAGES_DIR,
   EDITOR_PAGES_PREFIX
-} from "../../src/editors/EditorDescriptor.ts";
+} from "../../shared/EditorDescriptor.ts";
 import { serveBuild } from "../serveBuild.ts";
 import type { EditorPackage } from "./EditorPackage.ts";
 import type { EditorPackages } from "./EditorPackages.ts";

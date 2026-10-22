@@ -1,10 +1,10 @@
 // Import Third-party Dependencies
 import {
-  ADMIN_ROLE,
   AccountsRoster,
   type Account,
   type AccountsClient
 } from "@jolly-pixel/accounts";
+import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 import type { PeerMetadata } from "@jolly-pixel/network";
 import type { Client } from "@jolly-pixel/network/client";
 import {
@@ -14,20 +14,15 @@ import {
 import { toPeerProfileMetadata } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import type { AuditClient } from "../audit/AuditClient.ts";
-import {
-  AccountPreferences,
-  type AccountPreferencesClient
-} from "../preferences/AccountPreferences.ts";
-import type { ProjectArchiveClient } from "../project/ProjectArchiveClient.ts";
-import type { ProjectSettingsClient } from "../project/ProjectSettingsClient.ts";
+import type { StudioClients } from "../api/StudioClients.ts";
+import { AuditPages } from "../audit/AuditPages.ts";
+import type { FileDownload } from "../browser/FileDownload.ts";
+import { AccountPreferences } from "../preferences/AccountPreferences.ts";
 import { StudioProjectSettings } from "../project/StudioProjectSettings.ts";
-import type { ShareLinksClient } from "../shares/ShareLinksClient.ts";
 import { StudioShareLinks } from "../shares/StudioShareLinks.ts";
+import type { ProjectRights } from "../../shared/ProjectRights.ts";
 import { SessionRenewal } from "./SessionRenewal.ts";
-
-// CONSTANTS
-export const SIGNED_IN_CHANGE = "change";
+import { STUDIO_USER_CHANGE } from "./StudioUser.ts";
 
 export type StudioAccountsClient = Pick<
   AccountsClient,
@@ -40,11 +35,7 @@ export interface StudioSignInOptions {
    * Asks the user to sign in, when the session cookie holds no account.
    */
   signIn: () => Promise<Account>;
-  shareLinks: ShareLinksClient;
-  projectArchive: ProjectArchiveClient;
-  projectSettings: ProjectSettingsClient;
-  audit: AuditClient;
-  preferences: AccountPreferencesClient;
+  api: StudioClients;
   /**
    * Opens the shell's connection, joined with the account's peer profile.
    */
@@ -52,12 +43,9 @@ export interface StudioSignInOptions {
   reload: () => void;
 }
 
-export interface StudioSignedInOptions extends Omit<
-  StudioSignInOptions,
-  "preferences" | "projectSettings"
-> {
+export interface StudioSignedInOptions extends StudioSignInOptions {
   preferences: AccountPreferences;
-  project: StudioProjectSettings;
+  rights: ProjectRights;
 }
 
 export class StudioSignedIn extends EventTarget {
@@ -68,29 +56,29 @@ export class StudioSignedIn extends EventTarget {
     const [preferences, rights] = await Promise.all([
       AccountPreferences.load({
         accountId: account.id,
-        client: options.preferences
+        client: options.api.preferences
       }),
-      options.projectSettings.rights()
+      options.api.project.rights()
     ]);
 
     return new StudioSignedIn(account, {
       ...options,
       preferences,
-      project: new StudioProjectSettings(options.projectSettings, rights)
+      rights
     });
   }
 
+  readonly online = true;
   readonly client: Client;
   readonly roster: AccountsRoster;
   readonly shares: StudioShareLinks;
   readonly renewal: SessionRenewal;
-  readonly projectArchive: ProjectArchiveClient;
   readonly project: StudioProjectSettings;
-  readonly audit: AuditClient;
-  readonly preferences: AccountPreferences;
 
   #account: Account;
   #accounts: StudioAccountsClient;
+  #api: StudioClients;
+  #preferences: AccountPreferences;
   #reload: () => void;
 
   constructor(
@@ -100,14 +88,17 @@ export class StudioSignedIn extends EventTarget {
     super();
     this.#account = account;
     this.#accounts = options.accounts;
+    this.#api = options.api;
+    this.#preferences = options.preferences;
     this.#reload = options.reload;
     this.client = options.connect(toPeerProfileMetadata(this.identity));
     this.roster = AccountsRoster.join(this.client);
-    this.shares = new StudioShareLinks(options.shareLinks, this.roster);
-    this.projectArchive = options.projectArchive;
-    this.project = options.project;
-    this.audit = options.audit;
-    this.preferences = options.preferences;
+    this.shares = new StudioShareLinks(
+      options.api.shares,
+      this.roster,
+      options.rights.allows("share")
+    );
+    this.project = new StudioProjectSettings(options.api.project, options.rights);
     this.renewal = new SessionRenewal({
       accountId: account.id,
       currentAccount: () => this.#accounts.me(),
@@ -130,15 +121,33 @@ export class StudioSignedIn extends EventTarget {
     return peerIdentity(username, id, avatar);
   }
 
-  get isAdmin(): boolean {
-    return this.#account.role === ADMIN_ROLE;
+  get rights(): ProjectRights {
+    return this.project.rights;
+  }
+
+  get preferences(): Preferences {
+    return this.#preferences.preferences;
+  }
+
+  onPreferenceError(
+    listener: (message: string) => void
+  ): () => void {
+    return this.#preferences.onError(listener);
+  }
+
+  exportProject(): Promise<FileDownload> {
+    return this.#api.archive.download();
+  }
+
+  auditPages(): AuditPages {
+    return new AuditPages(this.#api.audit);
   }
 
   async replaceAvatar(
     image: Blob
   ): Promise<void> {
     this.#account = await this.#accounts.replaceAvatar(image);
-    this.dispatchEvent(new Event(SIGNED_IN_CHANGE));
+    this.dispatchEvent(new Event(STUDIO_USER_CHANGE));
   }
 
   async signOut(): Promise<void> {

@@ -28,8 +28,7 @@ import {
   type AuditPage,
   type AuditQuery,
   type AuditRow
-} from "../../src/audit/routes.ts";
-import { AuditRefusedError } from "./errors/AuditRefusedError.ts";
+} from "../../shared/api/audit.ts";
 
 // CONSTANTS
 const kPageRows = 50;
@@ -80,9 +79,7 @@ export class AuditFeed {
     query: AuditFeedQuery
   ): AuditPage {
     const rights = this.#project.access.projectRights(viewer.role);
-    if (!rights.canAudit) {
-      throw new AuditRefusedError();
-    }
+    rights.require("audit");
 
     const cursor = AuditCursor.decode(query.cursor);
     const consumed = cursor.toJSON();
@@ -103,7 +100,7 @@ export class AuditFeed {
       }
 
       const entry = item.entry !== null &&
-        matches(item.entry, query, rights.canManageAccess) ?
+        matches(item.entry, query, rights.allows("manageAccess")) ?
         item.entry :
         null;
       const run = entry?.kind === "edit" ? runs.continued(entry) : null;

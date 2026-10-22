@@ -15,7 +15,7 @@ import {
   AccountPreferences,
   type AccountPreferencesClient
 } from "../../src/preferences/AccountPreferences.ts";
-import { STUDIO_PREFERENCES } from "../../src/preferences/studioScope.ts";
+import { STUDIO_PREFERENCES } from "../../shared/studioScope.ts";
 
 class RecordingClient implements AccountPreferencesClient {
   readonly sent: PreferenceOverrides[] = [];

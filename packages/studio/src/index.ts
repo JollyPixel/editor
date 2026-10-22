@@ -11,21 +11,21 @@ import {
 
 // Import Internal Dependencies
 import { usersConsole } from "./accounts/usersConsole.ts";
-import { connectStudio } from "./connection.ts";
+import { connectStudio } from "./connection/StudioConnection.ts";
 import {
   EDITOR_PAGE_REBUILT_EVENT,
   type EditorPageRebuilt
-} from "./editors/EditorDescriptor.ts";
-import { ProjectManifest } from "./editors/ProjectManifest.ts";
+} from "../shared/EditorDescriptor.ts";
+import { ProjectManifest } from "../shared/ProjectManifest.ts";
 import { EditorRegistry } from "./editors/EditorRegistry.ts";
 import { EditorPrefetch } from "./editors/EditorPrefetch.ts";
 import "./icons.ts";
 import {
   PreferenceScopes,
   SHELL_PREFERENCES
-} from "./preferences/PreferenceScopes.ts";
+} from "../shared/PreferenceScopes.ts";
 import { StudioAppearance } from "./preferences/StudioAppearance.ts";
-import { STUDIO_PREFERENCES } from "./preferences/studioScope.ts";
+import { STUDIO_PREFERENCES } from "../shared/studioScope.ts";
 import { SettingsSections } from "./shell/settings/SettingsSections.ts";
 import { settingsConsole } from "./shell/settings/settingsConsole.ts";
 import type { Studio } from "./shell/Studio.ts";
@@ -77,24 +77,23 @@ async function boot(): Promise<void> {
     connectStudio(),
     ProjectManifest.fetch(document.baseURI)
   ]);
-  const { preferences } = connection;
+  const { user } = connection;
+  const { preferences } = user;
   appearance.follow(preferences);
   const scopes = PreferenceScopes.studio(manifest.preferences());
   const editors = createEditorRegistry(manifest, connection.editorQuery);
   const settings = new SettingsSections({
-    signedIn: connection.signedIn !== null,
+    user,
     shellScopes: SHELL_PREFERENCES,
     editors: manifest.editorScopes(),
     kindPackages: manifest.kindPackages,
-    kinds: editors.kindSet(),
-    project: connection.signedIn?.project.rights
+    kinds: editors.kindSet()
   });
   const studio = required("jolly-studio");
   await studio.attach({
     console: editorConsole,
     share: connection.share,
-    signedIn: connection.signedIn,
-    preferences,
+    user,
     scopes,
     settings,
     editors,
@@ -115,11 +114,8 @@ async function boot(): Promise<void> {
   });
 
   settingsConsole(editorConsole.commands, studio, settings);
-  if (connection.signedIn?.isAdmin) {
-    usersConsole(
-      editorConsole.commands,
-      connection.signedIn.roster
-    );
+  if (user.online && user.rights.allows("manageAccess")) {
+    usersConsole(editorConsole.commands, user.roster);
   }
 
   if (

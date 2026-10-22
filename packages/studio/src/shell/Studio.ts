@@ -10,13 +10,7 @@ import {
   query,
   state
 } from "lit/decorators.js";
-import type { Account } from "@jolly-pixel/accounts";
-import {
-  FrameConsoles,
-  type CatalogShare,
-  type EditorConsole
-} from "@jolly-pixel/editor.host";
-import type { Preferences } from "@jolly-pixel/editor.host/preferences";
+import type { CatalogShare } from "@jolly-pixel/editor.host";
 import {
   LogQueue,
   type LogEntry
@@ -24,34 +18,30 @@ import {
 
 // Import Internal Dependencies
 import type { AssetBrowserOptions } from "./assets/AssetBrowser.ts";
+import { ChangeController } from "./ChangeController.ts";
 import {
-  SIGNED_IN_CHANGE,
-  type StudioSignedIn
-} from "../accounts/StudioSignedIn.ts";
-import { StudioSession } from "./StudioSession.ts";
-import type { PreferenceScopes } from "../preferences/PreferenceScopes.ts";
+  STUDIO_USER_CHANGE,
+  type StudioUser
+} from "../accounts/StudioUser.ts";
+import {
+  StudioSession,
+  type StudioSessionOptions
+} from "./StudioSession.ts";
+import type { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
 import { SettingsSections } from "./settings/SettingsSections.ts";
-import type { EditorRegistry } from "../editors/EditorRegistry.ts";
 import { BrowserState } from "../browser/BrowserState.ts";
-import { SETTINGS_TAB_ID } from "./settings/StudioSettings.ts";
 import type { StudioErrorEvent } from "./StudioErrorEvent.ts";
-import type {
-  EditorTab,
-  EditorTabsOptions
-} from "../tabs/EditorTabs.ts";
+import type { EditorTab } from "../tabs/EditorTabs.ts";
 import "./home/StudioHome.ts";
 import "./settings/StudioSettings.ts";
 import "./account/AccountBadge.ts";
 
-export interface StudioOptions {
+export interface StudioOptions extends Pick<
+  StudioSessionOptions,
+  "editors" | "scopes" | "console" | "confirmEvict" | "confirmClose"
+> {
   share: CatalogShare;
-  confirmEvict?: EditorTabsOptions["confirmEvict"];
-  confirmClose?: EditorTabsOptions["confirmClose"];
-  editors: EditorRegistry;
-  console?: EditorConsole;
-  signedIn?: StudioSignedIn | null;
-  preferences: Preferences;
-  scopes: PreferenceScopes;
+  user: StudioUser;
   settings: SettingsSections;
 }
 
@@ -217,15 +207,6 @@ export class Studio extends LitElement {
   declare _log: readonly LogEntry[];
 
   @state()
-  declare _signedIn: StudioSignedIn | null;
-
-  @state()
-  declare _account: Account | null;
-
-  @state()
-  declare _preferences: Preferences | null;
-
-  @state()
   declare _sections: SettingsSections;
 
   @query("jolly-tabs")
@@ -245,16 +226,19 @@ export class Studio extends LitElement {
   #browserState = new BrowserState();
   #queue = new LogQueue();
   #unsubscribe: (() => void) | null = null;
-  #stopPreferenceErrors: (() => void) | null = null;
+  #user = new ChangeController<StudioUser>(
+    this,
+    STUDIO_USER_CHANGE,
+    (user) => [
+      user.onPreferenceError((message) => this.#queue.push(message))
+    ]
+  );
 
   constructor() {
     super();
     this._assets = null;
     this._openTabs = [];
     this._log = [];
-    this._signedIn = null;
-    this._account = null;
-    this._preferences = null;
     this._sections = SettingsSections.EMPTY;
   }
 
@@ -272,51 +256,38 @@ export class Studio extends LitElement {
     }
 
     this.#session?.dispose();
-    const { catalog } = options.share;
-    const signedIn = options.signedIn ?? null;
+    const { share, user } = options;
+    const { catalog } = share;
     const session = new StudioSession({
       catalog,
+      share,
+      user: user.online ? user : {
+        identity: null,
+        preferences: user.preferences,
+        renewal: null
+      },
+      scopes: options.scopes,
       editors: options.editors,
-      browserState: this.#browserState,
-      tabs: {
+      console: options.console,
+      confirmEvict: options.confirmEvict,
+      confirmClose: options.confirmClose,
+      slots: {
         strip: this._strip,
+        frames: this._frames,
         home: this._home,
-        pages: [
-          {
-            id: SETTINGS_TAB_ID,
-            label: "Settings",
-            icon: "settings",
-            element: this._settings
-          }
-        ],
-        confirmEvict: options.confirmEvict,
-        confirmClose: options.confirmClose
+        settings: this._settings
       },
-      frames: {
-        container: this._frames,
-        share: options.share,
-        identity: () => signedIn?.identity ?? null,
-        consoles: options.console === undefined ?
-          undefined :
-          new FrameConsoles({ commands: options.console.commands })
-      },
-      preferences: {
-        values: options.preferences,
-        scopes: options.scopes
-      },
-      onTabsChange: this.#syncOpenTabs,
-      console: options.console?.element,
-      renewal: signedIn?.renewal
+      browserState: this.#browserState,
+      onTabsChange: this.#syncOpenTabs
     });
     this.#session = session;
-    this._preferences = options.preferences;
     this.#scopes = options.scopes;
     this._sections = options.settings;
-    this.#follow(signedIn);
+    this.#user.attach(user);
     this._assets = {
       catalog,
       kinds: session.kinds,
-      shares: signedIn?.shares ?? null,
+      shares: user.online ? user.shares : null,
       browserState: this.#browserState
     };
     await session.restoreTabs();
@@ -329,7 +300,7 @@ export class Studio extends LitElement {
     if (section !== undefined && this._settings !== null) {
       this._settings.section = section;
     }
-    this.#session?.tabs.openPage(SETTINGS_TAB_ID);
+    this.#session?.openSettings();
   }
 
   reloadEditor(
@@ -358,19 +329,21 @@ export class Studio extends LitElement {
     super.disconnectedCallback();
     this.#unsubscribe?.();
     this.#unsubscribe = null;
-    this.#follow(null);
     this.#session?.dispose();
     this.#session = null;
   }
 
   override render(): TemplateResult {
+    const user = this.#user.current;
+    const account = user?.online ? user.account : null;
+
     return html`
       <header id="studio-header">
         <jolly-tabs id="editor-tabs" reorderable></jolly-tabs>
         <jolly-toolbar id="studio-actions" label="Studio actions">
           <studio-account
-            .account=${this._account}
-            .avatar=${this._account?.avatar ?? ""}
+            .account=${account}
+            .avatar=${account?.avatar ?? ""}
             @sign-out=${this.#signOut}
             @settings-open=${this.#openSettings}
           ></studio-account>
@@ -387,8 +360,7 @@ export class Studio extends LitElement {
             @asset-open=${this.#onAssetOpen}
             @console-toggle=${this.#toggleConsole}
             @settings-open=${this.#openSettings}
-            .signedIn=${this._signedIn}
-            .account=${this._account}
+            .user=${user}
             .browserState=${this.#browserState}
             @studio-error=${this.#logError}
           ></studio-home>
@@ -398,10 +370,8 @@ export class Studio extends LitElement {
             aria-label="Settings"
             hidden
             .sections=${this._sections}
-            .preferences=${this._preferences}
             .scopes=${this.#scopes}
-            .account=${this._account}
-            .signedIn=${this._signedIn}
+            .user=${user}
             .catalog=${this._assets?.catalog ?? null}
             .browserState=${this.#browserState}
             @avatar-change=${this.#replaceAvatar}
@@ -412,32 +382,23 @@ export class Studio extends LitElement {
     `;
   }
 
-  #follow(
-    signedIn: StudioSignedIn | null
-  ): void {
-    this._signedIn?.removeEventListener(SIGNED_IN_CHANGE, this.#syncAccount);
-    this._signedIn = signedIn;
-    signedIn?.addEventListener(SIGNED_IN_CHANGE, this.#syncAccount);
-    this.#stopPreferenceErrors?.();
-    this.#stopPreferenceErrors = signedIn?.preferences.onError(
-      (message) => this.#queue.push(message)
-    ) ?? null;
-    this.#syncAccount();
-  }
-
-  readonly #syncAccount = (): void => {
-    this._account = this._signedIn?.account ?? null;
-  };
-
   readonly #signOut = (): void => {
-    void this._signedIn?.signOut();
+    const user = this.#user.current;
+    if (user?.online) {
+      void user.signOut();
+    }
   };
 
   readonly #replaceAvatar = async(
     event: HTMLElementEventMap["avatar-change"]
   ): Promise<void> => {
+    const user = this.#user.current;
+    if (!user?.online) {
+      return;
+    }
+
     try {
-      await this._signedIn?.replaceAvatar(event.detail.image);
+      await user.replaceAvatar(event.detail.image);
     }
     catch (error) {
       this.#queue.push(

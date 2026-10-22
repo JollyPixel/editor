@@ -7,9 +7,10 @@ import {
   type ApiEndpointOptions
 } from "../api/ApiEndpoint.ts";
 import {
+  PREFERENCES_ROUTES,
   preferencesReplySchema,
   scopePreferencesReplySchema
-} from "./routes.ts";
+} from "../../shared/api/preferences.ts";
 
 export class PreferencesClient {
   #endpoint: ApiEndpoint;
@@ -21,9 +22,9 @@ export class PreferencesClient {
   }
 
   async list(): Promise<Map<string, PreferenceOverrides>> {
-    const response = await this.#endpoint.send("");
-    const { scopes } = preferencesReplySchema.parse(
-      await response.json()
+    const { scopes } = await this.#endpoint.json(
+      PREFERENCES_ROUTES.list,
+      preferencesReplySchema
     );
 
     return new Map(Object.entries(scopes));
@@ -33,17 +34,18 @@ export class PreferencesClient {
     scope: string,
     overrides: PreferenceOverrides
   ): Promise<PreferenceOverrides> {
-    const response = await this.#endpoint.send(encodeURIComponent(scope), {
-      method: "PUT",
-      keepalive: true,
-      headers: {
-        "content-type": "application/json"
-      },
-      body: JSON.stringify(overrides)
-    });
+    const reply = await this.#endpoint.json(
+      PREFERENCES_ROUTES.replace,
+      scopePreferencesReplySchema,
+      {
+        params: {
+          scope
+        },
+        body: overrides,
+        keepalive: true
+      }
+    );
 
-    return scopePreferencesReplySchema.parse(
-      await response.json()
-    ).overrides;
+    return reply.overrides;
   }
 }

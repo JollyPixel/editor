@@ -3,9 +3,7 @@ import type { AccountsFailureCode } from "@jolly-pixel/accounts";
 
 export type ApiFailureCode =
   | AccountsFailureCode
-  | "export-refused"
-  | "settings-refused"
-  | "audit-refused"
+  | "refused"
   | "invalid-settings"
   | "role-in-use";
 

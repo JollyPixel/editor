@@ -12,8 +12,8 @@ import { ACCOUNTS_URL_PATH } from "@jolly-pixel/accounts";
 import { DEFAULT_ACCESS } from "../../../../server/project/StudioAccess.ts";
 import { KindOptionsDraft } from "../../../../src/project/KindOptionsDraft.ts";
 import { ProjectSettingsClient } from "../../../../src/project/ProjectSettingsClient.ts";
-import { PROJECT_URL_PATH } from "../../../../src/project/routes.ts";
-import { browser } from "../../../helpers/studioApi.ts";
+import { PROJECT_URL_PATH } from "../../../../shared/api/project.ts";
+import { browser } from "../../../helpers/browser.ts";
 import {
   serveBackend,
   type ServedBackend
@@ -43,21 +43,23 @@ describe("/api/project/settings", () => {
 
     const settings = await admin.read();
 
-    assert.deepEqual(await admin.rights(), {
-      canExport: true,
-      canReadSettings: true,
-      canEditSettings: true,
-      canAudit: true,
-      canManageAccess: true
+    assert.deepEqual((await admin.rights()).toJSON(), {
+      share: true,
+      export: true,
+      readSettings: true,
+      editSettings: true,
+      audit: true,
+      manageAccess: true
     });
     assert.equal(settings.name, "project");
     assert.deepEqual(settings.access, DEFAULT_ACCESS);
-    assert.deepEqual(await member.rights(), {
-      canExport: true,
-      canReadSettings: false,
-      canEditSettings: false,
-      canAudit: false,
-      canManageAccess: false
+    assert.deepEqual((await member.rights()).toJSON(), {
+      share: true,
+      export: true,
+      readSettings: false,
+      editSettings: false,
+      audit: false,
+      manageAccess: false
     });
     await assert.rejects(member.read(), {
       name: "ApiRequestError",

@@ -20,7 +20,7 @@ import {
 } from "@jolly-pixel/asset.voxel-map";
 
 // Import Internal Dependencies
-import { PROJECT_MANIFEST_FILE } from "../../src/editors/ProjectManifest.ts";
+import { PROJECT_MANIFEST_FILE } from "../../shared/ProjectManifest.ts";
 import { projectManifest } from "../../vite/projectManifest.ts";
 import {
   listen,

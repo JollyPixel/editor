@@ -12,11 +12,10 @@ import {
   state
 } from "lit/decorators.js";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
-import {
-  SubscriptionController,
-  type Dialog,
-  type JollyChangeDetail,
-  type JollyOption
+import type {
+  Dialog,
+  JollyChangeDetail,
+  JollyOption
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -24,11 +23,9 @@ import type { AssetLeafData } from "../../catalog/AssetTreeModel.ts";
 import {
   ShareLifetime,
   type ShareLifetimeName
-} from "../../shares/ShareLifetime.ts";
-import {
-  SHARE_LINKS_CHANGE,
-  type StudioShareLinks
-} from "../../shares/StudioShareLinks.ts";
+} from "../../../shared/ShareLifetime.ts";
+import type { StudioShareLinks } from "../../shares/StudioShareLinks.ts";
+import { RemoteStateController } from "../RemoteStateController.ts";
 import type { ShareLinkList } from "../shares/ShareLinkList.ts";
 import "../shares/ShareLinkList.ts";
 
@@ -81,14 +78,7 @@ export class AssetShareDialog extends LitElement {
   @query("share-link-list")
   declare _list: ShareLinkList;
 
-  #links = new SubscriptionController<StudioShareLinks>(this, (links) => {
-    const repaint = () => this.requestUpdate();
-    links.addEventListener(SHARE_LINKS_CHANGE, repaint);
-
-    return [
-      () => links.removeEventListener(SHARE_LINKS_CHANGE, repaint)
-    ];
-  });
+  #links = new RemoteStateController<StudioShareLinks>(this);
 
   constructor() {
     super();

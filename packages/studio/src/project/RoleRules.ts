@@ -4,6 +4,12 @@ import {
   type Right
 } from "@jolly-pixel/network";
 
+// Import Internal Dependencies
+import {
+  namedRight,
+  type NamedRight
+} from "../../shared/api/project.ts";
+
 export interface RoleRule {
   readonly pattern: string;
   readonly right: Right;
@@ -62,11 +68,9 @@ export class RoleRules implements Iterable<RoleRule> {
   }
 
   grants(
-    key: string
+    name: NamedRight
   ): boolean {
-    return this.#rules.some(
-      (rule) => rule.pattern === key && rule.right !== "void"
-    );
+    return namedRight(this.toJSON(), name) !== "void";
   }
 
   move(

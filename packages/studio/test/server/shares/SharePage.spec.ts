@@ -11,6 +11,7 @@ import path from "node:path";
 import { LAUNCH_ELEMENT_ID } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
+import { EditorPageFolders } from "../../../server/editors/EditorPageFolders.ts";
 import { EditorPackages } from "../../../server/editors/EditorPackages.ts";
 import { SharePage } from "../../../server/shares/SharePage.ts";
 import {
@@ -52,7 +53,8 @@ async function pageHarness(): Promise<PageHarness> {
   });
   const page = new SharePage({
     shares,
-    editors: new EditorPackages([voxelMapEditor(dist)])
+    editors: new EditorPackages([voxelMapEditor(dist)]),
+    pages: EditorPageFolders.packages()
   });
   const server = await listen(page.middleware);
 

@@ -18,7 +18,10 @@ import type {
   AssetKindSet
 } from "../../catalog/AssetKindSet.ts";
 import { AssetPath } from "../../catalog/AssetPath.ts";
-import { AssetSelection } from "../../catalog/AssetSelection.ts";
+import {
+  AssetSelection,
+  type AssetAction
+} from "../../catalog/AssetSelection.ts";
 import { CatalogLayout } from "../../catalog/CatalogLayout.ts";
 import {
   AssetTreeModel,
@@ -29,7 +32,7 @@ import {
   type AssetRelocation,
   type AssetTreeNode
 } from "../../catalog/AssetTreeModel.ts";
-import type { DroppedFile } from "../../files/DroppedFile.ts";
+import type { DroppedFile } from "../../browser/DroppedFile.ts";
 import type { BrowserState } from "../../browser/BrowserState.ts";
 import {
   AssetCommands,
@@ -81,10 +84,24 @@ export interface AssetDropQuestions {
   conflicts: ConflictQuestion;
 }
 
+export interface AssetActionPrompts {
+  open(assetId: string): void;
+  rename(nodeId: string): void;
+  /**
+   * `null` when the studio cannot open share links, which hides the action.
+   */
+  share: ((asset: AssetLeafData) => void) | null;
+  confirmDelete(deletion: AssetDeletion): Promise<AssetDeleteChoice | null>;
+}
+
 export interface AssetTreeViewOptions {
   catalog: AssetTreeCatalog;
   kinds: AssetKindSet;
   browserState: AssetTreeState;
+  /**
+   * What the actions need from the page: dialogs, inline rename, opening.
+   */
+  prompts: AssetActionPrompts;
   onChange: () => void;
   onError: (message: string) => void;
   /**
@@ -97,6 +114,7 @@ export class AssetTreeView {
   #catalog: AssetTreeCatalog;
   #kinds: AssetKindSet;
   #browserState: AssetTreeState;
+  #prompts: AssetActionPrompts;
   #commands: AssetCommands;
   #onChange: () => void;
   #onError: (message: string) => void;
@@ -119,6 +137,7 @@ export class AssetTreeView {
     this.#catalog = options.catalog;
     this.#kinds = options.kinds;
     this.#browserState = options.browserState;
+    this.#prompts = options.prompts;
     this.#onChange = options.onChange;
     this.#onError = options.onError;
     this.#onCreated = options.onCreated;
@@ -131,6 +150,10 @@ export class AssetTreeView {
     this.#catalog.on("change", this.#onCatalogChange);
     this.#catalog.on("dependencies", this.#onDependenciesChange);
     this.refresh();
+  }
+
+  get sharing(): boolean {
+    return this.#prompts.share !== null;
   }
 
   get model(): AssetTreeModel {
@@ -266,9 +289,58 @@ export class AssetTreeView {
     this.#onChange();
   }
 
-  async remove(
-    nodeIds: readonly string[],
-    confirm: (deletion: AssetDeletion) => Promise<AssetDeleteChoice | null>
+  allows(
+    action: AssetAction,
+    nodeIds?: Iterable<string>
+  ): boolean {
+    return (action !== "share" || this.sharing) &&
+      this.selection(nodeIds).allows(action);
+  }
+
+  run(
+    action: AssetAction,
+    nodeIds?: Iterable<string>
+  ): void {
+    const selection = this.selection(nodeIds);
+    if (!this.allows(action, selection.nodeIds)) {
+      return;
+    }
+
+    const { asset, folder } = selection;
+    switch (action) {
+      case "open":
+        if (asset !== null) {
+          this.#prompts.open(asset.id);
+        }
+        break;
+      case "new-folder":
+        void this.createFolder(folder);
+        break;
+      case "rename":
+        this.#prompts.rename(selection.nodeIds[0]);
+        break;
+      case "export":
+        if (asset !== null) {
+          void this.#commands.export(asset);
+        }
+        break;
+      case "share":
+        if (asset !== null) {
+          this.#prompts.share?.(asset);
+        }
+        break;
+      case "delete":
+        void this.#remove(selection.nodeIds);
+        break;
+      default: {
+        const unhandled: never = action;
+        throw new Error(`Unhandled asset action: ${unhandled}`);
+      }
+    }
+  }
+
+  async #remove(
+    nodeIds: readonly string[]
   ): Promise<void> {
     const deletion = this.#model.planDeletion(nodeIds);
     if (deletion.isEmpty) {
@@ -277,16 +349,10 @@ export class AssetTreeView {
       return;
     }
 
-    const choice = await confirm(deletion);
+    const choice = await this.#prompts.confirmDelete(deletion);
     if (choice !== null) {
       await this.#commands.remove(deletion, choice.companions);
     }
-  }
-
-  export(
-    asset: AssetLeafData
-  ): Promise<void> {
-    return this.#commands.export(asset);
   }
 
   async importFiles(

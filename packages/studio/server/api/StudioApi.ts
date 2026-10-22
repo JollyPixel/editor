@@ -21,16 +21,20 @@ import {
 // Import Internal Dependencies
 import { accountsRoutes } from "./accounts/accountsRoutes.ts";
 import { auditRoutes } from "./audit/auditRoutes.ts";
+import { authenticate } from "./authentication.ts";
 import { ApiError } from "./errors/ApiError.ts";
+import { apiFailure } from "./errors/apiFailure.ts";
 import { preferencesRoutes } from "./preferences/preferencesRoutes.ts";
 import { projectRoutes } from "./project/projectRoutes.ts";
 import { sharesRoutes } from "./shares/sharesRoutes.ts";
-import type { PreferenceScopes } from "../../src/preferences/PreferenceScopes.ts";
-import { PREFERENCES_URL_PATH } from "../../src/preferences/routes.ts";
-import { AUDIT_URL_PATH } from "../../src/audit/routes.ts";
-import { PROJECT_URL_PATH } from "../../src/project/routes.ts";
-import { SHARES_URL_PATH } from "../../src/shares/routes.ts";
+import type { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
+import type { ApiFailure } from "../../shared/api/common.ts";
+import { PREFERENCES_URL_PATH } from "../../shared/api/preferences.ts";
+import { AUDIT_URL_PATH } from "../../shared/api/audit.ts";
+import { PROJECT_URL_PATH } from "../../shared/api/project.ts";
+import { SHARES_URL_PATH } from "../../shared/api/shares.ts";
 import type { AuditFeed } from "../audit/AuditFeed.ts";
+import { StoredPreferences } from "../preferences/StoredPreferences.ts";
 import type { ProjectArchive } from "../project/ProjectArchive.ts";
 import type { ProjectSettings } from "../project/ProjectSettings.ts";
 import type { StudioShares } from "../shares/StudioShares.ts";
@@ -38,7 +42,6 @@ import type { StudioShares } from "../shares/StudioShares.ts";
 // CONSTANTS
 export const API_URL_PATH = "/api/";
 const kMaxBodyBytes = 4 * 1_024;
-const kPayloadTooLarge = 413;
 const kDefaultRequestsPerMinute = 300;
 
 export type ApiMiddleware = (
@@ -91,6 +94,7 @@ export class StudioApi implements AsyncDisposable {
       );
     });
 
+    app.decorateRequest("account", null);
     app.setErrorHandler((error: FastifyError, _request, reply) => {
       const failure = apiFailure(error);
       if (failure === null) {
@@ -123,26 +127,29 @@ export class StudioApi implements AsyncDisposable {
       prefix: ACCOUNTS_URL_PATH,
       accounts: options.accounts
     });
-    await app.register(sharesRoutes, {
-      prefix: SHARES_URL_PATH,
-      accounts: options.accounts,
-      shares: options.shares
-    });
-    await app.register(projectRoutes, {
-      prefix: PROJECT_URL_PATH,
-      accounts: options.accounts,
-      archive: options.archive,
-      settings: options.settings
-    });
-    await app.register(auditRoutes, {
-      prefix: AUDIT_URL_PATH,
-      accounts: options.accounts,
-      feed: options.audit
-    });
-    await app.register(preferencesRoutes, {
-      prefix: PREFERENCES_URL_PATH,
-      accounts: options.accounts,
-      scopes: options.preferences
+    await app.register(async(signedIn) => {
+      signedIn.addHook("preParsing", authenticate(options.accounts));
+
+      await signedIn.register(sharesRoutes, {
+        prefix: SHARES_URL_PATH,
+        shares: options.shares
+      });
+      await signedIn.register(projectRoutes, {
+        prefix: PROJECT_URL_PATH,
+        archive: options.archive,
+        settings: options.settings
+      });
+      await signedIn.register(auditRoutes, {
+        prefix: AUDIT_URL_PATH,
+        feed: options.audit
+      });
+      await signedIn.register(preferencesRoutes, {
+        prefix: PREFERENCES_URL_PATH,
+        preferences: new StoredPreferences(
+          options.accounts,
+          options.preferences
+        )
+      });
     });
     await app.ready();
 
@@ -172,36 +179,6 @@ export class StudioApi implements AsyncDisposable {
   }
 }
 
-function apiFailure(
-  error: FastifyError
-): ApiError | null {
-  if (error instanceof ApiError) {
-    return error;
-  }
-
-  if (error.statusCode === kPayloadTooLarge) {
-    return new ApiError(
-      kPayloadTooLarge,
-      "payload-too-large",
-      "the request body is too large"
-    );
-  }
-
-  if (
-    error.statusCode !== undefined &&
-    error.statusCode >= 400 &&
-    error.statusCode < 500
-  ) {
-    return new ApiError(
-      error.statusCode,
-      "invalid-request",
-      "the request is malformed"
-    );
-  }
-
-  return null;
-}
-
 function sendFailure(
   reply: FastifyReply,
   failure: ApiError
@@ -212,5 +189,5 @@ function sendFailure(
     .send({
       code: failure.code,
       message: failure.message
-    });
+    } satisfies ApiFailure);
 }

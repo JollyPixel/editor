@@ -22,7 +22,7 @@ import {
 } from "../../../server/audit/AuditFeed.ts";
 import { AuditLog } from "../../../server/audit/AuditLog.ts";
 import { StudioAccess } from "../../../server/project/StudioAccess.ts";
-import type { AuditRow } from "../../../src/audit/routes.ts";
+import type { AuditRow } from "../../../shared/api/audit.ts";
 
 // CONSTANTS
 const kMinute = 60_000;

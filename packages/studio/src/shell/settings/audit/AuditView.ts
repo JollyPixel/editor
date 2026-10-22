@@ -12,20 +12,17 @@ import {
   property
 } from "lit/decorators.js";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
-import { SubscriptionController } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { StudioSignedIn } from "../../../accounts/StudioSignedIn.ts";
-import {
-  AUDIT_PAGES_CHANGE,
-  AuditPages
-} from "../../../audit/AuditPages.ts";
+import type { AuditPages } from "../../../audit/AuditPages.ts";
+import { RemoteStateController } from "../../RemoteStateController.ts";
 import { AuditRowText } from "../../../audit/AuditRowText.ts";
 import {
   ACCOUNTS_CATEGORY,
   type AuditCategory,
   type AuditRow
-} from "../../../audit/routes.ts";
+} from "../../../../shared/api/audit.ts";
 
 // CONSTANTS
 const kAny = "";
@@ -140,48 +137,39 @@ export class AuditView extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare signedIn: StudioSignedIn | null;
+  declare user: StudioSignedIn | null;
 
   @property({ attribute: false })
   declare catalog: CatalogClient | null;
 
-  #pages = new SubscriptionController<AuditPages>(this, (pages) => {
-    const repaint = (): void => this.requestUpdate();
-    pages.addEventListener(AUDIT_PAGES_CHANGE, repaint);
-
-    return [
-      () => pages.removeEventListener(AUDIT_PAGES_CHANGE, repaint)
-    ];
-  });
+  #pages = new RemoteStateController<AuditPages>(this);
 
   constructor() {
     super();
-    this.signedIn = null;
+    this.user = null;
     this.catalog = null;
   }
 
   override willUpdate(
     changed: PropertyValues<this>
   ): void {
-    if (changed.has("signedIn") && this.signedIn !== null) {
-      const pages = new AuditPages(this.signedIn.audit);
+    if (changed.has("user") && this.user !== null) {
+      const pages = this.user.auditPages();
       this.#pages.attach(pages);
       void pages.reload();
     }
   }
 
   override render(): TemplateResult | typeof nothing {
-    const { signedIn } = this;
+    const { user } = this;
     const pages = this.#pages.current;
-    if (signedIn === null || pages === null) {
+    if (user === null || pages === null) {
       return nothing;
     }
 
     return html`
-      ${this.#filters(signedIn, pages)}
-      ${pages.error === null ? nothing : html`
-        <p class="error" role="alert">${pages.error}</p>
-      `}
+      ${this.#filters(user, pages)}
+      ${this.#pages.error()}
       ${pages.rows.length === 0 && !pages.loading ?
         html`<p class="empty">Nothing recorded.</p>` :
         html`<ol aria-label="Audit entries">${pages.rows.map((row) => this.#row(row))}</ol>`}
@@ -196,12 +184,12 @@ export class AuditView extends LitElement {
   }
 
   #filters(
-    signedIn: StudioSignedIn,
+    user: StudioSignedIn,
     pages: AuditPages
   ): TemplateResult {
     const { data } = pages.filters;
-    const { canManageAccess } = signedIn.project.rights;
-    const actors = [...signedIn.roster].map((entry) => {
+    const canManageAccess = user.rights.allows("manageAccess");
+    const actors = [...user.roster].map((entry) => {
       return {
         value: entry.id,
         label: entry.username

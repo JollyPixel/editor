@@ -14,11 +14,18 @@ import type { Duplex } from "node:stream";
 import path from "node:path";
 
 // Import Third-party Dependencies
+import { ACCOUNTS_URL_PATH } from "@jolly-pixel/accounts";
 import { DEFAULT_WEBSOCKET_PATH } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import { PROJECT_MANIFEST_FILE } from "../../src/editors/ProjectManifest.ts";
+import { PROJECT_MANIFEST_FILE } from "../../shared/ProjectManifest.ts";
+import {
+  SHARES_URL_PATH,
+  VIEW_PAGES_PREFIX
+} from "../../shared/api/shares.ts";
 import { StudioServer } from "../../server/StudioServer.ts";
+import { ShareLinksClient } from "../../src/shares/ShareLinksClient.ts";
+import { browser } from "../helpers/browser.ts";
 import {
   createDist,
   voxelMapProject
@@ -100,10 +107,7 @@ describe("StudioServer", () => {
       shell,
       allowedHosts: [kPublicHost],
       backend: {
-        inMemory: true,
-        accounts: {
-          inMemory: true
-        }
+        inMemory: true
       }
     });
   }
@@ -134,6 +138,23 @@ describe("StudioServer", () => {
     );
     assert.equal(api.status, 404);
     assert.equal((await api.json()).code, "not-found");
+  });
+
+  test("answers a share link with the editor page compiled into the shell", async() => {
+    await using server = await openServer();
+    const url = await server.listen(0, "127.0.0.1");
+    const owner = browser(new URL(`.${ACCOUNTS_URL_PATH}`, url));
+    await owner.client.register("Alice", "p".repeat(43));
+    const links = new ShareLinksClient({
+      url: new URL(`.${SHARES_URL_PATH}`, url),
+      fetch: owner.fetch
+    });
+    const { link } = await links.create("map-overworld", "1d");
+
+    const page = await fetch(new URL(`.${VIEW_PAGES_PREFIX}${link.token}`, url));
+
+    assert.equal(page.status, 200);
+    assert.match(await page.text(), /<title>Compiled Voxel Map<\/title>/);
   });
 
   test("upgrades a WebSocket only for an allowed host", async() => {

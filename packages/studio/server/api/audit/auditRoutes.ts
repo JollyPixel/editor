@@ -1,39 +1,38 @@
 // Import Third-party Dependencies
 import type { FastifyInstance } from "fastify";
-import type { Accounts } from "@jolly-pixel/accounts/node";
 
 // Import Internal Dependencies
-import {
-  AuditController,
-  type AuditPageRoute
-} from "./AuditController.ts";
+import { signedInAccount } from "../authentication.ts";
 import type { AuditFeed } from "../../audit/AuditFeed.ts";
-import { auditQuerySchema } from "../../../src/audit/routes.ts";
+import {
+  AUDIT_ROUTES,
+  auditQuerySchema,
+  type AuditQuery
+} from "../../../shared/api/audit.ts";
 
 export interface AuditRoutesOptions {
-  accounts: Accounts;
   feed: AuditFeed;
+}
+
+interface AuditPageRoute {
+  Querystring: AuditQuery;
 }
 
 export async function auditRoutes(
   app: FastifyInstance,
   options: AuditRoutesOptions
 ): Promise<void> {
-  const controller = new AuditController(
-    options.accounts,
-    options.feed
-  );
-
-  app.setErrorHandler((error) => {
-    throw controller.failure(error);
-  });
+  const { page } = AUDIT_ROUTES;
 
   app.route<AuditPageRoute>({
-    method: "GET",
-    url: "",
+    method: page.method,
+    url: page.path,
     schema: {
       querystring: auditQuerySchema
     },
-    handler: (request) => controller.page(request)
+    handler: (request) => options.feed.page(
+      signedInAccount(request),
+      request.query
+    )
   });
 }

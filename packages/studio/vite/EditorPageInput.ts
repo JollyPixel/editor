@@ -7,7 +7,7 @@ import path from "node:path";
 import { normalizePath } from "vite";
 
 // Import Internal Dependencies
-import { EDITOR_PAGES_DIR } from "../src/editors/EditorDescriptor.ts";
+import { EDITOR_PAGES_DIR } from "../shared/EditorDescriptor.ts";
 
 // CONSTANTS
 const kPageUrl = /(<(?:script|link)\b[^>]*?\b(?:src|href)=)(["'])([^"']+)\2/g;

@@ -6,8 +6,8 @@ import type { AccountActivity } from "@jolly-pixel/accounts";
 import type {
   AuditCategory,
   AuditRow
-} from "../../src/audit/routes.ts";
-import type { SettingsSectionName } from "../../src/project/routes.ts";
+} from "../../shared/api/audit.ts";
+import type { SettingsSectionName } from "../../shared/api/project.ts";
 
 // CONSTANTS
 export const ENTRY_CATEGORIES = {

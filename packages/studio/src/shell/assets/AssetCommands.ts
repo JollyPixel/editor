@@ -16,8 +16,8 @@ import {
 } from "../../catalog/AssetKindSet.ts";
 import type { AssetPath } from "../../catalog/AssetPath.ts";
 import type { AssetDeletion } from "../../catalog/AssetDeletion.ts";
-import type { DroppedFile } from "../../files/DroppedFile.ts";
-import { FileDownload } from "../../files/FileDownload.ts";
+import type { DroppedFile } from "../../browser/DroppedFile.ts";
+import { FileDownload } from "../../browser/FileDownload.ts";
 import type {
   AssetLeafData,
   AssetNodeData,

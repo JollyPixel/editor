@@ -2,7 +2,7 @@
 import type {
   AuditCategory,
   AuditQuery
-} from "./routes.ts";
+} from "../../shared/api/audit.ts";
 
 export interface AuditFiltersData {
   actor?: string;

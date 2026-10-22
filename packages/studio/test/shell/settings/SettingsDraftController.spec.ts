@@ -11,8 +11,8 @@ import { StudioProjectSettings } from "../../../src/project/StudioProjectSetting
 import type {
   AccessChange,
   ProjectSettingsReply
-} from "../../../src/project/routes.ts";
-import { ProjectSettingsController } from "../../../src/shell/settings/project/ProjectSettingsController.ts";
+} from "../../../shared/api/project.ts";
+import { ProjectRights } from "../../../shared/ProjectRights.ts";
 import { SettingsDraftController } from "../../../src/shell/settings/project/SettingsDraftController.ts";
 
 // CONSTANTS
@@ -49,28 +49,28 @@ async function accessDraft(): Promise<SettingsDraftController<AccessDraft>> {
 
       return reply;
     }
-  }, {
-    canExport: true,
-    canReadSettings: true,
-    canEditSettings: true,
-    canAudit: true,
-    canManageAccess: true
-  });
+  }, new ProjectRights({
+    share: true,
+    export: true,
+    readSettings: true,
+    editSettings: true,
+    audit: true,
+    manageAccess: true
+  }));
   await project.load();
-  const controller = new ProjectSettingsController(kHost);
-  controller.attach(project);
-
-  return new SettingsDraftController(kHost, {
-    project: controller,
+  const controller = new SettingsDraftController(kHost, {
     saved: (data) => (data.access === undefined ? null : AccessDraft.from(data.access)),
     save: (settings, draft) => settings.replaceAccess(draft.toChange())
   });
+  controller.attach(project);
+
+  return controller;
 }
 
 describe("SettingsDraftController", () => {
   test("counts an edit as a change only when it differs from the saved section", async() => {
     const draft = await accessDraft();
-    const saved = draft.current;
+    const saved = draft.draft;
     assert.ok(saved !== null);
 
     draft.edit(saved.withAccessRequests(false));
@@ -82,13 +82,13 @@ describe("SettingsDraftController", () => {
 
   test("drops the edit once saved, so the saved section shows", async() => {
     const draft = await accessDraft();
-    const saved = draft.current;
+    const saved = draft.draft;
     assert.ok(saved !== null);
     draft.edit(saved.withAccessRequests(true));
 
     await draft.save();
 
     assert.equal(draft.edited, false);
-    assert.equal(draft.current?.accessRequests, true);
+    assert.equal(draft.draft?.accessRequests, true);
   });
 });

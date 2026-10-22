@@ -3,7 +3,7 @@ import type {
   AssetKindEntry,
   AssetKindSet
 } from "./AssetKindSet.ts";
-import { DroppedFile } from "../files/DroppedFile.ts";
+import { DroppedFile } from "../browser/DroppedFile.ts";
 
 // CONSTANTS
 export const MAX_DROPPED_FILE_MB = 10;

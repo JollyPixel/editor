@@ -1,11 +1,16 @@
 {
   "extends": "../../tsconfig/lib.json",
   "compilerOptions": {
+    "rootDir": ".",
     "types": [
       "node",
       "vite/client"
     ]
   },
+  "include": [
+    "src",
+    "shared"
+  ],
   "references": [
     {
       "path": "../accounts"

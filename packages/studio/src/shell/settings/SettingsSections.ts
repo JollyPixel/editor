@@ -11,9 +11,10 @@ import { AssetKindSet } from "../../catalog/AssetKindSet.ts";
 import type {
   EditorScopes,
   KindPackageDescriptor
-} from "../../editors/ProjectManifest.ts";
-import { STUDIO_PREFERENCES } from "../../preferences/studioScope.ts";
-import type { ProjectReply } from "../../project/routes.ts";
+} from "../../../shared/ProjectManifest.ts";
+import { STUDIO_PREFERENCES } from "../../../shared/studioScope.ts";
+import { ProjectRights } from "../../../shared/ProjectRights.ts";
+import type { StudioUser } from "../../accounts/StudioUser.ts";
 
 // CONSTANTS
 export const PROFILE_SECTION = "profile";
@@ -107,7 +108,11 @@ export interface SettingsGroup {
 }
 
 export interface SettingsSectionsOptions {
-  signedIn: boolean;
+  /**
+   * The account adds Profile and Share links; its project rights pick the
+   * Project sections.
+   */
+  user: Pick<StudioUser, "online" | "rights">;
   /**
    * The studio and host scopes; editor scopes come with `editors`.
    */
@@ -115,15 +120,14 @@ export interface SettingsSectionsOptions {
   editors?: Iterable<EditorScopes>;
   kindPackages?: Iterable<KindPackageDescriptor>;
   kinds?: AssetKindSet;
-  /**
-   * The signed-in account's project rights, which pick the Project sections.
-   */
-  project?: ProjectReply | null;
 }
 
 export class SettingsSections implements Iterable<SettingsSection> {
   static readonly EMPTY = new SettingsSections({
-    signedIn: false,
+    user: {
+      online: false,
+      rights: ProjectRights.NONE
+    },
     shellScopes: []
   });
 
@@ -136,16 +140,15 @@ export class SettingsSections implements Iterable<SettingsSection> {
     options: SettingsSectionsOptions
   ) {
     const {
-      signedIn,
+      user,
       editors = [],
       kindPackages = [],
-      kinds = AssetKindSet.EMPTY,
-      project = null
+      kinds = AssetKindSet.EMPTY
     } = options;
     const shellScopes = [...options.shellScopes].filter(hasPage);
 
     const you: SettingsSection[] = [];
-    if (signedIn) {
+    if (user.online) {
       you.push(kPages.profile);
     }
     you.push(preferencesPage(
@@ -159,7 +162,7 @@ export class SettingsSections implements Iterable<SettingsSection> {
       }
     }
     you.push(kPages["preferences-file"]);
-    if (project !== null) {
+    if (user.online) {
       you.push(kPages["share-links"]);
     }
 
@@ -168,7 +171,7 @@ export class SettingsSections implements Iterable<SettingsSection> {
         group("you", "You", you),
         group("editors", "Editors", editorPages([...editors], kinds))
       ],
-      project === null ? [] : projectGroups(project, [...kindPackages], kinds)
+      projectGroups(user.rights, [...kindPackages], kinds)
     ]
       .map((block) => block.filter((entry) => entry !== null))
       .filter((block) => block.length > 0);
@@ -201,13 +204,13 @@ export class SettingsSections implements Iterable<SettingsSection> {
 }
 
 function projectGroups(
-  project: ProjectReply,
+  project: ProjectRights,
   kindPackages: readonly KindPackageDescriptor[],
   kinds: AssetKindSet
 ): (SettingsGroup | null)[] {
   const pages: SettingsSection[] = [];
   const kindPackagePages: SettingsSection[] = [];
-  if (project.canReadSettings) {
+  if (project.allows("readSettings")) {
     pages.push(kPages.general);
     for (const kindPackage of kindPackages) {
       kindPackagePages.push({
@@ -218,10 +221,10 @@ function projectGroups(
       });
     }
   }
-  if (project.canManageAccess) {
+  if (project.allows("manageAccess")) {
     pages.push(kPages.access);
   }
-  if (project.canAudit) {
+  if (project.allows("audit")) {
     pages.push(kPages.audit);
   }
 

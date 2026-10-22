@@ -8,7 +8,7 @@ import {
 
 // Import Internal Dependencies
 import type { PreferencesClient } from "./PreferencesClient.ts";
-import { preferenceOverridesSchema } from "./routes.ts";
+import { preferenceOverridesSchema } from "../../shared/api/preferences.ts";
 
 // CONSTANTS
 export const PREFERENCES_CHANNEL = "jolly-pixel:preferences";

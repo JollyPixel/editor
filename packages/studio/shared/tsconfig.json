@@ -1,0 +1,17 @@
+{
+  "extends": [
+    "../tsconfig.json",
+    "../../../tsconfig/check.json"
+  ],
+  "compilerOptions": {
+    "lib": [
+      "ES2024"
+    ],
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "."
+  ]
+}

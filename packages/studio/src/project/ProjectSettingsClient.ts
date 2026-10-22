@@ -4,17 +4,14 @@ import {
   type ApiEndpointOptions
 } from "../api/ApiEndpoint.ts";
 import {
-  ACCESS_SECTION,
-  KINDS_SECTION,
-  PROJECT_SETTINGS_PATH,
+  PROJECT_ROUTES,
   projectReplySchema,
   projectSettingsReplySchema,
   type AccessChange,
   type KindOptions,
-  type ProjectReply,
-  type ProjectSettingsReply,
-  type SettingsSectionName
-} from "./routes.ts";
+  type ProjectSettingsReply
+} from "../../shared/api/project.ts";
+import { ProjectRights } from "../../shared/ProjectRights.ts";
 
 export class ProjectSettingsClient {
   #endpoint: ApiEndpoint;
@@ -25,45 +22,40 @@ export class ProjectSettingsClient {
     this.#endpoint = new ApiEndpoint(options);
   }
 
-  async rights(): Promise<ProjectReply> {
-    const response = await this.#endpoint.send("");
-
-    return projectReplySchema.parse(await response.json());
+  async rights(): Promise<ProjectRights> {
+    return new ProjectRights(
+      await this.#endpoint.json(PROJECT_ROUTES.rights, projectReplySchema)
+    );
   }
 
-  async read(): Promise<ProjectSettingsReply> {
-    const response = await this.#endpoint.send(PROJECT_SETTINGS_PATH);
-
-    return projectSettingsReplySchema.parse(await response.json());
+  read(): Promise<ProjectSettingsReply> {
+    return this.#endpoint.json(
+      PROJECT_ROUTES.settings,
+      projectSettingsReplySchema
+    );
   }
 
   replaceKinds(
     kinds: KindOptions
   ): Promise<ProjectSettingsReply> {
-    return this.#replace(KINDS_SECTION, kinds);
+    return this.#endpoint.json(
+      PROJECT_ROUTES.replaceKinds,
+      projectSettingsReplySchema,
+      {
+        body: kinds
+      }
+    );
   }
 
   replaceAccess(
     change: AccessChange
   ): Promise<ProjectSettingsReply> {
-    return this.#replace(ACCESS_SECTION, change);
-  }
-
-  async #replace(
-    section: SettingsSectionName,
-    value: unknown
-  ): Promise<ProjectSettingsReply> {
-    const response = await this.#endpoint.send(
-      `${PROJECT_SETTINGS_PATH}/${section}`,
+    return this.#endpoint.json(
+      PROJECT_ROUTES.replaceAccess,
+      projectSettingsReplySchema,
       {
-        method: "PUT",
-        headers: {
-          "content-type": "application/json"
-        },
-        body: JSON.stringify(value)
+        body: change
       }
     );
-
-    return projectSettingsReplySchema.parse(await response.json());
   }
 }

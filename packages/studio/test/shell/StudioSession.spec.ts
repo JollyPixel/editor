@@ -11,6 +11,7 @@ import {
   SESSION_RENEWED_MESSAGE_TYPE,
   SHELL_MESSAGE_TYPE
 } from "@jolly-pixel/editor.host";
+import { Preferences } from "@jolly-pixel/editor.host/preferences";
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -153,8 +154,10 @@ describe("StudioSession", () => {
       undefined,
       {
         console: {
-          toggle: () => {
-            toggles++;
+          element: {
+            toggle: () => {
+              toggles++;
+            }
           }
         }
       }
@@ -178,17 +181,21 @@ describe("StudioSession", () => {
       new MemoryStorageAdapter(),
       undefined,
       {
-        renewal: {
-          async renew() {
-            renewals++;
-            for (const listener of renewed) {
-              listener();
-            }
-          },
-          onRenewed(listener) {
-            renewed.add(listener);
+        user: {
+          identity: null,
+          preferences: new Preferences(),
+          renewal: {
+            async renew() {
+              renewals++;
+              for (const listener of renewed) {
+                listener();
+              }
+            },
+            onRenewed(listener) {
+              renewed.add(listener);
 
-            return () => renewed.delete(listener);
+              return () => renewed.delete(listener);
+            }
           }
         }
       }

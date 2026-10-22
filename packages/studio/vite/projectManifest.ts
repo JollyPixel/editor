@@ -5,7 +5,7 @@ import type {
 } from "vite";
 
 // Import Internal Dependencies
-import { PROJECT_MANIFEST_FILE } from "../src/editors/ProjectManifest.ts";
+import { PROJECT_MANIFEST_FILE } from "../shared/ProjectManifest.ts";
 import { ManifestRoute } from "../server/editors/ManifestRoute.ts";
 import type { StudioProject } from "../server/project/StudioProject.ts";
 

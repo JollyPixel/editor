@@ -7,6 +7,7 @@ import {
 } from "@jolly-pixel/controls";
 import type {
   BindingPreference,
+  ChordConflictError,
   PreferenceScope,
   Preferences
 } from "@jolly-pixel/editor.host/preferences";
@@ -67,6 +68,19 @@ export class KeybindingTable {
 
   get scopes(): readonly PreferenceScope[] {
     return this.#scopes;
+  }
+
+  conflictMessage(
+    error: ChordConflictError,
+    scope: PreferenceScope
+  ): string {
+    const chord = BoundChord.parse(error.chord, {
+      apple: this.#options.apple,
+      layout: this.#options.layout?.layout ?? null
+    })?.label ?? error.chord;
+    const owner = scope.fields[error.owner]?.label ?? error.owner;
+
+    return `${chord} is already bound to "${owner}".`;
   }
 
   sections(

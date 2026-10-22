@@ -13,10 +13,10 @@ import {
 } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
-import { PreferenceScopes } from "../../src/preferences/PreferenceScopes.ts";
+import { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
 import { PreferencesFile } from "../../src/preferences/PreferencesFile.ts";
 import { InvalidPreferencesFileError } from "../../src/preferences/errors/InvalidPreferencesFileError.ts";
-import { STUDIO_PREFERENCES } from "../../src/preferences/studioScope.ts";
+import { STUDIO_PREFERENCES } from "../../shared/studioScope.ts";
 
 // CONSTANTS
 const kKeys = defineKeyBindings({

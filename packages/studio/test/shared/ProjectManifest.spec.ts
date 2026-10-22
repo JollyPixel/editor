@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import {
   PROJECT_MANIFEST_FILE,
   ProjectManifest
-} from "../../src/editors/ProjectManifest.ts";
+} from "../../shared/ProjectManifest.ts";
 
 // CONSTANTS
 const kEditors = [
