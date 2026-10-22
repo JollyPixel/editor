@@ -7,7 +7,6 @@ import {
 
 // Import Internal Dependencies
 import type { StudioProject } from "./StudioProject.ts";
-import { ProjectExportRefusedError } from "./errors/ProjectExportRefusedError.ts";
 
 // CONSTANTS
 const kArchiveExtension = ".zip";
@@ -32,18 +31,10 @@ export class ProjectArchive {
     this.fileName = `${options.name}${kArchiveExtension}`;
   }
 
-  canExport(
-    account: Account
-  ): boolean {
-    return this.#project.access.canExport(account.role);
-  }
-
   async export(
     account: Account
   ): Promise<Uint8Array> {
-    if (!this.canExport(account)) {
-      throw new ProjectExportRefusedError();
-    }
+    this.#project.access.projectRights(account.role).require("export");
 
     const archive = await exportAssetArchive(this.#backend);
     if (!archive.ok) {

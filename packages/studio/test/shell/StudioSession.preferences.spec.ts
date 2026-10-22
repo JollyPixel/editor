@@ -42,10 +42,12 @@ describe("StudioSession preferences", () => {
       new MemoryStorageAdapter(),
       undefined,
       {
-        preferences: {
-          values: preferences,
-          scopes: new PreferenceScopes([RUNTIME_PREFERENCES])
-        }
+        user: {
+          identity: null,
+          preferences,
+          renewal: null
+        },
+        scopes: new PreferenceScopes([RUNTIME_PREFERENCES])
       }
     );
     await studio.openAsset("map-1");

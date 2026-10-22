@@ -4,9 +4,24 @@ import { shareLinkSchema } from "@jolly-pixel/accounts";
 
 // Import Internal Dependencies
 import { SHARE_LIFETIMES } from "../ShareLifetime.ts";
+import type { ApiRoute } from "./common.ts";
 
 // CONSTANTS
 export const SHARES_URL_PATH = "/api/shares/";
+export const SHARES_ROUTES = {
+  list: {
+    method: "GET",
+    path: ""
+  },
+  create: {
+    method: "POST",
+    path: ""
+  },
+  revoke: {
+    method: "DELETE",
+    path: ":linkId"
+  }
+} as const satisfies Record<string, ApiRoute>;
 export const VIEW_PAGES_PATH = "view/";
 export const VIEW_PAGES_PREFIX = `/${VIEW_PAGES_PATH}`;
 
@@ -20,8 +35,7 @@ export const createdShareReplySchema = z.object({
 });
 
 export const shareLinksReplySchema = z.object({
-  links: z.array(shareLinkSchema),
-  canShare: z.boolean()
+  links: z.array(shareLinkSchema)
 });
 
 export type CreateShareBody = z.infer<typeof createShareBodySchema>;

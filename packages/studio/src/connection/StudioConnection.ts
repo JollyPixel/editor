@@ -10,27 +10,18 @@ import {
   HOST_PARAMS,
   withOfflineFallback
 } from "@jolly-pixel/editor.host";
-import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 import { Client } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import { StudioSignedIn } from "../accounts/StudioSignedIn.ts";
-import { PreferencesClient } from "../preferences/PreferencesClient.ts";
-import { PREFERENCES_URL_PATH } from "../../shared/api/preferences.ts";
-import { ProjectArchiveClient } from "../project/ProjectArchiveClient.ts";
-import { AuditClient } from "../audit/AuditClient.ts";
-import { AUDIT_URL_PATH } from "../../shared/api/audit.ts";
-import { ProjectSettingsClient } from "../project/ProjectSettingsClient.ts";
-import { PROJECT_URL_PATH } from "../../shared/api/project.ts";
-import { ShareLinksClient } from "../shares/ShareLinksClient.ts";
-import { SHARES_URL_PATH } from "../../shared/api/shares.ts";
+import type { StudioUser } from "../accounts/StudioUser.ts";
+import { StudioClients } from "../api/StudioClients.ts";
 import "../shell/account/SignInDialog.ts";
 
 export interface StudioConnection {
   share: CatalogShare;
   editorQuery: Readonly<Record<string, string>>;
-  signedIn: StudioSignedIn | null;
-  preferences: Preferences;
+  user: StudioUser;
 }
 
 export function connectStudio(): Promise<StudioConnection> {
@@ -52,35 +43,20 @@ async function connectOnline(): Promise<StudioConnection> {
   const accounts = new AccountsClient({
     url: new URL(`.${ACCOUNTS_URL_PATH}`, document.baseURI)
   });
-  const signedIn = await StudioSignedIn.open({
+  const user = await StudioSignedIn.open({
     accounts,
     signIn: () => signIn(accounts),
-    shareLinks: new ShareLinksClient({
-      url: new URL(`.${SHARES_URL_PATH}`, document.baseURI)
-    }),
-    projectArchive: new ProjectArchiveClient({
-      url: new URL(`.${PROJECT_URL_PATH}`, document.baseURI)
-    }),
-    projectSettings: new ProjectSettingsClient({
-      url: new URL(`.${PROJECT_URL_PATH}`, document.baseURI)
-    }),
-    audit: new AuditClient({
-      url: new URL(`.${AUDIT_URL_PATH}`, document.baseURI)
-    }),
-    preferences: new PreferencesClient({
-      url: new URL(`.${PREFERENCES_URL_PATH}`, document.baseURI)
-    }),
+    api: StudioClients.at(document.baseURI),
     connect: (profile) => new Client({ profile }),
     reload: () => location.reload()
   });
 
   return {
-    share: await CatalogShare.open(signedIn.client, {
+    share: await CatalogShare.open(user.client, {
       timeoutMs: CATALOG_TIMEOUT_MS
     }),
     editorQuery: {},
-    signedIn,
-    preferences: signedIn.preferences.preferences
+    user
   };
 }
 

@@ -14,10 +14,8 @@ import {
 } from "@jolly-pixel/accounts";
 
 // Import Internal Dependencies
-import {
-  listenStudioApi,
-  requestStatus
-} from "../../../helpers/studioApi.ts";
+import { requestStatus } from "../../../helpers/browser.ts";
+import { serveBackend } from "../../../helpers/studioBackend.ts";
 
 // CONSTANTS
 const kPng = Buffer.from(
@@ -36,7 +34,7 @@ function activeAccount(
 
 describe("accountsRoutes avatars", () => {
   test("replaces the avatar of the signed-in account and serves it", async() => {
-    await using server = await listenStudioApi();
+    await using server = await serveBackend();
     const { client } = server.browser();
     await client.register("Alice", "correct horse");
 
@@ -59,7 +57,7 @@ describe("accountsRoutes avatars", () => {
   });
 
   test("revalidates an avatar requested without its current hash", async() => {
-    await using server = await listenStudioApi();
+    await using server = await serveBackend();
     const { client } = server.browser();
     await client.register("Alice", "correct horse");
     const account = await client.replaceAvatar(new Blob([kPng]));
@@ -71,7 +69,7 @@ describe("accountsRoutes avatars", () => {
   });
 
   test("answers not-found for an account without an avatar", async() => {
-    await using server = await listenStudioApi();
+    await using server = await serveBackend();
     const account = activeAccount(
       await server.browser().client.register("Alice", "correct horse")
     );
@@ -83,7 +81,7 @@ describe("accountsRoutes avatars", () => {
   });
 
   test("refuses an upload without a session", async() => {
-    await using server = await listenStudioApi();
+    await using server = await serveBackend();
 
     const response = await fetch(new URL("avatar", server.accountsUrl), {
       method: "PUT",
@@ -95,7 +93,7 @@ describe("accountsRoutes avatars", () => {
   });
 
   test("refuses an upload that is not an image", async() => {
-    await using server = await listenStudioApi();
+    await using server = await serveBackend();
     const { client } = server.browser();
     await client.register("Alice", "correct horse");
 
@@ -108,7 +106,7 @@ describe("accountsRoutes avatars", () => {
   });
 
   test("refuses an upload over the size limit", async() => {
-    await using server = await listenStudioApi();
+    await using server = await serveBackend();
     const { client, cookies } = server.browser();
     await client.register("Alice", "correct horse");
     const [[name, value]] = cookies;

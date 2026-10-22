@@ -7,7 +7,7 @@ import path from "node:path";
 import { compose } from "@openally/servo";
 
 // Import Internal Dependencies
-import { EDITOR_PAGES_DIR } from "../shared/EditorDescriptor.ts";
+import { EditorPageFolders } from "./editors/EditorPageFolders.ts";
 import { ManifestRoute } from "./editors/ManifestRoute.ts";
 import type { StudioProject } from "./project/StudioProject.ts";
 import { serveBuild } from "./serveBuild.ts";
@@ -23,7 +23,7 @@ export interface StudioServerOptions {
    * of every project editor under `editors/<name>/`.
    */
   shell: string;
-  backend?: StudioBackendOptions;
+  backend?: Omit<StudioBackendOptions, "editorPages">;
   /**
    * Host header values accepted on the WebSocket upgrade, besides localhost
    * and IP addresses.
@@ -36,20 +36,22 @@ export class StudioServer implements AsyncDisposable {
   static async open(
     options: StudioServerOptions
   ): Promise<StudioServer> {
+    const editorPages = EditorPageFolders.shell(options.shell);
     const pages = [
       path.join(options.shell, "index.html"),
-      ...Array.from(options.project.editors, (editor) => path.join(
-        options.shell,
-        EDITOR_PAGES_DIR,
-        editor.name,
-        "index.html"
-      ))
+      ...Array.from(
+        options.project.editors,
+        (editor) => editorPages.index(editor)
+      )
     ];
     await Promise.all(pages.map(requireBuiltPage));
 
     return new StudioServer(
       options,
-      await StudioBackend.open(options.project, options.backend)
+      await StudioBackend.open(options.project, {
+        ...options.backend,
+        editorPages
+      })
     );
   }
 

@@ -15,26 +15,18 @@ import {
 import { KeyboardLayoutStore } from "@jolly-pixel/controls";
 import {
   ChordConflictError,
-  type BindingPreference,
   type PreferenceScope,
   type Preferences
 } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
-import { BoundChord } from "../../keybindings/BoundChord.ts";
-import { HeldKey } from "../../keybindings/HeldKey.ts";
+import { KeyRecorder } from "../../keybindings/KeyRecorder.ts";
 import {
   KeybindingTable,
   type KeybindingRow,
   type KeybindingSection
 } from "../../keybindings/KeybindingTable.ts";
 import { settingsStyles } from "./settingsStyles.ts";
-
-interface Recording {
-  scope: PreferenceScope;
-  action: string;
-  kind: BindingPreference["type"];
-}
 
 @customElement("studio-keybinding-settings")
 export class KeybindingSettings extends LitElement {
@@ -100,9 +92,6 @@ export class KeybindingSettings extends LitElement {
   declare _query: string;
 
   @state()
-  declare _recording: Recording | null;
-
-  @state()
   declare _error: string;
 
   @state()
@@ -112,6 +101,17 @@ export class KeybindingSettings extends LitElement {
   #unsubscribe: (() => void) | null = null;
   #layout = new KeyboardLayoutStore();
   #stopLayout: (() => void) | null = null;
+  #recorder = new KeyRecorder({
+    onChange: () => this.requestUpdate(),
+    onRecorded: (recording, bindings) => this.#write(
+      recording.scope,
+      (preferences) => preferences.assign(
+        recording.scope,
+        recording.action,
+        bindings
+      )
+    )
+  });
 
   constructor() {
     super();
@@ -119,7 +119,6 @@ export class KeybindingSettings extends LitElement {
     this.shortcutScopes = [];
     this.preferences = null;
     this._query = "";
-    this._recording = null;
     this._error = "";
     this._version = 0;
   }
@@ -139,7 +138,7 @@ export class KeybindingSettings extends LitElement {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.#stopRecording();
+    this.#recorder.stop();
     this.#unsubscribe?.();
     this.#unsubscribe = null;
     this.#stopLayout?.();
@@ -205,8 +204,9 @@ export class KeybindingSettings extends LitElement {
     scope: PreferenceScope,
     row: KeybindingRow
   ): TemplateResult {
-    const recording = this._recording?.scope === scope &&
-      this._recording.action === row.action;
+    const current = this.#recorder.recording;
+    const recording = current?.scope === scope &&
+      current.action === row.action;
     const prompt = row.kind === "key" ? "Press a key" : "Press a shortcut";
 
     return html`
@@ -277,19 +277,12 @@ export class KeybindingSettings extends LitElement {
     scope: PreferenceScope,
     row: KeybindingRow
   ): void {
-    this.#stopRecording();
     this._error = "";
-    this._recording = {
+    this.#recorder.start({
       scope,
       action: row.action,
       kind: row.kind
-    };
-    window.addEventListener("keydown", this.#onKeyDown, { capture: true });
-  }
-
-  #stopRecording(): void {
-    window.removeEventListener("keydown", this.#onKeyDown, { capture: true });
-    this._recording = null;
+    });
   }
 
   #write(
@@ -305,61 +298,12 @@ export class KeybindingSettings extends LitElement {
       write(this.preferences);
     }
     catch (error) {
-      if (!(error instanceof ChordConflictError)) {
+      if (!(error instanceof ChordConflictError) || this.#table === null) {
         throw error;
       }
 
-      const chord = BoundChord.parse(error.chord, {
-        layout: this.#layout.layout
-      })?.label ?? error.chord;
-      const owner = scope.fields[error.owner]?.label ?? error.owner;
-      this._error = `${chord} is already bound to "${owner}".`;
+      this._error = this.#table.conflictMessage(error, scope);
     }
-  }
-
-  readonly #onKeyDown = (
-    event: KeyboardEvent
-  ): void => {
-    const recording = this._recording;
-    if (recording === null) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    if (event.key === "Escape") {
-      this.#stopRecording();
-
-      return;
-    }
-
-    const bindings = this.#capture(recording.kind, event);
-    if (bindings === null) {
-      return;
-    }
-
-    this.#stopRecording();
-    this.#write(
-      recording.scope,
-      (preferences) => preferences.assign(
-        recording.scope,
-        recording.action,
-        bindings
-      )
-    );
-  };
-
-  #capture(
-    kind: BindingPreference["type"],
-    event: KeyboardEvent
-  ): readonly string[] | null {
-    if (kind === "key") {
-      return HeldKey.capture(event)?.codes ?? null;
-    }
-
-    const chord = BoundChord.capture(event);
-
-    return chord === null ? null : [chord.value];
   }
 }
 

@@ -22,7 +22,7 @@ import { ShareLinksClient } from "../../src/shares/ShareLinksClient.ts";
 import { SHARES_URL_PATH } from "../../shared/api/shares.ts";
 import { guestSocket } from "../helpers/shares.ts";
 import { serveBackend } from "../helpers/studioBackend.ts";
-import { browser } from "../helpers/studioApi.ts";
+import { browser } from "../helpers/browser.ts";
 
 // CONSTANTS
 const kPassword = "p".repeat(43);

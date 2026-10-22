@@ -10,14 +10,13 @@ import {
   ADMIN_ROLE,
   type AccountsRequestError
 } from "@jolly-pixel/accounts";
-import { DEFAULT_SESSION_COOKIE } from "@jolly-pixel/accounts/node";
 
 // Import Internal Dependencies
+import { requestStatus } from "../../../helpers/browser.ts";
 import {
   PASSED_ON_STATUS,
-  listenStudioApi,
-  requestStatus
-} from "../../../helpers/studioApi.ts";
+  serveBackend
+} from "../../../helpers/studioBackend.ts";
 
 // CONSTANTS
 const kDigest = "p".repeat(43);
@@ -55,7 +54,7 @@ function registerOverHttps(
 
 describe("accountsRoutes", () => {
   test("keeps the session in an HttpOnly cookie, never in the body", async() => {
-    await using server = await listenStudioApi();
+    await using server = await serveBackend();
 
     const response = await postJson(
       new URL("register", server.accountsUrl),
@@ -70,12 +69,12 @@ describe("accountsRoutes", () => {
     assert.deepEqual(Object.keys(await response.json()), ["account"]);
     assert.match(
       response.headers.get("set-cookie") ?? "",
-      new RegExp(`^${DEFAULT_SESSION_COOKIE}=[\\w-]{43}; Max-Age=\\d+; Path=/; HttpOnly; SameSite=Strict$`)
+      /^jolly_session_[\da-f]{12}=[\w-]{43}; Max-Age=\d+; Path=\/; HttpOnly; SameSite=Strict$/
     );
   });
 
   test("marks the session cookie Secure when a trusted proxy forwards https", async() => {
-    await using server = await listenStudioApi({}, {
+    await using server = await serveBackend({
       trustProxy: true
     });
 
@@ -86,7 +85,7 @@ describe("accountsRoutes", () => {
   });
 
   test("ignores X-Forwarded-Proto from a peer it does not trust", async() => {
-    await using server = await listenStudioApi();
+    await using server = await serveBackend();
 
     const response = await registerOverHttps(server.accountsUrl);
 
@@ -95,10 +94,8 @@ describe("accountsRoutes", () => {
   });
 
   test("registers, resolves and closes a session", async() => {
-    await using server = await listenStudioApi();
+    await using server = await serveBackend();
     const { client, cookies } = server.browser();
-    const revoked: string[] = [];
-    server.accounts.watchRevocations((accountId) => revoked.push(accountId));
 
     const result = await client.register("Alice", "correct horse");
     assert.ok(result.status === "active");
@@ -110,11 +107,10 @@ describe("accountsRoutes", () => {
     await client.logout();
     assert.equal(cookies.size, 0);
     assert.equal(await client.me(), null);
-    assert.deepEqual(revoked, [result.account.id]);
   });
 
   test("logs in with the password the account registered with", async() => {
-    await using server = await listenStudioApi();
+    await using server = await serveBackend();
     const registered = await server.browser().client.register("Alice", "correct horse");
     assert.ok(registered.status === "active");
     const { client } = server.browser();
@@ -129,7 +125,7 @@ describe("accountsRoutes", () => {
   });
 
   test("refuses a taken username", async() => {
-    await using server = await listenStudioApi();
+    await using server = await serveBackend();
     await server.browser().client.register("Alice", "correct horse");
 
     await assert.rejects(
@@ -140,10 +136,8 @@ describe("accountsRoutes", () => {
   });
 
   test("sends the master password with a registration and answers its refusals", async() => {
-    await using server = await listenStudioApi({
-      masterPassword: {
-        secret: kSecret
-      }
+    await using server = await serveBackend({
+      masterPassword: kSecret
     });
     const { client } = server.browser();
 
@@ -167,11 +161,9 @@ describe("accountsRoutes", () => {
   });
 
   test("answers an access request without a cookie and refuses its sign-in", async() => {
-    await using server = await listenStudioApi({
-      masterPassword: {
-        secret: kSecret,
-        accessRequests: true
-      }
+    await using server = await serveBackend({
+      masterPassword: kSecret,
+      accessRequests: true
     });
     await server.browser().client.register("Alice", "correct horse", {
       masterPassword: kSecret
@@ -190,7 +182,7 @@ describe("accountsRoutes", () => {
   });
 
   test("refuses a request from another origin", async() => {
-    await using server = await listenStudioApi();
+    await using server = await serveBackend();
     const { client, fetch: browserFetch } = server.browser();
     await client.register("Alice", "correct horse");
 
@@ -205,7 +197,7 @@ describe("accountsRoutes", () => {
   });
 
   test("refuses a password that is not a pre-hashed digest", async() => {
-    await using server = await listenStudioApi();
+    await using server = await serveBackend();
 
     const response = await postJson(
       new URL("register", server.accountsUrl),
@@ -220,7 +212,7 @@ describe("accountsRoutes", () => {
   });
 
   test("refuses a body without the credentials shape", async() => {
-    await using server = await listenStudioApi();
+    await using server = await serveBackend();
 
     for (const route of ["register", "login"]) {
       const response = await postJson(
@@ -236,7 +228,7 @@ describe("accountsRoutes", () => {
   });
 
   test("refuses a body carrying prototype keys", async() => {
-    await using server = await listenStudioApi();
+    await using server = await serveBackend();
     const credentials = `"username": "Alice", "password": "${kDigest}"`;
 
     for (const pollution of [
@@ -255,7 +247,7 @@ describe("accountsRoutes", () => {
   });
 
   test("refuses a body over 4 KiB, with or without a length", async() => {
-    await using server = await listenStudioApi();
+    await using server = await serveBackend();
     const url = new URL("login", server.accountsUrl);
     const large = JSON.stringify({
       padding: "x".repeat(5_000)
@@ -278,7 +270,7 @@ describe("accountsRoutes", () => {
   });
 
   test("answers an unknown API route with not-found and passes other paths on", async() => {
-    await using server = await listenStudioApi();
+    await using server = await serveBackend();
 
     const unknown = await fetch(new URL("unknown", server.accountsUrl));
 

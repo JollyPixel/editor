@@ -17,11 +17,15 @@ import {
 import {
   AUDIT_RIGHT,
   BUILT_IN_ROLES,
+  EXPORT_RIGHT,
   SETTINGS_RIGHT,
+  SHARE_RIGHT,
   accessSectionSchema,
+  namedRight,
   type AccessSection,
-  type ProjectReply
+  type NamedRight
 } from "../../shared/api/project.ts";
+import { ProjectRights } from "../../shared/ProjectRights.ts";
 
 // CONSTANTS
 const kAdminRights = {
@@ -34,8 +38,6 @@ const kGuestRights = {
   "*.$presence": "write",
   "*": "read"
 } as const;
-export const SHARE_RIGHT = "studio.$share";
-export const EXPORT_RIGHT = "studio.$export";
 
 export const DEFAULT_ACCESS = {
   defaultRole: "spectator",
@@ -134,28 +136,17 @@ export class StudioAccess {
 
   projectRights(
     role: string
-  ): ProjectReply {
+  ): ProjectRights {
     const settings = this.#named(role, SETTINGS_RIGHT);
 
-    return {
-      canExport: this.canExport(role),
-      canReadSettings: settings !== "void",
-      canEditSettings: settings === "write",
-      canAudit: this.#named(role, AUDIT_RIGHT) !== "void",
-      canManageAccess: role === ADMIN_ROLE
-    };
-  }
-
-  canShare(
-    role: string
-  ): boolean {
-    return this.#table.check(role, SHARE_RIGHT) === "write";
-  }
-
-  canExport(
-    role: string
-  ): boolean {
-    return this.#table.check(role, EXPORT_RIGHT) === "write";
+    return new ProjectRights({
+      share: this.#table.check(role, SHARE_RIGHT) === "write",
+      export: this.#table.check(role, EXPORT_RIGHT) === "write",
+      readSettings: settings !== "void",
+      editSettings: settings === "write",
+      audit: this.#named(role, AUDIT_RIGHT) !== "void",
+      manageAccess: role === ADMIN_ROLE
+    });
   }
 
   toJSON(): StudioAccessData {
@@ -164,18 +155,14 @@ export class StudioAccess {
 
   #named(
     role: string,
-    key: string
+    name: NamedRight
   ): Right {
     if (role === ADMIN_ROLE) {
       return "write";
     }
 
-    const rules = Object.hasOwn(this.#data.roles, role) ?
-      this.#data.roles[role] :
-      undefined;
-
-    return rules !== undefined && Object.hasOwn(rules, key) ?
-      rules[key] :
+    return Object.hasOwn(this.#data.roles, role) ?
+      namedRight(this.#data.roles[role], name) :
       "void";
   }
 }

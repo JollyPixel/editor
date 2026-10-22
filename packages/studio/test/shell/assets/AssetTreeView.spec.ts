@@ -62,18 +62,33 @@ interface TreeViewProbe {
   browserState: BrowserState;
   errors: string[];
   created: string[];
+  prompted: string[];
 }
 
 function treeView(
-  catalog: FakeTreeCatalog
+  catalog: FakeTreeCatalog,
+  sharing = false
 ): TreeViewProbe {
   const browserState = new BrowserState(new MemoryStorageAdapter());
   const errors: string[] = [];
   const created: string[] = [];
+  const prompted: string[] = [];
   const view = new AssetTreeView({
     catalog,
     kinds: kKinds,
     browserState,
+    prompts: {
+      open: (assetId) => prompted.push(`open ${assetId}`),
+      rename: (nodeId) => prompted.push(`rename ${nodeId}`),
+      share: sharing ?
+        (asset) => prompted.push(`share ${asset.id}`) :
+        null,
+      confirmDelete: async() => {
+        prompted.push("confirm delete");
+
+        return null;
+      }
+    },
     onChange: () => undefined,
     onError: (message) => errors.push(message),
     onCreated: (nodeId) => created.push(nodeId)
@@ -83,7 +98,8 @@ function treeView(
     view,
     browserState,
     errors,
-    created
+    created,
+    prompted
   };
 }
 
@@ -203,5 +219,40 @@ describe("AssetTreeView", () => {
     assert.deepEqual(created, [assetNodeId(assetId)]);
     assert.deepEqual(view.selected, [assetNodeId(assetId)]);
     assert.ok(view.expanded.has(folderNodeId(AssetPath.parse("maps"))));
+  });
+});
+
+describe("AssetTreeView actions", () => {
+  test("offers share only when the studio can share, and only on one asset", () => {
+    const catalog = new FakeTreeCatalog([kMap], ["maps"]);
+    const maps = folderNodeId(AssetPath.parse("maps"));
+    const map = assetNodeId(kMap.id);
+    const offline = treeView(catalog);
+    const online = treeView(catalog, true);
+
+    offline.view.run("share", [map]);
+    online.view.run("share", [maps]);
+    online.view.run("share", [map]);
+
+    assert.deepEqual(
+      [offline.view.allows("share", [map]), online.view.allows("share", [maps])],
+      [false, false]
+    );
+    assert.deepEqual(offline.prompted, []);
+    assert.deepEqual(online.prompted, [`share ${kMap.id}`]);
+  });
+
+  test("opens and renames through the page's prompts, rename on one row only", () => {
+    const catalog = new FakeTreeCatalog([kMap, kModel], ["maps"]);
+    const { view, prompted } = treeView(catalog);
+    const map = assetNodeId(kMap.id);
+    const model = assetNodeId(kModel.id);
+
+    view.run("open", [map]);
+    view.run("rename", [map, model]);
+    view.select([model]);
+    view.run("rename");
+
+    assert.deepEqual(prompted, [`open ${kMap.id}`, `rename ${model}`]);
   });
 });

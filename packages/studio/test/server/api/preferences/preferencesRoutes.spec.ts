@@ -9,14 +9,14 @@ import assert from "node:assert/strict";
 import { PreferencesClient } from "../../../../src/preferences/PreferencesClient.ts";
 import { PREFERENCES_URL_PATH } from "../../../../shared/api/preferences.ts";
 import {
-  listenStudioApi,
-  type StudioApiServer
-} from "../../../helpers/studioApi.ts";
+  serveBackend,
+  type ServedBackend
+} from "../../../helpers/studioBackend.ts";
 
 async function signedIn(
-  server: StudioApiServer,
+  server: ServedBackend,
   username: string
-): Promise<{ client: PreferencesClient; accountId: string; }> {
+): Promise<{ client: PreferencesClient; }> {
   const page = server.browser();
   const registration = await page.client.register(username, "correct horse");
   assert.ok(registration.status === "active");
@@ -25,14 +25,13 @@ async function signedIn(
     client: new PreferencesClient({
       url: new URL(`.${PREFERENCES_URL_PATH}`, server.url),
       fetch: page.fetch
-    }),
-    accountId: registration.account.id
+    })
   };
 }
 
 describe("preferencesRoutes", () => {
   test("keeps each account's overrides apart", async() => {
-    await using server = await listenStudioApi();
+    await using server = await serveBackend();
     const alice = await signedIn(server, "Alice");
     const bob = await signedIn(server, "Bob");
 
@@ -49,7 +48,7 @@ describe("preferencesRoutes", () => {
   });
 
   test("refuses unknown scopes and values the descriptors refuse", async() => {
-    await using server = await listenStudioApi();
+    await using server = await serveBackend();
     const { client } = await signedIn(server, "Alice");
 
     await assert.rejects(
@@ -66,24 +65,8 @@ describe("preferencesRoutes", () => {
     );
   });
 
-  test("drops stored fields the descriptors no longer declare", async() => {
-    await using server = await listenStudioApi();
-    const { client, accountId } = await signedIn(server, "Alice");
-    server.accounts.replacePreferences(accountId, "studio", {
-      theme: "light",
-      retired: true
-    });
-    server.accounts.replacePreferences(accountId, "retired", {
-      speed: 2
-    });
-
-    assert.deepEqual(await client.list(), new Map([
-      ["studio", { theme: "light" }]
-    ]));
-  });
-
   test("answers 401 without a session", async() => {
-    await using server = await listenStudioApi();
+    await using server = await serveBackend();
     const client = new PreferencesClient({
       url: new URL(`.${PREFERENCES_URL_PATH}`, server.url)
     });

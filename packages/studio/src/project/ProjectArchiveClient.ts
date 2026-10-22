@@ -5,7 +5,7 @@ import {
 } from "../api/ApiEndpoint.ts";
 import { FileDownload } from "../browser/FileDownload.ts";
 import { AttachmentDisposition } from "../../shared/AttachmentDisposition.ts";
-import { PROJECT_ARCHIVE_PATH } from "../../shared/api/project.ts";
+import { PROJECT_ROUTES } from "../../shared/api/project.ts";
 
 // CONSTANTS
 const kFallbackFileName = "project.zip";
@@ -20,7 +20,7 @@ export class ProjectArchiveClient {
   }
 
   async download(): Promise<FileDownload> {
-    const response = await this.#endpoint.send(PROJECT_ARCHIVE_PATH);
+    const response = await this.#endpoint.send(PROJECT_ROUTES.archive);
     const disposition = AttachmentDisposition.parse(
       response.headers.get("content-disposition")
     );

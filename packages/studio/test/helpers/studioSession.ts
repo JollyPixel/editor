@@ -18,7 +18,6 @@ import {
 import { idleShare } from "./catalogShare.ts";
 
 // CONSTANTS
-export const SETTINGS_PAGE_ID = "studio:settings";
 export const MAP_RECORD: AssetRecordData = {
   id: "map-1",
   kind: "voxelmap",
@@ -100,6 +99,23 @@ export function session(
   document.body.append(strip, frames, home, settings);
   current = new StudioSession({
     catalog,
+    share: idleShare(),
+    user: {
+      identity: null,
+      preferences: new Preferences(),
+      renewal: null
+    },
+    scopes: new PreferenceScopes([]),
+    launchOrigin: "http://localhost",
+    slots: {
+      strip,
+      frames,
+      home,
+      settings
+    },
+    cap,
+    browserState: new BrowserState(storage),
+    ...extra,
     editors: new EditorRegistry()
       .registerKind({
         kind: "voxelmap",
@@ -114,31 +130,7 @@ export function session(
       .registerEditor({
         name: "voxel-model",
         kinds: ["voxelmodel"]
-      }),
-    tabs: {
-      strip,
-      home,
-      pages: [
-        {
-          id: SETTINGS_PAGE_ID,
-          label: "Settings",
-          icon: "settings",
-          element: settings
-        }
-      ],
-      cap
-    },
-    frames: {
-      container: frames,
-      launchOrigin: "http://localhost",
-      share: idleShare()
-    },
-    browserState: new BrowserState(storage),
-    ...extra,
-    preferences: extra.preferences ?? {
-      values: new Preferences(),
-      scopes: new PreferenceScopes([])
-    }
+      })
   });
 
   return current;

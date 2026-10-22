@@ -14,7 +14,7 @@ import { AUDIT_URL_PATH } from "../../../../shared/api/audit.ts";
 import { KindOptionsDraft } from "../../../../src/project/KindOptionsDraft.ts";
 import { ProjectSettingsClient } from "../../../../src/project/ProjectSettingsClient.ts";
 import { PROJECT_URL_PATH } from "../../../../shared/api/project.ts";
-import { browser } from "../../../helpers/studioApi.ts";
+import { browser } from "../../../helpers/browser.ts";
 import {
   serveBackend,
   type ServedBackend

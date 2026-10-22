@@ -169,7 +169,7 @@ describe("ProjectSettings", () => {
       "spectator",
       "reviewer"
     ]);
-    assert.equal(harness.project.access.canExport("spectator"), false);
+    assert.equal(harness.project.access.projectRights("spectator").allows("export"), false);
   });
 
   test("refuses access requests without a master password and leaves the access unchanged", async() => {

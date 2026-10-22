@@ -4,6 +4,7 @@ import {
   type ApiEndpointOptions
 } from "../api/ApiEndpoint.ts";
 import {
+  SHARES_ROUTES,
   createdShareReplySchema,
   shareLinksReplySchema,
   type CreatedShareReply,
@@ -20,35 +21,29 @@ export class ShareLinksClient {
     this.#endpoint = new ApiEndpoint(options);
   }
 
-  async list(): Promise<ShareLinksReply> {
-    const response = await this.#endpoint.send("");
-
-    return shareLinksReplySchema.parse(await response.json());
+  list(): Promise<ShareLinksReply> {
+    return this.#endpoint.json(SHARES_ROUTES.list, shareLinksReplySchema);
   }
 
-  async create(
+  create(
     assetId: string,
     lifetime: ShareLifetimeName
   ): Promise<CreatedShareReply> {
-    const response = await this.#endpoint.send("", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
+    return this.#endpoint.json(SHARES_ROUTES.create, createdShareReplySchema, {
+      body: {
         assetId,
         lifetime
-      })
+      }
     });
-
-    return createdShareReplySchema.parse(await response.json());
   }
 
   async revoke(
     linkId: string
   ): Promise<void> {
-    await this.#endpoint.send(encodeURIComponent(linkId), {
-      method: "DELETE"
+    await this.#endpoint.send(SHARES_ROUTES.revoke, {
+      params: {
+        linkId
+      }
     });
   }
 }

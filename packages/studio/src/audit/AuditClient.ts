@@ -4,6 +4,7 @@ import {
   type ApiEndpointOptions
 } from "../api/ApiEndpoint.ts";
 import {
+  AUDIT_ROUTES,
   auditPageSchema,
   type AuditPage,
   type AuditQuery
@@ -18,19 +19,11 @@ export class AuditClient {
     this.#endpoint = new ApiEndpoint(options);
   }
 
-  async page(
+  page(
     query: AuditQuery = {}
   ): Promise<AuditPage> {
-    const search = new URLSearchParams();
-    for (const [name, value] of Object.entries(query)) {
-      if (value !== undefined) {
-        search.set(name, String(value));
-      }
-    }
-    const response = await this.#endpoint.send(
-      search.size === 0 ? "" : `?${search}`
-    );
-
-    return auditPageSchema.parse(await response.json());
+    return this.#endpoint.json(AUDIT_ROUTES.page, auditPageSchema, {
+      query
+    });
   }
 }

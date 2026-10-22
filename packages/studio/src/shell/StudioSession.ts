@@ -1,6 +1,11 @@
 // Import Third-party Dependencies
 import type { AssetRecordData } from "@jolly-pixel/asset";
-import type { ShellCommand } from "@jolly-pixel/editor.host";
+import {
+  FrameConsoles,
+  type FrameConsolesOptions,
+  type LaunchIdentity,
+  type ShellCommand
+} from "@jolly-pixel/editor.host";
 import {
   InvalidPreferencesError,
   type PreferenceOverrides,
@@ -21,9 +26,13 @@ import {
   EditorTabs,
   type EditorTabOpenOptions,
   type EditorTabsOptions,
-  type EditorTabTitle
+  type EditorTabTitle,
+  type TabStrip
 } from "../tabs/EditorTabs.ts";
 import { SavedTabs } from "../tabs/SavedTabs.ts";
+
+// CONSTANTS
+export const SETTINGS_TAB_ID = "studio:settings";
 
 export interface StudioCatalog {
   record(
@@ -46,31 +55,52 @@ export interface StudioSessionRenewal {
   ): () => void;
 }
 
-export interface StudioSessionPreferences {
-  values: Preferences;
-  scopes: PreferenceScopes;
-}
-
-export interface StudioSessionConsole {
-  toggle(): void;
-}
-
-export interface StudioSessionOptions {
-  catalog: StudioCatalog;
-  editors: EditorRegistry;
-  tabs: Omit<EditorTabsOptions, "frames" | "onChange">;
-  frames: Omit<EditorFramesOptions, "onShellCommand" | "preferences">;
+export interface StudioSessionUser {
+  readonly identity: LaunchIdentity | null;
   /**
    * What frames read with their launch and change with `update-preferences`.
    */
-  preferences: StudioSessionPreferences;
-  onTabsChange?: () => void;
+  readonly preferences: Preferences;
+  readonly renewal: StudioSessionRenewal | null;
+}
+
+export interface StudioSessionConsole {
+  readonly element: {
+    toggle(): void;
+  };
+  /**
+   * Mirrors the active frame's console namespaces when given.
+   */
+  readonly commands?: FrameConsolesOptions["commands"];
+}
+
+export interface StudioSessionSlots {
+  strip: TabStrip;
+  frames: HTMLElement;
+  home: HTMLElement;
+  settings: HTMLElement;
+}
+
+export interface StudioSessionOptions extends Pick<
+  EditorTabsOptions,
+  "cap" | "confirmEvict" | "confirmClose"
+> {
+  catalog: StudioCatalog;
+  share: EditorFramesOptions["share"];
+  user: StudioSessionUser;
+  scopes: PreferenceScopes;
+  editors: EditorRegistry;
+  slots: StudioSessionSlots;
   console?: StudioSessionConsole;
-  renewal?: StudioSessionRenewal;
+  onTabsChange?: () => void;
   /**
    * @default new BrowserState()
    */
   browserState?: BrowserState;
+  /**
+   * @default location.origin
+   */
+  launchOrigin?: string;
 }
 
 export class StudioSession {
@@ -83,8 +113,8 @@ export class StudioSession {
   #browserState: BrowserState;
   #onTabsChange: (() => void) | undefined;
   #console: StudioSessionConsole | undefined;
-  #renewal: StudioSessionRenewal | undefined;
-  #preferences: StudioSessionPreferences;
+  #user: StudioSessionUser;
+  #scopes: PreferenceScopes;
   #stopRenewal: (() => void) | undefined;
   #restoring = false;
   #listening = new AbortController();
@@ -92,26 +122,46 @@ export class StudioSession {
   constructor(
     options: StudioSessionOptions
   ) {
+    const { slots, user } = options;
     this.#catalog = options.catalog;
     this.#editors = options.editors;
     this.#browserState = options.browserState ?? new BrowserState();
     this.#onTabsChange = options.onTabsChange;
     this.#console = options.console;
-    this.#renewal = options.renewal;
-    this.#preferences = options.preferences;
+    this.#user = user;
+    this.#scopes = options.scopes;
     this.kinds = options.editors.kindSet();
+    const commands = options.console?.commands;
     this.#frames = new EditorFrames({
-      ...options.frames,
-      preferences: options.preferences.values,
+      container: slots.frames,
+      launchOrigin: options.launchOrigin,
+      share: options.share,
+      identity: () => user.identity,
+      consoles: commands === undefined ?
+        undefined :
+        new FrameConsoles({ commands }),
+      preferences: user.preferences,
       onShellCommand: this.#onShellCommand
     });
     this.tabs = new EditorTabs({
-      ...options.tabs,
+      strip: slots.strip,
+      home: slots.home,
+      pages: [
+        {
+          id: SETTINGS_TAB_ID,
+          label: "Settings",
+          icon: "settings",
+          element: slots.settings
+        }
+      ],
+      cap: options.cap,
+      confirmEvict: options.confirmEvict,
+      confirmClose: options.confirmClose,
       frames: this.#frames,
       onChange: this.#onChange
     });
     this.#catalog.on("change", this.#syncTabs);
-    this.#stopRenewal = this.#renewal?.onRenewed(
+    this.#stopRenewal = user.renewal?.onRenewed(
       () => this.#frames.notifySessionRenewed()
     );
     window.addEventListener("beforeunload", this.#onBeforeUnload, {
@@ -120,7 +170,11 @@ export class StudioSession {
   }
 
   toggleConsole(): void {
-    this.#console?.toggle();
+    this.#console?.element.toggle();
+  }
+
+  openSettings(): void {
+    this.tabs.openPage(SETTINGS_TAB_ID);
   }
 
   async openAsset(
@@ -223,7 +277,7 @@ export class StudioSession {
         this.toggleConsole();
         break;
       case "session-refused":
-        void this.#renewal?.renew();
+        void this.#user.renewal?.renew();
         break;
       case "unsaved":
         this.tabs.markUnsaved(from, command.unsaved);
@@ -247,13 +301,13 @@ export class StudioSession {
     name: string,
     patch: PreferenceOverrides
   ): void {
-    const scope = this.#preferences.scopes.find(name);
+    const scope = this.#scopes.find(name);
     if (scope === undefined) {
       return;
     }
 
     try {
-      this.#preferences.values.update(scope, patch);
+      this.#user.preferences.update(scope, patch);
     }
     catch (error) {
       if (!(error instanceof InvalidPreferencesError)) {

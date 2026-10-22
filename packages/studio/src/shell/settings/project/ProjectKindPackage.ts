@@ -22,7 +22,6 @@ import type {
   KindOptionVector2
 } from "../../../../shared/api/project.ts";
 import { settingsStyles } from "../settingsStyles.ts";
-import { ProjectSettingsController } from "./ProjectSettingsController.ts";
 import { SettingsDraftController } from "./SettingsDraftController.ts";
 
 interface KindOptionForm {
@@ -43,9 +42,7 @@ export class ProjectKindPackage extends LitElement {
     }
   `];
 
-  #project = new ProjectSettingsController(this);
   #draft = new SettingsDraftController(this, {
-    project: this.#project,
     saved: (data) => KindOptionsDraft.from(data.kinds),
     save: (project, draft) => project.replaceKinds(draft.toJSON())
   });
@@ -60,18 +57,17 @@ export class ProjectKindPackage extends LitElement {
   set project(
     project: StudioProjectSettings
   ) {
-    this.#draft.reset();
-    this.#project.attach(project);
+    this.#draft.attach(project);
   }
 
   override render(): TemplateResult | typeof nothing {
-    const project = this.#project.current;
+    const { project } = this.#draft;
     const kindPackage = project?.data?.kinds.find(
       (candidate) => candidate.name === this.packageName
     );
-    const draft = this.#draft.current;
+    const { draft } = this.#draft;
     if (project === null || kindPackage === undefined || draft === null) {
-      return this.#project.error();
+      return this.#draft.error();
     }
 
     const form: KindOptionForm = {
@@ -80,7 +76,7 @@ export class ProjectKindPackage extends LitElement {
     };
 
     return html`
-      ${this.#project.error()}
+      ${this.#draft.error()}
       ${kindPackage.sections.length === 0 ?
         html`<pre>${JSON.stringify(kindPackage.options, null, 2)}</pre>` :
         kindPackage.sections.map((section) => this.#section(form, section))}

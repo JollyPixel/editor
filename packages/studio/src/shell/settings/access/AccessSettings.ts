@@ -10,7 +10,6 @@ import { customElement } from "lit/decorators.js";
 // Import Internal Dependencies
 import { AccessDraft } from "../../../project/AccessDraft.ts";
 import type { StudioProjectSettings } from "../../../project/StudioProjectSettings.ts";
-import { ProjectSettingsController } from "../project/ProjectSettingsController.ts";
 import { SettingsDraftController } from "../project/SettingsDraftController.ts";
 import {
   settingsColumnsStyles,
@@ -22,9 +21,7 @@ import "./RolesEditor.ts";
 export class AccessSettings extends LitElement {
   static override styles = [settingsStyles, settingsColumnsStyles];
 
-  #project = new ProjectSettingsController(this);
   #draft = new SettingsDraftController(this, {
-    project: this.#project,
     saved: (data) => (data.access === undefined ? null : AccessDraft.from(data.access)),
     save: (project, draft) => project.replaceAccess(draft.toChange())
   });
@@ -32,18 +29,17 @@ export class AccessSettings extends LitElement {
   set project(
     project: StudioProjectSettings
   ) {
-    this.#draft.reset();
-    this.#project.attach(project);
+    this.#draft.attach(project);
   }
 
   override render(): TemplateResult | typeof nothing {
-    const draft = this.#draft.current;
+    const { draft } = this.#draft;
     if (draft === null) {
-      return this.#project.error();
+      return this.#draft.error();
     }
 
     return html`
-      ${this.#project.error()}
+      ${this.#draft.error()}
       <div class="columns split">
         <section aria-label="Roles">
           <jolly-separator label="Roles"></jolly-separator>

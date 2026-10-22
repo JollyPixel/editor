@@ -22,12 +22,11 @@ import {
   type AccessSection,
   type KindOptions,
   type KindPackageSettings,
-  type ProjectReply,
   type ProjectSettingsReply
 } from "../../shared/api/project.ts";
+import type { ProjectRights } from "../../shared/ProjectRights.ts";
 import { InvalidSettingsError } from "./errors/InvalidSettingsError.ts";
 import { RoleInUseError } from "./errors/RoleInUseError.ts";
-import { SettingsRefusedError } from "./errors/SettingsRefusedError.ts";
 
 export interface ProjectSettingsOptions {
   project: StudioProject;
@@ -65,7 +64,7 @@ export class ProjectSettings {
 
   rights(
     account: Account
-  ): ProjectReply {
+  ): ProjectRights {
     return this.#project.access.projectRights(account.role);
   }
 
@@ -73,9 +72,7 @@ export class ProjectSettings {
     account: Account
   ): ProjectSettingsReply {
     const rights = this.rights(account);
-    if (!rights.canReadSettings) {
-      throw new SettingsRefusedError("this role cannot read the project settings");
-    }
+    rights.require("readSettings");
 
     const data: ProjectSettingsReply = {
       name: this.#project.name,
@@ -84,7 +81,7 @@ export class ProjectSettings {
         (kindPackage) => this.#kindPackage(kindPackage)
       )
     };
-    if (rights.canManageAccess) {
+    if (rights.allows("manageAccess")) {
       data.access = this.#project.access.toJSON();
     }
 
@@ -96,9 +93,7 @@ export class ProjectSettings {
     kinds: KindOptions
   ): Promise<ProjectSettingsReply> {
     return this.#serialize(account, async() => {
-      if (!this.rights(account).canEditSettings) {
-        throw new SettingsRefusedError("this role cannot change the project settings");
-      }
+      this.rights(account).require("editSettings");
       await this.#replaceKinds(account.id, kinds);
     });
   }
@@ -108,9 +103,7 @@ export class ProjectSettings {
     change: AccessChange
   ): Promise<ProjectSettingsReply> {
     return this.#serialize(account, async() => {
-      if (!this.rights(account).canManageAccess) {
-        throw new SettingsRefusedError("only an admin changes the access settings");
-      }
+      this.rights(account).require("manageAccess");
       await this.#replaceAccess(account.id, change);
     });
   }

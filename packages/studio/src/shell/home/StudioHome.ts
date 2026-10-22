@@ -11,11 +11,15 @@ import {
   property,
   state
 } from "lit/decorators.js";
-import type { Account } from "@jolly-pixel/accounts";
 
 // Import Internal Dependencies
 import type { StudioSignedIn } from "../../accounts/StudioSignedIn.ts";
+import {
+  STUDIO_USER_CHANGE,
+  type StudioUser
+} from "../../accounts/StudioUser.ts";
 import { BrowserState } from "../../browser/BrowserState.ts";
+import { ChangeController } from "../ChangeController.ts";
 import { StudioErrorEvent } from "../StudioErrorEvent.ts";
 import type { AssetBrowserOptions } from "../assets/AssetBrowser.ts";
 import type { EditorTab } from "../../tabs/EditorTabs.ts";
@@ -135,28 +139,32 @@ export class StudioHome extends LitElement {
   declare openTabs: readonly EditorTab[];
 
   @property({ attribute: false })
-  declare signedIn: StudioSignedIn | null;
-
-  @property({ attribute: false })
-  declare account: Account | null;
-
-  @property({ attribute: false })
   declare browserState: BrowserState;
 
   @state()
   declare _exporting: boolean;
 
+  #user = new ChangeController<StudioUser>(this, STUDIO_USER_CHANGE);
+
   constructor() {
     super();
     this.assets = null;
     this.openTabs = [];
-    this.signedIn = null;
-    this.account = null;
     this.browserState = new BrowserState();
     this._exporting = false;
   }
 
+  set user(
+    user: StudioUser | null
+  ) {
+    if (user !== null) {
+      this.#user.attach(user);
+    }
+  }
+
   override render(): TemplateResult {
+    const user = this.#user.current;
+
     return html`
       <jolly-dock-layout
         storage-key=${HOME_LAYOUT_STORAGE_KEY}
@@ -179,16 +187,16 @@ export class StudioHome extends LitElement {
           .options=${this.assets}
           .openTabs=${this.openTabs}
         ></project-overview>
-        ${this.signedIn === null ? nothing : this.#usersDock(this.signedIn)}
+        ${user?.online ? this.#usersDock(user) : nothing}
       </jolly-dock-layout>
-      ${this.signedIn === null ?
-        html`<div id="studio-side">${this.#tools(null)}</div>` :
-        nothing}
+      ${user?.online ?
+        nothing :
+        html`<div id="studio-side">${this.#tools(user)}</div>`}
     `;
   }
 
   #usersDock(
-    signedIn: StudioSignedIn
+    user: StudioSignedIn
   ): TemplateResult {
     return html`
       <jolly-dock
@@ -200,11 +208,11 @@ export class StudioHome extends LitElement {
         min-size="180"
         max-size="400"
       >
-        ${this.#tools(signedIn)}
+        ${this.#tools(user)}
         <jolly-pane key="users" heading="Users" icon="users" locked>
           <studio-users
-            .roster=${signedIn.roster}
-            .self=${this.account}
+            .roster=${user.roster}
+            .self=${user.account}
           ></studio-users>
         </jolly-pane>
       </jolly-dock>
@@ -212,9 +220,9 @@ export class StudioHome extends LitElement {
   }
 
   #tools(
-    signedIn: StudioSignedIn | null
+    user: StudioUser | null
   ): TemplateResult {
-    const canExport = signedIn?.project.rights.canExport ?? false;
+    const canExport = user?.rights.allows("export") ?? false;
 
     return html`
       <jolly-toolbar id="studio-tools" label="Studio tools">
@@ -236,9 +244,9 @@ export class StudioHome extends LitElement {
           icon="export"
           icon-only
           label="Export project"
-          title=${signedIn === null ?
-            "Export needs the studio server" :
-            "Export project"}
+          title=${user?.online ?
+            "Export project" :
+            "Export needs the studio server"}
           ?disabled=${this._exporting || !canExport}
           @click=${this.#export}
         ></jolly-button>
@@ -254,13 +262,14 @@ export class StudioHome extends LitElement {
   };
 
   readonly #export = async(): Promise<void> => {
-    if (this.signedIn === null || this._exporting) {
+    const user = this.#user.current;
+    if (!user?.online || this._exporting) {
       return;
     }
 
     this._exporting = true;
     try {
-      const download = await this.signedIn.projectArchive.download();
+      const download = await user.exportProject();
       download.save();
     }
     catch (error) {

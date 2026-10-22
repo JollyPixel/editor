@@ -11,13 +11,16 @@ import {
   property
 } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
-import type { Account } from "@jolly-pixel/accounts";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
-import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import type { StudioSignedIn } from "../../accounts/StudioSignedIn.ts";
+import {
+  STUDIO_USER_CHANGE,
+  type StudioUser
+} from "../../accounts/StudioUser.ts";
 import { BrowserState } from "../../browser/BrowserState.ts";
+import { ChangeController } from "../ChangeController.ts";
 import { cardStyles } from "../cardStyles.ts";
 import type { PreferenceScopes } from "../../../shared/PreferenceScopes.ts";
 import {
@@ -35,7 +38,6 @@ import "./project/ProjectGeneral.ts";
 import "./project/ProjectKindPackage.ts";
 
 // CONSTANTS
-export const SETTINGS_TAB_ID = "studio:settings";
 const kWideKinds: ReadonlySet<SettingsSection["kind"]> = new Set([
   "preferences",
   "access"
@@ -175,16 +177,7 @@ export class StudioSettings extends LitElement {
   declare sections: SettingsSections;
 
   @property({ attribute: false })
-  declare preferences: Preferences | null;
-
-  @property({ attribute: false })
   declare scopes: PreferenceScopes | null;
-
-  @property({ attribute: false })
-  declare account: Account | null;
-
-  @property({ attribute: false })
-  declare signedIn: StudioSignedIn | null;
 
   @property({ attribute: false })
   declare catalog: CatalogClient | null;
@@ -192,15 +185,22 @@ export class StudioSettings extends LitElement {
   @property({ attribute: false })
   declare browserState: BrowserState;
 
+  #user = new ChangeController<StudioUser>(this, STUDIO_USER_CHANGE);
+
   constructor() {
     super();
     this.sections = SettingsSections.EMPTY;
-    this.preferences = null;
     this.scopes = null;
-    this.account = null;
-    this.signedIn = null;
     this.catalog = null;
     this.browserState = new BrowserState();
+  }
+
+  set user(
+    user: StudioUser | null
+  ) {
+    if (user !== null) {
+      this.#user.attach(user);
+    }
   }
 
   get section(): string {
@@ -284,11 +284,12 @@ export class StudioSettings extends LitElement {
   #content(
     section: SettingsSection
   ): TemplateResult | typeof nothing {
+    const user = this.#user.current;
     switch (section.kind) {
       case "profile":
         return html`
           <studio-profile-settings
-            .account=${this.account}
+            .account=${user?.online ? user.account : null}
           ></studio-profile-settings>
         `;
       case "preferences":
@@ -297,58 +298,59 @@ export class StudioSettings extends LitElement {
             .forms=${section.forms}
             .keyBindings=${section.keyBindings}
             .shortcutScopes=${this.sections.shortcutScopes}
-            .preferences=${this.preferences}
+            .preferences=${user?.preferences ?? null}
           ></studio-preferences-page>
         `;
       case "preferences-file":
         return html`
           <studio-preferences-transfer
-            .preferences=${this.preferences}
+            .preferences=${user?.preferences ?? null}
             .scopes=${this.scopes}
           ></studio-preferences-transfer>
         `;
       default:
-        return this.signedIn === null ?
-          nothing :
-          this.#projectContent(section, this.signedIn);
+        return user?.online ?
+          this.#projectContent(section, user) :
+          nothing;
     }
   }
 
   #projectContent(
     section: ProjectSection,
-    signedIn: StudioSignedIn
+    user: StudioSignedIn
   ): TemplateResult | typeof nothing {
+    const { project } = user;
     switch (section.kind) {
       case "share-links":
         return this.catalog === null ? nothing : html`
           <studio-share-links
-            .links=${signedIn.shares}
+            .links=${user.shares}
             .catalog=${this.catalog}
           ></studio-share-links>
         `;
       case "general":
         return html`
           <studio-project-general
-            .project=${signedIn.project}
+            .project=${project}
           ></studio-project-general>
         `;
       case "kind-package":
         return html`${keyed(section.id, html`
           <studio-project-kind-package
-            .project=${signedIn.project}
+            .project=${project}
             .packageName=${section.packageName}
           ></studio-project-kind-package>
         `)}`;
       case "access":
         return html`
           <studio-access-settings
-            .project=${signedIn.project}
+            .project=${project}
           ></studio-access-settings>
         `;
       case "audit":
         return html`
           <studio-audit-view
-            .signedIn=${signedIn}
+            .user=${user}
             .catalog=${this.catalog}
           ></studio-audit-view>
         `;

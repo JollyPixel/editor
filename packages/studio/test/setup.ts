@@ -44,6 +44,7 @@ Object.assign(globalThis, {
   sessionStorage: kEmulatedBrowserWindow.sessionStorage,
   Event: kEmulatedBrowserWindow.Event,
   CustomEvent: kEmulatedBrowserWindow.CustomEvent,
+  KeyboardEvent: kEmulatedBrowserWindow.KeyboardEvent,
   MessageEvent: kEmulatedBrowserWindow.MessageEvent,
   EventTarget: kEmulatedBrowserWindow.EventTarget
 });

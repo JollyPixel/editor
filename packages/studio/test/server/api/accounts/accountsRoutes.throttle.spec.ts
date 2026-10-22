@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { prehashPassword, Username } from "@jolly-pixel/accounts";
 
 // Import Internal Dependencies
-import { listenStudioApi } from "../../../helpers/studioApi.ts";
+import { serveBackend } from "../../../helpers/studioBackend.ts";
 
 async function postLogin(
   url: URL,
@@ -31,7 +31,7 @@ async function postLogin(
 
 describe("accountsRoutes throttle", () => {
   test("answers a throttled login with 429 and Retry-After", async() => {
-    await using server = await listenStudioApi({
+    await using server = await serveBackend({
       throttle: {
         attempts: 2
       }
@@ -51,7 +51,7 @@ describe("accountsRoutes throttle", () => {
   });
 
   test("keys the address throttle on the socket, not on X-Forwarded-For", async() => {
-    await using server = await listenStudioApi({
+    await using server = await serveBackend({
       throttle: {
         attempts: 1
       }
@@ -66,11 +66,10 @@ describe("accountsRoutes throttle", () => {
   });
 
   test("keys the address throttle on X-Forwarded-For from a trusted proxy", async() => {
-    await using server = await listenStudioApi({
+    await using server = await serveBackend({
       throttle: {
         attempts: 1
-      }
-    }, {
+      },
       trustProxy: ["127.0.0.1"]
     });
     const { client } = server.browser();
@@ -83,7 +82,7 @@ describe("accountsRoutes throttle", () => {
   });
 
   test("caps requests per address before authenticating them", async() => {
-    await using server = await listenStudioApi({}, {
+    await using server = await serveBackend({
       requestsPerMinute: 2
     });
     const url = new URL("me", server.accountsUrl);

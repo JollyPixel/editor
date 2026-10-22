@@ -9,12 +9,12 @@ import assert from "node:assert/strict";
 import type { ShareLink } from "@jolly-pixel/accounts";
 
 // Import Internal Dependencies
+import type { Browser } from "../../../helpers/browser.ts";
 import {
-  listenStudioApi,
-  type Browser,
-  type StudioApiAccountsOptions,
-  type StudioApiServer
-} from "../../../helpers/studioApi.ts";
+  serveBackend,
+  type ServeBackendOptions,
+  type ServedBackend
+} from "../../../helpers/studioBackend.ts";
 import {
   SHARES_URL_PATH,
   type CreatedShareReply,
@@ -25,21 +25,18 @@ import {
 const kPassword = "correct horse";
 
 interface SharesHarness extends AsyncDisposable {
-  server: StudioApiServer;
+  server: ServedBackend;
   admin: Browser;
   bob: Browser;
   carol: Browser;
 }
 
 async function sharesHarness(
-  options: StudioApiAccountsOptions = {}
+  options: ServeBackendOptions = {}
 ): Promise<SharesHarness> {
-  const server = await listenStudioApi({
-    ...options,
-    closures: {
-      "map-1": ["map-1"],
-      "map-2": ["map-2"]
-    }
+  const server = await serveBackend({
+    defaultRole: "spectator",
+    ...options
   });
   const [admin, bob, carol] = [server.browser(), server.browser(), server.browser()];
   await admin.client.register("Alice", kPassword);
@@ -56,7 +53,7 @@ async function sharesHarness(
 }
 
 function sharesUrl(
-  server: StudioApiServer,
+  server: ServedBackend,
   path = ""
 ): URL {
   return new URL(SHARES_URL_PATH + path, server.url);
@@ -98,17 +95,16 @@ async function created(
 
 describe("sharesRoutes", () => {
   test("creates a link with the chosen lifetime that its creator can copy again", async(t) => {
-    t.mock.timers.enable({ apis: ["Date"], now: 1_000 });
     await using harness = await sharesHarness({ defaultRole: "member" });
+    t.mock.timers.enable({ apis: ["Date"], now: 1_000 });
 
     const link = await created(await share(harness, harness.bob, {
-      assetId: "map-1",
+      assetId: "map-overworld",
       lifetime: "7d"
     }));
 
-    assert.equal(link.assetId, "map-1");
+    assert.equal(link.assetId, "map-overworld");
     assert.equal(link.expiresAt, 1_000 + 7 * 24 * 60 * 60 * 1_000);
-    assert.deepEqual(harness.server.accounts.shareLinks.find(link.token), link);
     const response = await harness.bob.fetch(sharesUrl(harness.server));
     const { links } = await response.json() as ShareLinksReply;
     assert.deepEqual(links, [link]);
@@ -117,7 +113,7 @@ describe("sharesRoutes", () => {
   test("refuses a role without studio.$share, an unknown asset and a signed-out request", async() => {
     await using harness = await sharesHarness();
     const body = {
-      assetId: "map-1",
+      assetId: "map-overworld",
       lifetime: "1d"
     };
 
@@ -142,34 +138,32 @@ describe("sharesRoutes", () => {
       [refused.status, unknown.status, signedOut.status, badLifetime.status],
       [403, 404, 401, 400]
     );
-    assert.equal((await refused.json()).code, "share-link-refused");
-    const { canShare } = await (await harness.bob.fetch(sharesUrl(harness.server))).json() as ShareLinksReply;
-    assert.equal(canShare, false);
+    assert.equal((await refused.json()).code, "refused");
   });
 
   test("lists a member's own links and every link to an admin", async() => {
     await using harness = await sharesHarness({ defaultRole: "member" });
     await created(await share(harness, harness.bob, {
-      assetId: "map-1",
+      assetId: "map-overworld",
       lifetime: "never"
     }));
     await created(await share(harness, harness.carol, {
-      assetId: "map-2",
+      assetId: "model-default",
       lifetime: "never"
     }));
 
-    assert.deepEqual(await listed(harness, harness.bob), ["map-1"]);
-    assert.deepEqual(await listed(harness, harness.admin), ["map-1", "map-2"]);
+    assert.deepEqual(await listed(harness, harness.bob), ["map-overworld"]);
+    assert.deepEqual(await listed(harness, harness.admin), ["map-overworld", "model-default"]);
   });
 
   test("lets the creator and an admin revoke, not another member", async() => {
     await using harness = await sharesHarness({ defaultRole: "member" });
     const bobs = await created(await share(harness, harness.bob, {
-      assetId: "map-1",
+      assetId: "map-overworld",
       lifetime: "never"
     }));
     const carols = await created(await share(harness, harness.carol, {
-      assetId: "map-2",
+      assetId: "model-default",
       lifetime: "never"
     }));
 

@@ -19,10 +19,8 @@ import {
 
 // Import Internal Dependencies
 import type { ShareLinkRow } from "../../shares/ShareLinkRow.ts";
-import {
-  SHARE_LINKS_CHANGE,
-  type StudioShareLinks
-} from "../../shares/StudioShareLinks.ts";
+import type { StudioShareLinks } from "../../shares/StudioShareLinks.ts";
+import { RemoteStateController } from "../RemoteStateController.ts";
 
 @customElement("share-link-list")
 export class ShareLinkList extends LitElement {
@@ -81,13 +79,11 @@ export class ShareLinkList extends LitElement {
   @state()
   declare _copied: string | null;
 
-  #links = new SubscriptionController<StudioShareLinks>(this, (links) => {
+  #links = new RemoteStateController<StudioShareLinks>(this, (links) => {
     const repaint = () => this.requestUpdate();
-    links.addEventListener(SHARE_LINKS_CHANGE, repaint);
     links.roster.on("change", repaint);
 
     return [
-      () => links.removeEventListener(SHARE_LINKS_CHANGE, repaint),
       () => links.roster.off("change", repaint)
     ];
   });
@@ -140,13 +136,10 @@ export class ShareLinkList extends LitElement {
   }
 
   override render(): TemplateResult {
-    const error = this.#links.current?.error ?? null;
     const rows = this.#rows();
 
     return html`
-      ${error === null ? nothing : html`
-        <p class="error" role="alert">${error}</p>
-      `}
+      ${this.#links.error()}
       ${rows.length === 0 ? html`
         <p class="empty">No active link.</p>
       ` : html`

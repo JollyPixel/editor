@@ -18,17 +18,13 @@ import {
 
 // Import Internal Dependencies
 import {
-  SIGNED_IN_CHANGE,
   StudioSignedIn,
   type StudioAccountsClient
 } from "../../src/accounts/StudioSignedIn.ts";
+import { STUDIO_USER_CHANGE } from "../../src/accounts/StudioUser.ts";
+import { StudioClients } from "../../src/api/StudioClients.ts";
 import { AccountPreferences } from "../../src/preferences/AccountPreferences.ts";
-import { PreferencesClient } from "../../src/preferences/PreferencesClient.ts";
-import { AuditClient } from "../../src/audit/AuditClient.ts";
-import { ProjectArchiveClient } from "../../src/project/ProjectArchiveClient.ts";
-import { ProjectSettingsClient } from "../../src/project/ProjectSettingsClient.ts";
-import { StudioProjectSettings } from "../../src/project/StudioProjectSettings.ts";
-import { ShareLinksClient } from "../../src/shares/ShareLinksClient.ts";
+import { ProjectRights } from "../../shared/ProjectRights.ts";
 
 // CONSTANTS
 const kAlice: Account = {
@@ -84,6 +80,7 @@ function signedInAs(
   accounts: Partial<StudioAccountsClient> = {}
 ): SignedInProbe {
   const sockets: IdleSocket[] = [];
+  const api = StudioClients.at("http://localhost/");
 
   return {
     sockets,
@@ -95,32 +92,11 @@ function signedInAs(
         ...accounts
       },
       signIn: async() => kAlice,
-      shareLinks: new ShareLinksClient({
-        url: "http://localhost/api/shares/"
-      }),
-      projectArchive: new ProjectArchiveClient({
-        url: "http://localhost/api/project/"
-      }),
-      audit: new AuditClient({
-        url: "http://localhost/api/audit/"
-      }),
-      project: new StudioProjectSettings(
-        new ProjectSettingsClient({
-          url: "http://localhost/api/project/"
-        }),
-        {
-          canExport: false,
-          canReadSettings: false,
-          canEditSettings: false,
-          canAudit: false,
-          canManageAccess: false
-        }
-      ),
+      api,
+      rights: ProjectRights.NONE,
       preferences: new AccountPreferences([], {
         accountId: kAlice.id,
-        client: new PreferencesClient({
-          url: "http://localhost/api/preferences/"
-        }),
+        client: api.preferences,
         channel: null
       }),
       connect: (profile) => new Client({
@@ -157,7 +133,7 @@ describe("StudioSignedIn", () => {
       }
     });
     let changes = 0;
-    signedIn.addEventListener(SIGNED_IN_CHANGE, () => {
+    signedIn.addEventListener(STUDIO_USER_CHANGE, () => {
       changes++;
     });
 

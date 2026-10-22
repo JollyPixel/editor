@@ -58,9 +58,13 @@ flowchart TB
   `shared/`. A lint rule enforces it, and `shared/` type-checks without DOM
   types, so it runs on both sides.
 - `StudioBackend` opens the online back-end: the accounts, the
-  `AssetServer` and its catalog view, `StudioApi` and `SharePage`. `vite/backend`
-  mounts its middleware and attaches its WebSocket to the dev server. It
-  closes its WebSocket transports, the API, the asset server, then the accounts.
+  `AssetServer` and its catalog view, `StudioApi` and `SharePage`. It is the
+  only place that assembles them; tests reach HTTP through
+  `test/helpers/studioBackend.ts`. `inMemory` covers the assets, the accounts
+  and the audit log. `vite/backend` mounts its middleware and attaches its
+  WebSocket to the dev server. It closes its WebSocket transports, the API,
+  the asset server, then the accounts; an open that throws closes what it had
+  opened.
 - `StudioServer` is the hosted entry, started by `server/start.ts`. One
   `node:http` server chains the back-end, `ManifestRoute` and the built shell,
   which holds every editor page under `editors/<name>/`. It refuses to start
@@ -72,25 +76,40 @@ flowchart TB
   authenticates with it and registers its `accounts` room.
 - `server/api/StudioApi` is a Fastify app that owns every `/api/` path;
   `StudioBackend` hands those requests to it. Each API surface is a Fastify
-  plugin holding only its route table, such as `accountsRoutes`. A controller
-  class such as `AccountsController` owns the handlers and maps domain errors
-  to statuses.
+  plugin holding only its route table, such as `projectRoutes`, read from the
+  `{ method, path }` tables in `shared/api/` (`PROJECT_ROUTES`, …) that the
+  browser clients send through `ApiEndpoint`. Shares, project, audit and
+  preferences sit in one scope whose `preParsing` hook authenticates, and
+  their handlers call the domain module with `signedInAccount(request)`.
+  `apiFailure` maps every domain error to a status, and the failure body
+  `{ code, message }` is `apiFailureSchema`. `AccountsController` stays, for
+  cookies, statuses and avatar caching.
 - The session cookie is named after the project root: cookies ignore ports.
 - `StudioProject.privateFiles` lists the globs Vite must not serve: every
   `.jollypixel/` folder and the project's asset files. Assets reach the
   browser through the rooms only, which apply the rights table: the asset
   server runs with `http: false`.
-- Share links: `StudioShares` checks `studio.$share`, creates links for
-  `/api/shares/` and walks the closure for the network server's `admits`. `SharePage` answers
-  `/view/<token>` with the editor page plus a `<base>` and the launch.
+- Share links: `StudioShares` checks `studio.$share`, creates, lists and
+  revokes links for `/api/shares/` and walks the closure for the network
+  server's `admits`. `SharePage` answers `/view/<token>` with the editor page
+  plus a `<base>` and the launch. It reads the page from `EditorPageFolders`:
+  the package folders in dev, the shell build's `editors/<name>/` when
+  hosted, the folder `<base>` points at.
   Guests read the `asset-catalog-view` room, registered once the asset
   server is ready.
 - Project export: `ProjectArchive` checks `studio.$export` and answers
   `GET /api/project/archive` with every asset in one asset archive, named
   after the project root. It goes over HTTP, so the catalog content limit
   does not apply. `GET /api/project/` answers the caller's project rights,
-  `StudioAccess.projectRights`: `canExport`, `canReadSettings`,
-  `canEditSettings`, `canAudit` and `canManageAccess`.
+  one boolean per right: `share`, `export`, `readSettings`, `editSettings`,
+  `audit` and `manageAccess`.
+- `StudioAccess.projectRights(role)` returns `ProjectRights`, which lives in
+  `shared/` so the client parses the reply into the same object. On the
+  server, `require(right)` throws `ProjectRightRefusedError`, which the API
+  answers with 403 `refused`. `ProjectSettings`, `ProjectArchive`, `AuditFeed` and
+  `StudioShares` check rights only through it. The four `studio.$*` names
+  and `namedRight` live in `shared/api/project.ts`; `RoleRules.grants` uses
+  the same rule.
 - Project settings: `ProjectSettings` is the only writer of `project.json`
   and checks the caller's rights itself. `PUT /api/project/settings/kinds`
   needs write on `studio.$settings`, `PUT /api/project/settings/access` an
@@ -121,7 +140,7 @@ flowchart TB
   reads, `EditRuns` folds one actor's edits on one asset less than 5 minutes
   apart, and `AuditCursor` holds the position in each source. Account rows go
   to admins only.
-- Preferences: `PreferencesController` answers `GET /api/preferences/` with
+- Preferences: `StoredPreferences` answers `GET /api/preferences/` with
   the caller's overrides and `PUT /api/preferences/<scope>`. Both go
   through `PreferenceScopes`, the descriptors the server knows: a `PUT`
   refuses unknown fields and values, a read drops them
@@ -160,10 +179,16 @@ sequenceDiagram
 
 - The manifest loads while the sign-in dialog is open. A valid session cookie
   skips the dialog (`me`).
-- `StudioSignedIn` holds the signed-in account and what derives from it: the
-  peer identity, the shell's client, the roster, the share links and the
-  session renewal. A new avatar changes the identity the next launch carries.
-- `StudioSignedIn.open` loads the preferences right after `me`.
+- `connectStudio` always returns a `StudioUser`: `StudioSignedIn` online,
+  `OfflineUser` offline. Both carry the project rights (all false offline)
+  and the preferences. `online` tells them apart: only `StudioSignedIn` has
+  the account, the peer identity, the roster, the share links, the project
+  settings and the session renewal. Elements check `online` once, then
+  rights.
+  A new avatar changes the identity the next launch carries.
+- `StudioSignedIn.open` loads the preferences and the project rights right
+  after `me`. It sends every request through `StudioClients`, one HTTP client
+  per API surface.
   `AccountPreferences` sends each change, one request per scope in flight,
   and posts it on a `BroadcastChannel` for the other tabs. Offline,
   `LocalPreferences` keeps them in `localStorage`. `StudioAppearance` applies
@@ -207,7 +232,9 @@ sequenceDiagram
 - The iframe is created on first focus. Hidden tabs keep theirs
   (`display: none`). Closing a tab removes it.
 - `EditorTabs` and `EditorFrames` are plain controllers, not Lit templates:
-  moving an iframe reloads it.
+  moving an iframe reloads it. `StudioSession` builds both from the
+  `<jolly-studio>` DOM slots, the `StudioUser` and the console;
+  `<jolly-studio>` only renders.
 
 ## Frame messages
 
@@ -308,8 +335,9 @@ flowchart TB
 | Project | Audit | read on `studio.$audit` |
 
 - `SettingsSections` builds the nav from the manifest (editor scopes, kind
-  packages, kind icons) and the project rights `StudioSignedIn` loads after
-  `me`: a block with You and Editors, then a block with Project and Assets.
+  packages, kind icons), whether the `StudioUser` is online and its project
+  rights: a block with You and Editors, then a block with Project and
+  Assets.
 - An editor page shows the scopes its module exports by default. A scope it
   lists under `shared` shows there only when no installed editor declares it.
 - A kind package page edits a `KindOptionsDraft` through the sections the
@@ -320,8 +348,17 @@ flowchart TB
   Alt+Arrow to reorder, a "check a room" field), the default role and access
   requests, in two columns on a wide card. Members and requests stay in the
   Home Users pane, whose menu opens for admins.
-- Both panes hold their draft in a `SettingsDraftController`, which enables
-  Save once the draft differs from the saved section.
+- Both panes hold their draft in a `SettingsDraftController`: it follows
+  the `StudioProjectSettings` through a `ProjectSettingsController`, which
+  loads it on first use, and enables Save once the draft differs from the
+  saved section.
+- `StudioShareLinks`, `StudioProjectSettings` and `AuditPages` extend
+  `RemoteState` (error, loading, one `change` event; `latest` drops a reply
+  a newer request replaced). Elements follow one with a
+  `RemoteStateController`, which renders its error. Both it and the
+  `StudioUser` followers are a `ChangeController`, which repaints its host on
+  the source's `change` event.
+- Keyboard shortcuts record through `KeyRecorder`; Escape cancels.
 - Share links: `studio-share-links` lists the links the account may manage
   (its own, every one for admins), newest first. The Share dialog shows the
   same `share-link-list` for one asset. Both read one `StudioShareLinks`.
@@ -358,7 +395,9 @@ flowchart TB
   selection, kind filter, a renamed row's new name until the catalog confirms
   it, and the asset or folder just created, whose rename starts once the tree
   shows it. `<asset-browser>` renders it and owns the menus and dialogs.
-- `AssetSelection` decides which actions apply, and re-checks before running.
+- `AssetTreeView.allows` and `run` gate and dispatch every action, share
+  included when the studio has share links; the page answers through
+  `AssetActionPrompts` (dialogs, inline rename, opening).
 - Errors go to the `jolly-log`.
 
 ## Catalog changes
@@ -414,24 +453,25 @@ flowchart TB
 | `server/StudioBackend.ts` | the online back-end, opened and closed as one |
 | `server/StudioServer.ts`, `server/start.ts` | hosted entry and its environment |
 | `server/project/` | project file, `access` section, `ProjectSettings`, `KindOptionSections`, private files |
-| `server/editors/` | editor packages and pages, manifest route, dist watcher |
+| `server/editors/` | editor packages and pages, `EditorPageFolders`, manifest route, dist watcher |
+| `server/preferences/` | `StoredPreferences` |
 | `server/accounts.ts`, `server/AccountsAccess.ts` | project accounts, their roles and master password |
 | `server/shares/` | share rules, guest admission, `/view/` page |
 | `server/audit/` | `AuditLog`, `AssetLog`, `AuditFeed` and its merge, edit runs and cursor |
 | `vite.config.ts`, `vite/` | Vite plugins |
-| `shared/` | `EditorDescriptor`, `ProjectManifest`, `PreferenceScopes`, `studioScope`, `ShareLifetime`, `AttachmentDisposition`, seed for both back-ends |
-| `shared/api/` | `/api/` paths, rights and zod schemas, one file per surface |
+| `shared/` | `EditorDescriptor`, `ProjectManifest`, `PreferenceScopes`, `ProjectRights`, `studioScope`, `ShareLifetime`, `AttachmentDisposition`, seed for both back-ends |
+| `shared/api/` | `/api/` route tables, rights and zod schemas, one file per surface; `common.ts` holds `ApiRoute` and the failure body |
 | `src/index.ts` | boot |
 | `src/connection/` | `StudioConnection`: online catalog, offline fallback (`offline.ts`) |
-| `src/api/` | `ApiEndpoint`: fetch and failure shape shared by the HTTP clients |
+| `src/api/` | `ApiEndpoint` (routes, JSON, failures), `StudioClients`, `RemoteState` |
 | `src/browser/` | `BrowserState`, `DroppedFile`, `FileDownload` |
 | `src/catalog/` | pure tree logic (`AssetTreeModel`, `AssetPath`, …) |
-| `src/accounts/` | `StudioSignedIn`, `SessionRenewal`, `UsersTreeModel`, `/users` console |
+| `src/accounts/` | `StudioUser`, `StudioSignedIn`, `OfflineUser`, `SessionRenewal`, `UsersTreeModel`, `/users` console |
 | `src/shares/` | `ShareLinksClient`, `StudioShareLinks`, `ShareLinkRow` |
 | `src/project/` | project clients, `StudioProjectSettings`, `AccessDraft`, `RoleRules`, `KindOptionsDraft` |
 | `src/audit/` | `AuditClient`, `AuditPages`, `AuditFilters`, `AuditRowText` |
 | `src/editors/` | `EditorRegistry`, `EditorPrefetch` |
 | `src/preferences/` | `PreferencesClient`, `AccountPreferences`, `StudioAppearance`, `PreferencesFile` |
-| `src/keybindings/` | `KeybindingTable`, `BoundChord`, `HeldKey` |
+| `src/keybindings/` | `KeybindingTable`, `KeyRecorder`, `BoundChord`, `HeldKey` |
 | `src/tabs/` | `EditorTabs`, `EditorFrames`, `SavedTabs` |
 | `src/shell/` | `<jolly-studio>`, `StudioSession`, Home, Settings, asset browser (`AssetTreeView`), sign-in dialog, Users pane |

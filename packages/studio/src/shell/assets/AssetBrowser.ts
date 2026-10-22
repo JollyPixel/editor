@@ -28,8 +28,7 @@ import { summarizeSelection } from "../../catalog/AssetSummary.ts";
 import {
   AssetSelection,
   isAssetAction,
-  parseNewAssetKind,
-  type AssetAction
+  parseNewAssetKind
 } from "../../catalog/AssetSelection.ts";
 import { AssetTreeModel } from "../../catalog/AssetTreeModel.ts";
 import type { BrowserState } from "../../browser/BrowserState.ts";
@@ -65,11 +64,6 @@ export interface AssetBrowserOptions {
   kinds: AssetKindSet;
   shares: StudioShareLinks | null;
   browserState: BrowserState;
-}
-
-interface AssetSharing {
-  links: StudioShareLinks;
-  catalog: CatalogClient;
 }
 
 @customElement("asset-browser")
@@ -271,7 +265,7 @@ export class AssetBrowser extends LitElement {
             icon-only
             label="Rename"
             title="Rename (F2)"
-            ?disabled=${!selection.allows("rename")}
+            ?disabled=${!(view?.allows("rename") ?? false)}
             @click=${this.#beginRename}
           ></jolly-button>
           <jolly-button
@@ -280,7 +274,7 @@ export class AssetBrowser extends LitElement {
             variant="danger"
             label="Delete"
             title="Delete (Del)"
-            ?disabled=${!selection.allows("delete")}
+            ?disabled=${!(view?.allows("delete") ?? false)}
             @click=${this.#deleteSelected}
           ></jolly-button>
           <jolly-button
@@ -288,19 +282,19 @@ export class AssetBrowser extends LitElement {
             icon-only
             label="Export"
             title="Export as a ZIP archive"
-            ?disabled=${!selection.allows("export")}
+            ?disabled=${!(view?.allows("export") ?? false)}
             @click=${this.#exportSelected}
           ></jolly-button>
-          ${this.#sharing === null ? nothing : html`
+          ${view?.sharing ? html`
             <jolly-button
               icon="share"
               icon-only
               label="Share"
               title="Share a view-only link"
-              ?disabled=${!selection.allows("share")}
+              ?disabled=${!view.allows("share")}
               @click=${this.#shareSelected}
             ></jolly-button>
-          `}
+          ` : nothing}
         </jolly-toolbar>
         <jolly-tree
           virtual
@@ -340,18 +334,6 @@ export class AssetBrowser extends LitElement {
     `;
   }
 
-  get #sharing(): AssetSharing | null {
-    const options = this.#bound;
-    const links = options?.shares ?? null;
-
-    return options === null || links === null ?
-      null :
-      {
-        links,
-        catalog: options.catalog
-      };
-  }
-
   get #kinds(): AssetKindSet {
     return this.options?.kinds ?? AssetKindSet.EMPTY;
   }
@@ -364,10 +346,19 @@ export class AssetBrowser extends LitElement {
 
     this.#view?.dispose();
     this.#bound = options;
+    const shares = options?.shares ?? null;
     this.#view = options === null ? null : new AssetTreeView({
       catalog: options.catalog,
       kinds: options.kinds,
       browserState: options.browserState,
+      prompts: {
+        open: (assetId) => this.#open(assetId),
+        rename: (nodeId) => this._tree?.beginRename(nodeId),
+        share: shares === null ? null : (asset) => {
+          void this._shareDialog.open(asset, shares, options.catalog);
+        },
+        confirmDelete: (deletion) => this._deleteDialog.open(deletion)
+      },
       onChange: () => this.requestUpdate(),
       onError: (message) => this.#error(message),
       onCreated: (nodeId) => {
@@ -382,52 +373,6 @@ export class AssetBrowser extends LitElement {
   ): AssetSelection {
     return this.#view?.selection(nodeIds) ??
       new AssetSelection(AssetTreeModel.EMPTY, []);
-  }
-
-  #run(
-    action: AssetAction,
-    target: AssetSelection
-  ): void {
-    const view = this.#view;
-    const selection = this.#selection(target.nodeIds);
-    if (view === null || !selection.allows(action)) {
-      return;
-    }
-
-    const { asset, folder, nodeIds } = selection;
-    switch (action) {
-      case "open":
-        if (asset !== null) {
-          this.#open(asset.id);
-        }
-        break;
-      case "new-folder":
-        void view.createFolder(folder);
-        break;
-      case "rename":
-        this._tree?.beginRename(nodeIds[0]);
-        break;
-      case "export":
-        if (asset !== null) {
-          void view.export(asset);
-        }
-        break;
-      case "share": {
-        const sharing = this.#sharing;
-        if (asset !== null && sharing !== null) {
-          void this._shareDialog.open(asset, sharing.links, sharing.catalog);
-        }
-        break;
-      }
-      case "delete":
-        void view.remove(
-          nodeIds,
-          (deletion) => this._deleteDialog.open(deletion)
-        );
-        break;
-      default:
-        break;
-    }
   }
 
   #open(
@@ -457,15 +402,15 @@ export class AssetBrowser extends LitElement {
   };
 
   readonly #newFolder = (): void => {
-    this.#run("new-folder", this.#selection());
+    this.#view?.run("new-folder");
   };
 
   readonly #shareSelected = (): void => {
-    this.#run("share", this.#selection());
+    this.#view?.run("share");
   };
 
   readonly #exportSelected = (): void => {
-    this.#run("export", this.#selection());
+    this.#view?.run("export");
   };
 
   readonly #acceptDrop = (
@@ -582,7 +527,7 @@ export class AssetBrowser extends LitElement {
       id === null ? [] : this.#view?.selected ?? []
     );
     this.#menuTarget = target;
-    this._menu.items = assetMenu(target, this.#kinds, this.#sharing !== null);
+    this._menu.items = assetMenu(target, this.#kinds, this.#view?.sharing ?? false);
     this._menu.openAt(x, y);
   };
 
@@ -611,16 +556,16 @@ export class AssetBrowser extends LitElement {
       );
     }
     else if (isAssetAction(action)) {
-      this.#run(action, target);
+      this.#view?.run(action, target.nodeIds);
     }
   };
 
   readonly #beginRename = (): void => {
-    this.#run("rename", this.#selection());
+    this.#view?.run("rename");
   };
 
   readonly #deleteSelected = (): void => {
-    this.#run("delete", this.#selection());
+    this.#view?.run("delete");
   };
 }
 

@@ -9,6 +9,7 @@ import { openOfflineBackend } from "@jolly-pixel/editor.host/offline";
 import createHandlers from "virtual:jolly-pixel/handlers";
 
 // Import Internal Dependencies
+import { OfflineUser } from "../accounts/OfflineUser.ts";
 import type { StudioConnection } from "./StudioConnection.ts";
 import { createStudioSeed } from "../../shared/seed.ts";
 
@@ -30,8 +31,7 @@ export async function connect(): Promise<StudioConnection> {
   return {
     share: await CatalogShare.open(backend.connect().client),
     editorQuery: offlineQuery(kOfflineName),
-    signedIn: null,
-    preferences: new LocalPreferences().preferences
+    user: new OfflineUser(new LocalPreferences().preferences)
   };
 }
 

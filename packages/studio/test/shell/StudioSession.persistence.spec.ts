@@ -11,6 +11,7 @@ import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { TABS_STORAGE_KEY } from "../../src/browser/BrowserState.ts";
+import { SETTINGS_TAB_ID } from "../../src/shell/StudioSession.ts";
 import { HOME_TAB_ID } from "../../src/tabs/EditorTabs.ts";
 import {
   CAVE_RECORD,
@@ -20,7 +21,6 @@ import {
   MAP_RECORD,
   MODEL_RECORD,
   session,
-  SETTINGS_PAGE_ID,
   TEXTURE_RECORD
 } from "../helpers/studioSession.ts";
 
@@ -51,15 +51,15 @@ describe("StudioSession tab persistence", () => {
     const storage = new MemoryStorageAdapter();
     const first = session(catalog, storage);
     await first.openAsset("map-1");
-    first.tabs.openPage(SETTINGS_PAGE_ID);
+    first.openSettings();
     disposeSession();
 
     const second = session(catalog, storage);
     await second.restoreTabs();
 
     assert.deepEqual(second.tabs.ids(), ["map-1"]);
-    assert.deepEqual(second.tabs.openPages(), [SETTINGS_PAGE_ID]);
-    assert.equal(second.tabs.active, SETTINGS_PAGE_ID);
+    assert.deepEqual(second.tabs.openPages(), [SETTINGS_TAB_ID]);
+    assert.equal(second.tabs.active, SETTINGS_TAB_ID);
     assert.deepEqual(frameTargets(), []);
   });
 

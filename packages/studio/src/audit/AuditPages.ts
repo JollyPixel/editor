@@ -1,4 +1,5 @@
 // Import Internal Dependencies
+import { RemoteState } from "../api/RemoteState.ts";
 import type { AuditClient } from "./AuditClient.ts";
 import {
   AuditFilters,
@@ -6,19 +7,13 @@ import {
 } from "./AuditFilters.ts";
 import type { AuditRow } from "../../shared/api/audit.ts";
 
-// CONSTANTS
-export const AUDIT_PAGES_CHANGE = "change";
-
 export type AuditPageSource = Pick<AuditClient, "page">;
 
-export class AuditPages extends EventTarget {
+export class AuditPages extends RemoteState {
   #client: AuditPageSource;
   #filters = AuditFilters.NONE;
   #rows: readonly AuditRow[] = [];
   #next: string | null = null;
-  #loading = false;
-  #error: string | null = null;
-  #request = 0;
 
   constructor(
     client: AuditPageSource
@@ -37,14 +32,6 @@ export class AuditPages extends EventTarget {
 
   get hasMore(): boolean {
     return this.#next !== null;
-  }
-
-  get loading(): boolean {
-    return this.#loading;
-  }
-
-  get error(): string | null {
-    return this.#error;
   }
 
   filter(
@@ -66,32 +53,12 @@ export class AuditPages extends EventTarget {
   async #load(
     cursor: string | undefined
   ): Promise<void> {
-    const request = ++this.#request;
-    this.#loading = true;
-    this.#changed();
-    try {
-      const page = await this.#client.page(this.#filters.toQuery(cursor));
-      if (request !== this.#request) {
-        return;
+    await this.latest(
+      () => this.#client.page(this.#filters.toQuery(cursor)),
+      (page) => {
+        this.#rows = cursor === undefined ? page.rows : [...this.#rows, ...page.rows];
+        this.#next = page.next;
       }
-      this.#rows = cursor === undefined ? page.rows : [...this.#rows, ...page.rows];
-      this.#next = page.next;
-      this.#error = null;
-    }
-    catch (error) {
-      if (request === this.#request) {
-        this.#error = error instanceof Error ? error.message : String(error);
-      }
-    }
-    finally {
-      if (request === this.#request) {
-        this.#loading = false;
-        this.#changed();
-      }
-    }
-  }
-
-  #changed(): void {
-    this.dispatchEvent(new Event(AUDIT_PAGES_CHANGE));
+    );
   }
 }

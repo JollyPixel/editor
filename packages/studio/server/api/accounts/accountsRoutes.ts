@@ -4,7 +4,6 @@ import * as z from "zod";
 import {
   ACCOUNTS_ROUTES,
   AVATAR_MAX_BYTES,
-  AccountsError,
   credentialsBodySchema,
   registrationBodySchema
 } from "@jolly-pixel/accounts";
@@ -18,7 +17,7 @@ import {
   type RegisterRoute,
   type ReplaceAvatarRoute
 } from "./AccountsController.ts";
-import { accountsFailure } from "../errors/accountsFailure.ts";
+import { authenticate } from "../authentication.ts";
 
 // CONSTANTS
 const kAvatarBodySchema = z.instanceof(Uint8Array);
@@ -32,6 +31,7 @@ export async function accountsRoutes(
   options: AccountsRoutesOptions
 ): Promise<void> {
   const controller = new AccountsController(options.accounts);
+  const signedIn = authenticate(options.accounts);
   const {
     register,
     login,
@@ -40,11 +40,6 @@ export async function accountsRoutes(
     replaceAvatar,
     avatar
   } = ACCOUNTS_ROUTES;
-
-  app.decorateRequest("account", null);
-  app.setErrorHandler((error) => {
-    throw error instanceof AccountsError ? accountsFailure(error) : error;
-  });
 
   app.route<RegisterRoute>({
     method: register.method,
@@ -70,11 +65,7 @@ export async function accountsRoutes(
   app.route({
     method: me.method,
     url: me.path,
-    preParsing: (request, reply, payload) => controller.authenticate(
-      request,
-      reply,
-      payload
-    ),
+    preParsing: signedIn,
     handler: (request) => controller.me(request)
   });
   app.route<AvatarRoute>({
@@ -98,11 +89,7 @@ export async function accountsRoutes(
       schema: {
         body: kAvatarBodySchema
       },
-      preParsing: (request, reply, payload) => controller.authenticate(
-        request,
-        reply,
-        payload
-      ),
+      preParsing: signedIn,
       handler: (request) => controller.replaceAvatar(request)
     });
   });

@@ -1,12 +1,10 @@
 // Import Third-party Dependencies
 import type {
   FastifyReply,
-  FastifyRequest,
-  RequestPayload
+  FastifyRequest
 } from "fastify";
 import {
   AVATAR_VERSION_PARAM,
-  type Account,
   type AccountReply,
   type CredentialsBody,
   type RegistrationBody
@@ -18,19 +16,13 @@ import type {
 } from "@jolly-pixel/accounts/node";
 
 // Import Internal Dependencies
+import { signedInAccount } from "../authentication.ts";
 import { ApiError } from "../errors/ApiError.ts";
-import { requireAccount } from "../requireAccount.ts";
 
 // CONSTANTS
 const kAvatarContentType = "image/webp";
 const kImmutable = "public, max-age=31536000, immutable";
 const kRevalidate = "no-cache";
-
-declare module "fastify" {
-  interface FastifyRequest {
-    account: Account | null;
-  }
-}
 
 export interface RegisterRoute {
   Body: RegistrationBody;
@@ -98,28 +90,18 @@ export class AccountsController {
       .send();
   }
 
-  async authenticate(
-    request: FastifyRequest,
-    _reply: FastifyReply,
-    payload: RequestPayload
-  ): Promise<RequestPayload> {
-    request.account = requireAccount(this.#accounts, request);
-
-    return payload;
-  }
-
   me(
     request: FastifyRequest
   ): AccountReply {
     return {
-      account: this.#signedIn(request)
+      account: signedInAccount(request)
     };
   }
 
   async replaceAvatar(
     request: FastifyRequest<ReplaceAvatarRoute>
   ): Promise<AccountReply> {
-    const { id } = this.#signedIn(request);
+    const { id } = signedInAccount(request);
 
     return {
       account: await this.#accounts.replaceAvatar(id, request.body)
@@ -152,12 +134,6 @@ export class AccountsController {
       secure: request.protocol === "https",
       headers: request.headers
     };
-  }
-
-  #signedIn(
-    request: FastifyRequest
-  ): Account {
-    return request.account ?? requireAccount(this.#accounts, request);
   }
 
   #signIn(

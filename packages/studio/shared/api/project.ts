@@ -5,25 +5,56 @@ import {
   GUEST_ROLE
 } from "@jolly-pixel/accounts";
 
+// Import Internal Dependencies
+import type { ApiRoute } from "./common.ts";
+
 // CONSTANTS
 export const PROJECT_URL_PATH = "/api/project/";
-export const PROJECT_ARCHIVE_PATH = "archive";
-export const PROJECT_SETTINGS_PATH = "settings";
 export const KINDS_SECTION = "kinds";
 export const ACCESS_SECTION = "access";
+export const PROJECT_ROUTES = {
+  rights: {
+    method: "GET",
+    path: ""
+  },
+  archive: {
+    method: "GET",
+    path: "archive"
+  },
+  settings: {
+    method: "GET",
+    path: "settings"
+  },
+  replaceKinds: {
+    method: "PUT",
+    path: `settings/${KINDS_SECTION}`
+  },
+  replaceAccess: {
+    method: "PUT",
+    path: `settings/${ACCESS_SECTION}`
+  }
+} as const satisfies Record<string, ApiRoute>;
+export const SHARE_RIGHT = "studio.$share";
+export const EXPORT_RIGHT = "studio.$export";
 export const SETTINGS_RIGHT = "studio.$settings";
 export const AUDIT_RIGHT = "studio.$audit";
 export const BUILT_IN_ROLES: readonly string[] = [ADMIN_ROLE, GUEST_ROLE];
 
+export const PROJECT_RIGHTS = [
+  "share",
+  "export",
+  "readSettings",
+  "editSettings",
+  "audit",
+  "manageAccess"
+] as const;
+
 export const rightSchema = z.enum(["write", "read", "void"]);
 
-export const projectReplySchema = z.object({
-  canExport: z.boolean(),
-  canReadSettings: z.boolean(),
-  canEditSettings: z.boolean(),
-  canAudit: z.boolean(),
-  canManageAccess: z.boolean()
-});
+export const projectReplySchema = z.record(
+  z.enum(PROJECT_RIGHTS),
+  z.boolean()
+);
 
 export const kindOptionsSchema = z.record(
   z.string(),
@@ -110,3 +141,13 @@ export type AccessSection = z.infer<typeof accessSectionSchema>;
 export type AccessChange = z.infer<typeof accessChangeSchema>;
 export type ProjectSettingsReply = z.infer<typeof projectSettingsReplySchema>;
 export type SettingsSectionName = z.infer<typeof settingsSectionSchema>;
+export type Right = z.infer<typeof rightSchema>;
+export type ProjectRight = typeof PROJECT_RIGHTS[number];
+export type NamedRight = typeof SETTINGS_RIGHT | typeof AUDIT_RIGHT;
+
+export function namedRight(
+  rules: Readonly<Record<string, Right>>,
+  name: NamedRight
+): Right {
+  return Object.hasOwn(rules, name) ? rules[name] : "void";
+}

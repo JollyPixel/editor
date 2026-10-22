@@ -131,6 +131,18 @@ peer `subject` the event store records and the `peerId` presence colours.
 What an account may do, a key of the project's `access.roles` rights table.
 `admin` is built in; an undeclared role falls back to `defaultRole`.
 
+### Project rights
+
+What a role may do with the project rather than with assets: share, export,
+read or edit the settings, read the audit, manage access. The server answers
+them from the `access` section; offline, every one is false.
+
+### Studio user
+
+Who the shell runs for: the signed-in account online, or nobody offline. It
+holds the project rights and the preferences; online only, it also holds the
+account, the roster and the share links.
+
 ### Project owner
 
 The one admin account no other admin can demote or remove, first the account

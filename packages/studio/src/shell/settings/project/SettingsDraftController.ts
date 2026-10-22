@@ -1,12 +1,13 @@
 // Import Third-party Dependencies
 import {
   html,
+  nothing,
   type ReactiveControllerHost,
   type TemplateResult
 } from "lit";
 
 // Import Internal Dependencies
-import type { ProjectSettingsController } from "./ProjectSettingsController.ts";
+import { ProjectSettingsController } from "./ProjectSettingsController.ts";
 import type {
   StudioProjectSettings
 } from "../../../project/StudioProjectSettings.ts";
@@ -17,7 +18,6 @@ export interface SettingsDraft {
 }
 
 export interface SettingsDraftControllerOptions<TDraft extends SettingsDraft> {
-  project: ProjectSettingsController;
   saved(data: ProjectSettingsReply): TDraft | null;
   save(project: StudioProjectSettings, draft: TDraft): Promise<boolean>;
 }
@@ -25,6 +25,7 @@ export interface SettingsDraftControllerOptions<TDraft extends SettingsDraft> {
 export class SettingsDraftController<TDraft extends SettingsDraft> {
   #host: ReactiveControllerHost;
   #options: SettingsDraftControllerOptions<TDraft>;
+  #project: ProjectSettingsController;
   #edited: TDraft | null = null;
 
   constructor(
@@ -33,9 +34,14 @@ export class SettingsDraftController<TDraft extends SettingsDraft> {
   ) {
     this.#host = host;
     this.#options = options;
+    this.#project = new ProjectSettingsController(host);
   }
 
-  get current(): TDraft | null {
+  get project(): StudioProjectSettings | null {
+    return this.#project.current;
+  }
+
+  get draft(): TDraft | null {
     return this.#edited ?? this.#saved();
   }
 
@@ -52,6 +58,13 @@ export class SettingsDraftController<TDraft extends SettingsDraft> {
     );
   }
 
+  attach(
+    project: StudioProjectSettings
+  ): void {
+    this.#edited = null;
+    this.#project.attach(project);
+  }
+
   edit(
     draft: TDraft
   ): void {
@@ -62,6 +75,10 @@ export class SettingsDraftController<TDraft extends SettingsDraft> {
   reset(): void {
     this.#edited = null;
     this.#host.requestUpdate();
+  }
+
+  error(): TemplateResult | typeof nothing {
+    return this.#project.error();
   }
 
   actions(
@@ -84,7 +101,7 @@ export class SettingsDraftController<TDraft extends SettingsDraft> {
   }
 
   async save(): Promise<void> {
-    const project = this.#options.project.current;
+    const project = this.project;
     if (project === null || this.#edited === null) {
       return;
     }
@@ -95,7 +112,7 @@ export class SettingsDraftController<TDraft extends SettingsDraft> {
   }
 
   #saved(): TDraft | null {
-    const data = this.#options.project.current?.data ?? null;
+    const data = this.project?.data ?? null;
 
     return data === null ? null : this.#options.saved(data);
   }

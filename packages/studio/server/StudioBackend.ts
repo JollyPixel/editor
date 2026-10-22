@@ -14,7 +14,6 @@ import {
   type CatalogProjection
 } from "@jolly-pixel/asset-server";
 import { AssetServer } from "@jolly-pixel/asset-server/node";
-import type { Accounts } from "@jolly-pixel/accounts/node";
 import { STATE_DIRECTORY } from "@jolly-pixel/asset-source";
 import { DEFAULT_WEBSOCKET_PATH } from "@jolly-pixel/network";
 import { WebsocketTransport } from "@jolly-pixel/network/node";
@@ -30,6 +29,7 @@ import {
   type TrustProxy
 } from "./api/StudioApi.ts";
 import { AssetLog } from "./audit/AssetLog.ts";
+import { EditorPageFolders } from "./editors/EditorPageFolders.ts";
 import { AuditFeed } from "./audit/AuditFeed.ts";
 import {
   AUDIT_DATABASE_FILE,
@@ -69,7 +69,7 @@ export interface StudioBackendOptions {
    * @default false
    */
   inMemory?: boolean;
-  accounts?: StudioAccountsOptions;
+  accounts?: Omit<StudioAccountsOptions, "inMemory">;
   /**
    * @default 300
    */
@@ -80,6 +80,11 @@ export interface StudioBackendOptions {
    * @default false
    */
   trustProxy?: TrustProxy;
+  /**
+   * Where `/view/<token>` reads each editor's built page.
+   * @default EditorPageFolders.packages()
+   */
+  editorPages?: EditorPageFolders;
 }
 
 export interface StudioBackendAttachOptions {
@@ -95,15 +100,19 @@ export class StudioBackend implements AsyncDisposable {
     project: StudioProject,
     options: StudioBackendOptions = {}
   ): Promise<StudioBackend> {
-    const accounts = await openStudioAccounts(project, options.accounts);
-    const audit = await AuditLog.open(
+    await using opening = new AsyncDisposableStack();
+    const accounts = opening.use(await openStudioAccounts(project, {
+      ...options.accounts,
+      inMemory: options.inMemory
+    }));
+    const audit = opening.use(await AuditLog.open(
       options.inMemory ?
         null :
         path.join(project.file.root, STATE_DIRECTORY, AUDIT_DATABASE_FILE)
-    );
-    const unwatchActivity = accounts.watchActivity(
+    ));
+    opening.defer(accounts.watchActivity(
       (activity) => audit.recordAccount(activity)
-    );
+    ));
     const catalog = Promise.withResolvers<CatalogProjection>();
     const shares = new StudioShares({
       accounts,
@@ -131,25 +140,24 @@ export class StudioBackend implements AsyncDisposable {
       },
       admits: (identity, room) => shares.admits(identity, room)
     });
+    opening.defer(() => assetServer.close());
     catalog.resolve(assetServer.backend.catalog);
     assetServer.network.register(new CatalogViewExtension({
       catalog: assetServer.backend.catalog,
       scope: (identity) => shares.scope(identity)
     }));
 
-    const settings = new ProjectSettings({
-      project,
-      accounts,
-      server: assetServer.network,
-      registry: assetServer.backend.kinds,
-      audit,
-      accountsOptions: options.accounts
-    });
-
-    const api = await StudioApi.open({
+    const api = opening.use(await StudioApi.open({
       accounts,
       shares,
-      settings,
+      settings: new ProjectSettings({
+        project,
+        accounts,
+        server: assetServer.network,
+        registry: assetServer.backend.kinds,
+        audit,
+        accountsOptions: options.accounts
+      }),
       audit: new AuditFeed({
         project,
         assets: new AssetLog(assetServer.eventStore),
@@ -165,43 +173,34 @@ export class StudioBackend implements AsyncDisposable {
       preferences: PreferenceScopes.studio(project.editors.preferences()),
       requestsPerMinute: options.requestsPerMinute,
       trustProxy: options.trustProxy
-    });
-
-    const resources = new DisposableStack();
-    resources.defer(unwatchActivity);
-    resources.use(audit);
+    }));
 
     return new StudioBackend(
-      accounts,
-      resources,
+      opening.move(),
       assetServer,
       api,
       new SharePage({
         shares,
-        editors: project.editors
+        editors: project.editors,
+        pages: options.editorPages ?? EditorPageFolders.packages()
       })
     );
   }
 
   readonly middleware: StudioBackendMiddleware;
 
-  #accounts: Accounts;
-  #resources: DisposableStack;
+  #resources: AsyncDisposableStack;
   #assetServer: AssetServer;
-  #api: StudioApi;
   #transports = new DisposableStack();
 
   private constructor(
-    accounts: Accounts,
-    resources: DisposableStack,
+    resources: AsyncDisposableStack,
     assetServer: AssetServer,
     api: StudioApi,
     sharePage: SharePage
   ) {
-    this.#accounts = accounts;
     this.#resources = resources;
     this.#assetServer = assetServer;
-    this.#api = api;
     this.middleware = (request, response, next) => {
       api.middleware(request, response, () => {
         sharePage.middleware(request, response, next);
@@ -224,9 +223,6 @@ export class StudioBackend implements AsyncDisposable {
 
   async [Symbol.asyncDispose](): Promise<void> {
     this.#transports.dispose();
-    await this.#api[Symbol.asyncDispose]();
-    await this.#assetServer.close();
-    this.#resources.dispose();
-    this.#accounts[Symbol.dispose]();
+    await this.#resources.disposeAsync();
   }
 }

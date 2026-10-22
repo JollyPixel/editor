@@ -13,7 +13,7 @@ import { AssetKindSet } from "../../../src/catalog/AssetKindSet.ts";
 import type { EditorScopes } from "../../../shared/ProjectManifest.ts";
 import { SHELL_PREFERENCES } from "../../../shared/PreferenceScopes.ts";
 import { STUDIO_PREFERENCES } from "../../../shared/studioScope.ts";
-import type { ProjectReply } from "../../../shared/api/project.ts";
+import { ProjectRights } from "../../../shared/ProjectRights.ts";
 import { SettingsSections } from "../../../src/shell/settings/SettingsSections.ts";
 
 // CONSTANTS
@@ -84,13 +84,14 @@ const kKinds = new AssetKindSet({
   ],
   editable: ["voxelmap", "pixelart"]
 });
-const kEveryRight: ProjectReply = {
-  canExport: true,
-  canReadSettings: true,
-  canEditSettings: true,
-  canAudit: true,
-  canManageAccess: true
-};
+const kEveryRight = new ProjectRights({
+  share: true,
+  export: true,
+  readSettings: true,
+  editSettings: true,
+  audit: true,
+  manageAccess: true
+});
 
 function outline(
   settings: SettingsSections
@@ -101,11 +102,14 @@ function outline(
 }
 
 function sections(
-  project: ProjectReply | null = null,
+  rights = ProjectRights.NONE,
   editors: EditorScopes[] = [kVoxelMapEditor, kPixelArtEditor]
 ): SettingsSections {
   return new SettingsSections({
-    signedIn: true,
+    user: {
+      online: true,
+      rights
+    },
     shellScopes: SHELL_PREFERENCES,
     editors,
     kindPackages: [
@@ -114,8 +118,7 @@ function sections(
         kinds: ["voxelmap", "blockset"]
       }
     ],
-    kinds: kKinds,
-    project
+    kinds: kKinds
   });
 }
 
@@ -125,7 +128,7 @@ describe("SettingsSections", () => {
 
     assert.deepEqual(outline(settings), [
       {
-        you: ["profile", "appearance", "camera", "preferences-file"],
+        you: ["profile", "appearance", "camera", "preferences-file", "share-links"],
         editors: ["editor:voxel-map", "editor:pixel-art"]
       }
     ]);
@@ -142,7 +145,7 @@ describe("SettingsSections", () => {
   });
 
   test("shows a shared scope under the first editor reading it when no editor declares it", () => {
-    const voxelMap = sections(null, [kVoxelMapEditor]).find("editor:voxel-map");
+    const voxelMap = sections(ProjectRights.NONE, [kVoxelMapEditor]).find("editor:voxel-map");
 
     assert.ok(voxelMap?.kind === "preferences");
     assert.deepEqual(voxelMap.forms, [kVoxelMap, kPixelArt]);
@@ -160,7 +163,7 @@ describe("SettingsSections", () => {
   });
 
   test("leaves out a group with no section", () => {
-    const settings = sections(null, []);
+    const settings = sections(ProjectRights.NONE, []);
 
     assert.deepEqual(
       outline(settings).map((block) => Object.keys(block)),
@@ -170,7 +173,10 @@ describe("SettingsSections", () => {
 
   test("has no profile without an account", () => {
     const settings = new SettingsSections({
-      signedIn: false,
+      user: {
+        online: false,
+        rights: ProjectRights.NONE
+      },
       shellScopes: [STUDIO_PREFERENCES]
     });
 
@@ -193,12 +199,12 @@ describe("SettingsSections", () => {
     assert.equal(kindPackage.label, "Voxel map, Blockset");
     assert.equal(kindPackage.icon, "kind:voxelmap");
 
-    const reader = sections({
-      ...kEveryRight,
-      canReadSettings: false,
-      canAudit: false,
-      canManageAccess: false
-    });
+    const reader = sections(new ProjectRights({
+      ...kEveryRight.toJSON(),
+      readSettings: false,
+      audit: false,
+      manageAccess: false
+    }));
     assert.deepEqual(reader.ids, [
       "profile",
       "appearance",

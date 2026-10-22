@@ -77,24 +77,23 @@ async function boot(): Promise<void> {
     connectStudio(),
     ProjectManifest.fetch(document.baseURI)
   ]);
-  const { preferences } = connection;
+  const { user } = connection;
+  const { preferences } = user;
   appearance.follow(preferences);
   const scopes = PreferenceScopes.studio(manifest.preferences());
   const editors = createEditorRegistry(manifest, connection.editorQuery);
   const settings = new SettingsSections({
-    signedIn: connection.signedIn !== null,
+    user,
     shellScopes: SHELL_PREFERENCES,
     editors: manifest.editorScopes(),
     kindPackages: manifest.kindPackages,
-    kinds: editors.kindSet(),
-    project: connection.signedIn?.project.rights
+    kinds: editors.kindSet()
   });
   const studio = required("jolly-studio");
   await studio.attach({
     console: editorConsole,
     share: connection.share,
-    signedIn: connection.signedIn,
-    preferences,
+    user,
     scopes,
     settings,
     editors,
@@ -115,11 +114,8 @@ async function boot(): Promise<void> {
   });
 
   settingsConsole(editorConsole.commands, studio, settings);
-  if (connection.signedIn?.isAdmin) {
-    usersConsole(
-      editorConsole.commands,
-      connection.signedIn.roster
-    );
+  if (user.online && user.rights.allows("manageAccess")) {
+    usersConsole(editorConsole.commands, user.roster);
   }
 
   if (
