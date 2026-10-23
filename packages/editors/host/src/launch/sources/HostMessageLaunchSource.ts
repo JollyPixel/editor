@@ -1,12 +1,12 @@
 // Import Internal Dependencies
 import type { HostLogger } from "../../debug/readDebugLogger.ts";
-import { ShellCatalog } from "../catalog/ShellCatalog.ts";
+import { ShellCatalog } from "../../shell/catalog/ShellCatalog.ts";
 import { EditorLaunch } from "../EditorLaunch.ts";
 import {
   parseLaunchMessage,
   READY_MESSAGE_TYPE,
   ShellChannel
-} from "../ShellChannel.ts";
+} from "../../shell/ShellChannel.ts";
 import type { LaunchSource } from "./LaunchSource.ts";
 
 // CONSTANTS

@@ -34,7 +34,7 @@ import "@jolly-pixel/ui";
 import "./BuildTab.ts";
 import "../features/texture/TextureSizeField.ts";
 import type { TexturePane } from "./texturePanes.ts";
-import type { BuildWorkspace } from "./BuildTab.ts";
+import type { BuildEditing } from "./BuildTab.ts";
 import { PeerRegionSelections } from "../features/texture/index.ts";
 import type { PresenceStore } from "../state/index.ts";
 import type { EditorHistory } from "../features/history/index.ts";
@@ -48,7 +48,7 @@ const kDefaultZoom = {
   sensitivity: 0.6
 };
 
-export interface LeftPanelWorkspace extends BuildWorkspace {
+export interface LeftPanelEditing extends BuildEditing {
   access: ModelAccessSignals;
   presence: PresenceStore;
   history: EditorHistory;
@@ -61,7 +61,7 @@ export interface LeftPanelTexture {
 
 interface CanvasSources {
   readonly texture: LeftPanelTexture;
-  readonly workspace: LeftPanelWorkspace;
+  readonly editing: LeftPanelEditing;
 }
 
 export class LeftPanel extends LitElement {
@@ -72,7 +72,7 @@ export class LeftPanel extends LitElement {
   private declare _canvas: PixelArtCanvas | null;
 
   @property({ attribute: false })
-  declare workspace: LeftPanelWorkspace | null;
+  declare editing: LeftPanelEditing | null;
 
   @property({ attribute: false })
   declare keyBindingSettings: KeyBindingSettings<PixelArtAction> | null;
@@ -113,7 +113,7 @@ export class LeftPanel extends LitElement {
     super();
     this.mode = "build";
     this._canvas = null;
-    this.workspace = null;
+    this.editing = null;
     this.keyBindingSettings = null;
     this.uvNets = null;
   }
@@ -155,13 +155,13 @@ export class LeftPanel extends LitElement {
 
   #canvasToInitialize(): CanvasSources | null {
     const texture = this.#texture;
-    const workspace = this.workspace;
+    const editing = this.editing;
     if (
       texture === null ||
-      workspace === null ||
+      editing === null ||
       (
         this.#initialized?.texture === texture &&
-        this.#initialized.workspace === workspace
+        this.#initialized.editing === editing
       )
     ) {
       return null;
@@ -169,14 +169,14 @@ export class LeftPanel extends LitElement {
 
     return {
       texture,
-      workspace
+      editing
     };
   }
 
   async #bindCanvas(
     sources: CanvasSources
   ): Promise<void> {
-    const { texture, workspace } = sources;
+    const { texture, editing } = sources;
     this.#room?.dispose();
     this.#room = null;
 
@@ -185,7 +185,7 @@ export class LeftPanel extends LitElement {
       defaultMode: "move",
       zoom: kDefaultZoom,
       brush: { size: 8 },
-      history: new SharedPixelHistory(workspace.history, "build")
+      history: new SharedPixelHistory(editing.history, "build")
     });
     this.#initialized = sources;
     canvas.uv.showAll = true;
@@ -216,9 +216,9 @@ export class LeftPanel extends LitElement {
     ) {
       this._canvas.mode = canvasModeForTab(this.mode);
     }
-    if (changedProperties.has("workspace")) {
+    if (changedProperties.has("editing")) {
       this.#releaseModelAccess?.();
-      this.#releaseModelAccess = this.workspace?.access.subscribe(
+      this.#releaseModelAccess = this.editing?.access.subscribe(
         "change",
         () => this.requestUpdate()
       ) ?? null;
@@ -238,9 +238,9 @@ export class LeftPanel extends LitElement {
 
   #syncPeerRegionSelections(): void {
     this.#peerRegionSelections?.dispose();
-    this.#peerRegionSelections = this._canvas && this.workspace ?
+    this.#peerRegionSelections = this._canvas && this.editing ?
       new PeerRegionSelections({
-        presence: this.workspace.presence,
+        presence: this.editing.presence,
         target: this._canvas.peerPresence.uvSelections
       }) :
       null;
@@ -268,17 +268,17 @@ export class LeftPanel extends LitElement {
     return html`
       <jolly-model-editor-build
         ?hidden=${this.mode !== "build"}
-        .workspace=${this.workspace}
+        .editing=${this.editing}
       ></jolly-model-editor-build>
       <jolly-model-editor-texture-size
         ?hidden=${this.mode !== "build"}
         .canvas=${this._canvas}
-        .model=${this.workspace?.document ?? null}
+        .model=${this.editing?.document ?? null}
       ></jolly-model-editor-texture-size>
       <pixel-draw-panel
         uv-resize
         uv-overflow="64"
-        uv-access=${this.workspace?.access.current.has("uv") === false ? "view" : "edit"}
+        uv-access=${this.editing?.access.current.has("uv") === false ? "view" : "edit"}
       ></pixel-draw-panel>
     `;
   }

@@ -23,7 +23,7 @@ $ pnpm --filter @jolly-pixel/editor.voxel-map dev
 | `?max-fps=<n>` | Cap the frame rate |
 | `?offline` | Run the asset back-end in the page (IndexedDB) |
 
-The dev server seeds its workspace under `assets/`; delete that directory to seed it again.
+The dev server seeds its assets under `assets/`; delete that directory to seed them again.
 
 Auto orientation makes stairs rise away from the camera. Outer stair corners
 and peaks receive a half turn to account for their default shape geometry;

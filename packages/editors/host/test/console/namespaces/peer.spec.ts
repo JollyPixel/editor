@@ -11,7 +11,7 @@ import { CommandConsole } from "@jolly-pixel/console";
 // Import Internal Dependencies
 import { peerConsole } from "#src/console/namespaces/peer.ts";
 import { PeerInvite } from "#src/offline/peer/PeerInvite.ts";
-import type { PeerSharing } from "#src/session/OfflineMode.ts";
+import type { PeerSharing } from "#src/connection/OfflineMode.ts";
 
 describe("peer console", () => {
   test("invite prints a link that opens a guest on this page", async() => {

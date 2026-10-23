@@ -12,8 +12,8 @@ import {
 import {
   PageAppearance,
   type Appearance
-} from "../appearance/PageAppearance.ts";
-import { StoredAppearance } from "../appearance/StoredAppearance.ts";
+} from "../preferences/appearance/PageAppearance.ts";
+import { StoredAppearance } from "../preferences/appearance/StoredAppearance.ts";
 
 export interface PageConsole {
   readonly commands: CommandConsole;

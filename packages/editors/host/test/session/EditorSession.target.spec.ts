@@ -1,16 +1,10 @@
 // Import Node.js Dependencies
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { setTimeout } from "node:timers/promises";
 
 // Import Third-party Dependencies
 import { AssetId, type AssetReferenceData } from "@jolly-pixel/asset";
-import {
-  CATALOG_EXPORT,
-  CATALOG_APPLIED,
-  CATALOG_ROOM,
-  type CatalogExportCommand
-} from "@jolly-pixel/asset-server/client";
+import { CATALOG_ROOM } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
@@ -64,15 +58,6 @@ async function open(
   };
 }
 
-function isExportCommand(
-  message: unknown
-): message is CatalogExportCommand & { requestId: string; } {
-  return typeof message === "object" &&
-    message !== null &&
-    "type" in message &&
-    message.type === CATALOG_EXPORT;
-}
-
 describe("EditorSession target document", () => {
   test("keeps the target room-only when no kind is registered", async() => {
     const { client, session } = await open();
@@ -111,7 +96,7 @@ describe("EditorSession target document", () => {
     assert.equal(client.fakeRoom("voxelmap:map").leaves, 1);
   });
 
-  test("targetLease shares the document the session already holds", async() => {
+  test("targetLease shares the document the session holds and closes with the session", async() => {
     const kind = fakeDocumentKind("voxelmap");
     const { client, session } = await open({
       kinds: [kind],
@@ -123,62 +108,40 @@ describe("EditorSession target document", () => {
     assert.equal(lease.document, kind.documents[0]);
     assert.equal(kind.documents.length, 1);
 
-    lease.release();
+    session.dispose();
 
-    assert.equal(lease.document.disposed, false);
-    assert.equal(client.fakeRoom("voxelmap:map").leaves, 0);
+    assert.equal(lease.document.disposed, true);
+    assert.equal(client.fakeRoom("voxelmap:map").leaves, 1);
+  });
+
+  test("lease holds another asset until the session closes", async() => {
+    const { client, session } = await open();
+    const lease = session.lease(fakeDocumentKind("pixelart"), "grass");
+
+    assert.equal(client.fakeRoom("pixelart:grass").leaves, 0);
 
     session.dispose();
 
     assert.equal(lease.document.disposed, true);
+    assert.equal(client.fakeRoom("pixelart:grass").leaves, 1);
+    assert.throws(
+      () => session.lease(fakeDocumentKind("pixelart"), "grass"),
+      /disposed/
+    );
   });
 });
 
-describe("EditorSession archives", () => {
-  test("downloads the target under its current catalog path", async() => {
+describe("EditorSession target record", () => {
+  test("follows the catalog when the target moves", async() => {
     const { client, session } = await open();
-    const saved: string[] = [];
-    const archives = session.archives({
-      fallbackName: "map",
-      resetWarning: "",
-      browser: {
-        location: {
-          href: "http://localhost/",
-          assign: () => undefined,
-          reload: () => undefined
-        },
-        pickArchive: () => Promise.resolve(null),
-        save: (_blob, fileName) => {
-          saved.push(fileName);
-        },
-        askConflictPolicy: () => Promise.resolve(null),
-        confirmReset: () => Promise.resolve(false)
-      }
-    });
-    const catalog = client.fakeRoom(CATALOG_ROOM);
-    catalog.receive(changedMessage("map", {
+
+    client.fakeRoom(CATALOG_ROOM).receive(changedMessage("map", {
       ...MAP,
       path: "maps/overworld.voxelmap.json"
     }));
 
-    const downloading = archives.download();
-    await setTimeout();
-    const command = catalog.sent.find(isExportCommand);
-    assert.ok(command);
-    catalog.receive({
-      type: CATALOG_APPLIED,
-      requestId: command.requestId,
-      command: CATALOG_EXPORT,
-      content: {
-        type: "inline",
-        encoding: "base64",
-        data: ""
-      }
-    });
-    await downloading;
-
-    assert.equal(command.root, "map");
-    assert.deepEqual(saved, ["overworld.zip"]);
+    assert.equal(session.targetRecord.path, "maps/overworld.voxelmap.json");
+    assert.equal(session.target.record.path, MAP.path);
     session.dispose();
   });
 });

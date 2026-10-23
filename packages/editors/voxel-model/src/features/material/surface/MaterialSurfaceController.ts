@@ -21,7 +21,7 @@ import {
 } from "../../../state/index.ts";
 import type { ModelAccessSignals } from "../../../access/ModelAccess.ts";
 
-export interface MaterialSurfaceWorkspace {
+export interface MaterialSurfaceEditing {
   access: ModelAccessSignals;
   document: ModelDocument;
   materialFocus: MaterialFocusStore;
@@ -32,7 +32,7 @@ export interface MaterialSurfaceWorkspace {
 
 export class MaterialSurfaceController {
   #host: ReactiveControllerHost;
-  #connection: SubscriptionController<MaterialSurfaceWorkspace>;
+  #connection: SubscriptionController<MaterialSurfaceEditing>;
   #materialId: string | null = null;
 
   #onEdit = (
@@ -53,17 +53,17 @@ export class MaterialSurfaceController {
     this.#host = host;
     this.#connection = new SubscriptionController(
       host,
-      (workspace) => this.#subscribeTo(workspace)
+      (editing) => this.#subscribeTo(editing)
     );
   }
 
-  get #workspace(): MaterialSurfaceWorkspace | null {
+  get #editing(): MaterialSurfaceEditing | null {
     return this.#connection.current;
   }
 
   get edited(): ModelMaterialJSON | null {
     const material = this.#stored();
-    const previews = this.#workspace?.previews;
+    const previews = this.#editing?.previews;
     if (material === undefined || previews === undefined) {
       return null;
     }
@@ -77,30 +77,30 @@ export class MaterialSurfaceController {
   get editors(): readonly PresencePeer[] {
     return this.#materialId === null ?
       [] :
-      this.#workspace?.presence.materialEdits.get(this.#materialId) ?? [];
+      this.#editing?.presence.materialEdits.get(this.#materialId) ?? [];
   }
 
   get editable(): boolean {
-    return this.#workspace?.access.current.has("materials") ?? false;
+    return this.#editing?.access.current.has("materials") ?? false;
   }
 
   get lit(): boolean {
-    const view = this.#workspace?.view;
+    const view = this.#editing?.view;
 
     return view === undefined || isLit(view.settings);
   }
 
   attach(
-    workspace: MaterialSurfaceWorkspace
+    editing: MaterialSurfaceEditing
   ): void {
-    this.#connection.attach(workspace);
-    this.#onEdit(workspace.materialFocus.edited);
+    this.#connection.attach(editing);
+    this.#onEdit(editing.materialFocus.edited);
   }
 
   readonly preview = (
     changes: MaterialSurfacePatchJSON
   ): void => {
-    const previews = this.#workspace?.previews;
+    const previews = this.#editing?.previews;
     const materialId = this.#stored()?.id;
     if (previews === undefined || materialId === undefined || !this.editable) {
       return;
@@ -115,13 +115,13 @@ export class MaterialSurfaceController {
   readonly commit = (
     changes: MaterialSurfacePatchJSON
   ): void => {
-    const workspace = this.#workspace;
+    const editing = this.#editing;
     const stored = this.#stored();
-    if (workspace === null || stored === undefined) {
+    if (editing === null || stored === undefined) {
       return;
     }
     if (!this.editable) {
-      workspace.previews.end(stored.id, null);
+      editing.previews.end(stored.id, null);
 
       return;
     }
@@ -131,25 +131,25 @@ export class MaterialSurfaceController {
       ...changes
     });
     if (Object.keys(changed).length > 0) {
-      workspace.document.changeMaterial(stored.id, changed);
+      editing.document.changeMaterial(stored.id, changed);
     }
-    workspace.previews.end(stored.id, null);
+    editing.previews.end(stored.id, null);
   };
 
   #stored(): ModelMaterialJSON | undefined {
     return this.#materialId === null ?
       undefined :
-      this.#workspace?.document.tree.materials.material(this.#materialId);
+      this.#editing?.document.tree.materials.material(this.#materialId);
   }
 
   #endPreview(): void {
     if (this.#materialId !== null) {
-      this.#workspace?.previews.end(this.#materialId, null);
+      this.#editing?.previews.end(this.#materialId, null);
     }
   }
 
   #subscribeTo(
-    workspace: MaterialSurfaceWorkspace
+    editing: MaterialSurfaceEditing
   ): Array<() => void> {
     const {
       access,
@@ -158,7 +158,7 @@ export class MaterialSurfaceController {
       presence,
       previews,
       view
-    } = workspace;
+    } = editing;
 
     return [
       access.subscribe("change", this.#onUpdate),

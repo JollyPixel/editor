@@ -89,7 +89,7 @@ export interface ModelEditorSceneOptions {
   keyboardLayout: KeyboardLayoutStore;
 }
 
-export interface ModelWorkspace {
+export interface ModelEditing {
   access: ModelGrants;
   archives: EditorArchives;
   document: ModelDocument;
@@ -120,12 +120,12 @@ export interface ModelWorkspace {
 
 export class ModelEditorScene extends Systems.Scene {
   #options: ModelEditorSceneOptions;
-  #workspace = Promise.withResolvers<ModelWorkspace>();
+  #editing = Promise.withResolvers<ModelEditing>();
   #disposables: Array<() => void> = [];
   #viewport: ViewportRenderer | null = null;
 
-  get ready(): Promise<ModelWorkspace> {
-    return this.#workspace.promise;
+  get ready(): Promise<ModelEditing> {
+    return this.#editing.promise;
   }
 
   constructor(
@@ -326,7 +326,7 @@ export class ModelEditorScene extends Systems.Scene {
       () => access.dispose()
     );
 
-    this.#workspace.resolve({
+    this.#editing.resolve({
       access,
       archives: this.#options.archives,
       document,
@@ -372,7 +372,7 @@ export class ModelEditorScene extends Systems.Scene {
     for (const dispose of this.#disposables.splice(0)) {
       dispose();
     }
-    this.#workspace.reject(
+    this.#editing.reject(
       new Error("The model editor scene was destroyed before it awoke.")
     );
   }

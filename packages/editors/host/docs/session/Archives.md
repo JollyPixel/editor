@@ -1,7 +1,7 @@
 # Archives
 
 Export and import of `.zip` asset archives through the catalog room, the same
-way on a server and [offline](../editor/bootStandalone.md#offline-mode).
+way on a server and [offline](../boot/bootStandalone.md#offline-mode).
 
 ## SessionArchive
 
@@ -35,28 +35,32 @@ The `ImportPlan`: which ids are `live` or `fresh`, incompatible kinds, and the
 Resolves with the `ImportReport`. `"copy"` duplicates the archive under new
 ids. Rejects with `ArchiveImportDisabledError` when `canImport` is `false`.
 
-An editor cannot remount after an import: reload onto
-`?target=<report.root.id>`.
+Documents already open do not see the assets an import replaced: reload onto
+`?target=<report.root.id>` when `report.replaced` is not empty.
 
 ## EditorArchives
 
-The export, import and reset flows behind an editor's buttons, built for the
-session's target and `accepts` kind.
+The export, import and reset flows behind the `archive` console commands.
+The host builds one per mount for the target and gives it to the editor as
+[`context.archives`](../boot/mountStandalone.md#editor-context). The editor
+definition names its labels:
 
 ```ts
-const archives = session.archives({
-  fallbackName: "model",
-  resetWarning: "Every model stored here is deleted."
-});
+class ModelEditor {
+  static readonly archive = {
+    fallbackName: "model", // default: the accepts kind
+    resetWarning: "Every model stored here is deleted."
+  };
+}
 
-await archives.download();
+await context.archives.download();
 await archives.importFile(file);
 await archives.reset();
 ```
 
-### canImport, canReset and volatile
+### canImport and canReset
 
-Whether to offer import and reset, and whether edits are lost on reload.
+Whether to offer import and reset.
 
 ### download()
 
@@ -67,8 +71,10 @@ is read on each call, so a renamed target downloads under its new name.
 
 Rejects with `ArchiveRootError` when the archive root is not an `accepts`
 asset, before anything is written. Asks how to handle existing assets with
-`askImportConflictPolicy(plan)`, imports, then reloads onto the root. Does
-nothing when the question is dismissed.
+`askImportConflictPolicy(plan)` and imports. Then it
+[switches](../boot/mountStandalone.md#switching-target-or-tag) to the root, or
+reloads onto it when the import replaced assets. Does nothing when the
+question is dismissed.
 
 ### pickAndImport()
 
@@ -81,27 +87,9 @@ submitted with Enter.
 Asks to confirm `resetWarning`, resets the offline data and reloads.
 
 The `browser` option, an `EditorArchiveBrowser`, replaces downloads, file
-picking, dialogs and navigation. It defaults to the DOM and
-`window.location`.
+picking, dialogs and reloads. It defaults to the DOM and `window.location`.
 
-## ArchiveActions
+## Console
 
-`<jolly-archive-actions>` renders the buttons of an `EditorArchives`, the
-notice of volatile offline data and the error of the last failed flow.
-Importing `@jolly-pixel/editor.host/ui` defines it.
-
-```ts
-import "@jolly-pixel/editor.host/ui";
-
-html`<jolly-archive-actions .archives=${archives}></jolly-archive-actions>`;
-```
-
-## archiveConsole
-
-A [console feature](../../../../console/docs/features.md) registering
-`/archive.export`, `/archive.import` (when `canImport`) and `/archive.reset`
-(when `canReset`).
-
-```ts
-registerConsoleFeatures(commands, [archiveConsole], { archives });
-```
+The host registers `/archive.export`, `/archive.import` (when `canImport`)
+and `/archive.reset` (when `canReset`) for every editor.

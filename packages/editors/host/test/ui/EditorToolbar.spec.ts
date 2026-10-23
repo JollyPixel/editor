@@ -23,11 +23,11 @@ import {
 // Import Internal Dependencies
 import type { EditorToolbar } from "#src/ui/index.ts";
 import "#src/ui/index.ts";
-import { REPLAY_TOUR_STEP } from "#src/lantern/replayTourStep.ts";
+import { REPLAY_TOUR_STEP } from "#src/ui/lantern/replayTourStep.ts";
 import { EditorTargets } from "#src/session/EditorTargets.ts";
 import type { EditorTags } from "#src/session/EditorTags.ts";
 import { EditorToolbarSources } from "#src/session/EditorToolbarSources.ts";
-import { ConnectionStatus } from "#src/session/ConnectionStatus.ts";
+import { ConnectionStatus } from "#src/connection/ConnectionStatus.ts";
 import { AssetLeases } from "#src/lease/AssetLeases.ts";
 import {
   FakeClient,

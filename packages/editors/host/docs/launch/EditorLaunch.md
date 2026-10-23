@@ -1,7 +1,7 @@
 # EditorLaunch
 
 The target a page opens, with the tag it shows and the shell that framed it.
-[`mountStandalone`](../editor/mountStandalone.md) reads it from the first launch source
+[`mountStandalone`](../boot/mountStandalone.md) reads it from the first launch source
 that answers and passes it to `mount` as `context.launch`.
 
 ## Launch sources
@@ -105,4 +105,4 @@ Posts `{ type: "jolly-ready" }` to the parent once per allowed origin, then
 waits `timeout` milliseconds (1000 by default) for `jolly-launch`. A launch
 from an origin outside `origins` (`[location.origin]` by default) is ignored;
 `ANY_SHELL_ORIGIN` (`"*"`) allows every origin. A launch read this way carries
-a [`ShellChannel`](./ShellChannel.md).
+a [`ShellChannel`](../shell/ShellChannel.md).

@@ -11,9 +11,9 @@ import type {
 
 // Import Internal Dependencies
 import { EditorLaunch } from "../launch/EditorLaunch.ts";
-import { LastOpenedLaunchSource } from "../launch/sources/LastOpenedLaunchSource.ts";
+import type { LaunchNavigator } from "../launch/LaunchNavigator.ts";
 import type { SessionArchive } from "./SessionArchive.ts";
-import type { OfflineMode } from "./OfflineMode.ts";
+import type { OfflineMode } from "../connection/OfflineMode.ts";
 import { ArchiveRootError } from "./errors/ArchiveRootError.ts";
 import { ArchiveImportDisabledError } from "./errors/ArchiveImportDisabledError.ts";
 import { askImportConflictPolicy } from "./dialogs/askImportConflictPolicy.ts";
@@ -21,6 +21,8 @@ import { askImportConflictPolicy } from "./dialogs/askImportConflictPolicy.ts";
 // CONSTANTS
 const kArchiveExtension = ".zip";
 const kArchiveAccept = ".zip,application/zip";
+const kResetWarning = "Every asset stored in this browser is deleted. " +
+  "Export what you want to keep first.";
 const kDomArchiveBrowser: EditorArchiveBrowser = {
   get location() {
     return globalThis.location;
@@ -79,22 +81,31 @@ export interface EditorArchiveBrowser {
   ): Promise<boolean>;
 }
 
-export interface EditorArchivesOptions {
-  archive: SessionArchive;
-  offline: OfflineMode | null;
+export interface EditorArchiveLabels {
+  /**
+   * Download name, without extension, when the target path has no stem.
+   * @default accepts
+   */
+  fallbackName?: string;
+  /**
+   * What a reset deletes, shown before the user confirms it.
+   */
+  resetWarning?: string;
+}
+
+export interface EditorArchiveSession {
+  readonly archive: SessionArchive;
+  readonly offline: OfflineMode | null;
+  readonly targetRecord: EditorArchiveTarget;
+}
+
+export interface EditorArchivesOptions extends EditorArchiveLabels {
+  session: EditorArchiveSession;
   /**
    * Asset kind the editor opens; an archive rooted on another kind is refused.
    */
   accepts: string;
-  /**
-   * Download name, without extension, when the target path has no stem.
-   */
-  fallbackName: string;
-  /**
-   * What a reset deletes, shown before the user confirms it.
-   */
-  resetWarning: string;
-  target(): EditorArchiveTarget;
+  navigator: LaunchNavigator;
   /**
    * @default the DOM and window location
    */
@@ -102,42 +113,37 @@ export interface EditorArchivesOptions {
 }
 
 export class EditorArchives {
-  #archive: SessionArchive;
-  #offline: OfflineMode | null;
+  #session: EditorArchiveSession;
   #accepts: string;
   #fallbackName: string;
   #resetWarning: string;
-  #target: () => EditorArchiveTarget;
+  #navigator: LaunchNavigator;
   #browser: EditorArchiveBrowser;
 
   constructor(
     options: EditorArchivesOptions
   ) {
-    this.#archive = options.archive;
-    this.#offline = options.offline;
+    this.#session = options.session;
     this.#accepts = options.accepts;
-    this.#fallbackName = options.fallbackName;
-    this.#resetWarning = options.resetWarning;
-    this.#target = options.target;
+    this.#fallbackName = options.fallbackName ?? options.accepts;
+    this.#resetWarning = options.resetWarning ?? kResetWarning;
+    this.#navigator = options.navigator;
     this.#browser = options.browser ?? kDomArchiveBrowser;
   }
 
   get canImport(): boolean {
-    return this.#archive.canImport;
+    return this.#session.archive.canImport;
   }
 
   get canReset(): boolean {
-    return this.#offline?.persistent === true &&
-      this.#offline.canReset !== false;
-  }
+    const { offline } = this.#session;
 
-  get volatile(): boolean {
-    return this.#offline?.persistent === false;
+    return offline?.persistent === true && offline.canReset !== false;
   }
 
   async download(): Promise<void> {
-    const { id, path } = this.#target();
-    const blob = await this.#archive.export(id);
+    const { id, path } = this.#session.targetRecord;
+    const blob = await this.#session.archive.export(id);
 
     this.#browser.save(blob, this.#fileName(path));
   }
@@ -145,7 +151,7 @@ export class EditorArchives {
   async importFile(
     file: Blob
   ): Promise<void> {
-    const plan = await this.#archive.plan(file);
+    const plan = await this.#session.archive.plan(file);
     if (plan.root?.kind !== this.#accepts) {
       throw new ArchiveRootError(this.#accepts);
     }
@@ -157,12 +163,18 @@ export class EditorArchives {
       return;
     }
 
-    const { root } = await this.#archive.import(file, { onConflict });
+    const { root, replaced } = await this.#session.archive.import(
+      file,
+      { onConflict }
+    );
     if (root === undefined) {
       throw new ArchiveRootError(this.#accepts);
     }
+    if (replaced.length === 0) {
+      await this.#navigator.navigate(root.id, null);
 
-    LastOpenedLaunchSource.remember(this.#accepts, root.id);
+      return;
+    }
 
     const { location } = this.#browser;
     location.assign(
@@ -188,7 +200,7 @@ export class EditorArchives {
       return;
     }
 
-    await this.#offline?.reset();
+    await this.#session.offline?.reset();
     this.#browser.location.reload();
   }
 

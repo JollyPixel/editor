@@ -12,7 +12,7 @@ function brushBlock(
   map: VoxelMapPage
 ): Promise<number | null> {
   return map.page.evaluate(
-    () => window.voxelMapEditor!.workspace.state.block.id
+    () => window.voxelMapEditor!.editing.state.block.id
   );
 }
 
@@ -20,7 +20,7 @@ function blockNames(
   map: VoxelMapPage
 ): Promise<string[]> {
   return map.page.evaluate(() => [
-    ...window.voxelMapEditor!.workspace.view.document.blocks.getAll()
+    ...window.voxelMapEditor!.editing.view.document.blocks.getAll()
   ].map((block) => block.name));
 }
 
@@ -29,7 +29,7 @@ function blockProperties(
   name: string
 ): Promise<Record<string, unknown> | undefined> {
   return map.page.evaluate((blockName) => [
-    ...window.voxelMapEditor!.workspace.view.document.blocks.getAll()
+    ...window.voxelMapEditor!.editing.view.document.blocks.getAll()
   ].find((block) => block.name === blockName)?.properties, name);
 }
 
@@ -38,7 +38,7 @@ function blockSurface(
   blockId: number
 ): Promise<{ alphaMode?: string; side?: string; }> {
   return map.page.evaluate((id) => {
-    const block = window.voxelMapEditor!.workspace.view.document.blocks.get(id);
+    const block = window.voxelMapEditor!.editing.view.document.blocks.get(id);
 
     return {
       alphaMode: block?.alphaMode,
@@ -52,7 +52,7 @@ function blockTileSize(
   blockId: number
 ): Promise<number | undefined> {
   return map.page.evaluate((id) => {
-    const block = window.voxelMapEditor!.workspace.view.document.blocks.get(id);
+    const block = window.voxelMapEditor!.editing.view.document.blocks.get(id);
     const refs = Object.values(block?.faceTextures ?? {});
 
     return (block?.defaultTexture ?? refs[0])?.size;
@@ -242,7 +242,7 @@ test("the shape grid reshapes the block", async({ map }) => {
   await editor.pickShape("Inner stair corner");
 
   await expect.poll(() => map.page.evaluate(
-    () => window.voxelMapEditor!.workspace.view.document.blocks.get(1)?.shapeId
+    () => window.voxelMapEditor!.editing.view.document.blocks.get(1)?.shapeId
   )).toBe("stairCornerInner");
   await expect(editor.shape.locator(".trigger"))
     .toHaveText("Inner stair corner");

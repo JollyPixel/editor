@@ -29,7 +29,7 @@ test("the texture follows the selected block", async({ map, page }) => {
   });
 
   await page.evaluate(() => {
-    window.voxelMapEditor!.workspace.state.block.id = 5;
+    window.voxelMapEditor!.editing.state.block.id = 5;
   });
 
   await expect.poll(async() => (await textureState(map.texture)).selectedRegionId)

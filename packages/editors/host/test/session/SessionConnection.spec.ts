@@ -4,6 +4,7 @@ import {
   test
 } from "node:test";
 import assert from "node:assert/strict";
+import { setImmediate } from "node:timers/promises";
 
 // Import Third-party Dependencies
 import { AssetId } from "@jolly-pixel/asset";
@@ -15,6 +16,8 @@ import {
 
 // Import Internal Dependencies
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
+import { CATALOG_TIMEOUT_MS } from "#src/connection/openCatalog.ts";
+import type { ServerConnection } from "#src/connection/ConnectionStatus.ts";
 import { SessionConnection } from "#src/session/SessionConnection.ts";
 import {
   MAP,
@@ -27,6 +30,12 @@ import {
   snapshotMessage
 } from "../helpers/rooms.ts";
 
+const kServerLink: ServerConnection = {
+  ready: true,
+  on: () => undefined,
+  off: () => undefined
+};
+
 function mapLaunch(
   tag: string | null = null
 ): EditorLaunch {
@@ -34,17 +43,35 @@ function mapLaunch(
 }
 
 describe("SessionConnection.connect", () => {
-  test("closes a client when the catalog never becomes ready", async() => {
+  test("gives up on the catalog of a server link in time and closes its client", async(t) => {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
     const client = new FakeClient();
-    await assert.rejects(
-      SessionConnection.connect({
+    const connecting = SessionConnection.connect({
+      identity: PEER_IDENTITY,
+      client,
+      server: kServerLink
+    });
+    await setImmediate();
+    t.mock.timers.tick(CATALOG_TIMEOUT_MS);
+
+    await assert.rejects(connecting, CatalogUnavailableError);
+    assert.strictEqual(client.destroyed, true);
+  });
+
+  test("shows the connection status of a server link only", async() => {
+    for (const server of [kServerLink, undefined]) {
+      const client = new FakeClient();
+      const connecting = SessionConnection.connect({
         identity: PEER_IDENTITY,
         client,
-        catalogTimeoutMs: 1
-      }),
-      CatalogUnavailableError
-    );
-    assert.strictEqual(client.destroyed, true);
+        server
+      });
+      client.fakeRoom(CATALOG_ROOM).receive(snapshotMessage([MAP], {}));
+      const connection = await connecting;
+
+      assert.equal(connection.connectionStatus !== null, server !== undefined);
+      connection.dispose();
+    }
   });
 
   test("uses the catalog its opener resolves without opening another", async() => {

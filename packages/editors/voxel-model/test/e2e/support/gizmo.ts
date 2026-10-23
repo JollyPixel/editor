@@ -26,8 +26,8 @@ async function blockPoint(
 ): Promise<ScreenPoint> {
   const editor = await resolveEditor(page);
 
-  const { view, point } = await editor.evaluate(({ workspace, runtime }, blockName) => {
-    const { blocks, gizmo } = workspace;
+  const { view, point } = await editor.evaluate(({ editing, runtime }, blockName) => {
+    const { blocks, gizmo } = editing;
     const block = [...blocks.values()]
       .find((candidate) => candidate.name === blockName);
     if (block === undefined) {
@@ -68,16 +68,16 @@ export async function gizmoHandlePoints(
   axis: Axis
 ): Promise<[ScreenPoint, ScreenPoint]> {
   const editor = await resolveEditor(page);
-  await page.waitForFunction(({ workspace }) => {
-    const { gizmo } = workspace;
+  await page.waitForFunction(({ editing }) => {
+    const { gizmo } = editing;
 
     return (gizmo.activeControls?.target ?? null) !== null;
   }, editor);
   await nextFrames(page);
 
-  const { view, points } = await editor.evaluate(({ workspace, runtime }, axisName) => {
+  const { view, points } = await editor.evaluate(({ editing, runtime }, axisName) => {
     const kDragRatio = 3;
-    const { gizmo } = workspace;
+    const { gizmo } = editing;
     const controls = gizmo.activeControls;
     if (controls === null) {
       throw new Error("No active gizmo tool.");

@@ -83,7 +83,7 @@ export function createMaterialHarness(
   const surface = new MaterialSurfaceController(host);
   const view = new ViewSettingsStore(new Preferences());
   const access = modelAccess();
-  const workspace = {
+  const editing = {
     ...fixture,
     access,
     history: createEditorHistory({ document: fixture.document }),
@@ -91,8 +91,8 @@ export function createMaterialHarness(
     presence,
     view
   };
-  controller.attach(workspace);
-  surface.attach(workspace);
+  controller.attach(editing);
+  surface.attach(editing);
 
   const actions: string[] = [];
   fixture.document.on("change", (change) => actions.push(change.command.action));

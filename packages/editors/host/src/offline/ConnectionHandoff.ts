@@ -2,66 +2,65 @@
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
-import type { StandaloneConnection } from "../editor/StandaloneConnection.ts";
+import type { StandaloneConnection } from "../connection/StandaloneConnection.ts";
+import { openCatalog } from "../connection/openCatalog.ts";
 
-export class ParkedConnection {
-  readonly #connection: StandaloneConnection;
-  readonly #catalog: CatalogClient;
+interface SharedConnection {
+  readonly connection: StandaloneConnection;
+  readonly catalog: Promise<CatalogClient>;
+}
+
+export class ConnectionHandoff {
+  readonly #open: () => StandaloneConnection;
+  #shared: SharedConnection | null = null;
+  #taken = false;
 
   constructor(
-    connection: StandaloneConnection,
-    catalog: CatalogClient
+    open: () => StandaloneConnection
   ) {
-    this.#connection = connection;
-    this.#catalog = catalog;
+    this.#open = open;
   }
 
-  toConnection(): StandaloneConnection {
-    const catalog = this.#catalog;
+  catalog(): Promise<CatalogClient> {
+    return this.#first().catalog;
+  }
+
+  take(): StandaloneConnection {
+    if (this.#taken) {
+      return this.#open();
+    }
+
+    this.#taken = true;
+    const { connection, catalog } = this.#first();
 
     return {
-      ...this.#connection,
-      openCatalog: () => Promise.resolve(catalog)
+      ...connection,
+      openCatalog: () => catalog
     };
   }
 
   release(): void {
-    this.#catalog.dispose();
-    this.#connection.client.destroy();
-  }
-}
-
-export class ConnectionHandoff {
-  #parked: ParkedConnection | null = null;
-  #settled = false;
-
-  park(
-    connection: ParkedConnection
-  ): void {
-    this.#releaseParked();
-    if (this.#settled) {
-      connection.release();
+    const shared = this.#shared;
+    if (this.#taken || shared === null) {
+      return;
     }
-    else {
-      this.#parked = connection;
+
+    this.#shared = null;
+    void shared.catalog.then((catalog) => catalog.dispose(), () => undefined);
+    shared.connection.client.destroy();
+  }
+
+  #first(): SharedConnection {
+    if (this.#shared === null) {
+      const connection = this.#open();
+      const catalog = openCatalog(connection.client);
+      catalog.catch(() => undefined);
+      this.#shared = {
+        connection,
+        catalog
+      };
     }
-  }
 
-  take(): StandaloneConnection | undefined {
-    this.#settled = true;
-    const parked = this.#parked;
-    this.#parked = null;
-
-    return parked?.toConnection();
-  }
-
-  close(): void {
-    this.#settled = true;
-    this.#releaseParked();
-  }
-
-  #releaseParked(): void {
-    this.#parked?.release();
-    this.#parked = null;
+    return this.#shared;
   }
 }

@@ -3,7 +3,7 @@
 The editor's view of one target on a [connection](#connection) to the asset
 server. It holds the target's room and keeps one synced document per
 dependency, following the catalog as edges come and go.
-[`mountStandalone`](../editor/mountStandalone.md) opens it and passes it to `mount` as
+[`mountStandalone`](../boot/mountStandalone.md) opens it and passes it to `mount` as
 `context.session`.
 
 ```ts
@@ -83,28 +83,40 @@ The [toolbar](./EditorToolbar.md#properties) shows it.
 
 See [Archives](./Archives.md). `offline` is `null` on a server session.
 
+### targetRecord
+
+The target's current catalog record, which follows a rename or a move.
+`target.record` keeps the record the session opened.
+
 ## Methods
 
 ### targetLease(kind)
 
-The target document as a typed, refcounted [`AssetLease`](../lease/AssetLeases.md).
-Release it when the editor is disposed.
+The target document as a typed [`AssetLease`](../lease/AssetLeases.md),
+sharing the document the session holds. Pass the same kind object as
+`kinds`. The session releases it when disposed, so the editor does not.
 
 ```ts
 const target = session.targetLease(VOXEL_MAP_KIND_OBJECT);
 
 paint(target.document);
-// later
-target.release();
 ```
 
-### archives(options)
+### lease(kind, assetId)
 
-Builds the [`EditorArchives`](./Archives.md#editorarchives) of the target.
+A typed lease on another asset, held until the session is disposed. Use it
+for a document the editor needs for its whole mount, such as a model's
+texture.
+
+```ts
+const texture = session.lease(PIXEL_ART_KIND_OBJECT, reference.id);
+```
+
+Both `targetLease` and `lease` throw once the session is disposed.
 
 ### dispose()
 
-Releases the session's target and dependency leases. Leases panels opened
+Releases the session's target, dependency and held leases. Leases opened
 through `assets` stay open until released or until the connection is
 disposed. `mountStandalone` owns the session; an editor's `dispose()` must not
 call it.
@@ -128,10 +140,11 @@ editor's `kinds`. A lease added while the first snapshot syncs may still be
 pending: await its `ready`, then check that `session.dependency(id)` still
 returns it.
 
-Dependencies belong to the session and have no `release()`. A panel that
-needs a document to outlive the dependency opens its own lease with
-`session.assets.open(kind, assetId)`, using the same kind object as `kinds`.
-That is also how to get a typed document: `document` is `unknown` here.
+Dependencies belong to the session and have no `release()`. For a typed
+document that outlives the dependency, hold it with
+[`lease(kind, assetId)`](#leasekind-assetid) for the whole mount, or open
+it with `session.assets.open(kind, assetId)` and release it when the panel
+is done. Use the same kind object as `kinds`: `document` is `unknown` here.
 
 ## Events
 
@@ -159,16 +172,15 @@ The equality check skips a lease removed or replaced while syncing.
 
 ## Identity
 
-The username prompt stores the name in `sessionStorage` under
+The username prompt of `serverConnection()` stores the name in `sessionStorage` under
 `IDENTITY_STORAGE_KEY` (`"jolly-pixel:username"`) and skips itself while one
 is stored. `rememberQueryUsername(search?)` stores the `username` query
-parameter there; `mountStandalone` calls it in [dev](../editor/mountStandalone.md#dev).
+parameter there; `mountStandalone` calls it in [dev](../boot/mountStandalone.md#dev).
 
 ## Connection
 
 ```ts
 class SessionConnection {
-  static open(options: SessionConnectionOpenOptions): Promise<SessionConnection>;
   static connect(options: SessionConnectionConnectOptions): Promise<SessionConnection>;
 
   readonly identity: PeerIdentity;
@@ -185,27 +197,48 @@ class SessionConnection {
 
 A connection holds the network client, the catalog and one `AssetLeases`.
 `mountStandalone` keeps one per page and opens a session on it for each
-[switch](../editor/mountStandalone.md#switching-target-or-tag), so a dependency two
+[switch](../boot/mountStandalone.md#switching-target-or-tag), so a dependency two
 sessions use stays joined.
 
-### open({ identity, shell?, openCatalog?, logger? })
+### connect(options)
 
-Joins as `shell.identity`, or prompts for a username. Creates a network
-client and waits `CATALOG_TIMEOUT_MS` (5 s) for the catalog snapshot, then
-throws `CatalogUnavailableError` and destroys the client.
+```ts
+interface SessionConnectionConnectOptions extends StandaloneConnection {
+  logger?: HostLogger;
+}
 
-It passes the client as `server`, so only this connection has a
-`connectionStatus` and keeps [offline changes](../lease/AssetLeases.md#offline-changes).
+interface StandaloneConnection {
+  identity: PeerIdentity;
+  client: EditorSessionClient;
+  openCatalog?: CatalogOpener;
+  offline?: OfflineMode;
+  server?: ServerConnection;
+  openOutboxes?: () => Promise<PendingOutboxes | null>;
+}
+```
 
-### connect({ identity, client, offline?, catalogTimeoutMs?, openCatalog?, server?, logger? })
+Opens the catalog on `client` and builds the connection. Each way of
+reaching assets supplies its own fields:
 
-Uses a supplied client. Without `catalogTimeoutMs`, the caller owns
-connection liveness. `server` (`null` by default) is the client itself when it
-connects straight to the server: it feeds `connectionStatus`, and the
-connection claims the offline changes of closed pages once the catalog is up.
+- `server` is the client's link to the asset server. With it, the catalog
+  snapshot has `CATALOG_TIMEOUT_MS` (5 s) to arrive before
+  `CatalogUnavailableError`, and the link feeds `connectionStatus`. Without
+  it, the caller owns connection liveness.
+- `openOutboxes` keeps [offline changes](../lease/AssetLeases.md#offline-changes)
+  across page loads. Only the page's own server connection passes it.
+- `offline` marks an [offline](../boot/bootStandalone.md#offline-mode) back-end.
 
-`openCatalog` lets both open the catalog somewhere other than the client's
-catalog room, such as a [shell's catalog port](../launch/ShellChannel.md#catalog-port).
+A failed catalog destroys the client.
+
+### serverConnection({ identity, shell, logger })
+
+The connection to the page's asset server. It joins as `shell.identity`,
+or prompts for a username, renews the session when the shell asks to, and
+sets `server` and `openOutboxes`. A share link sets `server` but keeps no
+outboxes.
+
+`openCatalog` opens the catalog somewhere other than the client's
+catalog room, such as a [shell's catalog port](../shell/ShellChannel.md#catalog-port).
 A page that needs only the catalog calls
 `openCatalog(client, timeoutMs?, open?)`, which destroys the client on
 failure.
@@ -223,11 +256,11 @@ and the client.
 
 ### Boot steps
 
-`open()`, `connect()` and `openSession()` log
+`serverConnection()`, `connect()` and `openSession()` log
 [`Logger.step`](../../../../engine/docs/systems/logger.md#steps) entries to
 their `logger` (`host.session` under `mountStandalone`):
 
-- `identity`: the username prompt, `open()` only.
+- `identity`: the username prompt, `serverConnection()` only.
 - `catalog`
 - `target`, with `kind` and `id`.
 - `dependency`, one per dependency, with `kind` and `id`.

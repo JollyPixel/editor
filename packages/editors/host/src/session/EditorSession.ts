@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
-import type { AssetReferenceData } from "@jolly-pixel/asset";
+import type {
+  AssetRecordData,
+  AssetReferenceData
+} from "@jolly-pixel/asset";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 import type { PeerIdentity } from "@jolly-pixel/ui";
 
@@ -14,14 +17,10 @@ import type {
   AssetDocumentKind,
   AssetRoomLease
 } from "../lease/AssetLease.ts";
-import type { ConnectionStatus } from "./ConnectionStatus.ts";
+import type { ConnectionStatus } from "../connection/ConnectionStatus.ts";
 import type { SessionArchive } from "./SessionArchive.ts";
-import {
-  EditorArchives,
-  type EditorArchivesOptions
-} from "./EditorArchives.ts";
 import type { SessionConnection } from "./SessionConnection.ts";
-import type { OfflineMode } from "./OfflineMode.ts";
+import type { OfflineMode } from "../connection/OfflineMode.ts";
 
 export type EditorSessionEvents = {
   "dependency-added": (dependency: AssetDependency) => void;
@@ -42,11 +41,6 @@ export interface EditorSessionParts extends Omit<EditorSessionTarget, "logger"> 
   connection: SessionConnection;
 }
 
-export type EditorSessionArchivesOptions = Pick<
-  EditorArchivesOptions,
-  "fallbackName" | "resetWarning" | "browser"
->;
-
 interface SessionDependency {
   readonly lease: AssetLease<unknown>;
   readonly view: AssetDependency;
@@ -63,8 +57,8 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
   readonly target: AssetRoomLease;
   readonly targetReady: Promise<void>;
 
-  readonly #accepts: string;
   readonly #kinds = new Map<string, AssetDocumentKind<unknown>>();
+  readonly #held: AssetRoomLease[] = [];
   #dependencies = new Map<string, SessionDependency>();
   #disposed = false;
 
@@ -85,7 +79,6 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     this.assets = connection.assets;
     this.connectionStatus = connection.connectionStatus;
     this.tag = launch.tag;
-    this.#accepts = options.accepts;
     for (const kind of options.kinds) {
       this.#kinds.set(kind.kind, kind);
     }
@@ -119,27 +112,25 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     this.catalog.on("change", this.#onCatalogChange);
   }
 
+  get targetRecord(): AssetRecordData {
+    return this.catalog.record(this.target.record.id) ?? this.target.record;
+  }
+
   targetLease<TDocument, TCommand, TMessage>(
     kind: AssetDocumentKind<TDocument, TCommand, TMessage>
   ): AssetLease<TDocument, TCommand, TMessage> {
-    return this.assets.open(
+    return this.#hold(() => this.assets.open(
       kind,
       this.target.record.id,
       this.tag
-    );
+    ));
   }
 
-  archives(
-    options: EditorSessionArchivesOptions
-  ): EditorArchives {
-    return new EditorArchives({
-      ...options,
-      archive: this.archive,
-      offline: this.offline,
-      accepts: this.#accepts,
-      target: () => this.catalog.record(this.target.record.id) ??
-        this.target.record
-    });
+  lease<TDocument, TCommand, TMessage>(
+    kind: AssetDocumentKind<TDocument, TCommand, TMessage>,
+    assetId: string
+  ): AssetLease<TDocument, TCommand, TMessage> {
+    return this.#hold(() => this.assets.open(kind, assetId));
   }
 
   * dependencies(): IterableIterator<AssetDependency> {
@@ -165,7 +156,23 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
       lease.release();
     }
     this.#dependencies.clear();
+    for (const lease of this.#held.splice(0)) {
+      lease.release();
+    }
     this.target.release();
+  }
+
+  #hold<TLease extends AssetRoomLease>(
+    open: () => TLease
+  ): TLease {
+    if (this.#disposed) {
+      throw new Error("The editor session was disposed.");
+    }
+
+    const lease = open();
+    this.#held.push(lease);
+
+    return lease;
   }
 
   #syncDependencies(): void {

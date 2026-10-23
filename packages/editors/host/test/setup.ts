@@ -37,6 +37,7 @@ Object.assign(globalThis, {
   customElements: kEmulatedBrowserWindow.customElements,
   location: kEmulatedBrowserWindow.location,
   sessionStorage: kEmulatedBrowserWindow.sessionStorage,
+  localStorage: kEmulatedBrowserWindow.localStorage,
   Event: kEmulatedBrowserWindow.Event,
   CustomEvent: kEmulatedBrowserWindow.CustomEvent,
   MessageEvent: kEmulatedBrowserWindow.MessageEvent,

@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import type { SelectionStore } from "../../../state/index.ts";
-import type { VoxelMapWorkspace } from "../../../workspace/VoxelMapWorkspace.ts";
+import type { VoxelMapEditing } from "../../../editing/VoxelMapEditing.ts";
 import type { MapAccess } from "../../../access/MapAccess.ts";
 
 // CONSTANTS
@@ -30,11 +30,11 @@ export class PaintAvailability {
   static readonly Ready = new PaintAvailability(null, null);
 
   static watch(
-    workspace: VoxelMapWorkspace,
+    editing: VoxelMapEditing,
     listener: (availability: PaintAvailability) => void
   ): Iterable<() => void> {
-    const { editorMap, access } = workspace;
-    const { brush, block, selection } = workspace.state;
+    const { editorMap, access } = editing;
+    const { brush, block, selection } = editing.state;
     function refresh(): void {
       listener(PaintAvailability.evaluate({
         selection,

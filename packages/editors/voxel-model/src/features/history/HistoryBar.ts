@@ -14,7 +14,7 @@ import type { HistoryStepInfo } from "@jolly-pixel/history";
 // Import Internal Dependencies
 import "./HistoryButtons.ts";
 import { describeRefusal } from "./describeRefusal.ts";
-import type { HistoryWorkspace } from "./HistoryButtons.ts";
+import type { HistoryEditing } from "./HistoryButtons.ts";
 import type { ModelAccessSignals } from "../../access/ModelAccess.ts";
 import type { AnimationLibrary } from "../animation/index.ts";
 
@@ -22,7 +22,7 @@ import type { AnimationLibrary } from "../animation/index.ts";
 const kModelRefused = "You can only view this model, so the change was not saved";
 const kSetRefused = "You can only view this animation set, so the change was not saved";
 
-export interface HistoryBarWorkspace extends HistoryWorkspace {
+export interface HistoryBarEditing extends HistoryEditing {
   access: Pick<ModelAccessSignals, "subscribe">;
   animations: Pick<AnimationLibrary, "subscribe">;
 }
@@ -58,7 +58,7 @@ export class HistoryBar extends LitElement {
 
   #log = new LogQueue();
   #releaseLog: (() => void) | null = null;
-  #workspace = new SubscriptionController<HistoryBarWorkspace>(
+  #editing = new SubscriptionController<HistoryBarEditing>(
     this,
     ({ activeHistory, access, animations }) => {
       activeHistory.on("skipped", this.#onSkipped);
@@ -72,9 +72,9 @@ export class HistoryBar extends LitElement {
   );
 
   attach(
-    workspace: HistoryBarWorkspace
+    editing: HistoryBarEditing
   ): void {
-    this.#workspace.attach(workspace);
+    this.#editing.attach(editing);
   }
 
   override connectedCallback(): void {
@@ -92,14 +92,14 @@ export class HistoryBar extends LitElement {
     skipped: HistoryStepInfo
   ): void => {
     const step = skipped.label === null ? "a step" : `"${skipped.label}"`;
-    const peers = this.#workspace.current?.presence.peers ?? [];
+    const peers = this.#editing.current?.presence.peers ?? [];
     this.#log.push(`Skipped ${step}: ${describeRefusal(skipped.refused, peers)}`);
   };
 
   override render(): TemplateResult {
     return html`
       <jolly-model-editor-history-buttons
-        .workspace=${this.#workspace.current}
+        .editing=${this.#editing.current}
       ></jolly-model-editor-history-buttons>
       <jolly-log .entries=${this.#log.entries}></jolly-log>
     `;

@@ -71,7 +71,7 @@ function storedUvState(
   name: string
 ): Promise<string | undefined> {
   return page.evaluate((blockName) => {
-    const { document } = window.voxelModelEditor!.workspace;
+    const { document } = window.voxelModelEditor!.editing;
     const block = [...document.tree.blocks()]
       .find((candidate) => candidate.name === blockName);
 

@@ -18,7 +18,7 @@ import "./timelineIcons.ts";
 import {
   TimelineController,
   type TimelineView,
-  type TimelineWorkspace
+  type TimelineEditing
 } from "./TimelineController.ts";
 import type {
   TimelineKey,
@@ -245,9 +245,9 @@ export class Timeline extends LitElement {
   );
 
   attach(
-    workspace: TimelineWorkspace
+    editing: TimelineEditing
   ): void {
-    this.#controller.attach(workspace);
+    this.#controller.attach(editing);
   }
 
   override render(): TemplateResult {

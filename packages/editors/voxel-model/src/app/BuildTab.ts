@@ -15,20 +15,20 @@ import type { ModelDocument } from "@jolly-pixel/asset.voxel-model/client";
 // Import Internal Dependencies
 import "../features/transform/TransformPanel.ts";
 import type { TransformPanel } from "../features/transform/TransformPanel.ts";
-import type { TransformWorkspace } from "../features/transform/TransformPanelController.ts";
+import type { TransformEditing } from "../features/transform/TransformPanelController.ts";
 import "../features/transform/ShapeField.ts";
 import type {
   ShapeField,
-  ShapeFieldWorkspace
+  ShapeFieldEditing
 } from "../features/transform/ShapeField.ts";
 
-export interface BuildWorkspace extends TransformWorkspace, ShapeFieldWorkspace {
+export interface BuildEditing extends TransformEditing, ShapeFieldEditing {
   document: ModelDocument;
 }
 
 export class BuildTab extends LitElement {
   @property({ attribute: false })
-  declare workspace: BuildWorkspace | null;
+  declare editing: BuildEditing | null;
 
   @query("jolly-model-editor-transform")
   declare private transformElement: TransformPanel;
@@ -51,15 +51,15 @@ export class BuildTab extends LitElement {
 
   constructor() {
     super();
-    this.workspace = null;
+    this.editing = null;
   }
 
   override updated(
     changedProperties: PropertyValues<this>
   ): void {
-    if (changedProperties.has("workspace") && this.workspace !== null) {
-      this.transformElement.attach(this.workspace);
-      this.shapeElement.attach(this.workspace);
+    if (changedProperties.has("editing") && this.editing !== null) {
+      this.transformElement.attach(this.editing);
+      this.shapeElement.attach(this.editing);
     }
   }
 

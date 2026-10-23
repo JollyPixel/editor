@@ -20,8 +20,8 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { VoxelMapWorkspace } from "../../../workspace/VoxelMapWorkspace.ts";
-import { WorkspaceElement } from "../../../workspace/WorkspaceElement.ts";
+import type { VoxelMapEditing } from "../../../editing/VoxelMapEditing.ts";
+import { EditingElement } from "../../../editing/EditingElement.ts";
 import type { BlockCreateDialog } from "../dialogs/BlockCreateDialog.ts";
 import type { BlockEditDialog } from "../dialogs/BlockEditDialog.ts";
 import { BlockUsage } from "../usage/BlockUsage.ts";
@@ -47,7 +47,7 @@ import "../blockIcons.ts";
 export type BlockLibraryLayout = "compact" | "fill";
 
 @customElement("block-library")
-export class BlockLibrary extends WorkspaceElement {
+export class BlockLibrary extends EditingElement {
   static override styles = css`
     :host {
       display: flex;
@@ -150,68 +150,68 @@ export class BlockLibrary extends WorkspaceElement {
     this._swatches = new Map();
   }
 
-  protected override watchWorkspace(
-    workspace: VoxelMapWorkspace
+  protected override watchEditing(
+    editing: VoxelMapEditing
   ): Iterable<() => void> {
-    const { block, presence } = workspace.state;
-    const refreshMarks = (): void => this.#refreshMarks(workspace);
-    const refreshSwatches = (): void => this.#refreshSwatches(workspace);
-    this.#resolveSelection(workspace);
-    this.#refreshBlocks(workspace);
-    this.#refreshUsage(workspace);
-    this.#refreshSwatches(workspace);
+    const { block, presence } = editing.state;
+    const refreshMarks = (): void => this.#refreshMarks(editing);
+    const refreshSwatches = (): void => this.#refreshSwatches(editing);
+    this.#resolveSelection(editing);
+    this.#refreshBlocks(editing);
+    this.#refreshUsage(editing);
+    this.#refreshSwatches(editing);
 
     return [
       block.subscribe("change", () => {
-        this.#resolveSelection(workspace);
+        this.#resolveSelection(editing);
         void this.#revealSelection();
       }),
-      workspace.editorMap.subscribe("blockRegistryChanged", () => {
-        this.#resolveSelection(workspace);
-        this.#refreshBlocks(workspace);
+      editing.editorMap.subscribe("blockRegistryChanged", () => {
+        this.#resolveSelection(editing);
+        this.#refreshBlocks(editing);
         refreshSwatches();
       }),
-      workspace.editorMap.subscribe("materialGroupsChanged", refreshSwatches),
+      editing.editorMap.subscribe("materialGroupsChanged", refreshSwatches),
       presence.subscribe("blockSelectionsChange", refreshMarks),
       presence.subscribe("peersChange", refreshMarks),
-      workspace.blocksets.subscribe("change", () => {
-        this.#refreshShownBlocks(workspace);
+      editing.blocksets.subscribe("change", () => {
+        this.#refreshShownBlocks(editing);
         this.requestUpdate();
       }),
-      workspace.blocksets.subscribe("activeChange", () => {
-        this.#refreshShownBlocks(workspace);
+      editing.blocksets.subscribe("activeChange", () => {
+        this.#refreshShownBlocks(editing);
         void this.#revealSelection();
       }),
-      workspace.access.subscribe("change", () => this.requestUpdate()),
-      workspace.usage.subscribe("change", () => this.#refreshUsage(workspace))
+      editing.access.subscribe("change", () => this.requestUpdate()),
+      editing.usage.subscribe("change", () => this.#refreshUsage(editing))
     ];
   }
 
   override willUpdate(
     changed: Map<string, unknown>
   ) {
-    const workspace = this.workspace;
-    if (changed.has("view") && workspace !== null) {
-      this.#refreshShownBlocks(workspace);
+    const editing = this.editing;
+    if (changed.has("view") && editing !== null) {
+      this.#refreshShownBlocks(editing);
       void this.#revealSelection();
     }
   }
 
   override render() {
-    const workspace = this.workspace;
-    if (workspace === null) {
+    const editing = this.editing;
+    if (editing === null) {
       return nothing;
     }
 
-    const creatable = this.#creatable(workspace);
-    const cleanable = this.editable && workspace.access.current.has("voxels");
+    const creatable = this.#creatable(editing);
+    const cleanable = this.editable && editing.access.current.has("voxels");
 
     return html`
-      ${cleanable ? this.#renderOrphans(workspace) : nothing}
+      ${cleanable ? this.#renderOrphans(editing) : nothing}
       ${this.#renderNoMatches()}
       <block-library-viewport
-        .stage=${workspace.previewStage}
-        .sources=${workspace.blockSources}
+        .stage=${editing.previewStage}
+        .sources=${editing.blockSources}
         .blocks=${this._shown.blocks}
         .marks=${this._marks}
         .selectedId=${this._selectedId}
@@ -234,8 +234,8 @@ export class BlockLibrary extends WorkspaceElement {
       <slot></slot>
 
       ${creatable ? html`
-        <block-create-dialog .workspace=${workspace}></block-create-dialog>
-        <block-edit-dialog .workspace=${workspace}></block-edit-dialog>
+        <block-create-dialog .editing=${editing}></block-create-dialog>
+        <block-edit-dialog .editing=${editing}></block-edit-dialog>
       ` : nothing}
     `;
   }
@@ -249,9 +249,9 @@ export class BlockLibrary extends WorkspaceElement {
   }
 
   #renderOrphans(
-    workspace: VoxelMapWorkspace
+    editing: VoxelMapEditing
   ) {
-    const { orphanVoxels } = workspace.usage.stats;
+    const { orphanVoxels } = editing.usage.stats;
     if (orphanVoxels === 0) {
       return nothing;
     }
@@ -270,12 +270,12 @@ export class BlockLibrary extends WorkspaceElement {
   }
 
   async #confirmRemoveOrphans(): Promise<void> {
-    const workspace = this.workspace;
-    if (workspace === null || workspace.usage.stats.orphanVoxels === 0) {
+    const editing = this.editing;
+    if (editing === null || editing.usage.stats.orphanVoxels === 0) {
       return;
     }
 
-    const { orphanVoxels, orphanBlocks } = workspace.usage.stats;
+    const { orphanVoxels, orphanBlocks } = editing.usage.stats;
 
     const confirmed = await showConfirm({
       title: "Remove orphan voxels",
@@ -285,7 +285,7 @@ export class BlockLibrary extends WorkspaceElement {
       danger: true
     });
     if (confirmed) {
-      workspace.editorMap.world.removeBlocks(orphanBlocks);
+      editing.editorMap.world.removeBlocks(orphanBlocks);
     }
   }
 
@@ -305,7 +305,7 @@ export class BlockLibrary extends WorkspaceElement {
   #onBlockMove(
     event: CustomEvent<BlockMoveDetail>
   ): void {
-    this.workspace?.blocksets.moveBlock(
+    this.editing?.blocksets.moveBlock(
       event.detail.id,
       this._shown.registryIndex(event.detail)
     );
@@ -316,48 +316,48 @@ export class BlockLibrary extends WorkspaceElement {
   }
 
   #creatable(
-    workspace: VoxelMapWorkspace
+    editing: VoxelMapEditing
   ): boolean {
     return this.editable &&
-      workspace.blocksets.entriesGranting("blocks").length > 0;
+      editing.blocksets.entriesGranting("blocks").length > 0;
   }
 
   #onBlockContext(
     event: CustomEvent<BlockContextDetail>
   ): void {
-    const workspace = this.workspace;
-    if (workspace === null) {
+    const editing = this.editing;
+    if (editing === null) {
       return;
     }
 
     const { id, x, y } = event.detail;
     const session = id === null ?
-      this.#libraryMenu(workspace) :
-      this.#blockMenu(workspace, id);
+      this.#libraryMenu(editing) :
+      this.#blockMenu(editing, id);
     if (session === null) {
       return;
     }
 
     event.preventDefault();
     if (id !== null) {
-      workspace.state.block.id = id;
+      editing.state.block.id = id;
     }
     this.#menu.open(session, { x, y });
   }
 
   #libraryMenu(
-    workspace: VoxelMapWorkspace
+    editing: VoxelMapEditing
   ): MenuSession | null {
-    return this.#creatable(workspace) ?
+    return this.#creatable(editing) ?
       MenuSession.from(LIBRARY_MENU, () => this._createDialog.open()) :
       null;
   }
 
   #blockMenu(
-    workspace: VoxelMapWorkspace,
+    editing: VoxelMapEditing,
     blockId: number
   ): MenuSession {
-    const { editorMap, blocksets, materials, usage, access } = workspace;
+    const { editorMap, blocksets, materials, usage, access } = editing;
     const menu = new BlockMenu({
       blockId,
       materials: materials.availableTo(blockId),
@@ -368,13 +368,13 @@ export class BlockLibrary extends WorkspaceElement {
 
     return menu.session(this.editable ? "blocks" : "materials", {
       exists: () => editorMap.blocks.has(blockId),
-      run: (command) => this.#runCommand(workspace, command, blockId),
+      run: (command) => this.#runCommand(editing, command, blockId),
       assign: (material) => materials.assign(blockId, material.id)
     });
   }
 
   async #runCommand(
-    workspace: VoxelMapWorkspace,
+    editing: VoxelMapEditing,
     command: BlockCommand,
     blockId: number
   ): Promise<void> {
@@ -383,42 +383,42 @@ export class BlockLibrary extends WorkspaceElement {
         await this.#editBlock(blockId);
         break;
       case "duplicate":
-        this.#duplicate(workspace, blockId);
+        this.#duplicate(editing, blockId);
         break;
       case "new-material":
-        workspace.materials.createForBlock(blockId);
+        editing.materials.createForBlock(blockId);
         break;
       case "remove-material":
-        workspace.materials.assign(blockId, null);
+        editing.materials.assign(blockId, null);
         break;
       case "copy-id":
         await navigator.clipboard.writeText(String(blockId));
         break;
       case "remove-voxels":
-        await this.#confirmRemoveVoxels(workspace, blockId);
+        await this.#confirmRemoveVoxels(editing, blockId);
         break;
       case "delete":
-        await this.#confirmDelete(workspace, blockId);
+        await this.#confirmDelete(editing, blockId);
         break;
     }
   }
 
   #duplicate(
-    workspace: VoxelMapWorkspace,
+    editing: VoxelMapEditing,
     blockId: number
   ): void {
-    const copyId = workspace.blocksets.duplicateBlock(blockId);
+    const copyId = editing.blocksets.duplicateBlock(blockId);
     if (copyId !== null) {
-      workspace.state.block.id = copyId;
+      editing.state.block.id = copyId;
     }
   }
 
   async #confirmRemoveVoxels(
-    workspace: VoxelMapWorkspace,
+    editing: VoxelMapEditing,
     blockId: number
   ): Promise<void> {
-    const block = workspace.editorMap.blocks.get(blockId);
-    const usage = workspace.usage.inspectUsage(blockId);
+    const block = editing.editorMap.blocks.get(blockId);
+    const usage = editing.usage.inspectUsage(blockId);
     if (block === undefined || usage.unused) {
       return;
     }
@@ -431,20 +431,20 @@ export class BlockLibrary extends WorkspaceElement {
       danger: true
     });
     if (confirmed) {
-      workspace.editorMap.world.removeBlocks([blockId]);
+      editing.editorMap.world.removeBlocks([blockId]);
     }
   }
 
   async #confirmDelete(
-    workspace: VoxelMapWorkspace,
+    editing: VoxelMapEditing,
     blockId: number
   ): Promise<void> {
-    const block = workspace.editorMap.blocks.get(blockId);
+    const block = editing.editorMap.blocks.get(blockId);
     if (block === undefined) {
       return;
     }
 
-    const usage = workspace.usage.inspectUsage(blockId);
+    const usage = editing.usage.inspectUsage(blockId);
     const confirmed = usage.unused || await showConfirm({
       title: "Delete block",
       message: usage.deletePrompt(block.name),
@@ -453,14 +453,14 @@ export class BlockLibrary extends WorkspaceElement {
       danger: true
     });
     if (confirmed) {
-      workspace.blocksets.removeBlock(blockId);
+      editing.blocksets.removeBlock(blockId);
     }
   }
 
   async #editBlock(
     id = this._selectedId
   ): Promise<void> {
-    if (id === null || this.workspace?.blocksets.canEditBlock(id) !== true) {
+    if (id === null || this.editing?.blocksets.canEditBlock(id) !== true) {
       return;
     }
 
@@ -479,9 +479,9 @@ export class BlockLibrary extends WorkspaceElement {
   }
 
   #refreshMarks(
-    workspace: VoxelMapWorkspace
+    editing: VoxelMapEditing
   ): void {
-    const { presence } = workspace.state;
+    const { presence } = editing.state;
     this._marks = PeerMarks.withSelf(
       presence.blockSelections,
       this._selectedId,
@@ -490,54 +490,54 @@ export class BlockLibrary extends WorkspaceElement {
   }
 
   #resolveSelection(
-    workspace: VoxelMapWorkspace
+    editing: VoxelMapEditing
   ): void {
-    this._selectedId = workspace.state.block.id;
-    this.#refreshMarks(workspace);
+    this._selectedId = editing.state.block.id;
+    this.#refreshMarks(editing);
   }
 
   #refreshBlocks(
-    workspace: VoxelMapWorkspace
+    editing: VoxelMapEditing
   ): void {
-    this.#showBlocks(workspace, [...workspace.editorMap.blocks.getAll()]);
+    this.#showBlocks(editing, [...editing.editorMap.blocks.getAll()]);
   }
 
   #refreshUsage(
-    workspace: VoxelMapWorkspace
+    editing: VoxelMapEditing
   ): void {
-    const { unusedBlocks } = workspace.usage.stats;
+    const { unusedBlocks } = editing.usage.stats;
     if (
       unusedBlocks.length !== this._unused.size ||
       unusedBlocks.some((id) => !this._unused.has(id))
     ) {
       this._unused = new Set(unusedBlocks);
     }
-    this.#refreshShownBlocks(workspace);
+    this.#refreshShownBlocks(editing);
     this.requestUpdate();
   }
 
   #refreshSwatches(
-    workspace: VoxelMapWorkspace
+    editing: VoxelMapEditing
   ): void {
-    this._swatches = workspace.materials.swatches();
+    this._swatches = editing.materials.swatches();
   }
 
   #refreshShownBlocks(
-    workspace: VoxelMapWorkspace
+    editing: VoxelMapEditing
   ): void {
-    this.#showBlocks(workspace, this._shown.registry);
+    this.#showBlocks(editing, this._shown.registry);
   }
 
   #showBlocks(
-    workspace: VoxelMapWorkspace,
+    editing: VoxelMapEditing,
     registry: readonly ResolvedBlockDefinition[]
   ): void {
     this._shown = this._shown.update(
       registry,
       this.view.apply(
         registry,
-        workspace.blocksets.active,
-        workspace.usage.stats.blocks
+        editing.blocksets.active,
+        editing.usage.stats.blocks
       )
     );
   }

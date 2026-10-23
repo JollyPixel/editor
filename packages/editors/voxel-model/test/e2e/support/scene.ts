@@ -44,8 +44,8 @@ export async function outline(
 ): Promise<string[]> {
   const editor = await resolveEditor(page);
 
-  return editor.evaluate(({ workspace }) => {
-    const { hierarchy } = workspace;
+  return editor.evaluate(({ editing }) => {
+    const { hierarchy } = editing;
     type Nodes = ReturnType<typeof hierarchy.nodes>;
     const lines: string[] = [];
 
@@ -70,8 +70,8 @@ export async function materialOutline(
 ): Promise<string[]> {
   const editor = await resolveEditor(page);
 
-  return editor.evaluate(({ workspace }) => {
-    const { materials } = workspace.document.tree;
+  return editor.evaluate(({ editing }) => {
+    const { materials } = editing.document.tree;
     const lines: string[] = [];
 
     function visit(
@@ -95,8 +95,8 @@ export async function selectedBlock(
 ): Promise<string | null> {
   const editor = await resolveEditor(page);
 
-  return editor.evaluate(({ workspace }) => {
-    const { blocks, selection } = workspace;
+  return editor.evaluate(({ editing }) => {
+    const { blocks, selection } = editing;
     const uuid = selection.selected;
 
     return uuid === null ? null : blocks.get(uuid)?.name ?? null;
@@ -110,13 +110,13 @@ export async function blockSurface(
 ): Promise<MaterialSurfaceJSON | null> {
   const editor = await resolveEditor(page);
 
-  return editor.evaluate(({ workspace }, query) => {
+  return editor.evaluate(({ editing }, query) => {
     if (query.source === "scene") {
-      return [...workspace.blocks.values()]
+      return [...editing.blocks.values()]
         .find((block) => block.name === query.name)?.surface ?? null;
     }
 
-    const { tree } = workspace.document;
+    const { tree } = editing.document;
     const node = [...tree.blocks()].find((block) => block.name === query.name);
 
     return node?.materialId === undefined ?
@@ -130,8 +130,8 @@ export async function materialUses(
 ): Promise<Array<[string, number]>> {
   const editor = await resolveEditor(page);
 
-  return editor.evaluate(({ workspace }) => {
-    const { tree } = workspace.document;
+  return editor.evaluate(({ editing }) => {
+    const { tree } = editing.document;
     const uses = tree.materialUses();
 
     return [...tree.materials.materials()].map(
@@ -145,7 +145,7 @@ export async function gizmoAttached(
 ): Promise<boolean> {
   const editor = await resolveEditor(page);
 
-  return editor.evaluate(({ workspace }) => (workspace.gizmo.activeControls?.target ?? null) !== null);
+  return editor.evaluate(({ editing }) => (editing.gizmo.activeControls?.target ?? null) !== null);
 }
 
 export async function blockVisible(
@@ -154,7 +154,7 @@ export async function blockVisible(
 ): Promise<boolean | null> {
   const editor = await resolveEditor(page);
 
-  return editor.evaluate(({ workspace }, blockName) => [...workspace.blocks.values()]
+  return editor.evaluate(({ editing }, blockName) => [...editing.blocks.values()]
     .find((block) => block.name === blockName)?.visible ?? null, name);
 }
 
@@ -164,8 +164,8 @@ export async function blockSummary(
 ): Promise<BlockSummary | null> {
   const editor = await resolveEditor(page);
 
-  return editor.evaluate(({ workspace }, blockName) => {
-    const { blocks } = workspace;
+  return editor.evaluate(({ editing }, blockName) => {
+    const { blocks } = editing;
     const block = [...blocks.values()]
       .find((candidate) => candidate.name === blockName);
     if (block === undefined) {

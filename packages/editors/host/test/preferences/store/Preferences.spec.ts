@@ -33,6 +33,45 @@ const kCamera = definePreferences({
 });
 
 describe("Preferences", () => {
+  test("a view shares values and writes, and its disposal drops only its own listeners", () => {
+    const changes: PreferenceChange[] = [];
+    const preferences = new Preferences({
+      write: (change) => changes.push(change)
+    });
+    const view = preferences.view();
+    const seen: string[] = [];
+    preferences.watch(kCamera, (values) => seen.push(`page ${values.speed}`));
+    view.watch(kCamera, (values) => seen.push(`view ${values.speed}`));
+
+    view.assign(kCamera, "speed", 2);
+    view.dispose();
+    view.watch(kCamera, (values) => seen.push(`late ${values.speed}`));
+    preferences.assign(kCamera, "speed", 3);
+
+    assert.deepEqual(seen, ["page 2", "view 2", "page 3"]);
+    assert.equal(view.values(kCamera).speed, 3);
+    assert.equal(changes.length, 2);
+  });
+
+  test("disposing a view keeps the same listener subscribed through another view", () => {
+    const preferences = new Preferences();
+    const first = preferences.view();
+    const second = preferences.view();
+    const scopes: string[] = [];
+    function listener(
+      scope: string
+    ): void {
+      scopes.push(scope);
+    }
+    first.subscribe(listener);
+    second.subscribe(listener);
+
+    first.dispose();
+    preferences.assign(kCamera, "speed", 2);
+
+    assert.deepEqual(scopes, ["camera"]);
+  });
+
   test("writes and announces an assigned value", () => {
     const changes: PreferenceChange[] = [];
     const preferences = new Preferences({

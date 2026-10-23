@@ -10,7 +10,7 @@ import {
 } from "lit/decorators.js";
 
 // Import Internal Dependencies
-import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
+import { EditingElement } from "../../editing/EditingElement.ts";
 import { LayerTemplateDrop } from "../../features/templates/LayerTemplateDrop.ts";
 import type { TemplateManager } from "../../features/templates/TemplateManager.ts";
 import "../../features/layers/LayerManager.ts";
@@ -18,7 +18,7 @@ import "../../features/templates/TemplateManager.ts";
 import "../../features/templates/TemplatePreview.ts";
 
 @customElement("layers-panel")
-export class LayersPanel extends WorkspaceElement {
+export class LayersPanel extends EditingElement {
   static override styles = css`
     :host {
       display: flex;
@@ -54,25 +54,25 @@ export class LayersPanel extends WorkspaceElement {
         }
       }
     },
-    editable: () => this.workspace?.templates.editable === true,
-    save: (layerName) => this.workspace?.templates.saveLayer(layerName)
+    editable: () => this.editing?.templates.editable === true,
+    save: (layerName) => this.editing?.templates.saveLayer(layerName)
   });
 
   override render() {
-    const workspace = this.workspace;
-    if (workspace === null) {
+    const editing = this.editing;
+    if (editing === null) {
       return nothing;
     }
 
     return html`
       <div class="managers">
         <layer-manager
-          .workspace=${workspace}
+          .editing=${editing}
           .dragOut=${this.#templateDrop}
         ></layer-manager>
-        <template-manager .workspace=${workspace}></template-manager>
+        <template-manager .editing=${editing}></template-manager>
       </div>
-      <template-preview .workspace=${workspace}></template-preview>
+      <template-preview .editing=${editing}></template-preview>
     `;
   }
 }

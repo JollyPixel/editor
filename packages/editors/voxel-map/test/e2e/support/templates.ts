@@ -95,7 +95,7 @@ export class TemplateList {
 
   draftVoxelCount(): Promise<number | null> {
     return this.#page.evaluate(() => {
-      const { world } = window.voxelMapEditor!.workspace.view.document;
+      const { world } = window.voxelMapEditor!.editing.view.document;
       const draft = world.getLayers()
         .find((layer) => layer.id.startsWith("template-draft:"));
 
@@ -105,12 +105,12 @@ export class TemplateList {
 
   peerInDraft(): Promise<boolean> {
     return this.#page.evaluate(() => [
-      ...window.voxelMapEditor!.workspace.state.presence.layerSelections.keys()
+      ...window.voxelMapEditor!.editing.state.presence.layerSelections.keys()
     ].some((key) => key.includes("template-draft:")));
   }
 
   voxelCounts(): Promise<number[]> {
-    return this.#page.evaluate(() => window.voxelMapEditor!.workspace.view.document.world
+    return this.#page.evaluate(() => window.voxelMapEditor!.editing.view.document.world
       .templates.toArray()
       .map((template) => template.voxelCount));
   }

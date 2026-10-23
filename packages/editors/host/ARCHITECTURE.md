@@ -1,249 +1,88 @@
 # Architecture
 
-`@jolly-pixel/editor.host` is the code every editor page shares. It finds the
-asset to open, opens a session on it and mounts the editor. Terms are defined
-in the [glossary](./GLOSSARY.md).
+`@jolly-pixel/editor.host` turns an editor class into a working page. It finds
+the asset to open, connects to a back-end and mounts the editor on a live
+session. Terms are defined in the [glossary](./GLOSSARY.md).
 
-## Map
+## A page opens one asset
 
 ```mermaid
 flowchart TB
-    Page["mountStandalone(Editor)"] --> Launch["EditorLaunch"]
-    Launch --> Session["EditorSession"]
-    Session --> Leases["AssetLeases"]
+    Launch["EditorLaunch<br/>which asset?"] --> Connection["SessionConnection<br/>which back-end?"]
+    Connection --> Session["EditorSession<br/>target + dependencies"]
     Session -->|"mount(context)"| Editor["Editor class"]
-    Editor -.-> Runtime["EditorRuntime"]
+    Runtime["EditorRuntime"] --> Editor
 ```
 
-- `launch/`: where the target comes from, and the `ShellChannel` to a parent frame.
-- `session/`: the connection, the session, toolbar sources and archives.
-- `lease/`: one shared room, and at most one document, per asset.
-- `editor/`: `mountStandalone`, `bootStandalone`, `EditorMount`, `Placement`.
-- `state/`: the page state (`data-editor-state`) and its loading bar.
-- `runtime/`: the 3D runtime wrapper and `PeerFrustums`.
-- `offline/`: offline mode (in-page server, shared-tab and peer guests), behind the `./offline` entry.
+- The editor only implements `mount(context)` and `dispose()`. Everything above it belongs to the host.
+- Code: `launch/`, `session/`, `boot/`.
 
-## Who owns what
+## Two lifetimes
 
 ```mermaid
 flowchart TB
-    Host["host"] --> Session["session + connection"]
-    Host --> Runtime["runtime"]
-    Editor["editor handle"] --> Scene["scene, panels"]
-    Editor --> Target["target document"]
+    subgraph Page["Lives as long as the page"]
+        Placement["Placement"]
+        Connection["SessionConnection + AssetLeases"]
+        Runtime["EditorRuntime"]
+    end
+    subgraph Mount["Rebuilt on every target switch"]
+        Session["EditorSession"]
+        Editor["Editor handle"]
+    end
+    Page --> Mount
 ```
 
-- The host keeps the session, the connection and the runtime for the page's lifetime.
-- The editor releases only what `mount` built, in `dispose()`.
-- `Editor.createRuntime(logger)` is optional; editors without a 3D view skip it.
+- Switching target or tag remounts in place: the next session opens, the old editor unmounts, the new one mounts, and the old session is released last.
+- Placement holds what depends on where the page runs: console, preferences, history and the unsaved guard.
 
-## Boot
+## One room per asset
 
 ```mermaid
 flowchart TB
-    Start["mountStandalone"] --> Runtime["createRuntime"]
-    Start --> Launch["read launch"]
-    Launch --> Session["open session"]
-    Session --> Mount["Editor.mount(context)"]
-    Runtime --> Mount
-    Mount --> Ready["await handle.ready"]
+    Target["session target"] --> Leases["AssetLeases"]
+    Dependencies["session dependencies"] --> Leases
+    Panel["panel lease"] --> Leases
+    Leases --> Room["one room and one document per asset"]
 ```
 
-- The runtime is created while the launch is read; `mount` awaits it.
-- With a `connect` option and a `?target=` in the URL, the session opens before
-  the launch answers. It is kept only if the launch names the same view.
-- Every dependency document is synced before `mount`. The target room is only reserved.
-- Once ready, the page gets `data-editor-state="ready"` and, in dev, `window.jollyEditor`.
+- Holders share the room; it closes when the last one releases. Two sessions that use the same texture during a switch keep it synced.
+- On a server, unsent changes are also kept in IndexedDB, so closing a tab does not lose them.
+- Code: `lease/`.
 
-## Finding the target
+## Any back-end, same editor
 
 ```mermaid
 flowchart TB
-    Read["EditorLaunch.read"] --> Frame{"inside a frame?"}
-    Frame -->|"yes"| Parent["jolly-launch from the parent"]
-    Frame -->|"no"| Sources["sources in order"]
-    Parent -->|"timeout"| Sources
-    Sources -->|"none answers"| Missing["LaunchNotFoundError"]
+    Server["asset server"] --> Connect["connect()"]
+    Share["share link"] --> Connect
+    Offline["offline: server in the page"] --> Connect
+    Guest["other tab or peer"] -.->|"relayed to"| Offline
+    Guest --> Connect
 ```
 
-- The first source that answers wins. Outside a frame there is no wait.
-- The parent has 1000 ms, from an allowed origin (the page's own by default).
-- Default sources: `?target=`, then the injected JSON element.
-- `mountStandalone({ sources })` replaces the defaults; the parent is always asked first.
+- `bootStandalone` picks one; `mountStandalone({ connect })` accepts any.
+- Offline code sits behind the `./offline` entry and loads only when used.
+- Code: `connection/`, `offline/`.
 
-## Inside a shell
+## Standalone or inside a shell
 
 ```mermaid
 flowchart TB
-    Shell["parent shell"] -->|"jolly-launch, jolly-appearance, jolly-preferences"| Page["editor page"]
-    Page -->|"jolly-shell commands"| Shell
-    Page -->|"console namespaces"| Port["console port"]
+    Launch["EditorLaunch"] -->|"from the URL"| Alone["standalone page"]
+    Launch -->|"from a parent frame"| Framed["page in a shell"]
+    Alone --> Own["own console, localStorage preferences"]
+    Framed --> Channel["ShellChannel: console, preferences, unsaved state"]
 ```
 
-- Only a launch answered by the parent carries a `ShellChannel` (`context.shell`).
-- The page mounts no console of its own and forwards Ctrl+K as `toggle-console`.
-- It posts `unsaved` when its documents gain or lose unacknowledged changes.
-- It posts `editor-state` on every page state change (`PageState`).
-- It posts `session-refused` and reconnects after `jolly-session-renewed`.
-- Its `context.preferences` start from the launch, follow `jolly-preferences`,
-  and post `update-preferences` on a change; standalone, they live in
-  `localStorage` (`Placement.openPreferences`).
-- Messages and ports: [ShellChannel](./docs/launch/ShellChannel.md).
+- Only the launch knows where the page runs. Placement reads it; the editor never has to.
+- Code: `shell/`, `launch/`, `preferences/`.
 
-## Placement
-
-```mermaid
-flowchart TB
-    Launch["EditorLaunch"] --> Placement["Placement"]
-    Placement --> Console["console: own or forwarded"]
-    Placement --> History["history: push or replace"]
-    Placement --> Guard["unsaved: beforeunload or shell"]
-    Placement --> Toolbar["toolbar sources"]
-```
-
-- Placement reads the launch, never the session: an early session cannot tell
-  a shell or share-link launch from a plain page.
-- `targets` exist only outside a shell, `tags` only on a server connection, and neither for a share link.
-- An offline session remembers its target for the next offline launch.
-
-## Target and dependencies
-
-```mermaid
-flowchart TB
-    Session["EditorSession"] --> Target["target"]
-    Session --> Closure["catalog closure"]
-    Target -->|"kind registered"| Doc["session document"]
-    Target -->|"no kind"| Room["room only"]
-    Closure -->|"kind in Editor.kinds"| Lease["dependency lease"]
-```
-
-- A room-only target is joined and synced by the editor itself.
-- A dependency is leased only when its reference kind matches its record kind.
-- `dependencies()` and `dependency(id)` return frozen views without `release()`.
-- A panel that needs a longer lifetime opens its own lease through `session.assets`.
-
-## Following the catalog
-
-```mermaid
-flowchart TB
-    Change["catalog change"] --> Diff["diff wanted leases"]
-    Diff --> Open["open new leases"]
-    Open --> Release["release removed ones"]
-    Release --> Events["dependency-removed, dependency-added"]
-```
-
-- Only the boot waits for dependency documents. A lease from `dependency-added` may still be syncing.
-- After awaiting it, check `session.dependency(id)` still returns that view.
-- If an open throws, the pass is rolled back and the previous set stays.
-
-## Lease lifecycle
-
-```mermaid
-stateDiagram-v2
-    direction TB
-    [*] --> Open: first open() or openRoom()
-    Open --> Open: holders + 1 or - 1
-    Open --> Closed: last release() or dispose()
-    Closed --> [*]
-```
-
-- Every holder shares one room and at most one document.
-- `open(kind)` joins on first open; `openRoom` does not join.
-- Opening with another document kind, or with a kind after `openRoom`, throws `AssetDocumentConflictError`.
-- Kinds compare by identity: reuse the objects from `Editor.kinds`.
-- `release()` is idempotent per holder. `AssetLeases.dispose()` closes everything.
-- On a server connection, `PendingOutboxes` claims the records of closed pages (no live Web Lock) at open, then gives each current-version document an in-memory, write-through outbox before it joins. Records are keyed by command object, not position.
-
-## Switching target or tag
-
-```mermaid
-flowchart TB
-    Navigate["navigate(target, tag)"] --> Settle["settle pending changes"]
-    Settle --> Next["open next session"]
-    Next --> Remount["dispose handle, mount"]
-    Remount --> Drop["dispose old session"]
-```
-
-- The page, runtime, client and catalog stay. Leases both sessions use are shared.
-- The old session is disposed last, so the old scene keeps its documents until replaced.
-- The boot is the first switch, through the same `EditorMount`.
-- One switch at a time; only the latest waiting request runs and writes the URL.
-- A tag view puts only the target on its read-only tag room.
-- A failed remount reloads the page on the requested launch.
-
-## Archives and offline mode
-
-```mermaid
-flowchart TB
-    Editor["editor"] --> Archive["session.archive"]
-    Archive --> Catalog["catalog commands"]
-    Offline["session.offline"] -->|"persistent?"| Archive
-```
-
-- `export`, `plan` and `import` go through the catalog, online or offline.
-- Offline data kept in memory cannot import: `archive.canImport` is `false`.
-- `session.offline` is `null` on the default server connection.
-- API: [archives](./docs/session/Archives.md).
-
-## Offline
-
-```mermaid
-flowchart TB
-    Boot["bootStandalone"] -->|"?offline or no server"| Open["openOfflineBackend"]
-    Boot -->|"#peer= invite"| Peer["PeerLink to the owner tab"]
-    Open --> Owner["owner tab: OfflineOwner"]
-    Open --> Remote["other tab: OfflineGuest"]
-    Peer --> Remote
-    Owner --> Connect["connect()"]
-    Remote --> Connect
-    Connect --> Mount["same mount path"]
-```
-
-- `OfflineServer` runs the asset back-end in the page, so session and leases work unchanged.
-- `./offline` is a separate entry, loaded only when needed.
-- With IndexedDB, one tab holds the lock; other tabs reach it over a BroadcastChannel.
-- With IndexedDB, the event log is stored too, in its own database, so edits outlive a reload before their snapshot.
-- Only the owner tab loads the back-end and the editor's handlers and seed.
-- Without Web Locks the shared opener falls back to memory storage.
-- An `OfflineGuest` only needs a `ChannelTransport`: follower tabs build it on a BroadcastChannel, peer guests on a `DataChannelPort`.
-- The owner's `PeerHost` answers offers through `PeerSignaling` and relays each guest to the in-page server.
-- `PeerInvites` is that server's authentication provider: no credential means a same-browser tab, any other credential must be an issued token.
-- Storage, seeds and reset: [bootStandalone](./docs/editor/bootStandalone.md#offline-mode); invites: [peer invites](./docs/editor/bootStandalone.md#peer-invites).
-
-## Failure and teardown
-
-```mermaid
-flowchart TB
-    Launch["no launch"] --> Nothing["nothing to release"]
-    Connect["catalog or target fails"] --> Client["connection disposed"]
-    Mount["sync or mount fails"] --> All["session and connection disposed"]
-    Leave["pagehide, persisted"] --> Everything["handle, session, connection, runtime"]
-```
-
-- Session disposal releases its leases.
-- Connection disposal closes remaining leases, the catalog and the network client.
-- A page restored from the back-forward cache reloads.
-
-## Runtime keyboard
-
-```mermaid
-flowchart TB
-    Key["key event"] --> Layer{"dialog or popover?"}
-    Layer -->|"yes"| Ui["layer keeps it"]
-    Layer -->|"no"| Hover{"over a 2D panel?"}
-    Hover -->|"yes"| Panel["panel shortcuts"]
-    Hover -->|"no"| Scene["scene shortcuts"]
-```
-
-- `EditorRuntime.create` installs the input-layer guard.
-- The hover branch exists only after `suspendKeyboardOnHover`; overlapping bindings release last-out.
-- `PeerFrustums` is an actor component editors add for peer cameras.
-
-API: [mountStandalone](./docs/editor/mountStandalone.md),
-[bootStandalone](./docs/editor/bootStandalone.md),
+API: [mountStandalone](./docs/boot/mountStandalone.md),
+[bootStandalone](./docs/boot/bootStandalone.md),
 [EditorLaunch](./docs/launch/EditorLaunch.md),
+[ShellChannel](./docs/shell/ShellChannel.md),
 [EditorSession](./docs/session/EditorSession.md),
-[EditorToolbar](./docs/session/EditorToolbar.md),
 [AssetLeases](./docs/lease/AssetLeases.md),
 [EditorRuntime](./docs/runtime/EditorRuntime.md),
 [QueryParams](./docs/params/QueryParams.md).

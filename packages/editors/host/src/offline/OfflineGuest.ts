@@ -5,18 +5,14 @@ import type {
 } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
-import { guestConnection } from "../editor/guestConnection.ts";
-import type { StandaloneConnection } from "../editor/StandaloneConnection.ts";
+import { guestConnection } from "../connection/guest.ts";
+import type { StandaloneConnection } from "../connection/StandaloneConnection.ts";
 import {
   EditorLaunch,
   type LaunchSource
 } from "../launch/index.ts";
-import { openCatalog } from "../session/openCatalog.ts";
 import { catalogLaunchSources } from "./catalogLaunchSources.ts";
-import {
-  ConnectionHandoff,
-  ParkedConnection
-} from "./ConnectionHandoff.ts";
+import { ConnectionHandoff } from "./ConnectionHandoff.ts";
 import type { OfflineBackend } from "./OfflineBackend.ts";
 
 // CONSTANTS
@@ -38,7 +34,7 @@ export class OfflineGuest implements OfflineBackend {
   readonly #onClose: () => void;
   readonly #onUnauthorized: (() => void) | undefined;
   readonly #subscriptions = new AbortController();
-  readonly #handoff = new ConnectionHandoff();
+  readonly #handoff = new ConnectionHandoff(() => this.#open());
   #closed = false;
 
   constructor(
@@ -77,7 +73,7 @@ export class OfflineGuest implements OfflineBackend {
   }
 
   connect(): StandaloneConnection {
-    return this.#handoff.take() ?? this.#open();
+    return this.#handoff.take();
   }
 
   reset(): Promise<void> {
@@ -95,7 +91,7 @@ export class OfflineGuest implements OfflineBackend {
       return;
     }
     this.#closed = true;
-    this.#handoff.close();
+    this.#handoff.release();
     this.#subscriptions.abort();
     this.#transport.close(event);
     this.#onClose();
@@ -122,11 +118,9 @@ export class OfflineGuest implements OfflineBackend {
   async #readLaunch(
     accepts: string
   ): Promise<EditorLaunch | undefined> {
-    const connection = this.#open();
-    const catalog = await openCatalog(connection.client);
-    const parked = new ParkedConnection(connection, catalog);
     let launch: EditorLaunch | undefined;
     try {
+      const catalog = await this.#handoff.catalog();
       const known = new Set(
         [...catalog.records()]
           .filter((record) => record.kind === accepts)
@@ -142,10 +136,7 @@ export class OfflineGuest implements OfflineBackend {
     }
     finally {
       if (launch === undefined) {
-        parked.release();
-      }
-      else {
-        this.#handoff.park(parked);
+        this.#handoff.release();
       }
     }
 

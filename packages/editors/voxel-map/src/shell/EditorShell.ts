@@ -10,7 +10,7 @@ import "@jolly-pixel/editor.host/ui";
 
 // Import Internal Dependencies
 import type { EditorState } from "../state/index.ts";
-import type { VoxelMapWorkspace } from "../workspace/VoxelMapWorkspace.ts";
+import type { VoxelMapEditing } from "../editing/VoxelMapEditing.ts";
 import { EditorPanels } from "./EditorPanels.ts";
 import "./toolbar/EditToolbar.ts";
 import "./paneIcons.ts";
@@ -64,19 +64,19 @@ export class EditorShell {
     return this.#panels?.layout ?? null;
   }
 
-  adoptWorkspace(
-    workspace: VoxelMapWorkspace
+  adoptEditing(
+    editing: VoxelMapEditing
   ): void {
-    this.#panels?.attach(workspace);
+    this.#panels?.attach(editing);
     if (this.#presenceStack !== null) {
       this.#disposables.push(bindPresenceStack(
         this.#presenceStack,
-        workspace.state.presence,
-        (clientId) => workspace.teleportToPeer(clientId)
+        editing.state.presence,
+        (clientId) => editing.teleportToPeer(clientId)
       ));
     }
     if (this.#toolbar !== null) {
-      this.#toolbar.workspace = workspace;
+      this.#toolbar.editing = editing;
     }
   }
 

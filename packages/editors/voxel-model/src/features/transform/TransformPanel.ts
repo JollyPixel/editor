@@ -19,7 +19,7 @@ import type {
 } from "./gizmo/gizmoTools.ts";
 import {
   TransformPanelController,
-  type TransformWorkspace
+  type TransformEditing
 } from "./TransformPanelController.ts";
 import { TRANSFORM_MODES } from "./transformModes.ts";
 
@@ -78,9 +78,9 @@ export class TransformPanel extends LitElement {
   `;
 
   attach(
-    workspace: TransformWorkspace
+    editing: TransformEditing
   ): void {
-    this.#transform.attach(workspace);
+    this.#transform.attach(editing);
   }
 
   override render(): TemplateResult {

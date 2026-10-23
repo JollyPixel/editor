@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { ANY_SHELL_ORIGIN, HostMessageLaunchSource } from "#src/launch/sources/HostMessageLaunchSource.ts";
-import { LAUNCH_MESSAGE_TYPE } from "#src/launch/ShellChannel.ts";
+import { LAUNCH_MESSAGE_TYPE } from "#src/shell/ShellChannel.ts";
 import { captureLogs } from "../helpers/logs.ts";
 
 // CONSTANTS

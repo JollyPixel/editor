@@ -11,7 +11,7 @@ import type { VoxelMapPage } from "./support/voxelMap.ts";
 function blocksetSources(
   map: VoxelMapPage
 ): Promise<string[]> {
-  return map.page.evaluate(() => window.voxelMapEditor!.workspace.view.document.blocksets
+  return map.page.evaluate(() => window.voxelMapEditor!.editing.view.document.blocksets
     .definitions()
     .map((definition) => definition.asset?.id ?? ""));
 }
@@ -61,6 +61,6 @@ test("removing a blockset flags the blocks left without texture", async({ map, p
   await expect(editor).toBeHidden();
   await expect(map.texture.addBlocksetButton).toBeVisible();
   await expect.poll(() => page.evaluate(
-    () => [...window.voxelMapEditor!.workspace.view.document.blocks].length
+    () => [...window.voxelMapEditor!.editing.view.document.blocks].length
   )).toBe(0);
 });

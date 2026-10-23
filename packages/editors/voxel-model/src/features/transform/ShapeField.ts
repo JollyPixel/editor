@@ -37,7 +37,7 @@ const kParameterLabels: Readonly<Record<BlockShapeParameter, string>> = {
   thickness: "Thickness"
 };
 
-export interface ShapeFieldWorkspace {
+export interface ShapeFieldEditing {
   access: ModelAccessSignals;
   document: ModelDocument;
   selection: BlockSelectionStore;
@@ -46,9 +46,9 @@ export interface ShapeFieldWorkspace {
 }
 
 export class ShapeField extends LitElement {
-  #connection = new SubscriptionController<ShapeFieldWorkspace>(
+  #connection = new SubscriptionController<ShapeFieldEditing>(
     this,
-    (workspace) => this.#subscribeTo(workspace)
+    (editing) => this.#subscribeTo(editing)
   );
 
   #refresh = (): void => {
@@ -78,24 +78,24 @@ export class ShapeField extends LitElement {
     }
   `;
 
-  get #workspace(): ShapeFieldWorkspace | null {
+  get #editing(): ShapeFieldEditing | null {
     return this.#connection.current;
   }
 
   get #disabled(): boolean {
-    const workspace = this.#workspace;
+    const editing = this.#editing;
     const block = this.#selectedBlock();
 
-    return workspace === null ||
+    return editing === null ||
       block === undefined ||
-      !workspace.access.current.has("transforms") ||
-      workspace.lock.lockedBy(block.id) !== null;
+      !editing.access.current.has("transforms") ||
+      editing.lock.lockedBy(block.id) !== null;
   }
 
   attach(
-    workspace: ShapeFieldWorkspace
+    editing: ShapeFieldEditing
   ): void {
-    this.#connection.attach(workspace);
+    this.#connection.attach(editing);
   }
 
   override render(): TemplateResult {
@@ -137,10 +137,10 @@ export class ShapeField extends LitElement {
   }
 
   #selectedBlock(): BlockNodeJSON | undefined {
-    const workspace = this.#workspace;
-    const id = workspace?.selection.selected ?? null;
+    const editing = this.#editing;
+    const id = editing?.selection.selected ?? null;
 
-    return id === null ? undefined : workspace?.document.tree.block(id);
+    return id === null ? undefined : editing?.document.tree.block(id);
   }
 
   #shape(): BlockShapeJSON {
@@ -152,16 +152,16 @@ export class ShapeField extends LitElement {
   #reshape(
     shape: BlockShapeJSON
   ): void {
-    const id = this.#workspace?.selection.selected ?? null;
+    const id = this.#editing?.selection.selected ?? null;
     if (id !== null) {
-      this.#workspace?.hierarchy.reshape(id, shape);
+      this.#editing?.hierarchy.reshape(id, shape);
     }
   }
 
   #subscribeTo(
-    workspace: ShapeFieldWorkspace
+    editing: ShapeFieldEditing
   ): Array<() => void> {
-    const { access, document, selection, lock } = workspace;
+    const { access, document, selection, lock } = editing;
 
     return [
       access.subscribe("change", this.#refresh),

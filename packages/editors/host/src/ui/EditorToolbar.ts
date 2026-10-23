@@ -20,7 +20,7 @@ import type { AssetTag } from "@jolly-pixel/asset-server/client";
 import type { Lantern } from "@jolly-pixel/lantern";
 
 // Import Internal Dependencies
-import type { ConnectionStatus } from "../session/ConnectionStatus.ts";
+import type { ConnectionStatus } from "../connection/ConnectionStatus.ts";
 import type { EditorTags } from "../session/EditorTags.ts";
 import type { EditorTargets } from "../session/EditorTargets.ts";
 import type { EditorToolbarSources } from "../session/EditorToolbarSources.ts";

@@ -5,7 +5,7 @@ import type {
 } from "@jolly-pixel/console";
 
 // Import Internal Dependencies
-import type { PeerSharing } from "../../session/OfflineMode.ts";
+import type { PeerSharing } from "../../connection/OfflineMode.ts";
 
 export interface PeerConsoleContext {
   peers?: PeerSharing;

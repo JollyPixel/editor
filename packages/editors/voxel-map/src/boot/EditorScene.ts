@@ -39,7 +39,7 @@ import type {
   EditorState,
   ViewSettings
 } from "../state/index.ts";
-import type { VoxelMapWorkspace } from "../workspace/VoxelMapWorkspace.ts";
+import type { VoxelMapEditing } from "../editing/VoxelMapEditing.ts";
 import { BlockUsageStore } from "../features/blocks/usage/BlockUsageStore.ts";
 import { BlockRenderSources } from "../features/blocks/rendering/BlockRenderSources.ts";
 import { PreviewStage } from "../features/preview/PreviewStage.ts";
@@ -131,13 +131,13 @@ export interface EditorSceneOptions {
 
 export class EditorScene extends Systems.Scene {
   #options: EditorSceneOptions;
-  #workspace = Promise.withResolvers<VoxelMapWorkspace>();
+  #editing = Promise.withResolvers<VoxelMapEditing>();
   #disposables: Array<() => void> = [];
   #camera: EditorCamera | undefined;
   #environment: SceneEnvironment | undefined;
 
-  get ready(): Promise<VoxelMapWorkspace> {
-    return this.#workspace.promise;
+  get ready(): Promise<VoxelMapEditing> {
+    return this.#editing.promise;
   }
 
   get camera(): EditorCamera | undefined {
@@ -527,7 +527,7 @@ export class EditorScene extends Systems.Scene {
       camera.spawn(EditorMap.layers(view.document.world));
     }
 
-    this.#workspace.resolve({
+    this.#editing.resolve({
       state,
       access,
       editorMap,
@@ -577,7 +577,7 @@ export class EditorScene extends Systems.Scene {
     }
     this.#camera = undefined;
     this.#environment = undefined;
-    this.#workspace.reject(
+    this.#editing.reject(
       new Error("The editor scene was destroyed before it awoke.")
     );
   }

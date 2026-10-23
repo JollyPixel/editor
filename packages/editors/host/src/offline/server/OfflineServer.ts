@@ -21,8 +21,8 @@ import {
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import { guestConnection } from "../../editor/guestConnection.ts";
-import type { StandaloneConnection } from "../../editor/StandaloneConnection.ts";
+import { guestConnection } from "../../connection/guest.ts";
+import type { StandaloneConnection } from "../../connection/StandaloneConnection.ts";
 import type { LaunchSource } from "../../launch/index.ts";
 import type { OfflineBackend } from "../OfflineBackend.ts";
 import { catalogLaunchSources } from "../catalogLaunchSources.ts";

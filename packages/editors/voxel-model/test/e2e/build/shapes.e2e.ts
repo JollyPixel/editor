@@ -30,8 +30,8 @@ async function readFaceSlots(
 ): Promise<string[]> {
   const editor = await resolveEditor(page);
 
-  return editor.evaluate(({ workspace }, blockName) => {
-    const block = [...workspace.blocks.values()].find((candidate) => candidate.name === blockName);
+  return editor.evaluate(({ editing }, blockName) => {
+    const block = [...editing.blocks.values()].find((candidate) => candidate.name === blockName);
 
     return block === undefined ? [] : Object.keys(block.faces);
   }, name);
@@ -43,10 +43,10 @@ async function readStoredShape(
 ): Promise<unknown> {
   const editor = await resolveEditor(page);
 
-  return editor.evaluate(({ workspace }, blockName) => {
-    const block = [...workspace.blocks.values()].find((candidate) => candidate.name === blockName);
+  return editor.evaluate(({ editing }, blockName) => {
+    const block = [...editing.blocks.values()].find((candidate) => candidate.name === blockName);
 
-    return block === undefined ? null : workspace.document.tree.block(block.uuid)?.shape ?? null;
+    return block === undefined ? null : editing.document.tree.block(block.uuid)?.shape ?? null;
   }, name);
 }
 

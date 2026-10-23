@@ -43,9 +43,9 @@ describe("@jolly-pixel/editor.host/ui bundle", () => {
 
     assert.deepStrictEqual(
       modules.filter(
-        (name) => /^(ArchiveActions|archiveIcons|EditorToolbar|toolbarIcons)\.js$/.test(name)
+        (name) => /^(EditorToolbar|toolbarIcons)\.js$/.test(name)
       ),
-      ["ArchiveActions.js", "EditorToolbar.js", "archiveIcons.js", "toolbarIcons.js"]
+      ["EditorToolbar.js", "toolbarIcons.js"]
     );
   });
 });

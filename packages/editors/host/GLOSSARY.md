@@ -35,7 +35,7 @@ it edits, the other kinds it can load, and how to build itself. The host only
 loads what the editor declared, so the textures of a voxel map stay closed
 when the editor never said it can read textures.
 
-*In code:* the [editor definition](./docs/editor/mountStandalone.md#editor-definition):
+*In code:* the [editor definition](./docs/boot/mountStandalone.md#editor-definition):
 `accepts`, `kinds`, `mount` and the optional `createRuntime`.
 
 ### Mount
@@ -45,8 +45,9 @@ and the editor gives back a handle that can undo what it built. The editor
 never tears down what the host prepared, since the next mount reuses it.
 
 *In code:* `mount(context)` returns an `EditorHandle`, whose `dispose()`
-releases what `mount` built.
-[`mountStandalone`](./docs/editor/mountStandalone.md) runs the whole boot.
+releases what `mount` built. A `MountedEditor` holds one mount with what
+the host made for it, and undoes both.
+[`mountStandalone`](./docs/boot/mountStandalone.md) runs the whole boot.
 
 ### Switch
 
@@ -58,7 +59,7 @@ Anything the editor kept to itself, such as the selected brush, starts over.
 
 *In code:* `LaunchNavigator.navigate(target, tag)`, called by the toolbar's
 `EditorTargets.open()` and `EditorTags.view()`. See
-[switching](./docs/editor/mountStandalone.md#switching-target-or-tag).
+[switching](./docs/boot/mountStandalone.md#switching-target-or-tag).
 
 ## Holding assets open
 
@@ -120,5 +121,5 @@ the page opens the asset last opened in this browser.
 
 *In code:* the `@jolly-pixel/editor.host/offline` entry,
 `openOfflineBackend()`, and `session.offline`, which is `null` on a
-server. [`bootStandalone`](./docs/editor/bootStandalone.md#offline-mode)
+server. [`bootStandalone`](./docs/boot/bootStandalone.md#offline-mode)
 offers it when the server cannot be reached.

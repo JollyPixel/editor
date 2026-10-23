@@ -29,9 +29,9 @@ flowchart TB
     Editor --> Runtime["EditorRuntime"]
 ```
 
-The [architecture guide](./ARCHITECTURE.md) shows each step as a diagram: the
-boot sequence, how the target is found, lease sharing and what a failure
-releases. The [glossary](./GLOSSARY.md) defines the vocabulary.
+The [architecture guide](./ARCHITECTURE.md) draws the core ideas: the page and
+mount lifetimes, one room per asset, swappable back-ends and the shell. The
+[glossary](./GLOSSARY.md) defines the vocabulary.
 
 ## 👀 Usage example
 
@@ -85,13 +85,13 @@ await mountStandalone(MyEditor, {
 
 ### Boot
 
-- [`mountStandalone`](./docs/editor/mountStandalone.md): the editor definition and
+- [`mountStandalone`](./docs/boot/mountStandalone.md): the editor definition and
   context, switching, page lifecycle, console and boot tracing.
-- [`bootStandalone`](./docs/editor/bootStandalone.md): the offline fallback and
+- [`bootStandalone`](./docs/boot/bootStandalone.md): the offline fallback and
   offline mode.
 - [`EditorLaunch`](./docs/launch/EditorLaunch.md): launch sources and the target, tag
   and shell of a page.
-- [`ShellChannel`](./docs/launch/ShellChannel.md): the protocol between a shell and
+- [`ShellChannel`](./docs/shell/ShellChannel.md): the protocol between a shell and
   its editor frames.
 - [`QueryParams`](./docs/params/QueryParams.md): typed query-string parameters.
 

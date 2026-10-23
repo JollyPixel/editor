@@ -179,6 +179,8 @@ class Preferences implements Iterable<[string, PreferenceOverrides]> {
   receive(scope: string, overrides: PreferenceOverrides): void;
   subscribe(listener: (scope: string, overrides: PreferenceOverrides) => void): () => void;
   watch(scope: PreferenceScope, listener: (values: PreferenceValues) => void): () => void;
+  view(): Preferences;
+  dispose(): void;
 }
 
 interface PreferenceChange {
@@ -196,8 +198,16 @@ interface PreferenceChange {
 - `receive` replaces a scope's overrides from elsewhere, another tab or the
   shell, and calls the listeners but not `write`.
 
-An editor gets its `Preferences` as
-[`context.preferences`](../editor/mountStandalone.md#editor-context).
+### View
+
+`view()` returns a `Preferences` over the same overrides and `write`.
+`dispose()` stops the listeners subscribed through that object only, and a
+later `subscribe` or `watch` on it does nothing.
+
+An editor gets a view as
+[`context.preferences`](../boot/mountStandalone.md#editor-context). The host
+disposes it with the editor, so a follower such as `followKeyBindings` stops
+with the mount that created it.
 
 ## `LocalPreferences`
 

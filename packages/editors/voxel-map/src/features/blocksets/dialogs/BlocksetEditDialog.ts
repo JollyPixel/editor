@@ -16,8 +16,8 @@ import type {
 import { BlockTextures } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { VoxelMapWorkspace } from "../../../workspace/VoxelMapWorkspace.ts";
-import { WorkspaceElement } from "../../../workspace/WorkspaceElement.ts";
+import type { VoxelMapEditing } from "../../../editing/VoxelMapEditing.ts";
+import { EditingElement } from "../../../editing/EditingElement.ts";
 import type { BlocksetEntry } from "../BlocksetEntry.ts";
 import { tileSizeSegments } from "../tileSizes.ts";
 import "../blocksetIcons.ts";
@@ -27,7 +27,7 @@ const kOffGridWarning = "Some blocks will not line up with the new tile " +
   "grid. They keep covering the same pixels.";
 
 @customElement("blockset-edit-dialog")
-export class BlocksetEditDialog extends WorkspaceElement {
+export class BlocksetEditDialog extends EditingElement {
   static override styles = css`
     .fields {
       display: flex;
@@ -85,21 +85,21 @@ export class BlocksetEditDialog extends WorkspaceElement {
     this._pendingTileSize = null;
   }
 
-  protected override watchWorkspace(
-    workspace: VoxelMapWorkspace
+  protected override watchEditing(
+    editing: VoxelMapEditing
   ): Iterable<() => void> {
     return [
-      workspace.blocksets.subscribe("change", this.#refresh),
-      workspace.editorMap.subscribe("blockRegistryChanged", this.#refresh),
-      workspace.usage.subscribe("change", this.#refresh),
-      workspace.access.subscribe("change", this.#refresh)
+      editing.blocksets.subscribe("change", this.#refresh),
+      editing.editorMap.subscribe("blockRegistryChanged", this.#refresh),
+      editing.usage.subscribe("change", this.#refresh),
+      editing.access.subscribe("change", this.#refresh)
     ];
   }
 
   async open(
     blocksetId: string
   ): Promise<void> {
-    if (this.workspace?.blocksets.entry(blocksetId) === undefined) {
+    if (this.editing?.blocksets.entry(blocksetId) === undefined) {
       return;
     }
 
@@ -116,12 +116,12 @@ export class BlocksetEditDialog extends WorkspaceElement {
   get #entry(): BlocksetEntry | undefined {
     return this._blocksetId === null ?
       undefined :
-      this.workspace?.blocksets.entry(this._blocksetId);
+      this.editing?.blocksets.entry(this._blocksetId);
   }
 
   override render() {
-    const workspace = this.workspace;
-    if (workspace === null) {
+    const editing = this.editing;
+    if (editing === null) {
       return nothing;
     }
 
@@ -133,14 +133,14 @@ export class BlocksetEditDialog extends WorkspaceElement {
         icon="blockset"
         @jolly-exited=${this.#onExited}
       >
-        ${entry === undefined ? nothing : this.#renderContent(workspace, entry)}
+        ${entry === undefined ? nothing : this.#renderContent(editing, entry)}
 
         <jolly-button
           slot="actions"
           class="remove"
           variant="danger"
           icon="trash"
-          ?disabled=${entry === undefined || !workspace.access.current.has("blocksets")}
+          ?disabled=${entry === undefined || !editing.access.current.has("blocksets")}
           @click=${this.#remove}
         >Remove</jolly-button>
         <jolly-button
@@ -153,13 +153,13 @@ export class BlocksetEditDialog extends WorkspaceElement {
   }
 
   #renderContent(
-    workspace: VoxelMapWorkspace,
+    editing: VoxelMapEditing,
     entry: BlocksetEntry
   ) {
     const { definition } = entry;
-    const tileSize = workspace.blocksets.blocksetTileSize(definition.id);
-    const resizable = workspace.blocksets.access(definition.id).has("tileSize");
-    const usage = workspace.usage.inspectBlocksetUsage(definition.id);
+    const tileSize = editing.blocksets.blocksetTileSize(definition.id);
+    const resizable = editing.blocksets.access(definition.id).has("tileSize");
+    const usage = editing.usage.inspectBlocksetUsage(definition.id);
     const renamable = entry.assetId !== null;
     const pendingTileSize = this._pendingTileSize;
 
@@ -219,10 +219,10 @@ export class BlocksetEditDialog extends WorkspaceElement {
     name: string
   ): Promise<void> {
     try {
-      await this.workspace?.blocksets.rename(entry.definition.id, name);
+      await this.editing?.blocksets.rename(entry.definition.id, name);
     }
     catch (error) {
-      this.workspace?.state.log.push(`Could not rename "${entry.label}": ${describeError(error)}`);
+      this.editing?.state.log.push(`Could not rename "${entry.label}": ${describeError(error)}`);
     }
     this.requestUpdate();
   }
@@ -231,10 +231,10 @@ export class BlocksetEditDialog extends WorkspaceElement {
     entry: BlocksetEntry,
     tileSize: number
   ): void {
-    const workspace = this.workspace;
+    const editing = this.editing;
     const { definition } = entry;
-    const from = workspace?.blocksets.blocksetTileSize(definition.id);
-    if (workspace === null || from === undefined) {
+    const from = editing?.blocksets.blocksetTileSize(definition.id);
+    if (editing === null || from === undefined) {
       return;
     }
 
@@ -248,7 +248,7 @@ export class BlocksetEditDialog extends WorkspaceElement {
       from,
       to: tileSize
     };
-    const offGrid = [...workspace.editorMap.blocks].some(
+    const offGrid = [...editing.editorMap.blocks].some(
       (block) => !BlockTextures.fromBlock(block).canRescaleOnGrid(rescale)
     );
     if (offGrid) {
@@ -257,7 +257,7 @@ export class BlocksetEditDialog extends WorkspaceElement {
       return;
     }
 
-    workspace.blocksets.resizeTiles(definition.id, tileSize);
+    editing.blocksets.resizeTiles(definition.id, tileSize);
     this.requestUpdate();
   }
 
@@ -267,18 +267,18 @@ export class BlocksetEditDialog extends WorkspaceElement {
     const tileSize = this._pendingTileSize;
     this._pendingTileSize = null;
     if (tileSize !== null) {
-      this.workspace?.blocksets.resizeTiles(entry.definition.id, tileSize);
+      this.editing?.blocksets.resizeTiles(entry.definition.id, tileSize);
     }
   }
 
   async #remove(): Promise<void> {
-    const workspace = this.workspace;
+    const editing = this.editing;
     const entry = this.#entry;
-    if (workspace === null || entry === undefined) {
+    if (editing === null || entry === undefined) {
       return;
     }
 
-    const usage = workspace.usage.inspectBlocksetUsage(entry.definition.id);
+    const usage = editing.usage.inspectBlocksetUsage(entry.definition.id);
     const confirmed = usage.unused ||
       await this._dialog.confirmInline({
         message: `Remove "${entry.label}"? ` +
@@ -286,7 +286,7 @@ export class BlocksetEditDialog extends WorkspaceElement {
         confirmLabel: "Remove",
         danger: true
       });
-    if (confirmed && workspace.blocksets.remove(entry.definition.id)) {
+    if (confirmed && editing.blocksets.remove(entry.definition.id)) {
       this.#close();
     }
   }

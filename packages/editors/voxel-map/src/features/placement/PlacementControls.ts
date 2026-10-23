@@ -11,8 +11,8 @@ import {
 } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
-import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
-import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
+import type { VoxelMapEditing } from "../../editing/VoxelMapEditing.ts";
+import { EditingElement } from "../../editing/EditingElement.ts";
 import type { ActivePlacement } from "./ActivePlacement.ts";
 import { placementControlsStyles } from "./PlacementControls.styles.ts";
 import { PLACEMENT_SHORTCUTS } from "./placementShortcuts.ts";
@@ -27,7 +27,7 @@ import "../marquee/marqueeIcons.ts";
 import "../templates/templateIcons.ts";
 
 @customElement("voxel-placement-controls")
-export class PlacementControls extends WorkspaceElement {
+export class PlacementControls extends EditingElement {
   static override styles = placementControlsStyles;
 
   @state()
@@ -43,10 +43,10 @@ export class PlacementControls extends WorkspaceElement {
     this.addEventListener("mousedown", keepFocus);
   }
 
-  protected override watchWorkspace(
-    workspace: VoxelMapWorkspace
+  protected override watchEditing(
+    editing: VoxelMapEditing
   ): Iterable<() => void> {
-    const { placement } = workspace;
+    const { placement } = editing;
     const refresh = (current: ActivePlacement | null): void => {
       this._current = current ?? this._current;
     };
@@ -59,8 +59,8 @@ export class PlacementControls extends WorkspaceElement {
       placement.clipboard.subscribe("change", (content) => {
         this._canPaste = content !== null;
       }),
-      workspace.state.shortcuts.subscribe(() => this.requestUpdate()),
-      workspace.access.subscribe("change", () => this.requestUpdate())
+      editing.state.shortcuts.subscribe(() => this.requestUpdate()),
+      editing.access.subscribe("change", () => this.requestUpdate())
     ];
   }
 
@@ -177,15 +177,15 @@ export class PlacementControls extends WorkspaceElement {
   }
 
   #onPaste(): void {
-    const workspace = this.attached;
-    workspace.placement.paste(workspace.focusPoint());
+    const editing = this.attached;
+    editing.placement.paste(editing.focusPoint());
   }
 
   async #onSaveTemplate(): Promise<void> {
-    const workspace = this.attached;
-    const current = workspace.placement.current;
+    const editing = this.attached;
+    const current = editing.placement.current;
     if (current !== null) {
-      await workspace.templates.saveSnapshot(
+      await editing.templates.saveSnapshot(
         current.snapshot(),
         current.templateName
       );

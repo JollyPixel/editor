@@ -16,7 +16,9 @@ import type {
   SessionArchive,
   SessionArchiveImportOptions
 } from "#src/session/SessionArchive.ts";
-import type { OfflineMode } from "#src/session/OfflineMode.ts";
+import type { OfflineMode } from "#src/connection/OfflineMode.ts";
+import type { LaunchNavigator } from "#src/launch/LaunchNavigator.ts";
+import { FakeNavigator } from "./catalog.ts";
 
 // CONSTANTS
 export const ARCHIVE_KIND = "voxelmodel";
@@ -39,6 +41,7 @@ export interface FakeArchiveOptions {
   canImport?: boolean;
   root?: AssetReferenceData;
   live?: ImportPlan["live"];
+  replaced?: ImportReport["replaced"];
 }
 
 export interface FakeBrowser extends EditorArchiveBrowser {
@@ -61,7 +64,8 @@ export function createArchive(
 ): FakeArchive {
   const {
     canImport = true,
-    live = []
+    live = [],
+    replaced = []
   } = options;
   const root = "root" in options ? options.root : ARCHIVE_ROOT;
 
@@ -93,7 +97,7 @@ export function createArchive(
       const report: ImportReport = {
         root,
         created: [],
-        replaced: [],
+        replaced,
         kept: [],
         failed: []
       };
@@ -159,6 +163,7 @@ export interface CreateArchivesOptions {
   browser?: EditorArchiveBrowser;
   offline?: OfflineMode | null;
   target?: EditorArchiveTarget;
+  navigator?: LaunchNavigator;
 }
 
 export function createArchives(
@@ -168,6 +173,7 @@ export function createArchives(
     archive = createArchive(),
     browser = createBrowser(),
     offline = null,
+    navigator = new FakeNavigator(),
     target = {
       id: "model-1",
       path: "models/robot.voxelmodel.json"
@@ -175,12 +181,15 @@ export function createArchives(
   } = options;
 
   return new EditorArchives({
-    archive,
-    offline,
+    session: {
+      archive,
+      offline,
+      targetRecord: target
+    },
     accepts: ARCHIVE_KIND,
     fallbackName: "model",
     resetWarning: RESET_WARNING,
-    target: () => target,
+    navigator,
     browser
   });
 }

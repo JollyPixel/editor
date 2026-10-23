@@ -2,16 +2,16 @@
 import { BINARY_KIND } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
-import { EDITOR_STATE_ATTRIBUTE } from "#src/state/EditorState.ts";
+import { EDITOR_STATE_ATTRIBUTE } from "#src/shell/EditorState.ts";
 import type {
   EditorContext,
   EditorHandle
-} from "#src/editor/EditorDefinition.ts";
-import type { MountStandaloneOptions } from "#src/editor/mountStandalone.ts";
-import { DEBUG_HANDLE } from "#src/editor/StandaloneEditor.ts";
+} from "#src/boot/EditorDefinition.ts";
+import type { MountStandaloneOptions } from "#src/boot/mountStandalone.ts";
+import { DEBUG_HANDLE } from "#src/boot/StandaloneEditor.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
 import { OfflineServer } from "#src/offline/server/OfflineServer.ts";
-import type { StandaloneConnection } from "#src/editor/StandaloneConnection.ts";
+import type { StandaloneConnection } from "#src/connection/StandaloneConnection.ts";
 
 // CONSTANTS
 export const ASSET_ID = "debug-target";
@@ -87,6 +87,7 @@ export function resetStandalonePage(): void {
   Reflect.deleteProperty(globalThis, DEBUG_HANDLE);
   Reflect.deleteProperty(globalThis, "hostTestHandle");
   sessionStorage.clear();
+  localStorage.clear();
   window.history.replaceState(null, "", "/");
   for (const element of document.querySelectorAll(
     "jolly-console, jolly-editor-loading-bar"

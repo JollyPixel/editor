@@ -52,7 +52,7 @@ The `gpu-time` query parameter adds `trackTimestamp: true` to the
 [GPU time](../../../../runtime/docs/api/RuntimeMetrics.md#renderer-counters)
 of each frame.
 
-An editor booted by [`mountStandalone`](../editor/mountStandalone.md#editor-definition)
+An editor booted by [`mountStandalone`](../boot/mountStandalone.md#editor-definition)
 creates it in its static `createRuntime(logger)`, which the host calls before
 the session opens.
 
@@ -118,7 +118,7 @@ runtime picks one from the GPU tier. `load` resolves before the scene
 awakes, so a scene with async setup needs its own readiness promise.
 
 On a runtime that is already running, as after an editor
-[switch](../editor/mountStandalone.md#switching-target-or-tag), `load` replaces the
+[switch](../boot/mountStandalone.md#switching-target-or-tag), `load` replaces the
 current scene instead: the old scene is destroyed on the next frame, and
 `load` resolves after that frame. `options` are ignored then; the cap set by
 the first `load` stays.
@@ -140,9 +140,9 @@ and lets keyups through.
 
 ## Console
 
-`runtimeConsole` is a [console feature](../../../../console/docs/features.md)
-that registers the `runtime` namespace over the
-[runtime widgets](#runtime-widgets), so every write is kept after a reload:
+The host registers the `runtime` namespace over the
+[runtime widgets](#runtime-widgets) of an editor that declares
+`createRuntime`, so every write is kept after a reload:
 
 - `runtime.stats` shows or hides the corner performance HUD. It is registered
   only when the HUD is mounted.
@@ -150,12 +150,3 @@ that registers the `runtime` namespace over the
   when the gizmo is mounted.
 - `runtime.metrics` shows or hides the panel from `mountMetricsPanel()`.
   Writing it before a panel is mounted prints an error.
-
-```ts
-import { registerConsoleFeatures } from "@jolly-pixel/console";
-import { runtimeConsole } from "@jolly-pixel/editor.host";
-
-registerConsoleFeatures(commands, [runtimeConsole], {
-  runtime: editorRuntime
-});
-```

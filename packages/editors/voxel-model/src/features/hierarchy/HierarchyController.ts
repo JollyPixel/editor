@@ -69,7 +69,7 @@ import {
   type BlockShapeEntryId
 } from "../../shared/blockShapes.ts";
 
-export interface HierarchyWorkspace {
+export interface HierarchyEditing {
   access: ModelAccessSignals;
   document: ModelDocument;
   blocks: ModelBlocks;
@@ -98,7 +98,7 @@ export interface HierarchyView {
 export class HierarchyController {
   #host: ReactiveControllerHost;
   #view: HierarchyView;
-  #connection: SubscriptionController<HierarchyWorkspace>;
+  #connection: SubscriptionController<HierarchyEditing>;
   #nodes: TreeNode[] = [];
   #selected: string[] = [];
   #expanded = new ExpandedRows();
@@ -149,11 +149,11 @@ export class HierarchyController {
     this.#view = view;
     this.#connection = new SubscriptionController(
       host,
-      (workspace) => this.#subscribeTo(workspace)
+      (editing) => this.#subscribeTo(editing)
     );
   }
 
-  get #workspace(): HierarchyWorkspace | null {
+  get #editing(): HierarchyEditing | null {
     return this.#connection.current;
   }
 
@@ -174,17 +174,17 @@ export class HierarchyController {
   }
 
   get editable(): boolean {
-    return (this.#workspace?.tab.active ?? "build") === "build";
+    return (this.#editing?.tab.active ?? "build") === "build";
   }
 
   get writable(): boolean {
-    return this.#workspace?.hierarchy.editable ?? false;
+    return this.#editing?.hierarchy.editable ?? false;
   }
 
   attach(
-    workspace: HierarchyWorkspace
+    editing: HierarchyEditing
   ): void {
-    this.#connection.attach(workspace);
+    this.#connection.attach(editing);
     this.#onReset();
   }
 
@@ -204,10 +204,10 @@ export class HierarchyController {
   #selectNodes(
     selected: string[]
   ): void {
-    const workspace = this.#workspace;
+    const editing = this.#editing;
     const id = selected[0];
-    workspace?.selection.select(
-      id === undefined ? null : workspace.blocks.get(id)?.uuid ?? null
+    editing?.selection.select(
+      id === undefined ? null : editing.blocks.get(id)?.uuid ?? null
     );
     this.#selected = selected;
     this.#host.requestUpdate();
@@ -223,7 +223,7 @@ export class HierarchyController {
   readonly handleRename = (
     event: CustomEvent<JollyRenameDetail>
   ): void => {
-    this.#workspace?.hierarchy.rename(
+    this.#editing?.hierarchy.rename(
       event.detail.id,
       event.detail.name
     );
@@ -231,7 +231,7 @@ export class HierarchyController {
 
   readonly validateRename = (
     detail: JollyRenameDetail
-  ): string | null => this.#workspace?.hierarchy.renameError(
+  ): string | null => this.#editing?.hierarchy.renameError(
     detail.id,
     detail.name
   ) ?? null;
@@ -245,7 +245,7 @@ export class HierarchyController {
       return;
     }
 
-    this.#workspace?.blocks.changeVisibility(
+    this.#editing?.blocks.changeVisibility(
       node.kind === "folder" ? blockIdsUnder(node) : [id],
       visible
     );
@@ -258,7 +258,7 @@ export class HierarchyController {
       nodes: this.#nodes,
       ...event.detail
     });
-    this.#workspace?.hierarchy.moveAll(moves);
+    this.#editing?.hierarchy.moveAll(moves);
   };
 
   readonly addBlock = (): Promise<void> => this.#addBlock(
@@ -294,7 +294,7 @@ export class HierarchyController {
       );
     }
 
-    const kind = this.#workspace?.document.tree.get(id)?.kind;
+    const kind = this.#editing?.document.tree.get(id)?.kind;
     if (kind === undefined) {
       return MenuSession.EMPTY;
     }
@@ -304,7 +304,7 @@ export class HierarchyController {
         kind === "block" ? BLOCK_MENU : FOLDER_MENU,
         (action) => readOnly && action !== "material"
       ),
-      () => this.#workspace?.document.tree.has(id) === true,
+      () => this.#editing?.document.tree.has(id) === true,
       (action) => this.#rowActions[action](id)
     );
   }
@@ -323,7 +323,7 @@ export class HierarchyController {
 
     const { id, shape } = blockShapeById(result.choice);
     this.#lastShape = id;
-    const uuid = this.#workspace?.hierarchy.createBlock(result.name, parentId, shape) ?? null;
+    const uuid = this.#editing?.hierarchy.createBlock(result.name, parentId, shape) ?? null;
     if (uuid !== null) {
       this.#selectNodes([uuid]);
     }
@@ -334,7 +334,7 @@ export class HierarchyController {
   ): Promise<void> {
     const result = await this.#promptNew("folder", parentId);
     if (result !== null) {
-      this.#workspace?.hierarchy.createFolder(result.name, parentId);
+      this.#editing?.hierarchy.createFolder(result.name, parentId);
     }
   }
 
@@ -358,14 +358,14 @@ export class HierarchyController {
     name: string,
     parentId: string | null
   ): NameFieldOptions {
-    const workspace = this.#workspace;
-    if (kind === "folder" || workspace === null) {
+    const editing = this.#editing;
+    if (kind === "folder" || editing === null) {
       return { defaultName: name };
     }
 
     return {
-      defaultName: workspace.document.tree.blockNamesUnder(parentId).free(name),
-      validate: (candidate) => workspace.hierarchy.blockNameError(candidate, parentId)
+      defaultName: editing.document.tree.blockNamesUnder(parentId).free(name),
+      validate: (candidate) => editing.hierarchy.blockNameError(candidate, parentId)
     };
   }
 
@@ -378,17 +378,17 @@ export class HierarchyController {
     }
 
     const hasChildren = source.children.length > 0;
-    const parentId = this.#workspace?.document.tree.get(id)?.parentId ?? null;
+    const parentId = this.#editing?.document.tree.get(id)?.parentId ?? null;
     const result = await this.#view.promptDuplicate({
       hasChildren,
       ...this.#naming(source.kind, duplicateName(source.name), parentId)
     });
-    const workspace = this.#workspace;
-    if (result === null || workspace === null) {
+    const editing = this.#editing;
+    if (result === null || editing === null) {
       return;
     }
 
-    const duplicateId = workspace.hierarchy.duplicate(source.id, result);
+    const duplicateId = editing.hierarchy.duplicate(source.id, result);
     if (duplicateId === null) {
       return;
     }
@@ -413,12 +413,12 @@ export class HierarchyController {
         : "Delete Block",
       hasChildren: source.children.length > 0
     });
-    const workspace = this.#workspace;
-    if (result === null || workspace === null) {
+    const editing = this.#editing;
+    if (result === null || editing === null) {
       return;
     }
 
-    workspace.hierarchy.remove(
+    editing.hierarchy.remove(
       source.id,
       { withChildren: result.deleteChildren }
     );
@@ -429,7 +429,7 @@ export class HierarchyController {
     event: CustomEvent<JollyActivateDetail>
   ): void => {
     const { id } = event.detail;
-    if (this.#workspace?.document.tree.get(id)?.kind === "folder") {
+    if (this.#editing?.document.tree.get(id)?.kind === "folder") {
       this.#expanded.toggle(id);
       this.#host.requestUpdate();
     }
@@ -444,18 +444,18 @@ export class HierarchyController {
   #hierarchyNode(
     id: string
   ): HierarchyNode | null {
-    if (this.#workspace === null) {
+    if (this.#editing === null) {
       return null;
     }
 
     return findHierarchyNode(
-      this.#workspace.hierarchy.nodes(),
+      this.#editing.hierarchy.nodes(),
       id
     );
   }
 
   #subscribeTo(
-    workspace: HierarchyWorkspace
+    editing: HierarchyEditing
   ): Array<() => void> {
     const {
       access,
@@ -464,7 +464,7 @@ export class HierarchyController {
       selection,
       presence,
       tab
-    } = workspace;
+    } = editing;
 
     return [
       access.subscribe("change", () => this.#host.requestUpdate()),
@@ -478,12 +478,12 @@ export class HierarchyController {
   }
 
   readonly #rebuild = (): void => {
-    const workspace = this.#workspace;
-    if (workspace !== null) {
+    const editing = this.#editing;
+    if (editing !== null) {
       this.#nodes = toTreeNodes(
-        workspace.hierarchy.nodes(),
-        workspace.presence.blockSelections,
-        (id) => workspace.blocks.get(id)?.visible ?? true
+        editing.hierarchy.nodes(),
+        editing.presence.blockSelections,
+        (id) => editing.blocks.get(id)?.visible ?? true
       );
     }
     this.#host.requestUpdate();

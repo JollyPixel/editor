@@ -1,16 +1,10 @@
 // Import Third-party Dependencies
-import {
-  registerConsoleFeatures,
-  type RegistrationHandle
-} from "@jolly-pixel/console";
+import type { RegistrationHandle } from "@jolly-pixel/console";
 import type { Lantern } from "@jolly-pixel/lantern";
 import type { Runtime } from "@jolly-pixel/runtime";
 import {
   EditorRuntime,
-  archiveConsole,
-  peerConsole,
   provideTourKeys,
-  runtimeConsole,
   type AssetLease,
   type EditorSession,
   type HostLogger,
@@ -26,7 +20,7 @@ import { BakedRoomEnvironment } from "@jolly-pixel/three";
 // Import Internal Dependencies
 import { EditorState } from "../state/index.ts";
 import { EditorScene } from "./EditorScene.ts";
-import type { VoxelMapWorkspace } from "../workspace/VoxelMapWorkspace.ts";
+import type { VoxelMapEditing } from "../editing/VoxelMapEditing.ts";
 import { EditorShell } from "../shell/EditorShell.ts";
 import { BLOCKSET_DOCUMENT_KIND } from "../features/blocksets/BlocksetBinding.ts";
 import { mapConsole } from "./mapConsole.ts";
@@ -46,7 +40,7 @@ export interface VoxelMapEditorParts {
   runtime: Runtime;
   scene: EditorScene;
   shell: EditorShell;
-  workspace: VoxelMapWorkspace;
+  editing: VoxelMapEditing;
   session: EditorSession;
   target: AssetLease<SyncedVoxelMap>;
   consoleFeatures: RegistrationHandle;
@@ -61,6 +55,11 @@ export class VoxelMapEditor {
     title: "Join voxel map"
   };
   static readonly kinds = [kMapKind, BLOCKSET_DOCUMENT_KIND];
+  static readonly archive = {
+    fallbackName: "map",
+    resetWarning: "Every map and blockset stored in this browser is " +
+      "deleted. Export what you want to keep first."
+  };
 
   static createRuntime(
     logger: HostLogger
@@ -117,11 +116,7 @@ export class VoxelMapEditor {
         identity: session.identity,
         catalog: session.catalog,
         assets: session.assets,
-        archives: session.archives({
-          fallbackName: "map",
-          resetWarning: "Every map and blockset stored in this browser is " +
-            "deleted. Export what you want to keep first."
-        })
+        archives: context.archives
       },
       samples: editorRuntime.samples,
       roomEnvironment
@@ -135,13 +130,13 @@ export class VoxelMapEditor {
       maxFps: Infinity
     });
 
-    const workspace = await logger.step(
+    const editing = await logger.step(
       "scene",
       () => scene.ready
     );
-    shell.adoptWorkspace(workspace);
+    shell.adoptEditing(editing);
     const removeInspectorMetrics = runtime.metrics.addSource(
-      workspace.view.inspector
+      editing.view.inspector
     );
 
     const disposePerformancePane = editorRuntime.mountPerformancePane({
@@ -154,24 +149,12 @@ export class VoxelMapEditor {
       runtime,
       scene,
       shell,
-      workspace,
+      editing,
       session,
       target,
-      consoleFeatures: registerConsoleFeatures(
-        commands,
-        [
-          mapConsole,
-          runtimeConsole,
-          archiveConsole,
-          peerConsole
-        ],
-        {
-          state: workspace.state,
-          archives: workspace.archives,
-          runtime: editorRuntime,
-          peers: session.offline?.peers
-        }
-      ),
+      consoleFeatures: mapConsole(commands, {
+        state: editing.state
+      }),
       disposePerformancePane,
       removeInspectorMetrics,
       lantern: context.lantern
@@ -179,7 +162,6 @@ export class VoxelMapEditor {
   }
 
   #shell: EditorShell;
-  #target: AssetLease<SyncedVoxelMap>;
   #consoleFeatures: RegistrationHandle;
   #disposePerformancePane: () => void;
   #removeInspectorMetrics: () => void;
@@ -189,7 +171,7 @@ export class VoxelMapEditor {
   readonly ready: Promise<void>;
   readonly runtime: Runtime;
   readonly scene: EditorScene;
-  readonly workspace: VoxelMapWorkspace;
+  readonly editing: VoxelMapEditing;
   readonly session: EditorSession;
 
   constructor(
@@ -198,9 +180,8 @@ export class VoxelMapEditor {
     this.runtime = parts.runtime;
     this.scene = parts.scene;
     this.session = parts.session;
-    this.workspace = parts.workspace;
+    this.editing = parts.editing;
     this.#shell = parts.shell;
-    this.#target = parts.target;
     this.#consoleFeatures = parts.consoleFeatures;
     this.#removeInspectorMetrics = parts.removeInspectorMetrics;
     this.#disposePerformancePane = parts.disposePerformancePane;
@@ -208,9 +189,9 @@ export class VoxelMapEditor {
       ...MAP_TOURS.map((tour) => parts.lantern.register(tour)),
       provideTourKeys({
         lantern: parts.lantern,
-        preferences: parts.workspace.state.preferences,
+        preferences: parts.editing.state.preferences,
         scope: VOXEL_MAP_KEYBINDINGS,
-        layout: parts.workspace.state.keyboardLayout,
+        layout: parts.editing.state.keyboardLayout,
         namespace: MAP_TOUR_KEYS
       })
     ];
@@ -235,6 +216,5 @@ export class VoxelMapEditor {
       release();
     }
     this.#shell.dispose();
-    this.#target.release();
   }
 }

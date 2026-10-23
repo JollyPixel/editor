@@ -16,7 +16,7 @@ import {
 import "./timelineIcons.ts";
 import type { AnimationSession } from "../session/AnimationSession.ts";
 
-export interface TimelineTransportWorkspace {
+export interface TimelineTransportEditing {
   animationSession: AnimationSession;
 }
 
@@ -46,15 +46,15 @@ export class TimelineTransport extends LitElement {
     }
   `;
 
-  #connection = new SubscriptionController<TimelineTransportWorkspace>(this, ({ animationSession }) => [
+  #connection = new SubscriptionController<TimelineTransportEditing>(this, ({ animationSession }) => [
     animationSession.subscribe("clip", this.#refresh),
     animationSession.subscribe("playhead", this.#refresh)
   ]);
 
   attach(
-    workspace: TimelineTransportWorkspace
+    editing: TimelineTransportEditing
   ): void {
-    this.#connection.attach(workspace);
+    this.#connection.attach(editing);
   }
 
   override render(): TemplateResult | typeof nothing {

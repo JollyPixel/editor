@@ -32,19 +32,19 @@ import { menuPointBelow } from "../../shared/menu/menuPointBelow.ts";
 import "../transform/TransformPanel.ts";
 import "./tracks/TrackBindings.ts";
 import type { TrackBindings } from "./tracks/TrackBindings.ts";
-import type { TrackBindingsWorkspace } from "./tracks/TrackBindingsController.ts";
+import type { TrackBindingsEditing } from "./tracks/TrackBindingsController.ts";
 import "./keys/KeyInspector.ts";
 import type { KeyInspector } from "./keys/KeyInspector.ts";
-import type { KeyInspectorWorkspace } from "./keys/KeyInspectorController.ts";
+import type { KeyInspectorEditing } from "./keys/KeyInspectorController.ts";
 import "./timeline/timelineIcons.ts";
 import type { TransformPanel } from "../transform/TransformPanel.ts";
-import type { TransformWorkspace } from "../transform/TransformPanelController.ts";
+import type { TransformEditing } from "../transform/TransformPanelController.ts";
 import {
   AnimatePanelController,
   CLIP_FRAME_RATES,
   type AnimatePanelState,
   type AnimateSection,
-  type AnimateWorkspace,
+  type AnimateEditing,
   type FocusedClip
 } from "./AnimatePanelController.ts";
 
@@ -56,10 +56,10 @@ const kFpsOptions: JollyOption<number>[] = CLIP_FRAME_RATES.map((fps) => {
   };
 });
 
-export type AnimatePanelWorkspace = AnimateWorkspace &
-  TransformWorkspace &
-  TrackBindingsWorkspace &
-  KeyInspectorWorkspace;
+export type AnimatePanelEditing = AnimateEditing &
+  TransformEditing &
+  TrackBindingsEditing &
+  KeyInspectorEditing;
 
 export class AnimatePanel extends LitElement {
   static override styles = css`
@@ -176,13 +176,13 @@ export class AnimatePanel extends LitElement {
   #acceptSharedDrop = this.#controller.acceptDrop("shared");
 
   attach(
-    workspace: AnimatePanelWorkspace
+    editing: AnimatePanelEditing
   ): void {
-    this.#controller.attach(workspace);
+    this.#controller.attach(editing);
     void this.updateComplete.then(() => {
-      this.transformElement.attach(workspace);
-      this.trackBindings.attach(workspace);
-      this.keyInspector.attach(workspace);
+      this.transformElement.attach(editing);
+      this.trackBindings.attach(editing);
+      this.keyInspector.attach(editing);
     });
   }
 

@@ -21,7 +21,7 @@ import "./dialogs/HierarchyDuplicateDialog.ts";
 import "../../shared/dialogs/DeleteDialog.ts";
 import {
   HierarchyController,
-  type HierarchyWorkspace
+  type HierarchyEditing
 } from "./HierarchyController.ts";
 import type { NameDialog } from "../../shared/dialogs/NameDialog.ts";
 import type { HierarchyDuplicateDialog } from "./dialogs/HierarchyDuplicateDialog.ts";
@@ -94,9 +94,9 @@ export class HierarchyPanel extends LitElement {
   `;
 
   attach(
-    workspace: HierarchyWorkspace
+    editing: HierarchyEditing
   ): void {
-    this.#tree.attach(workspace);
+    this.#tree.attach(editing);
   }
 
   readonly #showBuild = (): void => {

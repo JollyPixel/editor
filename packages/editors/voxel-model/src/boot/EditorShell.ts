@@ -32,7 +32,7 @@ import {
   EDITOR_TABS,
   type EditorTab
 } from "../state/index.ts";
-import type { ModelWorkspace } from "../scene/ModelEditorScene.ts";
+import type { ModelEditing } from "../scene/ModelEditorScene.ts";
 
 // CONSTANTS
 const kLayoutSelector = "jolly-dock-layout";
@@ -57,7 +57,7 @@ const kAnimatePane = "animate";
 const kMaterialPane = "material";
 const kBuildPane = "build";
 
-type WorkspaceElement = HTMLElementTagNameMap[typeof kAttachedTags[number]];
+type AttachedElement = HTMLElementTagNameMap[typeof kAttachedTags[number]];
 
 export interface EditorShellOptions {
   runtime: EditorRuntime;
@@ -73,9 +73,9 @@ export class EditorShell {
   #materialPane: PaneElement;
   #animateTabs: PaneGroup;
   #timelineDock: HTMLElement;
-  #attached: WorkspaceElement[];
+  #attached: AttachedElement[];
   #presenceStack: PresenceStack;
-  #workspace: ModelWorkspace | null = null;
+  #editing: ModelEditing | null = null;
   #disposables: Array<() => void> = [];
 
   constructor(
@@ -122,7 +122,7 @@ export class EditorShell {
     this.#materialPane = materialPane;
     this.#animateTabs = animateTabs;
     this.#timelineDock = timelineDock;
-    this.#attached = kAttachedTags.map(queryWorkspaceElement);
+    this.#attached = kAttachedTags.map(queryAttachedElement);
     this.#presenceStack = presenceStack;
 
     this.#leftPanel.showTexture(texture);
@@ -157,24 +157,24 @@ export class EditorShell {
     return this.#layout;
   }
 
-  adoptWorkspace(
-    workspace: ModelWorkspace
+  adoptEditing(
+    editing: ModelEditing
   ): void {
-    this.#workspace = workspace;
+    this.#editing = editing;
     for (const element of this.#attached) {
-      void element.attach(workspace);
+      void element.attach(editing);
     }
     this.#disposables.push(bindPresenceStack(
       this.#presenceStack,
-      workspace.presence,
-      (clientId) => workspace.teleportToPeer(clientId)
+      editing.presence,
+      (clientId) => editing.teleportToPeer(clientId)
     ));
-    this.#leftPanel.workspace = workspace;
+    this.#leftPanel.editing = editing;
     this.#syncGizmo();
     this.#syncTab();
-    this.#materialPane.presence = workspace.fields;
+    this.#materialPane.presence = editing.fields;
     this.#leftPanel.onPeerUvDragging = (region) => {
-      workspace.textures.previewPeerDrag(region);
+      editing.textures.previewPeerDrag(region);
     };
   }
 
@@ -194,7 +194,7 @@ export class EditorShell {
 
   #syncTab(): void {
     this.#timelineDock.hidden = !this.#animating;
-    this.#workspace?.tab.activate(parseEditorTab(this.#animateTabs.active));
+    this.#editing?.tab.activate(parseEditorTab(this.#animateTabs.active));
   }
 
   get #animating(): boolean {
@@ -202,8 +202,8 @@ export class EditorShell {
   }
 
   #syncGizmo(): void {
-    if (this.#workspace !== null) {
-      this.#workspace.gizmo.enabled = this.#animating || this.#layout.paneVisible(kBuildPane);
+    if (this.#editing !== null) {
+      this.#editing.gizmo.enabled = this.#animating || this.#layout.paneVisible(kBuildPane);
     }
   }
 
@@ -230,9 +230,9 @@ export class EditorShell {
   }
 }
 
-function queryWorkspaceElement(
+function queryAttachedElement(
   tag: typeof kAttachedTags[number]
-): WorkspaceElement {
+): AttachedElement {
   const element = document.querySelector(tag);
   if (element === null) {
     throw new Error(`EditorShell: "${tag}" is missing from the page.`);

@@ -14,7 +14,7 @@ import {
   textureShortcutsConsole
 } from "../features/texture/textureConsole.ts";
 import { viewConsole } from "../scene/viewConsole.ts";
-import type { VoxelMapWorkspace } from "../workspace/VoxelMapWorkspace.ts";
+import type { VoxelMapEditing } from "../editing/VoxelMapEditing.ts";
 
 // CONSTANTS
 const kFeatures: readonly ConsoleFeature<MapConsoleContext>[] = [
@@ -25,7 +25,7 @@ const kFeatures: readonly ConsoleFeature<MapConsoleContext>[] = [
   viewConsole
 ];
 
-export type MapConsoleContext = Pick<VoxelMapWorkspace, "state">;
+export type MapConsoleContext = Pick<VoxelMapEditing, "state">;
 
 export function mapConsole(
   commands: CommandConsole,

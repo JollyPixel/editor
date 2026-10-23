@@ -23,8 +23,8 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { VoxelMapWorkspace } from "../../../workspace/VoxelMapWorkspace.ts";
-import { WorkspaceElement } from "../../../workspace/WorkspaceElement.ts";
+import type { VoxelMapEditing } from "../../../editing/VoxelMapEditing.ts";
+import { EditingElement } from "../../../editing/EditingElement.ts";
 import {
   blockDialogStyles,
   MISSING_BLOCKSET,
@@ -48,7 +48,7 @@ const kSideOptions: JollyOption<BlockSide>[] = [
 ];
 
 @customElement("block-edit-dialog")
-export class BlockEditDialog extends WorkspaceElement {
+export class BlockEditDialog extends EditingElement {
   static override styles = blockDialogStyles;
 
   @state()
@@ -68,8 +68,8 @@ export class BlockEditDialog extends WorkspaceElement {
     this._open = false;
   }
 
-  protected override watchWorkspace(
-    workspace: VoxelMapWorkspace
+  protected override watchEditing(
+    editing: VoxelMapEditing
   ): Iterable<() => void> {
     const refresh = (): void => {
       if (this._open) {
@@ -78,15 +78,15 @@ export class BlockEditDialog extends WorkspaceElement {
     };
 
     return [
-      workspace.editorMap.subscribe("blockRegistryChanged", refresh),
-      workspace.usage.subscribe("change", refresh)
+      editing.editorMap.subscribe("blockRegistryChanged", refresh),
+      editing.usage.subscribe("change", refresh)
     ];
   }
 
   async open(
     blockId: number
   ): Promise<void> {
-    if (this.workspace?.editorMap.blocks.get(blockId) === undefined) {
+    if (this.editing?.editorMap.blocks.get(blockId) === undefined) {
       return;
     }
 
@@ -104,17 +104,17 @@ export class BlockEditDialog extends WorkspaceElement {
   get #block(): ResolvedBlockDefinition | undefined {
     return this._blockId === null ?
       undefined :
-      this.workspace?.editorMap.blocks.get(this._blockId);
+      this.editing?.editorMap.blocks.get(this._blockId);
   }
 
   override render() {
-    const workspace = this.workspace;
+    const editing = this.editing;
     const block = this.#block;
-    if (workspace === null || block === undefined) {
+    if (editing === null || block === undefined) {
       return nothing;
     }
 
-    const { blocksets, view } = workspace;
+    const { blocksets, view } = editing;
     const owner = blocksets.findOwner(block.id);
     const blocksetId = owner?.definition.id ?? "";
 
@@ -148,12 +148,12 @@ export class BlockEditDialog extends WorkspaceElement {
                 @properties-change=${this.#onPropertiesChange}
               ></custom-properties-editor>
             `)}
-            ${this.#renderUsage(workspace, block)}
+            ${this.#renderUsage(editing, block)}
           </div>
           ${renderShapeColumn({
             open: this._open,
-            stage: workspace.previewStage,
-            sources: workspace.blockSources,
+            stage: editing.previewStage,
+            sources: editing.blockSources,
             block: this.#shapePreview.apply(block),
             size: BlockTextures.fromBlock(block).size ?? blocksets.blocksetTileSize(blocksetId),
             onSizeChange: this.#onSizeChange
@@ -176,14 +176,14 @@ export class BlockEditDialog extends WorkspaceElement {
   }
 
   #renderUsage(
-    workspace: VoxelMapWorkspace,
+    editing: VoxelMapEditing,
     block: ResolvedBlockDefinition
   ) {
     if (!this._open) {
       return nothing;
     }
 
-    const usage = workspace.usage.inspectUsage(block.id);
+    const usage = editing.usage.inspectUsage(block.id);
 
     return html`
       <jolly-separator label="Usage"></jolly-separator>
@@ -282,7 +282,7 @@ export class BlockEditDialog extends WorkspaceElement {
   ): void => {
     const block = this.#block;
     if (block !== undefined) {
-      this.workspace?.blocksets.defineBlock(
+      this.editing?.blocksets.defineBlock(
         BlockTextures.fromBlock(block).withTileSize(event.detail.value).createTexturedBlock(block)
       );
     }
@@ -293,7 +293,7 @@ export class BlockEditDialog extends WorkspaceElement {
   ): void {
     const block = this.#block;
     if (block !== undefined) {
-      this.workspace?.blocksets.defineBlock({
+      this.editing?.blocksets.defineBlock({
         ...block,
         ...patch
       });
@@ -301,20 +301,20 @@ export class BlockEditDialog extends WorkspaceElement {
   }
 
   async #confirmDelete(): Promise<void> {
-    const workspace = this.workspace;
+    const editing = this.editing;
     const block = this.#block;
-    if (workspace === null || block === undefined) {
+    if (editing === null || block === undefined) {
       return;
     }
 
-    const usage = workspace.usage.inspectUsage(block.id);
+    const usage = editing.usage.inspectUsage(block.id);
     const confirmed = usage.unused ||
       await this._dialog.confirmInline({
         message: usage.deletePrompt(block.name),
         confirmLabel: "Delete",
         danger: true
       });
-    if (!confirmed || !workspace.blocksets.removeBlock(block.id)) {
+    if (!confirmed || !editing.blocksets.removeBlock(block.id)) {
       return;
     }
 

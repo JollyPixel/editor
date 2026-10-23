@@ -80,7 +80,7 @@ second `release()` of one lease does nothing. See the
 [lease lifecycle](../../ARCHITECTURE.md#lease-lifecycle).
 
 One collection serves every session opened on a connection, including the
-sessions of a [switch](../editor/mountStandalone.md#switching-target-or-tag), so a lease
+sessions of a [switch](../boot/mountStandalone.md#switching-target-or-tag), so a lease
 opened by a panel outlives its session until released. Closing the connection
 closes the collection permanently. Later `open` and `openRoom`
 calls throw an error; releasing an existing lease afterward is harmless.

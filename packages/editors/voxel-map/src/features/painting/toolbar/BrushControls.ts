@@ -18,8 +18,8 @@ import {
   BRUSH_MIN_SIZE,
   type BrushStore
 } from "../../../state/index.ts";
-import type { VoxelMapWorkspace } from "../../../workspace/VoxelMapWorkspace.ts";
-import { WorkspaceElement } from "../../../workspace/WorkspaceElement.ts";
+import type { VoxelMapEditing } from "../../../editing/VoxelMapEditing.ts";
+import { EditingElement } from "../../../editing/EditingElement.ts";
 import type { MapAction } from "../../../keybindings/mapActions.ts";
 import { brushControlsStyles } from "./BrushControls.styles.ts";
 import { PaintAvailability } from "./PaintAvailability.ts";
@@ -41,7 +41,7 @@ interface ChoiceTool<TValue extends string> {
 }
 
 @customElement("voxel-brush-controls")
-export class BrushControls extends WorkspaceElement {
+export class BrushControls extends EditingElement {
   static override styles = brushControlsStyles;
 
   @property({ type: Boolean, reflect: true })
@@ -67,29 +67,29 @@ export class BrushControls extends WorkspaceElement {
     return this.attached.state.brush;
   }
 
-  protected override watchWorkspace(
-    workspace: VoxelMapWorkspace
+  protected override watchEditing(
+    editing: VoxelMapEditing
   ): Iterable<() => void> {
-    const { brush } = workspace.state;
+    const { brush } = editing.state;
     const refresh = (availability: PaintAvailability): void => {
       this._availability = availability;
       this.disabled = availability.blocked;
     };
 
     return [
-      ...PaintAvailability.watch(workspace, refresh),
+      ...PaintAvailability.watch(editing, refresh),
       brush.subscribe("change", () => this.requestUpdate()),
-      workspace.state.shortcuts.subscribe(() => this.requestUpdate())
+      editing.state.shortcuts.subscribe(() => this.requestUpdate())
     ];
   }
 
   override render(): TemplateResult | typeof nothing {
-    const workspace = this.workspace;
-    if (workspace === null) {
+    const editing = this.editing;
+    if (editing === null) {
       return nothing;
     }
 
-    const { brush } = workspace.state;
+    const { brush } = editing.state;
 
     return html`
       <div

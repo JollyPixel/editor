@@ -652,7 +652,7 @@ export class PixelDrawPanel extends LitElement {
         ></color-picker-rail>
       </div>
 
-      <div class="workspace" part="workspace">
+      <div class="canvas-area" part="canvas-area">
         ${this.#tabs.render()}
         <div
           class="stage"
