@@ -19,8 +19,8 @@ import { peerBadges } from "@jolly-pixel/ui/network";
 // Import Internal Dependencies
 import { TemplateDraftId } from "../../map/TemplateDraftId.ts";
 import { VoxelLayerRef } from "../../state/index.ts";
-import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
-import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
+import type { VoxelMapEditing } from "../../editing/VoxelMapEditing.ts";
+import { EditingElement } from "../../editing/EditingElement.ts";
 import { treeHostStyles } from "../../shared/styles/treeHost.styles.ts";
 import { templateTreeNodes } from "./templateTree.ts";
 import { TemplateDrop } from "./TemplateDrop.ts";
@@ -32,7 +32,7 @@ const kDragThreshold = 4;
 const kDraggingClass = "template-dragging";
 
 @customElement("template-manager")
-export class TemplateManager extends WorkspaceElement {
+export class TemplateManager extends EditingElement {
   static override styles = [
     treeHostStyles,
     css`
@@ -73,11 +73,11 @@ export class TemplateManager extends WorkspaceElement {
     this._selected = null;
   }
 
-  protected override watchWorkspace(
-    workspace: VoxelMapWorkspace
+  protected override watchEditing(
+    editing: VoxelMapEditing
   ): Iterable<() => void> {
-    const { templates, editorMap } = workspace;
-    const refresh = (): void => this.#refreshNodes(workspace);
+    const { templates, editorMap } = editing;
+    const refresh = (): void => this.#refreshNodes(editing);
     this._selected = templates.store.selected;
     refresh();
 
@@ -85,29 +85,29 @@ export class TemplateManager extends WorkspaceElement {
       editorMap.subscribe("templatesChanged", refresh),
       editorMap.subscribe("layerUpdated", refresh),
       editorMap.subscribe("reset", refresh),
-      workspace.state.presence.subscribe("layerSelectionsChange", refresh),
-      workspace.state.editContext.subscribe(
+      editing.state.presence.subscribe("layerSelectionsChange", refresh),
+      editing.state.editContext.subscribe(
         "change",
         () => this.requestUpdate()
       ),
       templates.store.subscribe("selectionChange", (templateId) => {
         this._selected = templateId;
       }),
-      workspace.access.subscribe("change", () => this.requestUpdate()),
+      editing.access.subscribe("change", () => this.requestUpdate()),
       () => this.#drag?.cancel()
     ];
   }
 
   override render() {
-    const workspace = this.workspace;
-    if (workspace === null) {
+    const editing = this.editing;
+    if (editing === null) {
       return nothing;
     }
 
-    const { templates, templateEditing, placement } = workspace;
+    const { templates, templateEditing, placement } = editing;
     const editable = templateEditing.canOpen &&
       this._selected !== null &&
-      this._selected !== workspace.state.editContext.draft?.templateId;
+      this._selected !== editing.state.editContext.draft?.templateId;
 
     return html`
       <jolly-folder
@@ -146,10 +146,10 @@ export class TemplateManager extends WorkspaceElement {
 
         <div class="tree-host">${this.#renderTree(templates.editable)}</div>
         <template-panel
-          .world=${workspace.editorMap.world}
+          .world=${editing.editorMap.world}
           .templates=${templates}
           .placement=${placement}
-          .editorMap=${workspace.editorMap}
+          .editorMap=${editing.editorMap}
         ></template-panel>
       </jolly-folder>
     `;
@@ -178,25 +178,25 @@ export class TemplateManager extends WorkspaceElement {
   }
 
   readonly #place = (): void => {
-    const workspace = this.workspace;
-    const templateId = workspace?.templates.store.selected ?? null;
-    if (workspace === null || templateId === null) {
+    const editing = this.editing;
+    const templateId = editing?.templates.store.selected ?? null;
+    if (editing === null || templateId === null) {
       return;
     }
 
-    workspace.placement.placeTemplate(templateId, workspace.focusPoint());
+    editing.placement.placeTemplate(templateId, editing.focusPoint());
   };
 
   readonly #edit = (): void => {
-    if (this.workspace !== null && this._selected !== null) {
-      this.workspace.templateEditing.open(this._selected);
+    if (this.editing !== null && this._selected !== null) {
+      this.editing.templateEditing.open(this._selected);
     }
   };
 
   readonly #removeTemplate = async(): Promise<void> => {
-    const workspace = this.workspace;
-    if (workspace !== null && this._selected !== null) {
-      await workspace.templates.remove(this._selected);
+    const editing = this.editing;
+    if (editing !== null && this._selected !== null) {
+      await editing.templates.remove(this._selected);
     }
   };
 
@@ -204,28 +204,28 @@ export class TemplateManager extends WorkspaceElement {
     event: CustomEvent<JollySelectDetail>
   ): void {
     const [id] = event.detail.selected;
-    if (this.workspace !== null) {
-      this.workspace.templates.store.selected = id ?? null;
+    if (this.editing !== null) {
+      this.editing.templates.store.selected = id ?? null;
     }
   }
 
   #onRename(
     event: CustomEvent<JollyRenameDetail>
   ): void {
-    const workspace = this.workspace;
-    if (workspace === null) {
+    const editing = this.editing;
+    if (editing === null) {
       return;
     }
 
-    workspace.templates.rename(event.detail.id, event.detail.name);
-    this.#refreshNodes(workspace);
+    editing.templates.rename(event.detail.id, event.detail.name);
+    this.#refreshNodes(editing);
   }
 
   #refreshNodes(
-    workspace: VoxelMapWorkspace
+    editing: VoxelMapEditing
   ): void {
-    const { world } = workspace.editorMap;
-    const marks = workspace.state.presence.layerSelections;
+    const { world } = editing.editorMap;
+    const marks = editing.state.presence.layerSelections;
     const drafts = new Map<string, TreeBadge[]>();
     for (const layer of world.getLayers()) {
       const draft = TemplateDraftId.parse(layer.id);
@@ -243,8 +243,8 @@ export class TemplateManager extends WorkspaceElement {
   #onActivate(
     event: CustomEvent<JollyActivateDetail>
   ): void {
-    if (this.workspace !== null) {
-      this.workspace.templates.store.selected = event.detail.id;
+    if (this.editing !== null) {
+      this.editing.templates.store.selected = event.detail.id;
       this.#place();
     }
   }
@@ -252,22 +252,22 @@ export class TemplateManager extends WorkspaceElement {
   #onTreePointerDown(
     event: PointerEvent
   ): void {
-    const workspace = this.workspace;
+    const editing = this.editing;
     const row = event.button === 0 ? createTemplateRow(event) : null;
     const templateId = row?.dataset.id;
     if (
-      workspace === null ||
+      editing === null ||
       row === null ||
       templateId === undefined ||
-      !workspace.placement.canPlace("template")
+      !editing.placement.canPlace("template")
     ) {
       return;
     }
 
     const drop = new TemplateDrop({
       templateId,
-      placement: workspace.placement,
-      pointAt: (clientX, clientY) => workspace.pointAt(clientX, clientY)
+      placement: editing.placement,
+      pointAt: (clientX, clientY) => editing.pointAt(clientX, clientY)
     });
     this.#drag?.cancel();
     this.#drag = startPointerDragSession({
@@ -276,7 +276,7 @@ export class TemplateManager extends WorkspaceElement {
       threshold: kDragThreshold,
       documentClass: kDraggingClass,
       onStart: () => {
-        workspace.templates.store.selected = templateId;
+        editing.templates.store.selected = templateId;
       },
       onMove: (clientX, clientY) => drop.hover(clientX, clientY),
       onFinish: (result) => {

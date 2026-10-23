@@ -13,13 +13,13 @@ import {
 } from "@jolly-pixel/console";
 
 // Import Internal Dependencies
-import type { Appearance } from "#src/appearance/PageAppearance.ts";
+import type { Appearance } from "#src/preferences/appearance/PageAppearance.ts";
 import { forwardConsole } from "#src/console/forwardConsole.ts";
 import {
   appearanceMessage,
   SHELL_MESSAGE_TYPE,
   ShellChannel
-} from "#src/launch/ShellChannel.ts";
+} from "#src/shell/ShellChannel.ts";
 
 // CONSTANTS
 const kShellOrigin = "http://studio.test";

@@ -12,7 +12,7 @@ import { FrameRate } from "@jolly-pixel/asset.voxel-animation/client";
 // Import Internal Dependencies
 import type { AnimationSession } from "./session/AnimationSession.ts";
 
-export interface AnimatingFrameWorkspace {
+export interface AnimatingFrameEditing {
   animationSession: AnimationSession;
 }
 
@@ -50,7 +50,7 @@ export class AnimatingFrame extends LitElement {
 
   declare private _label: string | null;
 
-  #workspace = new SubscriptionController<AnimatingFrameWorkspace>(
+  #editing = new SubscriptionController<AnimatingFrameEditing>(
     this,
     ({ animationSession }) => {
       const update = (): void => {
@@ -71,9 +71,9 @@ export class AnimatingFrame extends LitElement {
   }
 
   attach(
-    workspace: AnimatingFrameWorkspace
+    editing: AnimatingFrameEditing
   ): void {
-    this.#workspace.attach(workspace);
+    this.#editing.attach(editing);
   }
 
   override render(): TemplateResult | typeof nothing {

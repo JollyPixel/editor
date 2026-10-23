@@ -191,16 +191,16 @@ test("a block with children scales on a single axis", async({ page }) => {
   await enterAxes(page, { x: 2 });
 
   expect((await blockSummary(page, "Block"))?.scale).toEqual({ x: 2, y: 1, z: 1 });
-  expect(await page.evaluate(() => window.voxelModelEditor?.workspace.gizmo.activeControls?.axes))
+  expect(await page.evaluate(() => window.voxelModelEditor?.editing.gizmo.activeControls?.axes))
     .toEqual({ x: true, y: true, z: true });
 });
 
 test("moving the pivot of a rotated block leaves the box in place", async({ page }) => {
   function boxCenter(): Promise<number[] | undefined> {
     return page.evaluate(() => {
-      const workspace = window.voxelModelEditor?.workspace;
-      const uuid = workspace?.selection.selected ?? null;
-      const block = uuid === null ? undefined : workspace?.blocks.get(uuid);
+      const editing = window.voxelModelEditor?.editing;
+      const uuid = editing?.selection.selected ?? null;
+      const block = uuid === null ? undefined : editing?.blocks.get(uuid);
 
       return block?.mesh
         .getWorldPosition(block.mesh.position.clone())

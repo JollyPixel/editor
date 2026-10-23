@@ -6,8 +6,8 @@ import {
 } from "@jolly-pixel/console";
 
 // Import Internal Dependencies
-import { PageAppearance } from "../appearance/PageAppearance.ts";
-import type { ShellChannel } from "../launch/ShellChannel.ts";
+import { PageAppearance } from "../preferences/appearance/PageAppearance.ts";
+import type { ShellChannel } from "../shell/ShellChannel.ts";
 import type { PageConsole } from "./mountConsole.ts";
 
 export function forwardConsole(

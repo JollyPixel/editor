@@ -17,11 +17,11 @@ function offlineIds(
   map: VoxelMapPage
 ): Promise<OfflineIds> {
   return map.page.evaluate(() => {
-    const { session, workspace } = window.voxelMapEditor!;
+    const { session, editing } = window.voxelMapEditor!;
 
     return {
       mapId: session.target.record.id,
-      blocksetIds: workspace.view.document.blocksets
+      blocksetIds: editing.view.document.blocksets
         .definitions()
         .map((blockset) => blockset.asset?.id)
     };
@@ -50,7 +50,7 @@ test("exports the map, resets the offline data and imports it back", async({ map
 
   expect(await offlineIds(map)).toEqual(exported);
   const state = await page.evaluate(() => {
-    const { view } = window.voxelMapEditor!.workspace;
+    const { view } = window.voxelMapEditor!.editing;
 
     return {
       layers: view.document.world.getLayers().map((layer) => layer.name),

@@ -15,7 +15,7 @@ import type { AnimationInterpolation } from "@jolly-pixel/asset.voxel-animation/
 // Import Internal Dependencies
 import {
   KeyInspectorController,
-  type KeyInspectorWorkspace
+  type KeyInspectorEditing
 } from "./KeyInspectorController.ts";
 import { INTERPOLATION_OPTIONS } from "./interpolation.ts";
 
@@ -43,9 +43,9 @@ export class KeyInspector extends LitElement {
   #controller = new KeyInspectorController(this);
 
   attach(
-    workspace: KeyInspectorWorkspace
+    editing: KeyInspectorEditing
   ): void {
-    this.#controller.attach(workspace);
+    this.#controller.attach(editing);
   }
 
   readonly #onInterpolation = (

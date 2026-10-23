@@ -17,7 +17,7 @@ export class Brush {
 
   state() {
     return this.#page.evaluate(() => {
-      const { state } = window.voxelMapEditor!.workspace;
+      const { state } = window.voxelMapEditor!.editing;
       const { brush } = state;
 
       return {
@@ -31,7 +31,7 @@ export class Brush {
 
   ghost() {
     return this.#page.evaluate(() => {
-      const { localBrush } = window.voxelMapEditor!.workspace;
+      const { localBrush } = window.voxelMapEditor!.editing;
       const ghost = localBrush.actor.object3D.getObjectByName("ghost-block");
 
       return {
@@ -45,7 +45,7 @@ export class Brush {
     patch: BrushPatch
   ): Promise<void> {
     await this.#page.evaluate((values) => {
-      const { state } = window.voxelMapEditor!.workspace;
+      const { state } = window.voxelMapEditor!.editing;
       const { brush } = state;
       if (values.blockId !== undefined) {
         state.block.id = values.blockId;

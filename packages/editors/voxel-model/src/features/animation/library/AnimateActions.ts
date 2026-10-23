@@ -25,7 +25,7 @@ import { duplicateName } from "../../../model/index.ts";
 // CONSTANTS
 const kFirstClipName = "Clip 1";
 
-export interface AnimateActionsWorkspace {
+export interface AnimateActionsEditing {
   animations: AnimationLibrary;
   animationFocus: AnimationFocusStore;
 }
@@ -44,14 +44,14 @@ export interface AnimateActionsView {
 }
 
 export interface AnimateActionsOptions {
-  workspace: AnimateActionsWorkspace;
+  editing: AnimateActionsEditing;
   view: AnimateActionsView;
   expand(setId: string): void;
   report(error: string | null): void;
 }
 
 export class AnimateActions {
-  #workspace: AnimateActionsWorkspace;
+  #editing: AnimateActionsEditing;
   #view: AnimateActionsView;
   #expand: (setId: string) => void;
   #report: (error: string | null) => void;
@@ -59,14 +59,14 @@ export class AnimateActions {
   constructor(
     options: AnimateActionsOptions
   ) {
-    this.#workspace = options.workspace;
+    this.#editing = options.editing;
     this.#view = options.view;
     this.#expand = options.expand;
     this.#report = options.report;
   }
 
   get #animations(): AnimationLibrary {
-    return this.#workspace.animations;
+    return this.#editing.animations;
   }
 
   async newClip(
@@ -183,7 +183,7 @@ export class AnimateActions {
   unlinkSet(
     setId: string
   ): void {
-    const { animationFocus } = this.#workspace;
+    const { animationFocus } = this.#editing;
     this.#animations.unlink(setId);
     if (animationFocus.focus.setId === setId) {
       animationFocus.focusSet(null);
@@ -340,7 +340,7 @@ export class AnimateActions {
     setId: string
   ): void {
     this.#expand(setId);
-    this.#workspace.animationFocus.focusSet(setId);
+    this.#editing.animationFocus.focusSet(setId);
   }
 
   #focusClip(
@@ -348,7 +348,7 @@ export class AnimateActions {
   ): void {
     if (ref !== null) {
       this.#expand(ref.setId);
-      this.#workspace.animationFocus.focusClip(ref.setId, ref.clipId);
+      this.#editing.animationFocus.focusClip(ref.setId, ref.clipId);
     }
   }
 

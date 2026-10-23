@@ -15,7 +15,7 @@ import {
 // Import Internal Dependencies
 import {
   TrackBindingsController,
-  type TrackBindingsWorkspace
+  type TrackBindingsEditing
 } from "./TrackBindingsController.ts";
 import {
   TRACK_STATE_LABELS,
@@ -85,9 +85,9 @@ export class TrackBindings extends LitElement {
   );
 
   attach(
-    workspace: TrackBindingsWorkspace
+    editing: TrackBindingsEditing
   ): void {
-    this.#controller.attach(workspace);
+    this.#controller.attach(editing);
   }
 
   override render(): TemplateResult | typeof nothing {

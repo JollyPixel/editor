@@ -12,7 +12,7 @@ import type { AnimationSession } from "../session/AnimationSession.ts";
 import type { KeyEditor } from "./KeyEditor.ts";
 import type { ModelAccessSignals } from "../../../access/ModelAccess.ts";
 
-export interface KeyInspectorWorkspace {
+export interface KeyInspectorEditing {
   access: Pick<ModelAccessSignals, "subscribe">;
   animationSession: AnimationSession;
   keyEditor: KeyEditor;
@@ -27,7 +27,7 @@ export interface KeyInspectorState {
 export class KeyInspectorController {
   #host: ReactiveControllerHost;
   #state: KeyInspectorState | null = null;
-  #connection: SubscriptionController<KeyInspectorWorkspace>;
+  #connection: SubscriptionController<KeyInspectorEditing>;
 
   constructor(
     host: ReactiveControllerHost
@@ -45,9 +45,9 @@ export class KeyInspectorController {
   }
 
   attach(
-    workspace: KeyInspectorWorkspace
+    editing: KeyInspectorEditing
   ): void {
-    this.#connection.attach(workspace);
+    this.#connection.attach(editing);
     this.#refresh();
   }
 
@@ -63,14 +63,14 @@ export class KeyInspectorController {
   };
 
   #build(): KeyInspectorState | null {
-    const workspace = this.#connection.current;
-    const clip = workspace?.animationSession.focused?.clip;
-    const interpolation = workspace?.keyEditor.interpolation ?? null;
-    if (workspace === null || clip === undefined || interpolation === null) {
+    const editing = this.#connection.current;
+    const clip = editing?.animationSession.focused?.clip;
+    const interpolation = editing?.keyEditor.interpolation ?? null;
+    if (editing === null || clip === undefined || interpolation === null) {
       return null;
     }
 
-    const refs = workspace.keyEditor.selected;
+    const refs = editing.keyEditor.selected;
     const [first] = refs;
 
     return {
@@ -78,7 +78,7 @@ export class KeyInspectorController {
         `${new TrackPath(first.path).blockName} @ frame ${new FrameRate(clip.fps).frameAt(first.tick)}` :
         `${refs.length} keys`,
       interpolation,
-      editable: workspace.keyEditor.editable
+      editable: editing.keyEditor.editable
     };
   }
 }

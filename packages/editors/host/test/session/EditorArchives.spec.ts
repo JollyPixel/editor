@@ -1,17 +1,11 @@
 // Import Node.js Dependencies
-import {
-  afterEach,
-  describe,
-  test
-} from "node:test";
+import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { ArchiveRootError } from "#src/session/errors/ArchiveRootError.ts";
 import { ArchiveImportDisabledError } from "#src/session/errors/ArchiveImportDisabledError.ts";
-import { LAST_OPENED_STORAGE_PREFIX } from "#src/launch/sources/LastOpenedLaunchSource.ts";
 import {
-  ARCHIVE_KIND,
   ARCHIVE_ROOT,
   LIVE_ENTRY,
   RESET_WARNING,
@@ -20,16 +14,9 @@ import {
   createBrowser,
   createOfflineMode
 } from "../helpers/session/archives.ts";
-
-Object.assign(globalThis, {
-  localStorage: window.localStorage
-});
+import { FakeNavigator } from "../helpers/session/catalog.ts";
 
 describe("EditorArchives", () => {
-  afterEach(() => {
-    localStorage.clear();
-  });
-
   describe("download", () => {
     test("saves the target archive under its file stem", async() => {
       const archive = createArchive();
@@ -61,44 +48,66 @@ describe("EditorArchives", () => {
   });
 
   describe("importFile", () => {
-    test("imports without asking when nothing exists, then opens the root", async() => {
+    test("imports without asking when nothing exists, then switches to the root", async() => {
       const archive = createArchive();
       const browser = createBrowser();
-      const archives = createArchives({ archive, browser });
+      const navigator = new FakeNavigator();
+      const archives = createArchives({ archive, browser, navigator });
 
       await archives.importFile(new Blob());
 
       assert.deepEqual(browser.asked, []);
       assert.deepEqual(archive.imported, [{ onConflict: "keep" }]);
+      assert.deepEqual(navigator.navigations, [
+        {
+          target: ARCHIVE_ROOT.id,
+          tag: null
+        }
+      ]);
+      assert.deepEqual(browser.assigned, []);
+    });
+
+    test("reloads onto the root when the import replaced assets", async() => {
+      const archive = createArchive({
+        live: [LIVE_ENTRY],
+        replaced: [LIVE_ENTRY]
+      });
+      const browser = createBrowser();
+      const navigator = new FakeNavigator();
+      const archives = createArchives({ archive, browser, navigator });
+
+      await archives.importFile(new Blob());
+
+      assert.deepEqual(archive.imported, [{ onConflict: "replace" }]);
+      assert.deepEqual(navigator.navigations, []);
       assert.deepEqual(browser.assigned, [
         "http://localhost:5173/?target=model-2&room=a"
       ]);
-      assert.equal(
-        localStorage.getItem(`${LAST_OPENED_STORAGE_PREFIX}${ARCHIVE_KIND}`),
-        ARCHIVE_ROOT.id
-      );
     });
 
     test("asks how to handle existing assets and imports with the answer", async() => {
       const archive = createArchive({ live: [LIVE_ENTRY] });
       const browser = createBrowser({ policy: "copy" });
-      const archives = createArchives({ archive, browser });
+      const navigator = new FakeNavigator();
+      const archives = createArchives({ archive, browser, navigator });
 
       await archives.importFile(new Blob());
 
       assert.equal(browser.asked.length, 1);
       assert.deepEqual(archive.imported, [{ onConflict: "copy" }]);
-      assert.equal(browser.assigned.length, 1);
+      assert.equal(navigator.navigations.length, 1);
     });
 
     test("does nothing when the question is dismissed", async() => {
       const archive = createArchive({ live: [LIVE_ENTRY] });
       const browser = createBrowser({ policy: null });
-      const archives = createArchives({ archive, browser });
+      const navigator = new FakeNavigator();
+      const archives = createArchives({ archive, browser, navigator });
 
       await archives.importFile(new Blob());
 
       assert.deepEqual(archive.imported, []);
+      assert.deepEqual(navigator.navigations, []);
       assert.deepEqual(browser.assigned, []);
     });
 
@@ -122,17 +131,21 @@ describe("EditorArchives", () => {
   });
 
   describe("pickAndImport", () => {
-    test("imports the picked archive, then opens the root", async() => {
+    test("imports the picked archive, then switches to the root", async() => {
       const archive = createArchive();
       const browser = createBrowser();
-      const archives = createArchives({ archive, browser });
+      const navigator = new FakeNavigator();
+      const archives = createArchives({ archive, browser, navigator });
 
       await archives.pickAndImport();
 
       assert.equal(browser.picks, 1);
       assert.deepEqual(archive.imported, [{ onConflict: "keep" }]);
-      assert.deepEqual(browser.assigned, [
-        "http://localhost:5173/?target=model-2&room=a"
+      assert.deepEqual(navigator.navigations, [
+        {
+          target: ARCHIVE_ROOT.id,
+          tag: null
+        }
       ]);
     });
 
@@ -203,16 +216,14 @@ describe("EditorArchives", () => {
       });
 
       assert.equal(archives.canReset, true);
-      assert.equal(archives.volatile, false);
       assert.equal(locked.canReset, false);
     });
 
-    test("flags volatile offline data", () => {
+    test("has nothing to reset on volatile offline data", () => {
       const archives = createArchives({
         offline: createOfflineMode({ persistent: false })
       });
 
-      assert.equal(archives.volatile, true);
       assert.equal(archives.canReset, false);
     });
 
@@ -220,7 +231,6 @@ describe("EditorArchives", () => {
       const archives = createArchives();
 
       assert.equal(archives.canReset, false);
-      assert.equal(archives.volatile, false);
     });
   });
 });

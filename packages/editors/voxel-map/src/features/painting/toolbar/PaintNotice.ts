@@ -7,8 +7,8 @@ import {
 import { customElement, state } from "lit/decorators.js";
 
 // Import Internal Dependencies
-import type { VoxelMapWorkspace } from "../../../workspace/VoxelMapWorkspace.ts";
-import { WorkspaceElement } from "../../../workspace/WorkspaceElement.ts";
+import type { VoxelMapEditing } from "../../../editing/VoxelMapEditing.ts";
+import { EditingElement } from "../../../editing/EditingElement.ts";
 import {
   PaintAvailability,
   type PaintingNotice
@@ -16,7 +16,7 @@ import {
 import { paintNoticeStyles } from "./PaintNotice.styles.ts";
 
 @customElement("voxel-paint-notice")
-export class PaintNotice extends WorkspaceElement {
+export class PaintNotice extends EditingElement {
   static override styles = paintNoticeStyles;
 
   @state()
@@ -27,10 +27,10 @@ export class PaintNotice extends WorkspaceElement {
     this._notice = null;
   }
 
-  protected override watchWorkspace(
-    workspace: VoxelMapWorkspace
+  protected override watchEditing(
+    editing: VoxelMapEditing
   ): Iterable<() => void> {
-    return PaintAvailability.watch(workspace, (availability) => {
+    return PaintAvailability.watch(editing, (availability) => {
       this._notice = availability.notice;
       this.hidden = availability.notice === null;
     });

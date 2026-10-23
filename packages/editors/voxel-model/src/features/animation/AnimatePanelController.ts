@@ -26,7 +26,7 @@ import type { ClipRemovalFocus } from "./library/ClipRemovalFocus.ts";
 import {
   AnimateActions,
   type AnimateActionsView,
-  type AnimateActionsWorkspace
+  type AnimateActionsEditing
 } from "./library/AnimateActions.ts";
 import {
   keySelectedBlock,
@@ -74,7 +74,7 @@ const kEmptyState: AnimatePanelState = {
   notice: null
 };
 
-export interface AnimateWorkspace extends AnimateActionsWorkspace, KeySelectedOptions {
+export interface AnimateEditing extends AnimateActionsEditing, KeySelectedOptions {
   access: Pick<ModelAccessSignals, "subscribe">;
   presence: Pick<PresenceStore, "clipFocuses" | "subscribe">;
   clipRemoval: Pick<ClipRemovalFocus, "notice" | "dismiss" | "subscribe">;
@@ -125,7 +125,7 @@ export class AnimatePanelController {
   #state: AnimatePanelState = kEmptyState;
   #error: string | null = null;
   #actions: AnimateActions | null = null;
-  #connection: SubscriptionController<AnimateWorkspace>;
+  #connection: SubscriptionController<AnimateEditing>;
 
   constructor(
     host: ReactiveControllerHost,
@@ -133,8 +133,8 @@ export class AnimatePanelController {
   ) {
     this.#host = host;
     this.#view = view;
-    this.#connection = new SubscriptionController(host, (workspace) => {
-      const { access, animations, animationFocus, presence, clipRemoval, shortcuts } = workspace;
+    this.#connection = new SubscriptionController(host, (editing) => {
+      const { access, animations, animationFocus, presence, clipRemoval, shortcuts } = editing;
 
       return [
         access.subscribe("change", this.#refresh),
@@ -156,18 +156,18 @@ export class AnimatePanelController {
   }
 
   attach(
-    workspace: AnimateWorkspace
+    editing: AnimateEditing
   ): void {
     this.#expanded.reset(
-      workspace.animations.sets().map(({ id }) => animationKey(id))
+      editing.animations.sets().map(({ id }) => animationKey(id))
     );
     this.#actions = new AnimateActions({
-      workspace,
+      editing,
       view: this.#view,
       expand: (setId) => this.#expanded.expand(animationKey(setId)),
       report: this.#report
     });
-    this.#connection.attach(workspace);
+    this.#connection.attach(editing);
     this.#refresh();
   }
 
@@ -175,13 +175,13 @@ export class AnimatePanelController {
     event: CustomEvent<JollySelectDetail>
   ): void => {
     const row = this.#findRow(event.detail.selected[0]);
-    const workspace = this.#connection.current;
-    if (row === undefined || workspace === null) {
+    const editing = this.#connection.current;
+    if (row === undefined || editing === null) {
       return;
     }
 
-    const focus = workspace.animationFocus;
-    workspace.clipRemoval.dismiss();
+    const focus = editing.animationFocus;
+    editing.clipRemoval.dismiss();
     if (row.clipId === null) {
       focus.focusSet(row.setId);
     }
@@ -285,9 +285,9 @@ export class AnimatePanelController {
   }
 
   keySelected(): void {
-    const workspace = this.#connection.current;
-    if (workspace !== null) {
-      keySelectedBlock(workspace);
+    const editing = this.#connection.current;
+    if (editing !== null) {
+      keySelectedBlock(editing);
     }
   }
 
@@ -399,17 +399,17 @@ export class AnimatePanelController {
   };
 
   #build(): AnimatePanelState {
-    const workspace = this.#connection.current;
-    if (workspace === null) {
+    const editing = this.#connection.current;
+    if (editing === null) {
       return kEmptyState;
     }
 
-    const sets = workspace.animations.sets();
+    const sets = editing.animations.sets();
     const own = sets.find((candidate) => candidate.own);
-    const { setId, clipId } = workspace.animationFocus.focus;
+    const { setId, clipId } = editing.animationFocus.focus;
     const set = sets.find(({ id }) => id === setId) ?? null;
     const clip = set === null || clipId === null ? undefined : set.document.set.clip(clipId);
-    const focuses = workspace.presence.clipFocuses;
+    const focuses = editing.presence.clipFocuses;
 
     return {
       ownClips: own === undefined ? [] : clipNodes(own, focuses),
@@ -425,10 +425,10 @@ export class AnimatePanelController {
           frames: new FrameRate(clip.fps).frameAt(clip.length)
         },
       canShare: own !== undefined && own.document.set.size > 0,
-      editable: workspace.animations.editable,
-      keyTitle: workspace.shortcuts.label(kKeyTitle, "animation.key"),
+      editable: editing.animations.editable,
+      keyTitle: editing.shortcuts.label(kKeyTitle, "animation.key"),
       error: this.#error,
-      notice: workspace.clipRemoval.notice
+      notice: editing.clipRemoval.notice
     };
   }
 }

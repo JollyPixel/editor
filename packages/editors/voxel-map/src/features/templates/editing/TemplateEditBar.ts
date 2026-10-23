@@ -11,12 +11,12 @@ import {
 } from "lit/decorators.js";
 
 // Import Internal Dependencies
-import type { VoxelMapWorkspace } from "../../../workspace/VoxelMapWorkspace.ts";
-import { WorkspaceElement } from "../../../workspace/WorkspaceElement.ts";
+import type { VoxelMapEditing } from "../../../editing/VoxelMapEditing.ts";
+import { EditingElement } from "../../../editing/EditingElement.ts";
 import "../templateIcons.ts";
 
 @customElement("voxel-template-edit-bar")
-export class TemplateEditBar extends WorkspaceElement {
+export class TemplateEditBar extends EditingElement {
   static override styles = css`
     :host {
       display: inline-flex;
@@ -64,10 +64,10 @@ export class TemplateEditBar extends WorkspaceElement {
     this.hidden = true;
   }
 
-  protected override watchWorkspace(
-    workspace: VoxelMapWorkspace
+  protected override watchEditing(
+    editing: VoxelMapEditing
   ): Iterable<() => void> {
-    const { templateEditing, editorMap } = workspace;
+    const { templateEditing, editorMap } = editing;
     const refresh = (): void => {
       this._name = templateEditing.current?.template.name ?? null;
       this.hidden = this._name === null;
@@ -75,9 +75,9 @@ export class TemplateEditBar extends WorkspaceElement {
     refresh();
 
     return [
-      workspace.state.editContext.subscribe("change", refresh),
+      editing.state.editContext.subscribe("change", refresh),
       editorMap.subscribe("templatesChanged", refresh),
-      workspace.access.subscribe("change", () => this.requestUpdate())
+      editing.access.subscribe("change", () => this.requestUpdate())
     ];
   }
 

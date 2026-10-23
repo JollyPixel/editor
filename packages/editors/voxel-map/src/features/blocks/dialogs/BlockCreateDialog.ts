@@ -16,7 +16,7 @@ import type {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { WorkspaceElement } from "../../../workspace/WorkspaceElement.ts";
+import { EditingElement } from "../../../editing/EditingElement.ts";
 import { BlockDraft } from "./BlockDraft.ts";
 import {
   blockDialogStyles,
@@ -28,7 +28,7 @@ import { ShapePreview } from "./ShapePreview.ts";
 import "../blockIcons.ts";
 
 @customElement("block-create-dialog")
-export class BlockCreateDialog extends WorkspaceElement {
+export class BlockCreateDialog extends EditingElement {
   static override styles = blockDialogStyles;
 
   @state()
@@ -50,7 +50,7 @@ export class BlockCreateDialog extends WorkspaceElement {
   }
 
   async open(): Promise<void> {
-    const blocksets = this.workspace?.blocksets;
+    const blocksets = this.editing?.blocksets;
     const writable = blocksets?.entriesGranting("blocks") ?? [];
     const active = blocksets?.activeBlocksetId ?? null;
     this._draft = BlockDraft.create(
@@ -70,12 +70,12 @@ export class BlockCreateDialog extends WorkspaceElement {
   }
 
   override render() {
-    const workspace = this.workspace;
-    if (workspace === null) {
+    const editing = this.editing;
+    if (editing === null) {
       return nothing;
     }
 
-    const { blocksets, view } = workspace;
+    const { blocksets, view } = editing;
     const draft = this._draft;
     const writable = blocksets.entriesGranting("blocks");
 
@@ -105,8 +105,8 @@ export class BlockCreateDialog extends WorkspaceElement {
           </div>
           ${renderShapeColumn({
             open: this._open,
-            stage: workspace.previewStage,
-            sources: workspace.blockSources,
+            stage: editing.previewStage,
+            sources: editing.blockSources,
             block: this.#shapePreview.apply(this.#previewBlock),
             size: draft.size ?? blocksets.blocksetTileSize(draft.blocksetId),
             onSizeChange: this.#onSizeChange
@@ -160,19 +160,19 @@ export class BlockCreateDialog extends WorkspaceElement {
   }
 
   #create(): void {
-    const workspace = this.workspace;
+    const editing = this.editing;
     const draft = this._draft;
-    const id = workspace?.blocksets.nextBlockId(draft.blocksetId);
-    if (workspace === null || id === undefined) {
+    const id = editing?.blocksets.nextBlockId(draft.blocksetId);
+    if (editing === null || id === undefined) {
       return;
     }
 
     const definition = draft.toDefinition(
       id,
-      workspace.blocksets.freeTile(draft.blocksetId, draft.size)
+      editing.blocksets.freeTile(draft.blocksetId, draft.size)
     );
-    workspace.blocksets.defineBlock(definition);
-    workspace.state.block.id = definition.id;
+    editing.blocksets.defineBlock(definition);
+    editing.state.block.id = definition.id;
     this.#close();
   }
 }

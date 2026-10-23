@@ -15,8 +15,8 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
-import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
+import type { VoxelMapEditing } from "../../editing/VoxelMapEditing.ts";
+import { EditingElement } from "../../editing/EditingElement.ts";
 import { BlockLibraryOrder } from "../../features/blocks/library/BlockLibraryOrder.ts";
 import { BlockLibraryScope } from "../../features/blocks/library/BlockLibraryScope.ts";
 import { BlockLibraryView } from "../../features/blocks/library/BlockLibraryView.ts";
@@ -32,7 +32,7 @@ const kOrderStorageKey = "voxel-map:block-library:order";
 const kScopeStorageKey = "voxel-map:block-library:scope";
 
 @customElement("blocks-panel")
-export class BlocksPanel extends WorkspaceElement {
+export class BlocksPanel extends EditingElement {
   static override styles = css`
     :host {
       display: flex;
@@ -86,19 +86,19 @@ export class BlocksPanel extends WorkspaceElement {
     });
   }
 
-  protected override watchWorkspace(
-    workspace: VoxelMapWorkspace
+  protected override watchEditing(
+    editing: VoxelMapEditing
   ): Iterable<() => void> {
     return [
-      workspace.editorMap.subscribe(
+      editing.editorMap.subscribe(
         "reset",
         () => this.requestUpdate()
       ),
-      workspace.blocksets.subscribe(
+      editing.blocksets.subscribe(
         "change",
         () => this.requestUpdate()
       ),
-      workspace.blocksets.subscribe(
+      editing.blocksets.subscribe(
         "activeChange",
         () => this.requestUpdate()
       )
@@ -130,8 +130,8 @@ export class BlocksPanel extends WorkspaceElement {
   };
 
   override render() {
-    const workspace = this.workspace;
-    if (workspace === null) {
+    const editing = this.editing;
+    if (editing === null) {
       return html`<slot></slot>`;
     }
 
@@ -154,15 +154,15 @@ export class BlocksPanel extends WorkspaceElement {
           slot="actions"
           .order=${this._view.order}
           .scope=${this._view.scope}
-          .activeBlockset=${workspace.blocksets.active?.label ?? null}
+          .activeBlockset=${editing.blocksets.active?.label ?? null}
           @block-library-settings-change=${this.#onSettingsChange}
         ></block-library-settings>
         <block-library
-          .workspace=${workspace}
+          .editing=${editing}
           .view=${this._view}
           .layout=${this.hostsTextureEditor ? "compact" : "fill"}
         >
-          <brush-orientation .workspace=${workspace}></brush-orientation>
+          <brush-orientation .editing=${editing}></brush-orientation>
         </block-library>
       </jolly-folder>
 

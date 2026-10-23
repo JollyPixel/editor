@@ -17,8 +17,8 @@ import {
   type EditorTool,
   type SelectMode
 } from "../../state/index.ts";
-import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
-import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
+import type { VoxelMapEditing } from "../../editing/VoxelMapEditing.ts";
+import { EditingElement } from "../../editing/EditingElement.ts";
 import { editToolbarStyles } from "./EditToolbar.styles.ts";
 import "../../features/painting/toolbar/BrushControls.ts";
 import "../../features/painting/toolbar/PaintNotice.ts";
@@ -45,7 +45,7 @@ const kSelectModeButtons = {
 export type EditMode = "paint" | "select" | "place";
 
 @customElement("voxel-edit-toolbar")
-export class EditToolbar extends WorkspaceElement {
+export class EditToolbar extends EditingElement {
   static override styles = editToolbarStyles;
 
   @property({ reflect: true })
@@ -79,12 +79,12 @@ export class EditToolbar extends WorkspaceElement {
     this._selectMode = "box";
   }
 
-  protected override watchWorkspace(
-    workspace: VoxelMapWorkspace
+  protected override watchEditing(
+    editing: VoxelMapEditing
   ): Iterable<() => void> {
-    const { placement } = workspace;
-    const { tool, shortcuts } = workspace.state;
-    const { history } = workspace;
+    const { placement } = editing;
+    const { tool, shortcuts } = editing.state;
+    const { history } = editing;
     const refreshMode = (): void => {
       if (placement.placing) {
         this.mode = "place";
@@ -109,14 +109,14 @@ export class EditToolbar extends WorkspaceElement {
       tool.subscribe("selectMode", (selectMode) => {
         this._selectMode = selectMode;
       }),
-      workspace.access.subscribe("change", () => this.requestUpdate()),
+      editing.access.subscribe("change", () => this.requestUpdate()),
       shortcuts.subscribe(() => this.requestUpdate())
     ];
   }
 
   override render(): TemplateResult | typeof nothing {
-    const workspace = this.workspace;
-    if (workspace === null) {
+    const editing = this.editing;
+    if (editing === null) {
       return nothing;
     }
 
@@ -124,9 +124,9 @@ export class EditToolbar extends WorkspaceElement {
 
     return html`
       <voxel-template-edit-bar
-        .workspace=${workspace}
+        .editing=${editing}
       ></voxel-template-edit-bar>
-      <voxel-paint-notice .workspace=${workspace}></voxel-paint-notice>
+      <voxel-paint-notice .editing=${editing}></voxel-paint-notice>
       <jolly-rail
         orientation="horizontal"
         role="toolbar"
@@ -135,11 +135,11 @@ export class EditToolbar extends WorkspaceElement {
         ${renderSegment("edit", mode !== "place", this.#renderEdit())}
         ${renderSegment("select", mode === "select", this.#renderSelect())}
         ${renderSegment("brush", mode === "paint", html`
-          <voxel-brush-controls .workspace=${workspace}></voxel-brush-controls>
+          <voxel-brush-controls .editing=${editing}></voxel-brush-controls>
         `)}
         ${renderSegment("placement", mode === "place", html`
           <voxel-placement-controls
-            .workspace=${workspace}
+            .editing=${editing}
           ></voxel-placement-controls>
         `)}
       </jolly-rail>
@@ -232,16 +232,16 @@ export class EditToolbar extends WorkspaceElement {
   }
 
   #onUndo(): void {
-    this.workspace?.history.undo();
+    this.editing?.history.undo();
   }
 
   #onRedo(): void {
-    this.workspace?.history.redo();
+    this.editing?.history.redo();
   }
 
   #onPaste(): void {
-    const workspace = this.attached;
-    workspace.placement.paste(workspace.focusPoint());
+    const editing = this.attached;
+    editing.placement.paste(editing.focusPoint());
   }
 }
 

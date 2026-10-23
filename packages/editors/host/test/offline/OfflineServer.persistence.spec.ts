@@ -28,10 +28,7 @@ const kActor: EventStore.Actor = {
 };
 const kSeedIds = ["seed-readme", "seed-notes"];
 
-Object.assign(globalThis, {
-  indexedDB,
-  localStorage: window.localStorage
-});
+Object.assign(globalThis, { indexedDB });
 
 function bytes(
   value: string

@@ -30,7 +30,7 @@ import { describeRefusal } from "./describeRefusal.ts";
 import type { ActiveHistory } from "./ActiveHistory.ts";
 import type { ModelAction } from "../../keybindings/modelActions.ts";
 
-export interface HistoryWorkspace {
+export interface HistoryEditing {
   activeHistory: ActiveHistory;
   presence: PresenceStore;
   shortcuts: Pick<ShortcutLabels<ModelAction>, "label" | "subscribe">;
@@ -110,13 +110,13 @@ export class HistoryButtons extends LitElement {
   `;
 
   static override properties = {
-    workspace: { attribute: false },
+    editing: { attribute: false },
     _state: { state: true },
     _target: { state: true },
     _readOnly: { state: true }
   };
 
-  declare workspace: HistoryWorkspace | null;
+  declare editing: HistoryEditing | null;
   declare private _state: HistoryScopeState;
   declare private _target: string | null;
   declare private _readOnly: boolean;
@@ -128,7 +128,7 @@ export class HistoryButtons extends LitElement {
     popover: () => this.#steps.value ?? null,
     side: "above"
   });
-  #workspace = new SubscriptionController<HistoryWorkspace>(
+  #editing = new SubscriptionController<HistoryEditing>(
     this,
     ({ activeHistory, shortcuts }) => {
       this.#sync();
@@ -143,7 +143,7 @@ export class HistoryButtons extends LitElement {
 
   constructor() {
     super();
-    this.workspace = null;
+    this.editing = null;
     this._state = EMPTY_HISTORY_STATE;
     this._target = null;
     this._readOnly = false;
@@ -152,13 +152,13 @@ export class HistoryButtons extends LitElement {
   override willUpdate(
     changedProperties: PropertyValues<this>
   ): void {
-    if (changedProperties.has("workspace") && this.workspace !== null) {
-      this.#workspace.attach(this.workspace);
+    if (changedProperties.has("editing") && this.editing !== null) {
+      this.#editing.attach(this.editing);
     }
   }
 
   readonly #sync = (): void => {
-    const activeHistory = this.#workspace.current?.activeHistory;
+    const activeHistory = this.#editing.current?.activeHistory;
     this._state = activeHistory?.state ?? EMPTY_HISTORY_STATE;
     this._target = activeHistory?.targetName ?? null;
     this._readOnly = activeHistory?.readOnly ?? false;
@@ -167,7 +167,7 @@ export class HistoryButtons extends LitElement {
   #run(
     action: HistoryAction
   ): void {
-    this.#workspace.current?.activeHistory[action]();
+    this.#editing.current?.activeHistory[action]();
   }
 
   readonly #toggleSteps = (): void => {
@@ -201,7 +201,7 @@ export class HistoryButtons extends LitElement {
   ): TemplateResult {
     const what = step === null ? verb : `${verb} ${step}`;
     const where = this._target === null ? what : `${what} in ${this._target}`;
-    const title = this.#workspace.current?.shortcuts.label(
+    const title = this.#editing.current?.shortcuts.label(
       where,
       `edit.${action}`
     ) ?? where;
@@ -224,7 +224,7 @@ export class HistoryButtons extends LitElement {
   #renderRefused(
     refused: readonly HistoryStepInfo[]
   ): TemplateResult {
-    const peers = this.#workspace.current?.presence.peers ?? [];
+    const peers = this.#editing.current?.presence.peers ?? [];
     const title = refused.length === 1 ?
       "1 step can no longer be undone" :
       `${refused.length} steps can no longer be undone`;

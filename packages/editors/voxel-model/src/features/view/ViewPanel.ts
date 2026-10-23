@@ -46,7 +46,7 @@ const kKeyLightOptions: JollyOption<KeyLightPreset>[] = [
   }
 ];
 
-export interface ViewWorkspace {
+export interface ViewEditing {
   view: ViewSettingsStore;
 }
 
@@ -88,18 +88,18 @@ export class ViewPanel extends LitElement {
     }
   `;
 
-  #workspace = new SubscriptionController<ViewWorkspace>(this, ({ view }) => [
+  #editing = new SubscriptionController<ViewEditing>(this, ({ view }) => [
     view.subscribe("change", () => this.requestUpdate())
   ]);
 
   attach(
-    workspace: ViewWorkspace
+    editing: ViewEditing
   ): void {
-    this.#workspace.attach(workspace);
+    this.#editing.attach(editing);
   }
 
   override render(): TemplateResult | typeof nothing {
-    const settings = this.#workspace.current?.view.settings;
+    const settings = this.#editing.current?.view.settings;
     if (settings === undefined) {
       return nothing;
     }
@@ -178,13 +178,13 @@ export class ViewPanel extends LitElement {
   }
 
   readonly #resetBackground = (): void => {
-    this.#workspace.current?.view.update({ background: null });
+    this.#editing.current?.view.update({ background: null });
   };
 
   #bind<TKey extends keyof ViewSettings>(
     key: TKey
   ): (event: CustomEvent<JollyChangeDetail<ViewSettings[TKey]>>) => void {
-    return (event) => this.#workspace.current?.view.update({ [key]: event.detail.value });
+    return (event) => this.#editing.current?.view.update({ [key]: event.detail.value });
   }
 }
 

@@ -47,7 +47,7 @@ function cursorVisible(
   map: VoxelMapPage
 ): Promise<boolean> {
   return map.page.evaluate(() => {
-    let root: Object3D = window.voxelMapEditor!.workspace.view.root;
+    let root: Object3D = window.voxelMapEditor!.editing.view.root;
     while (root.parent !== null) {
       root = root.parent;
     }

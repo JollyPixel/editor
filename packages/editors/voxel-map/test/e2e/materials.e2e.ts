@@ -11,7 +11,7 @@ function readFinish(
   groupId: string
 ): Promise<{ roughness: number; swatch: string | null; } | null> {
   return map.page.evaluate((id) => {
-    const group = window.voxelMapEditor!.workspace.editorMap.materialGroups.get(id);
+    const group = window.voxelMapEditor!.editing.editorMap.materialGroups.get(id);
 
     return group === undefined ?
       null :
@@ -26,7 +26,7 @@ function readBlocks(
   map: VoxelMapPage
 ): Promise<{ id: number; name: string; }[]> {
   return map.page.evaluate(() => [
-    ...window.voxelMapEditor!.workspace.editorMap.blocks.getAll()
+    ...window.voxelMapEditor!.editing.editorMap.blocks.getAll()
   ].slice(0, 2).map((block) => {
     return { id: block.id, name: block.name };
   }));
@@ -37,7 +37,7 @@ function readMaterial(
   blockId: number
 ): Promise<string | undefined> {
   return map.page.evaluate(
-    (id) => window.voxelMapEditor!.workspace.editorMap.blocks.get(id)?.materialGroup,
+    (id) => window.voxelMapEditor!.editing.editorMap.blocks.get(id)?.materialGroup,
     blockId
   );
 }
@@ -90,7 +90,7 @@ test("the material fields follow the block picked in the library", async({ map }
   await map.panes.open("Materials");
   const [first, second] = await readBlocks(map);
   await map.page.evaluate(([firstId, secondId]) => {
-    const { blocksets, editorMap } = window.voxelMapEditor!.workspace;
+    const { blocksets, editorMap } = window.voxelMapEditor!.editing;
     for (const [blockId, name] of [[firstId, "Gold"], [secondId, "Silver"]] as const) {
       const block = editorMap.blocks.get(blockId)!;
       const groupId = blocksets.findOwner(blockId)!.slot.qualifyGroupId(name);
@@ -111,9 +111,9 @@ test("the Materials tab keeps working View settings while the map has no blocks"
   await expect(materials.materialLibrary).toBeVisible();
 
   await map.page.evaluate(() => {
-    const { workspace } = window.voxelMapEditor!;
-    for (const block of [...workspace.editorMap.blocks.getAll()]) {
-      workspace.blocksets.removeBlock(block.id);
+    const { editing } = window.voxelMapEditor!;
+    for (const block of [...editing.editorMap.blocks.getAll()]) {
+      editing.blocksets.removeBlock(block.id);
     }
   });
 
@@ -126,7 +126,7 @@ test("the Materials tab keeps working View settings while the map has no blocks"
   await expect(materials.lighting("Day")).toHaveAttribute("aria-checked", "true");
   await expect(materials.lighting("Studio")).toHaveAttribute("aria-checked", "false");
   expect(await map.page.evaluate(
-    () => window.voxelMapEditor!.workspace.state.view.settings.lighting
+    () => window.voxelMapEditor!.editing.state.view.settings.lighting
   )).toBe("day");
 });
 

@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { EditorHandle } from "#src/editor/EditorDefinition.ts";
+import type { EditorHandle } from "#src/boot/EditorDefinition.ts";
 import type { EditorSession } from "#src/session/EditorSession.ts";
 
 export function editorHandle(

@@ -21,7 +21,7 @@ import { TRANSFORM_MODES } from "./transformModes.ts";
 // CONSTANTS
 const kDisplayDecimals = 2;
 
-export interface TransformWorkspace {
+export interface TransformEditing {
   blocks: ModelBlocks;
   selection: BlockSelectionStore;
   gizmo: TransformGizmo;
@@ -31,7 +31,7 @@ export interface TransformWorkspace {
 
 export class TransformPanelController {
   #host: ReactiveControllerHost;
-  #connection: SubscriptionController<TransformWorkspace>;
+  #connection: SubscriptionController<TransformEditing>;
   #selected: ModelBlock | null = null;
   #axisValues: THREE.Vector3Like = {
     x: 0,
@@ -42,7 +42,7 @@ export class TransformPanelController {
   #onSelect = (
     uuid: string | null
   ): void => {
-    this.#selected = uuid === null ? null : this.#workspace?.blocks.get(uuid) ?? null;
+    this.#selected = uuid === null ? null : this.#editing?.blocks.get(uuid) ?? null;
     this.#refresh();
   };
 
@@ -73,39 +73,39 @@ export class TransformPanelController {
     this.#host = host;
     this.#connection = new SubscriptionController(
       host,
-      (workspace) => this.#subscribeTo(workspace)
+      (editing) => this.#subscribeTo(editing)
     );
   }
 
-  get #workspace(): TransformWorkspace | null {
+  get #editing(): TransformEditing | null {
     return this.#connection.current;
   }
 
   get modes(): readonly TransformMode[] {
-    return this.#workspace?.tool.target.modes ?? [];
+    return this.#editing?.tool.target.modes ?? [];
   }
 
   get mode(): TransformMode {
-    return this.#workspace?.tool.mode ?? "pos";
+    return this.#editing?.tool.mode ?? "pos";
   }
 
   set mode(
     mode: TransformMode
   ) {
-    if (this.#workspace !== null) {
-      this.#workspace.tool.mode = mode;
+    if (this.#editing !== null) {
+      this.#editing.tool.mode = mode;
     }
   }
 
   get space(): GizmoSpace {
-    return this.#workspace?.tool.space ?? "local";
+    return this.#editing?.tool.space ?? "local";
   }
 
   set space(
     space: GizmoSpace
   ) {
-    if (this.#workspace !== null) {
-      this.#workspace.tool.space = space;
+    if (this.#editing !== null) {
+      this.#editing.tool.space = space;
     }
   }
 
@@ -123,19 +123,19 @@ export class TransformPanelController {
 
   get disabled(): boolean {
     return this.#selected === null ||
-      this.#workspace?.tool.target.writable !== true ||
-      (this.#workspace.lock.lockedBy(this.#selected.uuid) ?? null) !== null;
+      this.#editing?.tool.target.writable !== true ||
+      (this.#editing.lock.lockedBy(this.#selected.uuid) ?? null) !== null;
   }
 
   attach(
-    workspace: TransformWorkspace
+    editing: TransformEditing
   ): void {
-    this.#connection.attach(workspace);
-    this.#onSelect(workspace.selection.selected);
+    this.#connection.attach(editing);
+    this.#onSelect(editing.selection.selected);
   }
 
   #subscribeTo(
-    workspace: TransformWorkspace
+    editing: TransformEditing
   ): Array<() => void> {
     const {
       blocks,
@@ -143,7 +143,7 @@ export class TransformPanelController {
       gizmo,
       lock,
       tool
-    } = workspace;
+    } = editing;
 
     return [
       selection.subscribe("select", this.#onSelect),
@@ -164,12 +164,12 @@ export class TransformPanelController {
 
   #applyAxisValues(): void {
     const block = this.#selected;
-    const workspace = this.#workspace;
+    const editing = this.#editing;
     if (
       block === null ||
-      workspace === null ||
-      !workspace.tool.target.writable ||
-      workspace.lock.lockedBy(block.uuid) !== null
+      editing === null ||
+      !editing.tool.target.writable ||
+      editing.lock.lockedBy(block.uuid) !== null
     ) {
       return;
     }
@@ -181,7 +181,7 @@ export class TransformPanelController {
       this.space === "world"
     );
 
-    workspace.tool.target.commit(block);
+    editing.tool.target.commit(block);
   }
 }
 

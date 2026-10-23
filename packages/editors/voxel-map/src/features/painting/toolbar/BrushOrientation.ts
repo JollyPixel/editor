@@ -12,8 +12,8 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { VoxelMapWorkspace } from "../../../workspace/VoxelMapWorkspace.ts";
-import { WorkspaceElement } from "../../../workspace/WorkspaceElement.ts";
+import type { VoxelMapEditing } from "../../../editing/VoxelMapEditing.ts";
+import { EditingElement } from "../../../editing/EditingElement.ts";
 import type { RotationMode } from "../../../state/index.ts";
 
 // CONSTANTS
@@ -26,7 +26,7 @@ const kRotationOptions: JollyOption<RotationMode>[] = [
 ];
 
 @customElement("brush-orientation")
-export class BrushOrientation extends WorkspaceElement {
+export class BrushOrientation extends EditingElement {
   static override styles = css`
     :host {
       --brush-orientation-height: max(
@@ -74,21 +74,21 @@ export class BrushOrientation extends WorkspaceElement {
     }
   });
 
-  protected override watchWorkspace(
-    workspace: VoxelMapWorkspace
+  protected override watchEditing(
+    editing: VoxelMapEditing
   ): Iterable<() => void> {
     return [
-      workspace.state.brush.subscribe("change", () => this.requestUpdate()),
-      workspace.state.shortcuts.subscribe(() => this.requestUpdate())
+      editing.state.brush.subscribe("change", () => this.requestUpdate()),
+      editing.state.shortcuts.subscribe(() => this.requestUpdate())
     ];
   }
 
   override render() {
-    if (this.workspace === null) {
+    if (this.editing === null) {
       return nothing;
     }
 
-    const { shortcuts } = this.workspace.state;
+    const { shortcuts } = this.editing.state;
     const rotationTitle = [
       shortcuts.label(
         "Rotate counter-clockwise",

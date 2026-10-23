@@ -34,16 +34,32 @@ export interface PreferencesOptions {
   write?: PreferenceWriter;
 }
 
+interface PreferenceState {
+  readonly overrides: Map<string, PreferenceOverrides>;
+  readonly listeners: Set<PreferenceListener>;
+  readonly write: PreferenceWriter | undefined;
+}
+
 export class Preferences {
-  #overrides: Map<string, PreferenceOverrides>;
-  #listeners = new Set<PreferenceListener>();
-  #write: PreferenceWriter | undefined;
+  #state: PreferenceState;
+  readonly #listeners = new Set<PreferenceListener>();
+  #disposed = false;
 
   constructor(
     options: PreferencesOptions = {}
   ) {
-    this.#overrides = new Map(options.overrides);
-    this.#write = options.write;
+    this.#state = {
+      overrides: new Map(options.overrides),
+      listeners: new Set(),
+      write: options.write
+    };
+  }
+
+  view(): Preferences {
+    const view = new Preferences();
+    view.#state = this.#state;
+
+    return view;
   }
 
   values<TFields extends PreferenceFields>(
@@ -55,7 +71,7 @@ export class Preferences {
   overrides(
     scope: string
   ): PreferenceOverrides {
-    return this.#overrides.get(scope) ?? {};
+    return this.#state.overrides.get(scope) ?? {};
   }
 
   update(
@@ -70,7 +86,7 @@ export class Preferences {
 
     this.#store(scope.name, overrides);
     const values: PreferenceOverrides = scope.resolve(overrides);
-    this.#write?.({
+    this.#state.write?.({
       scope: scope.name,
       patch: Object.fromEntries(
         Object.keys(patch).map((key) => [key, values[key]])
@@ -112,10 +128,22 @@ export class Preferences {
   subscribe(
     listener: PreferenceListener
   ): () => void {
-    this.#listeners.add(listener);
+    if (this.#disposed) {
+      return () => undefined;
+    }
+
+    function entry(
+      scope: string,
+      overrides: PreferenceOverrides
+    ): void {
+      listener(scope, overrides);
+    }
+    this.#state.listeners.add(entry);
+    this.#listeners.add(entry);
 
     return () => {
-      this.#listeners.delete(listener);
+      this.#state.listeners.delete(entry);
+      this.#listeners.delete(entry);
     };
   }
 
@@ -130,8 +158,16 @@ export class Preferences {
     });
   }
 
+  dispose(): void {
+    this.#disposed = true;
+    for (const entry of this.#listeners) {
+      this.#state.listeners.delete(entry);
+    }
+    this.#listeners.clear();
+  }
+
   * [Symbol.iterator](): IterableIterator<[string, PreferenceOverrides]> {
-    yield* this.#overrides;
+    yield* this.#state.overrides;
   }
 
   #store(
@@ -139,12 +175,12 @@ export class Preferences {
     overrides: PreferenceOverrides
   ): void {
     if (Object.keys(overrides).length === 0) {
-      this.#overrides.delete(scope);
+      this.#state.overrides.delete(scope);
     }
     else {
-      this.#overrides.set(scope, overrides);
+      this.#state.overrides.set(scope, overrides);
     }
-    for (const listener of this.#listeners) {
+    for (const listener of this.#state.listeners) {
       listener(scope, overrides);
     }
   }

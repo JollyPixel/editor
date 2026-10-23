@@ -169,7 +169,7 @@ test("the ghost block previews the placement at size one", async({ map, page }) 
 test("an object layer pauses painting until the voxel layer is resumed", async({ map, page }) => {
   const { toolbar } = map;
   await page.evaluate(() => {
-    const { view, state } = window.voxelMapEditor!.workspace;
+    const { view, state } = window.voxelMapEditor!.editing;
     view.document.world.objectLayers.add("Props");
     state.selection.selectObjectLayer("Props");
   });
@@ -185,7 +185,7 @@ test("an object layer pauses painting until the voxel layer is resumed", async({
 test("nothing is painted and a warning is logged without a voxel layer", async({ map, page }) => {
   const { toolbar, world } = map;
   await page.evaluate(() => {
-    window.voxelMapEditor!.workspace.view.document.world.removeLayer("Ground");
+    window.voxelMapEditor!.editing.view.document.world.removeLayer("Ground");
   });
   await expect(toolbar.brushTools).toHaveAttribute("aria-disabled", "true");
   await expect(toolbar.status).toContainText("No voxel layer to paint on");
@@ -202,9 +202,9 @@ test("nothing is painted and a warning is logged without a voxel layer", async({
 test("nothing is painted and a warning is logged without any block", async({ map, page }) => {
   const { toolbar, world } = map;
   await page.evaluate(() => {
-    const { workspace } = window.voxelMapEditor!;
-    for (const block of [...workspace.editorMap.blocks.getAll()]) {
-      workspace.blocksets.removeBlock(block.id);
+    const { editing } = window.voxelMapEditor!;
+    for (const block of [...editing.editorMap.blocks.getAll()]) {
+      editing.blocksets.removeBlock(block.id);
     }
   });
   await expect(toolbar.brushTools).toHaveAttribute("aria-disabled", "true");

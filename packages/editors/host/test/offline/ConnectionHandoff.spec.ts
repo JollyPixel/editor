@@ -1,83 +1,97 @@
 // Import Node.js Dependencies
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { setImmediate } from "node:timers/promises";
 
 // Import Third-party Dependencies
-import {
-  CATALOG_ROOM,
-  CatalogClient
-} from "@jolly-pixel/asset-server/client";
+import { CATALOG_ROOM } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
+import { ConnectionHandoff } from "#src/offline/ConnectionHandoff.ts";
 import {
-  ConnectionHandoff,
-  ParkedConnection
-} from "#src/offline/ConnectionHandoff.ts";
-import { FakeClient } from "../helpers/rooms.ts";
+  FakeClient,
+  record,
+  snapshotMessage
+} from "../helpers/rooms.ts";
 
-function parked() {
-  const client = new FakeClient();
-  const catalog = new CatalogClient(client.room(CATALOG_ROOM));
+function guestHandoff() {
+  const clients: FakeClient[] = [];
+  const handoff = new ConnectionHandoff(() => {
+    const client = new FakeClient();
+    clients.push(client);
+
+    return {
+      identity: {
+        username: "guest",
+        peerId: "peer-guest",
+        color: "#00ff00"
+      },
+      client
+    };
+  });
 
   return {
-    client,
-    catalog,
-    connection: new ParkedConnection(
-      {
-        identity: {
-          username: "guest",
-          peerId: "peer-guest",
-          color: "#00ff00"
-        },
-        client
-      },
-      catalog
-    ),
-    released: () => client.destroyed && client.fakeRoom(CATALOG_ROOM).leaves === 1
+    handoff,
+    clients,
+    sync(): void {
+      for (const client of clients) {
+        client.fakeRoom(CATALOG_ROOM).receive(
+          snapshotMessage([record("map", "voxelmap")])
+        );
+      }
+    }
   };
 }
 
 describe("ConnectionHandoff", () => {
-  it("hands the parked connection and its catalog to the first take only", async() => {
-    const handoff = new ConnectionHandoff();
-    const first = parked();
+  for (const first of ["launch", "connect"] as const) {
+    it(`shares one client and catalog when the ${first} comes first`, async() => {
+      const { handoff, clients, sync } = guestHandoff();
 
-    handoff.park(first.connection);
-    const taken = handoff.take();
+      const reading = first === "launch" ? handoff.catalog() : null;
+      const taken = handoff.take();
+      const catalog = reading ?? handoff.catalog();
+      sync();
 
-    assert.strictEqual(taken?.client, first.client);
-    assert.strictEqual(await taken?.openCatalog?.(first.client, {}), first.catalog);
-    assert.strictEqual(handoff.take(), undefined);
-    assert.strictEqual(first.released(), false);
+      assert.equal(clients.length, 1);
+      assert.strictEqual(taken.client, clients[0]);
+      assert.strictEqual(
+        await taken.openCatalog?.(taken.client, {}),
+        await catalog
+      );
+    });
+  }
+
+  it("opens a client of its own for every later connect", () => {
+    const { handoff, clients } = guestHandoff();
+
+    handoff.take();
+    const later = handoff.take();
+
+    assert.equal(clients.length, 2);
+    assert.strictEqual(later.client, clients[1]);
+    assert.equal(later.openCatalog, undefined);
   });
 
-  it("releases a connection parked over another one", () => {
-    const handoff = new ConnectionHandoff();
-    const first = parked();
-    const second = parked();
+  it("releases the connection of a launch read that no connect took", async() => {
+    const { handoff, clients, sync } = guestHandoff();
 
-    handoff.park(first.connection);
-    handoff.park(second.connection);
+    const catalog = handoff.catalog();
+    sync();
+    await catalog;
+    handoff.release();
+    await setImmediate();
 
-    assert.strictEqual(first.released(), true);
-    assert.strictEqual(handoff.take()?.client, second.client);
+    assert.equal(clients[0].destroyed, true);
+    assert.equal(clients[0].fakeRoom(CATALOG_ROOM).leaves, 1);
   });
 
-  it("releases a connection parked after a take or close", () => {
-    const taken = new ConnectionHandoff();
-    const closed = new ConnectionHandoff();
-    const late = parked();
-    const kept = parked();
-    const afterClose = parked();
+  it("leaves a taken connection to its taker", () => {
+    const { handoff, clients } = guestHandoff();
 
-    taken.take();
-    taken.park(late.connection);
-    closed.park(kept.connection);
-    closed.close();
-    closed.park(afterClose.connection);
+    handoff.take();
+    handoff.release();
 
-    assert.strictEqual(late.released(), true);
-    assert.strictEqual(kept.released(), true);
-    assert.strictEqual(afterClose.released(), true);
+    assert.equal(clients[0].destroyed, false);
   });
 });

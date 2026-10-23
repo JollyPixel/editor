@@ -18,7 +18,7 @@ import {
   LIGHTING_OPTIONS,
   lightingOption
 } from "./lightingOptions.ts";
-import type { ViewWorkspace } from "./ViewPanel.ts";
+import type { ViewEditing } from "./ViewPanel.ts";
 
 export class LightingMenu extends LitElement {
   static override styles = css`
@@ -35,18 +35,18 @@ export class LightingMenu extends LitElement {
   @query("jolly-context-menu")
   declare private menu: ContextMenu;
 
-  #workspace = new SubscriptionController<ViewWorkspace>(this, ({ view }) => [
+  #editing = new SubscriptionController<ViewEditing>(this, ({ view }) => [
     view.subscribe("change", () => this.requestUpdate())
   ]);
 
   attach(
-    workspace: ViewWorkspace
+    editing: ViewEditing
   ): void {
-    this.#workspace.attach(workspace);
+    this.#editing.attach(editing);
   }
 
   override render(): TemplateResult | typeof nothing {
-    const view = this.#workspace.current?.view;
+    const view = this.#editing.current?.view;
     if (view === undefined) {
       return nothing;
     }
@@ -91,7 +91,7 @@ export class LightingMenu extends LitElement {
   ): void => {
     const option = LIGHTING_OPTIONS.find(({ value }) => value === event.detail.id);
     if (option !== undefined) {
-      this.#workspace.current?.view.update({ lighting: option.value });
+      this.#editing.current?.view.update({ lighting: option.value });
     }
   };
 }

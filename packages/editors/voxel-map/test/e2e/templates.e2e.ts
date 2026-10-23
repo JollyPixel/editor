@@ -9,7 +9,7 @@ import type { VoxelMapPage } from "./support/voxelMap.ts";
 function templateNames(
   map: VoxelMapPage
 ): Promise<string[]> {
-  return map.page.evaluate(() => window.voxelMapEditor!.workspace.view.document.world
+  return map.page.evaluate(() => window.voxelMapEditor!.editing.view.document.world
     .templates.toArray()
     .map((template) => template.name));
 }

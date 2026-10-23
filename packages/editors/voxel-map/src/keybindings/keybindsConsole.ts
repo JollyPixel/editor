@@ -9,7 +9,7 @@ import {
 } from "@jolly-pixel/editor.pixel-art";
 
 // Import Internal Dependencies
-import type { VoxelMapWorkspace } from "../workspace/VoxelMapWorkspace.ts";
+import type { VoxelMapEditing } from "../editing/VoxelMapEditing.ts";
 import type { MapActionGroup } from "./mapActions.ts";
 
 // CONSTANTS
@@ -22,7 +22,7 @@ const kGroups: Readonly<Record<MapActionGroup, string>> = {
 };
 
 export interface KeybindsConsoleContext {
-  state: Pick<VoxelMapWorkspace["state"], "mapKeyBindings">;
+  state: Pick<VoxelMapEditing["state"], "mapKeyBindings">;
 }
 
 export function keybindsConsole(

@@ -5,7 +5,7 @@ import * as z from "zod/mini";
 // Import Internal Dependencies
 import type { HostLogger } from "../debug/readDebugLogger.ts";
 import { LaunchNotFoundError } from "./errors/LaunchNotFoundError.ts";
-import type { ShellChannel } from "./ShellChannel.ts";
+import type { ShellChannel } from "../shell/ShellChannel.ts";
 import type { LaunchSource } from "./sources/LaunchSource.ts";
 
 // CONSTANTS

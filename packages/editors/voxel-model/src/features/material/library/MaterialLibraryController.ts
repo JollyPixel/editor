@@ -54,7 +54,7 @@ import {
   usageRowId
 } from "./usageRows.ts";
 
-export interface MaterialWorkspace {
+export interface MaterialEditing {
   access: ModelAccessSignals;
   document: ModelDocument;
   history: ScopeRecorder<"material">;
@@ -102,7 +102,7 @@ export interface MaterialLibraryState {
 export class MaterialLibraryController {
   #host: ReactiveControllerHost;
   #prompts: MaterialLibraryPrompts;
-  #connection: SubscriptionController<MaterialWorkspace>;
+  #connection: SubscriptionController<MaterialEditing>;
   #expanded = new ExpandedRows();
   #state: MaterialLibraryState | null = null;
 
@@ -124,18 +124,18 @@ export class MaterialLibraryController {
     const { command } = change;
     if (
       command.action === "node-material-changed" &&
-      command.id === this.#workspace?.selection.selected
+      command.id === this.#editing?.selection.selected
     ) {
       this.#followBlock();
     }
-    if (this.#material(this.#workspace?.materialFocus.edited ?? null) === undefined) {
-      this.#workspace?.materialFocus.edit(null);
+    if (this.#material(this.#editing?.materialFocus.edited ?? null) === undefined) {
+      this.#editing?.materialFocus.edit(null);
     }
     this.#invalidate();
   };
 
   #onReset = (): void => {
-    this.#workspace?.materialFocus.edit(null);
+    this.#editing?.materialFocus.edit(null);
     this.#expanded.reset([]);
     this.#followBlock();
     this.#invalidate();
@@ -158,11 +158,11 @@ export class MaterialLibraryController {
     this.#prompts = prompts;
     this.#connection = new SubscriptionController(
       host,
-      (workspace) => this.#subscribeTo(workspace)
+      (editing) => this.#subscribeTo(editing)
     );
   }
 
-  get #workspace(): MaterialWorkspace | null {
+  get #editing(): MaterialEditing | null {
     return this.#connection.current;
   }
 
@@ -173,7 +173,7 @@ export class MaterialLibraryController {
   }
 
   get editable(): boolean {
-    return this.#workspace?.access.current.has("materials") ?? false;
+    return this.#editing?.access.current.has("materials") ?? false;
   }
 
   readonly acceptDrop: TreeDropAccept = (detail) => detail.where !== "inside" &&
@@ -181,16 +181,16 @@ export class MaterialLibraryController {
     !detail.movedIds.some(isUsageRow);
 
   attach(
-    workspace: MaterialWorkspace
+    editing: MaterialEditing
   ): void {
-    this.#connection.attach(workspace);
+    this.#connection.attach(editing);
     this.#onReset();
   }
 
   select(
     materialId: string | null
   ): void {
-    this.#workspace?.materialFocus.edit(
+    this.#editing?.materialFocus.edit(
       this.#material(materialId) === undefined ? null : materialId
     );
     this.#invalidate();
@@ -208,7 +208,7 @@ export class MaterialLibraryController {
       trimmed !== "" &&
       trimmed !== stored.name
     ) {
-      this.#workspace?.document.renameMaterial(id, trimmed);
+      this.#editing?.document.renameMaterial(id, trimmed);
     }
   }
 
@@ -249,7 +249,7 @@ export class MaterialLibraryController {
     const confirmed = confirmation === null ||
       await this.#prompts.promptDelete(confirmation) !== null;
     if (confirmed) {
-      this.#workspace?.document.removeMaterial(id);
+      this.#editing?.document.removeMaterial(id);
     }
   }
 
@@ -262,7 +262,7 @@ export class MaterialLibraryController {
       block !== undefined &&
       (block.materialId ?? null) !== materialId
     ) {
-      this.#workspace?.document.assignMaterial(block.id, materialId);
+      this.#editing?.document.assignMaterial(block.id, materialId);
     }
   }
 
@@ -279,10 +279,10 @@ export class MaterialLibraryController {
   paste(
     text: string
   ): boolean {
-    const workspace = this.#workspace;
+    const editing = this.#editing;
     const materials = decodeMaterialTransfer(text);
     if (
-      workspace === null ||
+      editing === null ||
       !this.editable ||
       materials === null ||
       materials.length === 0
@@ -313,7 +313,7 @@ export class MaterialLibraryController {
       return;
     }
 
-    this.#workspace?.selection.select(blockId);
+    this.#editing?.selection.select(blockId);
     this.#followBlock();
     this.#invalidate();
   };
@@ -348,7 +348,7 @@ export class MaterialLibraryController {
 
     const beforeId = where === "above" ? targetId : library.findNextSibling(targetId);
     if (id !== beforeId) {
-      this.#workspace?.document.moveMaterial(
+      this.#editing?.document.moveMaterial(
         id,
         library.get(targetId)?.parentId ?? null,
         beforeId
@@ -390,7 +390,7 @@ export class MaterialLibraryController {
   #deleteConfirmation(
     material: ModelMaterialJSON
   ): DeleteContext | null {
-    const uses = this.#workspace?.document.tree.blocksUsing(material.id).length ?? 0;
+    const uses = this.#editing?.document.tree.blocksUsing(material.id).length ?? 0;
 
     return uses === 0 ?
       null :
@@ -419,22 +419,22 @@ export class MaterialLibraryController {
   }
 
   #selectedBlock(): BlockNodeJSON | undefined {
-    const workspace = this.#workspace;
-    const selected = workspace?.selection.selected ?? null;
+    const editing = this.#editing;
+    const selected = editing?.selection.selected ?? null;
 
-    return selected === null ? undefined : workspace?.document.tree.block(selected);
+    return selected === null ? undefined : editing?.document.tree.block(selected);
   }
 
   #addAndAdopt(
     label: string | null,
     add: (document: ModelDocument) => string | null
   ): void {
-    const workspace = this.#workspace;
+    const editing = this.#editing;
     if (!this.editable) {
       return;
     }
-    workspace?.history.record("material", label, () => {
-      const materialId = add(workspace.document);
+    editing?.history.record("material", label, () => {
+      const materialId = add(editing.document);
       if (materialId === null) {
         return;
       }
@@ -450,12 +450,12 @@ export class MaterialLibraryController {
     const materialId = this.#selectedBlock()?.materialId ?? null;
     if (materialId !== null && this.#material(materialId) !== undefined) {
       this.#expanded.expand(materialId);
-      this.#workspace?.materialFocus.edit(materialId);
+      this.#editing?.materialFocus.edit(materialId);
     }
   }
 
   #highlightedRow(): string | null {
-    const edited = this.#workspace?.materialFocus.edited ?? null;
+    const edited = this.#editing?.materialFocus.edited ?? null;
     const block = this.#selectedBlock();
 
     return block !== undefined && edited !== null && block.materialId === edited ?
@@ -469,18 +469,18 @@ export class MaterialLibraryController {
   }
 
   #buildState(): MaterialLibraryState {
-    const workspace = this.#workspace;
-    const tree = workspace?.document.tree;
+    const editing = this.#editing;
+    const tree = editing?.document.tree;
 
     return {
       nodes: toMaterialTreeNodes({
         materials: [...tree?.materials.materials() ?? []],
         users: materialUsers(tree?.blocks() ?? []),
-        marks: workspace?.presence.materialEdits ?? new Map(),
-        blockMarks: workspace?.presence.blockSelections ?? new Map()
+        marks: editing?.presence.materialEdits ?? new Map(),
+        blockMarks: editing?.presence.blockSelections ?? new Map()
       }),
       selectedId: this.#highlightedRow(),
-      editedId: workspace?.materialFocus.edited ?? null,
+      editedId: editing?.materialFocus.edited ?? null,
       expanded: this.#expanded.ids,
       block: this.#blockState()
     };
@@ -499,7 +499,7 @@ export class MaterialLibraryController {
   }
 
   #library(): ModelMaterialsReader | undefined {
-    return this.#workspace?.document.tree.materials;
+    return this.#editing?.document.tree.materials;
   }
 
   #material(
@@ -511,14 +511,14 @@ export class MaterialLibraryController {
   }
 
   #subscribeTo(
-    workspace: MaterialWorkspace
+    editing: MaterialEditing
   ): Array<() => void> {
     const {
       access,
       document,
       selection,
       presence
-    } = workspace;
+    } = editing;
 
     return [
       access.subscribe("change", () => this.#invalidate()),
@@ -527,7 +527,7 @@ export class MaterialLibraryController {
       selection.subscribe("select", this.#onSelectBlock),
       presence.subscribe("materialEditsChange", this.#onPeerMarks),
       presence.subscribe("blockSelectionsChange", this.#onPeerMarks),
-      () => workspace.materialFocus.edit(null)
+      () => editing.materialFocus.edit(null)
     ];
   }
 }

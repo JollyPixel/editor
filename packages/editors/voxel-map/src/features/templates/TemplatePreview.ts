@@ -7,8 +7,8 @@ import {
 } from "lit/decorators.js";
 
 // Import Internal Dependencies
-import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
-import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
+import type { VoxelMapEditing } from "../../editing/VoxelMapEditing.ts";
+import { EditingElement } from "../../editing/EditingElement.ts";
 import { hintStyles } from "../../shared/styles/hint.styles.ts";
 import { previewWellStyles } from "../../shared/styles/previewWell.styles.ts";
 import { SquareTurntable } from "../preview/SquareTurntable.ts";
@@ -20,7 +20,7 @@ import {
 import "./templateIcons.ts";
 
 @customElement("template-preview")
-export class TemplatePreview extends WorkspaceElement {
+export class TemplatePreview extends EditingElement {
   static override styles = [
     hintStyles,
     previewWellStyles,
@@ -60,10 +60,10 @@ export class TemplatePreview extends WorkspaceElement {
     this._view = { kind: "hidden" };
   }
 
-  protected override watchWorkspace(
-    workspace: VoxelMapWorkspace
+  protected override watchEditing(
+    editing: VoxelMapEditing
   ): Iterable<() => void> {
-    const { editorMap, templates, state } = workspace;
+    const { editorMap, templates, state } = editing;
     const sync = (): void => {
       this._view = resolveTemplatePreview(
         editorMap.world.templates,
@@ -88,7 +88,7 @@ export class TemplatePreview extends WorkspaceElement {
 
   override render() {
     const view = this._view;
-    if (this.workspace === null || view.kind === "hidden") {
+    if (this.editing === null || view.kind === "hidden") {
       return nothing;
     }
 
@@ -143,14 +143,14 @@ export class TemplatePreview extends WorkspaceElement {
   #createRenderer(
     well: HTMLDivElement
   ): SquareTurntable<TemplatePreviewSubject> {
-    const workspace = this.attached;
+    const editing = this.attached;
 
     return new SquareTurntable(
       well,
-      workspace.previewStage,
+      editing.previewStage,
       new TemplatePreviewSubject({
-        sources: workspace.blockSources,
-        blockRegistry: workspace.view.document.blocks
+        sources: editing.blockSources,
+        blockRegistry: editing.view.document.blocks
       })
     );
   }

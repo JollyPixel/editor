@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import {
-  registerConsoleFeatures,
-  type RegistrationHandle
-} from "@jolly-pixel/console";
+import type { RegistrationHandle } from "@jolly-pixel/console";
 import type { Runtime } from "@jolly-pixel/runtime";
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 import {
@@ -20,9 +17,7 @@ import { voxelAnimationDocumentKind } from "@jolly-pixel/asset.voxel-animation/c
 import {
   EditorRuntime,
   PreferenceStorage,
-  archiveConsole,
   followKeyBindings,
-  runtimeConsole,
   type AssetLease,
   type EditorSession,
   type HostLogger,
@@ -41,7 +36,7 @@ import { BakedRoomEnvironment } from "@jolly-pixel/three";
 // Import Internal Dependencies
 import {
   ModelEditorScene,
-  type ModelWorkspace
+  type ModelEditing
 } from "../scene/ModelEditorScene.ts";
 import {
   PresenceStore,
@@ -67,10 +62,9 @@ export type ModelTextureLease = AssetLease<
 export interface VoxelModelEditorParts {
   runtime: Runtime;
   scene: ModelEditorScene;
-  workspace: ModelWorkspace;
+  editing: ModelEditing;
   session: EditorSession;
   shell: EditorShell;
-  texture: ModelTextureLease;
   target: AssetLease<ModelDocument>;
   consoleFeatures: RegistrationHandle;
   disposePerformancePane: () => void;
@@ -82,6 +76,11 @@ export class VoxelModelEditor {
     title: "Join voxel model"
   };
   static readonly kinds = [kModelKind, kTextureKind];
+  static readonly archive = {
+    fallbackName: "model",
+    resetWarning: "Every model and texture stored in this browser is " +
+      "deleted. Export what you want to keep first."
+  };
 
   static createRuntime(
     logger: HostLogger
@@ -118,10 +117,7 @@ export class VoxelModelEditor {
       throw new Error("VoxelModelEditor: the model has no pixel-art texture.");
     }
 
-    const texture = session.assets.open(
-      kTextureKind,
-      reference.id
-    );
+    const texture = session.lease(kTextureKind, reference.id);
     const target = session.targetLease(kModelKind);
     await texture.ready;
     const roomEnvironment = await BakedRoomEnvironment.load()
@@ -138,11 +134,7 @@ export class VoxelModelEditor {
       pixels: texture.document,
       animationSets: sessionAnimationSets(session, kAnimationKind),
       view: new ViewSettingsStore(context.preferences),
-      archives: session.archives({
-        fallbackName: "model",
-        resetWarning: "Every model and texture stored in this browser is " +
-          "deleted. Export what you want to keep first."
-      }),
+      archives: context.archives,
       roomEnvironment,
       preferences: context.preferences,
       keyBindings: followKeyBindings(
@@ -175,11 +167,11 @@ export class VoxelModelEditor {
       maxFps: Infinity
     });
 
-    const workspace = await context.logger.step(
+    const editing = await context.logger.step(
       "scene",
       () => scene.ready
     );
-    shell.adoptWorkspace(workspace);
+    shell.adoptEditing(editing);
 
     const disposePerformancePane = editorRuntime.mountPerformancePane({
       target: shell.layout,
@@ -190,39 +182,26 @@ export class VoxelModelEditor {
     return new VoxelModelEditor({
       runtime: editorRuntime.runtime,
       scene,
-      workspace,
+      editing,
       session,
       shell,
-      texture,
       target,
-      consoleFeatures: registerConsoleFeatures(
-        commands,
-        [
-          pixelArtConsole,
-          runtimeConsole,
-          archiveConsole
-        ],
-        {
-          keyBindingSettings,
-          uvNets,
-          archives: workspace.archives,
-          runtime: editorRuntime
-        }
-      ),
+      consoleFeatures: pixelArtConsole(commands, {
+        keyBindingSettings,
+        uvNets
+      }),
       disposePerformancePane
     });
   }
 
   #shell: EditorShell;
-  #texture: ModelTextureLease;
-  #target: AssetLease<ModelDocument>;
   #consoleFeatures: RegistrationHandle;
   #disposePerformancePane: () => void;
 
   readonly ready: Promise<void>;
   readonly runtime: Runtime;
   readonly scene: ModelEditorScene;
-  readonly workspace: ModelWorkspace;
+  readonly editing: ModelEditing;
   readonly session: EditorSession;
 
   constructor(
@@ -230,11 +209,9 @@ export class VoxelModelEditor {
   ) {
     this.runtime = parts.runtime;
     this.scene = parts.scene;
-    this.workspace = parts.workspace;
+    this.editing = parts.editing;
     this.session = parts.session;
     this.#shell = parts.shell;
-    this.#texture = parts.texture;
-    this.#target = parts.target;
     this.#consoleFeatures = parts.consoleFeatures;
     this.#disposePerformancePane = parts.disposePerformancePane;
     this.ready = Promise.all([
@@ -247,7 +224,5 @@ export class VoxelModelEditor {
     this.#disposePerformancePane();
     this.#consoleFeatures.unregister();
     this.#shell.dispose();
-    this.#texture.release();
-    this.#target.release();
   }
 }

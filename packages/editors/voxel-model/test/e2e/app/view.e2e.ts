@@ -14,13 +14,13 @@ import { pickLighting } from "../support/view.ts";
 function blocksLit(
   page: Page
 ): Promise<boolean> {
-  return page.evaluate(() => window.voxelModelEditor!.workspace.blocks.lit);
+  return page.evaluate(() => window.voxelModelEditor!.editing.blocks.lit);
 }
 
 function lighting(
   page: Page
 ): Promise<string> {
-  return page.evaluate(() => window.voxelModelEditor!.workspace.view.settings.lighting);
+  return page.evaluate(() => window.voxelModelEditor!.editing.view.settings.lighting);
 }
 
 function viewportRender(
@@ -65,11 +65,11 @@ test("a custom background offers a reset back to the lighting's colour", async({
   const reset = view.getByRole("button", { name: "Use the lighting's background" });
   await expect(reset).toHaveCount(0);
 
-  await page.evaluate(() => window.voxelModelEditor!.workspace.view.update({ background: "#336699" }));
+  await page.evaluate(() => window.voxelModelEditor!.editing.view.update({ background: "#336699" }));
   await reset.click();
 
   await expect(reset).toHaveCount(0);
-  expect(await page.evaluate(() => window.voxelModelEditor!.workspace.view.settings.background)).toBeNull();
+  expect(await page.evaluate(() => window.voxelModelEditor!.editing.view.settings.background)).toBeNull();
 });
 
 test("the lighting menu and the Material tab's View panel stay in step", async({ page }) => {

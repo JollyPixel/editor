@@ -66,7 +66,7 @@ export const panelStyles = css`
     background: var(--color-divider);
   }
 
-  .workspace {
+  .canvas-area {
     display: flex;
     flex: 1;
     flex-direction: column;

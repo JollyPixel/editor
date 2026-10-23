@@ -6,9 +6,9 @@ import type {
 import { pixelArtConsole } from "@jolly-pixel/editor.pixel-art";
 
 // Import Internal Dependencies
-import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
+import type { VoxelMapEditing } from "../../editing/VoxelMapEditing.ts";
 
-export type TextureConsoleContext = Pick<VoxelMapWorkspace, "state">;
+export type TextureConsoleContext = Pick<VoxelMapEditing, "state">;
 
 export function textureConsole(
   commands: CommandConsole,

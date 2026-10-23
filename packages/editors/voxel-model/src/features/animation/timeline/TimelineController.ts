@@ -31,7 +31,7 @@ import type {
   PresenceStore
 } from "../../../state/index.ts";
 
-export interface TimelineWorkspace {
+export interface TimelineEditing {
   document: ModelDocument;
   animationSession: AnimationSession;
   selection: BlockSelectionStore;
@@ -61,7 +61,7 @@ export class TimelineController {
   #host: ReactiveControllerHost;
   #playhead: TimelinePlayhead;
   #view: TimelineView | null = null;
-  #connection: SubscriptionController<TimelineWorkspace>;
+  #connection: SubscriptionController<TimelineEditing>;
 
   constructor(
     host: ReactiveControllerHost,
@@ -69,8 +69,8 @@ export class TimelineController {
   ) {
     this.#host = host;
     this.#playhead = playhead;
-    this.#connection = new SubscriptionController(host, (workspace) => {
-      const { animationSession, selection, keyEditor, presence } = workspace;
+    this.#connection = new SubscriptionController(host, (editing) => {
+      const { animationSession, selection, keyEditor, presence } = editing;
 
       return [
         animationSession.subscribe("clip", this.#refresh),
@@ -87,9 +87,9 @@ export class TimelineController {
   }
 
   attach(
-    workspace: TimelineWorkspace
+    editing: TimelineEditing
   ): void {
-    this.#connection.attach(workspace);
+    this.#connection.attach(editing);
     this.#refresh();
   }
 
@@ -140,12 +140,12 @@ export class TimelineController {
   rebindMenu(
     path: string
   ): MenuSession {
-    const workspace = this.#connection.current;
-    const setId = workspace?.animationSession.focused?.set.id;
+    const editing = this.#connection.current;
+    const setId = editing?.animationSession.focused?.set.id;
 
-    return workspace === null || setId === undefined || !workspace.keyEditor.editable ?
+    return editing === null || setId === undefined || !editing.keyEditor.editable ?
       MenuSession.EMPTY :
-      rebindMenu(workspace.document, setId, path);
+      rebindMenu(editing.document, setId, path);
   }
 
   readonly #refresh = (): void => {
@@ -155,27 +155,27 @@ export class TimelineController {
   };
 
   readonly #refreshPeers = (): void => {
-    const workspace = this.#connection.current;
-    const focused = workspace?.animationSession.focused ?? null;
-    if (workspace === null || focused === null || this.#view === null) {
+    const editing = this.#connection.current;
+    const focused = editing?.animationSession.focused ?? null;
+    if (editing === null || focused === null || this.#view === null) {
       return;
     }
 
     this.#view = {
       ...this.#view,
-      ...peersOn(workspace, focused)
+      ...peersOn(editing, focused)
     };
     this.#host.requestUpdate();
   };
 
   readonly #movePlayhead = (): void => {
-    const workspace = this.#connection.current;
+    const editing = this.#connection.current;
     const view = this.#view;
-    if (workspace === null || view === null) {
+    if (editing === null || view === null) {
       return;
     }
 
-    const frame = new FrameRate(view.clip.fps).toFrame(workspace.animationSession.playback.tick);
+    const frame = new FrameRate(view.clip.fps).toFrame(editing.animationSession.playback.tick);
     if (frame > view.frames) {
       this.#playhead.showPlayhead(null);
     }
@@ -185,9 +185,9 @@ export class TimelineController {
   };
 
   #build(): TimelineView | null {
-    const workspace = this.#connection.current;
-    const focused = workspace?.animationSession.focused ?? null;
-    if (workspace === null || focused === null) {
+    const editing = this.#connection.current;
+    const focused = editing?.animationSession.focused ?? null;
+    if (editing === null || focused === null) {
       return null;
     }
 
@@ -196,20 +196,20 @@ export class TimelineController {
     return {
       clip,
       frames: new FrameRate(clip.fps).frameAt(clip.length),
-      rows: timelineRows(workspace.document.tree, clip, link, workspace.selection.selected),
-      unbound: unboundTimelineRows(workspace.document.tree, clip, link),
-      selectedKeys: new Set(workspace.keyEditor.selected.map(keyId)),
-      ...peersOn(workspace, focused)
+      rows: timelineRows(editing.document.tree, clip, link, editing.selection.selected),
+      unbound: unboundTimelineRows(editing.document.tree, clip, link),
+      selectedKeys: new Set(editing.keyEditor.selected.map(keyId)),
+      ...peersOn(editing, focused)
     };
   }
 }
 
 function peersOn(
-  workspace: TimelineWorkspace,
+  editing: TimelineEditing,
   focused: FocusedAnimation
 ): TimelinePeers {
   return timelinePeers(
-    workspace.presence.animateCursors,
+    editing.presence.animateCursors,
     focused.key,
     focused.clip
   );

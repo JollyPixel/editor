@@ -86,7 +86,6 @@ export class TerrainEditor {
     }
     catch (error) {
       disposeAll(disposables);
-      target.release();
 
       throw error;
     }
@@ -121,7 +120,6 @@ export class TerrainEditor {
 
   dispose(): void {
     disposeAll(this.#disposables);
-    this.#target.release();
   }
 }
 

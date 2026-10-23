@@ -22,7 +22,7 @@ function layerProperties(
   name: string
 ): Promise<Record<string, unknown>> {
   return map.page.evaluate(
-    (layerName) => window.voxelMapEditor!.workspace.view.document.world
+    (layerName) => window.voxelMapEditor!.editing.view.document.world
       .getLayer(layerName)!.properties,
     name
   );
@@ -31,7 +31,7 @@ function layerProperties(
 function voxelLayers(
   map: VoxelMapPage
 ): Promise<LayerSummary[]> {
-  return map.page.evaluate(() => window.voxelMapEditor!.workspace.view.document.world
+  return map.page.evaluate(() => window.voxelMapEditor!.editing.view.document.world
     .getLayers()
     .map((layer) => {
       return {
@@ -45,7 +45,7 @@ function voxelLayers(
 function objectLayers(
   map: VoxelMapPage
 ): Promise<Array<{ name: string; objects: string[]; }>> {
-  return map.page.evaluate(() => window.voxelMapEditor!.workspace.view.document.world
+  return map.page.evaluate(() => window.voxelMapEditor!.editing.view.document.world
     .objectLayers.toArray()
     .map((layer) => {
       return {
@@ -58,7 +58,7 @@ function objectLayers(
 function objectVisibility(
   map: VoxelMapPage
 ): Promise<Array<{ name: string; visible: boolean; objects: boolean[]; }>> {
-  return map.page.evaluate(() => window.voxelMapEditor!.workspace.view.document.world
+  return map.page.evaluate(() => window.voxelMapEditor!.editing.view.document.world
     .objectLayers.toArray()
     .map((layer) => {
       return {
@@ -74,7 +74,7 @@ function layerShown(
   name: string
 ): Promise<boolean> {
   return map.page.evaluate((layerName) => {
-    const { view } = window.voxelMapEditor!.workspace;
+    const { view } = window.voxelMapEditor!.editing;
 
     return view.layerVisibility.isVisible(
       view.document.world.getLayer(layerName)!
@@ -87,7 +87,7 @@ async function syncFence(
   peerMap: VoxelMapPage
 ): Promise<void> {
   await map.page.evaluate(
-    () => window.voxelMapEditor!.workspace.view.document.world.addLayer("Fence")
+    () => window.voxelMapEditor!.editing.view.document.world.addLayer("Fence")
   );
   await expect.poll(async() => (await voxelLayers(peerMap))
     .some((layer) => layer.name === "Fence")).toBe(true);
@@ -153,7 +153,7 @@ test("custom properties follow a layer change made elsewhere", async({ map }) =>
   await keys.last().press("Tab");
   await expect.poll(() => layerProperties(map, "Ground")).toEqual({ biome: "" });
 
-  await map.page.evaluate(() => window.voxelMapEditor!.workspace.view.document.world
+  await map.page.evaluate(() => window.voxelMapEditor!.editing.view.document.world
     .updateLayer("Ground", {
       properties: {
         biome: "",
@@ -182,7 +182,7 @@ test("the layer header rebases the layer and locks while transforming", async({ 
 
   await layers.rebaseButton.click();
   await expect.poll(() => map.page.evaluate(() => {
-    const { position } = window.voxelMapEditor!.workspace.view.document.world
+    const { position } = window.voxelMapEditor!.editing.view.document.world
       .getLayer("Ground")!;
 
     return { x: position.x, y: position.y, z: position.z };

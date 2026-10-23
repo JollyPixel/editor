@@ -79,7 +79,7 @@ HOST_PARAMS.read("?max-fps=10&samples=0&username=Ada&offline");
   [`EditorRuntime.create`](../runtime/EditorRuntime.md#creation).
 - `username`: stored by [`rememberQueryUsername`](../session/EditorSession.md#identity)
   in dev.
-- `offline`: opens [offline mode](../editor/bootStandalone.md#fallback); its
+- `offline`: opens [offline mode](../boot/bootStandalone.md#fallback); its
   value, when set, names the offline data (`offline.name`).
 - `render`: `continuous` or `on-demand`, see
   [`EditorRuntime.create`](../runtime/EditorRuntime.md#creation).

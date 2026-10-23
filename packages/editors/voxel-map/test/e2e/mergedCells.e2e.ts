@@ -15,10 +15,10 @@ async function defineSlabs(
   map: VoxelMapPage
 ): Promise<void> {
   await map.page.evaluate((slabs) => {
-    const { workspace } = window.voxelMapEditor!;
+    const { editing } = window.voxelMapEditor!;
     for (const [id, shapeId] of slabs) {
-      workspace.blocksets.defineBlock({
-        ...workspace.view.document.blocks.get(id)!,
+      editing.blocksets.defineBlock({
+        ...editing.view.document.blocks.get(id)!,
         shapeId
       });
     }
@@ -34,7 +34,7 @@ async function seedSlabPair(
 ): Promise<void> {
   await defineSlabs(map);
   await map.page.evaluate((args) => {
-    const { world } = window.voxelMapEditor!.workspace.view.document;
+    const { world } = window.voxelMapEditor!.editing.view.document;
     world.setVoxel("Ground", { position: args.cell, blockId: args.bottom });
     world.setVoxel("Ground", {
       position: args.cell,
@@ -52,7 +52,7 @@ function cellParts(
   map: VoxelMapPage
 ): Promise<Array<number | null>> {
   return map.page.evaluate((cell) => {
-    const { world } = window.voxelMapEditor!.workspace.view.document;
+    const { world } = window.voxelMapEditor!.editing.view.document;
     const entry = world.getVoxelAt(cell);
 
     return [entry?.blockId ?? null, entry?.partner?.blockId ?? null];
@@ -63,7 +63,7 @@ function removalSpan(
   map: VoxelMapPage
 ) {
   return map.page.evaluate(() => {
-    const { localBrush } = window.voxelMapEditor!.workspace;
+    const { localBrush } = window.voxelMapEditor!.editing;
     const ghost = localBrush.actor.object3D.getObjectByName("removal-ghost");
     const mesh = ghost?.children[0] as { geometry?: any; } | undefined;
     if (!ghost?.visible || mesh?.geometry === undefined) {

@@ -33,12 +33,12 @@ import type { MaterialAction } from "./library/materialMenu.ts";
 import {
   MaterialLibraryController,
   type MaterialLibraryState,
-  type MaterialWorkspace,
+  type MaterialEditing,
   type SelectedBlockState
 } from "./library/MaterialLibraryController.ts";
 import {
   MaterialSurfaceController,
-  type MaterialSurfaceWorkspace
+  type MaterialSurfaceEditing
 } from "./surface/MaterialSurfaceController.ts";
 import {
   MATERIAL_PRESETS,
@@ -78,10 +78,10 @@ export class MaterialLibrary extends LitElement {
   static override styles = materialLibraryStyles;
 
   attach(
-    workspace: MaterialWorkspace & MaterialSurfaceWorkspace
+    editing: MaterialEditing & MaterialSurfaceEditing
   ): void {
-    this.#controller.attach(workspace);
-    this.#surface.attach(workspace);
+    this.#controller.attach(editing);
+    this.#surface.attach(editing);
   }
 
   override render(): TemplateResult {

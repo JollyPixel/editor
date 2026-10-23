@@ -26,8 +26,8 @@ import {
   parseLayerRef,
   type LayerRef
 } from "../../state/index.ts";
-import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
-import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
+import type { VoxelMapEditing } from "../../editing/VoxelMapEditing.ts";
+import { EditingElement } from "../../editing/EditingElement.ts";
 import { AddLayerDialog } from "./dialogs/AddLayerDialog.ts";
 import { layerManagerStyles } from "./LayerManager.styles.ts";
 import { LayerCommands } from "./LayerCommands.ts";
@@ -42,7 +42,7 @@ import "./voxel/VoxelLayerPanel.ts";
 import "./layerIcons.ts";
 
 @customElement("layer-manager")
-export class LayerManager extends WorkspaceElement {
+export class LayerManager extends EditingElement {
   static override styles = layerManagerStyles;
 
   @property({ attribute: false })
@@ -82,22 +82,22 @@ export class LayerManager extends WorkspaceElement {
     this._expanded = [];
   }
 
-  protected override watchWorkspace(
-    workspace: VoxelMapWorkspace
+  protected override watchEditing(
+    editing: VoxelMapEditing
   ): Iterable<() => void> {
-    const { selection, presence } = workspace.state;
-    const refresh = (): void => this.#refreshNodes(workspace);
+    const { selection, presence } = editing.state;
+    const refresh = (): void => this.#refreshNodes(editing);
     this._selection = selection.current;
     refresh();
 
     return [
-      workspace.editorMap.subscribe("layerUpdated", refresh),
-      workspace.editorMap.subscribe("reset", refresh),
+      editing.editorMap.subscribe("layerUpdated", refresh),
+      editing.editorMap.subscribe("reset", refresh),
       presence.subscribe("layerSelectionsChange", refresh),
-      workspace.layerVisibility.subscribe("change", refresh),
-      workspace.access.subscribe("change", refresh),
-      workspace.usage.subscribe("change", () => this.requestUpdate()),
-      workspace.state.editContext.subscribe(
+      editing.layerVisibility.subscribe("change", refresh),
+      editing.access.subscribe("change", refresh),
+      editing.usage.subscribe("change", () => this.requestUpdate()),
+      editing.state.editContext.subscribe(
         "change",
         () => this.requestUpdate()
       ),
@@ -109,12 +109,12 @@ export class LayerManager extends WorkspaceElement {
   }
 
   override render() {
-    const workspace = this.workspace;
-    if (workspace === null) {
+    const editing = this.editing;
+    if (editing === null) {
       return nothing;
     }
 
-    if (workspace.state.editContext.draft !== null) {
+    if (editing.state.editContext.draft !== null) {
       return html`
         <jolly-folder
           key="layers"
@@ -129,7 +129,7 @@ export class LayerManager extends WorkspaceElement {
       `;
     }
 
-    const { layers } = workspace;
+    const { layers } = editing;
     const selection = this._selection;
     const voxelLayerSelected = selection?.kind === "voxel-layer" &&
       layers.canEdit(selection.kind);
@@ -145,7 +145,7 @@ export class LayerManager extends WorkspaceElement {
           slot="actions"
           class="total"
           title="Voxels placed in the map"
-        >${formatCount(workspace.usage.stats.voxels, "voxel")}</span>
+        >${formatCount(editing.usage.stats.voxels, "voxel")}</span>
         <jolly-button
           slot="actions"
           icon="plus"
@@ -195,7 +195,7 @@ export class LayerManager extends WorkspaceElement {
             @jolly-reparent=${this.#onReparent}
           ></jolly-tree>
         </div>
-        ${this.#renderInspector(workspace)}
+        ${this.#renderInspector(editing)}
       </jolly-folder>
 
       <add-layer-dialog></add-layer-dialog>
@@ -209,17 +209,17 @@ export class LayerManager extends WorkspaceElement {
   #openMenu(
     id: string | null
   ): MenuSession {
-    const workspace = this.workspace;
-    if (workspace === null) {
+    const editing = this.editing;
+    if (editing === null) {
       return MenuSession.EMPTY;
     }
 
     const menu = new LayerMenu({
-      world: workspace.editorMap.world,
-      layers: workspace.layers,
-      templatesEditable: workspace.templates.editable,
+      world: editing.editorMap.world,
+      layers: editing.layers,
+      templatesEditable: editing.templates.editable,
       commands: new LayerCommands({
-        workspace,
+        editing,
         rename: (ref) => this._tree?.beginRename(ref.key),
         addLayer: this.#addLayer
       })
@@ -229,29 +229,29 @@ export class LayerManager extends WorkspaceElement {
   }
 
   #renderInspector(
-    workspace: VoxelMapWorkspace
+    editing: VoxelMapEditing
   ) {
-    const { world } = workspace.editorMap;
+    const { world } = editing.editorMap;
     const selection = this._selection;
     if (selection === null) {
       return nothing;
     }
-    const writable = workspace.layers.canEdit(selection.kind);
+    const writable = editing.layers.canEdit(selection.kind);
 
     switch (selection.kind) {
       case "voxel-layer":
         return html`<layer-panel
           .world=${world}
-          .selection=${workspace.state.selection}
-          .placement=${workspace.placement}
-          .editorMap=${workspace.editorMap}
+          .selection=${editing.state.selection}
+          .placement=${editing.placement}
+          .editorMap=${editing.editorMap}
           .layerName=${selection.name}
           .writable=${writable}
         ></layer-panel>`;
       case "object":
         return html`<object-panel
           .world=${world}
-          .editorMap=${workspace.editorMap}
+          .editorMap=${editing.editorMap}
           .layerName=${selection.layerName}
           .objectId=${selection.objectId}
           .writable=${writable}
@@ -264,15 +264,15 @@ export class LayerManager extends WorkspaceElement {
   }
 
   #refreshNodes(
-    workspace: VoxelMapWorkspace
+    editing: VoxelMapEditing
   ): void {
     this._nodes = withLayerBadges(
       layerTreeNodes(
-        workspace.editorMap.world,
-        workspace.layerVisibility,
-        workspace.layers
+        editing.editorMap.world,
+        editing.layerVisibility,
+        editing.layers
       ),
-      workspace.state.presence.layerSelections
+      editing.state.presence.layerSelections
     );
   }
 
@@ -293,8 +293,8 @@ export class LayerManager extends WorkspaceElement {
     event: CustomEvent<JollySelectDetail>
   ): void {
     const [id] = event.detail.selected;
-    if (id !== undefined && this.workspace !== null) {
-      this.workspace.state.selection.current = parseLayerRef(id);
+    if (id !== undefined && this.editing !== null) {
+      this.editing.state.selection.current = parseLayerRef(id);
     }
   }
 
@@ -310,7 +310,7 @@ export class LayerManager extends WorkspaceElement {
   #onToggleVisible(
     event: CustomEvent<JollyToggleVisibleDetail>
   ): void {
-    this.workspace?.layerVisibility.override(
+    this.editing?.layerVisibility.override(
       event.detail.id,
       event.detail.visible
     );
@@ -319,42 +319,42 @@ export class LayerManager extends WorkspaceElement {
   #onRename(
     event: CustomEvent<JollyRenameDetail>
   ): void {
-    const workspace = this.workspace;
-    if (workspace === null) {
+    const editing = this.editing;
+    if (editing === null) {
       return;
     }
 
-    workspace.layers.rename(parseLayerRef(event.detail.id), event.detail.name);
-    this.#refreshNodes(workspace);
+    editing.layers.rename(parseLayerRef(event.detail.id), event.detail.name);
+    this.#refreshNodes(editing);
   }
 
   #onToggleLock(
     event: CustomEvent<JollyToggleLockDetail>
   ): void {
-    const workspace = this.workspace;
-    if (workspace === null) {
+    const editing = this.editing;
+    if (editing === null) {
       return;
     }
 
-    workspace.layers.lock(parseLayerRef(event.detail.id), event.detail.locked);
-    this.#refreshNodes(workspace);
+    editing.layers.lock(parseLayerRef(event.detail.id), event.detail.locked);
+    this.#refreshNodes(editing);
   }
 
   #onReparent(
     event: CustomEvent<JollyReparentDetail>
   ): void {
-    const workspace = this.workspace;
-    if (workspace === null) {
+    const editing = this.editing;
+    if (editing === null) {
       return;
     }
 
-    workspace.layers.reparent(event.detail);
-    this.#refreshNodes(workspace);
+    editing.layers.reparent(event.detail);
+    this.#refreshNodes(editing);
   }
 
   readonly #addLayer = async(): Promise<void> => {
-    const workspace = this.workspace;
-    if (workspace === null) {
+    const editing = this.editing;
+    if (editing === null) {
       return;
     }
 
@@ -362,29 +362,29 @@ export class LayerManager extends WorkspaceElement {
       this._folder.open = true;
     }
 
-    const { objectLayer } = workspace.state.selection;
+    const { objectLayer } = editing.state.selection;
     const result = await this._addDialog.open({
       canAddObject: objectLayer !== null &&
-        workspace.layers.canEdit("object"),
+        editing.layers.canEdit("object"),
       defaultKind: objectLayer === null ? "voxel-layer" : "object",
-      defaultName: workspace.layers.defaultNames()
+      defaultName: editing.layers.defaultNames()
     });
     if (result !== null) {
-      workspace.layers.create(workspace.focusPoint(), result);
+      editing.layers.create(editing.focusPoint(), result);
     }
   };
 
   readonly #removeLayer = async(): Promise<void> => {
-    const workspace = this.workspace;
-    if (workspace !== null && this._selection !== null) {
-      await workspace.layers.remove(this._selection);
+    const editing = this.editing;
+    if (editing !== null && this._selection !== null) {
+      await editing.layers.remove(this._selection);
     }
   };
 
   readonly #cloneLayer = (): void => {
-    const workspace = this.workspace;
-    if (workspace !== null && this._selection !== null) {
-      workspace.layers.clone(this._selection);
+    const editing = this.editing;
+    if (editing !== null && this._selection !== null) {
+      editing.layers.clone(this._selection);
     }
   };
 }

@@ -7,13 +7,13 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { ShellCatalog } from "#src/launch/catalog/ShellCatalog.ts";
+import { ShellCatalog } from "#src/shell/catalog/ShellCatalog.ts";
 import { HostMessageLaunchSource } from "#src/launch/sources/HostMessageLaunchSource.ts";
 import {
   LAUNCH_MESSAGE_TYPE,
   READY_MESSAGE_TYPE,
   SHELL_MESSAGE_TYPE
-} from "#src/launch/ShellChannel.ts";
+} from "#src/shell/ShellChannel.ts";
 
 // CONSTANTS
 const kStudioOrigin = "http://studio.test";

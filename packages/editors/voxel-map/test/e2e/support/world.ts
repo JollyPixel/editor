@@ -22,7 +22,7 @@ export class MapWorld {
     cells: Cell[]
   ): Promise<Array<number | null>> {
     return this.#page.evaluate((targets) => {
-      const { world } = window.voxelMapEditor!.workspace.view.document;
+      const { world } = window.voxelMapEditor!.editing.view.document;
 
       return targets.map(
         (cell) => world.getVoxelAt(cell)?.blockId ?? null
@@ -32,7 +32,7 @@ export class MapWorld {
 
   voxelCount(): Promise<number> {
     return this.#page.evaluate(
-      () => window.voxelMapEditor!.workspace.view.document.world.voxelCount
+      () => window.voxelMapEditor!.editing.view.document.world.voxelCount
     );
   }
 
@@ -41,7 +41,7 @@ export class MapWorld {
     layerName = "Ground"
   ): Promise<void> {
     await this.#page.evaluate((args) => {
-      const { view } = window.voxelMapEditor!.workspace;
+      const { view } = window.voxelMapEditor!.editing;
       view.document.world.setVoxelBulk(
         args.layerName,
         args.voxels.map((voxel) => {
@@ -60,12 +60,12 @@ export class MapWorld {
       layerName
     });
     await this.#page.waitForFunction((targets) => {
-      const { view } = window.voxelMapEditor!.workspace;
+      const { view } = window.voxelMapEditor!.editing;
 
       return targets.every((cell) => view.document.world.getVoxelAt(cell) !== undefined);
     }, voxels);
     await this.#page.evaluate(
-      () => window.voxelMapEditor!.workspace.view.whenIdle()
+      () => window.voxelMapEditor!.editing.view.whenIdle()
     );
     await nextFrames(this.#page);
   }

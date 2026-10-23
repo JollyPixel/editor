@@ -21,8 +21,8 @@ import {
 
 // Import Internal Dependencies
 import type { BlockRegistryChange } from "../../map/EditorMap.ts";
-import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
-import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
+import type { VoxelMapEditing } from "../../editing/VoxelMapEditing.ts";
+import { EditingElement } from "../../editing/EditingElement.ts";
 import type { AddBlocksetDialog } from "../blocksets/dialogs/AddBlocksetDialog.ts";
 import type { BlocksetEditDialog } from "../blocksets/dialogs/BlocksetEditDialog.ts";
 import { BlocksetTab } from "./BlocksetTab.ts";
@@ -53,7 +53,7 @@ const kCanvasOptions: PixelArtCanvasOptions = {
 };
 
 @customElement("texture-editor")
-export class TextureEditor extends WorkspaceElement {
+export class TextureEditor extends EditingElement {
   static override styles = css`
     :host {
       display: flex;
@@ -107,17 +107,17 @@ export class TextureEditor extends WorkspaceElement {
     this.uvAccess = "edit";
   }
 
-  protected override watchWorkspace(
-    workspace: VoxelMapWorkspace
+  protected override watchEditing(
+    editing: VoxelMapEditing
   ): Iterable<() => void> {
-    const { blocksets, editorMap } = workspace;
+    const { blocksets, editorMap } = editing;
 
     return [
       blocksets.subscribe("change", this.#requestSync),
       blocksets.subscribe("activeChange", this.#reconcile),
-      workspace.state.block.subscribe("change", this.#onBlockChange),
-      workspace.access.subscribe("change", this.#requestSync),
-      workspace.state.textureTabs.subscribe("change", this.#requestSync),
+      editing.state.block.subscribe("change", this.#onBlockChange),
+      editing.access.subscribe("change", this.#requestSync),
+      editing.state.textureTabs.subscribe("change", this.#requestSync),
       editorMap.subscribe("blockRegistryChanged", this.#onBlockRegistryChanged)
     ];
   }
@@ -157,12 +157,12 @@ export class TextureEditor extends WorkspaceElement {
       await this.#adoptPanel(panel);
     }
 
-    const workspace = this.workspace;
-    if (workspace === null || panel === null || panel !== this.#panel) {
+    const editing = this.editing;
+    if (editing === null || panel === null || panel !== this.#panel) {
       return;
     }
 
-    const { view, blocksets } = workspace;
+    const { view, blocksets } = editing;
     const { entries } = blocksets;
     for (const entry of entries) {
       const blocksetId = entry.id;
@@ -196,9 +196,9 @@ export class TextureEditor extends WorkspaceElement {
         view,
         binding,
         blocks: blocksets,
-        block: workspace.state.block,
-        uvSync: workspace.state.uvSync,
-        editorMap: workspace.editorMap
+        block: editing.state.block,
+        uvSync: editing.state.uvSync,
+        editorMap: editing.editorMap
       }));
     }
 
@@ -253,9 +253,9 @@ export class TextureEditor extends WorkspaceElement {
     panel.addEventListener("texture-change", this.#onTextureChange);
     panel.addEventListener("texture-create-request", this.#addBlockset);
     panel.addEventListener("texture-edit-request", this.#onEditRequest);
-    if (this.workspace) {
-      panel.keyBindings = this.workspace.state.pixelArtKeyBindings;
-      panel.uvNets = this.workspace.state.uvNets;
+    if (this.editing) {
+      panel.keyBindings = this.editing.state.pixelArtKeyBindings;
+      panel.uvNets = this.editing.state.uvNets;
     }
     await panel.configure(kCanvasOptions);
   }
@@ -297,42 +297,42 @@ export class TextureEditor extends WorkspaceElement {
   #followSelectedBlock(
     force: boolean
   ): void {
-    const workspace = this.workspace;
-    if (workspace === null) {
+    const editing = this.editing;
+    if (editing === null) {
       return;
     }
 
-    const block = workspace.state.block.resolve(workspace.editorMap.blocks);
+    const block = editing.state.block.resolve(editing.editorMap.blocks);
     if (block === undefined) {
       return;
     }
 
-    const blocksetId = workspace.blocksets.findOwner(block.id)?.definition.id ?? null;
+    const blocksetId = editing.blocksets.findOwner(block.id)?.definition.id ?? null;
     if (!force && blocksetId === this.#followedBlocksetId) {
       return;
     }
 
     this.#followedBlocksetId = blocksetId;
     if (blocksetId !== null) {
-      workspace.blocksets.activeBlocksetId = blocksetId;
+      editing.blocksets.activeBlocksetId = blocksetId;
     }
   }
 
   readonly #onTextureChange = (
     event: CustomEvent<TextureChangeDetail>
   ): void => {
-    if (event.detail.source === "user" && this.workspace !== null) {
-      this.workspace.blocksets.activeBlocksetId = event.detail.id;
+    if (event.detail.source === "user" && this.editing !== null) {
+      this.editing.blocksets.activeBlocksetId = event.detail.id;
     }
   };
 
   readonly #addBlockset = async(): Promise<void> => {
-    const workspace = this.workspace;
-    if (workspace === null || this.#adding) {
+    const editing = this.editing;
+    if (editing === null || this.#adding) {
       return;
     }
 
-    const { blocksets } = workspace;
+    const { blocksets } = editing;
     const active = blocksets.activeBlocksetId;
     const result = await this._addDialog.open({
       defaultTileSize: (active === null ? undefined : blocksets.blocksetTileSize(active)) ??
@@ -349,7 +349,7 @@ export class TextureEditor extends WorkspaceElement {
         blocksets.link(result.assetId) :
         await blocksets.create(result);
       if (blocksetId === null) {
-        workspace.state.log.push("Could not add the blockset: it was refused by the map.");
+        editing.state.log.push("Could not add the blockset: it was refused by the map.");
       }
       else {
         blocksets.activeBlocksetId = blocksetId;
@@ -357,7 +357,7 @@ export class TextureEditor extends WorkspaceElement {
     }
     catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
-      workspace.state.log.push(`Could not add the blockset: ${reason}`);
+      editing.state.log.push(`Could not add the blockset: ${reason}`);
     }
     finally {
       this.#adding = false;
@@ -371,16 +371,16 @@ export class TextureEditor extends WorkspaceElement {
   };
 
   override render() {
-    const workspace = this.workspace;
-    if (workspace === null) {
+    const editing = this.editing;
+    if (editing === null) {
       return nothing;
     }
 
-    const addable = workspace.access.current.has("blocksets");
-    const { textureTabs } = workspace.state;
+    const addable = editing.access.current.has("blocksets");
+    const { textureTabs } = editing.state;
 
     return html`
-      ${workspace.blocksets.entries.length === 0 ?
+      ${editing.blocksets.entries.length === 0 ?
         this.#renderEmpty(addable) :
         html`
           <pixel-draw-panel
@@ -399,7 +399,7 @@ export class TextureEditor extends WorkspaceElement {
           ></pixel-draw-panel>
         `}
       <add-blockset-dialog></add-blockset-dialog>
-      <blockset-edit-dialog .workspace=${workspace}></blockset-edit-dialog>
+      <blockset-edit-dialog .editing=${editing}></blockset-edit-dialog>
     `;
   }
 

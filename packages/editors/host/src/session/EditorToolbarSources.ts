@@ -2,7 +2,7 @@
 import type { Lantern } from "@jolly-pixel/lantern";
 
 // Import Internal Dependencies
-import type { ConnectionStatus } from "./ConnectionStatus.ts";
+import type { ConnectionStatus } from "../connection/ConnectionStatus.ts";
 import type { EditorTags } from "./EditorTags.ts";
 import type { EditorTargets } from "./EditorTargets.ts";
 

@@ -2,9 +2,9 @@
 import { ChannelTransportHost } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import type { StandaloneConnection } from "../../editor/StandaloneConnection.ts";
+import type { StandaloneConnection } from "../../connection/StandaloneConnection.ts";
 import type { LaunchSource } from "../../launch/index.ts";
-import type { PeerSharing } from "../../session/OfflineMode.ts";
+import type { PeerSharing } from "../../connection/OfflineMode.ts";
 import {
   OfflineServer,
   type OwnedDatabase

@@ -13,13 +13,13 @@ import {
   ROTATION_MODES,
   type RotationMode
 } from "../../state/index.ts";
-import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
+import type { VoxelMapEditing } from "../../editing/VoxelMapEditing.ts";
 
 // CONSTANTS
 const kRotationValues = ROTATION_MODES.map(rotationValue);
 
 export interface BrushConsoleContext {
-  state: Pick<VoxelMapWorkspace["state"], "brush">;
+  state: Pick<VoxelMapEditing["state"], "brush">;
 }
 
 export function brushConsole(

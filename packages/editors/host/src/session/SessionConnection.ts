@@ -2,85 +2,39 @@
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 import { Systems } from "@jolly-pixel/engine";
-import * as network from "@jolly-pixel/network/client";
-import {
-  promptPeerIdentity,
-  type PeerIdentity
-} from "@jolly-pixel/ui";
-import { toPeerProfileMetadata } from "@jolly-pixel/ui/network";
+import type { PeerIdentity } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { HostLogger } from "../debug/readDebugLogger.ts";
-import type { ShellChannel } from "../launch/index.ts";
-import {
-  AssetLeases,
-  type RoomSource
-} from "../lease/AssetLeases.ts";
-import { PendingOutboxes } from "../lease/PendingOutboxes.ts";
+import { AssetLeases } from "../lease/AssetLeases.ts";
+import type { PendingOutboxes } from "../lease/outbox/PendingOutboxes.ts";
 import {
   ConnectionStatus,
   type ServerConnection
-} from "./ConnectionStatus.ts";
-import type { OfflineMode } from "./OfflineMode.ts";
+} from "../connection/ConnectionStatus.ts";
+import type { OfflineMode } from "../connection/OfflineMode.ts";
+import type {
+  EditorSessionClient,
+  StandaloneConnection
+} from "../connection/StandaloneConnection.ts";
 import {
   EditorSession,
   type EditorSessionTarget
 } from "./EditorSession.ts";
 import {
   CATALOG_TIMEOUT_MS,
-  openCatalog,
-  type CatalogOpener
-} from "./openCatalog.ts";
+  openCatalog
+} from "../connection/openCatalog.ts";
 import {
   CatalogSessionArchive,
   type SessionArchive
 } from "./SessionArchive.ts";
 
-// CONSTANTS
-export const IDENTITY_STORAGE_KEY = "jolly-pixel:username";
-
-export interface EditorSessionClient extends RoomSource {
-  destroy(): void;
-}
-
-export interface EditorIdentityOptions {
-  title: string;
-}
-
-interface SessionConnectionBase {
+export interface SessionConnectionConnectOptions extends StandaloneConnection {
   /**
    * @default a logger with every namespace disabled
    */
   logger?: HostLogger;
-}
-
-export interface SessionConnectionOpenOptions extends SessionConnectionBase {
-  identity: EditorIdentityOptions;
-  /**
-   * @default null
-   */
-  shell?: ShellChannel | null;
-  /**
-   * @default joins the catalog room on the connection client
-   */
-  openCatalog?: CatalogOpener;
-}
-
-export interface SessionConnectionConnectOptions extends SessionConnectionBase {
-  identity: PeerIdentity;
-  client: EditorSessionClient;
-  /**
-   * @default joins the catalog room on `client`
-   */
-  openCatalog?: CatalogOpener;
-  offline?: OfflineMode;
-  catalogTimeoutMs?: number;
-  /**
-   * The client again, when it connects straight to the server: the toolbar
-   * shows when it drops, and pending changes are kept across page loads.
-   * @default null
-   */
-  server?: ServerConnection | null;
 }
 
 export interface SessionConnectionOptions {
@@ -99,35 +53,6 @@ export interface SessionConnectionOptions {
 }
 
 export class SessionConnection {
-  static async open(
-    options: SessionConnectionOpenOptions
-  ): Promise<SessionConnection> {
-    const {
-      shell = null,
-      logger = new Systems.Logger()
-    } = options;
-    const identity = shell?.identity ?? await logger.step(
-      "identity",
-      () => promptPeerIdentity({
-        title: options.identity.title,
-        storageKey: IDENTITY_STORAGE_KEY
-      })
-    );
-    const client = new network.Client({
-      profile: toPeerProfileMetadata(identity)
-    });
-    shell?.renewWhenRefused(client);
-
-    return SessionConnection.connect({
-      identity,
-      client,
-      logger,
-      openCatalog: options.openCatalog,
-      catalogTimeoutMs: CATALOG_TIMEOUT_MS,
-      server: client
-    });
-  }
-
   static async connect(
     options: SessionConnectionConnectOptions
   ): Promise<SessionConnection> {
@@ -140,7 +65,7 @@ export class SessionConnection {
       "catalog",
       () => openCatalog(
         client,
-        options.catalogTimeoutMs,
+        server === null ? undefined : CATALOG_TIMEOUT_MS,
         options.openCatalog
       )
     );
@@ -151,7 +76,7 @@ export class SessionConnection {
       client,
       offline: options.offline,
       server,
-      outboxes: server === null ? null : await PendingOutboxes.open()
+      outboxes: await options.openOutboxes?.() ?? null
     });
   }
 

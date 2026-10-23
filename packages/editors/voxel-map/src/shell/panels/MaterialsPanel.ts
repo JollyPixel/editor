@@ -3,15 +3,15 @@ import { html, css, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
 // Import Internal Dependencies
-import type { VoxelMapWorkspace } from "../../workspace/VoxelMapWorkspace.ts";
-import { WorkspaceElement } from "../../workspace/WorkspaceElement.ts";
+import type { VoxelMapEditing } from "../../editing/VoxelMapEditing.ts";
+import { EditingElement } from "../../editing/EditingElement.ts";
 import { hintStyles } from "../../shared/styles/hint.styles.ts";
 import "../../features/blocks/library/BlockLibrary.ts";
 import "../../features/materials/MaterialLibrary.ts";
 import "./MapConfigPanel.ts";
 
 @customElement("materials-panel")
-export class MaterialsPanel extends WorkspaceElement {
+export class MaterialsPanel extends EditingElement {
   static override styles = [
     hintStyles,
     css`
@@ -48,10 +48,10 @@ export class MaterialsPanel extends WorkspaceElement {
     this._hasBlocks = false;
   }
 
-  protected override watchWorkspace(
-    workspace: VoxelMapWorkspace
+  protected override watchEditing(
+    editing: VoxelMapEditing
   ): Iterable<() => void> {
-    const { editorMap } = workspace;
+    const { editorMap } = editing;
     const refresh = (): void => {
       this._hasBlocks = editorMap.blocks.size > 0;
     };
@@ -64,14 +64,14 @@ export class MaterialsPanel extends WorkspaceElement {
   }
 
   override render() {
-    const workspace = this.workspace;
-    if (workspace === null) {
+    const editing = this.editing;
+    if (editing === null) {
       return html``;
     }
 
     return html`
       ${this._hasBlocks ?
-        this.#renderMaterials(workspace) :
+        this.#renderMaterials(editing) :
         html`<p class="hint">Add a block to the map to edit materials.</p>`}
       <jolly-folder
         flush
@@ -79,13 +79,13 @@ export class MaterialsPanel extends WorkspaceElement {
         label="View"
         storage-key="voxel-map:folder:map-config"
       >
-        <map-config-panel .workspace=${workspace}></map-config-panel>
+        <map-config-panel .editing=${editing}></map-config-panel>
       </jolly-folder>
     `;
   }
 
   #renderMaterials(
-    workspace: VoxelMapWorkspace
+    editing: VoxelMapEditing
   ) {
     return html`
       ${this.showsBlockLibrary ? html`
@@ -96,13 +96,13 @@ export class MaterialsPanel extends WorkspaceElement {
           storage-key="voxel-map:folder:material-block-library"
         >
           <block-library
-            .workspace=${workspace}
+            .editing=${editing}
             .editable=${false}
             layout="compact"
           ></block-library>
         </jolly-folder>
       ` : nothing}
-      <material-library .workspace=${workspace}></material-library>
+      <material-library .editing=${editing}></material-library>
     `;
   }
 }

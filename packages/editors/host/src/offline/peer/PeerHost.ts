@@ -5,7 +5,7 @@ import {
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import type { PeerSharing } from "../../session/OfflineMode.ts";
+import type { PeerSharing } from "../../connection/OfflineMode.ts";
 import { PeerInvite } from "./PeerInvite.ts";
 import type { PeerInvites } from "./PeerInvites.ts";
 import { PeerLink } from "./PeerLink.ts";

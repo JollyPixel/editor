@@ -62,7 +62,7 @@ Its `lantern` shows a Tours button, a question mark at the end of the bar,
 while at least one tour is registered. With one tour, a click starts it. With
 several, it opens a menu listing them by title, with a check on the ones the
 user already finished or skipped. A tour can end on
-[`REPLAY_TOUR_STEP`](../editor/mountStandalone.md#tours), which points at it.
+[`REPLAY_TOUR_STEP`](../boot/mountStandalone.md#tours), which points at it.
 
 ## EditorToolbarSources
 
@@ -110,7 +110,7 @@ interface LaunchNavigator {
 
 `targets` and `tags` open another asset or version through it.
 `mountStandalone` passes itself; see
-[switching](../editor/mountStandalone.md#switching-target-or-tag).
+[switching](../boot/mountStandalone.md#switching-target-or-tag).
 
 ## EditorTargets
 

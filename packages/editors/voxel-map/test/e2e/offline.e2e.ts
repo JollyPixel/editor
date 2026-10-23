@@ -29,8 +29,8 @@ test("boots the seeded map from an in-page offline server, without a socket", as
   await map.openOffline();
 
   const state = await page.evaluate(() => {
-    const { workspace, session } = window.voxelMapEditor!;
-    const { view } = workspace;
+    const { editing, session } = window.voxelMapEditor!;
+    const { view } = editing;
 
     return {
       target: session.target.record.path,
@@ -114,9 +114,9 @@ test("keeps offline map and texture edits across a reload", async({ map, page })
   await map.blockDialog("New Block").createButton.click();
 
   const before = await page.evaluate(() => {
-    const { session, workspace } = window.voxelMapEditor!;
+    const { session, editing } = window.voxelMapEditor!;
     const mapId = session.target.record.id;
-    const [blockset] = workspace.view.document.blocksets.definitions();
+    const [blockset] = editing.view.document.blocksets.definitions();
     const textureId = blockset.asset!.id;
 
     return {
@@ -147,11 +147,11 @@ test("keeps offline map and texture edits across a reload", async({ map, page })
 
   await map.reload();
   expect(await page.evaluate(() => {
-    const { session, workspace } = window.voxelMapEditor!;
+    const { session, editing } = window.voxelMapEditor!;
 
     return {
       mapId: session.target.record.id,
-      textureId: workspace.view.document.blocksets.definitions()[0].asset!.id
+      textureId: editing.view.document.blocksets.definitions()[0].asset!.id
     };
   })).toEqual({
     mapId: before.mapId,

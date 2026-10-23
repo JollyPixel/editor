@@ -97,7 +97,7 @@ export class TextureEditor {
     blockId: number
   ): Promise<TexturePoint> {
     return this.#page.evaluate((id) => {
-      const { view, blocksets } = window.voxelMapEditor!.workspace;
+      const { view, blocksets } = window.voxelMapEditor!.editing;
       const texture = view.document.blocks.get(id)!.defaultTexture!;
       const tileSize = blocksets.blocksetTileSize(texture.blocksetId ?? "");
       if (tileSize === undefined) {
