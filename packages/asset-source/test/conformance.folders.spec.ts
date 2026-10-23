@@ -21,6 +21,11 @@ for (const implementation of sourceImplementations) {
       await fixture.source.write("sprite.png", bytes("x"));
 
       assert.deepEqual(await fixture.source.list(), ["sprite.png"]);
+      assert.strictEqual(
+        fixture.source.isIgnored(".jollypixel/assets.json"),
+        true
+      );
+      assert.strictEqual(fixture.source.isIgnored("sprite.png"), false);
     });
 
     test("the state directory stays readable", async() => {
@@ -70,6 +75,21 @@ for (const implementation of sourceImplementations) {
         "maps/draft"
       ]);
       assert.deepEqual(await fixture.source.list(), []);
+    });
+
+    test("a folder is not a readable or existing file", async() => {
+      await using fixture = await implementation.create();
+
+      await fixture.source.createFolder("maps");
+
+      assert.strictEqual(await fixture.source.exists("maps"), false);
+      await assert.rejects(
+        () => fixture.source.read("maps"),
+        {
+          name: "AssetPathNotFoundError",
+          path: "maps"
+        }
+      );
     });
 
     test("deletes a folder and its empty sub-folders", async() => {

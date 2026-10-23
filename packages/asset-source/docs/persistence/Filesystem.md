@@ -33,7 +33,8 @@ files are excluded from listings.
 `writeIfAbsent()` links the temporary file into place. The link fails when the
 destination is occupied, so concurrent conditional writes cannot replace each
 other. Filesystems without hard-link support reject this operation. `exists()`
-checks the path without reading the file.
+checks that a file is at the path without reading it, and reports `false` for
+a directory.
 
 ## Ignored paths
 
@@ -79,19 +80,14 @@ is not ignored. `deleteFolder` removes the empty directories of the subtree,
 deepest first, and leaves any directory that still holds an entry, an ignored
 file included.
 
-## Resolving paths
+## Path containment
 
-```ts
-source.root: string
-source.resolve(path: string): string
-```
-
-`resolve(path)` validates the asset path and joins it to `root`. It does not
-access the filesystem.
-
-`read`, `write` and `delete` also check filesystem links. They throw
+Every operation that takes a path also checks filesystem links. It throws
 `AssetPathEscapeError` when a symbolic link or junction would take the
 operation outside `root`.
+
+`read` rejects with `AssetPathNotFoundError` when the file is missing or the
+path names a directory.
 
 The remaining read, write, delete and list behavior follows the shared
 [`AssetSource`](../../README.md#assetsource) contract.

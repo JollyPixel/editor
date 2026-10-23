@@ -95,28 +95,6 @@ describe("FilesystemAssetSource — atomic write", () => {
   });
 });
 
-describe("FilesystemAssetSource — resolve", () => {
-  test("resolves against the root", async() => {
-    await using workspace = await tempWorkspace();
-    const source = new FilesystemAssetSource(workspace.root);
-
-    assert.strictEqual(
-      source.resolve("a/b.png"),
-      path.join(workspace.root, "a", "b.png")
-    );
-  });
-
-  test("throws for a traversal that escapes the root", async() => {
-    await using workspace = await tempWorkspace();
-    const source = new FilesystemAssetSource(workspace.root);
-
-    assert.throws(
-      () => source.resolve("a/../../b.png"),
-      { name: "AssetPathEscapeError" }
-    );
-  });
-});
-
 describe("FilesystemAssetSource — missing root", () => {
   test("lists nothing when the root does not exist", async() => {
     await using workspace = await tempWorkspace();
@@ -134,7 +112,7 @@ describe("FilesystemAssetSource — missing root", () => {
 
     await assert.rejects(
       () => source.read("sprite.png"),
-      { code: "ENOENT" }
+      { name: "AssetPathNotFoundError" }
     );
 
     await source.write("sprite.png", bytes("x"));

@@ -13,19 +13,13 @@ import {
 
 // Import Internal Dependencies
 import type { AssetSource } from "../AssetSource.ts";
+import { AssetPathNotFoundError } from "../errors/AssetPathNotFoundError.ts";
 import { AssetPathEscapeError } from "../errors/AssetPathEscapeError.ts";
 import { isStatePath } from "../paths/index.ts";
 import {
   DEFAULT_CONTENT_TYPES,
   resolveContentType
 } from "./contentTypes.ts";
-
-// CONSTANTS
-const kMissingCodes = new Set([
-  "ENOENT",
-  "EISDIR",
-  "ENOTDIR"
-]);
 
 export type AssetStaticHandler = (
   request: IncomingMessage,
@@ -101,8 +95,8 @@ async function readAsset(
   try {
     return await source.read(assetPath);
   }
-  catch (error: any) {
-    if (kMissingCodes.has(error?.code)) {
+  catch (error) {
+    if (error instanceof AssetPathNotFoundError) {
       return null;
     }
 
@@ -114,8 +108,7 @@ function isHidden(
   source: AssetSource,
   assetPath: string
 ): boolean {
-  return isStatePath(assetPath) ||
-    (source.isIgnored?.(assetPath) ?? false);
+  return isStatePath(assetPath) || source.isIgnored(assetPath);
 }
 
 function end(

@@ -11,26 +11,20 @@ import path from "node:path";
 import { AtomicFile } from "@openally/atomic-fs";
 
 // Import Internal Dependencies
-import {
-  createIgnoredPathMatcher
-} from "#src/persistence/filesystem/ignoredPaths.ts";
-import {
-  walk,
-  walkFolders,
-  type WalkOptions
-} from "#src/persistence/filesystem/walk.ts";
+import { FilesystemTree } from "#src/persistence/filesystem/FilesystemTree.ts";
 import { tempWorkspace } from "../../helpers/tempWorkspace.ts";
 
 // CONSTANTS
 const kAtomic = new AtomicFile();
 
-function walkOptions(
+function tree(
+  root: string,
   ignore: readonly string[] = []
-): WalkOptions {
-  return {
-    isIgnored: createIgnoredPathMatcher(ignore),
+): FilesystemTree {
+  return new FilesystemTree(root, {
+    ignore,
     isTemporary: kAtomic.isTemporary
-  };
+  });
 }
 
 async function collect(
@@ -57,7 +51,7 @@ async function writeFiles(
   }
 }
 
-describe("walk", () => {
+describe("FilesystemTree", () => {
   test("yields root-relative POSIX file paths", async() => {
     await using workspace = await tempWorkspace();
     await writeFiles(workspace.root, [
@@ -66,7 +60,7 @@ describe("walk", () => {
     ]);
 
     const files = await collect(
-      walk(workspace.root, walkOptions())
+      tree(workspace.root).files()
     );
 
     assert.deepEqual(files.sort(), [
@@ -83,13 +77,13 @@ describe("walk", () => {
     ]);
 
     const files = await collect(
-      walk(workspace.root, walkOptions())
+      tree(workspace.root).files()
     );
 
     assert.deepEqual(files, []);
   });
 
-  test("walkFolders yields every folder but the ignored ones", async() => {
+  test("folders yields every folder but the ignored ones", async() => {
     await using workspace = await tempWorkspace();
     await writeFiles(workspace.root, [
       "maps/world/overworld.json",
@@ -98,7 +92,7 @@ describe("walk", () => {
     await fs.mkdir(path.join(workspace.root, "empty"));
 
     const folders = await collect(
-      walkFolders(workspace.root, walkOptions(["skip/**"]))
+      tree(workspace.root, ["skip/**"]).folders()
     );
 
     assert.deepEqual(folders.sort(), [
@@ -117,7 +111,7 @@ describe("walk", () => {
     const opendir = t.mock.method(fs, "opendir");
 
     const files = await collect(
-      walk(workspace.root, walkOptions(["skip/**"]))
+      tree(workspace.root, ["skip/**"]).files()
     );
 
     assert.deepEqual(files, ["keep/sprite.png"]);
@@ -136,7 +130,7 @@ describe("walk", () => {
     ]);
     const opendir = t.mock.method(fs, "opendir");
 
-    const iterator = walk(workspace.root, walkOptions());
+    const iterator = tree(workspace.root).files();
     const first = await iterator.next();
     await iterator.return?.();
 
@@ -154,7 +148,7 @@ describe("walk", () => {
     await using workspace = await tempWorkspace();
 
     const files = await collect(
-      walk(path.join(workspace.root, "missing"), walkOptions())
+      tree(path.join(workspace.root, "missing")).files()
     );
 
     assert.deepEqual(files, []);
@@ -166,7 +160,7 @@ describe("walk", () => {
 
     await assert.rejects(
       () => collect(
-        walk(path.join(workspace.root, "sprite.png"), walkOptions())
+        tree(path.join(workspace.root, "sprite.png")).files()
       ),
       { code: "ENOTDIR" }
     );
@@ -184,7 +178,7 @@ describe("walk", () => {
     );
 
     const files = await collect(
-      walk(workspace.root, walkOptions())
+      tree(workspace.root).files()
     );
 
     assert.deepEqual(files, ["sprite.png"]);

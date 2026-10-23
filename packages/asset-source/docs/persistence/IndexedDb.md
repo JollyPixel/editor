@@ -41,4 +41,5 @@ source.close(): void
   `close()` the source first.
 
 The source implements the shared [`AssetSource`](../../README.md#assetsource) storage
-contract. It does not provide `isIgnored` or `watch`.
+contract. `isIgnored` matches the `.jollypixel/` state directory only, and
+the source does not provide `watch`.

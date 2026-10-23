@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import type { AssetSource } from "./AssetSource.ts";
+import { AssetPathNotFoundError } from "./errors/AssetPathNotFoundError.ts";
 
 export async function readJsonFile(
   source: AssetSource,
@@ -12,8 +13,15 @@ export async function readJsonFile(
       new TextDecoder().decode(raw)
     );
   }
-  catch {
-    return null;
+  catch (error) {
+    if (
+      error instanceof AssetPathNotFoundError ||
+      error instanceof SyntaxError
+    ) {
+      return null;
+    }
+
+    throw error;
   }
 }
 

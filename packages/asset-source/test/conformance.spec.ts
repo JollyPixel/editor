@@ -41,7 +41,11 @@ for (const implementation of sourceImplementations) {
       await using fixture = await implementation.create();
 
       await assert.rejects(
-        () => fixture.source.read("missing.png")
+        () => fixture.source.read("missing.png"),
+        {
+          name: "AssetPathNotFoundError",
+          path: "missing.png"
+        }
       );
     });
 

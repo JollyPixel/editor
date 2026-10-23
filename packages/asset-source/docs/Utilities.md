@@ -1,7 +1,7 @@
 # Utilities
 
 The package entry point exports helpers for asset paths, workspace state and
-JSON files. `toRelativePosix` and `DEFAULT_IGNORED_PATHS` are exported from
+JSON files. `DEFAULT_IGNORED_PATHS` is exported from
 `@jolly-pixel/asset-source/node`.
 
 ## Asset paths
@@ -59,6 +59,17 @@ class AssetPathEscapeError extends Error {
 `path` contains the rejected input. `reason` contains the rejection reported
 by `safeAssetPath`, or a policy reason supplied by the caller.
 
+### `AssetPathNotFoundError`
+
+```ts
+class AssetPathNotFoundError extends Error {
+  readonly path: string;
+}
+```
+
+Every built-in source rejects `read` with this error when no file exists at
+`path`. The filesystem source keeps the underlying Node.js error as `cause`.
+
 ### Folder paths
 
 ```ts
@@ -90,18 +101,6 @@ adds the folders above a path: `"maps/world/a.json"` adds `"maps"` and
 `isWithinFolder` reports whether a normalized path is `folder` or lies
 anywhere below it.
 
-### `toRelativePosix`
-
-```ts
-toRelativePosix(
-  root: string,
-  absolute: string
-): string | null
-```
-
-Returns a POSIX path relative to `root`. It returns `null` when `absolute`
-equals `root`, lies outside it or cannot be represented as a relative child.
-
 ## State directory
 
 ```ts
@@ -132,8 +131,10 @@ writeJsonFile(
 ```
 
 `readJsonFile` decodes the stored bytes as UTF-8 and parses the result as JSON.
-It returns `null` when reading or parsing throws. Stored JSON `null` produces
-the same result, so use `source.read` directly when the distinction matters.
+It returns `null` when the file is missing (`AssetPathNotFoundError`) or is not
+valid JSON. Any other failure, such as a rejected path or a permission error,
+is rethrown. Stored JSON `null` also produces `null`, so use `source.read`
+directly when the distinction matters.
 
 `writeJsonFile` calls `JSON.stringify(value, null, 2)`, appends a newline,
 encodes the text as UTF-8 and writes it through the source.

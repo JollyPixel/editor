@@ -341,6 +341,9 @@ importers:
         specifier: 4.0.7
         version: 4.0.7
     devDependencies:
+      '@types/picomatch':
+        specifier: ^4.0.3
+        version: 4.0.3
       fake-indexeddb:
         specifier: 6.2.5
         version: 6.2.5

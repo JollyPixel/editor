@@ -5,16 +5,16 @@
 ## 💡 About 
 
 An `AssetSource` stores bytes under root-relative POSIX paths. It reads,
-writes, deletes and lists assets, and keeps the folders holding them. Both built-in sources normalize
-path separators and reject paths that escape their root.
+writes, deletes and lists assets, and keeps the folders holding them.
+Sources normalize path separators and reject paths that escape their root.
 
 ```mermaid
 flowchart TB
-    Caller["Asset backend or other caller"]
-    Contract["AssetSource<br/>byte storage contract"]
-    FS["FilesystemAssetSource"]
-    Memory["MemoryAssetSource"]
-    IDB["IndexedDbAssetSource"]
+    Caller["Backend"]
+    Contract["AssetSource<br/>(storage contract)"]
+    FS["Filesystem"]
+    Memory["Memory"]
+    IDB["IndexedDb"]
 
     Caller --> Contract
     Contract --> FS
@@ -52,32 +52,22 @@ await source.write(
 
 ### `AssetSource`
 
-All persistence sources implement this contract:
+All persistence and durable sources implement this contract:
 
 ```ts
 type AssetEntryType = "file" | "folder";
 
 interface AssetSource {
-  // Rejects when the asset is missing.
   read(path: string): Promise<Uint8Array>;
-  // Reports the current state; use writeIfAbsent for concurrent creation.
   exists(path: string): Promise<boolean>;
   write(path: string, data: Uint8Array): Promise<void>;
-  // Creates atomically; returns true if created, false if occupied.
   writeIfAbsent(path: string, data: Uint8Array): Promise<boolean>;
   delete(path: string): Promise<void>;
-  // Returns sorted paths, excluding .jollypixel/ state files.
   list(): Promise<string[]>;
-  // Returns sorted folder paths, empty folders included.
   folders(): Promise<string[]>;
-  // Creates the folder and its missing parents.
   createFolder(path: string): Promise<void>;
-  // Removes the folder and its sub-folders, keeping any that holds a file.
   deleteFolder(path: string): Promise<void>;
-  // Optional: reports whether a path is hidden from listing and watching.
-  isIgnored?(path: string): boolean;
-  // Optional: reports changed paths and returns a function to stop watching.
-  // Calls options.onReady once changes are reported.
+  isIgnored(path: string): boolean;
   watch?(
     onChange: (path: string, type: AssetEntryType) => void,
     options?: { onReady?: () => void; }
@@ -91,8 +81,24 @@ interface AssetSource {
 > root-escaping paths are rejected. State files remain available to direct
 > storage operations.
 
-Writing a file creates its folders, and deleting the file keeps them. A folder
-stays, empty or not, until `deleteFolder` removes it.
+`read` rejects with `AssetPathNotFoundError` when no file exists at the path,
+including when the path names a folder. `exists` reports `false` for a
+folder. Its answer can be stale by the time the caller acts on it, so creation
+that may race goes through `writeIfAbsent`: it writes atomically and returns
+`false`, leaving the stored bytes alone, when the path is already occupied.
+
+`list()` and `folders()` return sorted paths, and `folders()` includes empty
+folders. Writing a file creates its folders, and deleting the file keeps them.
+`createFolder` also creates the missing parents. A folder stays, empty or not,
+until `deleteFolder` removes it with its empty sub-folders; a sub-folder that
+still holds a file is kept.
+
+`isIgnored` reports whether a path is hidden from `list()`, `folders()` and
+`watch()`. Every built-in source ignores the `.jollypixel/` state directory.
+
+`watch` calls `onChange` with each changed path and returns a function that
+stops watching. `options.onReady` runs once the watcher starts reporting
+changes.
 
 ### 📦 Persistence
 
@@ -105,10 +111,9 @@ stays, empty or not, until `deleteFolder` removes it.
 
 > [!NOTE]
 > 
-> The filesystem source provides both optional methods. The memory and IndexedDB
-> sources provide neither. The root entry is browser-safe: it exports the
-> contract, the memory and IndexedDB sources and utilities. The filesystem
-> source and the HTTP handler are exported from
+> Only the filesystem source provides the optional `watch`. The root entry is
+> browser-safe: it exports the contract, the memory and IndexedDB sources and
+> utilities. The filesystem source and the HTTP handler are exported from
 > `@jolly-pixel/asset-source/node`.
 
 ### ✂️ Utilities
