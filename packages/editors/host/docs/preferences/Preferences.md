@@ -6,9 +6,9 @@ its fields once, and the same declaration validates values in the browser and
 on the studio server.
 
 `@jolly-pixel/editor.host/preferences` holds the declarations, the
-`Preferences` holder, `followKeyBindings` and the host's own scopes. It
-imports neither the DOM nor Three.js, so a Node.js server can load it.
-`LocalPreferences`, `PreferenceStorage`, `followCameraPreferences` and
+`Preferences` holder and the host's own scopes. It imports neither the DOM
+nor Three.js, so a Node.js server can load it. `LocalPreferences`,
+`PreferenceStorage`, `followCameraPreferences`, `followKeyBindings` and
 `provideTourKeys` come from the package root.
 
 ## `definePreferences`
@@ -103,7 +103,8 @@ export const MAP_KEYBINDINGS = defineKeyBindings({
 });
 ```
 
-A scope with one chord field per action of a `KeyBindingMap` defaults object.
+A scope with one chord field per action of a `KeyBindingMap` defaults object,
+so each default must be a valid `KeyChordString`.
 `actions` gives each action its label and group; TypeScript requires one per
 action. The studio lists every scope with chord fields on its Keybindings
 page, and gives no page of its own to a scope that has nothing else.
@@ -227,16 +228,26 @@ is not an entries field.
 ## `followKeyBindings`
 
 ```ts
-const settings = new KeyBindingSettings({ defaults });
-const stop = followKeyBindings(settings, preferences, MAP_KEYBINDINGS);
+function followKeyBindings<TAction extends string>(
+  preferences: Preferences,
+  scope: PreferenceScope<KeyBindingFields<TAction>>,
+  onDropped?: (message: string) => void
+): KeyBindingSettings<TAction>;
+
+const settings = followKeyBindings(
+  preferences,
+  MAP_KEYBINDINGS,
+  (message) => console.warn(message)
+);
 ```
 
-Keeps a `KeyBindingSettings` and a `defineKeyBindings` scope in step until
-`stop` is called. The settings load the scope's values now and again on every
-change made elsewhere, a swap of two chords included. Each change of the
-settings, such as a console command calling `assign` or `reset`, is written to
-the scope as one `update`. Entries the settings dropped while loading are
-written back without them.
+Returns a `KeyBindingSettings` over the defaults of a `defineKeyBindings`
+scope, kept in step with that scope for the life of the page. The settings
+load the scope's values now and again on every change made elsewhere, a swap
+of two chords included, and `onDropped` receives each stored entry they
+cannot read. Each change of the settings, such as a console command calling
+`assign` or `reset`, is written to the scope as one `update`. Entries the
+settings dropped while loading are written back without them.
 
 ## Host scopes
 

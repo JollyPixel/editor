@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import type {
   KeyBindingHandler,
+  KeyBindingSettings,
   KeyBindingTarget,
   KeyChordString
 } from "@jolly-pixel/controls";
@@ -14,9 +15,9 @@ import {
 } from "./placementTransforms.ts";
 import type { HorizontalAxis } from "../../scene/camera/EditorCamera.ts";
 import type {
-  MapGroupAction,
-  MapKeyBindingSettings
-} from "../../keybindings/MapKeyBindings.ts";
+  MapAction,
+  MapGroupAction
+} from "../../keybindings/mapActions.ts";
 
 export const PLACEMENT_SHORTCUTS = {
   commit: ["Enter", "NumpadEnter"],
@@ -25,7 +26,7 @@ export const PLACEMENT_SHORTCUTS = {
 
 export interface PlacementShortcutsOptions {
   keyboard: KeyBindingTarget;
-  keyBindings: Pick<MapKeyBindingSettings, "bind">;
+  keyBindings: Pick<KeyBindingSettings<MapAction>, "bind">;
   placement: Pick<MapPlacement, "placing" | "turn" | "commit" | "cancel">;
   rightAxis: () => HorizontalAxis;
 }

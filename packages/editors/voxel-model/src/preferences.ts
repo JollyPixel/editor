@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import {
+  defineKeyBindings,
   definePreferences,
   type PreferenceValues
 } from "@jolly-pixel/editor.host/preferences";
@@ -7,6 +8,9 @@ import {
   PIXEL_ART_KEYBINDINGS,
   PIXEL_ART_PREFERENCES
 } from "@jolly-pixel/editor.pixel-art/preferences";
+
+// Import Internal Dependencies
+import { MODEL_KEY_BINDINGS } from "./keybindings/modelActions.ts";
 
 export const VOXEL_MODEL_PREFERENCES = definePreferences({
   name: "voxel-model",
@@ -88,6 +92,26 @@ export type VoxelModelPreferences = PreferenceValues<
   typeof VOXEL_MODEL_PREFERENCES.fields
 >;
 
+export const VOXEL_MODEL_KEYBINDINGS = defineKeyBindings({
+  name: "voxel-model-keybindings",
+  label: "Voxel model",
+  defaults: MODEL_KEY_BINDINGS,
+  actions: {
+    "edit.undo": {
+      label: "Undo",
+      group: "Editing"
+    },
+    "edit.redo": {
+      label: "Redo",
+      group: "Editing"
+    },
+    "animation.key": {
+      label: "Key the selected block",
+      group: "Animation"
+    }
+  }
+});
+
 export const shared = [PIXEL_ART_PREFERENCES, PIXEL_ART_KEYBINDINGS];
 
-export default [VOXEL_MODEL_PREFERENCES];
+export default [VOXEL_MODEL_PREFERENCES, VOXEL_MODEL_KEYBINDINGS];

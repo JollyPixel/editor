@@ -7,11 +7,12 @@ import {
 
 // Import Third-party Dependencies
 import { CommandConsole } from "@jolly-pixel/console";
+import { followKeyBindings } from "@jolly-pixel/editor.host";
 import { Preferences } from "@jolly-pixel/editor.host/preferences";
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { PixelArtKeyBindingSettings } from "../../src/keybindings/PixelArtKeyBindingSettings.ts";
+import { PIXEL_ART_KEYBINDINGS } from "../../src/preferences.ts";
 import { pixelArtConsole } from "../../src/console/pixelArtConsole.ts";
 import { UvNetLibrary } from "../../src/uv/nets/UvNetLibrary.ts";
 
@@ -22,7 +23,10 @@ function boot(
   preferences = new Preferences()
 ) {
   const commands = new CommandConsole();
-  const keyBindingSettings = PixelArtKeyBindingSettings.follow(preferences);
+  const keyBindingSettings = followKeyBindings(
+    preferences,
+    PIXEL_ART_KEYBINDINGS
+  );
   pixelArtConsole(commands, {
     keyBindingSettings,
     uvNets: new UvNetLibrary({ storage: new MemoryStorageAdapter() })

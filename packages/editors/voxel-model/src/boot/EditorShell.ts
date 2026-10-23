@@ -6,9 +6,10 @@ import {
 } from "@jolly-pixel/editor.host";
 import {
   CANVAS_HOVER_CHANGE_EVENT,
-  type PixelArtKeyBindingSettings,
+  type PixelArtAction,
   type UvNetLibrary
 } from "@jolly-pixel/editor.pixel-art";
+import type { KeyBindingSettings } from "@jolly-pixel/controls";
 import "@jolly-pixel/editor.host/ui";
 import type {
   DockLayout,
@@ -61,7 +62,7 @@ type WorkspaceElement = HTMLElementTagNameMap[typeof kAttachedTags[number]];
 export interface EditorShellOptions {
   runtime: EditorRuntime;
   texture: LeftPanelTexture;
-  keyBindingSettings: PixelArtKeyBindingSettings;
+  keyBindingSettings: KeyBindingSettings<PixelArtAction>;
   uvNets: UvNetLibrary;
   toolbar: EditorToolbarSources;
 }

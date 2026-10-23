@@ -10,7 +10,7 @@ import {
 
 // Import Internal Dependencies
 import type { VoxelMapWorkspace } from "../workspace/VoxelMapWorkspace.ts";
-import type { MapActionGroup } from "./MapKeyBindings.ts";
+import type { MapActionGroup } from "./mapActions.ts";
 
 // CONSTANTS
 const kGroups: Readonly<Record<MapActionGroup, string>> = {

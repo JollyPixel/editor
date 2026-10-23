@@ -47,7 +47,7 @@ describe("StudioSession preferences", () => {
           preferences,
           renewal: null
         },
-        scopes: new PreferenceScopes([RUNTIME_PREFERENCES])
+        scopes: new PreferenceScopes([RUNTIME_PREFERENCES], [])
       }
     );
     await studio.openAsset("map-1");

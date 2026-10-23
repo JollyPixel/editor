@@ -11,7 +11,7 @@ import { STUDIO_PREFERENCES } from "../../shared/studioScope.ts";
 
 describe("PreferenceScopes", () => {
   test("prunes stored scopes and fields the descriptors no longer declare", () => {
-    const scopes = new PreferenceScopes([STUDIO_PREFERENCES]);
+    const scopes = new PreferenceScopes([STUDIO_PREFERENCES], []);
 
     const overrides = scopes.prune([
       [

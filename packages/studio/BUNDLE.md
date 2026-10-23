@@ -43,20 +43,7 @@ No dependency is bundled twice in different versions: one each of three `0.186.1
 
 Ranked by expected gain. Estimates are eager brotli unless stated.
 
-### 1. Take ata-validator out of the browser
-
-Built (uncommitted). The offline back-end runs the asset server in the browser (static mode, `?offline`, the shared-tab owner, a peer host). Its lazy chunk was mostly ata-validator: 438 KB minified, 94 KB brotli.
-
-- Schemas are written with zod/mini. Node validates them with ata-validator, on the JSON Schema that `z.toJSONSchema` emits; browsers validate them with zod. network's `#schema-runtime` import picks the runtime with the `browser` condition.
-- The browser runtime loads `z.compile` lazily: validators use zod's parser until the compiler arrives. Loaded eagerly, the compiler added 8 KB brotli to every editor page.
-- The in-browser server does not validate its own outbound messages (`validateOutbound: false`): rooms name each message from its tags, for read rights.
-- network's `minProperties`, `dependentRequired`, `requireAnyGroup` and `notMultiple` carry rules zod cannot emit: each one adds a zod check and the matching JSON Schema keyword. A network test runs both runtimes on every rule.
-- Static studio JS, all chunks: 4237 KB minified / 1013 KB brotli before, 3769 / 924 KB after. Eager chunks: shell 197, pixel-art 282, voxel-map 653, voxel-model 598 KB brotli.
-- [`studio.bundle.spec.ts`](./test/vite/studio.bundle.spec.ts) fails if any ata-validator module reaches the studio build.
-
-Measured and dropped on the way: precompiled ata validators (`generated/*.compiled.ts` beside each schema, 995 KB minified / 67 KB brotli, verdict only, and a build step), and full error detail in them (11.4 MB minified).
-
-### 2. Lazy-load what the first screen does not show
+### 1. Lazy-load what the first screen does not show
 
 Code that every page evaluates at boot but nobody sees until a click, in KB of rendered length:
 
@@ -72,7 +59,7 @@ That is about 190 KB rendered in voxel-map, roughly 25 to 30 KB of brotli; 15 to
 
 The pixel-art editor inside voxel-map is not a candidate: the texture editor is placed in the Blocks pane, which is the pane shown at boot ([`EditorPanels`](../editors/voxel-map/src/shell/EditorPanels.ts)).
 
-### 3. Register ui components per consumer
+### 2. Register ui components per consumer
 
 Every page bundles 251 to 266 of ui's 278 `dist` modules, because the root barrel re-exports every component and each component registers itself when its module runs. Components a page never names by tag:
 
@@ -80,18 +67,6 @@ Every page bundles 251 to 266 of ui's 278 `dist` modules, because the root barre
 - voxel-map: 13 of 54, 63 KB rendered (about 9 KB brotli).
 
 Adding a `sideEffects` list to ui alone gains nothing: marking every non-registering module side-effect free, with the barrels kept, moved voxel-map from 626 to 624 KB and the shell not at all. The saving needs consumers to import the components they use, for example per-component or per-group registration entry points. That is a public API change across every consumer, and a bare barrel import missing from `sideEffects` silently drops registrations, so it needs a bundle guard that checks the registered tags.
-
-### 4. Small dependencies
-
-- **picomatch**, about 7.6 KB brotli in every page. Browser users: the engine's [`Logger`](../engine/src/systems/Logger.ts) and [`ActorTree`](../engine/src/actor/ActorTree.ts), and [`AssetKindRegistry`](../asset-server/src/kinds/AssetKindRegistry.ts). The patterns involved are namespace filters and kind matchers, a small subset of glob.
-- **Classic zod in the shell**, 23 KB brotli. The editors moved to `zod/mini` in `c9726dc5` and the shell stayed on classic zod by choice; moving it would save about 15 KB.
-- **loglayer**, about 4.5 KB brotli per page. Listed for completeness.
-
-### 5. Drop `emitDecoratorMetadata`
-
-[`tsconfig/base.json`](../../tsconfig/base.json) enables `emitDecoratorMetadata` for every workspace. Nothing reads `design:type`: the engine's [`BehaviorDecorators`](../engine/src/components/script/BehaviorDecorators.ts) stores its own key through `reflect-metadata`. The voxel-map bundle carries 501 `design:type` calls and 71 inlined copies of the `__decorate` / `__metadata` helpers, about 45 KB minified but only about 3 KB of brotli.
-
-The size is not the reason to turn it off. A Lit field typed `THREE.Vector3` through `import * as THREE` emits metadata that keeps the whole three namespace, which is how `VoxelLayerPanel` pulled about 300 KB of three into voxel-map on 16 October. Turning it off removes that trap. Check the engine behavior tests before and after.
 
 ## Measured and dropped
 

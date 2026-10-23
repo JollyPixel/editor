@@ -125,10 +125,6 @@ describe("ProjectManifest", () => {
 
     assert.deepEqual(voxelMap.scopes.map((scope) => scope.name), ["voxel-map"]);
     assert.deepEqual(voxelMap.shared.map((scope) => scope.name), ["pixel-art"]);
-    assert.deepEqual(
-      [...manifest.preferences()].map((scope) => scope.name),
-      ["voxel-map", "pixel-art"]
-    );
   });
 
   test("names the manifest file it rejects", () => {

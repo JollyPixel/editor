@@ -105,7 +105,7 @@ export function session(
       preferences: new Preferences(),
       renewal: null
     },
-    scopes: new PreferenceScopes([]),
+    scopes: new PreferenceScopes([], []),
     launchOrigin: "http://localhost",
     slots: {
       strip,

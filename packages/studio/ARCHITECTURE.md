@@ -241,7 +241,7 @@ sequenceDiagram
 | Message | Direction | Carries |
 |---|---|---|
 | `jolly-ready` | frame → shell | nothing |
-| `jolly-launch` | shell → frame | target asset, theme, density, the shell's peer identity, the preference overrides, a port to the shell catalog and a port for the frame's console |
+| `jolly-launch` | shell → frame | target asset, theme, density, the shell's peer identity, the overrides of the scopes its editor reads, a port to the shell catalog and a port for the frame's console |
 | `jolly-catalog-open` | frame → shell, on the launch port | a port for one catalog |
 | `jolly-shell` | frame → shell | `open-asset`, `toggle-console`, `session-refused`, `unsaved`, `editor-state` or `update-preferences` |
 | `jolly-appearance` | shell → frame | new theme or density |
@@ -266,9 +266,13 @@ sequenceDiagram
   `editor-state` `ready`, spins again while it posts `switching`, and shows a
   warning on `failed`. A tab opened in the background stays still until its
   frame loads.
+- A frame reads the host scopes plus its editor's own and shared scopes from
+  the project manifest (`PreferenceScopes.readBy`). `EditorFrames` sends
+  it only those, and drops its `update-preferences` for any other scope.
 - `update-preferences` goes through the shell's `Preferences`; every change,
-  from a frame, Settings or another tab, is pushed to every frame. A refused
-  patch pushes the shell's overrides of that scope back instead
+  from a frame, Settings or another tab, is pushed to every frame that reads
+  its scope. A refused patch pushes the shell's overrides of that scope back
+  instead
   ([ADR-0024](./docs/adr/0024-editors-read-preferences-from-the-shell.md)).
 - One console for the whole studio: Ctrl+K in a frame posts `toggle-console`
   ([ADR-0015](./docs/adr/0015-the-studio-console-takes-precedence.md)).

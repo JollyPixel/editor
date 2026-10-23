@@ -20,20 +20,20 @@ import {
   type HistoryScopeState,
   type HistoryStepInfo
 } from "@jolly-pixel/history";
+import type { ShortcutLabels } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
 import "./historyIcons.ts";
 import type { PresenceStore } from "../../state/index.ts";
-import {
-  historyShortcutLabel,
-  type HistoryAction
-} from "./historyShortcuts.ts";
+import type { HistoryAction } from "./historyShortcuts.ts";
 import { describeRefusal } from "./describeRefusal.ts";
 import type { ActiveHistory } from "./ActiveHistory.ts";
+import type { ModelAction } from "../../keybindings/modelActions.ts";
 
 export interface HistoryWorkspace {
   activeHistory: ActiveHistory;
   presence: PresenceStore;
+  shortcuts: Pick<ShortcutLabels<ModelAction>, "label" | "subscribe">;
 }
 
 export class HistoryButtons extends LitElement {
@@ -130,11 +130,14 @@ export class HistoryButtons extends LitElement {
   });
   #workspace = new SubscriptionController<HistoryWorkspace>(
     this,
-    ({ activeHistory }) => {
+    ({ activeHistory, shortcuts }) => {
       this.#sync();
       activeHistory.on("change", this.#sync);
 
-      return [() => activeHistory.off("change", this.#sync)];
+      return [
+        () => activeHistory.off("change", this.#sync),
+        shortcuts.subscribe(() => this.requestUpdate())
+      ];
     }
   );
 
@@ -198,7 +201,10 @@ export class HistoryButtons extends LitElement {
   ): TemplateResult {
     const what = step === null ? verb : `${verb} ${step}`;
     const where = this._target === null ? what : `${what} in ${this._target}`;
-    const title = `${where} (${historyShortcutLabel(action)})`;
+    const title = this.#workspace.current?.shortcuts.label(
+      where,
+      `edit.${action}`
+    ) ?? where;
 
     return html`
       <span class="action">

@@ -7,10 +7,10 @@ import type {
 import type { KeyBindingSettings } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
-import type { PixelArtKeyBindingSettings } from "./PixelArtKeyBindingSettings.ts";
+import type { PixelArtAction } from "./PixelArtKeyBindings.ts";
 
 export interface KeybindConsoleContext {
-  keyBindingSettings: PixelArtKeyBindingSettings;
+  keyBindingSettings: KeyBindingSettings<PixelArtAction>;
 }
 
 export function keybindConsole(

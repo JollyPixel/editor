@@ -7,7 +7,7 @@ import type {
 
 // Import Internal Dependencies
 import type { ToolStore } from "../state/index.ts";
-import type { MapGroupAction } from "../keybindings/MapKeyBindings.ts";
+import type { MapGroupAction } from "../keybindings/mapActions.ts";
 
 export const TOOL_EXIT_SHORTCUT = [
   "Escape"

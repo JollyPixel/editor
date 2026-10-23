@@ -6,7 +6,7 @@ import type {
 import type { VoxelTransformOptions } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { MapGroupAction } from "../../keybindings/MapKeyBindings.ts";
+import type { MapGroupAction } from "../../keybindings/mapActions.ts";
 
 export type PlacementAxis = Axis;
 

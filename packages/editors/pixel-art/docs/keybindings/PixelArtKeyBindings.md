@@ -1,16 +1,16 @@
-# PixelArtKeyBindingSettings
+# Pixel-art key bindings
 
 Per-browser keyboard shortcuts for a `PixelDrawPanel`. They are stored as the difference from
 `PIXEL_ART_KEY_BINDINGS` and can be edited from the console's `pixelart.keybinds` namespace.
 
 ```ts
-import {
-  PixelArtKeyBindingSettings,
-  pixelArtConsole
-} from "@jolly-pixel/editor.pixel-art";
+import { followKeyBindings } from "@jolly-pixel/editor.host";
+import { pixelArtConsole } from "@jolly-pixel/editor.pixel-art";
+import { PIXEL_ART_KEYBINDINGS } from "@jolly-pixel/editor.pixel-art/preferences";
 
-const keyBindingSettings = PixelArtKeyBindingSettings.follow(
+const keyBindingSettings = followKeyBindings(
   preferences,
+  PIXEL_ART_KEYBINDINGS,
   (message) => console.warn(message)
 );
 
@@ -19,7 +19,7 @@ const features = pixelArtConsole(commands, { keyBindingSettings, uvNets });
 ```
 
 Keybinds are per browser. They are not part of the asset and are not sent to peers. Every editor
-that embeds a `PixelDrawPanel` creates its own `PixelArtKeyBindingSettings` on the same storage key, so a
+that embeds a `PixelDrawPanel` creates its own settings over the same scope, so a
 shortcut changed in one editor applies in the others on the same origin after a reload.
 
 The default `selectAll` action is `Mod+a` (Ctrl+A on Windows/Linux and Cmd+A on macOS).
@@ -29,28 +29,17 @@ keep their native Select All behavior. Rebind it with `pixelart.keybinds.selectA
 ## Settings
 
 ```ts
-class PixelArtKeyBindingSettings extends KeyBindingSettings<PixelArtAction> {
-  static follow(
-    preferences: Preferences,
-    onDropped?: (message: string) => void
-  ): PixelArtKeyBindingSettings;
-
-  constructor(options?: {
-    overrides?: unknown;
-    onDropped?: (message: string) => void;
-  });
-}
+const PIXEL_ART_KEYBINDINGS: PreferenceScope<KeyBindingFields<PixelArtAction>>;
 ```
 
-A [`KeyBindingSettings`](../../../../controls/docs/key-binding-settings.md) over
-`PIXEL_ART_KEY_BINDINGS`. Assign it to `panel.keyBindings`: the panel binds it while
-connected and follows every change.
-
-`follow` keeps the bindings in the `pixel-art-keybindings` preference scope
-(`PIXEL_ART_KEYBINDINGS` from `@jolly-pixel/editor.pixel-art/preferences`) with
-[`followKeyBindings`](../../../host/docs/preferences/Preferences.md#followkeybindings),
-and rebinds when the scope changes in the studio's Settings tab. The three editors that show the
-panel use it, so one set of panel shortcuts follows the account.
+The `pixel-art-keybindings` preference scope, from
+`@jolly-pixel/editor.pixel-art/preferences`. Pass it to
+[`followKeyBindings`](../../../host/docs/preferences/Preferences.md#followkeybindings)
+to get a [`KeyBindingSettings<PixelArtAction>`](../../../../controls/docs/key-binding-settings.md)
+over `PIXEL_ART_KEY_BINDINGS`. Assign it to `panel.keyBindings`: the panel binds it while
+connected and follows every change. The settings rebind when the scope changes in the
+studio's Settings tab. The three editors that show the panel use it, so one set of panel
+shortcuts follows the account.
 
 Bindings are [key chords](../../../../controls/docs/key-chords.md) such as `"Mod+Shift+z"`. A
 lowercase letter follows the printed key and a code such as `"KeyZ"` follows the key position.
@@ -75,7 +64,7 @@ const PIXEL_ART_KEY_BINDINGS: {
 type PixelArtAction = keyof typeof PIXEL_ART_KEY_BINDINGS;
 ```
 
-`new PixelArtKeyBindingSettings({ overrides })` builds settings without preferences, for
+`new KeyBindingSettings({ defaults: PIXEL_ART_KEY_BINDINGS, overrides })` builds settings without preferences, for
 example to set `panel.keyBindings` directly.
 
 ## Console

@@ -37,7 +37,7 @@ const kKeys = defineKeyBindings({
     }
   }
 });
-const kScopes = new PreferenceScopes([STUDIO_PREFERENCES, kKeys]);
+const kScopes = new PreferenceScopes([STUDIO_PREFERENCES, kKeys], []);
 
 function jsonFile(
   value: unknown

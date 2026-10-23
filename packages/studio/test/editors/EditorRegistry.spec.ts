@@ -41,19 +41,17 @@ describe("EditorRegistry", () => {
   });
 
   test("builds the page url with the encoded target", () => {
-    const registry = new EditorRegistry().registerEditor(kMapEditor);
+    const registry = new EditorRegistry();
 
     assert.equal(
-      registry.pageUrl("voxelmap", "map a&b"),
+      registry.pageUrl("voxel-map", "map a&b"),
       "editors/voxel-map/?target=map+a%26b"
     );
-    assert.equal(registry.pageUrl("texture", "map"), undefined);
   });
 
   test("builds a page url that stays under the shell's sub-path", () => {
-    const registry = new EditorRegistry().registerEditor(kMapEditor);
-    const url = registry.pageUrl("voxelmap", "map");
-    assert.ok(url);
+    const registry = new EditorRegistry();
+    const url = registry.pageUrl("voxel-map", "map");
 
     assert.equal(
       new URL(url, "https://example.com/studio/").pathname,
@@ -71,10 +69,10 @@ describe("EditorRegistry", () => {
         offline: "studio"
       },
       prefix: "/pages/"
-    }).registerEditor(kMapEditor);
+    });
 
     assert.equal(
-      registry.pageUrl("voxelmap", "map"),
+      registry.pageUrl("voxel-map", "map"),
       "/pages/voxel-map/?offline=studio&target=map"
     );
   });

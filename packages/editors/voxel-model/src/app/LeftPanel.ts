@@ -19,7 +19,7 @@ import type {
 } from "@jolly-pixel/pixel-draw.renderer";
 import {
   TextureRoom,
-  type PixelArtKeyBindingSettings,
+  type PixelArtAction,
   type PixelDrawPanel,
   type UvNetLibrary
 } from "@jolly-pixel/editor.pixel-art";
@@ -27,6 +27,7 @@ import {
   SharedPixelHistory,
   type PixelArtRoom
 } from "@jolly-pixel/asset.pixel-art/client";
+import type { KeyBindingSettings } from "@jolly-pixel/controls";
 import "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -74,7 +75,7 @@ export class LeftPanel extends LitElement {
   declare workspace: LeftPanelWorkspace | null;
 
   @property({ attribute: false })
-  declare keyBindingSettings: PixelArtKeyBindingSettings | null;
+  declare keyBindingSettings: KeyBindingSettings<PixelArtAction> | null;
 
   @property({ attribute: false })
   declare uvNets: UvNetLibrary | null;

@@ -73,6 +73,8 @@ if (dashCombo()) {
       by action.
     - [KeyBindingSettings](./docs/key-binding-settings.md): the current
       shortcut map of a feature, with a change event to save it.
+    - [ShortcutLabels](./docs/shortcut-labels.md): tooltip text with the
+      chords bound to an action, on the user's keyboard layout.
   - [Gamepad](./docs/gamepad.md)
   - [Touchpad](./docs/touchpad.md)
   - [Screen](./docs/screen.md)

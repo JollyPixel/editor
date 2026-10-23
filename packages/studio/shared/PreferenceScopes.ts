@@ -13,21 +13,37 @@ export const SHELL_PREFERENCES: readonly PreferenceScope[] = [
   STUDIO_PREFERENCES,
   ...HOST_PREFERENCES
 ];
+const kHostScopeNames: ReadonlySet<string> = new Set(
+  HOST_PREFERENCES.map((scope) => scope.name)
+);
+
+export interface EditorPreferenceScopes {
+  name: string;
+  scopes: readonly PreferenceScope[];
+  shared: readonly PreferenceScope[];
+}
 
 export class PreferenceScopes implements Iterable<PreferenceScope> {
   static studio(
-    editorScopes: Iterable<PreferenceScope>
+    editors: Iterable<EditorPreferenceScopes>
   ): PreferenceScopes {
-    return new PreferenceScopes([
-      ...SHELL_PREFERENCES,
-      ...editorScopes
-    ]);
+    const list = [...editors];
+
+    return new PreferenceScopes(
+      [
+        ...SHELL_PREFERENCES,
+        ...list.flatMap(({ scopes, shared }) => [...scopes, ...shared])
+      ],
+      list
+    );
   }
 
   #scopes = new Map<string, PreferenceScope>();
+  #readBy = new Map<string, ReadonlySet<string>>();
 
   constructor(
-    scopes: Iterable<PreferenceScope>
+    scopes: Iterable<PreferenceScope>,
+    editors: Iterable<EditorPreferenceScopes>
   ) {
     for (const scope of scopes) {
       const known = this.#scopes.get(scope.name);
@@ -38,12 +54,24 @@ export class PreferenceScopes implements Iterable<PreferenceScope> {
         throw new Error(`Two different "${scope.name}" preference scopes.`);
       }
     }
+    for (const { name, scopes: own, shared } of editors) {
+      this.#readBy.set(name, new Set([
+        ...kHostScopeNames,
+        ...[...own, ...shared].map((scope) => scope.name)
+      ]));
+    }
   }
 
   find(
     name: string
   ): PreferenceScope | undefined {
     return this.#scopes.get(name);
+  }
+
+  readBy(
+    editor: string
+  ): ReadonlySet<string> {
+    return this.#readBy.get(editor) ?? kHostScopeNames;
   }
 
   prune(

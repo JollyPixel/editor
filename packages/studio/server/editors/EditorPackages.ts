@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
 import type { PackageResolver } from "@jolly-pixel/asset-server/node";
-import type { PreferenceScope } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import type { EditorDescriptor } from "../../shared/EditorDescriptor.ts";
+import type { EditorPreferenceScopes } from "../../shared/PreferenceScopes.ts";
 import { EditorPackage } from "./EditorPackage.ts";
 
 export class EditorPackages implements Iterable<EditorPackage> {
@@ -51,10 +51,14 @@ export class EditorPackages implements Iterable<EditorPackage> {
     return this.#editors.find((editor) => editor.kinds.includes(kind));
   }
 
-  preferences(): PreferenceScope[] {
-    return this.#editors.flatMap(
-      (editor) => [...editor.preferences, ...editor.sharedPreferences]
-    );
+  editorScopes(): EditorPreferenceScopes[] {
+    return this.#editors.map((editor) => {
+      return {
+        name: editor.name,
+        scopes: editor.preferences,
+        shared: editor.sharedPreferences
+      };
+    });
   }
 
   descriptors(): EditorDescriptor[] {

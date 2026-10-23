@@ -1,6 +1,12 @@
-// Import Internal Dependencies
-import { MapKeyBindingSettings } from "../../src/keybindings/MapKeyBindings.ts";
+// Import Third-party Dependencies
+import { KeyBindingSettings } from "@jolly-pixel/controls";
 
-export function defaultKeyBindings(): MapKeyBindingSettings {
-  return new MapKeyBindingSettings();
+// Import Internal Dependencies
+import {
+  MAP_KEY_BINDINGS,
+  type MapAction
+} from "../../src/keybindings/mapActions.ts";
+
+export function defaultKeyBindings(): KeyBindingSettings<MapAction> {
+  return new KeyBindingSettings({ defaults: MAP_KEY_BINDINGS });
 }

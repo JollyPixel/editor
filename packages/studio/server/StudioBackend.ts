@@ -170,7 +170,7 @@ export class StudioBackend implements AsyncDisposable {
         backend: assetServer.backend,
         name: project.name
       }),
-      preferences: PreferenceScopes.studio(project.editors.preferences()),
+      preferences: PreferenceScopes.studio(project.editors.editorScopes()),
       requestsPerMinute: options.requestsPerMinute,
       trustProxy: options.trustProxy
     }));
