@@ -1,6 +1,3 @@
-// Import Third-party Dependencies
-import { IDBFactory } from "fake-indexeddb";
-
 // Import Internal Dependencies
 import {
   MemoryAssetSource,
@@ -42,8 +39,7 @@ export const sourceImplementations: SourceImplementation[] = [
     name: "IndexedDbAssetSource",
     create: async() => {
       const source = await IndexedDbAssetSource.open({
-        name: "conformance",
-        factory: new IDBFactory()
+        name: crypto.randomUUID()
       });
 
       return {

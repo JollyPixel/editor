@@ -17,28 +17,29 @@ source.close();
 
 The source is exported from the package root. It only reaches the `indexedDB`
 global when `open()` or `destroy()` runs, so loading the root in Node.js is
-safe.
+safe. Node.js tests can install the IndexedDB globals with
+`fake-indexeddb/auto`.
 
 ```ts
 IndexedDbAssetSource.open(options): Promise<IndexedDbAssetSource>
 IndexedDbAssetSource.destroy(options): Promise<void>
 source.close(): void
+
+interface IndexedDbAssetSourceOptions {
+  name: string;
+}
 ```
 
-| Option | Default | Description |
-|---|---|---|
-| `name` | required | Database name. Two sources opened on one name share their assets. |
-| `factory` | `globalThis.indexedDB` | The `IDBFactory` to open the database with. |
+`name` is the database name. Two sources opened on one name share their
+assets.
 
 - A write resolves once its transaction completed. A failed transaction
   rejects the write with the IndexedDB error, `QuotaExceededError` included.
 - `write` and `writeIfAbsent` copy their input bytes, and `read` returns a
   copy.
 - `list()` leaves out the `.jollypixel/` state files, which stay readable.
-- A database created before the `folders` store is upgraded when opened, and
-  the folders of the files it already held are stored then.
-- `destroy` deletes the database. It waits for every open connection, so
-  `close()` the source first.
+- `destroy` deletes the database. A source still open on it closes its
+  connection first, then rejects its next call.
 
 The source implements the shared [`AssetSource`](../../README.md#assetsource) storage
 contract. `isIgnored` matches the `.jollypixel/` state directory only, and

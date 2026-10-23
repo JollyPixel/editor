@@ -3,15 +3,12 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { indexedDB } from "fake-indexeddb";
 import { BINARY_KIND } from "@jolly-pixel/asset-server";
 import { CatalogClient } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
 import { openOfflineBackend } from "#src/offline/shared-tab/openOfflineBackend.ts";
 import { openBridgeChannel } from "#src/offline/shared-tab/protocol.ts";
-
-Object.assign(globalThis, { indexedDB });
 
 async function openTabs() {
   const name = `remote-${crypto.randomUUID()}`;

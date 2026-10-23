@@ -132,15 +132,16 @@ has no `watch()` implementation.
 ```mermaid
 flowchart TB
     Caller["Browser caller"] -->|"open(name)"| Source["IndexedDbAssetSource"]
-    Source -->|"readonly or readwrite transaction"| Files[("IndexedDB<br/>files object store")]
-    Files -->|"result after transaction completes"| Source
+    Source -->|"readonly or readwrite transaction"| Stores[("IndexedDB<br/>files and folders stores")]
+    Stores -->|"read result, or write once committed"| Source
     Source -->|"close()"| Closed["Connection closed"]
 ```
 
-The object store uses normalized asset paths as keys. `open()` creates it when
-the database is first opened; later opens of the same database name see the
-stored assets. `close()` releases a connection, while `destroy()` deletes the
-database after its connections close. This adapter has no `watch()`
+The `files` store is keyed by normalized asset path and the `folders` store by
+folder path; a write stores the file's parent folders in the same transaction.
+`open()` creates both stores when the database is first opened; later opens of
+the same database name see the stored assets. `close()` releases a connection, while `destroy()` deletes the
+database and closes the sources still open on it. This adapter has no `watch()`
 implementation.
 
 ## HTTP read path

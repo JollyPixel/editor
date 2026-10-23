@@ -1,21 +1,20 @@
 // Import Node.js Dependencies
 import {
+  beforeEach,
   describe,
   test
 } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { IDBFactory } from "fake-indexeddb";
+import { deleteDB } from "idb";
 import type { NetworkCommandHeader } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import { PendingOutboxes } from "#src/lease/outbox/PendingOutboxes.ts";
 
-async function page(
-  indexedDB: IDBFactory
-): Promise<PendingOutboxes> {
-  const outboxes = await PendingOutboxes.open({ indexedDB });
+async function page(): Promise<PendingOutboxes> {
+  const outboxes = await PendingOutboxes.open();
   assert.ok(outboxes);
 
   return outboxes;
@@ -31,40 +30,11 @@ function command(
   };
 }
 
-async function keepInVersionOne(
-  indexedDB: IDBFactory,
-  room: string,
-  commands: NetworkCommandHeader[]
-): Promise<void> {
-  const request = indexedDB.open("jolly-pixel:pending-changes", 1);
-  request.onupgradeneeded = () => {
-    request.result.createObjectStore("commands", {
-      keyPath: "id",
-      autoIncrement: true
-    });
-  };
-  const database = await new Promise<IDBDatabase>((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-  const transaction = database.transaction("commands", "readwrite");
-  for (const kept of commands) {
-    transaction.objectStore("commands").add({
-      room,
-      owner: "closed-page",
-      command: kept
-    });
-  }
-  await new Promise((resolve) => {
-    transaction.oncomplete = resolve;
-  });
-  database.close();
-}
-
 describe("PendingOutboxes", () => {
+  beforeEach(() => deleteDB("jolly-pixel:pending-changes"));
+
   test("a later page claims, in order, the commands a closed page still kept", async() => {
-    const indexedDB = new IDBFactory();
-    const closed = await page(indexedDB);
+    const closed = await page();
     const room = closed.open("pixelart:tex");
     const [first, second, third] = [command(1), command(2), command(3)];
     room.keep(first);
@@ -75,18 +45,17 @@ describe("PendingOutboxes", () => {
     assert.deepEqual(closed.open("pixelart:tex").restore(), [second, third]);
     await closed.close();
 
-    const later = await page(indexedDB);
+    const later = await page();
 
     assert.deepEqual(
       later.open("pixelart:tex").restore(),
       [command(2), command(3)]
     );
-    assert.deepEqual((await page(indexedDB)).open("pixelart:tex").restore(), []);
+    assert.deepEqual((await page()).open("pixelart:tex").restore(), []);
   });
 
   test("keeps one copy per command, updated by each later keep", async() => {
-    const indexedDB = new IDBFactory();
-    const closed = await page(indexedDB);
+    const closed = await page();
     const kept = {
       clientId: "A",
       seq: 0,
@@ -100,25 +69,8 @@ describe("PendingOutboxes", () => {
     await closed.close();
 
     assert.deepEqual(
-      (await page(indexedDB)).open("pixelart:tex").restore(),
+      (await page()).open("pixelart:tex").restore(),
       [command(4)]
-    );
-  });
-
-  test("claims and drops the commands a page kept before the ref index", async() => {
-    const indexedDB = new IDBFactory();
-    await keepInVersionOne(indexedDB, "pixelart:tex", [command(1), command(2)]);
-
-    const upgraded = await page(indexedDB);
-    const room = upgraded.open("pixelart:tex");
-    const [first, second] = room.restore();
-    assert.deepEqual([first, second], [command(1), command(2)]);
-    room.drop(first);
-    await upgraded.close();
-
-    assert.deepEqual(
-      (await page(indexedDB)).open("pixelart:tex").restore(),
-      [command(2)]
     );
   });
 });

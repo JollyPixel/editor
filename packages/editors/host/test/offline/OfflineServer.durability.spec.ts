@@ -6,7 +6,6 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { indexedDB } from "fake-indexeddb";
 import { BINARY_KIND } from "@jolly-pixel/asset-server";
 import type * as EventStore from "@jolly-pixel/event-store";
 
@@ -20,8 +19,6 @@ const kActor: EventStore.Actor = {
   type: "user",
   id: "guest"
 };
-
-Object.assign(globalThis, { indexedDB });
 
 function openOwner(
   databaseName: string

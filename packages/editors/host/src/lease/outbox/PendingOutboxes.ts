@@ -9,26 +9,10 @@ import {
 } from "./OutboxStore.ts";
 import { RoomOutbox } from "./RoomOutbox.ts";
 
-export interface PendingOutboxesOptions {
-  /**
-   * @default globalThis.indexedDB
-   */
-  indexedDB?: IDBFactory;
-  /**
-   * @default globalThis.navigator.locks
-   */
-  locks?: LockManager;
-}
-
 export class PendingOutboxes {
-  static async open(
-    options: PendingOutboxesOptions = {}
-  ): Promise<PendingOutboxes | null> {
-    const {
-      indexedDB = globalThis.indexedDB,
-      locks = globalThis.navigator?.locks
-    } = options;
-    if (indexedDB === undefined || locks === undefined) {
+  static async open(): Promise<PendingOutboxes | null> {
+    const locks = globalThis.navigator?.locks;
+    if (globalThis.indexedDB === undefined || locks === undefined) {
       return null;
     }
 
@@ -36,10 +20,7 @@ export class PendingOutboxes {
     let store: OutboxStore | null = null;
     try {
       lock = await OwnerLock.acquire(locks);
-      store = await OutboxStore.open({
-        indexedDB,
-        owner: lock.id
-      });
+      store = await OutboxStore.open(lock.id);
       const claimed = await store.claim(await lock.liveOwners());
 
       return new PendingOutboxes(lock, store, claimed);

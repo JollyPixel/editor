@@ -5,9 +5,6 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import { IDBFactory } from "fake-indexeddb";
-
 // Import Internal Dependencies
 import * as EventStore from "#src/index.ts";
 import {
@@ -17,21 +14,18 @@ import {
 } from "../helpers/backends.ts";
 
 function open(
-  factory: IDBFactory
+  name: string
 ): Promise<EventStore.EventStore> {
-  return EventStore.persistence.indexeddb({
-    name: "events",
-    factory
-  });
+  return EventStore.persistence.indexeddb({ name });
 }
 
 describe("IndexedDbEventStore — durability", () => {
   test("an append reaches a second connection before the first one closes", async() => {
-    const factory = new IDBFactory();
-    using first = await open(factory);
+    const name = crypto.randomUUID();
+    using first = await open(name);
     append(first, "a1", { x: 1 });
 
-    using second = await open(factory);
+    using second = await open(name);
 
     assert.deepEqual(
       second.reader.list("a1").map((event) => event.eventData),
@@ -40,14 +34,14 @@ describe("IndexedDbEventStore — durability", () => {
   });
 
   test("a reopened store keeps tags and continues ids and versions", async() => {
-    const factory = new IDBFactory();
-    const first = await open(factory);
+    const name = crypto.randomUUID();
+    const first = await open(name);
     append(first, "a1", { x: 1 });
     append(first, "a2", { x: 2 });
     const created = tag(first, "a1", "v1");
     first.close();
 
-    using second = await open(factory);
+    using second = await open(name);
     const next = append(second, "a1", { x: 3 });
 
     assert.deepEqual(second.tags.list(), [created]);
@@ -68,21 +62,21 @@ describe("IndexedDbEventStore — durability", () => {
   });
 
   test("a deleted tag stays deleted after a reopen", async() => {
-    const factory = new IDBFactory();
-    const first = await open(factory);
+    const name = crypto.randomUUID();
+    const first = await open(name);
     append(first, "a1");
     tag(first, "a1", "v1");
     first.tags.delete("a1", "v1");
     first.close();
 
-    using second = await open(factory);
+    using second = await open(name);
 
     assert.deepEqual(second.tags.list(), []);
   });
 
   test("compaction removes the superseded events from the database", async() => {
-    const factory = new IDBFactory();
-    const first = await open(factory);
+    const name = crypto.randomUUID();
+    const first = await open(name);
     append(first, "a1", { revision: 1 }, "asset.created");
     append(first, "a1", { x: 1 });
     append(first, "a1", { revision: 2 }, "asset.updated");
@@ -91,7 +85,7 @@ describe("IndexedDbEventStore — durability", () => {
     });
     first.close();
 
-    using second = await open(factory);
+    using second = await open(name);
 
     assert.deepEqual(
       second.reader.list("a1").map((event) => event.eventVersion),
@@ -102,14 +96,11 @@ describe("IndexedDbEventStore — durability", () => {
 
 describe("IndexedDbEventStore — deletion elsewhere", () => {
   test("an append fails once another connection deletes the database", async() => {
-    const factory = new IDBFactory();
-    using store = await open(factory);
+    const name = crypto.randomUUID();
+    using store = await open(name);
     append(store, "a1", { x: 1 });
 
-    await EventStore.persistence.indexeddb.destroy({
-      name: "events",
-      factory
-    });
+    await EventStore.persistence.indexeddb.destroy({ name });
     const result = store.writer.append({
       assetType: "texture",
       assetId: "a1",

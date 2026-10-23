@@ -22,7 +22,7 @@
     "build": "tsc -b",
     "bench": "jolly-bench",
     "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p bench/tsconfig.json",
-    "test-only": "node --test \"test/**/*.spec.ts\"",
+    "test-only": "node --import fake-indexeddb/auto --test \"test/**/*.spec.ts\"",
     "test-types": "tstyche --tsconfig ./test/tsconfig.json",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",
     "lint": "oxlint src test"
@@ -49,7 +49,8 @@
   "license": "MIT",
   "dependencies": {
     "@openally/emitt": "1.1.0",
-    "@openally/result": "3.1.0"
+    "@openally/result": "3.1.0",
+    "idb": "8.0.4"
   },
   "devDependencies": {
     "@jolly-pixel/bench": "workspace:*",

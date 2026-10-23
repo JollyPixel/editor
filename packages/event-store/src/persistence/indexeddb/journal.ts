@@ -1,3 +1,13 @@
+// Import Third-party Dependencies
+import {
+  deleteDB,
+  openDB,
+  unwrap,
+  type DBSchema,
+  type IDBPDatabase,
+  type StoreNames
+} from "idb";
+
 // Import Internal Dependencies
 import type {
   Event,
@@ -8,73 +18,63 @@ import type { MemoryEventLogOptions } from "../memory/log.ts";
 
 // CONSTANTS
 const kDatabaseVersion = 1;
-const kEventsStore = "events";
-const kTagsStore = "tags";
 
-type IndexedDbStore = typeof kEventsStore | typeof kTagsStore;
+interface JournalSchema extends DBSchema {
+  events: {
+    key: number;
+    value: Event;
+  };
+  tags: {
+    key: [string, string];
+    value: EventTag;
+  };
+}
 
 export interface IndexedDbEventStoreOptions {
   name: string;
-  /**
-   * @default globalThis.indexedDB
-   */
-  factory?: IDBFactory;
 }
 
 export class IndexedDbJournal implements EventJournal {
   static async open(
     options: IndexedDbEventStoreOptions
   ): Promise<IndexedDbJournal> {
-    const {
-      name,
-      factory = globalThis.indexedDB
-    } = options;
-
-    const request = factory.open(name, kDatabaseVersion);
-    request.onupgradeneeded = () => {
-      const database = request.result;
-      if (!database.objectStoreNames.contains(kEventsStore)) {
-        database.createObjectStore(kEventsStore, { keyPath: "eventId" });
+    const database = await openDB<JournalSchema>(
+      options.name,
+      kDatabaseVersion,
+      {
+        upgrade(database) {
+          database.createObjectStore("events", { keyPath: "eventId" });
+          database.createObjectStore("tags", {
+            keyPath: ["assetId", "name"]
+          });
+        }
       }
-      if (!database.objectStoreNames.contains(kTagsStore)) {
-        database.createObjectStore(kTagsStore, {
-          keyPath: ["assetId", "name"]
-        });
-      }
-    };
+    );
 
-    return new IndexedDbJournal(await settled(request));
+    return new IndexedDbJournal(database);
   }
 
   static async destroy(
     options: IndexedDbEventStoreOptions
   ): Promise<void> {
-    const {
-      name,
-      factory = globalThis.indexedDB
-    } = options;
-
-    await settled(factory.deleteDatabase(name));
+    await deleteDB(options.name);
   }
 
-  #database: IDBDatabase;
+  #database: IDBPDatabase<JournalSchema>;
   #failure: Error | null = null;
 
   constructor(
-    database: IDBDatabase
+    database: IDBPDatabase<JournalSchema>
   ) {
     this.#database = database;
     database.onversionchange = () => database.close();
   }
 
   async load(): Promise<MemoryEventLogOptions> {
-    const transaction = this.#database.transaction(
-      [kEventsStore, kTagsStore],
-      "readonly"
-    );
+    const transaction = this.#database.transaction(["events", "tags"]);
     const [events, tags] = await Promise.all([
-      settled<Event[]>(transaction.objectStore(kEventsStore).getAll()),
-      settled<EventTag[]>(transaction.objectStore(kTagsStore).getAll())
+      transaction.objectStore("events").getAll(),
+      transaction.objectStore("tags").getAll()
     ]);
 
     return {
@@ -86,13 +86,13 @@ export class IndexedDbJournal implements EventJournal {
   putEvent(
     event: Event
   ): void {
-    this.#writable(kEventsStore).put(event);
+    this.#writable("events").put(event);
   }
 
   deleteEvents(
     events: Iterable<Event>
   ): void {
-    const store = this.#writable(kEventsStore);
+    const store = this.#writable("events");
     for (const event of events) {
       store.delete(event.eventId);
     }
@@ -101,14 +101,14 @@ export class IndexedDbJournal implements EventJournal {
   putTag(
     tag: EventTag
   ): void {
-    this.#writable(kTagsStore).put(tag);
+    this.#writable("tags").put(tag);
   }
 
   deleteTag(
     assetId: string,
     name: string
   ): void {
-    this.#writable(kTagsStore).delete([assetId, name]);
+    this.#writable("tags").delete([assetId, name]);
   }
 
   close(): void {
@@ -116,28 +116,17 @@ export class IndexedDbJournal implements EventJournal {
   }
 
   #writable(
-    store: IndexedDbStore
+    store: StoreNames<JournalSchema>
   ): IDBObjectStore {
     if (this.#failure !== null) {
       throw this.#failure;
     }
 
     const transaction = this.#database.transaction(store, "readwrite");
-    transaction.onabort = () => {
-      this.#failure ??= transaction.error ??
-        new Error(`IndexedDB write to "${store}" was aborted`);
-    };
+    transaction.done.catch((error) => {
+      this.#failure ??= error;
+    });
 
-    return transaction.objectStore(store);
+    return unwrap(transaction.store);
   }
-}
-
-function settled<T>(
-  request: IDBRequest<T>
-): Promise<T> {
-  const { promise, resolve, reject } = Promise.withResolvers<T>();
-  request.onsuccess = () => resolve(request.result);
-  request.onerror = () => reject(request.error);
-
-  return promise;
 }

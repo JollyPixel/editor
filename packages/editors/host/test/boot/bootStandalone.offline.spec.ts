@@ -3,7 +3,6 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { indexedDB } from "fake-indexeddb";
 import {
   BINARY_KIND,
   TEXTURE_KIND,
@@ -19,8 +18,6 @@ import type {
 } from "#src/boot/EditorDefinition.ts";
 import type { OfflineMode } from "#src/connection/OfflineMode.ts";
 import { editorHandle } from "../helpers/editorHandle.ts";
-
-Object.assign(globalThis, { indexedDB });
 
 interface OfflineBoot {
   target: string;
