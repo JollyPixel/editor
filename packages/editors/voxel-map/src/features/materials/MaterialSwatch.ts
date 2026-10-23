@@ -1,22 +1,19 @@
 // Import Third-party Dependencies
-import {
-  goldenAngleColor,
-  hashKey
-} from "@jolly-pixel/color";
+import { ColorSequence } from "@jolly-pixel/color";
 import type { MaterialGroup } from "@jolly-pixel/voxel.renderer";
 
 // CONSTANTS
 const kNoEmissive = "#000000";
-const kDerivedColor = {
+const kDerivedColors = ColorSequence.goldenAngle({
   saturation: 0.65,
   lightness: 0.55
-};
+});
 
 export class MaterialSwatch {
   static derivedColor(
     materialId: string
   ): string {
-    return goldenAngleColor(hashKey(materialId), kDerivedColor);
+    return kDerivedColors.pick(materialId);
   }
 
   static fromMaterial(

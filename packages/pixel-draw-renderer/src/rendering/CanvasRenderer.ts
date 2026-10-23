@@ -1,9 +1,12 @@
 // Import Third-party Dependencies
+import {
+  assertColor8,
+  formatRgba8
+} from "@jolly-pixel/color";
 import type { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import { createCanvas2D } from "./Canvas2D.ts";
-import { toCssColor } from "../utils/colors.ts";
 import type { ByteColorInput } from "../types.ts";
 import type { CanvasBuffer } from "../buffer/CanvasBuffer.ts";
 import type { GridLines } from "../grid/GridLines.ts";
@@ -99,10 +102,10 @@ export class CanvasRenderer {
     );
     this.#bgSquareSize = bgSquareSize;
     this.#bgColors = {
-      odd: toCssColor(bgColors.odd),
-      even: toCssColor(bgColors.even)
+      odd: formatRgba8(assertColor8(bgColors.odd)),
+      even: formatRgba8(assertColor8(bgColors.even))
     };
-    this.#backgroundColor = toCssColor(backgroundColor);
+    this.#backgroundColor = formatRgba8(assertColor8(backgroundColor));
 
     ({ canvas: this.#canvas, context: this.#ctx } = createCanvas2D(0, 0));
     ({ canvas: this.#bgCanvas, context: this.#bgCtx } = createCanvas2D(0, 0));
@@ -129,7 +132,7 @@ export class CanvasRenderer {
   set backgroundColor(
     color: ByteColorInput
   ) {
-    this.#backgroundColor = toCssColor(color);
+    this.#backgroundColor = formatRgba8(assertColor8(color));
     this.drawFrame();
   }
 

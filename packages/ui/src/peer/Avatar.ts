@@ -12,7 +12,7 @@ import {
   property,
   state
 } from "lit/decorators.js";
-import { colorFromKey } from "@jolly-pixel/color";
+import { ColorSequence } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import { pickDefaultAvatar } from "./defaultAvatars.ts";
@@ -171,7 +171,7 @@ export class Avatar extends LitElement {
       <svg
         part="portrait"
         viewBox="0 0 24 24"
-        style=${`--jolly-avatar-color: ${this.color || colorFromKey(this.peerId)}`}
+        style=${`--jolly-avatar-color: ${this.color || ColorSequence.default.pick(this.peerId)}`}
       >
         <rect class="backdrop" width="24" height="24" />
         <path class="face" d=${avatar.face} />

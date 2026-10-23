@@ -1,8 +1,7 @@
 // Import Third-party Dependencies
 import {
+  colorHarmony,
   formatHex,
-  hsvToRgb,
-  rgbToHsv,
   type HSVA
 } from "@jolly-pixel/color";
 import {
@@ -21,53 +20,81 @@ import {
 // Import Internal Dependencies
 import { saturationValueFromPointer } from "../color/area.ts";
 import {
-  applyChannel,
   channelValues,
-  CHANNEL_BOUNDS,
-  type ChannelValues,
-  type ColorChannel
+  CHANNEL_ROWS,
+  type ColorPickerChannels
 } from "../color/channels.ts";
 import { parseFieldColor } from "../color/draft.ts";
-import { colorPickerStyles } from "./ColorPicker.styles.ts";
-import { emitFieldEvent } from "../field/events.ts";
-import { DraftController } from "../field/DraftController.ts";
+import { PickerFields } from "../color/PickerFields.ts";
+import { PickerPreferences } from "../color/PickerPreferences.ts";
+import { PickerSettings } from "../color/PickerSettings.ts";
 import {
-  formatNumber,
-  parseNumericEntry
-} from "../numeric/entry.ts";
+  COLOR_PICKER_DEFAULTS,
+  type ColorPickerHarmony,
+  type ColorPickerPreferences,
+  type ColorPickerPreferenceSource,
+  type ColorPickerSelector
+} from "../color/preferences.ts";
+import {
+  PickerSpace,
+  type ColorPickerSpace
+} from "../color/space.ts";
+import {
+  paintSurface,
+  SquareSurface,
+  WheelSurface,
+  type PickerSurface
+} from "../color/surface.ts";
+import {
+  DISCRETE_HUE_STEP,
+  DISCRETE_SATURATION_STEPS,
+  hueSaturationFromPointer,
+  snapToWheel,
+  wheelPosition
+} from "../color/wheel.ts";
+import { colorPickerStyles } from "./ColorPicker.styles.ts";
+import { emitComposedEvent } from "../events.ts";
+import {
+  emitFieldEvent,
+  type JollyChangeDetail
+} from "../field/events.ts";
 import { isInputElement } from "../dom.ts";
 
 // CONSTANTS
 const kAxisSteps = 1000;
 const kHueSteps = 360;
 const kAlphaSteps = 100;
-const kAlphaStep = 1 / kAlphaSteps;
 const kBlack: HSVA = {
   h: 0,
   s: 0,
   v: 0,
   a: 1
 };
-const kChannelLabels: Readonly<Record<ColorChannel, [string, string]>> = {
-  r: ["R", "Red value"],
-  g: ["G", "Green value"],
-  b: ["B", "Blue value"],
-  h: ["H", "Hue value"],
-  s: ["S", "HSL saturation value"],
-  l: ["L", "HSL lightness value"],
-  a: ["A", "Alpha value"]
-};
-const kChannelRows: ReadonlyArray<[ColorChannel, ColorChannel]> = [
-  ["r", "h"],
-  ["g", "s"],
-  ["b", "l"]
-];
+const kPreferences = new PickerPreferences();
 
 export type ColorPickerLayout = "stack" | "wide";
+export type {
+  ColorPickerChannels,
+  ColorPickerHarmony,
+  ColorPickerPreferences,
+  ColorPickerPreferenceSource,
+  ColorPickerSelector,
+  ColorPickerSpace
+};
 
 export interface ColorPickerDefaults {
   value: string;
   layout: ColorPickerLayout;
+}
+
+interface SliderTemplate {
+  label: string;
+  max: number;
+  value: number;
+  onChange: (event: Event) => void;
+  className?: string;
+  step?: number;
+  vertical?: boolean;
 }
 
 @customElement("jolly-color-picker")
@@ -80,6 +107,18 @@ export class ColorPicker extends LitElement {
   static override styles = [
     colorPickerStyles
   ];
+
+  static configure(
+    patch: Partial<ColorPickerPreferences>
+  ): void {
+    kPreferences.update(patch);
+  }
+
+  static follow(
+    source: ColorPickerPreferenceSource
+  ): () => void {
+    return kPreferences.follow(source);
+  }
 
   @property({ type: String })
   declare value: string;
@@ -97,6 +136,24 @@ export class ColorPicker extends LitElement {
   @property({ type: String, reflect: true })
   declare layout: ColorPickerLayout;
 
+  @property({ type: String })
+  declare space: ColorPickerSpace | undefined;
+
+  @property({ type: String })
+  declare selector: ColorPickerSelector | undefined;
+
+  @property({ type: String })
+  declare channels: ColorPickerChannels | undefined;
+
+  @property({ type: String })
+  declare harmony: ColorPickerHarmony | undefined;
+
+  @property({ type: Boolean })
+  declare discrete: boolean | undefined;
+
+  @property({ type: Boolean, reflect: true })
+  declare settings: boolean;
+
   @property({ type: Boolean, reflect: true })
   declare disabled: boolean;
 
@@ -109,11 +166,23 @@ export class ColorPicker extends LitElement {
   @query(".axis-saturation")
   declare _saturation: HTMLInputElement;
 
-  #hsva: HSVA = kBlack;
-  #draft: string | null = null;
-  #alphaDraft = new DraftController<number>(this);
-  #channelDrafts = new Map<ColorChannel, DraftController<number>>();
-  #invalid = false;
+  @query("canvas.surface")
+  declare _surface: HTMLCanvasElement;
+
+  #point: HSVA = kBlack;
+  #pointSpace = PickerSpace.hsv;
+  #preferences: ColorPickerPreferences = COLOR_PICKER_DEFAULTS;
+  #fields = new PickerFields(this, {
+    point: () => this.#point,
+    space: () => this.#pointSpace,
+    hex: () => this.#hex,
+    alpha: () => this.alpha,
+    change: (point) => this.#commitPoint(point)
+  });
+  #settings = new PickerSettings(this, {
+    preferences: () => this.#preferences,
+    configure: (patch) => ColorPicker.configure(patch)
+  });
 
   constructor() {
     super();
@@ -124,6 +193,17 @@ export class ColorPicker extends LitElement {
     this.layout = ColorPicker.Defaults.layout;
     this.disabled = false;
     this.readonly = false;
+    this.settings = false;
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    kPreferences.attach(this);
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    kPreferences.detach(this);
   }
 
   override focus(
@@ -135,12 +215,53 @@ export class ColorPicker extends LitElement {
   protected override willUpdate(
     changed: PropertyValues<this>
   ): void {
+    this.#preferences = this.#resolvePreferences();
+    const space = PickerSpace.named(this.#preferences.space);
+    if (space !== this.#pointSpace) {
+      this.#point = this.#pointSpace.convert(this.#point, space);
+      this.#pointSpace = space;
+    }
+
     if (
       changed.has("value") ||
       changed.has("alpha")
     ) {
       this.#adoptValue();
     }
+  }
+
+  protected override updated(): void {
+    paintSurface(this._surface, this.#surface);
+  }
+
+  get #wheel(): boolean {
+    return this.#preferences.selector === "wheel";
+  }
+
+  get #surface(): PickerSurface {
+    return this.#wheel ?
+      new WheelSurface(
+        this.#pointSpace,
+        this.#point.v,
+        this.#preferences.discrete
+      ) :
+      new SquareSurface(this.#pointSpace, this.#point.h);
+  }
+
+  get #settingsShown(): boolean {
+    return this.settings && this.#settings.open;
+  }
+
+  #resolvePreferences(): ColorPickerPreferences {
+    const shared = kPreferences.values;
+
+    return {
+      space: this.space ?? shared.space,
+      selector: this.selector ?? shared.selector,
+      channels: this.channels ?? shared.channels,
+      harmony: this.harmony ?? shared.harmony,
+      discrete: this.discrete ?? shared.discrete
+    };
   }
 
   #adoptValue(): void {
@@ -153,21 +274,27 @@ export class ColorPicker extends LitElement {
       return;
     }
 
-    this.#hsva = {
-      ...rgbToHsv(incoming),
+    this.#point = {
+      ...this.#pointSpace.fromRgb(incoming, this.#point),
       a: this.alpha ? incoming.a : 1
     };
   }
 
   get #hex(): string {
-    return formatHex(
-      hsvToRgb(this.#hsva),
-      this.alpha
-    );
+    return this.#formatPoint(this.#point);
   }
 
   get #opaqueHex(): string {
-    return formatHex(hsvToRgb(this.#hsva));
+    return this.#pointSpace.hex(this.#point);
+  }
+
+  #formatPoint(
+    point: HSVA
+  ): string {
+    return formatHex(
+      this.#pointSpace.toRgb(point),
+      this.alpha
+    );
   }
 
   protected get editable(): boolean {
@@ -175,26 +302,29 @@ export class ColorPicker extends LitElement {
   }
 
   override render(): TemplateResult {
-    const {
-      h,
-      s,
-      v
-    } = this.#hsva;
+    const point = this.#point;
+    const position = this.#wheel ?
+      wheelPosition(point) :
+      {
+        x: point.s,
+        y: 1 - point.v
+      };
 
     const style = [
-      `--jolly-picker-hue:${h}`,
-      `--jolly-picker-x:${s}`,
-      `--jolly-picker-y:${1 - v}`,
+      `--jolly-picker-x:${position.x}`,
+      `--jolly-picker-y:${position.y}`,
       `--jolly-picker-color:${this.#hex}`,
-      `--jolly-picker-opaque:${this.#opaqueHex}`
+      `--jolly-picker-opaque:${this.#opaqueHex}`,
+      `--jolly-picker-hue-ramp:${this.#pointSpace.hueRamp}`,
+      `--jolly-picker-value-ramp:${this.#pointSpace.valueRamp(point)}`
     ].join(";");
 
     if (this.layout === "wide") {
       return html`
         <div class="panel" style=${style}>
           ${this.#renderArea()}
-          ${this.#renderHue()}
-          ${this.alpha ? this.#renderAlphaTrack() : nothing}
+          ${this.#renderTrack(this.#wheel ? "value" : "hue")}
+          ${this.alpha ? this.#renderTrack("alpha") : nothing}
           ${this.#renderChannels()}
         </div>
       `;
@@ -203,18 +333,57 @@ export class ColorPicker extends LitElement {
     return html`
       <div class="panel" style=${style}>
         ${this.#renderArea()}
-        ${this.#renderHue()}
+        ${this.#renderTrack(this.#wheel ? "value" : "hue")}
         ${this.alpha ? this.#renderAlpha() : nothing}
-        ${this.hexInput ? this.#renderFooter() : nothing}
+        ${this.#settingsShown ? this.#settings.renderPanel() : this.#renderHarmony()}
+        ${this.hexInput || this.settings ? this.#renderFooter(nothing) : nothing}
       </div>
     `;
   }
 
   #renderArea(): TemplateResult {
-    const {
-      s,
-      v
-    } = this.#hsva;
+    const { h, s, v } = this.#point;
+    if (this.#wheel) {
+      const { discrete } = this.#preferences;
+
+      return html`
+        <div
+          class="area wheel ${discrete ? "discrete" : ""}"
+          role="group"
+          aria-label="Hue and saturation"
+          @pointerdown=${this.#onAreaPointerDown}
+        >
+          <canvas class="surface"></canvas>
+          ${this.#harmonyPoints().map((point) => {
+            const { x, y } = wheelPosition(point);
+
+            return html`
+              <span
+                class="harmony-marker"
+                style="--jolly-marker-x:${x};--jolly-marker-y:${y}"
+              ></span>
+            `;
+          })}
+          <span class="area-cursor"></span>
+          ${this.#renderSlider({
+            className: "axis axis-saturation",
+            label: "Saturation",
+            max: kAxisSteps,
+            step: discrete ? kAxisSteps / DISCRETE_SATURATION_STEPS : 1,
+            value: s * kAxisSteps,
+            onChange: this.#onSaturation
+          })}
+          ${this.#renderSlider({
+            className: "axis axis-hue",
+            label: "Hue",
+            max: kHueSteps,
+            step: discrete ? DISCRETE_HUE_STEP : 1,
+            value: h,
+            onChange: this.#onHue
+          })}
+        </div>
+      `;
+    }
 
     return html`
       <div
@@ -223,238 +392,179 @@ export class ColorPicker extends LitElement {
         aria-label="Saturation and value"
         @pointerdown=${this.#onAreaPointerDown}
       >
+        <canvas class="surface"></canvas>
         <span class="area-cursor"></span>
-        <input
-          class="axis axis-saturation"
-          type="range"
-          min="0"
-          max=${kAxisSteps}
-          .value=${String(Math.round(s * kAxisSteps))}
-          ?disabled=${this.disabled}
-          aria-label="Saturation"
-          aria-readonly=${this.readonly ? "true" : nothing}
-          @input=${this.#onSaturation}
-          @change=${this.#onSaturation}
-        >
-        <input
-          class="axis axis-value"
-          type="range"
-          min="0"
-          max=${kAxisSteps}
-          .value=${String(Math.round(v * kAxisSteps))}
-          ?disabled=${this.disabled}
-          aria-label="Value"
-          aria-readonly=${this.readonly ? "true" : nothing}
-          @input=${this.#onValue}
-          @change=${this.#onValue}
-        >
+        ${this.#renderSlider({
+          className: "axis axis-saturation",
+          label: "Saturation",
+          max: kAxisSteps,
+          value: s * kAxisSteps,
+          onChange: this.#onSaturation
+        })}
+        ${this.#renderSlider({
+          className: "axis axis-value",
+          label: "Value",
+          max: kAxisSteps,
+          value: v * kAxisSteps,
+          onChange: this.#onValue
+        })}
       </div>
     `;
   }
 
-  #renderHue(): TemplateResult {
+  #renderTrack(
+    kind: "hue" | "value" | "alpha"
+  ): TemplateResult {
+    const { h, v, a } = this.#point;
+    const tracks = {
+      hue: [kHueSteps, h, "Hue", this.#onHue],
+      value: [kAxisSteps, v * kAxisSteps, "Value", this.#onValue],
+      alpha: [kAlphaSteps, a * kAlphaSteps, "Alpha", this.#onAlpha]
+    } as const;
+    const [max, value, label, onChange] = tracks[kind];
+
     return html`
-      <div class="track hue">
-        <input
-          type="range"
-          min="0"
-          max=${kHueSteps}
-          step="1"
-          .value=${String(Math.round(this.#hsva.h))}
-          ?disabled=${this.disabled}
-          aria-label="Hue"
-          aria-orientation=${this.layout === "wide" ? "vertical" : nothing}
-          aria-readonly=${this.readonly ? "true" : nothing}
-          @input=${this.#onHue}
-          @change=${this.#onHue}
-        >
+      <div class="track ${kind}">
+        ${this.#renderSlider({
+          label,
+          max,
+          value,
+          onChange,
+          vertical: this.layout === "wide"
+        })}
       </div>
     `;
   }
 
-  #renderAlphaTrack(): TemplateResult {
+  #renderSlider(
+    slider: SliderTemplate
+  ): TemplateResult {
     return html`
-      <div class="track alpha">
-        <input
-          type="range"
-          min="0"
-          max=${kAlphaSteps}
-          step="1"
-          .value=${String(Math.round(this.#hsva.a * kAlphaSteps))}
-          ?disabled=${this.disabled}
-          aria-label="Alpha"
-          aria-orientation=${this.layout === "wide" ? "vertical" : nothing}
-          aria-readonly=${this.readonly ? "true" : nothing}
-          @input=${this.#onAlpha}
-          @change=${this.#onAlpha}
-        >
-      </div>
+      <input
+        class=${slider.className ?? nothing}
+        type="range"
+        min="0"
+        max=${slider.max}
+        step=${slider.step ?? 1}
+        .value=${String(Math.round(slider.value))}
+        ?disabled=${this.disabled}
+        aria-label=${slider.label}
+        aria-orientation=${slider.vertical ? "vertical" : nothing}
+        aria-readonly=${this.readonly ? "true" : nothing}
+        @input=${slider.onChange}
+        @change=${slider.onChange}
+      >
     `;
   }
 
   #renderAlpha(): TemplateResult {
     return html`
       <div class="lane">
-        ${this.#renderAlphaTrack()}
-        <input
-          class="readout"
-          type="text"
-          inputmode="decimal"
-          spellcheck="false"
-          aria-label="Alpha value"
-          .value=${this.#alphaDraft.draft ?? formatNumber(this.#hsva.a, kAlphaStep)}
-          ?disabled=${this.disabled}
-          ?readonly=${this.readonly}
-          @input=${this.#onAlphaType}
-          @keydown=${this.#onAlphaKeyDown}
-          @blur=${this.#onAlphaBlur}
-        >
+        ${this.#renderTrack("alpha")}
+        ${this.#fields.renderAlphaReadout()}
+      </div>
+    `;
+  }
+
+  #harmonyPoints(): HSVA[] {
+    const kind = this.#preferences.harmony;
+    if (kind === "none") {
+      return [];
+    }
+
+    return colorHarmony(this.#point, kind).slice(1);
+  }
+
+  #renderHarmony(): TemplateResult | typeof nothing {
+    const points = this.#harmonyPoints();
+    if (points.length === 0) {
+      return nothing;
+    }
+
+    return html`
+      <div
+        class="harmony"
+        role="group"
+        aria-label="Color harmony"
+        title="Click to use, right click for the secondary color"
+      >
+        ${points.map((point) => {
+          const hex = this.#formatPoint(point);
+
+          return html`
+            <button
+              class="harmony-swatch"
+              type="button"
+              style="--jolly-harmony-color:${this.#pointSpace.hex(point)}"
+              aria-label=${`Harmony color ${hex}`}
+              ?disabled=${!this.editable}
+              @click=${() => this.#commitPoint(point)}
+              @contextmenu=${(event: MouseEvent) => {
+                event.preventDefault();
+                this.#emitSecondary(point);
+              }}
+            ></button>
+          `;
+        })}
       </div>
     `;
   }
 
   #renderChannels(): TemplateResult {
-    const values = channelValues(this.#hsva);
-    const hasFooter = this.hexInput || this.alpha;
+    const values = channelValues(this.#point, this.#pointSpace);
+    const rows = CHANNEL_ROWS[this.#preferences.channels];
 
     return html`
       <div class="channels">
-        ${kChannelRows.map(([left, right]) => html`
-          ${this.#renderChannel(left, values)}
-          ${this.#renderChannel(right, values)}
-        `)}
-        ${hasFooter ? html`
-          <div class="footer">
-            ${this.hexInput ? this.#renderHexControls() : nothing}
-            ${this.alpha ? this.#renderChannel("a", values) : nothing}
-          </div>
-        ` : nothing}
+        ${this.#settingsShown ? this.#settings.renderPanel() : html`
+          ${rows.map(([left, right]) => html`
+            ${this.#fields.renderChannel(left, values)}
+            ${this.#fields.renderChannel(right, values)}
+          `)}
+          ${this.#renderHarmony()}
+        `}
+        ${this.hexInput || this.alpha || this.settings ?
+          this.#renderFooter(
+            this.alpha ? this.#fields.renderChannel("a", values) : nothing
+          ) :
+          nothing}
       </div>
     `;
   }
 
-  #renderChannel(
-    channel: ColorChannel,
-    values: ChannelValues
+  #renderFooter(
+    alpha: TemplateResult | typeof nothing
   ): TemplateResult {
-    const [name, label] = kChannelLabels[channel];
-    const draft = this.#channelDraft(channel);
-
-    return html`
-      <label class="channel">
-        <span class="channel-name" aria-hidden="true">${name}</span>
-        <input
-          class="readout"
-          type="text"
-          inputmode="decimal"
-          spellcheck="false"
-          data-channel=${channel}
-          aria-label=${label}
-          aria-invalid=${draft.error === null ? nothing : "true"}
-          .value=${draft.draft ?? String(values[channel])}
-          ?disabled=${this.disabled}
-          ?readonly=${this.readonly}
-          @input=${(event: Event) => draft.onInput(event)}
-          @keydown=${(event: KeyboardEvent) => {
-            draft.onKeyDown(event, () => this.#commitChannel(channel));
-          }}
-          @blur=${() => this.#commitChannel(channel)}
-        >
-      </label>
-    `;
-  }
-
-  #channelDraft(
-    channel: ColorChannel
-  ): DraftController<number> {
-    let draft = this.#channelDrafts.get(channel);
-    if (draft === undefined) {
-      draft = new DraftController<number>(this);
-      this.#channelDrafts.set(channel, draft);
-    }
-
-    return draft;
-  }
-
-  #commitChannel(
-    channel: ColorChannel
-  ): void {
-    this.#channelDraft(channel).commit(
-      (draft) => parseNumericEntry(draft, CHANNEL_BOUNDS[channel]),
-      this.editable,
-      (value) => {
-        this.#hsva = applyChannel(this.#hsva, channel, value);
-        this.#patch({});
-        this.#commit();
-      }
-    );
-  }
-
-  #onAlphaType(
-    event: Event
-  ): void {
-    this.#alphaDraft.onInput(event);
-  }
-
-  #onAlphaKeyDown(
-    event: KeyboardEvent
-  ): void {
-    this.#alphaDraft.onKeyDown(
-      event,
-      () => this.#commitAlpha()
-    );
-  }
-
-  #onAlphaBlur(): void {
-    this.#commitAlpha();
-  }
-
-  #commitAlpha(): void {
-    this.#alphaDraft.commit(
-      (draft) => {
-        const result = parseNumericEntry(draft, {
-          step: kAlphaStep,
-          min: 0,
-          max: 1
-        });
-
-        return result?.ok ? result : null;
-      },
-      this.editable,
-      (alpha) => {
-        this.#patch({ a: alpha });
-        this.#commit();
-      }
-    );
-  }
-
-  #renderFooter(): TemplateResult {
     return html`
       <div class="footer">
-        ${this.#renderHexControls()}
+        ${this.hexInput ? this.#fields.renderHex() : nothing}
+        ${alpha}
+        ${this.settings ? this.#settings.renderToggle() : nothing}
       </div>
     `;
   }
 
-  #renderHexControls(): TemplateResult {
-    return html`
-      <span class="preview checker">
-        <span class="preview-face"></span>
-      </span>
-      <input
-        class="hex"
-        type="text"
-        spellcheck="false"
-        aria-label="Hex value"
-        aria-invalid=${this.#invalid ? "true" : nothing}
-        .value=${this.#draft ?? this.#hex}
-        ?disabled=${this.disabled}
-        ?readonly=${this.readonly}
-        @input=${this.#onHexType}
-        @keydown=${this.#onHexKeyDown}
-        @blur=${this.#onHexBlur}
-      >
-    `;
+  #commitPoint(
+    point: HSVA
+  ): void {
+    if (!this.editable) {
+      return;
+    }
+
+    this.#patch(point);
+    this.#commit();
+  }
+
+  #emitSecondary(
+    point: HSVA
+  ): void {
+    if (!this.editable) {
+      return;
+    }
+
+    emitComposedEvent<JollyChangeDetail<string>>(this, "jolly-secondary", {
+      value: this.#formatPoint(point)
+    });
   }
 
   #onAreaPointerDown(
@@ -503,21 +613,19 @@ export class ColorPicker extends LitElement {
   #applyPointer(
     event: PointerEvent
   ): void {
-    const {
-      s,
-      v
-    } = saturationValueFromPointer(
-      {
-        x: event.clientX,
-        y: event.clientY
-      },
-      this._area.getBoundingClientRect()
-    );
+    const pointer = {
+      x: event.clientX,
+      y: event.clientY
+    };
+    const rect = this._area.getBoundingClientRect();
 
-    this.#patch({
-      s,
-      v
-    });
+    if (this.#wheel) {
+      const picked = hueSaturationFromPointer(pointer, rect);
+      this.#patch(this.#preferences.discrete ? snapToWheel(picked) : picked);
+    }
+    else {
+      this.#patch(saturationValueFromPointer(pointer, rect));
+    }
     this.#stream();
   }
 
@@ -592,16 +700,11 @@ export class ColorPicker extends LitElement {
   #patch(
     patch: Partial<HSVA>
   ): void {
-    this.#hsva = {
-      ...this.#hsva,
+    this.#point = {
+      ...this.#point,
       ...patch
     };
-    this.#draft = null;
-    this.#alphaDraft.clear();
-    for (const draft of this.#channelDrafts.values()) {
-      draft.clear();
-    }
-    this.#invalid = false;
+    this.#fields.clear();
     this.requestUpdate();
   }
 
@@ -619,60 +722,6 @@ export class ColorPicker extends LitElement {
       "jolly-change",
       this.#hex
     );
-  }
-
-  #onHexType(
-    event: Event
-  ): void {
-    if (!isInputElement(event.target)) {
-      return;
-    }
-
-    this.#draft = event.target.value;
-    this.#invalid = false;
-    this.requestUpdate();
-  }
-
-  #onHexKeyDown(
-    event: KeyboardEvent
-  ): void {
-    if (event.key === "Enter") {
-      this.#commitHex();
-    }
-    else if (event.key === "Escape") {
-      event.stopPropagation();
-      this.#draft = null;
-      this.#invalid = false;
-      this.requestUpdate();
-    }
-  }
-
-  #onHexBlur(): void {
-    this.#commitHex();
-  }
-
-  #commitHex(): void {
-    const draft = this.#draft;
-    if (draft === null || !this.editable) {
-      return;
-    }
-
-    const parsed = parseFieldColor(draft);
-    if (parsed === null) {
-      this.#invalid = true;
-      this.requestUpdate();
-
-      return;
-    }
-
-    this.#hsva = {
-      ...rgbToHsv(parsed),
-      a: this.alpha ? parsed.a : 1
-    };
-    this.#draft = null;
-    this.#invalid = false;
-    this.requestUpdate();
-    this.#commit();
   }
 }
 

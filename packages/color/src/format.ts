@@ -1,12 +1,16 @@
 // Import Internal Dependencies
-import { toByte } from "./convert/bytes.ts";
+import {
+  clampByte,
+  toByte
+} from "./convert/bytes.ts";
 import {
   BYTE_MAX,
   clampUnit,
   wrapHue
-} from "./utils.ts";
+} from "./math.ts";
 import type {
   HSLA,
+  OKLCHA,
   RGBA,
   RGBA8
 } from "./types.ts";
@@ -16,6 +20,9 @@ const kAlphaDigits = 3;
 const kPercentDigits = 1;
 const kHueDigits = 1;
 const kPercentScale = 100;
+const kOklchLightnessDigits = 2;
+const kOklchChromaDigits = 4;
+const kOklchHueDigits = 2;
 const kHexPairs = byteTable(
   (byte) => byte.toString(16).padStart(2, "0")
 );
@@ -28,10 +35,12 @@ export function formatHex(
   color: RGBA,
   withAlpha = false
 ): string {
-  const rgb = pair(color.r) + pair(color.g) + pair(color.b);
+  const rgb = hex(toByte(color.r)) +
+    hex(toByte(color.g)) +
+    hex(toByte(color.b));
 
   return withAlpha ?
-    `#${rgb}${pair(color.a)}` :
+    `#${rgb}${hex(toByte(color.a))}` :
     `#${rgb}`;
 }
 
@@ -39,21 +48,31 @@ export function formatHex8(
   color: RGBA8,
   withAlpha = false
 ): string {
-  const rgb = pair(color.r / BYTE_MAX) +
-    pair(color.g / BYTE_MAX) +
-    pair(color.b / BYTE_MAX);
+  const rgb = hex(clampByte(color.r)) +
+    hex(clampByte(color.g)) +
+    hex(clampByte(color.b));
 
   return withAlpha ?
-    `#${rgb}${pair(color.a / BYTE_MAX)}` :
+    `#${rgb}${hex(clampByte(color.a))}` :
     `#${rgb}`;
 }
 
 export function formatRgb(
   color: RGBA
 ): string {
-  const r = decimal(color.r);
-  const g = decimal(color.g);
-  const b = decimal(color.b);
+  const r = decimal(toByte(color.r));
+  const g = decimal(toByte(color.g));
+  const b = decimal(toByte(color.b));
+
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+export function formatRgb8(
+  color: RGBA8
+): string {
+  const r = decimal(clampByte(color.r));
+  const g = decimal(clampByte(color.g));
+  const b = decimal(clampByte(color.b));
 
   return `rgb(${r}, ${g}, ${b})`;
 }
@@ -61,11 +80,21 @@ export function formatRgb(
 export function formatRgba(
   color: RGBA
 ): string {
-  const r = decimal(color.r);
-  const g = decimal(color.g);
-  const b = decimal(color.b);
+  const r = decimal(toByte(color.r));
+  const g = decimal(toByte(color.g));
+  const b = decimal(toByte(color.b));
 
   return `rgba(${r}, ${g}, ${b}, ${alpha(color.a)})`;
+}
+
+export function formatRgba8(
+  color: RGBA8
+): string {
+  const r = decimal(clampByte(color.r));
+  const g = decimal(clampByte(color.g));
+  const b = decimal(clampByte(color.b));
+
+  return `rgba(${r}, ${g}, ${b}, ${kByteAlphas[clampByte(color.a)]})`;
 }
 
 export function formatHsl(
@@ -79,6 +108,19 @@ export function formatHsl(
   return a === 1 ?
     `hsl(${h}, ${s}%, ${l}%)` :
     `hsla(${h}, ${s}%, ${l}%, ${alpha(a)})`;
+}
+
+export function formatOklch(
+  color: OKLCHA
+): string {
+  const l = trim(clampUnit(color.l) * kPercentScale, kOklchLightnessDigits);
+  const c = trim(Math.max(color.c, 0), kOklchChromaDigits);
+  const h = trim(wrapHue(color.h), kOklchHueDigits);
+  const a = clampUnit(color.a);
+
+  return a === 1 ?
+    `oklch(${l}% ${c} ${h})` :
+    `oklch(${l}% ${c} ${h} / ${alpha(a)})`;
 }
 
 function alpha(
@@ -99,22 +141,6 @@ function trim(
   return Number(value.toFixed(digits));
 }
 
-function pair(
-  channel: number
-): string {
-  const byte = toByte(channel);
-
-  return kHexPairs[byte] ?? String(byte);
-}
-
-function decimal(
-  channel: number
-): string {
-  const byte = toByte(channel);
-
-  return kDecimals[byte] ?? String(byte);
-}
-
 function byteTable(
   format: (byte: number) => string
 ): string[] {
@@ -122,4 +148,16 @@ function byteTable(
     { length: BYTE_MAX + 1 },
     (_, byte) => format(byte)
   );
+}
+
+function hex(
+  byte: number
+): string {
+  return kHexPairs[byte] ?? String(byte);
+}
+
+function decimal(
+  byte: number
+): string {
+  return kDecimals[byte] ?? String(byte);
 }

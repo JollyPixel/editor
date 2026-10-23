@@ -1,15 +1,14 @@
 // Import Third-party Dependencies
-import {
-  hslToHsv,
-  hsvToHsl,
-  hsvToRgb,
-  rgbToHsv,
-  type HSVA
+import type {
+  HSVA,
+  RGBA
 } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import { clamp } from "../numeric/bounds.ts";
 import type { NumericBounds } from "../numeric/entry.ts";
+import { ChannelModel } from "./ChannelModel.ts";
+import type { PickerSpace } from "./space.ts";
 
 // CONSTANTS
 export const CHANNEL_BOUNDS: Readonly<Record<ColorChannel, NumericBounds>> = {
@@ -43,14 +42,45 @@ export const CHANNEL_BOUNDS: Readonly<Record<ColorChannel, NumericBounds>> = {
     min: 0,
     max: 100
   },
+  okl: {
+    step: 1,
+    min: 0,
+    max: 100
+  },
+  okc: {
+    step: 0.001,
+    min: 0,
+    max: 0.4
+  },
+  okh: {
+    step: 1,
+    min: 0,
+    max: 360
+  },
   a: {
     step: 1,
     min: 0,
     max: 100
   }
 };
+export const CHANNEL_ROWS: Readonly<
+  Record<ColorPickerChannels, ReadonlyArray<[ColorChannel, ColorChannel]>>
+> = {
+  hsl: [
+    ["r", "h"],
+    ["g", "s"],
+    ["b", "l"]
+  ],
+  oklch: [
+    ["r", "okl"],
+    ["g", "okc"],
+    ["b", "okh"]
+  ]
+};
 const kByte = 255;
 const kPercent = 100;
+
+export type ColorPickerChannels = "hsl" | "oklch";
 
 export type ColorChannel =
   | "r"
@@ -59,90 +89,73 @@ export type ColorChannel =
   | "h"
   | "s"
   | "l"
+  | "okl"
+  | "okc"
+  | "okh"
   | "a";
 
 export type ChannelValues = Record<ColorChannel, number>;
 
 export function channelValues(
-  hsva: HSVA
+  point: HSVA,
+  space: PickerSpace
 ): ChannelValues {
-  const rgb = hsvToRgb(hsva);
-  const hsl = hsvToHsl(hsva);
+  const rgb = space.toRgb(point);
 
   return {
     r: Math.round(rgb.r * kByte),
     g: Math.round(rgb.g * kByte),
     b: Math.round(rgb.b * kByte),
-    h: Math.round(hsva.h),
-    s: Math.round(hsl.s * kPercent),
-    l: Math.round(hsl.l * kPercent),
-    a: Math.round(hsva.a * kPercent)
+    ...ChannelModel.hsl.read(point, space),
+    ...ChannelModel.oklch.read(point, space),
+    a: Math.round(point.a * kPercent)
   };
 }
 
 export function applyChannel(
-  hsva: HSVA,
+  point: HSVA,
   channel: ColorChannel,
-  value: number
+  value: number,
+  space: PickerSpace
 ): HSVA {
   const { min, max } = CHANNEL_BOUNDS[channel];
   const bounded = clamp(value, min, max);
 
-  if (channel === "r" || channel === "g" || channel === "b") {
-    return applyRgbChannel(hsva, channel, bounded);
+  switch (channel) {
+    case "r":
+    case "g":
+    case "b":
+      return applyRgbChannel(point, channel, bounded, space);
+    case "h":
+    case "s":
+    case "l":
+      return ChannelModel.hsl.write(point, channel, bounded, space);
+    case "okl":
+    case "okc":
+    case "okh":
+      return ChannelModel.oklch.write(point, channel, bounded, space);
+    default:
+      return {
+        ...point,
+        a: bounded / kPercent
+      };
   }
-  if (channel === "s" || channel === "l") {
-    return applyHslChannel(hsva, channel, bounded);
-  }
-  if (channel === "h") {
-    return {
-      ...hsva,
-      h: bounded
-    };
-  }
-
-  return {
-    ...hsva,
-    a: bounded / kPercent
-  };
 }
 
 function applyRgbChannel(
-  hsva: HSVA,
+  point: HSVA,
   channel: "r" | "g" | "b",
-  value: number
+  value: number,
+  space: PickerSpace
 ): HSVA {
-  const rgb = hsvToRgb(hsva);
-  const next = {
+  const rgb = space.toRgb(point);
+  const next: RGBA = {
     r: Math.round(rgb.r * kByte) / kByte,
     g: Math.round(rgb.g * kByte) / kByte,
     b: Math.round(rgb.b * kByte) / kByte,
-    a: hsva.a,
+    a: point.a,
     [channel]: value / kByte
   };
-  const converted = rgbToHsv(next);
 
-  return {
-    h: converted.s === 0 || converted.v === 0 ? hsva.h : converted.h,
-    s: converted.v === 0 ? hsva.s : converted.s,
-    v: converted.v,
-    a: hsva.a
-  };
-}
-
-function applyHslChannel(
-  hsva: HSVA,
-  channel: "s" | "l",
-  value: number
-): HSVA {
-  const hsv = hslToHsv({
-    ...hsvToHsl(hsva),
-    [channel]: value / kPercent
-  });
-
-  return {
-    ...hsva,
-    s: hsv.s,
-    v: hsv.v
-  };
+  return space.fromRgb(next, point);
 }

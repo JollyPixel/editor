@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
 import * as network from "@jolly-pixel/network/client";
-import { ColorPalette } from "@jolly-pixel/color";
+import { ColorSequence } from "@jolly-pixel/color";
 import {
   LocalStorageAdapter,
   resolveStoredPrompt
@@ -130,16 +130,16 @@ const networkClient = new network.Client({
 const room = networkClient.room(PEER_SELECTION_ROOM);
 room.join();
 
-const colorPalette = new ColorPalette();
+const peerColors = ColorSequence.default;
 const colorAllocator = {
-  peerColor: (peerId: string) => colorPalette.forKey(peerId),
+  peerColor: (peerId: string) => peerColors.pick(peerId),
   release: () => void 0
 };
 
 const peerFrustumSync = new PeerFrustumSync({
   room,
   parent: scene,
-  color: (clientId) => colorPalette.forKey(clientId)
+  color: (clientId) => peerColors.pick(clientId)
 });
 peerFrustumSync.attach(camera);
 
@@ -216,7 +216,7 @@ function refreshPeersLegend(): void {
   for (const [clientId, peer] of room.peers) {
     rows.push({
       name: network.parsePeerProfile(peer.profile).username,
-      color: colorPalette.forKey(clientId),
+      color: peerColors.pick(clientId),
       selected: selectables.displayLabel(peerRegistry.selectedObject(clientId))
     });
   }

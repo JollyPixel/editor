@@ -128,7 +128,14 @@ describe("SettingsSections", () => {
 
     assert.deepEqual(outline(settings), [
       {
-        you: ["profile", "appearance", "camera", "preferences-file", "share-links"],
+        you: [
+          "profile",
+          "appearance",
+          "camera",
+          "color-picker",
+          "preferences-file",
+          "share-links"
+        ],
         editors: ["editor:voxel-map", "editor:pixel-art"]
       }
     ]);
@@ -209,6 +216,7 @@ describe("SettingsSections", () => {
       "profile",
       "appearance",
       "camera",
+      "color-picker",
       "preferences-file",
       "share-links",
       "editor:voxel-map",

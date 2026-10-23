@@ -13,11 +13,14 @@ import {
 // Import Internal Dependencies
 import { ColorController } from "../../src/color/ColorController.ts";
 import type { ColorChangeDetail } from "../../src/color/ColorSwatch.ts";
+import { rgba8ToColorChange } from "../../src/color/pickerChange.ts";
 import type { TextureSetEvents } from "../../src/textures/TextureSet.ts";
 import { createElementHost as createHost } from "../fixtures/host.ts";
 
 class FakeDocument {
   palette = ColorPalette.create();
+  batches: number[][] = [];
+  #batch: number[] | null = null;
   readonly #listeners = new Set<(index: number | null) => void>();
 
   subscribe(
@@ -34,8 +37,22 @@ class FakeDocument {
     color: RGBA8
   ): void {
     this.palette = this.palette.withColor(index, color);
+    this.#batch?.push(index);
     for (const listener of this.#listeners) {
       listener(index);
+    }
+  }
+
+  batch<T>(
+    edit: () => T
+  ): T {
+    this.#batch = [];
+    try {
+      return edit();
+    }
+    finally {
+      this.batches.push(this.#batch);
+      this.#batch = null;
     }
   }
 }
@@ -190,6 +207,49 @@ describe("UI.ColorController palette", () => {
 
     doc.changePaletteColor(3, { r: 0, g: 0, b: 255, a: 255 });
     assert.deepEqual(controller.foreground, color("#0000ff"));
+  });
+
+  test("a ramp fills the slots between two colors in OKLab as one batch", () => {
+    const { controller, doc } = setup();
+    controller.docked = true;
+    doc.changePaletteColor(2, { r: 0, g: 0, b: 0, a: 255 });
+    doc.changePaletteColor(4, { r: 255, g: 255, b: 255, a: 255 });
+    controller.selectPaletteColor(4);
+
+    controller.rampPalette(4, 2);
+
+    assert.deepEqual(doc.palette.colorAt(3), { r: 99, g: 99, b: 99, a: 255 });
+    assert.deepEqual(doc.batches, [[3]]);
+    assert.deepEqual(controller.foreground, color("#000000"));
+  });
+
+  test("a ramp leaves a locked palette and adjacent slots alone, and still selects", () => {
+    const { controller, doc } = setup();
+    controller.docked = true;
+    controller.selectPaletteColor(0);
+
+    controller.rampPalette(0, 1);
+    assert.deepEqual(controller.foreground, rgba8ToColorChange(doc.palette.colorAt(1)));
+
+    controller.paletteLocked = true;
+    controller.rampPalette(0, 5);
+
+    assert.deepEqual(doc.palette.toJSON(), ColorPalette.create().toJSON());
+    assert.deepEqual(doc.batches, []);
+    assert.deepEqual(controller.foreground, rgba8ToColorChange(doc.palette.colorAt(5)));
+  });
+
+  test("a secondary pick becomes the background unless docked", () => {
+    const { host, controller } = setup();
+    host.connect();
+
+    controller.pickSecondary("#00ff00");
+    assert.deepEqual(controller.background, color("#00ff00"));
+
+    controller.docked = true;
+    const docked = controller.background;
+    controller.pickSecondary("#0000ff");
+    assert.deepEqual(controller.background, docked);
   });
 
   test("each document keeps its own selected slot", () => {

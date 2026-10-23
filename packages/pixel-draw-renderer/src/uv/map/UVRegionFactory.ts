@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { ColorPalette } from "@jolly-pixel/color";
+import { ColorSequence } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import { clamp } from "../../utils/math.ts";
@@ -54,7 +54,7 @@ const kCascadeStep = 16;
 export class UVRegionFactory {
   #getCanvasSize: () => Vec2;
   #cascadeIndex = 0;
-  #palette = new ColorPalette();
+  #colorIndex = 0;
 
   constructor(
     getCanvasSize: () => Vec2
@@ -84,7 +84,7 @@ export class UVRegionFactory {
     const identity = {
       id: options.id ?? crypto.randomUUID(),
       name: options.name,
-      color: options.color ?? this.#palette.next()
+      color: options.color ?? ColorSequence.default.at(this.#colorIndex++)
     };
     const { activeSlots, slotGeometries } = options;
     const hasTopology = activeSlots !== undefined || slotGeometries !== undefined;
@@ -126,7 +126,7 @@ export class UVRegionFactory {
 
   reset(): void {
     this.#cascadeIndex = 0;
-    this.#palette.reset();
+    this.#colorIndex = 0;
   }
 
   #nextCascadePosition(

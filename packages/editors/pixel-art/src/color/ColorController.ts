@@ -12,13 +12,18 @@ import type {
   BrushColorSlot,
   PixelArtCanvas
 } from "@jolly-pixel/pixel-draw.renderer";
+import type { JollyChangeDetail } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type {
   ColorPickerPopover,
   ColorPickerRequest
 } from "./ColorPickerPopover.ts";
-import type { PaletteEditDetail } from "./ColorPaletteGrid.ts";
+import type {
+  PaletteEditDetail,
+  PaletteRampDetail
+} from "./ColorPaletteGrid.ts";
+import { parseColorChange } from "./pickerChange.ts";
 import type { ColorChangeDetail } from "./ColorSwatch.ts";
 import { PaletteController } from "./PaletteController.ts";
 import {
@@ -166,6 +171,25 @@ export class ColorController {
     }
   }
 
+  rampPalette(
+    from: number,
+    to: number
+  ): void {
+    this.#picker.value?.close();
+    this.cancelDraft();
+    this.#palette.ramp(from, to);
+    this.selectPaletteColor(to);
+  }
+
+  pickSecondary(
+    value: string
+  ): void {
+    const color = parseColorChange(value);
+    if (color !== null) {
+      this.changeBackground(color);
+    }
+  }
+
   deselectPaletteColor(): void {
     if (this.#palette.selected === null) {
       return;
@@ -262,6 +286,7 @@ export class ColorController {
       <color-picker-popover
         part="color-picker-popover"
         ${ref(this.#picker)}
+        @jolly-secondary=${this.#onSecondary}
       ></color-picker-popover>
     `;
   }
@@ -287,6 +312,10 @@ export class ColorController {
         @palette-edit=${(event: CustomEvent<PaletteEditDetail>) => {
           this.#editPaletteColor(event.detail);
         }}
+        @palette-ramp=${(event: CustomEvent<PaletteRampDetail>) => {
+          this.rampPalette(event.detail.from, event.detail.to);
+        }}
+        @jolly-secondary=${this.#onSecondary}
         @color-preview=${(event: CustomEvent<ColorChangeDetail>) => {
           if (this.#docked) {
             this.previewActive(event.detail);
@@ -305,6 +334,12 @@ export class ColorController {
     event: CustomEvent<ColorPickerRequest>
   ): void => {
     this.#picker.value?.open(event.detail);
+  };
+
+  readonly #onSecondary = (
+    event: CustomEvent<JollyChangeDetail<string>>
+  ): void => {
+    this.pickSecondary(event.detail.value);
   };
 
   readonly #onPickerClose = (

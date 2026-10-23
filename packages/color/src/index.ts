@@ -1,29 +1,21 @@
 export type {
   ColorInput,
+  ColorInput8,
   HSLA,
   HSVA,
   HWBA,
+  OKHSLA,
+  OKHSVA,
+  OKLCHA,
   RGBA,
   RGBA8
 } from "./types.ts";
 
-export {
-  fromRGBA8,
-  hslToHsv,
-  hslToRgb,
-  hsvToHsl,
-  hsvToRgb,
-  hwbToRgb,
-  linearToSrgb,
-  rgbToHsl,
-  rgbToHsv,
-  rgbToHwb,
-  srgbToLinear,
-  toRGBA8
-} from "./convert/index.ts";
+export * from "./convert/index.ts";
 
 export {
   assertColor,
+  assertColor8,
   ColorParseError,
   parseColor
 } from "./parse/index.ts";
@@ -32,33 +24,31 @@ export {
   formatHex,
   formatHex8,
   formatHsl,
+  formatOklch,
   formatRgb,
-  formatRgba
+  formatRgb8,
+  formatRgba,
+  formatRgba8
 } from "./format.ts";
 
 export {
-  contrastingColor,
-  contrastRatio,
-  relativeLuminance
-} from "./contrast.ts";
+  colorRamp,
+  mixColor
+} from "./mix/mix.ts";
+export type {
+  MixOptions,
+  MixSpace
+} from "./mix/mix.ts";
 
 export {
-  ColorPalette
-} from "./palette/ColorPalette.ts";
+  colorHarmony,
+  HARMONY_KINDS
+} from "./mix/harmony.ts";
 export type {
-  ColorPaletteOptions
-} from "./palette/ColorPalette.ts";
-export {
-  colorFromKey,
-  defaultPaletteColors,
-  goldenAngleColor,
-  hashKey
-} from "./palette/deterministic.ts";
-export type {
-  GoldenAngleOptions
-} from "./palette/deterministic.ts";
+  HarmonyKind
+} from "./mix/harmony.ts";
 
-export {
-  imageDataToPixels,
-  pixelsToImageData
-} from "./pixels.ts";
+export { contrastingColor } from "./contrast.ts";
+
+export * from "./palette/ColorSequence.ts";
+export { hashKey } from "./palette/hashKey.ts";

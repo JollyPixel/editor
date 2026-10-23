@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import {
-  goldenAngleColor,
-  hashKey
-} from "@jolly-pixel/color";
+import { ColorSequence } from "@jolly-pixel/color";
 import type { Vector3Like } from "three";
 import {
   VoxelFootprint,
@@ -10,10 +7,10 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // CONSTANTS
-const kDerivedColor = {
+const kDerivedColors = ColorSequence.goldenAngle({
   saturation: 0.65,
   lightness: 0.55
-};
+});
 
 export interface AreaTransform {
   position: Vector3Like;
@@ -60,7 +57,7 @@ export class MapObject {
   }
 
   get derivedColor(): string {
-    return goldenAngleColor(hashKey(this.data.id), kDerivedColor);
+    return kDerivedColors.pick(this.data.id);
   }
 
   get color(): string {

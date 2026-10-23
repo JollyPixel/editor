@@ -22,3 +22,17 @@ export function wrapHue(
 ): number {
   return ((hue % kTurn) + kTurn) % kTurn;
 }
+
+export function cube(
+  value: number
+): number {
+  return value * value * value;
+}
+
+export function lerp(
+  from: number,
+  to: number,
+  t: number
+): number {
+  return from + ((to - from) * t);
+}

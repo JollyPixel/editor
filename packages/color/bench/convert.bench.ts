@@ -6,16 +6,11 @@ import {
 
 // Import Internal Dependencies
 import {
+  ColorSpace,
   fromRGBA8,
   hslToHsv,
-  hslToRgb,
   hsvToHsl,
-  hsvToRgb,
-  hwbToRgb,
   linearToSrgb,
-  rgbToHsl,
-  rgbToHsv,
-  rgbToHwb,
   srgbToLinear,
   toRGBA8
 } from "../src/convert/index.ts";
@@ -28,24 +23,43 @@ import {
   unitRgba
 } from "./_fixtures.ts";
 
+// CONSTANTS
+const {
+  hsl,
+  hsv,
+  hwb,
+  oklch,
+  okhsv,
+  okhsl
+} = ColorSpace;
+
 const suite = defineSuite("convert", (bench) => {
   const rgbColors = createBatch(unitRgba);
   const hslColors = createBatch(hsla);
   const hsvColors = createBatch(hsva);
-  const hwbColors = rgbColors.map(rgbToHwb);
+  const hwbColors = rgbColors.map((color) => hwb.fromRgb(color));
   const bytes8 = createBatch(rgba8);
+  const oklchColors = rgbColors.map((color) => oklch.fromRgb(color));
+  const okhsvColors = rgbColors.map((color) => okhsv.fromRgb(color));
+  const okhslColors = rgbColors.map((color) => okhsl.fromRgb(color));
 
   bench
-    .add("rgbToHsl", () => sumBy(rgbColors, (color) => rgbToHsl(color).h))
-    .add("hslToRgb", () => sumBy(hslColors, (color) => hslToRgb(color).r))
-    .add("rgbToHsv", () => sumBy(rgbColors, (color) => rgbToHsv(color).h))
-    .add("hsvToRgb", () => sumBy(hsvColors, (color) => hsvToRgb(color).r))
-    .add("rgbToHwb", () => sumBy(rgbColors, (color) => rgbToHwb(color).h))
-    .add("hwbToRgb", () => sumBy(hwbColors, (color) => hwbToRgb(color).r))
+    .add("hsl.fromRgb", () => sumBy(rgbColors, (color) => hsl.fromRgb(color).h))
+    .add("hsl.toRgb", () => sumBy(hslColors, (color) => hsl.toRgb(color).r))
+    .add("hsv.fromRgb", () => sumBy(rgbColors, (color) => hsv.fromRgb(color).h))
+    .add("hsv.toRgb", () => sumBy(hsvColors, (color) => hsv.toRgb(color).r))
+    .add("hwb.fromRgb", () => sumBy(rgbColors, (color) => hwb.fromRgb(color).h))
+    .add("hwb.toRgb", () => sumBy(hwbColors, (color) => hwb.toRgb(color).r))
     .add("hslToHsv", () => sumBy(hslColors, (color) => hslToHsv(color).v))
     .add("hsvToHsl", () => sumBy(hsvColors, (color) => hsvToHsl(color).l))
     .add("toRGBA8", () => sumBy(rgbColors, (color) => toRGBA8(color).r))
     .add("fromRGBA8", () => sumBy(bytes8, (color) => fromRGBA8(color).r))
+    .add("oklch.fromRgb", () => sumBy(rgbColors, (color) => oklch.fromRgb(color).h))
+    .add("oklch.toRgb", () => sumBy(oklchColors, (color) => oklch.toRgb(color).r))
+    .add("okhsv.fromRgb", () => sumBy(rgbColors, (color) => okhsv.fromRgb(color).h))
+    .add("okhsv.toRgb", () => sumBy(okhsvColors, (color) => okhsv.toRgb(color).r))
+    .add("okhsl.fromRgb", () => sumBy(rgbColors, (color) => okhsl.fromRgb(color).h))
+    .add("okhsl.toRgb", () => sumBy(okhslColors, (color) => okhsl.toRgb(color).r))
     .add("srgbToLinear", () => sumBy(rgbColors, (color) => srgbToLinear(color.r)))
     .add("linearToSrgb", () => sumBy(rgbColors, (color) => linearToSrgb(color.r)));
 }, { opsPerIteration: BATCH });

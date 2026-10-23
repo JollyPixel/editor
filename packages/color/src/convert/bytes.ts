@@ -2,7 +2,7 @@
 import {
   clamp,
   BYTE_MAX
-} from "../utils.ts";
+} from "../math.ts";
 import type {
   RGBA,
   RGBA8
@@ -33,8 +33,14 @@ export function fromRGBA8(
 export function toByte(
   channel: number
 ): number {
+  return clampByte(channel * BYTE_MAX);
+}
+
+export function clampByte(
+  value: number
+): number {
   return clamp(
-    Math.round(channel * BYTE_MAX),
+    Math.round(value),
     0,
     BYTE_MAX
   );

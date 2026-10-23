@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { colorFromKey } from "@jolly-pixel/color";
+import { ColorSequence } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import { RoomPresenceSource } from "../../src/network/RoomPresenceSource.ts";
@@ -80,7 +80,7 @@ describe("RoomPresenceSource — identity", () => {
     const ada = source.peers.get("ada");
 
     assert.equal(ada?.displayName, "ada");
-    assert.equal(ada?.color, colorFromKey("peer-ada"));
+    assert.equal(ada?.color, ColorSequence.default.pick("peer-ada"));
   });
 
   test("lists a peer that never claimed a path", () => {

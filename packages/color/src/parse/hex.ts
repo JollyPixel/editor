@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { BYTE_MAX } from "../utils.ts";
+import { BYTE_MAX } from "../math.ts";
 import type { RGBA } from "../types.ts";
 
 // CONSTANTS

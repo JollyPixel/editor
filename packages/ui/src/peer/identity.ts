@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { colorFromKey } from "@jolly-pixel/color";
+import { ColorSequence } from "@jolly-pixel/color";
 
 // CONSTANTS
 export const GUEST_USERNAME = "Guest";
@@ -22,7 +22,7 @@ export function peerIdentity(
   return {
     username,
     peerId,
-    color: colorFromKey(peerId),
+    color: ColorSequence.default.pick(peerId),
     ...(avatar === undefined ? {} : { avatar })
   };
 }

@@ -19,7 +19,7 @@ avatar.image = identity.avatar ?? "";
 ```ts
 interface Avatar {
   peerId: string; // attribute peer-id, picks the default portrait
-  color: string; // portrait colour, default colorFromKey(peerId)
+  color: string; // portrait colour, default ColorSequence.default.pick(peerId)
   image: string; // uploaded image URL, replaces the portrait
   presence: "online" | "offline" | "";
 }
@@ -38,7 +38,7 @@ interface Avatar {
 
 - Nine portraits: slime, cat, bear, bunny, frog, ghost, robot, alien, fox.
 - The portrait is picked by hashing `peerId` with `hashKey`, the hash behind
-  `colorFromKey`. Nothing is stored, so every page draws the same avatar for
+  `ColorSequence.default`. Nothing is stored, so every page draws the same avatar for
   the same peer.
 - They stay readable from 12px.
 

@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import {
-  formatRgba,
-  fromRGBA8
-} from "@jolly-pixel/color";
+import { formatRgba8 } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import { PeerLayer } from "./PeerLayer.ts";
@@ -18,7 +15,7 @@ export class PeerStrokes extends PeerLayer<PeerStrokePixel[]> {
   ): void {
     for (const [, pixels] of this.states()) {
       for (const { x, y, color } of pixels) {
-        ctx.fillStyle = formatRgba(fromRGBA8(color));
+        ctx.fillStyle = formatRgba8(color);
         ctx.fillRect(x, y, 1, 1);
       }
     }

@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { assertColor8 } from "@jolly-pixel/color";
 import type { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
@@ -57,7 +58,6 @@ import {
 } from "./uv/region/uvSlotMask.ts";
 import type { UVGeometry } from "./uv/geometry/types.ts";
 import type { PeerPresence } from "./rendering/presence/PeerPresence.ts";
-import { resolveColor } from "./utils/colors.ts";
 import { SelectionEraseColor } from "./selection/SelectionEraseColor.ts";
 import type {
   ByteColorInput,
@@ -163,7 +163,7 @@ export class PixelArtCanvas {
     const eraseColor = new SelectionEraseColor(
       options.select?.eraseColor === undefined ?
         null :
-        resolveColor(options.select.eraseColor)
+        assertColor8(options.select.eraseColor)
     );
 
     const textureSize: Vec2 = options.texture?.size

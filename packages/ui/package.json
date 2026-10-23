@@ -23,6 +23,10 @@
     "./icon": {
       "types": "./dist/icon/index.d.ts",
       "default": "./dist/icon/index.js"
+    },
+    "./color-picker": {
+      "types": "./dist/color/index.d.ts",
+      "default": "./dist/color/index.js"
     }
   },
   "scripts": {

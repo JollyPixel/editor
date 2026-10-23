@@ -18,7 +18,8 @@ export type BuiltinIconName =
   | "search"
   | "check"
   | "info"
-  | "warning";
+  | "warning"
+  | "settings";
 export type IconName = BuiltinIconName | (string & {});
 export type IconGlyph = string | SVGTemplateResult;
 

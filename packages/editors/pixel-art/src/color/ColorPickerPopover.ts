@@ -127,6 +127,7 @@ export class ColorPickerPopover extends LitElement {
       >
         <jolly-color-picker
           alpha
+          settings
           .value=${this.#picker.value}
           @jolly-input=${this.#picker.input}
           @jolly-change=${this.#picker.commit}

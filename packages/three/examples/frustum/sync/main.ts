@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import * as network from "@jolly-pixel/network/client";
-import { ColorPalette } from "@jolly-pixel/color";
+import { ColorSequence } from "@jolly-pixel/color";
 import {
   LocalStorageAdapter,
   resolveStoredPrompt,
@@ -80,19 +80,19 @@ const networkClient = new network.Client({
 const room = networkClient.room(PEER_FRUSTUM_ROOM);
 room.join();
 
-const colorPalette = new ColorPalette();
+const peerColors = ColorSequence.default;
 
 const peerFrustumSync = new PeerFrustumSync({
   room,
   parent: scene,
-  color: (clientId, identity) => colorPalette.forKey(
+  color: (clientId, identity) => peerColors.pick(
     network.parsePeerProfile(identity).peerId ?? clientId
   )
 });
 peerFrustumSync.attach(camera);
 
 const selfFrustum = new PeerFrustum({
-  color: colorPalette.forKey(kLocalPeerId),
+  color: peerColors.pick(kLocalPeerId),
   displayName: username
 });
 mirrorRoom.showOnlyInMirrors(selfFrustum);
@@ -152,7 +152,7 @@ function presencePeers(): PresencePeer[] {
       return {
         clientId: peer.clientId,
         displayName: profile.username,
-        color: colorPalette.forKey(profile.peerId ?? peer.clientId)
+        color: peerColors.pick(profile.peerId ?? peer.clientId)
       };
     })
     .sort((a, b) => a.clientId.localeCompare(b.clientId));
@@ -161,7 +161,7 @@ function presencePeers(): PresencePeer[] {
     {
       clientId: kLocalPeerId,
       displayName: username,
-      color: colorPalette.forKey(kLocalPeerId),
+      color: peerColors.pick(kLocalPeerId),
       self: true
     },
     ...remote
