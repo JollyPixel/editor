@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import "fake-indexeddb/auto";
 import { Window } from "happy-dom";
 
 // CONSTANTS

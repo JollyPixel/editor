@@ -1,6 +1,3 @@
-// Import Third-party Dependencies
-import { IDBFactory } from "fake-indexeddb";
-
 // Import Internal Dependencies
 import * as EventStore from "#src/index.ts";
 
@@ -31,8 +28,7 @@ export const backends: {
   {
     name: "indexeddb",
     create: () => EventStore.persistence.indexeddb({
-      name: "events",
-      factory: new IDBFactory()
+      name: crypto.randomUUID()
     })
   }
 ];

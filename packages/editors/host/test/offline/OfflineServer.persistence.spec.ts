@@ -6,7 +6,6 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { indexedDB } from "fake-indexeddb";
 import {
   BINARY_KIND,
   type AssetSeedMap
@@ -27,8 +26,6 @@ const kActor: EventStore.Actor = {
   id: "guest"
 };
 const kSeedIds = ["seed-readme", "seed-notes"];
-
-Object.assign(globalThis, { indexedDB });
 
 function bytes(
   value: string

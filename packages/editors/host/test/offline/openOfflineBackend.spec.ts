@@ -3,15 +3,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { indexedDB } from "fake-indexeddb";
 import { once } from "@openally/emitt";
 import { BINARY_KIND } from "@jolly-pixel/asset-server";
 import { CATALOG_ROOM, CatalogClient } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
 import { openOfflineBackend } from "#src/offline/shared-tab/openOfflineBackend.ts";
-
-Object.assign(globalThis, { indexedDB });
 
 test("a second tab edits the persistent catalog through its owner", async() => {
   const name = `shared-${crypto.randomUUID()}`;

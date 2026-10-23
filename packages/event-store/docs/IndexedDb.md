@@ -15,8 +15,6 @@ EventStore.persistence.indexeddb.destroy(
 
 interface IndexedDbEventStoreOptions {
   name: string;
-  /** @default globalThis.indexedDB */
-  factory?: IDBFactory;
 }
 ```
 
@@ -35,8 +33,8 @@ The factory opens or creates the database `name`, with an `events` store keyed
 by `eventId` and a `tags` store keyed by `[assetId, name]`, and loads both
 before it resolves. Reads never touch IndexedDB afterwards. The `indexedDB`
 global is only reached when the factory runs, so importing the package in
-Node.js stays safe; pass `factory` to use another implementation, such as
-`fake-indexeddb` in tests.
+Node.js stays safe. Node.js tests can install the IndexedDB globals with
+`fake-indexeddb/auto`.
 
 ## Writes
 

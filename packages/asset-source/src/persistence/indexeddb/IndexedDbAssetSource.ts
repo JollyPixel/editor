@@ -1,3 +1,12 @@
+// Import Third-party Dependencies
+import {
+  deleteDB,
+  openDB,
+  type DBSchema,
+  type IDBPDatabase,
+  type IDBPTransaction
+} from "idb";
+
 // Import Internal Dependencies
 import type { AssetSource } from "../../AssetSource.ts";
 import { AssetPathNotFoundError } from "../../errors/AssetPathNotFoundError.ts";
@@ -6,73 +15,71 @@ import {
   isStatePath,
   normalizeAssetPath
 } from "../../paths/index.ts";
-import {
-  AssetTransaction,
-  type TransactionResult
-} from "./AssetTransaction.ts";
 
 // CONSTANTS
 const kDatabaseVersion = 2;
+const kStoreNames = ["files", "folders"] as const;
+
+interface AssetSchema extends DBSchema {
+  files: {
+    key: string;
+    value: Uint8Array;
+  };
+  folders: {
+    key: string;
+    value: true;
+  };
+}
+
+type AssetTransaction = IDBPTransaction<
+  AssetSchema,
+  typeof kStoreNames,
+  "readwrite"
+>;
 
 export interface IndexedDbAssetSourceOptions {
   name: string;
-  factory?: IDBFactory;
 }
 
 export class IndexedDbAssetSource implements AssetSource {
   static async open(
     options: IndexedDbAssetSourceOptions
   ): Promise<IndexedDbAssetSource> {
-    const {
-      name,
-      factory = globalThis.indexedDB
-    } = options;
-
-    const request = factory.open(
-      name,
-      kDatabaseVersion
+    const database = await openDB<AssetSchema>(
+      options.name,
+      kDatabaseVersion,
+      {
+        upgrade(database) {
+          for (const storeName of kStoreNames) {
+            database.createObjectStore(storeName);
+          }
+        }
+      }
     );
-    request.onupgradeneeded = (event) => {
-      request.transaction !== null && AssetTransaction.upgrade(
-        request.transaction,
-        event.oldVersion
-      );
-    };
 
-    return new IndexedDbAssetSource(
-      await settled(request)
-    );
+    return new IndexedDbAssetSource(database);
   }
 
   static async destroy(
     options: IndexedDbAssetSourceOptions
   ): Promise<void> {
-    const {
-      name,
-      factory = globalThis.indexedDB
-    } = options;
-
-    await settled(
-      factory.deleteDatabase(name)
-    );
+    await deleteDB(options.name);
   }
 
-  #database: IDBDatabase;
+  #database: IDBPDatabase<AssetSchema>;
 
   constructor(
-    database: IDBDatabase
+    database: IDBPDatabase<AssetSchema>
   ) {
     this.#database = database;
+    database.onversionchange = () => database.close();
   }
 
   async read(
     path: string
   ): Promise<Uint8Array> {
     const key = normalizeAssetPath(path);
-    const data = await this.#transact(
-      "readonly",
-      (transaction) => transaction.file(key)
-    );
+    const data = await this.#database.get("files", key);
     if (data === undefined) {
       throw new AssetPathNotFoundError(key);
     }
@@ -85,10 +92,7 @@ export class IndexedDbAssetSource implements AssetSource {
   ): Promise<boolean> {
     const key = normalizeAssetPath(path);
 
-    return this.#transact(
-      "readonly",
-      (transaction) => transaction.hasFile(key)
-    );
+    return await this.#database.getKey("files", key) !== undefined;
   }
 
   async write(
@@ -98,9 +102,8 @@ export class IndexedDbAssetSource implements AssetSource {
     const key = normalizeAssetPath(path);
     const copy = Uint8Array.from(data);
 
-    return this.#transact(
-      "readwrite",
-      (transaction) => transaction.putFile(key, copy)
+    await this.#write(
+      (transaction) => this.#putFile(transaction, key, copy)
     );
   }
 
@@ -111,21 +114,21 @@ export class IndexedDbAssetSource implements AssetSource {
     const key = normalizeAssetPath(path);
     const copy = Uint8Array.from(data);
 
-    return this.#transact(
-      "readwrite",
-      (transaction) => transaction.putFileIfAbsent(key, copy)
-    );
+    return this.#write(async(transaction) => {
+      const existing = await transaction.objectStore("files").getKey(key);
+      if (existing !== undefined) {
+        return false;
+      }
+      await this.#putFile(transaction, key, copy);
+
+      return true;
+    });
   }
 
   async delete(
     path: string
   ): Promise<void> {
-    const key = normalizeAssetPath(path);
-
-    return this.#transact(
-      "readwrite",
-      (transaction) => transaction.deleteFile(key)
-    );
+    await this.#database.delete("files", normalizeAssetPath(path));
   }
 
   isIgnored(
@@ -135,19 +138,13 @@ export class IndexedDbAssetSource implements AssetSource {
   }
 
   async list(): Promise<string[]> {
-    const files = await this.#transact(
-      "readonly",
-      (transaction) => transaction.fileKeys()
-    );
+    const files = await this.#database.getAllKeys("files");
 
     return files.filter((path) => !this.isIgnored(path));
   }
 
   async folders(): Promise<string[]> {
-    const folders = await this.#transact(
-      "readonly",
-      (transaction) => transaction.folderKeys()
-    );
+    const folders = await this.#database.getAllKeys("folders");
 
     return folders
       .filter((path) => !this.isIgnored(path))
@@ -161,50 +158,65 @@ export class IndexedDbAssetSource implements AssetSource {
       normalizeAssetPath(path)
     );
 
-    return this.#transact(
-      "readwrite",
-      (transaction) => transaction.putFolders(folders)
+    await this.#write(
+      (transaction) => this.#putFolders(transaction, folders)
     );
   }
 
   async deleteFolder(
     path: string
   ): Promise<void> {
-    const folder = normalizeAssetPath(path);
+    const root = normalizeAssetPath(path);
 
-    return this.#transact(
-      "readwrite",
-      (transaction) => transaction.pruneFolders(folder)
-    );
+    await this.#write(async(transaction) => {
+      const folders = transaction.objectStore("folders");
+      const [files, stored] = await Promise.all([
+        transaction.objectStore("files").getAllKeys(),
+        folders.getAllKeys()
+      ]);
+      const pruned = new FolderSet(stored).prune(root, files);
+
+      await Promise.all(
+        pruned.map((folder) => folders.delete(folder))
+      );
+    });
   }
 
   close(): void {
     this.#database.close();
   }
 
-  #transact<TResult>(
-    mode: IDBTransactionMode,
-    operation: (transaction: AssetTransaction) => TransactionResult<TResult>
+  async #write<TResult>(
+    operation: (transaction: AssetTransaction) => Promise<TResult>
   ): Promise<TResult> {
-    return AssetTransaction.run(
-      this.#database,
-      mode,
-      operation
+    const transaction = this.#database.transaction(kStoreNames, "readwrite");
+    const [result] = await Promise.all([
+      operation(transaction),
+      transaction.done
+    ]);
+
+    return result;
+  }
+
+  async #putFile(
+    transaction: AssetTransaction,
+    key: string,
+    data: Uint8Array
+  ): Promise<void> {
+    await Promise.all([
+      transaction.objectStore("files").put(data, key),
+      this.#putFolders(transaction, new FolderSet().addParents(key))
+    ]);
+  }
+
+  async #putFolders(
+    transaction: AssetTransaction,
+    folders: FolderSet
+  ): Promise<void> {
+    const store = transaction.objectStore("folders");
+
+    await Promise.all(
+      Array.from(folders, (folder) => store.put(true, folder))
     );
   }
-}
-
-function settled<TResult>(
-  request: IDBRequest<TResult>
-): Promise<TResult> {
-  const {
-    promise,
-    resolve,
-    reject
-  } = Promise.withResolvers<TResult>();
-
-  request.onsuccess = () => resolve(request.result);
-  request.onerror = () => reject(request.error);
-
-  return promise;
 }
