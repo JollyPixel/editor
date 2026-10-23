@@ -1,8 +1,7 @@
 // Import Third-party Dependencies
 import {
-  formatHex,
-  formatRgba,
-  fromRGBA8
+  formatHex8,
+  formatRgba8
 } from "@jolly-pixel/color";
 import { ColorPalette } from "@jolly-pixel/pixel-draw.renderer";
 import {
@@ -17,6 +16,11 @@ import {
 
 // Import Internal Dependencies
 import { colorPaletteGridStyles } from "./ColorPaletteGrid.styles.ts";
+
+export interface PaletteRampDetail {
+  from: number;
+  to: number;
+}
 
 export interface PaletteEditDetail {
   index: number;
@@ -54,14 +58,11 @@ export class ColorPaletteGrid extends LitElement {
   override render() {
     const hint = this.locked ?
       "click to use" :
-      "click to use, double click or F2 to edit";
+      "click to use, shift click to ramp from the selected color, double click or F2 to edit";
 
     return html`
       <div class="grid" role="group" aria-label="Document color palette">
-        ${this.palette.toJSON().map((color, index) => {
-          const rgba = fromRGBA8(color);
-
-          return html`
+        ${this.palette.toJSON().map((color, index) => html`
             <button
               type="button"
               part="palette-slot"
@@ -69,9 +70,9 @@ export class ColorPaletteGrid extends LitElement {
               aria-pressed=${String(this.selected === index)}
               aria-haspopup=${this.locked ? nothing : "dialog"}
               aria-expanded=${this.locked ? nothing : String(this.editing === index)}
-              title=${`${formatHex(rgba, true)}: ${hint}`}
+              title=${`${formatHex8(color, true)}: ${hint}`}
               ?disabled=${this.disabled}
-              @click=${() => this.#dispatch("palette-select", index)}
+              @click=${(event: MouseEvent) => this.#select(event, index)}
               @dblclick=${(event: MouseEvent) => this.#edit(event, index)}
               @keydown=${(event: KeyboardEvent) => {
                 if (event.key === "F2") {
@@ -79,11 +80,27 @@ export class ColorPaletteGrid extends LitElement {
                   this.#edit(event, index);
                 }
               }}
-            ><span style=${`background:${formatRgba(rgba)}`}></span></button>
-          `;
-        })}
+            ><span style=${`background:${formatRgba8(color)}`}></span></button>
+          `)}
       </div>
     `;
+  }
+
+  #select(
+    event: MouseEvent,
+    index: number
+  ): void {
+    const from = this.selected;
+    if (event.shiftKey && !this.locked && from !== null && from !== index) {
+      this.#dispatch<PaletteRampDetail>("palette-ramp", {
+        from,
+        to: index
+      });
+
+      return;
+    }
+
+    this.#dispatch("palette-select", index);
   }
 
   #edit(

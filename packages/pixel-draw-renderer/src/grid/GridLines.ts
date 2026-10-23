@@ -1,11 +1,11 @@
 // Import Third-party Dependencies
 import {
+  assertColor,
   contrastingColor,
   formatRgba
 } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
-import { toUnitColor } from "../utils/colors.ts";
 import type { TextureGrid } from "./TextureGrid.ts";
 import type { DefaultViewport } from "../rendering/Viewport.ts";
 import type { Vec2 } from "../types.ts";
@@ -75,8 +75,8 @@ export class GridLines {
       this.#casingCache = {
         color,
         value: formatRgba({
-          ...toUnitColor(contrastingColor(color)),
-          a: toUnitColor(color).a
+          ...assertColor(contrastingColor(color)),
+          a: assertColor(color).a
         })
       };
     }

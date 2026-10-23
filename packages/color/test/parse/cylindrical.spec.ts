@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { parseColor } from "../../src/parse/index.ts";
 import { formatHex } from "../../src/format.ts";
-import { rgbToHsl } from "../../src/convert/hsl.ts";
+import { ColorSpace } from "../../src/convert/index.ts";
 
 // CONSTANTS
 const kHex = "#1a2b3d";
@@ -45,7 +45,7 @@ function readHue(
     assert.fail(`${input} did not parse`);
   }
 
-  return rgbToHsl(color).h;
+  return ColorSpace.hsl.fromRgb(color).h;
 }
 
 describe("parseColor / hsl", () => {

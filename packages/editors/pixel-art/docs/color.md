@@ -23,8 +23,10 @@ away, for example on a texture switch.
 `ColorPaletteGrid` receives `palette`, `selected`, `editing` (the slot whose
 picker is open, or `null`), `disabled` and `locked`. It emits `palette-select`
 with a zero-based index, and `palette-edit` with `{ index, anchor }` on double
-click or F2. A `locked` grid never emits `palette-edit`. The host opens the
-shared picker for an edit request.
+click or F2. Shift click on another slot while one is selected emits
+`palette-ramp` with `{ from, to }` instead of `palette-select`. A `locked` grid
+never emits `palette-edit` or `palette-ramp`. The host opens the shared picker
+for an edit request and fills the ramp.
 
 `ColorDock` receives `color`, `opacity`, `palette`, `selected`, `editing` and
 `paletteLocked`, which it passes to the grid as `locked`. A `null` palette

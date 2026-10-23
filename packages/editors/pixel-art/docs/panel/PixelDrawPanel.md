@@ -164,6 +164,17 @@ locally; each completed adjustment commits one undoable, synchronized edit.
 Dismissal discards unfinished palette drafts and restores the saved color.
 Peer edits refresh the selected brush unless a local draft is active.
 
+Shift click a second slot to ramp from the selected one: the slots in between
+are filled with an OKLab blend of the two colors, as one undoable edit, and the
+clicked slot becomes the selection. On a locked palette, or on a slot next to
+the selected one, a shift click only selects.
+
+Every picker follows the shared color picker preferences (space, square or
+wheel, channel fields, harmony). The settings button next to the hex field
+changes them in place and saves them, so they also show up in the Color
+picker settings page. Clicking a harmony swatch uses that color; right click
+sets it as the background color when the picker is not docked.
+
 Palette data belongs to the Pixel Document and survives saving, reload and
 peer snapshots. Existing texture pixels keep their colors when a slot changes.
 See the renderer's [ColorPalette API](../../../../pixel-draw-renderer/docs/ColorPalette.md).

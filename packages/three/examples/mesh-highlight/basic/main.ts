@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import { ColorPalette } from "@jolly-pixel/color";
+import { ColorSequence } from "@jolly-pixel/color";
 import type { TreeNode } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -42,10 +42,10 @@ const {
 
 addSelectionLighting(scene);
 
-const colorPalette = new ColorPalette();
+const peerColors = ColorSequence.default;
 const peerRegistry = new PeerHighlights({
   colorAllocator: {
-    peerColor: (peerId) => colorPalette.forKey(peerId),
+    peerColor: (peerId) => peerColors.pick(peerId),
     release: () => void 0
   }
 });

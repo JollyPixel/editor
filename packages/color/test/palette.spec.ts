@@ -3,102 +3,84 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { ColorPalette } from "../src/palette/ColorPalette.ts";
-import {
-  colorFromKey,
-  defaultPaletteColors,
-  goldenAngleColor,
-  hashKey
-} from "../src/palette/deterministic.ts";
+import { ColorSequence } from "../src/palette/ColorSequence.ts";
+import { hashKey } from "../src/palette/hashKey.ts";
 import { parseColor } from "../src/parse/index.ts";
-import { rgbToHsl } from "../src/convert/index.ts";
+import { ColorSpace } from "../src/convert/index.ts";
 
-describe("ColorPalette", () => {
-  test("cycles through its colors in order", () => {
-    const palette = new ColorPalette({ colors: ["#a", "#b"] });
+// CONSTANTS
+const kKeys = ["", "a", "peer-42", "a-much-longer-client-id"];
 
-    assert.equal(palette.next(), "#a");
-    assert.equal(palette.next(), "#b");
-    assert.equal(palette.next(), "#a");
-  });
+describe("ColorSequence.from", () => {
+  test("cycles through its colors by index, in both directions", () => {
+    const sequence = ColorSequence.from(["#a", "#b"]);
 
-  test("reset restarts the cycle", () => {
-    const palette = new ColorPalette({ colors: ["#a", "#b"] });
-
-    palette.next();
-    palette.reset();
-
-    assert.equal(palette.next(), "#a");
-  });
-
-  test("forKey picks from its colors without moving the cursor", () => {
-    const palette = new ColorPalette({ colors: ["#a", "#b"] });
-
-    assert.equal(palette.next(), "#a");
-    assert.ok(palette.colors.includes(palette.forKey("peer-1")));
-    assert.equal(palette.next(), "#b");
-  });
-
-  test("defaults to the built-in palette and cannot be tampered with", () => {
-    const palette = new ColorPalette();
-
-    assert.deepEqual(palette.colors, defaultPaletteColors());
-    assert.throws(
-      () => (palette.colors as string[]).push("#000"),
-      TypeError
+    assert.deepEqual(
+      [0, 1, 2, -1].map((index) => sequence.at(index)),
+      ["#a", "#b", "#a", "#b"]
     );
-    assert.equal(palette.colors.length, defaultPaletteColors().length);
+  });
+
+  test("picks a stable color from its list for each key", () => {
+    const colors = ["#a", "#b", "#c"];
+    const sequence = ColorSequence.from(colors);
+
+    for (const key of kKeys) {
+      assert.ok(colors.includes(sequence.pick(key)), key);
+      assert.equal(sequence.pick(key), sequence.pick(key), key);
+    }
   });
 
   test("copies the caller's array so later edits do not leak in", () => {
     const colors = ["#a", "#b"];
-    const palette = new ColorPalette({ colors });
+    const sequence = ColorSequence.from(colors);
 
-    colors.push("#c");
+    colors[0] = "#c";
 
-    assert.deepEqual(palette.colors, ["#a", "#b"]);
+    assert.equal(sequence.at(0), "#a");
+  });
+
+  test("rejects an empty list", () => {
+    assert.throws(() => ColorSequence.from([]), RangeError);
+  });
+
+  test("the default sequence spreads keys over several colors", () => {
+    const picked = new Set(
+      Array.from({ length: 50 }, (_, index) => ColorSequence.default.pick(`peer-${index}`))
+    );
+
+    assert.ok(picked.size > 1);
   });
 });
 
-describe("colorFromKey", () => {
-  test("stays inside the built-in palette", () => {
-    const colors = defaultPaletteColors();
-
-    for (const key of ["", "a", "peer-42", "a-much-longer-client-id"]) {
-      assert.ok(colors.includes(colorFromKey(key)), key);
-    }
-  });
-
-  test("honours a supplied palette", () => {
-    assert.equal(colorFromKey("peer-1", ["#only"]), "#only");
-  });
-
-  test("hashKey is non-negative", () => {
-    for (const key of ["", "z", "\u{1F600}", "peer-999999"]) {
-      assert.ok(hashKey(key) >= 0, key);
-    }
-  });
-});
-
-describe("goldenAngleColor", () => {
+describe("ColorSequence.goldenAngle", () => {
   test("defaults to 72% saturation and 70% lightness", () => {
-    assert.equal(goldenAngleColor(0), "#ea7b7b");
-    assert.equal(goldenAngleColor(1), "#7bea9c");
+    const sequence = ColorSequence.goldenAngle();
+
+    assert.equal(sequence.at(0), "#ea7b7b");
+    assert.equal(sequence.at(1), "#7bea9c");
   });
 
   test("keeps adjacent indexes far apart in hue", () => {
-    const first = readHue(goldenAngleColor(0));
-    const second = readHue(goldenAngleColor(1));
-    const distance = Math.abs(first - second);
+    const sequence = ColorSequence.goldenAngle();
+    const distance = Math.abs(readHue(sequence.at(0)) - readHue(sequence.at(1)));
 
     assert.ok(Math.min(distance, 360 - distance) > 90);
   });
 
   test("honours saturation and lightness overrides", () => {
     assert.equal(
-      goldenAngleColor(0, { saturation: 0, lightness: 0.5 }),
+      ColorSequence.goldenAngle({ saturation: 0, lightness: 0.5 }).at(0),
       "#808080"
     );
+  });
+});
+
+describe("hashKey", () => {
+  test("is non-negative", () => {
+    for (const key of ["", "z", "\u{1F600}", "peer-999999"]) {
+      assert.ok(hashKey(key) >= 0, key);
+    }
   });
 });
 
@@ -110,5 +92,5 @@ function readHue(
     assert.fail(`${hex} did not parse`);
   }
 
-  return rgbToHsl(color).h;
+  return ColorSpace.hsl.fromRgb(color).h;
 }

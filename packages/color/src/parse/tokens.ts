@@ -4,7 +4,7 @@ import {
   clampUnit,
   BYTE_MAX,
   wrapHue
-} from "../utils.ts";
+} from "../math.ts";
 
 // CONSTANTS
 const kNumberPattern = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i;
@@ -60,6 +60,18 @@ export function parseUnitChannel(
   const value = missingOr(token, parseNumber);
 
   return value === null ? null : clampUnit(value / kPercentMax);
+}
+
+export function parseScaledNumber(
+  token: string,
+  percentScale: number
+): number | null {
+  const ratio = parsePercent(token);
+  if (ratio !== null) {
+    return ratio * percentScale;
+  }
+
+  return missingOr(token, parseNumber);
 }
 
 export function parseAlpha(

@@ -7,7 +7,7 @@ import {
 import {
   clampUnit,
   wrapHue
-} from "../utils.ts";
+} from "../math.ts";
 import type {
   HSLA,
   HSVA,

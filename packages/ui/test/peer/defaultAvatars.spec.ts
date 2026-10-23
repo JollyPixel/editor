@@ -3,10 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import {
-  colorFromKey,
-  defaultPaletteColors
-} from "@jolly-pixel/color";
+import { ColorSequence } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import {
@@ -32,13 +29,16 @@ describe("pickDefaultAvatar", () => {
   });
 
   test("pairs every avatar with every peer color", () => {
+    const colors = new Set(
+      peerIds(2_000).map((peerId) => ColorSequence.default.pick(peerId))
+    );
     const pairs = new Set(peerIds(2_000).map(
-      (peerId) => `${pickDefaultAvatar(peerId).name} ${colorFromKey(peerId)}`
+      (peerId) => `${pickDefaultAvatar(peerId).name} ${ColorSequence.default.pick(peerId)}`
     ));
 
     assert.equal(
       pairs.size,
-      DEFAULT_AVATARS.length * defaultPaletteColors().length
+      DEFAULT_AVATARS.length * colors.size
     );
   });
 });

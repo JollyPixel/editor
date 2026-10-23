@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { colorFromKey } from "@jolly-pixel/color";
+import { ColorSequence } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import { peerIdentity } from "../../src/peer/identity.ts";
@@ -13,7 +13,7 @@ describe("peerIdentity", () => {
     assert.deepEqual(peerIdentity("alice", "p-1"), {
       username: "alice",
       peerId: "p-1",
-      color: colorFromKey("p-1")
+      color: ColorSequence.default.pick("p-1")
     });
   });
 
@@ -21,7 +21,7 @@ describe("peerIdentity", () => {
     assert.deepEqual(peerIdentity("alice", "p-1", "/avatars/p-1"), {
       username: "alice",
       peerId: "p-1",
-      color: colorFromKey("p-1"),
+      color: ColorSequence.default.pick("p-1"),
       avatar: "/avatars/p-1"
     });
   });
@@ -31,6 +31,6 @@ describe("peerIdentity", () => {
     const second = peerIdentity("alice");
 
     assert.notEqual(first.peerId, second.peerId);
-    assert.equal(first.color, colorFromKey(first.peerId));
+    assert.equal(first.color, ColorSequence.default.pick(first.peerId));
   });
 });

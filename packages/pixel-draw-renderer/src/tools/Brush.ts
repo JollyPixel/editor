@@ -1,14 +1,15 @@
 // Import Third-party Dependencies
 import {
+  assertColor8,
   formatHex,
-  formatRgb,
+  formatRgb8,
   formatRgba,
+  fromRGBA8,
   toRGBA8,
   type RGBA
 } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
-import { toUnitColor } from "../utils/colors.ts";
 import { clamp } from "../utils/math.ts";
 import type {
   ByteColorInput,
@@ -81,7 +82,7 @@ function opaqueColor(
   color: ByteColorInput
 ): RGBA {
   return {
-    ...toUnitColor(color),
+    ...fromRGBA8(assertColor8(color)),
     a: 1
   };
 }
@@ -182,7 +183,7 @@ export class Brush {
   set colorInline(
     color: ByteColorInput
   ) {
-    this.#colorInline = formatRgb(toUnitColor(color));
+    this.#colorInline = formatRgb8(assertColor8(color));
   }
 
   get colorInline(): string {
@@ -192,7 +193,7 @@ export class Brush {
   set colorOutline(
     color: ByteColorInput
   ) {
-    this.#colorOutline = formatRgb(toUnitColor(color));
+    this.#colorOutline = formatRgb8(assertColor8(color));
   }
 
   get colorOutline(): string {

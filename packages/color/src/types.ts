@@ -37,4 +37,27 @@ export interface HWBA {
   a: number;
 }
 
+export interface OKLCHA {
+  l: number;
+  c: number;
+  h: number;
+  a: number;
+}
+
+export interface OKHSVA {
+  h: number;
+  s: number;
+  v: number;
+  a: number;
+}
+
+export interface OKHSLA {
+  h: number;
+  s: number;
+  l: number;
+  a: number;
+}
+
 export type ColorInput = string | RGBA;
+
+export type ColorInput8 = string | RGBA8;

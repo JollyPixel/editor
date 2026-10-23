@@ -1,3 +1,9 @@
+// Import Third-party Dependencies
+import {
+  COLOR_PICKER_DEFAULTS,
+  COLOR_PICKER_OPTIONS
+} from "@jolly-pixel/ui/color-picker";
+
 // Import Internal Dependencies
 import { definePreferences } from "./PreferenceScope.ts";
 
@@ -152,8 +158,54 @@ export const CAMERA_PREFERENCES = definePreferences({
   }
 });
 
+export const COLOR_PICKER_PREFERENCES = definePreferences({
+  name: "color-picker",
+  label: "Color picker",
+  fields: {
+    space: {
+      type: "enum",
+      label: "Color space",
+      group: "Picker",
+      description: "OKHSV keeps hue and lightness steps perceptually even",
+      options: COLOR_PICKER_OPTIONS.space,
+      default: COLOR_PICKER_DEFAULTS.space
+    },
+    selector: {
+      type: "enum",
+      label: "Selector",
+      group: "Picker",
+      options: COLOR_PICKER_OPTIONS.selector,
+      default: COLOR_PICKER_DEFAULTS.selector
+    },
+    channels: {
+      type: "enum",
+      label: "Channel fields",
+      group: "Picker",
+      description: "The fields next to RGB in docked pickers",
+      options: COLOR_PICKER_OPTIONS.channels,
+      default: COLOR_PICKER_DEFAULTS.channels
+    },
+    harmony: {
+      type: "enum",
+      label: "Harmony",
+      group: "Harmony",
+      description: "Swatches for a color scheme built from the current color",
+      options: COLOR_PICKER_OPTIONS.harmony,
+      default: COLOR_PICKER_DEFAULTS.harmony
+    },
+    discrete: {
+      type: "boolean",
+      label: "Discrete wheel",
+      group: "Picker",
+      description: "Snaps the wheel to hue sectors and saturation rings",
+      default: COLOR_PICKER_DEFAULTS.discrete
+    }
+  }
+});
+
 export const HOST_PREFERENCES = [
   RUNTIME_PREFERENCES,
   LANTERN_PREFERENCES,
-  CAMERA_PREFERENCES
+  CAMERA_PREFERENCES,
+  COLOR_PICKER_PREFERENCES
 ] as const;

@@ -13,8 +13,8 @@ import {
 
 The package registers these names on a shared 24 by 24 SVG grid:
 
-`chevron`, `close`, `plus`, `revert`, `drag`, `lock`, `eye`, `search`,
-`check`, `info`, and `warning`. `plus` carries the `lime` tone; the others
+`chevron`, `settings`, `close`, `plus`, `revert`, `drag`, `lock`, `eye`,
+`search`, `check`, `info`, and `warning`. `plus` carries the `lime` tone; the others
 have none.
 
 ## Register a Lit SVG glyph
@@ -160,7 +160,7 @@ its accessible label.
 ```ts
 type BuiltinIconName =
   | "chevron" | "close" | "plus" | "revert" | "drag" | "lock"
-  | "eye" | "search" | "check" | "info" | "warning";
+  | "eye" | "search" | "check" | "info" | "warning" | "settings";
 type IconName = BuiltinIconName | (string & {}); // completion for built-ins
 type IconGlyph = string | SVGTemplateResult;
 type IconTone = typeof ICON_TONES[number];

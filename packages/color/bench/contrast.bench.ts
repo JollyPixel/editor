@@ -5,11 +5,7 @@ import {
 } from "@jolly-pixel/bench";
 
 // Import Internal Dependencies
-import {
-  contrastingColor,
-  contrastRatio,
-  relativeLuminance
-} from "../src/contrast.ts";
+import { contrastingColor } from "../src/contrast.ts";
 import { formatHex } from "../src/format.ts";
 import {
   BATCH,
@@ -22,22 +18,6 @@ const suite = defineSuite("contrast", (bench) => {
   const hexColors = colors.map((color) => formatHex(color));
 
   bench
-    .add("relativeLuminance", () => {
-      let sum = 0;
-      for (const color of colors) {
-        sum += relativeLuminance(color);
-      }
-
-      return sum;
-    })
-    .add("contrastRatio", () => {
-      let sum = 0;
-      for (let i = 1; i < colors.length; i++) {
-        sum += contrastRatio(colors[i - 1], colors[i]);
-      }
-
-      return sum;
-    })
     .add("contrastingColor RGBA", () => {
       let length = 0;
       for (const color of colors) {

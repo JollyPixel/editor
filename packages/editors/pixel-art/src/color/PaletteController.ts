@@ -4,6 +4,11 @@ import type {
   ReactiveControllerHost
 } from "lit";
 import {
+  colorRamp,
+  fromRGBA8,
+  toRGBA8
+} from "@jolly-pixel/color";
+import {
   ColorPalette,
   type PixelArtCanvas,
   type PixelDocument
@@ -123,6 +128,29 @@ export class PaletteController implements ReactiveController {
     if (index !== null) {
       this.#activeDocument()?.changePaletteColor(index, colorChangeToRgba8(color));
     }
+  }
+
+  ramp(
+    from: number,
+    to: number
+  ): void {
+    const doc = this.#activeDocument();
+    const count = Math.abs(to - from) + 1;
+    if (doc === null || this.locked || count < 3) {
+      return;
+    }
+
+    const step = to > from ? 1 : -1;
+    const colors = colorRamp(
+      fromRGBA8(doc.palette.colorAt(from)),
+      fromRGBA8(doc.palette.colorAt(to)),
+      count
+    );
+    doc.batch(() => {
+      for (let offset = 1; offset < count - 1; offset++) {
+        doc.changePaletteColor(from + (offset * step), toRGBA8(colors[offset]));
+      }
+    });
   }
 
   #activeDocument(): PixelDocument | null {

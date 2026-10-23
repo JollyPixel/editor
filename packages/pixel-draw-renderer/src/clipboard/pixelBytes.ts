@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { RGBA8 } from "./types.ts";
+import type { RGBA8 } from "../types.ts";
 
 // CONSTANTS
 const kBytesPerPixel = 4;

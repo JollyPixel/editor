@@ -4,24 +4,19 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
+  ColorSpace,
   fromRGBA8,
   hslToHsv,
-  hslToRgb,
   hsvToHsl,
-  hsvToRgb,
-  hwbToRgb,
   linearToSrgb,
-  rgbToHsl,
-  rgbToHsv,
-  rgbToHwb,
   srgbToLinear,
   toRGBA8
-} from "../src/convert/index.ts";
+} from "../../src/convert/index.ts";
 import type {
   HSLA,
   HSVA,
   RGBA
-} from "../src/types.ts";
+} from "../../src/types.ts";
 
 // CONSTANTS
 const kEpsilon = 1e-6;
@@ -49,23 +44,19 @@ function assertClose(
   }
 }
 
+function assertRoundTrips<TChannel extends string>(
+  space: ColorSpace<TChannel>
+): void {
+  for (const sample of kSamples) {
+    assertClose(space.toRgb(space.fromRgb(sample)), sample, space.name);
+  }
+}
+
 describe("convert / round trips", () => {
-  test("rgb to hsv and back", () => {
-    for (const sample of kSamples) {
-      assertClose(hsvToRgb(rgbToHsv(sample)), sample, "hsv");
-    }
-  });
-
-  test("rgb to hsl and back", () => {
-    for (const sample of kSamples) {
-      assertClose(hslToRgb(rgbToHsl(sample)), sample, "hsl");
-    }
-  });
-
-  test("rgb to hwb and back", () => {
-    for (const sample of kSamples) {
-      assertClose(hwbToRgb(rgbToHwb(sample)), sample, "hwb");
-    }
+  test("rgb to hsv, hsl and hwb and back", () => {
+    assertRoundTrips(ColorSpace.hsv);
+    assertRoundTrips(ColorSpace.hsl);
+    assertRoundTrips(ColorSpace.hwb);
   });
 
   test("srgb gamma and back", () => {
@@ -80,26 +71,26 @@ describe("convert / round trips", () => {
 describe("convert / known values", () => {
   test("achromatic colors report hue and saturation 0", () => {
     assert.deepEqual(
-      rgbToHsv({ r: 0.5, g: 0.5, b: 0.5, a: 1 }),
+      ColorSpace.hsv.fromRgb({ r: 0.5, g: 0.5, b: 0.5, a: 1 }),
       { h: 0, s: 0, v: 0.5, a: 1 }
     );
     assert.deepEqual(
-      rgbToHsl({ r: 0.5, g: 0.5, b: 0.5, a: 1 }),
+      ColorSpace.hsl.fromRgb({ r: 0.5, g: 0.5, b: 0.5, a: 1 }),
       { h: 0, s: 0, l: 0.5, a: 1 }
     );
   });
 
   test("hwb collapses to gray when whiteness and blackness fill the color", () => {
     assert.deepEqual(
-      hwbToRgb({ h: 210, w: 0.5, b: 0.5, a: 1 }),
+      ColorSpace.hwb.toRgb({ h: 210, w: 0.5, b: 0.5, a: 1 }),
       { r: 0.5, g: 0.5, b: 0.5, a: 1 }
     );
   });
 
   test("hue wraps and channels clamp", () => {
     assert.deepEqual(
-      hslToRgb({ h: -360, s: 2, l: 0.5, a: 2 }),
-      hslToRgb({ h: 0, s: 1, l: 0.5, a: 1 })
+      ColorSpace.hsl.toRgb({ h: -360, s: 2, l: 0.5, a: 2 }),
+      ColorSpace.hsl.toRgb({ h: 0, s: 1, l: 0.5, a: 1 })
     );
   });
 });
@@ -136,11 +127,11 @@ describe("convert / hsv and hsl", () => {
 
   test("agrees with the rgb conversions", () => {
     for (const sample of kSamples) {
-      const hsv = rgbToHsv(sample);
-      assertClose(hslToRgb(hsvToHsl(hsv)), hsvToRgb(hsv), "hsv->hsl");
+      const hsv = ColorSpace.hsv.fromRgb(sample);
+      assertClose(ColorSpace.hsl.toRgb(hsvToHsl(hsv)), ColorSpace.hsv.toRgb(hsv), "hsv->hsl");
 
-      const hsl = rgbToHsl(sample);
-      assertClose(hsvToRgb(hslToHsv(hsl)), hslToRgb(hsl), "hsl->hsv");
+      const hsl = ColorSpace.hsl.fromRgb(sample);
+      assertClose(ColorSpace.hsv.toRgb(hslToHsv(hsl)), ColorSpace.hsl.toRgb(hsl), "hsl->hsv");
     }
   });
 

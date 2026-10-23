@@ -10,11 +10,18 @@ import {
 } from "./cylindrical.ts";
 import { parseHex } from "./hex.ts";
 import { parseNamed } from "./named.ts";
+import {
+  parseOklabFunction,
+  parseOklchFunction
+} from "./oklab.ts";
 import { parseRgbFunction } from "./rgb.ts";
 import { ColorParseError } from "./errors/ColorParseError.ts";
+import { toRGBA8 } from "../convert/bytes.ts";
 import type {
   ColorInput,
-  RGBA
+  ColorInput8,
+  RGBA,
+  RGBA8
 } from "../types.ts";
 
 // CONSTANTS
@@ -60,6 +67,16 @@ export function assertColor(
   return parsed;
 }
 
+export function assertColor8(
+  input: ColorInput8
+): RGBA8 {
+  if (typeof input !== "string") {
+    return input;
+  }
+
+  return toRGBA8(assertColor(input));
+}
+
 function fromFunction(
   fn: ColorFunction
 ): RGBA | null {
@@ -75,6 +92,10 @@ function fromFunction(
       return parseHsvFunction(fn);
     case "hwb":
       return parseHwbFunction(fn);
+    case "oklch":
+      return parseOklchFunction(fn);
+    case "oklab":
+      return parseOklabFunction(fn);
     default:
       return null;
   }

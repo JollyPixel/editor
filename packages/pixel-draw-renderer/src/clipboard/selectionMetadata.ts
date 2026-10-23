@@ -1,10 +1,8 @@
-// Import Third-party Dependencies
+// Import Internal Dependencies
 import {
   imageDataToPixels,
   pixelsToImageData
-} from "@jolly-pixel/color";
-
-// Import Internal Dependencies
+} from "./pixelBytes.ts";
 import { filledArray } from "../utils/array.ts";
 import {
   decodeBase64,

@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import { KeyboardLayoutStore } from "@jolly-pixel/controls";
 import type { Lantern } from "@jolly-pixel/lantern";
+import { ColorPicker } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { forwardConsole } from "../console/forwardConsole.ts";
@@ -22,6 +23,7 @@ import {
   LANTERN_PREFERENCES
 } from "../preferences/scope/hostPreferences.ts";
 import { PreferenceStorage } from "../preferences/adapters/PreferenceStorage.ts";
+import { followColorPickerPreferences } from "../preferences/adapters/followColorPickerPreferences.ts";
 import { LastOpenedLaunchSource } from "../launch/sources/LastOpenedLaunchSource.ts";
 import type { AssetRoomLease } from "../lease/AssetLease.ts";
 import type { AssetLeases } from "../lease/AssetLeases.ts";
@@ -118,6 +120,10 @@ export class Placement {
         scope: CAMERA_PREFERENCES,
         layout: this.#keyboardLayout
       }));
+      teardown.defer(followColorPickerPreferences(
+        ColorPicker,
+        this.#preferences
+      ));
     }
     catch (error) {
       this.dispose();

@@ -40,6 +40,9 @@ const suite = defineSuite("parse", (bench) => {
     ),
     "hsl() turn": createBatch((rng) => `hsl(${rng().toFixed(3)}turn 40% 60%)`),
     "hwb()": createBatch((rng) => `hwb(${byte(rng)} ${byte(rng) % 50}% ${byte(rng) % 50}%)`),
+    "oklch()": createBatch(
+      (rng) => `oklch(${(rng() * 100).toFixed(1)}% ${(rng() * 0.37).toFixed(3)} ${byte(rng)})`
+    ),
     rejected: createBatch(rejectedInput)
   };
 

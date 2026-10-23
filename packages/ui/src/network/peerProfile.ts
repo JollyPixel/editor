@@ -6,7 +6,7 @@ import {
   type PeerProfileMetadata,
   type Room
 } from "@jolly-pixel/network/client";
-import { colorFromKey } from "@jolly-pixel/color";
+import { ColorSequence } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import type { PeerIdentity } from "../peer/identity.ts";
@@ -64,5 +64,5 @@ function profileColor(
   clientId: string,
   profile: PeerProfile
 ): string {
-  return colorFromKey(profile.peerId ?? clientId);
+  return ColorSequence.default.pick(profile.peerId ?? clientId);
 }

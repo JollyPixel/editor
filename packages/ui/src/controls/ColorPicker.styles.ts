@@ -9,6 +9,7 @@ export const colorPickerStyles = css`
     --jolly-picker-width: 180px;
     --jolly-picker-area-height: 110px;
     --jolly-picker-area-max-width: 280px;
+    --jolly-picker-wheel-size: 160px;
     --jolly-picker-track-height: 12px;
     --jolly-picker-ramp-height: 4px;
     --jolly-picker-knob: 10px;
@@ -62,13 +63,6 @@ export const colorPickerStyles = css`
     position: relative;
     height: var(--jolly-picker-area-height);
     border-radius: var(--jolly-picker-radius);
-    background-image:
-      linear-gradient(to top, #000, transparent),
-      linear-gradient(
-        to right,
-        #fff,
-        hsl(calc(var(--jolly-picker-hue, 0) * 1deg) 100% 50%)
-      );
     cursor: crosshair;
     touch-action: none;
   }
@@ -78,6 +72,146 @@ export const colorPickerStyles = css`
     min-width: 64px;
     max-width: var(--jolly-picker-area-max-width);
     height: auto;
+  }
+
+  .area.wheel {
+    width: min(100%, var(--jolly-picker-wheel-size));
+    height: auto;
+    margin-inline: auto;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--jolly-surface-sunken, #808080);
+  }
+
+  :host([layout="wide"]) .area.wheel {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    height: 100%;
+    margin: 0;
+  }
+
+  .surface {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  .harmony-marker {
+    position: absolute;
+    left: calc(var(--jolly-marker-x, 0) * 100%);
+    top: calc(var(--jolly-marker-y, 0) * 100%);
+    width: 6px;
+    height: 6px;
+    box-sizing: border-box;
+    border: 1px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgb(0 0 0 / 50%);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .harmony {
+    display: flex;
+    gap: 2px;
+  }
+
+  .channels .harmony,
+  .channels .settings {
+    grid-column: 1 / -1;
+  }
+
+  .settings {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--jolly-space-1, 4px) var(--jolly-space-2, 8px);
+  }
+
+  :host([layout="wide"]) .settings {
+    grid-template-columns: repeat(2, auto auto);
+  }
+
+  :host([layout="wide"]) .setting-select {
+    width: 11ch;
+  }
+
+  .setting,
+  .setting-check {
+    display: contents;
+  }
+
+  .setting-name,
+  .setting-check span {
+    color: var(--jolly-text-muted, inherit);
+  }
+
+  .setting-check input {
+    justify-self: end;
+    margin: 0;
+  }
+
+  .setting-select {
+    min-width: 0;
+    height: var(--jolly-control-height, 20px);
+    padding: 0 var(--jolly-space-1, 4px);
+    border: none;
+    border-radius: var(--jolly-radius-sm, 2px);
+    background: var(--jolly-control-bg, ButtonFace);
+    color: inherit;
+    font: inherit;
+  }
+
+  .setting-select:focus-visible,
+  .setting-check input:focus-visible {
+    ${focusRing}
+  }
+
+  .settings-toggle {
+    --jolly-icon-size: 14px;
+
+    display: inline-grid;
+    flex: 0 0 auto;
+    place-items: center;
+    width: var(--jolly-control-height, 20px);
+    height: var(--jolly-control-height, 20px);
+    margin-inline-start: auto;
+    padding: 0;
+    border: none;
+    border-radius: var(--jolly-radius-sm, 2px);
+    background: transparent;
+    color: var(--jolly-text-muted, inherit);
+    cursor: pointer;
+  }
+
+  .settings-toggle:hover,
+  .settings-toggle[aria-expanded="true"] {
+    background: var(--jolly-control-bg-hover, ButtonFace);
+    color: inherit;
+  }
+
+  .settings-toggle:focus-visible {
+    ${focusRing}
+  }
+
+  .harmony-swatch {
+    flex: 1 1 0;
+    min-width: 12px;
+    height: var(--jolly-picker-track-height);
+    padding: 0;
+    border: none;
+    border-radius: var(--jolly-radius-sm, 2px);
+    background: var(--jolly-harmony-color, transparent);
+    cursor: pointer;
+  }
+
+  .harmony-swatch:focus-visible {
+    ${focusRing}
+    outline-offset: 1px;
   }
 
   .area-cursor {
@@ -141,29 +275,19 @@ export const colorPickerStyles = css`
   }
 
   .track.hue::before {
-    background-image: linear-gradient(
-      to right,
-      hsl(0deg 100% 50%),
-      hsl(60deg 100% 50%),
-      hsl(120deg 100% 50%),
-      hsl(180deg 100% 50%),
-      hsl(240deg 100% 50%),
-      hsl(300deg 100% 50%),
-      hsl(360deg 100% 50%)
-    );
+    background-image: linear-gradient(to right, var(--jolly-picker-hue-ramp));
+  }
+
+  .track.value::before {
+    background-image: linear-gradient(to right, var(--jolly-picker-value-ramp));
   }
 
   :host([layout="wide"]) .track.hue::before {
-    background-image: linear-gradient(
-      to top,
-      hsl(0deg 100% 50%),
-      hsl(60deg 100% 50%),
-      hsl(120deg 100% 50%),
-      hsl(180deg 100% 50%),
-      hsl(240deg 100% 50%),
-      hsl(300deg 100% 50%),
-      hsl(360deg 100% 50%)
-    );
+    background-image: linear-gradient(to top, var(--jolly-picker-hue-ramp));
+  }
+
+  :host([layout="wide"]) .track.value::before {
+    background-image: linear-gradient(to top, var(--jolly-picker-value-ramp));
   }
 
   .track.alpha::before {
@@ -361,6 +485,10 @@ export const colorPickerStyles = css`
     flex: 0 0 auto;
     width: 4ch;
     text-align: right;
+  }
+
+  .readout[data-channel="okc"] {
+    width: 5ch;
   }
 
   .hex:hover:not(:disabled),

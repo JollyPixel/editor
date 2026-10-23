@@ -33,6 +33,7 @@ parseColor("nope");
 | `hsl()` / `hsla()` | Comma or space syntax; `deg`, `rad`, `turn`, and `grad` hue units |
 | `hsv()` / `hsva()` | Non-standard notation used by HSV color pickers |
 | `hwb()` | Space-separated syntax |
+| `oklch()` / `oklab()` | `oklch(62.8% 0.258 29.2)`, `oklab(0.628 0.225 0.126 / 50%)` |
 | Named | The 148 CSS named colors and `transparent` |
 
 Parsing is case-insensitive. Whitespace follows the supported CSS syntax, and
@@ -45,6 +46,17 @@ parseColor("rgb(300 0 -20)");
 
 parseColor("hsl(-150 40% 17%)");
 // Same result as hsl(210 40% 17%)
+```
+
+`oklch()` and `oklab()` accept only the space syntax. Lightness takes a number
+from 0 to 1 or a percentage; chroma and the `a`/`b` axes take a number or a
+percentage where `100%` is `0.4`. A color outside sRGB is brought inside with
+the CSS Color 4 gamut mapping: chroma drops until the clipped color is within
+a just noticeable difference, so lightness and hue barely move.
+
+```ts
+parseColor("oklch(0.7 0.4 150)");
+// a green inside sRGB, with less chroma than requested
 ```
 
 Unknown functions and names return `null`. The parser also rejects invalid
@@ -76,6 +88,22 @@ assertColor({ r: 1, g: 0, b: 0, a: 1 });
 
 assertColor("nope");
 // throws ColorParseError
+```
+
+## `assertColor8()`
+
+```ts
+function assertColor8(input: ColorInput8): RGBA8
+```
+
+Same as `assertColor`, for byte channels: strings are parsed, then rounded and
+clamped to 0..255; an `RGBA8` object is returned unchanged.
+
+```ts
+import { assertColor8 } from "@jolly-pixel/color";
+
+assertColor8("#ff000080");
+// { r: 255, g: 0, b: 0, a: 128 }
 ```
 
 ## `ColorParseError`

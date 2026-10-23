@@ -5,7 +5,13 @@ import { parseColor } from "@jolly-pixel/color";
 import "../../../../src/controls/ColorPicker.ts";
 import type { GalleryExample } from "../../types.ts";
 import { readDetail } from "../../../../src/dom.ts";
-import type { ColorPickerLayout } from "../../../../src/controls/ColorPicker.ts";
+import type {
+  ColorPickerChannels,
+  ColorPickerHarmony,
+  ColorPickerLayout,
+  ColorPickerSelector,
+  ColorPickerSpace
+} from "../../../../src/controls/ColorPicker.ts";
 import type { JollyChangeDetail } from "../../../../src/field/events.ts";
 
 interface PanelOptions {
@@ -15,6 +21,12 @@ interface PanelOptions {
   hexInput?: boolean;
   readonly?: boolean;
   layout?: ColorPickerLayout;
+  space?: ColorPickerSpace;
+  selector?: ColorPickerSelector;
+  channels?: ColorPickerChannels;
+  harmony?: ColorPickerHarmony;
+  discrete?: boolean;
+  settings?: boolean;
 }
 
 // CONSTANTS
@@ -49,6 +61,41 @@ const kPanels: PanelOptions[] = [
     value: "#ff660080",
     alpha: true,
     layout: "wide"
+  },
+  {
+    name: "okhsv square",
+    value: "#4488ff",
+    space: "okhsv"
+  },
+  {
+    name: "wheel",
+    value: "#c3567f",
+    selector: "wheel",
+    harmony: "triadic"
+  },
+  {
+    name: "settings",
+    value: "#6a4fd0",
+    alpha: true,
+    settings: true
+  },
+  {
+    name: "okhsv discrete wheel",
+    value: "#3f9d6a",
+    space: "okhsv",
+    selector: "wheel",
+    discrete: true,
+    harmony: "complementary"
+  },
+  {
+    name: "wide okhsv wheel, oklch channels",
+    value: "#c39d7f",
+    alpha: true,
+    layout: "wide",
+    space: "okhsv",
+    selector: "wheel",
+    channels: "oklch",
+    harmony: "analogous"
   }
 ];
 
@@ -60,7 +107,7 @@ export const COLOR_PICKER_EXAMPLE: GalleryExample = {
     const hint = document.createElement("p");
     hint.className = "scenario-hint";
     hint.textContent =
-      "Drag the square, hue or alpha track. Each panel writes its own value back, " +
+      "Drag the square or wheel, then the hue, value or alpha track. Each panel writes its own value back, " +
       "so the readout is the committed colour.";
     root.append(hint);
 
@@ -90,6 +137,12 @@ function buildPanel(
   picker.hexInput = options.hexInput ?? true;
   picker.readonly = options.readonly ?? false;
   picker.layout = options.layout ?? "stack";
+  picker.space = options.space;
+  picker.selector = options.selector;
+  picker.channels = options.channels;
+  picker.harmony = options.harmony;
+  picker.discrete = options.discrete;
+  picker.settings = options.settings ?? false;
   if (picker.layout === "wide") {
     picker.style.height = kWideHeight;
   }

@@ -5,12 +5,8 @@ import {
 } from "@jolly-pixel/bench";
 
 // Import Internal Dependencies
-import { ColorPalette } from "../src/palette/ColorPalette.ts";
-import {
-  colorFromKey,
-  goldenAngleColor,
-  hashKey
-} from "../src/palette/deterministic.ts";
+import { ColorSequence } from "../src/palette/ColorSequence.ts";
+import { hashKey } from "../src/palette/hashKey.ts";
 import {
   BATCH,
   createBatch,
@@ -22,7 +18,7 @@ const suite = defineSuite("palette", (bench) => {
   const longKeys = createBatch(
     (rng) => Array.from({ length: 16 }, () => hexPair(rng)).join("")
   );
-  const palette = new ColorPalette();
+  const goldenAngle = ColorSequence.goldenAngle();
 
   bench
     .add("hashKey short", () => {
@@ -41,26 +37,18 @@ const suite = defineSuite("palette", (bench) => {
 
       return sum;
     })
-    .add("colorFromKey", () => {
+    .add("ColorSequence.default.pick", () => {
       let length = 0;
       for (const key of longKeys) {
-        length += colorFromKey(key).length;
+        length += ColorSequence.default.pick(key).length;
       }
 
       return length;
     })
-    .add("goldenAngleColor", () => {
+    .add("ColorSequence.goldenAngle.at", () => {
       let length = 0;
       for (let i = 0; i < BATCH; i++) {
-        length += goldenAngleColor(i).length;
-      }
-
-      return length;
-    })
-    .add("ColorPalette.next", () => {
-      let length = 0;
-      for (let i = 0; i < BATCH; i++) {
-        length += palette.next().length;
+        length += goldenAngle.at(i).length;
       }
 
       return length;

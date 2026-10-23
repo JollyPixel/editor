@@ -2,13 +2,46 @@
 
 Use these APIs to assign repeatable colors to string keys or numeric indexes.
 
-## `defaultPaletteColors()`
+## `ColorSequence`
 
 ```ts
-function defaultPaletteColors(): string[]
+interface GoldenAngleOptions {
+  saturation?: number; // default 0.72
+  lightness?: number; // default 0.7
+}
+
+class ColorSequence {
+  static readonly default: ColorSequence;
+  static from(colors: readonly string[]): ColorSequence;
+  static goldenAngle(options?: GoldenAngleOptions): ColorSequence;
+
+  constructor(colorAt: (index: number) => string);
+
+  at(index: number): string;
+  pick(key: string): string;
+}
 ```
 
-Returns a copy of the built-in eight-color palette.
+An endless sequence of hex colors. `at` reads it by index, `pick` hashes a key
+with `hashKey` and reads that index.
+
+- `default` cycles through a built-in eight-color palette.
+- `from` cycles through a copy of `colors`, in both directions. Throws a
+  `RangeError` when `colors` is empty.
+- `goldenAngle` turns the hue 137.5 degrees per index, so neighbours stay far
+  apart and the sequence never repeats.
+
+```ts
+import { ColorSequence } from "@jolly-pixel/color";
+
+ColorSequence.default.pick("peer-42");  // stable for this key
+ColorSequence.goldenAngle().at(0);       // "#ea7b7b"
+ColorSequence.goldenAngle().at(1);       // "#7bea9c"
+ColorSequence.from(["#111", "#222"]).at(2);  // "#111"
+```
+
+Use a stable identity such as a peer or document ID when the color must
+survive reconnection.
 
 ## `hashKey()`
 
@@ -16,104 +49,13 @@ Returns a copy of the built-in eight-color palette.
 function hashKey(key: string): number
 ```
 
-Returns the non-negative integer hash used by `colorFromKey`.
-
-## `colorFromKey()`
-
-```ts
-function colorFromKey(
-  key: string,
-  colors?: readonly string[]
-): string
-```
-
-Hashes `key` and selects an entry from `colors`, using the built-in palette when
-`colors` is omitted. Custom palettes cannot be empty.
-
-```ts
-import { colorFromKey } from "@jolly-pixel/color";
-
-colorFromKey("peer-42");
-// An entry from the built-in palette
-
-colorFromKey("peer-42", ["#111", "#222"]);
-// An entry from the custom palette
-```
-
-The same key and palette produce the same color, so use a stable identity such
-as a username or document ID when the color must survive reconnection.
-
-## `goldenAngleColor()`
-
-```ts
-interface GoldenAngleOptions {
-  saturation?: number;
-  lightness?: number;
-}
-
-function goldenAngleColor(
-  index: number,
-  options?: GoldenAngleOptions
-): string
-```
-
-Returns a hex color derived from `index`, with adjacent indexes separated by
-137.5 degrees of hue. Use it for an indexed sequence that is not limited to a
-fixed palette.
-
-```ts
-import { goldenAngleColor } from "@jolly-pixel/color";
-
-goldenAngleColor(0);  // "#ea7b7b"
-goldenAngleColor(1);  // "#7bea9c"
-goldenAngleColor(2, { saturation: 0.5, lightness: 0.4 });
-```
-
-`saturation` defaults to `0.72` and `lightness` defaults to `0.7`. Both options
-are clamped to the range from 0 to 1.
-
-## `ColorPalette`
-
-```ts
-interface ColorPaletteOptions {
-  colors?: string[];
-}
-
-class ColorPalette {
-  constructor(options?: ColorPaletteOptions);
-
-  readonly colors: readonly string[];
-
-  next(): string;
-  forKey(key: string): string;
-  reset(): void;
-}
-```
-
-Creates a cycling palette and freezes a copy of `colors`. With no options, it
-uses the built-in palette. Custom palettes cannot be empty.
-
-```ts
-import { ColorPalette } from "@jolly-pixel/color";
-
-const palette = new ColorPalette({
-  colors: ["#111111", "#222222"]
-});
-
-palette.next();          // "#111111"
-palette.next();          // "#222222"
-palette.next();          // "#111111"
-palette.forKey("peer");  // Stable for this key and palette
-palette.reset();         // The next call returns "#111111"
-```
-
-`forKey()` does not move the `next()` cursor.
+Returns the non-negative integer hash behind `pick`. Use it to spread other
+choices, such as default avatars, over the same keys.
 
 ## Three.js
 
-Palette functions return CSS color strings that can be passed to
-`THREE.Color`:
+Sequences return CSS color strings that can be passed to `THREE.Color`:
 
 ```ts
-new THREE.Color(colorFromKey(object.id));
+new THREE.Color(ColorSequence.default.pick(object.id));
 ```

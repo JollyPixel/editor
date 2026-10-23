@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
 import {
-  ColorPalette,
+  ColorSequence,
   formatHex,
   parseColor
 } from "@jolly-pixel/color";
@@ -52,7 +52,7 @@ const kBounds = new THREE.Box3(
   new THREE.Vector3(-16, 0, -16),
   new THREE.Vector3(16, 8, 16)
 );
-const kPalette = new ColorPalette();
+const kPalette = ColorSequence.default;
 const kExtentRange = { min: 1, max: 24, step: 1 };
 const kCoordRange = { min: -20, max: 20, step: 1 };
 const kOpacityRange = { min: 0, max: 1, step: 0.05 };
@@ -461,7 +461,7 @@ start();
 function paletteColor(
   index: number
 ): string {
-  return kPalette.colors[index % kPalette.colors.length];
+  return kPalette.at(index);
 }
 
 function withAlpha(

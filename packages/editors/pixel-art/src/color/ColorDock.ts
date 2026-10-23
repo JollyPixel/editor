@@ -66,6 +66,7 @@ export class ColorDock extends LitElement {
       <jolly-color-picker
         layout="wide"
         alpha
+        settings
         part="picker"
         .value=${this.#picker.value}
         @jolly-input=${this.#picker.input}

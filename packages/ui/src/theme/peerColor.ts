@@ -1,8 +1,11 @@
 // Import Third-party Dependencies
-import { goldenAngleColor } from "@jolly-pixel/color";
+import { ColorSequence } from "@jolly-pixel/color";
+
+// CONSTANTS
+const kPeerColors = ColorSequence.goldenAngle();
 
 export function peerColor(
   index: number
 ): string {
-  return goldenAngleColor(index);
+  return kPeerColors.at(index);
 }

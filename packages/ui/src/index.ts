@@ -83,8 +83,22 @@ export {
 } from "./controls/Color.ts";
 export {
   ColorPicker,
-  type ColorPickerLayout
+  type ColorPickerChannels,
+  type ColorPickerDefaults,
+  type ColorPickerHarmony,
+  type ColorPickerLayout,
+  type ColorPickerPreferences,
+  type ColorPickerPreferenceSource,
+  type ColorPickerSelector,
+  type ColorPickerSpace
 } from "./controls/ColorPicker.ts";
+export {
+  COLOR_PICKER_DEFAULTS,
+  COLOR_PICKER_OPTIONS,
+  type ColorPickerChoice,
+  type ColorPickerOption,
+  type ColorPickerOptions
+} from "./color/index.ts";
 export * from "./controls/Control.ts";
 export {
   Controls,

@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { colorFromKey } from "@jolly-pixel/color";
+import { ColorSequence } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import {
@@ -29,8 +29,8 @@ describe("peer profile", () => {
   });
 
   test("colors a peer from its published peer id, falling back to its client id", () => {
-    assert.equal(peerProfileColor("client-1", { peerId: "peer-1" }), colorFromKey("peer-1"));
-    assert.equal(peerProfileColor("client-1", {}), colorFromKey("client-1"));
+    assert.equal(peerProfileColor("client-1", { peerId: "peer-1" }), ColorSequence.default.pick("peer-1"));
+    assert.equal(peerProfileColor("client-1", {}), ColorSequence.default.pick("client-1"));
   });
 
   test("describes a room peer by its profile", () => {
@@ -42,7 +42,7 @@ describe("peer profile", () => {
     assert.deepEqual(toPresencePeer(peer), {
       clientId: "client-1",
       displayName: "Ada",
-      color: colorFromKey("peer-1"),
+      color: ColorSequence.default.pick("peer-1"),
       peerId: "peer-1",
       avatar: "/avatar.webp"
     });

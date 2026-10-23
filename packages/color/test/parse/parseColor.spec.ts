@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   assertColor,
+  assertColor8,
   ColorParseError,
   parseColor
 } from "../../src/parse/index.ts";
@@ -71,5 +72,33 @@ describe("assertColor", () => {
         return true;
       }
     );
+  });
+});
+
+describe("assertColor8", () => {
+  test("parses a string into rounded, clamped byte channels", () => {
+    assert.deepEqual(
+      assertColor8("#ff000080"),
+      { r: 255, g: 0, b: 0, a: 128 }
+    );
+    assert.deepEqual(
+      assertColor8("rgb(300, -10, 128)"),
+      { r: 255, g: 0, b: 128, a: 255 }
+    );
+  });
+
+  test("passes byte channels straight through", () => {
+    const color = {
+      r: 1,
+      g: 2,
+      b: 3,
+      a: 4
+    };
+
+    assert.equal(assertColor8(color), color);
+  });
+
+  test("throws ColorParseError on unrecognised input", () => {
+    assert.throws(() => assertColor8("not-a-color"), ColorParseError);
   });
 });

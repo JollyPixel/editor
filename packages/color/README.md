@@ -42,14 +42,23 @@ import { toRGBA8 } from "@jolly-pixel/color";
 toRGBA8({ r: 1, g: 0.4, b: 0, a: 1 });  // { r: 255, g: 102, b: 0, a: 255 }
 ```
 
-Use `colorFromKey` with a stable string key. Use `goldenAngleColor` with a
-numeric index:
+Convert through a `ColorSpace`. Passing the previous point keeps its hue on
+grays:
 
 ```ts
-import { colorFromKey, goldenAngleColor } from "@jolly-pixel/color";
+import { ColorSpace } from "@jolly-pixel/color";
 
-colorFromKey(peer.username);  // stable per key, from a curated palette
-goldenAngleColor(index);      // unbounded, hues a golden angle apart
+const point = ColorSpace.okhsv.fromRgb(color, previousPoint);
+ColorSpace.okhsv.toRgb({ ...point, v: 0.5 });
+```
+
+Use a `ColorSequence` to color peers or objects by key or index:
+
+```ts
+import { ColorSequence } from "@jolly-pixel/color";
+
+ColorSequence.default.pick(peer.username);  // stable per key
+ColorSequence.goldenAngle().at(index);      // hues a golden angle apart
 ```
 
 ## 📚 API
@@ -57,12 +66,13 @@ goldenAngleColor(index);      // unbounded, hues a golden angle apart
 - [Parsing](./docs/parse.md)
 - [Formatting](./docs/format.md)
 - [Types and conversion](./docs/convert.md)
+- [Mixing and harmonies](./docs/mix.md)
 - [Contrast](./docs/contrast.md)
 - [Palettes](./docs/palette.md)
 
 ## 🧪 Benchmarks
 
-One suite per module: parsing per notation (including rejected input), formatting, conversion, contrast, palettes and pixel buffers.
+One suite per module: parsing per notation (including rejected input), formatting, conversion, contrast and palettes.
 
 ```bash
 pnpm --filter @jolly-pixel/color bench

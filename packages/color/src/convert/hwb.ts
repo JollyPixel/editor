@@ -3,7 +3,7 @@ import {
   hsvToRgb,
   rgbToHsv
 } from "./hsv.ts";
-import { clampUnit } from "../utils.ts";
+import { clampUnit } from "../math.ts";
 import type {
   HWBA,
   RGBA

@@ -1,6 +1,6 @@
 // Import Internal Dependencies
-import { toByte } from "./convert/bytes.ts";
 import { srgbToLinear } from "./convert/srgb.ts";
+import { clampUnit } from "./math.ts";
 import { assertColor } from "./parse/index.ts";
 import type {
   ColorInput,
@@ -8,44 +8,31 @@ import type {
 } from "./types.ts";
 
 // CONSTANTS
-const kLightBrightness = 140;
 const kLuminanceWeights = {
   r: 0.2126,
   g: 0.7152,
   b: 0.0722
 };
 const kContrastOffset = 0.05;
-
-export function relativeLuminance(
-  color: RGBA
-): number {
-  return (kLuminanceWeights.r * srgbToLinear(color.r)) +
-    (kLuminanceWeights.g * srgbToLinear(color.g)) +
-    (kLuminanceWeights.b * srgbToLinear(color.b));
-}
-
-export function contrastRatio(
-  a: RGBA,
-  b: RGBA
-): number {
-  const first = relativeLuminance(a) + kContrastOffset;
-  const second = relativeLuminance(b) + kContrastOffset;
-
-  return first > second ?
-    first / second :
-    second / first;
-}
+const kWhiteLuminance = 1;
 
 export function contrastingColor(
   input: ColorInput
-): string {
-  const color = assertColor(input);
-  const r = toByte(color.r);
-  const g = toByte(color.g);
-  const b = toByte(color.b);
-  const brightness = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+): "#000" | "#fff" {
+  const luminance = relativeLuminance(assertColor(input));
+  const onBlack = (luminance + kContrastOffset) / kContrastOffset;
+  const onWhite = (kWhiteLuminance + kContrastOffset) /
+    (luminance + kContrastOffset);
 
-  return brightness > kLightBrightness ?
+  return onBlack >= onWhite ?
     "#000" :
     "#fff";
+}
+
+function relativeLuminance(
+  color: RGBA
+): number {
+  return (kLuminanceWeights.r * srgbToLinear(clampUnit(color.r))) +
+    (kLuminanceWeights.g * srgbToLinear(clampUnit(color.g))) +
+    (kLuminanceWeights.b * srgbToLinear(clampUnit(color.b)));
 }

@@ -11,8 +11,10 @@ picker's eyedropper and system palettes.
 
 Values stay hex strings, `#rrggbb` or `#rrggbbaa` when `alpha` is set, which keeps
 `FieldValue<string>` and therefore `Mixed`, `default` and revert unchanged, and stays directly usable
-as a CSS value. The panel holds an HSVA tuple as draft state, kept whenever it still formats to the
-incoming value and re-derived otherwise.
+as a CSS value. The panel holds a hue, saturation, value and alpha point in its active space (HSV or
+OKHSV) as draft state, kept whenever it still formats to the incoming value and re-derived otherwise.
+Perceptual spaces such as OKLCH change how a colour is picked, never the value: the string stays sRGB
+hex.
 
 Anchored placement, repositioning, focus restoration and the Escape hook live in a reusable
 `PopoverController` over a native `popover`, not inside `jolly-color`.

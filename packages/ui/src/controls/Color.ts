@@ -24,7 +24,11 @@ import { PointerFocusController } from "../field/PointerFocusController.ts";
 import { PopoverController } from "../field/PopoverController.ts";
 
 import {
-  ColorPicker
+  ColorPicker,
+  type ColorPickerChannels,
+  type ColorPickerHarmony,
+  type ColorPickerSelector,
+  type ColorPickerSpace
 } from "./ColorPicker.ts";
 
 export interface ColorDefaults {
@@ -44,6 +48,21 @@ export class Color extends JollyField<string> {
 
   @property({ type: Boolean, reflect: true })
   declare alpha: boolean;
+
+  @property({ type: String })
+  declare space: ColorPickerSpace | undefined;
+
+  @property({ type: String })
+  declare selector: ColorPickerSelector | undefined;
+
+  @property({ type: String })
+  declare channels: ColorPickerChannels | undefined;
+
+  @property({ type: String })
+  declare harmony: ColorPickerHarmony | undefined;
+
+  @property({ type: Boolean })
+  declare discrete: boolean | undefined;
 
   @query(".swatch")
   declare _swatch: HTMLButtonElement;
@@ -162,6 +181,11 @@ export class Color extends JollyField<string> {
           .value=${this.concreteValue ?? Color.Defaults.value}
           ?alpha=${this.alpha}
           .hexInput=${false}
+          .space=${this.space}
+          .selector=${this.selector}
+          .channels=${this.channels}
+          .harmony=${this.harmony}
+          .discrete=${this.discrete}
           ?readonly=${!this.editable}
           @jolly-input=${this.#onPickerInput}
           @jolly-change=${this.#onPickerChange}

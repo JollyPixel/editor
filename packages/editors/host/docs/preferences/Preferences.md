@@ -271,6 +271,13 @@ settings dropped while loading are written back without them.
   and one key field per `OrbitFlyCamera` key action: `forward`, `back`,
   `left`, `right`, `up`, `down`, `lookUp`, `lookDown`, `lookLeft` and
   `lookRight`. Every editor shares these keys.
+- `COLOR_PICKER_PREFERENCES` (`color-picker`): `space` (`hsv` or `okhsv`),
+  `selector` (`square` or `wheel`), `channels` (`hsl` or `oklch`), `harmony`
+  (`none` or a harmony kind) and `discrete`. The values, labels and defaults
+  come from `@jolly-pixel/ui/color-picker`. When a page opens, the host hands
+  this scope to `ColorPicker.follow()`, so every colour picker on the page
+  reads it unless it sets its own property, and a picker's settings button
+  writes into it.
 
 ```ts
 const stop = followCameraPreferences(orbitFlyCamera, context.preferences);

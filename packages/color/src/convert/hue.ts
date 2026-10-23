@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { wrapHue } from "../utils.ts";
+import { wrapHue } from "../math.ts";
 
 // CONSTANTS
 const kSector = 60;

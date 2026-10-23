@@ -255,6 +255,22 @@ import {
 - [Metric definitions](./docs/api/stats/metric-definition.md): aggregation, formatting and graph
   bounds. `MetricSource` lets another package describe metrics without depending on this one.
 
+#### Color picker preferences
+
+`@jolly-pixel/ui/color-picker` loads no element either. It exports the preference types, the
+values with their labels, and the defaults, so a settings page can edit the picker preferences from
+code that runs without a DOM:
+
+```ts
+import {
+  COLOR_PICKER_DEFAULTS,
+  COLOR_PICKER_OPTIONS,
+  type ColorPickerPreferences
+} from "@jolly-pixel/ui/color-picker";
+```
+
+- [Options and defaults](./docs/api/controls/color-picker.md#options-and-defaults)
+
 #### Presence
 
 - [Presence and locking](./docs/api/peer/presence-source.md): the `PresenceSource` port, and its

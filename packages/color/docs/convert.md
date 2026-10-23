@@ -20,7 +20,7 @@ interface RGBA8 {
 
 `RGBA` uses channels from 0 to 1 and is the input or output type for most APIs.
 `RGBA8` uses channels from 0 to 255 for byte-based storage such as
-`ImageData`.
+`ImageData`. The two types do not assign to each other.
 
 ### `toRGBA8()` and `fromRGBA8()`
 
@@ -42,92 +42,139 @@ fromRGBA8({ r: 255, g: 128, b: 0, a: 255 });
 // { r: 1, g: 0.502…, b: 0, a: 1 }
 ```
 
-## `ColorInput`
+Byte-based code can skip the round trip: [`assertColor8`](./parse.md) parses
+straight to `RGBA8`, and [`formatHex8`, `formatRgb8` and
+`formatRgba8`](./format.md) read it.
+
+## `ColorInput` and `ColorInput8`
 
 ```ts
 type ColorInput = string | RGBA;
+type ColorInput8 = string | RGBA8;
 ```
 
-APIs that accept `ColorInput` parse strings and use `RGBA` values directly.
+APIs that accept either type parse strings and use color objects directly.
 
-## `HSVA`, `HSLA`, and `HWBA`
+## `ColorSpace`
 
 ```ts
-interface HSVA {
-  h: number;
-  s: number;
-  v: number;
-  a: number;
+type HueColor<TChannel extends string> = Record<TChannel | "h" | "a", number>;
+type ColorSpaceName = "hsv" | "okhsv" | "hsl" | "okhsl" | "hwb" | "oklch";
+
+class ColorSpace<TChannel extends string> {
+  static readonly hsv: ColorSpace<"s" | "v">;
+  static readonly okhsv: ColorSpace<"s" | "v">;
+  static readonly hsl: ColorSpace<"s" | "l">;
+  static readonly okhsl: ColorSpace<"s" | "l">;
+  static readonly hwb: ColorSpace<"w" | "b">;
+  static readonly oklch: ColorSpace<"l" | "c">;
+
+  static named(name: ColorSpaceName): ColorSpace;
+
+  readonly name: string;
+
+  toRgb(color: HueColor<TChannel>): RGBA;
+  fromRgb(color: RGBA, previous?: Partial<HueColor<TChannel>>): HueColor<TChannel>;
+  mix(from: RGBA, to: RGBA, amount: number, hue?: HueInterpolation): RGBA;
 }
-
-interface HSLA {
-  h: number;
-  s: number;
-  l: number;
-  a: number;
-}
-
-interface HWBA {
-  h: number;
-  w: number;
-  b: number;
-  a: number;
-}
 ```
 
-Hue uses degrees. Every other channel uses a value from 0 to 1.
-
-### HSV
+One object per hue-based color model. Hue uses degrees and wraps. Every other
+channel uses 0 to 1 and is clamped, except OKLCH chroma.
 
 ```ts
-function rgbToHsv(color: RGBA): HSVA
-function hsvToRgb(color: HSVA): RGBA
+import { ColorSpace } from "@jolly-pixel/color";
+
+const orange = ColorSpace.hsl.fromRgb({ r: 1, g: 0.4, b: 0, a: 1 });
+// { h: 24, s: 1, l: 0.5, a: 1 }
+
+ColorSpace.hsl.toRgb({ ...orange, l: 0.25 });
 ```
 
-### HSL
+### `fromRgb()`
+
+Converts an `RGBA` color. Without `previous`, grays get hue 0 and black gets
+saturation 0.
+
+With `previous`, channels that the color does not define take their value
+from `previous`. Only the channels present in `previous` are carried:
+
+- `hsv`, `okhsv`: hue when `s` or `v` is 0, saturation when `v` is 0.
+- `hsl`, `okhsl`: hue when `s` is 0 or at black and white, saturation at
+  black and white.
+- `hwb`: hue when `w + b >= 1`.
+- `oklch`: hue when `c` is 0.
 
 ```ts
-function rgbToHsl(color: RGBA): HSLA
-function hslToRgb(color: HSLA): RGBA
+const previous = { h: 140, s: 0.7, v: 0.5, a: 1 };
+
+ColorSpace.hsv.fromRgb({ r: 0, g: 0, b: 0, a: 1 }, previous);
+// { h: 140, s: 0.7, v: 0, a: 1 }
 ```
 
-### HWB
+A picker passes its current point, so dragging through gray or black keeps
+the hue and saturation it had.
 
-```ts
-function rgbToHwb(color: RGBA): HWBA
-function hwbToRgb(color: HWBA): RGBA
-```
+### `mix()`
 
-RGB inputs and non-hue cylindrical channels are clamped. Hue values wrap;
-achromatic RGB colors convert with both hue and saturation set to 0.
+Same as [`mixColor`](./mix.md) with this space. `ColorSpace.named(name)`
+returns the space for a `MixSpace` or preference string.
 
-```ts
-import {
-  hslToRgb,
-  hsvToRgb,
-  hwbToRgb,
-  rgbToHsl,
-  rgbToHsv,
-  rgbToHwb
-} from "@jolly-pixel/color";
+### HSV, HSL and HWB
 
-hslToRgb({ h: -360, s: 2, l: 0.5, a: 2 });
-// Same result as { h: 0, s: 1, l: 0.5, a: 1 }
-```
-
-When `w + b >= 1`, `hwbToRgb` returns the gray described by the whiteness and
+When `w + b >= 1`, HWB returns the gray described by the whiteness and
 blackness channels.
 
-### HSV and HSL
+### OKLCH
+
+The polar form of OKLab, the perceptual model behind CSS `oklch()`. Lightness
+runs from 0 to 1, chroma from 0 to about 0.37 inside sRGB. Equal steps in
+lightness or hue look like equal changes, which HSL and HSV do not promise.
+Values still describe sRGB colors: OKLCH is a space to pick and blend in.
+
+`toRgb` clamps lightness and alpha, and maps a color outside sRGB back inside
+with the CSS Color 4 algorithm: chroma drops at constant lightness and hue
+until clipping is no longer noticeable. Lightness 0 and 1 return black and
+white.
+
+```ts
+ColorSpace.oklch.fromRgb({ r: 1, g: 0, b: 0, a: 1 });
+// { l: 0.628, c: 0.258, h: 29.23, a: 1 }
+```
+
+### OKHSV and OKHSL
+
+Björn Ottosson's OKHSV and OKHSL reshape OKLab so that saturation 1 always
+reaches the sRGB gamut edge. A square or wheel drawn in these models has no
+holes, unlike a raw OKLCH plane. Hue matches OKLCH hue. Lightness follows a
+perceptual toe curve, so OKHSL `l: 0.5` looks like a middle gray.
+
+A round trip can drift by about 0.001 near the gamut edge, under one 8-bit
+step.
+
+## `HSVA`, `HSLA`, `HWBA`, `OKLCHA`, `OKHSVA` and `OKHSLA`
+
+```ts
+interface HSVA { h: number; s: number; v: number; a: number }
+interface HSLA { h: number; s: number; l: number; a: number }
+interface HWBA { h: number; w: number; b: number; a: number }
+interface OKLCHA { l: number; c: number; h: number; a: number }
+interface OKHSVA { h: number; s: number; v: number; a: number }
+interface OKHSLA { h: number; s: number; l: number; a: number }
+```
+
+Named shapes of the `HueColor` each `ColorSpace` reads and returns.
+
+## `hsvToHsl()` and `hslToHsv()`
 
 ```ts
 function hsvToHsl(color: HSVA): HSLA
 function hslToHsv(color: HSLA): HSVA
 ```
 
-These convert between the two cylindrical models directly, without an RGB
-round trip, so hue passes through (wrapped) on grays instead of becoming 0.
-Saturation and value or lightness are clamped, and so is alpha.
+These convert between the two models directly, without an RGB round trip, so
+hue passes through (wrapped) on grays. Saturation, value, lightness and alpha
+are clamped.
 
 At the black point, where HSL saturation is undefined, both functions return
 the limit as lightness approaches 0 at the same HSV saturation:
@@ -138,12 +185,17 @@ converted to black and back keeps its saturation. At white, HSL saturation is
 ```ts
 import { hslToHsv, hsvToHsl } from "@jolly-pixel/color";
 
-hsvToHsl({ h: 24, s: 1, v: 1, a: 1 });
-// { h: 24, s: 1, l: 0.5, a: 1 }
-
 hslToHsv(hsvToHsl({ h: 24, s: 1, v: 0, a: 1 }));
 // { h: 24, s: 1, v: 0, a: 1 }
 ```
+
+## `isOklchInGamut()`
+
+```ts
+function isOklchInGamut(color: OKLCHA): boolean
+```
+
+Returns whether the color fits in sRGB before gamut mapping.
 
 ## sRGB transfer functions
 
@@ -160,34 +212,4 @@ import { linearToSrgb, srgbToLinear } from "@jolly-pixel/color";
 
 const linear = srgbToLinear(0.5);
 linearToSrgb(linear);  // 0.5
-```
-
-## Pixel buffers
-
-### `imageDataToPixels()`
-
-```ts
-function imageDataToPixels(data: Uint8ClampedArray): RGBA8[]
-```
-
-Copies an `ImageData` byte buffer into an array of `RGBA8` objects.
-
-### `pixelsToImageData()`
-
-```ts
-function pixelsToImageData(
-  pixels: readonly RGBA8[],
-  data: Uint8ClampedArray,
-  mask?: readonly boolean[]
-): void
-```
-
-Writes pixels into `data` in place. When a mask entry is `false`, the function
-writes the RGB channels and sets alpha to 0.
-
-```ts
-import { imageDataToPixels, pixelsToImageData } from "@jolly-pixel/color";
-
-const pixels = imageDataToPixels(imageData.data);
-pixelsToImageData(pixels, imageData.data, mask);
 ```

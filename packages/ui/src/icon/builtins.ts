@@ -15,6 +15,18 @@ registerIcon("chevron", svg`
   />
 `);
 
+registerIcon("settings", svg`
+  <path
+    d="M4 8h16M4 16h16"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.25"
+    stroke-linecap="round"
+  />
+  <circle cx="9" cy="8" r="3" fill="currentColor" />
+  <circle cx="15" cy="16" r="3" fill="currentColor" />
+`);
+
 registerIcon("close", svg`
   <path
     d="M6 6l12 12M18 6 6 18"

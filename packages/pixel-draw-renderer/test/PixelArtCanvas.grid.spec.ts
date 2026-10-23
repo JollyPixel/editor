@@ -62,7 +62,7 @@ describe("PixelArtCanvas grid", () => {
   test("draws each cell boundary in its color, dashed with the contrasting color", () => {
     const { manager } = createPixelArtCanvas({
       texture: {
-        defaultColor: "#000000"
+        defaultColor: "#ffffff"
       },
       zoom: { default: 4 },
       grid: {
@@ -70,13 +70,13 @@ describe("PixelArtCanvas grid", () => {
         color: "#ff0000"
       }
     });
-    assert.deepEqual(lineOffsetPixel(manager, 4, 4), kBlack);
+    assert.deepEqual(lineOffsetPixel(manager, 4, 4), kWhite);
 
     manager.grid.visible = true;
 
-    assert.deepEqual(lineOffsetPixel(manager, 4, 1), kWhite);
+    assert.deepEqual(lineOffsetPixel(manager, 4, 1), kBlack);
     assert.deepEqual(lineOffsetPixel(manager, 4, 4), kRed);
-    assert.deepEqual(screenPixel(manager, { x: 2.5, y: 1.5 }), kBlack);
+    assert.deepEqual(screenPixel(manager, { x: 2.5, y: 1.5 }), kWhite);
     manager.destroy();
   });
 
