@@ -20,8 +20,8 @@ flowchart TB
     Contract --> IDB
 ```
 
-The contract has six required operations. `isIgnored` and `watch` are optional;
-the filesystem adapter supplies both. The HTTP handler accepts any
+Every operation of the contract except `watch` is required, and only the
+filesystem adapter supplies `watch`. The HTTP handler accepts any
 `AssetSource`, so serving assets does not require filesystem storage.
 
 | Adapter | Backing store | Lifetime | Listing and change signals |
@@ -54,7 +54,8 @@ segments, and rejects empty, absolute, directory and escaping paths.
 `normalizeAssetPath` throws `AssetPathEscapeError` on rejection. Direct
 filesystem reads, existence checks, writes and deletes also resolve links
 before access, so a symlink or junction cannot redirect them outside the
-root. `resolve(path)` only performs lexical path resolution; it does not make
+root, and a link or Windows short name cannot reach an ignored path under
+another name. `resolve(path)` only performs lexical path resolution; it does not make
 that filesystem check.
 
 ```mermaid
@@ -67,11 +68,11 @@ stateDiagram-v2
     Missing --> Missing: delete
 ```
 
-`read` rejects when an asset is missing, while `exists` observes whether the
-path is occupied at that moment. `writeIfAbsent` is the operation for creating
-without replacing an occupied path. Filesystem writes use `AtomicFile`; the
-memory adapter copies input and output byte arrays, and IndexedDB writes copy
-their inputs before a transaction completes.
+`read` rejects when an asset is missing, while `exists` observes whether a
+file occupies the path at that moment. `writeIfAbsent` is the operation for
+creating without replacing an occupied path. Filesystem writes use
+`AtomicFile`; the memory adapter copies input and output byte arrays, and
+IndexedDB writes copy their inputs before a transaction completes.
 
 ## Filesystem storage and changes
 
@@ -79,19 +80,20 @@ their inputs before a transaction completes.
 sequenceDiagram
     participant Caller
     participant Source as FilesystemAssetSource
-    participant Paths as FilesystemPathResolver
+    participant Tree as FilesystemTree
     participant Disk as Filesystem root
     participant Watcher as FilesystemAssetWatcher
 
     Caller->>Source: write(path, bytes)
-    Source->>Paths: contained(path)
-    Paths-->>Source: path inside real root
+    Source->>Tree: contain(path)
+    Tree-->>Source: path inside real root
     Source->>Disk: atomic write
     Source-->>Caller: complete
 
     Caller->>Source: list()
-    Source->>Disk: walk files
-    Disk-->>Source: root-relative paths
+    Source->>Tree: files()
+    Tree->>Disk: walk directories
+    Tree-->>Source: root-relative paths
     Source-->>Caller: sorted paths after filtering
 
     Caller->>Source: watch(onChange)

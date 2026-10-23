@@ -41,8 +41,6 @@ describe("persistence exports", () => {
   test("preserves the filesystem source API", () => {
     expect(filesystemSource.root)
       .type.toBe<string>();
-    expect(filesystemSource.resolve("sprite.png"))
-      .type.toBe<string>();
     expect(filesystemSource.watch(() => undefined))
       .type.toBe<() => void>();
     expect(filesystemOptions.ignore)

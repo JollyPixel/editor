@@ -95,28 +95,6 @@ describe("FilesystemAssetSource — atomic write", () => {
   });
 });
 
-describe("FilesystemAssetSource — resolve", () => {
-  test("resolves against the root", async() => {
-    await using workspace = await tempWorkspace();
-    const source = new FilesystemAssetSource(workspace.root);
-
-    assert.strictEqual(
-      source.resolve("a/b.png"),
-      path.join(workspace.root, "a", "b.png")
-    );
-  });
-
-  test("throws for a traversal that escapes the root", async() => {
-    await using workspace = await tempWorkspace();
-    const source = new FilesystemAssetSource(workspace.root);
-
-    assert.throws(
-      () => source.resolve("a/../../b.png"),
-      { name: "AssetPathEscapeError" }
-    );
-  });
-});
-
 describe("FilesystemAssetSource — missing root", () => {
   test("lists nothing when the root does not exist", async() => {
     await using workspace = await tempWorkspace();
@@ -134,7 +112,7 @@ describe("FilesystemAssetSource — missing root", () => {
 
     await assert.rejects(
       () => source.read("sprite.png"),
-      { code: "ENOENT" }
+      { name: "AssetPathNotFoundError" }
     );
 
     await source.write("sprite.png", bytes("x"));
@@ -190,6 +168,83 @@ describe("FilesystemAssetSource — containment", () => {
     assert.strictEqual(
       text(await fs.readFile(path.join(outside.root, "secret.txt"))),
       "secret"
+    );
+  });
+
+  test("refuses a link inside the root that aliases an ignored folder", async() => {
+    await using workspace = await tempWorkspace();
+    await fs.mkdir(path.join(workspace.root, ".jollypixel"));
+    await fs.mkdir(path.join(workspace.root, "sprites"));
+    await fs.writeFile(
+      path.join(workspace.root, ".jollypixel", "state.json"),
+      "state"
+    );
+    await fs.writeFile(
+      path.join(workspace.root, "sprites", "hero.png"),
+      "hero"
+    );
+    await fs.symlink(
+      path.join(workspace.root, ".jollypixel"),
+      path.join(workspace.root, "alias"),
+      "junction"
+    );
+    await fs.symlink(
+      path.join(workspace.root, "sprites"),
+      path.join(workspace.root, "shared"),
+      "junction"
+    );
+
+    const source = new FilesystemAssetSource(workspace.root);
+
+    await assert.rejects(
+      () => source.read("alias/state.json"),
+      { name: "AssetPathEscapeError" }
+    );
+    await assert.rejects(
+      () => source.write("alias/planted.json", bytes("x")),
+      { name: "AssetPathEscapeError" }
+    );
+    await assert.rejects(
+      () => source.deleteFolder("alias"),
+      { name: "AssetPathEscapeError" }
+    );
+    assert.strictEqual(
+      await source.exists(".jollypixel/planted.json"),
+      false
+    );
+    assert.strictEqual(
+      text(await source.read(".jollypixel/state.json")),
+      "state"
+    );
+    assert.strictEqual(
+      text(await source.read("shared/hero.png")),
+      "hero"
+    );
+  });
+
+  test("refuses a Windows short name of an ignored folder", {
+    skip: process.platform !== "win32"
+  }, async(t) => {
+    await using workspace = await tempWorkspace();
+    await fs.mkdir(path.join(workspace.root, ".jollypixel"));
+    await fs.writeFile(
+      path.join(workspace.root, ".jollypixel", "state.json"),
+      "state"
+    );
+    const shortName = await fs.realpath(
+      path.join(workspace.root, "JOLLYP~1")
+    ).catch(() => null);
+    if (shortName === null) {
+      t.skip("the volume does not generate 8.3 names");
+
+      return;
+    }
+
+    const source = new FilesystemAssetSource(workspace.root);
+
+    await assert.rejects(
+      () => source.read("JOLLYP~1/state.json"),
+      { name: "AssetPathEscapeError" }
     );
   });
 

@@ -21,14 +21,14 @@ Requests outside the prefix are passed to `next()`. `GET` and `HEAD` answer
 from the source, other methods `405`. Reads go through the `AssetSource`, so
 an in-memory source is servable too.
 
-The handler is built on
-[`@openally/servo`](https://github.com/OpenAlly/npm-packages/tree/main/src/servo).
 Every file carries a strong ETag hashed from its bytes,
-`Cache-Control: no-cache` and `X-Content-Type-Options: nosniff`. A matching
+`Cache-Control: no-cache`, `X-Content-Type-Options: nosniff` and
+`Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox`,
+so an SVG opened directly runs no script. A matching
 `If-None-Match` answers `304` and a single byte `Range` answers `206`.
 
 The request target is stripped of its query and fragment, decoded once, then
-validated by servo's `safePath`, so the source only ever sees a
+validated by `safePath`, so the source only ever sees a
 root-relative POSIX path. The rejection decides the status:
 
 | Case | Status |

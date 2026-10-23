@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import type { AssetSource } from "../../AssetSource.ts";
+import { AssetPathNotFoundError } from "../../errors/AssetPathNotFoundError.ts";
 import {
   FolderSet,
   isStatePath,
@@ -27,10 +28,7 @@ export class MemoryAssetSource implements AssetSource {
     const key = normalizeAssetPath(path);
     const data = this.#files.get(key);
     if (data === undefined) {
-      throw Object.assign(
-        new Error(`ENOENT: no such asset, read "${key}"`),
-        { code: "ENOENT" }
-      );
+      throw new AssetPathNotFoundError(key);
     }
 
     return Uint8Array.from(data);
@@ -76,16 +74,22 @@ export class MemoryAssetSource implements AssetSource {
     );
   }
 
+  isIgnored(
+    path: string
+  ): boolean {
+    return isStatePath(path);
+  }
+
   async list(): Promise<string[]> {
     return [...this.#files.keys()]
-      .filter((path) => !isStatePath(path))
+      .filter((path) => !this.isIgnored(path))
       .sort();
   }
 
   async folders(): Promise<string[]> {
     return this.#folders
       .toJSON()
-      .filter((path) => !isStatePath(path));
+      .filter((path) => !this.isIgnored(path));
   }
 
   async createFolder(

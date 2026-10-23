@@ -1,6 +1,5 @@
 // Import Node.js Dependencies
 import fs from "node:fs/promises";
-import path from "node:path";
 
 // Import Third-party Dependencies
 import { AtomicFile } from "@openally/atomic-fs";
@@ -11,18 +10,16 @@ import type {
   AssetSource,
   AssetWatchOptions
 } from "../../AssetSource.ts";
+import { AssetPathNotFoundError } from "../../errors/AssetPathNotFoundError.ts";
 import { FilesystemAssetWatcher } from "./FilesystemAssetWatcher.ts";
-import { FilesystemPathResolver } from "./FilesystemPathResolver.ts";
-import {
-  createIgnoredPathMatcher,
-  type AssetPathMatcher
-} from "./ignoredPaths.ts";
-import {
-  walk,
-  walkFolders
-} from "./walk.ts";
+import { FilesystemTree } from "./FilesystemTree.ts";
 
 // CONSTANTS
+const kMissingCodes = new Set([
+  "ENOENT",
+  "EISDIR",
+  "ENOTDIR"
+]);
 const kIgnoredRmdirCodes = new Set([
   "ENOENT",
   "ENOTEMPTY",
@@ -40,64 +37,59 @@ export interface FilesystemAssetSourceOptions {
 export class FilesystemAssetSource implements AssetSource {
   readonly root: string;
 
-  #isIgnored: AssetPathMatcher;
-  #paths: FilesystemPathResolver;
   #atomic = new AtomicFile({ mkdir: true });
+  #tree: FilesystemTree;
 
   constructor(
     root: string,
     options: FilesystemAssetSourceOptions = {}
   ) {
-    const {
-      ignore = []
-    } = options;
-
-    this.#paths = new FilesystemPathResolver(root);
-    this.root = this.#paths.root;
-    this.#isIgnored = createIgnoredPathMatcher(ignore);
+    this.#tree = new FilesystemTree(root, {
+      ignore: options.ignore,
+      isTemporary: this.#atomic.isTemporary
+    });
+    this.root = this.#tree.root;
   }
 
   isIgnored(
     assetPath: string
   ): boolean {
-    return this.#isIgnored(assetPath);
-  }
-
-  resolve(
-    assetPath: string
-  ): string {
-    return this.#paths.resolve(assetPath);
+    return this.#tree.isIgnored(assetPath);
   }
 
   async read(
     assetPath: string
   ): Promise<Uint8Array> {
-    const buffer = await fs.readFile(
-      await this.#paths.contained(assetPath)
-    );
+    const absolute = await this.#tree.contain(assetPath);
+    try {
+      const buffer = await fs.readFile(absolute);
 
-    return new Uint8Array(
-      buffer.buffer,
-      buffer.byteOffset,
-      buffer.byteLength
-    );
+      return new Uint8Array(
+        buffer.buffer,
+        buffer.byteOffset,
+        buffer.byteLength
+      );
+    }
+    catch (error: any) {
+      if (kMissingCodes.has(error.code)) {
+        throw new AssetPathNotFoundError(assetPath, { cause: error });
+      }
+
+      throw error;
+    }
   }
 
   async exists(
     assetPath: string
   ): Promise<boolean> {
+    const absolute = await this.#tree.contain(assetPath);
     try {
-      await fs.access(
-        await this.#paths.contained(assetPath)
-      );
+      const stats = await fs.stat(absolute);
 
-      return true;
+      return stats.isFile();
     }
     catch (error: any) {
-      if (
-        error.code === "ENOENT" ||
-        error.code === "ENOTDIR"
-      ) {
+      if (kMissingCodes.has(error.code)) {
         return false;
       }
 
@@ -110,7 +102,7 @@ export class FilesystemAssetSource implements AssetSource {
     data: Uint8Array
   ): Promise<void> {
     await this.#atomic.write(
-      await this.#paths.contained(assetPath),
+      await this.#tree.contain(assetPath),
       data
     );
   }
@@ -120,7 +112,7 @@ export class FilesystemAssetSource implements AssetSource {
     data: Uint8Array
   ): Promise<boolean> {
     return this.#atomic.writeIfAbsent(
-      await this.#paths.contained(assetPath),
+      await this.#tree.contain(assetPath),
       data
     );
   }
@@ -129,21 +121,14 @@ export class FilesystemAssetSource implements AssetSource {
     assetPath: string
   ): Promise<void> {
     await fs.rm(
-      await this.#paths.contained(assetPath),
+      await this.#tree.contain(assetPath),
       { force: true }
     );
   }
 
   async list(): Promise<string[]> {
     const files: string[] = [];
-    const asyncIterable = walk(
-      this.root,
-      {
-        isIgnored: this.#isIgnored,
-        isTemporary: this.#atomic.isTemporary
-      }
-    );
-    for await (const file of asyncIterable) {
+    for await (const file of this.#tree.files()) {
       files.push(file);
     }
 
@@ -152,14 +137,7 @@ export class FilesystemAssetSource implements AssetSource {
 
   async folders(): Promise<string[]> {
     const folders: string[] = [];
-    const asyncIterable = walkFolders(
-      this.root,
-      {
-        isIgnored: this.#isIgnored,
-        isTemporary: this.#atomic.isTemporary
-      }
-    );
-    for await (const folder of asyncIterable) {
+    for await (const folder of this.#tree.folders()) {
       folders.push(folder);
     }
 
@@ -170,7 +148,7 @@ export class FilesystemAssetSource implements AssetSource {
     assetPath: string
   ): Promise<void> {
     await fs.mkdir(
-      await this.#paths.contained(assetPath),
+      await this.#tree.contain(assetPath),
       { recursive: true }
     );
   }
@@ -178,20 +156,9 @@ export class FilesystemAssetSource implements AssetSource {
   async deleteFolder(
     assetPath: string
   ): Promise<void> {
-    const folder = await this.#paths.contained(assetPath);
-    const nested: string[] = [];
-    const asyncIterable = walkFolders(
-      folder,
-      {
-        isIgnored: () => false,
-        isTemporary: this.#atomic.isTemporary
-      }
-    );
-    for await (const relative of asyncIterable) {
-      nested.push(path.join(folder, relative));
-    }
-
-    for (const directory of [...nested.reverse(), folder]) {
+    const folder = await this.#tree.contain(assetPath);
+    const nested = await this.#tree.subdirectoriesDeepestFirst(folder);
+    for (const directory of [...nested, folder]) {
       await removeEmptyDirectory(directory);
     }
   }
@@ -204,13 +171,9 @@ export class FilesystemAssetSource implements AssetSource {
     options: AssetWatchOptions = {}
   ): () => void {
     const watcher = new FilesystemAssetWatcher(
-      {
-        root: this.root,
-        isIgnored: this.#isIgnored,
-        isTemporary: this.#atomic.isTemporary,
-        onReady: options.onReady
-      },
-      onChange
+      this.#tree,
+      onChange,
+      options
     );
 
     return () => watcher.close();

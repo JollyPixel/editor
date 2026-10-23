@@ -329,7 +329,7 @@ export class Reconciler {
     const present: string[] = [];
     for (const path of scope) {
       if (
-        this.#source.isIgnored?.(path) !== true &&
+        !this.#source.isIgnored(path) &&
         await this.#source.exists(path)
       ) {
         present.push(path);

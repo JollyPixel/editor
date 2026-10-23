@@ -1,5 +1,6 @@
 export * from "./AssetSource.ts";
 export * from "./constants.ts";
+export * from "./errors/AssetPathNotFoundError.ts";
 export * from "./errors/AssetPathEscapeError.ts";
 export * from "./persistence/memory/MemoryAssetSource.ts";
 export * from "./persistence/indexeddb/IndexedDbAssetSource.ts";

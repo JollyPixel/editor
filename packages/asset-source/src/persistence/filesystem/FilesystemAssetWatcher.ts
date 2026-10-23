@@ -1,13 +1,12 @@
-// Import Node.js Dependencies
-import path from "node:path";
-
 // Import Third-party Dependencies
 import chokidar, { type ChokidarOptions } from "chokidar";
 
 // Import Internal Dependencies
-import type { AssetEntryType } from "../../AssetSource.ts";
-import { toRelativePosix } from "./toRelativePosix.ts";
-import type { AssetPathMatcher } from "./ignoredPaths.ts";
+import type {
+  AssetEntryType,
+  AssetWatchOptions
+} from "../../AssetSource.ts";
+import type { FilesystemTree } from "./FilesystemTree.ts";
 
 type FilesystemEvent =
   | "add"
@@ -35,11 +34,7 @@ export type FilesystemWatchFactory = (
   options: ChokidarOptions
 ) => FilesystemWatchHandle;
 
-export interface FilesystemAssetWatcherOptions {
-  root: string;
-  isIgnored: AssetPathMatcher;
-  isTemporary?: (name: string) => boolean;
-  onReady?: () => void;
+export interface FilesystemAssetWatcherOptions extends AssetWatchOptions {
   watch?: FilesystemWatchFactory;
 }
 
@@ -47,45 +42,32 @@ export class FilesystemAssetWatcher {
   #watcher: FilesystemWatchHandle | null;
 
   constructor(
-    options: FilesystemAssetWatcherOptions,
+    tree: FilesystemTree,
     onChange: (
       assetPath: string,
       type: AssetEntryType
-    ) => void
+    ) => void,
+    options: FilesystemAssetWatcherOptions = {}
   ) {
     const watch = options.watch ?? chokidar.watch;
-    this.#watcher = watch(options.root, {
+    this.#watcher = watch(tree.root, {
       persistent: true,
       ignoreInitial: true,
+      followSymlinks: false,
       awaitWriteFinish: {
         stabilityThreshold: 120,
         pollInterval: 30
       },
-      ignored: (absolute: string) => {
-        const relative = toRelativePosix(
-          options.root,
-          absolute
-        );
-
-        return relative !== null && options.isIgnored(relative);
-      }
+      ignored: (absolute: string) => tree.excludes(absolute)
     });
 
-    const isTemporary = options.isTemporary ?? (() => false);
     function notify(
       type: AssetEntryType
     ): FilesystemListener {
       return (absolute) => {
-        const relative = toRelativePosix(
-          options.root,
-          absolute
-        );
-        if (
-          relative !== null &&
-          !options.isIgnored(relative) &&
-          (type === "folder" || !isTemporary(path.basename(absolute)))
-        ) {
-          onChange(relative, type);
+        const assetPath = tree.assetPath(absolute, type);
+        if (assetPath !== null) {
+          onChange(assetPath, type);
         }
       };
     }

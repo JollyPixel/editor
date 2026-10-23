@@ -39,7 +39,7 @@ export interface AssetSource {
     path: string
   ): Promise<void>;
 
-  isIgnored?(
+  isIgnored(
     path: string
   ): boolean;
 

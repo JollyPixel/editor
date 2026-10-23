@@ -15,6 +15,7 @@ import {
   FilesystemAssetWatcher,
   type FilesystemWatchHandle
 } from "#src/persistence/filesystem/FilesystemAssetWatcher.ts";
+import { FilesystemTree } from "#src/persistence/filesystem/FilesystemTree.ts";
 
 type FilesystemEvent =
   | "add"
@@ -71,8 +72,8 @@ function watchHarness(
     assetPath: string,
     type: AssetEntryType
   ) => void,
-  isIgnored: (assetPath: string) => boolean = () => false,
-  isTemporary?: (name: string) => boolean,
+  ignore: readonly string[] = [],
+  isTemporary: (name: string) => boolean = () => false,
   onReady?: () => void
 ): WatchHarness {
   const handle = new FakeWatchHandle();
@@ -89,14 +90,15 @@ function watchHarness(
     return handle;
   }
   const watcher = new FilesystemAssetWatcher(
+    new FilesystemTree(root, {
+      ignore,
+      isTemporary
+    }),
+    onChange,
     {
-      root,
-      isIgnored,
-      isTemporary,
       onReady,
       watch
-    },
-    onChange
+    }
   );
   assert.strictEqual(started, true);
 
@@ -153,7 +155,7 @@ describe("FilesystemAssetWatcher", () => {
     const { handle } = watchHarness(
       root,
       (assetPath) => changes.push(assetPath),
-      (assetPath) => assetPath.endsWith(".log")
+      ["**/*.log"]
     );
 
     handle.emit("add", path.join(root, "debug.log"));
@@ -169,7 +171,7 @@ describe("FilesystemAssetWatcher", () => {
     const { handle } = watchHarness(
       root,
       () => undefined,
-      () => false,
+      [],
       undefined,
       () => ready++
     );
@@ -186,7 +188,7 @@ describe("FilesystemAssetWatcher", () => {
     const { handle } = watchHarness(
       root,
       (assetPath) => changes.push(assetPath),
-      () => false,
+      [],
       (name) => name.endsWith(".tmp")
     );
 
@@ -202,11 +204,12 @@ describe("FilesystemAssetWatcher", () => {
     const { options } = watchHarness(
       root,
       () => undefined,
-      (assetPath) => assetPath === "ignored/file.png"
+      ["ignored/file.png"]
     );
 
     assert.strictEqual(options.persistent, true);
     assert.strictEqual(options.ignoreInitial, true);
+    assert.strictEqual(options.followSymlinks, false);
     assert.deepEqual(options.awaitWriteFinish, {
       stabilityThreshold: 120,
       pollInterval: 30

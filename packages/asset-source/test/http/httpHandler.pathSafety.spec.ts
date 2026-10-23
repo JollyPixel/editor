@@ -8,9 +8,13 @@ import {
   MemoryAssetSource,
   STATE_DIRECTORY
 } from "#src/index.ts";
-import { createAssetStaticHandler } from "#src/node.ts";
+import {
+  createAssetStaticHandler,
+  FilesystemAssetSource
+} from "#src/node.ts";
 import { bytes } from "../helpers/bytes.ts";
 import { send } from "../helpers/http.ts";
+import { tempWorkspace } from "../helpers/tempWorkspace.ts";
 
 function workspace(): MemoryAssetSource {
   return new MemoryAssetSource([
@@ -113,10 +117,9 @@ describe("createAssetStaticHandler — path safety", () => {
   });
 
   test("answers 404 when the target turns out to be a directory", async() => {
-    const source = new MemoryAssetSource();
-    source.read = () => Promise.reject(
-      Object.assign(new Error("EISDIR"), { code: "EISDIR" })
-    );
+    await using temp = await tempWorkspace();
+    const source = new FilesystemAssetSource(temp.root);
+    await source.createFolder("textures");
 
     const handler = createAssetStaticHandler({ source });
     const result = await send(handler, { url: "/assets/textures" });
