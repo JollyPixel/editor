@@ -173,4 +173,4 @@ Details: [storage contract](./README.md#assetsource),
 [filesystem](./docs/persistence/Filesystem.md),
 [memory](./docs/persistence/Memory.md),
 [IndexedDB](./docs/persistence/IndexedDb.md), [HTTP](./docs/http/Http.md), and
-[path utilities](./docs/Utilities.md).
+[paths](./docs/Paths.md).

@@ -173,6 +173,7 @@ async function assembleAssetBackend(
   teardown.defer(() => states.close());
 
   const writer = new AssetWriter({
+    source,
     eventStore,
     kinds,
     projector,

@@ -15,7 +15,7 @@ import {
 import type { AssetSource } from "../AssetSource.ts";
 import { AssetPathNotFoundError } from "../errors/AssetPathNotFoundError.ts";
 import { AssetPathEscapeError } from "../errors/AssetPathEscapeError.ts";
-import { isStatePath } from "../paths/index.ts";
+import { isReservedPath } from "../paths/writableAssetPath.ts";
 import {
   DEFAULT_CONTENT_TYPES,
   resolveContentType
@@ -72,7 +72,7 @@ export function createAssetStaticHandler(
       extensions: [],
       redirect: false,
       dotfiles: "allow",
-      ignore: (assetPath) => isHidden(source, assetPath),
+      ignore: (assetPath) => isReservedPath(source, assetPath),
       setHeaders: (response, assetPath) => {
         response.setHeader(
           "Content-Type",
@@ -110,13 +110,6 @@ async function readAsset(
 
     throw error;
   }
-}
-
-function isHidden(
-  source: AssetSource,
-  assetPath: string
-): boolean {
-  return isStatePath(assetPath) || source.isIgnored(assetPath);
 }
 
 function end(

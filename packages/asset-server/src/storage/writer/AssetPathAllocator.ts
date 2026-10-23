@@ -5,11 +5,6 @@ import {
   Ok,
   type Result
 } from "@openally/result";
-import {
-  AssetPathEscapeError,
-  isStatePath,
-  safeAssetPath
-} from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
 import { AssetPathConflictError } from "./errors/AssetPathConflictError.ts";
@@ -109,22 +104,4 @@ export class AssetPathAllocator {
 
     return Ok(undefined);
   }
-}
-
-export function writableAssetPath(
-  input: string
-): Result<string, AssetPathEscapeError> {
-  const result = safeAssetPath(input);
-  if (!result.ok) {
-    const error = new AssetPathEscapeError(input, result.val);
-
-    return Err(error);
-  }
-  if (isStatePath(result.val)) {
-    const error = new AssetPathEscapeError(input, "reserved");
-
-    return Err(error);
-  }
-
-  return Ok(result.val);
 }

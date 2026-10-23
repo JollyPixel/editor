@@ -123,4 +123,32 @@ describe("catalog folder commands", () => {
     );
     assert.deepEqual(await commands.sync.source.folders(), []);
   });
+
+  test("rejects creating or moving a folder into a reserved path", async() => {
+    await using commands = await catalogCommands();
+    await commands.sync.source.createFolder("maps");
+
+    for (const command of [
+      {
+        type: CATALOG_CREATE_FOLDER,
+        requestId: "r5",
+        path: ".jollypixel/drafts"
+      },
+      {
+        type: CATALOG_MOVE_FOLDER,
+        requestId: "r6",
+        from: "maps",
+        to: ".jollypixel/maps"
+      }
+    ] as const) {
+      await commands.send(command);
+
+      assert.strictEqual(
+        (commands.lastDirect()!.payload as { type: string; }).type,
+        CATALOG_REJECTED,
+        command.type
+      );
+    }
+    assert.deepEqual(await commands.sync.source.folders(), ["maps"]);
+  });
 });

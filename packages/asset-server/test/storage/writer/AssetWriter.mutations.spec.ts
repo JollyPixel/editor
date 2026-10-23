@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
 import { AssetPathEscapeError } from "@jolly-pixel/asset-source";
+import { FilesystemAssetSource } from "@jolly-pixel/asset-source/node";
 
 // Import Internal Dependencies
 import {
@@ -15,6 +16,7 @@ import {
   AssetPathConflictError
 } from "#src/index.ts";
 import { syncHarness } from "../../helpers/backend.ts";
+import { tempDirectory } from "../../helpers/tempDirectory.ts";
 import { bytes, text } from "../../helpers/bytes.ts";
 
 // CONSTANTS
@@ -96,6 +98,31 @@ describe("AssetWriter — rename", () => {
     assert.strictEqual(result.ok, false);
     assert.ok(result.val instanceof AssetPathEscapeError);
     assert.deepEqual(lifecycleTypes(harness.eventStore), [ASSET_CREATED]);
+  });
+
+  test("returns a target the source ignores as an error and keeps the file", async() => {
+    await using directory = await tempDirectory();
+    await using harness = await syncHarness({
+      source: new FilesystemAssetSource(directory.root)
+    });
+    const created = (await harness.writer.create({
+      path: "a.png",
+      data: bytes("one"),
+      actor: kActor
+    })).unwrap();
+
+    const result = await harness.writer.rename({
+      assetId: created.assetId,
+      to: ".git/config",
+      actor: kActor
+    });
+    await harness.projector.flush();
+
+    assert.strictEqual(result.ok, false);
+    assert.ok(result.val instanceof AssetPathEscapeError);
+    assert.strictEqual(result.val.reason, "reserved");
+    assert.deepEqual(lifecycleTypes(harness.eventStore), [ASSET_CREATED]);
+    assert.deepEqual(await harness.source.list(), ["a.png"]);
   });
 
   test("returns an unknown asset as an error", async() => {

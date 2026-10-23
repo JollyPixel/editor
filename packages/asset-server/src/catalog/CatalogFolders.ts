@@ -3,6 +3,7 @@ import {
   FolderSet,
   isWithinFolder,
   normalizeAssetPath,
+  writableAssetPath,
   type AssetSource
 } from "@jolly-pixel/asset-source";
 import { Emitter } from "@openally/emitt";
@@ -69,7 +70,7 @@ export class CatalogFolders extends Emitter<
   async create(
     path: string
   ): Promise<string> {
-    const folder = normalizeAssetPath(path);
+    const folder = writableAssetPath(this.#source, path).unwrap();
 
     return this.#queue.run(async() => {
       await this.#source.createFolder(folder);
@@ -98,7 +99,7 @@ export class CatalogFolders extends Emitter<
     to: string
   ): Promise<string> {
     const origin = normalizeAssetPath(from);
-    const target = normalizeAssetPath(to);
+    const target = writableAssetPath(this.#source, to).unwrap();
     if (isWithinFolder(target, origin)) {
       throw new FolderMovedIntoItselfError(
         origin,

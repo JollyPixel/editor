@@ -1,119 +1,8 @@
 # Utilities
 
-The package entry point exports helpers for asset paths, workspace state and
-JSON files. `DEFAULT_IGNORED_PATHS` is exported from
-`@jolly-pixel/asset-source/node`.
-
-## Asset paths
-
-Asset paths are root-relative POSIX strings. The validators normalize
-backslashes, repeated separators and inner `.` or `..` segments.
-
-### `safeAssetPath`
-
-```ts
-safeAssetPath(
-  input: string
-): Result<string, AssetPathRejection>
-```
-
-Returns the normalized path in an `Ok`, or a rejection reason in an `Err`.
-Use it for input that should be rejected without throwing.
-
-| Rejection | Example |
-|---|---|
-| `empty` | `""` |
-| `invalid` | a path containing `NUL` or another control character |
-| `absolute` | `/etc/passwd`, `C:/Windows/win.ini`, `\\server\share` |
-| `traversal` | `../secret`, `textures/../../secret` |
-| `directory` | `.`, `textures/` |
-| `reserved` | a segment with `:`, a trailing dot or space, or a Windows device name (`CON`, `nul.png`) |
-
-The rules come from `safePath` in `@openally/servo/paths` and apply on every
-platform. Applications also return `reserved` when a valid asset path names an
-application-owned location such as `.jollypixel/`.
-
-### `normalizeAssetPath`
-
-```ts
-normalizeAssetPath(input: string): string
-```
-
-Returns the same normalized value as `safeAssetPath`. A rejected input throws
-`AssetPathEscapeError`.
-
-```ts
-const path = normalizeAssetPath("textures\\tiles\\../grass.png");
-// "textures/grass.png"
-```
-
-### `AssetPathEscapeError`
-
-```ts
-class AssetPathEscapeError extends Error {
-  readonly path: string;
-  readonly reason: AssetPathRejection;
-}
-```
-
-`path` contains the rejected input. `reason` contains the rejection reported
-by `safeAssetPath`, or a policy reason supplied by the caller.
-
-### `AssetPathNotFoundError`
-
-```ts
-class AssetPathNotFoundError extends Error {
-  readonly path: string;
-}
-```
-
-Every built-in source rejects `read` with this error when no file exists at
-`path`. The filesystem source keeps the underlying Node.js error as `cause`.
-
-### Folder paths
-
-```ts
-class FolderSet implements Iterable<string> {
-  constructor(folders?: Iterable<string>);
-  readonly size: number;
-  has(folder: string): boolean;
-  add(folder: string): this;
-  addParents(assetPath: string): this;
-  subtree(root: string): string[];
-  prune(root: string, files: Iterable<string>): string[];
-  equals(other: FolderSet): boolean;
-  toJSON(): string[];
-}
-
-isWithinFolder(path: string, folder: string): boolean
-```
-
-A `FolderSet` holds normalized folder paths and always holds the parents of
-each folder it holds. `add` adds a folder with its parents, and `addParents`
-adds the folders above a path: `"maps/world/a.json"` adds `"maps"` and
-`"maps/world"`. The set is mutable.
-
-- `subtree(root)` returns `root` and the folders under it, sorted.
-- `prune(root, files)` removes the folders of `subtree(root)` that hold none
-  of `files`, at any depth, and returns them sorted.
-- `equals` compares contents, and `toJSON()` returns the sorted paths.
-
-`isWithinFolder` reports whether a normalized path is `folder` or lies
-anywhere below it.
-
-## State directory
-
-```ts
-const STATE_DIRECTORY = ".jollypixel";
-isStatePath(assetPath: string): boolean
-```
-
-`isStatePath` matches the state directory itself and its children at the source
-root. Matching is case-insensitive. A nested path such as
-`textures/.jollypixel/state.json` is an ordinary asset path.
-
-The path validators accept state paths. The built-in sources keep them
-readable and writable while excluding them from `list()`.
+The package entry point exports helpers for JSON files.
+`DEFAULT_IGNORED_PATHS` is exported from `@jolly-pixel/asset-source/node`.
+Path helpers are described in [Paths](./Paths.md).
 
 ## JSON files
 
@@ -131,7 +20,8 @@ writeJsonFile(
 ```
 
 `readJsonFile` decodes the stored bytes as UTF-8 and parses the result as JSON.
-It returns `null` when the file is missing (`AssetPathNotFoundError`) or is not
+It returns `null` when the file is missing
+([`AssetPathNotFoundError`](./Paths.md#assetpathnotfounderror)) or is not
 valid JSON. Any other failure, such as a rejected path or a permission error,
 is rethrown. Stored JSON `null` also produces `null`, so use `source.read`
 directly when the distinction matters.
