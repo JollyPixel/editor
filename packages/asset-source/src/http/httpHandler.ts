@@ -21,6 +21,10 @@ import {
   resolveContentType
 } from "./contentTypes.ts";
 
+// CONSTANTS
+const kAssetContentSecurityPolicy =
+  "default-src 'none'; style-src 'unsafe-inline'; sandbox";
+
 export type AssetStaticHandler = (
   request: IncomingMessage,
   response: ServerResponse,
@@ -73,6 +77,10 @@ export function createAssetStaticHandler(
         response.setHeader(
           "Content-Type",
           resolveContentType(assetPath, table)
+        );
+        response.setHeader(
+          "Content-Security-Policy",
+          kAssetContentSecurityPolicy
         );
       },
       onNoMatch: (_request, response) => {

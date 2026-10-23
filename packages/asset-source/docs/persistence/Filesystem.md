@@ -84,7 +84,10 @@ file included.
 
 Every operation that takes a path also checks filesystem links. It throws
 `AssetPathEscapeError` when a symbolic link or junction would take the
-operation outside `root`.
+operation outside `root`. It also throws, with reason `reserved`, when a path
+that is not ignored resolves into an ignored one, such as a link to
+`.jollypixel/` or the Windows short name `JOLLYP~1`. Paths that name an ignored
+location directly still work.
 
 `read` rejects with `AssetPathNotFoundError` when the file is missing or the
 path names a directory.

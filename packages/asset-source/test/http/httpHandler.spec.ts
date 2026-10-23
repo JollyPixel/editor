@@ -221,6 +221,21 @@ describe("createAssetStaticHandler", () => {
     }
   });
 
+  test("sandboxes an SVG opened as a document", async() => {
+    const handler = createAssetStaticHandler({
+      source: new MemoryAssetSource([
+        ["icon.svg", bytes("<svg><script>alert(1)</script></svg>")]
+      ])
+    });
+
+    const result = await send(handler, { url: "/assets/icon.svg" });
+
+    assert.strictEqual(
+      result.headers["content-security-policy"],
+      "default-src 'none'; style-src 'unsafe-inline'; sandbox"
+    );
+  });
+
   test("serves a dotfile outside the state directory", async() => {
     const handler = createAssetStaticHandler({
       source: new MemoryAssetSource([["textures/.keep", bytes("k")]])

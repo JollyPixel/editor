@@ -22,7 +22,9 @@ from the source, other methods `405`. Reads go through the `AssetSource`, so
 an in-memory source is servable too.
 
 Every file carries a strong ETag hashed from its bytes,
-`Cache-Control: no-cache` and `X-Content-Type-Options: nosniff`. A matching
+`Cache-Control: no-cache`, `X-Content-Type-Options: nosniff` and
+`Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox`,
+so an SVG opened directly runs no script. A matching
 `If-None-Match` answers `304` and a single byte `Range` answers `206`.
 
 The request target is stripped of its query and fragment, decoded once, then

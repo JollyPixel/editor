@@ -209,6 +209,7 @@ describe("FilesystemAssetWatcher", () => {
 
     assert.strictEqual(options.persistent, true);
     assert.strictEqual(options.ignoreInitial, true);
+    assert.strictEqual(options.followSymlinks, false);
     assert.deepEqual(options.awaitWriteFinish, {
       stabilityThreshold: 120,
       pollInterval: 30

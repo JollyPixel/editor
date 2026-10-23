@@ -54,7 +54,8 @@ segments, and rejects empty, absolute, directory and escaping paths.
 `normalizeAssetPath` throws `AssetPathEscapeError` on rejection. Direct
 filesystem reads, existence checks, writes and deletes also resolve links
 before access, so a symlink or junction cannot redirect them outside the
-root. `resolve(path)` only performs lexical path resolution; it does not make
+root, and a link or Windows short name cannot reach an ignored path under
+another name. `resolve(path)` only performs lexical path resolution; it does not make
 that filesystem check.
 
 ```mermaid

@@ -53,6 +53,7 @@ export class FilesystemAssetWatcher {
     this.#watcher = watch(tree.root, {
       persistent: true,
       ignoreInitial: true,
+      followSymlinks: false,
       awaitWriteFinish: {
         stabilityThreshold: 120,
         pollInterval: 30

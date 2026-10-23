@@ -55,8 +55,18 @@ export class FilesystemTree {
     assetPath: string
   ): Promise<string> {
     const relative = normalizeAssetPath(assetPath);
-    if (await containedPath(this.root, relative) === null) {
+    const [realRoot, real] = await Promise.all([
+      containedPath(this.root, "."),
+      containedPath(this.root, relative)
+    ]);
+    if (realRoot === null || real === null) {
       throw new AssetPathEscapeError(assetPath);
+    }
+    if (
+      this.#isIgnored(toPosix(path.relative(realRoot, real))) &&
+      !this.#isIgnored(relative)
+    ) {
+      throw new AssetPathEscapeError(assetPath, "reserved");
     }
 
     return path.join(this.root, relative);
@@ -174,8 +184,14 @@ export class FilesystemTree {
       return null;
     }
 
-    return relative.replaceAll("\\", "/");
+    return toPosix(relative);
   }
+}
+
+function toPosix(
+  relative: string
+): string {
+  return relative.replaceAll("\\", "/");
 }
 
 async function openRoot(
