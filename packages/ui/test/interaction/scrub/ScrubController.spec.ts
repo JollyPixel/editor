@@ -83,6 +83,33 @@ test("ScrubController restores the preview and does not commit on cancel", () =>
   unmount();
 });
 
+test("ScrubController stops growing the guide once the value clamps", () => {
+  const { target, inputs, unmount } = mountScrub({
+    start: () => 10,
+    step: () => 1,
+    max: () => 12
+  });
+  function guideAt(
+    clientX: number
+  ): string | undefined {
+    target.dispatchEvent(pointer("pointermove", clientX));
+
+    return document.querySelector(".jolly-scrub-guide")?.innerHTML;
+  }
+
+  target.dispatchEvent(pointer("pointerdown", 0));
+  const belowBound = guideAt(4);
+  const atBound = guideAt(8);
+  const pastBound = guideAt(80);
+  target.dispatchEvent(pointer("pointerup", 80));
+
+  assert.deepEqual(inputs, [11, 12, 12]);
+  assert.notEqual(belowBound, atBound);
+  assert.equal(pastBound, atBound);
+
+  unmount();
+});
+
 test("ScrubController rounds to the precision of each drag start and step", () => {
   let start = 1.25;
   let step = 0.05;

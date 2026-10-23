@@ -1,16 +1,19 @@
 // CONSTANTS
 const kSvgNs = "http://www.w3.org/2000/svg";
+const kHeadDepth = 4;
+const kHeadHalfHeight = 4;
+const kTickHalfHeight = 5;
 
 export interface DragGuide {
   update(
-    currentX: number
+    offset: number
   ): void;
   destroy(): void;
 }
 
 export function createDragGuide(
+  originX: number,
   originY: number,
-  startX: number,
   color: string
 ): DragGuide {
   const svg = document.createElementNS(
@@ -27,64 +30,57 @@ export function createDragGuide(
     zIndex: "2147483647"
   });
 
-  const line = document.createElementNS(
+  const group = document.createElementNS(
     kSvgNs,
-    "line"
+    "g"
   );
-  line.setAttribute("x1", String(startX));
-  line.setAttribute("y1", String(originY));
-  line.setAttribute("y2", String(originY));
-  line.setAttribute("stroke", color);
-  line.setAttribute("stroke-width", "1");
-  line.setAttribute(
-    "stroke-dasharray",
-    "4 3"
+  group.setAttribute(
+    "transform",
+    `translate(${Math.round(originX) + 0.5} ${Math.round(originY) + 0.5})`
   );
-  svg.append(line);
+  group.setAttribute("fill", "none");
+  group.setAttribute("stroke", color);
+  group.setAttribute("stroke-width", "1");
+  svg.append(group);
 
-  const arrow = document.createElementNS(
+  const body = document.createElementNS(
     kSvgNs,
-    "polygon"
+    "path"
   );
-  arrow.setAttribute("fill", color);
-  svg.append(arrow);
+  body.setAttribute("stroke-dasharray", "1");
+  group.append(body);
+
+  const head = document.createElementNS(
+    kSvgNs,
+    "path"
+  );
+  group.append(head);
+
+  const tick = document.createElementNS(
+    kSvgNs,
+    "path"
+  );
+  group.append(tick);
 
   document.body.append(svg);
 
   let lastX: number | null = null;
 
   function update(
-    currentX: number
+    offset: number
   ): void {
-    if (currentX === lastX) {
+    const x = Math.round(offset);
+    if (x === lastX) {
       return;
     }
-    lastX = currentX;
+    lastX = x;
 
-    line.setAttribute(
-      "x2",
-      String(currentX)
-    );
-
-    if (currentX === startX) {
-      arrow.setAttribute(
-        "points",
-        ""
-      );
-
-      return;
-    }
-
-    const direction = currentX > startX ? 1 : -1;
-    const tipX = currentX + (direction * 5);
-    const backX = tipX - (direction * 6);
-    arrow.setAttribute(
-      "points",
-      `${tipX},${originY} ${backX},${originY - 4} ${backX},${originY + 4}`
-    );
+    body.setAttribute("d", `M0,0 H${x}`);
+    head.setAttribute("d", headPath(x));
+    tick.setAttribute("d", `M${x},${-kTickHalfHeight} V${kTickHalfHeight}`);
   }
 
-  update(startX);
+  update(0);
 
   return {
     update,
@@ -92,4 +88,15 @@ export function createDragGuide(
       svg.remove();
     }
   };
+}
+
+function headPath(
+  x: number
+): string {
+  const direction = Math.sign(x);
+  const tip = x - direction;
+  const depth = Math.min(Math.abs(tip), kHeadDepth);
+  const back = tip - (direction * depth);
+
+  return `M${back},${-kHeadHalfHeight} L${tip},0 L${back},${kHeadHalfHeight}`;
 }

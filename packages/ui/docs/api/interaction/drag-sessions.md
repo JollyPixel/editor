@@ -11,6 +11,7 @@ interface PointerDragSessionOptions {
   event: PointerEvent;
   threshold?: number; // pixels before the drag starts, default 0
   documentClass?: string; // set on the document while dragging
+  elementAttribute?: string; // set on element while dragging
   suppressClick?: boolean; // swallow the release click once started
   onStart?(): void;
   onMove(clientX: number, clientY: number, event: PointerEvent): void;

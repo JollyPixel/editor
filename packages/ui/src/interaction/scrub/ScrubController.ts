@@ -5,13 +5,16 @@ import type {
 } from "lit";
 
 // Import Internal Dependencies
-import { valueFromDelta } from "../../numeric/valueFromDelta.ts";
+import {
+  deltaFromValue,
+  valueFromDelta
+} from "../../numeric/valueFromDelta.ts";
 import { ensureDocumentStyles } from "../ensureDocumentStyles.ts";
 import { createDragGuide, type DragGuide } from "./dragGuide.ts";
 import { modifierMultiplier } from "../../numeric/modifierMultiplier.ts";
 import { measurePrecision } from "../../numeric/precision.ts";
 import { kFallback } from "../../theme/styles/fallbacks.ts";
-import { resolveThemeToken } from "../../theme/resolveThemeToken.ts";
+import { resolveThemeColor } from "../../theme/resolveThemeToken.ts";
 import {
   startPointerDragSession,
   type PointerDragSessionHandle
@@ -19,6 +22,7 @@ import {
 
 // CONSTANTS
 const kDraggingClass = "jolly-scrub-dragging";
+const kScrubbingAttribute = "data-scrubbing";
 
 export interface ScrubOptions {
   target(): HTMLElement | null;
@@ -32,7 +36,7 @@ export interface ScrubOptions {
    */
   threshold?: number;
   /**
-   * Draws the dashed guide while dragging. @default true
+   * Draws the guide while dragging. @default true
    */
   guide?: boolean;
   jump?(
@@ -126,6 +130,7 @@ export class ScrubController implements ReactiveController {
       event,
       threshold: jumped === undefined ? this.#options.threshold : 0,
       documentClass: kDraggingClass,
+      elementAttribute: kScrubbingAttribute,
       onStart: () => this.#showGuide(target),
       onMove: this.#onPointerMove,
       onFinish: this.#onPointerFinish
@@ -138,12 +143,12 @@ export class ScrubController implements ReactiveController {
   };
 
   #onPointerMove = (
-    clientX: number,
+    _clientX: number,
     _clientY: number,
     event: PointerEvent
   ): void => {
-    this.#guide?.update(clientX);
     this.#currentValue = this.#valueAt(event);
+    this.#guide?.update(this.#guideOffset());
     this.#options.onInput(this.#currentValue);
   };
 
@@ -179,16 +184,25 @@ export class ScrubController implements ReactiveController {
       return;
     }
 
-    const { top, height } = target.getBoundingClientRect();
+    const { left, top, width, height } = target.getBoundingClientRect();
     this.#guide = createDragGuide(
+      left + (width / 2),
       top + (height / 2),
-      this.#startX,
-      resolveThemeToken(
-        this.#host as HTMLElement,
-        "--jolly-focus-ring",
-        String(kFallback.focusRing)
+      resolveThemeColor(
+        this.#host,
+        "--jolly-text",
+        String(kFallback.text)
       )
     );
+  }
+
+  #guideOffset(): number {
+    return deltaFromValue({
+      start: this.#startValue,
+      value: this.#currentValue,
+      step: this.#options.step(),
+      pixelsPerStep: this.#pixelsPerStep
+    });
   }
 
   #valueAt(

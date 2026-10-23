@@ -5,6 +5,9 @@ import {
   roundToPrecision
 } from "./precision.ts";
 
+// CONSTANTS
+const kDefaultPixelsPerStep = 4;
+
 export interface ValueFromDeltaOptions {
   /**
    * Value at drag start.
@@ -28,6 +31,13 @@ export interface ValueFromDeltaOptions {
   precision?: number;
 }
 
+export interface DeltaFromValueOptions {
+  start: number;
+  value: number;
+  step: number;
+  pixelsPerStep?: number;
+}
+
 export function valueFromDelta(
   options: ValueFromDeltaOptions
 ): number {
@@ -35,7 +45,7 @@ export function valueFromDelta(
     start,
     deltaPx,
     step,
-    pixelsPerStep = 4,
+    pixelsPerStep = kDefaultPixelsPerStep,
     multiplier = 1,
     min = Number.NEGATIVE_INFINITY,
     max = Number.POSITIVE_INFINITY,
@@ -52,5 +62,21 @@ export function valueFromDelta(
     min,
     max
   );
+}
+
+export function deltaFromValue(
+  options: DeltaFromValueOptions
+): number {
+  const {
+    start,
+    value,
+    step,
+    pixelsPerStep = kDefaultPixelsPerStep
+  } = options;
+  if (step === 0) {
+    return 0;
+  }
+
+  return ((value - start) / step) * pixelsPerStep;
 }
 

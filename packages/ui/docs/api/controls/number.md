@@ -30,5 +30,8 @@ interface NumberField {
 
 - Arrow keys commit one step. Shift multiplies it by ten, Alt divides it by
   ten.
+- Dragging the bar at the input's left edge scrubs the value. While dragging,
+  the bar shrinks to a dot and a dotted arrow shows how far the value has
+  moved. The arrow stops at `min` or `max`.
 - Pointer scrubbing emits `jolly-input` while moving and `jolly-change` on
   release.

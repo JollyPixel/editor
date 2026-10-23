@@ -22,17 +22,25 @@ export const scrubHandleStyles = css`
     content: "";
     position: absolute;
     top: 50%;
-    left: 3px;
+    left: 50%;
     width: 2px;
     height: 55%;
     border-radius: 1px;
     background: var(--jolly-groove);
-    transform: translateY(-50%);
+    transform: translate(-50%, -50%);
 
     ${fillTransition}
+    transition-property: background-color, width, height, border-radius;
   }
 
-  :host([scrubbable]) .scrub-handle:hover::before {
-    background: var(--jolly-accent-fill);
+  :host([scrubbable]) .scrub-handle:hover::before,
+  .scrub-handle[data-scrubbing]::before {
+    background: var(--jolly-text);
+  }
+
+  .scrub-handle[data-scrubbing]::before {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
   }
 `;

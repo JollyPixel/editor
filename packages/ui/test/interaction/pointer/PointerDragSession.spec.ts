@@ -34,6 +34,7 @@ describe("PointerDragSession", () => {
       element,
       event: pointer("pointerdown", 7, 10, 10),
       threshold: 4,
+      elementAttribute: "data-dragging",
       onStart: () => {
         starts += 1;
       },
@@ -45,13 +46,16 @@ describe("PointerDragSession", () => {
     element.dispatchEvent(pointer("pointermove", 8, 30, 30));
     element.dispatchEvent(pointer("pointermove", 7, 12, 12));
     assert.equal(starts, 0);
+    assert.equal(element.hasAttribute("data-dragging"), false);
 
     element.dispatchEvent(pointer("pointermove", 7, 14, 10));
     assert.equal(starts, 1);
+    assert.equal(element.hasAttribute("data-dragging"), true);
     assert.deepEqual(moves, [[14, 10]]);
     element.dispatchEvent(pointer("pointerup", 7, 14, 10));
     assert.deepEqual(finishes, [["commit", true]]);
     assert.equal(element.hasPointerCapture(7), false);
+    assert.equal(element.hasAttribute("data-dragging"), false);
   });
 
   test("reports a release below the threshold without starting", () => {
