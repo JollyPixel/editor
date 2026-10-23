@@ -5,6 +5,7 @@ export interface PointerDragSessionOptions {
   event: PointerEvent;
   threshold?: number;
   documentClass?: string;
+  elementAttribute?: string;
   /**
    * Swallows the click the browser fires on release once the gesture started.
    */
@@ -34,6 +35,7 @@ export function startPointerDragSession(
     event,
     threshold = 0,
     documentClass,
+    elementAttribute,
     suppressClick = false,
     onStart,
     onMove,
@@ -54,6 +56,9 @@ export function startPointerDragSession(
     if (documentClass !== undefined) {
       document.documentElement.classList.add(documentClass);
     }
+    if (elementAttribute !== undefined) {
+      element.setAttribute(elementAttribute, "");
+    }
     onStart?.();
   }
 
@@ -65,6 +70,9 @@ export function startPointerDragSession(
     document.removeEventListener("keydown", onKeyDown, true);
     if (documentClass !== undefined) {
       document.documentElement.classList.remove(documentClass);
+    }
+    if (elementAttribute !== undefined) {
+      element.removeAttribute(elementAttribute);
     }
 
     if (element.hasPointerCapture(pointerId)) {

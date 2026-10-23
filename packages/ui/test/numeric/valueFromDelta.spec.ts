@@ -3,7 +3,10 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { valueFromDelta } from "../../src/numeric/valueFromDelta.ts";
+import {
+  deltaFromValue,
+  valueFromDelta
+} from "../../src/numeric/valueFromDelta.ts";
 
 describe("Numeric.valueFromDelta", () => {
   test("returns the starting value for no travel", () => {
@@ -147,5 +150,33 @@ describe("Numeric.valueFromDelta", () => {
       valueFromDelta({ start: 1.234, deltaPx: 1, step: 1, pixelsPerStep: 1, precision: 1 }),
       2.2
     );
+  });
+});
+
+describe("Numeric.deltaFromValue", () => {
+  test("maps the stepped distance back to pointer travel", () => {
+    const options = {
+      start: 10,
+      step: 0.5,
+      pixelsPerStep: 4
+    };
+
+    assert.equal(deltaFromValue({ ...options, value: 11 }), 8);
+    assert.equal(deltaFromValue({ ...options, value: 9 }), -8);
+  });
+
+  test("inverts valueFromDelta up to the clamped bound", () => {
+    const bounds = {
+      start: 10,
+      step: 1,
+      pixelsPerStep: 4
+    };
+    const value = valueFromDelta({ ...bounds, deltaPx: 400, max: 12 });
+
+    assert.equal(deltaFromValue({ ...bounds, value }), 8);
+  });
+
+  test("reports no travel for a zero step", () => {
+    assert.equal(deltaFromValue({ start: 3, value: 3, step: 0 }), 0);
   });
 });
