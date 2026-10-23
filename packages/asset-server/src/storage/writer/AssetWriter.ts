@@ -1,6 +1,10 @@
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
 import {
+  writableAssetPath,
+  type AssetSource
+} from "@jolly-pixel/asset-source";
+import {
   Err,
   Ok,
   type Result
@@ -29,10 +33,7 @@ import {
 } from "../../common/logger.ts";
 import { asError } from "../../common/asError.ts";
 import { TaskChain } from "../../common/TaskChain.ts";
-import {
-  AssetPathAllocator,
-  writableAssetPath
-} from "./AssetPathAllocator.ts";
+import { AssetPathAllocator } from "./AssetPathAllocator.ts";
 import {
   AssetCreationPlanner,
   type PlannedAsset
@@ -55,6 +56,7 @@ export {
 export type * from "./AssetWriteInput.ts";
 
 export interface AssetWriterOptions {
+  source: AssetSource;
   eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
   kinds: AssetKindRegistry;
   projector: AssetProjector;
@@ -63,6 +65,7 @@ export interface AssetWriterOptions {
 }
 
 export class AssetWriter {
+  #source: AssetSource;
   #eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
   #kinds: AssetKindRegistry;
   #projector: AssetProjector;
@@ -76,6 +79,7 @@ export class AssetWriter {
   constructor(
     options: AssetWriterOptions
   ) {
+    this.#source = options.source;
     this.#eventStore = options.eventStore;
     this.#kinds = options.kinds;
     this.#projector = options.projector;
@@ -86,6 +90,7 @@ export class AssetWriter {
       assetIndex: options.assetIndex
     });
     this.#planner = new AssetCreationPlanner({
+      source: options.source,
       kinds: options.kinds,
       paths: this.#paths
     });
@@ -274,7 +279,7 @@ export class AssetWriter {
       return found;
     }
 
-    const writable = writableAssetPath(input.to);
+    const writable = writableAssetPath(this.#source, input.to);
     if (!writable.ok) {
       return Err(writable.val);
     }

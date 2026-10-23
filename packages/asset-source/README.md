@@ -118,7 +118,9 @@ changes.
 
 ### ✂️ Utilities
 
-[Path, state-directory and JSON helpers](./docs/Utilities.md)
+- [Paths](./docs/Paths.md): path validation, reserved locations, folders and
+  the state directory.
+- [Utilities](./docs/Utilities.md): JSON file helpers and filesystem defaults.
 
 ### 🌍 HTTP serving
 

@@ -169,6 +169,7 @@ describe("SourceWatcher — real filesystem (integration)", () => {
     projector.start();
     const assetIndex = await AssetIndex.load(source);
     const writer = new AssetWriter({
+      source,
       eventStore,
       kinds,
       projector,

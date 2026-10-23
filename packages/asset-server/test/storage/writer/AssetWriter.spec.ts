@@ -1,10 +1,12 @@
 // Import Node.js Dependencies
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
 
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
 import { AssetPathEscapeError } from "@jolly-pixel/asset-source";
+import { FilesystemAssetSource } from "@jolly-pixel/asset-source/node";
 
 // Import Internal Dependencies
 import {
@@ -13,6 +15,7 @@ import {
   UnknownAssetKindError
 } from "#src/index.ts";
 import { syncHarness } from "../../helpers/backend.ts";
+import { tempDirectory } from "../../helpers/tempDirectory.ts";
 import { counterHandler } from "../../helpers/kinds.ts";
 import { bytes, text } from "../../helpers/bytes.ts";
 
@@ -99,6 +102,26 @@ describe("AssetWriter — create", () => {
     assert.strictEqual(result.ok, false);
     assert.ok(result.val instanceof AssetPathEscapeError);
     assert.deepEqual(lifecycleTypes(harness.eventStore), []);
+  });
+
+  test("returns a path the source ignores as an error without writing it", async() => {
+    await using directory = await tempDirectory();
+    await using harness = await syncHarness({
+      source: new FilesystemAssetSource(directory.root)
+    });
+
+    const result = await harness.writer.create({
+      path: ".git/hooks/pre-commit",
+      data: bytes("x"),
+      actor: kActor
+    });
+    await harness.projector.flush();
+
+    assert.strictEqual(result.ok, false);
+    assert.ok(result.val instanceof AssetPathEscapeError);
+    assert.strictEqual(result.val.reason, "reserved");
+    assert.deepEqual(lifecycleTypes(harness.eventStore), []);
+    assert.deepEqual(await fs.readdir(directory.root), []);
   });
 
   test("returns an unregistered kind as an error without appending", async() => {

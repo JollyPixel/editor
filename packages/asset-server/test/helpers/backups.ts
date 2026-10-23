@@ -1,8 +1,7 @@
 // Import Third-party Dependencies
 import {
   readJsonFile,
-  type AssetSource,
-  type MemoryAssetSource
+  type AssetSource
 } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
@@ -32,7 +31,7 @@ export async function readObject(
 }
 
 export function failObjectWrites(
-  source: MemoryAssetSource
+  source: AssetSource
 ): Disposable {
   const writeIfAbsent = source.writeIfAbsent.bind(source);
   source.writeIfAbsent = async(path, data) => {

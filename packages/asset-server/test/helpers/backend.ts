@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
-import { MemoryAssetSource } from "@jolly-pixel/asset-source";
+import {
+  MemoryAssetSource,
+  type AssetSource
+} from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
 import {
@@ -29,7 +32,7 @@ import {
 } from "#src/storage/reconcile/index.ts";
 
 export interface SyncHarness extends AsyncDisposable {
-  readonly source: MemoryAssetSource;
+  readonly source: AssetSource;
   readonly eventStore: EventStore.EventStore;
   readonly state: ProjectionState;
   readonly backups: AssetBackups;
@@ -47,7 +50,7 @@ export interface SyncHarness extends AsyncDisposable {
 export interface SyncHarnessOptions {
   handlers?: AnyAssetKindHandler[];
   snapshot?: SnapshotPolicy;
-  source?: MemoryAssetSource;
+  source?: AssetSource;
   eventStore?: EventStore.EventStore;
   compact?: boolean;
 }
@@ -132,6 +135,7 @@ export async function syncHarness(
 
   const assetIndex = await AssetIndex.load(source);
   const writer = new AssetWriter({
+    source,
     eventStore,
     kinds,
     projector,

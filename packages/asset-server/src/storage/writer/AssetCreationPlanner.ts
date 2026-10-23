@@ -1,6 +1,10 @@
 // Import Third-party Dependencies
 import { AssetPath } from "@jolly-pixel/asset";
 import {
+  writableAssetPath,
+  type AssetSource
+} from "@jolly-pixel/asset-source";
+import {
   Err,
   Ok,
   type Result
@@ -14,10 +18,7 @@ import type {
 import type { AssetKindRegistry } from "../../model/kinds/AssetKindRegistry.ts";
 import { UnknownAssetKindError } from "../../model/kinds/errors/UnknownAssetKindError.ts";
 import { serializeParts } from "../../model/kinds/serializeParts.ts";
-import {
-  writableAssetPath,
-  type AssetPathAllocator
-} from "./AssetPathAllocator.ts";
+import type { AssetPathAllocator } from "./AssetPathAllocator.ts";
 import type {
   AssetPayload,
   CreateAssetInput
@@ -36,6 +37,7 @@ export interface AssetCreationPlan {
 }
 
 export interface AssetCreationPlannerOptions {
+  source: AssetSource;
   kinds: AssetKindRegistry;
   paths: AssetPathAllocator;
 }
@@ -47,12 +49,14 @@ interface PlannedCompanion {
 }
 
 export class AssetCreationPlanner {
+  #source: AssetSource;
   #kinds: AssetKindRegistry;
   #paths: AssetPathAllocator;
 
   constructor(
     options: AssetCreationPlannerOptions
   ) {
+    this.#source = options.source;
     this.#kinds = options.kinds;
     this.#paths = options.paths;
   }
@@ -60,7 +64,7 @@ export class AssetCreationPlanner {
   async plan(
     input: CreateAssetInput
   ): Promise<Result<AssetCreationPlan, Error>> {
-    const writable = writableAssetPath(input.path);
+    const writable = writableAssetPath(this.#source, input.path);
     if (!writable.ok) {
       return Err(writable.val);
     }

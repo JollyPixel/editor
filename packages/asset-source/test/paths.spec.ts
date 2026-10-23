@@ -12,7 +12,8 @@ import {
   isStatePath,
   normalizeAssetPath,
   safeAssetPath,
-  STATE_DIRECTORY
+  STATE_DIRECTORY,
+  writableAssetPath
 } from "#src/index.ts";
 
 describe("safeAssetPath", () => {
@@ -103,6 +104,34 @@ describe("isStatePath", () => {
       "textures/.jollypixel/a.png"
     ]) {
       assert.strictEqual(isStatePath(input), false, input);
+    }
+  });
+});
+
+describe("writableAssetPath", () => {
+  const source = {
+    isIgnored: (path: string) => path.startsWith(".git/")
+  };
+
+  test("returns the normalized path of an unreserved input", () => {
+    const result = writableAssetPath(source, "textures\\grass.png");
+
+    assert.strictEqual(result.unwrap(), "textures/grass.png");
+  });
+
+  test("rejects an unsafe, state or ignored path with its reason", () => {
+    for (const [input, reason] of [
+      ["../secret.txt", "traversal"],
+      [".JOLLYPIXEL/state.json", "reserved"],
+      ["./.git/hooks/pre-commit", "reserved"],
+      [".git\\config", "reserved"]
+    ]) {
+      const result = writableAssetPath(source, input);
+
+      assert.strictEqual(result.ok, false, input);
+      assert.ok(result.val instanceof AssetPathEscapeError, input);
+      assert.strictEqual(result.val.path, input, input);
+      assert.strictEqual(result.val.reason, reason, input);
     }
   });
 });
