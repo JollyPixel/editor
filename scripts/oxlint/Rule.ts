@@ -1,5 +1,7 @@
 // Import Third-party Dependencies
 import type { RuleTester } from "oxlint/plugins-dev";
 
-export type Rule = Parameters<RuleTester["run"]>[1];
-export type RuleContext = Parameters<NonNullable<Rule["create"]>>[0];
+type OxlintRule = Parameters<RuleTester["run"]>[1];
+
+export interface Rule extends Exclude<OxlintRule, { createOnce: unknown; }> {}
+export type RuleContext = Parameters<Rule["create"]>[0];
