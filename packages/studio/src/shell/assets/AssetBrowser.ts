@@ -123,8 +123,8 @@ export class AssetBrowser extends LitElement {
       .kinds {
         flex: 1;
 
-        --jolly-field-inset-start: 0;
-        --jolly-field-inset-end: 0;
+        --jolly-field-inset-start: 0px;
+        --jolly-field-inset-end: 0px;
         --jolly-control-height: 24px;
         --jolly-icon-size: 30px;
         --jolly-accent-fill: var(--kind-selected-bg);

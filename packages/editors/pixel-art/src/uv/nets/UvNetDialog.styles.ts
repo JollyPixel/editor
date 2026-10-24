@@ -45,8 +45,8 @@ export const uvNetDialogStyles = css`
   }
 
   .editor jolly-toggle {
-    --jolly-field-inset-start: 0;
-    --jolly-field-inset-end: 0;
+    --jolly-field-inset-start: 0px;
+    --jolly-field-inset-end: 0px;
   }
 
   .grid {

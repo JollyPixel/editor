@@ -35,7 +35,7 @@ export class BlocksetEditDialog extends EditingElement {
       gap: var(--jolly-row-gap, 4px);
 
       --jolly-label-width: 80px;
-      --jolly-field-inset-end: 0;
+      --jolly-field-inset-end: 0px;
     }
 
     .usage {

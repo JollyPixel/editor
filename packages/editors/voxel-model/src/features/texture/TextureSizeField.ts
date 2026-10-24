@@ -71,7 +71,7 @@ export class TextureSizeField extends LitElement {
       flex: 1 1 0;
       min-width: 0;
 
-      --jolly-field-inset-end: 0;
+      --jolly-field-inset-end: 0px;
     }
 
     .separator {

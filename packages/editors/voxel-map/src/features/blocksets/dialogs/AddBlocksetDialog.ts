@@ -59,7 +59,7 @@ export class AddBlocksetDialog extends LitElement {
       gap: var(--jolly-row-gap, 4px);
 
       --jolly-label-width: 80px;
-      --jolly-field-inset-end: 0;
+      --jolly-field-inset-end: 0px;
     }
   `;
 
