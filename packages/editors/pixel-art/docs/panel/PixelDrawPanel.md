@@ -271,6 +271,8 @@ extension, so `"art/hero.pixelart"` gives `"hero"`. An empty name becomes
 ## Exported subcomponents
 
 The package root exports `ModeRail`, `ColorPickerRail`, `ColorDock`,
-`ColorSwatch`, `ColorPaletteGrid`, `ColorPickerPopover` and `NormalMapDock` for custom layouts. They receive state through
+`ColorSwatch`, `ColorPaletteGrid` and `ColorPickerPopover` for custom layouts.
+`NormalMapDock` is exported as a type only: the panel loads the element when
+its normal-map dock first opens. The subcomponents receive state through
 properties and report user changes through events. See their source files under
 [`src/`](../../src/) for property and event contracts.

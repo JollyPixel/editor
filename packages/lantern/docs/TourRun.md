@@ -75,6 +75,10 @@ button only while it is set.
 
 The current step. While a step is entering, they already name it.
 
+### `run.shown: boolean`
+
+True once the current step's `step` event has fired, false while it is still entering.
+
 ### `run.state: "running" | "finished" | "skipped" | "interrupted"`
 
 ### `run.waiting: boolean`

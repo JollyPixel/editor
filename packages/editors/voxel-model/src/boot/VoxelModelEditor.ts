@@ -161,7 +161,8 @@ export class VoxelModelEditor {
       texture,
       keyBindingSettings,
       uvNets,
-      toolbar: context.toolbar
+      toolbar: context.toolbar,
+      logger: context.logger
     });
     await editorRuntime.load(scene, {
       maxFps: Infinity

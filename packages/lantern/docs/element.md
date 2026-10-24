@@ -67,5 +67,6 @@ events as usual. The arrow keys and Escape are left to the page; Skip and Back s
 
 ### `element.run: TourRun | null`
 
-Assign the run before its first step shows; the `present` callback of `Lantern` does. The
-element opens on the first `step` event and closes on `end`.
+The `present` callback of `Lantern` assigns it. The element opens on the first `step` event and
+closes on `end`. A run assigned after its step showed, by an element created once the tour
+started, opens the element at once.

@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import type { CommandConsole } from "@jolly-pixel/console";
 import { Lantern } from "@jolly-pixel/lantern";
-import "@jolly-pixel/lantern/element";
 import {
   LocalStorageAdapter,
   type StorageAdapter
@@ -10,6 +9,7 @@ import {
 // Import Internal Dependencies
 import { tourConsole } from "../../console/namespaces/tour.ts";
 import type { HostLogger } from "../../debug/readDebugLogger.ts";
+import { LazyLanternElement } from "./LazyLanternElement.ts";
 
 export interface PageLantern {
   readonly lantern: Lantern;
@@ -40,17 +40,17 @@ export function mountLantern(
     storage = new LocalStorageAdapter()
   } = options;
 
-  const element = parent.ownerDocument.createElement("jolly-lantern");
-  parent.append(element);
+  const lazyElement = new LazyLanternElement(
+    parent,
+    (message) => logger.warn(message)
+  );
 
   const lantern = new Lantern({
     storage,
     page: parent.ownerDocument,
     autoStart: !navigator.webdriver,
     warn: (message) => logger.warn(message),
-    present: (run) => {
-      element.run = run;
-    }
+    present: (run) => lazyElement.present(run)
   });
   const namespace = tourConsole(commands, { lantern });
 
@@ -59,7 +59,7 @@ export function mountLantern(
     dispose() {
       lantern.dispose();
       namespace.unregister();
-      element.remove();
+      lazyElement.dispose();
     }
   };
 }

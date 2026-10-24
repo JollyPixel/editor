@@ -8,6 +8,7 @@ import {
 } from "lit/decorators.js";
 import {
   ContextMenuController,
+  LazyTemplate,
   MenuSession,
   formatCount,
   type ContextMenu,
@@ -28,7 +29,6 @@ import {
 } from "../../state/index.ts";
 import type { VoxelMapEditing } from "../../editing/VoxelMapEditing.ts";
 import { EditingElement } from "../../editing/EditingElement.ts";
-import { AddLayerDialog } from "./dialogs/AddLayerDialog.ts";
 import { layerManagerStyles } from "./LayerManager.styles.ts";
 import { LayerCommands } from "./LayerCommands.ts";
 import { LayerMenu } from "./LayerMenu.ts";
@@ -60,8 +60,10 @@ export class LayerManager extends EditingElement {
   @query("jolly-folder")
   private declare _folder: HTMLElementTagNameMap["jolly-folder"] | null;
 
-  @query("add-layer-dialog")
-  private declare _addDialog: AddLayerDialog;
+  #addDialog = new LazyTemplate(
+    this,
+    () => import("./dialogs/AddLayerDialog.ts")
+  );
 
   @query("jolly-tree")
   private declare _tree: Tree<LayerRef> | null;
@@ -198,7 +200,7 @@ export class LayerManager extends EditingElement {
         ${this.#renderInspector(editing)}
       </jolly-folder>
 
-      <add-layer-dialog></add-layer-dialog>
+      ${this.#addDialog.render(() => html`<add-layer-dialog></add-layer-dialog>`)}
       <jolly-context-menu
         label="Layer actions"
         @jolly-context-action=${this.#menu.onContextAction}
@@ -363,7 +365,8 @@ export class LayerManager extends EditingElement {
     }
 
     const { objectLayer } = editing.state.selection;
-    const result = await this._addDialog.open({
+    const dialog = await this.#addDialog.query("add-layer-dialog");
+    const result = await dialog.open({
       canAddObject: objectLayer !== null &&
         editing.layers.canEdit("object"),
       defaultKind: objectLayer === null ? "voxel-layer" : "object",

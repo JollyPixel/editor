@@ -18,7 +18,7 @@ export interface HistoryFileToolbarOptions {
   canvas: () => PixelArtCanvas | null;
   importer: TextureImporter;
   exporter: Pick<TextureExporter, "render">;
-  clearDialog: () => Pick<ClearTextureDialog, "open">;
+  clearDialog: () => Promise<Pick<ClearTextureDialog, "open">>;
   trailing: readonly (TemplateResult | typeof nothing)[];
   viewOnly: boolean;
 }
@@ -33,7 +33,8 @@ async function clearTexture(
     return;
   }
 
-  const result = await options.clearDialog().open({
+  const dialog = await options.clearDialog();
+  const result = await dialog.open({
     hasUVRegions: !canvas.uv.regions.next().done
   });
   if (trigger instanceof HTMLElement) {

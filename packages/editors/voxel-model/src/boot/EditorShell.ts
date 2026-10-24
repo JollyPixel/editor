@@ -2,7 +2,8 @@
 import {
   bindPresenceStack,
   type EditorRuntime,
-  type EditorToolbarSources
+  type EditorToolbarSources,
+  type HostLogger
 } from "@jolly-pixel/editor.host";
 import {
   CANVAS_HOVER_CHANGE_EVENT,
@@ -65,6 +66,7 @@ export interface EditorShellOptions {
   keyBindingSettings: KeyBindingSettings<PixelArtAction>;
   uvNets: UvNetLibrary;
   toolbar: EditorToolbarSources;
+  logger: HostLogger;
 }
 
 export class EditorShell {
@@ -75,6 +77,7 @@ export class EditorShell {
   #timelineDock: HTMLElement;
   #attached: AttachedElement[];
   #presenceStack: PresenceStack;
+  #logger: HostLogger;
   #editing: ModelEditing | null = null;
   #disposables: Array<() => void> = [];
 
@@ -86,7 +89,8 @@ export class EditorShell {
       texture,
       keyBindingSettings,
       uvNets,
-      toolbar
+      toolbar,
+      logger
     } = options;
 
     const editorToolbar = document.querySelector("jolly-editor-toolbar");
@@ -124,6 +128,7 @@ export class EditorShell {
     this.#timelineDock = timelineDock;
     this.#attached = kAttachedTags.map(queryAttachedElement);
     this.#presenceStack = presenceStack;
+    this.#logger = logger;
 
     this.#leftPanel.showTexture(texture);
     this.#leftPanel.keyBindingSettings = keyBindingSettings;
@@ -162,7 +167,16 @@ export class EditorShell {
   ): void {
     this.#editing = editing;
     for (const element of this.#attached) {
-      void element.attach(editing);
+      if (element.matches(":defined")) {
+        void element.attach(editing);
+      }
+      else {
+        void customElements.whenDefined(element.localName).then(() => {
+          if (this.#editing === editing) {
+            void element.attach(editing);
+          }
+        });
+      }
     }
     this.#disposables.push(bindPresenceStack(
       this.#presenceStack,
@@ -187,10 +201,29 @@ export class EditorShell {
   };
 
   readonly #onLayoutChange = (): void => {
+    this.#loadVisiblePanels();
     this.#placeLeftPanel();
     this.#syncGizmo();
     this.#syncTab();
   };
+
+  #loadVisiblePanels(): void {
+    const loads: Promise<unknown>[] = [];
+    if (this.#layout.paneVisible(kMaterialPane)) {
+      loads.push(import("../features/material/MaterialLibrary.ts"));
+    }
+    if (this.#animating) {
+      loads.push(
+        import("../features/animation/AnimatePanel.ts"),
+        import("../features/animation/timeline/Timeline.ts")
+      );
+    }
+    void Promise.all(loads).catch((error: unknown) => {
+      this.#logger.warn(
+        `An editor panel failed to load: ${error instanceof Error ? error.message : String(error)}`
+      );
+    });
+  }
 
   #syncTab(): void {
     this.#timelineDock.hidden = !this.#animating;
@@ -224,6 +257,7 @@ export class EditorShell {
   }
 
   dispose(): void {
+    this.#editing = null;
     for (const dispose of this.#disposables.splice(0).reverse()) {
       dispose();
     }

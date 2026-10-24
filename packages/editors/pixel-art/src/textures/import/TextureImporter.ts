@@ -34,7 +34,7 @@ export interface TextureImporterOptions {
   textures: TextureSet;
   status: TransientStatus;
   policy: () => TextureImportPolicy;
-  dialog: () => Pick<ImportTextureDialog, "open">;
+  dialog: () => Promise<Pick<ImportTextureDialog, "open">>;
 }
 
 export class TextureImporter implements ReactiveController {
@@ -56,7 +56,7 @@ export class TextureImporter implements ReactiveController {
   readonly #host: TextureImporterHost;
   readonly #textures: TextureSet;
   readonly #policy: () => TextureImportPolicy;
-  readonly #dialog: () => Pick<ImportTextureDialog, "open">;
+  readonly #dialog: () => Promise<Pick<ImportTextureDialog, "open">>;
   #generation = 0;
 
   constructor(
@@ -136,7 +136,7 @@ export class TextureImporter implements ReactiveController {
   ): Promise<boolean> {
     const policy = this.#policy();
     const result = policy === "ask" ?
-      await this.#dialog().open({
+      await (await this.#dialog()).open({
         name: source.name.value,
         size: source.size
       }) :

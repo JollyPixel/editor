@@ -18,16 +18,13 @@ import {
   type JollyReparentDetail,
   type Tree,
   ContextMenuController,
+  LazyTemplate,
   MenuSession
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import "../../shared/actionIcons.ts";
 import "./animateIcons.ts";
-import "../../shared/dialogs/DeleteDialog.ts";
-import "../../shared/dialogs/NameDialog.ts";
-import type { DeleteDialog } from "../../shared/dialogs/DeleteDialog.ts";
-import type { NameDialog } from "../../shared/dialogs/NameDialog.ts";
 import { menuPointBelow } from "../../shared/menu/menuPointBelow.ts";
 import "../transform/TransformPanel.ts";
 import "./tracks/TrackBindings.ts";
@@ -144,12 +141,6 @@ export class AnimatePanel extends LitElement {
   @query("jolly-context-menu")
   declare private menu: ContextMenu;
 
-  @query("jolly-model-editor-name-dialog")
-  declare private nameDialog: NameDialog;
-
-  @query("jolly-model-editor-delete-dialog")
-  declare private deleteDialog: DeleteDialog;
-
   @query("jolly-model-editor-transform")
   declare private transformElement: TransformPanel;
 
@@ -162,9 +153,17 @@ export class AnimatePanel extends LitElement {
   @queryAll("jolly-tree")
   declare private trees: NodeListOf<Tree>;
 
+  #dialogs = new LazyTemplate(this, () => Promise.all([
+    import("../../shared/dialogs/DeleteDialog.ts"),
+    import("../../shared/dialogs/NameDialog.ts")
+  ]));
   #controller = new AnimatePanelController(this, {
-    promptName: (context) => this.nameDialog.open(context),
-    promptDelete: (context) => this.deleteDialog.open(context),
+    promptName: (context) => this.#dialogs
+      .query("jolly-model-editor-name-dialog")
+      .then((dialog) => dialog.open(context)),
+    promptDelete: (context) => this.#dialogs
+      .query("jolly-model-editor-delete-dialog")
+      .then((dialog) => dialog.open(context)),
     openMenu: (session, point) => this.#menu.open(session, point),
     beginRename: (rowId) => [...this.trees].some((tree) => tree.beginRename(rowId))
   });
@@ -253,8 +252,10 @@ export class AnimatePanel extends LitElement {
         label="Animation actions"
         @jolly-context-action=${this.#menu.onContextAction}
       ></jolly-context-menu>
-      <jolly-model-editor-name-dialog></jolly-model-editor-name-dialog>
-      <jolly-model-editor-delete-dialog></jolly-model-editor-delete-dialog>
+      ${this.#dialogs.render(() => html`
+        <jolly-model-editor-name-dialog></jolly-model-editor-name-dialog>
+        <jolly-model-editor-delete-dialog></jolly-model-editor-delete-dialog>
+      `)}
     `;
   }
 

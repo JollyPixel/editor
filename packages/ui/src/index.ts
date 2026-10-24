@@ -54,6 +54,7 @@ export {
   type FieldSource
 } from "./field/FieldBinding.ts";
 export * from "./reactive/SubscriptionController.ts";
+export * from "./reactive/LazyTemplate.ts";
 export * from "./peer/types.ts";
 export * from "./peer/identity.ts";
 export * from "./peer/promptPeerIdentity.ts";

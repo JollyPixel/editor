@@ -35,7 +35,7 @@ export * from "./color/ColorPickerRail.ts";
 export * from "./color/ColorPickerPopover.ts";
 export { ColorPaletteGrid } from "./color/ColorPaletteGrid.ts";
 export * from "./color/ColorDock.ts";
-export * from "./normal/NormalMapDock.ts";
+export type { NormalMapDock } from "./normal/NormalMapDock.ts";
 export type { NormalMapConvention } from "./normal/NormalMapPng.ts";
 export type { ColorPickedDetail } from "./color/ColorController.ts";
 export * from "./color/ColorSwatch.ts";

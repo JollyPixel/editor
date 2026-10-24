@@ -97,7 +97,9 @@ export class Placement {
     try {
       this.#reportState(options.page);
       const pageConsole = shell === null ?
-        mountConsole() :
+        mountConsole({
+          logger: options.logger.child({ namespace: "host.console" })
+        }) :
         forwardConsole(shell);
       teardown.defer(() => pageConsole.dispose());
       this.#console = pageConsole;

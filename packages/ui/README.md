@@ -286,6 +286,8 @@ import {
   value.
 - [`SubscriptionController`](./docs/api/subscription-controller.md): keeps a host subscribed to one
   source while connected.
+- [`LazyTemplate`](./docs/api/lazy-template.md): renders part of a template once the module that
+  defines its elements is loaded.
 
 #### Utilities
 

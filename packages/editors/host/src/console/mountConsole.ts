@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import { CommandConsole } from "@jolly-pixel/console";
-import "@jolly-pixel/console/element";
 import {
   DENSITIES,
   LocalStorageAdapter,
@@ -9,6 +8,11 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
+import {
+  readDebugLogger,
+  type HostLogger
+} from "../debug/readDebugLogger.ts";
+import { LazyConsoleElement } from "./LazyConsoleElement.ts";
 import {
   PageAppearance,
   type Appearance
@@ -22,7 +26,7 @@ export interface PageConsole {
 }
 
 export interface EditorConsole extends PageConsole {
-  readonly element: HTMLElementTagNameMap["jolly-console"];
+  toggle(): void;
 }
 
 export interface MountConsoleOptions {
@@ -39,6 +43,10 @@ export interface MountConsoleOptions {
    * the page restores and stores them in `storage`.
    */
   appearance?: Appearance;
+  /**
+   * @default readDebugLogger()
+   */
+  logger?: HostLogger;
 }
 
 export function mountConsole(
@@ -46,7 +54,8 @@ export function mountConsole(
 ): EditorConsole {
   const {
     parent = document.body,
-    storage = new LocalStorageAdapter()
+    storage = new LocalStorageAdapter(),
+    logger = readDebugLogger()
   } = options;
 
   const appearance = options.appearance ??
@@ -55,17 +64,19 @@ export function mountConsole(
   const commands = new CommandConsole();
   registerAppearanceVariables(commands, appearance);
 
-  const element = parent.ownerDocument.createElement(
-    "jolly-console"
+  const lazyElement = new LazyConsoleElement(
+    commands,
+    parent,
+    (message) => logger.warn(message)
   );
-  element.console = commands;
-  parent.append(element);
 
   return {
     commands,
-    element,
+    toggle() {
+      lazyElement.toggle();
+    },
     dispose() {
-      element.remove();
+      lazyElement.dispose();
       commands.unregister();
     }
   };

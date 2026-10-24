@@ -12,6 +12,7 @@ import {
   type PresencePeer,
   type Tree,
   ContextMenuController,
+  LazyTemplate,
   MenuSession,
   type MenuPoint
 } from "@jolly-pixel/ui";
@@ -26,8 +27,6 @@ import {
 import { materialLibraryStyles } from "./MaterialLibrary.styles.ts";
 import { presetIcon } from "./library/materialIcons.ts";
 import "../../shared/actionIcons.ts";
-import "../../shared/dialogs/DeleteDialog.ts";
-import type { DeleteDialog } from "../../shared/dialogs/DeleteDialog.ts";
 import { menuPointBelow } from "../../shared/menu/menuPointBelow.ts";
 import type { MaterialAction } from "./library/materialMenu.ts";
 import {
@@ -59,11 +58,14 @@ export class MaterialLibrary extends LitElement {
   @query("jolly-context-menu")
   declare private menu: ContextMenu;
 
-  @query("jolly-model-editor-delete-dialog")
-  declare private deleteDialog: DeleteDialog;
-
+  #dialogs = new LazyTemplate(
+    this,
+    () => import("../../shared/dialogs/DeleteDialog.ts")
+  );
   #controller = new MaterialLibraryController(this, {
-    promptDelete: (context) => this.deleteDialog.open(context),
+    promptDelete: (context) => this.#dialogs
+      .query("jolly-model-editor-delete-dialog")
+      .then((dialog) => dialog.open(context)),
     beginRename: (id) => void this.#beginRename(id),
     choosePreset: (choose, point) => this.#openPresetMenu(choose, point),
     writeClipboard,
@@ -128,7 +130,9 @@ export class MaterialLibrary extends LitElement {
         label="Material actions"
         @jolly-context-action=${this.#menu.onContextAction}
       ></jolly-context-menu>
-      <jolly-model-editor-delete-dialog></jolly-model-editor-delete-dialog>
+      ${this.#dialogs.render(() => html`
+        <jolly-model-editor-delete-dialog></jolly-model-editor-delete-dialog>
+      `)}
     `;
   }
 

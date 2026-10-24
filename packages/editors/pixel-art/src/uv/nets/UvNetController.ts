@@ -20,7 +20,7 @@ import type { UvNetDialog } from "./UvNetDialog.ts";
 
 export interface UvNetControllerOptions {
   canvas: () => PixelArtCanvas | null;
-  dialog: () => UvNetDialog;
+  dialog: () => Promise<UvNetDialog>;
   adopt: (net: UVNet) => void;
 }
 
@@ -133,7 +133,8 @@ export class UvNetController implements ReactiveController {
     const regionId = uv?.selectedRegionId ?? null;
     const region = regionId === null ? null : uv?.get(regionId) ?? null;
 
-    await this.#options.dialog().open({
+    const dialog = await this.#options.dialog();
+    await dialog.open({
       library: this.#library,
       region,
       apply: (preset) => {

@@ -7,7 +7,7 @@ What the studio shell and the three editor pages make the browser download befor
 - Every page is already minified, three.js included, and [`serveBuild`](./server/serveBuild.ts) serves precompressed brotli with an immutable cache on hashed assets. The weight comes from what the pages contain and from how they are built.
 - three.js is about 220 KB of brotli in each voxel editor, a third of the page. Our copy is close to the cost of `WebGPURenderer` alone, so tree-shaking it harder saves little.
 - The offline back-end chunk ships the whole ata-validator schema compiler: 438 KB minified, 95 KB brotli. The `1.53.0` bump (`e91817e4`) grew it by 30 KB of brotli. Item 1 replaces it with zod in the browser.
-- Smaller items: lazy-loading what the first screen does not show, per-consumer ui registration, picomatch and classic zod in the browser, and `emitDecoratorMetadata`.
+- Smaller items: per-consumer ui registration, picomatch and classic zod in the browser, and `emitDecoratorMetadata`.
 
 ## Where the bytes are
 
@@ -43,23 +43,7 @@ No dependency is bundled twice in different versions: one each of three `0.186.1
 
 Ranked by expected gain. Estimates are eager brotli unless stated.
 
-### 1. Lazy-load what the first screen does not show
-
-Code that every page evaluates at boot but nobody sees until a click, in KB of rendered length:
-
-| Group | shell | voxel-map | voxel-model | pixel-art |
-|---|---|---|---|---|
-| dialogs | 35 | 59 | 37 | 26 |
-| console element (`@jolly-pixel/console/element`) | 44 | 44 | 44 | 44 |
-| tours and `@jolly-pixel/lantern` | | 29 | 25 | 25 |
-| template preview | 8 | 39 | | |
-| ui stats components | 12 | 21 | 21 | 12 |
-
-That is about 190 KB rendered in voxel-map, roughly 25 to 30 KB of brotli; 15 to 20 KB in the other pages. The console is the cleanest case: [`mountConsole`](../editors/host/src/console/mountConsole.ts) imports the element eagerly, while `CommandConsole` and the namespaces are the part the editors need at boot. `MetricsPanel` is already lazy, but the stats components still come in through the ui barrel (see 3).
-
-The pixel-art editor inside voxel-map is not a candidate: the texture editor is placed in the Blocks pane, which is the pane shown at boot ([`EditorPanels`](../editors/voxel-map/src/shell/EditorPanels.ts)).
-
-### 2. Register ui components per consumer
+### 1. Register ui components per consumer
 
 Every page bundles 251 to 266 of ui's 278 `dist` modules, because the root barrel re-exports every component and each component registers itself when its module runs. Components a page never names by tag:
 
@@ -72,7 +56,7 @@ Adding a `sideEffects` list to ui alone gains nothing: marking every non-registe
 
 - **Minifying Lit `css` and `html` template literals.** Collapsing indentation and comments inside template literals removes 64 KB raw from voxel-map but only about 3 KB of brotli.
 - **Tree-shaking three further.** A build of only `WebGPURenderer`, `Mesh`, `BoxGeometry`, `MeshStandardNodeMaterial` and `Scene` from `three/webgpu` is 763 KB minified / 166 KB brotli. Ours is 986 / 223 KB, and most of the difference is TSL nodes the editors use. Small eager extras: `BloomNode`, `ViewHelper`, `FontLoader`, `LineSegments2`.
-- **Lazy pixel-art in voxel-map.** Shown at boot, see 2.
+- **Lazy pixel-art in voxel-map.** The texture editor is placed in the Blocks pane, which is the pane shown at boot ([`EditorPanels`](../editors/voxel-map/src/shell/EditorPanels.ts)).
 
 ## Method
 

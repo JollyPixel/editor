@@ -60,11 +60,17 @@ export class LanternElement extends LitElement {
 
   #source = new SubscriptionController<TourRun>(
     this,
-    (run) => [
-      run.subscribe("step", () => void this.#show(run)),
-      run.subscribe("end", () => this.#close()),
-      () => this.#close()
-    ]
+    (run) => {
+      if (run.shown && run.state === "running") {
+        void this.#show(run);
+      }
+
+      return [
+        run.subscribe("step", () => void this.#show(run)),
+        run.subscribe("end", () => this.#close()),
+        () => this.#close()
+      ];
+    }
   );
   #tracker = new TargetTracker(this, (frame) => this.#place(frame));
   #theme = new AmbientThemeController(this);

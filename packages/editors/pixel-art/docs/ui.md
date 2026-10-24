@@ -112,7 +112,9 @@ Albedo export downloads the painted pixels regardless of the displayed view.
 Without normal maps enabled, Export downloads the albedo texture directly.
 
 The root exports `ModeRail`, `ColorPickerRail`, `ColorDock`, `ColorSwatch`,
-`ColorPaletteGrid`, `ColorPickerPopover` and `NormalMapDock` for custom layouts. They are controlled components: set their
+`ColorPaletteGrid` and `ColorPickerPopover` for custom layouts, and the
+`NormalMapDock` type, whose element the panel loads when its normal-map dock
+first opens. They are controlled components: set their
 properties and respond to their events. `PixelDrawPanel.ts` shows the wiring
 used by the full panel. Their definitions and event types are in `src/`.
 

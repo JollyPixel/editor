@@ -46,7 +46,8 @@ that cannot be dismissed keeps the console closed.
 `/script [namespace]`, or `commands.editScript()`, replaces the prompt with a text editor over
 the variables ([format](./grammar.md#scripts)). Values are colored by their variable's type and
 errors are underlined as you type; the status line shows the first error or the number of
-changes.
+changes. `element.editScript(script)` opens the console on a
+[`VariableScript`](./CommandConsole.md) the caller already holds.
 
 | Key | Effect |
 |---|---|

@@ -2,13 +2,16 @@
 import {
   html,
   nothing,
-  type ReactiveControllerHost,
   type TemplateResult
 } from "lit";
 import type {
   PixelArtCanvas,
   TextureView
 } from "@jolly-pixel/pixel-draw.renderer";
+import {
+  LazyTemplate,
+  type LazyTemplateHost
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -49,15 +52,17 @@ export interface NormalMapControllerOptions {
 }
 
 export class NormalMapController {
-  readonly #host: ReactiveControllerHost;
+  readonly #host: LazyTemplateHost;
   readonly #options: NormalMapControllerOptions;
+  readonly #dock: LazyTemplate;
 
   constructor(
-    host: ReactiveControllerHost,
+    host: LazyTemplateHost,
     options: NormalMapControllerOptions
   ) {
     this.#host = host;
     this.#options = options;
+    this.#dock = new LazyTemplate(host, () => import("./NormalMapDock.ts"));
     host.addController(this);
     options.events.subscribe("active-change", () => {
       if (this.view === "normal") {
@@ -120,10 +125,13 @@ export class NormalMapController {
     this.#options.docks.show("normal-map");
   }
 
-  renderDock(): TemplateResult {
+  renderDock(): TemplateResult | typeof nothing {
     const docked = this.#options.docks.isOpen("normal-map");
+    if (docked) {
+      void this.#dock.ready();
+    }
 
-    return html`
+    return this.#dock.render(() => html`
       <normal-map-dock
         class="normal-map-dock"
         part="normal-map-dock"
@@ -132,7 +140,7 @@ export class NormalMapController {
         .pixelDocument=${this.#canvas()?.document ?? null}
         .locked=${this.#options.locked()}
       ></normal-map-dock>
-    `;
+    `);
   }
 
   renderViewSwitch(): TemplateResult {
