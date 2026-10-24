@@ -8,12 +8,15 @@ import {
   type TemplateResult
 } from "lit";
 import {
+  ContextMenuController,
+  MenuSession,
   SubscriptionController,
+  menuPointBelow,
   readDetail,
   type ContextMenu,
-  type ContextMenuItem,
   type JollyChangeDetail,
-  type JollyOption
+  type JollyOption,
+  type MenuItem
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/context-menu";
@@ -26,8 +29,8 @@ import type { Lantern } from "@jolly-pixel/lantern";
 // Import Internal Dependencies
 import type { ConnectionStatus } from "../connection/ConnectionStatus.ts";
 import type { EditorTags } from "../session/EditorTags.ts";
-import type { EditorTargets } from "../session/EditorTargets.ts";
 import type { EditorToolbarSources } from "../session/EditorToolbarSources.ts";
+import { AssetMenu } from "./AssetMenu.ts";
 import "./toolbarIcons.ts";
 
 // CONSTANTS
@@ -37,9 +40,10 @@ const kDateFormat = new Intl.DateTimeFormat(undefined, {
   timeStyle: "short"
 });
 
-interface AssetSelect {
+interface AssetGroup {
   options: JollyOption<string>[];
   current: string;
+  menu: AssetMenu;
 }
 
 interface ChangeSource {
@@ -97,7 +101,7 @@ export class EditorToolbar extends LitElement {
     }
 
     .bar:has(> .tours) {
-      padding-inline-start: var(--jolly-space-1, 4px);
+      padding-inline-start: 0;
     }
 
     .group {
@@ -229,8 +233,16 @@ export class EditorToolbar extends LitElement {
   declare protected busy: boolean;
   declare protected error: string | null;
 
-  #assetSelect: AssetSelect | null = null;
+  #assets: AssetGroup | null = null;
   #tours: Lantern | null = null;
+  #toursMenu = new ContextMenuController(
+    () => this.renderRoot.querySelector<ContextMenu>("#tours-menu")!,
+    () => MenuSession.EMPTY
+  );
+  #assetMenu = new ContextMenuController(
+    () => this.renderRoot.querySelector<ContextMenu>("#asset-menu")!,
+    () => MenuSession.EMPTY
+  );
   #offline: ConnectionStatus | null = null;
 
   #sources = new SubscriptionController<EditorToolbarSources | null>(
@@ -267,19 +279,18 @@ export class EditorToolbar extends LitElement {
 
   protected override willUpdate(): void {
     const {
-      targets = null,
       tags = null,
       connectionStatus = null,
       lantern = null
     } = this.sources ?? {};
-    this.#assetSelect = targets === null ? null : assetSelect(targets);
+    this.#assets = this.sources === null ? null : assetGroup(this.sources);
     this.#tours = lantern !== null && lantern.size > 0 ? lantern : null;
     this.#offline = connectionStatus?.online === false ?
       connectionStatus :
       null;
     this.toggleAttribute(
       "empty",
-      this.#assetSelect === null &&
+      this.#assets === null &&
       tags === null &&
       this.#tours === null &&
       this.#offline === null
@@ -292,9 +303,7 @@ export class EditorToolbar extends LitElement {
     return html`
       <div class="bar">
         ${this.#tours === null ? nothing : this.#renderTours(this.#tours)}
-        ${this.#assetSelect === null ?
-          nothing :
-          this.#renderTargets(this.#assetSelect)}
+        ${this.#assets === null ? nothing : this.#renderTargets(this.#assets)}
         ${tags === null ? nothing : this.#renderVersions(tags)}
         ${this.#offline === null ? nothing : this.#renderOffline(this.#offline)}
         ${this.error === null ?
@@ -316,18 +325,19 @@ export class EditorToolbar extends LitElement {
         icon-only
         label="Tours"
         title="Tours"
-        @click=${(event: Event) => this.#onTours(lantern, event)}
+        @click=${(event: MouseEvent) => this.#onTours(lantern, event)}
       ></jolly-button>
       <jolly-context-menu
+        id="tours-menu"
         label="Tours"
-        @jolly-context-action=${(event: Event) => this.#onTourPicked(lantern, event)}
+        @jolly-context-action=${this.#toursMenu.onContextAction}
       ></jolly-context-menu>
     `;
   }
 
   #onTours(
     lantern: Lantern,
-    event: Event
+    event: MouseEvent
   ): void {
     const tours = [...lantern];
     if (tours.length === 1) {
@@ -336,47 +346,49 @@ export class EditorToolbar extends LitElement {
       return;
     }
 
-    const menu = this.shadowRoot?.querySelector<ContextMenu>("jolly-context-menu");
-    const button = event.currentTarget;
-    if (!menu || !(button instanceof HTMLElement)) {
-      return;
-    }
-
-    menu.items = tours.map((tour): ContextMenuItem => {
-      const item: ContextMenuItem = {
+    const items = tours.map((tour): MenuItem<string> => {
+      const item: MenuItem<string> = {
         id: tour.id,
         label: tour.title
       };
 
       return lantern.seen.has(tour) ? { ...item, icon: "check" } : item;
     });
-    const { left, bottom } = button.getBoundingClientRect();
-    menu.openAt(left, bottom);
-  }
-
-  #onTourPicked(
-    lantern: Lantern,
-    event: Event
-  ): void {
-    const detail = readDetail<{ id: string; }>(event);
-    if (detail !== null) {
-      lantern.start(lantern.tour(detail.id));
-    }
+    this.#toursMenu.open(
+      MenuSession.from(items, (id) => {
+        lantern.start(lantern.tour(id));
+      }),
+      menuPointBelow(event)
+    );
   }
 
   #renderTargets(
-    select: AssetSelect
+    assets: AssetGroup
   ): TemplateResult {
     return html`
       <div class="group asset">
         <span class="caption" id="asset-caption">Asset</span>
         <jolly-select
           aria-labelledby="asset-caption"
-          .options=${select.options}
-          .value=${select.current}
+          .options=${assets.options}
+          .value=${assets.current}
           ?disabled=${this.busy}
           @jolly-change=${this.#onTargetChange}
         ></jolly-select>
+        <jolly-button
+          id="asset-actions"
+          icon="asset-actions"
+          icon-only
+          label="Asset actions"
+          title="Asset actions"
+          ?disabled=${this.busy}
+          @click=${(event: MouseEvent) => this.#onAssetActions(assets.menu, event)}
+        ></jolly-button>
+        <jolly-context-menu
+          id="asset-menu"
+          label="Asset actions"
+          @jolly-context-action=${this.#assetMenu.onContextAction}
+        ></jolly-context-menu>
       </div>
     `;
   }
@@ -481,6 +493,16 @@ export class EditorToolbar extends LitElement {
     }
   };
 
+  #onAssetActions(
+    menu: AssetMenu,
+    event: MouseEvent
+  ): void {
+    this.#assetMenu.open(
+      MenuSession.from(menu.entries, (action) => this.#run(() => menu.run(action))),
+      menuPointBelow(event)
+    );
+  }
+
   readonly #onVersionChange = (
     event: Event
   ): void => {
@@ -540,9 +562,14 @@ export class EditorToolbar extends LitElement {
   }
 }
 
-function assetSelect(
-  targets: EditorTargets
-): AssetSelect | null {
+function assetGroup(
+  sources: EditorToolbarSources
+): AssetGroup | null {
+  const { targets, archives } = sources;
+  if (targets === null) {
+    return null;
+  }
+
   const options = Array.from(targets, (record) => {
     return {
       value: record.id,
@@ -550,12 +577,11 @@ function assetSelect(
     };
   });
 
-  return options.length < 2 ?
-    null :
-    {
-      options,
-      current: targets.current
-    };
+  return {
+    options,
+    current: targets.current,
+    menu: new AssetMenu(targets, archives)
+  };
 }
 
 function versionOptions(

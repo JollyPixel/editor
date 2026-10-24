@@ -5,7 +5,6 @@ import {
   test
 } from "node:test";
 import assert from "node:assert/strict";
-import { setTimeout } from "node:timers/promises";
 
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
@@ -21,11 +20,7 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { EditorToolbar } from "#src/ui/index.ts";
-import "#src/ui/index.ts";
 import { REPLAY_TOUR_STEP } from "#src/ui/lantern/replayTourStep.ts";
-import { EditorTargets } from "#src/session/EditorTargets.ts";
-import type { EditorTags } from "#src/session/EditorTags.ts";
 import { EditorToolbarSources } from "#src/session/EditorToolbarSources.ts";
 import { ConnectionStatus } from "#src/connection/ConnectionStatus.ts";
 import { AssetLeases } from "#src/lease/AssetLeases.ts";
@@ -37,34 +32,14 @@ import {
 import {
   TAGGED_ASSET_ID,
   assetTag,
-  FakeNavigator,
   fakeTags
 } from "../helpers/session/catalog.ts";
-
-async function mount(
-  targets: EditorTargets | null,
-  tags: EditorTags | null,
-  lantern = new Lantern({ storage: new MemoryStorageAdapter() })
-): Promise<EditorToolbar> {
-  const element = document.createElement("jolly-editor-toolbar");
-  element.sources = new EditorToolbarSources({
-    targets,
-    tags,
-    lantern
-  });
-  document.body.append(element);
-  await setTimeout();
-  await element.updateComplete;
-
-  return element;
-}
-
-function query<TElement extends Element = HTMLElement>(
-  element: EditorToolbar,
-  selector: string
-): TElement | null {
-  return element.shadowRoot!.querySelector<TElement>(selector);
-}
+import { createToolbarArchives } from "../helpers/session/archives.ts";
+import {
+  mountToolbar as mount,
+  pick,
+  query
+} from "../helpers/ui/toolbar.ts";
 
 function tour(
   id: string
@@ -81,15 +56,6 @@ function tour(
       }
     ]
   });
-}
-
-function pick(
-  select: Element,
-  value: string
-): void {
-  select.dispatchEvent(new CustomEvent("jolly-change", {
-    detail: { value }
-  }));
 }
 
 describe("EditorToolbar", () => {
@@ -119,6 +85,7 @@ describe("EditorToolbar", () => {
     element.sources = new EditorToolbarSources({
       targets: null,
       tags: null,
+      archives: createToolbarArchives(),
       connectionStatus: new ConnectionStatus({ client, changes: assets }),
       lantern: new Lantern({ storage: new MemoryStorageAdapter() })
     });
@@ -146,7 +113,7 @@ describe("EditorToolbar", () => {
     const lantern = new Lantern({ storage: new MemoryStorageAdapter() });
     const basics = tour("basics");
     const release = lantern.register(basics);
-    const element = await mount(null, null, lantern);
+    const element = await mount(null, null, { lantern });
 
     const button = new TargetPath(REPLAY_TOUR_STEP.target).resolve(document);
     assert.ok(button instanceof HTMLElement);
@@ -168,8 +135,8 @@ describe("EditorToolbar", () => {
     lantern.register(basics);
     lantern.register(tour("brushes"));
     lantern.seen.record(basics);
-    const element = await mount(null, null, lantern);
-    const menu = query<ContextMenu>(element, "jolly-context-menu")!;
+    const element = await mount(null, null, { lantern });
+    const menu = query<ContextMenu>(element, "#tours-menu")!;
 
     query(element, "[data-tour=tours]")!.click();
     menu.dispatchEvent(new CustomEvent("jolly-context-action", {
@@ -188,61 +155,6 @@ describe("EditorToolbar", () => {
       }
     ]);
     assert.equal(lantern.current?.tour.id, "brushes");
-  });
-
-  test("hides the Asset select when the target is the only asset of its kind", async() => {
-    function targets(): EditorTargets {
-      return new EditorTargets({
-        catalog: {
-          records: () => [record("forest", "voxelmap"), record("hero", "voxelmodel")].values(),
-          subscribe: () => () => undefined
-        },
-        accepts: "voxelmap",
-        current: "forest",
-        navigator: new FakeNavigator()
-      });
-    }
-
-    const alone = await mount(targets(), null);
-    const tagged = await mount(targets(), fakeTags().tags);
-
-    assert.ok(alone.hasAttribute("empty"));
-    assert.ok(!tagged.hasAttribute("empty"));
-    assert.equal(query(tagged, ".asset"), null);
-    assert.ok(query(tagged, ".version"));
-  });
-
-  test("lists assets by path without extension and opens the picked one", async() => {
-    const navigator = new FakeNavigator();
-    const cave = {
-      ...record("cave", "voxelmap"),
-      path: "maps/cave.voxelmap.json"
-    };
-    const targets = new EditorTargets({
-      catalog: {
-        records: () => [record("forest", "voxelmap"), cave].values(),
-        subscribe: () => () => undefined
-      },
-      accepts: "voxelmap",
-      current: "forest",
-      navigator
-    });
-    const element = await mount(targets, null);
-    const assets = query<Select<string>>(element, ".asset jolly-select")!;
-
-    pick(assets, "cave");
-
-    assert.ok(!element.hasAttribute("empty"));
-    assert.deepEqual(
-      assets.options.map((option) => option.label),
-      ["forest", "maps/cave"]
-    );
-    assert.deepEqual(navigator.navigations, [
-      {
-        target: "cave",
-        tag: null
-      }
-    ]);
   });
 
   test("lists the current version, then tags and restore points, and views the picked one", async() => {

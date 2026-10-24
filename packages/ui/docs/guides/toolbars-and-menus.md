@@ -55,21 +55,24 @@ import "./toolIcons.ts";
 
 ## 3. Open a menu from a button
 
-A `jolly-context-menu` opens at a point. Use the bottom-left corner of the
-button:
+A `jolly-context-menu` opens at a point. `menuPointBelow(event)` gives the
+bottom-left corner of the clicked button:
 
 ```ts
-import { ContextMenuController, MenuSession } from "@jolly-pixel/ui";
+import {
+  ContextMenuController,
+  MenuSession,
+  menuPointBelow
+} from "@jolly-pixel/ui";
 
 #menu = new ContextMenuController(() => this.menu, () => MenuSession.EMPTY);
 
 #openLighting = (event: MouseEvent) => {
-  const { left, bottom } = (event.currentTarget as HTMLElement).getBoundingClientRect();
   this.#menu.open(
     MenuSession.picker(kLightingOptions, "No lighting modes", (mode) => {
       this.view.update({ lighting: mode });
     }),
-    { x: left, y: bottom }
+    menuPointBelow(event)
   );
 };
 ```

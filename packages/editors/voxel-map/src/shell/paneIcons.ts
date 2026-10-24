@@ -39,3 +39,18 @@ registerIcon("material", svg`
     stroke-linecap="round"
   />
 `, { tone: "lime" });
+
+registerIcon("layers", svg`
+  <path
+    class="tone-fill"
+    d="M12 3 21 8l-9 5-9-5 9-5z"
+  />
+  <path
+    d="M12 3 21 8l-9 5-9-5 9-5zM3 12.5l9 5 9-5M3 17l9 5 9-5"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "violet" });

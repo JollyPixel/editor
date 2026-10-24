@@ -14,6 +14,7 @@ import {
   ContextMenuController,
   LazyTemplate,
   MenuSession,
+  menuPointBelow,
   type MenuPoint
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
@@ -34,7 +35,6 @@ import {
 import { materialLibraryStyles } from "./MaterialLibrary.styles.ts";
 import { presetIcon } from "./library/materialIcons.ts";
 import "../../shared/actionIcons.ts";
-import { menuPointBelow } from "../../shared/menu/menuPointBelow.ts";
 import type { MaterialAction } from "./library/materialMenu.ts";
 import {
   MaterialLibraryController,

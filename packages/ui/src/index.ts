@@ -173,6 +173,7 @@ export {
 export type * from "./containers/context-menu/ContextMenu.ts";
 export * from "./containers/context-menu/ContextMenuController.ts";
 export * from "./containers/context-menu/MenuSession.ts";
+export * from "./containers/context-menu/menuPointBelow.ts";
 export type * from "./containers/dialog/Dialog.ts";
 export * from "./containers/dialog/dialogHeader.ts";
 export type * from "./containers/dialog/dialogHelpers.ts";
