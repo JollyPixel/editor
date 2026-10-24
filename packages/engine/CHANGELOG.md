@@ -1,5 +1,65 @@
 # @jolly-pixel/engine
 
+## 7.1.0
+
+### Minor Changes
+
+- [#1015](https://github.com/JollyPixel/editor/pull/1015) [`02b3191`](https://github.com/JollyPixel/editor/commit/02b3191adf3f5b2dbc5df5e8768d5434ae3b0351) Thanks [@fraxken](https://github.com/fraxken)! - `ThreeRenderer` compiles every render pipeline asynchronously and adds `pendingCompiles`, `compiled()` and a `compiled` event; `Renderer` gains `compiled()`.
+  `Runtime` requests a frame when compiles settle and adds `compiledFrame()`.
+
+- [#1061](https://github.com/JollyPixel/editor/pull/1061) [`d225112`](https://github.com/JollyPixel/editor/commit/d2251127dac7d6b2ca8f4bf123331062156d645f) Thanks [@fraxken](https://github.com/fraxken)! - `OrbitFlyCamera` takes its fly and look keys from `OrbitFlyKeys` (`keys` option and setter).
+  A tour body span such as `` `{camera.forward}` `` shows the key bound to that action, served by `lantern.keys`.
+  `KeyChord.format()` names a bare modifier key, and controls exports `isKeyCode` and `MODIFIER_KEY_CODES`.
+
+- [#1015](https://github.com/JollyPixel/editor/pull/1015) [`48dd303`](https://github.com/JollyPixel/editor/commit/48dd3038b36246492b62bdd6e71137dd1d3d9c3e) Thanks [@fraxken](https://github.com/fraxken)! - `Logger.step()` records a `performance.measure()` named `<namespace>:<name>` when the step resolves, whatever the log level and namespaces.
+
+- [#951](https://github.com/JollyPixel/editor/pull/951) [`86af3d5`](https://github.com/JollyPixel/editor/commit/86af3d5b5e2fcc0ca9db56460add568776bde5eb) Thanks [@fraxken](https://github.com/fraxken)! - KTX2 textures: `TextureAssetLoader` and `createDefaultAssetLoaders` take a `ktx2` loader for `.ktx2` sources, and `Runtime` builds one from `assets.ktx2.transcoderPath`.
+  The `texture` asset kind claims `.ktx2`, served as `image/ktx2`; `loadBlocksets` accepts a `KTX2Loader`, and `AtlasTexture` includes `THREE.CompressedTexture`.
+
+- [#849](https://github.com/JollyPixel/editor/pull/849) [`5f66fe9`](https://github.com/JollyPixel/editor/commit/5f66fe99d7d1b7cb1df7c1383f2fa60ba6acf6cd) Thanks [@fraxken](https://github.com/fraxken)! - Time scale support: `FrameSchedule.unscaledDelta`, `GameLoop.step()` for frame-by-frame debugging, and a step budget that grows with `timeScale` above 1.
+  Add `world.time` (game, wall-clock and fixed-step time); `Camera3DControls` and `OrbitFlyCamera` move in wall-clock time, so they work in slow motion and while paused.
+  `World.tick` samples input once per frame and publishes it to each fixed step and to the rendered frame, so a press on a frame without a step reaches the next one.
+
+- [#1036](https://github.com/JollyPixel/editor/pull/1036) [`bc29b43`](https://github.com/JollyPixel/editor/commit/bc29b4307c5a3b485f6b2006c11f4a832b73284b) Thanks [@fraxken](https://github.com/fraxken)! - `OrbitFlyCamera` "lock" mode zooms the pivot distance by a ratio per wheel notch (new `pivotZoomStep`, default 0.1), throws a `RangeError` when `minPivotDistance` is not above 0, and `scrollSpeed` now only applies to "elastic" mode.
+  Clicking a `jolly-presence-stack` avatar no longer takes focus, so a following Space press reaches the viewport.
+
+- [#1045](https://github.com/JollyPixel/editor/pull/1045) [`695ee81`](https://github.com/JollyPixel/editor/commit/695ee81072bd90cae25c03e5e850ce214153278b) Thanks [@fraxken](https://github.com/fraxken)! - Settings change without a restart: `Server.replaceRights`, kind options via `ProjectFile.replace`, `KindPackage.withOptions` and `ProjectKinds`/`AssetKindRegistry.replace`, and `Accounts.replaceRoles`/`replaceAccessRequests`; `RightsPattern` is exported.
+  Accounts store per-account `preferences` and report typed `AccountActivity` events; `listAll` pages newest first with `beforeEventId`.
+  `OrbitFlyCamera` gains `invertY` and a `touchpadSwipe` look or pan mode.
+
+- [#1048](https://github.com/JollyPixel/editor/pull/1048) [`e1e86cb`](https://github.com/JollyPixel/editor/commit/e1e86cb232b5e021d839a58b8b68013194308349) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Relay schemas move to `AssetCommands.relay`, checked when `registerAssetRooms` starts; handler APIs return `AnyAssetKindHandler`, and `@jolly-pixel/asset-server/testing` adds `LiveAssetRoom` and `mockAssetRoom`.
+  Add `KeyedCommandArbiter` and `commandDocumentKind` to `@jolly-pixel/network`; breaking: `SyncedCommandDocument` now takes `<TDocument, TNotice>`.
+  Add `SceneManager.unloadScene(scene)` to `@jolly-pixel/engine`.
+
+- [#917](https://github.com/JollyPixel/editor/pull/917) [`deaf77f`](https://github.com/JollyPixel/editor/commit/deaf77f2cdd8ecd8e24602c0014efd17672617c0) Thanks [@fraxken](https://github.com/fraxken)! - `ThreeRenderer` emits `deviceLost`, and the runtime logs it as an error. The model loader decodes Meshopt-compressed glTF, and `Transform` no longer allocates on each call.
+  `VoxelView.meshVersion` counts chunk mesh changes, so a host can keep a static shadow map.
+
+- [#984](https://github.com/JollyPixel/editor/pull/984) [`51c9b58`](https://github.com/JollyPixel/editor/commit/51c9b58a6d5d6f279413d82be26c9d92609905c9) Thanks [@fraxken](https://github.com/fraxken)! - `Mouse.scrollSource` tells wheel notches, two-finger touchpad swipes and zooms (pinch or Ctrl+wheel) apart; `scrollDevice` overrides the detection.
+  `OrbitFlyCamera` looks around on a two-finger swipe and with I/J/K/L (`touchpadLookSensitivity`, `keyLookSpeed`); a pinch does what the wheel does.
+  `OrbitFlyCamera` eases in and out of movement (`accelerationTime`, `brakingTime`); `responsiveness` now only damps the pivot and trail.
+
+### Patch Changes
+
+- [#1071](https://github.com/JollyPixel/editor/pull/1071) [`32d05ac`](https://github.com/JollyPixel/editor/commit/32d05acf969fc7b09067ffcda2fcea0e6191fbcd) Thanks [@fraxken](https://github.com/fraxken)! - Add `AssetKind` and `AssetPath` (replaces `AssetSource`). Records carry `path` instead of `source` in `AssetRecord`, `AssetRecordData` and the catalog protocol, and a kind may no longer contain `@`.
+  `AssetReference.equals` compares `AssetType` tokens, `AssetCoordinator.catalog`/`loaders` are private, and `evict()` takes a reference and returns its typed value.
+
+- [#1018](https://github.com/JollyPixel/editor/pull/1018) [`c9726dc`](https://github.com/JollyPixel/editor/commit/c9726dc516927b5d119e066e7dfa0a1bca536eaf) Thanks [@fraxken](https://github.com/fraxken)! - The model asset loader and `Runtime` import the three.js model loaders, meshopt decoder and `KTX2Loader` on first use; `BakedRoomEnvironment.load()` starts its request one microtask after the call.
+  `AssetCatalog`, `AssetRecord` and `AssetReference` validate with `zod/mini`, so a malformed shape throws `$ZodError` instead of the classic `ZodError`.
+
+- [#1014](https://github.com/JollyPixel/editor/pull/1014) [`e5178c2`](https://github.com/JollyPixel/editor/commit/e5178c28b3650f6edddc97208f0f31168f628768) Thanks [@fraxken](https://github.com/fraxken)! - `GlobalAudio` creates its `AudioListener`, and the browser `AudioContext` behind it, on first use instead of in the constructor, so a world that plays no sound opens no audio context.
+
+- [#875](https://github.com/JollyPixel/editor/pull/875) [`98cbd2b`](https://github.com/JollyPixel/editor/commit/98cbd2b36acf3752a62d18a2bb5b6c8a505cc311) Thanks [@fraxken](https://github.com/fraxken)! - Declare `sideEffects: false` so bundlers drop three.js and reflect-metadata when only `Systems.Logger` is imported.
+  `ThreeRenderer` skips zero and unchanged sizes, so a canvas hidden then shown at the same size keeps its frame buffers.
+
+- [#908](https://github.com/JollyPixel/editor/pull/908) [`0436e3c`](https://github.com/JollyPixel/editor/commit/0436e3c645a2d717b90bb407ce41eb412beb4943) Thanks [@fraxken](https://github.com/fraxken)! - Add `renderDelta`/`unscaledRenderDelta` so `update` and `world.time` include frames skipped by `maxFps`; renders land on the nearest frame so a cap at the display rate no longer drops frames.
+
+- [#1039](https://github.com/JollyPixel/editor/pull/1039) [`33f6b2f`](https://github.com/JollyPixel/editor/commit/33f6b2f3a7c5ced091a3500480fbd2160f5ffcc0) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - `AssetLiveProtocol` gains an optional `relay` for ephemeral client messages outside arbitration and the event log; a live room that fails to open releases its state.
+  `OrbitFlyCamera.teleport()` keeps the camera at the pose in "elastic" focus mode and releases a "lock" orbit, instead of being pulled back on the next frame.
+- Updated dependencies [[`32d05ac`](https://github.com/JollyPixel/editor/commit/32d05acf969fc7b09067ffcda2fcea0e6191fbcd), [`d225112`](https://github.com/JollyPixel/editor/commit/d2251127dac7d6b2ca8f4bf123331062156d645f), [`5d9e5a4`](https://github.com/JollyPixel/editor/commit/5d9e5a484c5e7ce27d7d702bc2fe05df495bbc19), [`5f66fe9`](https://github.com/JollyPixel/editor/commit/5f66fe99d7d1b7cb1df7c1383f2fa60ba6acf6cd), [`6d8484f`](https://github.com/JollyPixel/editor/commit/6d8484fe99f34f8ed90b407fc6e657c0387c1acf), [`c9726dc`](https://github.com/JollyPixel/editor/commit/c9726dc516927b5d119e066e7dfa0a1bca536eaf), [`9123c45`](https://github.com/JollyPixel/editor/commit/9123c4578d791cb8f9d3749e56d2c8268ee87ec7), [`ce42278`](https://github.com/JollyPixel/editor/commit/ce42278634922401f293644c76ee55b71ae041db), [`837a08f`](https://github.com/JollyPixel/editor/commit/837a08fc80a0b41a1f2c0549fff8f6423db9066b), [`f949b80`](https://github.com/JollyPixel/editor/commit/f949b807ba586adee8b88f476261334eef8a703a), [`5f66fe9`](https://github.com/JollyPixel/editor/commit/5f66fe99d7d1b7cb1df7c1383f2fa60ba6acf6cd), [`0436e3c`](https://github.com/JollyPixel/editor/commit/0436e3c645a2d717b90bb407ce41eb412beb4943), [`02ab0a3`](https://github.com/JollyPixel/editor/commit/02ab0a3a9eeef46f26b5d45846c057249729b3c3), [`6b9daee`](https://github.com/JollyPixel/editor/commit/6b9daee5304c6bf06fd77086633e682d35640afc), [`51c9b58`](https://github.com/JollyPixel/editor/commit/51c9b58a6d5d6f279413d82be26c9d92609905c9)]:
+  - @jolly-pixel/asset@4.0.0
+  - @jolly-pixel/controls@4.0.0
+  - @jolly-pixel/loop@2.0.0
+
 ## 7.0.0
 
 ### Major Changes

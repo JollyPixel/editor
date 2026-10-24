@@ -1,5 +1,38 @@
 # @jolly-pixel/asset-source
 
+## 4.0.0
+
+### Major Changes
+
+- [#859](https://github.com/JollyPixel/editor/pull/859) [`425cef9`](https://github.com/JollyPixel/editor/commit/425cef984d0c6e5bf06f99fa29e0282acb47350b) Thanks [@fraxken](https://github.com/fraxken)! - `AssetSource` gains `folders()`, `createFolder` and `deleteFolder`, so empty folders persist, plus `FolderSet`; `watch` callbacks also receive whether a file or a folder changed.
+  The catalog room lists folders through `CatalogFolders` (`backend.folders`), with `catalog:create-folder`, `catalog:move-folder`, `catalog:delete-folder` and `catalog:folders`; `CatalogClient` adds `folders()`, `createFolder`, `moveFolder` and `removeFolder`.
+
+- [#1076](https://github.com/JollyPixel/editor/pull/1076) [`8539d87`](https://github.com/JollyPixel/editor/commit/8539d8702d62c6b27ade0f1e0bb13134b20e90fe) Thanks [@fraxken](https://github.com/fraxken)! - `read` rejects with `AssetPathNotFoundError` on every source, the filesystem `exists` reports `false` for a directory, and `readJsonFile` rethrows failures other than a missing file or invalid JSON.
+  `AssetSource.isIgnored` is required (memory and IndexedDB ignore `.jollypixel/`); `FilesystemAssetSource.resolve` and the `toRelativePosix` export are removed.
+  Filesystem paths that reach an ignored folder through a link or a Windows short name are rejected, the watcher no longer follows symlinks, and the HTTP handler sends a sandboxing `Content-Security-Policy`.
+
+- [#1080](https://github.com/JollyPixel/editor/pull/1080) [`59fc78a`](https://github.com/JollyPixel/editor/commit/59fc78a35178c8a5eee14462eb8b27ace71d1e22) Thanks [@fraxken](https://github.com/fraxken)! - IndexedDB storage now runs on `idb` and always uses `globalThis.indexedDB`: the `factory` option is removed.
+  `IndexedDbAssetSource` no longer upgrades databases made before the `folders` store, and `destroy` closes the sources still open on the database instead of waiting for them.
+
+- [#1024](https://github.com/JollyPixel/editor/pull/1024) [`9123c45`](https://github.com/JollyPixel/editor/commit/9123c4578d791cb8f9d3749e56d2c8268ee87ec7) Thanks [@fraxken](https://github.com/fraxken)! - Rename methods named `xOf`, `xFor` or `getX`/`setX` after what they do (for example `inverseOf` → `invert`, `UVRegion.rectFor` → `slotRect`, `MessageParser.of` → `fromProtocol`).
+  The package docs list the new names; behavior is unchanged.
+
+### Minor Changes
+
+- [#1078](https://github.com/JollyPixel/editor/pull/1078) [`89073fc`](https://github.com/JollyPixel/editor/commit/89073fcf9c2ca0fa9ff2f1b5c00746c95544e47e) Thanks [@fraxken](https://github.com/fraxken)! - Add `writableAssetPath(source, input)`, which normalizes a path and rejects it as `reserved` when it is a state path or one the source ignores.
+
+- [#951](https://github.com/JollyPixel/editor/pull/951) [`86af3d5`](https://github.com/JollyPixel/editor/commit/86af3d5b5e2fcc0ca9db56460add568776bde5eb) Thanks [@fraxken](https://github.com/fraxken)! - KTX2 textures: `TextureAssetLoader` and `createDefaultAssetLoaders` take a `ktx2` loader for `.ktx2` sources, and `Runtime` builds one from `assets.ktx2.transcoderPath`.
+  The `texture` asset kind claims `.ktx2`, served as `image/ktx2`; `loadBlocksets` accepts a `KTX2Loader`, and `AtlasTexture` includes `THREE.CompressedTexture`.
+
+- [#869](https://github.com/JollyPixel/editor/pull/869) [`e646731`](https://github.com/JollyPixel/editor/commit/e646731d6968af9a58604f5b503950e73dfa9681) Thanks [@fraxken](https://github.com/fraxken)! - event-store adds `expectedVersion` appends (`EventVersionConflictError`) and per-asset `compact` (`assetId`); SQLite files open in WAL mode with incremental vacuum.
+  asset-server snapshots no longer reload live state or drop commands appended while serializing, compacts before snapshots (`compactOnSnapshot`), caches room snapshots per version and reconciles only changed paths; `watch` reports readiness through `onReady` and skips initial and temporary entries.
+  network room loggers no longer overwrite the shared logger context, and disabled debug logs skip building metadata.
+
+### Patch Changes
+
+- Updated dependencies [[`32d05ac`](https://github.com/JollyPixel/editor/commit/32d05acf969fc7b09067ffcda2fcea0e6191fbcd), [`c9726dc`](https://github.com/JollyPixel/editor/commit/c9726dc516927b5d119e066e7dfa0a1bca536eaf), [`9123c45`](https://github.com/JollyPixel/editor/commit/9123c4578d791cb8f9d3749e56d2c8268ee87ec7), [`6b9daee`](https://github.com/JollyPixel/editor/commit/6b9daee5304c6bf06fd77086633e682d35640afc)]:
+  - @jolly-pixel/asset@4.0.0
+
 ## 3.0.0
 
 ### Major Changes

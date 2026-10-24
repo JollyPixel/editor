@@ -1,5 +1,16 @@
 # @jolly-pixel/color
 
+## 2.0.0
+
+### Major Changes
+
+- [#1083](https://github.com/JollyPixel/editor/pull/1083) [`d866130`](https://github.com/JollyPixel/editor/commit/d86613035c5f949c9449ce152bd5a8bcd570bac5) Thanks [@fraxken](https://github.com/fraxken)! - Add OKLCH/OKHSV/OKHSL behind one `ColorSpace` object per model (replaces the `rgbToX`/`xToRgb` pairs, keeps hue on grays), mixing, harmonies, byte-color helpers, `ColorSequence` (replaces `ColorPalette`/`colorFromKey`/`goldenAngleColor`) and WCAG `contrastingColor`, plus a configurable `jolly-color-picker` (spaces, wheel, channels, harmony, shared preferences).
+
+### Patch Changes
+
+- [#852](https://github.com/JollyPixel/editor/pull/852) [`09eabd6`](https://github.com/JollyPixel/editor/commit/09eabd676125ee69ac8e823815c62fd01b4feb5a) Thanks [@fraxken](https://github.com/fraxken)! - Faster hex and named-color parsing and hex/rgb formatting through lookup tables and packed-integer hex decoding.
+  `parseColor` no longer resolves `Object.prototype` keys such as `constructor` to black.
+
 ## 1.1.1
 
 ### Patch Changes

@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/runtime",
   "description": "Jolly Pixel Runtime for web browsers and electron applications.",
-  "version": "6.0.0",
+  "version": "6.1.0",
   "type": "module",
   "exports": {
     ".": {
