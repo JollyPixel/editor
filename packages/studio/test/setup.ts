@@ -5,6 +5,7 @@ import { Window } from "happy-dom";
 const kEmulatedBrowserWindow = new Window({
   url: "http://localhost/",
   settings: {
+    enableIframePageLoading: true,
     navigation: {
       disableChildFrameNavigation: true
     }
