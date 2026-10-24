@@ -1,489 +1,89 @@
 # Architecture
 
 `@jolly-pixel/studio` opens one project: one asset back-end, one asset tree,
-one editor page per tab.
+one editor page per tab. Terms are defined in the [glossary](./GLOSSARY.md),
+decisions in the [ADRs](./docs/adr/README.md).
 
-See also: [ADRs](./docs/adr/README.md) · [roadmap](./ROADMAP.md) ·
-[glossary](./GLOSSARY.md)
-
-## Big picture
+## One project, one back-end
 
 ```mermaid
 flowchart TB
-  File[".jollypixel/project.json"]
-  Server["Vite server<br/>back-end, editor pages, manifest"]
-  Shell["Shell page<br/>asset tree + tabs"]
-  Frame["Editor iframe<br/>one per tab"]
-  File --> Server
-  Server -->|"catalog, manifest"| Shell
-  Shell <-->|"postMessage"| Frame
-  Frame <-->|"asset rooms"| Server
+    File[".jollypixel/project.json"] --> Project["StudioProject"]
+    Project --> Kinds["kind packages"]
+    Project --> Editors["editor packages"]
+    Kinds --> Backend["StudioBackend<br/>asset server, accounts, /api/"]
+    Editors --> Manifest["project manifest + editor pages"]
 ```
 
-- The shell holds **data only**: kind descriptors, editor names, catalog records.
-- Kind code runs in the back-end, editor code runs in the frames.
-- Shell and frames share one origin but never share objects.
+- The project file lists the editors and kinds. Only the server writes it.
+- `vite/backend` mounts the back-end in dev, `StudioServer` when hosted. The static build has none and starts offline.
+- Code: `server/`, `vite/`.
 
-## Server
+## Data in the shell, code in the frames
 
 ```mermaid
 flowchart TB
-  Open["StudioProject.open"]
-  Editors["EditorPackages"]
-  Kinds["ProjectKinds"]
-  Pages["/editors/&lt;name&gt;/"]
-  Manifest["project-manifest.json"]
-  Backend["asset back-end"]
-  Handlers["virtual:jolly-pixel/handlers"]
-  Open --> Editors
-  Open --> Kinds
-  Editors --> Pages
-  Editors --> Manifest
-  Kinds --> Manifest
-  Kinds --> Backend
-  Kinds --> Handlers
+    Backend["back-end"] -->|"catalog + manifest"| Shell["shell<br/>asset tree + tabs"]
+    Shell <-->|"postMessage"| Frame["editor frame<br/>one per tab"]
+    Frame <-->|"asset rooms"| Backend
 ```
 
-- `StudioProject.open` writes a default project file when none exists
-  ([ADR-0016](./docs/adr/0016-the-project-file-lists-editors-and-kinds.md)).
-- Packages resolve through `PackageResolver`: project `node_modules`, then the
-  studio's. `./` or `../` means a project folder.
-- An editor from `node_modules` is prebuilt and never watched
-  ([ADR-0017](./docs/adr/0017-project-packages-are-trusted-code.md)).
-- Editing the project file by hand restarts the dev server. The server's own
-  writes do not.
-- `server/` knows nothing of Vite; `vite/` only adapts it.
-- `src/` is the browser shell. `server/` and `vite/` never import it: what
-  both sides need, such as API schemas and editor descriptors, lives in
-  `shared/`. A lint rule enforces it, and `shared/` type-checks without DOM
-  types, so it runs on both sides.
-- `StudioBackend` opens the online back-end: the accounts, the
-  `AssetServer` and its catalog view, `StudioApi` and `SharePage`. It is the
-  only place that assembles them; tests reach HTTP through
-  `test/helpers/studioBackend.ts`. `inMemory` covers the assets, the accounts
-  and the audit log. `vite/backend` mounts its middleware and attaches its
-  WebSocket to the dev server. It closes its WebSocket transports, the API,
-  the asset server, then the accounts; an open that throws closes what it had
-  opened.
-- `StudioServer` is the hosted entry, started by `server/start.ts`. One
-  `node:http` server chains the back-end, `ManifestRoute` and the built shell,
-  which holds every editor page under `editors/<name>/`. It refuses to start
-  when a project editor has no page there. `serveBuild` serves the shell and
-  its pages, with hashed assets cached as immutable.
-- `StudioAccess` reads the `access` section into a rights table with a
-  built-in `admin` and the `AccountRoles`. `server/accounts` opens the
-  project's `Accounts` on `.jollypixel/accounts.db`: the network server
-  authenticates with it and registers its `accounts` room.
-- `server/api/StudioApi` is a Fastify app that owns every `/api/` path;
-  `StudioBackend` hands those requests to it. Each API surface is a Fastify
-  plugin holding only its route table, such as `projectRoutes`, read from the
-  `{ method, path }` tables in `shared/api/` (`PROJECT_ROUTES`, …) that the
-  browser clients send through `ApiEndpoint`. Shares, project, audit and
-  preferences sit in one scope whose `preParsing` hook authenticates, and
-  their handlers call the domain module with `signedInAccount(request)`.
-  `apiFailure` maps every domain error to a status, and the failure body
-  `{ code, message }` is `apiFailureSchema`. `AccountsController` stays, for
-  cookies, statuses and avatar caching.
-- The session cookie is named after the project root: cookies ignore ports.
-- `StudioProject.privateFiles` lists the globs Vite must not serve: every
-  `.jollypixel/` folder and the project's asset files. Assets reach the
-  browser through the rooms only, which apply the rights table: the asset
-  server runs with `http: false`.
-- Share links: `StudioShares` checks `studio.$share`, creates, lists and
-  revokes links for `/api/shares/` and walks the closure for the network
-  server's `admits`. `SharePage` answers `/view/<token>` with the editor page
-  plus a `<base>` and the launch. It reads the page from `EditorPageFolders`:
-  the package folders in dev, the shell build's `editors/<name>/` when
-  hosted, the folder `<base>` points at.
-  Guests read the `asset-catalog-view` room, registered once the asset
-  server is ready.
-- Project export: `ProjectArchive` checks `studio.$export` and answers
-  `GET /api/project/archive` with every asset in one asset archive, named
-  after the project root. It goes over HTTP, so the catalog content limit
-  does not apply. `GET /api/project/` answers the caller's project rights,
-  one boolean per right: `share`, `export`, `readSettings`, `editSettings`,
-  `audit` and `manageAccess`.
-- `StudioAccess.projectRights(role)` returns `ProjectRights`, which lives in
-  `shared/` so the client parses the reply into the same object. On the
-  server, `require(right)` throws `ProjectRightRefusedError`, which the API
-  answers with 403 `refused`. `ProjectSettings`, `ProjectArchive`, `AuditFeed` and
-  `StudioShares` check rights only through it. The four `studio.$*` names
-  and `namedRight` live in `shared/api/project.ts`; `RoleRules.grants` uses
-  the same rule.
-- Project settings: `ProjectSettings` is the only writer of `project.json`
-  and checks the caller's rights itself. `PUT /api/project/settings/kinds`
-  needs write on `studio.$settings`, `PUT /api/project/settings/access` an
-  admin. A save builds and checks everything first (the rebuilt kind
-  packages, the new `StudioAccess` and its `AccountsAccess`), then writes the
-  file and applies it: kind handlers are replaced, the network rights table
-  and the account roles are swapped, and the sessions of a role whose rules
-  changed are revoked so they reconnect under the new rules.
-- The access body is `{ access, renamedRoles }`. `AccessDraft` keeps each
-  role's saved name, so a rename reaches the server as `old → new` instead
-  of a removal plus an addition. The save passes the renames to
-  `Accounts.replaceRoles`, which moves and revokes the role's accounts in the
-  same swap. Every saved name, renamed or deleted, stays reserved in the
-  draft until the save, so renames never chain, swap or land on a removed
-  role.
-- `AccountsAccess` turns an access section into the accounts' roles and
-  master password, at startup and on each save.
-- Editors lists each kind package's options with `KindOptionSections`, read
-  from its `optionsSchema`. A key named after one of the package's kinds gets
-  a section with the kind's label; any other object becomes a folded group.
-  An `x`/`y` object with a `default` meta is one vector field. Fields are
-  labelled by title or key, with the `default` meta as their revert value.
-- `studio.$settings` and `studio.$audit` count only when a role names them;
-  wildcards do not grant them. Admins always have both.
-- Audit: `AuditLog` writes `.jollypixel/audit.db` (settings changes and
-  account activity) and reads it back. `AuditFeed` answers `GET /api/audit`:
-  `NewestFirst` merges that log with the asset events and tags `AssetLog`
-  reads, `EditRuns` folds one actor's edits on one asset less than 5 minutes
-  apart, and `AuditCursor` holds the position in each source. Account rows go
-  to admins only.
-- Preferences: `StoredPreferences` answers `GET /api/preferences/` with
-  the caller's overrides and `PUT /api/preferences/<scope>`. Both go
-  through `PreferenceScopes`, the descriptors the server knows: a `PUT`
-  refuses unknown fields and values, a read drops them
-  ([ADR-0023](./docs/adr/0023-preferences-follow-the-account.md)). The
-  scopes are `SHELL_PREFERENCES`, the studio's and the host's, and those each
-  editor package's `jollypixel.editor.preferences` module exports, which
-  `EditorPackage.read` imports and the manifest carries
-  ([ADR-0024](./docs/adr/0024-editors-read-preferences-from-the-shell.md)).
-
-| Mode | Project file | Back-end | Editor pages |
-|---|---|---|---|
-| `dev` | on disk | project root | each page folder |
-| `e2e` | in memory | in memory, fixed port, accounts in memory, new accounts are `member` | same |
-| `static` | in memory | none, no accounts, shell starts offline | `dist/editors/`, offline-only |
-
-Online and offline back-ends get the same handlers (plus `texture`) and the
-same seed (`shared/seed.ts`).
-
-## Boot
-
-```mermaid
-sequenceDiagram
-  participant I as src/index.ts
-  participant C as connectStudio
-  participant S as jolly-studio
-  par
-    I->>I: fetch project-manifest.json
-  and
-    I->>C: connect
-    C-->>I: catalog
-  end
-  I->>I: register kinds + editors
-  I->>S: attach
-  S->>S: build tree, restore tabs
-```
-
-- The manifest loads while the sign-in dialog is open. A valid session cookie
-  skips the dialog (`me`).
-- `connectStudio` always returns a `StudioUser`: `StudioSignedIn` online,
-  `OfflineUser` offline. Both carry the project rights (all false offline)
-  and the preferences. `online` tells them apart: only `StudioSignedIn` has
-  the account, the peer identity, the roster, the share links, the project
-  settings and the session renewal. Elements check `online` once, then
-  rights.
-  A new avatar changes the identity the next launch carries.
-- `StudioSignedIn.open` loads the preferences and the project rights right
-  after `me`. It sends every request through `StudioClients`, one HTTP client
-  per API surface.
-  `AccountPreferences` sends each change, one request per scope in flight,
-  and posts it on a `BroadcastChannel` for the other tabs. Offline,
-  `LocalPreferences` keeps them in `localStorage`. `StudioAppearance` applies
-  the theme and density from them and is what the console's `theme` and
-  `density` variables write.
-- `PreferencesFile` carries the overrides of every known scope to another
-  project, from Settings › Import & export. An import drops unknown scopes and
-  fields, refuses the whole file on a shortcut conflict, then replaces each
-  scope it carries through `Preferences.update`, so the change is saved and
-  pushed like any other.
-- Editor frames connect with the same cookie; `jolly-launch` carries the
-  identity only.
-- A refused socket (`unauthorized`), the shell's or a frame's, goes through
-  `SessionRenewal`: `me` or the dialog, then every client reconnects. Another
-  account reloads
-  ([ADR-0022](./docs/adr/0022-a-refused-session-renews-in-place.md)).
-- Catalog unreachable: Retry, or go offline.
-- Offline adds `{ offline: "studio" }` to every editor URL, so the frames
-  join the same offline data.
+- The shell never loads kind handler or editor code, and shares no objects with the frames.
+- `shared/` holds what the browser and the server both need. `server/` never imports `src/`.
+- Code: `src/shell/`, `shared/`.
 
 ## Opening an asset
 
 ```mermaid
-sequenceDiagram
-  participant B as asset-browser
-  participant S as StudioSession
-  participant T as EditorTabs
-  participant E as EditorFrames
-  participant F as Editor frame
-  B->>S: asset-open
-  S->>T: open(tab)
-  T->>E: show(tab)
-  E->>F: create iframe
-  F->>E: jolly-ready
-  E->>F: jolly-launch
+flowchart TB
+    Browser["asset-browser"] -->|"asset-open"| Session["StudioSession"]
+    Session --> Tabs["EditorTabs"]
+    Tabs --> Frames["EditorFrames"]
+    Frames -->|"jolly-ready, jolly-launch"| Frame["editor frame"]
+    Frame -->|"jolly-shell commands"| Session
 ```
 
-- Kind without an editor: nothing opens, the row shows `no editor`.
-- Already open: the tab gets focus.
-- Tab cap reached: confirm closing the least recently used tab.
-- The iframe is created on first focus. Hidden tabs keep theirs
-  (`display: none`). Closing a tab removes it.
-- `EditorTabs` and `EditorFrames` are plain controllers, not Lit templates:
-  moving an iframe reloads it. `StudioSession` builds both from the
-  `<jolly-studio>` DOM slots, the `StudioUser` and the console;
-  `<jolly-studio>` only renders.
+- The iframe is created on first focus, then only hidden: moving it would reload it.
+- The launch carries ports for the shell catalog and the frame's console.
+- Code: `src/tabs/`, `src/shell/`.
 
-## Frame messages
-
-| Message | Direction | Carries |
-|---|---|---|
-| `jolly-ready` | frame → shell | nothing |
-| `jolly-launch` | shell → frame | target asset, theme, density, the shell's peer identity, the overrides of the scopes its editor reads, a port to the shell catalog and a port for the frame's console |
-| `jolly-catalog-open` | frame → shell, on the launch port | a port for one catalog |
-| `jolly-shell` | frame → shell | `open-asset`, `toggle-console`, `session-refused`, `unsaved`, `editor-state` or `update-preferences` |
-| `jolly-appearance` | shell → frame | new theme or density |
-| `jolly-preferences` | shell → frame | one scope's new overrides |
-| `jolly-session-renewed` | shell → frame | nothing; refused clients reconnect |
-
-- `EditorFrames` ignores messages from any other window.
-- Frames open their catalog on the launch port, served by the shell's
-  `CatalogShare` ([ADR-0018](./docs/adr/0018-frames-read-the-catalog-through-the-shell.md)).
-- `StudioSession` handles every `jolly-shell` command and never answers one.
-  `jolly-session-renewed` goes to every frame, not only those that posted
-  `session-refused`.
-- Online, every frame joins as the shell's peer (`username`, `peerId`), so one
-  user has one presence color across tabs. Offline frames stay guests.
-- A frame posts `unsaved` when its documents gain or lose changes the server
-  has not acknowledged. The shell marks its tab and cancels `beforeunload`
-  while any tab is marked. Closing a marked tab from the strip asks first;
-  eviction at the cap always asks and warns when the tab is marked. A tab
-  whose asset left the catalog, or whose editor page was rebuilt in dev, is
-  dropped without asking.
-- A tab spins from the moment its frame is created until the frame posts
-  `editor-state` `ready`, spins again while it posts `switching`, and shows a
-  warning on `failed`. A tab opened in the background stays still until its
-  frame loads.
-- A frame reads the host scopes plus its editor's own and shared scopes from
-  the project manifest (`PreferenceScopes.readBy`). `EditorFrames` sends
-  it only those, and drops its `update-preferences` for any other scope.
-- `update-preferences` goes through the shell's `Preferences`; every change,
-  from a frame, Settings or another tab, is pushed to every frame that reads
-  its scope. A refused patch pushes the shell's overrides of that scope back
-  instead
-  ([ADR-0024](./docs/adr/0024-editors-read-preferences-from-the-shell.md)).
-- One console for the whole studio: Ctrl+K in a frame posts `toggle-console`
-  ([ADR-0015](./docs/adr/0015-the-studio-console-takes-precedence.md)).
-- The frame serves its console namespaces on the console port, and
-  `FrameConsoles` shows those of the active tab in the studio console
-  ([ADR-0019](./docs/adr/0019-the-active-editor-namespaces-join-the-studio-console.md)).
-
-## Saved state
-
-| Key | Storage | Holds |
-|---|---|---|
-| `studio:tabs` | `localStorage` | open tab ids in order, active id |
-| `studio:home-layout` | `localStorage` | asset dock size |
-| `studio:asset-kind` | `localStorage` | kind filter |
-| `studio:asset-expanded` | `localStorage` | expanded folder node ids |
-| `studio:appearance` | `localStorage` | last applied theme and density, painted before the preferences load |
-| `jolly-pixel:preferences:<scope>` | `localStorage` | preference overrides of the offline studio |
-| `preferences` table | `.jollypixel/accounts.db` | preference overrides per account and scope |
-| `.jollypixel/audit.db` | SQLite | settings changes and account activity |
-| `jolly_session_<hash>` | HttpOnly cookie | session token, unreadable from scripts |
-
-`BrowserState` reads and writes the `studio:` keys through one
-`StorageAdapter`, and parses each one once; an unreadable value reads as
-empty. Restoring tabs skips missing assets and kinds without an editor, stops
-at the cap, and loads only the active frame.
-
-## Home
+## Who may do what
 
 ```mermaid
 flowchart TB
-  Home["studio-home"]
-  Dock["asset dock"]
-  Overview["project-overview"]
-  Browser["asset-browser"]
-  Users["studio-users"]
-  Home --> Dock
-  Home --> Overview
-  Home --> Users
-  Dock --> Browser
+    Cookie["session cookie"] --> Accounts["Accounts<br/>role per account"]
+    AccessFile["access section"] --> Access["StudioAccess<br/>rights table"]
+    Accounts --> Access
+    Share["share link guest"] --> Rooms["asset rooms"]
+    Access --> Rooms
+    Access --> Api["/api/ routes<br/>ProjectRights"]
 ```
 
-- Home is a fixed tab. Opening an editor hides it, so the tree keeps its state
-  ([ADR-0014](./docs/adr/0014-the-asset-browser-lives-on-home.md)).
-- Settings is a shell page like Home, but closable: no frame, outside the cap.
-  `SavedTabs.pages` reopens it after a reload, and `BrowserState` keeps its
-  last section.
-- The Home tools, online only: Settings opens the Settings tab, Search the
-  console, Export downloads the project archive. Export stays disabled when
-  the role has no write on `studio.$export`.
-- `project-overview` counts assets per kind (`AssetTally`) and lists open
-  editors.
-- `studio-users`, in the right dock when online, draws the `accounts` room
-  roster through `UsersTreeModel`, read-only.
+- Assets reach the browser through the rooms only. Vite never serves the asset files.
+- Offline there are no accounts, and every project right is false.
+- Code: `server/accounts.ts`, `server/project/`, `server/shares/`, `src/accounts/`. See [accounts](./docs/accounts.md).
 
-## Settings
+## Preferences follow the account
 
-| Tier | Section | Shown to |
-|---|---|---|
-| You | Profile, Appearance, other host scopes | everyone |
-| You › Editors | one per editor: its forms and shortcuts | everyone |
-| You | Share links | signed-in |
-| Project | General, Assets › one per kind package | read on `studio.$settings` |
-| Project | Access | admins |
-| Project | Audit | read on `studio.$audit` |
+```mermaid
+flowchart TB
+    Store["accounts.db<br/>or localStorage offline"] --> Prefs["shell Preferences"]
+    Prefs -->|"jolly-preferences"| Frames["frames that read the scope"]
+    Frames -->|"update-preferences"| Prefs
+```
 
-- `SettingsSections` builds the nav from the manifest (editor scopes, kind
-  packages, kind icons), whether the `StudioUser` is online and its project
-  rights: a block with You and Editors, then a block with Project and
-  Assets.
-- An editor page shows the scopes its module exports by default. A scope it
-  lists under `shared` shows there only when no installed editor declares it.
-- A kind package page edits a `KindOptionsDraft` through the sections the
-  server lists; a package without any shows its options read-only. Switching
-  package drops unsaved edits. `StudioProjectSettings` loads and saves both
-  sections.
-- Access edits an `AccessDraft`: roles as ordered `RoleRules` (drag or
-  Alt+Arrow to reorder, a "check a room" field), the default role and access
-  requests, in two columns on a wide card. Members and requests stay in the
-  Home Users pane, whose menu opens for admins.
-- Both panes hold their draft in a `SettingsDraftController`: it follows
-  the `StudioProjectSettings` through a `ProjectSettingsController`, which
-  loads it on first use, and enables Save once the draft differs from the
-  saved section.
-- `StudioShareLinks`, `StudioProjectSettings` and `AuditPages` extend
-  `RemoteState` (error, loading, one `change` event; `latest` drops a reply
-  a newer request replaced). Elements follow one with a
-  `RemoteStateController`, which renders its error. Both it and the
-  `StudioUser` followers are a `ChangeController`, which repaints its host on
-  the source's `change` event.
-- Keyboard shortcuts record through `KeyRecorder`; Escape cancels.
-- Share links: `studio-share-links` lists the links the account may manage
-  (its own, every one for admins), newest first. The Share dialog shows the
-  same `share-link-list` for one asset. Both read one `StudioShareLinks`.
-- Audit: `AuditPages` loads and pages the rows for the filters (actor,
-  asset, category, dates) and drops a reply a newer request replaced.
-
-## Asset browser
-
-| Action | Trigger | Rule |
-|---|---|---|
-| Open | double-click, Enter | |
-| Rename | F2 | keeps the extension, no `/` (moving is a drag) |
-| Delete | Delete | dialog lists the assets that still reference it |
-| New asset | toolbar, menu | back-end writes the default content, then rename starts |
-| New folder | toolbar, menu | created in the project, then rename starts |
-| Export | toolbar, menu | `<stem>.zip` with dependencies, not on folders |
-| Share | toolbar, menu | online only; lists, creates and revokes view-only links |
-| Add files | drop files from the OS | into the folder under the cursor, or the root |
-
-- Context menu: right-click, Shift+F10 or the menu key.
-- Dropped files (`AssetDrop`), 10 MB each at most, the WebSocket limit:
-  - `.zip`: imported as an asset archive at its own paths, asking first when
-    some of its assets exist. A `.zip` the catalog refuses to plan is added
-    as a file; any other failure is reported.
-  - A format a kind converts from (`convertsFrom` in the manifest): one
-    question per format, convert or keep. Converting creates
-    `<stem><kind extension>` and the back-end handler converts the bytes.
-  - Anything else: added under its own name; the back-end picks the kind by
-    extension, `binary` otherwise.
-- Folders start collapsed; the expanded ones are kept in `localStorage`
-  (`studio:asset-expanded`), like the kind filter.
-- The tree is `virtual` and scrolls inside the pane, under the toolbar.
-- `AssetTreeView` holds the tree state without the DOM: expanded folders,
-  selection, kind filter, a renamed row's new name until the catalog confirms
-  it, and the asset or folder just created, whose rename starts once the tree
-  shows it. `<asset-browser>` renders it and owns the menus and dialogs.
-- `AssetTreeView.allows` and `run` gate and dispatch every action, share
-  included when the studio has share links; the page answers through
-  `AssetActionPrompts` (dialogs, inline rename, opening).
-- Errors go to the `jolly-log`.
-
-## Catalog changes
-
-- Asset deleted: its tab closes.
-- Asset renamed: its tab label and tooltip update.
-- The tree rebuilds but keeps expanded folders, selection and filter. It
-  rebuilds only when an asset's kind, path or dependencies change, or a folder
-  comes or goes (`CatalogLayout`): saving content changes only the revision.
-- Folders live in the asset source: renaming one sends one command per asset
-  inside, plus one per companion, then one `catalog:move-folder` that carries
-  its empty folders over and deletes the old one.
+- The scopes come from the shell, the host and each editor package. The server drops unknown scopes and fields.
+- Code: `shared/PreferenceScopes.ts`, `server/preferences/`, `src/preferences/`.
 
 ## Editor pages
 
-| Editor | Package | Page folder | Kinds |
-|---|---|---|---|
-| `voxel-map` | `@jolly-pixel/editor.voxel-map` | `dist/` | `voxelmap` |
-| `voxel-model` | `@jolly-pixel/editor.voxel-model` | `dist/` | `voxelmodel` |
-| `pixel-art` | `@jolly-pixel/editor.pixel-art` | `dist-page/` | `pixelart` |
-
 ```mermaid
 flowchart TB
-  Watch["pnpm dev:editors"]
-  Folder["page folder rebuilt"]
-  Event["HMR: studio:editor-page-rebuilt"]
-  Reload["reload that editor's tabs"]
-  Watch --> Folder
-  Folder -->|"quiet for EDITOR_PAGE_SETTLE_MS"| Event
-  Event --> Reload
+    Package["editor package<br/>jollypixel.editor manifest"] --> Dev["dev: its own page folder"]
+    Package --> Build["build:hosted, build:static<br/>compiled with the shell"]
+    Build --> Chunks["one ui, lit and three across pages"]
 ```
 
-- In dev, each page folder bundles its own `editor.host` and
-  `@jolly-pixel/ui`: change either, rebuild the page.
-- Reload hits the active tab now, the others on next focus.
-- `build:hosted` and `build:static` compile every page whose manifest names a
-  `page` in the shell's Vite build, so ui, lit and three get one URL across
-  pages. `vite/editorPages` adds each page as a virtual
-  `editors/<name>/index.html` input. The page's URLs must be relative: a
-  root-absolute one fails the build.
-- That build turns off rolldown's `mergeCommonChunks`: left on, it moves
-  shared modules into one page's entry chunk and the shell preloads the
-  voxel-map entry. `test/vite/studio.bundle.spec.ts` guards it.
-- It also puts every ui module a page loads at start into one `ui` chunk.
-  Left to automatic splitting, the ui spreads over a chunk per combination of
-  pages and lazy imports, and a voxel editor opened from the shell downloads
-  about 40 KB more brotli. ui used only by lazily loaded code stays with that
-  code.
-- A page's entry imports the ui elements its `index.html` renders. The lint
-  rule cannot read HTML, so the bundle spec checks that a module loaded at
-  start registers each of them.
-- Both builds then fill `editors/<name>/` with the `public/` folder of each
-  compiled page and the `dist` of every other editor.
-- `pixel-art` builds its page with `build:page`, which the studio `build`
-  runs.
-
-## Layout
-
-| Path | Role |
-|---|---|
-| `server/StudioBackend.ts` | the online back-end, opened and closed as one |
-| `server/StudioServer.ts`, `server/start.ts` | hosted entry and its environment |
-| `server/project/` | project file, `access` section, `ProjectSettings`, `KindOptionSections`, private files |
-| `server/editors/` | editor packages and pages, `EditorPageFolders`, manifest route, dist watcher |
-| `server/preferences/` | `StoredPreferences` |
-| `server/accounts.ts`, `server/AccountsAccess.ts` | project accounts, their roles and master password |
-| `server/shares/` | share rules, guest admission, `/view/` page |
-| `server/audit/` | `AuditLog`, `AssetLog`, `AuditFeed` and its merge, edit runs and cursor |
-| `vite.config.ts`, `vite/` | Vite plugins |
-| `shared/` | `EditorDescriptor`, `ProjectManifest`, `PreferenceScopes`, `ProjectRights`, `studioScope`, `ShareLifetime`, `AttachmentDisposition`, seed for both back-ends |
-| `shared/api/` | `/api/` route tables, rights and zod schemas, one file per surface; `common.ts` holds `ApiRoute` and the failure body |
-| `src/index.ts` | boot |
-| `src/connection/` | `StudioConnection`: online catalog, offline fallback (`offline.ts`) |
-| `src/api/` | `ApiEndpoint` (routes, JSON, failures), `StudioClients`, `RemoteState` |
-| `src/browser/` | `BrowserState`, `DroppedFile`, `FileDownload` |
-| `src/catalog/` | pure tree logic (`AssetTreeModel`, `AssetPath`, …) |
-| `src/accounts/` | `StudioUser`, `StudioSignedIn`, `OfflineUser`, `SessionRenewal`, `UsersTreeModel`, `/users` console |
-| `src/shares/` | `ShareLinksClient`, `StudioShareLinks`, `ShareLinkRow` |
-| `src/project/` | project clients, `StudioProjectSettings`, `AccessDraft`, `RoleRules`, `KindOptionsDraft` |
-| `src/audit/` | `AuditClient`, `AuditPages`, `AuditFilters`, `AuditRowText` |
-| `src/editors/` | `EditorRegistry`, `EditorPrefetch` |
-| `src/preferences/` | `PreferencesClient`, `AccountPreferences`, `StudioAppearance`, `PreferencesFile` |
-| `src/keybindings/` | `KeybindingTable`, `KeyRecorder`, `BoundChord`, `HeldKey` |
-| `src/tabs/` | `EditorTabs`, `EditorFrames`, `SavedTabs` |
-| `src/shell/` | `<jolly-studio>`, `StudioSession`, Home, Settings, asset browser (`AssetTreeView`), sign-in dialog, Users pane |
+- In dev, a rebuilt page folder reloads that editor's tabs.
+- `test/vite/studio.bundle.spec.ts` guards the shared chunks.
+- Code: `server/editors/`, `vite/editorPages.ts`. See [hosting](./docs/hosting.md).
