@@ -1,21 +1,14 @@
+// Import Internal Dependencies
+import { composedClosest } from "../dom.ts";
+
 // CONSTANTS
 const kOverflowTitleAttribute = "overflow-title";
 
 export function overflowTitleEnabled(
   element: Element
 ): boolean {
-  let node: Node | null = element;
-  while (node !== null) {
-    if (node instanceof Element) {
-      const value = node.getAttribute(kOverflowTitleAttribute);
-      if (value !== null) {
-        return value !== "off";
-      }
-    }
-    node = node instanceof ShadowRoot ? node.host : node.parentNode;
-  }
-
-  return true;
+  return composedClosest(element, `[${kOverflowTitleAttribute}]`)
+    ?.getAttribute(kOverflowTitleAttribute) !== "off";
 }
 
 function isTextTruncated(

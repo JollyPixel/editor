@@ -69,7 +69,10 @@ one. See [Inline confirmation](#inline-confirmation).
 
 - `icon` draws a registered glyph before the heading.
 - `tone` makes the dialog a [toned area](../theme/tokens.md#toned-areas).
-  Without one, it takes the tone of `icon`.
+  Without one, it takes the tone of the nearest `jolly-pane` around it, shadow
+  roots included, or the dock's `sharedTone` when that pane's dock shares one.
+  Outside a toned pane it takes the tone of `icon`. The pane is read on each
+  `showModal()`.
 - `intent` colours the header only, leaves the content on the accent, and wins
   over `tone`.
 - `DIALOG_INTENTS` lists the intents. `isDialogIntent(value)` narrows a string.
