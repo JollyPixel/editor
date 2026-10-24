@@ -28,7 +28,8 @@ export class VoxelLayerPanel extends LitElement {
       display: flex;
       flex-direction: column;
       gap: var(--jolly-row-gap, 4px);
-      padding: var(--jolly-space-1, 4px);
+      padding-block: var(--jolly-space-1, 4px);
+      padding-inline: var(--jolly-space-1, 4px) 0;
     }
   `;
 
