@@ -16,6 +16,7 @@ import type {
   SessionArchive,
   SessionArchiveImportOptions
 } from "#src/session/SessionArchive.ts";
+import type { EditorToolbarArchives } from "#src/session/EditorToolbarSources.ts";
 import type { OfflineMode } from "#src/connection/OfflineMode.ts";
 import type { LaunchNavigator } from "#src/launch/LaunchNavigator.ts";
 import { FakeNavigator } from "./catalog.ts";
@@ -209,4 +210,41 @@ export function createOfflineMode(
   };
 
   return offline;
+}
+
+export interface FakeToolbarArchives extends EditorToolbarArchives {
+  calls: string[];
+}
+
+export interface FakeToolbarArchivesOptions {
+  canImport?: boolean;
+  canReset?: boolean;
+}
+
+export function createToolbarArchives(
+  options: FakeToolbarArchivesOptions = {}
+): FakeToolbarArchives {
+  const {
+    canImport = true,
+    canReset = false
+  } = options;
+  const calls: string[] = [];
+  function call(
+    name: string
+  ): () => Promise<void> {
+    return () => {
+      calls.push(name);
+
+      return Promise.resolve();
+    };
+  }
+
+  return {
+    canImport,
+    canReset,
+    calls,
+    download: call("download"),
+    pickAndImport: call("import"),
+    reset: call("reset")
+  };
 }

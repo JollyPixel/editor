@@ -40,7 +40,8 @@ Documents already open do not see the assets an import replaced: reload onto
 
 ## EditorArchives
 
-The export, import and reset flows behind the `archive` console commands.
+The export, import and reset flows behind the `archive` console commands and
+the toolbar's [Asset actions menu](./EditorToolbar.md#properties).
 The host builds one per mount for the target and gives it to the editor as
 [`context.archives`](../boot/mountStandalone.md#editor-context). The editor
 definition names its labels:

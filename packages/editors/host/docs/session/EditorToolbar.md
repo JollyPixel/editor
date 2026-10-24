@@ -1,9 +1,10 @@
 # EditorToolbar
 
 `<jolly-editor-toolbar>` is the bar an editor puts above its viewport. On a
-standalone page it lists the other assets the editor can open, and wherever
-the session allows it, it creates, views, restores and deletes the tags of
-the target. Importing `@jolly-pixel/editor.host/ui` defines it.
+standalone page it lists the assets the editor can open and renames,
+exports, imports and deletes them, and wherever the session allows it, it
+creates, views, restores and deletes the tags of the target. Importing
+`@jolly-pixel/editor.host/ui` defines it.
 
 ```html
 <div class="viewport-column">
@@ -23,9 +24,8 @@ toolbar.sources = context.toolbar;
 
 The bar is as tall as a pane group's tab strip and does not overlap the
 viewport, so put it in a column above the element holding the canvas. When
-`sources` is `null`, or holds no `tags`, fewer than two `targets`, no
-registered tour and no offline `connection`, it sets the `empty` attribute and
-hides itself.
+`sources` is `null`, or holds no `tags`, no `targets`, no registered tour
+and no offline `connection`, it sets the `empty` attribute and hides itself.
 
 The bar never draws outside its own width. Below 560px it hides the Asset and
 Version captions and shows Save version as an icon button. Below 360px it
@@ -37,8 +37,23 @@ hides the Read-only and Offline texts and keeps only their icons.
 
 Its `targets` shows the Asset select, listing the paths of the target and its
 siblings without their extension, such as `maps/overworld` for
-`maps/overworld.voxelmap.json`. Picking one opens it. The select is hidden
-when the target is the only asset of its kind.
+`maps/overworld.voxelmap.json`. Picking one opens it. The select stays
+visible when the target is the only asset of its kind.
+
+Next to the select, an Asset actions button (three dots) opens a menu on the
+target:
+
+- Rename… runs `targets.renameCurrent()`.
+- Export as .zip runs `archives.download()`.
+- Import archive… runs `archives.pickAndImport()`, only when
+  `archives.canImport` is `true`.
+- Delete… (danger) runs `targets.removeCurrent()`. It is disabled while
+  `targets.canRemoveCurrent` is `false`.
+- Reset offline data… (danger) runs `archives.reset()`, only when
+  `archives.canReset` is `true`.
+
+The archive entries are the same flows as the `archive` console commands; see
+[EditorArchives](./Archives.md#editorarchives).
 
 Its `tags` shows the Version select, and the bar loads the tags as soon as
 `sources` is set. The select
@@ -67,9 +82,15 @@ user already finished or skipped. A tour can end on
 ## EditorToolbarSources
 
 ```ts
+type EditorToolbarArchives = Pick<
+  EditorArchives,
+  "canImport" | "canReset" | "download" | "pickAndImport" | "reset"
+>;
+
 interface EditorToolbarSourcesOptions {
   targets: EditorTargets | null;
   tags: EditorTags | null;
+  archives: EditorToolbarArchives;
   connectionStatus?: ConnectionStatus | null;
   lantern: Lantern;
 }
@@ -77,6 +98,7 @@ interface EditorToolbarSourcesOptions {
 class EditorToolbarSources {
   readonly targets: EditorTargets | null;
   readonly tags: EditorTags | null;
+  readonly archives: EditorToolbarArchives;
   readonly connectionStatus: ConnectionStatus | null;
   readonly lantern: Lantern;
 
@@ -87,7 +109,10 @@ class EditorToolbarSources {
 
 `mountStandalone` opens the sources from the launch it read and passes them to
 `mount` as `context.toolbar`. `targets` is `null` inside a shell, which picks
-the target itself, and for a share link. `tags` is `null` for a share link and
+the target itself, and for a share link. `archives` is
+[`context.archives`](./Archives.md#editorarchives); the bar only uses it in
+the Asset actions menu, so not without `targets`. `tags` is `null` for a
+share link and
 in offline mode, whose in-memory event store loses tags on reload.
 `tags.viewing` is the tag of the launch. `connectionStatus` is the session's
 [`connectionStatus`](./EditorSession.md#connectionstatus), `null` by default
@@ -118,9 +143,12 @@ interface LaunchNavigator {
 class EditorTargets extends Emitter<{ change: () => void; }> {
   readonly accepts: string;
   readonly current: string;
+  get canRemoveCurrent(): boolean;
 
   [Symbol.iterator](): IterableIterator<AssetRecordData>;
   open(assetId: string): Promise<void>;
+  renameCurrent(): Promise<void>;
+  removeCurrent(): Promise<void>;
   dispose(): void;
 }
 ```
@@ -134,6 +162,31 @@ fires on every catalog change.
 
 Navigates to the current version of `assetId` and resolves once it is open.
 Opening `current` does nothing.
+
+### `renameCurrent()`
+
+Asks for a new name, prefilled with the name of `current`, and renames it in
+its folder with its extension: `cave` to `cavern` turns
+`maps/cave.voxelmap.json` into `maps/cavern.voxelmap.json`. The name is
+trimmed. Nothing is sent when the dialog is dismissed or the name is empty or
+unchanged.
+
+### `removeCurrent()` and `canRemoveCurrent`
+
+Asks to confirm, opens the next target by path (the previous one for the last
+path), then deletes `current` from the catalog. Nothing changes when the user
+cancels.
+
+It rejects before asking in two cases:
+
+- `LastTargetError` while `current` is the only asset of the `accepts` kind.
+  `canRemoveCurrent` is `false` then.
+- `TargetInUseError` while other assets use `current`. Its `dependents` lists
+  their paths without extension.
+
+Navigation goes through the required `navigator` option. Dialogs go through
+the `browser` option, an `EditorTargetsBrowser` with `prompt(options)` and
+`confirm(options)`, which defaults to the DOM dialogs.
 
 ## EditorTags
 

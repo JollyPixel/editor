@@ -19,7 +19,8 @@ import {
   type Tree,
   ContextMenuController,
   LazyTemplate,
-  MenuSession
+  MenuSession,
+  menuPointBelow
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/checkbox";
@@ -32,7 +33,6 @@ import "@jolly-pixel/ui/elements/tree";
 // Import Internal Dependencies
 import "../../shared/actionIcons.ts";
 import "./animateIcons.ts";
-import { menuPointBelow } from "../../shared/menu/menuPointBelow.ts";
 import "../transform/TransformPanel.ts";
 import "./tracks/TrackBindings.ts";
 import type { TrackBindings } from "./tracks/TrackBindings.ts";

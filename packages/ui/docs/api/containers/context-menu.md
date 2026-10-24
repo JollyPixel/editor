@@ -212,3 +212,9 @@ new ContextMenuController(
   [`jolly-tree`](../data/tree.md#opening-a-row-menu) `jolly-context-request`.
 - `run(id, actionId, point)`: runs an action of `openSession(id)` without
   opening the menu, for a toolbar button.
+
+### `menuPointBelow(event): MenuPoint`
+
+The bottom-left corner of `event.currentTarget`, where a menu opened from a
+button goes. When the target is not an `HTMLElement`, it returns the pointer
+position.

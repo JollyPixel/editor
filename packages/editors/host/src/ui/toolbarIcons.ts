@@ -43,3 +43,52 @@ registerIcon("offline", svg`
     d="M4 4l16 16"
   />
 `);
+
+registerIcon("asset-actions", svg`
+  <path
+    class="tone-ink"
+    fill="currentColor"
+    d="M5 10a2 2 0 1 1 0 4 2 2 0 0 1 0-4ZM12 10a2 2 0 1 1 0 4 2 2 0 0 1 0-4ZM19 10a2 2 0 1 1 0 4 2 2 0 0 1 0-4Z"
+  />
+`);
+
+registerIcon("asset-export", svg`
+  <path
+    class="tone-ink"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    d="M12 15V4M7.5 8.5 12 4l4.5 4.5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"
+  />
+`, { tone: "sky" });
+
+registerIcon("asset-import", svg`
+  <path
+    class="tone-ink"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    d="M12 4v11M7.5 10.5 12 15l4.5-4.5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"
+  />
+`, { tone: "teal" });
+
+registerIcon("asset-rename", svg`
+  <path
+    class="tone-ink"
+    fill="currentColor"
+    d="M15.5 3.5a2.1 2.1 0 0 1 3 0l2 2a2.1 2.1 0 0 1 0 3L9 20l-5.5 1.5L5 16Z"
+  />
+`, { tone: "amber" });
+
+registerIcon("asset-delete", svg`
+  <path
+    class="tone-ink"
+    fill="currentColor"
+    fill-rule="evenodd"
+    d="M9 2.5h6v2h5V7H4V4.5h5ZM5.5 8.5h13L17.4 21H6.6ZM9.5 11v7.5h1.8V11ZM12.7 11v7.5h1.8V11Z"
+  />
+`, { tone: "coral" });

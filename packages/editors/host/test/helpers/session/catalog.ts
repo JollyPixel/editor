@@ -22,6 +22,7 @@ export const TAGGED_ASSET_ID = "forest";
 export class FakeSessionCatalog extends Emitter<CatalogClientEvents> {
   assets: AssetRecordData[];
   stored: AssetTag[] = [];
+  readonly dependents = new Map<string, AssetRecordData[]>();
   readonly calls: string[] = [];
 
   constructor(
@@ -33,6 +34,41 @@ export class FakeSessionCatalog extends Emitter<CatalogClientEvents> {
 
   records(): IterableIterator<AssetRecordData> {
     return this.assets.values();
+  }
+
+  record(
+    assetId: string
+  ): AssetRecordData | undefined {
+    return this.assets.find((asset) => asset.id === assetId);
+  }
+
+  listDependents(
+    assetId: string
+  ): AssetRecordData[] {
+    return this.dependents.get(assetId) ?? [];
+  }
+
+  rename(
+    assetId: string,
+    to: string
+  ): Promise<void> {
+    this.calls.push(`rename ${assetId} ${to}`);
+    this.assets = this.assets.map((asset) => (asset.id === assetId ?
+      { ...asset, path: to } :
+      asset));
+    this.emit("change");
+
+    return Promise.resolve();
+  }
+
+  remove(
+    assetId: string
+  ): Promise<void> {
+    this.calls.push(`remove ${assetId}`);
+    this.assets = this.assets.filter((asset) => asset.id !== assetId);
+    this.emit("change");
+
+    return Promise.resolve();
   }
 
   tags(): Promise<readonly AssetTag[]> {

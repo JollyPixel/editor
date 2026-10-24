@@ -9,7 +9,8 @@ import {
 import {
   type ContextMenu,
   ContextMenuController,
-  MenuSession
+  MenuSession,
+  menuPointBelow
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/context-menu";
@@ -23,7 +24,6 @@ import {
   TRACK_STATE_LABELS,
   type TrackBindingRow
 } from "./trackBindingRows.ts";
-import { menuPointBelow } from "../../../shared/menu/menuPointBelow.ts";
 
 export class TrackBindings extends LitElement {
   static override styles = css`

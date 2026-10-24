@@ -25,6 +25,7 @@ import { PageState } from "#src/boot/PageState.ts";
 import type { OfflineMode } from "#src/connection/OfflineMode.ts";
 import { LAST_OPENED_STORAGE_PREFIX } from "#src/launch/sources/LastOpenedLaunchSource.ts";
 import { fakeDocumentKind, record } from "../helpers/rooms.ts";
+import { createToolbarArchives } from "../helpers/session/archives.ts";
 import {
   FakeNavigator,
   FakeSessionCatalog
@@ -85,7 +86,7 @@ function toolbar(
     session: placedSession(offline),
     navigator: new FakeNavigator(),
     own: (release) => kReleases.push(release)
-  }).toolbar;
+  }, createToolbarArchives()).toolbar;
 }
 
 function unload(): boolean {

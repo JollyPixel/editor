@@ -10,7 +10,8 @@ import { FrameRate } from "@jolly-pixel/asset.voxel-animation/client";
 import {
   type ContextMenu,
   ContextMenuController,
-  MenuSession
+  MenuSession,
+  menuPointBelow
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/context-menu";
 import "@jolly-pixel/ui/elements/icon";
@@ -29,7 +30,6 @@ import type {
 } from "./timelineRows.ts";
 import { keyId } from "./timelineKeys.ts";
 import { TRACK_STATE_LABELS } from "../tracks/trackBindingRows.ts";
-import { menuPointBelow } from "../../../shared/menu/menuPointBelow.ts";
 
 // CONSTANTS
 const kRulerSteps = [1, 2, 5, 10, 12, 24, 30, 60, 120, 240];

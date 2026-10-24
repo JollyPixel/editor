@@ -36,7 +36,10 @@ import {
   EditorTargets,
   type EditorTargetsCatalog
 } from "../session/EditorTargets.ts";
-import { EditorToolbarSources } from "../session/EditorToolbarSources.ts";
+import {
+  EditorToolbarSources,
+  type EditorToolbarArchives
+} from "../session/EditorToolbarSources.ts";
 import { mountLantern } from "../ui/lantern/mountLantern.ts";
 import { provideTourKeys } from "../ui/lantern/provideTourKeys.ts";
 import type { EditorContext } from "./EditorDefinition.ts";
@@ -135,9 +138,10 @@ export class Placement {
   }
 
   context(
-    request: PlacedRequest
+    request: PlacedRequest,
+    archives: EditorToolbarArchives
   ): PlacedContext {
-    const toolbar = this.#toolbar(request);
+    const toolbar = this.#toolbar(request, archives);
     request.own(() => toolbar.dispose());
     const preferences = this.#preferences.view();
     request.own(() => preferences.dispose());
@@ -186,7 +190,8 @@ export class Placement {
   }
 
   #toolbar(
-    request: PlacedRequest
+    request: PlacedRequest,
+    archives: EditorToolbarArchives
   ): EditorToolbarSources {
     const { launch, session, navigator } = request;
     const { catalog, assets } = session;
@@ -201,6 +206,7 @@ export class Placement {
           current: id,
           navigator
         }),
+      archives,
       tags: this.#shared || session.offline !== null ?
         null :
         new EditorTags({

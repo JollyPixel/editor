@@ -203,17 +203,18 @@ export class StandaloneEditor<
   ): Promise<THandle> {
     const runtime = await this.#runtime;
     const { launch, session, navigator } = request;
+    const archives = new EditorArchives({
+      ...this.definition.archive,
+      session,
+      accepts: this.definition.accepts,
+      navigator
+    });
     const context: EditorContext = {
-      ...placement.context(request),
+      ...placement.context(request, archives),
       launch,
       session,
       logger: this.#logger.child({ namespace: "editor" }),
-      archives: new EditorArchives({
-        ...this.definition.archive,
-        session,
-        accepts: this.definition.accepts,
-        navigator
-      })
+      archives
     };
     runtime?.widgets.follow(context.preferences);
     StandaloneEditor.#registerConsoles(context, runtime, request);

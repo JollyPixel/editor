@@ -1,5 +1,5 @@
-// Import Third-party Dependencies
-import type { MenuPoint } from "@jolly-pixel/ui";
+// Import Internal Dependencies
+import type { MenuPoint } from "./MenuSession.ts";
 
 export function menuPointBelow(
   event: MouseEvent

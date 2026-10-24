@@ -42,6 +42,8 @@ export * from "./session/EditorToolbarSources.ts";
 export type { NewTag } from "./session/dialogs/askNewTag.ts";
 export * from "./session/dialogs/askImportConflictPolicy.ts";
 export * from "./session/errors/ArchiveRootError.ts";
+export * from "./session/errors/LastTargetError.ts";
+export * from "./session/errors/TargetInUseError.ts";
 export * from "./session/rememberQueryUsername.ts";
 export {
   EditorRuntime,
