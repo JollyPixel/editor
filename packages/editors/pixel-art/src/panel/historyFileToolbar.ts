@@ -5,6 +5,7 @@ import {
   type TemplateResult
 } from "lit";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
+import "@jolly-pixel/ui/elements/spinner";
 
 // Import Internal Dependencies
 import { renderRailButton } from "../shared/railButton.ts";

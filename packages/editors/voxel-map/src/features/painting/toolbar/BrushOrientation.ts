@@ -10,6 +10,8 @@ import {
   FieldBinding,
   type JollyOption
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button-group";
+import "@jolly-pixel/ui/elements/toggle";
 
 // Import Internal Dependencies
 import type { VoxelMapEditing } from "../../../editing/VoxelMapEditing.ts";

@@ -3,7 +3,7 @@ import type {
   AssetLoadProgress,
   AssetRecord
 } from "@jolly-pixel/asset";
-import { Loading } from "@jolly-pixel/ui/feedback";
+import { Loading } from "@jolly-pixel/ui/elements/loading";
 
 export class RuntimeLoadingScreen {
   #canvas: HTMLCanvasElement;

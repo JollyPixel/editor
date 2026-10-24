@@ -3,8 +3,10 @@ import type {
   BlockShapeID,
   BlockShapeRegistry
 } from "@jolly-pixel/voxel.renderer";
-import { registerIcon } from "@jolly-pixel/ui/icon";
-import type { JollyOption } from "@jolly-pixel/ui";
+import {
+  registerIcon,
+  type JollyOption
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { ShapeGlyph } from "./ShapeGlyph.ts";

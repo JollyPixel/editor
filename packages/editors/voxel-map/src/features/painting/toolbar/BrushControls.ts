@@ -11,6 +11,8 @@ import {
 } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
 import { FieldBinding } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/slider";
+import "@jolly-pixel/ui/elements/tool-button";
 
 // Import Internal Dependencies
 import {

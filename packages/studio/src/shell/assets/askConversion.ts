@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { showChoice } from "@jolly-pixel/ui";
+import { showChoice } from "@jolly-pixel/ui/elements/dialog";
 
 // Import Internal Dependencies
 import type {

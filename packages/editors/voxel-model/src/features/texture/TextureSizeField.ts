@@ -11,6 +11,9 @@ import {
   SubscriptionController,
   type JollyOption
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/property-row";
+import "@jolly-pixel/ui/elements/select";
+import "@jolly-pixel/ui/elements/separator";
 import type {
   PixelArtCanvas,
   Vec2

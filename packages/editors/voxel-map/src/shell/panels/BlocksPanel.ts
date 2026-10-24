@@ -13,6 +13,8 @@ import {
   type JollyChangeDetail,
   type StorageAdapter
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/folder";
+import "@jolly-pixel/ui/elements/search";
 
 // Import Internal Dependencies
 import type { VoxelMapEditing } from "../../editing/VoxelMapEditing.ts";

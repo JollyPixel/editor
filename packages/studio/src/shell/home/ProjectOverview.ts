@@ -13,6 +13,8 @@ import {
   state
 } from "lit/decorators.js";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/icon";
 
 // Import Internal Dependencies
 import { AssetTally } from "../../catalog/AssetTally.ts";

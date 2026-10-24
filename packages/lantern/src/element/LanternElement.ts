@@ -15,6 +15,7 @@ import {
   deepActiveElement,
   themeStyles
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
 
 // Import Internal Dependencies
 import type { TargetFrame } from "../tour/TargetSeek.ts";

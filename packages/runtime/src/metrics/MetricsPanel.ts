@@ -1,15 +1,15 @@
 // Import Third-party Dependencies
 import {
-  Pane,
-  type FacadeContainer,
-  type FacadeFolder
-} from "@jolly-pixel/ui";
-import {
   resolveMetricFormat,
   type MetricDefinition,
   type StatsRecorder,
   type StatsSnapshot
 } from "@jolly-pixel/ui/stats";
+import {
+  Pane,
+  type FacadeContainer,
+  type FacadeFolder
+} from "@jolly-pixel/ui/facade";
 
 // Import Internal Dependencies
 import { groupMetrics } from "./groupMetrics.ts";

@@ -1,13 +1,11 @@
 // Import Third-party Dependencies
-import "@jolly-pixel/ui";
 import {
   PageAppearance,
   mountConsole
 } from "@jolly-pixel/editor.host";
-import {
-  LocalStorageAdapter,
-  showConfirm
-} from "@jolly-pixel/ui";
+import { LocalStorageAdapter } from "@jolly-pixel/ui";
+import { showConfirm } from "@jolly-pixel/ui/elements/dialog";
+import "@jolly-pixel/ui/elements/scope";
 
 // Import Internal Dependencies
 import { usersConsole } from "./accounts/usersConsole.ts";

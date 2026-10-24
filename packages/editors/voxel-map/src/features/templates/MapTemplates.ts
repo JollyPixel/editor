@@ -3,11 +3,8 @@ import type {
   VoxelTemplate,
   VoxelWorld
 } from "@jolly-pixel/voxel.renderer";
-import {
-  showConfirm,
-  showPrompt,
-  type LogQueue
-} from "@jolly-pixel/ui";
+import type { LogQueue } from "@jolly-pixel/ui";
+import { showConfirm, showPrompt } from "@jolly-pixel/ui/elements/dialog";
 
 // Import Internal Dependencies
 import type { EditorMapSignals } from "../../map/EditorMap.ts";

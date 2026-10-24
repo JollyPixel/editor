@@ -21,6 +21,13 @@ import {
   LazyTemplate,
   MenuSession
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/checkbox";
+import "@jolly-pixel/ui/elements/context-menu";
+import "@jolly-pixel/ui/elements/number";
+import "@jolly-pixel/ui/elements/select";
+import "@jolly-pixel/ui/elements/text";
+import "@jolly-pixel/ui/elements/tree";
 
 // Import Internal Dependencies
 import "../../shared/actionIcons.ts";

@@ -5,6 +5,10 @@ import {
   test
 } from "node:test";
 import assert from "node:assert/strict";
+import {
+  existsSync,
+  readFileSync
+} from "node:fs";
 import path from "node:path";
 
 // Import Third-party Dependencies
@@ -16,7 +20,10 @@ import {
 // CONSTANTS
 const kStudioRoot = path.join(import.meta.dirname, "..", "..");
 const kThreeCore = /[\\/]three[\\/]build[\\/]three\.core\.js$/;
+const kUiModule = /[\\/]packages[\\/]ui[\\/]dist[\\/]/;
 const kAtaValidator = /[\\/]ata-validator[\\/]/;
+const kPageTag = /<(jolly-[a-z0-9-]+)/g;
+const kDefinedTag = /(?:customElement|customElements\.define)\("(jolly-[a-z0-9-]+)"/g;
 const kHiddenAtStart = [
   /console[\\/]dist[\\/]element[\\/]index\.js$/,
   /lantern[\\/]dist[\\/]element[\\/]index\.js$/,
@@ -35,17 +42,34 @@ const kHiddenAtStart = [
   /material[\\/]MaterialLibrary\.ts$/
 ];
 
-function threeChunks(
-  closure: Iterable<Rolldown.OutputChunk>
+function chunksWith(
+  closure: Iterable<Rolldown.OutputChunk>,
+  pattern: RegExp
 ): string[] {
   return Array.from(closure)
-    .filter((chunk) => chunk.moduleIds.some((id) => kThreeCore.test(id)))
+    .filter((chunk) => chunk.moduleIds.some((id) => pattern.test(id)))
     .map((chunk) => chunk.fileName);
+}
+
+function definedTags(
+  chunks: Iterable<Rolldown.OutputChunk>,
+  pattern = /./
+): Set<string> {
+  return new Set(
+    Array.from(chunks)
+      .flatMap((chunk) => chunk.moduleIds)
+      .filter((id) => pattern.test(id) && existsSync(id))
+      .flatMap((id) => Array.from(
+        readFileSync(id, "utf8").matchAll(kDefinedTag),
+        (match) => match[1]
+      ))
+  );
 }
 
 describe("@jolly-pixel/studio bundle", () => {
   let chunks: Map<string, Rolldown.OutputChunk>;
   let eager: Map<string, Set<Rolldown.OutputChunk>>;
+  let pages: Map<string, string>;
 
   before(async() => {
     const result = await build({
@@ -75,6 +99,18 @@ describe("@jolly-pixel/studio bundle", () => {
           return [entry.name, closure];
         })
     );
+    pages = new Map(
+      result.output.flatMap((file) => (
+        file.type === "asset" && file.fileName.endsWith("index.html") ?
+          [[
+            file.fileName === "index.html" ?
+              "index" :
+              path.basename(path.dirname(file.fileName)),
+            String(file.source)
+          ]] :
+          []
+      ))
+    );
   });
 
   test("compiles the editor pages with the shell into shared chunks", () => {
@@ -92,11 +128,39 @@ describe("@jolly-pixel/studio bundle", () => {
         `${name} loads another page's entry chunk`
       );
     }
-    assert.strictEqual(threeChunks(eager.get("voxel-map")!).length, 1);
+    assert.strictEqual(chunksWith(eager.get("voxel-map")!, kThreeCore).length, 1);
     assert.deepStrictEqual(
-      threeChunks(eager.get("voxel-map")!),
-      threeChunks(eager.get("voxel-model")!)
+      chunksWith(eager.get("voxel-map")!, kThreeCore),
+      chunksWith(eager.get("voxel-model")!, kThreeCore)
     );
+  });
+
+  test("loads the ui every page starts with from one shared chunk", () => {
+    const [shell, ...editors] = ["index", "pixel-art", "voxel-map", "voxel-model"]
+      .map((name) => chunksWith(eager.get(name)!, kUiModule));
+
+    assert.strictEqual(shell.length, 1);
+    for (const editor of editors) {
+      assert.deepStrictEqual(editor, shell);
+    }
+  });
+
+  test("registers at start every ui element a page's HTML renders", () => {
+    const uiTags = definedTags(chunks.values(), kUiModule);
+
+    assert.deepStrictEqual([...pages.keys()].sort(), [...eager.keys()].sort());
+    for (const [name, html] of pages) {
+      const defined = definedTags(eager.get(name)!);
+      const rendered = new Set(
+        Array.from(html.matchAll(kPageTag), (match) => match[1])
+      );
+
+      assert.deepStrictEqual(
+        [...rendered].filter((tag) => uiTags.has(tag) && !defined.has(tag)),
+        [],
+        `${name} renders an element no start module registers`
+      );
+    }
   });
 
   test("loads what the first screen does not show only on demand", () => {

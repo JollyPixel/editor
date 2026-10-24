@@ -57,8 +57,21 @@ Collaboration and debugging:
 
 ## 📚 API
 
-Importing `@jolly-pixel/ui` registers every element. The network adapters live in
-`@jolly-pixel/ui/network`.
+Each element registers when its own entry point is imported: `@jolly-pixel/ui/elements/<name>`,
+where `<name>` is the tag without `jolly-`. That entry also exports the element class, and the
+elements it renders register with it. The root entry point registers no element: it exports the
+element types, the theme, the controllers and the helpers. The facade and its types live in
+`@jolly-pixel/ui/facade`, and the network adapters in `@jolly-pixel/ui/network`.
+
+```ts
+import "@jolly-pixel/ui/elements/tree";
+import { Dialog } from "@jolly-pixel/ui/elements/dialog";
+import type { TreeNode } from "@jolly-pixel/ui";
+```
+
+Import the element in the module whose template renders it, not once at the application entry: a
+lazily loaded panel then brings its own elements, and nothing else loads them. In this repository
+the `@jolly-pixel/import-rendered-elements` lint rule enforces it.
 
 Each element page lists its properties, events and slots. A property marked `property only` has no
 HTML attribute.
@@ -127,7 +140,7 @@ they fit together.
 - [Layout data and functions](./docs/api/containers/layout.md): the snapshot a `jolly-dock-layout`
   persists.
 - [Dialog helpers](./docs/api/containers/dialog-helpers.md): promise-based dialogs created under
-  `document.body`.
+  `document.body`, exported from `@jolly-pixel/ui/elements/dialog`.
 
 The root entry point also exports `DockAlign`, `DockSide`, `DockSlot`, `RailOrientation`,
 `TabsOrientation` and `ToolbarOrientation`.
@@ -140,8 +153,6 @@ The root entry point also exports `DockAlign`, `DockSide`, `DockSlot`, `RailOrie
 
 #### Feedback
 
-Also exported from `@jolly-pixel/ui/feedback`.
-
 - [`jolly-loading`](./docs/api/feedback/loading.md) (`Loading`)
 - [`jolly-log`](./docs/api/feedback/log.md) (`LogElement`), with its `LogQueue`
 - [`jolly-progress`](./docs/api/feedback/progress.md) (`Progress`)
@@ -149,16 +160,15 @@ Also exported from `@jolly-pixel/ui/feedback`.
 
 #### Icons
 
-Also exported from `@jolly-pixel/ui/icon`. Importing either entry point registers the built-in
-glyphs.
+The registry comes from the root entry point. The built-in glyphs register with `jolly-icon`.
 
 ```ts
+import { Icon } from "@jolly-pixel/ui/elements/icon";
 import {
-  Icon,
   getIcon,
   hasIcon,
   registerIcon
-} from "@jolly-pixel/ui/icon";
+} from "@jolly-pixel/ui";
 ```
 
 - [`jolly-icon`](./docs/api/icon/icon.md) (`Icon`)
@@ -204,8 +214,10 @@ The facade builds the components from JavaScript and binds them to object proper
 import {
   DockFacade,
   Pane
-} from "@jolly-pixel/ui";
+} from "@jolly-pixel/ui/facade";
 ```
+
+The facade registers every element it can create, and exports its own types.
 
 - [`Pane`](./docs/api/facade/pane.md): the entry point, and `FacadeHost` for an existing element.
 - [`DockFacade`](./docs/api/facade/dock.md): wraps an authored `jolly-dock`.

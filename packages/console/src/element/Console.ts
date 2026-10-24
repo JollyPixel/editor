@@ -18,7 +18,7 @@ import {
   inputLayers,
   themeStyles
 } from "@jolly-pixel/ui";
-import "@jolly-pixel/ui/icon";
+import "@jolly-pixel/ui/elements/icon";
 
 // Import Internal Dependencies
 import type { CommandConsole } from "../CommandConsole.ts";

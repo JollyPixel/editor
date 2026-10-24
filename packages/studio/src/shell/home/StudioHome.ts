@@ -11,6 +11,11 @@ import {
   property,
   state
 } from "lit/decorators.js";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/dock";
+import "@jolly-pixel/ui/elements/dock-layout";
+import "@jolly-pixel/ui/elements/pane";
+import "@jolly-pixel/ui/elements/toolbar";
 
 // Import Internal Dependencies
 import type { StudioSignedIn } from "../../accounts/StudioSignedIn.ts";

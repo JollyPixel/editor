@@ -5,10 +5,10 @@ export * from "./theme/tokens/scales.ts";
 export * from "./theme/peerColor.ts";
 export * from "./theme/font.ts";
 export * from "./theme/types.ts";
-export * from "./theme/components/ScopeHost.ts";
-export * from "./theme/components/ThemeControl.ts";
-export * from "./theme/components/DensityControl.ts";
-export {
+export type * from "./theme/components/ScopeHost.ts";
+export type * from "./theme/components/ThemeControl.ts";
+export type * from "./theme/components/DensityControl.ts";
+export type {
   ThemePreferences
 } from "./theme/components/ThemePreferences.ts";
 export type {
@@ -59,9 +59,9 @@ export * from "./peer/types.ts";
 export * from "./peer/identity.ts";
 export * from "./peer/promptPeerIdentity.ts";
 
-export * from "./peer/Presence.ts";
-export * from "./peer/PresenceStack.ts";
-export * from "./peer/Avatar.ts";
+export type * from "./peer/Presence.ts";
+export type * from "./peer/PresenceStack.ts";
+export type * from "./peer/Avatar.ts";
 export * from "./peer/PresenceSource.ts";
 export * from "./peer/toPresencePeers.ts";
 export type {
@@ -69,29 +69,30 @@ export type {
   PeerEventMap
 } from "./peer/events.ts";
 
-export * from "./icon/index.ts";
+export * from "./icon/registry.ts";
+export type * from "./icon/Icon.ts";
 
-export {
+export type {
   Button,
-  type ButtonVariant
+  ButtonVariant
 } from "./controls/Button.ts";
-export {
+export type {
   ButtonGroup
 } from "./controls/ButtonGroup.ts";
-export * from "./controls/Checkbox.ts";
-export {
+export type * from "./controls/Checkbox.ts";
+export type {
   Color
 } from "./controls/Color.ts";
-export {
+export type {
   ColorPicker,
-  type ColorPickerChannels,
-  type ColorPickerDefaults,
-  type ColorPickerHarmony,
-  type ColorPickerLayout,
-  type ColorPickerPreferences,
-  type ColorPickerPreferenceSource,
-  type ColorPickerSelector,
-  type ColorPickerSpace
+  ColorPickerChannels,
+  ColorPickerDefaults,
+  ColorPickerHarmony,
+  ColorPickerLayout,
+  ColorPickerPreferences,
+  ColorPickerPreferenceSource,
+  ColorPickerSelector,
+  ColorPickerSpace
 } from "./controls/ColorPicker.ts";
 export {
   COLOR_PICKER_DEFAULTS,
@@ -100,52 +101,52 @@ export {
   type ColorPickerOption,
   type ColorPickerOptions
 } from "./color/index.ts";
-export * from "./controls/Control.ts";
-export {
+export type * from "./controls/Control.ts";
+export type {
   Controls,
-  type ControlsPosition
+  ControlsPosition
 } from "./controls/Controls.ts";
-export {
+export type {
   Flags
 } from "./controls/Flags.ts";
-export {
+export type {
   LayerGrid,
-  type LayerGridDefaults,
-  type LayerGridMode
+  LayerGridDefaults,
+  LayerGridMode
 } from "./controls/LayerGrid.ts";
-export {
+export type {
   NumberField
 } from "./controls/Number.ts";
-export * from "./controls/PropertyRow.ts";
-export {
+export type * from "./controls/PropertyRow.ts";
+export type {
   Range
 } from "./controls/Range.ts";
-export * from "./controls/Search.ts";
-export * from "./controls/Select.ts";
-export * from "./controls/Separator.ts";
-export * from "./controls/Slider.ts";
-export * from "./controls/SpinSlider.ts";
-export * from "./controls/Text.ts";
-export * from "./controls/Toggle.ts";
-export * from "./controls/ToolButton.ts";
+export type * from "./controls/Search.ts";
+export type * from "./controls/Select.ts";
+export type * from "./controls/Separator.ts";
+export type * from "./controls/Slider.ts";
+export type * from "./controls/SpinSlider.ts";
+export type * from "./controls/Text.ts";
+export type * from "./controls/Toggle.ts";
+export type * from "./controls/ToolButton.ts";
 export * from "./controls/types.ts";
 
-export {
+export type {
   Vector2
 } from "./math/Vector2.ts";
-export {
+export type {
   Vector3
 } from "./math/Vector3.ts";
-export {
+export type {
   Vector4
 } from "./math/Vector4.ts";
-export {
+export type {
   Quaternion
 } from "./math/Quaternion.ts";
-export {
+export type {
   Transform
 } from "./math/Transform.ts";
-export {
+export type {
   Point2d
 } from "./math/Point2d.ts";
 export * from "./math/types.ts";
@@ -169,25 +170,25 @@ export {
   type PointerDragSessionOptions
 } from "./interaction/pointer/PointerDragSession.ts";
 
-export * from "./containers/context-menu/ContextMenu.ts";
+export type * from "./containers/context-menu/ContextMenu.ts";
 export * from "./containers/context-menu/ContextMenuController.ts";
 export * from "./containers/context-menu/MenuSession.ts";
-export * from "./containers/dialog/Dialog.ts";
+export type * from "./containers/dialog/Dialog.ts";
 export * from "./containers/dialog/dialogHeader.ts";
-export * from "./containers/dialog/dialogHelpers.ts";
+export type * from "./containers/dialog/dialogHelpers.ts";
 export * from "./containers/dialog/inlineConfirm.ts";
-export * from "./containers/dock/Dock.ts";
-export * from "./containers/dock/DockLayout.ts";
-export * from "./containers/floating/Floating.ts";
-export * from "./containers/folder/Folder.ts";
-export {
+export type * from "./containers/dock/Dock.ts";
+export type * from "./containers/dock/DockLayout.ts";
+export type * from "./containers/floating/Floating.ts";
+export type * from "./containers/folder/Folder.ts";
+export type {
   PaneElement
 } from "./containers/pane/Pane.ts";
-export * from "./containers/pane-group/PaneGroup.ts";
-export * from "./containers/rail/Rail.ts";
-export * from "./containers/tabs/Tab.ts";
-export * from "./containers/tabs/Tabs.ts";
-export * from "./containers/toolbar/Toolbar.ts";
+export type * from "./containers/pane-group/PaneGroup.ts";
+export type * from "./containers/rail/Rail.ts";
+export type * from "./containers/tabs/Tab.ts";
+export type * from "./containers/tabs/Tabs.ts";
+export type * from "./containers/toolbar/Toolbar.ts";
 export {
   dockPanes,
   emptyLayout,
@@ -234,7 +235,7 @@ export type {
   PaneVisibilityDetail
 } from "./containers/events.ts";
 
-export * from "./data/tree/Tree.ts";
+export type * from "./data/tree/Tree.ts";
 export {
   canDrop,
   resolveReparent,
@@ -258,69 +259,16 @@ export * from "./data/tree/contract.ts";
 export * from "./search/SearchQuery.ts";
 export type { Searchable } from "./search/Searchable.ts";
 
-export * from "./monitors/Monitor.ts";
-export * from "./monitors/Graph.ts";
+export type * from "./monitors/Monitor.ts";
+export type * from "./monitors/Graph.ts";
 export * from "./monitors/format.ts";
-export * from "./stats/Stats.ts";
+export type * from "./stats/Stats.ts";
 
-export * from "./feedback/Progress.ts";
-export * from "./feedback/Spinner.ts";
-export * from "./feedback/Loading.ts";
-export * from "./feedback/Log.ts";
+export type * from "./feedback/Progress.ts";
+export type * from "./feedback/Spinner.ts";
+export type * from "./feedback/Loading.ts";
+export type * from "./feedback/Log.ts";
 export * from "./feedback/LogQueue.ts";
 export * from "./feedback/LogQueue.types.ts";
-
-export * from "./facade/Pane.ts";
-export * from "./facade/Dock.ts";
-export * from "./facade/Host.ts";
-export type {
-  Disposable,
-  FacadeContainer,
-  MonitorFields
-} from "./facade/Container.ts";
-export type {
-  FieldLayoutOptions
-} from "./facade/fieldLayout.ts";
-export type {
-  FacadeItem
-} from "./facade/FacadeItem.ts";
-export {
-  FacadeFolder,
-  type FolderOptions
-} from "./facade/Folder.ts";
-export {
-  FacadeBinding,
-  type BindingChangeEvent,
-  type BindingChangeHandler,
-  type BindingOptions
-} from "./facade/Binding.ts";
-export {
-  FacadeMonitor,
-  type MonitorKey,
-  type MonitorOptions,
-  type MonitorValue
-} from "./facade/Monitor.ts";
-export type {
-  DispatchView
-} from "./facade/dispatch.ts";
-export {
-  FacadeButton,
-  type ButtonOptions
-} from "./facade/Button.ts";
-export {
-  FacadeSeparator
-} from "./facade/Separator.ts";
-export {
-  FacadeNote,
-  type NoteOptions
-} from "./facade/Note.ts";
-export {
-  FacadeElement
-} from "./facade/Element.ts";
-export type {
-  FacadeThemePreferences,
-  ThemePreferencesOptions
-} from "./facade/ThemePreferences.ts";
-export * from "./facade/Presence.ts";
 
 export * from "./dom.ts";

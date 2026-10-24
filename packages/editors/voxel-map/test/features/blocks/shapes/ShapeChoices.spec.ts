@@ -7,7 +7,7 @@ import {
   BlockShapeRegistry,
   Ramp
 } from "@jolly-pixel/voxel.renderer";
-import { hasIcon } from "@jolly-pixel/ui/icon";
+import { hasIcon } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { ShapeChoices } from "../../../../src/features/blocks/shapes/ShapeChoices.ts";

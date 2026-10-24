@@ -19,6 +19,9 @@ import {
   FieldBinding,
   SubscriptionController
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/rail";
+import "@jolly-pixel/ui/elements/slider";
+import "@jolly-pixel/ui/elements/tool-button";
 
 // Import Internal Dependencies
 import type { ViewSettings } from "../model/ViewSettings.ts";

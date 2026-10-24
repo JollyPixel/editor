@@ -6,7 +6,11 @@ question. A dialog element of your own covers a form.
 ## 1. Ask one question
 
 ```ts
-import { showChoice, showConfirm, showPrompt } from "@jolly-pixel/ui";
+import {
+  showChoice,
+  showConfirm,
+  showPrompt
+} from "@jolly-pixel/ui/elements/dialog";
 
 const remove = await showConfirm({
   title: "Remove orphan voxels",
@@ -45,6 +49,8 @@ const mode = await showChoice({
 `content` puts nodes under the message. Capture their values as the user types:
 
 ```ts
+import "@jolly-pixel/ui/elements/text";
+
 const tag = { name: "", message: "" };
 
 const name = document.createElement("jolly-text");
@@ -76,6 +82,9 @@ const choice = await showChoice({
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import type { Dialog, JollyChangeDetail } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/dialog";
+import "@jolly-pixel/ui/elements/number";
 
 @customElement("export-dialog")
 export class ExportDialog extends LitElement {

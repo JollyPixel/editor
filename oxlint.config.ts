@@ -1,8 +1,13 @@
+// Import Node.js Dependencies
+import { readdirSync } from "node:fs";
+
 // Import Third-party Dependencies
 import { defineConfig } from "oxlint";
 import { typescriptConfig } from "@openally/config.oxlint";
 
 // CONSTANTS
+const kUiElements = readdirSync(new URL("./packages/ui/src/elements", import.meta.url))
+  .map((file) => file.replace(/\.ts$/, ""));
 const kPublicAccessors = [
   "getActor",
   "getActorByPath",
@@ -122,6 +127,9 @@ export default defineConfig(typescriptConfig({
     "typescript/no-namespace": "error",
     "@jolly-pixel/comment-format": "error",
     "@jolly-pixel/err-declared-error": "error",
+    "@jolly-pixel/import-rendered-elements": [
+      "error", { elements: kUiElements }
+    ],
     "@jolly-pixel/no-enum": "error",
     "@jolly-pixel/no-ts-private": "error",
     "@jolly-pixel/no-comments": "error",
@@ -136,6 +144,12 @@ export default defineConfig(typescriptConfig({
       rules: {
         "max-classes-per-file": "off",
         "no-empty-function": "off"
+      }
+    },
+    {
+      files: ["packages/ui/**", "**/test/**", "**/bench/**"],
+      rules: {
+        "@jolly-pixel/import-rendered-elements": "off"
       }
     },
     {

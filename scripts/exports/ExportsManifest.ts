@@ -22,11 +22,15 @@ export class ExportsManifest {
     }
 
     const [dot, ...segments] = subpath.split("/");
+    const folder = segments.at(-1) === "*" ? segments.slice(0, -1) : segments;
     if (dot !== "." || segments.length === 0) {
       yield `"${subpath}" must start with "./"`;
     }
-    else if (!segments.every((segment) => kSubpathSegment.test(segment))) {
-      yield `"${subpath}" must use lowercase names with no extension or wildcard`;
+    else if (
+      folder.length === 0 ||
+      !folder.every((segment) => kSubpathSegment.test(segment))
+    ) {
+      yield `"${subpath}" must use lowercase names with no extension, or end with a folder "/*"`;
     }
   }
 
@@ -105,7 +109,11 @@ export class ExportsManifest {
     const source = target.default.startsWith("./dist/") ?
       target.default.replace("./dist/", "./src/").replace(/\.js$/, ".ts") :
       target.default;
-    if (!this.#exists(source)) {
+    const folder = subpath.endsWith("/*") ? subpath.slice(1, -1) : null;
+    if (folder !== null && !target.default.endsWith(`${folder}*.js`)) {
+      yield `"${subpath}" must target its own "${folder.slice(1, -1)}" folder`;
+    }
+    if (!this.#exists(folder === null ? source : path.dirname(source))) {
       yield `"${subpath}" has no source file for ${target.default}`;
     }
   }

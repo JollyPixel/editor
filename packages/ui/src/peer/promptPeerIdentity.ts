@@ -1,5 +1,4 @@
 // Import Internal Dependencies
-import { resolveStoredPrompt } from "../containers/dialog/dialogHelpers.ts";
 import { LocalStorageAdapter } from "../storage/LocalStorageAdapter.ts";
 import type { StorageAdapter } from "../storage/StorageAdapter.ts";
 import {
@@ -22,6 +21,9 @@ export interface PromptPeerIdentityOptions {
 export async function promptPeerIdentity(
   options: PromptPeerIdentityOptions
 ): Promise<PeerIdentity> {
+  const { resolveStoredPrompt } = await import(
+    "../containers/dialog/dialogHelpers.ts"
+  );
   const username = await resolveStoredPrompt({
     title: options.title,
     intent: "info",

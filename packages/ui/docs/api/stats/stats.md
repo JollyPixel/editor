@@ -4,7 +4,7 @@
 its history graph.
 
 ```ts
-import "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/stats";
 import { StatsRecorder } from "@jolly-pixel/ui/stats";
 
 const recorder = new StatsRecorder();

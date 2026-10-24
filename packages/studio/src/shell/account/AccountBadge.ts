@@ -12,6 +12,10 @@ import {
   query
 } from "lit/decorators.js";
 import type { Account } from "@jolly-pixel/accounts";
+import "@jolly-pixel/ui/elements/avatar";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/context-menu";
+import "@jolly-pixel/ui/elements/icon";
 
 // Import Internal Dependencies
 import { accountMenu } from "./accountMenu.ts";

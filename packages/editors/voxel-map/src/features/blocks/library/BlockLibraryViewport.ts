@@ -7,6 +7,7 @@ import {
   LocalStorageAdapter,
   type StorageAdapter
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/icon";
 
 // Import Internal Dependencies
 import { blockLibraryViewportStyles } from "./BlockLibraryViewport.styles.ts";

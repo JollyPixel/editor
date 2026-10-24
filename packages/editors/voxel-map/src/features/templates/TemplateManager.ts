@@ -15,6 +15,9 @@ import {
   type TreeNode
 } from "@jolly-pixel/ui";
 import { peerBadges } from "@jolly-pixel/ui/network";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/folder";
+import "@jolly-pixel/ui/elements/tree";
 
 // Import Internal Dependencies
 import { TemplateDraftId } from "../../map/TemplateDraftId.ts";

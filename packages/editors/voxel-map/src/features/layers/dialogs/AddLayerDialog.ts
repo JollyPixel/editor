@@ -10,6 +10,10 @@ import type {
   JollyChangeDetail,
   JollyOption
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/button-group";
+import "@jolly-pixel/ui/elements/dialog";
+import "@jolly-pixel/ui/elements/text";
 
 // Import Internal Dependencies
 import "../layerIcons.ts";

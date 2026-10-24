@@ -12,6 +12,7 @@ import {
   PopoverController,
   type PopoverSide
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/color-picker";
 import { formatHex } from "@jolly-pixel/color";
 
 // Import Internal Dependencies

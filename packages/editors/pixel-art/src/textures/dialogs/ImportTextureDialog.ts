@@ -9,6 +9,7 @@ import type {
   JollyChangeDetail,
   JollyOption
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/select";
 import type { Vec2 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies

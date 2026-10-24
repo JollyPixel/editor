@@ -14,6 +14,12 @@ import type {
   JollyChangeDetail,
   JollyOption
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/checkbox";
+import "@jolly-pixel/ui/elements/number";
+import "@jolly-pixel/ui/elements/select";
+import "@jolly-pixel/ui/elements/separator";
+import "@jolly-pixel/ui/elements/text";
 import type { BlockProperties } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies

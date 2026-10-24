@@ -2,6 +2,7 @@
 import * as THREE from "three/webgpu";
 import { ColorSequence } from "@jolly-pixel/color";
 import type { TreeNode } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/tree";
 
 // Import Internal Dependencies
 import {

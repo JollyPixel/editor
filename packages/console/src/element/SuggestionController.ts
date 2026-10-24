@@ -6,6 +6,7 @@ import {
   type ReactiveControllerHost,
   type TemplateResult
 } from "lit";
+import "@jolly-pixel/ui/elements/icon";
 
 // Import Internal Dependencies
 import type { CommandConsole } from "../CommandConsole.ts";

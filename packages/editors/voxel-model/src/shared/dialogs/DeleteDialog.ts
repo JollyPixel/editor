@@ -6,6 +6,7 @@ import {
 } from "lit";
 import { state } from "lit/decorators.js";
 import type { JollyChangeDetail } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/checkbox";
 
 // Import Internal Dependencies
 import {

@@ -21,6 +21,11 @@ import {
   type JollyOption,
   type JollyReparentDetail
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/button-group";
+import "@jolly-pixel/ui/elements/context-menu";
+import "@jolly-pixel/ui/elements/toolbar";
+import "@jolly-pixel/ui/elements/tree";
 
 // Import Internal Dependencies
 import { AssetKindSet } from "../../catalog/AssetKindSet.ts";

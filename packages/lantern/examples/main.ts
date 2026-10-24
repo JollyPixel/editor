@@ -2,6 +2,10 @@
 import {
   LocalStorageAdapter
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/pane";
+import "@jolly-pixel/ui/elements/pane-group";
+import "@jolly-pixel/ui/elements/scope";
 import {
   Lantern,
   Tour

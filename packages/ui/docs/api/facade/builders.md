@@ -57,7 +57,7 @@ interface FacadeContainer extends FacadeItem {
   `ThemePreferencesOptions`, `PresenceOptions`, `FieldLayoutOptions`.
 
 ```ts
-import type { FacadeFolder } from "@jolly-pixel/ui";
+import type { FacadeFolder } from "@jolly-pixel/ui/facade";
 
 function bindLighting(
   folder: FacadeFolder

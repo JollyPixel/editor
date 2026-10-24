@@ -8,10 +8,8 @@ import {
   Vector3,
   type Vector3Like
 } from "three";
-import {
-  showConfirm,
-  type JollyReparentDetail
-} from "@jolly-pixel/ui";
+import type { JollyReparentDetail } from "@jolly-pixel/ui";
+import { showConfirm } from "@jolly-pixel/ui/elements/dialog";
 
 // Import Internal Dependencies
 import {

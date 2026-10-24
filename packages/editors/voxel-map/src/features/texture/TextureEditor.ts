@@ -18,6 +18,7 @@ import {
   type UvAccess
 } from "@jolly-pixel/editor.pixel-art";
 import { LazyTemplate } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
 
 // Import Internal Dependencies
 import type { BlockRegistryChange } from "../../map/EditorMap.ts";

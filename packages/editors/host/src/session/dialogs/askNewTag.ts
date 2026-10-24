@@ -1,9 +1,7 @@
 // Import Third-party Dependencies
-import {
-  readDetail,
-  showChoice,
-  type JollyChangeDetail
-} from "@jolly-pixel/ui";
+import { readDetail, type JollyChangeDetail } from "@jolly-pixel/ui";
+import { showChoice } from "@jolly-pixel/ui/elements/dialog";
+import "@jolly-pixel/ui/elements/text";
 
 // CONSTANTS
 const kFieldsStyle = {

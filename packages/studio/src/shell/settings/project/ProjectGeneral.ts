@@ -7,6 +7,8 @@ import {
   type TemplateResult
 } from "lit";
 import { customElement } from "lit/decorators.js";
+import "@jolly-pixel/ui/elements/separator";
+import "@jolly-pixel/ui/elements/text";
 
 // Import Internal Dependencies
 import type { StudioProjectSettings } from "../../../project/StudioProjectSettings.ts";

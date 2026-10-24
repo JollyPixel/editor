@@ -16,6 +16,7 @@ import {
 } from "three/tsl";
 import { RenderPipeline } from "three/webgpu";
 import { BlockShapeRegistry } from "@jolly-pixel/voxel.renderer";
+import "@jolly-pixel/ui/elements/scope";
 
 // Import Internal Dependencies
 import { createExamplePane } from "../shared/example-pane.ts";

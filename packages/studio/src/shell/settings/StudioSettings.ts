@@ -12,6 +12,7 @@ import {
 } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
+import "@jolly-pixel/ui/elements/icon";
 
 // Import Internal Dependencies
 import type { StudioSignedIn } from "../../accounts/StudioSignedIn.ts";

@@ -13,7 +13,7 @@ import {
 } from "lit/decorators.js";
 import { guard } from "lit/directives/guard.js";
 import { repeat } from "lit/directives/repeat.js";
-import "@jolly-pixel/ui/icon";
+import "@jolly-pixel/ui/elements/icon";
 
 // Import Internal Dependencies
 import type { ScrollbackEntry } from "../execution/Scrollback.ts";

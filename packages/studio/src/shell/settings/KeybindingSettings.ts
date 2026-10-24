@@ -18,6 +18,9 @@ import {
   type PreferenceScope,
   type Preferences
 } from "@jolly-pixel/editor.host/preferences";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/search";
+import "@jolly-pixel/ui/elements/separator";
 
 // Import Internal Dependencies
 import { KeyRecorder } from "../../keybindings/KeyRecorder.ts";

@@ -14,6 +14,7 @@ import { EditorPageInput } from "./EditorPageInput.ts";
 
 // CONSTANTS
 const kHtmlFile = /\.html$/;
+const kUiModule = /[\\/](?:packages|@jolly-pixel)[\\/]ui[\\/]dist[\\/]/;
 
 export function editorPages(
   pages: EditorPages
@@ -59,6 +60,17 @@ export function editorPages(
                 ...Object.fromEntries(
                   Array.from(inputs.values(), (input) => [input.name, input.id])
                 )
+              },
+              output: {
+                codeSplitting: {
+                  groups: [
+                    {
+                      name: "ui",
+                      test: kUiModule,
+                      tags: ["$initial"]
+                    }
+                  ]
+                }
               },
               experimental: {
                 chunkOptimization: {

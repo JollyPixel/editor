@@ -1,17 +1,18 @@
 # Icon registry
 
-The icon registry stores glyphs by string name. It is available from both
-`@jolly-pixel/ui/icon` and the root entry point.
+The icon registry stores glyphs by string name. It is exported from the root
+entry point.
 
 ```ts
 import {
   getIcon,
   hasIcon,
   registerIcon
-} from "@jolly-pixel/ui/icon";
+} from "@jolly-pixel/ui";
 ```
 
-The package registers these names on a shared 24 by 24 SVG grid:
+`@jolly-pixel/ui/elements/icon` registers these names on a shared 24 by 24
+SVG grid:
 
 `chevron`, `settings`, `close`, `plus`, `revert`, `drag`, `lock`, `eye`,
 `search`, `check`, `info`, and `warning`. `plus` carries the `lime` tone; the others
@@ -21,7 +22,7 @@ have none.
 
 ```ts
 import { svg } from "lit";
-import { registerIcon } from "@jolly-pixel/ui/icon";
+import { registerIcon } from "@jolly-pixel/ui";
 
 registerIcon("cube", svg`
   <path
@@ -137,7 +138,7 @@ import {
 import {
   getIcon,
   iconViewBox
-} from "@jolly-pixel/ui/icon";
+} from "@jolly-pixel/ui";
 
 type EditorIconName = "move" | "paint";
 

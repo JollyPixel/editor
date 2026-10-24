@@ -12,6 +12,8 @@ import {
   state
 } from "lit/decorators.js";
 import type { Preferences } from "@jolly-pixel/editor.host/preferences";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/toolbar";
 
 // Import Internal Dependencies
 import type { PreferenceScopes } from "../../../shared/PreferenceScopes.ts";

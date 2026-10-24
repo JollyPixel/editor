@@ -6,6 +6,8 @@ import type {
 import { EditorRuntime } from "@jolly-pixel/editor.host";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 import { LocalStorageAdapter } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/dock";
+import "@jolly-pixel/ui/elements/pane";
 import { css } from "lit";
 
 // Import Internal Dependencies

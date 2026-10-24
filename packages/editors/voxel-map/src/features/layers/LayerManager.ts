@@ -21,6 +21,10 @@ import {
   type TreeDragOut,
   type TreeNode
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/context-menu";
+import "@jolly-pixel/ui/elements/folder";
+import "@jolly-pixel/ui/elements/tree";
 
 // Import Internal Dependencies
 import {

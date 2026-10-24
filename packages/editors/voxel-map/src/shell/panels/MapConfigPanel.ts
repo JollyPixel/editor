@@ -12,6 +12,8 @@ import {
   FieldBinding,
   type JollyOption
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button-group";
+import "@jolly-pixel/ui/elements/checkbox";
 
 // Import Internal Dependencies
 import type { VoxelMapEditing } from "../../editing/VoxelMapEditing.ts";

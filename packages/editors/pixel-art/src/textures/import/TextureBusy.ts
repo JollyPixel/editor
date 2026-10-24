@@ -5,6 +5,7 @@ import {
   type ReactiveControllerHost,
   type TemplateResult
 } from "lit";
+import "@jolly-pixel/ui/elements/spinner";
 
 // Import Internal Dependencies
 import type { TextureImportOrigin } from "./TextureImporter.ts";

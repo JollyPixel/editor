@@ -9,6 +9,8 @@ import {
   customElement,
   state
 } from "lit/decorators.js";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/icon";
 
 // Import Internal Dependencies
 import type { VoxelMapEditing } from "../../../editing/VoxelMapEditing.ts";

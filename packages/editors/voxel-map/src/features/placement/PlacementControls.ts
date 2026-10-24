@@ -9,6 +9,8 @@ import {
   isApplePlatform,
   type KeyChordString
 } from "@jolly-pixel/controls";
+import "@jolly-pixel/ui/elements/icon";
+import "@jolly-pixel/ui/elements/tool-button";
 
 // Import Internal Dependencies
 import type { VoxelMapEditing } from "../../editing/VoxelMapEditing.ts";

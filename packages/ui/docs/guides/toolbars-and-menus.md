@@ -8,7 +8,7 @@ buttons, and keep viewport shortcuts quiet while a dialog or a menu is open.
 ```ts
 // toolIcons.ts
 import { svg } from "lit";
-import { registerIcon } from "@jolly-pixel/ui/icon";
+import { registerIcon } from "@jolly-pixel/ui";
 
 registerIcon("brush", svg`
   <path class="tone-fill" d="M4 20c4 0 6-2 6-5l-3-3c-3 0-5 2-3 8Z" />
@@ -22,8 +22,8 @@ import "./toolIcons.ts";
 
 - Import the module for its side effect, before the toolbar renders. A
   `jolly-icon` drawn before its glyph is registered does not update.
-- `@jolly-pixel/ui/icon` loads the registry without the other elements, so a
-  module that only registers glyphs stays cheap in unit tests.
+- The root entry point loads the registry without any element, so a module
+  that only registers glyphs stays cheap in unit tests.
 - `tone-fill` takes the tone given at registration. A `jolly-tool-button`
   drawing the icon tints its hover and active fill with it.
 

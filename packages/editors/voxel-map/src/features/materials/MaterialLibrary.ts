@@ -21,6 +21,11 @@ import {
   type Tree,
   type TreeRenameValidator
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/color";
+import "@jolly-pixel/ui/elements/context-menu";
+import "@jolly-pixel/ui/elements/folder";
+import "@jolly-pixel/ui/elements/tree";
 import type {
   BlocksetSlot,
   ResolvedBlockDefinition

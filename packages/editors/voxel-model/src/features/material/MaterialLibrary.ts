@@ -16,6 +16,13 @@ import {
   MenuSession,
   type MenuPoint
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/color";
+import "@jolly-pixel/ui/elements/context-menu";
+import "@jolly-pixel/ui/elements/folder";
+import "@jolly-pixel/ui/elements/slider";
+import "@jolly-pixel/ui/elements/text";
+import "@jolly-pixel/ui/elements/tree";
 import {
   MaterialSurface,
   type MaterialSurfaceJSON,

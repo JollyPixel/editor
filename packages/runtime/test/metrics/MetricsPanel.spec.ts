@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 // Import Third-party Dependencies
-import type { FacadeContainer } from "@jolly-pixel/ui";
+import type { FacadeContainer } from "@jolly-pixel/ui/facade";
 import {
   StatsRecorder,
   type MetricDefinition

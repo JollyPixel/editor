@@ -1,5 +1,11 @@
 // Import Third-party Dependencies
 import { bootStandalone } from "@jolly-pixel/editor.host";
+import "@jolly-pixel/ui/elements/dock";
+import "@jolly-pixel/ui/elements/dock-layout";
+import "@jolly-pixel/ui/elements/pane";
+import "@jolly-pixel/ui/elements/pane-group";
+import "@jolly-pixel/ui/elements/presence-stack";
+import "@jolly-pixel/ui/elements/scope";
 
 // Import Internal Dependencies
 import "./app/paneIcons.ts";

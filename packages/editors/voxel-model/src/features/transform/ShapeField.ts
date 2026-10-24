@@ -9,6 +9,11 @@ import {
   SubscriptionController,
   type JollyChangeDetail
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/icon";
+import "@jolly-pixel/ui/elements/number";
+import "@jolly-pixel/ui/elements/property-row";
+import "@jolly-pixel/ui/elements/select";
+import "@jolly-pixel/ui/elements/separator";
 import {
   BlockShape,
   type BlockNodeJSON,

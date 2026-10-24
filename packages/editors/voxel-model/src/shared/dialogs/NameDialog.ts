@@ -9,6 +9,8 @@ import type {
   JollyChangeDetail,
   JollyOption
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button-group";
+import "@jolly-pixel/ui/elements/text";
 
 // Import Internal Dependencies
 import {

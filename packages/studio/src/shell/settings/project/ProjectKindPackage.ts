@@ -10,6 +10,10 @@ import {
   customElement,
   property
 } from "lit/decorators.js";
+import "@jolly-pixel/ui/elements/folder";
+import "@jolly-pixel/ui/elements/number";
+import "@jolly-pixel/ui/elements/separator";
+import "@jolly-pixel/ui/elements/vector2";
 
 // Import Internal Dependencies
 import { KindOptionsDraft } from "../../../project/KindOptionsDraft.ts";

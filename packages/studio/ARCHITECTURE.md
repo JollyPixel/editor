@@ -445,6 +445,14 @@ flowchart TB
 - That build turns off rolldown's `mergeCommonChunks`: left on, it moves
   shared modules into one page's entry chunk and the shell preloads the
   voxel-map entry. `test/vite/studio.bundle.spec.ts` guards it.
+- It also puts every ui module a page loads at start into one `ui` chunk.
+  Left to automatic splitting, the ui spreads over a chunk per combination of
+  pages and lazy imports, and a voxel editor opened from the shell downloads
+  about 40 KB more brotli. ui used only by lazily loaded code stays with that
+  code.
+- A page's entry imports the ui elements its `index.html` renders. The lint
+  rule cannot read HTML, so the bundle spec checks that a module loaded at
+  start registers each of them.
 - Both builds then fill `editors/<name>/` with the `public/` folder of each
   compiled page and the `dist` of every other editor.
 - `pixel-art` builds its page with `build:page`, which the studio `build`

@@ -18,10 +18,10 @@ import type {
   AccountsRoster,
   RosterEntry
 } from "@jolly-pixel/accounts";
-import {
-  SubscriptionController,
-  showConfirm
-} from "@jolly-pixel/ui";
+import { SubscriptionController } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/context-menu";
+import { showConfirm } from "@jolly-pixel/ui/elements/dialog";
+import "@jolly-pixel/ui/elements/tree";
 
 // Import Internal Dependencies
 import {

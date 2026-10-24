@@ -7,6 +7,8 @@ import {
   type TemplateResult
 } from "lit";
 import { SubscriptionController } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/tool-button";
 import {
   FrameRate,
   TICKS_PER_SECOND

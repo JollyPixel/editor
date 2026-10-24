@@ -12,6 +12,8 @@ import {
   property
 } from "lit/decorators.js";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/toolbar";
 
 // Import Internal Dependencies
 import type { StudioShareLinks } from "../../shares/StudioShareLinks.ts";

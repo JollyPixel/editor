@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
+import "@jolly-pixel/ui/elements/control";
+import "@jolly-pixel/ui/elements/controls";
+import "@jolly-pixel/ui/elements/scope";
 
 // Import Internal Dependencies
 import {

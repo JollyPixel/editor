@@ -16,6 +16,13 @@ import type {
   PreferenceScope,
   Preferences
 } from "@jolly-pixel/editor.host/preferences";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/checkbox";
+import "@jolly-pixel/ui/elements/color";
+import "@jolly-pixel/ui/elements/property-row";
+import "@jolly-pixel/ui/elements/select";
+import "@jolly-pixel/ui/elements/separator";
+import "@jolly-pixel/ui/elements/slider";
 
 // Import Internal Dependencies
 import { settingsStyles } from "./settingsStyles.ts";

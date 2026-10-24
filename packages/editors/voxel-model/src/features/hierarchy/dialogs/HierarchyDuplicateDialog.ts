@@ -7,6 +7,8 @@ import {
 } from "lit";
 import { state } from "lit/decorators.js";
 import type { JollyChangeDetail } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/checkbox";
+import "@jolly-pixel/ui/elements/text";
 import type { MirrorAxes } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies

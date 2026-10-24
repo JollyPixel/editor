@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
-import { showChoice } from "@jolly-pixel/ui";
 import type {
   ImportConflictPolicy,
   ImportPlan
 } from "@jolly-pixel/asset-server/client";
+import { showChoice } from "@jolly-pixel/ui/elements/dialog";
 
 export function askImportConflictPolicy(
   plan: ImportPlan

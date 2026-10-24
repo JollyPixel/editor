@@ -10,6 +10,9 @@ import type {
   JollyTabChangeDetail,
   TabsVariant
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/tab";
+import "@jolly-pixel/ui/elements/tabs";
 
 // Import Internal Dependencies
 import type { TextureEntry } from "./TextureEntry.ts";

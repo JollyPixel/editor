@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type { EditorState } from "@jolly-pixel/editor.host";
+import "@jolly-pixel/ui/elements/tab";
 import type {
   IconName,
   TabStatus

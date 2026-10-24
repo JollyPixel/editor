@@ -16,6 +16,9 @@ import {
   LogQueue,
   type LogEntry
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/log";
+import "@jolly-pixel/ui/elements/tabs";
+import "@jolly-pixel/ui/elements/toolbar";
 
 // Import Internal Dependencies
 import type { AssetBrowserOptions } from "./assets/AssetBrowser.ts";

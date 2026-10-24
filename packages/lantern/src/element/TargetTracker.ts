@@ -3,10 +3,8 @@ import type {
   ReactiveController,
   ReactiveControllerHost
 } from "lit";
-import {
-  PaneElement,
-  type AnchorRect
-} from "@jolly-pixel/ui";
+import type { AnchorRect } from "@jolly-pixel/ui";
+import { PaneElement } from "@jolly-pixel/ui/elements/pane";
 
 // Import Internal Dependencies
 import type { TargetFrame } from "../tour/TargetSeek.ts";

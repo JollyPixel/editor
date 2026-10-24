@@ -16,9 +16,11 @@ import {
   LazyTemplate,
   MenuSession,
   formatCount,
-  showConfirm,
   type ContextMenu
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/context-menu";
+import { showConfirm } from "@jolly-pixel/ui/elements/dialog";
+import "@jolly-pixel/ui/elements/icon";
 
 // Import Internal Dependencies
 import type { VoxelMapEditing } from "../../../editing/VoxelMapEditing.ts";

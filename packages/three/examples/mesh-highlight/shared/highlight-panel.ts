@@ -3,7 +3,7 @@ import type {
   FacadeFolder,
   FacadeItem,
   Pane
-} from "@jolly-pixel/ui";
+} from "@jolly-pixel/ui/facade";
 
 // Import Internal Dependencies
 import {

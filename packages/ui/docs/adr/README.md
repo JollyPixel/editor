@@ -29,12 +29,13 @@ are never reused: gaps are records that were merged into another one or moved to
 | [0022](./0022-persistence-keys-and-reconciliation.md) | Layout persists through derived keys and a stated reconciliation algorithm |
 | [0023](./0023-field-events-are-not-cancelable.md) | Field events are not cancelable, and carry the value alone |
 | [0024](./0024-no-spec-imports-a-component.md) | No spec imports a component, so testable logic lives in plain modules |
-| [0025](./0025-package-boundaries.md) | Lit is a peer dependency and the barrel is never side-effect-free |
+| [0025](./0025-package-boundaries.md) | Lit is a peer dependency and the barrel is never side-effect-free (superseded by 0041) |
 | [0027](./0027-facade-math-writes-are-component-wise.md) | The facade writes a math value component-wise, and an axis key is the domain identity |
 | [0031](./0031-a-log-is-not-a-toast.md) | `jolly-log` is an ambient feed, and `jolly-toast` stays deferred |
 | [0033](./0033-layout-snapshot-is-the-only-layout-state.md) | The layout snapshot is the only layout state, groups and columns included |
 | [0037](./0037-colour-is-a-tone-on-the-glyph-and-an-area-on-the-pane.md) | Colour is a tone on the glyph and an area on the pane, and a dialog's intent is not a tone |
 | [0040](./0040-declarative-bindings-read-through.md) | A declarative binding reads through to its source and keeps no mirror |
+| [0041](./0041-elements-register-through-their-own-entry-points.md) | Elements register through their own entry points, and the root registers none |
 
 ## Scope boundary
 

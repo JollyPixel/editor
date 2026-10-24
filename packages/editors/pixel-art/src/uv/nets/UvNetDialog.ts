@@ -19,6 +19,10 @@ import type {
   TreeBadge,
   TreeNode
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/dialog";
+import "@jolly-pixel/ui/elements/toggle";
+import "@jolly-pixel/ui/elements/tree";
 import {
   DEFAULT_UV_SLOTS,
   type UVRegion,

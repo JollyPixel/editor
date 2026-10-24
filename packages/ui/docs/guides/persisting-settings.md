@@ -150,7 +150,7 @@ test starts from its own state.
 `resolveStoredPrompt` returns a stored answer, or prompts for it once:
 
 ```ts
-import { resolveStoredPrompt } from "@jolly-pixel/ui";
+import { resolveStoredPrompt } from "@jolly-pixel/ui/elements/dialog";
 
 const author = await resolveStoredPrompt({
   title: "Your name",

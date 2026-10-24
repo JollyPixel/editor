@@ -9,6 +9,9 @@ import {
   type VoxelWorld
 } from "@jolly-pixel/voxel.renderer";
 import { FieldBinding } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/separator";
+import "@jolly-pixel/ui/elements/vector3";
 
 // Import Internal Dependencies
 import type { EditorMap } from "../../../map/EditorMap.ts";
