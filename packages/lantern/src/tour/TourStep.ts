@@ -28,6 +28,10 @@ export type StepUntil = (
   context: StepContext
 ) => Promise<void>;
 
+export type StepWhen = (
+  context: Pick<StepContext, "page">
+) => boolean;
+
 export type TargetLocator = () => Element | AnchorRect | null;
 
 export type StepTarget = TargetPath | TargetLocator;
@@ -42,6 +46,7 @@ export interface TourStepOptions {
    * @default "below"
    */
   side?: StepSide;
+  when?: StepWhen;
   enter?: StepEnter;
   until?: StepUntil;
 }
@@ -53,6 +58,7 @@ export interface TourStep {
   readonly image: Readonly<StepImage> | null;
   readonly target: StepTarget | null;
   readonly side: StepSide;
+  readonly when: StepWhen | null;
   readonly enter: StepEnter | null;
   readonly until: StepUntil | null;
 }

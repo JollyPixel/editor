@@ -13,7 +13,8 @@ run.on("end", (outcome) => logger.info({ outcome }, "tour ended"));
 
 ### `run.next(): Promise<void>`
 
-Leaves the current step and shows the next one. On the last step it finishes the tour.
+Leaves the current step and shows the next one whose [`when`](./Tour.md#when-context-boolean)
+passes. When no later step passes, it finishes the tour.
 
 ### `run.startFollowUp(): Promise<void>`
 
@@ -22,7 +23,7 @@ nothing while `offeredFollowUp` is `null`.
 
 ### `run.back(): Promise<void>`
 
-Shows the previous step. Does nothing on the first step.
+Shows the previous step whose `when` passes. Does nothing on the first step.
 
 ### `run.skip(): void`
 
@@ -81,6 +82,13 @@ The current step. While a step is entering, they already name it.
 True when the current step has an `until` hook and waits for the user instead of Next.
 
 ### `run.first: boolean` and `run.last: boolean`
+
+True when no earlier, or no later, step passes its `when`.
+
+### `run.position: number` and `run.count: number`
+
+The step counter: the 1-based position of the current step and the number of steps, both counting
+only the steps whose `when` passes, plus the current one.
 
 ## Events
 

@@ -8,9 +8,13 @@ import {
   BLOCKSET_KIND,
   VOXEL_MAP_KIND
 } from "@jolly-pixel/asset.voxel-map";
+import { decodePixelBytes } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { createDefaultSeed } from "../../src/boot/defaultSeed.ts";
+import {
+  createDefaultSeed,
+  STARTER_BLOCK_NAME
+} from "../../src/boot/defaultSeed.ts";
 
 function seededAsset(
   kind: string
@@ -35,12 +39,21 @@ describe("createDefaultSeed", () => {
     assert.equal(map.path.directory, blockset.path.directory);
   });
 
-  it("seeds a blank 512x512 blockset with 32px tiles and no blocks", async() => {
+  it("seeds a 512x512 blockset with 32px tiles and one opaque starter block", async() => {
     const content = await seededAsset(BLOCKSET_KIND).entry.content!();
     const blockset = JSON.parse(new TextDecoder().decode(content as Uint8Array));
+    const pixels = decodePixelBytes(blockset.pixels.pixels);
+    const alphas = [[0, 0], [31, 31], [32, 0]].map(([x, y]) => pixels[((y * 512) + x) * 4 + 3]);
 
     assert.deepEqual(blockset.pixels.size, { x: 512, y: 512 });
     assert.equal(blockset.tileSize, 32);
-    assert.deepEqual(blockset.blocks, []);
+    assert.deepEqual(
+      blockset.blocks.map((block: { name: string; defaultTexture: unknown; }) => [
+        block.name,
+        block.defaultTexture
+      ]),
+      [[STARTER_BLOCK_NAME, { col: 0, row: 0 }]]
+    );
+    assert.deepEqual(alphas, [255, 255, 0]);
   });
 });

@@ -16,6 +16,8 @@ import {
   type SyncedVoxelMap
 } from "@jolly-pixel/asset.voxel-map/client";
 import { BakedRoomEnvironment } from "@jolly-pixel/three";
+import { PIXEL_ART_KEYBINDINGS } from "@jolly-pixel/editor.pixel-art/preferences";
+import type { PaneVisibilityDetail } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { EditorState } from "../state/index.ts";
@@ -27,7 +29,9 @@ import { mapConsole } from "./mapConsole.ts";
 import { basics } from "../tours/basics.ts";
 import {
   MAP_TOURS,
-  MAP_TOUR_KEYS
+  MAP_TOUR_KEYS,
+  PANE_TOURS,
+  PIXEL_ART_TOUR_KEYS
 } from "../tours/mapTours.ts";
 import { VOXEL_MAP_KEYBINDINGS } from "../preferences.ts";
 
@@ -165,6 +169,7 @@ export class VoxelMapEditor {
   #consoleFeatures: RegistrationHandle;
   #disposePerformancePane: () => void;
   #removeInspectorMetrics: () => void;
+  #lantern: Lantern;
   #lanternReleases: Array<() => void>;
   #disposed = false;
 
@@ -185,6 +190,7 @@ export class VoxelMapEditor {
     this.#consoleFeatures = parts.consoleFeatures;
     this.#removeInspectorMetrics = parts.removeInspectorMetrics;
     this.#disposePerformancePane = parts.disposePerformancePane;
+    this.#lantern = parts.lantern;
     this.#lanternReleases = [
       ...MAP_TOURS.map((tour) => parts.lantern.register(tour)),
       provideTourKeys({
@@ -193,6 +199,13 @@ export class VoxelMapEditor {
         scope: VOXEL_MAP_KEYBINDINGS,
         layout: parts.editing.state.keyboardLayout,
         namespace: MAP_TOUR_KEYS
+      }),
+      provideTourKeys({
+        lantern: parts.lantern,
+        preferences: parts.editing.state.preferences,
+        scope: PIXEL_ART_KEYBINDINGS,
+        layout: parts.editing.state.keyboardLayout,
+        namespace: PIXEL_ART_TOUR_KEYS
       })
     ];
     this.ready = Promise.all([
@@ -203,12 +216,23 @@ export class VoxelMapEditor {
     this.ready.then(() => {
       if (!this.#disposed) {
         parts.lantern.offer(basics);
+        parts.shell.layout?.addEventListener("jolly-pane-visibility", this.#offerPaneTour);
       }
     }, () => undefined);
   }
 
+  readonly #offerPaneTour = (
+    event: CustomEvent<PaneVisibilityDetail>
+  ): void => {
+    const tour = PANE_TOURS.get(event.detail.pane);
+    if (event.detail.visible && tour !== undefined) {
+      this.#lantern.offer(tour);
+    }
+  };
+
   dispose(): void {
     this.#disposed = true;
+    this.#shell.layout?.removeEventListener("jolly-pane-visibility", this.#offerPaneTour);
     this.#disposePerformancePane();
     this.#removeInspectorMetrics();
     this.#consoleFeatures.unregister();

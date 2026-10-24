@@ -1,6 +1,5 @@
 // Import Node.js Dependencies
 import { describe, test } from "node:test";
-import { setImmediate } from "node:timers/promises";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
@@ -10,7 +9,6 @@ import { once } from "@openally/emitt";
 import {
   UnknownStepError,
   type RunOutcome,
-  type StepContext,
   type Tour
 } from "#src/index.ts";
 import { TourRun } from "#src/tour/TourRun.ts";
@@ -18,41 +16,10 @@ import {
   step,
   tour
 } from "../helpers/tours.ts";
-
-interface Recorder {
-  run: TourRun;
-  log: string[];
-  warnings: string[];
-}
-
-function record(
-  run: TourRun,
-  log: string[] = []
-): Omit<Recorder, "warnings"> {
-  run.on("step", (shown) => log.push(`step ${shown.id}`));
-  run.on("end", (outcome) => log.push(`end ${outcome}`));
-
-  return {
-    run,
-    log
-  };
-}
-
-function start(
-  steps = tour(),
-  at?: string
-): Recorder {
-  const warnings: string[] = [];
-  const recorder = record(new TourRun(steps, {
-    at,
-    warn: (message) => warnings.push(message)
-  }));
-
-  return {
-    ...recorder,
-    warnings
-  };
-}
+import {
+  record,
+  start
+} from "../helpers/runs.ts";
 
 function tracked(
   id: string,
@@ -224,57 +191,5 @@ describe("TourRun", () => {
     await once(run, "step");
 
     assert.match(warnings[0], /"test\.tour" step "one": enter failed, no dock/);
-  });
-
-  describe("interactive steps", () => {
-    function interactive(
-      until: (context: StepContext) => Promise<void>
-    ): Recorder {
-      return start(tour([step("place", { until }), step("done")]));
-    }
-
-    test("advance when until resolves", async() => {
-      const pending = Promise.withResolvers<void>();
-      const { run } = interactive(() => pending.promise);
-      await once(run, "step");
-      pending.resolve();
-      await once(run, "step");
-
-      assert.equal(run.step.id, "done");
-    });
-
-    test("warn and advance when until rejects", async() => {
-      const { run, warnings } = interactive(() => Promise.reject(new Error("lost")));
-      await once(run, "step");
-      await once(run, "step");
-
-      assert.equal(run.step.id, "done");
-      assert.match(warnings[0], /until failed, lost/);
-    });
-
-    test("abort until when the step is left and ignore its late result", async() => {
-      const pending = Promise.withResolvers<void>();
-      let signal: AbortSignal | null = null;
-      const { run, warnings } = start(tour([
-        step("intro"),
-        step("place", {
-          until: (context) => {
-            signal = context.signal;
-
-            return pending.promise;
-          }
-        }),
-        step("done")
-      ]), "place");
-      await once(run, "step");
-      await run.back();
-      pending.reject(new Error("lost"));
-      await setImmediate();
-
-      assert.equal(signal!.aborted, true);
-      assert.equal(run.step.id, "intro");
-      assert.equal(run.state, "running");
-      assert.deepEqual(warnings, []);
-    });
   });
 });

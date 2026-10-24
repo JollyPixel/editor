@@ -49,7 +49,7 @@ test("boots the seeded map from an in-page offline server, without a socket", as
     persistent: true,
     username: "Guest",
     layers: ["Ground"],
-    blocks: 0,
+    blocks: 1,
     blocksets: [seededSource(BLOCKSET_KIND)]
   });
   expect(sockets).toEqual([]);
@@ -134,7 +134,7 @@ test("keeps offline map and texture edits across a reload", async({ map, page })
   ), { timeout: 10_000 }).not.toBe(before.map);
 
   await map.panes.open("Paint");
-  const texel = { x: 16, y: 16 };
+  const texel = { x: 16, y: 80 };
   await expect.poll(() => map.texture.pixelAlpha(texel)).toBe(0);
   await map.texture.selectMode("Paint");
   await map.texture.clickTexel(texel);
