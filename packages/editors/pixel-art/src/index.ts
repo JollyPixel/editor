@@ -1,5 +1,6 @@
 export * from "./panel/PixelDrawPanel.ts";
 export * from "./panel/ViewSettings.ts";
+export * from "./panel/ViewPreferences.ts";
 export * from "./textures/TextureName.ts";
 export * from "./textures/TextureRoom.ts";
 export type {
