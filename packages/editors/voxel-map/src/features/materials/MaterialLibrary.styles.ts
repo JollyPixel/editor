@@ -45,7 +45,7 @@ export const materialLibraryStyles = css`
     flex: 1 1 auto;
     min-height: 0;
     overflow: auto;
-    padding-inline: 2px;
+    padding-inline: 2px var(--jolly-space-1, 4px);
   }
 
   .editor {

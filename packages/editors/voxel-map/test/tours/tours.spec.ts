@@ -13,12 +13,14 @@ import {
   Preferences,
   provideTourKeys
 } from "@jolly-pixel/editor.host";
+import { PIXEL_ART_KEYBINDINGS } from "@jolly-pixel/editor.pixel-art/preferences";
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
   MAP_TOURS,
-  MAP_TOUR_KEYS
+  MAP_TOUR_KEYS,
+  PIXEL_ART_TOUR_KEYS
 } from "../../src/tours/mapTours.ts";
 import { VOXEL_MAP_KEYBINDINGS } from "../../src/preferences.ts";
 
@@ -45,7 +47,7 @@ describe("voxel-map tours", () => {
     }
   });
 
-  test("every key placeholder names a camera or map binding", () => {
+  test("every key placeholder names a camera, map or pixel art binding", () => {
     const lantern = new Lantern({ storage: new MemoryStorageAdapter() });
     const preferences = new Preferences();
     const layout = { layout: null };
@@ -61,6 +63,13 @@ describe("voxel-map tours", () => {
       scope: VOXEL_MAP_KEYBINDINGS,
       layout,
       namespace: MAP_TOUR_KEYS
+    });
+    provideTourKeys({
+      lantern,
+      preferences,
+      scope: PIXEL_ART_KEYBINDINGS,
+      layout,
+      namespace: PIXEL_ART_TOUR_KEYS
     });
 
     for (const tour of MAP_TOURS) {

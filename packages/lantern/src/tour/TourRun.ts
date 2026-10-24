@@ -80,7 +80,7 @@ export class TourRun extends Emitter<TourRunEvents> {
     this.#page = page;
     this.#warn = warn;
     this.#index = index;
-    void this.#enqueue(() => this.#show(index));
+    void this.#enqueue(() => this.#showFrom(index));
   }
 
   get index(): number {
@@ -100,11 +100,22 @@ export class TourRun extends Emitter<TourRunEvents> {
   }
 
   get first(): boolean {
-    return this.#index === 0;
+    return this.#shownFrom(this.#index - 1, -1) === -1;
   }
 
   get last(): boolean {
-    return this.#index === this.tour.steps.length - 1;
+    return this.#shownFrom(this.#index + 1, 1) === -1;
+  }
+
+  get position(): number {
+    return 1 + this.#shownBetween(0, this.#index);
+  }
+
+  get count(): number {
+    return this.position + this.#shownBetween(
+      this.#index + 1,
+      this.tour.steps.length
+    );
   }
 
   get offeredFollowUp(): Tour | null {
@@ -118,12 +129,7 @@ export class TourRun extends Emitter<TourRunEvents> {
       }
 
       this.#leave();
-      if (this.last) {
-        this.#finish(null);
-
-        return;
-      }
-      await this.#show(this.#index + 1);
+      await this.#showFrom(this.#index + 1);
     });
   }
 
@@ -141,12 +147,13 @@ export class TourRun extends Emitter<TourRunEvents> {
 
   back(): Promise<void> {
     return this.#enqueue(async() => {
-      if (this.#state !== "running" || this.first) {
+      const previous = this.#shownFrom(this.#index - 1, -1);
+      if (this.#state !== "running" || previous === -1) {
         return;
       }
 
       this.#leave();
-      await this.#show(this.#index - 1);
+      await this.#show(previous);
     });
   }
 
@@ -187,6 +194,57 @@ export class TourRun extends Emitter<TourRunEvents> {
     this.#queue = run.catch(() => undefined);
 
     return run;
+  }
+
+  async #showFrom(
+    index: number
+  ): Promise<void> {
+    const shown = this.#shownFrom(index, 1);
+    if (shown === -1) {
+      this.#finish(null);
+
+      return;
+    }
+
+    await this.#show(shown);
+  }
+
+  #shownFrom(
+    index: number,
+    direction: 1 | -1
+  ): number {
+    const { steps } = this.tour;
+
+    return direction === 1 ?
+      steps.findIndex((step, at) => at >= index && this.#shows(step)) :
+      steps.findLastIndex((step, at) => at <= index && this.#shows(step));
+  }
+
+  #shownBetween(
+    start: number,
+    end: number
+  ): number {
+    return this.tour.steps
+      .slice(start, end)
+      .filter((step) => this.#shows(step))
+      .length;
+  }
+
+  #shows(
+    step: TourStep
+  ): boolean {
+    if (step.when === null) {
+      return true;
+    }
+
+    try {
+      return step.when({ page: this.#page });
+    }
+    catch (error) {
+      this.#report(step, "when", error);
+
+      return true;
+    }
   }
 
   async #show(
@@ -270,7 +328,7 @@ export class TourRun extends Emitter<TourRunEvents> {
 
   #report(
     step: TourStep,
-    hook: "enter" | "until" | "cleanup",
+    hook: "when" | "enter" | "until" | "cleanup",
     error: unknown
   ): void {
     const reason = error instanceof Error

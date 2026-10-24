@@ -34,6 +34,28 @@ export function isDocumentOrShadowRoot(
   return node instanceof Document || node instanceof ShadowRoot;
 }
 
+export function composedClosest<K extends keyof HTMLElementTagNameMap>(
+  element: Element,
+  selector: K
+): HTMLElementTagNameMap[K] | null;
+export function composedClosest(
+  element: Element,
+  selector: string
+): Element | null;
+export function composedClosest(
+  element: Element,
+  selector: string
+): Element | null {
+  const match = element.closest(selector);
+  if (match !== null) {
+    return match;
+  }
+
+  const root = element.getRootNode();
+
+  return root instanceof ShadowRoot ? composedClosest(root.host, selector) : null;
+}
+
 export function deepActiveElement(
   root: Document | ShadowRoot = document
 ): HTMLElement | null {

@@ -39,6 +39,7 @@ describe("Tour", () => {
     assert.equal(welcome.side, "below");
     assert.equal(welcome.target, null);
     assert.equal(welcome.image, null);
+    assert.equal(welcome.when, null);
     assert.equal(welcome.enter, null);
     assert.equal(welcome.until, null);
   });

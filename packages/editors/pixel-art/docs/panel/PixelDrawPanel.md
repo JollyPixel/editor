@@ -249,6 +249,21 @@ class ViewSettings {
 }
 ```
 
+`ViewPreferences` keeps these toggles in the `pixel-art` preference scope.
+`follow(canvas)` applies the saved values to the canvas, saves the user's
+changes, and applies changes made in Settings. It follows one canvas at a time,
+so call it again when the active texture changes. It never reads or writes
+`gridSize`; the host sets the cell size.
+
+```ts
+class ViewPreferences {
+  constructor(preferences: Preferences);
+
+  follow(canvas: ViewCanvas): void;
+  dispose(): void;
+}
+```
+
 `TextureName.fromPath(path)` keeps the file name without its folders and
 extension, so `"art/hero.pixelart"` gives `"hero"`. An empty name becomes
 `"Texture"`.

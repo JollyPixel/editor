@@ -28,7 +28,7 @@ export class LayersPanel extends EditingElement {
       container-type: size;
 
       --jolly-folder-indent: 0;
-      --jolly-field-inset-end: 0;
+      --jolly-field-inset-end: 0px;
     }
 
     .managers {

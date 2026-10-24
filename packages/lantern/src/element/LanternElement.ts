@@ -113,7 +113,7 @@ export class LanternElement extends LitElement {
     run: TourRun,
     step: TourStep
   ): TemplateResult {
-    const { steps, title } = run.tour;
+    const { title } = run.tour;
     const followUp = run.offeredFollowUp;
 
     return html`
@@ -129,7 +129,7 @@ export class LanternElement extends LitElement {
       >
         <header>
           <span>${title}</span>
-          <span class="counter">${run.index + 1} / ${steps.length}</span>
+          <span class="counter">${run.position} / ${run.count}</span>
         </header>
         ${step.image === null ? nothing : html`
           <img

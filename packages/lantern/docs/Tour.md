@@ -89,6 +89,24 @@ shows up late is still lit.
 
 Preferred side of the card. It flips to the opposite side when it does not fit there.
 
+### `when?: (context) => boolean`
+
+Shows the step only while it returns true, such as a step about materials that needs at least one
+block. `context` is `{ page: Document }`. Next and Back skip a step whose `when` is false, the
+counter leaves it out, and a tour whose remaining steps are all hidden finishes. The run calls it
+again on every move and every render of the card, so keep it cheap. A `when` that throws is logged
+and the step shows.
+
+```ts
+{
+  id: "materials",
+  target: ["materials-panel", "material-library"],
+  title: "Materials",
+  body: "Pick a material or create one.",
+  when: ({ page }) => page.querySelector("[data-block-count='0']") === null
+}
+```
+
 ### `enter?: (context) => void | (() => void) | Promise<…>`
 
 Runs before the step shows, to make its target visible: show a pane, open a folder, select a

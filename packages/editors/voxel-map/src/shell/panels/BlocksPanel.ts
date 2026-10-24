@@ -56,7 +56,7 @@ export class BlocksPanel extends EditingElement {
     }
 
     brush-orientation {
-      margin: 0 var(--jolly-space-1, 4px) var(--jolly-space-1, 4px);
+      margin: 0 0 var(--jolly-space-1, 4px) var(--jolly-space-1, 4px);
     }
   `;
 

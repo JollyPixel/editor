@@ -6,6 +6,7 @@ import {
 } from "@jolly-pixel/ui";
 import {
   UvNetLibrary,
+  ViewPreferences,
   type PixelArtAction
 } from "@jolly-pixel/editor.pixel-art";
 import {
@@ -66,6 +67,7 @@ export class EditorState {
   readonly shortcuts: ShortcutLabels<MapAction>;
   readonly pixelArtKeyBindings: KeyBindingSettings<PixelArtAction>;
   readonly uvNets: UvNetLibrary;
+  readonly textureView: ViewPreferences;
   readonly preferences: Preferences;
 
   constructor(
@@ -107,5 +109,6 @@ export class EditorState {
       presets: BLOCK_UV_NETS,
       defaultId: DEFAULT_BLOCK_UV_NET
     });
+    this.textureView = new ViewPreferences(preferences);
   }
 }

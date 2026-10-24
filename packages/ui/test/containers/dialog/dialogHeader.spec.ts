@@ -5,14 +5,28 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   isDialogIntent,
-  resolveDialogHeader
+  resolveDialogHeader,
+  type DialogHeader,
+  type DialogHeaderSource
 } from "../../../src/containers/dialog/dialogHeader.ts";
 import { registerIcon } from "../../../src/icon/registry.ts";
+
+function header(
+  source: Partial<DialogHeaderSource>
+): DialogHeader {
+  return resolveDialogHeader({
+    icon: "",
+    tone: "",
+    intent: "",
+    paneTone: null,
+    ...source
+  });
+}
 
 describe("resolveDialogHeader", () => {
   test("a bare dialog has no icon, tone or intent", () => {
     assert.deepEqual(
-      resolveDialogHeader({ icon: "", tone: "", intent: "" }),
+      header({}),
       { icon: "", intent: null, tone: null, alert: false }
     );
   });
@@ -20,21 +34,27 @@ describe("resolveDialogHeader", () => {
   test("an explicit tone wins over the icon's registered tone", () => {
     registerIcon("test-dialog-teal", "<path />", { tone: "teal" });
 
+    assert.equal(header({ icon: "test-dialog-teal" }).tone, "teal");
     assert.equal(
-      resolveDialogHeader({
-        icon: "test-dialog-teal",
-        tone: "",
-        intent: ""
-      }).tone,
-      "teal"
+      header({ icon: "test-dialog-teal", tone: "pink" }).tone,
+      "pink"
+    );
+  });
+
+  test("the pane's tone sits between an explicit tone and the icon's", () => {
+    registerIcon("test-dialog-amber", "<path />", { tone: "amber" });
+
+    assert.equal(
+      header({ icon: "test-dialog-amber", paneTone: "sky" }).tone,
+      "sky"
     );
     assert.equal(
-      resolveDialogHeader({
-        icon: "test-dialog-teal",
-        tone: "pink",
-        intent: ""
+      header({
+        icon: "test-dialog-amber",
+        tone: "coral",
+        paneTone: "sky"
       }).tone,
-      "pink"
+      "coral"
     );
   });
 
@@ -47,32 +67,23 @@ describe("resolveDialogHeader", () => {
     };
 
     for (const [intent, icon] of Object.entries(icons)) {
-      assert.equal(
-        resolveDialogHeader({ icon: "", tone: "", intent }).icon,
-        icon
-      );
+      assert.equal(header({ intent }).icon, icon);
     }
   });
 
   test("an explicit icon wins over the intent's default", () => {
-    assert.equal(
-      resolveDialogHeader({
-        icon: "lock",
-        tone: "",
-        intent: "danger"
-      }).icon,
-      "lock"
-    );
+    assert.equal(header({ icon: "lock", intent: "danger" }).icon, "lock");
   });
 
   test("an intent drops the area tone", () => {
     registerIcon("test-dialog-lime", "<path />", { tone: "lime" });
 
     assert.equal(
-      resolveDialogHeader({
+      header({
         icon: "test-dialog-lime",
         tone: "violet",
-        intent: "warning"
+        intent: "warning",
+        paneTone: "sky"
       }).tone,
       null
     );
@@ -80,11 +91,7 @@ describe("resolveDialogHeader", () => {
 
   test("only warning and danger raise an alert", () => {
     const alerts = ["info", "success", "warning", "danger"]
-      .filter((intent) => resolveDialogHeader({
-        icon: "",
-        tone: "",
-        intent
-      }).alert);
+      .filter((intent) => header({ intent }).alert);
 
     assert.deepEqual(alerts, ["warning", "danger"]);
   });
@@ -92,7 +99,7 @@ describe("resolveDialogHeader", () => {
   test("an unknown intent is ignored", () => {
     assert.equal(isDialogIntent("fatal"), false);
     assert.deepEqual(
-      resolveDialogHeader({ icon: "", tone: "sky", intent: "fatal" }),
+      header({ tone: "sky", intent: "fatal" }),
       { icon: "", intent: null, tone: "sky", alert: false }
     );
   });

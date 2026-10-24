@@ -46,9 +46,6 @@ const kCanvasOptions: PixelArtCanvasOptions = {
   },
   uv: {
     deselectOnEmptyClick: false
-  },
-  grid: {
-    visible: true
   }
 };
 
@@ -213,6 +210,14 @@ export class TextureEditor extends EditingElement {
     if (active !== null && this.#tabs.has(active)) {
       panel.activeTextureId = active;
     }
+    this.#followActiveCanvas();
+  }
+
+  #followActiveCanvas(): void {
+    const canvas = this.#panel?.canvasManager ?? null;
+    if (canvas !== null) {
+      this.editing?.state.textureView.follow(canvas);
+    }
   }
 
   #removeTab(
@@ -265,6 +270,7 @@ export class TextureEditor extends EditingElement {
     panel?.removeEventListener("texture-change", this.#onTextureChange);
     panel?.removeEventListener("texture-create-request", this.#addBlockset);
     panel?.removeEventListener("texture-edit-request", this.#onEditRequest);
+    this.editing?.state.textureView.dispose();
     this.#panel = null;
   }
 
@@ -321,6 +327,7 @@ export class TextureEditor extends EditingElement {
   readonly #onTextureChange = (
     event: CustomEvent<TextureChangeDetail>
   ): void => {
+    this.#followActiveCanvas();
     if (event.detail.source === "user" && this.editing !== null) {
       this.editing.blocksets.activeBlocksetId = event.detail.id;
     }

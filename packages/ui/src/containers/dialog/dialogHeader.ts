@@ -1,9 +1,10 @@
 // Import Internal Dependencies
-import type {
-  IconName,
-  IconTone
+import {
+  iconTone,
+  isIconTone,
+  type IconName,
+  type IconTone
 } from "../../icon/registry.ts";
-import { resolveAreaTone } from "../../theme/areaTone.ts";
 
 // CONSTANTS
 export const DIALOG_INTENTS = [
@@ -29,6 +30,7 @@ export interface DialogHeaderSource {
   icon: IconName;
   tone: string;
   intent: string;
+  paneTone: IconTone | null;
 }
 
 export interface DialogHeader {
@@ -47,13 +49,18 @@ export function isDialogIntent(
 export function resolveDialogHeader(
   options: DialogHeaderSource
 ): DialogHeader {
-  const { icon, tone, intent } = options;
+  const {
+    icon,
+    tone,
+    intent,
+    paneTone
+  } = options;
 
   if (!isDialogIntent(intent)) {
     return {
       icon,
       intent: null,
-      tone: resolveAreaTone(tone, icon),
+      tone: isIconTone(tone) ? tone : paneTone ?? iconTone(icon),
       alert: false
     };
   }

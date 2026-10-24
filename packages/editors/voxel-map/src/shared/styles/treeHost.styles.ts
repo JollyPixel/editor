@@ -8,7 +8,7 @@ export const treeHostStyles = css`
   }
 
   jolly-tree {
-    margin-inline: var(--jolly-space-1, 4px);
+    margin-inline: var(--jolly-space-1, 4px) 0;
   }
 
   .hint {

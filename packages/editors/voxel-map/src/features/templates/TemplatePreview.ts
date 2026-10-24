@@ -30,7 +30,8 @@ export class TemplatePreview extends EditingElement {
       }
 
       .frame {
-        padding: var(--jolly-space-1, 4px);
+        padding-block: var(--jolly-space-1, 4px);
+        padding-inline: var(--jolly-space-1, 4px) 0;
       }
 
       .well {

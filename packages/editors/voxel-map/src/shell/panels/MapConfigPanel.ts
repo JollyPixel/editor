@@ -37,6 +37,12 @@ export class MapConfigPanel extends LitElement {
       gap: var(--jolly-row-gap, 4px);
     }
 
+    jolly-button-group {
+      --jolly-field-inset-end: 0px;
+
+      padding-inline-start: var(--jolly-space-1, 4px);
+    }
+
     .toggles {
       --jolly-label-max-width: 70%;
 
@@ -59,8 +65,7 @@ export class MapConfigPanel extends LitElement {
   override render() {
     return html`
       <jolly-button-group
-        label="Lighting"
-        label-position="top"
+        aria-label="Lighting"
         .options=${kLightingOptions}
         .value=${this.#lighting.value}
         @jolly-change=${this.#lighting.commit}

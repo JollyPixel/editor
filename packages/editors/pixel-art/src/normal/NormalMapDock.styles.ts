@@ -3,8 +3,8 @@ import { css } from "lit";
 
 export const normalMapDockStyles = css`
   :host {
-    --jolly-field-inset-start: 0;
-    --jolly-field-inset-end: 0;
+    --jolly-field-inset-start: 0px;
+    --jolly-field-inset-end: 0px;
     --jolly-control-bg: color-mix(in oklab, var(--color-text) 8%, transparent);
     --jolly-control-bg-hover: color-mix(
       in oklab,

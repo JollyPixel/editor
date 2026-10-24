@@ -27,7 +27,9 @@ and accent-filled controls take the hue. Scope hosts read
 component that declares tokens of its own inside a toned pane follows the area
 too.
 
-`jolly-dialog` is a toned area the same way. Its `intent` (`info`, `success`,
+`jolly-dialog` is a toned area the same way, except that a dialog without a
+`tone` takes the tone of the pane it opens in before the tone of its icon. Its
+`intent` (`info`, `success`,
 `warning`, `danger`) is a separate input: it sets `--jolly-dialog-header-bg`
 from an `--jolly-intent-*-fill` token and nothing else, wins over a tone, and
 drops the area. The seven hues stay clear of the semantic ones — `coral` sits

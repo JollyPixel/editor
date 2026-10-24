@@ -50,6 +50,30 @@ function tonedDialog(): HTMLElement[] {
   return [trigger, dialog];
 }
 
+function paneDialog(): HTMLElement {
+  const dialog = document.createElement("jolly-dialog");
+  dialog.id = "pane-dialog";
+  dialog.heading = "Add block";
+  dialog.icon = "plus";
+  dialog.append(text("Opened in a sky pane: it takes the pane's tone."));
+  const close = button("Close", "accent");
+  close.slot = "actions";
+  close.addEventListener("click", () => dialog.close());
+  dialog.append(close);
+  const trigger = button("Open pane dialog");
+  trigger.dataset.action = "pane-dialog";
+  trigger.addEventListener("click", () => void dialog.showModal());
+
+  const panel = document.createElement("div");
+  panel.attachShadow({ mode: "open" }).append(trigger, dialog);
+  const pane = document.createElement("jolly-pane");
+  pane.heading = "Blocks";
+  pane.tone = "sky";
+  pane.append(panel);
+
+  return pane;
+}
+
 function inlineConfirmDialog(
   root: HTMLElement
 ): HTMLElement[] {
@@ -196,6 +220,6 @@ export const DIALOG_EXAMPLE: GalleryExample = {
       defaultAction,
       editableHeading
     );
-    host.append(root);
+    host.append(root, paneDialog());
   }
 };

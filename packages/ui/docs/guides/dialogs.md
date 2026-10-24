@@ -65,8 +65,9 @@ const choice = await showChoice({
 
 - `jolly-input` keeps `tag` current on every keystroke, so the value is there
   whichever way the action is chosen.
-- Set `--jolly-field-inset-start` and `--jolly-field-inset-end` to `0` on a
-  wrapper, so the fields line up with the message.
+- Set `--jolly-field-inset-start` and `--jolly-field-inset-end` to `0px` on a
+  wrapper, so the fields line up with the message. Keep the unit: the insets
+  feed a `calc()`, and a bare `0` makes it invalid.
 - For more than two or three fields, write a dialog element.
 
 ## 3. Write a dialog element

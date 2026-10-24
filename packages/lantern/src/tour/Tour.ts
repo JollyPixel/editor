@@ -8,6 +8,7 @@ import type {
   StepEnter,
   StepTarget,
   StepUntil,
+  StepWhen,
   TargetLocator,
   TourStep,
   TourStepOptions
@@ -43,6 +44,7 @@ const kStepSchema = z.pipe(
     })),
     target: z.optional(kTargetSchema),
     side: z.optional(z.enum(["above", "below", "left", "right"])),
+    when: z.optional(z.custom<StepWhen>(isFunction, "must be a function")),
     enter: z.optional(z.custom<StepEnter>(isFunction, "must be a function")),
     until: z.optional(z.custom<StepUntil>(isFunction, "must be a function"))
   }),
@@ -53,6 +55,7 @@ const kStepSchema = z.pipe(
     image: step.image === undefined ? null : Object.freeze(step.image),
     target: step.target ?? null,
     side: step.side ?? "below",
+    when: step.when ?? null,
     enter: step.enter ?? null,
     until: step.until ?? null
   }))

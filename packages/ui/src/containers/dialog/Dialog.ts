@@ -26,7 +26,10 @@ import {
   type InlineConfirmOptions
 } from "./inlineConfirm.ts";
 import { emitContainerEvent } from "../events.ts";
-import { deepActiveElement } from "../../dom.ts";
+import {
+  composedClosest,
+  deepActiveElement
+} from "../../dom.ts";
 import "../../controls/Button.ts";
 import "../../icon/Icon.ts";
 import type {
@@ -82,11 +85,15 @@ export class Dialog extends LitElement {
   @state()
   private declare _confirmation: InlineConfirmation | null;
 
+  @state()
+  private declare _paneTone: IconTone | null;
+
   #settleConfirmation: ((confirmed: boolean) => void) | null = null;
   #header: DialogHeader = resolveDialogHeader({
     icon: "",
     tone: "",
-    intent: ""
+    intent: "",
+    paneTone: null
   });
   #theme = new AmbientThemeController(this);
   #releaseInputLayer: (() => void) | null = null;
@@ -103,6 +110,7 @@ export class Dialog extends LitElement {
     this.dismissible = true;
     this.headingEditable = false;
     this._confirmation = null;
+    this._paneTone = null;
   }
 
   override disconnectedCallback(): void {
@@ -126,12 +134,14 @@ export class Dialog extends LitElement {
     if (
       changed.has("icon") ||
       changed.has("tone") ||
-      changed.has("intent")
+      changed.has("intent") ||
+      changed.has("_paneTone")
     ) {
       this.#header = resolveDialogHeader({
         icon: this.icon,
         tone: this.tone,
-        intent: this.intent
+        intent: this.intent,
+        paneTone: this._paneTone
       });
       applyAreaTone(this, this.#header.tone);
     }
@@ -232,6 +242,7 @@ export class Dialog extends LitElement {
 
   async showModal(): Promise<void> {
     this.#theme.follow();
+    this._paneTone = composedClosest(this, "jolly-pane")?.areaTone ?? null;
     await this.updateComplete;
     if (!this._dialog.open) {
       this.#closing = false;

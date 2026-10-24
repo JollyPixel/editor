@@ -45,8 +45,8 @@ export class BrushOrientation extends EditingElement {
     jolly-toggle {
       --jolly-row-height: var(--brush-orientation-height);
       --jolly-control-height: var(--brush-orientation-height);
-      --jolly-field-inset-start: 0;
-      --jolly-field-inset-end: 0;
+      --jolly-field-inset-start: 0px;
+      --jolly-field-inset-end: 0px;
       --jolly-radius-sm: 0;
     }
 

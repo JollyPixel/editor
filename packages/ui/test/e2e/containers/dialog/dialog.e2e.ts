@@ -4,6 +4,10 @@ import {
   expect
 } from "../../fixtures.ts";
 import { openExample } from "../../support/gallery.ts";
+import {
+  readPartStyle,
+  resolveColor
+} from "../../support/styles.ts";
 
 type DialogHost = HTMLElement & {
   readonly closing: boolean;
@@ -304,19 +308,17 @@ test.describe("Dialog header", () => {
     await expect(host.locator("dialog")).toHaveAttribute("open");
     await expect(host).toHaveAttribute("toned");
 
-    const colours = await host.evaluate((element) => {
-      const probe = document.createElement("div");
-      probe.style.background = "var(--jolly-tone-teal-fill)";
-      element.shadowRoot!.querySelector("dialog")!.append(probe);
-      const header = element.shadowRoot!.querySelector("header")!;
-      const result = {
-        header: getComputedStyle(header).backgroundColor,
-        fill: getComputedStyle(probe).backgroundColor
-      };
-      probe.remove();
+    expect(await readPartStyle(host, "header", "background-color"))
+      .toBe(await resolveColor(host, "var(--jolly-tone-teal-fill)"));
+  });
 
-      return result;
-    });
-    expect(colours.header).toBe(colours.fill);
+  test("a dialog in a toned pane takes the pane's tone over its icon's", async({ page }) => {
+    const host = page.locator("#pane-dialog");
+
+    await page.locator("[data-action=pane-dialog]").click();
+    await expect(host.locator("dialog")).toHaveAttribute("open");
+
+    expect(await readPartStyle(host, "header", "background-color"))
+      .toBe(await resolveColor(host, "var(--jolly-tone-sky-fill)"));
   });
 });
