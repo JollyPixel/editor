@@ -1,5 +1,25 @@
 # @jolly-pixel/loop
 
+## 2.0.0
+
+### Major Changes
+
+- [#846](https://github.com/JollyPixel/editor/pull/846) [`f949b80`](https://github.com/JollyPixel/editor/commit/f949b807ba586adee8b88f476261334eef8a703a) Thanks [@fraxken](https://github.com/fraxken)! - Rename `RafFrameSource` to `RequestAnimationFrameSource` (and `RafFrameSourceOptions` to `RequestAnimationFrameSourceOptions`).
+
+### Minor Changes
+
+- [#1012](https://github.com/JollyPixel/editor/pull/1012) [`837a08f`](https://github.com/JollyPixel/editor/commit/837a08fc80a0b41a1f2c0549fff8f6423db9066b) Thanks [@fraxken](https://github.com/fraxken)! - `FrameScheduler` starts and recovers from panics at half a step, so jittery 60 Hz frames run one step each; add `snapTolerance` to snap deltas to measured refresh periods (`refreshPeriod`, `phaseShift`, `FrameSchedule.snapped`).
+  Add `FrameRateGovernor`, which halves the render rate while frames keep missing their refresh and retries with backoff.
+
+- [#849](https://github.com/JollyPixel/editor/pull/849) [`5f66fe9`](https://github.com/JollyPixel/editor/commit/5f66fe99d7d1b7cb1df7c1383f2fa60ba6acf6cd) Thanks [@fraxken](https://github.com/fraxken)! - Time scale support: `FrameSchedule.unscaledDelta`, `GameLoop.step()` for frame-by-frame debugging, and a step budget that grows with `timeScale` above 1.
+  Add `world.time` (game, wall-clock and fixed-step time); `Camera3DControls` and `OrbitFlyCamera` move in wall-clock time, so they work in slow motion and while paused.
+  `World.tick` samples input once per frame and publishes it to each fixed step and to the rendered frame, so a press on a frame without a step reaches the next one.
+
+- [#908](https://github.com/JollyPixel/editor/pull/908) [`0436e3c`](https://github.com/JollyPixel/editor/commit/0436e3c645a2d717b90bb407ce41eb412beb4943) Thanks [@fraxken](https://github.com/fraxken)! - Add `renderDelta`/`unscaledRenderDelta` so `update` and `world.time` include frames skipped by `maxFps`; renders land on the nearest frame so a cap at the display rate no longer drops frames.
+
+- [#1017](https://github.com/JollyPixel/editor/pull/1017) [`02ab0a3`](https://github.com/JollyPixel/editor/commit/02ab0a3a9eeef46f26b5d45846c057249729b3c3) Thanks [@fraxken](https://github.com/fraxken)! - `GameLoop` takes an `idleDelay` before it sleeps. The runtime sets it to 2 s with `renderOnDemand` in place of rendering every frame while the pointer hovers the canvas.
+  `StatsRecorder.skipGap()` keeps the time the loop slept out of the FPS graph.
+
 ## 1.1.0
 
 ### Minor Changes

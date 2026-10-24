@@ -1,5 +1,110 @@
 # @jolly-pixel/network
 
+## 6.0.0
+
+### Major Changes
+
+- [#1009](https://github.com/JollyPixel/editor/pull/1009) [`5af5621`](https://github.com/JollyPixel/editor/commit/5af5621e4223fb97ab38b22530a64c0884d52051) Thanks [@fraxken](https://github.com/fraxken)! - `CommandSync` holds every command while disconnected: the offline bound, `overflowed`, `overflow` and `discarded` are removed.
+  `PendingChanges.keepIn(outbox)` mirrors pending commands into a `ChangeOutbox` and resumes from the restored commands' client id; a pending command whose replay throws is now refused.
+
+- [#1069](https://github.com/JollyPixel/editor/pull/1069) [`176b005`](https://github.com/JollyPixel/editor/commit/176b005c86d6d2e62e6d03780d26cf6f770e2650) Thanks [@fraxken](https://github.com/fraxken)! - Rename `CommandDocumentKind.createDocument(room)` to `syncDocument(room)` (now an alias of the new `DocumentKind`), `InvalidAssetDocumentError` to `InvalidAssetFileError` and `ProjectFile.document` to `ProjectFile.data`.
+  Rename the `.pixelart` codec to `PixelArtFile` (`create/parse/encode/decodePixelArtFile`, `InvalidPixelArtFileError`, `PIXEL_ART_FILE_VERSION`) and `DocumentCommand` to `PixelDocumentCommand`.
+
+- [#924](https://github.com/JollyPixel/editor/pull/924) [`f174add`](https://github.com/JollyPixel/editor/commit/f174addea4b885bd601976b7fd730a91a0b047c4) Thanks [@fraxken](https://github.com/fraxken)! - `CommandDocument`, `ChangeReceipts` and `CommandHistory` move from `@jolly-pixel/network/client` to the new `@jolly-pixel/history` package.
+  `PixelArtCanvas` undo runs on a `PixelArtCanvasHistory` the host passes in; `PixelDocument` loses `history`, `undo()` and `redo()` and emits plain `EditChange`s.
+  `VoxelHistory` is removed and neither renderer depends on `@jolly-pixel/history`: undo wiring lives in the asset packages.
+
+- [#1024](https://github.com/JollyPixel/editor/pull/1024) [`9123c45`](https://github.com/JollyPixel/editor/commit/9123c4578d791cb8f9d3749e56d2c8268ee87ec7) Thanks [@fraxken](https://github.com/fraxken)! - Rename methods named `xOf`, `xFor` or `getX`/`setX` after what they do (for example `inverseOf` → `invert`, `UVRegion.rectFor` → `slotRect`, `MessageParser.of` → `fromProtocol`).
+  The package docs list the new names; behavior is unchanged.
+
+- [#933](https://github.com/JollyPixel/editor/pull/933) [`02172bd`](https://github.com/JollyPixel/editor/commit/02172bd0a88a1db4612b76a41d78e424517f5ba0) Thanks [@fraxken](https://github.com/fraxken)! - A rights table now denies unmatched keys; end a role with `"*": "write"` to keep it open. `WebsocketTransport` checks Host and Origin headers, caps payloads, terminates slow or silent sockets, and no longer crashes when a client resets during authentication.
+  `PasswordAuthentication` limits failed attempts per address, `ServerOptions.limits` bounds presence size and resync rate, and `attributeCommand` stamps command headers on the server.
+
+- [#941](https://github.com/JollyPixel/editor/pull/941) [`5fbedf2`](https://github.com/JollyPixel/editor/commit/5fbedf27124e3deb38992f3b70592b9536d9223c) Thanks [@fraxken](https://github.com/fraxken)! - `Server.connect(client, identity)` returns a `ServerConnection` with `receive(raw)` and an idempotent `close()`, replacing `handleConnect`, `handleMessage` and `handleDisconnect`; a closing connection drops the envelopes it still receives.
+  A member whose `onClientConnect` throws now leaves its room on disconnect, so peers get `peer-left` and the room can be evicted.
+
+- [#1051](https://github.com/JollyPixel/editor/pull/1051) [`8323f7d`](https://github.com/JollyPixel/editor/commit/8323f7d1ac6ccb05c46407561cccf13a85098285) Thanks [@fraxken](https://github.com/fraxken)! - Drop `serverMessageProtocol`, `attributeCommand`, `ConflictTracker` and the `ConflictResolver` option; `CommandSync` requires a `reconciler` and makes `sendChange` public.
+  `KeyedCommandArbiter` takes `writes` (scoped keys or a reset) plus an optional `narrow`; new `SyncedDocument` base class.
+
+- [#1025](https://github.com/JollyPixel/editor/pull/1025) [`3d53ea9`](https://github.com/JollyPixel/editor/commit/3d53ea9ae1d62eed99cde3dd80a1c8831deedffb) Thanks [@fraxken](https://github.com/fraxken)! - Transports decode the credential into `request.credential`; `readCredential` and `InvalidCredentialError` are gone, and a malformed WebSocket credential is refused with `4401` before any provider runs.
+  `Server.connect` takes a `ClientConnection` (`id`, `sendSerialized`, `close`) and serializes every message itself; extensions still receive `ClientHandle`. `isChannelTransportMessage` and `ChannelTransportMessage` are no longer exported.
+
+- [#1022](https://github.com/JollyPixel/editor/pull/1022) [`1a9db4f`](https://github.com/JollyPixel/editor/commit/1a9db4f0e48b42c9f23e302e117f24fcd1211e66) Thanks [@fraxken](https://github.com/fraxken)! - Schemas are written with zod instead of JSON Schema (`defineSchema` and `JSONSchema` are removed): Node validates them with ata-validator, browsers with zod. `withEvent` names a variant's event, `minProperties`/`dependentRequired`/`requiredAnyOf`/`notMultipleOf` cover rules zod cannot emit, and `ValidationError` keeps `instancePath` and `message` only.
+  Kind packages export a zod `optionsSchema`, and `ServerOptions.validateOutbound: false` names outbound messages from their tags without validating them.
+
+### Minor Changes
+
+- [#1021](https://github.com/JollyPixel/editor/pull/1021) [`334fb9b`](https://github.com/JollyPixel/editor/commit/334fb9b31baf67b797f0f9564ac4f6be2c689e11) Thanks [@fraxken](https://github.com/fraxken)! - Cache the catalog join snapshot and HTTP body per catalog revision, defer projection state saves of single-asset flushes by up to a second, and drop per-command allocations on asset room edits.
+  A room validates and serializes a frozen outbound payload once and reuses it. The sqlite append no longer scans the asset's whole history to find its next version.
+
+- [#865](https://github.com/JollyPixel/editor/pull/865) [`35f9459`](https://github.com/JollyPixel/editor/commit/35f94598ed00f46dfd07152c752f8604d6ce436f) Thanks [@fraxken](https://github.com/fraxken)! - `ChannelTransport` and `ChannelTransportHost` accept a `socketPort` factory that gives each socket its own port, so a shared `BroadcastChannel` only carries connect messages.
+  The host follows each client's choice and closes a socket it cannot give a port with code `1002`.
+
+- [#945](https://github.com/JollyPixel/editor/pull/945) [`ef2c7fe`](https://github.com/JollyPixel/editor/commit/ef2c7fe37e1d532b745e6462c26bb9f650ccc875) Thanks [@fraxken](https://github.com/fraxken)! - Profiles update live: `Server.updateProfile` (fed by `AuthenticationProvider.watchProfiles`) sends `peer-profile` to every room member, and `Room.profile` holds the profile the server admitted for this client.
+  `Accounts.watchProfiles` reports a new avatar, and `PeerRoster` follows both, so peers and the local row show it without reconnecting.
+
+- [#922](https://github.com/JollyPixel/editor/pull/922) [`12dca6e`](https://github.com/JollyPixel/editor/commit/12dca6e98be8b71f9ef8517edcc17d8e8520fb72) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add `CommandHistory`: per-person undo and redo over `CommandDocument`s, synced by `DocumentSyncClient` and owned by `SyncedCommandDocument`, refusing a step a peer changed since.
+  Resyncs carry `refused` and `CommandSync` emits `"refused"` on rollback; `ChangeReceipts` carries the server's answers about local changes.
+  `jolly-tree` takes `validateRename` to refuse a rename, and `TreeNode.warning` flags a row with a warning icon.
+
+- [#988](https://github.com/JollyPixel/editor/pull/988) [`c141b45`](https://github.com/JollyPixel/editor/commit/c141b453ebd7191ee44bd98b74825e8b9570264e) Thanks [@fraxken](https://github.com/fraxken)! - Add `DataChannelPort`, which carries the channel transport over an `RTCDataChannel` in bounded frames with backpressure.
+  `ChannelTransport` takes a `credential` and passes it to the host's `open(options)`, typed `SocketConnectOptions`.
+  `LoopbackTransport.connect(options)` puts it on the authentication attempt, and `readCredential` prefers it over the handshake.
+
+- [#1019](https://github.com/JollyPixel/editor/pull/1019) [`9bcc044`](https://github.com/JollyPixel/editor/commit/9bcc044e1feaaed69f3344d17bff5b7e7f3ea797) Thanks [@fraxken](https://github.com/fraxken)! - Batch each socket's WebSocket writes per event loop turn and cut per-message allocations on the server and client receive paths.
+  Add the opt-in `trustServer` client option, which skips prototype scrubbing and envelope schema checks on server messages.
+
+- [#928](https://github.com/JollyPixel/editor/pull/928) [`c86b214`](https://github.com/JollyPixel/editor/commit/c86b214c710a64428fa251465f3bcd7984471a36) Thanks [@fraxken](https://github.com/fraxken)! - `PeerIdentity` gains an optional server-owned `profile`, merged over the client's profile on join.
+  `@jolly-pixel/network/node` exports `hashPassword`, `verifyPassword` and `PasswordHash`.
+
+- [#972](https://github.com/JollyPixel/editor/pull/972) [`85641f5`](https://github.com/JollyPixel/editor/commit/85641f5459de96c87aea28ae1ec5ef564991a760) Thanks [@fraxken](https://github.com/fraxken)! - `CommandSync` emits `unsettled` when `pending` leaves zero, and `settled` also after a discard.
+  `SyncedCommandDocument.pendingChanges` exposes that count and both events as `PendingChanges`.
+
+- [#868](https://github.com/JollyPixel/editor/pull/868) [`40e16a4`](https://github.com/JollyPixel/editor/commit/40e16a4ae92fdb94931b59e9ba80af52330b1bc4) Thanks [@fraxken](https://github.com/fraxken)! - Envelopes are parsed with `secure-json-parse` (dropping `__proto__` and `constructor.prototype` keys), and presence patches no longer use `Object.assign`.
+  `readCredential` throws the new `InvalidCredentialError` for a token that is not base64url UTF-8, rights patterns follow the documented rules (only `*` is special), and `ChannelTransportHost.close()` now closes client sockets with code `1001`.
+
+- [#940](https://github.com/JollyPixel/editor/pull/940) [`27cff63`](https://github.com/JollyPixel/editor/commit/27cff63c507ae72b62c0299999590c839f2ac492) Thanks [@fraxken](https://github.com/fraxken)! - `Server.revoke(subject)` closes a subject's connections with code `4001` so clients authenticate again.
+  Providers may implement `watchRevocations` to trigger it, and `ClientHandle` gains an optional `close(code, reason)`.
+
+- [#954](https://github.com/JollyPixel/editor/pull/954) [`28dae7b`](https://github.com/JollyPixel/editor/commit/28dae7b8ef17f600128ba02cfe33436afadf1c92) Thanks [@fraxken](https://github.com/fraxken)! - Add `CapabilityTable`, `Grants` and `RoomGrants` to group room events into capabilities and follow a client's grants across `sync`, forwarding governed `denied` refusals.
+
+- [#985](https://github.com/JollyPixel/editor/pull/985) [`13c7153`](https://github.com/JollyPixel/editor/commit/13c7153fcd2cfded9e0f9be6536e0aae8440ba19) Thanks [@fraxken](https://github.com/fraxken)! - Add `WebsocketTransport[Symbol.dispose]()`, which terminates the transport's sockets without waiting for the HTTP server to close.
+
+- [#930](https://github.com/JollyPixel/editor/pull/930) [`a75ee6d`](https://github.com/JollyPixel/editor/commit/a75ee6dc5ef94c274f0f3b69d8eeff73e018e495) Thanks [@fraxken](https://github.com/fraxken)! - `createWebSocketNetworkPlugin` also serves rooms from `vite preview`.
+
+- [#968](https://github.com/JollyPixel/editor/pull/968) [`a1c9713`](https://github.com/JollyPixel/editor/commit/a1c9713eafcdf644030bd565c4e119b84e3cfea8) Thanks [@fraxken](https://github.com/fraxken)! - `Client.reconnect()` reopens a client the server refused as `unauthorized`; joined rooms rejoin with their resume payload.
+  `ShellChannel.renewWhenRefused(client)` posts the `session-refused` shell command and reconnects on `sessionRenewedMessage()`; `EditorSession.open` wires it for framed editors.
+
+- [#963](https://github.com/JollyPixel/editor/pull/963) [`f20007a`](https://github.com/JollyPixel/editor/commit/f20007a1717a9b9bbab779489156c36451be38a0) Thanks [@fraxken](https://github.com/fraxken)! - Add view-only share links: `accounts.shareLinks` stores expiring link tokens that `authenticate` resolves to a `GUEST_ROLE` identity, and the `Server` option `admits` limits that identity to some rooms.
+  `CatalogViewExtension` serves a read-only catalog scoped to one asset's dependency closure (`CatalogClient.connect(client, { room })`), `launchElement` injects the launch, and `createAssetServerPlugin({ http: false })` drops the unauthenticated HTTP routes.
+  `PresencePeer.badge` shows "via link" for guests.
+
+- [#1045](https://github.com/JollyPixel/editor/pull/1045) [`695ee81`](https://github.com/JollyPixel/editor/commit/695ee81072bd90cae25c03e5e850ce214153278b) Thanks [@fraxken](https://github.com/fraxken)! - Settings change without a restart: `Server.replaceRights`, kind options via `ProjectFile.replace`, `KindPackage.withOptions` and `ProjectKinds`/`AssetKindRegistry.replace`, and `Accounts.replaceRoles`/`replaceAccessRequests`; `RightsPattern` is exported.
+  Accounts store per-account `preferences` and report typed `AccountActivity` events; `listAll` pages newest first with `beforeEventId`.
+  `OrbitFlyCamera` gains `invertY` and a `touchpadSwipe` look or pan mode.
+
+- [#977](https://github.com/JollyPixel/editor/pull/977) [`6b9daee`](https://github.com/JollyPixel/editor/commit/6b9daee5304c6bf06fd77086633e682d35640afc) Thanks [@fraxken](https://github.com/fraxken)! - Tag rooms: `AssetRoom` takes an optional `tag` (`kind@tag:assetId`), and the asset-server resolves such a room read-only with the tagged content through `AssetTags.read()`.
+  Network `RoomResolution.readOnly` caps every message right of a resolved room at `read`, and `RightsGate.configured` becomes `gated`; `TagName` (with `isRestorePoint`) and `InvalidTagNameError` are exported from `@jolly-pixel/asset-server/client`.
+
+- [#1048](https://github.com/JollyPixel/editor/pull/1048) [`e1e86cb`](https://github.com/JollyPixel/editor/commit/e1e86cb232b5e021d839a58b8b68013194308349) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Relay schemas move to `AssetCommands.relay`, checked when `registerAssetRooms` starts; handler APIs return `AnyAssetKindHandler`, and `@jolly-pixel/asset-server/testing` adds `LiveAssetRoom` and `mockAssetRoom`.
+  Add `KeyedCommandArbiter` and `commandDocumentKind` to `@jolly-pixel/network`; breaking: `SyncedCommandDocument` now takes `<TDocument, TNotice>`.
+  Add `SceneManager.unloadScene(scene)` to `@jolly-pixel/engine`.
+
+- [#967](https://github.com/JollyPixel/editor/pull/967) [`75902c5`](https://github.com/JollyPixel/editor/commit/75902c51ba6fb64d72d322e9bc73a80e8dcfbce2) Thanks [@fraxken](https://github.com/fraxken)! - `RoomPresenceSource(room)` and `PeerRoster` key peers by connection and read the local peer from `room.profile`, now the claimed profile until `sync`; both drop `identity`, and claims travel under `fieldLock`.
+  `@jolly-pixel/network` adds `parsePeerProfile`, `PeerProfileMetadata`, `GUEST_USERNAME` and `PresenceChannel.published`; `ui` drops `readUsername`, `readPeerId`, `readAvatar`, `readBadge`, `NullPresenceSource` and `LocalPeerIdentity`, and renames `presencePeerOf` and `toPeerMetadata` to `toPresencePeer` and `toPeerProfileMetadata`.
+  `PeerFrustumSync` labels a peer without a `username` as `"Guest"` by default.
+
+### Patch Changes
+
+- [#1019](https://github.com/JollyPixel/editor/pull/1019) [`e91817e`](https://github.com/JollyPixel/editor/commit/e91817e4dc21e0f659340de5ab426cdec4d45067) Thanks [@fraxken](https://github.com/fraxken)! - Update ata-validator to 1.53.0 and recompile the envelope validators.
+  A protocol that declares no message now rejects payloads without running the union validator.
+
+- [#869](https://github.com/JollyPixel/editor/pull/869) [`e646731`](https://github.com/JollyPixel/editor/commit/e646731d6968af9a58604f5b503950e73dfa9681) Thanks [@fraxken](https://github.com/fraxken)! - event-store adds `expectedVersion` appends (`EventVersionConflictError`) and per-asset `compact` (`assetId`); SQLite files open in WAL mode with incremental vacuum.
+  asset-server snapshots no longer reload live state or drop commands appended while serializing, compacts before snapshots (`compactOnSnapshot`), caches room snapshots per version and reconciles only changed paths; `watch` reports readiness through `onReady` and skips initial and temporary entries.
+  network room loggers no longer overwrite the shared logger context, and disabled debug logs skip building metadata.
+- Updated dependencies [[`5af5621`](https://github.com/JollyPixel/editor/commit/5af5621e4223fb97ab38b22530a64c0884d52051), [`a23ea74`](https://github.com/JollyPixel/editor/commit/a23ea74dca38f8684e890f0abed659277ccc230e), [`9123c45`](https://github.com/JollyPixel/editor/commit/9123c4578d791cb8f9d3749e56d2c8268ee87ec7)]:
+  - @jolly-pixel/history@2.0.0
+
 ## 5.0.0
 
 ### Major Changes

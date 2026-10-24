@@ -1,5 +1,16 @@
 # @jolly-pixel/image
 
+## 2.1.0
+
+### Minor Changes
+
+- [#1016](https://github.com/JollyPixel/editor/pull/1016) [`5df8953`](https://github.com/JollyPixel/editor/commit/5df89531ef26fe891a7ef5ed6144ea8dc2155bee) Thanks [@fraxken](https://github.com/fraxken)! - `encodePng` takes an optional `{ filter }`: `"adaptive"` (the default) or one fixed PNG row filter. `encodePngPixels` uses `"none"`: a 1024x512 tileset snapshot drops from about 165 KB to 95 KB.
+  pixel-draw.renderer and asset-server decode and encode base64 natively (`Uint8Array.fromBase64`, `Buffer`, then `atob`) and drop `js-base64`.
+
+### Patch Changes
+
+- [#851](https://github.com/JollyPixel/editor/pull/851) [`797aeb9`](https://github.com/JollyPixel/editor/commit/797aeb960560778e6f71219197859bb001f2045a) Thanks [@fraxken](https://github.com/fraxken)! - Faster PNG encoding and decoding: specialized branchless scanline filters, a single-pass adaptive filter score, SWAR unfiltering, palette lookup tables, a zero-copy RGBA path, slicing-by-8 CRC-32, and inflation into a preallocated buffer.
+
 ## 2.0.0
 
 ### Major Changes

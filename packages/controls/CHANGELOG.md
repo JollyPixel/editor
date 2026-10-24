@@ -1,5 +1,35 @@
 # @jolly-pixel/controls
 
+## 4.0.0
+
+### Major Changes
+
+- [#1047](https://github.com/JollyPixel/editor/pull/1047) [`5d9e5a4`](https://github.com/JollyPixel/editor/commit/5d9e5a484c5e7ce27d7d702bc2fe05df495bbc19) Thanks [@fraxken](https://github.com/fraxken)! - Breaking: devices share one edge bank, so a tap between two samples reports both edges; device state arrays, `Mouse.newPosition`/`newDelta`/`synchronizeWithTouch`, `Screen.requestFullscreenIfWanted`, `Keyboard.enabled`, condition `bind()` (use `bindInputCondition()`), `KeyBindingSettings.sync()` and `InputActionQuery` are removed.
+  Mouse follows the first touch and Screen its own gestures, so fullscreen now completes on touch; Touchpad allocates slots, the Gamepad `Home` button works, conditions take `InputDevices`, and `KeyboardLayoutStore` is exported.
+  `Keyboard.wasDownLastUpdate()` lets aliases report a tap then a hold in one frame, mouse scroll queries share one edge, and `Input` device fields are readonly.
+
+- [#849](https://github.com/JollyPixel/editor/pull/849) [`5f66fe9`](https://github.com/JollyPixel/editor/commit/5f66fe99d7d1b7cb1df7c1383f2fa60ba6acf6cd) Thanks [@fraxken](https://github.com/fraxken)! - Breaking: `publishFrameState()` is replaced by `publish(reader)` on `Input` and every device, with `InputReader` `"step"` or `"frame"`; `sample()` reads input without publishing, and `update()` is `sample()` then `publish("step")`.
+  Each reader sees every edge once, so a fixed-step host samples once per frame and a frame without a step no longer drops edges.
+
+- [#1024](https://github.com/JollyPixel/editor/pull/1024) [`9123c45`](https://github.com/JollyPixel/editor/commit/9123c4578d791cb8f9d3749e56d2c8268ee87ec7) Thanks [@fraxken](https://github.com/fraxken)! - Rename methods named `xOf`, `xFor` or `getX`/`setX` after what they do (for example `inverseOf` → `invert`, `UVRegion.rectFor` → `slotRect`, `MessageParser.of` → `fromProtocol`).
+  The package docs list the new names; behavior is unchanged.
+
+### Minor Changes
+
+- [#1061](https://github.com/JollyPixel/editor/pull/1061) [`d225112`](https://github.com/JollyPixel/editor/commit/d2251127dac7d6b2ca8f4bf123331062156d645f) Thanks [@fraxken](https://github.com/fraxken)! - `OrbitFlyCamera` takes its fly and look keys from `OrbitFlyKeys` (`keys` option and setter).
+  A tour body span such as `` `{camera.forward}` `` shows the key bound to that action, served by `lantern.keys`.
+  `KeyChord.format()` names a bare modifier key, and controls exports `isKeyCode` and `MODIFIER_KEY_CODES`.
+
+- [#1075](https://github.com/JollyPixel/editor/pull/1075) [`6d8484f`](https://github.com/JollyPixel/editor/commit/6d8484fe99f34f8ed90b407fc6e657c0387c1acf) Thanks [@fraxken](https://github.com/fraxken)! - Add `ShortcutLabels`, which writes tooltip text such as `Undo (Ctrl+Z)` from the chords a `KeyBindingSettings` binds, on the current keyboard layout, and notifies on each rebind or layout change.
+
+- [#1038](https://github.com/JollyPixel/editor/pull/1038) [`ce42278`](https://github.com/JollyPixel/editor/commit/ce42278634922401f293644c76ee55b71ae041db) Thanks [@fraxken](https://github.com/fraxken)! - Add `KeyBindingSettings`, which keeps a `KeyBindingMap`, loads stored overrides, emits each new map and rebinds handlers on change.
+  `KeyBindingMap` gains `rebind()`, `restore()`, `toJSON()` and static `parse()` and `from()` that drop invalid stored entries.
+  `KeyBindingMap.bind()` accepts handlers for a subset of the actions.
+
+- [#984](https://github.com/JollyPixel/editor/pull/984) [`51c9b58`](https://github.com/JollyPixel/editor/commit/51c9b58a6d5d6f279413d82be26c9d92609905c9) Thanks [@fraxken](https://github.com/fraxken)! - `Mouse.scrollSource` tells wheel notches, two-finger touchpad swipes and zooms (pinch or Ctrl+wheel) apart; `scrollDevice` overrides the detection.
+  `OrbitFlyCamera` looks around on a two-finger swipe and with I/J/K/L (`touchpadLookSensitivity`, `keyLookSpeed`); a pinch does what the wheel does.
+  `OrbitFlyCamera` eases in and out of movement (`accelerationTime`, `brakingTime`); `responsiveness` now only damps the pivot and trail.
+
 ## 3.0.0
 
 ### Major Changes
