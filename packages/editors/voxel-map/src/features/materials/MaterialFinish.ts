@@ -13,6 +13,11 @@ import {
   FieldBinding,
   type FieldSource
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/color";
+import "@jolly-pixel/ui/elements/number";
+import "@jolly-pixel/ui/elements/separator";
+import "@jolly-pixel/ui/elements/spin-slider";
 import {
   MaterialGroup,
   MAX_LIGHT_LEVEL,

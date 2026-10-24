@@ -1,8 +1,7 @@
 // Import Third-party Dependencies
-import {
-  DockFacade,
-  Pane
-} from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/dock";
+import "@jolly-pixel/ui/elements/dock-layout";
+import { DockFacade, Pane } from "@jolly-pixel/ui/facade";
 
 // Import Internal Dependencies
 import { exampleOptions } from "./manifest.ts";

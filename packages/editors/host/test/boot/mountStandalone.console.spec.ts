@@ -33,9 +33,14 @@ describe("mountStandalone console", () => {
       return Promise.resolve(editorHandle(context.session));
     }), offlineOptions(server));
 
+    assert.equal(received.length, 1);
+    const opened = new Promise<void>((resolve) => {
+      received[0].subscribe("opened", () => resolve());
+    });
+    received[0].open();
+    await opened;
     const elements = document.querySelectorAll("jolly-console");
     assert.equal(elements.length, 1);
-    assert.equal(received.length, 1);
     assert.equal(elements[0].console, received[0]);
     assert.notEqual(
       received[0].registry.resolveVariable("theme"),

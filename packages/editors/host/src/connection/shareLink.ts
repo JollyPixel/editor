@@ -4,7 +4,7 @@ import {
   CatalogClient
 } from "@jolly-pixel/asset-server/client";
 import { connectWebSocket } from "@jolly-pixel/network/client";
-import { showChoice } from "@jolly-pixel/ui";
+import { showChoice } from "@jolly-pixel/ui/elements/dialog";
 
 // Import Internal Dependencies
 import { guestConnection } from "./guest.ts";

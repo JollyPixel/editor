@@ -2,10 +2,8 @@
 import * as THREE from "three/webgpu";
 import * as network from "@jolly-pixel/network/client";
 import { ColorSequence } from "@jolly-pixel/color";
-import {
-  LocalStorageAdapter,
-  resolveStoredPrompt
-} from "@jolly-pixel/ui";
+import { LocalStorageAdapter } from "@jolly-pixel/ui";
+import { resolveStoredPrompt } from "@jolly-pixel/ui/elements/dialog";
 
 // Import Internal Dependencies
 import {

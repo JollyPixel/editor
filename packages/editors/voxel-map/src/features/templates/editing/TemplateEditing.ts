@@ -5,10 +5,8 @@ import type {
 } from "@jolly-pixel/voxel.renderer";
 import type { CommandHistory } from "@jolly-pixel/history";
 import type { CameraPose } from "@jolly-pixel/engine";
-import {
-  showConfirm,
-  type LogQueue
-} from "@jolly-pixel/ui";
+import type { LogQueue } from "@jolly-pixel/ui";
+import { showConfirm } from "@jolly-pixel/ui/elements/dialog";
 import type { Box3 } from "three";
 
 // Import Internal Dependencies

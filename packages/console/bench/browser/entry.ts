@@ -1,6 +1,3 @@
-// Import Third-party Dependencies
-import "@jolly-pixel/ui";
-
 // Import Internal Dependencies
 import "../../src/element/index.ts";
 import type { ConsoleElement } from "../../src/element/Console.ts";

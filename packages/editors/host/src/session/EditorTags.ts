@@ -7,10 +7,8 @@ import {
   type CatalogClientEvents,
   type RestoreReport
 } from "@jolly-pixel/asset-server/client";
-import {
-  showConfirm,
-  type ConfirmOptions
-} from "@jolly-pixel/ui";
+import type { ConfirmOptions } from "@jolly-pixel/ui";
+import { showConfirm } from "@jolly-pixel/ui/elements/dialog";
 
 // Import Internal Dependencies
 import type { LaunchNavigator } from "../launch/LaunchNavigator.ts";

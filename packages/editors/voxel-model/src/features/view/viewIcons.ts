@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import { svg } from "lit";
-import { registerIcon } from "@jolly-pixel/ui/icon";
+import { registerIcon } from "@jolly-pixel/ui";
 
 registerIcon("view-studio", svg`
   <path

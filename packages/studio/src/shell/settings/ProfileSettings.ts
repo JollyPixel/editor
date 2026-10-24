@@ -12,6 +12,8 @@ import {
   query
 } from "lit/decorators.js";
 import type { Account } from "@jolly-pixel/accounts";
+import "@jolly-pixel/ui/elements/avatar";
+import "@jolly-pixel/ui/elements/button";
 
 // Import Internal Dependencies
 import { roleLabel } from "../../accounts/UsersTreeModel.ts";

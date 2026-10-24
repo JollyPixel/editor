@@ -15,6 +15,12 @@ import type {
   JollyChangeDetail,
   JollyOption
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/button-group";
+import "@jolly-pixel/ui/elements/dialog";
+import "@jolly-pixel/ui/elements/number";
+import "@jolly-pixel/ui/elements/select";
+import "@jolly-pixel/ui/elements/text";
 import {
   AssetPath,
   type AssetRecordData

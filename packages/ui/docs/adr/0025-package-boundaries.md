@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded by ADR-0041
 ---
 
 # Lit is a peer dependency and the barrel is never side-effect-free

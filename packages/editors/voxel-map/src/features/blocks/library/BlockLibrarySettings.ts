@@ -7,6 +7,8 @@ import {
 } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
 import { PopoverController } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/icon";
 
 // Import Internal Dependencies
 import type { BlockLibraryOption } from "./BlockLibraryOption.ts";

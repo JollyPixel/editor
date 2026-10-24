@@ -7,8 +7,7 @@ import {
 } from "lit";
 import {
   customElement,
-  property,
-  query
+  property
 } from "lit/decorators.js";
 import type { PixelArtCanvasOptions } from "@jolly-pixel/pixel-draw.renderer";
 import { DEFAULT_TILE_SIZE } from "@jolly-pixel/voxel.renderer";
@@ -18,20 +17,18 @@ import {
   type TextureEditRequestDetail,
   type UvAccess
 } from "@jolly-pixel/editor.pixel-art";
+import { LazyTemplate } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
 
 // Import Internal Dependencies
 import type { BlockRegistryChange } from "../../map/EditorMap.ts";
 import type { VoxelMapEditing } from "../../editing/VoxelMapEditing.ts";
 import { EditingElement } from "../../editing/EditingElement.ts";
-import type { AddBlocksetDialog } from "../blocksets/dialogs/AddBlocksetDialog.ts";
-import type { BlocksetEditDialog } from "../blocksets/dialogs/BlocksetEditDialog.ts";
 import { BlocksetTab } from "./BlocksetTab.ts";
 import {
   blocksetTabLabels,
   type BlocksetTabLabels
 } from "./blocksetTabLabels.ts";
-import "../blocksets/dialogs/AddBlocksetDialog.ts";
-import "../blocksets/dialogs/BlocksetEditDialog.ts";
 
 // CONSTANTS
 const kCanvasOptions: PixelArtCanvasOptions = {
@@ -85,12 +82,10 @@ export class TextureEditor extends EditingElement {
   @property({ type: String })
   declare uvAccess: UvAccess;
 
-  @query("add-blockset-dialog")
-  private declare _addDialog: AddBlocksetDialog;
-
-  @query("blockset-edit-dialog")
-  private declare _editDialog: BlocksetEditDialog;
-
+  #dialogs = new LazyTemplate(this, () => Promise.all([
+    import("../blocksets/dialogs/AddBlocksetDialog.ts"),
+    import("../blocksets/dialogs/BlocksetEditDialog.ts")
+  ]));
   #tabs = new Map<string, BlocksetTab>();
   #placeholders = new Set<string>();
   #panel: PixelDrawPanel | null = null;
@@ -341,7 +336,8 @@ export class TextureEditor extends EditingElement {
 
     const { blocksets } = editing;
     const active = blocksets.activeBlocksetId;
-    const result = await this._addDialog.open({
+    const dialog = await this.#dialogs.query("add-blockset-dialog");
+    const result = await dialog.open({
       defaultTileSize: (active === null ? undefined : blocksets.blocksetTileSize(active)) ??
         DEFAULT_TILE_SIZE,
       linkable: blocksets.linkableAssets()
@@ -374,7 +370,9 @@ export class TextureEditor extends EditingElement {
   readonly #onEditRequest = (
     event: CustomEvent<TextureEditRequestDetail>
   ): void => {
-    void this._editDialog.open(event.detail.id);
+    void this.#dialogs.query("blockset-edit-dialog").then(
+      (dialog) => dialog.open(event.detail.id)
+    );
   };
 
   override render() {
@@ -405,8 +403,10 @@ export class TextureEditor extends EditingElement {
             }}
           ></pixel-draw-panel>
         `}
-      <add-blockset-dialog></add-blockset-dialog>
-      <blockset-edit-dialog .editing=${editing}></blockset-edit-dialog>
+      ${this.#dialogs.render(() => html`
+        <add-blockset-dialog></add-blockset-dialog>
+        <blockset-edit-dialog .editing=${editing}></blockset-edit-dialog>
+      `)}
     `;
   }
 

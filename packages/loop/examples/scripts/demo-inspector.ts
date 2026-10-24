@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import type { BindingOptions } from "@jolly-pixel/ui";
+import type { BindingOptions } from "@jolly-pixel/ui/facade";
+import "@jolly-pixel/ui/elements/dock";
+import "@jolly-pixel/ui/elements/dock-layout";
+import "@jolly-pixel/ui/elements/scope";
 
 // Import Internal Dependencies
 import { GameLoop } from "../../src/index.ts";

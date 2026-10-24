@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import { html, css, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import "@jolly-pixel/ui/elements/folder";
 
 // Import Internal Dependencies
 import type { VoxelMapEditing } from "../../editing/VoxelMapEditing.ts";

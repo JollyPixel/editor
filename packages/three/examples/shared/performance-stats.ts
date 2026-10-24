@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
-import "@jolly-pixel/ui";
 import { StatsRecorder } from "@jolly-pixel/ui/stats";
+import "@jolly-pixel/ui/elements/floating";
+import "@jolly-pixel/ui/elements/stats";
 import type * as THREE from "three/webgpu";
 
 export interface PerformanceStats {

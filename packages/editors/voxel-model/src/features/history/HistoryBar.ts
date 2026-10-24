@@ -9,6 +9,7 @@ import {
   LogQueue,
   SubscriptionController
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/log";
 import type { HistoryStepInfo } from "@jolly-pixel/history";
 
 // Import Internal Dependencies

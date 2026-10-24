@@ -1,13 +1,14 @@
 # Dialog helpers
 
-Promise-based dialogs created under `document.body`.
+Promise-based dialogs created under `document.body`. The helpers come from
+`@jolly-pixel/ui/elements/dialog`, which also registers the elements they use.
 
 ```ts
 import {
   showChoice,
   showConfirm,
   showPrompt
-} from "@jolly-pixel/ui";
+} from "@jolly-pixel/ui/elements/dialog";
 
 const name = await showPrompt({
   title: "New layer",

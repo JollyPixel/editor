@@ -9,6 +9,7 @@ import {
   type JollyChangeDetail,
   type JollyOption
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button-group";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies

@@ -1,11 +1,8 @@
 // Import Third-party Dependencies
 import * as network from "@jolly-pixel/network/client";
 import { ColorSequence } from "@jolly-pixel/color";
-import {
-  LocalStorageAdapter,
-  resolveStoredPrompt,
-  type PresencePeer
-} from "@jolly-pixel/ui";
+import { LocalStorageAdapter, type PresencePeer } from "@jolly-pixel/ui";
+import { resolveStoredPrompt } from "@jolly-pixel/ui/elements/dialog";
 
 // Import Internal Dependencies
 import {

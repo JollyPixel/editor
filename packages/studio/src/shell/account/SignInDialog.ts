@@ -21,6 +21,8 @@ import {
   type AccountsFailureCode
 } from "@jolly-pixel/accounts";
 import type { Dialog } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/dialog";
 
 // CONSTANTS
 const kRequestMessages: Partial<Record<AccountsFailureCode, string>> = {

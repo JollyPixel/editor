@@ -12,6 +12,8 @@ import type {
   DialogIntent,
   IconName
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/dialog";
 
 export interface EditorDialogFrame {
   heading: string;

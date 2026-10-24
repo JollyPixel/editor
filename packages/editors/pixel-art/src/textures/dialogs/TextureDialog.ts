@@ -11,6 +11,8 @@ import type {
   DialogIntent,
   IconName
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/dialog";
 
 export interface TextureDialogAction<TAction extends string> {
   value: TAction;

@@ -15,11 +15,17 @@ import {
 } from "lit/decorators.js";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 import { askImportConflictPolicy } from "@jolly-pixel/editor.host";
-import type {
-  JollyChangeDetail,
-  JollyOption,
-  JollyReparentDetail
+import {
+  LazyTemplate,
+  type JollyChangeDetail,
+  type JollyOption,
+  type JollyReparentDetail
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/button-group";
+import "@jolly-pixel/ui/elements/context-menu";
+import "@jolly-pixel/ui/elements/toolbar";
+import "@jolly-pixel/ui/elements/tree";
 
 // Import Internal Dependencies
 import { AssetKindSet } from "../../catalog/AssetKindSet.ts";
@@ -35,8 +41,6 @@ import type { BrowserState } from "../../browser/BrowserState.ts";
 import type { StudioShareLinks } from "../../shares/StudioShareLinks.ts";
 import { cardStyles } from "../cardStyles.ts";
 import { StudioErrorEvent } from "../StudioErrorEvent.ts";
-import type { AssetDeleteDialog } from "./AssetDeleteDialog.ts";
-import type { AssetShareDialog } from "./AssetShareDialog.ts";
 import { askConversion } from "./askConversion.ts";
 import { assetOpenEvent } from "./assetOpen.ts";
 import {
@@ -47,9 +51,7 @@ import {
   assetMenu,
   newAssetMenu
 } from "./assetMenu.ts";
-import "./AssetDeleteDialog.ts";
 import "./AssetDetails.ts";
-import "./AssetShareDialog.ts";
 
 // CONSTANTS
 const kNoKindOptions: readonly JollyOption<string>[] = [];
@@ -173,12 +175,6 @@ export class AssetBrowser extends LitElement {
   @query("jolly-tree")
   declare _tree: HTMLElementTagNameMap["jolly-tree"] | null;
 
-  @query("asset-delete-dialog")
-  declare _deleteDialog: AssetDeleteDialog;
-
-  @query("asset-share-dialog")
-  declare _shareDialog: AssetShareDialog;
-
   @query("jolly-context-menu")
   declare _menu: HTMLElementTagNameMap["jolly-context-menu"];
 
@@ -188,6 +184,10 @@ export class AssetBrowser extends LitElement {
   @state()
   declare _dropFolder: AssetPath | null;
 
+  #dialogs = new LazyTemplate(this, () => Promise.all([
+    import("./AssetDeleteDialog.ts"),
+    import("./AssetShareDialog.ts")
+  ]));
   #view: AssetTreeView | null = null;
   #bound: AssetBrowserOptions | null = null;
   #menuTarget: AssetSelection | null = null;
@@ -329,8 +329,10 @@ export class AssetBrowser extends LitElement {
         label="Asset actions"
         @jolly-context-action=${this.#onContextAction}
       ></jolly-context-menu>
-      <asset-delete-dialog></asset-delete-dialog>
-      <asset-share-dialog></asset-share-dialog>
+      ${this.#dialogs.render(() => html`
+        <asset-delete-dialog></asset-delete-dialog>
+        <asset-share-dialog></asset-share-dialog>
+      `)}
     `;
   }
 
@@ -355,9 +357,21 @@ export class AssetBrowser extends LitElement {
         open: (assetId) => this.#open(assetId),
         rename: (nodeId) => this._tree?.beginRename(nodeId),
         share: shares === null ? null : (asset) => {
-          void this._shareDialog.open(asset, shares, options.catalog);
+          void this.#dialogs.query("asset-share-dialog").then(
+            (dialog) => dialog.open(asset, shares, options.catalog),
+            this.#dialogFailed
+          );
         },
-        confirmDelete: (deletion) => this._deleteDialog.open(deletion)
+        confirmDelete: (deletion) => this.#dialogs
+          .query("asset-delete-dialog")
+          .then(
+            (dialog) => dialog.open(deletion),
+            (error: unknown) => {
+              this.#dialogFailed(error);
+
+              return null;
+            }
+          )
       },
       onChange: () => this.requestUpdate(),
       onError: (message) => this.#error(message),
@@ -394,6 +408,14 @@ export class AssetBrowser extends LitElement {
   ): void {
     this.dispatchEvent(new StudioErrorEvent(message));
   }
+
+  readonly #dialogFailed = (
+    error: unknown
+  ): void => {
+    this.#error(
+      `The dialog failed to load: ${error instanceof Error ? error.message : String(error)}`
+    );
+  };
 
   readonly #onKindChange = (
     event: CustomEvent<JollyChangeDetail<string>>

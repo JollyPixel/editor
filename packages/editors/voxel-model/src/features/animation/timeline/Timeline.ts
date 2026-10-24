@@ -12,6 +12,8 @@ import {
   ContextMenuController,
   MenuSession
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/context-menu";
+import "@jolly-pixel/ui/elements/icon";
 
 // Import Internal Dependencies
 import "./timelineIcons.ts";

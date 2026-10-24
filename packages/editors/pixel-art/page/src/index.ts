@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
-import "@jolly-pixel/ui";
 import {
   bootStandalone,
   PageAppearance
 } from "@jolly-pixel/editor.host";
+import "@jolly-pixel/ui/elements/scope";
 
 // Import Internal Dependencies
 import "#src/index.ts";

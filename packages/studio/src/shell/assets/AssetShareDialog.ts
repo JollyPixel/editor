@@ -17,6 +17,9 @@ import type {
   JollyChangeDetail,
   JollyOption
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/button-group";
+import "@jolly-pixel/ui/elements/dialog";
 
 // Import Internal Dependencies
 import type { AssetLeafData } from "../../catalog/AssetTreeModel.ts";

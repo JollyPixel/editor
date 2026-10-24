@@ -5,6 +5,8 @@ import {
   type ReactiveControllerHost,
   type TemplateResult
 } from "lit";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/toolbar";
 
 // Import Internal Dependencies
 import { ProjectSettingsController } from "./ProjectSettingsController.ts";

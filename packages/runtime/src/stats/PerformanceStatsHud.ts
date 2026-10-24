@@ -1,5 +1,7 @@
 // Import Third-party Dependencies
 import type { ResolvedThemeMode } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/scope";
+import "@jolly-pixel/ui/elements/stats";
 
 // Import Internal Dependencies
 import type {

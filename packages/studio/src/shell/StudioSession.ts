@@ -65,9 +65,7 @@ export interface StudioSessionUser {
 }
 
 export interface StudioSessionConsole {
-  readonly element: {
-    toggle(): void;
-  };
+  toggle(): void;
   /**
    * Mirrors the active frame's console namespaces when given.
    */
@@ -171,7 +169,7 @@ export class StudioSession {
   }
 
   toggleConsole(): void {
-    this.#console?.element.toggle();
+    this.#console?.toggle();
   }
 
   openSettings(): void {

@@ -4,7 +4,7 @@ import type { PixelDrawPanel } from "@jolly-pixel/editor.pixel-art";
 
 // Import Internal Dependencies
 import type { VoxelMapEditing } from "../../editing/VoxelMapEditing.ts";
-import type { LayersPanel } from "../../shell/panels/LayersPanel.ts";
+import type { BlocksPanel } from "../../shell/panels/BlocksPanel.ts";
 
 export class TourPage {
   readonly page: Document;
@@ -16,7 +16,7 @@ export class TourPage {
   }
 
   get editing(): VoxelMapEditing | null {
-    return this.page.querySelector<LayersPanel>("layers-panel")?.editing ?? null;
+    return this.page.querySelector<BlocksPanel>("blocks-panel")?.editing ?? null;
   }
 
   get texturePanel(): PixelDrawPanel | null {

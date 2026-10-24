@@ -154,10 +154,8 @@ describe("StudioSession", () => {
       undefined,
       {
         console: {
-          element: {
-            toggle: () => {
-              toggles++;
-            }
+          toggle: () => {
+            toggles++;
           }
         }
       }

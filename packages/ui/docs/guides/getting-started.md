@@ -6,11 +6,15 @@ state.
 ## 1. Register the elements
 
 ```ts
-import "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/number";
+import "@jolly-pixel/ui/elements/scope";
 ```
 
-- The root entry point registers every `jolly-*` element. Import it once, from
-  the application entry.
+- Each element has its own entry point, named after its tag without `jolly-`.
+  Importing it registers the element and the elements it renders.
+- Import an element from the module that renders it. The root entry point,
+  `@jolly-pixel/ui`, registers none: it exports the types, the theme and the
+  helpers.
 - `lit` is a peer dependency. The application and the package must share one
   copy.
 

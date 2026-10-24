@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import "@jolly-pixel/ui/elements/icon";
+
 // Import Internal Dependencies
 import type { TurntablePose } from "./TurntablePose.ts";
 import "./previewIcons.ts";

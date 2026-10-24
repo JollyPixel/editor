@@ -10,6 +10,9 @@ import {
   FieldBinding,
   type JollyOption
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button-group";
+import "@jolly-pixel/ui/elements/separator";
+import "@jolly-pixel/ui/elements/vector3";
 
 // Import Internal Dependencies
 import "./transformIcons.ts";

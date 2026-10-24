@@ -16,6 +16,9 @@ import type {
   Dialog,
   JollyChangeDetail
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/checkbox";
+import "@jolly-pixel/ui/elements/dialog";
 
 // Import Internal Dependencies
 import type { AssetDeletion } from "../../catalog/AssetDeletion.ts";

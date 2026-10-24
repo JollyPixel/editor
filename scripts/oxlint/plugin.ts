@@ -2,6 +2,7 @@
 import { commentFormat } from "./rules/commentFormat.ts";
 import { errDeclaredError } from "./rules/errDeclaredError.ts";
 import { errorsInErrorsFolder } from "./rules/errorsInErrorsFolder.ts";
+import { importRenderedElements } from "./rules/importRenderedElements.ts";
 import { noComments } from "./rules/noComments.ts";
 import { noEnum } from "./rules/noEnum.ts";
 import { noGetSetPrefix } from "./rules/noGetSetPrefix.ts";
@@ -16,6 +17,7 @@ export default {
     "comment-format": commentFormat,
     "err-declared-error": errDeclaredError,
     "errors-in-errors-folder": errorsInErrorsFolder,
+    "import-rendered-elements": importRenderedElements,
     "no-comments": noComments,
     "no-enum": noEnum,
     "no-get-set-prefix": noGetSetPrefix,

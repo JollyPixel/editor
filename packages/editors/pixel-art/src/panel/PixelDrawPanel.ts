@@ -16,6 +16,7 @@ import type {
 } from "@jolly-pixel/pixel-draw.renderer";
 import {
   AmbientThemeController,
+  LazyTemplate,
   resolveAmbientTheme,
   resolveThemeColor,
   themeStyles,
@@ -32,7 +33,6 @@ import { iconStyles } from "../shared/icon.styles.ts";
 import { UvToolbarController } from "../uv/UvToolbarController.ts";
 import { UvNetController } from "../uv/nets/UvNetController.ts";
 import type { UvNetLibrary } from "../uv/nets/UvNetLibrary.ts";
-import "../uv/nets/UvNetDialog.ts";
 import { ViewOptionsController } from "./ViewOptionsController.ts";
 import { SelectToolbarController } from "../tools/SelectToolbarController.ts";
 import { TextureDropController } from "../textures/import/TextureDropController.ts";
@@ -76,8 +76,6 @@ import {
   type TextureTabsMode,
   type TextureTabsVariant
 } from "../textures/TextureTabStrip.ts";
-import "../textures/dialogs/ClearTextureDialog.ts";
-import "../textures/dialogs/ImportTextureDialog.ts";
 import {
   CanvasKeyboardController,
   type CanvasHoverChangeDetail
@@ -86,7 +84,6 @@ import type { PixelArtAction } from "../keybindings/PixelArtKeyBindings.ts";
 import "../color/ColorPickerRail.ts";
 import "../color/ColorDock.ts";
 import "../color/ColorPickerPopover.ts";
-import "../normal/NormalMapDock.ts";
 
 // CONSTANTS
 const kNoModes: ReadonlySet<Mode> = new Set();
@@ -218,6 +215,11 @@ export class PixelDrawPanel extends LitElement {
   declare gridSizeLocked: boolean;
 
   readonly #status = new TransientStatus(this);
+  readonly #dialogs = new LazyTemplate(this, () => Promise.all([
+    import("../textures/dialogs/ClearTextureDialog.ts"),
+    import("../textures/dialogs/ImportTextureDialog.ts"),
+    import("../uv/nets/UvNetDialog.ts")
+  ]));
   readonly #textures = new TextureSet(
     this,
     () => this.#element(".canvas-host")
@@ -227,12 +229,12 @@ export class PixelDrawPanel extends LitElement {
     textures: this.#textures,
     status: this.#status,
     policy: () => this.textureImportPolicy,
-    dialog: () => this.#dialog("import-texture-dialog")
+    dialog: () => this.#dialogs.query("import-texture-dialog")
   });
   readonly #activeCanvas = (): PixelArtCanvas | null => this.canvasManager;
   readonly #uvNets = new UvNetController(this, {
     canvas: this.#activeCanvas,
-    dialog: () => this.#dialog("uv-net-dialog"),
+    dialog: () => this.#dialogs.query("uv-net-dialog"),
     adopt: (net) => {
       this.#textures.configureCanvases({ uvNet: net });
     }
@@ -510,17 +512,6 @@ export class PixelDrawPanel extends LitElement {
     return element;
   }
 
-  #dialog<TName extends "clear-texture-dialog" | "import-texture-dialog" | "uv-net-dialog">(
-    name: TName
-  ): HTMLElementTagNameMap[TName] {
-    const dialog = this.renderRoot.querySelector(name);
-    if (dialog === null) {
-      throw new Error(`PixelDrawPanel: ${name} element not found`);
-    }
-
-    return dialog;
-  }
-
   #observeCanvasHost(): void {
     if (
       this.#canvasHostObserver !== null ||
@@ -696,7 +687,7 @@ export class PixelDrawPanel extends LitElement {
             canvas: this.#activeCanvas,
             importer: this.#importer,
             exporter: this.#exporter,
-            clearDialog: () => this.#dialog("clear-texture-dialog"),
+            clearDialog: () => this.#dialogs.query("clear-texture-dialog"),
             viewOnly: access.viewOnly,
             trailing: [
               normalMaps?.renderViewSwitch() ?? nothing
@@ -708,9 +699,11 @@ export class PixelDrawPanel extends LitElement {
         </div>
       </div>
       ${this.#colors.renderPopover()}
-      <clear-texture-dialog></clear-texture-dialog>
-      <import-texture-dialog></import-texture-dialog>
-      <uv-net-dialog></uv-net-dialog>
+      ${this.#dialogs.render(() => html`
+        <clear-texture-dialog></clear-texture-dialog>
+        <import-texture-dialog></import-texture-dialog>
+        <uv-net-dialog></uv-net-dialog>
+      `)}
     `;
   }
 }

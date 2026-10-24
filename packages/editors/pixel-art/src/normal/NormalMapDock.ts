@@ -15,6 +15,10 @@ import {
   FieldBinding,
   type JollyOption
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/checkbox";
+import "@jolly-pixel/ui/elements/icon";
+import "@jolly-pixel/ui/elements/select";
+import "@jolly-pixel/ui/elements/spin-slider";
 import {
   DEFAULT_NORMAL_MAP_SETTINGS,
   NORMAL_MAP_BEVEL_PROFILES,

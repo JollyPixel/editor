@@ -15,6 +15,10 @@ import {
   type JollyChangeDetail,
   type JollyOption
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/context-menu";
+import "@jolly-pixel/ui/elements/icon";
+import "@jolly-pixel/ui/elements/select";
 import { AssetPath } from "@jolly-pixel/asset";
 import type { AssetTag } from "@jolly-pixel/asset-server/client";
 import type { Lantern } from "@jolly-pixel/lantern";

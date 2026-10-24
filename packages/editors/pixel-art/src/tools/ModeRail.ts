@@ -11,7 +11,7 @@ import {
 } from "lit/decorators.js";
 import { classMap } from "lit/directives/class-map.js";
 import type { Mode } from "@jolly-pixel/pixel-draw.renderer";
-import "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/rail";
 
 // Import Internal Dependencies
 import {

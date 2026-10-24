@@ -13,6 +13,11 @@ import type {
   Dialog,
   JollyChangeDetail
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/button-group";
+import "@jolly-pixel/ui/elements/dialog";
+import "@jolly-pixel/ui/elements/icon";
+import "@jolly-pixel/ui/elements/text";
 import { BlockTextures } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies

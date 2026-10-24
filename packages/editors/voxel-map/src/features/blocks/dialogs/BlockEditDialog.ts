@@ -21,6 +21,13 @@ import {
   type JollyHeadingChangeDetail,
   type JollyOption
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/button-group";
+import "@jolly-pixel/ui/elements/checkbox";
+import "@jolly-pixel/ui/elements/dialog";
+import "@jolly-pixel/ui/elements/select";
+import "@jolly-pixel/ui/elements/separator";
+import "@jolly-pixel/ui/elements/text";
 
 // Import Internal Dependencies
 import type { VoxelMapEditing } from "../../../editing/VoxelMapEditing.ts";

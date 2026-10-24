@@ -40,6 +40,21 @@ function commands(
   return mounted.commands;
 }
 
+function opened(
+  page: CommandConsole
+): Promise<void> {
+  return new Promise((resolve) => {
+    const unsubscribe = page.subscribe("opened", () => {
+      unsubscribe();
+      resolve();
+    });
+  });
+}
+
+function consoleElement(): HTMLElementTagNameMap["jolly-console"] | null {
+  return document.querySelector("jolly-console");
+}
+
 function lastLine(
   page: CommandConsole
 ): string {
@@ -52,6 +67,65 @@ afterEach(() => {
   mounted?.dispose();
   mounted = undefined;
   document.body.replaceChildren();
+});
+
+describe("console element", () => {
+  test("is mounted on the first open request", async() => {
+    const page = commands();
+    assert.equal(consoleElement(), null);
+
+    const shown = opened(page);
+    page.open();
+    await shown;
+
+    assert.equal(consoleElement()?.console, page);
+    assert.equal(consoleElement()?.open, true);
+  });
+
+  test("opens on the toggle shortcut", async() => {
+    const page = commands();
+    const shown = opened(page);
+    const event = new KeyboardEvent("keydown", {
+      key: "k",
+      ctrlKey: true,
+      cancelable: true
+    });
+
+    window.dispatchEvent(event);
+    await shown;
+
+    assert.equal(event.defaultPrevented, true);
+    assert.equal(document.querySelectorAll("jolly-console").length, 1);
+  });
+
+  test("shows the script editor of a script requested before mounting", async() => {
+    const page = commands();
+    const shown = opened(page);
+
+    page.editScript();
+    await shown;
+    const element = consoleElement();
+    await element?.updateComplete;
+
+    assert.notEqual(
+      element?.shadowRoot?.querySelector("jolly-console-script"),
+      null
+    );
+  });
+
+  test("mounts nothing when disposed while the element loads", async() => {
+    const page = commands();
+    page.open();
+    mounted?.dispose();
+    mounted = undefined;
+
+    await import("@jolly-pixel/console/element");
+    await new Promise((resolve) => {
+      setImmediate(resolve);
+    });
+
+    assert.equal(consoleElement(), null);
+  });
 });
 
 describe("theme variable", () => {

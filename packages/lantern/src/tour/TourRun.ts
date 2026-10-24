@@ -50,6 +50,7 @@ export class TourRun extends Emitter<TourRunEvents> {
   #page: Document;
   #warn: (message: string) => void;
   #index: number;
+  #shown = false;
   #state: RunState = "running";
   #step: AbortController | null = null;
   #seek: TargetSeek | null = null;
@@ -93,6 +94,10 @@ export class TourRun extends Emitter<TourRunEvents> {
 
   get state(): RunState {
     return this.#state;
+  }
+
+  get shown(): boolean {
+    return this.#shown;
   }
 
   get waiting(): boolean {
@@ -262,6 +267,7 @@ export class TourRun extends Emitter<TourRunEvents> {
     };
     this.#step = controller;
     this.#index = index;
+    this.#shown = false;
     this.#seek = new TargetSeek({
       target: step.target,
       page: this.#page,
@@ -282,6 +288,7 @@ export class TourRun extends Emitter<TourRunEvents> {
       return;
     }
 
+    this.#shown = true;
     this.emit("step", step);
     if (step.until !== null) {
       step.until(context).then(

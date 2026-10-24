@@ -6,6 +6,9 @@ import {
   type TemplateResult
 } from "lit";
 import { customElement } from "lit/decorators.js";
+import "@jolly-pixel/ui/elements/checkbox";
+import "@jolly-pixel/ui/elements/select";
+import "@jolly-pixel/ui/elements/separator";
 
 // Import Internal Dependencies
 import { AccessDraft } from "../../../project/AccessDraft.ts";

@@ -1,3 +1,8 @@
+// Import Third-party Dependencies
+import "@jolly-pixel/ui/elements/dock";
+import "@jolly-pixel/ui/elements/dock-layout";
+import "@jolly-pixel/ui/elements/scope";
+
 // Import Internal Dependencies
 import {
   FrameScheduler,

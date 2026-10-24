@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import {
-  DockFacade,
-  Pane
-} from "@jolly-pixel/ui";
+import { DockFacade, Pane } from "@jolly-pixel/ui/facade";
 
 // CONSTANTS
 const kDefaultTitle = "loop";

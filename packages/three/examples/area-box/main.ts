@@ -5,11 +5,10 @@ import {
   formatHex,
   parseColor
 } from "@jolly-pixel/color";
-import {
-  Pane,
-  formatVector,
-  type Dialog
-} from "@jolly-pixel/ui";
+import { formatVector } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/dialog";
+import { Pane } from "@jolly-pixel/ui/facade";
 
 // Import Internal Dependencies
 import {
@@ -233,7 +232,7 @@ function createAreaDialog() {
     shadeFaces: AreaBox.Defaults.shadeFaces
   };
 
-  const dialog = document.createElement("jolly-dialog") as Dialog;
+  const dialog = document.createElement("jolly-dialog");
   dialog.heading = "New area";
   document.body.append(dialog);
 

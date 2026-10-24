@@ -1,16 +1,19 @@
 // Import Third-party Dependencies
 import { bootStandalone } from "@jolly-pixel/editor.host";
+import "@jolly-pixel/ui/elements/dock";
+import "@jolly-pixel/ui/elements/dock-layout";
+import "@jolly-pixel/ui/elements/pane";
+import "@jolly-pixel/ui/elements/pane-group";
+import "@jolly-pixel/ui/elements/presence-stack";
+import "@jolly-pixel/ui/elements/scope";
 
 // Import Internal Dependencies
 import "./app/paneIcons.ts";
 import "./app/LeftPanel.ts";
 import "./features/hierarchy/HierarchyPanel.ts";
-import "./features/material/MaterialLibrary.ts";
 import "./features/history/HistoryBar.ts";
 import "./features/view/ViewPanel.ts";
 import "./features/view/LightingMenu.ts";
-import "./features/animation/AnimatePanel.ts";
-import "./features/animation/timeline/Timeline.ts";
 import "./features/animation/timeline/TimelineTransport.ts";
 import "./features/animation/AnimatingFrame.ts";
 import { VoxelModelEditor } from "./boot/VoxelModelEditor.ts";

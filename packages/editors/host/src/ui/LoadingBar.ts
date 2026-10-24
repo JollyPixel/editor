@@ -5,7 +5,7 @@ import {
   html,
   type TemplateResult
 } from "lit";
-import "@jolly-pixel/ui/feedback";
+import "@jolly-pixel/ui/elements/progress";
 
 // CONSTANTS
 const kLabel = "Loading editor";

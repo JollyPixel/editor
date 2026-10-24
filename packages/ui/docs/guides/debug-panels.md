@@ -7,7 +7,7 @@ frame-time overlay with `jolly-stats`.
 ## 1. Create a pane
 
 ```ts
-import { Pane } from "@jolly-pixel/ui";
+import { Pane } from "@jolly-pixel/ui/facade";
 
 const settings = {
   enabled: true,
@@ -109,7 +109,7 @@ windows:
 ```
 
 ```ts
-import { DockFacade, Pane } from "@jolly-pixel/ui";
+import { DockFacade, Pane } from "@jolly-pixel/ui/facade";
 
 const dock = DockFacade.query("#tools");
 
@@ -149,7 +149,8 @@ document.addEventListener("keydown", (event) => {
 ## 7. Add a frame-time overlay
 
 ```ts
-import "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/floating";
+import "@jolly-pixel/ui/elements/stats";
 import { StatsRecorder } from "@jolly-pixel/ui/stats";
 
 const recorder = new StatsRecorder();
@@ -183,8 +184,8 @@ function frame(): void {
 }
 ```
 
-- `@jolly-pixel/ui/stats` registers no element: import the root entry point
-  too, for `jolly-stats`.
+- `@jolly-pixel/ui/stats` registers no element: `jolly-stats` and
+  `jolly-floating` come from their `elements/` entry points.
 - Clicking the overlay cycles through the built-in metrics (FPS, frame time,
   worst frame, heap when the browser reports it) and the added ones. The
   choice is stored under `storageKey`.

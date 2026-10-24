@@ -10,6 +10,8 @@ its own. Every intent is an event, and the panel writes the result back.
 import { LitElement, html, type PropertyValues } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import type { ContextMenu, Tree, TreeNode } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/context-menu";
+import "@jolly-pixel/ui/elements/tree";
 
 @customElement("layer-panel")
 export class LayerPanel extends LitElement {

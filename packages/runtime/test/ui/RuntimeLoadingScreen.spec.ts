@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { AssetRecord } from "@jolly-pixel/asset";
-import { Loading } from "@jolly-pixel/ui/feedback";
+import { Loading } from "@jolly-pixel/ui/elements/loading";
 
 // Import Internal Dependencies
 import { RuntimeLoadingScreen } from "../../src/ui/RuntimeLoadingScreen.ts";

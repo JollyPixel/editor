@@ -28,7 +28,6 @@ import {
   type PixelArtRoom
 } from "@jolly-pixel/asset.pixel-art/client";
 import type { KeyBindingSettings } from "@jolly-pixel/controls";
-import "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import "./BuildTab.ts";

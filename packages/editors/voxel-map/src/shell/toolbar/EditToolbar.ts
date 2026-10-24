@@ -10,6 +10,8 @@ import {
   state
 } from "lit/decorators.js";
 import type { HistoryScopeState } from "@jolly-pixel/history";
+import "@jolly-pixel/ui/elements/rail";
+import "@jolly-pixel/ui/elements/tool-button";
 
 // Import Internal Dependencies
 import {

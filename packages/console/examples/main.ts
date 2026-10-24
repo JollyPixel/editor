@@ -1,7 +1,9 @@
 // Import Third-party Dependencies
-import "@jolly-pixel/ui";
 import { CommandConsole } from "@jolly-pixel/console";
 import "@jolly-pixel/console/element";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/dialog";
+import "@jolly-pixel/ui/elements/scope";
 
 // CONSTANTS
 const kShapes = ["cube", "sphere", "cross"] as const;

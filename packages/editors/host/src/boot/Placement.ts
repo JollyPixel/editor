@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import { KeyboardLayoutStore } from "@jolly-pixel/controls";
 import type { Lantern } from "@jolly-pixel/lantern";
-import { ColorPicker } from "@jolly-pixel/ui";
+import { ColorPicker } from "@jolly-pixel/ui/elements/color-picker";
 
 // Import Internal Dependencies
 import { forwardConsole } from "../console/forwardConsole.ts";
@@ -97,7 +97,9 @@ export class Placement {
     try {
       this.#reportState(options.page);
       const pageConsole = shell === null ?
-        mountConsole() :
+        mountConsole({
+          logger: options.logger.child({ namespace: "host.console" })
+        }) :
         forwardConsole(shell);
       teardown.defer(() => pageConsole.dispose());
       this.#console = pageConsole;

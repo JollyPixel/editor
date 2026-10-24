@@ -14,6 +14,12 @@ import {
 import { live } from "lit/directives/live.js";
 import { ADMIN_ROLE, GUEST_ROLE } from "@jolly-pixel/accounts";
 import type { Right } from "@jolly-pixel/network";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/checkbox";
+import "@jolly-pixel/ui/elements/icon";
+import "@jolly-pixel/ui/elements/select";
+import "@jolly-pixel/ui/elements/text";
+import "@jolly-pixel/ui/elements/toolbar";
 
 // Import Internal Dependencies
 import type { AccessDraft } from "../../../project/AccessDraft.ts";

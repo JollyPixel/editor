@@ -12,6 +12,8 @@ import {
   property
 } from "lit/decorators.js";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/select";
 
 // Import Internal Dependencies
 import type { StudioSignedIn } from "../../../accounts/StudioSignedIn.ts";

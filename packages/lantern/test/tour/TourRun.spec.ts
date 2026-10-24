@@ -129,6 +129,28 @@ describe("TourRun", () => {
     assert.deepEqual(log, ["enter one", "step one", "cleanup one", "end skipped"]);
   });
 
+  test("reports a step as shown only once its step event fired", async() => {
+    const pending = Promise.withResolvers<void>();
+    const { run } = start(tour([
+      step("one"),
+      step("two", { enter: () => pending.promise })
+    ]));
+    assert.equal(run.shown, false);
+    await once(run, "step");
+    assert.equal(run.shown, true);
+
+    const next = run.next();
+    await new Promise((resolve) => {
+      setImmediate(resolve);
+    });
+    assert.equal(run.step.id, "two");
+    assert.equal(run.shown, false);
+    pending.resolve();
+    await next;
+
+    assert.equal(run.shown, true);
+  });
+
   test("queues calls made while enter is pending", async() => {
     const pending = Promise.withResolvers<void>();
     const { run, log } = start(tour([

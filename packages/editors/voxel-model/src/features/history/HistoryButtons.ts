@@ -15,6 +15,7 @@ import {
   PopoverController,
   SubscriptionController
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
 import {
   EMPTY_HISTORY_STATE,
   type HistoryScopeState,

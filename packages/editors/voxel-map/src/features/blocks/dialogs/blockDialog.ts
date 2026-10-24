@@ -14,6 +14,8 @@ import type {
   JollyChangeDetail,
   JollyOption
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button-group";
+import "@jolly-pixel/ui/elements/select";
 
 // Import Internal Dependencies
 import type { BlockRenderSources } from "../rendering/BlockRenderSources.ts";

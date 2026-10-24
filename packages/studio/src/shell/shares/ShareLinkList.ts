@@ -12,10 +12,9 @@ import {
   state
 } from "lit/decorators.js";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
-import {
-  SubscriptionController,
-  showConfirm
-} from "@jolly-pixel/ui";
+import { SubscriptionController } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import { showConfirm } from "@jolly-pixel/ui/elements/dialog";
 
 // Import Internal Dependencies
 import type { ShareLinkRow } from "../../shares/ShareLinkRow.ts";

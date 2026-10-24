@@ -8,6 +8,7 @@ import {
   property
 } from "lit/decorators.js";
 import { FieldBinding } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/color-picker";
 import { ColorPalette } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies

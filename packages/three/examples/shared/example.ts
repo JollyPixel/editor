@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import type { Pane } from "@jolly-pixel/ui";
+import type { Pane } from "@jolly-pixel/ui/facade";
 
 // Import Internal Dependencies
 import { createExamplePane } from "./example-pane.ts";

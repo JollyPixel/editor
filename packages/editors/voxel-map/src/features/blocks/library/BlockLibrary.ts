@@ -13,17 +13,18 @@ import {
 import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 import {
   ContextMenuController,
+  LazyTemplate,
   MenuSession,
   formatCount,
-  showConfirm,
   type ContextMenu
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/context-menu";
+import { showConfirm } from "@jolly-pixel/ui/elements/dialog";
+import "@jolly-pixel/ui/elements/icon";
 
 // Import Internal Dependencies
 import type { VoxelMapEditing } from "../../../editing/VoxelMapEditing.ts";
 import { EditingElement } from "../../../editing/EditingElement.ts";
-import type { BlockCreateDialog } from "../dialogs/BlockCreateDialog.ts";
-import type { BlockEditDialog } from "../dialogs/BlockEditDialog.ts";
 import { BlockUsage } from "../usage/BlockUsage.ts";
 import { BlockLibraryView } from "./BlockLibraryView.ts";
 import { ShownBlocks } from "./ShownBlocks.ts";
@@ -40,8 +41,6 @@ import type {
 } from "./BlockLibraryViewport.ts";
 import type { BlockMoveDetail } from "./BlockReorderController.ts";
 import "./BlockLibraryViewport.ts";
-import "../dialogs/BlockCreateDialog.ts";
-import "../dialogs/BlockEditDialog.ts";
 import "../blockIcons.ts";
 
 export type BlockLibraryLayout = "compact" | "fill";
@@ -120,12 +119,6 @@ export class BlockLibrary extends EditingElement {
   @state()
   private declare _swatches: ReadonlyMap<number, MaterialSwatch>;
 
-  @query("block-create-dialog")
-  declare private _createDialog: BlockCreateDialog;
-
-  @query("block-edit-dialog")
-  declare private _editDialog: BlockEditDialog;
-
   @query("block-library-viewport")
   declare private _viewport: BlockLibraryViewport | null;
 
@@ -136,6 +129,10 @@ export class BlockLibrary extends EditingElement {
     () => this._contextMenu,
     () => MenuSession.EMPTY
   );
+  #dialogs = new LazyTemplate(this, () => Promise.all([
+    import("../dialogs/BlockCreateDialog.ts"),
+    import("../dialogs/BlockEditDialog.ts")
+  ]));
 
   constructor() {
     super();
@@ -233,10 +230,10 @@ export class BlockLibrary extends EditingElement {
 
       <slot></slot>
 
-      ${creatable ? html`
+      ${creatable ? this.#dialogs.render(() => html`
         <block-create-dialog .editing=${editing}></block-create-dialog>
         <block-edit-dialog .editing=${editing}></block-edit-dialog>
-      ` : nothing}
+      `) : nothing}
     `;
   }
 
@@ -312,7 +309,12 @@ export class BlockLibrary extends EditingElement {
   }
 
   #onBlockCreate(): void {
-    void this._createDialog?.open();
+    void this.#createBlock();
+  }
+
+  async #createBlock(): Promise<void> {
+    const dialog = await this.#dialogs.query("block-create-dialog");
+    await dialog.open();
   }
 
   #creatable(
@@ -349,7 +351,7 @@ export class BlockLibrary extends EditingElement {
     editing: VoxelMapEditing
   ): MenuSession | null {
     return this.#creatable(editing) ?
-      MenuSession.from(LIBRARY_MENU, () => this._createDialog.open()) :
+      MenuSession.from(LIBRARY_MENU, () => this.#createBlock()) :
       null;
   }
 
@@ -460,12 +462,18 @@ export class BlockLibrary extends EditingElement {
   async #editBlock(
     id = this._selectedId
   ): Promise<void> {
-    if (id === null || this.editing?.blocksets.canEditBlock(id) !== true) {
+    const editing = this.editing;
+    if (
+      id === null ||
+      editing === null ||
+      !this.#creatable(editing) ||
+      !editing.blocksets.canEditBlock(id)
+    ) {
       return;
     }
 
-    await this.updateComplete;
-    await this._editDialog?.open(id);
+    const dialog = await this.#dialogs.query("block-edit-dialog");
+    await dialog.open(id);
   }
 
   async #revealSelection(): Promise<void> {

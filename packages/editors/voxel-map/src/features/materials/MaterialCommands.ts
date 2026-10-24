@@ -1,8 +1,6 @@
 // Import Third-party Dependencies
-import {
-  formatCount,
-  showConfirm
-} from "@jolly-pixel/ui";
+import { formatCount } from "@jolly-pixel/ui";
+import { showConfirm } from "@jolly-pixel/ui/elements/dialog";
 import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies

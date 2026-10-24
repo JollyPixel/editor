@@ -65,13 +65,54 @@ const kCases: ManifestCase[] = [
       exports: {
         ".": "./src/index.ts",
         math: "./src/index.ts",
-        "./Math.js": "./src/index.ts"
+        "./Math.js": "./src/index.ts",
+        "./*": "./src/index.ts"
       }
     },
     expected: [
       "pkg: \"math\" must start with \"./\"",
-      "pkg: \"./Math.js\" must use lowercase names with no extension or wildcard"
+      "pkg: \"./Math.js\" must use lowercase names with no extension, or end with a folder \"/*\"",
+      "pkg: \"./*\" must use lowercase names with no extension, or end with a folder \"/*\""
     ]
+  },
+  {
+    title: "accepts a folder wildcard backed by a source folder",
+    manifest: {
+      exports: {
+        ".": "./src/index.ts",
+        "./elements/*": {
+          types: "./dist/elements/*.d.ts",
+          default: "./dist/elements/*.js"
+        }
+      }
+    },
+    expected: []
+  },
+  {
+    title: "requires a source folder behind a folder wildcard",
+    manifest: {
+      exports: {
+        ".": "./src/index.ts",
+        "./missing/*": {
+          types: "./dist/missing/*.d.ts",
+          default: "./dist/missing/*.js"
+        }
+      }
+    },
+    expected: ["pkg: \"./missing/*\" has no source file for ./dist/missing/*.js"]
+  },
+  {
+    title: "requires a folder wildcard to target its own folder",
+    manifest: {
+      exports: {
+        ".": "./src/index.ts",
+        "./elements/*": {
+          types: "./dist/*.d.ts",
+          default: "./dist/*.js"
+        }
+      }
+    },
+    expected: ["pkg: \"./elements/*\" must target its own \"elements\" folder"]
   },
   {
     title: "requires a string target to be an existing source file",

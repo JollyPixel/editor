@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import { ChannelTransport } from "@jolly-pixel/network/client";
-import { showChoice } from "@jolly-pixel/ui";
+import { showChoice } from "@jolly-pixel/ui/elements/dialog";
 
 // Import Internal Dependencies
 import { OfflineGuest } from "../OfflineGuest.ts";

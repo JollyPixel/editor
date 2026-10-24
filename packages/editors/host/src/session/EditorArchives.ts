@@ -3,11 +3,11 @@ import {
   AssetId,
   AssetPath
 } from "@jolly-pixel/asset";
-import { showConfirm } from "@jolly-pixel/ui";
 import type {
   ImportConflictPolicy,
   ImportPlan
 } from "@jolly-pixel/asset-server/client";
+import { showConfirm } from "@jolly-pixel/ui/elements/dialog";
 
 // Import Internal Dependencies
 import { EditorLaunch } from "../launch/EditorLaunch.ts";

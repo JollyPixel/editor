@@ -12,9 +12,13 @@ import {
 } from "lit/decorators.js";
 import type { CatalogShare } from "@jolly-pixel/editor.host";
 import {
+  LazyTemplate,
   LogQueue,
   type LogEntry
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/log";
+import "@jolly-pixel/ui/elements/tabs";
+import "@jolly-pixel/ui/elements/toolbar";
 
 // Import Internal Dependencies
 import type { AssetBrowserOptions } from "./assets/AssetBrowser.ts";
@@ -24,6 +28,7 @@ import {
   type StudioUser
 } from "../accounts/StudioUser.ts";
 import {
+  SETTINGS_TAB_ID,
   StudioSession,
   type StudioSessionOptions
 } from "./StudioSession.ts";
@@ -32,8 +37,8 @@ import { SettingsSections } from "./settings/SettingsSections.ts";
 import { BrowserState } from "../browser/BrowserState.ts";
 import type { StudioErrorEvent } from "./StudioErrorEvent.ts";
 import type { EditorTab } from "../tabs/EditorTabs.ts";
+import type { StudioSettings } from "./settings/StudioSettings.ts";
 import "./home/StudioHome.ts";
-import "./settings/StudioSettings.ts";
 import "./account/AccountBadge.ts";
 
 export interface StudioOptions extends Pick<
@@ -190,6 +195,14 @@ export class Studio extends LitElement {
       display: none;
     }
 
+    #studio-settings {
+      height: 100%;
+    }
+
+    #studio-settings[hidden] {
+      display: none;
+    }
+
     jolly-log {
       position: absolute;
       inset-block-end: calc(var(--studio-gutter) * 3);
@@ -219,11 +232,18 @@ export class Studio extends LitElement {
   declare _home: HTMLElement | null;
 
   @query("#studio-settings")
-  declare _settings: HTMLElementTagNameMap["studio-settings"] | null;
+  declare _settings: HTMLElement | null;
+
+  @query("studio-settings")
+  declare _settingsPage: StudioSettings | null;
 
   #session: StudioSession | null = null;
   #scopes: PreferenceScopes | null = null;
   #browserState = new BrowserState();
+  #settingsPage = new LazyTemplate(
+    this,
+    () => import("./settings/StudioSettings.ts")
+  );
   #queue = new LogQueue();
   #unsubscribe: (() => void) | null = null;
   #user = new ChangeController<StudioUser>(
@@ -297,8 +317,9 @@ export class Studio extends LitElement {
   openSettings(
     section?: string
   ): void {
-    if (section !== undefined && this._settings !== null) {
-      this._settings.section = section;
+    if (section !== undefined) {
+      this.#browserState.settingsSection = section;
+      this._settingsPage?.requestUpdate();
     }
     this.#session?.openSettings();
   }
@@ -364,18 +385,21 @@ export class Studio extends LitElement {
             .browserState=${this.#browserState}
             @studio-error=${this.#logError}
           ></studio-home>
-          <studio-settings
+          <div
             id="studio-settings"
             role="region"
             aria-label="Settings"
             hidden
-            .sections=${this._sections}
-            .scopes=${this.#scopes}
-            .user=${user}
-            .catalog=${this._assets?.catalog ?? null}
-            .browserState=${this.#browserState}
-            @avatar-change=${this.#replaceAvatar}
-          ></studio-settings>
+          >${this.#settingsPage.render(() => html`
+            <studio-settings
+              .sections=${this._sections}
+              .scopes=${this.#scopes}
+              .user=${user}
+              .catalog=${this._assets?.catalog ?? null}
+              .browserState=${this.#browserState}
+              @avatar-change=${this.#replaceAvatar}
+            ></studio-settings>
+          `)}</div>
         </div>
         <jolly-log .entries=${this._log}></jolly-log>
       </section>
@@ -409,6 +433,13 @@ export class Studio extends LitElement {
 
   readonly #syncOpenTabs = (): void => {
     this._openTabs = this.#session?.tabs.list() ?? [];
+    if (this.#session?.tabs.active === SETTINGS_TAB_ID) {
+      void this.#settingsPage.ready().catch((error: unknown) => {
+        this.#queue.push(
+          `Settings failed to load: ${error instanceof Error ? error.message : String(error)}`
+        );
+      });
+    }
   };
 
   readonly #toggleConsole = (): void => {

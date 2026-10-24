@@ -4,7 +4,8 @@ import {
   svg,
   type TemplateResult
 } from "lit";
-import { registerIcon } from "@jolly-pixel/ui/icon";
+import { registerIcon } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/icon";
 
 // Import Internal Dependencies
 import type { NormalMapIconName } from "./normalMapIcons.ts";

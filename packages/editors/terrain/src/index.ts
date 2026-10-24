@@ -1,6 +1,10 @@
 // Import Third-party Dependencies
-import "@jolly-pixel/ui";
 import { bootStandalone } from "@jolly-pixel/editor.host";
+import "@jolly-pixel/ui/elements/dock";
+import "@jolly-pixel/ui/elements/dock-layout";
+import "@jolly-pixel/ui/elements/log";
+import "@jolly-pixel/ui/elements/presence-stack";
+import "@jolly-pixel/ui/elements/scope";
 
 // Import Internal Dependencies
 import { TerrainEditor } from "./boot/TerrainEditor.ts";

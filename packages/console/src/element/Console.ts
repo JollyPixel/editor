@@ -18,7 +18,7 @@ import {
   inputLayers,
   themeStyles
 } from "@jolly-pixel/ui";
-import "@jolly-pixel/ui/icon";
+import "@jolly-pixel/ui/elements/icon";
 
 // Import Internal Dependencies
 import type { CommandConsole } from "../CommandConsole.ts";
@@ -322,11 +322,11 @@ export class ConsoleElement extends LitElement {
       }),
       commands.subscribe("open-requested", () => void this.show()),
       commands.subscribe("close-requested", () => this.hide()),
-      commands.subscribe("script-requested", (script) => void this.#editScript(script))
+      commands.subscribe("script-requested", (script) => void this.editScript(script))
     ];
   }
 
-  async #editScript(
+  async editScript(
     script: VariableScript
   ): Promise<void> {
     this._script = script;

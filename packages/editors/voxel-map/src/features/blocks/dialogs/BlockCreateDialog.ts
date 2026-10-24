@@ -14,6 +14,9 @@ import type {
   JollyChangeDetail,
   JollyHeadingChangeDetail
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/dialog";
+import "@jolly-pixel/ui/elements/select";
 
 // Import Internal Dependencies
 import { EditingElement } from "../../../editing/EditingElement.ts";

@@ -10,6 +10,7 @@ import {
   Mixed,
   type JollyChangeDetail
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/select";
 import type { AnimationInterpolation } from "@jolly-pixel/asset.voxel-animation/client";
 
 // Import Internal Dependencies

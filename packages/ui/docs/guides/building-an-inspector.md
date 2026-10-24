@@ -9,6 +9,7 @@ Edit the properties of the selected object from a Lit element, with one
 import { LitElement, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { FieldBinding } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/slider";
 
 @customElement("light-inspector")
 export class LightInspector extends LitElement {

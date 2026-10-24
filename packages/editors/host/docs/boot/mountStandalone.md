@@ -299,8 +299,9 @@ studio, they are the account's preferences.
 ## Tours
 
 `mountStandalone` creates one [`Lantern`](../../../../lantern/docs/Lantern.md)
-per page, appends a `jolly-lantern` element to the first `jolly-scope` and
-passes the lantern as `context.lantern`. An editor registers its tours in
+per page and passes it as `context.lantern`. When the first tour starts, it
+loads `@jolly-pixel/lantern/element` and appends a `jolly-lantern` element to
+the first `jolly-scope`. An editor registers its tours in
 `mount` and releases them in `dispose()`:
 
 ```ts
@@ -342,14 +343,22 @@ function mountConsole(options?: {
   parent?: HTMLElement;
   storage?: StorageAdapter;
   appearance?: Appearance;
+  logger?: HostLogger;
 }): EditorConsole;
 
 interface EditorConsole {
   readonly commands: CommandConsole;
-  readonly element: HTMLElementTagNameMap["jolly-console"];
+  toggle(): void;
   dispose(): void;
 }
 ```
+
+The `jolly-console` element is not on the page until the console first opens:
+on `toggle()`, the Ctrl+K or ⌘K shortcut, `commands.open()` or
+`commands.editScript()`. The page then loads `@jolly-pixel/console/element`
+and appends it to `parent`. Scrollback written before that is kept. When the
+module fails to load, `logger` (`readDebugLogger()` by default) gets a warning
+and the next request loads again.
 
 The `theme` and `density` console variables read and write `appearance`.
 Without it, the console restores them from `storage` and stores them there,

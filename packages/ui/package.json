@@ -8,9 +8,13 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./feedback": {
-      "types": "./dist/feedback/index.d.ts",
-      "default": "./dist/feedback/index.js"
+    "./elements/*": {
+      "types": "./dist/elements/*.d.ts",
+      "default": "./dist/elements/*.js"
+    },
+    "./facade": {
+      "types": "./dist/facade/index.d.ts",
+      "default": "./dist/facade/index.js"
     },
     "./network": {
       "types": "./dist/network/index.d.ts",
@@ -19,10 +23,6 @@
     "./stats": {
       "types": "./dist/stats/index.d.ts",
       "default": "./dist/stats/index.js"
-    },
-    "./icon": {
-      "types": "./dist/icon/index.d.ts",
-      "default": "./dist/icon/index.js"
     },
     "./color-picker": {
       "types": "./dist/color/index.d.ts",

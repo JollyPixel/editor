@@ -6,8 +6,8 @@ import type { VoxelMapEditing } from "../editing/VoxelMapEditing.ts";
 import type { TextureEditor } from "../features/texture/TextureEditor.ts";
 import "../features/texture/TextureEditor.ts";
 import { BlocksPanel } from "./panels/BlocksPanel.ts";
-import { LayersPanel } from "./panels/LayersPanel.ts";
-import { MaterialsPanel } from "./panels/MaterialsPanel.ts";
+import type { LayersPanel } from "./panels/LayersPanel.ts";
+import type { MaterialsPanel } from "./panels/MaterialsPanel.ts";
 import { PaintPanel } from "./panels/PaintPanel.ts";
 import { TextureHost } from "./TextureHost.ts";
 
@@ -21,6 +21,7 @@ export interface EditorPanelElements {
 
 export class EditorPanels {
   readonly #elements: EditorPanelElements;
+  #editing: VoxelMapEditing | null = null;
   #textureEditor: TextureEditor | null = null;
   #host = new TextureHost("blocks", true);
 
@@ -34,10 +35,10 @@ export class EditorPanels {
     const materials = root.querySelector("materials-panel");
     if (
       layout === null ||
+      layers === null ||
+      materials === null ||
       !(blocks instanceof BlocksPanel) ||
-      !(paint instanceof PaintPanel) ||
-      !(layers instanceof LayersPanel) ||
-      !(materials instanceof MaterialsPanel)
+      !(paint instanceof PaintPanel)
     ) {
       return null;
     }
@@ -71,6 +72,7 @@ export class EditorPanels {
       materials
     } = this.#elements;
 
+    this.#editing = editing;
     blocks.editing = editing;
     layers.editing = editing;
     materials.editing = editing;
@@ -101,6 +103,8 @@ export class EditorPanels {
 
     const { layout, blocks, paint, materials } = this.#elements;
     materials.showsBlockLibrary = !layout.paneVisible("blocks");
+    this.#reveal("layers", () => import("./panels/LayersPanel.ts"));
+    this.#reveal("materials", () => import("./panels/MaterialsPanel.ts"));
 
     const host = TextureHost.resolve(
       layout.placement("blocks"),
@@ -116,4 +120,19 @@ export class EditorPanels {
     textureEditor.uvAccess = host.uvAccess;
     textureEditor.active = layout.paneVisible(host.panel);
   };
+
+  #reveal(
+    pane: string,
+    load: () => Promise<unknown>
+  ): void {
+    if (!this.#elements.layout.paneVisible(pane)) {
+      return;
+    }
+
+    void load().catch((error: unknown) => {
+      this.#editing?.state.log.push(
+        `The ${pane} panel failed to load: ${error instanceof Error ? error.message : String(error)}`
+      );
+    });
+  }
 }
