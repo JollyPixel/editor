@@ -1,21 +1,13 @@
 // Import Third-party Dependencies
+import type { SelectionRect } from "@jolly-pixel/pixel-draw.renderer";
 import type {
-  PixelDocument,
-  SelectionRect
-} from "@jolly-pixel/pixel-draw.renderer";
-import {
+  BlockDefinition,
+  BlockShapeRegistry,
+  BlocksetDefinition,
   BlocksetLink,
-  type BlockDefinition,
-  type BlocksetDefinition,
-  type BlocksetDocument,
-  type BlocksetSlot,
-  type VoxelView
+  BlocksetSlot
 } from "@jolly-pixel/voxel.renderer";
-import {
-  blocksetDocumentKind,
-  type BlocksetRoom
-} from "@jolly-pixel/asset.voxel-map/client";
-import type { AssetLeases } from "@jolly-pixel/editor.host";
+import { BlocksetIslands } from "@jolly-pixel/asset.voxel-map/client";
 import { RoomGrants } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
@@ -24,21 +16,8 @@ import {
   BLOCKSET_CAPABILITIES,
   type BlocksetGrants
 } from "../../access/BlocksetAccess.ts";
-import type { BlocksetEntry } from "./BlocksetEntry.ts";
-import { BlocksetAtlasBridge } from "./BlocksetAtlasBridge.ts";
-
-// CONSTANTS
-export const BLOCKSET_DOCUMENT_KIND = blocksetDocumentKind({
-  maxSize: 2048
-});
-
-export interface OpenedBlockset {
-  readonly pixels: PixelDocument;
-  readonly blockset: BlocksetDocument;
-  readonly room: BlocksetRoom;
-  readonly ready: Promise<void>;
-  release(): void;
-}
+import type { LinkedBlockset } from "../../viewer/LinkedBlockset.ts";
+import type { OpenedBlockset } from "../../viewer/openBlockset.ts";
 
 export interface BlockWriter {
   defineBlock(block: BlockDefinition): void;
@@ -46,53 +25,56 @@ export interface BlockWriter {
 }
 
 export interface BlocksetBindingOptions {
-  view: VoxelView;
-  entry: BlocksetEntry;
-  slot: BlocksetSlot;
-  opened: OpenedBlockset;
-  editorMap: EditorMap;
-  blocks: BlockWriter;
+  linked: LinkedBlockset;
+  shapes: BlockShapeRegistry;
+  editorMap: Pick<EditorMap, "ready" | "subscribe">;
+  blocks: Pick<BlockWriter, "syncAlphaModes">;
 }
 
 export class BlocksetBinding {
-  readonly assetId: string | null;
   readonly opened: OpenedBlockset;
   readonly link: BlocksetLink;
   readonly access: BlocksetGrants;
-  readonly #atlas: BlocksetAtlasBridge;
-  #definition: BlocksetDefinition;
-  #loaded = false;
+  readonly #linked: LinkedBlockset;
+  readonly #editorMap: Pick<EditorMap, "ready">;
+  readonly #blocks: Pick<BlockWriter, "syncAlphaModes">;
+  readonly #subscriptions: Array<() => void>;
+  #disposed = false;
+
+  readonly #onReset = (): void => {
+    this.#syncAlphaModes();
+  };
+
+  readonly #onSettled = (bounds: SelectionRect): void => {
+    this.#syncAlphaModes(bounds);
+  };
 
   constructor(
     options: BlocksetBindingOptions
   ) {
-    const { view, entry, opened } = options;
+    const { linked } = options;
+    const { opened, surface } = linked;
 
-    this.assetId = entry.assetId;
+    this.#linked = linked;
+    this.#editorMap = options.editorMap;
+    this.#blocks = options.blocks;
     this.opened = opened;
-    this.#definition = entry.definition;
-    this.link = new BlocksetLink({
-      document: view.document,
-      blockset: opened.blockset,
-      slot: options.slot
-    });
-    this.#atlas = new BlocksetAtlasBridge({
-      view,
-      pixels: opened.pixels,
-      blockset: opened.blockset,
-      definition: entry.definition,
-      editorMap: options.editorMap,
-      blocks: options.blocks
-    });
+    this.link = linked.link;
     this.access = new RoomGrants(opened.room, BLOCKSET_CAPABILITIES);
-    void opened.ready.then(() => {
-      this.#loaded = true;
-      this.#atlas.syncAlphaModes();
-    });
+    this.#subscriptions = [
+      new BlocksetIslands({
+        blockset: opened.blockset,
+        shapes: options.shapes
+      }).attachTo(opened.pixels),
+      surface.subscribe("reset", this.#onReset),
+      surface.subscribe("settled", this.#onSettled),
+      options.editorMap.subscribe("reset", this.#onReset)
+    ];
+    void opened.ready.then(this.#onReset);
   }
 
   get loaded(): boolean {
-    return this.#loaded;
+    return this.#linked.loaded;
   }
 
   get slot(): BlocksetSlot {
@@ -100,42 +82,22 @@ export class BlocksetBinding {
   }
 
   get definition(): BlocksetDefinition {
-    return this.#definition;
-  }
-
-  boundTo(
-    entry: BlocksetEntry
-  ): boolean {
-    return this.assetId === entry.assetId &&
-      this.slot.slot === entry.definition.slot;
-  }
-
-  update(
-    definition: BlocksetDefinition
-  ): void {
-    this.#definition = definition;
-    this.#atlas.update(definition);
+    return this.#linked.definition;
   }
 
   dispose(): void {
+    this.#disposed = true;
     this.access.dispose();
-    this.#atlas.destroy();
-    this.link.dispose();
-    this.opened.release();
+    for (const unsubscribe of this.#subscriptions) {
+      unsubscribe();
+    }
   }
-}
 
-export function openBlockset(
-  assets: AssetLeases,
-  assetId: string
-): OpenedBlockset {
-  const lease = assets.open(BLOCKSET_DOCUMENT_KIND, assetId);
-
-  return {
-    pixels: lease.document.pixels,
-    blockset: lease.document.blockset,
-    room: lease.room,
-    ready: lease.ready,
-    release: () => lease.release()
-  };
+  #syncAlphaModes(
+    bounds?: SelectionRect
+  ): void {
+    if (!this.#disposed && this.#editorMap.ready) {
+      this.#blocks.syncAlphaModes(this.definition.id, bounds);
+    }
+  }
 }

@@ -1,5 +1,9 @@
 // Import Node.js Dependencies
-import { describe, test } from "node:test";
+import {
+  describe,
+  test,
+  type TestContext
+} from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
@@ -9,21 +13,19 @@ import {
   IslandMap,
   NormalMap,
   NormalMapConfig,
-  type IslandFace,
+  type PixelDocument,
   type PixelDocumentEvent,
   type SelectionRect
 } from "@jolly-pixel/pixel-draw.renderer";
-import {
-  BlockShapeRegistry,
-  resolveBlockDefinition
-} from "@jolly-pixel/voxel.renderer";
+import type { BlocksetDocument } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import {
   BlocksetAtlasBridge,
   type BlocksetAtlasBridgeOptions
-} from "../../../src/features/blocksets/BlocksetAtlasBridge.ts";
-import { FakeFrames } from "../../helpers/frames.ts";
+} from "../../src/viewer/BlocksetAtlasBridge.ts";
+import { BlocksetSurface } from "../../src/viewer/BlocksetSurface.ts";
+import { FakeFrames } from "../helpers/frames.ts";
 
 // CONSTANTS
 const kRect: SelectionRect = {
@@ -39,7 +41,6 @@ const kSize = {
 
 class FakeBlocksetPixels extends Emitter<PixelDocumentEvent> {
   normalMap: NormalMapConfig | null = null;
-  islandFaces: (() => Iterable<IslandFace>) | null = null;
   readonly buffer = {
     canvas: () => {
       return {};
@@ -53,7 +54,7 @@ class FakeBlocksetPixels extends Emitter<PixelDocumentEvent> {
     this.normals = new NormalMap({
       size: () => kSize,
       pixels: () => this.#pixels,
-      islands: () => IslandMap.fromFaces(kSize, this.islandFaces?.() ?? []),
+      islands: () => IslandMap.fromFaces(kSize, []),
       config: () => this.normalMap,
       connect: () => () => undefined
     });
@@ -61,20 +62,6 @@ class FakeBlocksetPixels extends Emitter<PixelDocumentEvent> {
 
   size(): typeof kSize {
     return kSize;
-  }
-
-  useIslandFaces(
-    faces: () => Iterable<IslandFace>
-  ): () => void {
-    this.islandFaces = faces;
-
-    return () => {
-      this.islandFaces = null;
-    };
-  }
-
-  invalidateIslands(): void {
-    this.normals.invalidateIslands();
   }
 
   toggleNormalMap(
@@ -88,12 +75,13 @@ class FakeBlocksetPixels extends Emitter<PixelDocumentEvent> {
   }
 }
 
-function setup() {
-  const queue: Array<() => void> = [];
+function setup(
+  t: TestContext
+) {
+  const frames = new FakeFrames(t);
   const counts = {
     images: 0,
-    frames: 0,
-    alphaSyncs: 0
+    frames: 0
   };
   const loads: (THREE.Texture | null)[] = [];
   const atlas = {
@@ -109,19 +97,14 @@ function setup() {
   };
   const pixels = new FakeBlocksetPixels();
   const blockset = Object.assign(new Emitter(), {
-    tileSize: 16,
-    blocks: [
-      resolveBlockDefinition({
-        id: 1,
-        name: "stone",
-        shapeId: "cube",
-        defaultTexture: { col: 1, row: 0 }
-      })
-    ]
+    tileSize: 16
+  });
+  const surface = new BlocksetSurface({
+    pixels: pixels as unknown as PixelDocument,
+    blockset: blockset as unknown as BlocksetDocument
   });
   const options = {
     view: {
-      shapes: BlockShapeRegistry.createDefault(),
       atlases: {
         get: () => atlas,
         requireLoadedAtlas: () => atlas
@@ -139,26 +122,12 @@ function setup() {
         counts.frames++;
       }
     },
-    pixels,
-    blockset,
+    surface,
     definition: {
       id: "tiles",
       tileSize: 16,
       cols: 2,
       rows: 2
-    },
-    editorMap: {
-      ready: true,
-      subscribe: () => () => undefined
-    },
-    blocks: {
-      defineBlock: () => undefined,
-      syncAlphaModes: () => {
-        counts.alphaSyncs++;
-      }
-    },
-    scheduler: (callback: () => void) => {
-      queue.push(callback);
     }
   } as unknown as BlocksetAtlasBridgeOptions;
   const bridge = new BlocksetAtlasBridge(options);
@@ -168,67 +137,44 @@ function setup() {
     pixels,
     atlas,
     loads,
-    queue,
+    frames,
     counts,
     toggleNormalMap(config: NormalMapConfig | null): void {
       pixels.toggleNormalMap(config);
-    },
-    runQueue(): void {
-      for (const callback of queue.splice(0)) {
-        callback();
-      }
     }
   };
 }
 
 describe("BlocksetAtlasBridge", () => {
-  test("syncs on construction and schedules nothing while idle", () => {
-    const { queue, counts } = setup();
+  test("syncs on construction and schedules nothing while idle", (t) => {
+    const { frames, counts } = setup(t);
 
     assert.equal(counts.images, 1);
     assert.equal(counts.frames, 1);
-    assert.equal(queue.length, 0);
+    assert.equal(frames.length, 0);
   });
 
-  test("a pixel change schedules one flush, then the alpha sync", () => {
-    const { pixels, queue, counts, runQueue } = setup();
+  test("uploads a burst of pixel changes once on the next frame", (t) => {
+    const { pixels, frames, counts } = setup(t);
 
     pixels.emit("changed", { bounds: kRect });
     pixels.emit("changed", { bounds: kRect });
-    assert.equal(queue.length, 1);
+    assert.equal(frames.length, 1);
 
-    const alphaSyncs = counts.alphaSyncs;
-    runQueue();
+    frames.run();
     assert.equal(counts.images, 2);
     assert.equal(counts.frames, 2);
-    assert.equal(queue.length, 1);
 
-    runQueue();
-    assert.equal(counts.alphaSyncs, alphaSyncs + 1);
-    assert.equal(queue.length, 0);
-  });
-
-  test("builds the pixel islands from the blockset blocks until destroyed", () => {
-    const { bridge, pixels } = setup();
-
-    assert.ok(pixels.islandFaces);
-    assert.deepEqual(
-      [...new Set([...pixels.islandFaces()].map(({ regionId }) => regionId))],
-      ["block-1"]
-    );
-
-    bridge.destroy();
-
-    assert.equal(pixels.islandFaces, null);
+    frames.run();
+    assert.equal(counts.images, 2);
   });
 
   test("attaches the pixels normal map while they have settings", (t) => {
-    new FakeFrames(t);
-    const { pixels, atlas, loads, queue, runQueue, toggleNormalMap } = setup();
+    const { pixels, atlas, loads, frames, toggleNormalMap } = setup(t);
 
     toggleNormalMap(NormalMapConfig.create());
-    assert.equal(queue.length, 1);
-    runQueue();
+    assert.equal(frames.length, 1);
+    frames.run();
 
     assert.equal(loads.length, 1);
     assert.ok(loads[0] instanceof THREE.DataTexture);
@@ -237,29 +183,27 @@ describe("BlocksetAtlasBridge", () => {
     assert.equal(atlas.normal, loads[0]);
 
     toggleNormalMap(null);
-    runQueue();
+    frames.run();
 
     assert.deepEqual(loads.slice(1), [null]);
     assert.equal(atlas.normal, null);
   });
 
   test("reloads nothing when a normal map setting changes", (t) => {
-    new FakeFrames(t);
-    const { loads, queue, runQueue, toggleNormalMap } = setup();
+    const { loads, frames, toggleNormalMap } = setup(t);
     toggleNormalMap(NormalMapConfig.create());
-    runQueue();
+    frames.run();
 
     toggleNormalMap(NormalMapConfig.create().withDefaults({ strength: 4 }));
 
-    assert.equal(queue.length, 0);
+    assert.equal(frames.length, 0);
     assert.equal(loads.length, 1);
   });
 
   test("requests a frame when the normal map regenerates", (t) => {
-    const frames = new FakeFrames(t);
-    const { pixels, counts, runQueue, toggleNormalMap } = setup();
+    const { pixels, counts, frames, toggleNormalMap } = setup(t);
     toggleNormalMap(NormalMapConfig.create());
-    runQueue();
+    frames.run();
     const before = counts.frames;
 
     pixels.normals.invalidate(kRect);
@@ -268,12 +212,13 @@ describe("BlocksetAtlasBridge", () => {
     assert.equal(counts.frames, before + 1);
   });
 
-  test("a destroyed bridge stops scheduling", () => {
-    const { bridge, pixels, queue } = setup();
+  test("a destroyed bridge uploads nothing", (t) => {
+    const { bridge, pixels, frames, counts } = setup(t);
 
     bridge.destroy();
     pixels.emit("changed", { bounds: kRect });
+    frames.run();
 
-    assert.equal(queue.length, 0);
+    assert.equal(counts.images, 1);
   });
 });

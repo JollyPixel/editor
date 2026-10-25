@@ -168,6 +168,8 @@ the renderer package does not depend on an ECS runtime.
 - [Serialization and the world codec](docs/api/serialization/serialization.md).
 - [`VoxelRenderer`](docs/api/engine/VoxelRenderer.md), the `@jolly-pixel/engine`
   actor component wrapping a `VoxelDocument` and a `VoxelView`.
+- [`VoxelMapDefinition`](docs/api/engine/VoxelMapDefinition.md), the `VoxelMap`
+  scene-file component type.
 
 ## 🚀 Running the examples
 

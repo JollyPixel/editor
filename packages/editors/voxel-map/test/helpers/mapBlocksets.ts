@@ -14,7 +14,10 @@ import {
   type AtlasTexture,
   type VoxelView
 } from "@jolly-pixel/voxel.renderer";
-import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
+import type {
+  IslandFace,
+  PixelDocument
+} from "@jolly-pixel/pixel-draw.renderer";
 import type { BlocksetRoom } from "@jolly-pixel/asset.voxel-map/client";
 import type {
   Right,
@@ -29,7 +32,7 @@ import {
   MapBlocksets,
   type BlocksetCatalog
 } from "../../src/features/blocksets/MapBlocksets.ts";
-import type { OpenedBlockset } from "../../src/features/blocksets/BlocksetBinding.ts";
+import type { OpenedBlockset } from "../../src/viewer/openBlockset.ts";
 
 // CONSTANTS
 export const TERRAIN_BLOCKSET: BlocksetDefinition = {
@@ -52,9 +55,13 @@ if (typeof globalThis.requestAnimationFrame !== "function") {
   globalThis.requestAnimationFrame = () => 0;
 }
 
+export interface FakePixels extends PixelDocument {
+  islandFaces: (() => Iterable<IslandFace>) | null;
+}
+
 function makePixels(
   transparent: () => boolean
-): PixelDocument {
+): FakePixels {
   const canvas = { width: 64, height: 64 };
   const fake = Object.assign(
     new Emitter<Record<string, (...args: unknown[]) => void>>(),
@@ -65,49 +72,32 @@ function makePixels(
       },
       normalMap: null,
       normals: new Emitter(),
-      useIslandFaces: () => () => undefined,
+      islandFaces: null as (() => Iterable<IslandFace>) | null,
+      useIslandFaces: (faces: () => Iterable<IslandFace>) => {
+        fake.islandFaces = faces;
+
+        return () => {
+          fake.islandFaces = null;
+        };
+      },
       invalidateIslands: () => undefined,
       hasTransparency: transparent
     }
   );
 
-  return fake as unknown as PixelDocument;
+  return fake as unknown as FakePixels;
 }
 
-function makeView(): VoxelView {
-  const blocksets = new BlocksetList();
-  const atlases = new BlocksetAtlases({ blocksets });
-  const blockRegistry = new BlockRegistry();
-  const materialGroups = new MaterialGroupList();
-  const blendGroups = new BlendGroupList();
+export function makeView(
+  document: VoxelView["document"] = makeDocument()
+): VoxelView {
+  const atlases = new BlocksetAtlases({ blocksets: document.blocksets });
   const fake = {
-    document: {
-      blocksets,
-      blocks: blockRegistry,
-      materialGroups,
-      blendGroups,
-      defineBlock: (def: ResolvedBlockDefinition) => {
-        blockRegistry.register(def);
-      },
-      defineBlocks: (defs: Iterable<ResolvedBlockDefinition>) => {
-        blockRegistry.registerMany(defs);
-      },
-      removeBlock: (id: number) => blockRegistry.unregister(id),
-      moveBlock: (id: number, toIndex: number) => blockRegistry.moveBlockToIndex(id, toIndex),
-      defineMaterialGroup: (group: MaterialGroup) => materialGroups.define(group),
-      removeMaterialGroup: (id: string) => materialGroups.remove(id),
-      defineBlendGroup: (group: BlendGroupJSON) => blendGroups.define(group),
-      removeBlendGroup: (id: string) => blendGroups.remove(id),
-      addBlockset: (def: BlocksetDefinition) => {
-        blocksets.declare(def);
-
-        return true;
-      }
-    },
+    document,
     atlases,
     shapes: BlockShapeRegistry.createDefault(),
     loadBlockset: (def: BlocksetDefinition, texture: AtlasTexture) => {
-      blocksets.declare(def);
+      document.blocksets.declare(def);
       atlases.registerTexture(def.id, texture);
     },
     markAllChunksDirty: () => void 0,
@@ -115,6 +105,38 @@ function makeView(): VoxelView {
   };
 
   return fake as unknown as VoxelView;
+}
+
+function makeDocument(): VoxelView["document"] {
+  const blocksets = new BlocksetList();
+  const blockRegistry = new BlockRegistry();
+  const materialGroups = new MaterialGroupList();
+  const blendGroups = new BlendGroupList();
+  const fake = Object.assign(new Emitter(), {
+    blocksets,
+    blocks: blockRegistry,
+    materialGroups,
+    blendGroups,
+    defineBlock: (def: ResolvedBlockDefinition) => {
+      blockRegistry.register(def);
+    },
+    defineBlocks: (defs: Iterable<ResolvedBlockDefinition>) => {
+      blockRegistry.registerMany(defs);
+    },
+    removeBlock: (id: number) => blockRegistry.unregister(id),
+    moveBlock: (id: number, toIndex: number) => blockRegistry.moveBlockToIndex(id, toIndex),
+    defineMaterialGroup: (group: MaterialGroup) => materialGroups.define(group),
+    removeMaterialGroup: (id: string) => materialGroups.remove(id),
+    defineBlendGroup: (group: BlendGroupJSON) => blendGroups.define(group),
+    removeBlendGroup: (id: string) => blendGroups.remove(id),
+    addBlockset: (def: BlocksetDefinition) => {
+      blocksets.declare(def);
+
+      return true;
+    }
+  });
+
+  return fake as unknown as VoxelView["document"];
 }
 
 export class FakeBlocksetRoom extends Emitter<RoomEventMap> {
@@ -141,6 +163,7 @@ export class FakeBlocksetRoom extends Emitter<RoomEventMap> {
 
 export class FakeSources {
   readonly opened = new Map<string, OpenedBlockset>();
+  readonly pixels = new Map<string, FakePixels>();
   readonly rooms = new Map<string, FakeBlocksetRoom>();
   readonly released: string[] = [];
   transparent = false;
@@ -160,9 +183,11 @@ export class FakeSources {
       ]
     });
     const room = new FakeBlocksetRoom();
+    const pixels = makePixels(() => this.transparent);
     this.rooms.set(assetId.replace("asset-", ""), room);
+    this.pixels.set(assetId.replace("asset-", ""), pixels);
     const opened: OpenedBlockset = {
-      pixels: makePixels(() => this.transparent),
+      pixels,
       blockset,
       room: room as unknown as BlocksetRoom,
       ready: Promise.resolve(),
@@ -208,25 +233,31 @@ function blocksetRecord(
   } as AssetRecordData;
 }
 
+export function makeCatalog(): FakeCatalog {
+  const catalog = new FakeCatalog();
+  catalog.list = [TERRAIN_BLOCKSET, ROCK_BLOCKSET, MOSS_BLOCKSET].map(
+    (definition) => blocksetRecord(definition.asset!.id)
+  );
+
+  return catalog;
+}
+
 export function setupMapBlocksets(
   definitions: BlocksetDefinition[] = [TERRAIN_BLOCKSET]
 ) {
   const view = makeView();
   const sources = new FakeSources();
-  const catalog = new FakeCatalog();
-  catalog.list = [TERRAIN_BLOCKSET, ROCK_BLOCKSET, MOSS_BLOCKSET].map(
-    (definition) => blocksetRecord(definition.asset!.id)
-  );
+  const catalog = makeCatalog();
   const editorMap = Object.assign(
     new Emitter<Record<string, () => void>>(),
     { ready: true }
-  ) as unknown as EditorMap;
+  );
   view.document.blocksets.replace(definitions);
   let nextId = 0;
   const blocksets = new MapBlocksets({
     view,
     catalog,
-    editorMap,
+    editorMap: editorMap as unknown as EditorMap,
     open: (assetId) => sources.open(assetId),
     generateId: () => `generated-${nextId++}`
   });
@@ -235,8 +266,8 @@ export function setupMapBlocksets(
     next: BlocksetDefinition[]
   ): void {
     view.document.blocksets.replace(next);
-    editorMap.emit("blocksetsChanged");
+    view.document.emit("loaded");
   }
 
-  return { view, catalog, sources, blocksets, relink };
+  return { view, catalog, sources, editorMap, blocksets, relink };
 }

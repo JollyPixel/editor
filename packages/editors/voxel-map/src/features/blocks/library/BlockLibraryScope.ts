@@ -2,7 +2,7 @@
 import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { BlocksetEntry } from "../../blocksets/BlocksetEntry.ts";
+import type { BlocksetEntry } from "../../../viewer/BlocksetEntry.ts";
 import { BlockLibraryOption } from "./BlockLibraryOption.ts";
 
 export type BlockLibraryScopeKind = "all" | "active";

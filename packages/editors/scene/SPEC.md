@@ -256,19 +256,24 @@ History registration follows the other kinds through `@jolly-pixel/history`.
 
 ## Voxel-map viewer
 
-`@jolly-pixel/editor.voxel-map/viewer` is a subpath export, as
-`editor.pixel-art/mesh-texturing` is. It takes `session.assets` and a map id,
-leases the map, its blocksets and their pixel-art textures, and returns a
-`VoxelDocument` plus a configured view whose atlases follow blockset and
-texture edits. It has no write path.
+The viewer is the root export of `@jolly-pixel/editor.voxel-map`, raw
+TypeScript from `./src/viewer/index.ts`, since the package's `dist/` holds its
+built page and `src/index.ts` boots it.
+`VoxelMapViewer` takes `session.assets`, `session.catalog` and a map id,
+leases the map and its blocksets, and exposes the map's `VoxelDocument` plus
+`attach(view)`, which loads the blockset atlases into a `VoxelView` and keeps
+them current. Atlases belong to a view while blocks are added to the shared
+document, so one viewer per map serves every view of it. It has no write
+path. `VoxelMapViewer.kinds` goes into the scene editor's `kinds`.
 
-It is extracted from the read side of `src/features/blocksets/`
-(`MapBlocksets`, `BlocksetAtlasBridge`), and the voxel-map editor moves to it
-so there is one atlas binding.
+Its `src/viewer/` holds the read side moved out of `src/features/blocksets/`:
+`LinkedBlocksets`, split from `MapBlocksets`, and `BlocksetAtlasBridge`. The
+voxel-map editor's `MapBlocksets` builds on it, so there is one atlas binding.
 
-The `VoxelMap` definition lives in voxel-renderer's engine plugin and reads
-its `VoxelDocument` through `ComponentContext.assets`. The scene editor's
-resolver answers `assets.map` with the viewer.
+The `VoxelMap` definition lives in voxel-renderer's engine plugin. Its `map`
+slot type is `VOXEL_MAP_ASSET`, an `AssetType<VoxelMapSource>`, and the
+viewer is a `VoxelMapSource`. The scene editor's resolver answers
+`assets.map` with the map's shared viewer.
 
 ## `@jolly-pixel/editor.scene`
 
@@ -348,8 +353,9 @@ Each phase ends with its workspace tests, `pnpm run typecheck` and
    definitions. Engine docs for the new API.
 2. [DONE] **`asset.scene`.** Schema, `SceneState`, commands, keys, arbiter, kind
    handler, `SceneDocument`, history registration.
-3. **Voxel-map viewer.** Extract `editor.voxel-map/viewer`, move the voxel-map
-   editor onto it, add the `VoxelMap` definition behind the resolver.
+3. [DONE] **Voxel-map viewer.** Extract the `editor.voxel-map` viewer, move
+   the voxel-map editor onto it, add the `VoxelMap` definition behind the
+   resolver.
 4. **Host.** `session.pickAsset()` and the offline `scene` kind.
 5. **`editor.scene`.** Boot, `SceneBinding`, hierarchy, inspector, scene pane,
    viewport and gizmo, history, presence, preferences.

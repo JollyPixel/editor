@@ -3,45 +3,15 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 // Import Third-party Dependencies
-import type { Actor } from "@jolly-pixel/engine";
 import * as THREE from "three";
 
 // Import Internal Dependencies
 import { VoxelRenderer } from "../../../src/plugins/engine/VoxelRenderer.ts";
 import { VoxelDocument } from "../../../src/document/VoxelDocument.ts";
-import { makeLogger } from "../../helpers/fakes.ts";
-
-interface FrameRequests {
-  invalidations: number;
-  keepAlives: Array<() => boolean>;
-}
-
-function makeActor(
-  frames: FrameRequests = { invalidations: 0, keepAlives: [] }
-): Actor {
-  return {
-    components: [],
-    componentsRequiringUpdate: [],
-    object3D: new THREE.Group(),
-    world: {
-      logger: makeLogger(),
-      invalidate: () => {
-        frames.invalidations++;
-      },
-      keepAlive: (predicate: () => boolean) => {
-        frames.keepAlives.push(predicate);
-
-        return () => {
-          frames.keepAlives.splice(frames.keepAlives.indexOf(predicate), 1);
-        };
-      },
-      sceneManager: {
-        scheduleStart: () => void 0,
-        cancelStart: () => void 0
-      }
-    }
-  } as unknown as Actor;
-}
+import {
+  makeActor,
+  type FrameRequests
+} from "../../helpers/engineActor.ts";
 
 describe("VoxelRenderer", () => {
   it("runs the view through the actor component lifecycle", (context) => {

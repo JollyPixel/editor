@@ -27,7 +27,6 @@ import { mapAccess } from "../helpers/mapAccess.ts";
 const kEvents: Array<keyof EditorMapEvents> = [
   "layerUpdated",
   "blockRegistryChanged",
-  "blocksetsChanged",
   "materialGroupsChanged",
   "templatesChanged",
   "reset"
@@ -110,7 +109,6 @@ describe("EditorMap", () => {
     assert.deepEqual(seen, [
       "layerUpdated",
       "blockRegistryChanged",
-      "blocksetsChanged",
       "materialGroupsChanged",
       "templatesChanged"
     ]);
@@ -123,7 +121,6 @@ describe("EditorMap", () => {
 
     assert.deepEqual(seen, [
       "layerUpdated",
-      "blocksetsChanged",
       "blockRegistryChanged",
       "materialGroupsChanged",
       "templatesChanged",

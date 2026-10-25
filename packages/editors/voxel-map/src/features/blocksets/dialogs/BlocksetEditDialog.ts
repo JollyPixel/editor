@@ -23,7 +23,7 @@ import { BlockTextures } from "@jolly-pixel/voxel.renderer";
 // Import Internal Dependencies
 import type { VoxelMapEditing } from "../../../editing/VoxelMapEditing.ts";
 import { EditingElement } from "../../../editing/EditingElement.ts";
-import type { BlocksetEntry } from "../BlocksetEntry.ts";
+import type { BlocksetEntry } from "../../../viewer/BlocksetEntry.ts";
 import { tileSizeSegments } from "../tileSizes.ts";
 import "../blocksetIcons.ts";
 

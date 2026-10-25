@@ -10,11 +10,10 @@ import {
   blocksetAsset,
   BLOCKSET_EXTENSION
 } from "@jolly-pixel/asset.voxel-map/client";
-import {
-  BlocksetSlot,
-  type BlockDefinition,
-  type MaterialGroup,
-  type VoxelView
+import type {
+  BlockDefinition,
+  MaterialGroup,
+  VoxelView
 } from "@jolly-pixel/voxel.renderer";
 import type { SelectionRect } from "@jolly-pixel/pixel-draw.renderer";
 import { Emitter } from "@openally/emitt";
@@ -30,11 +29,16 @@ import {
   BlockAlphaModes,
   type BlocksetPixels
 } from "./BlockAlphaModes.ts";
-import { BlocksetEntry } from "./BlocksetEntry.ts";
+import { BlocksetEntry } from "../../viewer/BlocksetEntry.ts";
+import type { LinkedBlockset } from "../../viewer/LinkedBlockset.ts";
+import {
+  LinkedBlocksets,
+  type BlocksetRecords
+} from "../../viewer/LinkedBlocksets.ts";
+import type { OpenedBlockset } from "../../viewer/openBlockset.ts";
 import {
   BlocksetBinding,
-  type BlockWriter,
-  type OpenedBlockset
+  type BlockWriter
 } from "./BlocksetBinding.ts";
 import {
   TileOccupancy,
@@ -44,8 +48,7 @@ import {
 // CONSTANTS
 const kBlocksetDirectory = "blocksets/";
 
-export interface BlocksetCatalog {
-  records(): Iterable<AssetRecordData>;
+export interface BlocksetCatalog extends BlocksetRecords {
   record(assetId: string): AssetRecordData | undefined;
   create(
     path: string,
@@ -53,8 +56,6 @@ export interface BlocksetCatalog {
     options?: CatalogCreateOptions
   ): Promise<string>;
   rename(assetId: string, to: string): Promise<void>;
-  on(event: "change", listener: () => void): unknown;
-  off(event: "change", listener: () => void): unknown;
 }
 
 export interface CreateBlocksetOptions {
@@ -78,18 +79,22 @@ export type MapBlocksetsEvents = {
   denied: (blocksetId: string) => void;
 };
 
+export type MapBlocksetsSignals = Pick<
+  Emitter<MapBlocksetsEvents>,
+  "subscribe"
+>;
+
 export class MapBlocksets
   extends Emitter<MapBlocksetsEvents>
   implements BlockWriter {
   readonly #view: VoxelView;
   readonly #catalog: BlocksetCatalog;
   readonly #editorMap: EditorMap;
-  readonly #open: (assetId: string) => OpenedBlockset;
   readonly #generateId: () => string;
+  readonly #linked: LinkedBlocksets;
   readonly #bindings = new Map<string, BlocksetBinding>();
   readonly #alphaModes: BlockAlphaModes;
-  readonly #unsubscribe: () => void;
-  #entries: readonly BlocksetEntry[] = [];
+  readonly #detach: () => void;
   #activeBlocksetId: string | null = null;
 
   constructor(
@@ -99,23 +104,25 @@ export class MapBlocksets
     this.#view = options.view;
     this.#catalog = options.catalog;
     this.#editorMap = options.editorMap;
-    this.#open = options.open;
     this.#generateId = options.generateId ?? (() => crypto.randomUUID());
     this.#alphaModes = new BlockAlphaModes({
       view: this.#view,
       resolvePixels: (blocksetId) => this.#resolveLoadedPixels(blocksetId)
     });
 
-    this.#catalog.on("change", this.refresh);
-    this.#unsubscribe = this.#editorMap.subscribe(
-      "blocksetsChanged",
-      this.refresh
-    );
-    this.refresh();
+    this.#linked = new LinkedBlocksets({
+      document: this.#view.document,
+      catalog: this.#catalog,
+      open: options.open,
+      onLink: this.#bind
+    });
+    this.#linked.on("change", this.#onLinkedChange);
+    this.#detach = this.#linked.attach(this.#view);
+    this.#assignActive(this.entries[0]?.id ?? null);
   }
 
   get entries(): readonly BlocksetEntry[] {
-    return this.#entries;
+    return this.#linked.entries;
   }
 
   get activeBlocksetId(): string | null {
@@ -141,7 +148,7 @@ export class MapBlocksets
   entry(
     blocksetId: string
   ): BlocksetEntry | undefined {
-    return this.#entries.find((entry) => entry.id === blocksetId);
+    return this.entries.find((entry) => entry.id === blocksetId);
   }
 
   open(
@@ -168,7 +175,7 @@ export class MapBlocksets
   entriesGranting(
     capability: BlocksetCapability
   ): BlocksetEntry[] {
-    return this.#entries.filter(
+    return this.entries.filter(
       (entry) => this.access(entry.id).has(capability)
     );
   }
@@ -309,7 +316,7 @@ export class MapBlocksets
   }
 
   linkableAssets(): AssetRecordData[] {
-    const linked = new Set(this.#entries.map((entry) => entry.assetId));
+    const linked = new Set(this.entries.map((entry) => entry.assetId));
 
     return [...this.#catalog.records()]
       .filter((record) => BlocksetEntry.isBlocksetAsset(record) && !linked.has(record.id))
@@ -371,33 +378,9 @@ export class MapBlocksets
     }
   }
 
-  readonly refresh = (): void => {
-    const entries = BlocksetEntry.resolveAll(
-      this.#view.document.blocksets,
-      this.#catalog.records()
-    );
-    if (
-      entries.length === this.#entries.length &&
-      entries.every((entry, index) => entry.equals(this.#entries[index]))
-    ) {
-      return;
-    }
-
-    this.#entries = entries;
-    const active = this.#activeBlocksetId;
-    if (active === null || this.entry(active) === undefined) {
-      this.#assignActive(entries[0]?.id ?? null);
-    }
-    this.#reconcileBindings();
-    this.emit("change");
-  };
-
   dispose(): void {
-    this.#unsubscribe();
-    this.#catalog.off("change", this.refresh);
-    for (const [blocksetId, binding] of this.#bindings) {
-      this.#unbind(blocksetId, binding);
-    }
+    this.#detach();
+    this.#linked.dispose();
   }
 
   #assignActive(
@@ -409,77 +392,33 @@ export class MapBlocksets
     }
   }
 
-  #reconcileBindings(): void {
-    const entries = new Map(
-      this.#entries.map((entry) => [entry.id, entry])
-    );
-    for (const [blocksetId, binding] of this.#bindings) {
-      const entry = entries.get(blocksetId);
-      if (entry === undefined || !binding.boundTo(entry)) {
-        this.#unbind(blocksetId, binding);
-      }
+  readonly #onLinkedChange = (): void => {
+    const active = this.#activeBlocksetId;
+    if (active === null || this.entry(active) === undefined) {
+      this.#assignActive(this.entries[0]?.id ?? null);
     }
+    this.emit("change");
+  };
 
-    for (const [blocksetId, entry] of entries) {
-      const binding = this.#bindings.get(blocksetId);
-      if (binding === undefined) {
-        this.#bind(entry);
-      }
-      else {
-        binding.update(entry.definition);
-      }
-    }
-  }
-
-  #bind(
-    entry: BlocksetEntry
-  ): void {
-    const { definition, assetId } = entry;
-    if (definition.slot === undefined || assetId === null) {
-      return;
-    }
-
-    let opened: OpenedBlockset;
-    try {
-      opened = this.#open(assetId);
-    }
-    catch (error) {
-      console.error(
-        `MapBlocksets: cannot open blockset "${definition.id}"`,
-        error
-      );
-
-      return;
-    }
-
+  readonly #bind = (
+    linked: LinkedBlockset
+  ): () => void => {
+    const blocksetId = linked.definition.id;
     const binding = new BlocksetBinding({
-      view: this.#view,
-      entry,
-      slot: new BlocksetSlot({
-        id: definition.id,
-        slot: definition.slot
-      }),
-      opened,
+      linked,
+      shapes: this.#view.shapes,
       editorMap: this.#editorMap,
       blocks: this
     });
     binding.access.on("change", () => this.emit("change"));
-    binding.access.on("denied", () => this.emit("denied", definition.id));
-    this.#bindings.set(definition.id, binding);
-    void opened.ready.then(() => {
-      if (this.#bindings.get(definition.id) === binding) {
-        this.emit("change");
-      }
-    });
-  }
+    binding.access.on("denied", () => this.emit("denied", blocksetId));
+    this.#bindings.set(blocksetId, binding);
 
-  #unbind(
-    blocksetId: string,
-    binding: BlocksetBinding
-  ): void {
-    this.#bindings.delete(blocksetId);
-    binding.dispose();
-  }
+    return () => {
+      this.#bindings.delete(blocksetId);
+      binding.dispose();
+    };
+  };
 
   #resolveLoadedPixels(
     blocksetId: string

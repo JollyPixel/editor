@@ -3,7 +3,7 @@ import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 import { SearchQuery } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { BlocksetEntry } from "../../blocksets/BlocksetEntry.ts";
+import type { BlocksetEntry } from "../../../viewer/BlocksetEntry.ts";
 import { BlockLibraryOrder } from "./BlockLibraryOrder.ts";
 import { BlockLibraryScope } from "./BlockLibraryScope.ts";
 

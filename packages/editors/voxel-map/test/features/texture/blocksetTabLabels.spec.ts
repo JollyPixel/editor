@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { blocksetTabLabels } from "../../../src/features/texture/blocksetTabLabels.ts";
-import { BlocksetEntry } from "../../../src/features/blocksets/BlocksetEntry.ts";
+import { BlocksetEntry } from "../../../src/viewer/BlocksetEntry.ts";
 
 // CONSTANTS
 const kDefinition = {

@@ -9,6 +9,7 @@ Private editor workspace built on [`@jolly-pixel/voxel.renderer`][voxel-renderer
 The [brush](./docs/brush.md) document specifies how the local brush aims, sizes and paints.
 The [texture](./docs/texture.md) document specifies when UV edits redefine the blocks.
 The [keybinds](./docs/keybinds.md) document lists every map shortcut and how to rebind it.
+The [viewer](./docs/viewer.md) document describes the read-only map viewer, the only thing other editors import from `@jolly-pixel/editor.voxel-map`.
 
 ## 🚀 Running the editor
 

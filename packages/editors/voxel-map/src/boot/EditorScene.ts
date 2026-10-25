@@ -75,7 +75,7 @@ import {
   MapBlocksets,
   type BlocksetCatalog
 } from "../features/blocksets/MapBlocksets.ts";
-import { openBlockset } from "../features/blocksets/BlocksetBinding.ts";
+import { openBlockset } from "../viewer/openBlockset.ts";
 import { SceneLighting } from "../scene/environment/SceneLighting.ts";
 import { SceneEnvironment } from "../scene/environment/SceneEnvironment.ts";
 import { EditorCamera } from "../scene/camera/EditorCamera.ts";
@@ -345,6 +345,7 @@ export class EditorScene extends Systems.Scene {
         blockRegistry: view.document.blocks,
         sources: blockSources,
         editorMap,
+        blocksets,
         peers
       });
     const frustums = world
@@ -386,6 +387,7 @@ export class EditorScene extends Systems.Scene {
         placement,
         pointer: state.pointer,
         editorMap,
+        blocksets,
         color: session.identity.color
       })
       .addComponent(PlacementClick, {
