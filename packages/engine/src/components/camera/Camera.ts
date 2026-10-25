@@ -57,7 +57,26 @@ export interface CameraOptions {
    * @default null
    */
   postProcessing?: PostProcessing | null;
+  /**
+   * Registers the camera with the renderer. A camera that does not render
+   * keeps its projection settings without drawing the scene.
+   * @default true
+   */
+  render?: boolean;
 }
+
+export const CAMERA_DEFAULTS = {
+  projectionMode: "perspective",
+  fov: 45,
+  near: 0.1,
+  far: 10000,
+  orthographicScale: 1,
+  viewport: null,
+  depth: 0,
+  addAudioListener: false,
+  postProcessing: null,
+  render: true
+} as const satisfies Required<CameraOptions>;
 
 export class CameraComponent<
   TContext = WorldDefaultContext
@@ -71,6 +90,7 @@ export class CameraComponent<
   #viewport: RenderViewport | null;
   #depth: number;
   #postProcessing: PostProcessing | null;
+  #render: boolean;
 
   #projectionDirty = true;
   #lastCanvasWidth = 0;
@@ -133,15 +153,16 @@ export class CameraComponent<
     });
 
     const {
-      projectionMode = "perspective",
-      fov = 45,
-      near = 0.1,
-      far = 10000,
-      orthographicScale = 1,
-      viewport = null,
-      depth = 0,
-      addAudioListener = false,
-      postProcessing = null
+      projectionMode = CAMERA_DEFAULTS.projectionMode,
+      fov = CAMERA_DEFAULTS.fov,
+      near = CAMERA_DEFAULTS.near,
+      far = CAMERA_DEFAULTS.far,
+      orthographicScale = CAMERA_DEFAULTS.orthographicScale,
+      viewport = CAMERA_DEFAULTS.viewport,
+      depth = CAMERA_DEFAULTS.depth,
+      addAudioListener = CAMERA_DEFAULTS.addAudioListener,
+      postProcessing = CAMERA_DEFAULTS.postProcessing,
+      render = CAMERA_DEFAULTS.render
     } = options;
 
     this.#projectionMode = projectionMode;
@@ -152,6 +173,7 @@ export class CameraComponent<
     this.#viewport = viewport;
     this.#depth = depth;
     this.#postProcessing = postProcessing;
+    this.#render = render;
 
     this.#threeCamera = this.#createThreeCamera();
     if (addAudioListener) {
@@ -169,6 +191,10 @@ export class CameraComponent<
   }
 
   awake(): void {
+    if (!this.#render) {
+      return;
+    }
+
     const { renderer } = this.actor.world;
     renderer.addRenderComponent(this);
     this.#registered = true;

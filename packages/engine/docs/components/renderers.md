@@ -132,6 +132,59 @@ renderer.text.setValue("Score: 100");
 renderer.updateMesh();
 ```
 
+## MeshRenderer
+
+Renders a primitive geometry with a `MeshStandardMaterial`. It needs no
+asset.
+
+```ts
+import { Actor, MeshRenderer } from "@jolly-pixel/engine";
+
+const actor = new Actor(world, { name: "Ball" });
+actor.addComponent(MeshRenderer, {
+  geometry: {
+    kind: "sphere",
+    radius: 0.5,
+    widthSegments: 32,
+    heightSegments: 16
+  },
+  material: { color: "#ff8800", roughness: 0.4 },
+  castShadow: true
+});
+```
+
+```ts
+interface MeshRendererOptions {
+  geometry?: MeshGeometry; // a 1x1x1 box
+  material?: {
+    color?: THREE.ColorRepresentation; // "#ffffff"
+    roughness?: number; // 1
+    metalness?: number; // 0
+    emissive?: THREE.ColorRepresentation; // "#000000"
+    emissiveIntensity?: number; // 1
+    opacity?: number; // 1, transparent below 1
+    flatShading?: boolean; // false
+  };
+  castShadow?: boolean; // false
+  receiveShadow?: boolean; // false
+}
+```
+
+`MESH_RENDERER_DEFAULTS` holds these defaults.
+
+`MeshGeometry` is a union over `kind` (`box`, `sphere`, `plane`, `cylinder`,
+`cone`, `torus`, `capsule`). Its other fields are the size and segment
+parameters of the matching three.js geometry constructor.
+`MESH_GEOMETRY_DEFAULTS` maps each kind to a geometry with default
+parameters.
+
+### configure(options): this
+
+Merges `options` into the current settings, field by field for `material`,
+and writes them to the live mesh. A geometry with different parameters
+replaces the current one, which is disposed; the material is updated in
+place.
+
 ## See also
 
 - [ActorComponent](../actor/actor-component.md)

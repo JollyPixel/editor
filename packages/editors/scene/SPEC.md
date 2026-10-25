@@ -118,25 +118,27 @@ New engine surface, in `src/systems/scene/` and `src/components/`:
 - **`ComponentDefinition`.** One per component type:
 
   ```ts
-  interface ComponentDefinition<TData, TComponent extends Component> {
+  interface ComponentDefinition<TData, TComponent extends Component, TAssets> {
     readonly type: string;
-    create(actor: Actor, data: TData, context: ComponentContext): TComponent;
+    // Asset type per slot; filled slots load before the scene activates
+    readonly assets?: { [TSlot in keyof TAssets]: AssetType<TAssets[TSlot]> };
+    parse(data: JSONObject): TData;
+    // null when the mode needs no component
+    create(actor: Actor, data: TData, context: ComponentContext<TAssets>): TComponent | null;
     // Patches a live component; without it a data change rebuilds it
     apply?(component: TComponent, data: TData): void;
-    // Asset references to load before the scene activates
-    assets?(entry: SceneComponentFile): AssetReference<unknown>[];
   }
 
-  interface ComponentContext {
+  interface ComponentContext<TAssets> {
     readonly mode: "edit" | "play";
-    readonly assets: ComponentAssetResolver;
+    readonly assets: ComponentAssets<TAssets>;
   }
   ```
 
   `ComponentAssetResolver` turns an `assets` slot into a value. In play mode
   it reads `world.assetCoordinator`; in edit mode the editor supplies one
   backed by host leases.
-- **`ComponentDefinitions`.** The registry, exposed as `world.components`. A
+- **`ComponentDefinitions`.** The registry a game passes to `FileScene`. A
   game registers only the definitions it uses, which keeps tree-shaking.
 - **`SceneBuilder`.** Builds the actors of a `SceneFile` under a parent actor
   (or the root), in edit or play mode. It returns a lookup from file id to
@@ -173,10 +175,11 @@ New engine surface, in `src/systems/scene/` and `src/components/`:
   maps come later through `assets`. `castShadow` and `receiveShadow`.
 - **`Script` data.** `{ behavior: string; properties: Record<string, JSONValue> }`.
   The game registers behaviors by explicit name
-  (`behaviors.register("Player", PlayerBehavior)`), since `Behavior` keys
+  (`new ScriptDefinition({ Player: PlayerBehavior })`), since `Behavior` keys
   `actor.behaviors` by `constructor.name` and minified builds mangle it.
   Property values are converted through the class's `@SceneProperty`
-  metadata, so `[0, 1, 0]` becomes a `Vector3`. A later script asset fills
+  metadata, so `[0, 1, 0]` becomes a `Vector3`; keys without that metadata
+  are ignored. A later script asset fills
   `assets.script` next to `behavior`.
 - **`VoxelMap` data.** `castShadow`, `receiveShadow` and the layer
   visibility the renderer exposes. The map comes from `assets.map`.
