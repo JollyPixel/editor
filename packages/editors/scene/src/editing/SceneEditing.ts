@@ -4,7 +4,6 @@ import type {
   AssetType
 } from "@jolly-pixel/asset";
 import type { SceneDocument } from "@jolly-pixel/asset.scene/client";
-import type { Systems } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
 import type { SceneActions } from "./SceneActions.ts";
@@ -30,7 +29,6 @@ export interface SceneEditing {
   selection: SelectionStore;
   presence: PresenceStore;
   gizmo: GizmoSettings;
-  definitions: Systems.ComponentDefinitions;
   assetSlots: SceneAssetSlots;
   frameSelection(): void;
   teleportToPeer(clientId: string): void;

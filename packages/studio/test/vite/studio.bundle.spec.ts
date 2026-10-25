@@ -19,6 +19,7 @@ import {
 
 // CONSTANTS
 const kStudioRoot = path.join(import.meta.dirname, "..", "..");
+const kEditorPages = ["pixel-art", "scene", "voxel-map", "voxel-model"];
 const kThreeCore = /[\\/]three[\\/]build[\\/]three\.core\.js$/;
 const kUiModule = /[\\/]packages[\\/]ui[\\/]dist[\\/]/;
 const kAtaValidator = /[\\/]ata-validator[\\/]/;
@@ -117,7 +118,7 @@ describe("@jolly-pixel/studio bundle", () => {
     const entries = [...chunks.values()].filter((chunk) => chunk.isEntry);
     assert.deepStrictEqual(
       entries.map((entry) => entry.name).sort(),
-      ["index", "pixel-art", "voxel-map", "voxel-model"]
+      ["index", ...kEditorPages].sort()
     );
     for (const [name, closure] of eager) {
       assert.deepStrictEqual(
@@ -129,19 +130,20 @@ describe("@jolly-pixel/studio bundle", () => {
       );
     }
     assert.strictEqual(chunksWith(eager.get("voxel-map")!, kThreeCore).length, 1);
-    assert.deepStrictEqual(
-      chunksWith(eager.get("voxel-map")!, kThreeCore),
-      chunksWith(eager.get("voxel-model")!, kThreeCore)
-    );
+    for (const name of ["scene", "voxel-model"]) {
+      assert.deepStrictEqual(
+        chunksWith(eager.get(name)!, kThreeCore),
+        chunksWith(eager.get("voxel-map")!, kThreeCore)
+      );
+    }
   });
 
   test("loads the ui every page starts with from one shared chunk", () => {
-    const [shell, ...editors] = ["index", "pixel-art", "voxel-map", "voxel-model"]
-      .map((name) => chunksWith(eager.get(name)!, kUiModule));
+    const shell = chunksWith(eager.get("index")!, kUiModule);
 
     assert.strictEqual(shell.length, 1);
-    for (const editor of editors) {
-      assert.deepStrictEqual(editor, shell);
+    for (const name of kEditorPages) {
+      assert.deepStrictEqual(chunksWith(eager.get(name)!, kUiModule), shell);
     }
   });
 

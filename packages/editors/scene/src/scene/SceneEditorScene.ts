@@ -21,7 +21,7 @@ import {
   EditAssets,
   type MapViewerOpener
 } from "./EditAssets.ts";
-import { createSceneDefinitions } from "../components/sceneDefinitions.ts";
+import { createSceneDefinitions } from "../components/sceneComponents.ts";
 import { SceneCollaboration } from "../collaboration/SceneCollaboration.ts";
 import { SceneActions } from "../editing/SceneActions.ts";
 import type {
@@ -103,7 +103,6 @@ export class SceneEditorScene extends Systems.Scene {
     const camera = world
       .createActor("editor-camera")
       .addComponentAndGet(OrbitFlyCamera, kCameraPreset);
-    const definitions = createSceneDefinitions();
     const history = createSceneHistory(document);
     teardown.defer(() => history.dispose());
     const environment = new Systems.SceneEnvironment(world);
@@ -113,17 +112,17 @@ export class SceneEditorScene extends Systems.Scene {
     const binding = new SceneBinding({
       world,
       document,
-      components: definitions,
+      components: createSceneDefinitions(),
       assets,
       environment
     });
     teardown.defer(() => binding.dispose());
-    const selection = new SelectionStore();
+    const selection = new SelectionStore(document);
+    teardown.defer(() => selection.dispose());
     const actions = new SceneActions({
       document,
       history,
       selection,
-      definitions,
       assetSlots
     });
     const gizmo = new GizmoSettings();
@@ -164,14 +163,9 @@ export class SceneEditorScene extends Systems.Scene {
         return actor === null ? [] : [actor.object3D];
       }));
     }
-    function retainSelection(): void {
-      selection.retain((id) => document.tree.has(id));
-    }
     function invalidate(): void {
       world.invalidate();
     }
-    teardown.defer(document.subscribe("change", retainSelection));
-    teardown.defer(document.subscribe("reset", retainSelection));
     teardown.defer(selection.subscribe("change", invalidate));
     teardown.defer(followCameraPreferences(camera, this.#options.preferences));
     teardown.defer(this.#options.keyBindings.bind(
@@ -192,7 +186,6 @@ export class SceneEditorScene extends Systems.Scene {
       selection,
       presence,
       gizmo,
-      definitions,
       assetSlots,
       frameSelection,
       teleportToPeer: (clientId) => {

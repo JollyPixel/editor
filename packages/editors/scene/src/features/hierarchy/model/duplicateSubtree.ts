@@ -32,7 +32,7 @@ export function duplicateSubtree(
   });
 }
 
-export function duplicateName(
+function duplicateName(
   name: string
 ): string {
   const match = kCopySuffix.exec(name);

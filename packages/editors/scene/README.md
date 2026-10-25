@@ -2,7 +2,7 @@
 
 Private editor workspace for `@jolly-pixel/asset.scene` scenes, booted through `@jolly-pixel/editor.host`. A scene is a tree of actors, each with an ordered list of components (camera, light, mesh, script, voxel map) that a game plays through `@jolly-pixel/engine`.
 
-The [SPEC](./SPEC.md) records the design and the build order; studio registration is the step left. [ARCHITECTURE](./ARCHITECTURE.md) says where each part lives.
+The studio opens scenes in this editor. [ARCHITECTURE](./ARCHITECTURE.md) says where each part lives, and the [ROADMAP](./ROADMAP.md) lists what comes after v1.
 
 ## 💃 Getting Started
 
@@ -29,9 +29,10 @@ The gizmo keys are digits because `W` moves the orbit-fly camera.
 ```bash
 $ pnpm --filter @jolly-pixel/editor.scene test
 $ pnpm --filter @jolly-pixel/editor.scene lint
+$ pnpm --filter @jolly-pixel/editor.scene test:e2e
 ```
 
-The unit tests cover the scene binding, the shared voxel-map viewers, the editing actions and the inspector's form model. Lit elements are not mounted in unit tests; the Playwright smoke test planned in the SPEC will cover them.
+The unit tests cover the scene binding, the shared voxel-map viewers, the editing actions and the inspector's form model. Lit elements are not mounted in unit tests, so the Playwright smoke suite in `test/e2e/` covers the panes, viewport picking, the gizmo and the asset picker against a real canvas.
 
 ## Contributors Guide
 

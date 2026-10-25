@@ -1,10 +1,3 @@
-// Import Third-party Dependencies
-import type {
-  ComponentChange,
-  JSONObject,
-  JSONValue
-} from "@jolly-pixel/asset.scene/client";
-
 export type FieldPath = readonly [string] | readonly [string, string];
 
 export interface ChoiceOption {
@@ -248,73 +241,6 @@ function ownField(
   key: string
 ): unknown {
   return Object.hasOwn(data, key) ? Reflect.get(data, key) : undefined;
-}
-
-export function fieldChange(
-  stored: Readonly<JSONObject>,
-  row: FormRow,
-  value: JSONValue
-): ComponentChange {
-  const [key, nested] = row.path;
-  if (nested === undefined) {
-    return { data: { [key]: value } };
-  }
-
-  const parent = row.control === "choice" && row.resets === true ?
-    {} :
-    storedObject(stored, key);
-
-  return {
-    data: {
-      [key]: {
-        ...parent,
-        [nested]: value
-      }
-    }
-  };
-}
-
-export function fieldReset(
-  stored: Readonly<JSONObject>,
-  path: FieldPath
-): ComponentChange {
-  const [key, nested] = path;
-  if (nested === undefined) {
-    return { unset: [key] };
-  }
-
-  const { [nested]: _removed, ...rest } = storedObject(stored, key);
-
-  return { data: { [key]: rest } };
-}
-
-export function defaultsSource(
-  data: ParsedData
-): JSONObject {
-  const source: JSONObject = {};
-  for (const key of Object.keys(data)) {
-    const kind = readField(data, [key, "kind"]);
-    if (typeof kind === "string") {
-      source[key] = { kind };
-    }
-  }
-
-  return source;
-}
-
-function storedObject(
-  stored: Readonly<JSONObject>,
-  key: string
-): JSONObject {
-  const value = stored[key];
-
-  return isJSONObject(value) ? { ...value } : {};
-}
-
-export function isJSONObject(
-  value: unknown
-): value is JSONObject {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function number(

@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import type { Systems } from "@jolly-pixel/engine";
 import type {
   MenuEntry,
   MenuItem
@@ -22,15 +21,13 @@ const kSections: readonly (readonly ActorPresetGroup[])[] = [
 ];
 const kSubmenus: ReadonlySet<ActorPresetGroup> = new Set(["Light", "Primitive"]);
 
-export function addEntries(
-  definitions: Systems.ComponentDefinitions
-): MenuEntry<string>[] {
+export function addEntries(): MenuEntry<string>[] {
   function item(preset: ActorPreset): MenuItem<string> {
     const type = preset.component?.type;
 
     return {
       id: `add:${preset.id}`,
-      label: type !== undefined && picksAssets(definitions, type) ?
+      label: type !== undefined && picksAssets(type) ?
         `${preset.label}…` :
         preset.label,
       icon: presetIcon(preset)
@@ -58,15 +55,13 @@ export function addEntries(
   ]);
 }
 
-export function rowEntries(
-  definitions: Systems.ComponentDefinitions
-): MenuEntry<string>[] {
+export function rowEntries(): MenuEntry<string>[] {
   return [
     {
       id: "group:add-child",
       label: "Add child",
       icon: "plus",
-      items: addEntries(definitions)
+      items: addEntries()
     },
     "separator",
     {

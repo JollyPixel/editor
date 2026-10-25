@@ -14,7 +14,9 @@ import { Actor } from "../../../src/actor/Actor.ts";
 import { ActorComponent } from "../../../src/actor/ActorComponent.ts";
 import {
   ComponentDefinitions,
+  readSceneTransform,
   SceneBuilder,
+  writeSceneTransform,
   type ComponentContext,
   type ComponentDefinition,
   type JSONObject,
@@ -213,5 +215,25 @@ describe("Systems.SceneBuilder", () => {
       () => definitions.register(kTagDefinition),
       /Component type "Tag" is already registered/
     );
+  });
+});
+
+describe("Systems.readSceneTransform", () => {
+  test("reads back the transform written to an object, then its rotated pose, in degrees", () => {
+    const object = new THREE.Object3D();
+    writeSceneTransform(object, {
+      position: { x: 1, y: 2, z: 3 },
+      rotation: { x: 0, y: 30, z: 0 },
+      scale: { x: 2, y: 2, z: 2 }
+    });
+
+    const written = readSceneTransform(object);
+    object.quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+    const rotated = readSceneTransform(object);
+
+    assert.deepEqual(written.position, { x: 1, y: 2, z: 3 });
+    assert.ok(Math.abs(written.rotation.y - 30) < 1e-9);
+    assert.deepEqual(written.scale, { x: 2, y: 2, z: 2 });
+    assert.ok(Math.abs(rotated.rotation.x - 90) < 1e-9);
   });
 });

@@ -271,7 +271,7 @@ export class InspectorPanel extends LitElement {
   ): void {
     this.#menu.open(
       MenuSession.from(
-        addComponentEntries(editing),
+        addComponentEntries(),
         async(type) => {
           await editing.actions.addComponent(actorId, type);
         }
@@ -281,13 +281,11 @@ export class InspectorPanel extends LitElement {
   }
 }
 
-function addComponentEntries(
-  editing: SceneEditing
-): MenuEntry<string>[] {
+function addComponentEntries(): MenuEntry<string>[] {
   const direct: MenuEntry<string>[] = [];
   const picking: MenuEntry<string>[] = [];
-  for (const { type, label, icon } of SCENE_COMPONENTS) {
-    const picks = picksAssets(editing.definitions, type);
+  for (const { definition: { type }, label, icon } of SCENE_COMPONENTS) {
+    const picks = picksAssets(type);
     (picks ? picking : direct).push({
       id: type,
       label: picks ? `${label}…` : label,

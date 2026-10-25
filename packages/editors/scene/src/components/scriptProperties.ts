@@ -49,7 +49,7 @@ export function scriptProperties(
   });
 }
 
-export function propertyType(
+function propertyType(
   value: JSONValue
 ): ScriptPropertyType {
   if (typeof value === "number") {

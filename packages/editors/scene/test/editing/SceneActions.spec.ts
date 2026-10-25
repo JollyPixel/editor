@@ -7,13 +7,11 @@ import type { AssetReferenceData } from "@jolly-pixel/asset";
 import { SceneDocument } from "@jolly-pixel/asset.scene/client";
 
 // Import Internal Dependencies
-import { createSceneDefinitions } from "../../src/components/sceneDefinitions.ts";
 import { SceneActions } from "../../src/editing/SceneActions.ts";
 import {
   ACTOR_PRESETS,
   type ActorPreset
 } from "../../src/features/hierarchy/model/actorPresets.ts";
-import { duplicateName } from "../../src/features/hierarchy/model/duplicateSubtree.ts";
 import {
   createSceneHistory,
   SCENE_HISTORY_SCOPE
@@ -25,13 +23,12 @@ function createActions(
 ) {
   const document = new SceneDocument();
   const history = createSceneHistory(document);
-  const selection = new SelectionStore();
+  const selection = new SelectionStore(document);
   const picks: string[] = [];
   const actions = new SceneActions({
     document,
     history,
     selection,
-    definitions: createSceneDefinitions(),
     assetSlots: {
       name: () => "Ground",
       pick: (type) => {
@@ -154,8 +151,12 @@ describe("SceneActions", () => {
     assert.deepEqual(picks, ["voxelmap"]);
   });
 
-  test("numbers duplicate names", () => {
-    assert.strictEqual(duplicateName("Box"), "Box (1)");
-    assert.strictEqual(duplicateName("Box (1)"), "Box (2)");
+  test("numbers the copy of a copy after its source's count", () => {
+    const { document, selection, actions } = createActions();
+    selection.select([document.addActor({ name: "Box (1)" })!]);
+
+    actions.duplicateSelection();
+
+    assert.deepEqual(names(document), ["Box (1)", "Box (2)"]);
   });
 });

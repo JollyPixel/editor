@@ -138,3 +138,27 @@ export function writeSceneTransform(
   object.scale.set(scale.x, scale.y, scale.z);
   object.updateMatrixWorld(false);
 }
+
+export function readSceneTransform(
+  object: THREE.Object3D
+): SceneTransformFile {
+  const { position, rotation, scale } = object;
+
+  return {
+    position: {
+      x: position.x,
+      y: position.y,
+      z: position.z
+    },
+    rotation: {
+      x: THREE.MathUtils.radToDeg(rotation.x),
+      y: THREE.MathUtils.radToDeg(rotation.y),
+      z: THREE.MathUtils.radToDeg(rotation.z)
+    },
+    scale: {
+      x: scale.x,
+      y: scale.y,
+      z: scale.z
+    }
+  };
+}

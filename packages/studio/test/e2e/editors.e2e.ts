@@ -24,7 +24,7 @@ test("editor frames read the catalog through the shell", async({ studio, page })
   expect(rooms.filter((room) => room === CATALOG_ROOM)).toHaveLength(1);
 });
 
-test("creates a map, a model and a texture from the tree and opens each", async({ studio }) => {
+test("creates a map, a model, a texture and a scene from the tree and opens each", async({ studio }) => {
   test.slow();
   const { assets } = studio;
   await studio.openOffline();
@@ -46,6 +46,12 @@ test("creates a map, a model and a texture from the tree and opens each", async(
       file: "New pixel art.pixelart",
       companion: null,
       editor: "pixel-art"
+    },
+    {
+      kind: "Scene",
+      file: "New scene.scene.json",
+      companion: null,
+      editor: "scene"
     }
   ];
 
