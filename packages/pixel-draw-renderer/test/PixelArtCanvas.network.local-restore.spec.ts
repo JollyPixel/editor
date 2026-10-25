@@ -143,12 +143,12 @@ describe("PixelArtCanvas — loadSnapshot", () => {
     };
     const normalMapData = NormalMapConfig.create({ strength: 3 }).toJSON();
 
-    manager.document.loadSnapshot(
-      { x: 2, y: 1 },
-      new Uint8ClampedArray([1, 2, 3, 255, 4, 5, 6, 255]),
-      [snapshotRegion],
-      normalMapData
-    );
+    manager.document.loadSnapshot({
+      size: { x: 2, y: 1 },
+      pixels: new Uint8ClampedArray([1, 2, 3, 255, 4, 5, 6, 255]),
+      uvRegions: [snapshotRegion],
+      normalMap: normalMapData
+    });
 
     assert.deepStrictEqual(
       manager.textureSize,

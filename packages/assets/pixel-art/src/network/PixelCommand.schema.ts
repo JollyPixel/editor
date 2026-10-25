@@ -47,6 +47,13 @@ const kPaletteColorSchema = z.strictObject({
   a: kChannel
 });
 
+const kUvNetIdSchema = z.string().check(z.minLength(1));
+const kSavedUvNetSchema = z.object({
+  id: kUvNetIdSchema,
+  name: z.string(),
+  rows: z.array(z.array(z.nullable(z.array(uvSlotSchema))))
+});
+
 const kFlatIntegers = z.array(z.int());
 const kFlatNumbers = z.array(z.number());
 
@@ -111,6 +118,15 @@ const kPixelCommandMetadata: Record<
       region: uvRegionSchema
     }
   ],
+  "uv-net-saved": [{
+    net: kSavedUvNetSchema
+  }],
+  "uv-net-deleted": [{
+    id: kUvNetIdSchema
+  }],
+  "uv-net-default-changed": [{
+    id: z.nullable(kUvNetIdSchema)
+  }],
   "normal-map-toggled": [{
     config: z.nullable(normalMapDataSchema)
   }],
@@ -162,5 +178,9 @@ export const pixelSnapshotSchema = z.object({
   palette: z.optional(z.array(kPaletteColorSchema).check(
     z.length(COLOR_PALETTE_SIZE)
   )),
-  normalMap: z.optional(normalMapDataSchema)
+  normalMap: z.optional(normalMapDataSchema),
+  uvNets: z.optional(z.object({
+    defaultId: z.optional(kUvNetIdSchema),
+    nets: z.array(kSavedUvNetSchema)
+  }))
 });

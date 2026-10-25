@@ -1,6 +1,6 @@
 # PixelDocumentState
 
-The pixels, UV map and normal map settings of a pixel document, without history, events or DOM. It is the one place [commands](./PixelCommand.md) are applied: a [`PixelDocument`](./PixelDocument.md) applies remote commands, undo and redo through its own state, and a server folds a room's commands into a headless one.
+The pixels, UV map, saved UV nets and normal map settings of a pixel document, without history, events or DOM. It is the one place [commands](./PixelCommand.md) are applied: a [`PixelDocument`](./PixelDocument.md) applies remote commands, undo and redo through its own state, and a server folds a room's commands into a headless one.
 
 ```ts
 const state = new PixelDocumentState({
@@ -17,6 +17,7 @@ interface PixelDocumentStateOptions<TBuffer extends DefaultPixelBuffer> {
   buffer: TBuffer;
   onNormalMapChanged?: (regionIds: string[] | null) => void;
   onPaletteChanged?: (index: number | null) => void;
+  onUvNetsChanged?: () => void;
   uv?: Omit<UVMapOptions, "getCanvasSize">;
 }
 ```
@@ -30,6 +31,7 @@ readonly buffer: TBuffer;
 readonly uv: UVMap;
 readonly normalMap: NormalMapConfig | null;
 readonly palette: ColorPalette;
+readonly uvNets: UVNetSet;
 ```
 
 `uv` is a [`UVMap`](./uv/UVMap.md) sized by `buffer`.
@@ -47,6 +49,7 @@ interface PixelDocumentSnapshot {
   uvRegions?: Iterable<UVRegion | UVRegionData>;
   normalMap?: NormalMapData | null;
   palette?: readonly RGBA8[];
+  uvNets?: UVNetSetData;
 }
 ```
 
@@ -58,3 +61,8 @@ interface PixelDocumentSnapshot {
 calls `onPaletteChanged` with its index when its color changes. Loading a
 snapshot replaces the palette and calls the listener with `null`. A missing
 palette loads the defaults, including when replacing an already edited state.
+
+`uvNets` is an immutable [UVNetSet](./uv/UVNetSet.md). The UV net commands
+call `onUvNetsChanged` when they change it. Loading a snapshot replaces it and
+calls the listener, unless an empty set stays empty. A snapshot without
+`uvNets` loads an empty set.

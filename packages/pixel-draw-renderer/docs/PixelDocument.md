@@ -31,6 +31,7 @@ interface PixelDocumentOptions {
 readonly buffer: CanvasBuffer;
 readonly uv: UVMap;
 readonly palette: ColorPalette;
+readonly uvNets: UVNetSet;
 ```
 
 ## Palette
@@ -40,6 +41,24 @@ readonly palette: ColorPalette;
 emits a change and a document command.
 Unchanged colors are ignored. Invalid indices or channels throw before any
 state, change or command.
+
+## UV nets
+
+`uvNets` holds the [UV nets saved with the texture](./uv/UVNetSet.md) and the
+id of its default net.
+
+```ts
+saveUvNet(net: SavedUVNetData): void;
+deleteUvNet(id: string): void;
+changeDefaultUvNet(id: string | null): void;
+```
+
+`saveUvNet` adds a net, or replaces the saved net with the same id. Each call
+emits a change and a document command, and undo restores the previous nets.
+Calls that change nothing are ignored. A net the
+[`SavedUVNet` constructor](./uv/SavedUVNet.md#creating) rejects throws its
+error before any state, change or command. Deleting the default
+net keeps `defaultId`, so undoing the deletion makes it the default again.
 
 ## UV ownership
 
@@ -59,6 +78,7 @@ The document owns every UV region until `disownUvRegions` hands the ones `filter
 | `change` | `PixelChange` | a command applied: a local edit, undo or redo (`origin` `local`), a peer's command (`remote`, naming its `clientId`) or this client's pending command replayed (`replay`) |
 | `command` | [`PixelCommand`](./PixelCommand.md), `PixelChange` | a local edit, undo or redo produced a command, after its `change`; remote commands and snapshots never emit it |
 | `palette-changed` | `number \| null` | one palette slot changed, or a snapshot replaced the whole palette (`null`); includes remote changes and undo/redo |
+| `uv-nets-changed` | none | a saved UV net or the default net changed, locally, remotely, through undo/redo or by a snapshot |
 | `changed` | `{ bounds }` | pixels were written |
 | `resized` | `{ size }` | the texture was resized |
 | `replaced` | `{ size }` | all pixels were replaced (texture load, remote replace, snapshot, history) |
@@ -152,14 +172,8 @@ Deleting a UV region the document owns removes its zone in the same change, and 
 ```ts
 applyRemoteCommand(command: PixelCommand, clientId?: string | null): void;
 replayPendingCommand(command: PixelCommand): void;
-loadSnapshot(
-  size: Vec2,
-  pixels: Uint8ClampedArray,
-  uvRegions?: (UVRegion | UVRegionData)[],
-  normalMap?: NormalMapData | null,
-  palette?: readonly RGBA8[]
-): void;
+loadSnapshot(snapshot: PixelDocumentSnapshot): void;
 runLocalRestore<T>(fn: () => T): T;
 ```
 
-Remote commands mutate the document and emit a `remote` change naming `clientId`, but no `command`. They are applied by the document's [state](./PixelDocumentState.md), the same applier a headless server uses. `replayPendingCommand` applies this client's pending command again after a peer's, as a `replay` change; a sync client's reconciler calls it. `loadSnapshot` replaces pixels, UV regions and normal map settings and emits `reset` with `"load"`. A snapshot without `normalMap` turns the feature off. `runLocalRestore` runs `fn` without recording, for restoring state that must not be broadcast: edits made inside it emit no change and no command.
+Remote commands mutate the document and emit a `remote` change naming `clientId`, but no `command`. They are applied by the document's [state](./PixelDocumentState.md), the same applier a headless server uses. `replayPendingCommand` applies this client's pending command again after a peer's, as a `replay` change; a sync client's reconciler calls it. `loadSnapshot` replaces pixels, UV regions, normal map settings, palette and saved UV nets, as [`PixelDocumentState.load`](./PixelDocumentState.md) describes, and emits `reset` with `"load"`. A snapshot without `normalMap` turns the feature off, and one without `uvNets` clears the saved nets. `runLocalRestore` runs `fn` without recording, for restoring state that must not be broadcast: edits made inside it emit no change and no command.

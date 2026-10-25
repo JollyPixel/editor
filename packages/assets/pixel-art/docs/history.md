@@ -57,6 +57,7 @@ function pixelHistoryKeys(
 - `stroke` and `select-edit` write their pixels.
 - `global-fill`, `resized` and `texture-replaced` write the whole texture; a step undoing them guards every pixel.
 - `palette-color-changed` writes `palette:<index>`.
+- `uv-net-saved` and `uv-net-deleted` write `uv-net:<id>`; `uv-net-default-changed` writes `uv-net-default`, which no net id can collide with.
 - `uv-region-*` writes the region and its slots.
 - `normal-map-*` writes `normal-map`, `normal-map:defaults:<field>` or `normal-map:zone:<regionId>`.
 

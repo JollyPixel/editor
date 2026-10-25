@@ -157,7 +157,7 @@ describe("PixelSyncClient — remote messages", () => {
     });
 
     assert.deepStrictEqual(readCalls(host.loadSnapshot), [
-      [{ x: 1, y: 1 }, new Uint8ClampedArray([1, 2, 3, 255]), [], null, undefined]
+      [{ size: { x: 1, y: 1 }, pixels: new Uint8ClampedArray([1, 2, 3, 255]), uvRegions: [] }]
     ]);
   });
 
@@ -183,7 +183,7 @@ describe("PixelSyncClient — remote messages", () => {
 
     assert.deepStrictEqual(order, ["snapshot", "command"]);
     assert.deepStrictEqual(readCalls(host.loadSnapshot), [
-      [size, new Uint8ClampedArray([1, 2, 3, 255]), [], null, undefined]
+      [{ size, pixels: new Uint8ClampedArray([1, 2, 3, 255]), uvRegions: [] }]
     ]);
   });
 

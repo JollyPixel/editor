@@ -22,9 +22,7 @@ import {
   type PixelChange,
   type PixelCommand,
   NormalMapConfig,
-  type NormalMapData,
-  type UVRegionData,
-  type Vec2
+  type PixelDocumentSnapshot
 } from "@jolly-pixel/pixel-draw.renderer";
 import { BlocksetDocument } from "@jolly-pixel/voxel.renderer";
 
@@ -52,13 +50,6 @@ const kBlack = {
   a: 255
 };
 
-interface LoadedSnapshot {
-  size: Vec2;
-  pixels: Uint8ClampedArray;
-  uvRegions: readonly (UVRegionData | { toJSON(): UVRegionData; })[];
-  normalMap: NormalMapData | null;
-}
-
 type PixelsRecorderEvents = {
   command: PixelCommandListener;
   change: (change: PixelChange) => void;
@@ -68,7 +59,7 @@ type PixelsRecorderEvents = {
 class PixelsRecorder extends Emitter<PixelsRecorderEvents> implements PixelSyncTarget {
   readonly remote: PixelCommand[] = [];
   readonly replayed: PixelCommand[] = [];
-  readonly loaded: LoadedSnapshot[] = [];
+  readonly loaded: PixelDocumentSnapshot[] = [];
 
   applyStep(
     command: PixelDocumentCommand
@@ -100,17 +91,9 @@ class PixelsRecorder extends Emitter<PixelsRecorderEvents> implements PixelSyncT
   }
 
   loadSnapshot(
-    size: Vec2,
-    pixels: Uint8ClampedArray,
-    uvRegions: readonly (UVRegionData | { toJSON(): UVRegionData; })[] = [],
-    normalMap: NormalMapData | null = null
+    snapshot: PixelDocumentSnapshot
   ): void {
-    this.loaded.push({
-      size,
-      pixels,
-      uvRegions,
-      normalMap
-    });
+    this.loaded.push(snapshot);
   }
 }
 

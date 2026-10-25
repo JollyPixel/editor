@@ -51,6 +51,31 @@ describe("PixelArtFile", () => {
     assert.deepEqual(target.palette.toJSON(), ColorPalette.create().toJSON());
   });
 
+  test("round-trips saved UV nets and leaves them out of files without any", () => {
+    const source = createDocumentState({ x: 1, y: 1 });
+    assert.equal("uvNets" in serializePixelDocument(source), false);
+    source.apply({
+      action: "uv-net-saved",
+      metadata: {
+        net: {
+          id: "caps",
+          name: "Caps",
+          rows: [[["top", "bottom"], null, ["front"]]]
+        }
+      }
+    });
+    source.apply({
+      action: "uv-net-default-changed",
+      metadata: { id: "caps" }
+    });
+    const target = createDocumentState({ x: 1, y: 1 });
+    deserializePixelDocument(
+      decodePixelArtFile(encodePixelArtFile(serializePixelDocument(source))),
+      target
+    );
+    assert.deepEqual(target.uvNets.toJSON(), source.uvNets.toJSON());
+  });
+
   test("round-trips pixels and size", () => {
     const source = createDocumentState({ x: 3, y: 2 });
     source.buffer.drawPixels(

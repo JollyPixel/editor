@@ -20,6 +20,7 @@ import type {
   NormalMapData,
   NormalMapSettings
 } from "../normal/types.ts";
+import type { SavedUVNetData } from "../uv/region/SavedUVNet.ts";
 
 export type UVRegionRotation =
   | {
@@ -129,7 +130,28 @@ type CommandOf<TPixels> =
     action: "uv-region-rotated";
     metadata: UVRegionRotation;
   }
+  | UVNetCommand
   | NormalMapCommand;
+
+export type UVNetCommand =
+  | {
+    action: "uv-net-saved";
+    metadata: {
+      net: SavedUVNetData;
+    };
+  }
+  | {
+    action: "uv-net-deleted";
+    metadata: {
+      id: string;
+    };
+  }
+  | {
+    action: "uv-net-default-changed";
+    metadata: {
+      id: string | null;
+    };
+  };
 
 export type PixelDocumentCommand = CommandOf<Uint8ClampedArray>;
 
@@ -268,4 +290,44 @@ export function uvRegionRotated(
     action: "uv-region-rotated",
     metadata: rotation
   };
+}
+
+export function uvNetSaved(
+  net: SavedUVNetData
+): UVNetCommand {
+  return {
+    action: "uv-net-saved",
+    metadata: { net }
+  };
+}
+
+export function uvNetDeleted(
+  id: string
+): UVNetCommand {
+  return {
+    action: "uv-net-deleted",
+    metadata: { id }
+  };
+}
+
+export function uvNetDefaultChanged(
+  id: string | null
+): UVNetCommand {
+  return {
+    action: "uv-net-default-changed",
+    metadata: { id }
+  };
+}
+
+export function uvNetId(
+  command: UVNetCommand
+): string | null {
+  switch (command.action) {
+    case "uv-net-saved":
+      return command.metadata.net.id;
+    case "uv-net-deleted":
+      return command.metadata.id;
+    case "uv-net-default-changed":
+      return null;
+  }
 }

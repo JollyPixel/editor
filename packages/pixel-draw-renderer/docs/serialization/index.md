@@ -24,6 +24,7 @@ interface PixelArtFile {
   readonly uvRegions: UVRegionData[];
   readonly normalMap?: NormalMapData;
   readonly palette?: RGBA8[];
+  readonly uvNets?: UVNetSetData;
 }
 ```
 
@@ -34,6 +35,11 @@ alpha. New files and snapshots include it. Older version `1` files
 without it load the default palette. Invalid lengths or channel values are
 rejected. Palette data travels through `serializePixelDocument`,
 `deserializePixelDocument` and `pixelArtSnapshot`.
+
+`uvNets` holds the [UV nets saved with the texture](../uv/UVNetSet.md) and
+its default net. It is written only when the texture has a saved net or a
+default, and a file without it loads with no saved nets. Invalid nets reject
+the whole file.
 
 Deliberately not a PNG. The file carries UV regions, which an image
 format cannot, and encoding one needs no image codec on the server, where
@@ -52,6 +58,7 @@ construction instead of by convention.
 | `serializePixelDocument(state)` | [`PixelDocumentState`](../PixelDocumentState.md) → `PixelArtFile` |
 | `deserializePixelDocument(file, state)` | `PixelArtFile` → `PixelDocumentState` of a `PixelBuffer` |
 | `pixelArtSnapshot(state)` | `PixelDocumentState` → `PixelBufferSnapshot`, for the wire |
+| `pixelArtSnapshotFields(state)` | the `PixelBufferSnapshot` fields other than `size` and `pixels`, for a snapshot that encodes its pixels another way |
 | `encodePixelArtFile(file)` | file → UTF-8 JSON bytes |
 | `decodePixelArtFile(bytes)` | JSON bytes → validated file |
 | `parsePixelArtFile(value)` | already-parsed JSON → validated file |

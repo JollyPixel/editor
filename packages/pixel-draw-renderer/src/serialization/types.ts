@@ -1,6 +1,7 @@
 // Import Internal Dependencies
 import type { UVRegionData } from "../uv/region/UVRegion.ts";
 import type { NormalMapData } from "../normal/types.ts";
+import type { UVNetSetData } from "../uv/region/UVNetSet.ts";
 import type {
   RGBA8,
   Vec2
@@ -17,6 +18,7 @@ export interface PixelBufferSnapshot {
   uvRegions: UVRegionData[];
   normalMap?: NormalMapData;
   palette?: RGBA8[];
+  uvNets?: UVNetSetData;
 }
 
 export interface PixelArtFile extends PixelBufferSnapshot {

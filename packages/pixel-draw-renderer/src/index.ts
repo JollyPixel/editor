@@ -22,10 +22,12 @@ export * from "./sync/PixelDocumentState.ts";
 export {
   toPixelDocumentCommand,
   toPixelCommand,
+  uvNetId,
   type PixelDocumentCommand,
   type NormalMapCommand,
   type PixelCommand,
   type PixelCommandAction,
+  type UVNetCommand,
   type UVRegionRotation
 } from "./sync/PixelCommand.ts";
 export type {
@@ -89,6 +91,15 @@ export type {
 export * from "./tools/selectionPlacement.ts";
 export * from "./uv/map/UVMap.ts";
 export * from "./uv/region/UVRegion.ts";
+export {
+  UVNetSet,
+  type UVNetSetData
+} from "./uv/region/UVNetSet.ts";
+export {
+  SavedUVNet,
+  type SavedUVNetData,
+  type SavedUVNetInit
+} from "./uv/region/SavedUVNet.ts";
 export * from "./buffer/colorGroups.ts";
 export * from "./tools/Fill.ts";
 export {

@@ -11,6 +11,7 @@ import { TextureBounds } from "../buffer/TextureBounds.ts";
 import { isUVRegionData } from "../uv/region/validation.ts";
 import { NormalMapConfig } from "../normal/NormalMapConfig.ts";
 import { ColorPalette } from "../palette/ColorPalette.ts";
+import { UVNetSet } from "../uv/region/UVNetSet.ts";
 import type { Vec2 } from "../types.ts";
 
 export function createPixelArtFile(
@@ -85,6 +86,13 @@ export function parsePixelArtFile(
       throw new InvalidPixelArtFileError("palette contains invalid data");
     }
     parsed.palette = palette.toJSON();
+  }
+  if (file.uvNets !== undefined) {
+    const uvNets = UVNetSet.parse(file.uvNets);
+    if (uvNets === null) {
+      throw new InvalidPixelArtFileError("uvNets contains invalid data");
+    }
+    parsed.uvNets = uvNets.toJSON();
   }
 
   return parsed;

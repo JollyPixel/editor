@@ -5,7 +5,6 @@ import {
   pixelArtDocumentKind
 } from "@jolly-pixel/asset.pixel-art/client";
 import {
-  PreferenceStorage,
   followKeyBindings,
   type EditorContext,
   type EditorSession,
@@ -22,10 +21,7 @@ import {
   pixelArtConsole,
   type PixelDrawPanel
 } from "#src/index.ts";
-import {
-  PIXEL_ART_KEYBINDINGS,
-  PIXEL_ART_PREFERENCES
-} from "#src/preferences.ts";
+import { PIXEL_ART_KEYBINDINGS } from "#src/preferences.ts";
 import { PanelScope } from "./PanelScope.ts";
 import type { PixelArtFeatures } from "./PixelArtFeatures.ts";
 import { EditorPreferences } from "../state/EditorPreferences.ts";
@@ -92,13 +88,7 @@ export class PixelArtEditor {
     panel.uvResize = features.uvResize;
     panel.uvOverflow = kUvOverflow;
     panel.textureImportPolicy = features.importPolicy;
-    const uvNets = new UvNetLibrary({
-      storage: new PreferenceStorage(
-        context.preferences,
-        PIXEL_ART_PREFERENCES,
-        "uvNets"
-      )
-    });
+    const uvNets = new UvNetLibrary();
     panel.uvNets = uvNets;
 
     const previewType = loadPreview === null

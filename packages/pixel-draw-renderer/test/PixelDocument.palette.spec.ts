@@ -49,9 +49,9 @@ describe("Pixel Document palette", () => {
     const doc = new HistoryDocument({ size: { x: 1, y: 1 } });
     doc.changePaletteColor(0, kColor);
     const colors = ColorPalette.create().withColor(9, kColor).toJSON();
-    doc.loadSnapshot({ x: 1, y: 1 }, new Uint8ClampedArray(4), [], null, colors);
+    doc.loadSnapshot({ size: { x: 1, y: 1 }, pixels: new Uint8ClampedArray(4), palette: colors });
     assert.deepEqual(doc.palette.colorAt(9), kColor);
-    doc.loadSnapshot({ x: 1, y: 1 }, new Uint8ClampedArray(4));
+    doc.loadSnapshot({ size: { x: 1, y: 1 }, pixels: new Uint8ClampedArray(4) });
     assert.deepEqual(doc.palette.toJSON(), ColorPalette.create().toJSON());
   });
 

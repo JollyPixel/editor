@@ -36,7 +36,7 @@ export function uvNetConsole(
   });
 
   namespace.registerCommand("default", {
-    description: "Pick the net used when a region unfolds",
+    description: "Pick the net used when a region of the open texture unfolds",
     args: [
       {
         name: "id",
@@ -52,8 +52,12 @@ export function uvNetConsole(
 
         return;
       }
+      if (!uvNets.changeDefault(id)) {
+        ctx.error("No texture is open");
 
-      uvNets.defaultId = id;
+        return;
+      }
+
       ctx.print(`Regions now unfold with ${preset.name}`);
     }
   });

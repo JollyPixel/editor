@@ -303,7 +303,10 @@ export class PixelDrawPanel extends LitElement {
     this.textureTabsVariant = "default";
     this.textureTabsLine = false;
     this.gridSizeLocked = false;
-    this.#textures.subscribe("active-change", () => this.#status.clear());
+    this.#textures.subscribe("active-change", () => {
+      this.#status.clear();
+      this.#uvNets.followActiveTexture();
+    });
   }
 
   get keyBindings(): KeyBindingSettings<PixelArtAction> {

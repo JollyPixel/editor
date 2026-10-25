@@ -144,15 +144,14 @@ describe("PixelDocument normal map", () => {
     const doc = createNormalMapDocument();
     doc.enableNormalMap();
 
-    doc.loadSnapshot(
-      { x: 2, y: 2 },
-      new Uint8ClampedArray(16),
-      [],
-      NormalMapConfig.create({ strength: 3 }).toJSON()
-    );
+    doc.loadSnapshot({
+      size: { x: 2, y: 2 },
+      pixels: new Uint8ClampedArray(16),
+      normalMap: NormalMapConfig.create({ strength: 3 }).toJSON()
+    });
     assert.equal(doc.normalMap?.defaults.strength, 3);
 
-    doc.loadSnapshot({ x: 2, y: 2 }, new Uint8ClampedArray(16));
+    doc.loadSnapshot({ size: { x: 2, y: 2 }, pixels: new Uint8ClampedArray(16) });
     assert.equal(doc.normalMap, null);
   });
 });

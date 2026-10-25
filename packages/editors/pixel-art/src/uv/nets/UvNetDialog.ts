@@ -108,7 +108,7 @@ export class UvNetDialog extends LitElement {
 
   override render(): TemplateResult {
     const context = this.#context;
-    const preset = context?.library.get(this.selectedId);
+    const preset = context?.library.get(this.selectedId) ?? context?.library.default;
 
     return html`
       <jolly-dialog
@@ -153,7 +153,7 @@ export class UvNetDialog extends LitElement {
               icon-only
               label="New net"
               title="New net"
-              @click=${() => this.#rename(library.create("New net").id)}
+              @click=${() => this.#rename(library.create("New net")?.id)}
             ></jolly-button>
             <jolly-button
               part="uv-net-duplicate"
@@ -196,7 +196,7 @@ export class UvNetDialog extends LitElement {
             .value=${library.defaultId === preset.id}
             ?readonly=${library.defaultId === preset.id}
             @jolly-change=${() => {
-              library.defaultId = preset.id;
+              library.changeDefault(preset.id);
             }}
           ></jolly-toggle>
           ${preset.rows === null ?

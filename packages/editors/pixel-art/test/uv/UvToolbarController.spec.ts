@@ -22,6 +22,7 @@ import { UvToolbarController } from "../../src/uv/UvToolbarController.ts";
 import { UvNetController } from "../../src/uv/nets/UvNetController.ts";
 import { UvNetLibrary } from "../../src/uv/nets/UvNetLibrary.ts";
 import { TestHost } from "../fixtures/host.ts";
+import { UvNetTestDocument } from "../fixtures/uvNetDocument.ts";
 
 interface FakeCanvas {
   canvas: PixelArtCanvas;
@@ -39,6 +40,7 @@ function makeCanvas(
     activeSlots
   };
   const canvas = {
+    document: new UvNetTestDocument(),
     uv: {
       selectedRegionId,
       selectedSlot: null,
@@ -102,8 +104,9 @@ describe("UvToolbarController", () => {
   test("unfolds the selected region with a fitting net and greys out nets missing its slots", () => {
     const fake = makeCanvas("block", ["front", "back", "left", "right", "top", "bottom", "top.1"]);
     const library = new UvNetLibrary();
-    const capsOnly = library.create("Caps", [[["top", "top.1"]]]);
-    const toolbar = renderToolbar(makeToolbar(fake, library))!;
+    const controller = makeToolbar(fake, library);
+    const capsOnly = library.create("Caps", [[["top", "top.1"]]])!;
+    const toolbar = renderToolbar(controller)!;
     function option(
       id: string
     ): HTMLButtonElement {

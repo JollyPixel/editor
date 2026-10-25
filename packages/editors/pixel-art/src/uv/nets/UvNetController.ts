@@ -52,11 +52,17 @@ export class UvNetController implements ReactiveController {
 
     const connected = this.#release !== null;
     this.hostDisconnected();
+    this.#library.document = null;
     this.#library = library;
+    this.followActiveTexture();
     if (connected) {
       this.#release = library.subscribe("change", this.#onChange);
     }
     this.#onChange();
+  }
+
+  followActiveTexture(): void {
+    this.#library.document = this.#options.canvas()?.document ?? null;
   }
 
   hostConnected(): void {

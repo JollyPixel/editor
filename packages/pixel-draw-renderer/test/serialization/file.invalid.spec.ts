@@ -40,6 +40,30 @@ describe("PixelArtFile — invalid payloads", () => {
     }
   });
 
+  test("rejects malformed saved UV nets", () => {
+    const net = {
+      id: "caps",
+      name: "Caps",
+      rows: [[["top"]]]
+    };
+    for (const uvNets of [
+      null,
+      { nets: null },
+      { defaultId: 1, nets: [] },
+      { defaultId: "", nets: [] },
+      { nets: [{ ...net, id: "" }] },
+      { nets: [{ ...net, rows: [] }] },
+      { nets: [{ ...net, rows: [[["top"], ["top"]]] }] },
+      { nets: [{ ...net, rows: [["top"]] }] },
+      { nets: [net, net] }
+    ]) {
+      assert.throws(() => decodePixelArtFile(jsonBytes({
+        ...createPixelArtFile({ x: 1, y: 1 }),
+        uvNets
+      })), InvalidPixelArtFileError);
+    }
+  });
+
   test("rejects invalid normal map settings", () => {
     assert.throws(
       () => decodePixelArtFile(jsonBytes({

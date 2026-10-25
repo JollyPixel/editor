@@ -56,8 +56,10 @@ Create/Delete buttons and defaults to false.
 ## UV nets
 
 `uvNets` is the [`UvNetLibrary`](../uv/UvNetLibrary.md) behind the "Unfold with" entries of the
-region state menu and the "Edit nets" dialog. Every texture of the panel unfolds through its
-default net. Without a host library, the panel keeps an in-memory one with the built-in nets.
+region state menu and the "Edit nets" dialog. The panel points it at the active texture's
+document, so the menu and dialog show that texture's saved nets, and the active texture unfolds
+through its own default net. Without a host library, the panel keeps one with only the built-in
+nets.
 
 ## Grid
 

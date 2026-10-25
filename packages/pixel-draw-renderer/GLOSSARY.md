@@ -25,8 +25,8 @@ again.
 
 ### Pixel document
 
-Everything that is saved and shared: the texture, the UV map and the normal map
-settings. It needs no canvas, so a server can hold one headless and several
+Everything that is saved and shared: the texture, the UV map, the saved UV nets
+and the normal map settings. It needs no canvas, so a server can hold one headless and several
 canvases can edit the same one. Every change to it is a *pixel command*,
 applied the same way whether it comes from a local edit, a peer, an undo or a
 redo. Undo history and what the canvas shows are not part of it.
@@ -155,12 +155,17 @@ The arrangement of an unfolded region's slots. By default they are packed into
 the smallest box; a grid net gives each slot a fixed cell instead. A *shared
 cell* holds several slots on one rectangle, such as a block's top and bottom.
 A net *fits* a region when it has a cell for every active slot; otherwise the
-region is packed. The net is local configuration: only the resulting region is
-saved and shared, and in an unfolded region, slots with the same rectangle act
-as one cell.
+region is packed. An unfold saves only the resulting region, and in an
+unfolded region, slots with the same rectangle act as one cell.
+
+A *saved net* is a named grid net stored in the pixel document, so it is saved
+in the file and shared with peers, along with the id of the texture's
+*default net*. The net a canvas unfolds with is still local configuration,
+which the host fills from that default.
 
 *In code:* `UVNet`, set through `canvas.uv.net`; `UVNet.missingSlots()`;
-`UVMap.unfold()` applies another net.
+`UVMap.unfold()` applies another net. A saved net is a `SavedUVNet`; the
+saved nets are a `UVNetSet` in `PixelDocument.uvNets`.
 
 ### UV ownership
 

@@ -12,6 +12,11 @@ import type {
 } from "../uv/region/UVRegion.ts";
 import { NormalMapConfig } from "../normal/NormalMapConfig.ts";
 import { ColorPalette } from "../palette/ColorPalette.ts";
+import {
+  UVNetSet,
+  type UVNetSetData
+} from "../uv/region/UVNetSet.ts";
+import { SavedUVNet } from "../uv/region/SavedUVNet.ts";
 import type {
   IndexedNormalMapZone,
   NormalMapData
@@ -30,8 +35,13 @@ import {
   uvRegionMoved,
   uvRegionRotated,
   uvRegionStateChanged,
+  uvNetDefaultChanged,
+  uvNetDeleted,
+  uvNetId,
+  uvNetSaved,
   type PixelDocumentCommand,
   type NormalMapCommand,
+  type UVNetCommand,
   type UVRegionRotation
 } from "./PixelCommand.ts";
 import { NormalMapChange } from "./NormalMapChange.ts";
@@ -48,6 +58,7 @@ export interface PixelDocumentSnapshot {
   uvRegions?: Iterable<UVRegion | UVRegionData>;
   normalMap?: NormalMapData | null;
   palette?: readonly RGBA8[];
+  uvNets?: UVNetSetData;
 }
 
 export interface PixelDocumentStateOptions<
@@ -56,6 +67,7 @@ export interface PixelDocumentStateOptions<
   buffer: TBuffer;
   onNormalMapChanged?: NormalMapChangedListener;
   onPaletteChanged?: (index: number | null) => void;
+  onUvNetsChanged?: () => void;
   uv?: Omit<UVMapOptions, "getCanvasSize">;
 }
 
@@ -67,7 +79,9 @@ export class PixelDocumentState<
 
   #normalMap: NormalMapConfig | null = null;
   #palette = ColorPalette.create();
+  #uvNets = UVNetSet.empty;
   #onPaletteChanged?: (index: number | null) => void;
+  #onUvNetsChanged?: () => void;
   #onNormalMapChanged?: NormalMapChangedListener;
 
   constructor(
@@ -80,6 +94,7 @@ export class PixelDocumentState<
     });
     this.#onNormalMapChanged = options.onNormalMapChanged;
     this.#onPaletteChanged = options.onPaletteChanged;
+    this.#onUvNetsChanged = options.onUvNetsChanged;
   }
 
   get normalMap(): NormalMapConfig | null {
@@ -88,6 +103,10 @@ export class PixelDocumentState<
 
   get palette(): ColorPalette {
     return this.#palette;
+  }
+
+  get uvNets(): UVNetSet {
+    return this.#uvNets;
   }
 
   apply(
@@ -139,6 +158,11 @@ export class PixelDocumentState<
       case "uv-region-rotated":
         this.#rotate(command.metadata);
         break;
+      case "uv-net-saved":
+      case "uv-net-deleted":
+      case "uv-net-default-changed":
+        this.#applyUvNets(command);
+        break;
       case "normal-map-toggled":
       case "normal-map-defaults-patched":
       case "normal-map-zone-set":
@@ -160,6 +184,8 @@ export class PixelDocumentState<
         return this.uv.get(command.metadata.id) !== undefined;
       case "uv-region-state-changed":
         return this.uv.get(command.metadata.region.id) !== undefined;
+      case "uv-net-deleted":
+        return this.#uvNets.get(command.metadata.id) !== undefined;
       case "normal-map-defaults-patched":
       case "normal-map-zone-set":
       case "normal-map-zone-deleted":
@@ -204,6 +230,10 @@ export class PixelDocumentState<
 
         return [existing ? uvRegionCreated(existing.toJSON()) : uvRegionDeleted(command.metadata.region.id)];
       }
+      case "uv-net-saved":
+      case "uv-net-deleted":
+      case "uv-net-default-changed":
+        return this.#invertUvNets(command);
       default:
         return this.#inverseOfExisting(command);
     }
@@ -221,6 +251,9 @@ export class PixelDocumentState<
     );
     this.#palette = palette;
     this.#onPaletteChanged?.(null);
+    this.#replaceUvNets(
+      snapshot.uvNets === undefined ? UVNetSet.empty : UVNetSet.from(snapshot.uvNets)
+    );
     this.buffer.replacePixels(snapshot.pixels, snapshot.size);
     this.uv.clear((region) => owns(region.id));
     for (const region of snapshot.uvRegions ?? []) {
@@ -318,6 +351,48 @@ export class PixelDocumentState<
         rotation.face
       );
     }
+  }
+
+  #applyUvNets(
+    command: UVNetCommand
+  ): void {
+    switch (command.action) {
+      case "uv-net-saved":
+        this.#replaceUvNets(
+          this.#uvNets.with(new SavedUVNet(command.metadata.net))
+        );
+        break;
+      case "uv-net-deleted":
+        this.#replaceUvNets(this.#uvNets.without(command.metadata.id));
+        break;
+      case "uv-net-default-changed":
+        this.#replaceUvNets(this.#uvNets.withDefault(command.metadata.id));
+        break;
+    }
+  }
+
+  #invertUvNets(
+    command: UVNetCommand
+  ): PixelDocumentCommand[] {
+    const id = uvNetId(command);
+    if (id === null) {
+      return [uvNetDefaultChanged(this.#uvNets.defaultId)];
+    }
+
+    const existing = this.#uvNets.get(id);
+
+    return [existing ? uvNetSaved(existing.toJSON()) : uvNetDeleted(id)];
+  }
+
+  #replaceUvNets(
+    uvNets: UVNetSet
+  ): void {
+    if (uvNets === this.#uvNets) {
+      return;
+    }
+
+    this.#uvNets = uvNets;
+    this.#onUvNetsChanged?.();
   }
 
   #applyNormalMap(

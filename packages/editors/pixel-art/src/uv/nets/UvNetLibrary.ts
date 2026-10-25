@@ -1,11 +1,10 @@
 // Import Third-party Dependencies
-import {
-  MemoryStorageAdapter,
-  type StorageAdapter
-} from "@jolly-pixel/ui";
 import { Emitter } from "@openally/emitt";
-import { DEFAULT_UV_SLOTS } from "@jolly-pixel/pixel-draw.renderer";
-import * as z from "zod/mini";
+import {
+  DEFAULT_UV_SLOTS,
+  SavedUVNet,
+  type PixelDocument
+} from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import {
@@ -15,7 +14,6 @@ import {
 } from "./UvNetPreset.ts";
 
 // CONSTANTS
-export const UV_NETS_STORAGE_KEY = "pixel-art:uv-nets";
 export const UV_NET_PRESETS: readonly UvNetPresetInit[] = Object.freeze([
   {
     id: "packed",
@@ -32,24 +30,21 @@ export const UV_NET_PRESETS: readonly UvNetPresetInit[] = Object.freeze([
     ]
   }
 ]);
-const kStoredLibrary = z.object({
-  defaultId: z.catch(z.optional(z.string()), undefined),
-  nets: z.catch(z.array(z.unknown()), [])
-});
-const kStoredNet = z.object({
-  id: z.string(),
-  name: z.string(),
-  rows: z.array(
-    z.array(z.nullable(z.array(z.string())))
-  )
-});
 
 export type UvNetLibraryEvents = {
   change: () => void;
 };
 
+export type UvNetDocument = Pick<
+  PixelDocument,
+  | "uvNets"
+  | "saveUvNet"
+  | "deleteUvNet"
+  | "changeDefaultUvNet"
+  | "subscribe"
+>;
+
 export interface UvNetLibraryOptions {
-  storage?: StorageAdapter;
   presets?: readonly UvNetPresetInit[];
   defaultId?: string;
 }
@@ -62,11 +57,11 @@ export interface UvNetChanges {
 export class UvNetLibrary
   extends Emitter<UvNetLibraryEvents>
   implements Iterable<UvNetPreset> {
-  readonly #storage: StorageAdapter;
   readonly #locked: readonly UvNetPreset[];
   readonly #fallbackDefaultId: string;
-  #custom: UvNetPreset[];
-  #defaultId: string;
+  #document: UvNetDocument | null = null;
+  #release: (() => void) | null = null;
+  #custom: readonly UvNetPreset[] = [];
 
   constructor(
     options: UvNetLibraryOptions = {}
@@ -74,25 +69,15 @@ export class UvNetLibrary
     super();
 
     const {
-      storage = new MemoryStorageAdapter(),
       presets = [],
       defaultId = UV_NET_PRESETS[0].id
     } = options;
-    this.#storage = storage;
     this.#locked = [...UV_NET_PRESETS, ...presets].map(
-      (init) => new UvNetPreset(init, true)
+      (init) => UvNetPreset.locked(init)
     );
-    this.#fallbackDefaultId = this.#locked.some((preset) => preset.id === defaultId) ?
+    this.#fallbackDefaultId = this.#isLocked(defaultId) ?
       defaultId :
       UV_NET_PRESETS[0].id;
-
-    const stored = UvNetLibrary.#parse(storage.get(UV_NETS_STORAGE_KEY));
-    this.#custom = stored.nets.filter(
-      (preset) => !this.#locked.some((locked) => locked.id === preset.id)
-    );
-    this.#defaultId = stored.defaultId !== undefined && this.get(stored.defaultId) ?
-      stored.defaultId :
-      this.#fallbackDefaultId;
   }
 
   * [Symbol.iterator](): IterableIterator<UvNetPreset> {
@@ -100,23 +85,44 @@ export class UvNetLibrary
     yield* this.#custom;
   }
 
-  get default(): UvNetPreset {
-    return this.get(this.#defaultId)!;
+  get document(): UvNetDocument | null {
+    return this.#document;
   }
 
-  get defaultId(): string {
-    return this.#defaultId;
-  }
-
-  set defaultId(
-    id: string
+  set document(
+    document: UvNetDocument | null
   ) {
-    if (id === this.#defaultId || this.get(id) === undefined) {
+    if (document === this.#document) {
       return;
     }
 
-    this.#defaultId = id;
-    this.#commit();
+    this.#release?.();
+    this.#document = document;
+    this.#release = document?.subscribe("uv-nets-changed", this.#refresh) ?? null;
+    this.#refresh();
+  }
+
+  get default(): UvNetPreset {
+    return this.get(this.defaultId)!;
+  }
+
+  get defaultId(): string {
+    const id = this.#document?.uvNets.defaultId ?? null;
+
+    return id !== null && this.get(id) !== undefined ? id : this.#fallbackDefaultId;
+  }
+
+  changeDefault(
+    id: string
+  ): boolean {
+    if (this.#document === null || this.get(id) === undefined) {
+      return false;
+    }
+    if (id !== this.defaultId) {
+      this.#document.changeDefaultUvNet(id);
+    }
+
+    return true;
   }
 
   get(
@@ -129,16 +135,19 @@ export class UvNetLibrary
   create(
     name: string,
     rows: UvNetRowsInput = [DEFAULT_UV_SLOTS]
-  ): UvNetPreset {
-    const preset = new UvNetPreset({
+  ): UvNetPreset | null {
+    if (this.#document === null) {
+      return null;
+    }
+
+    const saved = new SavedUVNet({
       id: crypto.randomUUID(),
       name,
       rows
     });
-    this.#custom = [...this.#custom, preset];
-    this.#commit();
+    this.#document.saveUvNet(saved.toJSON());
 
-    return preset;
+    return new UvNetPreset(saved);
   }
 
   duplicate(
@@ -159,21 +168,21 @@ export class UvNetLibrary
     id: string,
     changes: UvNetChanges
   ): boolean {
-    const index = this.#custom.findIndex((preset) => preset.id === id);
-    if (index === -1) {
+    const document = this.#document;
+    const saved = this.#isLocked(id) ? undefined : document?.uvNets.get(id);
+    if (document === null || saved === undefined) {
       return false;
     }
 
-    let next: UvNetPreset;
+    let next: SavedUVNet;
     try {
-      next = this.#custom[index].with(changes);
+      next = saved.with(changes);
     }
     catch {
       return false;
     }
 
-    this.#custom = this.#custom.with(index, next);
-    this.#commit();
+    document.saveUvNet(next.toJSON());
 
     return true;
   }
@@ -181,58 +190,30 @@ export class UvNetLibrary
   delete(
     id: string
   ): boolean {
-    if (!this.#custom.some((preset) => preset.id === id)) {
+    const document = this.#document;
+    if (
+      document === null ||
+      this.#isLocked(id) ||
+      document.uvNets.get(id) === undefined
+    ) {
       return false;
     }
 
-    this.#custom = this.#custom.filter((preset) => preset.id !== id);
-    if (this.#defaultId === id) {
-      this.#defaultId = this.#fallbackDefaultId;
-    }
-    this.#commit();
+    document.deleteUvNet(id);
 
     return true;
   }
 
-  #commit(): void {
-    this.#storage.set(
-      UV_NETS_STORAGE_KEY,
-      JSON.stringify({
-        defaultId: this.#defaultId,
-        nets: this.#custom
-      })
-    );
+  #isLocked(
+    id: string
+  ): boolean {
+    return this.#locked.some((preset) => preset.id === id);
+  }
+
+  readonly #refresh = (): void => {
+    this.#custom = [...this.#document?.uvNets ?? []]
+      .filter((saved) => !this.#isLocked(saved.id))
+      .map((saved) => new UvNetPreset(saved));
     this.emit("change");
-  }
-
-  static #parse(
-    raw: string | null
-  ): { defaultId?: string; nets: UvNetPreset[]; } {
-    let stored: z.infer<typeof kStoredLibrary>;
-    try {
-      stored = kStoredLibrary.parse(JSON.parse(raw ?? "{}"));
-    }
-    catch {
-      return { nets: [] };
-    }
-
-    const nets: UvNetPreset[] = [];
-    for (const value of stored.nets) {
-      const net = kStoredNet.safeParse(value);
-      if (!net.success) {
-        continue;
-      }
-      try {
-        nets.push(new UvNetPreset(net.data));
-      }
-      catch {
-        continue;
-      }
-    }
-
-    return {
-      defaultId: stored.defaultId,
-      nets
-    };
-  }
+  };
 }

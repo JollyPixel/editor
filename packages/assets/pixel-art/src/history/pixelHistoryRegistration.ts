@@ -10,9 +10,11 @@ import {
 } from "@jolly-pixel/history";
 import {
   DEFAULT_UV_SLOTS,
+  uvNetId,
   uvTargetKey,
   type PixelDocumentCommand,
   type PixelDocument,
+  type UVNetCommand,
   type UVRegionData,
   type UVSlot,
   type Vec2
@@ -40,6 +42,9 @@ const kLabels: Readonly<Record<PixelDocumentCommand["action"], string>> = {
   "uv-region-moved": "Move UV",
   "uv-region-state-changed": "Edit UV",
   "uv-region-rotated": "Rotate UV",
+  "uv-net-saved": "Save UV net",
+  "uv-net-deleted": "Delete UV net",
+  "uv-net-default-changed": "Change default UV net",
   "normal-map-toggled": "Toggle normal map",
   "normal-map-defaults-patched": "Edit normal map",
   "normal-map-zone-set": "Edit normal map zone",
@@ -227,6 +232,10 @@ function namedEntries(
         regionEntries(document, rotation.region) :
         [slotEntry(document, rotation.id, rotation.face)];
     }
+    case "uv-net-saved":
+    case "uv-net-deleted":
+    case "uv-net-default-changed":
+      return [uvNetEntry(document, command)];
     case "normal-map-toggled":
       return [{ key: kNormalMapKey, read: () => document.normalMap?.toJSON() ?? null }];
     case "normal-map-defaults-patched":
@@ -255,6 +264,24 @@ function regionEntries(
     slotEntry(document, region.id, null),
     ...slots.map((slot) => slotEntry(document, region.id, slot))
   ];
+}
+
+function uvNetEntry(
+  document: PixelDocument,
+  command: UVNetCommand
+): KeyedGuardEntry {
+  const id = uvNetId(command);
+  if (id === null) {
+    return {
+      key: "uv-net-default",
+      read: () => document.uvNets.defaultId
+    };
+  }
+
+  return {
+    key: `uv-net:${id}`,
+    read: () => document.uvNets.get(id)
+  };
 }
 
 function slotEntry(
