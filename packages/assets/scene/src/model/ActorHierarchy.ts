@@ -62,16 +62,30 @@ export class ActorHierarchy {
     return id === null || this.#actors.has(id);
   }
 
+  * ancestorIds(
+    id: string
+  ): IterableIterator<string> {
+    let current = this.#actors.get(id)?.parentId ?? null;
+    for (let step = 0; current !== null && step < this.#actors.size; step++) {
+      yield current;
+      current = this.#actors.get(current)?.parentId ?? null;
+    }
+  }
+
   isWithin(
     id: string | null,
     ancestorId: string
   ): boolean {
-    let current = id;
-    for (let step = 0; current !== null && step <= this.#actors.size; step++) {
-      if (current === ancestorId) {
+    if (id === null) {
+      return false;
+    }
+    if (id === ancestorId) {
+      return true;
+    }
+    for (const parentId of this.ancestorIds(id)) {
+      if (parentId === ancestorId) {
         return true;
       }
-      current = this.#actors.get(current)?.parentId ?? null;
     }
 
     return false;

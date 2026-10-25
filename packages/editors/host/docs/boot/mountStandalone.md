@@ -150,6 +150,12 @@ runtime, which a switch reuses. Leases from
 [`session.lease()`](../session/EditorSession.md#leasekind-assetid) belong to
 the session.
 
+### Teardown
+
+`new Teardown()` collects release steps for a handle. `defer(step)` adds one;
+`run()` aborts `signal`, then runs the steps once, last added first. A `mount`
+that throws halfway can call `run()` to release what it built so far.
+
 ## Options
 
 ```ts

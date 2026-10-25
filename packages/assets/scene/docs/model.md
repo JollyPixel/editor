@@ -23,6 +23,7 @@ class SceneDocument {
 ```
 
 - `tree` reads return copies, except `peekActor(id)` and `peekComponent(id)`, which return the stored entry for a read without a copy. Do not mutate it.
+- `tree.ancestorIds(id)` yields an actor's parent id, then that parent's, up to the root. It yields nothing for a root or an unknown id.
 
 ## Methods
 
@@ -85,6 +86,10 @@ Fills or clears (`null`) the named slots.
 ### changeEnvironment(patch): boolean
 
 Replaces the named fields of `background`, `environment` and `fog`.
+
+## randomId(): string
+
+Returns a 12-character id from `[0-9A-Za-z]`, the form every actor and component id takes. A caller that copies actors for `addSubtree` gives each copy a new one.
 
 ## Tree rules
 

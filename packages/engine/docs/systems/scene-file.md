@@ -191,6 +191,17 @@ file id to `Actor` (`build.actor(id)`) and to component
   mode only. So is a `null` from `create`, without a warning.
 - Transforms are written to `actor.object3D` directly.
 
+### createComponent(actor, entry): Component | null
+
+Creates one component of `entry` on an existing actor, as `build` does for
+each entry. Returns `null` for an unknown type or a `null` from `create`. An
+editor uses it to rebuild a single component after an edit.
+
+### writeSceneTransform(object, transform): void
+
+Writes a `SceneTransformFile` (rotation in degrees) to a `THREE.Object3D`
+and updates its world matrix.
+
 ## SceneEnvironment
 
 `new SceneEnvironment(world)` writes a `SceneEnvironmentFile` to the world's

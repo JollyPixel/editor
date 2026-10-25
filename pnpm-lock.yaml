@@ -705,15 +705,24 @@ importers:
 
   packages/editors/scene:
     dependencies:
-      '@jolly-pixel/arbor':
-        specifier: workspace:*
-        version: link:../../arbor
       '@jolly-pixel/asset':
         specifier: workspace:*
         version: link:../../asset
+      '@jolly-pixel/asset-server':
+        specifier: workspace:*
+        version: link:../../asset-server
+      '@jolly-pixel/asset.pixel-art':
+        specifier: workspace:*
+        version: link:../../assets/pixel-art
       '@jolly-pixel/asset.scene':
         specifier: workspace:*
         version: link:../../assets/scene
+      '@jolly-pixel/asset.voxel-map':
+        specifier: workspace:*
+        version: link:../../assets/voxel-map
+      '@jolly-pixel/controls':
+        specifier: workspace:*
+        version: link:../../controls
       '@jolly-pixel/editor.host':
         specifier: workspace:*
         version: link:../host
@@ -729,6 +738,9 @@ importers:
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
+      '@jolly-pixel/runtime':
+        specifier: workspace:*
+        version: link:../../runtime
       '@jolly-pixel/three':
         specifier: workspace:*
         version: link:../../three
@@ -738,12 +750,19 @@ importers:
       '@jolly-pixel/voxel.renderer':
         specifier: workspace:*
         version: link:../../voxel-renderer
+      '@openally/emitt':
+        specifier: 1.1.0
+        version: 1.1.0
       lit:
         specifier: 3.3.3
         version: 3.3.3
       three:
         specifier: 0.186.1
         version: 0.186.1
+    devDependencies:
+      '@jolly-pixel/e2e':
+        specifier: workspace:*
+        version: link:../../e2e
 
   packages/editors/terrain:
     dependencies:

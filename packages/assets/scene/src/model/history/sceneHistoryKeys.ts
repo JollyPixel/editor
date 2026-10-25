@@ -130,14 +130,5 @@ function ancestorChain(
   tree: SceneTreeReader,
   id: string | null
 ): string[] {
-  const chain: string[] = [];
-  for (
-    let current = id;
-    current !== null && !chain.includes(current);
-    current = tree.peekActor(current)?.parentId ?? null
-  ) {
-    chain.push(current);
-  }
-
-  return chain;
+  return id === null ? [] : [id, ...tree.ancestorIds(id)];
 }
