@@ -191,8 +191,10 @@ Transforms never go through components: an actor's transform writes
 
 Follows the asset workspace layout described in `packages/assets/ARCHITECTURE.md`:
 `src/asset/scene.ts` (kind constants, descriptor, `createSceneFile`),
-`src/asset/sceneAssetKind.ts` (`SceneState`, decoder, kind handler),
-`src/network/` (commands, keys, `SceneDocument`, `sceneDocumentKind()`).
+`src/asset/sceneFile.ts` (compact form, encoder, decoder),
+`src/asset/sceneAssetKind.ts` (`SceneState`, kind handler),
+`src/model/` (`SceneTree`, `SceneDocument`, history), `src/network/` (commands,
+keys, `sceneDocumentKind()`).
 
 | Value | |
 |---|---|
@@ -210,16 +212,16 @@ Last write wins through `KeyedCommandArbiter`, with tree rules checked first in
 
 | Command | Conflict keys |
 |---|---|
-| `actor-added` (subtree, parent, index) | tree validation |
+| `actor-added` (subtree, `beforeId`) | tree validation |
 | `actor-removed` (subtree) | every key of the subtree, refused only with a `basis` |
-| `actor-moved` (parent, index, transform rewritten to keep the world pose) | `parent:id`, `transform:id:field` |
+| `actor-moved` (parent, `beforeId`, transform rewritten to keep the world pose) | `parent:id`, `transform:id:field` |
 | `actor-renamed` | `name:id` |
 | `actor-visibility` | `visible:id` |
 | `actor-transformed` (patch of position, rotation, scale) | `transform:id:field` |
-| `component-added` (entry, index) | `components:actorId` |
+| `component-added` (entry, `beforeId`) | `components:actorId` |
 | `component-removed` | `components:actorId`, the component's keys, refused only with a `basis` |
-| `component-moved` (index) | `components:actorId` |
-| `component-changed` (patch of top-level `data` fields) | `component:id:field` per field |
+| `component-moved` (`beforeId`) | `components:actorId` |
+| `component-changed` (patch of top-level `data` fields, `unset` keys) | `component:id:field` per field |
 | `component-assets-changed` (slot to reference or `null`) | `component-asset:id:slot` |
 | `environment-changed` (field patch) | `environment:field` |
 
@@ -340,11 +342,11 @@ with its own lifecycle, while an instance is parented under an actor.
 Each phase ends with its workspace tests, `pnpm run typecheck` and
 `pnpm run lint` green, after `pnpm run build` of the changed workspaces.
 
-1. **Engine.** `SceneFile` interfaces, `ComponentDefinition`,
+1. [DONE] **Engine.** `SceneFile` interfaces, `ComponentDefinition`,
    `ComponentDefinitions`, `SceneBuilder`, `FileScene`, `LightComponent`,
    `MeshRenderer`, and the `Camera`, `Light`, `Mesh` and `Script`
    definitions. Engine docs for the new API.
-2. **`asset.scene`.** Schema, `SceneState`, commands, keys, arbiter, kind
+2. [DONE] **`asset.scene`.** Schema, `SceneState`, commands, keys, arbiter, kind
    handler, `SceneDocument`, history registration.
 3. **Voxel-map viewer.** Extract `editor.voxel-map/viewer`, move the voxel-map
    editor onto it, add the `VoxelMap` definition behind the resolver.
