@@ -942,6 +942,9 @@ importers:
       '@jolly-pixel/loop':
         specifier: workspace:*
         version: link:../loop
+      '@jolly-pixel/three':
+        specifier: workspace:*
+        version: link:../three
       '@openally/emitt':
         specifier: 1.1.0
         version: 1.1.0

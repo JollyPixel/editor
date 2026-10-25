@@ -118,25 +118,27 @@ New engine surface, in `src/systems/scene/` and `src/components/`:
 - **`ComponentDefinition`.** One per component type:
 
   ```ts
-  interface ComponentDefinition<TData, TComponent extends Component> {
+  interface ComponentDefinition<TData, TComponent extends Component, TAssets> {
     readonly type: string;
-    create(actor: Actor, data: TData, context: ComponentContext): TComponent;
+    // Asset type per slot; filled slots load before the scene activates
+    readonly assets?: { [TSlot in keyof TAssets]: AssetType<TAssets[TSlot]> };
+    parse(data: JSONObject): TData;
+    // null when the mode needs no component
+    create(actor: Actor, data: TData, context: ComponentContext<TAssets>): TComponent | null;
     // Patches a live component; without it a data change rebuilds it
     apply?(component: TComponent, data: TData): void;
-    // Asset references to load before the scene activates
-    assets?(entry: SceneComponentFile): AssetReference<unknown>[];
   }
 
-  interface ComponentContext {
+  interface ComponentContext<TAssets> {
     readonly mode: "edit" | "play";
-    readonly assets: ComponentAssetResolver;
+    readonly assets: ComponentAssets<TAssets>;
   }
   ```
 
   `ComponentAssetResolver` turns an `assets` slot into a value. In play mode
   it reads `world.assetCoordinator`; in edit mode the editor supplies one
   backed by host leases.
-- **`ComponentDefinitions`.** The registry, exposed as `world.components`. A
+- **`ComponentDefinitions`.** The registry a game passes to `FileScene`. A
   game registers only the definitions it uses, which keeps tree-shaking.
 - **`SceneBuilder`.** Builds the actors of a `SceneFile` under a parent actor
   (or the root), in edit or play mode. It returns a lookup from file id to
@@ -173,10 +175,11 @@ New engine surface, in `src/systems/scene/` and `src/components/`:
   maps come later through `assets`. `castShadow` and `receiveShadow`.
 - **`Script` data.** `{ behavior: string; properties: Record<string, JSONValue> }`.
   The game registers behaviors by explicit name
-  (`behaviors.register("Player", PlayerBehavior)`), since `Behavior` keys
+  (`new ScriptDefinition({ Player: PlayerBehavior })`), since `Behavior` keys
   `actor.behaviors` by `constructor.name` and minified builds mangle it.
   Property values are converted through the class's `@SceneProperty`
-  metadata, so `[0, 1, 0]` becomes a `Vector3`. A later script asset fills
+  metadata, so `[0, 1, 0]` becomes a `Vector3`; keys without that metadata
+  are ignored. A later script asset fills
   `assets.script` next to `behavior`.
 - **`VoxelMap` data.** `castShadow`, `receiveShadow` and the layer
   visibility the renderer exposes. The map comes from `assets.map`.
@@ -188,8 +191,10 @@ Transforms never go through components: an actor's transform writes
 
 Follows the asset workspace layout described in `packages/assets/ARCHITECTURE.md`:
 `src/asset/scene.ts` (kind constants, descriptor, `createSceneFile`),
-`src/asset/sceneAssetKind.ts` (`SceneState`, decoder, kind handler),
-`src/network/` (commands, keys, `SceneDocument`, `sceneDocumentKind()`).
+`src/asset/sceneFile.ts` (compact form, encoder, decoder),
+`src/asset/sceneAssetKind.ts` (`SceneState`, kind handler),
+`src/model/` (`SceneTree`, `SceneDocument`, history), `src/network/` (commands,
+keys, `sceneDocumentKind()`).
 
 | Value | |
 |---|---|
@@ -207,16 +212,16 @@ Last write wins through `KeyedCommandArbiter`, with tree rules checked first in
 
 | Command | Conflict keys |
 |---|---|
-| `actor-added` (subtree, parent, index) | tree validation |
+| `actor-added` (subtree, `beforeId`) | tree validation |
 | `actor-removed` (subtree) | every key of the subtree, refused only with a `basis` |
-| `actor-moved` (parent, index, transform rewritten to keep the world pose) | `parent:id`, `transform:id:field` |
+| `actor-moved` (parent, `beforeId`, transform rewritten to keep the world pose) | `parent:id`, `transform:id:field` |
 | `actor-renamed` | `name:id` |
 | `actor-visibility` | `visible:id` |
 | `actor-transformed` (patch of position, rotation, scale) | `transform:id:field` |
-| `component-added` (entry, index) | `components:actorId` |
+| `component-added` (entry, `beforeId`) | `components:actorId` |
 | `component-removed` | `components:actorId`, the component's keys, refused only with a `basis` |
-| `component-moved` (index) | `components:actorId` |
-| `component-changed` (patch of top-level `data` fields) | `component:id:field` per field |
+| `component-moved` (`beforeId`) | `components:actorId` |
+| `component-changed` (patch of top-level `data` fields, `unset` keys) | `component:id:field` per field |
 | `component-assets-changed` (slot to reference or `null`) | `component-asset:id:slot` |
 | `environment-changed` (field patch) | `environment:field` |
 
@@ -337,11 +342,11 @@ with its own lifecycle, while an instance is parented under an actor.
 Each phase ends with its workspace tests, `pnpm run typecheck` and
 `pnpm run lint` green, after `pnpm run build` of the changed workspaces.
 
-1. **Engine.** `SceneFile` interfaces, `ComponentDefinition`,
+1. [DONE] **Engine.** `SceneFile` interfaces, `ComponentDefinition`,
    `ComponentDefinitions`, `SceneBuilder`, `FileScene`, `LightComponent`,
    `MeshRenderer`, and the `Camera`, `Light`, `Mesh` and `Script`
    definitions. Engine docs for the new API.
-2. **`asset.scene`.** Schema, `SceneState`, commands, keys, arbiter, kind
+2. [DONE] **`asset.scene`.** Schema, `SceneState`, commands, keys, arbiter, kind
    handler, `SceneDocument`, history registration.
 3. **Voxel-map viewer.** Extract `editor.voxel-map/viewer`, move the voxel-map
    editor onto it, add the `VoxelMap` definition behind the resolver.

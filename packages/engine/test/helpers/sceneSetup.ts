@@ -39,11 +39,12 @@ export class ConcreteScene extends Scene {
 }
 
 export function createSceneSetup(
-  assets: SceneAssets = createSceneAssets()
+  assets: SceneAssets = createSceneAssets(),
+  logger = new Logger()
 ) {
   const sm = new SceneManager();
   const world = {
-    logger: new Logger(),
+    logger,
     sceneManager: sm,
     assetCoordinator: assets.coordinator,
     createActor(name: string) {

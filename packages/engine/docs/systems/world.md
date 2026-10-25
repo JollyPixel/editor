@@ -288,6 +288,7 @@ if (input.keyboard.isDown("Space")) {
 ## See also
 
 - [SceneManager](scene-manager.md): actor tree, lifecycle, and destruction
+- [Scene files](scene-file.md): `FileScene` and component definitions
 - [Renderer](renderer.md): rendering pipeline
 - [Logger](logger.md): `world.logger`, namespaces and steps
 - [Input](../../../controls/docs/input.md): input handling

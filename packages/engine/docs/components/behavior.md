@@ -131,6 +131,41 @@ interface Behavior<T extends BehaviorProperties> {
 }
 ```
 
+`properties` passed as an option are assigned to the behavior's fields after
+its field initializers, before `@SceneProperty` defaults resolve:
+
+```ts
+actor.addComponent(PlayerBehavior, {
+  properties: { speed: 0.1 }
+});
+```
+
+## Scene files
+
+A [scene file](../systems/scene-file.md) names a behavior by a string,
+because minified builds rename classes. Give `ScriptDefinition` a record
+from each name to its behavior class:
+
+```ts
+const script = new ScriptDefinition({
+  Player: PlayerBehavior
+});
+```
+
+```ts
+interface ScriptData {
+  behavior: string;
+  properties: JSONObject;
+}
+```
+
+- Each value in `properties` is converted through the field's
+  `@SceneProperty` type: `[0, 1, 0]` becomes a `Vector3` and `"#ff0000"` a
+  `Color`. A value that does not fit the type is dropped, so the field keeps
+  its initializer. A key without a `@SceneProperty` field is ignored.
+- An unregistered name logs a warning and builds no behavior. Edit mode
+  builds none either.
+
 ## See also
 
 - [ActorComponent](../actor/actor-component.md)

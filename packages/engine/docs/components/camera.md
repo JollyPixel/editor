@@ -59,6 +59,7 @@ interface CameraOptions {
   depth?: number;
   addAudioListener?: boolean;
   postProcessing?: PostProcessing | null;
+  render?: boolean;
 }
 ```
 
@@ -73,6 +74,9 @@ interface CameraOptions {
 | `depth` | `0` | Render order — lower first |
 | `addAudioListener` | `false` | Attaches the world's `THREE.AudioListener` |
 | `postProcessing` | `null` | Builds the camera's output node; see [post-processing](#post-processing) |
+| `render` | `true` | Registers the camera with the renderer; `false` keeps the settings without drawing |
+
+`CAMERA_DEFAULTS` holds these defaults.
 
 > [!NOTE]
 > The default `near`/`far` pair is a 100,000:1 ratio, which leaves

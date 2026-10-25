@@ -43,6 +43,7 @@
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/controls": "workspace:*",
     "@jolly-pixel/loop": "workspace:*",
+    "@jolly-pixel/three": "workspace:*",
     "@openally/emitt": "1.1.0",
     "picomatch": "4.0.7",
     "reflect-metadata": "^0.2.2"
