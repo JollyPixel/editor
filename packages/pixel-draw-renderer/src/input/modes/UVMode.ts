@@ -15,6 +15,7 @@ export interface UVModeOptions {
 
 export class UVMode extends InteractionMode {
   readonly id: Mode = "uv";
+  readonly edgePans = true;
 
   #uv: UVController;
 

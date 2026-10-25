@@ -120,6 +120,10 @@ export class InteractionRouter implements InputActions {
     return this.#panHeld || this.#active.pansOnPrimary;
   }
 
+  get edgePans(): boolean {
+    return this.#active.edgePans;
+  }
+
   get panHeld(): boolean {
     return this.#panHeld;
   }

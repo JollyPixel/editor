@@ -18,7 +18,7 @@ UV region tools, undo/redo, and zoom/pan behind one `PixelArtCanvas` API.
 - **Rectangle and shape select**: drag out a rectangle or select a connected region
 - **UV regions**: create/move/delete rectangular UV regions independently of painting, via the `uv` value object;
 - **Undo/redo**: every edit is emitted with the commands that undo it, and a canvas binds to the undo history its host passes in;
-- **Zoom & pan**: wheel-based zoom with configurable sensitivity and range, plus middle-drag panning and left-drag panning while a pan modifier is held;
+- **Zoom & pan**: wheel-based zoom with configurable sensitivity and range, plus middle-drag panning and left-drag panning while a pan modifier is held, and edge panning while a selection or UV drag reaches the canvas edge;
 - **Transparency support**: checkerboard background renders beneath transparent pixels
 
 ## 💃 Getting Started

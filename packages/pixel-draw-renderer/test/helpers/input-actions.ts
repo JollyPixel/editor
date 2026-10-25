@@ -20,6 +20,7 @@ export interface InputActionCalls {
 export interface MakeActionsOptions {
   tracksDrags?: boolean;
   pansOnPrimary?: boolean;
+  edgePans?: boolean;
   handlesCtrlWheel?: boolean;
 }
 
@@ -43,6 +44,7 @@ export function makeActions(
 
   const actions: InputActions = {
     pansOnPrimary: options.pansOnPrimary ?? false,
+    edgePans: options.edgePans ?? false,
     onPointerDown: (slot, position, ctrlKey) => {
       calls.onPointerDown.push([
         slot,

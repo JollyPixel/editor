@@ -10,6 +10,7 @@ export interface PointerPosition {
 
 export interface InputActions {
   readonly pansOnPrimary: boolean;
+  readonly edgePans: boolean;
   onPointerDown(
     slot: BrushColorSlot,
     position: PointerPosition,
