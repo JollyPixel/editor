@@ -1280,6 +1280,9 @@ importers:
       '@dimforge/rapier3d':
         specifier: 0.21.0
         version: 0.21.0
+      '@jolly-pixel/asset':
+        specifier: workspace:*
+        version: link:../asset
       '@jolly-pixel/engine':
         specifier: workspace:*
         version: link:../engine

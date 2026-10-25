@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { BlocksetEntry } from "../blocksets/BlocksetEntry.ts";
+import type { BlocksetEntry } from "../../viewer/BlocksetEntry.ts";
 
 export interface BlocksetTabLabels {
   name: string;

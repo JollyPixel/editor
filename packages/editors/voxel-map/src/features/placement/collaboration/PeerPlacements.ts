@@ -17,6 +17,7 @@ import { peerProfileColor } from "@jolly-pixel/ui/network";
 // Import Internal Dependencies
 import type { EditorMapSignals } from "../../../map/EditorMap.ts";
 import type { BlockRenderSources } from "../../blocks/rendering/BlockRenderSources.ts";
+import type { MapBlocksetsSignals } from "../../blocksets/MapBlocksets.ts";
 import { Placement } from "../Placement.ts";
 import { MarqueePresence } from "./MarqueePresence.ts";
 import { PlacementPresence } from "./PlacementPresence.ts";
@@ -48,6 +49,7 @@ export interface PeerPlacementsOptions {
   blockRegistry: BlockRegistry;
   sources: BlockRenderSources;
   editorMap: EditorMapSignals;
+  blocksets: MapBlocksetsSignals;
   peers: Pick<PeerEditContext, "shares" | "subscribe">;
 }
 
@@ -114,7 +116,7 @@ export class PeerPlacements extends ActorComponent {
       options.editorMap.subscribe("layerUpdated", this.#recapture),
       options.editorMap.subscribe("reset", this.#recapture),
       options.editorMap.subscribe("blockRegistryChanged", this.#rebuild),
-      options.editorMap.subscribe("blocksetsChanged", this.#rebuild),
+      options.blocksets.subscribe("change", this.#rebuild),
       options.peers.subscribe("change", this.#renderAll)
     ];
 

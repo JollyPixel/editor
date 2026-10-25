@@ -20,7 +20,7 @@ import "@jolly-pixel/ui/elements/select";
 // Import Internal Dependencies
 import type { BlockRenderSources } from "../rendering/BlockRenderSources.ts";
 import type { PreviewStage } from "../../preview/PreviewStage.ts";
-import type { BlocksetEntry } from "../../blocksets/BlocksetEntry.ts";
+import type { BlocksetEntry } from "../../../viewer/BlocksetEntry.ts";
 import { tileSizeSegments } from "../../blocksets/tileSizes.ts";
 import { ShapeChoices } from "../shapes/ShapeChoices.ts";
 import type { ShapePreview } from "./ShapePreview.ts";

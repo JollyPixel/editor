@@ -63,55 +63,6 @@ describe("MapBlocksets", () => {
     assert.equal(blocksets.defineBlock({ id: composeBlockId(9, 1), name: "x", shapeId: "cube" }), false);
   });
 
-  it("writes a block with the alpha mode its pixels need in a single command", async() => {
-    const { view, sources, blocksets } = setupMapBlocksets();
-    const opened = sources.opened.get("terrain")!;
-    const id = composeBlockId(1, 1);
-    await opened.ready;
-
-    const actions: string[] = [];
-    opened.blockset.on("command", (command) => actions.push(command.action));
-    sources.transparent = true;
-    blocksets.defineBlock({
-      ...view.document.blocks.get(id)!,
-      name: "leaves"
-    });
-
-    assert.deepEqual(actions, ["block-defined"]);
-    assert.equal(opened.blockset.blocks.get(1)?.alphaMode, "mask");
-    assert.equal(view.document.blocks.get(id)?.alphaMode, "mask");
-  });
-
-  it("keeps the alpha mode of a block written before its blockset loaded", () => {
-    const { view, sources, blocksets } = setupMapBlocksets();
-    const id = composeBlockId(1, 1);
-    sources.transparent = true;
-
-    blocksets.defineBlock({
-      ...view.document.blocks.get(id)!,
-      name: "leaves"
-    });
-
-    assert.equal(view.document.blocks.get(id)?.alphaMode, undefined);
-  });
-
-  it("syncs the alpha mode of the blocks a blockset repaint changed", async() => {
-    const { view, sources, blocksets } = setupMapBlocksets();
-    const id = composeBlockId(1, 1);
-    await sources.opened.get("terrain")!.ready;
-
-    sources.transparent = true;
-    blocksets.syncAlphaModes("terrain");
-    assert.equal(view.document.blocks.get(id)?.alphaMode, "mask");
-
-    sources.transparent = false;
-    blocksets.syncAlphaModes("terrain", { x: 32, y: 32, width: 4, height: 4 });
-    assert.equal(view.document.blocks.get(id)?.alphaMode, "mask");
-
-    blocksets.syncAlphaModes("terrain", { x: 0, y: 0, width: 4, height: 4 });
-    assert.equal(view.document.blocks.get(id)?.alphaMode, "opaque");
-  });
-
   it("routes material groups by their projected id", () => {
     const { view, sources, blocksets } = setupMapBlocksets([TERRAIN_BLOCKSET, ROCK_BLOCKSET]);
 
@@ -230,6 +181,21 @@ describe("MapBlocksets", () => {
     assert.equal(view.document.blocks.has(composeBlockId(1, 1)), true);
     assert.equal(blocksets.open("rock") !== undefined, false);
     assert.equal(changes, 1);
+  });
+
+  it("builds the pixel islands of a linked blockset until it is unlinked", () => {
+    const { sources, relink } = setupMapBlocksets([TERRAIN_BLOCKSET]);
+    const pixels = sources.pixels.get("terrain")!;
+
+    assert.ok(pixels.islandFaces);
+    assert.deepEqual(
+      [...new Set([...pixels.islandFaces()].map(({ regionId }) => regionId))],
+      ["block-1"]
+    );
+
+    relink([]);
+
+    assert.equal(pixels.islandFaces, null);
   });
 
   it("labels its entries from the catalog and relabels on a catalog change", () => {

@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { BlocksetEntry } from "../../../src/features/blocksets/BlocksetEntry.ts";
+import { BlocksetEntry } from "../../src/viewer/BlocksetEntry.ts";
 
 // CONSTANTS
 const kRecords = [

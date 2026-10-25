@@ -12,7 +12,6 @@ import {
 } from "@jolly-pixel/editor.host";
 import {
   VOXEL_MAP_KIND,
-  voxelMapDocumentKind,
   type SyncedVoxelMap
 } from "@jolly-pixel/asset.voxel-map/client";
 import { BakedRoomEnvironment } from "@jolly-pixel/three";
@@ -24,7 +23,10 @@ import { EditorState } from "../state/index.ts";
 import { EditorScene } from "./EditorScene.ts";
 import type { VoxelMapEditing } from "../editing/VoxelMapEditing.ts";
 import { EditorShell } from "../shell/EditorShell.ts";
-import { BLOCKSET_DOCUMENT_KIND } from "../features/blocksets/BlocksetBinding.ts";
+import {
+  VoxelMapViewer,
+  VOXEL_MAP_DOCUMENT_KIND
+} from "../viewer/VoxelMapViewer.ts";
 import { mapConsole } from "./mapConsole.ts";
 import { basics } from "../tours/basics.ts";
 import {
@@ -38,7 +40,6 @@ import { VOXEL_MAP_KEYBINDINGS } from "../preferences.ts";
 // CONSTANTS
 const kCanvas = "#game-container > canvas";
 const kPerformanceStorageKey = "voxel-map:performance-hud";
-const kMapKind = voxelMapDocumentKind();
 
 export interface VoxelMapEditorParts {
   runtime: Runtime;
@@ -58,7 +59,7 @@ export class VoxelMapEditor {
   static readonly identity = {
     title: "Join voxel map"
   };
-  static readonly kinds = [kMapKind, BLOCKSET_DOCUMENT_KIND];
+  static readonly kinds = VoxelMapViewer.kinds;
   static readonly archive = {
     fallbackName: "map",
     resetWarning: "Every map and blockset stored in this browser is " +
@@ -103,7 +104,7 @@ export class VoxelMapEditor {
       preferences,
       keyboardLayout: context.keyboardLayout
     });
-    const target = session.targetLease(kMapKind);
+    const target = session.targetLease(VOXEL_MAP_DOCUMENT_KIND);
     const roomEnvironment = await BakedRoomEnvironment.load()
       .catch((error: unknown) => {
         console.warn("[voxel-map] No environment map for reflections.", error);

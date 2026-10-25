@@ -9,7 +9,7 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { BlocksetEntry } from "../../../../src/features/blocksets/BlocksetEntry.ts";
+import { BlocksetEntry } from "../../../../src/viewer/BlocksetEntry.ts";
 import { BlockLibraryScope } from "../../../../src/features/blocks/library/BlockLibraryScope.ts";
 
 // CONSTANTS

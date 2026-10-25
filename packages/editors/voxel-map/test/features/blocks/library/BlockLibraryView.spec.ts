@@ -11,7 +11,7 @@ import {
 import { SearchQuery } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { BlocksetEntry } from "../../../../src/features/blocksets/BlocksetEntry.ts";
+import { BlocksetEntry } from "../../../../src/viewer/BlocksetEntry.ts";
 import { BlockLibraryOrder } from "../../../../src/features/blocks/library/BlockLibraryOrder.ts";
 import { BlockLibraryScope } from "../../../../src/features/blocks/library/BlockLibraryScope.ts";
 import { BlockLibraryView } from "../../../../src/features/blocks/library/BlockLibraryView.ts";

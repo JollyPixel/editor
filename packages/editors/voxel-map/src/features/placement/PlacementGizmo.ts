@@ -17,6 +17,7 @@ import type { VoxelView } from "@jolly-pixel/voxel.renderer";
 import type { EditorMapSignals } from "../../map/EditorMap.ts";
 import type { PointerCapture } from "../../state/index.ts";
 import type { BlockRenderSources } from "../blocks/rendering/BlockRenderSources.ts";
+import type { MapBlocksetsSignals } from "../blocksets/MapBlocksets.ts";
 import type { ActivePlacement } from "./ActivePlacement.ts";
 import type { MapPlacement } from "./MapPlacement.ts";
 import { PlacementPreview } from "./PlacementPreview.ts";
@@ -35,6 +36,7 @@ export interface PlacementGizmoOptions {
   >;
   pointer: PointerCapture;
   editorMap: EditorMapSignals;
+  blocksets: MapBlocksetsSignals;
   color: THREE.ColorRepresentation;
 }
 
@@ -43,6 +45,7 @@ export class PlacementGizmo extends ActorComponent {
   #placement: PlacementGizmoOptions["placement"];
   #pointerCapture: PointerCapture;
   #editorMap: EditorMapSignals;
+  #blocksets: MapBlocksetsSignals;
   #preview: PlacementPreview;
   #pivot = new THREE.Vector3();
   #controls: BoxControls<MarqueeBox> | null = null;
@@ -60,6 +63,7 @@ export class PlacementGizmo extends ActorComponent {
     this.#placement = options.placement;
     this.#pointerCapture = options.pointer;
     this.#editorMap = options.editorMap;
+    this.#blocksets = options.blocksets;
     this.#preview = new PlacementPreview({
       blockRegistry: options.view.document.blocks,
       sources: options.sources,
@@ -92,7 +96,7 @@ export class PlacementGizmo extends ActorComponent {
     this.#subscriptions.push(
       this.#placement.subscribe("change", this.#sync),
       this.#editorMap.subscribe("blockRegistryChanged", this.#rebuild),
-      this.#editorMap.subscribe("blocksetsChanged", this.#rebuild)
+      this.#blocksets.subscribe("change", this.#rebuild)
     );
     this.#sync(this.#placement.current);
   }
