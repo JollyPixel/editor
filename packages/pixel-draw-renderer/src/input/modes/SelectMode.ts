@@ -15,6 +15,7 @@ export interface SelectModeOptions {
 
 export class SelectMode extends InteractionMode {
   readonly id: Mode = "select";
+  readonly edgePans = true;
 
   #select: SelectEngine;
 

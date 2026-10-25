@@ -13,6 +13,7 @@ export abstract class InteractionMode {
   abstract readonly id: Mode;
   readonly writesPixels: boolean = false;
   readonly pansOnPrimary: boolean = false;
+  readonly edgePans: boolean = false;
 
   onEnter(): void {}
   onExit(): void {}

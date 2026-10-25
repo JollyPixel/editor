@@ -41,6 +41,11 @@ export interface CanvasViewport extends DefaultViewport {
   ): Vec2;
 }
 
+export interface PanRange {
+  min: Vec2;
+  max: Vec2;
+}
+
 export type ViewportEvent = {
   changed: () => void;
   animating: () => void;
@@ -361,6 +366,26 @@ export class Viewport extends Emitter<
       });
     }
     this.emit("changed");
+  }
+
+  panRange(
+    margin: number
+  ): PanRange {
+    const texPx = this.#texture.pixelSize(
+      this.zoom.value
+    );
+    const camera = this.#camera;
+
+    return {
+      min: {
+        x: Math.min(0, this.#canvasWidth - margin - texPx.x - camera.x),
+        y: Math.min(0, this.#canvasHeight - margin - texPx.y - camera.y)
+      },
+      max: {
+        x: Math.max(0, margin - camera.x),
+        y: Math.max(0, margin - camera.y)
+      }
+    };
   }
 
   toScreen(

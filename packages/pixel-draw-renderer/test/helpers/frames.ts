@@ -1,9 +1,13 @@
 // Import Node.js Dependencies
 import type { TestContext } from "node:test";
 
+// CONSTANTS
+const kFrameMs = 16;
+
 export class FakeFrames {
   #next = 1;
-  #pending = new Map<number, () => void>();
+  #time = 0;
+  #pending = new Map<number, FrameRequestCallback>();
 
   constructor(
     t: TestContext
@@ -11,7 +15,7 @@ export class FakeFrames {
     t.mock.method(
       globalThis,
       "requestAnimationFrame",
-      (callback: () => void) => {
+      (callback: FrameRequestCallback) => {
         this.#pending.set(
           this.#next,
           callback
@@ -33,13 +37,16 @@ export class FakeFrames {
     return this.#pending.size;
   }
 
-  run(): void {
+  run(
+    elapsedMs = kFrameMs
+  ): void {
     const callbacks = [
       ...this.#pending.values()
     ];
     this.#pending.clear();
+    this.#time += elapsedMs;
     for (const callback of callbacks) {
-      callback();
+      callback(this.#time);
     }
   }
 }

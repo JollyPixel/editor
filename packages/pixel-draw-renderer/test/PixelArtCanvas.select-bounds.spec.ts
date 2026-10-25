@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 import { mouseEvent } from "./helpers/events.ts";
 import { stubRect } from "./helpers/dom.ts";
 import { createPixelArtCanvas } from "./helpers/canvas.ts";
+import { FakeFrames } from "./helpers/frames.ts";
 
 describe("PixelArtCanvas — rectangle selection bounds", () => {
   test("can extend outside the texture while drawing, then snaps to its bounds on release", () => {
@@ -55,19 +56,41 @@ describe("PixelArtCanvas — rectangle selection bounds", () => {
     manager.destroy();
   });
 
-  test("redraws the rectangle being drawn when the viewport moves", () => {
+  test("edge-pans while drawing so the rectangle grows past the visible area", (t) => {
+    const frames = new FakeFrames(t);
+    const { manager, canvas, overlay } = createPixelArtCanvas({
+      zoom: { default: 32 }
+    });
+
+    manager.mode = "select";
+    canvas.dispatchEvent(mouseEvent("mousedown", 100, 100));
+    canvas.dispatchEvent(mouseEvent("mousemove", 195, 195));
+    for (let frame = 0; frame < 3; frame++) {
+      frames.run(100);
+    }
+    canvas.dispatchEvent(
+      new MouseEvent("mouseup", { bubbles: true })
+    );
+
+    for (const outline of overlay.querySelectorAll("[data-overlay=selection]")) {
+      assert.strictEqual(outline.getAttribute("d"), "M -24 -24 L 168 -24 L 168 168 L -24 168 Z");
+    }
+    manager.destroy();
+  });
+
+  test("keeps the dragged corner under the still cursor when the viewport moves", () => {
     const { manager, canvas, overlay, container } = createPixelArtCanvas({
       zoom: { default: 4 }
     });
 
     manager.mode = "select";
     canvas.dispatchEvent(mouseEvent("mousedown", 76, 76));
-    canvas.dispatchEvent(mouseEvent("mousemove", 124, 124));
+    canvas.dispatchEvent(mouseEvent("mousemove", 164, 164));
     stubRect(container, { width: 300, height: 300 });
     manager.onResize();
 
     for (const outline of overlay.querySelectorAll("[data-overlay=selection]")) {
-      assert.strictEqual(outline.getAttribute("d"), "M 126 126 L 178 126 L 178 178 L 126 178 Z");
+      assert.strictEqual(outline.getAttribute("d"), "M 126 126 L 166 126 L 166 166 L 126 166 Z");
     }
     manager.destroy();
   });

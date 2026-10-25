@@ -53,6 +53,14 @@ of the canvas element.
 
 *In code:* `PixelArtCanvas.viewport`, with `toScreen()` and `toTexture()`.
 
+### Edge pan
+
+Scrolling the viewport toward the cursor while a selection or UV drag sits near
+or past the edge of the canvas element. It stops once the texture edge on that
+side is in view.
+
+*In code:* `EdgePan`, turned on per mode by `edgePans`.
+
 ### Grid
 
 Lines drawn over the texture every few pixels, splitting it into square

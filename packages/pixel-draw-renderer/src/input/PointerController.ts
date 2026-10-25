@@ -1,4 +1,5 @@
 // Import Internal Dependencies
+import { EdgePan } from "./EdgePan.ts";
 import type { Viewport } from "../rendering/Viewport.ts";
 import type { BrushColorSlot } from "../tools/Brush.ts";
 import type { Vec2 } from "../types.ts";
@@ -31,6 +32,13 @@ const kWheelLineDeltaPixels = 16;
 const kWheelPageDeltaPixels = 100;
 const kPinchDeltaPerScaleLog = 100;
 
+type ClientPoint = Pick<MouseEvent, "clientX" | "clientY">;
+
+interface Drag {
+  slot: BrushColorSlot;
+  pointer: ClientPoint;
+}
+
 export interface PointerControllerOptions {
   canvas: HTMLCanvasElement;
   viewport: Viewport;
@@ -48,7 +56,8 @@ export class PointerController {
   #actions: InputActions;
   #inputWindow: WindowLike;
   #panAnchor: Vec2 | null = null;
-  #dragging: BrushColorSlot | null = null;
+  #drag: Drag | null = null;
+  #edgePan: EdgePan;
   #controlHeld = false;
 
   constructor(
@@ -65,11 +74,13 @@ export class PointerController {
     this.#viewport = viewport;
     this.#actions = actions;
     this.#inputWindow = inputWindow;
+    this.#edgePan = new EdgePan({ viewport });
 
     this.#addEventListeners();
   }
 
   destroy(): void {
+    this.#edgePan.stop();
     this.#removeEventListeners();
   }
 
@@ -85,6 +96,7 @@ export class PointerController {
     this.#inputWindow.addEventListener("keydown", this.#handleWindowKey);
     this.#inputWindow.addEventListener("keyup", this.#handleWindowKey);
     this.#inputWindow.addEventListener("blur", this.#handleWindowBlur);
+    this.#viewport.on("changed", this.#handleViewportChanged);
   }
 
   #removeEventListeners(): void {
@@ -99,10 +111,11 @@ export class PointerController {
     this.#inputWindow.removeEventListener("keydown", this.#handleWindowKey);
     this.#inputWindow.removeEventListener("keyup", this.#handleWindowKey);
     this.#inputWindow.removeEventListener("blur", this.#handleWindowBlur);
+    this.#viewport.off("changed", this.#handleViewportChanged);
   }
 
   #toPosition(
-    event: MouseEvent
+    event: ClientPoint
   ): PointerPosition {
     const bounds = this.#canvas.getBoundingClientRect();
     const { clientX, clientY } = event;
@@ -131,22 +144,51 @@ export class PointerController {
     return (event.buttons & kSlotButtonMasks[slot]) !== 0;
   }
 
+  #heldDrag(
+    event: MouseEvent
+  ): Drag | null {
+    const drag = this.#drag;
+
+    return drag !== null && this.#isHeld(drag.slot, event) ? drag : null;
+  }
+
   #endDrag(): void {
-    const slot = this.#dragging;
-    if (slot === null) {
+    const drag = this.#drag;
+    if (drag === null) {
       return;
     }
 
-    this.#dragging = null;
-    this.#actions.onPointerUp(slot);
+    this.#drag = null;
+    this.#edgePan.stop();
+    this.#actions.onPointerUp(drag.slot);
+  }
+
+  #dragTo(
+    drag: Drag,
+    event: MouseEvent,
+    position: PointerPosition
+  ): void {
+    drag.pointer = clientPoint(event);
+    this.#moveDrag(drag, position);
+  }
+
+  #moveDrag(
+    drag: Drag,
+    position: PointerPosition
+  ): void {
+    this.#actions.onPointerMove(drag.slot, position);
+
+    if (this.#panAnchor === null && this.#actions.edgePans) {
+      this.#edgePan.aim(position.canvas);
+    }
   }
 
   #release(
     event: MouseEvent
   ): void {
     if (
-      this.#dragging !== null &&
-      kButtonSlots.get(event.button) === this.#dragging
+      this.#drag !== null &&
+      kButtonSlots.get(event.button) === this.#drag.slot
     ) {
       this.#endDrag();
     }
@@ -156,6 +198,7 @@ export class PointerController {
   #beginPan(
     event: MouseEvent
   ): void {
+    this.#edgePan.stop();
     this.#panAnchor = {
       x: event.clientX,
       y: event.clientY
@@ -191,15 +234,18 @@ export class PointerController {
 
       return;
     }
-    if (this.#dragging !== null) {
-      if (this.#isHeld(this.#dragging, event)) {
+    if (this.#drag !== null) {
+      if (this.#isHeld(this.#drag.slot, event)) {
         return;
       }
       this.#endDrag();
     }
 
     if (this.#actions.onPointerDown(slot, this.#toPosition(event), event.ctrlKey)) {
-      this.#dragging = slot;
+      this.#drag = {
+        slot,
+        pointer: clientPoint(event)
+      };
     }
   };
 
@@ -212,11 +258,9 @@ export class PointerController {
     const position = this.#toPosition(event);
     this.#actions.onHover(position);
 
-    if (
-      this.#dragging !== null &&
-      this.#isHeld(this.#dragging, event)
-    ) {
-      this.#actions.onPointerMove(this.#dragging, position);
+    const drag = this.#heldDrag(event);
+    if (drag !== null) {
+      this.#dragTo(drag, event, position);
     }
   };
 
@@ -289,15 +333,9 @@ export class PointerController {
     event: MouseEvent
   ): void => {
     if (this.#panAnchor === null) {
-      if (
-        event.target !== this.#canvas &&
-        this.#dragging !== null &&
-        this.#isHeld(this.#dragging, event)
-      ) {
-        this.#actions.onPointerMove(
-          this.#dragging,
-          this.#toPosition(event)
-        );
+      const drag = this.#heldDrag(event);
+      if (event.target !== this.#canvas && drag !== null) {
+        this.#dragTo(drag, event, this.#toPosition(event));
       }
 
       return;
@@ -330,10 +368,26 @@ export class PointerController {
     this.#controlHeld = event.ctrlKey;
   };
 
+  #handleViewportChanged = (): void => {
+    const drag = this.#drag;
+    if (drag !== null) {
+      this.#moveDrag(drag, this.#toPosition(drag.pointer));
+    }
+  };
+
   #handleWindowBlur = (): void => {
     this.#controlHeld = false;
     this.#endPan();
     this.#endDrag();
     this.#actions.onBlur();
+  };
+}
+
+function clientPoint(
+  event: MouseEvent
+): ClientPoint {
+  return {
+    clientX: event.clientX,
+    clientY: event.clientY
   };
 }
