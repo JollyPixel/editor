@@ -241,18 +241,21 @@ History registration follows the other kinds through `@jolly-pixel/history`.
 
   ```ts
   pickAsset(options: {
-    kinds: string[];
+    kinds: Iterable<AssetKindDescriptor>;
     title: string;
     current?: AssetReferenceData | null;
   }): Promise<AssetReferenceData | null>;
   ```
 
   It lists `session.catalog.records()` filtered by kind as a folder tree, with
-  search and kind icons, and follows catalog changes while open. `null` means
+  search and kind icons, and follows catalog changes while open. `kinds` takes
+  descriptors because the host knows no kind's icon. `null` means
   cancelled. It works standalone and in the studio, where the catalog comes
   through the shell's catalog port.
-- **Offline back-end.** The `scene` kind is registered with the offline
-  server so the editor runs standalone.
+- **Offline back-end.** The host is kind-agnostic: each editor's offline
+  loader passes the handlers of its project file's kinds. The scene editor's
+  `vite.config.ts` lists `asset.scene`, `asset.voxel-map` and
+  `asset.pixel-art`, and its offline seed holds one scene (phase 5).
 
 ## Voxel-map viewer
 
@@ -356,8 +359,9 @@ Each phase ends with its workspace tests, `pnpm run typecheck` and
 3. [DONE] **Voxel-map viewer.** Extract the `editor.voxel-map` viewer, move
    the voxel-map editor onto it, add the `VoxelMap` definition behind the
    resolver.
-4. **Host.** `session.pickAsset()` and the offline `scene` kind.
-5. **`editor.scene`.** Boot, `SceneBinding`, hierarchy, inspector, scene pane,
-   viewport and gizmo, history, presence, preferences.
+4. [DONE] **Host.** `session.pickAsset()`.
+5. **`editor.scene`.** Boot with the offline project kinds and seed,
+   `SceneBinding`, hierarchy, inspector, scene pane, viewport and gizmo,
+   history, presence, preferences.
 6. **Studio.** Add the editor and the kind to `project.json`, and the
    Playwright smoke test.

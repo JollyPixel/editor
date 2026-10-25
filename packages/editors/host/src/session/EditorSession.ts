@@ -21,6 +21,7 @@ import type { ConnectionStatus } from "../connection/ConnectionStatus.ts";
 import type { SessionArchive } from "./SessionArchive.ts";
 import type { SessionConnection } from "./SessionConnection.ts";
 import type { OfflineMode } from "../connection/OfflineMode.ts";
+import type { AssetPickOptions } from "./picker/pickAsset.ts";
 
 export type EditorSessionEvents = {
   "dependency-added": (dependency: AssetDependency) => void;
@@ -59,6 +60,7 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
 
   readonly #kinds = new Map<string, AssetDocumentKind<unknown>>();
   readonly #held: AssetRoomLease[] = [];
+  readonly #pickers = new AbortController();
   #dependencies = new Map<string, SessionDependency>();
   #disposed = false;
 
@@ -145,12 +147,22 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     return this.#dependencies.get(assetId)?.view;
   }
 
+  async pickAsset(
+    options: AssetPickOptions
+  ): Promise<AssetReferenceData | null> {
+    this.#assertOpen();
+    const { pickAsset } = await import("./picker/pickAsset.ts");
+
+    return pickAsset(options, this.catalog, this.#pickers.signal);
+  }
+
   dispose(): void {
     if (this.#disposed) {
       return;
     }
     this.#disposed = true;
 
+    this.#pickers.abort();
     this.catalog.off("change", this.#onCatalogChange);
     for (const { lease } of this.#dependencies.values()) {
       lease.release();
@@ -165,14 +177,17 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
   #hold<TLease extends AssetRoomLease>(
     open: () => TLease
   ): TLease {
-    if (this.#disposed) {
-      throw new Error("The editor session was disposed.");
-    }
-
+    this.#assertOpen();
     const lease = open();
     this.#held.push(lease);
 
     return lease;
+  }
+
+  #assertOpen(): void {
+    if (this.#disposed) {
+      throw new Error("The editor session was disposed.");
+    }
   }
 
   #syncDependencies(): void {

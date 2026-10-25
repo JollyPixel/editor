@@ -1,10 +1,6 @@
 // Import Third-party Dependencies
 import type { LoadedAssetKind } from "@jolly-pixel/asset-server";
-import {
-  isIconTone,
-  registerIcon,
-  type IconName
-} from "@jolly-pixel/ui";
+import { registerKindIcon } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
 import {
@@ -18,7 +14,6 @@ import {
 
 // CONSTANTS
 const kTargetParam = "target";
-const kKindIconPrefix = "kind:";
 
 export interface EditorRegistryOptions {
   /**
@@ -47,29 +42,16 @@ export class EditorRegistry {
   registerKind(
     descriptor: LoadedAssetKind
   ): this {
-    const { kind, icon } = descriptor;
-    const tone = icon?.tone;
+    const { kind } = descriptor;
     if (this.#kinds.has(kind)) {
       throw new TypeError(`Asset kind "${kind}" is already registered.`);
     }
-    if (tone !== undefined && !isIconTone(tone)) {
-      throw new TypeError(
-        `Asset kind "${kind}" declares an unknown icon tone "${tone}".`
-      );
-    }
 
-    const name: IconName = `${kKindIconPrefix}${kind}`;
-    if (icon !== undefined) {
-      registerIcon(name, icon.svg, {
-        tone,
-        viewBox: icon.viewBox
-      });
-    }
     this.#kinds.set(kind, {
       kind,
       label: descriptor.label,
       extension: descriptor.extension,
-      icon: icon === undefined ? undefined : name,
+      icon: registerKindIcon(descriptor),
       convertsFrom: descriptor.convertsFrom
     });
 
