@@ -1,0 +1,51 @@
+{
+  "name": "@jolly-pixel/editor.scene",
+  "description": "Collaborative scene editor for JollyPixel",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "jollypixel": {
+    "editor": {
+      "name": "scene",
+      "kinds": [
+        "scene"
+      ],
+      "page": "index.html"
+    }
+  },
+  "scripts": {
+    "test-only": "node --test \"test/**/*.spec.ts\"",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json",
+    "lint": "oxlint src test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/editors/scene"
+  },
+  "keywords": [],
+  "files": [
+    "dist"
+  ],
+  "imports": {
+    "#src/*": "./src/*"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@jolly-pixel/arbor": "workspace:*",
+    "@jolly-pixel/asset": "workspace:*",
+    "@jolly-pixel/asset.scene": "workspace:*",
+    "@jolly-pixel/editor.host": "workspace:*",
+    "@jolly-pixel/editor.voxel-map": "workspace:*",
+    "@jolly-pixel/engine": "workspace:*",
+    "@jolly-pixel/history": "workspace:*",
+    "@jolly-pixel/network": "workspace:*",
+    "@jolly-pixel/three": "workspace:*",
+    "@jolly-pixel/ui": "workspace:*",
+    "@jolly-pixel/voxel.renderer": "workspace:*",
+    "lit": "3.3.3",
+    "three": "0.186.1"
+  }
+}

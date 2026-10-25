@@ -1,0 +1,44 @@
+{
+  "extends": "../../../tsconfig/lib.json",
+  "compilerOptions": {
+    "types": [
+      "node",
+      "vite/client"
+    ]
+  },
+  "references": [
+    {
+      "path": "../host"
+    },
+    {
+      "path": "../voxel-map"
+    },
+    {
+      "path": "../../assets/scene"
+    },
+    {
+      "path": "../../arbor"
+    },
+    {
+      "path": "../../asset"
+    },
+    {
+      "path": "../../engine"
+    },
+    {
+      "path": "../../history"
+    },
+    {
+      "path": "../../network"
+    },
+    {
+      "path": "../../three"
+    },
+    {
+      "path": "../../ui"
+    },
+    {
+      "path": "../../voxel-renderer"
+    }
+  ]
+}

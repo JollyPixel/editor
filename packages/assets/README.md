@@ -14,6 +14,8 @@ command flow, and persistence lifecycle.
 - [voxel-map](./voxel-map/README.md): voxel worlds with optional pixel-art blockset references
 - [voxel-model](./voxel-model/README.md): model trees with a pixel-art texture reference
 - [voxel-animation](./voxel-animation/README.md): animation sets of keyframed clips that models link
+- [terrain](./terrain/README.md): heightfield terrains loaded chunk by chunk 🚧
+- [scene](./scene/README.md): actor trees whose components reference other assets 🚧
 
 For the shared meaning of asset ID, kind, reference, record, and catalog, see
 the [asset glossary](../asset/GLOSSARY.md).
