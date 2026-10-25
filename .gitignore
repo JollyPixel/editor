@@ -150,6 +150,7 @@ perf-results/
 packages/editors/voxel-map/assets/
 packages/editors/voxel-model/assets/
 packages/editors/terrain/assets/
+packages/editors/scene/assets/
 packages/studio/project/
 
 # Pixel-art editor page served by the studio

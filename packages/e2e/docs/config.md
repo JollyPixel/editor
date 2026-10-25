@@ -48,7 +48,8 @@ enough to hide races, so the first attempt runs at full speed.
 
 `PORTS` gives each suite its own port, so dev servers can run side by side:
 `pixelArt` 3000, `ui` 3001, `voxelMap` 3002, `voxelModel` 3003, `studio` 3004,
-`runtime` 3005, `console` 3006, `lantern` 3007, `terrain` 3008. Vite configs
+`runtime` 3005, `console` 3006, `lantern` 3007, `terrain` 3008, `scene` 3009.
+Vite configs
 read the same table for `server.port`.
 
 `baseUrl(port)` gives `http://localhost:<port>`.

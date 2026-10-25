@@ -5,14 +5,6 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import {
-  DEFAULT_ICON_VIEW_BOX,
-  getIcon,
-  iconTone,
-  iconViewBox
-} from "@jolly-pixel/ui";
-
 // Import Internal Dependencies
 import { EditorRegistry } from "../../src/editors/EditorRegistry.ts";
 
@@ -77,33 +69,6 @@ describe("EditorRegistry", () => {
     );
   });
 
-  test("registers the icon of a kind under its own name", () => {
-    const registry = new EditorRegistry().registerKind(kMapKind);
-    const icon = registry.kindSet().kindIcon("voxelmap");
-
-    assert.equal(icon, "kind:voxelmap");
-    assert.notEqual(getIcon(icon), null);
-    assert.equal(iconTone(icon), "lime");
-    assert.equal(iconViewBox(icon), DEFAULT_ICON_VIEW_BOX);
-  });
-
-  test("registers an illustrated kind icon on its own grid", () => {
-    const registry = new EditorRegistry().registerKind({
-      kind: "blockset",
-      label: "Blockset",
-      extension: ".blockset",
-      icon: {
-        svg: "<rect width=\"64\" height=\"64\" fill=\"#ffc93c\" />",
-        viewBox: "0 0 64 64"
-      },
-      convertsFrom: []
-    });
-    const icon = registry.kindSet().kindIcon("blockset");
-
-    assert.equal(iconViewBox(icon), "0 0 64 64");
-    assert.equal(iconTone(icon), null);
-  });
-
   test("snapshots the registered kinds in registration order", () => {
     const registry = new EditorRegistry()
       .registerKind(kMapKind)
@@ -153,22 +118,6 @@ describe("EditorRegistry", () => {
     const registry = new EditorRegistry().registerKind(kMapKind);
 
     assert.throws(() => registry.registerKind(kMapKind), TypeError);
-  });
-
-  test("rejects an unknown icon tone", () => {
-    assert.throws(
-      () => new EditorRegistry().registerKind({
-        kind: "voxelmap",
-        label: "Voxel map",
-        extension: ".voxelmap.json",
-        icon: {
-          svg: "",
-          tone: "mauve"
-        },
-        convertsFrom: []
-      }),
-      /unknown icon tone "mauve"/
-    );
   });
 
   test("rejects a kind opened by two editors", () => {

@@ -215,3 +215,13 @@ describe("SceneTree.placeable", () => {
     );
   });
 });
+
+describe("SceneTree.ancestorIds", () => {
+  test("walks from an actor's parent up to its root", () => {
+    const tree = loadedTree([...sampleActors(), actor("D", { parentId: "B" })]);
+
+    assert.deepEqual([...tree.ancestorIds("D")], ["B", "A"]);
+    assert.deepEqual([...tree.ancestorIds("A")], []);
+    assert.deepEqual([...tree.ancestorIds("missing")], []);
+  });
+});

@@ -78,11 +78,11 @@ export class SceneBuilder<
         parent: actorParent,
         visible: file.visible
       });
-      writeTransform(actor.object3D, file.transform);
+      writeSceneTransform(actor.object3D, file.transform);
       builtActors.set(file.id, actor);
 
       for (const entry of file.components) {
-        const component = this.#createComponent(actor, entry);
+        const component = this.createComponent(actor, entry);
         if (component !== null) {
           builtComponents.set(entry.id, component);
         }
@@ -92,7 +92,7 @@ export class SceneBuilder<
     return new SceneBuild(builtActors, builtComponents);
   }
 
-  #createComponent(
+  createComponent(
     actor: Actor<TContext>,
     entry: SceneComponentFile
   ): Component | null {
@@ -123,7 +123,7 @@ export class SceneBuilder<
   }
 }
 
-function writeTransform(
+export function writeSceneTransform(
   object: THREE.Object3D,
   transform: SceneTransformFile
 ): void {

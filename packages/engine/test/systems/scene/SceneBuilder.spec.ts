@@ -188,6 +188,24 @@ describe("Systems.SceneBuilder", () => {
     assert.strictEqual(edit.warnings().length, 0);
   });
 
+  test("creates one component on an existing actor", () => {
+    const { builder } = createBuilder("edit");
+    const actor = builder.build([createActorFile("actor")]).actor("actor")!;
+
+    const added = builder.createComponent(
+      actor,
+      createComponentFile("late", "Tag", { label: "added" })
+    ) as TagComponent;
+    const unknown = builder.createComponent(
+      actor,
+      createComponentFile("other", "Particles")
+    );
+
+    assert.deepEqual(actor.components, [added]);
+    assert.strictEqual(added.label, "added");
+    assert.strictEqual(unknown, null);
+  });
+
   test("refuses to register two definitions of the same type", () => {
     const definitions = new ComponentDefinitions().register(kTagDefinition);
 

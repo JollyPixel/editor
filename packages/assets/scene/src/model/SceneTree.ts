@@ -30,6 +30,7 @@ export type SceneTreeReader = Pick<
   | "peekActor"
   | "actors"
   | "actorIds"
+  | "ancestorIds"
   | "findNextSibling"
   | "subtreeFrom"
   | "component"
@@ -95,6 +96,12 @@ export class SceneTree {
     for (const actor of this.#actors.walk(null)) {
       yield actor.id;
     }
+  }
+
+  ancestorIds(
+    id: string
+  ): IterableIterator<string> {
+    return this.#actors.ancestorIds(id);
   }
 
   findNextSibling(

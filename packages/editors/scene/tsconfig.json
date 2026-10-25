@@ -17,10 +17,19 @@
       "path": "../../assets/scene"
     },
     {
-      "path": "../../arbor"
+      "path": "../../assets/voxel-map"
+    },
+    {
+      "path": "../../assets/pixel-art"
     },
     {
       "path": "../../asset"
+    },
+    {
+      "path": "../../asset-server"
+    },
+    {
+      "path": "../../controls"
     },
     {
       "path": "../../engine"
@@ -30,6 +39,9 @@
     },
     {
       "path": "../../network"
+    },
+    {
+      "path": "../../runtime"
     },
     {
       "path": "../../three"

@@ -114,6 +114,42 @@ const texture = session.lease(PIXEL_ART_KIND_OBJECT, reference.id);
 
 Both `targetLease` and `lease` throw once the session is disposed.
 
+### pickAsset({ kinds, title, current? })
+
+Opens a modal dialog that lists the catalog's assets of the given kinds as a
+folder tree with a search field. It resolves to the picked
+`AssetReferenceData`, or `null` when the user cancels. The list follows
+catalog changes while the dialog is open, and folders that hold no asset of
+those kinds are left out.
+
+```ts
+interface AssetPickOptions {
+  kinds: Iterable<AssetKindDescriptor>;
+  title: string;
+  current?: AssetReferenceData | null;
+}
+```
+
+`kinds` takes the kinds' descriptors, such as `VOXEL_MAP_ASSET`; each row
+shows its kind's icon. `current` starts selected when the catalog still holds
+it. A double-click on an asset picks it. Disposing the session closes an open
+picker with `null`, and `pickAsset` rejects once the session is disposed.
+
+Kind icons go through `registerKindIcon(descriptor)`, also exported. It
+registers the descriptor's icon as `kind:<kind>` and returns that name, or
+`undefined` when the kind has no icon. An unknown icon tone throws a
+`TypeError`.
+
+```ts
+const map = await session.pickAsset({
+  kinds: [VOXEL_MAP_ASSET],
+  title: "Pick a voxel map"
+});
+if (map !== null) {
+  addVoxelMap(map);
+}
+```
+
 ### dispose()
 
 Releases the session's target, dependency and held leases. Leases opened

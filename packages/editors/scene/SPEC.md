@@ -241,18 +241,22 @@ History registration follows the other kinds through `@jolly-pixel/history`.
 
   ```ts
   pickAsset(options: {
-    kinds: string[];
+    kinds: Iterable<AssetKindDescriptor>;
     title: string;
     current?: AssetReferenceData | null;
   }): Promise<AssetReferenceData | null>;
   ```
 
   It lists `session.catalog.records()` filtered by kind as a folder tree, with
-  search and kind icons, and follows catalog changes while open. `null` means
+  search and kind icons, and follows catalog changes while open. `kinds` takes
+  descriptors because the host knows no kind's icon. `null` means
   cancelled. It works standalone and in the studio, where the catalog comes
   through the shell's catalog port.
-- **Offline back-end.** The `scene` kind is registered with the offline
-  server so the editor runs standalone.
+- **Offline back-end.** The host is kind-agnostic: each editor's offline
+  loader passes the handlers of its project file's kinds. The scene editor's
+  `vite.config.ts` lists `asset.scene`, `asset.voxel-map` and
+  `asset.pixel-art`, and its offline seed holds one scene, an empty voxel
+  map and its blockset, so "Voxel map…" has something to pick.
 
 ## Voxel-map viewer
 
@@ -283,7 +287,7 @@ An editor workspace with the `jollypixel.editor` manifest
 - **`SceneBinding`.** Turns `SceneDocument` changes into incremental actor
   and component updates through `SceneBuilder` and the definitions' `apply`.
   It owns the edit-mode `ComponentAssetResolver`.
-- **Hierarchy pane.** Arbor `TreeView`, modelled on voxel-model's
+- **Hierarchy pane.** `jolly-tree`, modelled on voxel-model's
   `HierarchyPanel`: drag to reparent or reorder keeping the world pose,
   rename, delete, duplicate (Mod+D), multi-select. Its *Add* menu holds
   Empty, Camera, the five lights, the seven primitives and "Voxel map…",
@@ -296,16 +300,16 @@ An editor workspace with the `jollypixel.editor` manifest
   - One form per type from typed property rows the editor declares for the
     v1 types.
   - An asset slot row shows the asset name with *Change…*, *Clear* and
-    *Open in editor*. The last asks the shell to open that asset's tab, or
-    switches target when standalone.
+    *Open in editor*. The last asks the shell to open that asset's tab; it is
+    hidden when standalone, since the scene page cannot mount another kind.
   - `Script`: a behavior name field and free typed rows (number, string,
     boolean, Vector2/3/4, color) the user adds.
   - An unknown type shows its JSON, read-only.
 - **Scene pane.** The `environment` block.
 - **Viewport.** `EditorRuntime` with the orbit-fly camera. Click to pick,
   selection synced with the tree; `TransformControls` from
-  `@jolly-pixel/three` (W/E/R, local/world toggle); F frames the selection;
-  camera and light helpers.
+  `@jolly-pixel/three` (1/2/3, since W moves the orbit-fly camera, and X for
+  local/world); F frames the selection; camera and light helpers.
 - **History and keys.** Undo and redo through `@jolly-pixel/history`, with
   rebindable keys in the editor's preferences scope.
 - **Presence.** Peer selection in the tree and peer frustums
@@ -337,8 +341,9 @@ with its own lifecycle, while an instance is parented under an actor.
   rules, conflict keys per command, `dependencies()`, the tstyche check of
   the schema against the engine interfaces.
 - **Host.** `pickAsset` filtering and catalog following, under `happy-dom`.
-- **Editor.** `SceneBinding` against a `SceneDocument`, inspector forms under
-  `happy-dom`.
+- **Editor.** `SceneBinding` against a `SceneDocument`, the inspector's form
+  model. Node's type stripping cannot load the Lit elements, so the smoke test
+  covers them.
 - **One Playwright smoke test** for the editor: picking and the gizmo need a
   real canvas.
 
@@ -356,8 +361,10 @@ Each phase ends with its workspace tests, `pnpm run typecheck` and
 3. [DONE] **Voxel-map viewer.** Extract the `editor.voxel-map` viewer, move
    the voxel-map editor onto it, add the `VoxelMap` definition behind the
    resolver.
-4. **Host.** `session.pickAsset()` and the offline `scene` kind.
-5. **`editor.scene`.** Boot, `SceneBinding`, hierarchy, inspector, scene pane,
-   viewport and gizmo, history, presence, preferences.
+4. [DONE] **Host.** `session.pickAsset()`.
+5. [DONE] **`editor.scene`.** Boot with the offline project kinds and seed,
+   `SceneBinding`, hierarchy, inspector, scene pane, viewport and gizmo,
+   history, presence, preferences. Left for later: the `VoxelMap` layer
+   visibility rows, which need the map's layer names in the inspector.
 6. **Studio.** Add the editor and the kind to `project.json`, and the
    Playwright smoke test.

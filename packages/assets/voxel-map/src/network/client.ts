@@ -1,5 +1,6 @@
 export * from "./types.ts";
 export {
+  VOXEL_MAP_ASSET,
   VOXEL_MAP_EXTENSION,
   VOXEL_MAP_KIND
 } from "../asset/voxelMap.ts";
