@@ -9,7 +9,6 @@ import {
 import { CommandConsole } from "@jolly-pixel/console";
 import { followKeyBindings } from "@jolly-pixel/editor.host";
 import { Preferences } from "@jolly-pixel/editor.host/preferences";
-import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { PIXEL_ART_KEYBINDINGS } from "../../src/preferences.ts";
@@ -29,7 +28,7 @@ function boot(
   );
   pixelArtConsole(commands, {
     keyBindingSettings,
-    uvNets: new UvNetLibrary({ storage: new MemoryStorageAdapter() })
+    uvNets: new UvNetLibrary()
   });
 
   return {

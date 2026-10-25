@@ -18,16 +18,25 @@ import type { PixelDocumentState } from "../sync/PixelDocumentState.ts";
 export function pixelArtSnapshot(
   state: PixelDocumentState<DefaultPixelBuffer>
 ): PixelBufferSnapshot {
-  const { buffer, normalMap } = state;
+  return {
+    size: state.buffer.size(),
+    pixels: encodePixelBytes(state.buffer.pixels()),
+    ...pixelArtSnapshotFields(state)
+  };
+}
+
+export function pixelArtSnapshotFields(
+  state: PixelDocumentState<DefaultPixelBuffer>
+): Omit<PixelBufferSnapshot, "size" | "pixels"> {
+  const { normalMap, uvNets } = state;
 
   return {
-    size: buffer.size(),
-    pixels: encodePixelBytes(buffer.pixels()),
     uvRegions: [
       ...state.uv
     ].map((region) => region.toJSON()),
     palette: state.palette.toJSON(),
-    ...(normalMap && { normalMap: normalMap.toJSON() })
+    ...(normalMap && { normalMap: normalMap.toJSON() }),
+    ...(!uvNets.isEmpty && { uvNets: uvNets.toJSON() })
   };
 }
 
@@ -63,6 +72,7 @@ export function deserializePixelDocument(
     pixels,
     uvRegions: file.uvRegions,
     normalMap: file.normalMap,
-    palette: file.palette
+    palette: file.palette,
+    uvNets: file.uvNets
   });
 }

@@ -115,11 +115,11 @@ describe("PixelDocument", () => {
         color: "#f00"
       };
 
-      doc.loadSnapshot(
-        { x: 2, y: 1 },
-        new Uint8ClampedArray([1, 2, 3, 255, 4, 5, 6, 255]),
-        [snapshotRegion]
-      );
+      doc.loadSnapshot({
+        size: { x: 2, y: 1 },
+        pixels: new Uint8ClampedArray([1, 2, 3, 255, 4, 5, 6, 255]),
+        uvRegions: [snapshotRegion]
+      });
 
       assert.deepEqual(doc.size(), { x: 2, y: 1 });
       assert.deepEqual(pixelAt(doc, 1, 0), [4, 5, 6, 255]);

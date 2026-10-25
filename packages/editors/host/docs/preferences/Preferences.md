@@ -231,7 +231,7 @@ new PreferenceStorage(preferences, scope, field);
 ```
 
 A `StorageAdapter` whose keys are the entries of one entries field. A store
-that took a `StorageAdapter`, such as `LanternSeen` or `UvNetLibrary`, keeps
+that took a `StorageAdapter`, such as `LanternSeen`, keeps
 its data with the account this way. It throws a `TypeError` for a field that
 is not an entries field.
 

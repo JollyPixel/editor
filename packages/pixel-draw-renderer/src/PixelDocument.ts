@@ -6,7 +6,10 @@ import {
   CanvasBuffer,
   type CanvasBufferEvent
 } from "./buffer/CanvasBuffer.ts";
-import { PixelDocumentState } from "./sync/PixelDocumentState.ts";
+import {
+  PixelDocumentState,
+  type PixelDocumentSnapshot
+} from "./sync/PixelDocumentState.ts";
 import {
   EditRecorder,
   type EditGrouping
@@ -16,8 +19,12 @@ import {
   strokeCommand,
   strokeCommands,
   textureCommand,
+  uvNetDefaultChanged,
+  uvNetDeleted,
+  uvNetSaved,
   type PixelDocumentCommand,
-  type PixelCommand
+  type PixelCommand,
+  type UVNetCommand
 } from "./sync/PixelCommand.ts";
 import { NormalMapChange } from "./sync/NormalMapChange.ts";
 import {
@@ -44,14 +51,11 @@ import { ColorPalette } from "./palette/ColorPalette.ts";
 import { IslandMap } from "./normal/IslandMap.ts";
 import type {
   IslandFace,
-  NormalMapData,
   NormalMapSettings,
   NormalMapZone
 } from "./normal/types.ts";
-import type {
-  UVRegion,
-  UVRegionData
-} from "./uv/region/UVRegion.ts";
+import type { UVNetSet } from "./uv/region/UVNetSet.ts";
+import type { SavedUVNetData } from "./uv/region/SavedUVNet.ts";
 import type {
   ByteColorInput,
   RGBA8,
@@ -80,6 +84,7 @@ export type PixelDocumentEvent = CanvasBufferEvent & {
   "draw-end": () => void;
   "islands-changed": () => void;
   "palette-changed": (index: number | null) => void;
+  "uv-nets-changed": () => void;
   "normal-map-changed": (event: {
     config: NormalMapConfig | null;
     regionIds: string[] | null;
@@ -119,6 +124,7 @@ export class PixelDocument extends Emitter<
     this.#state = new PixelDocumentState({
       buffer: this.buffer,
       onPaletteChanged: (index) => this.emit("palette-changed", index),
+      onUvNetsChanged: () => this.emit("uv-nets-changed"),
       uv: {
         batch: (apply) => this.#recorder.batch(apply)
       },
@@ -186,6 +192,28 @@ export class PixelDocument extends Emitter<
     };
     this.#state.apply(redo);
     this.#recorder.record({ command: redo, inverse: [undo] });
+  }
+
+  get uvNets(): UVNetSet {
+    return this.#state.uvNets;
+  }
+
+  saveUvNet(
+    net: SavedUVNetData
+  ): void {
+    this.#changeUvNets(uvNetSaved(net));
+  }
+
+  deleteUvNet(
+    id: string
+  ): void {
+    this.#changeUvNets(uvNetDeleted(id));
+  }
+
+  changeDefaultUvNet(
+    id: string | null
+  ): void {
+    this.#changeUvNets(uvNetDefaultChanged(id));
   }
 
   get islands(): IslandMap {
@@ -421,25 +449,26 @@ export class PixelDocument extends Emitter<
   }
 
   loadSnapshot(
-    size: Vec2,
-    pixels: Uint8ClampedArray,
-    uvRegions: (UVRegion | UVRegionData)[] = [],
-    normalMap: NormalMapData | null = null,
-    palette?: readonly RGBA8[]
+    snapshot: PixelDocumentSnapshot
   ): void {
-    this.#recorder.load({
-      size,
-      pixels,
-      uvRegions,
-      normalMap,
-      palette
-    });
+    this.#recorder.load(snapshot);
   }
 
   runLocalRestore<T>(
     fn: () => T
   ): T {
     return this.#recorder.silently(fn);
+  }
+
+  #changeUvNets(
+    command: UVNetCommand
+  ): void {
+    const before = this.uvNets;
+    const inverse = this.#state.invert(command);
+    this.#state.apply(command);
+    if (this.uvNets !== before) {
+      this.#recorder.record({ command, inverse });
+    }
   }
 
   readonly #onRegionsChanged = (): void => {

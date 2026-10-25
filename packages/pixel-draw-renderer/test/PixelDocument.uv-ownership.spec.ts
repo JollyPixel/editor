@@ -115,14 +115,14 @@ describe("PixelDocument", () => {
         action: "uv-region-deleted",
         metadata: { id: "ext:kept" }
       });
-      doc.loadSnapshot(
-        { x: 1, y: 1 },
-        new Uint8ClampedArray([1, 2, 3, 255]),
-        [
+      doc.loadSnapshot({
+        size: { x: 1, y: 1 },
+        pixels: new Uint8ClampedArray([1, 2, 3, 255]),
+        uvRegions: [
           stackedRegion("ext:stored"),
           stackedRegion("own")
         ]
-      );
+      });
 
       assert.deepEqual(
         [...doc.uv.regions].map((region) => region.id).sort(),

@@ -200,10 +200,10 @@ describe("BlockTextures model layouts", () => {
     const { pixels, addBlock, uv } = createTextureHarness();
     const block = addBlock({ uv: stackedAt(32) });
 
-    pixels.loadSnapshot(
-      TEXTURE_SIZE,
-      new Uint8ClampedArray(TEXTURE_SIZE.x * TEXTURE_SIZE.y * 4)
-    );
+    pixels.loadSnapshot({
+      size: TEXTURE_SIZE,
+      pixels: new Uint8ClampedArray(TEXTURE_SIZE.x * TEXTURE_SIZE.y * 4)
+    });
 
     assert.deepEqual(
       uv.get(readRegionId(block))?.slotGeometry("front"),

@@ -9,15 +9,9 @@ import {
   ViewPreferences,
   type PixelArtAction
 } from "@jolly-pixel/editor.pixel-art";
-import {
-  PreferenceStorage,
-  followKeyBindings
-} from "@jolly-pixel/editor.host";
+import { followKeyBindings } from "@jolly-pixel/editor.host";
 import type { Preferences } from "@jolly-pixel/editor.host/preferences";
-import {
-  PIXEL_ART_KEYBINDINGS,
-  PIXEL_ART_PREFERENCES
-} from "@jolly-pixel/editor.pixel-art/preferences";
+import { PIXEL_ART_KEYBINDINGS } from "@jolly-pixel/editor.pixel-art/preferences";
 import {
   KeyboardLayoutStore,
   ShortcutLabels,
@@ -101,11 +95,6 @@ export class EditorState {
       (message) => this.log.push(message)
     );
     this.uvNets = new UvNetLibrary({
-      storage: new PreferenceStorage(
-        preferences,
-        PIXEL_ART_PREFERENCES,
-        "uvNets"
-      ),
       presets: BLOCK_UV_NETS,
       defaultId: DEFAULT_BLOCK_UV_NET
     });

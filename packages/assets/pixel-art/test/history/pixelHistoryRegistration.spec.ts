@@ -222,6 +222,32 @@ describe("pixel history refusals", () => {
     );
   });
 
+  test("a peer edit to a saved UV net refuses only the steps on that net", () => {
+    const doc = createDocument();
+    const caps = {
+      id: "caps",
+      name: "Caps",
+      rows: [[["top", "bottom"]]]
+    };
+    doc.saveUvNet(caps);
+    doc.saveUvNet({ ...caps, id: "sides" });
+    doc.changeDefaultUvNet("sides");
+
+    doc.applyRemoteCommand({
+      action: "uv-net-saved",
+      metadata: { net: { ...caps, name: "Peer caps" } }
+    }, "peer");
+    doc.applyRemoteCommand({
+      action: "uv-net-saved",
+      metadata: { net: { ...caps, id: "default" } }
+    }, "peer");
+
+    assert.equal(doc.state.undoCount, 2);
+    assert.deepEqual(doc.state.refused, [
+      { label: "Save UV net", refused: { reason: "peer", clientId: "peer" } }
+    ]);
+  });
+
   test("a peer deleting a UV region refuses the steps that edited it", () => {
     const doc = createDocument();
     const region = doc.uv.create({ width: 2, height: 2 });
@@ -240,13 +266,12 @@ describe("pixel history refusals", () => {
     doc.enableNormalMap();
     doc.changePaletteColor(0, kBlue);
 
-    doc.loadSnapshot(
-      { x: 2, y: 1 },
-      new Uint8ClampedArray(8),
-      [],
-      NormalMapConfig.create({ strength: 3 }).toJSON(),
-      ColorPalette.create().withColor(9, kRed).toJSON()
-    );
+    doc.loadSnapshot({
+      size: { x: 2, y: 1 },
+      pixels: new Uint8ClampedArray(8),
+      normalMap: NormalMapConfig.create({ strength: 3 }).toJSON(),
+      palette: ColorPalette.create().withColor(9, kRed).toJSON()
+    });
 
     assert.equal(doc.canUndo, false);
     assert.equal(doc.state.refused.length, 4);

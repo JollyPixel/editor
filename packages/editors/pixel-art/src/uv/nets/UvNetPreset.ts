@@ -14,25 +14,29 @@ export interface UvNetPresetInit {
   rows: UvNetRowsInput | null;
 }
 
-export interface UvNetPresetJSON {
-  id: string;
-  name: string;
-  rows: readonly UVNetRow[] | null;
-}
-
 export class UvNetPreset {
+  static locked(
+    init: UvNetPresetInit
+  ): UvNetPreset {
+    return new UvNetPreset({
+      id: init.id,
+      name: init.name,
+      net: init.rows === null ? UVNet.packed : new UVNet(init.rows)
+    }, true);
+  }
+
   readonly id: string;
   readonly name: string;
   readonly net: UVNet;
   readonly locked: boolean;
 
   constructor(
-    init: UvNetPresetInit,
+    source: Pick<UvNetPreset, "id" | "name" | "net">,
     locked = false
   ) {
-    this.id = init.id;
-    this.name = init.name;
-    this.net = init.rows === null ? UVNet.packed : new UVNet(init.rows);
+    this.id = source.id;
+    this.name = source.name;
+    this.net = source.net;
     this.locked = locked;
 
     Object.freeze(this);
@@ -46,23 +50,5 @@ export class UvNetPreset {
     slots: Iterable<UVSlot>
   ): boolean {
     return this.net.missingSlots(slots).length === 0;
-  }
-
-  with(
-    changes: Partial<Omit<UvNetPresetInit, "id">>
-  ): UvNetPreset {
-    return new UvNetPreset({
-      id: this.id,
-      name: changes.name ?? this.name,
-      rows: changes.rows === undefined ? this.rows : changes.rows
-    }, this.locked);
-  }
-
-  toJSON(): UvNetPresetJSON {
-    return {
-      id: this.id,
-      name: this.name,
-      rows: this.rows
-    };
   }
 }

@@ -39,10 +39,7 @@ export class UVNet {
       return;
     }
 
-    const grid = Array.from(
-      rows,
-      (row) => Object.freeze(Array.from(row, normalizedCell))
-    );
+    const grid = normalizeNetRows(rows);
     const cells = new Map<UVSlot, GridCell>();
     grid.forEach((row, rowIndex) => {
       row.forEach((slots, column) => {
@@ -67,7 +64,7 @@ export class UVNet {
       throw new RangeError("A UV net needs at least one slot");
     }
 
-    this.rows = Object.freeze(grid);
+    this.rows = grid;
     this.#cells = cells;
   }
 
@@ -131,6 +128,15 @@ function leadFace(
         lead
     )
   );
+}
+
+export function normalizeNetRows(
+  rows: Iterable<Iterable<UVNetCellInput>>
+): readonly UVNetRow[] {
+  return Object.freeze(Array.from(
+    rows,
+    (row) => Object.freeze(Array.from(row, normalizedCell))
+  ));
 }
 
 function normalizedCell(

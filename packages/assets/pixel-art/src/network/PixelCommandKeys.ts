@@ -1,7 +1,9 @@
 // Import Third-party Dependencies
 import {
   DEFAULT_UV_SLOTS,
+  uvNetId,
   uvTargetKey,
+  type UVNetCommand,
   type UVRegionData,
   type UVSlot,
   type Vec2
@@ -52,6 +54,14 @@ export function paletteKey(
   index: number
 ): string {
   return `palette:${index}`;
+}
+
+export function uvNetKey(
+  command: UVNetCommand
+): string {
+  const id = uvNetId(command);
+
+  return id === null ? "uv-net-default" : `uv-net:${id}`;
 }
 
 export function paintedPositions(
@@ -113,6 +123,10 @@ export function pixelCommandKeys(
       return uvWriteKeys(command);
     case "palette-color-changed":
       return [paletteKey(command.metadata.index)];
+    case "uv-net-saved":
+    case "uv-net-deleted":
+    case "uv-net-default-changed":
+      return [uvNetKey(command)];
     case "normal-map-defaults-patched":
     case "normal-map-zone-set":
     case "normal-map-zone-deleted":

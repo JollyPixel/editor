@@ -1,6 +1,6 @@
 # PixelCommand
 
-One change to a [pixel document](./PixelDocument.md): its pixels, UV regions or normal map settings. A document emits commands for local edits, undo and redo, and applies commands from peers. A headless [`PixelDocumentState`](./PixelDocumentState.md) applies the same commands.
+One change to a [pixel document](./PixelDocument.md): its pixels, UV regions, saved UV nets or normal map settings. A document emits commands for local edits, undo and redo, and applies commands from peers. A headless [`PixelDocumentState`](./PixelDocumentState.md) applies the same commands.
 
 ```ts
 type PixelCommand = (
@@ -15,11 +15,21 @@ type PixelCommand = (
   | { action: "uv-region-moved"; metadata: { id: string; face: UVSlot | null; rect: SelectionRect } }
   | { action: "uv-region-state-changed"; metadata: { region: UVRegionData } }
   | { action: "uv-region-rotated"; metadata: UVRegionRotation }
+  | UVNetCommand
   | NormalMapCommand
 );
 
+type UVNetCommand =
+  | { action: "uv-net-saved"; metadata: { net: SavedUVNetData } }
+  | { action: "uv-net-deleted"; metadata: { id: string } }
+  | { action: "uv-net-default-changed"; metadata: { id: string | null } };
+
 type PixelCommandAction = PixelCommand["action"];
+
+function uvNetId(command: UVNetCommand): string | null;
 ```
+
+`uvNetId` returns the id of the saved net a UV net command writes, or `null` for `uv-net-default-changed`, which writes the default.
 
 `texture-replaced` carries base64 RGBA8 bytes. Normal map commands are listed in [`NormalMapConfig`](./normal/NormalMapConfig.md#commands).
 
@@ -49,5 +59,8 @@ function toPixelDocumentCommand(command: PixelCommand): PixelDocumentCommand;
 | `uv-region-moved` | moves the region, or the slot of a free region, kept inside the texture; an unknown slot is ignored |
 | `uv-region-state-changed` | replaces an existing region |
 | `uv-region-rotated` | replaces an existing region, or one slot's geometry |
+| `uv-net-saved` | adds the [saved net](./uv/SavedUVNet.md), or replaces the one with its id; throws like the `SavedUVNet` constructor for an invalid net |
+| `uv-net-deleted` | removes the saved net and leaves the default id unchanged |
+| `uv-net-default-changed` | sets the default net id, `null` for none |
 
-Commands for a missing region are ignored.
+Commands for a missing region or saved net are ignored.

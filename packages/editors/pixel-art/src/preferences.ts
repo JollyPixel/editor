@@ -50,13 +50,6 @@ export const PIXEL_ART_PREFERENCES = definePreferences({
       label: "Size labels",
       group: "UV regions",
       default: false
-    },
-    uvNets: {
-      type: "entries",
-      label: "Saved UV nets",
-      group: "UV nets",
-      description: "The nets you saved, in every editor of this project",
-      default: {}
     }
   }
 });

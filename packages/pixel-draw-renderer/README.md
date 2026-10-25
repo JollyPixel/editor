@@ -169,6 +169,7 @@ manager.redo();
   - [`UVMap`](./docs/uv/UVMap.md)
   - [`UVRegion`](./docs/uv/UVRegion.md)
   - [`UVNet`](./docs/uv/UVNet.md)
+  - [`UVNetSet`](./docs/uv/UVNetSet.md)
   - [`UVBounds`](./docs/uv/UVBounds.md)
 
 ## 🧩 Types

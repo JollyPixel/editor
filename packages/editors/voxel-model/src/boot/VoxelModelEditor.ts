@@ -16,7 +16,6 @@ import {
 import { voxelAnimationDocumentKind } from "@jolly-pixel/asset.voxel-animation/client";
 import {
   EditorRuntime,
-  PreferenceStorage,
   followKeyBindings,
   type AssetLease,
   type EditorSession,
@@ -27,10 +26,7 @@ import {
   UvNetLibrary,
   pixelArtConsole
 } from "@jolly-pixel/editor.pixel-art";
-import {
-  PIXEL_ART_KEYBINDINGS,
-  PIXEL_ART_PREFERENCES
-} from "@jolly-pixel/editor.pixel-art/preferences";
+import { PIXEL_ART_KEYBINDINGS } from "@jolly-pixel/editor.pixel-art/preferences";
 import { BakedRoomEnvironment } from "@jolly-pixel/three";
 
 // Import Internal Dependencies
@@ -149,13 +145,7 @@ export class VoxelModelEditor {
       PIXEL_ART_KEYBINDINGS,
       (message) => console.warn(message)
     );
-    const uvNets = new UvNetLibrary({
-      storage: new PreferenceStorage(
-        context.preferences,
-        PIXEL_ART_PREFERENCES,
-        "uvNets"
-      )
-    });
+    const uvNets = new UvNetLibrary();
     const shell = new EditorShell({
       runtime: editorRuntime,
       texture,

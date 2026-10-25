@@ -92,7 +92,7 @@ A region with `activeSlots` or `slotGeometries` starts free. Other regions start
 net: UVNet
 ```
 
-The [net](./UVNet.md) used when a region unfolds through `applyState()`, is created unfolded, or is passed to `unfold()` without a net. The default is `UVNet.packed`. Changing it leaves existing nets where they are. It is local configuration and is not synchronized: a state change sends the resulting region, so peers do not need the same net.
+The [net](./UVNet.md) used when a region unfolds through `applyState()`, is created unfolded, or is passed to `unfold()` without a net. The default is `UVNet.packed`. Changing it leaves existing nets where they are. It is local configuration and is not synchronized: a state change sends the resulting region, so peers do not need the same net. The nets a texture saves for its users, and its default net, are in the document's [`UVNetSet`](./UVNetSet.md); a host copies the default into `net`.
 
 ### `overflow`
 

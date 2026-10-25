@@ -47,6 +47,7 @@ interface PixelBufferSnapshot {
   uvRegions: UVRegionData[];
   normalMap?: NormalMapData;
   palette?: RGBA8[]; // ten colors
+  uvNets?: UVNetSetData;
 }
 ```
 
@@ -54,6 +55,7 @@ interface PixelBufferSnapshot {
 - `PixelNetworkCommand` is a renderer buffer event plus the network command header. `PixelWireCommand` is what travels and is stored: strokes and selection edits may be packed as flat `xy` positions and `rgba` channels. `packPixelEvent()` and `unpackPixelCommand()` convert between both.
 - `stroke`, `select-edit`, `global-fill`, `resized` and `texture-replaced` edit pixels. The `uv-region-*` commands edit UV regions; deleting one drops its normal map zone.
 - `palette-color-changed` carries `{ index, color }` for slots `0` to `9`. A snapshot without a palette restores the defaults.
+- `uv-net-saved`, `uv-net-deleted` and `uv-net-default-changed` edit the texture's saved UV nets. Edits to different nets never conflict; two edits to one net keep the later one. A snapshot without `uvNets` clears them.
 - The `normal-map-*` commands change normal map settings. The renderer docs describe every payload.
 
 ## Presence

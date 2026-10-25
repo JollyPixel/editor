@@ -4,6 +4,7 @@ import {
   isUVGeometry,
   isUVRegionData,
   NormalMapConfig,
+  SavedUVNet,
   type PixelDocumentState
 } from "@jolly-pixel/pixel-draw.renderer";
 
@@ -15,6 +16,7 @@ import {
   paintedPositions,
   paletteKey,
   pixelKey,
+  uvNetKey,
   uvRegionKeys,
   uvWriteKeys
 } from "./PixelCommandKeys.ts";
@@ -60,6 +62,8 @@ function acceptsPixelCommand(
       return state.buffer.acceptsSize(command.metadata.size);
     case "normal-map-toggled":
       return isValidNormalMap(command);
+    case "uv-net-saved":
+      return SavedUVNet.parse(command.metadata.net) !== null;
     default:
       return true;
   }
@@ -111,6 +115,13 @@ function pixelCommandWrites(
       return {
         scope: "palette",
         keys: [paletteKey(command.metadata.index)]
+      };
+    case "uv-net-saved":
+    case "uv-net-deleted":
+    case "uv-net-default-changed":
+      return {
+        scope: "uv-nets",
+        keys: [uvNetKey(command)]
       };
     case "normal-map-toggled":
       return {
