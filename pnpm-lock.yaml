@@ -385,6 +385,28 @@ importers:
         specifier: workspace:*
         version: link:../../event-store
 
+  packages/assets/scene:
+    dependencies:
+      '@jolly-pixel/asset':
+        specifier: workspace:*
+        version: link:../../asset
+      '@jolly-pixel/asset-server':
+        specifier: workspace:*
+        version: link:../../asset-server
+      '@jolly-pixel/history':
+        specifier: workspace:*
+        version: link:../../history
+      '@jolly-pixel/network':
+        specifier: workspace:*
+        version: link:../../network
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@jolly-pixel/engine':
+        specifier: workspace:*
+        version: link:../../engine
+
   packages/assets/terrain:
     dependencies:
       '@jolly-pixel/asset-server':
@@ -680,6 +702,48 @@ importers:
       '@jolly-pixel/runtime':
         specifier: workspace:*
         version: link:../../runtime
+
+  packages/editors/scene:
+    dependencies:
+      '@jolly-pixel/arbor':
+        specifier: workspace:*
+        version: link:../../arbor
+      '@jolly-pixel/asset':
+        specifier: workspace:*
+        version: link:../../asset
+      '@jolly-pixel/asset.scene':
+        specifier: workspace:*
+        version: link:../../assets/scene
+      '@jolly-pixel/editor.host':
+        specifier: workspace:*
+        version: link:../host
+      '@jolly-pixel/editor.voxel-map':
+        specifier: workspace:*
+        version: link:../voxel-map
+      '@jolly-pixel/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@jolly-pixel/history':
+        specifier: workspace:*
+        version: link:../../history
+      '@jolly-pixel/network':
+        specifier: workspace:*
+        version: link:../../network
+      '@jolly-pixel/three':
+        specifier: workspace:*
+        version: link:../../three
+      '@jolly-pixel/ui':
+        specifier: workspace:*
+        version: link:../../ui
+      '@jolly-pixel/voxel.renderer':
+        specifier: workspace:*
+        version: link:../../voxel-renderer
+      lit:
+        specifier: 3.3.3
+        version: 3.3.3
+      three:
+        specifier: 0.186.1
+        version: 0.186.1
 
   packages/editors/terrain:
     dependencies:

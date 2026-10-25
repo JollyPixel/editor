@@ -40,6 +40,8 @@ Each editor is listed with the formats it owns: the asset kinds it reads and wri
   - [@jolly-pixel/asset.pixel-art](./packages/assets/pixel-art) - `.pixelart` textures
 - [@jolly-pixel/editor.terrain](./packages/editors/terrain) - Heightfield terrain editor 🚧
   - [@jolly-pixel/asset.terrain](./packages/assets/terrain) - `.terrain.json` heightfield terrains 🚧
+- [@jolly-pixel/editor.scene](./packages/editors/scene) - Scene editor: actors, components and environment 🚧
+  - [@jolly-pixel/asset.scene](./packages/assets/scene) - `.scene.json` scenes 🚧
 
 #### UI
 

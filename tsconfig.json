@@ -71,6 +71,9 @@
       "path": "./packages/assets/terrain"
     },
     {
+      "path": "./packages/assets/scene"
+    },
+    {
       "path": "./packages/editors/host"
     },
     {
@@ -84,6 +87,9 @@
     },
     {
       "path": "./packages/editors/terrain"
+    },
+    {
+      "path": "./packages/editors/scene"
     },
     {
       "path": "./packages/studio"
