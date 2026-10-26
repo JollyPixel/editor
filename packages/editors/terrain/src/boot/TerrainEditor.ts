@@ -29,8 +29,8 @@ import type { TerrainView } from "@jolly-pixel/terrain.renderer";
 // Import Internal Dependencies
 import { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
 import "../features/sculpt/toolbar/SculptToolbar.ts";
-import { ViewSettings } from "../features/view/model/ViewSettings.ts";
-import "../features/view/toolbar/ViewToolbar.ts";
+import { OverlaySettings } from "../features/overlays/model/OverlaySettings.ts";
+import "../features/overlays/toolbar/OverlayToolbar.ts";
 import { TerrainEditorScene } from "../scene/TerrainEditorScene.ts";
 import { PresenceStore } from "../shared/PresenceStore.ts";
 import {
@@ -164,19 +164,19 @@ async function mountScene(
     });
   }
 
-  const viewSettings = new ViewSettings(new LocalStorageAdapter());
-  const viewToolbar = document.querySelector("terrain-view-toolbar");
-  if (viewToolbar !== null) {
-    viewToolbar.settings = viewSettings;
+  const overlaySettings = new OverlaySettings(new LocalStorageAdapter());
+  const overlayToolbar = document.querySelector("terrain-overlay-toolbar");
+  if (overlayToolbar !== null) {
+    overlayToolbar.settings = overlaySettings;
     disposables.push(() => {
-      viewToolbar.settings = null;
+      overlayToolbar.settings = null;
     });
   }
 
   const scene = new TerrainEditorScene({
     document: target.document,
     sculpt,
-    viewSettings,
+    overlaySettings,
     history,
     room: target.room
   });

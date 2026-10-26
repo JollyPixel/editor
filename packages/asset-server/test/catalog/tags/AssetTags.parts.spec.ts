@@ -21,6 +21,7 @@ import {
   type TileState
 } from "../../helpers/kinds.ts";
 import { text } from "../../helpers/bytes.ts";
+import { readBackups } from "../../helpers/backups.ts";
 
 // CONSTANTS
 const kActor: EventStore.Actor = {
@@ -51,7 +52,8 @@ async function tilesTagHarness(): Promise<TilesTagHarness> {
     projector: sync.projector,
     writer: sync.writer,
     flush: (id) => sync.flush(id),
-    backups: sync.backups
+    backups: sync.backups,
+    kinds: sync.kinds
   });
 
   return {
@@ -95,6 +97,20 @@ describe("AssetTags — parts", () => {
     assert.deepEqual(
       Object.fromEntries([...tagged.parts ?? []].map(([id, data]) => [id, text(data)])),
       { a: "grass", b: "sand" }
+    );
+  });
+
+  test("a tag backs up each part at its part file path", async() => {
+    await using harness = await tilesTagHarness();
+    (await harness.tags.create({
+      assetId: harness.assetId,
+      name: "v1",
+      actor: kActor
+    })).unwrap();
+
+    assert.deepEqual(
+      (await readBackups(harness.sync.source)).map(({ path }) => path),
+      ["w.tiles", "w.tiles.parts/a.tile"]
     );
   });
 

@@ -99,19 +99,12 @@ export function assetRoomOutboundProtocol(
 
 export function assetRoomInboundProtocol(
   command: MessageProtocol,
-  relay: readonly Schema[],
-  parted = false
+  relay: readonly Schema[]
 ): MessageProtocol {
-  if (relay.length === 0 && !parted) {
-    return command;
-  }
-
-  const requests = parted ?
-    ASSET_ROOM_PART_REQUESTS.map((tag) => z.object({
-      [command.discriminator]: z.literal(tag),
-      parts: kPartIdsSchema
-    })) :
-    [];
+  const requests = ASSET_ROOM_PART_REQUESTS.map((tag) => z.object({
+    [command.discriminator]: z.literal(tag),
+    parts: kPartIdsSchema
+  }));
 
   return new MessageProtocol(
     z.union([

@@ -18,10 +18,12 @@ import {
   type AssetEventDataMap
 } from "../../model/events/AssetEvents.ts";
 import { decodeContent } from "../../model/events/inlineContent.ts";
-import { heldPartContent } from "../../model/events/heldPartContent.ts";
+import { AssetPartContents } from "../../model/events/AssetPartContents.ts";
 import type { AssetProjector } from "../../storage/projection/AssetProjector.ts";
 import type { AssetWriter } from "../../storage/writer/AssetWriter.ts";
 import type { AssetBackups } from "../../storage/AssetBackups.ts";
+import { AssetPartFiles } from "../../storage/AssetPartFiles.ts";
+import type { AssetKindRegistry } from "../../model/kinds/AssetKindRegistry.ts";
 import { asError } from "../../common/asError.ts";
 import { UnknownAssetError } from "../../storage/writer/errors/UnknownAssetError.ts";
 import {
@@ -81,6 +83,7 @@ export interface AssetTagsOptions {
   writer: Pick<AssetWriter, "update">;
   flush: (assetId: string) => Promise<void>;
   backups: Pick<AssetBackups, "add">;
+  kinds: AssetKindRegistry;
   logger?: Logger;
 }
 
@@ -112,6 +115,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
   #writer: Pick<AssetWriter, "update">;
   #flush: (assetId: string) => Promise<void>;
   #backups: Pick<AssetBackups, "add">;
+  #partFiles: AssetPartFiles;
   #logger: Logger;
   #contents = new Map<string, TaggedContent | null>();
 
@@ -124,6 +128,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     this.#writer = options.writer;
     this.#flush = options.flush;
     this.#backups = options.backups;
+    this.#partFiles = new AssetPartFiles(options.kinds);
     this.#logger = options.logger ?? silentLogger();
   }
 
@@ -306,15 +311,14 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     const held = unchanged === undefined ?
       new Map() :
       partRefs(unchanged.eventData, unchanged.eventVersion);
+    const contents = new AssetPartContents(
+      this.#eventStore.reader,
+      event.assetId
+    );
     const parts = new Map<string, Uint8Array>();
     for (const [partId, ref] of partRefs(event.eventData, event.eventVersion)) {
       if (held.get(partId)?.hash !== ref.hash) {
-        parts.set(partId, decodeContent(heldPartContent(
-          this.#eventStore.reader,
-          event.assetId,
-          ref.at,
-          partId
-        )));
+        parts.set(partId, contents.read(partId, ref.at));
       }
     }
 
@@ -389,8 +393,11 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
   ): Promise<void> {
     const { assetId, eventData } = event;
     const backups = new Map([[eventData.path, decodeContent(eventData.content)]]);
-    for (const [partId, data] of eventData.parts === undefined ? [] : this.#parts(event)) {
-      backups.set(`${eventData.path}.parts/${partId}`, data);
+    const extension = this.#partFiles.extension(eventData.kind);
+    if (extension !== null && eventData.parts !== undefined) {
+      for (const [partId, data] of this.#parts(event)) {
+        backups.set(this.#partFiles.path(eventData.path, extension, partId), data);
+      }
     }
     try {
       for (const [path, data] of backups) {

@@ -207,6 +207,7 @@ async function assembleAssetBackend(
     writer,
     flush,
     backups,
+    kinds,
     logger
   });
 

@@ -26,7 +26,7 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import { PeerBrushRings } from "../features/sculpt/collaboration/PeerBrushRings.ts";
 import type { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
-import type { ViewSettings } from "../features/view/model/ViewSettings.ts";
+import type { OverlaySettings } from "../features/overlays/model/OverlaySettings.ts";
 import { SculptBrush } from "../features/sculpt/SculptBrush.ts";
 import {
   bindHistoryShortcuts,
@@ -58,7 +58,7 @@ const kCameraPreset: OrbitFlyCameraOptions = {
 export interface TerrainEditorSceneOptions {
   document: TerrainDocument;
   sculpt: SculptSettings;
-  viewSettings: ViewSettings;
+  overlaySettings: OverlaySettings;
   history: TerrainHistory;
   room: Room;
 }
@@ -76,7 +76,7 @@ interface TerrainSceneParts {
 export class TerrainEditorScene extends Systems.Scene {
   #document: TerrainDocument;
   #sculpt: SculptSettings;
-  #viewSettings: ViewSettings;
+  #overlaySettings: OverlaySettings;
   #history: TerrainHistory;
   #room: Room;
   #parts: TerrainSceneParts | null = null;
@@ -89,7 +89,7 @@ export class TerrainEditorScene extends Systems.Scene {
     super("terrain-editor");
     this.#document = options.document;
     this.#sculpt = options.sculpt;
-    this.#viewSettings = options.viewSettings;
+    this.#overlaySettings = options.overlaySettings;
     this.#history = options.history;
     this.#room = options.room;
   }
@@ -141,7 +141,7 @@ export class TerrainEditorScene extends Systems.Scene {
         terrain: preview.terrain,
         camera: () => camera.camera
       });
-    this.#bindViewSettings(view);
+    this.#bindOverlaySettings(view);
 
     const peerRings = this.world
       .createActor("peer-brush-rings")
@@ -190,11 +190,8 @@ export class TerrainEditorScene extends Systems.Scene {
 
     const position = parts.camera.camera.getWorldPosition(this.#cameraPosition);
     const chunk = ChunkCoord.containing(position.x, position.z);
-    if (this.#document.stream.centre?.equals(chunk) !== true) {
-      this.#document.stream.follow(chunk);
-    }
-    const centre = parts.live.interest?.centre;
-    if (centre?.equals(chunk)) {
+    this.#document.stream.follow(chunk);
+    if (parts.live.interest?.centre.equals(chunk) === true) {
       return;
     }
 
@@ -223,16 +220,16 @@ export class TerrainEditorScene extends Systems.Scene {
     return this.#parts;
   }
 
-  #bindViewSettings(
+  #bindOverlaySettings(
     view: TerrainView
   ): void {
-    const viewSettings = this.#viewSettings;
-    function applyViewSettings(): void {
-      view.overlay = viewSettings.options.overlay;
-      view.walkableSlope = viewSettings.options.walkableSlope;
+    const overlaySettings = this.#overlaySettings;
+    function applyOverlaySettings(): void {
+      view.overlay = overlaySettings.options.overlay;
+      view.walkableSlope = overlaySettings.options.walkableSlope;
     }
-    applyViewSettings();
-    this.#disposables.push(viewSettings.subscribe("change", applyViewSettings));
+    applyOverlaySettings();
+    this.#disposables.push(overlaySettings.subscribe("change", applyOverlaySettings));
   }
 
   #bindPreview(

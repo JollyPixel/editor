@@ -368,7 +368,7 @@ export class AssetWriter {
     payload: AssetPayload,
     current: AssetProjection | null
   ): Promise<Result<AssetWriteData, Error>> {
-    const parts = this.#partsWrite(assetId, kind, payload, current);
+    const parts = this.#partsWrite(kind, payload, current);
     if (!parts.ok) {
       return parts;
     }
@@ -383,7 +383,6 @@ export class AssetWriter {
   }
 
   #partsWrite(
-    assetId: string,
     kind: string,
     payload: AssetPayload,
     current: AssetProjection | null
@@ -403,12 +402,13 @@ export class AssetWriter {
       return Err(error);
     }
 
-    const decoded = this.#kinds.decode(kind, assetId, payload.data);
-    if (!decoded.ok) {
-      return decoded;
+    let listed: Set<string>;
+    try {
+      listed = new Set(parts.list(payload.data));
     }
-
-    const listed = new Set(parts.list(decoded.val.state));
+    catch (error) {
+      return Err(asError(error));
+    }
 
     const changes = payload.parts ?? new Map<string, Uint8Array | null>();
     const written = new Map<string, Uint8Array>();

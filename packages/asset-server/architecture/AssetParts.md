@@ -63,7 +63,7 @@ Tags, archives and seeding hold the parts with the manifest:
 - `tags.read()` returns every tagged part, and a tag room loads them.
 - A restore writes back the tagged parts that differ, even when the manifest
   is the same.
-- A tag backup stores each part beside the manifest.
+- A tag backup stores each part at its part file path beside the manifest.
 - An archive entry lists its part IDs in `parts`. Its part files sit at the
   same paths as on disk.
 - A seed entry without `content` writes the part files of the kind's
@@ -77,7 +77,7 @@ A kind declares parts with an optional `parts` field on its handler:
 |---|---|
 | `extension` | Part file extension, mapped to its media type. |
 | `touched(command)` | Part IDs a command writes. |
-| `list(state)` | Part IDs the manifest names. |
+| `list(manifest)` | Part IDs the manifest bytes name, read without loading a state. |
 | `load(state, partId, content)` | Loads one part into the state. |
 | `serialize(state, partId)` | Bytes of one part. |
 
@@ -147,7 +147,8 @@ subscribes to, is later work.
 A client subscribes to parts, and unsubscribes when it no longer needs them.
 Both are room messages handled by the asset room, not by the kind's relay.
 They carry their tag on the discriminator of the kind's command protocol,
-`action` by default, which no command or relay message may use:
+`action` by default, which no command or relay message may use. Every asset
+room reserves the two tags; a room whose kind has no parts ignores them:
 
 ```json
 { "action": "subscribe-parts", "parts": ["0_0", "0_1"] }
@@ -155,6 +156,8 @@ They carry their tag on the discriminator of the kind's command protocol,
 ```
 
 A message names at most `ASSET_ROOM_MAX_PARTS_PER_MESSAGE` (1,024) part IDs.
+`partRequests(action, partIds)` from `@jolly-pixel/asset-server/client`
+splits a longer list into messages of that size.
 
 The room answers a subscription with a `parts` message: the wire form of each
 requested part at the room's current version.
@@ -170,8 +173,8 @@ receives the `parts` message as a notice; it replaces those parts and
 reapplies its pending commands that touch them.
 
 Subscriptions end when a member leaves. A client subscribes again after it
-reconnects. A tag room accepts no message, so it sends every part after the
-snapshot of each joining member instead.
+reconnects. A tag room accepts no message, so it subscribes each joining
+member to every part and sends them after its snapshot.
 
 ## Broadcast
 

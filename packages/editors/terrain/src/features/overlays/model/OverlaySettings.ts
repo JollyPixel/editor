@@ -14,24 +14,24 @@ import { Emitter } from "@openally/emitt";
 // CONSTANTS
 const kStorageKey = "terrain:view";
 
-export interface ViewOptions {
+export interface OverlayOptions {
   overlay: TerrainOverlay;
   walkableSlope: number;
 }
 
-export type ViewSettingsEvents = {
-  change: (options: Readonly<ViewOptions>) => void;
+export type OverlaySettingsEvents = {
+  change: (options: Readonly<OverlayOptions>) => void;
 };
 
-const kDefaultOptions: Readonly<ViewOptions> = Object.freeze({
+const kDefaultOptions: Readonly<OverlayOptions> = Object.freeze({
   overlay: "none",
   walkableSlope: DEFAULT_WALKABLE_SLOPE
 });
 
-export class ViewSettings extends Emitter<ViewSettingsEvents> {
+export class OverlaySettings extends Emitter<OverlaySettingsEvents> {
   static parse(
     raw: string | null
-  ): Readonly<ViewOptions> {
+  ): Readonly<OverlayOptions> {
     const stored = parseObject(raw);
     const slope = stored.walkableSlope;
 
@@ -44,7 +44,7 @@ export class ViewSettings extends Emitter<ViewSettingsEvents> {
   }
 
   #storage: StorageAdapter;
-  #options: Readonly<ViewOptions>;
+  #options: Readonly<OverlayOptions>;
 
   constructor(
     storage: StorageAdapter = new MemoryStorageAdapter()
@@ -52,17 +52,17 @@ export class ViewSettings extends Emitter<ViewSettingsEvents> {
     super();
 
     this.#storage = storage;
-    this.#options = ViewSettings.parse(storage.get(kStorageKey));
+    this.#options = OverlaySettings.parse(storage.get(kStorageKey));
   }
 
-  get options(): Readonly<ViewOptions> {
+  get options(): Readonly<OverlayOptions> {
     return this.#options;
   }
 
   update(
-    changes: Partial<ViewOptions>
+    changes: Partial<OverlayOptions>
   ): void {
-    const next = ViewSettings.parse(JSON.stringify({ ...this.#options, ...changes }));
+    const next = OverlaySettings.parse(JSON.stringify({ ...this.#options, ...changes }));
     if (next.overlay === this.#options.overlay && next.walkableSlope === this.#options.walkableSlope) {
       return;
     }
@@ -75,7 +75,7 @@ export class ViewSettings extends Emitter<ViewSettingsEvents> {
 
 function parseObject(
   raw: string | null
-): Partial<Record<keyof ViewOptions, unknown>> {
+): Partial<Record<keyof OverlayOptions, unknown>> {
   try {
     const value: unknown = raw === null ? null : JSON.parse(raw);
 

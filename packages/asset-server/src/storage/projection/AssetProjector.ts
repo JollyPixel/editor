@@ -22,9 +22,8 @@ import type { AssetProjection } from "./applyProjection.ts";
 import { AssetFold } from "./AssetFold.ts";
 import type { ProjectionState } from "./ProjectionState.ts";
 import type { AssetBackups } from "../AssetBackups.ts";
-import { AssetPartFiles } from "../AssetPartFiles.ts";
-import { heldPartContent } from "../../model/events/heldPartContent.ts";
-import { decodeContent } from "../../model/events/inlineContent.ts";
+import type { AssetPartFiles } from "../AssetPartFiles.ts";
+import { AssetPartContents } from "../../model/events/AssetPartContents.ts";
 import { TaskChain } from "../../common/TaskChain.ts";
 import { asError } from "../../common/asError.ts";
 import { contentHash } from "../../common/contentHash.ts";
@@ -49,10 +48,7 @@ export interface AssetProjectorOptions {
   eventStore: EventStore.EventStore;
   state: ProjectionState;
   backups: Pick<AssetBackups, "add">;
-  /**
-   * @default no kind with parts
-   */
-  partFiles?: AssetPartFiles;
+  partFiles: AssetPartFiles;
   logger?: Logger;
 }
 
@@ -83,7 +79,7 @@ export class AssetProjector extends Emitter<
     this.#eventStore = options.eventStore;
     this.#state = options.state;
     this.#backups = options.backups;
-    this.#partFiles = options.partFiles ?? new AssetPartFiles();
+    this.#partFiles = options.partFiles;
     this.#logger = options.logger ?? silentLogger();
   }
 
@@ -405,6 +401,7 @@ export class AssetProjector extends Emitter<
     const desiredParts = desired?.parts ?? new Map<string, AssetPartRef>();
     if (desired?.parts !== undefined) {
       const extension = this.#partFiles.extension(desired.kind);
+      const held = new AssetPartContents(this.#eventStore.reader, assetId);
       for (const [partId, ref] of desiredParts) {
         if (
           extension === null ||
@@ -418,9 +415,10 @@ export class AssetProjector extends Emitter<
           projected?.parts?.get(partId)?.hash,
           ref.hash
         ]);
-        await this.#write(path, () => Promise.resolve(decodeContent(
-          heldPartContent(this.#eventStore.reader, assetId, ref.at, partId)
-        )));
+        await this.#write(
+          path,
+          () => Promise.resolve(held.read(partId, ref.at))
+        );
       }
     }
     if (projected?.parts === undefined) {

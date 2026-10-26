@@ -68,9 +68,9 @@ export function registerAssetRooms(
     logger = silentLogger()
   } = options;
   for (const kind of kinds.kinds()) {
-    const { commands, parts } = kinds.get(kind);
+    const { commands } = kinds.get(kind);
     if (hasLiveProtocol(commands)) {
-      AssetRoomProtocols.validate(commands, parts !== undefined);
+      AssetRoomProtocols.validate(commands);
     }
   }
 
@@ -111,7 +111,7 @@ export function registerAssetRooms(
       events,
       {
         ...extensionOptions,
-        ...roomParts(room.handler, state)
+        parts: room.handler.parts
       }
     );
   }
@@ -120,15 +120,16 @@ export function registerAssetRooms(
     room: ResolvedRoom,
     tagged: TaggedVersion
   ): RoomResolution {
-    const state = room.handler.create(room.assetId);
-    room.handler.load(state, tagged.data);
-    for (const [partId, data] of tagged.parts ?? []) {
-      room.handler.parts?.load(state, partId, data);
-    }
+    const { state } = kinds.decode(
+      room.handler.kind,
+      room.assetId,
+      tagged.data,
+      tagged.parts
+    ).unwrap();
 
     return {
       extension: roomExtension(room, state, () => tagged.eventVersion, {
-        pushParts: true
+        partsOnJoin: [...tagged.parts?.keys() ?? []]
       }),
       graceMs,
       readOnly: true
@@ -229,23 +230,6 @@ export function registerAssetRooms(
     states.off("replaced", onStateReplaced);
     liveRooms.clear();
     server.useRoomResolver(null);
-  };
-}
-
-function roomParts(
-  handler: AnyAssetKindHandler,
-  state: unknown
-): Pick<AssetRoomExtensionOptions<AssetCommandHeader>, "parts"> {
-  const { parts } = handler;
-  if (parts === undefined) {
-    return {};
-  }
-
-  return {
-    parts: {
-      touched: (command) => parts.touched(command),
-      list: () => parts.list(state)
-    }
   };
 }
 

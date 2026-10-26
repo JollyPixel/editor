@@ -14,7 +14,7 @@ import type { CatalogProjection } from "./CatalogProjection.ts";
 import { FolderMovedIntoItselfError } from "./errors/FolderMovedIntoItselfError.ts";
 import { TaskChain } from "../common/TaskChain.ts";
 import { AssetPartFiles } from "../storage/AssetPartFiles.ts";
-import type { AssetKindRegistry } from "../model/kinds/AssetKindRegistry.ts";
+import { AssetKindRegistry } from "../model/kinds/AssetKindRegistry.ts";
 
 export type CatalogFoldersEventMap = {
   changed: (
@@ -50,7 +50,9 @@ export class CatalogFolders extends Emitter<
     this.#source = options.source;
     this.#catalog = options.catalog;
     this.#flush = options.flush;
-    this.#partFiles = new AssetPartFiles(options.kinds);
+    this.#partFiles = new AssetPartFiles(
+      options.kinds ?? new AssetKindRegistry()
+    );
     this.#catalog.on(
       "changed",
       this.#onChanged

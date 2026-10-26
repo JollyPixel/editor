@@ -7,7 +7,6 @@ import {
 import {
   ChunkCoord,
   Terrain,
-  TileCoord,
   type ChunkKey,
   type TerrainReader,
   type TilePatch
@@ -17,7 +16,10 @@ import {
 import { touchedChunks } from "../network/chunkParts.ts";
 import { encodeHeights } from "../network/heights.ts";
 import { patchBatches } from "../network/patchBatches.ts";
-import { encodeTilePatch } from "../network/tilePatches.ts";
+import {
+  currentTilePatches,
+  encodeTilePatch
+} from "../network/tilePatches.ts";
 import type {
   ChunkEntry,
   TerrainCommand,
@@ -144,12 +146,7 @@ function invertCommand(
     default:
       return [{
         action: "heights-patched",
-        tiles: command.tiles.flatMap(({ x, z, tile: index }) => {
-          const tile = TileCoord.fromIndex(new ChunkCoord(x, z), index);
-          const heights = terrain.chunk(tile.chunk)?.tileHeights(tile.x, tile.z);
-
-          return heights === undefined ? [] : [encodeTilePatch({ tile, heights })];
-        })
+        tiles: currentTilePatches(terrain, command.tiles)
       }];
   }
 }

@@ -59,7 +59,9 @@ export class LiveAssetRoom<
 
     this.state = handler.create(kAssetId);
     const store = EventStore.persistence.memory();
-    store.subscribe((event) => foldAssetEvent(handler, this.state, event));
+    store.subscribe(
+      (event) => foldAssetEvent(handler, this.state, event, store.reader)
+    );
     const binding: AssetRoomBinding<TState> = {
       assetId: kAssetId,
       kind: handler.kind,
@@ -68,25 +70,16 @@ export class LiveAssetRoom<
     };
     const live = commands.live(binding);
     const protocols = AssetRoomProtocols
-      .compile(commands, live.parts !== undefined)
+      .compile(commands)
       .withSnapshot(live.snapshotSchema, live.parts?.schema);
     this.#inbound = MessageParser.fromProtocol(protocols.inbound);
     this.#outbound = MessageParser.fromProtocol(protocols.outbound);
-    const { parts } = handler;
-    const state = this.state;
     this.extension = new AssetRoomExtension(
       binding,
       commands,
       live,
       store.writer,
-      parts === undefined ?
-        {} :
-        {
-          parts: {
-            touched: (command) => parts.touched(command),
-            list: () => parts.list(state)
-          }
-        }
+      { parts: handler.parts }
     );
   }
 

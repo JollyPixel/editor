@@ -8,10 +8,10 @@ import type {
   RoomRights
 } from "@jolly-pixel/network/client";
 import {
-  ASSET_ROOM_MAX_PARTS_PER_MESSAGE,
   ASSET_ROOM_PARTS,
   ASSET_ROOM_SUBSCRIBE_PARTS,
   ASSET_ROOM_UNSUBSCRIBE_PARTS,
+  partRequests,
   type AssetPartsRequest,
   type AssetRoomPartsMessage
 } from "@jolly-pixel/asset-server/client";
@@ -85,7 +85,6 @@ export class TerrainPartsRoom implements Room<
     this.#room = room;
     this.#stream = stream;
     this.#clientId = room.clientId;
-    room.on("sync", this.#onSync);
     stream.connect({
       subscribe: (coords) => this.#request(ASSET_ROOM_SUBSCRIBE_PARTS, coords),
       unsubscribe: (coords) => this.#request(ASSET_ROOM_UNSUBSCRIBE_PARTS, coords)
@@ -168,6 +167,7 @@ export class TerrainPartsRoom implements Room<
 
     if (this.#listeners.size === 0) {
       this.#room.on("message", this.#onMessage);
+      this.#room.on("sync", this.#onSync);
     }
     this.#listeners.add(listener as (message: TerrainServerMessage) => void);
   }
@@ -257,12 +257,7 @@ export class TerrainPartsRoom implements Room<
     action: AssetPartsRequest["action"],
     coords: readonly ChunkCoord[]
   ): void {
-    const partIds = coords.map(chunkPartId);
-    for (let index = 0; index < partIds.length; index += ASSET_ROOM_MAX_PARTS_PER_MESSAGE) {
-      const request: AssetPartsRequest = {
-        action,
-        parts: partIds.slice(index, index + ASSET_ROOM_MAX_PARTS_PER_MESSAGE)
-      };
+    for (const request of partRequests(action, coords.map(chunkPartId))) {
       this.#room.send(request as unknown as TerrainNetworkCommand);
     }
   }

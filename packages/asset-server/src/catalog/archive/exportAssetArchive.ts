@@ -102,14 +102,23 @@ async function readPartFiles(
   data: Uint8Array
 ): Promise<Map<string, { path: string; data: Uint8Array; }> | undefined> {
   const extension = partFiles.extension(entry.kind);
-  const decoded = backend.kinds.decode(entry.kind, entry.id, data);
-  if (extension === null || !decoded.ok) {
+  const kindParts = backend.kinds.has(entry.kind) ?
+    backend.kinds.get(entry.kind).parts :
+    undefined;
+  if (extension === null || kindParts === undefined) {
     return undefined;
   }
 
-  const { handler, state } = decoded.val;
+  let listed: Iterable<string>;
+  try {
+    listed = kindParts.list(data);
+  }
+  catch {
+    return undefined;
+  }
+
   const parts = new Map<string, { path: string; data: Uint8Array; }>();
-  for (const partId of handler.parts?.list(state) ?? []) {
+  for (const partId of listed) {
     const path = partFiles.path(entry.path, extension, partId);
     parts.set(partId, {
       path,

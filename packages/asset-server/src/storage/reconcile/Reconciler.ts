@@ -21,7 +21,7 @@ import {
 } from "../../common/logger.ts";
 import type { AssetProjector } from "../projection/AssetProjector.ts";
 import type { AssetWriter } from "../writer/AssetWriter.ts";
-import { AssetPartFiles } from "../AssetPartFiles.ts";
+import type { AssetPartFiles } from "../AssetPartFiles.ts";
 import type { AssetPartRef } from "../../model/events/AssetEvents.ts";
 import { asError } from "../../common/asError.ts";
 import { TaskChain } from "../../common/TaskChain.ts";
@@ -92,10 +92,7 @@ export interface ReconcilerOptions {
   source: AssetSource;
   projector: AssetProjector;
   writer: AssetWriter;
-  /**
-   * @default no kind with parts
-   */
-  partFiles?: AssetPartFiles;
+  partFiles: AssetPartFiles;
   actor?: EventStore.Actor;
   logger?: Logger;
 }
@@ -115,7 +112,7 @@ export class Reconciler {
     this.#source = options.source;
     this.#projector = options.projector;
     this.#writer = options.writer;
-    this.#partFiles = options.partFiles ?? new AssetPartFiles();
+    this.#partFiles = options.partFiles;
     this.#actor = options.actor ?? kWatcherActor;
     this.#logger = options.logger ?? silentLogger();
   }

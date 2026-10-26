@@ -116,7 +116,11 @@ describe("AssetRoomExtension", () => {
 
     assert.strictEqual(extension.id, "counter:asset-1");
     assert.strictEqual(extension.name, "counter");
-    assert.deepEqual(extension.protocols.inbound!.events, ["increment"]);
+    assert.deepEqual(extension.protocols.inbound!.events, [
+      "increment",
+      "subscribe-parts",
+      "unsubscribe-parts"
+    ]);
   });
 
   test("sends the protocol snapshot to a connecting client", () => {

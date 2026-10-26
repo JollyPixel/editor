@@ -9,7 +9,10 @@ import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 // Import Internal Dependencies
 import { AssetProjector, ProjectionState } from "#src/storage/projection/index.ts";
 import { AssetBackups } from "#src/storage/AssetBackups.ts";
-import { syncHarness } from "../../helpers/backend.ts";
+import {
+  noPartFiles,
+  syncHarness
+} from "../../helpers/backend.ts";
 import { bytes, text } from "../../helpers/bytes.ts";
 
 // CONSTANTS
@@ -161,7 +164,8 @@ describe("AssetProjector — restart convergence", () => {
       source: second,
       eventStore,
       state,
-      backups: new AssetBackups(second)
+      backups: new AssetBackups(second),
+      partFiles: noPartFiles()
     });
     projector.load();
     await projector.flush();
@@ -206,7 +210,8 @@ describe("AssetProjector — restart convergence", () => {
       source: restarted,
       eventStore,
       state,
-      backups: new AssetBackups(restarted)
+      backups: new AssetBackups(restarted),
+      partFiles: noPartFiles()
     });
     projector.load();
     await projector.flush();

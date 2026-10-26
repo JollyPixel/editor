@@ -108,7 +108,8 @@ export async function roomHarness(
     projector: sync.projector,
     writer: sync.writer,
     flush,
-    backups: sync.backups
+    backups: sync.backups,
+    kinds: sync.kinds
   });
   try {
     registerAssetRooms({

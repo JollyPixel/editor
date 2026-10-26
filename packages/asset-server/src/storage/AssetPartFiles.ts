@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { AssetKindRegistry } from "../model/kinds/AssetKindRegistry.ts";
+import type { AssetKindRegistry } from "../model/kinds/AssetKindRegistry.ts";
 import { ASSET_PART_ID_PATTERN } from "../model/events/AssetEvents.schema.ts";
 
 // CONSTANTS
@@ -14,7 +14,7 @@ export class AssetPartFiles {
   #kinds: AssetKindRegistry;
 
   constructor(
-    kinds: AssetKindRegistry = new AssetKindRegistry()
+    kinds: AssetKindRegistry
   ) {
     this.#kinds = kinds;
   }

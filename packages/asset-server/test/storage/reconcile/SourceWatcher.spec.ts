@@ -20,6 +20,7 @@ import {
 } from "#src/index.ts";
 import { AssetIndex } from "#src/storage/AssetIndex.ts";
 import { AssetBackups } from "#src/storage/AssetBackups.ts";
+import { AssetPartFiles } from "#src/storage/AssetPartFiles.ts";
 import {
   AssetProjector,
   ProjectionState
@@ -158,12 +159,14 @@ describe("SourceWatcher — real filesystem (integration)", () => {
 
     const source = new FilesystemAssetSource(directory.root);
     const kinds = new AssetKindRegistry();
+    const partFiles = new AssetPartFiles(kinds);
     const state = await ProjectionState.load(source);
     const projector = new AssetProjector({
       source,
       eventStore,
       state,
-      backups: new AssetBackups(source)
+      backups: new AssetBackups(source),
+      partFiles
     });
     projector.load();
     projector.start();
@@ -175,7 +178,12 @@ describe("SourceWatcher — real filesystem (integration)", () => {
       projector,
       assetIndex
     });
-    const reconciler = new Reconciler({ source, projector, writer });
+    const reconciler = new Reconciler({
+      source,
+      projector,
+      writer,
+      partFiles
+    });
     const watcher = new SourceWatcher({
       source,
       onChange: async(files) => {

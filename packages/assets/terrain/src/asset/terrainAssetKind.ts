@@ -162,7 +162,8 @@ export function terrainAssetKind(
         [TERRAIN_PART_EXTENSION]: "application/octet-stream"
       },
       touched: (command) => touchedChunks(command).map(chunkPartId),
-      list: (state) => Array.from(state.chunks(), ({ coord }) => chunkPartId(coord)),
+      list: (manifest) => decodeTerrainFile(manifest).chunks
+        .map(({ x, z }) => chunkPartId(new ChunkCoord(x, z))),
       load: (state, partId, content) => {
         const coord = chunkOfPart(partId);
         const heights = decodeHeightBytes(content);

@@ -10,25 +10,25 @@ import {
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { ViewSettings } from "#src/features/view/model/ViewSettings.ts";
+import { OverlaySettings } from "#src/features/overlays/model/OverlaySettings.ts";
 
-describe("ViewSettings", () => {
+describe("OverlaySettings", () => {
   test("the overlay and walkable slope come back after a reload, clamped, unknown values replaced", () => {
     const storage = new MemoryStorageAdapter();
-    new ViewSettings(storage).update({ overlay: "slope", walkableSlope: 120 });
+    new OverlaySettings(storage).update({ overlay: "slope", walkableSlope: 120 });
 
     assert.deepEqual(
-      { ...new ViewSettings(storage).options },
+      { ...new OverlaySettings(storage).options },
       { overlay: "slope", walkableSlope: MAX_WALKABLE_SLOPE }
     );
     assert.deepEqual(
-      { ...ViewSettings.parse(JSON.stringify({ overlay: "heat", walkableSlope: "steep" })) },
+      { ...OverlaySettings.parse(JSON.stringify({ overlay: "heat", walkableSlope: "steep" })) },
       { overlay: "none", walkableSlope: DEFAULT_WALKABLE_SLOPE }
     );
   });
 
   test("an update that changes nothing emits nothing", () => {
-    const settings = new ViewSettings();
+    const settings = new OverlaySettings();
     const overlays: string[] = [];
     settings.subscribe("change", ({ overlay }) => overlays.push(overlay));
     settings.update({ overlay: "none" });
