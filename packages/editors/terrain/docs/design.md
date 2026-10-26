@@ -148,7 +148,7 @@ and highlights everything steeper than a maximum walkable angle, 45° by
 default. The angle comes from the same finite-difference normal as the
 lighting. The overlay and the angle are view settings: `TerrainView.overlay`
 and `TerrainView.walkableSlope`, in degrees from 0 to 90, set from the
-editor's view toolbar and saved in the browser. The ramp runs from
+editor's overlay toolbar and saved in the browser. The ramp runs from
 green on flat ground through yellow to orange at 60°; steeper than the
 walkable angle is red.
 

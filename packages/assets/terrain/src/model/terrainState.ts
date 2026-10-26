@@ -187,8 +187,8 @@ export function loadChunkHeights(
   coord: ChunkCoord,
   heights: Float32Array
 ): void {
-  if (terrain.removeChunk(coord) !== undefined) {
-    terrain.addChunk(coord, heights);
+  if (terrain.knows(coord)) {
+    terrain.loadChunk(coord, heights);
   }
 }
 

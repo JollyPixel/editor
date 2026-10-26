@@ -18,9 +18,9 @@ import {
 } from "../events/AssetEvents.ts";
 import { decodeContent } from "../events/inlineContent.ts";
 import {
-  heldPartContent,
+  AssetPartContents,
   type AssetPartReader
-} from "../events/heldPartContent.ts";
+} from "../events/AssetPartContents.ts";
 
 export function foldAssetEvent<
   TState,
@@ -97,10 +97,19 @@ function loadParts(
     return;
   }
 
+  let held: AssetPartContents | null = null;
   for (const [partId, entry] of Object.entries(data.parts)) {
-    const content = "content" in entry ?
-      entry.content :
-      heldPartContent(reader, assetId, entry.at, partId);
-    handler.parts.load(state, partId, decodeContent(content));
+    if ("content" in entry) {
+      handler.parts.load(state, partId, decodeContent(entry.content));
+      continue;
+    }
+    if (reader === undefined) {
+      throw new Error(
+        `Part "${partId}" of asset "${assetId}" is held at version ${entry.at}; pass an event reader.`
+      );
+    }
+
+    held ??= new AssetPartContents(reader, assetId);
+    handler.parts.load(state, partId, held.read(partId, entry.at));
   }
 }

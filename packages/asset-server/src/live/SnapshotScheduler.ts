@@ -225,7 +225,7 @@ export class SnapshotScheduler {
     const touched = this.#states.touchedParts(assetId);
     const dependencies = entry.handler.dependencies?.(entry.state);
     const data = await entry.handler.serialize(entry.state);
-    const parts = await partChanges(entry, touched, desired);
+    const parts = await partChanges(entry, data, touched, desired);
     if (
       await contentHash(data) === desired.hash &&
       (parts === undefined || parts.size === 0)
@@ -286,6 +286,7 @@ export class SnapshotScheduler {
 
 async function partChanges(
   entry: AssetStateEntry,
+  manifest: Uint8Array,
   touched: ReadonlySet<string>,
   desired: AssetProjection
 ): Promise<Map<string, Uint8Array | null> | undefined> {
@@ -295,7 +296,7 @@ async function partChanges(
   }
 
   const stored = desired.parts ?? new Map();
-  const listed = new Set(parts.list(entry.state));
+  const listed = new Set(parts.list(manifest));
   const changes = new Map<string, Uint8Array | null>();
   for (const partId of listed) {
     if (!touched.has(partId) && stored.has(partId)) {

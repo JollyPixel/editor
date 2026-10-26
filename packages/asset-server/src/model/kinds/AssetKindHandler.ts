@@ -82,7 +82,7 @@ export interface AssetParts<
   ): Iterable<string>;
 
   list(
-    state: TState
+    manifest: Uint8Array
   ): Iterable<string>;
 
   load(

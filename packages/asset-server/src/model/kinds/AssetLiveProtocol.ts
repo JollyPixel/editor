@@ -45,6 +45,21 @@ export interface AssetPartsRequest {
   readonly parts: readonly string[];
 }
 
+export function partRequests(
+  action: AssetPartsRequest["action"],
+  partIds: readonly string[]
+): AssetPartsRequest[] {
+  const requests: AssetPartsRequest[] = [];
+  for (let index = 0; index < partIds.length; index += ASSET_ROOM_MAX_PARTS_PER_MESSAGE) {
+    requests.push({
+      action,
+      parts: partIds.slice(index, index + ASSET_ROOM_MAX_PARTS_PER_MESSAGE)
+    });
+  }
+
+  return requests;
+}
+
 export type AssetBroadcast<TCommand> =
   | { readonly type: "command"; readonly data: TCommand; }
   | { readonly type: "snapshot"; readonly data: unknown; };

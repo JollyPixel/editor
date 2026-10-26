@@ -17,7 +17,7 @@ import type {
 } from "../../model/kinds/AssetKindHandler.ts";
 import type { AssetKindRegistry } from "../../model/kinds/AssetKindRegistry.ts";
 import { UnknownAssetKindError } from "../../model/kinds/errors/UnknownAssetKindError.ts";
-import { serializeParts } from "../../model/kinds/serializeParts.ts";
+import { serializeAsset } from "../../model/kinds/serializeAsset.ts";
 import type { AssetPathAllocator } from "./AssetPathAllocator.ts";
 import type {
   AssetPayload,
@@ -205,14 +205,4 @@ export class AssetCreationPlanner {
 
     return Ok(companions);
   }
-}
-
-async function serializeAsset(
-  handler: AnyAssetKindHandler,
-  state: unknown
-): Promise<AssetPayload> {
-  const data = await handler.serialize(state);
-  const parts = await serializeParts(handler, state);
-
-  return parts === undefined ? { data } : { data, parts };
 }

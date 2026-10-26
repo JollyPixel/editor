@@ -1,15 +1,14 @@
 // Import Third-party Dependencies
 import {
   ChunkCoord,
-  TileCoord,
   type TerrainReader
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import { terrainHeightTileKey } from "./TerrainCommandKeys.ts";
 import {
-  decodeTilePatch,
-  encodeTilePatch
+  currentTilePatches,
+  decodeTilePatch
 } from "./tilePatches.ts";
 import type {
   EncodedTilePatch,
@@ -49,14 +48,7 @@ export function correctTerrainCommand(
 
   const kept = new Set(admitted?.action === "heights-patched" ? admitted.tiles.map(tileKey) : []);
   const refused = command.tiles.filter((tile) => !kept.has(tileKey(tile)));
-  const current: EncodedTilePatch[] = [];
-  for (const { x, z, tile: index } of refused) {
-    const tile = TileCoord.fromIndex(new ChunkCoord(x, z), index);
-    const heights = state.chunk(tile.chunk)?.tileHeights(tile.x, tile.z);
-    if (heights !== undefined) {
-      current.push(encodeTilePatch({ tile, heights }));
-    }
-  }
+  const current = currentTilePatches(state, refused);
 
   const { clientId, seq, timestamp } = command;
   if (current.length > 0) {

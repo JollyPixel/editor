@@ -311,7 +311,11 @@ export function tileHandler(
     parts: {
       extension: { ".tile": "text/plain; charset=utf-8" },
       touched: (command) => [command.tile],
-      list: (state) => state.tiles.keys(),
+      list: (manifest) => {
+        const listed = text(manifest);
+
+        return listed.length === 0 ? [] : listed.split(",");
+      },
       load: (state, partId, content) => {
         state.tiles.set(partId, text(content));
       },

@@ -24,9 +24,9 @@ import "@jolly-pixel/ui/elements/slider";
 import "@jolly-pixel/ui/elements/tool-button";
 
 // Import Internal Dependencies
-import type { ViewSettings } from "../model/ViewSettings.ts";
+import type { OverlaySettings } from "../model/OverlaySettings.ts";
 import { viewportToolbarStyles } from "../../../shared/toolbar.styles.ts";
-import "./viewIcons.ts";
+import "./overlayIcons.ts";
 
 // CONSTANTS
 const kOverlayLabels: Readonly<Record<TerrainOverlay, string>> = {
@@ -36,19 +36,19 @@ const kOverlayLabels: Readonly<Record<TerrainOverlay, string>> = {
   slope: "Slope"
 };
 
-@customElement("terrain-view-toolbar")
-export class ViewToolbar extends LitElement {
+@customElement("terrain-overlay-toolbar")
+export class OverlayToolbar extends LitElement {
   static override styles = viewportToolbarStyles;
 
   @property({ attribute: false })
-  declare settings: ViewSettings | null;
+  declare settings: OverlaySettings | null;
 
   #walkableSlope = new FieldBinding<number>(this, {
     read: () => this.settings?.options.walkableSlope ?? 0,
     write: (walkableSlope) => this.settings?.update({ walkableSlope })
   });
 
-  #settingsSubscription = new SubscriptionController<ViewSettings | null>(
+  #settingsSubscription = new SubscriptionController<OverlaySettings | null>(
     this,
     (settings) => (settings === null ?
       [] :
@@ -77,7 +77,7 @@ export class ViewToolbar extends LitElement {
     const { overlay } = settings.options;
 
     return html`
-      <jolly-rail orientation="horizontal" role="toolbar" aria-label="View">
+      <jolly-rail orientation="horizontal" role="toolbar" aria-label="Overlays">
         <div class="group" role="group" aria-label="Overlay">
           ${TERRAIN_OVERLAYS.map((option) => html`
             <jolly-tool-button
@@ -124,6 +124,6 @@ export class ViewToolbar extends LitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "terrain-view-toolbar": ViewToolbar;
+    "terrain-overlay-toolbar": OverlayToolbar;
   }
 }

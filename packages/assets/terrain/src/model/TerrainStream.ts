@@ -33,10 +33,6 @@ export class TerrainStream extends Emitter<TerrainStreamEvents> {
     this.#terrain = terrain;
   }
 
-  get centre(): ChunkCoord | null {
-    return this.#centre;
-  }
-
   connect(
     source: ChunkSource
   ): void {
@@ -70,6 +66,10 @@ export class TerrainStream extends Emitter<TerrainStreamEvents> {
   follow(
     centre: ChunkCoord
   ): void {
+    if (this.#centre?.equals(centre) === true) {
+      return;
+    }
+
     this.#centre = centre;
     this.refresh();
   }

@@ -24,7 +24,6 @@ interface CompiledProtocols {
   readonly command: network.MessageProtocol;
   readonly relayOutbound: readonly network.Schema[];
   readonly relayTags: ReadonlySet<string>;
-  readonly parted: boolean;
   readonly bySnapshot: Map<
     network.Schema,
     Map<network.Schema | null, AssetRoomMessageProtocols>
@@ -33,7 +32,6 @@ interface CompiledProtocols {
 
 // CONSTANTS
 const kByCommands = new WeakMap<object, CompiledProtocols>();
-const kByPartedCommands = new WeakMap<object, CompiledProtocols>();
 const kPartRequestTags = new Set<string>(ASSET_ROOM_PART_REQUESTS);
 
 export class AssetRoomProtocols<
@@ -44,20 +42,18 @@ export class AssetRoomProtocols<
     TCommand extends AssetCommandHeader,
     TRelay extends object
   >(
-    commands: AssetCommands<unknown, TCommand, TRelay>,
-    parted = false
+    commands: AssetCommands<unknown, TCommand, TRelay>
   ): AssetRoomProtocols<TCommand, TRelay> {
-    return new AssetRoomProtocols(compiledProtocols(commands, parted));
+    return new AssetRoomProtocols(compiledProtocols(commands));
   }
 
   static validate<
     TCommand extends AssetCommandHeader,
     TRelay extends object
   >(
-    commands: AssetCommands<unknown, TCommand, TRelay>,
-    parted = false
+    commands: AssetCommands<unknown, TCommand, TRelay>
   ): void {
-    compiledProtocols(commands, parted);
+    compiledProtocols(commands);
   }
 
   readonly inbound: network.MessageProtocol;
@@ -99,18 +95,12 @@ export class AssetRoomProtocols<
     return protocols;
   }
 
-  partRequest(
+  isPartRequest(
     message: object
-  ): AssetPartsRequest | null {
+  ): message is AssetPartsRequest {
     const tag = this.#tag(message);
-    if (!this.#compiled.parted || !kPartRequestTags.has(tag ?? "")) {
-      return null;
-    }
 
-    return {
-      action: tag as AssetPartsRequest["action"],
-      parts: Reflect.get(message, "parts") as string[]
-    };
+    return tag !== null && kPartRequestTags.has(tag);
   }
 
   #tag(
@@ -139,14 +129,12 @@ function compiledProtocols<
   TCommand extends AssetCommandHeader,
   TRelay extends object
 >(
-  commands: AssetCommands<unknown, TCommand, TRelay>,
-  parted: boolean
+  commands: AssetCommands<unknown, TCommand, TRelay>
 ): CompiledProtocols {
-  const cache = parted ? kByPartedCommands : kByCommands;
-  let compiled = cache.get(commands);
+  let compiled = kByCommands.get(commands);
   if (compiled === undefined) {
-    compiled = compileProtocols(commands.protocol, commands.relay, parted);
-    cache.set(commands, compiled);
+    compiled = compileProtocols(commands.protocol, commands.relay);
+    kByCommands.set(commands, compiled);
   }
 
   return compiled;
@@ -154,24 +142,21 @@ function compiledProtocols<
 
 function compileProtocols(
   command: network.MessageProtocol,
-  relay: AssetRelaySchemas | undefined,
-  parted: boolean
+  relay: AssetRelaySchemas | undefined
 ): CompiledProtocols {
-  const relaySchemas = relay?.inbound ?? [];
-  const inbound = assetRoomInboundProtocol(command, relaySchemas, parted);
+  const inbound = assetRoomInboundProtocol(command, relay?.inbound ?? []);
   const commandTags = new Set(command.variants.map(({ tag }) => tag));
   const relayTags = new Set<string>();
-  const added = inbound.variants.slice(command.variants.length);
-  for (const [index, { tag }] of added.entries()) {
-    const reserved = index < relaySchemas.length && kPartRequestTags.has(tag ?? "");
-    if (tag === null || reserved || commandTags.has(tag) || relayTags.has(tag)) {
+  for (const { tag } of inbound.variants.slice(command.variants.length)) {
+    if (tag === null || commandTags.has(tag) || relayTags.has(tag)) {
       throw new TypeError(
         `every relay message needs its own literal "${command.discriminator}", got ${tag}`
       );
     }
-    if (index < relaySchemas.length) {
-      relayTags.add(tag);
-    }
+    relayTags.add(tag);
+  }
+  for (const tag of kPartRequestTags) {
+    relayTags.delete(tag);
   }
 
   return {
@@ -179,7 +164,6 @@ function compileProtocols(
     command,
     relayOutbound: relay?.outbound ?? [],
     relayTags,
-    parted,
     bySnapshot: new Map()
   };
 }

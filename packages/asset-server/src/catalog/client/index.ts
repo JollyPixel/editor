@@ -31,6 +31,7 @@ export {
   ASSET_ROOM_PARTS,
   ASSET_ROOM_SUBSCRIBE_PARTS,
   ASSET_ROOM_UNSUBSCRIBE_PARTS,
+  partRequests,
   type AssetPartsRequest,
   type AssetRoomPartsMessage
 } from "../../model/kinds/AssetLiveProtocol.ts";

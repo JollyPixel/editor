@@ -56,13 +56,14 @@ describe("terrain asset kind", () => {
     const room = new LiveAssetRoom(handler);
     room.receive("A", networkCommand({ action: "chunk-added", x: 1, z: 0, heights: heights(12.5) }));
 
+    const manifest = await handler.serialize(room.state);
     const loaded = handler.create("copy");
-    handler.load(loaded, await handler.serialize(room.state));
-    for (const partId of handler.parts!.list(room.state)) {
+    handler.load(loaded, manifest);
+    for (const partId of handler.parts!.list(manifest)) {
       handler.parts!.load(loaded, partId, await handler.parts!.serialize(room.state, partId));
     }
 
-    assert.deepEqual([...handler.parts!.list(room.state)], ["0_0", "1_0"]);
+    assert.deepEqual([...handler.parts!.list(manifest)], ["0_0", "1_0"]);
     assert.deepEqual(terrainSnapshot(loaded), terrainSnapshot(room.state));
   });
 

@@ -38,7 +38,8 @@ describe("AssetProjector — load reads the tail of the log", () => {
       source: harness.source,
       eventStore: counter.store,
       state: harness.state,
-      backups: harness.backups
+      backups: harness.backups,
+      partFiles: harness.partFiles
     });
     projector.load();
 
@@ -72,7 +73,8 @@ describe("AssetProjector — load reads the tail of the log", () => {
       source: harness.source,
       eventStore: harness.eventStore,
       state: harness.state,
-      backups: harness.backups
+      backups: harness.backups,
+      partFiles: harness.partFiles
     });
     projector.load();
 
@@ -98,7 +100,8 @@ describe("AssetProjector — load reads the tail of the log", () => {
       source: harness.source,
       eventStore: harness.eventStore,
       state: harness.state,
-      backups: harness.backups
+      backups: harness.backups,
+      partFiles: harness.partFiles
     });
     projector.load();
 

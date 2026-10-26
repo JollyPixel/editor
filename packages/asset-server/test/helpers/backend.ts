@@ -44,6 +44,7 @@ export interface SyncHarness extends AsyncDisposable {
   readonly watcher: SourceWatcher;
   readonly assetIndex: AssetIndex;
   readonly kinds: AssetKindRegistry;
+  readonly partFiles: AssetPartFiles;
   flush(assetId?: string): Promise<void>;
 }
 
@@ -108,6 +109,10 @@ export function countingReads(
       read = 0;
     }
   };
+}
+
+export function noPartFiles(): AssetPartFiles {
+  return new AssetPartFiles(new AssetKindRegistry());
 }
 
 export async function syncHarness(
@@ -182,6 +187,7 @@ export async function syncHarness(
     watcher,
     assetIndex,
     kinds,
+    partFiles,
     async flush(assetId) {
       await scheduler.flush(assetId);
       await projector.flush(assetId);
@@ -230,7 +236,8 @@ export function catalogBackend(
       projector: sync.projector,
       writer: sync.writer,
       flush: (assetId) => backend.flush(assetId),
-      backups: sync.backups
+      backups: sync.backups,
+      kinds: sync.kinds
     })
   };
 }

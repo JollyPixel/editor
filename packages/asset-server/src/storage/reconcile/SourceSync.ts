@@ -39,10 +39,7 @@ export interface SourceSyncOptions extends ReconcilePolicy {
   projector: AssetProjector;
   writer: AssetWriter;
   afterPass: () => Promise<void>;
-  /**
-   * @default no kind with parts
-   */
-  partFiles?: AssetPartFiles;
+  partFiles: AssetPartFiles;
   logger?: Logger;
 }
 

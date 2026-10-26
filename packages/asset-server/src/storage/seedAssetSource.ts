@@ -8,7 +8,7 @@ import {
 } from "./AssetIndex.ts";
 import type { AnyAssetKindHandler } from "../model/kinds/AssetKindHandler.ts";
 import { AssetKindRegistry } from "../model/kinds/AssetKindRegistry.ts";
-import { serializeParts } from "../model/kinds/serializeParts.ts";
+import { serializeAsset } from "../model/kinds/serializeAsset.ts";
 import { AssetPartFiles } from "./AssetPartFiles.ts";
 
 export type AssetSeedFactory = () => Uint8Array | Promise<Uint8Array>;
@@ -34,7 +34,7 @@ export interface SeedAssetSourceOptions {
 
 interface SeedContent {
   data: Uint8Array;
-  parts?: Map<string, Uint8Array>;
+  parts?: ReadonlyMap<string, Uint8Array>;
 }
 
 interface NormalizedSeed {
@@ -126,10 +126,7 @@ function defaultContent(
 ): () => Promise<SeedContent> {
   return async() => {
     const handler = registry.get(entry.kind);
-    const state = handler.create(entry.id);
-    const data = await handler.serialize(state);
-    const parts = await serializeParts(handler, state);
 
-    return parts === undefined ? { data } : { data, parts };
+    return serializeAsset(handler, handler.create(entry.id));
   };
 }
