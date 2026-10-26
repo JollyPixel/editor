@@ -20,7 +20,10 @@ export class PartBasis {
     change: object,
     version: number | undefined
   ): void {
-    if (this.#inFlight.delete(change) && version !== undefined) {
+    if (
+      this.#inFlight.delete(change) &&
+      version !== undefined
+    ) {
       this.#version = Math.max(this.#version, version);
     }
   }

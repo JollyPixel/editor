@@ -112,7 +112,7 @@ Protected. Applies a local edit (`origin: "local"`). Subclass edit methods call 
 
 Applies `placeable(command)` as a local edit with `basis` set. `CommandHistory` calls it on undo and redo.
 
-### apply(command, clientId = null): boolean
+### applyRemote(command, clientId = null): boolean
 
 Applies a peer command (`origin: "remote"`).
 
@@ -129,6 +129,8 @@ Loads `restored(images)` and emits `reset` with `"rewind"`. Does nothing when `i
 Replaces the state and emits `reset` with `"load"`.
 
 ## Events
+
+Listen with `on(event, listener)` and `off(event, listener)`, or with `subscribe(event, listener)`, which returns the unsubscribe. Only the document emits.
 
 ### change
 

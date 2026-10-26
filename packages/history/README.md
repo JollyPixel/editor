@@ -46,7 +46,7 @@ An undo never erases a peer's newer edit. When a peer wrote the same value, the 
 
 ```ts
 history.record("build", "Set hp", () => stats.set("hp", 20));
-stats.apply({ key: "hp", value: 99 }, "peer-1");
+stats.applyRemote({ key: "hp", value: 99 }, "peer-1");
 history.undo("build"); // false, emits "skipped", hp stays 99
 ```
 

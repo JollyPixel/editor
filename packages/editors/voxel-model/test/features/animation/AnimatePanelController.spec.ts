@@ -42,7 +42,7 @@ describe("AnimatePanelController", () => {
     animationFocus.focusClip("shared", clipId);
     presence.peers = [{ clientId: "bob", displayName: "Bob", color: "#ff0000" }];
 
-    document.apply({ action: "clip-removed", id: clipId }, "bob");
+    document.applyRemote({ action: "clip-removed", id: clipId }, "bob");
 
     assert.deepEqual(animationFocus.focus, { setId: "shared", clipId: null });
     assert.equal(controller.state.notice, "Bob deleted the clip you had open.");
@@ -54,7 +54,7 @@ describe("AnimatePanelController", () => {
 
     document.addClip({ id: "again", name: "Again" });
     animationFocus.focusClip("shared", "again");
-    document.apply({ action: "clip-removed", id: "again" }, "bob");
+    document.applyRemote({ action: "clip-removed", id: "again" }, "bob");
     animationFocus.focusSet(null);
     assert.equal(controller.state.notice, null);
 
@@ -69,7 +69,7 @@ describe("AnimatePanelController", () => {
     const clipId = document.addClip({ name: "Wave" })!;
     animationFocus.focusClip("shared", clipId);
 
-    document.apply({ action: "clip-removed", id: clipId }, "bob");
+    document.applyRemote({ action: "clip-removed", id: clipId }, "bob");
     assert.equal(controller.state.notice, "A peer deleted the clip you had open.");
 
     presence.peers = [{ clientId: "bob", displayName: "Bob", color: "#ff0000" }];

@@ -57,7 +57,7 @@ describe("MaterialLibraryController", () => {
     const block = harness.addBlock({ materialId: harness.glass });
     harness.controller.select(harness.glass);
 
-    harness.document.apply({ action: "material-removed", id: harness.glass });
+    harness.document.applyRemote({ action: "material-removed", id: harness.glass });
 
     assert.equal(harness.controller.state.selectedId, null);
     assert.equal(harness.materialFocus.edited, null);
@@ -76,7 +76,7 @@ describe("MaterialLibraryController", () => {
     harness.document.assignMaterial(block.uuid, harness.glass);
     assert.equal(harness.controller.state.nodes[0].detail, "1");
 
-    harness.document.apply({ action: "material-renamed", id: harness.glass, name: "Window" });
+    harness.document.applyRemote({ action: "material-renamed", id: harness.glass, name: "Window" });
     assert.equal(harness.controller.state.nodes[0].label, "Window");
   });
 

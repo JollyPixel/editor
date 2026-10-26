@@ -8,7 +8,7 @@ import {
   type CommandOrigin
 } from "./CommandChange.ts";
 import type { DocumentResetCause } from "./CommandDocument.ts";
-import type { HistorySource } from "../history/HistoryRegistration.ts";
+import type { HistorySource } from "../registration/HistoryRegistration.ts";
 
 export interface SourceChange<TCommand> {
   readonly command: TCommand;
@@ -42,9 +42,12 @@ export type ChangeSourceAdapterEvents<TCommand> = {
   reset: (cause: DocumentResetCause) => void;
 };
 
-export class ChangeSourceAdapter<TCommand>
-implements HistorySource<TCommand, null> {
-  readonly receipts = new ChangeReceipts<CommandChange<TCommand, null>>();
+export class ChangeSourceAdapter<
+  TCommand
+> implements HistorySource<TCommand, null> {
+  readonly receipts = new ChangeReceipts<
+    CommandChange<TCommand, null>
+  >();
 
   #source: ChangeSource<TCommand>;
   #changes = new WeakMap<
@@ -76,14 +79,7 @@ implements HistorySource<TCommand, null> {
   ): CommandChange<TCommand, null> {
     let adapted = this.#changes.get(change);
     if (adapted === undefined) {
-      adapted = new CommandChange({
-        command: change.command,
-        origin: change.origin,
-        image: null,
-        inverse: change.inverse,
-        clientId: change.clientId,
-        basis: change.origin === "local" ? this.#basis : undefined
-      });
+      adapted = this.#commandChange(change);
       this.#changes.set(change, adapted);
     }
 
@@ -118,5 +114,30 @@ implements HistorySource<TCommand, null> {
       release();
     }
     this.#events.removeAllListeners();
+  }
+
+  #commandChange(
+    change: SourceChange<TCommand>
+  ): CommandChange<TCommand, null> {
+    switch (change.origin) {
+      case "local":
+        return CommandChange.local(
+          change.command,
+          null,
+          change.inverse,
+          this.#basis
+        );
+      case "remote":
+        return CommandChange.remote(
+          change.command,
+          null,
+          change.clientId
+        );
+      case "replay":
+        return CommandChange.replay(
+          change.command,
+          null
+        );
+    }
   }
 }

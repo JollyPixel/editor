@@ -181,7 +181,7 @@ describe("AnimationHistories", () => {
     model.key(model.wave, "Key wave");
     model.key(model.run, "Key run");
 
-    set.apply({
+    set.applyRemote({
       action: "key-set",
       clipId: "run",
       path: "Body/Arm",

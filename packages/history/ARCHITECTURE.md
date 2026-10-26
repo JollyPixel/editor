@@ -20,7 +20,8 @@ local edit, and reports the server's answers through the document's receipts.
 | Folder | Holds |
 | --- | --- |
 | `src/document` | `CommandDocument`, the `CommandChange` it emits and the `ChangeReceipts` a sync client writes |
-| `src/history` | `CommandHistory`, `HistoryScopes` holding one `ScopeStacks` (undo and redo) per scope, `HistoryStep` with one `HistoryPart` per document and its `PartBasis`, `HistoryRegistration` and `KeyedGuard` |
+| `src/history` | `CommandHistory` with one `ScopeStacks` (undo and redo) per scope, `HistoryStep` with one `HistoryPart` per document (a `PartDraft` while the step is open) and its `PartBasis`, and the `HistoryState` it reports |
+| `src/registration` | `HistoryRegistration`, the contract a document plugs in with, and `KeyedGuard` |
 
 ## Incoming changes
 

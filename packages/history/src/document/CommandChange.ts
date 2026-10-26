@@ -1,13 +1,24 @@
 export type CommandOrigin = "local" | "remote" | "replay";
 
-export interface CommandChangeInit<TCommand, TImage> {
-  command: TCommand;
-  origin: CommandOrigin;
-  image: TImage;
-  inverse: readonly TCommand[];
-  clientId: string | null;
-  basis: number | undefined;
-}
+export type CommandChangeInit<TCommand, TImage> =
+  | {
+    origin: "local";
+    command: TCommand;
+    image: TImage;
+    inverse: readonly TCommand[];
+    basis: number | undefined;
+  }
+  | {
+    origin: "remote";
+    command: TCommand;
+    image: TImage;
+    clientId: string | null;
+  }
+  | {
+    origin: "replay";
+    command: TCommand;
+    image: TImage;
+  };
 
 export class CommandChange<TCommand, TImage> {
   static local<TCommand, TImage>(
@@ -17,11 +28,10 @@ export class CommandChange<TCommand, TImage> {
     basis?: number
   ): CommandChange<TCommand, TImage> {
     return new CommandChange({
-      command,
       origin: "local",
+      command,
       image,
       inverse,
-      clientId: null,
       basis
     });
   }
@@ -32,12 +42,10 @@ export class CommandChange<TCommand, TImage> {
     clientId: string | null = null
   ): CommandChange<TCommand, TImage> {
     return new CommandChange({
-      command,
       origin: "remote",
+      command,
       image,
-      inverse: [],
-      clientId,
-      basis: undefined
+      clientId
     });
   }
 
@@ -46,12 +54,9 @@ export class CommandChange<TCommand, TImage> {
     image: TImage
   ): CommandChange<TCommand, TImage> {
     return new CommandChange({
-      command,
       origin: "replay",
-      image,
-      inverse: [],
-      clientId: null,
-      basis: undefined
+      command,
+      image
     });
   }
 
@@ -68,8 +73,8 @@ export class CommandChange<TCommand, TImage> {
     this.command = init.command;
     this.origin = init.origin;
     this.image = init.image;
-    this.inverse = init.inverse;
-    this.clientId = init.clientId;
-    this.basis = init.basis;
+    this.inverse = init.origin === "local" ? init.inverse : [];
+    this.clientId = init.origin === "remote" ? init.clientId : null;
+    this.basis = init.origin === "local" ? init.basis : undefined;
   }
 }

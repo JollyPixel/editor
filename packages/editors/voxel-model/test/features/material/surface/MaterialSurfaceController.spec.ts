@@ -136,7 +136,7 @@ describe("MaterialSurfaceController", () => {
     const harness = createMaterialHarness();
     harness.controller.select(harness.glass);
 
-    harness.document.apply({ action: "material-removed", id: harness.glass });
+    harness.document.applyRemote({ action: "material-removed", id: harness.glass });
 
     assert.equal(harness.surface.edited, null);
   });

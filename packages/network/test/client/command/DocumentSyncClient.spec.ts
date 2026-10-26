@@ -50,10 +50,10 @@ describe("DocumentSyncClient", () => {
     t.mock.timers.enable({ apis: ["Date"], now: 100 });
     const { harness, document } = setup();
     const confirmed: Array<[CommandChange<SetCommand, number>, number | undefined]> = [];
-    document.receipts.on("confirmed", (change, version) => confirmed.push([change, version]));
+    document.receipts.subscribe("confirmed", (change, version) => confirmed.push([change, version]));
 
     const local = document.applyStep({ action: "set", value: 1 }, 4)!;
-    document.apply({ action: "set", value: 2 }, "peer");
+    document.applyRemote({ action: "set", value: 2 }, "peer");
 
     const sent: TestCommand = { action: "set", value: 1, clientId: "self", seq: 1, timestamp: 100, basis: 4 };
     assert.deepEqual(harness.messages, [sent]);
@@ -84,7 +84,7 @@ describe("DocumentSyncClient", () => {
   test("refuses the original local change when the server refuses it after a replay", () => {
     const { harness, document } = setup();
     const refused: CommandChange<SetCommand, number>[] = [];
-    document.receipts.on("refused", (change) => refused.push(change));
+    document.receipts.subscribe("refused", (change) => refused.push(change));
     harness.serverMessage({ type: "snapshot", data: { value: 3 } });
 
     document.set(4);

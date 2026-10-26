@@ -75,7 +75,7 @@ describe("CommandDocument", () => {
     const document = new ValuesDocument();
 
     assert.equal(document.set("a", -1), false);
-    assert.equal(document.apply({ key: "a", value: -1 }, "peer"), false);
+    assert.equal(document.applyRemote({ key: "a", value: -1 }, "peer"), false);
     assert.equal(document.replayPending({ key: "a", value: -1 }), null);
     assert.equal(document.changes.length, 0);
   });
@@ -83,7 +83,7 @@ describe("CommandDocument", () => {
   test("peer and replayed changes carry no inverse", () => {
     const document = new ValuesDocument();
 
-    document.apply({ key: "a", value: 1 }, "peer");
+    document.applyRemote({ key: "a", value: 1 }, "peer");
     document.replayPending({ key: "b", value: 2 });
 
     assert.deepEqual(

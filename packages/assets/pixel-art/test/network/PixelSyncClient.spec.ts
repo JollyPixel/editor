@@ -125,7 +125,7 @@ describe("PixelSyncClient — receipts", () => {
   test("confirms the change behind an acknowledged command, with its version", () => {
     const { room, host } = setup();
     const confirmed: [CommandChange<PixelDocumentCommand, null>, number | undefined][] = [];
-    pixelEdits(host).receipts.on("confirmed", (change, version) => confirmed.push([change, version]));
+    pixelEdits(host).receipts.subscribe("confirmed", (change, version) => confirmed.push([change, version]));
     room.deliverSnapshot();
 
     const change = host.edit(kResized);

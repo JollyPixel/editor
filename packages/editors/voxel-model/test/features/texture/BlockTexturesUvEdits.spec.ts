@@ -68,7 +68,7 @@ describe("BlockTextures UV edits", () => {
   test("applies a remote UV change to the region without echoing it", () => {
     const { document, uv, block, regionId, changes } = bound();
 
-    document.apply({
+    document.applyRemote({
       action: "node-uv-changed",
       id: block.uuid,
       uv: stackedAt(64, 32)
@@ -168,7 +168,7 @@ describe("BlockTextures UV edits", () => {
     uv.move(regionId, { x: 0, y: 0, width: 16, height: 16 }, "right");
     uv.move(regionId, { x: 100, y: 0, width: 16, height: 16 }, "left");
 
-    document.apply({
+    document.applyRemote({
       action: "node-added",
       node: {
         kind: "block",

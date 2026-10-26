@@ -71,6 +71,8 @@ Unregisters every document, drops every step and removes every listener.
 
 ## Events
 
+Listen with `on(event, listener)` and `off(event, listener)`, or with `subscribe(event, listener)`, which returns the unsubscribe. Only the history emits.
+
 ### change
 
 ```ts

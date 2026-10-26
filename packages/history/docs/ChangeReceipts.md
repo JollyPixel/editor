@@ -33,6 +33,10 @@ Emits `confirmed`. `version` is `number | undefined`.
 
 Emits `refused`.
 
+### subscribe(event, listener): () => void
+
+Listens to `confirmed` or `refused` and returns the unsubscribe.
+
 ## Events
 
 ### confirmed
