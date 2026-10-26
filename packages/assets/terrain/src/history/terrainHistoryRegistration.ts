@@ -5,13 +5,13 @@ import {
   type HistoryRegistration,
   type KeyedGuardEntry
 } from "@jolly-pixel/history";
-import type { TerrainReader } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import type {
   TerrainDocument,
   TerrainImage
 } from "../model/TerrainDocument.ts";
+import type { TerrainModelReader } from "../model/TerrainModel.ts";
 import { patchBatches } from "../network/patchBatches.ts";
 import {
   terrainHeightTileKey,
@@ -30,7 +30,11 @@ const kDefaultId = "terrain";
 const kLabels: Readonly<Record<TerrainCommand["action"], string>> = {
   "chunk-added": "Add chunk",
   "chunk-removed": "Remove chunk",
-  "heights-patched": "Sculpt"
+  "heights-patched": "Sculpt",
+  "layer-added": "Add layer",
+  "layer-updated": "Edit layer",
+  "layer-removed": "Remove layer",
+  "texture-size-changed": "Change texture size"
 };
 
 export interface TerrainHistoryRegistrationOptions<TScope extends string> {
@@ -50,7 +54,7 @@ export function terrainHistoryRegistration<TScope extends string>(
   return {
     id,
     document,
-    keys: terrainHistoryKeys(document.terrain),
+    keys: terrainHistoryKeys(document),
     resolveScope: () => scope,
     label: ({ command }) => kLabels[command.action],
     compact: compactHeightPatches
@@ -58,40 +62,52 @@ export function terrainHistoryRegistration<TScope extends string>(
 }
 
 export function terrainHistoryKeys(
-  terrain: TerrainReader
+  model: TerrainModelReader
 ): HistoryKeys<TerrainCommand, TerrainImage> {
   return {
     written: ({ command }) => terrainWriteKeys(command),
     guard: (commands) => new KeyedGuard(
-      commands.flatMap((command) => guardEntries(terrain, command))
+      commands.flatMap((command) => guardEntries(model, command))
     )
   };
 }
 
 function guardEntries(
-  terrain: TerrainReader,
+  model: TerrainModelReader,
   command: TerrainCommand
 ): KeyedGuardEntry[] {
   return terrainWriteRefs(command).map((ref) => {
     return {
       key: terrainWriteRefKey(ref),
-      read: () => readWriteRef(terrain, ref)
+      read: () => readWriteRef(model, ref)
     };
   });
 }
 
 function readWriteRef(
-  terrain: TerrainReader,
+  { terrain, layers }: TerrainModelReader,
   ref: TerrainWriteRef
 ): unknown {
-  if (ref.kind === "chunk") {
-    return terrain.has(ref.chunk);
+  switch (ref.kind) {
+    case "chunk":
+      return terrain.has(ref.chunk);
+    case "tile": {
+      const { tile } = ref;
+      const heights = terrain.chunk(tile.chunk)?.tileHeights(tile.x, tile.z);
+
+      return heights === undefined ? undefined : Array.from(heights);
+    }
+    case "layer": {
+      const layer = layers.layer(ref.id);
+      if (ref.field === null) {
+        return layer !== undefined;
+      }
+
+      return layer?.[ref.field];
+    }
+    case "texture-size":
+      return layers.textureSize;
   }
-
-  const { tile } = ref;
-  const heights = terrain.chunk(tile.chunk)?.tileHeights(tile.x, tile.z);
-
-  return heights === undefined ? undefined : Array.from(heights);
 }
 
 function compactHeightPatches(

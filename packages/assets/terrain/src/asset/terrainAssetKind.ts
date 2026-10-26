@@ -11,10 +11,7 @@ import {
   type AssetKindPackage,
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
-import {
-  ChunkCoord,
-  Terrain
-} from "@jolly-pixel/terrain.renderer";
+import { ChunkCoord } from "@jolly-pixel/terrain.renderer";
 import * as z from "zod/mini";
 
 // Import Internal Dependencies
@@ -35,6 +32,12 @@ import {
   loadTerrainManifest,
   terrainManifest
 } from "../model/terrainState.ts";
+import {
+  layerMaps,
+  rebindLayerMaps
+} from "../model/layerMaps.ts";
+import { GROUND_LAYER } from "../model/TerrainLayers.ts";
+import { TerrainModel } from "../model/TerrainModel.ts";
 import {
   terrainCommandProtocol,
   terrainManifestSchema,
@@ -103,7 +106,7 @@ export interface TerrainAssetKindOptions {
 export function terrainAssetKind(
   options: TerrainAssetKindOptions = {}
 ): AssetKindHandler<
-  Terrain,
+  TerrainModel,
   TerrainNetworkCommand,
   TerrainLiveMessage
 > {
@@ -116,15 +119,16 @@ export function terrainAssetKind(
     },
     snapshot,
 
-    create(): Terrain {
-      const terrain = new Terrain();
-      terrain.addChunk(new ChunkCoord(0, 0));
+    create(): TerrainModel {
+      const model = new TerrainModel();
+      model.terrain.addChunk(new ChunkCoord(0, 0));
+      model.layers.add(GROUND_LAYER);
 
-      return terrain;
+      return model;
     },
 
     load(
-      state: Terrain,
+      state: TerrainModel,
       content: Uint8Array
     ): void {
       const file = decodeTerrainFile(content);
@@ -141,13 +145,26 @@ export function terrainAssetKind(
     },
 
     clear(
-      state: Terrain
+      state: TerrainModel
     ): void {
       state.clear();
     },
 
+    dependencies(
+      state: TerrainModel
+    ) {
+      return layerMaps(state.layers);
+    },
+
+    rebind(
+      state: TerrainModel,
+      idMap: ReadonlyMap<string, string>
+    ): void {
+      rebindLayerMaps(state.layers, idMap);
+    },
+
     serialize(
-      state: Terrain
+      state: TerrainModel
     ): Promise<Uint8Array> {
       return Promise.resolve(
         encodeTerrainFile({
@@ -177,7 +194,7 @@ export function terrainAssetKind(
       },
       serialize: (state, partId) => {
         const coord = chunkOfPart(partId);
-        const chunk = coord === null ? undefined : state.chunk(coord);
+        const chunk = coord === null ? undefined : state.terrain.chunk(coord);
         if (chunk === undefined) {
           return Promise.reject(new RangeError(`Terrain has no chunk "${partId}".`));
         }
@@ -198,7 +215,7 @@ export function terrainAssetKind(
       live({ state }) {
         const arbiter = new KeyedCommandArbiter<
           TerrainNetworkCommand,
-          Terrain
+          TerrainModel
         >({
           accepts: acceptsTerrainCommand,
           writes: (command) => {
@@ -210,18 +227,18 @@ export function terrainAssetKind(
           snapshotSchema: terrainManifestSchema,
           snapshot: () => terrainManifest(state),
           arbitrate: (command) => {
-            const admissible = admissibleTiles(state, command);
+            const admissible = admissibleTiles(state.terrain, command);
 
             return admissible === null ? null : arbiter.admit(state, admissible);
           },
-          correct: (command, admitted) => correctTerrainCommand(state, command, admitted),
+          correct: (command, admitted) => correctTerrainCommand(state.terrain, command, admitted),
           restore: (command, version) => arbiter.restore(command, version),
           relay: new TerrainLiveRelay(),
           parts: {
             schema: terrainPartSchema,
             part: (partId) => {
               const coord = chunkOfPart(partId);
-              const chunk = coord === null ? undefined : state.chunk(coord);
+              const chunk = coord === null ? undefined : state.terrain.chunk(coord);
 
               return chunk === undefined ? null : encodeHeights(chunk.copyHeights());
             },

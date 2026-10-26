@@ -8,6 +8,12 @@ export * from "./TerrainLiveSender.ts";
 export * from "./TerrainCommandKeys.ts";
 export * from "./terrainDocumentKind.ts";
 export * from "../model/TerrainDocument.ts";
+export * from "../model/TerrainLayers.ts";
+export * from "../model/TerrainModel.ts";
+export {
+  MAX_TERRAIN_LAYERS,
+  TERRAIN_TEXTURE_SIZES
+} from "./TerrainCommand.schema.ts";
 export * from "../model/TerrainPreview.ts";
 export * from "../history/terrainHistoryRegistration.ts";
 export {

@@ -189,12 +189,12 @@ describe("terrain streaming", () => {
     followTo(0);
     assert.equal(history.undo("terrain"), true);
     route();
-    assert.equal(heightAt(server.state, tile), 2);
+    assert.equal(heightAt(server.state.terrain, tile), 2);
 
     stroke(4);
     followTo(12);
     assert.equal(history.undo("terrain"), false);
-    assert.equal(heightAt(server.state, tile), 4);
+    assert.equal(heightAt(server.state.terrain, tile), 4);
   });
 
   test("a rewind keeps each chunk loaded or unloaded as it is now", (t) => {

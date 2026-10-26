@@ -157,7 +157,7 @@ describe("terrain live patches", () => {
     t.mock.timers.tick(LIVE_PATCH_TIMEOUT);
 
     assert.equal(near.height(), 20);
-    assert.equal(tileHeightIn(server.state), 20);
+    assert.equal(tileHeightIn(server.state.terrain), 20);
   });
 
   test("fall back to the confirmed heights when no commit arrives in time", (t) => {

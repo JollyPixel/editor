@@ -49,7 +49,7 @@ refuses another sculpting it, and the reverse.
 peers renaming a layer and changing its tiling both land. `layer-added` and
 `layer-removed` hold `layer:<id>` and every field key. An update that reaches
 the room after the layer's removal is refused, so a delete wins over a
-concurrent update.
+concurrent update. `texture-size-changed` holds `terrain:texture-size`.
 
 ## Strokes
 

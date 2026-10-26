@@ -7,6 +7,7 @@ import {
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
+import { isLayerCommand } from "../model/layerCommands.ts";
 import { CHUNK_TILE_COUNT } from "./TerrainCommand.schema.ts";
 import type { TerrainCommand } from "./types.ts";
 
@@ -36,6 +37,9 @@ export function chunkOfPart(
 export function touchedChunks(
   command: TerrainCommand
 ): ChunkCoord[] {
+  if (isLayerCommand(command)) {
+    return [];
+  }
   if (command.action !== "heights-patched") {
     return [new ChunkCoord(command.x, command.z)];
   }

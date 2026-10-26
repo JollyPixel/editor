@@ -3,8 +3,6 @@ import {
   CHUNK_SAMPLE_COUNT,
   ChunkCoord,
   OVERVIEW_SAMPLE_COUNT,
-  type Terrain,
-  type TerrainReader,
   type TilePatch
 } from "@jolly-pixel/terrain.renderer";
 
@@ -15,8 +13,23 @@ import {
 } from "../network/heights.ts";
 import { decodeTilePatch } from "../network/tilePatches.ts";
 import { chunkOverview } from "./chunkOverview.ts";
+import {
+  acceptsLayerCommand,
+  applyLayerCommand,
+  isLayerCommand
+} from "./layerCommands.ts";
+import {
+  DEFAULT_TERRAIN_TEXTURE_SIZE,
+  GROUND_LAYER,
+  TerrainLayers
+} from "./TerrainLayers.ts";
+import type {
+  TerrainModel,
+  TerrainModelReader
+} from "./TerrainModel.ts";
 import type {
   EncodedTilePatch,
+  TerrainChunkCommand,
   TerrainCommand,
   TerrainManifest,
   TerrainSnapshot
@@ -41,9 +54,14 @@ type TerrainEdit =
   };
 
 export function acceptsTerrainCommand(
-  terrain: TerrainReader,
+  model: TerrainModelReader,
   command: TerrainCommand
 ): boolean {
+  if (isLayerCommand(command)) {
+    return acceptsLayerCommand(model.layers, command);
+  }
+
+  const { terrain } = model;
   const edit = terrainEdit(command);
   if (edit === null) {
     return false;
@@ -62,10 +80,17 @@ export function acceptsTerrainCommand(
 }
 
 export function applyTerrainCommand(
-  terrain: Terrain,
+  model: TerrainModel,
   command: TerrainCommand,
   loads: (coord: ChunkCoord) => boolean = () => true
 ): void {
+  if (isLayerCommand(command)) {
+    applyLayerCommand(model.layers, command);
+
+    return;
+  }
+
+  const { terrain } = model;
   const edit = terrainEdit(command);
   if (edit === null) {
     throw new RangeError(`Terrain command "${command.action}" has invalid heights.`);
@@ -97,7 +122,7 @@ export function applyTerrainCommand(
 }
 
 function terrainEdit(
-  command: TerrainCommand
+  command: TerrainChunkCommand
 ): TerrainEdit | null {
   if (command.action === "heights-patched") {
     return decodeTilePatches(command.tiles);
@@ -131,7 +156,7 @@ function decodeTilePatches(
 }
 
 export function terrainSnapshot(
-  terrain: TerrainReader
+  { terrain, layers }: TerrainModelReader
 ): TerrainSnapshot {
   return {
     chunks: Array.from(terrain.overview.coords(), (coord) => {
@@ -140,12 +165,14 @@ export function terrainSnapshot(
       return chunk === undefined ?
         { x: coord.x, z: coord.z, overview: encodeHeights(terrain.overview.samples(coord)!) } :
         { x: coord.x, z: coord.z, heights: encodeHeights(chunk.copyHeights()) };
-    })
+    }),
+    layers: layers.layers(),
+    textureSize: layers.textureSize
   };
 }
 
 export function terrainManifest(
-  terrain: TerrainReader
+  { terrain, layers }: TerrainModelReader
 ): TerrainManifest {
   return {
     chunks: Array.from(terrain.overview.coords(), (coord) => {
@@ -154,14 +181,17 @@ export function terrainManifest(
         z: coord.z,
         overview: encodeHeights(terrain.overview.samples(coord)!)
       };
-    })
+    }),
+    layers: layers.layers(),
+    textureSize: layers.textureSize
   };
 }
 
 export function loadTerrainManifest(
-  terrain: Terrain,
+  model: TerrainModel,
   manifest: TerrainManifest
 ): void {
+  const { terrain } = model;
   const chunks = manifest.chunks.map((chunk) => {
     const heights = chunk.heights === undefined ?
       new Float32Array(CHUNK_SAMPLE_COUNT) :
@@ -176,14 +206,16 @@ export function loadTerrainManifest(
     };
   });
 
+  const layers = loadedLayers(manifest);
   terrain.clear();
   for (const { coord, heights } of chunks) {
     terrain.addChunk(coord, heights);
   }
+  model.layers.load(layers.layers(), layers.textureSize);
 }
 
 export function loadChunkHeights(
-  terrain: Terrain,
+  { terrain }: TerrainModel,
   coord: ChunkCoord,
   heights: Float32Array
 ): void {
@@ -193,9 +225,10 @@ export function loadChunkHeights(
 }
 
 export function loadTerrainSnapshot(
-  terrain: Terrain,
+  model: TerrainModel,
   snapshot: TerrainSnapshot
 ): void {
+  const { terrain } = model;
   const chunks = snapshot.chunks.map((chunk) => {
     const coord = new ChunkCoord(chunk.x, chunk.z);
     if (chunk.heights !== undefined) {
@@ -210,6 +243,7 @@ export function loadTerrainSnapshot(
     };
   });
 
+  const layers = loadedLayers(snapshot);
   terrain.clear();
   for (const chunk of chunks) {
     if ("heights" in chunk) {
@@ -219,6 +253,16 @@ export function loadTerrainSnapshot(
       terrain.addUnloadedChunk(chunk.coord, chunk.overview);
     }
   }
+  model.layers.load(layers.layers(), layers.textureSize);
+}
+
+function loadedLayers(
+  { layers = [GROUND_LAYER], textureSize = DEFAULT_TERRAIN_TEXTURE_SIZE }: TerrainManifest
+): TerrainLayers {
+  const loaded = new TerrainLayers();
+  loaded.load(layers, textureSize);
+
+  return loaded;
 }
 
 function decodedOrThrow(

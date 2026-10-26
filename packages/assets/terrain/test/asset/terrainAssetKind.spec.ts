@@ -13,21 +13,31 @@ import {
 
 // Import Internal Dependencies
 import {
+  DEFAULT_TERRAIN_TEXTURE_SIZE,
   encodeHeights,
   encodeTerrainFile,
   decodeHeights,
   decodeTerrainFile,
+  GROUND_LAYER,
   MAX_TERRAIN_CHUNKS,
   terrainAssetKind,
   terrainSnapshot,
   TERRAIN_FILE_VERSION
 } from "#src/index.ts";
-import { CHUNK_COORDINATE_RANGE } from "#src/network/TerrainCommand.schema.ts";
+import {
+  CHUNK_COORDINATE_RANGE,
+  MAX_TERRAIN_LAYERS
+} from "#src/network/TerrainCommand.schema.ts";
 import {
   heights,
+  layer,
   networkCommand,
   tileHeights
 } from "../helpers/terrain.ts";
+
+// CONSTANTS
+const kRockMap = { id: "rock-albedo", kind: "texture" };
+const kRockNormal = { id: "rock-normal", kind: "texture" };
 
 function liveRoom() {
   return new LiveAssetRoom(terrainAssetKind());
@@ -40,21 +50,31 @@ function flatChunk(): Float32Array {
 function chunkKeys(
   room: ReturnType<typeof liveRoom>
 ): string[] {
-  return [...room.state.chunks()].map(({ coord }) => coord.key).sort();
+  return [...room.state.terrain.chunks()].map(({ coord }) => coord.key).sort();
+}
+
+function layerSlots(
+  room: ReturnType<typeof liveRoom>
+): number[] {
+  return room.state.layers.layers().map(({ slot }) => slot);
 }
 
 describe("terrain asset kind", () => {
-  test("a new terrain holds one flat chunk at the origin", () => {
-    const terrain = terrainAssetKind().create("asset");
+  test("a new terrain holds one flat chunk at the origin and the Ground layer", () => {
+    const { terrain, layers } = terrainAssetKind().create("asset");
 
     assert.deepEqual([...terrain.chunks()].map(({ coord }) => coord.key), ["0,0"]);
     assert.ok(terrain.chunk(new ChunkCoord(0, 0))!.copyHeights().every((height) => height === 0));
+    assert.deepEqual(layers.layers(), [GROUND_LAYER]);
   });
 
-  test("serialize and load round-trip the chunk list and each chunk's part", async() => {
+  test("serialize and load round-trip the chunk list, the layers and each chunk's part", async() => {
     const handler = terrainAssetKind();
     const room = new LiveAssetRoom(handler);
     room.receive("A", networkCommand({ action: "chunk-added", x: 1, z: 0, heights: heights(12.5) }));
+    const rock = layer("rock", 3, { albedo: kRockMap });
+    room.receive("A", networkCommand({ action: "layer-added", layer: rock }));
+    room.receive("A", networkCommand({ action: "texture-size-changed", size: 2048 }));
 
     const manifest = await handler.serialize(room.state);
     const loaded = handler.create("copy");
@@ -87,10 +107,78 @@ describe("terrain asset kind", () => {
       chunks: [{ x: 0, z: 0, heights: heights(3) }]
     });
 
-    const terrain = handler.create("asset");
-    handler.load(terrain, content);
+    const model = handler.create("asset");
+    handler.load(model, content);
 
-    assert.ok(terrain.chunk(new ChunkCoord(0, 0))!.copyHeights().every((height) => height === 3));
+    assert.ok(model.terrain.chunk(new ChunkCoord(0, 0))!.copyHeights().every((height) => height === 3));
+  });
+
+  test("a document without layers loads the Ground layer at the default texture size", () => {
+    const handler = terrainAssetKind();
+    const model = handler.create("asset");
+    model.layers.load([layer("rock", 3)], 2048);
+
+    handler.load(model, encodeTerrainFile({
+      version: TERRAIN_FILE_VERSION,
+      chunks: [{ x: 0, z: 0 }]
+    }));
+
+    assert.deepEqual(model.layers.layers(), [GROUND_LAYER]);
+    assert.equal(model.layers.textureSize, DEFAULT_TERRAIN_TEXTURE_SIZE);
+  });
+
+  test("load rejects a document whose layers share a slot", () => {
+    const handler = terrainAssetKind();
+    const content = encodeTerrainFile({
+      version: TERRAIN_FILE_VERSION,
+      chunks: [{ x: 0, z: 0 }],
+      layers: [layer("rock", 0), layer("sand", 0)]
+    });
+
+    assert.throws(() => handler.load(handler.create("asset"), content), InvalidAssetFileError);
+  });
+
+  test("the layers' images are the terrain's dependencies, and rebind follows new IDs", () => {
+    const handler = terrainAssetKind();
+    const model = handler.create("asset");
+    model.layers.add(layer("rock", 1, { albedo: kRockMap, normal: kRockNormal }));
+    model.layers.add(layer("moss", 2, { albedo: kRockMap }));
+
+    assert.deepEqual(handler.dependencies!(model), [kRockMap, kRockNormal]);
+
+    handler.rebind!(model, new Map([[kRockMap.id, "rock-copy"]]));
+
+    assert.deepEqual(handler.dependencies!(model), [{ ...kRockMap, id: "rock-copy" }, kRockNormal]);
+  });
+
+  test("a layer is admitted only with a new ID, on a free slot, under the layer cap", () => {
+    const room = liveRoom();
+    room.receive("A", networkCommand({ action: "layer-added", layer: layer("ground", 4) }));
+    room.receive("A", networkCommand({ action: "layer-added", layer: layer("rock", 0) }));
+    for (let slot = 1; slot <= MAX_TERRAIN_LAYERS; slot++) {
+      room.receive("A", networkCommand({ action: "layer-added", layer: layer(`layer-${slot}`, slot) }));
+    }
+
+    assert.deepEqual(layerSlots(room), Array.from({ length: MAX_TERRAIN_LAYERS }, (_, slot) => slot));
+  });
+
+  test("an update of a removed layer and an unchanged texture size are refused", () => {
+    const room = liveRoom();
+    room.connect("A");
+    room.take("A");
+    room.receive("A", networkCommand({ action: "layer-removed", id: GROUND_LAYER.id }));
+    room.receive("A", networkCommand({
+      action: "layer-updated",
+      id: GROUND_LAYER.id,
+      changes: { tiling: 8 }
+    }));
+    room.receive("A", networkCommand({ action: "texture-size-changed", size: DEFAULT_TERRAIN_TEXTURE_SIZE }));
+
+    assert.deepEqual(layerSlots(room), []);
+    assert.deepEqual(
+      room.take("A").map(({ type }) => type),
+      ["command", "snapshot", "snapshot"]
+    );
   });
 
   test("a part that is not a chunk of valid heights is refused", () => {
@@ -144,18 +232,18 @@ describe("terrain asset kind", () => {
     const room = liveRoom();
     const side = Math.sqrt(MAX_TERRAIN_CHUNKS);
     for (let index = 1; index < MAX_TERRAIN_CHUNKS; index++) {
-      room.state.addChunk(new ChunkCoord(index % side, Math.floor(index / side)), flatChunk());
+      room.state.terrain.addChunk(new ChunkCoord(index % side, Math.floor(index / side)), flatChunk());
     }
     room.receive("A", networkCommand({ action: "chunk-added", x: side, z: 0, heights: heights(0) }));
 
-    assert.equal(room.state.has(new ChunkCoord(side, 0)), false);
-    assert.equal(room.state.size, MAX_TERRAIN_CHUNKS);
+    assert.equal(room.state.terrain.has(new ChunkCoord(side, 0)), false);
+    assert.equal(room.state.terrain.size, MAX_TERRAIN_CHUNKS);
   });
 
   test("a chunk outside the coordinate range does not parse", () => {
     const room = liveRoom();
     const { max } = CHUNK_COORDINATE_RANGE;
-    room.state.addChunk(new ChunkCoord(max, 0), flatChunk());
+    room.state.terrain.addChunk(new ChunkCoord(max, 0), flatChunk());
     function add(x: number): void {
       room.receive("A", networkCommand({ action: "chunk-added", x, z: 0, heights: heights(0) }));
     }
@@ -181,7 +269,7 @@ describe("terrain asset kind", () => {
       room.receive("A", networkCommand({ action: "heights-patched", tiles: [flat(index + 2), tile] }));
     });
 
-    const chunk = room.state.chunk(new ChunkCoord(0, 0))!;
+    const chunk = room.state.terrain.chunk(new ChunkCoord(0, 0))!;
     const admitted = [chunk.tileHeights(2, 0), chunk.tileHeights(3, 0), chunk.tileHeights(0, 1)];
     assert.deepEqual(admitted.map((heights) => heights[0]), [4, 4, 4]);
     assert.deepEqual(chunk.tileHeights(1, 0), tileHeights(0));
@@ -198,6 +286,6 @@ describe("terrain asset kind", () => {
     const tile = { x: 0, z: 0, tile: 0, heights: encodeHeights(tileHeights(4)) };
     room.receive("A", networkCommand({ action: "heights-patched", tiles: [tile, tile] }));
 
-    assert.deepEqual(room.state.chunk(new ChunkCoord(0, 0))!.tileHeights(0, 0), tileHeights(0));
+    assert.deepEqual(room.state.terrain.chunk(new ChunkCoord(0, 0))!.tileHeights(0, 0), tileHeights(0));
   });
 });

@@ -94,7 +94,7 @@ describe("TerrainPreview", () => {
   test("a reload keeps previews on the chunks it keeps and drops those on the chunks it removes", () => {
     const { document, preview, displayed } = previewSetup();
     document.addChunk(1, 0);
-    const kept = terrainSnapshot(document.terrain).chunks
+    const kept = terrainSnapshot(document).chunks
       .filter(({ x }) => x === 0);
     const stroke = preview.beginStroke();
     stroke.write([{ tile: kTile, heights: tileHeights(9) }]);

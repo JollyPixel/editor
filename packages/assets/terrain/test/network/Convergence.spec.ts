@@ -8,9 +8,13 @@ import { ChunkCoord } from "@jolly-pixel/terrain.renderer";
 // Import Internal Dependencies
 import {
   encodeTilePatch,
+  GROUND_LAYER,
   terrainSnapshot
 } from "#src/index.ts";
-import { TerrainPreview } from "#src/network/client.ts";
+import {
+  MAX_TERRAIN_LAYERS,
+  TerrainPreview
+} from "#src/network/client.ts";
 import {
   EDGE_TILE,
   ORIGIN_TILE,
@@ -26,7 +30,7 @@ describe("terrain convergence", () => {
   test("a client starts from the room snapshot", () => {
     const { server, document } = edgePeerSetup();
 
-    assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
+    assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
   });
 
   test("a chunk added by a client lands on the server with its seeded edge", () => {
@@ -35,9 +39,9 @@ describe("terrain convergence", () => {
     assert.equal(document.addChunk(2, 0), true);
     route();
 
-    const added = server.state.chunk(new ChunkCoord(2, 0));
+    const added = server.state.terrain.chunk(new ChunkCoord(2, 0));
     assert.ok(added?.copyHeights().every((height) => height === 8));
-    assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
+    assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
   });
 
   test("a chunk added next to one a peer removed meanwhile is dropped everywhere", () => {
@@ -48,7 +52,7 @@ describe("terrain convergence", () => {
     route();
 
     assert.equal(document.terrain.has(new ChunkCoord(2, 0)), false);
-    assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
+    assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
   });
 
   test("two clients adding the same chunk settle on the first one admitted", () => {
@@ -62,7 +66,43 @@ describe("terrain convergence", () => {
     route();
 
     assert.ok(document.terrain.chunk(new ChunkCoord(1, 1))?.copyHeights().every((height) => height === -3));
-    assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
+    assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
+  });
+
+  test("layers a client adds take the lowest free slots and land on the server, up to the cap", () => {
+    const { server, document, route } = edgePeerSetup();
+    document.removeLayer(GROUND_LAYER.id);
+    document.addLayer({ name: "Rock" });
+
+    const added = Array.from({ length: MAX_TERRAIN_LAYERS }, () => document.addLayer());
+    route();
+
+    const slots = Array.from({ length: MAX_TERRAIN_LAYERS }, (_, slot) => slot);
+    assert.deepEqual(document.layers.layers().map(({ slot }) => slot), slots);
+    assert.equal(document.layers.layers()[0].name, "Rock");
+    assert.equal(added.at(-1), null);
+    assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
+  });
+
+  test("peers editing different layer fields both land, and a removal wins over a concurrent edit", () => {
+    const { server, document, route } = edgePeerSetup();
+
+    document.updateLayer(GROUND_LAYER.id, { name: "Grass" });
+    server.receive("A", networkCommand(
+      { action: "layer-updated", id: GROUND_LAYER.id, changes: { tiling: 8 } },
+      { clientId: "A" }
+    ));
+    route();
+
+    assert.deepEqual(document.layers.layer(GROUND_LAYER.id), { ...GROUND_LAYER, name: "Grass", tiling: 8 });
+    assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
+
+    document.updateLayer(GROUND_LAYER.id, { tiling: 2 });
+    server.receive("A", networkCommand({ action: "layer-removed", id: GROUND_LAYER.id }, { clientId: "A" }));
+    route();
+
+    assert.equal(document.layers.size, 0);
+    assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
   });
 
   test("a stroke reaches the server as one patch of its final heights", () => {
@@ -75,8 +115,8 @@ describe("terrain convergence", () => {
     assert.deepEqual(room.sent.map(({ action }) => action), ["heights-patched"]);
     route();
 
-    assert.deepEqual(server.state.chunk(EDGE_TILE.chunk)!.tileHeights(0, 2), tileHeights(5));
-    assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
+    assert.deepEqual(server.state.terrain.chunk(EDGE_TILE.chunk)!.tileHeights(0, 2), tileHeights(5));
+    assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
   });
 
   test("a stroke across a chunk a peer removed meanwhile keeps its other tiles, without a snapshot", () => {
@@ -89,7 +129,7 @@ describe("terrain convergence", () => {
 
     assert.equal(document.terrain.has(EDGE_TILE.chunk), false);
     assert.deepEqual(document.terrain.chunk(ORIGIN_TILE.chunk)!.tileHeights(3, 2), tileHeights(5));
-    assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
+    assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
     assert.equal(resets, 0);
   });
 
@@ -102,7 +142,7 @@ describe("terrain convergence", () => {
     route();
 
     assert.equal(document.terrain.knows(EDGE_TILE.chunk), false);
-    assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
+    assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
     assert.equal(resets, 0);
   });
 
@@ -117,6 +157,6 @@ describe("terrain convergence", () => {
     route();
 
     assert.deepEqual(document.terrain.chunk(EDGE_TILE.chunk)!.tileHeights(0, 2), tileHeights(5));
-    assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
+    assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
   });
 });

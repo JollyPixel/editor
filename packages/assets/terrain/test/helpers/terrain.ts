@@ -7,8 +7,11 @@ import {
 
 // Import Internal Dependencies
 import {
+  DEFAULT_LAYER_PROPERTIES,
   encodeHeights,
-  type TerrainCommand
+  type TerrainCommand,
+  type TerrainLayerData,
+  type TerrainLayerProperties
 } from "#src/index.ts";
 
 let seq = 0;
@@ -23,6 +26,20 @@ export function tileHeights(
   height: number
 ): Float32Array {
   return new Float32Array(TILE_SAMPLE_COUNT).fill(height);
+}
+
+export function layer(
+  id: string,
+  slot: number,
+  properties: Partial<TerrainLayerProperties> = {}
+): TerrainLayerData {
+  return {
+    ...DEFAULT_LAYER_PROPERTIES,
+    name: id,
+    ...properties,
+    id,
+    slot
+  };
 }
 
 export function networkCommand<T extends TerrainCommand>(

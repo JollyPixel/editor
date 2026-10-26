@@ -84,7 +84,11 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
 - **Texture rooms: done** (2026-10-26). The built-in `texture` kind opens a
   room whose snapshot is the file and that accepts no command;
   `TEXTURE_ASSET` lists textures in the asset picker.
-- **Next:** terrain layers in the manifest.
+- **Layers in the manifest: done** (2026-10-26). The asset file and room
+  snapshot hold the layers and the texture size; `TerrainDocument` adds,
+  updates and removes layers, keyed per field, and undoes each change. A file
+  without layers loads with the Ground layer.
+- **Next:** albedo, normal and ORM texture arrays.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -128,7 +132,7 @@ chunks yet.
 ## M3: Texturing
 
 - [x] A read-only room for the built-in `texture` kind, and its descriptor.
-- [ ] Terrain layers in the manifest: slots, the seeded "Ground" layer, layer
+- [x] Terrain layers in the manifest: slots, the seeded "Ground" layer, layer
   commands keyed per field, image dependencies, and the texture size setting.
 - [ ] Albedo, normal and ORM texture arrays, rebuilt when an image or the
   texture size changes.

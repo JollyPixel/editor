@@ -278,7 +278,7 @@ export class TerrainPartsRoom implements Room<
     });
     this.#deliver({
       ...pending.message,
-      data: { chunks }
+      data: { ...pending.manifest, chunks }
     });
     for (const message of pending.held) {
       if (isPartsMessage(message)) {
