@@ -146,7 +146,7 @@ describe("TerrainPreview", () => {
     const stroke = preview.beginStroke();
     stroke.write([{ tile: kTile, heights: tileHeights(9) }]);
 
-    document.apply({
+    document.applyRemote({
       action: "heights-patched",
       tiles: [encodeTilePatch({ tile: kTile, heights: tileHeights(3) })]
     }, "peer");

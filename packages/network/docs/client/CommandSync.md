@@ -119,9 +119,9 @@ Pairs an asset kind with the factory of its synced document. Each
 a `DocumentSyncClient`.
 
 `SyncedCommandDocument<TDocument, TNotice>` reads the command, snapshot and
-image types from the document's `apply`, `load` and `revert` signatures. The
-command type is the type `apply` takes, joined with `NetworkCommandHeader`; the
-image type is the element type `revert` takes.
+image types from the document's `applyRemote`, `load` and `revert` signatures.
+The command type is the type `applyRemote` takes, joined with
+`NetworkCommandHeader`; the image type is the element type `revert` takes.
 
 - `CommandSyncableDocument<TDocument>` is the `SyncableDocument` built from
   those three types, the constraint every document must satisfy;

@@ -74,7 +74,7 @@ describe("SyncedVoxelMap", () => {
     map.voxels.world.addLayer("Ground");
     mapHistory(map.edits);
     const confirmed: string[] = [];
-    map.edits.receipts.on("confirmed", (change) => confirmed.push(change.command.action));
+    map.edits.receipts.subscribe("confirmed", (change) => confirmed.push(change.command.action));
 
     map.voxels.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: 1 });
     room.simulateCommand(room.sentCommands.at(-1)!);

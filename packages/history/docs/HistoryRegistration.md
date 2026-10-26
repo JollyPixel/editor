@@ -17,7 +17,7 @@ history.register({
 ```
 
 ```ts
-interface HistoryRegistration<TScope, TCommand, TImage, TWritten = Iterable<string>, TCapture = KeyedSnapshot> {
+interface HistoryRegistration<TScope, TCommand, TImage, TWritten = Iterable<string>, TCapture = KeyedCapture> {
   id: string;
   document: HistorySource<TCommand, TImage>;
   keys: HistoryKeys<TCommand, TImage, TWritten, TCapture>;
@@ -67,13 +67,13 @@ interface HistorySource<TCommand, TImage> {
 ## HistoryKeys
 
 ```ts
-interface HistoryKeys<TCommand, TImage, TWritten = Iterable<string>, TCapture = KeyedSnapshot> {
+interface HistoryKeys<TCommand, TImage, TWritten = Iterable<string>, TCapture = KeyedCapture> {
   written(change: CommandChange<TCommand, TImage>): TWritten;
   guard(commands: readonly TCommand[]): HistoryGuard<TWritten, TCapture>;
 }
 ```
 
-`TWritten` is whatever the document compares cheaply: strings by default, packed pixels or voxel cells for documents with many small keys. `TCapture` is what its guard copies, a [`KeyedSnapshot`](#keyedguard) by default.
+`TWritten` is whatever the document compares cheaply: strings by default, packed pixels or voxel cells for documents with many small keys. `TCapture` is what its guard copies, a [`KeyedCapture`](#keyedguard) by default.
 
 ### written(change)
 
@@ -86,7 +86,7 @@ The guard of the values replaying `commands` must find unchanged.
 ## HistoryGuard
 
 ```ts
-interface HistoryGuard<TWritten = Iterable<string>, TCapture = KeyedSnapshot> {
+interface HistoryGuard<TWritten = Iterable<string>, TCapture = KeyedCapture> {
   touches(written: TWritten): boolean;
   capture(): TCapture;
   same(captured: TCapture): boolean;
@@ -110,7 +110,7 @@ Whether the guarded values still equal `captured`.
 The `HistoryGuard` of a few string keys. Values are compared as JSON; `undefined` means no value.
 
 ```ts
-class KeyedGuard implements HistoryGuard<Iterable<string>, KeyedSnapshot> {
+class KeyedGuard implements HistoryGuard<Iterable<string>, KeyedCapture> {
   constructor(entries: Iterable<KeyedGuardEntry>);
   readonly keys: IterableIterator<string>;
 }
@@ -131,6 +131,6 @@ const guard = new KeyedGuard([
 
 The guarded keys, for a document that guards named values beside its own written keys.
 
-### KeyedSnapshot
+### KeyedCapture
 
 What `capture()` returns: the JSON of each guarded value. `same(captured)` reads the values again and compares.

@@ -110,7 +110,7 @@ describe("AnimationDocument", () => {
     const changes: AnimationChange[] = [];
     document.on("change", (change) => changes.push(change));
 
-    document.apply({ action: "rig-renamed", rig: "Peer" });
+    document.applyRemote({ action: "rig-renamed", rig: "Peer" });
 
     assert.deepEqual(changes.map(({ origin, inverse }) => [origin, inverse]), [["remote", []]]);
   });

@@ -1,88 +1,22 @@
 // Import Internal Dependencies
 import type {
-  HistoryGuard,
-  HistoryKeys
-} from "./HistoryRegistration.ts";
-import type {
   HistoryRefusal,
   HistoryStepInfo
 } from "./HistoryState.ts";
-import { PartBasis } from "./PartBasis.ts";
-
-type AnyKeys = HistoryKeys<unknown, unknown, unknown, unknown>;
-
-export class HistoryPart {
-  readonly documentId: string;
-  readonly commands: unknown[] = [];
-  readonly basis = new PartBasis();
-
-  #guard: HistoryGuard<unknown, unknown> | null = null;
-  #guardedBy: AnyKeys | null = null;
-  #captured: unknown = undefined;
-
-  constructor(
-    documentId: string
-  ) {
-    this.documentId = documentId;
-  }
-
-  prepend(
-    inverse: readonly unknown[]
-  ): void {
-    this.commands.unshift(...inverse);
-  }
-
-  rewrite(
-    commands: readonly unknown[]
-  ): void {
-    this.commands.length = 0;
-    for (const command of commands) {
-      this.commands.push(command);
-    }
-  }
-
-  capture(
-    keys: AnyKeys
-  ): void {
-    this.#captured = this.#cachedGuard(
-      keys
-    ).capture();
-  }
-
-  touches(
-    keys: AnyKeys,
-    written: unknown
-  ): boolean {
-    return this.#cachedGuard(keys).touches(written);
-  }
-
-  changed(
-    keys: AnyKeys
-  ): boolean {
-    return !this.#cachedGuard(keys).same(this.#captured);
-  }
-
-  #cachedGuard(
-    keys: AnyKeys
-  ): HistoryGuard<unknown, unknown> {
-    if (
-      this.#guard === null ||
-      this.#guardedBy !== keys
-    ) {
-      this.#guard = keys.guard(this.commands);
-      this.#guardedBy = keys;
-    }
-
-    return this.#guard;
-  }
-}
+import {
+  PartDraft,
+  type HistoryPart,
+  type PartRegistration
+} from "./HistoryPart.ts";
+import type { PartBasis } from "./PartBasis.ts";
 
 export class HistoryStep<TScope extends string> {
   readonly scope: TScope;
-  readonly parts = new Map<string, HistoryPart>();
   readonly source: HistoryStep<TScope> | null;
-  label: string | null;
 
+  #label: string | null;
+  #drafts = new Map<string, PartDraft>();
+  #parts = new Map<string, HistoryPart>();
   #info: HistoryStepInfo | null = null;
 
   constructor(
@@ -91,8 +25,12 @@ export class HistoryStep<TScope extends string> {
     source: HistoryStep<TScope> | null = null
   ) {
     this.scope = scope;
-    this.label = label;
+    this.#label = label;
     this.source = source;
+  }
+
+  get label(): string | null {
+    return this.#label;
   }
 
   get info(): HistoryStepInfo | null {
@@ -103,36 +41,123 @@ export class HistoryStep<TScope extends string> {
     return this.#info !== null;
   }
 
-  part(
+  get empty(): boolean {
+    return this.#parts.size === 0;
+  }
+
+  collect(
+    documentId: string,
+    inverse: readonly unknown[],
+    label: () => string | null
+  ): PartBasis {
+    this.#label ??= label();
+    let draft = this.#drafts.get(documentId);
+    if (draft === undefined) {
+      draft = new PartDraft();
+      this.#drafts.set(documentId, draft);
+    }
+    draft.prepend(inverse);
+
+    return draft.basis;
+  }
+
+  file(
+    registrationOf: (documentId: string) => PartRegistration | undefined
+  ): void {
+    for (const [documentId, draft] of this.#drafts) {
+      const registration = registrationOf(documentId);
+      if (registration !== undefined) {
+        this.#parts.set(documentId, draft.file(registration));
+      }
+    }
+    this.#drafts.clear();
+  }
+
+  rebind(
+    documentId: string,
+    registration: PartRegistration
+  ): void {
+    this.#parts.get(documentId)?.rebind(registration);
+  }
+
+  recapture(
+    documentId: string,
+    written: unknown
+  ): void {
+    const part = this.#parts.get(documentId);
+    if (part?.touches(written) === true) {
+      part.recapture();
+    }
+  }
+
+  overwrittenBy(
+    documentId: string,
+    written: unknown
+  ): boolean {
+    return this.#settled(documentId)?.touches(written) === true;
+  }
+
+  changedIn(
     documentId: string
-  ): HistoryPart {
-    let part = this.parts.get(documentId);
-    if (part === undefined) {
-      part = new HistoryPart(documentId);
-      this.parts.set(
-        documentId,
-        part
-      );
+  ): boolean {
+    return this.#settled(documentId)?.changed() === true;
+  }
+
+  blocker(
+    isOpen: (documentId: string) => boolean
+  ): HistoryRefusal | null {
+    for (const documentId of this.#parts.keys()) {
+      if (!isOpen(documentId)) {
+        return {
+          reason: "closed",
+          documentId
+        };
+      }
+    }
+    for (const part of this.#parts.values()) {
+      if (part.changed()) {
+        return { reason: "changed" };
+      }
     }
 
-    return part;
+    return null;
+  }
+
+  replay(): boolean {
+    let applied = false;
+    for (const part of [...this.#parts.values()].toReversed()) {
+      applied = part.replay() || applied;
+    }
+
+    return applied;
   }
 
   refuse(
     refusal: HistoryRefusal
   ): HistoryStepInfo {
     this.#info = {
-      label: this.label,
+      label: this.#label,
       refused: refusal
     };
 
     return this.#info;
   }
 
-  * lineage(): IterableIterator<HistoryStep<TScope>> {
-    yield this;
-    if (this.source !== null) {
-      yield* this.source.lineage();
+  discard(): void {
+    for (const draft of this.#drafts.values()) {
+      draft.basis.drop();
     }
+    for (const part of this.#parts.values()) {
+      part.basis.drop();
+    }
+    this.source?.discard();
+  }
+
+  #settled(
+    documentId: string
+  ): HistoryPart | undefined {
+    const part = this.#parts.get(documentId);
+
+    return part?.basis.pending === false ? part : undefined;
   }
 }

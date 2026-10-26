@@ -7,7 +7,7 @@ import type {
 
 export type StackSide = "undo" | "redo";
 
-export interface StackPosition {
+interface StackPosition {
   readonly side: StackSide;
   readonly index: number;
 }
@@ -28,8 +28,12 @@ export class ScopeStacks<
   }
 
   get state(): HistoryScopeState {
-    const undoable = this.#stacks.undo.filter(({ refused }) => !refused);
-    const redoable = this.#stacks.redo.filter(({ refused }) => !refused);
+    const undoable = this.#stacks.undo.filter(
+      ({ refused }) => !refused
+    );
+    const redoable = this.#stacks.redo.filter(
+      ({ refused }) => !refused
+    );
 
     return {
       canUndo: undoable.length > 0,
@@ -49,10 +53,54 @@ export class ScopeStacks<
     step: HistoryStep<TScope>
   ): void {
     this.#stacks.redo = [];
-    this.push("undo", step);
+    this.#push("undo", step);
   }
 
-  push(
+  * newestFirst(
+    side: StackSide
+  ): IterableIterator<HistoryStep<TScope>> {
+    yield* this.#stacks[side].toReversed();
+  }
+
+  cross(
+    step: HistoryStep<TScope>,
+    replay: (file: (replayed: HistoryStep<TScope>) => void) => boolean
+  ): boolean {
+    const taken = this.#take(step);
+    if (taken === null) {
+      return false;
+    }
+
+    const crossed = replay(
+      (replayed) => this.#push(opposite(taken.side), replayed)
+    );
+    if (!crossed) {
+      this.#stacks[taken.side].splice(taken.index, 0, step);
+    }
+
+    return crossed;
+  }
+
+  restore(
+    replayed: HistoryStep<TScope>,
+    source: HistoryStep<TScope>
+  ): boolean {
+    const taken = this.#take(replayed);
+    if (taken === null) {
+      return false;
+    }
+
+    this.#push(opposite(taken.side), source);
+
+    return true;
+  }
+
+  * [Symbol.iterator](): IterableIterator<HistoryStep<TScope>> {
+    yield* this.#stacks.undo;
+    yield* this.#stacks.redo;
+  }
+
+  #push(
     side: StackSide,
     step: HistoryStep<TScope>
   ): void {
@@ -63,13 +111,7 @@ export class ScopeStacks<
     }
   }
 
-  * newestFirst(
-    side: StackSide
-  ): IterableIterator<HistoryStep<TScope>> {
-    yield* this.#stacks[side].toReversed();
-  }
-
-  take(
+  #take(
     step: HistoryStep<TScope>
   ): StackPosition | null {
     for (const side of ["undo", "redo"] as const) {
@@ -77,29 +119,19 @@ export class ScopeStacks<
       if (index !== -1) {
         this.#stacks[side].splice(index, 1);
 
-        return { side, index };
+        return {
+          side,
+          index
+        };
       }
     }
 
     return null;
   }
+}
 
-  insert(
-    position: StackPosition,
-    step: HistoryStep<TScope>
-  ): void {
-    this.#stacks[position.side].splice(position.index, 0, step);
-  }
-
-  clear(): void {
-    this.#stacks = {
-      undo: [],
-      redo: []
-    };
-  }
-
-  * [Symbol.iterator](): IterableIterator<HistoryStep<TScope>> {
-    yield* this.#stacks.undo;
-    yield* this.#stacks.redo;
-  }
+function opposite(
+  side: StackSide
+): StackSide {
+  return side === "undo" ? "redo" : "undo";
 }

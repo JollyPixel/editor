@@ -44,19 +44,44 @@ export class CommandDocument<
   TCommand,
   TSnapshot,
   TImage
-> extends Emitter<CommandDocumentEvents<TCommand, TImage>> {
+> {
   readonly receipts = new ChangeReceipts<CommandChange<TCommand, TImage>>();
 
+  #events = new Emitter<CommandDocumentEvents<TCommand, TImage>>();
   #state: CommandState<TCommand, TSnapshot, TImage>;
 
   constructor(
     state: CommandState<TCommand, TSnapshot, TImage>
   ) {
-    super();
     this.#state = state;
   }
 
-  apply(
+  on<TEvent extends keyof CommandDocumentEvents<TCommand, TImage>>(
+    event: TEvent,
+    listener: CommandDocumentEvents<TCommand, TImage>[TEvent]
+  ): this {
+    this.#events.on(event, listener);
+
+    return this;
+  }
+
+  off<TEvent extends keyof CommandDocumentEvents<TCommand, TImage>>(
+    event: TEvent,
+    listener: CommandDocumentEvents<TCommand, TImage>[TEvent]
+  ): this {
+    this.#events.off(event, listener);
+
+    return this;
+  }
+
+  subscribe<TEvent extends keyof CommandDocumentEvents<TCommand, TImage>>(
+    event: TEvent,
+    listener: CommandDocumentEvents<TCommand, TImage>[TEvent]
+  ): () => void {
+    return this.#events.subscribe(event, listener);
+  }
+
+  applyRemote(
     command: TCommand,
     clientId: string | null = null
   ): boolean {
@@ -107,7 +132,7 @@ export class CommandDocument<
     cause: DocumentResetCause
   ): void {
     this.#state.load(snapshot);
-    this.emit("reset", cause);
+    this.#events.emit("reset", cause);
   }
 
   #local(
@@ -135,7 +160,7 @@ export class CommandDocument<
 
     const change = changeOf(this.#state.captureImage(command));
     this.#state.apply(command);
-    this.emit("change", change);
+    this.#events.emit("change", change);
 
     return change;
   }

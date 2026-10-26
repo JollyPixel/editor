@@ -96,7 +96,7 @@ describe("scene history", () => {
       components: [component("d1", { intensity: 1 })]
     }));
 
-    document.apply({ action: "component-changed", id: "d1", data: { intensity: 4 } }, "peer");
+    document.applyRemote({ action: "component-changed", id: "d1", data: { intensity: 4 } }, "peer");
 
     assert.equal(history.undo(kScope), false);
     assert.equal(document.tree.has("D"), true);
@@ -106,7 +106,7 @@ describe("scene history", () => {
     const { document, history } = setup();
     history.record(kScope, null, () => document.addActor({ id: "D", name: "D" }));
 
-    document.apply({ action: "actor-added", actors: [actor("E", { parentId: "D" })] }, "peer");
+    document.applyRemote({ action: "actor-added", actors: [actor("E", { parentId: "D" })] }, "peer");
 
     assert.equal(history.undo(kScope), false);
     assert.equal(document.tree.has("D"), true);
@@ -118,7 +118,7 @@ describe("scene history", () => {
       data: { intensity: 3 }
     }));
 
-    document.apply({ action: "component-changed", id: "light", data: { color: "#ff0000" } }, "peer");
+    document.applyRemote({ action: "component-changed", id: "light", data: { color: "#ff0000" } }, "peer");
 
     assert.ok(history.undo(kScope));
     assert.deepEqual(document.tree.component("light")?.data, {

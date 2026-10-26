@@ -2,11 +2,11 @@
 import type { CommandChange } from "../document/CommandChange.ts";
 import type { DocumentResetCause } from "../document/CommandDocument.ts";
 import type { ChangeReceipts } from "../document/ChangeReceipts.ts";
-import type { KeyedSnapshot } from "./KeyedSnapshot.ts";
+import type { KeyedCapture } from "./KeyedGuard.ts";
 
 export interface HistoryGuard<
   TWritten = Iterable<string>,
-  TCapture = KeyedSnapshot
+  TCapture = KeyedCapture
 > {
   touches(
     written: TWritten
@@ -21,7 +21,7 @@ export interface HistoryKeys<
   TCommand,
   TImage,
   TWritten = Iterable<string>,
-  TCapture = KeyedSnapshot
+  TCapture = KeyedCapture
 > {
   written(
     change: CommandChange<TCommand, TImage>
@@ -55,11 +55,8 @@ export interface HistoryRegistration<
   TCommand,
   TImage,
   TWritten = Iterable<string>,
-  TCapture = KeyedSnapshot
+  TCapture = KeyedCapture
 > {
-  /**
-   * Unique among the documents of one history, e.g. "model" or "set:<id>".
-   */
   id: string;
   document: HistorySource<TCommand, TImage>;
   keys: HistoryKeys<TCommand, TImage, TWritten, TCapture>;

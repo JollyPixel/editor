@@ -15,7 +15,7 @@ import type {
 } from "../../sync/types.ts";
 
 type SyncableDocumentCommand<TDocument> = TDocument extends {
-  apply(command: infer TCommand, clientId: string | null): boolean;
+  applyRemote(command: infer TCommand, clientId: string | null): boolean;
 } ? TCommand & NetworkCommandHeader : never;
 
 type SyncableDocumentSnapshot<TDocument> = TDocument extends {

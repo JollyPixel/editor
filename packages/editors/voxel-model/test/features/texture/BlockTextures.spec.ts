@@ -79,7 +79,7 @@ describe("BlockTextures model layouts", () => {
   test("maps a remote block added with its UV layout", () => {
     const { document, blocks } = createTextureHarness();
 
-    document.apply({
+    document.applyRemote({
       action: "node-added",
       node: {
         kind: "block",
@@ -242,7 +242,7 @@ describe("BlockTextures rename", () => {
     const { document, addBlock, uv } = createTextureHarness();
     const block = addBlock({ name: "Torso", uv: stackedAt(0) });
 
-    document.apply({
+    document.applyRemote({
       action: "node-renamed",
       id: block.uuid,
       name: "Chest"

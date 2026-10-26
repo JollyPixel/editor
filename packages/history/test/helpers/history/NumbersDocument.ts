@@ -72,7 +72,7 @@ export class NumbersDocument extends CommandDocument<SetCommand, Record<string, 
     value: number,
     clientId: string
   ): void {
-    this.apply({ key, value }, clientId);
+    this.applyRemote({ key, value }, clientId);
   }
 
   echo(

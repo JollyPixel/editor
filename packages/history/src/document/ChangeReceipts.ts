@@ -11,9 +11,8 @@ export type ChangeReceiptsEvents<TChange> = {
   ) => void;
 };
 
-export class ChangeReceipts<
-  TChange
-> extends Emitter<ChangeReceiptsEvents<TChange>> {
+export class ChangeReceipts<TChange> {
+  #events = new Emitter<ChangeReceiptsEvents<TChange>>();
   #attached = false;
 
   get attached(): boolean {
@@ -31,11 +30,18 @@ export class ChangeReceipts<
     };
   }
 
+  subscribe<TEvent extends keyof ChangeReceiptsEvents<TChange>>(
+    event: TEvent,
+    listener: ChangeReceiptsEvents<TChange>[TEvent]
+  ): () => void {
+    return this.#events.subscribe(event, listener);
+  }
+
   confirm(
     change: TChange,
     version: number | undefined
   ): void {
-    this.emit(
+    this.#events.emit(
       "confirmed",
       change,
       version
@@ -45,7 +51,7 @@ export class ChangeReceipts<
   refuse(
     change: TChange
   ): void {
-    this.emit(
+    this.#events.emit(
       "refused",
       change
     );

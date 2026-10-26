@@ -68,7 +68,7 @@ describe("ModelDocument", () => {
     const document = new ModelDocument();
     const changes = recordChanges(document);
 
-    document.apply({
+    document.applyRemote({
       action: "node-added",
       node: {
         kind: "folder",
@@ -92,7 +92,7 @@ describe("ModelDocument", () => {
     document.move(b!, a);
     const changes = recordChanges(document);
 
-    const applied = document.apply({
+    const applied = document.applyRemote({
       action: "node-moved",
       id: "a",
       parentId: "b",

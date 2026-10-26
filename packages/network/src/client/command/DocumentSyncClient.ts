@@ -30,7 +30,7 @@ export interface SyncableDocument<
   readonly receipts: ChangeReceipts<SyncedChange<TCommand, TImage>>;
   subscribe(event: "change", listener: (change: SyncedChange<TCommand, TImage>) => void): () => void;
   load(snapshot: TSnapshot): void;
-  apply(command: TCommand, clientId: string | null): boolean;
+  applyRemote(command: TCommand, clientId: string | null): boolean;
   replayPending(command: TCommand): SyncedChange<TCommand, TImage> | null;
   revert(images: readonly TImage[]): void;
 }
@@ -64,7 +64,7 @@ export class DocumentSyncClient<
     });
 
     this.on("snapshot", (snapshot) => document.load(snapshot));
-    this.on("command", (command) => document.apply(command, command.clientId));
+    this.on("command", (command) => document.applyRemote(command, command.clientId));
     this.#release = document.subscribe("change", (change) => {
       if (change.origin === "local") {
         reconciler.capture(this.sendChange(change.command, change), change);

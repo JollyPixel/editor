@@ -132,7 +132,7 @@ describe("modelHistoryKeys", () => {
   test("ignores remote edits and a new local edit drops the redo steps", () => {
     const { document, history, ids } = createFixture();
 
-    document.apply(networkCommand({ action: "node-renamed", id: ids.leg, name: "Peer" }));
+    document.applyRemote(networkCommand({ action: "node-renamed", id: ids.leg, name: "Peer" }));
     assert.equal(history.state(kScope).canUndo, false);
 
     document.rename(ids.arm, "A");
@@ -149,7 +149,7 @@ describe("modelHistoryKeys", () => {
 
     document.rename(ids.head, "Skull");
     history.record(kScope, "Rename arm", () => document.rename(ids.arm, "A"));
-    document.apply(networkCommand(
+    document.applyRemote(networkCommand(
       { action: "node-renamed", id: ids.arm, name: "Peer" },
       { clientId: "peer-1" }
     ), "peer-1");
@@ -166,7 +166,7 @@ describe("modelHistoryKeys", () => {
     const transform = BlockTransform.create({ position: { x: 3, y: 0, z: 0 } });
 
     document.transform(ids.arm, transform);
-    document.apply(networkCommand({ action: "node-renamed", id: ids.arm, name: "Peer" }));
+    document.applyRemote(networkCommand({ action: "node-renamed", id: ids.arm, name: "Peer" }));
 
     assert.equal(history.undo(kScope), true);
     assert.notDeepEqual(document.tree.block(ids.arm)?.transform, transform);
@@ -177,7 +177,7 @@ describe("modelHistoryKeys", () => {
     const { document, history } = createFixture();
     const folder = document.addFolder({ name: "Props" })!;
 
-    document.apply(networkCommand({
+    document.applyRemote(networkCommand({
       action: "node-added",
       node: { kind: "folder", id: "peer-box", parentId: folder, name: "Box" }
     }));
@@ -189,7 +189,7 @@ describe("modelHistoryKeys", () => {
     const { document, history, ids } = createFixture();
 
     document.rename(ids.arm, "A");
-    document.apply(networkCommand({ action: "node-renamed", id: ids.leg, name: "Peer" }));
+    document.applyRemote(networkCommand({ action: "node-renamed", id: ids.leg, name: "Peer" }));
 
     assert.equal(history.undo(kScope), true);
     assert.equal(document.tree.get(ids.arm)?.name, "Arm");
@@ -200,7 +200,7 @@ describe("modelHistoryKeys", () => {
     const { document, history, ids } = createFixture();
 
     document.remove(ids.arm);
-    document.apply(networkCommand({ action: "node-removed", id: ids.leg }));
+    document.applyRemote(networkCommand({ action: "node-removed", id: ids.leg }));
 
     assert.equal(history.undo(kScope), true);
     assert.deepEqual(
@@ -250,7 +250,7 @@ describe("modelHistoryKeys", () => {
     const { color } = document.tree.materials.material(id)!.surface;
 
     document.changeMaterial(id, { color: "#00ff00" });
-    document.apply(networkCommand({ action: "material-changed", id, surface: { opacity: 0.9 } }));
+    document.applyRemote(networkCommand({ action: "material-changed", id, surface: { opacity: 0.9 } }));
 
     assert.equal(history.undo(kScope), true);
     const surface = document.tree.materials.material(id)?.surface;

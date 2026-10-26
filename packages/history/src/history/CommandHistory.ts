@@ -3,22 +3,18 @@ import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type { CommandChange } from "../document/CommandChange.ts";
-import type { HistoryRegistration } from "./HistoryRegistration.ts";
-import { HistoryScopes } from "./HistoryScopes.ts";
+import type { HistoryRegistration } from "../registration/HistoryRegistration.ts";
 import {
   EMPTY_HISTORY_STATE,
   type HistoryRefusal,
   type HistoryScopeState,
   type HistoryStepInfo
 } from "./HistoryState.ts";
-import {
-  HistoryStep,
-  type HistoryPart
-} from "./HistoryStep.ts";
+import { HistoryStep } from "./HistoryStep.ts";
 import type { PartBasis } from "./PartBasis.ts";
-import type {
+import {
   ScopeStacks,
-  StackSide
+  type StackSide
 } from "./ScopeStacks.ts";
 
 // CONSTANTS
@@ -81,8 +77,10 @@ interface Owner<
 
 export class CommandHistory<
   TScope extends string
-> extends Emitter<CommandHistoryEvents<TScope>> {
-  #scopes: HistoryScopes<TScope>;
+> {
+  #events = new Emitter<CommandHistoryEvents<TScope>>();
+  #limit: number;
+  #scopes = new Map<TScope, ScopeStacks<TScope>>();
   #documents = new Map<string, RegisteredDocument<TScope>>();
   #recording: HistoryStep<TScope> | null = null;
   #owners = new WeakMap<object, Owner<TScope>>();
@@ -90,12 +88,40 @@ export class CommandHistory<
   constructor(
     options: CommandHistoryOptions = {}
   ) {
-    super();
-    this.#scopes = new HistoryScopes(options.limit ?? kDefaultLimit);
+    const limit = options.limit ?? kDefaultLimit;
+    if (!Number.isInteger(limit) || limit < 1) {
+      throw new RangeError(`CommandHistory: limit must be a positive integer, got ${limit}.`);
+    }
+    this.#limit = limit;
   }
 
   get limit(): number {
-    return this.#scopes.limit;
+    return this.#limit;
+  }
+
+  on<TEvent extends keyof CommandHistoryEvents<TScope>>(
+    event: TEvent,
+    listener: CommandHistoryEvents<TScope>[TEvent]
+  ): this {
+    this.#events.on(event, listener);
+
+    return this;
+  }
+
+  off<TEvent extends keyof CommandHistoryEvents<TScope>>(
+    event: TEvent,
+    listener: CommandHistoryEvents<TScope>[TEvent]
+  ): this {
+    this.#events.off(event, listener);
+
+    return this;
+  }
+
+  subscribe<TEvent extends keyof CommandHistoryEvents<TScope>>(
+    event: TEvent,
+    listener: CommandHistoryEvents<TScope>[TEvent]
+  ): () => void {
+    return this.#events.subscribe(event, listener);
   }
 
   register<TCommand, TImage, TWritten, TCapture>(
@@ -107,25 +133,25 @@ export class CommandHistory<
     }
 
     const registered: AnyRegistration<TScope> = registration;
-    const onConfirmed = (change: AnyChange, version: number | undefined): void => {
-      this.#onConfirmed(change, version);
-    };
-    const onRefused = (change: AnyChange): void => this.#onRefused(change);
-    const { receipts } = registered.document;
-    receipts.on("confirmed", onConfirmed);
-    receipts.on("refused", onRefused);
+    const { document } = registered;
     const releases = [
-      registered.document.subscribe(
+      document.subscribe(
         "change",
         (change) => this.#onChange(registered, change)
       ),
-      registered.document.subscribe("reset", (cause) => {
+      document.subscribe("reset", (cause) => {
         if (cause === "load") {
           this.#onReset(registered);
         }
       }),
-      () => receipts.off("confirmed", onConfirmed),
-      () => receipts.off("refused", onRefused)
+      document.receipts.subscribe(
+        "confirmed",
+        (change, version) => this.#onConfirmed(change, version)
+      ),
+      document.receipts.subscribe(
+        "refused",
+        (change) => this.#onRefused(change)
+      )
     ];
     this.#documents.set(id, {
       registration: registered,
@@ -135,6 +161,9 @@ export class CommandHistory<
         }
       }
     });
+    for (const step of this.#steps()) {
+      step.rebind(id, registered);
+    }
 
     return () => this.#unregister(id);
   }
@@ -161,7 +190,7 @@ export class CommandHistory<
       return kJoinedStep;
     }
 
-    const stacks = this.#scopes.ensure(scope);
+    const stacks = this.#ensureScope(scope);
     const step = new HistoryStep(scope, label);
     this.#recording = step;
     const close = (file: boolean): void => {
@@ -170,7 +199,7 @@ export class CommandHistory<
       }
 
       this.#recording = null;
-      if (file && this.#accept(step, stacks)) {
+      if (file && this.#file(step, stacks)) {
         stacks.record(step);
         this.#notify(scope);
       }
@@ -197,21 +226,24 @@ export class CommandHistory<
   state(
     scope: TScope
   ): HistoryScopeState {
-    return this.#scopes.get(scope)?.state ?? EMPTY_HISTORY_STATE;
+    return this.#scopes.get(
+      scope
+    )?.state ?? EMPTY_HISTORY_STATE;
   }
 
   removeScope(
     scope: TScope
   ): void {
-    const stacks = this.#scopes.remove(scope);
+    const stacks = this.#scopes.get(scope);
     if (stacks === undefined) {
       return;
     }
 
+    this.#scopes.delete(scope);
     for (const step of stacks) {
-      this.#drop(step);
+      step.discard();
     }
-    this.emit("change", scope, EMPTY_HISTORY_STATE);
+    this.#events.emit("change", scope, EMPTY_HISTORY_STATE);
   }
 
   dispose(): void {
@@ -220,7 +252,25 @@ export class CommandHistory<
     }
     this.#scopes.clear();
     this.#recording = null;
-    this.removeAllListeners();
+    this.#events.removeAllListeners();
+  }
+
+  #ensureScope(
+    scope: TScope
+  ): ScopeStacks<TScope> {
+    let stacks = this.#scopes.get(scope);
+    if (stacks === undefined) {
+      stacks = new ScopeStacks(this.#limit);
+      this.#scopes.set(scope, stacks);
+    }
+
+    return stacks;
+  }
+
+  * #steps(): IterableIterator<HistoryStep<TScope>> {
+    for (const stacks of this.#scopes.values()) {
+      yield* stacks;
+    }
   }
 
   #unregister(
@@ -236,14 +286,14 @@ export class CommandHistory<
   ): void {
     switch (change.origin) {
       case "local":
-        this.#settle(registration, change);
+        this.#recapture(registration, change);
         this.#onLocalChange(registration, change);
         break;
       case "remote":
         this.#onPeerChange(registration, change);
         break;
       case "replay":
-        this.#settle(registration, change);
+        this.#recapture(registration, change);
         break;
     }
   }
@@ -277,73 +327,44 @@ export class CommandHistory<
       return;
     }
 
-    step.label ??= registration.label?.(change) ?? null;
-    const part = step.part(registration.id);
-    part.prepend(change.inverse);
+    const basis = step.collect(
+      registration.id,
+      change.inverse,
+      () => registration.label?.(change) ?? null
+    );
     if (registration.document.receipts.attached) {
-      part.basis.expect(change);
-      this.#owners.set(change, { step, basis: part.basis });
+      basis.expect(change);
+      this.#owners.set(change, {
+        step,
+        basis
+      });
     }
   }
 
-  #accept(
+  #file(
     step: HistoryStep<TScope>,
     stacks: ScopeStacks<TScope>
   ): boolean {
     if (this.#scopes.get(step.scope) !== stacks) {
-      this.#drop(step);
+      step.discard();
 
       return false;
     }
 
-    return this.#seal(step);
+    step.file(
+      (documentId) => this.#documents.get(documentId)?.registration
+    );
+
+    return !step.empty;
   }
 
-  #drop(
-    step: HistoryStep<TScope>
-  ): void {
-    for (const link of step.lineage()) {
-      for (const part of link.parts.values()) {
-        part.basis.drop();
-      }
-    }
-  }
-
-  #seal(
-    step: HistoryStep<TScope>
-  ): boolean {
-    for (const part of step.parts.values()) {
-      const registration = this.#documents.get(part.documentId)?.registration;
-      if (
-        registration === undefined ||
-        part.commands.length === 0
-      ) {
-        step.parts.delete(part.documentId);
-      }
-      else {
-        if (registration.compact !== undefined) {
-          part.rewrite(registration.compact(part.commands));
-        }
-        part.capture(registration.keys);
-      }
-    }
-
-    return step.parts.size > 0;
-  }
-
-  #settle(
+  #recapture(
     registration: AnyRegistration<TScope>,
     change: AnyChange
   ): void {
     const written = registration.keys.written(change);
-    for (const step of this.#scopes) {
-      const part = step.parts.get(registration.id);
-      if (
-        part !== undefined &&
-        part.touches(registration.keys, written)
-      ) {
-        part.capture(registration.keys);
-      }
+    for (const step of this.#steps()) {
+      step.recapture(registration.id, written);
     }
   }
 
@@ -357,43 +378,19 @@ export class CommandHistory<
     }
 
     for (const step of stacks.newestFirst(from)) {
-      const info = step.info;
-      if (info !== null) {
-        this.emit("skipped", scope, info);
-        continue;
-      }
-
-      const closed = [...step.parts.keys()].find((id) => !this.#documents.has(id));
-      if (closed !== undefined) {
-        this.emit(
-          "skipped",
-          scope,
-          this.#refuse(step, { reason: "closed", documentId: closed })
-        );
-        continue;
-      }
-
-      if (this.#outdated(step)) {
-        this.emit(
-          "skipped",
-          scope,
-          this.#refuse(step, { reason: "changed" })
-        );
-        continue;
-      }
-
-      const taken = stacks.take(step)!;
-      if (this.#replay(step, stacks, from === "undo" ? "redo" : "undo")) {
+      const blocked = step.info ?? this.#blocker(step);
+      if (
+        blocked === null &&
+        stacks.cross(step, (file) => this.#replay(step, stacks, file))
+      ) {
         this.#notify(scope);
 
         return true;
       }
-
-      stacks.insert(taken, step);
-      this.emit(
+      this.#events.emit(
         "skipped",
         scope,
-        this.#refuse(step, { reason: "gone" })
+        blocked ?? this.#refuse(step, { reason: "gone" })
       );
     }
     this.#notify(scope);
@@ -401,45 +398,32 @@ export class CommandHistory<
     return false;
   }
 
-  #outdated(
+  #blocker(
     step: HistoryStep<TScope>
-  ): boolean {
-    for (const part of step.parts.values()) {
-      if (part.changed(this.#documents.get(part.documentId)!.registration.keys)) {
-        return true;
-      }
-    }
+  ): HistoryStepInfo | null {
+    const refusal = step.blocker(
+      (documentId) => this.#documents.has(documentId)
+    );
 
-    return false;
+    return refusal === null ? null : this.#refuse(step, refusal);
   }
 
   #replay(
     step: HistoryStep<TScope>,
     stacks: ScopeStacks<TScope>,
-    side: StackSide
+    file: (replayed: HistoryStep<TScope>) => void
   ): boolean {
     const replayed = new HistoryStep(step.scope, step.label, step);
     this.#recording = replayed;
-    let applied = false;
     try {
-      for (const part of [...step.parts.values()].reverse()) {
-        const { document } = this.#documents.get(part.documentId)!.registration;
-        for (const command of part.commands) {
-          applied = document.applyStep(
-            command,
-            part.basis.version
-          ) !== null || applied;
-        }
-      }
+      return step.replay();
     }
     finally {
       this.#recording = null;
-      if (this.#accept(replayed, stacks)) {
-        stacks.push(side, replayed);
+      if (this.#file(replayed, stacks)) {
+        file(replayed);
       }
     }
-
-    return applied;
   }
 
   #onPeerChange(
@@ -448,9 +432,11 @@ export class CommandHistory<
   ): void {
     const written = registration.keys.written(change);
     this.#refuseWhere(
-      registration.id,
-      (part) => part.touches(registration.keys, written),
-      { reason: "peer", clientId: change.clientId }
+      (step) => step.overwrittenBy(registration.id, written),
+      {
+        reason: "peer",
+        clientId: change.clientId
+      }
     );
   }
 
@@ -458,26 +444,18 @@ export class CommandHistory<
     registration: AnyRegistration<TScope>
   ): void {
     this.#refuseWhere(
-      registration.id,
-      (part) => part.changed(registration.keys),
+      (step) => step.changedIn(registration.id),
       { reason: "changed" }
     );
   }
 
   #refuseWhere(
-    documentId: string,
-    matches: (part: HistoryPart) => boolean,
+    matches: (step: HistoryStep<TScope>) => boolean,
     refusal: HistoryRefusal
   ): void {
     const changed = new Set<TScope>();
-    for (const step of this.#scopes) {
-      const part = step.parts.get(documentId);
-      if (
-        !step.refused &&
-        part !== undefined &&
-        !part.basis.pending &&
-        matches(part)
-      ) {
+    for (const step of this.#steps()) {
+      if (!step.refused && matches(step)) {
         this.#refuse(step, refusal);
         changed.add(step.scope);
       }
@@ -492,7 +470,7 @@ export class CommandHistory<
     refusal: HistoryRefusal
   ): HistoryStepInfo {
     const info = step.refuse(refusal);
-    this.emit("refused", step.scope, info);
+    this.#events.emit("refused", step.scope, info);
 
     return info;
   }
@@ -518,7 +496,7 @@ export class CommandHistory<
     refusal: HistoryRefusal
   ): void {
     if (step.source !== null) {
-      this.#restoreReplayed(step, step.source, refusal);
+      this.#restore(step, step.source, refusal);
     }
     else if (!step.refused) {
       this.#refuse(step, refusal);
@@ -526,24 +504,16 @@ export class CommandHistory<
     }
   }
 
-  #restoreReplayed(
+  #restore(
     replayed: HistoryStep<TScope>,
     source: HistoryStep<TScope>,
     refusal: HistoryRefusal
   ): void {
     const stacks = this.#scopes.get(replayed.scope);
-    if (stacks === undefined) {
-      return;
+    if (stacks?.restore(replayed, source) === true) {
+      this.#refuse(source, refusal);
+      this.#notify(replayed.scope);
     }
-
-    const taken = stacks.take(replayed);
-    if (taken === null) {
-      return;
-    }
-
-    stacks.push(taken.side === "undo" ? "redo" : "undo", source);
-    this.#refuse(source, refusal);
-    this.#notify(replayed.scope);
   }
 
   #takeOwner(
@@ -560,7 +530,7 @@ export class CommandHistory<
   ): void {
     const stacks = this.#scopes.get(scope);
     if (stacks !== undefined) {
-      this.emit("change", scope, stacks.state);
+      this.#events.emit("change", scope, stacks.state);
     }
   }
 }

@@ -60,7 +60,7 @@ after each of this client's own writes to them. Undo checks the document still
 holds it before writing anything, which catches writes no change reported.
 
 *In code:* `HistoryGuard.capture()` and `same(captured)`; a `KeyedGuard`
-captures a `KeyedSnapshot`.
+returns a `KeyedCapture`.
 
 ### Refused step
 

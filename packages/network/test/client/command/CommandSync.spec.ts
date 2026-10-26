@@ -143,8 +143,8 @@ describe("CommandSync", () => {
     ): string {
       return change === first ? "first" : "second";
     }
-    receipts.on("confirmed", (change, version) => answers.push(`${readName(change)}@${version}`));
-    receipts.on("refused", (change) => answers.push(`${readName(change)} refused`));
+    receipts.subscribe("confirmed", (change, version) => answers.push(`${readName(change)}@${version}`));
+    receipts.subscribe("refused", (change) => answers.push(`${readName(change)} refused`));
 
     sync.sendChange({ action: "set", value: 1 }, first);
     sync.sendChange({ action: "set", value: 2 }, second);

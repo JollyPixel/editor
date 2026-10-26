@@ -53,7 +53,7 @@ describe("ModelBlocks projection", () => {
     const block = fixture.addBlock({ name: "Arm" });
 
     fixture.document.rename(block.uuid, "Leg");
-    fixture.document.apply({
+    fixture.document.applyRemote({
       action: "node-transformed",
       id: block.uuid,
       transform: transformAt({ x: 4, y: 0, z: 0 })
