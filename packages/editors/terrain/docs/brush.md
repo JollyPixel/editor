@@ -6,10 +6,12 @@ How the local brush aims, shapes and writes. What peers see is in
 
 ## Settings
 
-Shared by every brush:
+The toolbar picks one tool at a time: raise and lower, smooth, flatten or
+paint. They share one ring and these settings, except `strength`, which each
+tool remembers:
 
 - `size`: radius in metres, 0.5 to 128. Ctrl+wheel resizes.
-- `strength`: 0 to 1.
+- `strength`: 0 to 1, per tool.
 - `falloff`: a curve from the centre to the edge: `smooth` (default),
   `linear`, `sphere`, `sharp` or `constant`.
 - `spacing`: distance between two stamps along a stroke, as a fraction of the
@@ -78,7 +80,11 @@ centre lies inside the radius. Heights under a hole are kept.
 
 Paints the selected layer into the splat map. For each texel, the weight
 added is `weight × strength`; the four strongest layers are then kept and
-renormalised to sum to 255. See [texture](./texture.md#splat).
+renormalised to sum to 255. A layer not yet among a texel's four takes the
+place of the weakest one. See [texture](./texture.md#splat).
+
+Ctrl+click picks the layer with the highest weight under the cursor, as
+flatten picks a height.
 
 ## Previews
 

@@ -167,8 +167,10 @@ never empty. It is rebuilt incrementally from the chunks that change.
 - `Terrain.overview` holds them. The asset file and the room snapshot
   list each chunk's samples, so a client knows the far terrain without loading
   its chunks; loading a chunk derives its samples from its heights.
-- Colour arrives with the terrain layers in M3. Until then the overview holds
-  heights only.
+- Each sample also holds a dominant layer: the slot with the highest weight
+  in the splat texel at its grid point, one byte. The view colours it with
+  that layer's mean albedo, so changing a layer's image recolours the horizon
+  without changing the data, and the server never decodes an image.
 - A vertex or fragment on an unloaded chunk reads the overview, interpolated
   bilinearly between its four nearest samples; on a loaded chunk it reads the
   chunk's heights. The height is a function of position only, so two nodes
@@ -245,7 +247,8 @@ Accepted drawbacks:
 | Tier | 1, 2 or 4 | One value |
 
 Tiers multiply the height and hole sizes. The splat resolution does not
-change with the tier.
+change with the tier. Heights and splat are stored as two asset parts per
+chunk.
 
 On the GPU, heights live in one `R32F` texture array with a layer per chunk,
 so a node spanning many chunks is still one draw. A 256×256 lookup texture,
@@ -276,6 +279,8 @@ which leaves a flat 1 m strip along the edge of the world.
   `terrainDocumentKind.ts`, the live relay (`TerrainLiveRelay.ts`) and the
   client live halves (`TerrainLiveSender.ts`, `TerrainLiveReceiver.ts`).
 - `src/history/`: the `CommandHistory` registration.
+- `src/image/`: the read-only `image` kind that layer maps reference; see
+  [images](./texture.md#images).
 
 ### `@jolly-pixel/terrain.renderer`
 

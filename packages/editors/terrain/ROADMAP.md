@@ -76,7 +76,13 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   tiles and answers the author with the refused tiles' current heights
   instead of a snapshot; an undo that raced a peer is still refused whole.
 - **M2: done** (2026-10-22).
-- **Next:** M3 grilling: terrain layers, texture arrays and splat maps.
+- **M3 grilling: done** (2026-10-26). Layer maps reference a new read-only
+  `image` kind in `asset.terrain`, served by a snapshot-only room. Splat is a
+  second part per chunk. Layers keep a fixed slot, at most 32, and a deleted
+  layer's paint is skipped, not rewritten. The texture size is a terrain
+  setting. The overview holds each sample's dominant layer. See
+  [texture](./docs/texture.md).
+- **Next:** the `image` kind.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -119,10 +125,19 @@ chunks yet.
 
 ## M3: Texturing
 
-- [ ] Terrain layers that reference image assets in the catalog.
-- [ ] Albedo, normal and ORM texture arrays.
-- [ ] Index and weight splat maps, and the paint brush.
+- [ ] The `image` kind: PNG, JPEG and WebP stored as imported, a
+  snapshot-only room, replaced by re-import.
+- [ ] Terrain layers in the manifest: slots, the seeded "Ground" layer, layer
+  commands keyed per field, image dependencies, and the texture size setting.
+- [ ] Albedo, normal and ORM texture arrays, rebuilt when an image or the
+  texture size changes.
+- [ ] Splat parts, `splat-patched` commits, and the overview's dominant layer.
+- [ ] Layers panel, the paint tool in the brush toolbar, and Ctrl+click layer
+  pick.
+- [ ] Splat overlay.
 - [ ] Per-layer techniques: triplanar, stochastic tiling, height blending.
+- [ ] E2E: two peers paint and sculpt the same chunk, a far peer's horizon
+  takes the new dominant layer, a re-imported image updates an open terrain.
 
 ## M4: Rest of V1
 
