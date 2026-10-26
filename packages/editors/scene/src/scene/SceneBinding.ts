@@ -10,7 +10,8 @@ import type {
   SceneChange,
   SceneComponentJSON,
   SceneDocument,
-  SceneEnvironmentJSON
+  SceneEnvironmentJSON,
+  SceneEnvironmentPatch
 } from "@jolly-pixel/asset.scene/client";
 import { Emitter } from "@openally/emitt";
 
@@ -126,6 +127,16 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
     id: string
   ): void {
     this.#syncActor(id);
+  }
+
+  previewEnvironment(
+    patch: SceneEnvironmentPatch
+  ): void {
+    this.#environment.apply({
+      ...this.#document.tree.environment,
+      ...patch
+    });
+    this.#world.invalidate();
   }
 
   dispose(): void {

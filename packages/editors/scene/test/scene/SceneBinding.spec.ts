@@ -195,6 +195,20 @@ describe("SceneBinding", () => {
     assert.deepEqual(environments.at(-1), foggy);
   });
 
+  test("previews an environment patch over the document without changing it", () => {
+    const document = new SceneDocument();
+    const stored = document.tree.environment;
+    const { binding, environments } = createBinding(document);
+
+    binding.previewEnvironment({ background: "#ff0000" });
+
+    assert.deepEqual(environments.at(-1), {
+      ...stored,
+      background: "#ff0000"
+    });
+    assert.deepEqual(document.tree.environment, stored);
+  });
+
   test("finds the actor that owns a nested object", () => {
     const document = new SceneDocument();
     const actorId = document.addActor({ name: "Actor" })!;

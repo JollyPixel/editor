@@ -2,13 +2,13 @@
 import type { ReactiveControllerHost } from "lit";
 import {
   MenuSession,
-  resolveReparentMoves,
   SubscriptionController,
   type JollyRenameDetail,
   type JollyReparentDetail,
   type JollySelectDetail,
   type JollyToggleExpandDetail,
   type JollyToggleVisibleDetail,
+  type MenuEntry,
   type TreeNode
 } from "@jolly-pixel/ui";
 import type {
@@ -18,28 +18,69 @@ import type {
 
 // Import Internal Dependencies
 import type { SceneEditing } from "../../editing/SceneEditing.ts";
-import { actorTreeNodes } from "./actorTreeNodes.ts";
-import {
-  addEntries,
-  presetOfAction,
-  rowEntries
-} from "./hierarchyMenu.ts";
+import { ActorTreeRows } from "./ActorTreeRows.ts";
+import type { AddActorAction } from "./model/ActorPreset.ts";
+import { ACTOR_PRESET_MENU } from "./model/actorPresets.ts";
+import { TreeExpansion } from "./TreeExpansion.ts";
 
 export interface HierarchyView {
   beginRename(id: string): void;
 }
 
+type RowAction = "rename" | "duplicate" | "delete" | AddActorAction;
+
+// CONSTANTS
+const kRowEntries: readonly MenuEntry<RowAction>[] = [
+  {
+    id: "group:add-child",
+    label: "Add child",
+    icon: "plus",
+    items: ACTOR_PRESET_MENU.entries
+  },
+  "separator",
+  {
+    id: "rename",
+    label: "Rename",
+    icon: "action-rename"
+  },
+  {
+    id: "duplicate",
+    label: "Duplicate",
+    icon: "action-duplicate"
+  },
+  "separator",
+  {
+    id: "delete",
+    label: "Delete",
+    icon: "action-delete",
+    intent: "danger"
+  }
+];
+
 export class HierarchyController {
+  static #destinationParent(
+    command: SceneCommand
+  ): string | null {
+    switch (command.action) {
+      case "actor-added":
+        return command.actors[0]?.parentId ?? null;
+      case "actor-moved":
+        return command.parentId;
+      default:
+        return null;
+    }
+  }
+
   #host: ReactiveControllerHost;
   #view: HierarchyView;
   #connection: SubscriptionController<SceneEditing>;
-  #nodes: TreeNode[] = [];
-  #collapsed = new Set<string>();
+  #rows = ActorTreeRows.EMPTY;
+  #expansion = new TreeExpansion();
 
   #rebuild = (): void => {
     const editing = this.#connection.current;
     if (editing !== null) {
-      this.#nodes = actorTreeNodes(
+      this.#rows = ActorTreeRows.read(
         editing.document.tree,
         editing.presence.selections
       );
@@ -50,17 +91,19 @@ export class HierarchyController {
   #onChange = (
     change: SceneChange
   ): void => {
-    const parentId = destinationParent(change.command);
+    const parentId = HierarchyController.#destinationParent(change.command);
     if (parentId !== null) {
-      this.#collapsed.delete(parentId);
+      this.#expansion.expand(parentId);
     }
     this.#rebuild();
   };
 
   #onSelection = (): void => {
     const editing = this.#connection.current;
-    for (const id of editing?.selection.ids ?? []) {
-      this.#expandAncestors(id);
+    if (editing !== null) {
+      for (const id of editing.selection.ids) {
+        this.#expansion.reveal(editing.document.tree.ancestorIds(id));
+      }
     }
     this.#host.requestUpdate();
   };
@@ -85,7 +128,7 @@ export class HierarchyController {
   }
 
   get nodes(): TreeNode[] {
-    return this.#nodes;
+    return this.#rows.roots;
   }
 
   get selected(): string[] {
@@ -93,8 +136,9 @@ export class HierarchyController {
   }
 
   get expanded(): string[] {
-    return [...this.#connection.current?.document.tree.actorIds() ?? []]
-      .filter((id) => !this.#collapsed.has(id));
+    return this.#expansion.expanded(
+      this.#connection.current?.document.tree.actorIds() ?? []
+    );
   }
 
   get hasSelection(): boolean {
@@ -104,7 +148,7 @@ export class HierarchyController {
   attach(
     editing: SceneEditing
   ): void {
-    this.#collapsed.clear();
+    this.#expansion.clear();
     this.#connection.attach(editing);
   }
 
@@ -119,10 +163,10 @@ export class HierarchyController {
   ): void => {
     const { id, expanded } = event.detail;
     if (expanded) {
-      this.#collapsed.delete(id);
+      this.#expansion.expand(id);
     }
     else {
-      this.#collapsed.add(id);
+      this.#expansion.collapse(id);
     }
     this.#host.requestUpdate();
   };
@@ -148,10 +192,7 @@ export class HierarchyController {
   readonly handleReparent = (
     event: CustomEvent<JollyReparentDetail>
   ): void => {
-    const moves = resolveReparentMoves({
-      nodes: this.#nodes,
-      ...event.detail
-    });
+    const moves = this.#rows.moves(event.detail);
     if (moves.length > 0) {
       this.#connection.current?.actions.move(moves);
     }
@@ -166,47 +207,47 @@ export class HierarchyController {
   };
 
   addMenu(): MenuSession {
-    return this.openMenu(null);
+    if (this.#connection.current === null) {
+      return MenuSession.EMPTY;
+    }
+
+    return MenuSession.from(
+      ACTOR_PRESET_MENU.entries,
+      (action) => this.#add(action, null)
+    );
   }
 
   openMenu(
     id: string | null
   ): MenuSession {
     const editing = this.#connection.current;
-    if (editing === null) {
-      return MenuSession.EMPTY;
-    }
-    if (id === null) {
-      return MenuSession.from(
-        addEntries(),
-        (action) => this.#add(action, null)
-      );
+    if (id === null || editing === null) {
+      return this.addMenu();
     }
     if (!editing.selection.has(id)) {
       editing.selection.select([id]);
     }
 
     return MenuSession.forRow(
-      rowEntries(),
+      kRowEntries,
       () => editing.document.tree.has(id),
       (action) => this.#runRow(action, id)
     );
   }
 
   async #runRow(
-    action: string,
+    action: RowAction,
     id: string
   ): Promise<void> {
-    const editing = this.#connection.current;
     switch (action) {
       case "rename":
         this.#view.beginRename(id);
         break;
       case "duplicate":
-        editing?.actions.duplicateSelection();
+        this.duplicateSelected();
         break;
       case "delete":
-        editing?.actions.removeSelection();
+        this.deleteSelected();
         break;
       default:
         await this.#add(action, id);
@@ -214,40 +255,12 @@ export class HierarchyController {
   }
 
   async #add(
-    action: string,
+    action: AddActorAction,
     parentId: string | null
   ): Promise<void> {
-    const actions = this.#connection.current?.actions;
-    const preset = presetOfAction(action);
-    if (actions === undefined || preset === null) {
-      return;
+    const preset = ACTOR_PRESET_MENU.find(action);
+    if (preset !== undefined) {
+      await this.#connection.current?.actions.addActor(preset, parentId);
     }
-
-    if (parentId !== null) {
-      this.#collapsed.delete(parentId);
-    }
-    await actions.addActor(preset, parentId);
-  }
-
-  #expandAncestors(
-    id: string
-  ): void {
-    const tree = this.#connection.current?.document.tree;
-    for (const parentId of tree?.ancestorIds(id) ?? []) {
-      this.#collapsed.delete(parentId);
-    }
-  }
-}
-
-function destinationParent(
-  command: SceneCommand
-): string | null {
-  switch (command.action) {
-    case "actor-added":
-      return command.actors[0]?.parentId ?? null;
-    case "actor-moved":
-      return command.parentId;
-    default:
-      return null;
   }
 }

@@ -20,9 +20,14 @@ export type SceneHistory = CommandHistory<SceneHistoryScope>;
 export function createSceneHistory(
   document: SceneDocument
 ): SceneHistory {
-  const history = new CommandHistory<SceneHistoryScope>({ limit: kLimit });
+  const history = new CommandHistory<SceneHistoryScope>({
+    limit: kLimit
+  });
   history.register(
-    sceneHistoryRegistration(document, { scope: SCENE_HISTORY_SCOPE })
+    sceneHistoryRegistration(
+      document,
+      { scope: SCENE_HISTORY_SCOPE }
+    )
   );
 
   return history;

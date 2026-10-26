@@ -1,14 +1,12 @@
 // Import Third-party Dependencies
-import type { AssetReferenceData } from "@jolly-pixel/asset";
-import {
-  randomId,
-  type SceneDocument
-} from "@jolly-pixel/asset.scene/client";
+import type { SceneDocument } from "@jolly-pixel/asset.scene/client";
 
 // Import Internal Dependencies
 import { componentAssetSlots } from "../components/sceneComponents.ts";
-import type { ActorPreset } from "../features/hierarchy/model/actorPresets.ts";
-import { duplicateSubtree } from "../features/hierarchy/model/duplicateSubtree.ts";
+import type {
+  ActorPreset,
+  PickedAssets
+} from "../features/hierarchy/model/ActorPreset.ts";
 import {
   SCENE_HISTORY_SCOPE,
   type SceneHistory
@@ -16,14 +14,13 @@ import {
 import { rebaseTransform } from "../scene/sceneTransform.ts";
 import type { SelectionStore } from "../state/SelectionStore.ts";
 import type { SceneAssetSlots } from "./SceneEditing.ts";
+import { SubtreeCopy } from "./SubtreeCopy.ts";
 
 export interface ActorMove {
   id: string;
   parentId: string | null;
   beforeId?: string;
 }
-
-type PickedAssets = Record<string, AssetReferenceData>;
 
 export interface SceneActionsOptions {
   document: SceneDocument;
@@ -51,29 +48,23 @@ export class SceneActions {
     preset: ActorPreset,
     parentId: string | null
   ): Promise<string | null> {
-    const { component } = preset;
-    const assets = component === null ? {} : await this.#pickAssets(component.type);
-    if (assets === null) {
+    const components = await preset.createComponents(
+      (type) => this.#pickAssets(type)
+    );
+    if (components === null) {
       return null;
     }
 
     const { tree } = this.#document;
-    const [firstAsset] = Object.values(assets);
+    const [firstAsset] = components.flatMap(
+      ({ assets }) => Object.values(assets).filter((asset) => asset !== null)
+    );
     const id = this.#document.addActor({
       name: firstAsset === undefined ?
         preset.label :
         this.#assetSlots.name(firstAsset),
       parentId: parentId !== null && tree.has(parentId) ? parentId : null,
-      components: component === null ?
-        [] :
-        [
-          {
-            id: randomId(),
-            type: component.type,
-            data: structuredClone(component.data),
-            assets
-          }
-        ]
+      components
     });
     if (id !== null) {
       this.#selection.select([id]);
@@ -103,13 +94,13 @@ export class SceneActions {
       SCENE_HISTORY_SCOPE,
       "Duplicate",
       () => roots.flatMap((id) => {
-        const subtree = duplicateSubtree(this.#document.tree.subtreeFrom(id));
+        const copy = new SubtreeCopy(this.#document.tree.subtreeFrom(id));
         const added = this.#document.addSubtree(
-          subtree,
+          copy.actors,
           this.#document.tree.findNextSibling(id)
         );
 
-        return added ? [subtree[0].id] : [];
+        return added ? [copy.rootId] : [];
       })
     );
     if (copies.length > 0) {

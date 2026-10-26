@@ -3,18 +3,18 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { fogOfKind } from "../../src/features/environment/sceneFog.ts";
+import { switchFogKind } from "../../src/features/environment/sceneFog.ts";
 
-describe("fogOfKind", () => {
+describe("switchFogKind", () => {
   test("keeps the fog color when switching between linear and exponential fog", () => {
-    const linear = fogOfKind("linear", { kind: "none" });
+    const linear = switchFogKind({ kind: "none" }, "linear");
     assert.strictEqual(linear.kind, "linear");
 
     const tinted = { ...linear, color: "#123456" };
-    const exp2 = fogOfKind("exp2", tinted);
+    const exp2 = switchFogKind(tinted, "exp2");
 
     assert.strictEqual(exp2.kind === "exp2" && exp2.color, "#123456");
-    assert.deepEqual(fogOfKind("none", exp2), { kind: "none" });
-    assert.strictEqual(fogOfKind("exp2", exp2), exp2);
+    assert.deepEqual(switchFogKind(exp2, "none"), { kind: "none" });
+    assert.strictEqual(switchFogKind(exp2, "exp2"), exp2);
   });
 });

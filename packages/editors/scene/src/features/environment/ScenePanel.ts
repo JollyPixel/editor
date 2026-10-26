@@ -18,14 +18,14 @@ import {
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/checkbox";
 import "@jolly-pixel/ui/elements/color";
+import "@jolly-pixel/ui/elements/folder";
 import "@jolly-pixel/ui/elements/number";
 import "@jolly-pixel/ui/elements/select";
-import "@jolly-pixel/ui/elements/separator";
 
 // Import Internal Dependencies
 import type { SceneEditing } from "../../editing/SceneEditing.ts";
 import {
-  fogOfKind,
+  switchFogKind,
   type SceneFogKind
 } from "./sceneFog.ts";
 
@@ -60,12 +60,24 @@ const kFogKinds: JollyOption<SceneFogKind>[] = [
 ];
 
 export class ScenePanel extends LitElement {
+  #preview: SceneEnvironmentPatch = {};
   #editing = new SubscriptionController<SceneEditing>(this, (editing) => {
     const repaint = (): void => this.requestUpdate();
+    const discardPreview = (): void => {
+      this.#preview = {};
+      repaint();
+    };
 
     return [
-      editing.document.subscribe("change", repaint),
-      editing.document.subscribe("reset", repaint)
+      editing.document.subscribe("change", ({ command }) => {
+        if (command.action === "environment-changed") {
+          discardPreview();
+        }
+        else {
+          repaint();
+        }
+      }),
+      editing.document.subscribe("reset", discardPreview)
     ];
   });
 
@@ -94,71 +106,118 @@ export class ScenePanel extends LitElement {
     }
 
     const { document } = editing;
-    const environment = document.tree.environment;
-    function change(patch: SceneEnvironmentPatch): void {
-      document.changeEnvironment(patch);
-    }
+    const environment = {
+      ...document.tree.environment,
+      ...this.#preview
+    };
+    const preview = (patch: SceneEnvironmentPatch): void => {
+      this.#preview = {
+        ...this.#preview,
+        ...patch
+      };
+      editing.previewEnvironment(this.#preview);
+      this.requestUpdate();
+    };
+    const change = (patch: SceneEnvironmentPatch): void => {
+      this.#preview = {};
+      if (!document.changeEnvironment(patch)) {
+        editing.previewEnvironment(this.#preview);
+      }
+      this.requestUpdate();
+    };
 
     return html`
-      <jolly-separator label="Background"></jolly-separator>
-      <jolly-checkbox
-        label="Color"
-        .value=${environment.background !== null}
-        @jolly-change=${(event: ChangeEvent<boolean>) => change({
-          background: event.detail.value ? kDefaultBackground : null
-        })}
-      ></jolly-checkbox>
-      ${environment.background === null ?
-        nothing :
-        html`
-          <jolly-color
-            label="Background"
-            .value=${environment.background}
-            @jolly-change=${(event: ChangeEvent<string>) => change({
-              background: event.detail.value
-            })}
-          ></jolly-color>
-        `}
-      <jolly-separator label="Environment"></jolly-separator>
-      <jolly-select
-        label="Map"
-        .options=${kEnvironmentKinds}
-        .value=${environment.environment.kind}
-        @jolly-change=${(event: ChangeEvent<EnvironmentMapKind>) => change({
-          environment: {
-            ...environment.environment,
-            kind: event.detail.value
-          }
-        })}
-      ></jolly-select>
-      <jolly-number
-        label="Intensity"
-        min="0"
-        step="0.05"
-        .value=${environment.environment.intensity}
-        @jolly-change=${(event: ChangeEvent<number>) => change({
-          environment: {
-            ...environment.environment,
-            intensity: event.detail.value
-          }
-        })}
-      ></jolly-number>
-      <jolly-separator label="Fog"></jolly-separator>
-      <jolly-select
+      <jolly-folder
+        key="background"
+        label="Background"
+        storage-key="scene:folder:background"
+        flush
+      >
+        <jolly-checkbox
+          label="Color"
+          .value=${environment.background !== null}
+          @jolly-change=${(event: ChangeEvent<boolean>) => change({
+            background: event.detail.value ? kDefaultBackground : null
+          })}
+        ></jolly-checkbox>
+        ${environment.background === null ?
+          nothing :
+          html`
+            <jolly-color
+              label="Background"
+              .value=${environment.background}
+              @jolly-input=${(event: ChangeEvent<string>) => preview({
+                background: event.detail.value
+              })}
+              @jolly-change=${(event: ChangeEvent<string>) => change({
+                background: event.detail.value
+              })}
+            ></jolly-color>
+          `}
+      </jolly-folder>
+      <jolly-folder
+        key="environment"
+        label="Environment"
+        storage-key="scene:folder:environment"
+        flush
+      >
+        <jolly-select
+          label="Map"
+          .options=${kEnvironmentKinds}
+          .value=${environment.environment.kind}
+          @jolly-change=${(event: ChangeEvent<EnvironmentMapKind>) => change({
+            environment: {
+              ...environment.environment,
+              kind: event.detail.value
+            }
+          })}
+        ></jolly-select>
+        <jolly-number
+          label="Intensity"
+          min="0"
+          step="0.05"
+          .value=${environment.environment.intensity}
+          @jolly-input=${(event: ChangeEvent<number>) => preview({
+            environment: {
+              ...environment.environment,
+              intensity: event.detail.value
+            }
+          })}
+          @jolly-change=${(event: ChangeEvent<number>) => change({
+            environment: {
+              ...environment.environment,
+              intensity: event.detail.value
+            }
+          })}
+        ></jolly-number>
+      </jolly-folder>
+      <jolly-folder
+        key="fog"
         label="Fog"
-        .options=${kFogKinds}
-        .value=${environment.fog.kind}
-        @jolly-change=${(event: ChangeEvent<SceneFogKind>) => change({
-          fog: fogOfKind(event.detail.value, environment.fog)
-        })}
-      ></jolly-select>
-      ${renderFogFields(environment.fog, (fog) => change({ fog }))}
+        storage-key="scene:folder:fog"
+        flush
+      >
+        <jolly-select
+          label="Fog"
+          .options=${kFogKinds}
+          .value=${environment.fog.kind}
+          @jolly-change=${(event: ChangeEvent<SceneFogKind>) => change({
+            fog: switchFogKind(environment.fog, event.detail.value)
+          })}
+        ></jolly-select>
+        ${renderFogFields(
+          environment.fog,
+          (fog) => preview({ fog }),
+          (fog) => change({ fog })
+        )}
+      </jolly-folder>
     `;
   }
 }
 
 function renderFogFields(
   fog: SceneFogJSON,
+  preview: (fog: SceneFogJSON) => void,
   change: (fog: SceneFogJSON) => void
 ): TemplateResult | typeof nothing {
   if (fog.kind === "none") {
@@ -169,6 +228,10 @@ function renderFogFields(
     <jolly-color
       label="Color"
       .value=${fog.color}
+      @jolly-input=${(event: ChangeEvent<string>) => preview({
+        ...fog,
+        color: event.detail.value
+      })}
       @jolly-change=${(event: ChangeEvent<string>) => change({
         ...fog,
         color: event.detail.value
@@ -183,6 +246,10 @@ function renderFogFields(
         min="0"
         step="0.001"
         .value=${fog.density}
+        @jolly-input=${(event: ChangeEvent<number>) => preview({
+          ...fog,
+          density: event.detail.value
+        })}
         @jolly-change=${(event: ChangeEvent<number>) => change({
           ...fog,
           density: event.detail.value
@@ -198,6 +265,10 @@ function renderFogFields(
       min="0"
       step="0.5"
       .value=${fog.near}
+      @jolly-input=${(event: ChangeEvent<number>) => preview({
+        ...fog,
+        near: event.detail.value
+      })}
       @jolly-change=${(event: ChangeEvent<number>) => change({
         ...fog,
         near: event.detail.value
@@ -208,6 +279,10 @@ function renderFogFields(
       min="0"
       step="0.5"
       .value=${fog.far}
+      @jolly-input=${(event: ChangeEvent<number>) => preview({
+        ...fog,
+        far: event.detail.value
+      })}
       @jolly-change=${(event: ChangeEvent<number>) => change({
         ...fog,
         far: event.detail.value

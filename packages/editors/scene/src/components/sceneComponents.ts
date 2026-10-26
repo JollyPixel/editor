@@ -80,6 +80,19 @@ export function componentIcon(
   return sceneComponent(type)?.icon ?? EMPTY_ACTOR_ICON;
 }
 
+export function actorIcon(
+  types: Iterable<string>
+): string {
+  for (const type of types) {
+    const icon = componentIcon(type);
+    if (icon !== EMPTY_ACTOR_ICON) {
+      return icon;
+    }
+  }
+
+  return EMPTY_ACTOR_ICON;
+}
+
 export function componentAssetSlots(
   type: string
 ): Readonly<Record<string, AssetType<unknown>>> {

@@ -2,37 +2,42 @@
 import type { SceneFogJSON } from "@jolly-pixel/asset.scene/client";
 
 export type SceneFogKind = SceneFogJSON["kind"];
+type DefaultFogs = {
+  [TKind in SceneFogKind]: Extract<SceneFogJSON, { kind: TKind; }>;
+};
 
 // CONSTANTS
 const kFogColor = "#c8d2dc";
-const kLinearNear = 10;
-const kLinearFar = 100;
-const kDensity = 0.02;
+const kDefaultFogs = {
+  none: {
+    kind: "none"
+  },
+  linear: {
+    kind: "linear",
+    color: kFogColor,
+    near: 10,
+    far: 100
+  },
+  exp2: {
+    kind: "exp2",
+    color: kFogColor,
+    density: 0.02
+  }
+} satisfies DefaultFogs;
 
-export function fogOfKind(
-  kind: SceneFogKind,
-  current: SceneFogJSON
+export function switchFogKind(
+  fog: SceneFogJSON,
+  kind: SceneFogKind
 ): SceneFogJSON {
-  if (kind === current.kind) {
-    return current;
+  if (kind === fog.kind) {
+    return fog;
+  }
+  if (kind === "none" || fog.kind === "none") {
+    return { ...kDefaultFogs[kind] };
   }
 
-  const color = current.kind === "none" ? kFogColor : current.color;
-  switch (kind) {
-    case "none":
-      return { kind };
-    case "linear":
-      return {
-        kind,
-        color,
-        near: kLinearNear,
-        far: kLinearFar
-      };
-    case "exp2":
-      return {
-        kind,
-        color,
-        density: kDensity
-      };
-  }
+  return {
+    ...kDefaultFogs[kind],
+    color: fog.color
+  };
 }

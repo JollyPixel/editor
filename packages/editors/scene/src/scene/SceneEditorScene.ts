@@ -188,6 +188,7 @@ export class SceneEditorScene extends Systems.Scene {
       gizmo,
       assetSlots,
       frameSelection,
+      previewEnvironment: (patch) => binding.previewEnvironment(patch),
       teleportToPeer: (clientId) => {
         const pose = collaboration.peerPose(clientId);
         if (pose !== undefined) {
