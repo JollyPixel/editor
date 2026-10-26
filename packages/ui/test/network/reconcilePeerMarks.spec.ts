@@ -1,20 +1,28 @@
 // Import Node.js Dependencies
-import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import {
+  describe,
+  it
+} from "node:test";
 
 // Import Internal Dependencies
-import { reconcilePeerMarks } from "#src/collaboration/reconcilePeerMarks.ts";
+import { reconcilePeerMarks } from "../../src/network/reconcilePeerMarks.ts";
+import type { PresencePeer } from "../../src/peer/types.ts";
 
 type Call = ["hold", string, string] | ["release", string];
 
 function peerMarks(
-  entries: Array<[uuid: string, clientId: string]>
-): Map<string, { clientId: string; displayName: string; color: string; }[]> {
-  const marks = new Map<string, { clientId: string; displayName: string; color: string; }[]>();
-  for (const [uuid, clientId] of entries) {
-    const peers = marks.get(uuid) ?? [];
-    peers.push({ clientId, displayName: clientId, color: "#ff0000" });
-    marks.set(uuid, peers);
+  entries: Array<[key: string, clientId: string]>
+): Map<string, PresencePeer[]> {
+  const marks = new Map<string, PresencePeer[]>();
+  for (const [key, clientId] of entries) {
+    const peers = marks.get(key) ?? [];
+    peers.push({
+      clientId,
+      displayName: clientId,
+      color: "#ff0000"
+    });
+    marks.set(key, peers);
   }
 
   return marks;
@@ -26,7 +34,7 @@ function reconcile(
 ): { next: Map<string, string>; calls: Call[]; } {
   const calls: Call[] = [];
   const next = reconcilePeerMarks(marks, previous, {
-    hold: (peer, uuid) => void calls.push(["hold", peer.clientId, uuid]),
+    hold: (peer, key) => void calls.push(["hold", peer.clientId, key]),
     release: (clientId) => void calls.push(["release", clientId])
   });
 
@@ -34,7 +42,7 @@ function reconcile(
 }
 
 describe("reconcilePeerMarks", () => {
-  test("holds every peer on the first pass", () => {
+  it("holds every peer on the first pass", () => {
     const { next, calls } = reconcile(
       peerMarks([["torso", "bob"], ["torso", "eve"]]),
       new Map()
@@ -44,7 +52,7 @@ describe("reconcilePeerMarks", () => {
     assert.deepEqual([...next], [["bob", "torso"], ["eve", "torso"]]);
   });
 
-  test("holds a peer that moved without releasing them first", () => {
+  it("holds a peer that moved without releasing them first", () => {
     const { calls } = reconcile(
       peerMarks([["head", "bob"]]),
       new Map([["bob", "torso"]])
@@ -53,7 +61,7 @@ describe("reconcilePeerMarks", () => {
     assert.deepEqual(calls, [["hold", "bob", "head"]]);
   });
 
-  test("releases peers that let go and leaves unchanged peers alone", () => {
+  it("releases peers that let go and leaves unchanged peers alone", () => {
     const { next, calls } = reconcile(
       peerMarks([["torso", "eve"]]),
       new Map([["bob", "head"], ["eve", "torso"]])

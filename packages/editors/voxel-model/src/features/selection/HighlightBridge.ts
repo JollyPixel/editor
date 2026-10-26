@@ -3,16 +3,18 @@ import type * as THREE from "three/webgpu";
 import {
   MeshHighlight,
   ObjectOverlayRenderer,
-  PeerHighlights,
-  type PeerColorAllocator
+  PeerHighlights
 } from "@jolly-pixel/three";
-import type { PeerMarkMap } from "@jolly-pixel/ui/network";
+import {
+  reconcilePeerMarks,
+  type PeerMarkMap
+} from "@jolly-pixel/ui/network";
+import { presenceColorAllocator } from "@jolly-pixel/editor.host/viewport";
 
 // Import Internal Dependencies
 import type { ModelBlock, ModelBlocks } from "../../scene/blocks/index.ts";
 import { SELECTION_HIGHLIGHT_COLOR } from "../../scene/blocks/ModelBlock.ts";
 import { RenderOrder } from "../../scene/renderOrder.ts";
-import { reconcilePeerMarks } from "../../collaboration/reconcilePeerMarks.ts";
 import type {
   BlockSelectionStore,
   PresenceStore
@@ -98,12 +100,6 @@ export class HighlightBridge {
     this.#selection = options.selection;
     this.#presence = options.presence;
 
-    const peerColorAllocator: PeerColorAllocator = {
-      peerColor: (peerId) => this.#presence.peers
-        .find((peer) => peer.clientId === peerId)?.color ?? "#ffffff",
-      release: () => void 0
-    };
-
     this.#meshHighlight = new MeshHighlight({
       renderer: options.renderer,
       scene: options.scene,
@@ -123,7 +119,9 @@ export class HighlightBridge {
         outline: { linewidth: kOutlineThickness },
         occludedOpacityScale: kOccludedOpacityScale
       },
-      peers: new PeerHighlights({ colorAllocator: peerColorAllocator })
+      peers: new PeerHighlights({
+        colorAllocator: presenceColorAllocator(() => this.#presence.peers)
+      })
     });
 
     for (const block of this.#blocks.values()) {

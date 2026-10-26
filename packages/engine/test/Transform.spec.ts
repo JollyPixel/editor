@@ -137,6 +137,14 @@ describe("Transform", () => {
     assertVectorClose(transform.getLocalPosition(), new THREE.Vector3(-1, 0, 0));
   });
 
+  test("should be hidden in the hierarchy when an ancestor is hidden", () => {
+    const { parent, transform } = createChild();
+
+    assert.strictEqual(transform.visibleInHierarchy, true);
+    parent.visible = false;
+    assert.strictEqual(transform.visibleInHierarchy, false);
+  });
+
   test("should measure the distance to another transform", () => {
     const { transform } = createChild();
     const other = new THREE.Group();

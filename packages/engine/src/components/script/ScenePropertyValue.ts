@@ -6,6 +6,50 @@ import type { ScenePropertyType } from "./BehaviorDecorators.ts";
 import type { JSONValue } from "../../systems/scene/file/SceneFile.ts";
 import { isHexColor } from "../../systems/scene/file/ComponentData.ts";
 
+// CONSTANTS
+export const SCENE_PROPERTY_TYPES: readonly ScenePropertyType[] = [
+  "number",
+  "string",
+  "boolean",
+  "Vector2",
+  "Vector3",
+  "Vector4",
+  "Color",
+  "number[]",
+  "string[]",
+  "boolean[]"
+];
+const kVectorTypes: Readonly<Record<number, ScenePropertyType>> = {
+  2: "Vector2",
+  3: "Vector3",
+  4: "Vector4"
+};
+
+export function inferScenePropertyType(
+  value: JSONValue
+): ScenePropertyType | null {
+  if (isNumber(value)) {
+    return "number";
+  }
+  if (isBoolean(value)) {
+    return "boolean";
+  }
+  if (isString(value)) {
+    return isHexColor(value) ? "Color" : "string";
+  }
+  if (!Array.isArray(value)) {
+    return null;
+  }
+  if (value.every(isNumber)) {
+    return kVectorTypes[value.length] ?? "number[]";
+  }
+  if (value.every(isString)) {
+    return "string[]";
+  }
+
+  return value.every(isBoolean) ? "boolean[]" : null;
+}
+
 export function parseScenePropertyValue(
   type: ScenePropertyType,
   value: JSONValue

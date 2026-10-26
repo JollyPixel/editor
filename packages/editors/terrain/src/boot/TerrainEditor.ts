@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import type { HistoryStepInfo } from "@jolly-pixel/history";
+import {
+  describeSkippedStep,
+  type HistoryStepInfo
+} from "@jolly-pixel/history";
 import type { Runtime } from "@jolly-pixel/runtime";
 import {
   TERRAIN_KIND,
@@ -32,7 +35,7 @@ import { TerrainEditorScene } from "../scene/TerrainEditorScene.ts";
 import { PresenceStore } from "../shared/PresenceStore.ts";
 import {
   createTerrainHistory,
-  skippedMessage
+  TERRAIN_REFUSAL_WORDING
 } from "../shared/terrainHistory.ts";
 
 // CONSTANTS
@@ -141,7 +144,7 @@ async function mountScene(
     _scope: string,
     step: HistoryStepInfo
   ): void {
-    log.push(skippedMessage(step));
+    log.push(describeSkippedStep(step, TERRAIN_REFUSAL_WORDING));
   }
   history.on("skipped", onSkipped);
   disposables.push(() => history.off("skipped", onSkipped));

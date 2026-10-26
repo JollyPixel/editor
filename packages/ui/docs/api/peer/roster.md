@@ -82,6 +82,23 @@ const marks = peerMarks(
 );
 ```
 
+## `reconcilePeerMarks(marks, previous, handlers): Map<string, TKey>`
+
+Applies a new `PeerMarkMap` to a view that draws one mark per peer. `previous`
+maps each `clientId` to the key it held after the last call; pass the returned
+map back on the next one. Peers that left are released first, then peers whose
+key changed are held. Unchanged peers get no call.
+
+```ts
+let held = new Map<string, string>();
+presence.subscribe("selectionsChange", (marks) => {
+  held = reconcilePeerMarks(marks, held, {
+    hold: (peer, key) => highlight.peers.select(peer.clientId, key),
+    release: (clientId) => highlight.peers.select(clientId, null)
+  });
+});
+```
+
 ## `peerBadges(key, marks): TreeBadge[]`
 
 The peers marking `key`, as [`jolly-tree` badges](../data/tree.md#row-content):

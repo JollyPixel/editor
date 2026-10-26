@@ -117,6 +117,9 @@ await mountStandalone(MyEditor, {
   keyboard rules.
 - [`PeerFrustums`](./docs/runtime/PeerFrustums.md): peer camera frustums as an actor
   component.
+- [Viewport presets](./docs/viewport/ViewportPresets.md): the shared gizmo
+  appearance and peer highlight colors, from
+  `@jolly-pixel/editor.host/viewport`.
 
 ## ✨ Contributors guide
 

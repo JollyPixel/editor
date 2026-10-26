@@ -1,9 +1,12 @@
 // Import Node.js Dependencies
-import { describe, test } from "node:test";
+import {
+  describe,
+  test
+} from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { switchFogKind } from "../../src/features/environment/sceneFog.ts";
+import { switchFogKind } from "#src/index.ts";
 
 describe("switchFogKind", () => {
   test("keeps the fog color when switching between linear and exponential fog", () => {

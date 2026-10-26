@@ -11,7 +11,7 @@ import {
   type ViewStore
 } from "../state/index.ts";
 import type { EditorCamera } from "./camera/EditorCamera.ts";
-import { SpawnPose } from "./camera/SpawnPose.ts";
+import { unionLayerBounds } from "./camera/layerBounds.ts";
 import type { MapGroupAction } from "../keybindings/mapActions.ts";
 
 export interface ViewShortcutsOptions {
@@ -39,7 +39,7 @@ export function viewShortcuts(
       layers.bounds(selection.current);
 
     camera.frame(
-      selected ?? SpawnPose.unionBounds(EditorMap.layers(world))
+      selected ?? unionLayerBounds(EditorMap.layers(world))
     );
   }
 

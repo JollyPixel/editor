@@ -24,6 +24,8 @@ class SceneDocument {
 
 - `tree` reads return copies, except `peekActor(id)` and `peekComponent(id)`, which return the stored entry for a read without a copy. Do not mutate it.
 - `tree.ancestorIds(id)` yields an actor's parent id, then that parent's, up to the root. It yields nothing for a root or an unknown id.
+- `tree.copySubtree(id)` returns the subtree with new actor and component ids, ready for `addSubtree`. The root is renamed `Name (1)`, or `Name (n + 1)` when it already ends with `(n)`. It returns `[]` for an unknown id.
+- `tree.topmostIds(ids)` keeps the listed actors that have no listed ancestor, in tree order. Unknown ids are dropped.
 
 ## Methods
 
@@ -89,7 +91,11 @@ Replaces the named fields of `background`, `environment` and `fog`.
 
 ## randomId(): string
 
-Returns a 12-character id from `[0-9A-Za-z]`, the form every actor and component id takes. A caller that copies actors for `addSubtree` gives each copy a new one.
+Returns a 12-character id from `[0-9A-Za-z]`, the form every actor and component id takes.
+
+## switchFogKind(fog, kind): SceneFogJSON
+
+Returns the default fog of `kind`, keeping the color when both kinds have one. Returns `fog` unchanged when it already has that kind.
 
 ## Tree rules
 

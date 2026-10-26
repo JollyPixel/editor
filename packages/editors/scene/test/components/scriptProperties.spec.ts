@@ -6,44 +6,46 @@ import assert from "node:assert/strict";
 import {
   convertProperty,
   freePropertyKey,
+  listText,
+  parseList,
   removeProperty,
   renameProperty,
   scriptProperties
 } from "../../src/components/scriptProperties.ts";
 
 describe("scriptProperties", () => {
-  test("types a stored value the way the engine converts it", () => {
+  test("shows a value no property type parses as a string", () => {
     const properties = scriptProperties({
-      speed: 2,
-      enabled: true,
-      title: "hello",
-      tint: "#ff8800",
       up: [0, 1, 0],
-      quaternion: [1, 2, 3, 4],
-      samples: [1, 2, 3, 4, 5]
+      mixed: [1, "a"]
     });
 
     assert.deepEqual(
       properties.map(({ key, type }) => [key, type]),
       [
-        ["speed", "number"],
-        ["enabled", "boolean"],
-        ["title", "string"],
-        ["tint", "color"],
-        ["up", "vector3"],
-        ["quaternion", "vector4"],
-        ["samples", "string"]
+        ["up", "Vector3"],
+        ["mixed", "string"]
       ]
     );
   });
 
   test("converts a value to another type, keeping what carries over", () => {
-    assert.deepEqual(convertProperty(5, "vector3"), [5, 0, 0]);
-    assert.deepEqual(convertProperty([1, 2, 3], "vector2"), [1, 2]);
+    assert.deepEqual(convertProperty(5, "Vector3"), [5, 0, 0]);
+    assert.deepEqual(convertProperty([1, 2, 3], "Vector2"), [1, 2]);
     assert.strictEqual(convertProperty([7, 8], "number"), 7);
     assert.strictEqual(convertProperty(true, "number"), 1);
     assert.strictEqual(convertProperty(0, "boolean"), false);
-    assert.strictEqual(convertProperty("blue", "color"), "#ffffff");
+    assert.strictEqual(convertProperty("blue", "Color"), "#ffffff");
+    assert.deepEqual(convertProperty([1, 2, 3], "number[]"), [1, 2, 3]);
+    assert.deepEqual(convertProperty("a, b", "string[]"), ["a", "b"]);
+    assert.deepEqual(convertProperty(true, "boolean[]"), [true]);
+  });
+
+  test("edits a list as comma-separated text", () => {
+    assert.strictEqual(listText(["a", "b"]), "a, b");
+    assert.deepEqual(parseList("1, x, 2.5,", "number[]"), [1, 2.5]);
+    assert.deepEqual(parseList(" a ,, b ", "string[]"), ["a", "b"]);
+    assert.deepEqual(parseList("true, no", "boolean[]"), [true, false]);
   });
 
   test("renames a key in place and refuses a key that already exists", () => {

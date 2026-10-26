@@ -79,6 +79,11 @@ Returns `true` if the underlying `THREE.Object3D` is visible.
 
 Sets the visibility of the object. Returns `this` for chaining.
 
+### `visibleInHierarchy: boolean`
+
+`false` when the object or one of its ancestors is hidden. The same walk over
+any `THREE.Object3D` is exported as `isVisibleInHierarchy(object)`.
+
 ## Local Space
 
 ### `getLocalPosition(position?): Vector3`

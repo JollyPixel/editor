@@ -14,7 +14,6 @@ import {
 import { rebaseTransform } from "../scene/sceneTransform.ts";
 import type { SelectionStore } from "../state/SelectionStore.ts";
 import type { SceneAssetSlots } from "./SceneEditing.ts";
-import { SubtreeCopy } from "./SubtreeCopy.ts";
 
 export interface ActorMove {
   id: string;
@@ -89,18 +88,19 @@ export class SceneActions {
   }
 
   duplicateSelection(): string[] {
-    const roots = this.#selectedRoots();
+    const { tree } = this.#document;
+    const roots = tree.topmostIds(this.#selection.ids);
     const copies = this.#history.record(
       SCENE_HISTORY_SCOPE,
       "Duplicate",
       () => roots.flatMap((id) => {
-        const copy = new SubtreeCopy(this.#document.tree.subtreeFrom(id));
+        const copy = tree.copySubtree(id);
         const added = this.#document.addSubtree(
-          copy.actors,
-          this.#document.tree.findNextSibling(id)
+          copy,
+          tree.findNextSibling(id)
         );
 
-        return added ? [copy.rootId] : [];
+        return added ? [copy[0].id] : [];
       })
     );
     if (copies.length > 0) {
@@ -111,7 +111,7 @@ export class SceneActions {
   }
 
   removeSelection(): void {
-    const roots = this.#selectedRoots();
+    const roots = this.#document.tree.topmostIds(this.#selection.ids);
     if (roots.length === 0) {
       return;
     }
@@ -149,15 +149,5 @@ export class SceneActions {
     }
 
     return assets;
-  }
-
-  #selectedRoots(): string[] {
-    const { tree } = this.#document;
-    const selected = new Set(
-      this.#selection.ids.filter((id) => tree.has(id))
-    );
-
-    return [...tree.actorIds()].filter((id) => selected.has(id) &&
-      ![...tree.ancestorIds(id)].some((ancestorId) => selected.has(ancestorId)));
   }
 }

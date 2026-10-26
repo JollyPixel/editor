@@ -14,9 +14,7 @@ import { Actor } from "../../../src/actor/Actor.ts";
 import { ActorComponent } from "../../../src/actor/ActorComponent.ts";
 import {
   ComponentDefinitions,
-  readSceneTransform,
   SceneBuilder,
-  writeSceneTransform,
   type ComponentContext,
   type ComponentDefinition,
   type JSONObject,
@@ -121,6 +119,41 @@ describe("Systems.SceneBuilder", () => {
     assert.strictEqual(build.actor("inner")!.parent, parent);
   });
 
+  test("builds one actor under the given parent, whatever its file parent", () => {
+    const { builder } = createBuilder("play");
+    const parent = builder.build([createActorFile("parent")]).actor("parent")!;
+
+    const build = builder.buildActor(
+      createActorFile("single", {
+        parentId: "elsewhere",
+        components: [createComponentFile("tag", "Tag", { label: "one" })]
+      }),
+      parent
+    );
+
+    assert.strictEqual(build.actor("single")!.parent, parent);
+    assert.strictEqual((build.component("tag") as TagComponent).label, "one");
+  });
+
+  test("writes the name, visibility and transform of a file to a built actor", () => {
+    const { builder } = createBuilder("edit");
+    const actor = builder.build([createActorFile("root")]).actor("root")!;
+
+    builder.writeActor(actor, {
+      name: "Renamed",
+      visible: false,
+      transform: {
+        position: { x: 4, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0 },
+        scale: { x: 1, y: 1, z: 1 }
+      }
+    });
+
+    assert.strictEqual(actor.object3D.name, "Renamed");
+    assert.strictEqual(actor.object3D.visible, false);
+    assert.deepEqual(actor.object3D.position.toArray(), [4, 0, 0]);
+  });
+
   test("skips an actor whose parent was not built, with its subtree", () => {
     const { builder, warnings } = createBuilder("play");
 
@@ -215,25 +248,5 @@ describe("Systems.SceneBuilder", () => {
       () => definitions.register(kTagDefinition),
       /Component type "Tag" is already registered/
     );
-  });
-});
-
-describe("Systems.readSceneTransform", () => {
-  test("reads back the transform written to an object, then its rotated pose, in degrees", () => {
-    const object = new THREE.Object3D();
-    writeSceneTransform(object, {
-      position: { x: 1, y: 2, z: 3 },
-      rotation: { x: 0, y: 30, z: 0 },
-      scale: { x: 2, y: 2, z: 2 }
-    });
-
-    const written = readSceneTransform(object);
-    object.quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
-    const rotated = readSceneTransform(object);
-
-    assert.deepEqual(written.position, { x: 1, y: 2, z: 3 });
-    assert.ok(Math.abs(written.rotation.y - 30) < 1e-9);
-    assert.deepEqual(written.scale, { x: 2, y: 2, z: 2 });
-    assert.ok(Math.abs(rotated.rotation.x - 90) < 1e-9);
   });
 });

@@ -191,6 +191,16 @@ file id to `Actor` (`build.actor(id)`) and to component
   mode only. So is a `null` from `create`, without a warning.
 - Transforms are written to `actor.object3D` directly.
 
+### buildActor(file, parent): SceneBuild
+
+Creates one actor of `file` and its components under `parent`, ignoring
+`file.parentId`. An editor uses it to add an actor to a built scene.
+
+### writeActor(actor, { name, visible, transform }): void
+
+Writes the name, visibility and transform of an actor file to a built actor.
+An editor uses it after a rename, a visibility toggle or a move.
+
 ### createComponent(actor, entry): Component | null
 
 Creates one component of `entry` on an existing actor, as `build` does for
@@ -202,11 +212,16 @@ editor uses it to rebuild a single component after an edit.
 Writes a `SceneTransformFile` (rotation in degrees) to a `THREE.Object3D`
 and updates its world matrix.
 
-### readSceneTransform(object): SceneTransformFile
+### readSceneTransform(pose): SceneTransformFile
 
-Reads the local position, rotation and scale of a `THREE.Object3D` back
-into a `SceneTransformFile`, rotation in degrees. It is the inverse of
-`writeSceneTransform`.
+Reads a `{ position, quaternion, scale }` pose, such as a `THREE.Object3D` or
+a decomposed matrix, into a `SceneTransformFile`, rotation in degrees. It is
+the inverse of `writeSceneTransform`.
+
+### composeSceneTransform(transform, target?): THREE.Matrix4
+
+Composes the local matrix `writeSceneTransform` would give an object, into
+`target` or a new matrix.
 
 ## SceneEnvironment
 

@@ -17,6 +17,7 @@ import {
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
 import {
+  describeRefusal,
   EMPTY_HISTORY_STATE,
   type HistoryScopeState,
   type HistoryStepInfo
@@ -27,7 +28,7 @@ import type { ShortcutLabels } from "@jolly-pixel/controls";
 import "./historyIcons.ts";
 import type { PresenceStore } from "../../state/index.ts";
 import type { HistoryAction } from "./historyShortcuts.ts";
-import { describeRefusal } from "./describeRefusal.ts";
+import { refusalWording } from "./refusalWording.ts";
 import type { ActiveHistory } from "./ActiveHistory.ts";
 import type { ModelAction } from "../../keybindings/modelActions.ts";
 
@@ -255,7 +256,7 @@ export class HistoryButtons extends LitElement {
           ${refused.map(({ label, refused: refusal }) => html`
             <li>
               ${label ?? "A step"}:
-              <span class="reason">${describeRefusal(refusal, peers)}</span>
+              <span class="reason">${describeRefusal(refusal, refusalWording(peers))}</span>
             </li>
           `)}
         </ul>

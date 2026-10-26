@@ -17,6 +17,7 @@ import {
   findNextId,
   slotIndex
 } from "./siblingSlots.ts";
+import { copySubtree } from "./subtreeCopy.ts";
 
 // CONSTANTS
 export const COMPONENT_DATA_MAX_LENGTH = 65_536;
@@ -33,6 +34,8 @@ export type SceneTreeReader = Pick<
   | "ancestorIds"
   | "findNextSibling"
   | "subtreeFrom"
+  | "copySubtree"
+  | "topmostIds"
   | "component"
   | "peekComponent"
   | "componentOwner"
@@ -114,6 +117,23 @@ export class SceneTree {
     id: string
   ): SceneActorJSON[] {
     return this.#actors.subtreeFrom(id).map((actor) => structuredClone(actor));
+  }
+
+  copySubtree(
+    id: string
+  ): SceneActorJSON[] {
+    return copySubtree(this.#actors.subtreeFrom(id));
+  }
+
+  topmostIds(
+    ids: Iterable<string>
+  ): string[] {
+    const wanted = new Set(ids);
+
+    return [...this.#actors.walk(null)]
+      .map((actor) => actor.id)
+      .filter((id) => wanted.has(id) &&
+        ![...this.#actors.ancestorIds(id)].some((parentId) => wanted.has(parentId)));
   }
 
   component(

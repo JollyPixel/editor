@@ -13,6 +13,7 @@ import {
 } from "@jolly-pixel/ui";
 import { PeerRoster } from "@jolly-pixel/ui/network";
 import { RoomGrants } from "@jolly-pixel/network/client";
+import { describeSkippedStep } from "@jolly-pixel/history";
 import {
   PeerFrustums,
   type AssetLeases,
@@ -28,7 +29,7 @@ import { EditorMap } from "../map/EditorMap.ts";
 import { historyShortcuts } from "../shared/historyShortcuts.ts";
 import {
   createMapHistory,
-  skippedMessage
+  MAP_REFUSAL_WORDING
 } from "../shared/mapHistory.ts";
 import { MapSteps } from "../shared/MapSteps.ts";
 import {
@@ -264,7 +265,7 @@ export class EditorScene extends Systems.Scene {
     });
     const mapHistory = createMapHistory(session.map.edits);
     mapHistory.on("skipped", (_scope, step) => {
-      state.log.push(skippedMessage(step));
+      state.log.push(describeSkippedStep(step, MAP_REFUSAL_WORDING));
     });
     const steps = new MapSteps(mapHistory, editContext);
     const placement = new MapPlacement({

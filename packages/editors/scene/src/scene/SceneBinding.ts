@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type * as THREE from "three";
+import * as THREE from "three";
 import {
   Systems,
   type Actor,
@@ -14,6 +14,9 @@ import type {
   SceneEnvironmentPatch
 } from "@jolly-pixel/asset.scene/client";
 import { Emitter } from "@openally/emitt";
+
+// CONSTANTS
+const kWorldPosition = new THREE.Vector3();
 
 export interface SceneEnvironmentTarget {
   apply(environment: SceneEnvironmentJSON): void;
@@ -33,6 +36,7 @@ export interface BoundComponent {
 }
 
 export type SceneBindingEvents = {
+  actorsChange: () => void;
   componentBuilt: (bound: BoundComponent) => void;
   componentDropped: (component: Component) => void;
 };
@@ -93,6 +97,21 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
 
   components(): IterableIterator<BoundComponent> {
     return this.#components.values();
+  }
+
+  worldBounds(
+    ids: Iterable<string>
+  ): THREE.Box3 {
+    const bounds = new THREE.Box3();
+    for (const id of ids) {
+      const object = this.#actors.get(id)?.object3D;
+      if (object !== undefined) {
+        bounds.expandByObject(object);
+        bounds.expandByPoint(object.getWorldPosition(kWorldPosition));
+      }
+    }
+
+    return bounds;
   }
 
   findActorId(
@@ -216,6 +235,7 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
         this.#buildActor(file);
       }
     }
+    this.emit("actorsChange");
   }
 
   #buildActor(
@@ -228,10 +248,7 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
       return;
     }
 
-    const build = this.#builder.build(
-      [{ ...file, parentId: null }],
-      parent
-    );
+    const build = this.#builder.buildActor(file, parent);
     const actor = build.actor(file.id);
     if (actor === null) {
       return;
@@ -282,6 +299,7 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
         this.#forgetComponent(id);
       }
     }
+    this.emit("actorsChange");
   }
 
   #reparent(
@@ -309,10 +327,7 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
       return;
     }
 
-    actor.name = file.name;
-    actor.object3D.name = file.name;
-    actor.object3D.visible = file.visible;
-    Systems.writeSceneTransform(actor.object3D, file.transform);
+    this.#builder.writeActor(actor, file);
   }
 
   #removeComponent(

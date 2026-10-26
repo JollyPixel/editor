@@ -165,6 +165,11 @@ interface ScriptData {
   its initializer. A key without a `@SceneProperty` field is ignored.
 - An unregistered name logs a warning and builds no behavior. Edit mode
   builds none either.
+- `SCENE_PROPERTY_TYPES` lists every `@SceneProperty` type.
+  `inferScenePropertyType(value)` picks one from a stored value, for an editor
+  that does not know the behavior: `[0, 1, 0]` is a `Vector3`, five numbers a
+  `number[]`, `"#ff0000"` a `Color`. It returns `null` when no type parses the
+  value.
 
 ## See also
 

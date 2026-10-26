@@ -9,14 +9,16 @@ import type {
 } from "@jolly-pixel/controls";
 import {
   CommandHistory,
-  type HistoryRefusal,
-  type HistoryStepInfo
+  type RefusalWording
 } from "@jolly-pixel/history";
 
 // CONSTANTS
 const kLimit = 50;
 
 export const TERRAIN_HISTORY_SCOPE = "terrain";
+export const TERRAIN_REFUSAL_WORDING: RefusalWording = {
+  changed: "the terrain under it changed since"
+};
 export const HISTORY_SHORTCUTS = {
   undo: ["Mod+z"],
   redo: ["Mod+y", "Mod+Shift+z"]
@@ -54,28 +56,4 @@ export function bindHistoryShortcuts(
       release();
     }
   };
-}
-
-export function skippedMessage(
-  step: HistoryStepInfo
-): string {
-  const label = step.label === null ? "a step" : `"${step.label}"`;
-
-  return `Skipped ${label}: ${describeRefusal(step.refused)}`;
-}
-
-function describeRefusal(
-  refusal: HistoryRefusal
-): string {
-  switch (refusal.reason) {
-    case "peer":
-      return refusal.clientId === null ? "it was changed since" : "a peer changed it since";
-    case "changed":
-      return "the terrain under it changed since";
-    case "server":
-      return "the server refused it";
-    case "closed":
-    case "gone":
-      return "it is gone";
-  }
 }

@@ -6,10 +6,12 @@ import {
   nothing,
   type TemplateResult
 } from "lit";
-import type {
-  SceneEnvironmentJSON,
-  SceneEnvironmentPatch,
-  SceneFogJSON
+import {
+  switchFogKind,
+  type SceneEnvironmentJSON,
+  type SceneEnvironmentPatch,
+  type SceneFogJSON,
+  type SceneFogKind
 } from "@jolly-pixel/asset.scene/client";
 import {
   SubscriptionController,
@@ -24,10 +26,6 @@ import "@jolly-pixel/ui/elements/select";
 
 // Import Internal Dependencies
 import type { SceneEditing } from "../../editing/SceneEditing.ts";
-import {
-  switchFogKind,
-  type SceneFogKind
-} from "./sceneFog.ts";
 
 type ChangeEvent<TValue> = CustomEvent<JollyChangeDetail<TValue>>;
 type EnvironmentMapKind = SceneEnvironmentJSON["environment"]["kind"];

@@ -1,8 +1,7 @@
 // Import Third-party Dependencies
 import {
   CommandHistory,
-  type HistoryRefusal,
-  type HistoryStepInfo
+  type RefusalWording
 } from "@jolly-pixel/history";
 import {
   voxelHistoryRegistration,
@@ -17,6 +16,9 @@ const kLimit = 10;
 
 export const MAP_HISTORY_SCOPE = "map";
 export const TEMPLATE_HISTORY_SCOPE = "template";
+export const MAP_REFUSAL_WORDING: RefusalWording = {
+  changed: "its voxels moved or changed since"
+};
 
 export type MapHistoryScope =
   | typeof MAP_HISTORY_SCOPE
@@ -40,28 +42,4 @@ export function createMapHistory(
   });
 
   return history;
-}
-
-export function skippedMessage(
-  step: HistoryStepInfo
-): string {
-  const label = step.label === null ? "a step" : `"${step.label}"`;
-
-  return `Skipped ${label}: ${describeHistoryChange(step.refused)}`;
-}
-
-function describeHistoryChange(
-  refusal: HistoryRefusal
-): string {
-  switch (refusal.reason) {
-    case "peer":
-      return refusal.clientId === null ? "it was changed since" : "a peer changed it since";
-    case "changed":
-      return "its voxels moved or changed since";
-    case "server":
-      return "the server refused it";
-    case "closed":
-    case "gone":
-      return "it is gone";
-  }
 }

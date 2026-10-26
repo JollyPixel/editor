@@ -1,6 +1,3 @@
-// Import Third-party Dependencies
-import * as THREE from "three/webgpu";
-
 // Import Internal Dependencies
 import { Actor } from "../../../actor/Actor.ts";
 import type { Component } from "../../../components/types.ts";
@@ -15,9 +12,9 @@ import type { ComponentDefinitions } from "./ComponentDefinitions.ts";
 import { SceneBuild } from "./SceneBuild.ts";
 import type {
   SceneActorFile,
-  SceneComponentFile,
-  SceneTransformFile
+  SceneComponentFile
 } from "./SceneFile.ts";
+import { writeSceneTransform } from "./sceneTransform.ts";
 
 export interface SceneBuilderOptions<
   TContext = WorldDefaultContext
@@ -73,23 +70,30 @@ export class SceneBuilder<
         continue;
       }
 
-      const actor = new Actor<TContext>(this.#world, {
-        name: file.name,
-        parent: actorParent,
-        visible: file.visible
-      });
-      writeSceneTransform(actor.object3D, file.transform);
-      builtActors.set(file.id, actor);
-
-      for (const entry of file.components) {
-        const component = this.createComponent(actor, entry);
-        if (component !== null) {
-          builtComponents.set(entry.id, component);
-        }
-      }
+      this.#buildActor(file, actorParent, builtActors, builtComponents);
     }
 
     return new SceneBuild(builtActors, builtComponents);
+  }
+
+  buildActor(
+    file: SceneActorFile,
+    parent: Actor<TContext> | null
+  ): SceneBuild<TContext> {
+    const builtActors = new Map<string, Actor<TContext>>();
+    const builtComponents = new Map<string, Component>();
+    this.#buildActor(file, parent, builtActors, builtComponents);
+
+    return new SceneBuild(builtActors, builtComponents);
+  }
+
+  writeActor(
+    actor: Actor<TContext>,
+    file: Pick<SceneActorFile, "name" | "visible" | "transform">
+  ): void {
+    actor.name = file.name;
+    actor.object3D.visible = file.visible;
+    writeSceneTransform(actor.object3D, file.transform);
   }
 
   createComponent(
@@ -121,44 +125,26 @@ export class SceneBuilder<
       }
     );
   }
-}
 
-export function writeSceneTransform(
-  object: THREE.Object3D,
-  transform: SceneTransformFile
-): void {
-  const { position, rotation, scale } = transform;
+  #buildActor(
+    file: SceneActorFile,
+    parent: Actor<TContext> | null,
+    builtActors: Map<string, Actor<TContext>>,
+    builtComponents: Map<string, Component>
+  ): void {
+    const actor = new Actor<TContext>(this.#world, {
+      name: file.name,
+      parent,
+      visible: file.visible
+    });
+    writeSceneTransform(actor.object3D, file.transform);
+    builtActors.set(file.id, actor);
 
-  object.position.set(position.x, position.y, position.z);
-  object.rotation.set(
-    THREE.MathUtils.degToRad(rotation.x),
-    THREE.MathUtils.degToRad(rotation.y),
-    THREE.MathUtils.degToRad(rotation.z)
-  );
-  object.scale.set(scale.x, scale.y, scale.z);
-  object.updateMatrixWorld(false);
-}
-
-export function readSceneTransform(
-  object: THREE.Object3D
-): SceneTransformFile {
-  const { position, rotation, scale } = object;
-
-  return {
-    position: {
-      x: position.x,
-      y: position.y,
-      z: position.z
-    },
-    rotation: {
-      x: THREE.MathUtils.radToDeg(rotation.x),
-      y: THREE.MathUtils.radToDeg(rotation.y),
-      z: THREE.MathUtils.radToDeg(rotation.z)
-    },
-    scale: {
-      x: scale.x,
-      y: scale.y,
-      z: scale.z
+    for (const entry of file.components) {
+      const component = this.createComponent(actor, entry);
+      if (component !== null) {
+        builtComponents.set(entry.id, component);
+      }
     }
-  };
+  }
 }

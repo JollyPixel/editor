@@ -16,50 +16,64 @@ import {
   meshForm,
   scriptForm,
   voxelMapForm,
-  type ComponentForm
+  type ComponentForm,
+  type FormRow,
+  type ParsedData
 } from "./componentForms.ts";
+
+export interface ParsedForm {
+  data: ParsedData;
+  rows: FormRow[];
+}
 
 export interface SceneComponentKind {
   definition: Systems.AnyComponentDefinition;
   label: string;
   icon: string;
-  form: ComponentForm;
+  form: (stored: Readonly<Systems.JSONObject>) => ParsedForm;
+}
+
+interface TypedComponentKind<TData extends object> {
+  definition: Systems.ComponentDefinition<TData, any, any>;
+  label: string;
+  icon: string;
+  form: ComponentForm<TData>;
 }
 
 // CONSTANTS
 export const EMPTY_ACTOR_ICON = "actor-empty";
 
 export const SCENE_COMPONENTS: readonly SceneComponentKind[] = [
-  {
+  componentKind({
     definition: new CameraDefinition(),
     label: "Camera",
     icon: "actor-camera",
     form: cameraForm
-  },
-  {
+  }),
+  componentKind({
     definition: new LightDefinition(),
     label: "Light",
     icon: "actor-light",
     form: lightForm
-  },
-  {
+  }),
+  componentKind({
     definition: new MeshDefinition(),
     label: "Mesh",
     icon: "actor-mesh",
     form: meshForm
-  },
-  {
+  }),
+  componentKind({
     definition: new ScriptDefinition({}),
     label: "Script",
     icon: EMPTY_ACTOR_ICON,
     form: scriptForm
-  },
-  {
+  }),
+  componentKind({
     definition: new VoxelMapDefinition(),
     label: "Voxel map",
     icon: "actor-voxel-map",
     form: voxelMapForm
-  }
+  })
 ];
 
 export function createSceneDefinitions(): Systems.ComponentDefinitions {
@@ -103,4 +117,22 @@ export function picksAssets(
   type: string
 ): boolean {
   return Object.keys(componentAssetSlots(type)).length > 0;
+}
+
+function componentKind<TData extends object>(
+  kind: TypedComponentKind<TData>
+): SceneComponentKind {
+  const { definition, form } = kind;
+
+  return {
+    ...kind,
+    form: (stored) => {
+      const data = definition.parse(stored);
+
+      return {
+        data,
+        rows: form(data)
+      };
+    }
+  };
 }

@@ -30,15 +30,14 @@ export class ComponentInspection {
     entry: SceneComponentJSON,
     kind: SceneComponentKind
   ) {
-    const { definition, form } = kind;
-    const parsed: ParsedData = definition.parse(entry.data);
-    const defaults: ParsedData = definition.parse(defaultsSource(parsed));
+    const { data, rows } = kind.form(entry.data);
+    const defaults: ParsedData = kind.definition.parse(defaultsSource(data));
 
     this.#stored = entry.data;
-    this.rows = form(parsed).map((row) => {
+    this.rows = rows.map((row) => {
       return {
         row,
-        value: readField(parsed, row.path),
+        value: readField(data, row.path),
         fallback: readField(defaults, row.path)
       };
     });

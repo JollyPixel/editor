@@ -128,3 +128,15 @@ Flags, labels and counts leave refused steps out. `refused` lists the refused st
 ```ts
 import { EMPTY_HISTORY_STATE } from "@jolly-pixel/history";
 ```
+
+## Refusal messages
+
+`describeRefusal(refusal, wording?)` returns a short reason such as `"a peer changed it since"`. `describeSkippedStep(step, wording?)` prefixes it with the step: `Skipped "Paint": the server refused it`.
+
+```ts
+interface RefusalWording {
+  changed?: string; // "it was changed since"
+  closed?: string; // "it is gone"
+  peerName?: (clientId: string) => string | undefined; // "a peer" when undefined
+}
+```
