@@ -4,16 +4,16 @@ import {
   randomId,
   type SceneDocument
 } from "@jolly-pixel/asset.scene/client";
-import type { Systems } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
+import { componentAssetSlots } from "../components/sceneComponents.ts";
 import type { ActorPreset } from "../features/hierarchy/model/actorPresets.ts";
 import { duplicateSubtree } from "../features/hierarchy/model/duplicateSubtree.ts";
-import { rebaseTransform } from "../features/hierarchy/model/rebaseTransform.ts";
 import {
   SCENE_HISTORY_SCOPE,
   type SceneHistory
 } from "../features/history/sceneHistory.ts";
+import { rebaseTransform } from "../scene/sceneTransform.ts";
 import type { SelectionStore } from "../state/SelectionStore.ts";
 import type { SceneAssetSlots } from "./SceneEditing.ts";
 
@@ -29,7 +29,6 @@ export interface SceneActionsOptions {
   document: SceneDocument;
   history: Pick<SceneHistory, "record">;
   selection: SelectionStore;
-  definitions: Systems.ComponentDefinitions;
   assetSlots: Pick<SceneAssetSlots, "name" | "pick">;
 }
 
@@ -37,7 +36,6 @@ export class SceneActions {
   #document: SceneDocument;
   #history: Pick<SceneHistory, "record">;
   #selection: SelectionStore;
-  #definitions: Systems.ComponentDefinitions;
   #assetSlots: Pick<SceneAssetSlots, "name" | "pick">;
 
   constructor(
@@ -46,7 +44,6 @@ export class SceneActions {
     this.#document = options.document;
     this.#history = options.history;
     this.#selection = options.selection;
-    this.#definitions = options.definitions;
     this.#assetSlots = options.assetSlots;
   }
 
@@ -133,7 +130,6 @@ export class SceneActions {
         this.#document.remove(id);
       }
     });
-    this.#selection.retain((id) => this.#document.tree.has(id));
   }
 
   move(
@@ -152,9 +148,8 @@ export class SceneActions {
   async #pickAssets(
     type: string
   ): Promise<PickedAssets | null> {
-    const slots = this.#definitions.find(type)?.assets ?? {};
     const assets: PickedAssets = {};
-    for (const [slot, assetType] of Object.entries(slots)) {
+    for (const [slot, assetType] of Object.entries(componentAssetSlots(type))) {
       const picked = await this.#assetSlots.pick(assetType, null);
       if (picked === null) {
         return null;

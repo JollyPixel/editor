@@ -1,5 +1,13 @@
 // Import Third-party Dependencies
-import type { Systems } from "@jolly-pixel/engine";
+import type { AssetType } from "@jolly-pixel/asset";
+import {
+  CameraDefinition,
+  LightDefinition,
+  MeshDefinition,
+  ScriptDefinition,
+  Systems
+} from "@jolly-pixel/engine";
+import { VoxelMapDefinition } from "@jolly-pixel/voxel.renderer/engine";
 
 // Import Internal Dependencies
 import {
@@ -12,7 +20,7 @@ import {
 } from "./componentForms.ts";
 
 export interface SceneComponentKind {
-  type: string;
+  definition: Systems.AnyComponentDefinition;
   label: string;
   icon: string;
   form: ComponentForm;
@@ -23,41 +31,47 @@ export const EMPTY_ACTOR_ICON = "actor-empty";
 
 export const SCENE_COMPONENTS: readonly SceneComponentKind[] = [
   {
-    type: "Camera",
+    definition: new CameraDefinition(),
     label: "Camera",
     icon: "actor-camera",
     form: cameraForm
   },
   {
-    type: "Light",
+    definition: new LightDefinition(),
     label: "Light",
     icon: "actor-light",
     form: lightForm
   },
   {
-    type: "Mesh",
+    definition: new MeshDefinition(),
     label: "Mesh",
     icon: "actor-mesh",
     form: meshForm
   },
   {
-    type: "Script",
+    definition: new ScriptDefinition({}),
     label: "Script",
     icon: EMPTY_ACTOR_ICON,
     form: scriptForm
   },
   {
-    type: "VoxelMap",
+    definition: new VoxelMapDefinition(),
     label: "Voxel map",
     icon: "actor-voxel-map",
     form: voxelMapForm
   }
 ];
 
+export function createSceneDefinitions(): Systems.ComponentDefinitions {
+  return new Systems.ComponentDefinitions().register(
+    ...SCENE_COMPONENTS.map((kind) => kind.definition)
+  );
+}
+
 export function sceneComponent(
   type: string
 ): SceneComponentKind | undefined {
-  return SCENE_COMPONENTS.find((kind) => kind.type === type);
+  return SCENE_COMPONENTS.find((kind) => kind.definition.type === type);
 }
 
 export function componentIcon(
@@ -66,9 +80,14 @@ export function componentIcon(
   return sceneComponent(type)?.icon ?? EMPTY_ACTOR_ICON;
 }
 
+export function componentAssetSlots(
+  type: string
+): Readonly<Record<string, AssetType<unknown>>> {
+  return sceneComponent(type)?.definition.assets ?? {};
+}
+
 export function picksAssets(
-  definitions: Systems.ComponentDefinitions,
   type: string
 ): boolean {
-  return Object.keys(definitions.find(type)?.assets ?? {}).length > 0;
+  return Object.keys(componentAssetSlots(type)).length > 0;
 }

@@ -178,7 +178,7 @@ export class HierarchyController {
     }
     if (id === null) {
       return MenuSession.from(
-        addEntries(editing.definitions),
+        addEntries(),
         (action) => this.#add(action, null)
       );
     }
@@ -187,7 +187,7 @@ export class HierarchyController {
     }
 
     return MenuSession.forRow(
-      rowEntries(editing.definitions),
+      rowEntries(),
       () => editing.document.tree.has(id),
       (action) => this.#runRow(action, id)
     );

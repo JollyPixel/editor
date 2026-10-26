@@ -32,6 +32,7 @@ export const DEFAULT_PROJECT_FILE: ProjectFileData = {
   version: 1,
   editors: [
     "@jolly-pixel/editor.pixel-art",
+    "@jolly-pixel/editor.scene",
     "@jolly-pixel/editor.voxel-map",
     "@jolly-pixel/editor.voxel-model"
   ],
@@ -40,6 +41,7 @@ export const DEFAULT_PROJECT_FILE: ProjectFileData = {
       defaultSize: TEXTURE_SIZE,
       snapshot: kSnapshot
     },
+    "@jolly-pixel/asset.scene": {},
     "@jolly-pixel/asset.voxel-map": {
       blockset: {
         tileSize: 32,

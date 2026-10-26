@@ -14,9 +14,10 @@ The `SceneDocument` of the target lease is the only state that is saved. Everyth
 
 - `SceneActions` holds the edits that span several commands (duplicate, delete, reparent) and records each as one history step.
 - Adding a preset actor or a component asks for an asset for every slot its definition declares, so a `VoxelMap` needs no code of its own. A cancelled pick adds nothing, and a new actor takes the name of the first asset picked.
-- `components/sceneComponents.ts` lists each component type with its label, icon and inspector form. The hierarchy icons, the add menus and the inspector all read it.
+- `components/sceneComponents.ts` lists each component type with its engine definition, label, icon and inspector form, and builds the `ComponentDefinitions` the binding uses. The hierarchy icons, the add menus, the asset picks and the inspector all read it.
+- `SelectionStore` follows the document: an actor that a command or a reset removes leaves the selection.
 - Reparenting rewrites the moved actor's transform from the file data, so it keeps its world pose whatever the binding has drawn.
-- The inspector forms are row descriptors in `components/componentForms.ts`, `Script` included. A row edit becomes a `component-changed` patch of one top-level field; a nested field rewrites its whole object, as the room requires.
+- The inspector forms are row descriptors in `components/componentForms.ts`, `Script` included. A row edit becomes a `component-changed` patch of one top-level field, unset when set back to its default. A nested field rewrites its whole object, as the room requires.
 
 ## Collaboration
 

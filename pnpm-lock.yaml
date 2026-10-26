@@ -1174,6 +1174,9 @@ importers:
       '@jolly-pixel/asset.pixel-art':
         specifier: workspace:*
         version: link:../assets/pixel-art
+      '@jolly-pixel/asset.scene':
+        specifier: workspace:*
+        version: link:../assets/scene
       '@jolly-pixel/asset.voxel-animation':
         specifier: workspace:*
         version: link:../assets/voxel-animation
@@ -1192,6 +1195,9 @@ importers:
       '@jolly-pixel/editor.pixel-art':
         specifier: workspace:*
         version: link:../editors/pixel-art
+      '@jolly-pixel/editor.scene':
+        specifier: workspace:*
+        version: link:../editors/scene
       '@jolly-pixel/editor.voxel-map':
         specifier: workspace:*
         version: link:../editors/voxel-map

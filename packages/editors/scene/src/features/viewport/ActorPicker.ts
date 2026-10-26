@@ -68,9 +68,7 @@ export class ActorPicker extends ActorComponent {
       selection.select(id === null ? [] : [id]);
     }
     else if (id !== null) {
-      selection.select(selection.has(id) ?
-        selection.ids.filter((selected) => selected !== id) :
-        [id, ...selection.ids]);
+      selection.toggle(id);
     }
   }
 

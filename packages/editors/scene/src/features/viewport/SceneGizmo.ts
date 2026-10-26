@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import * as THREE from "three";
+import type * as THREE from "three";
 import type { OrbitFlyCamera } from "@jolly-pixel/engine";
 import type {
   SceneChange,
@@ -13,8 +13,8 @@ import {
 } from "@jolly-pixel/three";
 
 // Import Internal Dependencies
-import { decompose } from "../hierarchy/model/rebaseTransform.ts";
 import type { SceneBinding } from "../../scene/SceneBinding.ts";
+import { decomposePose } from "../../scene/sceneTransform.ts";
 import type { SelectionStore } from "../../state/SelectionStore.ts";
 import type {
   GizmoMode,
@@ -102,9 +102,7 @@ export class SceneGizmo {
     }
 
     const field = kPatchFields[event.mode];
-    const transform = decompose(
-      new THREE.Matrix4().compose(event.position, event.quaternion, event.scale)
-    );
+    const transform = decomposePose(event);
     const committed = this.#options.document.transform(id, {
       [field]: transform[field]
     });

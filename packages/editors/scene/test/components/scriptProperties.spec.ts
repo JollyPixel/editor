@@ -6,20 +6,35 @@ import assert from "node:assert/strict";
 import {
   convertProperty,
   freePropertyKey,
-  propertyType,
   removeProperty,
-  renameProperty
+  renameProperty,
+  scriptProperties
 } from "../../src/components/scriptProperties.ts";
 
 describe("scriptProperties", () => {
   test("types a stored value the way the engine converts it", () => {
-    assert.strictEqual(propertyType(2), "number");
-    assert.strictEqual(propertyType(true), "boolean");
-    assert.strictEqual(propertyType("hello"), "string");
-    assert.strictEqual(propertyType("#ff8800"), "color");
-    assert.strictEqual(propertyType([0, 1, 0]), "vector3");
-    assert.strictEqual(propertyType([1, 2, 3, 4]), "vector4");
-    assert.strictEqual(propertyType([1, 2, 3, 4, 5]), "string");
+    const properties = scriptProperties({
+      speed: 2,
+      enabled: true,
+      title: "hello",
+      tint: "#ff8800",
+      up: [0, 1, 0],
+      quaternion: [1, 2, 3, 4],
+      samples: [1, 2, 3, 4, 5]
+    });
+
+    assert.deepEqual(
+      properties.map(({ key, type }) => [key, type]),
+      [
+        ["speed", "number"],
+        ["enabled", "boolean"],
+        ["title", "string"],
+        ["tint", "color"],
+        ["up", "vector3"],
+        ["quaternion", "vector4"],
+        ["samples", "string"]
+      ]
+    );
   });
 
   test("converts a value to another type, keeping what carries over", () => {

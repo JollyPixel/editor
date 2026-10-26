@@ -82,7 +82,7 @@ function isChoice<T extends string>(
 }
 
 export function isJSONObject(
-  value: JSONValue | undefined
+  value: unknown
 ): value is JSONObject {
   return typeof value === "object" &&
     value !== null &&

@@ -202,6 +202,12 @@ editor uses it to rebuild a single component after an edit.
 Writes a `SceneTransformFile` (rotation in degrees) to a `THREE.Object3D`
 and updates its world matrix.
 
+### readSceneTransform(object): SceneTransformFile
+
+Reads the local position, rotation and scale of a `THREE.Object3D` back
+into a `SceneTransformFile`, rotation in degrees. It is the inverse of
+`writeSceneTransform`.
+
 ## SceneEnvironment
 
 `new SceneEnvironment(world)` writes a `SceneEnvironmentFile` to the world's

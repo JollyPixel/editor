@@ -10,6 +10,7 @@ import type {
   JSONValue,
   SceneComponentJSON
 } from "@jolly-pixel/asset.scene/client";
+import { Systems } from "@jolly-pixel/engine";
 import type {
   JollyChangeDetail,
   JollyOption
@@ -28,15 +29,13 @@ import "@jolly-pixel/ui/elements/vector4";
 
 // Import Internal Dependencies
 import {
-  defaultsSource,
-  fieldChange,
-  fieldReset,
-  isJSONObject,
-  readField,
-  type FormRow,
-  type ParsedData
-} from "../../components/componentForms.ts";
-import { sceneComponent } from "../../components/sceneComponents.ts";
+  ComponentInspection,
+  type InspectedRow
+} from "../../components/ComponentInspection.ts";
+import {
+  componentAssetSlots,
+  sceneComponent
+} from "../../components/sceneComponents.ts";
 import {
   SCRIPT_PROPERTY_TYPES,
   convertProperty,
@@ -51,7 +50,7 @@ import type { SceneEditing } from "../../editing/SceneEditing.ts";
 
 export type ComponentBodyContext = Pick<
   SceneEditing,
-  "document" | "definitions" | "assetSlots"
+  "document" | "assetSlots"
 >;
 
 type ChangeEvent<TValue> = CustomEvent<JollyChangeDetail<TValue>>;
@@ -71,20 +70,24 @@ export function renderComponentBody(
   entry: SceneComponentJSON,
   context: ComponentBodyContext
 ): TemplateResult {
-  const definition = context.definitions.find(entry.type);
-  if (definition === null) {
+  const kind = sceneComponent(entry.type);
+  if (kind === undefined) {
     return html`
       <pre class="unknown">${JSON.stringify(entry.data, null, 2)}</pre>
     `;
   }
 
-  const parsed: ParsedData = definition.parse(entry.data);
-  const defaults: ParsedData = definition.parse(defaultsSource(parsed));
-  const rows = sceneComponent(entry.type)?.form(parsed) ?? [];
+  const inspection = new ComponentInspection(entry, kind);
 
   return html`
-    ${renderAssetSlots(entry, definition.assets ?? {}, context)}
-    ${rows.map((row) => renderRow(entry, row, parsed, defaults, context))}
+    ${renderAssetSlots(entry, componentAssetSlots(entry.type), context)}
+    ${inspection.rows.map((inspected) => renderRow(
+      inspected,
+      (next) => context.document.changeComponent(
+        entry.id,
+        inspection.edit(inspected, next)
+      )
+    ))}
   `;
 }
 
@@ -101,22 +104,10 @@ export function axisValues(
 }
 
 function renderRow(
-  entry: SceneComponentJSON,
-  row: FormRow,
-  parsed: ParsedData,
-  defaults: ParsedData,
-  context: ComponentBodyContext
+  inspected: InspectedRow,
+  commit: (next: JSONValue) => void
 ): TemplateResult {
-  const value = readField(parsed, row.path);
-  const fallback = readField(defaults, row.path);
-  function commit(next: JSONValue): void {
-    if (next === fallback && row.path.length === 1) {
-      context.document.changeComponent(entry.id, fieldReset(entry.data, row.path));
-
-      return;
-    }
-    context.document.changeComponent(entry.id, fieldChange(entry.data, row, next));
-  }
+  const { row, value, fallback } = inspected;
 
   switch (row.control) {
     case "number":
@@ -168,7 +159,7 @@ function renderRow(
     case "properties":
       return renderProperties(
         row.label,
-        isJSONObject(value) ? value : {},
+        Systems.isJSONObject(value) ? value : {},
         commit
       );
   }

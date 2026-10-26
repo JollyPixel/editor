@@ -180,11 +180,18 @@ describe("StudioProject", () => {
       );
       assert.deepEqual(
         project.editors.descriptors().map((editor) => editor.name),
-        ["pixel-art", "voxel-map", "voxel-model"]
+        ["pixel-art", "scene", "voxel-map", "voxel-model"]
       );
       assert.deepEqual(
         project.kinds.descriptors().map((descriptor) => descriptor.kind),
-        ["pixelart", "blockset", "voxelmap", "voxelmodel", "voxelanimation"]
+        [
+          "pixelart",
+          "scene",
+          "blockset",
+          "voxelmap",
+          "voxelmodel",
+          "voxelanimation"
+        ]
       );
     });
 
