@@ -3,6 +3,7 @@ export * from "./camera/CameraDefinition.ts";
 export * from "./camera/Camera3DControls.ts";
 export * from "./camera/orbit-fly/OrbitFlyCamera.ts";
 export * from "./camera/orbit-fly/OrbitFlyKeys.ts";
+export * from "./camera/orbit-fly/cameraFraming.ts";
 export * from "./renderers/index.ts";
 export * from "./light/LightComponent.ts";
 export * from "./light/LightDefinition.ts";
@@ -13,8 +14,13 @@ export {
   SceneProperty,
   SceneActorComponent,
   InputListener,
-  type ScenePropertyOptions
+  type ScenePropertyOptions,
+  type ScenePropertyType
 } from "./script/BehaviorDecorators.ts";
+export {
+  SCENE_PROPERTY_TYPES,
+  inferScenePropertyType
+} from "./script/ScenePropertyValue.ts";
 
 export type {
   Component,

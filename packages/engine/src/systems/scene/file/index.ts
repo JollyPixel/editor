@@ -6,5 +6,6 @@ export * from "./ComponentDefinitions.ts";
 export * from "./CoordinatorAssetResolver.ts";
 export * from "./SceneBuild.ts";
 export * from "./SceneBuilder.ts";
+export * from "./sceneTransform.ts";
 export * from "./SceneEnvironment.ts";
 export * from "./FileScene.ts";

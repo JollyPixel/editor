@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
 
+// Import Internal Dependencies
+import { isVisibleInHierarchy } from "../utils/isVisibleInHierarchy.ts";
+
 // CONSTANTS
 const kMatrix = new THREE.Matrix4();
 const kTarget = new THREE.Vector3();
@@ -42,6 +45,10 @@ export class Transform {
     this.#object3D.visible = visible;
 
     return this;
+  }
+
+  get visibleInHierarchy(): boolean {
+    return isVisibleInHierarchy(this.#object3D);
   }
 
   getGlobalMatrix(

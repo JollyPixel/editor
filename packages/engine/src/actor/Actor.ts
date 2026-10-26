@@ -44,7 +44,6 @@ export class Actor<
 
   id = Actor.Id.incr();
   persistentId = Actor.PersistentId.next();
-  name: string;
   parent: Actor<TContext> | null = null;
 
   components: Component[] = [];
@@ -76,7 +75,6 @@ export class Actor<
     this.parent = parent;
 
     this.object3D.visible = visible;
-    this.object3D.name = this.name;
     this.object3D.userData.isActor = true;
 
     if (layer) {
@@ -99,6 +97,16 @@ export class Actor<
     }
 
     this.world.sceneManager.registerActor(this);
+  }
+
+  get name(): string {
+    return this.object3D.name;
+  }
+
+  set name(
+    name: string
+  ) {
+    this.object3D.name = name;
   }
 
   addComponent<T extends ComponentConstructor>(

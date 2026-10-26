@@ -189,4 +189,16 @@ describe("Actor", () => {
     assert.strictEqual(world.sceneManager.tree.add.mock.calls.length, 1);
     assert.strictEqual(world.sceneManager.tree.add.mock.calls[0].arguments[0], actor);
   });
+
+  test("should rename its object with it", () => {
+    const actor = new Actor(
+      createWorld() as any,
+      { name: "foobar" }
+    );
+
+    actor.name = "renamed";
+
+    assert.strictEqual(actor.object3D.name, "renamed");
+    assert.strictEqual(actor.name, "renamed");
+  });
 });

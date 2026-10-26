@@ -22,13 +22,13 @@ import { Preferences } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import { EditorCamera } from "../../../src/scene/camera/EditorCamera.ts";
-import type { SpawnLayer } from "../../../src/scene/camera/SpawnPose.ts";
+import type { BoundedLayer } from "../../../src/scene/camera/layerBounds.ts";
 import { PointerCapture } from "../../../src/state/PointerCapture.ts";
 
 function createLayer(
   min: THREE.Vector3Like,
   max: THREE.Vector3Like
-): SpawnLayer {
+): BoundedLayer {
   return {
     visible: true,
     worldBounds: () => new THREE.Box3(
@@ -45,6 +45,7 @@ function setup(
   const pointer = new PointerCapture();
   const log = new LogQueue();
   const poses: CameraPose[] = [];
+  const framed: THREE.Vector3[] = [];
   const pivots: THREE.Vector3Like[] = [];
   const controls = {
     camera: new THREE.PerspectiveCamera(60, 1, 0.1, 1000),
@@ -52,6 +53,10 @@ function setup(
     isOrbiting: false,
     postProcessing: null as Systems.PostProcessing | null,
     teleport: (pose: CameraPose) => poses.push(pose),
+    frame: (bounds: THREE.Box3) => {
+      controls.exitOrbitFocus();
+      framed.push(bounds.getCenter(new THREE.Vector3()));
+    },
     enterOrbitFocus: (point: THREE.Vector3Like) => {
       pivots.push(point);
       controls.isOrbiting = true;
@@ -98,6 +103,7 @@ function setup(
     messages,
     pivots,
     poses,
+    framed,
     pressEscape
   };
 }
@@ -144,7 +150,7 @@ describe("EditorCamera", () => {
   });
 
   test("frames the layers once per spawn request", () => {
-    const { camera, poses } = setup();
+    const { camera, framed } = setup();
     const near = [createLayer({ x: 0, y: 0, z: 0 }, { x: 4, y: 4, z: 4 })];
     const far = [createLayer({ x: 20, y: 0, z: 0 }, { x: 24, y: 4, z: 4 })];
 
@@ -154,7 +160,7 @@ describe("EditorCamera", () => {
     camera.spawn(far);
 
     assert.deepEqual(
-      poses.slice(1).map((pose) => new THREE.Vector3().copy(pose.position).x),
+      framed.slice(1).map((center) => center.x),
       [2, 22]
     );
   });

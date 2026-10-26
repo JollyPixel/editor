@@ -7,9 +7,9 @@ import { SceneDocument } from "@jolly-pixel/asset.scene/client";
 import type { PresencePeer } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { actorTreeNodes } from "../../src/features/hierarchy/actorTreeNodes.ts";
+import { ActorTreeRows } from "../../src/features/hierarchy/ActorTreeRows.ts";
 
-describe("actorTreeNodes", () => {
+describe("ActorTreeRows", () => {
   test("nests children, picks the icon of the first known component and badges peer selections", () => {
     const document = new SceneDocument();
     const rootId = document.addActor({ name: "Rig", visible: false })!;
@@ -23,7 +23,10 @@ describe("actorTreeNodes", () => {
     })!;
     const peer = { clientId: "p", displayName: "Peer", color: "#ff0000" } as PresencePeer;
 
-    const [root] = actorTreeNodes(document.tree, new Map([[childId, [peer]]]));
+    const [root] = ActorTreeRows.read(
+      document.tree,
+      new Map([[childId, [peer]]])
+    ).roots;
 
     assert.strictEqual(root.icon, "actor-empty");
     assert.strictEqual(root.visible, false);

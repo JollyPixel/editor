@@ -3,39 +3,23 @@ import type {
   JSONObject,
   JSONValue
 } from "@jolly-pixel/asset.scene/client";
+import {
+  inferScenePropertyType,
+  Systems,
+  type ScenePropertyType
+} from "@jolly-pixel/engine";
 
-export type ScriptPropertyType =
-  | "number"
-  | "string"
-  | "boolean"
-  | "vector2"
-  | "vector3"
-  | "vector4"
-  | "color";
+export type ScriptListType = Extract<ScenePropertyType, `${string}[]`>;
 
 export interface ScriptProperty {
   key: string;
-  type: ScriptPropertyType;
+  type: ScenePropertyType;
   value: JSONValue;
 }
 
 // CONSTANTS
-export const SCRIPT_PROPERTY_TYPES: readonly ScriptPropertyType[] = [
-  "number",
-  "string",
-  "boolean",
-  "vector2",
-  "vector3",
-  "vector4",
-  "color"
-];
-const kVectorLengths: Readonly<Record<string, ScriptPropertyType>> = {
-  2: "vector2",
-  3: "vector3",
-  4: "vector4"
-};
-const kHexColor = /^#[0-9a-f]{6}$/i;
 const kDefaultColor = "#ffffff";
+const kListSeparator = ",";
 
 export function scriptProperties(
   properties: Readonly<JSONObject>
@@ -43,34 +27,15 @@ export function scriptProperties(
   return Object.entries(properties).map(([key, value]) => {
     return {
       key,
-      type: propertyType(value),
+      type: inferScenePropertyType(value) ?? "string",
       value
     };
   });
 }
 
-function propertyType(
-  value: JSONValue
-): ScriptPropertyType {
-  if (typeof value === "number") {
-    return "number";
-  }
-  if (typeof value === "boolean") {
-    return "boolean";
-  }
-  if (typeof value === "string") {
-    return kHexColor.test(value) ? "color" : "string";
-  }
-  if (Array.isArray(value) && value.every((item) => typeof item === "number")) {
-    return kVectorLengths[value.length] ?? "string";
-  }
-
-  return "string";
-}
-
 export function convertProperty(
   value: JSONValue,
-  type: ScriptPropertyType
+  type: ScenePropertyType
 ): JSONValue {
   const numbers = Array.isArray(value) ?
     value.filter((item) => typeof item === "number") :
@@ -84,16 +49,49 @@ export function convertProperty(
       return Array.isArray(value) ? value.join(", ") : String(value ?? "");
     case "boolean":
       return typeof value === "boolean" ? value : first !== 0;
-    case "color":
-      return typeof value === "string" && kHexColor.test(value) ?
-        value :
-        kDefaultColor;
-    case "vector2":
+    case "Color":
+      return Systems.isHexColor(value) ? value : kDefaultColor;
+    case "Vector2":
       return vector(numbers, 2);
-    case "vector3":
+    case "Vector3":
       return vector(numbers, 3);
-    case "vector4":
+    case "Vector4":
       return vector(numbers, 4);
+    case "number[]":
+      return Array.isArray(value) || typeof value === "number" ? numbers : [];
+    case "string[]":
+      return Array.isArray(value) ?
+        value.map((item) => String(item)) :
+        parseList(String(value ?? ""), type);
+    case "boolean[]":
+      return Array.isArray(value) ?
+        value.map((item) => item === true) :
+        [typeof value === "boolean" ? value : first !== 0];
+  }
+}
+
+export function listText(
+  value: JSONValue
+): string {
+  return Array.isArray(value) ? value.join(`${kListSeparator} `) : "";
+}
+
+export function parseList(
+  text: string,
+  type: ScriptListType
+): JSONValue[] {
+  const items = text
+    .split(kListSeparator)
+    .map((item) => item.trim())
+    .filter((item) => item !== "");
+
+  switch (type) {
+    case "number[]":
+      return items.map(Number).filter(Number.isFinite);
+    case "string[]":
+      return items;
+    case "boolean[]":
+      return items.map((item) => item === "true");
   }
 }
 

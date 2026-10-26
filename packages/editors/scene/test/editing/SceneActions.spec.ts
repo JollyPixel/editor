@@ -8,10 +8,7 @@ import { SceneDocument } from "@jolly-pixel/asset.scene/client";
 
 // Import Internal Dependencies
 import { SceneActions } from "../../src/editing/SceneActions.ts";
-import {
-  ACTOR_PRESETS,
-  type ActorPreset
-} from "../../src/features/hierarchy/model/actorPresets.ts";
+import { ActorPreset } from "../../src/features/hierarchy/model/ActorPreset.ts";
 import {
   createSceneHistory,
   SCENE_HISTORY_SCOPE
@@ -43,12 +40,19 @@ function createActions(
 }
 
 function preset(
-  id: string
+  label: string,
+  type: string
 ): ActorPreset {
-  const found = ACTOR_PRESETS.find((candidate) => candidate.id === id);
-  assert.ok(found, `no preset ${id}`);
-
-  return found;
+  return new ActorPreset({
+    id: label,
+    label,
+    components: [
+      {
+        type,
+        data: {}
+      }
+    ]
+  });
 }
 
 function names(
@@ -68,11 +72,7 @@ describe("SceneActions", () => {
   test("duplicates selected subtrees once each, after their source, as one step", () => {
     const { document, history, selection, actions } = createActions();
     const parentId = document.addActor({ name: "Parent" })!;
-    const childId = document.addActor({
-      name: "Child",
-      parentId,
-      components: [{ id: "light", type: "Light", data: {}, assets: {} }]
-    })!;
+    const childId = document.addActor({ name: "Child", parentId })!;
     document.addActor({ name: "Last" });
     selection.select([childId, parentId]);
 
@@ -80,10 +80,6 @@ describe("SceneActions", () => {
 
     assert.deepEqual(names(document), ["Parent", "Child", "Parent (1)", "Child", "Last"]);
     assert.deepEqual(selection.ids, [copyId]);
-    const copiedChild = [...document.tree.actors()][3];
-    assert.notStrictEqual(copiedChild.id, childId);
-    assert.strictEqual(copiedChild.parentId, copyId);
-    assert.notStrictEqual(copiedChild.components[0].id, "light");
 
     history.undo(SCENE_HISTORY_SCOPE);
     assert.deepEqual(names(document), ["Parent", "Child", "Last"]);
@@ -131,7 +127,7 @@ describe("SceneActions", () => {
     const map = { id: "map-1", kind: "voxelmap" };
     const { document, selection, actions } = createActions(map);
 
-    const id = await actions.addActor(preset("voxel-map"), null);
+    const id = await actions.addActor(preset("Voxel map", "VoxelMap"), null);
 
     const actor = document.tree.actor(id!)!;
     assert.strictEqual(actor.name, "Ground");
@@ -143,20 +139,11 @@ describe("SceneActions", () => {
   test("adds nothing when the asset pick is cancelled, and never asks for a slot-free preset", async() => {
     const { document, actions, picks } = createActions(null);
 
-    assert.strictEqual(await actions.addActor(preset("voxel-map"), null), null);
+    assert.strictEqual(await actions.addActor(preset("Voxel map", "VoxelMap"), null), null);
     assert.strictEqual(document.tree.size, 0);
 
-    const boxId = await actions.addActor(preset("mesh:box"), null);
+    const boxId = await actions.addActor(preset("Box", "Mesh"), null);
     assert.strictEqual(document.tree.actor(boxId!)?.name, "Box");
     assert.deepEqual(picks, ["voxelmap"]);
-  });
-
-  test("numbers the copy of a copy after its source's count", () => {
-    const { document, selection, actions } = createActions();
-    selection.select([document.addActor({ name: "Box (1)" })!]);
-
-    actions.duplicateSelection();
-
-    assert.deepEqual(names(document), ["Box (1)", "Box (2)"]);
   });
 });

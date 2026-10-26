@@ -10,11 +10,14 @@ import {
   SubscriptionController
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/log";
-import type { HistoryStepInfo } from "@jolly-pixel/history";
+import {
+  describeSkippedStep,
+  type HistoryStepInfo
+} from "@jolly-pixel/history";
 
 // Import Internal Dependencies
 import "./HistoryButtons.ts";
-import { describeRefusal } from "./describeRefusal.ts";
+import { refusalWording } from "./refusalWording.ts";
 import type { HistoryEditing } from "./HistoryButtons.ts";
 import type { ModelAccessSignals } from "../../access/ModelAccess.ts";
 import type { AnimationLibrary } from "../animation/index.ts";
@@ -92,9 +95,8 @@ export class HistoryBar extends LitElement {
   readonly #onSkipped = (
     skipped: HistoryStepInfo
   ): void => {
-    const step = skipped.label === null ? "a step" : `"${skipped.label}"`;
     const peers = this.#editing.current?.presence.peers ?? [];
-    this.#log.push(`Skipped ${step}: ${describeRefusal(skipped.refused, peers)}`);
+    this.#log.push(describeSkippedStep(skipped, refusalWording(peers)));
   };
 
   override render(): TemplateResult {

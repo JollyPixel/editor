@@ -219,13 +219,33 @@ interface OrbitFlyCamera {
 
   // "lock" mode only: releases the pivot.
   exitOrbitFocus(): void;
+
+  // Releases the pivot and teleports to the frameBounds() pose, looking
+  // along the actor's forward with the camera's fov unless `options` set them.
+  frame(bounds: THREE.Box3, options?: Partial<CameraFramingOptions>): void;
 }
 ```
 
 The camera keeps an on-demand host rendering through
 [`world.keepAlive()`](../systems/world.md#rendering-on-demand) while it is
-enabled and `moving`. `teleport()`, `enterOrbitFocus()` and `exitOrbitFocus()`
-call `world.invalidate()`.
+enabled and `moving`. `teleport()`, `frame()`, `enterOrbitFocus()` and
+`exitOrbitFocus()` call `world.invalidate()`.
+
+## frameBounds(bounds, options): CameraPose
+
+Returns the pose looking at the center of `bounds` along `forward`, far enough
+for their bounding sphere to fit the vertical `fov`. Empty bounds frame the
+origin from `minDistance`.
+
+```ts
+interface CameraFramingOptions {
+  forward: THREE.Vector3Like;
+  fov: number; // degrees
+  margin?: number; // 1.2, multiplies the fitting distance
+  minDistance?: number; // 0
+  maxDistance?: number; // Infinity
+}
+```
 
 ## See also
 

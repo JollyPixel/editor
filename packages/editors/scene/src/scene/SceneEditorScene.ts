@@ -30,10 +30,10 @@ import type {
 } from "../editing/SceneEditing.ts";
 import { createSceneHistory } from "../features/history/sceneHistory.ts";
 import { ActorPicker } from "../features/viewport/ActorPicker.ts";
-import { frameObjects } from "../features/viewport/framePose.ts";
 import { GizmoSettings } from "../features/viewport/GizmoSettings.ts";
 import { SceneGizmo } from "../features/viewport/SceneGizmo.ts";
 import { SceneHelpers } from "../features/viewport/SceneHelpers.ts";
+import { SelectionHighlight } from "../features/viewport/SelectionHighlight.ts";
 import type { SceneAction } from "../keybindings/sceneActions.ts";
 import { sceneShortcuts } from "../keybindings/sceneShortcuts.ts";
 import type { PresenceStore } from "../state/PresenceStore.ts";
@@ -52,6 +52,10 @@ const kCameraPreset = {
   scrollSpeed: 1,
   maxPivotDistance: 100,
   initialTrailDistance: 12
+} as const;
+const kFraming = {
+  margin: 1.4,
+  minDistance: 2
 } as const;
 
 export interface SceneEditorSceneOptions {
@@ -129,6 +133,15 @@ export class SceneEditorScene extends Systems.Scene {
     world
       .createActor("scene-helpers")
       .addComponent(SceneHelpers, { binding });
+    world
+      .createActor("selection-highlight")
+      .addComponent(SelectionHighlight, {
+        renderer: world.renderer.getSource(),
+        camera: camera.camera,
+        binding,
+        selection,
+        presence
+      });
     const sceneGizmo = new SceneGizmo({
       camera,
       canvas: world.renderer.canvas,
@@ -157,11 +170,10 @@ export class SceneEditorScene extends Systems.Scene {
     teardown.defer(() => collaboration.dispose());
 
     function frameSelection(): void {
-      frameObjects(camera, selection.ids.flatMap((id) => {
-        const actor = binding.actor(id);
-
-        return actor === null ? [] : [actor.object3D];
-      }));
+      const bounds = binding.worldBounds(selection.ids);
+      if (!bounds.isEmpty()) {
+        camera.frame(bounds, kFraming);
+      }
     }
     function invalidate(): void {
       world.invalidate();
@@ -188,6 +200,7 @@ export class SceneEditorScene extends Systems.Scene {
       gizmo,
       assetSlots,
       frameSelection,
+      previewEnvironment: (patch) => binding.previewEnvironment(patch),
       teleportToPeer: (clientId) => {
         const pose = collaboration.peerPose(clientId);
         if (pose !== undefined) {

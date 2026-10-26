@@ -225,3 +225,38 @@ describe("SceneTree.ancestorIds", () => {
     assert.deepEqual([...tree.ancestorIds("missing")], []);
   });
 });
+
+describe("SceneTree.copySubtree", () => {
+  test("gives every actor and component a new id and keeps the copy's parent links", () => {
+    const tree = loadedTree([...sampleActors(), actor("D", { parentId: "B" })]);
+
+    const [root, child, grandChild] = tree.copySubtree("A");
+
+    assert.deepEqual(
+      [root.name, child.name, grandChild.name],
+      ["A (1)", "B", "D"]
+    );
+    assert.ok([root, child, grandChild].every(({ id }) => !tree.has(id)));
+    assert.strictEqual(root.parentId, null);
+    assert.strictEqual(child.parentId, root.id);
+    assert.strictEqual(grandChild.parentId, child.id);
+    assert.ok(root.components.every(({ id }) => tree.componentOwner(id) === undefined));
+    assert.deepEqual(root.components[0].data, { intensity: 1, color: "#ffffff" });
+  });
+
+  test("numbers the copy of a copy after its source's count", () => {
+    const tree = loadedTree([actor("A", { name: "Box (1)" })]);
+
+    assert.strictEqual(tree.copySubtree("A")[0].name, "Box (2)");
+    assert.deepEqual(tree.copySubtree("missing"), []);
+  });
+});
+
+describe("SceneTree.topmostIds", () => {
+  test("keeps the existing ids with no listed ancestor, in tree order", () => {
+    const tree = loadedTree([...sampleActors(), actor("D", { parentId: "B" })]);
+
+    assert.deepEqual(tree.topmostIds(["D", "C", "missing", "A"]), ["A", "C"]);
+    assert.deepEqual(tree.topmostIds(["D", "B"]), ["B"]);
+  });
+});

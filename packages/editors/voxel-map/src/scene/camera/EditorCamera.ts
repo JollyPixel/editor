@@ -13,9 +13,9 @@ import type { LogQueue } from "@jolly-pixel/ui";
 // Import Internal Dependencies
 import type { PointerCapture } from "../../state/PointerCapture.ts";
 import {
-  SpawnPose,
-  type SpawnLayer
-} from "./SpawnPose.ts";
+  nearestLayerBounds,
+  type BoundedLayer
+} from "./layerBounds.ts";
 import { ViewRay } from "./ViewRay.ts";
 import { CameraPostProcessing } from "./CameraPostProcessing.ts";
 
@@ -24,6 +24,11 @@ const kPivotMaxDistance = 32;
 const kPivotFallbackDistance = 24;
 const kDefaultSamples = 4;
 const kRight = new THREE.Vector3();
+const kSpawnFraming = {
+  forward: new THREE.Vector3(0, -0.6, -1).normalize(),
+  minDistance: 16,
+  maxDistance: 64
+} as const;
 
 export type HorizontalAxis = "x" | "z";
 
@@ -66,7 +71,7 @@ export class EditorCamera {
         focusMode: "lock",
         postProcessing: this.#postProcessing.select(false)
       });
-    controls.teleport(SpawnPose.frame(null));
+    controls.frame(new THREE.Box3(), kSpawnFraming);
     this.#controls = controls;
     this.#viewRay = new ViewRay({
       camera: controls.camera
@@ -147,25 +152,20 @@ export class EditorCamera {
   }
 
   spawn(
-    layers: Iterable<SpawnLayer>
+    layers: Iterable<BoundedLayer>
   ): void {
     if (!this.#spawnPending) {
       return;
     }
 
     this.#spawnPending = false;
-    this.frame(SpawnPose.nearestBounds(layers));
+    this.frame(nearestLayerBounds(layers));
   }
 
   frame(
     bounds: THREE.Box3 | null
   ): void {
-    this.#controls.exitOrbitFocus();
-    this.#controls.teleport(
-      SpawnPose.frame(bounds, {
-        fov: this.camera.fov
-      })
-    );
+    this.#controls.frame(bounds ?? new THREE.Box3(), kSpawnFraming);
     this.#announceMode();
   }
 

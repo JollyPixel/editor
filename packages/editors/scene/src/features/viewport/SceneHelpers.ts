@@ -9,7 +9,6 @@ import {
 } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
-import { visibleInWorld } from "../../scene/visibleInWorld.ts";
 import type {
   BoundComponent,
   SceneBinding
@@ -88,7 +87,7 @@ export class SceneHelpers extends ActorComponent {
 
   update(): void {
     for (const [component, { helper }] of this.#helpers) {
-      helper.root.visible = visibleInWorld(component.actor.object3D);
+      helper.root.visible = component.actor.transform.visibleInHierarchy;
       helper.sync();
     }
   }

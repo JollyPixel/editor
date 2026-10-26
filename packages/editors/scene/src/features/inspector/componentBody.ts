@@ -10,7 +10,11 @@ import type {
   JSONValue,
   SceneComponentJSON
 } from "@jolly-pixel/asset.scene/client";
-import { Systems } from "@jolly-pixel/engine";
+import {
+  SCENE_PROPERTY_TYPES,
+  Systems,
+  type ScenePropertyType
+} from "@jolly-pixel/engine";
 import type {
   JollyChangeDetail,
   JollyOption
@@ -37,14 +41,15 @@ import {
   sceneComponent
 } from "../../components/sceneComponents.ts";
 import {
-  SCRIPT_PROPERTY_TYPES,
   convertProperty,
   freePropertyKey,
+  listText,
+  parseList,
   removeProperty,
   renameProperty,
   scriptProperties,
-  type ScriptProperty,
-  type ScriptPropertyType
+  type ScriptListType,
+  type ScriptProperty
 } from "../../components/scriptProperties.ts";
 import type { SceneEditing } from "../../editing/SceneEditing.ts";
 
@@ -57,7 +62,7 @@ type ChangeEvent<TValue> = CustomEvent<JollyChangeDetail<TValue>>;
 
 // CONSTANTS
 const kVectorAxes = ["x", "y", "z", "w"] as const;
-const kScriptTypeOptions: JollyOption<ScriptPropertyType>[] = SCRIPT_PROPERTY_TYPES.map(
+const kScriptTypeOptions: JollyOption<ScenePropertyType>[] = SCENE_PROPERTY_TYPES.map(
   (type) => {
     return {
       value: type,
@@ -258,7 +263,7 @@ function renderScriptProperty(
           label=""
           .options=${kScriptTypeOptions}
           .value=${property.type}
-          @jolly-change=${(event: ChangeEvent<ScriptPropertyType>) => setValue(
+          @jolly-change=${(event: ChangeEvent<ScenePropertyType>) => setValue(
             convertProperty(property.value, event.detail.value)
           )}
         ></jolly-select>
@@ -298,7 +303,7 @@ function renderPropertyValue(
           @jolly-change=${(event: ChangeEvent<boolean>) => setValue(event.detail.value)}
         ></jolly-checkbox>
       `;
-    case "color":
+    case "Color":
       return html`
         <jolly-color
           label="Value"
@@ -314,15 +319,33 @@ function renderPropertyValue(
           @jolly-change=${(event: ChangeEvent<string>) => setValue(event.detail.value)}
         ></jolly-text>
       `;
-    case "vector2":
-    case "vector3":
-    case "vector4":
+    case "Vector2":
+    case "Vector3":
+    case "Vector4":
       return renderVector(type, value, setValue);
+    case "number[]":
+    case "string[]":
+    case "boolean[]":
+      return renderList(type, value, setValue);
   }
 }
 
+function renderList(
+  type: ScriptListType,
+  value: JSONValue,
+  setValue: (value: JSONValue) => void
+): TemplateResult {
+  return html`
+    <jolly-text
+      label="Values"
+      .value=${listText(value)}
+      @jolly-change=${(event: ChangeEvent<string>) => setValue(parseList(event.detail.value, type))}
+    ></jolly-text>
+  `;
+}
+
 function renderVector(
-  type: "vector2" | "vector3" | "vector4",
+  type: "Vector2" | "Vector3" | "Vector4",
   value: JSONValue,
   setValue: (value: JSONValue) => void
 ): TemplateResult {
@@ -336,11 +359,11 @@ function renderVector(
   }
 
   switch (type) {
-    case "vector2":
+    case "Vector2":
       return html`<jolly-vector2 label="Value" .value=${vector} @jolly-change=${commit}></jolly-vector2>`;
-    case "vector3":
+    case "Vector3":
       return html`<jolly-vector3 label="Value" .value=${vector} @jolly-change=${commit}></jolly-vector3>`;
-    case "vector4":
+    case "Vector4":
       return html`<jolly-vector4 label="Value" .value=${vector} @jolly-change=${commit}></jolly-vector4>`;
   }
 }

@@ -1,10 +1,12 @@
 // Import Third-party Dependencies
 import type { PeerPresence } from "@jolly-pixel/pixel-draw.renderer";
-import type { PeerMarkMap } from "@jolly-pixel/ui/network";
+import {
+  reconcilePeerMarks,
+  type PeerMarkMap
+} from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import type { PresenceStore } from "../../state/index.ts";
-import { reconcilePeerMarks } from "../../collaboration/reconcilePeerMarks.ts";
 import { blockRegionId } from "./blockRegionId.ts";
 
 export type PeerRegionSelectionTarget = Pick<

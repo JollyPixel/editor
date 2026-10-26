@@ -16,8 +16,7 @@ import {
 } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
-import { SceneBinding } from "../../src/scene/SceneBinding.ts";
-import { createEditWorld } from "../helpers/editWorld.ts";
+import { createSceneBinding } from "../helpers/sceneBinding.ts";
 
 class Probe extends ActorComponent {
   label: string;
@@ -55,23 +54,10 @@ const kRebuilt: Systems.ComponentDefinition<string, Probe> = {
 function createBinding(
   document: SceneDocument
 ) {
-  const { world, sceneManager } = createEditWorld();
-  const environments: SceneEnvironmentJSON[] = [];
-  const binding = new SceneBinding({
-    world,
+  return createSceneBinding(
     document,
-    components: new Systems.ComponentDefinitions().register(kPatched, kRebuilt),
-    assets: {
-      resolve: () => {
-        throw new Error("No asset expected");
-      }
-    },
-    environment: {
-      apply: (environment) => environments.push(environment)
-    }
-  });
-
-  return { binding, sceneManager, environments };
+    new Systems.ComponentDefinitions().register(kPatched, kRebuilt)
+  );
 }
 
 describe("SceneBinding", () => {
@@ -195,6 +181,20 @@ describe("SceneBinding", () => {
     assert.deepEqual(environments.at(-1), foggy);
   });
 
+  test("previews an environment patch over the document without changing it", () => {
+    const document = new SceneDocument();
+    const stored = document.tree.environment;
+    const { binding, environments } = createBinding(document);
+
+    binding.previewEnvironment({ background: "#ff0000" });
+
+    assert.deepEqual(environments.at(-1), {
+      ...stored,
+      background: "#ff0000"
+    });
+    assert.deepEqual(document.tree.environment, stored);
+  });
+
   test("finds the actor that owns a nested object", () => {
     const document = new SceneDocument();
     const actorId = document.addActor({ name: "Actor" })!;
@@ -239,5 +239,24 @@ describe("SceneBinding", () => {
 
     document.remove(actorId);
     assert.deepEqual([...live], []);
+  });
+
+  test("bounds the given actors, an empty one by its position", () => {
+    const document = new SceneDocument();
+    const emptyId = document.addActor({
+      name: "Empty",
+      transform: { position: { x: 4, y: 0, z: 0 } }
+    })!;
+    const boxId = document.addActor({ name: "Box" })!;
+    const { binding } = createBinding(document);
+    binding.actor(boxId)!.object3D.add(
+      new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2))
+    );
+
+    const bounds = binding.worldBounds([emptyId, boxId, "missing"]);
+
+    assert.deepEqual(bounds.min.toArray(), [-1, -1, -1]);
+    assert.deepEqual(bounds.max.toArray(), [4, 1, 1]);
+    assert.ok(binding.worldBounds(["missing"]).isEmpty());
   });
 });

@@ -1,14 +1,12 @@
 // Import Third-party Dependencies
-import type { AssetReferenceData } from "@jolly-pixel/asset";
-import {
-  randomId,
-  type SceneDocument
-} from "@jolly-pixel/asset.scene/client";
+import type { SceneDocument } from "@jolly-pixel/asset.scene/client";
 
 // Import Internal Dependencies
 import { componentAssetSlots } from "../components/sceneComponents.ts";
-import type { ActorPreset } from "../features/hierarchy/model/actorPresets.ts";
-import { duplicateSubtree } from "../features/hierarchy/model/duplicateSubtree.ts";
+import type {
+  ActorPreset,
+  PickedAssets
+} from "../features/hierarchy/model/ActorPreset.ts";
 import {
   SCENE_HISTORY_SCOPE,
   type SceneHistory
@@ -22,8 +20,6 @@ export interface ActorMove {
   parentId: string | null;
   beforeId?: string;
 }
-
-type PickedAssets = Record<string, AssetReferenceData>;
 
 export interface SceneActionsOptions {
   document: SceneDocument;
@@ -51,29 +47,23 @@ export class SceneActions {
     preset: ActorPreset,
     parentId: string | null
   ): Promise<string | null> {
-    const { component } = preset;
-    const assets = component === null ? {} : await this.#pickAssets(component.type);
-    if (assets === null) {
+    const components = await preset.createComponents(
+      (type) => this.#pickAssets(type)
+    );
+    if (components === null) {
       return null;
     }
 
     const { tree } = this.#document;
-    const [firstAsset] = Object.values(assets);
+    const [firstAsset] = components.flatMap(
+      ({ assets }) => Object.values(assets).filter((asset) => asset !== null)
+    );
     const id = this.#document.addActor({
       name: firstAsset === undefined ?
         preset.label :
         this.#assetSlots.name(firstAsset),
       parentId: parentId !== null && tree.has(parentId) ? parentId : null,
-      components: component === null ?
-        [] :
-        [
-          {
-            id: randomId(),
-            type: component.type,
-            data: structuredClone(component.data),
-            assets
-          }
-        ]
+      components
     });
     if (id !== null) {
       this.#selection.select([id]);
@@ -98,18 +88,19 @@ export class SceneActions {
   }
 
   duplicateSelection(): string[] {
-    const roots = this.#selectedRoots();
+    const { tree } = this.#document;
+    const roots = tree.topmostIds(this.#selection.ids);
     const copies = this.#history.record(
       SCENE_HISTORY_SCOPE,
       "Duplicate",
       () => roots.flatMap((id) => {
-        const subtree = duplicateSubtree(this.#document.tree.subtreeFrom(id));
+        const copy = tree.copySubtree(id);
         const added = this.#document.addSubtree(
-          subtree,
-          this.#document.tree.findNextSibling(id)
+          copy,
+          tree.findNextSibling(id)
         );
 
-        return added ? [subtree[0].id] : [];
+        return added ? [copy[0].id] : [];
       })
     );
     if (copies.length > 0) {
@@ -120,7 +111,7 @@ export class SceneActions {
   }
 
   removeSelection(): void {
-    const roots = this.#selectedRoots();
+    const roots = this.#document.tree.topmostIds(this.#selection.ids);
     if (roots.length === 0) {
       return;
     }
@@ -158,15 +149,5 @@ export class SceneActions {
     }
 
     return assets;
-  }
-
-  #selectedRoots(): string[] {
-    const { tree } = this.#document;
-    const selected = new Set(
-      this.#selection.ids.filter((id) => tree.has(id))
-    );
-
-    return [...tree.actorIds()].filter((id) => selected.has(id) &&
-      ![...tree.ancestorIds(id)].some((ancestorId) => selected.has(ancestorId)));
   }
 }

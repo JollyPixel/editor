@@ -7,3 +7,4 @@ export {
   toPresencePeer
 } from "./peerProfile.ts";
 export * from "./peerBadges.ts";
+export * from "./reconcilePeerMarks.ts";

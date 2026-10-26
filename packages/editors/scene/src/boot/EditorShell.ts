@@ -5,12 +5,15 @@ import {
   type EditorToolbarSources
 } from "@jolly-pixel/editor.host";
 import "@jolly-pixel/editor.host/ui";
-import type { HistoryStepInfo } from "@jolly-pixel/history";
+import {
+  describeSkippedStep,
+  type HistoryStepInfo
+} from "@jolly-pixel/history";
 import { LogQueue } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { SceneEditing } from "../editing/SceneEditing.ts";
-import { skippedMessage } from "../features/history/sceneHistory.ts";
+import { SCENE_REFUSAL_WORDING } from "../features/history/sceneHistory.ts";
 
 // CONSTANTS
 const kAttachedTags = [
@@ -69,7 +72,9 @@ export class EditorShell {
     const log = new LogQueue();
     this.#teardown.defer(editing.history.subscribe(
       "skipped",
-      (_scope: string, step: HistoryStepInfo) => log.push(skippedMessage(step))
+      (_scope: string, step: HistoryStepInfo) => log.push(
+        describeSkippedStep(step, SCENE_REFUSAL_WORDING)
+      )
     ));
     this.#teardown.defer(log.subscribe((entries) => {
       activityLog.entries = entries;

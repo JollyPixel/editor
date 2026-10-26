@@ -35,7 +35,7 @@ The constructor accepts an `ActorOptions` object:
 
 ```ts
 interface ActorOptions {
-  /** Display name used for tree lookups. */
+  /** Display name used for tree lookups, kept in `object3D.name`. */
   name: string;
   /** Parent actor; `null` adds to the scene root. @default null */
   parent?: Actor | null;

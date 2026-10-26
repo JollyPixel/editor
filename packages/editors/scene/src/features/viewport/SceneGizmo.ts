@@ -8,9 +8,9 @@ import type {
 } from "@jolly-pixel/asset.scene/client";
 import {
   TransformControls,
-  type TransformControlsOptions,
   type TransformEndEvent
 } from "@jolly-pixel/three";
+import { EDITOR_GIZMO_APPEARANCE } from "@jolly-pixel/editor.host/viewport";
 
 // Import Internal Dependencies
 import type { SceneBinding } from "../../scene/SceneBinding.ts";
@@ -22,21 +22,6 @@ import type {
 } from "./GizmoSettings.ts";
 
 // CONSTANTS
-const kAppearance = {
-  size: 0.1,
-  center: {
-    interactive: true
-  },
-  planes: {
-    inset: 0.065,
-    size: 0.3
-  },
-  flipTowardCamera: true,
-  outline: {
-    color: "#292a2c",
-    width: 2.5
-  }
-} as const satisfies TransformControlsOptions["appearance"];
 const kPatchFields: Readonly<Record<GizmoMode, keyof SceneTransformPatch>> = {
   translate: "position",
   rotate: "rotation",
@@ -119,7 +104,7 @@ export class SceneGizmo {
       options.camera.camera,
       options.canvas,
       {
-        appearance: kAppearance
+        appearance: EDITOR_GIZMO_APPEARANCE
       }
     );
     options.scene.add(this.#controls.helper);

@@ -7,6 +7,7 @@ import {
   TransformControls,
   type TransformControlsOptions
 } from "@jolly-pixel/three";
+import { EDITOR_GIZMO_APPEARANCE } from "@jolly-pixel/editor.host/viewport";
 
 // Import Internal Dependencies
 import type {
@@ -34,23 +35,11 @@ import { RenderOrder } from "../../../scene/renderOrder.ts";
 
 // CONSTANTS
 const kAppearance = {
-  size: 0.1,
-  center: {
-    interactive: true
-  },
-  planes: {
-    inset: 0.065,
-    size: 0.30
-  },
+  ...EDITOR_GIZMO_APPEARANCE,
   rings: {
     frontOnly: false
   },
-  flipTowardCamera: true,
   viewRing: false,
-  outline: {
-    color: "#292a2c",
-    width: 2.5
-  },
   renderOrder: RenderOrder.gizmo
 } as const satisfies TransformControlsOptions["appearance"];
 

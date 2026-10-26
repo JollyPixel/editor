@@ -15,6 +15,10 @@ import { ElasticFocus } from "./ElasticFocus.ts";
 import { SmoothedVelocity } from "./SmoothedVelocity.ts";
 import { OrbitFlyKeys } from "./OrbitFlyKeys.ts";
 import {
+  frameBounds,
+  type CameraFramingOptions
+} from "./cameraFraming.ts";
+import {
   type CameraFocus,
   type CameraFocusInput,
   NoCameraFocus
@@ -479,6 +483,18 @@ export class OrbitFlyCamera extends CameraComponent {
   exitOrbitFocus(): void {
     this.#focus.exit();
     this.actor.world.invalidate();
+  }
+
+  frame(
+    bounds: THREE.Box3,
+    options: Partial<CameraFramingOptions> = {}
+  ): void {
+    this.exitOrbitFocus();
+    this.teleport(frameBounds(bounds, {
+      forward: this.actor.transform.getForward(new THREE.Vector3()),
+      fov: this.fov,
+      ...options
+    }));
   }
 
   #updateFocusPose(

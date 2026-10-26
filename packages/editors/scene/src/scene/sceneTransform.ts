@@ -12,35 +12,34 @@ const kPrecision = 1e6;
 
 type TransformTree = Pick<SceneTreeReader, "peekActor" | "ancestorIds">;
 
-export interface TransformPose {
-  position: THREE.Vector3;
-  quaternion: THREE.Quaternion;
-  scale: THREE.Vector3;
-}
-
 export function rebaseTransform(
   tree: TransformTree,
   id: string,
   parentId: string | null
 ): SceneTransformJSON {
-  const object = new THREE.Object3D();
+  const pose = {
+    position: new THREE.Vector3(),
+    quaternion: new THREE.Quaternion(),
+    scale: new THREE.Vector3()
+  };
   worldMatrix(tree, parentId)
     .invert()
     .multiply(worldMatrix(tree, id))
-    .decompose(object.position, object.quaternion, object.scale);
+    .decompose(pose.position, pose.quaternion, pose.scale);
 
-  return roundedTransform(object);
+  return decomposePose(pose);
 }
 
 export function decomposePose(
-  pose: TransformPose
+  pose: Systems.SceneTransformPose
 ): SceneTransformJSON {
-  const object = new THREE.Object3D();
-  object.position.copy(pose.position);
-  object.quaternion.copy(pose.quaternion);
-  object.scale.copy(pose.scale);
+  const { position, rotation, scale } = Systems.readSceneTransform(pose);
 
-  return roundedTransform(object);
+  return {
+    position: rounded(position),
+    rotation: rounded(rotation),
+    scale: rounded(scale)
+  };
 }
 
 function worldMatrix(
@@ -52,28 +51,15 @@ function worldMatrix(
     return matrix;
   }
 
-  const object = new THREE.Object3D();
+  const local = new THREE.Matrix4();
   for (const actorId of [id, ...tree.ancestorIds(id)]) {
     const actor = tree.peekActor(actorId);
     if (actor !== undefined) {
-      Systems.writeSceneTransform(object, actor.transform);
-      matrix.premultiply(object.matrix);
+      matrix.premultiply(Systems.composeSceneTransform(actor.transform, local));
     }
   }
 
   return matrix;
-}
-
-function roundedTransform(
-  object: THREE.Object3D
-): SceneTransformJSON {
-  const { position, rotation, scale } = Systems.readSceneTransform(object);
-
-  return {
-    position: rounded(position),
-    rotation: rounded(rotation),
-    scale: rounded(scale)
-  };
 }
 
 function rounded(
