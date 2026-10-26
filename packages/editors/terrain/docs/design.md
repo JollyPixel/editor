@@ -279,8 +279,6 @@ which leaves a flat 1 m strip along the edge of the world.
   `terrainDocumentKind.ts`, the live relay (`TerrainLiveRelay.ts`) and the
   client live halves (`TerrainLiveSender.ts`, `TerrainLiveReceiver.ts`).
 - `src/history/`: the `CommandHistory` registration.
-- `src/image/`: the read-only `image` kind that layer maps reference; see
-  [images](./texture.md#images).
 
 ### `@jolly-pixel/terrain.renderer`
 

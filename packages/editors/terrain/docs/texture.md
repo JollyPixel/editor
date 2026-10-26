@@ -40,16 +40,27 @@ across its three maps.
 
 ### Images
 
-Layer maps reference assets of the `image` kind, which `asset.terrain`
-defines. An image is a PNG, JPEG or WebP file stored as imported, with its
-own extension, at most 4096×4096. Nothing re-encodes it; the editor decodes
-it with `createImageBitmap`.
+Layer maps reference assets of the `texture` kind built into
+`@jolly-pixel/asset-server`: image files stored as imported, with their own
+extension. Every project registers it, so any image in a project is already a
+`texture` asset, and other engine features can use the same assets.
 
-The kind has no editing commands. Its room's snapshot is the file content,
-and every command is refused, so the editor gets an image through the same
-join, reconnect and change notifications as any asset. Importing a file onto
-an existing image replaces its content and keeps its ID; open terrains then
-re-upload the slices that use it.
+A texture's room accepts no command. Its snapshot is the file content, so the
+editor gets an image through the same join, reconnect and change
+notifications as any asset; when the file changes, open terrains re-upload the
+slices that use it. The editor decodes it with `createImageBitmap`, so a layer
+accepts PNG, JPEG and WebP, at most 4096×4096, and shows an unsupported
+format for the other extensions the kind claims (GIF, BMP, KTX2).
+
+The image does not carry a colour space. The layer slot sets it: albedo is
+sRGB, normal and ORM are linear, so one file can serve either.
+
+The snapshot travels base64-encoded, about a third larger than the file. A
+peer-to-peer session refuses messages over 16 MB, so it cannot send an image
+much above 12 MB.
+
+Slots hold a plain `AssetReferenceData`, so accepting `pixelart` assets later
+needs no format change.
 
 The terrain declares the images its layers reference as dependencies, so the
 catalog keeps them and archives carry them.

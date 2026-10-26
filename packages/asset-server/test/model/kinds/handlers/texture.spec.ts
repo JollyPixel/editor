@@ -9,11 +9,14 @@ import assert from "node:assert/strict";
 import {
   ASSET_CREATED,
   AssetKindRegistry,
+  decodeContent,
   encodeContent,
   foldAssetEvent,
   textureAssetKind,
-  TEXTURE_KIND
+  TEXTURE_KIND,
+  type AssetInlineContent
 } from "#src/index.ts";
+import { LiveAssetRoom } from "#src/testing/index.ts";
 import {
   bytes,
   text
@@ -78,7 +81,20 @@ describe("textureAssetKind", () => {
     assert.strictEqual(text(await handler.serialize(state)), "hello");
   });
 
-  test("has no editing room", () => {
-    assert.strictEqual(textureAssetKind().commands, undefined);
+  test("sends its current bytes as the room snapshot", () => {
+    const handler = textureAssetKind();
+    const room = new LiveAssetRoom(handler);
+    handler.load(room.state, bytes("first"));
+
+    room.connect("A");
+    handler.load(room.state, bytes("second"));
+    room.extension.reload();
+
+    const snapshots = room.take<AssetInlineContent>("A").map((message) => {
+      assert.strictEqual(message.type, "snapshot");
+
+      return text(decodeContent(message.data));
+    });
+    assert.deepStrictEqual(snapshots, ["first", "second"]);
   });
 });
