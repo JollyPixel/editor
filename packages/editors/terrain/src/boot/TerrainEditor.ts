@@ -27,6 +27,7 @@ import { PeerRoster } from "@jolly-pixel/ui/network";
 import type { TerrainView } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
+import { textureDocumentKind } from "../features/layers/model/TextureDocument.ts";
 import { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
 import "../features/sculpt/toolbar/SculptToolbar.ts";
 import { OverlaySettings } from "../features/overlays/model/OverlaySettings.ts";
@@ -41,6 +42,7 @@ import {
 // CONSTANTS
 const kCanvas = "#game-container canvas";
 const kTerrainKind = terrainDocumentKind();
+const kTextureKind = textureDocumentKind();
 
 export interface TerrainEditorParts {
   runtime: Runtime;
@@ -178,7 +180,8 @@ async function mountScene(
     sculpt,
     overlaySettings,
     history,
-    room: target.room
+    room: target.room,
+    textures: (assetId) => context.session.lease(kTextureKind, assetId)
   });
   const { sceneManager } = context.runtime.runtime.world;
   disposables.push(() => sceneManager.unloadScene(scene));

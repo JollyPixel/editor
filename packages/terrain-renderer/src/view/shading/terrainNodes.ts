@@ -27,6 +27,7 @@ import {
   normalize,
   round,
   select,
+  texture,
   textureLoad,
   transformNormalToView,
   uniform,
@@ -50,6 +51,12 @@ import {
   LOOKUP_SIZE,
   OVERVIEW_TEXTURE_SIZE
 } from "../textures/ChunkTextureStore.ts";
+import {
+  LAYER_MAP_BITS,
+  LAYER_MAPS,
+  type LayerArrays,
+  type LayerMap
+} from "../textures/LayerTextureStore.ts";
 
 // CONSTANTS
 export const NODE_DATA_ATTRIBUTE = "terrainNode";
@@ -64,6 +71,9 @@ const kSlopeFlat = vec3(0.24, 0.58, 0.32);
 const kSlopeMid = vec3(0.86, 0.8, 0.26);
 const kSlopeHigh = vec3(0.9, 0.48, 0.16);
 const kSlopeTooSteep = vec3(0.82, 0.12, 0.12);
+const kGroundSlot = 0;
+const kMinTiling = 1e-3;
+const kDefaultRoughness = 1;
 
 export const TERRAIN_OVERLAYS = ["none", "chunks", "lod", "slope"] as const;
 export const DEFAULT_WALKABLE_SLOPE = 45;
@@ -79,12 +89,15 @@ export interface TerrainTextures {
   heights: THREE.DataArrayTexture;
   lookup: THREE.DataTexture;
   overview: THREE.DataTexture;
+  layerSlots: THREE.DataTexture;
+  layerArrays: LayerArrays;
 }
 
 export interface TerrainShading {
   material: MeshStandardNodeMaterial;
   overlay(mode: TerrainOverlay): void;
   walkableSlope(degrees: number): void;
+  layerArrays(arrays: LayerArrays): void;
 }
 
 interface ChunkTexel {
@@ -95,10 +108,7 @@ interface ChunkTexel {
 export function createTerrainShading(
   textures: TerrainTextures
 ): TerrainShading {
-  const material = new MeshStandardNodeMaterial({
-    roughness: 0.95,
-    metalness: 0
-  });
+  const material = new MeshStandardNodeMaterial();
 
   function lookupEntry(
     chunk: Vec2Node
@@ -291,9 +301,37 @@ export function createTerrainShading(
       blend.y
     )
   );
-  material.normalNode = transformNormalToView(
-    normalize(vec3(gradient.x.negate(), float(1), gradient.y.negate()))
+  const surfaceNormal = normalize(vec3(gradient.x.negate(), float(1), gradient.y.negate()));
+
+  const slotEntry = textureLoad(textures.layerSlots, ivec2(kGroundSlot, 0));
+  const layerIndex = int(max(slotEntry.x.sub(1), float(0)));
+  const layerMaps = int(slotEntry.z);
+  const layerUv = fragmentWorld.div(max(slotEntry.y, float(kMinTiling)));
+  const layerSamples = {
+    albedo: texture(textures.layerArrays.albedo, layerUv).depth(layerIndex),
+    normal: texture(textures.layerArrays.normal, layerUv).depth(layerIndex),
+    orm: texture(textures.layerArrays.orm, layerUv).depth(layerIndex)
+  };
+  function hasMap(
+    map: LayerMap
+  ): BoolNode {
+    return slotEntry.x.greaterThan(0.5)
+      .and(layerMaps.bitAnd(int(LAYER_MAP_BITS[map])).notEqual(int(0)));
+  }
+  const albedo = select(hasMap("albedo"), layerSamples.albedo.rgb, kAlbedo);
+  const detail = layerSamples.normal.rgb.mul(2).sub(1);
+  const tangent = normalize(vec3(1, 0, 0).sub(surfaceNormal.mul(surfaceNormal.x)));
+  const bitangent = normalize(vec3(0, 0, 1).sub(surfaceNormal.mul(surfaceNormal.z)));
+  const detailedNormal = normalize(
+    tangent.mul(detail.x).add(bitangent.mul(detail.y)).add(surfaceNormal.mul(detail.z))
   );
+  material.normalNode = transformNormalToView(
+    select(hasMap("normal"), detailedNormal, surfaceNormal)
+  );
+  const orm = layerSamples.orm;
+  material.aoNode = select(hasMap("orm"), orm.r, float(1));
+  material.roughnessNode = select(hasMap("orm"), orm.g, float(kDefaultRoughness));
+  material.metalnessNode = select(hasMap("orm"), orm.b, float(0));
   const overlay = uniform(0);
   const walkable = uniform(degreesToRadians(DEFAULT_WALKABLE_SLOPE));
   const slope = atan(length(gradient));
@@ -316,8 +354,8 @@ export function createTerrainShading(
   }
   const surfaceColor = select(
     overlayIs("lod"),
-    mix(kAlbedo, levelColor, kLevelTint),
-    select(overlayIs("slope"), slopeColor, kAlbedo)
+    mix(albedo, levelColor, kLevelTint),
+    select(overlayIs("slope"), slopeColor, albedo)
   );
   const showLines = overlayIs("chunks").or(overlayIs("lod"));
   material.colorNode = Fn(() => {
@@ -333,6 +371,11 @@ export function createTerrainShading(
     },
     walkableSlope(degrees) {
       walkable.value = degreesToRadians(degrees);
+    },
+    layerArrays(arrays) {
+      for (const map of LAYER_MAPS) {
+        layerSamples[map].value = arrays[map];
+      }
     }
   };
 }

@@ -88,7 +88,13 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   snapshot hold the layers and the texture size; `TerrainDocument` adds,
   updates and removes layers, keyed per field, and undoes each change. A file
   without layers loads with the Ground layer.
-- **Next:** albedo, normal and ORM texture arrays.
+- **Texture arrays: done** (2026-10-26). The view holds albedo, normal and
+  ORM arrays, one array layer per terrain layer, filled by GPU copy. The
+  editor leases each layer's textures, decodes them at the terrain's texture
+  size and uploads them again when a texture or the size changes. Until splat
+  maps land, the surface draws slot 0.
+- **Next:** splat parts, `splat-patched` commits and the overview's dominant
+  layer.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -134,7 +140,7 @@ chunks yet.
 - [x] A read-only room for the built-in `texture` kind, and its descriptor.
 - [x] Terrain layers in the manifest: slots, the seeded "Ground" layer, layer
   commands keyed per field, image dependencies, and the texture size setting.
-- [ ] Albedo, normal and ORM texture arrays, rebuilt when an image or the
+- [x] Albedo, normal and ORM texture arrays, rebuilt when an image or the
   texture size changes.
 - [ ] Splat parts, `splat-patched` commits, and the overview's dominant layer.
 - [ ] Layers panel, the paint tool in the brush toolbar, and Ctrl+click layer

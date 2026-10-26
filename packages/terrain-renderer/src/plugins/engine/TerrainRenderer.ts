@@ -11,6 +11,7 @@ import {
   TerrainView,
   type TerrainViewOptions
 } from "../../view/TerrainView.ts";
+import type { TextureCopier } from "../../view/textures/LayerTextureStore.ts";
 
 export interface TerrainRendererOptions extends TerrainViewOptions {
   terrain: TerrainReader;
@@ -40,8 +41,10 @@ export class TerrainRenderer extends ActorComponent {
       requestFrame,
       ...viewOptions
     } = options;
+    const renderer: TextureCopier = actor.world.renderer.getSource();
     this.#camera = camera;
     this.view = new TerrainView(terrain, {
+      textureCopier: renderer,
       ...viewOptions,
       requestFrame: () => {
         actor.world.invalidate();

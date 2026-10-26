@@ -30,6 +30,13 @@ import {
   type TerrainShading
 } from "./shading/terrainNodes.ts";
 import { ChunkTextureStore } from "./textures/ChunkTextureStore.ts";
+import {
+  LayerTextureStore,
+  type LayerImage,
+  type LayerMap,
+  type LayerSurface,
+  type TextureCopier
+} from "./textures/LayerTextureStore.ts";
 
 // CONSTANTS
 export const NODE_RESOLUTION = LEAF_NODE_SIZE;
@@ -42,6 +49,11 @@ export interface TerrainViewOptions {
    * that draw on demand.
    */
   requestFrame?: () => void;
+  /**
+   * Copies layer images into the layer texture arrays on the GPU. Without
+   * it, the view draws every layer in its fallback colour.
+   */
+  textureCopier?: TextureCopier;
 }
 
 export class TerrainView {
@@ -55,6 +67,7 @@ export class TerrainView {
   #overlay: TerrainOverlay = "none";
   #walkableSlope = DEFAULT_WALKABLE_SLOPE;
   #textures: ChunkTextureStore;
+  #layers: LayerTextureStore;
   #nodes: NodeBatch;
   #quarters: NodeBatch;
   #frustum = new THREE.Frustum();
@@ -67,13 +80,24 @@ export class TerrainView {
   ) {
     const {
       ranges = new LodRanges(),
-      requestFrame = () => undefined
+      requestFrame = () => undefined,
+      textureCopier = null
     } = options;
     this.#terrain = terrain;
     this.#requestFrame = requestFrame;
     this.selection = new QuadtreeSelection(terrain, ranges);
     this.#textures = new ChunkTextureStore(terrain);
-    this.#shading = createTerrainShading(this.#textures);
+    this.#layers = new LayerTextureStore({
+      copier: textureCopier,
+      replaced: (arrays) => this.#shading.layerArrays(arrays)
+    });
+    this.#shading = createTerrainShading({
+      heights: this.#textures.heights,
+      lookup: this.#textures.lookup,
+      overview: this.#textures.overview,
+      layerSlots: this.#layers.slots,
+      layerArrays: this.#layers.arrays
+    });
     this.material = this.#shading.material;
     this.#nodes = new NodeBatch(buildGridMesh(NODE_RESOLUTION), this.material);
     this.#quarters = new NodeBatch(buildGridMesh(NODE_RESOLUTION / 2), this.material);
@@ -105,6 +129,41 @@ export class TerrainView {
       Math.min(Math.max(degrees, 0), MAX_WALKABLE_SLOPE) :
       DEFAULT_WALKABLE_SLOPE;
     this.#shading.walkableSlope(this.#walkableSlope);
+    this.#requestFrame();
+  }
+
+  get layerTextureSize(): number {
+    return this.#layers.size;
+  }
+
+  set layerTextureSize(
+    size: number
+  ) {
+    this.#layers.resize(size);
+    this.#requestFrame();
+  }
+
+  layerChanged(
+    slot: number,
+    surface: LayerSurface
+  ): void {
+    this.#layers.layerChanged(slot, surface);
+    this.#requestFrame();
+  }
+
+  layerRemoved(
+    slot: number
+  ): void {
+    this.#layers.layerRemoved(slot);
+    this.#requestFrame();
+  }
+
+  writeLayerMap(
+    slot: number,
+    map: LayerMap,
+    image: LayerImage | null
+  ): void {
+    this.#layers.writeMap(slot, map, image);
     this.#requestFrame();
   }
 
@@ -182,6 +241,7 @@ export class TerrainView {
     this.#quarters.dispose();
     this.material.dispose();
     this.#textures.dispose();
+    this.#layers.dispose();
   }
 }
 

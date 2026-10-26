@@ -32,11 +32,15 @@ A layer without an albedo is drawn in a flat neutral colour. A missing normal
 map reads as a flat normal, and a missing ORM as occlusion 1, roughness 1 and
 metalness 0.
 
-At load, the view packs each map kind into a `Texture2DArray`, one slice per
-slot. The texture size is a terrain setting: 512, 1024 (default) or 2048,
-square. Images of another size are resized on upload, and changing the
-setting rebuilds the arrays. At 1024 with mipmaps, a layer costs about 17 MB
-across its three maps.
+The view packs each map kind into a texture array, with one array layer per
+terrain layer; a 256-entry slot table gives each slot its array layer, its
+tiling and which maps it has. The arrays grow as layers are added. The
+texture size is a terrain setting: 512, 1024 (default) or 2048, square. The
+editor decodes each image at that size with `createImageBitmap`, and the view
+copies it into its array layer on the GPU, so no pixels stay on the CPU.
+Changing the setting rebuilds the arrays and uploads every image again. At
+1024 with mipmaps, a layer costs about 17 MB of GPU memory across its three
+maps.
 
 ### Images
 
