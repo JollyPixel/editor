@@ -76,14 +76,14 @@ describe("assetMenu", () => {
   test("an asset opens first, deletes last and creates nothing", () => {
     assert.deepEqual(
       outline(buildMenu([assetNodeId("model-hero")])),
-      ["open", "-", "rename", "export", "-", "delete"]
+      ["open", "-", "rename", "replace", "export", "-", "delete"]
     );
   });
 
   test("an asset offers a share link only when the studio can share", () => {
     assert.deepEqual(
       outline(buildMenu([assetNodeId("model-hero")], true)),
-      ["open", "-", "rename", "export", "share", "-", "delete"]
+      ["open", "-", "rename", "replace", "export", "share", "-", "delete"]
     );
     assert.deepEqual(
       outline(buildMenu([folderNodeId(AssetPath.parse("models"))], true)),

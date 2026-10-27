@@ -4,6 +4,7 @@ import {
   test
 } from "node:test";
 import assert from "node:assert/strict";
+import { setImmediate } from "node:timers/promises";
 
 // Import Third-party Dependencies
 import type { AssetRecordData } from "@jolly-pixel/asset";
@@ -67,7 +68,8 @@ interface TreeViewProbe {
 
 function treeView(
   catalog: FakeTreeCatalog,
-  sharing = false
+  sharing = false,
+  picks: Array<File | null> = []
 ): TreeViewProbe {
   const browserState = new BrowserState(new MemoryStorageAdapter());
   const errors: string[] = [];
@@ -87,6 +89,11 @@ function treeView(
         prompted.push("confirm delete");
 
         return null;
+      },
+      pickFile: async(accept) => {
+        prompted.push(`pick ${accept.join(",")}`);
+
+        return picks.shift() ?? null;
       }
     },
     onChange: () => undefined,
@@ -254,5 +261,32 @@ describe("AssetTreeView actions", () => {
     view.run("rename");
 
     assert.deepEqual(prompted, [`open ${kMap.id}`, `rename ${model}`]);
+  });
+
+  test("replaces an asset with a file of its format or one its kind converts, refusing others", async() => {
+    const catalog = new FakeTreeCatalog([kMap, kModel], ["maps"]);
+    const { view, prompted, errors } = treeView(catalog, false, [
+      new File(["json"], "Hero.VoxelModel.json"),
+      new File(["vox"], "tree.vox"),
+      new File(["txt"], "notes.txt"),
+      null
+    ]);
+    const model = assetNodeId(kModel.id);
+
+    for (let pick = 0; pick < 4; pick++) {
+      view.run("replace", [model]);
+      await setImmediate();
+    }
+    view.run("replace", [assetNodeId(kMap.id), model]);
+
+    assert.deepEqual(catalog.replaced, [
+      { assetId: kModel.id, content: "json", from: undefined },
+      { assetId: kModel.id, content: "vox", from: ".vox" }
+    ]);
+    assert.deepEqual(errors, [
+      "Could not replace \"hero.voxelmodel.json\" with \"notes.txt\": it is not a .voxelmodel.json file"
+    ]);
+    assert.deepEqual(new Set(prompted), new Set(["pick .voxelmodel.json,.vox"]));
+    assert.equal(prompted.length, 4);
   });
 });

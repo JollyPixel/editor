@@ -29,6 +29,11 @@ const kItems = {
     label: "Rename",
     icon: "pencil"
   },
+  replace: {
+    id: "replace",
+    label: "Replace…",
+    icon: "replace"
+  },
   export: {
     id: "export",
     label: "Export as ZIP",
@@ -61,6 +66,7 @@ export function assetMenu(
       kItems.open,
       "separator",
       kItems.rename,
+      kItems.replace,
       kItems.export,
       ...(sharing ? [kItems.share] : []),
       "separator",

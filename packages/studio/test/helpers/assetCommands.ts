@@ -112,6 +112,9 @@ export function commandsFailingAt(
         kept: [],
         failed: archive.failed ?? []
       };
+    },
+    replace: async() => {
+      return { replaced: true };
     }
   };
   const errors: string[] = [];
