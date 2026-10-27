@@ -98,7 +98,13 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   which height blending reads instead of the albedo's alpha. The panel is a
   palette of the terrain's own materials, drawn as swatches; see
   [material palette](./docs/texture.md#material-palette).
-- **Next:** the material palette.
+- **Material palette: done** (2026-10-27). The Materials pane shows the
+  terrain's materials as swatches; a material is added from a picked texture
+  or from dropped images, with its sibling maps found by name, and edited
+  through a Scale field and folded Maps and Look sections. The techniques are
+  stored but not drawn yet.
+- **Next:** splat parts, `splat-patched` commits and the overview's dominant
+  material.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -147,7 +153,7 @@ chunks yet.
 - [x] Albedo, normal and ORM texture arrays, rebuilt when an image or the
   texture size changes.
 - [x] Rename layers to materials, and add the height map.
-- [ ] Material palette: swatches of the terrain's materials with map badges,
+- [x] Material palette: swatches of the terrain's materials with map badges,
   selection, adding from an image with its sibling maps found by name, and
   editing a material's maps, tiling and flags.
 - [ ] Splat parts, `splat-patched` commits, and the overview's dominant

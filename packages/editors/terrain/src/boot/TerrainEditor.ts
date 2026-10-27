@@ -25,9 +25,15 @@ import {
 import { PeerRoster } from "@jolly-pixel/ui/network";
 
 import type { TerrainView } from "@jolly-pixel/terrain.renderer";
+import { TEXTURE_ASSET } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
+import { MaterialPalette } from "../features/materials/model/MaterialPalette.ts";
+import { MaterialSelection } from "../features/materials/model/MaterialSelection.ts";
+import { MaterialThumbnails } from "../features/materials/model/MaterialThumbnails.ts";
 import { textureDocumentKind } from "../features/materials/model/TextureDocument.ts";
+import { parentFolder } from "../features/materials/model/textureNames.ts";
+import "../features/materials/panel/MaterialPalettePanel.ts";
 import { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
 import "../features/sculpt/toolbar/SculptToolbar.ts";
 import { OverlaySettings } from "../features/overlays/model/OverlaySettings.ts";
@@ -36,13 +42,15 @@ import { TerrainEditorScene } from "../scene/TerrainEditorScene.ts";
 import { PresenceStore } from "../shared/PresenceStore.ts";
 import {
   createTerrainHistory,
-  TERRAIN_REFUSAL_WORDING
+  TERRAIN_REFUSAL_WORDING,
+  type TerrainHistory
 } from "../shared/terrainHistory.ts";
 
 // CONSTANTS
 const kCanvas = "#game-container canvas";
 const kTerrainKind = terrainDocumentKind();
 const kTextureKind = textureDocumentKind();
+const kTextureFolder = "textures";
 
 export interface TerrainEditorParts {
   runtime: Runtime;
@@ -186,6 +194,7 @@ async function mountScene(
   const { sceneManager } = context.runtime.runtime.world;
   disposables.push(() => sceneManager.unloadScene(scene));
   await context.runtime.load(scene);
+  mountMaterialPalette(context, target, history, disposables);
 
   const presence = new PresenceStore();
   const roster = new PeerRoster({
@@ -206,6 +215,43 @@ async function mountScene(
   }
 
   return scene;
+}
+
+function mountMaterialPalette(
+  context: RuntimeEditorContext,
+  target: AssetLease<TerrainDocument>,
+  history: TerrainHistory,
+  disposables: Array<() => void>
+): void {
+  const element = document.querySelector("terrain-material-palette");
+  if (element === null) {
+    return;
+  }
+
+  const { session } = context;
+  const terrain = target.document;
+  const selection = new MaterialSelection(terrain);
+  const thumbnails = new MaterialThumbnails({
+    document: terrain,
+    lease: (assetId) => session.lease(kTextureKind, assetId),
+    createUrl: (bytes) => URL.createObjectURL(new Blob([bytes.slice()])),
+    revokeUrl: (url) => URL.revokeObjectURL(url)
+  });
+  const terrainFolder = parentFolder(session.target.record.path);
+  const palette = new MaterialPalette({
+    document: terrain,
+    selection,
+    history,
+    catalog: session.catalog,
+    importFolder: terrainFolder === "" ? kTextureFolder : `${terrainFolder}/${kTextureFolder}`,
+    pickTexture: (title) => session.pickAsset({ kinds: [TEXTURE_ASSET], title })
+  });
+  element.context = { document: terrain, palette, selection, thumbnails };
+  disposables.push(() => {
+    element.context = null;
+    thumbnails.dispose();
+    selection.dispose();
+  });
 }
 
 function disposeAll(

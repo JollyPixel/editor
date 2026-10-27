@@ -71,17 +71,43 @@ the catalog keeps them and archives carry them.
 
 ### Material palette
 
-A panel shows the terrain's materials as square swatches, each drawn from its
-albedo, with a badge per map it has: A, N, O and H. It shows only the
-materials loaded for this terrain, not every texture in the project. Clicking
-a swatch selects it; the selected material is the one the paint brush writes.
+The Materials pane starts in the right dock; it can be dragged to the left
+dock or floated, and each person's layout is kept. It shows the terrain's
+materials as square swatches, each drawn from its albedo, or in the fallback
+colour without one, with a badge per map it has: A, N, O and H. It shows only
+the materials loaded for this terrain, not every texture in the project.
+Clicking a swatch selects it; the selected material is the one the paint
+brush writes. The selection is each person's own: it is not shared and not
+undone. Removing the selected material selects the first one left.
 
-Adding a material starts from an image, picked through the host's asset
-dialog or dropped on the palette, which becomes its albedo. Images beside it
-named after the same material, such as `rock_normal`, `rock_orm` and
-`rock_height` for `rock_albedo`, fill the other maps. Opening a swatch edits
-its maps, tiling and technique flags. The terrain's texture size sits in the
-panel header.
+Adding a material starts from an image:
+
+- **+** opens the host's asset dialog on `texture` assets. The picked image
+  fills the map its name ends with, or the albedo, and the images in the same
+  folder named after the same material fill the other maps.
+- Image files dropped on the pane from the desktop are imported into a
+  `textures` folder beside the terrain, then grouped by name: `rock_albedo`,
+  `rock_normal` and `rock_height` make one material, Rock; an image whose name
+  ends with no map word, such as `grass.png`, makes a material with it as the
+  albedo.
+
+Map words are matched case-insensitively at the end of the name, after `_`,
+`-`, `.` or a space: albedo, basecolor, diffuse, color for the albedo;
+normal, nrm for the normal; orm, arm for the ORM; height, displacement, disp
+for the height.
+
+Below the grid, the selected material shows the essentials first: a preview,
+its name and a Scale field, the metres one repeat covers. Two folded sections
+hold the rest, worded for people new to materials, with the technical name in
+each tooltip:
+
+- **Maps**: Color (albedo), Bumps (normal), Surface (ORM) and Height. Each map
+  can be picked, replaced by a dropped image, or cleared.
+- **Look**: Wrap steep slopes (triplanar), Hide repetition (stochastic
+  tiling) and Blend by height (height blending).
+
+The terrain's texture size sits above the grid. Every change goes through the
+terrain's undo history.
 
 ## Splat
 
