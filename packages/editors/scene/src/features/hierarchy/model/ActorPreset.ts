@@ -2,47 +2,44 @@
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 import {
   randomId,
-  type JSONObject,
   type SceneComponentJSON
 } from "@jolly-pixel/asset.scene/client";
+import type {
+  SceneActorPreset,
+  SceneComponentSeed
+} from "@jolly-pixel/editor.host/scene";
 import type { MenuItem } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import {
-  actorIcon,
-  picksAssets
-} from "../../../components/sceneComponents.ts";
+import type { SceneComponents } from "../../../components/SceneComponents.ts";
 
 export type AddActorAction = `add:${string}`;
 
 export type PickedAssets = Record<string, AssetReferenceData>;
 
-export interface ActorComponentSeed {
-  type: string;
-  data: JSONObject;
-}
-
-export interface ActorPresetOptions {
-  id: string;
-  label: string;
-  components: readonly ActorComponentSeed[];
-}
+export type ActorPresetRegistry = Pick<
+  SceneComponents,
+  "actorIcon" | "picksAssets"
+>;
 
 export class ActorPreset {
   readonly action: AddActorAction;
   readonly label: string;
-  readonly #components: readonly ActorComponentSeed[];
+  readonly icon: string;
+  readonly #components: readonly SceneComponentSeed[];
+  readonly #picksAssets: boolean;
 
   constructor(
-    options: ActorPresetOptions
+    options: SceneActorPreset,
+    registry: ActorPresetRegistry
   ) {
+    const types = options.components.map(({ type }) => type);
+
     this.action = `add:${options.id}`;
     this.label = options.label;
+    this.icon = registry.actorIcon(types);
     this.#components = options.components;
-  }
-
-  get icon(): string {
-    return actorIcon(this.#components.map(({ type }) => type));
+    this.#picksAssets = types.some((type) => registry.picksAssets(type));
   }
 
   get presets(): readonly ActorPreset[] {
@@ -50,11 +47,9 @@ export class ActorPreset {
   }
 
   get menuEntry(): MenuItem<AddActorAction> {
-    const picks = this.#components.some(({ type }) => picksAssets(type));
-
     return {
       id: this.action,
-      label: picks ? `${this.label}…` : this.label,
+      label: this.#picksAssets ? `${this.label}…` : this.label,
       icon: this.icon
     };
   }

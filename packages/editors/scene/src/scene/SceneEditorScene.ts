@@ -17,23 +17,23 @@ import {
   Teardown
 } from "@jolly-pixel/editor.host";
 import type { Preferences } from "@jolly-pixel/editor.host/preferences";
+import type { SceneAssetContext } from "@jolly-pixel/editor.host/scene";
 import { Grid } from "@jolly-pixel/three";
 
 // Import Internal Dependencies
 import { SceneBinding } from "./SceneBinding.ts";
-import {
-  EditAssets,
-  type MapViewerOpener
-} from "./EditAssets.ts";
-import { createSceneDefinitions } from "../components/sceneComponents.ts";
+import { EditAssets } from "./EditAssets.ts";
+import type { SceneComponents } from "../components/SceneComponents.ts";
 import { SceneCollaboration } from "../collaboration/SceneCollaboration.ts";
 import { SceneActions } from "../editing/SceneActions.ts";
+import { ActorPresetMenu } from "../features/hierarchy/model/ActorPresetMenu.ts";
 import type {
   SceneAssetSlots,
   SceneEditing
 } from "../editing/SceneEditing.ts";
 import { createSceneHistory } from "../features/history/sceneHistory.ts";
 import { ActorPicker } from "../features/viewport/ActorPicker.ts";
+import { followGridPreferences } from "../features/viewport/followGridPreferences.ts";
 import { GizmoSettings } from "../features/viewport/GizmoSettings.ts";
 import { SceneGizmo } from "../features/viewport/SceneGizmo.ts";
 import { SceneHelpers } from "../features/viewport/SceneHelpers.ts";
@@ -41,6 +41,7 @@ import { SelectionHighlight } from "../features/viewport/SelectionHighlight.ts";
 import type { SceneAction } from "../keybindings/sceneActions.ts";
 import { sceneShortcuts } from "../keybindings/sceneShortcuts.ts";
 import type { PresenceStore } from "../state/PresenceStore.ts";
+import { SceneDraft } from "../state/SceneDraft.ts";
 import { SelectionStore } from "../state/SelectionStore.ts";
 
 // CONSTANTS
@@ -65,7 +66,8 @@ const kFraming = {
 export interface SceneEditorSceneOptions {
   document: SceneDocument;
   room: SceneRoom;
-  openMap: MapViewerOpener;
+  session: SceneAssetContext;
+  components: SceneComponents;
   assetSlots: SceneAssetSlots;
   presence: PresenceStore;
   preferences: Preferences;
@@ -94,6 +96,7 @@ export class SceneEditorScene extends Systems.Scene {
       document,
       room,
       presence,
+      components,
       assetSlots
     } = this.#options;
     const { world } = this;
@@ -116,22 +119,28 @@ export class SceneEditorScene extends Systems.Scene {
     teardown.defer(() => history.dispose());
     const environment = new Systems.SceneEnvironment(world);
     teardown.defer(() => environment.dispose());
-    const assets = new EditAssets(this.#options.openMap);
+    const assets = new EditAssets(components, this.#options.session);
     teardown.defer(() => assets.dispose());
     const binding = new SceneBinding({
       world,
       document,
-      components: createSceneDefinitions(),
+      components: components.createDefinitions(),
       assets,
       environment
     });
     teardown.defer(() => binding.dispose());
+    const draft = new SceneDraft({
+      document,
+      view: binding
+    });
+    teardown.defer(() => draft.dispose());
     const selection = new SelectionStore(document);
     teardown.defer(() => selection.dispose());
     const actions = new SceneActions({
       document,
       history,
       selection,
+      components,
       assetSlots
     });
     const gizmo = new GizmoSettings();
@@ -185,6 +194,11 @@ export class SceneEditorScene extends Systems.Scene {
     }
     teardown.defer(selection.subscribe("change", invalidate));
     teardown.defer(followCameraPreferences(camera, this.#options.preferences));
+    teardown.defer(followGridPreferences(
+      grid,
+      this.#options.preferences,
+      invalidate
+    ));
     teardown.defer(this.#options.keyBindings.bind(
       world.input.keyboard,
       sceneShortcuts({
@@ -198,18 +212,21 @@ export class SceneEditorScene extends Systems.Scene {
 
     this.#editing.resolve({
       document,
+      components,
+      presets: new ActorPresetMenu(components),
       history,
       actions,
       selection,
       presence,
       gizmo,
       assetSlots,
+      preferences: this.#options.preferences,
       shortcuts: new ShortcutLabels(
         this.#options.keyboardLayout,
         this.#options.keyBindings
       ),
+      draft,
       frameSelection,
-      previewEnvironment: (patch) => binding.previewEnvironment(patch),
       teleportToPeer: (clientId) => {
         const pose = collaboration.peerPose(clientId);
         if (pose !== undefined) {

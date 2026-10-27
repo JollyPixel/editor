@@ -121,20 +121,6 @@ registerIcon("actor-mesh", svg`
   />
 `, { tone: "lime" });
 
-registerIcon("actor-voxel-map", svg`
-  <path
-    class="tone-fill"
-    d="M3 14h6v6H3zM9 8h6v6H9z"
-  />
-  <path
-    d="M3 14h6v6H3zM9 14h6v6H9zM15 14h6v6h-6zM9 8h6v6H9z"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="1.75"
-    stroke-linejoin="round"
-  />
-`, { tone: "lime" });
-
 registerIcon("action-duplicate", svg`
   <rect
     class="tone-fill"
@@ -155,21 +141,6 @@ registerIcon("action-duplicate", svg`
     stroke-linejoin="round"
   />
 `, { tone: "sky" });
-
-registerIcon("action-delete", svg`
-  <path
-    class="tone-fill"
-    d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13z"
-  />
-  <path
-    d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="1.5"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
-`, { tone: "coral" });
 
 registerIcon("action-rename", svg`
   <path
@@ -279,6 +250,42 @@ registerIcon("gizmo-space-world", svg`
     stroke-linejoin="round"
   />
 `, { tone: "teal" });
+
+registerIcon("view-grid", svg`
+  <rect
+    class="tone-fill"
+    x="4"
+    y="4"
+    width="16"
+    height="16"
+    rx="1"
+  />
+  <path
+    d="M4 4h16v16H4zM9.33 4v16M14.67 4v16M4 9.33h16M4 14.67h16"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.75"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "amber" });
+
+registerIcon("view-axes", svg`
+  <circle
+    class="tone-fill"
+    cx="8"
+    cy="16"
+    r="2.5"
+  />
+  <path
+    d="M8 16V3M5.5 5.5 8 3l2.5 2.5M8 16h13M18.5 13.5 21 16l-2.5 2.5M8 16l-5 5"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.75"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "coral" });
 
 registerIcon("view-frame", svg`
   <circle

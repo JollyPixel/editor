@@ -68,3 +68,16 @@ so two viewers of the same map would add its blocks twice.
 editor that shows maps puts them in its own `kinds`, because the host matches
 a lease to its document kind by identity. The package also exports both
 kinds as `VOXEL_MAP_DOCUMENT_KIND` and `BLOCKSET_DOCUMENT_KIND`.
+
+## Scene component
+
+`@jolly-pixel/editor.voxel-map/scene` exports `SCENE_COMPONENTS`, the
+`SceneComponentPackage` that adds the `VoxelMap` component to the scene
+editor. The manifest names it with `"jollypixel": { "scene": "./scene" }`.
+
+It declares the `VoxelMap` component with its cast and receive shadow rows, a
+"Voxel map" preset, and the `voxelmap` asset source. That source opens a
+`SharedVoxelMaps` per editor session: one `VoxelMapViewer` per map, shared by
+every component that shows it, and released a microtask after its last view
+detaches, so a component rebuild keeps the lease. This also keeps to the one
+viewer per map rule above.

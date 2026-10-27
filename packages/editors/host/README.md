@@ -120,6 +120,9 @@ await mountStandalone(MyEditor, {
 - [Viewport presets](./docs/viewport/ViewportPresets.md): the shared gizmo
   appearance and peer highlight colors, from
   `@jolly-pixel/editor.host/viewport`.
+- [`SceneComponentPackage`](./docs/scene/SceneComponentPackage.md): the
+  contract a package implements to add component types to the scene editor,
+  from `@jolly-pixel/editor.host/scene`.
 
 ## ✨ Contributors guide
 

@@ -97,6 +97,10 @@ Returns a 12-character id from `[0-9A-Za-z]`, the form every actor and component
 
 Returns the default fog of `kind`, keeping the color when both kinds have one. Returns `fog` unchanged when it already has that kind.
 
+## applyComponentChange(data, change): JSONObject
+
+Returns a copy of `data` with `change` applied the way `changeComponent` applies it. `data` is left untouched.
+
 ## Tree rules
 
 The tree refuses:

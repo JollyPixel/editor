@@ -3,7 +3,10 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { AssetReferenceData } from "@jolly-pixel/asset";
+import {
+  AssetType,
+  type AssetReferenceData
+} from "@jolly-pixel/asset";
 import { SceneDocument } from "@jolly-pixel/asset.scene/client";
 
 // Import Internal Dependencies
@@ -14,6 +17,33 @@ import {
   SCENE_HISTORY_SCOPE
 } from "../../src/features/history/sceneHistory.ts";
 import { SelectionStore } from "../../src/state/SelectionStore.ts";
+import { createSceneComponents } from "../helpers/sceneComponents.ts";
+
+// CONSTANTS
+const kComponents = createSceneComponents([
+  "maps",
+  {
+    components: [
+      {
+        definition: {
+          type: "VoxelMap",
+          assets: {
+            map: new AssetType<unknown>("voxelmap")
+          },
+          parse() {
+            return {};
+          },
+          create() {
+            return null;
+          }
+        },
+        label: "Voxel map",
+        icon: "actor-voxel-map",
+        form: () => []
+      }
+    ]
+  }
+]);
 
 function createActions(
   picked: AssetReferenceData | null = null
@@ -26,6 +56,7 @@ function createActions(
     document,
     history,
     selection,
+    components: kComponents,
     assetSlots: {
       name: () => "Ground",
       pick: (type) => {
@@ -52,7 +83,7 @@ function preset(
         data: {}
       }
     ]
-  });
+  }, kComponents);
 }
 
 function names(

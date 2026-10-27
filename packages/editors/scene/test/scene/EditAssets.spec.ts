@@ -3,97 +3,101 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { AssetType } from "@jolly-pixel/asset";
-import type { VoxelView } from "@jolly-pixel/voxel.renderer";
 import {
-  VOXEL_MAP_ASSET,
-  type VoxelMapSource
-} from "@jolly-pixel/voxel.renderer/engine";
+  AssetType,
+  type AssetReferenceData
+} from "@jolly-pixel/asset";
+import type {
+  SceneAssetContext,
+  SceneAssetSource
+} from "@jolly-pixel/editor.host/scene";
 
 // Import Internal Dependencies
-import {
-  EditAssets,
-  type MapViewer
-} from "../../src/scene/EditAssets.ts";
+import { SceneComponents } from "../../src/components/SceneComponents.ts";
+import { EditAssets } from "../../src/scene/EditAssets.ts";
 
-interface FakeViewer extends MapViewer {
-  mapId: string;
-  attached: number;
-  released: boolean;
+interface OpenedSource {
+  kind: string;
+  session: SceneAssetContext;
+  resolved: string[];
+  disposed: boolean;
 }
+
+// CONSTANTS
+const kSession = {} as SceneAssetContext;
+const kMap = new AssetType<string>("voxelmap");
+const kModel = new AssetType<string>("voxelmodel");
 
 function createAssets() {
-  const viewers: FakeViewer[] = [];
-  const assets = new EditAssets((mapId) => {
-    const viewer: FakeViewer = {
-      mapId,
-      attached: 0,
-      released: false,
-      document: {} as VoxelMapSource["document"],
-      attach: () => {
-        viewer.attached++;
-
-        return () => {
-          viewer.attached--;
-        };
+  const opened: OpenedSource[] = [];
+  function source(
+    kind: string
+  ): SceneAssetSource<string> {
+    return {
+      descriptor: {
+        kind,
+        label: kind,
+        extension: `.${kind}.json`
       },
-      release: () => {
-        viewer.released = true;
+      documentKinds: [],
+      open: (session) => {
+        const entry: OpenedSource = {
+          kind,
+          session,
+          resolved: [],
+          disposed: false
+        };
+        opened.push(entry);
+
+        return {
+          resolve: (reference: AssetReferenceData) => {
+            entry.resolved.push(reference.id);
+
+            return `${kind}:${reference.id}`;
+          },
+          dispose: () => {
+            entry.disposed = true;
+          }
+        };
       }
     };
-    viewers.push(viewer);
+  }
 
-    return viewer;
-  });
-
-  return { assets, viewers };
+  return {
+    assets: new EditAssets(
+      new SceneComponents([
+        [
+          "sources",
+          {
+            components: [],
+            assets: [source("voxelmap"), source("voxelmodel"), source("unused")]
+          }
+        ]
+      ]),
+      kSession
+    ),
+    opened
+  };
 }
-
-function resolveMap(
-  assets: EditAssets,
-  mapId: string
-): VoxelMapSource {
-  return assets.resolve({ id: mapId, kind: "voxelmap" }, VOXEL_MAP_ASSET);
-}
-
-const kView = {} as VoxelView;
 
 describe("EditAssets", () => {
-  test("shares one viewer between the components showing the same map", () => {
-    const { assets, viewers } = createAssets();
+  test("opens one resolver per asset kind on first use and routes each reference to it", () => {
+    const { assets, opened } = createAssets();
 
-    const first = resolveMap(assets, "map-a");
-    const second = resolveMap(assets, "map-a");
-    const other = resolveMap(assets, "map-b");
-    first.attach(kView);
-    second.attach(kView);
-    other.attach(kView);
+    const first = assets.resolve({ id: "a", kind: "voxelmap" }, kMap);
+    assets.resolve({ id: "b", kind: "voxelmap" }, kMap);
+    const model = assets.resolve({ id: "c", kind: "voxelmodel" }, kModel);
 
-    assert.deepEqual(viewers.map((viewer) => viewer.mapId), ["map-a", "map-b"]);
-    assert.strictEqual(first.document, second.document);
-    assert.strictEqual(viewers[0].attached, 2);
+    assert.strictEqual(first, "voxelmap:a");
+    assert.strictEqual(model, "voxelmodel:c");
+    assert.deepEqual(
+      opened.map(({ kind, resolved }) => [kind, resolved]),
+      [["voxelmap", ["a", "b"]], ["voxelmodel", ["c"]]]
+    );
+    assert.strictEqual(opened[0].session, kSession);
   });
 
-  test("releases a viewer once its last view detaches, but not across a rebuild", async() => {
-    const { assets, viewers } = createAssets();
-    const detachFirst = resolveMap(assets, "map").attach(kView);
-    const detachSecond = resolveMap(assets, "map").attach(kView);
-
-    detachFirst();
-    detachSecond();
-    const rebuilt = resolveMap(assets, "map").attach(kView);
-    await Promise.resolve();
-    assert.strictEqual(viewers.length, 1);
-    assert.strictEqual(viewers[0].released, false);
-
-    rebuilt();
-    await Promise.resolve();
-    assert.strictEqual(viewers[0].released, true);
-    resolveMap(assets, "map");
-    assert.strictEqual(viewers.length, 2);
-  });
-
-  test("refuses an asset type it does not serve", () => {
+  test("refuses an asset type no source serves", () => {
     const { assets } = createAssets();
 
     assert.throws(
@@ -102,12 +106,15 @@ describe("EditAssets", () => {
     );
   });
 
-  test("releases every open viewer on dispose", () => {
-    const { assets, viewers } = createAssets();
-    resolveMap(assets, "map").attach(kView);
+  test("disposes every opened resolver on dispose", () => {
+    const { assets, opened } = createAssets();
+    assets.resolve({ id: "a", kind: "voxelmap" }, kMap);
 
     assets.dispose();
 
-    assert.strictEqual(viewers[0].released, true);
+    assert.deepEqual(
+      opened.map(({ kind, disposed }) => [kind, disposed]),
+      [["voxelmap", true]]
+    );
   });
 });

@@ -24,28 +24,34 @@ import {
   ComponentInspection,
   type InspectedRow
 } from "../../components/ComponentInspection.ts";
-import {
-  componentAssetSlots,
-  sceneComponent
-} from "../../components/sceneComponents.ts";
 import type { SceneEditing } from "../../editing/SceneEditing.ts";
 import "./ScriptPropertiesEditor.ts";
 import type { ScriptPropertiesChangeDetail } from "./ScriptPropertiesEditor.ts";
 
 export type ComponentBodyContext = Pick<
   SceneEditing,
-  "document" | "assetSlots"
+  "document" | "components" | "assetSlots" | "draft"
 >;
+
+interface RowEdit {
+  preview: (next: JSONValue) => void;
+  commit: (next: JSONValue) => void;
+}
 
 type ChangeEvent<TValue> = CustomEvent<JollyChangeDetail<TValue>>;
 
 export function renderComponentBody(
-  entry: SceneComponentJSON,
+  stored: SceneComponentJSON,
   context: ComponentBodyContext
 ): TemplateResult {
-  const kind = sceneComponent(entry.type);
+  const { draft, components } = context;
+  const entry = draft.component(stored);
+  const kind = components.find(entry.type);
   if (kind === undefined) {
     return html`
+      <p class="missing">
+        No package of this project provides this component. Its data is kept.
+      </p>
       <pre class="unknown">${JSON.stringify(entry.data, null, 2)}</pre>
     `;
   }
@@ -53,22 +59,26 @@ export function renderComponentBody(
   const inspection = new ComponentInspection(entry, kind);
 
   return html`
-    ${renderAssetSlots(entry, componentAssetSlots(entry.type), context)}
-    ${inspection.rows.map((inspected) => renderRow(
-      inspected,
-      (next) => context.document.changeComponent(
+    ${renderAssetSlots(entry, components.assetSlots(entry.type), context)}
+    ${inspection.rows.map((inspected) => renderRow(inspected, {
+      preview: (next) => draft.editComponent(
+        entry.id,
+        inspection.edit(inspected, next)
+      ),
+      commit: (next) => draft.commitComponent(
         entry.id,
         inspection.edit(inspected, next)
       )
-    ))}
+    }))}
   `;
 }
 
 function renderRow(
   inspected: InspectedRow,
-  commit: (next: JSONValue) => void
+  edit: RowEdit
 ): TemplateResult {
   const { row, value, fallback } = inspected;
+  const { preview, commit } = edit;
 
   switch (row.control) {
     case "number":
@@ -80,6 +90,7 @@ function renderRow(
           .min=${row.min ?? -Infinity}
           .max=${row.max ?? Infinity}
           .step=${row.step ?? 1}
+          @jolly-input=${(event: ChangeEvent<number>) => preview(event.detail.value)}
           @jolly-change=${(event: ChangeEvent<number>) => commit(event.detail.value)}
         ></jolly-number>
       `;
@@ -97,6 +108,7 @@ function renderRow(
           label=${row.label}
           .value=${String(value)}
           .default=${fallback}
+          @jolly-input=${(event: ChangeEvent<string>) => preview(event.detail.value)}
           @jolly-change=${(event: ChangeEvent<string>) => commit(event.detail.value)}
         ></jolly-color>
       `;

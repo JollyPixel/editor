@@ -12,10 +12,12 @@
       ],
       "page": "index.html",
       "preferences": "src/preferences.ts"
-    }
+    },
+    "scene": "./scene"
   },
   "exports": {
-    ".": "./src/viewer/index.ts"
+    ".": "./src/viewer/index.ts",
+    "./scene": "./src/sceneComponents/index.ts"
   },
   "scripts": {
     "prepublishOnly": "rimraf ./dist && tsc -b",

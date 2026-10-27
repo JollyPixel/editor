@@ -9,56 +9,12 @@ import {
   SceneDocument,
   type SceneEnvironmentJSON
 } from "@jolly-pixel/asset.scene/client";
-import {
-  ActorComponent,
-  Systems,
-  type Actor
-} from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
-import { createSceneBinding } from "../helpers/sceneBinding.ts";
-
-class Probe extends ActorComponent {
-  label: string;
-
-  constructor(
-    actor: Actor,
-    options: { label: string; }
-  ) {
-    super({ actor, typeName: "Probe" });
-    this.label = options.label;
-  }
-}
-
-function parseLabel(
-  data: Readonly<Systems.JSONObject>
-): string {
-  return typeof data.label === "string" ? data.label : "none";
-}
-
-const kPatched: Systems.ComponentDefinition<string, Probe> = {
-  type: "Patched",
-  parse: parseLabel,
-  create: (actor, label) => actor.addComponentAndGet(Probe, { label }),
-  apply: (probe, label) => {
-    probe.label = label;
-  }
-};
-
-const kRebuilt: Systems.ComponentDefinition<string, Probe> = {
-  type: "Rebuilt",
-  parse: parseLabel,
-  create: (actor, label) => actor.addComponentAndGet(Probe, { label })
-};
-
-function createBinding(
-  document: SceneDocument
-) {
-  return createSceneBinding(
-    document,
-    new Systems.ComponentDefinitions().register(kPatched, kRebuilt)
-  );
-}
+import {
+  createProbeBinding,
+  Probe
+} from "../helpers/probeComponents.ts";
 
 describe("SceneBinding", () => {
   test("builds the document's actors under their parents with their components", () => {
@@ -73,7 +29,7 @@ describe("SceneBinding", () => {
       components: [{ id: "probe", type: "Patched", data: { label: "sun" }, assets: {} }]
     })!;
 
-    const { binding, environments } = createBinding(document);
+    const { binding, environments } = createProbeBinding(document);
 
     const root = binding.actor(rootId)!;
     const child = binding.actor(childId)!;
@@ -86,7 +42,7 @@ describe("SceneBinding", () => {
   test("builds an added subtree under its parent and forgets a removed one", () => {
     const document = new SceneDocument();
     const rootId = document.addActor({ name: "Root" })!;
-    const { binding, sceneManager } = createBinding(document);
+    const { binding, sceneManager } = createProbeBinding(document);
 
     const addedId = document.addActor({
       name: "Added",
@@ -113,7 +69,7 @@ describe("SceneBinding", () => {
         { id: "rebuilt", type: "Rebuilt", data: { label: "a" }, assets: {} }
       ]
     });
-    const { binding } = createBinding(document);
+    const { binding } = createProbeBinding(document);
     const patched = binding.component("patched");
     const rebuilt = binding.component("rebuilt");
 
@@ -131,7 +87,7 @@ describe("SceneBinding", () => {
     const document = new SceneDocument();
     const rootId = document.addActor({ name: "Root" })!;
     const childId = document.addActor({ name: "Child", parentId: rootId })!;
-    const { binding } = createBinding(document);
+    const { binding } = createProbeBinding(document);
 
     document.move(childId, null, {
       transform: {
@@ -150,7 +106,7 @@ describe("SceneBinding", () => {
   test("rebuilds every actor and the environment when the document resets", () => {
     const document = new SceneDocument();
     const oldId = document.addActor({ name: "Old" })!;
-    const { binding, sceneManager, environments } = createBinding(document);
+    const { binding, sceneManager, environments } = createProbeBinding(document);
     const foggy: SceneEnvironmentJSON = {
       ...createSceneEnvironment(),
       fog: { kind: "exp2", color: "#ffffff", density: 0.1 }
@@ -184,7 +140,7 @@ describe("SceneBinding", () => {
   test("previews an environment patch over the document without changing it", () => {
     const document = new SceneDocument();
     const stored = document.tree.environment;
-    const { binding, environments } = createBinding(document);
+    const { binding, environments } = createProbeBinding(document);
 
     binding.previewEnvironment({ background: "#ff0000" });
 
@@ -195,10 +151,47 @@ describe("SceneBinding", () => {
     assert.deepEqual(document.tree.environment, stored);
   });
 
+  test("previews a component change through apply without changing the document", () => {
+    const document = new SceneDocument();
+    document.addActor({
+      name: "Actor",
+      components: [
+        { id: "patched", type: "Patched", data: { label: "a" }, assets: {} },
+        { id: "rebuilt", type: "Rebuilt", data: { label: "a" }, assets: {} }
+      ]
+    });
+    const { binding } = createProbeBinding(document);
+    const patched = binding.component("patched") as Probe;
+    const rebuilt = binding.component("rebuilt") as Probe;
+
+    binding.previewComponent("patched", { data: { label: "b" } });
+    binding.previewComponent("rebuilt", { data: { label: "b" } });
+    assert.strictEqual(patched.label, "b");
+    assert.strictEqual(binding.component("rebuilt"), rebuilt);
+    assert.strictEqual(rebuilt.label, "a");
+    assert.deepEqual(document.tree.component("patched")?.data, { label: "a" });
+
+    binding.previewComponent("patched", { unset: ["label"] });
+    assert.strictEqual(patched.label, "none");
+  });
+
+  test("previews a transform patch over the stored transform without changing the document", () => {
+    const document = new SceneDocument();
+    const scale = { x: 2, y: 2, z: 2 };
+    const actorId = document.addActor({ name: "Actor", transform: { scale } })!;
+    const { binding } = createProbeBinding(document);
+    const { object3D } = binding.actor(actorId)!;
+
+    binding.previewTransform(actorId, { position: { x: 5, y: 0, z: 0 } });
+    assert.deepEqual(object3D.position.toArray(), [5, 0, 0]);
+    assert.deepEqual(object3D.scale.toArray(), [2, 2, 2]);
+    assert.deepEqual(document.tree.actor(actorId)?.transform.position, { x: 0, y: 0, z: 0 });
+  });
+
   test("finds the actor that owns a nested object", () => {
     const document = new SceneDocument();
     const actorId = document.addActor({ name: "Actor" })!;
-    const { binding } = createBinding(document);
+    const { binding } = createProbeBinding(document);
     const mesh = new THREE.Object3D();
     binding.actor(actorId)!.object3D.add(mesh);
 
@@ -209,7 +202,7 @@ describe("SceneBinding", () => {
   test("resolves an outside pick target to its actor until it is released", () => {
     const document = new SceneDocument();
     const actorId = document.addActor({ name: "Actor" })!;
-    const { binding } = createBinding(document);
+    const { binding } = createProbeBinding(document);
     const marker = new THREE.Group();
     marker.add(new THREE.Object3D());
 
@@ -226,7 +219,7 @@ describe("SceneBinding", () => {
       name: "Actor",
       components: [{ id: "rebuilt", type: "Rebuilt", data: {}, assets: {} }]
     })!;
-    const { binding } = createBinding(document);
+    const { binding } = createProbeBinding(document);
     const live = new Set([...binding.components()].map(({ component }) => component));
     binding.on("componentBuilt", ({ component, actorId: ownerId }) => {
       assert.strictEqual(ownerId, actorId);
@@ -248,7 +241,7 @@ describe("SceneBinding", () => {
       transform: { position: { x: 4, y: 0, z: 0 } }
     })!;
     const boxId = document.addActor({ name: "Box" })!;
-    const { binding } = createBinding(document);
+    const { binding } = createProbeBinding(document);
     binding.actor(boxId)!.object3D.add(
       new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2))
     );

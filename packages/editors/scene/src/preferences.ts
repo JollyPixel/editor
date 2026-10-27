@@ -1,8 +1,35 @@
 // Import Third-party Dependencies
-import { defineKeyBindings } from "@jolly-pixel/editor.host/preferences";
+import {
+  defineKeyBindings,
+  definePreferences,
+  type PreferenceValues
+} from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import { SCENE_KEY_BINDINGS } from "./keybindings/sceneActions.ts";
+
+export const SCENE_PREFERENCES = definePreferences({
+  name: "scene",
+  label: "Scene",
+  fields: {
+    grid: {
+      type: "boolean",
+      label: "Grid",
+      group: "View",
+      default: true
+    },
+    axes: {
+      type: "boolean",
+      label: "Axes",
+      group: "View",
+      default: true
+    }
+  }
+});
+
+export type ScenePreferences = PreferenceValues<
+  typeof SCENE_PREFERENCES.fields
+>;
 
 export const SCENE_KEYBINDINGS = defineKeyBindings({
   name: "scene-keybindings",
@@ -48,4 +75,4 @@ export const SCENE_KEYBINDINGS = defineKeyBindings({
   }
 });
 
-export default [SCENE_KEYBINDINGS];
+export default [SCENE_PREFERENCES, SCENE_KEYBINDINGS];

@@ -10,8 +10,8 @@ import { repeat } from "lit/directives/repeat.js";
 import type {
   SceneActorJSON,
   SceneComponentJSON,
-  SceneDocument,
-  SceneTransformField
+  SceneTransformField,
+  SceneTransformPatch
 } from "@jolly-pixel/asset.scene/client";
 import {
   ContextMenuController,
@@ -35,11 +35,9 @@ import "@jolly-pixel/ui/elements/vector3";
 
 // Import Internal Dependencies
 import "../../app/sceneIcons.ts";
-import {
-  picksAssets,
-  SCENE_COMPONENTS
-} from "../../components/sceneComponents.ts";
+import type { SceneComponents } from "../../components/SceneComponents.ts";
 import type { SceneEditing } from "../../editing/SceneEditing.ts";
+import type { SceneDraft } from "../../state/SceneDraft.ts";
 import { axisValues } from "./axisValues.ts";
 import { renderComponentBody } from "./componentBody.ts";
 
@@ -93,6 +91,7 @@ export class InspectorPanel extends LitElement {
       editing.document.subscribe("change", repaint),
       editing.document.subscribe("reset", repaint),
       editing.selection.subscribe("change", repaint),
+      editing.draft.subscribe("change", repaint),
       editing.assetSlots.subscribe(repaint)
     ];
   });
@@ -134,6 +133,12 @@ export class InspectorPanel extends LitElement {
       white-space: nowrap;
     }
 
+    .missing {
+      margin: 0 0 4px;
+      font-size: 11px;
+      color: var(--jolly-text-muted, #9aa3ad);
+    }
+
     .unknown {
       margin: 0;
       overflow: auto;
@@ -157,7 +162,7 @@ export class InspectorPanel extends LitElement {
     }
 
     return html`
-      ${this.#renderActor(editing.document, actor)}
+      ${this.#renderActor(editing, actor)}
       <jolly-separator label="Components">
         <jolly-button
           slot="actions"
@@ -195,9 +200,11 @@ export class InspectorPanel extends LitElement {
   }
 
   #renderActor(
-    document: SceneDocument,
+    editing: SceneEditing,
     actor: SceneActorJSON
   ): TemplateResult {
+    const { document } = editing;
+
     return html`
       <jolly-folder
         key="actor"
@@ -214,17 +221,28 @@ export class InspectorPanel extends LitElement {
           .pressed=${actor.visible}
           @click=${() => document.changeVisibility(actor.id, !actor.visible)}
         ></jolly-button>
-        ${this.#renderTransform(document, actor)}
+        ${this.#renderTransform(editing.draft, actor)}
       </jolly-folder>
     `;
   }
 
   #renderTransform(
-    document: SceneDocument,
+    draft: SceneDraft,
     actor: SceneActorJSON
   ): TemplateResult {
     const field = this.#transformField;
-    const current = actor.transform[field];
+    const current = draft.transform(actor)[field];
+    function patch(
+      event: ChangeEvent<Record<string, unknown>>
+    ): SceneTransformPatch {
+      const [x, y, z] = axisValues(
+        event.detail.value,
+        kAxes,
+        kAxes.map((axis) => current[axis])
+      );
+
+      return { [field]: { x, y, z } };
+    }
 
     return html`
       <jolly-button-group
@@ -239,14 +257,14 @@ export class InspectorPanel extends LitElement {
       <jolly-vector3
         .step=${kTransformSteps[field]}
         .value=${{ ...current }}
-        @jolly-change=${(event: ChangeEvent<Record<string, unknown>>) => {
-          const [x, y, z] = axisValues(
-            event.detail.value,
-            kAxes,
-            kAxes.map((axis) => current[axis])
-          );
-          document.transform(actor.id, { [field]: { x, y, z } });
-        }}
+        @jolly-input=${(event: ChangeEvent<Record<string, unknown>>) => draft.editTransform(
+          actor.id,
+          patch(event)
+        )}
+        @jolly-change=${(event: ChangeEvent<Record<string, unknown>>) => draft.commitTransform(
+          actor.id,
+          patch(event)
+        )}
       ></jolly-vector3>
     `;
   }
@@ -266,7 +284,7 @@ export class InspectorPanel extends LitElement {
       >
         <jolly-button
           slot="actions"
-          icon="action-delete"
+          icon="trash"
           icon-only
           label="Remove component"
           title="Remove component"
@@ -304,7 +322,7 @@ export class InspectorPanel extends LitElement {
   ): void {
     this.#menu.open(
       MenuSession.from(
-        addComponentEntries(),
+        addComponentEntries(editing.components),
         async(type) => {
           await editing.actions.addComponent(actorId, type);
         }
@@ -314,11 +332,13 @@ export class InspectorPanel extends LitElement {
   }
 }
 
-function addComponentEntries(): MenuEntry<string>[] {
+function addComponentEntries(
+  components: SceneComponents
+): MenuEntry<string>[] {
   const direct: MenuEntry<string>[] = [];
   const picking: MenuEntry<string>[] = [];
-  for (const { definition: { type }, label, icon } of SCENE_COMPONENTS) {
-    const picks = picksAssets(type);
+  for (const { definition: { type }, label, icon } of components.kinds) {
+    const picks = components.picksAssets(type);
     (picks ? picking : direct).push({
       id: type,
       label: picks ? `${label}…` : label,

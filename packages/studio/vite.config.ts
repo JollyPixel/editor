@@ -13,6 +13,7 @@ import {
   type UserConfig
 } from "vite";
 import {
+  createProjectContributionsPlugin,
   createProjectFileWatchPlugin,
   createProjectKindsPlugin
 } from "@jolly-pixel/asset-server/node";
@@ -66,6 +67,10 @@ export default defineConfig(async(env): Promise<UserConfig> => {
     plugins: [
       mode.plugins(),
       createProjectKindsPlugin(project.kinds),
+      createProjectContributionsPlugin(
+        project.kinds,
+        Array.from(project.editors, (editor) => editor.package)
+      ),
       projectManifest(project),
       createProjectFileWatchPlugin(project.file),
       editorPages(
