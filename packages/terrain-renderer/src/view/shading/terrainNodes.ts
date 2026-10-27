@@ -97,6 +97,7 @@ const kDefaultRoughness = 1;
 const kJitterFrequency = 8;
 const kSplatJitter = 0.9;
 const kSplatDimmed = 0.3;
+const kPureWeight = 254.5 / 255;
 const kChannels = ["x", "y", "z", "w"] as const;
 const kTriplanarStart = 0.95;
 const kFlatHeight = 0.5;
@@ -362,17 +363,20 @@ export function createTerrainShading(
     const cornerBlend = texelSpace.sub(cornerBase).toVar();
     const nearestSlots = round(splatIndices.mul(255)).toVar();
     const layer = splatLayer.toVar();
-    const sum = vec4(0).toVar();
-    Loop(4, ({ i }) => {
-      const offset = vec2(float(i.mod(int(2))), float(i.div(int(2)))).toVar();
-      const texel = ivec2(clamp(cornerBase.add(offset), vec2(0), vec2(SPLAT_TEXELS - 1)));
-      const indices = round(textureLoad(textures.splatIndices, texel).depth(layer).mul(255)).toVar();
-      const weights = textureLoad(textures.splatWeights, texel).depth(layer).toVar();
-      const share = mix(float(1).sub(cornerBlend), cornerBlend, offset).toVar();
-      for (const channel of kChannels) {
-        const matches = float(1).sub(step(0.5, abs(nearestSlots.sub(indices[channel]))));
-        sum.addAssign(matches.mul(weights[channel]).mul(share.x.mul(share.y)));
-      }
+    const sum = vec4(1, 0, 0, 0).toVar();
+    If(splatWeights.x.lessThan(kPureWeight), () => {
+      sum.assign(vec4(0));
+      Loop(4, ({ i }) => {
+        const offset = vec2(float(i.mod(int(2))), float(i.div(int(2)))).toVar();
+        const texel = ivec2(clamp(cornerBase.add(offset), vec2(0), vec2(SPLAT_TEXELS - 1)));
+        const indices = round(textureLoad(textures.splatIndices, texel).depth(layer).mul(255)).toVar();
+        const weights = textureLoad(textures.splatWeights, texel).depth(layer).toVar();
+        const share = mix(float(1).sub(cornerBlend), cornerBlend, offset).toVar();
+        for (const channel of kChannels) {
+          const matches = float(1).sub(step(0.5, abs(nearestSlots.sub(indices[channel]))));
+          sum.addAssign(matches.mul(weights[channel]).mul(share.x.mul(share.y)));
+        }
+      });
     });
 
     return sum.mul(step(kMinWeight, splatWeights));
@@ -428,6 +432,7 @@ export function createTerrainShading(
 
       return {
         present: entry.x.greaterThan(0.5),
+        anyMap: maps.notEqual(int(0)),
         has: (map: MaterialMap) => maps.bitAnd(int(MATERIAL_MAP_BITS[map])).notEqual(int(0)),
         heightBlend: uses(techniques, "heightBlend"),
         triplanar,
@@ -444,72 +449,100 @@ export function createTerrainShading(
           .grad(uvDx, uvDy)
       };
     }
-    Loop(4, ({ i }) => {
-      const slot = slotMaterial(i);
-      const blendsHeight = component(weights, i).greaterThan(0)
-        .and(slot.heightBlend)
-        .and(slot.has("height"));
-      If(slot.present.not(), () => {
-        weights.assign(withComponent(weights, i, float(0)));
-      }).ElseIf(blendsHeight, () => {
-        const { height } = sampleSurface({
-          height: { read: slot.read("height"), enabled: bool(true), project: unchanged }
-        }, slot.sampling);
-        heights.assign(withComponent(heights, i, height.x));
-        heightBlended.assign(1);
+    const blended = dot(step(float(kMinWeight), weights), vec4(1)).greaterThan(1.5);
+    If(blended, () => {
+      Loop(4, ({ i }) => {
+        If(component(weights, i).greaterThan(0), () => {
+          const slot = slotMaterial(i);
+          If(slot.present.not(), () => {
+            weights.assign(withComponent(weights, i, float(0)));
+          }).ElseIf(slot.heightBlend.and(slot.has("height")), () => {
+            const { height } = sampleSurface({
+              height: { read: slot.read("height"), enabled: bool(true), project: unchanged }
+            }, slot.sampling);
+            heights.assign(withComponent(heights, i, height.x));
+            heightBlended.assign(1);
+          });
+        });
       });
-    });
-    const total = dot(weights, vec4(1)).toVar();
-    weights.divAssign(max(total, float(kMinWeight)));
-    If(heightBlended.greaterThan(0.5), () => {
-      const used = step(float(kMinWeight), weights);
-      const unused = float(1).sub(used);
-      const raised = weights.add(heights)
-        .mul(used)
-        .sub(unused)
-        .toVar();
-      const top = max(max(raised.x, raised.y), max(raised.z, raised.w)).sub(kHeightBlendDepth);
-      const sharp = max(raised.sub(top), vec4(0)).mul(used);
-      weights.assign(sharp.div(max(dot(sharp, vec4(1)), float(kMinWeight))));
+      If(heightBlended.greaterThan(0.5), () => {
+        const soft = weights.div(max(dot(weights, vec4(1)), float(kMinWeight)));
+        const used = step(float(kMinWeight), soft);
+        const unused = float(1).sub(used);
+        const raised = soft.add(heights)
+          .mul(used)
+          .sub(unused)
+          .toVar();
+        const top = max(max(raised.x, raised.y), max(raised.z, raised.w)).sub(kHeightBlendDepth);
+        weights.assign(max(raised.sub(top), vec4(0)).mul(used));
+      });
     });
 
     const albedo = vec3(0).toVar();
     const detail = vec3(0).toVar();
     const orm = vec3(0).toVar();
-    Loop(4, ({ i }) => {
-      const weight = component(weights, i).toVar();
-      If(weight.greaterThan(0), () => {
-        const slot = slotMaterial(i);
-        const sums = sampleSurface({
-          albedo: { read: slot.read("albedo"), enabled: slot.has("albedo"), project: unchanged },
-          normal: {
-            read: slot.read("normal"),
-            enabled: slot.has("normal"),
-            project: (sample, axis) => select(
-              slot.triplanar,
-              vec4(whiteoutNormal(normal, unpackNormal(sample), axis), 1),
-              vec4(unpackNormal(sample), 1)
-            )
-          },
-          orm: { read: slot.read("orm"), enabled: slot.has("orm"), project: unchanged }
-        }, slot.sampling);
+    const total = float(0).toVar();
+    function sampleLayer(
+      slot: ReturnType<typeof slotMaterial>,
+      layerAlbedo: Vec3Node,
+      layerDetail: Vec3Node,
+      layerOrm: Vec3Node
+    ): void {
+      const sums = sampleSurface({
+        albedo: { read: slot.read("albedo"), enabled: slot.has("albedo"), project: unchanged },
+        normal: {
+          read: slot.read("normal"),
+          enabled: slot.has("normal"),
+          project: (sample, axis) => select(
+            slot.triplanar,
+            vec4(whiteoutNormal(normal, unpackNormal(sample), axis), 1),
+            vec4(unpackNormal(sample), 1)
+          )
+        },
+        orm: { read: slot.read("orm"), enabled: slot.has("orm"), project: unchanged }
+      }, slot.sampling);
+      If(slot.has("albedo"), () => {
+        layerAlbedo.assign(sums.albedo.rgb);
+      });
+      If(slot.has("normal"), () => {
         const world = normalize(sums.normal.xyz);
-        const tangentDetail = select(
+        layerDetail.assign(select(
           slot.triplanar,
           vec3(dot(world, frameTangent), dot(world, frameBitangent), dot(world, normal)),
           sums.normal.xyz
-        );
-        albedo.addAssign(select(slot.has("albedo"), sums.albedo.rgb, kAlbedo).mul(weight));
-        detail.addAssign(select(slot.has("normal"), tangentDetail, vec3(0, 0, 1)).mul(weight));
-        orm.addAssign(select(slot.has("orm"), sums.orm.rgb, vec3(1, kDefaultRoughness, 0)).mul(weight));
+        ));
       });
+      If(slot.has("orm"), () => {
+        layerOrm.assign(sums.orm.rgb);
+      });
+    }
+    function accumulateLayer(
+      index: IntNode,
+      weight: FloatNode
+    ): void {
+      const slot = slotMaterial(index);
+      If(slot.present, () => {
+        const layerAlbedo = vec3(kAlbedo).toVar();
+        const layerDetail = vec3(0, 0, 1).toVar();
+        const layerOrm = vec3(1, kDefaultRoughness, 0).toVar();
+        If(slot.anyMap, () => sampleLayer(slot, layerAlbedo, layerDetail, layerOrm));
+        albedo.addAssign(layerAlbedo.mul(weight));
+        detail.addAssign(layerDetail.mul(weight));
+        orm.addAssign(layerOrm.mul(weight));
+        total.addAssign(weight);
+      });
+    }
+    Loop(4, ({ i }) => {
+      const weight = component(weights, i).toVar();
+      If(weight.greaterThan(0), () => accumulateLayer(i, weight));
     });
     const painted = total.greaterThan(kMinWeight);
+    const share = max(total, float(kMinWeight));
 
     return kSurface(
-      select(painted, albedo, kAlbedo),
+      select(painted, albedo.div(share), kAlbedo),
       select(painted, normalize(detail), vec3(0, 0, 1)),
-      select(painted, orm, vec3(1, kDefaultRoughness, 0))
+      select(painted, orm.div(share), vec3(1, kDefaultRoughness, 0))
     );
   })();
   const albedo = surface.get("albedo") as Vec3Node;
@@ -556,16 +589,21 @@ export function createTerrainShading(
     splatColor,
     splatColor.mul(mix(float(kSplatDimmed), float(1), highlightWeight))
   );
-  const surfaceColor = select(
-    overlayIs("lod"),
-    mix(albedo, levelColor, kLevelTint),
-    select(overlayIs("slope"), slopeColor, select(overlayIs("splat"), splatOverlay, albedo))
-  );
-  const showLines = overlayIs("chunks").or(overlayIs("lod"));
   material.colorNode = Fn(() => {
     Discard(chunkKnown(fragmentChunk).not());
+    const color = albedo.toVar();
+    If(overlayIs("lod"), () => {
+      color.assign(mix(color, levelColor, kLevelTint));
+    }).ElseIf(overlayIs("slope"), () => {
+      color.assign(slopeColor);
+    }).ElseIf(overlayIs("splat"), () => {
+      color.assign(splatOverlay);
+    });
+    If(overlayIs("chunks").or(overlayIs("lod")), () => {
+      color.assign(mix(color, kLineColor, line));
+    });
 
-    return mix(surfaceColor, kLineColor, line.mul(select(showLines, float(1), float(0))));
+    return color;
   })();
 
   return {

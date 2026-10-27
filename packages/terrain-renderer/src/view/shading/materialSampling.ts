@@ -119,16 +119,18 @@ export function sampleSurface<TMap extends string>(
     const uv = pick(axis, [point.zy, point.xz, point.xy]).toVar();
     const uvDx = pick(axis, [dx.zy, dx.xz, dx.xy]).toVar();
     const uvDy = pick(axis, [dy.zy, dy.xz, dy.xy]).toVar();
-    const grid = stochasticCells(uv);
+    const offsets = [vec2(0).toVar(), vec2(0).toVar(), vec2(0).toVar()] as const;
+    const cellWeights = vec3(1, 0, 0).toVar();
+    If(stochastic, () => {
+      const grid = stochasticCells(uv);
+      offsets.forEach((offset, index) => offset.assign(grid.offsets[index]));
+      cellWeights.assign(grid.weights);
+    });
     const samples = createSumVars(names);
     Loop(range("cell", stochastic), (cellInputs) => {
       const cell = loopVariable(cellInputs, "cell");
-      const offset = select(stochastic, pick(cell, grid.offsets), vec2(0)).toVar();
-      const weight = select(
-        stochastic,
-        pick<FloatNode>(cell, [grid.weights.x, grid.weights.y, grid.weights.z]),
-        float(1)
-      ).toVar();
+      const offset = pick(cell, offsets).toVar();
+      const weight = pick<FloatNode>(cell, [cellWeights.x, cellWeights.y, cellWeights.z]).toVar();
       for (const name of names) {
         If(maps[name].enabled, () => {
           samples[name].addAssign(maps[name].read(uv.add(offset), uvDx, uvDy).mul(weight));
