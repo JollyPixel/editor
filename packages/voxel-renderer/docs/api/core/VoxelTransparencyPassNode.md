@@ -76,7 +76,7 @@ camera.postProcessing = ({ scene, camera }) => {
 ### Selective bloom
 
 Glowing blocks write their glow to the `emissive` material output, and blocks
-lit by [block light](../../concepts/rendering-and-meshing.md#block-light) do
+lit by [block light](./VoxelView.md#block-light) do
 not, so bloom fed from it halos the light sources only.
 
 ```ts

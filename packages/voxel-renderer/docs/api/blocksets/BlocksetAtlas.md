@@ -80,4 +80,4 @@ Disposes `texture` and `normal`.
 `normal` is an optional tangent-space normal map with the same layout as
 `texture`. It gets the same filtering, without a colour space. Add or remove it
 through [`view.loadBlockset()`](../core/VoxelView.md), which rebuilds the chunk
-materials. See [normal maps](../../concepts/rendering-and-meshing.md#normal-maps).
+materials. See [normal maps](../core/VoxelView.md#normal-maps).

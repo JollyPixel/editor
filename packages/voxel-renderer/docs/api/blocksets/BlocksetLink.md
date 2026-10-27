@@ -48,10 +48,14 @@ Throws a `RangeError` for a slot outside `0..MAX_BLOCKSET_SLOT`.
 | `slot` | `BlocksetSlot` | Where its blocks land. |
 
 The constructor projects every block, material group and blend group of the
-blockset into the document: block ids go through the slot, tile references name
-the blockset, and group ids get the `"<blocksetId>/"` prefix. Blocks and groups
-of the slot that the blockset no longer has are removed. After that, every
-blockset command, a tile size change included, is replayed on the document.
+blockset into the document:
+
+- Block ids go through the slot, and tile references name the blockset.
+- Group ids get the `"<blocksetId>/"` prefix.
+- Blocks and groups of the slot that the blockset no longer has are removed.
+
+After that, every blockset command, a tile size change included, is replayed
+on the document.
 
 #### `nextBlockId: number`
 

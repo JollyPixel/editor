@@ -15,7 +15,11 @@ import {
 const document = new VoxelDocument();
 const view = new VoxelView(document, {
   blocksets: await loadBlocksets([
-    { id: "default", src: "blockset.png", tileSize: 16 }
+    {
+      id: "default",
+      src: "blockset.png",
+      tileSize: 16
+    }
   ])
 });
 ```
@@ -31,7 +35,10 @@ save them with the blockset they belong to (see
 code.
 
 ```ts
-localStorage.setItem("map", JSON.stringify(document.save()));
+localStorage.setItem(
+  "map",
+  JSON.stringify(document.save())
+);
 ```
 
 ## Loading
@@ -43,9 +50,13 @@ const snapshot = parseVoxelWorld(
   JSON.parse(localStorage.getItem("map")!)
 );
 
-const document = new VoxelDocument({ chunkSize: snapshot.chunkSize });
+const document = new VoxelDocument({
+  chunkSize: snapshot.chunkSize
+});
 const view = new VoxelView(document, {
-  blocksets: await loadBlocksets(snapshot.blocksets)
+  blocksets: await loadBlocksets(
+    snapshot.blocksets
+  )
 });
 
 view.load(snapshot);

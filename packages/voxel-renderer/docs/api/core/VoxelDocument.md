@@ -86,11 +86,15 @@ interface VoxelApplyOptions {
 ```
 
 Applies a command and emits it once on `"command"` with `options.origin`
-(default `"local"`) and `options.clientId`. A sync client applies a peer's
-command as `"remote"` with the peer's `clientId`, and its own pending
-commands, applied or rolled back around a peer's, as `"replay"`. Returns `false` and emits nothing when the command changed
-nothing. See [commands](./commands.md) for what each command carries once
-applied.
+(default `"local"`) and `options.clientId`. Returns `false` and emits nothing
+when the command changed nothing.
+
+- A sync client applies a peer's command as `"remote"`, with the peer's
+  `clientId`.
+- It applies its own pending commands, applied or rolled back around a
+  peer's, as `"replay"`.
+
+See [commands](./commands.md) for what each command carries once applied.
 
 The block and group methods below are shorthands for `applyCommand()`:
 

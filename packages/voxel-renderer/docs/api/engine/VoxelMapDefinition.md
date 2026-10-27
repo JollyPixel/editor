@@ -42,10 +42,12 @@ interface VoxelMapSource {
 }
 ```
 
-The slot's asset kind is `voxelmap`. `create()` returns `null` while the slot
-is empty. Otherwise it adds a `VoxelRenderer` drawing `document`, which stays
-with the source, and calls `attach()` with the renderer's view. The source
-loads the map's blockset atlases into that view and keeps them current. The
-function `attach()` returns runs when the component is destroyed.
+The slot's asset kind is `voxelmap`.
+
+- `create()` returns `null` while the slot is empty. Otherwise it adds a
+  `VoxelRenderer` drawing `document`, which stays with the source.
+- It then calls `attach()` with the renderer's view. The source loads the
+  map's blockset atlases into that view and keeps them current.
+- The function `attach()` returns runs when the component is destroyed.
 
 One source can serve several views at once.

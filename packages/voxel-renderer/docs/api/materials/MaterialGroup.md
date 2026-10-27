@@ -29,8 +29,8 @@ document.defineMaterialGroup({ id: "gold", roughness: 0.2, metalness: 1 });
 | `metalness` | `0` | `0` to `1`. |
 | `emissive` | `"#000000"` | A `#rrggbb` colour, stored in lower case. |
 | `emissiveIntensity` | `1` | `0` or more. |
-| `normalScale` | `1` | `0` or more. Strength of the blockset's [normal atlas](../../concepts/rendering-and-meshing.md#normal-maps); `0` turns it off. |
-| `lightLevel` | `0` | Integer from `0` to `MAX_LIGHT_LEVEL` (`15`). Light the blocks cast on their surroundings, see [block light](../../concepts/rendering-and-meshing.md#block-light); `0` casts none. |
+| `normalScale` | `1` | `0` or more. Strength of the blockset's [normal atlas](../core/VoxelView.md#normal-maps); `0` turns it off. |
+| `lightLevel` | `0` | Integer from `0` to `MAX_LIGHT_LEVEL` (`15`). Light the blocks cast on their surroundings, see [block light](../core/VoxelView.md#block-light); `0` casts none. |
 | `swatch` | None (`null`) | A `#rrggbb` colour, stored in lower case. A label colour for editors; it is not rendered. |
 
 `MaterialGroup.defaults` holds the defaults of the finish fields
@@ -41,7 +41,7 @@ document.defineMaterialGroup({ id: "gold", roughness: 0.2, metalness: 1 });
 A block whose group is defined is drawn with a `MeshStandardMaterial` carrying
 the finish, even when the view uses `"lambert"`. Other blocks, including those
 naming an undefined group, keep the view's material. A
-[material customizer](../../concepts/rendering-and-meshing.md#material-customizers)
+[material customizer](../core/VoxelView.md#material-customizers)
 runs after the finish is applied, and not again when the finish is edited
 later.
 

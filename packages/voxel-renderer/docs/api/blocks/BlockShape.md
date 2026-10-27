@@ -33,7 +33,7 @@ of the faces, or nothing.
 
 ## Built-in shapes
 
-![Available block shapes](../../images/shapes.png)
+![Available block shapes](../../images/shapes.jpg)
 
 | Shape id | Class | Collision | Occludes | Texture slots |
 |---|---|---|---|---|
@@ -78,16 +78,24 @@ notch three quarters, the missing quarter at the `-X`, `-Z` corner. The six
 face slots are `right`, `left`, `top`, `bottom`, `front` and `back`; see
 [texture slots](./BlockTextures.md#texture-slots).
 
-`Wall` takes a `WallType` (`"straight" | "corner" | "tee" | "cross"`, default
-`"straight"`) and builds a full-height wall a quarter block thick, centered
-in the cell. `Pole` takes a `PoleType` with the same values, default
-`"straight"`, and a `PoleRise` (`"none" | "up" | "through"`, default
-`"none"`) that adds an arm to `+Y`, or arms to both `+Y` and `-Y`. With a
-rise, the type may also be `"end"`: a single horizontal arm to `+Z`. Walls
-and horizontal poles run along Z: a corner branches to `+Z` and `+X`, a tee
-adds a `+X` arm to a straight piece, and a cross runs along both axes. Every
-arm ends on the same section as `pole` or `poleY`, so joined blocks hide the
-faces they share. A rise placed with `flipY: true` points down.
+```ts
+type WallType = "straight" | "corner" | "tee" | "cross";
+type PoleType = WallType;
+type PoleRise = "none" | "up" | "through";
+
+new Wall(type?: WallType, id?: BlockShapeID); // type defaults to "straight"
+new Pole(type?: PoleType, rise?: "none", id?: BlockShapeID);
+new Pole(type: PoleType | "end", rise: "up" | "through", id?: BlockShapeID);
+```
+
+- A wall is full height, a quarter block thick, centered in the cell.
+- Walls and horizontal poles run along Z. A corner branches to `+Z` and `+X`, a
+  tee adds a `+X` arm to a straight piece, a cross runs along both axes.
+- `rise: "up"` adds an arm to `+Y`, `"through"` arms to `+Y` and `-Y`. With a
+  rise, `"end"` is a single horizontal arm to `+Z`.
+- A rise placed with `flipY: true` points down.
+- Every arm ends on the same section as `pole` or `poleY`, so joined blocks
+  hide the faces they share.
 
 `stairCornerPeak` is a full-height quarter column standing on an L-shaped
 lower step, with the opposite quarter left empty. The column sits where
@@ -161,13 +169,16 @@ function computeOcclusionMask(faces: readonly FaceDefinition[]): number;
 function computeSideCoverage(faces: Iterable<FacePlacement>): Float64Array;
 ```
 
-Derives `occludes()` from `faces`: a side occludes when the faces lying on its
-boundary plane cover the whole unit square. Faces sharing a side must not
-overlap, or their areas add up and the side reports covered when it is not.
-Override `occludes()` when the geometry does not tell the truth, for example a
-full quad drawn through an alpha mask. `computeOcclusionMask()` returns the same
-answer as a bitmask indexed by `Face`, and `computeSideCoverage()` the covered area
-of each side, indexed by `Face`. Every built-in shape extends this class.
+Every built-in shape extends this class.
+
+- `occludes()` is derived from `faces`: a side occludes when the faces on its
+  boundary plane cover the whole unit square.
+- Faces sharing a side must not overlap, or their areas add up and the side
+  reports covered when it is not.
+- Override `occludes()` when the geometry does not tell the truth, for example
+  a full quad drawn through an alpha mask.
+- `computeOcclusionMask()` returns the same answer as a bitmask indexed by
+  `Face`; `computeSideCoverage()` returns the covered area of each side.
 
 ## BlockShapeRegistry
 

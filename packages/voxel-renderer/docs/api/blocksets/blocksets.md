@@ -124,14 +124,14 @@ Fetches the `src` images in parallel and resolves with one source per id;
 definitions without `src` are skipped. `loader` replaces the default
 `THREE.TextureLoader`, which is the only thing `manager` is passed to. Pass the
 result to `VoxelViewOptions.blocksets` or `view.load()`. `normal` is never
-filled; add a [normal atlas](../../concepts/rendering-and-meshing.md#normal-maps)
+filled; add a [normal atlas](../core/VoxelView.md#normal-maps)
 yourself.
 
 To load `.ktx2` atlases, pass a `KTX2Loader` from
 `three/addons/loaders/KTX2Loader.js` as `loader`, after setting its transcoder
 path and calling `detectSupport(renderer)`. A compressed atlas has no readable
 pixels, so its faces use nearest sampling under
-[tile minification](../../concepts/rendering-and-meshing.md#tile-minification).
+[tile minification](../core/VoxelView.md#tile-minification).
 
 ## Tile geometry
 
