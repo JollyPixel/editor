@@ -1,21 +1,12 @@
 # Asset workspaces
 
-The packages in this directory define editable asset formats. Each format
-provides an asset kind for the server and a client-side way to work with its
-content. An asset keeps its ID when its path or content changes; the catalog
-connects that ID to its current kind, path, and revision.
+Private workspaces that define the editable asset kinds served by
+`@jolly-pixel/asset-server` and opened by the editors. The
+[architecture](./ARCHITECTURE.md) shows how they fit together.
 
-See [architecture](./ARCHITECTURE.md) for the common workspace structure,
-command flow, and persistence lifecycle.
-
-## Formats in this directory
-
-- [pixel-art](./pixel-art/README.md): pixel-art textures and canvas edits
-- [voxel-map](./voxel-map/README.md): voxel worlds with optional pixel-art blockset references
-- [voxel-model](./voxel-model/README.md): model trees with a pixel-art texture reference
-- [voxel-animation](./voxel-animation/README.md): animation sets of keyframed clips that models link
-- [terrain](./terrain/README.md): heightfield terrains loaded chunk by chunk 🚧
+- [pixel-art](./pixel-art/README.md): pixel-art textures
+- [voxel-map](./voxel-map/README.md): voxel worlds and their blocksets
+- [voxel-model](./voxel-model/README.md): voxel model trees
+- [voxel-animation](./voxel-animation/README.md): animation sets that voxel models link
+- [terrain](./terrain/README.md): heightfield terrains 🚧
 - [scene](./scene/README.md): actor trees whose components reference other assets 🚧
-
-For the shared meaning of asset ID, kind, reference, record, and catalog, see
-the [asset glossary](../asset/GLOSSARY.md).

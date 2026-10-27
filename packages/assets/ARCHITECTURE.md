@@ -1,57 +1,97 @@
-# Asset workspace architecture
+# Asset workspaces architecture
 
-Each directory in `packages/assets` owns one editable format. Its `src/asset/` code defines the kind, stored state, codec integration, and asset dependencies. Its `src/network/` code defines the edit protocol and client sync. A format can keep other domain code elsewhere, such as voxel-model's `src/model/`.
+Each workspace in this directory owns one or two editable asset kinds. The
+server stores and arbitrates them; the editors open and edit them.
 
-Each kind keeps two files in `src/asset/`. `<kind>.ts` holds what an editor may import: the kind constants, the descriptor and the file builders. `<kind>AssetKind.ts` holds what only the server loads: the state, the file decoder and the kind handler. Decoders check stored files with the kind's zod schemas through `SchemaParser` from `@jolly-pixel/network`, and stay out of the client entry point. A malformed file throws `InvalidAssetFileError` from `@jolly-pixel/asset-server`, so the server can tell corrupt content from a handler bug.
+## Inside one workspace
 
 ```mermaid
 flowchart TB
-    Editor["Editor or client"]
-
-    subgraph Workspace["One asset workspace"]
-        Asset["src/asset<br/>kind and state"]
-        Network["src/network<br/>commands and client sync"]
+    subgraph Server["Server side (package root, ./server)"]
+        Kind["src/asset<br/>kind handler, state, file codec"]
+        Arbiter["src/network<br/>command schemas and arbiter"]
     end
 
-    Core["@jolly-pixel/asset<br/>references and catalog"]
-    Server["@jolly-pixel/asset-server<br/>rooms and event history"]
-    Source["@jolly-pixel/asset-source<br/>stored bytes"]
+    subgraph Client["Browser side (./client)"]
+        Document["src/model or a renderer<br/>document the editor edits"]
+        Sync["src/network<br/>room client and sync"]
+        History["src/history<br/>undo keys"]
+    end
 
-    Editor <--> Network
-    Editor -->|"resolve asset IDs"| Core
-    Network <--> Server
-    Asset -->|"register kind handler"| Server
-    Server -->|"publish records"| Core
-    Server -->|"read and write"| Source
+    Sync -->|"commands"| Arbiter
+    Kind --> Document
+    Sync --> Document
+    History --> Document
 ```
 
-The server owns rooms, the catalog, event history, and persistence. Each asset workspace supplies format-specific state and commands through an asset kind handler. The catalog room handles creation, rename, and deletion; an asset room handles edits to one open asset.
+- The server and the editor share the same model: the server replays commands
+  on it, the editor draws it.
+- Browser code imports `./client` only; the root pulls in server dependencies.
+- Code: `src/asset/`, `src/model/`, `src/network/`, `src/history/`; pixel-art
+  and voxel-map take their document from the renderer packages instead.
+
+## Where a workspace plugs in
+
+```mermaid
+flowchart TB
+    Editor["Editor<br/>(editors/*)"]
+    Workspace["Asset workspace"]
+    Server["@jolly-pixel/asset-server<br/>catalog, rooms, event history"]
+    Source["@jolly-pixel/asset-source<br/>files on disk or in memory"]
+
+    Editor -->|"opens the asset room"| Workspace
+    Workspace -->|"registers its kind handler"| Server
+    Workspace <-->|"commands and snapshots"| Server
+    Server -->|"writes snapshots"| Source
+```
+
+- The catalog room creates, renames and deletes assets; one asset room per
+  open asset carries its edits.
+- An asset keeps its ID when its path or content changes.
 
 ## From edit to stored asset
 
 ```mermaid
-sequenceDiagram
-    participant Editor
-    participant Client as Asset client
-    participant Room as Asset room
-    participant Store as Event store
-    participant Source as Asset source
+flowchart TB
+    Edit["Editor applies the edit locally"]
+    Room["Asset room arbitrates the command"]
+    Log["Command appended to the event history"]
+    Broadcast["Command broadcast to every peer"]
+    Correct["Author receives a correction or a snapshot"]
+    Save["Snapshot written to the source after editing stops"]
 
-    Editor->>Client: edit an asset
-    Client->>Room: send command
-    Room->>Room: validate and arbitrate
-    alt refused or narrowed
-        Room-->>Client: correction or snapshot to the author
-    else admitted
-        Room->>Store: append accepted command
-        Store-->>Room: appended
-        Room->>Room: apply command to kind state
-        Room-->>Client: broadcast command
-    end
-    Room->>Store: append later asset.updated
-    Room->>Source: write serialized snapshot
+    Edit --> Room
+    Room -->|"accepted"| Log
+    Room -->|"refused"| Correct
+    Log --> Broadcast
+    Broadcast --> Save
 ```
 
-The server replays recorded commands to restore live state and writes serialized snapshots after editing. A kind's apply function is the sole writer of its authoritative state; arbitration is committed after the event append succeeds. The author has already applied its command, so a refused, narrowed or unappended command is followed by a message to the author alone: a correction that restores only the refused part when the kind can build one (pixel-art and blockset pixel commands, voxel-map cell writes), otherwise a snapshot.
+- Edits show at once; the room has the final word.
+- On restart, the server replays the history to rebuild each asset.
 
-See the [asset server architecture](../asset-server/ARCHITECTURE.md) for the server contract. [Asset source architecture](../asset-source/ARCHITECTURE.md) describes the storage boundary. Format-specific rules live in the [pixel-art](./pixel-art/ARCHITECTURE.md), [voxel-map](./voxel-map/ARCHITECTURE.md), [voxel-model](./voxel-model/ARCHITECTURE.md), [voxel-animation](./voxel-animation/ARCHITECTURE.md), and [scene](./scene/ARCHITECTURE.md) architecture pages.
+## Assets reference each other
+
+```mermaid
+flowchart TB
+    Scene["scene"]
+    Map["voxelmap"]
+    Model["voxelmodel"]
+    Blockset["blockset"]
+    Animation["voxelanimation"]
+    PixelArt["pixelart"]
+    Terrain["terrain"]
+    Texture["texture (image)"]
+
+    Scene -->|"components"| Map
+    Map --> Blockset
+    Model --> PixelArt
+    Model --> Animation
+    Terrain -->|"material maps"| Texture
+```
+
+- Scene components may reference assets of any kind.
+- A reference is an asset ID and kind; the catalog lists each asset's
+  references as its dependencies.
+- Creating a voxel map also creates its blockset; creating a voxel model also
+  creates its pixel-art texture.

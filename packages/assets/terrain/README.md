@@ -2,83 +2,31 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
-## 💃 Getting Started
+## 📌 About
 
-This workspace-private package holds the terrain asset kind, its command
-schemas, the server arbiter and the client sync. Its entry points are `.`
-(kind, schemas and state helpers), `./client` (command document, preview, live
-sender and receiver, history registration) and `./server`. See the terrain
-editor [design][design] and [roadmap][roadmap].
+Private asset workspace for `.terrain.json` heightfield terrains (kind `terrain`), stored as a chunk list with one heights part and one splat part per chunk. Terrains are edited in `@jolly-pixel/editor.terrain`.
 
-## Storage and join
+Browser code imports `@jolly-pixel/asset.terrain/client`; the package root and `@jolly-pixel/asset.terrain/server` pull in server dependencies.
 
-A terrain is stored as asset parts: `world.terrain.json` lists the chunks
-with their overview samples, the [materials](#materials) and the texture size, and `world.terrain.json.parts/<x>_<z>.bin` holds
-the heights of each chunk, 64×64 little-endian `Float32`, beside
-`<x>_<z>_splat.bin`, its splat map: 128×128 texels of four material slots,
-then their four weights, which sum to 255 per texel. The overview samples
-are the four heights of the chunk's 32 m grid points, base64 encoded, and
-each chunk entry lists the dominant material at those points as
-`materials`; loading a chunk derives both from its parts. A chunk entry may also carry its heights
-inline, base64 encoded, as a catalog create does; the first save after an
-edit moves them to part files. Chunk coordinates lie within
-`CHUNK_COORDINATE_RANGE`, -128 to 127 on each axis, and a terrain holds at
-most `MAX_TERRAIN_CHUNKS`, 4096 chunks.
+## 🚀 Building
 
-The room's snapshot is the chunk list. The document knows every chunk
-through its overview samples and loads the heights of those its stream
-follows. Call `document.stream.follow(centre)` when the camera enters another
-chunk: the chunks within `STREAM_RADIUS`, 8 chunks, of the centre are
-subscribed, nearest first, and loaded chunks farther than one more chunk are
-unloaded. A chunk a peer adds loads if the stream reaches it.
+```bash
+$ pnpm install
+$ pnpm --filter @jolly-pixel/asset.terrain build
+```
 
-`terrainDocumentKind()` wraps the room in `TerrainPartsRoom`, which sends
-the stream's subscriptions and loads each part as it arrives. It holds a
-snapshot, and the messages received after it, until the subscribed chunks in
-it arrive. Members that have not subscribed to an edited chunk receive only
-the tiles of `heights-patched` that hold its overview samples, which they
-apply to the overview.
+Editors load the built `dist/` output, so rebuild after a change before running them.
 
-## Materials
+## 🧪 Tests and checks
 
-A material is a paintable surface. `TerrainDocument.materials` lists them;
-each holds an ID, a slot from 0 to 255 that splat texels will name, a name,
-four `texture` asset references (`TERRAIN_MATERIAL_MAPS`: `albedo`, `normal`,
-`orm` and `height`, each nullable), a tiling in metres per repeat and the
-technique flags. A terrain holds at most `MAX_TERRAIN_MATERIALS`, 32
-materials, and one texture size for all of them, one of
-`TERRAIN_TEXTURE_SIZES` (512, 1024 or 2048).
+```bash
+$ pnpm --filter @jolly-pixel/asset.terrain test
+$ pnpm --filter @jolly-pixel/asset.terrain lint
+```
 
-- `addMaterial(properties?)` takes the lowest free slot and returns the new
-  material's ID, or `null` at the cap.
-- `updateMaterial(id, changes)` sends only the changed fields. Two peers
-  changing different fields of one material both land; a removal wins over a
-  concurrent update.
-- `removeMaterial(id)` frees the slot. Undo brings the material back as it
-  was.
-- `changeTextureSize(size)` refuses the current size.
+## Contributors Guide
 
-A new terrain starts with `GROUND_MATERIAL`, slot 0, with no image. A file
-without `materials` loads with it too. The materials' images are the
-terrain's asset dependencies.
-
-## Preview
-
-`TerrainPreview` draws uncommitted heights over a `TerrainDocument`.
-`preview.terrain` shows every layer: peers' live patches, written with
-`write(peerId, patches)` and cleared with `drop(peerId)`, and the local stroke.
-It emits `chunkAdded` and `chunkRemoved` when a chunk loads or unloads, and
-`overviewChanged` when unloaded chunks change.
-
-`beginStroke()` returns the local `TerrainStroke`; it throws while another
-stroke is in progress. `stroke.terrain` shows the document with only this
-stroke's tiles over it. `commit()` sends those tiles as `heights-patched`
-commands of at most 1024 tiles each, the limit the room accepts, and returns
-true when any of them is applied. Open a history step around the stroke so
-they undo together. `end()` commits and ends the stroke, and `cancel()` drops
-its tiles. Once `stroke.ended` is true, writes and commits do nothing.
-`dispose()` commits a stroke in progress, then stops following the document
-and emitting events.
+If you are a developer **looking to contribute** to the project, you must first read the [CONTRIBUTING][contributing] guide.
 
 ## License
 
@@ -86,5 +34,4 @@ MIT
 
 <!-- Reference-style links for DRYness -->
 
-[design]: ../../editors/terrain/docs/design.md
-[roadmap]: ../../editors/terrain/ROADMAP.md
+[contributing]: ../../../CONTRIBUTING.md

@@ -25,6 +25,7 @@ export default withMermaid(defineConfig({
     "**/PLAN.md",
     "**/examples/**",
     "bench/**",
+    "assets/**",
     "editors/**",
     "studio/**"
   ],

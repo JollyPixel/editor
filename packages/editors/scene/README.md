@@ -1,26 +1,19 @@
 ## 📌 About
 
-Private editor workspace for `@jolly-pixel/asset.scene` scenes, booted through `@jolly-pixel/editor.host`. A scene is a tree of actors, each with an ordered list of components (camera, light, mesh, script, voxel map) that a game plays through `@jolly-pixel/engine`. Camera, light, mesh and script are built in; the voxel map comes from `@jolly-pixel/editor.voxel-map`, and any package of the project can add more component types.
+Private editor workspace for `@jolly-pixel/asset.scene` scenes, booted through `@jolly-pixel/editor.host`.
 
-The studio opens scenes in this editor. [ARCHITECTURE](./ARCHITECTURE.md) says where each part lives, and the [ROADMAP](./ROADMAP.md) lists what comes after v1.
+The [ROADMAP](./ROADMAP.md) lists what comes after v1.
 
-## 💃 Getting Started
+## 🚀 Running the editor
 
-Run `pnpm run dev` in this directory. On first start the dev server seeds `assets/` with a scene (a camera, a sun and a sky light), an empty voxel map and its blockset, and opens the scene.
+```bash
+$ pnpm install
+$ pnpm --filter @jolly-pixel/editor.scene dev
+```
 
-- **Hierarchy**: *Add* creates an actor at the root; right-click a row for *Add child*, rename, duplicate and delete. Drag a row to reparent or reorder it: the actor keeps its place in the world.
-- **Inspector**: the selected actor's name, visibility and transform, then its components. *Add component* lists Camera, Light, Mesh, Script and "Voxel map…", which opens the asset picker.
-- **Scene**: background color, environment map and fog.
-- **Viewport**: click an actor, or its camera or light marker, to select it; Ctrl+click adds to the selection. The gizmo moves, rotates or scales the selection in one undo step. The toolbar's *Grid* and *Grid axes* buttons are saved in your preferences.
+The dev server seeds its assets under `assets/`; delete that directory to seed them again.
 
-Default keys, rebindable in the editor's preferences:
-
-- Undo `Mod+Z`, redo `Mod+Y` or `Mod+Shift+Z`;
-- duplicate `Mod+D`, delete `Delete` or `Backspace`;
-- move, rotate and scale gizmo `1`, `2`, `3`; local or world axes `X`;
-- frame the selection `F`.
-
-The gizmo keys are digits because `W` moves the orbit-fly camera.
+The dev server loads scene component types from other workspaces only when their package is listed in `kComponentPackages` in `vite.config.ts`.
 
 `window.sceneEditor.editing` exposes the document, history, selection and actions from the console.
 
@@ -28,11 +21,13 @@ The gizmo keys are digits because `W` moves the orbit-fly camera.
 
 ```bash
 $ pnpm --filter @jolly-pixel/editor.scene test
+$ pnpm --filter @jolly-pixel/editor.scene typecheck
 $ pnpm --filter @jolly-pixel/editor.scene lint
+$ pnpm exec playwright install chromium
 $ pnpm --filter @jolly-pixel/editor.scene test:e2e
 ```
 
-The unit tests cover the scene binding, the component registry, asset routing, the editing actions and the inspector's form model. Lit elements are not mounted in unit tests, so the Playwright smoke suite in `test/e2e/` covers the panes, viewport picking, the gizmo and the asset picker against a real canvas.
+Unit tests do not mount Lit elements; cover panes, viewport picking and the gizmo in the Playwright suite under `test/e2e/`.
 
 ## Contributors Guide
 

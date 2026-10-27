@@ -2,74 +2,36 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
-## 💃 Getting Started
+## 📌 About
 
-This workspace-private package stores `.voxelanim.json` animation sets: clips of keyframes that target blocks by name path, so one set can play on every model sharing a hierarchy (a "Humanoid" rig, say). Add `"@jolly-pixel/asset.voxel-animation": "workspace:*"` to another workspace's dependencies. Models link sets through [`@jolly-pixel/asset.voxel-model`](../voxel-model/docs/animation.md), which binds the tracks to their blocks.
+Private asset workspace for `.voxelanim.json` animation sets (kind `voxelanimation`): clips of keyframes that target blocks by name path. Voxel models link them and `@jolly-pixel/editor.voxel-model` edits them.
 
-## 👀 Usage example
+Browser code imports `@jolly-pixel/asset.voxel-animation/client`; the package root and `@jolly-pixel/asset.voxel-animation/server` pull in server dependencies.
 
-### Register the kind
+## 🚀 Building
 
-```ts
-import { voxelAnimationAssetKind } from "@jolly-pixel/asset.voxel-animation";
-import { createAssetServerPlugin } from "@jolly-pixel/asset-server/node";
-import { defineConfig } from "vite";
-
-export default defineConfig({
-  plugins: [
-    createAssetServerPlugin({
-      root: import.meta.dirname,
-      handlers: [voxelAnimationAssetKind()]
-    })
-  ]
-});
+```bash
+$ pnpm install
+$ pnpm --filter @jolly-pixel/asset.voxel-animation build
 ```
 
-A set created without content is empty: no rig label and no clip. `createVoxelAnimationFile({ rig?, clips? })` builds a file holding the given clips. Pass `snapshot` to `voxelAnimationAssetKind()` to change when snapshots are written.
+Editors load the built `dist/` output, so rebuild after a change before running them.
 
-`decodeVoxelAnimationFile()` throws `InvalidAssetFileError` from `@jolly-pixel/asset-server` when the bytes are not JSON or do not match `compactVoxelAnimationFileSchema`, the on-disk form that leaves out linear interpolations. Loading the set then throws `InvalidAnimationSetError` for a repeated clip, a repeated track path, keys out of tick order or a frame rate off the tick grid, and keeps the previous set.
+## 🧪 Tests and checks
 
-### Connect a set
-
-```ts
-import { assetRoomName } from "@jolly-pixel/asset";
-import { Client } from "@jolly-pixel/network/client";
-import {
-  FrameRate,
-  voxelAnimationDocumentKind,
-  type AnimationRoom
-} from "@jolly-pixel/asset.voxel-animation/client";
-
-const client = new Client();
-const room: AnimationRoom = client.room(assetRoomName("voxelanimation", assetId));
-const synced = voxelAnimationDocumentKind().syncDocument(room);
-
-room.join();
-await synced.ready;
-const walk = synced.document.addClip({ name: "Walk" });
-synced.document.writeKey(walk!, "Body/Arm.L", "rotation", {
-  tick: new FrameRate(24).toTick(12),
-  value: { x: 45, y: 0, z: 0 },
-  interpolation: "smooth"
-});
-
-// On teardown: synced.dispose(); room.leave(); client.destroy();
+```bash
+$ pnpm --filter @jolly-pixel/asset.voxel-animation test
+$ pnpm --filter @jolly-pixel/asset.voxel-animation lint
 ```
 
-The first snapshot loads the document. Local edits go to the room and stay pending until the server acknowledges them; peer commands are applied with a remote origin. A rejected edit returns `null` from `addClip`, and `false` from the other edit methods.
+## Contributors Guide
 
-## 📚 API
+If you are a developer **looking to contribute** to the project, you must first read the [CONTRIBUTING][contributing] guide.
 
-- `@jolly-pixel/asset.voxel-animation` exports `voxelAnimationAssetKind`, the file codec and `compactVoxelAnimationFileSchema`, the `VOXEL_ANIMATION_ASSET` descriptor, `ASSET_KINDS` (the kind package, taking `{ snapshot? }` options), the kind and event constants, and everything the client entry point exports from the model.
-- `@jolly-pixel/asset.voxel-animation/client` exports the [animation set](./docs/animation-set.md) (`AnimationDocument`, `AnimationSet`, `FrameRate`, `TrackPath`, `NameSet`), [sampling](./docs/animation-set.md#sampling) (`KeyCurve`, `ClipSampler`), the [undo keys](./docs/history.md) (`animationHistoryKeys`), `voxelAnimationDocumentKind` and its `SyncedAnimationDocument` type, `animationWriteKeys`, and the wire types.
-- `@jolly-pixel/asset.voxel-animation/server` exports the conflict keys and the command and snapshot schemas.
-
-The package root imports server dependencies. Browser code should use the client entry point. See the [network API](./docs/network.md) for commands and sync behavior and [architecture](./ARCHITECTURE.md) for conflict keys.
-
-## ✨ Contributors guide
-
-Read the [contributing guide](../../../CONTRIBUTING.md) before submitting a change. Run `pnpm --filter @jolly-pixel/asset.voxel-animation test` and `pnpm run lint` from the monorepo root.
-
-## 📃 License
+## License
 
 MIT
+
+<!-- Reference-style links for DRYness -->
+
+[contributing]: ../../../CONTRIBUTING.md
