@@ -12,16 +12,6 @@ declare global {
      * Ids whose teardown ran, in order.
      */
     __galleryDisposed?: string[];
-    /**
-     * Committed values collected by the end to end tier,
-     * which is the only tier that sees one.
-     */
-    __changes?: unknown[];
-    /**
-     * Count of continuous `jolly-input` events,
-     * for asserting each control's cadence.
-     */
-    __inputs?: number;
   }
 }
 

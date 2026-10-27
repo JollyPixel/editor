@@ -36,6 +36,7 @@ const kFields = [
 ];
 const kInputlessFields = [
   { id: "controls/select", tag: "jolly-select" },
+  { id: "controls/reference", tag: "jolly-reference" },
   { id: "controls/button-group", tag: "jolly-button-group" },
   { id: "controls/layer-grid", tag: "jolly-layer-grid" }
 ];

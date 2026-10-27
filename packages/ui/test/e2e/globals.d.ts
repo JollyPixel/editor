@@ -1,10 +1,8 @@
 declare global {
   interface Window {
-    __changes?: unknown[];
+    __events?: [string, unknown][];
     __galleryDisposed?: string[];
     __galleryReady?: boolean;
-    __inputs?: number;
-    __inputValues?: unknown[];
   }
 }
 

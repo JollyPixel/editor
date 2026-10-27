@@ -121,6 +121,7 @@ export type * from "./controls/PropertyRow.ts";
 export type {
   Range
 } from "./controls/Range.ts";
+export type * from "./controls/Reference.ts";
 export type * from "./controls/Search.ts";
 export type * from "./controls/Select.ts";
 export type * from "./controls/Separator.ts";

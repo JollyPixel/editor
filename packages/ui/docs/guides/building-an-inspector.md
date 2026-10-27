@@ -102,6 +102,8 @@ can be a class implementing `FieldSource<T>`, shared between panels.
 - Bitmask: [`jolly-flags`](../api/controls/flags.md) for a few named bits,
   [`jolly-layer-grid`](../api/controls/layer-grid.md) for up to 32 layers.
 - Hex colour: [`jolly-color`](../api/controls/color.md).
+- A key into a collection too large for a list, such as an asset:
+  [`jolly-reference`](../api/controls/reference.md), with your own picker.
 - Vectors, rotations and transforms: the [axis fields](../api/math/axis-fields.md).
 
 ## 4. Bind a vector

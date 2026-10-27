@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import {
   html,
-  nothing,
   type TemplateResult
 } from "lit";
 import type { AssetType } from "@jolly-pixel/asset";
@@ -12,11 +11,10 @@ import type {
 } from "@jolly-pixel/asset.scene/client";
 import { Systems } from "@jolly-pixel/engine";
 import type { JollyChangeDetail } from "@jolly-pixel/ui";
-import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/checkbox";
 import "@jolly-pixel/ui/elements/color";
 import "@jolly-pixel/ui/elements/number";
-import "@jolly-pixel/ui/elements/property-row";
+import "@jolly-pixel/ui/elements/reference";
 import "@jolly-pixel/ui/elements/select";
 import "@jolly-pixel/ui/elements/separator";
 import "@jolly-pixel/ui/elements/text";
@@ -144,27 +142,26 @@ function renderAssetSlots(
         document.changeComponentAssets(entry.id, { [slot]: picked });
       }
     }
-    const open = assetSlots.open;
+    function clear(event: ChangeEvent<string | null>): void {
+      if (event.detail.value === null) {
+        document.changeComponentAssets(entry.id, { [slot]: null });
+      }
+    }
+    function open(): void {
+      if (reference !== null) {
+        assetSlots.open?.(reference);
+      }
+    }
 
     return html`
-      <jolly-property-row label=${label}>
-        <div class="slot">
-          <span class="slot-name">${reference === null ? "None" : assetSlots.name(reference)}</span>
-          <jolly-button @click=${pick}>Change…</jolly-button>
-          <jolly-button
-            ?disabled=${reference === null}
-            @click=${() => document.changeComponentAssets(entry.id, { [slot]: null })}
-          >Clear</jolly-button>
-          ${open === null ?
-            nothing :
-            html`
-              <jolly-button
-                ?disabled=${reference === null}
-                @click=${() => reference !== null && open(reference)}
-              >Open in editor</jolly-button>
-            `}
-        </div>
-      </jolly-property-row>
+      <jolly-reference
+        label=${label}
+        .value=${reference?.id ?? null}
+        .text=${reference === null ? "" : assetSlots.name(reference)}
+        @jolly-browse=${pick}
+        @jolly-change=${clear}
+        @jolly-open=${open}
+      ></jolly-reference>
     `;
   });
 }

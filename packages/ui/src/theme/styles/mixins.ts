@@ -19,6 +19,19 @@ export const fillTransition = css`
     var(--jolly-easing, ease);
 `;
 
+export const iconButton = css`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--jolly-radius-sm, 2px);
+  background: none;
+  cursor: pointer;
+
+  ${fillTransition}
+`;
+
 export const headerTexture = css`
   position: absolute;
   z-index: 0;

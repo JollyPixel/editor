@@ -8,7 +8,7 @@ import {
   fieldChanges,
   fieldInputValues,
   recordFieldChanges,
-  recordFieldInputValues
+  recordFieldInputs
 } from "../support/events.ts";
 
 test.describe("controls: select grid", () => {
@@ -18,7 +18,7 @@ test.describe("controls: select grid", () => {
 
   test.beforeEach(async({ page }) => {
     await recordFieldChanges(page);
-    await recordFieldInputValues(page);
+    await recordFieldInputs(page);
   });
 
   test("opens on the selected tile, walks the grid by row and commits with Enter", async({ page }) => {

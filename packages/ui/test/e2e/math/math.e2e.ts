@@ -223,10 +223,10 @@ test.describe("transform", () => {
 
     const transform = page.locator("jolly-transform");
     await transform.evaluate((element) => {
-      window.__changes = [];
+      window.__events = [];
       element.addEventListener("jolly-change", (event) => {
         if (event.composedPath()[0] === element && event instanceof CustomEvent) {
-          window.__changes?.push(event.detail.value);
+          window.__events?.push(["jolly-change", event.detail.value]);
         }
       });
     });

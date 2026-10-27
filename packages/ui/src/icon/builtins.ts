@@ -127,6 +127,16 @@ registerIcon("search", svg`
   />
 `);
 
+registerIcon("folder", svg`
+  <path
+    d="M4 7.5a2 2 0 0 1 2-2h3.5l2 2H18a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.25"
+    stroke-linejoin="round"
+  />
+`);
+
 registerIcon("check", svg`
   <path
     d="m5 12.5 4.5 4.5L19 7"
