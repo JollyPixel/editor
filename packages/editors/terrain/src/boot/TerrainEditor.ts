@@ -250,7 +250,12 @@ function mountMaterialPalette(
     history,
     catalog: session.catalog,
     importFolder: terrainFolder === "" ? kTextureFolder : `${terrainFolder}/${kTextureFolder}`,
-    pickTexture: (title) => session.pickAsset({ kinds: [TEXTURE_ASSET], title })
+    pickTexture: (title) => session.pickAsset({ kinds: [TEXTURE_ASSET], title }),
+    askConflict: async(paths) => {
+      const { askTextureConflict } = await import("../features/materials/panel/askTextureConflict.ts");
+
+      return askTextureConflict(paths);
+    }
   });
   element.context = { document: terrain, palette, selection, thumbnails, overlay: shared.overlay };
   disposables.push(() => {

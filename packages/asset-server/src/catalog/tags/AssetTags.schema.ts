@@ -56,5 +56,11 @@ export const restoreReportSchema = z.object({
   missing: z.array(assetReferenceSchema)
 });
 
+export const replaceReportSchema = z.object({
+  replaced: z.boolean(),
+  restorePoint: z.optional(assetTagSchema)
+});
+
 export type AssetTag = Immutable<Infer<typeof assetTagSchema>>;
+export type ReplaceReport = Immutable<Infer<typeof replaceReportSchema>>;
 export type RestoreReport = Immutable<Infer<typeof restoreReportSchema>>;

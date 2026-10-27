@@ -32,7 +32,7 @@ import {
   type AssetRelocation,
   type AssetTreeNode
 } from "../../catalog/AssetTreeModel.ts";
-import type { DroppedFile } from "../../browser/DroppedFile.ts";
+import { DroppedFile } from "../../browser/DroppedFile.ts";
 import type { BrowserState } from "../../browser/BrowserState.ts";
 import {
   AssetCommands,
@@ -43,6 +43,7 @@ import {
 
 // CONSTANTS
 const kNewFolderName = "New folder";
+const kMaxReplaceBytes = MAX_DROPPED_FILE_MB * 1024 * 1024;
 const kAllKinds: JollyOption<string> = {
   value: "",
   label: "All kinds",
@@ -92,6 +93,7 @@ export interface AssetActionPrompts {
    */
   share: ((asset: AssetLeafData) => void) | null;
   confirmDelete(deletion: AssetDeletion): Promise<AssetDeleteChoice | null>;
+  pickFile(accept: readonly string[]): Promise<File | null>;
 }
 
 export interface AssetTreeViewOptions {
@@ -319,6 +321,11 @@ export class AssetTreeView {
       case "rename":
         this.#prompts.rename(selection.nodeIds[0]);
         break;
+      case "replace":
+        if (asset !== null) {
+          void this.#replace(asset);
+        }
+        break;
       case "export":
         if (asset !== null) {
           void this.#commands.export(asset);
@@ -337,6 +344,30 @@ export class AssetTreeView {
         throw new Error(`Unhandled asset action: ${unhandled}`);
       }
     }
+  }
+
+  async #replace(
+    asset: AssetLeafData
+  ): Promise<void> {
+    const entry = this.#kinds.findEntry(asset.kind);
+    const picked = await this.#prompts.pickFile([
+      asset.path.extension,
+      ...entry?.convertsFrom ?? []
+    ]);
+    if (picked === null) {
+      return;
+    }
+
+    const file = new DroppedFile(picked);
+    if (file.size > kMaxReplaceBytes) {
+      this.#onError(
+        `Could not replace "${asset.path.name}": "${file.name}" is larger than ${MAX_DROPPED_FILE_MB} MB`
+      );
+
+      return;
+    }
+
+    await this.#commands.replace(asset, file, entry);
   }
 
   async #remove(

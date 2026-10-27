@@ -9,8 +9,10 @@ import {
   type CatalogBatchReport,
   type CatalogCreateOptions,
   type CatalogRename,
+  type CatalogReplaceOptions,
   type ImportPlan,
-  type ImportReport
+  type ImportReport,
+  type ReplaceReport
 } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
@@ -123,6 +125,7 @@ export class FakeTreeCatalog implements AssetTreeCatalog {
   readonly byId = new Map<string, AssetRecordData>();
   readonly folderPaths: Set<string>;
   failure: string | null = null;
+  readonly replaced: Array<{ assetId: string; content: string; from?: string; }> = [];
   #created = 0;
   #staged: Array<() => void> = [];
   #listeners = new Map<AssetTreeCatalogEvent, Set<() => void>>();
@@ -270,5 +273,22 @@ export class FakeTreeCatalog implements AssetTreeCatalog {
 
   async importArchive(): Promise<ImportReport> {
     throw new Error("not an asset archive");
+  }
+
+  async replace(
+    assetId: string,
+    content: Uint8Array,
+    options: CatalogReplaceOptions = {}
+  ): Promise<ReplaceReport> {
+    if (this.failure !== null) {
+      throw new Error(this.failure);
+    }
+    this.replaced.push({
+      assetId,
+      content: new TextDecoder().decode(content),
+      from: options.from
+    });
+
+    return { replaced: true };
   }
 }

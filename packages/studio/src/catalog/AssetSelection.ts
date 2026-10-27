@@ -12,6 +12,7 @@ export const ASSET_ACTIONS = [
   "open",
   "new-folder",
   "rename",
+  "replace",
   "export",
   "share",
   "delete"
@@ -75,6 +76,7 @@ export class AssetSelection {
   ): boolean {
     switch (action) {
       case "open":
+      case "replace":
       case "export":
       case "share":
         return this.asset !== null;

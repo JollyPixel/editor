@@ -22,6 +22,7 @@ import {
   CATALOG_PLAN,
   CATALOG_REJECTED,
   CATALOG_RENAME,
+  CATALOG_REPLACE,
   CATALOG_RESTORE,
   CATALOG_SNAPSHOT,
   CATALOG_TAG,
@@ -145,7 +146,8 @@ describe("CatalogExtension — broadcast", () => {
         CATALOG_TAGS,
         CATALOG_TAG,
         CATALOG_UNTAG,
-        CATALOG_RESTORE
+        CATALOG_RESTORE,
+        CATALOG_REPLACE
       ]
     );
     assert.deepEqual(

@@ -41,6 +41,7 @@ export type AssetCommandCatalog = Pick<
   | "exportArchive"
   | "planImport"
   | "importArchive"
+  | "replace"
 >;
 
 export type ConflictQuestion = (
@@ -215,6 +216,33 @@ export class AssetCommands {
       catch (error) {
         this.#onError(`Could not delete "${folder.name}": ${formatReason(error)}`);
       }
+    }
+  }
+
+  async replace(
+    asset: AssetLeafData,
+    file: DroppedFile,
+    entry: AssetKindEntry | undefined
+  ): Promise<boolean> {
+    const { name, extension } = asset.path;
+    const sameFormat = file.name.toLowerCase().endsWith(extension.toLowerCase());
+    if (!sameFormat && entry?.convertsFrom?.includes(file.format) !== true) {
+      this.#onError(`Could not replace "${name}" with "${file.name}": it is not a ${extension} file`);
+
+      return false;
+    }
+
+    try {
+      await this.#catalog.replace(asset.id, await file.bytes(), {
+        from: sameFormat ? undefined : file.format
+      });
+
+      return true;
+    }
+    catch (error) {
+      this.#onError(`Could not replace "${name}": ${formatReason(error)}`);
+
+      return false;
     }
   }
 

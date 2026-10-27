@@ -29,6 +29,7 @@ import {
   CATALOG_PLAN,
   CATALOG_RENAME,
   CATALOG_REJECTED,
+  CATALOG_REPLACE,
   CATALOG_RESTORE,
   CATALOG_ROOM,
   CATALOG_SNAPSHOT,
@@ -43,6 +44,7 @@ import {
   type CatalogImportCommand,
   type CatalogMessage,
   type CatalogPlanCommand,
+  type CatalogReplaceCommand,
   type CatalogRestoreCommand,
   type CatalogTagCommand
 } from "./client/protocol.ts";
@@ -69,6 +71,7 @@ import {
 } from "./archive/import/importAssetArchive.ts";
 import type { AssetTags } from "./tags/AssetTags.ts";
 import { asError } from "../common/asError.ts";
+import { UnknownAssetError } from "../storage/writer/errors/UnknownAssetError.ts";
 
 // CONSTANTS
 export const DEFAULT_CATALOG_MAX_CONTENT_BYTES = 16 * 1024 * 1024;
@@ -285,6 +288,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
           };
         }))
       .with({ type: CATALOG_RESTORE }, (restore) => this.#restore(restore, actor))
+      .with({ type: CATALOG_REPLACE }, (replace) => this.#replace(replace, actor))
       .exhaustive();
   }
 
@@ -320,6 +324,41 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     return restored.map((report) => {
       return {
         command: command.type,
+        report
+      };
+    });
+  }
+
+  async #replace(
+    command: CatalogReplaceCommand,
+    actor: EventStore.Actor
+  ): Promise<Result<CatalogApplied, Error>> {
+    const { assetId, from } = command;
+    const record = this.#backend.catalog.record(assetId);
+    if (record === undefined) {
+      const error = new UnknownAssetError(assetId);
+
+      return Err(error);
+    }
+
+    const decoded = this.#decode(command.content);
+    const data = !decoded.ok || from === undefined ?
+      decoded :
+      await this.#backend.kinds.convert(record.kind.value, from, decoded.val);
+    if (!data.ok) {
+      return data;
+    }
+
+    const replaced = await this.#backend.tags.replace({
+      assetId,
+      data: data.val,
+      actor
+    });
+
+    return replaced.map((report) => {
+      return {
+        command: command.type,
+        assetId,
         report
       };
     });

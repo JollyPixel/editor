@@ -181,6 +181,9 @@ export class AssetBrowser extends LitElement {
   @query(".new-asset")
   declare _newAssetButton: HTMLElement;
 
+  @query("input.replace-picker")
+  declare _replacePicker: HTMLInputElement | null;
+
   @state()
   declare _dropFolder: AssetPath | null;
 
@@ -278,6 +281,14 @@ export class AssetBrowser extends LitElement {
             @click=${this.#deleteSelected}
           ></jolly-button>
           <jolly-button
+            icon="replace"
+            icon-only
+            label="Replace"
+            title="Replace the content with a file"
+            ?disabled=${!(view?.allows("replace") ?? false)}
+            @click=${this.#replaceSelected}
+          ></jolly-button>
+          <jolly-button
             icon="export"
             icon-only
             label="Export"
@@ -329,6 +340,7 @@ export class AssetBrowser extends LitElement {
         label="Asset actions"
         @jolly-context-action=${this.#onContextAction}
       ></jolly-context-menu>
+      <input class="replace-picker" type="file" hidden />
       ${this.#dialogs.render(() => html`
         <asset-delete-dialog></asset-delete-dialog>
         <asset-share-dialog></asset-share-dialog>
@@ -371,7 +383,8 @@ export class AssetBrowser extends LitElement {
 
               return null;
             }
-          )
+          ),
+        pickFile: (accept) => this.#pickFile(accept)
       },
       onChange: () => this.requestUpdate(),
       onError: (message) => this.#error(message),
@@ -434,6 +447,33 @@ export class AssetBrowser extends LitElement {
   readonly #exportSelected = (): void => {
     this.#view?.run("export");
   };
+
+  readonly #replaceSelected = (): void => {
+    this.#view?.run("replace");
+  };
+
+  #pickFile(
+    accept: readonly string[]
+  ): Promise<File | null> {
+    if (this._replacePicker === null) {
+      return Promise.resolve(null);
+    }
+
+    const picker: HTMLInputElement = this._replacePicker;
+    const { promise, resolve } = Promise.withResolvers<File | null>();
+    const settled = new AbortController();
+    function settle(): void {
+      resolve(picker.files?.[0] ?? null);
+      picker.value = "";
+      settled.abort();
+    }
+    picker.accept = accept.join(",");
+    picker.addEventListener("change", settle, { signal: settled.signal });
+    picker.addEventListener("cancel", settle, { signal: settled.signal });
+    picker.click();
+
+    return promise;
+  }
 
   readonly #acceptDrop = (
     detail: JollyReparentDetail

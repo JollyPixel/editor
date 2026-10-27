@@ -22,6 +22,7 @@ export type {
 } from "../archive/import/AssetImport.ts";
 export type {
   AssetTag,
+  ReplaceReport,
   RestoreReport
 } from "../tags/AssetTags.schema.ts";
 export * from "../tags/TagName.ts";

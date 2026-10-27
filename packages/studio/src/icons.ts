@@ -155,6 +155,23 @@ registerIcon("export", `
   />
 `, { tone: "sky" });
 
+registerIcon("replace", `
+  <path
+    d="M4 15v5h16v-5"
+    fill="currentColor"
+    opacity="0.35"
+  />
+  <path
+    class="tone-ink"
+    d="M12 15V4M7 9l5-5 5 5M4 15v5h16v-5"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+`, { tone: "sky" });
+
 registerIcon("all-kinds", `
   <g transform="translate(10 -2) scale(.86)">
     <path d="M14 5 H39 L51 17 V59 H14 Z" fill="#2b1d16" stroke="#2b1d16" stroke-width="5" stroke-linejoin="round" />
