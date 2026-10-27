@@ -16,6 +16,13 @@ import { touchedChunks } from "../network/chunkParts.ts";
 import { encodeHeights } from "../network/heights.ts";
 import { patchBatches } from "../network/patchBatches.ts";
 import {
+  currentSplatTilePatches,
+  encodeMaterials,
+  encodeSplat,
+  encodeSplatTilePatch,
+  type SplatTilePatch
+} from "../network/splat.ts";
+import {
   currentTilePatches,
   encodeTilePatch
 } from "../network/tilePatches.ts";
@@ -56,9 +63,17 @@ export interface ChunkImage {
    */
   readonly heights: string | null;
   /**
+   * The encoded splat map of a loaded chunk.
+   */
+  readonly splat?: string;
+  /**
    * The encoded overview samples of an unloaded chunk.
    */
   readonly overview?: string;
+  /**
+   * The encoded overview materials of an unloaded chunk.
+   */
+  readonly materials?: string;
 }
 
 export interface MaterialImage {
@@ -185,6 +200,23 @@ export class TerrainDocument extends CommandDocument<
 
     return committed;
   }
+
+  patchSplat(
+    patches: Iterable<SplatTilePatch>
+  ): boolean {
+    const tiles = [...patches]
+      .filter(({ tile }) => this.terrain.has(tile.chunk))
+      .map(encodeSplatTilePatch);
+    let committed = false;
+    for (const batch of patchBatches(tiles)) {
+      committed = this.commit({
+        action: "splat-patched",
+        tiles: batch
+      }) || committed;
+    }
+
+    return committed;
+  }
 }
 
 function terrainState(
@@ -238,16 +270,27 @@ function invertCommand(
     case "chunk-added":
       return [{ action: "chunk-removed", x: command.x, z: command.z }];
     case "chunk-removed": {
-      const heights = encodedHeightsAt(terrain, command.x, command.z);
+      const chunk = terrain.chunk(new ChunkCoord(command.x, command.z));
 
-      return heights === null ?
+      return chunk === undefined ?
         [] :
-        [{ action: "chunk-added", x: command.x, z: command.z, heights }];
+        [{
+          action: "chunk-added",
+          x: command.x,
+          z: command.z,
+          heights: encodeHeights(chunk.copyHeights()),
+          splat: encodeSplat(chunk.splat.copy())
+        }];
     }
-    default:
+    case "heights-patched":
       return [{
         action: "heights-patched",
         tiles: currentTilePatches(terrain, command.tiles)
+      }];
+    case "splat-patched":
+      return [{
+        action: "splat-patched",
+        tiles: currentSplatTilePatches(terrain, command.tiles)
       }];
   }
 }
@@ -258,21 +301,22 @@ function chunkImage(
   z: number
 ): ChunkImage {
   const coord = new ChunkCoord(x, z);
-  const overview = terrain.has(coord) ? undefined : terrain.overview.samples(coord);
+  const chunk = terrain.chunk(coord);
+  if (chunk !== undefined) {
+    return {
+      x,
+      z,
+      heights: encodeHeights(chunk.copyHeights()),
+      splat: encodeSplat(chunk.splat.copy())
+    };
+  }
 
-  return overview === undefined ?
-    { x, z, heights: encodedHeightsAt(terrain, x, z) } :
-    { x, z, heights: null, overview: encodeHeights(overview) };
-}
+  const overview = terrain.overview.samples(coord);
+  const materials = terrain.overview.materials(coord);
 
-function encodedHeightsAt(
-  terrain: TerrainReader,
-  x: number,
-  z: number
-): string | null {
-  const chunk = terrain.chunk(new ChunkCoord(x, z));
-
-  return chunk === undefined ? null : encodeHeights(chunk.copyHeights());
+  return overview === undefined || materials === undefined ?
+    { x, z, heights: null } :
+    { x, z, heights: null, overview: encodeHeights(overview), materials: encodeMaterials(materials) };
 }
 
 function restoreImages(
@@ -317,14 +361,16 @@ function restoreImages(
 
 function restoredEntry(
   current: ChunkEntry | undefined,
-  { x, z, heights, overview }: ChunkImage
+  { x, z, heights, splat, overview, materials }: ChunkImage
 ): ChunkEntry | null {
   if (heights !== null) {
-    return { x, z, heights };
+    return { x, z, heights, ...(splat === undefined ? {} : { splat }) };
   }
   if (overview === undefined) {
     return null;
   }
 
-  return current?.heights === undefined ? { x, z, overview } : current;
+  return current?.heights === undefined ?
+    { x, z, overview, ...(materials === undefined ? {} : { materials }) } :
+    current;
 }

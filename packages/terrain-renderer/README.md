@@ -47,6 +47,17 @@ samples, `loadChunk(coord, heights)` loads a known chunk and
 `writeOverviewTile(tile, heights)` writes the samples a tile of an unloaded
 chunk holds. `sampleAt` reads the interpolated overview on an unloaded chunk.
 
+Each loaded chunk has a `splat`, a `SplatMap` of `SPLAT_TEXELS`² texels, 128
+per side, 0.5 m each. A texel holds four material slots and their weights,
+which sum to `SPLAT_WEIGHT_TOTAL`, 255; a new chunk is slot 0 everywhere.
+`writeSplatTile(tile, splat)` writes the 32×32 texels under a tile and returns
+those it replaced, `loadSplat(coord, splat)` replaces a loaded chunk's whole
+map, and `writeOverviewSplatTile(tile, splat)` updates an unloaded chunk.
+`overview.materials(coord)` gives the slot with the highest weight at each of
+the chunk's four 32 m points; `addUnloadedChunk` and `loadChunk` take them, or
+the splat, as an optional last argument, and a chunk loaded from its heights
+alone keeps the materials the overview already had.
+
 `TerrainView` draws unloaded chunks from the overview, so loaded and unloaded
 ground meet without a crack. Call `chunkAdded` and `chunkRemoved` when a chunk
 loads or unloads, `tilesChanged` when tiles are written, and

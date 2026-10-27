@@ -13,14 +13,16 @@ import {
 // Import Internal Dependencies
 import {
   DEFAULT_TERRAIN_TEXTURE_SIZE,
-  encodeTilePatch,
   GROUND_MATERIAL,
   terrainSnapshot,
-  type EncodedTilePatch,
   type TerrainCommand
 } from "#src/index.ts";
 import { terrainHistoryRegistration } from "#src/network/client.ts";
 import { MAX_PATCH_TILES } from "#src/network/TerrainCommand.schema.ts";
+import {
+  historySetup,
+  peerTile
+} from "../helpers/history.ts";
 import {
   EDGE_TILE,
   ORIGIN_TILE,
@@ -33,32 +35,6 @@ import {
   networkCommand,
   tileHeights
 } from "../helpers/terrain.ts";
-
-function historySetup() {
-  const peers = edgePeerSetup();
-  const history = new CommandHistory<"terrain">();
-  history.register(terrainHistoryRegistration(peers.document, { scope: "terrain" }));
-  const skipped: string[] = [];
-  history.on("skipped", (_scope, step) => skipped.push(step.refused.reason));
-
-  function stroke(...heights: number[]): void {
-    const step = history.open("terrain", null);
-    for (const height of heights) {
-      peers.sculpt(height);
-    }
-    step.commit();
-    peers.route();
-  }
-
-  return { ...peers, history, skipped, stroke };
-}
-
-function peerTile(
-  tile: TileCoord,
-  height: number
-): EncodedTilePatch {
-  return encodeTilePatch({ tile, heights: tileHeights(height) });
-}
 
 function edgeHeight(
   { document }: ReturnType<typeof edgePeerSetup>

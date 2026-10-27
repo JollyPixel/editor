@@ -1,5 +1,6 @@
 export * from "./types.ts";
 export * from "./heights.ts";
+export * from "./splat.ts";
 export * from "./tilePatches.ts";
 export * from "./TerrainInterest.ts";
 export * from "./TerrainLive.schema.ts";

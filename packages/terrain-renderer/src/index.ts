@@ -14,6 +14,19 @@ export {
 } from "./terrain/OverviewMap.ts";
 export type { SampleBlock } from "./terrain/SampleBlock.ts";
 export {
+  dominantSlot,
+  isValidSplat,
+  SPLAT_CHANNELS,
+  SPLAT_TEXEL_COUNT,
+  SPLAT_TEXELS,
+  SPLAT_TILE_TEXEL_COUNT,
+  SPLAT_TILE_TEXELS,
+  SPLAT_WEIGHT_TOTAL,
+  SplatMap,
+  uniformSplat,
+  type SplatTexels
+} from "./terrain/SplatMap.ts";
+export {
   CHUNK_SAMPLE_COUNT,
   HEIGHT_RANGE,
   isValidHeight,

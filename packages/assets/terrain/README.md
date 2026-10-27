@@ -14,9 +14,12 @@ editor [design][design] and [roadmap][roadmap].
 
 A terrain is stored as asset parts: `world.terrain.json` lists the chunks
 with their overview samples, the [materials](#materials) and the texture size, and `world.terrain.json.parts/<x>_<z>.bin` holds
-the heights of each chunk, 64×64 little-endian `Float32`. The overview samples
-are the four heights of the chunk's 32 m grid points, base64 encoded; loading
-a chunk derives them from its heights. A chunk entry may also carry its heights
+the heights of each chunk, 64×64 little-endian `Float32`, beside
+`<x>_<z>_splat.bin`, its splat map: 128×128 texels of four material slots,
+then their four weights, which sum to 255 per texel. The overview samples
+are the four heights of the chunk's 32 m grid points, base64 encoded, and
+each chunk entry lists the dominant material at those points as
+`materials`; loading a chunk derives both from its parts. A chunk entry may also carry its heights
 inline, base64 encoded, as a catalog create does; the first save after an
 edit moves them to part files. Chunk coordinates lie within
 `CHUNK_COORDINATE_RANGE`, -128 to 127 on each axis, and a terrain holds at

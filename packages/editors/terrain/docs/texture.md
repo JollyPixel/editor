@@ -121,6 +121,18 @@ Each chunk's splat is its own asset part, beside its heights part, so a
 sculpt checkpoint does not rewrite 128 KB of splat and painting does not
 rewrite heights. A new chunk starts with slot 0 at weight 255 on every texel.
 
+Paint travels as `splat-patched` commits of 32×32-texel tiles, 16 m on a side
+like the height tiles, so a tile index means the same ground for both. A
+tile's texels must each weigh 255 in total, or the tile is refused and the
+author gets the tile's current splat back. Undoing a chunk's removal brings
+its paint back.
+
+The overview keeps, for each 32 m point, the material with the highest weight
+in the texel there. The asset file and the room snapshot list them per
+chunk, so a far peer colours its horizon without loading the chunk, and
+members that have not subscribed to a painted chunk receive only the tiles
+that hold those points.
+
 The fragment shader reads both, samples the four materials from the arrays
 and blends them. The cost per pixel is fixed, whatever the number of
 materials in the terrain. Slots with a weight of 0 are skipped.

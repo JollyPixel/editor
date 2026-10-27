@@ -20,10 +20,12 @@ import { ChunkCoord } from "@jolly-pixel/terrain.renderer";
 // Import Internal Dependencies
 import type { TerrainStream } from "../model/TerrainStream.ts";
 import {
-  chunkOfPart,
-  chunkPartId
+  chunkPartId,
+  chunkPartIds,
+  parseChunkPart
 } from "./chunkParts.ts";
 import { decodeHeights } from "./heights.ts";
+import { decodeSplat } from "./splat.ts";
 import type {
   ChunkEntry,
   TerrainManifest,
@@ -244,11 +246,25 @@ export class TerrainPartsRoom implements Room<
   #loadParts(
     message: AssetRoomPartsMessage
   ): void {
-    for (const [partId, encoded] of Object.entries(message.parts)) {
-      const coord = chunkOfPart(partId);
-      const heights = typeof encoded === "string" ? decodeHeights(encoded) : null;
-      if (coord !== null && heights !== null) {
-        this.#stream.received(coord, heights);
+    const parts = Object.entries(message.parts)
+      .flatMap(([partId, encoded]) => {
+        const part = parseChunkPart(partId);
+
+        return part === null || typeof encoded !== "string" ? [] : [{ ...part, encoded }];
+      })
+      .sort((left, right) => Number(left.kind === "splat") - Number(right.kind === "splat"));
+    for (const { coord, kind, encoded } of parts) {
+      if (kind === "heights") {
+        const heights = decodeHeights(encoded);
+        if (heights !== null) {
+          this.#stream.received(coord, heights);
+        }
+      }
+      else {
+        const splat = decodeSplat(encoded);
+        if (splat !== null) {
+          this.#stream.receivedSplat(coord, splat);
+        }
       }
     }
   }
@@ -257,7 +273,7 @@ export class TerrainPartsRoom implements Room<
     action: AssetPartsRequest["action"],
     coords: readonly ChunkCoord[]
   ): void {
-    for (const request of partRequests(action, coords.map(chunkPartId))) {
+    for (const request of partRequests(action, coords.flatMap(chunkPartIds))) {
       this.#room.send(request as unknown as TerrainNetworkCommand);
     }
   }
@@ -269,12 +285,13 @@ export class TerrainPartsRoom implements Room<
     }
 
     this.#pending = null;
-    const chunks = pending.manifest.chunks.map(({ x, z, overview }): ChunkEntry => {
+    const chunks = pending.manifest.chunks.map(({ x, z, overview, materials }): ChunkEntry => {
       const heights = pending.heights.get(chunkPartId(new ChunkCoord(x, z)));
+      const known = materials === undefined ? {} : { materials };
 
       return heights === undefined ?
-        { x, z, ...(overview === undefined ? {} : { overview }) } :
-        { x, z, heights };
+        { x, z, ...(overview === undefined ? {} : { overview }), ...known } :
+        { x, z, heights, ...known };
     });
     this.#deliver({
       ...pending.message,

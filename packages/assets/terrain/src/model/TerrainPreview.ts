@@ -21,6 +21,7 @@ import type {
 
 export type TerrainPreviewEvents = {
   tilesChanged: (tiles: readonly TileCoord[]) => void;
+  splatChanged: (tiles: readonly TileCoord[]) => void;
   chunkAdded: (coord: ChunkCoord) => void;
   chunkRemoved: (coord: ChunkCoord) => void;
   overviewChanged: (coords: readonly ChunkCoord[]) => void;
@@ -105,6 +106,14 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
         this.#overviewChanged(unloadedChunks(this.#document.terrain, tiles));
         break;
       }
+      case "splat-patched": {
+        const tiles = command.tiles.map(
+          ({ x, z, tile }) => TileCoord.fromIndex(new ChunkCoord(x, z), tile)
+        );
+        this.#copySplat(tiles);
+        this.#overviewChanged(unloadedChunks(this.#document.terrain, tiles));
+        break;
+      }
     }
   };
 
@@ -114,15 +123,22 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
     this.#chunkLoaded(coord);
   };
 
+  #onSplatLoaded = (
+    coord: ChunkCoord
+  ): void => {
+    this.#copySplat(chunkTiles(coord));
+  };
+
   #onUnloaded = (
     coord: ChunkCoord
   ): void => {
     const settled = this.#forget(({ tile }) => tile.chunk.equals(coord));
-    const samples = this.#document.terrain.overview.samples(coord);
+    const { overview } = this.#document.terrain;
+    const samples = overview.samples(coord);
     for (const terrain of this.#terrains()) {
       terrain.removeChunk(coord);
       if (samples !== undefined) {
-        terrain.addUnloadedChunk(coord, samples);
+        terrain.addUnloadedChunk(coord, samples, overview.materials(coord));
       }
     }
     this.#strokeSettled(settled);
@@ -162,6 +178,7 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
     document.on("change", this.#onChange);
     document.on("reset", this.#onReset);
     document.stream.on("loaded", this.#onLoaded);
+    document.stream.on("splatLoaded", this.#onSplatLoaded);
     document.stream.on("unloaded", this.#onUnloaded);
   }
 
@@ -221,6 +238,7 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
     this.#document.off("change", this.#onChange);
     this.#document.off("reset", this.#onReset);
     this.#document.stream.off("loaded", this.#onLoaded);
+    this.#document.stream.off("splatLoaded", this.#onSplatLoaded);
     this.#document.stream.off("unloaded", this.#onUnloaded);
     this.#layers.clear();
     this.removeAllListeners();
@@ -241,10 +259,14 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
     for (const coord of confirmed.overview.coords()) {
       const chunk = confirmed.chunk(coord);
       if (chunk === undefined) {
-        terrain.addUnloadedChunk(coord, confirmed.overview.samples(coord)!);
+        terrain.addUnloadedChunk(
+          coord,
+          confirmed.overview.samples(coord)!,
+          confirmed.overview.materials(coord)
+        );
       }
       else {
-        terrain.addChunk(coord, chunk.copyHeights());
+        terrain.addChunk(coord, chunk.copyHeights(), chunk.splat.copy());
       }
     }
   }
@@ -260,7 +282,7 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
     const wasLoaded = this.#displayed.has(coord);
     for (const terrain of this.#terrains()) {
       terrain.removeChunk(coord);
-      terrain.addChunk(coord, confirmed.copyHeights());
+      terrain.addChunk(coord, confirmed.copyHeights(), confirmed.splat.copy());
     }
     const surviving = [...this.#layers].flatMap(([owner, layer]) => Array.from(layer.values())
       .filter(({ patch }) => patch.tile.chunk.equals(coord))
@@ -287,14 +309,35 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
       return;
     }
 
+    const { overview } = this.#document.terrain;
     for (const coord of coords) {
-      const samples = this.#document.terrain.overview.samples(coord)!;
+      const samples = overview.samples(coord)!;
       for (const terrain of this.#terrains()) {
         terrain.removeChunk(coord);
-        terrain.addUnloadedChunk(coord, samples);
+        terrain.addUnloadedChunk(coord, samples, overview.materials(coord));
       }
     }
     this.emit("overviewChanged", coords);
+  }
+
+  #copySplat(
+    tiles: readonly TileCoord[]
+  ): void {
+    const changed = tiles.filter(({ chunk }) => this.#displayed.has(chunk));
+    for (const tile of changed) {
+      const splat = this.#document.terrain.chunk(tile.chunk)?.splat.tile(tile.x, tile.z);
+      if (splat === undefined) {
+        continue;
+      }
+      for (const terrain of this.#terrains()) {
+        if (terrain.has(tile.chunk)) {
+          terrain.writeSplatTile(tile, splat);
+        }
+      }
+    }
+    if (changed.length > 0) {
+      this.emit("splatChanged", changed);
+    }
   }
 
   #isActive(

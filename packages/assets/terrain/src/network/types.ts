@@ -6,6 +6,7 @@ import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import type {
   chunkEntrySchema,
   materialPropertiesSchema,
+  splatTilePatchSchema,
   terrainCommandSchema,
   terrainManifestSchema,
   terrainMaterialSchema,
@@ -14,6 +15,7 @@ import type {
 } from "./TerrainCommand.schema.ts";
 
 export type EncodedTilePatch = network.Infer<typeof tilePatchSchema>;
+export type EncodedSplatTilePatch = network.Infer<typeof splatTilePatchSchema>;
 export type ChunkEntry = network.Infer<typeof chunkEntrySchema>;
 export type TerrainManifest = network.Infer<typeof terrainManifestSchema>;
 export type TerrainSnapshot = TerrainManifest;

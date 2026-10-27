@@ -103,8 +103,13 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   or from dropped images, with its sibling maps found by name, and edited
   through a Scale field and folded Maps and Look sections. The techniques are
   stored but not drawn yet.
-- **Next:** splat parts, `splat-patched` commits and the overview's dominant
-  material.
+- **Splat data: done** (2026-10-27). Each chunk holds a splat map, stored as
+  its `<x>_<z>_splat` part and changed by `splat-patched` commits keyed apart
+  from heights; the overview and the manifest keep each 32 m point's dominant
+  material. A chunk loads from its heights and takes its splat when it
+  arrives. Nothing paints or draws it yet.
+- **Next:** splat rendering: splat textures in the view, and the shader
+  blending four materials per pixel.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -156,7 +161,7 @@ chunks yet.
 - [x] Material palette: swatches of the terrain's materials with map badges,
   selection, adding from an image with its sibling maps found by name, and
   editing a material's maps, tiling and flags.
-- [ ] Splat parts, `splat-patched` commits, and the overview's dominant
+- [x] Splat parts, `splat-patched` commits, and the overview's dominant
   material.
 - [ ] The paint tool in the brush toolbar, painting the selected material,
   and Ctrl+click material pick.

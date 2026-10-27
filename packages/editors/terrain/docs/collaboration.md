@@ -12,7 +12,7 @@ broadcasts it, and a refused edit is answered with a correction.
 | `heights-patched` | Tile patches of height samples |
 | `splat-patched` | Tile patches of splat indices and weights |
 | `holePatch` | Tile patches of the hole mask |
-| `chunk-added` | A chunk coordinate and its seeded heights |
+| `chunk-added` | A chunk coordinate, its seeded heights and, when undoing a removal, its splat |
 | `chunk-removed` | A chunk coordinate |
 | `setTier` | A chunk coordinate and its new tier |
 | `material-added` | A material, with its ID and slot |
@@ -127,9 +127,12 @@ writes it as one file. A large terrain does not fit that model, so V1 adds
 asset parts to `@jolly-pixel/asset-server`:
 
 - A kind handler declares parts: binary files in a folder beside the asset
-  file, `<asset>.parts/`. For a terrain, two parts per chunk: its heights and
-  its splat. A client subscribes to both and loads the chunk once both
-  arrive.
+  file, `<asset>.parts/`. For a terrain, two parts per chunk: its heights,
+  `<x>_<z>`, and its splat, `<x>_<z>_splat`. A client subscribes to both. The
+  chunk loads as soon as its heights arrive, painted with the overview's
+  materials until its splat arrives; a splat that arrives first waits for
+  the heights. A terrain saved before splat parts existed loads as Ground and
+  writes them on its next save.
 - The join snapshot holds the manifest, the materials, the points of interest and
   the overview map. Chunks are not in it.
 - A client sends `subscribeParts` and `unsubscribeParts` as its camera moves,

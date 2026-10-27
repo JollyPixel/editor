@@ -23,6 +23,7 @@ const kTextureSizeKey = "terrain:texture-size";
 export type TerrainWriteRef =
   | { readonly kind: "chunk"; readonly chunk: ChunkCoord; }
   | { readonly kind: "tile"; readonly tile: TileCoord; }
+  | { readonly kind: "splat-tile"; readonly tile: TileCoord; }
   | {
     readonly kind: "material";
     readonly id: string;
@@ -45,6 +46,14 @@ export function terrainHeightTileKey(
   return `${terrainChunkKey(x, z)}:h:${tile}`;
 }
 
+export function terrainSplatTileKey(
+  x: number,
+  z: number,
+  tile: number
+): string {
+  return `${terrainChunkKey(x, z)}:s:${tile}`;
+}
+
 export function terrainMaterialKey(
   id: string,
   field: TerrainMaterialField | null = null
@@ -60,6 +69,8 @@ export function terrainWriteRefKey(
       return terrainChunkKey(ref.chunk.x, ref.chunk.z);
     case "tile":
       return terrainHeightTileKey(ref.tile.chunk.x, ref.tile.chunk.z, ref.tile.index);
+    case "splat-tile":
+      return terrainSplatTileKey(ref.tile.chunk.x, ref.tile.chunk.z, ref.tile.index);
     case "material":
       return terrainMaterialKey(ref.id, ref.field);
     case "texture-size":
@@ -73,24 +84,27 @@ export function terrainWriteRefs(
   if (isMaterialCommand(command)) {
     return materialWriteRefs(command);
   }
-  if (command.action === "heights-patched") {
-    return command.tiles.map(({ x, z, tile }) => {
+  if (command.action === "heights-patched" || command.action === "splat-patched") {
+    const kind: "tile" | "splat-tile" = command.action === "heights-patched" ? "tile" : "splat-tile";
+
+    return command.tiles.map(({ x, z, tile }): TerrainWriteRef => {
       return {
-        kind: "tile",
+        kind,
         tile: TileCoord.fromIndex(new ChunkCoord(x, z), tile)
       };
     });
   }
 
   const chunk = new ChunkCoord(command.x, command.z);
+  const tiles = Array.from({ length: CHUNK_TILE_COUNT }, (_, index) => TileCoord.fromIndex(chunk, index));
 
   return [
     { kind: "chunk", chunk },
-    ...Array.from({ length: CHUNK_TILE_COUNT }, (_, index): TerrainWriteRef => {
-      return {
-        kind: "tile",
-        tile: TileCoord.fromIndex(chunk, index)
-      };
+    ...tiles.map((tile): TerrainWriteRef => {
+      return { kind: "tile", tile };
+    }),
+    ...tiles.map((tile): TerrainWriteRef => {
+      return { kind: "splat-tile", tile };
     })
   ];
 }
