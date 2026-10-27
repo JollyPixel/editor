@@ -25,6 +25,7 @@ import type { AssetBackups } from "../../storage/AssetBackups.ts";
 import { AssetPartFiles } from "../../storage/AssetPartFiles.ts";
 import type { AssetKindRegistry } from "../../model/kinds/AssetKindRegistry.ts";
 import { asError } from "../../common/asError.ts";
+import { contentHash } from "../../common/contentHash.ts";
 import { UnknownAssetError } from "../../storage/writer/errors/UnknownAssetError.ts";
 import {
   silentLogger,
@@ -37,6 +38,7 @@ import { UnrestorableTagError } from "./errors/UnrestorableTagError.ts";
 import {
   TAG_MESSAGE_MAX_LENGTH,
   type AssetTag,
+  type ReplaceReport,
   type RestoreReport
 } from "./AssetTags.schema.ts";
 
@@ -65,6 +67,12 @@ export interface CreateTagInput {
 export interface RestoreTagInput {
   assetId: string;
   name: string;
+  actor: EventStore.Actor;
+}
+
+export interface ReplaceContentInput {
+  assetId: string;
+  data: Uint8Array;
   actor: EventStore.Actor;
 }
 
@@ -226,7 +234,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
       });
     }
 
-    const restorePoint = this.#restorePoint(current, name);
+    const restorePoint = this.#restorePoint(current, `Before restoring "${name}"`);
     if (!restorePoint.ok) {
       return restorePoint;
     }
@@ -263,6 +271,46 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
         .map((reference) => {
           return { ...reference };
         })
+    });
+  }
+
+  async replace(
+    input: ReplaceContentInput
+  ): Promise<Result<ReplaceReport, Error>> {
+    const { assetId, data } = input;
+    const checkpoint = await this.#settledCheckpoint(assetId);
+    if (!checkpoint.ok) {
+      return checkpoint;
+    }
+
+    const { event: current, head } = checkpoint.val;
+    if (current.eventData.hash === await contentHash(data)) {
+      return Ok({ replaced: false });
+    }
+
+    const restorePoint = this.#restorePoint(current, "Before replacing its content");
+    if (!restorePoint.ok) {
+      return restorePoint;
+    }
+
+    const updated = await this.#writer.update({
+      assetId,
+      data,
+      actor: input.actor,
+      expectedVersion: head
+    });
+    if (restorePoint.val !== null) {
+      await this.#backUp(current, restorePoint.val);
+    }
+    if (!updated.ok) {
+      return updated;
+    }
+
+    await this.#flush(assetId);
+
+    return Ok({
+      replaced: true,
+      ...(restorePoint.val === null ? {} : { restorePoint: restorePoint.val })
     });
   }
 
@@ -348,7 +396,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
 
   #restorePoint(
     checkpoint: AssetWriteEvent,
-    restoredName: string
+    message: string
   ): Result<AssetTag | null, Error> {
     const { assetId, eventVersion } = checkpoint;
     const tagged = this.#eventStore.tags
@@ -360,7 +408,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
 
     return this.#tagCheckpoint(checkpoint, {
       name: TagName.restorePoint(eventVersion),
-      message: `Before restoring "${restoredName}"`,
+      message,
       actor: kRestoreActor
     });
   }

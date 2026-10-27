@@ -165,11 +165,11 @@ describe("schema-derived catalog types", () => {
 
   test("an applied reply pairs each command with its result", () => {
     expect<Extract<CatalogApplied, { assetId: string; }>["command"]>()
-      .type.toBe<"catalog:create" | "catalog:tags" | "catalog:untag">();
+      .type.toBe<"catalog:create" | "catalog:tags" | "catalog:untag" | "catalog:replace">();
     expect<Extract<CatalogApplied, { tag: unknown; }>["command"]>()
       .type.toBe<"catalog:tag">();
     expect<Extract<CatalogApplied, { report: unknown; }>["command"]>()
-      .type.toBe<"catalog:import" | "catalog:restore">();
+      .type.toBe<"catalog:import" | "catalog:restore" | "catalog:replace">();
     expect<Extract<CatalogApplied, { applied: number; }>["command"]>()
       .type.toBe<"catalog:rename" | "catalog:delete">();
     expect<Extract<CatalogApplied, { content: unknown; }>["command"]>()

@@ -21,6 +21,7 @@ import {
   CATALOG_PLAN,
   CATALOG_REJECTED,
   CATALOG_RENAME,
+  CATALOG_REPLACE,
   CATALOG_RESTORE,
   CATALOG_SNAPSHOT,
   CATALOG_TAG,
@@ -46,6 +47,7 @@ import {
 } from "./archive/import/AssetImport.ts";
 import {
   assetTagSchema,
+  replaceReportSchema,
   restoreReportSchema,
   tagMessageSchema,
   tagNameSchema,
@@ -74,7 +76,8 @@ const kCommandTypes = [
   CATALOG_TAGS,
   CATALOG_TAG,
   CATALOG_UNTAG,
-  CATALOG_RESTORE
+  CATALOG_RESTORE,
+  CATALOG_REPLACE
 ] as const;
 
 export const assetRecordSchema = z.object({
@@ -179,6 +182,11 @@ export const catalogCommandProtocol = new MessageProtocol(
     requestVariant(CATALOG_RESTORE, {
       assetId: kString,
       name: tagReferenceSchema
+    }),
+    requestVariant(CATALOG_REPLACE, {
+      assetId: kString,
+      content: assetInlineContentSchema,
+      from: z.optional(kString)
     })
   ]),
   {
@@ -247,6 +255,10 @@ export const catalogMessageProtocol = new MessageProtocol(
       }),
       appliedVariant(z.literal(CATALOG_RESTORE), {
         report: restoreReportSchema
+      }),
+      appliedVariant(z.literal(CATALOG_REPLACE), {
+        assetId: kString,
+        report: replaceReportSchema
       })
     ]),
     requestVariant(CATALOG_REJECTED, {

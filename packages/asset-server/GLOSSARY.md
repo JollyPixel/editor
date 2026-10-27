@@ -89,10 +89,17 @@ Appending an update whose content is the content of a
 [tagged](../event-store/GLOSSARY.md#tag) event. The asset keeps its path and
 its history.
 
+### Replace
+
+Appending an update whose content comes from the client, such as a
+re-imported image. The asset keeps its ID, path and history, and open rooms
+reload the new content.
+
 ### Restore Point
 
-The tag a restore puts on the content it is about to replace, named
-`restore/<eventVersion>`. Restoring it undoes the restore.
+The tag a restore or a replace puts on the content it is about to overwrite,
+named `restore/<eventVersion>`. Restoring it undoes the restore or the
+replace.
 
 ### Asset Room
 

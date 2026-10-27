@@ -21,6 +21,7 @@ import {
   CATALOG_PLAN,
   CATALOG_REJECTED,
   CATALOG_RENAME,
+  CATALOG_REPLACE,
   CATALOG_RESTORE,
   CATALOG_ROOM,
   CATALOG_SNAPSHOT,
@@ -43,6 +44,7 @@ import type {
 } from "../archive/import/AssetImport.ts";
 import type {
   AssetTag,
+  ReplaceReport,
   RestoreReport
 } from "../tags/AssetTags.schema.ts";
 import {
@@ -91,6 +93,14 @@ export interface CatalogCreateOptions {
   /**
    * Extension of the content's format, such as `".png"`. The kind's handler
    * converts it before the asset is written.
+   */
+  from?: string;
+}
+
+export interface CatalogReplaceOptions {
+  /**
+   * Extension of the content's format, such as `".png"`. The asset kind's
+   * handler converts it before the content is written.
    */
   from?: string;
 }
@@ -415,6 +425,21 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
       type: CATALOG_RESTORE,
       assetId,
       name
+    });
+
+    return reply.report;
+  }
+
+  async replace(
+    assetId: string,
+    content: Uint8Array,
+    options: CatalogReplaceOptions = {}
+  ): Promise<ReplaceReport> {
+    const reply = await this.#request({
+      type: CATALOG_REPLACE,
+      assetId,
+      content: encodeContent(content),
+      from: options.from
     });
 
     return reply.report;
