@@ -6,7 +6,10 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { MessageParser } from "@jolly-pixel/network";
+import {
+  KeyedCommandArbiter,
+  MessageParser
+} from "@jolly-pixel/network";
 import {
   NormalMapConfig,
   PixelBuffer,
@@ -16,7 +19,7 @@ import {
 
 // Import Internal Dependencies
 import { applyPixelCommand } from "#src/network/PixelCommandApplier.ts";
-import { PixelCommandArbiter } from "#src/network/PixelCommandArbiter.ts";
+import { PIXEL_COMMAND_RULES } from "#src/network/PixelCommandRules.ts";
 import { pixelCommandProtocol } from "#src/network/PixelCommand.schema.ts";
 import {
   encodePixelSnapshot,
@@ -115,9 +118,9 @@ describe("normal map commands", () => {
     });
   });
 
-  describe("PixelCommandArbiter", () => {
+  describe("PixelCommandRules", () => {
     test("drops an older patch of the same field", () => {
-      const arbiter = new PixelCommandArbiter();
+      const arbiter = new KeyedCommandArbiter(PIXEL_COMMAND_RULES);
       const state = enabledState();
       const newer = arbiter.admit(state, command("normal-map-defaults-patched", {
         patch: { strength: 6 }
@@ -136,7 +139,7 @@ describe("normal map commands", () => {
     });
 
     test("a zone deletion conflicts with a newer set of the same zone", () => {
-      const arbiter = new PixelCommandArbiter();
+      const arbiter = new KeyedCommandArbiter(PIXEL_COMMAND_RULES);
       const state = enabledState();
       arbiter.admit(state, command("normal-map-zone-set", kZoneOff, {
         clientId: "B",
@@ -151,7 +154,7 @@ describe("normal map commands", () => {
     });
 
     test("rejects a toggle carrying duplicate zones", () => {
-      const arbiter = new PixelCommandArbiter();
+      const arbiter = new KeyedCommandArbiter(PIXEL_COMMAND_RULES);
       const config = NormalMapConfig.create().toJSON();
       config.zones = [
         { regionId: "a", settings: "off" },

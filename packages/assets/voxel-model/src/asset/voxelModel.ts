@@ -2,12 +2,12 @@
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 import type { Infer } from "@jolly-pixel/network";
 import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
+import { randomId } from "@jolly-pixel/asset.common";
 import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import { BlockTransform } from "../model/nodes/BlockTransform.ts";
 import { BlockUvLayouts } from "../model/nodes/BlockUvLayouts.ts";
-import { randomId } from "../model/randomId.ts";
 import {
   blockNodeSchema,
   blockTransformSchema,
@@ -92,15 +92,13 @@ export function createVoxelModelFile(
   };
 }
 
-export function encodeVoxelModelFile(
+export function compactVoxelModelFile(
   file: VoxelModelFile
-): Uint8Array {
-  const compact: CompactVoxelModelFile = {
+): CompactVoxelModelFile {
+  return {
     ...file,
     nodes: file.nodes.map(compactNode)
   };
-
-  return new TextEncoder().encode(JSON.stringify(compact));
 }
 
 export function expandVoxelModelFile(

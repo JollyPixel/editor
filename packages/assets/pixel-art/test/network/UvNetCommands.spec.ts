@@ -3,7 +3,11 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { MessageParser, SchemaParser } from "@jolly-pixel/network";
+import {
+  KeyedCommandArbiter,
+  MessageParser,
+  SchemaParser
+} from "@jolly-pixel/network";
 import {
   PixelBuffer,
   PixelDocumentState,
@@ -14,7 +18,7 @@ import {
 
 // Import Internal Dependencies
 import { applyPixelCommand } from "#src/network/PixelCommandApplier.ts";
-import { PixelCommandArbiter } from "#src/network/PixelCommandArbiter.ts";
+import { PIXEL_COMMAND_RULES } from "#src/network/PixelCommandRules.ts";
 import {
   pixelCommandProtocol,
   pixelSnapshotSchema
@@ -63,7 +67,7 @@ describe("UV net network commands", () => {
 
   test("the arbiter refuses invalid nets and keeps concurrent edits to different nets", () => {
     const state = createState();
-    const arbiter = new PixelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(PIXEL_COMMAND_RULES);
     assert.equal(arbiter.admit(state, command("uv-net-saved", {
       net: { ...kCaps, rows: [[["top"], ["top"]]] }
     })), null);

@@ -18,6 +18,10 @@ export const SNAPSHOT_POLICY_SCHEMA = z.strictObject({
   ))
 });
 
+export const SNAPSHOT_OPTIONS_SCHEMA = z.strictObject({
+  snapshot: z.optional(SNAPSHOT_POLICY_SCHEMA)
+});
+
 export interface AssetKindPackage<
   TOptions extends object = object
 > {

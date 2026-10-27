@@ -10,3 +10,4 @@ Private workspaces that define the editable asset kinds served by
 - [voxel-animation](./voxel-animation/README.md): animation sets that voxel models link
 - [terrain](./terrain/README.md): heightfield terrains 🚧
 - [scene](./scene/README.md): actor trees whose components reference other assets 🚧
+- [common](./common/README.md): code the workspaces above share

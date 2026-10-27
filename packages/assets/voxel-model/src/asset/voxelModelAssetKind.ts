@@ -1,25 +1,22 @@
 // Import Third-party Dependencies
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 import {
-  describeErrors,
-  KeyedCommandArbiter,
-  SchemaParser
-} from "@jolly-pixel/network";
-import {
+  arbitrated,
   InvalidAssetFileError,
-  SNAPSHOT_POLICY_SCHEMA,
+  JSON_CONTENT_TYPE,
+  JsonAssetFile,
+  SNAPSHOT_OPTIONS_SCHEMA,
   type AssetKindHandler,
   type AssetKindPackage,
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
-
+import { InvalidEntryError } from "@jolly-pixel/asset.common";
 import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art";
-import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import {
+  compactVoxelModelFile,
   createVoxelModelFile,
-  encodeVoxelModelFile,
   VOXEL_MODEL_ASSET,
   VOXEL_MODEL_COMMAND,
   VOXEL_MODEL_FILE_VERSION,
@@ -42,36 +39,13 @@ import type {
 } from "../network/types.ts";
 
 // CONSTANTS
-const kFileParser = new SchemaParser(compactVoxelModelFileSchema);
-const kOptionsSchema = z.strictObject({
-  snapshot: z.optional(SNAPSHOT_POLICY_SCHEMA)
+export const VOXEL_MODEL_FILE = new JsonAssetFile({
+  kind: VOXEL_MODEL_KIND,
+  schema: compactVoxelModelFileSchema,
+  expand: expandVoxelModelFile,
+  compact: compactVoxelModelFile,
+  isInvalid: (error) => error instanceof InvalidEntryError
 });
-
-export function decodeVoxelModelFile(
-  content: Uint8Array
-): VoxelModelFile {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(new TextDecoder().decode(content));
-  }
-  catch (error) {
-    throw new InvalidAssetFileError(
-      VOXEL_MODEL_KIND,
-      "content is not JSON",
-      { cause: error }
-    );
-  }
-
-  const result = kFileParser.parse(parsed);
-  if (result.err) {
-    throw new InvalidAssetFileError(
-      VOXEL_MODEL_KIND,
-      describeErrors(result.val)
-    );
-  }
-
-  return expandVoxelModelFile(result.val);
-}
 
 export class VoxelModelState {
   #tree = new ModelTree();
@@ -152,7 +126,7 @@ export function voxelModelAssetKind(
   return {
     kind: VOXEL_MODEL_KIND,
     extensions: {
-      [VOXEL_MODEL_EXTENSION]: "application/json; charset=utf-8"
+      [VOXEL_MODEL_EXTENSION]: JSON_CONTENT_TYPE
     },
     snapshot,
     companions: [
@@ -174,9 +148,7 @@ export function voxelModelAssetKind(
       state: VoxelModelState,
       content: Uint8Array
     ): void {
-      state.load(
-        decodeVoxelModelFile(content)
-      );
+      VOXEL_MODEL_FILE.load(content, (file) => state.load(file));
     },
 
     clear(
@@ -189,7 +161,7 @@ export function voxelModelAssetKind(
       state: VoxelModelState
     ): Promise<Uint8Array> {
       return Promise.resolve(
-        encodeVoxelModelFile(state.toJSON())
+        VOXEL_MODEL_FILE.encode(state.toJSON())
       );
     },
 
@@ -229,21 +201,15 @@ export function voxelModelAssetKind(
       },
 
       live({ state }) {
-        const arbiter = new KeyedCommandArbiter<
-          VoxelModelNetworkCommand,
-          VoxelModelState
-        >({
-          accepts: (model, command) => model.accepts(command),
-          writes: (command) => {
-            return { keys: voxelModelConflictKeys(command) };
-          }
-        });
-
         return {
           snapshotSchema: voxelModelSnapshotSchema,
           snapshot: () => state.snapshot(),
-          arbitrate: (command) => arbiter.admit(state, command),
-          restore: (command, version) => arbiter.restore(command, version)
+          ...arbitrated(state, {
+            accepts: (model, command) => model.accepts(command),
+            writes: (command) => {
+              return { keys: voxelModelConflictKeys(command) };
+            }
+          })
         };
       }
     }
@@ -252,6 +218,6 @@ export function voxelModelAssetKind(
 
 export const ASSET_KINDS: AssetKindPackage<VoxelModelAssetKindOptions> = {
   descriptors: [VOXEL_MODEL_ASSET],
-  optionsSchema: kOptionsSchema,
+  optionsSchema: SNAPSHOT_OPTIONS_SCHEMA,
   handlers: (options) => [voxelModelAssetKind(options)]
 };

@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { InvalidEntryError } from "@jolly-pixel/asset.common";
+
 // Import Internal Dependencies
 import {
   MAX_TERRAIN_MATERIALS,
@@ -95,10 +98,10 @@ export class TerrainMaterials implements TerrainMaterialsReader {
     material: TerrainMaterialData
   ): void {
     if (this.#materials.has(material.id)) {
-      throw new RangeError(`Terrain already has material "${material.id}".`);
+      throw new InvalidEntryError("material", material.id, "is listed twice");
     }
     if (this.slotTaken(material.slot)) {
-      throw new RangeError(`Terrain material slot ${material.slot} is taken.`);
+      throw new InvalidEntryError("material", material.id, `takes the used slot ${material.slot}`);
     }
     this.#materials.set(material.id, copyMaterial(material));
   }

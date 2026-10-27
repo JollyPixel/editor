@@ -10,12 +10,12 @@ import {
   type SplatTexels,
   type TerrainReader
 } from "@jolly-pixel/terrain.renderer";
-
-// Import Internal Dependencies
 import {
   decodeBase64,
   encodeBase64
-} from "./base64.ts";
+} from "@jolly-pixel/asset.common";
+
+// Import Internal Dependencies
 import type { EncodedSplatTilePatch } from "./types.ts";
 
 export interface SplatTilePatch {

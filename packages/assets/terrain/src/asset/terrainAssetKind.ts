@@ -1,29 +1,25 @@
 // Import Third-party Dependencies
 import {
-  describeErrors,
-  KeyedCommandArbiter,
-  SchemaParser
-} from "@jolly-pixel/network";
-import {
+  arbitrated,
   InvalidAssetFileError,
-  SNAPSHOT_POLICY_SCHEMA,
+  JSON_CONTENT_TYPE,
+  JsonAssetFile,
+  SNAPSHOT_OPTIONS_SCHEMA,
   type AssetKindHandler,
   type AssetKindPackage,
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
+import { InvalidEntryError } from "@jolly-pixel/asset.common";
 import { ChunkCoord } from "@jolly-pixel/terrain.renderer";
-import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import {
-  encodeTerrainFile,
   terrainFileSchema,
   TERRAIN_ASSET,
   TERRAIN_COMMAND,
   TERRAIN_FILE_VERSION,
   TERRAIN_EXTENSION,
-  TERRAIN_KIND,
-  type TerrainFile
+  TERRAIN_KIND
 } from "./terrain.ts";
 import {
   acceptsTerrainCommand,
@@ -74,36 +70,11 @@ import type { TerrainNetworkCommand } from "../network/types.ts";
 
 // CONSTANTS
 export const TERRAIN_PART_EXTENSION = ".bin";
-const kOptionsSchema = z.strictObject({
-  snapshot: z.optional(SNAPSHOT_POLICY_SCHEMA)
+export const TERRAIN_FILE = new JsonAssetFile({
+  kind: TERRAIN_KIND,
+  schema: terrainFileSchema,
+  isInvalid: (error) => error instanceof InvalidEntryError
 });
-const kFileParser = new SchemaParser(terrainFileSchema);
-
-export function decodeTerrainFile(
-  content: Uint8Array
-): TerrainFile {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(new TextDecoder().decode(content));
-  }
-  catch (error) {
-    throw new InvalidAssetFileError(
-      TERRAIN_KIND,
-      "content is not JSON",
-      { cause: error }
-    );
-  }
-
-  const result = kFileParser.parse(parsed);
-  if (result.err) {
-    throw new InvalidAssetFileError(
-      TERRAIN_KIND,
-      describeErrors(result.val)
-    );
-  }
-
-  return result.val;
-}
 
 export interface TerrainAssetKindOptions {
   snapshot?: SnapshotPolicy;
@@ -121,7 +92,7 @@ export function terrainAssetKind(
   return {
     kind: TERRAIN_KIND,
     extensions: {
-      [TERRAIN_EXTENSION]: "application/json; charset=utf-8"
+      [TERRAIN_EXTENSION]: JSON_CONTENT_TYPE
     },
     snapshot,
 
@@ -137,17 +108,7 @@ export function terrainAssetKind(
       state: TerrainModel,
       content: Uint8Array
     ): void {
-      const file = decodeTerrainFile(content);
-      try {
-        loadTerrainManifest(state, file);
-      }
-      catch (error) {
-        throw new InvalidAssetFileError(
-          TERRAIN_KIND,
-          error instanceof Error ? error.message : String(error),
-          { cause: error }
-        );
-      }
+      TERRAIN_FILE.load(content, (file) => loadTerrainManifest(state, file));
     },
 
     clear(
@@ -173,7 +134,7 @@ export function terrainAssetKind(
       state: TerrainModel
     ): Promise<Uint8Array> {
       return Promise.resolve(
-        encodeTerrainFile({
+        TERRAIN_FILE.encode({
           version: TERRAIN_FILE_VERSION,
           ...terrainManifest(state)
         })
@@ -185,7 +146,7 @@ export function terrainAssetKind(
         [TERRAIN_PART_EXTENSION]: "application/octet-stream"
       },
       touched: touchedParts,
-      list: (manifest) => decodeTerrainFile(manifest).chunks
+      list: (manifest) => TERRAIN_FILE.decode(manifest).chunks
         .flatMap(({ x, z }) => chunkPartIds(new ChunkCoord(x, z))),
       load: (state, partId, content) => {
         const part = parseChunkPart(partId);
@@ -231,10 +192,7 @@ export function terrainAssetKind(
       },
 
       live({ state }) {
-        const arbiter = new KeyedCommandArbiter<
-          TerrainNetworkCommand,
-          TerrainModel
-        >({
+        const { arbitrate, restore } = arbitrated<TerrainNetworkCommand, TerrainModel>(state, {
           accepts: acceptsTerrainCommand,
           writes: (command) => {
             return { keys: terrainWriteKeys(command) };
@@ -247,10 +205,10 @@ export function terrainAssetKind(
           arbitrate: (command) => {
             const admissible = admissibleTiles(state.terrain, command);
 
-            return admissible === null ? null : arbiter.admit(state, admissible);
+            return admissible === null ? null : arbitrate(admissible);
           },
           correct: (command, admitted) => correctTerrainCommand(state.terrain, command, admitted),
-          restore: (command, version) => arbiter.restore(command, version),
+          restore,
           relay: new TerrainLiveRelay(),
           parts: {
             schema: terrainPartSchema,
@@ -275,6 +233,6 @@ export function terrainAssetKind(
 
 export const ASSET_KINDS: AssetKindPackage<TerrainAssetKindOptions> = {
   descriptors: [TERRAIN_ASSET],
-  optionsSchema: kOptionsSchema,
+  optionsSchema: SNAPSHOT_OPTIONS_SCHEMA,
   handlers: (options) => [terrainAssetKind(options)]
 };

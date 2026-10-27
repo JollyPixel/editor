@@ -1,18 +1,20 @@
+// Import Third-party Dependencies
+import {
+  InvalidEntryError,
+  withBefore,
+  type OrderedTreeEntry
+} from "@jolly-pixel/asset.common";
+
 // Import Internal Dependencies
 import type {
   MaterialFolderJSON,
   VoxelModelCommand
 } from "../../network/types.ts";
-import {
-  InvalidModelTreeError,
-  type ModelTreeEntry
-} from "../errors/InvalidModelTreeError.ts";
 import { MaterialSurface } from "../materials/MaterialSurface.ts";
 import { BlockShape } from "../nodes/BlockShape.ts";
 import { NO_FLIP } from "../nodes/BlockTransform.ts";
 import type { EntryTreeReader } from "./modelCommands.ts";
 import type { ModelTreeReader } from "../ModelTree.ts";
-import type { OrderedTreeEntry } from "../OrderedTree.ts";
 
 export function invert(
   tree: ModelTreeReader,
@@ -158,20 +160,14 @@ export function invert(
 
 function existing<T>(
   value: T | undefined,
-  entry: ModelTreeEntry,
+  entry: string,
   id: string
 ): T {
   if (value === undefined) {
-    throw new InvalidModelTreeError(entry, id, "is missing for a command the tree accepted");
+    throw new InvalidEntryError(entry, id, "is missing for a command the tree accepted");
   }
 
   return value;
-}
-
-function withBefore(
-  beforeId: string | undefined
-): { beforeId?: string; } {
-  return beforeId === undefined ? {} : { beforeId };
 }
 
 function readdNodes(
@@ -217,7 +213,7 @@ interface ReaddedEntry<T> {
 function readded<T extends OrderedTreeEntry>(
   entries: EntryTreeReader<T>,
   id: string,
-  kind: ModelTreeEntry
+  kind: string
 ): ReaddedEntry<T>[] {
   const root = existing(entries.get(id), kind, id);
   const before = withBefore(entries.findNextSibling(id));
@@ -260,7 +256,7 @@ function existingFolder(
 ): MaterialFolderJSON {
   const entry = existing(tree.materials.get(id), "material", id);
   if (entry.kind !== "folder") {
-    throw new InvalidModelTreeError("material", id, "is not a folder");
+    throw new InvalidEntryError("material", id, "is not a folder");
   }
 
   return entry;

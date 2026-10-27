@@ -9,7 +9,7 @@ import { LiveAssetRoom } from "@jolly-pixel/asset-server/testing";
 // Import Internal Dependencies
 import {
   DEFAULT_TERRAIN_TEXTURE_SIZE,
-  encodeTerrainFile,
+  TERRAIN_FILE,
   GROUND_MATERIAL,
   terrainAssetKind,
   TERRAIN_FILE_VERSION
@@ -41,7 +41,7 @@ describe("terrain materials", () => {
     const model = handler.create("asset");
     model.materials.load([material("rock", 3)], 2048);
 
-    handler.load(model, encodeTerrainFile({
+    handler.load(model, TERRAIN_FILE.encode({
       version: TERRAIN_FILE_VERSION,
       chunks: [{ x: 0, z: 0 }]
     }));
@@ -52,7 +52,7 @@ describe("terrain materials", () => {
 
   test("load rejects a document whose materials share a slot", () => {
     const handler = terrainAssetKind();
-    const content = encodeTerrainFile({
+    const content = TERRAIN_FILE.encode({
       version: TERRAIN_FILE_VERSION,
       chunks: [{ x: 0, z: 0 }],
       materials: [material("rock", 0), material("sand", 0)]

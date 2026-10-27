@@ -1,6 +1,8 @@
+// Import Third-party Dependencies
+import { randomId } from "@jolly-pixel/asset.common";
+
 // Import Internal Dependencies
 import type { SceneActorJSON } from "../network/types.ts";
-import { randomId } from "./randomId.ts";
 
 // CONSTANTS
 const kCopySuffix = /^(?<base>.*) \((?<count>\d+)\)$/;

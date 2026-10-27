@@ -1,3 +1,9 @@
+// Import Third-party Dependencies
+import {
+  InvalidEntryError,
+  withBefore
+} from "@jolly-pixel/asset.common";
+
 // Import Internal Dependencies
 import type {
   AnimationClipJSON,
@@ -7,7 +13,6 @@ import type {
 } from "../../network/types.ts";
 import { ANIMATION_CHANNELS } from "../../network/AnimationCommand.schema.ts";
 import type { AnimationSetReader } from "../AnimationSet.ts";
-import { InvalidAnimationSetError } from "../errors/InvalidAnimationSetError.ts";
 
 export function invert(
   set: AnimationSetReader,
@@ -54,7 +59,7 @@ export function invert(
       const { clipId, path, channel, tick } = command;
       const key = set.keyAt(clipId, path, channel, tick);
       if (key === undefined) {
-        throw new InvalidAnimationSetError(clipId, `has no ${channel} key at ${tick} on ${path}`);
+        throw new InvalidEntryError("clip", clipId, `has no ${channel} key at ${tick} on ${path}`);
       }
 
       return [{ action: "key-set", clipId, path, channel, key }];
@@ -86,7 +91,7 @@ function existingClip(
 ): AnimationClipJSON {
   const clip = set.clip(clipId);
   if (clip === undefined) {
-    throw new InvalidAnimationSetError(clipId, "is missing for a command the set accepted");
+    throw new InvalidEntryError("clip", clipId, "is missing for a command the set accepted");
   }
 
   return clip;
@@ -99,7 +104,7 @@ function existingTrack(
 ): AnimationTrackJSON {
   const track = set.track(clipId, path);
   if (track === undefined) {
-    throw new InvalidAnimationSetError(clipId, `has no track ${path}`);
+    throw new InvalidEntryError("clip", clipId, `has no track ${path}`);
   }
 
   return track;
@@ -115,10 +120,4 @@ function previousPatch(
     ...patch.fps === undefined ? {} : { fps: clip.fps },
     ...patch.loop === undefined ? {} : { loop: clip.loop }
   };
-}
-
-function withBefore(
-  beforeId: string | undefined
-): { beforeId?: string; } {
-  return beforeId === undefined ? {} : { beforeId };
 }

@@ -2,9 +2,11 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { InvalidEntryError } from "@jolly-pixel/asset.common";
+
 // Import Internal Dependencies
 import { ModelTree } from "#src/model/ModelTree.ts";
-import { InvalidModelTreeError } from "#src/model/errors/InvalidModelTreeError.ts";
 import type { VoxelModelCommand, VoxelModelSnapshot } from "#src/network/types.ts";
 import {
   TRANSFORM,
@@ -73,7 +75,7 @@ describe("ModelTree.load", () => {
           animationSets: [],
           ...snapshot
         }),
-        InvalidModelTreeError
+        InvalidEntryError
       );
     }
   });

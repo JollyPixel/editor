@@ -8,13 +8,10 @@ import {
   isPixelCommand,
   loadPixelSnapshot,
   narrowPixelCommand,
-  packPixelEvent,
   pixelEdits,
+  PixelLink,
   replayPixelCommand,
   revertsInPlace,
-  unpackPixelCommand,
-  type PixelCommandListener,
-  type PixelEdits,
   type PixelSyncTarget
 } from "@jolly-pixel/asset.pixel-art/client";
 import type {
@@ -74,16 +71,8 @@ export class BlocksetSyncClient extends CommandSync<
   BlocksetSnapshot,
   AssetRoomNotice
 > {
-  #pixels: PixelSyncTarget;
-  #pixelEdits: PixelEdits;
+  #pixels: PixelLink;
   #blockset: BlocksetDocument;
-
-  #sendPixelCommand: PixelCommandListener = (command, change) => {
-    this.sendChange(
-      packPixelEvent(command),
-      this.#pixelEdits.adapt(change)
-    );
-  };
 
   #sendBlocksetCommand: BlocksetDocumentListener = (command, { origin }) => {
     if (origin === "local") {
@@ -107,18 +96,15 @@ export class BlocksetSyncClient extends CommandSync<
       ),
       receipts: edits.receipts
     });
-    const { pixels, blockset } = options;
 
-    this.#pixels = pixels;
-    this.#pixelEdits = edits;
-    this.#blockset = blockset;
-    pixels.on("command", this.#sendPixelCommand);
-    blockset.on("command", this.#sendBlocksetCommand);
+    this.#pixels = new PixelLink(options.pixels, edits, this);
+    this.#blockset = options.blockset;
+    this.#blockset.on("command", this.#sendBlocksetCommand);
     this.on("command", (command) => this.#applyRemote(command));
   }
 
   override destroy(): void {
-    this.#pixels.off("command", this.#sendPixelCommand);
+    this.#pixels.dispose();
     this.#blockset.off("command", this.#sendBlocksetCommand);
     super.destroy();
   }
@@ -127,10 +113,7 @@ export class BlocksetSyncClient extends CommandSync<
     command: BlocksetNetworkCommand
   ): void {
     if (isPixelCommand(command)) {
-      this.#pixels.applyRemoteCommand(
-        unpackPixelCommand(command),
-        command.clientId
-      );
+      this.#pixels.applyRemote(command);
 
       return;
     }

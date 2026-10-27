@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import * as network from "@jolly-pixel/network";
+import type * as network from "@jolly-pixel/network";
 import {
   assertVoxelPatch,
   deserializeVoxelWorld,
@@ -35,15 +35,6 @@ export const VOXEL_COMMAND_RULES: network.KeyedCommandArbiterOptions<
     narrowVoxelCellCommand(command, keep) :
     null)
 };
-
-export class VoxelCommandArbiter extends network.KeyedCommandArbiter<
-  VoxelMapNetworkCommand,
-  VoxelWorldCommandTarget
-> {
-  constructor() {
-    super(VOXEL_COMMAND_RULES);
-  }
-}
 
 function acceptsVoxelCommand(
   state: VoxelWorldCommandTarget,

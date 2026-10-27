@@ -2,9 +2,11 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { InvalidEntryError } from "@jolly-pixel/asset.common";
+
 // Import Internal Dependencies
 import { AnimationSet } from "#src/model/AnimationSet.ts";
-import { InvalidAnimationSetError } from "#src/model/errors/InvalidAnimationSetError.ts";
 import {
   captureImage,
   restoreImages
@@ -157,14 +159,14 @@ describe("AnimationSet", () => {
 
     assert.throws(
       () => set.load({ rig: "", clips: [clip("a"), clip("a")] }),
-      InvalidAnimationSetError
+      InvalidEntryError
     );
     assert.throws(
       () => set.load({
         rig: "",
         clips: [clip("a", { tracks: [{ path: "arm", position: [key(10, 0), key(5, 0)] }] })]
       }),
-      InvalidAnimationSetError
+      InvalidEntryError
     );
     assert.equal(set.rig, "Humanoid");
   });

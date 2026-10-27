@@ -1,3 +1,9 @@
+// Import Third-party Dependencies
+import {
+  InvalidEntryError,
+  NameSet
+} from "@jolly-pixel/asset.common";
+
 // Import Internal Dependencies
 import type {
   AnimationChannel,
@@ -8,9 +14,7 @@ import type {
   AnimationTrackJSON
 } from "../network/types.ts";
 import { AnimationClip } from "./AnimationClip.ts";
-import { InvalidAnimationSetError } from "./errors/InvalidAnimationSetError.ts";
 import { FrameRate } from "./values/FrameRate.ts";
-import { NameSet } from "./values/NameSet.ts";
 import { TrackPath } from "./values/TrackPath.ts";
 
 export type AnimationSetReader = Pick<
@@ -196,7 +200,7 @@ export class AnimationSet {
     const clips = new Map<string, AnimationClip>();
     for (const clip of snapshot.clips) {
       if (clips.has(clip.id)) {
-        throw new InvalidAnimationSetError(clip.id, "is repeated");
+        throw new InvalidEntryError("clip", clip.id, "is repeated");
       }
       clips.set(clip.id, new AnimationClip(clip));
     }

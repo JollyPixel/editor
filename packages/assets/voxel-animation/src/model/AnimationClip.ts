@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { InvalidEntryError } from "@jolly-pixel/asset.common";
+
 // Import Internal Dependencies
 import type {
   AnimationChannel,
@@ -7,7 +10,6 @@ import type {
   AnimationTrackJSON
 } from "../network/types.ts";
 import { ANIMATION_CHANNELS } from "../network/AnimationCommand.schema.ts";
-import { InvalidAnimationSetError } from "./errors/InvalidAnimationSetError.ts";
 import { KeyCurve } from "./sampling/KeyCurve.ts";
 import { FrameRate } from "./values/FrameRate.ts";
 import { roundKeyValue } from "./values/keyValue.ts";
@@ -46,7 +48,7 @@ export class AnimationClip {
   ) {
     const problem = AnimationClip.findProblem(clip);
     if (problem !== null) {
-      throw new InvalidAnimationSetError(clip.id, problem);
+      throw new InvalidEntryError("clip", clip.id, problem);
     }
 
     this.#json = {

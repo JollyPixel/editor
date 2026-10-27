@@ -1,10 +1,12 @@
+// Import Third-party Dependencies
+import { InvalidEntryError } from "@jolly-pixel/asset.common";
+
 // Import Internal Dependencies
 import type {
   AnimationBindingJSON,
   AnimationSetLinkJSON,
   VoxelModelCommand
 } from "../../network/types.ts";
-import { InvalidModelTreeError } from "../errors/InvalidModelTreeError.ts";
 import { AnimationSetLink } from "./AnimationSetLink.ts";
 
 export type AnimationLinkCommand = Extract<
@@ -115,11 +117,11 @@ export class ModelAnimationLinks {
     const loaded = new Map<string, AnimationSetLink>();
     for (const json of links) {
       if (loaded.has(json.id)) {
-        throw new InvalidModelTreeError("animation-set", json.id, "is linked twice");
+        throw new InvalidEntryError("animation-set", json.id, "is linked twice");
       }
       const link = new AnimationSetLink(json);
       if (link.own && [...loaded.values()].some(({ own }) => own)) {
-        throw new InvalidModelTreeError("animation-set", json.id, "is a second own set");
+        throw new InvalidEntryError("animation-set", json.id, "is a second own set");
       }
       loaded.set(json.id, link);
     }

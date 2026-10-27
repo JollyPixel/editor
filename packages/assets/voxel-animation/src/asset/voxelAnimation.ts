@@ -81,10 +81,10 @@ export function createVoxelAnimationFile(
   };
 }
 
-export function encodeVoxelAnimationFile(
+export function compactVoxelAnimationFile(
   file: VoxelAnimationFile
-): Uint8Array {
-  const compact: CompactVoxelAnimationFile = {
+): CompactVoxelAnimationFile {
+  return {
     ...file,
     clips: file.clips.map((clip) => {
       return {
@@ -93,8 +93,6 @@ export function encodeVoxelAnimationFile(
       };
     })
   };
-
-  return new TextEncoder().encode(JSON.stringify(compact));
 }
 
 export function expandVoxelAnimationFile(

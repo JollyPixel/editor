@@ -1,3 +1,11 @@
+// Import Third-party Dependencies
+import {
+  findNextId,
+  InvalidEntryError,
+  OrderedTree,
+  slotIndex
+} from "@jolly-pixel/asset.common";
+
 // Import Internal Dependencies
 import type {
   JSONObject,
@@ -7,21 +15,14 @@ import type {
   SceneEnvironmentJSON,
   SceneSnapshot
 } from "../network/types.ts";
-import { ActorHierarchy } from "./ActorHierarchy.ts";
 import { applyComponentChange } from "./componentChange.ts";
-import {
-  InvalidSceneTreeError,
-  type SceneTreeEntry
-} from "./errors/InvalidSceneTreeError.ts";
 import { createSceneEnvironment } from "./sceneEnvironment.ts";
-import {
-  findNextId,
-  slotIndex
-} from "./siblingSlots.ts";
 import { copySubtree } from "./subtreeCopy.ts";
 
 // CONSTANTS
 export const COMPONENT_DATA_MAX_LENGTH = 65_536;
+
+type SceneTreeEntry = "actor" | "component";
 
 export type SceneTreeReader = Pick<
   SceneTree,
@@ -58,7 +59,7 @@ interface ActorListContext {
 }
 
 export class SceneTree {
-  #actors = new ActorHierarchy();
+  #actors = new OrderedTree<SceneActorJSON>({ entry: "actor" });
   #owners = new Map<string, string>();
   #environment: SceneEnvironmentJSON = createSceneEnvironment();
 
@@ -90,14 +91,12 @@ export class SceneTree {
     return this.#actors.peek(id);
   }
 
-  * actors(): IterableIterator<SceneActorJSON> {
-    for (const actor of this.#actors.walk(null)) {
-      yield structuredClone(actor);
-    }
+  actors(): IterableIterator<SceneActorJSON> {
+    return this.#actors.values();
   }
 
   * actorIds(): IterableIterator<string> {
-    for (const actor of this.#actors.walk(null)) {
+    for (const actor of this.#actors.scan()) {
       yield actor.id;
     }
   }
@@ -117,13 +116,13 @@ export class SceneTree {
   subtreeFrom(
     id: string
   ): SceneActorJSON[] {
-    return this.#actors.subtreeFrom(id).map((actor) => structuredClone(actor));
+    return this.#actors.subtreeFrom(id);
   }
 
   copySubtree(
     id: string
   ): SceneActorJSON[] {
-    return copySubtree(this.#actors.subtreeFrom(id));
+    return copySubtree(this.#actors.peekSubtree(id));
   }
 
   topmostIds(
@@ -131,7 +130,7 @@ export class SceneTree {
   ): string[] {
     const wanted = new Set(ids);
 
-    return [...this.#actors.walk(null)]
+    return [...this.#actors.scan()]
       .map((actor) => actor.id)
       .filter((id) => wanted.has(id) &&
         ![...this.#actors.ancestorIds(id)].some((parentId) => wanted.has(parentId)));
@@ -175,7 +174,7 @@ export class SceneTree {
   ): Readonly<SceneActorJSON>[] {
     switch (command.action) {
       case "actor-removed":
-        return this.#actors.subtreeFrom(command.id);
+        return this.#actors.peekSubtree(command.id);
       case "component-removed": {
         const owner = this.#actors.peek(command.actorId);
 
@@ -367,7 +366,7 @@ export class SceneTree {
       isOuterParent: (actor) => actor.parentId === null
     });
     if (problem !== null) {
-      throw new InvalidSceneTreeError(problem.entry, problem.id, problem.reason);
+      throw new InvalidEntryError(problem.entry, problem.id, problem.reason);
     }
 
     this.clear();
@@ -460,7 +459,7 @@ export class SceneTree {
     beforeId: string | undefined
   ): void {
     for (const [index, actor] of actors.entries()) {
-      this.#actors.insert(actor, index === 0 ? beforeId : undefined);
+      this.#actors.add(actor, index === 0 ? beforeId : undefined);
       for (const component of actor.components) {
         this.#owners.set(component.id, actor.id);
       }

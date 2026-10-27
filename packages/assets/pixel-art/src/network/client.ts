@@ -11,6 +11,7 @@ export * from "../history/PixelKeySet.ts";
 export type * from "../history/PixelCapture.ts";
 export * from "../history/pixelHistoryRegistration.ts";
 export * from "../history/PixelCanvasHistory.ts";
+export * from "./PixelLink.ts";
 export * from "./PixelSyncClient.ts";
 export { loadPixelSnapshot } from "./PixelSnapshotCodec.ts";
 export * from "./PixelWireCodec.ts";

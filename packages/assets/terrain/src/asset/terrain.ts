@@ -25,9 +25,3 @@ export const terrainFileSchema = z.extend(terrainManifestSchema, {
 });
 
 export type TerrainFile = Infer<typeof terrainFileSchema>;
-
-export function encodeTerrainFile(
-  file: TerrainFile
-): Uint8Array {
-  return new TextEncoder().encode(JSON.stringify(file));
-}

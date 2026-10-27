@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { NameSet } from "#src/model/values/NameSet.ts";
+import { NameSet } from "#src/text/NameSet.ts";
 
 describe("NameSet", () => {
   test("compares names trimmed and in any case", () => {

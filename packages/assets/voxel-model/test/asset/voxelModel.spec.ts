@@ -10,8 +10,7 @@ import {
   BlockTransform,
   BlockUvLayouts,
   createVoxelModelFile,
-  decodeVoxelModelFile,
-  encodeVoxelModelFile,
+  VOXEL_MODEL_FILE,
   VOXEL_MODEL_FILE_VERSION
 } from "#src/index.ts";
 
@@ -75,15 +74,15 @@ describe("createVoxelModelFile", () => {
   test("round-trips its blocks and texture reference", () => {
     const file = createVoxelModelFile({ texture: kTexture });
 
-    const decoded = decodeVoxelModelFile(
-      encodeVoxelModelFile(file)
+    const decoded = VOXEL_MODEL_FILE.decode(
+      VOXEL_MODEL_FILE.encode(file)
     );
 
     assert.deepEqual(decoded, file);
   });
 });
 
-describe("encodeVoxelModelFile", () => {
+describe("VOXEL_MODEL_FILE.encode", () => {
   test("stores only the transform parts and active faces that differ from the defaults", () => {
     const created = createVoxelModelFile({
       texture: kTexture,
@@ -108,13 +107,13 @@ describe("encodeVoxelModelFile", () => {
       ]
     };
 
-    const content = encodeVoxelModelFile(file);
+    const content = VOXEL_MODEL_FILE.encode(file);
     const stored = JSON.parse(new TextDecoder().decode(content));
 
     assert.deepEqual(stored.nodes[0].transform, { position: { x: 0, y: 2, z: 0 } });
     assert.equal("activeFaces" in stored.nodes[0].uv, false);
     assert.deepEqual(stored.nodes[1].transform, {});
     assert.deepEqual(stored.nodes[1].uv.activeFaces, ["front"]);
-    assert.deepEqual(decodeVoxelModelFile(content), file);
+    assert.deepEqual(VOXEL_MODEL_FILE.decode(content), file);
   });
 });

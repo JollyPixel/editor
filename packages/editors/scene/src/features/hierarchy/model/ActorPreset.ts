@@ -1,9 +1,7 @@
 // Import Third-party Dependencies
 import type { AssetReferenceData } from "@jolly-pixel/asset";
-import {
-  randomId,
-  type SceneComponentJSON
-} from "@jolly-pixel/asset.scene/client";
+import { randomId } from "@jolly-pixel/asset.common";
+import type { SceneComponentJSON } from "@jolly-pixel/asset.scene/client";
 import type {
   SceneActorPreset,
   SceneComponentSeed

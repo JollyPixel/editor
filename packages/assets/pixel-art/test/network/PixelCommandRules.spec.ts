@@ -3,10 +3,11 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import { KeyedCommandArbiter } from "@jolly-pixel/network";
 import { PixelBuffer, PixelDocumentState } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { PixelCommandArbiter } from "#src/network/PixelCommandArbiter.ts";
+import { PIXEL_COMMAND_RULES } from "#src/network/PixelCommandRules.ts";
 import type { PixelWireCommand } from "#src/network/types.ts";
 import { packColors } from "#src/network/PixelWireCodec.ts";
 import {
@@ -16,11 +17,11 @@ import {
 } from "../fixtures/commands.ts";
 
 function setup(): {
-  arbiter: PixelCommandArbiter;
+  arbiter: KeyedCommandArbiter<PixelWireCommand, PixelDocumentState>;
   state: PixelDocumentState;
 } {
   return {
-    arbiter: new PixelCommandArbiter(),
+    arbiter: new KeyedCommandArbiter(PIXEL_COMMAND_RULES),
     state: new PixelDocumentState({
       buffer: new PixelBuffer({
         size: { x: 4, y: 4 },
@@ -31,7 +32,7 @@ function setup(): {
 }
 
 function accept(
-  arbiter: PixelCommandArbiter,
+  arbiter: KeyedCommandArbiter<PixelWireCommand, PixelDocumentState>,
   state: PixelDocumentState,
   pixelCommand: PixelWireCommand
 ): PixelWireCommand | null {
@@ -41,7 +42,7 @@ function accept(
   return arbitration?.command ?? null;
 }
 
-describe("PixelCommandArbiter — pixels", () => {
+describe("PixelCommandRules — pixels", () => {
   test("accepts an uncontested stroke unchanged", () => {
     const { arbiter, state } = setup();
     const stroke = command("stroke", {

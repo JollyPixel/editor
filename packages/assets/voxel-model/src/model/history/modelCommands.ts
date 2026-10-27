@@ -1,3 +1,9 @@
+// Import Third-party Dependencies
+import type {
+  OrderedTree,
+  OrderedTreeEntry
+} from "@jolly-pixel/asset.common";
+
 // Import Internal Dependencies
 import type {
   VoxelModelCommand,
@@ -5,10 +11,6 @@ import type {
 } from "../../network/types.ts";
 import type { ModelImages } from "./modelImages.ts";
 import type { ModelTreeReader } from "../ModelTree.ts";
-import type {
-  OrderedTree,
-  OrderedTreeEntry
-} from "../OrderedTree.ts";
 
 // CONSTANTS
 export const MODEL_ENTRY_TREES = ["nodes", "materials"] as const;

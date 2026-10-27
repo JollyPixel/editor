@@ -3,7 +3,11 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { MessageParser, SchemaParser } from "@jolly-pixel/network";
+import {
+  KeyedCommandArbiter,
+  MessageParser,
+  SchemaParser
+} from "@jolly-pixel/network";
 import {
   ColorPalette,
   PixelBuffer,
@@ -14,7 +18,7 @@ import {
 
 // Import Internal Dependencies
 import { applyPixelCommand } from "#src/network/PixelCommandApplier.ts";
-import { PixelCommandArbiter } from "#src/network/PixelCommandArbiter.ts";
+import { PIXEL_COMMAND_RULES } from "#src/network/PixelCommandRules.ts";
 import {
   pixelCommandProtocol,
   pixelSnapshotSchema
@@ -68,7 +72,7 @@ describe("palette network commands", () => {
       index: 3, color: kColor
     }, { clientId: "B", timestamp: 900 });
     for (const replay of [false, true]) {
-      const arbiter = new PixelCommandArbiter();
+      const arbiter = new KeyedCommandArbiter(PIXEL_COMMAND_RULES);
       if (replay) {
         arbiter.restore(newer, 1);
       }

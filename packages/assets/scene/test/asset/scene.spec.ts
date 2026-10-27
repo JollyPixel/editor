@@ -8,8 +8,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   createSceneFile,
-  decodeSceneFile,
-  encodeSceneFile
+  SCENE_FILE
 } from "#src/index.ts";
 import { SceneTransform } from "#src/model/SceneTransform.ts";
 import {
@@ -60,7 +59,7 @@ describe("scene file codec", () => {
   ]);
 
   test("stores only the transform fields and visibility that differ from the defaults", () => {
-    const stored = JSON.parse(new TextDecoder().decode(encodeSceneFile(file)));
+    const stored = JSON.parse(new TextDecoder().decode(SCENE_FILE.encode(file)));
 
     assert.equal("transform" in stored.actors[0], false);
     assert.equal("visible" in stored.actors[0], false);
@@ -69,6 +68,6 @@ describe("scene file codec", () => {
   });
 
   test("decodes the stored form back to the full file", () => {
-    assert.deepEqual(decodeSceneFile(encodeSceneFile(file)), file);
+    assert.deepEqual(SCENE_FILE.decode(SCENE_FILE.encode(file)), file);
   });
 });

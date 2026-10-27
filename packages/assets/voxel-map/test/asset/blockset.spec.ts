@@ -12,14 +12,19 @@ import { createPixelArtFile } from "@jolly-pixel/pixel-draw.renderer";
 // Import Internal Dependencies
 import {
   createBlocksetFile,
-  decodeBlocksetFile,
+  BLOCKSET_FILE,
   encodeBlocksetFile,
-  parseBlocksetFile,
   BLOCKSET_FILE_VERSION,
   blocksetFileFromPng
 } from "#src/index.ts";
 import { makeBlockDef } from "../helpers/blocks.ts";
 import { opaquePng } from "../helpers/png.ts";
+
+function encodeJSON(
+  value: unknown
+): Uint8Array {
+  return new TextEncoder().encode(JSON.stringify(value));
+}
 
 describe("createBlocksetFile", () => {
   test("defaults to a blank 8 by 8 tile grid at tile size 32", () => {
@@ -89,14 +94,14 @@ describe("blockset file codec", () => {
     });
 
     assert.deepEqual(
-      decodeBlocksetFile(encodeBlocksetFile(file)),
+      BLOCKSET_FILE.decode(encodeBlocksetFile(file)),
       file
     );
   });
 
   test("rejects a file that is not JSON", () => {
     assert.throws(
-      () => decodeBlocksetFile(new TextEncoder().encode("{")),
+      () => BLOCKSET_FILE.decode(new TextEncoder().encode("{")),
       InvalidAssetFileError
     );
   });
@@ -117,11 +122,11 @@ describe("blockset file codec", () => {
       ["material groups", { ...valid, materialGroups: null }]
     ] as const) {
       assert.throws(
-        () => parseBlocksetFile(broken),
+        () => BLOCKSET_FILE.decode(encodeJSON(broken)),
         InvalidAssetFileError,
         name
       );
     }
-    assert.deepEqual(parseBlocksetFile(valid), valid);
+    assert.deepEqual(BLOCKSET_FILE.decode(encodeJSON(valid)), valid);
   });
 });

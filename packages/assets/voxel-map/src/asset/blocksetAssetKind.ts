@@ -1,13 +1,14 @@
 // Import Third-party Dependencies
+import type { Infer } from "@jolly-pixel/network";
 import {
-  describeErrors,
-  SchemaParser
-} from "@jolly-pixel/network";
-import {
+  arbitrated,
   InvalidAssetFileError,
+  JSON_CONTENT_TYPE,
+  JsonAssetFile,
   type AssetKindHandler,
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
+import { PixelArtState } from "@jolly-pixel/asset.pixel-art";
 import {
   applyPixelCommand,
   correctPixelCommand,
@@ -15,13 +16,10 @@ import {
   isPixelCommand
 } from "@jolly-pixel/asset.pixel-art/server";
 import {
-  deserializePixelDocument,
   parsePixelArtFile,
   pixelArtSnapshot,
-  PixelBuffer,
-  PixelDocumentState,
-  serializePixelDocument,
   type PixelArtFile,
+  type PixelDocumentState,
   type Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
 import {
@@ -32,7 +30,6 @@ import {
 
 // Import Internal Dependencies
 import {
-  encodeBlocksetFile,
   BLOCKSET_COMMAND,
   BLOCKSET_FILE_VERSION,
   BLOCKSET_EXTENSION,
@@ -44,7 +41,7 @@ import {
   blocksetCommandProtocol,
   blocksetSnapshotSchema
 } from "../network/blockset/BlocksetCommand.schema.ts";
-import { BlocksetCommandArbiter } from "../network/blockset/BlocksetCommandArbiter.ts";
+import { BLOCKSET_COMMAND_RULES } from "../network/blockset/BlocksetCommandRules.ts";
 import type {
   BlocksetNetworkCommand,
   BlocksetSnapshot
@@ -52,22 +49,25 @@ import type {
 
 // CONSTANTS
 const kDefaultGridSize = 8;
-const kFileParser = new SchemaParser(blocksetFileSchema);
 
-export function parseBlocksetFile(
-  value: unknown
-): BlocksetFile {
-  const result = kFileParser.parse(value);
-  if (result.err) {
-    throw new InvalidAssetFileError(
-      BLOCKSET_KIND,
-      describeErrors(result.val)
-    );
+export const BLOCKSET_FILE = new JsonAssetFile({
+  kind: BLOCKSET_KIND,
+  schema: blocksetFileSchema,
+  expand: expandBlocksetFile,
+  compact: (file) => {
+    return {
+      ...file,
+      pixels: { ...file.pixels }
+    };
   }
+});
 
+function expandBlocksetFile(
+  stored: Infer<typeof blocksetFileSchema>
+): BlocksetFile {
   let pixels: PixelArtFile;
   try {
-    pixels = parsePixelArtFile(result.val.pixels);
+    pixels = parsePixelArtFile(stored.pixels);
   }
   catch (error) {
     throw new InvalidAssetFileError(
@@ -80,9 +80,9 @@ export function parseBlocksetFile(
   let document: BlocksetDocument;
   try {
     document = new BlocksetDocument({
-      tileSize: result.val.tileSize,
-      blocks: result.val.blocks as BlockDefinition[],
-      materialGroups: result.val.materialGroups
+      tileSize: stored.tileSize,
+      blocks: stored.blocks as BlockDefinition[],
+      materialGroups: stored.materialGroups
     });
   }
   catch (error) {
@@ -100,50 +100,33 @@ export function parseBlocksetFile(
   };
 }
 
-export function decodeBlocksetFile(
-  content: Uint8Array
-): BlocksetFile {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(new TextDecoder().decode(content));
-  }
-  catch (error) {
-    throw new InvalidAssetFileError(
-      BLOCKSET_KIND,
-      "payload is not JSON",
-      { cause: error }
-    );
-  }
-
-  return parseBlocksetFile(parsed);
-}
-
 export interface BlocksetStateOptions {
   size: Vec2;
   tileSize: number;
 }
 
 export class BlocksetState {
-  readonly pixels: PixelDocumentState;
   readonly document: BlocksetDocument;
+
+  #pixelArt: PixelArtState;
 
   constructor(
     options: BlocksetStateOptions
   ) {
-    this.pixels = new PixelDocumentState({
-      buffer: new PixelBuffer({
-        size: options.size
-      })
-    });
+    this.#pixelArt = new PixelArtState(options.size);
     this.document = new BlocksetDocument({
       tileSize: options.tileSize
     });
   }
 
+  get pixels(): PixelDocumentState {
+    return this.#pixelArt.document;
+  }
+
   toJSON(): BlocksetFile {
     return {
       version: BLOCKSET_FILE_VERSION,
-      pixels: serializePixelDocument(this.pixels),
+      pixels: this.#pixelArt.toJSON(),
       ...this.document.toJSON()
     };
   }
@@ -172,7 +155,7 @@ export class BlocksetState {
       blocks: file.blocks,
       materialGroups: file.materialGroups
     });
-    deserializePixelDocument(file.pixels, this.pixels);
+    this.#pixelArt.load(file.pixels);
   }
 
   applyCommand(
@@ -188,12 +171,7 @@ export class BlocksetState {
   }
 
   clear(): void {
-    const size = this.pixels.buffer.size();
-
-    this.pixels.load({
-      size,
-      pixels: new Uint8ClampedArray(size.x * size.y * 4)
-    });
+    this.#pixelArt.clear();
     this.document.clear(this.document.tileSize);
   }
 }
@@ -219,7 +197,7 @@ export function blocksetAssetKind(
   return {
     kind: BLOCKSET_KIND,
     extensions: {
-      [BLOCKSET_EXTENSION]: "application/json; charset=utf-8"
+      [BLOCKSET_EXTENSION]: JSON_CONTENT_TYPE
     },
     snapshot,
 
@@ -234,9 +212,7 @@ export function blocksetAssetKind(
       state: BlocksetState,
       content: Uint8Array
     ): void {
-      state.load(
-        decodeBlocksetFile(content)
-      );
+      BLOCKSET_FILE.load(content, (file) => state.load(file));
     },
 
     clear(
@@ -249,7 +225,7 @@ export function blocksetAssetKind(
       state: BlocksetState
     ): Promise<Uint8Array> {
       return Promise.resolve(
-        encodeBlocksetFile(state.toJSON())
+        BLOCKSET_FILE.encode(state.toJSON())
       );
     },
 
@@ -262,19 +238,16 @@ export function blocksetAssetKind(
       },
 
       live({ state }) {
-        const arbiter = new BlocksetCommandArbiter();
-
         return {
           snapshotSchema: blocksetSnapshotSchema,
           snapshot: () => state.snapshot(),
           encodeSnapshot: () => state.encodeSnapshot(),
-          arbitrate: (command) => arbiter.admit(state, command),
+          ...arbitrated(state, BLOCKSET_COMMAND_RULES),
           correct: (command, admitted) => correctBlocksetCommand(
             state,
             command,
             admitted
-          ),
-          restore: (command, version) => arbiter.restore(command, version)
+          )
         };
       }
     }

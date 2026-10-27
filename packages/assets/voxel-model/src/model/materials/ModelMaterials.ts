@@ -1,10 +1,12 @@
+// Import Third-party Dependencies
+import { OrderedTree } from "@jolly-pixel/asset.common";
+
 // Import Internal Dependencies
 import type {
   MaterialEntryJSON,
   ModelMaterialJSON,
   VoxelModelCommand
 } from "../../network/types.ts";
-import { OrderedTree } from "../OrderedTree.ts";
 import { MaterialSurface } from "./MaterialSurface.ts";
 
 export type MaterialCommand = Extract<
@@ -28,7 +30,7 @@ export type ModelMaterialsReader = Pick<
 export class ModelMaterials extends OrderedTree<MaterialEntryJSON> {
   constructor() {
     super({
-      kind: "material",
+      entry: "material",
       canContain: (parent) => parent.kind === "folder"
     });
   }

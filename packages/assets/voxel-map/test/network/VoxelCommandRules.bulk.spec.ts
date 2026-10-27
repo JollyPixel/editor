@@ -3,6 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import { KeyedCommandArbiter } from "@jolly-pixel/network";
 import {
   BlocksetList,
   VoxelWorld,
@@ -11,7 +12,7 @@ import {
 
 // Import Internal Dependencies
 import {
-  VoxelCommandArbiter,
+  VOXEL_COMMAND_RULES,
   voxelCommandKeys,
   type VoxelMapNetworkCommand
 } from "../../src/network/server.ts";
@@ -28,7 +29,7 @@ function createState(): VoxelWorldCommandTarget {
 }
 
 function admitted(
-  arbiter: VoxelCommandArbiter,
+  arbiter: KeyedCommandArbiter<VoxelMapNetworkCommand, VoxelWorldCommandTarget>,
   command: VoxelMapNetworkCommand,
   state = createState()
 ): VoxelMapNetworkCommand | null {
@@ -36,14 +37,14 @@ function admitted(
 }
 
 function commit(
-  arbiter: VoxelCommandArbiter,
+  arbiter: KeyedCommandArbiter<VoxelMapNetworkCommand, VoxelWorldCommandTarget>,
   command: VoxelMapNetworkCommand,
   state = createState()
 ): void {
   arbiter.admit(state, command)!.commit();
 }
 
-describe("VoxelCommandArbiter — bulk commands", () => {
+describe("VoxelCommandRules — bulk commands", () => {
   function voxelsSetCmd(
     xs: number[],
     opts: { clientId?: string; timestamp?: number; } = {}
@@ -73,7 +74,7 @@ describe("VoxelCommandArbiter — bulk commands", () => {
   });
 
   test("records every cell of a bulk command", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
 
     commit(arbiter, voxelsSetCmd([0, 1], { timestamp: 2000 }));
 
@@ -88,7 +89,7 @@ describe("VoxelCommandArbiter — bulk commands", () => {
   });
 
   test("a single write loses to a cell a bulk command already won", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
 
     commit(arbiter, voxelSetCmd({
       clientId: "late",
@@ -112,7 +113,7 @@ describe("VoxelCommandArbiter — bulk commands", () => {
   });
 
   test("drops a bulk command losing every one of its cells", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
 
     commit(arbiter, voxelsSetCmd([0, 1], {
       clientId: "late",
@@ -129,14 +130,14 @@ describe("VoxelCommandArbiter — bulk commands", () => {
   });
 
   test("passes an uncontested bulk command through untouched", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
     const command = voxelsSetCmd([0, 1, 2]);
 
     assert.strictEqual(admitted(arbiter, command), command);
   });
 });
 
-describe("VoxelCommandArbiter — patch commands", () => {
+describe("VoxelCommandRules — patch commands", () => {
   function voxelsPatchedCmd(
     xs: number[],
     opts: { clientId?: string; timestamp?: number; } = {}
@@ -161,7 +162,7 @@ describe("VoxelCommandArbiter — patch commands", () => {
   });
 
   test("narrows a patch to the cells that win", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
     commit(arbiter, voxelSetCmd({
       clientId: "late",
       timestamp: 2000,
@@ -180,7 +181,7 @@ describe("VoxelCommandArbiter — patch commands", () => {
   });
 
   test("renumbers the partners of the cells a narrowed patch keeps", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
     commit(arbiter, voxelSetCmd({
       clientId: "late",
       timestamp: 2000,
@@ -206,7 +207,7 @@ describe("VoxelCommandArbiter — patch commands", () => {
   });
 
   test("records every cell of a patch", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
     commit(arbiter, voxelsPatchedCmd([0, 1], { timestamp: 2000 }));
 
     assert.strictEqual(
@@ -220,14 +221,14 @@ describe("VoxelCommandArbiter — patch commands", () => {
   });
 
   test("passes an uncontested patch through untouched", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
     const command = voxelsPatchedCmd([0, 1, 2]);
 
     assert.strictEqual(admitted(arbiter, command), command);
   });
 
   test("rejects a patch that is not a whole number of cells", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
     const command = voxelsPatchedCmd([0]);
     if (command.action === "voxels-patched") {
       command.metadata.cells.pop();
@@ -237,7 +238,7 @@ describe("VoxelCommandArbiter — patch commands", () => {
   });
 
   test("rejects a patch whose partner targets no cell of the patch", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
     const command = voxelsPatchedCmd([0]);
     if (command.action === "voxels-patched") {
       command.metadata.partners = [1, 9, 16];
