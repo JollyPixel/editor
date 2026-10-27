@@ -23,7 +23,6 @@ export const packageGroups: PackageGroup[] = [
     packages: [
       { dir: "three", text: "Three" },
       { dir: "voxel-renderer", text: "Voxel Renderer" },
-      { dir: "voxel-tiled", text: "Voxel Tiled" },
       { dir: "pixel-draw-renderer", text: "Pixel Draw" },
       { dir: "color", text: "Color" },
       { dir: "image", text: "Image" }
@@ -53,8 +52,7 @@ export const packageGroups: PackageGroup[] = [
       { dir: "ui", text: "UI" },
       { dir: "console", text: "Console" },
       { dir: "lantern", text: "Lantern" },
-      { dir: "resize-handle", text: "Resize Handle" },
-      { dir: "arbor", text: "Arbor" }
+      { dir: "resize-handle", text: "Resize Handle" }
     ]
   }
 ];

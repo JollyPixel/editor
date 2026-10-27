@@ -29,9 +29,6 @@
       "path": "./packages/three"
     },
     {
-      "path": "./packages/arbor"
-    },
-    {
       "path": "./packages/asset"
     },
     {
@@ -48,9 +45,6 @@
     },
     {
       "path": "./packages/voxel-renderer"
-    },
-    {
-      "path": "./packages/voxel-tiled"
     },
     {
       "path": "./packages/terrain-renderer"
