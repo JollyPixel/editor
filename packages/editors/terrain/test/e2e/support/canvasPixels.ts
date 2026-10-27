@@ -15,7 +15,10 @@ const kHideOverlays = "#game-container > :not(canvas) { visibility: hidden !impo
 export async function captureCanvas(
   canvas: Locator
 ): Promise<CanvasPixels> {
-  const png = await canvas.screenshot({ style: kHideOverlays });
+  const png = await canvas.screenshot({
+    style: kHideOverlays,
+    scale: "css"
+  });
 
   return canvas.page().evaluate(async(base64) => {
     const image = new Image();

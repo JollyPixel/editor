@@ -37,6 +37,7 @@ spread it to override anything else.
 | `ciWorkers` | `4` | workers when `CI` is set |
 | `localWorkers` | `4` | workers when `CI` is not set, a count or a share of the CPU cores such as `"50%"` |
 | `viewport` | Playwright's | |
+| `deviceScaleFactor` | Playwright's | `window.devicePixelRatio`; below 1 a WebGL canvas draws fewer pixels at the same layout |
 | `reuseExistingServer` | `!CI` | |
 
 Tracing is off locally: recording every test made the voxel-map suite about

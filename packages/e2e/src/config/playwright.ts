@@ -20,6 +20,7 @@ export interface E2EConfigOptions {
   ciWorkers?: number;
   localWorkers?: PlaywrightTestConfig["workers"];
   viewport?: ViewportSize;
+  deviceScaleFactor?: number;
   reducedMotion?: "reduce" | "no-preference";
   reuseExistingServer?: boolean;
 }
@@ -34,6 +35,7 @@ export function defineE2EConfig(
     ciWorkers = kWorkers,
     localWorkers = kWorkers,
     viewport,
+    deviceScaleFactor,
     reducedMotion,
     reuseExistingServer = !ci
   } = options;
@@ -48,6 +50,7 @@ export function defineE2EConfig(
       baseURL: baseUrl(port),
       trace: ci ? "on-first-retry" : "off",
       ...(viewport === undefined ? {} : { viewport }),
+      ...(deviceScaleFactor === undefined ? {} : { deviceScaleFactor }),
       ...(reducedMotion === undefined ? {} : { reducedMotion })
     },
     webServer: {
