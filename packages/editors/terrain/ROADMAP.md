@@ -122,7 +122,12 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
 - **Splat overlay: done** (2026-10-27). The "Painted materials" overlay
   colours each slot, shows the colour on its swatch and highlights the
   selected material.
-- **Next:** M3 end-to-end test.
+- **M3 end-to-end test: done** (2026-10-27). Two peers paint and sculpt the
+  same chunk and undo the paint alone; a far peer's horizon takes the new
+  dominant material without loading the chunk. The material shader now loops
+  over projections and stochastic cells instead of unrolling them, so software
+  WebGL compiles it.
+- **Next:** replace an asset's content from the catalog.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -181,7 +186,7 @@ chunks yet.
   pick.
 - [x] Splat overlay.
 - [x] Per-material techniques: triplanar, stochastic tiling, height blending.
-- [ ] E2E: two peers paint and sculpt the same chunk, a far peer's horizon
+- [x] E2E: two peers paint and sculpt the same chunk, a far peer's horizon
   takes the new dominant material.
 - [ ] Replace an asset's content from the catalog, keeping its ID, so a
   re-imported texture updates the terrains that use it.

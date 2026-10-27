@@ -68,8 +68,7 @@ import {
   type MaterialTechnique
 } from "../textures/MaterialTextureStore.ts";
 import {
-  projectedSample,
-  triplanarSamples,
+  sampleSurface,
   triplanarWeights,
   whiteoutNormal
 } from "./materialSampling.ts";
@@ -98,21 +97,23 @@ const kTriplanarStart = 0.95;
 const kFlatHeight = 0.5;
 const kHeightBlendDepth = 0.2;
 const kWeightedSum: MapCombine = {
-  planar: (sample) => sample,
-  triplanar: ([side, top, front], { weights }) => side.mul(weights.x)
-    .add(top.mul(weights.y))
-    .add(front.mul(weights.z))
+  project: (sample) => sample,
+  finish: (sum) => sum
 };
 const kNormalCombine: MapCombine = {
-  planar: (sample) => vec4(unpackNormal(sample), 1),
-  triplanar: (samples, { normal, tangent, bitangent, weights }) => {
-    const world = whiteoutNormal(normal, weights, [
-      unpackNormal(samples[0]),
-      unpackNormal(samples[1]),
-      unpackNormal(samples[2])
-    ]);
+  project: (sample, axis, triplanar, { normal }) => select(
+    triplanar,
+    vec4(whiteoutNormal(normal, unpackNormal(sample), axis), 1),
+    vec4(unpackNormal(sample), 1)
+  ),
+  finish: (sum, triplanar, { normal, tangent, bitangent }) => {
+    const world = normalize(sum.xyz);
 
-    return vec4(dot(world, tangent), dot(world, bitangent), dot(world, normal), 1);
+    return select(
+      triplanar,
+      vec4(dot(world, tangent), dot(world, bitangent), dot(world, normal), 1),
+      sum
+    );
   }
 };
 
@@ -136,8 +137,8 @@ interface SurfaceFrame {
 }
 
 interface MapCombine {
-  planar(sample: Vec4Node): Vec4Node;
-  triplanar(samples: readonly [Vec4Node, Vec4Node, Vec4Node], frame: SurfaceFrame): Vec4Node;
+  project(sample: Vec4Node, axis: IntNode, triplanar: BoolNode, frame: SurfaceFrame): Vec4Node;
+  finish(sum: Vec4Node, triplanar: BoolNode, frame: SurfaceFrame): Vec4Node;
 }
 
 export interface TerrainTextures {
@@ -448,11 +449,12 @@ export function createTerrainShading(
           return arrayNodes[map].sample(uv).depth(layer).grad(uvDx, uvDy);
         }
         If(enabled, () => {
-          If(triplanar, () => {
-            value.assign(combine.triplanar(triplanarSamples(read, point, dx, dy, stochastic), frame));
-          }).Else(() => {
-            value.assign(combine.planar(projectedSample(read, point.xz, dx.xz, dy.xz, stochastic)));
-          });
+          const sum = sampleSurface(
+            read,
+            { point, dx, dy, triplanar, stochastic, weights: frame.weights },
+            (sample, axis) => combine.project(sample, axis, triplanar, frame)
+          );
+          value.assign(combine.finish(sum, triplanar, frame));
         });
 
         return value;

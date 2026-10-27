@@ -6,8 +6,10 @@ import {
   openEditor
 } from "@jolly-pixel/e2e/editor";
 import {
+  DEFAULT_MATERIAL_PROPERTIES,
   encodeHeights,
   encodeTerrainFile,
+  GROUND_MATERIAL,
   TERRAIN_FILE_VERSION,
   TERRAIN_KIND
 } from "@jolly-pixel/asset.terrain";
@@ -22,6 +24,12 @@ import { TerrainPage } from "./support/terrainPage.ts";
 // CONSTANTS
 export const TERRAIN_CHUNKS = 4;
 export const STRIP_CHUNKS = { x: 20, z: 8 } as const;
+export const ROCK_MATERIAL = {
+  ...DEFAULT_MATERIAL_PROPERTIES,
+  id: "rock",
+  slot: 1,
+  name: "Rock"
+};
 export const EDITOR_OPTIONS = {
   maxFps: 30,
   query: {
@@ -75,7 +83,8 @@ function encodeRollingTerrain(
 
   return encodeTerrainFile({
     version: TERRAIN_FILE_VERSION,
-    chunks
+    chunks,
+    materials: [GROUND_MATERIAL, ROCK_MATERIAL]
   });
 }
 
