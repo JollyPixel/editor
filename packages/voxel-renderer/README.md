@@ -18,9 +18,6 @@ $ yarn add @jolly-pixel/voxel.renderer
 
 ## 👀 Usage example
 
-For renamed factories and helpers, see the
-[API name migration guide](./docs/guides/api-name-migration.md).
-
 Load atlas textures before creating the view:
 
 ```ts
@@ -96,127 +93,84 @@ the document alone, so call `document.dispose()` once nothing else uses it.
 ECS applications can wrap these calls in a component local to the application;
 the renderer package does not depend on an ECS runtime.
 
-## 📚 Documentation
+## 📖 Guides
 
-### Concepts and guides
+[GLOSSARY.md](GLOSSARY.md) defines the vocabulary used for worlds, blocks, layers, and meshing.
 
-- [Glossary](GLOSSARY.md): shared vocabulary for worlds, blocks, layers, and
-  meshing.
-- [Architecture](ARCHITECTURE.md): the document and view layers and the
-  source layout.
-- [World model](docs/concepts/world-model.md): layers, chunks, compositing, and
-  ownership.
-- [Transparency](docs/api/core/VoxelTransparencyPassNode.md): scene compositing, setup, and limitations.
-- [Rendering and meshing](docs/concepts/rendering-and-meshing.md): what each
-  rendering feature does and what it costs.
-- [Saving and loading worlds](docs/guides/saving-and-loading-worlds.md) and
-  [creating custom shapes](docs/guides/creating-custom-shapes.md).
-- [Adding physics](docs/guides/adding-physics.md).
+- [Saving and loading worlds](docs/guides/saving-and-loading-worlds.md)
+- [Creating custom shapes](docs/guides/creating-custom-shapes.md)
+- [Adding physics](docs/guides/adding-physics.md)
 
-### Core and world API
+## 📚 API
 
-- [`VoxelDocument`](docs/api/core/VoxelDocument.md) (voxel data, headless) and
-  [`VoxelView`](docs/api/core/VoxelView.md) (the meshes drawn from it).
-- [`VoxelInspector`, mesh and block statistics](docs/api/core/VoxelInspector.md)
-  and [commands](docs/api/core/commands.md).
-- [`VoxelWorld`](docs/api/world/VoxelWorld.md),
-  [`VoxelLayer`](docs/api/world/VoxelLayer.md),
-  [`VoxelTemplates`](docs/api/world/VoxelTemplates.md),
-  [`VoxelChunk` and packed voxels](docs/api/world/VoxelChunk.md),
-  [`VoxelTransform`](docs/api/world/VoxelTransform.md), and
-  [`ViewDistance`](docs/api/world/ViewDistance.md).
+### Core
 
-### Blocks, blocksets, and rendering API
+- [`VoxelDocument`](docs/api/core/VoxelDocument.md): voxel data, headless
+- [`VoxelView`](docs/api/core/VoxelView.md): the meshes drawn from a document
+- [`VoxelInspector`](docs/api/core/VoxelInspector.md): mesh and block statistics
+- [Commands](docs/api/core/commands.md)
+- [`VoxelTransparencyPassNode`](docs/api/core/VoxelTransparencyPassNode.md):
+  transparent scene compositing, setup, and limitations
 
-- [`BlockDefinition`](docs/api/blocks/BlockDefinition.md),
-  [`BlockRegistry`](docs/api/blocks/BlockRegistry.md),
-  [`BlockShape` and built-in shapes](docs/api/blocks/BlockShape.md),
-  [`BlockSurface`](docs/api/blocks/BlockSurface.md),
-  [`BlockTextures` and texture slots](docs/api/blocks/BlockTextures.md), and
-  [`BlockPieces`](docs/api/blocks/BlockPieces.md).
-- [Blocksets](docs/api/blocksets/blocksets.md),
-  [`BlocksetDocument`](docs/api/blocksets/BlocksetDocument.md),
-  [`BlocksetLink`](docs/api/blocksets/BlocksetLink.md),
-  [`BlocksetAtlases`](docs/api/blocksets/BlocksetAtlases.md),
-  [`BlocksetAtlas`](docs/api/blocksets/BlocksetAtlas.md),
-  [`MaterialGroup`](docs/api/materials/MaterialGroup.md), and
-  [`BlendGroup`](docs/api/materials/BlendGroup.md).
-- [`VoxelCollider`](docs/api/collision/VoxelCollider.md) and
-  [`RapierVoxelCollider`](docs/api/collision/RapierVoxelCollider.md).
+### World
 
-### Serialization and integration API
+- [`VoxelWorld`](docs/api/world/VoxelWorld.md)
+- [`VoxelLayer`](docs/api/world/VoxelLayer.md)
+- [`VoxelTemplates`](docs/api/world/VoxelTemplates.md)
+- [`VoxelChunk`](docs/api/world/VoxelChunk.md): chunks and packed voxels
+- [`VoxelTransform`](docs/api/world/VoxelTransform.md)
+- [`ViewDistance`](docs/api/world/ViewDistance.md)
 
-- [Serialization and the world codec](docs/api/serialization/serialization.md).
-- [`VoxelRenderer`](docs/api/engine/VoxelRenderer.md), the `@jolly-pixel/engine`
-  actor component wrapping a `VoxelDocument` and a `VoxelView`.
-- [`VoxelMapDefinition`](docs/api/engine/VoxelMapDefinition.md), the `VoxelMap`
-  scene-file component type.
+### Blocks
+
+- [`BlockDefinition`](docs/api/blocks/BlockDefinition.md)
+- [`BlockRegistry`](docs/api/blocks/BlockRegistry.md)
+- [`BlockShape`](docs/api/blocks/BlockShape.md): built-in shapes
+- [`BlockSurface`](docs/api/blocks/BlockSurface.md)
+- [`BlockTextures`](docs/api/blocks/BlockTextures.md): texture slots
+- [`BlockPieces`](docs/api/blocks/BlockPieces.md)
+
+### Blocksets and materials
+
+- [Blocksets](docs/api/blocksets/blocksets.md)
+- [`BlocksetDocument`](docs/api/blocksets/BlocksetDocument.md)
+- [`BlocksetLink`](docs/api/blocksets/BlocksetLink.md)
+- [`BlocksetAtlases`](docs/api/blocksets/BlocksetAtlases.md)
+- [`BlocksetAtlas`](docs/api/blocksets/BlocksetAtlas.md)
+- [`MaterialGroup`](docs/api/materials/MaterialGroup.md)
+- [`BlendGroup`](docs/api/materials/BlendGroup.md)
+
+### Collision
+
+- [`VoxelCollider`](docs/api/collision/VoxelCollider.md)
+- [`RapierVoxelCollider`](docs/api/collision/RapierVoxelCollider.md)
+
+### Serialization and integration
+
+- [Serialization](docs/api/serialization/serialization.md): the world codec
+- [`VoxelRenderer`](docs/api/engine/VoxelRenderer.md): `@jolly-pixel/engine`
+  actor component wrapping a `VoxelDocument` and a `VoxelView`
+- [`VoxelMapDefinition`](docs/api/engine/VoxelMapDefinition.md): the `VoxelMap`
+  scene-file component type
 
 ## 🚀 Running the examples
-
-Six interactive examples live in the `examples/` directory, one folder each, and are served by Vite. Start the dev server from the package root:
 
 ```bash
 pnpm --filter @jolly-pixel/voxel.renderer dev
 ```
 
-Then open `http://localhost:5173/` for the landing page, or go straight to one:
-
-- `/shapes/`: every built-in block shape as a coloured mesh with a wireframe overlay and a ground label.
-- `/blockset/`: every tile of `UV_cube.png` laid out as a UV-mapped quad with col/row labels.
-- `/transparency/`: a diorama for transparency and lighting: blended water and glass, cutout leaves, grates and windows with explicit alpha modes, an alpha-gradient probe for `alphaTest`, and live light and layer controls.
-- `/normal-map/`: procedural relief tiles lit by an orbiting sun, with live normal scale and roughness.
-- `/physics/`: a 32×32 voxel terrain with ramps, stairs and slabs, and a Rapier3D sphere you roll with the arrow keys.
-- `/noise-world/`: a Minecraft-like world (oceans, plains, snowy ridged mountains) generated with the `math` noise helpers, with live renderer and mesh counters. This is the benchmark example.
-
-See [examples/README.md](https://github.com/JollyPixel/editor/blob/main/packages/voxel-renderer/examples/README.md) to add one.
+Open `http://localhost:5173/` for the landing page, which links every example.
 
 ## 🧪 Benchmarks
 
-### Noise-world benchmark
-
-Use `/noise-world/` to measure the renderer under load. It builds a heightmap world from layered simplex noise (continents, ridged mountains, domain warp) and reports two separate costs: voxel writes via `setVoxel` and chunk meshing for dirty chunks.
-
-It is configurable from the query string:
-
-```text
-/noise-world/?size=1024&chunk=32&seed=42
-```
-
-| Param | Default | Effect |
-|---|---:|---|
-| `size` | `512` | World width/depth in voxels (`size²` columns) |
-| `chunk` | `32` | `chunkSize`; trades draw calls against rebuild cost |
-| `seed` | `1337` | Terrain seed; the same seed always yields the same world |
-| `workers` | `2` up to 512, `4` above | Mesh workers, capped at `hardwareConcurrency - 1`; `0` meshes on the main thread |
-
-The examples dev server sends `Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy` headers, which mesh workers need for `SharedArrayBuffer`.
-
-### Headless benchmark
-
-The browser HUD is only a sanity check; Vite's checker inflates timings. Run headless instead:
-
 ```bash
 pnpm run bench
-pnpm run bench --workers 8
-pnpm run bench:compare
+pnpm run bench:light
+pnpm run bench:render
 ```
 
-`--workers N` meshes in N `worker_threads` ticked at 60 fps; `main thread` then reports the event loop busy time instead of the flush duration.
-
-Use the minimum of three runs when comparing numbers, since single runs can drift a lot on a throttled machine.
-
-### Block light and frame benchmarks
-
-```bash
-pnpm run bench:light --size 256 --lights 300
-pnpm run bench:render --size 256 --lights 400 --resolution 1024
-pnpm run bench:render --webgpu
-```
-
-`block-light.bench.ts` times the CPU side of block light on a stone floor with scattered lights and pillars: first and full relight, texture fill, falloff switch, single edits and the idle update. `--tint` sets the light colour. A coloured light relights on a falloff switch; a white one only rewrites its textures.
-
-`render.bench.ts` reports the frame time of a lit map in headless Chrome (WebGL by default, `--webgpu` for WebGPU), with and without block light, glass and the glow pass. Three only advances its node frame inside the animation loop, so the bench page swaps `requestAnimationFrame` for an unthrottled one. The numbers are throughput, not latency, and only compare between runs on the same machine.
+[BENCHMARK.md](BENCHMARK.md) covers each suite's options, the `/noise-world/`
+browser benchmark, and how to compare runs.
 
 ## 🔥 Troubleshooting
 
@@ -234,15 +188,22 @@ hosted by a runtime:
 
 ```ts
 import { Systems } from "@jolly-pixel/engine";
-import { VoxelDocument, VoxelView } from "@jolly-pixel/voxel.renderer";
+import {
+  VoxelDocument,
+  VoxelView
+} from "@jolly-pixel/voxel.renderer";
 
 const logger = new Systems.Logger({
   level: "trace",
   namespaces: ["*"]
 });
 
-const document = new VoxelDocument({ logger });
-const view = new VoxelView(document, { logger });
+const document = new VoxelDocument({
+  logger
+});
+const view = new VoxelView(document, {
+  logger
+});
 ```
 
 ## Contributors guide

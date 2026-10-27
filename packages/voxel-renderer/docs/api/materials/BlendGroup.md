@@ -48,7 +48,7 @@ document.defineBlendGroup({ id: "snow", width: 16, priority: 1 });
 - Where two tiles meet, the higher one gets a darker outline and casts a short
   shadow towards `+x` and `+z`.
 - Only opaque neighbours in the same blockset blend. Distant faces drawn with
-  [flat colours](../../concepts/rendering-and-meshing.md#far-distance) do not.
+  [flat colours](../core/VoxelView.md#far-distance) do not.
 
 ## BlendGroup
 

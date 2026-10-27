@@ -32,8 +32,8 @@ optional `id`.
 
 `"composite"` lets only a block whose opaque shape fills the whole cell hide
 lower voxels in that cell. `"replace"` hides them under any block, masked and
-blended ones included. See
-[layer compositing](../../concepts/world-model.md#layer-compositing).
+blended ones included. A hidden layer is left out of reads, meshing and
+collision.
 
 ## Properties
 

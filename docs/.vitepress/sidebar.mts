@@ -32,6 +32,7 @@ const kTitleOverrides = new Map([
 const kRootFiles = new Map([
   ["README.md", "Introduction"],
   ["ARCHITECTURE.md", "Architecture"],
+  ["BENCHMARK.md", "Benchmarks"],
   ["CATALOG_WRITE_PATH.md", "Catalog write path"],
   ["GLOSSARY.md", "Glossary"]
 ]);

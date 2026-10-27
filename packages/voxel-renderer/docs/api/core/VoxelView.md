@@ -40,19 +40,19 @@ drives a view through the actor lifecycle.
 | Group | Option | Default | Description |
 | --- | --- | --- | --- |
 | `rendering` | `material` | `"lambert"` | `"lambert"` or `"standard"` (PBR). |
-| | `customizer` | | `(material, blocksetId, surface) => void`, called once per new material. See [material customizers](../../concepts/rendering-and-meshing.md#material-customizers). |
+| | `customizer` | | `(material, blocksetId, surface) => void`, called once per new material. See [material customizers](#material-customizers). |
 | | `alphaTest` | `0.1` | Alpha-test cutoff; `0` disables discards. Blocks can set their own [`alphaCutoff`](../blocks/BlockSurface.md). |
 | | `alphaToCoverage` | `false` | Mask blocks write MSAA coverage. Needs a multisampled target and an opaque canvas. |
-| | `tileMinification` | `"average"` | `"average"` or `"nearest"`, see [tile minification](../../concepts/rendering-and-meshing.md#tile-minification). |
-| `lighting` | `ambientOcclusion` | `0` | Strength from `0` (off) to `1`, see [ambient occlusion](../../concepts/rendering-and-meshing.md#ambient-occlusion). |
-| | `blockLight` | `1` | Strength of the light glowing blocks cast, `0` or more, see [block light](../../concepts/rendering-and-meshing.md#block-light). |
+| | `tileMinification` | `"average"` | `"average"` or `"nearest"`, see [tile minification](#tile-minification). |
+| `lighting` | `ambientOcclusion` | `0` | Strength from `0` (off) to `1`, see [ambient occlusion](#ambient-occlusion). |
+| | `blockLight` | `1` | Strength of the light glowing blocks cast, `0` or more, see [block light](#block-light). |
 | | `blockLightFalloff` | `"wide"` | `"wide"` or `"focused"`, how block light fades with distance. |
 | | `shadowFill` | `0` | How much block light washes out received shadows, `0` or more. |
 | | `castShadow` | `false` | |
 | | `receiveShadow` | `false` | |
 | `range` | `viewDistance` | `Infinity` | Chunks around `focus`; a number, `ViewDistanceOptions` or a [`ViewDistance`](../world/ViewDistance.md). |
 | | `policy` | `"hide"` | What happens to built chunks leaving the view distance. |
-| | `farDistance` | `Infinity` | Chunks from `focus` beyond which tiles draw as flat colours, see [far distance](../../concepts/rendering-and-meshing.md#far-distance). |
+| | `farDistance` | `Infinity` | Chunks from `focus` beyond which tiles draw as flat colours, see [far distance](#far-distance). |
 | `meshing` | `budgetMs` | `8` | Rebuild time per `tick()`; `0` rebuilds everything at once. |
 | | `workers` | | See [mesh workers](#mesh-workers). |
 
@@ -210,7 +210,7 @@ view.range.viewDistance = new ViewDistance({ chunks: 12, shape: "sphere", hyster
 ```
 
 The view distance does nothing while `focus` is `null`, and it never affects
-colliders.
+colliders. Frustum culling still applies on top.
 
 ## Methods
 
@@ -225,7 +225,7 @@ requestFrame(): void;
 registers its atlas. A known ID is updated in place and keeps its slot; a
 loaded atlas is replaced. To share a new blockset with peers, use
 [`document.addBlockset()`](./VoxelDocument.md#commands). `options.normal` adds a
-[normal map](../../concepts/rendering-and-meshing.md#normal-maps) laid out like
+[normal map](#normal-maps) laid out like
 `texture`; loading again without it removes it.
 
 A declared blockset without a texture hides its blocks until `loadBlockset()`
@@ -287,7 +287,8 @@ const part = view.pickVoxelPart("Ground", cell, point);
 
 The view reacts to the document on its own:
 
-- Voxel and layer commands remesh the affected chunks.
+- Voxel and layer commands remesh the affected chunks, plus the neighbouring
+  chunks whose faces they can hide or reveal, in every layer.
 - Block definitions and removals remesh the chunks holding the block, and their
   neighbours when culling can change. A definition that only moves its tiles
   (same blocksets and rotations, no blend group) or renames the block remeshes
@@ -298,5 +299,131 @@ The view reacts to the document on its own:
   every chunk.
 - `loaded` clears every mesh and rebuilds the world.
 
-To composite overlapping transparent blocks correctly, render the scene through
-a [`VoxelTransparencyPassNode`](./VoxelTransparencyPassNode.md).
+## Chunk meshes
+
+Each chunk cell gets one mesh per blockset and
+[surface](../blocks/BlockSurface.md) (alpha mode, side, cutoff and material
+group), under `root`.
+
+- Layers positioned on a multiple of the chunk size share these meshes, so
+  stacking layers adds no draw calls. A layer off the chunk grid gets its own.
+- Faces touching a block of another [blend group](../materials/BlendGroup.md)
+  go in a separate blended mesh.
+- Opaque and masked surfaces write depth; blended ones do not. To composite
+  overlapping transparent blocks, render the scene through a
+  [`VoxelTransparencyPassNode`](./VoxelTransparencyPassNode.md).
+- A blockset id containing `:surface=` makes mesh building throw `RangeError`.
+- Meshes cast shadows from the faces they show, since hidden faces between
+  blocks are never meshed. Give the light a `shadow.normalBias` of one to two
+  shadow-map texels, in world units, or lit faces shadow themselves.
+- Raycasts work, but the hits carry no `uv`.
+
+### Material customizers
+
+The vertex shader rebuilds every face from compact per-face data, so a
+`rendering.customizer` must leave that path intact:
+
+- The geometry has no `uv` attribute, and its `position` and `normal`
+  attributes hold no positions or normals. Do not read them.
+- Leave `positionNode` alone: it rebuilds the faces.
+- Replacing `colorNode` drops tile sampling, ambient occlusion and distant tile
+  filtering, and changes what the shadow pass draws.
+- The material's `map` is `null`; the color node samples the atlas.
+
+### Tile minification
+
+Atlases are sampled nearest-neighbour without mipmaps, which would mix
+neighbouring tiles.
+
+- `"average"` (default) shows the average of the texels a pixel covers, within
+  the face's own tile. Distant terrain stops shimmering and distant masked
+  foliage fills in.
+- `"nearest"` turns the filter off.
+- Faces whose atlas pixels cannot be read, such as a cross-origin image without
+  CORS or a `.ktx2` atlas, fall back to nearest sampling.
+- The averages are recomputed on the next `tick()` after the atlas texture's
+  `version` changes, for example through
+  [`BlocksetAtlas.updateImage()`](../blocksets/BlocksetAtlas.md).
+
+### Far distance
+
+Past `range.farDistance` chunks from `focus`, a chunk draws each face in its
+tile's flat average colour, and its blended blocks turn opaque.
+
+- Only materials change, so crossing the threshold never remeshes.
+- A chunk switches back half a chunk inside the threshold, so chunks on the
+  border do not flicker.
+
+### Normal maps
+
+`loadBlockset(definition, texture, { normal })` adds a tangent-space normal
+atlas.
+
+- Same layout and size as the colour atlas, OpenGL convention: red points
+  right and green points up in the image.
+- Rotated, flipped and slanted faces need no extra data.
+- Strength is the [`normalScale`](../materials/MaterialGroup.md) of the
+  block's material group, `1` without a group; `0` turns it off.
+- The relief fades with distance and is gone past `farDistance`. Shadows ignore
+  it.
+- Works with `"lambert"` and `"standard"`. Under `"standard"`, low roughness
+  adds specular highlights on the relief.
+
+### Ambient occlusion
+
+`lighting.ambientOcclusion` darkens creases between blocks, up to `1`, where a
+fully enclosed corner turns black. It is baked into the chunk meshes: no
+post-processing pass, but chunk builds take about twice as long.
+
+- Toggling it rebuilds every chunk; changing the strength does not.
+- Only a block that fully covers one of its faces casts it, so cutout blocks
+  and thin shapes such as poles cast none.
+- Only faces on the cell boundary receive it: ramp slopes and the inner step of
+  a stair stay lit.
+- It multiplies the albedo, so it darkens direct and ambient light alike.
+- An edit on a chunk edge or corner also rebuilds the diagonal chunks.
+
+### Block light
+
+A block whose [material group](../materials/MaterialGroup.md) has a
+`lightLevel` lights its surroundings, Minecraft style: one level lost per cell,
+so level 15 reaches 14 cells.
+
+- It flows around opaque full cubes and through every other block (slabs,
+  stairs, glass, cutout leaves).
+- The colour is the group's `emissive` hue, or white when `emissive` is black.
+  Each RGB channel spreads on its own, so coloured lights mix, and the weaker
+  channels fade out first.
+- `lighting.blockLight` scales it; `0` hides it and pauses updates until the
+  strength rises again.
+- It adds to the scene lights, so it shows best in a dark scene. A standard
+  material receives it as ambient light, so metal reflects it instead of going
+  dark.
+- Light fades smoothly across faces and does not leak through one-block walls.
+- Sun shadows do not dim it; ambient occlusion does.
+- The material's `emissive` output holds only the glow of the emitting block,
+  see [selective bloom](./VoxelTransparencyPassNode.md#selective-bloom).
+
+Cost:
+
+- Computed on the CPU, never saved or sent to peers. An edit relights only the
+  chunks within reach of a light; a world without glowing groups skips the
+  work.
+- Each lit chunk gets a small light texture (about 23 KB for 16-cell chunks).
+  A light change re-uploads it without rebuilding the mesh.
+
+`lighting.blockLightFalloff` picks the curve (brightness next to the source, 3
+and 8 cells away):
+
+- `"wide"` (default): `0.82`, `0.57`, `0.23`. Every cell in range is lit
+  almost evenly.
+- `"focused"`: `1.38`, `0.39`, `0.04`. A lamp with a pool of light around it;
+  values above 1 rely on tone mapping.
+
+Changing the falloff rewrites every lit chunk's light texture. Only coloured
+lights are relit, since their channel levels depend on the curve.
+
+Block light adds to a shadowed surface without replacing the missing sunlight,
+so a sun shadow still shows next to a glowing block. `lighting.shadowFill`
+washes it out where block light is strong: `0` keeps shadows whole, `1`
+removes them where block light is at full brightness.

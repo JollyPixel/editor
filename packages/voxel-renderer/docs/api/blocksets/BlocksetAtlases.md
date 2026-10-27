@@ -54,7 +54,7 @@ as it is.
 Voxels whose blockset is not declared, for example after it was removed, are
 drawn with a red 16×16 tile crossed in white. Their faces use the reserved id
 `MISSING_BLOCKSET_ID` (`"$missing"`), which is also the `blocksetId` a
-[material customizer](../../concepts/rendering-and-meshing.md#material-customizers)
+[material customizer](../core/VoxelView.md#material-customizers)
 receives for them. `BlocksetList.add()` refuses that id.
 
 A declared blockset without a texture is different: its faces are not drawn

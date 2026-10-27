@@ -1,8 +1,8 @@
 # VoxelWorld
 
 The voxel layers, object layers and templates of a document, exposed as
-`document.world`. Every edit goes through it. See
-[the world model](../../concepts/world-model.md) for how layers stack.
+`document.world`. Every edit goes through it. Layers stack by `rank` and store
+their voxels in fixed-size [chunks](./VoxelChunk.md).
 
 ```ts
 const { world } = document;
@@ -180,8 +180,8 @@ command by hand. `null` stands for the bottom or the top of the stack.
 ## Reading voxels
 
 Reads look through the layers from the top and return the first visible voxel.
-Rendering composites layers by other rules, described in
-[layer compositing](../../concepts/world-model.md#layer-compositing).
+Rendering follows each layer's
+[`compositing`](./VoxelLayer.md#options) instead.
 
 #### `getVoxelAt(position: Vector3Like): VoxelEntry | undefined`
 
@@ -275,15 +275,17 @@ world.transaction(() => {
 
 #### `patchVoxels(layerName: string, cells: readonly number[], partners?: readonly number[]): void`
 
-Writes `VOXEL_PATCH_STRIDE` (5) numbers per cell, `x, y, z, blockId,
-transform`, and emits them as one `"voxels-patched"`. A `blockId` of `0`
-removes the voxel. `partners` gives the second shape of merged cells,
-`VOXEL_PATCH_PARTNER_STRIDE` (3) numbers each: `cell, blockId, transform`,
-where `cell` is the index of a non-air cell of `cells`; a cell without one is
-not merged. The fastest way to write generated terrain. Throws a `RangeError`
-when a length is not a multiple of its stride or a partner targets no voxel,
-before writing anything, or for an invalid block id, after writing the cells
-before it.
+The fastest way to write generated terrain. Emits one `"voxels-patched"`.
+
+- `cells` holds `VOXEL_PATCH_STRIDE` (5) numbers per cell:
+  `x, y, z, blockId, transform`. A `blockId` of `0` removes the voxel.
+- `partners` gives the second shape of merged cells,
+  `VOXEL_PATCH_PARTNER_STRIDE` (3) numbers each: `cell, blockId, transform`,
+  where `cell` indexes a non-air cell of `cells`.
+- Throws `RangeError` before writing anything when a length is not a multiple
+  of its stride or a partner targets no voxel.
+- Throws `RangeError` on an invalid block id, after writing the cells before
+  it.
 
 ```ts
 world.patchVoxels("Ground", [
