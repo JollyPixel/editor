@@ -8,9 +8,12 @@ import {
   abs,
   atan,
   attribute,
+  bool,
   cameraPosition,
   clamp,
   cos,
+  dFdx,
+  dFdy,
   Discard,
   dot,
   float,
@@ -18,6 +21,7 @@ import {
   Fn,
   fract,
   fwidth,
+  If,
   int,
   ivec2,
   length,
@@ -35,7 +39,8 @@ import {
   uniform,
   varying,
   vec2,
-  vec3
+  vec3,
+  vec4
 } from "three/tsl";
 
 // Import Internal Dependencies
@@ -56,9 +61,18 @@ import {
 } from "../textures/ChunkTextureStore.ts";
 import {
   MATERIAL_MAP_BITS,
+  MATERIAL_MAPS,
+  MATERIAL_TECHNIQUE_BITS,
   type MaterialArrays,
-  type MaterialMap
+  type MaterialMap,
+  type MaterialTechnique
 } from "../textures/MaterialTextureStore.ts";
+import {
+  projectedSample,
+  triplanarSamples,
+  triplanarWeights,
+  whiteoutNormal
+} from "./materialSampling.ts";
 
 // CONSTANTS
 export const NODE_DATA_ATTRIBUTE = "terrainNode";
@@ -78,9 +92,27 @@ const kMinWeight = 1e-3;
 const kDefaultRoughness = 1;
 const kJitterCellsPerMetre = 8;
 const kSplatJitter = 0.9;
-const kSampledMaps = ["albedo", "normal", "orm"] as const;
+const kTriplanarStart = 0.95;
+const kFlatHeight = 0.5;
+const kHeightBlendDepth = 0.2;
+const kWeightedSum: MapCombine = {
+  planar: (sample) => sample,
+  triplanar: ([side, top, front], { weights }) => side.mul(weights.x)
+    .add(top.mul(weights.y))
+    .add(front.mul(weights.z))
+};
+const kNormalCombine: MapCombine = {
+  planar: (sample) => vec4(unpackNormal(sample), 1),
+  triplanar: (samples, { normal, tangent, bitangent, weights }) => {
+    const world = whiteoutNormal(normal, weights, [
+      unpackNormal(samples[0]),
+      unpackNormal(samples[1]),
+      unpackNormal(samples[2])
+    ]);
 
-type SampledMap = typeof kSampledMaps[number];
+    return vec4(dot(world, tangent), dot(world, bitangent), dot(world, normal), 1);
+  }
+};
 
 export const TERRAIN_OVERLAYS = ["none", "chunks", "lod", "slope"] as const;
 export const DEFAULT_WALKABLE_SLOPE = 45;
@@ -91,6 +123,20 @@ type BoolNode = Node<"bool">;
 type FloatNode = Node<"float">;
 type IntNode = Node<"int">;
 type Vec2Node = Node<"vec2">;
+type Vec3Node = Node<"vec3">;
+type Vec4Node = Node<"vec4">;
+
+interface SurfaceFrame {
+  normal: Vec3Node;
+  tangent: Vec3Node;
+  bitangent: Vec3Node;
+  weights: Vec3Node;
+}
+
+interface MapCombine {
+  planar(sample: Vec4Node): Vec4Node;
+  triplanar(samples: readonly [Vec4Node, Vec4Node, Vec4Node], frame: SurfaceFrame): Vec4Node;
+}
 
 export interface TerrainTextures {
   heights: THREE.DataArrayTexture;
@@ -312,6 +358,12 @@ export function createTerrainShading(
     )
   );
   const surfaceNormal = normalize(vec3(gradient.x.negate(), float(1), gradient.y.negate()));
+  const tangent = normalize(vec3(1, 0, 0).sub(surfaceNormal.mul(surfaceNormal.x)));
+  const bitangent = normalize(vec3(0, 0, 1).sub(surfaceNormal.mul(surfaceNormal.z)));
+  const surfacePoint = vec3(fragmentWorld.x, varying(position.y, "vTerrainHeight"), fragmentWorld.y);
+  const pointDx = dFdx(surfacePoint);
+  const pointDy = dFdy(surfacePoint);
+  const steep = surfaceNormal.y.lessThan(kTriplanarStart);
 
   const loaded = fragmentLayer.greaterThanEqual(int(0));
   const splatLayer = select(loaded, fragmentLayer, int(0));
@@ -332,64 +384,125 @@ export function createTerrainShading(
     floor(overviewPoint.div(OVERVIEW_TEXTURE_SIZE)).mul(OVERVIEW_TEXTURE_SIZE)
   );
   const overviewSlot = textureLoad(textures.overviewMaterials, ivec2(overviewTexel)).x;
-  const channels = ["x", "y", "z", "w"] as const;
-  const sampleNodes: Record<SampledMap, ReturnType<typeof texture>[]> = {
-    albedo: [],
-    normal: [],
-    orm: []
+  const arrayNodes = {
+    albedo: texture(textures.materialArrays.albedo),
+    normal: texture(textures.materialArrays.normal),
+    orm: texture(textures.materialArrays.orm),
+    height: texture(textures.materialArrays.height)
   };
+  const channels = ["x", "y", "z", "w"] as const;
   const layers = channels.map((channel, index) => {
     const fallbackSlot = index === 0 ? overviewSlot : float(0);
     const slot = int(round(select(loaded, splatIndices[channel], fallbackSlot).mul(255)));
-    const weight = select(loaded, splatWeights[channel], float(index === 0 ? 1 : 0));
     const entry = textureLoad(textures.materialSlots, ivec2(slot, int(0)));
-    const present = entry.x.greaterThan(0.5);
+    const weight = select(
+      entry.x.greaterThan(0.5),
+      select(loaded, splatWeights[channel], float(index === 0 ? 1 : 0)),
+      float(0)
+    );
+    const used = weight.greaterThan(0);
     const maps = int(entry.z);
+    const techniques = int(entry.w);
     const arrayLayer = int(max(entry.x.sub(1), float(0)));
-    const uv = fragmentWorld.div(max(entry.y, float(kMinTiling)));
-    function sampled(
-      map: SampledMap
-    ) {
-      const node = texture(textures.materialArrays[map], uv).depth(arrayLayer);
-      sampleNodes[map].push(node);
-
-      return node;
-    }
+    const scale = float(1).div(max(entry.y, float(kMinTiling)));
     function hasMap(
       map: MaterialMap
     ): BoolNode {
-      return maps.bitAnd(int(MATERIAL_MAP_BITS[map])).notEqual(int(0));
+      return used.and(maps.bitAnd(int(MATERIAL_MAP_BITS[map])).notEqual(int(0)));
     }
-    const orm = sampled("orm");
+    function uses(
+      technique: MaterialTechnique
+    ): BoolNode {
+      return techniques.bitAnd(int(MATERIAL_TECHNIQUE_BITS[technique])).notEqual(int(0));
+    }
+    function surfaceMap(
+      map: MaterialMap,
+      fallback: Vec4Node,
+      combine: MapCombine = kWeightedSum,
+      when: BoolNode = hasMap(map)
+    ): Vec4Node {
+      return Fn(() => {
+        const value = vec4(fallback).toVar();
+        const enabled = when.toVar();
+        const triplanar = uses("triplanar").and(steep).toVar();
+        const stochastic = uses("stochastic").toVar();
+        const point = surfacePoint.mul(scale).toVar();
+        const dx = pointDx.mul(scale).toVar();
+        const dy = pointDy.mul(scale).toVar();
+        const layer = arrayLayer.toVar();
+        const frame: SurfaceFrame = {
+          normal: surfaceNormal.toVar(),
+          tangent: tangent.toVar(),
+          bitangent: bitangent.toVar(),
+          weights: triplanarWeights(surfaceNormal).toVar()
+        };
+        function read(
+          uv: Vec2Node,
+          uvDx: Vec2Node,
+          uvDy: Vec2Node
+        ): Vec4Node {
+          return arrayNodes[map].sample(uv).depth(layer).grad(uvDx, uvDy);
+        }
+        If(enabled, () => {
+          If(triplanar, () => {
+            value.assign(combine.triplanar(triplanarSamples(read, point, dx, dy, stochastic), frame));
+          }).Else(() => {
+            value.assign(combine.planar(projectedSample(read, point.xz, dx.xz, dy.xz, stochastic)));
+          });
+        });
+
+        return value;
+      })();
+    }
+
+    const heightBlend = uses("heightBlend").and(hasMap("height"));
 
     return {
-      weight: select(present, weight, float(0)),
-      albedo: select(hasMap("albedo"), sampled("albedo").rgb, kAlbedo),
-      detail: select(hasMap("normal"), sampled("normal").rgb.mul(2).sub(1), vec3(0, 0, 1)),
-      orm: select(hasMap("orm"), orm.rgb, vec3(1, kDefaultRoughness, 0))
+      weight,
+      used,
+      heightBlend,
+      height: () => surfaceMap("height", vec4(kFlatHeight), kWeightedSum, heightBlend).x,
+      albedo: () => surfaceMap("albedo", vec4(kAlbedo, 1)).rgb,
+      detail: () => surfaceMap("normal", vec4(0, 0, 1, 1), kNormalCombine).xyz,
+      orm: () => surfaceMap("orm", vec4(1, kDefaultRoughness, 0, 1)).rgb
     };
   });
   const totalWeight = layers.reduce<FloatNode>((total, { weight }) => total.add(weight), float(0));
   const painted = totalWeight.greaterThan(kMinWeight);
+  const blendWeights = Fn(() => {
+    const soft = vec4From(layers.map(({ weight }) => weight)).div(max(totalWeight, float(kMinWeight)));
+    const heights = vec4From(layers.map(({ height }) => height())).toVar();
+    const result = soft.toVar();
+    If(layers.reduce<BoolNode>((any, { heightBlend }) => any.or(heightBlend), bool(false)), () => {
+      const raised = channels.map((channel, index) => select(
+        layers[index].used,
+        soft[channel].add(heights[channel]),
+        float(-1)
+      ));
+      const top = raised.reduce((highest, value) => max(highest, value)).sub(kHeightBlendDepth);
+      const sharp = vec4From(raised.map((value) => max(value.sub(top), float(0))));
+      result.assign(sharp.div(max(sharp.x.add(sharp.y).add(sharp.z).add(sharp.w), float(kMinWeight))));
+    });
+
+    return result;
+  })();
   function blended(
-    pick: (layer: typeof layers[number]) => Node<"vec3">,
-    fallback: Node<"vec3">
-  ): Node<"vec3"> {
-    const sum = layers.reduce<Node<"vec3">>(
-      (total, layer) => total.add(pick(layer).mul(layer.weight)),
+    pick: (layer: typeof layers[number]) => Vec3Node,
+    fallback: Vec3Node
+  ): Vec3Node {
+    const sum = layers.reduce<Vec3Node>(
+      (total, layer, index) => total.add(pick(layer).mul(blendWeights[channels[index]])),
       vec3(0)
     );
 
-    return select(painted, sum.div(max(totalWeight, float(kMinWeight))), fallback);
+    return select(painted, sum, fallback);
   }
-  const albedo = blended(({ albedo: color }) => color, kAlbedo);
-  const detail = normalize(blended(({ detail: value }) => value, vec3(0, 0, 1)));
-  const tangent = normalize(vec3(1, 0, 0).sub(surfaceNormal.mul(surfaceNormal.x)));
-  const bitangent = normalize(vec3(0, 0, 1).sub(surfaceNormal.mul(surfaceNormal.z)));
+  const albedo = blended(({ albedo: color }) => color(), kAlbedo);
+  const detail = normalize(blended(({ detail: value }) => value(), vec3(0, 0, 1)));
   material.normalNode = transformNormalToView(normalize(
     tangent.mul(detail.x).add(bitangent.mul(detail.y)).add(surfaceNormal.mul(detail.z))
   ));
-  const orm = blended(({ orm: value }) => value, vec3(1, kDefaultRoughness, 0));
+  const orm = blended(({ orm: value }) => value(), vec3(1, kDefaultRoughness, 0));
   material.aoNode = orm.x;
   material.roughnessNode = orm.y;
   material.metalnessNode = orm.z;
@@ -434,13 +547,23 @@ export function createTerrainShading(
       walkable.value = degreesToRadians(degrees);
     },
     materialArrays(arrays) {
-      for (const map of kSampledMaps) {
-        for (const node of sampleNodes[map]) {
-          node.value = arrays[map];
-        }
+      for (const map of MATERIAL_MAPS) {
+        arrayNodes[map].value = arrays[map];
       }
     }
   };
+}
+
+function vec4From(
+  [x, y, z, w]: FloatNode[]
+): Vec4Node {
+  return vec4(x, y, z, w);
+}
+
+function unpackNormal(
+  sample: Vec4Node
+): Vec3Node {
+  return sample.rgb.mul(2).sub(1);
 }
 
 function degreesToRadians(

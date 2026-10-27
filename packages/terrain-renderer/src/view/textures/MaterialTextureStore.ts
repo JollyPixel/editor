@@ -11,19 +11,39 @@ export const MATERIAL_MAP_BITS: Readonly<Record<MaterialMap, number>> = {
   orm: 4,
   height: 8
 };
+export const MATERIAL_TECHNIQUES = ["triplanar", "stochastic", "heightBlend"] as const;
+export const MATERIAL_TECHNIQUE_BITS: Readonly<Record<MaterialTechnique, number>> = {
+  triplanar: 1,
+  stochastic: 2,
+  heightBlend: 4
+};
 const kInitialCapacity = 4;
 const kSlotComponents = 4;
 const kIndexComponent = 0;
 const kTilingComponent = 1;
 const kMapsComponent = 2;
+const kTechniquesComponent = 3;
 
 export type MaterialMap = typeof MATERIAL_MAPS[number];
+export type MaterialTechnique = typeof MATERIAL_TECHNIQUES[number];
 
 export interface MaterialSurface {
   /**
    * Metres per repeat of the material's maps.
    */
   tiling: number;
+  /**
+   * Projects the maps from three sides on steep slopes.
+   */
+  triplanar?: boolean;
+  /**
+   * Samples each repeat with a random offset, so the tiling does not show.
+   */
+  stochastic?: boolean;
+  /**
+   * Blends with the other materials along the height map.
+   */
+  heightBlend?: boolean;
 }
 
 export interface MaterialImage {
@@ -118,6 +138,10 @@ export class MaterialTextureStore {
       this.#writeSlot(slot, kMapsComponent, 0);
     }
     this.#writeSlot(slot, kTilingComponent, surface.tiling);
+    this.#writeSlot(slot, kTechniquesComponent, MATERIAL_TECHNIQUES.reduce(
+      (bits, technique) => (surface[technique] === true ? bits | MATERIAL_TECHNIQUE_BITS[technique] : bits),
+      0
+    ));
   }
 
   materialRemoved(

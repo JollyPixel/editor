@@ -116,6 +116,9 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   material selected in the palette, shown at once to the painter and
   committed on the stroke cadence as one undo step; Ctrl+click selects the
   material under the cursor. Peers see paint at each commit, not live.
+- **Per-material techniques: done** (2026-10-27). The Look toggles reach the
+  view: triplanar on steep slopes, stochastic tiling and height blending,
+  each sampled only where its material is painted.
 - **Next:** splat overlay.
 
 Tick a box when its item lands, and move **Next** along with it.
@@ -174,7 +177,7 @@ chunks yet.
   brush toolbar painting the selected material, and Ctrl+click material
   pick.
 - [ ] Splat overlay.
-- [ ] Per-material techniques: triplanar, stochastic tiling, height blending.
+- [x] Per-material techniques: triplanar, stochastic tiling, height blending.
 - [ ] E2E: two peers paint and sculpt the same chunk, a far peer's horizon
   takes the new dominant material.
 - [ ] Replace an asset's content from the catalog, keeping its ID, so a
@@ -207,6 +210,9 @@ chunks yet.
   terrain in server memory. Load parts on first subscription or command from
   the event store, and unload those no member subscribes to once a checkpoint
   holds them.
+- **Material streaming.** The view holds every material of a terrain in its
+  arrays, which caps a terrain at 32 materials. Hold only those painted on
+  the loaded chunks, so a terrain can use all 256 slots.
 - **HTTP delivery for textures.** A texture travels base64 in its room
   snapshot, with no browser cache, and a peer-to-peer session cannot send one
   much above 12 MB. Serve texture files over a cacheable route instead.

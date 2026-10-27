@@ -156,18 +156,24 @@ Splat is stored per texel, not per vertex, so it does not change with the LoD.
 Each material can turn on:
 
 - **Triplanar.** Projects the material along X, Y and Z and blends by the
-  normal, so cliffs do not stretch. A slope threshold limits it to steep
-  surfaces.
-- **Stochastic tiling.** Samples the material with random offsets and
-  rotations per cell and blends them, so a repeating texture shows no
-  pattern.
-- **Height blending.** Uses the height map, so materials blend along their
-  relief, such as sand filling the gaps between stones, instead of a soft
-  fade. A material without a height map blends softly.
+  normal, so cliffs do not stretch. It starts on slopes steeper than about
+  18°; flatter ground keeps the single top-down projection. Normal maps are
+  blended per projection with a whiteout blend.
+- **Stochastic tiling.** Splits each repeat into a triangle grid, about three
+  cells per repeat, and samples the material at a random offset per cell,
+  blending the three cells around the pixel. A repeating texture then shows
+  no pattern. Cells are offset, not rotated, so normal maps stay correct.
+- **Height blending.** Raises each material's weight by its height map and
+  keeps only what lies within 0.2 of the highest, so materials meet along
+  their relief, such as sand filling the gaps between stones, instead of a
+  soft fade. It applies to a texel when one of its materials uses it and has
+  a height map; the others count as flat ground at mid height.
 
-The shader branches per slot: a technique costs only where its material is
-among the four at that texel. Grass with stochastic tiling and rock with
-triplanar only on cliffs pay for each technique only where they show.
+The shader branches per slot: a slot with no weight at a texel samples
+nothing, and a technique costs only where its material is among the four at
+that texel. Grass with stochastic tiling and rock with triplanar pay for each
+technique only where they show. Triplanar with stochastic tiling is the
+dearest: nine samples per map.
 
 ## Overlays
 

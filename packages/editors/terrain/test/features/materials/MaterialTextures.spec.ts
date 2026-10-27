@@ -9,10 +9,11 @@ import {
   GROUND_MATERIAL,
   TerrainDocument
 } from "@jolly-pixel/asset.terrain/client";
-import type {
-  MaterialImage,
-  MaterialMap,
-  MaterialSurface
+import {
+  MATERIAL_TECHNIQUES,
+  type MaterialImage,
+  type MaterialMap,
+  type MaterialSurface
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
@@ -46,7 +47,8 @@ class RecordingView {
     slot: number,
     surface: MaterialSurface
   ): void {
-    this.events.push(`material ${slot} tiling ${surface.tiling}`);
+    const techniques = MATERIAL_TECHNIQUES.filter((technique) => surface[technique] === true);
+    this.events.push([`material ${slot} tiling ${surface.tiling}`, ...techniques].join(" "));
   }
 
   materialRemoved(
@@ -141,14 +143,16 @@ function materialsSetup(
 }
 
 describe("MaterialTextures", () => {
-  test("a material's maps reach the view decoded at the terrain's texture size", async() => {
+  test("a material's tiling and techniques reach the view, its maps decoded at the texture size", async() => {
     const { document, view } = materialsSetup({ grass: "grass" });
     document.updateMaterial(GROUND_MATERIAL.id, { albedo: texture("grass"), tiling: 8 });
+    document.updateMaterial(GROUND_MATERIAL.id, { triplanar: true, heightBlend: true });
     await settle();
 
     assert.deepEqual(view.events, [
       "material 0 tiling 4",
       "material 0 tiling 8",
+      "material 0 tiling 8 triplanar heightBlend",
       "albedo 0 grass@1024"
     ]);
   });

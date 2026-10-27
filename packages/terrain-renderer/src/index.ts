@@ -75,8 +75,10 @@ export {
   DEFAULT_MATERIAL_TEXTURE_SIZE,
   MATERIAL_MAPS,
   MATERIAL_SLOT_COUNT,
+  MATERIAL_TECHNIQUES,
   type MaterialImage,
   type MaterialMap,
   type MaterialSurface,
+  type MaterialTechnique,
   type TextureCopier
 } from "./view/textures/MaterialTextureStore.ts";

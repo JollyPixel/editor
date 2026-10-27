@@ -68,8 +68,8 @@ draws with stale bounds. It addresses chunks modulo `LOOKUP_SIZE`, 256, on
 each axis and throws when two known chunks share a slot.
 
 The view shades the surface with terrain materials. Call
-`materialChanged(slot, { tiling })` when a material appears or its tiling
-changes, `materialRemoved(slot)` when it goes, and
+`materialChanged(slot, { tiling, triplanar, stochastic, heightBlend })` when a
+material appears or its tiling or `MATERIAL_TECHNIQUES` change, `materialRemoved(slot)` when it goes, and
 `writeMaterialMap(slot, map, image)` with an image of exactly
 `materialTextureSize` pixels per side for one of `MATERIAL_MAPS` (`albedo`,
 `normal`, `orm` or `height`), or `null` to draw that map's fallback: a neutral
@@ -77,8 +77,8 @@ colour, a flat normal, occlusion 1, roughness 1 and metalness 0, and a flat
 height. Each map kind lives in one texture array, albedo in sRGB and the
 others linear, with an array layer per material rather than per slot; the
 arrays grow as materials are added. Setting `materialTextureSize` replaces the
-arrays empty, so every map has to be written again. The height map is stored
-for height blending and is not sampled yet.
+arrays empty, so every map has to be written again. The height map is read
+only by height blending.
 
 Images reach the arrays by a GPU copy, so no pixels stay in memory on the CPU.
 The view needs a `textureCopier`, such as the `WebGPURenderer`, for that;

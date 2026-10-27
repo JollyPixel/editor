@@ -112,7 +112,12 @@ export class MaterialTextures {
     }
     for (const material of materials.values()) {
       this.#slots.add(material.slot);
-      view.materialChanged(material.slot, { tiling: material.tiling });
+      view.materialChanged(material.slot, {
+        tiling: material.tiling,
+        triplanar: material.triplanar,
+        stochastic: material.stochastic,
+        heightBlend: material.heightBlend
+      });
       for (const map of MATERIAL_MAPS) {
         this.#assign(material.slot, map, mapAsset(material, map), resized);
       }
