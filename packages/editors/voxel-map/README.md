@@ -6,10 +6,7 @@
 
 Private editor workspace built on [`@jolly-pixel/voxel.renderer`][voxel-renderer] and booted through [`@jolly-pixel/editor.host`][editor-host].
 
-The [brush](./docs/brush.md) document specifies how the local brush aims, sizes and paints.
-The [texture](./docs/texture.md) document specifies when UV edits redefine the blocks.
-The [keybinds](./docs/keybinds.md) document lists every map shortcut and how to rebind it.
-The [viewer](./docs/viewer.md) document describes the read-only map viewer, exported from `@jolly-pixel/editor.voxel-map`, and the `VoxelMap` scene component built on it, exported from `@jolly-pixel/editor.voxel-map/scene`.
+The package exports a read-only map viewer from `src/viewer/` and the `VoxelMap` scene component from `src/sceneComponents/` (`@jolly-pixel/editor.voxel-map/scene`).
 
 ## 🚀 Running the editor
 
@@ -18,56 +15,9 @@ $ pnpm install
 $ pnpm --filter @jolly-pixel/editor.voxel-map dev
 ```
 
-| Query parameter | Effect |
-|---|---|
-| `?target=<assetId>` | Open another map |
-| `?max-fps=<n>` | Cap the frame rate |
-| `?offline` | Run the asset back-end in the page (IndexedDB) |
+The page accepts `?target=<assetId>` to open another map, `?max-fps=<n>` to cap the frame rate and `?offline` to run the asset back-end in the page (IndexedDB).
 
 The dev server seeds its assets under `assets/`; delete that directory to seed them again.
-
-Auto orientation makes stairs rise away from the camera. Outer stair corners
-and peaks receive a half turn to account for their default shape geometry;
-slab notches receive the same turn to align with their stair complement.
-Explicit rotations keep the renderer's original shape orientation.
-
-Blocks, layers and objects edit their [custom properties][block-properties] as
-text, number or boolean rows. Changing a row's type converts its value: text
-that is not a number becomes `0`, and only `true` (any case) becomes a true
-boolean. The list always ends with a blank row; giving it a key saves it and
-opens a new blank row. Clearing a saved row's key removes it, and giving a row a
-key already in use replaces that property. Layer values of any other type stay
-hidden and are kept on save.
-
-Right-clicking a block in the Block Library selects it and opens a menu to edit,
-duplicate, set or remove its material, copy its ID, remove its voxels from the
-map, or delete it. Removing voxels always asks first; deleting asks only when
-voxels still use the block. Right-clicking an empty spot offers a new block.
-The library in the Materials pane only offers the material and ID actions.
-Double-clicking a block opens its editor.
-
-The Materials tree groups materials by blockset when the map has more than one;
-each group collapses and shows its material count, with a lock on read-only
-blocksets. Right-clicking a material opens a menu to apply it to the selected
-block or remove it, rename, duplicate, reset its finish, or delete it. The copy
-keeps the finish under a "copy" name with a new swatch. Right-clicking a
-blockset offers a new material in it. The fields split into Surface (roughness,
-metalness, normal strength) and Emission (colour, intensity, light level); each
-section header has a button that resets its fields.
-
-The Edit button in the Templates folder opens the selected template in place
-of the map. Its voxels are copied into a draft layer that stays hidden in the
-map, and the view shows only that layer. Everyone who opens the same template
-paints on the same draft. Apply saves the draft into the template. Done goes
-back to the map and removes the draft once nothing is left to apply and nobody
-else is editing it; otherwise the template row shows "draft" and the next Edit
-resumes it. Discard drops the draft. Undo and redo inside a template step only
-through its edits.
-
-The settings button in the Block Library header picks the block order and which
-blocks the library shows: those of every blockset, or only those of the active
-blockset (the selected texture tab). The browser remembers both choices.
-The search button next to it filters the shown blocks by name.
 
 ## 🧪 Tests and checks
 
@@ -78,8 +28,6 @@ $ pnpm --filter @jolly-pixel/editor.voxel-map lint
 $ pnpm exec playwright install chromium
 $ pnpm --filter @jolly-pixel/editor.voxel-map test:e2e
 ```
-
-Add any new `@jolly-pixel/*` entry point imported by `src/` to `kWorkspaceBrowserEntries` in `vite.config.ts` (see the [e2e README][e2e]).
 
 ## Contributors Guide
 
@@ -93,6 +41,4 @@ MIT
 
 [contributing]: ../../../CONTRIBUTING.md
 [voxel-renderer]: ../../voxel-renderer/README.md
-[block-properties]: ../../voxel-renderer/docs/api/blocks/BlockDefinition.md#custom-properties
 [editor-host]: ../host/README.md
-[e2e]: ../../e2e/README.md#-starting-a-new-suite

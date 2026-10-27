@@ -2,68 +2,37 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
-## 💃 Getting Started
+## 📌 About
 
-This workspace-private package stores `.pixelart` documents. Add `"@jolly-pixel/asset.pixel-art": "workspace:*"` to another workspace's dependencies.
+Private asset workspace for `.pixelart` textures (kind `pixelart`). Textures are edited in `@jolly-pixel/editor.pixel-art` and referenced by voxel maps, voxel models and scenes.
 
-## 👀 Usage example
+Browser code imports `@jolly-pixel/asset.pixel-art/client`; the package root and `@jolly-pixel/asset.pixel-art/server` pull in server dependencies.
 
-### Register the kind
+## 🚀 Building
 
-```ts
-import { pixelArtAssetKind } from "@jolly-pixel/asset.pixel-art";
-import { createAssetBackend } from "@jolly-pixel/asset-server";
-import { FilesystemAssetSource } from "@jolly-pixel/asset-source";
-import * as EventStore from "@jolly-pixel/event-store";
-
-using eventStore = await EventStore.persistence.sqlite(
-  "./assets/.jollypixel/events.db"
-);
-await createAssetBackend({
-  source: new FilesystemAssetSource("./assets"),
-  eventStore,
-  handlers: [pixelArtAssetKind({ defaultSize: { x: 32, y: 32 } })]
-});
+```bash
+$ pnpm install
+$ pnpm --filter @jolly-pixel/asset.pixel-art build
 ```
 
-The handler claims `.pixelart` files. `defaultSize` is the size of a texture created without content; it defaults to 32 by 32. A deleted texture keeps its size and loses its pixels and UV regions. The renderer package owns the file codec. Use `MemoryAssetSource` and an in-memory event store for an ephemeral workspace.
+Editors load the built `dist/` output, so rebuild after a change before running them.
 
-### Connect a document
+## 🧪 Tests and checks
 
-Create the synced document before joining the room so it receives the first snapshot.
-
-```ts
-import { Client } from "@jolly-pixel/network/client";
-import {
-  SyncedPixelDocument,
-  pixelArtRoom
-} from "@jolly-pixel/asset.pixel-art/client";
-
-const client = new Client();
-const room = pixelArtRoom(client, assetId);
-const synced = new SyncedPixelDocument(room);
-
-room.join();
-await synced.ready;
-
-// Pass synced.document to PixelArtCanvas or another document consumer.
-// On teardown: synced.dispose(); room.leave(); client.destroy();
+```bash
+$ pnpm --filter @jolly-pixel/asset.pixel-art test
+$ pnpm --filter @jolly-pixel/asset.pixel-art lint
+$ pnpm --filter @jolly-pixel/asset.pixel-art bench
 ```
 
-`PixelCollaboration` adds cursors and in-progress previews to a `PixelArtCanvas` built on that document. See the [network API](./docs/network.md) for its constructor and lifecycle.
+## Contributors Guide
 
-## 📚 API
+If you are a developer **looking to contribute** to the project, you must first read the [CONTRIBUTING][contributing] guide.
 
-- `@jolly-pixel/asset.pixel-art` exports `pixelArtAssetKind`, `PixelArtState`, the `PIXEL_ART_ASSET` descriptor, `ASSET_KINDS` (the kind package, taking `{ defaultSize?, snapshot? }` options), the kind and event constants for server registration, and `pixelArtContentFromPng(png)`, which turns PNG bytes into `.pixelart` content. Build a blank texture with `encodePixelArtFile(createPixelArtFile(size))` from `@jolly-pixel/pixel-draw.renderer`. Loading malformed content throws `InvalidAssetFileError`, with the renderer error as `cause`.
-- `@jolly-pixel/asset.pixel-art/client` exports `SyncedPixelDocument`, `PixelSyncClient`, `pixelArtRoom`, `createPixelArtAsset`, `PixelCollaboration`, presence helpers, wire types such as `PixelArtRoom`, and the [history](./docs/history.md) a `PixelArtCanvas` or a host records undo in.
-- `@jolly-pixel/asset.pixel-art/server` exports `PixelCommandArbiter`, `applyPixelCommand`, and the command, snapshot and UV layout schemas.
-
-The package root imports server dependencies. Browser code should use the client entry point. The [network API](./docs/network.md) covers commands, snapshots, notices, and presence helpers. [Architecture](./ARCHITECTURE.md) covers replay and conflict handling. The `.pixelart` file format and codec are documented by [pixel-draw.renderer](../../pixel-draw-renderer/docs/serialization/index.md).
-
-## ✨ Contributors guide
-
-Read the [contributing guide](../../../CONTRIBUTING.md) before submitting a change. Run `pnpm --filter @jolly-pixel/asset.pixel-art test` and `pnpm run lint` from the monorepo root.
-
-## 📃 License
+## License
 
 MIT
+
+<!-- Reference-style links for DRYness -->
+
+[contributing]: ../../../CONTRIBUTING.md

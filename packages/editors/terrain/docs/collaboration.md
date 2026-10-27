@@ -1,9 +1,9 @@
 # Collaboration
 
 How terrain edits travel between users. It builds on the command flow shared
-by every asset kind, described in the [assets architecture][assets-arch]:
-the author applies an edit at once, the room arbitrates it, logs it and
-broadcasts it, and a refused edit is answered with a correction.
+by every asset kind: the author applies an edit at once, the room arbitrates
+it, logs it and broadcasts it, and a refused edit is answered with a
+correction.
 
 ## Commands
 
@@ -234,6 +234,5 @@ exactly.
 
 <!-- Reference-style links for DRYness -->
 
-[assets-arch]: ../../../assets/ARCHITECTURE.md
 [asset-parts]: ../../../asset-server/architecture/AssetParts.md
 [world]: ./design.md#world-and-chunks

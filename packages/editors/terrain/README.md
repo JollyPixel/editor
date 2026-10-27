@@ -4,32 +4,37 @@
 
 ## 📌 About
 
-Private editor workspace for large, streamed heightfield terrains, edited by several users at once. The editor boots, opens a terrain asset and draws it with CDLOD. This directory holds the V1 design, and the [roadmap][roadmap] lists the order in which the rest lands.
+Private editor workspace for [`@jolly-pixel/asset.terrain`][asset-terrain] heightfield terrains, drawn by `@jolly-pixel/terrain.renderer` and booted through [`@jolly-pixel/editor.host`][editor-host].
 
-V1 is split over three packages, following the voxel-map layout:
-
-| Package | Directory | Role |
-|---|---|---|
-| `@jolly-pixel/asset.terrain` | `packages/assets/terrain` | Asset kind, command schemas, server arbiter, client sync, history registration |
-| `@jolly-pixel/terrain.renderer` | `packages/terrain-renderer` | Headless terrain, CDLOD view, TSL materials, engine plugin, heightmap import and export |
-| `@jolly-pixel/editor.terrain` | `packages/editors/terrain` | This editor, booted through [`@jolly-pixel/editor.host`][editor-host] |
-
-V1 also extends [`@jolly-pixel/asset-server`][asset-server] with asset parts, so an asset can be loaded chunk by chunk, Live strokes are routed by interest region in the terrain kind's server extension; `@jolly-pixel/network` does not change.
-
-## 💃 Getting Started
-
-Run `pnpm run dev` in this directory. The dev server listens on port 3008 and seeds `assets/` with a terrain of one flat chunk on first start. The overlay toolbar in the top-left corner switches the overlay: none, the chunk borders, the chunk borders with a tint per LoD level, the surface coloured by slope, with a walkable angle above which it turns red, or each painted material in its own colour, the selected one highlighted. The choice is saved in the browser; `terrainEditor.view.overlay` and `terrainEditor.view.walkableSlope` set the same values from the console.
-
-`pnpm run test` runs the unit tests and `pnpm run test:e2e` the Playwright suite in `test/e2e/`. The suite runs on one worker: a collaboration test renders three editors at once with software WebGL, and with more workers a page can miss the editor host's 5 s wait for the asset catalog. Pages render at a
-`deviceScaleFactor` of 0.5: software WebGL frame time grows with the pixel
-count, and at full resolution the three-editor tests time out on CI.
-
-## 📚 Documents
+The [ROADMAP][roadmap] lists what lands next. Design notes live in `docs/`:
 
 - [Design](./docs/design.md): decisions, grid, LoD, data formats and package layout.
 - [Collaboration](./docs/collaboration.md): stroke commits, proximity-based sync, asset parts, corrections and undo.
 - [Brush](./docs/brush.md): how sculpt, hole and paint brushes aim, shape and write.
 - [Texture](./docs/texture.md): materials and their palette, splat, texture arrays, per-material techniques and the overlays.
+
+## 🚀 Running the editor
+
+```bash
+$ pnpm install
+$ pnpm --filter @jolly-pixel/editor.terrain dev
+```
+
+The dev server seeds its assets under `assets/`; delete that directory to seed them again.
+
+`window.terrainEditor` exposes the editor from the console.
+
+## 🧪 Tests and checks
+
+```bash
+$ pnpm --filter @jolly-pixel/editor.terrain test
+$ pnpm --filter @jolly-pixel/editor.terrain typecheck
+$ pnpm --filter @jolly-pixel/editor.terrain lint
+$ pnpm exec playwright install chromium
+$ pnpm --filter @jolly-pixel/editor.terrain test:e2e
+```
+
+Keep the Playwright suite on one worker and a `deviceScaleFactor` of 0.5: the collaboration tests render three editors with software WebGL, and more workers or pixels make them time out on CI.
 
 ## Contributors Guide
 
@@ -43,5 +48,5 @@ MIT
 
 [roadmap]: ./ROADMAP.md
 [contributing]: ../../../CONTRIBUTING.md
+[asset-terrain]: ../../assets/terrain/README.md
 [editor-host]: ../host/README.md
-[asset-server]: ../../asset-server/README.md

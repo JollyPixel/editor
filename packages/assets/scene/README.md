@@ -1,40 +1,33 @@
-## 💃 Getting Started
+## 📌 About
 
-This workspace-private package stores `.scene.json` scenes: a tree of actors, each with an ordered list of components that can reference other assets. Add `"@jolly-pixel/asset.scene": "workspace:*"` to another workspace's dependencies.
+Private asset workspace for `.scene.json` scenes (kind `scene`): a tree of actors whose components can reference other assets. Scenes are edited in `@jolly-pixel/editor.scene`.
 
-## 👀 Usage example
+Browser code imports `@jolly-pixel/asset.scene/client`; the package root and `@jolly-pixel/asset.scene/server` pull in server dependencies.
 
-```ts
-import { AssetRoom } from "@jolly-pixel/asset";
-import { Client } from "@jolly-pixel/network/client";
-import {
-  sceneDocumentKind,
-  type SceneRoom
-} from "@jolly-pixel/asset.scene/client";
+## 🚀 Building
 
-const client = new Client();
-const room: SceneRoom = client.room(new AssetRoom("scene", assetId).toString());
-const synced = sceneDocumentKind().syncDocument(room);
-
-room.join();
-await synced.ready;
-synced.document.addActor({ name: "Player" });
-
-// On teardown: synced.dispose(); room.leave(); client.destroy();
+```bash
+$ pnpm install
+$ pnpm --filter @jolly-pixel/asset.scene build
 ```
 
-## 📚 API
+Editors load the built `dist/` output, so rebuild after a change before running them.
 
-- `@jolly-pixel/asset.scene` exports the [asset kind](./docs/asset.md) (`sceneAssetKind`, `SceneState`, the file codec, `createSceneFile`, `SCENE_ASSET`, `ASSET_KINDS`) and the model the client entry point exports.
-- `@jolly-pixel/asset.scene/client` exports the [scene document](./docs/model.md) (`SceneDocument`, `SceneTree`, `SceneTransform`, `sceneHistoryRegistration`), `sceneDocumentKind`, the [conflict keys](./docs/network.md) and the wire types.
-- `@jolly-pixel/asset.scene/server` exports the conflict keys and the command and snapshot schemas.
+## 🧪 Tests and checks
 
-The package root imports server dependencies, so browser code uses the client entry point. See [architecture](./ARCHITECTURE.md) for how the tree and the room fit together.
+```bash
+$ pnpm --filter @jolly-pixel/asset.scene test
+$ pnpm --filter @jolly-pixel/asset.scene lint
+```
 
-## ✨ Contributors guide
+## Contributors Guide
 
-Read the [contributing guide](../../../CONTRIBUTING.md) before submitting a change. Run `pnpm --filter @jolly-pixel/asset.scene test` and `pnpm run lint` from the monorepo root.
+If you are a developer **looking to contribute** to the project, you must first read the [CONTRIBUTING][contributing] guide.
 
-## 📃 License
+## License
 
 MIT
+
+<!-- Reference-style links for DRYness -->
+
+[contributing]: ../../../CONTRIBUTING.md
