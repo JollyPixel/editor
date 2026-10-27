@@ -23,6 +23,7 @@ import {
   fwidth,
   If,
   int,
+  Loop,
   ivec2,
   length,
   log2,
@@ -33,6 +34,7 @@ import {
   round,
   select,
   sin,
+  step,
   texture,
   textureLoad,
   transformNormalToView,
@@ -90,9 +92,10 @@ const kSlopeTooSteep = vec3(0.82, 0.12, 0.12);
 const kMinTiling = 1e-3;
 const kMinWeight = 1e-3;
 const kDefaultRoughness = 1;
-const kJitterCellsPerMetre = 8;
+const kJitterFrequency = 8;
 const kSplatJitter = 0.9;
 const kSplatDimmed = 0.3;
+const kChannels = ["x", "y", "z", "w"] as const;
 const kTriplanarStart = 0.95;
 const kFlatHeight = 0.5;
 const kHeightBlendDepth = 0.2;
@@ -371,10 +374,9 @@ export function createTerrainShading(
 
   const loaded = fragmentLayer.greaterThanEqual(int(0));
   const splatLayer = select(loaded, fragmentLayer, int(0));
-  const splatCell = floor(fragmentWorld.mul(kJitterCellsPerMetre));
   const jitter = vec2(
-    fract(sin(dot(splatCell, vec2(12.9898, 78.233))).mul(43758.5453)),
-    fract(sin(dot(splatCell, vec2(39.3468, 11.135))).mul(24634.6345))
+    valueNoise(fragmentWorld.mul(kJitterFrequency), vec2(12.9898, 78.233)),
+    valueNoise(fragmentWorld.mul(kJitterFrequency), vec2(39.3468, 11.135))
   ).sub(0.5).mul(kSplatJitter);
   const splatTexel = clamp(
     floor(local.mul(SPLAT_TEXELS / CHUNK_SAMPLES).add(jitter)),
@@ -383,6 +385,27 @@ export function createTerrainShading(
   );
   const splatIndices = textureLoad(textures.splatIndices, ivec2(splatTexel)).depth(splatLayer);
   const splatWeights = textureLoad(textures.splatWeights, ivec2(splatTexel)).depth(splatLayer);
+  const smoothWeights = Fn(() => {
+    const texelSpace = local.mul(SPLAT_TEXELS / CHUNK_SAMPLES).sub(0.5).toVar();
+    const cornerBase = floor(texelSpace).toVar();
+    const cornerBlend = texelSpace.sub(cornerBase).toVar();
+    const nearestSlots = round(splatIndices.mul(255)).toVar();
+    const layer = splatLayer.toVar();
+    const sum = vec4(0).toVar();
+    Loop(4, ({ i }) => {
+      const offset = vec2(float(i.mod(int(2))), float(i.div(int(2)))).toVar();
+      const texel = ivec2(clamp(cornerBase.add(offset), vec2(0), vec2(SPLAT_TEXELS - 1)));
+      const indices = round(textureLoad(textures.splatIndices, texel).depth(layer).mul(255)).toVar();
+      const weights = textureLoad(textures.splatWeights, texel).depth(layer).toVar();
+      const share = mix(float(1).sub(cornerBlend), cornerBlend, offset).toVar();
+      for (const channel of kChannels) {
+        const matches = float(1).sub(step(0.5, abs(nearestSlots.sub(indices[channel]))));
+        sum.addAssign(matches.mul(weights[channel]).mul(share.x.mul(share.y)));
+      }
+    });
+
+    return sum.mul(step(kMinWeight, splatWeights));
+  })();
   const overviewPoint = round(fragmentWorld.div(OVERVIEW_SPACING));
   const overviewTexel = overviewPoint.sub(
     floor(overviewPoint.div(OVERVIEW_TEXTURE_SIZE)).mul(OVERVIEW_TEXTURE_SIZE)
@@ -394,15 +417,19 @@ export function createTerrainShading(
     orm: texture(textures.materialArrays.orm),
     height: texture(textures.materialArrays.height)
   };
-  const channels = ["x", "y", "z", "w"] as const;
-  const layers = channels.map((channel, index) => {
+  const interpolated = dot(smoothWeights, vec4(1)).greaterThan(kMinWeight);
+  const layers = kChannels.map((channel, index) => {
     const fallbackSlot = index === 0 ? overviewSlot : float(0);
     const slotNumber = round(select(loaded, splatIndices[channel], fallbackSlot).mul(255));
     const slot = int(slotNumber);
     const entry = textureLoad(textures.materialSlots, ivec2(slot, int(0)));
     const weight = select(
       entry.x.greaterThan(0.5),
-      select(loaded, splatWeights[channel], float(index === 0 ? 1 : 0)),
+      select(
+        loaded,
+        select(interpolated, smoothWeights[channel], splatWeights[channel]),
+        float(index === 0 ? 1 : 0)
+      ),
       float(0)
     );
     const used = weight.greaterThan(0);
@@ -481,7 +508,7 @@ export function createTerrainShading(
     const heights = vec4From(layers.map(({ height }) => height())).toVar();
     const result = soft.toVar();
     If(layers.reduce<BoolNode>((any, { heightBlend }) => any.or(heightBlend), bool(false)), () => {
-      const raised = channels.map((channel, index) => select(
+      const raised = kChannels.map((channel, index) => select(
         layers[index].used,
         soft[channel].add(heights[channel]),
         float(-1)
@@ -498,7 +525,7 @@ export function createTerrainShading(
     fallback: Vec3Node
   ): Vec3Node {
     const sum = layers.reduce<Vec3Node>(
-      (total, layer, index) => total.add(pick(layer).mul(blendWeights[channels[index]])),
+      (total, layer, index) => total.add(pick(layer).mul(blendWeights[kChannels[index]])),
       vec3(0)
     );
 
@@ -577,6 +604,26 @@ export function createTerrainShading(
       }
     }
   };
+}
+
+function valueNoise(
+  point: Vec2Node,
+  seed: Vec2Node
+): FloatNode {
+  const cell = floor(point);
+  const blend = point.sub(cell);
+  const ease = blend.mul(blend).mul(vec2(3).sub(blend.mul(2)));
+  function corner(
+    offset: Vec2Node
+  ): FloatNode {
+    return fract(sin(dot(cell.add(offset), seed)).mul(43758.5453));
+  }
+
+  return mix(
+    mix(corner(vec2(0, 0)), corner(vec2(1, 0)), ease.x),
+    mix(corner(vec2(0, 1)), corner(vec2(1, 1)), ease.x),
+    ease.y
+  );
 }
 
 function vec4From(
