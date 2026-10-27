@@ -20,7 +20,7 @@ chosen by file suffix, and each suffix has one runner:
 
 | Suffix | Runner | Owns |
 |---|---|---|
-| `*.spec.ts` (`*.test.ts` in arbor, resize-handle, three) | `node --test` with `node:assert/strict` | behavior, invariants, regressions |
+| `*.spec.ts` (`*.test.ts` in resize-handle, three) | `node --test` with `node:assert/strict` | behavior, invariants, regressions |
 | `*.tst.ts` | `tstyche` (`test-types` script) | inferred and generic type contracts |
 | `*.e2e.ts` under `test/e2e/` | Playwright on `@jolly-pixel/e2e` (`test:e2e` script) | interaction, layout, real browser behavior |
 | `*.gpu.ts` | dedicated script (`test-gpu`), outside the unit glob | GPU-only rendering probes |
@@ -147,7 +147,7 @@ workspaces for supporting evidence. For broad scope, run parallel discovery
 lanes when available:
 
 - core runtime: `engine`, `loop`, `runtime`, `controls`, `color`, `image`,
-  `three`, `arbor`, `resize-handle`;
+  `three`, `resize-handle`;
 - renderers: `voxel-renderer`, `pixel-draw-renderer`;
 - data and sync: `network`, `event-store`, `asset`, `asset-source`,
   `asset-server`, `assets/*`;

@@ -8,7 +8,7 @@
 
 ## 🧭 Workspaces
 
-Workspaces are grouped by sub-domain. Each arrow shows what one sub-domain provides to another.
+Every workspace name below drops the `@jolly-pixel/` scope: `network` is `@jolly-pixel/network`. Workspaces are grouped by sub-domain. Each arrow shows what one sub-domain provides to another.
 
 <p align="center">
   <img src="./docs/context_map.png" alt="JollyPixel">
@@ -16,46 +16,40 @@ Workspaces are grouped by sub-domain. Each arrow shows what one sub-domain provi
 
 ### 🤝 Collaboration
 
-- [@jolly-pixel/network](./packages/network) - Rooms, peers and state sync for the collaborative editors
-- [@jolly-pixel/accounts](./packages/accounts) - User accounts and session tokens for JollyPixel servers
-- [@jolly-pixel/history](./packages/history) - Command documents and per-person undo history that survives collaboration
+- [network](./packages/network) - Rooms, peers and state sync for the collaborative editors
+- [accounts](./packages/accounts) - User accounts and session tokens for JollyPixel servers
+- [history](./packages/history) - Command documents and per-person undo history that survives collaboration
 
 ### 🎨 Authoring
 
 #### Shell
 
-- [@jolly-pixel/studio](./packages/studio) - One project, its assets and one editor per tab
-- [@jolly-pixel/editor.host](./packages/editors/host) - Shared launch, session and runtime boot for the editors
+- [studio](./packages/studio) - One project, its assets and one editor per tab
+- [editor.host](./packages/editors/host) - Shared launch, session and runtime boot for the editors
 
 #### Editors and formats
 
-Each editor is listed with the formats it owns: the asset kinds it reads and writes, and that `asset-server` stores. Editors also read the formats their documents link, such as the `.pixelart` textures used by voxel maps and models.
+Each editor is an `editor.<name>` workspace, and the formats it owns (the asset kinds it reads and writes, and that `asset-server` stores) live in `asset.<name>` workspaces linked from each extension. Editors also read the formats their documents link, such as the `.pixelart` textures used by voxel maps and models.
 
-- [@jolly-pixel/editor.voxel-map](./packages/editors/voxel-map) - Voxel-terrain editor
-  - [@jolly-pixel/asset.voxel-map](./packages/assets/voxel-map) - `.voxelmap.json` worlds and the `.blockset.json` blocksets
-- [@jolly-pixel/editor.voxel-model](./packages/editors/voxel-model) - Low-polygon 3D model editor
-  - [@jolly-pixel/asset.voxel-model](./packages/assets/voxel-model) - `.voxelmodel.json` models
-  - [@jolly-pixel/asset.voxel-animation](./packages/assets/voxel-animation) - `.voxelanim.json` animation sets
-- [@jolly-pixel/editor.pixel-art](./packages/editors/pixel-art) - Pixel-art texture editor (built on `pixel-draw.renderer`)
-  - [@jolly-pixel/asset.pixel-art](./packages/assets/pixel-art) - `.pixelart` textures
-- [@jolly-pixel/editor.terrain](./packages/editors/terrain) - Heightfield terrain editor 🚧
-  - [@jolly-pixel/asset.terrain](./packages/assets/terrain) - `.terrain.json` heightfield terrains 🚧
-- [@jolly-pixel/editor.scene](./packages/editors/scene) - Scene editor: actors, components and environment 🚧
-  - [@jolly-pixel/asset.scene](./packages/assets/scene) - `.scene.json` scenes 🚧
+- [Voxel map](./packages/editors/voxel-map) - Voxel-terrain editor for [`.voxelmap.json` worlds and `.blockset.json` blocksets](./packages/assets/voxel-map)
+- [Voxel model](./packages/editors/voxel-model) - Low-polygon 3D model editor for [`.voxelmodel.json` models](./packages/assets/voxel-model) and [`.voxelanim.json` animation sets](./packages/assets/voxel-animation)
+- [Pixel art](./packages/editors/pixel-art) - Pixel-art texture editor for [`.pixelart` textures](./packages/assets/pixel-art), built on `pixel-draw.renderer`
+- [Terrain](./packages/editors/terrain) 🚧 - Heightfield terrain editor for [`.terrain.json` terrains](./packages/assets/terrain)
+- [Scene](./packages/editors/scene) 🚧 - Actors, components and environment, saved as [`.scene.json` scenes](./packages/assets/scene)
 
 #### UI
 
-- [@jolly-pixel/ui](./packages/ui) - Design system (declarative UI components and a facade API)
-- [@jolly-pixel/resize-handle](./packages/resize-handle) - Resize handles and splitters
-- [@jolly-pixel/console](./packages/console) - Command palette and developer console for the editors
-- [@jolly-pixel/lantern](./packages/lantern) - Guided tours for the editors
+- [ui](./packages/ui) - Design system (declarative UI components and a facade API)
+- [resize-handle](./packages/resize-handle) - Resize handles and splitters
+- [console](./packages/console) - Command palette and developer console for the editors
+- [lantern](./packages/lantern) - Guided tours for the editors
 
 ### 🗄️ Asset Management
 
-- [@jolly-pixel/asset](./packages/asset) - Asset references, catalogs and loading orchestration for browser and Node.js
-- [@jolly-pixel/asset-server](./packages/asset-server) - Event-sourced asset projection, reconciliation and catalog delivery
-- [@jolly-pixel/asset-source](./packages/asset-source) - Physical asset storage (filesystem, memory, IndexedDB)
-- [@jolly-pixel/event-store](./packages/event-store) - Append-only event log (event sourcing)
+- [asset](./packages/asset) - Asset references, catalogs and loading orchestration for browser and Node.js
+- [asset-server](./packages/asset-server) - Event-sourced asset projection, reconciliation and catalog delivery
+- [asset-source](./packages/asset-source) - Physical asset storage (filesystem, memory, IndexedDB)
+- [event-store](./packages/event-store) - Append-only event log (event sourcing)
 
 ### 🏗️ Build
 
@@ -65,30 +59,29 @@ Planned. It will turn a project's assets into the catalog manifest the runtime l
 
 #### Core
 
-- [@jolly-pixel/runtime](./packages/runtime) - Game runtime for web browsers and Electron
-- [@jolly-pixel/engine](./packages/engine) - Minimal ECS framework on top of Three.js
-- [@jolly-pixel/loop](./packages/loop) - Frame scheduling and time primitives (FrameScheduler, GameLoop)
-- [@jolly-pixel/controls](./packages/controls) - Input controls (screen, mouse, touchpad, keyboard, gamepad)
+- [runtime](./packages/runtime) - Game runtime for web browsers and Electron
+- [engine](./packages/engine) - Minimal ECS framework on top of Three.js
+- [loop](./packages/loop) - Frame scheduling and time primitives (FrameScheduler, GameLoop)
+- [controls](./packages/controls) - Input controls (screen, mouse, touchpad, keyboard, gamepad)
 
 #### Renderers
 
-- [@jolly-pixel/voxel.renderer](./packages/voxel-renderer) - Voxel engine and renderer
-- [@jolly-pixel/voxel.tiled](./packages/voxel-tiled) - Tiled map import for `voxel.renderer` 🚧
-- [@jolly-pixel/terrain.renderer](./packages/terrain-renderer) - Heightfield terrain engine and renderer 🚧
-- [@jolly-pixel/pixel-draw.renderer](./packages/pixel-draw-renderer) - Pixel-art canvas drawing and rendering
+- [voxel.renderer](./packages/voxel-renderer) - Voxel engine and renderer
+- [terrain.renderer](./packages/terrain-renderer) - Heightfield terrain engine and renderer 🚧
+- [pixel-draw.renderer](./packages/pixel-draw-renderer) - Pixel-art canvas drawing and rendering
 
 ## 🧩 Shared libraries
 
 Generic packages used by more than one sub-domain.
 
-- [@jolly-pixel/three](./packages/three) - Three.js components and utilities (grid, transform controls, selection highlight...)
-- [@jolly-pixel/color](./packages/color) - Color parsing, palettes, color spaces and conversions
-- [@jolly-pixel/image](./packages/image) - PNG codecs and browser raster decoding
+- [three](./packages/three) - Three.js components and utilities (grid, transform controls, selection highlight...)
+- [color](./packages/color) - Color parsing, palettes, color spaces and conversions
+- [image](./packages/image) - PNG codecs and browser raster decoding
 
 ## 🛠️ Tooling
 
-- [@jolly-pixel/bench](./packages/bench) - Benchmarking harness and CLI
-- [@jolly-pixel/e2e](./packages/e2e) - Playwright config, locators and editor fixtures for e2e suites
+- [bench](./packages/bench) - Benchmarking harness and CLI
+- [e2e](./packages/e2e) - Playwright config, locators and editor fixtures for e2e suites
 
 ## 💃 Getting started
 
@@ -109,7 +102,7 @@ $ pnpm run build
 ```
 
 ### Run
-[@jolly-pixel/studio](./packages/studio) is the full application
+[studio](./packages/studio) is the full application
 
 ```bash
 $ pnpm --filter @jolly-pixel/studio dev

@@ -198,7 +198,7 @@ culling does not change the world or the voxels stored in that chunk.
   its own.
 - Use **blockset** for blocks and the image grid they sample, **tile** for one
   image in that grid, and **atlas** for the loaded texture used for rendering.
-  Keep *tileset* for 2D tile maps, such as Tiled imports.
+  Keep *tileset* for 2D tile maps.
 - Use **transparent block** for texture holes and translucency. Layers are
   either visible or hidden.
 - Use **meshing** for generating chunk surfaces.

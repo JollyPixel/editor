@@ -6,25 +6,6 @@
   <img src="./docs/images/noise-world.png">
 </p>
 
-## 💡 Features
-
-- Chunked world (default 16³) - only dirty chunks are rebuilt each frame, the rest are left alone
-- Named layers with explicit visual compositing or cell replacement
-- Toggle visibility, reorder, add/remove layers, and move them in world space
-- Face culling between adjacent solid voxels to keep triangle counts low
-- Vertex pulling: 8 bytes per face, vertices rebuilt in the shader - about 17x less chunk geometry memory than per-vertex attributes
-- Many built-in block shapes (cube, slabs, ramp, corners, pole, stairs) and a `BlockShape` interface for custom geometry
-- Per-block transforms via a packed byte - 90° Y rotations and X/Z flips without duplicating definitions
-- Multiple blocksets at different resolutions; tiles referenced by `{ blocksetId, col, row }`
-- Per-face texture overrides on any block definition
-- `"lambert"` (default) or `"standard"` (PBR) material modes
-- Opaque, masked, and blended block surfaces with configurable sides and mask cutoff
-- `save()` / `load()` round-trips the full world state as plain JSON
-- World recorders that report the cells each write replaced, for an undo history to invert
-- Optional physics through the backend-agnostic `VoxelCollider` interface, with `"box"` or `"trimesh"` colliders rebuilt per dirty chunk and a Rapier3D plugin included; zero extra dependency if omitted
-- Compatible with JollyPixel engine logger
-- Inspector (`view.inspector`) exposing live face/triangle counts and a wireframe view of the meshed chunks
-
 ## 💃 Getting Started
 
 This package is available in the Node Package Repository and can be easily installed with [npm][npm] or [yarn][yarn].

@@ -266,8 +266,6 @@ importers:
         specifier: 4.6.7
         version: 4.6.7
 
-  packages/arbor: {}
-
   packages/asset:
     dependencies:
       zod:
@@ -1323,24 +1321,6 @@ importers:
       math:
         specifier: 0.1.0
         version: 0.1.0
-
-  packages/voxel-tiled:
-    devDependencies:
-      '@jolly-pixel/asset':
-        specifier: workspace:*
-        version: link:../asset
-      '@jolly-pixel/engine':
-        specifier: workspace:*
-        version: link:../engine
-      '@jolly-pixel/runtime':
-        specifier: workspace:*
-        version: link:../runtime
-      '@jolly-pixel/voxel.renderer':
-        specifier: workspace:*
-        version: link:../voxel-renderer
-      three:
-        specifier: 0.186.1
-        version: 0.186.1
 
 packages:
 

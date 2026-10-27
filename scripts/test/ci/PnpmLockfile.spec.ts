@@ -31,7 +31,7 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  packages/arbor: {}
+  packages/resize-handle: {}
 
   packages/ui:
     dependencies:
@@ -79,19 +79,19 @@ describe("PnpmLockfile.importersChangedSince", () => {
   });
 
   it("attributes a first dependency added to an empty importer", () => {
-    const next = kBase.replace("  packages/arbor: {}", [
-      "  packages/arbor:",
+    const next = kBase.replace("  packages/resize-handle: {}", [
+      "  packages/resize-handle:",
       "    dependencies:",
       "      lit:",
       "        specifier: 3.3.0",
       "        version: 3.3.0"
     ].join("\n"));
 
-    assert.deepEqual(changed(next), new Set(["packages/arbor"]));
+    assert.deepEqual(changed(next), new Set(["packages/resize-handle"]));
   });
 
   it("skips the importer of a removed workspace", () => {
-    assert.deepEqual(changed(kBase.replace("  packages/arbor: {}\n", "")), new Set());
+    assert.deepEqual(changed(kBase.replace("  packages/resize-handle: {}\n", "")), new Set());
   });
 
   it("gives up when an existing snapshot changes", () => {

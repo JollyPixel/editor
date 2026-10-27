@@ -6,15 +6,6 @@
   A modern and robust resize-handle / splitter library for your HTML5 apps and websites, inspired by <a href="https://github.com/sparklinlabs/resize-handle">sparklinlabs/resize-handle</a>
 </p>
 
-## 💡 Features
-
-- **Single-axis handles**: `ResizeHandle` resizes one edge (`left`/`right`/`top`/`bottom`) by pointer or keyboard, with `minSize`/`maxSize` bounds
-- **Corner handle**: `CornerResizeHandle` resizes width and height together from a single pointer drag, reusing the same per-axis math
-- **Collapsible edges**: double-click a `collapsible` handle to zero the target's size, double-click again to restore it
-- **Keyboard resizing**: arrow keys move a handle by 8px, Shift for a 32px step; keyboard input clamps to the same bounds and fires the same drag events as pointer input
-- **Accessible by default**: edge handles are focusable `role="separator"` elements with live `aria-valuemin`/`aria-valuemax`/`aria-valuenow`
-- **Locked drag cursor**: the whole document keeps the resize cursor while dragging, even if the pointer outruns the handle's own hit area
-
 ## 💃 Getting Started
 
 This package is available in the Node Package Repository and can be easily installed with [npm][npm] or [yarn][yarn].
