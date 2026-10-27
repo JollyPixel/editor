@@ -24,6 +24,7 @@ import {
 } from "../../../shared/terrainHistory.ts";
 
 export type MaterialTechnique = "triplanar" | "stochastic" | "heightBlend";
+export type TextureConflict = "replace" | "keep";
 
 type CatalogRecord = NonNullable<ReturnType<CatalogClient["record"]>>;
 type MaterialMaps = Partial<Record<TerrainMaterialMapKind, TerrainMaterialMap>>;
@@ -40,9 +41,10 @@ export interface MaterialPaletteOptions {
   >;
   selection: Pick<MaterialSelection, "select">;
   history: Pick<TerrainHistory, "record">;
-  catalog: Pick<CatalogClient, "records" | "record" | "create">;
+  catalog: Pick<CatalogClient, "records" | "record" | "create" | "replace">;
   importFolder: string;
   pickTexture(title: string): Promise<TerrainMaterialMap | null>;
+  askConflict(paths: readonly string[]): Promise<TextureConflict | null>;
 }
 
 export class MaterialPalette {
@@ -69,13 +71,22 @@ export class MaterialPalette {
   async addFromFiles(
     files: readonly TextureFile[]
   ): Promise<string[]> {
+    const conflict = await this.#conflict(files);
+    if (conflict === null) {
+      return [];
+    }
+
     const added: string[] = [];
     for (const group of groupMaterialFiles(files)) {
       const maps: MaterialMaps = {};
       for (const [kind, file] of Object.entries(group.maps)) {
-        maps[kind as TerrainMaterialMapKind] = await this.#import(file);
+        maps[kind as TerrainMaterialMapKind] = await this.#import(file, conflict);
       }
-      const id = this.#add(group.name, maps);
+      const using = this.#materialUsing(maps);
+      if (using !== null) {
+        this.#options.selection.select(using);
+      }
+      const id = using ?? this.#add(group.name, maps);
       if (id !== null) {
         added.push(id);
       }
@@ -98,9 +109,15 @@ export class MaterialPalette {
     map: TerrainMaterialMapKind,
     file: TextureFile
   ): Promise<boolean> {
-    const texture = await this.#import(file);
+    const conflict = await this.#conflict([file]);
+    if (conflict === null) {
+      return false;
+    }
 
-    return this.#update(materialId, { [map]: texture });
+    const texture = await this.#import(file, conflict);
+    const current = this.#options.document.materials.material(materialId)?.[map];
+
+    return current?.id === texture.id || this.#update(materialId, { [map]: texture });
   }
 
   clearMap(
@@ -203,16 +220,61 @@ export class MaterialPalette {
     return maps;
   }
 
+  #materialUsing(
+    maps: MaterialMaps
+  ): string | null {
+    const used = Object.entries(maps);
+    const material = this.#options.document.materials.materials().find(
+      (candidate) => used.every(([kind, map]) => candidate[kind as TerrainMaterialMapKind]?.id === map.id)
+    );
+
+    return material?.id ?? null;
+  }
+
+  async #conflict(
+    files: readonly TextureFile[]
+  ): Promise<TextureConflict | null> {
+    const existing = files
+      .map((file) => this.#importPath(file))
+      .filter((path) => this.#textureAt(path) !== undefined);
+
+    return existing.length === 0 ? "keep" : this.#options.askConflict(existing);
+  }
+
   async #import(
-    file: TextureFile
+    file: TextureFile,
+    conflict: TextureConflict
   ): Promise<TerrainMaterialMap> {
-    const { catalog, importFolder } = this.#options;
-    const path = importFolder === "" ? file.name : `${importFolder}/${file.name}`;
+    const { catalog } = this.#options;
+    const path = this.#importPath(file);
+    const existing = this.#textureAt(path);
+    if (existing !== undefined && conflict === "replace") {
+      await catalog.replace(existing.id, file.bytes);
+
+      return { id: existing.id, kind: TEXTURE_KIND };
+    }
+
     const id = await catalog.create(path, file.bytes, {
       kind: TEXTURE_KIND,
       onConflict: "suffix"
     });
 
     return { id, kind: TEXTURE_KIND };
+  }
+
+  #importPath(
+    file: TextureFile
+  ): string {
+    const { importFolder } = this.#options;
+
+    return importFolder === "" ? file.name : `${importFolder}/${file.name}`;
+  }
+
+  #textureAt(
+    path: string
+  ): CatalogRecord | undefined {
+    return [...this.#options.catalog.records()].find(
+      (record) => record.kind === TEXTURE_KIND && record.path === path
+    );
   }
 }

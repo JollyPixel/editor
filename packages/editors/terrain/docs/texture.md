@@ -90,6 +90,12 @@ Adding a material starts from an image:
   `rock_normal` and `rock_height` make one material, Rock; an image whose name
   ends with no map word, such as `grass.png`, makes a material with it as the
   albedo.
+- When a dropped image's path already holds a texture, the pane asks once per
+  drop: **Replace** writes the new content into the existing texture, keeping
+  its ID, so every terrain using it repaints for everyone, and a material
+  already using those textures is selected instead of added; **Keep both**
+  imports a copy with a numbered name. The asset's restore point brings the
+  old content back.
 
 Map words are matched case-insensitively at the end of the name, after `_`,
 `-`, `.` or a space: albedo, basecolor, diffuse, color for the albedo;

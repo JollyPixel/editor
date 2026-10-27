@@ -10,7 +10,10 @@ import {
 } from "@jolly-pixel/asset.terrain/client";
 
 // Import Internal Dependencies
-import { MaterialPalette } from "#src/features/materials/model/MaterialPalette.ts";
+import {
+  MaterialPalette,
+  type TextureConflict
+} from "#src/features/materials/model/MaterialPalette.ts";
 import { MaterialSelection } from "#src/features/materials/model/MaterialSelection.ts";
 import {
   createTerrainHistory,
@@ -24,7 +27,8 @@ interface CatalogEntry {
 }
 
 function paletteSetup(
-  existing: string[] = []
+  existing: string[] = [],
+  conflict: TextureConflict | null = "keep"
 ) {
   const document = new TerrainDocument();
   document.load({ chunks: [{ x: 0, z: 0 }] });
@@ -34,6 +38,8 @@ function paletteSetup(
     existing.map((path) => [path, { id: path, kind: "texture", path }])
   );
   const imported: string[] = [];
+  const replaced: string[] = [];
+  const asked: string[][] = [];
   let picked: string | null = null;
   const palette = new MaterialPalette({
     document,
@@ -45,14 +51,25 @@ function paletteSetup(
       record: (id) => records.get(id),
       create: (path, _content, options) => {
         imported.push(path);
-        records.set(path, { id: path, kind: options?.kind ?? "binary", path });
+        const id = records.has(path) ? `${path} (1)` : path;
+        records.set(id, { id, kind: options?.kind ?? "binary", path: id });
 
-        return Promise.resolve(path);
+        return Promise.resolve(id);
+      },
+      replace: (id) => {
+        replaced.push(id);
+
+        return Promise.resolve({ replaced: true });
       }
     },
     pickTexture: () => Promise.resolve<TerrainMaterialMap | null>(
       picked === null ? null : { id: picked, kind: "texture" }
-    )
+    ),
+    askConflict: (paths) => {
+      asked.push([...paths]);
+
+      return Promise.resolve(conflict);
+    }
   });
 
   return {
@@ -61,6 +78,8 @@ function paletteSetup(
     selection,
     palette,
     imported,
+    replaced,
+    asked,
     pick(path: string | null): void {
       picked = path;
     }
@@ -115,6 +134,54 @@ describe("MaterialPalette", () => {
     assert.equal(history.state(TERRAIN_HISTORY_SCOPE).undoCount, 2);
     history.undo(TERRAIN_HISTORY_SCOPE);
     assert.deepEqual(document.materials.materials().map(({ name }) => name), ["Ground", "Rock"]);
+  });
+
+  test("re-dropped images ask once, then replace in place, keep both, or import nothing", async() => {
+    const existing = ["world/textures/rock_albedo.png", "world/textures/rock_normal.png"];
+    const files = [file("rock_albedo.png"), file("rock_normal.png"), file("grass.png")];
+    const grass = "world/textures/grass.png";
+    const cases = [
+      { conflict: "replace", replaced: existing, imported: [grass], names: ["Rock", "Grass"] },
+      { conflict: "keep", replaced: [], imported: [...existing, grass], names: ["Rock", "Rock", "Grass"] },
+      { conflict: null, replaced: [], imported: [], names: ["Rock"] }
+    ] as const;
+    for (const expected of cases) {
+      const { document, palette, selection, asked, replaced, imported } = paletteSetup(
+        existing,
+        expected.conflict
+      );
+      const rock = document.addMaterial({
+        name: "Rock",
+        albedo: { id: existing[0], kind: "texture" },
+        normal: { id: existing[1], kind: "texture" }
+      })!;
+      const selectedBefore = selection.selected;
+
+      const added = await palette.addFromFiles(files);
+
+      const message = String(expected.conflict);
+      assert.deepEqual(asked, [existing], message);
+      assert.deepEqual(replaced, expected.replaced, message);
+      assert.deepEqual(imported, expected.imported, message);
+      assert.deepEqual(document.materials.materials().map(({ name }) => name), ["Ground", ...expected.names]);
+      assert.equal(added[0] === rock, expected.conflict === "replace", message);
+      assert.equal(added.length, expected.conflict === null ? 0 : 2, message);
+      assert.equal(selection.selected, added.at(-1) ?? selectedBefore, message);
+    }
+  });
+
+  test("a re-dropped map replaces the texture a material already uses, without an undo step", async() => {
+    const existing = ["world/textures/ground_height.png"];
+    const { document, history, palette, replaced } = paletteSetup(existing, "replace");
+    history.record(TERRAIN_HISTORY_SCOPE, null, () => document.updateMaterial(GROUND_MATERIAL.id, {
+      height: { id: existing[0], kind: "texture" }
+    }));
+    const undoCount = history.state(TERRAIN_HISTORY_SCOPE).undoCount;
+
+    assert.equal(await palette.dropMap(GROUND_MATERIAL.id, "height", file("ground_height.png")), true);
+
+    assert.deepEqual(replaced, existing);
+    assert.equal(history.state(TERRAIN_HISTORY_SCOPE).undoCount, undoCount);
   });
 
   test("a map can be replaced by a dropped image and cleared", async() => {

@@ -127,7 +127,12 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   dominant material without loading the chunk. The material shader now loops
   over projections and stochastic cells instead of unrolling them, so software
   WebGL compiles it.
-- **Next:** replace an asset's content from the catalog.
+- **Catalog replace: done** (2026-10-27). `catalog:replace` writes new
+  content into an existing asset, keeping its ID, behind a restore point. The
+  studio offers it on an asset, and the palette asks to replace a dropped
+  image whose texture already exists, which repaints every terrain using it.
+  M3 is complete.
+- **Next:** M4, starting with the hole brush.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -188,7 +193,7 @@ chunks yet.
 - [x] Per-material techniques: triplanar, stochastic tiling, height blending.
 - [x] E2E: two peers paint and sculpt the same chunk, a far peer's horizon
   takes the new dominant material.
-- [ ] Replace an asset's content from the catalog, keeping its ID, so a
+- [x] Replace an asset's content from the catalog, keeping its ID, so a
   re-imported texture updates the terrains that use it.
 
 ## M4: Rest of V1

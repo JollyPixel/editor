@@ -85,6 +85,23 @@ export class TerrainPage {
     await this.selectMaterial(materialName);
   }
 
+  async dropImage(
+    name: string,
+    color: string
+  ): Promise<void> {
+    const dataTransfer = await this.page.evaluateHandle(async([fileName, fill]) => {
+      const canvas = new OffscreenCanvas(4, 4);
+      const context = canvas.getContext("2d")!;
+      context.fillStyle = fill;
+      context.fillRect(0, 0, 4, 4);
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([await canvas.convertToBlob()], fileName, { type: "image/png" }));
+
+      return transfer;
+    }, [name, color]);
+    await this.page.locator("terrain-material-palette").dispatchEvent("drop", { dataTransfer });
+  }
+
   async showOverlay(
     overlay: TerrainOverlay
   ): Promise<void> {
