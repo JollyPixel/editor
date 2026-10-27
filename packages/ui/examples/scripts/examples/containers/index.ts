@@ -13,6 +13,11 @@ export const CONTAINERS_EXAMPLES: readonly GalleryEntry[] = [
     load: async() => (await import("./folder.ts")).FOLDER_EXAMPLE
   },
   {
+    id: "containers/show-more",
+    title: "Show more",
+    load: async() => (await import("./show-more.ts")).SHOW_MORE_EXAMPLE
+  },
+  {
     id: "containers/tabs",
     title: "Tabs",
     load: async() => (await import("./tabs.ts")).TABS_EXAMPLE

@@ -236,8 +236,8 @@ export function meshForm(
       ...kMesh.choice(["geometry", "kind"], "Geometry", GEOMETRY_KINDS),
       resets: true
     },
-    ...data.geometry === undefined ? [] : kGeometryRows[data.geometry.kind],
     kMesh.color(["material", "color"], "Color"),
+    ...data.geometry === undefined ? [] : kGeometryRows[data.geometry.kind],
     kMesh.number(["material", "roughness"], "Roughness", kUnit),
     kMesh.number(["material", "metalness"], "Metalness", kUnit),
     kMesh.color(["material", "emissive"], "Emissive"),

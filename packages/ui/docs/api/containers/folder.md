@@ -78,6 +78,11 @@ html`<jolly-folder .collapsible=${false} label="Block Library"></jolly-folder>`
   `--jolly-space-1`. Nesting adds up.
 - `flush`, or the property set to `0` on an ancestor, flattens the content.
 
+## Long folders
+
+Wrap the rows in a [`jolly-show-more`](./show-more.md) to show the first few
+and fold the rest behind a "Show N more" button.
+
 ## Header actions
 
 `actions` elements sit between the label and the grip, and stay visible while
