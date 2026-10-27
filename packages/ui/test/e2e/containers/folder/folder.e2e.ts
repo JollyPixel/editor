@@ -291,4 +291,26 @@ test.describe("Folder reorder", () => {
     await reloadGallery(page);
     await expect.poll(() => visualOrder(folders)).toEqual(moved);
   });
+
+  test("a second grip stays released during a grab, and Escape restores the order", async({ page }) => {
+    const folders = page.locator("jolly-pane > jolly-folder");
+    const grabbed = folders.first().locator(".grip");
+    const other = folders.nth(2).locator(".grip");
+
+    await grabbed.focus();
+    await grabbed.press("Space");
+    await grabbed.press("ArrowDown");
+    await expect(grabbed).toHaveAttribute("aria-pressed", "true");
+    await expect.poll(() => visualOrder(folders))
+      .toEqual(["Material", "Transform", "Physics"]);
+
+    await other.focus();
+    await other.press("Space");
+    await expect(other).toHaveAttribute("aria-pressed", "false");
+
+    await grabbed.focus();
+    await grabbed.press("Escape");
+    await expect(grabbed).toHaveAttribute("aria-pressed", "false");
+    await expect.poll(() => visualOrder(folders)).toEqual(kDefaultOrder);
+  });
 });

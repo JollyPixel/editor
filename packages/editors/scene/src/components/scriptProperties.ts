@@ -95,16 +95,20 @@ export function parseList(
   }
 }
 
-export function freePropertyKey(
+export function addProperty(
   properties: Readonly<JSONObject>,
-  base = "property"
-): string {
-  let key = base;
-  for (let suffix = 2; Object.hasOwn(properties, key); suffix++) {
-    key = `${base}${suffix}`;
+  key: string,
+  value: JSONValue
+): JSONObject {
+  const trimmed = key.trim();
+  if (trimmed === "" || Object.hasOwn(properties, trimmed)) {
+    return { ...properties };
   }
 
-  return key;
+  return {
+    ...properties,
+    [trimmed]: value
+  };
 }
 
 export function renameProperty(
@@ -112,13 +116,17 @@ export function renameProperty(
   from: string,
   to: string
 ): JSONObject {
-  if (from === to || Object.hasOwn(properties, to)) {
+  const trimmed = to.trim();
+  if (trimmed === "") {
+    return removeProperty(properties, from);
+  }
+  if (from === trimmed || Object.hasOwn(properties, trimmed)) {
     return { ...properties };
   }
 
   return Object.fromEntries(
     Object.entries(properties).map(
-      ([key, value]) => [key === from ? to : key, value]
+      ([key, value]) => [key === from ? trimmed : key, value]
     )
   );
 }

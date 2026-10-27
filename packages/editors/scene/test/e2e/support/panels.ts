@@ -17,14 +17,35 @@ export function inspector(
   return page.locator("jolly-scene-inspector");
 }
 
-export function transformAxis(
+export function sceneTool(
+  page: Page,
+  tool: string
+): Locator {
+  return page.locator(
+    `jolly-scene-toolbar jolly-tool-button[data-tool="${tool}"]`
+  );
+}
+
+export function inspectedActor(
+  page: Page
+): Locator {
+  return inspector(page).locator("jolly-folder[key=\"actor\"]");
+}
+
+export async function editTransform(
   page: Page,
   field: "Position" | "Rotation" | "Scale",
-  axis: "X" | "Y" | "Z"
-): Locator {
-  return inspector(page)
-    .locator(`jolly-vector3[label="${field}"]`)
+  axis: "X" | "Y" | "Z",
+  value: string
+): Promise<void> {
+  const actor = inspectedActor(page);
+  await actor.getByRole("radio", { name: field }).click();
+
+  const input = actor
+    .locator("jolly-vector3")
     .getByRole("textbox", { name: axis });
+  await input.fill(value);
+  await input.press("Enter");
 }
 
 export async function chooseMenuPath(

@@ -18,6 +18,7 @@ The `SceneDocument` of the target lease is the only state that is saved. Everyth
 - `SelectionStore` follows the document: an actor that a command or a reset removes leaves the selection.
 - Reparenting rewrites the moved actor's transform from the file data, so it keeps its world pose whatever the binding has drawn.
 - The inspector forms are row descriptors in `components/componentForms.ts`, `Script` included. A row edit becomes a `component-changed` patch of one top-level field, unset when set back to its default. A nested field rewrites its whole object, as the room requires.
+- Dragging a component folder by its grip, or moving it with the keyboard, commits one `component-moved` command on drop. The order lives in the document, never in pane storage. A gesture is cancelled when the component list changes under it.
 
 ## Collaboration
 

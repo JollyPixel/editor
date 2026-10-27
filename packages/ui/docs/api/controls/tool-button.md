@@ -20,10 +20,14 @@ interface ToolButton {
   disabled: boolean;
   flyoutSide: "above" | "below" | "left" | "right"; // attribute flyout-side, default "right"
   open: boolean;
+  count: number; // corner badge, hidden at 0
 }
 ```
 
 - A toned button tints its hover and `active` fill with the tone.
+- `count` shows a number in the bottom-right corner, such as the undo depth.
+  The badge is hidden from assistive technology: put anything it must hear in
+  `label`.
 - The tooltip opens on `flyout-side`.
 
 ## Methods
@@ -50,5 +54,5 @@ to `flyout-side`.
 
 ## Styling
 
-- Parts: `button`, `notch`, `tooltip`, `flyout`.
+- Parts: `button`, `count`, `notch`, `tooltip`, `flyout`.
 - `--jolly-tool-button-size` (`36px`), `--jolly-tool-button-gap` (`6px`).

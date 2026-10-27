@@ -1,19 +1,13 @@
 // Import Third-party Dependencies
-import type {
-  ReactiveController,
-  ReactiveControllerHost
-} from "lit";
+import type { ReactiveControllerHost } from "lit";
 
 // Import Internal Dependencies
-import { emitContainerEvent } from "../events.ts";
-import type { Folder } from "../folder/Folder.ts";
-import { readDetail } from "../../dom.ts";
-import { headerGhost } from "../../interaction/drag/dragGhost.ts";
 import {
-  startDragSession,
-  verticalInsertionLine,
-  type DragSessionHandle
-} from "../../interaction/drag/DragSession.ts";
+  emitContainerEvent,
+  type ContainerEventMap
+} from "../events.ts";
+import type { Folder } from "../folder/Folder.ts";
+import { FolderReorder } from "../folder/FolderReorder.ts";
 import { NamespacedStore } from "../../storage/NamespacedStore.ts";
 import type { StorageAdapter } from "../../storage/StorageAdapter.ts";
 import {
@@ -21,22 +15,9 @@ import {
   resolveOrder
 } from "../../storage/keys.ts";
 
-// CONSTANTS
-const kFolderZone = "folders";
-
 interface FolderEntry {
   folder: Folder;
   key: string;
-}
-
-interface FolderReorderDetail {
-  folder: Folder;
-  command: "cancel" | "down" | "finish" | "start" | "up";
-}
-
-interface FolderDragDetail {
-  folder: Folder;
-  event: PointerEvent;
 }
 
 export interface FolderListOptions {
@@ -50,28 +31,30 @@ export interface FolderListOptions {
   discovered(): void;
 }
 
-export class FolderListController implements ReactiveController {
+export class FolderListController {
   readonly #options: FolderListOptions;
   readonly #store: NamespacedStore;
+  readonly #reorder: FolderReorder;
   #entries: FolderEntry[] = [];
-  #startOrder: string[] | null = null;
-  #session: DragSessionHandle | null = null;
 
   constructor(
     host: ReactiveControllerHost,
     options: FolderListOptions
   ) {
-    host.addController(this);
     this.#options = options;
     this.#store = new NamespacedStore({
       namespace: () => options.namespace(),
       storage: () => options.storage()
     });
-  }
-
-  hostDisconnected(): void {
-    this.#session?.cancel();
-    this.#session = null;
+    this.#reorder = new FolderReorder(host, {
+      folders: () => this.#entries.map(({ folder }) => folder),
+      zone: () => options.content(),
+      commit: (order) => {
+        this.#applyOrder(({ folder }) => order.indexOf(folder));
+        this.#commitOrder();
+      },
+      announce: (message) => options.announce(message)
+    });
   }
 
   states(): Record<string, { open: boolean; }> {
@@ -93,6 +76,7 @@ export class FolderListController implements ReactiveController {
   }
 
   onContentChange = () => {
+    this.#reorder.cancel();
     const folders = this.#options.contentSlot()
       .assignedElements({ flatten: true })
       .filter((element): element is Folder => element.tagName === "JOLLY-FOLDER");
@@ -112,10 +96,11 @@ export class FolderListController implements ReactiveController {
       }
     }
 
-    this.#applyOrder(resolveOrder(
+    const order = resolveOrder(
       parseOrder(this.#store.readJson("order")),
       this.#keys()
-    ));
+    );
+    this.#applyOrder(({ key }) => order.indexOf(key));
     this.#options.discovered();
   };
 
@@ -131,166 +116,31 @@ export class FolderListController implements ReactiveController {
   };
 
   onFolderDrag = (
-    event: Event
+    event: CustomEvent<ContainerEventMap["jolly-folder-drag"]>
   ) => {
-    if (!this.#options.reorderable()) {
-      return;
+    if (this.#options.reorderable()) {
+      this.#reorder.onDrag(event);
     }
-
-    event.stopPropagation();
-    const detail = readDetail<FolderDragDetail>(event);
-    if (detail === null || this.#session !== null) {
-      return;
-    }
-
-    const ordered = this.#entries;
-    const from = ordered.findIndex(
-      ({ folder }) => folder === detail.folder
-    );
-    if (from === -1) {
-      return;
-    }
-
-    const bounds = readRect(this.#options.content());
-    const candidates = ordered.map(({ folder }) => {
-      const rect = folder.getBoundingClientRect();
-
-      return { start: rect.y, size: rect.height };
-    });
-
-    this.#session = startDragSession({
-      source: detail.folder,
-      event: detail.event,
-      handle: detail.event.currentTarget instanceof HTMLElement ?
-        detail.event.currentTarget :
-        detail.folder,
-      ghostLabel: detail.folder.label,
-      ghostElement: () => {
-        const ghost = headerGhost(detail.folder);
-        ghost.label = detail.folder.label;
-
-        return ghost;
-      },
-      zones: () => [{
-        id: kFolderZone,
-        rect: bounds,
-        candidates,
-        axis: "y",
-        line: (index) => verticalInsertionLine(bounds, candidates, index)
-      }],
-      onStart: () => {
-        detail.folder.dragging = true;
-      },
-      onCommit: (result) => {
-        if (result.zone !== null) {
-          this.#move(from, result.index);
-        }
-      },
-      onEnd: () => {
-        this.#session = null;
-        detail.folder.dragging = false;
-      }
-    });
   };
 
   onReorderCommand = (
-    event: Event
+    event: CustomEvent<ContainerEventMap["jolly-folder-reorder"]>
   ) => {
-    if (!this.#options.reorderable()) {
-      return;
+    if (this.#options.reorderable()) {
+      this.#reorder.onReorder(event);
     }
-
-    event.stopPropagation();
-    const detail = readDetail<FolderReorderDetail>(event);
-    if (detail === null) {
-      return;
-    }
-
-    const order = this.#keys();
-    const index = this.#entries.findIndex(
-      ({ folder }) => folder === detail.folder
-    );
-    if (index === -1) {
-      return;
-    }
-
-    if (detail.command === "start") {
-      this.#startOrder = order;
-      this.#options.announce(`${detail.folder.label} grabbed`);
-
-      return;
-    }
-    if (detail.command === "cancel") {
-      if (this.#startOrder !== null) {
-        this.#applyOrder(this.#startOrder);
-      }
-      this.#startOrder = null;
-      this.#options.announce(
-        `${detail.folder.label} movement cancelled`
-      );
-
-      return;
-    }
-    if (detail.command === "finish") {
-      this.#commitOrder();
-      this.#startOrder = null;
-      this.#options.announce(
-        `${detail.folder.label} dropped`
-      );
-
-      return;
-    }
-
-    const next = Math.min(
-      Math.max(index + (detail.command === "up" ? -1 : 1), 0),
-      order.length - 1
-    );
-    if (index === next) {
-      return;
-    }
-
-    [order[index], order[next]] = [order[next], order[index]];
-    this.#applyOrder(order);
-    this.#options.announce(
-      `${detail.folder.label}, position ${next + 1} of ${order.length}`
-    );
   };
-
-  #move(
-    from: number,
-    insertion: number
-  ): void {
-    const order = this.#keys();
-    const to = insertion > from ? insertion - 1 : insertion;
-    if (to === from || to < 0 || to >= order.length) {
-      return;
-    }
-
-    const [key] = order.splice(from, 1);
-    order.splice(to, 0, key);
-    this.#applyOrder(order);
-    this.#commitOrder();
-    this.#options.announce(
-      `${this.#entries[from]?.folder.label ?? "Folder"}, position ` +
-      `${to + 1} of ${order.length}`
-    );
-  }
 
   #keys(): string[] {
     return this.#entries.map(({ key }) => key);
   }
 
   #applyOrder(
-    order: readonly string[]
+    rank: (entry: FolderEntry) => number
   ): void {
-    const entries = new Map(
-      this.#entries.map((entry) => [entry.key, entry])
+    this.#entries = this.#entries.toSorted(
+      (left, right) => rank(left) - rank(right)
     );
-    this.#entries = order.flatMap((key) => {
-      const entry = entries.get(key);
-
-      return entry === undefined ? [] : [entry];
-    });
     for (const [index, { folder }] of this.#entries.entries()) {
       folder.style.order = String(index);
     }
@@ -330,19 +180,6 @@ function folderKeys(
       occurrence
     );
   });
-}
-
-function readRect(
-  element: Element
-) {
-  const rect = element.getBoundingClientRect();
-
-  return {
-    x: rect.x,
-    y: rect.y,
-    width: rect.width,
-    height: rect.height
-  };
 }
 
 function parseOrder(

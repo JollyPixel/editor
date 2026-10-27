@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import {
-  css,
   html,
   LitElement,
   nothing,
@@ -59,19 +58,7 @@ const kFalloffLabels: Readonly<Record<FalloffCurve, string>> = {
 
 @customElement("terrain-sculpt-toolbar")
 export class SculptToolbar extends LitElement {
-  static override styles = [
-    viewportToolbarStyles,
-    css`
-      .step-count {
-        position: absolute;
-        inset-block-end: 1px;
-        inset-inline-end: 2px;
-        font-size: 9px;
-        font-weight: 600;
-        pointer-events: none;
-      }
-    `
-  ];
+  static override styles = viewportToolbarStyles;
 
   @property({ attribute: false })
   declare settings: SculptSettings | null;
@@ -134,7 +121,7 @@ export class SculptToolbar extends LitElement {
     const { tool, falloff } = settings.options;
 
     return html`
-      <jolly-rail orientation="horizontal" role="toolbar" aria-label="Sculpt">
+      <jolly-rail orientation="horizontal" floating role="toolbar" aria-label="Sculpt">
         ${this.#renderHistory()}
         <div class="group divided" role="group" aria-label="Brush">
           ${SCULPT_TOOLS.map((option) => html`
@@ -259,25 +246,21 @@ export class SculptToolbar extends LitElement {
           data-tool="undo"
           icon="undo"
           label="Undo (Ctrl+Z)"
+          .count=${state.undoCount}
           ?disabled=${state.undoCount === 0}
           @click=${() => history.undo(TERRAIN_HISTORY_SCOPE)}
-        >${renderStepCount(state.undoCount)}</jolly-tool-button>
+        ></jolly-tool-button>
         <jolly-tool-button
           data-tool="redo"
           icon="redo"
           label="Redo (Ctrl+Y)"
+          .count=${state.redoCount}
           ?disabled=${state.redoCount === 0}
           @click=${() => history.redo(TERRAIN_HISTORY_SCOPE)}
-        >${renderStepCount(state.redoCount)}</jolly-tool-button>
+        ></jolly-tool-button>
       </div>
     `;
   }
-}
-
-function renderStepCount(
-  count: number
-): TemplateResult | typeof nothing {
-  return count === 0 ? nothing : html`<span class="step-count" aria-hidden="true">${count}</span>`;
 }
 
 function formatMetres(

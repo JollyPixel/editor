@@ -13,7 +13,7 @@ import "./app/sceneIcons.ts";
 import "./features/hierarchy/HierarchyPanel.ts";
 import "./features/inspector/InspectorPanel.ts";
 import "./features/environment/ScenePanel.ts";
-import "./features/viewport/ViewToolbar.ts";
+import "./features/viewport/SceneToolbar.ts";
 import { SceneEditor } from "./boot/SceneEditor.ts";
 
 declare global {

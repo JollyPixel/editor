@@ -131,6 +131,7 @@ export class EditToolbar extends EditingElement {
       <voxel-paint-notice .editing=${editing}></voxel-paint-notice>
       <jolly-rail
         orientation="horizontal"
+        floating
         role="toolbar"
         aria-label="Map editing"
       >
@@ -175,16 +176,18 @@ export class EditToolbar extends EditingElement {
           data-tool="undo"
           icon="undo"
           label=${shortcuts.label("Undo", "edit.undo")}
+          .count=${this._undoDepth}
           ?disabled=${access.current.readOnly || this._undoDepth === 0}
           @click=${this.#onUndo}
-        >${renderStepCount(this._undoDepth)}</jolly-tool-button>
+        ></jolly-tool-button>
         <jolly-tool-button
           data-tool="redo"
           icon="redo"
           label=${shortcuts.label("Redo", "edit.redo")}
+          .count=${this._redoDepth}
           ?disabled=${access.current.readOnly || this._redoDepth === 0}
           @click=${this.#onRedo}
-        >${renderStepCount(this._redoDepth)}</jolly-tool-button>
+        ></jolly-tool-button>
       </div>
       <div class="group divided" role="group" aria-label="Clipboard">
         <jolly-tool-button
@@ -257,14 +260,6 @@ function renderSegment(
       <div class="segment-content">${content}</div>
     </div>
   `;
-}
-
-function renderStepCount(
-  depth: number
-): TemplateResult | typeof nothing {
-  return depth === 0 ?
-    nothing :
-    html`<span class="step-count" aria-hidden="true"><span>${depth}</span></span>`;
 }
 
 declare global {

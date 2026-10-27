@@ -248,24 +248,51 @@ registerIcon("gizmo-scale", svg`
   />
 `, { tone: "coral" });
 
-registerIcon("move-up", svg`
+registerIcon("gizmo-space-local", svg`
   <path
-    d="M12 19V5M6 11l6-6 6 6"
+    class="tone-fill"
+    d="M12 3l8 4.5L12 12 4 7.5z"
+  />
+  <path
+    d="M12 3l8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9"
     fill="none"
     stroke="currentColor"
-    stroke-width="2"
+    stroke-width="1.75"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
-`, { tone: "sky" });
+`, { tone: "amber" });
 
-registerIcon("move-down", svg`
+registerIcon("gizmo-space-world", svg`
+  <circle
+    class="tone-fill"
+    cx="12"
+    cy="12"
+    r="9"
+  />
   <path
-    d="M12 5v14M6 13l6 6 6-6"
+    d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM3 12h18M12 3c2.5 2.4 3.8 5.4 3.8 9s-1.3 6.6-3.8 9M12 3c-2.5 2.4-3.8 5.4-3.8 9s1.3 6.6 3.8 9"
     fill="none"
     stroke="currentColor"
-    stroke-width="2"
+    stroke-width="1.75"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
-`, { tone: "sky" });
+`, { tone: "teal" });
+
+registerIcon("view-frame", svg`
+  <circle
+    class="tone-fill"
+    cx="12"
+    cy="12"
+    r="3.5"
+  />
+  <path
+    d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4M15.5 12a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.75"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "violet" });

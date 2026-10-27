@@ -83,6 +83,10 @@ export const buttonStyles = css`
     background: var(--jolly-invalid-bg-focus);
   }
 
+  button[aria-pressed="false"] jolly-icon {
+    opacity: 0.4;
+  }
+
   :host([disabled]) button {
     opacity: 0.5;
     cursor: default;

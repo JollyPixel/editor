@@ -3,7 +3,11 @@ import {
   OrbitFlyCamera,
   Systems
 } from "@jolly-pixel/engine";
-import type { KeyBindingSettings } from "@jolly-pixel/controls";
+import {
+  ShortcutLabels,
+  type KeyBindingSettings,
+  type KeyboardLayoutStore
+} from "@jolly-pixel/controls";
 import type {
   SceneDocument,
   SceneRoom
@@ -66,6 +70,7 @@ export interface SceneEditorSceneOptions {
   presence: PresenceStore;
   preferences: Preferences;
   keyBindings: KeyBindingSettings<SceneAction>;
+  keyboardLayout: KeyboardLayoutStore;
 }
 
 export class SceneEditorScene extends Systems.Scene {
@@ -199,6 +204,10 @@ export class SceneEditorScene extends Systems.Scene {
       presence,
       gizmo,
       assetSlots,
+      shortcuts: new ShortcutLabels(
+        this.#options.keyboardLayout,
+        this.#options.keyBindings
+      ),
       frameSelection,
       previewEnvironment: (patch) => binding.previewEnvironment(patch),
       teleportToPeer: (clientId) => {

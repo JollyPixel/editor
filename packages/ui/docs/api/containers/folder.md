@@ -16,12 +16,13 @@ interface Folder {
   key: string;
   open: boolean; // default true
   collapsible: boolean; // default true
-  reorderable: boolean; // shows a grip when its pane allows reordering
+  reorderable: boolean; // shows the grip, set by a reorderable pane
   flush: boolean; // no content indent
   storageKey: string; // attribute storage-key
   storage: StorageAdapter; // property only, default LocalStorageAdapter
 
   dragging: boolean; // set by its pane during a reorder preview
+  grabbed: boolean; // set by its pane while moved with the keyboard
 }
 ```
 
@@ -30,8 +31,28 @@ interface Folder {
 ```ts
 interface FolderEvents {
   "jolly-toggle": { open: boolean; };
+  "jolly-folder-drag": { folder: Folder; event: PointerEvent; };
+  "jolly-folder-reorder": {
+    folder: Folder;
+    command: "start" | "up" | "down" | "finish" | "cancel";
+  };
 }
 ```
+
+## Reordering
+
+The grip asks for a move and leaves the order to whoever handles the events.
+A [reorderable pane](./pane.md) handles them for the folders slotted in it.
+Elsewhere, set `reorderable` and hand the events to a
+[`FolderReorder`](./folder-reorder.md):
+
+- A primary-button press on the grip emits `jolly-folder-drag` with the
+  `pointerdown` event, only while `reorderable`.
+- Space on the grip emits `start`, or `finish` while `grabbed`. While
+  `grabbed`, ArrowUp and ArrowDown emit `up` and `down`, and Escape emits
+  `cancel`.
+- The folder never sets `grabbed` itself. The handler sets it on `start` and
+  clears it when the move ends.
 
 ## Slots and parts
 

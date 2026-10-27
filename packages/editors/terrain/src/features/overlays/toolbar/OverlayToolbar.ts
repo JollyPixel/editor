@@ -77,7 +77,7 @@ export class OverlayToolbar extends LitElement {
     const { overlay } = settings.options;
 
     return html`
-      <jolly-rail orientation="horizontal" role="toolbar" aria-label="Overlays">
+      <jolly-rail orientation="horizontal" floating role="toolbar" aria-label="Overlays">
         <div class="group" role="group" aria-label="Overlay">
           ${TERRAIN_OVERLAYS.map((option) => html`
             <jolly-tool-button
