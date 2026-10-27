@@ -33,7 +33,8 @@ const kOverlayLabels: Readonly<Record<TerrainOverlay, string>> = {
   none: "No overlay",
   chunks: "Chunk grid",
   lod: "LoD levels",
-  slope: "Slope"
+  slope: "Slope",
+  splat: "Painted materials"
 };
 
 @customElement("terrain-overlay-toolbar")

@@ -66,6 +66,7 @@ export class TerrainView {
   #shading: TerrainShading;
   #overlay: TerrainOverlay = "none";
   #walkableSlope = DEFAULT_WALKABLE_SLOPE;
+  #highlightedMaterial: number | null = null;
   #textures: ChunkTextureStore;
   #materials: MaterialTextureStore;
   #nodes: NodeBatch;
@@ -118,6 +119,18 @@ export class TerrainView {
   ) {
     this.#overlay = mode;
     this.#shading.overlay(mode);
+    this.#requestFrame();
+  }
+
+  get highlightedMaterial(): number | null {
+    return this.#highlightedMaterial;
+  }
+
+  set highlightedMaterial(
+    slot: number | null
+  ) {
+    this.#highlightedMaterial = slot;
+    this.#shading.highlightSlot(slot);
     this.#requestFrame();
   }
 

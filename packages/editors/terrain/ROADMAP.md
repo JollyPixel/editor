@@ -119,7 +119,10 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
 - **Per-material techniques: done** (2026-10-27). The Look toggles reach the
   view: triplanar on steep slopes, stochastic tiling and height blending,
   each sampled only where its material is painted.
-- **Next:** splat overlay.
+- **Splat overlay: done** (2026-10-27). The "Painted materials" overlay
+  colours each slot, shows the colour on its swatch and highlights the
+  selected material.
+- **Next:** M3 end-to-end test.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -176,7 +179,7 @@ chunks yet.
 - [x] The paint tool: the splat drawn in the view, then the Paint tool in the
   brush toolbar painting the selected material, and Ctrl+click material
   pick.
-- [ ] Splat overlay.
+- [x] Splat overlay.
 - [x] Per-material techniques: triplanar, stochastic tiling, height blending.
 - [ ] E2E: two peers paint and sculpt the same chunk, a far peer's horizon
   takes the new dominant material.

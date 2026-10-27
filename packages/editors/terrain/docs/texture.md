@@ -183,10 +183,12 @@ peers.
 - **Slope.** A colour ramp by slope, from 0° to 60°, with faces steeper than
   the walkable angle, 45° by default, in red. Useful to see where a character
   cannot walk. See [slope overlay](./design.md#slope-overlay).
-- **Splat.** Each slot has a fixed colour, shown on its swatch in the
-  palette, and each texel blends the colours of its four slots by weight. The
-  selected material is highlighted. Shows what is painted where, whatever the
-  images look like.
+- **Splat**, "Painted materials" in the toolbar. Each slot has a fixed
+  colour, picked by the golden ratio so neighbouring slots differ, and shown
+  as a dot on its swatch while the overlay is on. Each texel blends the
+  colours of its four slots by weight, before height blending. Texels darken
+  to 30% as the selected material's weight falls, so its paint stands out.
+  Shows what is painted where, whatever the images look like.
 - **Chunk grid.** Chunk edges and coordinates.
 - **LoD.** One colour per level.
 - **Holes.** Hole cells, outlined, with the surface under them shown.

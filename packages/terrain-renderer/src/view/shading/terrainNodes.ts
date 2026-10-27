@@ -73,6 +73,7 @@ import {
   triplanarWeights,
   whiteoutNormal
 } from "./materialSampling.ts";
+import { splatColorNode } from "./splatColors.ts";
 
 // CONSTANTS
 export const NODE_DATA_ATTRIBUTE = "terrainNode";
@@ -92,6 +93,7 @@ const kMinWeight = 1e-3;
 const kDefaultRoughness = 1;
 const kJitterCellsPerMetre = 8;
 const kSplatJitter = 0.9;
+const kSplatDimmed = 0.3;
 const kTriplanarStart = 0.95;
 const kFlatHeight = 0.5;
 const kHeightBlendDepth = 0.2;
@@ -114,7 +116,7 @@ const kNormalCombine: MapCombine = {
   }
 };
 
-export const TERRAIN_OVERLAYS = ["none", "chunks", "lod", "slope"] as const;
+export const TERRAIN_OVERLAYS = ["none", "chunks", "lod", "slope", "splat"] as const;
 export const DEFAULT_WALKABLE_SLOPE = 45;
 export const MAX_WALKABLE_SLOPE = 90;
 export type TerrainOverlay = typeof TERRAIN_OVERLAYS[number];
@@ -153,6 +155,7 @@ export interface TerrainShading {
   material: MeshStandardNodeMaterial;
   overlay(mode: TerrainOverlay): void;
   walkableSlope(degrees: number): void;
+  highlightSlot(slot: number | null): void;
   materialArrays(arrays: MaterialArrays): void;
 }
 
@@ -393,7 +396,8 @@ export function createTerrainShading(
   const channels = ["x", "y", "z", "w"] as const;
   const layers = channels.map((channel, index) => {
     const fallbackSlot = index === 0 ? overviewSlot : float(0);
-    const slot = int(round(select(loaded, splatIndices[channel], fallbackSlot).mul(255)));
+    const slotNumber = round(select(loaded, splatIndices[channel], fallbackSlot).mul(255));
+    const slot = int(slotNumber);
     const entry = textureLoad(textures.materialSlots, ivec2(slot, int(0)));
     const weight = select(
       entry.x.greaterThan(0.5),
@@ -458,6 +462,7 @@ export function createTerrainShading(
     const heightBlend = uses("heightBlend").and(hasMap("height"));
 
     return {
+      slot: slotNumber,
       weight,
       used,
       heightBlend,
@@ -526,10 +531,25 @@ export function createTerrainShading(
   ) {
     return overlay.equal(TERRAIN_OVERLAYS.indexOf(mode));
   }
+  const highlight = uniform(-1);
+  const splatShare = max(totalWeight, float(kMinWeight));
+  const splatColor = layers.reduce<Vec3Node>(
+    (sum, { slot, weight }) => sum.add(splatColorNode(slot).mul(weight)),
+    vec3(0)
+  ).div(splatShare);
+  const highlightWeight = layers.reduce<FloatNode>(
+    (sum, { slot, weight }) => sum.add(select(slot.equal(highlight), weight, float(0))),
+    float(0)
+  ).div(splatShare);
+  const splatOverlay = select(
+    highlight.lessThan(0),
+    splatColor,
+    splatColor.mul(mix(float(kSplatDimmed), float(1), highlightWeight))
+  );
   const surfaceColor = select(
     overlayIs("lod"),
     mix(albedo, levelColor, kLevelTint),
-    select(overlayIs("slope"), slopeColor, albedo)
+    select(overlayIs("slope"), slopeColor, select(overlayIs("splat"), splatOverlay, albedo))
   );
   const showLines = overlayIs("chunks").or(overlayIs("lod"));
   material.colorNode = Fn(() => {
@@ -545,6 +565,9 @@ export function createTerrainShading(
     },
     walkableSlope(degrees) {
       walkable.value = degreesToRadians(degrees);
+    },
+    highlightSlot(slot) {
+      highlight.value = slot ?? -1;
     },
     materialArrays(arrays) {
       for (const map of MATERIAL_MAPS) {

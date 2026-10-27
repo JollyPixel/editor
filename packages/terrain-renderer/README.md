@@ -80,6 +80,11 @@ arrays grow as materials are added. Setting `materialTextureSize` replaces the
 arrays empty, so every map has to be written again. The height map is read
 only by height blending.
 
+With `overlay` set to `"splat"`, each slot is drawn in the colour
+`splatOverlayColor(slot)` returns, blended by weight. Setting
+`highlightedMaterial` to a slot darkens the texels where that slot weighs
+less; `null` turns the highlight off.
+
 Images reach the arrays by a GPU copy, so no pixels stay in memory on the CPU.
 The view needs a `textureCopier`, such as the `WebGPURenderer`, for that;
 `TerrainRenderer` passes the engine's renderer. Without one, every map draws

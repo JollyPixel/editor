@@ -197,7 +197,7 @@ async function mountScene(
   const { sceneManager } = context.runtime.runtime.world;
   disposables.push(() => sceneManager.unloadScene(scene));
   await context.runtime.load(scene);
-  mountMaterialPalette(context, target, { history, selection }, disposables);
+  mountMaterialPalette(context, target, { history, selection, overlay: overlaySettings }, disposables);
 
   const presence = new PresenceStore();
   const roster = new PeerRoster({
@@ -223,7 +223,7 @@ async function mountScene(
 function mountMaterialPalette(
   context: RuntimeEditorContext,
   target: AssetLease<TerrainDocument>,
-  shared: { history: TerrainHistory; selection: MaterialSelection; },
+  shared: { history: TerrainHistory; selection: MaterialSelection; overlay: OverlaySettings; },
   disposables: Array<() => void>
 ): void {
   const element = document.querySelector("terrain-material-palette");
@@ -249,7 +249,7 @@ function mountMaterialPalette(
     importFolder: terrainFolder === "" ? kTextureFolder : `${terrainFolder}/${kTextureFolder}`,
     pickTexture: (title) => session.pickAsset({ kinds: [TEXTURE_ASSET], title })
   });
-  element.context = { document: terrain, palette, selection, thumbnails };
+  element.context = { document: terrain, palette, selection, thumbnails, overlay: shared.overlay };
   disposables.push(() => {
     element.context = null;
     thumbnails.dispose();

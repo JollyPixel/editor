@@ -57,3 +57,18 @@ registerIcon("overlay-slope", svg`
     stroke-linejoin="round"
   />
 `, { tone: "coral" });
+
+registerIcon("overlay-splat", svg`
+  <path
+    class="tone-fill"
+    d="M4 4h9c-1 4 2 6 7 6v10H4Z"
+  />
+  <path
+    class="tone-ink"
+    d="M4 4h16v16H4ZM13 4c-1 4 2 6 7 6M4 15c4-2 7 0 9 5"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linejoin="round"
+  />
+`, { tone: "amber" });

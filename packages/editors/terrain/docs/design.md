@@ -138,8 +138,9 @@ The view uses CDLOD:
 
 `TerrainView.overlay` switches the surface between `none`, `chunks`, which
 draws a one-pixel line on every chunk border, `lod`, which adds a tint per
-LoD level, and `slope`, described below. A uniform selects the mode, so switching does not recompile the
-shader.
+LoD level, `slope`, described below, and `splat`, described in
+[texture](./texture.md#overlays). A uniform selects the mode, so switching
+does not recompile the shader.
 
 ### Slope overlay
 

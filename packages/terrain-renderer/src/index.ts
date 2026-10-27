@@ -67,6 +67,10 @@ export {
   type TerrainOverlay
 } from "./view/shading/terrainNodes.ts";
 export {
+  splatOverlayColor,
+  type SplatColor
+} from "./view/shading/splatColors.ts";
+export {
   TerrainView,
   type TerrainViewOptions
 } from "./view/TerrainView.ts";

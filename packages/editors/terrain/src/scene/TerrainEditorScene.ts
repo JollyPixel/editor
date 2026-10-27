@@ -252,6 +252,16 @@ export class TerrainEditorScene extends Systems.Scene {
     }
     applyOverlaySettings();
     this.#disposables.push(overlaySettings.subscribe("change", applyOverlaySettings));
+
+    const terrain = this.#document;
+    const selection = this.#selection;
+    function highlightSelected(): void {
+      const { selected } = selection;
+      const material = selected === null ? undefined : terrain.materials.material(selected);
+      view.highlightedMaterial = material?.slot ?? null;
+    }
+    highlightSelected();
+    this.#disposables.push(selection.subscribe("change", highlightSelected));
   }
 
   #bindPreview(

@@ -20,6 +20,7 @@ import {
   type TerrainMaterialMapKind,
   type TerrainTextureSize
 } from "@jolly-pixel/asset.terrain/client";
+import { splatOverlayColor } from "@jolly-pixel/terrain.renderer";
 import {
   readDetail,
   SubscriptionController,
@@ -41,6 +42,7 @@ import type {
 } from "../model/MaterialPalette.ts";
 import type { MaterialSelection } from "../model/MaterialSelection.ts";
 import type { MaterialThumbnails } from "../model/MaterialThumbnails.ts";
+import type { OverlaySettings } from "../../overlays/model/OverlaySettings.ts";
 import "./materialIcons.ts";
 
 // CONSTANTS
@@ -98,6 +100,7 @@ export interface MaterialPaletteContext {
   palette: MaterialPalette;
   selection: MaterialSelection;
   thumbnails: MaterialThumbnails;
+  overlay: Pick<OverlaySettings, "options" | "subscribe">;
 }
 
 @customElement("terrain-material-palette")
@@ -156,6 +159,16 @@ export class MaterialPalettePanel extends LitElement {
     .swatch:focus-visible .tile {
       outline: 2px solid var(--jolly-focus-ring);
       outline-offset: 2px;
+    }
+
+    .splat {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px var(--jolly-surface-raised);
     }
 
     .badges {
@@ -262,7 +275,8 @@ export class MaterialPalettePanel extends LitElement {
         context.document.subscribe("change", () => this.requestUpdate()),
         context.document.subscribe("reset", () => this.requestUpdate()),
         context.selection.subscribe("change", () => this.requestUpdate()),
-        context.thumbnails.subscribe("change", () => this.requestUpdate())
+        context.thumbnails.subscribe("change", () => this.requestUpdate()),
+        context.overlay.subscribe("change", () => this.requestUpdate())
       ])
   );
 
@@ -326,7 +340,11 @@ export class MaterialPalettePanel extends LitElement {
     material: TerrainMaterialData,
     selected: boolean
   ): TemplateResult {
-    const albedo = this.context!.thumbnails.url(material.albedo?.id);
+    const { thumbnails, overlay } = this.context!;
+    const albedo = thumbnails.url(material.albedo?.id);
+    const painted = overlay.options.overlay === "splat" ?
+      `rgb(${splatOverlayColor(material.slot).map((channel) => Math.round(channel * 255)).join(" ")})` :
+      null;
 
     return html`
       <button
@@ -338,6 +356,13 @@ export class MaterialPalettePanel extends LitElement {
         @click=${() => this.context!.selection.select(material.id)}
       >
         <div class="tile" style=${albedo === null ? "" : `background-image: url(${albedo})`}>
+          ${painted === null ? nothing : html`
+            <span
+              class="splat"
+              style=${`background: ${painted}`}
+              title="Colour in the Painted materials overlay"
+            ></span>
+          `}
           <div class="badges">
             ${TERRAIN_MATERIAL_MAPS
               .filter((map) => material[map] !== null)
