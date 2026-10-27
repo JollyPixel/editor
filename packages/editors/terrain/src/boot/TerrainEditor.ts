@@ -71,6 +71,9 @@ export class TerrainEditor {
     logger: HostLogger
   ): Promise<EditorRuntime> {
     return EditorRuntime.create(kCanvas, {
+      includePerformanceStats: {
+        position: "top-right"
+      },
       focusCanvas: false,
       viewHelper: true,
       logger
