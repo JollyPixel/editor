@@ -6,6 +6,7 @@ import {
   float,
   floor,
   fract,
+  If,
   int,
   Loop,
   pow,
@@ -30,6 +31,12 @@ type BoolNode = Node<"bool">;
 
 export type MapReader = (uv: Vec2Node, dx: Vec2Node, dy: Vec2Node) => Vec4Node;
 export type ProjectionReader = (sample: Vec4Node, axis: IntNode) => Vec4Node;
+
+export interface SurfaceMap {
+  read: MapReader;
+  enabled: BoolNode;
+  project: ProjectionReader;
+}
 
 export interface SurfaceSampling {
   point: Vec3Node;
@@ -100,35 +107,52 @@ function stochasticCells(
   };
 }
 
-export function sampleSurface(
-  read: MapReader,
-  sampling: SurfaceSampling,
-  project: ProjectionReader
-): Vec4Node {
+export function sampleSurface<TMap extends string>(
+  maps: Readonly<Record<TMap, SurfaceMap>>,
+  sampling: SurfaceSampling
+): Record<TMap, Vec4Node> {
   const { point, dx, dy, triplanar, stochastic, weights } = sampling;
-  const sum = vec4(0).toVar();
+  const names = Object.keys(maps) as TMap[];
+  const sums = createSumVars(names);
   Loop(range("axisIndex", triplanar), (projectionInputs) => {
     const axis = select(triplanar, loopVariable(projectionInputs, "axisIndex"), int(kTopAxis)).toVar();
     const uv = pick(axis, [point.zy, point.xz, point.xy]).toVar();
     const uvDx = pick(axis, [dx.zy, dx.xz, dx.xy]).toVar();
     const uvDy = pick(axis, [dy.zy, dy.xz, dy.xy]).toVar();
     const grid = stochasticCells(uv);
-    const sample = vec4(0).toVar();
+    const samples = createSumVars(names);
     Loop(range("cell", stochastic), (cellInputs) => {
       const cell = loopVariable(cellInputs, "cell");
-      const offset = select(stochastic, pick(cell, grid.offsets), vec2(0));
+      const offset = select(stochastic, pick(cell, grid.offsets), vec2(0)).toVar();
       const weight = select(
         stochastic,
         pick<FloatNode>(cell, [grid.weights.x, grid.weights.y, grid.weights.z]),
         float(1)
-      );
-      sample.addAssign(read(uv.add(offset), uvDx, uvDy).mul(weight));
+      ).toVar();
+      for (const name of names) {
+        If(maps[name].enabled, () => {
+          samples[name].addAssign(maps[name].read(uv.add(offset), uvDx, uvDy).mul(weight));
+        });
+      }
     });
     const share = select(triplanar, pick<FloatNode>(axis, [weights.x, weights.y, weights.z]), float(1));
-    sum.addAssign(project(sample, axis).mul(share));
+    for (const name of names) {
+      sums[name].addAssign(maps[name].project(samples[name], axis).mul(share));
+    }
   });
 
-  return sum;
+  return sums;
+}
+
+function createSumVars<TMap extends string>(
+  names: readonly TMap[]
+): Record<TMap, Vec4Node> {
+  const vars: Partial<Record<TMap, Vec4Node>> = {};
+  for (const name of names) {
+    vars[name] = vec4(0).toVar();
+  }
+
+  return vars as Record<TMap, Vec4Node>;
 }
 
 export function triplanarWeights(
