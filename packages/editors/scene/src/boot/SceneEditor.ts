@@ -5,9 +5,6 @@ import {
   type SceneDocument
 } from "@jolly-pixel/asset.scene/client";
 import {
-  VOXEL_MAP_ASSET as VOXEL_MAP_DESCRIPTOR
-} from "@jolly-pixel/asset.voxel-map/client";
-import {
   EditorRuntime,
   followKeyBindings,
   Teardown,
@@ -16,7 +13,6 @@ import {
   type HostLogger,
   type RuntimeEditorContext
 } from "@jolly-pixel/editor.host";
-import { VoxelMapViewer } from "@jolly-pixel/editor.voxel-map";
 import type { Runtime } from "@jolly-pixel/runtime";
 import { BakedRoomEnvironment } from "@jolly-pixel/three";
 
@@ -27,6 +23,7 @@ import { SCENE_KEYBINDINGS } from "../preferences.ts";
 import { SceneEditorScene } from "../scene/SceneEditorScene.ts";
 import { PresenceStore } from "../state/PresenceStore.ts";
 import { EditorShell } from "./EditorShell.ts";
+import { PROJECT_COMPONENTS } from "./projectComponents.ts";
 
 // CONSTANTS
 const kCanvas = "#scene-viewport canvas";
@@ -47,7 +44,7 @@ export class SceneEditor {
   static readonly identity = {
     title: "Join scene"
   };
-  static readonly kinds = [kSceneKind, ...VoxelMapViewer.kinds];
+  static readonly kinds = [kSceneKind, ...PROJECT_COMPONENTS.documentKinds];
   static readonly archive = {
     fallbackName: "scene",
     resetWarning: "Every scene and asset stored in this browser is " +
@@ -90,7 +87,7 @@ export class SceneEditor {
 
       const assetSlots = new SessionAssetSlots({
         session,
-        descriptors: [VOXEL_MAP_DESCRIPTOR],
+        descriptors: PROJECT_COMPONENTS.descriptors,
         open: context.shell === null ?
           null :
           (assetId) => context.shell?.openAsset(assetId)
@@ -98,11 +95,8 @@ export class SceneEditor {
       const scene = new SceneEditorScene({
         document: target.document,
         room: target.room,
-        openMap: (mapId) => new VoxelMapViewer({
-          assets: session.assets,
-          catalog: session.catalog,
-          mapId
-        }),
+        session,
+        components: PROJECT_COMPONENTS,
         assetSlots,
         presence: new PresenceStore(),
         preferences: context.preferences,

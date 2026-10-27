@@ -17,13 +17,16 @@ import {
   ComponentInspection,
   type InspectedRow
 } from "../../src/components/ComponentInspection.ts";
-import { sceneComponent } from "../../src/components/sceneComponents.ts";
+import { createSceneComponents } from "../helpers/sceneComponents.ts";
+
+// CONSTANTS
+const kComponents = createSceneComponents();
 
 function inspect(
   type: string,
   data: JSONObject
 ): ComponentInspection {
-  const kind = sceneComponent(type);
+  const kind = kComponents.find(type);
   assert.ok(kind, `no component kind ${type}`);
   const entry: SceneComponentJSON = {
     id: "component",

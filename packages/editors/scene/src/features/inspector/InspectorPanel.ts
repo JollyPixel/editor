@@ -35,10 +35,7 @@ import "@jolly-pixel/ui/elements/vector3";
 
 // Import Internal Dependencies
 import "../../app/sceneIcons.ts";
-import {
-  picksAssets,
-  SCENE_COMPONENTS
-} from "../../components/sceneComponents.ts";
+import type { SceneComponents } from "../../components/SceneComponents.ts";
 import type { SceneEditing } from "../../editing/SceneEditing.ts";
 import type { SceneDraft } from "../../state/SceneDraft.ts";
 import { axisValues } from "./axisValues.ts";
@@ -134,6 +131,12 @@ export class InspectorPanel extends LitElement {
       overflow: hidden;
       clip-path: inset(50%);
       white-space: nowrap;
+    }
+
+    .missing {
+      margin: 0 0 4px;
+      font-size: 11px;
+      color: var(--jolly-text-muted, #9aa3ad);
     }
 
     .unknown {
@@ -319,7 +322,7 @@ export class InspectorPanel extends LitElement {
   ): void {
     this.#menu.open(
       MenuSession.from(
-        addComponentEntries(),
+        addComponentEntries(editing.components),
         async(type) => {
           await editing.actions.addComponent(actorId, type);
         }
@@ -329,11 +332,13 @@ export class InspectorPanel extends LitElement {
   }
 }
 
-function addComponentEntries(): MenuEntry<string>[] {
+function addComponentEntries(
+  components: SceneComponents
+): MenuEntry<string>[] {
   const direct: MenuEntry<string>[] = [];
   const picking: MenuEntry<string>[] = [];
-  for (const { definition: { type }, label, icon } of SCENE_COMPONENTS) {
-    const picks = picksAssets(type);
+  for (const { definition: { type }, label, icon } of components.kinds) {
+    const picks = components.picksAssets(type);
     (picks ? picking : direct).push({
       id: type,
       label: picks ? `${label}…` : label,

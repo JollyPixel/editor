@@ -15,14 +15,15 @@ import {
 } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import { actorIcon } from "../../components/sceneComponents.ts";
+import type { SceneComponents } from "../../components/SceneComponents.ts";
 
 export class ActorTreeRows {
   static readonly EMPTY = new ActorTreeRows([]);
 
   static read(
     tree: Pick<SceneTreeReader, "actorIds" | "peekActor">,
-    marks: PeerMarkMap<string>
+    marks: PeerMarkMap<string>,
+    components: Pick<SceneComponents, "actorIcon">
   ): ActorTreeRows {
     const nodes = new Map<string, TreeNode>();
     const roots: TreeNode[] = [];
@@ -32,7 +33,7 @@ export class ActorTreeRows {
         continue;
       }
 
-      const node = ActorTreeRows.#node(actor, marks);
+      const node = ActorTreeRows.#node(actor, marks, components);
       nodes.set(id, node);
 
       const parent = actor.parentId === null ? undefined : nodes.get(actor.parentId);
@@ -49,14 +50,15 @@ export class ActorTreeRows {
 
   static #node(
     actor: Readonly<SceneActorJSON>,
-    marks: PeerMarkMap<string>
+    marks: PeerMarkMap<string>,
+    components: Pick<SceneComponents, "actorIcon">
   ): TreeNode {
     const badges = peerBadges(actor.id, marks);
 
     return {
       id: actor.id,
       label: actor.name,
-      icon: actorIcon(actor.components.map(({ type }) => type)),
+      icon: components.actorIcon(actor.components.map(({ type }) => type)),
       visible: actor.visible,
       renamable: true,
       ...badges.length > 0 ? { badges } : {}

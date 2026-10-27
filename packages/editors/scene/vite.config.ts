@@ -8,6 +8,7 @@ import {
 } from "vite";
 import {
   createAssetServerPlugin,
+  createProjectContributionsPlugin,
   createProjectFileWatchPlugin,
   createProjectKindsPlugin,
   ProjectFile,
@@ -25,6 +26,7 @@ import { createSceneProject } from "./src/boot/sceneProject.ts";
 
 // CONSTANTS
 const kAssetsRoot = path.join(import.meta.dirname, "assets");
+const kComponentPackages = ["@jolly-pixel/editor.voxel-map"];
 const kProjectFile: ProjectFileData = {
   version: 1,
   kinds: {
@@ -52,6 +54,7 @@ export default defineConfig(async(env): Promise<UserConfig> => {
     plugins: [
       mode.plugins(),
       createProjectKindsPlugin(kinds),
+      createProjectContributionsPlugin(kinds, kComponentPackages),
       createProjectFileWatchPlugin(projectFile),
       createAssetServerPlugin({
         root: kAssetsRoot,

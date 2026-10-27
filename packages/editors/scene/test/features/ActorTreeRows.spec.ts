@@ -8,6 +8,7 @@ import type { PresencePeer } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { ActorTreeRows } from "../../src/features/hierarchy/ActorTreeRows.ts";
+import { createSceneComponents } from "../helpers/sceneComponents.ts";
 
 describe("ActorTreeRows", () => {
   test("nests children, picks the icon of the first known component and badges peer selections", () => {
@@ -25,7 +26,8 @@ describe("ActorTreeRows", () => {
 
     const [root] = ActorTreeRows.read(
       document.tree,
-      new Map([[childId, [peer]]])
+      new Map([[childId, [peer]]]),
+      createSceneComponents()
     ).roots;
 
     assert.strictEqual(root.icon, "actor-empty");

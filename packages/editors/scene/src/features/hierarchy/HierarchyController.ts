@@ -20,7 +20,7 @@ import type {
 import type { SceneEditing } from "../../editing/SceneEditing.ts";
 import { ActorTreeRows } from "./ActorTreeRows.ts";
 import type { AddActorAction } from "./model/ActorPreset.ts";
-import { ACTOR_PRESET_MENU } from "./model/actorPresets.ts";
+import type { ActorPresetMenu } from "./model/ActorPresetMenu.ts";
 import { TreeExpansion } from "./TreeExpansion.ts";
 
 export interface HierarchyView {
@@ -29,35 +29,38 @@ export interface HierarchyView {
 
 type RowAction = "rename" | "duplicate" | "delete" | AddActorAction;
 
-// CONSTANTS
-const kRowEntries: readonly MenuEntry<RowAction>[] = [
-  {
-    id: "group:add-child",
-    label: "Add child",
-    icon: "plus",
-    items: ACTOR_PRESET_MENU.entries
-  },
-  "separator",
-  {
-    id: "rename",
-    label: "Rename",
-    icon: "action-rename"
-  },
-  {
-    id: "duplicate",
-    label: "Duplicate",
-    icon: "action-duplicate"
-  },
-  "separator",
-  {
-    id: "delete",
-    label: "Delete",
-    icon: "trash",
-    intent: "danger"
-  }
-];
-
 export class HierarchyController {
+  static #rowEntries(
+    presets: ActorPresetMenu
+  ): MenuEntry<RowAction>[] {
+    return [
+      {
+        id: "group:add-child",
+        label: "Add child",
+        icon: "plus",
+        items: presets.entries
+      },
+      "separator",
+      {
+        id: "rename",
+        label: "Rename",
+        icon: "action-rename"
+      },
+      {
+        id: "duplicate",
+        label: "Duplicate",
+        icon: "action-duplicate"
+      },
+      "separator",
+      {
+        id: "delete",
+        label: "Delete",
+        icon: "trash",
+        intent: "danger"
+      }
+    ];
+  }
+
   static #destinationParent(
     command: SceneCommand
   ): string | null {
@@ -82,7 +85,8 @@ export class HierarchyController {
     if (editing !== null) {
       this.#rows = ActorTreeRows.read(
         editing.document.tree,
-        editing.presence.selections
+        editing.presence.selections,
+        editing.components
       );
     }
     this.#host.requestUpdate();
@@ -207,12 +211,13 @@ export class HierarchyController {
   };
 
   addMenu(): MenuSession {
-    if (this.#connection.current === null) {
+    const editing = this.#connection.current;
+    if (editing === null) {
       return MenuSession.EMPTY;
     }
 
     return MenuSession.from(
-      ACTOR_PRESET_MENU.entries,
+      editing.presets.entries,
       (action) => this.#add(action, null)
     );
   }
@@ -229,7 +234,7 @@ export class HierarchyController {
     }
 
     return MenuSession.forRow(
-      kRowEntries,
+      HierarchyController.#rowEntries(editing.presets),
       () => editing.document.tree.has(id),
       (action) => this.#runRow(action, id)
     );
@@ -258,9 +263,14 @@ export class HierarchyController {
     action: AddActorAction,
     parentId: string | null
   ): Promise<void> {
-    const preset = ACTOR_PRESET_MENU.find(action);
+    const editing = this.#connection.current;
+    if (editing === null) {
+      return;
+    }
+
+    const preset = editing.presets.find(action);
     if (preset !== undefined) {
-      await this.#connection.current?.actions.addActor(preset, parentId);
+      await editing.actions.addActor(preset, parentId);
     }
   }
 }

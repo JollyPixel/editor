@@ -20,6 +20,10 @@
       "types": "./dist/preferences/index.d.ts",
       "default": "./dist/preferences/index.js"
     },
+    "./scene": {
+      "types": "./dist/scene/index.d.ts",
+      "default": "./dist/scene/index.js"
+    },
     "./ui": {
       "types": "./dist/ui/index.d.ts",
       "default": "./dist/ui/index.js"

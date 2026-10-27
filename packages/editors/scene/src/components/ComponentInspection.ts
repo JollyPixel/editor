@@ -5,15 +5,17 @@ import type {
   JSONValue,
   SceneComponentJSON
 } from "@jolly-pixel/asset.scene/client";
+import type {
+  FormRow,
+  SceneComponentKind
+} from "@jolly-pixel/editor.host/scene";
 import { Systems } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
 import {
   readField,
-  type FormRow,
   type ParsedData
 } from "./componentForms.ts";
-import type { SceneComponentKind } from "./sceneComponents.ts";
 
 export interface InspectedRow {
   row: FormRow;
@@ -30,7 +32,8 @@ export class ComponentInspection {
     entry: SceneComponentJSON,
     kind: SceneComponentKind
   ) {
-    const { data, rows } = kind.form(entry.data);
+    const data: ParsedData = kind.definition.parse(entry.data);
+    const rows = kind.form(data);
     const defaults: ParsedData = kind.definition.parse(defaultsSource(data));
 
     this.#stored = entry.data;

@@ -2,7 +2,7 @@
 import type { SceneDocument } from "@jolly-pixel/asset.scene/client";
 
 // Import Internal Dependencies
-import { componentAssetSlots } from "../components/sceneComponents.ts";
+import type { SceneComponents } from "../components/SceneComponents.ts";
 import type {
   ActorPreset,
   PickedAssets
@@ -25,6 +25,7 @@ export interface SceneActionsOptions {
   document: SceneDocument;
   history: Pick<SceneHistory, "record">;
   selection: SelectionStore;
+  components: Pick<SceneComponents, "assetSlots">;
   assetSlots: Pick<SceneAssetSlots, "name" | "pick">;
 }
 
@@ -32,6 +33,7 @@ export class SceneActions {
   #document: SceneDocument;
   #history: Pick<SceneHistory, "record">;
   #selection: SelectionStore;
+  #components: Pick<SceneComponents, "assetSlots">;
   #assetSlots: Pick<SceneAssetSlots, "name" | "pick">;
 
   constructor(
@@ -40,6 +42,7 @@ export class SceneActions {
     this.#document = options.document;
     this.#history = options.history;
     this.#selection = options.selection;
+    this.#components = options.components;
     this.#assetSlots = options.assetSlots;
   }
 
@@ -140,7 +143,7 @@ export class SceneActions {
     type: string
   ): Promise<PickedAssets | null> {
     const assets: PickedAssets = {};
-    for (const [slot, assetType] of Object.entries(componentAssetSlots(type))) {
+    for (const [slot, assetType] of Object.entries(this.#components.assetSlots(type))) {
       const picked = await this.#assetSlots.pick(assetType, null);
       if (picked === null) {
         return null;
