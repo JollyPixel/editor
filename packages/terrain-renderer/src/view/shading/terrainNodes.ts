@@ -12,6 +12,7 @@ import {
   clamp,
   cos,
   Discard,
+  dot,
   float,
   floor,
   Fn,
@@ -27,6 +28,7 @@ import {
   normalize,
   round,
   select,
+  sin,
   texture,
   textureLoad,
   transformNormalToView,
@@ -42,6 +44,7 @@ import {
   OVERVIEW_SAMPLES,
   OVERVIEW_SPACING
 } from "../../terrain/OverviewMap.ts";
+import { SPLAT_TEXELS } from "../../terrain/SplatMap.ts";
 import { SKIRT_EDGES } from "../lod/skirtMasks.ts";
 import {
   APRON_MARGIN,
@@ -70,10 +73,14 @@ const kSlopeFlat = vec3(0.24, 0.58, 0.32);
 const kSlopeMid = vec3(0.86, 0.8, 0.26);
 const kSlopeHigh = vec3(0.9, 0.48, 0.16);
 const kSlopeTooSteep = vec3(0.82, 0.12, 0.12);
-const kGroundSlot = 0;
 const kMinTiling = 1e-3;
+const kMinWeight = 1e-3;
 const kDefaultRoughness = 1;
+const kJitterCellsPerMetre = 8;
+const kSplatJitter = 0.9;
 const kSampledMaps = ["albedo", "normal", "orm"] as const;
+
+type SampledMap = typeof kSampledMaps[number];
 
 export const TERRAIN_OVERLAYS = ["none", "chunks", "lod", "slope"] as const;
 export const DEFAULT_WALKABLE_SLOPE = 45;
@@ -87,8 +94,11 @@ type Vec2Node = Node<"vec2">;
 
 export interface TerrainTextures {
   heights: THREE.DataArrayTexture;
+  splatIndices: THREE.DataArrayTexture;
+  splatWeights: THREE.DataArrayTexture;
   lookup: THREE.DataTexture;
   overview: THREE.DataTexture;
+  overviewMaterials: THREE.DataTexture;
   materialSlots: THREE.DataTexture;
   materialArrays: MaterialArrays;
 }
@@ -303,35 +313,86 @@ export function createTerrainShading(
   );
   const surfaceNormal = normalize(vec3(gradient.x.negate(), float(1), gradient.y.negate()));
 
-  const slotEntry = textureLoad(textures.materialSlots, ivec2(kGroundSlot, 0));
-  const materialIndex = int(max(slotEntry.x.sub(1), float(0)));
-  const materialMaps = int(slotEntry.z);
-  const materialUv = fragmentWorld.div(max(slotEntry.y, float(kMinTiling)));
-  const materialSamples = {
-    albedo: texture(textures.materialArrays.albedo, materialUv).depth(materialIndex),
-    normal: texture(textures.materialArrays.normal, materialUv).depth(materialIndex),
-    orm: texture(textures.materialArrays.orm, materialUv).depth(materialIndex)
+  const loaded = fragmentLayer.greaterThanEqual(int(0));
+  const splatLayer = select(loaded, fragmentLayer, int(0));
+  const splatCell = floor(fragmentWorld.mul(kJitterCellsPerMetre));
+  const jitter = vec2(
+    fract(sin(dot(splatCell, vec2(12.9898, 78.233))).mul(43758.5453)),
+    fract(sin(dot(splatCell, vec2(39.3468, 11.135))).mul(24634.6345))
+  ).sub(0.5).mul(kSplatJitter);
+  const splatTexel = clamp(
+    floor(local.mul(SPLAT_TEXELS / CHUNK_SAMPLES).add(jitter)),
+    vec2(0),
+    vec2(SPLAT_TEXELS - 1)
+  );
+  const splatIndices = textureLoad(textures.splatIndices, ivec2(splatTexel)).depth(splatLayer);
+  const splatWeights = textureLoad(textures.splatWeights, ivec2(splatTexel)).depth(splatLayer);
+  const overviewPoint = round(fragmentWorld.div(OVERVIEW_SPACING));
+  const overviewTexel = overviewPoint.sub(
+    floor(overviewPoint.div(OVERVIEW_TEXTURE_SIZE)).mul(OVERVIEW_TEXTURE_SIZE)
+  );
+  const overviewSlot = textureLoad(textures.overviewMaterials, ivec2(overviewTexel)).x;
+  const channels = ["x", "y", "z", "w"] as const;
+  const sampleNodes: Record<SampledMap, ReturnType<typeof texture>[]> = {
+    albedo: [],
+    normal: [],
+    orm: []
   };
-  function hasMap(
-    map: MaterialMap
-  ): BoolNode {
-    return slotEntry.x.greaterThan(0.5)
-      .and(materialMaps.bitAnd(int(MATERIAL_MAP_BITS[map])).notEqual(int(0)));
+  const layers = channels.map((channel, index) => {
+    const fallbackSlot = index === 0 ? overviewSlot : float(0);
+    const slot = int(round(select(loaded, splatIndices[channel], fallbackSlot).mul(255)));
+    const weight = select(loaded, splatWeights[channel], float(index === 0 ? 1 : 0));
+    const entry = textureLoad(textures.materialSlots, ivec2(slot, int(0)));
+    const present = entry.x.greaterThan(0.5);
+    const maps = int(entry.z);
+    const arrayLayer = int(max(entry.x.sub(1), float(0)));
+    const uv = fragmentWorld.div(max(entry.y, float(kMinTiling)));
+    function sampled(
+      map: SampledMap
+    ) {
+      const node = texture(textures.materialArrays[map], uv).depth(arrayLayer);
+      sampleNodes[map].push(node);
+
+      return node;
+    }
+    function hasMap(
+      map: MaterialMap
+    ): BoolNode {
+      return maps.bitAnd(int(MATERIAL_MAP_BITS[map])).notEqual(int(0));
+    }
+    const orm = sampled("orm");
+
+    return {
+      weight: select(present, weight, float(0)),
+      albedo: select(hasMap("albedo"), sampled("albedo").rgb, kAlbedo),
+      detail: select(hasMap("normal"), sampled("normal").rgb.mul(2).sub(1), vec3(0, 0, 1)),
+      orm: select(hasMap("orm"), orm.rgb, vec3(1, kDefaultRoughness, 0))
+    };
+  });
+  const totalWeight = layers.reduce<FloatNode>((total, { weight }) => total.add(weight), float(0));
+  const painted = totalWeight.greaterThan(kMinWeight);
+  function blended(
+    pick: (layer: typeof layers[number]) => Node<"vec3">,
+    fallback: Node<"vec3">
+  ): Node<"vec3"> {
+    const sum = layers.reduce<Node<"vec3">>(
+      (total, layer) => total.add(pick(layer).mul(layer.weight)),
+      vec3(0)
+    );
+
+    return select(painted, sum.div(max(totalWeight, float(kMinWeight))), fallback);
   }
-  const albedo = select(hasMap("albedo"), materialSamples.albedo.rgb, kAlbedo);
-  const detail = materialSamples.normal.rgb.mul(2).sub(1);
+  const albedo = blended(({ albedo: color }) => color, kAlbedo);
+  const detail = normalize(blended(({ detail: value }) => value, vec3(0, 0, 1)));
   const tangent = normalize(vec3(1, 0, 0).sub(surfaceNormal.mul(surfaceNormal.x)));
   const bitangent = normalize(vec3(0, 0, 1).sub(surfaceNormal.mul(surfaceNormal.z)));
-  const detailedNormal = normalize(
+  material.normalNode = transformNormalToView(normalize(
     tangent.mul(detail.x).add(bitangent.mul(detail.y)).add(surfaceNormal.mul(detail.z))
-  );
-  material.normalNode = transformNormalToView(
-    select(hasMap("normal"), detailedNormal, surfaceNormal)
-  );
-  const orm = materialSamples.orm;
-  material.aoNode = select(hasMap("orm"), orm.r, float(1));
-  material.roughnessNode = select(hasMap("orm"), orm.g, float(kDefaultRoughness));
-  material.metalnessNode = select(hasMap("orm"), orm.b, float(0));
+  ));
+  const orm = blended(({ orm: value }) => value, vec3(1, kDefaultRoughness, 0));
+  material.aoNode = orm.x;
+  material.roughnessNode = orm.y;
+  material.metalnessNode = orm.z;
   const overlay = uniform(0);
   const walkable = uniform(degreesToRadians(DEFAULT_WALKABLE_SLOPE));
   const slope = atan(length(gradient));
@@ -374,7 +435,9 @@ export function createTerrainShading(
     },
     materialArrays(arrays) {
       for (const map of kSampledMaps) {
-        materialSamples[map].value = arrays[map];
+        for (const node of sampleNodes[map]) {
+          node.value = arrays[map];
+        }
       }
     }
   };

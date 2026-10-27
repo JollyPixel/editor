@@ -255,13 +255,14 @@ export class TerrainEditorScene extends Systems.Scene {
   ): void {
     const listeners: Pick<
       TerrainPreviewEvents,
-      "tilesChanged" | "chunkAdded" | "chunkRemoved" | "overviewChanged" | "reset"
+      "tilesChanged" | "splatChanged" | "chunkAdded" | "chunkRemoved" | "overviewChanged" | "reset"
     > = {
       tilesChanged: (tiles) => {
         view.tilesChanged(tiles);
         surfaceChanged();
         this.world.invalidate();
       },
+      splatChanged: (tiles) => view.splatChanged(tiles),
       chunkAdded: (coord) => view.chunkAdded(coord),
       chunkRemoved: (coord) => view.chunkRemoved(coord),
       overviewChanged: (coords) => view.overviewChanged(coords),
@@ -271,12 +272,14 @@ export class TerrainEditorScene extends Systems.Scene {
       }
     };
     preview.on("tilesChanged", listeners.tilesChanged);
+    preview.on("splatChanged", listeners.splatChanged);
     preview.on("chunkAdded", listeners.chunkAdded);
     preview.on("chunkRemoved", listeners.chunkRemoved);
     preview.on("overviewChanged", listeners.overviewChanged);
     preview.on("reset", listeners.reset);
     this.#disposables.push(() => {
       preview.off("tilesChanged", listeners.tilesChanged);
+      preview.off("splatChanged", listeners.splatChanged);
       preview.off("chunkAdded", listeners.chunkAdded);
       preview.off("chunkRemoved", listeners.chunkRemoved);
       preview.off("overviewChanged", listeners.overviewChanged);

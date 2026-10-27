@@ -133,9 +133,14 @@ chunk, so a far peer colours its horizon without loading the chunk, and
 members that have not subscribed to a painted chunk receive only the tiles
 that hold those points.
 
-The fragment shader reads both, samples the four materials from the arrays
-and blends them. The cost per pixel is fixed, whatever the number of
-materials in the terrain. Slots with a weight of 0 are skipped.
+The fragment shader reads the texel under the pixel, samples its four
+materials from the arrays and blends them by weight: albedo, normal detail
+and ORM alike. The cost per pixel is fixed, whatever the number of materials
+in the terrain; a slot whose material was deleted adds nothing, and the other
+weights are renormalised. The texel is picked with a small world-space jitter,
+fixed per 12.5 cm cell, so the edge between two materials reads as a ragged
+line instead of the 0.5 m texel grid. A pixel on an unloaded chunk draws the
+dominant material of the nearest 32 m overview point.
 
 Splat is stored per texel, not per vertex, so it does not change with the LoD.
 

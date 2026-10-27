@@ -93,8 +93,11 @@ export class TerrainView {
     });
     this.#shading = createTerrainShading({
       heights: this.#textures.heights,
+      splatIndices: this.#textures.splatIndices,
+      splatWeights: this.#textures.splatWeights,
       lookup: this.#textures.lookup,
       overview: this.#textures.overview,
+      overviewMaterials: this.#textures.overviewMaterials,
       materialSlots: this.#materials.slots,
       materialArrays: this.#materials.arrays
     });
@@ -189,6 +192,13 @@ export class TerrainView {
     const changed = [...tiles];
     this.#textures.tilesChanged(changed);
     this.selection.invalidate(new Map(changed.map(({ chunk }) => [chunk.key, chunk])).values());
+    this.#requestFrame();
+  }
+
+  splatChanged(
+    tiles: Iterable<TileCoord>
+  ): void {
+    this.#textures.splatChanged(tiles);
     this.#requestFrame();
   }
 

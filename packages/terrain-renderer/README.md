@@ -83,8 +83,13 @@ for height blending and is not sampled yet.
 Images reach the arrays by a GPU copy, so no pixels stay in memory on the CPU.
 The view needs a `textureCopier`, such as the `WebGPURenderer`, for that;
 `TerrainRenderer` passes the engine's renderer. Without one, every map draws
-its fallback. Until splat maps arrive, the whole surface draws the material
-in slot 0.
+its fallback.
+
+Each chunk's splat map is uploaded to the view with the chunk; call
+`splatChanged(tiles)` after painting so the view re-uploads those chunks. A
+pixel blends the four materials of its splat texel by weight, and a pixel on
+an unloaded chunk draws the overview's dominant material at the nearest 32 m
+point.
 
 ## License
 

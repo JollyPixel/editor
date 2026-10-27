@@ -108,8 +108,11 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   from heights; the overview and the manifest keep each 32 m point's dominant
   material. A chunk loads from its heights and takes its splat when it
   arrives. Nothing paints or draws it yet.
-- **Next:** splat rendering: splat textures in the view, and the shader
-  blending four materials per pixel.
+- **Splat rendering: done** (2026-10-27). The view uploads each chunk's
+  splat, the shader blends four materials per pixel with jittered texel
+  edges, and the far overview draws each point's dominant material. First
+  half of the paint tool item.
+- **Next:** the paint tool in the brush toolbar.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -163,8 +166,9 @@ chunks yet.
   editing a material's maps, tiling and flags.
 - [x] Splat parts, `splat-patched` commits, and the overview's dominant
   material.
-- [ ] The paint tool in the brush toolbar, painting the selected material,
-  and Ctrl+click material pick.
+- [ ] The paint tool: the splat drawn in the view (done), then the Paint tool
+  in the brush toolbar painting the selected material, and Ctrl+click
+  material pick.
 - [ ] Splat overlay.
 - [ ] Per-material techniques: triplanar, stochastic tiling, height blending.
 - [ ] E2E: two peers paint and sculpt the same chunk, a far peer's horizon
