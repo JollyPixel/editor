@@ -56,6 +56,7 @@ function strokeSetup(
         settings
       },
       {
+        tool: options.tool === "paint" || options.tool === undefined ? "raise" : options.tool,
         point: kPoint,
         height,
         lower

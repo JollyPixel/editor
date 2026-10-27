@@ -183,18 +183,21 @@ async function mountScene(
     });
   }
 
+  const selection = new MaterialSelection(target.document);
+  disposables.push(() => selection.dispose());
   const scene = new TerrainEditorScene({
     document: target.document,
     sculpt,
     overlaySettings,
     history,
     room: target.room,
-    textures: (assetId) => context.session.lease(kTextureKind, assetId)
+    textures: (assetId) => context.session.lease(kTextureKind, assetId),
+    selection
   });
   const { sceneManager } = context.runtime.runtime.world;
   disposables.push(() => sceneManager.unloadScene(scene));
   await context.runtime.load(scene);
-  mountMaterialPalette(context, target, history, disposables);
+  mountMaterialPalette(context, target, { history, selection }, disposables);
 
   const presence = new PresenceStore();
   const roster = new PeerRoster({
@@ -220,7 +223,7 @@ async function mountScene(
 function mountMaterialPalette(
   context: RuntimeEditorContext,
   target: AssetLease<TerrainDocument>,
-  history: TerrainHistory,
+  shared: { history: TerrainHistory; selection: MaterialSelection; },
   disposables: Array<() => void>
 ): void {
   const element = document.querySelector("terrain-material-palette");
@@ -229,8 +232,8 @@ function mountMaterialPalette(
   }
 
   const { session } = context;
+  const { history, selection } = shared;
   const terrain = target.document;
-  const selection = new MaterialSelection(terrain);
   const thumbnails = new MaterialThumbnails({
     document: terrain,
     lease: (assetId) => session.lease(kTextureKind, assetId),
@@ -250,7 +253,6 @@ function mountMaterialPalette(
   disposables.push(() => {
     element.context = null;
     thumbnails.dispose();
-    selection.dispose();
   });
 }
 

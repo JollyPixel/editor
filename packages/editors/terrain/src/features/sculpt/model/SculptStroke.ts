@@ -19,7 +19,8 @@ import type {
 } from "./SculptSettings.ts";
 import {
   sculptStamp,
-  type SculptStamp
+  type SculptStamp,
+  type SculptTool
 } from "./sculptStamp.ts";
 import {
   StampSpacer,
@@ -33,6 +34,7 @@ export interface SculptStrokeOptions {
 }
 
 export interface StrokePress {
+  readonly tool: SculptTool;
   readonly point: GroundPoint;
   readonly height: number;
   readonly lower: boolean;
@@ -45,6 +47,7 @@ export class SculptStroke {
   #preview: TerrainStroke;
   #spacer: StampSpacer;
   #cadence = new CommitCadence();
+  #tool: SculptTool;
   #lower: boolean;
   #target: number;
 
@@ -58,6 +61,7 @@ export class SculptStroke {
     this.#step = options.history.open(TERRAIN_HISTORY_SCOPE, "Sculpt");
     this.#terrain = this.#preview.terrain;
     this.#spacer = new StampSpacer(press.point);
+    this.#tool = press.tool;
     this.#lower = press.lower;
     this.#target = flattenTarget === "fixed" ? flattenHeight : press.height;
   }
@@ -94,7 +98,7 @@ export class SculptStroke {
   ): void {
     const options = this.#settings.options;
     const strength = stampStrength(
-      options.tool,
+      this.#tool,
       options.strength,
       elapsed,
       centres.length
@@ -121,7 +125,7 @@ export class SculptStroke {
       strength,
       falloff: options.falloff
     };
-    switch (options.tool) {
+    switch (this.#tool) {
       case "raise":
         return {
           ...footprint,

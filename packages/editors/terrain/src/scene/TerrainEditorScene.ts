@@ -29,6 +29,7 @@ import {
   MaterialTextures,
   type TextureLease
 } from "../features/materials/rendering/MaterialTextures.ts";
+import type { MaterialSelection } from "../features/materials/model/MaterialSelection.ts";
 import { PeerBrushRings } from "../features/sculpt/collaboration/PeerBrushRings.ts";
 import type { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
 import type { OverlaySettings } from "../features/overlays/model/OverlaySettings.ts";
@@ -67,6 +68,7 @@ export interface TerrainEditorSceneOptions {
   history: TerrainHistory;
   room: Room;
   textures: (assetId: string) => TextureLease;
+  selection: MaterialSelection;
 }
 
 interface TerrainSceneParts {
@@ -86,6 +88,7 @@ export class TerrainEditorScene extends Systems.Scene {
   #history: TerrainHistory;
   #room: Room;
   #textures: (assetId: string) => TextureLease;
+  #selection: MaterialSelection;
   #parts: TerrainSceneParts | null = null;
   #cameraPosition = new THREE.Vector3();
   #disposables: Array<() => void> = [];
@@ -100,6 +103,7 @@ export class TerrainEditorScene extends Systems.Scene {
     this.#history = options.history;
     this.#room = options.room;
     this.#textures = options.textures;
+    this.#selection = options.selection;
   }
 
   get view(): TerrainView {
@@ -169,8 +173,10 @@ export class TerrainEditorScene extends Systems.Scene {
     const brush = this.world
       .createActor("sculpt-brush")
       .addComponentAndGet(SculptBrush, {
+        document: this.#document,
         preview,
         settings: this.#sculpt,
+        selection: this.#selection,
         history: this.#history,
         camera: camera.camera,
         rings: peerRings

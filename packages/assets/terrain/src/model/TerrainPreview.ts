@@ -14,6 +14,7 @@ import {
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
+import type { SplatTilePatch } from "../network/splat.ts";
 import type {
   TerrainChange,
   TerrainDocument
@@ -196,6 +197,30 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
   ): void {
     if (!this.#disposed) {
       this.#drop(peerId);
+    }
+  }
+
+  writeSplat(
+    patches: Iterable<SplatTilePatch>
+  ): void {
+    if (this.#disposed) {
+      return;
+    }
+
+    const written: TileCoord[] = [];
+    for (const { tile, splat } of patches) {
+      if (!this.#displayed.has(tile.chunk)) {
+        continue;
+      }
+      for (const terrain of this.#terrains()) {
+        if (terrain.has(tile.chunk)) {
+          terrain.writeSplatTile(tile, splat);
+        }
+      }
+      written.push(tile);
+    }
+    if (written.length > 0) {
+      this.emit("splatChanged", written);
     }
   }
 

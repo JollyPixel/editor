@@ -112,7 +112,11 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   splat, the shader blends four materials per pixel with jittered texel
   edges, and the far overview draws each point's dominant material. First
   half of the paint tool item.
-- **Next:** the paint tool in the brush toolbar.
+- **Paint tool: done** (2026-10-27). The brush toolbar's Paint tool paints the
+  material selected in the palette, shown at once to the painter and
+  committed on the stroke cadence as one undo step; Ctrl+click selects the
+  material under the cursor. Peers see paint at each commit, not live.
+- **Next:** splat overlay.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -166,9 +170,9 @@ chunks yet.
   editing a material's maps, tiling and flags.
 - [x] Splat parts, `splat-patched` commits, and the overview's dominant
   material.
-- [ ] The paint tool: the splat drawn in the view (done), then the Paint tool
-  in the brush toolbar painting the selected material, and Ctrl+click
-  material pick.
+- [x] The paint tool: the splat drawn in the view, then the Paint tool in the
+  brush toolbar painting the selected material, and Ctrl+click material
+  pick.
 - [ ] Splat overlay.
 - [ ] Per-material techniques: triplanar, stochastic tiling, height blending.
 - [ ] E2E: two peers paint and sculpt the same chunk, a far peer's horizon

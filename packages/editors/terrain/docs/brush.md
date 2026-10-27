@@ -7,11 +7,12 @@ How the local brush aims, shapes and writes. What peers see is in
 ## Settings
 
 The toolbar picks one tool at a time: raise and lower, smooth, flatten or
-paint. They share one ring and these settings, except `strength`, which each
-tool remembers:
+paint. They share one ring and these settings, except strength, which the
+sculpt tools share and paint keeps on its own:
 
 - `size`: radius in metres, 0.5 to 128. Ctrl+wheel resizes.
-- `strength`: 0 to 1, per tool.
+- `strength`: 0 to 1, for the sculpt tools; `paintStrength` for paint, 0.5
+  by default.
 - `falloff`: a curve from the centre to the edge: `smooth` (default),
   `linear`, `sphere`, `sharp` or `constant`.
 - `spacing`: distance between two stamps along a stroke, as a fraction of the
@@ -78,14 +79,22 @@ centre lies inside the radius. Heights under a hole are kept.
 
 ## Paint brush
 
-Paints the material selected in the palette into the splat map. For each
-texel, the weight added is `weight × strength`; the four strongest materials
-are then kept and renormalised to sum to 255. A material not yet among a
-texel's four takes the place of the weakest one. See
-[texture](./texture.md#splat).
+Paints the material selected in the palette into the splat map; with no
+material selected, a press does nothing. Each stamp moves every texel within
+the radius toward the material by `falloff weight × strength`, the strength
+growing with the time the brush is held, as smooth and flatten do: the
+texel's weights are scaled down by that amount and the material's weight
+gains it, so they keep summing to 255. A material not yet among a texel's
+four takes the place of the weakest one, whose weight goes to the others.
+See [texture](./texture.md#splat).
 
-Ctrl+click picks the material with the highest weight under the cursor, as
-flatten picks a height.
+The painter sees each stamp at once. The paint reaches peers and the saved
+asset as `splat-patched` commits on the stroke commit cadence: at its end,
+every 2 s, and once 4 chunks are touched. Peers do not see the stroke before
+its commits; there are no live paint patches yet. A stroke is one undo step.
+
+Ctrl+click picks the material with the highest weight under the cursor and
+selects it in the palette, as flatten picks a height.
 
 ## Previews
 
