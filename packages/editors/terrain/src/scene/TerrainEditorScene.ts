@@ -41,24 +41,15 @@ import {
 
 // CONSTANTS
 const kCameraPreset: OrbitFlyCameraOptions = {
-  focusMode: "elastic",
   position: {
-    x: CHUNK_SAMPLES * 1.5,
-    y: CHUNK_SAMPLES,
-    z: CHUNK_SAMPLES * 1.5
-  },
-  pivotPosition: {
     x: CHUNK_SAMPLES / 2,
-    y: 0,
-    z: CHUNK_SAMPLES / 2
+    y: CHUNK_SAMPLES * 0.75,
+    z: CHUNK_SAMPLES * 1.8
   },
   pitch: -0.5,
   moveSpeed: 40,
   minMoveSpeed: 5,
-  maxMoveSpeed: 400,
-  scrollSpeed: 4,
-  maxPivotDistance: CHUNK_SAMPLES * 16,
-  initialTrailDistance: CHUNK_SAMPLES * 1.5
+  maxMoveSpeed: 400
 };
 
 export interface TerrainEditorSceneOptions {
