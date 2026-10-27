@@ -182,6 +182,7 @@ export type * from "./containers/dock/Dock.ts";
 export type * from "./containers/dock/DockLayout.ts";
 export type * from "./containers/floating/Floating.ts";
 export type * from "./containers/folder/Folder.ts";
+export * from "./containers/folder/FolderReorder.ts";
 export type {
   PaneElement
 } from "./containers/pane/Pane.ts";

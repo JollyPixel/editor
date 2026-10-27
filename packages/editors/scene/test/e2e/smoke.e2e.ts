@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import {
   dialog,
-  textField,
   treeRow
 } from "@jolly-pixel/e2e";
 import { pressAt } from "@jolly-pixel/e2e/editor";
@@ -14,9 +13,11 @@ import {
 import {
   addActor,
   addComponent,
+  editTransform,
   hierarchy,
+  inspectedActor,
   inspector,
-  transformAxis
+  sceneTool
 } from "./support/panels.ts";
 import {
   actorPoint,
@@ -35,15 +36,36 @@ test("the inspector edits the actor added from the hierarchy", async({ page }) =
   await addActor(page, ["Primitive", "Box"]);
 
   await expect(treeRow(page, "Box")).toHaveAttribute("aria-selected", "true");
-  await expect(textField(inspector(page), "Name")).toHaveValue("Box");
+  await expect(inspectedActor(page)).toHaveAttribute("label", "Box");
   await expect(inspector(page).locator("jolly-folder[label=\"Mesh\"]")).toBeVisible();
 
-  const x = transformAxis(page, "Position", "X");
-  await x.fill("2");
-  await x.press("Enter");
+  await editTransform(page, "Scale", "Y", "2");
+  await expect.poll(async() => (await findActor(page, "Box"))?.transform.scale)
+    .toEqual({ x: 1, y: 2, z: 1 });
 
-  await expect.poll(async() => (await findActor(page, "Box"))?.transform.position)
-    .toEqual({ x: 2, y: 0, z: 0 });
+  const visible = inspectedActor(page).getByRole("button", { name: "Visible" });
+  await expect(visible).toHaveAttribute("aria-pressed", "true");
+  await visible.click();
+  await expect(visible).toHaveAttribute("aria-pressed", "false");
+  await expect.poll(async() => (await findActor(page, "Box"))?.visible)
+    .toBe(false);
+});
+
+test("the toolbar undoes and redoes the actor added from the hierarchy", async({ page }) => {
+  const undo = sceneTool(page, "undo");
+  const redo = sceneTool(page, "redo");
+  await expect(undo).toHaveAttribute("disabled");
+
+  await addActor(page, ["Primitive", "Box"]);
+  await expect(treeRow(page, "Box")).toBeVisible();
+
+  await undo.click();
+  await expect(treeRow(page, "Box")).toHaveCount(0);
+  await expect(undo).toHaveAttribute("disabled");
+
+  await redo.click();
+  await expect(treeRow(page, "Box")).toBeVisible();
+  await expect(redo).toHaveAttribute("disabled");
 });
 
 test("a click in the viewport selects an actor and the gizmo moves it in one undo step", async({ page }) => {
@@ -66,7 +88,7 @@ test("a click in the viewport selects an actor and the gizmo moves it in one und
     .toEqual({ x: 0, y: 0, z: 0 });
 });
 
-test("a voxel map component takes the map picked from the catalog", async({ page, target }) => {
+test("a voxel map component takes the picked map, then moves above the light", async({ page, target }) => {
   await treeRow(page, "Sky").click();
   await addComponent(page, "Voxel map…");
 
@@ -80,4 +102,15 @@ test("a voxel map component takes the map picked from the catalog", async({ page
   await expect(component.getByText(target.mapName, { exact: true })).toBeVisible();
   expect((await findActor(page, "Sky"))?.components.map(({ type }) => type))
     .toEqual(["Light", "VoxelMap"]);
+
+  const grip = component.locator(".grip");
+  await grip.focus();
+  await grip.press("Space");
+  await grip.press("ArrowUp");
+  await grip.press("Space");
+  await expect.poll(async() => (await findActor(page, "Sky"))?.components.map(({ type }) => type))
+    .toEqual(["VoxelMap", "Light"]);
+  await expect(inspector(page).locator("jolly-folder[reorderable]").first())
+    .toHaveAttribute("label", "VoxelMap");
+  await expect(grip).toHaveAttribute("aria-pressed", "false");
 });

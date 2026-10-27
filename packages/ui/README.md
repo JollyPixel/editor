@@ -296,6 +296,8 @@ import {
 
 - [`FieldBinding`](./docs/api/field/field-binding.md): binds a field in a Lit template to one
   value.
+- [`FolderReorder`](./docs/api/containers/folder-reorder.md): moves `jolly-folder` elements by
+  their grip and commits the order to a model.
 - [`SubscriptionController`](./docs/api/subscription-controller.md): keeps a host subscribed to one
   source while connected.
 - [`LazyTemplate`](./docs/api/lazy-template.md): renders part of a template once the module that

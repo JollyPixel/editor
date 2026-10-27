@@ -70,6 +70,9 @@ export class ToolButton extends LitElement {
   @property({ type: Boolean, reflect: true })
   declare open: boolean;
 
+  @property({ type: Number })
+  declare count: number;
+
   @state()
   declare _hasFlyout: boolean;
 
@@ -92,6 +95,7 @@ export class ToolButton extends LitElement {
     this.disabled = false;
     this.flyoutSide = ToolButton.Defaults.flyoutSide;
     this.open = false;
+    this.count = 0;
     this._hasFlyout = false;
   }
 
@@ -160,6 +164,9 @@ export class ToolButton extends LitElement {
           nothing :
           html`<jolly-icon name=${this.icon}></jolly-icon>`}
         <slot></slot>
+        ${this.count > 0 ?
+          html`<span class="count" part="count" aria-hidden="true"><span>${this.count}</span></span>` :
+          nothing}
         ${this._hasFlyout ? html`<span class="notch" part="notch"></span>` : nothing}
       </button>
       ${this.label === "" ?

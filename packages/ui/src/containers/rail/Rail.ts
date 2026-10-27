@@ -35,15 +35,29 @@ export class Rail extends LitElement {
       width: auto;
       height: calc(var(--jolly-icon-button-size, 32px) + (var(--jolly-space-1, 4px) * 2));
     }
+
+    :host([floating]) {
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: var(--jolly-space-1, 4px) 0;
+      height: auto;
+      border-radius: var(--jolly-radius-sm, 2px);
+      background: var(--jolly-surface-raised);
+      box-shadow: var(--jolly-shadow-floating);
+    }
   `;
 
   @property({ type: String, reflect: true })
   declare orientation: RailOrientation;
 
+  @property({ type: Boolean, reflect: true })
+  declare floating: boolean;
+
   constructor() {
     super();
 
     this.orientation = "vertical";
+    this.floating = false;
   }
 
   override render(): TemplateResult {

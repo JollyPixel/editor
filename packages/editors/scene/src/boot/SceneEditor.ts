@@ -110,7 +110,8 @@ export class SceneEditor {
           context.preferences,
           SCENE_KEYBINDINGS,
           (message) => console.warn(message)
-        )
+        ),
+        keyboardLayout: context.keyboardLayout
       });
       const { sceneManager } = editorRuntime.runtime.world;
       teardown.defer(() => sceneManager.unloadScene(scene));

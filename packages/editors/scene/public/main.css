@@ -58,19 +58,24 @@ jolly-dock {
   outline: none;
 }
 
-#scene-viewport .viewport-top-left {
+#scene-viewport jolly-log {
   position: absolute;
   inset-block-start: 12px;
   inset-inline-start: 16px;
   z-index: 5;
+}
+
+#scene-viewport .viewport-toolbars {
+  position: absolute;
+  inset-block-end: 16px;
+  inset-inline: 16px;
+  z-index: 5;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
+  justify-content: center;
   pointer-events: none;
 }
 
-#scene-viewport .viewport-top-left > * {
+#scene-viewport .viewport-toolbars > * {
   pointer-events: auto;
 }
 

@@ -14,5 +14,10 @@ only, with no toolbar role.
 ```ts
 interface Rail {
   orientation: "horizontal" | "vertical"; // default "vertical"
+  floating: boolean;
 }
 ```
+
+`floating` draws the rail as a raised strip with a shadow, for a toolbar over
+a viewport. A horizontal floating rail wraps its items onto more rows when it
+runs out of width.

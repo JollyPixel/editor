@@ -61,6 +61,9 @@ export class Button extends LitElement {
   })
   declare iconOnly: boolean;
 
+  @property({ attribute: false })
+  declare pressed?: boolean;
+
   constructor() {
     super();
 
@@ -76,6 +79,7 @@ export class Button extends LitElement {
         type="button"
         ?disabled=${this.disabled}
         aria-label=${this.label === "" ? nothing : this.label}
+        aria-pressed=${this.pressed === undefined ? nothing : String(this.pressed)}
       >
         ${this.icon === undefined
           ? nothing

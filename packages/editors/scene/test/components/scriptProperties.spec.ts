@@ -4,8 +4,8 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
+  addProperty,
   convertProperty,
-  freePropertyKey,
   listText,
   parseList,
   removeProperty,
@@ -51,12 +51,23 @@ describe("scriptProperties", () => {
   test("renames a key in place and refuses a key that already exists", () => {
     const properties = { speed: 1, jump: 2, name: "a" };
 
-    assert.deepEqual(Object.keys(renameProperty(properties, "jump", "height")), ["speed", "height", "name"]);
+    assert.deepEqual(
+      Object.keys(renameProperty(properties, "jump", " height ")),
+      ["speed", "height", "name"]
+    );
     assert.deepEqual(renameProperty(properties, "jump", "speed"), properties);
   });
 
-  test("finds a free key and removes one", () => {
-    assert.strictEqual(freePropertyKey({ property: 1, property2: 2 }), "property3");
+  test("removes a property whose key is cleared", () => {
+    assert.deepEqual(renameProperty({ a: 1, b: 2 }, "a", "  "), { b: 2 });
     assert.deepEqual(removeProperty({ a: 1, b: 2 }, "a"), { b: 2 });
+  });
+
+  test("adds a property under a trimmed key unless it is blank or taken", () => {
+    const properties = { speed: 1 };
+
+    assert.deepEqual(addProperty(properties, " up ", [0, 1, 0]), { speed: 1, up: [0, 1, 0] });
+    assert.deepEqual(addProperty(properties, "speed", 5), properties);
+    assert.deepEqual(addProperty(properties, " ", 5), properties);
   });
 });

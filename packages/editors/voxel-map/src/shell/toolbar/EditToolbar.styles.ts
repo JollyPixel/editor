@@ -24,15 +24,8 @@ export const editToolbarStyles = [viewportToolbarStyles, css`
   jolly-rail {
     --jolly-icon-button-size: var(--voxel-toolbar-button-size);
 
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: center;
     gap: var(--voxel-toolbar-row-gap) 0;
-    height: auto;
     padding: var(--voxel-toolbar-row-gap) 4px;
-    border-radius: var(--jolly-radius-sm, 2px);
-    background: var(--jolly-surface-raised);
-    box-shadow: var(--jolly-shadow-floating);
   }
 
   .segment {
@@ -82,31 +75,6 @@ export const editToolbarStyles = [viewportToolbarStyles, css`
     overflow-x: clip;
     translate: 0 3px;
     transition: translate 0s var(--voxel-segment-fade-out);
-  }
-
-  .step-count {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-    min-width: 14px;
-    height: 14px;
-    padding: 0 3px;
-    border-radius: 7px;
-    background: var(--jolly-tone-teal);
-    color: var(--jolly-surface-raised);
-    font-size: 9px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    line-height: 1;
-    pointer-events: none;
-  }
-
-  .step-count > span {
-    text-box: trim-both cap alphabetic;
   }
 
   @media (prefers-reduced-motion: reduce) {

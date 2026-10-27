@@ -6,8 +6,7 @@ import {
 } from "lit";
 import {
   customElement,
-  property,
-  state
+  property
 } from "lit/decorators.js";
 
 // Import Internal Dependencies
@@ -65,6 +64,9 @@ export class Folder extends LitElement implements Searchable {
   declare dragging: boolean;
 
   @property({ type: Boolean, reflect: true })
+  declare grabbed: boolean;
+
+  @property({ type: Boolean, reflect: true })
   declare flush: boolean;
 
   @property({
@@ -75,9 +77,6 @@ export class Folder extends LitElement implements Searchable {
 
   @property({ attribute: false })
   declare storage: StorageAdapter;
-
-  @state()
-  declare _reordering: boolean;
 
   #persistenceKey = "";
   #state = new NamespacedStore({
@@ -110,10 +109,10 @@ export class Folder extends LitElement implements Searchable {
     this.collapsible = true;
     this.reorderable = false;
     this.dragging = false;
+    this.grabbed = false;
     this.flush = false;
     this.storageKey = "";
     this.storage = defaultStorageAdapter();
-    this._reordering = false;
   }
 
   override connectedCallback(): void {
@@ -140,7 +139,7 @@ export class Folder extends LitElement implements Searchable {
           class="grip"
           type="button"
           aria-label=${`Reorder ${this.label}`}
-          aria-pressed=${String(this._reordering)}
+          aria-pressed=${String(this.grabbed)}
           @pointerdown=${this.#onGripPointerDown}
           @keydown=${this.#onGripKeyDown}
         ><jolly-icon name="drag" aria-hidden="true"></jolly-icon></button>
@@ -229,14 +228,11 @@ export class Folder extends LitElement implements Searchable {
   ) => {
     if (event.key === " ") {
       event.preventDefault();
-      this._reordering = !this._reordering;
-      this.#emitReorder(
-        this._reordering ? "start" : "finish"
-      );
+      this.#emitReorder(this.grabbed ? "finish" : "start");
 
       return;
     }
-    if (!this._reordering) {
+    if (!this.grabbed) {
       return;
     }
 
@@ -252,9 +248,6 @@ export class Folder extends LitElement implements Searchable {
 
     event.preventDefault();
     this.#emitReorder(command);
-    if (command === "cancel") {
-      this._reordering = false;
-    }
   };
 
   #onGripPointerDown = (

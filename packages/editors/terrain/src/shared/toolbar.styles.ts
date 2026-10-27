@@ -6,15 +6,6 @@ export const viewportToolbarStyles = css`
     display: inline-flex;
   }
 
-  jolly-rail {
-    gap: 0;
-    height: auto;
-    padding: 4px;
-    border-radius: var(--jolly-radius-sm, 2px);
-    background: var(--jolly-surface-raised);
-    box-shadow: var(--jolly-shadow-floating);
-  }
-
   .group {
     display: flex;
     align-items: center;
