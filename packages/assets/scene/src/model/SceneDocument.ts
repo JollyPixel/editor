@@ -6,6 +6,7 @@ import {
 } from "@jolly-pixel/history";
 
 // Import Internal Dependencies
+import type { ComponentChange } from "./componentChange.ts";
 import { SceneTree, type SceneTreeReader } from "./SceneTree.ts";
 import { SceneTransform } from "./SceneTransform.ts";
 import { randomId } from "./randomId.ts";
@@ -66,14 +67,6 @@ export interface AddComponentOptions {
    * The component to land before; last when omitted.
    */
   beforeId?: string;
-}
-
-export interface ComponentChange {
-  data?: JSONObject;
-  /**
-   * Top-level fields removed from the data.
-   */
-  unset?: Iterable<string>;
 }
 
 export class SceneDocument extends CommandDocument<

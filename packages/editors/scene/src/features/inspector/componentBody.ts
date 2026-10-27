@@ -34,15 +34,22 @@ import type { ScriptPropertiesChangeDetail } from "./ScriptPropertiesEditor.ts";
 
 export type ComponentBodyContext = Pick<
   SceneEditing,
-  "document" | "assetSlots"
+  "document" | "assetSlots" | "draft"
 >;
+
+interface RowEdit {
+  preview: (next: JSONValue) => void;
+  commit: (next: JSONValue) => void;
+}
 
 type ChangeEvent<TValue> = CustomEvent<JollyChangeDetail<TValue>>;
 
 export function renderComponentBody(
-  entry: SceneComponentJSON,
+  stored: SceneComponentJSON,
   context: ComponentBodyContext
 ): TemplateResult {
+  const { draft } = context;
+  const entry = draft.component(stored);
   const kind = sceneComponent(entry.type);
   if (kind === undefined) {
     return html`
@@ -54,21 +61,25 @@ export function renderComponentBody(
 
   return html`
     ${renderAssetSlots(entry, componentAssetSlots(entry.type), context)}
-    ${inspection.rows.map((inspected) => renderRow(
-      inspected,
-      (next) => context.document.changeComponent(
+    ${inspection.rows.map((inspected) => renderRow(inspected, {
+      preview: (next) => draft.editComponent(
+        entry.id,
+        inspection.edit(inspected, next)
+      ),
+      commit: (next) => draft.commitComponent(
         entry.id,
         inspection.edit(inspected, next)
       )
-    ))}
+    }))}
   `;
 }
 
 function renderRow(
   inspected: InspectedRow,
-  commit: (next: JSONValue) => void
+  edit: RowEdit
 ): TemplateResult {
   const { row, value, fallback } = inspected;
+  const { preview, commit } = edit;
 
   switch (row.control) {
     case "number":
@@ -80,6 +91,7 @@ function renderRow(
           .min=${row.min ?? -Infinity}
           .max=${row.max ?? Infinity}
           .step=${row.step ?? 1}
+          @jolly-input=${(event: ChangeEvent<number>) => preview(event.detail.value)}
           @jolly-change=${(event: ChangeEvent<number>) => commit(event.detail.value)}
         ></jolly-number>
       `;
@@ -97,6 +109,7 @@ function renderRow(
           label=${row.label}
           .value=${String(value)}
           .default=${fallback}
+          @jolly-input=${(event: ChangeEvent<string>) => preview(event.detail.value)}
           @jolly-change=${(event: ChangeEvent<string>) => commit(event.detail.value)}
         ></jolly-color>
       `;

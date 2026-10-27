@@ -20,6 +20,7 @@ export type BuiltinIconName =
   | "check"
   | "info"
   | "warning"
+  | "trash"
   | "settings";
 export type IconName = BuiltinIconName | (string & {});
 export type IconGlyph = string | SVGTemplateResult;

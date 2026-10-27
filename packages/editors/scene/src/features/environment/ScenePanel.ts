@@ -58,24 +58,13 @@ const kFogKinds: JollyOption<SceneFogKind>[] = [
 ];
 
 export class ScenePanel extends LitElement {
-  #preview: SceneEnvironmentPatch = {};
   #editing = new SubscriptionController<SceneEditing>(this, (editing) => {
     const repaint = (): void => this.requestUpdate();
-    const discardPreview = (): void => {
-      this.#preview = {};
-      repaint();
-    };
 
     return [
-      editing.document.subscribe("change", ({ command }) => {
-        if (command.action === "environment-changed") {
-          discardPreview();
-        }
-        else {
-          repaint();
-        }
-      }),
-      editing.document.subscribe("reset", discardPreview)
+      editing.document.subscribe("change", repaint),
+      editing.document.subscribe("reset", repaint),
+      editing.draft.subscribe("change", repaint)
     ];
   });
 
@@ -103,26 +92,18 @@ export class ScenePanel extends LitElement {
       return nothing;
     }
 
-    const { document } = editing;
-    const environment = {
-      ...document.tree.environment,
-      ...this.#preview
-    };
-    const preview = (patch: SceneEnvironmentPatch): void => {
-      this.#preview = {
-        ...this.#preview,
-        ...patch
-      };
-      editing.previewEnvironment(this.#preview);
-      this.requestUpdate();
-    };
-    const change = (patch: SceneEnvironmentPatch): void => {
-      this.#preview = {};
-      if (!document.changeEnvironment(patch)) {
-        editing.previewEnvironment(this.#preview);
-      }
-      this.requestUpdate();
-    };
+    const { draft } = editing;
+    const environment = draft.environment();
+    function preview(
+      patch: SceneEnvironmentPatch
+    ): void {
+      draft.editEnvironment(patch);
+    }
+    function commit(
+      patch: SceneEnvironmentPatch
+    ): void {
+      draft.commitEnvironment(patch);
+    }
 
     return html`
       <jolly-folder
@@ -134,7 +115,7 @@ export class ScenePanel extends LitElement {
         <jolly-checkbox
           label="Color"
           .value=${environment.background !== null}
-          @jolly-change=${(event: ChangeEvent<boolean>) => change({
+          @jolly-change=${(event: ChangeEvent<boolean>) => commit({
             background: event.detail.value ? kDefaultBackground : null
           })}
         ></jolly-checkbox>
@@ -147,7 +128,7 @@ export class ScenePanel extends LitElement {
               @jolly-input=${(event: ChangeEvent<string>) => preview({
                 background: event.detail.value
               })}
-              @jolly-change=${(event: ChangeEvent<string>) => change({
+              @jolly-change=${(event: ChangeEvent<string>) => commit({
                 background: event.detail.value
               })}
             ></jolly-color>
@@ -163,7 +144,7 @@ export class ScenePanel extends LitElement {
           label="Map"
           .options=${kEnvironmentKinds}
           .value=${environment.environment.kind}
-          @jolly-change=${(event: ChangeEvent<EnvironmentMapKind>) => change({
+          @jolly-change=${(event: ChangeEvent<EnvironmentMapKind>) => commit({
             environment: {
               ...environment.environment,
               kind: event.detail.value
@@ -181,7 +162,7 @@ export class ScenePanel extends LitElement {
               intensity: event.detail.value
             }
           })}
-          @jolly-change=${(event: ChangeEvent<number>) => change({
+          @jolly-change=${(event: ChangeEvent<number>) => commit({
             environment: {
               ...environment.environment,
               intensity: event.detail.value
@@ -199,14 +180,14 @@ export class ScenePanel extends LitElement {
           label="Fog"
           .options=${kFogKinds}
           .value=${environment.fog.kind}
-          @jolly-change=${(event: ChangeEvent<SceneFogKind>) => change({
+          @jolly-change=${(event: ChangeEvent<SceneFogKind>) => commit({
             fog: switchFogKind(environment.fog, event.detail.value)
           })}
         ></jolly-select>
         ${renderFogFields(
           environment.fog,
           (fog) => preview({ fog }),
-          (fog) => change({ fog })
+          (fog) => commit({ fog })
         )}
       </jolly-folder>
     `;
@@ -216,7 +197,7 @@ export class ScenePanel extends LitElement {
 function renderFogFields(
   fog: SceneFogJSON,
   preview: (fog: SceneFogJSON) => void,
-  change: (fog: SceneFogJSON) => void
+  commit: (fog: SceneFogJSON) => void
 ): TemplateResult | typeof nothing {
   if (fog.kind === "none") {
     return nothing;
@@ -230,7 +211,7 @@ function renderFogFields(
         ...fog,
         color: event.detail.value
       })}
-      @jolly-change=${(event: ChangeEvent<string>) => change({
+      @jolly-change=${(event: ChangeEvent<string>) => commit({
         ...fog,
         color: event.detail.value
       })}
@@ -248,7 +229,7 @@ function renderFogFields(
           ...fog,
           density: event.detail.value
         })}
-        @jolly-change=${(event: ChangeEvent<number>) => change({
+        @jolly-change=${(event: ChangeEvent<number>) => commit({
           ...fog,
           density: event.detail.value
         })}
@@ -267,7 +248,7 @@ function renderFogFields(
         ...fog,
         near: event.detail.value
       })}
-      @jolly-change=${(event: ChangeEvent<number>) => change({
+      @jolly-change=${(event: ChangeEvent<number>) => commit({
         ...fog,
         near: event.detail.value
       })}
@@ -281,7 +262,7 @@ function renderFogFields(
         ...fog,
         far: event.detail.value
       })}
-      @jolly-change=${(event: ChangeEvent<number>) => change({
+      @jolly-change=${(event: ChangeEvent<number>) => commit({
         ...fog,
         far: event.detail.value
       })}

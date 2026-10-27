@@ -82,7 +82,7 @@ export class HierarchyPanel extends LitElement {
           @click=${this.#tree.duplicateSelected}
         ></jolly-button>
         <jolly-button
-          icon="action-delete"
+          icon="trash"
           icon-only
           label="Delete"
           title="Delete"

@@ -34,6 +34,7 @@ import type {
 } from "../editing/SceneEditing.ts";
 import { createSceneHistory } from "../features/history/sceneHistory.ts";
 import { ActorPicker } from "../features/viewport/ActorPicker.ts";
+import { followGridPreferences } from "../features/viewport/followGridPreferences.ts";
 import { GizmoSettings } from "../features/viewport/GizmoSettings.ts";
 import { SceneGizmo } from "../features/viewport/SceneGizmo.ts";
 import { SceneHelpers } from "../features/viewport/SceneHelpers.ts";
@@ -41,6 +42,7 @@ import { SelectionHighlight } from "../features/viewport/SelectionHighlight.ts";
 import type { SceneAction } from "../keybindings/sceneActions.ts";
 import { sceneShortcuts } from "../keybindings/sceneShortcuts.ts";
 import type { PresenceStore } from "../state/PresenceStore.ts";
+import { SceneDraft } from "../state/SceneDraft.ts";
 import { SelectionStore } from "../state/SelectionStore.ts";
 
 // CONSTANTS
@@ -126,6 +128,11 @@ export class SceneEditorScene extends Systems.Scene {
       environment
     });
     teardown.defer(() => binding.dispose());
+    const draft = new SceneDraft({
+      document,
+      view: binding
+    });
+    teardown.defer(() => draft.dispose());
     const selection = new SelectionStore(document);
     teardown.defer(() => selection.dispose());
     const actions = new SceneActions({
@@ -185,6 +192,11 @@ export class SceneEditorScene extends Systems.Scene {
     }
     teardown.defer(selection.subscribe("change", invalidate));
     teardown.defer(followCameraPreferences(camera, this.#options.preferences));
+    teardown.defer(followGridPreferences(
+      grid,
+      this.#options.preferences,
+      invalidate
+    ));
     teardown.defer(this.#options.keyBindings.bind(
       world.input.keyboard,
       sceneShortcuts({
@@ -204,12 +216,13 @@ export class SceneEditorScene extends Systems.Scene {
       presence,
       gizmo,
       assetSlots,
+      preferences: this.#options.preferences,
       shortcuts: new ShortcutLabels(
         this.#options.keyboardLayout,
         this.#options.keyBindings
       ),
+      draft,
       frameSelection,
-      previewEnvironment: (patch) => binding.previewEnvironment(patch),
       teleportToPeer: (clientId) => {
         const pose = collaboration.peerPose(clientId);
         if (pose !== undefined) {

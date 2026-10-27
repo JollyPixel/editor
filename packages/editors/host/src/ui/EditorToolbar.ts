@@ -93,15 +93,15 @@ export class EditorToolbar extends LitElement {
       min-height: calc(
         var(--jolly-row-height, 20px) + (2 * var(--jolly-space-1, 4px))
       );
-      padding: 0 var(--jolly-space-2, 8px);
+      padding: 0 var(--jolly-space-2, 8px) 0 0;
       overflow: clip;
 
       --jolly-field-inset-start: 0px;
       --jolly-field-inset-end: 0px;
     }
 
-    .bar:has(> .tours) {
-      padding-inline-start: 0;
+    .bar:has(> .group:last-child) {
+      padding-inline-end: 0;
     }
 
     .group {
@@ -194,7 +194,7 @@ export class EditorToolbar extends LitElement {
     @container (width < 560px) {
       .bar {
         gap: var(--jolly-space-2, 8px);
-        padding: 0 var(--jolly-space-1, 4px);
+        padding-inline-end: var(--jolly-space-1, 4px);
       }
 
       .caption,

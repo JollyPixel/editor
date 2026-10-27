@@ -5,13 +5,15 @@ import {
   type Actor,
   type Component
 } from "@jolly-pixel/engine";
-import type {
-  SceneActorJSON,
-  SceneChange,
-  SceneComponentJSON,
-  SceneDocument,
-  SceneEnvironmentJSON,
-  SceneEnvironmentPatch
+import {
+  applyComponentChange,
+  type ComponentChange,
+  type SceneActorJSON,
+  type SceneChange,
+  type SceneDocument,
+  type SceneEnvironmentJSON,
+  type SceneEnvironmentPatch,
+  type SceneTransformPatch
 } from "@jolly-pixel/asset.scene/client";
 import { Emitter } from "@openally/emitt";
 
@@ -156,6 +158,23 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
       ...patch
     });
     this.#world.invalidate();
+  }
+
+  previewTransform(
+    id: string,
+    patch: SceneTransformPatch
+  ): void {
+    this.#syncActor(id, patch);
+    this.#world.invalidate();
+  }
+
+  previewComponent(
+    id: string,
+    change: ComponentChange
+  ): void {
+    if (this.#applyComponent(id, change)) {
+      this.#world.invalidate();
+    }
   }
 
   dispose(): void {
@@ -319,7 +338,8 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
   }
 
   #syncActor(
-    id: string
+    id: string,
+    patch: SceneTransformPatch = {}
   ): void {
     const actor = this.#actors.get(id);
     const file = this.#document.tree.peekActor(id);
@@ -327,7 +347,13 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
       return;
     }
 
-    this.#builder.writeActor(actor, file);
+    this.#builder.writeActor(actor, {
+      ...file,
+      transform: {
+        ...file.transform,
+        ...patch
+      }
+    });
   }
 
   #removeComponent(
@@ -358,8 +384,17 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
   #changeComponent(
     id: string
   ): void {
+    if (!this.#applyComponent(id, {})) {
+      this.#rebuildComponent(id);
+    }
+  }
+
+  #applyComponent(
+    id: string,
+    change: ComponentChange
+  ): boolean {
     const component = this.#components.get(id)?.component;
-    const entry: SceneComponentJSON | undefined = this.#document.tree.component(id);
+    const entry = this.#document.tree.component(id);
     const definition = entry === undefined ?
       null :
       this.#definitions.find(entry.type);
@@ -368,11 +403,14 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
       entry === undefined ||
       definition?.apply === undefined
     ) {
-      this.#rebuildComponent(id);
-
-      return;
+      return false;
     }
 
-    definition.apply(component, definition.parse(entry.data));
+    definition.apply(
+      component,
+      definition.parse(applyComponentChange(entry.data, change))
+    );
+
+    return true;
   }
 }

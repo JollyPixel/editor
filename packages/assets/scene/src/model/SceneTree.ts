@@ -8,6 +8,7 @@ import type {
   SceneSnapshot
 } from "../network/types.ts";
 import { ActorHierarchy } from "./ActorHierarchy.ts";
+import { applyComponentChange } from "./componentChange.ts";
 import {
   InvalidSceneTreeError,
   type SceneTreeEntry
@@ -331,7 +332,7 @@ export class SceneTree {
         this.#updateComponent(command.id, (component) => {
           return {
             ...component,
-            data: changedData(component.data, command.data, command.unset ?? [])
+            data: applyComponentChange(component.data, command)
           };
         });
         break;
@@ -451,7 +452,7 @@ export class SceneTree {
       return false;
     }
 
-    return fitsDataLimit(changedData(component.data, command.data, unset));
+    return fitsDataLimit(applyComponentChange(component.data, command));
   }
 
   #insert(
@@ -539,22 +540,6 @@ function problem(
     id,
     reason
   };
-}
-
-function changedData(
-  data: JSONObject,
-  patch: JSONObject,
-  unset: readonly string[]
-): JSONObject {
-  const changed: JSONObject = {
-    ...data,
-    ...structuredClone(patch)
-  };
-  for (const key of unset) {
-    delete changed[key];
-  }
-
-  return changed;
 }
 
 function insertedBefore<T extends { id: string; }>(

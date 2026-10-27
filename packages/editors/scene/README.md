@@ -11,7 +11,7 @@ Run `pnpm run dev` in this directory. On first start the dev server seeds `asset
 - **Hierarchy**: *Add* creates an actor at the root; right-click a row for *Add child*, rename, duplicate and delete. Drag a row to reparent or reorder it: the actor keeps its place in the world.
 - **Inspector**: the selected actor's name, visibility and transform, then its components. *Add component* lists Camera, Light, Mesh, Script and "Voxel map…", which opens the asset picker.
 - **Scene**: background color, environment map and fog.
-- **Viewport**: click an actor, or its camera or light marker, to select it; Ctrl+click adds to the selection. The gizmo moves, rotates or scales the selection in one undo step.
+- **Viewport**: click an actor, or its camera or light marker, to select it; Ctrl+click adds to the selection. The gizmo moves, rotates or scales the selection in one undo step. The toolbar's *Grid* and *Grid axes* buttons are saved in your preferences.
 
 Default keys, rebindable in the editor's preferences:
 

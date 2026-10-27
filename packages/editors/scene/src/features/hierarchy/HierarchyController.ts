@@ -52,7 +52,7 @@ const kRowEntries: readonly MenuEntry<RowAction>[] = [
   {
     id: "delete",
     label: "Delete",
-    icon: "action-delete",
+    icon: "trash",
     intent: "danger"
   }
 ];

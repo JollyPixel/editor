@@ -489,40 +489,6 @@ registerIcon("edit", svg`
     />
   `, { tone: "coral" });
 
-registerIcon("trash", svg`
-    <path
-      class="tone-ink"
-      d="M4 7h16"
-      stroke="currentColor"
-      stroke-width="2.2"
-      stroke-linecap="round"
-    />
-    <path
-      class="tone-ink"
-      d="M9 7V4.8c0-.44.36-.8.8-.8h4.4c.44 0 .8.36.8.8V7"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2.2"
-      stroke-linejoin="round"
-    />
-    <path
-      class="tone-ink"
-      d="M6.5 7 7.3 19.2a2 2 0 0 0 2 1.8h5.4a2 2 0 0 0 2-1.8L17.5 7"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2.2"
-      stroke-linejoin="round"
-      stroke-linecap="round"
-    />
-    <path
-      class="tone-ink"
-      d="M10 11v6M14 11v6"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-    />
-  `, { tone: "coral" });
-
 registerIcon("collapse", svg`
     <path
       d="M9 4v3.5A1.5 1.5 0 0 1 7.5 9H4"
