@@ -10,7 +10,7 @@ import type {
 } from "../../systems/rendering/Renderer.ts";
 import type {
   PostProcessing
-} from "../../systems/rendering/PostProcessing.ts";
+} from "../../systems/rendering/compositing/PostProcessing.ts";
 import type { WorldDefaultContext } from "../../systems/World.ts";
 
 export type CameraProjectionMode = "perspective" | "orthographic";
@@ -65,6 +65,17 @@ export interface CameraOptions {
   render?: boolean;
 }
 
+export type CameraSettings = Pick<
+  CameraOptions,
+  | "projectionMode"
+  | "fov"
+  | "near"
+  | "far"
+  | "orthographicScale"
+  | "viewport"
+  | "depth"
+>;
+
 export const CAMERA_DEFAULTS = {
   projectionMode: "perspective",
   fov: 45,
@@ -95,7 +106,6 @@ export class CameraComponent<
   #projectionDirty = true;
   #lastCanvasWidth = 0;
   #lastCanvasHeight = 0;
-  #registered = false;
 
   #worldPosition = new THREE.Vector3();
   #worldQuaternion = new THREE.Quaternion();
@@ -197,11 +207,7 @@ export class CameraComponent<
 
     const { renderer } = this.actor.world;
     renderer.addRenderComponent(this);
-    this.#registered = true;
-    this.addTeardown(() => {
-      renderer.removeRenderComponent(this);
-      this.#registered = false;
-    });
+    this.addTeardown(() => renderer.removeRenderComponent(this));
   }
 
   prepareRender(
@@ -268,62 +274,36 @@ export class CameraComponent<
     this.#threeCamera.updateProjectionMatrix();
   }
 
-  setFov(
-    fov: number
+  configure(
+    settings: CameraSettings
   ): this {
+    const {
+      projectionMode = this.#projectionMode,
+      fov = this.#fov,
+      near = this.#near,
+      far = this.#far,
+      orthographicScale = this.#orthographicScale,
+      viewport = this.#viewport,
+      depth = this.#depth
+    } = settings;
+
     this.#fov = fov;
-    this.#projectionDirty = true;
-
-    return this;
-  }
-
-  setNearFar(
-    near: number,
-    far: number
-  ): this {
     this.#near = near;
     this.#far = far;
-    this.#projectionDirty = true;
-
-    return this;
-  }
-
-  setOrthographicScale(
-    scale: number
-  ): this {
-    this.#orthographicScale = scale;
-    this.#projectionDirty = true;
-
-    return this;
-  }
-
-  setViewport(
-    viewport: RenderViewport | null
-  ): this {
+    this.#orthographicScale = orthographicScale;
     this.#viewport = viewport;
+    this.#depth = depth;
+    if (projectionMode !== this.#projectionMode) {
+      this.#switchProjection(projectionMode);
+    }
     this.#projectionDirty = true;
 
     return this;
   }
 
-  setDepth(
-    depth: number
-  ): this {
-    this.#depth = depth;
-    if (this.#registered) {
-      this.actor.world.renderer.markRenderOrderDirty();
-    }
-
-    return this;
-  }
-
-  setProjectionMode(
+  #switchProjection(
     mode: CameraProjectionMode
-  ): this {
-    if (mode === this.#projectionMode) {
-      return this;
-    }
-
+  ): void {
     const previous = this.#threeCamera;
     this.#projectionMode = mode;
     this.#threeCamera = this.#createThreeCamera();
@@ -332,9 +312,5 @@ export class CameraComponent<
       this.#threeCamera.add(...previous.children);
     }
     this.#threeCamera.layers.mask = previous.layers.mask;
-
-    this.#projectionDirty = true;
-
-    return this;
   }
 }

@@ -13,7 +13,7 @@ import {
 import {
   createHarness,
   pivotArray
-} from "../../helpers/orbitFlyHarness.ts";
+} from "../../helpers/camera/orbitFlyHarness.ts";
 
 describe("OrbitFlyKeys", () => {
   test("from drops unknown codes and keeps an empty list unbound", () => {

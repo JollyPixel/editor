@@ -13,7 +13,7 @@ import {
   Actor,
   ActorComponent
 } from "../src/index.ts";
-import { createWorld } from "./mocks.ts";
+import { createWorld } from "./helpers/actor/mockWorld.ts";
 
 class AssetConsumer extends ActorComponent {
   constructor(

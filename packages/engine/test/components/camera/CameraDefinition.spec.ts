@@ -6,8 +6,8 @@ import assert from "node:assert/strict";
 import { Actor } from "../../../src/actor/Actor.ts";
 import { CameraDefinition } from "../../../src/components/camera/CameraDefinition.ts";
 import type { SceneMode } from "../../../src/systems/scene/file/ComponentDefinition.ts";
-import { createSceneSetup } from "../../helpers/sceneSetup.ts";
-import { createComponentContext } from "../../helpers/sceneFile.ts";
+import { createSceneSetup } from "../../helpers/scene/sceneSetup.ts";
+import { createComponentContext } from "../../helpers/scene/sceneFile.ts";
 
 function createCamera(
   mode: SceneMode
@@ -15,8 +15,7 @@ function createCamera(
   const { world } = createSceneSetup();
   const renderer = {
     addRenderComponent: mock.fn(),
-    removeRenderComponent: mock.fn(),
-    markRenderOrderDirty: mock.fn()
+    removeRenderComponent: mock.fn()
   };
   const actor = new Actor({ ...world, renderer } as any, { name: "camera" });
   const definition = new CameraDefinition();

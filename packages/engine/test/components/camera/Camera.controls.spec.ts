@@ -2,8 +2,7 @@
 import {
   describe,
   test,
-  beforeEach,
-  mock
+  beforeEach
 } from "node:test";
 import assert from "node:assert/strict";
 
@@ -12,55 +11,11 @@ import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import { Camera3DControls } from "../../../src/components/camera/Camera3DControls.ts";
-import { Transform } from "../../../src/actor/Transform.ts";
 import type { Actor } from "../../../src/actor/Actor.ts";
-
-function createRendererMock() {
-  return {
-    addRenderComponent: mock.fn(),
-    removeRenderComponent: mock.fn(),
-    markRenderOrderDirty: mock.fn()
-  };
-}
-
-function createActorMock() {
-  const parent = new THREE.Scene();
-  const object3D = new THREE.Group();
-  parent.add(object3D);
-
-  return {
-    object3D,
-    transform: new Transform(object3D),
-    components: [],
-    componentsRequiringUpdate: [],
-    world: {
-      time: {
-        delta: 0.1,
-        unscaledDelta: 0.1
-      },
-      renderer: createRendererMock(),
-      audio: { threeAudioListener: new THREE.Object3D() },
-      sceneManager: {
-        scheduleStart: () => void 0,
-        cancelStart: () => void 0
-      },
-      input: {
-        getMouseDelta: mock.fn(() => {
-          return { x: 0, y: 0 };
-        }),
-        keyboard: {
-          isDown: mock.fn((_key: string) => false)
-        },
-        mouse: {
-          isDown: mock.fn(() => false),
-          wasJustReleased: mock.fn(() => false)
-        }
-      }
-    }
-  };
-}
-
-type ActorMock = ReturnType<typeof createActorMock>;
+import {
+  createActorMock,
+  type ActorMock
+} from "../../helpers/camera/cameraActor.ts";
 
 describe("Components.Camera.Camera3DControls", () => {
   let actor: ActorMock;

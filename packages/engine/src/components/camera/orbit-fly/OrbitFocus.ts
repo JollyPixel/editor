@@ -3,21 +3,20 @@ import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import { PivotMarker } from "./pivotMarker.ts";
-import type {
-  OrbitFlyAction,
-  OrbitFlyKeys
-} from "./OrbitFlyKeys.ts";
 import {
   type CameraFocus,
   type CameraFocusEnterRequest,
-  type CameraFocusInput,
   type CameraFocusOrientation,
   type CameraFocusPose,
-  type CameraFocusTransform,
+  type FlyBody,
+  type OrbitFlyNudge,
   dampScalar,
   dampVector,
   smoothingFactor
 } from "./CameraFocus.ts";
+
+// CONSTANTS
+const kUp = new THREE.Vector3(0, 1, 0);
 
 export interface OrbitFocusOptions {
   /**
@@ -149,9 +148,9 @@ export class OrbitFocus implements CameraFocus {
 
   move(
     offset: THREE.Vector3,
-    transform: CameraFocusTransform
+    body: FlyBody
   ): void {
-    transform.moveGlobal(offset);
+    body.position.add(offset);
   }
 
   teleported(): void {
@@ -165,7 +164,7 @@ export class OrbitFocus implements CameraFocus {
       return;
     }
 
-    const { transform, yaw, pitch, deltaTime, responsiveness } = pose;
+    const { body, yaw, pitch, deltaTime, responsiveness } = pose;
     const smoothing = smoothingFactor(responsiveness, deltaTime);
 
     this.#pivotDistance = dampScalar(
@@ -183,8 +182,10 @@ export class OrbitFocus implements CameraFocus {
       .multiplyScalar(this.#pivotDistance)
       .add(this.#pivotPoint);
 
-    transform.setLocalPosition(this.#orbitOffset);
-    transform.lookAt(this.#pivotPoint);
+    body.position.copy(this.#orbitOffset);
+    body.orientation.setFromRotationMatrix(
+      this.#lookMatrix.lookAt(body.position, this.#pivotPoint, kUp)
+    );
     this.#marker.moveTo(this.#pivotPoint);
   }
 
@@ -214,39 +215,31 @@ export class OrbitFocus implements CameraFocus {
   }
 
   nudge(
-    input: CameraFocusInput,
-    keys: OrbitFlyKeys,
+    direction: OrbitFlyNudge,
     forward: THREE.Vector3,
     right: THREE.Vector3
   ): void {
-    function pressed(
-      action: OrbitFlyAction
-    ): boolean {
-      return keys.held(action).pressed.evaluate(input);
-    }
+    this.#targetPivotPoint.add(this.#nudgeOffset(direction, forward, right));
+  }
 
-    let step: THREE.Vector3 | null = null;
-    if (pressed("forward")) {
-      step = this.#snapCardinal(forward, 1);
-    }
-    else if (pressed("back")) {
-      step = this.#snapCardinal(forward, -1);
-    }
-    else if (pressed("right")) {
-      step = this.#snapCardinal(right, 1);
-    }
-    else if (pressed("left")) {
-      step = this.#snapCardinal(right, -1);
-    }
-    else if (pressed("up")) {
-      step = this.#nudgeStep.set(0, this.#pivotNudgeStep, 0);
-    }
-    else if (pressed("down")) {
-      step = this.#nudgeStep.set(0, -this.#pivotNudgeStep, 0);
-    }
-
-    if (step !== null) {
-      this.#targetPivotPoint.add(step);
+  #nudgeOffset(
+    direction: OrbitFlyNudge,
+    forward: THREE.Vector3,
+    right: THREE.Vector3
+  ): THREE.Vector3 {
+    switch (direction) {
+      case "forward":
+        return this.#snapCardinal(forward, 1);
+      case "back":
+        return this.#snapCardinal(forward, -1);
+      case "right":
+        return this.#snapCardinal(right, 1);
+      case "left":
+        return this.#snapCardinal(right, -1);
+      case "up":
+        return this.#nudgeStep.set(0, this.#pivotNudgeStep, 0);
+      case "down":
+        return this.#nudgeStep.set(0, -this.#pivotNudgeStep, 0);
     }
   }
 

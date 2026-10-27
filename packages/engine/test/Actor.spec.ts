@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { Actor } from "../src/index.ts";
-import { createWorld } from "./mocks.ts";
+import { createWorld } from "./helpers/actor/mockWorld.ts";
 
 describe("Actor", () => {
   describe("isDestroyed", () => {
@@ -123,8 +123,7 @@ describe("Actor", () => {
       actor.destroy();
 
       assert.strictEqual(component.destroy.mock.calls.length, 1);
-      assert.strictEqual(world.sceneManager.tree.remove.mock.calls.length, 1);
-      assert.strictEqual(world.sceneManager.tree.remove.mock.calls[0].arguments[0], actor);
+      assert.deepStrictEqual(world.sceneManager.tree.children, []);
     });
 
     test("should destroy all components even when destroy splices the components array", () => {
@@ -177,17 +176,6 @@ describe("Actor", () => {
       assert.strictEqual(actor.pendingForDestruction, true);
       assert.strictEqual(fakeActorChildren.markDestructionPending.mock.calls.length, 2);
     });
-  });
-
-  test("should push actor to the world", () => {
-    const world = createWorld();
-    const actor = new Actor(
-      world as any,
-      { name: "foobar" }
-    );
-
-    assert.strictEqual(world.sceneManager.tree.add.mock.calls.length, 1);
-    assert.strictEqual(world.sceneManager.tree.add.mock.calls[0].arguments[0], actor);
   });
 
   test("should rename its object with it", () => {

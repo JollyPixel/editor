@@ -10,13 +10,13 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { Actor } from "../src/actor/index.ts";
 import { Scene } from "../src/systems/scene/Scene.ts";
-import { createSceneAssets } from "./sceneAssets.ts";
+import { createSceneAssets } from "./helpers/scene/sceneAssets.ts";
 import {
   ConcreteScene,
   activateAppendedScene,
   activateScene,
   createSceneSetup
-} from "./helpers/sceneSetup.ts";
+} from "./helpers/scene/sceneSetup.ts";
 
 // CONSTANTS
 const kDeltaTime = 1 / 60;

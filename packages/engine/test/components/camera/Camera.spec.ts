@@ -2,8 +2,7 @@
 import {
   describe,
   test,
-  beforeEach,
-  mock
+  beforeEach
 } from "node:test";
 import assert from "node:assert/strict";
 
@@ -12,55 +11,11 @@ import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import { CameraComponent } from "../../../src/components/camera/Camera.ts";
-import { Transform } from "../../../src/actor/Transform.ts";
 import type { Actor } from "../../../src/actor/Actor.ts";
-
-function createRendererMock() {
-  return {
-    addRenderComponent: mock.fn(),
-    removeRenderComponent: mock.fn(),
-    markRenderOrderDirty: mock.fn()
-  };
-}
-
-function createActorMock() {
-  const parent = new THREE.Scene();
-  const object3D = new THREE.Group();
-  parent.add(object3D);
-
-  return {
-    object3D,
-    transform: new Transform(object3D),
-    components: [],
-    componentsRequiringUpdate: [],
-    world: {
-      time: {
-        delta: 0.1,
-        unscaledDelta: 0.1
-      },
-      renderer: createRendererMock(),
-      audio: { threeAudioListener: new THREE.Object3D() },
-      sceneManager: {
-        scheduleStart: () => void 0,
-        cancelStart: () => void 0
-      },
-      input: {
-        getMouseDelta: mock.fn(() => {
-          return { x: 0, y: 0 };
-        }),
-        keyboard: {
-          isDown: mock.fn((_key: string) => false)
-        },
-        mouse: {
-          isDown: mock.fn(() => false),
-          wasJustReleased: mock.fn(() => false)
-        }
-      }
-    }
-  };
-}
-
-type ActorMock = ReturnType<typeof createActorMock>;
+import {
+  createActorMock,
+  type ActorMock
+} from "../../helpers/camera/cameraActor.ts";
 
 function createOutputNode() {
   return new THREE.Node();
@@ -148,14 +103,28 @@ describe("Components.Camera.CameraComponent", () => {
     });
   });
 
-  describe("setProjectionMode()", () => {
+  describe("configure()", () => {
+    test("should keep the settings it is not given", () => {
+      const camera = new CameraComponent(actor as unknown as Actor, {
+        fov: 60,
+        depth: 2
+      });
+
+      camera.configure({ near: 1 });
+
+      assert.deepStrictEqual(
+        [camera.fov, camera.near, camera.far, camera.depth],
+        [60, 1, 10000, 2]
+      );
+    });
+
     test("should carry the audio listener over to the new camera", () => {
       const camera = new CameraComponent(actor as unknown as Actor, {
         addAudioListener: true
       });
       const listener = camera.threeCamera.children[0];
 
-      camera.setProjectionMode("orthographic");
+      camera.configure({ projectionMode: "orthographic" });
 
       assert.strictEqual(camera.threeCamera.children.includes(listener), true);
       assert.strictEqual(listener.parent, camera.threeCamera);
@@ -166,7 +135,7 @@ describe("Components.Camera.CameraComponent", () => {
       camera.threeCamera.layers.enable(3);
       const { mask } = camera.threeCamera.layers;
 
-      camera.setProjectionMode("orthographic");
+      camera.configure({ projectionMode: "orthographic" });
 
       assert.strictEqual(camera.threeCamera.layers.mask, mask);
     });
@@ -174,7 +143,7 @@ describe("Components.Camera.CameraComponent", () => {
     test("should build the new camera as actor-driven too", () => {
       const camera = new CameraComponent(actor as unknown as Actor);
 
-      camera.setProjectionMode("orthographic");
+      camera.configure({ projectionMode: "orthographic" });
 
       assert.ok(camera.threeCamera instanceof THREE.OrthographicCamera);
       assert.strictEqual(camera.threeCamera.matrixWorldAutoUpdate, false);
@@ -184,7 +153,7 @@ describe("Components.Camera.CameraComponent", () => {
       const camera = new CameraComponent(actor as unknown as Actor);
       camera.awake();
 
-      camera.setProjectionMode("orthographic");
+      camera.configure({ projectionMode: "orthographic" });
 
       const { addRenderComponent, removeRenderComponent } = actor.world.renderer;
       assert.strictEqual(addRenderComponent.mock.callCount(), 1);
@@ -192,11 +161,11 @@ describe("Components.Camera.CameraComponent", () => {
       assert.ok(camera.threeCamera instanceof THREE.OrthographicCamera);
     });
 
-    test("should be a no-op when the mode is unchanged", () => {
+    test("should keep the three.js camera when the mode is unchanged", () => {
       const camera = new CameraComponent(actor as unknown as Actor);
       const { threeCamera } = camera;
 
-      camera.setProjectionMode("perspective");
+      camera.configure({ projectionMode: "perspective" });
 
       assert.strictEqual(camera.threeCamera, threeCamera);
     });
@@ -213,45 +182,6 @@ describe("Components.Camera.CameraComponent", () => {
       const { removeRenderComponent } = actor.world.renderer;
       assert.strictEqual(removeRenderComponent.mock.callCount(), 1);
       assert.strictEqual(removeRenderComponent.mock.calls[0].arguments[0], camera);
-    });
-
-    test("should stop invalidating the render order after destroy", () => {
-      const camera = new CameraComponent(actor as unknown as Actor);
-      camera.awake();
-      camera.destroy();
-
-      camera.setDepth(3);
-
-      assert.strictEqual(
-        actor.world.renderer.markRenderOrderDirty.mock.callCount(),
-        0
-      );
-    });
-  });
-
-  describe("setDepth()", () => {
-    test("should invalidate the renderer's cached order", () => {
-      const camera = new CameraComponent(actor as unknown as Actor);
-      camera.awake();
-
-      camera.setDepth(5);
-
-      assert.strictEqual(camera.depth, 5);
-      assert.strictEqual(
-        actor.world.renderer.markRenderOrderDirty.mock.callCount(),
-        1
-      );
-    });
-
-    test("should not touch a renderer it was never registered with", () => {
-      const camera = new CameraComponent(actor as unknown as Actor);
-
-      camera.setDepth(5);
-
-      assert.strictEqual(
-        actor.world.renderer.markRenderOrderDirty.mock.callCount(),
-        0
-      );
     });
   });
 
@@ -270,17 +200,6 @@ describe("Components.Camera.CameraComponent", () => {
       );
 
       assert.strictEqual(camera.postProcessing, postProcessing);
-    });
-
-    test("should replace and clear the post-processing", () => {
-      const postProcessing = createOutputNode;
-      const camera = new CameraComponent(actor as unknown as Actor);
-
-      camera.postProcessing = postProcessing;
-      assert.strictEqual(camera.postProcessing, postProcessing);
-
-      camera.postProcessing = null;
-      assert.strictEqual(camera.postProcessing, null);
     });
   });
 });

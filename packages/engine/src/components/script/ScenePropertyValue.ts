@@ -2,28 +2,68 @@
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import type { ScenePropertyType } from "./BehaviorDecorators.ts";
 import type { JSONValue } from "../../systems/scene/file/SceneFile.ts";
 import { isHexColor } from "../../systems/scene/file/ComponentData.ts";
 
 // CONSTANTS
-export const SCENE_PROPERTY_TYPES: readonly ScenePropertyType[] = [
-  "number",
-  "string",
-  "boolean",
-  "Vector2",
-  "Vector3",
-  "Vector4",
-  "Color",
-  "number[]",
-  "string[]",
-  "boolean[]"
-];
+const kScenePropertyKinds = {
+  number: {
+    parse: (value) => (isNumber(value) ? value : undefined),
+    createDefault: () => 0
+  },
+  string: {
+    parse: (value) => (isString(value) ? value : undefined),
+    createDefault: () => ""
+  },
+  boolean: {
+    parse: (value) => (isBoolean(value) ? value : undefined),
+    createDefault: () => false
+  },
+  Vector2: {
+    parse: (value) => parseNumbers(value, 2, (x, y) => new THREE.Vector2(x, y)),
+    createDefault: () => new THREE.Vector2()
+  },
+  Vector3: {
+    parse: (value) => parseNumbers(value, 3, (x, y, z) => new THREE.Vector3(x, y, z)),
+    createDefault: () => new THREE.Vector3()
+  },
+  Vector4: {
+    parse: (value) => parseNumbers(value, 4, (x, y, z, w) => new THREE.Vector4(x, y, z, w)),
+    createDefault: () => new THREE.Vector4()
+  },
+  Color: {
+    parse: (value) => (isHexColor(value) ? new THREE.Color(value) : undefined),
+    createDefault: () => new THREE.Color(0, 0, 0)
+  },
+  "number[]": {
+    parse: (value) => parseArray(value, isNumber),
+    createDefault: () => []
+  },
+  "string[]": {
+    parse: (value) => parseArray(value, isString),
+    createDefault: () => []
+  },
+  "boolean[]": {
+    parse: (value) => parseArray(value, isBoolean),
+    createDefault: () => []
+  }
+} satisfies Record<string, ScenePropertyKind>;
 const kVectorTypes: Readonly<Record<number, ScenePropertyType>> = {
   2: "Vector2",
   3: "Vector3",
   4: "Vector4"
 };
+
+interface ScenePropertyKind {
+  parse(value: JSONValue): unknown;
+  createDefault(): unknown;
+}
+
+export type ScenePropertyType = keyof typeof kScenePropertyKinds;
+
+export const SCENE_PROPERTY_TYPES = Object.keys(
+  kScenePropertyKinds
+) as readonly ScenePropertyType[];
 
 export function inferScenePropertyType(
   value: JSONValue
@@ -54,30 +94,13 @@ export function parseScenePropertyValue(
   type: ScenePropertyType,
   value: JSONValue
 ): unknown {
-  switch (type) {
-    case "string":
-      return isString(value) ? value : undefined;
-    case "number":
-      return isNumber(value) ? value : undefined;
-    case "boolean":
-      return isBoolean(value) ? value : undefined;
-    case "string[]":
-      return parseArray(value, isString);
-    case "number[]":
-      return parseArray(value, isNumber);
-    case "boolean[]":
-      return parseArray(value, isBoolean);
-    case "Vector2":
-      return parseNumbers(value, 2, (x, y) => new THREE.Vector2(x, y));
-    case "Vector3":
-      return parseNumbers(value, 3, (x, y, z) => new THREE.Vector3(x, y, z));
-    case "Vector4":
-      return parseNumbers(value, 4, (x, y, z, w) => new THREE.Vector4(x, y, z, w));
-    case "Color":
-      return isHexColor(value) ?
-        new THREE.Color(value) :
-        undefined;
-  }
+  return kScenePropertyKinds[type].parse(value);
+}
+
+export function createScenePropertyDefault(
+  type: ScenePropertyType
+): unknown {
+  return kScenePropertyKinds[type].createDefault();
 }
 
 function parseArray<T extends JSONValue>(

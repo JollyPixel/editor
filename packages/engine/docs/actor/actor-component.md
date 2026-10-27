@@ -91,7 +91,7 @@ class Spinner extends ActorComponent {
 ```
 
 To destroy a component during gameplay, prefer
-`world.sceneManager.destroyComponent(component)`, which defers the
+`world.sceneManager.actors.destroyLater(component)`, which defers the
 destruction to the end of the frame.
 
 ## API

@@ -3,7 +3,7 @@ import * as THREE from "three/webgpu";
 import type { EventMap } from "@openally/emitt";
 
 // Import Internal Dependencies
-import type { PostProcessing } from "./PostProcessing.ts";
+import type { PostProcessing } from "./compositing/PostProcessing.ts";
 
 export interface RenderViewport {
   /**
@@ -68,7 +68,6 @@ export interface Renderer<
   removeRenderComponent(
     component: RenderComponent
   ): void;
-  markRenderOrderDirty(): void;
 
   on<Key extends keyof Events>(
     type: Key,

@@ -3,11 +3,11 @@ import * as THREE from "three/webgpu";
 import { pass } from "three/tsl";
 
 // Import Internal Dependencies
-import { DirectRenderStrategy } from "../../../../src/systems/rendering/RenderStrategy.ts";
+import { CameraCompositor } from "../../../../../src/systems/rendering/compositing/CameraCompositor.ts";
 import type {
   RenderComponent,
   RenderViewport
-} from "../../../../src/systems/rendering/Renderer.ts";
+} from "../../../../../src/systems/rendering/Renderer.ts";
 
 // CONSTANTS
 const kSize = 32;
@@ -60,7 +60,8 @@ export async function probe(
     prepareRender: () => void 0
   };
   const overlay = new THREE.Scene();
-  const strategy = new DirectRenderStrategy(renderer);
+  const compositor = new CameraCompositor(renderer);
+  compositor.add(component);
   const sample = document.createElement("canvas");
   sample.width = kSize;
   sample.height = kSize;
@@ -71,11 +72,7 @@ export async function probe(
     let remaining = kFrames;
     void renderer.setAnimationLoop(() => {
       try {
-        strategy.render(scene, {
-          components: [component],
-          canvasWidth: kSize,
-          canvasHeight: kSize
-        });
+        compositor.render(scene, kSize, kSize);
         if (options.overlay) {
           renderer.setViewport(kSize - 8, 0, 8, 8);
           renderer.render(overlay, camera);
@@ -101,7 +98,7 @@ export async function probe(
     };
   }
   finally {
-    strategy.dispose();
+    compositor.dispose();
     plane.geometry.dispose();
     plane.material.dispose();
     renderer.dispose();

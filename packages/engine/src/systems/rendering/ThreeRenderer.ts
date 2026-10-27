@@ -8,10 +8,8 @@ import type {
   RenderComponent,
   RendererEvents
 } from "./Renderer.ts";
-import {
-  type RenderStrategy,
-  DirectRenderStrategy
-} from "./RenderStrategy.ts";
+import { CameraCompositor } from "./compositing/CameraCompositor.ts";
+import { CanvasSize } from "./CanvasSize.ts";
 import { PipelineCompiles } from "./PipelineCompiles.ts";
 
 // CONSTANTS
@@ -120,18 +118,10 @@ export function resolveRendererSettings(
 
 export class ThreeRenderer extends Emitter<ThreeRendererEvents> implements Renderer<THREE.WebGPURenderer> {
   webGPURenderer: THREE.WebGPURenderer;
-  renderComponents: RenderComponent[] = [];
-  renderStrategy: RenderStrategy;
-  ratio: number | null = null;
 
-  #sortedComponents: readonly RenderComponent[] = [];
-  #renderOrderDirty = true;
-
+  #compositor: CameraCompositor;
+  #size = new CanvasSize();
   #resizeObserver: ResizeObserver | null = null;
-  #width = 0;
-  #height = 0;
-  #appliedWidth = 0;
-  #appliedHeight = 0;
   #compiles: PipelineCompiles | null = null;
 
   constructor(
@@ -139,7 +129,7 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents> implements Rende
   ) {
     super();
     this.webGPURenderer = webGPURenderer;
-    this.renderStrategy = new DirectRenderStrategy(webGPURenderer);
+    this.#compositor = new CameraCompositor(webGPURenderer);
 
     const { backend } = webGPURenderer;
     if (PipelineCompiles.isBackend(backend)) {
@@ -176,6 +166,14 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents> implements Rende
     return this.webGPURenderer.domElement;
   }
 
+  get ratio(): number | null {
+    return this.#size.ratio;
+  }
+
+  get renderComponents(): readonly RenderComponent[] {
+    return this.#compositor.components;
+  }
+
   getSource() {
     return this.webGPURenderer;
   }
@@ -191,34 +189,21 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents> implements Rende
   addRenderComponent(
     component: RenderComponent
   ): void {
-    if (this.renderComponents.includes(component)) {
-      return;
-    }
-
-    this.renderComponents.push(component);
-    this.markRenderOrderDirty();
+    this.#compositor.add(component);
   }
 
   removeRenderComponent(
     component: RenderComponent
   ): void {
-    const index = this.renderComponents.indexOf(component);
-    if (index !== -1) {
-      this.renderComponents.splice(index, 1);
-      this.markRenderOrderDirty();
-    }
-  }
-
-  markRenderOrderDirty(): void {
-    this.#renderOrderDirty = true;
+    this.#compositor.remove(component);
   }
 
   setRatio(
     ratio: number | null = null
   ) {
-    this.ratio = ratio;
+    this.#size.ratio = ratio;
 
-    const styles = this.ratio ?
+    const styles = ratio ?
       { margin: "0", flex: "1" } :
       { margin: "auto", flex: "none" };
     Object.assign(this.webGPURenderer.domElement.style, styles);
@@ -232,35 +217,17 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents> implements Rende
       return;
     }
 
-    const target = this.ratio ?
+    const target = this.#size.ratio ?
       document.body :
       this.webGPURenderer.domElement.parentElement ?? this.webGPURenderer.domElement;
 
     this.#resizeObserver = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (entry) {
-        this.#requestSize(entry.contentRect.width, entry.contentRect.height);
+        this.#size.fit(entry.contentRect.width, entry.contentRect.height);
       }
     });
     this.#resizeObserver.observe(target);
-  }
-
-  #requestSize(
-    width: number,
-    height: number
-  ): void {
-    if (!this.ratio) {
-      this.#width = Math.round(width);
-      this.#height = Math.round(height);
-    }
-    else if (width / height > this.ratio) {
-      this.#height = Math.round(height);
-      this.#width = Math.round(Math.min(width, height * this.ratio));
-    }
-    else {
-      this.#width = Math.round(width);
-      this.#height = Math.round(Math.min(height, width / this.ratio));
-    }
   }
 
   unobserveResize() {
@@ -269,18 +236,13 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents> implements Rende
   }
 
   resize() {
-    if (
-      this.#width === 0 ||
-      this.#height === 0 ||
-      (this.#width === this.#appliedWidth && this.#height === this.#appliedHeight)
-    ) {
+    const size = this.#size.commit();
+    if (size === null) {
       return;
     }
-    this.#appliedWidth = this.#width;
-    this.#appliedHeight = this.#height;
 
-    this.renderStrategy.resize(this.#width, this.#height);
-    this.emit("resize", { width: this.#width, height: this.#height });
+    this.webGPURenderer.setSize(size.width, size.height, false);
+    this.emit("resize", size);
   }
 
   draw(
@@ -288,25 +250,11 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents> implements Rende
   ) {
     this.resize();
 
-    if (this.#width === 0 || this.#height === 0) {
+    if (this.#size.isEmpty) {
       return;
     }
 
-    if (this.#renderOrderDirty) {
-      this.#sortedComponents = [...this.renderComponents].sort(
-        (a, b) => a.depth - b.depth
-      );
-      this.#renderOrderDirty = false;
-    }
-
-    this.renderStrategy.render(
-      scene,
-      {
-        components: this.#sortedComponents,
-        canvasWidth: this.#width,
-        canvasHeight: this.#height
-      }
-    );
+    this.#compositor.render(scene, this.#size.width, this.#size.height);
     this.emit("draw", { source: this.webGPURenderer });
   }
 
@@ -316,9 +264,7 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents> implements Rende
 
   dispose() {
     this.unobserveResize();
-    this.renderStrategy.dispose();
-    this.renderComponents.length = 0;
-    this.#sortedComponents = [];
+    this.#compositor.dispose();
 
     this.webGPURenderer.setAnimationLoop(null);
     this.webGPURenderer.dispose();

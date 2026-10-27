@@ -44,7 +44,6 @@ export class ElasticFocus implements CameraFocus {
   #targetTrailDistance: number;
 
   #forward = new THREE.Vector3();
-  #cameraPosition = new THREE.Vector3();
 
   constructor(
     options: ElasticFocusOptions
@@ -132,7 +131,7 @@ export class ElasticFocus implements CameraFocus {
   updatePose(
     pose: CameraFocusPose
   ): void {
-    const { transform, orientation, deltaTime, responsiveness } = pose;
+    const { body, deltaTime, responsiveness } = pose;
 
     this.#trailDistance = dampScalar(
       this.#trailDistance,
@@ -140,12 +139,10 @@ export class ElasticFocus implements CameraFocus {
       smoothingFactor(responsiveness, deltaTime)
     );
 
-    this.#forward.set(0, 0, -1).applyQuaternion(orientation);
-    this.#cameraPosition
+    this.#forward.set(0, 0, -1).applyQuaternion(body.orientation);
+    body.position
       .copy(this.#pivotPosition)
       .addScaledVector(this.#forward, -this.#trailDistance);
-
-    transform.setLocalPosition(this.#cameraPosition);
     this.#marker.moveTo(this.#pivotPosition);
   }
 

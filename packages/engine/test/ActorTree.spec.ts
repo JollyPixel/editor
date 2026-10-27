@@ -8,19 +8,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { ActorTree } from "../src/index.ts";
-
-function createFakeActor(
-  options: { children?: any[]; name?: string; } = {}
-) {
-  const { children = [], name = "" } = options;
-
-  return {
-    name,
-    children,
-    pendingForDestruction: false,
-    markDestructionPending: mock.fn()
-  };
-}
+import { createFakeActor } from "./helpers/actor/fakeActor.ts";
 
 describe("ActorTree", () => {
   describe("add", () => {
@@ -183,7 +171,7 @@ describe("ActorTree", () => {
   });
 
   describe("destroyActor", () => {
-    test("should mark actor for destruction and add to destroy list", () => {
+    test("should mark a live actor for destruction", () => {
       const actorTree = new ActorTree();
       const actor = createFakeActor();
 

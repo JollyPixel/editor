@@ -6,15 +6,19 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import * as THREE from "three/webgpu";
+
 // Import Internal Dependencies
 import {
   Actor,
   ActorComponent,
   Behavior,
   InputListener,
-  SceneActorComponent
+  SceneActorComponent,
+  SceneProperty
 } from "../src/index.ts";
-import { createWorld } from "./mocks.ts";
+import { createWorld } from "./helpers/actor/mockWorld.ts";
 
 class Sibling extends ActorComponent {
   constructor(
@@ -40,6 +44,11 @@ class KeyListener extends Behavior {
   }
 }
 InputListener("keyboard.down")(KeyListener.prototype, "onKeyDown");
+
+class Mover extends Behavior {
+  offset: THREE.Vector3 | undefined = undefined;
+}
+SceneProperty({ type: "Vector3" })(Mover.prototype, "offset");
 
 class BehaviorOne extends Behavior {}
 class BehaviorTwo extends Behavior {}
@@ -188,6 +197,18 @@ describe("Actor Component Lookup", () => {
 });
 
 describe("Behavior bindings", () => {
+  test("should give each behavior its own default for an unset scene property", () => {
+    const actor = createRealActor();
+    const first = actor.addComponentAndGet(Mover);
+    const second = actor.addComponentAndGet(Mover);
+
+    actor.awake();
+    first.offset!.x = 1;
+
+    assert.ok(second.offset instanceof THREE.Vector3);
+    assert.strictEqual(second.offset.x, 0);
+  });
+
   test("should resolve decorated sibling components before awake", () => {
     const actor = createRealActor();
     const consumer = actor.addComponentAndGet(SiblingConsumer);

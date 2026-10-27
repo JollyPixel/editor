@@ -10,7 +10,7 @@ import type { JSONObject } from "../../systems/scene/file/SceneFile.ts";
 import {
   CameraComponent,
   CAMERA_DEFAULTS,
-  type CameraOptions,
+  type CameraSettings,
   type CameraProjectionMode
 } from "./Camera.ts";
 
@@ -20,10 +20,7 @@ const kProjectionModes: Record<CameraProjectionMode, true> = {
   orthographic: true
 };
 
-export type CameraData = Required<Pick<
-  CameraOptions,
-  "projectionMode" | "fov" | "near" | "far" | "orthographicScale" | "viewport" | "depth"
->>;
+export type CameraData = Required<CameraSettings>;
 
 export class CameraDefinition implements ComponentDefinition<
   CameraData,
@@ -69,13 +66,7 @@ export class CameraDefinition implements ComponentDefinition<
     component: CameraComponent<any>,
     data: CameraData
   ): void {
-    component
-      .setProjectionMode(data.projectionMode)
-      .setFov(data.fov)
-      .setNearFar(data.near, data.far)
-      .setOrthographicScale(data.orthographicScale)
-      .setViewport(data.viewport)
-      .setDepth(data.depth);
+    component.configure(data);
   }
 }
 

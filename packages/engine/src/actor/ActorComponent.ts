@@ -42,8 +42,7 @@ export class ActorComponent<
     this.actor = options.actor;
     this.typeName = options.typeName;
 
-    this.actor.components.push(this);
-    this.actor.world.sceneManager.scheduleStart(this);
+    this.actor.world.sceneManager.actors.attachComponent(this);
     this.needUpdate = hasUpdateHook(this);
   }
 
@@ -106,12 +105,7 @@ export class ActorComponent<
     }
 
     this.needUpdate = false;
-    this.actor.world.sceneManager.cancelStart(this);
-
-    const index = this.actor.components.indexOf(this);
-    if (index !== -1) {
-      this.actor.components.splice(index, 1);
-    }
+    this.actor.world.sceneManager.actors.detachComponent(this);
   }
 
   protected onDestroy(): void {

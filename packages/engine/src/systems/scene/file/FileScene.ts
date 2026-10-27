@@ -3,9 +3,8 @@ import { Scene } from "../Scene.ts";
 import type { WorldDefaultContext } from "../../World.ts";
 import type { ComponentDefinitions } from "./ComponentDefinitions.ts";
 import { CoordinatorAssetResolver } from "./CoordinatorAssetResolver.ts";
-import { SceneBuilder } from "./SceneBuilder.ts";
+import { SceneInstance } from "./SceneInstance.ts";
 import { SceneEnvironment } from "./SceneEnvironment.ts";
-import type { SceneBuild } from "./SceneBuild.ts";
 import type { SceneFile } from "./SceneFile.ts";
 
 export interface FileSceneOptions {
@@ -18,7 +17,6 @@ export class FileScene<
   readonly file: SceneFile;
 
   #components: ComponentDefinitions;
-  #build: SceneBuild<TContext> | null = null;
   #environment: SceneEnvironment | null = null;
 
   constructor(
@@ -33,20 +31,15 @@ export class FileScene<
     this.#components = options.components;
   }
 
-  get build(): SceneBuild<TContext> | null {
-    return this.#build;
-  }
-
   override awake(): void {
-    const builder = new SceneBuilder<TContext>({
+    new SceneInstance<TContext>({
       world: this.world,
       mode: "play",
       components: this.#components,
       assets: new CoordinatorAssetResolver(
         this.world.assetCoordinator
       )
-    });
-    this.#build = builder.build(this.file.actors);
+    }).add(this.file.actors);
 
     this.#environment = new SceneEnvironment(this.world);
     this.#environment.apply(
@@ -57,6 +50,5 @@ export class FileScene<
   override destroy(): void {
     this.#environment?.dispose();
     this.#environment = null;
-    this.#build = null;
   }
 }

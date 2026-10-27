@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as THREE from "three";
-import type { Actor } from "@jolly-pixel/engine";
+import { Systems, type Actor } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
 import { PeerFrustums } from "#src/runtime/PeerFrustums.ts";
@@ -31,8 +31,7 @@ function createFrustums(): FrustumsHarness {
         invalidations++;
       },
       sceneManager: {
-        scheduleStart: () => void 0,
-        cancelStart: () => void 0,
+        actors: new Systems.ActorRegistry(new THREE.Scene()),
         getSource: () => new THREE.Scene()
       }
     }

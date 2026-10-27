@@ -2,7 +2,7 @@
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import type { RenderComponent } from "./Renderer.ts";
+import type { RenderComponent } from "../Renderer.ts";
 import type { PostProcessing } from "./PostProcessing.ts";
 import { OffscreenCameraPipeline } from "./OffscreenCameraPipeline.ts";
 

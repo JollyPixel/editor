@@ -14,13 +14,13 @@ import {
   FileScene,
   type ComponentDefinition
 } from "../../../src/systems/scene/file/index.ts";
-import { createSceneSetup } from "../../helpers/sceneSetup.ts";
-import { createSceneAssets } from "../../sceneAssets.ts";
+import { createSceneSetup } from "../../helpers/scene/sceneSetup.ts";
+import { createSceneAssets } from "../../helpers/scene/sceneAssets.ts";
 import {
   createActorFile,
   createComponentFile,
   createSceneFile
-} from "../../helpers/sceneFile.ts";
+} from "../../helpers/scene/sceneFile.ts";
 
 class ModelComponent extends ActorComponent {
   readonly model: string | null;
@@ -85,15 +85,15 @@ describe("Systems.FileScene", () => {
 
     const load = sm.loadScene(scene);
     sm.beginFrame();
-    assert.strictEqual(scene.build, null);
+    assert.strictEqual(sm.tree.children.length, 0);
 
     assets.loader.resolve("knight");
     await load.done;
     sm.beginFrame();
 
-    const hero = scene.build!.actor("hero")!;
-    const model = scene.build!.component("model") as ModelComponent;
-    assert.deepEqual(sm.tree.children, [hero]);
+    const [hero] = sm.tree.children;
+    const model = hero.getComponent(ModelComponent)!;
+    assert.strictEqual(sm.tree.children.length, 1);
     assert.strictEqual(model.actor, hero);
     assert.strictEqual(model.model, "knight");
   });

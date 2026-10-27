@@ -13,18 +13,13 @@ capabilities to an Actor. It provides:
 ```ts
 import {
   Behavior,
-  type BehaviorProperties,
   ModelRenderer,
   SceneProperty,
   SceneActorComponent,
   SignalEvent
 } from "@jolly-pixel/engine";
 
-export interface PlayerProperties extends BehaviorProperties {
-  speed: number;
-}
-
-export class PlayerBehavior extends Behavior<PlayerProperties> {
+export class PlayerBehavior extends Behavior {
   onPlayerPunch = new SignalEvent();
 
   @SceneProperty({ type: "number" })
@@ -83,6 +78,10 @@ variants), `Vector2`, `Vector3`, `Vector4`, `Color`.
 speed = 0.05;
 ```
 
+A field still `undefined` when `bind()` runs gets the type default: `""`,
+`0`, `false`, an empty array, a zero vector, or black. Vectors and colors are
+new instances for each behavior.
+
 ### `@SceneActorComponent`
 
 Binds a field to a sibling component on the same actor. The
@@ -108,28 +107,6 @@ onKeyDown(event: KeyboardEvent) {
 ```
 
 ## Properties
-
-Behaviors support typed runtime properties through the generic
-parameter `T extends BehaviorProperties`:
-
-```ts
-type BehaviorPropertiesValue =
-  | string | string[]
-  | number | number[]
-  | boolean | boolean[]
-  | THREE.Vector2
-  | THREE.Vector3;
-
-type BehaviorProperties = Record<string, BehaviorPropertiesValue>;
-```
-
-```ts
-interface Behavior<T extends BehaviorProperties> {
-  setProperty<K extends keyof T>(name: K, value: T[K]): void;
-  getProperty<K extends keyof T>(name: K, defaultValue: T[K]): T[K];
-  mergeProperties(defaults?: Partial<T>): void;
-}
-```
 
 `properties` passed as an option are assigned to the behavior's fields after
 its field initializers, before `@SceneProperty` defaults resolve:

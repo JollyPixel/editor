@@ -11,7 +11,7 @@ import type {
 } from "../../../src/systems/rendering/Renderer.ts";
 import type {
   PostProcessing
-} from "../../../src/systems/rendering/PostProcessing.ts";
+} from "../../../src/systems/rendering/compositing/PostProcessing.ts";
 
 export interface RenderComponentStubOptions {
   depth?: number;

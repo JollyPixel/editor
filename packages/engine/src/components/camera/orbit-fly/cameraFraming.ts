@@ -2,7 +2,7 @@
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import type { CameraPose } from "./OrbitFlyCamera.ts";
+import type { CameraPose } from "./FlyRig.ts";
 
 export interface CameraFramingOptions {
   /**

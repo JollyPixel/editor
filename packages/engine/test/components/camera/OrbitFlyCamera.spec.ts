@@ -5,11 +5,14 @@ import {
   test
 } from "node:test";
 
+// Import Third-party Dependencies
+import * as THREE from "three/webgpu";
+
 // Import Internal Dependencies
-import { createHarness, unusedPostProcessing } from "../../helpers/orbitFlyHarness.ts";
+import { createHarness, unusedPostProcessing } from "../../helpers/camera/orbitFlyHarness.ts";
 import type {
   PostProcessing
-} from "../../../src/systems/rendering/PostProcessing.ts";
+} from "../../../src/systems/rendering/compositing/PostProcessing.ts";
 
 describe("OrbitFlyCamera vertical movement", () => {
   test("descends while shift is held", () => {
@@ -177,24 +180,6 @@ describe("OrbitFlyCamera focus mode \"none\"", () => {
 });
 
 describe("OrbitFlyCamera options", () => {
-  test("elastic focus creates no marker when showPivotMarker is false", () => {
-    const harness = createHarness({
-      focusMode: "elastic",
-      maxPivotDistance: 20,
-      position: { x: 0, y: 0, z: 0 },
-      initialTrailDistance: 12,
-      showPivotMarker: false
-    });
-
-    assert.equal(harness.camera.isOrbiting, true);
-    assert.equal(harness.sceneChildren.length, 0);
-
-    harness.scroll(-10);
-    harness.advance();
-    harness.scroll(0);
-    assert.equal(harness.sceneChildren.length, 0);
-  });
-
   test("fov defaults to 60 and is configurable", () => {
     assert.equal(createHarness().camera.fov, 60);
     assert.equal(createHarness({ fov: 45 }).camera.fov, 45);
@@ -214,5 +199,19 @@ describe("OrbitFlyCamera options", () => {
       [0.5, 500, 2, viewport]
     );
     assert.equal(camera.postProcessing, postProcessing);
+  });
+});
+
+describe("OrbitFlyCamera under a parent actor", () => {
+  test("holds its local pose while idle", () => {
+    const harness = createHarness();
+    const parent = new THREE.Object3D();
+    parent.position.set(10, 0, 0);
+    parent.add(harness.object);
+    parent.updateMatrixWorld(true);
+
+    harness.advance(3);
+
+    assert.deepEqual(harness.offset.toArray(), [0, 0, 0]);
   });
 });

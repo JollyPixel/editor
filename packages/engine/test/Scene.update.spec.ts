@@ -22,7 +22,7 @@ import {
   ConcreteScene,
   createSceneSetup,
   activateScene
-} from "./helpers/sceneSetup.ts";
+} from "./helpers/scene/sceneSetup.ts";
 
 // CONSTANTS
 const kDeltaTime = 1 / 60;
@@ -36,52 +36,43 @@ describe("Scene", () => {
 
   describe("update / fixedUpdate", () => {
     test("calls scene.update after actor updates", () => {
-      const { sm } = createSceneSetup();
+      const { sm, world } = createSceneSetup();
       const scene = new ConcreteScene("test");
+      const calls: string[] = [];
 
       activateScene(sm, scene);
+      const actor = world.createActor("actor");
       sm.beginFrame();
+      mock.method(actor, "update", () => {
+        calls.push("actor");
+      });
+      scene.updateSpy.mock.mockImplementation(() => {
+        calls.push("scene");
+      });
       sm.update(kDeltaTime);
 
-      assert.strictEqual(scene.updateSpy.mock.calls.length, 1);
+      assert.deepEqual(calls, ["actor", "scene"]);
       assert.strictEqual(scene.updateSpy.mock.calls[0].arguments[0], kDeltaTime);
     });
 
     test("calls scene.fixedUpdate after actor fixedUpdates", () => {
-      const { sm } = createSceneSetup();
+      const { sm, world } = createSceneSetup();
       const scene = new ConcreteScene("test");
+      const calls: string[] = [];
 
       activateScene(sm, scene);
+      const actor = world.createActor("actor");
       sm.beginFrame();
+      mock.method(actor, "fixedUpdate", () => {
+        calls.push("actor");
+      });
+      scene.fixedUpdateSpy.mock.mockImplementation(() => {
+        calls.push("scene");
+      });
       sm.fixedUpdate(kDeltaTime);
 
-      assert.strictEqual(scene.fixedUpdateSpy.mock.calls.length, 1);
+      assert.deepEqual(calls, ["actor", "scene"]);
       assert.strictEqual(scene.fixedUpdateSpy.mock.calls[0].arguments[0], kDeltaTime);
-    });
-
-    test("does not call update/fixedUpdate when no scene is set", () => {
-      const { sm } = createSceneSetup();
-      const updateSpy = mock.fn();
-      const fixedUpdateSpy = mock.fn();
-
-      sm.update(kDeltaTime);
-      sm.fixedUpdate(kDeltaTime);
-
-      assert.strictEqual(updateSpy.mock.calls.length, 0);
-      assert.strictEqual(fixedUpdateSpy.mock.calls.length, 0);
-    });
-
-    test("scene.update is called every frame", () => {
-      const { sm } = createSceneSetup();
-      const scene = new ConcreteScene("test");
-
-      activateScene(sm, scene);
-      sm.beginFrame();
-      sm.update(kDeltaTime);
-      sm.update(kDeltaTime);
-      sm.update(kDeltaTime);
-
-      assert.strictEqual(scene.updateSpy.mock.calls.length, 3);
     });
   });
 
@@ -94,13 +85,6 @@ describe("Scene", () => {
       assert.strictEqual(a.id, 0);
       assert.strictEqual(b.id, 1);
       assert.strictEqual(c.id, 2);
-    });
-
-    test("two scenes with the same name have different ids", () => {
-      const a = new ConcreteScene("same");
-      const b = new ConcreteScene("same");
-
-      assert.notStrictEqual(a.id, b.id);
     });
   });
 

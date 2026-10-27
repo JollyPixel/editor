@@ -48,7 +48,7 @@ export class Actor<
 
   components: Component[] = [];
   componentsRequiringUpdate: Component[] = [];
-  behaviors: Record<string, Behavior<any, TContext>[]> = {};
+  behaviors: Record<string, Behavior<TContext>[]> = {};
 
   awoken = false;
   pendingForDestruction = false;
@@ -87,16 +87,7 @@ export class Actor<
 
     this.transform = new Transform(this.object3D);
 
-    if (parent) {
-      parent.add(this);
-      parent.object3D.add(this.object3D);
-      this.object3D.updateMatrixWorld(false);
-    }
-    else {
-      this.world.sceneManager.tree.add(this);
-    }
-
-    this.world.sceneManager.registerActor(this);
+    this.world.sceneManager.actors.attach(this);
   }
 
   get name(): string {
@@ -218,8 +209,7 @@ export class Actor<
       component.destroy();
     }
 
-    this.world.sceneManager.unregisterActor(this);
-    (this.parent ?? this.world.sceneManager.tree).remove(this);
+    this.world.sceneManager.actors.detach(this);
 
     disposeObject3D(
       this.object3D,
@@ -243,19 +233,7 @@ export class Actor<
       throw new Error("Cannot reparent actor to destroyed actor");
     }
 
-    const threeParent = newParent?.object3D ?? this.world.sceneManager.getSource();
-    if (keepLocal) {
-      threeParent.add(this.object3D);
-    }
-    else {
-      threeParent.attach(this.object3D);
-    }
-
-    (this.parent ?? this.world.sceneManager.tree).remove(this);
-    this.parent = newParent;
-    (newParent ?? this.world.sceneManager.tree).add(this);
-
-    this.object3D.updateMatrixWorld(false);
+    this.world.sceneManager.actors.reparent(this, newParent, keepLocal);
   }
 }
 

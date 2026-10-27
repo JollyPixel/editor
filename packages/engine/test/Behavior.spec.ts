@@ -5,158 +5,122 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   Actor,
-  ActorComponent,
-  Behavior,
-  InputListener,
-  SceneActorComponent
+  Behavior
 } from "../src/index.ts";
-import { createActor } from "./mocks.ts";
+import { SceneManager } from "../src/systems/scene/SceneManager.ts";
 
-class Sibling extends ActorComponent {
-  constructor(
-    actor: Actor
-  ) {
-    super({ actor, typeName: "Sibling" });
+class BehaviorOne extends Behavior {
+  starts = 0;
+
+  start() {
+    this.starts++;
   }
 }
-
-class SiblingConsumer extends Behavior {
-  sibling: Sibling | undefined = undefined;
-  siblingSeenInAwake: Sibling | undefined = undefined;
-
-  awake() {
-    this.siblingSeenInAwake = this.sibling;
-  }
-}
-SceneActorComponent(Sibling)(SiblingConsumer.prototype, "sibling");
-
-class KeyListener extends Behavior {
-  onKeyDown() {
-    return;
-  }
-}
-InputListener("keyboard.down")(KeyListener.prototype, "onKeyDown");
-
-class BehaviorOne extends Behavior {}
 class BehaviorTwo extends Behavior {}
 
+function createActor() {
+  const sceneManager = new SceneManager();
+  const actor = new Actor(
+    { sceneManager } as any,
+    { name: "owner" }
+  );
+
+  return { actor, sceneManager };
+}
+
 describe("Behavior", () => {
-  test("should register behavior to actor and add to components to be started", () => {
-    const fakeActor = createActor();
+  test("should register on its actor and start on the next frame", () => {
+    const { actor, sceneManager } = createActor();
 
-    // @ts-expect-error
-    const behavior = new BehaviorOne(fakeActor);
+    const behavior = new BehaviorOne(actor);
 
-    assert.deepEqual(fakeActor.components, [behavior]);
-    assert.deepEqual(fakeActor.world.sceneManager.componentsToStart, [behavior]);
-    assert.deepEqual(fakeActor.behaviors, {
-      BehaviorOne: [behavior]
-    });
+    assert.deepEqual(actor.components, [behavior]);
+    assert.strictEqual(behavior.starts, 0);
+
+    sceneManager.beginFrame();
+    sceneManager.beginFrame();
+    assert.strictEqual(behavior.starts, 1);
   });
 
-  test("should handle multiple behaviors of same type", () => {
-    const fakeActor = createActor();
+  test("should group behaviors by type name on the actor", () => {
+    const { actor } = createActor();
 
-    // @ts-expect-error
-    const behavior1 = new BehaviorOne(fakeActor);
-    // @ts-expect-error
-    const behavior2 = new BehaviorOne(fakeActor);
+    const first = new BehaviorOne(actor);
+    const second = new BehaviorOne(actor);
+    const other = new BehaviorTwo(actor);
 
-    assert.deepEqual(fakeActor.components, [behavior1, behavior2]);
-    assert.deepEqual(fakeActor.world.sceneManager.componentsToStart, [behavior1, behavior2]);
-    assert.deepEqual(fakeActor.behaviors, {
-      BehaviorOne: [behavior1, behavior2]
-    });
-  });
-
-  test("should handle multiple behaviors of different types", () => {
-    const fakeActor = createActor();
-
-    // @ts-expect-error
-    const mockBehavior = new BehaviorOne(fakeActor);
-    // @ts-expect-error
-    const anotherBehavior = new BehaviorTwo(fakeActor);
-
-    assert.deepEqual(fakeActor.components, [mockBehavior, anotherBehavior]);
-    assert.deepEqual(fakeActor.world.sceneManager.componentsToStart, [mockBehavior, anotherBehavior]);
-    assert.deepEqual(fakeActor.behaviors, {
-      BehaviorOne: [mockBehavior],
-      BehaviorTwo: [anotherBehavior]
+    assert.deepEqual(actor.components, [first, second, other]);
+    assert.deepEqual(actor.behaviors, {
+      BehaviorOne: [first, second],
+      BehaviorTwo: [other]
     });
   });
 
   test("should remove behavior from actor on destroy", () => {
-    const fakeActor = createActor();
+    const { actor } = createActor();
 
-    // @ts-expect-error
-    const behavior = new BehaviorOne(fakeActor);
+    const behavior = new BehaviorOne(actor);
 
-    assert.equal(fakeActor.components.length, 1);
-    assert.equal(Object.keys(fakeActor.behaviors).length, 1);
+    assert.equal(actor.components.length, 1);
+    assert.equal(Object.keys(actor.behaviors).length, 1);
 
     behavior.destroy();
 
-    assert.equal(fakeActor.components.length, 0);
-    assert.equal(Object.keys(fakeActor.behaviors).length, 0);
+    assert.equal(actor.components.length, 0);
+    assert.equal(Object.keys(actor.behaviors).length, 0);
   });
 
   test("should handle destroy when multiple behaviors of same type exist", () => {
-    const fakeActor = createActor();
+    const { actor } = createActor();
 
-    // @ts-expect-error
-    const behavior1 = new BehaviorOne(fakeActor);
-    // @ts-expect-error
-    const behavior2 = new BehaviorOne(fakeActor);
+    const behavior1 = new BehaviorOne(actor);
+    const behavior2 = new BehaviorOne(actor);
 
-    assert.equal(fakeActor.components.length, 2);
-    const behaviorList = fakeActor.behaviors.BehaviorOne;
+    assert.equal(actor.components.length, 2);
+    const behaviorList = actor.behaviors.BehaviorOne;
     assert.equal(behaviorList.length, 2);
 
     behavior1.destroy();
 
-    assert.equal(fakeActor.components.length, 1);
-    assert.equal(fakeActor.components[0], behavior2);
+    assert.equal(actor.components.length, 1);
+    assert.equal(actor.components[0], behavior2);
     assert.deepEqual(behaviorList, [behavior2]);
   });
 
   test("should not affect other behavior types on destroy", () => {
-    const fakeActor = createActor();
+    const { actor } = createActor();
 
-    // @ts-expect-error
-    const mockBehavior = new BehaviorOne(fakeActor);
-    // @ts-expect-error
-    const anotherBehavior = new BehaviorTwo(fakeActor);
+    const behavior = new BehaviorOne(actor);
+    const anotherBehavior = new BehaviorTwo(actor);
 
-    mockBehavior.destroy();
+    behavior.destroy();
 
-    assert.equal(fakeActor.components.length, 1);
-    assert.equal(fakeActor.components[0], anotherBehavior);
-    assert.equal(Object.keys(fakeActor.behaviors).length, 1);
-    assert.deepEqual(fakeActor.behaviors.BehaviorTwo, [anotherBehavior]);
+    assert.equal(actor.components.length, 1);
+    assert.equal(actor.components[0], anotherBehavior);
+    assert.equal(Object.keys(actor.behaviors).length, 1);
+    assert.deepEqual(actor.behaviors.BehaviorTwo, [anotherBehavior]);
   });
 
   test("should handle destroy on already destroyed behavior", () => {
-    const fakeActor = createActor();
+    const { actor } = createActor();
 
-    // @ts-expect-error
-    const behavior = new BehaviorOne(fakeActor);
-
-    behavior.destroy();
-    assert.equal(fakeActor.components.length, 0);
+    const behavior = new BehaviorOne(actor);
 
     behavior.destroy();
-    assert.equal(fakeActor.components.length, 0);
+    assert.equal(actor.components.length, 0);
+
+    behavior.destroy();
+    assert.equal(actor.components.length, 0);
   });
 
   test("should still tear down a behavior already marked for destruction", () => {
-    const fakeActor = createActor();
+    const { actor } = createActor();
 
-    // @ts-expect-error
-    const behavior = new BehaviorOne(fakeActor);
+    const behavior = new BehaviorOne(actor);
     behavior.pendingForDestruction = true;
     behavior.destroy();
 
-    assert.equal(fakeActor.components.length, 0);
-    assert.equal(Object.keys(fakeActor.behaviors).length, 0);
+    assert.equal(actor.components.length, 0);
+    assert.equal(Object.keys(actor.behaviors).length, 0);
   });
 });

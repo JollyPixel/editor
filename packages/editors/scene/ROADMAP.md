@@ -24,7 +24,7 @@ file already reserves `SceneActorFile.prefab`, and the room and the editor
 refuse it.
 
 - **Cut 1.** An actor with `prefab` holds no children of its own. Its name,
-  visibility and transform form the instance root, and `SceneBuilder` expands
+  visibility and transform form the instance root, and `SceneInstance` expands
   the referenced scene's root actors under it, in edit and play mode alike.
   Instances are read-only. Cycles are refused in the editor and in
   `SceneState.accepts()`.

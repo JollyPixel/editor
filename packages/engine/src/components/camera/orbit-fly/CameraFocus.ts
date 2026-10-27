@@ -2,20 +2,25 @@
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import type { Actor } from "../../../actor/Actor.ts";
-import type { OrbitFlyKeys } from "./OrbitFlyKeys.ts";
+import type { OrbitFlyAction } from "./OrbitFlyKeys.ts";
 
 // CONSTANTS
 const kSmoothingSnapEpsilon = 1e-3;
 
-export type CameraFocusTransform = Actor["transform"];
-export type CameraFocusInput = Actor["world"]["input"];
+export type OrbitFlyNudge = Extract<
+  OrbitFlyAction,
+  "forward" | "back" | "right" | "left" | "up" | "down"
+>;
+
+export interface FlyBody {
+  position: THREE.Vector3;
+  orientation: THREE.Quaternion;
+}
 
 export interface CameraFocusPose {
-  transform: CameraFocusTransform;
+  body: FlyBody;
   yaw: number;
   pitch: number;
-  orientation: THREE.Quaternion;
   deltaTime: number;
   responsiveness: number;
 }
@@ -47,14 +52,13 @@ export interface CameraFocus {
     scrollY: number
   ): boolean;
   nudge(
-    input: CameraFocusInput,
-    keys: OrbitFlyKeys,
+    direction: OrbitFlyNudge,
     forward: THREE.Vector3,
     right: THREE.Vector3
   ): void;
   move(
     offset: THREE.Vector3,
-    transform: CameraFocusTransform
+    body: FlyBody
   ): void;
   teleported(
     position: THREE.Vector3Like,
@@ -90,9 +94,9 @@ export class NoCameraFocus implements CameraFocus {
 
   move(
     offset: THREE.Vector3,
-    transform: CameraFocusTransform
+    body: FlyBody
   ): void {
-    transform.moveGlobal(offset);
+    body.position.add(offset);
   }
 
   teleported(): void {
