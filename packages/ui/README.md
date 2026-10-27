@@ -97,6 +97,7 @@ Field controls share the [field API](./docs/api/field/shared-field-api.md).
 - [`jolly-number`](./docs/api/controls/number.md) (`NumberField`)
 - [`jolly-property-row`](./docs/api/controls/property-row.md) (`PropertyRow`)
 - [`jolly-range`](./docs/api/controls/range.md) (`Range`)
+- [`jolly-reference`](./docs/api/controls/reference.md) (`Reference`)
 - [`jolly-search`](./docs/api/controls/search.md) (`Search`)
 - [`jolly-select`](./docs/api/controls/select.md) (`Select`)
 - [`jolly-separator`](./docs/api/controls/separator.md) (`Separator`)

@@ -5,7 +5,8 @@ import { css } from "lit";
 import { kFallback } from "../theme/styles/fallbacks.ts";
 import {
   fillTransition,
-  focusRing
+  focusRing,
+  iconButton
 } from "../theme/styles/mixins.ts";
 
 export const searchStyles = css`
@@ -78,17 +79,10 @@ export const searchStyles = css`
 
   .trigger,
   .clear {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     flex: 0 0 auto;
-    padding: 0;
-    border: 0;
-    border-radius: var(--jolly-radius-sm, 2px);
     color: inherit;
-    cursor: pointer;
 
-    ${fillTransition}
+    ${iconButton}
   }
 
   .trigger {
@@ -101,7 +95,6 @@ export const searchStyles = css`
   .clear {
     width: 16px;
     height: 16px;
-    background: none;
     opacity: 0.75;
   }
 

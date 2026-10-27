@@ -134,21 +134,6 @@ export class InspectorPanel extends LitElement {
       white-space: nowrap;
     }
 
-    .slot {
-      display: flex;
-      align-items: center;
-      gap: var(--jolly-space-1, 4px);
-      min-width: 0;
-    }
-
-    .slot-name {
-      flex: 1 1 auto;
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
     .unknown {
       margin: 0;
       overflow: auto;

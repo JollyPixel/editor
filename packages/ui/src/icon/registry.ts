@@ -16,6 +16,7 @@ export type BuiltinIconName =
   | "lock"
   | "eye"
   | "search"
+  | "folder"
   | "check"
   | "info"
   | "warning"

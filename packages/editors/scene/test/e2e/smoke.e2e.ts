@@ -88,7 +88,8 @@ test("a click in the viewport selects an actor and the gizmo moves it in one und
     .toEqual({ x: 0, y: 0, z: 0 });
 });
 
-test("a voxel map component takes the picked map, then moves above the light", async({ page, target }) => {
+test("a voxel map re-picks its map from its field, then moves above the light", async({ page, target }) => {
+  test.slow();
   await treeRow(page, "Sky").click();
   await addComponent(page, "Voxel map…");
 
@@ -99,9 +100,18 @@ test("a voxel map component takes the picked map, then moves above the light", a
   await expect(picker).toBeHidden();
 
   const component = inspector(page).locator("jolly-folder[label=\"VoxelMap\"]");
-  await expect(component.getByText(target.mapName, { exact: true })).toBeVisible();
+  const map = component.locator("jolly-reference[label=\"Map\"]");
+  await expect(map.getByRole("textbox")).toHaveText(target.mapName);
   expect((await findActor(page, "Sky"))?.components.map(({ type }) => type))
     .toEqual(["Light", "VoxelMap"]);
+
+  await map.getByRole("button", { name: "Clear" }).click();
+  await expect(map.getByRole("textbox")).toHaveText("<empty>");
+  await map.getByRole("button", { name: "Browse" }).click();
+  await picker.getByRole("searchbox").fill(target.mapName);
+  await treeRow(page, target.mapName).click();
+  await picker.getByRole("button", { name: "Pick" }).click();
+  await expect(map.getByRole("textbox")).toHaveText(target.mapName);
 
   const grip = component.locator(".grip");
   await grip.focus();
