@@ -27,6 +27,7 @@ import { terrainPeers } from "../helpers/peers.ts";
 import {
   heights,
   networkCommand,
+  paint,
   tileHeights
 } from "../helpers/terrain.ts";
 
@@ -91,8 +92,11 @@ describe("terrain streaming", () => {
     assert.equal(document.terrain.overview.size, kStripLength);
 
     document.stream.follow(chunkAt(10));
-    assert.deepEqual(room.sent.at(-1), { action: "subscribe-parts", parts: ["10_0", "9_0", "11_0", "12_0"] });
-    assert.deepEqual(room.sent.at(-2), { action: "unsubscribe-parts", parts: ["0_0"] });
+    assert.deepEqual(room.sent.at(-1), {
+      action: "subscribe-parts",
+      parts: ["10_0", "10_0_splat", "9_0", "9_0_splat", "11_0", "11_0_splat", "12_0", "12_0_splat"]
+    });
+    assert.deepEqual(room.sent.at(-2), { action: "unsubscribe-parts", parts: ["0_0", "0_0_splat"] });
     route();
 
     assert.deepEqual(loaded(document.terrain), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
@@ -119,6 +123,26 @@ describe("terrain streaming", () => {
     far.document.stream.follow(chunkAt(1));
     route();
     assert.equal(heightAt(far.document.terrain, TileCoord.fromIndex(chunkAt(1), kInnerTile)), 7);
+  });
+
+  test("a far peer's horizon takes painted overview points, and loading the chunk brings the paint", (t) => {
+    const { server, join, route } = stripPeers(t);
+    const far = join("B", { streamCentre: chunkAt(12) });
+    const received: TerrainCommand[] = [];
+    far.document.on("change", ({ command }) => received.push(command));
+
+    const painted = paint(1, 0, { [kOverviewTile]: 6, [kInnerTile]: 9 });
+    server.receive("X", networkCommand(painted, { clientId: "X" }));
+    route();
+
+    assert.deepEqual([...far.document.terrain.overview.materials(chunkAt(1))!], [6, 0, 0, 0]);
+    assert.deepEqual(received.map((command) => "tiles" in command && command.tiles.length), [1]);
+    assert.deepEqual([...far.preview.terrain.overview.materials(chunkAt(1))!], [6, 0, 0, 0]);
+
+    far.document.stream.follow(chunkAt(1));
+    route();
+    const { splat } = far.preview.terrain.chunk(chunkAt(1))!;
+    assert.deepEqual([splat.dominantSlot(0, 0), splat.dominantSlot(32, 32)], [6, 9]);
   });
 
   test("the preview shows an unloaded chunk as its overview and reports each change to the view", (t) => {
@@ -189,12 +213,12 @@ describe("terrain streaming", () => {
     followTo(0);
     assert.equal(history.undo("terrain"), true);
     route();
-    assert.equal(heightAt(server.state, tile), 2);
+    assert.equal(heightAt(server.state.terrain, tile), 2);
 
     stroke(4);
     followTo(12);
     assert.equal(history.undo("terrain"), false);
-    assert.equal(heightAt(server.state, tile), 4);
+    assert.equal(heightAt(server.state.terrain, tile), 4);
   });
 
   test("a rewind keeps each chunk loaded or unloaded as it is now", (t) => {

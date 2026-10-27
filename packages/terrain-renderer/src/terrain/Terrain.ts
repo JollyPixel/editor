@@ -11,6 +11,13 @@ import {
 } from "./OverviewMap.ts";
 import { SampleBlock } from "./SampleBlock.ts";
 import {
+  dominantSlot,
+  SPLAT_TEXEL_COUNT,
+  SplatMap,
+  uniformSplat,
+  type SplatTexels
+} from "./SplatMap.ts";
+import {
   CHUNK_SAMPLE_COUNT,
   TerrainChunk
 } from "./TerrainChunk.ts";
@@ -69,35 +76,51 @@ export class Terrain implements TerrainReader {
 
   addChunk(
     coord: ChunkCoord,
-    heights: Float32Array = this.seedHeights(coord)
+    heights: Float32Array = this.seedHeights(coord),
+    splat: SplatTexels = uniformSplat(SPLAT_TEXEL_COUNT)
   ): TerrainChunk {
     if (this.knows(coord)) {
       throw new Error(`Chunk ${coord.key} already exists.`);
     }
 
-    return this.#load(coord, heights);
+    return this.#load(coord, heights, splat);
   }
 
   addUnloadedChunk(
     coord: ChunkCoord,
-    samples: Float32Array
+    samples: Float32Array,
+    materials?: Uint8Array
   ): void {
     if (this.knows(coord)) {
       throw new Error(`Chunk ${coord.key} already exists.`);
     }
 
-    this.overview.set(coord, samples);
+    this.overview.set(coord, samples, materials);
   }
 
   loadChunk(
     coord: ChunkCoord,
-    heights: Float32Array
+    heights: Float32Array,
+    splat?: SplatTexels
   ): TerrainChunk {
     if (!this.knows(coord)) {
       throw new Error(`Chunk ${coord.key} does not exist.`);
     }
 
-    return this.#load(coord, heights);
+    return this.#load(coord, heights, splat ?? this.#chunks.get(coord.key)?.splat.copy());
+  }
+
+  loadSplat(
+    coord: ChunkCoord,
+    splat: SplatTexels
+  ): void {
+    const chunk = this.#chunks.get(coord.key);
+    if (chunk === undefined) {
+      throw new Error(`Chunk ${coord.key} is not loaded.`);
+    }
+
+    chunk.splat.load(splat);
+    this.overview.writeMaterials(coord, chunk.splat.overviewMaterials());
   }
 
   unloadChunk(
@@ -151,6 +174,33 @@ export class Terrain implements TerrainReader {
     return this.overview.writeTile(tile, heights);
   }
 
+  writeSplatTile(
+    tile: TileCoord,
+    splat: SplatTexels
+  ): SplatTexels {
+    const chunk = this.#chunks.get(tile.chunk.key);
+    if (chunk === undefined) {
+      throw new Error(`Chunk ${tile.chunk.key} does not exist.`);
+    }
+
+    const previous = chunk.splat.tile(tile.x, tile.z);
+    chunk.splat.writeTile(tile.x, tile.z, splat);
+    this.overview.writeTileMaterial(tile, dominantSlot(splat, 0));
+
+    return previous;
+  }
+
+  writeOverviewSplatTile(
+    tile: TileCoord,
+    splat: SplatTexels
+  ): boolean {
+    if (this.has(tile.chunk)) {
+      throw new Error(`Chunk ${tile.chunk.key} is loaded; write its splat tile instead.`);
+    }
+
+    return this.overview.writeTileMaterial(tile, dominantSlot(splat, 0));
+  }
+
   sampleAt(
     sampleX: number,
     sampleZ: number
@@ -190,11 +240,15 @@ export class Terrain implements TerrainReader {
 
   #load(
     coord: ChunkCoord,
-    heights: Float32Array
+    heights: Float32Array,
+    splat: SplatTexels | undefined
   ): TerrainChunk {
-    const chunk = new TerrainChunk(coord, heights);
+    const chunk = new TerrainChunk(coord, heights, new SplatMap(splat));
+    const materials = splat === undefined ?
+      this.overview.materials(coord) :
+      chunk.splat.overviewMaterials();
     this.#chunks.set(coord.key, chunk);
-    this.overview.set(coord, overviewSamples(chunk));
+    this.overview.set(coord, overviewSamples(chunk), materials);
 
     return chunk;
   }

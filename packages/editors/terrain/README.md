@@ -18,16 +18,18 @@ V1 also extends [`@jolly-pixel/asset-server`][asset-server] with asset parts, so
 
 ## 💃 Getting Started
 
-Run `pnpm run dev` in this directory. The dev server listens on port 3008 and seeds `assets/` with a terrain of one flat chunk on first start. The overlay toolbar in the top-left corner switches the overlay: none, the chunk borders, the chunk borders with a tint per LoD level, or the surface coloured by slope, with a walkable angle above which it turns red. The choice is saved in the browser; `terrainEditor.view.overlay` and `terrainEditor.view.walkableSlope` set the same values from the console.
+Run `pnpm run dev` in this directory. The dev server listens on port 3008 and seeds `assets/` with a terrain of one flat chunk on first start. The overlay toolbar in the top-left corner switches the overlay: none, the chunk borders, the chunk borders with a tint per LoD level, the surface coloured by slope, with a walkable angle above which it turns red, or each painted material in its own colour, the selected one highlighted. The choice is saved in the browser; `terrainEditor.view.overlay` and `terrainEditor.view.walkableSlope` set the same values from the console.
 
-`pnpm run test` runs the unit tests and `pnpm run test:e2e` the Playwright suite in `test/e2e/`. The suite runs on one worker: a collaboration test renders three editors at once with software WebGL, and with more workers a page can miss the editor host's 5 s wait for the asset catalog.
+`pnpm run test` runs the unit tests and `pnpm run test:e2e` the Playwright suite in `test/e2e/`. The suite runs on one worker: a collaboration test renders three editors at once with software WebGL, and with more workers a page can miss the editor host's 5 s wait for the asset catalog. Pages render at a
+`deviceScaleFactor` of 0.5: software WebGL frame time grows with the pixel
+count, and at full resolution the three-editor tests time out on CI.
 
 ## 📚 Documents
 
 - [Design](./docs/design.md): decisions, grid, LoD, data formats and package layout.
 - [Collaboration](./docs/collaboration.md): stroke commits, proximity-based sync, asset parts, corrections and undo.
 - [Brush](./docs/brush.md): how sculpt, hole and paint brushes aim, shape and write.
-- [Texture](./docs/texture.md): splat layers, texture arrays, per-layer techniques and the slope overlay.
+- [Texture](./docs/texture.md): materials and their palette, splat, texture arrays, per-material techniques and the overlays.
 
 ## Contributors Guide
 

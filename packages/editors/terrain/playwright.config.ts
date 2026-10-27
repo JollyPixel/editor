@@ -12,5 +12,6 @@ export default defineE2EConfig({
   viewport: {
     width: 820,
     height: 540
-  }
+  },
+  deviceScaleFactor: 0.5
 });

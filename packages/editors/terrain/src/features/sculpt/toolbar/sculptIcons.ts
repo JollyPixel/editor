@@ -18,6 +18,22 @@ registerIcon("sculpt-raise", svg`
   />
 `, { tone: "lime" });
 
+registerIcon("sculpt-paint", svg`
+  <path
+    class="tone-fill"
+    d="M4 20c0-3 2-4 4-4s3 1 3 3-2 3-4 3H4Z"
+  />
+  <path
+    class="tone-ink"
+    d="M10 15 20 4M4 20c0-3 2-4 4-4s3 1 3 3-2 3-4 3H4ZM9 14l3 3"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "pink" });
+
 registerIcon("sculpt-smooth", svg`
   <path
     d="M2 16l3-5 3 6 3-8 3 7 3-4 3 5 2-2"

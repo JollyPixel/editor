@@ -10,14 +10,19 @@ broadcasts it, and a refused edit is answered with a correction.
 | Command | Content |
 |---|---|
 | `heights-patched` | Tile patches of height samples |
-| `splatPatch` | Tile patches of splat indices and weights |
+| `splat-patched` | Tile patches of splat indices and weights |
 | `holePatch` | Tile patches of the hole mask |
-| `chunk-added` | A chunk coordinate and its seeded heights |
+| `chunk-added` | A chunk coordinate, its seeded heights and, when undoing a removal, its splat |
 | `chunk-removed` | A chunk coordinate |
 | `setTier` | A chunk coordinate and its new tier |
-| Layer and point-of-interest commands | Create, update, delete |
+| `material-added` | A material, with its ID and slot |
+| `material-updated` | A material ID and only the fields that changed |
+| `material-removed` | A material ID |
+| `texture-size-changed` | The terrain's material texture size |
+| Point-of-interest commands | Create, update, delete |
 
-A patch is cut into 16×16 tiles; a chunk at ×1 has 4×4 of them. Each tile
+A height patch is cut into 16×16 tiles and a splat patch into 32×32 texel
+tiles, so a chunk at ×1 has 4×4 of each. Each tile
 carries its chunk, its index in the chunk (`z × 4 + x`) and its new values. A
 commit holds at most 1024 tiles. The author's document captures the values
 the stroke replaced when it commits, and builds the inverse for undo from
@@ -36,6 +41,16 @@ Each tile has the key `chunk:<x>,<z>:<channel>:<tile>`, where the channel is
 creation is refused once someone has sculpted it. Two commands collide when
 they share a key. A collision resolves last write wins: the later command is
 admitted and overwrites the tile.
+
+Heights and splat use separate channels, so a peer painting a tile never
+refuses another sculpting it, and the reverse.
+
+`material-updated` holds `material:<id>:<field>` for each field it changes,
+so two peers renaming a material and changing its tiling both land.
+`material-added` and `material-removed` hold `material:<id>` and every field
+key. An update that reaches the room after the material's removal is refused,
+so a delete wins over a
+concurrent update. `texture-size-changed` holds `terrain:texture-size`.
 
 ## Strokes
 
@@ -112,8 +127,13 @@ writes it as one file. A large terrain does not fit that model, so V1 adds
 asset parts to `@jolly-pixel/asset-server`:
 
 - A kind handler declares parts: binary files in a folder beside the asset
-  file, `<asset>.parts/`. For a terrain, one part per chunk.
-- The join snapshot holds the manifest, the layers, the points of interest and
+  file, `<asset>.parts/`. For a terrain, two parts per chunk: its heights,
+  `<x>_<z>`, and its splat, `<x>_<z>_splat`. A client subscribes to both. The
+  chunk loads as soon as its heights arrive, painted with the overview's
+  materials until its splat arrives; a splat that arrives first waits for
+  the heights. A terrain saved before splat parts existed loads as Ground and
+  writes them on its next save.
+- The join snapshot holds the manifest, the materials, the points of interest and
   the overview map. Chunks are not in it.
 - A client sends `subscribeParts` and `unsubscribeParts` as its camera moves,
   and fetches the parts it subscribes to.
@@ -152,9 +172,10 @@ decides which chunks are loaded.
 - The room sends `heights-patched` whole to the members subscribed to its
   chunks. The others receive `outside(command)`: the same command cut down to
   the tiles that hold overview samples, tiles 0, 2, 8 and 10 of each chunk,
-  or nothing when no such tile changed. A client applies the tiles of an
-  unloaded chunk to its overview only. `chunk-added` and `chunk-removed` go
-  to every member.
+  or nothing when no such tile changed. `splat-patched` is cut the same way,
+  since the same tile indices hold the overview's dominant materials. A client
+  applies the tiles of an unloaded chunk to its overview only. `chunk-added`,
+  `chunk-removed` and the material commands go to every member.
 - A chunk without a part reply yet, or unloaded while it has pending
   commands, stays consistent: the reply carries the heights at its version,
   and a pending patch replayed on an unloaded chunk updates the overview.
@@ -203,6 +224,9 @@ is refused, as for the other asset kinds.
 A step whose chunks are unloaded is skipped the same way, since the client
 cannot check their current heights. A step no undo tried meanwhile is
 available again once its chunks load with the same heights.
+
+A paint stroke is one step as well. Its undo is refused only when a peer has
+painted one of its splat tiles since; sculpting there does not count.
 
 Hole cuts and fills are patches like any other, so they undo the same way.
 Since heights under a hole are kept, filling a hole restores the surface

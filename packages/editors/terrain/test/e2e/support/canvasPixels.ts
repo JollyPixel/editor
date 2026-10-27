@@ -15,7 +15,10 @@ const kHideOverlays = "#game-container > :not(canvas) { visibility: hidden !impo
 export async function captureCanvas(
   canvas: Locator
 ): Promise<CanvasPixels> {
-  const png = await canvas.screenshot({ style: kHideOverlays });
+  const png = await canvas.screenshot({
+    style: kHideOverlays,
+    scale: "css"
+  });
 
   return canvas.page().evaluate(async(base64) => {
     const image = new Image();
@@ -32,6 +35,35 @@ export async function captureCanvas(
       data: [...data]
     };
   }, png.toString("base64"));
+}
+
+export function pixelsAround(
+  pixels: CanvasPixels,
+  centre: { x: number; y: number; },
+  radius: number
+): CanvasPixels {
+  const size = radius * 2 + 1;
+  const data: number[] = [];
+  for (let dy = -radius; dy <= radius; dy++) {
+    const offset = ((Math.round(centre.y) + dy) * pixels.width + Math.round(centre.x) - radius) * 4;
+    data.push(...pixels.data.slice(offset, offset + size * 4));
+  }
+
+  return { width: size, height: size, data };
+}
+
+export function averageColor(
+  pixels: CanvasPixels
+): Rgb {
+  const sums = [0, 0, 0];
+  for (let index = 0; index < pixels.data.length; index += 4) {
+    for (let channel = 0; channel < 3; channel++) {
+      sums[channel] += pixels.data[index + channel];
+    }
+  }
+  const count = pixels.data.length / 4;
+
+  return [sums[0] / count, sums[1] / count, sums[2] / count];
 }
 
 export function dominantColor(

@@ -13,10 +13,13 @@ editor [design][design] and [roadmap][roadmap].
 ## Storage and join
 
 A terrain is stored as asset parts: `world.terrain.json` lists the chunks
-with their overview samples, and `world.terrain.json.parts/<x>_<z>.bin` holds
-the heights of each chunk, 64×64 little-endian `Float32`. The overview samples
-are the four heights of the chunk's 32 m grid points, base64 encoded; loading
-a chunk derives them from its heights. A chunk entry may also carry its heights
+with their overview samples, the [materials](#materials) and the texture size, and `world.terrain.json.parts/<x>_<z>.bin` holds
+the heights of each chunk, 64×64 little-endian `Float32`, beside
+`<x>_<z>_splat.bin`, its splat map: 128×128 texels of four material slots,
+then their four weights, which sum to 255 per texel. The overview samples
+are the four heights of the chunk's 32 m grid points, base64 encoded, and
+each chunk entry lists the dominant material at those points as
+`materials`; loading a chunk derives both from its parts. A chunk entry may also carry its heights
 inline, base64 encoded, as a catalog create does; the first save after an
 edit moves them to part files. Chunk coordinates lie within
 `CHUNK_COORDINATE_RANGE`, -128 to 127 on each axis, and a terrain holds at
@@ -35,6 +38,29 @@ snapshot, and the messages received after it, until the subscribed chunks in
 it arrive. Members that have not subscribed to an edited chunk receive only
 the tiles of `heights-patched` that hold its overview samples, which they
 apply to the overview.
+
+## Materials
+
+A material is a paintable surface. `TerrainDocument.materials` lists them;
+each holds an ID, a slot from 0 to 255 that splat texels will name, a name,
+four `texture` asset references (`TERRAIN_MATERIAL_MAPS`: `albedo`, `normal`,
+`orm` and `height`, each nullable), a tiling in metres per repeat and the
+technique flags. A terrain holds at most `MAX_TERRAIN_MATERIALS`, 32
+materials, and one texture size for all of them, one of
+`TERRAIN_TEXTURE_SIZES` (512, 1024 or 2048).
+
+- `addMaterial(properties?)` takes the lowest free slot and returns the new
+  material's ID, or `null` at the cap.
+- `updateMaterial(id, changes)` sends only the changed fields. Two peers
+  changing different fields of one material both land; a removal wins over a
+  concurrent update.
+- `removeMaterial(id)` frees the slot. Undo brings the material back as it
+  was.
+- `changeTextureSize(size)` refuses the current size.
+
+A new terrain starts with `GROUND_MATERIAL`, slot 0, with no image. A file
+without `materials` loads with it too. The materials' images are the
+terrain's asset dependencies.
 
 ## Preview
 

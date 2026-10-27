@@ -28,12 +28,10 @@ import {
 } from "../model/falloff.ts";
 import {
   BRUSH_SIZE,
+  BRUSH_TOOLS,
+  type BrushTool,
   type SculptSettings
 } from "../model/SculptSettings.ts";
-import {
-  SCULPT_TOOLS,
-  type SculptTool
-} from "../model/sculptStamp.ts";
 import {
   TERRAIN_HISTORY_SCOPE,
   type TerrainHistory
@@ -43,10 +41,11 @@ import "../../../shared/historyIcons.ts";
 import "./sculptIcons.ts";
 
 // CONSTANTS
-const kToolLabels: Readonly<Record<SculptTool, string>> = {
+const kToolLabels: Readonly<Record<BrushTool, string>> = {
   raise: "Raise and lower (right button lowers)",
   smooth: "Smooth",
-  flatten: "Flatten"
+  flatten: "Flatten",
+  paint: "Paint the selected material (Ctrl+click picks one)"
 };
 const kFalloffLabels: Readonly<Record<FalloffCurve, string>> = {
   smooth: "Smooth",
@@ -72,8 +71,17 @@ export class SculptToolbar extends LitElement {
   });
 
   #strength = new FieldBinding<number>(this, {
-    read: () => Math.round((this.settings?.options.strength ?? 0) * 100),
-    write: (percent) => this.settings?.update({ strength: percent / 100 })
+    read: () => {
+      const options = this.settings?.options;
+      const strength = options?.tool === "paint" ? options.paintStrength : options?.strength;
+
+      return Math.round((strength ?? 0) * 100);
+    },
+    write: (percent) => this.settings?.update(
+      this.settings.options.tool === "paint" ?
+        { paintStrength: percent / 100 } :
+        { strength: percent / 100 }
+    )
   });
 
   #flattenHeight = new FieldBinding<number>(this, {
@@ -124,7 +132,7 @@ export class SculptToolbar extends LitElement {
       <jolly-rail orientation="horizontal" floating role="toolbar" aria-label="Sculpt">
         ${this.#renderHistory()}
         <div class="group divided" role="group" aria-label="Brush">
-          ${SCULPT_TOOLS.map((option) => html`
+          ${BRUSH_TOOLS.map((option) => html`
             <jolly-tool-button
               data-tool=${option}
               icon=${`sculpt-${option}`}

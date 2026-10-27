@@ -11,10 +11,7 @@ import {
   FALLOFF_CURVES,
   type FalloffCurve
 } from "./falloff.ts";
-import {
-  SCULPT_TOOLS,
-  type SculptTool
-} from "./sculptStamp.ts";
+import { SCULPT_TOOLS } from "./sculptStamp.ts";
 
 // CONSTANTS
 const kStorageKey = "terrain:sculpt";
@@ -22,13 +19,16 @@ const kStorageKey = "terrain:sculpt";
 export const BRUSH_SIZE = Object.freeze({ min: 0.5, max: 128 });
 export const BRUSH_SPACING = Object.freeze({ min: 0.05, max: 1 });
 export const FLATTEN_TARGETS = ["press", "fixed"] as const;
+export const BRUSH_TOOLS = Object.freeze([...SCULPT_TOOLS, "paint"] as const);
 
 export type FlattenTarget = typeof FLATTEN_TARGETS[number];
+export type BrushTool = typeof BRUSH_TOOLS[number];
 
 export interface SculptOptions {
-  tool: SculptTool;
+  tool: BrushTool;
   size: number;
   strength: number;
+  paintStrength: number;
   falloff: FalloffCurve;
   spacing: number;
   flattenTarget: FlattenTarget;
@@ -43,6 +43,7 @@ const kDefaultOptions: Readonly<SculptOptions> = Object.freeze({
   tool: "raise",
   size: 8,
   strength: 0.25,
+  paintStrength: 0.5,
   falloff: "smooth",
   spacing: 0.25,
   flattenTarget: "press",
@@ -64,9 +65,10 @@ export class SculptSettings extends Emitter<SculptSettingsEvents> {
     }
 
     return Object.freeze({
-      tool: choice("tool", SCULPT_TOOLS),
+      tool: choice("tool", BRUSH_TOOLS),
       size: clamp(number("size"), BRUSH_SIZE.min, BRUSH_SIZE.max),
       strength: clamp(number("strength"), 0, 1),
+      paintStrength: clamp(number("paintStrength"), 0, 1),
       falloff: choice("falloff", FALLOFF_CURVES),
       spacing: clamp(number("spacing"), BRUSH_SPACING.min, BRUSH_SPACING.max),
       flattenTarget: choice("flattenTarget", FLATTEN_TARGETS),

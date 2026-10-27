@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { SculptTool } from "./sculptStamp.ts";
+import type { BrushTool } from "./SculptSettings.ts";
 
 // CONSTANTS
 export const RAISE_RATE = 1;
@@ -7,7 +7,7 @@ export const BLEND_RATE = 8;
 export const MAX_FRAME_TIME = 0.05;
 
 export function stampStrength(
-  tool: SculptTool,
+  tool: BrushTool,
   strength: number,
   elapsed: number,
   stamps: number

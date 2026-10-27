@@ -24,6 +24,12 @@ import { TerrainRenderer } from "@jolly-pixel/terrain.renderer/engine";
 import * as THREE from "three";
 
 // Import Internal Dependencies
+import {
+  decodeMaterialImage,
+  MaterialTextures,
+  type TextureLease
+} from "../features/materials/rendering/MaterialTextures.ts";
+import type { MaterialSelection } from "../features/materials/model/MaterialSelection.ts";
 import { PeerBrushRings } from "../features/sculpt/collaboration/PeerBrushRings.ts";
 import type { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
 import type { OverlaySettings } from "../features/overlays/model/OverlaySettings.ts";
@@ -61,6 +67,8 @@ export interface TerrainEditorSceneOptions {
   overlaySettings: OverlaySettings;
   history: TerrainHistory;
   room: Room;
+  textures: (assetId: string) => TextureLease;
+  selection: MaterialSelection;
 }
 
 interface TerrainSceneParts {
@@ -79,6 +87,8 @@ export class TerrainEditorScene extends Systems.Scene {
   #overlaySettings: OverlaySettings;
   #history: TerrainHistory;
   #room: Room;
+  #textures: (assetId: string) => TextureLease;
+  #selection: MaterialSelection;
   #parts: TerrainSceneParts | null = null;
   #cameraPosition = new THREE.Vector3();
   #disposables: Array<() => void> = [];
@@ -92,6 +102,8 @@ export class TerrainEditorScene extends Systems.Scene {
     this.#overlaySettings = options.overlaySettings;
     this.#history = options.history;
     this.#room = options.room;
+    this.#textures = options.textures;
+    this.#selection = options.selection;
   }
 
   get view(): TerrainView {
@@ -142,6 +154,14 @@ export class TerrainEditorScene extends Systems.Scene {
         camera: () => camera.camera
       });
     this.#bindOverlaySettings(view);
+    const materialTextures = new MaterialTextures({
+      document: this.#document,
+      view,
+      lease: this.#textures,
+      decode: decodeMaterialImage,
+      failed: (assetId, error) => console.warn(`[terrain] Texture ${assetId} cannot be drawn.`, error)
+    });
+    this.#disposables.push(() => materialTextures.dispose());
 
     const peerRings = this.world
       .createActor("peer-brush-rings")
@@ -153,8 +173,10 @@ export class TerrainEditorScene extends Systems.Scene {
     const brush = this.world
       .createActor("sculpt-brush")
       .addComponentAndGet(SculptBrush, {
+        document: this.#document,
         preview,
         settings: this.#sculpt,
+        selection: this.#selection,
         history: this.#history,
         camera: camera.camera,
         rings: peerRings
@@ -230,6 +252,16 @@ export class TerrainEditorScene extends Systems.Scene {
     }
     applyOverlaySettings();
     this.#disposables.push(overlaySettings.subscribe("change", applyOverlaySettings));
+
+    const terrain = this.#document;
+    const selection = this.#selection;
+    function highlightSelected(): void {
+      const { selected } = selection;
+      const material = selected === null ? undefined : terrain.materials.material(selected);
+      view.highlightedMaterial = material?.slot ?? null;
+    }
+    highlightSelected();
+    this.#disposables.push(selection.subscribe("change", highlightSelected));
   }
 
   #bindPreview(
@@ -239,13 +271,14 @@ export class TerrainEditorScene extends Systems.Scene {
   ): void {
     const listeners: Pick<
       TerrainPreviewEvents,
-      "tilesChanged" | "chunkAdded" | "chunkRemoved" | "overviewChanged" | "reset"
+      "tilesChanged" | "splatChanged" | "chunkAdded" | "chunkRemoved" | "overviewChanged" | "reset"
     > = {
       tilesChanged: (tiles) => {
         view.tilesChanged(tiles);
         surfaceChanged();
         this.world.invalidate();
       },
+      splatChanged: (tiles) => view.splatChanged(tiles),
       chunkAdded: (coord) => view.chunkAdded(coord),
       chunkRemoved: (coord) => view.chunkRemoved(coord),
       overviewChanged: (coords) => view.overviewChanged(coords),
@@ -255,12 +288,14 @@ export class TerrainEditorScene extends Systems.Scene {
       }
     };
     preview.on("tilesChanged", listeners.tilesChanged);
+    preview.on("splatChanged", listeners.splatChanged);
     preview.on("chunkAdded", listeners.chunkAdded);
     preview.on("chunkRemoved", listeners.chunkRemoved);
     preview.on("overviewChanged", listeners.overviewChanged);
     preview.on("reset", listeners.reset);
     this.#disposables.push(() => {
       preview.off("tilesChanged", listeners.tilesChanged);
+      preview.off("splatChanged", listeners.splatChanged);
       preview.off("chunkAdded", listeners.chunkAdded);
       preview.off("chunkRemoved", listeners.chunkRemoved);
       preview.off("overviewChanged", listeners.overviewChanged);

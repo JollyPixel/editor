@@ -7,12 +7,15 @@ import { mockAssetRoom } from "@jolly-pixel/asset-server/testing";
 import {
   ChunkCoord,
   OVERVIEW_SAMPLE_COUNT,
-  TileCoord
+  SPLAT_TEXEL_COUNT,
+  TileCoord,
+  uniformSplat
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import {
   encodeHeights,
+  encodeSplat,
   encodeTilePatch,
   type TerrainNetworkCommand,
   type TerrainSnapshot
@@ -83,7 +86,7 @@ describe("TerrainPartsRoom", () => {
     const { room, document, deliver } = joinedPeer();
 
     deliver(manifest(1));
-    assert.deepEqual(room.sent, [{ action: "subscribe-parts", parts: ["0_0"] }]);
+    assert.deepEqual(room.sent, [{ action: "subscribe-parts", parts: ["0_0", "0_0_splat"] }]);
     assert.deepEqual([document.terrain.knows(kNear), document.terrain.knows(kFar)], [true, true]);
     assert.equal(document.terrain.size, 0);
 
@@ -122,6 +125,19 @@ describe("TerrainPartsRoom", () => {
     assert.equal(document.terrain.has(kNear), false);
   });
 
+  test("a splat part that arrives before its heights is applied when the chunk loads", () => {
+    const { document, deliver } = joinedPeer();
+    deliver(manifest(1));
+
+    const splat = encodeSplat(uniformSplat(SPLAT_TEXEL_COUNT, 5));
+    deliver({ type: "parts", version: 1, parts: { "0_0_splat": splat } });
+    assert.equal(document.terrain.has(kNear), false);
+    deliver(parts(1, 4));
+
+    assert.equal(document.terrain.chunk(kNear)!.splat.dominantSlot(10, 10), 5);
+    assert.deepEqual([...document.terrain.overview.materials(kNear)!], [5, 5, 5, 5]);
+  });
+
   test("a new connection subscribes again to the chunks the stream follows", () => {
     const { room, deliver } = joinedPeer();
     deliver(manifest(1));
@@ -130,6 +146,6 @@ describe("TerrainPartsRoom", () => {
     Object.assign(room, { clientId: "A-2" });
     room.emit("sync", { self: "A-2", clientIds: ["A-2"] });
 
-    assert.deepEqual(room.sent, [{ action: "subscribe-parts", parts: ["0_0"] }]);
+    assert.deepEqual(room.sent, [{ action: "subscribe-parts", parts: ["0_0", "0_0_splat"] }]);
   });
 });

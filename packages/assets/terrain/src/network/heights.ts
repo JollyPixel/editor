@@ -4,9 +4,14 @@ import {
   isValidHeight
 } from "@jolly-pixel/terrain.renderer";
 
+// Import Internal Dependencies
+import {
+  decodeBase64,
+  encodeBase64
+} from "./base64.ts";
+
 // CONSTANTS
 const kBytesPerHeight = Float32Array.BYTES_PER_ELEMENT;
-const kBinaryBatch = 0x8000;
 
 export function encodeHeightBytes(
   heights: Float32Array
@@ -40,31 +45,14 @@ export function decodeHeightBytes(
 export function encodeHeights(
   heights: Float32Array
 ): string {
-  const bytes = encodeHeightBytes(heights);
-  let binary = "";
-  for (let offset = 0; offset < bytes.length; offset += kBinaryBatch) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + kBinaryBatch));
-  }
-
-  return btoa(binary);
+  return encodeBase64(encodeHeightBytes(heights));
 }
 
 export function decodeHeights(
   encoded: string,
   count: number = CHUNK_SAMPLE_COUNT
 ): Float32Array | null {
-  let binary: string;
-  try {
-    binary = atob(encoded);
-  }
-  catch {
-    return null;
-  }
+  const bytes = decodeBase64(encoded);
 
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index++) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-
-  return decodeHeightBytes(bytes, count);
+  return bytes === null ? null : decodeHeightBytes(bytes, count);
 }

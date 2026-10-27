@@ -10,7 +10,7 @@ import {
 import {
   countPixelsNear,
   dominantColor,
-  type CanvasPixels
+  pixelsAround
 } from "./support/canvasPixels.ts";
 
 // CONSTANTS
@@ -27,20 +27,6 @@ const kAlongPose = {
   pitch: -0.25,
   yaw: -Math.PI / 2
 };
-
-function around(
-  pixels: CanvasPixels,
-  centre: { x: number; y: number; }
-): CanvasPixels {
-  const size = kProbeRadius * 2 + 1;
-  const data: number[] = [];
-  for (let dy = -kProbeRadius; dy <= kProbeRadius; dy++) {
-    const offset = ((Math.round(centre.y) + dy) * pixels.width + Math.round(centre.x) - kProbeRadius) * 4;
-    data.push(...pixels.data.slice(offset, offset + size * 4));
-  }
-
-  return { width: size, height: size, data };
-}
 
 test.slow();
 
@@ -60,7 +46,11 @@ test("ground past the stream radius is drawn from the overview", async({ terrain
     y: await terrain.heightAt(sampleX, sampleZ),
     z: sampleZ
   });
-  const probe = around(await terrain.capture(), { x: point.x - box!.x, y: point.y - box!.y });
+  const probe = pixelsAround(
+    await terrain.capture(),
+    { x: point.x - box!.x, y: point.y - box!.y },
+    kProbeRadius
+  );
 
   expect(countPixelsNear(probe, background, kColorTolerance)).toBe(0);
 });

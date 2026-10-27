@@ -11,6 +11,11 @@ import {
   OVERVIEW_SAMPLE_COUNT,
   OVERVIEW_SAMPLES
 } from "../../terrain/OverviewMap.ts";
+import {
+  SPLAT_CHANNELS,
+  SPLAT_TEXEL_COUNT,
+  SPLAT_TEXELS
+} from "../../terrain/SplatMap.ts";
 import type { TerrainReader } from "../../terrain/Terrain.ts";
 import {
   TILE_SAMPLES,
@@ -30,6 +35,7 @@ import {
 export const MAX_CHUNK_LAYERS = 256;
 export const LOOKUP_SIZE = 256;
 export const OVERVIEW_TEXTURE_SIZE = LOOKUP_SIZE * OVERVIEW_SAMPLES;
+const kSplatLayerBytes = SPLAT_TEXEL_COUNT * SPLAT_CHANNELS;
 const kLookupComponents = 4;
 const kKnownComponent = 3;
 
@@ -44,8 +50,11 @@ export function lookupSlot(
 
 export class ChunkTextureStore {
   readonly heights: THREE.DataArrayTexture;
+  readonly splatIndices: THREE.DataArrayTexture;
+  readonly splatWeights: THREE.DataArrayTexture;
   readonly lookup: THREE.DataTexture;
   readonly overview: THREE.DataTexture;
+  readonly overviewMaterials: THREE.DataTexture;
 
   #terrain: TerrainReader;
   #layers = new Map<ChunkKey, number>();
@@ -64,6 +73,8 @@ export class ChunkTextureStore {
     this.heights.format = THREE.RedFormat;
     this.heights.type = THREE.FloatType;
     configureNearest(this.heights);
+    this.splatIndices = createSplatArray();
+    this.splatWeights = createSplatArray();
 
     this.lookup = new THREE.DataTexture(
       new Float32Array(LOOKUP_SIZE * LOOKUP_SIZE * kLookupComponents),
@@ -82,6 +93,15 @@ export class ChunkTextureStore {
       THREE.FloatType
     );
     configureNearest(this.overview);
+
+    this.overviewMaterials = new THREE.DataTexture(
+      new Uint8Array(OVERVIEW_TEXTURE_SIZE * OVERVIEW_TEXTURE_SIZE),
+      OVERVIEW_TEXTURE_SIZE,
+      OVERVIEW_TEXTURE_SIZE,
+      THREE.RedFormat,
+      THREE.UnsignedByteType
+    );
+    configureNearest(this.overviewMaterials);
     for (let layer = MAX_CHUNK_LAYERS - 1; layer >= 0; layer--) {
       this.#freeLayers.push(layer);
     }
@@ -106,6 +126,8 @@ export class ChunkTextureStore {
     this.lookup.needsUpdate = true;
     (this.overview.image.data as Float32Array).fill(0);
     this.overview.needsUpdate = true;
+    (this.overviewMaterials.image.data as Uint8Array).fill(0);
+    this.overviewMaterials.needsUpdate = true;
   }
 
   chunkAdded(
@@ -128,6 +150,7 @@ export class ChunkTextureStore {
     this.#layers.set(coord.key, layer);
     this.#writeLookup(coord, layer + 1, 1);
     this.#writeOverview(coord);
+    this.#writeSplat(coord);
     this.#writeAprons(affectedAprons(coord, CHUNK_RECT));
   }
 
@@ -188,10 +211,26 @@ export class ChunkTextureStore {
     this.#writeAprons(mergeAprons(regions));
   }
 
+  splatChanged(
+    tiles: Iterable<TileCoord>
+  ): void {
+    const chunks = new Map<ChunkKey, ChunkCoord>();
+    for (const { chunk } of tiles) {
+      chunks.set(chunk.key, chunk);
+    }
+    for (const coord of chunks.values()) {
+      this.#writeSplat(coord);
+      this.#writeOverview(coord);
+    }
+  }
+
   dispose(): void {
     this.heights.dispose();
+    this.splatIndices.dispose();
+    this.splatWeights.dispose();
     this.lookup.dispose();
     this.overview.dispose();
+    this.overviewMaterials.dispose();
   }
 
   #claimSlot(
@@ -235,28 +274,55 @@ export class ChunkTextureStore {
     else {
       lookup.fill(0, slot, slot + kLookupComponents);
       this.lookup.needsUpdate = true;
-      this.#writeOverview(coord, new Float32Array(OVERVIEW_SAMPLE_COUNT));
+      this.#writeOverview(
+        coord,
+        new Float32Array(OVERVIEW_SAMPLE_COUNT),
+        new Uint8Array(OVERVIEW_SAMPLE_COUNT)
+      );
     }
   }
 
   #writeOverview(
     coord: ChunkCoord,
-    samples = this.#terrain.overview.samples(coord)
+    samples = this.#terrain.overview.samples(coord),
+    materials = this.#terrain.overview.materials(coord)
   ): void {
     if (samples === undefined) {
       return;
     }
 
     const data = this.overview.image.data as Float32Array;
+    const slots = this.overviewMaterials.image.data as Uint8Array;
     const originX = overviewTexel(coord.x);
     const originZ = overviewTexel(coord.z);
     for (let row = 0; row < OVERVIEW_SAMPLES; row++) {
-      data.set(
-        samples.subarray(row * OVERVIEW_SAMPLES, (row + 1) * OVERVIEW_SAMPLES),
-        (originZ + row) * OVERVIEW_TEXTURE_SIZE + originX
-      );
+      const start = (originZ + row) * OVERVIEW_TEXTURE_SIZE + originX;
+      data.set(samples.subarray(row * OVERVIEW_SAMPLES, (row + 1) * OVERVIEW_SAMPLES), start);
+      if (materials !== undefined) {
+        slots.set(materials.subarray(row * OVERVIEW_SAMPLES, (row + 1) * OVERVIEW_SAMPLES), start);
+      }
     }
     this.overview.needsUpdate = true;
+    this.overviewMaterials.needsUpdate = true;
+  }
+
+  #writeSplat(
+    coord: ChunkCoord
+  ): void {
+    const layer = this.#layers.get(coord.key);
+    const chunk = this.#terrain.chunk(coord);
+    if (layer === undefined || chunk === undefined) {
+      return;
+    }
+
+    const { indices, weights } = chunk.splat.copy();
+    const offset = layer * kSplatLayerBytes;
+    (this.splatIndices.image.data as Uint8Array).set(indices, offset);
+    (this.splatWeights.image.data as Uint8Array).set(weights, offset);
+    for (const array of [this.splatIndices, this.splatWeights]) {
+      array.addLayerUpdate(layer);
+      array.needsUpdate = true;
+    }
   }
 
   #writeAprons(
@@ -279,6 +345,20 @@ function overviewTexel(
   chunk: number
 ): number {
   return (((chunk % LOOKUP_SIZE) + LOOKUP_SIZE) % LOOKUP_SIZE) * OVERVIEW_SAMPLES;
+}
+
+function createSplatArray(): THREE.DataArrayTexture {
+  const array = new THREE.DataArrayTexture(
+    new Uint8Array(kSplatLayerBytes * MAX_CHUNK_LAYERS),
+    SPLAT_TEXELS,
+    SPLAT_TEXELS,
+    MAX_CHUNK_LAYERS
+  );
+  array.format = THREE.RGBAFormat;
+  array.type = THREE.UnsignedByteType;
+  configureNearest(array);
+
+  return array;
 }
 
 function configureNearest(

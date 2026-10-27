@@ -14,7 +14,7 @@ in [collaboration](./collaboration.md); how brushes write is in
 | Detail | Resolution tiers per chunk: ×1, ×2 or ×4. |
 | Far LoD | CDLOD quadtree, an always-resident overview map, and points of interest. |
 | Splat | Index and weight maps over texture arrays. |
-| Techniques | Per-layer flags: triplanar, stochastic tiling, height blending. |
+| Techniques | Per-material flags: triplanar, stochastic tiling, height blending. |
 | Rooms | One room per terrain asset. Commands are keyed by chunk. |
 | Streaming | Asset parts in the asset server, loaded by interest. |
 
@@ -138,8 +138,9 @@ The view uses CDLOD:
 
 `TerrainView.overlay` switches the surface between `none`, `chunks`, which
 draws a one-pixel line on every chunk border, `lod`, which adds a tint per
-LoD level, and `slope`, described below. A uniform selects the mode, so switching does not recompile the
-shader.
+LoD level, `slope`, described below, and `splat`, described in
+[texture](./texture.md#overlays). A uniform selects the mode, so switching
+does not recompile the shader.
 
 ### Slope overlay
 
@@ -167,8 +168,10 @@ never empty. It is rebuilt incrementally from the chunks that change.
 - `Terrain.overview` holds them. The asset file and the room snapshot
   list each chunk's samples, so a client knows the far terrain without loading
   its chunks; loading a chunk derives its samples from its heights.
-- Colour arrives with the terrain layers in M3. Until then the overview holds
-  heights only.
+- Each sample also holds a dominant material: the slot with the highest weight
+  in the splat texel at its grid point, one byte. The view colours it with
+  that material's mean albedo, so changing a material's image recolours the horizon
+  without changing the data, and the server never decodes an image.
 - A vertex or fragment on an unloaded chunk reads the overview, interpolated
   bilinearly between its four nearest samples; on a loaded chunk it reads the
   chunk's heights. The height is a function of position only, so two nodes
@@ -199,7 +202,7 @@ Not in V1, but the design keeps room for it. WebGPU has no tessellation
 stage; the way to get one is subdivision in compute shaders, such as
 concurrent binary trees: triangles are split by longest-edge bisection,
 according to distance, screen error or curvature, and drawn with one indirect
-draw. New vertices sample the height texture, and each layer can add
+draw. New vertices sample the height texture, and each material can add
 displacement from its height map.
 
 Resolution tiers give detail that can be sculpted. Tessellation would add
@@ -208,7 +211,7 @@ automatic detail near the camera. The two stack.
 What V1 keeps for it:
 
 - Node meshes come from a `NodeMeshProvider`.
-- Layers have a `displacementScale`, 0 and unused in V1.
+- Materials have a height map and a `displacementScale`, 0 and unused in V1.
 - Heights, holes and splat are textures. Brushes, height queries and exports
   read the data, never the mesh.
 
@@ -239,13 +242,14 @@ Accepted drawbacks:
 | Channel | Format | Size at ×1 |
 |---|---|---|
 | Heights | `Float32`, one per sample | 64×64 |
-| Splat indices | `RGBA8`: the four strongest layers | 128×128, 0.5 m per texel |
+| Splat indices | `RGBA8`: the four strongest materials | 128×128, 0.5 m per texel |
 | Splat weights | `RGBA8`: their weights, summing to 255 | 128×128 |
 | Holes | One bit per quad | 64×64 |
 | Tier | 1, 2 or 4 | One value |
 
 Tiers multiply the height and hole sizes. The splat resolution does not
-change with the tier.
+change with the tier. Heights and splat are stored as two asset parts per
+chunk.
 
 On the GPU, heights live in one `R32F` texture array with a layer per chunk,
 so a node spanning many chunks is still one draw. A 256×256 lookup texture,
@@ -296,6 +300,6 @@ which leaves a flat 1 m strip along the edge of the world.
 This package, laid out like the voxel-map editor:
 
 - `boot/`, `document/`, `state/`, `scene/`, `shell/`, `shared/`.
-- `features/{sculpt,paint,holes,layers,tiers,poi,overlays,importExport}/`,
+- `features/{sculpt,paint,holes,materials,tiers,poi,overlays,importExport}/`,
   each split into `model/`, `interaction/`, `rendering/`, `toolbar/` and
   `collaboration/` as needed.

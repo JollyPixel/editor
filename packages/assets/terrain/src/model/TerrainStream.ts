@@ -2,6 +2,7 @@
 import type {
   ChunkCoord,
   ChunkKey,
+  SplatTexels,
   Terrain
 } from "@jolly-pixel/terrain.renderer";
 import { Emitter } from "@openally/emitt";
@@ -17,6 +18,7 @@ export interface ChunkSource {
 
 export type TerrainStreamEvents = {
   loaded: (coord: ChunkCoord) => void;
+  splatLoaded: (coord: ChunkCoord) => void;
   unloaded: (coord: ChunkCoord) => void;
 };
 
@@ -25,6 +27,7 @@ export class TerrainStream extends Emitter<TerrainStreamEvents> {
   #source: ChunkSource | null = null;
   #centre: ChunkCoord | null = null;
   #subscribed = new Map<ChunkKey, ChunkCoord>();
+  #earlySplat = new Map<ChunkKey, SplatTexels>();
 
   constructor(
     terrain: Terrain
@@ -85,6 +88,7 @@ export class TerrainStream extends Emitter<TerrainStreamEvents> {
     for (const coord of [...this.#subscribed.values()]) {
       if (!this.#terrain.knows(coord) || !within(centre, coord, kUnloadRadius)) {
         this.#subscribed.delete(coord.key);
+        this.#earlySplat.delete(coord.key);
         dropped.push(coord);
       }
     }
@@ -118,8 +122,27 @@ export class TerrainStream extends Emitter<TerrainStreamEvents> {
       return;
     }
 
-    this.#terrain.loadChunk(coord, heights);
+    const splat = this.#earlySplat.get(coord.key);
+    this.#earlySplat.delete(coord.key);
+    this.#terrain.loadChunk(coord, heights, splat);
     this.emit("loaded", coord);
+  }
+
+  receivedSplat(
+    coord: ChunkCoord,
+    splat: SplatTexels
+  ): void {
+    if (!this.#subscribed.has(coord.key) || !this.#terrain.knows(coord)) {
+      return;
+    }
+    if (!this.#terrain.has(coord)) {
+      this.#earlySplat.set(coord.key, splat);
+
+      return;
+    }
+
+    this.#terrain.loadSplat(coord, splat);
+    this.emit("splatLoaded", coord);
   }
 }
 

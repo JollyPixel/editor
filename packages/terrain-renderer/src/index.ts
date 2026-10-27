@@ -14,6 +14,19 @@ export {
 } from "./terrain/OverviewMap.ts";
 export type { SampleBlock } from "./terrain/SampleBlock.ts";
 export {
+  dominantSlot,
+  isValidSplat,
+  SPLAT_CHANNELS,
+  SPLAT_TEXEL_COUNT,
+  SPLAT_TEXELS,
+  SPLAT_TILE_TEXEL_COUNT,
+  SPLAT_TILE_TEXELS,
+  SPLAT_WEIGHT_TOTAL,
+  SplatMap,
+  uniformSplat,
+  type SplatTexels
+} from "./terrain/SplatMap.ts";
+export {
   CHUNK_SAMPLE_COUNT,
   HEIGHT_RANGE,
   isValidHeight,
@@ -54,7 +67,22 @@ export {
   type TerrainOverlay
 } from "./view/shading/terrainNodes.ts";
 export {
+  splatOverlayColor,
+  type SplatColor
+} from "./view/shading/splatColors.ts";
+export {
   TerrainView,
   type TerrainViewOptions
 } from "./view/TerrainView.ts";
 export { LOOKUP_SIZE } from "./view/textures/ChunkTextureStore.ts";
+export {
+  DEFAULT_MATERIAL_TEXTURE_SIZE,
+  MATERIAL_MAPS,
+  MATERIAL_SLOT_COUNT,
+  MATERIAL_TECHNIQUES,
+  type MaterialImage,
+  type MaterialMap,
+  type MaterialSurface,
+  type MaterialTechnique,
+  type TextureCopier
+} from "./view/textures/MaterialTextureStore.ts";

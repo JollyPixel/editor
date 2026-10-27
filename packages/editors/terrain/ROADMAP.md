@@ -76,7 +76,58 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   tiles and answers the author with the refused tiles' current heights
   instead of a snapshot; an undo that raced a peer is still refused whole.
 - **M2: done** (2026-10-22).
-- **Next:** M3 grilling: terrain layers, texture arrays and splat maps.
+- **M3 grilling: done** (2026-10-26). Layer maps reference the built-in
+  `texture` kind. Splat is a second part per chunk. Layers keep a fixed slot,
+  at most 32, and a deleted layer's paint is skipped, not rewritten. The
+  texture size is a terrain setting. The overview holds each sample's
+  dominant layer. See [texture](./docs/texture.md).
+- **Texture rooms: done** (2026-10-26). The built-in `texture` kind opens a
+  room whose snapshot is the file and that accepts no command;
+  `TEXTURE_ASSET` lists textures in the asset picker.
+- **Layers in the manifest: done** (2026-10-26). The asset file and room
+  snapshot hold the layers and the texture size; `TerrainDocument` adds,
+  updates and removes layers, keyed per field, and undoes each change. A file
+  without layers loads with the Ground layer.
+- **Texture arrays: done** (2026-10-26). The view holds albedo, normal and
+  ORM arrays, one array layer per terrain layer, filled by GPU copy. The
+  editor leases each layer's textures, decodes them at the terrain's texture
+  size and uploads them again when a texture or the size changes. Until splat
+  maps land, the surface draws slot 0.
+- **Materials: done** (2026-10-27). Terrain layers are now materials
+  (`TerrainMaterial`, `material-added` and so on) with a fourth map, height,
+  which height blending reads instead of the albedo's alpha. The panel is a
+  palette of the terrain's own materials, drawn as swatches; see
+  [material palette](./docs/texture.md#material-palette).
+- **Material palette: done** (2026-10-27). The Materials pane shows the
+  terrain's materials as swatches; a material is added from a picked texture
+  or from dropped images, with its sibling maps found by name, and edited
+  through a Scale field and folded Maps and Look sections. The techniques are
+  stored but not drawn yet.
+- **Splat data: done** (2026-10-27). Each chunk holds a splat map, stored as
+  its `<x>_<z>_splat` part and changed by `splat-patched` commits keyed apart
+  from heights; the overview and the manifest keep each 32 m point's dominant
+  material. A chunk loads from its heights and takes its splat when it
+  arrives. Nothing paints or draws it yet.
+- **Splat rendering: done** (2026-10-27). The view uploads each chunk's
+  splat, the shader blends four materials per pixel with jittered texel
+  edges, and the far overview draws each point's dominant material. First
+  half of the paint tool item.
+- **Paint tool: done** (2026-10-27). The brush toolbar's Paint tool paints the
+  material selected in the palette, shown at once to the painter and
+  committed on the stroke cadence as one undo step; Ctrl+click selects the
+  material under the cursor. Peers see paint at each commit, not live.
+- **Per-material techniques: done** (2026-10-27). The Look toggles reach the
+  view: triplanar on steep slopes, stochastic tiling and height blending,
+  each sampled only where its material is painted.
+- **Splat overlay: done** (2026-10-27). The "Painted materials" overlay
+  colours each slot, shows the colour on its swatch and highlights the
+  selected material.
+- **M3 end-to-end test: done** (2026-10-27). Two peers paint and sculpt the
+  same chunk and undo the paint alone; a far peer's horizon takes the new
+  dominant material without loading the chunk. The material shader now loops
+  over projections and stochastic cells instead of unrolling them, so software
+  WebGL compiles it.
+- **Next:** replace an asset's content from the catalog.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -119,10 +170,26 @@ chunks yet.
 
 ## M3: Texturing
 
-- [ ] Terrain layers that reference image assets in the catalog.
-- [ ] Albedo, normal and ORM texture arrays.
-- [ ] Index and weight splat maps, and the paint brush.
-- [ ] Per-layer techniques: triplanar, stochastic tiling, height blending.
+- [x] A read-only room for the built-in `texture` kind, and its descriptor.
+- [x] Terrain layers in the manifest: slots, the seeded "Ground" layer, layer
+  commands keyed per field, image dependencies, and the texture size setting.
+- [x] Albedo, normal and ORM texture arrays, rebuilt when an image or the
+  texture size changes.
+- [x] Rename layers to materials, and add the height map.
+- [x] Material palette: swatches of the terrain's materials with map badges,
+  selection, adding from an image with its sibling maps found by name, and
+  editing a material's maps, tiling and flags.
+- [x] Splat parts, `splat-patched` commits, and the overview's dominant
+  material.
+- [x] The paint tool: the splat drawn in the view, then the Paint tool in the
+  brush toolbar painting the selected material, and Ctrl+click material
+  pick.
+- [x] Splat overlay.
+- [x] Per-material techniques: triplanar, stochastic tiling, height blending.
+- [x] E2E: two peers paint and sculpt the same chunk, a far peer's horizon
+  takes the new dominant material.
+- [ ] Replace an asset's content from the catalog, keeping its ID, so a
+  re-imported texture updates the terrains that use it.
 
 ## M4: Rest of V1
 
@@ -151,3 +218,9 @@ chunks yet.
   terrain in server memory. Load parts on first subscription or command from
   the event store, and unload those no member subscribes to once a checkpoint
   holds them.
+- **Material streaming.** The view holds every material of a terrain in its
+  arrays, which caps a terrain at 32 materials. Hold only those painted on
+  the loaded chunks, so a terrain can use all 256 slots.
+- **HTTP delivery for textures.** A texture travels base64 in its room
+  snapshot, with no browser cache, and a peer-to-peer session cannot send one
+  much above 12 MB. Serve texture files over a cacheable route instead.

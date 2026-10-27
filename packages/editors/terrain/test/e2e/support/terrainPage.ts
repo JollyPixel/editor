@@ -8,6 +8,11 @@ import {
   nextFrames,
   pressAt
 } from "@jolly-pixel/e2e/editor";
+import {
+  CHUNK_SAMPLES,
+  SPLAT_TEXELS,
+  type TerrainOverlay
+} from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import {
@@ -45,6 +50,46 @@ export class TerrainPage {
       ([x, z]) => window.terrainEditor!.document.terrain.sampleAt(x, z),
       [sampleX, sampleZ]
     );
+  }
+
+  materialAt(
+    sampleX: number,
+    sampleZ: number,
+    options: { confirmed?: boolean; } = {}
+  ): Promise<number | null> {
+    return this.page.evaluate(([x, z, confirmed, chunkSamples, splatTexels]) => {
+      const editor = window.terrainEditor!;
+      const terrain = confirmed ? editor.document.terrain : editor.scene.terrain;
+      const chunkX = Math.floor(x / chunkSamples);
+      const chunkZ = Math.floor(z / chunkSamples);
+      const chunk = [...terrain.chunks()].find(({ coord }) => coord.x === chunkX && coord.z === chunkZ);
+      const texelsPerSample = splatTexels / chunkSamples;
+
+      return chunk === undefined ? null : chunk.splat.dominantSlot(
+        (x - chunkX * chunkSamples) * texelsPerSample,
+        (z - chunkZ * chunkSamples) * texelsPerSample
+      );
+    }, [sampleX, sampleZ, options.confirmed ?? false, CHUNK_SAMPLES, SPLAT_TEXELS] as const);
+  }
+
+  async selectMaterial(
+    materialName: string
+  ): Promise<void> {
+    await this.page.locator(`terrain-material-palette .swatch[title="${materialName}"]`).click();
+  }
+
+  async paintWith(
+    materialName: string
+  ): Promise<void> {
+    await this.page.locator("terrain-sculpt-toolbar jolly-tool-button[data-tool=paint]").click();
+    await this.selectMaterial(materialName);
+  }
+
+  async showOverlay(
+    overlay: TerrainOverlay
+  ): Promise<void> {
+    await this.page.locator(`terrain-overlay-toolbar jolly-tool-button[data-overlay=${overlay}]`).click();
+    await nextFrames(this.page);
   }
 
   chunkLoaded(

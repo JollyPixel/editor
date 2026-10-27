@@ -12,13 +12,17 @@ import {
 
 // Import Internal Dependencies
 import {
-  encodeTilePatch,
+  DEFAULT_TERRAIN_TEXTURE_SIZE,
+  GROUND_MATERIAL,
   terrainSnapshot,
-  type EncodedTilePatch,
   type TerrainCommand
 } from "#src/index.ts";
 import { terrainHistoryRegistration } from "#src/network/client.ts";
 import { MAX_PATCH_TILES } from "#src/network/TerrainCommand.schema.ts";
+import {
+  historySetup,
+  peerTile
+} from "../helpers/history.ts";
 import {
   EDGE_TILE,
   ORIGIN_TILE,
@@ -31,32 +35,6 @@ import {
   networkCommand,
   tileHeights
 } from "../helpers/terrain.ts";
-
-function historySetup() {
-  const peers = edgePeerSetup();
-  const history = new CommandHistory<"terrain">();
-  history.register(terrainHistoryRegistration(peers.document, { scope: "terrain" }));
-  const skipped: string[] = [];
-  history.on("skipped", (_scope, step) => skipped.push(step.refused.reason));
-
-  function stroke(...heights: number[]): void {
-    const step = history.open("terrain", null);
-    for (const height of heights) {
-      peers.sculpt(height);
-    }
-    step.commit();
-    peers.route();
-  }
-
-  return { ...peers, history, skipped, stroke };
-}
-
-function peerTile(
-  tile: TileCoord,
-  height: number
-): EncodedTilePatch {
-  return encodeTilePatch({ tile, heights: tileHeights(height) });
-}
 
 function edgeHeight(
   { document }: ReturnType<typeof edgePeerSetup>
@@ -81,12 +59,12 @@ describe("terrain history", () => {
     assert.equal(history.undo("terrain"), true);
     route();
     assert.equal(edgeHeight(peers), 8);
-    assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
+    assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
 
     assert.equal(history.redo("terrain"), true);
     route();
     assert.equal(edgeHeight(peers), 5);
-    assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
+    assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
   });
 
   test("undo is skipped once a peer changed one of the stroke's tiles, not another tile", () => {
@@ -138,8 +116,61 @@ describe("terrain history", () => {
     assert.equal(history.undo("terrain"), true);
     route();
 
-    assert.equal(server.state.has(new ChunkCoord(2, 0)), true);
-    assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
+    assert.equal(server.state.terrain.has(new ChunkCoord(2, 0)), true);
+    assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
+  });
+
+  test("a removed material comes back with its properties on undo, on the server too", () => {
+    const { history, document, server, route } = historySetup();
+    document.updateMaterial(GROUND_MATERIAL.id, { tiling: 8, albedo: { id: "grass", kind: "texture" } });
+    route();
+    const before = document.materials.material(GROUND_MATERIAL.id);
+    history.record("terrain", null, () => document.removeMaterial(GROUND_MATERIAL.id));
+    route();
+
+    assert.equal(history.undo("terrain"), true);
+    route();
+
+    assert.deepEqual(document.materials.material(GROUND_MATERIAL.id), before);
+    assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
+  });
+
+  test("a material edit undoes only its own fields, and is skipped once a peer changed one of them", () => {
+    const { history, document, server, route, skipped } = historySetup();
+    history.record("terrain", null, () => document.updateMaterial(GROUND_MATERIAL.id, { tiling: 8 }));
+    route();
+    server.receive("A", networkCommand(
+      { action: "material-updated", id: GROUND_MATERIAL.id, changes: { name: "Grass" } },
+      { clientId: "A" }
+    ));
+    route();
+
+    assert.equal(history.undo("terrain"), true);
+    route();
+    assert.deepEqual(document.materials.material(GROUND_MATERIAL.id), { ...GROUND_MATERIAL, name: "Grass" });
+
+    history.record("terrain", null, () => document.updateMaterial(GROUND_MATERIAL.id, { tiling: 8 }));
+    route();
+    server.receive("A", networkCommand(
+      { action: "material-updated", id: GROUND_MATERIAL.id, changes: { tiling: 2 } },
+      { clientId: "A" }
+    ));
+    route();
+
+    assert.equal(history.undo("terrain"), false);
+    assert.deepEqual(skipped, ["peer"]);
+  });
+
+  test("a texture size change undoes to the previous size", () => {
+    const { history, document, server, route } = historySetup();
+    history.record("terrain", null, () => document.changeTextureSize(2048));
+    route();
+
+    assert.equal(history.undo("terrain"), true);
+    route();
+
+    assert.equal(document.materials.textureSize, DEFAULT_TERRAIN_TEXTURE_SIZE);
+    assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
   });
 
   test("merging a long stroke's inverses keeps the first heights per tile and fits the commit size", () => {
@@ -182,7 +213,7 @@ describe("terrain history", () => {
 
     assert.equal(edgeHeight(peers), -2);
     assert.equal(heightAt(document.terrain, ORIGIN_TILE), 5);
-    assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
+    assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
     assert.equal(resets, 0);
   });
 
@@ -202,12 +233,12 @@ describe("terrain history", () => {
     assert.ok(room.sent.every((sent) => sent.action !== "heights-patched" ||
       sent.tiles.length <= MAX_PATCH_TILES));
     route();
-    assert.ok(tiles.every((tile) => heightAt(server.state, tile) === 4));
+    assert.ok(tiles.every((tile) => heightAt(server.state.terrain, tile) === 4));
 
     assert.equal(history.state("terrain").undoCount, 1);
     assert.equal(history.undo("terrain"), true);
     route();
-    assert.ok(tiles.every((tile) => heightAt(server.state, tile) === 0));
-    assert.deepEqual(terrainSnapshot(document.terrain), terrainSnapshot(server.state));
+    assert.ok(tiles.every((tile) => heightAt(server.state.terrain, tile) === 0));
+    assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
   });
 });

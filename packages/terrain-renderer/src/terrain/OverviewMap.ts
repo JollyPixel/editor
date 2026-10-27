@@ -24,6 +24,7 @@ export interface OverviewReader {
   has(coord: ChunkCoord): boolean;
   coords(): IterableIterator<ChunkCoord>;
   samples(coord: ChunkCoord): Float32Array | undefined;
+  materials(coord: ChunkCoord): Uint8Array | undefined;
   heightRange(coord: ChunkCoord): HeightRange | undefined;
   heightAt(sampleX: number, sampleZ: number): number | undefined;
   interpolate(sampleX: number, sampleZ: number): number | undefined;
@@ -32,6 +33,7 @@ export interface OverviewReader {
 interface OverviewEntry {
   readonly coord: ChunkCoord;
   readonly samples: Float32Array;
+  readonly materials: Uint8Array;
   range: HeightRange;
 }
 
@@ -58,6 +60,12 @@ export class OverviewMap implements OverviewReader {
     coord: ChunkCoord
   ): Float32Array | undefined {
     return this.#entries.get(coord.key)?.samples.slice();
+  }
+
+  materials(
+    coord: ChunkCoord
+  ): Uint8Array | undefined {
+    return this.#entries.get(coord.key)?.materials.slice();
   }
 
   heightRange(
@@ -101,16 +109,52 @@ export class OverviewMap implements OverviewReader {
 
   set(
     coord: ChunkCoord,
-    samples: Float32Array
+    samples: Float32Array,
+    materials: Uint8Array = new Uint8Array(OVERVIEW_SAMPLE_COUNT)
   ): void {
-    if (samples.length !== OVERVIEW_SAMPLE_COUNT) {
+    if (samples.length !== OVERVIEW_SAMPLE_COUNT || materials.length !== OVERVIEW_SAMPLE_COUNT) {
       throw new RangeError(
-        `Chunk ${coord.key} needs ${OVERVIEW_SAMPLE_COUNT} overview samples, got ${samples.length}.`
+        `Chunk ${coord.key} needs ${OVERVIEW_SAMPLE_COUNT} overview samples and materials, ` +
+        `got ${samples.length} and ${materials.length}.`
       );
     }
 
     const copy = samples.slice();
-    this.#entries.set(coord.key, { coord, samples: copy, range: sampleRange(copy) });
+    this.#entries.set(coord.key, {
+      coord,
+      samples: copy,
+      materials: materials.slice(),
+      range: sampleRange(copy)
+    });
+  }
+
+  writeMaterials(
+    coord: ChunkCoord,
+    materials: Uint8Array
+  ): boolean {
+    const entry = this.#entries.get(coord.key);
+    if (entry === undefined || materials.length !== OVERVIEW_SAMPLE_COUNT) {
+      return false;
+    }
+
+    entry.materials.set(materials);
+
+    return true;
+  }
+
+  writeTileMaterial(
+    tile: TileCoord,
+    slot: number
+  ): boolean {
+    const entry = this.#entries.get(tile.chunk.key);
+    if (entry === undefined || !isOverviewTile(tile)) {
+      return false;
+    }
+
+    const { x, z } = tile.localSample;
+    entry.materials[(z / OVERVIEW_SPACING) * OVERVIEW_SAMPLES + x / OVERVIEW_SPACING] = slot;
+
+    return true;
   }
 
   writeTile(

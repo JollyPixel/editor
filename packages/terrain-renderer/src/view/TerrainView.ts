@@ -30,6 +30,13 @@ import {
   type TerrainShading
 } from "./shading/terrainNodes.ts";
 import { ChunkTextureStore } from "./textures/ChunkTextureStore.ts";
+import {
+  MaterialTextureStore,
+  type MaterialImage,
+  type MaterialMap,
+  type MaterialSurface,
+  type TextureCopier
+} from "./textures/MaterialTextureStore.ts";
 
 // CONSTANTS
 export const NODE_RESOLUTION = LEAF_NODE_SIZE;
@@ -42,6 +49,11 @@ export interface TerrainViewOptions {
    * that draw on demand.
    */
   requestFrame?: () => void;
+  /**
+   * Copies material images into the material texture arrays on the GPU.
+   * Without it, the view draws every material in its fallback colour.
+   */
+  textureCopier?: TextureCopier;
 }
 
 export class TerrainView {
@@ -54,7 +66,9 @@ export class TerrainView {
   #shading: TerrainShading;
   #overlay: TerrainOverlay = "none";
   #walkableSlope = DEFAULT_WALKABLE_SLOPE;
+  #highlightedMaterial: number | null = null;
   #textures: ChunkTextureStore;
+  #materials: MaterialTextureStore;
   #nodes: NodeBatch;
   #quarters: NodeBatch;
   #frustum = new THREE.Frustum();
@@ -67,13 +81,27 @@ export class TerrainView {
   ) {
     const {
       ranges = new LodRanges(),
-      requestFrame = () => undefined
+      requestFrame = () => undefined,
+      textureCopier = null
     } = options;
     this.#terrain = terrain;
     this.#requestFrame = requestFrame;
     this.selection = new QuadtreeSelection(terrain, ranges);
     this.#textures = new ChunkTextureStore(terrain);
-    this.#shading = createTerrainShading(this.#textures);
+    this.#materials = new MaterialTextureStore({
+      copier: textureCopier,
+      replaced: (arrays) => this.#shading.materialArrays(arrays)
+    });
+    this.#shading = createTerrainShading({
+      heights: this.#textures.heights,
+      splatIndices: this.#textures.splatIndices,
+      splatWeights: this.#textures.splatWeights,
+      lookup: this.#textures.lookup,
+      overview: this.#textures.overview,
+      overviewMaterials: this.#textures.overviewMaterials,
+      materialSlots: this.#materials.slots,
+      materialArrays: this.#materials.arrays
+    });
     this.material = this.#shading.material;
     this.#nodes = new NodeBatch(buildGridMesh(NODE_RESOLUTION), this.material);
     this.#quarters = new NodeBatch(buildGridMesh(NODE_RESOLUTION / 2), this.material);
@@ -94,6 +122,18 @@ export class TerrainView {
     this.#requestFrame();
   }
 
+  get highlightedMaterial(): number | null {
+    return this.#highlightedMaterial;
+  }
+
+  set highlightedMaterial(
+    slot: number | null
+  ) {
+    this.#highlightedMaterial = slot;
+    this.#shading.highlightSlot(slot);
+    this.#requestFrame();
+  }
+
   get walkableSlope(): number {
     return this.#walkableSlope;
   }
@@ -105,6 +145,41 @@ export class TerrainView {
       Math.min(Math.max(degrees, 0), MAX_WALKABLE_SLOPE) :
       DEFAULT_WALKABLE_SLOPE;
     this.#shading.walkableSlope(this.#walkableSlope);
+    this.#requestFrame();
+  }
+
+  get materialTextureSize(): number {
+    return this.#materials.size;
+  }
+
+  set materialTextureSize(
+    size: number
+  ) {
+    this.#materials.resize(size);
+    this.#requestFrame();
+  }
+
+  materialChanged(
+    slot: number,
+    surface: MaterialSurface
+  ): void {
+    this.#materials.materialChanged(slot, surface);
+    this.#requestFrame();
+  }
+
+  materialRemoved(
+    slot: number
+  ): void {
+    this.#materials.materialRemoved(slot);
+    this.#requestFrame();
+  }
+
+  writeMaterialMap(
+    slot: number,
+    map: MaterialMap,
+    image: MaterialImage | null
+  ): void {
+    this.#materials.writeMap(slot, map, image);
     this.#requestFrame();
   }
 
@@ -130,6 +205,13 @@ export class TerrainView {
     const changed = [...tiles];
     this.#textures.tilesChanged(changed);
     this.selection.invalidate(new Map(changed.map(({ chunk }) => [chunk.key, chunk])).values());
+    this.#requestFrame();
+  }
+
+  splatChanged(
+    tiles: Iterable<TileCoord>
+  ): void {
+    this.#textures.splatChanged(tiles);
     this.#requestFrame();
   }
 
@@ -182,6 +264,7 @@ export class TerrainView {
     this.#quarters.dispose();
     this.material.dispose();
     this.#textures.dispose();
+    this.#materials.dispose();
   }
 }
 

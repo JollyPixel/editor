@@ -16,7 +16,9 @@ import {
   encodeHeights,
   encodeTerrainFile,
   decodeHeights,
+  decodeMaterials,
   decodeTerrainFile,
+  GROUND_MATERIAL,
   MAX_TERRAIN_CHUNKS,
   terrainAssetKind,
   terrainSnapshot,
@@ -25,9 +27,14 @@ import {
 import { CHUNK_COORDINATE_RANGE } from "#src/network/TerrainCommand.schema.ts";
 import {
   heights,
+  material,
   networkCommand,
+  paint,
   tileHeights
 } from "../helpers/terrain.ts";
+
+// CONSTANTS
+const kRockMap = { id: "rock-albedo", kind: "texture" };
 
 function liveRoom() {
   return new LiveAssetRoom(terrainAssetKind());
@@ -40,43 +47,57 @@ function flatChunk(): Float32Array {
 function chunkKeys(
   room: ReturnType<typeof liveRoom>
 ): string[] {
-  return [...room.state.chunks()].map(({ coord }) => coord.key).sort();
+  return [...room.state.terrain.chunks()].map(({ coord }) => coord.key).sort();
 }
 
 describe("terrain asset kind", () => {
-  test("a new terrain holds one flat chunk at the origin", () => {
-    const terrain = terrainAssetKind().create("asset");
+  test("a new terrain holds one flat chunk at the origin and the Ground material", () => {
+    const { terrain, materials } = terrainAssetKind().create("asset");
 
     assert.deepEqual([...terrain.chunks()].map(({ coord }) => coord.key), ["0,0"]);
     assert.ok(terrain.chunk(new ChunkCoord(0, 0))!.copyHeights().every((height) => height === 0));
+    assert.deepEqual(materials.materials(), [GROUND_MATERIAL]);
   });
 
-  test("serialize and load round-trip the chunk list and each chunk's part", async() => {
+  test("serialize and load round-trip chunks, materials and parts in any part order", async() => {
     const handler = terrainAssetKind();
     const room = new LiveAssetRoom(handler);
     room.receive("A", networkCommand({ action: "chunk-added", x: 1, z: 0, heights: heights(12.5) }));
+    const rock = material("rock", 3, { albedo: kRockMap });
+    room.receive("A", networkCommand({ action: "material-added", material: rock }));
+    room.receive("A", networkCommand({ action: "texture-size-changed", size: 2048 }));
+    room.receive("A", networkCommand(paint(1, 0, { 0: 3, 5: 3 })));
 
     const manifest = await handler.serialize(room.state);
-    const loaded = handler.create("copy");
-    handler.load(loaded, manifest);
-    for (const partId of handler.parts!.list(manifest)) {
-      handler.parts!.load(loaded, partId, await handler.parts!.serialize(room.state, partId));
-    }
+    const partIds = [...handler.parts!.list(manifest)];
+    assert.deepEqual(partIds, ["0_0", "0_0_splat", "1_0", "1_0_splat"]);
+    for (const order of [partIds, partIds.toReversed()]) {
+      const loaded = handler.create("copy");
+      handler.load(loaded, manifest);
+      for (const partId of order) {
+        handler.parts!.load(loaded, partId, await handler.parts!.serialize(room.state, partId));
+      }
 
-    assert.deepEqual([...handler.parts!.list(manifest)], ["0_0", "1_0"]);
-    assert.deepEqual(terrainSnapshot(loaded), terrainSnapshot(room.state));
+      assert.deepEqual(terrainSnapshot(loaded), terrainSnapshot(room.state));
+    }
   });
 
-  test("the document lists each chunk with its overview samples", async() => {
+  test("the document lists each chunk with its overview samples and their dominant materials", async() => {
     const handler = terrainAssetKind();
     const room = new LiveAssetRoom(handler);
     room.receive("A", networkCommand({ action: "chunk-added", x: 1, z: 0, heights: heights(12.5) }));
+    room.receive("A", networkCommand(paint(1, 0, { 2: 7, 5: 9 })));
 
     const { chunks } = decodeTerrainFile(await handler.serialize(room.state));
 
     assert.deepEqual(
-      chunks.map(({ x, z, overview }) => [x, z, [...decodeHeights(overview!, OVERVIEW_SAMPLE_COUNT)!]]),
-      [[0, 0, [0, 0, 0, 0]], [1, 0, [12.5, 12.5, 12.5, 12.5]]]
+      chunks.map(({ x, z, overview, materials }) => [
+        x,
+        z,
+        [...decodeHeights(overview!, OVERVIEW_SAMPLE_COUNT)!],
+        [...decodeMaterials(materials!)!]
+      ]),
+      [[0, 0, [0, 0, 0, 0], [0, 0, 0, 0]], [1, 0, [12.5, 12.5, 12.5, 12.5], [0, 7, 0, 0]]]
     );
   });
 
@@ -87,10 +108,10 @@ describe("terrain asset kind", () => {
       chunks: [{ x: 0, z: 0, heights: heights(3) }]
     });
 
-    const terrain = handler.create("asset");
-    handler.load(terrain, content);
+    const model = handler.create("asset");
+    handler.load(model, content);
 
-    assert.ok(terrain.chunk(new ChunkCoord(0, 0))!.copyHeights().every((height) => height === 3));
+    assert.ok(model.terrain.chunk(new ChunkCoord(0, 0))!.copyHeights().every((height) => height === 3));
   });
 
   test("a part that is not a chunk of valid heights is refused", () => {
@@ -144,18 +165,18 @@ describe("terrain asset kind", () => {
     const room = liveRoom();
     const side = Math.sqrt(MAX_TERRAIN_CHUNKS);
     for (let index = 1; index < MAX_TERRAIN_CHUNKS; index++) {
-      room.state.addChunk(new ChunkCoord(index % side, Math.floor(index / side)), flatChunk());
+      room.state.terrain.addChunk(new ChunkCoord(index % side, Math.floor(index / side)), flatChunk());
     }
     room.receive("A", networkCommand({ action: "chunk-added", x: side, z: 0, heights: heights(0) }));
 
-    assert.equal(room.state.has(new ChunkCoord(side, 0)), false);
-    assert.equal(room.state.size, MAX_TERRAIN_CHUNKS);
+    assert.equal(room.state.terrain.has(new ChunkCoord(side, 0)), false);
+    assert.equal(room.state.terrain.size, MAX_TERRAIN_CHUNKS);
   });
 
   test("a chunk outside the coordinate range does not parse", () => {
     const room = liveRoom();
     const { max } = CHUNK_COORDINATE_RANGE;
-    room.state.addChunk(new ChunkCoord(max, 0), flatChunk());
+    room.state.terrain.addChunk(new ChunkCoord(max, 0), flatChunk());
     function add(x: number): void {
       room.receive("A", networkCommand({ action: "chunk-added", x, z: 0, heights: heights(0) }));
     }
@@ -181,7 +202,7 @@ describe("terrain asset kind", () => {
       room.receive("A", networkCommand({ action: "heights-patched", tiles: [flat(index + 2), tile] }));
     });
 
-    const chunk = room.state.chunk(new ChunkCoord(0, 0))!;
+    const chunk = room.state.terrain.chunk(new ChunkCoord(0, 0))!;
     const admitted = [chunk.tileHeights(2, 0), chunk.tileHeights(3, 0), chunk.tileHeights(0, 1)];
     assert.deepEqual(admitted.map((heights) => heights[0]), [4, 4, 4]);
     assert.deepEqual(chunk.tileHeights(1, 0), tileHeights(0));
@@ -198,6 +219,6 @@ describe("terrain asset kind", () => {
     const tile = { x: 0, z: 0, tile: 0, heights: encodeHeights(tileHeights(4)) };
     room.receive("A", networkCommand({ action: "heights-patched", tiles: [tile, tile] }));
 
-    assert.deepEqual(room.state.chunk(new ChunkCoord(0, 0))!.tileHeights(0, 0), tileHeights(0));
+    assert.deepEqual(room.state.terrain.chunk(new ChunkCoord(0, 0))!.tileHeights(0, 0), tileHeights(0));
   });
 });

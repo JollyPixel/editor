@@ -3,6 +3,7 @@ import {
   CHUNK_SAMPLES,
   type ChunkCoord
 } from "./ChunkCoord.ts";
+import { SplatMap } from "./SplatMap.ts";
 import {
   TILE_SAMPLE_COUNT,
   TILE_SAMPLES
@@ -37,6 +38,7 @@ export interface HeightRange {
 
 export class TerrainChunk {
   readonly coord: ChunkCoord;
+  readonly splat: SplatMap;
 
   #origin: { readonly x: number; readonly z: number; };
   #heights: Float32Array;
@@ -44,7 +46,8 @@ export class TerrainChunk {
 
   constructor(
     coord: ChunkCoord,
-    heights: Float32Array = new Float32Array(CHUNK_SAMPLE_COUNT)
+    heights: Float32Array = new Float32Array(CHUNK_SAMPLE_COUNT),
+    splat: SplatMap = new SplatMap()
   ) {
     if (!isValidHeights(heights)) {
       throw new RangeError(
@@ -54,6 +57,7 @@ export class TerrainChunk {
     }
 
     this.coord = coord;
+    this.splat = splat;
     this.#origin = coord.originSample;
     this.#heights = heights.slice();
     this.#heightRange = measureRange(this.#heights);

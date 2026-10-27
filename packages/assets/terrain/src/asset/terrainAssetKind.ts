@@ -11,10 +11,7 @@ import {
   type AssetKindPackage,
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
-import {
-  ChunkCoord,
-  Terrain
-} from "@jolly-pixel/terrain.renderer";
+import { ChunkCoord } from "@jolly-pixel/terrain.renderer";
 import * as z from "zod/mini";
 
 // Import Internal Dependencies
@@ -32,9 +29,16 @@ import {
   acceptsTerrainCommand,
   applyTerrainCommand,
   loadChunkHeights,
+  loadChunkSplat,
   loadTerrainManifest,
   terrainManifest
 } from "../model/terrainState.ts";
+import {
+  materialMaps,
+  rebindMaterialMaps
+} from "../model/materialMaps.ts";
+import { GROUND_MATERIAL } from "../model/TerrainMaterials.ts";
+import { TerrainModel } from "../model/TerrainModel.ts";
 import {
   terrainCommandProtocol,
   terrainManifestSchema,
@@ -45,16 +49,21 @@ import {
   correctTerrainCommand
 } from "../network/TerrainCorrection.ts";
 import {
-  chunkOfPart,
+  chunkPartIds,
   outsideCommand,
-  chunkPartId,
-  touchedChunks
+  parseChunkPart,
+  touchedParts
 } from "../network/chunkParts.ts";
 import {
   decodeHeightBytes,
   encodeHeightBytes,
   encodeHeights
 } from "../network/heights.ts";
+import {
+  decodeSplatBytes,
+  encodeSplat,
+  encodeSplatBytes
+} from "../network/splat.ts";
 import { terrainWriteKeys } from "../network/TerrainCommandKeys.ts";
 import {
   TERRAIN_RELAY_SCHEMAS,
@@ -103,7 +112,7 @@ export interface TerrainAssetKindOptions {
 export function terrainAssetKind(
   options: TerrainAssetKindOptions = {}
 ): AssetKindHandler<
-  Terrain,
+  TerrainModel,
   TerrainNetworkCommand,
   TerrainLiveMessage
 > {
@@ -116,15 +125,16 @@ export function terrainAssetKind(
     },
     snapshot,
 
-    create(): Terrain {
-      const terrain = new Terrain();
-      terrain.addChunk(new ChunkCoord(0, 0));
+    create(): TerrainModel {
+      const model = new TerrainModel();
+      model.terrain.addChunk(new ChunkCoord(0, 0));
+      model.materials.add(GROUND_MATERIAL);
 
-      return terrain;
+      return model;
     },
 
     load(
-      state: Terrain,
+      state: TerrainModel,
       content: Uint8Array
     ): void {
       const file = decodeTerrainFile(content);
@@ -141,13 +151,26 @@ export function terrainAssetKind(
     },
 
     clear(
-      state: Terrain
+      state: TerrainModel
     ): void {
       state.clear();
     },
 
+    dependencies(
+      state: TerrainModel
+    ) {
+      return materialMaps(state.materials);
+    },
+
+    rebind(
+      state: TerrainModel,
+      idMap: ReadonlyMap<string, string>
+    ): void {
+      rebindMaterialMaps(state.materials, idMap);
+    },
+
     serialize(
-      state: Terrain
+      state: TerrainModel
     ): Promise<Uint8Array> {
       return Promise.resolve(
         encodeTerrainFile({
@@ -161,28 +184,40 @@ export function terrainAssetKind(
       extension: {
         [TERRAIN_PART_EXTENSION]: "application/octet-stream"
       },
-      touched: (command) => touchedChunks(command).map(chunkPartId),
+      touched: touchedParts,
       list: (manifest) => decodeTerrainFile(manifest).chunks
-        .map(({ x, z }) => chunkPartId(new ChunkCoord(x, z))),
+        .flatMap(({ x, z }) => chunkPartIds(new ChunkCoord(x, z))),
       load: (state, partId, content) => {
-        const coord = chunkOfPart(partId);
+        const part = parseChunkPart(partId);
+        if (part?.kind === "splat") {
+          const splat = decodeSplatBytes(content);
+          if (splat === null) {
+            throw new InvalidAssetFileError(TERRAIN_KIND, `part "${partId}" is not a valid splat map`);
+          }
+          loadChunkSplat(state, part.coord, splat);
+
+          return;
+        }
+
         const heights = decodeHeightBytes(content);
-        if (coord === null || heights === null) {
+        if (part === null || heights === null) {
           throw new InvalidAssetFileError(
             TERRAIN_KIND,
             `part "${partId}" is not a chunk of valid heights`
           );
         }
-        loadChunkHeights(state, coord, heights);
+        loadChunkHeights(state, part.coord, heights);
       },
       serialize: (state, partId) => {
-        const coord = chunkOfPart(partId);
-        const chunk = coord === null ? undefined : state.chunk(coord);
-        if (chunk === undefined) {
+        const part = parseChunkPart(partId);
+        const chunk = part === null ? undefined : state.terrain.chunk(part.coord);
+        if (part === null || chunk === undefined) {
           return Promise.reject(new RangeError(`Terrain has no chunk "${partId}".`));
         }
 
-        return Promise.resolve(encodeHeightBytes(chunk.copyHeights()));
+        return Promise.resolve(part.kind === "splat" ?
+          encodeSplatBytes(chunk.splat.copy()) :
+          encodeHeightBytes(chunk.copyHeights()));
       }
     },
 
@@ -198,7 +233,7 @@ export function terrainAssetKind(
       live({ state }) {
         const arbiter = new KeyedCommandArbiter<
           TerrainNetworkCommand,
-          Terrain
+          TerrainModel
         >({
           accepts: acceptsTerrainCommand,
           writes: (command) => {
@@ -210,20 +245,25 @@ export function terrainAssetKind(
           snapshotSchema: terrainManifestSchema,
           snapshot: () => terrainManifest(state),
           arbitrate: (command) => {
-            const admissible = admissibleTiles(state, command);
+            const admissible = admissibleTiles(state.terrain, command);
 
             return admissible === null ? null : arbiter.admit(state, admissible);
           },
-          correct: (command, admitted) => correctTerrainCommand(state, command, admitted),
+          correct: (command, admitted) => correctTerrainCommand(state.terrain, command, admitted),
           restore: (command, version) => arbiter.restore(command, version),
           relay: new TerrainLiveRelay(),
           parts: {
             schema: terrainPartSchema,
             part: (partId) => {
-              const coord = chunkOfPart(partId);
-              const chunk = coord === null ? undefined : state.chunk(coord);
+              const part = parseChunkPart(partId);
+              const chunk = part === null ? undefined : state.terrain.chunk(part.coord);
+              if (part === null || chunk === undefined) {
+                return null;
+              }
 
-              return chunk === undefined ? null : encodeHeights(chunk.copyHeights());
+              return part.kind === "splat" ?
+                encodeSplat(chunk.splat.copy()) :
+                encodeHeights(chunk.copyHeights());
             },
             outside: outsideCommand
           }
