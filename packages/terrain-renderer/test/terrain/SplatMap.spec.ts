@@ -77,4 +77,17 @@ describe("Terrain splat", () => {
     terrain.loadSplat(coord, uniformSplat(SPLAT_TEXEL_COUNT, 1));
     assert.deepEqual([...terrain.overview.materials(coord)!], [1, 1, 1, 1]);
   });
+
+  test("a chunk whose splat loaded first keeps it when its heights load after", () => {
+    const terrain = new Terrain();
+    const coord = new ChunkCoord(0, 0);
+    terrain.addChunk(coord, new Float32Array(64 * 64));
+    terrain.loadSplat(coord, uniformSplat(SPLAT_TEXEL_COUNT, 3));
+
+    terrain.loadChunk(coord, new Float32Array(64 * 64).fill(7));
+
+    assert.equal(terrain.chunk(coord)!.splat.dominantSlot(40, 90), 3);
+    assert.deepEqual([...terrain.overview.materials(coord)!], [3, 3, 3, 3]);
+    assert.equal(terrain.sampleAt(10, 10), 7);
+  });
 });

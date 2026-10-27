@@ -59,7 +59,7 @@ describe("terrain asset kind", () => {
     assert.deepEqual(materials.materials(), [GROUND_MATERIAL]);
   });
 
-  test("serialize and load round-trip the chunk list, the materials and each chunk's part", async() => {
+  test("serialize and load round-trip chunks, materials and parts in any part order", async() => {
     const handler = terrainAssetKind();
     const room = new LiveAssetRoom(handler);
     room.receive("A", networkCommand({ action: "chunk-added", x: 1, z: 0, heights: heights(12.5) }));
@@ -69,14 +69,17 @@ describe("terrain asset kind", () => {
     room.receive("A", networkCommand(paint(1, 0, { 0: 3, 5: 3 })));
 
     const manifest = await handler.serialize(room.state);
-    const loaded = handler.create("copy");
-    handler.load(loaded, manifest);
-    for (const partId of handler.parts!.list(manifest)) {
-      handler.parts!.load(loaded, partId, await handler.parts!.serialize(room.state, partId));
-    }
+    const partIds = [...handler.parts!.list(manifest)];
+    assert.deepEqual(partIds, ["0_0", "0_0_splat", "1_0", "1_0_splat"]);
+    for (const order of [partIds, partIds.toReversed()]) {
+      const loaded = handler.create("copy");
+      handler.load(loaded, manifest);
+      for (const partId of order) {
+        handler.parts!.load(loaded, partId, await handler.parts!.serialize(room.state, partId));
+      }
 
-    assert.deepEqual([...handler.parts!.list(manifest)], ["0_0", "0_0_splat", "1_0", "1_0_splat"]);
-    assert.deepEqual(terrainSnapshot(loaded), terrainSnapshot(room.state));
+      assert.deepEqual(terrainSnapshot(loaded), terrainSnapshot(room.state));
+    }
   });
 
   test("the document lists each chunk with its overview samples and their dominant materials", async() => {

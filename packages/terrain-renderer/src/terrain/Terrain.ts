@@ -107,7 +107,7 @@ export class Terrain implements TerrainReader {
       throw new Error(`Chunk ${coord.key} does not exist.`);
     }
 
-    return this.#load(coord, heights, splat);
+    return this.#load(coord, heights, splat ?? this.#chunks.get(coord.key)?.splat.copy());
   }
 
   loadSplat(
