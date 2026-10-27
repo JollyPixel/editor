@@ -2,12 +2,14 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { InvalidEntryError } from "@jolly-pixel/asset.common";
+
 // Import Internal Dependencies
 import {
   AnimationDocument,
   type AnimationChange
 } from "#src/model/AnimationDocument.ts";
-import { InvalidAnimationSetError } from "#src/model/errors/InvalidAnimationSetError.ts";
 import { invert } from "#src/model/history/animationInverse.ts";
 import { TICKS_PER_SECOND } from "#src/model/values/FrameRate.ts";
 import { key } from "../helpers/clips.ts";
@@ -120,7 +122,7 @@ describe("AnimationDocument", () => {
 
     assert.throws(
       () => invert(document.set, { action: "clip-removed", id: "missing" }),
-      InvalidAnimationSetError
+      InvalidEntryError
     );
   });
 });

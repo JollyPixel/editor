@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import * as network from "@jolly-pixel/network";
+import type * as network from "@jolly-pixel/network";
 import {
   isUVGeometry,
   isUVRegionData,
@@ -30,15 +30,6 @@ export const PIXEL_COMMAND_RULES: network.KeyedCommandArbiterOptions<
   writes: pixelCommandWrites,
   narrow: narrowPixelCommand
 };
-
-export class PixelCommandArbiter extends network.KeyedCommandArbiter<
-  PixelWireCommand,
-  PixelDocumentState
-> {
-  constructor() {
-    super(PIXEL_COMMAND_RULES);
-  }
-}
 
 function acceptsPixelCommand(
   state: PixelDocumentState,

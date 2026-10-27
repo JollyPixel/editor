@@ -3,12 +3,10 @@ import {
   CHUNK_SAMPLE_COUNT,
   isValidHeight
 } from "@jolly-pixel/terrain.renderer";
-
-// Import Internal Dependencies
 import {
   decodeBase64,
   encodeBase64
-} from "./base64.ts";
+} from "@jolly-pixel/asset.common";
 
 // CONSTANTS
 const kBytesPerHeight = Float32Array.BYTES_PER_ELEMENT;

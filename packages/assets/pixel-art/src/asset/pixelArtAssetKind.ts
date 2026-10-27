@@ -1,6 +1,8 @@
 // Import Third-party Dependencies
 import {
+  arbitrated,
   InvalidAssetFileError,
+  JSON_CONTENT_TYPE,
   SNAPSHOT_POLICY_SCHEMA,
   type AssetKindHandler,
   type AssetKindPackage,
@@ -35,7 +37,7 @@ import {
   pixelSnapshotSchema,
   sizeSchema
 } from "../network/PixelCommand.schema.ts";
-import { PixelCommandArbiter } from "../network/PixelCommandArbiter.ts";
+import { PIXEL_COMMAND_RULES } from "../network/PixelCommandRules.ts";
 import { correctPixelCommand } from "../network/PixelCorrection.ts";
 import type { PixelWireCommand } from "../network/types.ts";
 
@@ -78,14 +80,12 @@ export class PixelArtState {
   }
 
   clear(): void {
-    const { buffer } = this.document;
-    const size = buffer.size();
+    const size = this.document.buffer.size();
 
-    buffer.replacePixels(
-      new Uint8ClampedArray(size.x * size.y * 4),
-      size
-    );
-    this.document.uv.clear();
+    this.document.load({
+      size,
+      pixels: new Uint8ClampedArray(size.x * size.y * 4)
+    });
   }
 }
 
@@ -105,7 +105,7 @@ export function pixelArtAssetKind(
   return {
     kind: PIXEL_ART_KIND,
     extensions: {
-      [PIXEL_ART_EXTENSION]: "application/json; charset=utf-8"
+      [PIXEL_ART_EXTENSION]: JSON_CONTENT_TYPE
     },
     conversions: {
       ".png": pixelArtContentFromPng
@@ -164,19 +164,16 @@ export function pixelArtAssetKind(
       },
 
       live({ state }) {
-        const arbiter = new PixelCommandArbiter();
-
         return {
           snapshotSchema: pixelSnapshotSchema,
           snapshot: () => pixelArtSnapshot(state.document),
           encodeSnapshot: () => encodePixelSnapshot(state.document),
-          arbitrate: (command) => arbiter.admit(state.document, command),
+          ...arbitrated(state.document, PIXEL_COMMAND_RULES),
           correct: (command, admitted) => correctPixelCommand(
             state.document.buffer,
             command,
             admitted
-          ),
-          restore: (command, version) => arbiter.restore(command, version)
+          )
         };
       }
     }

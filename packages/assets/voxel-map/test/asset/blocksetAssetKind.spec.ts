@@ -16,7 +16,7 @@ import { NormalMapConfig } from "@jolly-pixel/pixel-draw.renderer";
 // Import Internal Dependencies
 import {
   createBlocksetFile,
-  decodeBlocksetFile,
+  BLOCKSET_FILE,
   encodeBlocksetFile,
   BLOCKSET_COMMAND,
   BLOCKSET_EXTENSION,
@@ -122,7 +122,7 @@ describe("blocksetAssetKind", () => {
       tileSize: 16,
       defaultSize: { x: 32, y: 16 }
     });
-    const file = decodeBlocksetFile(
+    const file = BLOCKSET_FILE.decode(
       await handler.serialize(handler.create("asset-1"))
     );
 
@@ -186,7 +186,7 @@ describe("blocksetAssetKind", () => {
       tileSize: 16
     }));
 
-    const file = decodeBlocksetFile(await handler.serialize(state));
+    const file = BLOCKSET_FILE.decode(await handler.serialize(state));
     const restored = handler.create("asset-1");
     foldAssetEvent(handler, restored, fileEvent(file));
 
@@ -223,7 +223,7 @@ describe("blocksetAssetKind", () => {
     const expected = NormalMapConfig.create()
       .withZone({ regionId: "block-1", settings: { strength: 4 } })
       .toJSON();
-    const file = decodeBlocksetFile(await handler.serialize(state));
+    const file = BLOCKSET_FILE.decode(await handler.serialize(state));
     assert.deepEqual(file.pixels.normalMap, expected);
 
     const restored = handler.create("asset-1");

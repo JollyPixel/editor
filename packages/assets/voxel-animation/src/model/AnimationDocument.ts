@@ -4,6 +4,10 @@ import {
   type CommandChange,
   type CommandState
 } from "@jolly-pixel/history";
+import {
+  randomId,
+  withBefore
+} from "@jolly-pixel/asset.common";
 
 // Import Internal Dependencies
 import type {
@@ -25,7 +29,6 @@ import {
 } from "./history/animationImages.ts";
 import { invert } from "./history/animationInverse.ts";
 import { TICKS_PER_SECOND } from "./values/FrameRate.ts";
-import { randomId } from "./values/randomId.ts";
 
 // CONSTANTS
 const kDefaultFps = 24;
@@ -97,7 +100,7 @@ export class AnimationDocument extends CommandDocument<
         loop,
         tracks: structuredClone([...tracks])
       },
-      ...(beforeId === undefined ? {} : { beforeId })
+      ...withBefore(beforeId)
     });
 
     return added ? id : null;
@@ -123,7 +126,7 @@ export class AnimationDocument extends CommandDocument<
     return this.commit({
       action: "clip-moved",
       id,
-      ...(beforeId === undefined ? {} : { beforeId })
+      ...withBefore(beforeId)
     });
   }
 

@@ -1,5 +1,9 @@
 // Import Third-party Dependencies
-import type { NameSet } from "@jolly-pixel/asset.voxel-animation/client";
+import {
+  InvalidEntryError,
+  type NameSet,
+  type OrderedTree
+} from "@jolly-pixel/asset.common";
 
 // Import Internal Dependencies
 import type {
@@ -9,7 +13,6 @@ import type {
   VoxelModelCommand,
   VoxelModelSnapshot
 } from "../network/types.ts";
-import { InvalidModelTreeError } from "./errors/InvalidModelTreeError.ts";
 import {
   ModelAnimationLinks,
   type ModelAnimationLinksReader
@@ -25,7 +28,6 @@ import {
   type ModelMaterialsReader
 } from "./materials/ModelMaterials.ts";
 import { ModelNodes } from "./nodes/ModelNodes.ts";
-import type { OrderedTree } from "./OrderedTree.ts";
 
 export type ModelTreeReader = Pick<
   ModelTree,
@@ -265,7 +267,7 @@ export class ModelTree {
     nodes.load(snapshot.nodes);
     for (const node of nodes.scan()) {
       if (!hasKnownMaterial(node, materials)) {
-        throw new InvalidModelTreeError("node", node.id, "has no such material");
+        throw new InvalidEntryError("node", node.id, "has no such material");
       }
     }
 

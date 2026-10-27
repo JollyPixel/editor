@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
 import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
+import { randomId } from "@jolly-pixel/asset.common";
 
 // Import Internal Dependencies
-import { randomId } from "../model/randomId.ts";
 import { createSceneEnvironment } from "../model/sceneEnvironment.ts";
 import { SceneTransform } from "../model/SceneTransform.ts";
 import type {

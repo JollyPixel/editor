@@ -15,7 +15,7 @@ import {
 } from "@jolly-pixel/asset.voxel-map";
 import {
   createVoxelModelFile,
-  encodeVoxelModelFile,
+  VOXEL_MODEL_FILE,
   VOXEL_MODEL_KIND
 } from "@jolly-pixel/asset.voxel-model";
 import {
@@ -73,7 +73,7 @@ export async function createStudioSeed(
     "models/model.voxelmodel.json": {
       id: kModelAssetId,
       kind: VOXEL_MODEL_KIND,
-      content: () => encodeVoxelModelFile(
+      content: () => VOXEL_MODEL_FILE.encode(
         createVoxelModelFile({
           texture: {
             id: kModelTextureAssetId,

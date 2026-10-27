@@ -8,6 +8,7 @@ import {
   type TerrainReader,
   type TilePatch
 } from "@jolly-pixel/terrain.renderer";
+import { InvalidEntryError } from "@jolly-pixel/asset.common";
 
 // Import Internal Dependencies
 import {
@@ -248,8 +249,13 @@ export function loadTerrainManifest(
   manifest: TerrainManifest
 ): void {
   const { terrain } = model;
+  const listed = new Set<string>();
   const chunks = manifest.chunks.map((chunk) => {
     const coord = new ChunkCoord(chunk.x, chunk.z);
+    if (listed.has(coord.key)) {
+      throw new InvalidEntryError("chunk", coord.key, "is listed twice");
+    }
+    listed.add(coord.key);
 
     return {
       coord,
@@ -350,7 +356,7 @@ function splatOrThrow(
 ): SplatTexels {
   const splat = decodeSplat(encoded);
   if (splat === null) {
-    throw new RangeError(`Chunk ${coord.key} has an invalid splat map.`);
+    throw new InvalidEntryError("chunk", coord.key, "has an invalid splat map");
   }
 
   return splat;
@@ -362,7 +368,7 @@ function materialsOrThrow(
 ): Uint8Array {
   const materials = decodeMaterials(encoded);
   if (materials === null) {
-    throw new RangeError(`Chunk ${coord.key} has invalid overview materials.`);
+    throw new InvalidEntryError("chunk", coord.key, "has invalid overview materials");
   }
 
   return materials;
@@ -384,7 +390,7 @@ function decodedOrThrow(
 ): Float32Array {
   const decoded = decodeHeights(encoded, length);
   if (decoded === null) {
-    throw new RangeError(`Chunk ${coord.key} has invalid heights.`);
+    throw new InvalidEntryError("chunk", coord.key, "has invalid heights");
   }
 
   return decoded;

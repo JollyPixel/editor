@@ -13,8 +13,7 @@ import {
 // Import Internal Dependencies
 import {
   createVoxelAnimationFile,
-  decodeVoxelAnimationFile,
-  encodeVoxelAnimationFile,
+  VOXEL_ANIMATION_FILE,
   VOXEL_ANIMATION_KIND,
   voxelAnimationAssetKind
 } from "#src/index.ts";
@@ -37,7 +36,7 @@ describe("voxel animation file", () => {
     });
 
     assert.deepEqual(
-      decodeVoxelAnimationFile(encodeVoxelAnimationFile(file)),
+      VOXEL_ANIMATION_FILE.decode(VOXEL_ANIMATION_FILE.encode(file)),
       file
     );
   });
@@ -47,7 +46,7 @@ describe("voxel animation file", () => {
       clips: [clip("walk", { tracks: [{ path: "body", rotation: [key(0, 15), key(12, 30, "smooth")] }] })]
     });
 
-    const stored = JSON.parse(new TextDecoder().decode(encodeVoxelAnimationFile(file)));
+    const stored = JSON.parse(new TextDecoder().decode(VOXEL_ANIMATION_FILE.encode(file)));
 
     assert.deepEqual(stored.clips[0].tracks[0].rotation, [
       { tick: 0, value: { x: 15, y: 0, z: 0 } },
@@ -59,11 +58,23 @@ describe("voxel animation file", () => {
     const encoder = new TextEncoder();
 
     assert.throws(
-      () => decodeVoxelAnimationFile(encoder.encode("{")),
+      () => VOXEL_ANIMATION_FILE.decode(encoder.encode("{")),
       InvalidAssetFileError
     );
     assert.throws(
-      () => decodeVoxelAnimationFile(encoder.encode(JSON.stringify({ version: 1, rig: "" }))),
+      () => VOXEL_ANIMATION_FILE.decode(encoder.encode(JSON.stringify({ version: 1, rig: "" }))),
+      InvalidAssetFileError
+    );
+  });
+
+  test("reports a set with a repeated clip as an invalid file", () => {
+    const handler = voxelAnimationAssetKind();
+    const content = VOXEL_ANIMATION_FILE.encode(
+      createVoxelAnimationFile({ clips: [clip("walk"), clip("walk")] })
+    );
+
+    assert.throws(
+      () => handler.load(handler.create("set"), content),
       InvalidAssetFileError
     );
   });
@@ -91,7 +102,7 @@ describe("voxel animation file", () => {
       .find(({ id }) => id === created.assetId);
     assert.equal(record?.kind, VOXEL_ANIMATION_KIND);
     assert.deepEqual(
-      decodeVoxelAnimationFile(await source.read("animations/humanoid.voxelanim.json")),
+      VOXEL_ANIMATION_FILE.decode(await source.read("animations/humanoid.voxelanim.json")),
       createVoxelAnimationFile()
     );
   });

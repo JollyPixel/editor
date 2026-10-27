@@ -15,27 +15,8 @@ import {
 // Import Internal Dependencies
 import {
   PIXEL_ART_KIND,
-  createPixelArtAsset,
-  pixelArtRoom
+  createPixelArtAsset
 } from "#src/network/client.ts";
-import { MockRoom } from "../helpers/room.ts";
-
-describe("pixelArtRoom", () => {
-  test("opens the pixel-art room of the asset", () => {
-    const opened: string[] = [];
-    const client = {
-      room(name: string) {
-        opened.push(name);
-
-        return new MockRoom();
-      }
-    };
-
-    pixelArtRoom(client, "asset-1");
-
-    assert.deepEqual(opened, [`${PIXEL_ART_KIND}:asset-1`]);
-  });
-});
 
 describe("createPixelArtAsset", () => {
   test("creates an encoded pixel-art file with a suffixed path on conflict", async() => {

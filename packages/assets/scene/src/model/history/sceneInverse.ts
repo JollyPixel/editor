@@ -1,12 +1,13 @@
-// Import Internal Dependencies
+// Import Third-party Dependencies
 import {
-  InvalidSceneTreeError,
-  type SceneTreeEntry
-} from "../errors/InvalidSceneTreeError.ts";
+  InvalidEntryError,
+  withBefore
+} from "@jolly-pixel/asset.common";
+
+// Import Internal Dependencies
 import { SceneTransform } from "../SceneTransform.ts";
 import { SCENE_ENVIRONMENT_FIELDS } from "../sceneEnvironment.ts";
 import type { SceneTreeReader } from "../SceneTree.ts";
-import { withBefore } from "../siblingSlots.ts";
 import type {
   JSONObject,
   SceneCommand,
@@ -138,11 +139,11 @@ export function invert(
 
 function existing<T>(
   value: T | undefined,
-  entry: SceneTreeEntry,
+  entry: string,
   id: string
 ): T {
   if (value === undefined) {
-    throw new InvalidSceneTreeError(entry, id, "is missing for a command the tree accepted");
+    throw new InvalidEntryError(entry, id, "is missing for a command the tree accepted");
   }
 
   return value;

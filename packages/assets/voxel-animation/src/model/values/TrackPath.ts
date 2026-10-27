@@ -1,5 +1,5 @@
-// Import Internal Dependencies
-import { NameSet } from "./NameSet.ts";
+// Import Third-party Dependencies
+import { NameSet } from "@jolly-pixel/asset.common";
 
 export class TrackPath {
   static readonly SEPARATOR = "/";

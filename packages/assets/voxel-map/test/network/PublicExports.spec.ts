@@ -36,8 +36,8 @@ describe("public entry points", () => {
   });
 
   test("server exports authoritative synchronization of both rooms", () => {
-    assert.strictEqual(typeof server.VoxelCommandArbiter, "function");
-    assert.strictEqual(typeof server.BlocksetCommandArbiter, "function");
+    assert.strictEqual(typeof server.VOXEL_COMMAND_RULES, "object");
+    assert.strictEqual(typeof server.BLOCKSET_COMMAND_RULES, "object");
     assert.strictEqual(typeof server.blocksetCommandProtocol, "object");
   });
 });

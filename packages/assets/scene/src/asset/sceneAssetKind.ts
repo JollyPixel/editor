@@ -1,14 +1,15 @@
 // Import Third-party Dependencies
 import type { AssetReferenceData } from "@jolly-pixel/asset";
-import { KeyedCommandArbiter } from "@jolly-pixel/network";
 import {
-  InvalidAssetFileError,
-  SNAPSHOT_POLICY_SCHEMA,
+  arbitrated,
+  JSON_CONTENT_TYPE,
+  JsonAssetFile,
+  SNAPSHOT_OPTIONS_SCHEMA,
   type AssetKindHandler,
   type AssetKindPackage,
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
-import * as z from "zod/mini";
+import { InvalidEntryError } from "@jolly-pixel/asset.common";
 
 // Import Internal Dependencies
 import {
@@ -21,10 +22,10 @@ import {
   type SceneFile
 } from "./scene.ts";
 import {
-  decodeSceneFile,
-  encodeSceneFile
+  compactSceneFile,
+  compactSceneFileSchema,
+  expandSceneFile
 } from "./sceneFile.ts";
-import { InvalidSceneTreeError } from "../model/errors/InvalidSceneTreeError.ts";
 import { SceneTree } from "../model/SceneTree.ts";
 import {
   sceneCommandProtocol,
@@ -40,8 +41,12 @@ import type {
 } from "../network/types.ts";
 
 // CONSTANTS
-const kOptionsSchema = z.strictObject({
-  snapshot: z.optional(SNAPSHOT_POLICY_SCHEMA)
+export const SCENE_FILE = new JsonAssetFile({
+  kind: SCENE_KIND,
+  schema: compactSceneFileSchema,
+  expand: expandSceneFile,
+  compact: compactSceneFile,
+  isInvalid: (error) => error instanceof InvalidEntryError
 });
 
 export class SceneState {
@@ -50,15 +55,7 @@ export class SceneState {
   load(
     file: SceneFile
   ): void {
-    try {
-      this.#tree.load(file);
-    }
-    catch (error) {
-      if (error instanceof InvalidSceneTreeError) {
-        throw new InvalidAssetFileError(SCENE_KIND, error.message, { cause: error });
-      }
-      throw error;
-    }
+    this.#tree.load(file);
   }
 
   clear(): void {
@@ -147,7 +144,7 @@ export function sceneAssetKind(
   return {
     kind: SCENE_KIND,
     extensions: {
-      [SCENE_EXTENSION]: "application/json; charset=utf-8"
+      [SCENE_EXTENSION]: JSON_CONTENT_TYPE
     },
     snapshot,
 
@@ -162,9 +159,7 @@ export function sceneAssetKind(
       state: SceneState,
       content: Uint8Array
     ): void {
-      state.load(
-        decodeSceneFile(content)
-      );
+      SCENE_FILE.load(content, (file) => state.load(file));
     },
 
     clear(
@@ -177,7 +172,7 @@ export function sceneAssetKind(
       state: SceneState
     ): Promise<Uint8Array> {
       return Promise.resolve(
-        encodeSceneFile(state.toJSON())
+        SCENE_FILE.encode(state.toJSON())
       );
     },
 
@@ -203,21 +198,15 @@ export function sceneAssetKind(
       },
 
       live({ state }) {
-        const arbiter = new KeyedCommandArbiter<
-          SceneNetworkCommand,
-          SceneState
-        >({
-          accepts: (scene, command) => scene.accepts(command),
-          writes: (command, scene) => {
-            return { keys: scene?.conflictKeys(command) ?? sceneConflictKeys(command, []) };
-          }
-        });
-
         return {
           snapshotSchema: sceneSnapshotSchema,
           snapshot: () => state.snapshot(),
-          arbitrate: (command) => arbiter.admit(state, command),
-          restore: (command, version) => arbiter.restore(command, version)
+          ...arbitrated(state, {
+            accepts: (scene, command) => scene.accepts(command),
+            writes: (command, scene) => {
+              return { keys: scene?.conflictKeys(command) ?? sceneConflictKeys(command, []) };
+            }
+          })
         };
       }
     }
@@ -226,7 +215,7 @@ export function sceneAssetKind(
 
 export const ASSET_KINDS: AssetKindPackage<SceneAssetKindOptions> = {
   descriptors: [SCENE_ASSET],
-  optionsSchema: kOptionsSchema,
+  optionsSchema: SNAPSHOT_OPTIONS_SCHEMA,
   handlers: (options) => [sceneAssetKind(options)]
 };
 

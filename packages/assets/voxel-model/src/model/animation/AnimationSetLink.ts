@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { InvalidEntryError } from "@jolly-pixel/asset.common";
 import { TrackPath } from "@jolly-pixel/asset.voxel-animation/client";
 
 // Import Internal Dependencies
@@ -6,7 +7,6 @@ import type {
   AnimationBindingJSON,
   AnimationSetLinkJSON
 } from "../../network/types.ts";
-import { InvalidModelTreeError } from "../errors/InvalidModelTreeError.ts";
 
 export class AnimationSetLink {
   static findProblem(
@@ -31,7 +31,7 @@ export class AnimationSetLink {
   ) {
     const problem = AnimationSetLink.findProblem(link);
     if (problem !== null) {
-      throw new InvalidModelTreeError("animation-set", link.id, problem);
+      throw new InvalidEntryError("animation-set", link.id, problem);
     }
 
     this.#json = structuredClone(link);

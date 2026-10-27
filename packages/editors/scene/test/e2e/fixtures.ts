@@ -5,7 +5,7 @@ import {
 } from "@jolly-pixel/e2e/editor";
 import {
   createSceneFile,
-  encodeSceneFile,
+  SCENE_FILE,
   SCENE_KIND
 } from "@jolly-pixel/asset.scene";
 import {
@@ -60,7 +60,7 @@ export const test = editorFixture<E2EScene>({
     );
     const id = await catalog.create(
       `${folder}/main.scene.json`,
-      encodeSceneFile(createSceneFile()),
+      SCENE_FILE.encode(createSceneFile()),
       { kind: SCENE_KIND }
     );
 

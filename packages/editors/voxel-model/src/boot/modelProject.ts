@@ -3,7 +3,7 @@ import type { AssetSeedMap } from "@jolly-pixel/asset-server";
 import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art";
 import {
   createVoxelModelFile,
-  encodeVoxelModelFile,
+  VOXEL_MODEL_FILE,
   VOXEL_MODEL_KIND
 } from "@jolly-pixel/asset.voxel-model";
 
@@ -20,7 +20,7 @@ export interface ModelProject {
 export function encodeModelFile(
   textureId: string
 ): Uint8Array {
-  return encodeVoxelModelFile(
+  return VOXEL_MODEL_FILE.encode(
     createVoxelModelFile({
       texture: {
         id: textureId,

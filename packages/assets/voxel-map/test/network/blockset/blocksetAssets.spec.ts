@@ -12,28 +12,9 @@ import type { CatalogCreateOptions } from "@jolly-pixel/asset-server/client";
 import {
   createBlocksetAsset,
   createBlocksetFile,
-  BLOCKSET_KIND,
-  blocksetRoom
+  BLOCKSET_KIND
 } from "#src/network/client.ts";
-import { decodeBlocksetFile } from "#src/asset/blocksetAssetKind.ts";
-import { createMockBlocksetRoom } from "../../helpers/blocksetRoom.ts";
-
-describe("blocksetRoom", () => {
-  test("opens the blockset room of the asset", () => {
-    const opened: string[] = [];
-    const client = {
-      room(name: string) {
-        opened.push(name);
-
-        return createMockBlocksetRoom();
-      }
-    };
-
-    blocksetRoom(client, "asset-1");
-
-    assert.deepEqual(opened, [`${BLOCKSET_KIND}:asset-1`]);
-  });
-});
+import { BLOCKSET_FILE } from "#src/asset/blocksetAssetKind.ts";
 
 describe("createBlocksetAsset", () => {
   test("creates an encoded blockset with a suffixed path on conflict", async() => {
@@ -64,7 +45,7 @@ describe("createBlocksetAsset", () => {
     assert.equal(calls.length, 1);
     const [path, content, options] = calls[0];
     assert.equal(path, "textures/stone.blockset.json");
-    assert.deepEqual(decodeBlocksetFile(content), file);
+    assert.deepEqual(BLOCKSET_FILE.decode(content), file);
     assert.deepEqual(options, {
       kind: BLOCKSET_KIND,
       onConflict: "suffix"

@@ -4,13 +4,15 @@ import {
   type CommandChange,
   type CommandState
 } from "@jolly-pixel/history";
+import {
+  randomId,
+  withBefore
+} from "@jolly-pixel/asset.common";
 
 // Import Internal Dependencies
 import type { ComponentChange } from "./componentChange.ts";
 import { SceneTree, type SceneTreeReader } from "./SceneTree.ts";
 import { SceneTransform } from "./SceneTransform.ts";
-import { randomId } from "./randomId.ts";
-import { withBefore } from "./siblingSlots.ts";
 import { invert } from "./history/sceneInverse.ts";
 import {
   captureSceneImage,

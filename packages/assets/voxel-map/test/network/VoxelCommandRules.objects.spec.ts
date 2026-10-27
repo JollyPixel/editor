@@ -3,6 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import { KeyedCommandArbiter } from "@jolly-pixel/network";
 import {
   BlocksetList,
   VoxelWorld,
@@ -11,7 +12,7 @@ import {
 
 // Import Internal Dependencies
 import {
-  VoxelCommandArbiter,
+  VOXEL_COMMAND_RULES,
   voxelCommandKey,
   type VoxelMapNetworkCommand
 } from "../../src/network/server.ts";
@@ -32,7 +33,7 @@ function createState(): VoxelWorldCommandTarget {
 }
 
 function admitted(
-  arbiter: VoxelCommandArbiter,
+  arbiter: KeyedCommandArbiter<VoxelMapNetworkCommand, VoxelWorldCommandTarget>,
   command: VoxelMapNetworkCommand,
   state = createState()
 ): VoxelMapNetworkCommand | null {
@@ -40,7 +41,7 @@ function admitted(
 }
 
 function commit(
-  arbiter: VoxelCommandArbiter,
+  arbiter: KeyedCommandArbiter<VoxelMapNetworkCommand, VoxelWorldCommandTarget>,
   command: VoxelMapNetworkCommand,
   state = createState()
 ): void {
@@ -53,7 +54,7 @@ const kHeader = {
   timestamp: 1000
 };
 
-describe("VoxelCommandArbiter — object commands", () => {
+describe("VoxelCommandRules — object commands", () => {
   const header = {
     clientId: "client-A",
     seq: 1,
@@ -116,7 +117,7 @@ describe("VoxelCommandArbiter — object commands", () => {
   });
 
   test("resolves two concurrent moves of one object to a single winner", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
     const moveToProps: VoxelMapNetworkCommand = {
       ...header,
       action: "object-moved",
@@ -145,7 +146,7 @@ describe("VoxelCommandArbiter — object commands", () => {
   });
 
   test("leaves a different object unaffected", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
     const first: VoxelMapNetworkCommand = {
       ...header,
       action: "object-moved",
@@ -173,7 +174,7 @@ describe("VoxelCommandArbiter — object commands", () => {
   });
 });
 
-describe("VoxelCommandArbiter — template commands", () => {
+describe("VoxelCommandRules — template commands", () => {
   test("keys every template command by its template id", () => {
     assert.deepEqual(
       templateCommands().map((command) => voxelCommandKey({ ...kHeader, ...command })),
@@ -182,7 +183,7 @@ describe("VoxelCommandArbiter — template commands", () => {
   });
 });
 
-describe("VoxelCommandArbiter — blockset commands", () => {
+describe("VoxelCommandRules — blockset commands", () => {
   test("keys a blockset command by its blockset id", () => {
     assert.strictEqual(voxelCommandKey({
       ...kHeader,
@@ -197,9 +198,9 @@ describe("VoxelCommandArbiter — blockset commands", () => {
   });
 });
 
-describe("VoxelCommandArbiter.restore", () => {
+describe("VoxelCommandRules — restore", () => {
   test("records a past write, so an older replay of that cell loses", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
     arbiter.restore(voxelSetCmd({ clientId: "client-B" }), 6);
 
     assert.strictEqual(
@@ -213,7 +214,7 @@ describe("VoxelCommandArbiter.restore", () => {
   });
 
   test("a restored world replacement floors every cell", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
     arbiter.restore(worldReplaceCmd({ clientId: "client-B" }), 4);
 
     assert.strictEqual(

@@ -1,10 +1,5 @@
 // Import Third-party Dependencies
-import {
-  describeErrors,
-  SchemaParser,
-  type Infer
-} from "@jolly-pixel/network";
-import { InvalidAssetFileError } from "@jolly-pixel/asset-server";
+import type { Infer } from "@jolly-pixel/network";
 import * as z from "zod/mini";
 
 // Import Internal Dependencies
@@ -17,7 +12,6 @@ import {
 import type { SceneActorJSON } from "../network/types.ts";
 import {
   SCENE_FILE_VERSION,
-  SCENE_KIND,
   type SceneFile
 } from "./scene.ts";
 
@@ -33,48 +27,24 @@ export const compactSceneFileSchema = z.object({
   actors: z.array(kCompactActorSchema)
 });
 
-const kFileParser = new SchemaParser(compactSceneFileSchema);
-
 export type CompactSceneFile = Infer<typeof compactSceneFileSchema>;
 type CompactSceneActor = CompactSceneFile["actors"][number];
 
-export function encodeSceneFile(
+export function compactSceneFile(
   file: SceneFile
-): Uint8Array {
-  const compact: CompactSceneFile = {
+): CompactSceneFile {
+  return {
     ...file,
     actors: file.actors.map(compactActor)
   };
-
-  return new TextEncoder().encode(JSON.stringify(compact));
 }
 
-export function decodeSceneFile(
-  content: Uint8Array
+export function expandSceneFile(
+  compact: CompactSceneFile
 ): SceneFile {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(new TextDecoder().decode(content));
-  }
-  catch (error) {
-    throw new InvalidAssetFileError(
-      SCENE_KIND,
-      "content is not JSON",
-      { cause: error }
-    );
-  }
-
-  const result = kFileParser.parse(parsed);
-  if (result.err) {
-    throw new InvalidAssetFileError(
-      SCENE_KIND,
-      describeErrors(result.val)
-    );
-  }
-
   return {
-    ...result.val,
-    actors: result.val.actors.map(expandActor)
+    ...compact,
+    actors: compact.actors.map(expandActor)
   };
 }
 

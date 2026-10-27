@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import * as network from "@jolly-pixel/network";
+import type * as network from "@jolly-pixel/network";
 import {
   isPixelCommand,
   narrowPixelCommand,
@@ -36,15 +36,6 @@ export const BLOCKSET_COMMAND_RULES: network.KeyedCommandArbiterOptions<
     narrowPixelCommand(command, keep) :
     null)
 };
-
-export class BlocksetCommandArbiter extends network.KeyedCommandArbiter<
-  BlocksetNetworkCommand,
-  BlocksetArbiterState
-> {
-  constructor() {
-    super(BLOCKSET_COMMAND_RULES);
-  }
-}
 
 function isFoldable(
   command: BlocksetDocumentNetworkCommand

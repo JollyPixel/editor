@@ -3,6 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import { InvalidEntryError } from "@jolly-pixel/asset.common";
 import { CommandHistory } from "@jolly-pixel/history";
 
 // Import Internal Dependencies
@@ -11,7 +12,6 @@ import { modelHistoryKeys } from "#src/model/history/modelHistoryKeys.ts";
 import { BlockTransform } from "#src/model/nodes/BlockTransform.ts";
 import { BlockUvLayouts } from "#src/model/nodes/BlockUvLayouts.ts";
 import { invert } from "#src/model/history/modelInverse.ts";
-import { InvalidModelTreeError } from "#src/model/errors/InvalidModelTreeError.ts";
 import type { ModelTreeReader } from "#src/model/ModelTree.ts";
 
 // CONSTANTS
@@ -90,7 +90,7 @@ describe("invert", () => {
 
     assert.throws(
       () => invert(document.tree, { action: "node-renamed", id: "missing", name: "A" }),
-      InvalidModelTreeError
+      InvalidEntryError
     );
   });
 });

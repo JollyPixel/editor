@@ -6,6 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import { KeyedCommandArbiter } from "@jolly-pixel/network";
 import {
   PixelBuffer,
   PixelDocumentState
@@ -14,7 +15,7 @@ import type { PixelNetworkCommand } from "@jolly-pixel/asset.pixel-art/client";
 
 // Import Internal Dependencies
 import {
-  BlocksetCommandArbiter,
+  BLOCKSET_COMMAND_RULES,
   blocksetCommandKey,
   type BlocksetDocumentNetworkCommand
 } from "#src/network/server.ts";
@@ -35,7 +36,7 @@ const kBlack = {
 
 function harness() {
   return {
-    arbiter: new BlocksetCommandArbiter(),
+    arbiter: new KeyedCommandArbiter(BLOCKSET_COMMAND_RULES),
     state: {
       pixels: new PixelDocumentState({
         buffer: new PixelBuffer({ size: { x: 4, y: 4 } })
@@ -71,7 +72,7 @@ function stroke(
   };
 }
 
-describe("BlocksetCommandArbiter", () => {
+describe("BlocksetCommandRules", () => {
   test("keys document commands by block, material group or tile size", () => {
     assert.strictEqual(blocksetCommandKey(blockDefined(4)), "block:4");
     assert.strictEqual(

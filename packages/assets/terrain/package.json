@@ -42,6 +42,7 @@
   "license": "MIT",
   "dependencies": {
     "@jolly-pixel/asset-server": "workspace:*",
+    "@jolly-pixel/asset.common": "workspace:*",
     "@jolly-pixel/history": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/terrain.renderer": "workspace:*",

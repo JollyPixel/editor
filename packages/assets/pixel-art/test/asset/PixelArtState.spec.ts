@@ -6,7 +6,10 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { UVRegionData } from "@jolly-pixel/pixel-draw.renderer";
+import {
+  ColorPalette,
+  type UVRegionData
+} from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import { PixelArtState } from "#src/asset/pixelArtAssetKind.ts";
@@ -57,7 +60,7 @@ describe("PixelArtState", () => {
     );
   });
 
-  test("clear erases the pixels at the current size and drops uv regions", () => {
+  test("clear erases the pixels at the current size, uv regions and palette edits", () => {
     const state = new PixelArtState({ x: 2, y: 2 });
 
     state.load(new PixelArtState({ x: 4, y: 4 }).toJSON());
@@ -71,6 +74,18 @@ describe("PixelArtState", () => {
       }
     );
     state.document.uv.restore(kRegion);
+    state.document.apply({
+      action: "palette-color-changed",
+      metadata: {
+        index: 0,
+        color: {
+          r: 9,
+          g: 9,
+          b: 9,
+          a: 255
+        }
+      }
+    });
 
     state.clear();
 
@@ -80,5 +95,6 @@ describe("PixelArtState", () => {
       new Uint8ClampedArray(4 * 4 * 4)
     );
     assert.deepEqual([...state.document.uv], []);
+    assert.deepEqual(state.document.palette.toJSON(), ColorPalette.create().toJSON());
   });
 });

@@ -49,6 +49,7 @@
   "dependencies": {
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-server": "workspace:*",
+    "@jolly-pixel/asset.common": "workspace:*",
     "@jolly-pixel/asset.pixel-art": "workspace:*",
     "@jolly-pixel/asset.voxel-animation": "workspace:*",
     "@jolly-pixel/history": "workspace:*",

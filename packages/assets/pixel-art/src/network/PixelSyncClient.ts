@@ -1,13 +1,6 @@
 // Import Third-party Dependencies
 import { CommandSync } from "@jolly-pixel/network/client";
 import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
-import type { ChangeSource } from "@jolly-pixel/history";
-import type {
-  PixelDocumentCommand,
-  PixelChange,
-  PixelCommand,
-  PixelDocument
-} from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import type {
@@ -15,35 +8,13 @@ import type {
   PixelWireCommand,
   PixelWireSnapshot
 } from "./types.ts";
-import {
-  packPixelEvent,
-  unpackPixelCommand
-} from "./PixelWireCodec.ts";
 import { createPixelReconciler } from "./PixelReconciler.ts";
 import { loadPixelSnapshot } from "./PixelSnapshotCodec.ts";
 import {
-  pixelEdits,
-  type PixelEdits
-} from "../history/PixelEdits.ts";
-
-export type PixelCommandListener = (
-  command: PixelCommand,
-  change: PixelChange
-) => void;
-
-export interface PixelSyncTarget extends Pick<
-  PixelDocument,
-  "applyRemoteCommand" | "replayPendingCommand" | "loadSnapshot"
->, ChangeSource<PixelDocumentCommand> {
-  on(
-    event: "command",
-    listener: PixelCommandListener
-  ): unknown;
-  off(
-    event: "command",
-    listener: PixelCommandListener
-  ): unknown;
-}
+  PixelLink,
+  type PixelSyncTarget
+} from "./PixelLink.ts";
+import { pixelEdits } from "../history/PixelEdits.ts";
 
 export interface PixelSyncClientOptions {
   room: PixelArtRoom;
@@ -55,15 +26,7 @@ export class PixelSyncClient extends CommandSync<
   PixelWireSnapshot,
   AssetRoomNotice
 > {
-  #document: PixelSyncTarget;
-  #edits: PixelEdits;
-
-  #sendLocalCommand: PixelCommandListener = (command, change) => {
-    this.sendChange(
-      packPixelEvent(command),
-      this.#edits.adapt(change)
-    );
-  };
+  #link: PixelLink;
 
   constructor(
     options: PixelSyncClientOptions
@@ -77,22 +40,13 @@ export class PixelSyncClient extends CommandSync<
       ),
       receipts: edits.receipts
     });
-    const { document } = options;
 
-    this.#document = document;
-    this.#edits = edits;
-    document.on("command", this.#sendLocalCommand);
-    this.on(
-      "command",
-      (command) => document.applyRemoteCommand(
-        unpackPixelCommand(command),
-        command.clientId
-      )
-    );
+    this.#link = new PixelLink(options.document, edits, this);
+    this.on("command", (command) => this.#link.applyRemote(command));
   }
 
   override destroy(): void {
-    this.#document.off("command", this.#sendLocalCommand);
+    this.#link.dispose();
     super.destroy();
   }
 }

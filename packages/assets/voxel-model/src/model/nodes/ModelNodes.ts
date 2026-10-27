@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import { NameSet } from "@jolly-pixel/asset.voxel-animation/client";
+import {
+  NameSet,
+  OrderedTree
+} from "@jolly-pixel/asset.common";
 
 // Import Internal Dependencies
 import type {
@@ -9,7 +12,6 @@ import type {
   ModelNodeJSON,
   VoxelModelCommand
 } from "../../network/types.ts";
-import { OrderedTree } from "../OrderedTree.ts";
 import { BlockShape } from "./BlockShape.ts";
 
 export type NodeCommand = Extract<
@@ -20,8 +22,7 @@ export type NodeCommand = Extract<
 export class ModelNodes extends OrderedTree<ModelNodeJSON> {
   constructor() {
     super({
-      kind: "node",
-      canContain: () => true
+      entry: "node"
     });
   }
 

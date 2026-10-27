@@ -53,6 +53,9 @@
       "path": "./packages/pixel-draw-renderer"
     },
     {
+      "path": "./packages/assets/common"
+    },
+    {
       "path": "./packages/assets/pixel-art"
     },
     {

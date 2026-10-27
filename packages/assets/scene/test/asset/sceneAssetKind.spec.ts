@@ -11,7 +11,7 @@ import { InvalidAssetFileError } from "@jolly-pixel/asset-server";
 // Import Internal Dependencies
 import {
   COMPONENT_DATA_MAX_LENGTH,
-  decodeSceneFile,
+  SCENE_FILE,
   sceneAssetKind,
   SceneState
 } from "#src/index.ts";
@@ -79,7 +79,7 @@ describe("scene kind load", () => {
 
     const serialized = await sceneAssetKind().serialize(state);
 
-    assert.deepEqual(decodeSceneFile(serialized), file);
+    assert.deepEqual(SCENE_FILE.decode(serialized), file);
   });
 });
 
@@ -118,7 +118,7 @@ describe("scene kind create", () => {
     const handler = sceneAssetKind();
     const state = handler.create("scene-1");
 
-    const decoded = decodeSceneFile(await handler.serialize(state));
+    const decoded = SCENE_FILE.decode(await handler.serialize(state));
 
     assert.deepEqual(decoded.actors.map(({ name }) => name), ["Main Camera", "Sun", "Sky"]);
   });

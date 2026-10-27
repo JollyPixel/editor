@@ -14,10 +14,9 @@ import {
 // Import Internal Dependencies
 import {
   encodeHeights,
-  encodeTerrainFile,
+  TERRAIN_FILE,
   decodeHeights,
   decodeMaterials,
-  decodeTerrainFile,
   GROUND_MATERIAL,
   MAX_TERRAIN_CHUNKS,
   terrainAssetKind,
@@ -88,7 +87,7 @@ describe("terrain asset kind", () => {
     room.receive("A", networkCommand({ action: "chunk-added", x: 1, z: 0, heights: heights(12.5) }));
     room.receive("A", networkCommand(paint(1, 0, { 2: 7, 5: 9 })));
 
-    const { chunks } = decodeTerrainFile(await handler.serialize(room.state));
+    const { chunks } = TERRAIN_FILE.decode(await handler.serialize(room.state));
 
     assert.deepEqual(
       chunks.map(({ x, z, overview, materials }) => [
@@ -103,7 +102,7 @@ describe("terrain asset kind", () => {
 
   test("a document may hold a chunk's heights inline", () => {
     const handler = terrainAssetKind();
-    const content = encodeTerrainFile({
+    const content = TERRAIN_FILE.encode({
       version: TERRAIN_FILE_VERSION,
       chunks: [{ x: 0, z: 0, heights: heights(3) }]
     });
@@ -130,12 +129,24 @@ describe("terrain asset kind", () => {
 
   test("load rejects a document with invalid heights", () => {
     const handler = terrainAssetKind();
-    const content = encodeTerrainFile({
+    const content = TERRAIN_FILE.encode({
       version: TERRAIN_FILE_VERSION,
       chunks: [{ x: 0, z: 0, heights: "AAAA" }]
     });
 
     assert.throws(() => handler.load(handler.create("asset"), content), InvalidAssetFileError);
+  });
+
+  test("load rejects a document listing a chunk twice and keeps the terrain", () => {
+    const handler = terrainAssetKind();
+    const model = handler.create("asset");
+    const content = TERRAIN_FILE.encode({
+      version: TERRAIN_FILE_VERSION,
+      chunks: [{ x: 1, z: 0 }, { x: 1, z: 0 }]
+    });
+
+    assert.throws(() => handler.load(model, content), InvalidAssetFileError);
+    assert.deepEqual([...model.terrain.chunks()].map(({ coord }) => coord.key), ["0,0"]);
   });
 
   test("a chunk is admitted only next to an existing one", () => {

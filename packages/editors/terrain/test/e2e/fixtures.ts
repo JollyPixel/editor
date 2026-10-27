@@ -8,7 +8,7 @@ import {
 import {
   DEFAULT_MATERIAL_PROPERTIES,
   encodeHeights,
-  encodeTerrainFile,
+  TERRAIN_FILE,
   GROUND_MATERIAL,
   TERRAIN_FILE_VERSION,
   TERRAIN_KIND
@@ -81,7 +81,7 @@ function encodeRollingTerrain(
     }
   }
 
-  return encodeTerrainFile({
+  return TERRAIN_FILE.encode({
     version: TERRAIN_FILE_VERSION,
     chunks,
     materials: [GROUND_MATERIAL, ROCK_MATERIAL]

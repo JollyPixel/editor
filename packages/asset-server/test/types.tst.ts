@@ -4,23 +4,26 @@ import {
   expect,
   test
 } from "tstyche";
+import type { Infer } from "@jolly-pixel/network";
 import * as z from "zod/mini";
 
 // Import Internal Dependencies
-import type {
-  AssetCommandHeader,
-  AssetCommands,
-  AssetKindHandler,
-  AssetContent,
-  AssetDeletedData,
-  AssetInlineContent,
-  AssetRelaySchemas,
-  AssetRenamedData,
-  AssetWriteData,
-  CatalogApplied,
-  CatalogChange,
-  CatalogDeleteCommand,
-  ImportPlan
+import {
+  JsonAssetFile,
+  type AssetCommandHeader,
+  type AssetCommands,
+  type AssetKindHandler,
+  type AssetContent,
+  type AssetDeletedData,
+  type AssetInlineContent,
+  type AssetRelaySchemas,
+  type AssetRenamedData,
+  type AssetWriteData,
+  type CatalogApplied,
+  type CatalogChange,
+  type CatalogDeleteCommand,
+  type ImportPlan,
+  type JsonAssetFileOptions
 } from "#src/index.ts";
 import {
   LiveAssetRoom,
@@ -245,5 +248,62 @@ describe("asset room message types", () => {
       ...commands,
       relay: { inbound: [kNudge], outbound: [] }
     }).type.not.toBeAssignableTo<AssetCommands<unknown, RoomCommand>>();
+  });
+});
+
+const kStoredNames = z.object({
+  names: z.optional(z.array(z.string()))
+});
+
+interface NamesFile {
+  names: string[];
+}
+
+function expandNames(
+  { names = [] }: Infer<typeof kStoredNames>
+): NamesFile {
+  return { names: [...names] };
+}
+
+describe("JSON asset file types", () => {
+  test("a file without a codec is the stored form", () => {
+    const file = new JsonAssetFile({
+      kind: "names",
+      schema: kStoredNames
+    });
+
+    expect(file.decode(new Uint8Array()))
+      .type.toBe<Infer<typeof kStoredNames>>();
+  });
+
+  test("a file that differs from the stored form needs both halves of the codec", () => {
+    expect({
+      kind: "names",
+      schema: kStoredNames
+    }).type.not.toBeAssignableTo<JsonAssetFileOptions<typeof kStoredNames, NamesFile>>();
+    expect({
+      kind: "names",
+      schema: kStoredNames,
+      expand: expandNames
+    }).type.not.toBeAssignableTo<JsonAssetFileOptions<typeof kStoredNames, NamesFile>>();
+  });
+
+  test("compact must produce the stored form", () => {
+    expect({
+      kind: "names",
+      schema: kStoredNames,
+      expand: expandNames,
+      compact: ({ names }: NamesFile) => {
+        return { names };
+      }
+    }).type.toBeAssignableTo<JsonAssetFileOptions<typeof kStoredNames, NamesFile>>();
+    expect({
+      kind: "names",
+      schema: kStoredNames,
+      expand: expandNames,
+      compact: ({ names }: NamesFile) => {
+        return { names: names.length };
+      }
+    }).type.not.toBeAssignableTo<JsonAssetFileOptions<typeof kStoredNames, NamesFile>>();
   });
 });

@@ -19,7 +19,8 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import { PixelSyncClient, type PixelCommandListener } from "#src/network/PixelSyncClient.ts";
+import type { PixelCommandListener } from "#src/network/PixelLink.ts";
+import { PixelSyncClient } from "#src/network/PixelSyncClient.ts";
 import { pixelEdits } from "#src/history/PixelEdits.ts";
 import {
   command,

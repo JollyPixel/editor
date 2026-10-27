@@ -1,6 +1,10 @@
 // Import Third-party Dependencies
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 import {
+  randomId,
+  withBefore
+} from "@jolly-pixel/asset.common";
+import {
   CommandDocument,
   type CommandChange,
   type CommandState
@@ -12,7 +16,6 @@ import { BlockTransform } from "./nodes/BlockTransform.ts";
 import { BlockUvLayouts } from "./nodes/BlockUvLayouts.ts";
 import { BlockShape } from "./nodes/BlockShape.ts";
 import { MaterialSurface } from "./materials/MaterialSurface.ts";
-import { randomId } from "./randomId.ts";
 import { invert } from "./history/modelInverse.ts";
 import {
   captureModelImage,
@@ -120,7 +123,7 @@ export class ModelDocument extends CommandDocument<
         uv,
         ...(materialId === undefined ? {} : { materialId })
       }, shape),
-      ...(beforeId === undefined ? {} : { beforeId })
+      ...withBefore(beforeId)
     });
 
     return added ? id : null;
@@ -143,7 +146,7 @@ export class ModelDocument extends CommandDocument<
         parentId,
         name
       },
-      ...(beforeId === undefined ? {} : { beforeId })
+      ...withBefore(beforeId)
     });
 
     return added ? id : null;
@@ -184,7 +187,7 @@ export class ModelDocument extends CommandDocument<
       id,
       parentId,
       transforms: [...transforms],
-      ...(beforeId === undefined ? {} : { beforeId })
+      ...withBefore(beforeId)
     });
   }
 
@@ -255,7 +258,7 @@ export class ModelDocument extends CommandDocument<
         name,
         surface
       },
-      ...(beforeId === undefined ? {} : { beforeId })
+      ...withBefore(beforeId)
     });
 
     return added ? id : null;
@@ -278,7 +281,7 @@ export class ModelDocument extends CommandDocument<
         parentId,
         name
       },
-      ...(beforeId === undefined ? {} : { beforeId })
+      ...withBefore(beforeId)
     });
 
     return added ? id : null;
@@ -293,7 +296,7 @@ export class ModelDocument extends CommandDocument<
       action: "material-moved",
       id,
       parentId,
-      ...(beforeId === undefined ? {} : { beforeId })
+      ...withBefore(beforeId)
     });
   }
 

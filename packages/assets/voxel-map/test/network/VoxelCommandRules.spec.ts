@@ -3,6 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import { KeyedCommandArbiter } from "@jolly-pixel/network";
 import {
   BlocksetList,
   VoxelWorld,
@@ -11,7 +12,7 @@ import {
 
 // Import Internal Dependencies
 import {
-  VoxelCommandArbiter,
+  VOXEL_COMMAND_RULES,
   voxelCommandKey,
   type VoxelMapNetworkCommand
 } from "../../src/network/server.ts";
@@ -33,7 +34,7 @@ function createState(): VoxelWorldCommandTarget {
 }
 
 function admitted(
-  arbiter: VoxelCommandArbiter,
+  arbiter: KeyedCommandArbiter<VoxelMapNetworkCommand, VoxelWorldCommandTarget>,
   command: VoxelMapNetworkCommand,
   state = createState()
 ): VoxelMapNetworkCommand | null {
@@ -41,7 +42,7 @@ function admitted(
 }
 
 function commit(
-  arbiter: VoxelCommandArbiter,
+  arbiter: KeyedCommandArbiter<VoxelMapNetworkCommand, VoxelWorldCommandTarget>,
   command: VoxelMapNetworkCommand,
   state = createState()
 ): void {
@@ -54,9 +55,9 @@ const kHeader = {
   timestamp: 1000
 };
 
-describe("VoxelCommandArbiter — state checks", () => {
+describe("VoxelCommandRules — state checks", () => {
   test("rejects a voxel write to a layer the world does not have", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
 
     assert.strictEqual(
       admitted(arbiter, voxelSetCmd({ layerId: "Missing" })),
@@ -65,7 +66,7 @@ describe("VoxelCommandArbiter — state checks", () => {
   });
 
   test("admits a layer transform only for a layer the world has", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
     const transform: VoxelMapNetworkCommand = {
       ...kHeader,
       action: "layer-transformed",
@@ -78,7 +79,7 @@ describe("VoxelCommandArbiter — state checks", () => {
   });
 
   test("rejects a world-replace whose layers cannot be loaded", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
     const replace = worldReplaceCmd();
     assert.strictEqual(replace.action, "world-replace");
     const broken: VoxelMapNetworkCommand = {
@@ -94,7 +95,7 @@ describe("VoxelCommandArbiter — state checks", () => {
   });
 
   test("rejects a template whose voxels cannot be decoded", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
     const [defined] = templateCommands();
     assert.ok(defined.action === "template-defined");
     const command: VoxelMapNetworkCommand = { ...kHeader, ...defined };
@@ -111,7 +112,7 @@ describe("VoxelCommandArbiter — state checks", () => {
   });
 
   test("a committed world-replace supersedes every recorded voxel", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
     commit(arbiter, voxelSetCmd({ timestamp: 100 }));
     commit(arbiter, worldReplaceCmd({ clientId: "client-B", timestamp: 500 }));
 
@@ -126,7 +127,7 @@ describe("VoxelCommandArbiter — state checks", () => {
   });
 });
 
-describe("VoxelCommandArbiter", () => {
+describe("VoxelCommandRules", () => {
   test("keys a voxel command by layer and position", () => {
     assert.strictEqual(
       voxelCommandKey(voxelSetCmd({
@@ -139,7 +140,7 @@ describe("VoxelCommandArbiter", () => {
   });
 
   test("admits a new layer without a key, and refuses an id the world has", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
     const header = {
       clientId: "client-A",
       seq: 1,
@@ -153,7 +154,7 @@ describe("VoxelCommandArbiter", () => {
   });
 
   test("keys a layer move by layer, and refuses one for a layer the world lacks", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
     const moved: VoxelMapNetworkCommand = {
       ...kHeader,
       action: "layer-moved",
@@ -167,7 +168,7 @@ describe("VoxelCommandArbiter", () => {
   });
 
   test("refuses a clone onto an existing id or a merge into itself", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
 
     assert.strictEqual(admitted(arbiter, {
       ...kHeader,
@@ -184,7 +185,7 @@ describe("VoxelCommandArbiter", () => {
   });
 
   test("accepts an uncontested command", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
 
     const uncontested = voxelSetCmd();
 
@@ -192,7 +193,7 @@ describe("VoxelCommandArbiter", () => {
   });
 
   test("rejects a command losing to a recorded later write", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
     const late = voxelSetCmd({
       clientId: "late",
       timestamp: 2000
@@ -211,7 +212,7 @@ describe("VoxelCommandArbiter", () => {
   });
 
   test("an unrecorded command never poisons its key", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
 
     admitted(arbiter, voxelSetCmd({
       clientId: "late",
@@ -226,7 +227,7 @@ describe("VoxelCommandArbiter", () => {
   });
 
   test("different positions do not contend", () => {
-    const arbiter = new VoxelCommandArbiter();
+    const arbiter = new KeyedCommandArbiter(VOXEL_COMMAND_RULES);
 
     commit(arbiter, voxelSetCmd({
       timestamp: 2000,

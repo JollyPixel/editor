@@ -23,8 +23,7 @@ import {
   VOXEL_MODEL_COMMAND,
   VOXEL_MODEL_KIND,
   createVoxelModelFile,
-  decodeVoxelModelFile,
-  encodeVoxelModelFile,
+  VOXEL_MODEL_FILE,
   voxelModelAssetKind
 } from "#src/index.ts";
 import {
@@ -74,7 +73,7 @@ async function withBackend(
     using eventStore = EventStore.persistence.memory();
     await fs.writeFile(
       path.join(root, kFilePath),
-      encodeVoxelModelFile(createVoxelModelFile({
+      VOXEL_MODEL_FILE.encode(createVoxelModelFile({
         texture: kTexture,
         blocks: []
       }))
@@ -141,7 +140,7 @@ describe("voxel-model asset kind over a real back-end", () => {
       assert.equal(appended.length, 2);
 
       await backend.flush(recordId);
-      const onDisk = decodeVoxelModelFile(
+      const onDisk = VOXEL_MODEL_FILE.decode(
         await fs.readFile(path.join(root, kFilePath))
       );
       assert.deepEqual(

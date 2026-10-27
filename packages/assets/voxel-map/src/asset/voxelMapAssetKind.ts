@@ -4,7 +4,9 @@ import {
   SchemaParser
 } from "@jolly-pixel/network";
 import {
+  arbitrated,
   InvalidAssetFileError,
+  JSON_CONTENT_TYPE,
   SNAPSHOT_POLICY_SCHEMA,
   type AssetKindHandler,
   type AssetKindPackage,
@@ -50,7 +52,7 @@ import {
   voxelCommandProtocol,
   voxelWorldSchema
 } from "../network/VoxelCommand.schema.ts";
-import { VoxelCommandArbiter } from "../network/VoxelCommandArbiter.ts";
+import { VOXEL_COMMAND_RULES } from "../network/VoxelCommandRules.ts";
 import { correctVoxelCommand } from "../network/VoxelCorrection.ts";
 import type { VoxelMapNetworkCommand } from "../network/types.ts";
 
@@ -172,7 +174,7 @@ export function voxelMapAssetKind(
   return {
     kind: VOXEL_MAP_KIND,
     extensions: {
-      [VOXEL_MAP_EXTENSION]: "application/json; charset=utf-8"
+      [VOXEL_MAP_EXTENSION]: JSON_CONTENT_TYPE
     },
     snapshot,
     companions: [
@@ -252,18 +254,15 @@ export function voxelMapAssetKind(
       },
 
       live({ state }) {
-        const arbiter = new VoxelCommandArbiter();
-
         return {
           snapshotSchema: voxelWorldSchema,
           snapshot: () => state.toJSON(),
-          arbitrate: (command) => arbiter.admit(state, command),
+          ...arbitrated(state, VOXEL_COMMAND_RULES),
           correct: (command, admitted) => correctVoxelCommand(
             state,
             command,
             admitted
           ),
-          restore: (command, version) => arbiter.restore(command, version),
           broadcast(command) {
             if (
               command.action === "world-replace" ||

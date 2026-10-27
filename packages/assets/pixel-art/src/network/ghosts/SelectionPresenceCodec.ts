@@ -5,44 +5,25 @@ import {
   type SelectionPresenceData,
   type SelectionRect
 } from "@jolly-pixel/pixel-draw.renderer";
+import {
+  decodeBase64,
+  encodeBase64
+} from "@jolly-pixel/asset.common";
 
 // Import Internal Dependencies
 import { isSelectionRect } from "./presenceGuards.ts";
 import type { SelectionGhostPayload } from "../types.ts";
 
-function encodeBytes(
-  bytes: Uint8Array
-): string {
-  const chunks: string[] = [];
-  for (let index = 0; index < bytes.length; index += 8192) {
-    chunks.push(
-      String.fromCharCode(...bytes.subarray(index, index + 8192))
-    );
-  }
-
-  return btoa(chunks.join(""));
-}
-
 function decodeBytes(
   value: unknown,
   length: number
 ): Uint8Array | undefined {
-  if (typeof value !== "string" ||
-    value.length !== Math.ceil(length / 3) * 4 ||
-    !/^[A-Za-z0-9+/]*={0,2}$/.test(value)) {
+  if (typeof value !== "string" || value.length !== Math.ceil(length / 3) * 4) {
     return undefined;
   }
-  try {
-    const binary = atob(value);
-    if (binary.length !== length) {
-      return undefined;
-    }
+  const bytes = decodeBase64(value);
 
-    return Uint8Array.from(binary, (character) => character.charCodeAt(0));
-  }
-  catch {
-    return undefined;
-  }
+  return bytes?.length === length ? bytes : undefined;
 }
 
 function validRect(
@@ -72,7 +53,7 @@ function encodeMask(
     }
   }
 
-  return encodeBytes(bytes);
+  return encodeBase64(bytes);
 }
 
 function decodeMask(
@@ -110,7 +91,7 @@ export function encodeSelectionPresence(
     bytes.set([r, g, b, a], index * 4);
   }
 
-  return { ...state, mask, pixels: encodeBytes(bytes) };
+  return { ...state, mask, pixels: encodeBase64(bytes) };
 }
 
 export function decodeSelectionPresence(
