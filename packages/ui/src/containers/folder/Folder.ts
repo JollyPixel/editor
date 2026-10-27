@@ -14,7 +14,10 @@ import { emitContainerEvent } from "../events.ts";
 import { folderStyles } from "./Folder.styles.ts";
 
 import "../../icon/Icon.ts";
-import { isButtonElement } from "../../dom.ts";
+import {
+  defaultSlotChildren,
+  isButtonElement
+} from "../../dom.ts";
 import { defaultStorageAdapter } from "../../storage/defaultStorage.ts";
 import { NamespacedStore } from "../../storage/NamespacedStore.ts";
 import type { StorageAdapter } from "../../storage/StorageAdapter.ts";
@@ -179,10 +182,12 @@ export class Folder extends LitElement implements Searchable {
   applySearch(
     query: SearchQuery
   ): number {
-    const content = [...this.children].filter((child) => child.slot === "");
     const labelMatches = !query.isEmpty && query.matches(this.label);
     const contentQuery = labelMatches ? SearchQuery.EMPTY : query;
-    const { matches } = searchElements(content, contentQuery);
+    const { matches } = searchElements(
+      defaultSlotChildren(this),
+      contentQuery
+    );
     this.toggleAttribute(
       kSearchOpenAttribute,
       !contentQuery.isEmpty && matches > 0

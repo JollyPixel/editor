@@ -188,6 +188,7 @@ export type {
 } from "./containers/pane/Pane.ts";
 export type * from "./containers/pane-group/PaneGroup.ts";
 export type * from "./containers/rail/Rail.ts";
+export type * from "./containers/show-more/ShowMore.ts";
 export type * from "./containers/tabs/Tab.ts";
 export type * from "./containers/tabs/Tabs.ts";
 export type * from "./containers/toolbar/Toolbar.ts";

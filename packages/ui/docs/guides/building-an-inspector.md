@@ -207,6 +207,8 @@ light-inspector {
 
 - [`jolly-folder`](../api/containers/folder.md) folds a group. With
   `storage-key`, it keeps its open state across reloads.
+- [`jolly-show-more`](../api/containers/show-more.md) inside a long folder
+  shows its first rows and folds the rest behind a "Show N more" button.
 - [`jolly-separator`](../api/controls/separator.md) captions a group that does
   not fold.
 - [`jolly-property-row`](../api/controls/property-row.md) lines up custom

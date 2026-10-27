@@ -134,6 +134,7 @@ they fit together.
 - [`jolly-pane`](./docs/api/containers/pane.md) (`PaneElement`)
 - [`jolly-pane-group`](./docs/api/containers/pane-group.md) (`PaneGroup`)
 - [`jolly-rail`](./docs/api/containers/rail.md) (`Rail`)
+- [`jolly-show-more`](./docs/api/containers/show-more.md) (`ShowMore`)
 - [`jolly-tab`](./docs/api/containers/tab.md) (`Tab`)
 - [`jolly-tabs`](./docs/api/containers/tabs.md) (`Tabs`)
 - [`jolly-toolbar`](./docs/api/containers/toolbar.md) (`Toolbar`)

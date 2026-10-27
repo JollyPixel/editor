@@ -30,6 +30,7 @@ import "@jolly-pixel/ui/elements/button-group";
 import "@jolly-pixel/ui/elements/context-menu";
 import "@jolly-pixel/ui/elements/folder";
 import "@jolly-pixel/ui/elements/separator";
+import "@jolly-pixel/ui/elements/show-more";
 import "@jolly-pixel/ui/elements/vector3";
 
 // Import Internal Dependencies
@@ -286,7 +287,9 @@ export class InspectorPanel extends LitElement {
           title="Remove component"
           @click=${() => editing.document.removeComponent(component.id)}
         ></jolly-button>
-        ${renderComponentBody(component, editing)}
+        <jolly-show-more storage-key=${`scene-inspector:more:${component.type}`}>
+          ${renderComponentBody(component, editing)}
+        </jolly-show-more>
       </jolly-folder>
     `;
   }

@@ -28,6 +28,12 @@ export function isSlotElement(
   return target instanceof HTMLSlotElement;
 }
 
+export function defaultSlotChildren(
+  host: Element
+): Element[] {
+  return [...host.children].filter((child) => child.slot === "");
+}
+
 export function isDocumentOrShadowRoot(
   node: Node
 ): node is Document | ShadowRoot {
