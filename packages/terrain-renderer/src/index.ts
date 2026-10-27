@@ -59,11 +59,11 @@ export {
 } from "./view/TerrainView.ts";
 export { LOOKUP_SIZE } from "./view/textures/ChunkTextureStore.ts";
 export {
-  DEFAULT_LAYER_TEXTURE_SIZE,
-  LAYER_MAPS,
-  LAYER_SLOT_COUNT,
-  type LayerImage,
-  type LayerMap,
-  type LayerSurface,
+  DEFAULT_MATERIAL_TEXTURE_SIZE,
+  MATERIAL_MAPS,
+  MATERIAL_SLOT_COUNT,
+  type MaterialImage,
+  type MaterialMap,
+  type MaterialSurface,
   type TextureCopier
-} from "./view/textures/LayerTextureStore.ts";
+} from "./view/textures/MaterialTextureStore.ts";

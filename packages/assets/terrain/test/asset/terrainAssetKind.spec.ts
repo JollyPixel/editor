@@ -18,7 +18,7 @@ import {
   encodeTerrainFile,
   decodeHeights,
   decodeTerrainFile,
-  GROUND_LAYER,
+  GROUND_MATERIAL,
   MAX_TERRAIN_CHUNKS,
   terrainAssetKind,
   terrainSnapshot,
@@ -26,11 +26,11 @@ import {
 } from "#src/index.ts";
 import {
   CHUNK_COORDINATE_RANGE,
-  MAX_TERRAIN_LAYERS
+  MAX_TERRAIN_MATERIALS
 } from "#src/network/TerrainCommand.schema.ts";
 import {
   heights,
-  layer,
+  material,
   networkCommand,
   tileHeights
 } from "../helpers/terrain.ts";
@@ -38,6 +38,7 @@ import {
 // CONSTANTS
 const kRockMap = { id: "rock-albedo", kind: "texture" };
 const kRockNormal = { id: "rock-normal", kind: "texture" };
+const kRockHeight = { id: "rock-height", kind: "texture" };
 
 function liveRoom() {
   return new LiveAssetRoom(terrainAssetKind());
@@ -53,27 +54,27 @@ function chunkKeys(
   return [...room.state.terrain.chunks()].map(({ coord }) => coord.key).sort();
 }
 
-function layerSlots(
+function materialSlots(
   room: ReturnType<typeof liveRoom>
 ): number[] {
-  return room.state.layers.layers().map(({ slot }) => slot);
+  return room.state.materials.materials().map(({ slot }) => slot);
 }
 
 describe("terrain asset kind", () => {
-  test("a new terrain holds one flat chunk at the origin and the Ground layer", () => {
-    const { terrain, layers } = terrainAssetKind().create("asset");
+  test("a new terrain holds one flat chunk at the origin and the Ground material", () => {
+    const { terrain, materials } = terrainAssetKind().create("asset");
 
     assert.deepEqual([...terrain.chunks()].map(({ coord }) => coord.key), ["0,0"]);
     assert.ok(terrain.chunk(new ChunkCoord(0, 0))!.copyHeights().every((height) => height === 0));
-    assert.deepEqual(layers.layers(), [GROUND_LAYER]);
+    assert.deepEqual(materials.materials(), [GROUND_MATERIAL]);
   });
 
-  test("serialize and load round-trip the chunk list, the layers and each chunk's part", async() => {
+  test("serialize and load round-trip the chunk list, the materials and each chunk's part", async() => {
     const handler = terrainAssetKind();
     const room = new LiveAssetRoom(handler);
     room.receive("A", networkCommand({ action: "chunk-added", x: 1, z: 0, heights: heights(12.5) }));
-    const rock = layer("rock", 3, { albedo: kRockMap });
-    room.receive("A", networkCommand({ action: "layer-added", layer: rock }));
+    const rock = material("rock", 3, { albedo: kRockMap });
+    room.receive("A", networkCommand({ action: "material-added", material: rock }));
     room.receive("A", networkCommand({ action: "texture-size-changed", size: 2048 }));
 
     const manifest = await handler.serialize(room.state);
@@ -113,68 +114,74 @@ describe("terrain asset kind", () => {
     assert.ok(model.terrain.chunk(new ChunkCoord(0, 0))!.copyHeights().every((height) => height === 3));
   });
 
-  test("a document without layers loads the Ground layer at the default texture size", () => {
+  test("a document without materials loads the Ground material at the default texture size", () => {
     const handler = terrainAssetKind();
     const model = handler.create("asset");
-    model.layers.load([layer("rock", 3)], 2048);
+    model.materials.load([material("rock", 3)], 2048);
 
     handler.load(model, encodeTerrainFile({
       version: TERRAIN_FILE_VERSION,
       chunks: [{ x: 0, z: 0 }]
     }));
 
-    assert.deepEqual(model.layers.layers(), [GROUND_LAYER]);
-    assert.equal(model.layers.textureSize, DEFAULT_TERRAIN_TEXTURE_SIZE);
+    assert.deepEqual(model.materials.materials(), [GROUND_MATERIAL]);
+    assert.equal(model.materials.textureSize, DEFAULT_TERRAIN_TEXTURE_SIZE);
   });
 
-  test("load rejects a document whose layers share a slot", () => {
+  test("load rejects a document whose materials share a slot", () => {
     const handler = terrainAssetKind();
     const content = encodeTerrainFile({
       version: TERRAIN_FILE_VERSION,
       chunks: [{ x: 0, z: 0 }],
-      layers: [layer("rock", 0), layer("sand", 0)]
+      materials: [material("rock", 0), material("sand", 0)]
     });
 
     assert.throws(() => handler.load(handler.create("asset"), content), InvalidAssetFileError);
   });
 
-  test("the layers' images are the terrain's dependencies, and rebind follows new IDs", () => {
+  test("the materials' images are the terrain's dependencies, and rebind follows new IDs", () => {
     const handler = terrainAssetKind();
     const model = handler.create("asset");
-    model.layers.add(layer("rock", 1, { albedo: kRockMap, normal: kRockNormal }));
-    model.layers.add(layer("moss", 2, { albedo: kRockMap }));
+    model.materials.add(material("rock", 1, { albedo: kRockMap, normal: kRockNormal, height: kRockHeight }));
+    model.materials.add(material("moss", 2, { albedo: kRockMap }));
 
-    assert.deepEqual(handler.dependencies!(model), [kRockMap, kRockNormal]);
+    assert.deepEqual(handler.dependencies!(model), [kRockMap, kRockNormal, kRockHeight]);
 
     handler.rebind!(model, new Map([[kRockMap.id, "rock-copy"]]));
 
-    assert.deepEqual(handler.dependencies!(model), [{ ...kRockMap, id: "rock-copy" }, kRockNormal]);
+    assert.deepEqual(
+      handler.dependencies!(model),
+      [{ ...kRockMap, id: "rock-copy" }, kRockNormal, kRockHeight]
+    );
   });
 
-  test("a layer is admitted only with a new ID, on a free slot, under the layer cap", () => {
+  test("a material is admitted only with a new ID, on a free slot, under the material cap", () => {
     const room = liveRoom();
-    room.receive("A", networkCommand({ action: "layer-added", layer: layer("ground", 4) }));
-    room.receive("A", networkCommand({ action: "layer-added", layer: layer("rock", 0) }));
-    for (let slot = 1; slot <= MAX_TERRAIN_LAYERS; slot++) {
-      room.receive("A", networkCommand({ action: "layer-added", layer: layer(`layer-${slot}`, slot) }));
+    function add(id: string, slot: number): void {
+      room.receive("A", networkCommand({ action: "material-added", material: material(id, slot) }));
+    }
+    add("ground", 4);
+    add("rock", 0);
+    for (let slot = 1; slot <= MAX_TERRAIN_MATERIALS; slot++) {
+      add(`material-${slot}`, slot);
     }
 
-    assert.deepEqual(layerSlots(room), Array.from({ length: MAX_TERRAIN_LAYERS }, (_, slot) => slot));
+    assert.deepEqual(materialSlots(room), Array.from({ length: MAX_TERRAIN_MATERIALS }, (_, slot) => slot));
   });
 
-  test("an update of a removed layer and an unchanged texture size are refused", () => {
+  test("an update of a removed material and an unchanged texture size are refused", () => {
     const room = liveRoom();
     room.connect("A");
     room.take("A");
-    room.receive("A", networkCommand({ action: "layer-removed", id: GROUND_LAYER.id }));
+    room.receive("A", networkCommand({ action: "material-removed", id: GROUND_MATERIAL.id }));
     room.receive("A", networkCommand({
-      action: "layer-updated",
-      id: GROUND_LAYER.id,
+      action: "material-updated",
+      id: GROUND_MATERIAL.id,
       changes: { tiling: 8 }
     }));
     room.receive("A", networkCommand({ action: "texture-size-changed", size: DEFAULT_TERRAIN_TEXTURE_SIZE }));
 
-    assert.deepEqual(layerSlots(room), []);
+    assert.deepEqual(materialSlots(room), []);
     assert.deepEqual(
       room.take("A").map(({ type }) => type),
       ["command", "snapshot", "snapshot"]

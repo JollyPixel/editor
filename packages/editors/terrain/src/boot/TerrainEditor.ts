@@ -27,7 +27,7 @@ import { PeerRoster } from "@jolly-pixel/ui/network";
 import type { TerrainView } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
-import { textureDocumentKind } from "../features/layers/model/TextureDocument.ts";
+import { textureDocumentKind } from "../features/materials/model/TextureDocument.ts";
 import { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
 import "../features/sculpt/toolbar/SculptToolbar.ts";
 import { OverlaySettings } from "../features/overlays/model/OverlaySettings.ts";

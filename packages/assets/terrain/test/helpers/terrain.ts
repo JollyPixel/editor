@@ -7,11 +7,11 @@ import {
 
 // Import Internal Dependencies
 import {
-  DEFAULT_LAYER_PROPERTIES,
+  DEFAULT_MATERIAL_PROPERTIES,
   encodeHeights,
   type TerrainCommand,
-  type TerrainLayerData,
-  type TerrainLayerProperties
+  type TerrainMaterialData,
+  type TerrainMaterialProperties
 } from "#src/index.ts";
 
 let seq = 0;
@@ -28,13 +28,13 @@ export function tileHeights(
   return new Float32Array(TILE_SAMPLE_COUNT).fill(height);
 }
 
-export function layer(
+export function material(
   id: string,
   slot: number,
-  properties: Partial<TerrainLayerProperties> = {}
-): TerrainLayerData {
+  properties: Partial<TerrainMaterialProperties> = {}
+): TerrainMaterialData {
   return {
-    ...DEFAULT_LAYER_PROPERTIES,
+    ...DEFAULT_MATERIAL_PROPERTIES,
     name: id,
     ...properties,
     id,

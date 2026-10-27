@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  GROUND_LAYER,
+  GROUND_MATERIAL,
   terrainSnapshot
 } from "#src/index.ts";
 import {
@@ -13,16 +13,16 @@ import {
 } from "#src/network/client.ts";
 
 describe("TerrainDocument", () => {
-  test("a rewind restores the layers and the texture size the changes replaced", () => {
+  test("a rewind restores the materials and the texture size the changes replaced", () => {
     const document = new TerrainDocument();
     document.load({ chunks: [{ x: 0, z: 0 }] });
     const original = terrainSnapshot(document);
     const images: TerrainImage[] = [];
     document.on("change", ({ image }) => images.push(image));
 
-    document.updateLayer(GROUND_LAYER.id, { tiling: 8 });
-    const added = document.addLayer({ name: "Rock" });
-    document.removeLayer(GROUND_LAYER.id);
+    document.updateMaterial(GROUND_MATERIAL.id, { tiling: 8 });
+    const added = document.addMaterial({ name: "Rock" });
+    document.removeMaterial(GROUND_MATERIAL.id);
     document.changeTextureSize(2048);
     document.revert(images);
 

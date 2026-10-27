@@ -56,22 +56,24 @@ those over the chunks these calls name, so a terrain changed without them
 draws with stale bounds. It addresses chunks modulo `LOOKUP_SIZE`, 256, on
 each axis and throws when two known chunks share a slot.
 
-The view shades the surface with terrain layers. Call
-`layerChanged(slot, { tiling })` when a layer appears or its tiling changes,
-`layerRemoved(slot)` when it goes, and `writeLayerMap(slot, map, image)` with
-an `albedo`, `normal` or `orm` image of exactly `layerTextureSize` pixels per
-side, or `null` to draw that map's fallback: a neutral colour, a flat normal,
-and occlusion 1, roughness 1, metalness 0. Each map kind lives in one texture
-array, albedo in sRGB and the others linear, with an array layer per terrain
-layer rather than per slot; the arrays grow as layers are added. Setting
-`layerTextureSize` replaces the arrays empty, so every map has to be written
-again.
+The view shades the surface with terrain materials. Call
+`materialChanged(slot, { tiling })` when a material appears or its tiling
+changes, `materialRemoved(slot)` when it goes, and
+`writeMaterialMap(slot, map, image)` with an image of exactly
+`materialTextureSize` pixels per side for one of `MATERIAL_MAPS` (`albedo`,
+`normal`, `orm` or `height`), or `null` to draw that map's fallback: a neutral
+colour, a flat normal, occlusion 1, roughness 1 and metalness 0, and a flat
+height. Each map kind lives in one texture array, albedo in sRGB and the
+others linear, with an array layer per material rather than per slot; the
+arrays grow as materials are added. Setting `materialTextureSize` replaces the
+arrays empty, so every map has to be written again. The height map is stored
+for height blending and is not sampled yet.
 
 Images reach the arrays by a GPU copy, so no pixels stay in memory on the CPU.
 The view needs a `textureCopier`, such as the `WebGPURenderer`, for that;
 `TerrainRenderer` passes the engine's renderer. Without one, every map draws
-its fallback. Until splat maps arrive, the whole surface draws the layer in
-slot 0.
+its fallback. Until splat maps arrive, the whole surface draws the material
+in slot 0.
 
 ## License
 

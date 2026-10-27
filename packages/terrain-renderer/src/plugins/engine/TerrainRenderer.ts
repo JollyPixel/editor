@@ -11,7 +11,7 @@ import {
   TerrainView,
   type TerrainViewOptions
 } from "../../view/TerrainView.ts";
-import type { TextureCopier } from "../../view/textures/LayerTextureStore.ts";
+import type { TextureCopier } from "../../view/textures/MaterialTextureStore.ts";
 
 export interface TerrainRendererOptions extends TerrainViewOptions {
   terrain: TerrainReader;

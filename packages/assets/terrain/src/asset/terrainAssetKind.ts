@@ -33,10 +33,10 @@ import {
   terrainManifest
 } from "../model/terrainState.ts";
 import {
-  layerMaps,
-  rebindLayerMaps
-} from "../model/layerMaps.ts";
-import { GROUND_LAYER } from "../model/TerrainLayers.ts";
+  materialMaps,
+  rebindMaterialMaps
+} from "../model/materialMaps.ts";
+import { GROUND_MATERIAL } from "../model/TerrainMaterials.ts";
 import { TerrainModel } from "../model/TerrainModel.ts";
 import {
   terrainCommandProtocol,
@@ -122,7 +122,7 @@ export function terrainAssetKind(
     create(): TerrainModel {
       const model = new TerrainModel();
       model.terrain.addChunk(new ChunkCoord(0, 0));
-      model.layers.add(GROUND_LAYER);
+      model.materials.add(GROUND_MATERIAL);
 
       return model;
     },
@@ -153,14 +153,14 @@ export function terrainAssetKind(
     dependencies(
       state: TerrainModel
     ) {
-      return layerMaps(state.layers);
+      return materialMaps(state.materials);
     },
 
     rebind(
       state: TerrainModel,
       idMap: ReadonlyMap<string, string>
     ): void {
-      rebindLayerMaps(state.layers, idMap);
+      rebindMaterialMaps(state.materials, idMap);
     },
 
     serialize(

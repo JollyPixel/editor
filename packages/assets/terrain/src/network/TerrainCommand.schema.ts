@@ -35,20 +35,21 @@ export const tilePatchesSchema = z.array(tilePatchSchema).check(
 );
 
 export const TERRAIN_TEXTURE_SIZES = [512, 1024, 2048] as const;
-export const MAX_TERRAIN_LAYERS = 32;
-export const TERRAIN_LAYER_SLOTS = 256;
+export const MAX_TERRAIN_MATERIALS = 32;
+export const TERRAIN_MATERIAL_SLOTS = 256;
 const kTextureSize = z.literal(TERRAIN_TEXTURE_SIZES);
-const kLayerId = z.string().check(z.minLength(1), z.maxLength(64));
-const kLayerMap = z.nullable(z.object({
+const kMaterialId = z.string().check(z.minLength(1), z.maxLength(64));
+const kMaterialMap = z.nullable(z.object({
   id: z.string().check(z.minLength(1)),
   kind: z.string().check(z.minLength(1))
 }));
 
-export const layerPropertiesSchema = z.object({
+export const materialPropertiesSchema = z.object({
   name: z.string().check(z.maxLength(64)),
-  albedo: kLayerMap,
-  normal: kLayerMap,
-  orm: kLayerMap,
+  albedo: kMaterialMap,
+  normal: kMaterialMap,
+  orm: kMaterialMap,
+  height: kMaterialMap,
   tiling: z.number().check(z.gt(0), z.lte(1024)),
   triplanar: z.boolean(),
   stochastic: z.boolean(),
@@ -56,9 +57,9 @@ export const layerPropertiesSchema = z.object({
   displacementScale: z.number().check(z.gte(0))
 });
 
-export const terrainLayerSchema = z.extend(layerPropertiesSchema, {
-  id: kLayerId,
-  slot: z.int().check(z.gte(0), z.lt(TERRAIN_LAYER_SLOTS))
+export const terrainMaterialSchema = z.extend(materialPropertiesSchema, {
+  id: kMaterialId,
+  slot: z.int().check(z.gte(0), z.lt(TERRAIN_MATERIAL_SLOTS))
 });
 
 export const chunkEntrySchema = z.object({
@@ -70,8 +71,8 @@ export const chunkEntrySchema = z.object({
 
 export const terrainManifestSchema = z.object({
   chunks: z.array(chunkEntrySchema),
-  layers: z.optional(
-    z.array(terrainLayerSchema).check(z.maxLength(MAX_TERRAIN_LAYERS))
+  materials: z.optional(
+    z.array(terrainMaterialSchema).check(z.maxLength(MAX_TERRAIN_MATERIALS))
   ),
   textureSize: z.optional(kTextureSize)
 });
@@ -91,15 +92,15 @@ export const terrainCommandSchema = z.discriminatedUnion("action", [
   commandVariant("heights-patched", {
     tiles: tilePatchesSchema
   }),
-  commandVariant("layer-added", {
-    layer: terrainLayerSchema
+  commandVariant("material-added", {
+    material: terrainMaterialSchema
   }),
-  commandVariant("layer-updated", {
-    id: kLayerId,
-    changes: z.partial(layerPropertiesSchema)
+  commandVariant("material-updated", {
+    id: kMaterialId,
+    changes: z.partial(materialPropertiesSchema)
   }),
-  commandVariant("layer-removed", {
-    id: kLayerId
+  commandVariant("material-removed", {
+    id: kMaterialId
   }),
   commandVariant("texture-size-changed", {
     size: kTextureSize

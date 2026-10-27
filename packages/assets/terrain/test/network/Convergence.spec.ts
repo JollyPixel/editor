@@ -8,11 +8,11 @@ import { ChunkCoord } from "@jolly-pixel/terrain.renderer";
 // Import Internal Dependencies
 import {
   encodeTilePatch,
-  GROUND_LAYER,
+  GROUND_MATERIAL,
   terrainSnapshot
 } from "#src/index.ts";
 import {
-  MAX_TERRAIN_LAYERS,
+  MAX_TERRAIN_MATERIALS,
   TerrainPreview
 } from "#src/network/client.ts";
 import {
@@ -69,39 +69,45 @@ describe("terrain convergence", () => {
     assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
   });
 
-  test("layers a client adds take the lowest free slots and land on the server, up to the cap", () => {
+  test("materials a client adds take the lowest free slots and land on the server, up to the cap", () => {
     const { server, document, route } = edgePeerSetup();
-    document.removeLayer(GROUND_LAYER.id);
-    document.addLayer({ name: "Rock" });
+    document.removeMaterial(GROUND_MATERIAL.id);
+    document.addMaterial({ name: "Rock" });
 
-    const added = Array.from({ length: MAX_TERRAIN_LAYERS }, () => document.addLayer());
+    const added = Array.from({ length: MAX_TERRAIN_MATERIALS }, () => document.addMaterial());
     route();
 
-    const slots = Array.from({ length: MAX_TERRAIN_LAYERS }, (_, slot) => slot);
-    assert.deepEqual(document.layers.layers().map(({ slot }) => slot), slots);
-    assert.equal(document.layers.layers()[0].name, "Rock");
+    const slots = Array.from({ length: MAX_TERRAIN_MATERIALS }, (_, slot) => slot);
+    assert.deepEqual(document.materials.materials().map(({ slot }) => slot), slots);
+    assert.equal(document.materials.materials()[0].name, "Rock");
     assert.equal(added.at(-1), null);
     assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
   });
 
-  test("peers editing different layer fields both land, and a removal wins over a concurrent edit", () => {
+  test("peers editing different material fields both land, and a removal wins over a concurrent edit", () => {
     const { server, document, route } = edgePeerSetup();
 
-    document.updateLayer(GROUND_LAYER.id, { name: "Grass" });
+    document.updateMaterial(GROUND_MATERIAL.id, { name: "Grass" });
     server.receive("A", networkCommand(
-      { action: "layer-updated", id: GROUND_LAYER.id, changes: { tiling: 8 } },
+      { action: "material-updated", id: GROUND_MATERIAL.id, changes: { tiling: 8 } },
       { clientId: "A" }
     ));
     route();
 
-    assert.deepEqual(document.layers.layer(GROUND_LAYER.id), { ...GROUND_LAYER, name: "Grass", tiling: 8 });
+    assert.deepEqual(
+      document.materials.material(GROUND_MATERIAL.id),
+      { ...GROUND_MATERIAL, name: "Grass", tiling: 8 }
+    );
     assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
 
-    document.updateLayer(GROUND_LAYER.id, { tiling: 2 });
-    server.receive("A", networkCommand({ action: "layer-removed", id: GROUND_LAYER.id }, { clientId: "A" }));
+    document.updateMaterial(GROUND_MATERIAL.id, { tiling: 2 });
+    server.receive("A", networkCommand(
+      { action: "material-removed", id: GROUND_MATERIAL.id },
+      { clientId: "A" }
+    ));
     route();
 
-    assert.equal(document.layers.size, 0);
+    assert.equal(document.materials.size, 0);
     assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
   });
 

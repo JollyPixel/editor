@@ -31,9 +31,9 @@ const kLabels: Readonly<Record<TerrainCommand["action"], string>> = {
   "chunk-added": "Add chunk",
   "chunk-removed": "Remove chunk",
   "heights-patched": "Sculpt",
-  "layer-added": "Add layer",
-  "layer-updated": "Edit layer",
-  "layer-removed": "Remove layer",
+  "material-added": "Add material",
+  "material-updated": "Edit material",
+  "material-removed": "Remove material",
   "texture-size-changed": "Change texture size"
 };
 
@@ -85,7 +85,7 @@ function guardEntries(
 }
 
 function readWriteRef(
-  { terrain, layers }: TerrainModelReader,
+  { terrain, materials }: TerrainModelReader,
   ref: TerrainWriteRef
 ): unknown {
   switch (ref.kind) {
@@ -97,16 +97,16 @@ function readWriteRef(
 
       return heights === undefined ? undefined : Array.from(heights);
     }
-    case "layer": {
-      const layer = layers.layer(ref.id);
+    case "material": {
+      const material = materials.material(ref.id);
       if (ref.field === null) {
-        return layer !== undefined;
+        return material !== undefined;
       }
 
-      return layer?.[ref.field];
+      return material?.[ref.field];
     }
     case "texture-size":
-      return layers.textureSize;
+      return materials.textureSize;
   }
 }
 

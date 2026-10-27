@@ -14,15 +14,15 @@ import {
 import { decodeTilePatch } from "../network/tilePatches.ts";
 import { chunkOverview } from "./chunkOverview.ts";
 import {
-  acceptsLayerCommand,
-  applyLayerCommand,
-  isLayerCommand
-} from "./layerCommands.ts";
+  acceptsMaterialCommand,
+  applyMaterialCommand,
+  isMaterialCommand
+} from "./materialCommands.ts";
 import {
   DEFAULT_TERRAIN_TEXTURE_SIZE,
-  GROUND_LAYER,
-  TerrainLayers
-} from "./TerrainLayers.ts";
+  GROUND_MATERIAL,
+  TerrainMaterials
+} from "./TerrainMaterials.ts";
 import type {
   TerrainModel,
   TerrainModelReader
@@ -57,8 +57,8 @@ export function acceptsTerrainCommand(
   model: TerrainModelReader,
   command: TerrainCommand
 ): boolean {
-  if (isLayerCommand(command)) {
-    return acceptsLayerCommand(model.layers, command);
+  if (isMaterialCommand(command)) {
+    return acceptsMaterialCommand(model.materials, command);
   }
 
   const { terrain } = model;
@@ -84,8 +84,8 @@ export function applyTerrainCommand(
   command: TerrainCommand,
   loads: (coord: ChunkCoord) => boolean = () => true
 ): void {
-  if (isLayerCommand(command)) {
-    applyLayerCommand(model.layers, command);
+  if (isMaterialCommand(command)) {
+    applyMaterialCommand(model.materials, command);
 
     return;
   }
@@ -156,7 +156,7 @@ function decodeTilePatches(
 }
 
 export function terrainSnapshot(
-  { terrain, layers }: TerrainModelReader
+  { terrain, materials }: TerrainModelReader
 ): TerrainSnapshot {
   return {
     chunks: Array.from(terrain.overview.coords(), (coord) => {
@@ -166,13 +166,13 @@ export function terrainSnapshot(
         { x: coord.x, z: coord.z, overview: encodeHeights(terrain.overview.samples(coord)!) } :
         { x: coord.x, z: coord.z, heights: encodeHeights(chunk.copyHeights()) };
     }),
-    layers: layers.layers(),
-    textureSize: layers.textureSize
+    materials: materials.materials(),
+    textureSize: materials.textureSize
   };
 }
 
 export function terrainManifest(
-  { terrain, layers }: TerrainModelReader
+  { terrain, materials }: TerrainModelReader
 ): TerrainManifest {
   return {
     chunks: Array.from(terrain.overview.coords(), (coord) => {
@@ -182,8 +182,8 @@ export function terrainManifest(
         overview: encodeHeights(terrain.overview.samples(coord)!)
       };
     }),
-    layers: layers.layers(),
-    textureSize: layers.textureSize
+    materials: materials.materials(),
+    textureSize: materials.textureSize
   };
 }
 
@@ -206,12 +206,12 @@ export function loadTerrainManifest(
     };
   });
 
-  const layers = loadedLayers(manifest);
+  const materials = loadedMaterials(manifest);
   terrain.clear();
   for (const { coord, heights } of chunks) {
     terrain.addChunk(coord, heights);
   }
-  model.layers.load(layers.layers(), layers.textureSize);
+  model.materials.load(materials.materials(), materials.textureSize);
 }
 
 export function loadChunkHeights(
@@ -243,7 +243,7 @@ export function loadTerrainSnapshot(
     };
   });
 
-  const layers = loadedLayers(snapshot);
+  const materials = loadedMaterials(snapshot);
   terrain.clear();
   for (const chunk of chunks) {
     if ("heights" in chunk) {
@@ -253,14 +253,14 @@ export function loadTerrainSnapshot(
       terrain.addUnloadedChunk(chunk.coord, chunk.overview);
     }
   }
-  model.layers.load(layers.layers(), layers.textureSize);
+  model.materials.load(materials.materials(), materials.textureSize);
 }
 
-function loadedLayers(
-  { layers = [GROUND_LAYER], textureSize = DEFAULT_TERRAIN_TEXTURE_SIZE }: TerrainManifest
-): TerrainLayers {
-  const loaded = new TerrainLayers();
-  loaded.load(layers, textureSize);
+function loadedMaterials(
+  { materials = [GROUND_MATERIAL], textureSize = DEFAULT_TERRAIN_TEXTURE_SIZE }: TerrainManifest
+): TerrainMaterials {
+  const loaded = new TerrainMaterials();
+  loaded.load(materials, textureSize);
 
   return loaded;
 }

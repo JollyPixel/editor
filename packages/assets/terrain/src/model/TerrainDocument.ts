@@ -22,20 +22,20 @@ import {
 import type {
   ChunkEntry,
   TerrainCommand,
-  TerrainLayerChanges,
-  TerrainLayerData,
-  TerrainLayerProperties,
+  TerrainMaterialChanges,
+  TerrainMaterialData,
+  TerrainMaterialProperties,
   TerrainSnapshot,
   TerrainTextureSize
 } from "../network/types.ts";
 import {
-  invertLayerCommand,
-  isLayerCommand
-} from "./layerCommands.ts";
+  invertMaterialCommand,
+  isMaterialCommand
+} from "./materialCommands.ts";
 import {
-  DEFAULT_LAYER_PROPERTIES,
-  type TerrainLayersReader
-} from "./TerrainLayers.ts";
+  DEFAULT_MATERIAL_PROPERTIES,
+  type TerrainMaterialsReader
+} from "./TerrainMaterials.ts";
 import {
   TerrainModel,
   type TerrainModelReader
@@ -61,17 +61,17 @@ export interface ChunkImage {
   readonly overview?: string;
 }
 
-export interface LayerImage {
+export interface MaterialImage {
   readonly id: string;
   /**
-   * The layer before the change, or `null` when it did not exist.
+   * The material before the change, or `null` when it did not exist.
    */
-  readonly layer: TerrainLayerData | null;
+  readonly material: TerrainMaterialData | null;
 }
 
 export interface TerrainImage {
   readonly chunks: readonly ChunkImage[];
-  readonly layers: readonly LayerImage[];
+  readonly materials: readonly MaterialImage[];
   /**
    * The texture size before the change, or `null` when it did not change.
    */
@@ -86,7 +86,7 @@ export class TerrainDocument extends CommandDocument<
   TerrainImage
 > implements TerrainModelReader {
   readonly terrain: TerrainReader;
-  readonly layers: TerrainLayersReader;
+  readonly materials: TerrainMaterialsReader;
   readonly stream: TerrainStream;
 
   constructor() {
@@ -94,7 +94,7 @@ export class TerrainDocument extends CommandDocument<
     const stream = new TerrainStream(model.terrain);
     super(terrainState(model, stream));
     this.terrain = model.terrain;
-    this.layers = model.layers;
+    this.materials = model.materials;
     this.stream = stream;
     this.on("change", ({ command }) => {
       if (command.action === "chunk-added" || command.action === "chunk-removed") {
@@ -104,19 +104,19 @@ export class TerrainDocument extends CommandDocument<
     this.on("reset", () => stream.refresh());
   }
 
-  addLayer(
-    properties: Partial<TerrainLayerProperties> = {}
+  addMaterial(
+    properties: Partial<TerrainMaterialProperties> = {}
   ): string | null {
-    const slot = this.layers.freeSlot();
+    const slot = this.materials.freeSlot();
     if (slot === null) {
       return null;
     }
 
     const id = crypto.randomUUID();
     const committed = this.commit({
-      action: "layer-added",
-      layer: {
-        ...DEFAULT_LAYER_PROPERTIES,
+      action: "material-added",
+      material: {
+        ...DEFAULT_MATERIAL_PROPERTIES,
         ...properties,
         id,
         slot
@@ -126,17 +126,17 @@ export class TerrainDocument extends CommandDocument<
     return committed ? id : null;
   }
 
-  updateLayer(
+  updateMaterial(
     id: string,
-    changes: TerrainLayerChanges
+    changes: TerrainMaterialChanges
   ): boolean {
-    return this.commit({ action: "layer-updated", id, changes });
+    return this.commit({ action: "material-updated", id, changes });
   }
 
-  removeLayer(
+  removeMaterial(
     id: string
   ): boolean {
-    return this.commit({ action: "layer-removed", id });
+    return this.commit({ action: "material-removed", id });
   }
 
   changeTextureSize(
@@ -203,35 +203,35 @@ function terrainState(
 }
 
 function captureImage(
-  { terrain, layers }: TerrainModelReader,
+  { terrain, materials }: TerrainModelReader,
   command: TerrainCommand
 ): TerrainImage {
-  if (!isLayerCommand(command)) {
+  if (!isMaterialCommand(command)) {
     return {
       chunks: touchedChunks(command).map(({ x, z }) => chunkImage(terrain, x, z)),
-      layers: [],
+      materials: [],
       textureSize: null
     };
   }
   if (command.action === "texture-size-changed") {
-    return { chunks: [], layers: [], textureSize: layers.textureSize };
+    return { chunks: [], materials: [], textureSize: materials.textureSize };
   }
 
-  const id = command.action === "layer-added" ? command.layer.id : command.id;
+  const id = command.action === "material-added" ? command.material.id : command.id;
 
   return {
     chunks: [],
-    layers: [{ id, layer: layers.layer(id) ?? null }],
+    materials: [{ id, material: materials.material(id) ?? null }],
     textureSize: null
   };
 }
 
 function invertCommand(
-  { terrain, layers }: TerrainModelReader,
+  { terrain, materials }: TerrainModelReader,
   command: TerrainCommand
 ): TerrainCommand[] {
-  if (isLayerCommand(command)) {
-    return invertLayerCommand(layers, command);
+  if (isMaterialCommand(command)) {
+    return invertMaterialCommand(materials, command);
   }
 
   switch (command.action) {
@@ -282,8 +282,8 @@ function restoreImages(
   const chunks = new Map<ChunkKey, ChunkEntry>(
     snapshot.chunks.map((chunk) => [new ChunkCoord(chunk.x, chunk.z).key, chunk])
   );
-  const layers = new Map(
-    (snapshot.layers ?? []).map((layer) => [layer.id, layer])
+  const materials = new Map(
+    (snapshot.materials ?? []).map((material) => [material.id, material])
   );
   let { textureSize } = snapshot;
   for (const image of [...images].reverse()) {
@@ -297,12 +297,12 @@ function restoreImages(
         chunks.set(key, restored);
       }
     }
-    for (const { id, layer } of image.layers) {
-      if (layer === null) {
-        layers.delete(id);
+    for (const { id, material } of image.materials) {
+      if (material === null) {
+        materials.delete(id);
       }
       else {
-        layers.set(id, layer);
+        materials.set(id, material);
       }
     }
     textureSize = image.textureSize ?? textureSize;
@@ -310,7 +310,7 @@ function restoreImages(
 
   return {
     chunks: [...chunks.values()],
-    layers: [...layers.values()].sort((left, right) => left.slot - right.slot),
+    materials: [...materials.values()].sort((left, right) => left.slot - right.slot),
     textureSize
   };
 }

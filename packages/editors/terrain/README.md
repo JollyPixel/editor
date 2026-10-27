@@ -27,7 +27,7 @@ Run `pnpm run dev` in this directory. The dev server listens on port 3008 and se
 - [Design](./docs/design.md): decisions, grid, LoD, data formats and package layout.
 - [Collaboration](./docs/collaboration.md): stroke commits, proximity-based sync, asset parts, corrections and undo.
 - [Brush](./docs/brush.md): how sculpt, hole and paint brushes aim, shape and write.
-- [Texture](./docs/texture.md): splat layers, texture arrays, per-layer techniques and the slope overlay.
+- [Texture](./docs/texture.md): materials and their palette, splat, texture arrays, per-material techniques and the slope overlay.
 
 ## Contributors Guide
 

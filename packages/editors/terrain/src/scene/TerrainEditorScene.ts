@@ -25,10 +25,10 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import {
-  decodeLayerImage,
-  LayerTextures,
+  decodeMaterialImage,
+  MaterialTextures,
   type TextureLease
-} from "../features/layers/rendering/LayerTextures.ts";
+} from "../features/materials/rendering/MaterialTextures.ts";
 import { PeerBrushRings } from "../features/sculpt/collaboration/PeerBrushRings.ts";
 import type { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
 import type { OverlaySettings } from "../features/overlays/model/OverlaySettings.ts";
@@ -150,14 +150,14 @@ export class TerrainEditorScene extends Systems.Scene {
         camera: () => camera.camera
       });
     this.#bindOverlaySettings(view);
-    const layerTextures = new LayerTextures({
+    const materialTextures = new MaterialTextures({
       document: this.#document,
       view,
       lease: this.#textures,
-      decode: decodeLayerImage,
+      decode: decodeMaterialImage,
       failed: (assetId, error) => console.warn(`[terrain] Texture ${assetId} cannot be drawn.`, error)
     });
-    this.#disposables.push(() => layerTextures.dispose());
+    this.#disposables.push(() => materialTextures.dispose());
 
     const peerRings = this.world
       .createActor("peer-brush-rings")

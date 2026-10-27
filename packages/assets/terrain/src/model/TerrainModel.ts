@@ -6,21 +6,21 @@ import {
 
 // Import Internal Dependencies
 import {
-  TerrainLayers,
-  type TerrainLayersReader
-} from "./TerrainLayers.ts";
+  TerrainMaterials,
+  type TerrainMaterialsReader
+} from "./TerrainMaterials.ts";
 
 export interface TerrainModelReader {
   readonly terrain: TerrainReader;
-  readonly layers: TerrainLayersReader;
+  readonly materials: TerrainMaterialsReader;
 }
 
 export class TerrainModel implements TerrainModelReader {
   readonly terrain = new Terrain();
-  readonly layers = new TerrainLayers();
+  readonly materials = new TerrainMaterials();
 
   clear(): void {
     this.terrain.clear();
-    this.layers.clear();
+    this.materials.clear();
   }
 }

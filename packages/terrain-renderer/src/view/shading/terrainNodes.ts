@@ -52,11 +52,10 @@ import {
   OVERVIEW_TEXTURE_SIZE
 } from "../textures/ChunkTextureStore.ts";
 import {
-  LAYER_MAP_BITS,
-  LAYER_MAPS,
-  type LayerArrays,
-  type LayerMap
-} from "../textures/LayerTextureStore.ts";
+  MATERIAL_MAP_BITS,
+  type MaterialArrays,
+  type MaterialMap
+} from "../textures/MaterialTextureStore.ts";
 
 // CONSTANTS
 export const NODE_DATA_ATTRIBUTE = "terrainNode";
@@ -74,6 +73,7 @@ const kSlopeTooSteep = vec3(0.82, 0.12, 0.12);
 const kGroundSlot = 0;
 const kMinTiling = 1e-3;
 const kDefaultRoughness = 1;
+const kSampledMaps = ["albedo", "normal", "orm"] as const;
 
 export const TERRAIN_OVERLAYS = ["none", "chunks", "lod", "slope"] as const;
 export const DEFAULT_WALKABLE_SLOPE = 45;
@@ -89,15 +89,15 @@ export interface TerrainTextures {
   heights: THREE.DataArrayTexture;
   lookup: THREE.DataTexture;
   overview: THREE.DataTexture;
-  layerSlots: THREE.DataTexture;
-  layerArrays: LayerArrays;
+  materialSlots: THREE.DataTexture;
+  materialArrays: MaterialArrays;
 }
 
 export interface TerrainShading {
   material: MeshStandardNodeMaterial;
   overlay(mode: TerrainOverlay): void;
   walkableSlope(degrees: number): void;
-  layerArrays(arrays: LayerArrays): void;
+  materialArrays(arrays: MaterialArrays): void;
 }
 
 interface ChunkTexel {
@@ -303,23 +303,23 @@ export function createTerrainShading(
   );
   const surfaceNormal = normalize(vec3(gradient.x.negate(), float(1), gradient.y.negate()));
 
-  const slotEntry = textureLoad(textures.layerSlots, ivec2(kGroundSlot, 0));
-  const layerIndex = int(max(slotEntry.x.sub(1), float(0)));
-  const layerMaps = int(slotEntry.z);
-  const layerUv = fragmentWorld.div(max(slotEntry.y, float(kMinTiling)));
-  const layerSamples = {
-    albedo: texture(textures.layerArrays.albedo, layerUv).depth(layerIndex),
-    normal: texture(textures.layerArrays.normal, layerUv).depth(layerIndex),
-    orm: texture(textures.layerArrays.orm, layerUv).depth(layerIndex)
+  const slotEntry = textureLoad(textures.materialSlots, ivec2(kGroundSlot, 0));
+  const materialIndex = int(max(slotEntry.x.sub(1), float(0)));
+  const materialMaps = int(slotEntry.z);
+  const materialUv = fragmentWorld.div(max(slotEntry.y, float(kMinTiling)));
+  const materialSamples = {
+    albedo: texture(textures.materialArrays.albedo, materialUv).depth(materialIndex),
+    normal: texture(textures.materialArrays.normal, materialUv).depth(materialIndex),
+    orm: texture(textures.materialArrays.orm, materialUv).depth(materialIndex)
   };
   function hasMap(
-    map: LayerMap
+    map: MaterialMap
   ): BoolNode {
     return slotEntry.x.greaterThan(0.5)
-      .and(layerMaps.bitAnd(int(LAYER_MAP_BITS[map])).notEqual(int(0)));
+      .and(materialMaps.bitAnd(int(MATERIAL_MAP_BITS[map])).notEqual(int(0)));
   }
-  const albedo = select(hasMap("albedo"), layerSamples.albedo.rgb, kAlbedo);
-  const detail = layerSamples.normal.rgb.mul(2).sub(1);
+  const albedo = select(hasMap("albedo"), materialSamples.albedo.rgb, kAlbedo);
+  const detail = materialSamples.normal.rgb.mul(2).sub(1);
   const tangent = normalize(vec3(1, 0, 0).sub(surfaceNormal.mul(surfaceNormal.x)));
   const bitangent = normalize(vec3(0, 0, 1).sub(surfaceNormal.mul(surfaceNormal.z)));
   const detailedNormal = normalize(
@@ -328,7 +328,7 @@ export function createTerrainShading(
   material.normalNode = transformNormalToView(
     select(hasMap("normal"), detailedNormal, surfaceNormal)
   );
-  const orm = layerSamples.orm;
+  const orm = materialSamples.orm;
   material.aoNode = select(hasMap("orm"), orm.r, float(1));
   material.roughnessNode = select(hasMap("orm"), orm.g, float(kDefaultRoughness));
   material.metalnessNode = select(hasMap("orm"), orm.b, float(0));
@@ -372,9 +372,9 @@ export function createTerrainShading(
     walkableSlope(degrees) {
       walkable.value = degreesToRadians(degrees);
     },
-    layerArrays(arrays) {
-      for (const map of LAYER_MAPS) {
-        layerSamples[map].value = arrays[map];
+    materialArrays(arrays) {
+      for (const map of kSampledMaps) {
+        materialSamples[map].value = arrays[map];
       }
     }
   };

@@ -15,10 +15,10 @@ broadcasts it, and a refused edit is answered with a correction.
 | `chunk-added` | A chunk coordinate and its seeded heights |
 | `chunk-removed` | A chunk coordinate |
 | `setTier` | A chunk coordinate and its new tier |
-| `layer-added` | A layer, with its ID and slot |
-| `layer-updated` | A layer ID and only the fields that changed |
-| `layer-removed` | A layer ID |
-| `texture-size-changed` | The terrain's layer texture size |
+| `material-added` | A material, with its ID and slot |
+| `material-updated` | A material ID and only the fields that changed |
+| `material-removed` | A material ID |
+| `texture-size-changed` | The terrain's material texture size |
 | Point-of-interest commands | Create, update, delete |
 
 A height patch is cut into 16×16 tiles and a splat patch into 32×32 texel
@@ -45,10 +45,11 @@ admitted and overwrites the tile.
 Heights and splat use separate channels, so a peer painting a tile never
 refuses another sculpting it, and the reverse.
 
-`layer-updated` holds `layer:<id>:<field>` for each field it changes, so two
-peers renaming a layer and changing its tiling both land. `layer-added` and
-`layer-removed` hold `layer:<id>` and every field key. An update that reaches
-the room after the layer's removal is refused, so a delete wins over a
+`material-updated` holds `material:<id>:<field>` for each field it changes,
+so two peers renaming a material and changing its tiling both land.
+`material-added` and `material-removed` hold `material:<id>` and every field
+key. An update that reaches the room after the material's removal is refused,
+so a delete wins over a
 concurrent update. `texture-size-changed` holds `terrain:texture-size`.
 
 ## Strokes
@@ -129,7 +130,7 @@ asset parts to `@jolly-pixel/asset-server`:
   file, `<asset>.parts/`. For a terrain, two parts per chunk: its heights and
   its splat. A client subscribes to both and loads the chunk once both
   arrive.
-- The join snapshot holds the manifest, the layers, the points of interest and
+- The join snapshot holds the manifest, the materials, the points of interest and
   the overview map. Chunks are not in it.
 - A client sends `subscribeParts` and `unsubscribeParts` as its camera moves,
   and fetches the parts it subscribes to.
@@ -169,9 +170,9 @@ decides which chunks are loaded.
   chunks. The others receive `outside(command)`: the same command cut down to
   the tiles that hold overview samples, tiles 0, 2, 8 and 10 of each chunk,
   or nothing when no such tile changed. `splat-patched` is cut the same way,
-  since the same tile indices hold the overview's dominant layers. A client
+  since the same tile indices hold the overview's dominant materials. A client
   applies the tiles of an unloaded chunk to its overview only. `chunk-added`,
-  `chunk-removed` and the layer commands go to every member.
+  `chunk-removed` and the material commands go to every member.
 - A chunk without a part reply yet, or unloaded while it has pending
   commands, stays consistent: the reply carries the heights at its version,
   and a pending patch replayed on an unloaded chunk updates the overview.

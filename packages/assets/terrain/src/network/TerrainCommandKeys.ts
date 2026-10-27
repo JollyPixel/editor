@@ -7,14 +7,14 @@ import {
 // Import Internal Dependencies
 import {
   changedFields,
-  isLayerCommand,
-  TERRAIN_LAYER_FIELDS
-} from "../model/layerCommands.ts";
+  isMaterialCommand,
+  TERRAIN_MATERIAL_FIELDS
+} from "../model/materialCommands.ts";
 import { CHUNK_TILE_COUNT } from "./TerrainCommand.schema.ts";
 import type {
   TerrainCommand,
-  TerrainLayerCommand,
-  TerrainLayerField
+  TerrainMaterialCommand,
+  TerrainMaterialField
 } from "./types.ts";
 
 // CONSTANTS
@@ -24,9 +24,9 @@ export type TerrainWriteRef =
   | { readonly kind: "chunk"; readonly chunk: ChunkCoord; }
   | { readonly kind: "tile"; readonly tile: TileCoord; }
   | {
-    readonly kind: "layer";
+    readonly kind: "material";
     readonly id: string;
-    readonly field: TerrainLayerField | null;
+    readonly field: TerrainMaterialField | null;
   }
   | { readonly kind: "texture-size"; };
 
@@ -45,11 +45,11 @@ export function terrainHeightTileKey(
   return `${terrainChunkKey(x, z)}:h:${tile}`;
 }
 
-export function terrainLayerKey(
+export function terrainMaterialKey(
   id: string,
-  field: TerrainLayerField | null = null
+  field: TerrainMaterialField | null = null
 ): string {
-  return field === null ? `layer:${id}` : `layer:${id}:${field}`;
+  return field === null ? `material:${id}` : `material:${id}:${field}`;
 }
 
 export function terrainWriteRefKey(
@@ -60,8 +60,8 @@ export function terrainWriteRefKey(
       return terrainChunkKey(ref.chunk.x, ref.chunk.z);
     case "tile":
       return terrainHeightTileKey(ref.tile.chunk.x, ref.tile.chunk.z, ref.tile.index);
-    case "layer":
-      return terrainLayerKey(ref.id, ref.field);
+    case "material":
+      return terrainMaterialKey(ref.id, ref.field);
     case "texture-size":
       return kTextureSizeKey;
   }
@@ -70,8 +70,8 @@ export function terrainWriteRefKey(
 export function terrainWriteRefs(
   command: TerrainCommand
 ): TerrainWriteRef[] {
-  if (isLayerCommand(command)) {
-    return layerWriteRefs(command);
+  if (isMaterialCommand(command)) {
+    return materialWriteRefs(command);
   }
   if (command.action === "heights-patched") {
     return command.tiles.map(({ x, z, tile }) => {
@@ -95,21 +95,21 @@ export function terrainWriteRefs(
   ];
 }
 
-function layerWriteRefs(
-  command: TerrainLayerCommand
+function materialWriteRefs(
+  command: TerrainMaterialCommand
 ): TerrainWriteRef[] {
   switch (command.action) {
-    case "layer-updated":
+    case "material-updated":
       return changedFields(command.changes).map((field) => {
-        return { kind: "layer", id: command.id, field };
+        return { kind: "material", id: command.id, field };
       });
     case "texture-size-changed":
       return [{ kind: "texture-size" }];
     default: {
-      const id = command.action === "layer-added" ? command.layer.id : command.id;
+      const id = command.action === "material-added" ? command.material.id : command.id;
 
-      return [null, ...TERRAIN_LAYER_FIELDS].map((field) => {
-        return { kind: "layer", id, field };
+      return [null, ...TERRAIN_MATERIAL_FIELDS].map((field) => {
+        return { kind: "material", id, field };
       });
     }
   }

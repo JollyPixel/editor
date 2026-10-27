@@ -78,12 +78,13 @@ centre lies inside the radius. Heights under a hole are kept.
 
 ## Paint brush
 
-Paints the selected layer into the splat map. For each texel, the weight
-added is `weight × strength`; the four strongest layers are then kept and
-renormalised to sum to 255. A layer not yet among a texel's four takes the
-place of the weakest one. See [texture](./texture.md#splat).
+Paints the material selected in the palette into the splat map. For each
+texel, the weight added is `weight × strength`; the four strongest materials
+are then kept and renormalised to sum to 255. A material not yet among a
+texel's four takes the place of the weakest one. See
+[texture](./texture.md#splat).
 
-Ctrl+click picks the layer with the highest weight under the cursor, as
+Ctrl+click picks the material with the highest weight under the cursor, as
 flatten picks a height.
 
 ## Previews

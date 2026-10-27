@@ -2,13 +2,14 @@
 import * as THREE from "three";
 
 // CONSTANTS
-export const LAYER_MAPS = ["albedo", "normal", "orm"] as const;
-export const LAYER_SLOT_COUNT = 256;
-export const DEFAULT_LAYER_TEXTURE_SIZE = 1024;
-export const LAYER_MAP_BITS: Readonly<Record<LayerMap, number>> = {
+export const MATERIAL_MAPS = ["albedo", "normal", "orm", "height"] as const;
+export const MATERIAL_SLOT_COUNT = 256;
+export const DEFAULT_MATERIAL_TEXTURE_SIZE = 1024;
+export const MATERIAL_MAP_BITS: Readonly<Record<MaterialMap, number>> = {
   albedo: 1,
   normal: 2,
-  orm: 4
+  orm: 4,
+  height: 8
 };
 const kInitialCapacity = 4;
 const kSlotComponents = 4;
@@ -16,16 +17,16 @@ const kIndexComponent = 0;
 const kTilingComponent = 1;
 const kMapsComponent = 2;
 
-export type LayerMap = typeof LAYER_MAPS[number];
+export type MaterialMap = typeof MATERIAL_MAPS[number];
 
-export interface LayerSurface {
+export interface MaterialSurface {
   /**
-   * Metres per repeat of the layer's maps.
+   * Metres per repeat of the material's maps.
    */
   tiling: number;
 }
 
-export interface LayerImage {
+export interface MaterialImage {
   readonly width: number;
   readonly height: number;
 }
@@ -39,34 +40,34 @@ export interface TextureCopier {
   ): void;
 }
 
-export type LayerArrays = Readonly<Record<LayerMap, THREE.DataArrayTexture>>;
+export type MaterialArrays = Readonly<Record<MaterialMap, THREE.DataArrayTexture>>;
 
-export interface LayerTextureStoreOptions {
+export interface MaterialTextureStoreOptions {
   copier: TextureCopier | null;
   /**
    * Called after the arrays were replaced by larger or resized ones.
    */
-  replaced?: (arrays: LayerArrays) => void;
+  replaced?: (arrays: MaterialArrays) => void;
 }
 
-export class LayerTextureStore {
+export class MaterialTextureStore {
   readonly slots: THREE.DataTexture;
 
-  #arrays: LayerArrays;
-  #size = DEFAULT_LAYER_TEXTURE_SIZE;
+  #arrays: MaterialArrays;
+  #size = DEFAULT_MATERIAL_TEXTURE_SIZE;
   #capacity = kInitialCapacity;
   #copier: TextureCopier | null;
-  #replaced: (arrays: LayerArrays) => void;
+  #replaced: (arrays: MaterialArrays) => void;
   #indices = new Map<number, number>();
 
   constructor(
-    options: LayerTextureStoreOptions
+    options: MaterialTextureStoreOptions
   ) {
     this.#copier = options.copier;
     this.#replaced = options.replaced ?? (() => undefined);
     this.slots = new THREE.DataTexture(
-      new Float32Array(LAYER_SLOT_COUNT * kSlotComponents),
-      LAYER_SLOT_COUNT,
+      new Float32Array(MATERIAL_SLOT_COUNT * kSlotComponents),
+      MATERIAL_SLOT_COUNT,
       1,
       THREE.RGBAFormat,
       THREE.FloatType
@@ -77,7 +78,7 @@ export class LayerTextureStore {
     this.#arrays = createArrays(this.#size, this.#capacity);
   }
 
-  get arrays(): LayerArrays {
+  get arrays(): MaterialArrays {
     return this.#arrays;
   }
 
@@ -97,16 +98,16 @@ export class LayerTextureStore {
 
   hasMap(
     slot: number,
-    map: LayerMap
+    map: MaterialMap
   ): boolean {
     const maps = this.#slotData()[slot * kSlotComponents + kMapsComponent];
 
-    return (maps & LAYER_MAP_BITS[map]) !== 0;
+    return (maps & MATERIAL_MAP_BITS[map]) !== 0;
   }
 
-  layerChanged(
+  materialChanged(
     slot: number,
-    surface: LayerSurface
+    surface: MaterialSurface
   ): void {
     assertSlot(slot);
     let index = this.#indices.get(slot);
@@ -119,7 +120,7 @@ export class LayerTextureStore {
     this.#writeSlot(slot, kTilingComponent, surface.tiling);
   }
 
-  layerRemoved(
+  materialRemoved(
     slot: number
   ): void {
     if (this.#indices.delete(slot)) {
@@ -130,23 +131,23 @@ export class LayerTextureStore {
 
   writeMap(
     slot: number,
-    map: LayerMap,
-    image: LayerImage | null
+    map: MaterialMap,
+    image: MaterialImage | null
   ): void {
     const index = this.#indices.get(slot);
     if (index === undefined) {
-      throw new RangeError(`Terrain layer slot ${slot} has no layer.`);
+      throw new RangeError(`Terrain material slot ${slot} has no material.`);
     }
 
     const maps = this.#slotData()[slot * kSlotComponents + kMapsComponent];
     if (image === null || this.#copier === null) {
-      this.#writeSlot(slot, kMapsComponent, maps & ~LAYER_MAP_BITS[map]);
+      this.#writeSlot(slot, kMapsComponent, maps & ~MATERIAL_MAP_BITS[map]);
 
       return;
     }
     if (image.width !== this.#size || image.height !== this.#size) {
       throw new RangeError(
-        `A terrain layer image must be ${this.#size}×${this.#size}, not ${image.width}×${image.height}.`
+        `A terrain material image must be ${this.#size}×${this.#size}, not ${image.width}×${image.height}.`
       );
     }
 
@@ -161,7 +162,7 @@ export class LayerTextureStore {
       new THREE.Vector3(0, 0, index)
     );
     source.dispose();
-    this.#writeSlot(slot, kMapsComponent, maps | LAYER_MAP_BITS[map]);
+    this.#writeSlot(slot, kMapsComponent, maps | MATERIAL_MAP_BITS[map]);
   }
 
   resize(
@@ -209,16 +210,16 @@ export class LayerTextureStore {
   }
 
   #replace(
-    arrays: LayerArrays,
-    keepLayers: boolean
+    arrays: MaterialArrays,
+    keepMaterials: boolean
   ): void {
     const previous = this.#arrays;
-    if (keepLayers && this.#copier !== null) {
+    if (keepMaterials && this.#copier !== null) {
       const region = new THREE.Box3(
         new THREE.Vector3(0, 0, 0),
         new THREE.Vector3(this.#size, this.#size, previous.albedo.image.depth)
       );
-      for (const map of LAYER_MAPS) {
+      for (const map of MATERIAL_MAPS) {
         this.#copier.copyTextureToTexture(previous[map], arrays[map], region, new THREE.Vector3(0, 0, 0));
       }
     }
@@ -246,19 +247,20 @@ export class LayerTextureStore {
 function assertSlot(
   slot: number
 ): void {
-  if (!Number.isInteger(slot) || slot < 0 || slot >= LAYER_SLOT_COUNT) {
-    throw new RangeError(`A terrain layer slot lies in [0, ${LAYER_SLOT_COUNT}), not ${slot}.`);
+  if (!Number.isInteger(slot) || slot < 0 || slot >= MATERIAL_SLOT_COUNT) {
+    throw new RangeError(`A terrain material slot lies in [0, ${MATERIAL_SLOT_COUNT}), not ${slot}.`);
   }
 }
 
 function createArrays(
   size: number,
   depth: number
-): LayerArrays {
+): MaterialArrays {
   return {
     albedo: createArray(size, depth, THREE.SRGBColorSpace),
     normal: createArray(size, depth, THREE.NoColorSpace),
-    orm: createArray(size, depth, THREE.NoColorSpace)
+    orm: createArray(size, depth, THREE.NoColorSpace),
+    height: createArray(size, depth, THREE.NoColorSpace)
   };
 }
 

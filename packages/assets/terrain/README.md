@@ -13,7 +13,7 @@ editor [design][design] and [roadmap][roadmap].
 ## Storage and join
 
 A terrain is stored as asset parts: `world.terrain.json` lists the chunks
-with their overview samples, the [layers](#layers) and the texture size, and `world.terrain.json.parts/<x>_<z>.bin` holds
+with their overview samples, the [materials](#materials) and the texture size, and `world.terrain.json.parts/<x>_<z>.bin` holds
 the heights of each chunk, 64×64 little-endian `Float32`. The overview samples
 are the four heights of the chunk's 32 m grid points, base64 encoded; loading
 a chunk derives them from its heights. A chunk entry may also carry its heights
@@ -36,26 +36,28 @@ it arrive. Members that have not subscribed to an edited chunk receive only
 the tiles of `heights-patched` that hold its overview samples, which they
 apply to the overview.
 
-## Layers
+## Materials
 
-A layer is a paintable material. `TerrainDocument.layers` lists them; each
-holds an ID, a slot from 0 to 255 that splat texels will name, a name, three
-`texture` asset references (`albedo`, `normal`, `orm`, each nullable), a
-tiling in metres per repeat and the technique flags. A terrain holds at most
-`MAX_TERRAIN_LAYERS`, 32 layers, and one texture size for all of them, one of
+A material is a paintable surface. `TerrainDocument.materials` lists them;
+each holds an ID, a slot from 0 to 255 that splat texels will name, a name,
+four `texture` asset references (`TERRAIN_MATERIAL_MAPS`: `albedo`, `normal`,
+`orm` and `height`, each nullable), a tiling in metres per repeat and the
+technique flags. A terrain holds at most `MAX_TERRAIN_MATERIALS`, 32
+materials, and one texture size for all of them, one of
 `TERRAIN_TEXTURE_SIZES` (512, 1024 or 2048).
 
-- `addLayer(properties?)` takes the lowest free slot and returns the new
-  layer's ID, or `null` at the cap.
-- `updateLayer(id, changes)` sends only the changed fields. Two peers
-  changing different fields of one layer both land; a removal wins over a
+- `addMaterial(properties?)` takes the lowest free slot and returns the new
+  material's ID, or `null` at the cap.
+- `updateMaterial(id, changes)` sends only the changed fields. Two peers
+  changing different fields of one material both land; a removal wins over a
   concurrent update.
-- `removeLayer(id)` frees the slot. Undo brings the layer back as it was.
+- `removeMaterial(id)` frees the slot. Undo brings the material back as it
+  was.
 - `changeTextureSize(size)` refuses the current size.
 
-A new terrain starts with `GROUND_LAYER`, slot 0, with no image. A file
-without `layers` loads with it too. The layers' images are the terrain's
-asset dependencies.
+A new terrain starts with `GROUND_MATERIAL`, slot 0, with no image. A file
+without `materials` loads with it too. The materials' images are the
+terrain's asset dependencies.
 
 ## Preview
 

@@ -93,8 +93,12 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   editor leases each layer's textures, decodes them at the terrain's texture
   size and uploads them again when a texture or the size changes. Until splat
   maps land, the surface draws slot 0.
-- **Next:** splat parts, `splat-patched` commits and the overview's dominant
-  layer.
+- **Materials: done** (2026-10-27). Terrain layers are now materials
+  (`TerrainMaterial`, `material-added` and so on) with a fourth map, height,
+  which height blending reads instead of the albedo's alpha. The panel is a
+  palette of the terrain's own materials, drawn as swatches; see
+  [material palette](./docs/texture.md#material-palette).
+- **Next:** the material palette.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -142,13 +146,18 @@ chunks yet.
   commands keyed per field, image dependencies, and the texture size setting.
 - [x] Albedo, normal and ORM texture arrays, rebuilt when an image or the
   texture size changes.
-- [ ] Splat parts, `splat-patched` commits, and the overview's dominant layer.
-- [ ] Layers panel, the paint tool in the brush toolbar, and Ctrl+click layer
-  pick.
+- [x] Rename layers to materials, and add the height map.
+- [ ] Material palette: swatches of the terrain's materials with map badges,
+  selection, adding from an image with its sibling maps found by name, and
+  editing a material's maps, tiling and flags.
+- [ ] Splat parts, `splat-patched` commits, and the overview's dominant
+  material.
+- [ ] The paint tool in the brush toolbar, painting the selected material,
+  and Ctrl+click material pick.
 - [ ] Splat overlay.
-- [ ] Per-layer techniques: triplanar, stochastic tiling, height blending.
+- [ ] Per-material techniques: triplanar, stochastic tiling, height blending.
 - [ ] E2E: two peers paint and sculpt the same chunk, a far peer's horizon
-  takes the new dominant layer.
+  takes the new dominant material.
 - [ ] Replace an asset's content from the catalog, keeping its ID, so a
   re-imported texture updates the terrains that use it.
 

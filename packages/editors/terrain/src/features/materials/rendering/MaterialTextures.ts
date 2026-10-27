@@ -1,12 +1,12 @@
 // Import Third-party Dependencies
 import type {
   TerrainDocument,
-  TerrainLayerData
+  TerrainMaterialData
 } from "@jolly-pixel/asset.terrain/client";
 import {
-  LAYER_MAPS,
-  type LayerImage,
-  type LayerMap,
+  MATERIAL_MAPS,
+  type MaterialImage,
+  type MaterialMap,
   type TerrainView
 } from "@jolly-pixel/terrain.renderer";
 
@@ -14,14 +14,14 @@ import {
 import type { TextureDocument } from "../model/TextureDocument.ts";
 
 // CONSTANTS
-const kLayerActions = new Set([
-  "layer-added",
-  "layer-updated",
-  "layer-removed",
+const kMaterialActions = new Set([
+  "material-added",
+  "material-updated",
+  "material-removed",
   "texture-size-changed"
 ]);
 
-export interface DecodedImage extends LayerImage {
+export interface DecodedImage extends MaterialImage {
   close(): void;
 }
 
@@ -32,11 +32,11 @@ export interface TextureLease {
   release(): void;
 }
 
-export interface LayerTexturesOptions {
-  document: Pick<TerrainDocument, "layers" | "subscribe">;
+export interface MaterialTexturesOptions {
+  document: Pick<TerrainDocument, "materials" | "subscribe">;
   view: Pick<
     TerrainView,
-    "layerTextureSize" | "layerChanged" | "layerRemoved" | "writeLayerMap"
+    "materialTextureSize" | "materialChanged" | "materialRemoved" | "writeMaterialMap"
   >;
   lease(assetId: string): TextureLease;
   decode(bytes: Uint8Array, size: number): Promise<DecodedImage>;
@@ -45,7 +45,7 @@ export interface LayerTexturesOptions {
 
 interface MapState {
   readonly slot: number;
-  readonly map: LayerMap;
+  readonly map: MaterialMap;
   assetId: string | null;
   generation: number;
 }
@@ -56,8 +56,8 @@ interface HeldTexture {
   readonly unsubscribe: () => void;
 }
 
-export class LayerTextures {
-  #options: LayerTexturesOptions;
+export class MaterialTextures {
+  #options: MaterialTexturesOptions;
   #maps = new Map<string, MapState>();
   #slots = new Set<number>();
   #textures = new Map<string, HeldTexture>();
@@ -65,13 +65,13 @@ export class LayerTextures {
   #disposed = false;
 
   constructor(
-    options: LayerTexturesOptions
+    options: MaterialTexturesOptions
   ) {
     this.#options = options;
     const { document } = options;
     this.#unsubscribe = [
       document.subscribe("change", ({ command }) => {
-        if (kLayerActions.has(command.action)) {
+        if (kMaterialActions.has(command.action)) {
           this.#sync();
         }
       }),
@@ -93,33 +93,35 @@ export class LayerTextures {
 
   #sync(): void {
     const { view, document } = this.#options;
-    const resized = view.layerTextureSize !== document.layers.textureSize;
+    const resized = view.materialTextureSize !== document.materials.textureSize;
     if (resized) {
-      view.layerTextureSize = document.layers.textureSize;
+      view.materialTextureSize = document.materials.textureSize;
     }
 
-    const layers = new Map(document.layers.layers().map((layer) => [layer.slot, layer]));
+    const materials = new Map(
+      document.materials.materials().map((material) => [material.slot, material])
+    );
     for (const slot of this.#slots) {
-      if (!layers.has(slot)) {
+      if (!materials.has(slot)) {
         this.#slots.delete(slot);
-        for (const map of LAYER_MAPS) {
+        for (const map of MATERIAL_MAPS) {
           this.#assign(slot, map, null, false);
         }
-        view.layerRemoved(slot);
+        view.materialRemoved(slot);
       }
     }
-    for (const layer of layers.values()) {
-      this.#slots.add(layer.slot);
-      view.layerChanged(layer.slot, { tiling: layer.tiling });
-      for (const map of LAYER_MAPS) {
-        this.#assign(layer.slot, map, mapAsset(layer, map), resized);
+    for (const material of materials.values()) {
+      this.#slots.add(material.slot);
+      view.materialChanged(material.slot, { tiling: material.tiling });
+      for (const map of MATERIAL_MAPS) {
+        this.#assign(material.slot, map, mapAsset(material, map), resized);
       }
     }
   }
 
   #assign(
     slot: number,
-    map: LayerMap,
+    map: MaterialMap,
     assetId: string | null,
     rewrite: boolean
   ): void {
@@ -161,7 +163,7 @@ export class LayerTextures {
       state.generation === generation &&
       this.#slots.has(slot);
     if (assetId === null) {
-      view.writeLayerMap(slot, map, null);
+      view.writeMaterialMap(slot, map, null);
 
       return;
     }
@@ -174,15 +176,15 @@ export class LayerTextures {
         return;
       }
       if (bytes === null) {
-        view.writeLayerMap(slot, map, null);
+        view.writeMaterialMap(slot, map, null);
 
         return;
       }
 
-      const image = await decode(bytes, view.layerTextureSize);
+      const image = await decode(bytes, view.materialTextureSize);
       try {
         if (current()) {
-          view.writeLayerMap(slot, map, image);
+          view.writeMaterialMap(slot, map, image);
         }
       }
       finally {
@@ -191,7 +193,7 @@ export class LayerTextures {
     }
     catch (error) {
       if (current()) {
-        view.writeLayerMap(slot, map, null);
+        view.writeMaterialMap(slot, map, null);
         failed?.(assetId, error);
       }
     }
@@ -244,7 +246,7 @@ export class LayerTextures {
   }
 }
 
-export function decodeLayerImage(
+export function decodeMaterialImage(
   bytes: Uint8Array,
   size: number
 ): Promise<DecodedImage> {
@@ -258,8 +260,8 @@ export function decodeLayerImage(
 }
 
 function mapAsset(
-  layer: TerrainLayerData,
-  map: LayerMap
+  material: TerrainMaterialData,
+  map: MaterialMap
 ): string | null {
-  return layer[map]?.id ?? null;
+  return material[map]?.id ?? null;
 }

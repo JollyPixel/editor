@@ -5,10 +5,10 @@ import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 // Import Internal Dependencies
 import type {
   chunkEntrySchema,
-  layerPropertiesSchema,
+  materialPropertiesSchema,
   terrainCommandSchema,
-  terrainLayerSchema,
   terrainManifestSchema,
+  terrainMaterialSchema,
   TERRAIN_TEXTURE_SIZES,
   tilePatchSchema
 } from "./TerrainCommand.schema.ts";
@@ -19,25 +19,25 @@ export type TerrainManifest = network.Infer<typeof terrainManifestSchema>;
 export type TerrainSnapshot = TerrainManifest;
 
 export type TerrainTextureSize = typeof TERRAIN_TEXTURE_SIZES[number];
-export type TerrainLayerProperties = network.Infer<typeof layerPropertiesSchema>;
-export type TerrainLayerData = network.Infer<typeof terrainLayerSchema>;
-export type TerrainLayerChanges = Partial<TerrainLayerProperties>;
-export type TerrainLayerField = keyof TerrainLayerProperties;
-export type TerrainLayerMap = NonNullable<TerrainLayerProperties["albedo"]>;
+export type TerrainMaterialProperties = network.Infer<typeof materialPropertiesSchema>;
+export type TerrainMaterialData = network.Infer<typeof terrainMaterialSchema>;
+export type TerrainMaterialChanges = Partial<TerrainMaterialProperties>;
+export type TerrainMaterialField = keyof TerrainMaterialProperties;
+export type TerrainMaterialMap = NonNullable<TerrainMaterialProperties["albedo"]>;
 
 export type TerrainCommand = network.Infer<typeof terrainCommandSchema>;
 export type TerrainCommandAction = TerrainCommand["action"];
-export type TerrainLayerCommand = Extract<
+export type TerrainMaterialCommand = Extract<
   TerrainCommand,
   {
     action:
-      | "layer-added"
-      | "layer-updated"
-      | "layer-removed"
+      | "material-added"
+      | "material-updated"
+      | "material-removed"
       | "texture-size-changed";
   }
 >;
-export type TerrainChunkCommand = Exclude<TerrainCommand, TerrainLayerCommand>;
+export type TerrainChunkCommand = Exclude<TerrainCommand, TerrainMaterialCommand>;
 export type TerrainNetworkCommand = TerrainCommand & network.NetworkCommandHeader;
 
 export type TerrainServerMessage = network.NetworkServerMessage<
