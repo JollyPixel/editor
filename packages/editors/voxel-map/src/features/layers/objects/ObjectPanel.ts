@@ -8,7 +8,11 @@ import {
   type VoxelObjectJSON,
   type VoxelLayerCommand
 } from "@jolly-pixel/voxel.renderer";
-import { FieldBinding } from "@jolly-pixel/ui";
+import {
+  FieldBinding,
+  type JollyChangeDetail
+} from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/checkbox";
 import "@jolly-pixel/ui/elements/color";
 import "@jolly-pixel/ui/elements/separator";
 import "@jolly-pixel/ui/elements/vector2";
@@ -181,6 +185,16 @@ export class ObjectPanel extends LitElement {
         @jolly-change=${this.#size.commit}
       ></jolly-vector2>
 
+      <jolly-checkbox
+        align="end"
+        label="Anchor"
+        description="Lets a scene attach actors to the object"
+        description-display="tooltip"
+        ?disabled=${!this.writable}
+        .value=${object.anchor ?? false}
+        @jolly-change=${this.#onAnchorChange}
+      ></jolly-checkbox>
+
       ${keyed(object.id, html`
         <custom-properties-editor
           .properties=${object.properties ?? {}}
@@ -189,6 +203,12 @@ export class ObjectPanel extends LitElement {
         ></custom-properties-editor>
       `)}
     `;
+  }
+
+  #onAnchorChange(
+    event: CustomEvent<JollyChangeDetail<boolean>>
+  ): void {
+    this.#patch({ anchor: event.detail.value });
   }
 
   #onPropertiesChange(

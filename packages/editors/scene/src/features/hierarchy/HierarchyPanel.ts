@@ -98,6 +98,7 @@ export class HierarchyPanel extends LitElement {
         .nodes=${this.#tree.nodes}
         .selected=${this.#tree.selected}
         .expanded=${this.#tree.expanded}
+        .acceptDrop=${this.#tree.acceptDrop}
         @jolly-select=${this.#tree.handleSelect}
         @jolly-toggle-expand=${this.#tree.handleToggleExpand}
         @jolly-toggle-visible=${this.#tree.handleToggleVisible}

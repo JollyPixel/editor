@@ -5,6 +5,7 @@ import type {
 } from "@jolly-pixel/asset";
 import type { SceneDocument } from "@jolly-pixel/asset.scene/client";
 import type { ShortcutLabels } from "@jolly-pixel/controls";
+import type { Systems } from "@jolly-pixel/engine";
 import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
@@ -35,8 +36,16 @@ export interface SceneAssetSlots {
   ): () => void;
 }
 
+export interface SceneAnchorsView extends Systems.SceneAnchorsReader {
+  subscribe(
+    event: "anchorsChange",
+    listener: () => void
+  ): () => void;
+}
+
 export interface SceneEditing {
   document: SceneDocument;
+  anchors: SceneAnchorsView;
   components: SceneComponents;
   presets: ActorPresetMenu;
   history: SceneHistory;

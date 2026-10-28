@@ -54,6 +54,7 @@ const kVoxelObjectSchema = z.object({
   visible: z.boolean(),
   color: z.string(),
   locked: z.boolean(),
+  anchor: z.boolean(),
   properties: z.record(
     z.string(),
     z.union([z.string(), z.number(), z.boolean()])
@@ -125,6 +126,7 @@ const kLayerMetadataSchemas: Record<VoxelLayerCommandAction, z.ZodMiniType> = {
       rotation: true,
       color: true,
       locked: true,
+      anchor: true,
       properties: true
     })
   }),

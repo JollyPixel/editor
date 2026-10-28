@@ -41,6 +41,7 @@ export function invert(
         id: actor.id,
         parentId: actor.parentId,
         transform: actor.transform,
+        ...actor.anchor === undefined ? {} : { anchor: actor.anchor },
         ...withBefore(tree.findNextSibling(actor.id))
       }];
     }

@@ -8,6 +8,7 @@ import {
   type AssetReferenceData
 } from "@jolly-pixel/asset";
 import { SceneDocument } from "@jolly-pixel/asset.scene/client";
+import type { Systems } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
 import { SceneActions } from "../../src/editing/SceneActions.ts";
@@ -46,7 +47,8 @@ const kComponents = createSceneComponents([
 ]);
 
 function createActions(
-  picked: AssetReferenceData | null = null
+  picked: AssetReferenceData | null = null,
+  anchors: Pick<Systems.SceneAnchorsReader, "findAnchor"> = { findAnchor: () => null }
 ) {
   const document = new SceneDocument();
   const history = createSceneHistory(document);
@@ -69,7 +71,8 @@ function createActions(
 
         return Promise.resolve(picked);
       }
-    }
+    },
+    anchors
   });
 
   return { document, history, selection, actions, picks };
@@ -157,6 +160,40 @@ describe("SceneActions", () => {
     close(transform.position.x, 10);
     close(transform.position.z, -1);
     close(transform.rotation.y, 90);
+  });
+
+  test("moves an actor onto an anchor keeping its world pose", () => {
+    const spawn = { component: "map", key: "object:spawn" };
+    const { document, actions } = createActions(null, {
+      findAnchor: (actorId, anchor) => (actorId === mapId && anchor.key === spawn.key ?
+        {
+          key: spawn.key,
+          label: "Spawn",
+          kind: "object",
+          pose: {
+            position: { x: 4, y: 0, z: 0 },
+            rotation: { x: 0, y: 90, z: 0 }
+          }
+        } :
+        null)
+    });
+    const mapId = document.addActor({
+      name: "Map",
+      transform: { position: { x: 10, y: 0, z: 0 } }
+    })!;
+    const heroId = document.addActor({
+      name: "Hero",
+      transform: { position: { x: 14, y: 0, z: -2 } }
+    })!;
+
+    actions.move([{ id: heroId, parentId: mapId, anchor: spawn }]);
+
+    const { parentId, anchor, transform } = document.tree.actor(heroId)!;
+    assert.strictEqual(parentId, mapId);
+    assert.deepEqual(anchor, spawn);
+    close(transform.position.x, 2);
+    close(transform.position.z, 0);
+    close(transform.rotation.y, -90);
   });
 
   test("adds a voxel map actor named after the picked asset", async() => {

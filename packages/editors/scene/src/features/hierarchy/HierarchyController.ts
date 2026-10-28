@@ -12,6 +12,7 @@ import {
   type TreeNode
 } from "@jolly-pixel/ui";
 import type {
+  SceneAnchorJSON,
   SceneChange,
   SceneCommand
 } from "@jolly-pixel/asset.scene/client";
@@ -81,14 +82,14 @@ export class HierarchyController {
     ];
   }
 
-  static #destinationParent(
+  static #placedActor(
     command: SceneCommand
   ): string | null {
     switch (command.action) {
       case "actor-added":
-        return command.actors[0]?.parentId ?? null;
+        return command.actors[0]?.id ?? null;
       case "actor-moved":
-        return command.parentId;
+        return command.id;
       default:
         return null;
     }
@@ -106,7 +107,8 @@ export class HierarchyController {
       this.#rows = ActorTreeRows.read(
         editing.document.tree,
         editing.presence.selections,
-        editing.components
+        editing.components,
+        editing.anchors
       );
     }
     this.#host.requestUpdate();
@@ -115,18 +117,18 @@ export class HierarchyController {
   #onChange = (
     change: SceneChange
   ): void => {
-    const parentId = HierarchyController.#destinationParent(change.command);
-    if (parentId !== null) {
-      this.#expansion.expand(parentId);
-    }
     this.#rebuild();
+    const id = HierarchyController.#placedActor(change.command);
+    if (id !== null) {
+      this.#expansion.reveal(this.#rows.ancestorIds(id));
+    }
   };
 
   #onSelection = (): void => {
     const editing = this.#connection.current;
     if (editing !== null) {
       for (const id of editing.selection.ids) {
-        this.#expansion.reveal(editing.document.tree.ancestorIds(id));
+        this.#expansion.reveal(this.#rows.ancestorIds(id));
       }
     }
     this.#host.requestUpdate();
@@ -139,14 +141,20 @@ export class HierarchyController {
     this.#host = host;
     this.#view = view;
     this.#connection = new SubscriptionController(host, (editing) => {
-      const { document, selection, presence } = editing;
+      const {
+        document,
+        selection,
+        presence,
+        anchors
+      } = editing;
       this.#rebuild();
 
       return [
         document.subscribe("change", this.#onChange),
         document.subscribe("reset", this.#rebuild),
         selection.subscribe("change", this.#onSelection),
-        presence.subscribe("selectionsChange", this.#rebuild)
+        presence.subscribe("selectionsChange", this.#rebuild),
+        anchors.subscribe("anchorsChange", this.#rebuild)
       ];
     });
   }
@@ -160,9 +168,7 @@ export class HierarchyController {
   }
 
   get expanded(): string[] {
-    return this.#expansion.expanded(
-      this.#connection.current?.document.tree.actorIds() ?? []
-    );
+    return this.#expansion.expanded(this.#rows.ids());
   }
 
   get hasSelection(): boolean {
@@ -179,7 +185,9 @@ export class HierarchyController {
   readonly handleSelect = (
     event: CustomEvent<JollySelectDetail>
   ): void => {
-    this.#connection.current?.selection.select(event.detail.selected);
+    this.#connection.current?.selection.select(
+      event.detail.selected.filter((id) => this.#rows.anchorRow(id) === null)
+    );
   };
 
   readonly handleToggleExpand = (
@@ -212,6 +220,10 @@ export class HierarchyController {
       event.detail.visible
     );
   };
+
+  readonly acceptDrop = (
+    detail: JollyReparentDetail
+  ): boolean => this.#rows.accepts(detail);
 
   readonly handleReparent = (
     event: CustomEvent<JollyReparentDetail>
@@ -249,6 +261,14 @@ export class HierarchyController {
     if (id === null || editing === null) {
       return this.addMenu();
     }
+    const row = this.#rows.anchorRow(id);
+    if (row !== null) {
+      return MenuSession.forRow(
+        HierarchyController.#addEntries(editing.presets),
+        () => editing.document.tree.has(row.ownerId),
+        (action) => this.#add(action, row.ownerId, row.anchor)
+      );
+    }
     if (!editing.selection.has(id)) {
       editing.selection.select([id]);
     }
@@ -284,21 +304,22 @@ export class HierarchyController {
 
   async #add(
     action: AddAction,
-    parentId: string | null
+    parentId: string | null,
+    anchor?: SceneAnchorJSON
   ): Promise<void> {
     const editing = this.#connection.current;
     if (editing === null) {
       return;
     }
     if (action === "add-instance") {
-      await editing.actions.addInstance(parentId);
+      await editing.actions.addInstance(parentId, anchor);
 
       return;
     }
 
     const preset = editing.presets.find(action);
     if (preset !== undefined) {
-      await editing.actions.addActor(preset, parentId);
+      await editing.actions.addActor(preset, parentId, anchor);
     }
   }
 }

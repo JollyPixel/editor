@@ -19,6 +19,7 @@ import {
 import { createSceneSetup } from "./sceneSetup.ts";
 import { createSceneAssets } from "./sceneAssets.ts";
 import { createWarningLogger } from "./sceneFile.ts";
+import { MARKERS_DEFINITION } from "./sceneAnchors.ts";
 
 // CONSTANTS
 const kTextureType = new AssetType<string>("texture");
@@ -54,7 +55,10 @@ export function createInstance(
   const instance = new SceneInstance({
     world: world as any,
     mode,
-    components: new ComponentDefinitions().register(TAG_DEFINITION),
+    components: new ComponentDefinitions().register(
+      TAG_DEFINITION,
+      MARKERS_DEFINITION
+    ),
     assets: {
       resolve: (reference, _type) => {
         resolved.push(reference);

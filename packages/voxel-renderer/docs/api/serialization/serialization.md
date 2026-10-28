@@ -33,6 +33,7 @@ interface VoxelLayerJSON {
   rank: string;
   position?: { x: number; y: number; z: number }; // { x: 0, y: 0, z: 0 }
   compositing?: "replace" | "composite"; // "composite"
+  anchor?: boolean; // false, written only when true
   properties?: Record<string, any>;
   palette: VoxelEntryJSON[];
   chunks: VoxelChunkJSON[];

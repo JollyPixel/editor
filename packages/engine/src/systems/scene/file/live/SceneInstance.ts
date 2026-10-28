@@ -11,10 +11,16 @@ import type {
   ComponentAssetResolver,
   SceneMode
 } from "../definitions/ComponentDefinition.ts";
+import type {
+  ComponentAnchor,
+  SceneActorAnchor,
+  SceneAnchorsReader
+} from "../definitions/ComponentAnchors.ts";
 import type { ComponentDefinitions } from "../definitions/ComponentDefinitions.ts";
 import type {
   JSONObject,
   SceneActorFile,
+  SceneAnchorFile,
   SceneComponentFile
 } from "../SceneFile.ts";
 import {
@@ -22,6 +28,7 @@ import {
   type ScenePrefabs
 } from "../ScenePrefabs.ts";
 import { writeSceneTransform } from "../sceneTransform.ts";
+import { SceneAnchors } from "./SceneAnchors.ts";
 
 export interface SceneInstanceOptions<
   TContext = WorldDefaultContext
@@ -55,11 +62,12 @@ interface PrefabInstance {
 export type SceneInstanceEvents = {
   componentBuilt: (built: SceneInstanceComponent) => void;
   componentDropped: (component: Component) => void;
+  anchorsChange: () => void;
 };
 
 export class SceneInstance<
   TContext = WorldDefaultContext
-> extends Emitter<SceneInstanceEvents> {
+> extends Emitter<SceneInstanceEvents> implements SceneAnchorsReader {
   #world: World<any, TContext>;
   #mode: SceneMode;
   #definitions: ComponentDefinitions;
@@ -71,6 +79,9 @@ export class SceneInstance<
   #ids = new Map<THREE.Object3D, string>();
   #components = new Map<string, SceneInstanceComponent>();
   #instances = new Map<string, PrefabInstance>();
+  #anchors = new SceneAnchors(
+    () => this.emit("anchorsChange")
+  );
 
   constructor(
     options: SceneInstanceOptions<TContext>
@@ -107,6 +118,24 @@ export class SceneInstance<
 
   components(): IterableIterator<SceneInstanceComponent> {
     return this.#components.values();
+  }
+
+  * anchors(
+    actorId: string
+  ): IterableIterator<SceneActorAnchor> {
+    const owner = this.#actors.get(actorId);
+    if (owner !== undefined) {
+      yield* this.#anchors.list(owner);
+    }
+  }
+
+  findAnchor(
+    actorId: string,
+    anchor: SceneAnchorFile
+  ): ComponentAnchor | null {
+    const owner = this.#actors.get(actorId);
+
+    return owner === undefined ? null : this.#anchors.find(owner, anchor);
   }
 
   add(
@@ -162,7 +191,8 @@ export class SceneInstance<
 
   reparent(
     id: string,
-    parentId: string | null
+    parentId: string | null,
+    anchor?: SceneAnchorFile
   ): void {
     const actor = this.#actors.get(id);
     if (actor === undefined) {
@@ -173,6 +203,7 @@ export class SceneInstance<
       null :
       this.#actors.get(parentId) ?? null;
     actor.setParent(parent, true);
+    this.#seat(actor, parent, anchor);
   }
 
   write(
@@ -231,6 +262,7 @@ export class SceneInstance<
     for (const id of [...this.#components.keys()]) {
       this.#forgetComponent(id);
     }
+    this.#anchors.clear();
     this.#actors.clear();
     this.#ids.clear();
     this.#instances.clear();
@@ -326,6 +358,7 @@ export class SceneInstance<
       visible: file.visible,
       persistentId: restoreId ? file.id : undefined
     });
+    this.#seat(actor, parent, file.anchor);
     writeSceneTransform(actor.object3D, file.transform);
     this.#actors.set(file.id, actor);
     this.#ids.set(actor.object3D, file.id);
@@ -371,7 +404,21 @@ export class SceneInstance<
         component
       };
       this.#components.set(entry.id, built);
+      const anchors = this.#definitions.anchors(component);
+      if (anchors !== null) {
+        this.#anchors.provide(entry.id, actor, anchors);
+      }
       this.emit("componentBuilt", built);
+    }
+  }
+
+  #seat(
+    actor: Actor<TContext>,
+    parent: Actor<TContext> | null,
+    anchor: SceneAnchorFile | undefined
+  ): void {
+    if (parent !== null && anchor !== undefined) {
+      this.#anchors.socket(parent, anchor).add(actor.object3D);
     }
   }
 
@@ -381,6 +428,7 @@ export class SceneInstance<
     const built = this.#components.get(id);
     if (built !== undefined) {
       this.#components.delete(id);
+      this.#anchors.forget(id);
       this.emit("componentDropped", built.component);
     }
   }
@@ -401,6 +449,12 @@ function scopedActorFile(
         ...component,
         id: `${instanceId}/${component.id}`
       };
-    })
+    }),
+    ...file.anchor === undefined ? {} : {
+      anchor: {
+        component: `${instanceId}/${file.anchor.component}`,
+        key: file.anchor.key
+      }
+    }
   };
 }

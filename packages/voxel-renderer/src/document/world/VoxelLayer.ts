@@ -41,6 +41,11 @@ export interface VoxelLayerConfigurableOptions {
    */
   visible?: boolean;
   /**
+   * Whether a scene can attach actors to the layer origin.
+   * @default false
+   */
+  anchor?: boolean;
+  /**
    * Arbitrary layer properties.
    * @default {}
    */
@@ -95,6 +100,7 @@ export interface VoxelLayerCloneOptions extends Partial<VoxelLayerOptions> {
 }
 
 export class VoxelLayer {
+  anchor: boolean;
   compositing: "replace" | "composite";
   id: string;
   name: string;
@@ -136,6 +142,7 @@ export class VoxelLayer {
       rank = kDefaultRank,
       chunkSize,
       visible = true,
+      anchor = false,
       compositing = "composite",
       position = { x: 0, y: 0, z: 0 },
       properties = {}
@@ -151,6 +158,7 @@ export class VoxelLayer {
     this.#chunkShift = Math.log2(chunkSize);
     this.#chunkMask = chunkSize - 1;
     this.visible = visible;
+    this.anchor = anchor;
     this.compositing = compositing;
     this.position = structuredClone(position);
     this.properties = structuredClone(properties);
@@ -688,6 +696,7 @@ export class VoxelLayer {
       order: this.order,
       rank: this.rank,
       visible: this.visible,
+      anchor: this.anchor,
       compositing: this.compositing,
       position: this.position,
       properties: this.properties,

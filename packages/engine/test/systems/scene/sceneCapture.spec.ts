@@ -26,6 +26,7 @@ import {
   createComponentFile,
   createSceneFile
 } from "../../helpers/scene/sceneFile.ts";
+import { MARKERS_DEFINITION } from "../../helpers/scene/sceneAnchors.ts";
 
 class ModelComponent extends ActorComponent {
   readonly model: string | null;
@@ -174,5 +175,25 @@ describe("Systems.FileScene capture", () => {
     assert.strictEqual(patrol.target, sm.getActor("door"));
     assert.strictEqual(reloaded.getComponent(ModelComponent)!.model, "knight");
     assert.ok(sm.getActor("coin")!.getComponent(MeshRenderer));
+  });
+
+  test("keeps the anchor an actor sits on", async() => {
+    const { sm } = createSceneSetup(createSceneAssets());
+    const anchor = { component: "markers", key: "spawn" };
+    const scene = new FileScene("map", createSceneFile([
+      createActorFile("map", {
+        components: [createComponentFile("markers", "Markers", { spawn: 5 })]
+      }),
+      createActorFile("hero", { parentId: "map", anchor })
+    ]), {
+      components: new ComponentDefinitions().register(MARKERS_DEFINITION)
+    });
+    await sm.loadScene(scene).done;
+    sm.beginFrame();
+
+    const [, hero] = scene.capture().actors;
+
+    assert.deepEqual(hero.anchor, anchor);
+    assert.deepEqual(hero.transform.position, { x: 0, y: 0, z: 0 });
   });
 });

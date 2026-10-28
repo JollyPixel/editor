@@ -235,6 +235,7 @@ export class SceneTree {
         return this.#actors.has(command.id);
       case "actor-moved":
         return this.#actors.has(command.id) &&
+          (command.anchor === undefined || command.parentId !== null) &&
           this.#actors.isParent(command.parentId) &&
           !this.isInstance(command.parentId) &&
           !this.#actors.isWithin(command.parentId, command.id);
@@ -274,9 +275,14 @@ export class SceneTree {
       case "actor-moved":
         this.#actors.move(command.id, command.parentId, command.beforeId);
         this.#actors.update(command.id, (actor) => {
+          const { anchor: _anchor, ...unanchored } = actor;
+
           return {
-            ...actor,
-            transform: structuredClone(command.transform)
+            ...unanchored,
+            transform: structuredClone(command.transform),
+            ...command.anchor === undefined ?
+              {} :
+              { anchor: structuredClone(command.anchor) }
           };
         });
         break;
@@ -533,6 +539,9 @@ function findActorListProblem(
     const listedParent = actor.parentId !== null && actorIds.has(actor.parentId);
     if (!listedParent && !context.isOuterParent(actor, index)) {
       return problem("actor", actor.id, `has no parent ${actor.parentId} before it`);
+    }
+    if (actor.anchor !== undefined && actor.parentId === null) {
+      return problem("actor", actor.id, "has an anchor but no parent");
     }
     if (
       actor.parentId !== null &&

@@ -33,6 +33,7 @@ export function restoreVoxelWorld(
       name: layerData.name,
       rank: layerData.rank,
       visible: layerData.visible,
+      anchor: layerData.anchor,
       compositing: layerData.compositing,
       position: layerData.position,
       properties: layerData.properties

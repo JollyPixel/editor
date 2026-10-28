@@ -145,13 +145,24 @@ export class VoxelLayerStructure {
     layer: VoxelLayer,
     command: StructureCommandOf<"updated">
   ): VoxelLayerStructureCommand {
-    const options: VoxelLayerUpdate = { ...command.metadata.options };
+    const options: VoxelLayerUpdate = {
+      ...command.metadata.options
+    };
+
     if (options.name !== undefined) {
-      options.name = this.#layers.uniqueName(options.name, layer);
+      options.name = this.#layers.uniqueName(
+        options.name,
+        layer
+      );
       layer.name = options.name;
     }
     if (options.properties) {
-      layer.properties = structuredClone(options.properties);
+      layer.properties = structuredClone(
+        options.properties
+      );
+    }
+    if (options.anchor !== undefined) {
+      layer.anchor = options.anchor;
     }
     if (options.visible === layer.visible) {
       layer.markAllDirty();

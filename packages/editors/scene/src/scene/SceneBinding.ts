@@ -9,6 +9,7 @@ import {
   applyComponentChange,
   type ComponentChange,
   type SceneActorJSON,
+  type SceneAnchorJSON,
   type SceneChange,
   type SceneDocument,
   type SceneEnvironmentJSON,
@@ -46,9 +47,12 @@ export type SceneBindingEvents = {
   actorsChange: () => void;
   componentBuilt: (bound: BoundComponent) => void;
   componentDropped: (component: Component) => void;
+  anchorsChange: () => void;
 };
 
-export class SceneBinding extends Emitter<SceneBindingEvents> {
+export class SceneBinding
+  extends Emitter<SceneBindingEvents>
+  implements Systems.SceneAnchorsReader {
   #world: Systems.World;
   #document: SceneDocument;
   #instance: Systems.SceneInstance;
@@ -98,6 +102,10 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
     this.#instance.on("componentDropped", (component) => {
       this.emit("componentDropped", component);
     });
+    this.#instance.on("anchorsChange", () => {
+      this.emit("anchorsChange");
+      this.#world.invalidate();
+    });
 
     this.#rebuild();
     this.#document.on("change", this.#onChange);
@@ -122,6 +130,19 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
 
   components(): IterableIterator<BoundComponent> {
     return this.#instance.components();
+  }
+
+  anchors(
+    actorId: string
+  ): IterableIterator<Systems.SceneActorAnchor> {
+    return this.#instance.anchors(actorId);
+  }
+
+  findAnchor(
+    actorId: string,
+    anchor: SceneAnchorJSON
+  ): Systems.ComponentAnchor | null {
+    return this.#instance.findAnchor(actorId, anchor);
   }
 
   worldBounds(
@@ -306,7 +327,7 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
   ): void {
     const file = this.#document.tree.peekActor(id);
     if (file !== undefined) {
-      this.#instance.reparent(id, file.parentId);
+      this.#instance.reparent(id, file.parentId, file.anchor);
       this.#syncActor(id);
     }
   }

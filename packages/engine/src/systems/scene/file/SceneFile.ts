@@ -35,17 +35,29 @@ export interface SceneComponentFile {
   assets: Record<string, AssetReferenceData | null>;
 }
 
+export interface SceneAnchorFile {
+  /**
+   * A component of the actor's parent.
+   */
+  component: string;
+  key: string;
+}
+
 export interface SceneActorFile {
   id: string;
   name: string;
   parentId: string | null;
   visible: boolean;
+  /**
+   * Relative to the anchor when the actor has one, else to its parent.
+   */
   transform: SceneTransformFile;
   components: SceneComponentFile[];
   /**
    * Reserved for prefab instances.
    */
   prefab?: AssetReferenceData;
+  anchor?: SceneAnchorFile;
 }
 
 export type SceneEnvironmentKind = "none" | "room";

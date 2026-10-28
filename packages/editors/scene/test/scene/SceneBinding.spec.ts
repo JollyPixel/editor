@@ -89,7 +89,7 @@ describe("SceneBinding", () => {
     const childId = document.addActor({ name: "Child", parentId: rootId })!;
     const { binding } = createProbeBinding(document);
 
-    document.move(childId, null, {
+    document.move(childId, { parentId: null }, {
       transform: {
         position: { x: 4, y: 0, z: 0 },
         rotation: { x: 0, y: 90, z: 0 },
@@ -101,6 +101,32 @@ describe("SceneBinding", () => {
     assert.strictEqual(child.parent, null);
     assert.deepEqual(child.object3D.position.toArray(), [4, 0, 0]);
     assert.ok(Math.abs(child.object3D.rotation.y - (Math.PI / 2)) < 1e-9);
+  });
+
+  test("moves an actor onto the anchor a move names and lists its owner's anchors", () => {
+    const document = new SceneDocument();
+    const mapId = document.addActor({
+      name: "Map",
+      components: [{ id: "map", type: "Anchored", data: {}, assets: {} }]
+    })!;
+    const coinId = document.addActor({ name: "Coin" })!;
+    const { binding } = createProbeBinding(document);
+
+    document.move(coinId, {
+      parentId: mapId,
+      anchor: { component: "map", key: "object:spawn" }
+    }, {
+      transform: {
+        position: { x: 0, y: 1, z: 0 },
+        rotation: { x: 0, y: 0, z: 0 },
+        scale: { x: 1, y: 1, z: 1 }
+      }
+    });
+
+    const coin = binding.actor(coinId)!;
+    assert.strictEqual(coin.parent, binding.actor(mapId));
+    assert.deepEqual(coin.object3D.getWorldPosition(new THREE.Vector3()).toArray(), [5, 1, 0]);
+    assert.deepEqual([...binding.anchors(mapId)].map(({ anchor }) => anchor.label), ["Spawn"]);
   });
 
   test("rebuilds every actor and the environment when the document resets", () => {

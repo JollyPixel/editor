@@ -49,6 +49,7 @@ function makeRichWorld(): VoxelWorld {
   ground.setVoxelAt({ x: 37, y: 3, z: 2 }, makeVoxelEntry(2, 1));
   ground.setVoxelAt({ x: 31, y: 0, z: -17 }, makeVoxelEntry(3, 2));
   ground.setVoxelAt(kMergedCell, kMergedEntry);
+  ground.anchor = true;
   const glass = world.addLayer("Glass", { compositing: "replace" });
   glass.visible = false;
   glass.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(4, 0));
@@ -78,6 +79,8 @@ describe("voxel world round-trip", () => {
         .some(([, , , , partner]) => partner !== -1)
     );
     assert.equal(restored.getLayer("Glass")?.compositing, "replace");
+    assert.equal(restored.getLayer("Ground")?.anchor, true);
+    assert.equal(restored.getLayer("Glass")?.anchor, false);
     assert.deepEqual(restored.templates.get("house")?.properties, { tag: "home" });
   });
 

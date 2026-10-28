@@ -11,11 +11,21 @@ export function copySubtree(
   source: readonly Readonly<SceneActorJSON>[]
 ): SceneActorJSON[] {
   const ids = new Map<string, string>();
+  const componentIds = new Map<string, string>();
 
   return source.map((actor, index) => {
     const copy = structuredClone(actor);
     const id = randomId();
     ids.set(actor.id, id);
+    const components = copy.components.map((component) => {
+      const componentId = randomId();
+      componentIds.set(component.id, componentId);
+
+      return {
+        ...component,
+        id: componentId
+      };
+    });
 
     return {
       ...copy,
@@ -24,12 +34,13 @@ export function copySubtree(
       parentId: actor.parentId === null ?
         null :
         ids.get(actor.parentId) ?? actor.parentId,
-      components: copy.components.map((component) => {
-        return {
-          ...component,
-          id: randomId()
-        };
-      })
+      components,
+      ...copy.anchor === undefined ? {} : {
+        anchor: {
+          ...copy.anchor,
+          component: componentIds.get(copy.anchor.component) ?? copy.anchor.component
+        }
+      }
     };
   });
 }
