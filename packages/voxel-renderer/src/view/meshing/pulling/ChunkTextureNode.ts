@@ -21,7 +21,8 @@ export abstract class ChunkTextureNode extends TextureNode {
     super(value, uvNode, levelNode, biasNode);
     Object.defineProperty(this, "updateType", {
       get: () => NodeUpdateType.OBJECT,
-      set: () => undefined
+      // oxlint-disable-next-line no-empty-function
+      set: () => {}
     });
   }
 
@@ -48,8 +49,14 @@ export abstract class ChunkTextureNode extends TextureNode {
   #resolveTexture(
     object: THREE.Object3D | null
   ): THREE.Texture {
-    const geometry = object instanceof THREE.Mesh ? object.geometry : null;
+    const geometry = object instanceof THREE.Mesh
+      ? object.geometry
+      : null;
 
-    return this.pick(geometry instanceof PulledChunkGeometry ? geometry : null);
+    return this.pick(
+      geometry instanceof PulledChunkGeometry
+        ? geometry
+        : null
+    );
   }
 }

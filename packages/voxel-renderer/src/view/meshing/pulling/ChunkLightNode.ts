@@ -24,7 +24,8 @@ export class ChunkLightNode extends Texture3DNode {
     super(value, uvNode, levelNode);
     Object.defineProperty(this, "updateType", {
       get: () => NodeUpdateType.OBJECT,
-      set: () => undefined
+      // oxlint-disable-next-line no-empty-function
+      set: () => {}
     });
   }
 
