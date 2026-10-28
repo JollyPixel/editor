@@ -8,6 +8,7 @@ import {
   ChunkCoord,
   type ChunkKey,
   type TerrainReader,
+  type TileCoord,
   type TilePatch
 } from "@jolly-pixel/terrain.renderer";
 
@@ -16,16 +17,12 @@ import { touchedChunks } from "../network/chunkParts.ts";
 import { encodeHeights } from "../network/heights.ts";
 import { patchBatches } from "../network/patchBatches.ts";
 import {
-  currentSplatTilePatches,
   encodeMaterials,
-  encodeSplat,
   encodeSplatTilePatch,
   type SplatTilePatch
 } from "../network/splat.ts";
-import {
-  currentTilePatches,
-  encodeTilePatch
-} from "../network/tilePatches.ts";
+import { currentTiles } from "../network/tilePatchCommands.ts";
+import { encodeTilePatch } from "../network/tilePatches.ts";
 import type {
   ChunkEntry,
   TerrainCommand,
@@ -36,6 +33,7 @@ import type {
   TerrainTextureSize
 } from "../network/types.ts";
 import {
+  captureMaterialImage,
   invertMaterialCommand,
   isMaterialCommand
 } from "./materialCommands.ts";
@@ -50,6 +48,7 @@ import {
 import {
   acceptsTerrainCommand,
   applyTerrainCommand,
+  loadedChunkEntry,
   loadTerrainSnapshot,
   terrainSnapshot
 } from "./terrainState.ts";
@@ -187,32 +186,38 @@ export class TerrainDocument extends CommandDocument<
   patchTiles(
     patches: Iterable<TilePatch>
   ): boolean {
-    const tiles = [...patches]
-      .filter(({ tile }) => this.terrain.has(tile.chunk))
-      .map(encodeTilePatch);
-    let committed = false;
-    for (const batch of patchBatches(tiles)) {
-      committed = this.commit({
-        action: "heights-patched",
-        tiles: batch
-      }) || committed;
-    }
-
-    return committed;
+    return this.#commitBatches(
+      this.#loaded(patches).map(encodeTilePatch),
+      (tiles) => {
+        return { action: "heights-patched", tiles };
+      }
+    );
   }
 
   patchSplat(
     patches: Iterable<SplatTilePatch>
   ): boolean {
-    const tiles = [...patches]
-      .filter(({ tile }) => this.terrain.has(tile.chunk))
-      .map(encodeSplatTilePatch);
+    return this.#commitBatches(
+      this.#loaded(patches).map(encodeSplatTilePatch),
+      (tiles) => {
+        return { action: "splat-patched", tiles };
+      }
+    );
+  }
+
+  #loaded<TPatch extends { readonly tile: TileCoord; }>(
+    patches: Iterable<TPatch>
+  ): TPatch[] {
+    return [...patches].filter(({ tile }) => this.terrain.has(tile.chunk));
+  }
+
+  #commitBatches<TTile>(
+    tiles: readonly TTile[],
+    command: (batch: TTile[]) => TerrainCommand
+  ): boolean {
     let committed = false;
     for (const batch of patchBatches(tiles)) {
-      committed = this.commit({
-        action: "splat-patched",
-        tiles: batch
-      }) || committed;
+      committed = this.commit(command(batch)) || committed;
     }
 
     return committed;
@@ -238,22 +243,13 @@ function captureImage(
   { terrain, materials }: TerrainModelReader,
   command: TerrainCommand
 ): TerrainImage {
-  if (!isMaterialCommand(command)) {
-    return {
-      chunks: touchedChunks(command).map(({ x, z }) => chunkImage(terrain, x, z)),
-      materials: [],
-      textureSize: null
-    };
+  if (isMaterialCommand(command)) {
+    return captureMaterialImage(materials, command);
   }
-  if (command.action === "texture-size-changed") {
-    return { chunks: [], materials: [], textureSize: materials.textureSize };
-  }
-
-  const id = command.action === "material-added" ? command.material.id : command.id;
 
   return {
-    chunks: [],
-    materials: [{ id, material: materials.material(id) ?? null }],
+    chunks: touchedChunks(command).map(({ x, z }) => chunkImage(terrain, x, z)),
+    materials: [],
     textureSize: null
   };
 }
@@ -274,24 +270,11 @@ function invertCommand(
 
       return chunk === undefined ?
         [] :
-        [{
-          action: "chunk-added",
-          x: command.x,
-          z: command.z,
-          heights: encodeHeights(chunk.copyHeights()),
-          splat: encodeSplat(chunk.splat.copy())
-        }];
+        [{ action: "chunk-added", ...loadedChunkEntry(chunk) }];
     }
     case "heights-patched":
-      return [{
-        action: "heights-patched",
-        tiles: currentTilePatches(terrain, command.tiles)
-      }];
     case "splat-patched":
-      return [{
-        action: "splat-patched",
-        tiles: currentSplatTilePatches(terrain, command.tiles)
-      }];
+      return [currentTiles(terrain, command)];
   }
 }
 
@@ -303,12 +286,7 @@ function chunkImage(
   const coord = new ChunkCoord(x, z);
   const chunk = terrain.chunk(coord);
   if (chunk !== undefined) {
-    return {
-      x,
-      z,
-      heights: encodeHeights(chunk.copyHeights()),
-      splat: encodeSplat(chunk.splat.copy())
-    };
+    return loadedChunkEntry(chunk);
   }
 
   const overview = terrain.overview.samples(coord);

@@ -26,10 +26,10 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import {
   decodeMaterialImage,
-  MaterialTextures,
-  type TextureLease
+  MaterialTextures
 } from "../features/materials/rendering/MaterialTextures.ts";
 import type { MaterialSelection } from "../features/materials/model/MaterialSelection.ts";
+import type { TextureLeases } from "../features/materials/model/TextureLeases.ts";
 import { PeerBrushRings } from "../features/sculpt/collaboration/PeerBrushRings.ts";
 import type { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
 import type { OverlaySettings } from "../features/overlays/model/OverlaySettings.ts";
@@ -58,7 +58,7 @@ export interface TerrainEditorSceneOptions {
   overlaySettings: OverlaySettings;
   history: TerrainHistory;
   room: Room;
-  textures: (assetId: string) => TextureLease;
+  leases: TextureLeases;
   selection: MaterialSelection;
 }
 
@@ -78,7 +78,7 @@ export class TerrainEditorScene extends Systems.Scene {
   #overlaySettings: OverlaySettings;
   #history: TerrainHistory;
   #room: Room;
-  #textures: (assetId: string) => TextureLease;
+  #leases: TextureLeases;
   #selection: MaterialSelection;
   #parts: TerrainSceneParts | null = null;
   #cameraPosition = new THREE.Vector3();
@@ -93,7 +93,7 @@ export class TerrainEditorScene extends Systems.Scene {
     this.#overlaySettings = options.overlaySettings;
     this.#history = options.history;
     this.#room = options.room;
-    this.#textures = options.textures;
+    this.#leases = options.leases;
     this.#selection = options.selection;
   }
 
@@ -148,7 +148,7 @@ export class TerrainEditorScene extends Systems.Scene {
     const materialTextures = new MaterialTextures({
       document: this.#document,
       view,
-      lease: this.#textures,
+      leases: this.#leases,
       decode: decodeMaterialImage,
       failed: (assetId, error) => console.warn(`[terrain] Texture ${assetId} cannot be drawn.`, error)
     });

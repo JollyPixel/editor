@@ -19,9 +19,12 @@ import {
 // Import Internal Dependencies
 import { TextureDocument } from "#src/features/materials/model/TextureDocument.ts";
 import {
-  MaterialTextures,
-  type DecodedImage,
+  TextureLeases,
   type TextureLease
+} from "#src/features/materials/model/TextureLeases.ts";
+import {
+  MaterialTextures,
+  type DecodedImage
 } from "#src/features/materials/rendering/MaterialTextures.ts";
 
 interface LabelledImage extends DecodedImage {
@@ -120,7 +123,7 @@ function materialsSetup(
   const materials = new MaterialTextures({
     document,
     view,
-    lease,
+    leases: new TextureLeases(lease),
     decode,
     failed: (assetId) => failed.push(assetId)
   });

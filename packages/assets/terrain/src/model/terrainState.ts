@@ -2,10 +2,13 @@
 import {
   CHUNK_SAMPLE_COUNT,
   ChunkCoord,
+  DEFAULT_MATERIAL_TEXTURE_SIZE,
   OVERVIEW_SAMPLE_COUNT,
   SplatMap,
   type SplatTexels,
+  type TerrainChunk,
   type TerrainReader,
+  type TileCoord,
   type TilePatch
 } from "@jolly-pixel/terrain.renderer";
 import { InvalidEntryError } from "@jolly-pixel/asset.common";
@@ -31,7 +34,6 @@ import {
   isMaterialCommand
 } from "./materialCommands.ts";
 import {
-  DEFAULT_TERRAIN_TEXTURE_SIZE,
   GROUND_MATERIAL,
   TerrainMaterials
 } from "./TerrainMaterials.ts";
@@ -41,8 +43,6 @@ import type {
 } from "./TerrainModel.ts";
 import type {
   ChunkEntry,
-  EncodedSplatTilePatch,
-  EncodedTilePatch,
   TerrainChunkCommand,
   TerrainCommand,
   TerrainManifest,
@@ -51,6 +51,13 @@ import type {
 
 // CONSTANTS
 export const MAX_TERRAIN_CHUNKS = 4096;
+
+export interface LoadedChunkEntry {
+  readonly x: number;
+  readonly z: number;
+  readonly heights: string;
+  readonly splat: string;
+}
 
 type TerrainEdit =
   | {
@@ -159,10 +166,14 @@ function terrainEdit(
   command: TerrainChunkCommand
 ): TerrainEdit | null {
   if (command.action === "heights-patched") {
-    return decodeTilePatches(command.tiles);
+    const patches = uniquePatches(command.tiles, decodeTilePatch);
+
+    return patches === null ? null : { action: command.action, patches };
   }
   if (command.action === "splat-patched") {
-    return decodeSplatTilePatches(command.tiles);
+    const patches = uniquePatches(command.tiles, decodeSplatTilePatch);
+
+    return patches === null ? null : { action: command.action, patches };
   }
 
   const coord = new ChunkCoord(command.x, command.z);
@@ -179,13 +190,14 @@ function terrainEdit(
   return { action: "chunk-added", coord, heights, splat };
 }
 
-function decodeSplatTilePatches(
-  tiles: readonly EncodedSplatTilePatch[]
-): TerrainEdit | null {
-  const patches: SplatTilePatch[] = [];
+function uniquePatches<TEncoded, TPatch extends { readonly tile: TileCoord; }>(
+  tiles: readonly TEncoded[],
+  decode: (encoded: TEncoded) => TPatch | null
+): TPatch[] | null {
+  const patches: TPatch[] = [];
   const keys = new Set<string>();
   for (const encoded of tiles) {
-    const patch = decodeSplatTilePatch(encoded);
+    const patch = decode(encoded);
     if (patch === null || keys.has(patch.tile.key)) {
       return null;
     }
@@ -193,24 +205,7 @@ function decodeSplatTilePatches(
     patches.push(patch);
   }
 
-  return { action: "splat-patched", patches };
-}
-
-function decodeTilePatches(
-  tiles: readonly EncodedTilePatch[]
-): TerrainEdit | null {
-  const patches: TilePatch[] = [];
-  const keys = new Set<string>();
-  for (const encoded of tiles) {
-    const patch = decodeTilePatch(encoded);
-    if (patch === null || keys.has(patch.tile.key)) {
-      return null;
-    }
-    keys.add(patch.tile.key);
-    patches.push(patch);
-  }
-
-  return { action: "heights-patched", patches };
+  return patches;
 }
 
 export function terrainSnapshot(
@@ -220,14 +215,7 @@ export function terrainSnapshot(
     chunks: Array.from(terrain.overview.coords(), (coord) => {
       const chunk = terrain.chunk(coord);
 
-      return chunk === undefined ?
-        overviewEntry(terrain, coord) :
-        {
-          x: coord.x,
-          z: coord.z,
-          heights: encodeHeights(chunk.copyHeights()),
-          splat: encodeSplat(chunk.splat.copy())
-        };
+      return chunk === undefined ? overviewEntry(terrain, coord) : loadedChunkEntry(chunk);
     }),
     materials: materials.materials(),
     textureSize: materials.textureSize
@@ -274,26 +262,6 @@ export function loadTerrainManifest(
   model.materials.load(materials.materials(), materials.textureSize);
 }
 
-export function loadChunkHeights(
-  { terrain }: TerrainModel,
-  coord: ChunkCoord,
-  heights: Float32Array
-): void {
-  if (terrain.knows(coord)) {
-    terrain.loadChunk(coord, heights);
-  }
-}
-
-export function loadChunkSplat(
-  { terrain }: TerrainModel,
-  coord: ChunkCoord,
-  splat: SplatTexels
-): void {
-  if (terrain.has(coord)) {
-    terrain.loadSplat(coord, splat);
-  }
-}
-
 export function loadTerrainSnapshot(
   model: TerrainModel,
   snapshot: TerrainSnapshot
@@ -338,6 +306,17 @@ export function loadTerrainSnapshot(
   model.materials.load(materials.materials(), materials.textureSize);
 }
 
+export function loadedChunkEntry(
+  chunk: TerrainChunk
+): LoadedChunkEntry {
+  return {
+    x: chunk.coord.x,
+    z: chunk.coord.z,
+    heights: encodeHeights(chunk.copyHeights()),
+    splat: encodeSplat(chunk.splat.copy())
+  };
+}
+
 function overviewEntry(
   terrain: TerrainReader,
   coord: ChunkCoord
@@ -375,7 +354,7 @@ function materialsOrThrow(
 }
 
 function loadedMaterials(
-  { materials = [GROUND_MATERIAL], textureSize = DEFAULT_TERRAIN_TEXTURE_SIZE }: TerrainManifest
+  { materials = [GROUND_MATERIAL], textureSize = DEFAULT_MATERIAL_TEXTURE_SIZE }: TerrainManifest
 ): TerrainMaterials {
   const loaded = new TerrainMaterials();
   loaded.load(materials, textureSize);

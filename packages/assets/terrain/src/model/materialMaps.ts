@@ -1,3 +1,9 @@
+// Import Third-party Dependencies
+import {
+  MATERIAL_MAPS,
+  type MaterialMap
+} from "@jolly-pixel/terrain.renderer";
+
 // Import Internal Dependencies
 import type {
   TerrainMaterialData,
@@ -7,11 +13,6 @@ import type {
   TerrainMaterials,
   TerrainMaterialsReader
 } from "./TerrainMaterials.ts";
-
-// CONSTANTS
-export const TERRAIN_MATERIAL_MAPS = ["albedo", "normal", "orm", "height"] as const;
-
-export type TerrainMaterialMapKind = typeof TERRAIN_MATERIAL_MAPS[number];
 
 export function materialMaps(
   materials: TerrainMaterialsReader
@@ -31,22 +32,24 @@ export function rebindMaterialMaps(
   idMap: ReadonlyMap<string, string>
 ): void {
   for (const material of materials.materials()) {
-    const changes: Partial<Record<TerrainMaterialMapKind, TerrainMaterialMap>> = {};
-    for (const kind of TERRAIN_MATERIAL_MAPS) {
+    const changes: Partial<Record<MaterialMap, TerrainMaterialMap>> = {};
+    for (const kind of MATERIAL_MAPS) {
       const map = material[kind];
       const id = map === null ? undefined : idMap.get(map.id);
       if (map !== null && id !== undefined) {
         changes[kind] = { ...map, id };
       }
     }
-    materials.update(material.id, changes);
+    if (Object.keys(changes).length > 0) {
+      materials.update(material.id, changes);
+    }
   }
 }
 
 function referencedMaps(
   material: TerrainMaterialData
 ): TerrainMaterialMap[] {
-  return TERRAIN_MATERIAL_MAPS.flatMap((kind) => {
+  return MATERIAL_MAPS.flatMap((kind) => {
     const map = material[kind];
 
     return map === null ? [] : [map];

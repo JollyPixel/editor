@@ -9,7 +9,10 @@ import {
   type AssetKindPackage,
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
-import { InvalidEntryError } from "@jolly-pixel/asset.common";
+import {
+  encodeBase64,
+  InvalidEntryError
+} from "@jolly-pixel/asset.common";
 import { ChunkCoord } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
@@ -22,10 +25,12 @@ import {
   TERRAIN_KIND
 } from "./terrain.ts";
 import {
+  encodeChunkPart,
+  loadChunkPart
+} from "./terrainParts.ts";
+import {
   acceptsTerrainCommand,
   applyTerrainCommand,
-  loadChunkHeights,
-  loadChunkSplat,
   loadTerrainManifest,
   terrainManifest
 } from "../model/terrainState.ts";
@@ -47,19 +52,8 @@ import {
 import {
   chunkPartIds,
   outsideCommand,
-  parseChunkPart,
   touchedParts
 } from "../network/chunkParts.ts";
-import {
-  decodeHeightBytes,
-  encodeHeightBytes,
-  encodeHeights
-} from "../network/heights.ts";
-import {
-  decodeSplatBytes,
-  encodeSplat,
-  encodeSplatBytes
-} from "../network/splat.ts";
 import { terrainWriteKeys } from "../network/TerrainCommandKeys.ts";
 import {
   TERRAIN_RELAY_SCHEMAS,
@@ -149,36 +143,19 @@ export function terrainAssetKind(
       list: (manifest) => TERRAIN_FILE.decode(manifest).chunks
         .flatMap(({ x, z }) => chunkPartIds(new ChunkCoord(x, z))),
       load: (state, partId, content) => {
-        const part = parseChunkPart(partId);
-        if (part?.kind === "splat") {
-          const splat = decodeSplatBytes(content);
-          if (splat === null) {
-            throw new InvalidAssetFileError(TERRAIN_KIND, `part "${partId}" is not a valid splat map`);
-          }
-          loadChunkSplat(state, part.coord, splat);
-
-          return;
-        }
-
-        const heights = decodeHeightBytes(content);
-        if (part === null || heights === null) {
+        if (!loadChunkPart(state, partId, content)) {
           throw new InvalidAssetFileError(
             TERRAIN_KIND,
-            `part "${partId}" is not a chunk of valid heights`
+            `part "${partId}" is not a valid chunk part`
           );
         }
-        loadChunkHeights(state, part.coord, heights);
       },
       serialize: (state, partId) => {
-        const part = parseChunkPart(partId);
-        const chunk = part === null ? undefined : state.terrain.chunk(part.coord);
-        if (part === null || chunk === undefined) {
-          return Promise.reject(new RangeError(`Terrain has no chunk "${partId}".`));
-        }
+        const content = encodeChunkPart(state.terrain, partId);
 
-        return Promise.resolve(part.kind === "splat" ?
-          encodeSplatBytes(chunk.splat.copy()) :
-          encodeHeightBytes(chunk.copyHeights()));
+        return content === null ?
+          Promise.reject(new RangeError(`Terrain has no chunk "${partId}".`)) :
+          Promise.resolve(content);
       }
     },
 
@@ -213,15 +190,9 @@ export function terrainAssetKind(
           parts: {
             schema: terrainPartSchema,
             part: (partId) => {
-              const part = parseChunkPart(partId);
-              const chunk = part === null ? undefined : state.terrain.chunk(part.coord);
-              if (part === null || chunk === undefined) {
-                return null;
-              }
+              const content = encodeChunkPart(state.terrain, partId);
 
-              return part.kind === "splat" ?
-                encodeSplat(chunk.splat.copy()) :
-                encodeHeights(chunk.copyHeights());
+              return content === null ? null : encodeBase64(content);
             },
             outside: outsideCommand
           }

@@ -20,6 +20,12 @@ export const BRUSH_SIZE = Object.freeze({ min: 0.5, max: 128 });
 export const BRUSH_SPACING = Object.freeze({ min: 0.05, max: 1 });
 export const FLATTEN_TARGETS = ["press", "fixed"] as const;
 export const BRUSH_TOOLS = Object.freeze([...SCULPT_TOOLS, "paint"] as const);
+export const STRENGTH_OPTIONS: Readonly<Record<BrushTool, "strength" | "paintStrength">> = Object.freeze({
+  raise: "strength",
+  smooth: "strength",
+  flatten: "strength",
+  paint: "paintStrength"
+});
 
 export type FlattenTarget = typeof FLATTEN_TARGETS[number];
 export type BrushTool = typeof BRUSH_TOOLS[number];

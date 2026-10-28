@@ -5,9 +5,12 @@ import type {
   TerrainDocument,
   TerrainMaterialChanges,
   TerrainMaterialMap,
-  TerrainMaterialMapKind,
   TerrainTextureSize
 } from "@jolly-pixel/asset.terrain/client";
+import type {
+  MaterialMap,
+  MaterialTechnique
+} from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import type { MaterialSelection } from "./MaterialSelection.ts";
@@ -23,11 +26,10 @@ import {
   type TerrainHistory
 } from "../../../shared/terrainHistory.ts";
 
-export type MaterialTechnique = "triplanar" | "stochastic" | "heightBlend";
 export type TextureConflict = "replace" | "keep";
 
 type CatalogRecord = NonNullable<ReturnType<CatalogClient["record"]>>;
-type MaterialMaps = Partial<Record<TerrainMaterialMapKind, TerrainMaterialMap>>;
+type MaterialMaps = Partial<Record<MaterialMap, TerrainMaterialMap>>;
 
 export interface TextureFile {
   readonly name: string;
@@ -65,7 +67,7 @@ export class MaterialPalette {
 
     const { base } = parseTextureName(record.path);
 
-    return this.#add(materialName(base), this.#siblingMaps(record));
+    return this.#select(this.#add(materialName(base), this.#siblingMaps(record)));
   }
 
   async addFromFiles(
@@ -80,13 +82,9 @@ export class MaterialPalette {
     for (const group of groupMaterialFiles(files)) {
       const maps: MaterialMaps = {};
       for (const [kind, file] of Object.entries(group.maps)) {
-        maps[kind as TerrainMaterialMapKind] = await this.#import(file, conflict);
+        maps[kind as MaterialMap] = await this.#import(file, conflict);
       }
-      const using = this.#materialUsing(maps);
-      if (using !== null) {
-        this.#options.selection.select(using);
-      }
-      const id = using ?? this.#add(group.name, maps);
+      const id = this.#select(this.#materialUsing(maps) ?? this.#add(group.name, maps));
       if (id !== null) {
         added.push(id);
       }
@@ -97,7 +95,7 @@ export class MaterialPalette {
 
   async pickMap(
     materialId: string,
-    map: TerrainMaterialMapKind
+    map: MaterialMap
   ): Promise<boolean> {
     const picked = await this.#options.pickTexture(`Pick the ${map} texture`);
 
@@ -106,7 +104,7 @@ export class MaterialPalette {
 
   async dropMap(
     materialId: string,
-    map: TerrainMaterialMapKind,
+    map: MaterialMap,
     file: TextureFile
   ): Promise<boolean> {
     const conflict = await this.#conflict([file]);
@@ -122,7 +120,7 @@ export class MaterialPalette {
 
   clearMap(
     materialId: string,
-    map: TerrainMaterialMapKind
+    map: MaterialMap
   ): boolean {
     return this.#update(materialId, { [map]: null });
   }
@@ -154,47 +152,45 @@ export class MaterialPalette {
   remove(
     materialId: string
   ): boolean {
-    const { history, document } = this.#options;
-
-    return history.record(TERRAIN_HISTORY_SCOPE, null, () => document.removeMaterial(materialId));
+    return this.#record((document) => document.removeMaterial(materialId));
   }
 
   changeTextureSize(
     size: TerrainTextureSize
   ): boolean {
-    const { history, document } = this.#options;
-
-    return history.record(TERRAIN_HISTORY_SCOPE, null, () => document.changeTextureSize(size));
+    return this.#record((document) => document.changeTextureSize(size));
   }
 
   #add(
     name: string,
     maps: MaterialMaps
   ): string | null {
-    const { history, document, selection } = this.#options;
-    const id = history.record(
-      TERRAIN_HISTORY_SCOPE,
-      null,
-      () => document.addMaterial({ name, ...maps })
-    );
-    if (id !== null) {
-      selection.select(id);
-    }
-
-    return id;
+    return this.#record((document) => document.addMaterial({ name, ...maps }));
   }
 
   #update(
     materialId: string,
     changes: TerrainMaterialChanges
   ): boolean {
+    return this.#record((document) => document.updateMaterial(materialId, changes));
+  }
+
+  #record<T>(
+    edit: (document: MaterialPaletteOptions["document"]) => T
+  ): T {
     const { history, document } = this.#options;
 
-    return history.record(
-      TERRAIN_HISTORY_SCOPE,
-      null,
-      () => document.updateMaterial(materialId, changes)
-    );
+    return history.record(TERRAIN_HISTORY_SCOPE, null, () => edit(document));
+  }
+
+  #select(
+    materialId: string | null
+  ): string | null {
+    if (materialId !== null) {
+      this.#options.selection.select(materialId);
+    }
+
+    return materialId;
   }
 
   #siblingMaps(
@@ -225,7 +221,7 @@ export class MaterialPalette {
   ): string | null {
     const used = Object.entries(maps);
     const material = this.#options.document.materials.materials().find(
-      (candidate) => used.every(([kind, map]) => candidate[kind as TerrainMaterialMapKind]?.id === map.id)
+      (candidate) => used.every(([kind, map]) => candidate[kind as MaterialMap]?.id === map.id)
     );
 
     return material?.id ?? null;

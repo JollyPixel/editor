@@ -15,6 +15,7 @@ import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type { SplatTilePatch } from "../network/splat.ts";
+import { patchedTiles } from "../network/tilePatchCommands.ts";
 import type {
   TerrainChange,
   TerrainDocument
@@ -94,9 +95,7 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
         break;
       }
       case "heights-patched": {
-        const tiles = command.tiles.map(
-          ({ x, z, tile }) => TileCoord.fromIndex(new ChunkCoord(x, z), tile)
-        );
+        const tiles = patchedTiles(command);
         const keys = new Set(tiles.map(({ key }) => key));
         const settled = this.#forget(({ tile }) => keys.has(tile.key));
         if (this.#stroke !== null) {
@@ -108,9 +107,7 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
         break;
       }
       case "splat-patched": {
-        const tiles = command.tiles.map(
-          ({ x, z, tile }) => TileCoord.fromIndex(new ChunkCoord(x, z), tile)
-        );
+        const tiles = patchedTiles(command);
         this.#copySplat(tiles);
         this.#overviewChanged(unloadedChunks(this.#document.terrain, tiles));
         break;

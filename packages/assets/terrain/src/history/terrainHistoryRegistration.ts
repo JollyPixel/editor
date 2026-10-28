@@ -14,18 +14,18 @@ import type {
 import type { TerrainModelReader } from "../model/TerrainModel.ts";
 import { patchBatches } from "../network/patchBatches.ts";
 import {
-  terrainHeightTileKey,
-  terrainSplatTileKey,
+  terrainTileKey,
   terrainWriteKeys,
   terrainWriteRefKey,
   terrainWriteRefs,
   type TerrainWriteRef
 } from "../network/TerrainCommandKeys.ts";
-import type {
-  EncodedSplatTilePatch,
-  EncodedTilePatch,
-  TerrainCommand
-} from "../network/types.ts";
+import {
+  isTilePatchCommand,
+  type ChunkChannel,
+  type PatchTile
+} from "../network/tilePatchCommands.ts";
+import type { TerrainCommand } from "../network/types.ts";
 
 // CONSTANTS
 const kDefaultId = "terrain";
@@ -96,15 +96,17 @@ function readWriteRef(
       return terrain.has(ref.chunk);
     case "tile": {
       const { tile } = ref;
-      const heights = terrain.chunk(tile.chunk)?.tileHeights(tile.x, tile.z);
+      const chunk = terrain.chunk(tile.chunk);
+      if (chunk === undefined) {
+        return undefined;
+      }
+      if (ref.channel === "heights") {
+        return Array.from(chunk.tileHeights(tile.x, tile.z));
+      }
 
-      return heights === undefined ? undefined : Array.from(heights);
-    }
-    case "splat-tile": {
-      const { tile } = ref;
-      const splat = terrain.chunk(tile.chunk)?.splat.tile(tile.x, tile.z);
+      const splat = chunk.splat.tile(tile.x, tile.z);
 
-      return splat === undefined ? undefined : [...splat.indices, ...splat.weights];
+      return [...splat.indices, ...splat.weights];
     }
     case "material": {
       const material = materials.material(ref.id);
@@ -122,30 +124,33 @@ function readWriteRef(
 function compactTilePatches(
   commands: readonly TerrainCommand[]
 ): TerrainCommand[] {
-  const heights = new Map<string, EncodedTilePatch>();
-  const splat = new Map<string, EncodedSplatTilePatch>();
-  const kept: TerrainCommand[] = [];
-  for (const command of commands) {
-    if (command.action === "heights-patched") {
-      for (const tile of command.tiles) {
-        heights.set(terrainHeightTileKey(tile.x, tile.z, tile.tile), tile);
-      }
-    }
-    else if (command.action === "splat-patched") {
-      for (const tile of command.tiles) {
-        splat.set(terrainSplatTileKey(tile.x, tile.z, tile.tile), tile);
-      }
-    }
-    else {
-      kept.push(command);
-    }
-  }
-  for (const batch of patchBatches([...heights.values()])) {
+  const kept: TerrainCommand[] = commands.filter((command) => !isTilePatchCommand(command));
+  const heights = latestTiles(
+    "heights",
+    commands.flatMap((command) => (command.action === "heights-patched" ? command.tiles : []))
+  );
+  const splat = latestTiles(
+    "splat",
+    commands.flatMap((command) => (command.action === "splat-patched" ? command.tiles : []))
+  );
+  for (const batch of patchBatches(heights)) {
     kept.push({ action: "heights-patched", tiles: batch });
   }
-  for (const batch of patchBatches([...splat.values()])) {
+  for (const batch of patchBatches(splat)) {
     kept.push({ action: "splat-patched", tiles: batch });
   }
 
   return kept;
+}
+
+function latestTiles<TTile extends PatchTile>(
+  channel: ChunkChannel,
+  tiles: readonly TTile[]
+): TTile[] {
+  const latest = new Map<string, TTile>();
+  for (const tile of tiles) {
+    latest.set(terrainTileKey(channel, tile.x, tile.z, tile.tile), tile);
+  }
+
+  return [...latest.values()];
 }

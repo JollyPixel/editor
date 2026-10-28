@@ -29,7 +29,9 @@ import {
 import {
   BRUSH_SIZE,
   BRUSH_TOOLS,
+  STRENGTH_OPTIONS,
   type BrushTool,
+  type SculptOptions,
   type SculptSettings
 } from "../model/SculptSettings.ts";
 import {
@@ -73,15 +75,19 @@ export class SculptToolbar extends LitElement {
   #strength = new FieldBinding<number>(this, {
     read: () => {
       const options = this.settings?.options;
-      const strength = options?.tool === "paint" ? options.paintStrength : options?.strength;
 
-      return Math.round((strength ?? 0) * 100);
+      return options === undefined ? 0 : Math.round(options[STRENGTH_OPTIONS[options.tool]] * 100);
     },
-    write: (percent) => this.settings?.update(
-      this.settings.options.tool === "paint" ?
-        { paintStrength: percent / 100 } :
-        { strength: percent / 100 }
-    )
+    write: (percent) => {
+      const settings = this.settings;
+      if (settings === null) {
+        return;
+      }
+
+      const changes: Partial<SculptOptions> = {};
+      changes[STRENGTH_OPTIONS[settings.options.tool]] = percent / 100;
+      settings.update(changes);
+    }
   });
 
   #flattenHeight = new FieldBinding<number>(this, {

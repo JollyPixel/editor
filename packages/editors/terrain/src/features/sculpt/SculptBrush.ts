@@ -9,20 +9,24 @@ import {
   ActorComponent
 } from "@jolly-pixel/engine";
 import {
-  CHUNK_SAMPLES,
-  ChunkCoord,
   raycastTerrain,
-  SPLAT_TEXELS,
   type TerrainHit
 } from "@jolly-pixel/terrain.renderer";
 import * as THREE from "three";
 
 // Import Internal Dependencies
 import type { MaterialSelection } from "../materials/model/MaterialSelection.ts";
-import { PaintStroke } from "../paint/model/PaintStroke.ts";
-import type { SculptSettings } from "./model/SculptSettings.ts";
-import { SculptStroke } from "./model/SculptStroke.ts";
+import { paintTool } from "../paint/paintTool.ts";
+import type {
+  BrushStroke,
+  BrushToolHandler
+} from "./model/BrushToolHandler.ts";
+import type {
+  BrushTool,
+  SculptSettings
+} from "./model/SculptSettings.ts";
 import type { GroundPoint } from "./model/StampSpacer.ts";
+import { sculptTools } from "./sculptTools.ts";
 import type { TerrainHistory } from "../../shared/terrainHistory.ts";
 import type { PeerBrushRings } from "./collaboration/PeerBrushRings.ts";
 import { BrushCursor } from "./rendering/BrushCursor.ts";
@@ -30,7 +34,6 @@ import { BrushCursor } from "./rendering/BrushCursor.ts";
 // CONSTANTS
 const kResizeStep = 1.1;
 const kMaxAimDistance = 20_000;
-const kTexelsPerMetre = SPLAT_TEXELS / CHUNK_SAMPLES;
 
 export interface SculptBrushOptions {
   document: Pick<TerrainDocument, "terrain" | "materials" | "patchSplat">;
@@ -47,7 +50,8 @@ export class SculptBrush extends ActorComponent {
   #cursor: BrushCursor;
   #raycaster = new THREE.Raycaster();
   #pointer = new THREE.Vector2();
-  #stroke: SculptStroke | PaintStroke | null = null;
+  #tools: Readonly<Record<BrushTool, BrushToolHandler>>;
+  #stroke: BrushStroke | null = null;
   #keepAlive: (() => void) | null = null;
 
   constructor(
@@ -60,6 +64,10 @@ export class SculptBrush extends ActorComponent {
     });
 
     this.#options = options;
+    this.#tools = {
+      ...sculptTools(options),
+      paint: paintTool(options)
+    };
     this.#cursor = new BrushCursor({
       terrain: options.preview.terrain,
       rings: options.rings
@@ -86,7 +94,7 @@ export class SculptBrush extends ActorComponent {
       this.endStroke();
       this.#resize(mouse.isDown("scrollUp"), mouse.isDown("scrollDown"));
       if (aim !== null && mouse.wasJustPressed("left")) {
-        this.#pick(aim);
+        this.#tool().pick(aim);
       }
     }
     else {
@@ -146,7 +154,7 @@ export class SculptBrush extends ActorComponent {
         return;
       }
 
-      this.#stroke = this.#beginStroke(aim, lower);
+      this.#stroke = this.#tool().begin({ point: groundPoint(aim), height: aim.point.y, lower });
       if (this.#stroke === null) {
         return;
       }
@@ -154,60 +162,8 @@ export class SculptBrush extends ActorComponent {
     this.#stroke.update(point, this.actor.world.time.unscaledDelta);
   }
 
-  #beginStroke(
-    aim: TerrainHit,
-    lower: boolean
-  ): SculptStroke | PaintStroke | null {
-    const { document, preview, history, settings, selection } = this.#options;
-    const { tool } = settings.options;
-    if (tool !== "paint") {
-      return new SculptStroke(
-        { preview, history, settings },
-        { tool, point: groundPoint(aim), height: aim.point.y, lower }
-      );
-    }
-
-    const material = selection.selected === null ?
-      undefined :
-      document.materials.material(selection.selected);
-    if (lower || material === undefined) {
-      return null;
-    }
-
-    return new PaintStroke(
-      { document, preview, history, settings },
-      { point: groundPoint(aim), slot: material.slot }
-    );
-  }
-
-  #pick(
-    aim: TerrainHit
-  ): void {
-    if (this.#options.settings.options.tool === "paint") {
-      this.#pickMaterial(aim);
-    }
-    else {
-      this.#pickFlattenHeight(aim.point.y);
-    }
-  }
-
-  #pickMaterial(
-    { point }: TerrainHit
-  ): void {
-    const { preview, document, selection } = this.#options;
-    const chunk = preview.terrain.chunk(ChunkCoord.containing(point.x, point.z));
-    if (chunk === undefined) {
-      return;
-    }
-
-    const origin = chunk.coord.originSample;
-    const texelX = Math.min(Math.floor((point.x - origin.x) * kTexelsPerMetre), SPLAT_TEXELS - 1);
-    const texelZ = Math.min(Math.floor((point.z - origin.z) * kTexelsPerMetre), SPLAT_TEXELS - 1);
-    const slot = chunk.splat.dominantSlot(texelX, texelZ);
-    const material = document.materials.materials().find((candidate) => candidate.slot === slot);
-    if (material !== undefined) {
-      selection.select(material.id);
-    }
+  #tool(): BrushToolHandler {
+    return this.#tools[this.#options.settings.options.tool];
   }
 
   #resize(
@@ -221,18 +177,6 @@ export class SculptBrush extends ActorComponent {
     }
     else if (shrink) {
       settings.update({ size: size / kResizeStep });
-    }
-  }
-
-  #pickFlattenHeight(
-    height: number
-  ): void {
-    const { settings } = this.#options;
-    if (settings.options.tool === "flatten") {
-      settings.update({
-        flattenTarget: "fixed",
-        flattenHeight: Math.round(height * 100) / 100
-      });
     }
   }
 

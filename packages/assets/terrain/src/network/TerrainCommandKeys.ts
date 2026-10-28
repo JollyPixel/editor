@@ -6,30 +6,38 @@ import {
 
 // Import Internal Dependencies
 import {
-  changedFields,
   isMaterialCommand,
-  TERRAIN_MATERIAL_FIELDS
+  materialWriteRefs,
+  type TerrainMaterialWriteRef
 } from "../model/materialCommands.ts";
 import { CHUNK_TILE_COUNT } from "./TerrainCommand.schema.ts";
+import {
+  CHUNK_CHANNELS,
+  isTilePatchCommand,
+  patchedTiles,
+  tileChannel,
+  type ChunkChannel
+} from "./tilePatchCommands.ts";
 import type {
   TerrainCommand,
-  TerrainMaterialCommand,
   TerrainMaterialField
 } from "./types.ts";
 
 // CONSTANTS
 const kTextureSizeKey = "terrain:texture-size";
+const kChannelTags: Readonly<Record<ChunkChannel, string>> = {
+  heights: "h",
+  splat: "s"
+};
 
 export type TerrainWriteRef =
   | { readonly kind: "chunk"; readonly chunk: ChunkCoord; }
-  | { readonly kind: "tile"; readonly tile: TileCoord; }
-  | { readonly kind: "splat-tile"; readonly tile: TileCoord; }
   | {
-    readonly kind: "material";
-    readonly id: string;
-    readonly field: TerrainMaterialField | null;
+    readonly kind: "tile";
+    readonly channel: ChunkChannel;
+    readonly tile: TileCoord;
   }
-  | { readonly kind: "texture-size"; };
+  | TerrainMaterialWriteRef;
 
 export function terrainChunkKey(
   x: number,
@@ -38,20 +46,13 @@ export function terrainChunkKey(
   return `chunk:${x},${z}`;
 }
 
-export function terrainHeightTileKey(
+export function terrainTileKey(
+  channel: ChunkChannel,
   x: number,
   z: number,
   tile: number
 ): string {
-  return `${terrainChunkKey(x, z)}:h:${tile}`;
-}
-
-export function terrainSplatTileKey(
-  x: number,
-  z: number,
-  tile: number
-): string {
-  return `${terrainChunkKey(x, z)}:s:${tile}`;
+  return `${terrainChunkKey(x, z)}:${kChannelTags[channel]}:${tile}`;
 }
 
 export function terrainMaterialKey(
@@ -68,9 +69,7 @@ export function terrainWriteRefKey(
     case "chunk":
       return terrainChunkKey(ref.chunk.x, ref.chunk.z);
     case "tile":
-      return terrainHeightTileKey(ref.tile.chunk.x, ref.tile.chunk.z, ref.tile.index);
-    case "splat-tile":
-      return terrainSplatTileKey(ref.tile.chunk.x, ref.tile.chunk.z, ref.tile.index);
+      return terrainTileKey(ref.channel, ref.tile.chunk.x, ref.tile.chunk.z, ref.tile.index);
     case "material":
       return terrainMaterialKey(ref.id, ref.field);
     case "texture-size":
@@ -84,14 +83,11 @@ export function terrainWriteRefs(
   if (isMaterialCommand(command)) {
     return materialWriteRefs(command);
   }
-  if (command.action === "heights-patched" || command.action === "splat-patched") {
-    const kind: "tile" | "splat-tile" = command.action === "heights-patched" ? "tile" : "splat-tile";
+  if (isTilePatchCommand(command)) {
+    const channel = tileChannel(command);
 
-    return command.tiles.map(({ x, z, tile }): TerrainWriteRef => {
-      return {
-        kind,
-        tile: TileCoord.fromIndex(new ChunkCoord(x, z), tile)
-      };
+    return patchedTiles(command).map((tile): TerrainWriteRef => {
+      return { kind: "tile", channel, tile };
     });
   }
 
@@ -100,33 +96,10 @@ export function terrainWriteRefs(
 
   return [
     { kind: "chunk", chunk },
-    ...tiles.map((tile): TerrainWriteRef => {
-      return { kind: "tile", tile };
-    }),
-    ...tiles.map((tile): TerrainWriteRef => {
-      return { kind: "splat-tile", tile };
-    })
+    ...CHUNK_CHANNELS.flatMap((channel) => tiles.map((tile): TerrainWriteRef => {
+      return { kind: "tile", channel, tile };
+    }))
   ];
-}
-
-function materialWriteRefs(
-  command: TerrainMaterialCommand
-): TerrainWriteRef[] {
-  switch (command.action) {
-    case "material-updated":
-      return changedFields(command.changes).map((field) => {
-        return { kind: "material", id: command.id, field };
-      });
-    case "texture-size-changed":
-      return [{ kind: "texture-size" }];
-    default: {
-      const id = command.action === "material-added" ? command.material.id : command.id;
-
-      return [null, ...TERRAIN_MATERIAL_FIELDS].map((field) => {
-        return { kind: "material", id, field };
-      });
-    }
-  }
 }
 
 export function terrainWriteKeys(

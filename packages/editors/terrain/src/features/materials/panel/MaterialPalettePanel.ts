@@ -13,14 +13,17 @@ import {
   state
 } from "lit/decorators.js";
 import {
-  TERRAIN_MATERIAL_MAPS,
   TERRAIN_TEXTURE_SIZES,
   type TerrainDocument,
   type TerrainMaterialData,
-  type TerrainMaterialMapKind,
   type TerrainTextureSize
 } from "@jolly-pixel/asset.terrain/client";
-import { splatOverlayColor } from "@jolly-pixel/terrain.renderer";
+import {
+  MATERIAL_MAPS,
+  splatOverlayColor,
+  type MaterialMap,
+  type MaterialTechnique
+} from "@jolly-pixel/terrain.renderer";
 import {
   readDetail,
   SubscriptionController,
@@ -37,7 +40,6 @@ import "@jolly-pixel/ui/elements/toggle";
 // Import Internal Dependencies
 import type {
   MaterialPalette,
-  MaterialTechnique,
   TextureFile
 } from "../model/MaterialPalette.ts";
 import type { MaterialSelection } from "../model/MaterialSelection.ts";
@@ -47,7 +49,7 @@ import "./materialIcons.ts";
 
 // CONSTANTS
 const kImageExtensions = /\.(png|jpe?g|webp)$/i;
-const kMapLabels: Readonly<Record<TerrainMaterialMapKind, {
+const kMapLabels: Readonly<Record<MaterialMap, {
   label: string;
   badge: string;
   description: string;
@@ -364,7 +366,7 @@ export class MaterialPalettePanel extends LitElement {
             ></span>
           `}
           <div class="badges">
-            ${TERRAIN_MATERIAL_MAPS
+            ${MATERIAL_MAPS
               .filter((map) => material[map] !== null)
               .map((map) => html`<span class="badge">${kMapLabels[map].badge}</span>`)}
           </div>
@@ -379,7 +381,7 @@ export class MaterialPalettePanel extends LitElement {
   ): TemplateResult {
     const { palette, thumbnails } = this.context!;
     const albedo = thumbnails.url(material.albedo?.id);
-    const filled = TERRAIN_MATERIAL_MAPS.filter((map) => material[map] !== null);
+    const filled = MATERIAL_MAPS.filter((map) => material[map] !== null);
     const techniques = kTechniques.filter(({ technique }) => material[technique]);
 
     return html`
@@ -415,7 +417,7 @@ export class MaterialPalettePanel extends LitElement {
           label=${`Maps (${filled.map((map) => kMapLabels[map].badge).join(" ") || "none"})`}
           .open=${false}
         >
-          ${TERRAIN_MATERIAL_MAPS.map((map) => this.#renderMap(material, map))}
+          ${MATERIAL_MAPS.map((map) => this.#renderMap(material, map))}
         </jolly-folder>
         <jolly-folder
           key="material-look"
@@ -438,7 +440,7 @@ export class MaterialPalettePanel extends LitElement {
 
   #renderMap(
     material: TerrainMaterialData,
-    map: TerrainMaterialMapKind
+    map: MaterialMap
   ): TemplateResult {
     const { palette, thumbnails } = this.context!;
     const { label, description } = kMapLabels[map];
@@ -540,7 +542,7 @@ export class MaterialPalettePanel extends LitElement {
   #onDropMap(
     event: DragEvent,
     materialId: string,
-    map: TerrainMaterialMapKind
+    map: MaterialMap
   ): void {
     event.preventDefault();
     this.dropping = false;

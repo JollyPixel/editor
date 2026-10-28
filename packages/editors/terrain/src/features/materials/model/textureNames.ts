@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
-import type { TerrainMaterialMapKind } from "@jolly-pixel/asset.terrain/client";
+import type { MaterialMap } from "@jolly-pixel/terrain.renderer";
 
 // CONSTANTS
-const kMapSuffixes: Readonly<Record<TerrainMaterialMapKind, readonly string[]>> = {
+const kMapSuffixes: Readonly<Record<MaterialMap, readonly string[]>> = {
   albedo: ["albedo", "basecolor", "basecolour", "diffuse", "diff", "color", "colour", "col"],
   normal: ["normal", "normalgl", "nrm", "nor", "norm"],
   orm: ["orm", "arm"],
@@ -12,7 +12,7 @@ const kSeparators = /[\s._-]+/;
 
 export interface TextureName {
   readonly base: string;
-  readonly map: TerrainMaterialMapKind | null;
+  readonly map: MaterialMap | null;
 }
 
 export interface NamedFile {
@@ -21,7 +21,7 @@ export interface NamedFile {
 
 export interface MaterialFiles<TFile extends NamedFile> {
   readonly name: string;
-  readonly maps: Partial<Record<TerrainMaterialMapKind, TFile>>;
+  readonly maps: Partial<Record<MaterialMap, TFile>>;
 }
 
 export function parseTextureName(
@@ -56,7 +56,7 @@ export function groupMaterialFiles<TFile extends NamedFile>(
 ): MaterialFiles<TFile>[] {
   const groups = new Map<string, {
     name: string;
-    maps: Partial<Record<TerrainMaterialMapKind, TFile>>;
+    maps: Partial<Record<MaterialMap, TFile>>;
   }>();
   for (const file of files) {
     const { base, map } = parseTextureName(file.name);
@@ -99,10 +99,10 @@ function fileStem(
 
 function mapOfSuffix(
   suffix: string
-): TerrainMaterialMapKind | null {
+): MaterialMap | null {
   for (const [map, suffixes] of Object.entries(kMapSuffixes)) {
     if (suffixes.includes(suffix)) {
-      return map as TerrainMaterialMapKind;
+      return map as MaterialMap;
     }
   }
 

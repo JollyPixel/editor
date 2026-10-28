@@ -6,6 +6,7 @@ import {
 } from "@jolly-pixel/network";
 import {
   LOOKUP_SIZE,
+  MATERIAL_SLOT_COUNT,
   TILES_PER_CHUNK
 } from "@jolly-pixel/terrain.renderer";
 import * as z from "zod/mini";
@@ -48,7 +49,12 @@ export const splatTilePatchesSchema = z.array(splatTilePatchSchema).check(
 
 export const TERRAIN_TEXTURE_SIZES = [512, 1024, 2048] as const;
 export const MAX_TERRAIN_MATERIALS = 32;
-export const TERRAIN_MATERIAL_SLOTS = 256;
+export const TERRAIN_MATERIAL_ACTIONS = [
+  "material-added",
+  "material-updated",
+  "material-removed",
+  "texture-size-changed"
+] as const;
 const kTextureSize = z.literal(TERRAIN_TEXTURE_SIZES);
 const kMaterialId = z.string().check(z.minLength(1), z.maxLength(64));
 const kMaterialMap = z.nullable(z.object({
@@ -71,7 +77,7 @@ export const materialPropertiesSchema = z.object({
 
 export const terrainMaterialSchema = z.extend(materialPropertiesSchema, {
   id: kMaterialId,
-  slot: z.int().check(z.gte(0), z.lt(TERRAIN_MATERIAL_SLOTS))
+  slot: z.int().check(z.gte(0), z.lt(MATERIAL_SLOT_COUNT))
 });
 
 export const chunkEntrySchema = z.object({
