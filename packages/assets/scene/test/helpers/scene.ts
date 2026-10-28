@@ -4,7 +4,10 @@ import type { NetworkCommandHeader } from "@jolly-pixel/network";
 // Import Internal Dependencies
 import { createSceneEnvironment } from "#src/model/sceneEnvironment.ts";
 import { SceneTransform } from "#src/model/SceneTransform.ts";
-import { SceneTree } from "#src/model/SceneTree.ts";
+import {
+  SceneTree,
+  type SceneTreeOptions
+} from "#src/model/SceneTree.ts";
 import type { SceneFile } from "#src/asset/scene.ts";
 import type {
   AssetReferenceJSON,
@@ -65,9 +68,10 @@ export function sceneFile(
 }
 
 export function loadedTree(
-  actors: SceneActorJSON[]
+  actors: SceneActorJSON[],
+  options: SceneTreeOptions = {}
 ): SceneTree {
-  const tree = new SceneTree();
+  const tree = new SceneTree(options);
   tree.load(snapshot(actors));
 
   return tree;

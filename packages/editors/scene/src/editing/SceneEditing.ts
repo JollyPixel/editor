@@ -26,6 +26,7 @@ export interface SceneAssetSlots {
     type: AssetType<unknown>,
     current: AssetReferenceData | null
   ): Promise<AssetReferenceData | null>;
+  pickScene(): Promise<AssetReferenceData | null>;
   open: (
     (reference: AssetReferenceData) => void
   ) | null;

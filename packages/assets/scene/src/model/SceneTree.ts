@@ -7,6 +7,7 @@ import {
 } from "@jolly-pixel/asset.common";
 
 // Import Internal Dependencies
+import { SCENE_KIND } from "../asset/scene.ts";
 import type {
   JSONObject,
   SceneActorJSON,
@@ -29,6 +30,7 @@ export type SceneTreeReader = Pick<
   | "size"
   | "environment"
   | "has"
+  | "isInstance"
   | "actor"
   | "peekActor"
   | "actors"
@@ -56,12 +58,25 @@ interface ActorListContext {
   hasActor(id: string): boolean;
   hasComponent(id: string): boolean;
   isOuterParent(actor: SceneActorJSON, index: number): boolean;
+  isOuterInstance(id: string): boolean;
+  isOwnScene(sceneId: string): boolean;
+}
+
+export interface SceneTreeOptions {
+  sceneId?: string;
 }
 
 export class SceneTree {
   #actors = new OrderedTree<SceneActorJSON>({ entry: "actor" });
   #owners = new Map<string, string>();
   #environment: SceneEnvironmentJSON = createSceneEnvironment();
+  #sceneId: string | null;
+
+  constructor(
+    options: SceneTreeOptions = {}
+  ) {
+    this.#sceneId = options.sceneId ?? null;
+  }
 
   get size(): number {
     return this.#actors.size;
@@ -75,6 +90,12 @@ export class SceneTree {
     id: string
   ): boolean {
     return this.#actors.has(id);
+  }
+
+  isInstance(
+    id: string | null
+  ): boolean {
+    return id !== null && this.#actors.peek(id)?.prefab !== undefined;
   }
 
   actor(
@@ -215,9 +236,11 @@ export class SceneTree {
       case "actor-moved":
         return this.#actors.has(command.id) &&
           this.#actors.isParent(command.parentId) &&
+          !this.isInstance(command.parentId) &&
           !this.#actors.isWithin(command.parentId, command.id);
       case "component-added":
         return this.#actors.has(command.actorId) &&
+          !this.isInstance(command.actorId) &&
           !this.#owners.has(command.component.id) &&
           fitsDataLimit(command.component.data);
       case "component-removed":
@@ -363,7 +386,9 @@ export class SceneTree {
     const problem = findActorListProblem(snapshot.actors, {
       hasActor: () => false,
       hasComponent: () => false,
-      isOuterParent: (actor) => actor.parentId === null
+      isOuterParent: (actor) => actor.parentId === null,
+      isOuterInstance: () => false,
+      isOwnScene: () => false
     });
     if (problem !== null) {
       throw new InvalidEntryError(problem.entry, problem.id, problem.reason);
@@ -433,7 +458,9 @@ export class SceneTree {
     return actors.length > 0 && findActorListProblem(actors, {
       hasActor: (id) => this.#actors.has(id),
       hasComponent: (id) => this.#owners.has(id),
-      isOuterParent: (actor, index) => index === 0 && this.#actors.isParent(actor.parentId)
+      isOuterParent: (actor, index) => index === 0 && this.#actors.isParent(actor.parentId),
+      isOuterInstance: (id) => this.isInstance(id),
+      isOwnScene: (sceneId) => sceneId === this.#sceneId
     }) === null;
   }
 
@@ -497,17 +524,33 @@ function findActorListProblem(
   context: ActorListContext
 ): TreeProblem | null {
   const actorIds = new Set<string>();
+  const instanceIds = new Set<string>();
   const componentIds = new Set<string>();
   for (const [index, actor] of actors.entries()) {
     if (context.hasActor(actor.id) || actorIds.has(actor.id)) {
       return problem("actor", actor.id, "is listed twice");
     }
-    if (actor.prefab !== undefined) {
-      return problem("actor", actor.id, "is a prefab instance");
-    }
     const listedParent = actor.parentId !== null && actorIds.has(actor.parentId);
     if (!listedParent && !context.isOuterParent(actor, index)) {
       return problem("actor", actor.id, `has no parent ${actor.parentId} before it`);
+    }
+    if (
+      actor.parentId !== null &&
+      (instanceIds.has(actor.parentId) || context.isOuterInstance(actor.parentId))
+    ) {
+      return problem("actor", actor.id, "is a child of a prefab instance");
+    }
+    if (actor.prefab !== undefined) {
+      if (actor.prefab.kind !== SCENE_KIND) {
+        return problem("actor", actor.id, "has a prefab that is not a scene");
+      }
+      if (actor.components.length > 0) {
+        return problem("actor", actor.id, "is a prefab instance with components");
+      }
+      if (context.isOwnScene(actor.prefab.id)) {
+        return problem("actor", actor.id, "is an instance of its own scene");
+      }
+      instanceIds.add(actor.id);
     }
     actorIds.add(actor.id);
 

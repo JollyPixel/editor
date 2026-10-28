@@ -12,7 +12,8 @@ import { Scene } from "../../../src/systems/scene/Scene.ts";
 import {
   ComponentDefinitions,
   FileScene,
-  type ComponentDefinition
+  type ComponentDefinition,
+  type ScenePrefabFile
 } from "../../../src/systems/scene/file/index.ts";
 import { createSceneSetup } from "../../helpers/scene/sceneSetup.ts";
 import { createSceneAssets } from "../../helpers/scene/sceneAssets.ts";
@@ -63,6 +64,27 @@ function createModelSetup() {
   return { ...createSceneSetup(assets), assets, components, file };
 }
 
+async function loadKeepInstance() {
+  const setup = createModelSetup();
+  const [hero] = setup.file.actors;
+  const prefabs = {
+    find: (sceneId: string) => (sceneId === "keep" ? { actors: [hero] } : null)
+  };
+  const file = createSceneFile([
+    createActorFile("castle", { prefab: { id: "keep", kind: "scene" } })
+  ]);
+  const scene = new FileScene("level", file, {
+    components: setup.components,
+    prefabs
+  });
+  const load = setup.sm.loadScene(scene);
+  setup.assets.loader.resolve("knight");
+  await load.done;
+  setup.sm.beginFrame();
+
+  return { ...setup, scene };
+}
+
 describe("Systems.FileScene", () => {
   beforeEach(() => {
     Scene.Id.clear();
@@ -75,6 +97,53 @@ describe("Systems.FileScene", () => {
 
     assert.strictEqual(scene.assets.length, 1);
     assert.ok(scene.assets[0].equals(assets.reference("knight")));
+  });
+
+  test("declares and builds the assets of the scenes its prefabs include", async() => {
+    const { sm, assets, scene } = await loadKeepInstance();
+
+    const [castle] = sm.tree.children;
+    const [hero] = castle.children;
+    assert.ok(scene.assets.some((reference) => reference.equals(assets.reference("knight"))));
+    assert.strictEqual(hero.getComponent(ModelComponent)!.model, "knight");
+  });
+
+  test("captures a prefab instance as the actors it expanded", async() => {
+    const { scene } = await loadKeepInstance();
+
+    const captured = scene.capture().actors;
+
+    assert.deepEqual(
+      captured.map(({ id, parentId, prefab }) => [id, parentId, prefab]),
+      [["castle", null, undefined], ["castle/hero", "castle", undefined]]
+    );
+  });
+
+  test("never includes its own scene through a prefab cycle", async() => {
+    const { sm, assets, components, file } = createModelSetup();
+    const level = createSceneFile([
+      ...file.actors,
+      createActorFile("castle", { prefab: { id: "keep", kind: "scene" } })
+    ]);
+    const scenes = new Map<string, ScenePrefabFile>([
+      ["level", level],
+      ["keep", { actors: [createActorFile("back", { prefab: { id: "level", kind: "scene" } })] }]
+    ]);
+    const scene = new FileScene("level", level, {
+      components,
+      prefabs: { find: (sceneId) => scenes.get(sceneId) ?? null },
+      sceneId: "level"
+    });
+
+    const load = sm.loadScene(scene);
+    assets.loader.resolve("knight");
+    await load.done;
+    sm.beginFrame();
+
+    const [, castle] = sm.tree.children;
+    const [back] = castle.children;
+    assert.strictEqual(scene.assets.length, 1);
+    assert.deepEqual(back.children, []);
   });
 
   test("builds its actors with loaded assets once activated", async() => {

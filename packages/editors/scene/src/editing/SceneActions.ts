@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import type { SceneDocument } from "@jolly-pixel/asset.scene/client";
+import type {
+  AddActorOptions,
+  SceneDocument
+} from "@jolly-pixel/asset.scene/client";
 
 // Import Internal Dependencies
 import type { SceneComponents } from "../components/SceneComponents.ts";
@@ -26,7 +29,7 @@ export interface SceneActionsOptions {
   history: Pick<SceneHistory, "record">;
   selection: SelectionStore;
   components: Pick<SceneComponents, "assetSlots">;
-  assetSlots: Pick<SceneAssetSlots, "name" | "pick">;
+  assetSlots: Pick<SceneAssetSlots, "name" | "pick" | "pickScene">;
 }
 
 export class SceneActions {
@@ -34,7 +37,7 @@ export class SceneActions {
   #history: Pick<SceneHistory, "record">;
   #selection: SelectionStore;
   #components: Pick<SceneComponents, "assetSlots">;
-  #assetSlots: Pick<SceneAssetSlots, "name" | "pick">;
+  #assetSlots: Pick<SceneAssetSlots, "name" | "pick" | "pickScene">;
 
   constructor(
     options: SceneActionsOptions
@@ -57,22 +60,32 @@ export class SceneActions {
       return null;
     }
 
-    const { tree } = this.#document;
     const [firstAsset] = components.flatMap(
       ({ assets }) => Object.values(assets).filter((asset) => asset !== null)
     );
-    const id = this.#document.addActor({
+
+    return this.#add({
       name: firstAsset === undefined ?
         preset.label :
         this.#assetSlots.name(firstAsset),
-      parentId: parentId !== null && tree.has(parentId) ? parentId : null,
+      parentId,
       components
     });
-    if (id !== null) {
-      this.#selection.select([id]);
+  }
+
+  async addInstance(
+    parentId: string | null
+  ): Promise<string | null> {
+    const prefab = await this.#assetSlots.pickScene();
+    if (prefab === null) {
+      return null;
     }
 
-    return id;
+    return this.#add({
+      name: this.#assetSlots.name(prefab),
+      parentId,
+      prefab
+    });
   }
 
   async addComponent(
@@ -137,6 +150,23 @@ export class SceneActions {
         });
       }
     });
+  }
+
+  #add(
+    options: AddActorOptions & { parentId: string | null; }
+  ): string | null {
+    const { parentId } = options;
+    const id = this.#document.addActor({
+      ...options,
+      parentId: parentId !== null && this.#document.tree.has(parentId) ?
+        parentId :
+        null
+    });
+    if (id !== null) {
+      this.#selection.select([id]);
+    }
+
+    return id;
   }
 
   async #pickAssets(

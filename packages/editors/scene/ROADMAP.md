@@ -19,20 +19,21 @@ loaders exist, a `VoxelMap` component renders only in the editor.
 
 ## Prefabs
 
-Any scene can be included in another; there is no separate prefab kind. The
-file already reserves `SceneActorFile.prefab`, and the room and the editor
-refuse it.
+Any scene can be included in another; there is no separate prefab kind.
 
-- **Cut 1.** An actor with `prefab` holds no children of its own. Its name,
-  visibility and transform form the instance root, and `SceneInstance` expands
-  the referenced scene's root actors under it, in edit and play mode alike.
-  Instances are read-only. Cycles are refused in the editor and in
-  `SceneState.accepts()`.
+Cut 1 shipped on 2026-10-28. An actor with `prefab` is a read-only instance
+with no components or children of its own. `SceneInstance` expands the
+referenced scene under it with path ids, and `PrefabScenes` leases each
+referenced scene so instances follow its edits. The room refuses only an
+instance of the scene itself. The picker hides scenes that would close a cycle,
+judged from the catalog's dependency index, which only updates when a scene is
+snapshotted. The engine skips any cycle that gets through anyway.
+
 - **Cut 2.** Overrides addressed by `instanceActorId/innerActorId/componentId`
   paths, and "apply to prefab".
-
-`SceneManager.appendScene()` does not fit: an appended scene adds root actors
-with its own lifecycle, while an instance is parented under an actor.
+- **Hierarchy rows** for the expanded actors, read-only.
+- **Release leases** of scenes no instance references any more; today they
+  stay open until the editor closes.
 
 ## Scripts
 

@@ -26,7 +26,10 @@ import {
   compactSceneFileSchema,
   expandSceneFile
 } from "./sceneFile.ts";
-import { SceneTree } from "../model/SceneTree.ts";
+import {
+  SceneTree,
+  type SceneTreeOptions
+} from "../model/SceneTree.ts";
 import {
   sceneCommandProtocol,
   sceneSnapshotSchema
@@ -50,7 +53,13 @@ export const SCENE_FILE = new JsonAssetFile({
 });
 
 export class SceneState {
-  #tree = new SceneTree();
+  #tree: SceneTree;
+
+  constructor(
+    options: SceneTreeOptions = {}
+  ) {
+    this.#tree = new SceneTree(options);
+  }
 
   load(
     file: SceneFile
@@ -148,8 +157,10 @@ export function sceneAssetKind(
     },
     snapshot,
 
-    create(): SceneState {
-      const state = new SceneState();
+    create(
+      assetId: string
+    ): SceneState {
+      const state = new SceneState({ sceneId: assetId });
       state.load(createSceneFile());
 
       return state;

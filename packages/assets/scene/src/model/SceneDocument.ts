@@ -47,6 +47,7 @@ export interface AddActorOptions {
   visible?: boolean;
   transform?: Partial<SceneTransformJSON>;
   components?: readonly SceneComponentJSON[];
+  prefab?: AssetReferenceJSON;
 }
 
 export interface MoveActorOptions {
@@ -94,7 +95,8 @@ export class SceneDocument extends CommandDocument<
       beforeId,
       visible = true,
       transform,
-      components = []
+      components = [],
+      prefab
     } = options;
     const added = this.addSubtree([{
       id,
@@ -102,7 +104,8 @@ export class SceneDocument extends CommandDocument<
       parentId,
       visible,
       transform: SceneTransform.create(transform),
-      components: [...components]
+      components: [...components],
+      ...prefab === undefined ? {} : { prefab: { ...prefab } }
     }], beforeId);
 
     return added ? id : null;

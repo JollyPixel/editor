@@ -38,7 +38,8 @@ function outline(
 }
 
 function setup(
-  current: AssetReferenceData | null = null
+  current: AssetReferenceData | null = null,
+  accepts?: (reference: AssetReferenceData) => boolean
 ) {
   const catalog = new FakeSessionCatalog([
     {
@@ -75,7 +76,8 @@ function setup(
   const choices = new AssetChoices({
     catalog,
     kinds: [kVoxelMap],
-    current
+    current,
+    accepts
   });
 
   return {
@@ -99,6 +101,15 @@ describe("AssetChoices", () => {
       "map10"
     ]);
     assert.deepEqual(choices.expanded, ["folder:maps/", "folder:maps/caves/"]);
+  });
+
+  test("leaves out the assets it is told not to accept", () => {
+    const { choices } = setup(null, ({ id }) => id !== "forest" && id !== "map2");
+
+    assert.deepEqual(choices.nodes.map(outline), [
+      { maps: [{ caves: ["deep"] }] },
+      "map10"
+    ]);
   });
 
   test("preselects the current asset and chooses only an asset row", () => {

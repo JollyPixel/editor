@@ -8,6 +8,7 @@ import {
 } from "lit";
 import { repeat } from "lit/directives/repeat.js";
 import type {
+  AssetReferenceJSON,
   SceneActorJSON,
   SceneComponentJSON,
   SceneTransformField,
@@ -29,6 +30,7 @@ import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/button-group";
 import "@jolly-pixel/ui/elements/context-menu";
 import "@jolly-pixel/ui/elements/folder";
+import "@jolly-pixel/ui/elements/reference";
 import "@jolly-pixel/ui/elements/separator";
 import "@jolly-pixel/ui/elements/show-more";
 import "@jolly-pixel/ui/elements/vector3";
@@ -163,6 +165,15 @@ export class InspectorPanel extends LitElement {
 
     return html`
       ${this.#renderActor(editing, actor)}
+      ${actor.prefab === undefined ? this.#renderComponents(editing, actor) : nothing}
+    `;
+  }
+
+  #renderComponents(
+    editing: SceneEditing,
+    actor: SceneActorJSON
+  ): TemplateResult {
+    return html`
       <jolly-separator label="Components">
         <jolly-button
           slot="actions"
@@ -222,7 +233,25 @@ export class InspectorPanel extends LitElement {
           @click=${() => document.changeVisibility(actor.id, !actor.visible)}
         ></jolly-button>
         ${this.#renderTransform(editing.draft, actor)}
+        ${actor.prefab === undefined ? nothing : this.#renderPrefab(editing, actor.prefab)}
       </jolly-folder>
+    `;
+  }
+
+  #renderPrefab(
+    editing: SceneEditing,
+    prefab: AssetReferenceJSON
+  ): TemplateResult {
+    const { assetSlots } = editing;
+
+    return html`
+      <jolly-reference
+        label="Scene"
+        readonly
+        .value=${prefab.id}
+        .text=${assetSlots.name(prefab)}
+        @jolly-open=${() => assetSlots.open?.(prefab)}
+      ></jolly-reference>
     `;
   }
 

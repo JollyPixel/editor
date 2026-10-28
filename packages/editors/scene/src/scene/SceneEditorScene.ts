@@ -23,6 +23,10 @@ import { Grid } from "@jolly-pixel/three";
 // Import Internal Dependencies
 import { SceneBinding } from "./SceneBinding.ts";
 import { EditAssets } from "./EditAssets.ts";
+import {
+  PrefabScenes,
+  type SceneLeaser
+} from "./PrefabScenes.ts";
 import type { SceneComponents } from "../components/SceneComponents.ts";
 import { SceneCollaboration } from "../collaboration/SceneCollaboration.ts";
 import { SceneActions } from "../editing/SceneActions.ts";
@@ -64,8 +68,10 @@ const kFraming = {
 } as const;
 
 export interface SceneEditorSceneOptions {
+  sceneId: string;
   document: SceneDocument;
   room: SceneRoom;
+  openScene: SceneLeaser;
   session: SceneAssetContext;
   components: SceneComponents;
   assetSlots: SceneAssetSlots;
@@ -121,12 +127,16 @@ export class SceneEditorScene extends Systems.Scene {
     teardown.defer(() => environment.dispose());
     const assets = new EditAssets(components, this.#options.session);
     teardown.defer(() => assets.dispose());
+    const prefabs = new PrefabScenes(this.#options.openScene);
+    teardown.defer(() => prefabs.dispose());
     const binding = new SceneBinding({
       world,
       document,
       components: components.createDefinitions(),
       assets,
-      environment
+      environment,
+      prefabs,
+      sceneId: this.#options.sceneId
     });
     teardown.defer(() => binding.dispose());
     const draft = new SceneDraft({

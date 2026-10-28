@@ -85,16 +85,20 @@ export class SceneEditor {
       const shell = new EditorShell({ toolbar: context.toolbar });
       teardown.defer(() => shell.dispose());
 
+      const sceneId = target.record.id;
       const assetSlots = new SessionAssetSlots({
         session,
+        sceneId,
         descriptors: PROJECT_COMPONENTS.descriptors,
         open: context.shell === null ?
           null :
           (assetId) => context.shell?.openAsset(assetId)
       });
       const scene = new SceneEditorScene({
+        sceneId,
         document: target.document,
         room: target.room,
+        openScene: (assetId) => session.assets.open(kSceneKind, assetId),
         session,
         components: PROJECT_COMPONENTS,
         assetSlots,

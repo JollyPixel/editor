@@ -7,6 +7,7 @@ import {
 } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
+import type { PrefabScenes } from "../../src/scene/PrefabScenes.ts";
 import { createSceneBinding } from "./sceneBinding.ts";
 
 export class Probe extends ActorComponent {
@@ -43,10 +44,12 @@ const kRebuilt: Systems.ComponentDefinition<string, Probe> = {
 };
 
 export function createProbeBinding(
-  document: SceneDocument
+  document: SceneDocument,
+  prefabs?: PrefabScenes
 ) {
   return createSceneBinding(
     document,
-    new Systems.ComponentDefinitions().register(kPatched, kRebuilt)
+    new Systems.ComponentDefinitions().register(kPatched, kRebuilt),
+    prefabs
   );
 }

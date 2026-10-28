@@ -6,12 +6,18 @@ import type {
 import type { Systems } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
+import type { PrefabScenes } from "../../src/scene/PrefabScenes.ts";
 import { SceneBinding } from "../../src/scene/SceneBinding.ts";
 import { createEditWorld } from "./editWorld.ts";
+import { createPrefabScenes } from "./prefabScenes.ts";
+
+// CONSTANTS
+export const BOUND_SCENE_ID = "level";
 
 export function createSceneBinding(
   document: SceneDocument,
-  components: Systems.ComponentDefinitions
+  components: Systems.ComponentDefinitions,
+  prefabs: PrefabScenes = createPrefabScenes().scenes
 ) {
   const { world, sceneManager } = createEditWorld();
   const environments: SceneEnvironmentJSON[] = [];
@@ -26,7 +32,9 @@ export function createSceneBinding(
     },
     environment: {
       apply: (environment) => environments.push(environment)
-    }
+    },
+    prefabs,
+    sceneId: BOUND_SCENE_ID
   });
 
   return {
