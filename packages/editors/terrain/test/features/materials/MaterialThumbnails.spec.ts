@@ -13,6 +13,7 @@ import {
 // Import Internal Dependencies
 import { MaterialThumbnails } from "#src/features/materials/model/MaterialThumbnails.ts";
 import { TextureDocument } from "#src/features/materials/model/TextureDocument.ts";
+import { TextureLeases } from "#src/features/materials/model/TextureLeases.ts";
 
 function content(
   text: string
@@ -28,7 +29,7 @@ function thumbnailsSetup() {
   const released: string[] = [];
   const thumbnails = new MaterialThumbnails({
     document,
-    lease: (assetId) => {
+    leases: new TextureLeases((assetId) => {
       const texture = new TextureDocument();
       texture.load(content(`${assetId}-v1`));
       textures.set(assetId, texture);
@@ -38,7 +39,7 @@ function thumbnailsSetup() {
         ready: Promise.resolve(),
         release: () => released.push(assetId)
       };
-    },
+    }),
     createUrl: (bytes) => {
       const url = `blob:${new TextDecoder().decode(bytes)}`;
       live.add(url);

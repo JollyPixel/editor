@@ -10,6 +10,7 @@ import type {
   terrainCommandSchema,
   terrainManifestSchema,
   terrainMaterialSchema,
+  TERRAIN_MATERIAL_ACTIONS,
   TERRAIN_TEXTURE_SIZES,
   tilePatchSchema
 } from "./TerrainCommand.schema.ts";
@@ -31,13 +32,7 @@ export type TerrainCommand = network.Infer<typeof terrainCommandSchema>;
 export type TerrainCommandAction = TerrainCommand["action"];
 export type TerrainMaterialCommand = Extract<
   TerrainCommand,
-  {
-    action:
-      | "material-added"
-      | "material-updated"
-      | "material-removed"
-      | "texture-size-changed";
-  }
+  { action: typeof TERRAIN_MATERIAL_ACTIONS[number]; }
 >;
 export type TerrainChunkCommand = Exclude<TerrainCommand, TerrainMaterialCommand>;
 export type TerrainNetworkCommand = TerrainCommand & network.NetworkCommandHeader;

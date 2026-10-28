@@ -6,13 +6,13 @@ import assert from "node:assert/strict";
 import { CommandHistory } from "@jolly-pixel/history";
 import {
   ChunkCoord,
+  DEFAULT_MATERIAL_TEXTURE_SIZE,
   type TerrainReader,
   type TileCoord
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import {
-  DEFAULT_TERRAIN_TEXTURE_SIZE,
   GROUND_MATERIAL,
   terrainSnapshot,
   type TerrainCommand
@@ -169,7 +169,7 @@ describe("terrain history", () => {
     assert.equal(history.undo("terrain"), true);
     route();
 
-    assert.equal(document.materials.textureSize, DEFAULT_TERRAIN_TEXTURE_SIZE);
+    assert.equal(document.materials.textureSize, DEFAULT_MATERIAL_TEXTURE_SIZE);
     assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
   });
 

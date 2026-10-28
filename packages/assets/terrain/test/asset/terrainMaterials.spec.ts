@@ -5,10 +5,10 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import { InvalidAssetFileError } from "@jolly-pixel/asset-server";
 import { LiveAssetRoom } from "@jolly-pixel/asset-server/testing";
+import { DEFAULT_MATERIAL_TEXTURE_SIZE } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import {
-  DEFAULT_TERRAIN_TEXTURE_SIZE,
   TERRAIN_FILE,
   GROUND_MATERIAL,
   terrainAssetKind,
@@ -47,7 +47,7 @@ describe("terrain materials", () => {
     }));
 
     assert.deepEqual(model.materials.materials(), [GROUND_MATERIAL]);
-    assert.equal(model.materials.textureSize, DEFAULT_TERRAIN_TEXTURE_SIZE);
+    assert.equal(model.materials.textureSize, DEFAULT_MATERIAL_TEXTURE_SIZE);
   });
 
   test("load rejects a document whose materials share a slot", () => {
@@ -101,7 +101,10 @@ describe("terrain materials", () => {
       id: GROUND_MATERIAL.id,
       changes: { tiling: 8 }
     }));
-    room.receive("A", networkCommand({ action: "texture-size-changed", size: DEFAULT_TERRAIN_TEXTURE_SIZE }));
+    room.receive("A", networkCommand({
+      action: "texture-size-changed",
+      size: DEFAULT_MATERIAL_TEXTURE_SIZE
+    }));
 
     assert.deepEqual(materialSlots(room), []);
     assert.deepEqual(

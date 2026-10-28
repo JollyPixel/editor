@@ -1,7 +1,8 @@
 // Import Third-party Dependencies
-import type {
-  TerrainDocument,
-  TerrainMaterialData
+import {
+  isMaterialCommand,
+  type TerrainDocument,
+  type TerrainMaterialData
 } from "@jolly-pixel/asset.terrain/client";
 import {
   MATERIAL_MAPS,
@@ -11,25 +12,13 @@ import {
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
-import type { TextureDocument } from "../model/TextureDocument.ts";
-
-// CONSTANTS
-const kMaterialActions = new Set([
-  "material-added",
-  "material-updated",
-  "material-removed",
-  "texture-size-changed"
-]);
+import type {
+  TextureLease,
+  TextureLeases
+} from "../model/TextureLeases.ts";
 
 export interface DecodedImage extends MaterialImage {
   close(): void;
-}
-
-export interface TextureLease {
-  readonly document: Pick<TextureDocument, "bytes" | "subscribe">;
-  readonly ready: Promise<void>;
-
-  release(): void;
 }
 
 export interface MaterialTexturesOptions {
@@ -38,7 +27,7 @@ export interface MaterialTexturesOptions {
     TerrainView,
     "materialTextureSize" | "materialChanged" | "materialRemoved" | "writeMaterialMap"
   >;
-  lease(assetId: string): TextureLease;
+  leases: Pick<TextureLeases, "hold">;
   decode(bytes: Uint8Array, size: number): Promise<DecodedImage>;
   failed?(assetId: string, error: unknown): void;
 }
@@ -46,21 +35,19 @@ export interface MaterialTexturesOptions {
 interface MapState {
   readonly slot: number;
   readonly map: MaterialMap;
-  assetId: string | null;
+  texture: HeldTexture | null;
   generation: number;
 }
 
 interface HeldTexture {
+  readonly assetId: string;
   readonly lease: TextureLease;
-  readonly users: Set<MapState>;
-  readonly unsubscribe: () => void;
 }
 
 export class MaterialTextures {
   #options: MaterialTexturesOptions;
   #maps = new Map<string, MapState>();
   #slots = new Set<number>();
-  #textures = new Map<string, HeldTexture>();
   #unsubscribe: Array<() => void>;
   #disposed = false;
 
@@ -71,7 +58,7 @@ export class MaterialTextures {
     const { document } = options;
     this.#unsubscribe = [
       document.subscribe("change", ({ command }) => {
-        if (kMaterialActions.has(command.action)) {
+        if (isMaterialCommand(command)) {
           this.#sync();
         }
       }),
@@ -85,8 +72,8 @@ export class MaterialTextures {
     for (const unsubscribe of this.#unsubscribe.splice(0)) {
       unsubscribe();
     }
-    for (const assetId of [...this.#textures.keys()]) {
-      this.#drop(assetId);
+    for (const state of this.#maps.values()) {
+      state.texture?.lease.release();
     }
     this.#maps.clear();
   }
@@ -105,7 +92,7 @@ export class MaterialTextures {
       if (!materials.has(slot)) {
         this.#slots.delete(slot);
         for (const map of MATERIAL_MAPS) {
-          this.#assign(slot, map, null, false);
+          this.#assign(slot, map, null);
         }
         view.materialRemoved(slot);
       }
@@ -119,7 +106,12 @@ export class MaterialTextures {
         heightBlend: material.heightBlend
       });
       for (const map of MATERIAL_MAPS) {
-        this.#assign(material.slot, map, mapAsset(material, map), resized);
+        this.#assign(material.slot, map, mapAsset(material, map));
+      }
+    }
+    if (resized) {
+      for (const state of this.#maps.values()) {
+        void this.#write(state);
       }
     }
   }
@@ -127,35 +119,30 @@ export class MaterialTextures {
   #assign(
     slot: number,
     map: MaterialMap,
-    assetId: string | null,
-    rewrite: boolean
+    assetId: string | null
   ): void {
     const key = `${slot}:${map}`;
     let state = this.#maps.get(key);
     if (state === undefined) {
-      state = { slot, map, assetId: null, generation: 0 };
+      state = { slot, map, texture: null, generation: 0 };
       this.#maps.set(key, state);
     }
-    if (state.assetId === assetId && !rewrite) {
+    if ((state.texture?.assetId ?? null) === assetId) {
       return;
     }
 
-    if (state.assetId !== assetId) {
-      if (state.assetId !== null) {
-        this.#release(state.assetId, state);
-      }
-      state.assetId = assetId;
-      if (assetId !== null) {
-        this.#hold(assetId, state);
-      }
-    }
+    const held = state;
+    held.texture?.lease.release();
+    held.texture = assetId === null ?
+      null :
+      { assetId, lease: this.#options.leases.hold(assetId, () => void this.#write(held)) };
     if (assetId === null && !this.#slots.has(slot)) {
-      state.generation++;
+      held.generation++;
       this.#maps.delete(key);
 
       return;
     }
-    void this.#write(state);
+    void this.#write(held);
   }
 
   async #write(
@@ -163,17 +150,16 @@ export class MaterialTextures {
   ): Promise<void> {
     const generation = ++state.generation;
     const { view, decode, failed } = this.#options;
-    const { assetId, slot, map } = state;
+    const { texture, slot, map } = state;
     const current = () => !this.#disposed &&
       state.generation === generation &&
       this.#slots.has(slot);
-    if (assetId === null) {
+    if (texture === null) {
       view.writeMaterialMap(slot, map, null);
 
       return;
     }
 
-    const texture = this.#textures.get(assetId)!;
     try {
       await texture.lease.ready;
       const { bytes } = texture.lease.document;
@@ -199,54 +185,8 @@ export class MaterialTextures {
     catch (error) {
       if (current()) {
         view.writeMaterialMap(slot, map, null);
-        failed?.(assetId, error);
+        failed?.(texture.assetId, error);
       }
-    }
-  }
-
-  #hold(
-    assetId: string,
-    state: MapState
-  ): void {
-    const held = this.#textures.get(assetId);
-    if (held !== undefined) {
-      held.users.add(state);
-
-      return;
-    }
-
-    const lease = this.#options.lease(assetId);
-    const users = new Set([state]);
-    this.#textures.set(assetId, {
-      lease,
-      users,
-      unsubscribe: lease.document.subscribe("reset", () => {
-        for (const user of users) {
-          void this.#write(user);
-        }
-      })
-    });
-  }
-
-  #release(
-    assetId: string,
-    state: MapState
-  ): void {
-    const held = this.#textures.get(assetId);
-    held?.users.delete(state);
-    if (held?.users.size === 0) {
-      this.#drop(assetId);
-    }
-  }
-
-  #drop(
-    assetId: string
-  ): void {
-    const held = this.#textures.get(assetId);
-    if (held !== undefined) {
-      this.#textures.delete(assetId);
-      held.unsubscribe();
-      held.lease.release();
     }
   }
 }

@@ -8,14 +8,12 @@ import {
   abs,
   atan,
   attribute,
-  bool,
   cameraPosition,
   clamp,
   cos,
   dFdx,
   dFdy,
   Discard,
-  dot,
   float,
   floor,
   Fn,
@@ -23,7 +21,6 @@ import {
   fwidth,
   If,
   int,
-  Loop,
   ivec2,
   length,
   log2,
@@ -33,17 +30,12 @@ import {
   normalize,
   round,
   select,
-  sin,
-  step,
-  struct,
-  texture,
   textureLoad,
   transformNormalToView,
   uniform,
   varying,
   vec2,
-  vec3,
-  vec4
+  vec3
 } from "three/tsl";
 
 // Import Internal Dependencies
@@ -52,7 +44,6 @@ import {
   OVERVIEW_SAMPLES,
   OVERVIEW_SPACING
 } from "../../terrain/OverviewMap.ts";
-import { SPLAT_TEXELS } from "../../terrain/SplatMap.ts";
 import { SKIRT_EDGES } from "../lod/skirtMasks.ts";
 import {
   APRON_MARGIN,
@@ -62,28 +53,22 @@ import {
   LOOKUP_SIZE,
   OVERVIEW_TEXTURE_SIZE
 } from "../textures/ChunkTextureStore.ts";
+import type { MaterialArrays } from "../textures/MaterialTextureStore.ts";
 import {
-  MATERIAL_MAP_BITS,
-  MATERIAL_MAPS,
-  MATERIAL_TECHNIQUE_BITS,
-  type MaterialArrays,
-  type MaterialMap,
-  type MaterialTechnique
-} from "../textures/MaterialTextureStore.ts";
+  materialSurface,
+  type MaterialSurfaceTextures
+} from "./materialSurface.ts";
 import {
-  sampleSurface,
-  triplanarWeights,
-  whiteoutNormal,
-  type MapReader
-} from "./materialSampling.ts";
-import { splatColorNode } from "./splatColors.ts";
+  splatLayers,
+  splatOverlay,
+  type SplatTextures
+} from "./splatLayers.ts";
 
 // CONSTANTS
 export const NODE_DATA_ATTRIBUTE = "terrainNode";
 export const NODE_MORPH_ATTRIBUTE = "terrainMorph";
 export const GRID_ATTRIBUTE = "terrainGrid";
 export const MORPH_OFFSETS_ATTRIBUTE = "terrainMorphOffsets";
-const kAlbedo = vec3(0.42, 0.47, 0.33);
 const kLineColor = vec3(0.08, 0.09, 0.07);
 const kLevelTint = 0.45;
 const kSlopeRampTop = Math.PI / 3;
@@ -91,18 +76,6 @@ const kSlopeFlat = vec3(0.24, 0.58, 0.32);
 const kSlopeMid = vec3(0.86, 0.8, 0.26);
 const kSlopeHigh = vec3(0.9, 0.48, 0.16);
 const kSlopeTooSteep = vec3(0.82, 0.12, 0.12);
-const kMinTiling = 1e-3;
-const kMinWeight = 1e-3;
-const kDefaultRoughness = 1;
-const kJitterFrequency = 8;
-const kSplatJitter = 0.9;
-const kSplatDimmed = 0.3;
-const kPureWeight = 254.5 / 255;
-const kChannels = ["x", "y", "z", "w"] as const;
-const kTriplanarStart = 0.95;
-const kFlatHeight = 0.5;
-const kHeightBlendDepth = 0.2;
-const kSurface = struct({ albedo: "vec3", detail: "vec3", orm: "vec3" }, "TerrainSurface");
 
 export const TERRAIN_OVERLAYS = ["none", "chunks", "lod", "slope", "splat"] as const;
 export const DEFAULT_WALKABLE_SLOPE = 45;
@@ -113,18 +86,11 @@ type BoolNode = Node<"bool">;
 type FloatNode = Node<"float">;
 type IntNode = Node<"int">;
 type Vec2Node = Node<"vec2">;
-type Vec3Node = Node<"vec3">;
-type Vec4Node = Node<"vec4">;
 
-export interface TerrainTextures {
+export interface TerrainTextures extends SplatTextures, MaterialSurfaceTextures {
   heights: THREE.DataArrayTexture;
-  splatIndices: THREE.DataArrayTexture;
-  splatWeights: THREE.DataArrayTexture;
   lookup: THREE.DataTexture;
   overview: THREE.DataTexture;
-  overviewMaterials: THREE.DataTexture;
-  materialSlots: THREE.DataTexture;
-  materialArrays: MaterialArrays;
 }
 
 export interface TerrainShading {
@@ -342,215 +308,20 @@ export function createTerrainShading(
   const surfacePoint = vec3(fragmentWorld.x, varying(position.y, "vTerrainHeight"), fragmentWorld.y);
   const pointDx = dFdx(surfacePoint);
   const pointDy = dFdy(surfacePoint);
-  const steep = surfaceNormal.y.lessThan(kTriplanarStart);
-
-  const loaded = fragmentLayer.greaterThanEqual(int(0));
-  const splatLayer = select(loaded, fragmentLayer, int(0));
-  const jitter = vec2(
-    valueNoise(fragmentWorld.mul(kJitterFrequency), vec2(12.9898, 78.233)),
-    valueNoise(fragmentWorld.mul(kJitterFrequency), vec2(39.3468, 11.135))
-  ).sub(0.5).mul(kSplatJitter);
-  const splatTexel = clamp(
-    floor(local.mul(SPLAT_TEXELS / CHUNK_SAMPLES).add(jitter)),
-    vec2(0),
-    vec2(SPLAT_TEXELS - 1)
-  );
-  const splatIndices = textureLoad(textures.splatIndices, ivec2(splatTexel)).depth(splatLayer);
-  const splatWeights = textureLoad(textures.splatWeights, ivec2(splatTexel)).depth(splatLayer);
-  const smoothWeights = Fn(() => {
-    const texelSpace = local.mul(SPLAT_TEXELS / CHUNK_SAMPLES).sub(0.5).toVar();
-    const cornerBase = floor(texelSpace).toVar();
-    const cornerBlend = texelSpace.sub(cornerBase).toVar();
-    const nearestSlots = round(splatIndices.mul(255)).toVar();
-    const layer = splatLayer.toVar();
-    const sum = vec4(1, 0, 0, 0).toVar();
-    If(splatWeights.x.lessThan(kPureWeight), () => {
-      sum.assign(vec4(0));
-      Loop(4, ({ i }) => {
-        const offset = vec2(float(i.mod(int(2))), float(i.div(int(2)))).toVar();
-        const texel = ivec2(clamp(cornerBase.add(offset), vec2(0), vec2(SPLAT_TEXELS - 1)));
-        const indices = round(textureLoad(textures.splatIndices, texel).depth(layer).mul(255)).toVar();
-        const weights = textureLoad(textures.splatWeights, texel).depth(layer).toVar();
-        const share = mix(float(1).sub(cornerBlend), cornerBlend, offset).toVar();
-        for (const channel of kChannels) {
-          const matches = float(1).sub(step(0.5, abs(nearestSlots.sub(indices[channel]))));
-          sum.addAssign(matches.mul(weights[channel]).mul(share.x.mul(share.y)));
-        }
-      });
-    });
-
-    return sum.mul(step(kMinWeight, splatWeights));
-  })();
-  const overviewPoint = round(fragmentWorld.div(OVERVIEW_SPACING));
-  const overviewTexel = overviewPoint.sub(
-    floor(overviewPoint.div(OVERVIEW_TEXTURE_SIZE)).mul(OVERVIEW_TEXTURE_SIZE)
-  );
-  const overviewSlot = textureLoad(textures.overviewMaterials, ivec2(overviewTexel)).x;
-  const arrayNodes = {
-    albedo: texture(textures.materialArrays.albedo),
-    normal: texture(textures.materialArrays.normal),
-    orm: texture(textures.materialArrays.orm),
-    height: texture(textures.materialArrays.height)
-  };
-  const interpolated = dot(smoothWeights, vec4(1)).greaterThan(kMinWeight);
-  const layers = kChannels.map((channel, index) => {
-    const fallbackSlot = index === 0 ? overviewSlot : float(0);
-
-    return {
-      slot: round(select(loaded, splatIndices[channel], fallbackSlot).mul(255)),
-      weight: select(
-        loaded,
-        select(interpolated, smoothWeights[channel], splatWeights[channel]),
-        float(index === 0 ? 1 : 0)
-      )
-    };
+  const layers = splatLayers(textures, { world: fragmentWorld, local, layer: fragmentLayer });
+  const surface = materialSurface(textures, {
+    layers,
+    normal: surfaceNormal,
+    tangent,
+    bitangent,
+    point: surfacePoint,
+    pointDx,
+    pointDy
   });
-  const totalWeight = layers.reduce<FloatNode>((total, { weight }) => total.add(weight), float(0));
-  const surface = Fn(() => {
-    const slots = vec4From(layers.map(({ slot }) => slot)).toVar();
-    const weights = vec4From(layers.map(({ weight }) => weight)).toVar();
-    const heights = vec4(kFlatHeight).toVar();
-    const heightBlended = float(0).toVar();
-    const normal = surfaceNormal.toVar();
-    const frameTangent = tangent.toVar();
-    const frameBitangent = bitangent.toVar();
-    const projectionWeights = triplanarWeights(surfaceNormal).toVar();
-    const isSteep = steep.toVar();
-    const point = surfacePoint.toVar();
-    const pointX = pointDx.toVar();
-    const pointY = pointDy.toVar();
-    function slotMaterial(
-      index: IntNode
-    ) {
-      const slotTexel = ivec2(int(component(slots, index)), int(0));
-      const entry = textureLoad(textures.materialSlots, slotTexel).toVar();
-      const maps = int(entry.z).toVar();
-      const techniques = int(entry.w).toVar();
-      const scale = float(1).div(max(entry.y, float(kMinTiling))).toVar();
-      const layer = int(max(entry.x.sub(1), float(0))).toVar();
-      const triplanar = uses(techniques, "triplanar").and(isSteep).toVar();
-
-      return {
-        present: entry.x.greaterThan(0.5),
-        anyMap: maps.notEqual(int(0)),
-        has: (map: MaterialMap) => maps.bitAnd(int(MATERIAL_MAP_BITS[map])).notEqual(int(0)),
-        heightBlend: uses(techniques, "heightBlend"),
-        triplanar,
-        sampling: {
-          point: point.mul(scale),
-          dx: pointX.mul(scale),
-          dy: pointY.mul(scale),
-          triplanar,
-          stochastic: uses(techniques, "stochastic"),
-          weights: projectionWeights
-        },
-        read: (map: MaterialMap): MapReader => (uv, uvDx, uvDy) => arrayNodes[map].sample(uv)
-          .depth(layer)
-          .grad(uvDx, uvDy)
-      };
-    }
-    const blended = dot(step(float(kMinWeight), weights), vec4(1)).greaterThan(1.5);
-    If(blended, () => {
-      Loop(4, ({ i }) => {
-        If(component(weights, i).greaterThan(0), () => {
-          const slot = slotMaterial(i);
-          If(slot.present.not(), () => {
-            weights.assign(withComponent(weights, i, float(0)));
-          }).ElseIf(slot.heightBlend.and(slot.has("height")), () => {
-            const { height } = sampleSurface({
-              height: { read: slot.read("height"), enabled: bool(true), project: unchanged }
-            }, slot.sampling);
-            heights.assign(withComponent(heights, i, height.x));
-            heightBlended.assign(1);
-          });
-        });
-      });
-      If(heightBlended.greaterThan(0.5), () => {
-        const soft = weights.div(max(dot(weights, vec4(1)), float(kMinWeight)));
-        const used = step(float(kMinWeight), soft);
-        const unused = float(1).sub(used);
-        const raised = soft.add(heights)
-          .mul(used)
-          .sub(unused)
-          .toVar();
-        const top = max(max(raised.x, raised.y), max(raised.z, raised.w)).sub(kHeightBlendDepth);
-        weights.assign(max(raised.sub(top), vec4(0)).mul(used));
-      });
-    });
-
-    const albedo = vec3(0).toVar();
-    const detail = vec3(0).toVar();
-    const orm = vec3(0).toVar();
-    const total = float(0).toVar();
-    function sampleLayer(
-      slot: ReturnType<typeof slotMaterial>,
-      layerAlbedo: Vec3Node,
-      layerDetail: Vec3Node,
-      layerOrm: Vec3Node
-    ): void {
-      const sums = sampleSurface({
-        albedo: { read: slot.read("albedo"), enabled: slot.has("albedo"), project: unchanged },
-        normal: {
-          read: slot.read("normal"),
-          enabled: slot.has("normal"),
-          project: (sample, axis) => select(
-            slot.triplanar,
-            vec4(whiteoutNormal(normal, unpackNormal(sample), axis), 1),
-            vec4(unpackNormal(sample), 1)
-          )
-        },
-        orm: { read: slot.read("orm"), enabled: slot.has("orm"), project: unchanged }
-      }, slot.sampling);
-      If(slot.has("albedo"), () => {
-        layerAlbedo.assign(sums.albedo.rgb);
-      });
-      If(slot.has("normal"), () => {
-        const world = normalize(sums.normal.xyz);
-        layerDetail.assign(select(
-          slot.triplanar,
-          vec3(dot(world, frameTangent), dot(world, frameBitangent), dot(world, normal)),
-          sums.normal.xyz
-        ));
-      });
-      If(slot.has("orm"), () => {
-        layerOrm.assign(sums.orm.rgb);
-      });
-    }
-    function accumulateLayer(
-      index: IntNode,
-      weight: FloatNode
-    ): void {
-      const slot = slotMaterial(index);
-      If(slot.present, () => {
-        const layerAlbedo = vec3(kAlbedo).toVar();
-        const layerDetail = vec3(0, 0, 1).toVar();
-        const layerOrm = vec3(1, kDefaultRoughness, 0).toVar();
-        If(slot.anyMap, () => sampleLayer(slot, layerAlbedo, layerDetail, layerOrm));
-        albedo.addAssign(layerAlbedo.mul(weight));
-        detail.addAssign(layerDetail.mul(weight));
-        orm.addAssign(layerOrm.mul(weight));
-        total.addAssign(weight);
-      });
-    }
-    Loop(4, ({ i }) => {
-      const weight = component(weights, i).toVar();
-      If(weight.greaterThan(0), () => accumulateLayer(i, weight));
-    });
-    const painted = total.greaterThan(kMinWeight);
-    const share = max(total, float(kMinWeight));
-
-    return kSurface(
-      select(painted, albedo.div(share), kAlbedo),
-      select(painted, normalize(detail), vec3(0, 0, 1)),
-      select(painted, orm.div(share), vec3(1, kDefaultRoughness, 0))
-    );
-  })();
-  const albedo = surface.get("albedo") as Vec3Node;
-  const detail = surface.get("detail") as Vec3Node;
+  const { albedo, detail, orm } = surface;
   material.normalNode = transformNormalToView(normalize(
     tangent.mul(detail.x).add(bitangent.mul(detail.y)).add(surfaceNormal.mul(detail.z))
   ));
-  const orm = surface.get("orm") as Vec3Node;
   material.aoNode = orm.x;
   material.roughnessNode = orm.y;
   material.metalnessNode = orm.z;
@@ -575,20 +346,7 @@ export function createTerrainShading(
     return overlay.equal(TERRAIN_OVERLAYS.indexOf(mode));
   }
   const highlight = uniform(-1);
-  const splatShare = max(totalWeight, float(kMinWeight));
-  const splatColor = layers.reduce<Vec3Node>(
-    (sum, { slot, weight }) => sum.add(splatColorNode(slot).mul(weight)),
-    vec3(0)
-  ).div(splatShare);
-  const highlightWeight = layers.reduce<FloatNode>(
-    (sum, { slot, weight }) => sum.add(select(slot.equal(highlight), weight, float(0))),
-    float(0)
-  ).div(splatShare);
-  const splatOverlay = select(
-    highlight.lessThan(0),
-    splatColor,
-    splatColor.mul(mix(float(kSplatDimmed), float(1), highlightWeight))
-  );
+  const splatColor = splatOverlay(layers, highlight);
   material.colorNode = Fn(() => {
     Discard(chunkKnown(fragmentChunk).not());
     const color = albedo.toVar();
@@ -597,7 +355,7 @@ export function createTerrainShading(
     }).ElseIf(overlayIs("slope"), () => {
       color.assign(slopeColor);
     }).ElseIf(overlayIs("splat"), () => {
-      color.assign(splatOverlay);
+      color.assign(splatColor);
     });
     If(overlayIs("chunks").or(overlayIs("lod")), () => {
       color.assign(mix(color, kLineColor, line));
@@ -618,77 +376,9 @@ export function createTerrainShading(
       highlight.value = slot ?? -1;
     },
     materialArrays(arrays) {
-      for (const map of MATERIAL_MAPS) {
-        arrayNodes[map].value = arrays[map];
-      }
+      surface.materialArrays(arrays);
     }
   };
-}
-
-function valueNoise(
-  point: Vec2Node,
-  seed: Vec2Node
-): FloatNode {
-  const cell = floor(point);
-  const blend = point.sub(cell);
-  const ease = blend.mul(blend).mul(vec2(3).sub(blend.mul(2)));
-  function corner(
-    offset: Vec2Node
-  ): FloatNode {
-    return fract(sin(dot(cell.add(offset), seed)).mul(43758.5453));
-  }
-
-  return mix(
-    mix(corner(vec2(0, 0)), corner(vec2(1, 0)), ease.x),
-    mix(corner(vec2(0, 1)), corner(vec2(1, 1)), ease.x),
-    ease.y
-  );
-}
-
-function unchanged(
-  sample: Vec4Node
-): Vec4Node {
-  return sample;
-}
-
-function uses(
-  techniques: IntNode,
-  technique: MaterialTechnique
-): BoolNode {
-  return techniques.bitAnd(int(MATERIAL_TECHNIQUE_BITS[technique])).notEqual(int(0));
-}
-
-function component(
-  vector: Vec4Node,
-  index: IntNode
-): FloatNode {
-  return select(
-    index.equal(int(0)),
-    vector.x,
-    select(index.equal(int(1)), vector.y, select(index.equal(int(2)), vector.z, vector.w))
-  );
-}
-
-function withComponent(
-  vector: Vec4Node,
-  index: IntNode,
-  value: FloatNode
-): Vec4Node {
-  const mask = vec4From(kChannels.map((_, channel) => select(index.equal(int(channel)), float(1), float(0))));
-
-  return mix(vector, vec4(value), mask);
-}
-
-function vec4From(
-  [x, y, z, w]: FloatNode[]
-): Vec4Node {
-  return vec4(x, y, z, w);
-}
-
-function unpackNormal(
-  sample: Vec4Node
-): Vec3Node {
-  return sample.rgb.mul(2).sub(1);
 }
 
 function degreesToRadians(

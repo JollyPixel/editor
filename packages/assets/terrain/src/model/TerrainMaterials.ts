@@ -1,20 +1,21 @@
 // Import Third-party Dependencies
 import { InvalidEntryError } from "@jolly-pixel/asset.common";
+import {
+  DEFAULT_MATERIAL_TEXTURE_SIZE,
+  MATERIAL_SLOT_COUNT
+} from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
-import {
-  MAX_TERRAIN_MATERIALS,
-  TERRAIN_MATERIAL_SLOTS
-} from "../network/TerrainCommand.schema.ts";
+import { MAX_TERRAIN_MATERIALS } from "../network/TerrainCommand.schema.ts";
 import type {
   TerrainMaterialChanges,
   TerrainMaterialData,
   TerrainMaterialProperties,
   TerrainTextureSize
 } from "../network/types.ts";
+import { changedFields } from "./materialCommands.ts";
 
 // CONSTANTS
-export const DEFAULT_TERRAIN_TEXTURE_SIZE: TerrainTextureSize = 1024;
 export const DEFAULT_MATERIAL_PROPERTIES: Readonly<TerrainMaterialProperties> = Object.freeze({
   name: "Material",
   albedo: null,
@@ -40,12 +41,12 @@ export interface TerrainMaterialsReader {
 
   material(id: string): TerrainMaterialData | undefined;
   materials(): TerrainMaterialData[];
-  slotTaken(slot: number): boolean;
+  materialAt(slot: number): TerrainMaterialData | undefined;
   freeSlot(): number | null;
 }
 
 export class TerrainMaterials implements TerrainMaterialsReader {
-  textureSize: TerrainTextureSize = DEFAULT_TERRAIN_TEXTURE_SIZE;
+  textureSize: TerrainTextureSize = DEFAULT_MATERIAL_TEXTURE_SIZE;
 
   #materials = new Map<string, TerrainMaterialData>();
 
@@ -67,16 +68,16 @@ export class TerrainMaterials implements TerrainMaterialsReader {
       .map(copyMaterial);
   }
 
-  slotTaken(
+  materialAt(
     slot: number
-  ): boolean {
+  ): TerrainMaterialData | undefined {
     for (const material of this.#materials.values()) {
       if (material.slot === slot) {
-        return true;
+        return copyMaterial(material);
       }
     }
 
-    return false;
+    return undefined;
   }
 
   freeSlot(): number | null {
@@ -85,7 +86,7 @@ export class TerrainMaterials implements TerrainMaterialsReader {
     }
 
     const taken = new Set(Array.from(this.#materials.values(), ({ slot }) => slot));
-    for (let slot = 0; slot < TERRAIN_MATERIAL_SLOTS; slot++) {
+    for (let slot = 0; slot < MATERIAL_SLOT_COUNT; slot++) {
       if (!taken.has(slot)) {
         return slot;
       }
@@ -100,7 +101,7 @@ export class TerrainMaterials implements TerrainMaterialsReader {
     if (this.#materials.has(material.id)) {
       throw new InvalidEntryError("material", material.id, "is listed twice");
     }
-    if (this.slotTaken(material.slot)) {
+    if (this.materialAt(material.slot) !== undefined) {
       throw new InvalidEntryError("material", material.id, `takes the used slot ${material.slot}`);
     }
     this.#materials.set(material.id, copyMaterial(material));
@@ -116,10 +117,8 @@ export class TerrainMaterials implements TerrainMaterialsReader {
     }
 
     const updated = { ...material };
-    for (const [field, value] of Object.entries(changes)) {
-      if (value !== undefined) {
-        Object.assign(updated, { [field]: value });
-      }
+    for (const field of changedFields(changes)) {
+      Object.assign(updated, { [field]: changes[field] });
     }
     this.#materials.set(id, copyMaterial(updated));
   }
@@ -132,7 +131,7 @@ export class TerrainMaterials implements TerrainMaterialsReader {
 
   clear(): void {
     this.#materials.clear();
-    this.textureSize = DEFAULT_TERRAIN_TEXTURE_SIZE;
+    this.textureSize = DEFAULT_MATERIAL_TEXTURE_SIZE;
   }
 
   load(

@@ -32,6 +32,7 @@ import { MaterialPalette } from "../features/materials/model/MaterialPalette.ts"
 import { MaterialSelection } from "../features/materials/model/MaterialSelection.ts";
 import { MaterialThumbnails } from "../features/materials/model/MaterialThumbnails.ts";
 import { textureDocumentKind } from "../features/materials/model/TextureDocument.ts";
+import { TextureLeases } from "../features/materials/model/TextureLeases.ts";
 import { parentFolder } from "../features/materials/model/textureNames.ts";
 import "../features/materials/panel/MaterialPalettePanel.ts";
 import { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
@@ -188,19 +189,25 @@ async function mountScene(
 
   const selection = new MaterialSelection(target.document);
   disposables.push(() => selection.dispose());
+  const leases = new TextureLeases((assetId) => context.session.lease(kTextureKind, assetId));
   const scene = new TerrainEditorScene({
     document: target.document,
     sculpt,
     overlaySettings,
     history,
     room: target.room,
-    textures: (assetId) => context.session.lease(kTextureKind, assetId),
+    leases,
     selection
   });
   const { sceneManager } = context.runtime.runtime.world;
   disposables.push(() => sceneManager.unloadScene(scene));
   await context.runtime.load(scene);
-  mountMaterialPalette(context, target, { history, selection, overlay: overlaySettings }, disposables);
+  mountMaterialPalette(
+    context,
+    target,
+    { history, selection, leases, overlay: overlaySettings },
+    disposables
+  );
 
   const presence = new PresenceStore();
   const roster = new PeerRoster({
@@ -226,7 +233,12 @@ async function mountScene(
 function mountMaterialPalette(
   context: RuntimeEditorContext,
   target: AssetLease<TerrainDocument>,
-  shared: { history: TerrainHistory; selection: MaterialSelection; overlay: OverlaySettings; },
+  shared: {
+    history: TerrainHistory;
+    selection: MaterialSelection;
+    leases: TextureLeases;
+    overlay: OverlaySettings;
+  },
   disposables: Array<() => void>
 ): void {
   const element = document.querySelector("terrain-material-palette");
@@ -235,11 +247,11 @@ function mountMaterialPalette(
   }
 
   const { session } = context;
-  const { history, selection } = shared;
+  const { history, selection, leases } = shared;
   const terrain = target.document;
   const thumbnails = new MaterialThumbnails({
     document: terrain,
-    lease: (assetId) => session.lease(kTextureKind, assetId),
+    leases,
     createUrl: (bytes) => URL.createObjectURL(new Blob([bytes.slice()])),
     revokeUrl: (url) => URL.revokeObjectURL(url)
   });

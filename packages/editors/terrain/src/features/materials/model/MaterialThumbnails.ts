@@ -1,12 +1,16 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
 import {
-  TERRAIN_MATERIAL_MAPS,
+  isMaterialCommand,
   type TerrainDocument
 } from "@jolly-pixel/asset.terrain/client";
+import { MATERIAL_MAPS } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
-import type { TextureLease } from "../rendering/MaterialTextures.ts";
+import type {
+  TextureLease,
+  TextureLeases
+} from "./TextureLeases.ts";
 
 export type MaterialThumbnailsEvents = {
   change: () => void;
@@ -14,14 +18,13 @@ export type MaterialThumbnailsEvents = {
 
 export interface MaterialThumbnailsOptions {
   document: Pick<TerrainDocument, "materials" | "subscribe">;
-  lease(assetId: string): TextureLease;
+  leases: Pick<TextureLeases, "hold">;
   createUrl(bytes: Uint8Array): string;
   revokeUrl(url: string): void;
 }
 
 interface HeldThumbnail {
   readonly lease: TextureLease;
-  readonly unsubscribe: () => void;
   url: string | null;
 }
 
@@ -37,7 +40,11 @@ export class MaterialThumbnails extends Emitter<MaterialThumbnailsEvents> {
     this.#options = options;
     const { document } = options;
     this.#unsubscribe = [
-      document.subscribe("change", () => this.#sync()),
+      document.subscribe("change", ({ command }) => {
+        if (isMaterialCommand(command)) {
+          this.#sync();
+        }
+      }),
       document.subscribe("reset", () => this.#sync())
     ];
     this.#sync();
@@ -63,7 +70,7 @@ export class MaterialThumbnails extends Emitter<MaterialThumbnailsEvents> {
   #sync(): void {
     const wanted = new Set<string>();
     for (const material of this.#options.document.materials.materials()) {
-      for (const map of TERRAIN_MATERIAL_MAPS) {
+      for (const map of MATERIAL_MAPS) {
         const id = material[map]?.id;
         if (id !== undefined) {
           wanted.add(id);
@@ -86,13 +93,8 @@ export class MaterialThumbnails extends Emitter<MaterialThumbnailsEvents> {
   #hold(
     assetId: string
   ): void {
-    const lease = this.#options.lease(assetId);
-    const held: HeldThumbnail = {
-      lease,
-      url: null,
-      unsubscribe: lease.document.subscribe("reset", () => this.#refresh(assetId))
-    };
-    this.#held.set(assetId, held);
+    const lease = this.#options.leases.hold(assetId, () => this.#refresh(assetId));
+    this.#held.set(assetId, { lease, url: null });
     lease.ready.then(
       () => this.#refresh(assetId),
       () => undefined
@@ -124,7 +126,6 @@ export class MaterialThumbnails extends Emitter<MaterialThumbnailsEvents> {
     }
 
     this.#held.delete(assetId);
-    held.unsubscribe();
     held.lease.release();
     if (held.url !== null) {
       this.#options.revokeUrl(held.url);

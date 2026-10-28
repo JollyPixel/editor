@@ -200,7 +200,7 @@ export class TerrainPartsRoom implements Room<
     const waiting = new Set<string>();
     for (const chunk of manifest.chunks) {
       const coord = new ChunkCoord(chunk.x, chunk.z);
-      const partId = chunkPartId(coord);
+      const partId = chunkPartId(coord, "heights");
       if (chunk.heights !== undefined) {
         heights.set(partId, chunk.heights);
       }
@@ -246,24 +246,21 @@ export class TerrainPartsRoom implements Room<
   #loadParts(
     message: AssetRoomPartsMessage
   ): void {
-    const parts = Object.entries(message.parts)
-      .flatMap(([partId, encoded]) => {
-        const part = parseChunkPart(partId);
-
-        return part === null || typeof encoded !== "string" ? [] : [{ ...part, encoded }];
-      })
-      .sort((left, right) => Number(left.kind === "splat") - Number(right.kind === "splat"));
-    for (const { coord, kind, encoded } of parts) {
-      if (kind === "heights") {
+    for (const [partId, encoded] of Object.entries(message.parts)) {
+      const part = parseChunkPart(partId);
+      if (part === null || typeof encoded !== "string") {
+        continue;
+      }
+      if (part.channel === "heights") {
         const heights = decodeHeights(encoded);
         if (heights !== null) {
-          this.#stream.received(coord, heights);
+          this.#stream.received(part.coord, heights);
         }
       }
       else {
         const splat = decodeSplat(encoded);
         if (splat !== null) {
-          this.#stream.receivedSplat(coord, splat);
+          this.#stream.receivedSplat(part.coord, splat);
         }
       }
     }
@@ -286,7 +283,7 @@ export class TerrainPartsRoom implements Room<
 
     this.#pending = null;
     const chunks = pending.manifest.chunks.map(({ x, z, overview, materials }): ChunkEntry => {
-      const heights = pending.heights.get(chunkPartId(new ChunkCoord(x, z)));
+      const heights = pending.heights.get(chunkPartId(new ChunkCoord(x, z), "heights"));
       const known = materials === undefined ? {} : { materials };
 
       return heights === undefined ?

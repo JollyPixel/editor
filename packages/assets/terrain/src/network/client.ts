@@ -10,10 +10,7 @@ export * from "./TerrainCommandKeys.ts";
 export * from "./terrainDocumentKind.ts";
 export * from "../model/TerrainDocument.ts";
 export * from "../model/TerrainMaterials.ts";
-export {
-  TERRAIN_MATERIAL_MAPS,
-  type TerrainMaterialMapKind
-} from "../model/materialMaps.ts";
+export { isMaterialCommand } from "../model/materialCommands.ts";
 export * from "../model/TerrainModel.ts";
 export {
   MAX_TERRAIN_MATERIALS,

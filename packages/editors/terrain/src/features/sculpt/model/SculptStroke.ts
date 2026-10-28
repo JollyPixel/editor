@@ -12,6 +12,7 @@ import {
   type TerrainHistory
 } from "../../../shared/terrainHistory.ts";
 import { stampStrength } from "./brushRate.ts";
+import type { BrushPress } from "./BrushToolHandler.ts";
 import { CommitCadence } from "./CommitCadence.ts";
 import type {
   SculptOptions,
@@ -33,11 +34,8 @@ export interface SculptStrokeOptions {
   settings: Pick<SculptSettings, "options">;
 }
 
-export interface StrokePress {
+export interface StrokePress extends BrushPress {
   readonly tool: SculptTool;
-  readonly point: GroundPoint;
-  readonly height: number;
-  readonly lower: boolean;
 }
 
 export class SculptStroke {

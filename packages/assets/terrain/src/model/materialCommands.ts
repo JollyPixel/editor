@@ -1,8 +1,11 @@
+// Import Third-party Dependencies
+import { MATERIAL_SLOT_COUNT } from "@jolly-pixel/terrain.renderer";
+
 // Import Internal Dependencies
 import {
   materialPropertiesSchema,
   MAX_TERRAIN_MATERIALS,
-  TERRAIN_MATERIAL_SLOTS
+  TERRAIN_MATERIAL_ACTIONS
 } from "../network/TerrainCommand.schema.ts";
 import type {
   TerrainCommand,
@@ -10,6 +13,7 @@ import type {
   TerrainMaterialCommand,
   TerrainMaterialField
 } from "../network/types.ts";
+import type { TerrainImage } from "./TerrainDocument.ts";
 import type {
   TerrainMaterials,
   TerrainMaterialsReader
@@ -19,12 +23,15 @@ import type {
 export const TERRAIN_MATERIAL_FIELDS = Object.freeze(
   Object.keys(materialPropertiesSchema.def.shape) as TerrainMaterialField[]
 );
-const kMaterialActions = new Set<string>([
-  "material-added",
-  "material-updated",
-  "material-removed",
-  "texture-size-changed"
-]);
+const kMaterialActions = new Set<string>(TERRAIN_MATERIAL_ACTIONS);
+
+export type TerrainMaterialWriteRef =
+  | {
+    readonly kind: "material";
+    readonly id: string;
+    readonly field: TerrainMaterialField | null;
+  }
+  | { readonly kind: "texture-size"; };
 
 export function isMaterialCommand(
   command: TerrainCommand
@@ -45,8 +52,8 @@ export function acceptsMaterialCommand(
   switch (command.action) {
     case "material-added":
       return materials.material(command.material.id) === undefined &&
-        command.material.slot < TERRAIN_MATERIAL_SLOTS &&
-        !materials.slotTaken(command.material.slot) &&
+        command.material.slot < MATERIAL_SLOT_COUNT &&
+        materials.materialAt(command.material.slot) === undefined &&
         materials.size < MAX_TERRAIN_MATERIALS;
     case "material-updated":
       return materials.material(command.id) !== undefined &&
@@ -106,4 +113,47 @@ export function invertMaterialCommand(
     case "texture-size-changed":
       return [{ action: "texture-size-changed", size: materials.textureSize }];
   }
+}
+
+export function captureMaterialImage(
+  materials: TerrainMaterialsReader,
+  command: TerrainMaterialCommand
+): TerrainImage {
+  if (command.action === "texture-size-changed") {
+    return { chunks: [], materials: [], textureSize: materials.textureSize };
+  }
+
+  const id = materialCommandId(command);
+
+  return {
+    chunks: [],
+    materials: [{ id, material: materials.material(id) ?? null }],
+    textureSize: null
+  };
+}
+
+export function materialWriteRefs(
+  command: TerrainMaterialCommand
+): TerrainMaterialWriteRef[] {
+  switch (command.action) {
+    case "material-updated":
+      return changedFields(command.changes).map((field) => {
+        return { kind: "material", id: command.id, field };
+      });
+    case "texture-size-changed":
+      return [{ kind: "texture-size" }];
+    default: {
+      const id = materialCommandId(command);
+
+      return [null, ...TERRAIN_MATERIAL_FIELDS].map((field) => {
+        return { kind: "material", id, field };
+      });
+    }
+  }
+}
+
+function materialCommandId(
+  command: Exclude<TerrainMaterialCommand, { action: "texture-size-changed"; }>
+): string {
+  return command.action === "material-added" ? command.material.id : command.id;
 }
