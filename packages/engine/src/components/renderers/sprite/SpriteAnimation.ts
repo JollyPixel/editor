@@ -23,13 +23,16 @@ export interface SpriteAnimationPlayOptions {
 
 export class SpriteAnimation {
   #isPlaying = false;
+  #requestUpdate: () => void;
 
   animations = new Map<string, number[]>();
   animation: SpriteRunningAnimation | null = null;
 
   constructor(
-    animations: SpriteAnimationOptions
+    animations: SpriteAnimationOptions,
+    requestUpdate: () => void
   ) {
+    this.#requestUpdate = requestUpdate;
     for (const [name, value] of Object.entries(animations)) {
       this.animations.set(
         name,
@@ -64,6 +67,7 @@ export class SpriteAnimation {
       elapsed: 0
     };
     this.#isPlaying = true;
+    this.#requestUpdate();
   }
 
   pause() {
@@ -75,6 +79,7 @@ export class SpriteAnimation {
   resume() {
     if (this.animation) {
       this.#isPlaying = true;
+      this.#requestUpdate();
     }
   }
 

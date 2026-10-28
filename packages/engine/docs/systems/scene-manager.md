@@ -165,6 +165,8 @@ class ActorRegistry<TContext> {
   readonly tree: ActorTree<TContext>;
 
   has(actor: Actor<TContext>): boolean;
+  /** `true` while an actor holds a component with `needUpdate`. */
+  get updating(): boolean;
   /** Marks the component and destroys it at the end of the frame. */
   destroyLater(component: Component): void;
   /** Actors created while `build` runs. */
@@ -184,6 +186,10 @@ and tear down a group of actors.
 
 `beginFrame()` activates ready scene loads, starts pending scenes, awakes
 every actor created since the last frame, then starts pending components.
+`fixedUpdate()` and `update()` only visit actors holding a component with
+`needUpdate`, in creation order, so static actors cost nothing per frame.
+An actor that gains its first updating component during a frame joins on
+the next one; within an actor, a pass runs the components it started with.
 `endFrame()` destroys the components passed to `destroyLater()`, then
 every actor marked for destruction. Destroying an actor destroys its
 children first, so each actor is destroyed once.

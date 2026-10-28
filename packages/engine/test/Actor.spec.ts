@@ -52,7 +52,7 @@ describe("Actor", () => {
       const actor = new Actor(createWorld() as any, { name: "foobar" });
 
       const component = { update: mock.fn() };
-      actor.componentsRequiringUpdate.push(component as any);
+      actor.componentsRequiringUpdate = [component as any];
       actor.update(0);
 
       assert.strictEqual(component.update.mock.calls.length, 1);
@@ -72,7 +72,7 @@ describe("Actor", () => {
       const actor = new Actor(createWorld() as any, { name: "foobar" });
 
       const component = { update: mock.fn() };
-      actor.componentsRequiringUpdate.push(component as any);
+      actor.componentsRequiringUpdate = [component as any];
       actor.markDestructionPending();
       actor.update(0);
 
@@ -83,7 +83,7 @@ describe("Actor", () => {
       const actor = new Actor(createWorld() as any, { name: "foobar" });
 
       const component = { fixedUpdate: mock.fn() };
-      actor.componentsRequiringUpdate.push(component as any);
+      actor.componentsRequiringUpdate = [component as any];
       actor.fixedUpdate(0);
 
       assert.strictEqual(component.fixedUpdate.mock.calls.length, 1);
@@ -93,7 +93,7 @@ describe("Actor", () => {
       const actor = new Actor(createWorld() as any, { name: "foobar" });
 
       const component = { fixedUpdate: mock.fn() };
-      actor.componentsRequiringUpdate.push(component as any);
+      actor.componentsRequiringUpdate = [component as any];
       actor.markDestructionPending();
       actor.fixedUpdate(0);
 
@@ -105,8 +105,10 @@ describe("Actor", () => {
 
       const componentWithUpdate = { update: mock.fn() };
       const componentWithFixed = { fixedUpdate: mock.fn() };
-      actor.componentsRequiringUpdate.push(componentWithUpdate as any);
-      actor.componentsRequiringUpdate.push(componentWithFixed as any);
+      actor.componentsRequiringUpdate = [
+        componentWithUpdate as any,
+        componentWithFixed as any
+      ];
       actor.fixedUpdate(0);
 
       assert.strictEqual(componentWithUpdate.update?.mock.calls.length, 0);

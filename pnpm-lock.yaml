@@ -995,6 +995,9 @@ importers:
         specifier: ^0.186.0
         version: 0.186.1
     devDependencies:
+      '@jolly-pixel/bench':
+        specifier: workspace:*
+        version: link:../bench
       '@types/picomatch':
         specifier: ^4.0.2
         version: 4.0.3

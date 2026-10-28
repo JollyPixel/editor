@@ -2,7 +2,6 @@
 import {
   describe,
   test,
-  mock,
   beforeEach
 } from "node:test";
 import assert from "node:assert/strict";
@@ -18,6 +17,7 @@ import {
 // Import Internal Dependencies
 import { Actor } from "../src/actor/index.ts";
 import { Scene } from "../src/systems/scene/Scene.ts";
+import { UpdateProbe } from "./helpers/actor/updateProbe.ts";
 import {
   ConcreteScene,
   createSceneSetup,
@@ -41,11 +41,11 @@ describe("Scene", () => {
       const calls: string[] = [];
 
       activateScene(sm, scene);
-      const actor = world.createActor("actor");
+      const probe = world.createActor("actor").addComponentAndGet(UpdateProbe);
       sm.beginFrame();
-      mock.method(actor, "update", () => {
+      probe.onUpdate = () => {
         calls.push("actor");
-      });
+      };
       scene.updateSpy.mock.mockImplementation(() => {
         calls.push("scene");
       });
@@ -61,11 +61,11 @@ describe("Scene", () => {
       const calls: string[] = [];
 
       activateScene(sm, scene);
-      const actor = world.createActor("actor");
+      const probe = world.createActor("actor").addComponentAndGet(UpdateProbe);
       sm.beginFrame();
-      mock.method(actor, "fixedUpdate", () => {
+      probe.onFixedUpdate = () => {
         calls.push("actor");
-      });
+      };
       scene.fixedUpdateSpy.mock.mockImplementation(() => {
         calls.push("scene");
       });

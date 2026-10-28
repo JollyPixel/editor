@@ -17,7 +17,8 @@
     "test-gpu": "node --test test/systems/rendering/compositing/postProcessing.gpu.ts",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "lint": "oxlint src test",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json"
+    "bench": "jolly-bench",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p bench/tsconfig.json"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
@@ -49,6 +50,7 @@
     "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
+    "@jolly-pixel/bench": "workspace:*",
     "@types/picomatch": "^4.0.2"
   },
   "peerDependencies": {

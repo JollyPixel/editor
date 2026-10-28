@@ -2,11 +2,22 @@
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import type { RenderComponent } from "../Renderer.ts";
+import type {
+  RenderComponent,
+  RenderViewport
+} from "../Renderer.ts";
 import {
   type CameraPipelineFactory,
   CameraPipelines
 } from "./CameraPipelines.ts";
+
+// CONSTANTS
+const kFullViewport: Readonly<RenderViewport> = Object.freeze({
+  x: 0,
+  y: 0,
+  width: 1,
+  height: 1
+});
 
 export class CameraCompositor {
   #renderer: THREE.WebGPURenderer;
@@ -47,8 +58,8 @@ export class CameraCompositor {
     canvasWidth: number,
     canvasHeight: number
   ): void {
-    const components = this.#components.sort((a, b) => a.depth - b.depth);
-    const hasViewports = components.some((rc) => rc.viewport !== null);
+    const components = this.#components.sort(byDepth);
+    const hasViewports = components.some(hasViewport);
 
     if (!hasViewports) {
       this.#renderer.setViewport(0, 0, canvasWidth, canvasHeight);
@@ -59,7 +70,7 @@ export class CameraCompositor {
       rc.prepareRender(canvasWidth, canvasHeight);
 
       if (hasViewports) {
-        const vp = rc.viewport ?? { x: 0, y: 0, width: 1, height: 1 };
+        const vp = rc.viewport ?? kFullViewport;
         const vx = Math.round(vp.x * canvasWidth);
         const vy = Math.round(vp.y * canvasHeight);
         const vw = Math.round(vp.width * canvasWidth);
@@ -91,4 +102,17 @@ export class CameraCompositor {
     this.#pipelines.dispose();
     this.#components.length = 0;
   }
+}
+
+function byDepth(
+  left: RenderComponent,
+  right: RenderComponent
+): number {
+  return left.depth - right.depth;
+}
+
+function hasViewport(
+  component: RenderComponent
+): boolean {
+  return component.viewport !== null;
 }

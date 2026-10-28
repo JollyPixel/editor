@@ -203,6 +203,19 @@ UI elements are anchored to screen edges and support pointer interaction through
   - [UISprite](./docs/ui/ui-sprite.md) — interactive sprite with
     style, hover states, text labels, and pointer signals.
 
+## 🧪 Benchmarks
+
+The suites measure `World#tick()` over static and updating actors, actor
+churn and `getComponent`, `ActorTree` lookups, and `CameraCompositor#render`.
+They run on a headless world with no-op renderer and input, so the numbers
+cover the engine and leave out three.js and the GPU.
+
+```bash
+pnpm --filter @jolly-pixel/engine bench -- --allocations
+```
+
+Filtering and measurement rules are documented by `@jolly-pixel/bench`.
+
 ## Contributors guide
 
 If you are a developer **looking to contribute** to the project, you must first read the [CONTRIBUTING][contributing] guide.

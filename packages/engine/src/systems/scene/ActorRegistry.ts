@@ -16,10 +16,12 @@ export class ActorRegistry<
 
   #root: THREE.Object3D;
   #actors = new Set<Actor<TContext>>();
-  #frameActors: Actor<TContext>[] = [];
+  #updatingActors: readonly Actor<TContext>[] = [];
+  #frameActors: readonly Actor<TContext>[] = [];
   #hasActorsToAwake = false;
   #componentsToStart: Component[] = [];
   #componentsToDestroy: Component[] = [];
+  #actorsToDestroy = new Set<Actor<TContext>>();
 
   constructor(
     root: THREE.Object3D
@@ -35,6 +37,10 @@ export class ActorRegistry<
     actor: Actor<TContext>
   ): boolean {
     return this.#actors.has(actor);
+  }
+
+  get updating(): boolean {
+    return this.#updatingActors.length > 0;
   }
 
   attach(
@@ -76,8 +82,47 @@ export class ActorRegistry<
   detach(
     actor: Actor<TContext>
   ): void {
-    this.#actors.delete(actor);
+    if (
+      this.#actors.delete(actor) &&
+      actor.componentsRequiringUpdate.length > 0
+    ) {
+      this.#stopUpdating(actor);
+    }
     (actor.parent ?? this.tree).remove(actor);
+  }
+
+  requireUpdate(
+    component: Component,
+    required: boolean
+  ): void {
+    const { actor } = component;
+    const before = actor.componentsRequiringUpdate;
+    const index = before.indexOf(component);
+    if (required === (index !== -1)) {
+      return;
+    }
+
+    const after = required ?
+      [...before, component] :
+      before.toSpliced(index, 1);
+    actor.componentsRequiringUpdate = after;
+
+    if (!this.#actors.has(actor)) {
+      return;
+    }
+    if (before.length === 0) {
+      this.#startUpdating(actor);
+    }
+    else if (after.length === 0) {
+      this.#stopUpdating(actor);
+    }
+  }
+
+  destroyActorLater(
+    actor: Actor<TContext>
+  ): void {
+    actor.pendingForDestruction = true;
+    this.#actorsToDestroy.add(actor);
   }
 
   attachComponent(
@@ -153,7 +198,7 @@ export class ActorRegistry<
     if (this.#hasActorsToAwake) {
       this.awake();
     }
-    this.#frameActors = Array.from(this.#actors);
+    this.#frameActors = this.#updatingActors;
     this.#startComponents();
   }
 
@@ -176,18 +221,18 @@ export class ActorRegistry<
   }
 
   endFrame(): void {
-    for (const component of this.#componentsToDestroy.splice(0)) {
-      component.destroy();
+    const components = this.#componentsToDestroy;
+    if (components.length > 0) {
+      this.#componentsToDestroy = [];
+      for (const component of components) {
+        component.destroy();
+      }
     }
 
-    for (const actor of this.#frameActors) {
-      if (
-        actor.pendingForDestruction &&
-        this.#actors.has(actor) &&
-        !actor.parent?.pendingForDestruction
-      ) {
-        actor.destroy();
-      }
+    const actors = this.#actorsToDestroy;
+    if (actors.size > 0) {
+      this.#actorsToDestroy = new Set();
+      this.destroyRoots(actors);
     }
   }
 
@@ -198,8 +243,38 @@ export class ActorRegistry<
 
     this.#componentsToStart.length = 0;
     this.#componentsToDestroy.length = 0;
-    this.#frameActors.length = 0;
+    this.#actorsToDestroy.clear();
+    this.#updatingActors = [];
+    this.#frameActors = [];
     this.#actors.clear();
+  }
+
+  #startUpdating(
+    actor: Actor<TContext>
+  ): void {
+    const actors = this.#updatingActors;
+    let low = 0;
+    let high = actors.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (actors[middle].id < actor.id) {
+        low = middle + 1;
+      }
+      else {
+        high = middle;
+      }
+    }
+
+    this.#updatingActors = actors.toSpliced(low, 0, actor);
+  }
+
+  #stopUpdating(
+    actor: Actor<TContext>
+  ): void {
+    const index = this.#updatingActors.indexOf(actor);
+    if (index !== -1) {
+      this.#updatingActors = this.#updatingActors.toSpliced(index, 1);
+    }
   }
 
   #startComponents(): void {

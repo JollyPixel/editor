@@ -20,6 +20,8 @@ import {
 
 // CONSTANTS
 const kDoubleClickThresholdMs = 300;
+const kBounds = new THREE.Box3();
+const kPointer = new THREE.Vector3();
 
 export interface UISpriteStyle {
   color?: THREE.ColorRepresentation;
@@ -97,10 +99,9 @@ export class UISprite<
 
   isPointerOver(): boolean {
     const mouse = this.actor.world.input.mouse.worldPosition;
-    const box = new THREE.Box3().setFromObject(this.mesh);
 
-    return box.containsPoint(
-      new THREE.Vector3(mouse.x, mouse.y, 0)
+    return kBounds.setFromObject(this.mesh).containsPoint(
+      kPointer.set(mouse.x, mouse.y, 0)
     );
   }
 

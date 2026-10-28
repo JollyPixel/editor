@@ -47,7 +47,7 @@ export class Actor<
   parent: Actor<TContext> | null = null;
 
   components: Component[] = [];
-  componentsRequiringUpdate: Component[] = [];
+  componentsRequiringUpdate: readonly Component[] = [];
   behaviors: Record<string, Behavior<TContext>[]> = {};
 
   awoken = false;
@@ -124,15 +124,17 @@ export class Actor<
   getComponent<T extends Component>(typeName: string): T | null;
   getComponent<T extends Component>(componentClass: new (...args: any[]) => T): T | null;
   getComponent<T extends Component>(typeNameOrClass: string | (new (...args: any[]) => T)): T | null {
-    const matches = typeof typeNameOrClass === "string" ?
-      (component: Component) => component.typeName === typeNameOrClass :
-      (component: Component) => component instanceof typeNameOrClass;
+    for (const component of this.components) {
+      const matches = typeof typeNameOrClass === "string" ?
+        component.typeName === typeNameOrClass :
+        component instanceof typeNameOrClass;
 
-    const component = this.components.find(
-      (component) => matches(component) && !component.pendingForDestruction
-    );
+      if (matches && !component.pendingForDestruction) {
+        return component as T;
+      }
+    }
 
-    return (component as T | undefined) ?? null;
+    return null;
   }
 
   * getComponents<T extends Component>(
@@ -176,7 +178,7 @@ export class Actor<
     alpha = 0
   ) {
     if (!this.pendingForDestruction) {
-      for (const component of [...this.componentsRequiringUpdate]) {
+      for (const component of this.componentsRequiringUpdate) {
         component.update?.(deltaTime, alpha);
       }
     }
@@ -187,7 +189,7 @@ export class Actor<
     stepIndex = 0
   ) {
     if (!this.pendingForDestruction) {
-      for (const component of [...this.componentsRequiringUpdate]) {
+      for (const component of this.componentsRequiringUpdate) {
         component.fixedUpdate?.(deltaTime, stepIndex);
       }
     }
@@ -218,7 +220,7 @@ export class Actor<
   }
 
   markDestructionPending() {
-    this.pendingForDestruction = true;
+    this.world.sceneManager.actors.destroyActorLater(this);
     this.destroyAllActors();
   }
 

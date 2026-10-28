@@ -42,6 +42,24 @@ class Recorder extends ActorComponent {
   }
 }
 
+class Logger extends ActorComponent {
+  #log: string[];
+  onUpdate: () => void = () => undefined;
+
+  constructor(
+    actor: Actor,
+    log: string[]
+  ) {
+    super({ actor, typeName: "Logger" });
+    this.#log = log;
+  }
+
+  update() {
+    this.#log.push(this.actor.name);
+    this.onUpdate();
+  }
+}
+
 function createRegistry() {
   const root = new THREE.Scene();
   const sceneManager = new SceneManager(root);
@@ -98,6 +116,73 @@ describe("Systems.Scene.ActorRegistry", () => {
         ["awake", "start", "fixedUpdate", "fixedUpdate", "update"]
       );
     }
+  });
+
+  test("should update actors in creation order, even one that starts updating late", () => {
+    const { registry, createActor } = createRegistry();
+    const log: string[] = [];
+    const late = createActor("late");
+    createActor("early").addComponent(Logger, log);
+    registry.beginFrame();
+
+    late.addComponent(Logger, log);
+    registry.beginFrame();
+    registry.update(kDeltaTime, 0);
+
+    assert.deepStrictEqual(log, ["late", "early"]);
+  });
+
+  test("should run the components and actors the update pass started with", () => {
+    const { registry, createActor } = createRegistry();
+    const log: string[] = [];
+    const actor = createActor("first");
+    const first = actor.addComponentAndGet(Logger, log);
+    actor.addComponent(Logger, log);
+    first.onUpdate = () => {
+      first.needUpdate = false;
+      actor.addComponent(Logger, log);
+      createActor("spawned").addComponent(Logger, log);
+    };
+    registry.beginFrame();
+
+    registry.update(kDeltaTime, 0);
+
+    assert.deepStrictEqual(log, ["first", "first"]);
+  });
+
+  test("should update each actor once per frame even when actor ids repeat", () => {
+    const { registry, createActor } = createRegistry();
+    const log: string[] = [];
+    Actor.Id.clear();
+    const first = createActor("first");
+    Actor.Id.clear();
+    const second = createActor("second");
+
+    second.addComponent(Logger, log);
+    first.addComponent(Logger, log);
+    second.addComponent(Recorder);
+    registry.beginFrame();
+    registry.update(kDeltaTime, 0);
+
+    assert.deepStrictEqual(log.toSorted(), ["first", "second"]);
+  });
+
+  test("should report updating only while an actor holds an updating component", () => {
+    const { registry, createActor } = createRegistry();
+    const empty = registry.updating;
+    const actor = createActor("actor");
+    const recorder = actor.addComponentAndGet(Recorder);
+    const started = registry.updating;
+
+    recorder.needUpdate = false;
+    const paused = registry.updating;
+    recorder.needUpdate = true;
+    actor.destroy();
+
+    assert.deepStrictEqual(
+      [empty, started, paused, registry.updating],
+      [false, true, false, false]
+    );
   });
 
   test("should stop updating an actor once it is destroyed", () => {

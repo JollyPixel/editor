@@ -18,6 +18,7 @@ export interface ActorComponentOptions<
 > {
   actor: Actor<TContext>;
   typeName: FreeComponentEnum;
+  needUpdate?: boolean;
 }
 
 export class ActorComponent<
@@ -43,7 +44,7 @@ export class ActorComponent<
     this.typeName = options.typeName;
 
     this.actor.world.sceneManager.actors.attachComponent(this);
-    this.needUpdate = hasUpdateHook(this);
+    this.needUpdate = options.needUpdate ?? hasUpdateHook(this);
   }
 
   get needUpdate(): boolean {
@@ -54,18 +55,7 @@ export class ActorComponent<
     value: boolean
   ) {
     this.#needUpdate = value;
-
-    if (this.#needUpdate) {
-      if (!this.actor.componentsRequiringUpdate.includes(this)) {
-        this.actor.componentsRequiringUpdate.push(this);
-      }
-    }
-    else {
-      const index = this.actor.componentsRequiringUpdate.indexOf(this);
-      if (index !== -1) {
-        this.actor.componentsRequiringUpdate.splice(index, 1);
-      }
-    }
+    this.actor.world.sceneManager.actors.requireUpdate(this, value);
   }
 
   get context(): TContext {

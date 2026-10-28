@@ -46,6 +46,11 @@ renderer.animation.play("walk");
 renderer.animation.stop();
 ```
 
+`animation.isAnimating` is `true` while a clip plays or fades. The
+renderer only requests updates in that state: `play()`, `resume()` and a
+fading `stop()` turn them on, and they turn off once nothing is left to
+animate.
+
 ## SpriteRenderer
 
 Renders a 2D sprite from a spritesheet texture. Supports
@@ -93,7 +98,8 @@ sprite.animation.play("run", { duration: 0.6, loop: true });
 
 `duration` is the length of one full cycle, in seconds. Playback
 advances with the frame `deltaTime`. A non-looping animation stops on
-its last frame and `isPlaying` becomes `false`.
+its last frame and `isPlaying` becomes `false`. The sprite only requests
+updates while `isPlaying` is `true`.
 
 ## TextRenderer
 

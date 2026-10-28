@@ -39,7 +39,9 @@ export class ModelRenderer<
   #debug = false;
   #mixer: THREE.AnimationMixer | null = null;
 
-  animation = new ModelAnimation<TClipName>();
+  animation = new ModelAnimation<TClipName>(() => {
+    this.needUpdate = true;
+  });
 
   constructor(
     actor: Actor<any>,
@@ -47,7 +49,8 @@ export class ModelRenderer<
   ) {
     super({
       actor,
-      typeName: "ModelRenderer"
+      typeName: "ModelRenderer",
+      needUpdate: false
     });
 
     this.#asset = options.asset;
@@ -64,9 +67,6 @@ export class ModelRenderer<
       if (animations.default) {
         this.animation.play(animations.default);
       }
-    }
-    else {
-      this.needUpdate = false;
     }
   }
 
@@ -92,6 +92,9 @@ export class ModelRenderer<
     deltaTime: number
   ) {
     this.animation.update(deltaTime);
+    if (!this.animation.isAnimating) {
+      this.needUpdate = false;
+    }
   }
 
   protected override onDestroy(): void {

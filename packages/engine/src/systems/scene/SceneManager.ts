@@ -367,15 +367,21 @@ export class SceneManager<
       this.#currentScene?.start();
     }
 
-    for (const id of this.#appendedScenesPendingStart) {
-      this.#appendedScenes.get(id)?.scene.start();
+    if (this.#appendedScenesPendingStart.size > 0) {
+      for (const id of this.#appendedScenesPendingStart) {
+        this.#appendedScenes.get(id)?.scene.start();
+      }
+      this.#appendedScenesPendingStart.clear();
     }
-    this.#appendedScenesPendingStart.clear();
 
     this.actors.beginFrame();
   }
 
   #activateReadyLoads(): void {
+    if (this.#readyLoads.size === 0) {
+      return;
+    }
+
     const replacement = this.#replacementLoad;
     if (replacement !== null && this.#readyLoads.delete(replacement)) {
       this.#activateScene(replacement.scene);
