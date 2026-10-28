@@ -143,12 +143,37 @@ interface UINodeOptions {
 
 ```ts
 class UINode extends ActorComponent {
-  get size(): { width: number; height: number };
-  get pivot(): { x: number; y: number };
+  readonly layout: UILayout;
 
   addChildren(object: THREE.Object3D): void;
   updateToWorldPosition(): void;
 }
+
+class UILayout {
+  constructor(options?: UINodeOptions);
+
+  // The options with their defaults filled in, frozen.
+  readonly size: { width: number; height: number };
+  readonly pivot: { x: number; y: number };
+  readonly anchor: { x: UIAnchorX; y: UIAnchorY };
+  readonly offset: { x: number; y: number };
+
+  // Position of the element's origin inside the screen bounds.
+  position(bounds: UIBounds): { x: number; y: number };
+}
+```
+
+`UILayout` holds no reference to the scene, so the positioning can be
+computed for any bounds:
+
+```ts
+const layout = new UILayout({
+  anchor: { x: "right", y: "top" },
+  size: { width: 4, height: 2 }
+});
+
+layout.position({ left: -10, right: 10, top: 5, bottom: -5 });
+// { x: 8, y: 4 }
 ```
 
 ## See also

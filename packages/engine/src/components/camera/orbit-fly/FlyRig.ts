@@ -5,6 +5,8 @@ import * as THREE from "three/webgpu";
 import { OrbitFocus } from "./OrbitFocus.ts";
 import { ElasticFocus } from "./ElasticFocus.ts";
 import { SmoothedVelocity } from "./SmoothedVelocity.ts";
+import { NumberRange } from "./NumberRange.ts";
+import { LookAngles } from "./LookAngles.ts";
 import {
   type CameraFocus,
   type FlyBody,
@@ -160,14 +162,11 @@ export class FlyRig {
 
   #velocity: SmoothedVelocity;
   #focus: CameraFocus;
-  #yaw: number;
-  #pitch: number;
+  #angles: LookAngles;
   #moveSpeed: number;
-  #minMoveSpeed: number;
-  #maxMoveSpeed: number;
+  #speedRange: NumberRange;
   #responsiveness: number;
   #keyLookSpeed: number;
-  #maxPitch: number;
   #speedAdjustStep: number;
 
   #forward = new THREE.Vector3();
@@ -175,7 +174,6 @@ export class FlyRig {
   #up = new THREE.Vector3(0, 1, 0);
   #move = new THREE.Vector3();
   #offset = new THREE.Vector3();
-  #euler = new THREE.Euler(0, 0, 0, "YXZ");
 
   constructor(
     options: FlyRigOptions
@@ -214,18 +212,15 @@ export class FlyRig {
     this.touchpadSwipe = touchpadSwipe;
     this.invertY = invertY;
 
-    this.#yaw = yaw;
-    this.#pitch = pitch;
-    this.#minMoveSpeed = minMoveSpeed;
-    this.#maxMoveSpeed = maxMoveSpeed;
-    this.#moveSpeed = this.#clampMoveSpeed(moveSpeed);
+    this.#angles = new LookAngles({ yaw, pitch }, maxPitch);
+    this.#speedRange = new NumberRange(minMoveSpeed, maxMoveSpeed);
+    this.#moveSpeed = this.#speedRange.clamp(moveSpeed);
     this.#velocity = new SmoothedVelocity({
       accelerationTime,
       brakingTime
     });
     this.#responsiveness = responsiveness;
     this.#keyLookSpeed = keyLookSpeed;
-    this.#maxPitch = maxPitch;
     this.#speedAdjustStep = speedAdjustStep;
 
     switch (focusMode) {
@@ -264,7 +259,7 @@ export class FlyRig {
   set moveSpeed(
     speed: number
   ) {
-    this.#moveSpeed = this.#clampMoveSpeed(speed);
+    this.#moveSpeed = this.#speedRange.clamp(speed);
   }
 
   get moving(): boolean {
@@ -345,12 +340,7 @@ export class FlyRig {
   teleport(
     pose: CameraPose
   ): void {
-    const { x, y, z, w } = pose.quaternion;
-    this.#euler.setFromQuaternion(
-      this.body.orientation.set(x, y, z, w)
-    );
-    this.#yaw = this.#euler.y;
-    this.#pitch = this.#clampPitch(this.#euler.x);
+    this.#angles.face(pose.quaternion);
     this.#velocity.stop();
 
     this.#orientFromAngles();
@@ -364,16 +354,14 @@ export class FlyRig {
     const orientation = this.#focus.enter({
       point,
       cameraPosition: this.body.position,
-      yaw: this.#yaw,
-      pitch: this.#pitch,
+      angles: this.#angles,
       up: this.#up
     });
     if (orientation === null) {
       return false;
     }
 
-    this.#yaw = orientation.yaw;
-    this.#pitch = this.#clampPitch(orientation.pitch);
+    this.#angles.aim(orientation);
     this.#velocity.stop();
     this.#updateFocusPose(0);
 
@@ -408,8 +396,7 @@ export class FlyRig {
       return;
     }
 
-    this.#yaw += yawDelta;
-    this.#pitch = this.#clampPitch(this.#pitch + pitchDelta);
+    this.#angles.turn(yawDelta, pitchDelta);
 
     if (!this.#focus.isLocked) {
       this.#orientFromAngles();
@@ -417,9 +404,7 @@ export class FlyRig {
   }
 
   #orientFromAngles(): void {
-    this.body.orientation.setFromEuler(
-      this.#euler.set(this.#pitch, this.#yaw, 0)
-    );
+    this.#angles.writeTo(this.body.orientation);
   }
 
   #updateFocusPose(
@@ -427,25 +412,9 @@ export class FlyRig {
   ): void {
     this.#focus.updatePose({
       body: this.body,
-      yaw: this.#yaw,
-      pitch: this.#pitch,
+      angles: this.#angles,
       deltaTime,
       responsiveness: this.#responsiveness
     });
-  }
-
-  #clampPitch(
-    pitch: number
-  ): number {
-    return THREE.MathUtils.clamp(pitch, -this.#maxPitch, this.#maxPitch);
-  }
-
-  #clampMoveSpeed(
-    speed: number
-  ): number {
-    return Math.min(
-      this.#maxMoveSpeed,
-      Math.max(this.#minMoveSpeed, speed)
-    );
   }
 }

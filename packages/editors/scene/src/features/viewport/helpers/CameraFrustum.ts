@@ -18,13 +18,20 @@ export class CameraFrustum implements ComponentHelper {
 
   sync(): void {
     const component = this.#component;
+    const {
+      projectionMode,
+      fov,
+      near,
+      far,
+      orthographicScale
+    } = component.settings;
     this.root.update(
       {
-        projection: component.projectionMode,
-        fov: component.fov,
-        near: component.near,
-        far: component.far,
-        orthographicScale: component.orthographicScale
+        projection: projectionMode,
+        fov,
+        near,
+        far,
+        orthographicScale
       },
       component.actor.object3D.matrixWorld
     );

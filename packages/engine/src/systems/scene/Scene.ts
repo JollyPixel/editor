@@ -43,7 +43,7 @@ export abstract class Scene<
     options: SceneOptions = {}
   ) {
     super();
-    this.id = Scene.Id.incr();
+    this.id = Scene.Id.next();
     this.name = name;
     this.assets = parseSceneAssets(options.assets ?? []);
   }

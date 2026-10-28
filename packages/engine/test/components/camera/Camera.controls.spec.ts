@@ -16,6 +16,7 @@ import {
   createActorMock,
   type ActorMock
 } from "../../helpers/camera/cameraActor.ts";
+import { Viewport } from "../../../src/systems/rendering/Viewport.ts";
 
 describe("Components.Camera.Camera3DControls", () => {
   let actor: ActorMock;
@@ -31,8 +32,8 @@ describe("Components.Camera.Camera3DControls", () => {
         far: 4096
       });
 
-      assert.strictEqual(controls.near, 2);
-      assert.strictEqual(controls.far, 4096);
+      assert.strictEqual(controls.settings.near, 2);
+      assert.strictEqual(controls.settings.far, 4096);
       assert.strictEqual(controls.camera.far, 4096);
     });
 
@@ -41,7 +42,7 @@ describe("Components.Camera.Camera3DControls", () => {
         fov: 75
       });
 
-      assert.strictEqual(controls.fov, 75);
+      assert.strictEqual(controls.settings.fov, 75);
       assert.strictEqual(controls.camera.fov, 75);
     });
 
@@ -51,8 +52,8 @@ describe("Components.Camera.Camera3DControls", () => {
         orthographicScale: 12
       });
 
-      assert.strictEqual(controls.projectionMode, "orthographic");
-      assert.strictEqual(controls.orthographicScale, 12);
+      assert.strictEqual(controls.settings.projectionMode, "orthographic");
+      assert.strictEqual(controls.settings.orthographicScale, 12);
       assert.ok(controls.threeCamera instanceof THREE.OrthographicCamera);
     });
 
@@ -64,7 +65,7 @@ describe("Components.Camera.Camera3DControls", () => {
       });
 
       assert.strictEqual(controls.depth, 3);
-      assert.deepStrictEqual(controls.viewport, viewport);
+      assert.deepStrictEqual(controls.viewport, new Viewport(viewport));
     });
 
     test("should attach an audio listener by default", () => {

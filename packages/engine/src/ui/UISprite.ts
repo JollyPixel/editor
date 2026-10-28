@@ -9,17 +9,15 @@ import {
   Actor,
   SignalEvent
 } from "../actor/index.ts";
-import {
-  UINode,
-  type UINodeOptions
-} from "./UINode.ts";
+import { UINode } from "./UINode.ts";
+import type { UINodeOptions } from "./UILayout.ts";
 import {
   UIText,
   type UITextOptions
 } from "./UIText.ts";
 
 // CONSTANTS
-const kDoubleClickThresholdMs = 300;
+const kDoubleClickThreshold = 0.3;
 const kBounds = new THREE.Box3();
 const kPointer = new THREE.Vector3();
 
@@ -46,7 +44,7 @@ export class UISprite<
   #styleOnHover: UISpriteStyle | null;
   #text: UIText<TContext> | undefined;
 
-  #lastClickTime = 0;
+  #lastClickTime = Number.NEGATIVE_INFINITY;
 
   onPointerEnter = new SignalEvent();
   onPointerLeave = new SignalEvent();
@@ -72,7 +70,7 @@ export class UISprite<
   }
 
   awake() {
-    const { width, height } = this.size;
+    const { width, height } = this.layout.size;
     const geometry = new THREE.PlaneGeometry(width, height);
     const material = new THREE.MeshBasicMaterial({
       color: this.#style.color ?? 0xffffff,
@@ -106,7 +104,7 @@ export class UISprite<
   }
 
   update() {
-    const { input } = this.actor.world;
+    const { input, time } = this.actor.world;
     const isOver = this.isPointerOver();
 
     if (isOver && !this.#isHovered) {
@@ -140,10 +138,10 @@ export class UISprite<
       if (isOver) {
         this.onClick.emit();
 
-        const now = performance.now();
-        if (now - this.#lastClickTime < kDoubleClickThresholdMs) {
+        const now = time.unscaledElapsed;
+        if (now - this.#lastClickTime < kDoubleClickThreshold) {
           this.onDoubleClick.emit();
-          this.#lastClickTime = 0;
+          this.#lastClickTime = Number.NEGATIVE_INFINITY;
         }
         else {
           this.#lastClickTime = now;

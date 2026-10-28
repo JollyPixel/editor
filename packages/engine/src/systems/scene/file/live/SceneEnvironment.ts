@@ -3,12 +3,12 @@ import * as THREE from "three/webgpu";
 import { BakedRoomEnvironment } from "@jolly-pixel/three";
 
 // Import Internal Dependencies
-import type { World } from "../../World.ts";
-import type { Logger } from "../../Logger.ts";
+import type { World } from "../../../World.ts";
+import type { Logger } from "../../../Logger.ts";
 import type {
   SceneEnvironmentFile,
   SceneFogFile
-} from "./SceneFile.ts";
+} from "../SceneFile.ts";
 
 export class SceneEnvironment {
   #world: World<any, any>;

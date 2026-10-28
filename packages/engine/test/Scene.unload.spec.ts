@@ -8,7 +8,6 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Actor } from "../src/actor/index.ts";
 import { Scene } from "../src/systems/scene/Scene.ts";
 import { UpdateProbe } from "./helpers/actor/updateProbe.ts";
 import { createSceneAssets } from "./helpers/scene/sceneAssets.ts";
@@ -24,8 +23,6 @@ const kDeltaTime = 1 / 60;
 
 describe("SceneManager.unloadScene", () => {
   beforeEach(() => {
-    Actor.Id.clear();
-    Actor.PersistentId.clear();
     Scene.Id.clear();
   });
 

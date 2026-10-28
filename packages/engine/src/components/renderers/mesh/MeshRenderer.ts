@@ -60,7 +60,7 @@ export interface MeshRendererOptions {
   receiveShadow?: boolean;
 }
 
-interface MeshSettings {
+export interface MeshSettings {
   geometry: MeshGeometry;
   material: Required<MeshMaterialOptions>;
   castShadow: boolean;
@@ -119,6 +119,10 @@ export class MeshRenderer<
 
   get geometry(): MeshGeometry {
     return this.#settings.geometry;
+  }
+
+  get settings(): Readonly<MeshSettings> {
+    return this.#settings;
   }
 
   configure(

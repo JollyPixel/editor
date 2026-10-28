@@ -1,10 +1,14 @@
 // Import Internal Dependencies
 import type { Actor } from "../../../actor/Actor.ts";
-import { ComponentData } from "../../../systems/scene/file/ComponentData.ts";
+import {
+  ComponentData,
+  toHexColor
+} from "../../../systems/scene/file/definitions/ComponentData.ts";
 import type {
   ComponentDefinition
-} from "../../../systems/scene/file/ComponentDefinition.ts";
+} from "../../../systems/scene/file/definitions/ComponentDefinition.ts";
 import type { JSONObject } from "../../../systems/scene/file/SceneFile.ts";
+import type { Component } from "../../types.ts";
 import {
   type MeshGeometry,
   MESH_GEOMETRY_DEFAULTS
@@ -47,6 +51,29 @@ export class MeshDefinition implements ComponentDefinition<
     data: MeshRendererOptions
   ): void {
     component.configure(data);
+  }
+
+  owns(
+    component: Component
+  ): component is MeshRenderer<any> {
+    return component instanceof MeshRenderer;
+  }
+
+  capture(
+    component: MeshRenderer<any>
+  ): JSONObject {
+    const { geometry, material, castShadow, receiveShadow } = component.settings;
+
+    return {
+      geometry: { ...geometry },
+      material: {
+        ...material,
+        color: toHexColor(material.color),
+        emissive: toHexColor(material.emissive)
+      },
+      castShadow,
+      receiveShadow
+    };
   }
 }
 

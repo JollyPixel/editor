@@ -10,6 +10,7 @@ import type {
 } from "./Renderer.ts";
 import { CameraCompositor } from "./compositing/CameraCompositor.ts";
 import { CanvasSize } from "./CanvasSize.ts";
+import { createCanvasFit } from "./CanvasFit.ts";
 import { PipelineCompiles } from "./PipelineCompiles.ts";
 
 // CONSTANTS
@@ -167,7 +168,7 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents> implements Rende
   }
 
   get ratio(): number | null {
-    return this.#size.ratio;
+    return this.#size.layout.ratio;
   }
 
   get renderComponents(): readonly RenderComponent[] {
@@ -201,12 +202,11 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents> implements Rende
   setRatio(
     ratio: number | null = null
   ) {
-    this.#size.ratio = ratio;
-
-    const styles = ratio ?
-      { margin: "0", flex: "1" } :
-      { margin: "auto", flex: "none" };
-    Object.assign(this.webGPURenderer.domElement.style, styles);
+    this.#size.layout = createCanvasFit(ratio);
+    Object.assign(
+      this.webGPURenderer.domElement.style,
+      this.#size.layout.styles
+    );
     this.resize();
 
     return this;
@@ -217,10 +217,9 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents> implements Rende
       return;
     }
 
-    const target = this.#size.ratio ?
-      document.body :
-      this.webGPURenderer.domElement.parentElement ?? this.webGPURenderer.domElement;
-
+    const target = this.#size.layout.observeTarget(
+      this.webGPURenderer.domElement
+    );
     this.#resizeObserver = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (entry) {
@@ -250,11 +249,12 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents> implements Rende
   ) {
     this.resize();
 
-    if (this.#size.isEmpty) {
+    const canvas = this.#size.dimensions;
+    if (canvas.isEmpty) {
       return;
     }
 
-    this.#compositor.render(scene, this.#size.width, this.#size.height);
+    this.#compositor.render(scene, canvas);
     this.emit("draw", { source: this.webGPURenderer });
   }
 

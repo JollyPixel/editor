@@ -1,13 +1,16 @@
 // Import Third-party Dependencies
 import "reflect-metadata";
-import type { InputListenerType } from "@jolly-pixel/controls";
+import type {
+  Input,
+  InputListenerType
+} from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
 import type { Component } from "../types.ts";
-import type { ScenePropertyType } from "./ScenePropertyValue.ts";
+import type { BehaviorPropertyType } from "./ScenePropertyValue.ts";
 
 export interface ScenePropertyOptions {
-  type: ScenePropertyType;
+  type: BehaviorPropertyType;
   label?: string;
   description?: string;
 }
@@ -15,13 +18,23 @@ export interface ScenePropertyOptions {
 export type BehaviorKey = string | symbol;
 
 export type BehaviorPropertyMetadata = {
-  type: ScenePropertyType;
+  type: BehaviorPropertyType;
   label: string;
   description: string;
 };
 
+export interface InputEventTarget {
+  on(eventName: string, listener: (...args: any[]) => void): unknown;
+  off(eventName: string, listener: (...args: any[]) => void): unknown;
+}
+
+export type InputListenerDevice = InputListenerType extends `${infer TDevice}.${string}`
+  ? TDevice
+  : never;
+
 export type BehaviorInputListenerMetadata = {
-  type: InputListenerType;
+  device: InputListenerDevice;
+  event: string;
   methodName: BehaviorKey;
 };
 
@@ -32,6 +45,17 @@ export type BehaviorMetadata = {
 };
 
 export const BehaviorMetadataKey = Symbol.for("BehaviorMetadata");
+
+export const INPUT_LISTENER_TARGETS: Readonly<
+  Record<InputListenerDevice, (input: Input) => InputEventTarget>
+> = {
+  input: (input) => input,
+  mouse: (input) => input.mouse,
+  gamepad: (input) => input.gamepad,
+  touchpad: (input) => input.touchpad,
+  screen: (input) => input.screen,
+  keyboard: (input) => input.keyboard
+};
 
 export function SceneProperty(
   options: ScenePropertyOptions
@@ -78,8 +102,15 @@ export function InputListener(
     object: Object,
     methodName: BehaviorKey
   ): void {
+    const separator = type.indexOf(".");
+    const device = type.slice(0, separator);
+    if (!Object.hasOwn(INPUT_LISTENER_TARGETS, device)) {
+      throw new Error(`Unknown input listener "${type}".`);
+    }
+
     getOrCreateBehaviorMetadata(object).inputListeners.push({
-      type,
+      device: device as InputListenerDevice,
+      event: type.slice(separator + 1),
       methodName
     });
   };

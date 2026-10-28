@@ -43,7 +43,7 @@ describe("VoxelRenderer", () => {
 
     assert.strictEqual(renderer.view.root.parent, null);
     assert.strictEqual(dispose.mock.callCount(), 1);
-    assert.strictEqual(actor.components.includes(renderer), false);
+    assert.strictEqual(actor.components.has(renderer), false);
   });
 
   it("builds and disposes its own document from the document options", (context) => {

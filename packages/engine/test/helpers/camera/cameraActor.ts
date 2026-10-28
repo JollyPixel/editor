@@ -6,6 +6,7 @@ import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import { Transform } from "../../../src/actor/Transform.ts";
+import { ActorComponents } from "../../../src/actor/ActorComponents.ts";
 import { ActorRegistry } from "../../../src/systems/scene/ActorRegistry.ts";
 
 function createRendererMock() {
@@ -23,8 +24,7 @@ export function createActorMock() {
   return {
     object3D,
     transform: new Transform(object3D),
-    components: [],
-    componentsRequiringUpdate: [],
+    components: new ActorComponents(),
     world: {
       time: {
         delta: 0.1,

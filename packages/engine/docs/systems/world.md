@@ -228,6 +228,43 @@ if (time.fixedElapsed - this.lastShot >= 2) {
 
 A tick on a stopped world does not advance the time.
 
+### Timers
+
+`world.timers` is a `Timers` that `tick()` advances to `time.elapsed`
+right after the time, before the fixed steps. Its timers count game
+time, so they follow `timeScale` and wait while paused.
+
+```ts
+interface TimerOptions {
+  /** @default false */
+  repeat?: boolean;
+}
+
+interface Timer {
+  readonly active: boolean;
+  cancel(): void;
+}
+
+class Timers {
+  get pending(): boolean;
+  schedule(
+    seconds: number,
+    callback: () => void,
+    options?: TimerOptions
+  ): Timer;
+  advance(now: number): void;
+}
+```
+
+`schedule()` throws a `RangeError` for a negative delay, and for a
+repeating timer without delay. Timers due in the same tick fire in due
+order, and a timer cancelled by an earlier callback of that tick does
+not fire. The world keeps animating while `pending` is `true`, so a
+render-on-demand host keeps ticking until the last timer fires.
+Components schedule through
+[`ActorComponent.schedule`](../actor/actor-component.md#timers), which
+also cancels their timers on destruction.
+
 #### `endFrame(): boolean`
 
 Called once at the end of each animation frame:

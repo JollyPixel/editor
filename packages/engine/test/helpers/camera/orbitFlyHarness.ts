@@ -3,6 +3,7 @@ import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import { Transform } from "../../../src/actor/Transform.ts";
+import { ActorComponents } from "../../../src/actor/ActorComponents.ts";
 import { ActorRegistry } from "../../../src/systems/scene/ActorRegistry.ts";
 import {
   OrbitFlyCamera,
@@ -60,8 +61,7 @@ export function createHarness(
   let justPressed = new Set<string>();
 
   const actorValue = {
-    components: [],
-    componentsRequiringUpdate: [],
+    components: new ActorComponents(),
     transform: new Transform(body),
     world: {
       time: {

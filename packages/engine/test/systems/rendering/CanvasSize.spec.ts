@@ -4,6 +4,8 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { CanvasSize } from "../../../src/systems/rendering/CanvasSize.ts";
+import { CanvasDimensions } from "../../../src/systems/rendering/CanvasDimensions.ts";
+import { Letterbox } from "../../../src/systems/rendering/CanvasFit.ts";
 
 describe("Systems.Rendering.CanvasSize", () => {
   test("should keep its last size while the canvas is hidden then shown again", () => {
@@ -16,7 +18,7 @@ describe("Systems.Rendering.CanvasSize", () => {
     }
 
     assert.deepStrictEqual(committed, [
-      { width: 800, height: 600 },
+      new CanvasDimensions(800, 600),
       null,
       null,
       null
@@ -32,12 +34,12 @@ describe("Systems.Rendering.CanvasSize", () => {
     size.commit();
     size.fit(1024, 768);
 
-    assert.deepStrictEqual(size.commit(), { width: 1024, height: 768 });
+    assert.deepStrictEqual(size.commit(), new CanvasDimensions(1024, 768));
   });
 
   test("should letterbox the available area to the ratio", () => {
     const size = new CanvasSize();
-    size.ratio = 16 / 9;
+    size.layout = new Letterbox(16 / 9);
 
     size.fit(1000, 1000);
     const tall = size.commit();
@@ -46,7 +48,13 @@ describe("Systems.Rendering.CanvasSize", () => {
 
     assert.deepStrictEqual(
       [tall, wide],
-      [{ width: 1000, height: 563 }, { width: 1600, height: 900 }]
+      [new CanvasDimensions(1000, 563), new CanvasDimensions(1600, 900)]
     );
+  });
+
+  test("should refuse a ratio that cannot letterbox", () => {
+    for (const ratio of [-1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      assert.throws(() => new Letterbox(ratio), RangeError);
+    }
   });
 });

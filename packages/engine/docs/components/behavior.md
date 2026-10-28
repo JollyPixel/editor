@@ -4,8 +4,8 @@ A `Behavior` is a specialized
 [ActorComponent](../actor/actor-component.md) that adds scripting
 capabilities to an Actor. It provides:
 
-- **Actor registration** — each behavior registers itself on
-  `actor.behaviors`, making it discoverable from other actors
+- **Actor lookup** — other scripts find a behavior by class with
+  `actor.getComponent(PlayerBehavior)` or `actor.getComponents(PlayerBehavior)`
 - **Decorators** — declarative metadata for scene properties,
   component references, input listeners, and
   [signals](./signal.md)
@@ -82,6 +82,18 @@ A field still `undefined` when `bind()` runs gets the type default: `""`,
 `0`, `false`, an empty array, a zero vector, or black. Vectors and colors are
 new instances for each behavior.
 
+The `Actor` type references another actor. A scene file stores its
+`persistentId`, and `bind()` replaces it with the live actor found by
+`world.sceneManager.actors.find`. An id no live actor holds logs a warning
+and leaves `null`. Every actor of a file is built before any behavior binds,
+so the target may come later in the file. The reference is not cleared when
+the target is destroyed later: check `pendingForDestruction` before using it.
+
+```ts
+@SceneProperty({ type: "Actor" })
+target: Actor | null = null;
+```
+
 ### `@SceneActorComponent`
 
 Binds a field to a sibling component on the same actor. The
@@ -142,7 +154,14 @@ interface ScriptData {
   its initializer. A key without a `@SceneProperty` field is ignored.
 - An unregistered name logs a warning and builds no behavior. Edit mode
   builds none either.
-- `SCENE_PROPERTY_TYPES` lists every `@SceneProperty` type.
+- `capture(behavior)` writes a registered behavior back as `ScriptData`, each
+  `@SceneProperty` field in its stored form (a `Vector3` as `[x, y, z]`, a
+  `Color` as `"#rrggbb"`, an actor as its `persistentId`). `owns(component)`
+  accepts an instance of a registered class only, not of a subclass, so a
+  save never reloads a subclass as its parent.
+- `SCENE_PROPERTY_TYPES` lists every `@SceneProperty` value type, which the
+  editor can edit. The `Actor` type is not part of it:
+  `BehaviorPropertyType` is the union of both.
   `inferScenePropertyType(value)` picks one from a stored value, for an editor
   that does not know the behavior: `[0, 1, 0]` is a `Vector3`, five numbers a
   `number[]`, `"#ff0000"` a `Color`. It returns `null` when no type parses the

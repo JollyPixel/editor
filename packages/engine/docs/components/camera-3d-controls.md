@@ -79,7 +79,8 @@ interface Camera3DControlsOptions extends CameraOptions {
 ```ts
 interface Camera3DControls {
   // The underlying Three.js camera. Read-only as far as the transform
-  // goes — see CameraComponent.
+  // goes — see CameraComponent. Throws while the projectionMode is
+  // "orthographic": read threeCamera instead.
   camera: THREE.PerspectiveCamera;
 
   // Change movement speed at runtime

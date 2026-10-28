@@ -74,8 +74,8 @@ actor.addComponent(SpriteRenderer, {
 | Option | Default | Description |
 | ------ | ------- | ----------- |
 | `texture` | — | `AssetReference<THREE.Texture>` declared by the owning scene (for example with `TEXTURE_ASSET`). Each sprite renders a clone, so frames and flips never leak between sprites |
-| `tileHorizontal` | — | Number of columns in the spritesheet |
-| `tileVertical` | — | Number of rows in the spritesheet |
+| `tileHorizontal` | — | Number of columns in the spritesheet, a positive integer |
+| `tileVertical` | — | Number of rows in the spritesheet, a positive integer |
 | `animations` | `{}` | Named animation definitions (frame arrays or ranges) |
 | `flip.horizontal` | `false` | Mirror the sprite horizontally |
 | `flip.vertical` | `false` | Mirror the sprite vertically |
@@ -99,7 +99,14 @@ sprite.animation.play("run", { duration: 0.6, loop: true });
 `duration` is the length of one full cycle, in seconds. Playback
 advances with the frame `deltaTime`. A non-looping animation stops on
 its last frame and `isPlaying` becomes `false`. The sprite only requests
-updates while `isPlaying` is `true`.
+updates while `isPlaying` is `true`. Playing an unknown animation name
+logs a warning through `world.logger` and changes nothing.
+
+`frameIndex` and `flip` are read-only; change them with `setFrame()` and
+the flip setters. `sheet` is the `SpriteSheet` built from the tile counts.
+Its constructor throws a `RangeError` for a count below 1 or not an
+integer, and `writeFrame(texture, frame, flip)` sets the texture's `repeat`
+and `offset` to one cell. Frames count left to right from the top row.
 
 ## TextRenderer
 
@@ -127,7 +134,8 @@ actor.addComponent(TextRenderer, {
 | `textGeometryOptions` | `{ size: 1, depth: 1 }` | Three.js `TextGeometry` parameters |
 
 To update the text at runtime, use the `text` property and call
-`updateMesh()`:
+`updateMesh()`. `text.ensureMesh()` rebuilds the geometry when the value,
+font or options changed, and returns the mesh:
 
 ```ts
 const renderer = actor.addComponentAndGet(TextRenderer, {

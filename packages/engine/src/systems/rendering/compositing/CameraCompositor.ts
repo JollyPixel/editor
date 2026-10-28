@@ -2,22 +2,13 @@
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import type {
-  RenderComponent,
-  RenderViewport
-} from "../Renderer.ts";
+import type { RenderComponent } from "../Renderer.ts";
+import type { CanvasDimensions } from "../CanvasDimensions.ts";
+import { Viewport } from "../Viewport.ts";
 import {
   type CameraPipelineFactory,
   CameraPipelines
 } from "./CameraPipelines.ts";
-
-// CONSTANTS
-const kFullViewport: Readonly<RenderViewport> = Object.freeze({
-  x: 0,
-  y: 0,
-  width: 1,
-  height: 1
-});
 
 export class CameraCompositor {
   #renderer: THREE.WebGPURenderer;
@@ -55,29 +46,25 @@ export class CameraCompositor {
 
   render(
     scene: THREE.Scene,
-    canvasWidth: number,
-    canvasHeight: number
+    canvas: CanvasDimensions
   ): void {
     const components = this.#components.sort(byDepth);
     const hasViewports = components.some(hasViewport);
 
     if (!hasViewports) {
-      this.#renderer.setViewport(0, 0, canvasWidth, canvasHeight);
+      this.#renderer.setViewport(0, 0, canvas.width, canvas.height);
       this.#renderer.clear();
     }
 
     for (const rc of components) {
-      rc.prepareRender(canvasWidth, canvasHeight);
+      rc.prepareRender(canvas);
 
       if (hasViewports) {
-        const vp = rc.viewport ?? kFullViewport;
-        const vx = Math.round(vp.x * canvasWidth);
-        const vy = Math.round(vp.y * canvasHeight);
-        const vw = Math.round(vp.width * canvasWidth);
-        const vh = Math.round(vp.height * canvasHeight);
+        const { x, y, width, height } = (rc.viewport ?? Viewport.full)
+          .pixels(canvas);
 
-        this.#renderer.setViewport(vx, vy, vw, vh);
-        this.#renderer.setScissor(vx, vy, vw, vh);
+        this.#renderer.setViewport(x, y, width, height);
+        this.#renderer.setScissor(x, y, width, height);
         this.#renderer.setScissorTest(true);
         this.#renderer.clear();
       }
@@ -94,7 +81,7 @@ export class CameraCompositor {
 
     if (hasViewports) {
       this.#renderer.setScissorTest(false);
-      this.#renderer.setViewport(0, 0, canvasWidth, canvasHeight);
+      this.#renderer.setViewport(0, 0, canvas.width, canvas.height);
     }
   }
 

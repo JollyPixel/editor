@@ -89,7 +89,7 @@ export class Camera3DControls extends CameraComponent<any> {
   }
 
   get camera(): THREE.PerspectiveCamera {
-    return this.threeCamera as THREE.PerspectiveCamera;
+    return this.projection.requirePerspective();
   }
 
   set speed(

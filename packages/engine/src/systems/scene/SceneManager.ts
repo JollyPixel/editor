@@ -12,20 +12,11 @@ import type { Scene } from "./Scene.ts";
 import type { Logger } from "../Logger.ts";
 import { ManagedSceneLoad } from "./ManagedSceneLoad.ts";
 import { ActorRegistry } from "./ActorRegistry.ts";
+import { AppendedScenes } from "./AppendedScenes.ts";
 import type {
   SceneLoad,
   SceneLoadOptions
 } from "./SceneLoad.ts";
-
-export type AppendedSceneEntry<TContext> = {
-  scene: Scene<TContext>;
-  /**
-   * All actors created during the scene's awake(),
-   * tracked for cleanup on removeScene.
-   *
-   */
-  ownedActors: ReadonlySet<Actor<TContext>>;
-};
 
 export type SceneEvents<TContext = WorldDefaultContext> = {
   awake: () => void;
@@ -49,8 +40,6 @@ export type SceneEvents<TContext = WorldDefaultContext> = {
   ) => void;
 };
 
-type SceneLoadMode = "replace" | "append";
-
 export class SceneManager<
   TContext = WorldDefaultContext
 > extends Emitter<SceneEvents<TContext>> {
@@ -63,11 +52,8 @@ export class SceneManager<
   #logger!: Logger;
 
   #replacementLoad: ManagedSceneLoad<TContext> | null = null;
-  #appendLoads: Map<number, ManagedSceneLoad<TContext>> = new Map();
   #readyLoads: Set<ManagedSceneLoad<TContext>> = new Set();
-
-  #appendedScenes: Map<number, AppendedSceneEntry<TContext>> = new Map();
-  #appendedScenesPendingStart: Set<number> = new Set();
+  #appended: AppendedScenes<TContext>;
 
   constructor(
     scene?: THREE.Scene
@@ -75,6 +61,15 @@ export class SceneManager<
     super();
     this.default = scene ?? new THREE.Scene();
     this.actors = new ActorRegistry(this.default);
+    this.#appended = new AppendedScenes(
+      this.actors,
+      (scene) => {
+        this.#logger.debug("Removing appended scene", {
+          scene: scene.name
+        });
+        this.emit("sceneRemoved", scene);
+      }
+    );
   }
 
   get tree() {
@@ -118,7 +113,14 @@ export class SceneManager<
   ): SceneLoad<TContext> {
     this.#replacementLoad?.cancel();
 
-    const load = this.#createSceneLoad(scene, options, "replace");
+    const load = new ManagedSceneLoad(
+      scene,
+      options,
+      (changed) => this.#handleLoadChange(
+        changed,
+        this.#replacementLoad === changed
+      )
+    );
     this.#replacementLoad = load;
     this.emit("sceneLoadRequested", load);
     this.#startSceneLoad(load);
@@ -130,44 +132,28 @@ export class SceneManager<
     scene: Scene<TContext>,
     options: SceneLoadOptions = {}
   ): SceneLoad<TContext> {
-    this.#appendLoads.get(scene.id)?.cancel();
-
-    const load = this.#createSceneLoad(scene, options, "append");
-    this.#appendLoads.set(scene.id, load);
+    const load = new ManagedSceneLoad(
+      scene,
+      options,
+      (changed) => this.#handleLoadChange(
+        changed,
+        this.#appended.tracks(changed)
+      )
+    );
+    this.#appended.request(load);
     this.emit("sceneLoadRequested", load);
     this.#startSceneLoad(load);
 
     return load;
   }
 
-  #createSceneLoad(
-    scene: Scene<TContext>,
-    options: SceneLoadOptions,
-    mode: SceneLoadMode
-  ): ManagedSceneLoad<TContext> {
-    return new ManagedSceneLoad(
-      scene,
-      options,
-      (load) => this.#handleLoadChange(load, mode)
-    );
-  }
-
-  #isTracked(
-    load: ManagedSceneLoad<TContext>,
-    mode: SceneLoadMode
-  ): boolean {
-    return mode === "replace" ?
-      this.#replacementLoad === load :
-      this.#appendLoads.get(load.scene.id) === load;
-  }
-
   #handleLoadChange(
     load: ManagedSceneLoad<TContext>,
-    mode: SceneLoadMode
+    tracked: boolean
   ): void {
     this.emit("sceneLoadChanged", load);
 
-    if (!this.#isTracked(load, mode)) {
+    if (!tracked) {
       return;
     }
 
@@ -176,9 +162,7 @@ export class SceneManager<
     }
     else if (load.status === "failed" || load.status === "cancelled") {
       this.#readyLoads.delete(load);
-      if (mode === "append") {
-        this.#appendLoads.delete(load.scene.id);
-      }
+      this.#appended.forget(load);
     }
   }
 
@@ -212,7 +196,7 @@ export class SceneManager<
   #activateScene(
     scene: Scene<TContext>
   ): void {
-    this.#cancelAppendLoads();
+    this.#appended.cancelLoads();
 
     if (this.#currentScene !== null) {
       this.#teardownCurrentScene(this.#currentScene);
@@ -232,12 +216,6 @@ export class SceneManager<
     this.emit("sceneChanged", scene);
   }
 
-  #cancelAppendLoads(): void {
-    for (const load of [...this.#appendLoads.values()]) {
-      load.cancel();
-    }
-  }
-
   #teardownCurrentScene(
     scene: Scene<TContext>
   ): void {
@@ -245,18 +223,12 @@ export class SceneManager<
       scene: scene.name
     });
 
-    for (const entry of this.#appendedScenes.values()) {
-      this.emit("sceneRemoved", entry.scene);
-      entry.scene.destroy();
-    }
-    this.#appendedScenes.clear();
-    this.#appendedScenesPendingStart.clear();
+    this.#appended.clear();
 
     this.emit("sceneDestroyed", scene);
     scene.destroy();
 
     this.actors.clear();
-    this.default.clear();
   }
 
   #activateAppendedScene(
@@ -267,16 +239,7 @@ export class SceneManager<
       { scene: scene.name }
     );
 
-    scene.world = this.#world!;
-    const ownedActors = this.actors.collect(() => scene.awake());
-    this.actors.awake();
-
-    this.#appendedScenes.set(
-      scene.id,
-      { scene, ownedActors }
-    );
-    this.#appendedScenesPendingStart.add(scene.id);
-
+    this.#appended.activate(scene, this.#world!);
     this.emit("sceneAppended", scene);
   }
 
@@ -290,7 +253,7 @@ export class SceneManager<
       return;
     }
 
-    this.#cancelAppendLoads();
+    this.#appended.cancelLoads();
     this.#teardownCurrentScene(scene);
     this.#currentScene = null;
     this.#sceneStartPending = false;
@@ -301,38 +264,11 @@ export class SceneManager<
   removeScene(
     target: Scene<TContext> | string
   ): void {
-    const matches = typeof target === "string" ?
-      (scene: Scene<TContext>) => scene.name === target :
-      (scene: Scene<TContext>) => scene === target;
-
-    for (const load of [...this.#appendLoads.values()]) {
-      if (matches(load.scene)) {
-        load.cancel();
-      }
-    }
-
-    for (const [id, entry] of this.#appendedScenes) {
-      if (matches(entry.scene)) {
-        this.#teardownAppendedScene(id, entry);
-      }
-    }
-  }
-
-  #teardownAppendedScene(
-    id: number,
-    entry: AppendedSceneEntry<TContext>
-  ): void {
-    this.#logger.debug("Removing appended scene", {
-      scene: entry.scene.name
-    });
-
-    this.emit("sceneRemoved", entry.scene);
-    entry.scene.destroy();
-
-    this.actors.destroyRoots(entry.ownedActors);
-
-    this.#appendedScenes.delete(id);
-    this.#appendedScenesPendingStart.delete(id);
+    this.#appended.remove(
+      typeof target === "string" ?
+        (scene) => scene.name === target :
+        (scene) => scene === target
+    );
   }
 
   getScene(): Scene<TContext> | null;
@@ -346,17 +282,10 @@ export class SceneManager<
     }
 
     if (typeof target === "number") {
-      return this.#appendedScenes.get(target)?.scene ?? null;
+      return this.#appended.find(target);
     }
 
-    const result: Scene<TContext>[] = [];
-    for (const entry of this.#appendedScenes.values()) {
-      if (entry.scene.name === target) {
-        result.push(entry.scene);
-      }
-    }
-
-    return result;
+    return [...this.#appended.named(target)];
   }
 
   beginFrame() {
@@ -367,12 +296,7 @@ export class SceneManager<
       this.#currentScene?.start();
     }
 
-    if (this.#appendedScenesPendingStart.size > 0) {
-      for (const id of this.#appendedScenesPendingStart) {
-        this.#appendedScenes.get(id)?.scene.start();
-      }
-      this.#appendedScenesPendingStart.clear();
-    }
+    this.#appended.startPending();
 
     this.actors.beginFrame();
   }
@@ -396,7 +320,7 @@ export class SceneManager<
     for (const load of readyLoads) {
       this.#activateAppendedScene(load.scene);
       load.activate();
-      this.#appendLoads.delete(load.scene.id);
+      this.#appended.forget(load);
     }
   }
 
@@ -406,10 +330,7 @@ export class SceneManager<
   ) {
     this.actors.fixedUpdate(deltaTime, stepIndex);
     this.#currentScene?.fixedUpdate(deltaTime, stepIndex);
-
-    for (const { scene } of this.#appendedScenes.values()) {
-      scene.fixedUpdate(deltaTime, stepIndex);
-    }
+    this.#appended.fixedUpdate(deltaTime, stepIndex);
   }
 
   update(
@@ -418,10 +339,7 @@ export class SceneManager<
   ) {
     this.actors.update(deltaTime, alpha);
     this.#currentScene?.update(deltaTime, alpha);
-
-    for (const { scene } of this.#appendedScenes.values()) {
-      scene.update(deltaTime, alpha);
-    }
+    this.#appended.update(deltaTime, alpha);
   }
 
   endFrame() {

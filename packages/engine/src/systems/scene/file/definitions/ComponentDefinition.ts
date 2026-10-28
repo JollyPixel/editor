@@ -5,9 +5,9 @@ import type {
 } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import type { Actor } from "../../../actor/Actor.ts";
-import type { Component } from "../../../components/types.ts";
-import type { JSONObject } from "./SceneFile.ts";
+import type { Actor } from "../../../../actor/Actor.ts";
+import type { Component } from "../../../../components/types.ts";
+import type { JSONObject } from "../SceneFile.ts";
 
 export type SceneMode = "edit" | "play";
 
@@ -79,4 +79,10 @@ export interface ComponentDefinition<
     component: TComponent,
     data: TData
   ): void;
+  owns?(
+    component: Component
+  ): component is TComponent;
+  capture?(
+    component: TComponent
+  ): JSONObject;
 }

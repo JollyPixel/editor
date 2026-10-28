@@ -3,6 +3,10 @@ import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import type { OrbitFlyAction } from "./OrbitFlyKeys.ts";
+import type {
+  LookAngles,
+  LookOrientation
+} from "./LookAngles.ts";
 
 // CONSTANTS
 const kSmoothingSnapEpsilon = 1e-3;
@@ -19,8 +23,7 @@ export interface FlyBody {
 
 export interface CameraFocusPose {
   body: FlyBody;
-  yaw: number;
-  pitch: number;
+  angles: Readonly<LookAngles>;
   deltaTime: number;
   responsiveness: number;
 }
@@ -28,14 +31,8 @@ export interface CameraFocusPose {
 export interface CameraFocusEnterRequest {
   point: THREE.Vector3Like | undefined;
   cameraPosition: THREE.Vector3;
-  yaw: number;
-  pitch: number;
+  angles: Readonly<LookOrientation>;
   up: THREE.Vector3;
-}
-
-export interface CameraFocusOrientation {
-  yaw: number;
-  pitch: number;
 }
 
 export interface CameraFocus {
@@ -46,7 +43,7 @@ export interface CameraFocus {
 
   enter(
     request: CameraFocusEnterRequest
-  ): CameraFocusOrientation | null;
+  ): LookOrientation | null;
   exit(): void;
   handleScroll(
     scrollY: number

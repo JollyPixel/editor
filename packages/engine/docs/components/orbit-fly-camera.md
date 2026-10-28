@@ -91,7 +91,7 @@ interface OrbitFlyCameraOptions extends CameraOptions {
 | `initialTrailDistance` | `0` | "elastic" mode's starting trail distance, in world units |
 | `yaw` / `pitch` | `0` / `-0.2` | Starting orientation, in radians |
 | `moveSpeed` | `18` | Cruise speed in units per second |
-| `minMoveSpeed` / `maxMoveSpeed` | `2` / `240` | Bounds for the scroll-adjusted `moveSpeed` |
+| `minMoveSpeed` / `maxMoveSpeed` | `2` / `240` | Bounds for the scroll-adjusted `moveSpeed`; a min above the max throws a `RangeError` |
 | `accelerationTime` | `0.15` | Seconds to ease into a new cruise velocity. Acceleration starts at zero and builds up; `0` starts at full speed |
 | `brakingTime` | `0.1` | Seconds to glide to a stop once the movement keys are released; `0` stops at once |
 | `responsiveness` | `18` | Frame-rate-independent damping rate of the "lock" pivot and distance and the "elastic" trail distance, in 1/s |
@@ -105,7 +105,7 @@ interface OrbitFlyCameraOptions extends CameraOptions {
 | `scrollSpeed` | `2.5` | Trail distance changed per wheel notch in "elastic" mode, in world units |
 | `speedAdjustStep` | `0.15` | Fraction `moveSpeed` grows per wheel notch in "none" mode, and in "lock" mode while not orbiting |
 | `focusMode` | `"none"` | `"none"`: no pivot. `"lock"`: `enterOrbitFocus` engages a fixed pivot; scroll adjusts distance; `exitOrbitFocus` or `teleport` releases it. `"elastic"`: WASD/look pilot a free-floating pivot; scroll trails the camera behind it, reaching 0 (free-fly) at full zoom-in |
-| `minPivotDistance` / `maxPivotDistance` | `1` / `200` | Bounds for the scroll-adjusted pivot distance in "lock" mode; `minPivotDistance` must be greater than 0 or the constructor throws a `RangeError`. `maxPivotDistance` also doubles as "elastic" mode's max trail distance |
+| `minPivotDistance` / `maxPivotDistance` | `1` / `200` | Bounds for the scroll-adjusted pivot distance in "lock" mode; `minPivotDistance` must be greater than 0 and at most `maxPivotDistance`, or the constructor throws a `RangeError`. `maxPivotDistance` also doubles as "elastic" mode's max trail distance |
 | `pivotZoomStep` | `0.1` | While orbiting in "lock" mode, each wheel notch multiplies the pivot distance by `1 + pivotZoomStep` zooming out and divides it zooming in, so a notch covers the same share of the distance near the pivot as far from it |
 | `pivotNudgeStep` | `1` | Distance nudged per key press while orbiting in "lock" mode |
 | `showPivotMarker` | `true` | Draws a marker at the pivot in "lock" and "elastic" modes |
@@ -180,7 +180,8 @@ default codes.
 
 ```ts
 interface OrbitFlyCamera {
-  // The underlying THREE.PerspectiveCamera.
+  // The underlying THREE.PerspectiveCamera. Throws while the
+  // projectionMode is "orthographic": read threeCamera instead.
   camera: THREE.PerspectiveCamera;
 
   // Gates all input handling; false freezes the camera in place.
@@ -235,7 +236,8 @@ enabled and `moving`. `teleport()`, `frame()`, `enterOrbitFocus()` and
 
 Returns the pose looking at the center of `bounds` along `forward`, far enough
 for their bounding sphere to fit the vertical `fov`. Empty bounds frame the
-origin from `minDistance`.
+origin from `minDistance`. A `minDistance` above `maxDistance` throws a
+`RangeError`.
 
 ```ts
 interface CameraFramingOptions {

@@ -10,6 +10,7 @@ import {
   CameraCompositor
 } from "../../../../src/systems/rendering/compositing/CameraCompositor.ts";
 import type { RenderComponent } from "../../../../src/systems/rendering/Renderer.ts";
+import { CanvasDimensions } from "../../../../src/systems/rendering/CanvasDimensions.ts";
 import {
   createRenderComponent,
   createRendererSpy
@@ -17,6 +18,7 @@ import {
 
 describe("Systems.Rendering.CameraCompositor", () => {
   const scene = new THREE.Scene();
+  const canvas = new CanvasDimensions(800, 600);
 
   function render(
     components: RenderComponent[]
@@ -27,7 +29,7 @@ describe("Systems.Rendering.CameraCompositor", () => {
       compositor.add(component);
     }
 
-    compositor.render(scene, 800, 600);
+    compositor.render(scene, canvas);
 
     return renderer;
   }
@@ -54,7 +56,7 @@ describe("Systems.Rendering.CameraCompositor", () => {
     compositor.add(second);
 
     first.depth = 2;
-    compositor.render(scene, 800, 600);
+    compositor.render(scene, canvas);
 
     assert.deepStrictEqual(
       renderer.render.mock.calls.map((call) => call.arguments[1]),
@@ -70,7 +72,7 @@ describe("Systems.Rendering.CameraCompositor", () => {
     assert.strictEqual(component.prepareRender.mock.callCount(), 1);
     assert.deepStrictEqual(
       component.prepareRender.mock.calls[0].arguments,
-      [800, 600]
+      [canvas]
     );
   });
 

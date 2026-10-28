@@ -107,7 +107,7 @@ unsubscribe with `disconnect`.
 | `onPointerDown` | Left mouse button pressed over the sprite |
 | `onPointerUp` | Left mouse button released (was pressed over sprite) |
 | `onClick` | Full click — down and up while still over the sprite |
-| `onDoubleClick` | Two clicks within 300 ms |
+| `onDoubleClick` | Two clicks within 0.3 s of unscaled world time |
 | `onRightClick` | Right mouse button released over the sprite |
 | `onHover` | Same as `onPointerEnter` (convenience alias) |
 

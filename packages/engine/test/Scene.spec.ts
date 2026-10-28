@@ -18,8 +18,6 @@ import {
 
 describe("Scene", () => {
   beforeEach(() => {
-    Actor.Id.clear();
-    Actor.PersistentId.clear();
     Scene.Id.clear();
   });
 

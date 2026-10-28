@@ -14,6 +14,7 @@ export * from "./components/index.ts";
 export * from "./actor/index.ts";
 export * from "./assets/index.ts";
 export * from "./audio/AudioBackground.ts";
+export * from "./audio/AudioPlaylists.ts";
 export * from "./audio/AudioLibrary.ts";
 export * from "./audio/AudioManager.ts";
 export * from "./audio/GlobalAudio.ts";

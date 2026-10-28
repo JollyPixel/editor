@@ -95,7 +95,7 @@ describe("Actor Component Lookup", () => {
       const destroyedBehavior = new BehaviorOne(actor);
       const validBehavior = new BehaviorOne(actor);
 
-      destroyedBehavior.pendingForDestruction = true;
+      destroyedBehavior.markDestructionPending();
 
       const retrievedBehavior = actor.getComponent(BehaviorOne);
       assert.equal(retrievedBehavior, validBehavior);
@@ -116,8 +116,8 @@ describe("Actor Component Lookup", () => {
       const behavior1 = new BehaviorOne(actor);
       const behavior2 = new BehaviorOne(actor);
 
-      behavior1.pendingForDestruction = true;
-      behavior2.pendingForDestruction = true;
+      behavior1.markDestructionPending();
+      behavior2.markDestructionPending();
 
       const retrievedBehavior = actor.getComponent(BehaviorOne);
       assert.equal(retrievedBehavior, null);
@@ -162,7 +162,7 @@ describe("Actor Component Lookup", () => {
       const destroyedBehavior = new BehaviorOne(actor);
       const validBehavior2 = new BehaviorOne(actor);
 
-      destroyedBehavior.pendingForDestruction = true;
+      destroyedBehavior.markDestructionPending();
 
       const retrievedBehaviors = Array.from(actor.getComponents(BehaviorOne));
       assert.deepEqual(retrievedBehaviors, [validBehavior1, validBehavior2]);
@@ -188,7 +188,7 @@ describe("Actor Component Lookup", () => {
       const parentBehavior = new BehaviorOne(actor);
       const childBehavior = new ChildBehavior(actor);
 
-      parentBehavior.pendingForDestruction = true;
+      parentBehavior.markDestructionPending();
 
       const retrievedBehaviors = Array.from(actor.getComponents(BehaviorOne));
       assert.deepEqual(retrievedBehaviors, [childBehavior]);

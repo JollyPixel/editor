@@ -65,8 +65,6 @@ function createModelSetup() {
 
 describe("Systems.FileScene", () => {
   beforeEach(() => {
-    Actor.Id.clear();
-    Actor.PersistentId.clear();
     Scene.Id.clear();
   });
 

@@ -1,10 +1,11 @@
 // Import Internal Dependencies
 import { Scene } from "../Scene.ts";
 import type { WorldDefaultContext } from "../../World.ts";
-import type { ComponentDefinitions } from "./ComponentDefinitions.ts";
-import { CoordinatorAssetResolver } from "./CoordinatorAssetResolver.ts";
-import { SceneInstance } from "./SceneInstance.ts";
-import { SceneEnvironment } from "./SceneEnvironment.ts";
+import type { ComponentDefinitions } from "./definitions/ComponentDefinitions.ts";
+import { CoordinatorAssetResolver } from "./definitions/CoordinatorAssetResolver.ts";
+import { SceneInstance } from "./live/SceneInstance.ts";
+import { captureSceneActors } from "./live/sceneCapture.ts";
+import { SceneEnvironment } from "./live/SceneEnvironment.ts";
 import type { SceneFile } from "./SceneFile.ts";
 
 export interface FileSceneOptions {
@@ -45,6 +46,17 @@ export class FileScene<
     this.#environment.apply(
       this.file.environment
     );
+  }
+
+  capture(): SceneFile {
+    return {
+      version: 1,
+      environment: structuredClone(this.file.environment),
+      actors: captureSceneActors(
+        this.world.sceneManager.tree,
+        this.#components
+      )
+    };
   }
 
   override destroy(): void {

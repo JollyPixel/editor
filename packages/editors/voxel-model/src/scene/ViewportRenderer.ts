@@ -45,10 +45,9 @@ export class ViewportRenderer implements Systems.RenderComponent {
   }
 
   prepareRender(
-    canvasWidth: number,
-    canvasHeight: number
+    canvas: Systems.CanvasDimensions
   ): void {
-    this.#camera.prepareRender(canvasWidth, canvasHeight);
+    this.#camera.prepareRender(canvas);
     for (const step of this.#steps) {
       step();
     }

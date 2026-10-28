@@ -76,8 +76,6 @@ function createInstance(
 
 describe("Systems.SceneInstance", () => {
   beforeEach(() => {
-    Actor.Id.clear();
-    Actor.PersistentId.clear();
   });
 
   test("builds actors in tree order with names, visibility and transforms", () => {
@@ -168,7 +166,7 @@ describe("Systems.SceneInstance", () => {
 
     const labelled = instance.component("labelled") as TagComponent;
     const invalid = instance.component("invalid") as TagComponent;
-    assert.deepEqual(instance.actor("actor")!.components, [labelled, invalid]);
+    assert.deepEqual([...instance.actor("actor")!.components], [labelled, invalid]);
     assert.strictEqual(labelled.label, "sun");
     assert.strictEqual(invalid.label, "default");
     assert.strictEqual(labelled.componentContext.mode, "edit");
@@ -206,7 +204,7 @@ describe("Systems.SceneInstance", () => {
 
     assert.strictEqual(play.instance.component("unknown"), null);
     assert.strictEqual(edit.instance.component("unknown"), null);
-    assert.deepEqual(play.instance.actor("actor")!.components, []);
+    assert.deepEqual([...play.instance.actor("actor")!.components], []);
     assert.strictEqual(play.warnings().length, 1);
     assert.strictEqual(edit.warnings().length, 0);
   });
@@ -249,7 +247,7 @@ describe("Systems.SceneInstance", () => {
 
     const rebuilt = instance.component("tag") as TagComponent;
     assert.strictEqual(rebuilt.label, "new");
-    assert.deepEqual(instance.actor("actor")!.components, [rebuilt]);
+    assert.deepEqual([...instance.actor("actor")!.components], [rebuilt]);
     assert.strictEqual(old.pendingForDestruction, true);
   });
 

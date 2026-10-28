@@ -13,14 +13,15 @@ const kOther = new THREE.Vector3();
 const kParentOrientation = new THREE.Quaternion();
 const kRotation = new THREE.Quaternion();
 const kEulerRotation = new THREE.Quaternion();
+const kPosition = new THREE.Vector3();
+const kLocalPosition = new THREE.Vector3();
+const kDirection = new THREE.Vector3();
+const kOrientation = new THREE.Quaternion();
+const kTargetOrientation = new THREE.Quaternion();
 
 export type TransformLike = Transform | { transform: Transform; };
 
 export class Transform {
-  static Matrix = new THREE.Matrix4();
-  static Vector3 = new THREE.Vector3();
-  static Quaternion = new THREE.Quaternion();
-
   static resolveTransform(
     value: TransformLike
   ): Transform {
@@ -75,7 +76,7 @@ export class Transform {
     angles: THREE.Euler = new THREE.Euler()
   ) {
     return angles.setFromQuaternion(
-      this.getGlobalOrientation(Transform.Quaternion)
+      this.getGlobalOrientation(kOrientation)
     );
   }
 
@@ -143,7 +144,7 @@ export class Transform {
       return this;
     }
 
-    const localPos = Transform.Vector3.copy(pos);
+    const localPos = kLocalPosition.copy(pos);
     this.#object3D.parent.worldToLocal(localPos);
     this.#object3D.position.copy(localPos);
     this.#object3D.updateMatrixWorld(false);
@@ -171,11 +172,11 @@ export class Transform {
       kUp.copy(up) :
       this.#object3D.up;
     kMatrix.lookAt(
-      this.getGlobalPosition(Transform.Vector3),
+      this.getGlobalPosition(kPosition),
       targetVec,
       upVec
     );
-    this.setGlobalOrientation(Transform.Quaternion.setFromRotationMatrix(kMatrix));
+    this.setGlobalOrientation(kOrientation.setFromRotationMatrix(kMatrix));
 
     return this;
   }
@@ -185,7 +186,7 @@ export class Transform {
     up?: THREE.Vector3Like
   ) {
     this.lookAt(
-      this.getGlobalPosition(Transform.Vector3).sub(direction),
+      this.getGlobalPosition(kPosition).sub(direction),
       up
     );
 
@@ -210,7 +211,7 @@ export class Transform {
 
     this.#object3D.quaternion.multiplyQuaternions(
       this.getParentGlobalOrientation(kParentOrientation).invert(),
-      Transform.Quaternion.copy(quaternion)
+      kTargetOrientation.copy(quaternion)
     );
     this.#object3D.updateMatrixWorld(false);
 
@@ -248,7 +249,7 @@ export class Transform {
   ) {
     const rotation = kRotation
       .copy(quaternion)
-      .multiply(this.getGlobalOrientation(Transform.Quaternion));
+      .multiply(this.getGlobalOrientation(kOrientation));
     this.setGlobalOrientation(rotation);
 
     return this;
@@ -258,7 +259,7 @@ export class Transform {
     quaternion: THREE.QuaternionLike
   ) {
     this.#object3D.quaternion.premultiply(
-      Transform.Quaternion.copy(quaternion)
+      kTargetOrientation.copy(quaternion)
     );
     this.#object3D.updateMatrixWorld(false);
 
@@ -284,8 +285,9 @@ export class Transform {
   moveGlobal(
     offset: THREE.Vector3Like
   ) {
-    this.getGlobalPosition(Transform.Vector3).add(offset);
-    this.setGlobalPosition(Transform.Vector3);
+    this.setGlobalPosition(
+      this.getGlobalPosition(kPosition).add(offset)
+    );
 
     return this;
   }
@@ -317,7 +319,7 @@ export class Transform {
     return target
       .set(0, 0, -1)
       .applyQuaternion(
-        this.getGlobalOrientation(Transform.Quaternion)
+        this.getGlobalOrientation(kOrientation)
       );
   }
 
@@ -327,7 +329,7 @@ export class Transform {
     return target
       .set(1, 0, 0)
       .applyQuaternion(
-        this.getGlobalOrientation(Transform.Quaternion)
+        this.getGlobalOrientation(kOrientation)
       );
   }
 
@@ -337,7 +339,7 @@ export class Transform {
     return target
       .set(0, 1, 0)
       .applyQuaternion(
-        this.getGlobalOrientation(Transform.Quaternion)
+        this.getGlobalOrientation(kOrientation)
       );
   }
 
@@ -345,7 +347,7 @@ export class Transform {
     distance: number
   ) {
     return this.moveGlobal(
-      this.getForward(Transform.Vector3).multiplyScalar(distance)
+      this.getForward(kDirection).multiplyScalar(distance)
     );
   }
 
@@ -353,7 +355,7 @@ export class Transform {
     distance: number
   ) {
     return this.moveGlobal(
-      this.getRight(Transform.Vector3).multiplyScalar(distance)
+      this.getRight(kDirection).multiplyScalar(distance)
     );
   }
 
@@ -361,19 +363,18 @@ export class Transform {
     distance: number
   ) {
     return this.moveGlobal(
-      this.getUp(Transform.Vector3).multiplyScalar(distance)
+      this.getUp(kDirection).multiplyScalar(distance)
     );
   }
 
   distanceTo(
     other: TransformLike
   ) {
-    this.getGlobalPosition(Transform.Vector3);
     const otherPos = Transform
       .resolveTransform(other)
       .getGlobalPosition(kOther);
 
-    return Transform.Vector3.distanceTo(otherPos);
+    return this.getGlobalPosition(kPosition).distanceTo(otherPos);
   }
 
   lerpPosition(

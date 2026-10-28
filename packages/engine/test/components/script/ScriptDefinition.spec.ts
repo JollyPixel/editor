@@ -12,7 +12,7 @@ import {
   SceneProperty,
   ScriptDefinition
 } from "../../../src/index.ts";
-import type { SceneMode } from "../../../src/systems/scene/file/ComponentDefinition.ts";
+import type { SceneMode } from "../../../src/systems/scene/file/definitions/ComponentDefinition.ts";
 import type { JSONObject } from "../../../src/systems/scene/file/SceneFile.ts";
 import { createSceneSetup } from "../../helpers/scene/sceneSetup.ts";
 import { createSceneAssets } from "../../helpers/scene/sceneAssets.ts";
@@ -36,6 +36,11 @@ SceneProperty({ type: "number" })(Mover.prototype, "speed");
 SceneProperty({ type: "string" })(Mover.prototype, "label");
 SceneProperty({ type: "Vector3" })(Mover.prototype, "offset");
 SceneProperty({ type: "Color" })(Mover.prototype, "tint");
+
+class Follower extends Behavior {
+  target: Actor | null = null;
+}
+SceneProperty({ type: "Actor" })(Follower.prototype, "target");
 
 function createScript(
   mode: SceneMode,
@@ -70,7 +75,7 @@ describe("Components.ScriptDefinition", () => {
 
     const mover = component as Mover & { extra?: unknown; };
     assert.ok(mover instanceof Mover);
-    assert.deepEqual(actor.behaviors.Mover, [mover]);
+    assert.deepEqual([...actor.getComponents(Mover)], [mover]);
     assert.strictEqual(mover.speed, 3);
     assert.strictEqual(mover.speedSeenInAwake, 3);
     assert.strictEqual(mover.label, "idle");
@@ -87,7 +92,7 @@ describe("Components.ScriptDefinition", () => {
     });
 
     assert.strictEqual(component, null);
-    assert.deepEqual(actor.components, []);
+    assert.deepEqual([...actor.components], []);
     assert.strictEqual(warnings().length, 0);
   });
 
@@ -97,7 +102,68 @@ describe("Components.ScriptDefinition", () => {
     });
 
     assert.strictEqual(component, null);
-    assert.deepEqual(actor.components, []);
+    assert.deepEqual([...actor.components], []);
     assert.strictEqual(warnings().length, 1);
+  });
+
+  test("captures the declared properties a registered behavior holds now", () => {
+    const { component } = createScript("play", {
+      behavior: "Mover",
+      properties: { speed: 3 }
+    });
+    const mover = component as Mover;
+    mover.speed = 8;
+    mover.offset.set(1, 2, 3);
+    const definition = new ScriptDefinition({ Mover });
+
+    assert.deepEqual(definition.capture(mover), {
+      behavior: "Mover",
+      properties: {
+        speed: 8,
+        label: "idle",
+        offset: [1, 2, 3],
+        tint: "#ffffff"
+      }
+    });
+  });
+
+  test("owns registered behaviors only, by their exact class", () => {
+    class FastMover extends Mover {}
+    const { actor, component } = createScript("play", {
+      behavior: "Mover"
+    });
+    const definition = new ScriptDefinition({ Mover });
+
+    assert.strictEqual(definition.owns(component!), true);
+    assert.strictEqual(new ScriptDefinition({}).owns(component!), false);
+    assert.strictEqual(definition.owns(actor.addComponentAndGet(Follower)), false);
+    assert.strictEqual(definition.owns(actor.addComponentAndGet(FastMover)), false);
+  });
+
+  test("resolves an Actor property to the actor holding that persistent id", () => {
+    const { logger, warnings } = createWarningLogger();
+    const { world } = createSceneSetup(createSceneAssets(), logger);
+    const door = new Actor(world as any, { name: "door", persistentId: "door-1" });
+    const guard = new Actor(world as any, { name: "guard" });
+    const definition = new ScriptDefinition({ Follower });
+    const context = createComponentContext("play");
+
+    const follower = definition.create(guard, definition.parse({
+      behavior: "Follower",
+      properties: { target: "door-1" }
+    }), context) as Follower;
+    const lost = definition.create(guard, definition.parse({
+      behavior: "Follower",
+      properties: { target: "gone" }
+    }), context) as Follower;
+    guard.awake();
+
+    assert.strictEqual(follower.target, door);
+    assert.strictEqual(lost.target, null);
+    assert.strictEqual(warnings().length, 1);
+    assert.deepEqual(definition.capture(follower), {
+      behavior: "Follower",
+      properties: { target: "door-1" }
+    });
   });
 });

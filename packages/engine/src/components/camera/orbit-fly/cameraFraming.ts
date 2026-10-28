@@ -3,6 +3,7 @@ import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import type { CameraPose } from "./FlyRig.ts";
+import { NumberRange } from "./NumberRange.ts";
 
 export interface CameraFramingOptions {
   /**
@@ -50,10 +51,8 @@ export function frameBounds(
     0
   );
   const halfFov = THREE.MathUtils.degToRad(fov) / 2;
-  const distance = THREE.MathUtils.clamp(
-    (radius / Math.sin(halfFov)) * margin,
-    minDistance,
-    maxDistance
+  const distance = new NumberRange(minDistance, maxDistance).clamp(
+    (radius / Math.sin(halfFov)) * margin
   );
   const direction = new THREE.Vector3()
     .copy(forward)

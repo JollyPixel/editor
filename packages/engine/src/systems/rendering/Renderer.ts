@@ -4,30 +4,13 @@ import type { EventMap } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type { PostProcessing } from "./compositing/PostProcessing.ts";
-
-export interface RenderViewport {
-  /**
-   * Normalized [0, 1]. x=0 is left
-   */
-  x: number;
-  /**
-   * Normalized [0, 1]. y=0 is bottom (WebGL convention)
-   */
-  y: number;
-  /**
-   * Normalized width [0, 1]
-   */
-  width: number;
-  /**
-   * Normalized height [0, 1]
-   */
-  height: number;
-}
+import type { CanvasDimensions } from "./CanvasDimensions.ts";
+import type { Viewport } from "./Viewport.ts";
 
 export interface RenderComponent {
   readonly threeCamera: THREE.Camera;
   readonly depth: number;
-  readonly viewport: Readonly<RenderViewport> | null;
+  readonly viewport: Viewport | null;
   /**
    * Replaces the direct render with a `THREE.RenderPipeline`.
    * @default null
@@ -35,14 +18,13 @@ export interface RenderComponent {
   readonly postProcessing?: PostProcessing | null;
 
   prepareRender(
-    canvasWidth: number,
-    canvasHeight: number
+    canvas: CanvasDimensions
   ): void;
 }
 
 export type RendererEvents<T = THREE.WebGPURenderer> = {
   resize: (
-    size: { width: number; height: number; }
+    size: CanvasDimensions
   ) => void;
   draw: (
     params: { source: T; }

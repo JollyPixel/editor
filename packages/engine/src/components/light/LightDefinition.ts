@@ -1,10 +1,14 @@
 // Import Internal Dependencies
 import type { Actor } from "../../actor/Actor.ts";
-import { ComponentData } from "../../systems/scene/file/ComponentData.ts";
+import {
+  ComponentData,
+  toHexColor
+} from "../../systems/scene/file/definitions/ComponentData.ts";
 import type {
   ComponentDefinition
-} from "../../systems/scene/file/ComponentDefinition.ts";
+} from "../../systems/scene/file/definitions/ComponentDefinition.ts";
 import type { JSONObject } from "../../systems/scene/file/SceneFile.ts";
+import type { Component } from "../types.ts";
 import {
   LightComponent,
   LIGHT_DEFAULTS,
@@ -59,5 +63,23 @@ export class LightDefinition implements ComponentDefinition<
     data: LightSettings
   ): void {
     component.configure(data);
+  }
+
+  owns(
+    component: Component
+  ): component is LightComponent<any> {
+    return component instanceof LightComponent;
+  }
+
+  capture(
+    component: LightComponent<any>
+  ): JSONObject {
+    const { settings } = component;
+
+    return {
+      ...settings,
+      color: toHexColor(settings.color),
+      groundColor: toHexColor(settings.groundColor)
+    };
   }
 }

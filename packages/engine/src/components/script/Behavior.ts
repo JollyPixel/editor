@@ -30,18 +30,6 @@ export class Behavior<
       typeName: "ScriptBehavior"
     });
     this.#initialProperties = options.properties ?? null;
-
-    const { behaviors } = this.actor;
-    const name = this.constructor.name;
-    (behaviors[name] ??= []).push(this);
-
-    this.addTeardown(() => {
-      const behaviorList = behaviors[name] ?? [];
-      behaviorList.splice(behaviorList.indexOf(this), 1);
-      if (behaviorList.length === 0) {
-        delete behaviors[name];
-      }
-    });
   }
 
   bind(): void {

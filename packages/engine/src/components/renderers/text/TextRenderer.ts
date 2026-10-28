@@ -58,7 +58,7 @@ export class TextRenderer extends ActorComponent<any> {
   }
 
   updateMesh(): void {
-    const mesh = this.text.mesh;
+    const mesh = this.text.ensureMesh();
     if (mesh && mesh.parent !== this.actor.object3D) {
       this.actor.object3D.add(mesh);
     }

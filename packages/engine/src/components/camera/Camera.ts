@@ -4,16 +4,21 @@ import * as THREE from "three/webgpu";
 // Import Internal Dependencies
 import { ActorComponent } from "../../actor/ActorComponent.ts";
 import type { Actor } from "../../actor/Actor.ts";
-import type {
-  RenderComponent,
-  RenderViewport
-} from "../../systems/rendering/Renderer.ts";
+import type { RenderComponent } from "../../systems/rendering/Renderer.ts";
+import { CanvasDimensions } from "../../systems/rendering/CanvasDimensions.ts";
+import {
+  type RenderViewport,
+  Viewport
+} from "../../systems/rendering/Viewport.ts";
 import type {
   PostProcessing
 } from "../../systems/rendering/compositing/PostProcessing.ts";
 import type { WorldDefaultContext } from "../../systems/World.ts";
-
-export type CameraProjectionMode = "perspective" | "orthographic";
+import {
+  type CameraProjection,
+  type CameraProjectionMode,
+  createCameraProjection
+} from "./CameraProjection.ts";
 
 export interface CameraOptions {
   projectionMode?: CameraProjectionMode;
@@ -76,6 +81,12 @@ export type CameraSettings = Pick<
   | "depth"
 >;
 
+export type ResolvedCameraSettings = Required<
+  Omit<CameraSettings, "viewport">
+> & {
+  viewport: Viewport | null;
+};
+
 export const CAMERA_DEFAULTS = {
   projectionMode: "perspective",
   fov: 45,
@@ -92,66 +103,16 @@ export const CAMERA_DEFAULTS = {
 export class CameraComponent<
   TContext = WorldDefaultContext
 > extends ActorComponent<TContext> implements RenderComponent {
-  #threeCamera: THREE.PerspectiveCamera | THREE.OrthographicCamera;
-  #projectionMode: CameraProjectionMode;
-  #fov: number;
-  #near: number;
-  #far: number;
-  #orthographicScale: number;
-  #viewport: RenderViewport | null;
-  #depth: number;
-  #postProcessing: PostProcessing | null;
-  #render: boolean;
+  postProcessing: PostProcessing | null;
 
-  #projectionDirty = true;
-  #lastCanvasWidth = 0;
-  #lastCanvasHeight = 0;
+  #settings: ResolvedCameraSettings;
+  #projection: CameraProjection;
+  #render: boolean;
+  #canvas = CanvasDimensions.empty;
 
   #worldPosition = new THREE.Vector3();
   #worldQuaternion = new THREE.Quaternion();
   #worldScale = new THREE.Vector3();
-
-  get threeCamera(): THREE.PerspectiveCamera | THREE.OrthographicCamera {
-    return this.#threeCamera;
-  }
-
-  get depth(): number {
-    return this.#depth;
-  }
-
-  get viewport(): RenderViewport | null {
-    return this.#viewport;
-  }
-
-  get postProcessing(): PostProcessing | null {
-    return this.#postProcessing;
-  }
-
-  set postProcessing(
-    postProcessing: PostProcessing | null
-  ) {
-    this.#postProcessing = postProcessing;
-  }
-
-  get projectionMode(): CameraProjectionMode {
-    return this.#projectionMode;
-  }
-
-  get fov(): number {
-    return this.#fov;
-  }
-
-  get near(): number {
-    return this.#near;
-  }
-
-  get far(): number {
-    return this.#far;
-  }
-
-  get orthographicScale(): number {
-    return this.#orthographicScale;
-  }
 
   constructor(
     actor: Actor<TContext>,
@@ -163,41 +124,40 @@ export class CameraComponent<
     });
 
     const {
-      projectionMode = CAMERA_DEFAULTS.projectionMode,
-      fov = CAMERA_DEFAULTS.fov,
-      near = CAMERA_DEFAULTS.near,
-      far = CAMERA_DEFAULTS.far,
-      orthographicScale = CAMERA_DEFAULTS.orthographicScale,
-      viewport = CAMERA_DEFAULTS.viewport,
-      depth = CAMERA_DEFAULTS.depth,
       addAudioListener = CAMERA_DEFAULTS.addAudioListener,
       postProcessing = CAMERA_DEFAULTS.postProcessing,
       render = CAMERA_DEFAULTS.render
     } = options;
 
-    this.#projectionMode = projectionMode;
-    this.#fov = fov;
-    this.#near = near;
-    this.#far = far;
-    this.#orthographicScale = orthographicScale;
-    this.#viewport = viewport;
-    this.#depth = depth;
-    this.#postProcessing = postProcessing;
+    this.#settings = resolveSettings(CAMERA_DEFAULTS, options);
+    this.postProcessing = postProcessing;
     this.#render = render;
 
-    this.#threeCamera = this.#createThreeCamera();
+    this.#projection = createCameraProjection(this.#settings.projectionMode);
+    this.#writeProjection();
     if (addAudioListener) {
       this.threeCamera.add(actor.world.audio.threeAudioListener);
     }
   }
 
-  #createThreeCamera(): THREE.PerspectiveCamera | THREE.OrthographicCamera {
-    const camera = this.#projectionMode === "orthographic"
-      ? new THREE.OrthographicCamera(-1, 1, 1, -1, this.#near, this.#far)
-      : new THREE.PerspectiveCamera(this.#fov, 1, this.#near, this.#far);
-    camera.matrixWorldAutoUpdate = false;
+  get threeCamera(): THREE.PerspectiveCamera | THREE.OrthographicCamera {
+    return this.#projection.camera;
+  }
 
-    return camera;
+  get projection(): CameraProjection {
+    return this.#projection;
+  }
+
+  get settings(): Readonly<ResolvedCameraSettings> {
+    return this.#settings;
+  }
+
+  get depth(): number {
+    return this.#settings.depth;
+  }
+
+  get viewport(): Viewport | null {
+    return this.#settings.viewport;
   }
 
   awake(): void {
@@ -211,106 +171,90 @@ export class CameraComponent<
   }
 
   prepareRender(
-    canvasWidth: number,
-    canvasHeight: number
+    canvas: CanvasDimensions
   ): void {
-    this.actor.object3D.updateWorldMatrix(true, false);
-    this.#threeCamera.matrixWorld.copy(
-      this.actor.object3D.matrixWorld
-    );
-    this.#threeCamera.matrixWorldInverse
-      .copy(this.#threeCamera.matrixWorld)
-      .invert();
+    const camera = this.threeCamera;
 
-    this.#threeCamera.matrixWorld.decompose(
+    this.actor.object3D.updateWorldMatrix(true, false);
+    camera.matrixWorld.copy(this.actor.object3D.matrixWorld);
+    camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
+
+    camera.matrixWorld.decompose(
       this.#worldPosition,
       this.#worldQuaternion,
       this.#worldScale
     );
-    this.#threeCamera.position.copy(this.#worldPosition);
-    this.#threeCamera.quaternion.copy(this.#worldQuaternion);
-    this.#threeCamera.scale.copy(this.#worldScale);
+    camera.position.copy(this.#worldPosition);
+    camera.quaternion.copy(this.#worldQuaternion);
+    camera.scale.copy(this.#worldScale);
 
-    for (const child of this.#threeCamera.children) {
+    for (const child of camera.children) {
       child.updateMatrixWorld(true);
     }
 
-    const canvasChanged = canvasWidth !== this.#lastCanvasWidth ||
-      canvasHeight !== this.#lastCanvasHeight;
-    if (this.#projectionDirty || canvasChanged) {
-      this.#lastCanvasWidth = canvasWidth;
-      this.#lastCanvasHeight = canvasHeight;
-      this.#updateProjection(canvasWidth, canvasHeight);
-      this.#projectionDirty = false;
+    if (!canvas.equals(this.#canvas)) {
+      this.#canvas = canvas;
+      this.#writeProjection();
     }
-  }
-
-  #updateProjection(
-    canvasWidth: number,
-    canvasHeight: number
-  ): void {
-    const viewport = this.#viewport;
-    const effectiveWidth = viewport ? viewport.width * canvasWidth : canvasWidth;
-    const effectiveHeight = viewport ? viewport.height * canvasHeight : canvasHeight;
-    const aspect = effectiveWidth / Math.max(effectiveHeight, 1);
-
-    if (this.#threeCamera instanceof THREE.PerspectiveCamera) {
-      this.#threeCamera.fov = this.#fov;
-      this.#threeCamera.aspect = aspect;
-      this.#threeCamera.near = this.#near;
-      this.#threeCamera.far = this.#far;
-    }
-    else {
-      const halfHeight = this.#orthographicScale;
-      const halfWidth = halfHeight * aspect;
-      this.#threeCamera.left = -halfWidth;
-      this.#threeCamera.right = halfWidth;
-      this.#threeCamera.top = halfHeight;
-      this.#threeCamera.bottom = -halfHeight;
-      this.#threeCamera.near = this.#near;
-      this.#threeCamera.far = this.#far;
-    }
-
-    this.#threeCamera.updateProjectionMatrix();
   }
 
   configure(
     settings: CameraSettings
   ): this {
-    const {
-      projectionMode = this.#projectionMode,
-      fov = this.#fov,
-      near = this.#near,
-      far = this.#far,
-      orthographicScale = this.#orthographicScale,
-      viewport = this.#viewport,
-      depth = this.#depth
-    } = settings;
+    const previous = this.#settings;
+    this.#settings = resolveSettings(previous, settings);
 
-    this.#fov = fov;
-    this.#near = near;
-    this.#far = far;
-    this.#orthographicScale = orthographicScale;
-    this.#viewport = viewport;
-    this.#depth = depth;
-    if (projectionMode !== this.#projectionMode) {
-      this.#switchProjection(projectionMode);
+    if (this.#settings.projectionMode !== previous.projectionMode) {
+      this.#switchProjection();
     }
-    this.#projectionDirty = true;
+    this.#writeProjection();
 
     return this;
   }
 
-  #switchProjection(
-    mode: CameraProjectionMode
-  ): void {
-    const previous = this.#threeCamera;
-    this.#projectionMode = mode;
-    this.#threeCamera = this.#createThreeCamera();
+  #writeProjection(): void {
+    const { viewport } = this.#settings;
+    const aspect = this.#canvas.isEmpty ?
+      1 :
+      (viewport ?? Viewport.full).aspect(this.#canvas);
+
+    this.#projection.write(this.#settings, aspect);
+  }
+
+  #switchProjection(): void {
+    const previous = this.threeCamera;
+    this.#projection = createCameraProjection(this.#settings.projectionMode);
 
     if (previous.children.length > 0) {
-      this.#threeCamera.add(...previous.children);
+      this.threeCamera.add(...previous.children);
     }
-    this.#threeCamera.layers.mask = previous.layers.mask;
+    this.threeCamera.layers.mask = previous.layers.mask;
   }
+}
+
+function resolveSettings(
+  current: Readonly<ResolvedCameraSettings>,
+  settings: CameraSettings
+): ResolvedCameraSettings {
+  const {
+    projectionMode = current.projectionMode,
+    fov = current.fov,
+    near = current.near,
+    far = current.far,
+    orthographicScale = current.orthographicScale,
+    viewport = current.viewport,
+    depth = current.depth
+  } = settings;
+
+  return {
+    projectionMode,
+    fov,
+    near,
+    far,
+    orthographicScale,
+    viewport: viewport === null || viewport instanceof Viewport ?
+      viewport :
+      new Viewport(viewport),
+    depth
+  };
 }

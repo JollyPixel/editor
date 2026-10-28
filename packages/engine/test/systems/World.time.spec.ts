@@ -109,6 +109,23 @@ describe("Systems.World", () => {
       ]);
       assert.strictEqual(world.time.fixedElapsed, 3 * kFixedDelta60 / 1000);
     });
+
+    test("should fire timers on game time and keep animating while one is pending", () => {
+      const fired: number[] = [];
+      world.timers.schedule(0.05, () => fired.push(world.time.elapsed));
+      scheduler.timeScale = 0.5;
+      world.start();
+      tick();
+
+      tick(80);
+      assert.deepStrictEqual(fired, []);
+      assert.strictEqual(world.animating, true);
+
+      tick(40);
+
+      assert.deepStrictEqual(fired, [0.06]);
+      assert.strictEqual(world.animating, false);
+    });
   });
 
   describe("start() / stop()", () => {
