@@ -257,8 +257,8 @@ importers:
         specifier: 2.0.1
         version: 2.0.1
       rate-limiter-flexible:
-        specifier: 11.2.2
-        version: 11.2.2
+        specifier: 11.2.3
+        version: 11.2.3
       sharp:
         specifier: 0.35.5
         version: 0.35.5(@types/node@26.6.5)
@@ -333,8 +333,8 @@ importers:
         specifier: 1.1.0
         version: 1.1.0
       chokidar:
-        specifier: ^5.0.0
-        version: 5.0.0
+        specifier: ^6.0.0
+        version: 6.0.0
       idb:
         specifier: 8.0.4
         version: 8.0.4
@@ -1159,8 +1159,8 @@ importers:
         specifier: workspace:*
         version: link:../ui
       '@pmndrs/detect-gpu':
-        specifier: 6.0.26
-        version: 6.0.26
+        specifier: 6.0.27
+        version: 6.0.27
       three:
         specifier: ^0.186.0
         version: 0.186.1
@@ -2487,8 +2487,8 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
-  '@pmndrs/detect-gpu@6.0.26':
-    resolution: {integrity: sha512-bcCsgJkfe7HndAgEwd3oMQbx8Zpkndk4MQamTmEhbaboec+5WN+ZwuZ0nlyHprQCmXfMiDgHmWWvOia+efIsAw==}
+  '@pmndrs/detect-gpu@6.0.27':
+    resolution: {integrity: sha512-NEXcRZDBTwFaZABSmLsdvznKqMpekQ9cLX2vds6oEG2dMOA+CmWJpMeI72SS5R4oymwy8es+KsDRDEkKhGtfww==}
 
   '@pnpm/deps.graph-sequencer@1100.0.1':
     resolution: {integrity: sha512-pOr5+q1fLYKwFN3LAJuGZEnfXDcQ73zqgDHMtGy+K+uIoUqyY+6MeDCWFwfu+4EFuq76I5EPFofoNAI+Bmmq4A==}
@@ -3368,6 +3368,10 @@ packages:
   chokidar@5.0.0:
     resolution: {integrity: sha512-TQMmc3w+5AxjpL8iIiwebF73dRDF4fBIieAqGn9RGCWaEVwQ6Fb2cGe31Yns0RRIzii5goJ1Y7xbMwo1TxMplw==}
     engines: {node: '>= 20.19.0'}
+
+  chokidar@6.0.0:
+    resolution: {integrity: sha512-Ec2Z7wpcKBiMpR7DxteoqS/sq5G5d2A4fpxzPv6+fD7xNNdrTghn7L11YwV5EN1B3i72Erc3XVT5FkWIDx90+A==}
+    engines: {node: '>= 22.22'}
 
   cliui@9.0.1:
     resolution: {integrity: sha512-k7ndgKhwoQveBL+/1tqGJYNz097I7WOvwbmmU2AR5+magtbjPWQTS1C5vzGkBC8Ym8UWRzfKUzUUqFLypY4Q+w==}
@@ -4528,11 +4532,15 @@ packages:
   quick-format-unescaped@4.0.4:
     resolution: {integrity: sha512-tYC1Q1hgyRuHgloV/YXs2w15unPVh8qfu/qCTfhTYamaw7fyhumKa2yGpdSo87vY32rIclj+4fWYQXUMs9EHvg==}
 
-  rate-limiter-flexible@11.2.2:
-    resolution: {integrity: sha512-n6M+msT0OWdril3PgkAjatDME2BEDhf8nBx4lJj9pMFQVcN6ldXtZvTX3nZdFqqX5utQ7kCUzq7LfyfmA2wglw==}
+  rate-limiter-flexible@11.2.3:
+    resolution: {integrity: sha512-w4HX4toAsEbu1VksOauZwI9d6URb6/4WqJJ5Hg1bESihMt2KJfQ2iTwvDkhIg+y2HetLh65DGu/8xIkUz/xNPA==}
 
   readdirp@5.0.0:
     resolution: {integrity: sha512-9u/XQ1pvrQtYyMpZe7DXKv2p5CNvyVwzUB6uhLAnQwHMSgKMBR62lc7AHljaeteeHXn11XTAaLLUVZYVZyuRBQ==}
+    engines: {node: '>= 20.19.0'}
+
+  readdirp@5.1.1:
+    resolution: {integrity: sha512-Kko+Y5XQ6fM+Ce3dq3m9YGxnacYZYl9cA1wZjaF3Vbry2L3i1qVg8+CAgNPsXRArPMUMCaOR7oa9Nqntc43JKA==}
     engines: {node: '>= 20.19.0'}
 
   real-require@1.0.0:
@@ -6085,7 +6093,7 @@ snapshots:
     dependencies:
       playwright: 1.64.1
 
-  '@pmndrs/detect-gpu@6.0.26': {}
+  '@pmndrs/detect-gpu@6.0.27': {}
 
   '@pnpm/deps.graph-sequencer@1100.0.1': {}
 
@@ -6844,6 +6852,10 @@ snapshots:
   chokidar@5.0.0:
     dependencies:
       readdirp: 5.0.0
+
+  chokidar@6.0.0:
+    dependencies:
+      readdirp: 5.1.1
 
   cliui@9.0.1:
     dependencies:
@@ -8042,9 +8054,11 @@ snapshots:
 
   quick-format-unescaped@4.0.4: {}
 
-  rate-limiter-flexible@11.2.2: {}
+  rate-limiter-flexible@11.2.3: {}
 
   readdirp@5.0.0: {}
+
+  readdirp@5.1.1: {}
 
   real-require@1.0.0: {}
 
