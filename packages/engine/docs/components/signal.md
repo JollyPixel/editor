@@ -56,6 +56,9 @@ interface SignalEvent<T extends unknown[] = []> {
 type SignalListener<T extends unknown[]> = (...args: T[]) => void;
 ```
 
+`emit()` calls the listeners connected when it starts. A listener
+connected or disconnected during an emit takes effect on the next one.
+
 ## Typed signals
 
 `SignalEvent` accepts a generic tuple to type the emitted arguments:

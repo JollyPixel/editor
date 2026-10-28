@@ -9,7 +9,7 @@ import {
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { createHarness } from "../../helpers/orbitFlyHarness.ts";
+import { createHarness } from "../../helpers/camera/orbitFlyHarness.ts";
 
 function yawPitch(
   orientation: THREE.Quaternion

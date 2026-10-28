@@ -5,18 +5,22 @@ import {
   beforeEach
 } from "node:test";
 import assert from "node:assert/strict";
+import { setImmediate } from "node:timers/promises";
 
 // Import Third-party Dependencies
-import { AssetBatchLoadError } from "@jolly-pixel/asset";
+import {
+  AssetBatchLoadError,
+  AssetNotFoundError
+} from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import { Actor } from "../src/actor/index.ts";
 import { Scene } from "../src/systems/scene/Scene.ts";
-import { createSceneAssets } from "./sceneAssets.ts";
+import { createSceneAssets } from "./helpers/scene/sceneAssets.ts";
 import {
   ConcreteScene,
   createSceneSetup
-} from "./helpers/sceneSetup.ts";
+} from "./helpers/scene/sceneSetup.ts";
 
 describe("Scene", () => {
   beforeEach(() => {
@@ -38,46 +42,20 @@ describe("Scene", () => {
       assert.strictEqual(sm.sceneLoad, load);
     });
 
-    test("does NOT swap scene immediately", () => {
-      const { sm } = createSceneSetup();
-      const scene = new ConcreteScene("test");
-
-      sm.loadScene(scene);
-
-      assert.strictEqual(sm.currentScene, null);
-      assert.strictEqual(scene.awakeSpy.mock.calls.length, 0);
-    });
-
-    test("applies a ready scene at the next beginFrame", () => {
+    test("activates and starts a ready scene at the next beginFrame", () => {
       const { sm } = createSceneSetup();
       const scene = new ConcreteScene("test");
 
       const load = sm.loadScene(scene);
       assert.strictEqual(sm.currentScene, null);
+      assert.strictEqual(scene.awakeSpy.mock.calls.length, 0);
+      assert.strictEqual(scene.startSpy.mock.calls.length, 0);
 
       sm.beginFrame();
       assert.strictEqual(sm.currentScene, scene);
       assert.strictEqual(load.status, "active");
-      assert.strictEqual(scene.awakeSpy.mock.calls.length, 1);
-    });
-
-    test("clears hasPendingScene after beginFrame applies it", () => {
-      const { sm } = createSceneSetup();
-      const scene = new ConcreteScene("test");
-
-      sm.loadScene(scene);
-      sm.beginFrame();
-
       assert.strictEqual(sm.hasPendingScene, false);
-    });
-
-    test("starts the scene on the frame that activates it", () => {
-      const { sm } = createSceneSetup();
-      const scene = new ConcreteScene("test");
-
-      sm.loadScene(scene);
-      sm.beginFrame();
-
+      assert.strictEqual(scene.awakeSpy.mock.calls.length, 1);
       assert.strictEqual(scene.startSpy.mock.calls.length, 1);
     });
 
@@ -102,7 +80,7 @@ describe("Scene", () => {
       assert.strictEqual(sm.currentScene, scene);
     });
 
-    test("waits for its assets before queuing the scene", async() => {
+    test("reports asset progress and queues the scene once its assets are ready", async() => {
       const assets = createSceneAssets(["a", "b"]);
       const { sm } = createSceneSetup(assets);
       const scene = new ConcreteScene("test", {
@@ -117,6 +95,10 @@ describe("Scene", () => {
       assert.strictEqual(sm.hasPendingScene, false);
 
       assets.loader.resolve("a");
+      await setImmediate();
+      assert.strictEqual(load.completed, 1);
+      assert.strictEqual(load.currentAsset?.id.value, "a");
+
       assets.loader.resolve("b");
       await load.done;
       assert.strictEqual(load.status, "ready");
@@ -157,6 +139,9 @@ describe("Scene", () => {
 
       const firstLoad = sm.loadScene(first);
       const secondLoad = sm.loadScene(second);
+      assert.strictEqual(firstLoad.status, "cancelled");
+      await assert.rejects(firstLoad.done, /Scene load was cancelled/);
+
       assets.loader.resolve("a");
       assets.loader.resolve("b");
       await secondLoad.done;
@@ -165,6 +150,20 @@ describe("Scene", () => {
       assert.strictEqual(firstLoad.status, "cancelled");
       assert.strictEqual(secondLoad.status, "active");
       assert.strictEqual(sm.currentScene, second);
+    });
+
+    test("fails when an asset is missing from the catalog", async() => {
+      const assets = createSceneAssets();
+      const { sm } = createSceneSetup(assets);
+      const scene = new ConcreteScene("level", {
+        assets: [assets.reference("missing")]
+      });
+
+      const load = sm.loadScene(scene);
+
+      assert.strictEqual(load.status, "failed");
+      assert.ok(load.error instanceof AssetNotFoundError);
+      await assert.rejects(load.done, AssetNotFoundError);
     });
 
     test("retains asset failures without replacing the scene", async() => {

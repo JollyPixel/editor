@@ -4,18 +4,7 @@ import type { InputListenerType } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
 import type { Component } from "../types.ts";
-
-export type ScenePropertyType =
-  | "string"
-  | "string[]"
-  | "number"
-  | "number[]"
-  | "boolean"
-  | "boolean[]"
-  | "Vector2"
-  | "Vector3"
-  | "Vector4"
-  | "Color";
+import type { ScenePropertyType } from "./ScenePropertyValue.ts";
 
 export interface ScenePropertyOptions {
   type: ScenePropertyType;

@@ -14,12 +14,12 @@ import {
 } from "../../../src/index.ts";
 import type { SceneMode } from "../../../src/systems/scene/file/ComponentDefinition.ts";
 import type { JSONObject } from "../../../src/systems/scene/file/SceneFile.ts";
-import { createSceneSetup } from "../../helpers/sceneSetup.ts";
-import { createSceneAssets } from "../../sceneAssets.ts";
+import { createSceneSetup } from "../../helpers/scene/sceneSetup.ts";
+import { createSceneAssets } from "../../helpers/scene/sceneAssets.ts";
 import {
   createComponentContext,
   createWarningLogger
-} from "../../helpers/sceneFile.ts";
+} from "../../helpers/scene/sceneFile.ts";
 
 class Mover extends Behavior {
   speed = 5;

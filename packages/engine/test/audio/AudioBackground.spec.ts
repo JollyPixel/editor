@@ -7,131 +7,73 @@ import {
   mock
 } from "node:test";
 import assert from "node:assert/strict";
-import timers from "node:timers/promises";
-
-// Import Third-party Dependencies
-import type * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import {
+import type {
   AudioBackground,
-  type AudioBackgroundOptions,
-  type AudioBackgroundPlaylist
+  AudioBackgroundPlaylist
 } from "../../src/audio/AudioBackground.ts";
-import type { AudioManager } from "../../src/audio/AudioManager.ts";
-
-// CONSTANTS
-const kAsyncPropagationDelay = 10;
-
-interface MockAudio {
-  isPlaying: boolean;
-  setVolume: ReturnType<typeof mock.fn<(volume: number) => void>>;
-  play: ReturnType<typeof mock.fn<() => void>>;
-  pause: ReturnType<typeof mock.fn<() => void>>;
-  stop: ReturnType<typeof mock.fn<() => void>>;
-  onEnded: (() => void) | null;
-}
-
-interface MockAudioManager {
-  loadAudio: ReturnType<typeof mock.fn<(url: string, options?: any) => Promise<THREE.Audio>>>;
-  destroyAudio: ReturnType<typeof mock.fn<(audio: THREE.Audio) => void>>;
-}
+import {
+  createAudioBackgroundHarness,
+  type AudioBackgroundHarness
+} from "../helpers/audio/audioBackgroundHarness.ts";
 
 describe("Audio.AudioBackground", () => {
   let audioBackground: AudioBackground;
-  let mockAudioManager: MockAudioManager;
-  let mockAudio: MockAudio;
+  let mockAudioManager: AudioBackgroundHarness["mockAudioManager"];
+  let mockAudio: AudioBackgroundHarness["mockAudio"];
   let playlists: AudioBackgroundPlaylist[];
-
-  async function triggerOnEnded(): Promise<void> {
-    if (mockAudio.onEnded) {
-      mockAudio.onEnded();
-      await timers.setTimeout(kAsyncPropagationDelay);
-    }
-  }
+  let createBackground: AudioBackgroundHarness["createBackground"];
+  let triggerOnEnded: AudioBackgroundHarness["triggerOnEnded"];
 
   beforeEach(() => {
-    mockAudio = {
-      isPlaying: false,
-      setVolume: mock.fn(),
-      play: mock.fn(() => {
-        mockAudio.isPlaying = true;
-      }),
-      pause: mock.fn(() => {
-        mockAudio.isPlaying = false;
-      }),
-      stop: mock.fn(() => {
-        mockAudio.isPlaying = false;
-      }),
-      onEnded: null
-    };
-
-    mockAudioManager = {
-      loadAudio: mock.fn(async() => mockAudio as unknown as THREE.Audio),
-      destroyAudio: mock.fn()
-    };
-
-    playlists = [
-      {
-        name: "main",
-        tracks: [
-          {
-            name: "track1",
-            path: "/audio/track1.mp3",
-            volume: 0.8
-          },
-          {
-            name: "track2",
-            path: "/audio/track2.mp3",
-            volume: 0.6
-          }
-        ],
-        onEnd: "loop"
-      },
-      {
-        name: "secondary",
-        tracks: [
-          {
-            name: "ambient",
-            path: "/audio/ambient.mp3"
-          }
-        ],
-        onEnd: "stop"
-      }
-    ];
-
-    const options: AudioBackgroundOptions = {
-      audioManager: mockAudioManager as unknown as AudioManager,
+    ({
+      audioBackground,
+      mockAudioManager,
+      mockAudio,
       playlists,
-      autoPlay: false
-    };
-
-    audioBackground = new AudioBackground(options);
+      createBackground,
+      triggerOnEnded
+    } = createAudioBackgroundHarness());
   });
 
   afterEach(() => {
     audioBackground.stop();
   });
 
-  test("should initialize with correct playlists", () => {
-    assert.strictEqual(audioBackground.playlists.length, 2);
-    assert.strictEqual(audioBackground.playlists[0].name, "main");
-    assert.strictEqual(audioBackground.playlists[1].name, "secondary");
-  });
-
-  test("should initialize with null audio and current index", () => {
+  test("should start with no audio and no track", () => {
     assert.strictEqual(audioBackground.audio, null);
     assert.strictEqual(audioBackground.track, null);
   });
 
-  test("should auto-play first track when autoPlay is true", async() => {
-    const options: AudioBackgroundOptions = {
-      audioManager: mockAudioManager as unknown as AudioManager,
-      playlists,
-      autoPlay: true
-    };
+  test("should handle errors with custom error handler", async() => {
+    const errors: Error[] = [];
 
-    const bg = new AudioBackground(options);
+    function customErrorHandler(error: Error) {
+      errors.push(error);
+    }
+
+    const bg = createBackground({
+      onError: customErrorHandler
+    });
+
+    await bg.play([0, 0]);
+
+    const testError = new Error("Test error");
+
+    mockAudioManager.loadAudio = mock.fn(async() => {
+      throw testError;
+    });
+    await triggerOnEnded();
+
+    assert.strictEqual(errors.length, 1);
+    assert.strictEqual(errors[0], testError);
+
+    bg.stop();
+  });
+
+  test("should auto-play first track when autoPlay is true", async() => {
+    const bg = createBackground({ autoPlay: true });
 
     await triggerOnEnded();
 
@@ -142,13 +84,7 @@ describe("Audio.AudioBackground", () => {
   });
 
   test("should auto-play specific track when autoPlay is a path", async() => {
-    const options: AudioBackgroundOptions = {
-      audioManager: mockAudioManager as unknown as AudioManager,
-      playlists,
-      autoPlay: "secondary.ambient"
-    };
-
-    const bg = new AudioBackground(options);
+    const bg = createBackground({ autoPlay: "secondary.ambient" });
 
     await triggerOnEnded();
 
@@ -159,13 +95,7 @@ describe("Audio.AudioBackground", () => {
   });
 
   test("should auto-play specific track when autoPlay is an index", async() => {
-    const options: AudioBackgroundOptions = {
-      audioManager: mockAudioManager as unknown as AudioManager,
-      playlists,
-      autoPlay: [0, 1]
-    };
-
-    const bg = new AudioBackground(options);
+    const bg = createBackground({ autoPlay: [0, 1] });
 
     await triggerOnEnded();
 

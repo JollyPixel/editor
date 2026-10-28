@@ -46,12 +46,9 @@ export type SceneBindingEvents = {
 export class SceneBinding extends Emitter<SceneBindingEvents> {
   #world: Systems.World;
   #document: SceneDocument;
-  #definitions: Systems.ComponentDefinitions;
-  #builder: Systems.SceneBuilder;
+  #instance: Systems.SceneInstance;
   #environment: SceneEnvironmentTarget;
-  #actors = new Map<string, Actor>();
-  #components = new Map<string, BoundComponent>();
-  #actorIds = new Map<THREE.Object3D, string>();
+  #pickTargets = new Map<THREE.Object3D, string>();
 
   #onChange = (
     change: SceneChange
@@ -71,13 +68,18 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
     super();
     this.#world = options.world;
     this.#document = options.document;
-    this.#definitions = options.components;
     this.#environment = options.environment;
-    this.#builder = new Systems.SceneBuilder({
+    this.#instance = new Systems.SceneInstance({
       world: options.world,
       mode: "edit",
       components: options.components,
       assets: options.assets
+    });
+    this.#instance.on("componentBuilt", (built) => {
+      this.emit("componentBuilt", built);
+    });
+    this.#instance.on("componentDropped", (component) => {
+      this.emit("componentDropped", component);
     });
 
     this.#rebuild();
@@ -88,17 +90,17 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
   actor(
     id: string
   ): Actor | null {
-    return this.#actors.get(id) ?? null;
+    return this.#instance.actor(id);
   }
 
   component(
     id: string
   ): Component | null {
-    return this.#components.get(id)?.component ?? null;
+    return this.#instance.component(id);
   }
 
   components(): IterableIterator<BoundComponent> {
-    return this.#components.values();
+    return this.#instance.components();
   }
 
   worldBounds(
@@ -106,7 +108,7 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
   ): THREE.Box3 {
     const bounds = new THREE.Box3();
     for (const id of ids) {
-      const object = this.#actors.get(id)?.object3D;
+      const object = this.#instance.actor(id)?.object3D;
       if (object !== undefined) {
         bounds.expandByObject(object);
         bounds.expandByPoint(object.getWorldPosition(kWorldPosition));
@@ -121,7 +123,8 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
   ): string | null {
     let current: THREE.Object3D | null = object;
     while (current !== null) {
-      const id = this.#actorIds.get(current);
+      const id = this.#instance.actorId(current) ??
+        this.#pickTargets.get(current);
       if (id !== undefined) {
         return id;
       }
@@ -135,11 +138,11 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
     object: THREE.Object3D,
     actorId: string
   ): () => void {
-    this.#actorIds.set(object, actorId);
+    this.#pickTargets.set(object, actorId);
 
     return () => {
-      if (this.#actorIds.get(object) === actorId) {
-        this.#actorIds.delete(object);
+      if (this.#pickTargets.get(object) === actorId) {
+        this.#pickTargets.delete(object);
       }
     };
   }
@@ -194,8 +197,9 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
         this.#buildActors(command.actors.map((actor) => actor.id));
         break;
       case "actor-removed":
-        this.#actors.get(command.id)?.destroy();
-        this.#forgetRemoved();
+        this.#instance.remove(command.id);
+        this.#forgetPickTargets();
+        this.emit("actorsChange");
         break;
       case "actor-moved":
         this.#reparent(command.id);
@@ -212,7 +216,7 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
           command.id);
         break;
       case "component-removed":
-        this.#removeComponent(command.id);
+        this.#instance.removeComponent(command.id);
         break;
       case "component-changed":
         this.#changeComponent(command.id);
@@ -232,122 +236,54 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
   }
 
   #clear(): void {
-    const owned = new Set<Actor>(this.#actors.values());
-    for (const actor of owned) {
-      if (actor.parent === null || !owned.has(actor.parent)) {
-        actor.destroy();
-      }
-    }
-    for (const id of [...this.#components.keys()]) {
-      this.#forgetComponent(id);
-    }
-    this.#actors.clear();
-    this.#actorIds.clear();
+    this.#instance.clear();
+    this.#pickTargets.clear();
   }
 
   #buildActors(
     ids: Iterable<string>
   ): void {
+    const { tree } = this.#document;
+    const files: SceneActorJSON[] = [];
     for (const id of ids) {
-      const file = this.#document.tree.actor(id);
+      const file = tree.actor(id);
       if (file !== undefined) {
-        this.#buildActor(file);
+        files.push(file);
       }
     }
+
+    this.#instance.add(files);
     this.emit("actorsChange");
   }
 
-  #buildActor(
-    file: SceneActorJSON
-  ): void {
-    const parent = file.parentId === null ?
-      null :
-      this.#actors.get(file.parentId);
-    if (parent === undefined) {
-      return;
-    }
-
-    const build = this.#builder.buildActor(file, parent);
-    const actor = build.actor(file.id);
-    if (actor === null) {
-      return;
-    }
-
-    this.#actors.set(file.id, actor);
-    this.#actorIds.set(actor.object3D, file.id);
-    for (const entry of file.components) {
-      const component = build.component(entry.id);
-      if (component !== null) {
-        this.#bindComponent(entry.id, component, file.id);
+  #forgetPickTargets(): void {
+    for (const [object, id] of this.#pickTargets) {
+      if (this.#instance.actor(id) === null) {
+        this.#pickTargets.delete(object);
       }
     }
-  }
-
-  #bindComponent(
-    id: string,
-    component: Component,
-    actorId: string
-  ): void {
-    const bound = {
-      component,
-      actorId
-    };
-    this.#components.set(id, bound);
-    this.emit("componentBuilt", bound);
-  }
-
-  #forgetComponent(
-    id: string
-  ): void {
-    const bound = this.#components.get(id);
-    if (bound !== undefined) {
-      this.#components.delete(id);
-      this.emit("componentDropped", bound.component);
-    }
-  }
-
-  #forgetRemoved(): void {
-    for (const [id, actor] of this.#actors) {
-      if (!this.#document.tree.has(id)) {
-        this.#actors.delete(id);
-        this.#actorIds.delete(actor.object3D);
-      }
-    }
-    for (const id of [...this.#components.keys()]) {
-      if (this.#document.tree.componentOwner(id) === undefined) {
-        this.#forgetComponent(id);
-      }
-    }
-    this.emit("actorsChange");
   }
 
   #reparent(
     id: string
   ): void {
-    const actor = this.#actors.get(id);
     const file = this.#document.tree.peekActor(id);
-    if (actor === undefined || file === undefined) {
-      return;
+    if (file !== undefined) {
+      this.#instance.reparent(id, file.parentId);
+      this.#syncActor(id);
     }
-
-    const parent = file.parentId === null ?
-      null :
-      this.#actors.get(file.parentId) ?? null;
-    actor.setParent(parent, true);
-    this.#syncActor(id);
   }
 
   #syncActor(
     id: string,
     patch: SceneTransformPatch = {}
   ): void {
-    const actor = this.#actors.get(id);
     const file = this.#document.tree.peekActor(id);
-    if (actor === undefined || file === undefined) {
+    if (file === undefined) {
       return;
     }
 
-    this.#builder.writeActor(actor, {
+    this.#instance.write(id, {
       ...file,
       transform: {
         ...file.transform,
@@ -356,29 +292,18 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
     });
   }
 
-  #removeComponent(
-    id: string
-  ): void {
-    this.#components.get(id)?.component.destroy();
-    this.#forgetComponent(id);
-  }
-
   #rebuildComponent(
     id: string
   ): void {
-    this.#removeComponent(id);
-
     const entry = this.#document.tree.component(id);
     const ownerId = this.#document.tree.componentOwner(id);
-    const actor = ownerId === undefined ? undefined : this.#actors.get(ownerId);
-    if (entry === undefined || ownerId === undefined || actor === undefined) {
+    if (entry === undefined || ownerId === undefined) {
+      this.#instance.removeComponent(id);
+
       return;
     }
 
-    const component = this.#builder.createComponent(actor, entry);
-    if (component !== null) {
-      this.#bindComponent(id, component, ownerId);
-    }
+    this.#instance.rebuildComponent(ownerId, entry);
   }
 
   #changeComponent(
@@ -393,24 +318,12 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
     id: string,
     change: ComponentChange
   ): boolean {
-    const component = this.#components.get(id)?.component;
     const entry = this.#document.tree.component(id);
-    const definition = entry === undefined ?
-      null :
-      this.#definitions.find(entry.type);
-    if (
-      component === undefined ||
-      entry === undefined ||
-      definition?.apply === undefined
-    ) {
-      return false;
-    }
 
-    definition.apply(
-      component,
-      definition.parse(applyComponentChange(entry.data, change))
+    return entry !== undefined && this.#instance.applyComponent(
+      id,
+      entry.type,
+      applyComponentChange(entry.data, change)
     );
-
-    return true;
   }
 }

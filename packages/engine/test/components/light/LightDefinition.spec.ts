@@ -9,7 +9,7 @@ import * as THREE from "three/webgpu";
 import { Actor } from "../../../src/actor/Actor.ts";
 import { LightDefinition } from "../../../src/components/light/LightDefinition.ts";
 import type { JSONObject } from "../../../src/systems/scene/file/SceneFile.ts";
-import { createSceneSetup } from "../../helpers/sceneSetup.ts";
+import { createSceneSetup } from "../../helpers/scene/sceneSetup.ts";
 
 function createLight(
   data: JSONObject = {}

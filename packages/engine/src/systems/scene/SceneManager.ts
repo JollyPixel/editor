@@ -3,18 +3,15 @@ import * as THREE from "three/webgpu";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import {
-  type Actor,
-  ActorTree
-} from "../../actor/index.ts";
+import type { Actor } from "../../actor/index.ts";
 import type {
   World,
   WorldDefaultContext
 } from "../World.ts";
-import type { Component } from "../../components/types.ts";
 import type { Scene } from "./Scene.ts";
 import type { Logger } from "../Logger.ts";
 import { ManagedSceneLoad } from "./ManagedSceneLoad.ts";
+import { ActorRegistry } from "./ActorRegistry.ts";
 import type {
   SceneLoad,
   SceneLoadOptions
@@ -57,14 +54,8 @@ type SceneLoadMode = "replace" | "append";
 export class SceneManager<
   TContext = WorldDefaultContext
 > extends Emitter<SceneEvents<TContext>> {
-  default: THREE.Scene;
-
-  #componentsToStart: Component[] = [];
-  #componentsToDestroy: Component[] = [];
-
-  #registeredActors: Set<Actor<TContext>> = new Set();
-  #cachedActors: Actor<TContext>[] = [];
-  #hasActorsToAwake = false;
+  readonly default: THREE.Scene;
+  readonly actors: ActorRegistry<TContext>;
 
   #currentScene: Scene<TContext> | null = null;
   #sceneStartPending = false;
@@ -78,16 +69,16 @@ export class SceneManager<
   #appendedScenes: Map<number, AppendedSceneEntry<TContext>> = new Map();
   #appendedScenesPendingStart: Set<number> = new Set();
 
-  readonly tree = new ActorTree<TContext>({
-    addCallback: (actor) => this.default.add(actor.object3D),
-    removeCallback: (actor) => this.default.remove(actor.object3D)
-  });
-
   constructor(
     scene?: THREE.Scene
   ) {
     super();
     this.default = scene ?? new THREE.Scene();
+    this.actors = new ActorRegistry(this.default);
+  }
+
+  get tree() {
+    return this.actors.tree;
   }
 
   get currentScene(): Scene<TContext> | null {
@@ -117,17 +108,8 @@ export class SceneManager<
   }
 
   awake() {
-    this.#awakeActors();
+    this.actors.awake();
     this.emit("awake");
-  }
-
-  #awakeActors(): void {
-    this.#hasActorsToAwake = false;
-    for (const { actor } of this.tree.walk()) {
-      if (!actor.awoken) {
-        actor.awake();
-      }
-    }
   }
 
   loadScene(
@@ -273,15 +255,8 @@ export class SceneManager<
     this.emit("sceneDestroyed", scene);
     scene.destroy();
 
-    for (const actor of [...this.tree.children]) {
-      actor.destroy();
-    }
-
-    this.#componentsToStart.length = 0;
-    this.#componentsToDestroy.length = 0;
-    this.#cachedActors.length = 0;
+    this.actors.clear();
     this.default.clear();
-    this.#registeredActors.clear();
   }
 
   #activateAppendedScene(
@@ -292,19 +267,9 @@ export class SceneManager<
       { scene: scene.name }
     );
 
-    const snapshot = new Set(this.#registeredActors);
-
     scene.world = this.#world!;
-    scene.awake();
-
-    const ownedActors = new Set<Actor<TContext>>();
-    for (const actor of this.#registeredActors) {
-      if (!snapshot.has(actor)) {
-        ownedActors.add(actor);
-      }
-    }
-
-    this.#awakeActors();
+    const ownedActors = this.actors.collect(() => scene.awake());
+    this.actors.awake();
 
     this.#appendedScenes.set(
       scene.id,
@@ -364,14 +329,7 @@ export class SceneManager<
     this.emit("sceneRemoved", entry.scene);
     entry.scene.destroy();
 
-    for (const actor of entry.ownedActors) {
-      if (
-        actor.parent === null ||
-        !entry.ownedActors.has(actor.parent)
-      ) {
-        actor.destroy();
-      }
-    }
+    this.actors.destroyRoots(entry.ownedActors);
 
     this.#appendedScenes.delete(id);
     this.#appendedScenesPendingStart.delete(id);
@@ -404,25 +362,26 @@ export class SceneManager<
   beginFrame() {
     this.#activateReadyLoads();
 
-    if (this.#hasActorsToAwake) {
-      this.#awakeActors();
-    }
-
     if (this.#sceneStartPending) {
       this.#sceneStartPending = false;
       this.#currentScene?.start();
     }
 
-    for (const id of this.#appendedScenesPendingStart) {
-      this.#appendedScenes.get(id)?.scene.start();
+    if (this.#appendedScenesPendingStart.size > 0) {
+      for (const id of this.#appendedScenesPendingStart) {
+        this.#appendedScenes.get(id)?.scene.start();
+      }
+      this.#appendedScenesPendingStart.clear();
     }
-    this.#appendedScenesPendingStart.clear();
 
-    this.#cachedActors = Array.from(this.#registeredActors);
-    this.#startComponents();
+    this.actors.beginFrame();
   }
 
   #activateReadyLoads(): void {
+    if (this.#readyLoads.size === 0) {
+      return;
+    }
+
     const replacement = this.#replacementLoad;
     if (replacement !== null && this.#readyLoads.delete(replacement)) {
       this.#activateScene(replacement.scene);
@@ -441,28 +400,11 @@ export class SceneManager<
     }
   }
 
-  #startComponents(): void {
-    const components = this.#componentsToStart;
-    let i = 0;
-    while (i < components.length) {
-      const component = components[i];
-      if (this.#registeredActors.has(component.actor)) {
-        components.splice(i, 1);
-        component.start?.();
-      }
-      else {
-        i++;
-      }
-    }
-  }
-
   fixedUpdate(
     deltaTime: number,
     stepIndex = 0
   ) {
-    for (const actor of this.#cachedActors) {
-      actor.fixedUpdate(deltaTime, stepIndex);
-    }
+    this.actors.fixedUpdate(deltaTime, stepIndex);
     this.#currentScene?.fixedUpdate(deltaTime, stepIndex);
 
     for (const { scene } of this.#appendedScenes.values()) {
@@ -474,9 +416,7 @@ export class SceneManager<
     deltaTime: number,
     alpha = 0
   ) {
-    for (const actor of this.#cachedActors) {
-      actor.update(deltaTime, alpha);
-    }
+    this.actors.update(deltaTime, alpha);
     this.#currentScene?.update(deltaTime, alpha);
 
     for (const { scene } of this.#appendedScenes.values()) {
@@ -485,65 +425,13 @@ export class SceneManager<
   }
 
   endFrame() {
-    for (const component of this.#componentsToDestroy.splice(0)) {
-      component.destroy();
-    }
-
-    for (const actor of this.#cachedActors) {
-      if (
-        actor.pendingForDestruction &&
-        this.#registeredActors.has(actor) &&
-        !actor.parent?.pendingForDestruction
-      ) {
-        actor.destroy();
-      }
-    }
-  }
-
-  registerActor(
-    actor: Actor<TContext>
-  ) {
-    this.#registeredActors.add(actor);
-    this.#hasActorsToAwake = true;
-  }
-
-  unregisterActor(
-    actor: Actor<TContext>
-  ) {
-    this.#registeredActors.delete(actor);
+    this.actors.endFrame();
   }
 
   getActor(
     name: string
   ): Actor<TContext> | null {
     return this.tree.getActor(name);
-  }
-
-  scheduleStart(
-    component: Component
-  ): void {
-    this.#componentsToStart.push(component);
-  }
-
-  cancelStart(
-    component: Component
-  ): void {
-    const index = this.#componentsToStart.indexOf(component);
-    if (index !== -1) {
-      this.#componentsToStart.splice(index, 1);
-    }
-  }
-
-  destroyComponent(
-    component: Component
-  ) {
-    if (component.pendingForDestruction) {
-      return;
-    }
-
-    component.pendingForDestruction = true;
-    this.#componentsToDestroy.push(component);
-    this.cancelStart(component);
   }
 }
 

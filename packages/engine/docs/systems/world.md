@@ -271,6 +271,14 @@ this.addTeardown(release);
 A host that ticks every frame ignores both, so components can call them
 unconditionally.
 
+A render-on-demand host that should keep running while any component
+updates can opt in with one predicate. Behaviors with an `update()` then
+keep frames going, and the loop sleeps once only static actors remain:
+
+```ts
+world.keepAlive(() => world.sceneManager.actors.updating);
+```
+
 ## Accessing subsystems
 
 Actors and components can access every subsystem through public

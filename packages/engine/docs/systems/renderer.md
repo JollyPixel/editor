@@ -107,29 +107,12 @@ const webGPU = renderer.getSource();
 webGPU.toneMappingExposure = 1.5;
 ```
 
-## Render strategy
+## Drawing the cameras
 
-`renderer.renderStrategy` performs the actual render. The default
-`DirectRenderStrategy` calls `THREE.WebGPURenderer.render()` once per
-camera and honours `depth` and per-camera `viewport`.
-
-Assign another `RenderStrategy` to change how the frame is composed.
-`dispose()` on the renderer disposes the active strategy.
-
-```ts
-interface RenderStrategy {
-  render(scene: THREE.Scene, parameters: RenderParameters): void;
-  resize(width: number, height: number): void;
-  dispose(): void;
-}
-
-interface RenderParameters {
-  /** Sorted by ascending depth. */
-  components: readonly RenderComponent[];
-  canvasWidth: number;
-  canvasHeight: number;
-}
-```
+Each draw sorts the registered cameras by ascending `depth`, keeping
+registration order between equal depths, and calls
+`THREE.WebGPURenderer.render()` once per camera inside its `viewport`. A
+`depth` changed between two draws applies on the next one.
 
 ## Post-processing
 
@@ -181,8 +164,6 @@ is disposed.
   renderer's tone mapping and output color space, so later cameras and
   overlays draw over it.
 - Pass targets follow the canvas size, not the viewport size.
-- A custom `RenderStrategy` ignores `postProcessing` unless it
-  implements it.
 
 ## Cameras (render components)
 
@@ -196,10 +177,9 @@ world.createActor("camera")
   .addComponent(Camera3DControls, { far: 4096 });
 ```
 
-Cameras render in ascending `depth` order — lower values first
-(background), higher last (overlay). The sorted order is cached and
-recomputed only when a camera is added, removed, or calls
-`setDepth`.
+Cameras render in ascending `depth` order: lower values first
+(background), higher last (overlay). The cameras are sorted on every
+draw, so a `depth` changed with `configure()` applies on the next frame.
 
 ## Aspect ratio
 
@@ -298,8 +278,8 @@ generator.dispose();
 A failed compile settles like a successful one: three.js logs it and never
 draws the object.
 
-`renderComponents` lists the registered cameras in registration order.
-It is read-only; register and remove cameras with `addRenderComponent()` and
+`renderComponents` lists the registered cameras in the order of the last
+draw. It is read-only; register and remove cameras with `addRenderComponent()` and
 `removeRenderComponent()`.
 
 ## Dispose

@@ -50,6 +50,20 @@ export class ModelAnimation<
 
   onFinished: ((clipName: TClipName) => void) | null = null;
 
+  #requestUpdate: () => void;
+
+  constructor(
+    requestUpdate: () => void
+  ) {
+    this.#requestUpdate = requestUpdate;
+  }
+
+  get isAnimating(): boolean {
+    return this.#state === "playing" ||
+      this.#next !== null ||
+      this.#fadingOut.length > 0;
+  }
+
   get state(): ModelAnimationState {
     return this.#state;
   }
@@ -145,6 +159,7 @@ export class ModelAnimation<
     }
 
     this.#next = { action, name, fadeInDuration, fadeOutDuration, loop };
+    this.#requestUpdate();
   }
 
   stop(
@@ -158,6 +173,7 @@ export class ModelAnimation<
     if (fadeOutDuration > 0) {
       this.#current.fadeOut(fadeOutDuration);
       this.#fadingOut.push({ action: this.#current, elapsed: 0, duration: fadeOutDuration });
+      this.#requestUpdate();
     }
     else {
       this.#current.stop();
@@ -184,6 +200,7 @@ export class ModelAnimation<
 
     this.#mixer.timeScale = 1;
     this.#state = "playing";
+    this.#requestUpdate();
   }
 
   start() {

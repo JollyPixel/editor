@@ -139,6 +139,8 @@ interface SceneLoad<TContext> {
 }
 
 class SceneManager<TContext> {
+  readonly actors: ActorRegistry<TContext>;
+  readonly tree: ActorTree<TContext>;
   readonly currentScene: Scene<TContext> | null;
   readonly sceneLoad: SceneLoad<TContext> | null;
   readonly hasPendingScene: boolean;
@@ -155,20 +157,39 @@ class SceneManager<TContext> {
 
   unloadScene(scene: Scene<TContext>): void;
 
-  /** Queues `component.start()` for the next frame its actor is registered. */
-  scheduleStart(component: Component): void;
-  cancelStart(component: Component): void;
-  /** Marks the component and destroys it at the end of the frame. */
-  destroyComponent(component: Component): void;
   /** First non-pending actor with this name, or at this root-anchored path. */
   getActor(name: string): Actor<TContext> | null;
+}
+
+class ActorRegistry<TContext> {
+  readonly tree: ActorTree<TContext>;
+
+  has(actor: Actor<TContext>): boolean;
+  /** `true` while an actor holds a component with `needUpdate`. */
+  get updating(): boolean;
+  /** Marks the component and destroys it at the end of the frame. */
+  destroyLater(component: Component): void;
+  /** Actors created while `build` runs. */
+  collect(build: () => void): ReadonlySet<Actor<TContext>>;
+  /** Destroys each actor whose parent is not in the set. */
+  destroyRoots(actors: ReadonlySet<Actor<TContext>>): void;
 }
 ```
 
 ## Frame lifecycle
 
-`beginFrame()` activates ready scene loads, awakes every actor created
-since the last frame, starts pending scenes, then starts pending components.
-`endFrame()` destroys the components passed to `destroyComponent()`, then
+`sceneManager.actors` owns the actors and components of every scene: it
+attaches each new actor to the tree, queues each new component for `start()`,
+and keeps the list of actors updated each frame. `Actor` and `ActorComponent`
+register themselves; call it directly only for `destroyLater()`, or to collect
+and tear down a group of actors.
+
+`beginFrame()` activates ready scene loads, starts pending scenes, awakes
+every actor created since the last frame, then starts pending components.
+`fixedUpdate()` and `update()` only visit actors holding a component with
+`needUpdate`, in creation order, so static actors cost nothing per frame.
+An actor that gains its first updating component during a frame joins on
+the next one; within an actor, a pass runs the components it started with.
+`endFrame()` destroys the components passed to `destroyLater()`, then
 every actor marked for destruction. Destroying an actor destroys its
 children first, so each actor is destroyed once.

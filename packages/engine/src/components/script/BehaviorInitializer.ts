@@ -1,33 +1,14 @@
-// Import Third-party Dependencies
-import * as THREE from "three/webgpu";
-
 // Import Internal Dependencies
 import type { Actor } from "../../actor/Actor.ts";
 import {
   getBehaviorMetadata,
-  type ScenePropertyType,
   type BehaviorMetadata
 } from "./BehaviorDecorators.ts";
-import type { ConsoleAdapter } from "../../adapters/console.ts";
-
-// CONSTANTS
-const kDefaultValues: Record<ScenePropertyType, unknown> = {
-  string: "",
-  "string[]": [],
-  number: 0,
-  "number[]": [],
-  boolean: false,
-  "boolean[]": [],
-  Vector2: new THREE.Vector2(0, 0),
-  Vector3: new THREE.Vector3(0, 0, 0),
-  Vector4: new THREE.Vector4(0, 0, 0, 0),
-  Color: new THREE.Color(0, 0, 0)
-};
+import { createScenePropertyDefault } from "./ScenePropertyValue.ts";
 
 export interface InitializableBehavior {
   actor: Actor<any>;
   addTeardown(teardown: () => void): void;
-  setProperty(propertyName: string, value: any): void;
 }
 
 type BehaviorRecord = InitializableBehavior & Record<PropertyKey, any>;
@@ -37,14 +18,9 @@ interface InputEventTarget {
   off(eventName: string, listener: (...args: any[]) => void): unknown;
 }
 
-export interface BehaviorInitializerOptions {
-  consoleAdapter?: ConsoleAdapter;
-}
-
 export class BehaviorInitializer {
   #behavior: BehaviorRecord;
   #metadata: BehaviorMetadata;
-  #console: ConsoleAdapter;
 
   static for(
     behavior: InitializableBehavior
@@ -60,14 +36,10 @@ export class BehaviorInitializer {
 
   constructor(
     behavior: InitializableBehavior,
-    metadata: BehaviorMetadata,
-    options: BehaviorInitializerOptions = {}
+    metadata: BehaviorMetadata
   ) {
-    const { consoleAdapter = console } = options;
-
     this.#behavior = behavior as BehaviorRecord;
     this.#metadata = metadata;
-    this.#console = consoleAdapter;
   }
 
   get behaviorName(): string {
@@ -80,14 +52,22 @@ export class BehaviorInitializer {
     this.#resolveInputListeners();
   }
 
+  #warnMissing(
+    kind: string,
+    name: PropertyKey
+  ): void {
+    this.#behavior.actor.world.logger.warn(`Behavior ${kind} not found`, {
+      behavior: this.behaviorName,
+      name: String(name)
+    });
+  }
+
   #resolveInputListeners(): void {
     const { input } = this.#behavior.actor.world;
 
     for (const { type, methodName } of this.#metadata.inputListeners) {
       if (!(methodName in this.#behavior)) {
-        this.#console.warn(
-          `[BehaviorInitializer] Class method '${String(methodName)}' not found in ${this.behaviorName}`
-        );
+        this.#warnMissing("method", methodName);
         continue;
       }
 
@@ -104,20 +84,14 @@ export class BehaviorInitializer {
 
   #resolveProperties(): void {
     for (const [propertyName, { type }] of this.#metadata.properties) {
-      const finalValue = this.#behavior[propertyName] ?? cloneDefaultValue(type);
-
-      this.#behavior[propertyName] = finalValue;
-      this.#behavior.setProperty(propertyName as string, finalValue);
+      this.#behavior[propertyName] ??= createScenePropertyDefault(type);
     }
   }
 
   #resolveActorComponents(): void {
     for (const [componentName, ComponentClass] of this.#metadata.components) {
       if (!(componentName in this.#behavior)) {
-        this.#console.warn(
-          `[BehaviorInitializer] Component '${String(componentName)}' not found in ${this.behaviorName}`
-        );
-
+        this.#warnMissing("component", componentName);
         continue;
       }
 
@@ -126,24 +100,4 @@ export class BehaviorInitializer {
       );
     }
   }
-}
-
-function cloneDefaultValue(
-  type: ScenePropertyType
-): unknown {
-  const value = kDefaultValues[type];
-
-  if (
-    value instanceof THREE.Vector2 ||
-    value instanceof THREE.Vector3 ||
-    value instanceof THREE.Vector4 ||
-    value instanceof THREE.Color
-  ) {
-    return value.clone();
-  }
-  if (Array.isArray(value)) {
-    return [...value];
-  }
-
-  return value;
 }

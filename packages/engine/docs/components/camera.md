@@ -102,10 +102,6 @@ world.createActor("p2").addComponent(CameraComponent, {
 });
 ```
 
-Viewports are honoured by the default
-[render strategy](../systems/renderer.md#render-strategy); a custom
-strategy decides for itself.
-
 ## Post-processing
 
 `postProcessing` returns the output node of a `THREE.RenderPipeline`
@@ -125,25 +121,27 @@ camera.postProcessing = null;
 
 ## Runtime changes
 
-Every setter marks the projection dirty; it is recomputed before the
-next draw.
+`configure(settings)` takes any of `projectionMode`, `fov`, `near`, `far`,
+`orthographicScale`, `viewport` and `depth`, and keeps the ones it is not
+given. The projection and the render order are recomputed on the next draw.
 
 ```ts
-camera
-  .setFov(75)
-  .setNearFar(0.5, 5000)
-  .setOrthographicScale(10)
-  .setViewport(null)
-  .setDepth(10);
+camera.configure({
+  fov: 75,
+  near: 0.5,
+  far: 5000,
+  viewport: null,
+  depth: 10
+});
 ```
 
-`setProjectionMode` swaps the underlying `THREE.Camera` for a new one
+A new `projectionMode` swaps the underlying `THREE.Camera` for a new one
 of the other kind. It carries the attached objects (the audio
 listener) and the layer mask across, and tells the renderer to rebind
 anything keyed on the old camera:
 
 ```ts
-camera.setProjectionMode("orthographic");
+camera.configure({ projectionMode: "orthographic" });
 ```
 
 ## See also

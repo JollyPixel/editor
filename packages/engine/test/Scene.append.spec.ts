@@ -7,15 +7,19 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { AssetBatchLoadError } from "@jolly-pixel/asset";
+
 // Import Internal Dependencies
 import { Actor } from "../src/actor/index.ts";
 import { Scene } from "../src/systems/scene/Scene.ts";
+import { createSceneAssets } from "./helpers/scene/sceneAssets.ts";
 import {
   ConcreteScene,
   createSceneSetup,
   activateScene,
   activateAppendedScene
-} from "./helpers/sceneSetup.ts";
+} from "./helpers/scene/sceneSetup.ts";
 
 // CONSTANTS
 const kDeltaTime = 1 / 60;
@@ -40,6 +44,7 @@ describe("Scene", () => {
       sm.appendScene(appended);
 
       assert.strictEqual(appended.awakeSpy.mock.calls.length, 0);
+      assert.strictEqual(appended.startSpy.mock.calls.length, 0);
 
       sm.beginFrame();
 
@@ -63,60 +68,20 @@ describe("Scene", () => {
       assert.strictEqual(listener.mock.calls[0].arguments[0], appended);
     });
 
-    test("does not activate or start the scene immediately", () => {
-      const { sm } = createSceneSetup();
-      const appended = new ConcreteScene("prefab");
-
-      sm.appendScene(appended);
-
-      assert.strictEqual(appended.awakeSpy.mock.calls.length, 0);
-      assert.strictEqual(appended.startSpy.mock.calls.length, 0);
-    });
-
-    test("calls scene.start() on the next beginFrame", () => {
+    test("starts the scene once, on the next beginFrame", () => {
       const { sm } = createSceneSetup();
       const appended = new ConcreteScene("prefab");
 
       sm.appendScene(appended);
       sm.beginFrame();
+      assert.strictEqual(appended.startSpy.mock.calls.length, 1);
 
+      sm.beginFrame();
+      sm.beginFrame();
       assert.strictEqual(appended.startSpy.mock.calls.length, 1);
     });
 
-    test("only calls scene.start() once across multiple beginFrame calls", () => {
-      const { sm } = createSceneSetup();
-      const appended = new ConcreteScene("prefab");
-
-      sm.appendScene(appended);
-      sm.beginFrame();
-      sm.beginFrame();
-      sm.beginFrame();
-
-      assert.strictEqual(appended.startSpy.mock.calls.length, 1);
-    });
-
-    test("tracks actors created during awake as owned actors", () => {
-      const { sm, world } = createSceneSetup();
-
-      class PrefabScene extends ConcreteScene {
-        override awake() {
-          super.awake();
-          world.createActor("PrefabActorA");
-          world.createActor("PrefabActorB");
-        }
-      }
-
-      const appended = new PrefabScene("prefab");
-      activateAppendedScene(sm, appended);
-      assert.ok(sm.getActor("PrefabActorA") !== null);
-      assert.ok(sm.getActor("PrefabActorB") !== null);
-
-      sm.removeScene(appended);
-      assert.strictEqual(sm.getActor("PrefabActorA"), null, "owned actors should be destroyed");
-      assert.strictEqual(sm.getActor("PrefabActorB"), null, "owned actors should be destroyed");
-    });
-
-    test("does not destroy pre-existing actors when removed", () => {
+    test("owns the actors created during awake, not the pre-existing ones", () => {
       const { sm, world } = createSceneSetup();
 
       class MainScene extends ConcreteScene {
@@ -135,6 +100,8 @@ describe("Scene", () => {
 
       activateScene(sm, new MainScene("main"));
       activateAppendedScene(sm, new PrefabScene("prefab"));
+      assert.ok(sm.getActor("PrefabActor") !== null);
+
       sm.removeScene("prefab");
 
       assert.ok(sm.getActor("MainActor") !== null, "pre-existing actor should survive removeScene");
@@ -187,6 +154,93 @@ describe("Scene", () => {
       assert.strictEqual(scenes.length, 2);
       assert.ok(scenes.includes(a));
       assert.ok(scenes.includes(b));
+    });
+  });
+
+  describe("appendScene loading", () => {
+    test("waits for its assets before appending the scene", async() => {
+      const assets = createSceneAssets(["a"]);
+      const { sm } = createSceneSetup(assets);
+      const appended = new ConcreteScene("prefab", {
+        assets: [assets.reference("a")]
+      });
+
+      const load = sm.appendScene(appended);
+      sm.beginFrame();
+
+      assert.strictEqual(load.status, "loading");
+      assert.strictEqual(sm.getScene(appended.id), null);
+      assert.strictEqual(appended.awakeSpy.mock.calls.length, 0);
+
+      assets.loader.resolve("a");
+      await load.done;
+      sm.beginFrame();
+
+      assert.strictEqual(load.status, "active");
+      assert.strictEqual(sm.getScene(appended.id), appended);
+      assert.strictEqual(appended.awakeSpy.mock.calls.length, 1);
+    });
+
+    test("supports manual activation for appended scenes", () => {
+      const { sm } = createSceneSetup();
+      const appended = new ConcreteScene("prefab");
+
+      const load = sm.appendScene(appended, {
+        activation: "manual"
+      });
+      sm.beginFrame();
+
+      assert.strictEqual(load.status, "ready");
+      assert.strictEqual(sm.getScene(appended.id), null);
+
+      load.allowActivation();
+      sm.beginFrame();
+
+      assert.strictEqual(load.status, "active");
+      assert.strictEqual(sm.getScene(appended.id), appended);
+    });
+
+    test("loads different appended scenes independently", async() => {
+      const assets = createSceneAssets(["a", "b"]);
+      const { sm } = createSceneSetup(assets);
+      const first = new ConcreteScene("first", {
+        assets: [assets.reference("a")]
+      });
+      const second = new ConcreteScene("second", {
+        assets: [assets.reference("b")]
+      });
+
+      const firstLoad = sm.appendScene(first);
+      const secondLoad = sm.appendScene(second);
+      assets.loader.resolve("a");
+      assets.loader.resolve("b");
+      await Promise.all([firstLoad.done, secondLoad.done]);
+      sm.beginFrame();
+
+      assert.strictEqual(firstLoad.status, "active");
+      assert.strictEqual(secondLoad.status, "active");
+      assert.strictEqual(sm.getScene(first.id), first);
+      assert.strictEqual(sm.getScene(second.id), second);
+    });
+
+    test("does not append a scene when an asset fails", async() => {
+      const assets = createSceneAssets(["a"]);
+      const { sm } = createSceneSetup(assets);
+      const appended = new ConcreteScene("prefab", {
+        assets: [assets.reference("a")]
+      });
+      const error = new Error("load failed");
+
+      const load = sm.appendScene(appended);
+      assets.loader.reject("a", error);
+      await assert.rejects(load.done, AssetBatchLoadError);
+      sm.beginFrame();
+
+      assert.strictEqual(load.status, "failed");
+      assert.ok(load.error instanceof AssetBatchLoadError);
+      assert.strictEqual(load.error.failures[0]?.error, error);
+      assert.strictEqual(sm.getScene(appended.id), null);
+      assert.strictEqual(appended.awakeSpy.mock.calls.length, 0);
     });
   });
 });

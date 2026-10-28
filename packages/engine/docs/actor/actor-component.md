@@ -63,10 +63,14 @@ wall-clock time.
 
 Components that define `update()` or `fixedUpdate()` are
 registered for per-frame updates via the `needUpdate` property.
-The default is computed before the subclass constructor body runs,
-so a constructor can set `needUpdate = false` to opt out. Setting
-it later removes the component from the update loop without
-destroying it.
+Pass `needUpdate: false` to `super()` to start without updates:
+
+```ts
+super({ actor, typeName: "Sprite", needUpdate: false });
+```
+
+Setting the property later adds the component to the update loop
+or removes it without destroying it.
 
 ## Destruction
 
@@ -91,7 +95,7 @@ class Spinner extends ActorComponent {
 ```
 
 To destroy a component during gameplay, prefer
-`world.sceneManager.destroyComponent(component)`, which defers the
+`world.sceneManager.actors.destroyLater(component)`, which defers the
 destruction to the end of the frame.
 
 ## API

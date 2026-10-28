@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import {
   Behavior,
-  type BehaviorProperties,
   ModelRenderer,
   type InputDevicePreference,
   SceneProperty,
@@ -10,11 +9,7 @@ import {
   SignalEvent
 } from "@jolly-pixel/engine";
 
-export interface PlayerProperties extends BehaviorProperties {
-  speed: number;
-}
-
-export class PlayerBehavior extends Behavior<PlayerProperties> {
+export class PlayerBehavior extends Behavior {
   onPlayerPunch = new SignalEvent();
 
   @SceneProperty({ type: "number" })

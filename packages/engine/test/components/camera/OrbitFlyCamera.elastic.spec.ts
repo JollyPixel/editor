@@ -9,7 +9,7 @@ import {
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { createHarness, pivotArray } from "../../helpers/orbitFlyHarness.ts";
+import { createHarness, pivotArray } from "../../helpers/camera/orbitFlyHarness.ts";
 
 describe("OrbitFlyCamera orbit focus (elastic)", () => {
   test("starts fully zoomed in, with the camera matching the pivot exactly", () => {

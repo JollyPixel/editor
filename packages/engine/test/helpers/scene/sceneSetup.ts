@@ -2,14 +2,14 @@
 import { mock } from "node:test";
 
 // Import Internal Dependencies
-import { Logger } from "../../src/systems/Logger.ts";
-import { Actor } from "../../src/actor/index.ts";
-import { Scene } from "../../src/systems/scene/Scene.ts";
-import { SceneManager } from "../../src/systems/scene/SceneManager.ts";
+import { Logger } from "../../../src/systems/Logger.ts";
+import { Actor } from "../../../src/actor/index.ts";
+import { Scene } from "../../../src/systems/scene/Scene.ts";
+import { SceneManager } from "../../../src/systems/scene/SceneManager.ts";
 import {
   createSceneAssets,
   type SceneAssets
-} from "../sceneAssets.ts";
+} from "./sceneAssets.ts";
 
 export class ConcreteScene extends Scene {
   awakeSpy = mock.fn();

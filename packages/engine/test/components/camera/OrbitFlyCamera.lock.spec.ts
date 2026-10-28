@@ -6,7 +6,7 @@ import { describe, test } from "node:test";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { createHarness, pivotArray } from "../../helpers/orbitFlyHarness.ts";
+import { createHarness, pivotArray } from "../../helpers/camera/orbitFlyHarness.ts";
 
 describe("OrbitFlyCamera orbit focus (lock)", () => {
   test("enterOrbitFocus immediately faces the given point", () => {

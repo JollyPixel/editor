@@ -1,26 +1,10 @@
 // Import Node.js Dependencies
-import {
-  describe,
-  test,
-  mock
-} from "node:test";
+import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { ActorTree } from "../src/index.ts";
-
-function createFakeActor(
-  options: { children?: any[]; name?: string; } = {}
-) {
-  const { children = [], name = "" } = options;
-
-  return {
-    name,
-    children,
-    pendingForDestruction: false,
-    markDestructionPending: mock.fn()
-  };
-}
+import { createFakeActor } from "./helpers/actor/fakeActor.ts";
 
 describe("ActorTree path patterns", () => {
   function createTree() {

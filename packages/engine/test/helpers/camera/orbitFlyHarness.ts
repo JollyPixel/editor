@@ -2,15 +2,16 @@
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
+import { Transform } from "../../../src/actor/Transform.ts";
+import { ActorRegistry } from "../../../src/systems/scene/ActorRegistry.ts";
 import {
   OrbitFlyCamera,
   type OrbitFlyCameraOptions
-} from "../../src/components/camera/orbit-fly/OrbitFlyCamera.ts";
-import type { Actor } from "../../src/actor/Actor.ts";
+} from "../../../src/components/camera/orbit-fly/OrbitFlyCamera.ts";
+import type { Actor } from "../../../src/actor/Actor.ts";
 
 // CONSTANTS
 const kFrame = 1 / 60;
-const kUp = new THREE.Vector3(0, 1, 0);
 
 export function pivotArray(
   pivot: THREE.Vector3Like | null
@@ -24,7 +25,8 @@ export function unusedPostProcessing(): never {
 
 export interface CameraHarness {
   camera: OrbitFlyCamera;
-  offset: THREE.Vector3;
+  readonly offset: THREE.Vector3;
+  object: THREE.Object3D;
   position: THREE.Vector3;
   orientation: THREE.Quaternion;
   sceneChildren: THREE.Object3D[];
@@ -43,11 +45,8 @@ export function createHarness(
   options: OrbitFlyCameraOptions = {}
 ): CameraHarness {
   const held = new Set<string>();
-  const offset = new THREE.Vector3();
-  const position = new THREE.Vector3();
-  const orientation = new THREE.Quaternion();
   const sceneRoot = new THREE.Object3D();
-  const lookMatrix = new THREE.Matrix4();
+  const body = new THREE.Object3D();
   const keepAlives: Array<() => boolean> = [];
 
   let invalidations = 0;
@@ -63,24 +62,7 @@ export function createHarness(
   const actorValue = {
     components: [],
     componentsRequiringUpdate: [],
-    transform: {
-      setLocalPosition: (value: THREE.Vector3Like) => {
-        position.set(value.x, value.y, value.z);
-      },
-      setLocalOrientation: (value: THREE.QuaternionLike) => {
-        orientation.set(value.x, value.y, value.z, value.w);
-      },
-      getForward: (out: THREE.Vector3) => out.set(0, 0, -1),
-      getGlobalPosition: (out: THREE.Vector3) => out.copy(position),
-      lookAt: (target: THREE.Vector3Like) => {
-        lookMatrix.lookAt(position, new THREE.Vector3(target.x, target.y, target.z), kUp);
-        orientation.setFromRotationMatrix(lookMatrix);
-      },
-      moveGlobal: (delta: THREE.Vector3) => {
-        offset.add(delta);
-        position.add(delta);
-      }
-    },
+    transform: new Transform(body),
     world: {
       time: {
         delta: kFrame,
@@ -132,20 +114,23 @@ export function createHarness(
         }
       },
       sceneManager: {
-        scheduleStart: () => void 0,
-        cancelStart: () => void 0,
+        actors: new ActorRegistry(sceneRoot),
         getSource: () => sceneRoot
       }
     }
   };
   const actor = actorValue as unknown as Actor;
   const camera = new OrbitFlyCamera(actor, options);
+  const start = body.position.clone();
 
   return {
     camera,
-    offset,
-    position,
-    orientation,
+    get offset() {
+      return body.position.clone().sub(start);
+    },
+    object: body,
+    position: body.position,
+    orientation: body.quaternion,
     sceneChildren: sceneRoot.children,
     keepAlives,
     invalidations: () => invalidations,

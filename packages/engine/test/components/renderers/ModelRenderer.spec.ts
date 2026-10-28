@@ -76,4 +76,30 @@ describe("Components.Renderers.ModelRenderer", () => {
     assert.strictEqual(renderer.needUpdate, false);
     assert.deepEqual(actor.componentsRequiringUpdate, []);
   });
+
+  test("should request updates only while a clip plays", () => {
+    const model = createModel();
+    model.animations.push(new THREE.AnimationClip("spin", 1, [
+      new THREE.NumberKeyframeTrack(".rotation[y]", [0, 1], [0, Math.PI])
+    ]));
+    const actor = new Actor(createWorld(model) as any, { name: "animated" });
+    const renderer = actor.addComponentAndGet(ModelRenderer, {
+      asset: reference,
+      animations: {}
+    });
+    actor.awake();
+    const idle = renderer.needUpdate;
+
+    renderer.animation.play("spin", { fadeInDuration: 0, loop: false });
+    const playing = renderer.needUpdate;
+    renderer.update(0.5);
+    const midway = renderer.needUpdate;
+    renderer.update(0.6);
+
+    assert.deepEqual(
+      [idle, playing, midway, renderer.needUpdate],
+      [false, true, true, false]
+    );
+    assert.strictEqual(renderer.animation.state, "stopped");
+  });
 });

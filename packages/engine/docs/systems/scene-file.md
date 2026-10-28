@@ -139,7 +139,7 @@ Resolves one slot of the component's `assets` map with the type the
 definition declares for it. Returns `null` for an empty or missing slot.
 `FileScene` resolves through `world.assetCoordinator`
 (`CoordinatorAssetResolver`). An editor passes its own
-`ComponentAssetResolver` to `SceneBuilder`.
+`ComponentAssetResolver` to `SceneInstance`.
 
 ### ComponentDefinitions
 
@@ -153,7 +153,6 @@ definition declares for it. Returns `null` for an empty or missing slot.
 ```ts
 class FileScene<TContext> extends Scene<TContext> {
   readonly file: SceneFile;
-  readonly build: SceneBuild<TContext> | null; // null until awake
 
   constructor(
     name: string,
@@ -168,22 +167,41 @@ class FileScene<TContext> extends Scene<TContext> {
 - `awake()` builds the actors in play mode and applies the environment.
 - `destroy()` resets the background, fog and environment map.
 
-## SceneBuilder
+## SceneInstance
+
+Keeps the live actors and components of a scene file, by file id. `FileScene`
+fills one in play mode. An editor keeps one in edit mode and applies each
+document change to it.
 
 ```ts
-interface SceneBuilderOptions<TContext> {
+interface SceneInstanceOptions<TContext> {
   world: World<any, TContext>;
   mode: "edit" | "play";
   components: ComponentDefinitions;
   assets: ComponentAssetResolver;
 }
+
+interface SceneInstanceComponent {
+  id: string;
+  actorId: string;
+  component: Component;
+}
+
+type SceneInstanceEvents = {
+  componentBuilt: (built: SceneInstanceComponent) => void;
+  componentDropped: (component: Component) => void;
+};
 ```
 
-### build(actors, parent?): SceneBuild
+`actor(id)` and `component(id)` return the built actor or component, or
+`null`. `actorId(object)` returns the file id of the actor whose `object3D` is
+`object`, or `null`; it does not search ancestors. `components()` iterates
+the built components.
 
-Creates the actors under `parent`, or at the root, and returns a lookup from
-file id to `Actor` (`build.actor(id)`) and to component
-(`build.component(id)`).
+### add(actors): void
+
+Creates the actors in order, under the actor of their `parentId` or at the
+root. The parent may come from the same call or an earlier one.
 
 - An actor whose parent was not built is skipped with a warning, and so is
   its subtree. So is a duplicate id.
@@ -191,21 +209,40 @@ file id to `Actor` (`build.actor(id)`) and to component
   mode only. So is a `null` from `create`, without a warning.
 - Transforms are written to `actor.object3D` directly.
 
-### buildActor(file, parent): SceneBuild
+### remove(id): void
 
-Creates one actor of `file` and its components under `parent`, ignoring
-`file.parentId`. An editor uses it to add an actor to a built scene.
+Destroys the actor and its subtree, and forgets their ids and components.
+Emits `componentDropped` for each component it forgets.
 
-### writeActor(actor, { name, visible, transform }): void
+### reparent(id, parentId): void
+
+Moves the actor under the actor of `parentId`, or to the root for `null`,
+keeping its local transform.
+
+### write(id, { name, visible, transform }): void
 
 Writes the name, visibility and transform of an actor file to a built actor.
-An editor uses it after a rename, a visibility toggle or a move.
 
-### createComponent(actor, entry): Component | null
+### rebuildComponent(actorId, entry): void
 
-Creates one component of `entry` on an existing actor, as `build` does for
-each entry. Returns `null` for an unknown type or a `null` from `create`. An
-editor uses it to rebuild a single component after an edit.
+Destroys the component with the id of `entry`, if any, and creates it again
+on the actor of `actorId`.
+
+### removeComponent(id): void
+
+Destroys the component and forgets it.
+
+### applyComponent(id, type, data): boolean
+
+Parses `data` with the definition of `type` and passes it to the definition's
+`apply`. Returns `false`, changing nothing, when the component is not built or
+the definition has no `apply`; rebuild the component in that case.
+
+### clear(): void
+
+Destroys every actor it built and forgets every id.
+
+## Scene transforms
 
 ### writeSceneTransform(object, transform): void
 

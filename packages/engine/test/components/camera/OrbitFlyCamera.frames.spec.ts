@@ -6,7 +6,7 @@ import {
 } from "node:test";
 
 // Import Internal Dependencies
-import { createHarness } from "../../helpers/orbitFlyHarness.ts";
+import { createHarness } from "../../helpers/camera/orbitFlyHarness.ts";
 
 describe("OrbitFlyCamera frame requests", () => {
   test("keeps frames alive while gliding, then releases them at rest", () => {

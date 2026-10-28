@@ -2,106 +2,30 @@
 import {
   describe,
   test,
-  beforeEach,
-  mock
+  beforeEach
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import { FrameScheduler } from "@jolly-pixel/loop";
-
 // Import Internal Dependencies
-import { World } from "../../src/systems/World.ts";
+import type { World } from "../../src/systems/World.ts";
+import {
+  createWorldHarness,
+  type WorldHarness
+} from "../helpers/world/worldHarness.ts";
 
 // CONSTANTS
 const kFixedDelta60 = 1000 / 60;
-const kScene = { isScene: true };
-
-function createMockSceneManager() {
-  return {
-    tree: { add: mock.fn(), remove: mock.fn() },
-    scheduleStart: mock.fn(),
-    cancelStart: mock.fn(),
-    getSource: mock.fn(() => kScene),
-    awake: mock.fn(),
-    beginFrame: mock.fn(),
-    update: mock.fn(),
-    fixedUpdate: mock.fn(),
-    endFrame: mock.fn(),
-    registerActor: mock.fn(),
-    unregisterActor: mock.fn(),
-    getActor: mock.fn(),
-    bindWorld: mock.fn()
-  };
-}
-
-function createMockRenderer() {
-  return {
-    canvas: { addEventListener: mock.fn(), removeEventListener: mock.fn() },
-    draw: mock.fn(),
-    clear: mock.fn(),
-    observeResize: mock.fn(),
-    unobserveResize: mock.fn(),
-    getSource: mock.fn(),
-    dispose: mock.fn()
-  };
-}
-
-function createMockInput() {
-  return {
-    connect: mock.fn(),
-    disconnect: mock.fn(),
-    sample: mock.fn(),
-    publish: mock.fn(),
-    exited: false
-  };
-}
-
-function createMockAudio() {
-  return {
-    listener: {},
-    setVolume: mock.fn(),
-    getVolume: mock.fn()
-  };
-}
-
-function createMockGlobalsAdapter() {
-  return {
-    exposeGame: mock.fn()
-  };
-}
 
 describe("Systems.World", () => {
   let world: World;
-  let sceneManager: ReturnType<typeof createMockSceneManager>;
-  let renderer: ReturnType<typeof createMockRenderer>;
-  let input: ReturnType<typeof createMockInput>;
-  let now: number;
-  let scheduler: FrameScheduler;
-
-  function tick(
-    deltaMs = 0
-  ): boolean {
-    now += deltaMs;
-
-    return world.tick(scheduler.advance(now));
-  }
+  let sceneManager: WorldHarness["sceneManager"];
+  let renderer: WorldHarness["renderer"];
+  let input: WorldHarness["input"];
+  let scheduler: WorldHarness["scheduler"];
+  let tick: WorldHarness["tick"];
 
   beforeEach(() => {
-    sceneManager = createMockSceneManager();
-    renderer = createMockRenderer();
-    input = createMockInput();
-    now = 0;
-    scheduler = new FrameScheduler();
-
-    // @ts-expect-error
-    world = new World(renderer, {
-      sceneManager,
-      input,
-      audio: createMockAudio(),
-      assetCoordinator: {},
-      globalsAdapter: createMockGlobalsAdapter()
-    });
+    ({ world, sceneManager, renderer, input, scheduler, tick } = createWorldHarness());
   });
 
   describe("time", () => {
@@ -185,12 +109,6 @@ describe("Systems.World", () => {
       ]);
       assert.strictEqual(world.time.fixedElapsed, 3 * kFixedDelta60 / 1000);
     });
-
-    test("should not advance before start()", () => {
-      tick(20);
-
-      assert.strictEqual(world.time.unscaledElapsed, 0);
-    });
   });
 
   describe("start() / stop()", () => {
@@ -238,17 +156,6 @@ describe("Systems.World", () => {
   });
 
   describe("scheduling", () => {
-    test("should run whatever the caller's scheduler decided", () => {
-      scheduler.fixedFps = 30;
-      scheduler.timeScale = 0.5;
-
-      world.start();
-      tick();
-      tick(80);
-
-      assert.strictEqual(sceneManager.fixedUpdate.mock.callCount(), 1);
-    });
-
     test("should not advance a scheduler of its own", () => {
       world.start();
       const schedule = scheduler.advance(0);

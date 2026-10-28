@@ -5,10 +5,10 @@ export type SignalListener<
 export class SignalEvent<
   T extends unknown[] = []
 > {
-  #listeners: SignalListener<T>[] = [];
+  #listeners: readonly SignalListener<T>[] = [];
 
   emit(...args: T) {
-    for (const listener of [...this.#listeners]) {
+    for (const listener of this.#listeners) {
       listener(...args);
     }
   }
@@ -16,7 +16,7 @@ export class SignalEvent<
   connect(
     listener: SignalListener<T>
   ) {
-    this.#listeners.push(listener);
+    this.#listeners = [...this.#listeners, listener];
   }
 
   disconnect(
@@ -24,7 +24,7 @@ export class SignalEvent<
   ) {
     const index = this.#listeners.indexOf(listener);
     if (index !== -1) {
-      this.#listeners.splice(index, 1);
+      this.#listeners = this.#listeners.toSpliced(index, 1);
     }
   }
 

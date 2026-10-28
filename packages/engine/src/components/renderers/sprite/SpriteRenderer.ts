@@ -41,7 +41,8 @@ export class SpriteRenderer extends ActorComponent<any> {
   ) {
     super({
       actor,
-      typeName: "SpriteRenderer"
+      typeName: "SpriteRenderer",
+      needUpdate: false
     });
     const {
       texture,
@@ -57,7 +58,12 @@ export class SpriteRenderer extends ActorComponent<any> {
     this.flip.horizontal = flip.horizontal ?? false;
     this.flip.vertical = flip.vertical ?? false;
 
-    this.animation = new SpriteAnimation(animations);
+    this.animation = new SpriteAnimation(
+      animations,
+      () => {
+        this.needUpdate = true;
+      }
+    );
     this.threeObject = new THREE.Sprite(new THREE.SpriteMaterial());
   }
 
@@ -128,6 +134,9 @@ export class SpriteRenderer extends ActorComponent<any> {
     const frame = this.animation.update(deltaTime);
     if (frame !== null) {
       this.setFrame(frame);
+    }
+    if (!this.animation.isPlaying) {
+      this.needUpdate = false;
     }
   }
 

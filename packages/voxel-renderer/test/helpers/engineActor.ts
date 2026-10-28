@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { Actor } from "@jolly-pixel/engine";
+import { Systems, type Actor } from "@jolly-pixel/engine";
 import * as THREE from "three";
 
 // Import Internal Dependencies
@@ -34,8 +34,7 @@ export function makeActor(
         };
       },
       sceneManager: {
-        scheduleStart: () => void 0,
-        cancelStart: () => void 0
+        actors: new Systems.ActorRegistry(new THREE.Scene())
       }
     }
   };

@@ -1,6 +1,3 @@
-// Import Third-party Dependencies
-import * as THREE from "three/webgpu";
-
 // Import Internal Dependencies
 import type {
   WorldDefaultContext
@@ -11,17 +8,6 @@ import {
 } from "../../actor/index.ts";
 import { BehaviorInitializer } from "./BehaviorInitializer.ts";
 
-export type BehaviorPropertiesValue =
-  | string
-  | string[]
-  | number
-  | number[]
-  | boolean
-  | boolean[]
-  | THREE.Vector2
-  | THREE.Vector3;
-export type BehaviorProperties = Record<string, BehaviorPropertiesValue>;
-
 export interface BehaviorOptions {
   /**
    * Field values assigned once field initializers have run, before the
@@ -31,10 +17,8 @@ export interface BehaviorOptions {
 }
 
 export class Behavior<
-  T extends BehaviorProperties = Record<string, BehaviorPropertiesValue>,
   TContext = WorldDefaultContext
 > extends ActorComponent<TContext> {
-  #properties: T = Object.create(null);
   #initialProperties: Readonly<Record<string, unknown>> | null;
 
   constructor(
@@ -66,25 +50,5 @@ export class Behavior<
       this.#initialProperties = null;
     }
     BehaviorInitializer.for(this)?.load();
-  }
-
-  setProperty<K extends keyof T = keyof T>(
-    propertyName: K,
-    value: T[K]
-  ): void {
-    this.#properties[propertyName] = value;
-  }
-
-  getProperty<K extends keyof T = keyof T>(
-    propertyName: K,
-    defaultValue: T[K]
-  ): T[K] {
-    return this.#properties[propertyName] ?? defaultValue;
-  }
-
-  mergeProperties(
-    defaultProperties: Partial<T> = Object.create(null)
-  ) {
-    Object.assign(this, defaultProperties, this.#properties);
   }
 }

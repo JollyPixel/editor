@@ -19,7 +19,7 @@ import { parseScenePropertyValue } from "./ScenePropertyValue.ts";
 export type BehaviorConstructor = new (
   actor: Actor<any>,
   options?: BehaviorOptions
-) => Behavior<any, any>;
+) => Behavior<any>;
 
 export interface ScriptData {
   behavior: string;
@@ -28,7 +28,7 @@ export interface ScriptData {
 
 export class ScriptDefinition implements ComponentDefinition<
   ScriptData,
-  Behavior<any, any>
+  Behavior<any>
 > {
   readonly type = "Script";
 
@@ -56,7 +56,7 @@ export class ScriptDefinition implements ComponentDefinition<
     actor: Actor<any>,
     data: ScriptData,
     context: ComponentContext
-  ): Behavior<any, any> | null {
+  ): Behavior<any> | null {
     if (context.mode === "edit") {
       return null;
     }

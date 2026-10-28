@@ -10,13 +10,14 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { Actor } from "../src/actor/index.ts";
 import { Scene } from "../src/systems/scene/Scene.ts";
-import { createSceneAssets } from "./sceneAssets.ts";
+import { UpdateProbe } from "./helpers/actor/updateProbe.ts";
+import { createSceneAssets } from "./helpers/scene/sceneAssets.ts";
 import {
   ConcreteScene,
   activateAppendedScene,
   activateScene,
   createSceneSetup
-} from "./helpers/sceneSetup.ts";
+} from "./helpers/scene/sceneSetup.ts";
 
 // CONSTANTS
 const kDeltaTime = 1 / 60;
@@ -140,19 +141,17 @@ describe("SceneManager.unloadScene", () => {
     const { sm, world } = createSceneSetup();
     const level = new ConcreteScene("level");
     activateScene(sm, level);
-    const first = world.createActor("First");
-    const second = world.createActor("Second");
+    const first = world.createActor("First").addComponentAndGet(UpdateProbe);
+    const second = world.createActor("Second").addComponentAndGet(UpdateProbe);
     sm.beginFrame();
 
-    mock.method(first, "update", () => sm.unloadScene(level));
-    const secondUpdate = mock.method(second, "update");
-    const secondFixedUpdate = mock.method(second, "fixedUpdate");
+    first.onUpdate = () => sm.unloadScene(level);
     sm.update(kDeltaTime);
     sm.fixedUpdate(kDeltaTime);
     sm.endFrame();
 
-    assert.strictEqual(secondUpdate.mock.calls.length, 0);
-    assert.strictEqual(secondFixedUpdate.mock.calls.length, 0);
+    assert.strictEqual(second.updates, 0);
+    assert.strictEqual(second.fixedUpdates, 0);
     assert.strictEqual(level.updateSpy.mock.calls.length, 0);
   });
 });

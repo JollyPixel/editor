@@ -8,13 +8,13 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Actor } from "../src/actor/index.ts";
+import { Actor, ActorComponent } from "../src/actor/index.ts";
 import { Scene } from "../src/systems/scene/Scene.ts";
 import {
   ConcreteScene,
   createSceneSetup,
   activateScene
-} from "./helpers/sceneSetup.ts";
+} from "./helpers/scene/sceneSetup.ts";
 
 describe("Scene", () => {
   beforeEach(() => {
@@ -38,15 +38,6 @@ describe("Scene", () => {
       assert.strictEqual(worldAtAwakeTime, world);
     });
 
-    test("calls scene.awake()", () => {
-      const { sm } = createSceneSetup();
-      const scene = new ConcreteScene("test");
-
-      activateScene(sm, scene);
-
-      assert.strictEqual(scene.awakeSpy.mock.calls.length, 1);
-    });
-
     test("emits sceneChanged with the new scene", () => {
       const { sm } = createSceneSetup();
       const scene = new ConcreteScene("test");
@@ -59,15 +50,6 @@ describe("Scene", () => {
       assert.strictEqual(listener.mock.calls[0].arguments[0], scene);
     });
 
-    test("exposes the scene via currentScene accessor", () => {
-      const { sm } = createSceneSetup();
-      const scene = new ConcreteScene("test");
-
-      assert.strictEqual(sm.currentScene, null);
-      activateScene(sm, scene);
-      assert.strictEqual(sm.currentScene, scene);
-    });
-
     test("getScene() with no argument returns the current scene", () => {
       const { sm } = createSceneSetup();
       const scene = new ConcreteScene("test");
@@ -75,27 +57,6 @@ describe("Scene", () => {
       assert.strictEqual(sm.getScene(), null);
       activateScene(sm, scene);
       assert.strictEqual(sm.getScene(), scene);
-    });
-
-    test("does not activate or start a scene immediately", () => {
-      const { sm } = createSceneSetup();
-      const scene = new ConcreteScene("test");
-
-      sm.loadScene(scene);
-
-      assert.strictEqual(scene.awakeSpy.mock.calls.length, 0);
-      assert.strictEqual(scene.startSpy.mock.calls.length, 0);
-    });
-
-    test("activates and starts a scene on the next beginFrame", () => {
-      const { sm } = createSceneSetup();
-      const scene = new ConcreteScene("test");
-
-      sm.loadScene(scene);
-      assert.strictEqual(scene.startSpy.mock.calls.length, 0);
-
-      sm.beginFrame();
-      assert.strictEqual(scene.startSpy.mock.calls.length, 1);
     });
 
     test("only calls scene.start() once across multiple beginFrame calls", () => {
@@ -169,7 +130,16 @@ describe("Scene", () => {
       activateScene(sm, sceneA);
 
       const start = mock.fn();
-      sm.scheduleStart({ start, actor: world.createActor("Pending") } as any);
+      class Pending extends ActorComponent {
+        start = start;
+
+        constructor(
+          actor: Actor
+        ) {
+          super({ actor, typeName: "Pending" });
+        }
+      }
+      world.createActor("Pending").addComponentAndGet(Pending);
 
       activateScene(sm, new ConcreteScene("B"));
       sm.beginFrame();

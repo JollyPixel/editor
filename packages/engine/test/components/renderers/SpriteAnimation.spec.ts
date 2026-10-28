@@ -3,7 +3,16 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { SpriteAnimation } from "../../../src/components/renderers/sprite/SpriteAnimation.ts";
+import {
+  SpriteAnimation,
+  type SpriteAnimationOptions
+} from "../../../src/components/renderers/sprite/SpriteAnimation.ts";
+
+function createAnimation(
+  animations: SpriteAnimationOptions
+): SpriteAnimation {
+  return new SpriteAnimation(animations, () => undefined);
+}
 
 function collectFrames(
   animation: SpriteAnimation,
@@ -15,7 +24,7 @@ function collectFrames(
 
 describe("Components.Renderers.SpriteAnimation", () => {
   test("should play a non-looping animation through its last frame", () => {
-    const animation = new SpriteAnimation({ walk: [4, 5, 6, 7] });
+    const animation = createAnimation({ walk: [4, 5, 6, 7] });
     animation.play("walk", { duration: 0.4 });
 
     const frames = collectFrames(animation, 5, 0.1);
@@ -25,7 +34,7 @@ describe("Components.Renderers.SpriteAnimation", () => {
   });
 
   test("should wrap a looping animation back to its first frame", () => {
-    const animation = new SpriteAnimation({ idle: { from: 0, to: 2 } });
+    const animation = createAnimation({ idle: { from: 0, to: 2 } });
     animation.play("idle", { duration: 0.3, loop: true });
 
     const frames = collectFrames(animation, 4, 0.1);
@@ -35,7 +44,7 @@ describe("Components.Renderers.SpriteAnimation", () => {
   });
 
   test("should skip frames when a step spans several of them", () => {
-    const animation = new SpriteAnimation({ walk: [0, 1, 2, 3] });
+    const animation = createAnimation({ walk: [0, 1, 2, 3] });
     animation.play("walk", { duration: 0.5, loop: true });
 
     assert.strictEqual(animation.update(0.3125), 2);
@@ -43,7 +52,7 @@ describe("Components.Renderers.SpriteAnimation", () => {
   });
 
   test("should hold its frame while paused", () => {
-    const animation = new SpriteAnimation({ walk: [0, 1, 2, 3] });
+    const animation = createAnimation({ walk: [0, 1, 2, 3] });
     animation.play("walk", { duration: 0.4, loop: true });
 
     animation.pause();
