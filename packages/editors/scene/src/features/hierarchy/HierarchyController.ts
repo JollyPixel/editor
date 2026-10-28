@@ -18,7 +18,10 @@ import type {
 
 // Import Internal Dependencies
 import type { SceneEditing } from "../../editing/SceneEditing.ts";
-import { ActorTreeRows } from "./ActorTreeRows.ts";
+import {
+  ActorTreeRows,
+  PREFAB_ICON
+} from "./ActorTreeRows.ts";
 import type { AddActorAction } from "./model/ActorPreset.ts";
 import type { ActorPresetMenu } from "./model/ActorPresetMenu.ts";
 import { TreeExpansion } from "./TreeExpansion.ts";
@@ -27,18 +30,35 @@ export interface HierarchyView {
   beginRename(id: string): void;
 }
 
-type RowAction = "rename" | "duplicate" | "delete" | AddActorAction;
+type AddAction = AddActorAction | "add-instance";
+type RowAction = "rename" | "duplicate" | "delete" | AddAction;
 
 export class HierarchyController {
-  static #rowEntries(
+  static #addEntries(
     presets: ActorPresetMenu
+  ): MenuEntry<AddAction>[] {
+    return [
+      ...presets.entries,
+      "separator",
+      {
+        id: "add-instance",
+        label: "Scene instance…",
+        icon: PREFAB_ICON
+      }
+    ];
+  }
+
+  static #rowEntries(
+    presets: ActorPresetMenu,
+    canAddChild: boolean
   ): MenuEntry<RowAction>[] {
     return [
       {
         id: "group:add-child",
         label: "Add child",
         icon: "plus",
-        items: presets.entries
+        disabled: !canAddChild,
+        items: HierarchyController.#addEntries(presets)
       },
       "separator",
       {
@@ -217,7 +237,7 @@ export class HierarchyController {
     }
 
     return MenuSession.from(
-      editing.presets.entries,
+      HierarchyController.#addEntries(editing.presets),
       (action) => this.#add(action, null)
     );
   }
@@ -234,7 +254,10 @@ export class HierarchyController {
     }
 
     return MenuSession.forRow(
-      HierarchyController.#rowEntries(editing.presets),
+      HierarchyController.#rowEntries(
+        editing.presets,
+        !editing.document.tree.isInstance(id)
+      ),
       () => editing.document.tree.has(id),
       (action) => this.#runRow(action, id)
     );
@@ -260,11 +283,16 @@ export class HierarchyController {
   }
 
   async #add(
-    action: AddActorAction,
+    action: AddAction,
     parentId: string | null
   ): Promise<void> {
     const editing = this.#connection.current;
     if (editing === null) {
+      return;
+    }
+    if (action === "add-instance") {
+      await editing.actions.addInstance(parentId);
+
       return;
     }
 

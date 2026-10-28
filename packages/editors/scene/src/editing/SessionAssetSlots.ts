@@ -5,6 +5,7 @@ import {
   type AssetType
 } from "@jolly-pixel/asset";
 import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
+import { SCENE_ASSET } from "@jolly-pixel/asset.scene/client";
 import type { EditorSession } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
@@ -15,6 +16,7 @@ const kMissingName = "Missing asset";
 
 export interface SessionAssetSlotsOptions {
   session: Pick<EditorSession, "catalog" | "pickAsset">;
+  sceneId: string;
   descriptors: Iterable<AssetKindDescriptor>;
   open: ((assetId: string) => void) | null;
 }
@@ -23,6 +25,7 @@ export class SessionAssetSlots implements SceneAssetSlots {
   readonly open: ((reference: AssetReferenceData) => void) | null;
 
   #session: Pick<EditorSession, "catalog" | "pickAsset">;
+  #sceneId: string;
   #descriptors: ReadonlyMap<string, AssetKindDescriptor>;
 
   constructor(
@@ -31,6 +34,7 @@ export class SessionAssetSlots implements SceneAssetSlots {
     const { open } = options;
 
     this.#session = options.session;
+    this.#sceneId = options.sceneId;
     this.#descriptors = new Map(
       Array.from(options.descriptors, (descriptor) => [descriptor.kind, descriptor])
     );
@@ -64,6 +68,19 @@ export class SessionAssetSlots implements SceneAssetSlots {
       kinds: [descriptor],
       title: `Pick a ${descriptor.label.toLowerCase()}`,
       current
+    });
+  }
+
+  pickScene(): Promise<AssetReferenceData | null> {
+    const { catalog } = this.#session;
+
+    return this.#session.pickAsset({
+      kinds: [SCENE_ASSET],
+      title: "Pick a scene to include",
+      accepts: ({ id }) => id !== this.#sceneId &&
+        catalog.dependencies.transitiveDependencies(id).every(
+          (dependency) => dependency.id !== this.#sceneId
+        )
     });
   }
 

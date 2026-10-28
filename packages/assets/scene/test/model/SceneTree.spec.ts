@@ -22,6 +22,7 @@ import {
 // CONSTANTS
 const kTransform = SceneTransform.create();
 const kOversized = { text: "x".repeat(COMPONENT_DATA_MAX_LENGTH) };
+const kOtherScene = { id: "scene-2", kind: "scene" };
 
 describe("SceneTree.accepts", () => {
   const cases: [string, SceneCommand, boolean][] = [
@@ -38,9 +39,25 @@ describe("SceneTree.accepts", () => {
       action: "actor-added",
       actors: [actor("D"), actor("E", { parentId: "C" })]
     }, false],
-    ["a prefab instance", {
+    ["an instance of another scene", {
       action: "actor-added",
-      actors: [actor("D", { prefab: { id: "scene-2", kind: "scene" } })]
+      actors: [actor("D", { prefab: kOtherScene })]
+    }, true],
+    ["an instance of the scene itself", {
+      action: "actor-added",
+      actors: [actor("D", { prefab: { id: "scene-1", kind: "scene" } })]
+    }, false],
+    ["a prefab that is not a scene", {
+      action: "actor-added",
+      actors: [actor("D", { prefab: { id: "map-1", kind: "voxelmap" } })]
+    }, false],
+    ["an instance with components", {
+      action: "actor-added",
+      actors: [actor("D", { prefab: kOtherScene, components: [component("c")] })]
+    }, false],
+    ["a subtree with a child under its instance", {
+      action: "actor-added",
+      actors: [actor("D", { prefab: kOtherScene }), actor("E", { parentId: "D" })]
     }, false],
     ["an actor placed before an actor of another parent", {
       action: "actor-added",
@@ -101,7 +118,7 @@ describe("SceneTree.accepts", () => {
 
   for (const [name, command, expected] of cases) {
     test(`${expected ? "accepts" : "refuses"} ${name}`, () => {
-      assert.equal(loadedTree(sampleActors()).accepts(command), expected);
+      assert.equal(loadedTree(sampleActors(), { sceneId: "scene-1" }).accepts(command), expected);
     });
   }
 });

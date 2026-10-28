@@ -24,6 +24,7 @@ import {
 // CONSTANTS
 const kMap = { id: "map-1", kind: "voxelmap" };
 const kTexture = { id: "texture-1", kind: "pixelart" };
+const kScene = { id: "scene-2", kind: "scene" };
 
 function encodeJSON(
   value: unknown
@@ -53,7 +54,11 @@ describe("scene kind load", () => {
       actor("A", { components: [component("c")] }),
       actor("B", { components: [component("c")] })
     ]))],
-    ["a prefab instance", encodeJSON(sceneFile([actor("A", { prefab: kMap })]))],
+    ["a prefab that is not a scene", encodeJSON(sceneFile([actor("A", { prefab: kMap })]))],
+    ["a child under a prefab instance", encodeJSON(sceneFile([
+      actor("A", { prefab: kScene }),
+      actor("B", { parentId: "A" })
+    ]))],
     ["component data over the size limit", encodeJSON(sceneFile([
       actor("A", {
         components: [component("c", { text: "x".repeat(COMPONENT_DATA_MAX_LENGTH) })]
@@ -91,24 +96,26 @@ describe("scene kind assets", () => {
           component("c1", {}, { map: kMap, normal: null }),
           component("c2", {}, { map: kMap, texture: kTexture })
         ]
-      })
+      }),
+      actor("P", { prefab: kScene })
     ])));
   }
 
-  test("lists each filled asset slot reference once as a dependency", () => {
+  test("lists each filled asset slot and prefab reference once as a dependency", () => {
     assert.deepEqual(
       sceneAssetKind().dependencies?.(referencingState()),
-      [kMap, kTexture]
+      [kMap, kTexture, kScene]
     );
   });
 
   test("rebinds referenced asset ids", () => {
     const state = referencingState();
-    sceneAssetKind().rebind?.(state, new Map([["map-1", "map-2"]]));
+    sceneAssetKind().rebind?.(state, new Map([["map-1", "map-2"], ["scene-2", "scene-3"]]));
 
     assert.deepEqual(state.dependencies(), [
       { id: "map-2", kind: "voxelmap" },
-      kTexture
+      kTexture,
+      { id: "scene-3", kind: "scene" }
     ]);
   });
 });
@@ -121,5 +128,18 @@ describe("scene kind create", () => {
     const decoded = SCENE_FILE.decode(await handler.serialize(state));
 
     assert.deepEqual(decoded.actors.map(({ name }) => name), ["Main Camera", "Sun", "Sky"]);
+  });
+
+  test("refuses an instance of the scene it creates", () => {
+    const state = sceneAssetKind().create("scene-1");
+
+    assert.equal(state.accepts({
+      action: "actor-added",
+      actors: [actor("P", { prefab: { id: "scene-1", kind: "scene" } })]
+    }), false);
+    assert.equal(state.accepts({
+      action: "actor-added",
+      actors: [actor("P", { prefab: kScene })]
+    }), true);
   });
 });

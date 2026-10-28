@@ -40,6 +40,7 @@ export interface AssetChoicesOptions {
   catalog: AssetChoicesCatalog;
   kinds: Iterable<AssetKindDescriptor>;
   current?: AssetReferenceData | null;
+  accepts?: (reference: AssetReferenceData) => boolean;
 }
 
 interface FolderBranch {
@@ -51,6 +52,7 @@ interface FolderBranch {
 export class AssetChoices extends Emitter<AssetChoicesEvents> {
   readonly #catalog: AssetChoicesCatalog;
   readonly #icons: ReadonlyMap<string, IconName | undefined>;
+  readonly #accepts: (reference: AssetReferenceData) => boolean;
   readonly #collapsed = new Set<string>();
   readonly #unsubscribe: () => void;
   #nodes: AssetChoiceNode[] = [];
@@ -64,6 +66,7 @@ export class AssetChoices extends Emitter<AssetChoicesEvents> {
     super();
 
     this.#catalog = options.catalog;
+    this.#accepts = options.accepts ?? (() => true);
     this.#icons = new Map(
       Array.from(
         options.kinds,
@@ -168,11 +171,14 @@ export class AssetChoices extends Emitter<AssetChoicesEvents> {
         continue;
       }
 
-      const path = new AssetPath(record.path);
       const reference = Object.freeze({
         id: record.id,
         kind: record.kind
       });
+      if (!this.#accepts(reference)) {
+        continue;
+      }
+      const path = new AssetPath(record.path);
       const nodeId = `${kAssetNodePrefix}${record.id}`;
       assets.set(nodeId, reference);
       ensureFolder(root, path.directory).assets.push({

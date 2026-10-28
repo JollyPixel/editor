@@ -4,75 +4,18 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import {
-  AssetType,
-  type AssetReferenceData
-} from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { Actor } from "../../../src/actor/Actor.ts";
-import { ActorComponent } from "../../../src/actor/ActorComponent.ts";
+import { ComponentDefinitions } from "../../../src/systems/scene/file/index.ts";
 import {
-  ComponentDefinitions,
-  SceneInstance,
-  type ComponentContext,
-  type ComponentDefinition,
-  type JSONObject,
-  type SceneMode
-} from "../../../src/systems/scene/file/index.ts";
-import { createSceneSetup } from "../../helpers/scene/sceneSetup.ts";
-import { createSceneAssets } from "../../helpers/scene/sceneAssets.ts";
+  createInstance,
+  TAG_DEFINITION,
+  type TagComponent
+} from "../../helpers/scene/sceneInstance.ts";
 import {
   createActorFile,
-  createComponentFile,
-  createWarningLogger
+  createComponentFile
 } from "../../helpers/scene/sceneFile.ts";
-
-// CONSTANTS
-const kTextureType = new AssetType<string>("texture");
-
-class TagComponent extends ActorComponent {
-  readonly label: string;
-  readonly componentContext: ComponentContext;
-
-  constructor(
-    actor: Actor,
-    options: { label: string; context: ComponentContext; }
-  ) {
-    super({ actor, typeName: "Tag" });
-    this.label = options.label;
-    this.componentContext = options.context;
-  }
-}
-
-const kTagDefinition: ComponentDefinition<string, TagComponent> = {
-  type: "Tag",
-  assets: { map: kTextureType, empty: kTextureType, absent: kTextureType },
-  parse: (data: Readonly<JSONObject>) => (typeof data.label === "string" ? data.label : "default"),
-  create: (actor, label, context) => actor.addComponentAndGet(TagComponent, { label, context })
-};
-
-function createInstance(
-  mode: SceneMode
-) {
-  const { logger, warnings } = createWarningLogger();
-  const { sm, world } = createSceneSetup(createSceneAssets(), logger);
-  const resolved: AssetReferenceData[] = [];
-  const instance = new SceneInstance({
-    world: world as any,
-    mode,
-    components: new ComponentDefinitions().register(kTagDefinition),
-    assets: {
-      resolve: (reference, _type) => {
-        resolved.push(reference);
-
-        return `value:${reference.id}` as never;
-      }
-    }
-  });
-
-  return { sm, instance, warnings, resolved };
-}
 
 describe("Systems.SceneInstance", () => {
   beforeEach(() => {
@@ -265,10 +208,10 @@ describe("Systems.SceneInstance", () => {
   });
 
   test("refuses to register two definitions of the same type", () => {
-    const definitions = new ComponentDefinitions().register(kTagDefinition);
+    const definitions = new ComponentDefinitions().register(TAG_DEFINITION);
 
     assert.throws(
-      () => definitions.register(kTagDefinition),
+      () => definitions.register(TAG_DEFINITION),
       /Component type "Tag" is already registered/
     );
   });

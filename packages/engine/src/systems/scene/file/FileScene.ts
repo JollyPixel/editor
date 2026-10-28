@@ -7,9 +7,22 @@ import { SceneInstance } from "./live/SceneInstance.ts";
 import { captureSceneActors } from "./live/sceneCapture.ts";
 import { SceneEnvironment } from "./live/SceneEnvironment.ts";
 import type { SceneFile } from "./SceneFile.ts";
+import {
+  includedSceneFiles,
+  NO_SCENE_PREFABS,
+  type ScenePrefabs
+} from "./ScenePrefabs.ts";
 
 export interface FileSceneOptions {
   components: ComponentDefinitions;
+  /**
+   * Scene files that prefab instances expand, with every scene they include.
+   */
+  prefabs?: ScenePrefabs;
+  /**
+   * Id of the scene file, never expanded as a prefab inside itself.
+   */
+  sceneId?: string;
 }
 
 export class FileScene<
@@ -18,6 +31,8 @@ export class FileScene<
   readonly file: SceneFile;
 
   #components: ComponentDefinitions;
+  #prefabs: ScenePrefabs;
+  #sceneId: string | undefined;
   #environment: SceneEnvironment | null = null;
 
   constructor(
@@ -25,11 +40,22 @@ export class FileScene<
     file: SceneFile,
     options: FileSceneOptions
   ) {
+    const {
+      components,
+      prefabs = NO_SCENE_PREFABS,
+      sceneId
+    } = options;
+
     super(name, {
-      assets: options.components.assets(file)
+      assets: Array.from(
+        includedSceneFiles(file, prefabs, sceneId),
+        (included) => [...components.assets(included)]
+      ).flat()
     });
     this.file = file;
-    this.#components = options.components;
+    this.#components = components;
+    this.#prefabs = prefabs;
+    this.#sceneId = sceneId;
   }
 
   override awake(): void {
@@ -39,7 +65,9 @@ export class FileScene<
       components: this.#components,
       assets: new CoordinatorAssetResolver(
         this.world.assetCoordinator
-      )
+      ),
+      prefabs: this.#prefabs,
+      sceneId: this.#sceneId
     }).add(this.file.actors);
 
     this.#environment = new SceneEnvironment(this.world);

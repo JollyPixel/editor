@@ -49,7 +49,7 @@ interface SceneActorFile {
     scale: Vector3JSON;
   };
   components: SceneComponentFile[];
-  prefab?: AssetReferenceData; // reserved, ignored by the builder
+  prefab?: AssetReferenceData; // a scene expanded under this actor
 }
 
 interface SceneComponentFile {
@@ -78,6 +78,34 @@ type ColorJSON = string; // "#rrggbb"
   it then gets a new random one.
 - The engine reads the decoded form. A file with an identity transform or
   `visible: true` left out must be decoded before it reaches the engine.
+
+## Prefab instances
+
+An actor with `prefab` is an instance of another scene. Its name, visibility
+and transform form the instance root, and the root actors of the referenced
+scene are built under it, in edit and play mode alike.
+
+```ts
+interface ScenePrefabs {
+  find(sceneId: string): Readonly<ScenePrefabFile> | null;
+}
+
+type ScenePrefabFile = Pick<SceneFile, "actors">;
+```
+
+- The engine loads no scene file itself: the game or editor passes a
+  `ScenePrefabs` that finds them by asset id. A scene it does not find
+  leaves the instance root empty.
+- An expanded actor or component gets the path id
+  `<instance id>/<id in its scene>`, so several instances of one scene never
+  collide. A nested instance adds one segment per level.
+- A scene already being expanded on the way down is skipped with a warning,
+  so a cycle stops instead of recursing.
+- Instances are read-only: nothing writes back to the referenced scene.
+
+`includedSceneFiles(file, prefabs, sceneId?)` yields `file`, then every scene
+its instances include, nested ones too, once each. `sceneId` names `file`, so
+an instance of it is never yielded again. `NO_SCENE_PREFABS` finds no scene.
 
 ## Component definitions
 
@@ -165,7 +193,7 @@ definition declares for it. Returns `null` for an empty or missing slot.
   back as a file entry. See
   [Saving a running scene](#saving-a-running-scene).
 - `assets(file)` yields the asset references of every known component in the
-  file.
+  file. It reads only `file.actors`.
 
 ## FileScene
 
@@ -176,7 +204,11 @@ class FileScene<TContext> extends Scene<TContext> {
   constructor(
     name: string,
     file: SceneFile,
-    options: { components: ComponentDefinitions; }
+    options: {
+      components: ComponentDefinitions;
+      prefabs?: ScenePrefabs;
+      sceneId?: string;
+    }
   );
 
   capture(): SceneFile;
@@ -184,7 +216,11 @@ class FileScene<TContext> extends Scene<TContext> {
 ```
 
 - Its `assets` are the definitions' assets, loaded by
-  [`SceneManager`](scene-manager.md) like any scene.
+  [`SceneManager`](scene-manager.md) like any scene. With `prefabs`, they
+  include the assets of every scene its instances include, so `prefabs` must
+  find each of those scenes when the `FileScene` is constructed.
+- `sceneId` is the asset id of `file`. Pass it so a prefab cycle back to this
+  scene stops at once, as in the editor, instead of one level down.
 - `awake()` builds the actors in play mode and applies the environment.
 - `destroy()` resets the background, fog and environment map.
 
@@ -211,6 +247,8 @@ What a capture holds:
   those built from a file, those created at runtime, those of appended
   scenes, and persistent ones. Ids are `actor.persistentId`.
 - The local transform, name and visibility of each actor.
+- A prefab instance as the actors it expanded, with their path ids and no
+  `prefab` field: loading the save rebuilds them without the referenced scene.
 - For a component built from a scene file by the same `ComponentDefinitions`:
   its file id and asset slots, and the `data` its definition's `capture`
   returns. A definition without `capture` keeps the data the component was
@@ -238,6 +276,8 @@ interface SceneInstanceOptions<TContext> {
   mode: "edit" | "play";
   components: ComponentDefinitions;
   assets: ComponentAssetResolver;
+  prefabs?: ScenePrefabs;
+  sceneId?: string;
 }
 
 interface SceneInstanceComponent {
@@ -252,8 +292,12 @@ type SceneInstanceEvents = {
 };
 ```
 
+`prefabs` finds the scenes [prefab instances](#prefab-instances) expand.
+`sceneId` names the scene this instance builds, so an instance of it is
+skipped at once.
+
 `actor(id)` and `component(id)` return the built actor or component, or
-`null`. `actorId(object)` returns the file id of the actor whose `object3D` is
+`null`. An expanded actor or component goes by its path id. `actorId(object)` returns the file id of the actor whose `object3D` is
 `object`, or `null`; it does not search ancestors. `components()` iterates
 the built components.
 
@@ -270,6 +314,13 @@ root. The parent may come from the same call or an earlier one.
 - A component type without a definition is skipped, with a warning in play
   mode only. So is a `null` from `create`, without a warning.
 - Transforms are written to `actor.object3D` directly.
+- An actor with `prefab` gets its scene's actors built under it.
+
+### refresh(sceneId): void
+
+Destroys what every instance of `sceneId` expanded, nested instances
+included, and expands them again from `prefabs`. Call it when that scene
+changes.
 
 ### remove(id): void
 

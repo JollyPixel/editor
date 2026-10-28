@@ -69,6 +69,28 @@ registerIcon("actor-empty", svg`
   />
 `, { tone: "violet" });
 
+registerIcon("actor-prefab", svg`
+  <rect
+    class="tone-fill"
+    x="8"
+    y="8"
+    width="8"
+    height="8"
+    rx="1"
+  />
+  <rect
+    x="3"
+    y="3"
+    width="18"
+    height="18"
+    rx="2"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.75"
+    stroke-dasharray="3 2.5"
+  />
+`, { tone: "coral" });
+
 registerIcon("actor-camera", svg`
   <rect
     class="tone-fill"

@@ -17,6 +17,10 @@ import type {
   SceneActorFile,
   SceneComponentFile
 } from "../SceneFile.ts";
+import {
+  NO_SCENE_PREFABS,
+  type ScenePrefabs
+} from "../ScenePrefabs.ts";
 import { writeSceneTransform } from "../sceneTransform.ts";
 
 export interface SceneInstanceOptions<
@@ -26,12 +30,26 @@ export interface SceneInstanceOptions<
   mode: SceneMode;
   components: ComponentDefinitions;
   assets: ComponentAssetResolver;
+  /**
+   * Scene files that prefab instances expand.
+   */
+  prefabs?: ScenePrefabs;
+  /**
+   * Id of the scene this instance builds, never expanded as a prefab.
+   */
+  sceneId?: string;
 }
 
 export interface SceneInstanceComponent {
   id: string;
   actorId: string;
   component: Component;
+}
+
+interface PrefabInstance {
+  sceneId: string;
+  chain: readonly string[];
+  roots: string[];
 }
 
 export type SceneInstanceEvents = {
@@ -46,10 +64,13 @@ export class SceneInstance<
   #mode: SceneMode;
   #definitions: ComponentDefinitions;
   #assets: ComponentAssetResolver;
+  #prefabs: ScenePrefabs;
+  #chain: readonly string[];
   #logger: Logger;
   #actors = new Map<string, Actor<TContext>>();
   #ids = new Map<THREE.Object3D, string>();
   #components = new Map<string, SceneInstanceComponent>();
+  #instances = new Map<string, PrefabInstance>();
 
   constructor(
     options: SceneInstanceOptions<TContext>
@@ -59,6 +80,8 @@ export class SceneInstance<
     this.#mode = options.mode;
     this.#definitions = options.components;
     this.#assets = options.assets;
+    this.#prefabs = options.prefabs ?? NO_SCENE_PREFABS;
+    this.#chain = options.sceneId === undefined ? [] : [options.sceneId];
     this.#logger = options.world.logger.child({
       namespace: "Systems.SceneInstance"
     });
@@ -89,35 +112,22 @@ export class SceneInstance<
   add(
     files: Iterable<SceneActorFile>
   ): void {
-    const kept = new Set<string>();
+    this.#add(files, this.#chain);
+  }
 
-    for (const file of files) {
-      if (this.#actors.has(file.id)) {
-        this.#logger.warn("Duplicate actor id skipped", { id: file.id });
-        continue;
-      }
+  refresh(
+    sceneId: string
+  ): void {
+    const instanceIds = [...this.#instances]
+      .filter(([, instance]) => instance.sceneId === sceneId)
+      .map(([id]) => id);
 
-      const live = this.#world.sceneManager.actors.find(file.id);
-      if (
-        (file.parentId !== null && kept.has(file.parentId)) ||
-        (live !== null && !live.pendingForDestruction)
-      ) {
-        kept.add(file.id);
-        continue;
-      }
-
-      const parent = file.parentId === null ?
-        null :
-        this.#actors.get(file.parentId);
-      if (parent === undefined) {
-        this.#logger.warn("Actor without a built parent skipped", {
-          id: file.id,
-          parentId: file.parentId
-        });
-        continue;
-      }
-
-      this.#buildActor(file, parent, live === null);
+    for (const id of instanceIds) {
+      this.#collapse(id);
+    }
+    const outermostIds = instanceIds.filter((id) => this.#instances.has(id));
+    for (const id of outermostIds) {
+      this.#expand(id);
     }
   }
 
@@ -140,6 +150,7 @@ export class SceneInstance<
       if (removedId !== undefined) {
         this.#ids.delete(object3D);
         this.#actors.delete(removedId);
+        this.#instances.delete(removedId);
       }
     }
     for (const [componentId, built] of this.#components) {
@@ -222,12 +233,92 @@ export class SceneInstance<
     }
     this.#actors.clear();
     this.#ids.clear();
+    this.#instances.clear();
+  }
+
+  #add(
+    files: Iterable<SceneActorFile>,
+    chain: readonly string[]
+  ): void {
+    const kept = new Set<string>();
+
+    for (const file of files) {
+      if (this.#actors.has(file.id)) {
+        this.#logger.warn("Duplicate actor id skipped", { id: file.id });
+        continue;
+      }
+
+      const live = this.#world.sceneManager.actors.find(file.id);
+      if (
+        (file.parentId !== null && kept.has(file.parentId)) ||
+        (live !== null && !live.pendingForDestruction)
+      ) {
+        kept.add(file.id);
+        continue;
+      }
+
+      const parent = file.parentId === null ?
+        null :
+        this.#actors.get(file.parentId);
+      if (parent === undefined) {
+        this.#logger.warn("Actor without a built parent skipped", {
+          id: file.id,
+          parentId: file.parentId
+        });
+        continue;
+      }
+
+      this.#buildActor(file, parent, live === null, chain);
+    }
+  }
+
+  #expand(
+    instanceId: string
+  ): void {
+    const instance = this.#instances.get(instanceId);
+    if (instance === undefined) {
+      return;
+    }
+    if (instance.chain.includes(instance.sceneId)) {
+      this.#logger.warn("Prefab cycle skipped", {
+        id: instanceId,
+        sceneId: instance.sceneId
+      });
+
+      return;
+    }
+
+    const scene = this.#prefabs.find(instance.sceneId);
+    if (scene !== null) {
+      const files = scene.actors.map(
+        (file) => scopedActorFile(file, instanceId)
+      );
+      instance.roots = files
+        .filter((file) => file.parentId === instanceId)
+        .map((file) => file.id);
+      this.#add(files, [...instance.chain, instance.sceneId]);
+    }
+  }
+
+  #collapse(
+    instanceId: string
+  ): void {
+    const instance = this.#instances.get(instanceId);
+    if (instance === undefined) {
+      return;
+    }
+
+    for (const id of instance.roots) {
+      this.remove(id);
+    }
+    instance.roots = [];
   }
 
   #buildActor(
     file: SceneActorFile,
     parent: Actor<TContext> | null,
-    restoreId: boolean
+    restoreId: boolean,
+    chain: readonly string[]
   ): void {
     const actor = new Actor<TContext>(this.#world, {
       name: file.name,
@@ -241,6 +332,15 @@ export class SceneInstance<
 
     for (const entry of file.components) {
       this.#buildComponent(file.id, actor, entry);
+    }
+
+    if (file.prefab !== undefined) {
+      this.#instances.set(file.id, {
+        sceneId: file.prefab.id,
+        chain,
+        roots: []
+      });
+      this.#expand(file.id);
     }
   }
 
@@ -284,4 +384,23 @@ export class SceneInstance<
       this.emit("componentDropped", built.component);
     }
   }
+}
+
+function scopedActorFile(
+  file: SceneActorFile,
+  instanceId: string
+): SceneActorFile {
+  return {
+    ...file,
+    id: `${instanceId}/${file.id}`,
+    parentId: file.parentId === null ?
+      instanceId :
+      `${instanceId}/${file.parentId}`,
+    components: file.components.map((component) => {
+      return {
+        ...component,
+        id: `${instanceId}/${component.id}`
+      };
+    })
+  };
 }

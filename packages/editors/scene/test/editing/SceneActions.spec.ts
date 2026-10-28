@@ -63,6 +63,11 @@ function createActions(
         picks.push(type.kind.value);
 
         return Promise.resolve(picked);
+      },
+      pickScene: () => {
+        picks.push("scene");
+
+        return Promise.resolve(picked);
       }
     }
   });
@@ -176,5 +181,18 @@ describe("SceneActions", () => {
     const boxId = await actions.addActor(preset("Box", "Mesh"), null);
     assert.strictEqual(document.tree.actor(boxId!)?.name, "Box");
     assert.deepEqual(picks, ["voxelmap"]);
+  });
+
+  test("adds and selects an instance of the picked scene", async() => {
+    const house = { id: "house", kind: "scene" };
+    const { document, selection, actions } = createActions(house);
+
+    const id = await actions.addInstance(null);
+
+    const actor = document.tree.actor(id!)!;
+    assert.strictEqual(actor.name, "Ground");
+    assert.deepEqual(actor.prefab, house);
+    assert.deepEqual(actor.components, []);
+    assert.deepEqual(selection.ids, [id]);
   });
 });

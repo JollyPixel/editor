@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 export * from "./SceneFile.ts";
+export * from "./ScenePrefabs.ts";
 export * from "./definitions/ComponentData.ts";
 export * from "./definitions/ComponentDefinition.ts";
 export * from "./definitions/ComponentDefinitions.ts";

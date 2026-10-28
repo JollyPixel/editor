@@ -17,6 +17,9 @@ import {
 // Import Internal Dependencies
 import type { SceneComponents } from "../../components/SceneComponents.ts";
 
+// CONSTANTS
+export const PREFAB_ICON = "actor-prefab";
+
 export class ActorTreeRows {
   static readonly EMPTY = new ActorTreeRows([]);
 
@@ -58,7 +61,9 @@ export class ActorTreeRows {
     return {
       id: actor.id,
       label: actor.name,
-      icon: components.actorIcon(actor.components.map(({ type }) => type)),
+      icon: actor.prefab === undefined ?
+        components.actorIcon(actor.components.map(({ type }) => type)) :
+        PREFAB_ICON,
       visible: actor.visible,
       renamable: true,
       ...badges.length > 0 ? { badges } : {}

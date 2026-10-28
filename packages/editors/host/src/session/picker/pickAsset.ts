@@ -28,6 +28,10 @@ export interface AssetPickOptions {
   kinds: Iterable<AssetKindDescriptor>;
   title: string;
   current?: AssetReferenceData | null;
+  /**
+   * Narrows the assets of `kinds` the picker offers.
+   */
+  accepts?: (reference: AssetReferenceData) => boolean;
 }
 
 export function pickAsset(
@@ -42,7 +46,8 @@ export function pickAsset(
   const choices = new AssetChoices({
     catalog,
     kinds: options.kinds,
-    current: options.current
+    current: options.current,
+    accepts: options.accepts
   });
 
   const dialog = new Dialog();

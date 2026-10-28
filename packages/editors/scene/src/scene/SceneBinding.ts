@@ -17,6 +17,9 @@ import {
 } from "@jolly-pixel/asset.scene/client";
 import { Emitter } from "@openally/emitt";
 
+// Import Internal Dependencies
+import type { PrefabScenes } from "./PrefabScenes.ts";
+
 // CONSTANTS
 const kWorldPosition = new THREE.Vector3();
 
@@ -30,6 +33,8 @@ export interface SceneBindingOptions {
   components: Systems.ComponentDefinitions;
   assets: Systems.ComponentAssetResolver;
   environment: SceneEnvironmentTarget;
+  prefabs: Pick<PrefabScenes, "find" | "subscribe">;
+  sceneId: string;
 }
 
 export interface BoundComponent {
@@ -49,6 +54,7 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
   #instance: Systems.SceneInstance;
   #environment: SceneEnvironmentTarget;
   #pickTargets = new Map<THREE.Object3D, string>();
+  #unsubscribePrefabs: () => void;
 
   #onChange = (
     change: SceneChange
@@ -59,6 +65,15 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
 
   #onReset = (): void => {
     this.#rebuild();
+    this.#world.invalidate();
+  };
+
+  #onPrefabChange = (
+    sceneId: string
+  ): void => {
+    this.#instance.refresh(sceneId);
+    this.#forgetPickTargets();
+    this.emit("actorsChange");
     this.#world.invalidate();
   };
 
@@ -73,7 +88,9 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
       world: options.world,
       mode: "edit",
       components: options.components,
-      assets: options.assets
+      assets: options.assets,
+      prefabs: options.prefabs,
+      sceneId: options.sceneId
     });
     this.#instance.on("componentBuilt", (built) => {
       this.emit("componentBuilt", built);
@@ -85,6 +102,10 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
     this.#rebuild();
     this.#document.on("change", this.#onChange);
     this.#document.on("reset", this.#onReset);
+    this.#unsubscribePrefabs = options.prefabs.subscribe(
+      "change",
+      this.#onPrefabChange
+    );
   }
 
   actor(
@@ -126,7 +147,7 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
       const id = this.#instance.actorId(current) ??
         this.#pickTargets.get(current);
       if (id !== undefined) {
-        return id;
+        return this.#documentActorId(id);
       }
       current = current.parent;
     }
@@ -183,7 +204,23 @@ export class SceneBinding extends Emitter<SceneBindingEvents> {
   dispose(): void {
     this.#document.off("change", this.#onChange);
     this.#document.off("reset", this.#onReset);
+    this.#unsubscribePrefabs();
     this.#clear();
+  }
+
+  #documentActorId(
+    id: string
+  ): string | null {
+    let current: THREE.Object3D | null = this.#instance.actor(id)?.object3D ?? null;
+    while (current !== null) {
+      const actorId = this.#instance.actorId(current);
+      if (actorId !== null && this.#document.tree.has(actorId)) {
+        return actorId;
+      }
+      current = current.parent;
+    }
+
+    return null;
   }
 
   #applyChange(

@@ -7,7 +7,10 @@ import { SceneDocument } from "@jolly-pixel/asset.scene/client";
 import type { PresencePeer } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { ActorTreeRows } from "../../src/features/hierarchy/ActorTreeRows.ts";
+import {
+  ActorTreeRows,
+  PREFAB_ICON
+} from "../../src/features/hierarchy/ActorTreeRows.ts";
 import { createSceneComponents } from "../helpers/sceneComponents.ts";
 
 describe("ActorTreeRows", () => {
@@ -37,5 +40,14 @@ describe("ActorTreeRows", () => {
     assert.strictEqual(child.label, "Lamp");
     assert.strictEqual(child.icon, "actor-light");
     assert.deepEqual(child.badges, [{ color: "#ff0000", title: "Peer" }]);
+  });
+
+  test("marks a prefab instance with the prefab icon", () => {
+    const document = new SceneDocument();
+    document.addActor({ name: "House", prefab: { id: "house", kind: "scene" } });
+
+    const [row] = ActorTreeRows.read(document.tree, new Map(), createSceneComponents()).roots;
+
+    assert.strictEqual(row.icon, PREFAB_ICON);
   });
 });

@@ -114,7 +114,7 @@ const texture = session.lease(PIXEL_ART_KIND_OBJECT, reference.id);
 
 Both `targetLease` and `lease` throw once the session is disposed.
 
-### pickAsset({ kinds, title, current? })
+### pickAsset({ kinds, title, current?, accepts? })
 
 Opens a modal dialog that lists the catalog's assets of the given kinds as a
 folder tree with a search field. It resolves to the picked
@@ -127,12 +127,14 @@ interface AssetPickOptions {
   kinds: Iterable<AssetKindDescriptor>;
   title: string;
   current?: AssetReferenceData | null;
+  accepts?: (reference: AssetReferenceData) => boolean;
 }
 ```
 
 `kinds` takes the kinds' descriptors, such as `VOXEL_MAP_ASSET`; each row
 shows its kind's icon. `current` starts selected when the catalog still holds
-it. A double-click on an asset picks it. Disposing the session closes an open
+it. `accepts` leaves out each asset of those kinds it returns `false` for, and
+runs again on every catalog change. A double-click on an asset picks it. Disposing the session closes an open
 picker with `null`, and `pickAsset` rejects once the session is disposed.
 
 Kind icons go through `registerKindIcon(descriptor)`, also exported. It

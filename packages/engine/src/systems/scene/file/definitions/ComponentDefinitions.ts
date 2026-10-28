@@ -133,7 +133,7 @@ export class ComponentDefinitions {
   }
 
   * assets(
-    file: SceneFile
+    file: Readonly<Pick<SceneFile, "actors">>
   ): IterableIterator<AssetReference<unknown>> {
     for (const actor of file.actors) {
       for (const entry of actor.components) {
