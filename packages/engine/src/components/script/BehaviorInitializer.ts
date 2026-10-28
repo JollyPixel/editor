@@ -1,10 +1,11 @@
 // Import Internal Dependencies
 import type { Actor } from "../../actor/Actor.ts";
 import {
+  INPUT_LISTENER_TARGETS,
   getBehaviorMetadata,
   type BehaviorMetadata
 } from "./BehaviorDecorators.ts";
-import { createScenePropertyDefault } from "./ScenePropertyValue.ts";
+import { bindScenePropertyValue } from "./ScenePropertyValue.ts";
 
 export interface InitializableBehavior {
   actor: Actor<any>;
@@ -12,11 +13,6 @@ export interface InitializableBehavior {
 }
 
 type BehaviorRecord = InitializableBehavior & Record<PropertyKey, any>;
-
-interface InputEventTarget {
-  on(eventName: string, listener: (...args: any[]) => void): unknown;
-  off(eventName: string, listener: (...args: any[]) => void): unknown;
-}
 
 export class BehaviorInitializer {
   #behavior: BehaviorRecord;
@@ -65,27 +61,47 @@ export class BehaviorInitializer {
   #resolveInputListeners(): void {
     const { input } = this.#behavior.actor.world;
 
-    for (const { type, methodName } of this.#metadata.inputListeners) {
+    for (const { device, event, methodName } of this.#metadata.inputListeners) {
       if (!(methodName in this.#behavior)) {
         this.#warnMissing("method", methodName);
         continue;
       }
 
-      const [targetName, eventName] = type.split(".");
-      const target: InputEventTarget = targetName === "input" ?
-        input :
-        (input as unknown as Record<string, InputEventTarget>)[targetName];
+      const target = INPUT_LISTENER_TARGETS[device](input);
       const listener = this.#behavior[methodName].bind(this.#behavior);
 
-      target.on(eventName, listener);
-      this.#behavior.addTeardown(() => target.off(eventName, listener));
+      target.on(event, listener);
+      this.#behavior.addTeardown(() => target.off(event, listener));
     }
   }
 
   #resolveProperties(): void {
+    const scope = {
+      findActor: (persistentId: string) => this.#resolveActor(persistentId)
+    };
+
     for (const [propertyName, { type }] of this.#metadata.properties) {
-      this.#behavior[propertyName] ??= createScenePropertyDefault(type);
+      this.#behavior[propertyName] = bindScenePropertyValue(
+        type,
+        this.#behavior[propertyName],
+        scope
+      );
     }
+  }
+
+  #resolveActor(
+    persistentId: string
+  ): Actor<any> | null {
+    const actor = this.#behavior.actor.world.sceneManager.actors.find(
+      persistentId
+    );
+    if (actor === null || actor.pendingForDestruction) {
+      this.#warnMissing("actor", persistentId);
+
+      return null;
+    }
+
+    return actor;
   }
 
   #resolveActorComponents(): void {
@@ -96,8 +112,8 @@ export class BehaviorInitializer {
       }
 
       this.#behavior[componentName] = this.#behavior.actor.components.find(
-        (component) => component instanceof ComponentClass
-      );
+        ComponentClass
+      ) ?? undefined;
     }
   }
 }

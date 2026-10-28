@@ -67,6 +67,7 @@ function createRegistry() {
 
   return {
     root,
+    world,
     registry: sceneManager.actors,
     createActor(name: string, parent: Actor | null = null) {
       return new Actor(world, { name, parent });
@@ -150,23 +151,6 @@ describe("Systems.Scene.ActorRegistry", () => {
     assert.deepStrictEqual(log, ["first", "first"]);
   });
 
-  test("should update each actor once per frame even when actor ids repeat", () => {
-    const { registry, createActor } = createRegistry();
-    const log: string[] = [];
-    Actor.Id.clear();
-    const first = createActor("first");
-    Actor.Id.clear();
-    const second = createActor("second");
-
-    second.addComponent(Logger, log);
-    first.addComponent(Logger, log);
-    second.addComponent(Recorder);
-    registry.beginFrame();
-    registry.update(kDeltaTime, 0);
-
-    assert.deepStrictEqual(log.toSorted(), ["first", "second"]);
-  });
-
   test("should report updating only while an actor holds an updating component", () => {
     const { registry, createActor } = createRegistry();
     const empty = registry.updating;
@@ -204,8 +188,8 @@ describe("Systems.Scene.ActorRegistry", () => {
     const recorder = actor.addComponentAndGet(Recorder);
     const destroy = mock.method(recorder, "destroy");
 
-    registry.destroyLater(recorder);
-    registry.destroyLater(recorder);
+    recorder.markDestructionPending();
+    recorder.markDestructionPending();
     registry.beginFrame();
     registry.endFrame();
     registry.endFrame();
@@ -213,8 +197,8 @@ describe("Systems.Scene.ActorRegistry", () => {
     assert.strictEqual(recorder.pendingForDestruction, true);
     assert.deepStrictEqual(recorder.calls, ["awake"]);
     assert.strictEqual(destroy.mock.callCount(), 1);
-    assert.deepStrictEqual(actor.components, []);
-    assert.deepStrictEqual(actor.componentsRequiringUpdate, []);
+    assert.deepStrictEqual([...actor.components], []);
+    assert.strictEqual(actor.components.updating, false);
   });
 
   test("should destroy each actor of a subtree marked for destruction exactly once", () => {
@@ -251,5 +235,21 @@ describe("Systems.Scene.ActorRegistry", () => {
 
     assert.deepStrictEqual(registry.tree.children, [kept]);
     assert.strictEqual(destroyGone.mock.callCount(), 1);
+  });
+
+  test("should find an actor by the persistent id it was given until it is destroyed", () => {
+    const { world, registry } = createRegistry();
+    const door = new Actor(world, { name: "door", persistentId: "door-1" });
+
+    assert.strictEqual(registry.find("door-1"), door);
+    assert.throws(
+      () => new Actor(world, { name: "copy", persistentId: "door-1" }),
+      /already in use/
+    );
+
+    door.destroy();
+
+    assert.strictEqual(registry.find("door-1"), null);
+    assert.strictEqual(new Actor(world, { name: "door", persistentId: "door-1" }).persistentId, "door-1");
   });
 });

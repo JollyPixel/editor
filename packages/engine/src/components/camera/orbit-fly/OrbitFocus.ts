@@ -3,10 +3,11 @@ import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import { PivotMarker } from "./pivotMarker.ts";
+import { NumberRange } from "./NumberRange.ts";
+import type { LookOrientation } from "./LookAngles.ts";
 import {
   type CameraFocus,
   type CameraFocusEnterRequest,
-  type CameraFocusOrientation,
   type CameraFocusPose,
   type FlyBody,
   type OrbitFlyNudge,
@@ -41,8 +42,7 @@ export interface OrbitFocusOptions {
 }
 
 export class OrbitFocus implements CameraFocus {
-  #minPivotDistance: number;
-  #maxPivotDistance: number;
+  #distanceRange: NumberRange;
   #pivotZoomStep: number;
   #pivotNudgeStep: number;
   #marker: PivotMarker;
@@ -69,8 +69,10 @@ export class OrbitFocus implements CameraFocus {
       );
     }
 
-    this.#minPivotDistance = options.minPivotDistance;
-    this.#maxPivotDistance = options.maxPivotDistance;
+    this.#distanceRange = new NumberRange(
+      options.minPivotDistance,
+      options.maxPivotDistance
+    );
     this.#pivotZoomStep = options.pivotZoomStep;
     this.#pivotNudgeStep = options.pivotNudgeStep;
     this.#marker = new PivotMarker({
@@ -98,27 +100,17 @@ export class OrbitFocus implements CameraFocus {
     );
   }
 
-  #clampPivotDistance(
-    distance: number
-  ): number {
-    return THREE.MathUtils.clamp(
-      distance,
-      this.#minPivotDistance,
-      this.#maxPivotDistance
-    );
-  }
-
   enter(
     request: CameraFocusEnterRequest
-  ): CameraFocusOrientation | null {
+  ): LookOrientation | null {
     if (this.#isOrbiting) {
       return null;
     }
 
-    const { point, cameraPosition, yaw, pitch, up } = request;
+    const { point, cameraPosition, angles, up } = request;
     this.#pivotPoint.copy(point ?? cameraPosition);
     this.#targetPivotPoint.copy(this.#pivotPoint);
-    this.#pivotDistance = this.#clampPivotDistance(
+    this.#pivotDistance = this.#distanceRange.clamp(
       cameraPosition.distanceTo(this.#pivotPoint)
     );
     this.#targetPivotDistance = this.#pivotDistance;
@@ -129,7 +121,10 @@ export class OrbitFocus implements CameraFocus {
     this.#marker.moveTo(this.#pivotPoint);
 
     if (point === undefined) {
-      return { yaw, pitch };
+      return {
+        yaw: angles.yaw,
+        pitch: angles.pitch
+      };
     }
 
     this.#orientation.setFromRotationMatrix(
@@ -164,7 +159,7 @@ export class OrbitFocus implements CameraFocus {
       return;
     }
 
-    const { body, yaw, pitch, deltaTime, responsiveness } = pose;
+    const { body, angles, deltaTime, responsiveness } = pose;
     const smoothing = smoothingFactor(responsiveness, deltaTime);
 
     this.#pivotDistance = dampScalar(
@@ -174,8 +169,7 @@ export class OrbitFocus implements CameraFocus {
     );
     dampVector(this.#pivotPoint, this.#targetPivotPoint, smoothing);
 
-    this.#euler.set(pitch, yaw, 0);
-    this.#orientation.setFromEuler(this.#euler);
+    angles.writeTo(this.#orientation);
     this.#orbitOffset
       .set(0, 0, 1)
       .applyQuaternion(this.#orientation)
@@ -196,7 +190,7 @@ export class OrbitFocus implements CameraFocus {
       return false;
     }
 
-    this.#targetPivotDistance = this.#clampPivotDistance(
+    this.#targetPivotDistance = this.#distanceRange.clamp(
       this.#targetPivotDistance * Math.pow(1 + this.#pivotZoomStep, -scrollY)
     );
 

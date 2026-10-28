@@ -1,13 +1,16 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { Systems, type Actor } from "@jolly-pixel/engine";
+import {
+  ActorComponents,
+  Systems,
+  type Actor
+} from "@jolly-pixel/engine";
 
 export function sceneActor(): Actor {
   const object3D = new THREE.Group();
 
   return {
-    components: [],
-    componentsRequiringUpdate: [],
+    components: new ActorComponents(),
     object3D,
     addChildren(...objects: THREE.Object3D[]) {
       object3D.add(...objects);

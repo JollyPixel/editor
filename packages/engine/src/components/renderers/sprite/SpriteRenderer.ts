@@ -8,6 +8,10 @@ import {
   SpriteAnimation,
   type SpriteAnimationOptions
 } from "./SpriteAnimation.ts";
+import {
+  SpriteSheet,
+  type SpriteFlip
+} from "./SpriteSheet.ts";
 
 export interface SpriteRendererOptions {
   texture: AssetReference<THREE.Texture>;
@@ -21,19 +25,15 @@ export interface SpriteRendererOptions {
 }
 
 export class SpriteRenderer extends ActorComponent<any> {
-  frameIndex = 0;
-  tileHorizontal: number;
-  tileVertical: number;
-  flip = {
-    horizontal: false,
-    vertical: false
-  };
+  readonly sheet: SpriteSheet;
 
   texture: THREE.Texture | null = null;
   animation: SpriteAnimation;
   threeObject: THREE.Sprite;
 
   #asset: AssetReference<THREE.Texture>;
+  #frameIndex = 0;
+  #flip: SpriteFlip;
 
   constructor(
     actor: Actor<any>,
@@ -53,16 +53,18 @@ export class SpriteRenderer extends ActorComponent<any> {
     } = options;
 
     this.#asset = texture;
-    this.tileHorizontal = tileHorizontal;
-    this.tileVertical = tileVertical;
-    this.flip.horizontal = flip.horizontal ?? false;
-    this.flip.vertical = flip.vertical ?? false;
+    this.sheet = new SpriteSheet(tileHorizontal, tileVertical);
+    this.#flip = {
+      horizontal: flip.horizontal ?? false,
+      vertical: flip.vertical ?? false
+    };
 
     this.animation = new SpriteAnimation(
       animations,
       () => {
         this.needUpdate = true;
-      }
+      },
+      actor.world.logger
     );
     this.threeObject = new THREE.Sprite(new THREE.SpriteMaterial());
   }
@@ -74,17 +76,25 @@ export class SpriteRenderer extends ActorComponent<any> {
     this.#applyUVs();
   }
 
+  get frameIndex(): number {
+    return this.#frameIndex;
+  }
+
+  get flip(): Readonly<SpriteFlip> {
+    return this.#flip;
+  }
+
   setHorizontalFlip(
     value: boolean
   ) {
-    this.flip.horizontal = value;
+    this.#flip.horizontal = value;
     this.#applyUVs();
   }
 
   setVerticalFlip(
     value: boolean
   ) {
-    this.flip.vertical = value;
+    this.#flip.vertical = value;
     this.#applyUVs();
   }
 
@@ -105,27 +115,14 @@ export class SpriteRenderer extends ActorComponent<any> {
   setFrame(
     index: number
   ) {
-    this.frameIndex = index;
+    this.#frameIndex = index;
     this.#applyUVs();
   }
 
   #applyUVs(): void {
-    if (this.texture === null) {
-      return;
+    if (this.texture !== null) {
+      this.sheet.writeFrame(this.texture, this.#frameIndex, this.#flip);
     }
-
-    const { horizontal, vertical } = this.flip;
-    const tileX = this.frameIndex % this.tileHorizontal;
-    const tileY = this.tileVertical - Math.floor(this.frameIndex / this.tileHorizontal) - 1;
-
-    this.texture.repeat.set(
-      (horizontal ? -1 : 1) / this.tileHorizontal,
-      (vertical ? -1 : 1) / this.tileVertical
-    );
-    this.texture.offset.set(
-      (horizontal ? tileX + 1 : tileX) / this.tileHorizontal,
-      (vertical ? tileY + 1 : tileY) / this.tileVertical
-    );
   }
 
   update(

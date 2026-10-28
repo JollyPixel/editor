@@ -9,13 +9,16 @@ import * as THREE from "three/webgpu";
 import {
   CameraCompositor
 } from "../src/systems/rendering/compositing/CameraCompositor.ts";
-import type {
-  RenderComponent,
-  RenderViewport
-} from "../src/systems/rendering/Renderer.ts";
+import type { RenderComponent } from "../src/systems/rendering/Renderer.ts";
+import { CanvasDimensions } from "../src/systems/rendering/CanvasDimensions.ts";
+import {
+  type RenderViewport,
+  Viewport
+} from "../src/systems/rendering/Viewport.ts";
 
 const suite = defineSuite("engine / CameraCompositor#render", (bench) => {
   const scene = new THREE.Scene();
+  const canvas = new CanvasDimensions(1920, 1080);
 
   const single = new CameraCompositor(createRenderer());
   single.add(createCamera(0, null));
@@ -27,10 +30,10 @@ const suite = defineSuite("engine / CameraCompositor#render", (bench) => {
 
   bench
     .add("one fullscreen camera", () => {
-      single.render(scene, 1920, 1080);
+      single.render(scene, canvas);
     })
     .add("three cameras with viewports", () => {
-      split.render(scene, 1920, 1080);
+      split.render(scene, canvas);
     });
 });
 
@@ -47,7 +50,7 @@ function createCamera(
   return {
     threeCamera: new THREE.PerspectiveCamera(),
     depth,
-    viewport,
+    viewport: viewport === null ? null : new Viewport(viewport),
     prepareRender() {
       return;
     }

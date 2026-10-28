@@ -1,4 +1,5 @@
 export * from "./sprite/SpriteRenderer.ts";
+export * from "./sprite/SpriteSheet.ts";
 export * from "./model/ModelRenderer.ts";
 export * from "./text/TextRenderer.ts";
 export * from "./mesh/MeshGeometry.ts";

@@ -20,31 +20,75 @@ interface FadingAction {
   duration: number;
 }
 
-interface ScheduledTransition<
+interface PlayingClip<
   TClipName extends string
 > {
   action: THREE.AnimationAction;
   name: TClipName;
-  fadeInDuration: number;
   fadeOutDuration: number;
+}
+
+interface ScheduledTransition<
+  TClipName extends string
+> extends PlayingClip<TClipName> {
+  fadeInDuration: number;
   loop: boolean;
+}
+
+class FadingActions {
+  #fading: FadingAction[] = [];
+
+  get active(): boolean {
+    return this.#fading.length > 0;
+  }
+
+  fadeOut(
+    action: THREE.AnimationAction,
+    duration: number
+  ): void {
+    action.fadeOut(duration);
+    this.#fading.push({
+      action,
+      elapsed: 0,
+      duration
+    });
+  }
+
+  cancel(
+    action: THREE.AnimationAction
+  ): void {
+    const index = this.#fading.findIndex((fading) => fading.action === action);
+    if (index !== -1) {
+      this.#fading.splice(index, 1);
+    }
+  }
+
+  advance(
+    deltaTime: number
+  ): void {
+    for (let i = this.#fading.length - 1; i >= 0; i--) {
+      const fading = this.#fading[i];
+      fading.elapsed += deltaTime;
+      if (fading.elapsed >= fading.duration) {
+        fading.action.stop();
+        this.#fading.splice(i, 1);
+      }
+    }
+  }
 }
 
 export class ModelAnimation<
   TClipName extends string = string
 > {
-  #mixer: THREE.AnimationMixer;
+  #mixer: THREE.AnimationMixer | null = null;
   #clipNameRewriter: ModelAnimationClipNameRewriter = (name) => name;
   #clips = new Map<string, THREE.AnimationAction>();
 
   #defaultFadeDuration = 1;
   #state: ModelAnimationState = "idle";
 
-  #current: THREE.AnimationAction | null = null;
-  #currentName: TClipName | null = null;
-  #currentFadeOutDuration = 0;
-
-  #fadingOut: FadingAction[] = [];
+  #current: PlayingClip<TClipName> | null = null;
+  #fading = new FadingActions();
   #pending: { name: TClipName; options: ModelAnimationPlayOptions; } | null = null;
   #next: ScheduledTransition<TClipName> | null = null;
 
@@ -61,7 +105,7 @@ export class ModelAnimation<
   get isAnimating(): boolean {
     return this.#state === "playing" ||
       this.#next !== null ||
-      this.#fadingOut.length > 0;
+      this.#fading.active;
   }
 
   get state(): ModelAnimationState {
@@ -77,22 +121,19 @@ export class ModelAnimation<
   }
 
   get currentName(): TClipName | null {
-    return this.#currentName;
+    return this.#current?.name ?? null;
   }
 
   setMixer(
     mixer: THREE.AnimationMixer
   ) {
     this.#mixer = mixer;
-    this.#mixer.addEventListener("finished", (event) => {
-      if (event.action === this.#current) {
-        const finishedName = this.#currentName;
+    mixer.addEventListener("finished", (event) => {
+      const finished = this.#current;
+      if (finished !== null && event.action === finished.action) {
         this.#state = "stopped";
         this.#current = null;
-        this.#currentName = null;
-        if (finishedName !== null) {
-          this.onFinished?.(finishedName);
-        }
+        this.onFinished?.(finished.name);
       }
     });
 
@@ -117,9 +158,9 @@ export class ModelAnimation<
   setClips(
     clips: THREE.AnimationClip[]
   ) {
+    const mixer = this.#requireMixer();
     for (const clip of clips) {
-      const action = this.#mixer.clipAction(clip);
-      this.#clips.set(this.#clipNameRewriter(clip.name), action);
+      this.#clips.set(this.#clipNameRewriter(clip.name), mixer.clipAction(clip));
     }
 
     return this;
@@ -137,7 +178,7 @@ export class ModelAnimation<
     name: TClipName,
     options: ModelAnimationPlayOptions = {}
   ) {
-    if (!this.#mixer) {
+    if (this.#mixer === null) {
       this.#pending = { name, options };
 
       return;
@@ -154,7 +195,7 @@ export class ModelAnimation<
       throw new Error(`Animation clip "${name}" not found!`);
     }
 
-    if (action === this.#current) {
+    if (action === this.#current?.action) {
       return;
     }
 
@@ -165,22 +206,20 @@ export class ModelAnimation<
   stop(
     options: ModelAnimationStopOptions = {}
   ) {
-    if (!this.#current) {
+    if (this.#current === null) {
       return;
     }
 
     const { fadeOutDuration = 0 } = options;
     if (fadeOutDuration > 0) {
-      this.#current.fadeOut(fadeOutDuration);
-      this.#fadingOut.push({ action: this.#current, elapsed: 0, duration: fadeOutDuration });
+      this.#fading.fadeOut(this.#current.action, fadeOutDuration);
       this.#requestUpdate();
     }
     else {
-      this.#current.stop();
+      this.#current.action.stop();
     }
 
     this.#current = null;
-    this.#currentName = null;
     this.#state = "stopped";
   }
 
@@ -189,7 +228,7 @@ export class ModelAnimation<
       return;
     }
 
-    this.#mixer.timeScale = 0;
+    this.#requireMixer().timeScale = 0;
     this.#state = "paused";
   }
 
@@ -198,7 +237,7 @@ export class ModelAnimation<
       return;
     }
 
-    this.#mixer.timeScale = 1;
+    this.#requireMixer().timeScale = 1;
     this.#state = "playing";
     this.#requestUpdate();
   }
@@ -213,47 +252,45 @@ export class ModelAnimation<
   update(
     deltaTime: number
   ) {
-    if (!this.#mixer) {
+    const mixer = this.#mixer;
+    if (mixer === null) {
       return;
     }
 
-    for (let i = this.#fadingOut.length - 1; i >= 0; i--) {
-      const fading = this.#fadingOut[i];
-      fading.elapsed += deltaTime;
-      if (fading.elapsed >= fading.duration) {
-        fading.action.stop();
-        this.#fadingOut.splice(i, 1);
-      }
-    }
+    this.#fading.advance(deltaTime);
 
     if (this.#next) {
       const { action, name, fadeInDuration, fadeOutDuration, loop } = this.#next;
       this.#next = null;
 
-      const fadingIdx = this.#fadingOut.findIndex((f) => f.action === action);
-      if (fadingIdx !== -1) {
-        this.#fadingOut.splice(fadingIdx, 1);
-      }
-
+      this.#fading.cancel(action);
       if (this.#current) {
-        this.#current.fadeOut(this.#currentFadeOutDuration);
-        this.#fadingOut.push({ action: this.#current, elapsed: 0, duration: this.#currentFadeOutDuration });
+        this.#fading.fadeOut(
+          this.#current.action,
+          this.#current.fadeOutDuration
+        );
       }
 
-      if (this.#mixer.timeScale === 0) {
-        this.#mixer.timeScale = 1;
+      if (mixer.timeScale === 0) {
+        mixer.timeScale = 1;
       }
 
       action.loop = loop ? THREE.LoopRepeat : THREE.LoopOnce;
       action.clampWhenFinished = !loop;
       action.reset().fadeIn(fadeInDuration).play();
 
-      this.#current = action;
-      this.#currentName = name;
-      this.#currentFadeOutDuration = fadeOutDuration;
+      this.#current = { action, name, fadeOutDuration };
       this.#state = "playing";
     }
 
-    this.#mixer.update(deltaTime);
+    mixer.update(deltaTime);
+  }
+
+  #requireMixer(): THREE.AnimationMixer {
+    if (this.#mixer === null) {
+      throw new Error("ModelAnimation needs a mixer: call setMixer() first.");
+    }
+
+    return this.#mixer;
   }
 }

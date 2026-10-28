@@ -8,6 +8,7 @@ import * as THREE from "three/webgpu";
 // Import Internal Dependencies
 import { Actor } from "../../../src/actor/Actor.ts";
 import { LightDefinition } from "../../../src/components/light/LightDefinition.ts";
+import { LightComponent } from "../../../src/components/light/LightComponent.ts";
 import type { JSONObject } from "../../../src/systems/scene/file/SceneFile.ts";
 import { createSceneSetup } from "../../helpers/scene/sceneSetup.ts";
 
@@ -96,6 +97,30 @@ describe("Components.LightDefinition", () => {
     assert.ok(Math.abs(spot.angle - (Math.PI / 6)) < 1e-9);
   });
 
+  test("captures a live light as data it parses back, colors as hex", () => {
+    const { world } = createSceneSetup();
+    const actor = new Actor(world as any, { name: "light" });
+    const component = actor.addComponentAndGet(LightComponent, {
+      kind: "hemisphere",
+      color: 0xff0000,
+      groundColor: new THREE.Color(0, 0, 1),
+      intensity: 2
+    });
+    const definition = new LightDefinition();
+
+    const captured = definition.capture(component);
+
+    assert.strictEqual(captured.color, "#ff0000");
+    assert.strictEqual(captured.groundColor, "#0000ff");
+    assert.deepEqual(definition.parse(captured), {
+      ...definition.parse({}),
+      kind: "hemisphere",
+      color: "#ff0000",
+      groundColor: "#0000ff",
+      intensity: 2
+    });
+  });
+
   test("destroy removes the light from the actor", () => {
     const { actor, component } = createLight({ kind: "ambient" });
     const light = component.threeLight;
@@ -104,6 +129,6 @@ describe("Components.LightDefinition", () => {
 
     assert.ok(light instanceof THREE.AmbientLight);
     assert.strictEqual(light.parent, null);
-    assert.deepEqual(actor.components, []);
+    assert.deepEqual([...actor.components], []);
   });
 });

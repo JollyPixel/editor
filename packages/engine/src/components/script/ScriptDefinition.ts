@@ -3,18 +3,22 @@ import type { Actor } from "../../actor/Actor.ts";
 import {
   ComponentData,
   isJSONObject
-} from "../../systems/scene/file/ComponentData.ts";
+} from "../../systems/scene/file/definitions/ComponentData.ts";
 import type {
   ComponentContext,
   ComponentDefinition
-} from "../../systems/scene/file/ComponentDefinition.ts";
+} from "../../systems/scene/file/definitions/ComponentDefinition.ts";
 import type { JSONObject } from "../../systems/scene/file/SceneFile.ts";
+import type { Component } from "../types.ts";
 import type {
   Behavior,
   BehaviorOptions
 } from "./Behavior.ts";
 import { getBehaviorMetadata } from "./BehaviorDecorators.ts";
-import { parseScenePropertyValue } from "./ScenePropertyValue.ts";
+import {
+  parseScenePropertyValue,
+  serializeScenePropertyValue
+} from "./ScenePropertyValue.ts";
 
 export type BehaviorConstructor = new (
   actor: Actor<any>,
@@ -33,11 +37,15 @@ export class ScriptDefinition implements ComponentDefinition<
   readonly type = "Script";
 
   #behaviors: ReadonlyMap<string, BehaviorConstructor>;
+  #names: ReadonlyMap<unknown, string>;
 
   constructor(
     behaviors: Readonly<Record<string, BehaviorConstructor>>
   ) {
     this.#behaviors = new Map(Object.entries(behaviors));
+    this.#names = new Map(
+      Object.entries(behaviors).map(([name, behavior]) => [behavior, name])
+    );
   }
 
   parse(
@@ -75,6 +83,46 @@ export class ScriptDefinition implements ComponentDefinition<
       properties: convertProperties(behavior, data.properties)
     });
   }
+
+  owns(
+    component: Component
+  ): component is Behavior<any> {
+    return this.#names.has(component.constructor);
+  }
+
+  capture(
+    component: Behavior<any>
+  ): JSONObject {
+    return {
+      behavior: this.#names.get(component.constructor) ?? "",
+      properties: captureProperties(component)
+    };
+  }
+}
+
+function captureProperties(
+  component: Behavior<any>
+): JSONObject {
+  const declared = getBehaviorMetadata(
+    Object.getPrototypeOf(component)
+  )?.properties ?? [];
+  const captured: JSONObject = {};
+
+  for (const [name, { type }] of declared) {
+    if (typeof name !== "string") {
+      continue;
+    }
+
+    const value = serializeScenePropertyValue(
+      type,
+      Reflect.get(component, name)
+    );
+    if (value !== undefined) {
+      captured[name] = value;
+    }
+  }
+
+  return captured;
 }
 
 function convertProperties(

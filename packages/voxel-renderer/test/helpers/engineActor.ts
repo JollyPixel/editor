@@ -1,5 +1,9 @@
 // Import Third-party Dependencies
-import { Systems, type Actor } from "@jolly-pixel/engine";
+import {
+  ActorComponents,
+  Systems,
+  type Actor
+} from "@jolly-pixel/engine";
 import * as THREE from "three";
 
 // Import Internal Dependencies
@@ -14,8 +18,7 @@ export function makeActor(
   frames: FrameRequests = { invalidations: 0, keepAlives: [] }
 ): Actor {
   const actor = {
-    components: [],
-    componentsRequiringUpdate: [],
+    components: new ActorComponents(),
     object3D: new THREE.Group(),
     addComponentAndGet: (
       Component: new(actor: Actor, options: unknown) => unknown,

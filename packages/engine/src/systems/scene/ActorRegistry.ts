@@ -8,6 +8,8 @@ import {
 } from "../../actor/index.ts";
 import type { WorldDefaultContext } from "../World.ts";
 import type { Component } from "../../components/types.ts";
+import { IntegerIncrement } from "../generators/IntegerIncrement.ts";
+import { randomPersistentId } from "../generators/randomPersistentId.ts";
 
 export class ActorRegistry<
   TContext = WorldDefaultContext
@@ -15,7 +17,9 @@ export class ActorRegistry<
   readonly tree: ActorTree<TContext>;
 
   #root: THREE.Object3D;
-  #actors = new Set<Actor<TContext>>();
+  #actorIds = new IntegerIncrement();
+  #componentIds = new IntegerIncrement();
+  #actors = new Map<string, Actor<TContext>>();
   #updatingActors: readonly Actor<TContext>[] = [];
   #frameActors: readonly Actor<TContext>[] = [];
   #hasActorsToAwake = false;
@@ -36,16 +40,46 @@ export class ActorRegistry<
   has(
     actor: Actor<TContext>
   ): boolean {
-    return this.#actors.has(actor);
+    return this.#actors.get(actor.persistentId) === actor;
+  }
+
+  find(
+    persistentId: string
+  ): Actor<TContext> | null {
+    return this.#actors.get(persistentId) ?? null;
   }
 
   get updating(): boolean {
     return this.#updatingActors.length > 0;
   }
 
+  nextActorId(): number {
+    return this.#actorIds.next();
+  }
+
+  nextComponentId(): number {
+    return this.#componentIds.next();
+  }
+
+  newPersistentId(): string {
+    let id: string;
+    do {
+      id = randomPersistentId();
+    }
+    while (this.#actors.has(id));
+
+    return id;
+  }
+
   attach(
     actor: Actor<TContext>
   ): void {
+    if (this.#actors.has(actor.persistentId)) {
+      throw new Error(
+        `Actor persistent id "${actor.persistentId}" is already in use.`
+      );
+    }
+
     if (actor.parent === null) {
       this.tree.add(actor);
     }
@@ -55,7 +89,7 @@ export class ActorRegistry<
       actor.object3D.updateMatrixWorld(false);
     }
 
-    this.#actors.add(actor);
+    this.#actors.set(actor.persistentId, actor);
     this.#hasActorsToAwake = true;
   }
 
@@ -77,16 +111,17 @@ export class ActorRegistry<
     (parent ?? this.tree).add(actor);
 
     actor.object3D.updateMatrixWorld(false);
+    this.reschedule(actor);
   }
 
   detach(
     actor: Actor<TContext>
   ): void {
-    if (
-      this.#actors.delete(actor) &&
-      actor.componentsRequiringUpdate.length > 0
-    ) {
-      this.#stopUpdating(actor);
+    if (this.has(actor)) {
+      this.#actors.delete(actor.persistentId);
+      if (actor.components.updating) {
+        this.#stopUpdating(actor);
+      }
     }
     (actor.parent ?? this.tree).remove(actor);
   }
@@ -95,25 +130,44 @@ export class ActorRegistry<
     component: Component,
     required: boolean
   ): void {
-    const { actor } = component;
-    const before = actor.componentsRequiringUpdate;
-    const index = before.indexOf(component);
-    if (required === (index !== -1)) {
+    const { components } = component.actor;
+    const wasUpdating = components.updating;
+    components.requireUpdate(component, required);
+
+    if (
+      components.updating === wasUpdating ||
+      !this.has(component.actor)
+    ) {
       return;
     }
-
-    const after = required ?
-      [...before, component] :
-      before.toSpliced(index, 1);
-    actor.componentsRequiringUpdate = after;
-
-    if (!this.#actors.has(actor)) {
-      return;
+    if (!components.updating) {
+      this.#stopUpdating(component.actor);
     }
-    if (before.length === 0) {
+    else if (component.actor.activeInHierarchy) {
+      this.#startUpdating(component.actor);
+    }
+  }
+
+  reschedule(
+    actor: Actor<TContext>
+  ): void {
+    this.#reschedule(actor);
+    for (const { actor: descendant } of actor.walk()) {
+      this.#reschedule(descendant);
+    }
+  }
+
+  #reschedule(
+    actor: Actor<TContext>
+  ): void {
+    if (
+      this.has(actor) &&
+      actor.components.updating &&
+      actor.activeInHierarchy
+    ) {
       this.#startUpdating(actor);
     }
-    else if (after.length === 0) {
+    else {
       this.#stopUpdating(actor);
     }
   }
@@ -121,14 +175,13 @@ export class ActorRegistry<
   destroyActorLater(
     actor: Actor<TContext>
   ): void {
-    actor.pendingForDestruction = true;
     this.#actorsToDestroy.add(actor);
   }
 
   attachComponent(
     component: Component
   ): void {
-    component.actor.components.push(component);
+    component.actor.components.attach(component);
     this.#componentsToStart.push(component);
   }
 
@@ -136,22 +189,12 @@ export class ActorRegistry<
     component: Component
   ): void {
     this.#cancelStart(component);
-
-    const { components } = component.actor;
-    const index = components.indexOf(component);
-    if (index !== -1) {
-      components.splice(index, 1);
-    }
+    component.actor.components.detach(component);
   }
 
   destroyLater(
     component: Component
   ): void {
-    if (component.pendingForDestruction) {
-      return;
-    }
-
-    component.pendingForDestruction = true;
     this.#componentsToDestroy.push(component);
     this.#cancelStart(component);
   }
@@ -159,11 +202,11 @@ export class ActorRegistry<
   collect(
     build: () => void
   ): ReadonlySet<Actor<TContext>> {
-    const before = new Set(this.#actors);
+    const before = new Set(this.#actors.values());
     build();
 
     const collected = new Set<Actor<TContext>>();
-    for (const actor of this.#actors) {
+    for (const actor of this.#actors.values()) {
       if (!before.has(actor)) {
         collected.add(actor);
       }
@@ -177,12 +220,22 @@ export class ActorRegistry<
   ): void {
     for (const actor of actors) {
       if (
-        this.#actors.has(actor) &&
+        this.has(actor) &&
         (actor.parent === null || !actors.has(actor.parent))
       ) {
         actor.destroy();
       }
     }
+  }
+
+  destroySceneActors(
+    actors: ReadonlySet<Actor<TContext>>
+  ): void {
+    this.destroyRoots(new Set(
+      [...actors].filter(
+        ({ root }) => !root.persistent || !actors.has(root)
+      )
+    ));
   }
 
   awake(): void {
@@ -238,15 +291,32 @@ export class ActorRegistry<
 
   clear(): void {
     for (const actor of [...this.tree.children]) {
-      actor.destroy();
+      if (!actor.persistent || actor.pendingForDestruction) {
+        actor.destroy();
+      }
     }
 
-    this.#componentsToStart.length = 0;
-    this.#componentsToDestroy.length = 0;
-    this.#actorsToDestroy.clear();
-    this.#updatingActors = [];
-    this.#frameActors = [];
-    this.#actors.clear();
+    const survivors = new Set<THREE.Object3D>(
+      this.tree.children.map((actor) => actor.object3D)
+    );
+    for (const object of [...this.#root.children]) {
+      if (!survivors.has(object)) {
+        this.#root.remove(object);
+      }
+    }
+
+    this.#componentsToStart = this.#componentsToStart.filter(
+      (component) => this.has(component.actor)
+    );
+    this.#componentsToDestroy = this.#componentsToDestroy.filter(
+      (component) => this.has(component.actor)
+    );
+    for (const actor of this.#actorsToDestroy) {
+      if (!this.has(actor)) {
+        this.#actorsToDestroy.delete(actor);
+      }
+    }
+    this.#frameActors = this.#updatingActors;
   }
 
   #startUpdating(
@@ -265,7 +335,9 @@ export class ActorRegistry<
       }
     }
 
-    this.#updatingActors = actors.toSpliced(low, 0, actor);
+    if (actors[low] !== actor) {
+      this.#updatingActors = actors.toSpliced(low, 0, actor);
+    }
   }
 
   #stopUpdating(
@@ -282,7 +354,7 @@ export class ActorRegistry<
     let i = 0;
     while (i < components.length) {
       const component = components[i];
-      if (this.#actors.has(component.actor)) {
+      if (this.has(component.actor)) {
         components.splice(i, 1);
         component.start?.();
       }

@@ -3,6 +3,7 @@ import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import { PivotMarker } from "./pivotMarker.ts";
+import { NumberRange } from "./NumberRange.ts";
 import {
   type CameraFocus,
   type CameraFocusPose,
@@ -35,7 +36,7 @@ export interface ElasticFocusOptions {
 export class ElasticFocus implements CameraFocus {
   readonly isLocked = false;
 
-  #maxTrailDistance: number;
+  #trailRange: NumberRange;
   #trailScrollStep: number;
   #marker: PivotMarker;
 
@@ -48,7 +49,7 @@ export class ElasticFocus implements CameraFocus {
   constructor(
     options: ElasticFocusOptions
   ) {
-    this.#maxTrailDistance = options.maxTrailDistance;
+    this.#trailRange = new NumberRange(0, options.maxTrailDistance);
     this.#trailScrollStep = options.trailScrollStep;
     this.#marker = new PivotMarker({
       enabled: options.showPivotMarker,
@@ -112,10 +113,8 @@ export class ElasticFocus implements CameraFocus {
   handleScroll(
     scrollY: number
   ): boolean {
-    this.#targetTrailDistance = THREE.MathUtils.clamp(
-      this.#targetTrailDistance - (scrollY * this.#trailScrollStep),
-      0,
-      this.#maxTrailDistance
+    this.#targetTrailDistance = this.#trailRange.clamp(
+      this.#targetTrailDistance - (scrollY * this.#trailScrollStep)
     );
 
     if (this.#targetTrailDistance > 0) {

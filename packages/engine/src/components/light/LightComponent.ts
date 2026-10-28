@@ -186,6 +186,10 @@ export class LightComponent<
     return this.#settings.kind;
   }
 
+  get settings(): Readonly<LightSettings> {
+    return this.#settings;
+  }
+
   configure(
     options: LightOptions
   ): this {

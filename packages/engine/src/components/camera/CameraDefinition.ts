@@ -1,18 +1,19 @@
 // Import Internal Dependencies
 import type { Actor } from "../../actor/Actor.ts";
-import type { RenderViewport } from "../../systems/rendering/Renderer.ts";
-import { ComponentData } from "../../systems/scene/file/ComponentData.ts";
+import type { RenderViewport } from "../../systems/rendering/Viewport.ts";
+import { ComponentData } from "../../systems/scene/file/definitions/ComponentData.ts";
 import type {
   ComponentContext,
   ComponentDefinition
-} from "../../systems/scene/file/ComponentDefinition.ts";
+} from "../../systems/scene/file/definitions/ComponentDefinition.ts";
 import type { JSONObject } from "../../systems/scene/file/SceneFile.ts";
+import type { Component } from "../types.ts";
 import {
   CameraComponent,
   CAMERA_DEFAULTS,
-  type CameraSettings,
-  type CameraProjectionMode
+  type CameraSettings
 } from "./Camera.ts";
+import type { CameraProjectionMode } from "./CameraProjection.ts";
 
 // CONSTANTS
 const kProjectionModes: Record<CameraProjectionMode, true> = {
@@ -67,6 +68,23 @@ export class CameraDefinition implements ComponentDefinition<
     data: CameraData
   ): void {
     component.configure(data);
+  }
+
+  owns(
+    component: Component
+  ): component is CameraComponent<any> {
+    return component instanceof CameraComponent;
+  }
+
+  capture(
+    component: CameraComponent<any>
+  ): JSONObject {
+    const { viewport, ...settings } = component.settings;
+
+    return {
+      ...settings,
+      viewport: viewport === null ? null : { ...viewport }
+    };
   }
 }
 

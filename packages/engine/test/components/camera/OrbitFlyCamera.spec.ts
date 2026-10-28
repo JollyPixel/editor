@@ -13,6 +13,7 @@ import { createHarness, unusedPostProcessing } from "../../helpers/camera/orbitF
 import type {
   PostProcessing
 } from "../../../src/systems/rendering/compositing/PostProcessing.ts";
+import { Viewport } from "../../../src/systems/rendering/Viewport.ts";
 
 describe("OrbitFlyCamera vertical movement", () => {
   test("descends while shift is held", () => {
@@ -181,12 +182,12 @@ describe("OrbitFlyCamera focus mode \"none\"", () => {
 
 describe("OrbitFlyCamera options", () => {
   test("fov defaults to 60 and is configurable", () => {
-    assert.equal(createHarness().camera.fov, 60);
-    assert.equal(createHarness({ fov: 45 }).camera.fov, 45);
+    assert.equal(createHarness().camera.settings.fov, 60);
+    assert.equal(createHarness({ fov: 45 }).camera.settings.fov, 45);
   });
 
   test("far defaults to 2000 and camera options are forwarded", () => {
-    assert.equal(createHarness().camera.far, 2000);
+    assert.equal(createHarness().camera.settings.far, 2000);
 
     const postProcessing: PostProcessing = unusedPostProcessing;
     const viewport = { x: 0, y: 0, width: 0.5, height: 1 };
@@ -195,8 +196,8 @@ describe("OrbitFlyCamera options", () => {
     });
 
     assert.deepEqual(
-      [camera.near, camera.far, camera.depth, camera.viewport],
-      [0.5, 500, 2, viewport]
+      [camera.settings.near, camera.settings.far, camera.depth, camera.viewport],
+      [0.5, 500, 2, new Viewport(viewport)]
     );
     assert.equal(camera.postProcessing, postProcessing);
   });

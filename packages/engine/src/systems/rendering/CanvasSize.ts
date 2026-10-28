@@ -1,59 +1,36 @@
-export interface CanvasDimensions {
-  width: number;
-  height: number;
-}
+// Import Internal Dependencies
+import { CanvasDimensions } from "./CanvasDimensions.ts";
+import {
+  type CanvasFit,
+  FillParent
+} from "./CanvasFit.ts";
 
 export class CanvasSize {
-  ratio: number | null = null;
+  layout: CanvasFit = new FillParent();
 
-  #width = 0;
-  #height = 0;
-  #appliedWidth = 0;
-  #appliedHeight = 0;
+  #dimensions = CanvasDimensions.empty;
+  #applied = CanvasDimensions.empty;
 
-  get width(): number {
-    return this.#width;
-  }
-
-  get height(): number {
-    return this.#height;
-  }
-
-  get isEmpty(): boolean {
-    return this.#width === 0 || this.#height === 0;
+  get dimensions(): CanvasDimensions {
+    return this.#dimensions;
   }
 
   fit(
     width: number,
     height: number
   ): void {
-    if (!this.ratio) {
-      this.#width = Math.round(width);
-      this.#height = Math.round(height);
-    }
-    else if (width / height > this.ratio) {
-      this.#height = Math.round(height);
-      this.#width = Math.round(Math.min(width, height * this.ratio));
-    }
-    else {
-      this.#width = Math.round(width);
-      this.#height = Math.round(Math.min(height, width / this.ratio));
-    }
+    this.#dimensions = this.layout.fit(width, height);
   }
 
   commit(): CanvasDimensions | null {
     if (
-      this.isEmpty ||
-      (this.#width === this.#appliedWidth && this.#height === this.#appliedHeight)
+      this.#dimensions.isEmpty ||
+      this.#dimensions.equals(this.#applied)
     ) {
       return null;
     }
-    this.#appliedWidth = this.#width;
-    this.#appliedHeight = this.#height;
+    this.#applied = this.#dimensions;
 
-    return {
-      width: this.#width,
-      height: this.#height
-    };
+    return this.#dimensions;
   }
 }

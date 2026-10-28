@@ -177,6 +177,12 @@ world.createActor("camera")
   .addComponent(Camera3DControls, { far: 4096 });
 ```
 
+A render component exposes `threeCamera`, `depth`, a `Viewport` or `null`
+as `viewport`, and `prepareRender(canvas: CanvasDimensions)`, called
+before each draw. `Viewport.full` covers the whole canvas;
+`viewport.pixels(canvas)` and `viewport.aspect(canvas)` convert it to
+canvas pixels.
+
 Cameras render in ascending `depth` order: lower values first
 (background), higher last (overlay). The cameras are sorted on every
 draw, so a `depth` changed with `configure()` applies on the next frame.
@@ -184,7 +190,8 @@ draw, so a `depth` changed with `configure()` applies on the next frame.
 ## Aspect ratio
 
 By default the renderer fills its parent element. An explicit
-aspect ratio can be enforced with `setRatio`:
+aspect ratio can be enforced with `setRatio`. A negative or infinite
+ratio throws a `RangeError`:
 
 ```ts
 // Lock to 16:9
@@ -207,7 +214,8 @@ in a hidden iframe, is skipped: showing the canvas again at its
 previous size does not reallocate the frame buffers.
 
 The renderer emits a `"resize"` event after each actual size
-change:
+change, with the new `CanvasDimensions` (`width`, `height`, `aspect`,
+`isEmpty`, `equals()`):
 
 ```ts
 renderer.on("resize", ({ width, height }) => {
@@ -303,7 +311,7 @@ correctly. The renderer must not be used after disposal.
 
 | Event | Payload | When it fires |
 | ----- | ------- | ------------- |
-| `resize` | `{ width, height }` | After the canvas size changes |
+| `resize` | `CanvasDimensions` | After the canvas size changes |
 | `draw` | `{ source: THREE.WebGPURenderer }` | After each render frame |
 | `compiled` | none | When the last pending [pipeline compile](#pipeline-compiles) settles |
 | `deviceLost` | `{ api, message, reason }` | When the GPU device or WebGL context is lost |

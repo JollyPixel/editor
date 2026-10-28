@@ -137,6 +137,24 @@ describe("Transform", () => {
     assertVectorClose(transform.getLocalPosition(), new THREE.Vector3(-1, 0, 0));
   });
 
+  for (const [method, expected] of [
+    ["moveForward", new THREE.Vector3(10, 0, -2)],
+    ["moveRight", new THREE.Vector3(12, 0, 0)],
+    ["moveUp", new THREE.Vector3(10, 2, 0)]
+  ] as const) {
+    test(`should ${method} from its current position`, () => {
+      const object = new THREE.Group();
+      new THREE.Group().add(object);
+      object.position.set(10, 0, 0);
+      object.updateMatrixWorld();
+      const transform = new Transform(object);
+
+      transform[method](2);
+
+      assertVectorClose(transform.getGlobalPosition(), expected);
+    });
+  }
+
   test("should be hidden in the hierarchy when an ancestor is hidden", () => {
     const { parent, transform } = createChild();
 

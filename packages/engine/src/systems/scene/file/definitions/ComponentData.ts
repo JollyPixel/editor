@@ -1,9 +1,12 @@
+// Import Third-party Dependencies
+import * as THREE from "three/webgpu";
+
 // Import Internal Dependencies
 import type {
   ColorJSON,
   JSONObject,
   JSONValue
-} from "./SceneFile.ts";
+} from "../SceneFile.ts";
 
 // CONSTANTS
 const kHexColor = /^#[0-9a-f]{6}$/i;
@@ -93,4 +96,10 @@ export function isHexColor(
   value: JSONValue | undefined
 ): value is ColorJSON {
   return typeof value === "string" && kHexColor.test(value);
+}
+
+export function toHexColor(
+  value: THREE.ColorRepresentation
+): ColorJSON {
+  return `#${new THREE.Color(value).getHexString()}`;
 }

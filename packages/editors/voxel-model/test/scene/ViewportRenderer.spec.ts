@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as THREE from "three";
-import type { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
 import { ViewportRenderer } from "#src/scene/ViewportRenderer.ts";
@@ -45,7 +45,7 @@ describe("ViewportRenderer", () => {
     viewport.addPreDrawStep(() => placed.push("outlines"));
 
     viewport.replaceCamera(createRenderer(components));
-    viewport.prepareRender(800, 600);
+    viewport.prepareRender(new Systems.CanvasDimensions(800, 600));
 
     assert.deepEqual(components, [viewport]);
     assert.equal(viewport.depth, 3);

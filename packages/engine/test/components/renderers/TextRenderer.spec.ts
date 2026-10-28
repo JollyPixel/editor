@@ -23,7 +23,7 @@ describe("Components.Renderers.TextRenderer", () => {
       asset: new AssetReference("font", FontAssetType)
     });
     const textMesh = new THREE.Mesh(new THREE.BoxGeometry());
-    Object.defineProperty(renderer.text, "mesh", { get: () => textMesh });
+    renderer.text.ensureMesh = () => textMesh;
 
     renderer.updateMesh();
     renderer.updateMesh();

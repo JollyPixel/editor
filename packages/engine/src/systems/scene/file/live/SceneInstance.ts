@@ -3,22 +3,21 @@ import type * as THREE from "three/webgpu";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import { Actor } from "../../../actor/Actor.ts";
-import type { Component } from "../../../components/types.ts";
-import type { World, WorldDefaultContext } from "../../World.ts";
-import type { Logger } from "../../Logger.ts";
-import {
-  type ComponentAssetResolver,
-  type SceneMode,
-  ComponentAssets
-} from "./ComponentDefinition.ts";
-import type { ComponentDefinitions } from "./ComponentDefinitions.ts";
+import { Actor } from "../../../../actor/Actor.ts";
+import type { Component } from "../../../../components/types.ts";
+import type { World, WorldDefaultContext } from "../../../World.ts";
+import type { Logger } from "../../../Logger.ts";
+import type {
+  ComponentAssetResolver,
+  SceneMode
+} from "../definitions/ComponentDefinition.ts";
+import type { ComponentDefinitions } from "../definitions/ComponentDefinitions.ts";
 import type {
   JSONObject,
   SceneActorFile,
   SceneComponentFile
-} from "./SceneFile.ts";
-import { writeSceneTransform } from "./sceneTransform.ts";
+} from "../SceneFile.ts";
+import { writeSceneTransform } from "../sceneTransform.ts";
 
 export interface SceneInstanceOptions<
   TContext = WorldDefaultContext
@@ -90,9 +89,20 @@ export class SceneInstance<
   add(
     files: Iterable<SceneActorFile>
   ): void {
+    const kept = new Set<string>();
+
     for (const file of files) {
       if (this.#actors.has(file.id)) {
         this.#logger.warn("Duplicate actor id skipped", { id: file.id });
+        continue;
+      }
+
+      const live = this.#world.sceneManager.actors.find(file.id);
+      if (
+        (file.parentId !== null && kept.has(file.parentId)) ||
+        (live !== null && !live.pendingForDestruction)
+      ) {
+        kept.add(file.id);
         continue;
       }
 
@@ -107,7 +117,7 @@ export class SceneInstance<
         continue;
       }
 
-      this.#buildActor(file, parent);
+      this.#buildActor(file, parent, live === null);
     }
   }
 
@@ -196,14 +206,9 @@ export class SceneInstance<
     data: Readonly<JSONObject>
   ): boolean {
     const component = this.#components.get(id)?.component;
-    const definition = this.#definitions.find(type);
-    if (component === undefined || definition?.apply === undefined) {
-      return false;
-    }
 
-    definition.apply(component, definition.parse(data));
-
-    return true;
+    return component !== undefined &&
+      this.#definitions.apply(component, type, data);
   }
 
   clear(): void {
@@ -221,12 +226,14 @@ export class SceneInstance<
 
   #buildActor(
     file: SceneActorFile,
-    parent: Actor<TContext> | null
+    parent: Actor<TContext> | null,
+    restoreId: boolean
   ): void {
     const actor = new Actor<TContext>(this.#world, {
       name: file.name,
       parent,
-      visible: file.visible
+      visible: file.visible,
+      persistentId: restoreId ? file.id : undefined
     });
     writeSceneTransform(actor.object3D, file.transform);
     this.#actors.set(file.id, actor);
@@ -242,8 +249,7 @@ export class SceneInstance<
     actor: Actor<TContext>,
     entry: SceneComponentFile
   ): void {
-    const definition = this.#definitions.find(entry.type);
-    if (definition === null) {
+    if (this.#definitions.find(entry.type) === null) {
       if (this.#mode === "play") {
         this.#logger.warn("Unknown component type skipped", {
           type: entry.type,
@@ -254,18 +260,10 @@ export class SceneInstance<
       return;
     }
 
-    const component = definition.create(
-      actor,
-      definition.parse(entry.data),
-      {
-        mode: this.#mode,
-        assets: new ComponentAssets(
-          definition.assets ?? {},
-          entry.assets,
-          this.#assets
-        )
-      }
-    );
+    const component = this.#definitions.create(actor, entry, {
+      mode: this.#mode,
+      resolver: this.#assets
+    });
     if (component !== null) {
       const built = {
         id: entry.id,

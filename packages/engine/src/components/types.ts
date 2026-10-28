@@ -17,7 +17,7 @@ export interface Component {
   actor: Actor<any>;
   typeName: FreeComponentEnum;
   needUpdate: boolean;
-  pendingForDestruction: boolean;
+  readonly pendingForDestruction: boolean;
 
   bind?(): void;
   awake?(): void;
@@ -30,5 +30,6 @@ export interface Component {
     deltaTime: number,
     stepIndex?: number
   ): void;
+  markDestructionPending(): void;
   destroy(): void;
 }

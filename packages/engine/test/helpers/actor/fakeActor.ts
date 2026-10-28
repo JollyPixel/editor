@@ -31,7 +31,6 @@ export function createFakeActor(
     update: mock.fn(),
     fixedUpdate: mock.fn(),
     destroy: mock.fn(),
-    isDestroyed: mock.fn(() => actor.pendingForDestruction),
     markDestructionPending: mock.fn()
   };
 

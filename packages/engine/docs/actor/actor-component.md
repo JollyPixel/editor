@@ -95,8 +95,29 @@ class Spinner extends ActorComponent {
 ```
 
 To destroy a component during gameplay, prefer
-`world.sceneManager.actors.destroyLater(component)`, which defers the
-destruction to the end of the frame.
+`actor.removeComponent(component)`, which defers the destruction to
+the end of the frame.
+
+## Timers
+
+`schedule(seconds, callback, options?)` calls `callback` once the
+delay has passed in game time, so the timer follows the loop time
+scale and waits while paused. Pass `{ repeat: true }` to call it
+every `seconds` instead. A repeating timer that falls behind fires
+once and catches up on the next interval, never in a burst.
+
+```ts
+class Spawner extends Behavior {
+  awake() {
+    this.schedule(2, () => this.spawn(), { repeat: true });
+  }
+}
+```
+
+The returned `Timer` has `cancel()` and an `active` getter. Timers of
+a component stop when it is destroyed, and skip their callback while
+the component waits for removal. They run on `world.timers`, described
+in [World](../systems/world.md#timers).
 
 ## API
 
@@ -112,10 +133,10 @@ export type StrictComponentEnum =
 export type FreeComponentEnum = StrictComponentEnum | (string & {});
 
 interface ActorComponent {
-  /** Sequential numeric identifier (per component class). */
-  id: number;
+  /** Numeric identifier, counted from 0 in each world. */
+  readonly id: number;
   /** Persistent random hex identifier (16 characters). */
-  persistentId: string;
+  readonly persistentId: string;
   actor: Actor;
   typeName: FreeComponentEnum;
 
@@ -134,13 +155,26 @@ interface ActorComponent {
     reference: AssetReference<TValue>
   ): TValue;
 
-  isDestroyed(): boolean;
+  /** "alive", then "pending" once removal is queued, then "destroyed". */
+  readonly status: ActorStatus;
+  /** True while pending and once destroyed. */
+  readonly pendingForDestruction: boolean;
+
+  /** Queues the component for removal at the end of the frame. */
+  markDestructionPending(): void;
 
   /** Returns `"$typeName:$id-$persistentId"`. */
   toString(): string;
 
   /** Runs `teardown` when the component is destroyed. */
   addTeardown(teardown: () => void): void;
+
+  /** Calls `callback` after `seconds` of game time. */
+  schedule(
+    seconds: number,
+    callback: () => void,
+    options?: { repeat?: boolean; }
+  ): Timer;
 
   /** Remove the component from its actor. Idempotent. */
   destroy(): void;

@@ -80,7 +80,7 @@ interface AudioBackgroundTrack {
 
 ```ts
 interface AudioBackground {
-  playlists: AudioBackgroundPlaylist[];
+  readonly playlists: AudioPlaylists;
   audio: THREE.Audio | null;
 
   readonly isPlaying: boolean;
@@ -94,4 +94,18 @@ interface AudioBackground {
   resume(): void;
 
 }
+
+class AudioPlaylists implements Iterable<AudioBackgroundPlaylist> {
+  // An unknown playlist or track name resolves to -1, which track() maps to null.
+  resolve(
+    pathOrIndex: AudioBackgroundSoundPath | AudioBackgroundSoundIndex
+  ): AudioBackgroundSoundIndex;
+  track(index: AudioBackgroundSoundIndex): AudioBackgroundTrack | null;
+  // The track playNext() moves to, or null when playback stops.
+  next(index: AudioBackgroundSoundIndex): AudioBackgroundSoundIndex | null;
+}
 ```
+
+`playlists` wraps the array given to the constructor without copying it,
+so tracks pushed into that array later are found by `play()` and
+`playNext()`.

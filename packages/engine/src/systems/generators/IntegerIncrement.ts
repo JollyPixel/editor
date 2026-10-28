@@ -1,7 +1,7 @@
 export class IntegerIncrement {
   #value = 0;
 
-  incr(): number {
+  next(): number {
     return this.#value++;
   }
 

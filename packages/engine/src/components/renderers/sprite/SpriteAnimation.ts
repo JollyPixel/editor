@@ -1,3 +1,6 @@
+// Import Internal Dependencies
+import type { Logger } from "../../../systems/Logger.ts";
+
 export interface SpriteAnimationRange {
   from: number;
   to: number;
@@ -24,15 +27,18 @@ export interface SpriteAnimationPlayOptions {
 export class SpriteAnimation {
   #isPlaying = false;
   #requestUpdate: () => void;
+  #logger: Pick<Logger, "warn">;
 
   animations = new Map<string, number[]>();
   animation: SpriteRunningAnimation | null = null;
 
   constructor(
     animations: SpriteAnimationOptions,
-    requestUpdate: () => void
+    requestUpdate: () => void,
+    logger: Pick<Logger, "warn">
   ) {
     this.#requestUpdate = requestUpdate;
+    this.#logger = logger;
     for (const [name, value] of Object.entries(animations)) {
       this.animations.set(
         name,
@@ -53,7 +59,9 @@ export class SpriteAnimation {
 
     const frames = this.animations.get(animationName);
     if (!frames) {
-      console.warn(`Animation "${animationName}" not found.`);
+      this.#logger.warn("Sprite animation not found", {
+        animation: animationName
+      });
 
       return;
     }

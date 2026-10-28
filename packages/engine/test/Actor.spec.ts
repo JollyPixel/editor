@@ -7,16 +7,18 @@ import { Actor } from "../src/index.ts";
 import { createWorld } from "./helpers/actor/mockWorld.ts";
 
 describe("Actor", () => {
-  describe("isDestroyed", () => {
-    test("should return true if the actor is marked for destruction", () => {
+  describe("status", () => {
+    test("should move from alive to pending to destroyed", () => {
       const actor = new Actor(createWorld() as any, { name: "foobar" });
-      actor.markDestructionPending();
-      assert.strictEqual(actor.isDestroyed(), true);
-    });
+      const statuses = [actor.status];
 
-    test("should return false if the actor is not marked for destruction", () => {
-      const actor = new Actor(createWorld() as any, { name: "foobar" });
-      assert.strictEqual(actor.isDestroyed(), false);
+      actor.markDestructionPending();
+      statuses.push(actor.status);
+      actor.destroy();
+      actor.markDestructionPending();
+      statuses.push(actor.status);
+
+      assert.deepStrictEqual(statuses, ["alive", "pending", "destroyed"]);
     });
   });
 
@@ -25,7 +27,7 @@ describe("Actor", () => {
       const actor = new Actor(createWorld() as any, { name: "foobar" });
 
       const component = { awake: mock.fn() };
-      actor.components.push(component as any);
+      actor.components.attach(component as any);
       actor.awake();
 
       assert.strictEqual(component.awake.mock.calls.length, 1);
@@ -37,10 +39,10 @@ describe("Actor", () => {
       const secondAwake = mock.fn();
       const firstComponent = {
         awake: mock.fn(() => {
-          actor.components.push({ awake: secondAwake } as any);
+          actor.components.attach({ awake: secondAwake } as any);
         })
       };
-      actor.components.push(firstComponent as any);
+      actor.components.attach(firstComponent as any);
 
       actor.awake();
 
@@ -52,7 +54,7 @@ describe("Actor", () => {
       const actor = new Actor(createWorld() as any, { name: "foobar" });
 
       const component = { update: mock.fn() };
-      actor.componentsRequiringUpdate = [component as any];
+      actor.components.requireUpdate(component as any, true);
       actor.update(0);
 
       assert.strictEqual(component.update.mock.calls.length, 1);
@@ -62,7 +64,7 @@ describe("Actor", () => {
       const actor = new Actor(createWorld() as any, { name: "foobar" });
 
       const component = { update: mock.fn() };
-      actor.components.push(component as any);
+      actor.components.attach(component as any);
       actor.update(0);
 
       assert.strictEqual(component.update.mock.calls.length, 0);
@@ -72,7 +74,7 @@ describe("Actor", () => {
       const actor = new Actor(createWorld() as any, { name: "foobar" });
 
       const component = { update: mock.fn() };
-      actor.componentsRequiringUpdate = [component as any];
+      actor.components.requireUpdate(component as any, true);
       actor.markDestructionPending();
       actor.update(0);
 
@@ -83,7 +85,7 @@ describe("Actor", () => {
       const actor = new Actor(createWorld() as any, { name: "foobar" });
 
       const component = { fixedUpdate: mock.fn() };
-      actor.componentsRequiringUpdate = [component as any];
+      actor.components.requireUpdate(component as any, true);
       actor.fixedUpdate(0);
 
       assert.strictEqual(component.fixedUpdate.mock.calls.length, 1);
@@ -93,7 +95,7 @@ describe("Actor", () => {
       const actor = new Actor(createWorld() as any, { name: "foobar" });
 
       const component = { fixedUpdate: mock.fn() };
-      actor.componentsRequiringUpdate = [component as any];
+      actor.components.requireUpdate(component as any, true);
       actor.markDestructionPending();
       actor.fixedUpdate(0);
 
@@ -105,10 +107,8 @@ describe("Actor", () => {
 
       const componentWithUpdate = { update: mock.fn() };
       const componentWithFixed = { fixedUpdate: mock.fn() };
-      actor.componentsRequiringUpdate = [
-        componentWithUpdate as any,
-        componentWithFixed as any
-      ];
+      actor.components.requireUpdate(componentWithUpdate as any, true);
+      actor.components.requireUpdate(componentWithFixed as any, true);
       actor.fixedUpdate(0);
 
       assert.strictEqual(componentWithUpdate.update?.mock.calls.length, 0);
@@ -121,7 +121,7 @@ describe("Actor", () => {
       const actor = new Actor(world as any, { name: "foobar" });
 
       const component = { destroy: mock.fn() };
-      actor.components.push(component as any);
+      actor.components.attach(component as any);
       actor.destroy();
 
       assert.strictEqual(component.destroy.mock.calls.length, 1);
@@ -139,20 +139,17 @@ describe("Actor", () => {
         const component = {
           destroy() {
             spy();
-            const idx = actor.components.indexOf(this as any);
-            if (idx !== -1) {
-              actor.components.splice(idx, 1);
-            }
+            actor.components.detach(this as any);
           }
         };
-        actor.components.push(component as any);
+        actor.components.attach(component as any);
         destroySpies.push(spy);
       }
 
-      assert.strictEqual(actor.components.length, 3);
+      assert.strictEqual([...actor.components].length, 3);
       actor.destroy();
 
-      assert.strictEqual(actor.components.length, 0);
+      assert.strictEqual([...actor.components].length, 0);
       for (const spy of destroySpies) {
         assert.strictEqual(spy.mock.calls.length, 1);
       }

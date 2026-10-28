@@ -58,6 +58,20 @@ describe("Components.MeshDefinition", () => {
     assert.strictEqual(mesh.receiveShadow, false);
   });
 
+  test("captures a live mesh as the data it was built from", () => {
+    const data = {
+      geometry: { kind: "cylinder", radiusTop: 0.5, height: 3 },
+      material: { color: "#00ff00", emissive: "#112233", opacity: 0.5 },
+      receiveShadow: true
+    };
+    const { definition, component } = createMesh(data);
+
+    assert.deepEqual(
+      definition.parse(definition.capture(component)),
+      definition.parse(data)
+    );
+  });
+
   test("apply keeps the geometry when only the material changes", () => {
     const { definition, component } = createMesh({ geometry: { kind: "torus" } });
     const geometry = component.threeMesh.geometry;

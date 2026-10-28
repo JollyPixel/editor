@@ -5,10 +5,12 @@ import { mock } from "node:test";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import type {
-  RenderComponent,
-  RenderViewport
-} from "../../../src/systems/rendering/Renderer.ts";
+import type { RenderComponent } from "../../../src/systems/rendering/Renderer.ts";
+import type { CanvasDimensions } from "../../../src/systems/rendering/CanvasDimensions.ts";
+import {
+  type RenderViewport,
+  Viewport
+} from "../../../src/systems/rendering/Viewport.ts";
 import type {
   PostProcessing
 } from "../../../src/systems/rendering/compositing/PostProcessing.ts";
@@ -33,11 +35,10 @@ export function createRenderComponent(
   return {
     threeCamera: camera,
     depth,
-    viewport,
+    viewport: viewport === null ? null : new Viewport(viewport),
     postProcessing,
     prepareRender: mock.fn((
-      _canvasWidth: number,
-      _canvasHeight: number
+      _canvas: CanvasDimensions
     ) => {
     })
   } satisfies RenderComponent & { prepareRender: ReturnType<typeof mock.fn>; };

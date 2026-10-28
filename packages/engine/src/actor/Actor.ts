@@ -4,11 +4,12 @@ import * as THREE from "three/webgpu";
 // Import Internal Dependencies
 import { ActorTree } from "./ActorTree.ts";
 import { Transform } from "./Transform.ts";
-import { IntegerIncrement } from "../systems/generators/IntegerIncrement.ts";
-import { PersistentIdIncrement } from "../systems/generators/PersistentIdIncrement.ts";
+import {
+  ActorComponents,
+  type ComponentClass
+} from "./ActorComponents.ts";
 import { disposeObject3D } from "../utils/disposeObject3D.ts";
 import type { World, WorldDefaultContext } from "../systems/World.ts";
-import type { Behavior } from "../components/script/Behavior.ts";
 import type {
   Component
 } from "../components/types.ts";
@@ -25,6 +26,8 @@ type ComponentOptionsArgs<T extends ComponentConstructor> =
     ? [options: ConstructorParameters<T>[1]]
     : [options?: ConstructorParameters<T>[1]];
 
+export type ActorStatus = "alive" | "pending" | "destroyed";
+
 export interface ActorOptions<
   TContext = WorldDefaultContext
 > {
@@ -32,36 +35,42 @@ export interface ActorOptions<
   parent?: Actor<TContext> | null;
   visible?: boolean;
   layer?: number | number[];
+  persistentId?: string;
+  persistent?: boolean;
 }
 
 export class Actor<
   TContext = WorldDefaultContext
 > extends ActorTree<TContext> {
-  static Id = new IntegerIncrement();
-  static PersistentId = new PersistentIdIncrement();
-
   world: World<any, TContext>;
 
-  id = Actor.Id.incr();
-  persistentId = Actor.PersistentId.next();
+  readonly id: number;
+  readonly persistentId: string;
+  persistent: boolean;
   parent: Actor<TContext> | null = null;
 
-  components: Component[] = [];
-  componentsRequiringUpdate: readonly Component[] = [];
-  behaviors: Record<string, Behavior<TContext>[]> = {};
-
-  awoken = false;
-  pendingForDestruction = false;
+  readonly components = new ActorComponents();
 
   object3D = new THREE.Group();
   transform: Transform;
+
+  #active = true;
+  #awoken = false;
+  #status: ActorStatus = "alive";
 
   constructor(
     world: World<any, TContext>,
     options: ActorOptions<TContext>
   ) {
     super();
-    const { name, parent = null, visible = true, layer } = options;
+    const {
+      name,
+      parent = null,
+      visible = true,
+      layer,
+      persistentId,
+      persistent = false
+    } = options;
 
     if (
       parent !== null &&
@@ -70,9 +79,13 @@ export class Actor<
       throw new Error("Cannot add actor to a parent that is pending for destruction.");
     }
 
+    const { actors } = world.sceneManager;
     this.world = world;
+    this.id = actors.nextActorId();
     this.name = name;
     this.parent = parent;
+    this.persistentId = persistentId ?? actors.newPersistentId();
+    this.persistent = persistent;
 
     this.object3D.visible = visible;
     this.object3D.userData.isActor = true;
@@ -87,7 +100,7 @@ export class Actor<
 
     this.transform = new Transform(this.object3D);
 
-    this.world.sceneManager.actors.attach(this);
+    actors.attach(this);
   }
 
   get name(): string {
@@ -98,6 +111,53 @@ export class Actor<
     name: string
   ) {
     this.object3D.name = name;
+  }
+
+  get status(): ActorStatus {
+    return this.#status;
+  }
+
+  get pendingForDestruction(): boolean {
+    return this.#status !== "alive";
+  }
+
+  get awoken(): boolean {
+    return this.#awoken;
+  }
+
+  get active(): boolean {
+    return this.#active;
+  }
+
+  set active(
+    active: boolean
+  ) {
+    if (this.#active !== active) {
+      this.#active = active;
+      this.world.sceneManager.actors.reschedule(this);
+    }
+  }
+
+  get activeInHierarchy(): boolean {
+    return this.#active && (this.parent?.activeInHierarchy ?? true);
+  }
+
+  get root(): Actor<TContext> {
+    return this.parent?.root ?? this;
+  }
+
+  hasDescendant(
+    actor: Actor<TContext>
+  ): boolean {
+    let ancestor = actor.parent;
+    while (ancestor !== null) {
+      if (ancestor === this) {
+        return true;
+      }
+      ancestor = ancestor.parent;
+    }
+
+    return false;
   }
 
   addComponent<T extends ComponentConstructor>(
@@ -114,37 +174,94 @@ export class Actor<
     ...args: ComponentOptionsArgs<T>
   ): InstanceType<T> {
     const component = new componentClass(this, args[0]);
-    if (this.awoken) {
-      awakeComponent(component);
+    if (this.#awoken) {
+      component.bind?.();
+      component.awake?.();
     }
 
     return component as InstanceType<T>;
   }
 
-  getComponent<T extends Component>(typeName: string): T | null;
-  getComponent<T extends Component>(componentClass: new (...args: any[]) => T): T | null;
-  getComponent<T extends Component>(typeNameOrClass: string | (new (...args: any[]) => T)): T | null {
-    for (const component of this.components) {
-      const matches = typeof typeNameOrClass === "string" ?
-        component.typeName === typeNameOrClass :
-        component instanceof typeNameOrClass;
+  getComponent<T extends Component>(
+    typeNameOrClass: string | ComponentClass<T>
+  ): T | null {
+    return this.components.find(typeNameOrClass);
+  }
 
-      if (matches && !component.pendingForDestruction) {
-        return component as T;
+  getComponents<T extends Component>(
+    componentClass: ComponentClass<T>
+  ): IterableIterator<T> {
+    return this.components.matching(componentClass);
+  }
+
+  hasComponent(
+    typeNameOrClass: string | ComponentClass
+  ): boolean {
+    return this.components.find(typeNameOrClass) !== null;
+  }
+
+  ensureComponent<T extends ComponentConstructor>(
+    componentClass: T,
+    ...args: ComponentOptionsArgs<T>
+  ): InstanceType<T> {
+    for (const component of this.components) {
+      if (isInstance(component, componentClass)) {
+        return component;
+      }
+    }
+
+    return this.addComponentAndGet(componentClass, ...args);
+  }
+
+  removeComponent(
+    componentOrClass: Component | ComponentClass
+  ): boolean {
+    const component = typeof componentOrClass === "function" ?
+      this.components.find(componentOrClass) :
+      componentOrClass;
+    if (
+      component === null ||
+      component.actor !== this ||
+      component.pendingForDestruction
+    ) {
+      return false;
+    }
+
+    component.markDestructionPending();
+
+    return true;
+  }
+
+  findComponentInChildren<T extends Component>(
+    componentClass: ComponentClass<T>
+  ): T | null {
+    for (const { actor } of this.walk()) {
+      const component = actor.pendingForDestruction ?
+        null :
+        actor.components.find(componentClass);
+      if (component !== null) {
+        return component;
       }
     }
 
     return null;
   }
 
-  * getComponents<T extends Component>(
-    componentClass: new (...args: any[]) => T
-  ): IterableIterator<T> {
-    for (const component of this.components) {
-      if (component instanceof componentClass && !component.pendingForDestruction) {
-        yield component;
+  findComponentInParent<T extends Component>(
+    componentClass: ComponentClass<T>
+  ): T | null {
+    let ancestor = this.parent;
+    while (ancestor !== null) {
+      const component = ancestor.pendingForDestruction ?
+        null :
+        ancestor.components.find(componentClass);
+      if (component !== null) {
+        return component;
       }
+      ancestor = ancestor.parent;
     }
+
+    return null;
   }
 
   addChildren(
@@ -167,10 +284,8 @@ export class Actor<
   }
 
   awake() {
-    for (let i = 0; i < this.components.length; i++) {
-      awakeComponent(this.components[i]);
-    }
-    this.awoken = true;
+    this.components.awake();
+    this.#awoken = true;
   }
 
   update(
@@ -178,9 +293,7 @@ export class Actor<
     alpha = 0
   ) {
     if (!this.pendingForDestruction) {
-      for (const component of this.componentsRequiringUpdate) {
-        component.update?.(deltaTime, alpha);
-      }
+      this.components.update(deltaTime, alpha);
     }
   }
 
@@ -189,9 +302,7 @@ export class Actor<
     stepIndex = 0
   ) {
     if (!this.pendingForDestruction) {
-      for (const component of this.componentsRequiringUpdate) {
-        component.fixedUpdate?.(deltaTime, stepIndex);
-      }
+      this.components.fixedUpdate(deltaTime, stepIndex);
     }
   }
 
@@ -199,17 +310,16 @@ export class Actor<
     return `${this.name}:${this.id}-${this.persistentId}`;
   }
 
-  isDestroyed() {
-    return this.pendingForDestruction;
-  }
-
   destroy() {
+    if (this.#status === "destroyed") {
+      return;
+    }
+    this.#status = "destroyed";
+
     for (const child of [...this.children]) {
       child.destroy();
     }
-    for (const component of [...this.components].reverse()) {
-      component.destroy();
-    }
+    this.components.destroy();
 
     this.world.sceneManager.actors.detach(this);
 
@@ -220,6 +330,11 @@ export class Actor<
   }
 
   markDestructionPending() {
+    if (this.#status !== "alive") {
+      return;
+    }
+    this.#status = "pending";
+
     this.world.sceneManager.actors.destroyActorLater(this);
     this.destroyAllActors();
   }
@@ -239,9 +354,9 @@ export class Actor<
   }
 }
 
-function awakeComponent(
-  component: Component
-): void {
-  component.bind?.();
-  component.awake?.();
+function isInstance<T extends ComponentConstructor>(
+  component: Component,
+  componentClass: T
+): component is InstanceType<T> {
+  return component instanceof componentClass;
 }

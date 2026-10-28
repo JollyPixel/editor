@@ -64,8 +64,8 @@ export class OrbitFlyCamera extends CameraComponent {
     this.#writeBody();
   }
 
-  get camera() {
-    return this.threeCamera as THREE.PerspectiveCamera;
+  get camera(): THREE.PerspectiveCamera {
+    return this.projection.requirePerspective();
   }
 
   get moveSpeed(): number {
@@ -169,7 +169,7 @@ export class OrbitFlyCamera extends CameraComponent {
     this.exitOrbitFocus();
     this.teleport(frameBounds(bounds, {
       forward: this.actor.transform.getForward(new THREE.Vector3()),
-      fov: this.fov,
+      fov: this.settings.fov,
       ...options
     }));
   }

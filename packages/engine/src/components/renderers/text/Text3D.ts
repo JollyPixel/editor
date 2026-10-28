@@ -50,7 +50,7 @@ export class Text3D {
     this.material = material;
   }
 
-  get mesh(): THREE.Mesh | null {
+  ensureMesh(): THREE.Mesh | null {
     if (this.#needsUpdate) {
       this.#updateMesh();
     }

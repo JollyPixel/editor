@@ -7,7 +7,11 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { Systems, type Actor } from "@jolly-pixel/engine";
+import {
+  ActorComponents,
+  Systems,
+  type Actor
+} from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
 import { PeerFrustums } from "#src/runtime/PeerFrustums.ts";
@@ -24,8 +28,7 @@ function createFrustums(): FrustumsHarness {
   let invalidations = 0;
 
   const actor = {
-    components: [],
-    componentsRequiringUpdate: [],
+    components: new ActorComponents(),
     world: {
       invalidate: () => {
         invalidations++;

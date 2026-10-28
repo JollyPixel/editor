@@ -34,7 +34,7 @@ describe("Behavior", () => {
 
     const behavior = new BehaviorOne(actor);
 
-    assert.deepEqual(actor.components, [behavior]);
+    assert.deepEqual([...actor.components], [behavior]);
     assert.strictEqual(behavior.starts, 0);
 
     sceneManager.beginFrame();
@@ -42,85 +42,37 @@ describe("Behavior", () => {
     assert.strictEqual(behavior.starts, 1);
   });
 
-  test("should group behaviors by type name on the actor", () => {
+  test("should find behaviors on the actor by class", () => {
     const { actor } = createActor();
 
     const first = new BehaviorOne(actor);
     const second = new BehaviorOne(actor);
     const other = new BehaviorTwo(actor);
 
-    assert.deepEqual(actor.components, [first, second, other]);
-    assert.deepEqual(actor.behaviors, {
-      BehaviorOne: [first, second],
-      BehaviorTwo: [other]
-    });
+    assert.deepEqual([...actor.getComponents(BehaviorOne)], [first, second]);
+    assert.deepEqual([...actor.getComponents(BehaviorTwo)], [other]);
   });
 
-  test("should remove behavior from actor on destroy", () => {
+  test("should leave the other behaviors on the actor when one is destroyed", () => {
     const { actor } = createActor();
 
     const behavior = new BehaviorOne(actor);
-
-    assert.equal(actor.components.length, 1);
-    assert.equal(Object.keys(actor.behaviors).length, 1);
-
-    behavior.destroy();
-
-    assert.equal(actor.components.length, 0);
-    assert.equal(Object.keys(actor.behaviors).length, 0);
-  });
-
-  test("should handle destroy when multiple behaviors of same type exist", () => {
-    const { actor } = createActor();
-
-    const behavior1 = new BehaviorOne(actor);
-    const behavior2 = new BehaviorOne(actor);
-
-    assert.equal(actor.components.length, 2);
-    const behaviorList = actor.behaviors.BehaviorOne;
-    assert.equal(behaviorList.length, 2);
-
-    behavior1.destroy();
-
-    assert.equal(actor.components.length, 1);
-    assert.equal(actor.components[0], behavior2);
-    assert.deepEqual(behaviorList, [behavior2]);
-  });
-
-  test("should not affect other behavior types on destroy", () => {
-    const { actor } = createActor();
-
-    const behavior = new BehaviorOne(actor);
-    const anotherBehavior = new BehaviorTwo(actor);
+    const sameType = new BehaviorOne(actor);
+    const otherType = new BehaviorTwo(actor);
 
     behavior.destroy();
-
-    assert.equal(actor.components.length, 1);
-    assert.equal(actor.components[0], anotherBehavior);
-    assert.equal(Object.keys(actor.behaviors).length, 1);
-    assert.deepEqual(actor.behaviors.BehaviorTwo, [anotherBehavior]);
-  });
-
-  test("should handle destroy on already destroyed behavior", () => {
-    const { actor } = createActor();
-
-    const behavior = new BehaviorOne(actor);
-
     behavior.destroy();
-    assert.equal(actor.components.length, 0);
 
-    behavior.destroy();
-    assert.equal(actor.components.length, 0);
+    assert.deepEqual([...actor.components], [sameType, otherType]);
   });
 
   test("should still tear down a behavior already marked for destruction", () => {
     const { actor } = createActor();
 
     const behavior = new BehaviorOne(actor);
-    behavior.pendingForDestruction = true;
+    behavior.markDestructionPending();
     behavior.destroy();
 
-    assert.equal(actor.components.length, 0);
-    assert.equal(Object.keys(actor.behaviors).length, 0);
+    assert.deepEqual([...actor.components], []);
   });
 });

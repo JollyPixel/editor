@@ -10,7 +10,7 @@ import {
   ComponentAssets,
   type ComponentContext,
   type SceneMode
-} from "../../../src/systems/scene/file/ComponentDefinition.ts";
+} from "../../../src/systems/scene/file/definitions/ComponentDefinition.ts";
 import type {
   JSONObject,
   SceneActorFile,

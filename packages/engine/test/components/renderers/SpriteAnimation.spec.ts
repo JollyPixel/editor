@@ -11,7 +11,11 @@ import {
 function createAnimation(
   animations: SpriteAnimationOptions
 ): SpriteAnimation {
-  return new SpriteAnimation(animations, () => undefined);
+  return new SpriteAnimation(
+    animations,
+    () => undefined,
+    { warn: () => undefined }
+  );
 }
 
 function collectFrames(

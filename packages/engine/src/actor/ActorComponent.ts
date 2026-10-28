@@ -2,12 +2,18 @@
 import type { AssetReference } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import type { Actor } from "./Actor.ts";
-import { IntegerIncrement } from "../systems/generators/IntegerIncrement.ts";
-import { PersistentIdIncrement } from "../systems/generators/PersistentIdIncrement.ts";
+import type {
+  Actor,
+  ActorStatus
+} from "./Actor.ts";
+import { randomPersistentId } from "../systems/generators/randomPersistentId.ts";
 import type {
   WorldDefaultContext
 } from "../systems/World.ts";
+import type {
+  Timer,
+  TimerOptions
+} from "../systems/Timers.ts";
 import type {
   Component,
   FreeComponentEnum
@@ -24,26 +30,25 @@ export interface ActorComponentOptions<
 export class ActorComponent<
   TContext = WorldDefaultContext
 > implements Component {
-  static Id = new IntegerIncrement();
-  static PersistentId = new PersistentIdIncrement();
-
-  id = ActorComponent.Id.incr();
-  persistentId = ActorComponent.PersistentId.next();
+  readonly id: number;
+  readonly persistentId = randomPersistentId();
   actor: Actor<TContext>;
   typeName: FreeComponentEnum;
 
   #needUpdate = false;
-  #destroyed = false;
+  #status: ActorStatus = "alive";
   #teardowns: (() => void)[] = [];
-  pendingForDestruction = false;
+  #timers = new Set<Timer>();
 
   constructor(
     options: ActorComponentOptions<TContext>
   ) {
+    const { actors } = options.actor.world.sceneManager;
     this.actor = options.actor;
     this.typeName = options.typeName;
+    this.id = actors.nextComponentId();
 
-    this.actor.world.sceneManager.actors.attachComponent(this);
+    actors.attachComponent(this);
     this.needUpdate = options.needUpdate ?? hasUpdateHook(this);
   }
 
@@ -56,6 +61,14 @@ export class ActorComponent<
   ) {
     this.#needUpdate = value;
     this.actor.world.sceneManager.actors.requireUpdate(this, value);
+  }
+
+  get status(): ActorStatus {
+    return this.#status;
+  }
+
+  get pendingForDestruction(): boolean {
+    return this.#status !== "alive";
   }
 
   get context(): TContext {
@@ -74,22 +87,48 @@ export class ActorComponent<
     this.#teardowns.push(teardown);
   }
 
+  schedule(
+    seconds: number,
+    callback: () => void,
+    options: TimerOptions = {}
+  ): Timer {
+    const timer = this.actor.world.timers.schedule(seconds, () => {
+      if (!timer.active) {
+        this.#timers.delete(timer);
+      }
+      if (!this.pendingForDestruction) {
+        callback();
+      }
+    }, options);
+    this.#timers.add(timer);
+
+    return timer;
+  }
+
   toString(): string {
     return `${this.typeName}:${this.id}-${this.persistentId}`;
   }
 
-  isDestroyed() {
-    return this.pendingForDestruction;
+  markDestructionPending(): void {
+    if (this.#status !== "alive") {
+      return;
+    }
+    this.#status = "pending";
+
+    this.actor.world.sceneManager.actors.destroyLater(this);
   }
 
   destroy(): void {
-    if (this.#destroyed) {
+    if (this.#status === "destroyed") {
       return;
     }
-    this.#destroyed = true;
-    this.pendingForDestruction = true;
+    this.#status = "destroyed";
 
     this.onDestroy();
+    for (const timer of this.#timers) {
+      timer.cancel();
+    }
+    this.#timers.clear();
     for (const teardown of this.#teardowns.splice(0).reverse()) {
       teardown();
     }

@@ -4,10 +4,12 @@ import { pass } from "three/tsl";
 
 // Import Internal Dependencies
 import { CameraCompositor } from "../../../../../src/systems/rendering/compositing/CameraCompositor.ts";
-import type {
-  RenderComponent,
-  RenderViewport
-} from "../../../../../src/systems/rendering/Renderer.ts";
+import type { RenderComponent } from "../../../../../src/systems/rendering/Renderer.ts";
+import { CanvasDimensions } from "../../../../../src/systems/rendering/CanvasDimensions.ts";
+import {
+  type RenderViewport,
+  Viewport
+} from "../../../../../src/systems/rendering/Viewport.ts";
 
 // CONSTANTS
 const kSize = 32;
@@ -55,7 +57,7 @@ export async function probe(
   const component: RenderComponent = {
     threeCamera: camera,
     depth: 0,
-    viewport: options.viewport ?? null,
+    viewport: options.viewport ? new Viewport(options.viewport) : null,
     postProcessing: (context) => pass(context.scene, context.camera),
     prepareRender: () => void 0
   };
@@ -72,7 +74,7 @@ export async function probe(
     let remaining = kFrames;
     void renderer.setAnimationLoop(() => {
       try {
-        compositor.render(scene, kSize, kSize);
+        compositor.render(scene, new CanvasDimensions(kSize, kSize));
         if (options.overlay) {
           renderer.setViewport(kSize - 8, 0, 8, 8);
           renderer.render(overlay, camera);

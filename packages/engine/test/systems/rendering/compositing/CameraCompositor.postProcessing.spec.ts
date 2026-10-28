@@ -10,6 +10,7 @@ import {
   CameraCompositor
 } from "../../../../src/systems/rendering/compositing/CameraCompositor.ts";
 import type { RenderComponent } from "../../../../src/systems/rendering/Renderer.ts";
+import { CanvasDimensions } from "../../../../src/systems/rendering/CanvasDimensions.ts";
 import type {
   PostProcessingContext
 } from "../../../../src/systems/rendering/compositing/PostProcessing.ts";
@@ -52,7 +53,7 @@ describe("Systems.Rendering.CameraCompositor post-processing", () => {
       for (const component of components) {
         compositor.add(component);
       }
-      compositor.render(scene, 800, 600);
+      compositor.render(scene, new CanvasDimensions(800, 600));
     }
 
     return {

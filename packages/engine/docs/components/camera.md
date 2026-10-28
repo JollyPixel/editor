@@ -70,7 +70,7 @@ interface CameraOptions {
 | `near` | `0.1` | Near clipping plane |
 | `far` | `10000` | Far clipping plane |
 | `orthographicScale` | `1` | Ortho half-height in world units |
-| `viewport` | `null` | Normalized rect; `null` is the full canvas |
+| `viewport` | `null` | Normalized rect, each value clamped to `[0, 1]`; `null` is the full canvas |
 | `depth` | `0` | Render order — lower first |
 | `addAudioListener` | `false` | Attaches the world's `THREE.AudioListener` |
 | `postProcessing` | `null` | Builds the camera's output node; see [post-processing](#post-processing) |
@@ -123,7 +123,9 @@ camera.postProcessing = null;
 
 `configure(settings)` takes any of `projectionMode`, `fov`, `near`, `far`,
 `orthographicScale`, `viewport` and `depth`, and keeps the ones it is not
-given. The projection and the render order are recomputed on the next draw.
+given. The projection matrix is rewritten at once; the render order applies
+on the next draw. `settings` returns the current values, with `viewport` as
+a `Viewport`.
 
 ```ts
 camera.configure({
@@ -143,6 +145,11 @@ anything keyed on the old camera:
 ```ts
 camera.configure({ projectionMode: "orthographic" });
 ```
+
+`projection` is the `CameraProjection` behind `threeCamera`: a
+`PerspectiveProjection` or an `OrthographicProjection`.
+`projection.requirePerspective()` returns the `THREE.PerspectiveCamera`
+and throws for an orthographic projection.
 
 ## See also
 

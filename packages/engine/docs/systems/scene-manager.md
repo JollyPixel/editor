@@ -165,29 +165,47 @@ class ActorRegistry<TContext> {
   readonly tree: ActorTree<TContext>;
 
   has(actor: Actor<TContext>): boolean;
+  /** The actor holding this persistent id, pending destruction or not. */
+  find(persistentId: string): Actor<TContext> | null;
   /** `true` while an actor holds a component with `needUpdate`. */
   get updating(): boolean;
-  /** Marks the component and destroys it at the end of the frame. */
+  /** Next actor `id` of this world, counted from 0. */
+  nextActorId(): number;
+  /** Next component `id` of this world, counted from 0. */
+  nextComponentId(): number;
+  /** A random 16-character hex id no actor of this world holds. */
+  newPersistentId(): string;
+  /** Destroys the component at the end of the frame. */
   destroyLater(component: Component): void;
   /** Actors created while `build` runs. */
   collect(build: () => void): ReadonlySet<Actor<TContext>>;
   /** Destroys each actor whose parent is not in the set. */
   destroyRoots(actors: ReadonlySet<Actor<TContext>>): void;
+  /** Like `destroyRoots`, but keeps the persistent roots in the set and their subtrees. */
+  destroySceneActors(actors: ReadonlySet<Actor<TContext>>): void;
+  /** Starts or stops the updates of the actor's subtree from `active`. */
+  reschedule(actor: Actor<TContext>): void;
 }
 ```
+
+Replacing or unloading the current scene destroys every actor except
+[persistent roots](../actor/actor.md#persistent-actors), which stay in the
+tree and in `default`. Removing an appended scene destroys the actors it
+created through `destroySceneActors`, so its persistent roots stay too.
 
 ## Frame lifecycle
 
 `sceneManager.actors` owns the actors and components of every scene: it
 attaches each new actor to the tree, queues each new component for `start()`,
 and keeps the list of actors updated each frame. `Actor` and `ActorComponent`
-register themselves; call it directly only for `destroyLater()`, or to collect
-and tear down a group of actors.
+register themselves, and `markDestructionPending()` on an actor or a
+component queues it here. Call the registry directly only to collect and
+tear down a group of actors.
 
 `beginFrame()` activates ready scene loads, starts pending scenes, awakes
 every actor created since the last frame, then starts pending components.
-`fixedUpdate()` and `update()` only visit actors holding a component with
-`needUpdate`, in creation order, so static actors cost nothing per frame.
+`fixedUpdate()` and `update()` only visit active actors holding a component
+with `needUpdate`, in creation order, so static actors cost nothing per frame.
 An actor that gains its first updating component during a frame joins on
 the next one; within an actor, a pass runs the components it started with.
 `endFrame()` destroys the components passed to `destroyLater()`, then

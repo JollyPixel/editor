@@ -74,7 +74,7 @@ describe("Components.Renderers.ModelRenderer", () => {
     const renderer = actor.addComponentAndGet(ModelRenderer, { asset: reference });
 
     assert.strictEqual(renderer.needUpdate, false);
-    assert.deepEqual(actor.componentsRequiringUpdate, []);
+    assert.strictEqual(actor.components.updating, false);
   });
 
   test("should request updates only while a clip plays", () => {

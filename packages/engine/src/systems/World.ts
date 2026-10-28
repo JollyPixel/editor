@@ -26,6 +26,7 @@ import {
   type LoggerOptions
 } from "./Logger.ts";
 import { WorldTime } from "./WorldTime.ts";
+import { Timers } from "./Timers.ts";
 
 export type WorldEvents = {
   beforeFixedUpdate: (dt: number) => void;
@@ -82,6 +83,7 @@ export class World<
   readonly debug: boolean;
   readonly logger: Logger;
   readonly time = new WorldTime();
+  readonly timers = new Timers();
 
   #worldLogger: Logger;
   #running = false;
@@ -124,6 +126,7 @@ export class World<
 
     sceneManager.bindWorld(this);
     globalsAdapter.exposeGame(this);
+    this.keepAlive(() => this.timers.pending);
   }
 
   createActor(
@@ -218,6 +221,7 @@ export class World<
 
     this.sceneManager.beginFrame();
     this.time.advanceFrame(schedule);
+    this.timers.advance(this.time.elapsed);
     this.input.sample();
 
     const fixedDt = schedule.fixedDelta / 1000;

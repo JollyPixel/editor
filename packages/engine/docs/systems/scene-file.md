@@ -73,8 +73,9 @@ type ColorJSON = string; // "#rrggbb"
 
 - `actors` is in tree order: an actor follows its parent, and siblings follow
   their display order.
-- Ids are unique within one file. They are file ids, not
-  `Actor.persistentId`.
+- Ids are unique within one file. A built actor takes its file id as its
+  `persistentId`, unless an actor pending destruction still holds that id:
+  it then gets a new random one.
 - The engine reads the decoded form. A file with an identity transform or
   `visible: true` left out must be decoded before it reaches the engine.
 
@@ -94,6 +95,8 @@ interface ComponentDefinition<TData, TComponent extends Component, TAssets> {
     context: ComponentContext<TAssets>
   ): TComponent | null;
   apply?(component: TComponent, data: TData): void;
+  owns?(component: Component): component is TComponent;
+  capture?(component: TComponent): JSONObject;
 }
 
 interface ComponentContext<TAssets> {
@@ -111,6 +114,13 @@ interface ComponentContext<TAssets> {
   script in edit mode.
 - `apply` patches a live component with the full data. Without it, a data
   change rebuilds the component.
+- `capture` is the inverse of `parse`: it writes the current state of a live
+  component as `data`. `owns` tells whether a component the scene file did
+  not build is one the definition captures; without it, only the components
+  the definition built are captured. `toHexColor(value)` turns any
+  `THREE.ColorRepresentation` into the
+  `"#rrggbb"` form `ComponentData.color` reads. See
+  [Saving a running scene](#saving-a-running-scene).
 - `assets` maps each asset slot the component reads to its `AssetType`. The
   filled slots are loaded before the scene activates.
 - In edit mode a definition builds nothing that runs the game: the camera
@@ -145,6 +155,15 @@ definition declares for it. Returns `null` for an empty or missing slot.
 
 - `register(...definitions): this` throws when a type is already registered.
 - `find(type): ComponentDefinition | null`
+- `create(actor, entry, { mode, resolver }): Component | null` builds the
+  component of a `SceneComponentFile` and remembers the entry it came from.
+  Returns `null` for an unknown type or when the definition builds nothing.
+- `apply(component, type, data): boolean` patches a live component through
+  its definition's `apply` and remembers `data` as the component's latest.
+  Returns `false` when the definition has no `apply`.
+- `capture(component): SceneComponentFile | null` writes a live component
+  back as a file entry. See
+  [Saving a running scene](#saving-a-running-scene).
 - `assets(file)` yields the asset references of every known component in the
   file.
 
@@ -159,6 +178,8 @@ class FileScene<TContext> extends Scene<TContext> {
     file: SceneFile,
     options: { components: ComponentDefinitions; }
   );
+
+  capture(): SceneFile;
 }
 ```
 
@@ -166,6 +187,44 @@ class FileScene<TContext> extends Scene<TContext> {
   [`SceneManager`](scene-manager.md) like any scene.
 - `awake()` builds the actors in play mode and applies the environment.
 - `destroy()` resets the background, fog and environment map.
+
+## Saving a running scene
+
+`scene.capture()` returns a `SceneFile` of the world as it is now, with the
+environment of the scene's own file. Loading it in a new `FileScene` restores
+that state, so a save game is a scene file:
+
+```ts
+localStorage.setItem("save", JSON.stringify(scene.capture()));
+
+const save = JSON.parse(localStorage.getItem("save")!) as Systems.SceneFile;
+world.sceneManager.loadScene(new Systems.FileScene("Level 1", save, { components }));
+```
+
+`captureSceneActors(tree, components)` does the same for any `ActorTree`,
+such as `world.sceneManager.tree` under a scene written in code. It returns
+the actor files only.
+
+What a capture holds:
+
+- Every actor of the tree that is not pending destruction, in tree order:
+  those built from a file, those created at runtime, those of appended
+  scenes, and persistent ones. Ids are `actor.persistentId`.
+- The local transform, name and visibility of each actor.
+- For a component built from a scene file by the same `ComponentDefinitions`:
+  its file id and asset slots, and the `data` its definition's `capture`
+  returns. A definition without `capture` keeps the data the component was
+  built or last applied with.
+- For any other component: the first definition, in registration order,
+  that `owns` it and has a `capture`, with a new id and no asset slot.
+  Components no definition owns are left out, so a runtime component that
+  needs an asset does not come back.
+- For a behavior: the `@SceneProperty` fields, written by
+  [`ScriptDefinition`](../components/behavior.md#scene-files). Other fields
+  are not saved.
+
+A save captured in edit mode lacks the scripts, which edit mode never
+builds.
 
 ## SceneInstance
 
@@ -205,6 +264,9 @@ root. The parent may come from the same call or an earlier one.
 
 - An actor whose parent was not built is skipped with a warning, and so is
   its subtree. So is a duplicate id.
+- An actor whose id belongs to a live actor of the world, such as a
+  [persistent actor](../actor/actor.md#persistent-actors), is skipped
+  without a warning, with its subtree: the live actor is kept.
 - A component type without a definition is skipped, with a warning in play
   mode only. So is a `null` from `create`, without a warning.
 - Transforms are written to `actor.object3D` directly.
@@ -275,7 +337,8 @@ Composes the local matrix `writeSceneTransform` would give an object, into
 ## Built-in definitions
 
 Each one parses a missing field to the component's own default
-(`CAMERA_DEFAULTS`, `LIGHT_DEFAULTS`, `MESH_RENDERER_DEFAULTS`).
+(`CAMERA_DEFAULTS`, `LIGHT_DEFAULTS`, `MESH_RENDERER_DEFAULTS`), and
+captures the live component back to data.
 
 - `CameraDefinition` (`Camera`): the [camera](../components/camera.md)
   options. In edit mode the camera is created with `render: false`.

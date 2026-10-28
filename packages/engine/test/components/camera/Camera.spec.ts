@@ -11,6 +11,7 @@ import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import { CameraComponent } from "../../../src/components/camera/Camera.ts";
+import { CanvasDimensions } from "../../../src/systems/rendering/CanvasDimensions.ts";
 import type { Actor } from "../../../src/actor/Actor.ts";
 import {
   createActorMock,
@@ -43,7 +44,7 @@ describe("Components.Camera.CameraComponent", () => {
       const camera = new CameraComponent(actor as unknown as Actor);
       actor.transform.setLocalPosition({ x: 3, y: 4, z: 5 });
 
-      camera.prepareRender(800, 600);
+      camera.prepareRender(new CanvasDimensions(800, 600));
 
       assert.deepStrictEqual(
         camera.threeCamera.matrixWorld.elements,
@@ -57,7 +58,7 @@ describe("Components.Camera.CameraComponent", () => {
         .setLocalPosition({ x: 10, y: 2, z: -4 })
         .lookAt({ x: 0, y: 0, z: 0 });
 
-      camera.prepareRender(800, 600);
+      camera.prepareRender(new CanvasDimensions(800, 600));
 
       const { position } = camera.threeCamera;
       assert.deepStrictEqual(
@@ -74,7 +75,7 @@ describe("Components.Camera.CameraComponent", () => {
       const camera = new CameraComponent(actor as unknown as Actor);
       actor.transform.setLocalPosition({ x: 7, y: 0, z: 1 });
 
-      camera.prepareRender(800, 600);
+      camera.prepareRender(new CanvasDimensions(800, 600));
 
       const identity = new THREE.Matrix4().multiplyMatrices(
         camera.threeCamera.matrixWorld,
@@ -92,7 +93,7 @@ describe("Components.Camera.CameraComponent", () => {
       });
       actor.transform.setLocalPosition({ x: 0, y: 12, z: 0 });
 
-      camera.prepareRender(800, 600);
+      camera.prepareRender(new CanvasDimensions(800, 600));
 
       const listener = camera.threeCamera.children[0];
       assert.strictEqual(
@@ -113,7 +114,12 @@ describe("Components.Camera.CameraComponent", () => {
       camera.configure({ near: 1 });
 
       assert.deepStrictEqual(
-        [camera.fov, camera.near, camera.far, camera.depth],
+        [
+          camera.settings.fov,
+          camera.settings.near,
+          camera.settings.far,
+          camera.depth
+        ],
         [60, 1, 10000, 2]
       );
     });

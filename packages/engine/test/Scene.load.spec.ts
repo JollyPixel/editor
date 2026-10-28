@@ -14,7 +14,6 @@ import {
 } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { Actor } from "../src/actor/index.ts";
 import { Scene } from "../src/systems/scene/Scene.ts";
 import { createSceneAssets } from "./helpers/scene/sceneAssets.ts";
 import {
@@ -24,8 +23,6 @@ import {
 
 describe("Scene", () => {
   beforeEach(() => {
-    Actor.Id.clear();
-    Actor.PersistentId.clear();
     Scene.Id.clear();
   });
 
