@@ -14,6 +14,7 @@ import {
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
+import type { HoleTilePatch } from "../network/holes.ts";
 import type { SplatTilePatch } from "../network/splat.ts";
 import { patchedTiles } from "../network/tilePatchCommands.ts";
 import type {
@@ -229,6 +230,30 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
     }
     if (written.length > 0) {
       this.emit("splatChanged", written);
+    }
+  }
+
+  writeHoles(
+    patches: Iterable<HoleTilePatch>
+  ): void {
+    if (this.#disposed) {
+      return;
+    }
+
+    const written: TileCoord[] = [];
+    for (const { tile, holes } of patches) {
+      if (!this.#displayed.has(tile.chunk)) {
+        continue;
+      }
+      for (const terrain of this.#terrains()) {
+        if (terrain.has(tile.chunk)) {
+          terrain.writeHoleTile(tile, holes);
+        }
+      }
+      written.push(tile);
+    }
+    if (written.length > 0) {
+      this.emit("holesChanged", written);
     }
   }
 

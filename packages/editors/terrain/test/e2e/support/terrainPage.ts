@@ -15,6 +15,7 @@ import {
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
+import type { BrushTool } from "#src/features/sculpt/model/SculptSettings.ts";
 import {
   captureCanvas,
   type CanvasPixels
@@ -72,6 +73,29 @@ export class TerrainPage {
     }, [sampleX, sampleZ, options.confirmed ?? false, CHUNK_SAMPLES, SPLAT_TEXELS] as const);
   }
 
+  holeAt(
+    sampleX: number,
+    sampleZ: number
+  ): Promise<boolean | null> {
+    return this.page.evaluate(([x, z, chunkSamples]) => {
+      const { terrain } = window.terrainEditor!.document;
+      const chunkX = Math.floor(x / chunkSamples);
+      const chunkZ = Math.floor(z / chunkSamples);
+      const chunk = [...terrain.chunks()].find(({ coord }) => coord.x === chunkX && coord.z === chunkZ);
+
+      return chunk === undefined ? null : chunk.holes.isHole(
+        Math.floor(x) - chunkX * chunkSamples,
+        Math.floor(z) - chunkZ * chunkSamples
+      );
+    }, [sampleX, sampleZ, CHUNK_SAMPLES] as const);
+  }
+
+  async selectTool(
+    tool: BrushTool
+  ): Promise<void> {
+    await this.page.locator(`terrain-sculpt-toolbar jolly-tool-button[data-tool=${tool}]`).click();
+  }
+
   async selectMaterial(
     materialName: string
   ): Promise<void> {
@@ -81,7 +105,7 @@ export class TerrainPage {
   async paintWith(
     materialName: string
   ): Promise<void> {
-    await this.page.locator("terrain-sculpt-toolbar jolly-tool-button[data-tool=paint]").click();
+    await this.selectTool("paint");
     await this.selectMaterial(materialName);
   }
 

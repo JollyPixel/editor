@@ -37,6 +37,14 @@ export interface TerrainHit {
   readonly distance: number;
 }
 
+export interface RaycastOptions {
+  readonly maxDistance?: number;
+  /**
+   * Hit the heights kept under hole quads instead of passing through them.
+   */
+  readonly hitHoles?: boolean;
+}
+
 type Triangle = readonly [Point3, Point3, Point3];
 
 interface QuadCorner {
@@ -159,8 +167,9 @@ export function surfaceHeight(
 export function raycastTerrain(
   terrain: TerrainReader,
   ray: TerrainRay,
-  maxDistance = Infinity
+  options: RaycastOptions = {}
 ): TerrainHit | null {
+  const { maxDistance = Infinity, hitHoles = false } = options;
   const spans: ChunkSpan[] = [];
   for (const chunk of terrain.chunks()) {
     const footprint = footprintSpan(chunk, ray, maxDistance);
@@ -183,7 +192,7 @@ export function raycastTerrain(
       break;
     }
 
-    const hit = marchChunk(span, ray);
+    const hit = marchChunk(span, ray, hitHoles);
     const closer = hit !== null && (nearest === null || hit.distance < nearest.distance);
     if (closer && hit.distance <= maxDistance) {
       nearest = hit;
@@ -240,9 +249,11 @@ function clipSlab(
 
 function marchChunk(
   { quads, enter, exit }: ChunkSpan,
-  ray: TerrainRay
+  ray: TerrainRay,
+  hitHoles: boolean
 ): TerrainHit | null {
   const { origin: start, direction } = ray;
+  const { holes } = quads.chunk;
   const origin = quads.chunk.coord.originSample;
   const last = { x: origin.x + CHUNK_SAMPLES - 1, z: origin.z + CHUNK_SAMPLES - 1 };
   let quadX = clamp(Math.floor(start.x + direction.x * enter), origin.x, last.x);
@@ -255,7 +266,8 @@ function marchChunk(
   let northBlock = boundary(start.z, direction.z, quadZ);
 
   while (quadX >= origin.x && quadX <= last.x && quadZ >= origin.z && quadZ <= last.z) {
-    const hit = hitQuad(quads.triangles(quadX, quadZ), ray);
+    const solid = hitHoles || !holes.isHole(quadX - origin.x, quadZ - origin.z);
+    const hit = solid ? hitQuad(quads.triangles(quadX, quadZ), ray) : null;
     if (hit !== null) {
       return hit;
     }

@@ -8,6 +8,10 @@ import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import {
+  HOLE_MODES,
+  type HoleMode
+} from "../../holes/model/holeStamp.ts";
+import {
   FALLOFF_CURVES,
   type FalloffCurve
 } from "./falloff.ts";
@@ -19,16 +23,18 @@ const kStorageKey = "terrain:sculpt";
 export const BRUSH_SIZE = Object.freeze({ min: 0.5, max: 128 });
 export const BRUSH_SPACING = Object.freeze({ min: 0.05, max: 1 });
 export const FLATTEN_TARGETS = ["press", "fixed"] as const;
-export const BRUSH_TOOLS = Object.freeze([...SCULPT_TOOLS, "paint"] as const);
-export const STRENGTH_OPTIONS: Readonly<Record<BrushTool, "strength" | "paintStrength">> = Object.freeze({
+export const BRUSH_TOOLS = Object.freeze([...SCULPT_TOOLS, "paint", "holes"] as const);
+export const STRENGTH_OPTIONS: Readonly<Record<BrushTool, StrengthOption | null>> = Object.freeze({
   raise: "strength",
   smooth: "strength",
   flatten: "strength",
-  paint: "paintStrength"
+  paint: "paintStrength",
+  holes: null
 });
 
 export type FlattenTarget = typeof FLATTEN_TARGETS[number];
 export type BrushTool = typeof BRUSH_TOOLS[number];
+export type StrengthOption = "strength" | "paintStrength";
 
 export interface SculptOptions {
   tool: BrushTool;
@@ -39,6 +45,7 @@ export interface SculptOptions {
   spacing: number;
   flattenTarget: FlattenTarget;
   flattenHeight: number;
+  holeMode: HoleMode;
 }
 
 export type SculptSettingsEvents = {
@@ -53,7 +60,8 @@ const kDefaultOptions: Readonly<SculptOptions> = Object.freeze({
   falloff: "smooth",
   spacing: 0.25,
   flattenTarget: "press",
-  flattenHeight: 0
+  flattenHeight: 0,
+  holeMode: "cut"
 });
 
 export class SculptSettings extends Emitter<SculptSettingsEvents> {
@@ -78,7 +86,8 @@ export class SculptSettings extends Emitter<SculptSettingsEvents> {
       falloff: choice("falloff", FALLOFF_CURVES),
       spacing: clamp(number("spacing"), BRUSH_SPACING.min, BRUSH_SPACING.max),
       flattenTarget: choice("flattenTarget", FLATTEN_TARGETS),
-      flattenHeight: clamp(number("flattenHeight"), HEIGHT_RANGE.min, HEIGHT_RANGE.max)
+      flattenHeight: clamp(number("flattenHeight"), HEIGHT_RANGE.min, HEIGHT_RANGE.max),
+      holeMode: choice("holeMode", HOLE_MODES)
     });
   }
 

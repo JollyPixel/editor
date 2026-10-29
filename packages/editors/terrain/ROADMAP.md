@@ -148,7 +148,13 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   mask as a max pyramid and discards a pixel whose LoD cell holds a hole, so
   an opening shows at every level and a filled one closes. Peers' cuts and
   fills show at each commit.
-- **Next:** the hole tool, cut and fill.
+- **Hole tool: done** (2026-10-29). Cut and Fill in the toolbar, Ctrl
+  inverting while held; a quad changes when its centre lies inside the
+  radius. The tool's ray hits the heights kept under a hole, other tools aim
+  through it. A stroke shows at once, commits on the stroke cadence and undoes
+  as one step.
+- **Next:** the debug overlay for holes, which the hole tool turns on while
+  selected.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -214,7 +220,7 @@ chunks yet.
 
 ## M4: Rest of V1
 
-- [ ] Hole brush, cut and fill: the `<x>_<z>_holes` part, `holes-patched`
+- [x] Hole brush, cut and fill: the `<x>_<z>_holes` part, `holes-patched`
   commits, the mask drawn in the view, and the tool.
 - [ ] Debug overlay for holes.
 - [ ] Chunks tool: add and remove chunks by click or drag, one undo step.

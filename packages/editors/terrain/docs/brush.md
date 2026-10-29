@@ -78,8 +78,9 @@ existing chunks: the part of a stamp over empty ground is dropped, and the
 
 ## Hole brush
 
-Two modes: **cut** and **fill**. Ctrl inverts the mode while held. The brush
-uses the same footprint, with no falloff: a quad is cut or filled when its
+Two modes, picked in the toolbar: **cut** and **fill**. Ctrl inverts the mode
+while held, so the tool has no Ctrl+click pick. The brush uses the same
+footprint, with no strength and no falloff: a quad is cut or filled when its
 centre lies inside the radius. Heights under a hole are kept.
 
 Holes reach peers and the saved asset as `holes-patched` commits on the

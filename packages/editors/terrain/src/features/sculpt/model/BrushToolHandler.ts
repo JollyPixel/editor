@@ -11,11 +11,12 @@ export interface BrushPress {
 }
 
 export interface BrushStroke {
-  update(point: GroundPoint | null, elapsed: number): void;
+  update(point: GroundPoint | null, elapsed: number, inverted: boolean): void;
   end(): void;
 }
 
 export interface BrushToolHandler {
   begin(press: BrushPress): BrushStroke | null;
-  pick(hit: TerrainHit): void;
+  pick?(hit: TerrainHit): void;
+  hitsHoles?: boolean;
 }

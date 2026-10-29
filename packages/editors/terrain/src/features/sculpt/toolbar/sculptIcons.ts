@@ -34,6 +34,62 @@ registerIcon("sculpt-paint", svg`
   />
 `, { tone: "pink" });
 
+registerIcon("sculpt-holes", svg`
+  <path
+    class="tone-fill"
+    d="M8 15h8v5H8Z"
+  />
+  <path
+    class="tone-ink"
+    d="M2 15h6v5h8v-5h6"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M5 9c2-2 4-3 7-3s5 1 7 3"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.25"
+    stroke-opacity="0.5"
+    stroke-linecap="round"
+  />
+`, { tone: "violet" });
+
+registerIcon("holes-cut", svg`
+  <path
+    class="tone-fill"
+    d="M8 15h8v5H8Z"
+  />
+  <path
+    class="tone-ink"
+    d="M2 15h6v5h8v-5h6M12 3v8M9 8l3 3 3-3"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "violet" });
+
+registerIcon("holes-fill", svg`
+  <path
+    class="tone-fill"
+    d="M8 15h8v5H8Z"
+  />
+  <path
+    class="tone-ink"
+    d="M2 15h20M12 11V3M9 6l3-3 3 3"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "violet" });
+
 registerIcon("sculpt-smooth", svg`
   <path
     d="M2 16l3-5 3 6 3-8 3 7 3-4 3 5 2-2"

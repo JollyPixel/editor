@@ -15,15 +15,18 @@ import {
 import * as THREE from "three";
 
 // Import Internal Dependencies
+import { holeTool } from "../holes/holeTool.ts";
 import type { MaterialSelection } from "../materials/model/MaterialSelection.ts";
 import { paintTool } from "../paint/paintTool.ts";
 import type {
   BrushStroke,
   BrushToolHandler
 } from "./model/BrushToolHandler.ts";
-import type {
-  BrushTool,
-  SculptSettings
+import {
+  STRENGTH_OPTIONS,
+  type BrushTool,
+  type SculptOptions,
+  type SculptSettings
 } from "./model/SculptSettings.ts";
 import type { GroundPoint } from "./model/StampSpacer.ts";
 import { sculptTools } from "./sculptTools.ts";
@@ -36,7 +39,7 @@ const kResizeStep = 1.1;
 const kMaxAimDistance = 20_000;
 
 export interface SculptBrushOptions {
-  document: Pick<TerrainDocument, "terrain" | "materials" | "patchSplat">;
+  document: Pick<TerrainDocument, "terrain" | "materials" | "patchSplat" | "patchHoles">;
   preview: TerrainPreview;
   settings: SculptSettings;
   selection: Pick<MaterialSelection, "selected" | "select">;
@@ -66,7 +69,8 @@ export class SculptBrush extends ActorComponent {
     this.#options = options;
     this.#tools = {
       ...sculptTools(options),
-      paint: paintTool(options)
+      paint: paintTool(options),
+      holes: holeTool(options)
     };
     this.#cursor = new BrushCursor({
       terrain: options.preview.terrain,
@@ -89,22 +93,26 @@ export class SculptBrush extends ActorComponent {
       return;
     }
 
-    const aim = this.#aim();
-    if (InputCombination.Control.evaluate(input)) {
-      this.endStroke();
+    const tool = this.#tool();
+    const aim = this.#aim(tool);
+    const control = InputCombination.Control.evaluate(input);
+    if (control) {
       this.#resize(mouse.isDown("scrollUp"), mouse.isDown("scrollDown"));
+    }
+    if (control && tool.pick !== undefined) {
+      this.endStroke();
       if (aim !== null && mouse.wasJustPressed("left")) {
-        this.#tool().pick(aim);
+        tool.pick(aim);
       }
     }
     else {
-      this.#sculpt(aim);
+      this.#sculpt(tool, aim, control);
     }
 
     if (aim === null) {
       this.#hideCursor();
     }
-    else if (this.#cursor.show(aim.point, this.#options.settings.options)) {
+    else if (this.#cursor.show(aim.point, this.#ringOptions())) {
       this.actor.world.invalidate();
     }
   }
@@ -127,7 +135,9 @@ export class SculptBrush extends ActorComponent {
     super.destroy();
   }
 
-  #aim(): TerrainHit | null {
+  #aim(
+    tool: BrushToolHandler
+  ): TerrainHit | null {
     this.actor.world.input.mouse.viewportPositionTo(this.#pointer);
     this.#raycaster.setFromCamera(this.#pointer, this.#options.camera);
     const { origin, direction } = this.#raycaster.ray;
@@ -135,12 +145,23 @@ export class SculptBrush extends ActorComponent {
     return raycastTerrain(
       this.#options.preview.terrain,
       { origin, direction },
-      kMaxAimDistance
+      { maxDistance: kMaxAimDistance, hitHoles: tool.hitsHoles }
     );
   }
 
+  #ringOptions(): Pick<SculptOptions, "size" | "falloff"> {
+    const { tool, size, falloff } = this.#options.settings.options;
+
+    return {
+      size,
+      falloff: STRENGTH_OPTIONS[tool] === null ? "constant" : falloff
+    };
+  }
+
   #sculpt(
-    aim: TerrainHit | null
+    tool: BrushToolHandler,
+    aim: TerrainHit | null,
+    inverted: boolean
   ): void {
     const { mouse } = this.actor.world.input;
     if (this.#stroke !== null && !mouse.isDown("left") && !mouse.isDown("right")) {
@@ -154,12 +175,12 @@ export class SculptBrush extends ActorComponent {
         return;
       }
 
-      this.#stroke = this.#tool().begin({ point: groundPoint(aim), height: aim.point.y, lower });
+      this.#stroke = tool.begin({ point: groundPoint(aim), height: aim.point.y, lower });
       if (this.#stroke === null) {
         return;
       }
     }
-    this.#stroke.update(point, this.actor.world.time.unscaledDelta);
+    this.#stroke.update(point, this.actor.world.time.unscaledDelta, inverted);
   }
 
   #tool(): BrushToolHandler {

@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { CHUNK_SAMPLES, ChunkCoord } from "#src/terrain/ChunkCoord.ts";
+import { HOLE_BYTES } from "#src/terrain/HoleMask.ts";
 import { quadDiagonal } from "#src/terrain/quadDiagonal.ts";
 import { CHUNK_SAMPLE_COUNT } from "#src/terrain/TerrainChunk.ts";
 import { Terrain } from "#src/terrain/Terrain.ts";
@@ -212,7 +213,7 @@ describe("raycastTerrain", () => {
     for (const [index, ray] of sampleRays(random).entries()) {
       const maxDistance = index % 3 === 0 ? 40 + random() * 120 : Infinity;
       const expected = bruteRaycastDistance(terrain, ray, maxDistance);
-      const hit = raycastTerrain(terrain, ray, maxDistance);
+      const hit = raycastTerrain(terrain, ray, { maxDistance });
       if (expected === null) {
         assert.equal(hit, null, `ray ${index} should miss`);
         misses++;
@@ -268,12 +269,26 @@ describe("raycastTerrain", () => {
     assert.ok(Math.abs(hit.point.y - surfaceHeight(terrain, hit.point.x, 20.5)!) < 1e-6);
   });
 
+  test("a ray passes through a hole quad unless it asks to hit the heights kept under it", () => {
+    const terrain = new Terrain();
+    const holes = new Uint8Array(HOLE_BYTES);
+    const quad = 10 * CHUNK_SAMPLES + 10;
+    holes[quad >> 3] = 1 << (quad & 7);
+    terrain.addChunk(new ChunkCoord(0, 0), new Float32Array(CHUNK_SAMPLE_COUNT).fill(3), undefined, holes);
+    const intoHole = rayToward({ x: 10.5, y: 20, z: 10.5 }, { x: 10.5, y: 0, z: 10.5 });
+    const beside = rayToward({ x: 11.5, y: 20, z: 10.5 }, { x: 11.5, y: 0, z: 10.5 });
+
+    assert.equal(raycastTerrain(terrain, intoHole), null);
+    assert.equal(raycastTerrain(terrain, intoHole, { hitHoles: true })?.point.y, 3);
+    assert.equal(raycastTerrain(terrain, beside)?.point.y, 3);
+  });
+
   test("a ray over empty ground, or stopped short of the surface, has no hit", () => {
     const terrain = hills();
     const down = rayToward({ x: 100, y: 30, z: 100 }, { x: 100, y: 0, z: 100 });
 
     assert.equal(raycastTerrain(terrain, down), null);
     const short = rayToward({ x: 30, y: 30, z: 30 }, { x: 30, y: 0, z: 30 });
-    assert.equal(raycastTerrain(terrain, short, 5), null);
+    assert.equal(raycastTerrain(terrain, short, { maxDistance: 5 }), null);
   });
 });

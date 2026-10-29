@@ -28,13 +28,6 @@ $ pnpm --filter @jolly-pixel/terrain.renderer lint
 
 If you are a developer **looking to contribute** to the project, you must first read the [CONTRIBUTING][contributing] guide.
 
-Each chunk's hole mask is uploaded with the chunk as well; call
-`holesChanged(tiles)` after cutting or filling. The upload is a max pyramid
-of the mask: the quads, then each coarser level marking a cell when any quad
-under it is a hole. A pixel is discarded when the cell of its node's spacing
-is marked, so a coarse cell drops whole as soon as one quad under it is a
-hole. Unloaded chunks draw no holes.
-
 ## License
 
 MIT

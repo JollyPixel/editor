@@ -53,6 +53,7 @@ export {
 export {
   raycastTerrain,
   surfaceHeight,
+  type RaycastOptions,
   type TerrainHit,
   type TerrainRay
 } from "./terrain/terrainSurface.ts";

@@ -19,6 +19,7 @@ import {
   SculptSettings,
   type SculptOptions
 } from "#src/features/sculpt/model/SculptSettings.ts";
+import { SCULPT_TOOLS } from "#src/features/sculpt/model/sculptStamp.ts";
 import { SculptStroke } from "#src/features/sculpt/model/SculptStroke.ts";
 import {
   createTerrainHistory,
@@ -56,7 +57,7 @@ function strokeSetup(
         settings
       },
       {
-        tool: options.tool === "paint" || options.tool === undefined ? "raise" : options.tool,
+        tool: SCULPT_TOOLS.find((tool) => tool === options.tool) ?? "raise",
         point: kPoint,
         height,
         lower
