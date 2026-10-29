@@ -150,6 +150,20 @@ describe("PulledChunkGeometry - layout", () => {
     assert.deepEqual(geometry.boundingSphere!.center.toArray(), [3, 4, 5]);
   });
 
+  it("keeps its cell bounds when bounding volumes are recomputed", () => {
+    const fixture = makeMeshFixture({ chunkSize: 8 });
+    place(fixture, [1, 2, 3]);
+    place(fixture, [4, 5, 6]);
+    const [geometry] = buildGeometries(fixture).values();
+
+    geometry.computeBoundingBox();
+    geometry.computeBoundingSphere();
+
+    assert.deepEqual(geometry.boundingBox!.min.toArray(), [1, 2, 3]);
+    assert.deepEqual(geometry.boundingBox!.max.toArray(), [5, 6, 7]);
+    assert.deepEqual(geometry.boundingSphere!.center.toArray(), [3, 4, 5]);
+  });
+
   it("disposes its face texture with the geometry", () => {
     const fixture = makeMeshFixture();
     place(fixture, [0, 0, 0]);

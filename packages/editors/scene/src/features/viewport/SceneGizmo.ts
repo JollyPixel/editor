@@ -104,7 +104,10 @@ export class SceneGizmo {
       options.camera.camera,
       options.canvas,
       {
-        appearance: EDITOR_GIZMO_APPEARANCE
+        appearance: {
+          ...EDITOR_GIZMO_APPEARANCE,
+          planes: false
+        }
       }
     );
     options.scene.add(this.#controls.helper);
