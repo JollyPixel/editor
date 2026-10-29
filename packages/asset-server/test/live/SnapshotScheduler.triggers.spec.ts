@@ -31,17 +31,17 @@ async function counterAsset(
   return created.assetId;
 }
 
-function increment(
+async function increment(
   harness: SyncHarness,
   assetId: string
-): void {
-  harness.eventStore.writer.append({
+): Promise<void> {
+  (await harness.eventStore.writer.append({
     assetType: "counter",
     assetId,
     eventType: COUNTER_INCREMENTED,
     eventData: { action: "increment" },
     actor: kActor
-  }).unwrap();
+  })).unwrap();
 }
 
 describe("SnapshotScheduler — triggers", () => {
@@ -52,7 +52,7 @@ describe("SnapshotScheduler — triggers", () => {
     });
     const assetId = await counterAsset(harness);
 
-    increment(harness, assetId);
+    await increment(harness, assetId);
     await harness.scheduler.flush(assetId);
 
     assert.strictEqual(text(await harness.source.read("a.counter")), "1");
@@ -66,7 +66,7 @@ describe("SnapshotScheduler — triggers", () => {
     });
     const assetId = await counterAsset(harness);
 
-    increment(harness, assetId);
+    await increment(harness, assetId);
     await harness.scheduler.close();
 
     assert.strictEqual(text(await harness.source.read("a.counter")), "1");
@@ -103,7 +103,7 @@ describe("SnapshotScheduler — triggers", () => {
     })).unwrap();
     await harness.projector.flush();
 
-    increment(harness, created.assetId);
+    await increment(harness, created.assetId);
 
     assert.strictEqual(harness.scheduler.pending, 0);
     assert.strictEqual(
@@ -119,11 +119,11 @@ describe("SnapshotScheduler — triggers", () => {
     });
     const assetId = await counterAsset(harness);
 
-    const before = harness.eventStore.reader.listAll().length;
+    const before = (await harness.eventStore.reader.listAll()).length;
     assert.strictEqual(await harness.scheduler.snapshot(assetId), false);
 
     assert.strictEqual(
-      harness.eventStore.reader.listAll().length,
+      (await harness.eventStore.reader.listAll()).length,
       before
     );
   });
@@ -135,10 +135,10 @@ describe("SnapshotScheduler — triggers", () => {
     });
     const assetId = await counterAsset(harness);
 
-    increment(harness, assetId);
+    await increment(harness, assetId);
     assert.strictEqual(await harness.scheduler.snapshot(assetId), true);
 
-    const [update] = harness.eventStore.reader.listAll({
+    const [update] = await harness.eventStore.reader.listAll({
       eventTypePrefix: ASSET_UPDATED
     });
     assert.partialDeepStrictEqual(update, {
@@ -164,7 +164,7 @@ describe("SnapshotScheduler browser timers", () => {
     t.mock.method(globalThis, "setTimeout", () => 1);
     const clear = t.mock.method(globalThis, "clearTimeout", () => void 0);
 
-    increment(harness, assetId);
+    await increment(harness, assetId);
     assert.equal(harness.scheduler.pending, 1);
     await harness.scheduler.flush();
 

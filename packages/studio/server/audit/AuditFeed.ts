@@ -74,10 +74,10 @@ export class AuditFeed {
     this.#assetPath = options.assetPath;
   }
 
-  page(
+  async page(
     viewer: Account,
     query: AuditFeedQuery
-  ): AuditPage {
+  ): Promise<AuditPage> {
     const rights = this.#project.access.projectRights(viewer.role);
     rights.require("audit");
 
@@ -94,7 +94,7 @@ export class AuditFeed {
 
     let scanned = 0;
     let complete = true;
-    for (const { source, item } of items) {
+    for await (const { source, item } of items) {
       if (query.from !== undefined && item.at < query.from) {
         break;
       }

@@ -41,7 +41,7 @@ describe("AssetProjector — load reads the tail of the log", () => {
       backups: harness.backups,
       partFiles: harness.partFiles
     });
-    projector.load();
+    await projector.load();
 
     assert.strictEqual(counter.read, 1);
     assert.strictEqual(
@@ -76,7 +76,7 @@ describe("AssetProjector — load reads the tail of the log", () => {
       backups: harness.backups,
       partFiles: harness.partFiles
     });
-    projector.load();
+    await projector.load();
 
     const desired = projector.desired(created.assetId)!;
     assert.strictEqual(desired.path, "b.png");
@@ -103,7 +103,7 @@ describe("AssetProjector — load reads the tail of the log", () => {
       backups: harness.backups,
       partFiles: harness.partFiles
     });
-    projector.load();
+    await projector.load();
 
     assert.strictEqual(projector.desired(created.assetId), null);
   });

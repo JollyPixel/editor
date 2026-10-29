@@ -23,15 +23,15 @@ describe("AssetTags — backups", () => {
   test("a tag and a restore point back up the content they name", async() => {
     await using harness = await tagHarness();
     const { assetId } = harness;
-    harness.increment();
+    await harness.increment();
     (await harness.tags.create({
       assetId,
       name: "v1",
       message: "First pass",
       actor: TAG_ACTOR
     })).unwrap();
-    harness.increment();
-    harness.increment();
+    await harness.increment();
+    await harness.increment();
 
     const { restorePoint } = (await harness.tags.restore({
       assetId,
@@ -80,7 +80,7 @@ describe("AssetTags — backups", () => {
 
     assert.ok(created.ok);
     assert.deepEqual(
-      harness.tags.list(harness.assetId).map(({ name }) => name),
+      (await harness.tags.list(harness.assetId)).map(({ name }) => name),
       ["v1"]
     );
     assert.deepEqual(

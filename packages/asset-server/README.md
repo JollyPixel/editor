@@ -74,15 +74,15 @@ import {
 const server = new LiveAssetRoom(myAssetKind());
 const room = mockAssetRoom<MyNetworkCommand, MySnapshot>("B");
 
-server.connect("B");
+await server.connect("B");
 for (const message of server.take<MySnapshot>("B")) {
   room.deliver(message);
 }
 ```
 
 - `LiveAssetRoom` serves the kind's live room for asset `"asset-1"`. Drive it
-  with `connect()`, `receive()` and `resync()`, then read what it sent a client
-  with `take()`.
+  with `connect()`, `receive()` and `resync()`, awaiting each, then read what it
+  sent a client with `take()`.
 - `mockAssetRoom()` returns a client `Room` with no transport. It records what
   the client sends in `sent`, and `deliver()` feeds it server messages.
 

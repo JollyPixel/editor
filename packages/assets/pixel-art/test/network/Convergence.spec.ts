@@ -29,7 +29,7 @@ const kBlue = {
   a: 255
 };
 
-function setup(
+async function setup(
   history = false
 ) {
   const server = new LiveAssetRoom(
@@ -49,13 +49,13 @@ function setup(
     }
   }
 
-  function flush(): void {
+  async function flush(): Promise<void> {
     for (const sent of room.sent.splice(0)) {
-      server.receive("B", sent);
+      await server.receive("B", sent);
     }
   }
 
-  server.connect("B");
+  await server.connect("B");
   deliver();
 
   return {
@@ -72,17 +72,17 @@ function setup(
 }
 
 describe("pixel-art convergence", () => {
-  test("C1: the author keeps its newer stroke when an older peer stroke lands first", (t) => {
+  test("C1: the author keeps its newer stroke when an older peer stroke lands first", async(t) => {
     t.mock.timers.enable({ apis: ["Date"] });
-    const { server, manager, deliver, flush, paintPixelOneOne } = setup();
+    const { server, manager, deliver, flush, paintPixelOneOne } = await setup();
 
     t.mock.timers.tick(200);
     paintPixelOneOne();
-    server.receive("A", command("stroke", {
+    await server.receive("A", command("stroke", {
       color: kBlue,
       positions: [{ x: 1, y: 1 }]
     }, { clientId: "A", timestamp: 100 }));
-    flush();
+    await flush();
     deliver();
 
     assert.deepStrictEqual(server.state.document.buffer.samplePixel(1, 1), kBlack);
@@ -90,10 +90,10 @@ describe("pixel-art convergence", () => {
     manager.destroy();
   });
 
-  test("a client whose clock is two minutes slow wins the stroke it sent last", (t) => {
+  test("a client whose clock is two minutes slow wins the stroke it sent last", async(t) => {
     t.mock.timers.enable({ apis: ["Date"], now: 1_000_000 });
-    const { server, manager, deliver, flush, paintPixelOneOne } = setup();
-    server.receive("A", command("stroke", {
+    const { server, manager, deliver, flush, paintPixelOneOne } = await setup();
+    await server.receive("A", command("stroke", {
       color: kBlue,
       positions: [{ x: 2, y: 2 }]
     }, { clientId: "A", timestamp: 1_000_000 }));
@@ -102,11 +102,11 @@ describe("pixel-art convergence", () => {
     t.mock.timers.setTime(1_000_000 - 120_000);
     paintPixelOneOne();
     t.mock.timers.setTime(1_000_000);
-    server.receive("A", command("stroke", {
+    await server.receive("A", command("stroke", {
       color: kBlue,
       positions: [{ x: 1, y: 1 }]
     }, { clientId: "A", timestamp: 1_000_000 }));
-    flush();
+    await flush();
     deliver();
 
     assert.deepStrictEqual(server.state.document.buffer.samplePixel(1, 1), kBlack);
@@ -114,12 +114,12 @@ describe("pixel-art convergence", () => {
     manager.destroy();
   });
 
-  test("an undo sends the version of the stroke it replays as its basis", (t) => {
+  test("an undo sends the version of the stroke it replays as its basis", async(t) => {
     t.mock.timers.enable({ apis: ["Date"], now: 100 });
-    const { manager, room, deliver, flush, paintPixelOneOne } = setup(true);
+    const { manager, room, deliver, flush, paintPixelOneOne } = await setup(true);
 
     paintPixelOneOne();
-    flush();
+    await flush();
     deliver();
     manager.undo();
 
@@ -127,13 +127,13 @@ describe("pixel-art convergence", () => {
     manager.destroy();
   });
 
-  test("a peer stroke after the author's echo shows on the author", (t) => {
+  test("a peer stroke after the author's echo shows on the author", async(t) => {
     t.mock.timers.enable({ apis: ["Date"], now: 100 });
-    const { server, manager, deliver, flush, paintPixelOneOne } = setup();
+    const { server, manager, deliver, flush, paintPixelOneOne } = await setup();
 
     paintPixelOneOne();
-    flush();
-    server.receive("A", command("stroke", {
+    await flush();
+    await server.receive("A", command("stroke", {
       color: kBlue,
       positions: [{ x: 1, y: 1 }]
     }, { clientId: "A", timestamp: 1 }));

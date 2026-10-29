@@ -29,12 +29,11 @@ async function exported(
   ).unwrap();
 }
 
-function createdCount(
+async function createdCount(
   project: ArchiveProject,
   assetId: string
-): number {
-  return project.eventStore.reader
-    .list(assetId)
+): Promise<number> {
+  return (await project.eventStore.reader.list(assetId))
     .filter((event) => event.eventType === ASSET_CREATED)
     .length;
 }
@@ -182,7 +181,7 @@ describe("importAssetArchive", () => {
     ]);
     assert.deepEqual(report.created, []);
     assert.strictEqual(text(await project.source.read("map.link")), "two");
-    assert.strictEqual(createdCount(project, map), 1);
+    assert.strictEqual(await createdCount(project, map), 1);
   });
 
   test("replace rewrites live content at its current path", async() => {
@@ -211,7 +210,7 @@ describe("importAssetArchive", () => {
     ]);
     assert.strictEqual(text(await project.source.read("moved.link")), "one");
     assert.strictEqual(await project.source.exists("map.link"), false);
-    assert.strictEqual(createdCount(project, map), 1);
+    assert.strictEqual(await createdCount(project, map), 1);
   });
 
   test("suffixes an occupied path and keeps the reference", async() => {

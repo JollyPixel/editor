@@ -167,14 +167,14 @@ describe("CatalogProjection — live changes", () => {
 
     const changes: CatalogChange[] = [];
     projection.on("changed", (change) => changes.push(change));
-    harness.eventStore.writer.append({
+    await harness.eventStore.writer.append({
       assetType: "counter",
       assetId: "a1",
       eventType: "counter.incremented",
       eventData: {},
       actor: kActor
     });
-    harness.eventStore.writer.append({
+    await harness.eventStore.writer.append({
       assetType: "binary",
       assetId: "a1",
       eventType: "asset.created",
@@ -194,7 +194,7 @@ describe("CatalogProjection — live changes", () => {
 
     const changes: CatalogChange[] = [];
     projection.on("changed", (change) => changes.push(change));
-    harness.eventStore.writer.append({
+    await harness.eventStore.writer.append({
       assetType: "binary",
       assetId: "ghost",
       eventType: "asset.deleted",

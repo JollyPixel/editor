@@ -85,23 +85,22 @@ function strokeCommand(
   };
 }
 
-function commandCount(
+async function commandCount(
   eventStore: EventStore.EventStore,
   assetId: string
-): number {
-  return eventStore.reader
-    .list(assetId)
+): Promise<number> {
+  return (await eventStore.reader.list(assetId))
     .filter((event) => event.eventType === PIXEL_ART_COMMAND)
     .length;
 }
 
-function replay(
+async function replay(
   eventStore: EventStore.EventStore,
   assetId: string
-): PixelBuffer {
+): Promise<PixelBuffer> {
   const handler = pixelArtAssetKind({ defaultSize: kSize });
   const state = handler.create(assetId);
-  for (const event of eventStore.reader.list(assetId)) {
+  for (const event of await eventStore.reader.list(assetId)) {
     foldAssetEvent(handler, state, event);
   }
 
@@ -124,7 +123,7 @@ describe("pixel-art asset kind over a real back-end", () => {
     const root = await tempRoot();
 
     try {
-      using eventStore = EventStore.persistence.memory();
+      await using eventStore = EventStore.persistence.memory();
       await fs.mkdir(path.join(root, "textures"), { recursive: true });
       await fs.writeFile(
         path.join(root, kFilePath),
@@ -172,7 +171,7 @@ describe("pixel-art asset kind over a real back-end", () => {
         ], 1_000)
       });
 
-      assert.strictEqual(commandCount(eventStore, record.id), 1);
+      assert.strictEqual(await commandCount(eventStore, record.id), 1);
 
       assert.deepEqual(
         bufferFromFile(
@@ -191,7 +190,7 @@ describe("pixel-art asset kind over a real back-end", () => {
       assert.deepEqual(onDisk.samplePixel(2, 2), [255, 0, 0, 255]);
 
       assert.deepEqual(
-        replay(eventStore, record.id).pixels(),
+        (await replay(eventStore, record.id)).pixels(),
         onDisk.pixels()
       );
 
@@ -209,7 +208,7 @@ describe("pixel-art asset kind over a real back-end", () => {
     const root = await tempRoot();
 
     try {
-      using eventStore = EventStore.persistence.memory();
+      await using eventStore = EventStore.persistence.memory();
       await fs.writeFile(
         path.join(root, "a.pixelart"),
         encodePixelArtFile(
@@ -249,7 +248,7 @@ describe("pixel-art asset kind over a real back-end", () => {
         kind: "message",
         payload: strokeCommand([{ x: 0, y: 0 }], 2_000)
       });
-      const afterFirst = commandCount(eventStore, record.id);
+      const afterFirst = await commandCount(eventStore, record.id);
 
       await connectionB.receive({
         room,
@@ -260,7 +259,7 @@ describe("pixel-art asset kind over a real back-end", () => {
         }
       });
 
-      assert.strictEqual(commandCount(eventStore, record.id), afterFirst);
+      assert.strictEqual(await commandCount(eventStore, record.id), afterFirst);
 
       await server.close();
     }

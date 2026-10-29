@@ -15,19 +15,19 @@ import {
 
 for (const backend of backends) {
   describe(`${backend.name} — close`, () => {
-    test("append and tag creation return the closed failure every other member throws", async() => {
+    test("append and tag creation return the closed failure every other member rejects with", async() => {
       const store = await backend.create();
-      store.close();
+      await store.close();
 
       const results = [
-        store.writer.append({
+        await store.writer.append({
           assetType: "texture",
           assetId: "a1",
           eventType: "pixel-set",
           eventData: {},
           actor: USER_ACTOR
         }),
-        store.tags.create({
+        await store.tags.create({
           assetId: "a1",
           name: "v1",
           eventVersion: 1,
@@ -52,27 +52,27 @@ for (const backend of backends) {
         assert.ok(result.val instanceof EventStore.EventLogClosedError);
       }
       for (const member of members) {
-        assert.throws(member, EventStore.EventLogClosedError);
+        await assert.rejects(member, EventStore.EventLogClosedError);
       }
     });
 
     test("close is idempotent", async() => {
       const store = await backend.create();
-      store.close();
+      await store.close();
 
-      assert.doesNotThrow(() => store.close());
+      await assert.doesNotReject(() => store.close());
     });
 
     test("using closes the store on scope exit", async() => {
       let escaped: EventStore.EventStore;
 
       {
-        using store = await backend.create();
-        append(store, "a1", { x: 1 });
+        await using store = await backend.create();
+        await append(store, "a1", { x: 1 });
         escaped = store;
       }
 
-      assert.throws(() => escaped.reader.list("a1"));
+      await assert.rejects(() => escaped.reader.list("a1"));
     });
   });
 }

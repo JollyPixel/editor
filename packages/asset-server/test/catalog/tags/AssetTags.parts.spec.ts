@@ -61,13 +61,13 @@ async function tilesTagHarness(): Promise<TilesTagHarness> {
     tags,
     assetId,
     async change(command) {
-      sync.eventStore.writer.append({
+      (await sync.eventStore.writer.append({
         assetType: "tiles",
         assetId,
         eventType: TILE_CHANGED,
         eventData: command,
         actor: kActor
-      }).unwrap();
+      })).unwrap();
       await sync.scheduler.snapshot(assetId);
     },
     async tiles() {
@@ -92,7 +92,7 @@ describe("AssetTags — parts", () => {
       actor: kActor
     })).unwrap();
 
-    const tagged = harness.tags.read(harness.assetId, "v1").unwrap();
+    const tagged = (await harness.tags.read(harness.assetId, "v1")).unwrap();
 
     assert.deepEqual(
       Object.fromEntries([...tagged.parts ?? []].map(([id, data]) => [id, text(data)])),

@@ -19,10 +19,10 @@ import { MemoryTagTable } from "./tags.ts";
 
 // CONSTANTS
 const kNoJournal: EventJournal = {
-  putEvent: () => undefined,
-  deleteEvents: () => undefined,
-  putTag: () => undefined,
-  deleteTag: () => undefined,
+  putEvent: () => Promise.resolve(),
+  deleteEvents: () => Promise.resolve(),
+  putTag: () => Promise.resolve(),
+  deleteTag: () => Promise.resolve(),
   close: () => undefined
 };
 
@@ -66,9 +66,9 @@ export class MemoryEventLog implements EventLog {
     this.#reindex();
   }
 
-  insert(
+  async insert(
     input: AppendInput
-  ): Event {
+  ): Promise<Event> {
     this.#assertOpen();
 
     const { assetId, expectedVersion } = input;
@@ -88,7 +88,7 @@ export class MemoryEventLog implements EventLog {
       eventVersion: head + 1
     };
     const stored = record.toEvent(position);
-    this.#journal.putEvent(stored);
+    await this.#journal.putEvent(stored);
 
     this.#nextEventId++;
     this.#versionByAsset.set(assetId, position.eventVersion);
@@ -98,10 +98,10 @@ export class MemoryEventLog implements EventLog {
     return record.toEvent(position);
   }
 
-  get(
+  async get(
     assetId: string,
     eventVersion: number
-  ): Event | undefined {
+  ): Promise<Event | undefined> {
     this.#assertOpen();
 
     const event = this.#find(assetId, eventVersion);
@@ -109,10 +109,10 @@ export class MemoryEventLog implements EventLog {
     return event === undefined ? undefined : structuredClone(event);
   }
 
-  list(
+  async list(
     assetId: string,
     fromVersion = 0
-  ): Event[] {
+  ): Promise<Event[]> {
     this.#assertOpen();
 
     return copyMatching(
@@ -121,9 +121,9 @@ export class MemoryEventLog implements EventLog {
     );
   }
 
-  listAll(
+  async listAll(
     options: ListAllOptions = {}
-  ): Event[] {
+  ): Promise<Event[]> {
     this.#assertOpen();
 
     const {
@@ -143,9 +143,9 @@ export class MemoryEventLog implements EventLog {
     );
   }
 
-  listFromCheckpoints(
+  async listFromCheckpoints(
     options: ListFromCheckpointsOptions
-  ): Event[] {
+  ): Promise<Event[]> {
     this.#assertOpen();
 
     const {
@@ -162,9 +162,9 @@ export class MemoryEventLog implements EventLog {
     );
   }
 
-  compact(
+  async compact(
     options: CompactOptions
-  ): CompactReport {
+  ): Promise<CompactReport> {
     this.#assertOpen();
 
     const heads = this.#checkpointHeads(
@@ -189,7 +189,7 @@ export class MemoryEventLog implements EventLog {
 
     const removed = this.#events.filter((event) => !kept(event));
     if (removed.length > 0) {
-      this.#journal.deleteEvents(removed);
+      await this.#journal.deleteEvents(removed);
       this.#events = this.#events.filter(kept);
       this.#reindex();
     }
@@ -200,7 +200,7 @@ export class MemoryEventLog implements EventLog {
     };
   }
 
-  close(): void {
+  async close(): Promise<void> {
     this.#events = [];
     this.#streams.clear();
     this.tags.close();

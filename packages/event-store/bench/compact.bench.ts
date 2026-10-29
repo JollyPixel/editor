@@ -36,8 +36,8 @@ const suite = defineSuite("event-store / compact", (bench) => {
 
       bench.add(
         `compact / reclaim: ${reclaim} [${kind}]`,
-        () => {
-          fixture.store.compact({
+        async() => {
+          await fixture.store.compact({
             checkpointEventTypes: CHECKPOINT_EVENT_TYPES,
             reclaim
           });
@@ -50,9 +50,9 @@ const suite = defineSuite("event-store / compact", (bench) => {
     }
   }
 
-  return () => {
+  return async() => {
     for (const fixture of fixtures) {
-      fixture.dispose();
+      await fixture.dispose();
     }
   };
 });
@@ -81,13 +81,13 @@ class Fixture {
   }
 
   async reset(): Promise<void> {
-    this.dispose();
+    await this.dispose();
     this.#opened = await openStore(this.#kind);
-    seed(this.#opened.store, this.#inputs);
+    await seed(this.#opened.store, this.#inputs);
   }
 
-  dispose(): void {
-    this.#opened?.dispose();
+  async dispose(): Promise<void> {
+    await this.#opened?.dispose();
     this.#opened = null;
   }
 }

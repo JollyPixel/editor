@@ -22,6 +22,9 @@ import {
   type AssetPartReader
 } from "../events/AssetPartContents.ts";
 
+export type AssetHeldParts = ReadonlyMap<string, Uint8Array>;
+export type AssetHeldPartRefs = ReadonlyMap<string, number>;
+
 export function foldAssetEvent<
   TState,
   TCommand extends AssetCommandHeader,
@@ -30,10 +33,10 @@ export function foldAssetEvent<
   handler: AssetKindHandler<TState, TCommand, TRelay>,
   state: TState,
   event: EventStore.Event,
-  parts?: AssetPartReader
+  held?: AssetHeldParts
 ): TCommand | null {
   if (isAssetEventType(event.eventType)) {
-    foldLifecycleEvent(handler, state, event, parts);
+    foldLifecycleEvent(handler, state, event, held);
 
     return null;
   }
@@ -57,11 +60,58 @@ export function foldAssetEvent<
   return command.val.message;
 }
 
+export function heldPartRefs(
+  event: EventStore.Event
+): AssetHeldPartRefs {
+  const refs = new Map<string, number>();
+  const data = parseWriteData(event);
+  for (const [partId, entry] of Object.entries(data?.parts ?? {})) {
+    if (!("content" in entry)) {
+      refs.set(partId, entry.at);
+    }
+  }
+
+  return refs;
+}
+
+export async function loadHeldParts(
+  assetId: string,
+  refs: AssetHeldPartRefs,
+  reader: AssetPartReader
+): Promise<AssetHeldParts> {
+  const held = new Map<string, Uint8Array>();
+  const contents = new AssetPartContents(reader, assetId);
+  for (const [partId, at] of refs) {
+    held.set(partId, await contents.read(partId, at));
+  }
+
+  return held;
+}
+
+function parseWriteData(
+  event: EventStore.Event
+): AssetWriteData | null {
+  if (event.eventType !== ASSET_CREATED && event.eventType !== ASSET_UPDATED) {
+    return null;
+  }
+
+  const parsed = parseAssetEvent(event);
+  if (
+    !parsed.ok ||
+    (parsed.val.eventType !== ASSET_CREATED &&
+      parsed.val.eventType !== ASSET_UPDATED)
+  ) {
+    return null;
+  }
+
+  return parsed.val.eventData;
+}
+
 function foldLifecycleEvent(
   handler: AnyAssetKindHandler,
   state: unknown,
   event: EventStore.Event,
-  parts: AssetPartReader | undefined
+  held: AssetHeldParts | undefined
 ): void {
   const parsed = parseAssetEvent(event);
   if (!parsed.ok) {
@@ -76,7 +126,7 @@ function foldLifecycleEvent(
         state,
         decodeContent(assetEvent.eventData.content)
       );
-      loadParts(handler, state, assetEvent.eventData, event.assetId, parts);
+      loadParts(handler, state, assetEvent.eventData, event.assetId, held);
       break;
     case ASSET_DELETED:
       handler.clear(state);
@@ -91,25 +141,24 @@ function loadParts(
   state: unknown,
   data: AssetWriteData,
   assetId: string,
-  reader: AssetPartReader | undefined
+  held: AssetHeldParts | undefined
 ): void {
   if (handler.parts === undefined || data.parts === undefined) {
     return;
   }
 
-  let held: AssetPartContents | null = null;
   for (const [partId, entry] of Object.entries(data.parts)) {
     if ("content" in entry) {
       handler.parts.load(state, partId, decodeContent(entry.content));
       continue;
     }
-    if (reader === undefined) {
+
+    const content = held?.get(partId);
+    if (content === undefined) {
       throw new Error(
-        `Part "${partId}" of asset "${assetId}" is held at version ${entry.at}; pass an event reader.`
+        `Part "${partId}" of asset "${assetId}" is held at version ${entry.at}; load it with loadHeldParts.`
       );
     }
-
-    held ??= new AssetPartContents(reader, assetId);
-    handler.parts.load(state, partId, held.read(partId, entry.at));
+    handler.parts.load(state, partId, content);
   }
 }

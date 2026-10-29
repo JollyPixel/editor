@@ -107,16 +107,17 @@ describe("variance", () => {
 });
 
 describe("reads", () => {
-  test("hand back events whose payload stays unknown", () => {
-    expect(typed.reader.list("a1")).type.toBe<EventStore.Event[]>();
-    expect(typed.reader.list("a1")[0].eventData).type.toBe<unknown>();
-    expect(typed.reader.list("a1")[0].eventData).type.not.toBeAssignableTo<
+  test("hand back events whose payload stays unknown", async() => {
+    const [event] = await typed.reader.list("a1");
+
+    expect(event.eventData).type.toBe<unknown>();
+    expect(event.eventData).type.not.toBeAssignableTo<
       { path: string; }
     >();
   });
 
-  test("a guard is what narrows a stored event", () => {
-    const event = typed.reader.list("a1")[0];
+  test("a guard is what narrows a stored event", async() => {
+    const [event] = await typed.reader.list("a1");
 
     expect<EventStore.TypedEvent<SpriteMap>>()
       .type.toBeAssignableTo<EventStore.Event>();

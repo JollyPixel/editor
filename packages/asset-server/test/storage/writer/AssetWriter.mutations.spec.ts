@@ -25,11 +25,10 @@ const kActor: EventStore.Actor = {
   id: "alice"
 };
 
-function lifecycleTypes(
+async function lifecycleTypes(
   eventStore: EventStore.EventStore
-): string[] {
-  return eventStore.reader
-    .listAll({ eventTypePrefix: "asset." })
+): Promise<string[]> {
+  return (await eventStore.reader.listAll({ eventTypePrefix: "asset." }))
     .map((event) => event.eventType);
 }
 
@@ -97,7 +96,7 @@ describe("AssetWriter — rename", () => {
 
     assert.strictEqual(result.ok, false);
     assert.ok(result.val instanceof AssetPathEscapeError);
-    assert.deepEqual(lifecycleTypes(harness.eventStore), [ASSET_CREATED]);
+    assert.deepEqual(await lifecycleTypes(harness.eventStore), [ASSET_CREATED]);
   });
 
   test("returns a target the source ignores as an error and keeps the file", async() => {
@@ -121,7 +120,7 @@ describe("AssetWriter — rename", () => {
     assert.strictEqual(result.ok, false);
     assert.ok(result.val instanceof AssetPathEscapeError);
     assert.strictEqual(result.val.reason, "reserved");
-    assert.deepEqual(lifecycleTypes(harness.eventStore), [ASSET_CREATED]);
+    assert.deepEqual(await lifecycleTypes(harness.eventStore), [ASSET_CREATED]);
     assert.deepEqual(await harness.source.list(), ["a.png"]);
   });
 
@@ -189,7 +188,7 @@ describe("AssetWriter — ordering", () => {
     ]);
 
     assert.deepEqual(results.map((result) => result.ok), [true, true, true, true]);
-    assert.deepEqual(lifecycleTypes(harness.eventStore), [
+    assert.deepEqual(await lifecycleTypes(harness.eventStore), [
       ASSET_CREATED,
       ASSET_UPDATED,
       ASSET_RENAMED,

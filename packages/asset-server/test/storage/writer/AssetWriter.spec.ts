@@ -25,11 +25,10 @@ const kActor: EventStore.Actor = {
   id: "alice"
 };
 
-function lifecycleTypes(
+async function lifecycleTypes(
   eventStore: EventStore.EventStore
-): string[] {
-  return eventStore.reader
-    .listAll({ eventTypePrefix: "asset." })
+): Promise<string[]> {
+  return (await eventStore.reader.listAll({ eventTypePrefix: "asset." }))
     .map((event) => event.eventType);
 }
 
@@ -72,7 +71,7 @@ describe("AssetWriter — create", () => {
 
     assert.strictEqual(result.ok, false);
     assert.ok(result.val instanceof AssetPathEscapeError);
-    assert.deepEqual(lifecycleTypes(harness.eventStore), []);
+    assert.deepEqual(await lifecycleTypes(harness.eventStore), []);
   });
 
   test("returns a Windows reserved segment as an error without appending", async() => {
@@ -87,7 +86,7 @@ describe("AssetWriter — create", () => {
     assert.strictEqual(result.ok, false);
     assert.ok(result.val instanceof AssetPathEscapeError);
     assert.strictEqual(result.val.reason, "reserved");
-    assert.deepEqual(lifecycleTypes(harness.eventStore), []);
+    assert.deepEqual(await lifecycleTypes(harness.eventStore), []);
   });
 
   test("returns the state directory as an error without appending", async() => {
@@ -101,7 +100,7 @@ describe("AssetWriter — create", () => {
 
     assert.strictEqual(result.ok, false);
     assert.ok(result.val instanceof AssetPathEscapeError);
-    assert.deepEqual(lifecycleTypes(harness.eventStore), []);
+    assert.deepEqual(await lifecycleTypes(harness.eventStore), []);
   });
 
   test("returns a path the source ignores as an error without writing it", async() => {
@@ -120,7 +119,7 @@ describe("AssetWriter — create", () => {
     assert.strictEqual(result.ok, false);
     assert.ok(result.val instanceof AssetPathEscapeError);
     assert.strictEqual(result.val.reason, "reserved");
-    assert.deepEqual(lifecycleTypes(harness.eventStore), []);
+    assert.deepEqual(await lifecycleTypes(harness.eventStore), []);
     assert.deepEqual(await fs.readdir(directory.root), []);
   });
 
@@ -136,7 +135,7 @@ describe("AssetWriter — create", () => {
 
     assert.strictEqual(result.ok, false);
     assert.ok(result.val instanceof UnknownAssetKindError);
-    assert.deepEqual(lifecycleTypes(harness.eventStore), []);
+    assert.deepEqual(await lifecycleTypes(harness.eventStore), []);
   });
 
   test("refuses a path already used by another asset", async() => {

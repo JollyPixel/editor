@@ -90,7 +90,7 @@ describe("registerAssetRooms — replaced content", () => {
 
     await harness.sync.scheduler.flush();
 
-    const last = harness.sync.eventStore.reader.list(harness.assetId).at(-1);
+    const last = (await harness.sync.eventStore.reader.list(harness.assetId)).at(-1);
     assert.strictEqual(last?.eventType, ASSET_UPDATED);
     assert.strictEqual(received.length, beforeSnapshot);
   });

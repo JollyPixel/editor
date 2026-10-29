@@ -16,7 +16,7 @@ The optional `TMap` schema map is described in
 ```ts
 import * as EventStore from "@jolly-pixel/event-store";
 
-using store = await EventStore.persistence.sqlite("./events.sqlite");
+await using store = await EventStore.persistence.sqlite("./events.sqlite");
 ```
 
 Passing a file path creates or opens a durable database, and creates the
@@ -47,7 +47,7 @@ Node.js applications can import the factory directly:
 ```ts
 import { createSqliteEventStore } from "@jolly-pixel/event-store/node";
 
-using store = await createSqliteEventStore("./events.sqlite");
+await using store = await createSqliteEventStore("./events.sqlite");
 ```
 
 The factory owns the connection it opens and closes it with the store.

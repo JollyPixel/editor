@@ -72,8 +72,7 @@ describe("registerAssetRooms — admission", () => {
     await harness.send("A", { action: "increment" });
     await harness.send("A", { action: "decrement" });
 
-    const appended = harness.sync.eventStore.reader
-      .list(harness.assetId)
+    const appended = (await harness.sync.eventStore.reader.list(harness.assetId))
       .filter((event) => event.eventType === COUNTER_INCREMENTED);
 
     assert.strictEqual(appended.length, 1);
@@ -87,8 +86,7 @@ describe("registerAssetRooms — admission", () => {
       await harness.send("A", payload);
     }
 
-    const appended = harness.sync.eventStore.reader
-      .list(harness.assetId)
+    const appended = (await harness.sync.eventStore.reader.list(harness.assetId))
       .filter((event) => event.eventType === COUNTER_INCREMENTED);
     const errors = harness.clients.get("A")!.received
       .filter((envelope) => (envelope as { kind: string; }).kind === "error");
@@ -165,7 +163,7 @@ describe("registerAssetRooms — relay", () => {
     await using harness = await roomHarness({ handler: relayCounterHandler(kNudgeSchemas, nudgeRelay([])) });
     await harness.join("A");
     await harness.join("B");
-    const before = harness.sync.eventStore.reader.list(harness.assetId).length;
+    const before = (await harness.sync.eventStore.reader.list(harness.assetId)).length;
 
     await harness.send("A", { action: "nudge", to: "B" });
     await harness.send("A", { action: "nudge" });
@@ -174,7 +172,7 @@ describe("registerAssetRooms — relay", () => {
       type: "nudged",
       from: "A"
     });
-    assert.strictEqual(harness.sync.eventStore.reader.list(harness.assetId).length, before);
+    assert.strictEqual((await harness.sync.eventStore.reader.list(harness.assetId)).length, before);
     assert.strictEqual(
       harness.clients.get("A")!.received
         .filter((envelope) => (envelope as { kind: string; }).kind === "error").length,
@@ -188,8 +186,7 @@ describe("registerAssetRooms — relay", () => {
 
     await harness.send("A", { action: "increment" });
 
-    const appended = harness.sync.eventStore.reader
-      .list(harness.assetId)
+    const appended = (await harness.sync.eventStore.reader.list(harness.assetId))
       .filter((event) => event.eventType === COUNTER_INCREMENTED);
     assert.strictEqual(appended.length, 1);
   });

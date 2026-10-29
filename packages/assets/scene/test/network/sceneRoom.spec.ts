@@ -37,22 +37,22 @@ function serverTree(
   return loadedTree(server.state.snapshot().actors);
 }
 
-function createRoom(): LiveAssetRoom<SceneState, SceneNetworkCommand> {
+async function createRoom(): Promise<LiveAssetRoom<SceneState, SceneNetworkCommand>> {
   const server = new LiveAssetRoom(sceneAssetKind());
   server.state.load(sceneFile(sampleActors()));
-  server.connect("A");
-  server.connect("B");
+  await server.connect("A");
+  await server.connect("B");
 
   return server;
 }
 
-function connectClient(
+async function connectClient(
   server: LiveAssetRoom<SceneState, SceneNetworkCommand>,
   clientId: string
 ) {
   const room = mockAssetRoom<SceneNetworkCommand, SceneSnapshot>(clientId);
   const { document } = sceneDocumentKind().syncDocument(room);
-  server.connect(clientId);
+  await server.connect(clientId);
 
   return {
     document,
@@ -61,24 +61,24 @@ function connectClient(
         room.deliver(message);
       }
     },
-    flush(): void {
+    async flush(): Promise<void> {
       for (const sent of room.sent.splice(0)) {
-        server.receive(clientId, sent);
+        await server.receive(clientId, sent);
       }
     }
   };
 }
 
 describe("scene room", () => {
-  test("keeps two peers' concurrent edits of different fields of one component", () => {
-    const server = createRoom();
+  test("keeps two peers' concurrent edits of different fields of one component", async() => {
+    const server = await createRoom();
 
-    server.receive("A", networkCommand({
+    await server.receive("A", networkCommand({
       action: "component-changed",
       id: "light",
       data: { intensity: 2 }
     }, { clientId: "A", basis: 0 }));
-    server.receive("B", networkCommand({
+    await server.receive("B", networkCommand({
       action: "component-changed",
       id: "light",
       data: { color: "#ff0000" }
@@ -90,15 +90,15 @@ describe("scene room", () => {
     });
   });
 
-  test("refuses an undo that would remove an actor a peer renamed since", () => {
-    const server = createRoom();
+  test("refuses an undo that would remove an actor a peer renamed since", async() => {
+    const server = await createRoom();
 
-    server.receive("A", networkCommand({
+    await server.receive("A", networkCommand({
       action: "actor-renamed",
       id: "B",
       name: "Renamed"
     }, { clientId: "A" }));
-    server.receive("B", networkCommand({
+    await server.receive("B", networkCommand({
       action: "actor-removed",
       id: "A"
     }, { clientId: "B", basis: 0 }));
@@ -106,15 +106,15 @@ describe("scene room", () => {
     assert.equal(serverTree(server).has("A"), true);
   });
 
-  test("lets a removal without a basis win over earlier edits", () => {
-    const server = createRoom();
+  test("lets a removal without a basis win over earlier edits", async() => {
+    const server = await createRoom();
 
-    server.receive("A", networkCommand({
+    await server.receive("A", networkCommand({
       action: "actor-renamed",
       id: "B",
       name: "Renamed"
     }, { clientId: "A" }));
-    server.receive("B", networkCommand({
+    await server.receive("B", networkCommand({
       action: "actor-removed",
       id: "A"
     }, { clientId: "B" }));
@@ -122,46 +122,46 @@ describe("scene room", () => {
     assert.equal(serverTree(server).has("A"), false);
   });
 
-  test("refuses an environment patch with a malformed color", () => {
-    const server = createRoom();
+  test("refuses an environment patch with a malformed color", async() => {
+    const server = await createRoom();
 
-    assert.throws(() => server.receive("A", networkCommand({
+    await assert.rejects(() => server.receive("A", networkCommand({
       action: "environment-changed",
       environment: { background: "red" }
     }, { clientId: "A" })), TypeError);
   });
 
-  test("converges when a peer removes the parent of a pending local actor", () => {
-    const server = createRoom();
-    const client = connectClient(server, "C");
+  test("converges when a peer removes the parent of a pending local actor", async() => {
+    const server = await createRoom();
+    const client = await connectClient(server, "C");
     client.deliver();
 
     client.document.addActor({ id: "D", name: "D", parentId: "A" });
-    server.receive("A", networkCommand({ action: "actor-removed", id: "A" }, { clientId: "A" }));
+    await server.receive("A", networkCommand({ action: "actor-removed", id: "A" }, { clientId: "A" }));
     client.deliver();
-    client.flush();
+    await client.flush();
     client.deliver();
 
     assert.deepEqual(client.document.tree.toJSON(), server.state.snapshot());
     assert.equal(serverTree(server).has("D"), false);
   });
 
-  test("converges on sibling order when a peer inserts before a pending move", () => {
-    const server = createRoom();
-    const client = connectClient(server, "C");
+  test("converges on sibling order when a peer inserts before a pending move", async() => {
+    const server = await createRoom();
+    const client = await connectClient(server, "C");
     client.deliver();
 
     client.document.move("C", { parentId: null }, {
       transform: SceneTransform.create(),
       beforeId: "A"
     });
-    server.receive("A", networkCommand({
+    await server.receive("A", networkCommand({
       action: "actor-added",
       actors: [actor("Z")],
       beforeId: "A"
     }, { clientId: "A" }));
     client.deliver();
-    client.flush();
+    await client.flush();
     client.deliver();
 
     assert.deepEqual(client.document.tree.toJSON(), server.state.snapshot());

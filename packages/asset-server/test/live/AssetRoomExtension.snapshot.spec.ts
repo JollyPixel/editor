@@ -140,7 +140,7 @@ describe("AssetRoomExtension — encoded snapshots", () => {
     await room.join("a");
     const resync = recordingRoom();
 
-    room.extension.onResync("a", resync.context);
+    await room.extension.onResync("a", resync.context);
 
     assert.deepEqual(resync.direct.map(({ payload }) => payload), [
       { type: "snapshot", data: { value: "encoded@1" }, version: 1 }
@@ -154,7 +154,7 @@ describe("AssetRoomExtension — plain snapshots", () => {
 
     await room.join("a");
     await room.join("b");
-    room.extension.onResync("a", recordingRoom().context);
+    await room.extension.onResync("a", recordingRoom().context);
 
     assert.strictEqual(room.snapshots, 1);
   });
@@ -177,7 +177,7 @@ describe("AssetRoomExtension — plain snapshots", () => {
       return { value: `encoded@${current.version}` };
     });
     const resync = recordingRoom();
-    room.extension.onResync("a", resync.context);
+    await room.extension.onResync("a", resync.context);
 
     const received = await room.join("b");
 

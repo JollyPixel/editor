@@ -37,17 +37,17 @@ async function counterAsset(
   return created.assetId;
 }
 
-function increment(
+async function increment(
   harness: SyncHarness,
   assetId: string
-): void {
-  harness.eventStore.writer.append({
+): Promise<void> {
+  (await harness.eventStore.writer.append({
     assetType: "counter",
     assetId,
     eventType: COUNTER_INCREMENTED,
     eventData: { action: "increment" },
     actor: kActor
-  }).unwrap();
+  })).unwrap();
 }
 
 interface GatedCounter {
@@ -102,13 +102,13 @@ describe("SnapshotScheduler — concurrent commands", () => {
       handlers: [counter.handler]
     });
     const assetId = await counterAsset(harness);
-    increment(harness, assetId);
-    increment(harness, assetId);
+    await increment(harness, assetId);
+    await increment(harness, assetId);
 
     const gate = counter.hold();
     const snapshot = harness.scheduler.snapshot(assetId);
     await gate.serializing;
-    increment(harness, assetId);
+    await increment(harness, assetId);
     gate.release();
 
     assert.strictEqual(await snapshot, false);
@@ -133,12 +133,12 @@ describe("SnapshotScheduler — concurrent commands", () => {
       handlers: [counter.handler]
     });
     const assetId = await counterAsset(harness);
-    increment(harness, assetId);
+    await increment(harness, assetId);
 
     const gate = counter.hold();
     const flushed = harness.scheduler.flush(assetId);
     await gate.serializing;
-    increment(harness, assetId);
+    await increment(harness, assetId);
     gate.release();
     await flushed;
 
@@ -153,10 +153,10 @@ describe("SnapshotScheduler — compaction", () => {
       handlers: [counterHandler()]
     });
     const assetId = await counterAsset(harness);
-    increment(harness, assetId);
+    await increment(harness, assetId);
     await harness.scheduler.snapshot(assetId);
 
-    assert.strictEqual(harness.eventStore.reader.list(assetId).length, 3);
+    assert.strictEqual((await harness.eventStore.reader.list(assetId)).length, 3);
   });
 
   test("keeps the previous snapshot and the commands since", async() => {
@@ -165,14 +165,14 @@ describe("SnapshotScheduler — compaction", () => {
       compact: true
     });
     const assetId = await counterAsset(harness);
-    increment(harness, assetId);
-    increment(harness, assetId);
+    await increment(harness, assetId);
+    await increment(harness, assetId);
     await harness.scheduler.snapshot(assetId);
-    increment(harness, assetId);
+    await increment(harness, assetId);
     await harness.scheduler.snapshot(assetId);
 
     assert.deepEqual(
-      harness.eventStore.reader.list(assetId).map(
+      (await harness.eventStore.reader.list(assetId)).map(
         (event) => event.eventVersion
       ),
       [4, 5, 6]

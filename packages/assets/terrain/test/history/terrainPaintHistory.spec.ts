@@ -16,46 +16,49 @@ import {
 } from "../helpers/terrain.ts";
 
 describe("terrain paint history", () => {
-  test("a paint step undoes to the previous splat, skipped if a peer painted its tile, not sculpted", () => {
-    const { history, document, server, route, skipped } = historySetup();
-    function edgeSplat() {
-      return document.terrain.chunk(EDGE_TILE.chunk)!.splat.tile(EDGE_TILE.x, EDGE_TILE.z);
+  test(
+    "a paint step undoes to the previous splat, skipped if a peer painted its tile, not sculpted",
+    async() => {
+      const { history, document, server, route, skipped } = await historySetup();
+      function edgeSplat() {
+        return document.terrain.chunk(EDGE_TILE.chunk)!.splat.tile(EDGE_TILE.x, EDGE_TILE.z);
+      }
+      history.record("terrain", null, () => document.patchSplat([{ tile: EDGE_TILE, splat: splatTile(3) }]));
+      await route();
+      await server.receive("A", networkCommand(
+        { action: "heights-patched", tiles: [peerTile(EDGE_TILE, 6)] },
+        { clientId: "A", timestamp: Date.now() + 1000 }
+      ));
+      await route();
+
+      assert.equal(history.undo("terrain"), true);
+      await route();
+      assert.deepEqual(edgeSplat(), splatTile(0));
+      assert.equal(document.terrain.chunk(EDGE_TILE.chunk)!.tileHeights(EDGE_TILE.x, EDGE_TILE.z)[0], 6);
+      assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
+
+      history.record("terrain", null, () => document.patchSplat([{ tile: EDGE_TILE, splat: splatTile(3) }]));
+      await route();
+      await server.receive("A", networkCommand(
+        paint(EDGE_TILE.chunk.x, EDGE_TILE.chunk.z, { [EDGE_TILE.index]: 8 }),
+        { clientId: "A", timestamp: Date.now() + 2000 }
+      ));
+      await route();
+
+      assert.equal(history.undo("terrain"), false);
+      assert.deepEqual(skipped, ["peer"]);
     }
-    history.record("terrain", null, () => document.patchSplat([{ tile: EDGE_TILE, splat: splatTile(3) }]));
-    route();
-    server.receive("A", networkCommand(
-      { action: "heights-patched", tiles: [peerTile(EDGE_TILE, 6)] },
-      { clientId: "A", timestamp: Date.now() + 1000 }
-    ));
-    route();
+  );
 
-    assert.equal(history.undo("terrain"), true);
-    route();
-    assert.deepEqual(edgeSplat(), splatTile(0));
-    assert.equal(document.terrain.chunk(EDGE_TILE.chunk)!.tileHeights(EDGE_TILE.x, EDGE_TILE.z)[0], 6);
-    assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
-
-    history.record("terrain", null, () => document.patchSplat([{ tile: EDGE_TILE, splat: splatTile(3) }]));
-    route();
-    server.receive("A", networkCommand(
-      paint(EDGE_TILE.chunk.x, EDGE_TILE.chunk.z, { [EDGE_TILE.index]: 8 }),
-      { clientId: "A", timestamp: Date.now() + 2000 }
-    ));
-    route();
-
-    assert.equal(history.undo("terrain"), false);
-    assert.deepEqual(skipped, ["peer"]);
-  });
-
-  test("undoing a chunk's removal brings back its paint", () => {
-    const { history, document, server, route } = historySetup();
+  test("undoing a chunk's removal brings back its paint", async() => {
+    const { history, document, server, route } = await historySetup();
     document.patchSplat([{ tile: EDGE_TILE, splat: splatTile(5) }]);
-    route();
+    await route();
     history.record("terrain", null, () => document.removeChunk(EDGE_TILE.chunk.x, EDGE_TILE.chunk.z));
-    route();
+    await route();
 
     assert.equal(history.undo("terrain"), true);
-    route();
+    await route();
 
     const { splat } = server.state.terrain.chunk(EDGE_TILE.chunk)!;
     assert.deepEqual(splat.tile(EDGE_TILE.x, EDGE_TILE.z), splatTile(5));

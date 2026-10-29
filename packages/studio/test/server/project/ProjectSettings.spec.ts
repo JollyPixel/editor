@@ -96,7 +96,7 @@ async function settingsHarness(): Promise<SettingsHarness> {
     },
     async [Symbol.asyncDispose]() {
       await assetServer.close();
-      audit[Symbol.dispose]();
+      await audit[Symbol.asyncDispose]();
       accounts[Symbol.dispose]();
     }
   };
@@ -127,7 +127,7 @@ describe("ProjectSettings", () => {
 
     assert.equal(harness.handlerDelay("voxelmodel"), 500);
     assert.deepEqual(harness.project.file.kinds.get(kVoxelModelKinds), after[kVoxelModelKinds]);
-    const [event] = harness.audit.store.reader.listAll();
+    const [event] = await harness.audit.store.reader.listAll();
     assert.equal(event.eventType, SETTINGS_CHANGED);
     assert.deepEqual(event.actor, { type: "user", id: admin.id });
     assert.deepEqual(event.eventData, {
@@ -150,7 +150,7 @@ describe("ProjectSettings", () => {
     };
     assert.deepEqual(reply.kindFilter, after);
     assert.deepEqual(harness.project.file.data.kindFilter, after);
-    const [event] = harness.audit.store.reader.listAll();
+    const [event] = await harness.audit.store.reader.listAll();
     assert.deepEqual(event.eventData, {
       section: "kindFilter",
       before: {
@@ -219,7 +219,7 @@ describe("ProjectSettings", () => {
       InvalidSettingsError
     );
     assert.deepEqual(harness.project.access.toJSON(), access);
-    assert.deepEqual(harness.audit.store.reader.listAll(), []);
+    assert.deepEqual(await harness.audit.store.reader.listAll(), []);
   });
 
   test("a renamed role keeps its accounts, revoked once", async() => {

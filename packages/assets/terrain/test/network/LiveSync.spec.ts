@@ -57,12 +57,12 @@ function livePeers(
   const { server, join, route, dispose } = terrainPeers();
   t.after(dispose);
 
-  function joinLive(
+  async function joinLive(
     clientId: string,
     chunkX: number,
     options: Omit<JoinOptions, "interestChunkX"> = {}
-  ): LivePeer {
-    const peer = join(clientId, { ...options, interestChunkX: chunkX });
+  ): Promise<LivePeer> {
+    const peer = await join(clientId, { ...options, interestChunkX: chunkX });
     const stroke = peer.preview.beginStroke();
 
     return {
@@ -97,35 +97,38 @@ function tileHeightIn(
 }
 
 describe("terrain live patches", () => {
-  test("reach a peer whose interest overlaps the tiles, not a far peer, and stay out of documents", (t) => {
+  test(
+    "reach a peer whose interest overlaps the tiles, not a far peer, and stay out of documents",
+    async(t) => {
+      t.mock.timers.enable({ apis: ["setTimeout"] });
+      const { server, join, route } = livePeers(t);
+      const author = await join("A", 0);
+      const near = await join("B", 1);
+      const far = await join("C", 5);
+      const saved = terrainSnapshot(server.state);
+
+      author.sculpt(12);
+      t.mock.timers.tick(LIVE_PATCH_INTERVAL);
+      await route();
+
+      assert.equal(near.height(), 12);
+      assert.equal(near.confirmedHeight(), 0);
+      assert.equal(far.height(), 0);
+      assert.equal(author.confirmedHeight(), 0);
+      assert.deepEqual(terrainSnapshot(server.state), saved);
+    }
+  );
+
+  test("wider than one message's tile limit reach peers near either end of the stroke", async(t) => {
     t.mock.timers.enable({ apis: ["setTimeout"] });
     const { server, join, route } = livePeers(t);
-    const author = join("A", 0);
-    const near = join("B", 1);
-    const far = join("C", 5);
-    const saved = terrainSnapshot(server.state);
-
-    author.sculpt(12);
-    t.mock.timers.tick(LIVE_PATCH_INTERVAL);
-    route();
-
-    assert.equal(near.height(), 12);
-    assert.equal(near.confirmedHeight(), 0);
-    assert.equal(far.height(), 0);
-    assert.equal(author.confirmedHeight(), 0);
-    assert.deepEqual(terrainSnapshot(server.state), saved);
-  });
-
-  test("wider than one message's tile limit reach peers near either end of the stroke", (t) => {
-    t.mock.timers.enable({ apis: ["setTimeout"] });
-    const { server, join, route } = livePeers(t);
-    const tiles = addWideChunkBlock(server);
+    const tiles = await addWideChunkBlock(server);
     const first = tiles[0];
     const last = tiles[tiles.length - 1];
     const streamCentre = WIDE_BLOCK_CENTRE;
-    const author = join("A", 0, { streamCentre });
-    const nearFirst = join("B", first.chunk.x, { interestChunkZ: first.chunk.z, streamCentre });
-    const nearLast = join("C", last.chunk.x, { interestChunkZ: last.chunk.z, streamCentre });
+    const author = await join("A", 0, { streamCentre });
+    const nearFirst = await join("B", first.chunk.x, { interestChunkZ: first.chunk.z, streamCentre });
+    const nearLast = await join("C", last.chunk.x, { interestChunkZ: last.chunk.z, streamCentre });
 
     author.stroke.write(tiles.map((tile) => {
       return { tile, heights: tileHeights(9) };
@@ -133,73 +136,73 @@ describe("terrain live patches", () => {
     t.mock.timers.tick(LIVE_PATCH_INTERVAL);
     assert.ok(author.room.sent.every((sent) => !("tiles" in sent) ||
       sent.tiles.length <= MAX_PATCH_TILES));
-    route();
+    await route();
 
     assert.equal(heightIn(nearFirst.preview.terrain, first), 9);
     assert.equal(heightIn(nearLast.preview.terrain, last), 9);
   });
 
-  test("give way to the stroke commit, which outlives the live timeout", (t) => {
+  test("give way to the stroke commit, which outlives the live timeout", async(t) => {
     t.mock.timers.enable({ apis: ["setTimeout"] });
     const { server, join, route } = livePeers(t);
-    const author = join("A", 0);
-    const near = join("B", 0);
+    const author = await join("A", 0);
+    const near = await join("B", 0);
 
     author.sculpt(12);
     t.mock.timers.tick(LIVE_PATCH_INTERVAL);
-    route();
+    await route();
     author.sculpt(20);
     author.stroke.commit();
     t.mock.timers.tick(LIVE_PATCH_INTERVAL);
 
     assert.deepEqual(author.room.sent.map((sent) => sent.action), ["heights-patched"]);
-    route();
+    await route();
     t.mock.timers.tick(LIVE_PATCH_TIMEOUT);
 
     assert.equal(near.height(), 20);
     assert.equal(tileHeightIn(server.state.terrain), 20);
   });
 
-  test("fall back to the confirmed heights when no commit arrives in time", (t) => {
+  test("fall back to the confirmed heights when no commit arrives in time", async(t) => {
     t.mock.timers.enable({ apis: ["setTimeout"] });
     const { join, route } = livePeers(t);
-    const author = join("A", 0);
-    const near = join("B", 0);
+    const author = await join("A", 0);
+    const near = await join("B", 0);
     const changed: unknown[] = [];
     near.preview.on("tilesChanged", (tiles) => changed.push(tiles));
 
     author.sculpt(12);
     t.mock.timers.tick(LIVE_PATCH_INTERVAL);
-    route();
+    await route();
     t.mock.timers.tick(LIVE_PATCH_TIMEOUT);
 
     assert.equal(near.height(), 0);
     assert.deepEqual(changed, [[kLiveTile], [kLiveTile]]);
   });
 
-  test("fall back to the confirmed heights when the author leaves mid-stroke", (t) => {
+  test("fall back to the confirmed heights when the author leaves mid-stroke", async(t) => {
     t.mock.timers.enable({ apis: ["setTimeout"] });
     const { join, route } = livePeers(t);
-    const author = join("A", 0);
-    const near = join("B", 0);
+    const author = await join("A", 0);
+    const near = await join("B", 0);
 
     author.sculpt(12);
     t.mock.timers.tick(LIVE_PATCH_INTERVAL);
-    route();
+    await route();
     near.room.emit("peer-left", { clientId: "A" });
 
     assert.equal(near.height(), 0);
   });
 
-  test("survive a rebase rewind without becoming confirmed heights, beside the local stroke", (t) => {
+  test("survive a rebase rewind without becoming confirmed heights, beside the local stroke", async(t) => {
     t.mock.timers.enable({ apis: ["setTimeout"] });
     const { server, join, route } = livePeers(t);
-    server.receive("X", networkCommand(
+    await server.receive("X", networkCommand(
       { action: "chunk-added", x: 1, z: 0, heights: heights(0) },
       { clientId: "X" }
     ));
-    const author = join("A", 0);
-    const near = join("B", 0);
+    const author = await join("A", 0);
+    const near = await join("B", 0);
     const atRewind: Array<Array<number | undefined>> = [];
     near.document.on("reset", (cause) => {
       if (cause === "rewind") {
@@ -212,17 +215,17 @@ describe("terrain live patches", () => {
     });
     author.sculpt(12);
     t.mock.timers.tick(LIVE_PATCH_INTERVAL);
-    route();
+    await route();
     near.stroke.write([{ tile: kOtherTile, heights: tileHeights(7) }]);
 
     near.document.patchTiles([{ tile: kRemovedTile, heights: tileHeights(1) }]);
     near.document.patchTiles([{ tile: kPendingTile, heights: tileHeights(2) }]);
-    server.receive("X", networkCommand({ action: "chunk-removed", x: 1, z: 0 }, { clientId: "X" }));
-    server.receive("X", networkCommand(
+    await server.receive("X", networkCommand({ action: "chunk-removed", x: 1, z: 0 }, { clientId: "X" }));
+    await server.receive("X", networkCommand(
       { action: "heights-patched", tiles: [encodeTilePatch({ tile: kRemoteTile, heights: tileHeights(3) })] },
       { clientId: "X" }
     ));
-    route();
+    await route();
 
     assert.deepEqual(atRewind, [[0, 12, 7]]);
     assert.equal(near.height(), 12);
@@ -230,9 +233,9 @@ describe("terrain live patches", () => {
     assert.equal(heightIn(near.document.terrain, kOtherTile), 7);
   });
 
-  test("resend the interest region when the room syncs again", (t) => {
+  test("resend the interest region when the room syncs again", async(t) => {
     const { join } = livePeers(t);
-    const peer = join("A", 0);
+    const peer = await join("A", 0);
     peer.sender.publishInterest(TerrainInterest.around(0, 0, 1));
     assert.equal(peer.room.sent.length, 0);
 

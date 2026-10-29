@@ -18,9 +18,9 @@ import {
 } from "../helpers/terrain.ts";
 
 describe("terrain splat", () => {
-  test("a splat patch keeps its valid tiles and answers the author with the refused ones' splat", () => {
+  test("a splat patch keeps its valid tiles and answers the author with the refused ones' splat", async() => {
     const room = new LiveAssetRoom(terrainAssetKind());
-    room.connect("A");
+    await room.connect("A");
     room.take("A");
     const unbalanced = splatTile(4);
     unbalanced.weights[0] = 200;
@@ -28,7 +28,7 @@ describe("terrain splat", () => {
     const invalid = { x: 0, z: 0, tile: 1, splat: encodeSplat(unbalanced) };
     assert.ok(valid.action === "splat-patched");
 
-    room.receive("A", networkCommand({ action: "splat-patched", tiles: [...valid.tiles, invalid] }));
+    await room.receive("A", networkCommand({ action: "splat-patched", tiles: [...valid.tiles, invalid] }));
 
     const { splat } = room.state.terrain.chunk(new ChunkCoord(0, 0))!;
     assert.deepEqual([splat.dominantSlot(64, 0), splat.dominantSlot(32, 0)], [4, 0]);

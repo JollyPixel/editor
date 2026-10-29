@@ -234,7 +234,7 @@ export class SnapshotScheduler {
     }
 
     if (this.#compact) {
-      this.#compactBeforeSnapshot(assetId);
+      await this.#compactBeforeSnapshot(assetId);
     }
     const updated = await this.#writer.update({
       assetId,
@@ -264,14 +264,14 @@ export class SnapshotScheduler {
     return "written";
   }
 
-  #compactBeforeSnapshot(
+  async #compactBeforeSnapshot(
     assetId: string
-  ): void {
-    const report = this.#eventStore.compact({
+  ): Promise<void> {
+    const report = await this.#eventStore.compact({
       checkpointEventTypes: ASSET_CHECKPOINT_EVENT_TYPES,
       assetId,
       reclaim: false,
-      keep: retainedPartEvents(this.#eventStore, assetId)
+      keep: await retainedPartEvents(this.#eventStore, assetId)
     });
     if (report.removed > 0) {
       this.#logger

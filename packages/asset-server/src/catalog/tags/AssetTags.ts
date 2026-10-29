@@ -165,7 +165,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     }
 
     const { event } = checkpoint.val;
-    const tag = this.#tagCheckpoint(event, {
+    const tag = await this.#tagCheckpoint(event, {
       name: name.val,
       message: input.message,
       actor: input.actor
@@ -177,12 +177,12 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     return tag;
   }
 
-  list(
+  async list(
     assetId: string
-  ): AssetTag[] {
+  ): Promise<AssetTag[]> {
     const tags: AssetTag[] = [];
-    for (const tag of this.#eventStore.tags.list(assetId)) {
-      const content = this.#content(tag);
+    for (const tag of await this.#eventStore.tags.list(assetId)) {
+      const content = await this.#content(tag);
       if (content !== null) {
         tags.push(toAssetTag(tag, content));
       }
@@ -191,11 +191,11 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     return tags;
   }
 
-  read(
+  async read(
     assetId: string,
     name: string
-  ): Result<TaggedVersion, UnknownTagError | UnrestorableTagError> {
-    const tagged = this.#taggedEvent(assetId, name);
+  ): Promise<Result<TaggedVersion, UnknownTagError | UnrestorableTagError>> {
+    const tagged = await this.#taggedEvent(assetId, name);
     if (!tagged.ok) {
       return tagged;
     }
@@ -207,7 +207,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
       data: decodeContent(eventData.content),
       ...(eventData.parts === undefined ?
         {} :
-        { parts: this.#parts(tagged.val) })
+        { parts: await this.#parts(tagged.val) })
     });
   }
 
@@ -215,7 +215,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     input: RestoreTagInput
   ): Promise<Result<RestoreReport, Error>> {
     const { assetId, name } = input;
-    const found = this.#taggedEvent(assetId, name);
+    const found = await this.#taggedEvent(assetId, name);
     if (!found.ok) {
       return found;
     }
@@ -234,7 +234,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
       });
     }
 
-    const restorePoint = this.#restorePoint(current, `Before restoring "${name}"`);
+    const restorePoint = await this.#restorePoint(current, `Before restoring "${name}"`);
     if (!restorePoint.ok) {
       return restorePoint;
     }
@@ -245,7 +245,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
       data: decodeContent(content),
       ...(tagged.eventData.parts === undefined ?
         {} :
-        { parts: this.#parts(tagged, current) }),
+        { parts: await this.#parts(tagged, current) }),
       dependencies,
       actor: input.actor,
       expectedVersion: head,
@@ -288,7 +288,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
       return Ok({ replaced: false });
     }
 
-    const restorePoint = this.#restorePoint(current, "Before replacing its content");
+    const restorePoint = await this.#restorePoint(current, "Before replacing its content");
     if (!restorePoint.ok) {
       return restorePoint;
     }
@@ -314,11 +314,11 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     });
   }
 
-  delete(
+  async delete(
     assetId: string,
     name: string
-  ): Result<void, UnknownTagError> {
-    if (!this.#eventStore.tags.delete(assetId, name)) {
+  ): Promise<Result<void, UnknownTagError>> {
+    if (!await this.#eventStore.tags.delete(assetId, name)) {
       const error = new UnknownTagError(assetId, name);
 
       return Err(error);
@@ -329,11 +329,11 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     return Ok(undefined);
   }
 
-  #taggedEvent(
+  async #taggedEvent(
     assetId: string,
     name: string
-  ): Result<AssetWriteEvent, UnknownTagError | UnrestorableTagError> {
-    const tag = this.#eventStore.tags.get(assetId, name);
+  ): Promise<Result<AssetWriteEvent, UnknownTagError | UnrestorableTagError>> {
+    const tag = await this.#eventStore.tags.get(assetId, name);
     if (tag === undefined) {
       const error = new UnknownTagError(assetId, name);
 
@@ -341,7 +341,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     }
 
     const event = parseWriteEvent(
-      this.#eventStore.reader.get(assetId, tag.eventVersion)
+      await this.#eventStore.reader.get(assetId, tag.eventVersion)
     );
     if (event === null) {
       const error = new UnrestorableTagError(assetId, name);
@@ -352,10 +352,10 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     return Ok(event);
   }
 
-  #parts(
+  async #parts(
     event: AssetWriteEvent,
     unchanged?: AssetWriteEvent
-  ): Map<string, Uint8Array> {
+  ): Promise<Map<string, Uint8Array>> {
     const held = unchanged === undefined ?
       new Map() :
       partRefs(unchanged.eventData, unchanged.eventVersion);
@@ -366,7 +366,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     const parts = new Map<string, Uint8Array>();
     for (const [partId, ref] of partRefs(event.eventData, event.eventVersion)) {
       if (held.get(partId)?.hash !== ref.hash) {
-        parts.set(partId, contents.read(partId, ref.at));
+        parts.set(partId, await contents.read(partId, ref.at));
       }
     }
 
@@ -377,7 +377,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     assetId: string
   ): Promise<Result<Checkpoint, UnknownAssetError>> {
     await this.#flush(assetId);
-    const events = this.#eventStore.reader.listFromCheckpoints({
+    const events = await this.#eventStore.reader.listFromCheckpoints({
       assetId,
       checkpointEventTypes: ASSET_CHECKPOINT_EVENT_TYPES
     });
@@ -394,13 +394,12 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     });
   }
 
-  #restorePoint(
+  async #restorePoint(
     checkpoint: AssetWriteEvent,
     message: string
-  ): Result<AssetTag | null, Error> {
+  ): Promise<Result<AssetTag | null, Error>> {
     const { assetId, eventVersion } = checkpoint;
-    const tagged = this.#eventStore.tags
-      .list(assetId)
+    const tagged = (await this.#eventStore.tags.list(assetId))
       .some((tag) => tag.eventVersion === eventVersion);
     if (tagged) {
       return Ok(null);
@@ -413,12 +412,12 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     });
   }
 
-  #tagCheckpoint(
+  async #tagCheckpoint(
     checkpoint: AssetWriteEvent,
     input: CheckpointTag
-  ): Result<AssetTag, Error> {
+  ): Promise<Result<AssetTag, Error>> {
     const { assetId, eventVersion } = checkpoint;
-    const created = this.#eventStore.tags.create({
+    const created = await this.#eventStore.tags.create({
       assetId,
       name: input.name.value,
       eventVersion,
@@ -443,7 +442,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     const backups = new Map([[eventData.path, decodeContent(eventData.content)]]);
     const extension = this.#partFiles.extension(eventData.kind);
     if (extension !== null && eventData.parts !== undefined) {
-      for (const [partId, data] of this.#parts(event)) {
+      for (const [partId, data] of await this.#parts(event)) {
         backups.set(this.#partFiles.path(eventData.path, extension, partId), data);
       }
     }
@@ -471,9 +470,9 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     }
   }
 
-  #content(
+  async #content(
     tag: EventStore.EventTag
-  ): TaggedContent | null {
+  ): Promise<TaggedContent | null> {
     const key = contentKey(tag.assetId, tag.eventVersion);
     const cached = this.#contents.get(key);
     if (cached !== undefined) {
@@ -481,7 +480,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     }
 
     const event = parseWriteEvent(
-      this.#eventStore.reader.get(tag.assetId, tag.eventVersion)
+      await this.#eventStore.reader.get(tag.assetId, tag.eventVersion)
     );
     if (event !== null) {
       return this.#remember(event);

@@ -237,7 +237,7 @@ async function seed(
 ): Promise<void> {
   for (let index = 0; index < options.assets; index++) {
     const assetId = binaryAssetId(index);
-    eventStore.writer.append({
+    await eventStore.writer.append({
       assetType: BINARY_KIND,
       assetId,
       eventType: ASSET_CREATED,
@@ -251,7 +251,7 @@ async function seed(
     });
   }
   for (let index = 0; index < options.grids; index++) {
-    eventStore.writer.append({
+    await eventStore.writer.append({
       assetType: GRID_KIND,
       assetId: gridAssetId(index),
       eventType: ASSET_CREATED,

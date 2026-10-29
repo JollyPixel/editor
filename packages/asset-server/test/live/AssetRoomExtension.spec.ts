@@ -57,7 +57,7 @@ function harness(
   const room = recordingRoom();
   const committed: Command[] = [];
   const events: EventStore.EventWriter = {
-    append: (input) => {
+    append: async(input) => {
       appended.push(input);
       if (!appends) {
         const error = new Error("disk full");
@@ -123,11 +123,11 @@ describe("AssetRoomExtension", () => {
     ]);
   });
 
-  test("sends the protocol snapshot to a connecting client", () => {
+  test("sends the protocol snapshot to a connecting client", async() => {
     const { extension, context } = harness();
     const peer = recordingClient("alice");
 
-    extension.onClientConnect(peer, roomPeer(peer.id), context);
+    await extension.onClientConnect(peer, roomPeer(peer.id), context);
 
     assert.deepEqual(peer.received, [
       {
@@ -205,6 +205,34 @@ describe("AssetRoomExtension", () => {
     await extension.onMessage("alice", { action: "increment" }, context);
 
     assert.deepEqual(versions, [1, 2]);
+  });
+
+  test("arbitrates a command only once the previous one is stored", async() => {
+    const steps: string[] = [];
+    const { extension, context } = harness({
+      protocol: {
+        arbitrate: (command) => {
+          steps.push(`arbitrate ${command.seq}`);
+
+          return {
+            command,
+            commit: (version) => steps.push(`commit ${version}`)
+          };
+        }
+      }
+    });
+
+    await Promise.all([
+      extension.onMessage("alice", { action: "increment", seq: 1 }, context),
+      extension.onMessage("bob", { action: "increment", seq: 2 }, context)
+    ]);
+
+    assert.deepEqual(steps, [
+      "arbitrate 1",
+      "commit 1",
+      "arbitrate 2",
+      "commit 2"
+    ]);
   });
 
   test("a rejected append neither commits nor broadcasts", async() => {

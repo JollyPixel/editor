@@ -78,7 +78,7 @@ describe("CatalogExtension — commands", () => {
       content: encodeContent(bytes("one"))
     });
 
-    const [event] = commands.sync.eventStore.reader.listAll({
+    const [event] = await commands.sync.eventStore.reader.listAll({
       eventTypePrefix: "asset."
     });
     assert.deepEqual(event.actor, {

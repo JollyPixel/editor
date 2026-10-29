@@ -11,20 +11,20 @@ import { terrainHistoryRegistration } from "#src/network/client.ts";
 import { edgePeerSetup } from "./peers.ts";
 import { tileHeights } from "./terrain.ts";
 
-export function historySetup() {
-  const peers = edgePeerSetup();
+export async function historySetup() {
+  const peers = await edgePeerSetup();
   const history = new CommandHistory<"terrain">();
   history.register(terrainHistoryRegistration(peers.document, { scope: "terrain" }));
   const skipped: string[] = [];
   history.on("skipped", (_scope, step) => skipped.push(step.refused.reason));
 
-  function stroke(...heights: number[]): void {
+  async function stroke(...heights: number[]): Promise<void> {
     const step = history.open("terrain", null);
     for (const height of heights) {
       peers.sculpt(height);
     }
     step.commit();
-    peers.route();
+    await peers.route();
   }
 
   return { ...peers, history, skipped, stroke };

@@ -53,24 +53,24 @@ const suite = defineSuite("event-store / listFromCheckpoints", async(bench) => {
       bench
         .add(
           `listFromCheckpoints / ${label} [${kind}]`,
-          () => {
-            sink += reader.listFromCheckpoints({
+          async() => {
+            sink += (await reader.listFromCheckpoints({
               checkpointEventTypes: CHECKPOINT_EVENT_TYPES
-            }).length;
+            })).length;
           }
         )
         .add(
           `listAll / ${label} [${kind}]`,
-          () => {
-            sink += reader.listAll().length;
+          async() => {
+            sink += (await reader.listAll()).length;
           }
         );
     }
   }
 
-  return () => {
+  return async() => {
     for (const seeded of opened) {
-      seeded.dispose();
+      await seeded.dispose();
     }
     if (sink < 0) {
       throw new Error("unreachable");

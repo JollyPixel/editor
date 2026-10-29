@@ -33,7 +33,7 @@ describe("voxel-map asset kind over a real back-end", () => {
     );
 
     try {
-      using eventStore = EventStore.persistence.memory();
+      await using eventStore = EventStore.persistence.memory();
       await fs.mkdir(path.join(root, "textures"), { recursive: true });
       await fs.writeFile(
         path.join(root, "textures/stone.blockset.json"),

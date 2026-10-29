@@ -4,7 +4,7 @@ import type * as EventStore from "@jolly-pixel/event-store";
 // CONSTANTS
 const kBatchSize = 200;
 
-export class EventPages implements Iterable<EventStore.Event> {
+export class EventPages implements AsyncIterable<EventStore.Event> {
   #store: EventStore.EventStore;
   #before: number | undefined;
 
@@ -16,10 +16,10 @@ export class EventPages implements Iterable<EventStore.Event> {
     this.#before = before;
   }
 
-  * [Symbol.iterator](): IterableIterator<EventStore.Event> {
+  async* [Symbol.asyncIterator](): AsyncIterableIterator<EventStore.Event> {
     let before = this.#before;
     for (;;) {
-      const batch = this.#store.reader.listAll({
+      const batch = await this.#store.reader.listAll({
         newestFirst: true,
         beforeEventId: before,
         limit: kBatchSize

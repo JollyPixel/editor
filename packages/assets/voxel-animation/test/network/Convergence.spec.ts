@@ -21,10 +21,10 @@ import {
   networkCommand
 } from "../helpers/clips.ts";
 
-function setup() {
+async function setup() {
   const server = new LiveAssetRoom(voxelAnimationAssetKind());
-  server.receive("A", networkCommand({ action: "clip-added", clip: clip("walk") }, { clientId: "A" }));
-  server.receive("A", networkCommand({ action: "clip-added", clip: clip("run") }, { clientId: "A" }));
+  await server.receive("A", networkCommand({ action: "clip-added", clip: clip("walk") }, { clientId: "A" }));
+  await server.receive("A", networkCommand({ action: "clip-added", clip: clip("run") }, { clientId: "A" }));
 
   const room = mockAssetRoom<AnimationNetworkCommand, AnimationSetSnapshot>("B");
   const { document } = voxelAnimationDocumentKind().syncDocument(room);
@@ -35,40 +35,40 @@ function setup() {
     }
   }
 
-  server.connect("B");
+  await server.connect("B");
   deliver();
 
   return {
     server,
     document,
     deliver,
-    flush(): void {
+    async flush(): Promise<void> {
       for (const sent of room.sent.splice(0)) {
-        server.receive("B", sent);
+        await server.receive("B", sent);
       }
     }
   };
 }
 
 describe("voxel-animation convergence", () => {
-  test("a client starts from the room snapshot", () => {
-    const { document } = setup();
+  test("a client starts from the room snapshot", async() => {
+    const { document } = await setup();
 
     assert.deepEqual([...document.set.clips()].map(({ id }) => id), ["walk", "run"]);
   });
 
-  test("a local key and a peer key on other ticks both land", () => {
-    const { server, document, deliver, flush } = setup();
+  test("a local key and a peer key on other ticks both land", async() => {
+    const { server, document, deliver, flush } = await setup();
 
     document.writeKey("walk", "arm", "rotation", key(0, 10));
-    server.receive("A", networkCommand({
+    await server.receive("A", networkCommand({
       action: "key-set",
       clipId: "walk",
       path: "arm",
       channel: "rotation",
       key: key(12000, 90)
     }, { clientId: "A" }));
-    flush();
+    await flush();
     deliver();
 
     assert.deepEqual(document.set.toJSON(), server.state.toJSON());
@@ -78,24 +78,24 @@ describe("voxel-animation convergence", () => {
     );
   });
 
-  test("a key set in a clip a peer removed meanwhile is dropped everywhere", () => {
-    const { server, document, deliver, flush } = setup();
+  test("a key set in a clip a peer removed meanwhile is dropped everywhere", async() => {
+    const { server, document, deliver, flush } = await setup();
 
     document.writeKey("run", "leg", "position", key(0, 1));
-    server.receive("A", networkCommand({ action: "clip-removed", id: "run" }, { clientId: "A" }));
-    flush();
+    await server.receive("A", networkCommand({ action: "clip-removed", id: "run" }, { clientId: "A" }));
+    await flush();
     deliver();
 
     assert.equal(document.set.has("run"), false);
     assert.deepEqual(document.set.toJSON(), server.state.toJSON());
   });
 
-  test("concurrent renames of the rig settle on the same value", () => {
-    const { server, document, deliver, flush } = setup();
+  test("concurrent renames of the rig settle on the same value", async() => {
+    const { server, document, deliver, flush } = await setup();
 
     document.renameRig("Humanoid");
-    server.receive("A", networkCommand({ action: "rig-renamed", rig: "Biped" }, { clientId: "A" }));
-    flush();
+    await server.receive("A", networkCommand({ action: "rig-renamed", rig: "Biped" }, { clientId: "A" }));
+    await flush();
     deliver();
 
     assert.equal(document.set.rig, server.state.rig);

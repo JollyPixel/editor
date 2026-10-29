@@ -218,7 +218,7 @@ export function registerAssetRooms(
       return openLiveRoom(resolved);
     }
 
-    const tagged = tags.read(assetId, tag);
+    const tagged = await tags.read(assetId, tag);
 
     return tagged.ok ?
       openTagRoom(resolved, tagged.val) :

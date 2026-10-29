@@ -61,7 +61,6 @@ export class IndexedDbJournal implements EventJournal {
   }
 
   #database: IDBPDatabase<JournalSchema>;
-  #failure: Error | null = null;
 
   constructor(
     database: IDBPDatabase<JournalSchema>
@@ -85,48 +84,50 @@ export class IndexedDbJournal implements EventJournal {
 
   putEvent(
     event: Event
-  ): void {
-    this.#writable("events").put(event);
+  ): Promise<void> {
+    return this.#write("events", (store) => {
+      store.put(event);
+    });
   }
 
   deleteEvents(
     events: Iterable<Event>
-  ): void {
-    const store = this.#writable("events");
-    for (const event of events) {
-      store.delete(event.eventId);
-    }
+  ): Promise<void> {
+    return this.#write("events", (store) => {
+      for (const event of events) {
+        store.delete(event.eventId);
+      }
+    });
   }
 
   putTag(
     tag: EventTag
-  ): void {
-    this.#writable("tags").put(tag);
+  ): Promise<void> {
+    return this.#write("tags", (store) => {
+      store.put(tag);
+    });
   }
 
   deleteTag(
     assetId: string,
     name: string
-  ): void {
-    this.#writable("tags").delete([assetId, name]);
+  ): Promise<void> {
+    return this.#write("tags", (store) => {
+      store.delete([assetId, name]);
+    });
   }
 
   close(): void {
     this.#database.close();
   }
 
-  #writable(
-    store: StoreNames<JournalSchema>
-  ): IDBObjectStore {
-    if (this.#failure !== null) {
-      throw this.#failure;
-    }
+  #write(
+    storeName: StoreNames<JournalSchema>,
+    write: (store: IDBObjectStore) => void
+  ): Promise<void> {
+    const transaction = this.#database.transaction(storeName, "readwrite");
+    write(unwrap(transaction.store));
 
-    const transaction = this.#database.transaction(store, "readwrite");
-    transaction.done.catch((error) => {
-      this.#failure ??= error;
-    });
-
-    return unwrap(transaction.store);
+    return transaction.done;
   }
 }

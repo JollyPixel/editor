@@ -34,7 +34,7 @@ const kBlocksetSize = {
 
 describe("voxel map created without content", () => {
   test("comes with a same-named blockset it links", async() => {
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
     const source = new MemoryAssetSource();
     await using backend = await createAssetBackend({
       source,

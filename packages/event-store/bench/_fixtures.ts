@@ -35,7 +35,7 @@ export const CHECKPOINT_EVENT_TYPES = ["asset.snapshot"] as const;
 export interface OpenedStore {
   kind: BackendKind;
   store: EventStore.EventStore;
-  dispose(): void;
+  dispose(): Promise<void>;
 }
 
 export async function openStore(
@@ -71,8 +71,8 @@ export async function openStore(
   return {
     kind,
     store,
-    dispose: () => {
-      store.close();
+    dispose: async() => {
+      await store.close();
       fs.rmSync(directory, { recursive: true, force: true });
     }
   };
@@ -121,18 +121,18 @@ export function seedInputs(
   return inputs;
 }
 
-export function seed(
+export async function seed(
   store: EventStore.EventStore,
   inputs: readonly EventStore.AppendInput[]
-): void {
+): Promise<void> {
   for (const input of inputs) {
-    store.writer.append(input).unwrap();
+    (await store.writer.append(input)).unwrap();
   }
 }
 
 export interface SeededStores {
   entries: OpenedStore[];
-  dispose(): void;
+  dispose(): Promise<void>;
 }
 
 export async function openSeededStores(
@@ -143,15 +143,15 @@ export async function openSeededStores(
 
   for (const kind of kinds) {
     const opened = await openStore(kind);
-    seed(opened.store, inputs);
+    await seed(opened.store, inputs);
     entries.push(opened);
   }
 
   return {
     entries,
-    dispose: () => {
+    dispose: async() => {
       for (const opened of entries) {
-        opened.dispose();
+        await opened.dispose();
       }
     }
   };

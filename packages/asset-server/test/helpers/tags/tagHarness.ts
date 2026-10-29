@@ -32,7 +32,7 @@ export interface TagHarness extends AsyncDisposable {
   readonly sync: SyncHarness;
   readonly tags: AssetTags;
   readonly assetId: string;
-  increment(): void;
+  increment(): Promise<void>;
   liveValue(): number | undefined;
   read(path: string): Promise<string | null>;
 }
@@ -74,14 +74,14 @@ export async function tagHarness(
     sync,
     tags,
     assetId,
-    increment() {
-      sync.eventStore.writer.append({
+    async increment() {
+      (await sync.eventStore.writer.append({
         assetType: "counter",
         assetId,
         eventType: COUNTER_INCREMENTED,
         eventData: { action: "increment" },
         actor: TAG_ACTOR
-      }).unwrap();
+      })).unwrap();
     },
     liveValue() {
       const entry = sync.states.get(assetId);

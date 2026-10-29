@@ -41,18 +41,18 @@ async function tilesAsset(
   return created.assetId;
 }
 
-function change(
+async function change(
   harness: SyncHarness,
   assetId: string,
   command: TileCommand
-): void {
-  harness.eventStore.writer.append({
+): Promise<void> {
+  (await harness.eventStore.writer.append({
     assetType: "tiles",
     assetId,
     eventType: TILE_CHANGED,
     eventData: command,
     actor: kActor
-  }).unwrap();
+  })).unwrap();
 }
 
 async function replayed(
@@ -65,11 +65,11 @@ async function replayed(
   return Object.fromEntries((entry.state as TileState).tiles);
 }
 
-function lastParts(
+async function lastParts(
   harness: SyncHarness,
   assetId: string
-): Record<string, Record<string, unknown>> {
-  const event = harness.eventStore.reader.list(assetId).at(-1);
+): Promise<Record<string, Record<string, unknown>>> {
+  const event = (await harness.eventStore.reader.list(assetId)).at(-1);
   const data = event?.eventData as {
     parts: Record<string, Record<string, unknown>>;
   };
@@ -84,10 +84,10 @@ describe("SnapshotScheduler — parts", () => {
     });
     const assetId = await tilesAsset(harness);
 
-    change(harness, assetId, { action: "paint", tile: "b", value: "sand" });
+    await change(harness, assetId, { action: "paint", tile: "b", value: "sand" });
     assert.strictEqual(await harness.scheduler.snapshot(assetId), true);
 
-    const parts = lastParts(harness, assetId);
+    const parts = await lastParts(harness, assetId);
     assert.deepEqual(Object.keys(parts).sort(), ["a", "b"]);
     assert.strictEqual(parts.a.at, 1);
     assert.strictEqual("content" in parts.a, false);
@@ -100,11 +100,11 @@ describe("SnapshotScheduler — parts", () => {
     });
     const assetId = await tilesAsset(harness);
 
-    change(harness, assetId, { action: "paint", tile: "a", value: "water" });
+    await change(harness, assetId, { action: "paint", tile: "a", value: "water" });
     await harness.scheduler.snapshot(assetId);
-    change(harness, assetId, { action: "paint", tile: "b", value: "sand" });
+    await change(harness, assetId, { action: "paint", tile: "b", value: "sand" });
     await harness.scheduler.snapshot(assetId);
-    change(harness, assetId, { action: "paint", tile: "b", value: "dirt" });
+    await change(harness, assetId, { action: "paint", tile: "b", value: "dirt" });
 
     assert.deepEqual(await replayed(harness, assetId), {
       a: "water",
@@ -118,11 +118,11 @@ describe("SnapshotScheduler — parts", () => {
     });
     const assetId = await tilesAsset(harness);
 
-    change(harness, assetId, { action: "paint", tile: "b", value: "sand" });
-    change(harness, assetId, { action: "erase", tile: "a" });
+    await change(harness, assetId, { action: "paint", tile: "b", value: "sand" });
+    await change(harness, assetId, { action: "erase", tile: "a" });
     await harness.scheduler.snapshot(assetId);
 
-    assert.deepEqual(Object.keys(lastParts(harness, assetId)), ["b"]);
+    assert.deepEqual(Object.keys(await lastParts(harness, assetId)), ["b"]);
     assert.deepEqual(await replayed(harness, assetId), { b: "sand" });
   });
 
@@ -132,7 +132,7 @@ describe("SnapshotScheduler — parts", () => {
     });
     const assetId = await tilesAsset(harness);
 
-    change(harness, assetId, { action: "paint", tile: "a", value: "grass" });
+    await change(harness, assetId, { action: "paint", tile: "a", value: "grass" });
 
     assert.strictEqual(await harness.scheduler.snapshot(assetId), false);
   });
@@ -144,9 +144,9 @@ describe("SnapshotScheduler — parts", () => {
     });
     const assetId = await tilesAsset(harness);
 
-    change(harness, assetId, { action: "paint", tile: "b", value: "sand" });
+    await change(harness, assetId, { action: "paint", tile: "b", value: "sand" });
     await harness.scheduler.snapshot(assetId);
-    change(harness, assetId, { action: "paint", tile: "b", value: "dirt" });
+    await change(harness, assetId, { action: "paint", tile: "b", value: "dirt" });
     await harness.scheduler.snapshot(assetId);
 
     assert.deepEqual(await replayed(harness, assetId), {
@@ -170,7 +170,7 @@ describe("AssetWriter — parts", () => {
     });
 
     assert.strictEqual(created.ok, false);
-    assert.strictEqual(harness.eventStore.reader.listAll().length, 0);
+    assert.strictEqual((await harness.eventStore.reader.listAll()).length, 0);
   });
 
   test("refuses a part id outside letters, digits, _ and -", async() => {
@@ -186,6 +186,6 @@ describe("AssetWriter — parts", () => {
     });
 
     assert.strictEqual(created.ok, false);
-    assert.strictEqual(harness.eventStore.reader.listAll().length, 0);
+    assert.strictEqual((await harness.eventStore.reader.listAll()).length, 0);
   });
 });

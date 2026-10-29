@@ -65,12 +65,14 @@ function peerPatch(
   };
 }
 
-function setup() {
+async function setup() {
   const server = new LiveAssetRoom(voxelMapAssetKind({ chunkSize: 16 }));
-  ["L3", "L2", "L1"].forEach((name, index) => server.receive("A", {
-    ...makeAddedCommand(name),
-    ...header("A", index + 1)
-  }));
+  for (const [index, name] of ["L3", "L2", "L1"].entries()) {
+    await server.receive("A", {
+      ...makeAddedCommand(name),
+      ...header("A", index + 1)
+    });
+  }
 
   const room = createMockRoom("B");
   const document = new VoxelDocument({ chunkSize: 16 });
@@ -85,7 +87,7 @@ function setup() {
     }
   }
 
-  server.connect("B");
+  await server.connect("B");
   deliver();
 
   return {
@@ -94,12 +96,12 @@ function setup() {
     document,
     edits,
     deliver,
-    flush(): void {
+    async flush(): Promise<void> {
       for (const sent of room.sentCommands.splice(0)) {
-        server.receive("B", sent);
+        await server.receive("B", sent);
       }
       for (; room.resyncs > 0; room.resyncs--) {
-        server.resync("B");
+        await server.resync("B");
       }
     }
   };
@@ -117,13 +119,13 @@ function header(
 }
 
 describe("voxel-map convergence", () => {
-  test("C2: concurrent layer moves leave the author in the server's order", () => {
-    const { server, document, deliver, flush } = setup();
+  test("C2: concurrent layer moves leave the author in the server's order", async() => {
+    const { server, document, deliver, flush } = await setup();
     assert.deepStrictEqual(layerNames(document), ["L1", "L2", "L3"]);
 
     document.world.moveLayerTo("L2", 0);
-    server.receive("A", moveToTop(server.state, "L3"));
-    flush();
+    await server.receive("A", moveToTop(server.state, "L3"));
+    await flush();
     deliver();
 
     assert.deepStrictEqual(layerNames(server.state), ["L3", "L2", "L1"]);
@@ -131,12 +133,12 @@ describe("voxel-map convergence", () => {
     assert.deepStrictEqual(readWorld(document), readWorld(server.state));
   });
 
-  test("a newer local voxel write survives an older peer write to the same cell", (t) => {
+  test("a newer local voxel write survives an older peer write to the same cell", async(t) => {
     t.mock.timers.enable({ apis: ["Date"], now: 200 });
-    const { server, document, deliver, flush } = setup();
+    const { server, document, deliver, flush } = await setup();
 
     document.world.setVoxel("L1", { position: kOrigin, blockId: 2 });
-    server.receive("A", {
+    await server.receive("A", {
       action: "voxel-set",
       layerId: "L1",
       metadata: {
@@ -149,16 +151,16 @@ describe("voxel-map convergence", () => {
       },
       ...header("A", 4)
     });
-    flush();
+    await flush();
     deliver();
 
     assert.strictEqual(document.world.getVoxelAt(kOrigin)?.blockId, 2);
     assert.deepStrictEqual(readWorld(document), readWorld(server.state));
   });
 
-  test("a voxel replay the server refuses is corrected, not resynced", () => {
-    const { server, room, document, deliver } = setup();
-    server.receive("A", {
+  test("a voxel replay the server refuses is corrected, not resynced", async() => {
+    const { server, room, document, deliver } = await setup();
+    await server.receive("A", {
       action: "voxel-set",
       layerId: "L1",
       metadata: {
@@ -175,7 +177,7 @@ describe("voxel-map convergence", () => {
     const received: string[] = [];
     room.on("message", (message) => received.push(message.type));
 
-    server.receive("B", {
+    await server.receive("B", {
       action: "voxels-removed",
       layerId: "L1",
       metadata: { entries: [{ position: kOrigin }] },
@@ -191,49 +193,49 @@ describe("voxel-map convergence", () => {
     assert.deepStrictEqual(readWorld(document), readWorld(server.state));
   });
 
-  test("a remote layer move is applied under pending voxel writes", () => {
-    const { server, document, deliver, flush } = setup();
+  test("a remote layer move is applied under pending voxel writes", async() => {
+    const { server, document, deliver, flush } = await setup();
 
     document.world.setVoxel("L1", { position: kOrigin, blockId: 2 });
     document.world.removeVoxel("L1", { position: kOrigin });
     document.world.setVoxel("L2", { position: kOrigin, blockId: 3 });
-    server.receive("A", moveToTop(server.state, "L3"));
+    await server.receive("A", moveToTop(server.state, "L3"));
     deliver();
     assert.deepStrictEqual(layerNames(document), ["L3", "L1", "L2"]);
 
-    flush();
+    await flush();
     deliver();
 
     assert.deepStrictEqual(readWorld(document), readWorld(server.state));
   });
 
-  test("a pending undo is rebased with the inverse of its own writes", () => {
-    const { server, room, document, edits, deliver, flush } = setup();
+  test("a pending undo is rebased with the inverse of its own writes", async() => {
+    const { server, room, document, edits, deliver, flush } = await setup();
     const history = mapHistory(edits);
 
     document.world.setVoxel("L1", { position: kOrigin, blockId: 2 });
     history.undo(MAP_SCOPE);
-    server.receive("A", moveToTop(server.state, "L3"));
+    await server.receive("A", moveToTop(server.state, "L3"));
     deliver();
     assert.strictEqual(room.resyncs, 0);
     assert.strictEqual(document.world.getVoxelAt(kOrigin), undefined);
 
-    flush();
+    await flush();
     deliver();
 
     assert.deepStrictEqual(readWorld(document), readWorld(server.state));
   });
 
-  test("a peer write landing after the server confirmed an edit refuses its step", () => {
-    const { server, document, edits, deliver, flush } = setup();
+  test("a peer write landing after the server confirmed an edit refuses its step", async() => {
+    const { server, document, edits, deliver, flush } = await setup();
     const history = mapHistory(edits);
     const refused: HistoryStepInfo[] = [];
     history.on("refused", (_scope, step) => refused.push(step));
 
     document.world.setVoxel("L1", { position: kOrigin, blockId: 2 });
-    flush();
+    await flush();
     deliver();
-    server.receive("A", peerPatch(server.state, "L1", 5));
+    await server.receive("A", peerPatch(server.state, "L1", 5));
     deliver();
 
     assert.deepStrictEqual(refused, [

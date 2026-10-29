@@ -1,7 +1,8 @@
 # In-memory persistence
 
-Creation is synchronous. The factory comes from the package's browser-safe
-main entry point and keeps events only in the store instance that created them.
+Creation is synchronous; reads and writes still return promises. The factory
+comes from the package's browser-safe main entry point and keeps events only
+in the store instance that created them.
 
 ```ts
 EventStore.persistence.memory<TMap>(): TypedEventStore<TMap>
@@ -13,7 +14,7 @@ The optional `TMap` schema map is described in
 ```ts
 import * as EventStore from "@jolly-pixel/event-store";
 
-using store = EventStore.persistence.memory();
+await using store = EventStore.persistence.memory();
 ```
 
 Each store is isolated. Its events remain private to that store. Calling

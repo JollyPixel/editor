@@ -179,7 +179,7 @@ export class AssetServer implements AsyncDisposable {
     this.#detach();
     await this.backend.close();
     if (this.#ownsEventStore) {
-      this.eventStore.close();
+      await this.eventStore.close();
     }
   }
 

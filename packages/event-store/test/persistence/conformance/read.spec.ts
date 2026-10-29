@@ -16,12 +16,12 @@ import {
 for (const backend of backends) {
   describe(`${backend.name} — list`, () => {
     test("returns events for the asset in version order", async() => {
-      using store = await backend.create();
-      append(store, "a1", { x: 1 });
-      append(store, "a1", { x: 2 });
-      append(store, "a2", { x: 3 });
+      await using store = await backend.create();
+      await append(store, "a1", { x: 1 });
+      await append(store, "a1", { x: 2 });
+      await append(store, "a2", { x: 3 });
 
-      const events = store.reader.list("a1");
+      const events = await store.reader.list("a1");
 
       assert.deepEqual(
         events.map((event) => event.eventVersion),
@@ -30,12 +30,12 @@ for (const backend of backends) {
     });
 
     test("fromVersion excludes events at or before it", async() => {
-      using store = await backend.create();
-      append(store, "a1", { x: 1 });
-      append(store, "a1", { x: 2 });
-      append(store, "a1", { x: 3 });
+      await using store = await backend.create();
+      await append(store, "a1", { x: 1 });
+      await append(store, "a1", { x: 2 });
+      await append(store, "a1", { x: 3 });
 
-      const events = store.reader.list("a1", 1);
+      const events = await store.reader.list("a1", 1);
 
       assert.deepEqual(
         events.map((event) => event.eventVersion),
@@ -44,10 +44,10 @@ for (const backend of backends) {
     });
 
     test("returns an empty array for an unknown asset", async() => {
-      using store = await backend.create();
+      await using store = await backend.create();
 
       assert.deepEqual(
-        store.reader.list("missing"),
+        await store.reader.list("missing"),
         []
       );
     });
@@ -55,47 +55,47 @@ for (const backend of backends) {
 
   describe(`${backend.name} — get`, () => {
     test("returns the event stored at that version of the asset", async() => {
-      using store = await backend.create();
-      append(store, "a1", { x: 1 });
-      const second = append(store, "a1", { x: 2 });
-      append(store, "a2", { x: 3 });
+      await using store = await backend.create();
+      await append(store, "a1", { x: 1 });
+      const second = await append(store, "a1", { x: 2 });
+      await append(store, "a2", { x: 3 });
 
-      assert.deepEqual(store.reader.get("a1", 2), second);
+      assert.deepEqual(await store.reader.get("a1", 2), second);
     });
 
     test("returns undefined for a version or asset the log does not hold", async() => {
-      using store = await backend.create();
-      append(store, "a1", { x: 1 });
+      await using store = await backend.create();
+      await append(store, "a1", { x: 1 });
 
-      assert.strictEqual(store.reader.get("a1", 2), undefined);
-      assert.strictEqual(store.reader.get("missing", 1), undefined);
+      assert.strictEqual(await store.reader.get("a1", 2), undefined);
+      assert.strictEqual(await store.reader.get("missing", 1), undefined);
     });
   });
 
   describe(`${backend.name} — read copies`, () => {
-    const reads: [string, (reader: EventStore.EventReader) => EventStore.Event | undefined][] = [
+    const reads: [string, (reader: EventStore.EventReader) => Promise<EventStore.Event | undefined>][] = [
       ["get", (reader) => reader.get("a1", 1)],
-      ["list", (reader) => reader.list("a1")[0]],
-      ["listAll", (reader) => reader.listAll()[0]],
+      ["list", async(reader) => (await reader.list("a1"))[0]],
+      ["listAll", async(reader) => (await reader.listAll())[0]],
       [
         "listFromCheckpoints",
-        (reader) => reader.listFromCheckpoints({
+        async(reader) => (await reader.listFromCheckpoints({
           checkpointEventTypes: ["asset.created"]
-        })[0]
+        }))[0]
       ]
     ];
 
     for (const [name, read] of reads) {
       test(`${name} hands back copies, so mutating a result cannot reach the log`, async() => {
-        using store = await backend.create();
-        append(store, "a1", { nested: { value: 1 } }, "asset.created");
+        await using store = await backend.create();
+        await append(store, "a1", { nested: { value: 1 } }, "asset.created");
 
-        const event = read(store.reader);
+        const event = await read(store.reader);
         assert.ok(event);
         (event.eventData as { nested: { value: number; }; }).nested.value = 999;
 
         assert.deepEqual(
-          read(store.reader)?.eventData,
+          (await read(store.reader))?.eventData,
           { nested: { value: 1 } }
         );
       });
@@ -104,10 +104,10 @@ for (const backend of backends) {
 
   describe(`${backend.name} — listAll`, () => {
     test("returns append order across interleaved streams", async() => {
-      using store = await backend.create();
-      seed(store);
+      await using store = await backend.create();
+      await seed(store);
 
-      const events = store.reader.listAll();
+      const events = await store.reader.listAll();
 
       assert.deepEqual(
         events.map((event) => event.eventId),
@@ -120,10 +120,10 @@ for (const backend of backends) {
     });
 
     test("fromEventId is an exclusive lower bound", async() => {
-      using store = await backend.create();
-      seed(store);
+      await using store = await backend.create();
+      await seed(store);
 
-      const events = store.reader.listAll({ fromEventId: 2 });
+      const events = await store.reader.listAll({ fromEventId: 2 });
 
       assert.deepEqual(
         events.map((event) => event.eventId),
@@ -132,10 +132,10 @@ for (const backend of backends) {
     });
 
     test("eventTypePrefix keeps only the matching prefix", async() => {
-      using store = await backend.create();
-      seed(store);
+      await using store = await backend.create();
+      await seed(store);
 
-      const events = store.reader.listAll({
+      const events = await store.reader.listAll({
         eventTypePrefix: "asset."
       });
 
@@ -146,11 +146,11 @@ for (const backend of backends) {
     });
 
     test("eventTypePrefix matches wildcards literally", async() => {
-      using store = await backend.create();
-      append(store, "a1", {}, "asset.created");
-      append(store, "a2", {}, "a*.created");
+      await using store = await backend.create();
+      await append(store, "a1", {}, "asset.created");
+      await append(store, "a2", {}, "a*.created");
 
-      const events = store.reader.listAll({
+      const events = await store.reader.listAll({
         eventTypePrefix: "a*."
       });
 
@@ -161,10 +161,10 @@ for (const backend of backends) {
     });
 
     test("limit truncates from the start of the ordered result", async() => {
-      using store = await backend.create();
-      seed(store);
+      await using store = await backend.create();
+      await seed(store);
 
-      const events = store.reader.listAll({ limit: 2 });
+      const events = await store.reader.listAll({ limit: 2 });
 
       assert.deepEqual(
         events.map((event) => event.eventId),
@@ -173,10 +173,10 @@ for (const backend of backends) {
     });
 
     test("combines every option", async() => {
-      using store = await backend.create();
-      seed(store);
+      await using store = await backend.create();
+      await seed(store);
 
-      const events = store.reader.listAll({
+      const events = await store.reader.listAll({
         fromEventId: 1,
         eventTypePrefix: "asset.",
         limit: 1
@@ -189,14 +189,14 @@ for (const backend of backends) {
     });
 
     test("newestFirst pages backwards from beforeEventId", async() => {
-      using store = await backend.create();
-      seed(store);
+      await using store = await backend.create();
+      await seed(store);
 
-      const first = store.reader.listAll({
+      const first = await store.reader.listAll({
         newestFirst: true,
         limit: 2
       });
-      const next = store.reader.listAll({
+      const next = await store.reader.listAll({
         newestFirst: true,
         beforeEventId: first.at(-1)?.eventId,
         limit: 2
@@ -209,10 +209,10 @@ for (const backend of backends) {
     });
 
     test("returns an empty array on an empty log", async() => {
-      using store = await backend.create();
+      await using store = await backend.create();
 
       assert.deepEqual(
-        store.reader.listAll(),
+        await store.reader.listAll(),
         []
       );
     });

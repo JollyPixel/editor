@@ -22,11 +22,17 @@ export interface EventStore {
   ): () => void;
   compact(
     options: CompactOptions
-  ): CompactReport;
-  close(): void;
-  [Symbol.dispose](): void;
+  ): Promise<CompactReport>;
+  close(): Promise<void>;
+  [Symbol.asyncDispose](): Promise<void>;
 }
 ```
+
+Every read and write returns a promise, whatever the backend. Writes
+(`append`, `tags.create`, `tags.delete`, `compact` and `close`) run one at a
+time in call order, so a write starts only after the previous one settled.
+Reads do not wait for pending writes and see the log as of the last settled
+write.
 
 ## Data model
 
@@ -76,7 +82,7 @@ type SpriteMap = {
 
 const store = persistence.memory<SpriteMap>();
 
-store.writer.append({
+await store.writer.append({
   assetType: "sprite",
   assetId: "a1",
   eventType: "sprite.created",
@@ -121,11 +127,13 @@ function isSpriteCreated(
 ## `writer`
 
 ```ts
-writer.append(input: AppendInput): Result<Event, Error>
+writer.append(input: AppendInput): Promise<Result<Event, Error>>
 ```
 
-`append` returns the stored event on success, including the `eventId` and
-`eventVersion` assigned by the backend. Failures are returned as `Result` errors.
+`append` resolves with the stored event on success, including the `eventId`
+and `eventVersion` assigned by the backend. Failures resolve as `Result`
+errors; the promise itself does not reject. Appends issued without awaiting
+each other are stored in call order and get consecutive versions.
 
 ### Expected version
 
@@ -158,7 +166,9 @@ subscribe(listener: EventListener, options?: SubscribeOptions): () => void
 ```
 
 Calls `listener` with each event the store accepts, in append order, and
-returns the function that detaches it. A rejected append notifies nothing.
+returns the function that detaches it. Listeners run before the `append`
+promise resolves, so the appender continues with every listener already
+called. A rejected append notifies nothing.
 `eventTypePrefix` matches the start of `eventType` literally, the same way the
 reader filters, so a consumer folding one family of events does not filter the
 stream itself.
@@ -188,13 +198,13 @@ returns the same error, so the appender handles it either way.
 ## `reader`
 
 ```ts
-reader.get(assetId: string, eventVersion: number): Event | undefined
-reader.list(assetId: string, fromVersion?: number): Event[]
-reader.listAll(options?: ListAllOptions): Event[]
-reader.listFromCheckpoints(options: ListFromCheckpointsOptions): Event[]
+reader.get(assetId: string, eventVersion: number): Promise<Event | undefined>
+reader.list(assetId: string, fromVersion?: number): Promise<Event[]>
+reader.listAll(options?: ListAllOptions): Promise<Event[]>
+reader.listFromCheckpoints(options: ListFromCheckpointsOptions): Promise<Event[]>
 ```
 
-`get` returns the event stored at one version of an asset, or `undefined` when
+`get` resolves with the event stored at one version of an asset, or `undefined` when
 the stream does not hold that version, for example after compaction removed it.
 
 `list` returns one asset stream in `eventVersion` order and treats `fromVersion`
@@ -243,7 +253,7 @@ matching the prefix but stored before its asset's checkpoint is still left out.
 only the events its fold still needs:
 
 ```ts
-const events = store.reader.listFromCheckpoints({
+const events = await store.reader.listFromCheckpoints({
   assetId: "a1",
   checkpointEventTypes: ["asset.created", "asset.updated"]
 });
@@ -264,10 +274,10 @@ export interface EventTag extends EventTagInput {
   createdAt: string;
 }
 
-tags.create(input: EventTagInput): Result<EventTag, Error>
-tags.get(assetId: string, name: string): EventTag | undefined
-tags.list(assetId?: string): EventTag[]
-tags.delete(assetId: string, name: string): boolean
+tags.create(input: EventTagInput): Promise<Result<EventTag, Error>>
+tags.get(assetId: string, name: string): Promise<EventTag | undefined>
+tags.list(assetId?: string): Promise<EventTag[]>
+tags.delete(assetId: string, name: string): Promise<boolean>
 ```
 
 A tag names one event of one asset stream and keeps that event through
@@ -276,22 +286,22 @@ names may point at the same event. The store only refuses an empty name; any
 other naming rule belongs to the consumer.
 
 ```ts
-const [checkpoint] = store.reader.listFromCheckpoints({
+const [checkpoint] = await store.reader.listFromCheckpoints({
   assetId: "a1",
   checkpointEventTypes: ["asset.created", "asset.updated"]
 });
 
-store.tags.create({
+(await store.tags.create({
   assetId: "a1",
   name: "v1",
   eventVersion: checkpoint.eventVersion,
   message: "First pass",
   actor
-}).unwrap();
+})).unwrap();
 ```
 
-`create` returns the stored tag with the `createdAt` the store assigned. It
-returns an error and stores nothing when:
+`create` resolves with the stored tag and the `createdAt` the store assigned.
+It resolves with an error and stores nothing when:
 
 - the stream holds no event at `eventVersion`, including one that compaction
   already removed: `UnknownEventError`;
@@ -314,7 +324,7 @@ class EventTagConflictError extends Error {
 never moves: to point a name at another event, delete it and create it again,
 which also moves it to the end of the list.
 
-`delete` returns `false` when the tag does not exist. It leaves the event in
+`delete` resolves with `false` when the tag does not exist. It leaves the event in
 place, and the next `compact` removes that event unless another tag still
 points at it.
 
@@ -362,14 +372,16 @@ elsewhere stays valid and `append` keeps assigning increasing versions.
 ## Lifecycle
 
 ```ts
-close(): void
-[Symbol.dispose](): void
+close(): Promise<void>
+[Symbol.asyncDispose](): Promise<void>
 ```
 
-`close()` is idempotent. A closed store rejects later reads and writes with an
-`EventLogClosedError`: `append` and `tags.create` return it, and every other
-member throws it.
-`[Symbol.dispose]` calls `close()`, so stores work with `using` declarations.
+`close()` is idempotent and waits for the writes issued before it. A closed
+store refuses later reads and writes with an `EventLogClosedError`: `append`
+and `tags.create` resolve with it as a `Result` error, and every other member
+rejects with it.
+`[Symbol.asyncDispose]` calls `close()`, so stores work with `await using`
+declarations.
 
 ## Storage contract
 

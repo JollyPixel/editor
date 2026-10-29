@@ -80,7 +80,7 @@ describe("voxel animation file", () => {
   });
 
   test("an asset created without content is an empty set", async() => {
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
     const source = new MemoryAssetSource();
     await using backend = await createAssetBackend({
       source,

@@ -57,7 +57,7 @@ function harness(
   const room = recordingRoom();
   const committed: Command[] = [];
   const events: EventStore.EventWriter = {
-    append: (input) => {
+    append: async(input) => {
       appended.push(input);
       if (!appends) {
         const error = new Error("disk full");
@@ -121,10 +121,10 @@ describe("AssetRoomExtension — deletion", () => {
     assert.strictEqual(parser.parse({ type: ASSET_ROOM_DELETED }).ok, true);
   });
 
-  test("broadcasts the deleted notice once to connected clients", () => {
+  test("broadcasts the deleted notice once to connected clients", async() => {
     const { extension, context, broadcast } = harness();
     const peer = recordingClient("alice");
-    extension.onClientConnect(peer, roomPeer(peer.id), context);
+    await extension.onClientConnect(peer, roomPeer(peer.id), context);
 
     extension.markDeleted();
     extension.markDeleted();
@@ -133,12 +133,12 @@ describe("AssetRoomExtension — deletion", () => {
     assert.deepEqual(broadcast, [{ type: ASSET_ROOM_DELETED }]);
   });
 
-  test("sends the deleted notice instead of a snapshot to a late joiner", () => {
+  test("sends the deleted notice instead of a snapshot to a late joiner", async() => {
     const { extension, context } = harness();
     extension.markDeleted();
     const peer = recordingClient("alice");
 
-    extension.onClientConnect(peer, roomPeer(peer.id), context);
+    await extension.onClientConnect(peer, roomPeer(peer.id), context);
 
     assert.deepEqual(peer.received, [{ type: ASSET_ROOM_DELETED }]);
   });

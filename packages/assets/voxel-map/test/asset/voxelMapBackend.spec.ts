@@ -52,13 +52,13 @@ function stateFromFile(
   return state;
 }
 
-function replay(
+async function replay(
   eventStore: EventStore.EventStore,
   assetId: string
-): VoxelMapState {
+): Promise<VoxelMapState> {
   const handler = voxelMapAssetKind({ chunkSize: kChunkSize });
   const state = handler.create(assetId);
-  for (const event of eventStore.reader.list(assetId)) {
+  for (const event of await eventStore.reader.list(assetId)) {
     foldAssetEvent(handler, state, event);
   }
 
@@ -72,7 +72,7 @@ describe("voxel-map asset kind over a real back-end", () => {
     );
 
     try {
-      using eventStore = EventStore.persistence.memory();
+      await using eventStore = EventStore.persistence.memory();
       await fs.mkdir(path.join(root, "maps"), { recursive: true });
       await fs.writeFile(
         path.join(root, kFilePath),
@@ -122,8 +122,7 @@ describe("voxel-map asset kind over a real back-end", () => {
       });
 
       assert.strictEqual(
-        eventStore.reader
-          .list(record.id)
+        (await eventStore.reader.list(record.id))
           .filter((event) => event.eventType === VOXEL_MAP_COMMAND)
           .length,
         1
@@ -148,7 +147,7 @@ describe("voxel-map asset kind over a real back-end", () => {
       );
 
       assert.strictEqual(
-        replay(eventStore, record.id).world
+        (await replay(eventStore, record.id)).world
           .getVoxelAt({ x: 2, y: 1, z: 3 })?.blockId,
         5
       );
@@ -169,7 +168,7 @@ describe("voxel-map asset kind over a real back-end", () => {
     );
 
     try {
-      using eventStore = EventStore.persistence.memory();
+      await using eventStore = EventStore.persistence.memory();
       await fs.writeFile(
         path.join(root, "a.voxelmap.json"),
         seededDocument()
@@ -223,8 +222,7 @@ describe("voxel-map asset kind over a real back-end", () => {
       });
 
       assert.strictEqual(
-        eventStore.reader
-          .list(record.id)
+        (await eventStore.reader.list(record.id))
           .filter((event) => event.eventType === VOXEL_MAP_COMMAND)
           .length,
         1

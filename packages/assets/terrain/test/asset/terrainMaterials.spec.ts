@@ -77,31 +77,31 @@ describe("terrain materials", () => {
     );
   });
 
-  test("a material is admitted only with a new ID, on a free slot, under the material cap", () => {
+  test("a material is admitted only with a new ID, on a free slot, under the material cap", async() => {
     const room = liveRoom();
-    function add(id: string, slot: number): void {
-      room.receive("A", networkCommand({ action: "material-added", material: material(id, slot) }));
+    async function add(id: string, slot: number): Promise<void> {
+      await room.receive("A", networkCommand({ action: "material-added", material: material(id, slot) }));
     }
-    add("ground", 4);
-    add("rock", 0);
+    await add("ground", 4);
+    await add("rock", 0);
     for (let slot = 1; slot <= MAX_TERRAIN_MATERIALS; slot++) {
-      add(`material-${slot}`, slot);
+      await add(`material-${slot}`, slot);
     }
 
     assert.deepEqual(materialSlots(room), Array.from({ length: MAX_TERRAIN_MATERIALS }, (_, slot) => slot));
   });
 
-  test("an update of a removed material and an unchanged texture size are refused", () => {
+  test("an update of a removed material and an unchanged texture size are refused", async() => {
     const room = liveRoom();
-    room.connect("A");
+    await room.connect("A");
     room.take("A");
-    room.receive("A", networkCommand({ action: "material-removed", id: GROUND_MATERIAL.id }));
-    room.receive("A", networkCommand({
+    await room.receive("A", networkCommand({ action: "material-removed", id: GROUND_MATERIAL.id }));
+    await room.receive("A", networkCommand({
       action: "material-updated",
       id: GROUND_MATERIAL.id,
       changes: { tiling: 8 }
     }));
-    room.receive("A", networkCommand({
+    await room.receive("A", networkCommand({
       action: "texture-size-changed",
       size: DEFAULT_MATERIAL_TEXTURE_SIZE
     }));

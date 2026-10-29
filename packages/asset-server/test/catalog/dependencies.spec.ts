@@ -30,12 +30,11 @@ const kActor: EventStore.Actor = {
   id: "alice"
 };
 
-function lastWrite(
+async function lastWrite(
   harness: SyncHarness,
   assetId: string
 ) {
-  const writes = harness.eventStore.reader
-    .list(assetId)
+  const writes = (await harness.eventStore.reader.list(assetId))
     .filter((event) => event.eventType === ASSET_CREATED ||
       event.eventType === ASSET_UPDATED);
 
@@ -56,13 +55,13 @@ async function createLink(
   return created.unwrap().assetId;
 }
 
-function legacyCreated(
+async function legacyCreated(
   eventStore: EventStore.TypedEventStore<AssetEventDataMap>,
   assetId: string,
   path: string,
   data: Uint8Array
-): void {
-  eventStore.writer.append({
+): Promise<void> {
+  (await eventStore.writer.append({
     assetType: "link",
     assetId,
     eventType: ASSET_CREATED,
@@ -74,7 +73,7 @@ function legacyCreated(
       content: encodeContent(data)
     },
     actor: kActor
-  }).unwrap();
+  })).unwrap();
 }
 
 function unindexedIds(
@@ -91,7 +90,7 @@ describe("dependency edges on lifecycle events", () => {
     await using harness = await syncHarness({ handlers: [linkHandler()] });
     const assetId = await createLink(harness, "map.link", "a", "b");
 
-    assert.deepEqual(lastWrite(harness, assetId).dependencies, [
+    assert.deepEqual((await lastWrite(harness, assetId)).dependencies, [
       linkReference("a"),
       linkReference("b")
     ]);
@@ -101,7 +100,7 @@ describe("dependency edges on lifecycle events", () => {
       data: linkContent("c"),
       actor: kActor
     });
-    assert.deepEqual(lastWrite(harness, assetId).dependencies, [
+    assert.deepEqual((await lastWrite(harness, assetId)).dependencies, [
       linkReference("c")
     ]);
   });
@@ -121,7 +120,7 @@ describe("dependency edges on lifecycle events", () => {
       actor: kActor
     });
 
-    assert.deepEqual(lastWrite(harness, assetId).dependencies, [
+    assert.deepEqual((await lastWrite(harness, assetId)).dependencies, [
       linkReference("x")
     ]);
   });
@@ -135,10 +134,10 @@ describe("dependency edges on lifecycle events", () => {
     })).unwrap();
     const broken = await createLink(harness, "broken.link", "!");
 
-    const binaryWrite = harness.eventStore.reader
-      .list(binary.assetId)[0].eventData as { dependencies: unknown; };
+    const [binaryEvent] = await harness.eventStore.reader.list(binary.assetId);
+    const binaryWrite = binaryEvent.eventData as { dependencies: unknown; };
     assert.deepEqual(binaryWrite.dependencies, []);
-    assert.deepEqual(lastWrite(harness, broken).dependencies, []);
+    assert.deepEqual((await lastWrite(harness, broken)).dependencies, []);
   });
 
   test("reconcile records edges from disk content", async() => {
@@ -147,13 +146,13 @@ describe("dependency edges on lifecycle events", () => {
 
     (await harness.reconciler.reconcile()).unwrap();
     const assetId = harness.assetIndex.byPath("outside.link")!.id;
-    assert.deepEqual(lastWrite(harness, assetId).dependencies, [
+    assert.deepEqual((await lastWrite(harness, assetId)).dependencies, [
       linkReference("a")
     ]);
 
     await harness.source.write("outside.link", linkContent("b", "c"));
     (await harness.reconciler.reconcile()).unwrap();
-    assert.deepEqual(lastWrite(harness, assetId).dependencies, [
+    assert.deepEqual((await lastWrite(harness, assetId)).dependencies, [
       linkReference("b"),
       linkReference("c")
     ]);
@@ -165,16 +164,16 @@ describe("dependency edges on lifecycle events", () => {
     await harness.projector.flush();
     await harness.states.acquire(assetId, "link");
 
-    harness.eventStore.writer.append({
+    (await harness.eventStore.writer.append({
       assetType: "link",
       assetId,
       eventType: LINK_TARGETS_SET,
       eventData: { action: "set", targets: ["b"] },
       actor: kActor
-    }).unwrap();
+    })).unwrap();
     await harness.scheduler.flush(assetId);
 
-    assert.deepEqual(lastWrite(harness, assetId).dependencies, [
+    assert.deepEqual((await lastWrite(harness, assetId)).dependencies, [
       linkReference("b")
     ]);
   });
@@ -244,7 +243,7 @@ describe("CatalogProjection — dependency index", () => {
 
   test("events without edges are reported as unindexed", async() => {
     const eventStore = EventStore.persistence.memory<AssetEventDataMap>();
-    legacyCreated(eventStore, "old", "old.link", linkContent("a"));
+    await legacyCreated(eventStore, "old", "old.link", linkContent("a"));
 
     {
       await using harness = await syncHarness({ eventStore });

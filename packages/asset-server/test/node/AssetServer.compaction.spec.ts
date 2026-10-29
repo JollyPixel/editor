@@ -57,29 +57,29 @@ describe("AssetServer — compaction", () => {
   }
 
   test("drops the events superseded by each checkpoint", async() => {
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
 
     await editThenReopen(undefined, eventStore);
 
     assert.deepEqual(
-      eventStore.reader.listAll().map((event) => event.eventType),
+      (await eventStore.reader.listAll()).map((event) => event.eventType),
       ["asset.updated"]
     );
   });
 
   test("keeps the whole log when it is turned off", async() => {
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
 
     await editThenReopen(false, eventStore);
 
     assert.deepEqual(
-      eventStore.reader.listAll().map((event) => event.eventType),
+      (await eventStore.reader.listAll()).map((event) => event.eventType),
       ["asset.created", "asset.updated"]
     );
   });
 
   test("the catalog a reopened server serves survives it", async() => {
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
     const source = new MemoryAssetSource();
     function open(): Promise<AssetServer> {
       return AssetServer.open({

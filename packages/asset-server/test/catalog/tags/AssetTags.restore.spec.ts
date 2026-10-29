@@ -52,11 +52,11 @@ function restore(
 describe("AssetTags — restore", () => {
   test("brings the tagged content back to the live state and the file", async() => {
     await using harness = await tagHarness();
-    harness.increment();
-    harness.increment();
+    await harness.increment();
+    await harness.increment();
     await tag(harness, "v1");
     for (let index = 0; index < 3; index++) {
-      harness.increment();
+      await harness.increment();
     }
 
     const report = (await restore(harness, "v1")).unwrap();
@@ -73,7 +73,7 @@ describe("AssetTags — restore", () => {
     assert.strictEqual(harness.liveValue(), 2);
     assert.strictEqual(await harness.read("a.counter"), "2");
 
-    const last = harness.sync.eventStore.reader.list(harness.assetId).at(-1)!;
+    const last = (await harness.sync.eventStore.reader.list(harness.assetId)).at(-1)!;
     assert.deepEqual(last.actor, TAG_ACTOR);
     assert.deepEqual(
       (last.eventData as { restoredFrom?: unknown; }).restoredFrom,
@@ -84,7 +84,7 @@ describe("AssetTags — restore", () => {
   test("restoring the restore point undoes the restore", async() => {
     await using harness = await tagHarness();
     await tag(harness, "v1");
-    harness.increment();
+    await harness.increment();
     const { restorePoint } = (await restore(harness, "v1")).unwrap();
 
     (await restore(harness, restorePoint!.name)).unwrap();
@@ -95,25 +95,25 @@ describe("AssetTags — restore", () => {
 
   test("adds no restore point when a tag already holds the current content", async() => {
     await using harness = await tagHarness();
-    harness.increment();
+    await harness.increment();
     await tag(harness, "v1");
-    harness.increment();
+    await harness.increment();
     await tag(harness, "v2");
 
     const report = (await restore(harness, "v1")).unwrap();
 
     assert.strictEqual(report.restorePoint, undefined);
     assert.deepEqual(
-      harness.tags.list(harness.assetId).map(({ name }) => name),
+      (await harness.tags.list(harness.assetId)).map(({ name }) => name),
       ["v1", "v2"]
     );
   });
 
   test("does nothing when the tagged content is the current content", async() => {
     await using harness = await tagHarness();
-    harness.increment();
+    await harness.increment();
     await tag(harness, "v1");
-    const before = harness.sync.eventStore.reader.list(harness.assetId).length;
+    const before = (await harness.sync.eventStore.reader.list(harness.assetId)).length;
 
     const report = (await restore(harness, "v1")).unwrap();
 
@@ -122,21 +122,21 @@ describe("AssetTags — restore", () => {
       missing: []
     });
     assert.strictEqual(
-      harness.sync.eventStore.reader.list(harness.assetId).length,
+      (await harness.sync.eventStore.reader.list(harness.assetId)).length,
       before
     );
-    assert.strictEqual(harness.tags.list(harness.assetId).length, 1);
+    assert.strictEqual((await harness.tags.list(harness.assetId)).length, 1);
   });
 
   test("still works once compaction removed the events around the tag", async() => {
     await using harness = await tagHarness({ compact: true });
-    harness.increment();
+    await harness.increment();
     await tag(harness, "v1");
     for (let index = 0; index < 3; index++) {
-      harness.increment();
+      await harness.increment();
       await harness.sync.scheduler.flush(harness.assetId);
     }
-    harness.sync.eventStore.compact({
+    await harness.sync.eventStore.compact({
       checkpointEventTypes: ASSET_CHECKPOINT_EVENT_TYPES
     });
 
@@ -154,7 +154,7 @@ describe("AssetTags — restore", () => {
       to: "b.counter",
       actor: TAG_ACTOR
     })).unwrap();
-    harness.increment();
+    await harness.increment();
 
     (await restore(harness, "v1")).unwrap();
 
@@ -205,9 +205,9 @@ describe("AssetTags — restore", () => {
     await using harness = await tagHarness({
       writer: (sync) => {
         return {
-          update: (input) => {
+          update: async(input) => {
             if (editing) {
-              harness.increment();
+              await harness.increment();
             }
 
             return sync.writer.update(input);
@@ -216,7 +216,7 @@ describe("AssetTags — restore", () => {
       }
     });
     await tag(harness, "v1");
-    harness.increment();
+    await harness.increment();
     editing = true;
 
     const restored = await restore(harness, "v1");
@@ -239,7 +239,7 @@ describe("AssetTags — restore", () => {
     assert.ok(!restored.ok);
     assert.ok(restored.val instanceof UnknownAssetError);
     assert.deepEqual(
-      harness.tags.list(harness.assetId).map(({ name }) => name),
+      (await harness.tags.list(harness.assetId)).map(({ name }) => name),
       ["v1"]
     );
   });
@@ -260,13 +260,13 @@ describe("AssetTags — restore", () => {
       to: "b.counter",
       actor: TAG_ACTOR
     })).unwrap();
-    harness.increment();
-    harness.sync.eventStore.tags.create({
+    await harness.increment();
+    (await harness.sync.eventStore.tags.create({
       assetId: harness.assetId,
       name: "renamed",
       eventVersion: renamed.eventVersion,
       actor: TAG_ACTOR
-    }).unwrap();
+    })).unwrap();
 
     const restored = await restore(harness, "renamed");
 

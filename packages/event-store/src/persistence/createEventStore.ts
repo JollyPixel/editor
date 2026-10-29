@@ -3,7 +3,7 @@ import {
   Emitter
 } from "@openally/emitt";
 import {
-  wrap
+  wrapAsync
 } from "@openally/result";
 
 // Import Internal Dependencies
@@ -38,6 +38,16 @@ export function createEventStore<
   log: EventLog
 ): TypedEventStore<TMap> {
   const notifications = new Emitter<AppendNotifications>();
+  let writes: Promise<unknown> = Promise.resolve();
+  function serialize<T>(
+    write: () => Promise<T>
+  ): Promise<T> {
+    const written = writes.then(write);
+    writes = written.catch(() => undefined);
+
+    return written;
+  }
+
   const reader: EventReader = {
     get: (assetId, eventVersion) => log.get(assetId, eventVersion),
     list: (assetId, fromVersion) => log.list(assetId, fromVersion),
@@ -45,21 +55,27 @@ export function createEventStore<
     listFromCheckpoints: (options) => log.listFromCheckpoints(options)
   };
   const tags: EventTags = {
-    create: (input) => wrap<EventTag, Error>(
-      () => log.tags.insert(input)
+    create: (input) => serialize(
+      () => wrapAsync<EventTag, Error>(() => log.tags.insert(input))
     ),
     get: (assetId, name) => log.tags.get(assetId, name),
     list: (assetId) => log.tags.list(assetId),
-    delete: (assetId, name) => log.tags.delete(assetId, name)
+    delete: (assetId, name) => serialize(
+      () => log.tags.delete(assetId, name)
+    )
   };
+
+  function close(): Promise<void> {
+    return serialize(() => log.close());
+  }
 
   return {
     writer: {
-      append: (input) => wrap<Event, Error>(
-        () => log.insert(input)
+      append: (input) => serialize(
+        async() => (await wrapAsync<Event, Error>(() => log.insert(input)))
+          .andTee((event) => notifications.emit("append", event))
+          .orTee((error) => notifications.emit("rejection", error, input))
       )
-        .andTee((event) => notifications.emit("append", event))
-        .orTee((error) => notifications.emit("rejection", error, input))
     },
     reader,
     tags,
@@ -82,8 +98,8 @@ export function createEventStore<
       "rejection",
       listener
     ),
-    compact: (options) => log.compact(options),
-    close: () => log.close(),
-    [Symbol.dispose]: () => log.close()
+    compact: (options) => serialize(() => log.compact(options)),
+    close,
+    [Symbol.asyncDispose]: close
   };
 }

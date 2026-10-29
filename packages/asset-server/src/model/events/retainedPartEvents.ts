@@ -11,18 +11,19 @@ import {
   partRefs
 } from "./AssetEvents.ts";
 
-export function retainedPartEvents(
+export async function retainedPartEvents(
   eventStore: Pick<EventStore.EventStore, "reader" | "tags">,
   assetId?: string
-): EventStore.EventPosition[] {
-  const checkpoints = eventStore.reader.listFromCheckpoints({
+): Promise<EventStore.EventPosition[]> {
+  const checkpoints = await eventStore.reader.listFromCheckpoints({
     checkpointEventTypes: ASSET_CHECKPOINT_EVENT_TYPES,
     eventTypePrefix: ASSET_EVENT_PREFIX,
     ...(assetId === undefined ? {} : { assetId })
   });
-  const tagged = eventStore.tags
-    .list(assetId)
-    .map((tag) => eventStore.reader.get(tag.assetId, tag.eventVersion));
+  const tagged = await Promise.all(
+    (await eventStore.tags.list(assetId))
+      .map((tag) => eventStore.reader.get(tag.assetId, tag.eventVersion))
+  );
 
   const kept: EventStore.EventPosition[] = [];
   for (const event of [...checkpoints, ...tagged]) {

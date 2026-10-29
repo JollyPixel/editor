@@ -89,16 +89,24 @@ function setup() {
   const { context, broadcasts } = createRoomContext();
   const { buffer } = state.document;
 
+  let received: Promise<void> = Promise.resolve();
   function receive(
     clientId: string,
     sent: PixelWireCommand
-  ): void {
-    extension.onMessage(clientId, sent, context);
+  ): Promise<void> {
+    received = received.then(
+      async() => extension.onMessage(clientId, sent, context)
+    );
+
+    return received;
+  }
+  function settled(): Promise<void> {
+    return received;
   }
 
   const room = new MockRoom({
     clientId: "A",
-    onSend: (sent) => receive("A", sent)
+    onSend: (sent) => void receive("A", sent)
   });
   const history = new CommandHistory<"pixels">();
   const document = new PixelDocument({ size: { x: 8, y: 8 } });
@@ -112,9 +120,10 @@ function setup() {
   new PixelSyncClient({ room, document: manager.document });
   room.deliverSnapshot(pixelArtSnapshot(state.document));
 
-  function paintPixelOneOne(): void {
+  async function paintPixelOneOne(): Promise<void> {
     canvas.dispatchEvent(mouseEvent("mousedown", 88, 88));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    await settled();
   }
 
   return {
@@ -126,77 +135,82 @@ function setup() {
     history,
     manager,
     canvas,
+    settled,
     paintPixelOneOne
   };
 }
 
 describe("PixelSyncClient and the pixel-art asset room, undo", () => {
-  test("an undo carries the room version of the stroke it undoes", (t) => {
+  test("an undo carries the room version of the stroke it undoes", async(t) => {
     t.mock.timers.enable({ apis: ["Date"] });
-    const { room, broadcasts, manager, paintPixelOneOne } = setup();
+    const { room, broadcasts, manager, settled, paintPixelOneOne } = setup();
 
     t.mock.timers.tick(1000);
-    paintPixelOneOne();
+    await paintPixelOneOne();
     const echo = broadcasts.at(-1);
     assert.ok(isCommandEcho(echo) && echo.version !== undefined);
     room.emit("message", echo);
     t.mock.timers.tick(2000);
     manager.undo();
+    await settled();
 
     assert.strictEqual(room.sent.at(-1)?.action, "stroke");
     assert.strictEqual(room.sent.at(-1)?.basis, echo.version);
     manager.destroy();
   });
 
-  test("a peer's newer edit survives an undo of an older stroke", (t) => {
+  test("a peer's newer edit survives an undo of an older stroke", async(t) => {
     t.mock.timers.enable({ apis: ["Date"] });
-    const { buffer, receive, manager, paintPixelOneOne } = setup();
+    const { buffer, receive, manager, settled, paintPixelOneOne } = setup();
 
     t.mock.timers.tick(1000);
-    paintPixelOneOne();
+    await paintPixelOneOne();
     assert.deepStrictEqual(buffer.samplePixel(1, 1), kBlack);
-    receive("B", command("stroke", {
+    await receive("B", command("stroke", {
       color: { r: 0, g: 0, b: 255, a: 255 },
       positions: [{ x: 1, y: 1 }]
     }, { clientId: "B", timestamp: 2000 }));
     t.mock.timers.tick(2000);
     manager.undo();
+    await settled();
 
     assert.deepStrictEqual(buffer.samplePixel(1, 1), kBlue);
     manager.destroy();
   });
 
-  test("undoing two overlapping strokes reverts the shared pixel on the server", (t) => {
+  test("undoing two overlapping strokes reverts the shared pixel on the server", async(t) => {
     t.mock.timers.enable({ apis: ["Date"] });
-    const { buffer, manager, paintPixelOneOne } = setup();
+    const { buffer, manager, settled, paintPixelOneOne } = setup();
 
     t.mock.timers.tick(1000);
-    paintPixelOneOne();
+    await paintPixelOneOne();
     t.mock.timers.tick(1000);
-    paintPixelOneOne();
+    await paintPixelOneOne();
     assert.deepStrictEqual(buffer.samplePixel(1, 1), kBlack);
 
     t.mock.timers.tick(1000);
     manager.undo();
     manager.undo();
+    await settled();
 
     assert.deepStrictEqual(readPixel(manager.texture, { x: 1, y: 1 }, 8), kWhite);
     assert.deepStrictEqual(buffer.samplePixel(1, 1), kWhite);
     manager.destroy();
   });
 
-  test("an undo that loses to a peer's newer edit is corrected without a snapshot", (t) => {
+  test("an undo that loses to a peer's newer edit is corrected without a snapshot", async(t) => {
     t.mock.timers.enable({ apis: ["Date"] });
-    const { broadcasts, receive, room, manager, paintPixelOneOne } = setup();
+    const { broadcasts, receive, room, manager, settled, paintPixelOneOne } = setup();
 
     t.mock.timers.tick(1000);
-    paintPixelOneOne();
-    receive("B", command("stroke", {
+    await paintPixelOneOne();
+    await receive("B", command("stroke", {
       color: { r: 0, g: 0, b: 255, a: 255 },
       positions: [{ x: 1, y: 1 }]
     }, { clientId: "B", timestamp: 1000 }));
     t.mock.timers.tick(2000);
     manager.undo();
+    await settled();
     assert.deepStrictEqual(readPixel(manager.texture, { x: 1, y: 1 }, 8), kWhite);
 
     const correction = broadcasts.at(-1);
@@ -208,13 +222,13 @@ describe("PixelSyncClient and the pixel-art asset room, undo", () => {
     manager.destroy();
   });
 
-  test("a palette undo after a peer's newer color is refused before it reaches the server", (t) => {
+  test("a palette undo after a peer's newer color is refused before it reaches the server", async(t) => {
     t.mock.timers.enable({ apis: ["Date"] });
-    const { state, receive, room, history, manager } = setup();
+    const { state, receive, room, history, manager, settled } = setup();
     const peer = new PixelDocument({ size: { x: 8, y: 8 } });
     const peerRoom = new MockRoom({
       clientId: "B",
-      onSend: (sent) => receive("B", sent)
+      onSend: (sent) => void receive("B", sent)
     });
     const peerSync = new PixelSyncClient({ room: peerRoom, document: peer });
     peerRoom.deliverSnapshot(pixelArtSnapshot(state.document));
@@ -234,6 +248,7 @@ describe("PixelSyncClient and the pixel-art asset room, undo", () => {
     t.mock.timers.tick(1000);
     const sent = room.sent.length;
 
+    await settled();
     assert.strictEqual(manager.undo(), false);
     assert.strictEqual(room.sent.length, sent);
     assert.deepEqual(history.state("pixels").refused, [
@@ -246,8 +261,8 @@ describe("PixelSyncClient and the pixel-art asset room, undo", () => {
     manager.destroy();
   });
 
-  test("a select-edit and its undo both reach the server", () => {
-    const { buffer, manager, canvas } = setup();
+  test("a select-edit and its undo both reach the server", async() => {
+    const { buffer, manager, canvas, settled } = setup();
     manager.commitPixels([{ x: 2, y: 2 }]);
     manager.mode = "select";
 
@@ -255,9 +270,11 @@ describe("PixelSyncClient and the pixel-art asset room, undo", () => {
     canvas.dispatchEvent(mouseEvent("mousemove", 96, 92));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
     manager.shortcuts.delete();
+    await settled();
     assert.deepStrictEqual(buffer.samplePixel(2, 2), kWhite);
 
     manager.undo();
+    await settled();
 
     assert.deepStrictEqual(readPixel(manager.texture, { x: 2, y: 2 }, 8), kBlack);
     assert.deepStrictEqual(buffer.samplePixel(2, 2), kBlack);
