@@ -29,6 +29,7 @@ import {
   createTempDir,
   removeTempDir
 } from "../../helpers/tempDir.ts";
+import { KindFilter } from "../../../shared/KindFilter.ts";
 
 // CONSTANTS
 const kPrivatePaths = [
@@ -61,7 +62,8 @@ function voxelMapProject(
         handlers: ASSET_KINDS.handlers()
       })
     ], new PackageResolver(root)),
-    StudioAccess.read({}, "project.json")
+    StudioAccess.read({}, "project.json"),
+    KindFilter.NONE
   );
 }
 

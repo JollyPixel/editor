@@ -20,6 +20,7 @@ import type { FileDownload } from "../browser/FileDownload.ts";
 import { AccountPreferences } from "../preferences/AccountPreferences.ts";
 import { StudioProjectSettings } from "../project/StudioProjectSettings.ts";
 import { StudioShareLinks } from "../shares/StudioShareLinks.ts";
+import type { KindFilter } from "../../shared/KindFilter.ts";
 import type { ProjectRights } from "../../shared/ProjectRights.ts";
 import { SessionRenewal } from "./SessionRenewal.ts";
 import { STUDIO_USER_CHANGE } from "./StudioUser.ts";
@@ -46,6 +47,7 @@ export interface StudioSignInOptions {
 export interface StudioSignedInOptions extends StudioSignInOptions {
   preferences: AccountPreferences;
   rights: ProjectRights;
+  kindFilter: KindFilter;
 }
 
 export class StudioSignedIn extends EventTarget {
@@ -53,18 +55,20 @@ export class StudioSignedIn extends EventTarget {
     options: StudioSignInOptions
   ): Promise<StudioSignedIn> {
     const account = await options.accounts.me() ?? await options.signIn();
-    const [preferences, rights] = await Promise.all([
+    const [preferences, rights, kindFilter] = await Promise.all([
       AccountPreferences.load({
         accountId: account.id,
         client: options.api.preferences
       }),
-      options.api.project.rights()
+      options.api.project.rights(),
+      options.api.project.kindFilter()
     ]);
 
     return new StudioSignedIn(account, {
       ...options,
       preferences,
-      rights
+      rights,
+      kindFilter
     });
   }
 
@@ -98,7 +102,11 @@ export class StudioSignedIn extends EventTarget {
       this.roster,
       options.rights.allows("share")
     );
-    this.project = new StudioProjectSettings(options.api.project, options.rights);
+    this.project = new StudioProjectSettings(
+      options.api.project,
+      options.rights,
+      options.kindFilter
+    );
     this.renewal = new SessionRenewal({
       accountId: account.id,
       currentAccount: () => this.#accounts.me(),

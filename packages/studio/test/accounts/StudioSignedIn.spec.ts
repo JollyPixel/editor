@@ -24,6 +24,7 @@ import {
 import { STUDIO_USER_CHANGE } from "../../src/accounts/StudioUser.ts";
 import { StudioClients } from "../../src/api/StudioClients.ts";
 import { AccountPreferences } from "../../src/preferences/AccountPreferences.ts";
+import { KindFilter } from "../../shared/KindFilter.ts";
 import { ProjectRights } from "../../shared/ProjectRights.ts";
 
 // CONSTANTS
@@ -94,6 +95,7 @@ function signedInAs(
       signIn: async() => kAlice,
       api,
       rights: ProjectRights.NONE,
+      kindFilter: KindFilter.NONE,
       preferences: new AccountPreferences([], {
         accountId: kAlice.id,
         client: api.preferences,

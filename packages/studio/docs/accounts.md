@@ -20,7 +20,7 @@ Roles are set in the `access` section of `.jollypixel/project.json`. Without it,
 }
 ```
 
-A role sees Settings › Project only when it names `"studio.$settings"`, and the audit only when it names `"studio.$audit"`: `*` grants neither. `"write"` on `studio.$settings` also lets it change the kind options; the Access section stays admin only.
+A role sees Settings › Project only when it names `"studio.$settings"`, and the audit only when it names `"studio.$audit"`: `*` grants neither. `"write"` on `studio.$settings` also lets it change the kind options and the kind filter; the Access section stays admin only.
 
 ## Master password
 

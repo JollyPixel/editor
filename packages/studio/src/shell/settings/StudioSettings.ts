@@ -21,6 +21,7 @@ import {
   type StudioUser
 } from "../../accounts/StudioUser.ts";
 import { BrowserState } from "../../browser/BrowserState.ts";
+import { AssetKindSet } from "../../catalog/AssetKindSet.ts";
 import { ChangeController } from "../ChangeController.ts";
 import { cardStyles } from "../cardStyles.ts";
 import type { PreferenceScopes } from "../../../shared/PreferenceScopes.ts";
@@ -184,6 +185,9 @@ export class StudioSettings extends LitElement {
   declare catalog: CatalogClient | null;
 
   @property({ attribute: false })
+  declare kinds: AssetKindSet;
+
+  @property({ attribute: false })
   declare browserState: BrowserState;
 
   #user = new ChangeController<StudioUser>(this, STUDIO_USER_CHANGE);
@@ -193,6 +197,7 @@ export class StudioSettings extends LitElement {
     this.sections = SettingsSections.EMPTY;
     this.scopes = null;
     this.catalog = null;
+    this.kinds = AssetKindSet.EMPTY;
     this.browserState = new BrowserState();
   }
 
@@ -333,6 +338,7 @@ export class StudioSettings extends LitElement {
         return html`
           <studio-project-general
             .project=${project}
+            .kinds=${this.kinds}
           ></studio-project-general>
         `;
       case "kind-package":

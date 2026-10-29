@@ -18,6 +18,7 @@ import { EditorPackages } from "../../server/editors/EditorPackages.ts";
 import { StudioAccess } from "../../server/project/StudioAccess.ts";
 import { openStudioAccounts } from "../../server/accounts.ts";
 import { StudioProject } from "../../server/project/StudioProject.ts";
+import { KindFilter } from "../../shared/KindFilter.ts";
 
 // CONSTANTS
 const kAccessRequests = {
@@ -42,7 +43,8 @@ function project(
     }),
     new EditorPackages([]),
     new ProjectKinds([], new PackageResolver(root)),
-    StudioAccess.read(document, "project.json")
+    StudioAccess.read(document, "project.json"),
+    KindFilter.NONE
   );
 }
 

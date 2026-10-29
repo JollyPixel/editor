@@ -62,6 +62,9 @@ paths and dependency edges, never stored.
 
 The button group above the tree. A kind shows only its assets and their
 companions; every folder still shows. The choice is kept per browser.
+It offers a kind once the project has an asset of it, unless the project hides
+the kind in Settings › Project › General (the `kindFilter` section of the
+project file). An active kind stays offered until another is picked.
 
 ### Kind descriptor
 

@@ -9,7 +9,8 @@ import type { SettingsSectionName } from "../../shared/api/project.ts";
 // CONSTANTS
 const kSectionLabels: Readonly<Record<SettingsSectionName, string>> = {
   kinds: "the editor settings",
-  access: "the access settings"
+  access: "the access settings",
+  kindFilter: "the kind filter"
 };
 
 export class AuditRowText {

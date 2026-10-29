@@ -137,6 +137,36 @@ describe("ProjectSettings", () => {
     });
   });
 
+  test("a new kind filter reaches the project file and the audit log, refusing unknown kinds", async() => {
+    await using harness = await settingsHarness();
+    const admin = await harness.register("Alice");
+
+    const reply = await harness.settings.replaceKindFilter(admin, {
+      hidden: ["voxelmodel", "voxelmap", "voxelmodel"]
+    });
+
+    const after = {
+      hidden: ["voxelmap", "voxelmodel"]
+    };
+    assert.deepEqual(reply.kindFilter, after);
+    assert.deepEqual(harness.project.file.data.kindFilter, after);
+    const [event] = harness.audit.store.reader.listAll();
+    assert.deepEqual(event.eventData, {
+      section: "kindFilter",
+      before: {
+        hidden: []
+      },
+      after
+    });
+    await assert.rejects(
+      harness.settings.replaceKindFilter(admin, {
+        hidden: ["unknown"]
+      }),
+      InvalidSettingsError
+    );
+    assert.deepEqual(harness.settings.kindFilter(), after);
+  });
+
   test("new access rules apply at once and reconnect only the holders of a changed role", async() => {
     await using harness = await settingsHarness();
     const admin = await harness.register("Alice");

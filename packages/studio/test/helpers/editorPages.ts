@@ -25,6 +25,7 @@ import {
   StudioProject
 } from "../../server/project/StudioProject.ts";
 import { createTempDir } from "./tempDir.ts";
+import { KindFilter } from "../../shared/KindFilter.ts";
 
 // CONSTANTS
 export const PASS_THROUGH_STATUS = 418;
@@ -114,7 +115,8 @@ export function voxelMapProject(
     ], new PackageResolver(root, {
       fallbacks: [STUDIO_ROOT]
     })),
-    StudioAccess.read({}, "project.json")
+    StudioAccess.read({}, "project.json"),
+    KindFilter.NONE
   );
 }
 

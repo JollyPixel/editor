@@ -18,6 +18,8 @@ import {
   DEFAULT_ACCESS,
   StudioAccess
 } from "./StudioAccess.ts";
+import { kindFilterSchema } from "../../shared/api/project.ts";
+import { KindFilter } from "../../shared/KindFilter.ts";
 import { TEXTURE_SIZE } from "../../shared/seed.ts";
 
 // CONSTANTS
@@ -68,8 +70,11 @@ export const DEFAULT_PROJECT_FILE: ProjectFileData = {
   },
   access: DEFAULT_ACCESS
 };
-const kEditorsSectionSchema = z.object({
-  editors: z.array(z.string().min(1)).default([])
+const kSectionsSchema = z.object({
+  editors: z.array(z.string().min(1)).default([]),
+  kindFilter: kindFilterSchema.default({
+    hidden: []
+  })
 });
 
 export class StudioProject {
@@ -79,6 +84,7 @@ export class StudioProject {
   readonly privateFiles: PrivateFiles;
 
   #access: StudioAccess;
+  #kindFilter: KindFilter;
 
   static resolveRoot(
     base: string,
@@ -107,26 +113,34 @@ export class StudioProject {
     const resolver = new PackageResolver(file.root, {
       fallbacks: [STUDIO_ROOT]
     });
-    const section = kEditorsSectionSchema.safeParse(
+    const sections = kSectionsSchema.safeParse(
       file.data
     );
-    if (!section.success) {
+    if (!sections.success) {
       throw new TypeError(
-        `"${file.path}" is invalid:\n${z.prettifyError(section.error)}`
+        `"${file.path}" is invalid:\n${z.prettifyError(sections.error)}`
       );
     }
+    const editors = await EditorPackages.read(
+      sections.data.editors,
+      resolver
+    );
+    const kinds = await ProjectKinds.load(
+      file,
+      { resolver }
+    );
+    const known = new Set(
+      kinds.descriptors().map((descriptor) => descriptor.kind)
+    );
 
     return new StudioProject(
       file,
-      await EditorPackages.read(
-        section.data.editors,
-        resolver
-      ),
-      await ProjectKinds.load(
-        file,
-        { resolver }
-      ),
-      StudioAccess.read(file.data, file.path)
+      editors,
+      kinds,
+      StudioAccess.read(file.data, file.path),
+      new KindFilter(
+        sections.data.kindFilter.hidden.filter((kind) => known.has(kind))
+      )
     );
   }
 
@@ -134,12 +148,14 @@ export class StudioProject {
     file: ProjectFile,
     editors: EditorPackages,
     kinds: ProjectKinds,
-    access: StudioAccess
+    access: StudioAccess,
+    kindFilter: KindFilter
   ) {
     this.file = file;
     this.editors = editors;
     this.kinds = kinds;
     this.#access = access;
+    this.#kindFilter = kindFilter;
     this.privateFiles = new PrivateFiles(
       file.root,
       kinds.descriptors().map((descriptor) => descriptor.extension)
@@ -158,5 +174,15 @@ export class StudioProject {
     access: StudioAccess
   ): void {
     this.#access = access;
+  }
+
+  get kindFilter(): KindFilter {
+    return this.#kindFilter;
+  }
+
+  replaceKindFilter(
+    kindFilter: KindFilter
+  ): void {
+    this.#kindFilter = kindFilter;
   }
 }
