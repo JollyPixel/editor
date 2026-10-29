@@ -71,6 +71,7 @@ import {
 } from "./archive/import/importAssetArchive.ts";
 import type { AssetTags } from "./tags/AssetTags.ts";
 import { asError } from "../common/asError.ts";
+import { TaskChain } from "../common/TaskChain.ts";
 import { UnknownAssetError } from "../storage/writer/errors/UnknownAssetError.ts";
 
 // CONSTANTS
@@ -121,6 +122,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
   #onChanged: (change: CatalogChange) => void;
   #onFolders: (folders: readonly string[]) => void;
   #onTags: (assetId: string) => void;
+  #tagReads = new TaskChain();
   #snapshot: CatalogMessage | null = null;
 
   constructor(
@@ -144,10 +146,13 @@ export class CatalogExtension extends Extension<CatalogCommand> {
       this.#snapshot = null;
       this.#outbox.pushFolders(folders);
     };
-    this.#onTags = (assetId) => this.#outbox.pushTags(
-      assetId,
-      this.#backend.tags.list(assetId)
-    );
+    this.#onTags = (assetId) => {
+      this.#outbox
+        .hold(() => this.#tagReads.run(async() => {
+          this.#outbox.pushTags(assetId, await this.#backend.tags.list(assetId));
+        }))
+        .catch(() => undefined);
+    };
     this.#backend.catalog.on(
       "changed",
       this.#onChanged
@@ -272,14 +277,15 @@ export class CatalogExtension extends Extension<CatalogCommand> {
       .with({ type: CATALOG_EXPORT }, (exported) => this.#export(exported))
       .with({ type: CATALOG_PLAN }, (plan) => this.#plan(plan))
       .with({ type: CATALOG_IMPORT }, (imported) => this.#import(imported, actor))
-      .with({ type: CATALOG_TAGS }, ({ type, assetId }) => Ok({
+      .with({ type: CATALOG_TAGS }, async({ type, assetId }) => Ok({
         command: type,
         assetId,
-        tags: tags.list(assetId)
+        tags: await tags.list(assetId)
       }))
       .with({ type: CATALOG_TAG }, (tag) => this.#tag(tag, actor))
-      .with({ type: CATALOG_UNTAG }, ({ type, assetId, name }) => tags
-        .delete(assetId, name)
+      .with({ type: CATALOG_UNTAG }, async({ type, assetId, name }) => (
+        await tags.delete(assetId, name)
+      )
         .map(() => {
           return {
             command: type,

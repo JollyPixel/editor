@@ -152,7 +152,7 @@ describe("AssetProjector — lifecycle events land on the source", () => {
     await assert.rejects(() => harness.source.read("a.png"));
   });
 
-  test("markProjected records state without writing", async() => {
+  test("an already projected write records state without writing", async() => {
     await using harness = await syncHarness();
 
     const created = (await harness.writer.create({

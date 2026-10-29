@@ -25,8 +25,8 @@ import { sha256Hex } from "../../helpers/hash.ts";
 describe("AssetTags — create", () => {
   test("a tag captures the live state once it is flushed", async() => {
     await using harness = await tagHarness();
-    harness.increment();
-    harness.increment();
+    await harness.increment();
+    await harness.increment();
 
     const tag = (await harness.tags.create({
       assetId: harness.assetId,
@@ -46,7 +46,7 @@ describe("AssetTags — create", () => {
       hash: sha256Hex(bytes("2")),
       size: 1
     });
-    assert.deepEqual(harness.tags.list(harness.assetId), [tag]);
+    assert.deepEqual(await harness.tags.list(harness.assetId), [tag]);
   });
 
   test("a deleted asset cannot be tagged", async() => {
@@ -93,7 +93,7 @@ describe("AssetTags — create", () => {
 
     assert.ok(!created.ok);
     assert.ok(created.val instanceof InvalidTagMessageError);
-    assert.deepEqual(harness.tags.list(harness.assetId), []);
+    assert.deepEqual(await harness.tags.list(harness.assetId), []);
   });
 });
 
@@ -110,7 +110,7 @@ describe("AssetTags — list", () => {
       to: "b.counter",
       actor: TAG_ACTOR
     })).unwrap();
-    harness.increment();
+    await harness.increment();
     (await harness.tags.create({
       assetId: harness.assetId,
       name: "v2",
@@ -118,7 +118,7 @@ describe("AssetTags — list", () => {
     })).unwrap();
 
     assert.deepEqual(
-      harness.tags.list(harness.assetId).map(({ name, path }) => {
+      (await harness.tags.list(harness.assetId)).map(({ name, path }) => {
         return { name, path };
       }),
       [
@@ -136,13 +136,13 @@ describe("AssetTags — list", () => {
       actor: TAG_ACTOR
     })).unwrap();
     assert.strictEqual(renamed.eventType, ASSET_RENAMED);
-    harness.sync.eventStore.tags.create({
+    (await harness.sync.eventStore.tags.create({
       assetId: harness.assetId,
       name: "renamed",
       eventVersion: renamed.eventVersion,
       actor: TAG_ACTOR
-    }).unwrap();
+    })).unwrap();
 
-    assert.deepEqual(harness.tags.list(harness.assetId), []);
+    assert.deepEqual(await harness.tags.list(harness.assetId), []);
   });
 });

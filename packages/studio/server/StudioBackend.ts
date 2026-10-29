@@ -110,9 +110,11 @@ export class StudioBackend implements AsyncDisposable {
         null :
         path.join(project.file.root, STATE_DIRECTORY, AUDIT_DATABASE_FILE)
     ));
-    opening.defer(accounts.watchActivity(
-      (activity) => audit.recordAccount(activity)
-    ));
+    opening.defer(accounts.watchActivity((activity) => {
+      audit.recordAccount(activity).catch((error: unknown) => {
+        console.error(error);
+      });
+    }));
     const catalog = Promise.withResolvers<CatalogProjection>();
     const shares = new StudioShares({
       accounts,

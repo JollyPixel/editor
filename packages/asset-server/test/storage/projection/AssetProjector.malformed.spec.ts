@@ -46,7 +46,7 @@ describe("AssetProjector — malformed events", () => {
     assert.ok(created.ok);
     await harness.projector.flush();
 
-    const appended = harness.eventStore.writer.append({
+    const appended = await harness.eventStore.writer.append({
       assetType: "binary",
       assetId: created.val.assetId,
       eventType: "asset.updated",
@@ -65,7 +65,7 @@ describe("AssetProjector — malformed events", () => {
 
   test("a malformed event keeps the replayed desired state", async() => {
     const source = new MemoryAssetSource();
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
     await using harness = await syncHarness({ source, eventStore });
 
     const created = await harness.writer.create({
@@ -75,7 +75,7 @@ describe("AssetProjector — malformed events", () => {
     });
     assert.ok(created.ok);
 
-    const appended = eventStore.writer.append({
+    const appended = await eventStore.writer.append({
       assetType: "binary",
       assetId: created.val.assetId,
       eventType: "asset.renamed",
@@ -92,7 +92,7 @@ describe("AssetProjector — malformed events", () => {
       partFiles: noPartFiles()
     });
 
-    replayed.load();
+    await replayed.load();
     assert.strictEqual(replayed.desired(created.val.assetId)?.path, "a.png");
   });
 });
@@ -102,7 +102,7 @@ describe("AssetProjector — rejected events", () => {
     "warns about a malformed event, naming the offending field",
     async() => {
       const source = new MemoryAssetSource();
-      using eventStore = EventStore.persistence.memory();
+      await using eventStore = EventStore.persistence.memory();
       await using harness = await syncHarness({ source, eventStore });
 
       const created = await harness.writer.create({
@@ -111,16 +111,16 @@ describe("AssetProjector — rejected events", () => {
         actor: kActor
       });
       assert.ok(created.ok);
-      assert.ok(eventStore.writer.append({
+      assert.ok((await eventStore.writer.append({
         assetType: "binary",
         assetId: created.val.assetId,
         eventType: "asset.deleted",
         eventData: { path: "a.png" },
         actor: kActor
-      }).ok);
+      })).ok);
 
       const { logger, records } = recordingLogger();
-      new AssetProjector({
+      await new AssetProjector({
         source,
         eventStore,
         state: await ProjectionState.load(source),
@@ -140,7 +140,7 @@ describe("AssetProjector — rejected events", () => {
     "does not warn about an asset event type it does not know",
     async() => {
       const source = new MemoryAssetSource();
-      using eventStore = EventStore.persistence.memory();
+      await using eventStore = EventStore.persistence.memory();
       await using harness = await syncHarness({ source, eventStore });
 
       const created = await harness.writer.create({
@@ -149,16 +149,16 @@ describe("AssetProjector — rejected events", () => {
         actor: kActor
       });
       assert.ok(created.ok);
-      assert.ok(eventStore.writer.append({
+      assert.ok((await eventStore.writer.append({
         assetType: "binary",
         assetId: created.val.assetId,
         eventType: "asset.archived",
         eventData: {},
         actor: kActor
-      }).ok);
+      })).ok);
 
       const { logger, records } = recordingLogger();
-      new AssetProjector({
+      await new AssetProjector({
         source,
         eventStore,
         state: await ProjectionState.load(source),
@@ -176,9 +176,9 @@ describe("AssetProjector — rejected events", () => {
 
   test("skips a content reference rather than throwing", async() => {
     const source = new MemoryAssetSource();
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
 
-    assert.ok(eventStore.writer.append({
+    assert.ok((await eventStore.writer.append({
       assetType: "binary",
       assetId: "a1",
       eventType: "asset.created",
@@ -190,8 +190,8 @@ describe("AssetProjector — rejected events", () => {
         content: encodeContent(bytes("one"))
       },
       actor: kActor
-    }).ok);
-    assert.ok(eventStore.writer.append({
+    })).ok);
+    assert.ok((await eventStore.writer.append({
       assetType: "binary",
       assetId: "a1",
       eventType: "asset.updated",
@@ -207,7 +207,7 @@ describe("AssetProjector — rejected events", () => {
         }
       },
       actor: kActor
-    }).ok);
+    })).ok);
 
     const { logger, records } = recordingLogger();
     const projector = new AssetProjector({
@@ -219,7 +219,7 @@ describe("AssetProjector — rejected events", () => {
       logger
     });
 
-    projector.load();
+    await projector.load();
     assert.strictEqual(projector.desired("a1"), null);
     assert.strictEqual(projector.pending, 0);
 

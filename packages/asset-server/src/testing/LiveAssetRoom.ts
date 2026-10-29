@@ -60,7 +60,7 @@ export class LiveAssetRoom<
     this.state = handler.create(kAssetId);
     const store = EventStore.persistence.memory();
     store.subscribe(
-      (event) => foldAssetEvent(handler, this.state, event, store.reader)
+      (event) => foldAssetEvent(handler, this.state, event)
     );
     const binding: AssetRoomBinding<TState> = {
       assetId: kAssetId,
@@ -85,10 +85,11 @@ export class LiveAssetRoom<
 
   connect(
     clientId: string
-  ): void {
+  ): Promise<void> {
     const inbox: unknown[] = [];
     this.#inboxes.set(clientId, inbox);
-    this.extension.onClientConnect(
+
+    return this.extension.onClientConnect(
       {
         id: clientId,
         send: (payload) => inbox.push(payload)
@@ -103,10 +104,10 @@ export class LiveAssetRoom<
     );
   }
 
-  receive(
+  async receive(
     clientId: string,
     payload: unknown
-  ): void {
+  ): Promise<void> {
     const parsed = this.#inbound.parse(payload);
     if (parsed.err) {
       throw new TypeError(
@@ -114,13 +115,13 @@ export class LiveAssetRoom<
       );
     }
 
-    this.extension.onMessage(clientId, parsed.val.message, this.#context);
+    await this.extension.onMessage(clientId, parsed.val.message, this.#context);
   }
 
   resync(
     clientId: string
-  ): void {
-    this.extension.onResync(clientId, this.#context);
+  ): Promise<void> {
+    return this.extension.onResync(clientId, this.#context);
   }
 
   take<TSnapshot = unknown>(

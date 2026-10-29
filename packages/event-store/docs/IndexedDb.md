@@ -24,7 +24,7 @@ The optional `TMap` schema map is described in
 ```ts
 import * as EventStore from "@jolly-pixel/event-store";
 
-using store = await EventStore.persistence.indexeddb({
+await using store = await EventStore.persistence.indexeddb({
   name: "jolly-events:my-workspace"
 });
 ```
@@ -38,18 +38,16 @@ Node.js stays safe. Node.js tests can install the IndexedDB globals with
 
 ## Writes
 
-`append`, `tags.create`, `tags.delete` and `compact` issue their IndexedDB
-request in a transaction opened before they return, then update the in-memory
-log. A call that changes nothing, such as deleting a missing tag, writes
-nothing. Nothing waits on a timer or a promise first, so a page that reloads right
-after an append finds the event once IndexedDB has committed it. Another
-connection to the same database reads it as soon as that transaction ends,
-even if the writing store is never closed.
+`append`, `tags.create`, `tags.delete` and `compact` write to IndexedDB in
+their own `readwrite` transaction, wait for it to commit, and only then update
+the in-memory log. Once the promise settles, a page that reloads finds the
+change, and another connection to the same database reads it even if the
+writing store is never closed. A call that changes nothing, such as deleting a
+missing tag, writes nothing.
 
-When IndexedDB aborts a write, quota errors included, the in-memory log keeps
-the change but the store stops writing: every later change fails with the
-error IndexedDB reported and leaves the in-memory log as it was. Reads keep
-working.
+When IndexedDB aborts a write, quota errors included, that call fails with the
+error IndexedDB reported and the in-memory log stays as it was. The next write
+tries again.
 
 The store closes its connection when another connection deletes or upgrades the
 database. Later writes then fail with IndexedDB's `InvalidStateError`.
@@ -68,6 +66,6 @@ has no effect: the browser manages the space of the database.
 
 ## Lifetime
 
-`close()` discards the in-memory log and closes the connection. IndexedDB still
-commits the writes already issued. `destroy` deletes the database `name`. An
+`close()` waits for the writes issued before it, then discards the in-memory
+log and closes the connection. `destroy` deletes the database `name`. An
 open store on it closes its connection first, then fails on its next write.

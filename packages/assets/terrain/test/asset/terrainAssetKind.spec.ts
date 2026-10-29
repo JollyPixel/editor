@@ -61,11 +61,11 @@ describe("terrain asset kind", () => {
   test("serialize and load round-trip chunks, materials and parts in any part order", async() => {
     const handler = terrainAssetKind();
     const room = new LiveAssetRoom(handler);
-    room.receive("A", networkCommand({ action: "chunk-added", x: 1, z: 0, heights: heights(12.5) }));
+    await room.receive("A", networkCommand({ action: "chunk-added", x: 1, z: 0, heights: heights(12.5) }));
     const rock = material("rock", 3, { albedo: kRockMap });
-    room.receive("A", networkCommand({ action: "material-added", material: rock }));
-    room.receive("A", networkCommand({ action: "texture-size-changed", size: 2048 }));
-    room.receive("A", networkCommand(paint(1, 0, { 0: 3, 5: 3 })));
+    await room.receive("A", networkCommand({ action: "material-added", material: rock }));
+    await room.receive("A", networkCommand({ action: "texture-size-changed", size: 2048 }));
+    await room.receive("A", networkCommand(paint(1, 0, { 0: 3, 5: 3 })));
 
     const manifest = await handler.serialize(room.state);
     const partIds = [...handler.parts!.list(manifest)];
@@ -84,8 +84,8 @@ describe("terrain asset kind", () => {
   test("the document lists each chunk with its overview samples and their dominant materials", async() => {
     const handler = terrainAssetKind();
     const room = new LiveAssetRoom(handler);
-    room.receive("A", networkCommand({ action: "chunk-added", x: 1, z: 0, heights: heights(12.5) }));
-    room.receive("A", networkCommand(paint(1, 0, { 2: 7, 5: 9 })));
+    await room.receive("A", networkCommand({ action: "chunk-added", x: 1, z: 0, heights: heights(12.5) }));
+    await room.receive("A", networkCommand(paint(1, 0, { 2: 7, 5: 9 })));
 
     const { chunks } = TERRAIN_FILE.decode(await handler.serialize(room.state));
 
@@ -149,86 +149,92 @@ describe("terrain asset kind", () => {
     assert.deepEqual([...model.terrain.chunks()].map(({ coord }) => coord.key), ["0,0"]);
   });
 
-  test("a chunk is admitted only next to an existing one", () => {
+  test("a chunk is admitted only next to an existing one", async() => {
     const room = liveRoom();
-    room.receive("A", networkCommand({ action: "chunk-added", x: 2, z: 0, heights: heights(0) }));
-    room.receive("A", networkCommand({ action: "chunk-added", x: 1, z: 1, heights: heights(0) }));
-    room.receive("A", networkCommand({ action: "chunk-added", x: 0, z: -1, heights: heights(0) }));
+    await room.receive("A", networkCommand({ action: "chunk-added", x: 2, z: 0, heights: heights(0) }));
+    await room.receive("A", networkCommand({ action: "chunk-added", x: 1, z: 1, heights: heights(0) }));
+    await room.receive("A", networkCommand({ action: "chunk-added", x: 0, z: -1, heights: heights(0) }));
 
     assert.deepEqual(chunkKeys(room), ["0,-1", "0,0"]);
   });
 
-  test("a chunk with heights outside the range is refused", () => {
+  test("a chunk with heights outside the range is refused", async() => {
     const room = liveRoom();
-    room.receive("A", networkCommand({ action: "chunk-added", x: 1, z: 0, heights: heights(5000) }));
+    await room.receive("A", networkCommand({ action: "chunk-added", x: 1, z: 0, heights: heights(5000) }));
 
     assert.deepEqual(chunkKeys(room), ["0,0"]);
   });
 
-  test("the last chunk cannot be removed", () => {
+  test("the last chunk cannot be removed", async() => {
     const room = liveRoom();
-    room.receive("A", networkCommand({ action: "chunk-removed", x: 0, z: 0 }));
+    await room.receive("A", networkCommand({ action: "chunk-removed", x: 0, z: 0 }));
 
     assert.deepEqual(chunkKeys(room), ["0,0"]);
   });
 
-  test(`no chunk is admitted past ${MAX_TERRAIN_CHUNKS}`, () => {
+  test(`no chunk is admitted past ${MAX_TERRAIN_CHUNKS}`, async() => {
     const room = liveRoom();
     const side = Math.sqrt(MAX_TERRAIN_CHUNKS);
     for (let index = 1; index < MAX_TERRAIN_CHUNKS; index++) {
       room.state.terrain.addChunk(new ChunkCoord(index % side, Math.floor(index / side)), flatChunk());
     }
-    room.receive("A", networkCommand({ action: "chunk-added", x: side, z: 0, heights: heights(0) }));
+    await room.receive("A", networkCommand({ action: "chunk-added", x: side, z: 0, heights: heights(0) }));
 
     assert.equal(room.state.terrain.has(new ChunkCoord(side, 0)), false);
     assert.equal(room.state.terrain.size, MAX_TERRAIN_CHUNKS);
   });
 
-  test("a chunk outside the coordinate range does not parse", () => {
+  test("a chunk outside the coordinate range does not parse", async() => {
     const room = liveRoom();
     const { max } = CHUNK_COORDINATE_RANGE;
     room.state.terrain.addChunk(new ChunkCoord(max, 0), flatChunk());
-    function add(x: number): void {
-      room.receive("A", networkCommand({ action: "chunk-added", x, z: 0, heights: heights(0) }));
+    async function add(x: number): Promise<void> {
+      await room.receive("A", networkCommand({ action: "chunk-added", x, z: 0, heights: heights(0) }));
     }
-    assert.throws(() => add(max + 1), /does not parse/);
-    add(max - 1);
+    await assert.rejects(() => add(max + 1), /does not parse/);
+    await add(max - 1);
 
     assert.deepEqual(chunkKeys(room), ["0,0", `${max - 1},0`, `${max},0`]);
   });
 
-  test("a height patch keeps its valid tiles and answers the author with the refused ones' heights", () => {
-    const room = liveRoom();
-    room.connect("A");
-    room.take("A");
-    function flat(tile: number) {
-      return { x: 0, z: 0, tile, heights: encodeHeights(tileHeights(4)) };
+  test(
+    "a height patch keeps its valid tiles and answers the author with the refused ones' heights",
+    async() => {
+      const room = liveRoom();
+      await room.connect("A");
+      room.take("A");
+      function flat(tile: number) {
+        return { x: 0, z: 0, tile, heights: encodeHeights(tileHeights(4)) };
+      }
+      const invalid = [
+        { ...flat(1), x: 5 },
+        { ...flat(1), heights: encodeHeights(tileHeights(5000)) },
+        { ...flat(1), heights: heights(4) }
+      ];
+      for (const [index, tile] of invalid.entries()) {
+        await room.receive("A", networkCommand({
+          action: "heights-patched",
+          tiles: [flat(index + 2), tile]
+        }));
+      }
+
+      const chunk = room.state.terrain.chunk(new ChunkCoord(0, 0))!;
+      const admitted = [chunk.tileHeights(2, 0), chunk.tileHeights(3, 0), chunk.tileHeights(0, 1)];
+      assert.deepEqual(admitted.map((heights) => heights[0]), [4, 4, 4]);
+      assert.deepEqual(chunk.tileHeights(1, 0), tileHeights(0));
+      const corrections = room.take("A").filter((message) => message.type === "correction");
+      assert.deepEqual(corrections.map(({ data }) => "tiles" in data && data.tiles.map(({ tile }) => tile)), [
+        [2],
+        [1],
+        [1]
+      ]);
     }
-    const invalid = [
-      { ...flat(1), x: 5 },
-      { ...flat(1), heights: encodeHeights(tileHeights(5000)) },
-      { ...flat(1), heights: heights(4) }
-    ];
-    invalid.forEach((tile, index) => {
-      room.receive("A", networkCommand({ action: "heights-patched", tiles: [flat(index + 2), tile] }));
-    });
+  );
 
-    const chunk = room.state.terrain.chunk(new ChunkCoord(0, 0))!;
-    const admitted = [chunk.tileHeights(2, 0), chunk.tileHeights(3, 0), chunk.tileHeights(0, 1)];
-    assert.deepEqual(admitted.map((heights) => heights[0]), [4, 4, 4]);
-    assert.deepEqual(chunk.tileHeights(1, 0), tileHeights(0));
-    const corrections = room.take("A").filter((message) => message.type === "correction");
-    assert.deepEqual(corrections.map(({ data }) => "tiles" in data && data.tiles.map(({ tile }) => tile)), [
-      [2],
-      [1],
-      [1]
-    ]);
-  });
-
-  test("a height patch naming a tile twice is refused whole", () => {
+  test("a height patch naming a tile twice is refused whole", async() => {
     const room = liveRoom();
     const tile = { x: 0, z: 0, tile: 0, heights: encodeHeights(tileHeights(4)) };
-    room.receive("A", networkCommand({ action: "heights-patched", tiles: [tile, tile] }));
+    await room.receive("A", networkCommand({ action: "heights-patched", tiles: [tile, tile] }));
 
     assert.deepEqual(room.state.terrain.chunk(new ChunkCoord(0, 0))!.tileHeights(0, 0), tileHeights(0));
   });

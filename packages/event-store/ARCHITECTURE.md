@@ -21,8 +21,10 @@ flowchart TB
     Store -->|"accepted or rejected append"| Caller
 ```
 
-`createEventStore` wraps an `EventLog` in the public store. The writer returns
-a `Result` for each append and notifies `subscribe` listeners of accepted
+`createEventStore` wraps an `EventLog` in the public store and queues its
+writes, so each `EventLog` write runs alone and the backend never sees two
+appends race for the same position. The writer resolves a `Result` for each
+append and notifies `subscribe` listeners of accepted
 appends and `subscribeRejections` listeners of rejected ones. The reader is a
 read-only view of the log. `subscribe` can filter by a literal event type
 prefix and does not replay earlier events; a consumer reads history to build

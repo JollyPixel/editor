@@ -28,10 +28,10 @@ export class AssetLog {
     this.#store = store;
   }
 
-  * events(
+  async* events(
     before: number | undefined
-  ): IterableIterator<AuditItem> {
-    for (const event of new EventPages(this.#store, before)) {
+  ): AsyncIterableIterator<AuditItem> {
+    for await (const event of new EventPages(this.#store, before)) {
       yield {
         position: event.eventId,
         at: Date.parse(event.createdAt),
@@ -40,10 +40,10 @@ export class AssetLog {
     }
   }
 
-  * tags(
+  async* tags(
     before: string | undefined
-  ): IterableIterator<AuditItem> {
-    const tags = this.#store.tags.list()
+  ): AsyncIterableIterator<AuditItem> {
+    const tags = (await this.#store.tags.list())
       .map((tag) => {
         return {
           tag,

@@ -49,7 +49,7 @@ describe("AssetProjector — desired paths", () => {
       actor: kActor
     })).unwrap();
 
-    harness.projector.load();
+    await harness.projector.load();
 
     assert.strictEqual(harness.projector.assetAt("a.png"), assetId);
   });
@@ -66,7 +66,7 @@ describe("AssetProjector — changes", () => {
       data: bytes("0"),
       actor: kActor
     })).unwrap();
-    harness.eventStore.writer.append({
+    await harness.eventStore.writer.append({
       assetType: "binary",
       assetId,
       eventType: "asset.updated",

@@ -146,7 +146,7 @@ export class ProjectSettings {
 
     await this.#project.file.replace(KIND_FILTER_SECTION, next.toJSON());
     this.#project.replaceKindFilter(next);
-    this.#audit.recordSettings(actorId, {
+    await this.#audit.recordSettings(actorId, {
       section: KIND_FILTER_SECTION,
       before: previous.toJSON(),
       after: next.toJSON()
@@ -186,7 +186,7 @@ export class ProjectSettings {
         this.#registry.replace(handler);
       }
     }
-    this.#audit.recordSettings(actorId, {
+    await this.#audit.recordSettings(actorId, {
       section: KINDS_SECTION,
       before,
       after
@@ -227,7 +227,7 @@ export class ProjectSettings {
         }
       }
     }
-    this.#audit.recordSettings(actorId, {
+    await this.#audit.recordSettings(actorId, {
       section: ACCESS_SECTION,
       before,
       after

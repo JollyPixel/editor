@@ -57,7 +57,7 @@ function harness(
   const room = recordingRoom();
   const committed: Command[] = [];
   const events: EventStore.EventWriter = {
-    append: (input) => {
+    append: async(input) => {
       appended.push(input);
       if (!appends) {
         const error = new Error("disk full");
@@ -217,7 +217,7 @@ describe("AssetRoomExtension — acks", () => {
     const { extension, context, direct } = harness();
 
     await extension.onMessage("alice", { action: "increment", seq: 6 }, context);
-    extension.onResync("alice", context);
+    await extension.onResync("alice", context);
 
     assert.deepEqual(direct, [
       {

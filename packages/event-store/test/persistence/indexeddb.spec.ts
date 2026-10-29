@@ -22,13 +22,13 @@ function open(
 describe("IndexedDbEventStore — durability", () => {
   test("an append reaches a second connection before the first one closes", async() => {
     const name = crypto.randomUUID();
-    using first = await open(name);
-    append(first, "a1", { x: 1 });
+    await using first = await open(name);
+    await append(first, "a1", { x: 1 });
 
-    using second = await open(name);
+    await using second = await open(name);
 
     assert.deepEqual(
-      second.reader.list("a1").map((event) => event.eventData),
+      (await second.reader.list("a1")).map((event) => event.eventData),
       [{ x: 1 }]
     );
   });
@@ -36,15 +36,15 @@ describe("IndexedDbEventStore — durability", () => {
   test("a reopened store keeps tags and continues ids and versions", async() => {
     const name = crypto.randomUUID();
     const first = await open(name);
-    append(first, "a1", { x: 1 });
-    append(first, "a2", { x: 2 });
-    const created = tag(first, "a1", "v1");
-    first.close();
+    await append(first, "a1", { x: 1 });
+    await append(first, "a2", { x: 2 });
+    const created = await tag(first, "a1", "v1");
+    await first.close();
 
-    using second = await open(name);
-    const next = append(second, "a1", { x: 3 });
+    await using second = await open(name);
+    const next = await append(second, "a1", { x: 3 });
 
-    assert.deepEqual(second.tags.list(), [created]);
+    assert.deepEqual(await second.tags.list(), [created]);
     assert.deepEqual(
       {
         eventId: next.eventId,
@@ -56,7 +56,7 @@ describe("IndexedDbEventStore — durability", () => {
       }
     );
     assert.deepEqual(
-      second.reader.listAll().map((event) => event.eventData),
+      (await second.reader.listAll()).map((event) => event.eventData),
       [{ x: 1 }, { x: 2 }, { x: 3 }]
     );
   });
@@ -64,31 +64,31 @@ describe("IndexedDbEventStore — durability", () => {
   test("a deleted tag stays deleted after a reopen", async() => {
     const name = crypto.randomUUID();
     const first = await open(name);
-    append(first, "a1");
-    tag(first, "a1", "v1");
-    first.tags.delete("a1", "v1");
-    first.close();
+    await append(first, "a1");
+    await tag(first, "a1", "v1");
+    await first.tags.delete("a1", "v1");
+    await first.close();
 
-    using second = await open(name);
+    await using second = await open(name);
 
-    assert.deepEqual(second.tags.list(), []);
+    assert.deepEqual(await second.tags.list(), []);
   });
 
   test("compaction removes the superseded events from the database", async() => {
     const name = crypto.randomUUID();
     const first = await open(name);
-    append(first, "a1", { revision: 1 }, "asset.created");
-    append(first, "a1", { x: 1 });
-    append(first, "a1", { revision: 2 }, "asset.updated");
-    first.compact({
+    await append(first, "a1", { revision: 1 }, "asset.created");
+    await append(first, "a1", { x: 1 });
+    await append(first, "a1", { revision: 2 }, "asset.updated");
+    await first.compact({
       checkpointEventTypes: ["asset.created", "asset.updated"]
     });
-    first.close();
+    await first.close();
 
-    using second = await open(name);
+    await using second = await open(name);
 
     assert.deepEqual(
-      second.reader.list("a1").map((event) => event.eventVersion),
+      (await second.reader.list("a1")).map((event) => event.eventVersion),
       [3]
     );
   });
@@ -97,11 +97,11 @@ describe("IndexedDbEventStore — durability", () => {
 describe("IndexedDbEventStore — deletion elsewhere", () => {
   test("an append fails once another connection deletes the database", async() => {
     const name = crypto.randomUUID();
-    using store = await open(name);
-    append(store, "a1", { x: 1 });
+    await using store = await open(name);
+    await append(store, "a1", { x: 1 });
 
     await EventStore.persistence.indexeddb.destroy({ name });
-    const result = store.writer.append({
+    const result = await store.writer.append({
       assetType: "texture",
       assetId: "a1",
       eventType: "pixel-set",
@@ -111,7 +111,7 @@ describe("IndexedDbEventStore — deletion elsewhere", () => {
 
     assert.strictEqual(result.err, true);
     assert.deepEqual(
-      store.reader.list("a1").map((event) => event.eventData),
+      (await store.reader.list("a1")).map((event) => event.eventData),
       [{ x: 1 }]
     );
   });

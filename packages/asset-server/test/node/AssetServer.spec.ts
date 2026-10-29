@@ -46,7 +46,7 @@ class StaticExtension extends Extension {
 describe("AssetServer", () => {
   test("seeds, catalogs and serves the project over one network server", async() => {
     await using temporary = await tempDirectory();
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
 
     await using assetServer = await AssetServer.open({
       root: temporary.root,
@@ -84,7 +84,7 @@ describe("AssetServer", () => {
 
   test("seeds a root that does not exist yet", async() => {
     await using temporary = await tempDirectory();
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
     const root = path.join(temporary.root, "assets");
 
     await using assetServer = await AssetServer.open({
@@ -113,7 +113,7 @@ describe("AssetServer", () => {
 
   test("keeps an existing document over its seed", async() => {
     await using temporary = await tempDirectory();
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
 
     await fs.writeFile(
       path.join(temporary.root, "counter.counter"),
@@ -170,7 +170,7 @@ describe("AssetServer", () => {
   });
 
   test("uses the source it is given", async() => {
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
     const source = new MemoryAssetSource();
 
     await using assetServer = await AssetServer.open({
@@ -199,7 +199,7 @@ describe("AssetServer", () => {
   });
 
   test("registers the extensions it is given on the server it built", async() => {
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
     const extension = new StaticExtension("static-room");
 
     await using assetServer = await AssetServer.open({
@@ -224,7 +224,7 @@ describe("AssetServer", () => {
   });
 
   test("leaves an event store it does not own open", async() => {
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
 
     const assetServer = await AssetServer.open({
       root: "unused",
@@ -238,7 +238,7 @@ describe("AssetServer", () => {
     });
     await assetServer.close();
 
-    const appended = eventStore.writer.append({
+    const appended = await eventStore.writer.append({
       assetType: "counter",
       assetId: "a1",
       eventType: "counter.incremented",
@@ -247,6 +247,6 @@ describe("AssetServer", () => {
     });
 
     assert.ok(appended.ok);
-    assert.strictEqual(eventStore.reader.listAll().length, 1);
+    assert.strictEqual((await eventStore.reader.listAll()).length, 1);
   });
 });

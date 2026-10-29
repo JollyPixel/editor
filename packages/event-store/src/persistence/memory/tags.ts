@@ -35,9 +35,9 @@ export class MemoryTagTable implements TagLog {
     }
   }
 
-  insert(
+  async insert(
     input: EventTagInput
-  ): EventTag {
+  ): Promise<EventTag> {
     this.#assertOpen();
 
     const record = TagRecord.encode(input);
@@ -50,16 +50,16 @@ export class MemoryTagTable implements TagLog {
       throw new EventTagConflictError(record.assetId, record.name);
     }
     const tag = record.toEventTag();
-    this.#journal.putTag(tag);
+    await this.#journal.putTag(tag);
     this.#tags.set(key, tag);
 
     return record.toEventTag();
   }
 
-  get(
+  async get(
     assetId: string,
     name: string
-  ): EventTag | undefined {
+  ): Promise<EventTag | undefined> {
     this.#assertOpen();
 
     const tag = this.#tags.get(tagKey(assetId, name));
@@ -67,9 +67,9 @@ export class MemoryTagTable implements TagLog {
     return tag === undefined ? undefined : structuredClone(tag);
   }
 
-  list(
+  async list(
     assetId?: string
-  ): EventTag[] {
+  ): Promise<EventTag[]> {
     this.#assertOpen();
 
     const tags: EventTag[] = [];
@@ -82,17 +82,17 @@ export class MemoryTagTable implements TagLog {
     return tags;
   }
 
-  delete(
+  async delete(
     assetId: string,
     name: string
-  ): boolean {
+  ): Promise<boolean> {
     this.#assertOpen();
 
     const key = tagKey(assetId, name);
     if (!this.#tags.has(key)) {
       return false;
     }
-    this.#journal.deleteTag(assetId, name);
+    await this.#journal.deleteTag(assetId, name);
 
     return this.#tags.delete(key);
   }

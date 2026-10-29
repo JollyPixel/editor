@@ -48,7 +48,7 @@ describe("registerAssetRooms — tag rooms", () => {
     await harness.join("A");
     await harness.send("A", { action: "increment" });
     const room = new AssetRoom("counter", harness.assetId, "v1").toString();
-    const eventCount = harness.sync.eventStore.reader.list(harness.assetId).length;
+    const eventCount = (await harness.sync.eventStore.reader.list(harness.assetId)).length;
 
     const connection = await harness.join("B", room);
     await connection.receive({
@@ -73,7 +73,7 @@ describe("registerAssetRooms — tag rooms", () => {
     });
     assert.strictEqual((denied as { kind: string; }).kind, "denied");
     assert.strictEqual(
-      harness.sync.eventStore.reader.list(harness.assetId).length,
+      (await harness.sync.eventStore.reader.list(harness.assetId)).length,
       eventCount
     );
   });
@@ -96,13 +96,17 @@ describe("registerAssetRooms — restore", () => {
     await using harness = await roomHarness({
       handler: restoringCounterHandler(restored)
     });
-    const versions = [1, 2].map(() => harness.sync.eventStore.writer.append({
-      assetType: "counter",
-      assetId: harness.assetId,
-      eventType: COUNTER_INCREMENTED,
-      eventData: { action: "increment" },
-      actor: ROOM_ACTOR
-    }).unwrap().eventVersion);
+    const versions: number[] = [];
+    for (let index = 0; index < 2; index++) {
+      const appended = await harness.sync.eventStore.writer.append({
+        assetType: "counter",
+        assetId: harness.assetId,
+        eventType: COUNTER_INCREMENTED,
+        eventData: { action: "increment" },
+        actor: ROOM_ACTOR
+      });
+      versions.push(appended.unwrap().eventVersion);
+    }
 
     await harness.join("alice");
 

@@ -29,7 +29,7 @@ const kActor: EventStore.Actor = {
 
 describe("voxel model created without content", () => {
   test("comes with a same-named texture it references and one block", async() => {
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
     const source = new MemoryAssetSource();
     await using backend = await createAssetBackend({
       source,

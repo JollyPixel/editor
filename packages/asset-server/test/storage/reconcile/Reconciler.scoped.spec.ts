@@ -15,10 +15,10 @@ const kActor: EventStore.Actor = {
   id: "alice"
 };
 
-function lifecycleEvents(
+async function lifecycleEvents(
   eventStore: EventStore.EventStore
-): EventStore.Event[] {
-  return eventStore.reader.listAll({ eventTypePrefix: "asset." });
+): Promise<EventStore.Event[]> {
+  return await eventStore.reader.listAll({ eventTypePrefix: "asset." });
 }
 
 describe("Reconciler — scoped passes", () => {
@@ -138,6 +138,6 @@ describe("Reconciler — scoped passes", () => {
       deleted: 0,
       failed: 0
     });
-    assert.strictEqual(lifecycleEvents(harness.eventStore).length, 1);
+    assert.strictEqual((await lifecycleEvents(harness.eventStore)).length, 1);
   });
 });

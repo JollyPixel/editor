@@ -33,18 +33,18 @@ import {
 import { tempDirectory } from "../../helpers/tempDirectory.ts";
 import { bytes } from "../../helpers/bytes.ts";
 
-function lifecycleCount(
+async function lifecycleCount(
   eventStore: EventStore.EventStore
-): number {
-  return eventStore.reader.listAll({ eventTypePrefix: "asset." }).length;
+): Promise<number> {
+  return (await eventStore.reader.listAll({ eventTypePrefix: "asset." })).length;
 }
 
 async function waitFor(
-  predicate: () => boolean,
+  predicate: () => Promise<boolean>,
   timeoutMs = 5_000
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
-  while (!predicate()) {
+  while (!await predicate()) {
     if (Date.now() > deadline) {
       throw new Error("timed out waiting for the watcher");
     }
@@ -155,7 +155,7 @@ describe("SourceWatcher — debounce", () => {
 describe("SourceWatcher — real filesystem (integration)", () => {
   test("a file written outside the editor reaches the log", async() => {
     await using directory = await tempDirectory();
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
 
     const source = new FilesystemAssetSource(directory.root);
     const kinds = new AssetKindRegistry();
@@ -168,7 +168,7 @@ describe("SourceWatcher — real filesystem (integration)", () => {
       backups: new AssetBackups(source),
       partFiles
     });
-    projector.load();
+    await projector.load();
     projector.start();
     const assetIndex = await AssetIndex.load(source);
     const writer = new AssetWriter({
@@ -200,9 +200,9 @@ describe("SourceWatcher — real filesystem (integration)", () => {
         path.join(directory.root, "external.png"),
         bytes("from a tool")
       );
-      await waitFor(() => lifecycleCount(eventStore) === 1);
+      await waitFor(async() => await lifecycleCount(eventStore) === 1);
 
-      const [event] = eventStore.reader.listAll({
+      const [event] = await eventStore.reader.listAll({
         eventTypePrefix: "asset."
       });
       assert.strictEqual(event.eventType, "asset.created");

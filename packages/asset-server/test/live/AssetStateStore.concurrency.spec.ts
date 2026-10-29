@@ -69,17 +69,17 @@ async function counterAsset(
   return created.assetId;
 }
 
-function increment(
+async function increment(
   harness: SyncHarness,
   assetId: string
-): number {
-  return harness.eventStore.writer.append({
+): Promise<number> {
+  return (await harness.eventStore.writer.append({
     assetType: "counter",
     assetId,
     eventType: COUNTER_INCREMENTED,
     eventData: { action: "increment" },
     actor: kActor
-  }).unwrap().eventVersion;
+  })).unwrap().eventVersion;
 }
 
 describe("AssetStateStore — replay concurrency", () => {
@@ -89,7 +89,7 @@ describe("AssetStateStore — replay concurrency", () => {
     const assetId = "long-asset";
 
     for (let index = 0; index < 600; index++) {
-      increment(harness, assetId);
+      await increment(harness, assetId);
     }
 
     let interleaved = false;
@@ -108,7 +108,7 @@ describe("AssetStateStore — replay concurrency", () => {
     const assetId = "shared-asset";
 
     for (let index = 0; index < 300; index++) {
-      increment(harness, assetId);
+      await increment(harness, assetId);
     }
 
     const [first, second] = await Promise.all([
@@ -127,11 +127,11 @@ describe("AssetStateStore — replay concurrency", () => {
     const assetId = "growing-asset";
 
     for (let index = 0; index < 300; index++) {
-      increment(harness, assetId);
+      await increment(harness, assetId);
     }
 
     const acquired = harness.states.acquire(assetId, "counter");
-    increment(harness, assetId);
+    await increment(harness, assetId);
     const entry = await acquired;
 
     assert.strictEqual((entry.state as CounterState).value, 301);
@@ -156,7 +156,7 @@ describe("AssetStateStore — fault isolation", () => {
   }
 
   test("an invalid document in the replay is logged as a warning", async() => {
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
     const { logger, records } = recordingLogger();
     const states = new AssetStateStore({
       eventStore,
@@ -168,13 +168,13 @@ describe("AssetStateStore — fault isolation", () => {
       logger
     });
 
-    eventStore.writer.append({
+    (await eventStore.writer.append({
       assetType: "counter",
       assetId: "a1",
       eventType: COUNTER_INCREMENTED,
       eventData: { action: "increment" },
       actor: kActor
-    }).unwrap();
+    })).unwrap();
 
     await states.acquire("a1", "counter");
 
@@ -185,7 +185,7 @@ describe("AssetStateStore — fault isolation", () => {
   });
 
   test("a throwing replay fold is logged and keeps the last good state", async() => {
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
     const { logger, records } = recordingLogger();
     const states = new AssetStateStore({
       eventStore,
@@ -193,13 +193,13 @@ describe("AssetStateStore — fault isolation", () => {
       logger
     });
 
-    eventStore.writer.append({
+    (await eventStore.writer.append({
       assetType: "counter",
       assetId: "a1",
       eventType: COUNTER_INCREMENTED,
       eventData: { action: "increment" },
       actor: kActor
-    }).unwrap();
+    })).unwrap();
 
     const entry = await states.acquire("a1", "counter");
 
@@ -212,7 +212,7 @@ describe("AssetStateStore — fault isolation", () => {
   });
 
   test("a throwing live fold does not escape the append", async() => {
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
     const { logger, records } = recordingLogger();
     const states = new AssetStateStore({
       eventStore,
@@ -222,7 +222,7 @@ describe("AssetStateStore — fault isolation", () => {
     states.start();
     await states.acquire("a1", "counter");
 
-    const appended = eventStore.writer.append({
+    const appended = await eventStore.writer.append({
       assetType: "counter",
       assetId: "a1",
       eventType: COUNTER_INCREMENTED,
@@ -242,19 +242,19 @@ describe("AssetStateStore — scheduled snapshots", () => {
     await using harness = await syncHarness({ handlers: [handler] });
     const assetId = await counterAsset(harness);
     await harness.states.acquire(assetId, "counter");
-    increment(harness, assetId);
+    await increment(harness, assetId);
 
     folded.length = 0;
     await harness.scheduler.flush(assetId);
 
     assert.strictEqual(
-      harness.eventStore.reader.list(assetId).at(-1)?.eventType,
+      (await harness.eventStore.reader.list(assetId)).at(-1)?.eventType,
       ASSET_UPDATED
     );
     assert.deepEqual(folded, []);
     assert.strictEqual(
       harness.states.openVersion(assetId),
-      harness.eventStore.reader.list(assetId).at(-1)?.eventVersion
+      (await harness.eventStore.reader.list(assetId)).at(-1)?.eventVersion
     );
   });
 
@@ -263,7 +263,7 @@ describe("AssetStateStore — scheduled snapshots", () => {
     await using harness = await syncHarness({ handlers: [handler] });
     const assetId = await counterAsset(harness);
     await harness.states.acquire(assetId, "counter");
-    increment(harness, assetId);
+    await increment(harness, assetId);
     await harness.scheduler.snapshot(assetId);
     harness.states.release(assetId);
 

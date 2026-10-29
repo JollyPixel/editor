@@ -189,7 +189,7 @@ export class OfflineServer implements OfflineBackend {
         server?.close()
       ]);
       try {
-        eventStore?.close();
+        await eventStore?.close();
       }
       catch {
       }
@@ -346,7 +346,7 @@ export class OfflineServer implements OfflineBackend {
     await this.#server.close();
     await this.backend.flush();
     await this.backend.close();
-    this.#eventStore.close();
+    await this.#eventStore.close();
 
     const { source } = this.backend;
     if (source instanceof IndexedDbAssetSource) {

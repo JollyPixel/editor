@@ -74,7 +74,7 @@ export interface ListAllOptions {
 export interface EventWriter {
   append(
     input: AppendInput
-  ): Result<Event, Error>;
+  ): Promise<Result<Event, Error>>;
 }
 
 export interface TypedEventWriter<
@@ -82,7 +82,7 @@ export interface TypedEventWriter<
 > {
   append: <K extends EventType<TMap>>(
     input: TypedAppendInput<TMap, K>
-  ) => Result<Event, Error>;
+  ) => Promise<Result<Event, Error>>;
 }
 
 export interface ListFromCheckpointsOptions {
@@ -130,38 +130,38 @@ export interface EventTag extends EventTagInput {
 export interface EventTags {
   create(
     input: EventTagInput
-  ): Result<EventTag, Error>;
+  ): Promise<Result<EventTag, Error>>;
   get(
     assetId: string,
     name: string
-  ): EventTag | undefined;
+  ): Promise<EventTag | undefined>;
   list(
     assetId?: string
-  ): EventTag[];
+  ): Promise<EventTag[]>;
   delete(
     assetId: string,
     name: string
-  ): boolean;
+  ): Promise<boolean>;
 }
 
 export interface EventReader {
   get(
     assetId: string,
     eventVersion: number
-  ): Event | undefined;
+  ): Promise<Event | undefined>;
 
   list(
     assetId: string,
     fromVersion?: number
-  ): Event[];
+  ): Promise<Event[]>;
 
   listAll(
     options?: ListAllOptions
-  ): Event[];
+  ): Promise<Event[]>;
 
   listFromCheckpoints(
     options: ListFromCheckpointsOptions
-  ): Event[];
+  ): Promise<Event[]>;
 }
 
 export interface SubscribeOptions {
@@ -193,10 +193,10 @@ export interface EventStore {
 
   compact(
     options: CompactOptions
-  ): CompactReport;
+  ): Promise<CompactReport>;
 
-  close(): void;
-  [Symbol.dispose](): void;
+  close(): Promise<void>;
+  [Symbol.asyncDispose](): Promise<void>;
 }
 
 export interface TypedEventStore<

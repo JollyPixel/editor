@@ -134,16 +134,16 @@ async function assembleAssetBackend(
   await ensureStateGitignore(source, options.stateIgnores);
 
   if (compactOnOpen) {
-    const report = eventStore.compact({
+    const report = await eventStore.compact({
       checkpointEventTypes: ASSET_CHECKPOINT_EVENT_TYPES,
-      keep: retainedPartEvents(eventStore)
+      keep: await retainedPartEvents(eventStore)
     });
     logger
       .withMetadata(report)
       .debug("event log compacted");
   }
 
-  const state = eventStore.reader.listAll({ limit: 1 }).length === 0 ?
+  const state = (await eventStore.reader.listAll({ limit: 1 })).length === 0 ?
     new ProjectionState(source) :
     await ProjectionState.load(source, logger);
   const backups = new AssetBackups(source, logger);
@@ -155,7 +155,7 @@ async function assembleAssetBackend(
     partFiles,
     logger
   });
-  projector.load();
+  await projector.load();
   projector.start();
   teardown.defer(() => projector.close());
 

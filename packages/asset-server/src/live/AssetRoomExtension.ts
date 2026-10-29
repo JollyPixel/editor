@@ -30,6 +30,7 @@ import {
 } from "./PeerAcks.ts";
 import { SnapshotCache } from "./SnapshotCache.ts";
 import { PartSubscriptions } from "./PartSubscriptions.ts";
+import { TaskChain } from "../common/TaskChain.ts";
 
 // CONSTANTS
 const kDefaultResumeLimit = 1_000;
@@ -86,6 +87,7 @@ export class AssetRoomExtension<
   #members = new Set<string>();
   #departures = new Map<string, () => void>();
   #parts: PartSubscriptions<TCommand> | null;
+  #inbox = new TaskChain();
 
   constructor(
     binding: AssetRoomBinding,
@@ -184,38 +186,43 @@ export class AssetRoomExtension<
     if (resume !== null) {
       await this.#departure(resume.clientId);
     }
-    const encoding = this.#snapshots.refresh();
-    if (encoding !== null) {
-      await encoding;
-    }
 
-    if (this.#deleted) {
-      client.send({
-        type: ASSET_ROOM_DELETED
-      } satisfies AssetRoomDeletedMessage);
+    await this.#inbox.run(async() => {
+      const encoding = this.#snapshots.refresh();
+      if (encoding !== null) {
+        await encoding;
+      }
 
-      return;
-    }
+      if (this.#deleted) {
+        client.send({
+          type: ASSET_ROOM_DELETED
+        } satisfies AssetRoomDeletedMessage);
 
-    client.send(
-      resume === null ? this.#snapshot({}) : this.#resumeMessage(resume)
-    );
-    this.#parts?.join(peer.clientId, (message) => client.send(message));
+        return;
+      }
+
+      client.send(
+        resume === null ? this.#snapshot({}) : await this.#resumeMessage(resume)
+      );
+      this.#parts?.join(peer.clientId, (message) => client.send(message));
+    });
   }
 
   override onResync(
     clientId: string,
     context: network.RoomContext
-  ): void {
-    if (this.#deleted) {
-      return;
-    }
+  ): Promise<void> {
+    return this.#inbox.run(async() => {
+      if (this.#deleted) {
+        return;
+      }
 
-    context.room.sendTo(
-      clientId,
-      this.#snapshot(this.#acks.collectAcks([clientId]))
-    );
-    this.#parts?.resend(clientId, sender(context.room, clientId));
+      context.room.sendTo(
+        clientId,
+        this.#snapshot(this.#acks.collectAcks([clientId]))
+      );
+      this.#parts?.resend(clientId, sender(context.room, clientId));
+    });
   }
 
   override onClientDisconnect(
@@ -232,7 +239,7 @@ export class AssetRoomExtension<
     clientId: string,
     message: TCommand | TRelay,
     context: network.RoomContext
-  ): void {
+  ): Promise<void> | void {
     if (this.#deleted) {
       return;
     }
@@ -242,6 +249,19 @@ export class AssetRoomExtension<
       return;
     }
 
+    return this.#inbox.run(
+      () => this.#receive(clientId, message, context)
+    );
+  }
+
+  async #receive(
+    clientId: string,
+    message: TCommand,
+    context: network.RoomContext
+  ): Promise<void> {
+    if (this.#deleted) {
+      return;
+    }
     if (this.#roomProtocols.isPartRequest(message)) {
       this.#parts?.request(clientId, message, sender(context.room, clientId));
 
@@ -263,7 +283,7 @@ export class AssetRoomExtension<
       return;
     }
 
-    const appended = this.#events.append({
+    const appended = await this.#events.append({
       assetType: this.name,
       assetId: this.#assetId,
       eventType: this.#commands.eventType,
@@ -334,11 +354,11 @@ export class AssetRoomExtension<
     return promise;
   }
 
-  #resumeMessage(
+  async #resumeMessage(
     resume: network.NetworkResume
-  ): AssetSyncMessage {
+  ): Promise<AssetSyncMessage> {
     const acks = this.#acks.resumedBy(resume.clientId);
-    const caughtUp = this.#catchUp(resume.version);
+    const caughtUp = await this.#catchUp(resume.version);
     if (caughtUp === null) {
       return this.#snapshot(acks);
     }
@@ -351,9 +371,9 @@ export class AssetRoomExtension<
     };
   }
 
-  #catchUp(
+  async #catchUp(
     from: number | undefined
-  ): CatchUp | null {
+  ): Promise<CatchUp | null> {
     const current = this.#version();
     if (
       from === undefined ||
@@ -365,7 +385,7 @@ export class AssetRoomExtension<
       return null;
     }
 
-    const events = this.#reader.list(this.#assetId, from);
+    const events = await this.#reader.list(this.#assetId, from);
     const commands: unknown[] = [];
     let expectedVersion = from + 1;
     for (const event of events) {

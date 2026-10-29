@@ -35,17 +35,17 @@ async function counterAsset(
   return created.assetId;
 }
 
-function increment(
+async function increment(
   harness: SyncHarness,
   assetId: string
-): void {
-  harness.eventStore.writer.append({
+): Promise<void> {
+  (await harness.eventStore.writer.append({
     assetType: "counter",
     assetId,
     eventType: COUNTER_INCREMENTED,
     eventData: { action: "increment" },
     actor: kActor
-  }).unwrap();
+  })).unwrap();
 }
 
 async function pendingAfter(
@@ -68,7 +68,7 @@ describe("SnapshotScheduler — cadence", () => {
     });
     const assetId = await counterAsset(harness);
 
-    increment(harness, assetId);
+    await increment(harness, assetId);
     assert.strictEqual(await pendingAfter(t, harness, 999), 1);
     assert.strictEqual(await pendingAfter(t, harness, 1), 0);
 
@@ -94,11 +94,11 @@ describe("SnapshotScheduler — cadence", () => {
       return original(path, data);
     };
 
-    increment(harness, assetId);
+    await increment(harness, assetId);
     assert.strictEqual(await pendingAfter(t, harness, 400), 1);
-    increment(harness, assetId);
+    await increment(harness, assetId);
     assert.strictEqual(await pendingAfter(t, harness, 400), 1);
-    increment(harness, assetId);
+    await increment(harness, assetId);
     assert.strictEqual(await pendingAfter(t, harness, 999), 1);
     assert.strictEqual(await pendingAfter(t, harness, 1), 0);
     await harness.scheduler.flush();
@@ -116,7 +116,7 @@ describe("SnapshotScheduler — cadence", () => {
     const assetId = await counterAsset(harness);
 
     for (let index = 0; index < 5; index++) {
-      increment(harness, assetId);
+      await increment(harness, assetId);
       assert.strictEqual(await pendingAfter(t, harness, 499), 1);
       await pendingAfter(t, harness, 1);
     }
@@ -134,7 +134,7 @@ describe("SnapshotScheduler — cadence", () => {
     });
     const assetId = await counterAsset(harness);
 
-    increment(harness, assetId);
+    await increment(harness, assetId);
     assert.strictEqual(harness.scheduler.pending, 1);
     assert.strictEqual(await pendingAfter(t, harness, 0), 0);
   });
@@ -146,16 +146,16 @@ describe("SnapshotScheduler — cadence", () => {
     });
     const assetId = await counterAsset(harness);
 
-    increment(harness, assetId);
+    await increment(harness, assetId);
     assert.strictEqual(await pendingAfter(t, harness, 1_999), 1);
     assert.strictEqual(await pendingAfter(t, harness, 1), 0);
     await harness.scheduler.flush();
 
     for (let elapsed = 0; elapsed < 28_500; elapsed += 1_500) {
-      increment(harness, assetId);
+      await increment(harness, assetId);
       assert.strictEqual(await pendingAfter(t, harness, 1_500), 1);
     }
-    increment(harness, assetId);
+    await increment(harness, assetId);
     assert.strictEqual(await pendingAfter(t, harness, 1_499), 1);
     assert.strictEqual(await pendingAfter(t, harness, 1), 0);
   });
@@ -172,7 +172,7 @@ describe("SnapshotScheduler — cadence", () => {
       });
       const assetId = await counterAsset(harness);
 
-      increment(harness, assetId);
+      await increment(harness, assetId);
       assert.strictEqual(await pendingAfter(t, harness, quiet - 1), 1);
       assert.strictEqual(await pendingAfter(t, harness, 1), 0);
     });
@@ -187,7 +187,7 @@ describe("SnapshotScheduler — cadence", () => {
     const assetId = await counterAsset(harness);
 
     harness.kinds.replace(counterHandler({ delay: 100 }));
-    increment(harness, assetId);
+    await increment(harness, assetId);
 
     assert.strictEqual(await pendingAfter(t, harness, 99), 1);
     assert.strictEqual(await pendingAfter(t, harness, 1), 0);

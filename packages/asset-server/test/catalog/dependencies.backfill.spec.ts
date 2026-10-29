@@ -28,13 +28,13 @@ const kActor: EventStore.Actor = {
   id: "alice"
 };
 
-function legacyCreated(
+async function legacyCreated(
   eventStore: EventStore.TypedEventStore<AssetEventDataMap>,
   assetId: string,
   path: string,
   data: Uint8Array
-): void {
-  eventStore.writer.append({
+): Promise<void> {
+  (await eventStore.writer.append({
     assetType: "link",
     assetId,
     eventType: ASSET_CREATED,
@@ -46,7 +46,7 @@ function legacyCreated(
       content: encodeContent(data)
     },
     actor: kActor
-  }).unwrap();
+  })).unwrap();
 }
 
 function unindexedIds(
@@ -64,7 +64,7 @@ describe("createAssetBackend — dependency backfill", () => {
     const eventStore = EventStore.persistence.memory<AssetEventDataMap>();
     const data = linkContent("tex");
     await source.write("old.link", data);
-    legacyCreated(eventStore, "old", "old.link", data);
+    await legacyCreated(eventStore, "old", "old.link", data);
 
     {
       await using backend = await createAssetBackend({
@@ -82,7 +82,7 @@ describe("createAssetBackend — dependency backfill", () => {
       assert.deepEqual(unindexedIds(backend.catalog), []);
     }
 
-    const count = eventStore.reader.list("old").length;
+    const count = (await eventStore.reader.list("old")).length;
     {
       await using backend = await createAssetBackend({
         source,
@@ -95,7 +95,7 @@ describe("createAssetBackend — dependency backfill", () => {
 
       assert.deepEqual(backend.catalog.dependencies.listDependents("tex"), ["old"]);
     }
-    assert.strictEqual(eventStore.reader.list("old").length, count);
+    assert.strictEqual((await eventStore.reader.list("old")).length, count);
     eventStore.close();
   });
 
@@ -104,7 +104,7 @@ describe("createAssetBackend — dependency backfill", () => {
     const eventStore = EventStore.persistence.memory<AssetEventDataMap>();
     const data = bytes("png");
     await source.write("a.png", data);
-    eventStore.writer.append({
+    (await eventStore.writer.append({
       assetType: "binary",
       assetId: "png",
       eventType: ASSET_CREATED,
@@ -116,7 +116,7 @@ describe("createAssetBackend — dependency backfill", () => {
         content: encodeContent(data)
       },
       actor: kActor
-    }).unwrap();
+    })).unwrap();
 
     await using backend = await createAssetBackend({
       source,
@@ -126,7 +126,7 @@ describe("createAssetBackend — dependency backfill", () => {
       }
     });
 
-    assert.strictEqual(eventStore.reader.list("png").length, 1);
+    assert.strictEqual((await eventStore.reader.list("png")).length, 1);
     assert.deepEqual(unindexedIds(backend.catalog), ["png"]);
   });
 });

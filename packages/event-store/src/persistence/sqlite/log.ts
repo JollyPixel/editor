@@ -64,9 +64,9 @@ export class SqliteEventLog implements EventLog {
     this.tags = new SqliteTagTable(database);
   }
 
-  insert(
+  async insert(
     input: AppendInput
-  ): Event {
+  ): Promise<Event> {
     this.#database.assertOpen();
 
     const { assetId, expectedVersion } = input;
@@ -117,10 +117,10 @@ export class SqliteEventLog implements EventLog {
     });
   }
 
-  get(
+  async get(
     assetId: string,
     eventVersion: number
-  ): Event | undefined {
+  ): Promise<Event | undefined> {
     const [event] = this.#query(
       `SELECT ${kEventColumns}
        FROM events
@@ -132,10 +132,10 @@ export class SqliteEventLog implements EventLog {
     return event;
   }
 
-  list(
+  async list(
     assetId: string,
     fromVersion = 0
-  ): Event[] {
+  ): Promise<Event[]> {
     return this.#query(
       `SELECT ${kEventColumns}
        FROM events
@@ -146,9 +146,9 @@ export class SqliteEventLog implements EventLog {
     );
   }
 
-  listAll(
+  async listAll(
     options: ListAllOptions = {}
-  ): Event[] {
+  ): Promise<Event[]> {
     const {
       fromEventId = 0,
       beforeEventId,
@@ -181,9 +181,9 @@ export class SqliteEventLog implements EventLog {
     );
   }
 
-  listFromCheckpoints(
+  async listFromCheckpoints(
     options: ListFromCheckpointsOptions
-  ): Event[] {
+  ): Promise<Event[]> {
     const {
       checkpointEventTypes,
       eventTypePrefix,
@@ -222,9 +222,9 @@ export class SqliteEventLog implements EventLog {
     );
   }
 
-  compact(
+  async compact(
     options: CompactOptions
-  ): CompactReport {
+  ): Promise<CompactReport> {
     const {
       checkpointEventTypes,
       reclaim = true,
@@ -271,7 +271,7 @@ export class SqliteEventLog implements EventLog {
     };
   }
 
-  close(): void {
+  async close(): Promise<void> {
     this.#database.close();
   }
 

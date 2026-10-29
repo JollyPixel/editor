@@ -67,18 +67,18 @@ export function resumeRoom(
       }
     },
     {
-      append: (input) => Ok(record(input))
+      append: async(input) => Ok(record(input))
     },
     {
       reader: {
-        get: (_assetId, version) => log.find(
+        get: async(_assetId, version) => log.find(
           (event) => event.eventVersion === version
         ),
-        list: (_assetId, from = 0) => log.filter(
+        list: async(_assetId, from = 0) => log.filter(
           (event) => event.eventVersion > from
         ),
-        listAll: () => [],
-        listFromCheckpoints: () => []
+        listAll: async() => [],
+        listFromCheckpoints: async() => []
       },
       ...options
     }
@@ -101,11 +101,11 @@ export function resumeRoom(
     };
   }
 
-  function send(
+  async function send(
     clientId: string,
     seq: number
-  ): void {
-    extension.onMessage(clientId, { action: "increment", seq }, context);
+  ): Promise<void> {
+    await extension.onMessage(clientId, { action: "increment", seq }, context);
   }
 
   return {

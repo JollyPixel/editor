@@ -35,56 +35,56 @@ const suite = defineSuite("event-store / reads", async(bench) => {
     bench
       .add(
         `list / whole ${kPerAsset} event stream [${kind}]`,
-        () => {
-          sink += reader.list("asset-0").length;
+        async() => {
+          sink += (await reader.list("asset-0")).length;
         }
       )
       .add(
         `list / tail after version ${kTailVersion} [${kind}]`,
-        () => {
-          sink += reader.list("asset-0", kTailVersion).length;
+        async() => {
+          sink += (await reader.list("asset-0", kTailVersion)).length;
         }
       )
       .add(
         `listFromCheckpoints / one asset, 2 event types [${kind}]`,
-        () => {
-          sink += reader.listFromCheckpoints({
+        async() => {
+          sink += (await reader.listFromCheckpoints({
             assetId: "asset-0",
             checkpointEventTypes: ["asset.created", "asset.snapshot"]
-          }).length;
+          })).length;
         }
       )
       .add(
         `listAll / whole ${kTotalEvents} event log [${kind}]`,
-        () => {
-          sink += reader.listAll().length;
+        async() => {
+          sink += (await reader.listAll()).length;
         }
       )
       .add(
         `listAll / "pixelart." prefix [${kind}]`,
-        () => {
-          sink += reader.listAll({ eventTypePrefix: "pixelart." }).length;
+        async() => {
+          sink += (await reader.listAll({ eventTypePrefix: "pixelart." })).length;
         }
       )
       .add(
         `listAll / "asset." prefix, 4% selective [${kind}]`,
-        () => {
-          sink += reader.listAll({ eventTypePrefix: "asset." }).length;
+        async() => {
+          sink += (await reader.listAll({ eventTypePrefix: "asset." })).length;
         }
       )
       .add(
         `listAll / ${kPageSize} event page near the head [${kind}]`,
-        () => {
-          sink += reader.listAll({
+        async() => {
+          sink += (await reader.listAll({
             fromEventId: kTotalEvents - kPageSize,
             limit: kPageSize
-          }).length;
+          })).length;
         }
       );
   }
 
-  return () => {
-    seeded.dispose();
+  return async() => {
+    await seeded.dispose();
     if (sink < 0) {
       throw new Error("unreachable");
     }

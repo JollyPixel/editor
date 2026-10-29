@@ -52,9 +52,9 @@ const suite = defineSuite("event-store / append", async(bench) => {
       );
   }
 
-  return () => {
+  return async() => {
     for (const entry of opened) {
-      entry.dispose();
+      await entry.dispose();
     }
   };
 });
@@ -65,7 +65,7 @@ async function seededStore(
   kind: BackendKind
 ): Promise<OpenedStore> {
   const opened = await openStore(kind);
-  seed(
+  await seed(
     opened.store,
     seedInputs({
       assets: kSeedAssets,
@@ -96,9 +96,9 @@ function appender(
     }
   };
 
-  return function append() {
+  return async function append() {
     input.assetId = assetId();
-    store.writer.append(input).unwrap();
+    (await store.writer.append(input)).unwrap();
   };
 }
 

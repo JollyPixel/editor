@@ -13,9 +13,9 @@ describe("AssetRoomExtension — resume", () => {
   test("answers with the commands after the resumed version and the previous ack", async() => {
     const { extension, connect, send } = resumeRoom();
     await connect("old").connected;
-    send("old", 1);
-    send("peer", 1);
-    send("old", 2);
+    await send("old", 1);
+    await send("peer", 1);
+    await send("old", 2);
     extension.onClientDisconnect("old");
 
     const { received, connected } = connect("new", { clientId: "old", version: 1 });
@@ -36,7 +36,7 @@ describe("AssetRoomExtension — resume", () => {
 
   test("skips renames and scheduled snapshots in the range", async() => {
     const { connect, record, send } = resumeRoom();
-    send("peer", 1);
+    await send("peer", 1);
     record({
       eventType: "asset.renamed",
       eventData: {},
@@ -63,7 +63,7 @@ describe("AssetRoomExtension — resume", () => {
   test("answers a resume without a version with an acknowledging snapshot", async() => {
     const { extension, connect, send } = resumeRoom();
     await connect("old").connected;
-    send("old", 4);
+    await send("old", 4);
     extension.onClientDisconnect("old");
 
     const { received, connected } = connect("new", { clientId: "old" });
@@ -79,7 +79,7 @@ describe("AssetRoomExtension — resume", () => {
     await connect("old").connected;
 
     const { received, connected } = connect("new", { clientId: "old", version: 0 });
-    send("old", 1);
+    await send("old", 1);
     assert.deepEqual(received, []);
     extension.onClientDisconnect("old");
     await connected;
@@ -110,7 +110,7 @@ describe("AssetRoomExtension — resume", () => {
 
   test("a join without resume gets a snapshot with the room version", async() => {
     const { connect, send } = resumeRoom();
-    send("peer", 1);
+    await send("peer", 1);
 
     const { received, connected } = connect("new");
     await connected;
@@ -122,7 +122,7 @@ describe("AssetRoomExtension — resume", () => {
 
   test("a malformed resume is answered like a fresh join", async() => {
     const { connect, send } = resumeRoom();
-    send("old", 4);
+    await send("old", 4);
 
     const { received, connected } = connect("new", {
       clientId: "old",

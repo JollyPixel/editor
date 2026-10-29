@@ -135,7 +135,7 @@ describe("AssetProjector — checkpoints", () => {
 
 describe("AssetProjector — restart convergence", () => {
   test("replaying the whole log twice yields identical state", async() => {
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
     const first = new MemoryAssetSource();
 
     {
@@ -167,7 +167,7 @@ describe("AssetProjector — restart convergence", () => {
       backups: new AssetBackups(second),
       partFiles: noPartFiles()
     });
-    projector.load();
+    await projector.load();
     await projector.flush();
 
     assert.strictEqual(text(await second.read("b.png")), "two");
@@ -175,7 +175,7 @@ describe("AssetProjector — restart convergence", () => {
   });
 
   test("an interrupted run converges on restart", async() => {
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
     const source = new MemoryAssetSource();
 
     const created = await (async() => {
@@ -213,7 +213,7 @@ describe("AssetProjector — restart convergence", () => {
       backups: new AssetBackups(restarted),
       partFiles: noPartFiles()
     });
-    projector.load();
+    await projector.load();
     await projector.flush();
 
     assert.strictEqual(text(await restarted.read("a.png")), "two");

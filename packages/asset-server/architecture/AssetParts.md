@@ -120,6 +120,10 @@ Replay starts from the newest checkpoint, as for other kinds, so no command is
 folded twice. It loads the manifest, then each part from the checkpoint its
 `at` names.
 
+An open asset follows a new generation the same way. Reading the parts its
+`at` names takes a round trip to the event store, so `AssetStateStore` queues
+the asset's later events behind that read and folds them in log order.
+
 Compaction removes events below each asset's head checkpoint. It keeps the
 checkpoints that the head and every tagged event name in `at`, through the
 `keep` option of the event store's `compact`.

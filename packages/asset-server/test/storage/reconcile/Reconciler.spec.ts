@@ -12,10 +12,10 @@ import { syncHarness } from "../../helpers/backend.ts";
 import { counterHandler } from "../../helpers/kinds.ts";
 import { bytes } from "../../helpers/bytes.ts";
 
-function lifecycleEvents(
+async function lifecycleEvents(
   eventStore: EventStore.EventStore
-): EventStore.Event[] {
-  return eventStore.reader.listAll({ eventTypePrefix: "asset." });
+): Promise<EventStore.Event[]> {
+  return await eventStore.reader.listAll({ eventTypePrefix: "asset." });
 }
 
 describe("Reconciler — cold start", () => {
@@ -33,7 +33,7 @@ describe("Reconciler — cold start", () => {
 
     assert.strictEqual(report.created, 2);
     assert.deepEqual(
-      lifecycleEvents(harness.eventStore).map((event) => event.eventType),
+      (await lifecycleEvents(harness.eventStore)).map((event) => event.eventType),
       [ASSET_CREATED, ASSET_CREATED]
     );
     assert.strictEqual(
@@ -57,7 +57,7 @@ describe("Reconciler — cold start", () => {
       deleted: 0,
       failed: 0
     });
-    assert.strictEqual(lifecycleEvents(harness.eventStore).length, 1);
+    assert.strictEqual((await lifecycleEvents(harness.eventStore)).length, 1);
   });
 
   test("reuses the ids a valid asset index already carries", async() => {
@@ -74,7 +74,7 @@ describe("Reconciler — cold start", () => {
     await harness.reconciler.reconcile();
 
     assert.strictEqual(
-      lifecycleEvents(harness.eventStore)[0].assetId,
+      (await lifecycleEvents(harness.eventStore))[0].assetId,
       "kept-id"
     );
   });
@@ -156,7 +156,7 @@ describe("Reconciler — failures", () => {
     assert.strictEqual(report.failed, 1);
     assert.strictEqual(report.deleted, 0);
     assert.deepEqual(
-      lifecycleEvents(harness.eventStore).map((event) => event.eventType),
+      (await lifecycleEvents(harness.eventStore)).map((event) => event.eventType),
       [ASSET_CREATED]
     );
   });

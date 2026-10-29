@@ -28,18 +28,18 @@ describe("SqliteEventStore — durability", () => {
       () => fs.rmSync(file, { force: true })
     );
 
-    using first = await EventStore.persistence.sqlite(file);
-    append(
+    await using first = await EventStore.persistence.sqlite(file);
+    await append(
       first,
       "a1",
       { x: 1 }
     );
-    first.close();
+    await first.close();
 
-    using second = await EventStore.persistence.sqlite(file);
+    await using second = await EventStore.persistence.sqlite(file);
 
     assert.deepEqual(
-      second.reader.list("a1").map((event) => event.eventData),
+      (await second.reader.list("a1")).map((event) => event.eventData),
       [{ x: 1 }]
     );
   });
@@ -56,8 +56,8 @@ describe("SqliteEventStore — location", () => {
     );
 
     const file = path.join(root, ".state", "events.db");
-    using store = await EventStore.persistence.sqlite(file);
-    append(store, "a1", { x: 1 });
+    await using store = await EventStore.persistence.sqlite(file);
+    await append(store, "a1", { x: 1 });
 
     assert.strictEqual(fs.statSync(file).isFile(), true);
   });
@@ -90,14 +90,14 @@ describe("SqliteEventStore — version invariant", () => {
       () => fs.rmSync(file, { force: true })
     );
 
-    using first = await EventStore.persistence.sqlite(file);
-    using second = await EventStore.persistence.sqlite(file);
+    await using first = await EventStore.persistence.sqlite(file);
+    await using second = await EventStore.persistence.sqlite(file);
 
-    append(first, "a1", { writer: "first" });
-    append(second, "a1", { writer: "second" });
+    await append(first, "a1", { writer: "first" });
+    await append(second, "a1", { writer: "second" });
 
     assert.deepEqual(
-      first.reader.list("a1").map((event) => event.eventVersion),
+      (await first.reader.list("a1")).map((event) => event.eventVersion),
       [1, 2]
     );
   });
@@ -112,7 +112,7 @@ describe("SqliteEventStore — journal", () => {
 
     const file = path.join(root, "events.db");
     const store = await EventStore.persistence.sqlite(file);
-    store.close();
+    await store.close();
 
     using db = new DatabaseSync(file);
     assert.deepEqual(
@@ -136,9 +136,9 @@ describe("SqliteEventStore — journal", () => {
     legacy.exec(SQL_SCHEMA);
     legacy.close();
 
-    using store = await EventStore.persistence.sqlite(file);
-    append(store, "a1", { x: 1 });
-    store.close();
+    await using store = await EventStore.persistence.sqlite(file);
+    await append(store, "a1", { x: 1 });
+    await store.close();
 
     using db = new DatabaseSync(file);
     assert.deepEqual(
@@ -154,12 +154,12 @@ describe("SqliteEventStore — journal", () => {
     );
 
     const file = path.join(root, "events.db");
-    using store = await EventStore.persistence.sqlite(file);
+    await using store = await EventStore.persistence.sqlite(file);
     const payload = { blob: "x".repeat(64 * 1024) };
-    append(store, "a1", payload, "asset.created");
-    append(store, "a1", payload, "asset.updated");
+    await append(store, "a1", payload, "asset.created");
+    await append(store, "a1", payload, "asset.updated");
 
-    const report = store.compact({
+    const report = await store.compact({
       checkpointEventTypes: ["asset.created", "asset.updated"]
     });
 
@@ -200,20 +200,20 @@ describe("SqliteEventStore — tags", () => {
     legacy.close();
 
     const first = await EventStore.persistence.sqlite(file);
-    const created = tag(first, "a1", "v1");
-    first.close();
+    const created = await tag(first, "a1", "v1");
+    await first.close();
 
-    using second = await EventStore.persistence.sqlite(file);
+    await using second = await EventStore.persistence.sqlite(file);
 
-    assert.deepEqual(second.tags.list(), [created]);
+    assert.deepEqual(await second.tags.list(), [created]);
   });
 });
 
 describe("SqliteEventStore — subpath entrypoint", () => {
   test("exposes the same factory as persistence.sqlite", async() => {
-    using store = await createSqliteEventStore();
+    await using store = await createSqliteEventStore();
 
-    const event = append(
+    const event = await append(
       store,
       "a1",
       { x: 1 }

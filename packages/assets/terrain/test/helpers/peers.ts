@@ -67,13 +67,13 @@ export function terrainPeers() {
   const server = new LiveAssetRoom(terrainAssetKind());
   const peers = new Map<string, TerrainPeer>();
 
-  function route(): void {
+  async function route(): Promise<void> {
     let delivered = true;
     while (delivered) {
       delivered = false;
       for (const [clientId, { room }] of peers) {
         for (const sent of room.sent.splice(0)) {
-          server.receive(clientId, sent);
+          await server.receive(clientId, sent);
         }
       }
       for (const [clientId, { room }] of peers) {
@@ -85,10 +85,10 @@ export function terrainPeers() {
     }
   }
 
-  function join(
+  async function join(
     clientId: string,
     options: JoinOptions = {}
-  ): TerrainPeer {
+  ): Promise<TerrainPeer> {
     const {
       interestChunkX,
       interestChunkZ = 0,
@@ -108,13 +108,13 @@ export function terrainPeers() {
     };
     peers.set(clientId, peer);
     document.stream.follow(streamCentre);
-    server.connect(clientId);
+    await server.connect(clientId);
     if (interestChunkX !== undefined) {
       sender.publishInterest(
         TerrainInterest.around(interestChunkX * CHUNK_SAMPLES, interestChunkZ * CHUNK_SAMPLES, 1)
       );
     }
-    route();
+    await route();
 
     return peer;
   }
@@ -136,13 +136,13 @@ export function terrainPeers() {
   };
 }
 
-export function edgePeerSetup() {
+export async function edgePeerSetup() {
   const peers = terrainPeers();
-  peers.server.receive("A", networkCommand(
+  await peers.server.receive("A", networkCommand(
     { action: "chunk-added", x: 1, z: 0, heights: heights(8) },
     { clientId: "A" }
   ));
-  const peer = peers.join("B");
+  const peer = await peers.join("B");
 
   function sculpt(
     height: number,
@@ -160,13 +160,13 @@ export function edgePeerSetup() {
   };
 }
 
-export function addWideChunkBlock(
+export async function addWideChunkBlock(
   server: ReturnType<typeof terrainPeers>["server"]
-): TileCoord[] {
+): Promise<TileCoord[]> {
   const tiles: TileCoord[] = [];
   for (let index = 0; index < kWideBlockChunks; index++) {
     const chunk = new ChunkCoord(index % kWideBlockColumns, 1 + Math.floor(index / kWideBlockColumns));
-    server.receive("X", networkCommand(
+    await server.receive("X", networkCommand(
       { action: "chunk-added", x: chunk.x, z: chunk.z, heights: heights(0) },
       { clientId: "X" }
     ));

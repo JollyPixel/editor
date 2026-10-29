@@ -15,13 +15,13 @@ import {
 for (const backend of backends) {
   describe(`${backend.name} — listFromCheckpoints scoped to one asset`, () => {
     test("returns the newest checkpoint and everything after it", async() => {
-      using store = await backend.create();
-      append(store, "a1", { v: 1 }, "asset.created");
-      append(store, "a1", { v: 2 }, "pixelart.command");
-      append(store, "a1", { v: 3 }, "asset.updated");
-      append(store, "a1", { v: 4 }, "pixelart.command");
+      await using store = await backend.create();
+      await append(store, "a1", { v: 1 }, "asset.created");
+      await append(store, "a1", { v: 2 }, "pixelart.command");
+      await append(store, "a1", { v: 3 }, "asset.updated");
+      await append(store, "a1", { v: 4 }, "pixelart.command");
 
-      const events = store.reader.listFromCheckpoints({
+      const events = await store.reader.listFromCheckpoints({
         assetId: "a1",
         checkpointEventTypes: ["asset.created", "asset.updated"]
       });
@@ -33,11 +33,11 @@ for (const backend of backends) {
     });
 
     test("matches any of the given types, not only the first", async() => {
-      using store = await backend.create();
-      append(store, "a1", { v: 1 }, "asset.updated");
-      append(store, "a1", { v: 2 }, "asset.deleted");
+      await using store = await backend.create();
+      await append(store, "a1", { v: 1 }, "asset.updated");
+      await append(store, "a1", { v: 2 }, "asset.deleted");
 
-      const events = store.reader.listFromCheckpoints({
+      const events = await store.reader.listFromCheckpoints({
         assetId: "a1",
         checkpointEventTypes: ["asset.updated", "asset.deleted"]
       });
@@ -49,12 +49,12 @@ for (const backend of backends) {
     });
 
     test("returns only that stream for an empty type list", async() => {
-      using store = await backend.create();
-      append(store, "a1", { v: 1 }, "asset.updated");
-      append(store, "a2", { v: 2 }, "asset.updated");
-      append(store, "a1", { v: 3 }, "pixelart.command");
+      await using store = await backend.create();
+      await append(store, "a1", { v: 1 }, "asset.updated");
+      await append(store, "a2", { v: 2 }, "asset.updated");
+      await append(store, "a1", { v: 3 }, "pixelart.command");
 
-      const events = store.reader.listFromCheckpoints({
+      const events = await store.reader.listFromCheckpoints({
         assetId: "a1",
         checkpointEventTypes: []
       });
@@ -66,11 +66,11 @@ for (const backend of backends) {
     });
 
     test("returns nothing for an unknown asset", async() => {
-      using store = await backend.create();
-      append(store, "a1", {}, "asset.updated");
+      await using store = await backend.create();
+      await append(store, "a1", {}, "asset.updated");
 
       assert.deepEqual(
-        store.reader.listFromCheckpoints({
+        await store.reader.listFromCheckpoints({
           assetId: "missing",
           checkpointEventTypes: ["asset.updated"]
         }),
@@ -79,11 +79,11 @@ for (const backend of backends) {
     });
 
     test("ignores matching events on another asset stream", async() => {
-      using store = await backend.create();
-      append(store, "a2", { v: 1 }, "asset.updated");
-      append(store, "a1", { v: 2 }, "pixelart.command");
+      await using store = await backend.create();
+      await append(store, "a2", { v: 1 }, "asset.updated");
+      await append(store, "a1", { v: 2 }, "pixelart.command");
 
-      const events = store.reader.listFromCheckpoints({
+      const events = await store.reader.listFromCheckpoints({
         assetId: "a1",
         checkpointEventTypes: ["asset.updated"]
       });
@@ -97,13 +97,13 @@ for (const backend of backends) {
 
   describe(`${backend.name} — listFromCheckpoints`, () => {
     test("keeps the newest checkpoint and everything after it", async() => {
-      using store = await backend.create();
-      append(store, "a1", {}, "asset.created");
-      append(store, "a1", {}, "stroke");
-      append(store, "a1", {}, "asset.updated");
-      append(store, "a1", {}, "stroke");
+      await using store = await backend.create();
+      await append(store, "a1", {}, "asset.created");
+      await append(store, "a1", {}, "stroke");
+      await append(store, "a1", {}, "asset.updated");
+      await append(store, "a1", {}, "stroke");
 
-      const events = store.reader.listFromCheckpoints({
+      const events = await store.reader.listFromCheckpoints({
         checkpointEventTypes: ["asset.created", "asset.updated"]
       });
 
@@ -114,12 +114,12 @@ for (const backend of backends) {
     });
 
     test("bounds each asset by its own checkpoint", async() => {
-      using store = await backend.create();
-      append(store, "a1", {}, "asset.created");
-      append(store, "a2", {}, "asset.created");
-      append(store, "a1", {}, "asset.updated");
+      await using store = await backend.create();
+      await append(store, "a1", {}, "asset.created");
+      await append(store, "a2", {}, "asset.created");
+      await append(store, "a1", {}, "asset.updated");
 
-      const events = store.reader.listFromCheckpoints({
+      const events = await store.reader.listFromCheckpoints({
         checkpointEventTypes: ["asset.created", "asset.updated"]
       });
 
@@ -130,11 +130,11 @@ for (const backend of backends) {
     });
 
     test("keeps a whole stream holding no checkpoint", async() => {
-      using store = await backend.create();
-      append(store, "a1", {}, "stroke");
-      append(store, "a1", {}, "stroke");
+      await using store = await backend.create();
+      await append(store, "a1", {}, "stroke");
+      await append(store, "a1", {}, "stroke");
 
-      const events = store.reader.listFromCheckpoints({
+      const events = await store.reader.listFromCheckpoints({
         checkpointEventTypes: ["asset.created"]
       });
 
@@ -145,12 +145,12 @@ for (const backend of backends) {
     });
 
     test("filters by prefix without moving the checkpoint", async() => {
-      using store = await backend.create();
-      append(store, "a1", {}, "asset.created");
-      append(store, "a1", {}, "asset.updated");
-      append(store, "a1", {}, "stroke");
+      await using store = await backend.create();
+      await append(store, "a1", {}, "asset.created");
+      await append(store, "a1", {}, "asset.updated");
+      await append(store, "a1", {}, "stroke");
 
-      const events = store.reader.listFromCheckpoints({
+      const events = await store.reader.listFromCheckpoints({
         checkpointEventTypes: ["asset.updated"],
         eventTypePrefix: "asset."
       });
@@ -162,11 +162,11 @@ for (const backend of backends) {
     });
 
     test("matches prefix wildcards literally", async() => {
-      using store = await backend.create();
-      append(store, "a1", {}, "asset.created");
-      append(store, "a2", {}, "a*.created");
+      await using store = await backend.create();
+      await append(store, "a1", {}, "asset.created");
+      await append(store, "a2", {}, "a*.created");
 
-      const events = store.reader.listFromCheckpoints({
+      const events = await store.reader.listFromCheckpoints({
         checkpointEventTypes: [],
         eventTypePrefix: "a*."
       });
@@ -178,10 +178,10 @@ for (const backend of backends) {
     });
 
     test("returns every event when no checkpoint type is given", async() => {
-      using store = await backend.create();
-      seed(store);
+      await using store = await backend.create();
+      await seed(store);
 
-      const events = store.reader.listFromCheckpoints({
+      const events = await store.reader.listFromCheckpoints({
         checkpointEventTypes: []
       });
 
@@ -192,10 +192,10 @@ for (const backend of backends) {
     });
 
     test("returns an empty array on an empty log", async() => {
-      using store = await backend.create();
+      await using store = await backend.create();
 
       assert.deepEqual(
-        store.reader.listFromCheckpoints({
+        await store.reader.listFromCheckpoints({
           checkpointEventTypes: ["asset.created"]
         }),
         []

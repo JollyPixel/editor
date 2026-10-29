@@ -22,10 +22,10 @@ const kActor: EventStore.Actor = {
   id: "alice"
 };
 
-function lifecycleEvents(
+async function lifecycleEvents(
   eventStore: EventStore.EventStore
-): EventStore.Event[] {
-  return eventStore.reader.listAll({ eventTypePrefix: "asset." });
+): Promise<EventStore.Event[]> {
+  return await eventStore.reader.listAll({ eventTypePrefix: "asset." });
 }
 
 describe("Reconciler — external drift", () => {
@@ -38,7 +38,7 @@ describe("Reconciler — external drift", () => {
     });
     await harness.projector.flush();
 
-    const before = lifecycleEvents(harness.eventStore).length;
+    const before = (await lifecycleEvents(harness.eventStore)).length;
     const report = (await harness.reconciler.reconcile()).unwrap();
 
     assert.deepEqual(report, {
@@ -49,7 +49,7 @@ describe("Reconciler — external drift", () => {
       failed: 0
     });
     assert.strictEqual(
-      lifecycleEvents(harness.eventStore).length,
+      (await lifecycleEvents(harness.eventStore)).length,
       before
     );
   });
@@ -67,7 +67,7 @@ describe("Reconciler — external drift", () => {
     const report = (await harness.reconciler.reconcile()).unwrap();
 
     assert.strictEqual(report.updated, 1);
-    const events = lifecycleEvents(harness.eventStore);
+    const events = await lifecycleEvents(harness.eventStore);
     const last = events.at(-1)!;
     assert.strictEqual(last.eventType, ASSET_UPDATED);
     assert.deepEqual(last.actor, {
@@ -90,7 +90,7 @@ describe("Reconciler — external drift", () => {
     const report = (await harness.reconciler.reconcile()).unwrap();
 
     assert.strictEqual(report.renamed, 1);
-    const last = lifecycleEvents(harness.eventStore).at(-1)!;
+    const last = (await lifecycleEvents(harness.eventStore)).at(-1)!;
     assert.strictEqual(last.eventType, ASSET_RENAMED);
     assert.strictEqual(last.assetId, created.assetId);
     assert.deepEqual(
@@ -122,7 +122,7 @@ describe("Reconciler — external drift", () => {
     assert.strictEqual(report.renamed, 0);
     assert.strictEqual(report.deleted, 2);
     assert.strictEqual(report.created, 2);
-    const types = lifecycleEvents(harness.eventStore)
+    const types = (await lifecycleEvents(harness.eventStore))
       .slice(2)
       .map((event) => event.eventType);
     assert.deepEqual(types, [
@@ -215,7 +215,7 @@ describe("Reconciler — external drift", () => {
     assert.strictEqual(report.deleted, 1);
     assert.strictEqual(harness.assetIndex.byId(target.assetId), undefined);
     assert.strictEqual(
-      lifecycleEvents(harness.eventStore).at(-1)?.eventType,
+      (await lifecycleEvents(harness.eventStore)).at(-1)?.eventType,
       ASSET_DELETED
     );
   });

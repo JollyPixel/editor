@@ -29,7 +29,7 @@ export type AuditEventDataMap = {
 
 type AuditEvent = EventStore.TypedEvent<AuditEventDataMap>;
 
-export class AuditLog implements Disposable {
+export class AuditLog implements AsyncDisposable {
   static async open(
     location: string | null
   ): Promise<AuditLog> {
@@ -48,11 +48,11 @@ export class AuditLog implements Disposable {
     this.store = store;
   }
 
-  recordSettings(
+  async recordSettings(
     actorId: string,
     change: SettingsChange
-  ): void {
-    this.store.writer.append({
+  ): Promise<void> {
+    (await this.store.writer.append({
       assetType: "settings",
       assetId: change.section,
       eventType: SETTINGS_CHANGED,
@@ -61,15 +61,15 @@ export class AuditLog implements Disposable {
         type: "user",
         id: actorId
       }
-    }).unwrap();
+    })).unwrap();
   }
 
-  recordAccount(
+  async recordAccount(
     activity: AccountActivity
-  ): void {
+  ): Promise<void> {
     const isLink = "linkId" in activity;
 
-    this.store.writer.append({
+    (await this.store.writer.append({
       assetType: isLink ? "share-link" : "account",
       assetId: isLink ? activity.linkId : activity.accountId,
       eventType: `${kAccountEventPrefix}${activity.type}`,
@@ -78,13 +78,13 @@ export class AuditLog implements Disposable {
         type: "user",
         id: activity.actorId
       }
-    }).unwrap();
+    })).unwrap();
   }
 
-  * newestFirst(
+  async* newestFirst(
     before: number | undefined
-  ): IterableIterator<AuditItem> {
-    for (const event of new EventPages(this.store, before)) {
+  ): AsyncIterableIterator<AuditItem> {
+    for await (const event of new EventPages(this.store, before)) {
       yield {
         position: event.eventId,
         at: Date.parse(event.createdAt),
@@ -93,8 +93,8 @@ export class AuditLog implements Disposable {
     }
   }
 
-  [Symbol.dispose](): void {
-    this.store.close();
+  async [Symbol.asyncDispose](): Promise<void> {
+    await this.store.close();
   }
 }
 

@@ -12,34 +12,34 @@ import type {
 export interface TagLog {
   insert(
     input: EventTagInput
-  ): EventTag;
+  ): Promise<EventTag>;
   get(
     assetId: string,
     name: string
-  ): EventTag | undefined;
+  ): Promise<EventTag | undefined>;
   list(
     assetId?: string
-  ): EventTag[];
+  ): Promise<EventTag[]>;
   delete(
     assetId: string,
     name: string
-  ): boolean;
+  ): Promise<boolean>;
 }
 
 export interface EventJournal {
   putEvent(
     event: Event
-  ): void;
+  ): Promise<void>;
   deleteEvents(
     events: Iterable<Event>
-  ): void;
+  ): Promise<void>;
   putTag(
     tag: EventTag
-  ): void;
+  ): Promise<void>;
   deleteTag(
     assetId: string,
     name: string
-  ): void;
+  ): Promise<void>;
   close(): void;
 }
 
@@ -47,9 +47,9 @@ export interface EventLog extends EventReader {
   readonly tags: TagLog;
   insert(
     input: AppendInput
-  ): Event;
+  ): Promise<Event>;
   compact(
     options: CompactOptions
-  ): CompactReport;
-  close(): void;
+  ): Promise<CompactReport>;
+  close(): Promise<void>;
 }

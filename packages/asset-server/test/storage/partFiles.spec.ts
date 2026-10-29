@@ -54,13 +54,13 @@ async function change(
   command: TileCommand
 ): Promise<void> {
   await harness.states.acquire(assetId, "tiles");
-  harness.eventStore.writer.append({
+  (await harness.eventStore.writer.append({
     assetType: "tiles",
     assetId,
     eventType: TILE_CHANGED,
     eventData: command,
     actor: kActor
-  }).unwrap();
+  })).unwrap();
   await harness.scheduler.snapshot(assetId);
   await harness.flush();
 }
@@ -169,7 +169,7 @@ describe("Reconciler — part files", () => {
     });
 
     const report = (await harness.reconciler.reconcile()).unwrap();
-    const [{ assetId }] = harness.eventStore.reader.listAll();
+    const [{ assetId }] = await harness.eventStore.reader.listAll();
 
     assert.strictEqual(report.created, 1);
     assert.deepEqual(await replayed(harness, assetId), {

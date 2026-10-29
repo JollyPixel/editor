@@ -38,9 +38,9 @@ export class SqliteTagTable implements TagLog {
     this.#database = database;
   }
 
-  insert(
+  async insert(
     input: EventTagInput
-  ): EventTag {
+  ): Promise<EventTag> {
     this.#database.assertOpen();
 
     const record = TagRecord.encode(input);
@@ -54,10 +54,10 @@ export class SqliteTagTable implements TagLog {
     return record.toEventTag();
   }
 
-  get(
+  async get(
     assetId: string,
     name: string
-  ): EventTag | undefined {
+  ): Promise<EventTag | undefined> {
     const row = this.#database.get<TagRow>(
       `SELECT ${kTagColumns}
        FROM tags
@@ -69,9 +69,9 @@ export class SqliteTagTable implements TagLog {
     return row === undefined ? undefined : toTag(row);
   }
 
-  list(
+  async list(
     assetId?: string
-  ): EventTag[] {
+  ): Promise<EventTag[]> {
     return this.#database
       .all<TagRow>(
         `SELECT ${kTagColumns}
@@ -84,10 +84,10 @@ export class SqliteTagTable implements TagLog {
       .map((row) => toTag(row));
   }
 
-  delete(
+  async delete(
     assetId: string,
     name: string
-  ): boolean {
+  ): Promise<boolean> {
     return this.#database.run(
       "DELETE FROM tags WHERE asset_id = ? AND name = ?",
       assetId,

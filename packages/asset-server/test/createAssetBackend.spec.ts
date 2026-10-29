@@ -221,7 +221,7 @@ describe("createAssetBackend — append errors", () => {
       logger
     });
 
-    const appended = backend.eventStore.writer.append({
+    const appended = await backend.eventStore.writer.append({
       assetType: "binary",
       assetId: "a1",
       eventType: "asset.deleted",

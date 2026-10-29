@@ -70,7 +70,7 @@ async function withBackend(
 ): Promise<void> {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "jolly-voxel-model-"));
   try {
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
     await fs.writeFile(
       path.join(root, kFilePath),
       VOXEL_MODEL_FILE.encode(createVoxelModelFile({
@@ -134,8 +134,7 @@ describe("voxel-model asset kind over a real back-end", () => {
         });
       }
 
-      const appended = eventStore.reader
-        .list(recordId)
+      const appended = (await eventStore.reader.list(recordId))
         .filter((event) => event.eventType === VOXEL_MODEL_COMMAND);
       assert.equal(appended.length, 2);
 

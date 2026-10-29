@@ -12,7 +12,7 @@ import { resumeRoom } from "../helpers/live/resumeRoom.ts";
 describe("AssetRoomExtension — resume fallback", () => {
   test("falls back to a snapshot for a content change in the range", async() => {
     const { connect, record, send } = resumeRoom();
-    send("peer", 1);
+    await send("peer", 1);
     record({
       eventType: ASSET_UPDATED,
       eventData: {},
@@ -30,7 +30,7 @@ describe("AssetRoomExtension — resume fallback", () => {
   test("falls back to a snapshot past the resume limit", async() => {
     const { connect, send } = resumeRoom({ resumeLimit: 2 });
     for (let seq = 1; seq <= 3; seq++) {
-      send("peer", seq);
+      await send("peer", seq);
     }
 
     const { received, connected } = connect("new", { clientId: "old", version: 0 });
@@ -43,8 +43,8 @@ describe("AssetRoomExtension — resume fallback", () => {
 
   test("falls back to a snapshot when compaction removed the range", async() => {
     const { connect, send } = resumeRoom();
-    send("peer", 1);
-    send("peer", 2);
+    await send("peer", 1);
+    await send("peer", 2);
 
     const { received, connected } = connect("new", { clientId: "old", version: 5 });
     await connected;
@@ -63,14 +63,14 @@ describe("AssetRoomExtension — resume fallback", () => {
         actor: { type: "system", source: "snapshot" }
       });
     }
-    send("peer", 1);
-    send("peer", 2);
+    await send("peer", 1);
+    await send("peer", 2);
     snapshot();
     for (let seq = 3; seq <= 6; seq++) {
-      send("peer", seq);
+      await send("peer", seq);
     }
     snapshot();
-    send("peer", 7);
+    await send("peer", 7);
     compact(4, 7);
 
     const { received, connected } = connect("new", { clientId: "old", version: 2 });

@@ -64,12 +64,14 @@ function peerPatch(
   };
 }
 
-function setup() {
+async function setup() {
   const server = new LiveAssetRoom(voxelMapAssetKind({ chunkSize: 16 }));
-  ["L3", "L2", "L1"].forEach((name, index) => server.receive("A", {
-    ...makeAddedCommand(name),
-    ...header("A", index + 1)
-  }));
+  for (const [index, name] of ["L3", "L2", "L1"].entries()) {
+    await server.receive("A", {
+      ...makeAddedCommand(name),
+      ...header("A", index + 1)
+    });
+  }
 
   const room = createMockRoom("B");
   const document = new VoxelDocument({ chunkSize: 16 });
@@ -84,7 +86,7 @@ function setup() {
     }
   }
 
-  server.connect("B");
+  await server.connect("B");
   deliver();
 
   return {
@@ -93,12 +95,12 @@ function setup() {
     document,
     edits,
     deliver,
-    flush(): void {
+    async flush(): Promise<void> {
       for (const sent of room.sentCommands.splice(0)) {
-        server.receive("B", sent);
+        await server.receive("B", sent);
       }
       for (; room.resyncs > 0; room.resyncs--) {
-        server.resync("B");
+        await server.resync("B");
       }
     }
   };
@@ -116,32 +118,35 @@ function header(
 }
 
 describe("voxel-map convergence", () => {
-  test("an undo carries the version of its step, so the server refuses it over a newer peer write", () => {
-    const { server, document, edits, deliver, flush } = setup();
-    const history = mapHistory(edits);
+  test(
+    "an undo carries the version of its step, so the server refuses it over a newer peer write",
+    async() => {
+      const { server, document, edits, deliver, flush } = await setup();
+      const history = mapHistory(edits);
 
-    document.world.setVoxel("L1", { position: kOrigin, blockId: 2 });
-    flush();
-    deliver();
-    server.receive("A", peerPatch(server.state, "L1", 5));
-    history.undo(MAP_SCOPE);
-    flush();
-    deliver();
+      document.world.setVoxel("L1", { position: kOrigin, blockId: 2 });
+      await flush();
+      deliver();
+      await server.receive("A", peerPatch(server.state, "L1", 5));
+      history.undo(MAP_SCOPE);
+      await flush();
+      deliver();
 
-    assert.strictEqual(document.world.getVoxelAt(kOrigin)?.blockId, 5);
-    assert.deepStrictEqual(readWorld(document), readWorld(server.state));
-    assert.deepStrictEqual(history.state(MAP_SCOPE).refused, [
-      { label: "Edit voxels", refused: { reason: "server" } }
-    ]);
-  });
+      assert.strictEqual(document.world.getVoxelAt(kOrigin)?.blockId, 5);
+      assert.deepStrictEqual(readWorld(document), readWorld(server.state));
+      assert.deepStrictEqual(history.state(MAP_SCOPE).refused, [
+        { label: "Edit voxels", refused: { reason: "server" } }
+      ]);
+    }
+  );
 
-  test("a pending new layer is rebased under a remote layer move", () => {
-    const { server, room, document, deliver, flush } = setup();
+  test("a pending new layer is rebased under a remote layer move", async() => {
+    const { server, room, document, deliver, flush } = await setup();
 
     document.world.addLayer("L4");
-    server.receive("A", moveToTop(server.state, "L3"));
+    await server.receive("A", moveToTop(server.state, "L3"));
     deliver();
-    flush();
+    await flush();
     deliver();
 
     assert.strictEqual(room.resyncs, 0);
@@ -149,50 +154,50 @@ describe("voxel-map convergence", () => {
     assert.deepStrictEqual(readWorld(document), readWorld(server.state));
   });
 
-  test("a pending command without an inverse resyncs, then converges", () => {
-    const { server, room, document, deliver, flush } = setup();
+  test("a pending command without an inverse resyncs, then converges", async() => {
+    const { server, room, document, deliver, flush } = await setup();
 
     document.world.mergeLayer("L1", "L2");
-    server.receive("A", moveToTop(server.state, "L3"));
+    await server.receive("A", moveToTop(server.state, "L3"));
     deliver();
     assert.strictEqual(room.resyncs, 1);
 
-    flush();
+    await flush();
     deliver();
 
     assert.deepStrictEqual(readWorld(document), readWorld(server.state));
     assert.deepStrictEqual(layerNames(document), ["L3", "L2"]);
   });
 
-  test("a peer rename does not strand the author's pending strokes", () => {
-    const { server, document, deliver, flush } = setup();
+  test("a peer rename does not strand the author's pending strokes", async() => {
+    const { server, document, deliver, flush } = await setup();
 
     document.world.setVoxel("L1", { position: kOrigin, blockId: 2 });
-    server.receive("A", {
+    await server.receive("A", {
       action: "updated",
       layerId: "L1",
       metadata: { options: { name: "Floor" } },
       ...header("A", 4)
     });
     deliver();
-    flush();
+    await flush();
     deliver();
 
     assert.strictEqual(server.state.world.getLayer("Floor")?.getVoxelAt(kOrigin)?.blockId, 2);
     assert.deepStrictEqual(readWorld(document), readWorld(server.state));
   });
 
-  test("concurrent layers with one name end up with the same unique names", () => {
-    const { server, document, deliver, flush } = setup();
+  test("concurrent layers with one name end up with the same unique names", async() => {
+    const { server, document, deliver, flush } = await setup();
 
     document.world.addLayer("New");
-    server.receive("A", {
+    await server.receive("A", {
       ...makeAddedCommand("peer-new"),
       metadata: { name: "New", rank: "0V", options: {} },
       ...header("A", 4)
     });
     deliver();
-    flush();
+    await flush();
     deliver();
 
     assert.deepStrictEqual(

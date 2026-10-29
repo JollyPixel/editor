@@ -68,8 +68,8 @@ export function countingReads(
   let read = 0;
 
   const reader: EventStore.EventReader = {
-    get: (...parameters) => {
-      const event = store.reader.get(...parameters);
+    get: async(...parameters) => {
+      const event = await store.reader.get(...parameters);
       if (event !== undefined) {
         read++;
       }
@@ -83,9 +83,10 @@ export function countingReads(
     )
   };
 
-  function count(
-    events: EventStore.Event[]
-  ): EventStore.Event[] {
+  async function count(
+    reading: Promise<EventStore.Event[]>
+  ): Promise<EventStore.Event[]> {
+    const events = await reading;
     read += events.length;
 
     return events;
@@ -100,7 +101,7 @@ export function countingReads(
       subscribeRejections: (listener) => store.subscribeRejections(listener),
       compact: (options) => store.compact(options),
       close: () => store.close(),
-      [Symbol.dispose]: () => store.close()
+      [Symbol.asyncDispose]: () => store.close()
     },
     get read() {
       return read;
@@ -132,7 +133,7 @@ export async function syncHarness(
     backups,
     partFiles
   });
-  projector.load();
+  await projector.load();
   projector.start();
 
   const states = new AssetStateStore({ eventStore, kinds });

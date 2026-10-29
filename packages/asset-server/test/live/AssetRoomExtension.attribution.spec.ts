@@ -51,7 +51,7 @@ function harness(
   const room = recordingRoom();
   const committed: Command[] = [];
   const events: EventStore.EventWriter = {
-    append: (input) => {
+    append: async(input) => {
       appended.push(input);
       if (!appends) {
         const error = new Error("disk full");

@@ -81,12 +81,12 @@ describe("textureAssetKind", () => {
     assert.strictEqual(text(await handler.serialize(state)), "hello");
   });
 
-  test("sends its current bytes as the room snapshot", () => {
+  test("sends its current bytes as the room snapshot", async() => {
     const handler = textureAssetKind();
     const room = new LiveAssetRoom(handler);
     handler.load(room.state, bytes("first"));
 
-    room.connect("A");
+    await room.connect("A");
     handler.load(room.state, bytes("second"));
     room.extension.reload();
 

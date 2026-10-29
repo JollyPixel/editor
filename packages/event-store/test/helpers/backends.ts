@@ -33,59 +33,59 @@ export const backends: {
   }
 ];
 
-export function append(
+export async function append(
   store: EventStore.EventStore,
   assetId: string,
   eventData: unknown = {},
   eventType = "pixel-set"
-): EventStore.Event {
-  return store.writer.append({
+): Promise<EventStore.Event> {
+  return (await store.writer.append({
     assetType: "texture",
     assetId,
     eventType,
     eventData,
     actor: USER_ACTOR
-  }).unwrap();
+  })).unwrap();
 }
 
-export function tag(
+export async function tag(
   store: EventStore.EventStore,
   assetId: string,
   name: string,
   eventVersion = 1
-): EventStore.EventTag {
-  return store.tags.create({
+): Promise<EventStore.EventTag> {
+  return (await store.tags.create({
     assetId,
     name,
     eventVersion,
     actor: USER_ACTOR
-  }).unwrap();
+  })).unwrap();
 }
 
-export function seed(
+export async function seed(
   store: EventStore.EventStore
-): void {
-  append(
+): Promise<void> {
+  await append(
     store,
     "a1",
     { path: "a.png" },
     "asset.created"
   );
-  store.writer.append({
+  (await store.writer.append({
     assetType: "texture",
     assetId: "a2",
     eventType: "asset.created",
     eventData: { path: "b.png" },
     actor: SYSTEM_ACTOR
-  }).unwrap();
+  })).unwrap();
 
-  append(
+  await append(
     store,
     "a1",
     { x: 1 },
     "pixelart.stroke.applied"
   );
-  append(
+  await append(
     store,
     "a2",
     { path: "b.png" },

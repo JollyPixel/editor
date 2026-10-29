@@ -30,11 +30,10 @@ const kActor: EventStore.Actor = {
   id: "alice"
 };
 
-function createdPaths(
+async function createdPaths(
   eventStore: EventStore.EventStore
-): string[] {
-  return eventStore.reader
-    .listAll({ eventTypePrefix: ASSET_CREATED })
+): Promise<string[]> {
+  return (await eventStore.reader.listAll({ eventTypePrefix: ASSET_CREATED }))
     .map((event) => (event.eventData as { path: string; }).path);
 }
 
@@ -66,7 +65,7 @@ describe("AssetWriter — create without content", () => {
 
     const companion = harness.assetIndex.byPath("maps/world.counter");
     assert.strictEqual(companion?.kind, "counter");
-    assert.deepEqual(createdPaths(harness.eventStore), [
+    assert.deepEqual(await createdPaths(harness.eventStore), [
       "maps/world.counter",
       "maps/world.owner"
     ]);
@@ -93,7 +92,7 @@ describe("AssetWriter — create without content", () => {
       actor: kActor
     })).unwrap();
 
-    assert.deepEqual(createdPaths(harness.eventStore), ["maps/world.owner"]);
+    assert.deepEqual(await createdPaths(harness.eventStore), ["maps/world.owner"]);
   });
 
   test("suffixes the owner and its companions together on request", async() => {
@@ -113,7 +112,7 @@ describe("AssetWriter — create without content", () => {
       actor: kActor
     })).unwrap();
 
-    assert.deepEqual(createdPaths(harness.eventStore), [
+    assert.deepEqual(await createdPaths(harness.eventStore), [
       "maps/world.counter",
       "maps/world-2.counter",
       "maps/world-2.owner"
@@ -138,7 +137,7 @@ describe("AssetWriter — create without content", () => {
 
     assert.strictEqual(result.ok, false);
     assert.ok(result.val instanceof AssetPathConflictError);
-    assert.deepEqual(createdPaths(harness.eventStore), ["maps/world.counter"]);
+    assert.deepEqual(await createdPaths(harness.eventStore), ["maps/world.counter"]);
   });
 
   test("returns an unregistered companion kind as an error without appending", async() => {
@@ -154,7 +153,7 @@ describe("AssetWriter — create without content", () => {
 
     assert.strictEqual(result.ok, false);
     assert.ok(result.val instanceof UnknownAssetKindError);
-    assert.deepEqual(createdPaths(harness.eventStore), []);
+    assert.deepEqual(await createdPaths(harness.eventStore), []);
   });
 
   test("appends nothing when the owner cannot serialize its default state", async() => {
@@ -176,7 +175,7 @@ describe("AssetWriter — create without content", () => {
 
     assert.strictEqual(result.ok, false);
     assert.match(result.val.message, /no default state/);
-    assert.deepEqual(createdPaths(harness.eventStore), []);
+    assert.deepEqual(await createdPaths(harness.eventStore), []);
     assert.strictEqual(harness.assetIndex.byPath("maps/world.counter"), undefined);
   });
 });

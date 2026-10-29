@@ -200,7 +200,7 @@ export class AssetWriter {
       return data;
     }
 
-    const appended = this.#append(
+    const appended = await this.#append(
       asset.assetId,
       asset.kind,
       ASSET_CREATED,
@@ -223,7 +223,7 @@ export class AssetWriter {
     options: WriteOptions
   ): Promise<void> {
     for (const asset of written) {
-      this.#append(
+      await this.#append(
         asset.assetId,
         asset.kind,
         ASSET_DELETED,
@@ -297,7 +297,7 @@ export class AssetWriter {
       kind: current.kind,
       hash: current.hash
     };
-    const appended = this.#append(
+    const appended = await this.#append(
       input.assetId,
       current.kind,
       ASSET_RENAMED,
@@ -331,7 +331,7 @@ export class AssetWriter {
       path: current.path,
       kind: current.kind
     };
-    const appended = this.#append(
+    const appended = await this.#append(
       input.assetId,
       current.kind,
       ASSET_DELETED,
@@ -454,8 +454,8 @@ export class AssetWriter {
     eventType: TEventType,
     eventData: AssetEventDataMap[TEventType],
     options: WriteOptions
-  ): Result<EventStore.Event, Error> {
-    const result = this.#eventStore.writer.append({
+  ): Promise<Result<EventStore.Event, Error>> {
+    const append = () => this.#eventStore.writer.append({
       assetType: kind,
       assetId,
       eventType,
@@ -463,14 +463,10 @@ export class AssetWriter {
       actor: options.actor,
       expectedVersion: options.expectedVersion
     });
-    if (
-      result.ok &&
-      options.alreadyProjected === true
-    ) {
-      this.#projector.markProjected(assetId);
-    }
 
-    return result;
+    return options.alreadyProjected === true ?
+      this.#projector.appendProjected(assetId, append) :
+      append();
   }
 }
 

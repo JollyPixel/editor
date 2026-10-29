@@ -32,7 +32,7 @@ import { recordingClient } from "./helpers/rooms.ts";
 describe("asset-server — end to end", () => {
   test("cold start, live edit, external drift and catalog agree", async(t) => {
     await using directory = await tempDirectory();
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
 
     await fs.writeFile(
       path.join(directory.root, "counter.counter"),
@@ -138,7 +138,7 @@ describe("asset-server — end to end", () => {
       .find((record) => record.kind === "binary")!;
     assert.strictEqual(drifted.path, "textures/dirt.png");
     assert.deepEqual(
-      eventStore.reader.listAll({ eventTypePrefix: "asset." }).at(-1)!.actor,
+      (await eventStore.reader.listAll({ eventTypePrefix: "asset." })).at(-1)!.actor,
       { type: "system", source: "fs-watcher" }
     );
 
@@ -162,7 +162,7 @@ describe("asset-server — end to end", () => {
 
   test("a restart over the same directory emits no new lifecycle events", async() => {
     await using directory = await tempDirectory();
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
 
     await fs.writeFile(path.join(directory.root, "a.png"), bytes("one"));
     const source = new FilesystemAssetSource(directory.root);
@@ -178,8 +178,7 @@ describe("asset-server — end to end", () => {
       assert.strictEqual(backend.catalog.size, 1);
     }
 
-    const before = eventStore.reader
-      .listAll({ eventTypePrefix: "asset." }).length;
+    const before = (await eventStore.reader.listAll({ eventTypePrefix: "asset." })).length;
 
     await using restarted = await createAssetBackend({
       source: new FilesystemAssetSource(directory.root),
@@ -190,7 +189,7 @@ describe("asset-server — end to end", () => {
     });
 
     assert.strictEqual(
-      eventStore.reader.listAll({ eventTypePrefix: "asset." }).length,
+      (await eventStore.reader.listAll({ eventTypePrefix: "asset." })).length,
       before
     );
     assert.strictEqual(restarted.catalog.size, 1);
@@ -198,7 +197,7 @@ describe("asset-server — end to end", () => {
 
   test("catalog commands from a client reach disk, peers and open rooms", async() => {
     await using directory = await tempDirectory();
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
 
     await fs.writeFile(path.join(directory.root, "a.counter"), bytes("0"));
     await using backend = await createAssetBackend({

@@ -34,6 +34,11 @@ The room validates and arbitrates a command, appends it, then commits and
 broadcasts it. The event store folds the command into live state. A failed
 append sends `rejected` to the sender and leaves the room state unchanged.
 
+The room handles one command at a time. The next command is arbitrated only
+after the previous append settled, so arbitration always runs against a state
+holding every earlier command. A join or a resync waits its turn behind the
+commands received before it; relay messages skip the queue.
+
 A kind may also relay ephemeral messages that are neither arbitrated nor
 logged, such as live previews of an edit. The kind declares their schemas once,
 as `commands.relay`: `inbound` joins the command protocol, each schema with its

@@ -63,17 +63,17 @@ async function counterAsset(
   return created.assetId;
 }
 
-function increment(
+async function increment(
   harness: SyncHarness,
   assetId: string
-): number {
-  return harness.eventStore.writer.append({
+): Promise<number> {
+  return (await harness.eventStore.writer.append({
     assetType: "counter",
     assetId,
     eventType: COUNTER_INCREMENTED,
     eventData: { action: "increment" },
     actor: kActor
-  }).unwrap().eventVersion;
+  })).unwrap().eventVersion;
 }
 
 describe("AssetStateStore — checkpointed replay", () => {
@@ -86,11 +86,11 @@ describe("AssetStateStore — checkpointed replay", () => {
     const assetId = await counterAsset(harness);
 
     await harness.states.acquire(assetId, "counter");
-    increment(harness, assetId);
-    increment(harness, assetId);
-    increment(harness, assetId);
+    await increment(harness, assetId);
+    await increment(harness, assetId);
+    await increment(harness, assetId);
     await harness.scheduler.flush();
-    increment(harness, assetId);
+    await increment(harness, assetId);
     harness.states.release(assetId);
 
     folded.length = 0;
@@ -105,8 +105,8 @@ describe("AssetStateStore — checkpointed replay", () => {
     await using harness = await syncHarness({ handlers: [handler] });
     const assetId = "loose-asset";
 
-    increment(harness, assetId);
-    increment(harness, assetId);
+    await increment(harness, assetId);
+    await increment(harness, assetId);
 
     const entry = await harness.states.acquire(assetId, "counter");
 
@@ -119,7 +119,7 @@ describe("AssetStateStore — checkpointed replay", () => {
     await using harness = await syncHarness({ handlers: [handler] });
     const assetId = await counterAsset(harness);
 
-    increment(harness, assetId);
+    await increment(harness, assetId);
 
     folded.length = 0;
     const entry = await harness.states.acquire(assetId, "counter");
@@ -134,8 +134,8 @@ describe("AssetStateStore — commands since checkpoint", () => {
     await using harness = await syncHarness({ handlers: [counterHandler()] });
     const assetId = await counterAsset(harness);
     const versions = [
-      increment(harness, assetId),
-      increment(harness, assetId)
+      await increment(harness, assetId),
+      await increment(harness, assetId)
     ];
 
     await harness.states.acquire(assetId, "counter");
@@ -159,9 +159,9 @@ describe("AssetStateStore — commands since checkpoint", () => {
     const assetId = await counterAsset(harness);
 
     await harness.states.acquire(assetId, "counter");
-    increment(harness, assetId);
+    await increment(harness, assetId);
     await harness.scheduler.flush();
-    const version = increment(harness, assetId);
+    const version = await increment(harness, assetId);
 
     assert.deepEqual(harness.states.takeCommandsSinceCheckpoint(assetId), [
       {
@@ -174,7 +174,7 @@ describe("AssetStateStore — commands since checkpoint", () => {
   test("forgets the commands of a released asset", async() => {
     await using harness = await syncHarness({ handlers: [counterHandler()] });
     const assetId = await counterAsset(harness);
-    increment(harness, assetId);
+    await increment(harness, assetId);
 
     await harness.states.acquire(assetId, "counter");
     harness.states.release(assetId);
@@ -211,10 +211,10 @@ describe("AssetStateStore — replaced content", () => {
     const seen: string[] = [];
     harness.states.on("replaced", (id) => seen.push(id));
 
-    increment(harness, assetId);
+    await increment(harness, assetId);
     await harness.scheduler.flush();
 
-    const last = harness.eventStore.reader.list(assetId).at(-1);
+    const last = (await harness.eventStore.reader.list(assetId)).at(-1);
     assert.equal(last?.eventType, ASSET_UPDATED);
     assert.deepEqual(seen, []);
   });

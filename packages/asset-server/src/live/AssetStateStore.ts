@@ -12,19 +12,28 @@ import {
   ASSET_UPDATED,
   isStateNeutral
 } from "../model/events/AssetEvents.ts";
-import { foldAssetEvent } from "../model/kinds/foldAssetEvent.ts";
+import {
+  foldAssetEvent,
+  heldPartRefs,
+  loadHeldParts,
+  type AssetHeldPartRefs,
+  type AssetHeldParts
+} from "../model/kinds/foldAssetEvent.ts";
 import { InvalidAssetFileError } from "../model/kinds/errors/InvalidAssetFileError.ts";
 import {
   silentLogger,
   type Logger
 } from "../common/logger.ts";
 import { asError } from "../common/asError.ts";
+import { TaskChain } from "../common/TaskChain.ts";
 import { yieldToEventLoop } from "../common/yieldToEventLoop.ts";
 
 // CONSTANTS
 const kReplayYieldEvery = 250;
 const kCheckpointEventTypes = new Set<string>(ASSET_CHECKPOINT_EVENT_TYPES);
 const kContentEventTypes = new Set<string>([ASSET_CREATED, ASSET_UPDATED]);
+const kNoHeldPartRefs: AssetHeldPartRefs = new Map();
+const kNoHeldParts: AssetHeldParts = new Map();
 
 export type AssetStateStoreEventMap = {
   /**
@@ -52,6 +61,12 @@ interface OpenAsset {
   version: number;
   commandsSinceCheckpoint: RecordedCommand<AssetCommandHeader>[] | null;
   readonly touchedParts: Set<string>;
+  readonly folds: TaskChain;
+}
+
+interface Replay {
+  readonly entry: Promise<AssetStateEntry>;
+  readonly arrived: EventStore.Event[];
 }
 
 export interface AssetStateStoreOptions {
@@ -65,7 +80,7 @@ export class AssetStateStore extends Emitter<AssetStateStoreEventMap> {
   #kinds: AssetKindRegistry;
   #logger: Logger;
   #open = new Map<string, OpenAsset>();
-  #replays = new Map<string, Promise<AssetStateEntry>>();
+  #replays = new Map<string, Replay>();
   #unsubscribe: (() => void) | null = null;
 
   constructor(
@@ -80,11 +95,11 @@ export class AssetStateStore extends Emitter<AssetStateStoreEventMap> {
   start(): void {
     this.#unsubscribe ??= this.#eventStore.subscribe((event) => {
       const open = this.#open.get(event.assetId);
-      if (open !== undefined) {
-        this.#follow(open, event);
-        if (replacesContent(event)) {
-          this.emit("replaced", event.assetId);
-        }
+      if (open === undefined) {
+        this.#replays.get(event.assetId)?.arrived.push(event);
+      }
+      else {
+        this.#receive(open, event);
       }
     });
   }
@@ -130,19 +145,19 @@ export class AssetStateStore extends Emitter<AssetStateStoreEventMap> {
 
     const inFlight = this.#replays.get(assetId);
     if (inFlight !== undefined) {
-      return inFlight;
+      return inFlight.entry;
     }
 
-    const replay = this.#replay(assetId, kind)
-      .then((open) => {
-        this.#open.set(assetId, open);
-
-        return open.entry;
-      })
+    const arrived: EventStore.Event[] = [];
+    const entry = this.#replay(assetId, kind, arrived)
+      .then((open) => open.entry)
       .finally(() => this.#replays.delete(assetId));
-    this.#replays.set(assetId, replay);
+    this.#replays.set(assetId, {
+      entry,
+      arrived
+    });
 
-    return replay;
+    return entry;
   }
 
   takeCommandsSinceCheckpoint(
@@ -165,7 +180,8 @@ export class AssetStateStore extends Emitter<AssetStateStoreEventMap> {
 
   async #replay(
     assetId: string,
-    kind: string
+    kind: string,
+    arrived: readonly EventStore.Event[]
   ): Promise<OpenAsset> {
     const handler = this.#kinds.get(kind);
     const open: OpenAsset = {
@@ -177,36 +193,83 @@ export class AssetStateStore extends Emitter<AssetStateStoreEventMap> {
       },
       version: 0,
       commandsSinceCheckpoint: [],
-      touchedParts: new Set()
+      touchedParts: new Set(),
+      folds: new TaskChain()
     };
-    let events = this.#eventStore.reader.listFromCheckpoints({
+    const events = await this.#eventStore.reader.listFromCheckpoints({
       assetId,
       checkpointEventTypes: ASSET_CHECKPOINT_EVENT_TYPES
     });
     let sinceYield = 0;
-
-    while (events.length > 0) {
-      for (const event of events) {
-        this.#follow(open, event);
-        if (++sinceYield >= kReplayYieldEvery) {
-          sinceYield = 0;
-          await yieldToEventLoop();
-        }
+    for (const event of events) {
+      this.#receive(open, event);
+      if (++sinceYield >= kReplayYieldEvery) {
+        sinceYield = 0;
+        await yieldToEventLoop();
       }
+    }
+    await open.folds.settled();
 
-      events = this.#eventStore.reader.list(assetId, open.version);
+    this.#open.set(assetId, open);
+    for (const event of arrived) {
+      if (event.eventVersion > open.version) {
+        this.#receive(open, event);
+      }
     }
 
     return open;
   }
 
-  #follow(
+  #receive(
     open: OpenAsset,
     event: EventStore.Event
   ): void {
-    const command = open.version > 0 && isStateNeutral(event) ?
-      null :
-      this.#fold(open.entry, event);
+    const refs = skipsFold(open, event) ? kNoHeldPartRefs : heldPartRefs(event);
+    if (open.folds.idle && refs.size === 0) {
+      this.#apply(open, event, this.#fold(open, event, kNoHeldParts));
+
+      return;
+    }
+
+    void open.folds.run(async() => {
+      this.#apply(open, event, await this.#foldHeld(open, event, refs));
+    });
+  }
+
+  #apply(
+    open: OpenAsset,
+    event: EventStore.Event,
+    command: AssetCommandHeader | null
+  ): void {
+    this.#follow(open, event, command);
+    if (replacesContent(event) && this.#open.get(event.assetId) === open) {
+      this.emit("replaced", event.assetId);
+    }
+  }
+
+  async #foldHeld(
+    open: OpenAsset,
+    event: EventStore.Event,
+    refs: AssetHeldPartRefs
+  ): Promise<AssetCommandHeader | null> {
+    let held: AssetHeldParts;
+    try {
+      held = await loadHeldParts(event.assetId, refs, this.#eventStore.reader);
+    }
+    catch (error) {
+      this.#notFolded(event, error);
+
+      return null;
+    }
+
+    return this.#fold(open, event, held);
+  }
+
+  #follow(
+    open: OpenAsset,
+    event: EventStore.Event,
+    command: AssetCommandHeader | null
+  ): void {
     open.version = event.eventVersion;
     if (kCheckpointEventTypes.has(event.eventType)) {
       open.touchedParts.clear();
@@ -233,35 +296,54 @@ export class AssetStateStore extends Emitter<AssetStateStoreEventMap> {
   }
 
   #fold(
-    entry: AssetStateEntry,
-    event: EventStore.Event
+    open: OpenAsset,
+    event: EventStore.Event,
+    held: AssetHeldParts
   ): AssetCommandHeader | null {
+    if (skipsFold(open, event)) {
+      return null;
+    }
+
     try {
       return foldAssetEvent(
-        entry.handler,
-        entry.state,
+        open.entry.handler,
+        open.entry.state,
         event,
-        this.#eventStore.reader
+        held
       );
     }
     catch (error) {
-      const log = this.#logger.withMetadata({
-        assetId: event.assetId,
-        eventId: event.eventId,
-        eventType: event.eventType,
-        reason: asError(error).message
-      });
-
-      if (error instanceof InvalidAssetFileError) {
-        log.warn("asset event not folded");
-      }
-      else {
-        log.error("asset event not folded");
-      }
+      this.#notFolded(event, error);
 
       return null;
     }
   }
+
+  #notFolded(
+    event: EventStore.Event,
+    error: unknown
+  ): void {
+    const log = this.#logger.withMetadata({
+      assetId: event.assetId,
+      eventId: event.eventId,
+      eventType: event.eventType,
+      reason: asError(error).message
+    });
+
+    if (error instanceof InvalidAssetFileError) {
+      log.warn("asset event not folded");
+    }
+    else {
+      log.error("asset event not folded");
+    }
+  }
+}
+
+function skipsFold(
+  open: OpenAsset,
+  event: EventStore.Event
+): boolean {
+  return open.version > 0 && isStateNeutral(event);
 }
 
 function replacesContent(

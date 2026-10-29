@@ -41,11 +41,10 @@ function openOwner(
   }, new PeerInvites());
 }
 
-function eventTypes(
+async function eventTypes(
   server: OfflineServer
-): string[] {
-  return server.backend.eventStore.reader
-    .list(kAssetId)
+): Promise<string[]> {
+  return (await server.backend.eventStore.reader.list(kAssetId))
     .map((event) => event.eventType);
 }
 
@@ -60,7 +59,7 @@ describe("OfflineServer event log", () => {
 
     const second = await openOwner("jolly-offline:unclosed");
 
-    assert.strictEqual(eventTypes(second).at(-1), "asset.updated");
+    assert.strictEqual((await eventTypes(second)).at(-1), "asset.updated");
     await second.close();
     await first.close();
   });

@@ -66,6 +66,7 @@ export class AssetProjector extends Emitter<
   #paths = new Map<string, string>();
   #dirty = new Set<string>();
   #writing = new Set<string>();
+  #alreadyProjected = new Set<string>();
   #stateDirty = false;
   #stateSave: ReturnType<typeof setTimeout> | null = null;
   #queue = new TaskChain();
@@ -83,12 +84,12 @@ export class AssetProjector extends Emitter<
     this.#logger = options.logger ?? silentLogger();
   }
 
-  load(): void {
+  async load(): Promise<void> {
     this.#folds.clear();
     this.#paths.clear();
     this.#dirty.clear();
 
-    const events = this.#eventStore.reader.listFromCheckpoints({
+    const events = await this.#eventStore.reader.listFromCheckpoints({
       checkpointEventTypes: ASSET_CHECKPOINT_EVENT_TYPES,
       eventTypePrefix: ASSET_EVENT_PREFIX
     });
@@ -101,6 +102,9 @@ export class AssetProjector extends Emitter<
     this.#unsubscribe ??= this.#eventStore.subscribe(
       (event) => {
         const absorbed = this.#absorb(event);
+        if (this.#alreadyProjected.delete(event.assetId)) {
+          this.#markProjected(event.assetId);
+        }
         if (absorbed !== null) {
           this.emit("changed", {
             assetId: event.assetId,
@@ -178,18 +182,28 @@ export class AssetProjector extends Emitter<
     return this.#dirty.size;
   }
 
-  markProjected(
+  async appendProjected<TResult>(
+    assetId: string,
+    append: () => Promise<TResult>
+  ): Promise<TResult> {
+    this.#alreadyProjected.add(assetId);
+    try {
+      return await append();
+    }
+    finally {
+      if (this.#alreadyProjected.delete(assetId) && this.#unsubscribe === null) {
+        this.#logger
+          .withMetadata({ assetId })
+          .warn("asset appended as projected while the projector is stopped");
+      }
+    }
+  }
+
+  #markProjected(
     assetId: string
   ): void {
     const fold = this.#folds.get(assetId);
     if (fold === undefined) {
-      this.#logger
-        .withMetadata({ assetId })
-        .warn(
-          "asset marked projected before its event was absorbed; " +
-          "is the projector started?"
-        );
-
       return;
     }
 
@@ -417,7 +431,7 @@ export class AssetProjector extends Emitter<
         ]);
         await this.#write(
           path,
-          () => Promise.resolve(held.read(partId, ref.at))
+          () => held.read(partId, ref.at)
         );
       }
     }

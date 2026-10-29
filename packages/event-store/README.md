@@ -19,7 +19,7 @@ import * as EventStore from "@jolly-pixel/event-store";
 
 const store = EventStore.persistence.memory();
 
-store.writer.append({
+(await store.writer.append({
   assetType: "pixelart",
   assetId: "<UUID>",
   eventType: "pixelart.command",
@@ -33,9 +33,9 @@ store.writer.append({
     type: "user",
     id: "533454a2-4f09-47c5-8e24-dc5d479c578e"
   }
-}).unwrap();
+})).unwrap();
 
-const events = store.reader.list("<UUID>");
+const events = await store.reader.list("<UUID>");
 console.log(events);
 ```
 

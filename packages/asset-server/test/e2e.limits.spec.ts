@@ -23,7 +23,7 @@ import { recordingClient } from "./helpers/rooms.ts";
 describe("asset-server — end to end", () => {
   test("catalog.maxContentBytes caps catalog:create payloads", async() => {
     await using directory = await tempDirectory();
-    using eventStore = EventStore.persistence.memory();
+    await using eventStore = EventStore.persistence.memory();
 
     await using backend = await createAssetBackend({
       source: new FilesystemAssetSource(directory.root),

@@ -11,24 +11,24 @@ export interface SourcedItem {
 
 interface Head {
   source: AuditSourceName;
-  iterator: Iterator<AuditItem>;
+  iterator: AsyncIterator<AuditItem>;
   item: AuditItem;
 }
 
-export class NewestFirst implements Iterable<SourcedItem> {
-  #sources: ReadonlyMap<AuditSourceName, Iterable<AuditItem>>;
+export class NewestFirst implements AsyncIterable<SourcedItem> {
+  #sources: ReadonlyMap<AuditSourceName, AsyncIterable<AuditItem>>;
 
   constructor(
-    sources: ReadonlyMap<AuditSourceName, Iterable<AuditItem>>
+    sources: ReadonlyMap<AuditSourceName, AsyncIterable<AuditItem>>
   ) {
     this.#sources = sources;
   }
 
-  * [Symbol.iterator](): IterableIterator<SourcedItem> {
+  async* [Symbol.asyncIterator](): AsyncIterableIterator<SourcedItem> {
     const heads: Head[] = [];
     for (const [source, items] of this.#sources) {
-      const iterator = items[Symbol.iterator]();
-      const item = next(iterator);
+      const iterator = items[Symbol.asyncIterator]();
+      const item = await next(iterator);
       if (item !== null) {
         heads.push({
           source,
@@ -47,7 +47,7 @@ export class NewestFirst implements Iterable<SourcedItem> {
         item: newest.item
       };
 
-      const item = next(newest.iterator);
+      const item = await next(newest.iterator);
       if (item === null) {
         heads.splice(heads.indexOf(newest), 1);
       }
@@ -58,10 +58,10 @@ export class NewestFirst implements Iterable<SourcedItem> {
   }
 }
 
-function next(
-  iterator: Iterator<AuditItem>
-): AuditItem | null {
-  const result = iterator.next();
+async function next(
+  iterator: AsyncIterator<AuditItem>
+): Promise<AuditItem | null> {
+  const result = await iterator.next();
 
   return result.done ? null : result.value;
 }
