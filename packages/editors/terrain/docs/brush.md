@@ -85,8 +85,8 @@ centre lies inside the radius. Heights under a hole are kept.
 
 Holes reach peers and the saved asset as `holes-patched` commits on the
 stroke commit cadence, as paint does; there are no live hole patches. A
-stroke is one undo step. The Holes overlay turns on while the tool is
-selected.
+stroke is one undo step. While the tool is selected, hole cells are drawn as in
+the Holes overlay, over whichever overlay is on.
 
 ## Chunks tool
 

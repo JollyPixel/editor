@@ -153,8 +153,11 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   radius. The tool's ray hits the heights kept under a hole, other tools aim
   through it. A stroke shows at once, commits on the stroke cadence and undoes
   as one step.
-- **Next:** the debug overlay for holes, which the hole tool turns on while
-  selected.
+- **Holes overlay: done** (2026-10-29). The Holes overlay draws hole cells
+  over the surface kept under them, tinted and outlined cell by cell. The
+  hole tool shows them the same way while selected, over whichever overlay is
+  on, so its cuts and fills stay visible.
+- **Next:** the Chunks tool, adding and removing chunks.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -222,7 +225,7 @@ chunks yet.
 
 - [x] Hole brush, cut and fill: the `<x>_<z>_holes` part, `holes-patched`
   commits, the mask drawn in the view, and the tool.
-- [ ] Debug overlay for holes.
+- [x] Debug overlay for holes.
 - [ ] Chunks tool: add and remove chunks by click or drag, one undo step.
 - [ ] Resolution tiers ×2 and ×4, with seam morphing, set from the Chunks
   tool's Detail mode.

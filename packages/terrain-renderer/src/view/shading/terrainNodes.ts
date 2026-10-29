@@ -81,8 +81,10 @@ const kSlopeFlat = vec3(0.24, 0.58, 0.32);
 const kSlopeMid = vec3(0.86, 0.8, 0.26);
 const kSlopeHigh = vec3(0.9, 0.48, 0.16);
 const kSlopeTooSteep = vec3(0.82, 0.12, 0.12);
+const kHoleColor = vec3(0.78, 0.22, 0.86);
+const kHoleTint = 0.55;
 
-export const TERRAIN_OVERLAYS = ["none", "chunks", "lod", "slope", "splat"] as const;
+export const TERRAIN_OVERLAYS = ["none", "chunks", "lod", "slope", "splat", "holes"] as const;
 export const DEFAULT_WALKABLE_SLOPE = 45;
 export const MAX_WALKABLE_SLOPE = 90;
 export type TerrainOverlay = typeof TERRAIN_OVERLAYS[number];
@@ -103,6 +105,7 @@ export interface TerrainShading {
   material: MeshStandardNodeMaterial;
   overlay(mode: TerrainOverlay): void;
   walkableSlope(degrees: number): void;
+  revealHoles(revealed: boolean): void;
   highlightSlot(slot: number | null): void;
   materialArrays(arrays: MaterialArrays): void;
 }
@@ -362,11 +365,17 @@ export function createTerrainShading(
   ) {
     return overlay.equal(TERRAIN_OVERLAYS.indexOf(mode));
   }
+  const reveal = uniform(0);
+  const holesShown = overlayIs("holes").or(reveal.equal(1));
+  const holeCellCoord = local.div(holeCellSize);
+  const holeLineDistance = abs(fract(holeCellCoord.sub(0.5)).sub(0.5))
+    .div(max(fwidth(holeCellCoord), vec2(1e-4)));
+  const holeLine = float(1).sub(min(min(holeLineDistance.x, holeLineDistance.y), float(1)));
   const highlight = uniform(-1);
   const splatColor = splatOverlay(layers, highlight);
   material.colorNode = Fn(() => {
     Discard(chunkKnown(fragmentChunk).not());
-    Discard(inHole);
+    Discard(inHole.and(holesShown.not()));
     const color = albedo.toVar();
     If(overlayIs("lod"), () => {
       color.assign(mix(color, levelColor, kLevelTint));
@@ -378,6 +387,9 @@ export function createTerrainShading(
     If(overlayIs("chunks").or(overlayIs("lod")), () => {
       color.assign(mix(color, kLineColor, line));
     });
+    If(inHole, () => {
+      color.assign(mix(mix(color, kHoleColor, kHoleTint), kHoleColor, holeLine));
+    });
 
     return color;
   })();
@@ -386,6 +398,9 @@ export function createTerrainShading(
     material,
     overlay(mode) {
       overlay.value = TERRAIN_OVERLAYS.indexOf(mode);
+    },
+    revealHoles(revealed) {
+      reveal.value = revealed ? 1 : 0;
     },
     walkableSlope(degrees) {
       walkable.value = degreesToRadians(degrees);

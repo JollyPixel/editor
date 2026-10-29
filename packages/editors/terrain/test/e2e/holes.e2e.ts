@@ -9,7 +9,8 @@ import {
 import {
   countPixelsNear,
   dominantColor,
-  pixelsAround
+  pixelsAround,
+  type CanvasPixels
 } from "./support/canvasPixels.ts";
 import type { TerrainPage } from "./support/terrainPage.ts";
 
@@ -30,45 +31,50 @@ const kTopDownPose = {
   pitch: -Math.PI / 2
 };
 
-async function backgroundAtPoint(
-  terrain: TerrainPage,
-  background: readonly [number, number, number]
-): Promise<number> {
+async function probeAtPoint(
+  terrain: TerrainPage
+): Promise<CanvasPixels> {
   const box = await terrain.viewport.canvas.boundingBox();
   const screen = await terrain.viewport.screenPoint({
     x: kPoint.x,
     y: await terrain.heightAt(kPoint.x, kPoint.z),
     z: kPoint.z
   });
-  const probe = pixelsAround(
+
+  return pixelsAround(
     await terrain.capture(),
     { x: screen.x - box!.x, y: screen.y - box!.y },
     kProbeRadius
   );
-
-  return countPixelsNear(probe, background, kColorTolerance);
 }
 
 test.slow();
 
-test("the hole tool cuts an opening to the background, and Ctrl fills it aiming into the opening", async({
+test("the hole tool shows the cells it cuts, which open to the background under another tool", async({
   terrain
 }) => {
   await terrain.viewport.pinCamera(kSkyPose);
   const background = dominantColor(await terrain.capture());
+  async function backgroundAtPoint(): Promise<number> {
+    return countPixelsNear(await probeAtPoint(terrain), background, kColorTolerance);
+  }
   await terrain.viewport.pinCamera(kTopDownPose);
   await terrain.selectTool("holes");
-  expect(await backgroundAtPoint(terrain, background)).toBe(0);
 
   const releaseCut = await terrain.pressBrush(kPoint.x, kPoint.z);
   await releaseCut();
   await expect.poll(() => terrain.holeAt(kPoint.x, kPoint.z)).toBe(true);
-  expect(await backgroundAtPoint(terrain, background)).toBe(kProbePixels);
+  expect(await backgroundAtPoint()).toBe(0);
 
+  await terrain.selectTool("raise");
+  expect(await backgroundAtPoint()).toBe(kProbePixels);
+
+  await terrain.selectTool("holes");
   await terrain.page.keyboard.down("Control");
   const releaseFill = await terrain.pressBrush(kPoint.x, kPoint.z);
   await releaseFill();
   await terrain.page.keyboard.up("Control");
   await expect.poll(() => terrain.holeAt(kPoint.x, kPoint.z)).toBe(false);
-  expect(await backgroundAtPoint(terrain, background)).toBe(0);
+  await terrain.selectTool("raise");
+  expect(await backgroundAtPoint()).toBe(0);
 });

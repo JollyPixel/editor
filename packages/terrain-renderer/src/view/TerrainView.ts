@@ -65,6 +65,7 @@ export class TerrainView {
   #requestFrame: () => void;
   #shading: TerrainShading;
   #overlay: TerrainOverlay = "none";
+  #revealHoles = false;
   #walkableSlope = DEFAULT_WALKABLE_SLOPE;
   #highlightedMaterial: number | null = null;
   #textures: ChunkTextureStore;
@@ -120,6 +121,18 @@ export class TerrainView {
   ) {
     this.#overlay = mode;
     this.#shading.overlay(mode);
+    this.#requestFrame();
+  }
+
+  get revealHoles(): boolean {
+    return this.#revealHoles;
+  }
+
+  set revealHoles(
+    revealed: boolean
+  ) {
+    this.#revealHoles = revealed;
+    this.#shading.revealHoles(revealed);
     this.#requestFrame();
   }
 

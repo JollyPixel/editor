@@ -244,6 +244,13 @@ export class TerrainEditorScene extends Systems.Scene {
     applyOverlaySettings();
     this.#disposables.push(overlaySettings.subscribe("change", applyOverlaySettings));
 
+    const sculpt = this.#sculpt;
+    function revealHoles(): void {
+      view.revealHoles = sculpt.options.tool === "holes";
+    }
+    revealHoles();
+    this.#disposables.push(sculpt.subscribe("change", revealHoles));
+
     const terrain = this.#document;
     const selection = this.#selection;
     function highlightSelected(): void {
